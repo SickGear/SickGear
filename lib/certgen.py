@@ -1,82 +1,127 @@
-# -*- coding: latin-1 -*-
-#
-# Copyright (C) Martin Sjögren and AB Strakt 2001, All rights reserved
-# Copyright (C) Jean-Paul Calderone 2008, All rights reserved
-# This file is licenced under the GNU LESSER GENERAL PUBLIC LICENSE Version 2.1 or later (aka LGPL v2.1)
-# Please see LGPL2.1.txt for more information
+#!/usr/bin/env python
+
 """
-Certificate generation module.
+Adapted from the docs of cryptography
+
+Creates a key and self-signed certificate for local use
 """
 
-from OpenSSL import crypto
-import time
+import datetime
+import os
+import socket
 
-TYPE_RSA = crypto.TYPE_RSA
-TYPE_DSA = crypto.TYPE_DSA
+# noinspection PyPackageRequirements
+from cryptography.hazmat.backends import default_backend
+# noinspection PyPackageRequirements
+from cryptography.hazmat.primitives import hashes, serialization
+# noinspection PyPackageRequirements
+from cryptography.hazmat.primitives.asymmetric import rsa
+# noinspection PyPackageRequirements
+from cryptography import x509
+# noinspection PyPackageRequirements
+from cryptography.x509.oid import NameOID
 
-serial = int(time.time())
+from six import PY2, text_type
 
 
-def createKeyPair(type, bits):
-    """
-    Create a public/private key pair.
+def localipv4():
+    try:
+        s_ipv4 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s_ipv4.connect(('1.2.3.4', 80))    # Option: use 100.64.1.1 (IANA-Reserved IPv4 Prefix for Shared Address Space)
+        ipv4 = s_ipv4.getsockname()[0]
+        s_ipv4.close()
+    except (BaseException, Exception):
+        ipv4 = None
+    return ipv4
 
-    Arguments: type - Key type, must be one of TYPE_RSA and TYPE_DSA
-               bits - Number of bits to use in the key
-    Returns:   The public/private key pair in a PKey object
-    """
-    pkey = crypto.PKey()
-    pkey.generate_key(type, bits)
-    return pkey
 
-def createCertRequest(pkey, digest="md5", **name):
-    """
-    Create a certificate request.
+# Ported from cryptography/utils.py
+def int_from_bytes(data, byteorder, signed=False):
+    assert 'big' == byteorder
+    assert not signed
 
-    Arguments: pkey   - The key to associate with the request
-               digest - Digestion method to use for signing, default is md5
-               **name - The name of the subject of the request, possible
-                        arguments are:
-                          C     - Country name
-                          ST    - State or province name
-                          L     - Locality name
-                          O     - Organization name
-                          OU    - Organizational unit name
-                          CN    - Common name
-                          emailAddress - E-mail address
-    Returns:   The certificate request in an X509Req object
-    """
-    req = crypto.X509Req()
-    subj = req.get_subject()
+    if not PY2:
+        import binascii
+        return int(binascii.hexlify(data), 16)
 
-    for (key,value) in name.items():
-        setattr(subj, key, value)
+    # call bytes() on data to allow the use of bytearrays
+    # noinspection PyUnresolvedReferences
+    return int(bytes(data).encode('hex'), 16)
 
-    req.set_pubkey(pkey)
-    req.sign(pkey, digest)
-    return req
 
-def createCertificate(req, (issuerCert, issuerKey), serial, (notBefore, notAfter), digest="md5"):
-    """
-    Generate a certificate given a certificate request.
+# Ported from cryptography/x509/base.py
+def random_serial_number():
+    return int_from_bytes(os.urandom(20), 'big') >> 1
 
-    Arguments: req        - Certificate reqeust to use
-               issuerCert - The certificate of the issuer
-               issuerKey  - The private key of the issuer
-               serial     - Serial number for the certificate
-               notBefore  - Timestamp (relative to now) when the certificate
-                            starts being valid
-               notAfter   - Timestamp (relative to now) when the certificate
-                            stops being valid
-               digest     - Digest method to use for signing, default is md5
-    Returns:   The signed certificate in an X509 object
-    """
-    cert = crypto.X509()
-    cert.set_serial_number(serial)
-    cert.gmtime_adj_notBefore(notBefore)
-    cert.gmtime_adj_notAfter(notAfter)
-    cert.set_issuer(issuerCert.get_subject())
-    cert.set_subject(req.get_subject())
-    cert.set_pubkey(req.get_pubkey())
-    cert.sign(issuerKey, digest)
+
+# Ported from cryptography docs/x509/tutorial.rst (set with no encryption)
+def generate_key(key_size=4096, output_file='server.key'):
+    # Generate our key
+    private_key = rsa.generate_private_key(
+        public_exponent=65537,
+        key_size=key_size,
+        backend=default_backend()
+    )
+
+    # Write our key to disk for safe keeping
+    with open(output_file, 'wb') as f:
+        f.write(private_key.private_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PrivateFormat.TraditionalOpenSSL,
+            encryption_algorithm=serialization.NoEncryption()
+        ))
+
+    return private_key
+
+
+# Ported from cryptography docs/x509/tutorial.rst
+def generate_local_cert(private_key, days_valid=3650, output_file='server.crt', loc_name=None, org_name=None):
+
+    def_name = u'SickGear'
+
+    # Various details about who we are. For a self-signed certificate the
+    # subject and issuer are always the same.
+    subject = issuer = x509.Name([
+        x509.NameAttribute(NameOID.LOCALITY_NAME, loc_name or def_name),
+        x509.NameAttribute(NameOID.ORGANIZATION_NAME, org_name or def_name)
+    ])
+
+    # build Subject Alternate Names (aka SAN) list
+    # First the host names, add with x509.DNSName():
+    san_list = [x509.DNSName(u'localhost')]
+    try:
+        thishostname = text_type(socket.gethostname())
+        san_list.append(x509.DNSName(thishostname))
+    except (BaseException, Exception):
+        pass
+
+    # Then the host IP addresses, add with x509.IPAddress()
+    # Inside a try-except, just to be sure
+    try:
+        # noinspection PyCompatibility
+        from ipaddress import IPv4Address, IPv6Address
+        san_list.append(x509.IPAddress(IPv4Address(u'127.0.0.1')))
+        san_list.append(x509.IPAddress(IPv6Address(u'::1')))
+
+        # append local v4 ip
+        mylocalipv4 = localipv4()
+        if mylocalipv4:
+            san_list.append(x509.IPAddress(IPv4Address(u'' + mylocalipv4)))
+    except (ImportError, Exception):
+        pass
+
+    cert = x509.CertificateBuilder() \
+        .subject_name(subject) \
+        .issuer_name(issuer) \
+        .public_key(private_key.public_key()) \
+        .not_valid_before(datetime.datetime.utcnow()) \
+        .not_valid_after(datetime.datetime.utcnow() + datetime.timedelta(days=days_valid)) \
+        .serial_number(random_serial_number()) \
+        .add_extension(x509.SubjectAlternativeName(san_list), critical=True) \
+        .sign(private_key, hashes.SHA256(), default_backend())
+
+    # Write the certificate out to disk.
+    with open(output_file, 'wb') as f:
+        f.write(cert.public_bytes(serialization.Encoding.PEM))
+
     return cert
