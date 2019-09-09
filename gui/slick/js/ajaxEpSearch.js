@@ -35,13 +35,13 @@ var ajaxConsumer = function () {
 	return {
 		checkManualSearches : function () {
 			logInfo('ajaxConsumer.checkManualSearches()');
-			var showId = $('#showID').val();
+			var showId = $('#tvid-prodid').val();
 			$.getJSON({
-				url: baseUrl() + '/home/search_q_progress' + (/undefined/i.test(showId) ? '' : '?show=' + showId),
+				url: baseUrl() + '/home/search-q-status' + (/undefined/i.test(showId) ? '' : '?tvid_prodid=' + showId),
 				timeout: 15000 // timeout request after 15 secs
 			})
 			.done(function (data) {
-				logInfo('search_q_progress.success(data)', data);
+				logInfo('search_q_status.success(data)', data);
 				if (!data.episodes || 0 === data.episodes.length) {
 					rowRestore();
 				}
@@ -50,11 +50,11 @@ var ajaxConsumer = function () {
 					? (uiUpdateComplete(data) ? 5000 : 1000) : 10000;	// 10000/0
 			})
 			.fail(function () {
-				logErr('search_q_progress.error()');
+				logErr('search_q_status.error()');
 				that.pollInterval = 30000;
 			})
 			.always(function (jqXHR, textStatus) {
-				logInfo('search_q_progress.complete(textStatus)', '\'' + textStatus + '\'.');
+				logInfo('search_q_status.complete(textStatus)', '\'' + textStatus + '\'.');
 				clearTimeout(that.timeoutId);
 				if (that.pollInterval)
 					that.timeoutId = setTimeout(ajaxConsumer.checkManualSearches, that.pollInterval);

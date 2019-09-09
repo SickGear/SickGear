@@ -3,6 +3,7 @@
 #from sickbeard.common import *
 #from sickbeard.logger import reverseNames
 #from sickbeard.helpers import maybe_plural
+#from _23 import list_keys
 ##
 #set global $header = 'Log File'
 #set global $title = 'Logs'
@@ -22,8 +23,8 @@
 
 <div class="h2footer pull-right">
 	<select name="minLevel" id="minLevel" class="form-control form-control-inline input-sm pull-right">
-#set $levels = $reverseNames.keys()
-#set void = $levels.sort(lambda x,y: cmp($reverseNames[$x], $reverseNames[$y]))
+#set $levels = $list_keys($reverseNames)
+#set void = $levels.sort(key=lambda x: $reverseNames[$x])
 #set $level_count = len($levels)
 #for $level in $levels
     #set $level_count -= 1
@@ -43,7 +44,7 @@
 <!--
 \$(document).ready(function(){
 	\$('#minLevel').change(function(){
-		window.location.href = '$sbRoot/errorlogs/viewlog/?$log_level_var=' + \$(this).val()
+		window.location.href = '$sbRoot/events/view-log/?$log_level_var=' + \$(this).val()
 	});
 
     window.setInterval('location.reload(true)', 600000); // Refresh every 10 minutes

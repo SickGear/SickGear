@@ -18,9 +18,10 @@
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
 from . import generic
-from sickbeard import logger
-from sickbeard.helpers import tryInt
-from lib.unidecode import unidecode
+from .. import logger
+from ..helpers import try_int
+
+from _23 import unidecode
 
 
 class MilkieProvider(generic.TorrentProvider):
@@ -43,14 +44,14 @@ class MilkieProvider(generic.TorrentProvider):
 
         return super(MilkieProvider, self)._authorised(
             post_params=dict(login=False), post_json=dict(email=self.username, password=self.password),
-            json=True, logged_in=self.logged_in)
+            parse_json=True, logged_in=self.logged_in)
 
     def logged_in(self, resp=None):
         
         self._token = resp and resp.get('token')
         if self._token:
             resp = self.get_url(self.urls['auth'], skip_auth=True,
-                                headers=dict(Authorization='Bearer %s' % self._token), json=True)
+                                headers=dict(Authorization='Bearer %s' % self._token), parse_json=True)
             self._dkey = isinstance(resp, dict) and resp.get('user', {}).get('downloadKey')
         return bool(self._token)
 
@@ -62,20 +63,20 @@ class MilkieProvider(generic.TorrentProvider):
 
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
-        for mode in search_params.keys():
+        for mode in search_params:
             for search_string in search_params[mode]:
-                search_string = isinstance(search_string, unicode) and unidecode(search_string) or search_string
+                search_string = unidecode(search_string)
                 search_url = self.urls['search'] % search_string
 
                 data_json, sess = self.get_url(search_url, headers=dict(Authorization='Bearer %s' % self._token),
-                                               resp_sess=True, json=True)
+                                               resp_sess=True, parse_json=True)
                 if self.should_skip():
                     return results
 
                 cnt = len(items[mode])
                 if isinstance(data_json, dict):
                     for tr in data_json.get('torrents') or data_json.get('releases') or []:
-                        seeders, leechers, size = (tryInt(n, n) for n in [
+                        seeders, leechers, size = (try_int(n, n) for n in [
                             tr.get(x) for x in ('seeders', 'leechers', 'size')])
                         if not self._reject_item(seeders, leechers):
                             title = tr.get('releaseName')

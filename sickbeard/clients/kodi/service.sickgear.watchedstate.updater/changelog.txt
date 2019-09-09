@@ -1,2 +1,8 @@
 [B]1.0.0[/B] (2017-10-04)
 - Initial release
+[B]1.0.2[/B] (2017-11-15)
+- Devel release for an SG API change
+[B]1.0.3[/B] (2018-02-28)
+- Add episodeid to payload
+[B]1.0.4[/B] (2019-08-13)
+- Service code cleanup

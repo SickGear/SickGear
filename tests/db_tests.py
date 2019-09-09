@@ -21,6 +21,7 @@ from __future__ import print_function
 import unittest
 import test_lib as test
 from sickbeard import cache_db, mainDB, failed_db
+from six import integer_types
 
 
 class DBBasicTests(test.SickbeardTestDBCase):
@@ -30,7 +31,7 @@ class DBBasicTests(test.SickbeardTestDBCase):
         self.db = test.db.DBConnection()
 
     def is_testdb(self, version):
-        if isinstance(version, (int, long)):
+        if isinstance(version, integer_types):
             return 100000 <= version
 
     def test_select(self):
@@ -40,7 +41,8 @@ class DBBasicTests(test.SickbeardTestDBCase):
         self.assertEqual(mainDB.TEST_BASE_VERSION is not None, self.is_testdb(mainDB.MAX_DB_VERSION))
         self.assertEqual(failed_db.TEST_BASE_VERSION is not None, self.is_testdb(failed_db.MAX_DB_VERSION))
 
-if __name__ == '__main__':
+
+if '__main__' == __name__:
     print('==================')
     print('STARTING - DB TESTS')
     print('==================')

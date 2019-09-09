@@ -156,9 +156,12 @@ def _guess_filename(filename, filetype):
         # if filetype is subtitle and the language appears last, just before
         # the extension, then it is likely a subtitle language
         parts = clean_string(title.root.value).split()
-        if (m['type'] in ['moviesubtitle', 'episodesubtitle'] and
-            parts.index(lang.value) == len(parts) - 2):
-            return m
+        try:
+            if (m['type'] in ['moviesubtitle', 'episodesubtitle'] and
+                    parts.index(lang.value) == len(parts) - 2):
+                return m
+        except ValueError:
+            pass
 
         # if the language was in the middle of the other potential title,
         # keep the other title (eg: The Italian Job), except if it is at the

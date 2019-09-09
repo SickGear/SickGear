@@ -2,16 +2,15 @@
 #import datetime
 #import locale
 #import operator
-#from sickbeard.common import *
-#from sickbeard.sbdatetime import *
-#from sickbeard import config
-#from sickbeard import metadata
+#from sickbeard import config,  metadata
 #from sickbeard.metadata.generic import GenericMetadata
-#from sickbeard.helpers import anon_url
+#from sickbeard.common import *
+#from sickbeard.helpers import anon_url, maybe_plural
 #from sickbeard.logger import reverseNames as file_logging_presets
-#from sickbeard.helpers import maybe_plural
+#from sickbeard.sgdatetime import *
 <% def sg_var(varname, default=False): return getattr(sickbeard, varname, default) %>#slurp#
 <% def sg_str(varname, default=''): return getattr(sickbeard, varname, default) %>#slurp#
+#from _23 import list_keys
 ##
 #set global $title  = 'Config - General'
 #set global $header = 'General Settings'
@@ -30,10 +29,6 @@
 #set $checked = ' checked="checked"'
 #set $selected = ' selected="selected"'
 ##
-#set $indexer = 0
-#if $sg_var('INDEXER_DEFAULT')
-    #set $indexer = $sg_var('INDEXER_DEFAULT')
-#end if
 
 <script type="text/javascript" src="$sbRoot/js/config.js?v=$sbPID"></script>
 <script type="text/javascript" src="$sbRoot/js/rootDirs.js?v=$sbPID"></script>
@@ -41,7 +36,7 @@
 <div id="config">
 	<div id="config-content">
 
-		<form id="configForm" action="saveGeneral" method="post">
+		<form id="configForm" action="save_general" method="post">
 			$xsrf_form_html
 
 			<div id="config-components">
@@ -57,7 +52,7 @@
 
 					<div class="component-group-desc">
 						<h3>Misc</h3>
-						<p>Startup options. Indexer options. Log and show file locations.</p>
+						<p>Startup options. TV info source options. Log and show file locations.</p>
 						<p><b>Some options may require a manual restart to take effect.</b></p>
 					</div>
 
@@ -115,15 +110,19 @@
 								</span>
 							</label>
 						</div>
-#if 1 < $len($indexers)
+#set $def_isrc = 0
+#if $sg_var('TVINFO_DEFAULT')
+    #set $def_isrc = $sg_var('TVINFO_DEFAULT')
+#end if
+#if $getVar('infosrc', None) and 1 < $len($infosrc)
 						<div class="field-pair">
 							<label for="indexer_default">
-								<span class="component-title">Use initial indexer set to</span>
+								<span class="component-title">Set initial TV info source as</span>
 								<span class="component-desc">
 									<select id="indexer_default" name="indexer_default" class="form-control input-sm">
-										<option value="0"#echo ('', $selected)[0 == $indexer]#>All Indexers</option>
-    #for $indexer in $indexers
-										<option value="$indexer"#echo ('', $selected)[$indexer == $sg_var('INDEXER_DEFAULT', 0)]#>$sickbeard.indexerApi().indexers[$indexer]</option>
+										<option value="0"#echo ('', $selected)[0 == $def_isrc]#>All Sources</option>
+    #for $isrc in $infosrc
+										<option value="$isrc"#echo ('', $selected)[$isrc == $sg_var('TVINFO_DEFAULT', 0)]#>$sickbeard.TVInfoAPI().sources[$isrc]</option>
     #end for
 									</select>
 									<span>as the default selection when adding new shows</span>
@@ -133,9 +132,9 @@
 #end if
 						<div class="field-pair">
 							<label for="indexer_timeout">
-								<span class="component-title">Timeout show indexer at</span>
+								<span class="component-title">Timeout TV info source at</span>
 								<span class="component-desc">
-									<input type="text" name="indexer_timeout" id="indexer_timeout" value="$sg_var('INDEXER_TIMEOUT', 20)" class="form-control input-sm input75">
+									<input type="text" name="indexer_timeout" id="indexer_timeout" value="$sg_var('TVINFO_TIMEOUT', 20)" class="form-control input-sm input75">
 									<p>seconds of inactivity when finding new shows (default:10)</p>
 								</span>
 							</label>
@@ -343,7 +342,7 @@
 									<input type="text" id="imdb-url" value="" class="form-control input-sm input250" />
 									<input type="button" class="btn btn-inline" value="Enable" id="imdb-list-onoff" />
 									<div class="clear-left">
-									<p><code>imdb.com/user/ur64552276</code> or <code>ur64552276</code> to <span id="view-list">view list</span><a class="hide" id="link-list" href="$sbRoot/home/addShows/watchlist_imdb?account=64552276">view list</a> at "Add from IMDb"
+									<p><code>imdb.com/user/ur64552276</code> or <code>ur64552276</code> to <span id="view-list">view list</span><a class="hide" id="link-list" href="$sbRoot/add-shows/watchlist-imdb?account=64552276">view list</a> at "Add from IMDb"
 									</p></div>
 #end if
 								</span>
@@ -371,7 +370,7 @@
 							</label>
 						</div>
 
-#if not $sbdatetime.is_locale_eng()
+#if not $SGDatetime.is_locale_eng()
 						<input type="hidden" name="fuzzy_dating" id="fuzzy_dating" value="false">
 						<input type="hidden" name="trim_zero" id="trim_zero" value="false">
 #else
@@ -421,7 +420,7 @@
 									<select id="time_presets" name="time_preset" class="form-control input-sm">
 #for $cur_preset in $time_presets
     #set $show_seconds = not $sg_var('FUZZY_DATING')
-										<option value="$cur_preset"#echo ('', $selected)[$cur_preset == $sg_str('TIME_PRESET_W_SECONDS', '%I:%M:%S %p')]#>$sbdatetime.now().sbftime(show_seconds=$show_seconds, t_preset=$cur_preset)</option>
+										<option value="$cur_preset"#echo ('', $selected)[$cur_preset == $sg_str('TIME_PRESET_W_SECONDS', '%I:%M:%S %p')]#>$SGDatetime.now().sbftime(show_seconds=$show_seconds, t_preset=$cur_preset)</option>
 #end for
 									</select>
 									<span id="trim_info_seconds"><b>note:</b> seconds are only shown on the History page</span>
@@ -662,7 +661,7 @@
 									<select id="branchVersion" class="form-control form-control-inline input-sm pull-left max300">
 										<option>Loading list from github</option>
 									</select>
-									<input class="btn btn-inline" style="margin-left:6px" type="button" id="branchCheckout" value="Checkout Branch" disabled="disabled">
+									<input class="btn btn-inline" style="margin-left:6px" type="button" id="branch-checkout" value="Checkout Branch" disabled="disabled">
 									<div class="clear-left"><p>select branch to use (restart required)</p></div>
 								</span>
 							</label>
@@ -676,7 +675,7 @@
 										<select id="pullRequestVersion" class="form-control form-control-inline input-sm pull-left max300">
 											<option>Loading list from github</option>
 										</select>
-										<input class="btn btn-inline" style="margin-left: 6px;" type="button" id="pullRequestCheckout" value="Checkout Pull Request" disabled="disabled">
+										<input class="btn btn-inline" style="margin-left: 6px;" type="button" id="pull-request-checkout" value="Checkout Pull Request" disabled="disabled">
 										<div class="clear-left"><p>select pull request to test (restart required)</p></div>
 									</span>
 								</label>
@@ -765,8 +764,8 @@
 								<span class="component-title">File logging level:</span>
 								<span class="component-desc">
 									<select id="file_logging_presets" name="file_logging_preset" class="form-control input-sm">
-#set $levels = $file_logging_presets.keys()
-#set void = $levels.sort(lambda x, y: cmp($file_logging_presets[$x], $file_logging_presets[$y]))
+#set $levels = $list_keys(file_logging_presets)
+#set void = $levels.sort(key=lambda x: $file_logging_presets[$x])
 #set $level_count = len($levels)
 #for $level in $levels
     #set $level_title = $level.title().upper()

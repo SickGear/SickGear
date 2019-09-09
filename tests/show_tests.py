@@ -23,7 +23,7 @@ import unittest
 import sickbeard
 import test_lib as test
 from sickbeard import db
-from sickbeard.common import Quality, UNAIRED, SKIPPED, WANTED, wantedQualities, statusStrings
+from sickbeard.common import Quality, UNAIRED, SKIPPED, WANTED, WantedQualities, statusStrings
 from sickbeard.show_queue import QueueItemAdd
 from sickbeard.tv import TVEpisode, TVShow
 
@@ -304,45 +304,46 @@ class ShowAddTests(test.SickbeardTestDBCase):
     def setUp(self):
         super(ShowAddTests, self).setUp()
         sickbeard.showList = []
-        sickbeard.WANTEDLIST_CACHE = wantedQualities()
+        sickbeard.WANTEDLIST_CACHE = WantedQualities()
 
     def test_getWanted(self):
         for ep_base, w in enumerate(wanted_tests):
-            show = TVShow(w['show']['indexer'], w['show']['indexerid'], 'en')
-            show.name = 'show name'
-            show.tvrname = 'show name'
-            show.quality = w['show']['quality']
-            show.network = 'cbs'
-            show.genre = 'crime'
-            show.runtime = 40
-            show.status = '5'
-            show.airs = 'monday'
-            show.startyear = 1987
-            show.saveToDB()
-            sickbeard.showList = [show]
+            show_obj = TVShow(w['show']['indexer'], w['show']['indexerid'], 'en')
+            show_obj.name = 'show name'
+            show_obj.tvrname = 'show name'
+            show_obj.quality = w['show']['quality']
+            show_obj.network = 'cbs'
+            show_obj.genre = 'crime'
+            show_obj.runtime = 40
+            show_obj.status = '5'
+            show_obj.airs = 'monday'
+            show_obj.startyear = 1987
+            show_obj.save_to_db()
+            sickbeard.showList = [show_obj]
             cl = []
             ep_id = ep_base * 10000
             for ep in w['episodes']:
                 ep_id += 1
-                if ep['season'] not in show.episodes:
-                    show.episodes[ep['season']] = {}
-                show.episodes[ep['season']][ep['episode']] = TVEpisode(show, ep['season'], ep['episode'])
-                show.episodes[ep['season']][ep['episode']].status = Quality.compositeStatus(ep['status'], ep['quality'])
-                show.episodes[ep['season']][ep['episode']].airdate = ep['airdate']
-                show.episodes[ep['season']][ep['episode']].name = 'nothing'
-                show.episodes[ep['season']][ep['episode']].indexerid = ep_id
-                show.episodes[ep['season']][ep['episode']].show = show
-                show.episodes[ep['season']][ep['episode']].indexer = show.indexer
-                cl.append(show.episodes[ep['season']][ep['episode']].get_sql())
+                if ep['season'] not in show_obj.sxe_ep_obj:
+                    show_obj.sxe_ep_obj[ep['season']] = {}
+                show_obj.sxe_ep_obj[ep['season']][ep['episode']] = TVEpisode(show_obj, ep['season'], ep['episode'])
+                episode = show_obj.sxe_ep_obj[ep['season']][ep['episode']]
+                episode.status = Quality.compositeStatus(ep['status'], ep['quality'])
+                episode.airdate = ep['airdate']
+                episode.name = 'nothing'
+                episode.epid = ep_id
+                episode.show_obj = show_obj
+                episode.tvid = show_obj.tvid
+                cl.append(episode.get_sql())
 
             cur_db = db.DBConnection()
             if cl:
                 cur_db.mass_action(cl)
 
-            qi = QueueItemAdd(w['show']['indexer'], w['show']['indexerid'], '', None, None,
+            qi = QueueItemAdd(w['show']['indexer'], w['show']['indexerid'], '', None, Quality.NONE,
                               None, None, None, False, False, False, None, None,
                               w['start_wanted'], w['end_wanted'], None, None)
-            qi.show = show
+            qi.show_obj = show_obj
             # start tests
             tr = qi._get_wanted(cur_db, w['start_wanted'], False)
             self.assertEqual(
@@ -350,7 +351,7 @@ class ShowAddTests(test.SickbeardTestDBCase):
                 msg='%s: start: got: %s, expected: %s' % (w['name'], tr, w['result']['start'].get('count')))
             results = cur_db.select('SELECT status, season, episode FROM tv_episodes WHERE indexer = ? AND showid = ?'
                                     ' ORDER BY season, episode',
-                                    [show.indexer, show.indexerid])
+                                    [show_obj.tvid, show_obj.prodid])
             for r in results:
                 expected = w['result']['start'].get('episodes').get(r['season'], {}).get(r['episode'], None)
                 self.assertEqual(
@@ -364,7 +365,7 @@ class ShowAddTests(test.SickbeardTestDBCase):
                              msg='%s: end: got: %s, expected: %s' % (w['name'], tr, w['result']['end'].get('count')))
             results = cur_db.select('SELECT status, season, episode FROM tv_episodes WHERE indexer = ? AND showid = ?'
                                     ' ORDER BY season, episode',
-                                    [show.indexer, show.indexerid])
+                                    [show_obj.tvid, show_obj.prodid])
             for r in results:
                 expected = w['result']['end'].get('episodes').get(r['season'], {}).get(r['episode'], None)
                 self.assertEqual(r['status'], expected,

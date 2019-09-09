@@ -2,8 +2,9 @@ import logging
 import re
 import time
 from .exceptions import TraktShowNotFound, TraktException
-from sickbeard.exceptions import ex
-from trakt import TraktAPI
+from exceptions_helper import ex
+from six import iteritems
+from .trakt import TraktAPI
 
 
 class ShowContainer(dict):
@@ -36,7 +37,7 @@ def log():
     return logging.getLogger('trakt_api')
 
 
-class TraktSearchTypes:
+class TraktSearchTypes(object):
     text = 1
     trakt_id = 'trakt'
     tvdb_id = 'tvdb'
@@ -49,7 +50,7 @@ class TraktSearchTypes:
         pass
 
 
-class TraktResultTypes:
+class TraktResultTypes(object):
     show = 'show'
     episode = 'episode'
     movie = 'movie'
@@ -61,7 +62,7 @@ class TraktResultTypes:
         pass
 
 
-class TraktIndexer:
+class TraktIndexer(object):
     # noinspection PyUnusedLocal
     # noinspection PyDefaultArgument
     def __init__(self, custom_ui=None, sleep_retry=None, search_type=TraktSearchTypes.text,
@@ -80,7 +81,8 @@ class TraktIndexer:
             'base_url': '',
             'search_type': search_type if search_type in TraktSearchTypes.all else TraktSearchTypes.text,
             'sleep_retry': sleep_retry,
-            'result_types': result_types if isinstance(result_types, list) and all(x in TraktResultTypes.all for x in result_types) else [TraktResultTypes.show],
+            'result_types': result_types if isinstance(result_types, list) and all(
+                [x in TraktResultTypes.all for x in result_types]) else [TraktResultTypes.show],
         }
 
         self.corrections = {}
@@ -148,7 +150,7 @@ class TraktIndexer:
             if len(resp):
                 for d in resp:
                     if isinstance(d, dict) and 'type' in d and d['type'] in self.config['result_types']:
-                        for k, v in d.iteritems():
+                        for k, v in iteritems(d):
                             d[k] = clean_data(v)
                         if 'show' in d and TraktResultTypes.show == d['type']:
                             d.update(d['show'])

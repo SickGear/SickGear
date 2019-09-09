@@ -5,12 +5,11 @@
 
 import feedparser
 
+from exceptions_helper import ex
 from sickbeard import logger
-from sickbeard.exceptions import ex
 
 
-class RSSFeeds:
-
+class RSSFeeds(object):
     def __init__(self, provider=None):
         self.provider = provider
 
@@ -32,5 +31,5 @@ class RSSFeeds:
                     else:
                         logger.log(u'RSS error loading url: ' + url, logger.DEBUG)
 
-                except Exception as e:
+                except (BaseException, Exception) as e:
                     logger.log(u'RSS error: ' + ex(e), logger.DEBUG)

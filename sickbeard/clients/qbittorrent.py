@@ -16,15 +16,22 @@
 
 import re
 import time
-import urllib
 
 from .generic import GenericClient
-from .. import helpers, logger
+from .. import logger
+from ..helpers import get_url, try_int
+from ..sgdatetime import SGDatetime
 import sickbeard
 
 from requests.exceptions import HTTPError
 
+from _23 import filter_iter, filter_list, map_list, unquote_plus
 from six import string_types
+
+# noinspection PyUnreachableCode
+if False:
+    from typing import Any, AnyStr, Callable, Optional, Union
+    from ..classes import TorrentSearchResult
 
 
 class QbittorrentAPI(GenericClient):
@@ -38,12 +45,11 @@ class QbittorrentAPI(GenericClient):
         self.api_ns = None
 
     def _active_state(self, ids=None):
+        # type: (Optional[AnyStr, list]) -> list
         """
         Fetch state of items, return items that are actually downloading or seeding
         :param ids: Optional id(s) to get state info for. None to get all
-        :type ids: list, string or None
         :return: Zero or more object(s) assigned with state `down`loading or `seed`ing
-        :rtype: list
         """
         downloaded = (lambda item: float(item.get('progress') or 0) * (item.get('size') or 0))  # bytes
         wanted = (lambda item: item.get('priority'))  # wanted will == tally/downloaded if all files are selected
@@ -51,9 +57,9 @@ class QbittorrentAPI(GenericClient):
             id=t['hash'], title=t['name'], total_size=gp.get('total_size') or 0,
             added_ts=gp.get('addition_date'), last_completed_ts=gp.get('completion_date'),
             last_started_ts=None, seed_elapsed_secs=gp.get('seeding_time'),
-            wanted_size=sum(map(lambda tf: wanted(tf) and tf.get('size') or 0, f)) or None,
-            wanted_down=sum(map(lambda tf: wanted(tf) and downloaded(tf) or 0, f)) or None,
-            tally_down=sum(map(lambda tf: downloaded(tf) or 0, f)) or None,
+            wanted_size=sum(map_list(lambda tf: wanted(tf) and tf.get('size') or 0, f)) or None,
+            wanted_down=sum(map_list(lambda tf: wanted(tf) and downloaded(tf) or 0, f)) or None,
+            tally_down=sum(map_list(lambda tf: downloaded(tf) or 0, f)) or None,
             tally_up=gp.get('total_uploaded'),
             state='done' if 'pausedUP' == t.get('state') else ('down', 'seed')['up' in t.get('state').lower()]
         ))
@@ -61,24 +67,21 @@ class QbittorrentAPI(GenericClient):
             ('torrents/files', 'query/propertiesFiles/%s' % ti['hash'])[not self.api_ns],
             params=({'hash': ti['hash']}, {})[not self.api_ns], json=True) or {})
         valid_stat = (lambda ti: not self._ignore_state(ti)
-                      and sum(map(lambda tf: wanted(tf) and downloaded(tf) or 0, file_list(ti))))
-        result = map(lambda t: base_state(t, self._tinf(t['hash'])[0], file_list(t)),
-                     filter(lambda t: re.search('(?i)queue|stall|(up|down)load|pausedUP', t['state']) and valid_stat(t),
-                            self._tinf(ids, False)))
+                      and sum(map_list(lambda tf: wanted(tf) and downloaded(tf) or 0, file_list(ti))))
+        result = map_list(lambda t: base_state(t, self._tinf(t['hash'])[0], file_list(t)),
+                          filter_list(lambda t: re.search('(?i)queue|stall|(up|down)load|pausedUP', t['state']) and
+                                      valid_stat(t), self._tinf(ids, False)))
 
         return result
 
     def _tinf(self, ids=None, use_props=True, err=False):
+        # type: (Optional[list], bool, bool) -> list
         """
         Fetch client task information
         :param ids: Optional id(s) to get task info for. None to get all task info
-        :type ids: list or None
         :param use_props: Optional override forces retrieval of torrents info instead of torrent generic properties
-        :type ids: Boolean
         :param err: Optional return error dict instead of empty array
-        :type err: Boolean
         :return: Zero or more task object(s) from response
-        :rtype: list
         """
         result = []
         rids = (ids if isinstance(ids, (list, type(None))) else [x.strip() for x in ids.split(',')]) or [None]
@@ -105,18 +108,18 @@ class QbittorrentAPI(GenericClient):
             except (BaseException, Exception):
                 if getinfo:
                     result += [dict(error=True, id=rid)]
-        for t in filter(lambda d: isinstance(d.get('name'), string_types) and d.get('name'), (result, [])[getinfo]):
-            t['name'] = urllib.unquote_plus(t.get('name'))
+        for t in filter_iter(lambda d: isinstance(d.get('name'), string_types) and d.get('name'),
+                             (result, [])[getinfo]):
+            t['name'] = unquote_plus(t.get('name'))
 
         return result
 
     def _set_torrent_pause(self, search_result):
+        # type: (TorrentSearchResult) -> bool
         """
         Set torrent as paused used for the "add as paused" feature (overridden class function)
         :param search_result: A populated search result object
-        :type search_result: TorrentSearchResult
         :return: Success or Falsy if fail
-        :rtype: bool
         """
         if not sickbeard.TORRENT_PAUSED:
             return super(QbittorrentAPI, self)._set_torrent_pause(search_result)
@@ -140,12 +143,11 @@ class QbittorrentAPI(GenericClient):
         return bool(re.search(r'(?i)error', task.get('state') or ''))
 
     def _maxpri_torrent(self, ids):
+        # type: (Union[AnyStr, list]) -> Union[bool, list]
         """
         Set maximal priority in queue to torrent task
         :param ids: ID(s) to promote
-        :type ids: list or string
         :return: True/Falsy if success/failure else Id(s) that failed to be changed
-        :rtype: bool or list
         """
         def _maxpri_filter(t):
             mark_fail = True
@@ -173,12 +175,11 @@ class QbittorrentAPI(GenericClient):
         return self._action('topPrio', ids, lambda t: _maxpri_filter(t))
 
     def _label_torrent(self, ids):
+        # type: (Union[AnyStr, list]) -> Union[bool, list]
         """
         Set label/category to torrent task
         :param ids: ID(s) to change
-        :type ids: list or string
         :return: True/Falsy if success/failure else Id(s) that failed to be changed
-        :rtype: bool or list
         """
         def _label_filter(t):
             mark_fail = True
@@ -201,12 +202,11 @@ class QbittorrentAPI(GenericClient):
         return self._action('label', ids, lambda t: _label_filter(t))
 
     def _pause_torrent(self, ids):
+        # type: (Union[AnyStr, list]) -> Union[bool, list]
         """
         Pause item(s)
         :param ids: Id(s) to pause
-        :type ids: list or string
         :return: True/Falsy if success/failure else Id(s) that failed to be paused
-        :rtype: bool or list
         """
         def _pause_filter(t):
             mark_fail = True
@@ -249,12 +249,11 @@ class QbittorrentAPI(GenericClient):
         return 'paused' in states[-1]
 
     def _resume_torrent(self, ids):
+        # type: (Union[AnyStr, list]) -> Union[bool, list]
         """
         Resume task(s) in client
         :param ids: Id(s) to act on
-        :type ids: list or string
         :return: True if success, Id(s) that could not be resumed, else Falsy if failure
-        :rtype: bool or list
         """
         return self._perform_task(
             'resume', ids,
@@ -265,12 +264,11 @@ class QbittorrentAPI(GenericClient):
                 post_data={'hash' + ('es', '')[not self.api_ns]: t.get('hash')}))
 
     def _delete_torrent(self, ids):
+        # type: (Union[AnyStr, list]) -> Union[bool, list]
         """
         Delete task(s) from client
         :param ids: Id(s) to act on
-        :type ids: list or string
         :return: True if success, Id(s) that could not be deleted, else Falsy if failure
-        :rtype: bool or list
         """
         return self._perform_task(
             'delete', ids,
@@ -281,21 +279,17 @@ class QbittorrentAPI(GenericClient):
             pause_first=True)
 
     def _perform_task(self, method, ids, filter_func, pause_first=False):
+        # type: (AnyStr, Union[AnyStr, list], Callable, bool) -> Union[bool, list]
         """
         Set up and send a method to client
         :param method: Either `resume` or `delete`
-        :type method: string
         :param ids: Id(s) to perform method on
-        :type ids: list or string
         :param filter_func: Call back function passed to _action that will filter tasks as failed or erroneous
-        :type Function
         :param pause_first: True if task should be paused prior to invoking method
-        :type Boolean
         :return: True if success, Id(s) that could not be acted upon, else Falsy if failure
-        :rtype: Boolean or list
         """
         if isinstance(ids, (string_types, list)):
-            rids = ids if isinstance(ids, list) else map(lambda x: x.strip(), ids.split(','))
+            rids = ids if isinstance(ids, list) else map_list(lambda x: x.strip(), ids.split(','))
 
             result = pause_first and self._pause_torrent(rids)  # get items not paused
             result = (isinstance(result, list) and result or [])
@@ -309,7 +303,7 @@ class QbittorrentAPI(GenericClient):
 
         if isinstance(ids, (string_types, list)):
             item = dict(fail=[], ignore=[])
-            for task in filter(filter_func, self._tinf(ids, use_props=False, err=True)):
+            for task in filter_iter(filter_func, self._tinf(ids, use_props=False, err=True)):
                 item[('fail', 'ignore')[self._ignore_state(task)]] += [task.get('hash')]
 
             # retry items that are not acted on
@@ -321,7 +315,7 @@ class QbittorrentAPI(GenericClient):
                     logger.log('%s: retry %s %s item(s) in %ss' % (self.name, act, len(item['fail']), i), logger.DEBUG)
                     time.sleep(i)
                     item['fail'] = []
-                    for task in filter(filter_func, self._tinf(retry_ids, use_props=False, err=True)):
+                    for task in filter_iter(filter_func, self._tinf(retry_ids, use_props=False, err=True)):
                         item[('fail', 'ignore')[self._ignore_state(task)]] += [task.get('hash')]
 
                     if not item['fail']:
@@ -336,34 +330,30 @@ class QbittorrentAPI(GenericClient):
             return (item['fail'] + item['ignore']) or True
 
     def _add_torrent_uri(self, search_result):
+        # type: (TorrentSearchResult) -> Optional[bool]
         """
         Add magnet to client (overridden class function)
         :param search_result: A populated search result object
-        :type search_result: TorrentSearchResult
         :return: True if created, else Falsy if nothing created
-        :rtype: Boolean or None
         """
         return search_result and self._add_torrent('download', search_result) or False
 
     def _add_torrent_file(self, search_result):
+        # type: (TorrentSearchResult) -> Optional[bool]
         """
         Add file to client (overridden class function)
         :param search_result: A populated search result object
-        :type search_result: TorrentSearchResult
         :return: True if created, else Falsy if nothing created
-        :rtype: Boolean or None
         """
         return search_result and self._add_torrent('upload', search_result) or False
 
     def _add_torrent(self, cmd, data):
+        # type: (AnyStr, TorrentSearchResult) -> Optional[bool]
         """
         Create client task
         :param cmd: Command for client API v6, converted up for newer API
-        :type cmd: String
         :param data: A populated search result object
-        :type data: TorrentSearchResult
         :return: True if created, else Falsy if nothing created
-        :rtype: Boolean or None
         """
         if self._tinf(data.hash):
             logger.log('Could not create task, the hash is already in use', logger.ERROR)
@@ -382,12 +372,12 @@ class QbittorrentAPI(GenericClient):
         else:
             kwargs = dict(post_data=params, files={'torrents': ('%s.torrent' % data.name, data.content)})
 
-        task_stamp = int(sickbeard.sbdatetime.sbdatetime.now().totimestamp(default=0))
+        task_stamp = int(SGDatetime.now().totimestamp(default=0))
         response = self._client_request(('torrents/add', 'command/%s' % cmd)[not self.api_ns], **kwargs)
 
         if True is response:
             for s in (1, 3, 5, 10, 15, 30, 60):
-                if filter(lambda t: task_stamp <= t['addition_date'], self._tinf(data.hash)):
+                if filter_list(lambda t: task_stamp <= t['addition_date'], self._tinf(data.hash)):
                     return data.hash
                 time.sleep(s)
             return True
@@ -396,19 +386,17 @@ class QbittorrentAPI(GenericClient):
 
         try:
             v = self._client_request('app/webapiVersion').split('.')
-            return (2, 0) < tuple([helpers.tryInt(x) for x in '.'.join(v + ['0'] * (4 - len(v))).split('.')])
+            return (2, 0) < tuple([try_int(x) for x in '.'.join(v + ['0'] * (4 - len(v))).split('.')])
         except AttributeError:
-            return 6 < helpers.tryInt(self._client_request('version/api'))
+            return 6 < try_int(self._client_request('version/api'))
 
     def _client_request(self, cmd='', **kwargs):
+        # type: (AnyStr, Any) -> Optional[AnyStr, bool, dict, list]
         """
         Send a request to client
         :param cmd: Api task to invoke
-        :type cmd: string_types
         :param kwargs: keyword arguments to pass thru to helpers getURL function
-        :type kwargs: mixed
         :return: JSON decoded response dict, True if success and no response body, Text error or None if failure,
-        :rtype: Dict, Boolean, String or None
         """
         authless = bool(re.search('(?i)login|version', cmd))
         if authless or self.auth:
@@ -419,12 +407,12 @@ class QbittorrentAPI(GenericClient):
             # self._log_request_details('%s%s' % (self.api_ns, cmd.strip('/')), **kwargs)
             response = None
             try:
-                response = helpers.getURL('%s%s%s' % (self.host, self.api_ns, cmd.strip('/')),
-                                          session=self.session, **kwargs)
+                response = get_url('%s%s%s' % (self.host, self.api_ns, cmd.strip('/')),
+                                   session=self.session, **kwargs)
             except HTTPError as e:
                 if e.response.status_code in (409, 403):
                     response = e.response.text
-            except (StandardError, Exception):
+            except (BaseException, Exception):
                 pass
             if isinstance(response, string_types):
                 if response[0:3].lower() in ('', 'ok.'):

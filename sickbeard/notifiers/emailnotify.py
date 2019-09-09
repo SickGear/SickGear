@@ -25,9 +25,12 @@ from email.utils import formatdate
 import re
 import smtplib
 
+from .generic import Notifier, notify_strings
+from .. import db
 import sickbeard
-from sickbeard import db
-from sickbeard.notifiers.generic import Notifier, notify_strings
+from exceptions_helper import ex
+
+from six import text_type
 
 
 class EmailNotifier(Notifier):
@@ -39,7 +42,7 @@ class EmailNotifier(Notifier):
 
     def _sendmail(self, host, port, smtp_from, use_tls, user, pwd, to, msg, smtp_debug=False):
 
-        use_tls = 1 == sickbeard.helpers.tryInt(use_tls)
+        use_tls = 1 == sickbeard.helpers.try_int(use_tls)
         login = any(user) and any(pwd)
         self._log_debug(u'Sendmail HOST: %s; PORT: %s; LOGIN: %s, TLS: %s, USER: %s, FROM: %s, TO: %s' % (
             host, port, login, use_tls, user, smtp_from, to))
@@ -65,8 +68,8 @@ class EmailNotifier(Notifier):
             srv.sendmail(smtp_from, to, msg.as_string())
             srv.quit()
 
-        except Exception as e:
-            self.last_err = '%s' % e
+        except (BaseException, Exception) as e:
+            self.last_err = '%s' % ex(e)
             return False
 
         return True
@@ -95,8 +98,8 @@ class EmailNotifier(Notifier):
 
     def _notify(self, title, body, lang='', extra='', **kwargs):
 
-        show = body.split(' - ')[0]
-        to = self._get_recipients(show)
+        show_name = body.split(' - ')[0]
+        to = self._get_recipients(show_name)
         if not any(to):
             self._log_warning(u'No email recipients to notify, skipping')
             return
@@ -108,18 +111,18 @@ class EmailNotifier(Notifier):
             msg.attach(MIMEText(
                 '<body style="font-family:Helvetica, Arial, sans-serif;">' +
                 '<h3>SickGear Notification - %s</h3>\n' % title +
-                '<p>Show: <b>' + show.encode('ascii', 'xmlcharrefreplace') +
+                '<p>Show: <b>' + show_name.encode('ascii', 'xmlcharrefreplace') +
                 '</b></p>\n<p>Episode: <b>' +
-                unicode(re.search('.+ - (.+?-.+) -.+', body).group(1)).encode('ascii', 'xmlcharrefreplace') +
+                text_type(re.search('.+ - (.+?-.+) -.+', body).group(1)).encode('ascii', 'xmlcharrefreplace') +
                 extra +
                 '</b></p>\n\n' +
                 '<footer style="margin-top:2.5em;padding:.7em 0;color:#777;border-top:#BBB solid 1px;">' +
                 'Powered by SickGear.</footer></body>',
                 'html'))
-        except (StandardError, Exception):
+        except (BaseException, Exception):
             try:
                 msg = MIMEText(body)
-            except (StandardError, Exception):
+            except (BaseException, Exception):
                 msg = MIMEText('Episode %s' % title)
 
         msg['Subject'] = '%s%s: %s' % (lang, title, body)

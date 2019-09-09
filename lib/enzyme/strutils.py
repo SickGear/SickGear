@@ -21,6 +21,7 @@
 __all__ = ['ENCODING', 'str_to_unicode', 'unicode_to_str']
 
 import locale
+from six import text_type
 
 # find the correct encoding
 try:
@@ -63,7 +64,7 @@ def unicode_to_str(s, encoding=None):
     charset, replacing unknown characters. If the given object is no
     unicode string, this function will return the given object.
     """
-    if not type(s) == unicode:
+    if not type(s) == text_type:
         return s
 
     if not encoding:

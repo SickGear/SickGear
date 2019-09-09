@@ -21,10 +21,12 @@ import re
 import traceback
 
 from . import generic
-from sickbeard import logger
-from sickbeard.bs4_parser import BS4Parser
-from sickbeard.helpers import tryInt, has_anime
-from lib.unidecode import unidecode
+from .. import logger
+from ..helpers import has_anime, try_int
+from bs4_parser import BS4Parser
+
+from _23 import unidecode
+from six import iteritems
 
 
 class XspeedsProvider(generic.TorrentProvider):
@@ -59,15 +61,16 @@ class XspeedsProvider(generic.TorrentProvider):
 
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
-        rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {'info': 'detail', 'get': 'download', 'fl': 'free'}.items())
-        for mode in search_params.keys():
+        rc = dict([(k, re.compile('(?i)' + v)) for (k, v) in
+                   iteritems({'info': 'detail', 'get': 'download', 'fl': 'free'})])
+        for mode in search_params:
             save_url, restore = self._set_categories(mode)
             if self.should_skip():
                 return results
             for search_string in search_params[mode]:
                 search_string = search_string.replace(u'£', '%')
                 search_string = re.sub(r'[\s.]+', '%', search_string)
-                search_string = isinstance(search_string, unicode) and unidecode(search_string) or search_string
+                search_string = unidecode(search_string)
 
                 kwargs = dict(post_data={'keywords': search_string, 'do': 'quick_sort', 'page': '0',
                                          'category': '0', 'search_type': 't_name', 'sort': 'added',
@@ -97,8 +100,8 @@ class XspeedsProvider(generic.TorrentProvider):
                                 continue
                             try:
                                 head = head if None is not head else self._header_row(tr)
-                                seeders, leechers, size = [tryInt(n, n) for n in [
-                                    cells[head[x]].get_text().strip() for x in 'seed', 'leech', 'size']]
+                                seeders, leechers, size = [try_int(n, n) for n in [
+                                    cells[head[x]].get_text().strip() for x in ('seed', 'leech', 'size')]]
                                 if self._reject_item(seeders, leechers, self.freeleech and (
                                         None is cells[1].find('img', title=rc['fl']))):
                                     continue
@@ -184,11 +187,12 @@ class XspeedsProvider(generic.TorrentProvider):
             params[name] = values[index][0]
 
         restore = params.copy()
-        restore.update(dict(('cat%s' % c, 'yes') for c in cats))
-        params.update(dict(('cat%s' % c, 'yes') for c in (
+        restore.update(dict([('cat%s' % c, 'yes') for c in cats]))
+        params.update(dict([('cat%s' % c, 'yes') for c in (
             self.categories[(mode, 'Episode')['Propers' == mode]] +
-            ([], self.categories['anime'])[(re.search('(Ca|Pr)', mode) and has_anime()) or
-                                           all([re.search('(Se|Ep)', mode) and self.show and self.show.is_anime])])))
+            ([], self.categories['anime'])[
+                (re.search('(Ca|Pr)', mode) and has_anime()) or
+                all([re.search('(Se|Ep)', mode) and self.show_obj and self.show_obj.is_anime])])]))
         params['torrentsperpage'] = 40
         self.get_url(save_url, post_data=params)
         if self.should_skip():

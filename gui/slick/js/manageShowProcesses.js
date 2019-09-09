@@ -32,9 +32,9 @@ $(document).ready(function() {
 		disableSaveBtn(!0);
 		var param = {};
 		$('.nowarnicon').each(function(i, selected){
-			param[$(selected).data('indexer-id') + '|' + $(selected).prop('checked')] = $(selected).data('indexer');
+			param[$(selected).data('tvid-prodid')] = $(selected).prop('checked');
 		});
-		$.getJSON(sbRoot + '/manage/showProcesses/switch_ignore_warning', param)
+		$.getJSON(sbRoot + '/manage/show-tasks/switch-ignore-warning', param)
 			.done(function(){
 				var body$ = $('body'), nNotChecked = $('.nowarnicon').not(':checked').length;
 				body$.removeClass('n nn nnn nnnn');

@@ -16,14 +16,20 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
+import copy
 import datetime
 import threading
-import copy
 
-from sickbeard import logger
+from . import logger
+
+# noinspection PyUnreachableCode
+if False:
+    from typing import AnyStr, List, Union
+    from .search_queue import BaseSearchQueueItem
+    from .show_queue import ShowQueueItem
 
 
-class QueuePriorities:
+class QueuePriorities(object):
     LOW = 10
     NORMAL = 20
     HIGH = 30
@@ -33,13 +39,13 @@ class QueuePriorities:
 class GenericQueue(object):
     def __init__(self):
 
-        self.currentItem = None
+        self.currentItem = None  # type: QueueItem or None
 
-        self.queue = []
+        self.queue = []  # type: List[Union[QueueItem, BaseSearchQueueItem, ShowQueueItem]]
 
-        self.queue_name = 'QUEUE'
+        self.queue_name = 'QUEUE'  # type: AnyStr
 
-        self.min_priority = 0
+        self.min_priority = 0  # type: int
 
         self.lock = threading.Lock()
 
@@ -54,17 +60,24 @@ class GenericQueue(object):
             self.min_priority = 0
 
     def add_item(self, item):
+        """
+
+        :param item: Queue Item
+        :type item: QueueItem
+        :return: Queue Item
+        :rtype: QueueItem
+        """
         with self.lock:
             item.added = datetime.datetime.now()
             self.queue.append(item)
 
             return item
 
-    def run(self, force=False):
+    def run(self):
 
         # only start a new task if one isn't already going
         with self.lock:
-            if self.currentItem is None or not self.currentItem.isAlive():
+            if None is self.currentItem or not self.currentItem.is_alive():
 
                 # if the thread is dead then the current item should be finished
                 if self.currentItem:
@@ -72,51 +85,42 @@ class GenericQueue(object):
                     self.currentItem = None
 
                 # if there's something in the queue then run it in a thread and take it out of the queue
-                if len(self.queue) > 0:
+                if 0 < len(self.queue):
 
-                    # sort by priority
-                    def sorter(x, y):
-                        """
-                        Sorts by priority descending then time ascending
-                        """
-                        if x.priority == y.priority:
-                            if y.added == x.added:
-                                return 0
-                            elif y.added < x.added:
-                                return 1
-                            elif y.added > x.added:
-                                return -1
-                        else:
-                            return y.priority - x.priority
-
-                    self.queue.sort(cmp=sorter)
+                    self.queue.sort(key=lambda y: (-y.priority, y.added))
                     if self.queue[0].priority < self.min_priority:
                         return
 
                     # launch the queue item in a thread
                     self.currentItem = self.queue.pop(0)
-                    if not self.queue_name == 'SEARCHQUEUE':
+                    if 'SEARCHQUEUE' != self.queue_name:
                         self.currentItem.name = self.queue_name + '-' + self.currentItem.name
                     self.currentItem.start()
 
 
 class QueueItem(threading.Thread):
     def __init__(self, name, action_id=0):
+        # type: (AnyStr, int) -> None
+        """
+
+        :param name: name
+        :param action_id:
+        """
         super(QueueItem, self).__init__()
 
-        self.name = name.replace(' ', '-').upper()
-        self.inProgress = False
-        self.priority = QueuePriorities.NORMAL
-        self.action_id = action_id
+        self.name = name.replace(' ', '-').upper()  # type: AnyStr
+        self.inProgress = False  # type: bool
+        self.priority = QueuePriorities.NORMAL  # type: int
+        self.action_id = action_id  # type: int
         self.stop = threading.Event()
         self.added = None
 
     def copy(self, deepcopy_obj=None):
         """
-        Returns a shallow copy of QueueItem with optional deepcopy of in deepcopy_obj listed objects
+
         :param deepcopy_obj: List of properties to be deep copied
-        :type deepcopy_obj: list
-        :return: return QueueItem
+        :type deepcopy_obj: List
+        :return: a shallow copy of QueueItem with optional deepcopy of in deepcopy_obj listed objects
         :rtype: QueueItem
         """
         cls = self.__class__

@@ -1,5 +1,3 @@
-from base64 import b64encode, b64decode
-
 from requests.adapters import HTTPAdapter
 from requests.exceptions import RequestException
 from requests.models import Response
@@ -14,14 +12,8 @@ import time
 
 import js2py
 
-try:
-    from urlparse import urlparse
-    from urlparse import urlunparse
-except ImportError:
-    # noinspection PyCompatibility
-    from urllib.parse import urlparse
-    # noinspection PyCompatibility
-    from urllib.parse import urlunparse
+from _23 import b64decodestring, b64encodestring, urlparse, urlunparse
+
 
 DEFAULT_USER_AGENTS = [
     'Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko)'
@@ -66,10 +58,10 @@ class CloudflareScraper(Session):
                 and resp.status_code in (503, 429, 403)):
             self.start_time = time.time()
             if (re.search('(?i)cloudflare', resp.headers.get('Server', ''))
-                    and 'jschl_vc' in resp.content
-                    and 'jschl_answer' in resp.content):
+                    and b'jschl_vc' in resp.content
+                    and b'jschl_answer' in resp.content):
                 resp = self.solve_cf_challenge(resp, **kwargs)
-            elif 'ddgu' in resp.content:
+            elif b'ddgu' in resp.content:
                 resp = self.solve_ddg_challenge(resp, **kwargs)
 
         # Otherwise, no anti-bot detected
@@ -86,12 +78,12 @@ class CloudflareScraper(Session):
             kwargs = {k: v for k, v in original_kwargs.items() if k not in ['hooks']}
             kwargs.setdefault('headers', {})
             kwargs.setdefault('data', dict(
-                h=b64encode('%s://%s' % (parsed_url.scheme, parsed_url.hostname)),
-                u=b64encode(parsed_url.path), p=b64encode(parsed_url.port or '')
+                h=b64encodestring('%s://%s' % (parsed_url.scheme, parsed_url.hostname)),
+                u=b64encodestring(parsed_url.path), p=b64encodestring(parsed_url.port or '')
             ))
             self.wait()
             resp = self.request('POST', submit_url, **kwargs)
-        except(Exception, BaseException):
+        except (BaseException, Exception):
             pass
         return resp
 
@@ -125,7 +117,7 @@ class CloudflareScraper(Session):
             try:
                 # no instantiated delay, therefore check js for hard coded CF delay
                 self.delay = float(re.search(r'submit\(\);[^0-9]*?([0-9]+)', body).group(1)) / float(1000)
-            except(Exception, BaseException):
+            except (BaseException, Exception):
                 pass
 
         for i in re.findall(r'(<input[^>]+?hidden[^>]+?>)', body):
@@ -135,16 +127,16 @@ class CloudflareScraper(Session):
                 params[name[0]] = value[0]
 
         js = self.extract_js(body, domain)
-        atob = (lambda s: b64decode('%s' % s).decode('utf-8'))
+        atob = (lambda s: b64decodestring('%s' % s))
         try:
             # Eval the challenge algorithm
             params['jschl_answer'] = str(js2py.EvalJs({'atob': atob}).eval(js))
-        except(Exception, BaseException):
+        except (BaseException, Exception):
             try:
                 params['jschl_answer'] = str(js2py.EvalJs({'atob': atob}).eval(js))
-            except(Exception, BaseException) as e:
+            except (BaseException, Exception) as e:
                 # Something is wrong with the page. This may indicate Cloudflare has changed their anti-bot technique.
-                raise ValueError('Unable to parse Cloudflare anti-bot IUAM page: %s' % e.message)
+                raise ValueError('Unable to parse Cloudflare anti-bot IUAM page: %r' % e)
 
         # Requests transforms any request into a GET after a redirect,
         # so the redirect has to be handled manually here to allow for
@@ -177,7 +169,7 @@ class CloudflareScraper(Session):
                 setTimeout\(function\(\){\s*?(var\s*?
                 (?:s,t,o,p,b,r,e,a,k,i,n,g|t,r,a),f.+?[\r\n\s\S]*?a\.value\s*=.+?)[\r\n]+
                 ''', body).group(1)
-        except(Exception, BaseException):
+        except (BaseException, Exception):
             raise RuntimeError('Error #1 Cloudflare anti-bots changed, please notify SickGear for an update')
 
         if not re.search(r'(?i)(toFixed|t\.length)', js):
@@ -259,7 +251,7 @@ class CloudflareScraper(Session):
         try:
             resp = scraper.get(url, **kwargs)
             resp.raise_for_status()
-        except(Exception, BaseException):
+        except (BaseException, Exception):
             logging.error('[%s] returned an error. Could not collect tokens.' % url)
             raise
 
@@ -279,12 +271,12 @@ class CloudflareScraper(Session):
             scraper.headers['User-Agent'])
 
     @classmethod
-    def get_cookie_string(cls, url, user_agent=None):
+    def get_cookie_string(cls, url, user_agent=None, **kwargs):
         """
         Convenience function for building a Cookie HTTP header value.
         """
         tokens, user_agent = cls.get_tokens(url, user_agent=user_agent, **kwargs)
-        return '; '.join('='.join(pair) for pair in tokens.items()), user_agent
+        return '; '.join(['='.join(pair) for pair in tokens.items()]), user_agent
 
 
 class CloudflareAdapter(HTTPAdapter):

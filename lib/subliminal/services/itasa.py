@@ -28,8 +28,8 @@ import re
 import os
 import requests
 import zipfile
-import StringIO
 import guessit
+from six import StringIO
 
 from sickbeard.common import Quality
 

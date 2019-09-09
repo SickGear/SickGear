@@ -16,12 +16,14 @@
 
 import re
 import time
-import urllib
 
 from . import generic
-from sickbeard import show_name_helpers, tvcache
-from sickbeard.helpers import tryInt
-from sickbeard.bs4_parser import BS4Parser
+from .. import show_name_helpers, tvcache
+from ..helpers import try_int
+from bs4_parser import BS4Parser
+
+from _23 import filter_list, map_list, urlencode
+from six import iteritems
 
 
 class TokyoToshokanProvider(generic.TorrentProvider):
@@ -36,17 +38,18 @@ class TokyoToshokanProvider(generic.TorrentProvider):
     def _search_provider(self, search_params, **kwargs):
 
         results = []
-        if self.show and not self.show.is_anime:
+        if self.show_obj and not self.show_obj.is_anime:
             return results
 
         items = {'Season': [], 'Episode': [], 'Propers': []}
 
-        rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {
-            'nodots': r'[\.\s]+', 'stats': r'S:\s*?(\d)+\s*L:\s*(\d+)', 'size': r'size:\s*(\d+[.,]\d+\w+)'}.iteritems())
+        rc = dict([(k, re.compile('(?i)' + v)) for (k, v) in iteritems({
+            'nodots': r'[\.\s]+', 'stats': r'S:\s*?(\d)+\s*L:\s*(\d+)',
+            'size': r'size:\s*(\d+[.,]\d+\w+)'})])
 
-        for mode in search_params.keys():
+        for mode in search_params:
             for search_string in search_params[mode]:
-                params = urllib.urlencode({'terms': rc['nodots'].sub(' ', search_string).encode('utf-8'), 'type': 1})
+                params = urlencode({'terms': rc['nodots'].sub(' ', search_string).encode('utf-8'), 'type': 1})
 
                 search_url = '%ssearch.php?%s' % (self.url, params)
 
@@ -68,17 +71,17 @@ class TokyoToshokanProvider(generic.TorrentProvider):
                                 try:
                                     bottom_text = bottom.get_text() or ''
                                     stats = rc['stats'].findall(bottom_text)
-                                    seeders, leechers = (0, 0) if not stats else [tryInt(n) for n in stats[0]]
+                                    seeders, leechers = (0, 0) if not stats else [try_int(n) for n in stats[0]]
 
                                     size = rc['size'].findall(bottom_text)
                                     size = size and size[0] or -1
 
                                     info = top.find('td', class_='desc-top')
                                     title = info and re.sub(r'[ .]{2,}', '.', info.get_text().strip())
-                                    links = info and map(lambda l: l.get('href', ''), info.find_all('a')) or None
+                                    links = info and map_list(lambda l: l.get('href', ''), info.find_all('a')) or None
                                     download_url = self._link(
-                                        (filter(lambda l: 'magnet:' in l, links)
-                                         or filter(lambda l: not re.search(r'(magnet:|\.se).+', l), links))[0])
+                                        (filter_list(lambda l: 'magnet:' in l, links)
+                                         or filter_list(lambda l: not re.search(r'(magnet:|\.se).+', l), links))[0])
                                 except (AttributeError, TypeError, ValueError, IndexError):
                                     continue
 
@@ -95,10 +98,10 @@ class TokyoToshokanProvider(generic.TorrentProvider):
         return results
 
     def _season_strings(self, *args, **kwargs):
-        return [{'Season': show_name_helpers.makeSceneSeasonSearchString(self.show, *args)}]
+        return [{'Season': show_name_helpers.makeSceneSeasonSearchString(self.show_obj, *args)}]
 
     def _episode_strings(self, *args, **kwargs):
-        return [{'Episode': show_name_helpers.makeSceneSearchString(self.show, *args)}]
+        return [{'Episode': show_name_helpers.makeSceneSearchString(self.show_obj, *args)}]
 
 
 class TokyoToshokanCache(tvcache.TVCache):
@@ -111,13 +114,13 @@ class TokyoToshokanCache(tvcache.TVCache):
     def _cache_data(self, **kwargs):
 
         mode = 'Cache'
-        search_url = '%srss.php?%s' % (self.provider.url, urllib.urlencode({'filter': '1'}))
+        search_url = '%srss.php?%s' % (self.provider.url, urlencode({'filter': '1'}))
         data = self.get_rss(search_url)
 
         results = []
         if data and 'entries' in data:
 
-            rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {'size': r'size:\s*(\d+[.,]\d+\w+)'}.iteritems())
+            rc = dict([(k, re.compile('(?i)' + v)) for (k, v) in iteritems({'size': r'size:\s*(\d+[.,]\d+\w+)'})])
 
             for cur_item in data.get('entries', []):
                 try:

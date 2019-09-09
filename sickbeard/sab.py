@@ -17,42 +17,46 @@
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
 import sickbeard
-from sickbeard import logger
+from . import logger
+from .classes import NZBDataSearchResult, NZBSearchResult
 
 
-def send_nzb(nzb):
+def send_nzb(search_result):
     """
     Sends an nzb to SABnzbd via the API.
 
-    :param nzb: The NZBSearchResult object to send to SAB
+    :param search_result: The NZBSearchResult object to send to SAB
+    :type search_result: NZBSearchResult or NZBDataSearchResult
+    :return: success
+    :rtype: bool
     """
 
     success, result, nzb_type = True, '', 'nzb'
-    if nzb.resultType in ('nzb', 'nzbdata'):
+    if search_result.resultType in ('nzb', 'nzbdata'):
 
         # set up a dict with the URL params in it
         params = {'output': 'json'}
-        if sickbeard.SAB_USERNAME is not None:
+        if None is not sickbeard.SAB_USERNAME:
             params['ma_username'] = sickbeard.SAB_USERNAME
-        if sickbeard.SAB_PASSWORD is not None:
+        if None is not sickbeard.SAB_PASSWORD:
             params['ma_password'] = sickbeard.SAB_PASSWORD
-        if sickbeard.SAB_APIKEY is not None:
+        if None is not sickbeard.SAB_APIKEY:
             params['apikey'] = sickbeard.SAB_APIKEY
-        if sickbeard.SAB_CATEGORY is not None:
+        if None is not sickbeard.SAB_CATEGORY:
             params['cat'] = sickbeard.SAB_CATEGORY
 
         # use high priority if specified (recently aired episode)
-        if 1 == nzb.priority:
+        if 1 == search_result.priority:
             params['priority'] = 1
 
-        params['nzbname'] = '%s.nzb' % nzb.name
+        params['nzbname'] = '%s.nzb' % search_result.name
 
         kwargs = {}
         # if it's a normal result we just pass SAB the URL
-        if 'nzb' == nzb.resultType:
+        if 'nzb' == search_result.resultType:
             nzb_type = 'nzb url'
             params['mode'] = 'addurl'
-            params['name'] = nzb.url
+            params['name'] = search_result.url
             kwargs['params'] = params
 
         # if we get a raw data result we want to upload it to SAB
@@ -60,12 +64,12 @@ def send_nzb(nzb):
             nzb_type = 'file nzb'
             params['mode'] = 'addfile'
             kwargs['post_data'] = params
-            nzb_data = nzb.get_data()
+            nzb_data = search_result.get_data()
             if not nzb_data:
                 return False
-            kwargs['files'] = {'nzbfile': ('%s.nzb' % nzb.name, nzb_data)}
+            kwargs['files'] = {'nzbfile': ('%s.nzb' % search_result.name, nzb_data)}
 
-        logger.log(u'Sending %s to SABnzbd: %s' % (nzb_type, nzb.name))
+        logger.log(u'Sending %s to SABnzbd: %s' % (nzb_type, search_result.name))
 
         url = '%sapi' % sickbeard.SAB_HOST
         logger.log(u'SABnzbd at %s sent params: %s' % (url, params), logger.DEBUG)
@@ -99,7 +103,7 @@ def _check_sab_response(result):
 
 def _get_url(url, params=None, **kwargs):
 
-    result = sickbeard.helpers.getURL(url, params=params, json=True, **kwargs)
+    result = sickbeard.helpers.get_url(url, params=params, parse_json=True, **kwargs)
     if None is result:
         logger.log('Error, no response from SABnzbd', logger.ERROR)
         return False, 'Error, no response from SABnzbd'

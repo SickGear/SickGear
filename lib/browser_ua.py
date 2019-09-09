@@ -16,6 +16,7 @@
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
 import random
+from six import moves
 
 # Browser apps represented in data
 __all__ = ['chrome', 'opera', 'firefox', 'safari', 'ie']
@@ -28,7 +29,7 @@ def get_ua():
     :rtype: String
     """
     ua = []
-    for x in xrange(1, 10):
+    for x in moves.xrange(1, 10):
         ua += [random.choice(browser_ua.get(random.choice(__all__)))]
     return random.choice(ua)
 

@@ -18,15 +18,19 @@ import datetime
 import re
 
 import sickbeard
-from lib.six import moves
-from base64 import standard_b64encode
-from common import Quality
-from sickbeard import logger
-from sickbeard.helpers import tryInt
-from sickbeard.providers.generic import GenericProvider
+from . import logger
+from .classes import NZBDataSearchResult, NZBSearchResult
+from .common import Quality
+from .helpers import try_int
+from .providers.generic import GenericProvider
+
+from lib.xmlrpclib_to import ServerProxy
+
+from _23 import b64encodestring
+from six import moves
 
 
-def test_nzbget(host, use_https, username, password):
+def test_nzbget(host, use_https, username, password, timeout=300):
 
     result = False
     if not host:
@@ -37,7 +41,7 @@ def test_nzbget(host, use_https, username, password):
     url = 'http%(scheme)s://%(username)s:%(password)s@%(host)s/xmlrpc' % {
         'scheme': ('', 's')[use_https], 'host': re.sub('(?:https?://)?(.*?)/?$', r'\1', host),
         'username': username, 'password': password}
-    rpc_client = moves.xmlrpc_client.ServerProxy(url)
+    rpc_client = ServerProxy(url, timeout=timeout)
     try:
         msg = 'Success. Connected'
         if rpc_client.writelog('INFO', 'SickGear connected as a test'):
@@ -63,7 +67,13 @@ def test_nzbget(host, use_https, username, password):
     return result, msg, rpc_client
 
 
-def send_nzb(nzb):
+def send_nzb(search_result):
+    """
+
+    :param search_result: search result
+    :type search_result: NZBSearchResult or NZBDataSearchResult
+    :return:
+    """
     result = False
     add_to_top = False
     nzbget_prio = 0
@@ -77,84 +87,86 @@ def send_nzb(nzb):
     dupekey = ''
     dupescore = 0
     # if it aired recently make it high priority and generate DupeKey/Score
-    for curEp in nzb.episodes:
+    for cur_ep_obj in search_result.ep_obj_list:
         if '' == dupekey:
             dupekey = 'SickGear-%s%s' % (
-                sickbeard.indexerApi(curEp.show.indexer).config.get('dupekey', ''), curEp.show.indexerid)
-        dupekey += '-%s.%s' % (curEp.season, curEp.episode)
+                sickbeard.TVInfoAPI(cur_ep_obj.show_obj.tvid).config.get('dupekey', ''), cur_ep_obj.show_obj.prodid)
+        dupekey += '-%s.%s' % (cur_ep_obj.season, cur_ep_obj.episode)
 
     if 1 == nzb.priority:
         add_to_top = True
         nzbget_prio = sickbeard.NZBGET_PRIORITY
 
-    if Quality.UNKNOWN != nzb.quality:
-        dupescore = nzb.quality * 100
+    if Quality.UNKNOWN != search_result.quality:
+        dupescore = search_result.quality * 100
 
-    dupescore += (0, 9 + nzb.properlevel)[0 < nzb.properlevel]
+    dupescore += (0, 9 + search_result.properlevel)[0 < search_result.properlevel]
 
     nzbcontent64 = None
-    if 'nzbdata' == nzb.resultType:
-        data = nzb.get_data()
+    if 'nzbdata' == search_result.resultType:
+        data = search_result.get_data()
         if not data:
             return False
-        nzbcontent64 = standard_b64encode(data).decode('utf-8')
-    elif 'Anizb' == nzb.provider.name and 'nzb' == nzb.resultType:
+        nzbcontent64 = b64encodestring(data, keep_eol=True)
+    elif 'Anizb' == search_result.provider.name and 'nzb' == search_result.resultType:
         gen_provider = GenericProvider('')
-        data = gen_provider.get_url(nzb.url)
+        data = gen_provider.get_url(search_result.url)
         if None is data:
             return result
-        nzbcontent64 = standard_b64encode(data).decode('utf-8')
+        nzbcontent64 = b64encodestring(data, keep_eol=True)
 
-    logger.log(u'Sending NZB to NZBGet: %s' % nzb.name)
+    logger.log(u'Sending NZB to NZBGet: %s' % search_result.name)
 
     try:
         # Find out if nzbget supports priority (Version 9.0+), old versions beginning with a 0.x will use the old cmd
         nzbget_version_str = rpc_client.version()
-        nzbget_version = tryInt(nzbget_version_str[:nzbget_version_str.find('.')])
+        nzbget_version = try_int(nzbget_version_str[:nzbget_version_str.find('.')])
 
         # v13+ has a combined append method that accepts both (url and content)
         # also the return value has changed from boolean to integer
         # (Positive number representing NZBID of the queue item. 0 and negative numbers represent error codes.)
         if 13 <= nzbget_version:
-            nzbget_result = rpc_client.append(
-                '%s.nzb' % nzb.name, (nzbcontent64, nzb.url)[None is nzbcontent64], sickbeard.NZBGET_CATEGORY,
-                nzbget_prio, False, False, dupekey, dupescore, 'score') > 0
+            nzbget_result = 0 < rpc_client.append(
+                '%s.nzb' % search_result.name, (nzbcontent64, search_result.url)[None is nzbcontent64],
+                sickbeard.NZBGET_CATEGORY, nzbget_prio, False, False, dupekey, dupescore, 'score')
 
         elif 12 == nzbget_version:
-            if nzbcontent64 is not None:
-                nzbget_result = rpc_client.append('%s.nzb' % nzb.name, sickbeard.NZBGET_CATEGORY,
-                                                  nzbget_prio, False, nzbcontent64, False, dupekey, dupescore, 'score')
+            if None is not nzbcontent64:
+                nzbget_result = rpc_client.append(
+                    '%s.nzb' % search_result.name, sickbeard.NZBGET_CATEGORY,
+                    nzbget_prio, False, nzbcontent64, False, dupekey, dupescore, 'score')
             else:
-                nzbget_result = rpc_client.appendurl('%s.nzb' % nzb.name, sickbeard.NZBGET_CATEGORY,
-                                                     nzbget_prio, False, nzb.url, False, dupekey, dupescore, 'score')
+                nzbget_result = rpc_client.appendurl(
+                    '%s.nzb' % search_result.name, sickbeard.NZBGET_CATEGORY,
+                    nzbget_prio, False, search_result.url, False, dupekey, dupescore, 'score')
         elif 0 == nzbget_version:
-            if nzbcontent64 is not None:
-                nzbget_result = rpc_client.append('%s.nzb' % nzb.name, sickbeard.NZBGET_CATEGORY,
+            if None is not nzbcontent64:
+                nzbget_result = rpc_client.append('%s.nzb' % search_result.name, sickbeard.NZBGET_CATEGORY,
                                                   add_to_top, nzbcontent64)
             else:
-                if 'nzb' == nzb.resultType:
+                if 'nzb' == search_result.resultType:
                     gen_provider = GenericProvider('')
-                    data = gen_provider.get_url(nzb.url)
+                    data = gen_provider.get_url(search_result.url)
                     if None is data:
                         return result
 
-                    nzbcontent64 = standard_b64encode(data).decode('utf-8')
-                nzbget_result = rpc_client.append('%s.nzb' % nzb.name, sickbeard.NZBGET_CATEGORY,
+                    nzbcontent64 = b64encodestring(data, keep_eol=True)
+                nzbget_result = rpc_client.append('%s.nzb' % search_result.name, sickbeard.NZBGET_CATEGORY,
                                                   add_to_top, nzbcontent64)
         else:
-            if nzbcontent64 is not None:
-                nzbget_result = rpc_client.append('%s.nzb' % nzb.name, sickbeard.NZBGET_CATEGORY,
+            if None is not nzbcontent64:
+                nzbget_result = rpc_client.append('%s.nzb' % search_result.name, sickbeard.NZBGET_CATEGORY,
                                                   nzbget_prio, False, nzbcontent64)
             else:
-                nzbget_result = rpc_client.appendurl('%s.nzb' % nzb.name, sickbeard.NZBGET_CATEGORY,
-                                                     nzbget_prio, False, nzb.url)
+                nzbget_result = rpc_client.appendurl('%s.nzb' % search_result.name, sickbeard.NZBGET_CATEGORY,
+                                                     nzbget_prio, False, search_result.url)
 
         if nzbget_result:
             logger.log(u'NZB sent to NZBGet successfully', logger.DEBUG)
             result = True
         else:
-            logger.log(u'NZBGet could not add %s to the queue' % ('%s.nzb' % nzb.name), logger.ERROR)
-    except(StandardError, Exception):
-        logger.log(u'Connect Error to NZBGet: could not add %s to the queue' % ('%s.nzb' % nzb.name), logger.ERROR)
+            logger.log(u'NZBGet could not add %s.nzb to the queue' % search_result.name, logger.ERROR)
+    except (BaseException, Exception):
+        logger.log(u'Connect Error to NZBGet: could not add %s.nzb to the queue' % search_result.name, logger.ERROR)
 
     return result

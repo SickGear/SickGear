@@ -7,7 +7,6 @@ $(document).ready(function(){
 
 	$('#test-growl').click(function () {
 		var growlHost = $.trim($('#growl-host').val());
-		var growlPassword = $.trim($('#growl-password').val());
 		if (!growlHost) {
 			$('#test-growl-result').html('Please fill out the necessary fields above.');
 			$('#growl-host').addClass('warning');
@@ -16,8 +15,8 @@ $(document).ready(function(){
 		$('#growl-host').removeClass('warning');
 		$(this).prop('disabled', !0);
 		$('#test-growl-result').html(loading);
-		$.get(sbRoot + '/home/test_growl',
-			{host: growlHost, password: growlPassword})
+		$.get(sbRoot + '/home/test-growl',
+			{host: growlHost})
 			.done(function (data) {
 				$('#test-growl-result').html(data);
 				$('#test-growl').prop('disabled', !1);
@@ -35,7 +34,7 @@ $(document).ready(function(){
 		$('#prowl-api').removeClass('warning');
 		$(this).prop('disabled', !0);
 		$('#test-prowl-result').html(loading);
-		$.get(sbRoot + '/home/test_prowl',
+		$.get(sbRoot + '/home/test-prowl',
 			{prowl_api: prowlApi, prowl_priority: prowlPriority})
 			.done(function (data) {
 				$('#test-prowl-result').html(data);
@@ -47,7 +46,7 @@ $(document).ready(function(){
 		$(this).prop('disabled', !0);
 		$('#emby-host,#emby-apikey').removeClass('warning');
 		$('#test-emby-result').html(loading);
-		$.get(sbRoot + '/home/discover_emby')
+		$.get(sbRoot + '/home/discover-emby')
 			.done(function (data) {
 				var result = 'Unable to discover a server, is one running?';
 				if ('' !== data) {
@@ -79,7 +78,7 @@ $(document).ready(function(){
 		$('#emby-host,#emby-apikey').removeClass('warning');
 		$(this).prop('disabled', !0);
 		$('#test-emby-result').html(loading);
-		$.get(sbRoot + '/home/test_emby',
+		$.get(sbRoot + '/home/test-emby',
 			{host: host, apikey: apikey})
 			.done(function (data) {
 				$('#test-emby-result').html(data);
@@ -99,7 +98,7 @@ $(document).ready(function(){
 		$('#kodi-host').removeClass('warning');
 		$(this).prop('disabled', !0);
 		$('#test-kodi-result').html(loading);
-		$.get(sbRoot + '/home/test_kodi',
+		$.get(sbRoot + '/home/test-kodi',
 			{host: kodiHost, username: kodiUsername, password: kodiPassword})
 			.done(function (data) {
 				$('#test-kodi-result').html(data);
@@ -119,7 +118,7 @@ $(document).ready(function(){
 		$('#xbmc-host').removeClass('warning');
 		$(this).prop('disabled', !0);
 		$('#test-xbmc-result').html(loading);
-		$.get(sbRoot + '/home/test_xbmc',
+		$.get(sbRoot + '/home/test-xbmc',
 			{host: xbmcHost, username: xbmcUsername, password: xbmcPassword})
 			.done(function (data) {
 				$('#test-xbmc-result').html(data);
@@ -149,7 +148,7 @@ $(document).ready(function(){
 		$('#plex-host').removeClass('warning');
 		$(this).prop('disabled', !0);
 		$('#test-pmc-result').html(loading);
-		$.get(sbRoot + '/home/test_plex',
+		$.get(sbRoot + '/home/test-plex',
 			{host: plexHost, username: plexUsername, password: plexPassword})
 			.done(function (data) {
 				$('#test-pmc-result').html(data);
@@ -169,7 +168,7 @@ $(document).ready(function(){
 		$('#plex-server-host').removeClass('warning');
 		$(this).prop('disabled', !0);
 		$('#test-pms-result').html(loading);
-		$.get(sbRoot + '/home/test_plex',
+		$.get(sbRoot + '/home/test-plex',
 			{host: plexServerHost, username: plexUsername, password: plexPassword, server: !0})
 			.done(function (data) {
 				$('#test-pms-result').html(data);
@@ -188,7 +187,7 @@ $(document).ready(function(){
 		$('#boxcar2-access-token').removeClass('warning');
 		$(this).prop('disabled', !0);
 		$('#test-boxcar2-result').html(loading);
-		$.get(sbRoot + '/home/test_boxcar2',
+		$.get(sbRoot + '/home/test-boxcar2',
 			{access_token: boxcarAccesstoken, sound: boxcarSound})
 			.done(function (data) {
 				$('#test-boxcar2-result').html(data);
@@ -221,7 +220,7 @@ $(document).ready(function(){
 		$('#pushover-userkey,#pushover-apikey').removeClass('warning');
 		$(this).prop('disabled', !0);
 		testResult$.html(loading);
-		$.get(sbRoot + '/home/test_pushover',
+		$.get(sbRoot + '/home/test-pushover',
 			{user_key: pushoverUserkey, api_key: pushoverApikey, priority: pushoverPriority,
 				device: pushoverDevice, sound: pushoverSound})
 			.done(function (data) {
@@ -252,7 +251,7 @@ $(document).ready(function(){
 			$('#test-pushover-result').html(loading);
 		}
 		var currentPushoverDevice = $('#pushover-device').val();
-		$.get(sbRoot + '/home/get_pushover_devices',
+		$.get(sbRoot + '/home/get-pushover-devices',
 			{user_key: pushoverUserkey, api_key: pushoverApikey})
 			.done(function (data) {
 				var devices = jQuery.parseJSON(data || '{}').devices;
@@ -291,7 +290,7 @@ $(document).ready(function(){
 
 	$('#test-libnotify').click(function() {
 		$('#test-libnotify-result').html(loading);
-		$.get(sbRoot + '/home/test_libnotify',
+		$.get(sbRoot + '/home/test-libnotify',
 			function (data) { $('#test-libnotify-result').html(data); });
 	});
 
@@ -304,7 +303,7 @@ $(document).ready(function(){
 		$('#test-nmj-result').html(loading);
 		var nmjHost = $('#nmj-host').val();
 
-		$.get(sbRoot + '/home/settings_nmj',
+		$.get(sbRoot + '/home/settings-nmj',
 			{host: nmjHost},
 			function (data) {
 				if (null === data) {
@@ -341,7 +340,7 @@ $(document).ready(function(){
 		$('#nmj-host').removeClass('warning');
 		$(this).prop('disabled', !0);
 		$('#test-nmj-result').html(loading);
-		$.get(sbRoot + '/home/test_nmj',
+		$.get(sbRoot + '/home/test-nmj',
 			{host: nmjHost, database: nmjDatabase, mount: nmjMount})
 			.done(function (data) {
 				$('#test-nmj-result').html(data);
@@ -367,7 +366,7 @@ $(document).ready(function(){
 		}
 
 		var nmjv2Dbinstance=$('#NMJv2db-instance').val();
-		$.get(sbRoot + '/home/settings_nmj2',
+		$.get(sbRoot + '/home/settings-nmj2',
 			{host: nmjv2Host,dbloc: nmjv2Dbloc,instance: nmjv2Dbinstance},
 			function (data){
 				if (null === data) {
@@ -394,7 +393,7 @@ $(document).ready(function(){
 		$('#nmjv2-host').removeClass('warning');
 		$(this).prop('disabled', !0);
 		$('#test-nmjv2-result').html(loading);
-		$.get(sbRoot + '/home/test_nmj2',
+		$.get(sbRoot + '/home/test-nmj2',
 			{host: nmjv2Host})
 			.done(function (data) {
 				$('#test-nmjv2-result').html(data);
@@ -412,7 +411,7 @@ $(document).ready(function(){
 		$('#pushalot-authorizationtoken').removeClass('warning');
 		$(this).prop('disabled', !0);
 		$('#test-pushalot-result').html(loading);
-		$.get(sbRoot + '/home/test_pushalot',
+		$.get(sbRoot + '/home/test-pushalot',
 			{authorization_token: pushalotAuthorizationtoken})
 			.done(function (data) {
 				$('#test-pushalot-result').html(data);
@@ -431,7 +430,7 @@ $(document).ready(function(){
 		$('#pushbullet-access-token').removeClass('warning');
 		$(this).prop('disabled', !0);
 		$('#test-pushbullet-result').html(loading);
-		$.get(sbRoot + '/home/test_pushbullet',
+		$.get(sbRoot + '/home/test-pushbullet',
 			{access_token: pushbulletAccessToken, device_iden: pushbulletDeviceIden})
 			.done(function (data) {
 				$('#test-pushbullet-result').html(data);
@@ -455,7 +454,7 @@ $(document).ready(function(){
 		} else {
 			$(this).prop('disabled', !0);
 			$('#test-slack-result').html(loading);
-			$.get(sbRoot + '/home/test_slack',
+			$.get(sbRoot + '/home/test-slack',
 				{channel: slackChannel, as_authed: slackAsAuthed, bot_name: slackBotName,
 					icon_url: slackIconUrl, access_token: slackAccessToken})
 				.done(function (data) {
@@ -479,7 +478,7 @@ $(document).ready(function(){
 		} else {
 			$(this).prop('disabled', !0);
 			$('#test-discordapp-result').html(loading);
-			$.get(sbRoot + '/home/test_discordapp',
+			$.get(sbRoot + '/home/test-discordapp',
 				{as_authed: discordappAsAuthed, username: discordappUsername, icon_url: discordappIconUrl,
 					as_tts: discordappAsTts, access_token: discordappAccessToken})
 				.done(function (data) {
@@ -501,7 +500,7 @@ $(document).ready(function(){
 		} else {
 			$(this).prop('disabled', !0);
 			$('#test-gitter-result').html(loading);
-			$.get(sbRoot + '/home/test_gitter',
+			$.get(sbRoot + '/home/test-gitter',
 				{room_name: gitterRoom, access_token: gitterAccessToken})
 				.done(function (data) {
 					$('#test-gitter-result').html(data);
@@ -522,7 +521,7 @@ $(document).ready(function(){
 			$('#test-pushbullet-result').html(loading);
 		}
 		var currentPushbulletDevice = $('#pushbullet-device-iden').val();
-		$.get(sbRoot + '/home/get_pushbullet_devices',
+		$.get(sbRoot + '/home/get-pushbullet-devices',
 			{access_token: pushbulletAccessToken})
 			.done(function (data) {
 				var devices = jQuery.parseJSON(data || '{}').devices;
@@ -567,32 +566,6 @@ $(document).ready(function(){
 		getPushbulletDevices();
 	}
 
-	$('#twitter-step1').click(function() {
-		$('#test-twitter-result').html(loading);
-		$.get(sbRoot + '/home/twitter_step1',
-			function (data) {window.open(data); })
-			.done(function () { $('#test-twitter-result').html('<b>Step1:</b> Confirm Authorization'); });
-	});
-
-	$('#twitter-step2').click(function () {
-		var twitterKey = $.trim($('#twitter-key').val());
-		if (!twitterKey) {
-			$('#test-twitter-result').html('Please fill out the necessary fields above.');
-			$('#twitter-key').addClass('warning');
-			return;
-		}
-		$('#twitter-key').removeClass('warning');
-		$('#test-twitter-result').html(loading);
-		$.get(sbRoot + '/home/twitter_step2',
-			{key: twitterKey},
-			function (data) { $('#test-twitter-result').html(data); });
-	});
-
-	$('#test-twitter').click(function() {
-		$.get(sbRoot + '/home/test_twitter',
-			function (data) { $('#test-twitter-result').html(data); });
-	});
-
 	var elTraktAuth = $('#trakt-authenticate'), elTraktAuthResult = $('#trakt-authentication-result');
 
 	function traktSendAuth(){
@@ -601,7 +574,7 @@ $(document).ready(function(){
 
 		elTraktAuthResult.html(loading);
 
-		$.get(sbRoot + '/home/trakt_authenticate',
+		$.get(sbRoot + '/home/trakt-authenticate',
 			{pin: strPin, account: strCurAccountId})
 			.done(function(data) {
 				elTraktAuth.prop('disabled', !1);
@@ -711,7 +684,7 @@ $(document).ready(function(){
 				'Yes'	: {
 					'class'	: 'green',
 					'action': function() {
-						$.get(sbRoot + '/home/trakt_delete',
+						$.get(sbRoot + '/home/trakt-delete',
 							{accountid: elSelected.val()})
 							.done(function(data) {
 								that.prop('disabled', !1);
@@ -754,7 +727,7 @@ $(document).ready(function(){
 	});
 
 	function loadShowNotifyLists() {
-		$.get(sbRoot + '/home/load_show_notify_lists', function (data) {
+		$.get(sbRoot + '/home/load-show-notify-lists', function (data) {
 			var list, html, item, len= 0, el;
 			list = $.parseJSON(data);
 			html = [];
@@ -800,7 +773,7 @@ $(document).ready(function(){
 				$('#test-email-result').html('No show selected for save.');
 				return
 			}
-			$.post(sbRoot + '/home/save_show_email', {
+			$.post(sbRoot + '/home/save-show-email', {
 				_xsrf: Cookies.get('_xsrf'),
 				show: show,
 				emails: $('#show-email-list').val()},
@@ -844,7 +817,7 @@ $(document).ready(function(){
 			if (null === to || 0 === to.length || null === to.match(/.*@.*/)) {
 				status.html('Required: A valid address for email test');
 			} else {
-				$.get(sbRoot + '/home/test_email',
+				$.get(sbRoot + '/home/test-email',
 					{host:host, port:port, smtp_from:from, use_tls:tls, user:user, pwd:pwd, to:to},
 					function(msg) {$('#test-email-result').html(msg);});
 			}

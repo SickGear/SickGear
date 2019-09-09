@@ -114,7 +114,7 @@ class RTorrent(object):
         try:
             self._check_connection()
             return True
-        except(Exception, BaseException):
+        except (BaseException, Exception):
             return False
 
     def _check_connection(self):
@@ -238,7 +238,7 @@ class RTorrent(object):
                 method = rpc.find_method(call)
                 method_name = filter(lambda m: self.method_exists(m), (method.rpc_call,) + method.aliases)[0]
                 param += ['%s=%s' % (method_name, arg)]
-            except(Exception, BaseException):
+            except (BaseException, Exception):
                 pass
 
         method = getattr(self.get_connection(), func_name)
@@ -246,7 +246,7 @@ class RTorrent(object):
         if not self.use_target:
             try:
                 method(*param)
-            except(Exception, BaseException):
+            except (BaseException, Exception):
                 self.use_target = True
         if self.use_target:
             method('', *param)
@@ -265,7 +265,7 @@ class RTorrent(object):
                 try:
                     t = filter(lambda td: td.info_hash.upper() == info_hash, self.get_torrents())[0]
                     break
-                except(Exception, BaseException):
+                except (BaseException, Exception):
                     time.sleep(self.request_interval)
                     max_retries -= 1
 
@@ -324,7 +324,7 @@ class RTorrent(object):
                 try:
                     t = filter(lambda td: td.info_hash == info_hash, self.get_torrents())[0]
                     break
-                except(Exception, BaseException):
+                except (BaseException, Exception):
                     time.sleep(self.request_interval)
                     verify_retries -= 1
 

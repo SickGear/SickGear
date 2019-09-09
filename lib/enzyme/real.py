@@ -22,14 +22,15 @@ __all__ = ['Parser']
 
 import struct
 import logging
-from exceptions import ParseError
-import core
+from .exceptions import ParseError
+from . import core
 
 # http://www.pcisys.net/~melanson/codecs/rmff.htm
 # http://www.pcisys.net/~melanson/codecs/
 
 # get logging object
 log = logging.getLogger(__name__)
+
 
 class RealVideo(core.AVContainer):
     def __init__(self, file):
@@ -47,7 +48,7 @@ class RealVideo(core.AVContainer):
             raise ParseError()
 
         file_version, num_headers = struct.unpack('>II', file.read(8))
-        log.debug(u'size: %d, ver: %d, headers: %d' % \
+        log.debug(u'size: %d, ver: %d, headers: %d' %
                   (object_size, file_version, num_headers))
         for _ in range(0, num_headers):
             try:
@@ -70,7 +71,6 @@ class RealVideo(core.AVContainer):
             log.debug(u'%r [%d]' % (object_id, object_size - 10))
         # Read all the following headers
 
-
     def _read_header(self, object_id, s):
         if object_id == 'PROP':
             prop = struct.unpack('>9IHH', s)
@@ -80,13 +80,13 @@ class RealVideo(core.AVContainer):
             log.debug(u'MDPR: %r' % mdpr)
             self.length = mdpr[7] / 1000.0
             (stream_name_size,) = struct.unpack('>B', s[30:31])
-            stream_name = s[31:31 + stream_name_size]
+            # stream_name = s[31:31 + stream_name_size]
             pos = 31 + stream_name_size
             (mime_type_size,) = struct.unpack('>B', s[pos:pos + 1])
             mime = s[pos + 1:pos + 1 + mime_type_size]
             pos += mime_type_size + 1
             (type_specific_len,) = struct.unpack('>I', s[pos:pos + 4])
-            type_specific = s[pos + 4:pos + 4 + type_specific_len]
+            # type_specific = s[pos + 4:pos + 4 + type_specific_len]
             pos += 4 + type_specific_len
             if mime[:5] == 'audio':
                 ai = core.AudioStream()

@@ -83,7 +83,7 @@ $(document).ready(function () {
 
 	$('div[id^="progressbar"]').each(function (k, v) {
 		var progress = parseInt($(this).siblings('span[class="sort-data"]').attr('data-progress'), 10),
-			elId = '#' + $(this).attr('id');
+			elId = '[id="' + $(this).attr('id') + '"]';
 		v = 80;
 		$(elId).progressbar({value: progress});
 		if (progress < v) {

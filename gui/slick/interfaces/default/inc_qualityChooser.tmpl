@@ -1,5 +1,6 @@
 #import sickbeard
 #from sickbeard.common import Quality, qualityPresets, qualityPresetStrings
+#from _23 import filter_list
 ##
 #set $html_checked = ' checked="checked"'
 #set $html_selected = ' selected="selected"'
@@ -34,7 +35,7 @@
 
 			<span id="wanted-quality" class="component-desc">
 				<p>select one or more qualities; the best one found when searching will be used</p>
-#set $any_quality_list = filter(lambda x: x > $Quality.NONE and x < $Quality.UNKNOWN, $Quality.qualityStrings)
+#set $any_quality_list = filter_list(lambda x: x > $Quality.NONE and x < $Quality.UNKNOWN, $Quality.qualityStrings)
 #set $has_unknown = False
 #for $cur_quality in sorted($any_quality_list):
     ##set $has_unknown |= ($Quality.UNKNOWN == $cur_quality and $cur_quality in $any_qualities)
@@ -61,7 +62,7 @@
 			</div>
 			<span id="upgrade-quality" class="component-desc">
 				<p>optional, upgrade existing media to any selected quality</p>
-#set $best_quality_list = filter(lambda x: x > $Quality.SDTV and x < $Quality.UNKNOWN, $Quality.qualityStrings)
+#set $best_quality_list = filter_list(lambda x: x > $Quality.SDTV and x < $Quality.UNKNOWN, $Quality.qualityStrings)
 #for $cur_quality in sorted($best_quality_list):
 				<a href="#" data-quality="$cur_quality" class="btn btn-inverse dark-bg#echo ('', ' active')[$cur_quality in $best_qualities]#" role="button"><i class="icon-glyph searchadd"></i>$Quality.get_quality_ui($cur_quality)</a>
     #if $cur_quality in [$Quality.SDDVD, $Quality.FULLHDTV, $Quality.FULLHDBLURAY]
@@ -84,9 +85,9 @@
 		<span class="component-desc bfr">
 			<div style="float:left;padding-right:28px">
 				<h4 class="jumbo">Wanted</h4>
-#set $any_quality_list = filter(lambda x: x > $Quality.NONE, $Quality.qualityStrings)
+#set $any_quality_list = filter_list(lambda x: x > $Quality.NONE, $Quality.qualityStrings)
 
-				<select id="wanted-qualities" name="anyQualities" multiple="multiple" size="$len($any_quality_list)" class="form-control form-control-inline input-sm">
+				<select id="wanted-qualities" name="any_qualities" multiple="multiple" size="$len($any_quality_list)" class="form-control form-control-inline input-sm">
 #for $cur_quality in sorted($any_quality_list):
 					<option value="$cur_quality"#echo ('', $html_selected)[$cur_quality in $any_qualities]#>$Quality.get_quality_ui($cur_quality)</option>
 #end for
@@ -95,8 +96,8 @@
 
 			<div style="float:left;padding-right:20px">
 				<h4 class="jumbo">Upgrade to</h4>
-#set $best_quality_list = filter(lambda x: x > $Quality.SDTV and x < $Quality.UNKNOWN, $Quality.qualityStrings)
-				<select id="upgrade-qualities" name="bestQualities" multiple="multiple" size="$len($best_quality_list)" class="form-control form-control-inline input-sm">
+#set $best_quality_list = filter_list(lambda x: x > $Quality.SDTV and x < $Quality.UNKNOWN, $Quality.qualityStrings)
+				<select id="upgrade-qualities" name="best_qualities" multiple="multiple" size="$len($best_quality_list)" class="form-control form-control-inline input-sm">
 #for $cur_quality in sorted($best_quality_list):
 					<option value="$cur_quality"#echo ('', $html_selected)[$cur_quality in $best_qualities]#>$Quality.get_quality_ui($cur_quality)</option>
 #end for

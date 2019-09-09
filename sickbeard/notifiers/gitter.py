@@ -17,8 +17,8 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
+from .generic import Notifier
 import sickbeard
-from sickbeard.notifiers.generic import Notifier
 
 
 class GitterNotifier(Notifier):
@@ -35,14 +35,14 @@ class GitterNotifier(Notifier):
 
         # get user of token
         # noinspection PyTypeChecker
-        resp = sickbeard.helpers.getURL(**dict([('url', '%suser' % api_url)] + params))
+        resp = sickbeard.helpers.get_url(**dict([('url', '%suser' % api_url)] + params))
         user_id = resp and 1 == len(resp) and resp[0].get('id') or None
         if None is user_id:
             result = self._failed('bad oath access token?')
         else:
             # get a room
             # noinspection PyTypeChecker
-            resp = sickbeard.helpers.getURL(**dict(
+            resp = sickbeard.helpers.get_url(**dict(
                 [('url', '%srooms' % api_url),
                  ('post_json', dict(uri=self._choose(room_name, sickbeard.GITTER_ROOM)))] + params))
             room_id = resp and resp.get('id') or None
@@ -53,14 +53,14 @@ class GitterNotifier(Notifier):
 
                 # join room
                 # noinspection PyTypeChecker
-                if not sickbeard.helpers.getURL(**dict(
+                if not sickbeard.helpers.get_url(**dict(
                                 [('url', '%suser/%s/rooms' % (api_url, user_id)),
                                  ('post_json', dict(id=room_id))] + params)):
                     result = self._failed('failed to join room')
                 else:
                     # send text
                     # noinspection PyTypeChecker
-                    resp = sickbeard.helpers.getURL(**dict(
+                    resp = sickbeard.helpers.get_url(**dict(
                         [('url', '%srooms/%s/chatMessages' % (api_url, room_id)),
                          ('post_json', dict(text=self._body_only(title, body)))] + params))
                     if None is (resp and resp.get('id') or None):

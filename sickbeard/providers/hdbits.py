@@ -15,19 +15,20 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
-import re
-import urllib
-
-from . import generic
-from sickbeard import logger
-from sickbeard.exceptions import ex, AuthException
-from sickbeard.helpers import tryInt
-from sickbeard.indexers import indexer_config
-
 try:
     import json
 except ImportError:
     from lib import simplejson as json
+import re
+
+from exceptions_helper import ex, AuthException
+
+from . import generic
+from .. import logger
+from ..helpers import try_int
+from ..indexers import indexer_config
+
+from _23 import urlencode
 
 
 class HDBitsProvider(generic.TorrentProvider):
@@ -60,13 +61,13 @@ class HDBitsProvider(generic.TorrentProvider):
 
         params = super(HDBitsProvider, self)._season_strings(ep_obj)
 
-        show = ep_obj.show
-        if indexer_config.INDEXER_TVDB == show.indexer and show.indexerid:
+        show_obj = ep_obj.show_obj
+        if indexer_config.TVINFO_TVDB == show_obj.tvid and show_obj.prodid:
             params[0]['Season'].insert(0, dict(tvdb=dict(
-                id=show.indexerid,
-                season=(show.air_by_date or show.is_sports) and str(ep_obj.airdate)[:7] or
-                (show.is_anime and ('%d' % ep_obj.scene_absolute_number) or
-                 (ep_obj.season, ep_obj.scene_season)[bool(show.is_scene)]))))
+                id=show_obj.prodid,
+                season=(show_obj.air_by_date or show_obj.is_sports) and str(ep_obj.airdate)[:7] or
+                (show_obj.is_anime and ('%d' % ep_obj.scene_absolute_number) or
+                 (ep_obj.season, ep_obj.scene_season)[bool(show_obj.is_scene)]))))
 
         return params
 
@@ -74,16 +75,16 @@ class HDBitsProvider(generic.TorrentProvider):
 
         params = super(HDBitsProvider, self)._episode_strings(ep_obj, sep_date='|')
 
-        show = ep_obj.show
-        if indexer_config.INDEXER_TVDB == show.indexer and show.indexerid:
+        show_obj = ep_obj.show_obj
+        if indexer_config.TVINFO_TVDB == show_obj.tvid and show_obj.prodid:
             id_param = dict(
-                id=show.indexerid,
-                episode=show.air_by_date and str(ep_obj.airdate).replace('-', ' ') or
-                (show.is_sports and ep_obj.airdate.strftime('%b') or
-                 (show.is_anime and ('%i' % int(ep_obj.scene_absolute_number)) or
-                  (ep_obj.episode, ep_obj.scene_episode)[bool(show.is_scene)])))
-            if not(show.air_by_date and show.is_sports and show.is_anime):
-                id_param['season'] = (ep_obj.season, ep_obj.scene_season)[bool(show.is_scene)]
+                id=show_obj.prodid,
+                episode=show_obj.air_by_date and str(ep_obj.airdate).replace('-', ' ') or
+                (show_obj.is_sports and ep_obj.airdate.strftime('%b') or
+                 (show_obj.is_anime and ('%i' % int(ep_obj.scene_absolute_number)) or
+                  (ep_obj.episode, ep_obj.scene_episode)[bool(show_obj.is_scene)])))
+            if not(show_obj.air_by_date and show_obj.is_sports and show_obj.is_anime):
+                id_param['season'] = (ep_obj.season, ep_obj.scene_season)[bool(show_obj.is_scene)]
             params[0]['Episode'].insert(0, dict(tvdb=id_param))
 
         return params
@@ -97,7 +98,7 @@ class HDBitsProvider(generic.TorrentProvider):
 
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
-        for mode in search_params.keys():
+        for mode in search_params:
             for search_param in search_params[mode]:
 
                 post_data = api_data.copy()
@@ -111,7 +112,7 @@ class HDBitsProvider(generic.TorrentProvider):
                 post_data = json.dumps(post_data)
                 search_url = self.urls['search']
 
-                json_resp = self.get_url(search_url, post_data=post_data, json=True)
+                json_resp = self.get_url(search_url, post_data=post_data, parse_json=True)
                 if self.should_skip():
                     return results
 
@@ -126,14 +127,14 @@ class HDBitsProvider(generic.TorrentProvider):
                 cnt = len(items[mode])
                 for item in json_resp['data']:
                     try:
-                        seeders, leechers, size = [tryInt(n, n) for n in [item.get(x) for x in
-                                                                          'seeders', 'leechers', 'size']]
+                        seeders, leechers, size = [try_int(n, n) for n in [item.get(x) for x in
+                                                                           ('seeders', 'leechers', 'size')]]
                         if self._reject_item(seeders, leechers, self.freeleech and (
                                 re.search('(?i)no', item.get('freeleech', 'no')))):
                             continue
 
                         title = item['name']
-                        download_url = self.urls['get'] % urllib.urlencode({'id': item['id'], 'passkey': self.passkey})
+                        download_url = self.urls['get'] % urlencode({'id': item['id'], 'passkey': self.passkey})
                     except (AttributeError, TypeError, ValueError):
                         continue
 

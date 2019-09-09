@@ -1,15 +1,15 @@
 $(function () {
     $('.title span').each(function () {
-        var match = $(this).parent().attr('id').match(/^scene_exception_(\d+)$/);
+        var match = $(this).parent().attr('id').match(/^scene_exception_(.*)$/);
         $(this).qtip({
             content: {
                 text: function(event, api) {
                     // deferred object ensuring the request is only made once
                     $.ajax({
-                        url: $.SickGear.Root + '/home/sceneExceptions',
+                        url: $.SickGear.Root + '/home/scene-exceptions',
                         type: 'GET',
                         data: {
-                            show: match[1]
+                            tvid_prodid: match[1]
                         }
                     })
                     .then(function(content) {

@@ -6,9 +6,10 @@
 #set global $topmenu = 'cache'
 ##
 #import os.path
-#from sickbeard import sbdatetime, providers
+#from sickbeard import providers
 #from sickbeard.common import Quality
-#from sickbeard.helpers import tryInt
+#from sickbeard.helpers import try_int
+#from sickbeard.sgdatetime import SGDatetime
 #include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_top.tmpl')
 
 <script type="text/javascript">
@@ -65,10 +66,10 @@
 		<tbody>
 #for $hItem in $cacheResults:
     #set $provider = $providers.getProviderClass($hItem['provider'])
-    #set $tip = '%s @ %s' % ($hItem['provider'], $sbdatetime.sbdatetime.sbfdatetime($sbdatetime.sbdatetime.fromtimestamp($hItem['time'])))
+    #set $tip = '%s @ %s' % ($hItem['provider'], $SGDatetime.sbfdatetime($SGDatetime.fromtimestamp($hItem['time'])))
     #set $ver = $hItem['version']
     #set $ver = ($ver, '')[-1 == $ver]
-    #set $quality = tryInt($hItem['quality'])
+    #set $quality = try_int($hItem['quality'])
 			<tr>
     #if $provider
                 <td class="col-cache"><img src="$sbRoot/images/providers/$provider.image_name()" class="addQTip" alt="$tip" title="$tip" width="16" height="16" style="vertical-align:middle"></td>

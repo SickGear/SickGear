@@ -17,45 +17,73 @@
 
 from __future__ import with_statement
 
+import exceptions_helper
+
 import sickbeard
-from sickbeard import logger
-from sickbeard import exceptions
-from sickbeard import show_name_helpers
-from sickbeard import search_queue
-from sickbeard.name_parser.parser import NameParser, InvalidNameException, InvalidShowException
+from . import logger, search_queue, show_name_helpers
+from ._legacy_classes import LegacyFailedProcessor
+from .name_parser.parser import NameParser, InvalidNameException, InvalidShowException
+
+# noinspection PyUnreachableCode
+if False:
+    from typing import AnyStr
 
 
-class FailedProcessor(object):
+class FailedProcessor(LegacyFailedProcessor):
     """Take appropriate action when a download fails to complete"""
 
-    def __init__(self, dirName, nzbName, showObj=None):
+    def __init__(self, dir_name, nzb_name, show_obj=None):
         """
-        dirName: Full path to the folder of the failed download
-        nzbName: Full name of the nzb file that failed
+        :param dir_name: Full path to the folder of the failed download
+        :type dir_name: AnyStr
+        :param nzb_name: Full name of the nzb file that failed
+        :type nzb_name: AnyStr or None
+        :param show_obj: show object
+        :type show_obj: sickbeard.tv.TVShow or None
         """
-        self.dir_name = dirName
-        self.nzb_name = nzbName
-        self.show = showObj
+        self.dir_name = dir_name  # type: AnyStr
+        self.nzb_name = nzb_name  # type: AnyStr or None
+        self._show_obj = show_obj  # type: sickbeard.tv.TVShow or None
 
-        self.log = ""
+        self.log = ''  # type: AnyStr
+
+    @property
+    def show_obj(self):
+        """
+        :rtype: sickbeard.tv.TVShow or None
+        """
+        return self._show_obj
+
+    @show_obj.setter
+    def show_obj(self, val):
+        """
+        :param val: show object or None
+        :type val: sickbeard.tv.TVShow or None
+        """
+        self._show_obj = val
 
     def process(self):
-        self._log(u"Failed download detected: (" + str(self.nzb_name) + ", " + str(self.dir_name) + ")")
+        """
+
+        :return: success
+        :type: bool or None
+        """
+        self._log(u'Failed download detected: (%s, %s)' % (self.nzb_name, self.dir_name))
 
         releaseName = show_name_helpers.determineReleaseName(self.dir_name, self.nzb_name)
-        if releaseName is None:
-            self._log(u"Warning: unable to find a valid release name.", logger.WARNING)
-            raise exceptions.FailedProcessingFailed()
+        if None is releaseName:
+            self._log(u'Warning: unable to find a valid release name.', logger.WARNING)
+            raise exceptions_helper.FailedProcessingFailed()
 
         try:
-            parser = NameParser(False, showObj=self.show, convert=True)
+            parser = NameParser(False, show_obj=self.show_obj, convert=True)
             parsed = parser.parse(releaseName)
         except InvalidNameException:
-            self._log(u"Error: release name is invalid: " + releaseName, logger.DEBUG)
-            raise exceptions.FailedProcessingFailed()
+            self._log(u'Error: release name is invalid: ' + releaseName, logger.DEBUG)
+            raise exceptions_helper.FailedProcessingFailed()
         except InvalidShowException:
-            self._log(u"Error: unable to parse release name " + releaseName + " into a valid show", logger.DEBUG)
-            raise exceptions.FailedProcessingFailed()
+            self._log(u'Error: unable to parse release name %s into a valid show' % releaseName, logger.DEBUG)
+            raise exceptions_helper.FailedProcessingFailed()
 
         logger.log(u"name_parser info: ", logger.DEBUG)
         logger.log(u" - " + str(parsed.series_name), logger.DEBUG)
@@ -66,14 +94,19 @@ class FailedProcessor(object):
         logger.log(u" - " + str(parsed.air_date), logger.DEBUG)
 
         for episode in parsed.episode_numbers:
-            segment = parsed.show.getEpisode(parsed.season_number, episode)
+            segment = parsed.show_obj.get_episode(parsed.season_number, episode)
 
-            cur_failed_queue_item = search_queue.FailedQueueItem(parsed.show, [segment])
+            cur_failed_queue_item = search_queue.FailedQueueItem(parsed.show_obj, [segment])
             sickbeard.searchQueueScheduler.action.add_item(cur_failed_queue_item)
 
         return True
 
     def _log(self, message, level=logger.MESSAGE):
-        """Log to regular logfile and save for return for PP script log"""
+        """Log to regular logfile and save for return for PP script log
+        :param message: message
+        :type message: AnyStr
+        :param level: logging level
+        :type level: int
+        """
         logger.log(message, level)
-        self.log += message + "\n"
+        self.log += message + '\n'

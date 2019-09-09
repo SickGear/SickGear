@@ -112,5 +112,5 @@ class TestCase(unittest.TestCase):
         return None is not match and match
 
 
-if __name__ == '__main__':
+if '__main__' == __name__:
     unittest.main()

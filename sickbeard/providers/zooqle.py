@@ -19,10 +19,12 @@ import re
 import traceback
 
 from . import generic
-from sickbeard import logger
-from sickbeard.bs4_parser import BS4Parser
-from sickbeard.helpers import tryInt
-from lib.unidecode import unidecode
+from .. import logger
+from ..helpers import try_int
+from bs4_parser import BS4Parser
+
+from _23 import unidecode
+from six import iteritems
 
 
 class ZooqleProvider(generic.TorrentProvider):
@@ -47,12 +49,12 @@ class ZooqleProvider(generic.TorrentProvider):
 
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
-        rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {
+        rc = dict([(k, re.compile('(?i)' + v)) for (k, v) in iteritems({
             'abd': r'(\d{4}(?:[.]\d{2}){2})', 'peers': r'Seed[^\d]*(\d+)[\w\W]*?Leech[^\d]*(\d+)',
-            'info': r'(\w+)[.]html', 'get': r'^magnet:'}.items())
-        for mode in search_params.keys():
+            'info': r'(\w+)[.]html', 'get': r'^magnet:'})])
+        for mode in search_params:
             for search_string in search_params[mode]:
-                search_string = isinstance(search_string, unicode) and unidecode(search_string) or search_string
+                search_string = unidecode(search_string)
                 search_string = '+'.join(rc['abd'].sub(r'%22\1%22', search_string).split())
                 search_url = self.urls['search'] % (
                     search_string, self._categories_string(mode, '', ',')
@@ -84,7 +86,7 @@ class ZooqleProvider(generic.TorrentProvider):
                                     tr, {'peers': r'(?:zqf\-clou)', 'size': r'(?:zqf\-file)', 'down': r'(?:zqf\-down)'})
                                 stats = rc['peers'].findall(
                                     (cells[head['peers']].find(class_='progress') or {}).get('title', ''))
-                                seeders, leechers = any(stats) and [tryInt(x) for x in stats[0]] or (0, 0)
+                                seeders, leechers = any(stats) and [try_int(x) for x in stats[0]] or (0, 0)
                                 if self._reject_item(seeders, leechers):
                                     continue
                                 for cell in (1, 0):

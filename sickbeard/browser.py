@@ -16,18 +16,19 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
-import os
-import string
-
-from sickbeard import encodingKludge as ek
-from sickbeard import logger
-
-
 # use the built-in if it's available (python 2.6), if not use the included library
 try:
     import json
 except ImportError:
     from lib import simplejson as json
+import os
+import string
+
+# noinspection PyPep8Naming
+import encodingKludge as ek
+from exceptions_helper import ex
+
+from . import logger
 
 # this is for the drive letter code, it only works on windows
 if 'nt' == os.name:
@@ -42,7 +43,7 @@ def getWinDrives():
 
     drives = []
     bitmask = windll.kernel32.GetLogicalDrives()
-    for letter in string.uppercase:
+    for letter in string.ascii_uppercase:
         if bitmask & 1:
             drives.append(letter)
         bitmask >>= 1
@@ -50,7 +51,16 @@ def getWinDrives():
     return drives
 
 
-def foldersAtPath(path, includeParent=False, includeFiles=False):
+def foldersAtPath(path, include_parent=False, include_files=False, **kwargs):
+    """ deprecated_item, remove in 2020 """
+    """ prevent issues with requests using legacy params """
+    include_parent = include_parent or kwargs.get('includeParent') or False
+    include_files = include_files or kwargs.get('includeFiles') or False
+    """ /legacy """
+    return folders_at_path(path, include_parent, include_files)
+
+
+def folders_at_path(path, include_parent=False, include_files=False):
     """ Returns a list of dictionaries with the folders contained at the given path
         Give the empty string as the path to list the contents of the root path
         under Unix this means "/", on Windows this will be a list of drive letters)
@@ -66,7 +76,7 @@ def foldersAtPath(path, includeParent=False, includeFiles=False):
 
     if '' == path:
         if 'nt' == os.name:
-            entries = [{'currentPath': '\My Computer'}]
+            entries = [{'currentPath': r'\My Computer'}]
             for letter in getWinDrives():
                 letter_path = '%s:\\' % letter
                 entries.append({'name': letter_path, 'path': letter_path})
@@ -83,16 +93,15 @@ def foldersAtPath(path, includeParent=False, includeFiles=False):
         parent_path = ''
 
     try:
-        file_list = get_file_list(path, includeFiles)
+        file_list = get_file_list(path, include_files)
     except OSError as e:
-        logger.log(u'Unable to open %s: %r / %s' % (path, e, e), logger.WARNING)
-        file_list = get_file_list(parent_path, includeFiles)
+        logger.log('Unable to open %s: %r / %s' % (path, e, ex(e)), logger.WARNING)
+        file_list = get_file_list(parent_path, include_files)
 
-    file_list = sorted(file_list, lambda x, y: cmp(ek.ek(os.path.basename, x['name']).lower(),
-                                                   ek.ek(os.path.basename, y['path']).lower()))
+    file_list = sorted(file_list, key=lambda x: ek.ek(os.path.basename, x['name']).lower())
 
     entries = [{'currentPath': path}]
-    if includeParent and path != parent_path:
+    if include_parent and path != parent_path:
         entries.append({'name': '..', 'path': parent_path})
     entries.extend(file_list)
 

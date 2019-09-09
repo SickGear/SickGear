@@ -17,14 +17,15 @@
 
 import re
 import time
-import urlparse
-from urllib import quote, unquote
 
-from . import generic
-from sickbeard import logger
-from sickbeard.bs4_parser import BS4Parser
-from sickbeard.helpers import tryInt
 import sickbeard
+from . import generic
+from .. import logger
+from ..helpers import try_int
+from bs4_parser import BS4Parser
+
+from _23 import quote, unquote, urlparse
+from six import iteritems
 
 
 class SpeedCDProvider(generic.TorrentProvider):
@@ -50,8 +51,8 @@ class SpeedCDProvider(generic.TorrentProvider):
             self.digest = digest[2] + digest[1] + quote(unquote(digest[0]))
             params = dict(
                 logged_in=(lambda y='': all(
-                    [self.url and self.session.cookies.get_dict(domain='.' + urlparse.urlparse(self.url).netloc) and
-                     self.session.cookies.clear('.' + urlparse.urlparse(self.url).netloc) is None or True] +
+                    [self.url and self.session.cookies.get_dict(domain='.' + urlparse(self.url).netloc) and
+                     self.session.cookies.clear('.' + urlparse(self.url).netloc) is None or True] +
                     ['RSS' in y, 'type="password"' not in y, self.has_all_cookies(['speedian'], 'inSpeed_')] +
                     [(self.session.cookies.get('inSpeed_' + c) or 'sg!no!pw') in self.digest for c in ['speedian']])),
                 failed_msg=(lambda y=None: None), post_params={'login': False})
@@ -94,18 +95,18 @@ class SpeedCDProvider(generic.TorrentProvider):
 
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
-        rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {
-            'info': '/t/', 'get': 'download', 'fl': r'\[freeleech\]'}.items())
+        rc = dict([(k, re.compile('(?i)' + v)) for (k, v) in iteritems({
+            'info': '/t/', 'get': 'download', 'fl': r'\[freeleech\]'})])
 
-        for mode in search_params.keys():
+        for mode in search_params:
             rc['cats'] = re.compile(r'(?i)(cat|c\[\])=(?:%s)'
                                     % self._categories_string(mode, template='', delimiter='|'))
             for search_string in search_params[mode]:
-                post_data = dict((x.split('=') for x in self._categories_string(mode).split('&')),
+                post_data = dict([x.split('=') for x in self._categories_string(mode).split('&')],
                                  search=search_string.replace('.', ' ').replace('^@^', '.'),
                                  jxt=2, jxw='b', freeleech=('on', None)[not self.freeleech])
 
-                data_json = self.get_url(self.urls['search'], post_data=post_data, json=True)
+                data_json = self.get_url(self.urls['search'], post_data=post_data, parse_json=True)
                 if self.should_skip():
                     return results
 
@@ -128,8 +129,8 @@ class SpeedCDProvider(generic.TorrentProvider):
                                 continue
                             try:
                                 head = head if None is not head else self._header_row(tr)
-                                seeders, leechers, size = [tryInt(n, n) for n in [
-                                    cells[head[x]].get_text().strip() for x in 'seed', 'leech', 'size']]
+                                seeders, leechers, size = [try_int(n, n) for n in [
+                                    cells[head[x]].get_text().strip() for x in ('seed', 'leech', 'size')]]
                                 if None is tr.find('a', href=rc['cats']) or self._reject_item(
                                         seeders, leechers, self.freeleech and (
                                         None is rc['fl'].search(cells[1].get_text()))):

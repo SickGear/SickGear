@@ -18,10 +18,12 @@
 
 import os
 
+from .generic import BaseNotifier
 import sickbeard
-from sickbeard.notifiers.generic import BaseNotifier
-
 from lib.libtrakt import TraktAPI, exceptions
+
+from _23 import list_keys
+from six import iteritems
 
 
 class TraktNotifier(BaseNotifier):
@@ -31,8 +33,8 @@ class TraktNotifier(BaseNotifier):
     @classmethod
     def is_enabled_library(cls):
         if sickbeard.TRAKT_ACCOUNTS:
-            for tid, locations in sickbeard.TRAKT_UPDATE_COLLECTION.items():
-                if tid in sickbeard.TRAKT_ACCOUNTS.keys():
+            for tid, locations in iteritems(sickbeard.TRAKT_UPDATE_COLLECTION):
+                if tid in list_keys(sickbeard.TRAKT_ACCOUNTS):
                     return True
         return False
 
@@ -51,39 +53,39 @@ class TraktNotifier(BaseNotifier):
 
             # URL parameters
             data = dict(shows=[
-                dict(title=ep_obj.show.name, year=ep_obj.show.startyear, ids={})
+                dict(title=ep_obj.show_obj.name, year=ep_obj.show_obj.startyear, ids={})
             ])
 
-            from sickbeard.indexers.indexer_config import INDEXER_TVDB, INDEXER_TVRAGE, INDEXER_IMDB, INDEXER_TMDB, \
-                INDEXER_TRAKT
+            from sickbeard.indexers.indexer_config import TVINFO_TVDB, TVINFO_TVRAGE, TVINFO_IMDB, TVINFO_TMDB, \
+                TVINFO_TRAKT
 
-            supported_indexer = {INDEXER_TRAKT: 'trakt', INDEXER_TVDB: 'tvdb', INDEXER_TVRAGE: 'tvrage',
-                                 INDEXER_IMDB: 'imdb', INDEXER_TMDB: 'tmdb'}
-            indexer_priorities = [INDEXER_TRAKT, INDEXER_TVDB, INDEXER_TVRAGE, INDEXER_IMDB, INDEXER_TMDB]
+            supported_indexer = {TVINFO_TRAKT: 'trakt', TVINFO_TVDB: 'tvdb', TVINFO_TVRAGE: 'tvrage',
+                                 TVINFO_IMDB: 'imdb', TVINFO_TMDB: 'tmdb'}
+            indexer_priorities = [TVINFO_TRAKT, TVINFO_TVDB, TVINFO_TVRAGE, TVINFO_IMDB, TVINFO_TMDB]
 
-            indexer = indexerid = None
-            if ep_obj.show.indexer in supported_indexer:
-                indexer, indexerid = supported_indexer[ep_obj.show.indexer], ep_obj.show.indexerid
+            tvid = prodid = None
+            if ep_obj.show_obj.tvid in supported_indexer:
+                tvid, prodid = supported_indexer[ep_obj.show_obj.tvid], ep_obj.show_obj.prodid
             else:
                 for i in indexer_priorities:
-                    if 0 < ep_obj.show.ids.get(i, {'id': 0}).get('id', 0):
-                        indexer, indexerid = supported_indexer[i], ep_obj.show.ids[i]['id']
+                    if 0 < ep_obj.show_obj.ids.get(i, {'id': 0}).get('id', 0):
+                        tvid, prodid = supported_indexer[i], ep_obj.show_obj.ids[i]['id']
                         break
 
-            if None is indexer or None is indexerid:
+            if None is tvid or None is prodid:
                 self._log_warning('Missing trakt supported id, could not add to collection')
                 return
 
-            data['shows'][0]['ids'][indexer] = indexerid
+            data['shows'][0]['ids'][tvid] = prodid
 
             # Add Season and Episode + Related Episodes
             data['shows'][0]['seasons'] = [{'number': ep_obj.season, 'episodes': []}]
 
-            for relEp_Obj in [ep_obj] + ep_obj.relatedEps:
-                data['shows'][0]['seasons'][0]['episodes'].append({'number': relEp_Obj.episode})
+            for cur_ep_obj in [ep_obj] + ep_obj.related_ep_obj:
+                data['shows'][0]['seasons'][0]['episodes'].append({'number': cur_ep_obj.episode})
 
-            for tid, locations in sickbeard.TRAKT_UPDATE_COLLECTION.items():
-                if tid not in sickbeard.TRAKT_ACCOUNTS.keys():
+            for tid, locations in iteritems(sickbeard.TRAKT_UPDATE_COLLECTION):
+                if tid not in list_keys(sickbeard.TRAKT_ACCOUNTS):
                     continue
                 for loc in locations:
                     if not ep_obj.location.startswith('%s%s' % (loc.rstrip(os.path.sep), os.path.sep)):
@@ -93,16 +95,16 @@ class TraktNotifier(BaseNotifier):
                     try:
                         resp = TraktAPI().trakt_request('sync/collection', data, send_oauth=tid)
                         if 'added' in resp and 'episodes' in resp['added'] \
-                                and 0 < sickbeard.helpers.tryInt(resp['added']['episodes']):
+                                and 0 < sickbeard.helpers.try_int(resp['added']['episodes']):
                             msg = 'Added episode to'
                         elif 'updated' in resp and 'episodes' in resp['updated'] \
-                                and 0 < sickbeard.helpers.tryInt(resp['updated']['episodes']):
+                                and 0 < sickbeard.helpers.try_int(resp['updated']['episodes']):
                             msg = 'Updated episode in'
                         elif 'existing' in resp and 'episodes' in resp['existing'] \
-                                and 0 < sickbeard.helpers.tryInt(resp['existing']['episodes']):
+                                and 0 < sickbeard.helpers.try_int(resp['existing']['episodes']):
                             msg = 'Episode is already in'
                         elif 'not_found' in resp and 'episodes' in resp['not_found'] \
-                                and 0 < sickbeard.helpers.tryInt(resp['not_found']['episodes']):
+                                and 0 < sickbeard.helpers.try_int(resp['not_found']['episodes']):
                             msg = 'Episode not found on Trakt, not adding to'
                         else:
                             warn, msg = True, 'Could not add episode to'

@@ -9,7 +9,7 @@ var sgRoot = $.SickGear.Root,
 	browserUrl = window.location.protocol + '//' + window.location.host + sgRoot,
 	baseUrl = 'http' + ($.SickGear.UseHttps ? 's' : '') + '://' + $.SickGear.Host + ':'
 		+ (('' == sgRoot) ? $.SickGear.Port : location.port) + sgRoot,
-	isAliveUrl = sgRoot + '/home/is_alive/',
+	isAliveUrl = sgRoot + '/home/is-alive/',
 	timeoutId;
 $.SickGear.numRestartWaits = 0;
 
@@ -62,7 +62,7 @@ $(document).ready(function() {
 		var restart$ = $('#restart_message');
 		restart$.removeClass();
 
-		isAliveUrl = baseUrl + '/home/is_alive/';
+		isAliveUrl = baseUrl + '/home/is-alive/';
 
 		// If using https and the port or protocol changed, then wait 5 seconds before redirect because ajax calls will
 		// fail with untrusted certs or when a http ajax request is made from https with a mixed content error.

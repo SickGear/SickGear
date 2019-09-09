@@ -16,11 +16,11 @@ $(document).ready(function () {
 
 	enabler.each(function () {
 		if (!$(this).prop('checked'))
-			$('#content_' + $(this).attr('id')).hide();
+			$(document.getElementById('content_' + $(this).attr('id'))).hide();
 	});
 
 	enabler.click(function () {
-		var content_id = $('#content_' + $(this).attr('id'));
+		var content_id = $(document.getElementById('content_' + $(this).attr('id')));
 		if ($(this).prop('checked'))
 			content_id.fadeIn('fast', 'linear');
 		else
@@ -59,7 +59,7 @@ $(document).ready(function () {
 		return $([idView, idLink].join()).removeClass() &&
 			((isAdd() || isOff()) && $(idLink).addClass('hide') || $(idView).addClass('hide')) &&
 			(!isOff() && $(idLink)
-				.attr('href', sbRoot + '/home/addShows/watchlist_imdb?account=' + accId())
+				.attr('href', sbRoot + '/add-shows/watchlist-imdb?account=' + accId())
 				.attr('title', 'View ' + nameList()));
 	}
 
@@ -112,7 +112,7 @@ $(document).ready(function () {
 					'class'	: 'green',
 					'action': function() {
 						all('off');
-						$.get(sbRoot + '/home/addShows/watchlist_imdb', {
+						$.get(sbRoot + '/add-shows/watchlist-imdb', {
 							'action': elDel.val().toLowerCase(),
 							'select': accId()})
 							.done(function(response) {
@@ -143,7 +143,7 @@ $(document).ready(function () {
 			else
 				params.select = accId();
 
-			$.get(sbRoot + '/home/addShows/watchlist_imdb', params)
+			$.get(sbRoot + '/add-shows/watchlist-imdb', params)
 				.done(function(data) { setControls(!populateSelect(data), !1); })
 				.fail(function() { setControls(!0, 'Failed to load list'); });
 		}
@@ -328,12 +328,12 @@ $(document).ready(function () {
 		}
 	});
 
-	$('#branchCheckout').click(function () {
-		window.location.href = sbRoot + '/home/branchCheckout?branch=' + $('#branchVersion').val();
+	$('#branch-checkout').click(function () {
+		window.location.href = sbRoot + '/home/branch-checkout?branch=' + $('#branchVersion').val();
 	});
 
-	$('#pullRequestCheckout').click(function () {
-		window.location.href = sbRoot + '/home/pullRequestCheckout?branch=' + $('#pullRequestVersion').val();
+	$('#pull-request-checkout').click(function () {
+		window.location.href = sbRoot + '/home/pull-request-checkout?branch=' + $('#pullRequestVersion').val();
 	});
 
 	fetch_branches();
@@ -369,7 +369,7 @@ function config_success(response) {
 }
 
 function fetch_pullrequests() {
-	$.getJSON(sbRoot + '/config/general/fetch_pullrequests', function (data) {
+	$.getJSON(sbRoot + '/config/general/fetch-pullrequests', function (data) {
 		$('#pullRequestVersion').find('option').remove();
 		if (data['result'] == 'success') {
 			var pulls = [];
@@ -382,7 +382,7 @@ function fetch_pullrequests() {
 				$.each(pulls, function (i, text) {
 					add_option_to_pulls(text);
 				});
-				$('#pullRequestCheckout').removeAttr('disabled');
+				$('#pull-request-checkout').removeAttr('disabled');
 			} else {
 				add_option_to_pulls(['No pull requests available', '']);
 			}
@@ -393,7 +393,7 @@ function fetch_pullrequests() {
 }
 
 function fetch_branches() {
-	$.getJSON(sbRoot + '/config/general/fetch_branches', function (data) {
+	$.getJSON(sbRoot + '/config/general/fetch-branches', function (data) {
 		$('#branchVersion').find('option').remove();
 		if (data['result'] == 'success') {
 			var branches = [];
@@ -406,7 +406,7 @@ function fetch_branches() {
 				$.each(branches, function (i, text) {
 					add_option_to_branches(text);
 				});
-				$('#branchCheckout').removeAttr('disabled');
+				$('#branch-checkout').removeAttr('disabled');
 				$('#branchVersion').find('option[value="' + data['current'] + '"]').prop('selected', !0);
 			} else {
 				add_option_to_branches('No branches available');

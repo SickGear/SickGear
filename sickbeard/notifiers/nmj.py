@@ -18,13 +18,15 @@
 
 import re
 import telnetlib
-import urllib
-import urllib2
 import xml.etree.cElementTree as XmlEtree
 
+from .generic import BaseNotifier
 import sickbeard
-from sickbeard.exceptions import ex
-from sickbeard.notifiers.generic import BaseNotifier
+from exceptions_helper import ex
+
+from _23 import urlencode
+# noinspection PyUnresolvedReferences
+from six.moves import urllib
 
 
 class NMJNotifier(BaseNotifier):
@@ -42,7 +44,7 @@ class NMJNotifier(BaseNotifier):
         result, terminal = False, None
         try:
             terminal = telnetlib.Telnet(host)
-        except (StandardError, Exception):
+        except (BaseException, Exception):
             self._log_warning(u'Unable to get a telnet session to %s' % host)
 
         if result:
@@ -101,29 +103,29 @@ class NMJNotifier(BaseNotifier):
         # if a mount URL is provided then attempt to open a handle to that URL
         if mount:
             try:
-                req = urllib2.Request(mount)
+                req = urllib.request.Request(mount)
                 self._log_debug(u'Try to mount network drive via url: %s' % mount)
-                urllib2.urlopen(req)
+                urllib.request.urlopen(req)
             except IOError as e:
                 if hasattr(e, 'reason'):
                     self._log_warning(u'Could not contact Popcorn Hour on host %s: %s' % (host, e.reason))
                 elif hasattr(e, 'code'):
                     self._log_warning(u'Problem with Popcorn Hour on host %s: %s' % (host, e.code))
                 return False
-            except Exception as e:
+            except (BaseException, Exception) as e:
                 self._log_error(u'Unknown exception: ' + ex(e))
                 return False
 
         # build up the request URL and parameters
         params = dict(arg0='scanner_start', arg1=database, arg2='background', arg3='')
-        params = urllib.urlencode(params)
+        params = urlencode(params)
         update_url = 'http://%(host)s:8008/metadata_database?%(params)s' % {'host': host, 'params': params}
 
         # send the request to the server
         try:
-            req = urllib2.Request(update_url)
+            req = urllib.request.Request(update_url)
             self._log_debug(u'Sending scan update command via url: %s' % update_url)
-            handle = urllib2.urlopen(req)
+            handle = urllib.request.urlopen(req)
             response = handle.read()
         except IOError as e:
             if hasattr(e, 'reason'):
@@ -131,7 +133,7 @@ class NMJNotifier(BaseNotifier):
             elif hasattr(e, 'code'):
                 self._log_warning(u'Problem with Popcorn Hour on host %s: %s' % (host, e.code))
             return False
-        except Exception as e:
+        except (BaseException, Exception) as e:
             self._log_error(u'Unknown exception: ' + ex(e))
             return False
 
@@ -140,7 +142,7 @@ class NMJNotifier(BaseNotifier):
             et = XmlEtree.fromstring(response)
             result = et.findtext('returnValue')
         except SyntaxError as e:
-            self._log_error(u'Unable to parse XML returned from the Popcorn Hour: %s' % e)
+            self._log_error(u'Unable to parse XML returned from the Popcorn Hour: %s' % ex(e))
             return False
 
         # if the result was a number then consider that an error

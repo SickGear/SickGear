@@ -18,12 +18,14 @@
 
 import os.path
 
+# noinspection PyPep8Naming
+import encodingKludge as ek
+
 import sickbeard
-from sickbeard import logger, processTV
-from sickbeard import encodingKludge as ek
+from . import logger, processTV
 
 
-class PostProcesser:
+class PostProcesser(object):
     def __init__(self):
         self.amActive = False
 

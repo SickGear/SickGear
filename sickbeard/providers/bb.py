@@ -17,15 +17,16 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
-import base64
 import re
 import traceback
 
 from . import generic
-from sickbeard import logger
-from sickbeard.bs4_parser import BS4Parser
-from sickbeard.helpers import tryInt
-from lib.unidecode import unidecode
+from .. import logger
+from ..helpers import try_int
+from bs4_parser import BS4Parser
+
+from _23 import b64decodestring, unidecode
+from six import iteritems
 
 
 class BBProvider(generic.TorrentProvider):
@@ -34,9 +35,9 @@ class BBProvider(generic.TorrentProvider):
 
         generic.TorrentProvider.__init__(self, 'bB', cache_update_freq=15)
 
-        self.url_base = [re.sub('(?i)[qx\sz]+', '', x[::-1]) for x in [
+        self.url_base = [re.sub(r'(?i)[qx\sz]+', '', x[::-1]) for x in [
             'HaQ', 'c0Rz', 'MH', 'yL6', 'NW Yi9', 'pJmbv', 'Hd', 'buMz', 'wLn J3', '=xXx=']]
-        self.url_base = base64.b64decode(''.join(self.url_base))
+        self.url_base = b64decodestring(''.join(self.url_base))
         self.urls = {'config_provider_home_uri': self.url_base,
                      'login_action': self.url_base + 'login.php',
                      'search': self.url_base + 'torrents.php?%s&searchstr=%s'}
@@ -60,11 +61,11 @@ class BBProvider(generic.TorrentProvider):
 
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
-        rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {
-            'info': 'view', 'get': 'download', 'nodots': '[\.\s]+'}.items())
-        for mode in search_params.keys():
+        rc = dict([(k, re.compile('(?i)' + v)) for (k, v) in iteritems({
+            'info': 'view', 'get': 'download', 'nodots': r'[\.\s]+'})])
+        for mode in search_params:
             for search_string in search_params[mode]:
-                search_string = isinstance(search_string, unicode) and unidecode(search_string) or search_string
+                search_string = unidecode(search_string)
                 search_url = self.urls['search'] % (
                     self._categories_string(mode, 'filter_cat[%s]=1'), rc['nodots'].sub('+', search_string))
                 html = self.get_url(search_url)
@@ -88,10 +89,10 @@ class BBProvider(generic.TorrentProvider):
                                 continue
                             try:
                                 head = head if None is not head else self._header_row(tr)
-                                seeders, leechers, size = [tryInt(n, n) for n in [
-                                    cells[head[x]].get_text().strip() for x in 'seed', 'leech', 'size']]
+                                seeders, leechers, size = [try_int(n, n) for n in [
+                                    cells[head[x]].get_text().strip() for x in ('seed', 'leech', 'size')]]
                                 if self._reject_item(seeders, leechers, self.freeleech and (not bool(
-                                        re.search('(?i)>\s*Freeleech!*\s*<', cells[1].encode(formatter='minimal'))))):
+                                        re.search(r'(?i)>\s*Freeleech!*\s*<', cells[1].encode(formatter='minimal'))))):
                                     continue
 
                                 title = self.regulate_title(tr.find('a', title=rc['info']).get_text().strip())
@@ -104,7 +105,7 @@ class BBProvider(generic.TorrentProvider):
 
                 except generic.HaltParseException:
                     pass
-                except (StandardError, Exception):
+                except (BaseException, Exception):
                     logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
                 self._log_search(mode, len(items[mode]) - cnt, search_url)
 
@@ -116,11 +117,11 @@ class BBProvider(generic.TorrentProvider):
     def regulate_title(item_text):
 
         t = ['']
-        bl = '[*\[({]+\s*'
-        br = '\s*[})\]*]+'
+        bl = r'[*\[({]+\s*'
+        br = r'\s*[})\]*]+'
         title = re.sub('(.*?)((?i)%sproper%s)(.*)' % (bl, br), r'\1\3\2', item_text)
-        for r in ('\s+-\s+', '(?:\(\s*)?(?:19|20)\d\d(?:\-\d\d\-\d\d)?(?:\s*\))?',
-                  'S\d\d+(?:E\d\d+)?', '(?:Series|Season)\s*\d+'):
+        for r in (r'\s+-\s+', r'(?:\(\s*)?(?:19|20)\d\d(?:\-\d\d\-\d\d)?(?:\s*\))?',
+                  r'S\d\d+(?:E\d\d+)?', r'(?:Series|Season)\s*\d+'):
             m = re.findall('(.*%s)(.*)' % r, title)
             if any(m) and len(m[0][0]) > len(t[0]):
                 t = m[0]
@@ -151,7 +152,7 @@ class BBProvider(generic.TorrentProvider):
 
         title = '`'.join([x.strip('.') for x in ([], [t[0]])[1 < len(t)] + ['%s-NOGRP' % title]])
 
-        for r in [('\[`+', '['), ('`+\]', ']'), ('\s+[-]?\s+|\s+`|`\s+', '`'), ('`+', '.')]:
+        for r in [(r'\[`+', '['), (r'`+\]', ']'), (r'\s+[-]?\s+|\s+`|`\s+', '`'), ('`+', '.')]:
             title = re.sub(r[0], r[1], title)
 
         title += + any(tags[4]) and ('.%s' % tags[4][0]) or ''

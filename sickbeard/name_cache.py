@@ -15,86 +15,113 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
+
 import threading
+
 import sickbeard
-from sickbeard import db
-from sickbeard.helpers import tryInt
+from . import db
+from .helpers import try_int
+
+from _23 import list_items
+from six import iteritems
+
+# noinspection PyUnreachableCode
+if False:
+    from typing import AnyStr, Tuple, Union
 
 nameCache = {}
 nameCacheLock = threading.Lock()
 
 
-def addNameToCache(name, indexer_id=0, season=-1):
+def addNameToCache(name, tvid=0, prodid=0, season=-1):
     """Adds the show & tvdb id to the namecache
 
     :param name: the show name to cache
-    :param indexer_id: the TVDB and TVRAGE id that this show should be cached with (can be None/0 for unknown)
+    :type name: AnyStr
+    :param tvid: the tvinfo source id that this show should be cached with (can be None/0 for unknown)
+    :type tvid: int
+    :param prodid: the production id that this show should be cached with (can be None/0 for unknown)
+    :type prodid: int or long
     :param season: the season the the name exception belongs to. -1 for generic exception
+    :type season: int
     """
     global nameCache
 
     # standardize the name we're using to account for small differences in providers
-    name = sickbeard.helpers.full_sanitizeSceneName(name)
+    name = sickbeard.helpers.full_sanitize_scene_name(name)
     if name not in nameCache:
-        nameCache[name] = [int(indexer_id), season]
+        nameCache[name] = [int(tvid), int(prodid), season]
 
 
 def retrieveNameFromCache(name):
+    # type: (AnyStr) -> Union[Tuple[int, int], Tuple[None, None]]
     """Looks up the given name in the name cache
 
     :param name: The show name to look up.
-    :return: the TVDB and TVRAGE id that resulted from the cache lookup or None if the show wasn't found in the cache
+    :return: the tuple of (tvid, prodid) id resulting from a cache lookup or None if the show wasn't found
     """
     global nameCache
 
-    name = sickbeard.helpers.full_sanitizeSceneName(name)
+    name = sickbeard.helpers.full_sanitize_scene_name(name)
     if name in nameCache:
-        return int(nameCache[name][0])
+        return int(nameCache[name][0]), int(nameCache[name][1])
+    return None, None
 
 
-def buildNameCache(show=None):
+def buildNameCache(show_obj=None):
     """Adds all new name exceptions to the namecache memory and flushes any removed name exceptions
 
-    :param show (optional): Only update namecache for this show object
+    :param show_obj : (optional) Only update namecache for this show object
+    :type show_obj: sickbeard.tv.TVShow or None
     """
     global nameCache
     with nameCacheLock:
 
-        if show:
+        if show_obj:
             # search for only the requested show id and flush old show entries from namecache
-            indexer_ids = [show.indexerid]
-            nameCache = dict((k, v) for k, v in nameCache.items() if v != show.indexerid)
+            show_ids = {show_obj.tvid: [show_obj.prodid]}
+            nameCache = dict([(k, v) for k, v in list_items(nameCache) if v != (show_obj.tvid, show_obj.prodid)])
 
             # add standard indexer name to namecache
-            nameCache[sickbeard.helpers.full_sanitizeSceneName(show.name)] = [show.indexerid, -1]
+            nameCache[sickbeard.helpers.full_sanitize_scene_name(show_obj.name)] = [show_obj.tvid, show_obj.prodid, -1]
         else:
-            # generate list of indexer ids to look up in cache.db
-            indexer_ids = [x.indexerid for x in sickbeard.showList if x]
+            # generate list of production ids to look up in cache.db
+            show_ids = {}
+            for cur_show_obj in sickbeard.showList:
+                show_ids.setdefault(cur_show_obj.tvid, []).append(cur_show_obj.prodid)
 
             # add all standard show indexer names to namecache
             nameCache = dict(
-                (sickbeard.helpers.full_sanitizeSceneName(x.name), [x.indexerid, -1]) for x in sickbeard.showList if x)
+                [(sickbeard.helpers.full_sanitize_scene_name(cur_so.name), [cur_so.tvid, cur_so.prodid, -1])
+                 for cur_so in sickbeard.showList if cur_so])
 
         cacheDB = db.DBConnection()
 
-        cache_results = cacheDB.select(
-            'SELECT show_name, indexer_id, season FROM scene_exceptions WHERE indexer_id IN (%s)' % ','.join(
-                ['%s' % i for i in indexer_ids]))
+        cache_results = []
+        for t, s in iteritems(show_ids):
+            cache_results += cacheDB.select(
+                'SELECT show_name, indexer AS tv_id, indexer_id AS prod_id, season'
+                ' FROM scene_exceptions'
+                ' WHERE indexer = %s AND indexer_id IN (%s)' % (t, ','.join(['%s' % i for i in s])))
 
         if cache_results:
             for cache_result in cache_results:
-                indexer_id = int(cache_result['indexer_id'])
-                season = tryInt(cache_result['season'], -1)
-                name = sickbeard.helpers.full_sanitizeSceneName(cache_result['show_name'])
-                nameCache[name] = [indexer_id, season]
+                tvid = int(cache_result['tv_id'])
+                prodid = int(cache_result['prod_id'])
+                season = try_int(cache_result['season'], -1)
+                name = sickbeard.helpers.full_sanitize_scene_name(cache_result['show_name'])
+                nameCache[name] = [tvid, prodid, season]
 
 
-def remove_from_namecache(indexer_id):
+def remove_from_namecache(tvid, prodid):
     """Deletes all entries from the namecache for a particular show
 
-    :param indexer_id: tvdbid or rageid to be removed from the namecache
+    :param tvid: TV info source to be removed from the namecache
+    :type tvid: int
+    :param prodid: tvdbid or rageid to be removed from the namecache
+    :type prodid: int or long
     """
     global nameCache
 
     if nameCache:
-        nameCache = dict((k, v) for k, v in nameCache.items() if v != indexer_id)
+        nameCache = dict([(k, v) for k, v in list_items(nameCache) if v != (tvid, prodid)])

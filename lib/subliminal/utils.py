@@ -16,6 +16,8 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with subliminal.  If not, see <http://www.gnu.org/licenses/>.
 import re
+from six import string_types, text_type
+from _23 import decode_str
 
 
 __all__ = ['get_keywords', 'split_keyword', 'to_unicode']
@@ -57,13 +59,13 @@ def to_unicode(data):
     :rtype: unicode
 
     """
-    if not isinstance(data, basestring):
+    if not isinstance(data, string_types):
         raise ValueError('Basestring expected')
-    if isinstance(data, unicode):
+    if isinstance(data, text_type):
         return data
     for encoding in ('utf-8', 'latin-1'):
         try:
-            return unicode(data, encoding)
+            return decode_str(data, encoding)
         except UnicodeDecodeError:
             pass
-    return unicode(data, 'utf-8', 'replace')
+    return decode_str(data, 'utf-8', 'replace')

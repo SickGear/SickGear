@@ -1,2 +1,2 @@
-from trakt import TraktAPI
-from indexerapiinterface import TraktIndexer
+from .trakt import TraktAPI
+from .indexerapiinterface import TraktIndexer

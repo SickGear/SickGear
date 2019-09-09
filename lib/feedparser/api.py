@@ -59,7 +59,11 @@ from .mixin import _FeedParserMixin
 from .parsers.loose import _LooseFeedParser
 from .parsers.strict import _StrictFeedParser
 from .sanitizer import replace_doctype
-from .sgml import *
+from six import PY2
+if not PY2:
+    import sgmllib3k as sgmllib
+else:
+    from .sgml import *
 from .urls import convert_to_idn, make_safe_absolute_uri
 from .util import FeedParserDict
 

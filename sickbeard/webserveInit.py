@@ -1,15 +1,25 @@
 import os
+from sys import exc_info, platform
 import threading
-import sys
-import sickbeard
-import webserve
-import webapi
 
-from sickbeard import logger
-from sickbeard.helpers import create_https_certificates, re_valid_hostname
-from tornado.web import Application, _ApplicationRouter
 from tornado.ioloop import IOLoop
 from tornado.routing import AnyMatches, Rule
+# noinspection PyProtectedMember
+from tornado.web import Application, _ApplicationRouter
+
+from . import logger, webapi, webserve
+from ._legacy import LegacyConfigPostProcessing, LegacyHomeAddShows, \
+    LegacyManageManageSearches, LegacyManageShowProcesses, LegacyErrorLogs
+from .helpers import create_https_certificates, re_valid_hostname
+import sickbeard
+
+from _23 import PY38
+from six import PY2
+
+# noinspection PyUnreachableCode
+if False:
+    # noinspection PyUnresolvedReferences
+    from typing import Dict
 
 
 class MyApplication(Application):
@@ -26,7 +36,9 @@ class MyApplication(Application):
 
 class WebServer(threading.Thread):
     def __init__(self, options=None):
+        # type: (Dict) -> None
         threading.Thread.__init__(self)
+        self._ready_event = threading.Event()
         self.daemon = True
         self.alive = True
         self.name = 'TORNADO'
@@ -89,7 +101,8 @@ class WebServer(threading.Thread):
                                  compress_response=True,
                                  cookie_secret=sickbeard.COOKIE_SECRET,
                                  xsrf_cookies=True,
-                                 login_url='%s/login/' % self.options['web_root'])
+                                 login_url='%s/login/' % self.options['web_root'],
+                                 default_handler_class=webserve.WrongHostWebHandler)
 
         self.re_host_pattern = re_valid_hostname()
         self._add_loading_rules()
@@ -123,8 +136,12 @@ class WebServer(threading.Thread):
         # Main Handler
         self.app.add_handlers(self.re_host_pattern, [
             (r'%s/api(/?.*)' % self.options['web_root'], webapi.ApiServerLoading),
-            (r'%s/home/is_alive(/?.*)' % self.options['web_root'], webserve.IsAliveHandler),
+            (r'%s/home/is-alive(/?.*)' % self.options['web_root'], webserve.IsAliveHandler),
+            (r'%s/ui(/?.*)' % self.options['web_root'], webserve.UI),
             (r'%s(/?.*)' % self.options['web_root'], webserve.LoadingWebHandler),
+            # ----------------------------------------------------------------------------------------------------------
+            # legacy deprecated Aug 2019
+            (r'%s/home/is_alive(/?.*)' % self.options['web_root'], webserve.IsAliveHandler),
         ])
 
         self.app.add_handlers(r'.*', [(r'.*', webserve.WrongHostWebHandler)])
@@ -170,30 +187,49 @@ class WebServer(threading.Thread):
 
         # Main Handler
         self.app.add_handlers(self.re_host_pattern, [
-            (r'%s/api/builder(/?)(.*)' % self.options['web_root'], webserve.ApiBuilder),
-            (r'%s/api(/?.*)' % self.options['web_root'], webapi.Api),
+            (r'%s/ui(/?.*)' % self.options['web_root'], webserve.UI),
+            (r'%s/home/is-alive(/?.*)' % self.options['web_root'], webserve.IsAliveHandler),
             (r'%s/imagecache(/?.*)' % self.options['web_root'], webserve.CachedImages),
             (r'%s/cache(/?.*)' % self.options['web_root'], webserve.Cache),
+            (r'%s(/?update-watched-state-kodi/?)' % self.options['web_root'], webserve.NoXSRFHandler),
+            (r'%s/add-shows(/?.*)' % self.options['web_root'], webserve.AddShows),
+            (r'%s/home/process-media(/?.*)' % self.options['web_root'], webserve.HomeProcessMedia),
             (r'%s/config/general(/?.*)' % self.options['web_root'], webserve.ConfigGeneral),
             (r'%s/config/search(/?.*)' % self.options['web_root'], webserve.ConfigSearch),
             (r'%s/config/providers(/?.*)' % self.options['web_root'], webserve.ConfigProviders),
+            (r'%s/config/media-process(/?.*)' % self.options['web_root'], webserve.ConfigMediaProcess),
             (r'%s/config/subtitles(/?.*)' % self.options['web_root'], webserve.ConfigSubtitles),
-            (r'%s/config/postProcessing(/?.*)' % self.options['web_root'], webserve.ConfigPostProcessing),
             (r'%s/config/notifications(/?.*)' % self.options['web_root'], webserve.ConfigNotifications),
             (r'%s/config/anime(/?.*)' % self.options['web_root'], webserve.ConfigAnime),
-            (r'%s/config(/?.*)' % self.options['web_root'], webserve.Config),
-            (r'%s/errorlogs(/?.*)' % self.options['web_root'], webserve.ErrorLogs),
-            (r'%s/history(/?.*)' % self.options['web_root'], webserve.History),
+            (r'%s/manage/search-tasks(/?.*)' % self.options['web_root'], webserve.ManageSearch),
+            (r'%s/manage/show-tasks(/?.*)' % self.options['web_root'], webserve.ShowTasks),
+            (r'%s/api/builder(/?)(.*)' % self.options['web_root'], webserve.ApiBuilder),
+            (r'%s/api(/?.*)' % self.options['web_root'], webapi.Api),
+            # ----------------------------------------------------------------------------------------------------------
+            # legacy deprecated Aug 2019
+            (r'%s/home/addShows/?$' % self.options['web_root'], LegacyHomeAddShows),
+            (r'%s/manage/manageSearches/?$' % self.options['web_root'], LegacyManageManageSearches),
+            (r'%s/manage/showProcesses/?$' % self.options['web_root'], LegacyManageShowProcesses),
+            (r'%s/config/postProcessing/?$' % self.options['web_root'], LegacyConfigPostProcessing),
+            (r'%s/errorlogs/?$' % self.options['web_root'], LegacyErrorLogs),
             (r'%s/home/is_alive(/?.*)' % self.options['web_root'], webserve.IsAliveHandler),
-            (r'%s/home/addShows(/?.*)' % self.options['web_root'], webserve.NewHomeAddShows),
-            (r'%s/home/postprocess(/?.*)' % self.options['web_root'], webserve.HomePostProcess),
-            (r'%s/home(/?.*)' % self.options['web_root'], webserve.Home),
-            (r'%s/manage/manageSearches(/?.*)' % self.options['web_root'], webserve.ManageSearches),
-            (r'%s/manage/showProcesses(/?.*)' % self.options['web_root'], webserve.showProcesses),
-            (r'%s/manage/(/?.*)' % self.options['web_root'], webserve.Manage),
-            (r'%s/ui(/?.*)' % self.options['web_root'], webserve.UI),
-            (r'%s/browser(/?.*)' % self.options['web_root'], webserve.WebFileBrowser),
+            (r'%s/home/addShows(/?.*)' % self.options['web_root'], webserve.AddShows),
+            (r'%s/manage/manageSearches(/?.*)' % self.options['web_root'], webserve.ManageSearch),
+            (r'%s/manage/showProcesses(/?.*)' % self.options['web_root'], webserve.ShowTasks),
+            (r'%s/config/postProcessing(/?.*)' % self.options['web_root'], webserve.ConfigMediaProcess),
+            (r'%s/errorlogs(/?.*)' % self.options['web_root'], webserve.EventLogs),
+            # ----------------------------------------------------------------------------------------------------------
+            # legacy deprecated Aug 2019 - never remove as used in external scripts
+            (r'%s/home/postprocess(/?.*)' % self.options['web_root'], webserve.HomeProcessMedia),
             (r'%s(/?update_watched_state_kodi/?)' % self.options['web_root'], webserve.NoXSRFHandler),
+            # regular catchall routes - keep here at the bottom
+            (r'%s/home(/?.*)' % self.options['web_root'], webserve.Home),
+            (r'%s/manage/(/?.*)' % self.options['web_root'], webserve.Manage),
+            (r'%s/config(/?.*)' % self.options['web_root'], webserve.Config),
+            (r'%s/browser(/?.*)' % self.options['web_root'], webserve.WebFileBrowser),
+            (r'%s/errors(/?.*)' % self.options['web_root'], webserve.EventLogs),
+            (r'%s/events(/?.*)' % self.options['web_root'], webserve.EventLogs),
+            (r'%s/history(/?.*)' % self.options['web_root'], webserve.History),
             (r'%s(/?.*)' % self.options['web_root'], webserve.MainHandler),
         ])
 
@@ -203,27 +239,40 @@ class WebServer(threading.Thread):
         protocol, ssl_options = (('http', None),
                                  ('https', {'certfile': self.https_cert, 'keyfile': self.https_key}))[self.enable_https]
 
-        logger.log(u'Starting SickGear on ' + protocol + '://' + str(self.options['host']) + ':' + str(
-            self.options['port']) + '/')
+        logger.log(u'Starting SickGear on %s://%s:%s/' % (protocol, self.options['host'],  self.options['port']))
+
+        # python 3 needs to start event loop first
+        if not PY2:
+            import asyncio
+            if 'win32' == platform and PY38:
+                # noinspection PyUnresolvedReferences
+                asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+            asyncio.set_event_loop(asyncio.new_event_loop())
 
         try:
             self.server = self.app.listen(self.options['port'], self.options['host'], ssl_options=ssl_options,
                                           xheaders=sickbeard.HANDLE_REVERSE_PROXY, protocol=protocol)
-        except (StandardError, Exception):
-            etype, evalue, etb = sys.exc_info()
-            logger.log(
-                'Could not start webserver on %s. Excpeption: %s, Error: %s' % (self.options['port'], etype, evalue),
-                logger.ERROR)
+        except (BaseException, Exception):
+            etype, evalue, etb = exc_info()
+            logger.log('Could not start webserver on %s. Exception: %s, Error: %s' % (
+                self.options['port'], etype, evalue), logger.ERROR)
             return
 
         self.io_loop = IOLoop.current()
 
+        # add event set to be called first as soon as io_loop is started to inform other threads webserver has started
+        self.io_loop.add_callback(self._ready_event.set)
         try:
             self.io_loop.start()
             self.io_loop.close(True)
         except (IOError, ValueError):
             # Ignore errors like 'ValueError: I/O operation on closed kqueue fd'. These might be thrown during a reload.
             pass
+
+    def wait_server_start(self, timeout=30):
+        if not self._ready_event.wait(timeout=timeout):
+            raise Exception('Tornado Server failed to start')
+        self._ready_event.clear()
 
     def switch_handlers(self, new_handler='_add_default_rules'):
         if hasattr(self, new_handler):
@@ -237,4 +286,4 @@ class WebServer(threading.Thread):
     def shut_down(self):
         self.alive = False
         if None is not self.io_loop:
-            self.io_loop.stop()
+            self.io_loop.add_callback(lambda x: x.stop(), self.io_loop)

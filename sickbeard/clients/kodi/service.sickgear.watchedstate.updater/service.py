@@ -17,22 +17,72 @@
 
 try:
     import json as json
-except (StandardError, Exception):
+except (BaseException, Exception):
     import simplejson as json
 from os import path, sep
 import datetime
 import socket
+import sys
 import time
 import traceback
-import urllib
-import urllib2
+
+# these are Kodi specific libs, so block the error reports in pycharm
+# noinspection PyUnresolvedReferences
 import xbmc
+# noinspection PyUnresolvedReferences
 import xbmcaddon
+# noinspection PyUnresolvedReferences
 import xbmcgui
+# noinspection PyUnresolvedReferences
 import xbmcvfs
 
+PY2 = 2 == sys.version_info[0]
 
-class SickGearWatchedStateUpdater:
+if PY2:
+    # noinspection PyCompatibility,PyUnresolvedReferences
+    from urllib2 import Request, urlopen, URLError, urlencode
+
+    # noinspection PyCompatibility,PyUnresolvedReferences
+    string_types = (basestring,)
+
+    def iterkeys(d, **kw):
+        # noinspection PyCompatibility
+        return d.iterkeys(**kw)
+
+    def itervalues(d, **kw):
+        # noinspection PyCompatibility
+        return d.itervalues(**kw)
+
+    def iteritems(d, **kw):
+        # noinspection PyCompatibility
+        return d.iteritems(**kw)
+
+    def iterlists(d, **kw):
+        return d.iterlists(**kw)
+else:
+    # noinspection PyCompatibility,PyUnresolvedReferences
+    from urllib.error import URLError
+    # noinspection PyCompatibility,PyUnresolvedReferences
+    from urllib.parse import urlencode
+    # noinspection PyCompatibility,PyUnresolvedReferences
+    from urllib.request import Request, urlopen
+
+    string_types = (str,)
+
+    def iterkeys(d, **kw):
+        return iter(d.keys(**kw))
+
+    def itervalues(d, **kw):
+        return iter(d.values(**kw))
+
+    def iteritems(d, **kw):
+        return iter(d.items(**kw))
+
+    def iterlists(d, **kw):
+        return iter(d.lists(**kw))
+
+
+class SickGearWatchedStateUpdater(object):
 
     def __init__(self):
         self.wait_onstartup = 4000
@@ -41,7 +91,7 @@ class SickGearWatchedStateUpdater:
         try:
             if 1350 > xbmcgui.Window.getWidth(xbmcgui.Window()):
                 icon_size += '-sm'
-        except (StandardError, Exception):
+        except (BaseException, Exception):
             pass
         icon = 'special://home/addons/service.sickgear.watchedstate.updater/resources/icon-%s.png' % icon_size
 
@@ -72,7 +122,7 @@ class SickGearWatchedStateUpdater:
         xbmc.sleep(self.wait_onstartup)
         try:
             self.sock_kodi.connect((self.kodi_ip, self.kodi_port))
-        except (StandardError, Exception) as e:
+        except (BaseException, Exception) as e:
             return self.report_contact_fail(e)
 
         self.log('Started')
@@ -170,7 +220,7 @@ class SickGearWatchedStateUpdater:
         params.update(dict(jsonrpc='2.0', id='SickGear'))
         try:
             response = xbmc.executeJSONRPC(json.dumps(params))
-        except (StandardError, Exception) as e:
+        except (BaseException, Exception) as e:
             return self.report_contact_fail(e)
         try:
             return json.loads(response)
@@ -204,14 +254,14 @@ class SickGearWatchedStateUpdater:
                 path_file = json_resp['result']['episodedetails']['file'].encode('utf-8')
 
                 self.update_sickgear(media_id, path_file, play_count, current_profile)
-        except (StandardError, Exception):
+        except (BaseException, Exception):
             pass
 
     def update_sickgear(self, media_id, path_file, play_count, profile):
 
         self.notify('Update sent to SickGear')
 
-        url = 'http://%s:%s/update_watched_state_kodi/' % (
+        url = 'http://%s:%s/update-watched-state-kodi/' % (
             self.addon.getSetting('sickgear_ip'), self.addon.getSetting('sickgear_port'))
         self.log('Notify state to %s with path_file=%s' % (url, path_file))
 
@@ -220,34 +270,35 @@ class SickGearWatchedStateUpdater:
 
         payload_json = self.payload_prep(dict(media_id=media_id, path_file=path_file, played=play_count, label=profile))
         if payload_json:
-            payload = urllib.urlencode(dict(payload=payload_json))
+            payload = urlencode(dict(payload=payload_json))
             try:
-                rq = urllib2.Request(url, data=payload)
-                r = urllib2.urlopen(rq)
+                rq = Request(url, data=payload)
+                r = urlopen(rq)
                 response = json.load(r)
                 r.close()
                 if 'OK' == r.msg:
                     self.payload_prep(response)
-                    if not all(response.values()):
+                    if not all(itervalues(response)):
                         msg = 'Success, watched state updated'
                     else:
                         msg = 'Success, %s/%s watched stated updated' % (
-                            len([v for v in response.values() if v]), len(response.values()))
+                            len([v for v in itervalues(response) if v]), len(itervalues(response)))
                     self.log(msg)
                     self.notify(msg, error=False)
                 else:
                     msg_bad = 'Failed to update watched state'
                     self.log(msg_bad)
                     self.notify(msg_bad, error=True)
-            except (urllib2.URLError, IOError) as e:
+            except (URLError, IOError) as e:
                 self.log(u'Couldn\'t contact SickGear %s' % self.ex(e), error=True)
                 self.notify(msg_bad, error=True, period=15)
-            except (StandardError, Exception) as e:
+            except (BaseException, Exception) as e:
                 self.log(u'Couldn\'t contact SickGear %s' % self.ex(e), error=True)
                 self.notify(msg_bad, error=True, period=15)
 
     @staticmethod
     def payload_prep(payload):
+        # type: (dict) -> str
 
         name = 'sickgear_buffer.txt'
         # try to locate /temp at parent location
@@ -260,7 +311,7 @@ class SickGearWatchedStateUpdater:
             try:
                 fh = xbmcvfs.File(path_data)
                 data_pool = json.load(fh)
-            except (StandardError, Exception):
+            except (BaseException, Exception):
                 pass
             fh and fh.close()
 
@@ -271,13 +322,13 @@ class SickGearWatchedStateUpdater:
                 temp_ok = xbmcvfs.mkdirs(path_temp)
 
         response_data = False
-        for k, v in payload.items():
+        for k, v in iteritems(payload):
             if response_data or k in data_pool:
                 response_data = True
                 if not v:
                     # whether no fail response or bad input, remove this from data
                     data_pool.pop(k)
-                elif isinstance(v, basestring):
+                elif isinstance(v, string_types):
                     # error so retry next time
                     continue
         if not response_data:
@@ -288,7 +339,7 @@ class SickGearWatchedStateUpdater:
                 timeout -= 1
 
             max_payload = 50-1
-            for k in list(data_pool.keys())[max_payload:]:
+            for k in list(iterkeys(data_pool))[max_payload:]:
                 data_pool.pop(k)
             payload.update(dict(date_watched=ts_now))
             data_pool.update({ts_now: payload})
@@ -299,7 +350,7 @@ class SickGearWatchedStateUpdater:
             try:
                 fh = xbmcvfs.File(path_data, 'w')
                 fh.write(output)
-            except (StandardError, Exception):
+            except (BaseException, Exception):
                 pass
             fh and fh.close()
 
@@ -313,16 +364,16 @@ class SickGearWatchedStateUpdater:
             for setting in settings:
                 if not self.kodi_request(dict(
                         method='Settings.SetSettingValue',
-                        params=dict(setting='services.%s' % setting.keys()[0], value=setting.values()[0])
+                        params=dict(setting='services.%s' % iterkeys(setting)[0], value=itervalues(setting)[0])
                 )).get('result', {}):
                     settings[setting] = self.kodi_request(dict(
                         method='Settings.GetSettingValue',
-                        params=dict(setting='services.%s' % setting.keys()[0])
+                        params=dict(setting='services.%s' % iterkeys(setting)[0])
                     )).get('result', {}).get('value')
-        except (StandardError, Exception):
+        except (BaseException, Exception):
             return
 
-        setting_states = [setting.values()[0] for setting in settings]
+        setting_states = [itervalues(setting)[0] for setting in settings]
         if not all(setting_states):
             if not (any(setting_states)):
                 msg = 'Please enable *all* Kodi settings to allow remote control by programs...'
@@ -338,7 +389,8 @@ class SickGearWatchedStateUpdater:
 __dev__ = True
 if __dev__:
     try:
-        # noinspection PyProtectedMember
+        # specific to a dev env
+        # noinspection PyProtectedMember, PyUnresolvedReferences
         import _devenv as devenv
     except ImportError:
         __dev__ = False
@@ -350,7 +402,7 @@ if 1 < len(sys.argv):
     if sys.argv[2].endswith('send_all'):
         print('>>>>>> TESTTESTTEST')
 
-elif __name__ == '__main__':
+elif '__main__' == __name__:
     if __dev__:
         devenv.setup_devenv(True)
     WSU = SickGearWatchedStateUpdater()

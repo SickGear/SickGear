@@ -15,17 +15,21 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
-import base64
 import random
 import re
 import time
 import traceback
-import urllib
 
 from . import generic
-from sickbeard import logger
-from sickbeard.helpers import tryInt
-from lib.unidecode import unidecode
+from .. import logger
+from ..helpers import try_int
+
+from _23 import b64encodestring, filter_iter, map_list, quote, unidecode
+from six import iteritems
+
+# noinspection PyUnreachableCode
+if False:
+    from typing import AnyStr, Tuple
 
 try:
     import json
@@ -60,8 +64,8 @@ class SnowflProvider(generic.TorrentProvider):
 
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
-        quote = (lambda t: urllib.quote(t, safe='~()*!.\''))
-        for mode in search_params.keys():
+        quote_fx = (lambda t: quote(t, safe='~()*!.\''))
+        for mode in search_params:
             for search_string in search_params[mode]:
                 search_url = self.url
                 cnt = len(items[mode])
@@ -74,8 +78,7 @@ class SnowflProvider(generic.TorrentProvider):
 
                         params = dict(token=token[0], ent=token[1])
                         if 'Cache' != mode:
-                            params.update({'ss': quote(isinstance(search_string, unicode) and unidecode(
-                                search_string) or search_string)})
+                            params.update({'ss': quote_fx(unidecode(search_string))})
 
                         data_json = None
                         vals = [i for i in range(3, 8)]
@@ -93,12 +96,12 @@ class SnowflProvider(generic.TorrentProvider):
                             if self.should_skip():
                                 return results
 
-                        for item in filter(lambda di: re.match('(?i).*?(tv|television)',
-                                                               di.get('type', '') or di.get('category', ''))
-                                           and (not self.confirmed or di.get('trusted') or di.get('verified')),
-                                           data_json or {}):
-                            seeders, leechers, size = map(lambda (n1, n2): tryInt(
-                                *([item.get(n1) if None is not item.get(n1) else item.get(n2)]) * 2),
+                        for item in filter_iter(lambda di: re.match('(?i).*?(tv|television)',
+                                                                    di.get('type', '') or di.get('category', ''))
+                                                and (not self.confirmed or di.get('trusted') or di.get('verified')),
+                                                data_json or {}):
+                            seeders, leechers, size = map_list(lambda arg: try_int(
+                                *([item.get(arg[0]) if None is not item.get(arg[0]) else item.get(arg[1])]) * 2),
                                 (('seeder', 'seed'), ('leecher', 'leech'), ('size', 'size')))
                             if self._reject_item(seeders, leechers):
                                 continue
@@ -110,7 +113,8 @@ class SnowflProvider(generic.TorrentProvider):
                                 if not source or not link:
                                     continue
                                 download_url = self.urls['get'] % dict(
-                                    token=token[0], src=quote(source), url=base64.b64encode(quote(link)), ts='%(ts)s')
+                                    token=token[0], src=quote_fx(source),
+                                    url=b64encodestring(quote_fx(link)), ts='%(ts)s')
                             if title and download_url:
                                 items[mode].append((title, download_url, seeders, size))
 
@@ -126,14 +130,15 @@ class SnowflProvider(generic.TorrentProvider):
         return results
 
     def _get_tokens(self):
+        # type: (...) -> Tuple[AnyStr, AnyStr]
         html = self.get_url(self.url)
         if not self.should_skip():
             if not html:
                 raise generic.HaltParseException
 
-            rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {
+            rc = dict([(k, re.compile('(?i)' + v)) for (k, v) in iteritems({
                 'js': r'<script[^>]+?src="([^"]+?js\?v=[\w]{8,})"',
-                'token': r'\w\s*=\s*"(\w{30,40})"', 'seed': r'n random[^"]+"([^"]+)'}.items())
+                'token': r'\w\s*=\s*"(\w{30,40})"', 'seed': r'n random[^"]+"([^"]+)'})])
 
             js_src = rc['js'].findall(html)
             for src in js_src:
@@ -153,7 +158,7 @@ class SnowflProvider(generic.TorrentProvider):
 
     def get_data(self, url):
         result = None
-        data_json = self.get_url(url % dict(ts=self.ts()), json=True)
+        data_json = self.get_url(url % dict(ts=self.ts()), parse_json=True)
         if self.should_skip():
             return result
         url = data_json.get('url', '')
@@ -162,8 +167,8 @@ class SnowflProvider(generic.TorrentProvider):
         else:
             from sickbeard import providers
             if 'torlock' in url.lower():
-                prov = (filter(lambda p: 'torlock' == p.name.lower(), (filter(
-                    lambda sp: sp.providerType == self.providerType, providers.sortedProviderList()))))[0]
+                prov = next(filter_iter(lambda p: 'torlock' == p.name.lower(), (filter_iter(
+                    lambda sp: sp.providerType == self.providerType, providers.sortedProviderList()))))
                 state = prov.enabled
                 prov.enabled = True
                 _ = prov.url

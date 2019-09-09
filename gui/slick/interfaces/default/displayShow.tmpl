@@ -1,15 +1,16 @@
 #import sickbeard
-#from sickbeard import indexerApi, indexermapper, network_timezones
+#from sickbeard import TVInfoAPI, indexermapper, network_timezones
 #from sickbeard.common import Overview, qualityPresets, qualityPresetStrings, \
     Quality, statusStrings, WANTED, SKIPPED, ARCHIVED, IGNORED, FAILED, DOWNLOADED
 #from sickbeard.helpers import anon_url, get_size, human, maybe_plural
-#from sickbeard.indexers.indexer_config import INDEXER_TVDB, INDEXER_IMDB
+#from sickbeard.indexers.indexer_config import TVINFO_TVDB, TVINFO_IMDB
+#from six import iteritems
 <% def sg_var(varname, default=False): return getattr(sickbeard, varname, default) %>#slurp#
 <% def sg_str(varname, default=''): return getattr(sickbeard, varname, default) %>#slurp#
 ##
-#set global $title = $show.name
+#set global $title = $show_obj.name
 #set global $topmenu = 'home'
-#set $exceptions_string = ', '.join($show.exceptions)
+#set $exceptions_string = ', '.join($show_obj.exceptions)
 #set $css = $getVar('css', 'reg')
 #set $has_art = $getVar('has_art', None)
 #set $restart = 'Restart SickGear for new features on this page'
@@ -24,18 +25,16 @@
 <!--
 	var config = {
 		hasArt: #echo ('!0', '!1')[not $has_art]#,
-		TVShowList: [${tvshow_id_csv}],
+		TVShowList: ${tvshow_id_csv},
 		useIMDbInfo: #echo ('!1', '!0')[$sg_var('USE_IMDB_INFO')]
 	}
 
-    \$.SickGear.config = {
-		useFuzzy: #echo ('!1', '!0')[$sg_var('FUZZY_DATING')]#,
-#if $sg_var('FUZZY_DATING')##slurp#
+	\$.SickGear.config = {
+		useFuzzy: #echo ('!1', '!0')[$sg_var('FUZZY_DATING')]##if $sg_var('FUZZY_DATING')#,
 		dateFormat: '$sg_str('DATE_PRESET', '%x')',
 		timeFormat: '$sg_str('TIME_PRESET', '%I:%M %p')',
-		fuzzyTrimZero: #echo ('!1', '!0')[$sg_var('TRIM_ZERO')]#
-#end if##slurp#
-    }
+		fuzzyTrimZero: #echo ('!1', '!0')[$sg_var('TRIM_ZERO')]##end if#
+	}
 //-->
 </script>
 <script type="text/javascript" src="$sbRoot/js/displayShow.js?v=$sbPID"></script>
@@ -60,7 +59,7 @@
 #if $has_art
 	<ul>
     #for $k, ($image, $rating) in enumerate($fanart)
-		<li class="#echo ' '.join((x for x in ({10:'group', 20:'fave', 30:'avoid'}.get($rating, ''), ('', 'background first-load')[$start_image == $k]) if x)) #" style="background-image:url($sbRoot/showPoster/?show=$show.indexerid&which=fanart_$image)"></li>
+		<li class="#echo ' '.join((x for x in ({10:'group', 20:'fave', 30:'avoid'}.get($rating, ''), ('', 'background first-load')[$start_image == $k]) if x)) #" style="background-image:url($sbRoot/show-poster/?tvid_prodid=$show_obj.tvid_prodid&which=fanart_$image)"></li>
     #end for
 	</ul>
 #end if
@@ -71,15 +70,15 @@
 		Change show:
 #set $displayshowlist = []
 #set $cur_sel = 0
-#for $curShowList in $sortedShowLists
-    #set $curShowType = $curShowList[0]
-    #set $curShowList = $curShowList[1]
+#for $cur_showlist in $sortedShowLists
+    #set $cur_showtype = $cur_showlist[0]
+    #set $cur_showlist = $cur_showlist[1]
     #if 1 < len($sortedShowLists)
-#set void = $displayshowlist.append('\t\t\t<optgroup label="%s">' % $curShowType)
+#set void = $displayshowlist.append('\t\t\t<optgroup label="%s">' % $cur_showtype)
     #end if
-    #for $curShow in $curShowList
-        #set $show_ended = '' != $curShow.status and $curShow.status in ['ended', 'Ended', 'Canceled']
-        #set void = $displayshowlist.append('\t\t\t<option %svalue="%s"%s>%s</option>' % (('', 'class="ended" ')[$show_ended], $curShow.indexerid, ('', ' selected="selected"')[$curShow == $show], $curShow.name))
+    #for $cur_show_obj in $cur_showlist
+        #set $show_ended = '' != $cur_show_obj.status and $cur_show_obj.status in ['ended', 'Ended', 'Canceled']
+        #set void = $displayshowlist.append('\t\t\t<option %svalue="%s"%s>%s</option>' % (('', 'class="ended" ')[$show_ended], $cur_show_obj.tvid_prodid, ('', ' selected="selected"')[$cur_show_obj == $show_obj], $cur_show_obj.name))
     #end for
     #if 1 < len($sortedShowLists)
         #set void = $displayshowlist.append('\t\t\t</optgroup>')
@@ -103,13 +102,13 @@
 #end if
 	<div class="display-show-container">
 		<div id="posterCol" class="hidden-xs">
-			<a href="$sbRoot/showPoster/?show=$show.indexerid&amp;which=poster" rel="dialog">
-				<img src="$sbRoot/showPoster/?show=$show.indexerid&amp;which=poster_thumb" title="View poster for $show.name" class="tvshowImg addQTip" alt="">
+			<a href="$sbRoot/show-poster/?tvid_prodid=$show_obj.tvid_prodid&amp;which=poster" rel="dialog">
+				<img src="$sbRoot/show-poster/?tvid_prodid=$show_obj.tvid_prodid&amp;which=poster_thumb" title="View poster for $show_obj.name" class="tvshowImg addQTip" alt="">
 			</a>
 		</div>
 
 		<div id="showCol">
-#if int($show.paused)
+#if int($show_obj.paused)
 			<div class="paused paused-highlight">
 				<i class="sgicon-pause paused-outline"></i>
 			</div>
@@ -117,11 +116,11 @@
 			<div class="details-wrapper">
 				<div class="details-right top">
 #if 0 < len($seasons)
-    #set $show_ended = '' != $show.status and $show.status in ['ended', 'Ended', 'Canceled']
+    #set $show_ended = '' != $show_obj.status and $show_obj.status in ['ended', 'Ended', 'Canceled']
 					<div>
     #if $getVar('has_special', 0 == $seasons[-1][0])
 						<span class="details-title">Specials</span>
-						<span class="details-info">#if $sg_var('DISPLAY_SHOW_SPECIALS')#<a href="#season-0">View</a><span style="margin:0 7px">-</span>#end if#<a class="inner" href="$sbRoot/toggleDisplayShowSpecials/?show=$show.indexerid">#echo ('Show', 'Hide')[$sg_var('DISPLAY_SHOW_SPECIALS')]#</a></span>
+						<span class="details-info">#if $sg_var('DISPLAY_SHOW_SPECIALS')#<a href="#season-0">View</a><span style="margin:0 7px">-</span>#end if#<a class="inner" href="$sbRoot/toggle-specials-view-show/?tvid_prodid=$show_obj.tvid_prodid">#echo ('Show', 'Hide')[$sg_var('DISPLAY_SHOW_SPECIALS')]#</a></span>
     #end if
 					</div>
     #set $many_seasons = 12 < len($seasons)
@@ -151,17 +150,17 @@
 				</div>
 
 				<div id="details-top">
-					<div id="showtitle" data-showname="$show.name">
-						<h2 class="title" id="scene_exception_$show.indexerid"><span>$show.name</span>#echo ('', '<em id="title-status"> (ended)</em>')[$show_ended]#</h2>
+					<div id="showtitle" data-showname="$show_obj.name">
+						<h2 class="title" id="scene_exception_$show_obj.tvid_prodid"><span>$show_obj.name</span>#echo ('', '<em id="title-status"> (ended)</em>')[$show_ended]#</h2>
 #set $genres_done = False
-#if $sg_var('USE_IMDB_INFO') and 'genres' in $show.imdb_info and '' != $show.imdb_info['genres']
-    #for $imdbgenre in $show.imdb_info['genres'].split('|')
+#if $sg_var('USE_IMDB_INFO') and 'genres' in $show_obj.imdb_info and '' != $show_obj.imdb_info['genres']
+    #for $imdbgenre in $show_obj.imdb_info['genres'].split('|')
         #set $genres_done = True
 						<span class="label"><a href="<%= anon_url('http://www.imdb.com/search/title?at=0&genres=', imdbgenre.lower().replace('-','_'),'&amp;sort=moviemeter,asc&amp;title_type=tv_series') %>" target="_blank" title="View other popular $imdbgenre shows on imdb.com" class="addQTip">$imdbgenre.replace('Sci-Fi','Science-Fiction')</a></span>
     #end for
 #end if
-#if not $genres_done and $show.genre
-    #for $genre in $show.genre[1:-1].split('|')
+#if not $genres_done and $show_obj.genre
+    #for $genre in $show_obj.genre[1:-1].split('|')
         #set $genres_done = True
 						<span class="label">$genre</span>
     #end for#
@@ -179,23 +178,23 @@
 						<span class="details-title">Links</span>
 						<span class="details-info">
 #set $tvdb_id = None
-#for $src_id, $src_name in $indexerApi().all_indexers.iteritems()
-    #if $indexerApi($src_id).config.get('defunct') and $src_id != $show.indexer
+#for $src_id, $src_name in iteritems($TVInfoAPI().all_sources)
+    #if $TVInfoAPI($src_id).config.get('defunct') and $src_id != $show_obj.tvid
         #continue
     #end if
-    #if $src_id in $show.ids and $show.ids[$src_id].get('id', 0) > 0 and $indexermapper.MapStatus.NOT_FOUND != $show.ids[$src_id]['status']
-        #if $INDEXER_TVDB == $src_id
-            #set $tvdb_id = $show.ids[$src_id]['id']
+    #if $src_id in $show_obj.ids and $show_obj.ids[$src_id].get('id', 0) > 0 and $indexermapper.MapStatus.NOT_FOUND != $show_obj.ids[$src_id]['status']
+        #if $TVINFO_TVDB == $src_id
+            #set $tvdb_id = $show_obj.ids[$src_id]['id']
         #end if
-        #if $INDEXER_IMDB == $src_id and not $sg_var('USE_IMDB_INFO')
+        #if $TVINFO_IMDB == $src_id and not $sg_var('USE_IMDB_INFO')
             #continue
         #end if
-        #if not $indexerApi($src_id).config.get('defunct')
-							<a class="service addQTip" href="$anon_url($indexerApi($src_id).config['show_url'] % $show.ids[$src_id]['id'])" rel="noreferrer" onclick="window.open(this.href, '_blank'); return !1;" title="View $src_name info in new tab">
+        #if not $TVInfoAPI($src_id).config.get('defunct')
+							<a class="service addQTip" href="$anon_url($TVInfoAPI($src_id).config['show_url'] % $show_obj.ids[$src_id]['id'])" rel="noreferrer" onclick="window.open(this.href, '_blank'); return !1;" title="View $src_name info in new tab">
         #else#
-							<a class="service addQTip" href="$sbRoot/home/editShow?show=$show.indexerid#core-component-group3" title="Edit related show IDs">
+							<a class="service addQTip" href="$sbRoot/home/edit-show?tvid_prodid=$show_obj.tvid_prodid#core-component-group3" title="Edit related show IDs">
         #end if#
-								<img alt="$src_name" height="16" width="16" src="$sbRoot/images/$indexerApi($src_id).config['icon']" />
+								<img alt="$src_name" height="16" width="16" src="$sbRoot/images/$TVInfoAPI($src_id).config['icon']" />
 							</a>
     #end if
 #end for
@@ -205,26 +204,26 @@
 							</a>
 #end if
 #if $xem_numbering or $xem_absolute_numbering
-							<a class="service addQTip" href="$anon_url('http://thexem.de/search?q=', $show.name)" rel="noreferrer" onclick="window.open(this.href, '_blank'); return !1;" title="View XEM info in new tab"><img alt="[xem]" height="16" width="16" src="$sbRoot/images/xem.png" /></a>
+							<a class="service addQTip" href="$anon_url('http://thexem.de/search?q=', $show_obj.name)" rel="noreferrer" onclick="window.open(this.href, '_blank'); return !1;" title="View XEM info in new tab"><img alt="[xem]" height="16" width="16" src="$sbRoot/images/xem.png" /></a>
 #end if
 						</span>
 					</div>
 
 #set $startyear, $flags, $runtime = (None, False, None)
-#if $sg_var('USE_IMDB_INFO') and $show.imdbid
-    #if 'year' in $show.imdb_info
-        #set $startyear = $show.imdb_info['year'] or None
+#if $sg_var('USE_IMDB_INFO') and $show_obj.imdbid
+    #if 'year' in $show_obj.imdb_info
+        #set $startyear = $show_obj.imdb_info['year'] or None
     #end if
-    #set $flags = 'country_codes' in $show.imdb_info and '' != $show.imdb_info['country_codes']
-    #if 'runtimes' in $show.imdb_info
-        #set $runtime = $show.imdb_info['runtimes']
+    #set $flags = 'country_codes' in $show_obj.imdb_info and '' != $show_obj.imdb_info['country_codes']
+    #if 'runtimes' in $show_obj.imdb_info
+        #set $runtime = $show_obj.imdb_info['runtimes']
     #end if
 #end if
-#if None is $startyear and $show.startyear
-    #set $startyear = $show.startyear
+#if None is $startyear and $show_obj.startyear
+    #set $startyear = $show_obj.startyear
 #end if
-#if None is $runtime and $show.runtime
-    #set $runtime = $show.runtime
+#if None is $runtime and $show_obj.runtime
+    #set $runtime = $show_obj.runtime
 #end if
 #if $startyear or $flags
 					<div>
@@ -232,7 +231,7 @@
 						<span class="details-info">
 							<span class="space-right">#echo ($startyear, 'Unknown')[None is $startyear]#</span>
     #if $flags
-        #for $country in $show.imdb_info['country_codes'].split('|')
+        #for $country in $show_obj.imdb_info['country_codes'].split('|')
 							<img class="flag space-right" src="$sbRoot/images/flags/${$country.lower()}.png" width="16" height="11" />
         #end for
     #end if
@@ -240,19 +239,19 @@
 					</div>
 #end if
 
-#if $show.airs
-    #set $showairs = '%s%s' % ($show.airs.replace('y', 'y,'),
-                               ('', ' <span class="red-text" style="font-weight:bold">(invalid timeformat)</span>')[not $network_timezones.test_timeformat($show.airs)])
+#if $show_obj.airs
+    #set $showairs = '%s%s' % ($show_obj.airs.replace('y', 'y,'),
+                               ('', ' <span class="red-text" style="font-weight:bold">(invalid timeformat)</span>')[not $network_timezones.test_timeformat($show_obj.airs)])
 					<div>
 						<span class="details-title">Air#echo ('s', 'ed')[$show_ended]#</span>
 						<span class="details-info">$showairs</span>
 					</div>
 #end if
 
-#if $show.network
+#if $show_obj.network
 					<div>
 						<span class="details-title">Network</span>
-						<span class="details-info">$show.network</span>
+						<span class="details-info">$show_obj.network</span>
 					</div>
 #end if
 #if None is not $runtime
@@ -261,20 +260,20 @@
 						<span class="details-info">$runtime minutes</span>
 					</div>
 #end if
-#if $show.status
+#if $show_obj.status
 					<div>
 						<span class="details-title">Status</span>
-						<span class="details-info">$show.status</span>
+						<span class="details-info">$show_obj.status</span>
 					</div>
 #end if
 
-#if $sg_var('USE_IMDB_INFO') and 'rating' in $show.imdb_info
+#if $sg_var('USE_IMDB_INFO') and 'rating' in $show_obj.imdb_info
 					<div>
 						<span class="details-title">IMDb rating</span>
 						<span class="details-info">
-    #if $show.imdb_info['votes']
-        #set $rating_tip = '%s of 10 stars<br />%s votes' % (str($show.imdb_info['rating']), str($show.imdb_info['votes']))
-							<span class="imdbstars" qtip-content="$rating_tip">$show.imdb_info['rating']</span>
+    #if $show_obj.imdb_info['votes']
+        #set $rating_tip = '%s of 10 stars<br />%s votes' % (str($show_obj.imdb_info['rating']), str($show_obj.imdb_info['votes']))
+							<span class="imdbstars" qtip-content="$rating_tip">$show_obj.imdb_info['rating']</span>
     #else
 							<span>No votes available</span>
     #end if
@@ -282,12 +281,12 @@
 					</div>
 #end if
 
-#set $anyQualities, $bestQualities = $Quality.splitQuality(int($show.quality))
-#if $show.quality in $qualityPresets
+#set $anyQualities, $bestQualities = $Quality.splitQuality(int($show_obj.quality))
+#if $show_obj.quality in $qualityPresets
 					<div>
 						<span class="details-title">Quality</span>
 						<span class="details-info">
-							<span class="quality $qualityPresetStrings[$show.quality]">$qualityPresetStrings[$show.quality]</span>
+							<span class="quality $qualityPresetStrings[$show_obj.quality]">$qualityPresetStrings[$show_obj.quality]</span>
 						</span>
 					</div>
 #else
@@ -311,12 +310,12 @@
 				</div>
 
 				<div id="details-left">
-#set $has_overview = '' != $show.overview
+#set $has_overview = '' != $show_obj.overview
 #set $ep_tally = ('', '(<span class="hint">%s episodes</span>)' % $ep_counts['eps_all'])[0 < $ep_counts['eps_all']]
 					<div class="#echo ('no', 'details')[$has_overview]#-plot">
 						$ep_tally
 #if $has_overview
-						$show.overview
+						$show_obj.overview
 #else
                         #echo ('', '<br /><br />')[any($ep_tally)]
     #if $show_ended
@@ -332,47 +331,47 @@
 					</div>
 
 					<div id="details-bottom">
-						<span class="label addQTip" title="Info language, $show.lang"><img src="$sbRoot/images/flags/${show.lang}.png" width="16" height="11" alt="" style="margin-top:-1px" /></span>
+						<span class="label addQTip" title="Info language, $show_obj.lang"><img src="$sbRoot/images/flags/${show_obj.lang}.png" width="16" height="11" alt="" style="margin-top:-1px" /></span>
 						<span class="label addQTip" title="Location#echo (' no longer exists" style="background-color:#8f1515"', '"')[$showLoc[1]]#>$showLoc[0]</span>
 						<span class="label addQTip" title="Size">$human($get_size($showLoc[0]))</span>
 #set $filecount = sum([$c for $k, $c in $ep_counts['videos'].items()])
-#set $to_prune = $show.prune - $filecount
-#set $keep_or_prune = ('', ' (%s)' % ('%s to prune' % abs($to_prune), 'keep %s' % $show.prune)[0 <= $to_prune])[bool($show.prune)]
+#set $to_prune = $show_obj.prune - $filecount
+#set $keep_or_prune = ('', ' (%s)' % ('%s to prune' % abs($to_prune), 'keep %s' % $show_obj.prune)[0 <= $to_prune])[bool($show_obj.prune)]
 						<span class="label addQTip" title="Videos">#echo '%s file%s%s' % (('No', $filecount)[0 < $filecount], $maybe_plural($filecount), $keep_or_prune)#</span>
-#if $show.paused
+#if $show_obj.paused
 						<span class="label label-paused">Paused</span>
 #end if
-#if ($anyQualities + $bestQualities) and int($show.upgrade_once)
+#if ($anyQualities + $bestQualities) and int($show_obj.upgrade_once)
 						<span class="label">Upgrade once</span>
 #end if
-#if $show.exceptions
+#if $show_obj.exceptions
 						<span class="label addQTip" title="$exceptions_string.replace(', ', '<br />')">Scene names</span>
 #end if
-#if $show.rls_ignore_words
-						<span class="label addQTip" title="#echo $show.rls_ignore_words.replace(',', '<br />')#">Ignored words</span>
+#if $show_obj.rls_ignore_words
+						<span class="label addQTip" title="#echo $show_obj.rls_ignore_words.replace(',', '<br />')#">Ignored words</span>
 #end if
-#if $show.rls_require_words
-						<span class="label addQTip" title="#echo $show.rls_require_words.replace(',', '<br />')#">Required words</span>
+#if $show_obj.rls_require_words
+						<span class="label addQTip" title="#echo $show_obj.rls_require_words.replace(',', '<br />')#">Required words</span>
 #end if
-#if $show.flatten_folders or $sg_var('NAMING_FORCE_FOLDERS')
+#if $show_obj.flatten_folders or $sg_var('NAMING_FORCE_FOLDERS')
 						<span class="label">Flat folders</span>
 #end if
-#if int($show.air_by_date)
+#if int($show_obj.air_by_date)
 						<span class="label">Air by date</span>
 #end if
-#if int($show.dvdorder)
+#if int($show_obj.dvdorder)
 						<span class="label">DVD order</span>
 #end if
-#if int($show.scene)
+#if int($show_obj.scene)
 						<span class="label">Scene numbering</span>
 #end if
-#if $sg_var('USE_SUBTITLES') and int($show.subtitles)
+#if $sg_var('USE_SUBTITLES') and int($show_obj.subtitles)
 						<span class="label">Subtitles</span>
 #end if
-#if int($show.is_sports)
+#if int($show_obj.is_sports)
 						<span class="label">Sports</span>
 #end if
-#if int($show.is_anime)
+#if int($show_obj.is_anime)
 						<span class="label">Anime</span>
 #end if
 #if $bwl and $bwl.whitelist
@@ -398,7 +397,7 @@
 			<optgroup label="Downloaded">
 #for $curStatus in sorted($Quality.DOWNLOADED)
     #if $DOWNLOADED != $curStatus
-				<option value="$curStatus">$re.sub('Downloaded\s*\(([^\)]+)\)', r'\1', $statusStrings[$curStatus].replace('SD DVD', 'SD DVD/BR/BD'))</option>
+				<option value="$curStatus">$re.sub(r'Downloaded\s*\(([^\)]+)\)', r'\1', $statusStrings[$curStatus].replace('SD DVD', 'SD DVD/BR/BD'))</option>
     #end if
 #end for
 			<option value="$DOWNLOADED">with archived quality</option>
@@ -408,8 +407,7 @@
 				<option value="-$ARCHIVED">default ($min_initial)</option>
 			</optgroup>
 		</select>
-		<input type="hidden" id="showID" value="$show.indexerid">
-		<input type="hidden" id="indexer" value="$show.indexer">
+		<input type="hidden" id="tvid-prodid" value="$show_obj.tvid_prodid">
 		<input class="btn btn-inline" type="button" id="changeStatus" value="Go">
 	</div>
 
@@ -432,16 +430,16 @@
 #if not len($seasons)
 	<div id="no-episode-data">
 		<h3>No episode details at TV info source
-			<a class="service" href="$anon_url($indexerApi($show.indexer).config['show_url'] % $show.indexerid)" onclick="window.open(this.href, '_blank'); return !1;" title="View $indexerApi($show.indexer).name info in new tab">$indexerApi($show.indexer).name</a>
+			<a class="service" href="$anon_url($TVInfoAPI($show_obj.tvid).config['show_url'] % $show_obj.prodid)" onclick="window.open(this.href, '_blank'); return !1;" title="View $TVInfoAPI($show_obj.tvid).name info in new tab">$TVInfoAPI($show_obj.tvid).name</a>
 		</h3>
 	</div>
 #else
     #set $working_season = -1
     #set $odd = 0
     #set $scene, $scene_anime = (False, False)
-    #if not $show.air_by_date and not $show.is_sports and not $show.is_anime and $show.is_scene
+    #if not $show_obj.air_by_date and not $show_obj.is_sports and not $show_obj.is_anime and $show_obj.is_scene
         #set $scene = True
-    #elif not $show.air_by_date and not $show.is_sports and $show.is_anime and $show.is_scene
+    #elif not $show_obj.air_by_date and not $show_obj.is_sports and $show_obj.is_anime and $show_obj.is_scene
         #set $scene_anime = True
     #end if
 
@@ -487,14 +485,14 @@
 				</h3>
 			</th>
 		</tr>
-                #set $attr_title_ep = ('', ' (Anime #)')[$show.is_anime]
+                #set $attr_title_ep = ('', ' (Anime #)')[$show_obj.is_anime]
 		<tr id="season-$season-cols" class="seasoncols collapse tablesorter-headerRow">
 			<th class="col-checkbox tablesorter-no-sort"><input type="checkbox" class="seasonCheck" id="$season"></th>
 			<th class="col-metadata tablesorter-no-sort">Meta</th>
 			<th class="col-ep tablesorter-ep-num"><span title="Ep #$attr_title_ep"><span class="hdr-text">#</span></span></th>#if $scene or $scene_anime
 			<th class="col-ep tablesorter-ep-scene" style="padding-right:18px"><span class="hdr-text">Scene#if $scene_anime# absolute#end if#</span></th>#end if#
 			<th class="col-name"><span class="hdr-text">Name</span></th>
-			<th class="col-airdate tablesorter-airdate"><span class="hdr-text">Air Date</span></th>#if $sg_var('USE_SUBTITLES') and $show.subtitles
+			<th class="col-airdate tablesorter-airdate"><span class="hdr-text">Air Date</span></th>#if $sg_var('USE_SUBTITLES') and $show_obj.subtitles
 			<th class="col-subtitles tablesorter-no-sort">Subtitles</th>#end if
 			<th class="col-status"><span class="hdr-text">Status</span></th>
 			<th class="col-search tablesorter-no-sort">Search</th>

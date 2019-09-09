@@ -16,20 +16,20 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
+import datetime
 import os
 import traceback
-import datetime
+
+# noinspection PyPep8Naming
+import encodingKludge as ek
 
 import sickbeard
-from sickbeard import encodingKludge as ek
-from sickbeard import logger
-from sickbeard import helpers
-from sickbeard import search_queue
-from sickbeard.common import SKIPPED, WANTED
-from lib import libtrakt
+from . import helpers, logger, search_queue
+from .common import SKIPPED, WANTED
+from .indexers.indexer_config import TVINFO_TVRAGE
 
 
-class TraktChecker():
+class TraktChecker(object):
     def __init__(self):
         self.todoWanted = []
 
@@ -50,7 +50,7 @@ class TraktChecker():
         except Exception:
             logger.log(traceback.format_exc(), logger.DEBUG)
 
-    def findShow(self, indexer, indexerid):
+    def findShow(self, tvid, prodid):
         library = TraktCall("user/library/shows/all.json/%API%/" + sickbeard.TRAKT_USERNAME, sickbeard.TRAKT_API, sickbeard.TRAKT_USERNAME, sickbeard.TRAKT_PASSWORD)
 
         if library == 'NULL':
@@ -61,17 +61,17 @@ class TraktChecker():
             logger.log(u"Could not connect to trakt service, aborting library check", logger.ERROR)
             return
 
-        return filter(lambda x: int(indexerid) in [int(x['tvdb_id']) or 0, int(x['tvrage_id'])] or 0, library)
+        return filter(lambda x: int(prodid) in [int(x['tvdb_id']) or 0, int(x['tvrage_id'])] or 0, library)
 
     def syncLibrary(self):
         logger.log(u"Syncing Trakt.tv show library", logger.DEBUG)
 
-        for myShow in sickbeard.showList:
-            self.addShowToTraktLibrary(myShow)
+        for cur_show_obj in sickbeard.showList:
+            self.addShowToTraktLibrary(cur_show_obj)
 
     def removeShowFromTraktLibrary(self, show_obj):
         data = {}
-        if self.findShow(show_obj.indexer, show_obj.indexerid):
+        if self.findShow(show_obj.tvid, show_obj.prodid):
             # URL parameters
             data['tvdb_id'] = helpers.mapIndexersToShow(show_obj)[1]
             data['title'] = show_obj.name
@@ -91,7 +91,7 @@ class TraktChecker():
 
         data = {}
 
-        if not self.findShow(show_obj.indexer, show_obj.indexerid):
+        if not self.findShow(show_obj.tvid, show_obj.prodid):
             # URL parameters
             data['tvdb_id'] = helpers.mapIndexersToShow(show_obj)[1]
             data['title'] = show_obj.name
@@ -115,23 +115,20 @@ class TraktChecker():
             return
 
         for show in watchlist:
-            indexer = int(sickbeard.TRAKT_DEFAULT_INDEXER)
-            if indexer == 2:
-                indexer_id = int(show["tvrage_id"])
-            else:
-                indexer_id = int(show["tvdb_id"])
+            tvid = int(sickbeard.TRAKT_DEFAULT_INDEXER)
+            prodid = int(show[('tvdb_id', 'tvrage_id')[TVINFO_TVRAGE == tvid]])
 
             if int(sickbeard.TRAKT_METHOD_ADD) != 2:
-                self.addDefaultShow(indexer, indexer_id, show["title"], SKIPPED)
+                self.addDefaultShow(tvid, prodid, show["title"], SKIPPED)
             else:
-                self.addDefaultShow(indexer, indexer_id, show["title"], WANTED)
+                self.addDefaultShow(tvid, prodid, show["title"], WANTED)
 
             if int(sickbeard.TRAKT_METHOD_ADD) == 1:
-                newShow = helpers.findCertainShow(sickbeard.showList, indexer_id)
-                if newShow is not None:
-                    self.setEpisodeToWanted(newShow, 1, 1)
+                show_obj = helpers.find_show_by_id({tvid: prodid})
+                if None is not show_obj:
+                    self.setEpisodeToWanted(show_obj, 1, 1)
                 else:
-                    self.todoWanted.append((indexer_id, 1, 1))
+                    self.todoWanted.append((prodid, 1, 1))
 
     def updateEpisodes(self):
         """
@@ -149,31 +146,28 @@ class TraktChecker():
             return
 
         for show in watchlist:
-            indexer = int(sickbeard.TRAKT_DEFAULT_INDEXER)
-            if indexer == 2:
-                indexer_id = int(show["tvrage_id"])
-            else:
-                indexer_id = int(show["tvdb_id"])
+            tvid = int(sickbeard.TRAKT_DEFAULT_INDEXER)
+            prodid = int(show[('tvdb_id', 'tvrage_id')[TVINFO_TVRAGE == tvid]])
 
-            self.addDefaultShow(indexer, indexer_id, show["title"], SKIPPED)
-            newShow = helpers.findCertainShow(sickbeard.showList, indexer_id)
+            self.addDefaultShow(tvid, prodid, show['title'], SKIPPED)
+            show_obj = helpers.find_show_by_id({tvid: prodid})
 
             try:
-                if newShow and newShow.indexer == indexer:
+                if show_obj and show_obj.tvid == tvid:
                     for episode in show["episodes"]:
-                        if newShow is not None:
-                            self.setEpisodeToWanted(newShow, episode["season"], episode["number"])
+                        if None is not show_obj:
+                            self.setEpisodeToWanted(show_obj, episode["season"], episode["number"])
                         else:
-                            self.todoWanted.append((indexer_id, episode["season"], episode["number"]))
+                            self.todoWanted.append((prodid, episode["season"], episode["number"]))
             except TypeError:
                 logger.log(u"Could not parse the output from trakt for " + show["title"], logger.DEBUG)
 
-    def addDefaultShow(self, indexer, indexer_id, name, status):
+    def addDefaultShow(self, tvid, prod_id, name, status):
         """
         Adds a new show with the default settings
         """
-        if not helpers.findCertainShow(sickbeard.showList, int(indexer_id)):
-            logger.log(u"Adding show " + str(indexer_id))
+        if not helpers.find_show_by_id({int(tvid): int(prodid)}):
+            logger.log(u"Adding show " + str(prod_id))
             root_dirs = sickbeard.ROOT_DIRS.split('|')
 
             try:
@@ -182,15 +176,15 @@ class TraktChecker():
                 location = None
 
             if location:
-                showPath = ek.ek(os.path.join, location, helpers.sanitizeFileName(name))
-                dir_exists = helpers.makeDir(showPath)
+                showPath = ek.ek(os.path.join, location, helpers.sanitize_filename(name))
+                dir_exists = helpers.make_dir(showPath)
                 if not dir_exists:
                     logger.log(u"Unable to create the folder " + showPath + ", can't add the show", logger.ERROR)
                     return
                 else:
-                    helpers.chmodAsParent(showPath)
+                    helpers.chmod_as_parent(showPath)
 
-                sickbeard.showQueueScheduler.action.addShow(int(indexer), int(indexer_id), showPath, status,
+                sickbeard.showQueueScheduler.action.addShow(int(tvid), int(prod_id), showPath, status,
                                                             int(sickbeard.QUALITY_DEFAULT),
                                                             int(sickbeard.FLATTEN_FOLDERS_DEFAULT),
                                                             paused=sickbeard.TRAKT_START_PAUSED)
@@ -198,32 +192,33 @@ class TraktChecker():
                 logger.log(u"There was an error creating the show, no root directory setting found", logger.ERROR)
                 return
 
-    def setEpisodeToWanted(self, show, s, e):
+    def setEpisodeToWanted(self, show_obj, s, e):
         """
         Sets an episode to wanted, only is it is currently skipped
         """
-        epObj = show.getEpisode(int(s), int(e))
-        if epObj:
+        ep_obj = show_obj.get_episode(int(s), int(e))
+        if ep_obj:
 
-            with epObj.lock:
-                if epObj.status != SKIPPED or epObj.airdate == datetime.date.fromordinal(1):
+            with ep_obj.lock:
+                if ep_obj.status != SKIPPED or ep_obj.airdate == datetime.date.fromordinal(1):
                     return
 
-                logger.log(u"Setting episode s" + str(s) + "e" + str(e) + " of show " + show.name + " to wanted")
+                logger.log(u"Setting episode s" + str(s) + "e" + str(e) + " of show " + show_obj.name + " to wanted")
                 # figure out what segment the episode is in and remember it so we can backlog it
 
-                epObj.status = WANTED
-                epObj.saveToDB()
+                ep_obj.status = WANTED
+                ep_obj.save_to_db()
 
-            cur_backlog_queue_item = search_queue.BacklogQueueItem(show, [epObj])
-            sickbeard.searchQueueScheduler.action.add_item(cur_backlog_queue_item)
+            backlog_queue_item = search_queue.BacklogQueueItem(show_obj, [ep_obj])
+            sickbeard.searchQueueScheduler.action.add_item(backlog_queue_item)
 
-            logger.log(u"Starting backlog for " + show.name + " season " + str(
+            logger.log(u"Starting backlog for " + show_obj.name + " season " + str(
                     s) + " episode " + str(e) + " because some eps were set to wanted")
 
-    def manageNewShow(self, show):
-        logger.log(u"Checking if trakt watch list wants to search for episodes from new show " + show.name, logger.DEBUG)
-        episodes = [i for i in self.todoWanted if i[0] == show.indexerid]
+    def manageNewShow(self, show_obj):
+        logger.log(u"Checking if trakt watch list wants to search for episodes from new show " + show_obj.name,
+                   logger.DEBUG)
+        episodes = [i for i in self.todoWanted if i[0] == show_obj.prodid]
         for episode in episodes:
             self.todoWanted.remove(episode)
-            self.setEpisodeToWanted(show, episode[1], episode[2])
+            self.setEpisodeToWanted(show_obj, episode[1], episode[2])

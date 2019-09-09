@@ -1,8 +1,14 @@
 from threading import RLock
+
+from six import PY2
 try:
     from UserDict import DictMixin
 except ImportError:
-    from collections import Mapping as DictMixin
+    if PY2:
+        from collections import Mapping as DictMixin
+    else:
+        # noinspection PyCompatibility
+        from collections.abc import Mapping as DictMixin
 
 
 # With lazy loading, we might end up with multiple threads triggering

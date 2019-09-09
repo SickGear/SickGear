@@ -18,12 +18,12 @@
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import print_function
-import random
+# import random
 import unittest
 
 import test_lib as test
 
-import sys, os.path
+# import sys, os.path
 
 import sickbeard.search as search
 import sickbeard
@@ -70,25 +70,26 @@ def test_generator(tvdbdid, show_name, curData, forceSearch):
     def test(self):
         global searchItems
         searchItems = curData['i']
-        show = TVShow(1, tvdbdid)
-        show.name = show_name
-        show.quality = curData['q']
-        show.saveToDB()
-        sickbeard.showList.append(show)
+        show_obj = TVShow(1, tvdbdid)
+        show_obj.name = show_name
+        show_obj.quality = curData['q']
+        show_obj.save_to_db()
+        sickbeard.showList.append(show_obj)
         episode = None
 
         for epNumber in curData['e']:
-            episode = TVEpisode(show, curData['s'], epNumber)
+            episode = TVEpisode(show_obj, curData['s'], epNumber)
             episode.status = c.WANTED
-            episode.saveToDB()
+            episode.save_to_db()
 
-        bestResult = search.search_providers(show, episode.season, episode.episode, forceSearch)
+        bestResult = search.search_providers(show_obj, episode.season, episode.episode, forceSearch)
         if not bestResult:
             self.assertEqual(curData['b'], bestResult)
         self.assertEqual(curData['b'], bestResult.name) #first is expected, second is choosen one
     return test
 
-if __name__ == '__main__':
+
+if '__main__' == __name__:
     print('==================')
     print('STARTING - Snatch TESTS')
     print('==================')

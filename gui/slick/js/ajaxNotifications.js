@@ -1,4 +1,4 @@
-var message_url = sbRoot + '/ui/get_messages',
+var message_url = sbRoot + '/ui/get-messages',
 	test = !1;
 
 PNotify.prototype.options.addclass = 'stack-bottomright';

@@ -26,8 +26,8 @@ $(document).ready(function(){
 		if (0 == dirArr.length)
 			return false;
 
-		window.location.href = sbRoot + '/home/addShows/addExistingShows'
-			+ '?promptForSettings=' + ($('#promptForSettings').prop('checked') ? 'on' : 'off')
+		window.location.href = sbRoot + '/add-shows/add-existing-shows'
+			+ '?prompt_for_settings=' + ($('#prompt-for-settings').prop('checked') ? 'on' : 'off')
 			+ (undefined !== $.sgSid && 0 < $.sgSid.length ? '&sid=' + $.sgSid : '')
 			+ '&shows_to_add=' + dirArr.join('&shows_to_add=');
 	});
@@ -38,7 +38,7 @@ $(document).ready(function(){
 		$('.dir_check').each(function(i, w){
 			if ($(w).is(':checked')){
 				url += (url.length ? '&' : '')
-					+ 'rootDir=' + encodeURIComponent($(w).attr('id'));
+					+ 'root_dir=' + encodeURIComponent($(w).attr('id'));
 			}
 		});
 
@@ -48,7 +48,7 @@ $(document).ready(function(){
 			+ ' height="32" width="32" />'
 			+ ' scanning parent folders...');
 
-		$.get(sbRoot + '/home/addShows/massAddTable' + (undefined !== $.sgHashDir && 0 < $.sgHashDir.length ? '?hash_dir=' + $.sgHashDir : ''),
+		$.get(sbRoot + '/add-shows/mass-add-table' + (undefined !== $.sgHashDir && 0 < $.sgHashDir.length ? '?hash_dir=' + $.sgHashDir : ''),
 			url,
 			function(data){
 				$('#tableDiv').html(data);

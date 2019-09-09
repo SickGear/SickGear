@@ -9,7 +9,7 @@ from sickbeard import logger
 from .exceptions import *
 
 
-class TraktAccount:
+class TraktAccount(object):
     max_auth_fail = 9
 
     def __init__(self, account_id=None, token='', refresh_token='', auth_fail=0, last_fail=None, token_valid_date=None):
@@ -94,7 +94,7 @@ class TraktAccount:
                 self.inc_auth_failure()
 
 
-class TraktAPI:
+class TraktAPI(object):
     max_retrys = 3
 
     def __init__(self, timeout=None):
@@ -143,8 +143,7 @@ class TraktAPI:
             sickbeard.TRAKT_ACCOUNTS[account].reset_auth_failure()
             sickbeard.save_config()
             return True
-        else:
-            return False
+        return False
 
     @staticmethod
     def delete_account(account):
@@ -190,7 +189,7 @@ class TraktAPI:
             return False
 
         if 'access_token' in resp and 'refresh_token' in resp and 'expires_in' in resp:
-            token_valid_date = now + datetime.timedelta(seconds=sickbeard.helpers.tryInt(resp['expires_in']))
+            token_valid_date = now + datetime.timedelta(seconds=sickbeard.helpers.try_int(resp['expires_in']))
             if refresh or (not refresh and None is not account and account in sickbeard.TRAKT_ACCOUNTS):
                 return self.replace_account(account, resp['access_token'], resp['refresh_token'],
                                             token_valid_date, refresh)
@@ -204,8 +203,8 @@ class TraktAPI:
         if method not in ['GET', 'POST', 'PUT', 'DELETE', None]:
             return {}
         if None is method:
-            method = ('GET', 'POST')['data' in kwargs.keys() or data is not None]
-        if path != 'oauth/token' and None is send_oauth and method in ['POST', 'PUT', 'DELETE']:
+            method = ('GET', 'POST')['data' in kwargs.keys() or None is not data]
+        if 'oauth/token' != path and None is send_oauth and method in ['POST', 'PUT', 'DELETE']:
             return {}
 
         count += 1
@@ -214,7 +213,7 @@ class TraktAPI:
 
         # wait before retry
         if 'users/settings' != path:
-            count > 1 and time.sleep(sleep_retry)
+            1 < count and time.sleep(sleep_retry)
 
         headers = headers or self.headers
         if None is not send_oauth and send_oauth in sickbeard.TRAKT_ACCOUNTS:
@@ -276,7 +275,7 @@ class TraktAPI:
                 return self.trakt_request(path, data, headers, url, count=count, sleep_retry=sleep_retry,
                                           send_oauth=send_oauth, method=method)
 
-            elif 401 == code and path != 'oauth/token':
+            elif 401 == code and 'oauth/token' != path:
                 if None is not send_oauth:
                     if sickbeard.TRAKT_ACCOUNTS[send_oauth].needs_refresh:
                         if self.trakt_token(refresh=True, count=count, account=send_oauth):

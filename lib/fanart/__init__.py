@@ -37,9 +37,11 @@ __doc__ = """
 :copyright: %s
 """ % (__version__, __author__, __license__)
 
+from six import iteritems
 
 def values(obj):
-    return [v for k, v in obj.__dict__.iteritems() if not k.startswith('_')]
+    return [v for k, v in iteritems(obj.__dict__) if not k.startswith('_')]
+
 
 BASEURL = 'http://webservice.fanart.tv/v3/%s/%s?api_key=%s'
 
@@ -65,6 +67,7 @@ class TYPE(object):
         CHARACTER = 'characterart'
         THUMB = 'tvthumb'
         SEASONTHUMB = 'seasonthumb'
+        SEASONPOSTER = 'seasonposter'
         BACKGROUND = 'showbackground'
         HDLOGO = 'hdtvlogo'
         HDART = 'hdclearart'

@@ -12,12 +12,12 @@
 #set $has_any_sports = False
 #set $has_any_anime = False
 #set $has_any_flat_folders = False
-#set $myShowList = $sickbeard.showList
-$myShowList.sort(lambda x, y: cmp(x.name, y.name))
-#for $curShow in $myShowList
-    #set $has_any_sports |= bool($curShow.sports)
-    #set $has_any_anime |= bool($curShow.anime)
-    #set $has_any_flat_folders |= $bool(curShow.flatten_folders)
+#set $show_list = $sickbeard.showList
+$show_list.sort(key=lambda _x: _x.name)
+#for $cur_show_obj in $show_list
+    #set $has_any_sports |= bool($cur_show_obj.sports)
+    #set $has_any_anime |= bool($cur_show_obj.anime)
+    #set $has_any_flat_folders |= $bool(cur_show_obj.flatten_folders)
 #end for
 <script type="text/javascript" charset="utf-8">
 <!--
@@ -82,7 +82,7 @@ $myShowList.sort(lambda x, y: cmp(x.name, y.name))
 #else
 	<h1 class="title">$title</h1>
 #end if
-<form name="bulkChangeForm" method="post" action="bulkChange">
+<form name="bulkChangeForm" method="post" action="bulk_change">
 $xsrf_form_html
 
 <table id="bulkChangeTable" class="sickbeardTable tablesorter" cellspacing="1" border="0" cellpadding="0">
@@ -129,68 +129,68 @@ $xsrf_form_html
 #set $disabled_subtitles_tip = ' title="Use edit to enable subtitle search for this show"'
 #set $no = 'no16.png" title="No" alt="No'
 #set $yes = 'yes16.png" title="Yes" alt="Yes'
-#for $curShow in $myShowList
-    #set $option_state = '<input type="checkbox" class="%sCheck" id="%s-{0:s}"%s>'.format(str($curShow.indexerid))
+#for $cur_show_obj in $show_list
+    #set $option_state = '<input type="checkbox" class="%sCheck" id="%s-{0:s}"%s>'.format($cur_show_obj.tvid_prodid)
     ##
-    #set $curUpdate_disabled = $sickbeard.showQueueScheduler.action.isBeingUpdated($curShow)\
-                               or $sickbeard.showQueueScheduler.action.isInUpdateQueue($curShow)
+    #set $curUpdate_disabled = $sickbeard.showQueueScheduler.action.isBeingUpdated($cur_show_obj)\
+                               or $sickbeard.showQueueScheduler.action.isInUpdateQueue($cur_show_obj)
     #set $reason = $disabled_inprogress_tip % 'Update'
     #set $curUpdate = '%s>%s' % (('', $reason)[$curUpdate_disabled],
                                  $option_state % ('update', 'update', ('', $disabled + $reason)[$curUpdate_disabled]))
     ##
-    #set $curRefresh_disabled = $sickbeard.showQueueScheduler.action.isBeingRefreshed($curShow)\
-                                or $sickbeard.showQueueScheduler.action.isInRefreshQueue($curShow)
+    #set $curRefresh_disabled = $sickbeard.showQueueScheduler.action.isBeingRefreshed($cur_show_obj)\
+                                or $sickbeard.showQueueScheduler.action.isInRefreshQueue($cur_show_obj)
     #set $reason = $disabled_inprogress_tip % 'Rescan'
     #set $curRefresh = '%s>%s' % (('', $reason)[$curRefresh_disabled],
                                   $option_state % ('refresh', 'refresh', ('', $disabled + $reason)[$curRefresh_disabled]))
     ##
-    #set $curRename_disabled = $sickbeard.showQueueScheduler.action.isBeingRenamed($curShow)\
-                               or $sickbeard.showQueueScheduler.action.isInRenameQueue($curShow)
+    #set $curRename_disabled = $sickbeard.showQueueScheduler.action.isBeingRenamed($cur_show_obj)\
+                               or $sickbeard.showQueueScheduler.action.isInRenameQueue($cur_show_obj)
     #set $reason = $disabled_inprogress_tip % 'Rename'
     #set $curRename = '%s>%s' % (('', $reason)[$curRename_disabled],
                                  $option_state % ('rename', 'rename', ('', $disabled + $reason)[$curRename_disabled]))
     ##
-    #set $subtitles_disabled = not $curShow.subtitles\
-                               or $sickbeard.showQueueScheduler.action.isBeingSubtitled($curShow)\
-                               or $sickbeard.showQueueScheduler.action.isInSubtitleQueue($curShow)
-    #set $reason = ($disabled_inprogress_tip % 'Search subtitle', $disabled_subtitles_tip)[not $curShow.subtitles]
+    #set $subtitles_disabled = not $cur_show_obj.subtitles\
+                               or $sickbeard.showQueueScheduler.action.isBeingSubtitled($cur_show_obj)\
+                               or $sickbeard.showQueueScheduler.action.isInSubtitleQueue($cur_show_obj)
+    #set $reason = ($disabled_inprogress_tip % 'Search subtitle', $disabled_subtitles_tip)[not $cur_show_obj.subtitles]
     #set $curSubtitle = '%s>%s' % (('', $reason)[$subtitles_disabled],
                                    $option_state % ('subtitle', 'subtitle', ('', $disabled + $reason)[$subtitles_disabled]))
     ##
-    #set $curDelete_disabled = $sickbeard.showQueueScheduler.action.isBeingRenamed($curShow)\
-                               or $sickbeard.showQueueScheduler.action.isInRenameQueue($curShow)\
-                               or $sickbeard.showQueueScheduler.action.isInRefreshQueue($curShow)
+    #set $curDelete_disabled = $sickbeard.showQueueScheduler.action.isBeingRenamed($cur_show_obj)\
+                               or $sickbeard.showQueueScheduler.action.isInRenameQueue($cur_show_obj)\
+                               or $sickbeard.showQueueScheduler.action.isInRefreshQueue($cur_show_obj)
     #set $reason = $disabled_inprogress_tip % 'Rename or rescan'
     #set $curDelete = '%s>%s' % (('', $reason)[$curDelete_disabled],
                                  $option_state % ('delete', 'delete', ('', $disabled + $reason)[$curDelete_disabled]))
     ##
-    #set $curRemove_disabled = $sickbeard.showQueueScheduler.action.isBeingRenamed($curShow)\
-                               or $sickbeard.showQueueScheduler.action.isInRenameQueue($curShow)\
-                               or $sickbeard.showQueueScheduler.action.isInRefreshQueue($curShow)
+    #set $curRemove_disabled = $sickbeard.showQueueScheduler.action.isBeingRenamed($cur_show_obj)\
+                               or $sickbeard.showQueueScheduler.action.isInRenameQueue($cur_show_obj)\
+                               or $sickbeard.showQueueScheduler.action.isInRefreshQueue($cur_show_obj)
     ##set $reason = $disabled_inprogress_tip % 'Rename or rescan'
     #set $curRemove = '%s>%s' % (('', $reason)[$curRemove_disabled],
                                  $option_state % ('remove', 'remove', ('', $disabled + $reason)[$curRemove_disabled]))
 		<tr>
-			<td align="center"><input type="checkbox" class="editCheck" id="edit-$curShow.indexerid"></td>
-    #set $display_name = (re.sub('^((?:A(?!\s+to)n?)|The)\s(\w)', r'<span class="article">\1</span> \2', $curShow.name), $curShow.name)[$sickbeard.SORT_ARTICLE]
-			<td class="tvShow"><a href="$sbRoot/home/displayShow?show=$curShow.indexerid">$display_name</a></td>
-    #if $curShow.quality in $qualityPresets
-			<td align="center"><span class="quality $qualityPresetStrings[$curShow.quality]">$qualityPresetStrings[$curShow.quality]</span></td>
+			<td align="center"><input type="checkbox" class="editCheck" id="edit-$cur_show_obj.tvid_prodid"></td>
+    #set $display_name = (re.sub(r'^((?:A(?!\s+to)n?)|The)\s(\w)', r'<span class="article">\1</span> \2', $cur_show_obj.name), $cur_show_obj.name)[$sickbeard.SORT_ARTICLE]
+			<td class="tvShow"><a href="$sbRoot/home/view-show?tvid_prodid=${cur_show_obj.tvid_prodid}">$display_name</a></td>
+    #if $cur_show_obj.quality in $qualityPresets
+			<td align="center"><span class="quality $qualityPresetStrings[$cur_show_obj.quality]">$qualityPresetStrings[$cur_show_obj.quality]</span></td>
     #else
 			<td align="center"><span class="quality Custom">Custom</span></td>
     #end if
     #if $has_any_sports
-			<td align="center"><img src="$sbRoot/images/#if 1 == int($curShow.is_sports) then $yes else $no#" width="16" height="16" /></td>
+			<td align="center"><img src="$sbRoot/images/#if 1 == int($cur_show_obj.is_sports) then $yes else $no#" width="16" height="16" /></td>
     #end if
-			<td align="center"><img src="$sbRoot/images/#if 1 == int($curShow.is_scene) then $yes else $no#" width="16" height="16" /></td>
+			<td align="center"><img src="$sbRoot/images/#if 1 == int($cur_show_obj.is_scene) then $yes else $no#" width="16" height="16" /></td>
     #if $has_any_anime
-			<td align="center"><img src="$sbRoot/images/#if 1 == int($curShow.is_anime) then $yes else $no#" width="16" height="16" /></td>
+			<td align="center"><img src="$sbRoot/images/#if 1 == int($cur_show_obj.is_anime) then $yes else $no#" width="16" height="16" /></td>
     #end if
     #if $has_any_flat_folders
-			<td align="center"><img src="$sbRoot/images/#if 1 == int($curShow.flatten_folders) then $yes else $no#" width="16" height="16" /></td>
+			<td align="center"><img src="$sbRoot/images/#if 1 == int($cur_show_obj.flatten_folders) then $yes else $no#" width="16" height="16" /></td>
     #end if
-			<td align="center"><img src="$sbRoot/images/#if 1 == int($curShow.paused) then $yes else $no#" width="16" height="16" /></td>
-			<td align="center">$curShow.status</td>
+			<td align="center"><img src="$sbRoot/images/#if 1 == int($cur_show_obj.paused) then $yes else $no#" width="16" height="16" /></td>
+			<td align="center">$cur_show_obj.status</td>
 			<td align="center"$curUpdate</td>
 			<td align="center"$curRefresh</td>
 			<td align="center"$curRename</td>
