@@ -26,7 +26,6 @@ from sickbeard import logger
 from sickbeard.bs4_parser import BS4Parser
 from sickbeard.config import naming_ep_type
 from sickbeard.helpers import tryInt
-from sickbeard.bs4_parser import BS4Parser
 from dateutil.parser import parse
 from lib.unidecode import unidecode
 
@@ -109,7 +108,7 @@ class TVChaosUKProvider(generic.TorrentProvider):
                         try:
                             head = head if None is not head else self._header_row(tr)
                             seeders, leechers, size = [tryInt(n, n) for n in [
-                                cells[head[x]].get_text().strip() for x in 'seed', 'leech', 'size']]
+                                cells[head[x]].get_text().strip() for x in ('seed', 'leech', 'size')]]
                             if self._reject_item(seeders, leechers, self.freeleech and (
                                     None is cells[1].find('img', title=rc['fl']))):
                                 continue
@@ -164,6 +163,11 @@ class TVChaosUKProvider(generic.TorrentProvider):
     @staticmethod
     def regulate_title(title, mode='-', search_string=''):
 
+        # normalise abnormal naming patterns e.g. 2019/20 -> 2019
+        title = re.sub(r'((?:19|20)\d\d)/20(\d\d)?', r'\1', title)
+        # s<x> ep<y> -> s<x>e<y>
+        title = re.sub(r'(?i)s(\d\d+)[\W]*?e+(?:p|pisode)*(\d\d+)', r'S\1E\2', title)
+        
         has_series = re.findall(r'(?i)(.*?series[^\d]*?\d+)(.*)', title)
         if has_series:
             rc_xtras = re.compile(r'(?i)([. _-]|^)(special|extra)s?\w*([. _-]|$)')
@@ -178,13 +182,16 @@ class TVChaosUKProvider(generic.TorrentProvider):
         title_parts = re.findall(
             r'(?im)^(.*?)(?:Season[^\d]*?(\d+).*?)?' +
             r'(?:(?:pack|part|pt)\W*?)?(\d+)[^\d]*?of[^\d]*?(?:\d+)(.*?)$', title)
+        sxe_build = None
+
         if len(title_parts):
             new_parts = [tryInt(part, part) for part in title_parts[0]]
             if not new_parts[1]:
                 new_parts[1] = 1
             new_parts[2] = ('E%02d', ' Pack %d')[any([re.search('(?i)season|series', title),
                                                       mode in 'Season'])] % new_parts[2]
-            title = '%s`S%02d%s`%s' % tuple(new_parts)
+            sxe_build = 'S%02d%s' % tuple(new_parts[1:3])
+            title = '%s`%s`%s' % (new_parts[0], sxe_build, new_parts[-1])
         for yr in years:
             # noinspection RegExpRedundantEscape
             title = re.sub(r'\{\{yr\}\}', yr, title, count=1)
@@ -232,12 +239,14 @@ class TVChaosUKProvider(generic.TorrentProvider):
             re.sub(r'(?i)(?:hd(?:tv)?\s*)?(\d{3,4})(?:hd|p)?', r'\1p',
                    '`'.join(['`'.join(x) for x in tags[:-1]]).rstrip('`')) +
             ('', '`hdtv')[not any(tags[2])] + ('', '`x264')[not any(tags[3])]))
+        title = re.sub(r'([hx]26[45])p', r'\1', title)
         for r in [(r'(?i)(?:\W(?:Series|Season))?\W(Repack)\W', r'`\1`'),
                   ('(?i)%s(Proper)%s' % (bl, br), r'`\1`'), (r'%s\s*%s' % (bl, br), '`')]:
             title = re.sub(r[0], r[1], title)
-
+            
+        title = re.sub(r'[][]', '', title)
         title = '%s%s-nogrp' % (('', t[0])[1 < len(t)], title)
-        for r in [(r'\s+[-]?\s+|\s+`|`\s+', '`'), ('`+', '.')]:
+        for r in [(r'\s+[-]?\s+|\s+`|`\s+', '`'), ('`+', ' ')]:
             title = re.sub(r[0], r[1], title)
 
         titles = []
@@ -263,7 +272,36 @@ class TVChaosUKProvider(generic.TorrentProvider):
 
         titles += [title]
 
-        return titles
+        result = []
+        for cur_item in titles:
+            sxe_find = r'(?i)%s' % (sxe_build, r'S\d\d+E\d\d+|season\s*\d+')[not sxe_build]
+            sxe = re.findall(sxe_find, cur_item) or ''
+            if sxe:
+                sxe = sxe[0]
+                cur_item = re.sub(sxe, r'{{sxe}}', cur_item)
+            dated = dnew and re.findall(dnew, cur_item) or ''
+            if dated:
+                dated = dated[0]
+                cur_item = re.sub(dated, r'{{dated}}', cur_item)
+
+            parts = []
+            pre_post = re.findall(r'(.*?){{.*}}[.]*(.*)', cur_item)
+            item = re.sub(r'{{(sxe|dated)}}[.]*', '', cur_item)
+            end = [item]
+            if pre_post and (sxe or dated):
+                divider = ':'
+                tail = re.findall(r'(?i)^([^%s]+)(.*)' % divider, item)[0]
+                if tail[1]:  # show name divider found
+                    parts = [tail[0].strip()]
+                    end = [tail[1].lstrip('%s ' % divider)]
+                else:
+                    parts = [pre_post[0][0]]
+                    end = [pre_post[0][1]]
+
+            parts += ([sxe], [])[not sxe] + ([dated], [])[not dated] + end
+            result += [re.sub(r'(\s\.|\.\s|\s+)', '.', ' '.join(parts))]
+
+        return result
 
     def after_get_data(self, result):
         if self.use_after_get_data:
@@ -281,19 +319,30 @@ class TVChaosUKProvider(generic.TorrentProvider):
 
     def _season_strings(self, ep_obj, **kwargs):
 
-        return generic.TorrentProvider._season_strings(self, ep_obj, scene=False, prefix='%', sp_detail=(
-            lambda e: [
-                (('', 'Series %(seasonnumber)d%%')[1 < tryInt(e.get('seasonnumber'))] + '%(episodenumber)dof') % e,
-                'Series %(seasonnumber)d' % e]))
+        return self.show_name_wildcard(
+            generic.TorrentProvider._season_strings(
+                self, ep_obj, scene=False, prefix='%', sp_detail=(
+                    lambda e: [(('', 'Series %(seasonnumber)d%%')[1 < tryInt(e.get('seasonnumber'))]
+                                + '%(episodenumber)dof') % e, 'Series %(seasonnumber)d' % e])))
 
     def _episode_strings(self, ep_obj, **kwargs):
 
-        return super(TVChaosUKProvider, self)._episode_strings(ep_obj, scene=False, prefix='%', date_detail=(
-            lambda date: ['%s %s %s'.lstrip('0') % x for x in
-                          [((d[-1], '%s%%' % m, y), (d, m, y)) + (((d, mf, y),), ())[m == mf]
-                           for (d, m, mf, y) in [(date.strftime(x) for x in ('%d', '%b', '%B', '%Y'))]][0]]),
-            ep_detail=(lambda e: [naming_ep_type[2] % e] + (
-                [], ['%(episodenumber)dof' % e])[1 == tryInt(e.get('seasonnumber'))]), **kwargs)
+        return self.show_name_wildcard(
+            super(TVChaosUKProvider, self)._episode_strings(
+                ep_obj, scene=False, prefix='%', date_detail=(
+                    lambda date: ['%s %s%% %s'.lstrip('0') % x for x in
+                                  [((d[-1], '%s' % m, y), (d, m, y)) + (((d, mf, y),), ())[m == mf]
+                                   for (d, m, mf, y) in [(date.strftime(x) for x in ('%d', '%b', '%B', '%Y'))]][0]]),
+                ep_detail=(lambda e: [naming_ep_type[2] % e] + (
+                    [], ['%(episodenumber)dof' % e])[1 == tryInt(e.get('seasonnumber'))]), **kwargs))
+
+    @staticmethod
+    def show_name_wildcard(search_items):
+        for d in search_items:
+            for k, v in d.items():
+                for i, val in enumerate(v):
+                    v[i] = v[i].replace(' %', '% %', 1)
+        return search_items
 
     @staticmethod
     def ui_string(key):
