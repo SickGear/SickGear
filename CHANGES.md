@@ -1,4 +1,9 @@
-﻿### 0.20.3 (2019-08-27 18:50:00 UTC)
+﻿### 0.20.4 (2019-09-10 16:30:00 UTC)
+
+* Change improve TVChaosUK search range, and also to recognise more of its random release names in results
+
+
+### 0.20.3 (2019-08-27 18:50:00 UTC)
 
 * Fix provider LimeTorrents
 
