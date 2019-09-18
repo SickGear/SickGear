@@ -12,6 +12,7 @@
 * Update Hachoir library 2.0a6 (c102cc7) to 2.0a6 (5b9e05a)
 * Update Js2Py 0.64 (efbfcca) to 0.64 (7858d1d)
 * Update MsgPack 0.6.1 (737f08a) to 0.6.1 (05ff11d)
+* Update rarfile 3.0 (2704344) to 3.1 (1b14c85)
 * Update Requests library 2.22.0 (0b6c110) to 2.22.0 (3d968ff)
 * Update Six compatibility library 1.12.0 (8da94b8) to 1.12.0 (aa4e90b)
 * Update TZlocal 2.0.0.dev0 (b73a692) to 2.0.0b3 (410a838)
