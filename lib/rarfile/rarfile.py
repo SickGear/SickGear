@@ -1,6 +1,6 @@
 # rarfile.py
 #
-# Copyright (c) 2005-2016  Marko Kreen <markokr@gmail.com>
+# Copyright (c) 2005-2019  Marko Kreen <markokr@gmail.com>
 #
 # Permission to use, copy, modify, and/or distribute this software for any
 # purpose with or without fee is hereby granted, provided that the above
@@ -174,7 +174,13 @@ else:  # pragma: no cover
 if sys.hexversion < 0x2070000:
     memoryview = lambda x: x  # noqa
 
-__version__ = '3.0'
+try:
+    from pathlib import Path
+    _have_pathlib = True
+except ImportError:
+    _have_pathlib = False
+
+__version__ = '3.1'
 
 # export only interesting items
 __all__ = ['is_rarfile', 'RarInfo', 'RarFile', 'RarExtFile']
@@ -655,7 +661,11 @@ class RarFile(object):
                 Either "stop" to quietly stop parsing on errors,
                 or "strict" to raise errors.  Default is "stop".
         """
-        self._rarfile = rarfile
+        if _have_pathlib and isinstance(rarfile, Path):
+            self._rarfile = str(rarfile)
+        else:
+            self._rarfile = rarfile
+
         self._charset = charset or DEFAULT_CHARSET
         self._info_callback = info_callback
         self._crc_check = crc_check
@@ -803,6 +813,8 @@ class RarFile(object):
         """
         if isinstance(member, RarInfo):
             fname = member.filename
+        elif _have_pathlib and isinstance(member, Path):
+            fname = str(member)
         else:
             fname = member
         self._extract([fname], path, pwd)
@@ -888,6 +900,8 @@ class RarFile(object):
 
             # destination path
             if path is not None:
+                if _have_pathlib and isinstance(path, Path):
+                    path = str(path)
                 cmd.append(path + os.sep)
 
             # call
@@ -957,6 +971,8 @@ class CommonParser(object):
         """
         if isinstance(member, RarInfo):
             fname = member.filename
+        elif _have_pathlib and isinstance(member, Path):
+            fname = str(member)
         else:
             fname = member
 
@@ -1033,6 +1049,12 @@ class CommonParser(object):
                     # RAR 2.x does not set FIRSTVOLUME,
                     # so check it only if NEWNUMBERING is used
                     if (h.flags & RAR_MAIN_FIRSTVOLUME) == 0:
+                        if getattr(h, 'main_volume_number', None) is not None:
+                            # rar5 may have more info
+                            raise NeedFirstVolume(
+                                "Need to start from first volume (current: %r)"
+                                % (h.main_volume_number,)
+                            )
                         raise NeedFirstVolume("Need to start from first volume")
                 if h.flags & RAR_MAIN_PASSWORD:
                     self._needs_password = True
@@ -1081,7 +1103,7 @@ class CommonParser(object):
             # handle encrypted headers
             if (self._main and self._main.flags & RAR_MAIN_PASSWORD) or self._hdrenc_main:
                 if not self._password:
-                    return
+                    return None
                 fd = self._decrypt_header(fd)
 
             # now read actual header
@@ -1682,7 +1704,7 @@ class RAR5Parser(CommonParser):
     def _parse_main_block(self, h, hdata, pos):
         h.main_flags, pos = load_vint(hdata, pos)
         if h.main_flags & RAR5_MAIN_FLAG_HAS_VOLNR:
-            h.main_volume_number = load_vint(hdata, pos)
+            h.main_volume_number, pos = load_vint(hdata, pos)
 
         h.flags |= RAR_MAIN_NEWNUMBERING
         if h.main_flags & RAR5_MAIN_FLAG_SOLID:
@@ -1883,6 +1905,7 @@ class RAR5Parser(CommonParser):
         # rar bug? - appends zero to comment
         cmt = cmt.split(ZERO, 1)[0]
         self.comment = cmt.decode('utf8')
+        return None
 
     def _open_hack(self, inf, psw):
         # len, type, blk_flags, flags
@@ -2042,6 +2065,7 @@ class RarExtFile(RawIOBase):
 
     def _read(self, cnt):
         """Actual read that gets sanitized cnt."""
+        raise NotImplementedError("_read")
 
     def close(self):
         """Close open resources."""
@@ -2728,7 +2752,12 @@ def _parse_xtime(flag, data, pos, basetime=None):
 def is_filelike(obj):
     """Filename or file object?
     """
-    if isinstance(obj, (bytes, unicode)):
+    if _have_pathlib:
+        filename_types = (bytes, unicode, Path)
+    else:
+        filename_types = (bytes, unicode)
+
+    if isinstance(obj, filename_types):
         return False
     res = True
     for a in ('read', 'tell', 'seek'):
