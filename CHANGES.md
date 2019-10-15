@@ -6,6 +6,7 @@
 * Update cachecontrol library 0.12.4 (bd94f7e) to 0.12.5 (007e8ca)
 * Update Certifi 2019.03.09 (401100f) to 2019.06.16 (84dc766)
 * Update ConfigObj 5.1.0 (a68530a) to 5.1.0 (45fbf1b)
+* Update dateutil 2.8.0 (c90a30c) to 2.8.0 (27848c5)
 * Update DiskCache library 3.1.1 (2649ac9) to 4.0.0 (2c79bb9)
 * Update feedparser 5.2.1 (2b11c80) to 5.2.1 (cbe18d0)
 * Update Fuzzywuzzy 0.15.1 to 0.17.0 (778162c)
