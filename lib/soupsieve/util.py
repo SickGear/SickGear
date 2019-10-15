@@ -32,7 +32,6 @@ else:
     string = basestring  # noqa: F821
 
 DEBUG = 0x00001
-_QUIRKS = 0x10000
 
 RE_PATTERN_LINE_SPLIT = re.compile(r'(?:\r\n|(?!\r\n)[\n\r])|$')
 
@@ -83,7 +82,7 @@ def uord(c):
     return ordinal
 
 
-class SelectorSyntaxError(SyntaxError):
+class SelectorSyntaxError(Exception):
     """Syntax error in a CSS selector."""
 
     def __init__(self, msg, pattern=None, index=None):
@@ -169,45 +168,3 @@ def get_pattern_context(pattern, index):
         last = m.end(0)
 
     return ''.join(text), line, col
-
-
-class QuirksWarning(UserWarning):  # pragma: no cover
-    """Warning for quirks mode."""
-
-
-def warn_quirks(message, recommend, pattern, index):
-    """Warn quirks."""
-
-    import traceback
-    import bs4  # noqa: F401
-
-    # Acquire source code line context
-    paths = (MODULE, sys.modules['bs4'].__path__[0])
-    tb = traceback.extract_stack()
-    previous = None
-    filename = None
-    lineno = None
-    for entry in tb:
-        if (PY35 and entry.filename.startswith(paths)) or (not PY35 and entry[0].startswith(paths)):
-            break
-        previous = entry
-    if previous:
-        filename = previous.filename if PY35 else previous[0]
-        lineno = previous.lineno if PY35 else previous[1]
-
-    # Format pattern to show line and column position
-    context, line = get_pattern_context(pattern, index)[0:2]
-
-    # Display warning
-    warnings.warn_explicit(
-        "\nCSS selector pattern:\n" +
-        "    {}\n".format(message) +
-        "    This behavior is only allowed temporarily for Beautiful Soup's transition to Soup Sieve.\n" +
-        "    In order to confrom to the CSS spec, {}\n".format(recommend) +
-        "    It is strongly recommended the selector be altered to conform to the CSS spec " +
-        "as an exception will be raised for this case in the future.\n" +
-        "pattern line {}:\n{}".format(line, context),
-        QuirksWarning,
-        filename,
-        lineno
-    )
