@@ -30,10 +30,10 @@ from .__meta__ import __version__, __version_info__  # noqa: F401
 from . import css_parser as cp
 from . import css_match as cm
 from . import css_types as ct
-from .util import DEBUG, _QUIRKS, deprecated, SelectorSyntaxError  # noqa: F401
+from .util import DEBUG, deprecated, SelectorSyntaxError  # noqa: F401
 
 __all__ = (
-    'DEBUG', "_QUIRKS", 'SelectorSyntaxError', 'SoupSieve',
+    'DEBUG', 'SelectorSyntaxError', 'SoupSieve',
     'closest', 'comments', 'compile', 'filter', 'icomments',
     'iselect', 'match', 'select', 'select_one'
 )

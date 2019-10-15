@@ -16,6 +16,7 @@
 * Update rarfile 3.0 (2704344) to 3.1 (1b14c85)
 * Update Requests library 2.22.0 (0b6c110) to 2.22.0 (3d968ff)
 * Update Six compatibility library 1.12.0 (8da94b8) to 1.12.0 (aa4e90b)
+* Update soupsieve 1.9.1 (24859cc) to 2.0.0.dev (beeb4ab)
 * Update TZlocal 2.0.0.dev0 (b73a692) to 2.0.0b3 (410a838)
 * Update unidecode module 1.0.22 (a5045ab) to 1.1.1 (632af82)
 * Update urllib3 release 1.25.2 (49eea80) to 1.25.6 (4a6c288)
