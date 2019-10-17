@@ -32,6 +32,11 @@
 * Update urllib3 release 1.25.5 (edc3ddb) to 1.25.6 (4a6c288)
 
 
+### 0.20.5 (2019-10-18 00:01:00 UTC)
+
+* Fix order for option edit show/Other/"Keep up to"
+
+
 ### 0.20.4 (2019-09-10 16:30:00 UTC)
 
 * Change improve TVChaosUK search range, and also to recognise more of its random release names in results
