@@ -1290,7 +1290,7 @@ class TVShow(object):
         sqlResults = myDB.select(
             'SELECT * FROM tv_episodes'
             ' WHERE showid = ? AND location != ""'
-            ' ORDER BY season, episode DESC',
+            ' ORDER BY season DESC , episode DESC',
             [self.indexerid])
 
         kept = 0
