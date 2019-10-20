@@ -146,7 +146,7 @@ CPU_PRESET = 'DISABLED'
 ANON_REDIRECT = None
 
 USE_API = False
-API_KEY = None
+API_KEYS = []
 
 ENABLE_HTTPS = False
 HTTPS_CERT = None
@@ -619,7 +619,7 @@ def init_stage_1(console_logging):
     global THEME_NAME, DEFAULT_HOME, FANART_LIMIT, SHOWLIST_TAGVIEW, SHOW_TAGS, \
         HOME_SEARCH_FOCUS, USE_IMDB_INFO, IMDB_ACCOUNTS, DISPLAY_FREESPACE, SORT_ARTICLE, FUZZY_DATING, TRIM_ZERO, \
         DATE_PRESET, TIME_PRESET, TIME_PRESET_W_SECONDS, TIMEZONE_DISPLAY, \
-        WEB_USERNAME, WEB_PASSWORD, CALENDAR_UNPROTECTED, USE_API, API_KEY, WEB_PORT, WEB_LOG, \
+        WEB_USERNAME, WEB_PASSWORD, CALENDAR_UNPROTECTED, USE_API, API_KEYS, WEB_PORT, WEB_LOG, \
         ENABLE_HTTPS, HTTPS_CERT, HTTPS_KEY, WEB_IPV6, WEB_IPV64, HANDLE_REVERSE_PROXY, \
         SEND_SECURITY_HEADERS, ALLOWED_HOSTS
     # Gen Config/Advanced
@@ -814,7 +814,11 @@ def init_stage_1(console_logging):
     TRASH_ROTATE_LOGS = bool(check_setting_int(CFG, 'General', 'trash_rotate_logs', 0))
 
     USE_API = bool(check_setting_int(CFG, 'General', 'use_api', 0))
-    API_KEY = check_setting_str(CFG, 'General', 'api_key', '')
+    API_KEYS = [k.split(':::') for k in check_setting_str(CFG, 'General', 'api_keys', '').split('|||') if k]
+    if not API_KEYS:
+        tmp_api_key = check_setting_str(CFG, 'General', 'api_key', None)
+        if None is not tmp_api_key:
+            API_KEYS = [['app-name', tmp_api_key]]
 
     DEBUG = bool(check_setting_int(CFG, 'General', 'debug', 0))
 
@@ -1668,7 +1672,7 @@ def save_config():
     new_config['General']['cpu_preset'] = CPU_PRESET
     new_config['General']['anon_redirect'] = ANON_REDIRECT
     new_config['General']['use_api'] = int(USE_API)
-    new_config['General']['api_key'] = API_KEY
+    new_config['General']['api_keys'] = '|||'.join([':::'.join(a) for a in API_KEYS])
     new_config['General']['debug'] = int(DEBUG)
     new_config['General']['enable_https'] = int(ENABLE_HTTPS)
     new_config['General']['https_cert'] = HTTPS_CERT

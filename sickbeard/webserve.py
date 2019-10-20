@@ -5891,7 +5891,8 @@ class ConfigGeneral(Config):
 
         sickbeard.save_config()
 
-    def generateKey(self, *args, **kwargs):
+    @staticmethod
+    def generateKey(*args, **kwargs):
         """ Return a new randomized API_KEY
         """
 
@@ -5914,10 +5915,34 @@ class ConfigGeneral(Config):
         logger.log(u'New API generated')
         return m.hexdigest()
 
+    @staticmethod
+    def api_ui_func(name, key, delete=False):
+        # type: (AnyStr, AnyStr, bool) -> AnyStr
+        if not name:
+            return 'No Name given'
+        if 32 != len(key):
+            return 'key not valid'
+        if delete:
+            if key in [k[1] for k in sickbeard.API_KEYS]:
+                sickbeard.API_KEYS = [ak for ak in sickbeard.API_KEYS if key != ak[1]]
+                logger.log('APIKEY: [%s] removed' % name, logger.DEBUG)
+                return 'KEY removed'
+            else:
+                return 'KEY doesn\'t exists'
+        else:
+            if key in [k[1] for k in sickbeard.API_KEYS]:
+                return 'APIKEY already exists'
+            elif name in [k[0] for k in sickbeard.API_KEYS]:
+                return 'Key name is not unique'
+            else:
+                sickbeard.API_KEYS.append([name, key])
+                logger.log('APIKEY: [%s] added' % name, logger.DEBUG)
+                return 'APIKEY added'
+
     def saveGeneral(self, log_dir=None, web_port=None, web_log=None, encryption_version=None, web_ipv6=None, web_ipv64=None,
                     update_shows_on_start=None, show_update_hour=None,
                     trash_remove_show=None, trash_rotate_logs=None, update_frequency=None, launch_browser=None, web_username=None,
-                    use_api=None, api_key=None, indexer_default=None, timezone_display=None, cpu_preset=None, file_logging_preset=None,
+                    use_api=None, api_keys=None, indexer_default=None, timezone_display=None, cpu_preset=None, file_logging_preset=None,
                     web_password=None, version_notify=None, enable_https=None, https_cert=None, https_key=None,
                     handle_reverse_proxy=None, send_security_headers=None, allowed_hosts=None,
                     home_search_focus=None, display_freespace=None, sort_article=None, auto_update=None, notify_on_update=None,
@@ -6000,7 +6025,7 @@ class ConfigGeneral(Config):
 
         sickbeard.CALENDAR_UNPROTECTED = config.checkbox_to_value(calendar_unprotected)
         sickbeard.USE_API = config.checkbox_to_value(use_api)
-        sickbeard.API_KEY = api_key
+        sickbeard.API_KEYS = [a.split(':::') for a in api_keys.split('|')]
         sickbeard.WEB_PORT = config.to_int(web_port)
         # sickbeard.WEB_LOG is set in config.change_log_dir()
 
@@ -7313,8 +7338,9 @@ class ApiBuilder(MainHandler):
         t.indexers = sickbeard.indexerApi().all_indexers
         t.searchindexers = sickbeard.indexerApi().search_indexers
 
-        if len(sickbeard.API_KEY) == 32:
-            t.apikey = sickbeard.API_KEY
+        if len(sickbeard.API_KEYS):
+            # use first APIKEY for apibuilder tests
+            t.apikey = sickbeard.API_KEYS[0][1]
         else:
             t.apikey = 'api key not generated'
 

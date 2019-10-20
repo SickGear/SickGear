@@ -1116,7 +1116,7 @@ class TVShow(object):
                 self._imdbid = redirect_check
                 imdb_id = redirect_check
                 imdb_info['imdb_id'] = self.imdbid
-            i = imdbpie.Imdb(exclude_episodes=True)
+            i = imdbpie.Imdb(exclude_episodes=True, cachedir=ek.ek(os.path.join, sickbeard.CACHE_DIR, 'imdb-pie'))
             if not re.search(r'tt\d{7}', imdb_id, flags=re.I):
                 logger.log('Not a valid imdbid: %s for show: %s' % (imdb_id, self.name), logger.WARNING)
                 return

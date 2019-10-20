@@ -34,6 +34,12 @@ addListGroup("api", "Command");
 addOption("Command", "SickGear", "?cmd=sg", 1); //make default
 addOption("Command", "SickBeard", "?cmd=sb");
 addOption("Command", "List Commands", "?cmd=listcommands");
+addList("Command", "Help", "?cmd=help", "sg.functions-list", "","", "action");
+#from sickbeard.webapi import _functionMaper
+#from six import iterkeys
+#for $k in sorted(iterkeys(_functionMaper), key=lambda x: x.replace('sg.', '').replace('sb.', ''))
+addOption("sg.functions-list", "$k", "&subject=$k")
+#end for
 addList("Command", "SickBeard.AddRootDir", "?cmd=sb.addrootdir", "sb.addrootdir", "", "", "action");
 addList("Command", "SickGear.AddRootDir", "?cmd=sg.addrootdir", "sb.addrootdir", "", "", "action");
 addOption("Command", "SickBeard.CheckScheduler", "?cmd=sb.checkscheduler", "", "", "action");
@@ -53,7 +59,7 @@ addList("Command", "SickGear.GetIndexers", "?cmd=sg.getindexers", "listindexers"
 addList("Command", "SickGear.GetIndexerIcon", "?cmd=sg.getindexericon", "getindexericon", "", "action");
 addList("Command", "SickGear.GetNetworkIcon", "?cmd=sg.getnetworkicon", "getnetworkicon", "", "action");
 addOption("Command", "SickBeard.GetRootDirs", "?cmd=sb.getrootdirs", "", "", "action");
-addOption("Command", "SickGar.GetRootDirs", "?cmd=sg.getrootdirs", "", "", "action");
+addOption("Command", "SickGear.GetRootDirs", "?cmd=sg.getrootdirs", "", "", "action");
 addList("Command", "SickBeard.PauseBacklog", "?cmd=sb.pausebacklog", "sb.pausebacklog", "", "", "action");
 addList("Command", "SickGear.PauseBacklog", "?cmd=sg.pausebacklog", "sb.pausebacklog", "", "", "action");
 addOption("Command", "SickBeard.Ping", "?cmd=sb.ping", "", "", "action");
@@ -63,7 +69,9 @@ addOption("Command", "SickGear.Restart", "?cmd=sg.restart", "", "", "action");
 addList("Command", "SickBeard.SearchTVDB", "?cmd=sb.searchtvdb", "sb.searchtvdb", "", "", "action");
 addList("Command", "SickGear.SearchTV", "?cmd=sg.searchtv", "sg.searchtv", "", "", "action");
 addList("Command", "SickBeard.SetDefaults", "?cmd=sb.setdefaults", "sb.setdefaults", "", "", "action");
+addList("Command", "SickGear.SetDefaults", "?cmd=sg.setdefaults", "sb.setdefaults", "", "", "action");
 addOption("Command", "SickBeard.Shutdown", "?cmd=sb.shutdown", "", "", "action");
+addOption("Command", "SickGear.Shutdown", "?cmd=sg.shutdown", "", "", "action");
 addList("Command", "SickGear.ListIgnoreWords", "?cmd=sg.listignorewords", "listignorewords", "", "action");
 addList("Command", "SickGear.SetIgnoreWords", "?cmd=sg.setignorewords", "setwords", "", "action");
 addList("Command", "SickGear.ListRequiredWords", "?cmd=sg.listrequiredwords", "listrequiredwords", "", "action");
@@ -101,7 +109,7 @@ addList("Command", "SickGear.Show.AddNew", "?cmd=sg.show.addnew", "sg.show.addne
 addList("Command", "Show.Cache", "?cmd=show.cache", "indexerid", "", "", "action");
 addList("Command", "SickGear.Show.Cache", "?cmd=sg.show.cache", "sg.indexerid", "", "", "action");
 addList("Command", "Show.Delete", "?cmd=show.delete", "indexerid", "", "", "action");
-addList("Command", "SickGear.Show.Delete", "?cmd=sg.show.delete", "sg.indexerid", "", "", "action");
+addList("Command", "SickGear.Show.Delete", "?cmd=sg.show.delete", "show-delete", "", "", "action");
 addList("Command", "Show.GetBanner", "?cmd=show.getbanner", "indexerid", "", "", "action");
 addList("Command", "SickGear.Show.GetBanner", "?cmd=sg.show.getbanner", "sg.indexerid", "", "", "action");
 addList("Command", "SickGear.Show.ListFanart", "?cmd=sg.show.listfanart", "sg.indexerid", "", "", "action");
@@ -482,6 +490,14 @@ addOption("episode-status", "Wanted", "&status=wanted");
 addOption("episode-status", "Skipped", "&status=skipped");
 addOption("episode-status", "Archived", "&status=archived");
 addOption("episode-status", "Ignored", "&status=ignored");
+
+#for $curShow in $sortedShowList:
+addList("show-delete", "$curShow.name", "&indexer=$curShow.indexer&indexerid=$curShow.indexerid", "delete-options");
+#end for
+
+addOption("delete-options", "Optional Param", "", 1)
+addList("delete-options", "Keep Files/Folders", "&full=0")
+addList("delete-options", "Delete Files/Folders", "&full=1")
 
 addOption("future", "Optional Param", "", 1);
 addList("future", "Sort by Date", "&sort=date", "future-type");

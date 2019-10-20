@@ -17,6 +17,7 @@
 import datetime
 import re
 import traceback
+import os
 
 import requests
 import sickbeard
@@ -26,7 +27,7 @@ from lib.dateutil.parser import parse
 from lib.unidecode import unidecode
 from libtrakt import TraktAPI
 from libtrakt.exceptions import TraktAuthException, TraktException
-from sickbeard import db, logger
+from sickbeard import db, logger, encodingKludge as ek
 from sickbeard.helpers import tryInt, getURL
 from sickbeard.indexers.indexer_config import (INDEXER_TVDB, INDEXER_TVRAGE, INDEXER_TVMAZE,
                                                INDEXER_IMDB, INDEXER_TRAKT, INDEXER_TMDB)
@@ -198,7 +199,7 @@ def get_trakt_ids(url_trakt):
 def get_imdbid_by_name(name, startyear):
     ids = {}
     try:
-        res = Imdb(exclude_episodes=True).search_for_title(title=name)
+        res = Imdb(exclude_episodes=True, cachedir=ek.ek(os.path.join, sickbeard.CACHE_DIR, 'imdb-pie')).search_for_title(title=name)
         for r in res:
             if isinstance(r.get('type'), basestring) and 'tv series' == r.get('type').lower() \
                     and str(startyear) == str(r.get('year')):

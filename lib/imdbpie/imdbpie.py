@@ -53,12 +53,15 @@ _SIMPLE_GET_ENDPOINTS = {
 
 class Imdb(Auth):
 
-    def __init__(self, locale=None, exclude_episodes=False, session=None):
+    def __init__(self, locale=None, exclude_episodes=False, session=None, cachedir=None):
         self.locale = locale or 'en_US'
         self.region = self.locale.split('_')[-1].upper()
         self.exclude_episodes = exclude_episodes
         self.session = session or requests.Session()
-        self._cachedir = tempfile.gettempdir()
+        if not cachedir:
+            self._cachedir = tempfile.gettempdir()
+        else:
+            self._cachedir = cachedir
 
     def __getattr__(self, name):
         if name in _SIMPLE_GET_ENDPOINTS:
