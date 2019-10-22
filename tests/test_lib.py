@@ -90,7 +90,7 @@ sickbeard.newznabProviderList = providers.getNewznabProviderList(
 sickbeard.providerList = providers.makeProviderList()
 
 sickbeard.PROG_DIR = os.path.abspath('..')
-sickbeard.DATA_DIR = sickbeard.PROG_DIR
+sickbeard.DATA_DIR = os.path.join(TESTDIR, 'data')
 sickbeard.LOG_DIR = os.path.join(TESTDIR, 'Logs')
 create_test_log_folder()
 sickbeard.logger.sb_log_instance.init_logging(False)
