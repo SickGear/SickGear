@@ -456,6 +456,14 @@ class SickGear(object):
                     print(u'Rollback of [%s] successful.' % d)
                     sickbeard.classes.loading_msg.set_msg_progress(load_msg, 'Finished')
 
+        # migrate the config if it needs it
+        from sickbeard.config import ConfigMigrator
+        migrator = ConfigMigrator(sickbeard.CFG)
+        if migrator.config_version > migrator.expected_config_version:
+            self.execute_rollback('ConfigFile', migrator.expected_config_version, 'Downgrading config.ini')
+            migrator = ConfigMigrator(sickbeard.CFG)
+        migrator.migrate_config()
+
         # free memory
         global rollback_loaded
         rollback_loaded = None
