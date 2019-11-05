@@ -496,7 +496,7 @@
 								<span class="component-title">API enable</span>
 								<span class="component-desc">
 									<input type="checkbox" name="use_api" class="enabler" id="use_api"#echo ('', $checked)[$sg_var('USE_API')]#>
-									<p>permit the use of the SickGear (and Legacy SickBeard) API</p>
+									<p>permit the use of the SickGear (and legacy SickBeard) API</p>
 								</span>
 							</label>
 						</div>
@@ -505,10 +505,22 @@
 								<label for="api_key">
 									<span class="component-title">API key</span>
 									<span class="component-desc">
-    									<p>The legacy SickBeard API is limited to shows from thetvdb.com.<br>Use the SickGear API endpoint for full access</p>
-										<input type="text" name="api_key" id="api_key" value="$sg_str('API_KEYS')" class="form-control input-sm input300" readonly="readonly">
-										<input class="btn btn-inline" type="button" id="generate_new_apikey" value="Generate">
-										<div class="clear-left"><p>used to give 3rd party programs limited access to SickGear</p></div>
+										<input id="app-name" type="text" placeholder="enter app name" class="form-control input-sm input150">
+										<input id="generate-api-key" value="Generate" type="button" class="btn btn-inline">
+										<span id="generate-result">&nbsp;</span>
+										<p class="clear-left">apps using SickGear API calls gain full access, legacy SickBeard endpoints are limited to thetvdb.com shows</p>
+										<div id="api-keys" class="clear-left">
+											<div class="new-key highlight-text" style="display:none"><span class="qr-btn"><a rel="" name="qr" title="API key QR code"><span class="glyphicon glyphicon-qrcode"></span></a></span><span class="api-key"></span><span class="app-name"></span><input value="Revoke" type="button" class="revoke btn btn-inline"></div>
+#set $tip_addkeys = ''
+#for $appname, $uid in $api_keys
+    #if not ($appname and $uid)
+        #continue
+    #end if
+											<div class="grey-text"><span class="qr-btn"><a rel="qr" name="qr" title="API key QR code"><span class="glyphicon glyphicon-qrcode"></span></a></span><span class="api-key">$uid</span><span class="app-name">$appname</span><input value="Revoke" type="button" class="revoke btn btn-inline"></div>
+    #set $tip_addkeys = ' style="display:none"'
+#end for
+											<div id="tip-addkeys"$tip_addkeys>Keys used by 3rd party programs to access SickGear will list here when generated</div>
+										</div>
 									</span>
 								</label>
 							</div>

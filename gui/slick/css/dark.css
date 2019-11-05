@@ -651,10 +651,12 @@ config*.tmpl
 	border-bottom:1px dotted #666
 }
 
+.qr-btn .glyphicon-qrcode,
 .component-group-desc p{
 	color:#ddd
 }
 
+.dotted-surround,
 .test-notification{
 	border:1px dotted #ccc
 }

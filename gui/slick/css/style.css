@@ -3029,6 +3029,7 @@ select .selected:before{
 	margin:0 !important
 }
 
+.dotted-surround,
 .test-notification{
 	padding:5px;
 	margin-bottom:10px;
@@ -3150,6 +3151,18 @@ select .selected:before{
 .icon16-win{
 	background-position:-104px 0
 }
+
+#api-keys > div{display:inline-block}
+#api-keys span{float:left}
+#api-keys span, #generate-result{line-height:22px}
+#api-keys .api-key{width:235px}
+#api-keys .app-name{width:135px}
+.qr-btn{margin-right:6px}
+.qr-btn .glyphicon-qrcode{cursor:pointer;font-size:15px}
+.apikey-qr-dlg .qr-title{padding:0 25px 5px 25px;text-align:right}
+.apikey-qr-dlg .qr-title em{color:#999;font-weight:bolder}
+.apikey-qr-dlg .qr-title span{color:#333}
+.apikey-qr-dlg .qr-body{padding:25px 25px 0}
 
 /* =======================================================================
 config_postProcessing.tmpl

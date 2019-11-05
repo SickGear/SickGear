@@ -818,7 +818,7 @@ def init_stage_1(console_logging):
     if not API_KEYS:
         tmp_api_key = check_setting_str(CFG, 'General', 'api_key', None)
         if None is not tmp_api_key:
-            API_KEYS = [['app-name', tmp_api_key]]
+            API_KEYS = [['app name (old key)', tmp_api_key]]
 
     DEBUG = bool(check_setting_int(CFG, 'General', 'debug', 0))
 
