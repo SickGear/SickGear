@@ -1,4 +1,4 @@
-# Author: Nic Wolfe <nic@wolfeden.ca>
+﻿# Author: Nic Wolfe <nic@wolfeden.ca>
 # URL: http://code.google.com/p/sickbeard/
 #
 # This file is part of SickGear.
@@ -1392,10 +1392,6 @@ def init_stage_2():
     # fix up any db problems
     my_db = db.DBConnection()
     db.sanityCheckDatabase(my_db, mainDB.MainSanityCheck)
-
-    # migrate the config if it needs it
-    migrator = ConfigMigrator(CFG)
-    migrator.migrate_config()
 
     # initialize metadata_providers
     metadata_provider_dict = metadata.get_metadata_generator_dict()
