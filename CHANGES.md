@@ -1,5 +1,25 @@
 ﻿### 0.21.0 (2019-xx-xx xx:xx:xx UTC)
 
+* Add ability to use multiple SG apikeys 
+* Add UI for multiple apikeys to config/General/Web Interface
+* Add jquery-qrcode 0.17.0
+* Change add apikey name to ERROR log messages
+* Change add logging of errors from api
+* Change add remote ip to error message
+* Change add print command name for api in debug log
+* Change add warning message to log if old Sick-Beard api call is used
+* Change add an api call mapping helper for name changed functions (for printed warnings)
+* Change ui typo in apiBuilder
+* Fix display of fanart in apibuilder
+* Add help command to apiBuilder and fix help call
+* Fix add shows via api
+* Change fix sg.searchqueue output
+* Add missing sg.show.delete parameter "full"
+* Add missing sg.setdefaults and sg.shutdown methods
+* Change increase api version because missing sg.* methods are added
+* Change add some extra checks for Sick-Beard call add (existing) show
+* Change patch imdbpie to add cachedir folder and set imdbpie cachedir in SG
+* Fix force search return values
 * Update attr 19.2.0.dev0 (154b4e5) to 19.2.0.dev0 (daf2bc8)
 * Update Beautiful Soup 4.7.1 (r497) to 4.8.0 (r526)
 * Update bencode to 2.1.0 (e8290df)

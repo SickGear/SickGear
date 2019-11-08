@@ -46,9 +46,11 @@ from sickbeard.scene_numbering import set_scene_numbering_helper
 from common import Quality, qualityPresetStrings, statusStrings
 from sickbeard.indexers.indexer_config import *
 from sickbeard.indexers import indexer_config, indexer_api
+from sickbeard.tv import TVShow, TVEpisode
 from tornado import gen
 from sickbeard.search_backlog import FORCED_BACKLOG
 from sickbeard.webserve import NewHomeAddShows
+from six import iteritems, integer_types
 
 try:
     import json
@@ -92,6 +94,13 @@ quality_map = {'sdtv': Quality.SDTV,
 quality_map_inversed = {v: k for k, v in quality_map.iteritems()}
 
 
+def api_log(obj, msg, level=logger.MESSAGE):
+    apikey_name = getattr(obj, 'apikey_name', '')
+    if apikey_name:
+        apikey_name = ' (%s)' % apikey_name
+    logger.log('%s%s' % ('API%s:: ' % apikey_name, msg), level)
+
+
 class ApiServerLoading(webserve.BaseHandler):
     @gen.coroutine
     def get(self, route, *args, **kwargs):
@@ -104,12 +113,16 @@ class PythonObjectEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, set):
             return list(obj)
+        elif isinstance(obj, TVEpisode):
+            return {'season': obj.season, 'episode': obj.episode}
+        elif isinstance(obj, TVShow):
+            return {'name': obj.name, 'indexer': obj.indexer, 'indexer_id': obj.indexerid}
         return json.JSONEncoder.default(self, obj)
 
 
 class Api(webserve.BaseHandler):
     """ api class that returns json results """
-    version = 10  # use an int since float-point is unpredictible
+    version = 11  # use an int since float-point is unpredictible
     intent = 4
 
     def check_xsrf_cookie(self):
@@ -147,8 +160,8 @@ class Api(webserve.BaseHandler):
 
         args = args[1:]
 
-        self.apiKey = sickbeard.API_KEY
-        access, accessMsg, args, kwargs = self._grand_access(self.apiKey, route, args, kwargs)
+        self.apiKeys = sickbeard.API_KEYS
+        access, accessMsg, args, kwargs = self._grand_access(self.apiKeys, route, args, kwargs)
 
         # set the output callback
         # default json
@@ -158,9 +171,9 @@ class Api(webserve.BaseHandler):
 
         # do we have acces ?
         if access:
-            logger.log(accessMsg, logger.DEBUG)
+            api_log(self, accessMsg, logger.DEBUG)
         else:
-            logger.log(accessMsg, logger.WARNING)
+            api_log(self, accessMsg, logger.WARNING)
             return outputCallbackDict['default'](_responds(RESULT_DENIED, msg=accessMsg))
 
         # set the original call_dispatcher as the local _call_dispatcher
@@ -181,7 +194,7 @@ class Api(webserve.BaseHandler):
             try:
                 outDict = _call_dispatcher(self, args, kwargs)
             except Exception as e:  # real internal error oohhh nooo :(
-                logger.log(u"API :: " + ex(e), logger.ERROR)
+                api_log(self, ex(e), logger.ERROR)
                 errorData = {"error_msg": ex(e),
                              "args": args,
                              "kwargs": kwargs}
@@ -203,28 +216,30 @@ class Api(webserve.BaseHandler):
                 out = '%s(%s);' % (callback, out)  # wrap with JSONP call if requested
 
         except Exception as e:  # if we fail to generate the output fake an error
-            logger.log(u'API :: ' + traceback.format_exc(), logger.ERROR)
+            api_log(self, traceback.format_exc(), logger.ERROR)
             out = '{"result":"' + result_type_map[RESULT_ERROR] + '", "message": "error while composing output: "' + ex(
                 e) + '"}'
 
         return out
 
-    def _grand_access(self, realKey, apiKey, args, kwargs):
+    def _grand_access(self, realKeys, apiKey, args, kwargs):
         """ validate api key and log result """
         remoteIp = self.request.remote_ip
+        self.apikey_name = ''
 
         if not sickbeard.USE_API:
-            msg = u'API :: ' + remoteIp + ' - SB API Disabled. ACCESS DENIED'
+            msg = u'%s - SB API Disabled. ACCESS DENIED' % remoteIp
             return False, msg, args, kwargs
-        elif apiKey == realKey:
-            msg = u'API :: ' + remoteIp + ' - gave correct API KEY. ACCESS GRANTED'
-            return True, msg, args, kwargs
-        elif not apiKey:
-            msg = u'API :: ' + remoteIp + ' - gave NO API KEY. ACCESS DENIED'
+        if not apiKey:
+            msg = u'%s - gave NO API KEY. ACCESS DENIED' % remoteIp
             return False, msg, args, kwargs
-        else:
-            msg = u'API :: ' + remoteIp + ' - gave WRONG API KEY ' + apiKey + '. ACCESS DENIED'
-            return False, msg, args, kwargs
+        for realKey in realKeys:
+            if apiKey == realKey[1]:
+                self.apikey_name = realKey[0]
+                msg = u'%s - gave correct API KEY: %s. ACCESS GRANTED' % (remoteIp, realKey[0])
+                return True, msg, args, kwargs
+        msg = u'%s - gave WRONG API KEY %s. ACCESS DENIED' % (remoteIp, apiKey)
+        return False, msg, args, kwargs
 
 
 def call_dispatcher(handler, args, kwargs):
@@ -233,10 +248,6 @@ def call_dispatcher(handler, args, kwargs):
         or calls the TVDBShorthandWrapper when the first args element is a number
         or returns an error that there is no such cmd
     """
-    logger.log(u"API :: all args: '" + str(args) + "'", logger.DEBUG)
-    logger.log(u"API :: all kwargs: '" + str(kwargs) + "'", logger.DEBUG)
-    # logger.log(u"API :: dateFormat: '" + str(dateFormat) + "'", logger.DEBUG)
-
     cmds = None
     if args:
         cmds = args[0]
@@ -245,6 +256,12 @@ def call_dispatcher(handler, args, kwargs):
     if "cmd" in kwargs:
         cmds = kwargs["cmd"]
         del kwargs["cmd"]
+
+    api_log(handler, u"cmd: '" + str(cmds) + "'", logger.DEBUG)
+    api_log(handler, u"all args: '" + str(args) + "'", logger.DEBUG)
+    api_log(handler, u"all kwargs: '" + str(kwargs) + "'", logger.DEBUG)
+    # logger.log(u"dateFormat: '" + str(dateFormat) + "'", logger.DEBUG)
+
 
     outDict = {}
     if cmds != None:
@@ -256,7 +273,7 @@ def call_dispatcher(handler, args, kwargs):
             if len(cmd.split("_")) > 1:  # was a index used for this cmd ?
                 cmd, cmdIndex = cmd.split("_")  # this gives us the clear cmd and the index
 
-            logger.log(u"API :: " + cmd + ": curKwargs " + str(curKwargs), logger.DEBUG)
+            api_log(handler, cmd + ": curKwargs " + str(curKwargs), logger.DEBUG)
             if not (multiCmds and cmd in ('show.getposter', 'show.getbanner')):  # skip these cmd while chaining
                 try:
                     if cmd in _functionMaper:
@@ -346,6 +363,12 @@ class ApiCall(object):
 
         # old sickbeard call
         self._sickbeard_call = getattr(self, '_sickbeard_call', False)
+        if 'help' not in kwargs and self._sickbeard_call:
+            call_name = _functionMaper_reversed.get(self.__class__, '')
+            if 'sb' != call_name:
+                self.log('SickBeard API call "%s" should be replaced with SickGear API "%s" calls to get much '
+                           'improved detail and functionality, contact your App developer and ask them to update '
+                           'their code.' % (call_name, self._get_old_command()), logger.WARNING)
 
     @property
     def sickbeard_call(self):
@@ -360,6 +383,24 @@ class ApiCall(object):
     def run(self):
         # override with real output function in subclass
         return {}
+
+    def log(self, msg, level=logger.MESSAGE):
+        api_log(self.handler, msg, level)
+
+    def _get_old_command(self, command_class=None):
+        c_class = command_class or self
+        new_call_name = None
+        help = getattr(c_class, '_help', None)
+        if getattr(c_class, '_sickbeard_call', False) or "SickGearCommand" in help:
+            call_name = _functionMaper_reversed.get(c_class.__class__, '')
+            new_call_name = 'sg.%s' % call_name.replace('sb.', '') if 'sb' != call_name else 'sg'
+            if new_call_name not in _functionMaper:
+                if isinstance(help, dict) and "SickGearCommand" in help \
+                        and help['SickGearCommand'] in _functionMaper:
+                    new_call_name = help['SickGearCommand']
+                else:
+                    new_call_name = 'sg.*'
+        return new_call_name
 
     def return_help(self):
         try:
@@ -403,6 +444,13 @@ class ApiCall(object):
             msg = "The required parameter: '" + self._missing[0] + "' was not set"
         else:
             msg = "The required parameters: '" + "','".join(self._missing) + "' where not set"
+        try:
+            remote_ip = self.handler.request.remote_ip
+        except (BaseException, Exception):
+            remote_ip = '"unknown ip"'
+        self.log("API call from host %s triggers :: %s: %s" %
+                   (remote_ip, _functionMaper_reversed.get(self.__class__, ''), msg),
+                   logger.ERROR)
         return _responds(RESULT_ERROR, msg=msg)
 
     def check_params(self, args, kwargs, key, default, required, type, allowedValues, sub_type=None):
@@ -516,7 +564,7 @@ class ApiCall(object):
         elif type == "ignore":
             pass
         else:
-            logger.log(u"API :: Invalid param type set " + str(type) + " can not check or convert ignoring it",
+            self.log(u"Invalid param type set " + str(type) + " can not check or convert ignoring it",
                        logger.ERROR)
 
         if error:
@@ -765,13 +813,14 @@ class CMD_ListCommands(ApiCall):
             color = ("", " style='color: grey !important;'")[is_old_command]
             out += '<hr><h1 class="command"%s>%s%s</h1>' % (color, f, ("", " <span style='font-size: 50%;color: black;'>(Sickbeard compatibility command)</span>")[is_old_command])
             if isinstance(help, dict):
-                sg_c = ''
-                if "SickGearCommand" in help:
-                    sg_c += '<td>%s</td>' % help['SickGearCommand']
-                    out += "<p style='color: darkgreen !important;'>for all features use SickGear API Command: <b>%s</b></p>" % help['SickGearCommand']
+                sg_cmd_new = self._get_old_command(command_class=v)
+                sg_cmd = ''
+                if sg_cmd_new:
+                    sg_cmd = '<td>%s</td>' % sg_cmd_new
+                    out += "<p style='color: darkgreen !important;'>for all features use SickGear API Command: <b>%s</b></p>" % sg_cmd_new
                 if "desc" in help:
                     if is_old_command:
-                        table_sickbeard_commands += '<td>%s</td>%s' % (help['desc'], sg_c)
+                        table_sickbeard_commands += '<td>%s</td>%s' % (help['desc'], sg_cmd)
                     else:
                         table_sickgear_commands += '<td>%s</td>' % help['desc']
                     out += help['desc']
@@ -832,7 +881,7 @@ class CMD_Help(ApiCall):
     def run(self):
         """ display help information for a given subject/command """
         if self.subject in _functionMaper:
-            out = _responds(RESULT_SUCCESS, _functionMaper.get(self.subject)((), {"help": 1}).run())
+            out = _responds(RESULT_SUCCESS, _functionMaper.get(self.subject)(None, (), {"help": 1}).run())
         else:
             out = _responds(RESULT_FAILURE, msg="No such cmd")
         return out
@@ -1302,7 +1351,7 @@ class CMD_SickGearEpisodeSetStatus(ApiCall):
                 cur_backlog_queue_item = search_queue.BacklogQueueItem(showObj, segment)
                 sickbeard.searchQueueScheduler.action.add_item(cur_backlog_queue_item)  #@UndefinedVariable
 
-                logger.log(u"API :: Starting backlog for " + showObj.name + " season " + str(
+                self.log(u"Starting backlog for " + showObj.name + " season " + str(
                     season) + " because some episodes were set to WANTED")
 
             extra_msg = " Backlog started"
@@ -2051,11 +2100,15 @@ class CMD_SickGearForceSearch(ApiCall):
     def run(self):
         """ force the given search type search """
         result = None
-        if 'recent' == self.searchtype:
+        if 'recent' == self.searchtype and not sickbeard.searchQueueScheduler.action.is_recentsearch_in_progress() \
+                and not sickbeard.recentSearchScheduler.action.amActive:
             result = sickbeard.recentSearchScheduler.forceRun()
-        elif 'backlog' == self.searchtype:
-            result = sickbeard.backlogSearchScheduler.force_search(force_type=FORCED_BACKLOG)
-        elif 'proper' == self.searchtype:
+        elif 'backlog' == self.searchtype and not sickbeard.searchQueueScheduler.action.is_backlog_in_progress() \
+                and not sickbeard.backlogSearchScheduler.action.amActive:
+            sickbeard.backlogSearchScheduler.force_search(force_type=FORCED_BACKLOG)
+            result = True
+        elif 'proper' == self.searchtype and not sickbeard.searchQueueScheduler.action.is_propersearch_in_progress() \
+                and not sickbeard.properFinderScheduler.action.amActive:
             result = sickbeard.properFinderScheduler.forceRun()
         if result:
             return _responds(RESULT_SUCCESS, msg='%s search successfully forced' % self.searchtype)
@@ -2106,7 +2159,7 @@ class CMD_SickGearGetDefaults(ApiCall):
 
         data = {"status": statusStrings[sickbeard.STATUS_DEFAULT].lower(),
                 "flatten_folders": int(sickbeard.FLATTEN_FOLDERS_DEFAULT), "initial": anyQualities,
-                "archive": bestQualities, "future_show_paused": int(sickgear.EPISODE_VIEW_DISPLAY_PAUSED)}
+                "archive": bestQualities, "future_show_paused": int(sickbeard.EPISODE_VIEW_DISPLAY_PAUSED)}
         return _responds(RESULT_SUCCESS, data)
 
 
@@ -2470,12 +2523,12 @@ class CMD_SickGearSearchIndexers(ApiCall):
             try:
                 myShow = t[int(self.indexerid), False]
             except (sickbeard.indexer_shownotfound, sickbeard.indexer_error):
-                logger.log(u"API :: Unable to find show with id " + str(self.indexerid), logger.WARNING)
+                self.log(u"Unable to find show with id " + str(self.indexerid), logger.WARNING)
                 return _responds(RESULT_SUCCESS, {"results": [], "langid": lang_id})
 
             if not myShow.data['seriesname']:
-                logger.log(
-                    u"API :: Found show with indexerid " + str(self.indexerid) + ", however it contained no show name",
+                self.log(
+                    u"Found show with indexerid " + str(self.indexerid) + ", however it contained no show name",
                     logger.DEBUG)
                 return _responds(RESULT_FAILURE, msg="Show contains no name, invalid result")
 
@@ -2514,7 +2567,7 @@ class CMD_SickBeardSearchIndexers(CMD_SickGearSearchIndexers):
         CMD_SickGearSearchIndexers.__init__(self, handler, args, kwargs)
 
 
-class CMD_SickBeardSetDefaults(ApiCall):
+class CMD_SickGearSetDefaults(ApiCall):
     _help = {"desc": "set sickgear user defaults",
              "optionalParameters": {"initial": {"desc": "initial quality for the show"},
                                     "archive": {"desc": "archive quality for the show"},
@@ -2572,6 +2625,22 @@ class CMD_SickBeardSetDefaults(ApiCall):
             sickbeard.EPISODE_VIEW_DISPLAY_PAUSED = int(self.future_show_paused)
 
         return _responds(RESULT_SUCCESS, msg="Saved defaults")
+
+
+class CMD_SickBeardSetDefaults(CMD_SickGearSetDefaults):
+    _help = {"desc": "set sickgear user defaults",
+             "optionalParameters": {"initial": {"desc": "initial quality for the show"},
+                                    "archive": {"desc": "archive quality for the show"},
+                                    "flatten_folders": {"desc": "flatten subfolders within the show directory"},
+                                    "status": {"desc": "status of missing episodes"}
+             },
+             "SickGearCommand": "sg.setdefaults",
+    }
+
+    def __init__(self, handler, args, kwargs):
+        # super, missing, help
+        self.sickbeard_call = True
+        CMD_SickGearSetDefaults.__init__(self, handler, args, kwargs)
 
 
 class CMD_SickGearSetSceneNumber(ApiCall):
@@ -2647,7 +2716,7 @@ class CMD_SickGearActivateSceneNumber(ApiCall):
                          msg="Scene Numbering %sactivated" % ('de', '')[self.activate])
 
 
-class CMD_SickBeardShutdown(ApiCall):
+class CMD_SickGearShutdown(ApiCall):
     _help = {"desc": "shutdown sickgear"}
 
     def __init__(self, handler, args, kwargs):
@@ -2660,6 +2729,16 @@ class CMD_SickBeardShutdown(ApiCall):
         """ shutdown sickgear """
         sickbeard.events.put(sickbeard.events.SystemEvent.SHUTDOWN)
         return _responds(RESULT_SUCCESS, msg="SickGear is shutting down...")
+
+
+class CMD_SickBeardShutdown(CMD_SickGearShutdown):
+    _help = {"desc": "shutdown sickgear",
+             "SickGearCommand": "sg.shutdown",
+             }
+
+    def __init__(self, handler, args, kwargs):
+        self.sickbeard_call = True
+        CMD_SickGearShutdown.__init__(self, handler, args, kwargs)
 
 
 class CMD_SickGearListIgnoreWords(ApiCall):
@@ -2959,8 +3038,11 @@ class CMD_SickGearShow(ApiCall):
             return _responds(RESULT_FAILURE, msg="Show not found")
 
         showDict = {}
-        showDict["season_list"] = CMD_ShowSeasonList(self.handler, (), {"indexerid": self.indexerid}).run()["data"]
-        showDict["cache"] = CMD_ShowCache(self.handler, (), {"indexerid": self.indexerid}).run()["data"]
+        showDict["season_list"] = CMD_SickGearShowSeasonList(self.handler, (),
+                                                             {"indexer": self.indexer, "indexerid": self.indexerid}
+                                                             ).run()["data"]
+        showDict["cache"] = CMD_SickGearShowCache(self.handler, (), {"indexer": self.indexer,
+                                                                     "indexerid": self.indexerid}).run()["data"]
 
         genreList = []
         if showObj.genre:
@@ -3083,15 +3165,28 @@ class CMD_SickGearShowAddExisting(ApiCall):
         if not ek.ek(os.path.isdir, self.location):
             return _responds(RESULT_FAILURE, msg='Not a valid location')
 
-        indexerName = None
-        indexerResult = CMD_SickBeardSearchIndexers(self.handler, [],
-                                                    {"indexerid": self.indexerid, "indexer": self.indexer}).run()
+        lINDEXER_API_PARMS = sickbeard.indexerApi(self.indexer).api_params.copy()
+        lINDEXER_API_PARMS['language'] = 'en'
+        lINDEXER_API_PARMS['custom_ui'] = classes.AllShowsNoFilterListUI
+        lINDEXER_API_PARMS['actors'] = False
 
-        if indexerResult['result'] == result_type_map[RESULT_SUCCESS]:
-            if not indexerResult['data']['results']:
-                return _responds(RESULT_FAILURE, msg="Empty results returned, check indexerid and try again")
-            if len(indexerResult['data']['results']) == 1 and 'name' in indexerResult['data']['results'][0]:
-                indexerName = indexerResult['data']['results'][0]['name']
+        t = sickbeard.indexerApi(self.indexer).indexer(**lINDEXER_API_PARMS)
+
+        try:
+            myShow = t[int(self.indexerid), False]
+        except (sickbeard.indexer_shownotfound, sickbeard.indexer_error):
+            self.log(u"Unable to find show with id " + str(self.indexerid), logger.WARNING)
+            return _responds(RESULT_FAILURE, msg="Unable to retrieve information from indexer")
+
+        indexerName = None
+        if not myShow.data['seriesname']:
+            self.log(
+                u"Found show with indexerid " + str(self.indexerid) + ", however it contained no show name",
+                logger.DEBUG)
+            return _responds(RESULT_FAILURE, msg="Unable to retrieve information from indexer")
+
+        else:
+            indexerName = myShow.data['seriesname']
 
         if not indexerName:
             return _responds(RESULT_FAILURE, msg="Unable to retrieve information from indexer")
@@ -3134,7 +3229,8 @@ class CMD_ShowAddExisting(CMD_SickGearShowAddExisting):
     def __init__(self, handler, args, kwargs):
         kwargs['indexer'] = INDEXER_TVDB
         # required
-        kwargs['indexerid'], args = self.check_params(args, kwargs, "tvdbid", None, True, "int", [])
+        if 'tvdbid' in kwargs and 'indexerid' not in kwargs:
+            kwargs['indexerid'], args = self.check_params(args, kwargs, "tvdbid", None, True, "int", [])
         # super, missing, help
         self.sickbeard_call = True
         CMD_SickGearShowAddExisting.__init__(self, handler, args, kwargs)
@@ -3231,15 +3327,28 @@ class CMD_SickGearShowAddNew(ApiCall):
                 return _responds(RESULT_FAILURE, msg="Status prohibited")
             newStatus = self.status
 
-        indexerName = None
-        indexerResult = CMD_SickBeardSearchIndexers(self.handler, [],
-                                                    {"indexerid": self.indexerid, "indexer": self.indexer}).run()
+        lINDEXER_API_PARMS = sickbeard.indexerApi(self.indexer).api_params.copy()
+        lINDEXER_API_PARMS['language'] = 'en'
+        lINDEXER_API_PARMS['custom_ui'] = classes.AllShowsNoFilterListUI
+        lINDEXER_API_PARMS['actors'] = False
 
-        if indexerResult['result'] == result_type_map[RESULT_SUCCESS]:
-            if not indexerResult['data']['results']:
-                return _responds(RESULT_FAILURE, msg="Empty results returned, check indexerid and try again")
-            if len(indexerResult['data']['results']) == 1 and 'name' in indexerResult['data']['results'][0]:
-                indexerName = indexerResult['data']['results'][0]['name']
+        t = sickbeard.indexerApi(self.indexer).indexer(**lINDEXER_API_PARMS)
+
+        try:
+            myShow = t[int(self.indexerid), False]
+        except (sickbeard.indexer_shownotfound, sickbeard.indexer_error):
+            self.log(u"Unable to find show with id " + str(self.indexerid), logger.WARNING)
+            return _responds(RESULT_FAILURE, msg="Unable to retrieve information from indexer")
+
+        indexerName = None
+        if not myShow.data['seriesname']:
+            self.log(
+                u"Found show with indexerid " + str(self.indexerid) + ", however it contained no show name",
+                logger.DEBUG)
+            return _responds(RESULT_FAILURE, msg="Unable to retrieve information from indexer")
+
+        else:
+            indexerName = myShow.data['seriesname']
 
         if not indexerName:
             return _responds(RESULT_FAILURE, msg="Unable to retrieve information from indexer")
@@ -3249,11 +3358,11 @@ class CMD_SickGearShowAddNew(ApiCall):
 
         # don't create show dir if config says not to
         if sickbeard.ADD_SHOWS_WO_DIR:
-            logger.log(u"Skipping initial creation of " + showPath + " due to config.ini setting")
+            self.log(u"Skipping initial creation of " + showPath + " due to config.ini setting")
         else:
             dir_exists = helpers.makeDir(showPath)
             if not dir_exists:
-                logger.log(u"API :: Unable to create the folder " + showPath + ", can't add the show", logger.ERROR)
+                self.log(u"Unable to create the folder " + showPath + ", can't add the show", logger.ERROR)
                 return _responds(RESULT_FAILURE, {"path": showPath},
                                  "Unable to create the folder " + showPath + ", can't add the show")
             else:
@@ -3292,7 +3401,8 @@ class CMD_ShowAddNew(CMD_SickGearShowAddNew):
 
     def __init__(self, handler, args, kwargs):
         kwargs['indexer'] = INDEXER_TVDB
-        kwargs['indexerid'], args = self.check_params(args, kwargs, "tvdbid", None, True, "int", [])
+        if 'tvdbid' in kwargs and 'indexerid' not in kwargs:
+            kwargs['indexerid'], args = self.check_params(args, kwargs, "tvdbid", None, True, "int", [])
         # required
         # optional
         # super, missing, help
@@ -3359,6 +3469,7 @@ class CMD_SickGearShowDelete(ApiCall):
              "requiredParameters": {"indexer": {"desc": "indexer of a show"},
                                     "indexerid": {"desc": "unique id of a show"},
                                     },
+             "optionalParameters": {"full": {"desc": "delete files/folder of show"}}
              }
 
     def __init__(self, handler, args, kwargs):
@@ -3367,6 +3478,7 @@ class CMD_SickGearShowDelete(ApiCall):
                                                [i for i in indexer_api.indexerApi().indexers])
         self.indexerid, args = self.check_params(args, kwargs, "indexerid", None, True, "int", [])
         # optional
+        self.full_delete, args = self.check_params(args, kwargs, "full", False, False, "bool", [])
         # super, missing, help
         ApiCall.__init__(self, handler, args, kwargs)
 
@@ -3380,7 +3492,7 @@ class CMD_SickGearShowDelete(ApiCall):
                 showObj) or sickbeard.showQueueScheduler.action.isBeingUpdated(showObj):  #@UndefinedVariable
             return _responds(RESULT_FAILURE, msg="Show can not be deleted while being added or updated")
 
-        showObj.deleteShow()
+        showObj.deleteShow(full=self.full_delete)
         return _responds(RESULT_SUCCESS, msg=str(showObj.name) + " has been deleted")
 
 
@@ -4139,7 +4251,7 @@ class CMD_SickGearShowUpdate(ApiCall):
             sickbeard.showQueueScheduler.action.updateShow(showObj, True)  #@UndefinedVariable
             return _responds(RESULT_SUCCESS, msg=str(showObj.name) + " has queued to be updated")
         except exceptions.CantUpdateException as e:
-            logger.log(u"API:: Unable to update " + str(showObj.name) + ". " + str(ex(e)), logger.ERROR)
+            self.log(u"Unable to update " + str(showObj.name) + ". " + str(ex(e)), logger.ERROR)
             return _responds(RESULT_FAILURE, msg="Unable to update " + str(showObj.name))
 
 
@@ -4230,7 +4342,8 @@ class CMD_SickGearShows(ApiCall):
             else:
                 showDict['next_ep_airdate'] = ''
 
-            showDict["cache"] = CMD_ShowCache(self.handler, (), {"indexerid": curShow.indexerid}).run()["data"]
+            showDict["cache"] = CMD_SickGearShowCache(self.handler, (), {"indexer": curShow.indexer,
+                                                                         "indexerid": curShow.indexerid}).run()["data"]
             if not showDict["network"]:
                 showDict["network"] = ""
             if self.sort == "name":
@@ -4459,12 +4572,14 @@ _functionMaper = {"help": CMD_Help,
                   "sb.searchtvdb": CMD_SickBeardSearchIndexers,
                   "sg.searchtv": CMD_SickGearSearchIndexers,
                   "sb.setdefaults": CMD_SickBeardSetDefaults,
+                  "sg.setdefaults": CMD_SickGearSetDefaults,
                   "sg.setscenenumber": CMD_SickGearSetSceneNumber,
                   "sg.activatescenenumbering": CMD_SickGearActivateSceneNumber,
                   "sg.getindexers": CMD_SickGearGetIndexers,
                   "sg.getindexericon": CMD_SickGearGetIndexerIcon,
                   "sg.getnetworkicon": CMD_SickGearGetNetworkIcon,
                   "sb.shutdown": CMD_SickBeardShutdown,
+                  "sg.shutdown": CMD_SickGearShutdown,
                   "sg.listignorewords": CMD_SickGearListIgnoreWords,
                   "sg.setignorewords": CMD_SickGearSetIgnoreWords,
                   "sg.listrequiredwords": CMD_SickGearListRequireWords,
@@ -4512,3 +4627,5 @@ _functionMaper = {"help": CMD_Help,
                   "sg.shows.forceupdate": CMD_SickGearShowsForceUpdate,
                   "sg.shows.queue": CMD_SickGearShowsQueue,
                   }
+
+_functionMaper_reversed = {v: k for k, v in iteritems(_functionMaper)}

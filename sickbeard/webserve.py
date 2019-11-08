@@ -5854,6 +5854,8 @@ class ConfigGeneral(Config):
         t.indexers = dict([(i, sickbeard.indexerApi().indexers[i]) for i in sickbeard.indexerApi().indexers
                            if sickbeard.indexerApi(i).config['active']])
         t.request_host = escape.xhtml_escape(self.request.host_name)
+        api_keys = '|||'.join([':::'.join(a) for a in sickbeard.API_KEYS])
+        t.api_keys = api_keys and sickbeard.API_KEYS or []
         return t.respond()
 
     def saveRootDirs(self, rootDirString=None):
@@ -5891,7 +5893,8 @@ class ConfigGeneral(Config):
 
         sickbeard.save_config()
 
-    def generateKey(self, *args, **kwargs):
+    @staticmethod
+    def generateKey(*args, **kwargs):
         """ Return a new randomized API_KEY
         """
 
@@ -5911,20 +5914,60 @@ class ConfigGeneral(Config):
         m.update(r)
 
         # Return a hex digest of the md5, eg 49f68a5c8493ec2c0bf489821c21fc3b
-        logger.log(u'New API generated')
+        app_name = kwargs.get('app_name')
+        app_name = '' if not app_name else ' for [%s]' % app_name
+        logger.log(u'New apikey generated%s' % app_name)
         return m.hexdigest()
+
+    def create_apikey(self, app_name):
+        result = dict()
+        if not app_name:
+            result['result'] = 'Failed: no name given'
+        elif app_name in [k[0] for k in sickbeard.API_KEYS if k[0]]:
+            result['result'] = 'Failed: name is not unique'
+        else:
+            api_key = self.generateKey(app_name=app_name)
+            if api_key in [k[1] for k in sickbeard.API_KEYS if k[0]]:
+                result['result'] = 'Failed: apikey already exists, try again'
+            else:
+                sickbeard.API_KEYS.append([app_name, api_key])
+                logger.log('Created apikey for [%s]' % app_name, logger.DEBUG)
+                result.update(dict(result='Success: apikey added', added=api_key))
+                sickbeard.USE_API = 1
+                sickbeard.save_config()
+                ui.notifications.message('Configuration Saved', ek.ek(os.path.join, sickbeard.CONFIG_FILE))
+
+        return json.dumps(result)
+
+    @staticmethod
+    def revoke_apikey(app_name, api_key):
+        result = dict()
+        if not app_name:
+            result['result'] = 'Failed: no name given'
+        elif not api_key or 32 != len(re.sub('(?i)[^0-9a-f]', '', api_key)):
+            result['result'] = 'Failed: key not valid'
+        elif api_key not in [k[1] for k in sickbeard.API_KEYS if k[0]]:
+            result['result'] = 'Failed: key doesn\'t exist'
+        else:
+            sickbeard.API_KEYS = [ak for ak in sickbeard.API_KEYS if ak[0] and api_key != ak[1]]
+            logger.log('Revoked [%s] apikey [%s]' % (app_name, api_key), logger.DEBUG)
+            result.update(dict(result='Success: apikey removed', removed=True))
+            sickbeard.save_config()
+            ui.notifications.message('Configuration Saved', ek.ek(os.path.join, sickbeard.CONFIG_FILE))
+
+        return json.dumps(result)
 
     def saveGeneral(self, log_dir=None, web_port=None, web_log=None, encryption_version=None, web_ipv6=None, web_ipv64=None,
                     update_shows_on_start=None, show_update_hour=None,
                     trash_remove_show=None, trash_rotate_logs=None, update_frequency=None, launch_browser=None, web_username=None,
-                    use_api=None, api_key=None, indexer_default=None, timezone_display=None, cpu_preset=None, file_logging_preset=None,
+                    use_api=None, indexer_default=None, timezone_display=None, cpu_preset=None, file_logging_preset=None,
                     web_password=None, version_notify=None, enable_https=None, https_cert=None, https_key=None,
                     handle_reverse_proxy=None, send_security_headers=None, allowed_hosts=None,
                     home_search_focus=None, display_freespace=None, sort_article=None, auto_update=None, notify_on_update=None,
                     proxy_setting=None, proxy_indexers=None, anon_redirect=None, git_path=None, git_remote=None, calendar_unprotected=None,
                     fuzzy_dating=None, trim_zero=None, date_preset=None, date_preset_na=None, time_preset=None,
                     indexer_timeout=None, rootDir=None, show_dirs_with_dots=None, theme_name=None, default_home=None,
-                    use_imdb_info=None, fanart_limit=None, show_tags=None, showlist_tagview=None):
+                    use_imdb_info=None, fanart_limit=None, show_tags=None, showlist_tagview=None, **kwargs):
 
         results = []
 
@@ -6000,7 +6043,6 @@ class ConfigGeneral(Config):
 
         sickbeard.CALENDAR_UNPROTECTED = config.checkbox_to_value(calendar_unprotected)
         sickbeard.USE_API = config.checkbox_to_value(use_api)
-        sickbeard.API_KEY = api_key
         sickbeard.WEB_PORT = config.to_int(web_port)
         # sickbeard.WEB_LOG is set in config.change_log_dir()
 
@@ -7313,8 +7355,9 @@ class ApiBuilder(MainHandler):
         t.indexers = sickbeard.indexerApi().all_indexers
         t.searchindexers = sickbeard.indexerApi().search_indexers
 
-        if len(sickbeard.API_KEY) == 32:
-            t.apikey = sickbeard.API_KEY
+        if len(sickbeard.API_KEYS):
+            # use first APIKEY for apibuilder tests
+            t.apikey = sickbeard.API_KEYS[0][1]
         else:
             t.apikey = 'api key not generated'
 
