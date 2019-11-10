@@ -95,9 +95,10 @@ class Plex:
     @property
     def plex_host(self):
 
-        if not self._plex_host.startswith('http'):
-            return 'http://%s' % self.plex_host
-        return self._plex_host
+        host = self._plex_host
+        if not host.startswith('http'):
+            host = 'http://%s' % host
+        return host
 
     @plex_host.setter
     def plex_host(self, value):
