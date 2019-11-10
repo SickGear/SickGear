@@ -1,4 +1,10 @@
-﻿### 0.20.6 (2019-11-04 22:15:00 UTC)
+﻿### 0.20.7 (2019-11-10 14:40:00 UTC)
+
+* Fix configured Plex notification hosts that don't start with "http"
+* Add exclude "Specials" when pruning with option edit show/Other/"Keep up to"
+
+
+### 0.20.6 (2019-11-04 22:15:00 UTC)
 
 * Change move config migrator earlier up in the startup phase and add capability to gracefully downgrade config file
 * Remove POTuk torrent provider

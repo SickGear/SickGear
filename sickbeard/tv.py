@@ -1310,7 +1310,7 @@ class TVShow(object):
                 continue
 
             # if the path exist and if it's in our show dir
-            if (self.prune and curEp.location not in attempted and 0 < helpers.get_size(curEp.location) and
+            if (self.prune and season and curEp.location not in attempted and 0 < helpers.get_size(curEp.location) and
                     ek.ek(os.path.normpath, curLoc).startswith(ek.ek(os.path.normpath, self.location))):
                 with curEp.lock:
                     if curEp.status in Quality.DOWNLOADED:
