@@ -135,6 +135,8 @@ class Plex:
                           json=True,
                           post_data=urlencode({b'user[login]': user, b'user[password]': passw}).encode('utf-8')
                           )['user']['authentication_token']
+        except TypeError:
+            self.log('Error in response from plex.tv auth server')
         except IndexError:
             self.log('Error getting Plex Token')
 

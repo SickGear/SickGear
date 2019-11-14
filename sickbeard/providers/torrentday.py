@@ -22,6 +22,7 @@ import time
 from . import generic
 from sickbeard.bs4_parser import BS4Parser
 from sickbeard.helpers import tryInt, anon_url
+from sickbeard import logger
 
 
 class TorrentDayProvider(generic.TorrentProvider):
@@ -37,7 +38,7 @@ class TorrentDayProvider(generic.TorrentProvider):
                                 '15TWd', 'hV 3c', 'lBHb', 'vNncq', 'j5ib', '=qQ02b']],
                         ]]]
 
-        self.url_vars = {'login': 'rss.php', 'search': 't?%s%s&qf=&q=%s'}
+        self.url_vars = {'login': 'rss.php', 'search': 't?%s%s&qf=&p=%s&q=%s'}
         self.url_tmpl = {'config_provider_home_uri': '%(home)s', 'login': '%(home)s%(vars)s',
                          'search': '%(home)s%(vars)s'}
 
@@ -67,21 +68,38 @@ class TorrentDayProvider(generic.TorrentProvider):
         if not self._authorised():
             return results
 
-        items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
-
-        rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {'get': 'download'}.items())
+        last_recent_search = self.last_recent_search
+        last_recent_search = '' if not last_recent_search else last_recent_search.replace('id-', '')
         for mode in search_params.keys():
+            urls = []
             for search_string in search_params[mode]:
                 search_string = '+'.join(search_string.split())
+                urls += [[]]
+                for page in range((3, 5)['Cache' == mode])[1:]:
+                    urls[-1] += [self.urls['search'] % (self._categories_string(mode, '%s=on'),
+                                                        ('&free=on', '')[not self.freeleech], page, search_string)]
+            results += self._search_urls(mode, last_recent_search, urls)
+            last_recent_search = ''
 
-                search_url = self.urls['search'] % (
-                    self._categories_string(mode, '%s=on'), ('&free=on', '')[not self.freeleech], search_string)
+        return results
 
+    def _search_urls(self, mode, last_recent_search, urls):
+        results = []
+
+        items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
+
+        rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {'get': 'download', 'id': r'download.*?/([\d]+)'}.items())
+        lrs_found = False
+        lrs_new = True
+        for search_urls in urls:  # this intentionally iterates once to preserve indentation
+            for search_url in search_urls:
                 html = self.get_url(search_url)
                 if self.should_skip():
                     return results
 
                 cnt = len(items[mode])
+                cnt_search = 0
+                log_settings_hint = False
                 try:
                     if not html or self._has_no_results(html):
                         raise generic.HaltParseException
@@ -93,11 +111,15 @@ class TorrentDayProvider(generic.TorrentProvider):
                         if 2 > len(tbl_rows):
                             raise generic.HaltParseException
 
+                        if 'Cache' == mode and 100 > len(tbl_rows):
+                            log_settings_hint = True
+
                         head = None
                         for tr in tbl_rows[1:]:
                             cells = tr.find_all('td')
                             if 4 > len(cells):
                                 continue
+                            cnt_search += 1
                             try:
                                 head = head if None is not head else self._header_row(
                                     tr, header_strip='(?i)(?:leechers|seeders|size);')
@@ -107,8 +129,11 @@ class TorrentDayProvider(generic.TorrentProvider):
                                     continue
 
                                 dl = tr.find('a', href=rc['get'])['href']
-                                title = tr.find('a', href=re.compile(
-                                    '/t/%s' % re.findall('download.*?/([^/]+)', dl)[0])).get_text().strip()
+                                dl_id = rc['id'].findall(dl)[0]
+                                lrs_found = dl_id == last_recent_search
+                                if lrs_found:
+                                    break
+                                title = tr.find('a', href=re.compile('/t/%s' % dl_id)).get_text().strip()
                                 download_url = self._link(dl)
                             except (AttributeError, TypeError, ValueError, IndexError):
                                 continue
@@ -122,6 +147,12 @@ class TorrentDayProvider(generic.TorrentProvider):
                     time.sleep(1.1)
 
                 self._log_search(mode, len(items[mode]) - cnt, search_url)
+                if log_settings_hint:
+                    logger.log('Perfomance tip: change "Torrents per Page" to 100 at the TD site/Settings page')
+
+                if self.is_search_finished(mode, items, cnt_search, rc['id'], last_recent_search, lrs_new, lrs_found):
+                    break
+                lrs_new = False
 
             results = self._sort_seeding(mode, results + items[mode])
 
