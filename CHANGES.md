@@ -52,6 +52,18 @@
 * Update urllib3 release 1.25.5 (edc3ddb) to 1.25.6 (4a6c288)
 
 
+### 0.20.8 (2019-11-14 09:40:00 UTC)
+
+* Change improve TD provider recent search performance to process new items since the previous cycle
+* Change log a tip for TD users who have not improved on the default site setting "Torrents per page" 
+* Change tweak hoverover highlight on menu item Shows/History for when History is the home page
+* Change update tvdb_api to 3.0.0
+* Change improve fetching TVDB thumbnails
+* Change add new 'banner_thumb' and 'poster_thumb' direct links
+* Change artwork domain to new artwork domain with fallback URLs
+* Change improve handling of Plex auth failure
+
+                                                                                                                
 ### 0.20.7 (2019-11-10 14:40:00 UTC)
 
 * Fix configured Plex notification hosts that don't start with "http"

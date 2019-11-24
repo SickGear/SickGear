@@ -40,7 +40,8 @@ from sickbeard.exceptions import ex
 from sickbeard.indexers import indexer_config
 from sickbeard.indexers.indexer_config import INDEXER_TVDB, INDEXER_TVDB_V1
 
-from six import iteritems
+from six import iteritems, itervalues
+from collections import OrderedDict
 
 from lib.tmdb_api.tmdb_api import TMDB
 from lib.fanart.core import Request as fanartRequest
@@ -795,11 +796,39 @@ class GenericMetadata():
 
         image_urls = []
         init_url = None
+        alt_tvdb_urls = []
+
+        def build_url(s_o, image_mode):
+            _urls = []
+            _url = s_o[image_mode]
+            if _url and _url.startswith('http'):
+                if 'poster' == image_mode:
+                    _url = re.sub('posters', '_cache/posters', _url)
+                elif 'banner' == image_mode:
+                    _url = re.sub('graphical', '_cache/graphical', _url)
+                _urls.append([_url])
+
+                try:
+                    alt_url = '%swww.%s%s' % re.findall(
+                        r'(https?://)(?:artworks\.)?(thetvdb\.[^/]+/banners/[^\d]+[^.]+)(?:_t)(.*)', _url)[0][0:3]
+                    if alt_url not in _urls[0]:
+                        _urls.append([alt_url])
+                except (IndexError, Exception):
+                    try:
+                        alt_url = '%sartworks.%s_t%s' % re.findall(
+                            r'(https?://)(?:www\.)?(thetvdb\.[^/]+/banners/[^\d]+[^.]+)(.*)', _url)[0][0:3]
+                        if alt_url not in _urls[0]:
+                            _urls.append([alt_url])
+                    except (IndexError, Exception):
+                        pass
+            return _urls
+
         if 'poster_thumb' == image_type:
-            if getattr(indexer_show_obj, 'poster', None) is not None:
-                image_url = re.sub('posters', '_cache/posters', indexer_show_obj['poster'])
-                if image_url:
-                    image_urls.append(image_url)
+            if None is not getattr(indexer_show_obj, image_type, None):
+                image_urls, alt_tvdb_urls = build_url(indexer_show_obj, image_type)
+            elif None is not getattr(indexer_show_obj, 'poster', None):
+                image_urls, alt_tvdb_urls = build_url(indexer_show_obj, 'poster')
+
             for item in self._fanart_urls_from_show(show_obj, image_type, indexer_lang, True) or []:
                 image_urls.append(item[2])
             if 0 == len(image_urls):
@@ -807,10 +836,10 @@ class GenericMetadata():
                     image_urls.append(item[2])
 
         elif 'banner_thumb' == image_type:
-            if getattr(indexer_show_obj, 'banner', None) is not None:
-                image_url = re.sub('graphical', '_cache/graphical', indexer_show_obj['banner'])
-                if image_url:
-                    image_urls.append(image_url)
+            if None is not getattr(indexer_show_obj, image_type, None):
+                image_urls, alt_tvdb_urls = build_url(indexer_show_obj, image_type)
+            elif None is not getattr(indexer_show_obj, 'banner', None):
+                image_urls, alt_tvdb_urls = build_url(indexer_show_obj, 'banner')
             for item in self._fanart_urls_from_show(show_obj, image_type, indexer_lang, True) or []:
                 image_urls.append(item[2])
         else:
@@ -824,16 +853,32 @@ class GenericMetadata():
                     if 'poster' == image_type:
                         init_url = image_url
 
+            # check extra provided images in '_banners' key
+            if None is not getattr(indexer_show_obj, '_banners', None) and \
+                    isinstance(indexer_show_obj['_banners'].get(image_type, None), (list, dict)):
+                for res, value in iteritems(indexer_show_obj['_banners'][image_type]):
+                    for item in itervalues(value):
+                        image_urls.append(item['bannerpath'])
+
             if 0 == len(image_urls) or 'fanart' == image_type:
                 for item in self._tmdb_image_url(show_obj, image_type) or []:
                     image_urls.append('%s?%s' % (item[2], item[0]))
 
         image_data = len(image_urls) or None
         if image_data:
+            # remove duplicates, keeping order
+            image_urls = list(OrderedDict.fromkeys(image_urls))
             if return_links:
                 return image_urls
             else:
-                image_data = metadata_helpers.getShowImage((init_url, image_urls[0])[None is init_url], which, show_obj.name)
+                image_data = metadata_helpers.getShowImage(
+                    (init_url, image_urls[0])[None is init_url], which, show_obj.name, bool(len(alt_tvdb_urls)))
+                if None is image_data and len(alt_tvdb_urls):
+                    for url in alt_tvdb_urls:
+                        image_data = metadata_helpers.getShowImage(
+                            (init_url, url)[None is init_url], which, show_obj.name)
+                        if None is not image_data:
+                            break
 
         if None is not image_data:
             return image_data
