@@ -799,26 +799,26 @@ class GenericMetadata():
         alt_tvdb_urls = []
 
         def build_url(s_o, image_mode):
-            _urls = []
+            _urls = [[], []]
             _url = s_o[image_mode]
             if _url and _url.startswith('http'):
                 if 'poster' == image_mode:
                     _url = re.sub('posters', '_cache/posters', _url)
                 elif 'banner' == image_mode:
                     _url = re.sub('graphical', '_cache/graphical', _url)
-                _urls.append([_url])
+                _urls[0].append(_url)
 
                 try:
                     alt_url = '%swww.%s%s' % re.findall(
                         r'(https?://)(?:artworks\.)?(thetvdb\.[^/]+/banners/[^\d]+[^.]+)(?:_t)(.*)', _url)[0][0:3]
                     if alt_url not in _urls[0]:
-                        _urls.append([alt_url])
+                        _urls[1].append(alt_url)
                 except (IndexError, Exception):
                     try:
                         alt_url = '%sartworks.%s_t%s' % re.findall(
                             r'(https?://)(?:www\.)?(thetvdb\.[^/]+/banners/[^\d]+[^.]+)(.*)', _url)[0][0:3]
                         if alt_url not in _urls[0]:
-                            _urls.append([alt_url])
+                            _urls[1].append(alt_url)
                     except (IndexError, Exception):
                         pass
             return _urls
