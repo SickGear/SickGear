@@ -52,6 +52,11 @@
 * Update urllib3 release 1.25.5 (edc3ddb) to 1.25.6 (4a6c288)
 
 
+### 0.20.9 (2019-11-24 21:35:00 UTC)
+
+* Change improve handling of poster/banner thumb URLs
+
+
 ### 0.20.8 (2019-11-14 09:40:00 UTC)
 
 * Change improve TD provider recent search performance to process new items since the previous cycle
