@@ -43,7 +43,7 @@ from hachoir.stream import FileInputStream
 from sickbeard import helpers, classes, logger, db, tvcache, encodingKludge as ek
 from sickbeard.common import Quality, MULTI_EP_RESULT, SEASON_RESULT, USER_AGENT
 from sickbeard.exceptions import SickBeardException, AuthException, ex
-from sickbeard.helpers import maybe_plural, remove_file_failed
+from sickbeard.helpers import maybe_plural, remove_file_failed, tryInt
 from sickbeard.name_parser.parser import NameParser, InvalidNameException, InvalidShowException
 from sickbeard.show_name_helpers import get_show_names_all_possible
 from sickbeard.sbdatetime import sbdatetime
@@ -1346,6 +1346,7 @@ class TorrentProvider(GenericProvider):
         self._reject_unverified = None
         self._reject_notfree = None
         self._reject_container = None
+        self._last_recent_search = None
 
     @property
     def url(self):
@@ -1831,4 +1832,46 @@ class TorrentProvider(GenericProvider):
             if hasattr(self, 'after_get_data'):
                 result.after_get_data_func = self.after_get_data
 
+        return result
+
+    @property
+    def last_recent_search(self):
+        if not self._last_recent_search:
+            try:
+                my_db = db.DBConnection('cache.db')
+                res = my_db.select('SELECT' + ' "datetime" FROM "lastrecentsearch" WHERE "name"=?', [self.get_id()])
+                if res:
+                    self._last_recent_search = res[0]['datetime']
+            except (BaseException, Exception):
+                pass
+        return self._last_recent_search
+
+    @last_recent_search.setter
+    def last_recent_search(self, value):
+        value = 0 if not value else 'id-%s' % value
+        try:
+            my_db = db.DBConnection('cache.db')
+            my_db.action('INSERT OR REPLACE INTO "lastrecentsearch" (name, datetime) VALUES (?,?)',
+                         [self.get_id(), value])
+        except (BaseException, Exception):
+            pass
+        self._last_recent_search = value
+
+    def is_search_finished(self, mode, items, cnt_search, rc_dlid, last_recent_search, lrs_rst, lrs_found):
+        result = True
+        if cnt_search:
+            if 'Cache' == mode:
+                if last_recent_search and lrs_rst:
+                    self.last_recent_search = None
+
+                if not self.last_recent_search:
+                    try:
+                        self.last_recent_search = tryInt(rc_dlid.findall(items[mode][0][1])[0])
+                    except IndexError:
+                        self.last_recent_search = last_recent_search
+
+                if last_recent_search and lrs_found:
+                    return result
+            if 50 == cnt_search or 100 == cnt_search:
+                result = False
         return result
