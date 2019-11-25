@@ -1,4 +1,9 @@
-﻿### 0.20.9 (2019-11-24 21:35:00 UTC)
+﻿### 0.20.10 (2019-11-25 21:35:00 UTC)
+
+* Fix history activity hits when there are no stats
+
+
+### 0.20.9 (2019-11-24 21:35:00 UTC)
 
 * Change improve handling of poster/banner thumb URLs
 
