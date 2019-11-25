@@ -52,6 +52,12 @@
 * Update urllib3 release 1.25.5 (edc3ddb) to 1.25.6 (4a6c288)
 
 
+### 0.20.10 (2019-11-25 23:45:00 UTC)
+
+* Fix history activity hits when there are no stats
+* Fix 401 authentication issues caused by Requests lib using Linux environment vars
+
+
 ### 0.20.9 (2019-11-24 21:35:00 UTC)
 
 * Change improve handling of poster/banner thumb URLs

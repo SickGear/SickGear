@@ -1165,6 +1165,9 @@ def getURL(url, post_data=None, params=None, headers=None, timeout=30, session=N
     # session ssl verify
     session.verify = False
 
+    # don't trust OS authentication overwrites
+    session.trust_env = False
+
     response = None
     try:
         # sanitise url
