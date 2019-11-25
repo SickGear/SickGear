@@ -1,6 +1,7 @@
-﻿### 0.20.10 (2019-11-25 21:35:00 UTC)
+﻿### 0.20.10 (2019-11-25 23:45:00 UTC)
 
 * Fix history activity hits when there are no stats
+* Fix 401 authentication issues caused by Requests lib using Linux environment vars
 
 
 ### 0.20.9 (2019-11-24 21:35:00 UTC)
