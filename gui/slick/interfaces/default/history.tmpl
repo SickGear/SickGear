@@ -57,7 +57,7 @@
 #else
 	<h1 class="title">$title</h1>
 #end if
-#if $varExists('earliest')
+#if $varExists('earliest') and $earliest
 	<div class="grey-text" style="clear:both;margin:-8px 0 1.5em 2px;font-size:0.85em;float:left">
 		Stats range from <span class="${fuzzydate}">$sbdatetime.sbdatetime.sbfdatetime($datetime.datetime.strptime(str($earliest), $history.dateFormat))</span> until <span class="${fuzzydate}">$sbdatetime.sbdatetime.sbfdatetime($datetime.datetime.strptime(str($latest), $history.dateFormat))</span>
 	</div>
