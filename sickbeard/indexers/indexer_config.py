@@ -1,5 +1,4 @@
 from lib.tvdb_api.tvdb_api import Tvdb
-from lib.tvdb_api_v1.tvdb_api import TvdbV1
 from lib.libtrakt.indexerapiinterface import TraktIndexer
 
 INDEXER_TVDB = 1
@@ -7,7 +6,7 @@ INDEXER_TVRAGE = 2
 INDEXER_TVMAZE = 3
 
 # old tvdb api - version 1
-INDEXER_TVDB_V1 = 10001
+# INDEXER_TVDB_V1 = 10001
 
 # mapped only indexer
 INDEXER_IMDB = 100
@@ -27,23 +26,11 @@ indexerConfig = {
         id=INDEXER_TVDB,
         name='TheTVDB',
         module=Tvdb,
-        api_params=dict(apikey='F9C450E78D99172E', language='en'),
+        api_params=dict(apikey='6cfd6399fd2bee018a8793da976f6522', language='en'),
         active=True,
         dupekey='',
         mapped_only=False,
         icon='thetvdb16.png',
-    ),
-    INDEXER_TVDB_V1: dict(
-        main_url='https://thetvdb.com/',
-        id=INDEXER_TVDB_V1,
-        name='TheTVDBV1',
-        module=TvdbV1,
-        api_params=dict(apikey='F9C450E78D99172E', language='en'),
-        active=False,
-        dupekey='',
-        mapped_only=True,
-        icon='thetvdb16.png',
-        fallback=True,
     ),
     INDEXER_TVRAGE: dict(
         main_url='http://tvrage.com/',
@@ -111,15 +98,6 @@ indexerConfig[info_src].update(dict(
             'index.php?fieldlocation=2&language=7&order=translation&searching=Search&tab=advancedsearch&seriesname=%s'),
     scene_url='https://midgetspy.github.io/sb_tvdb_scene_exceptions/exceptions.txt',
     xem_origin='tvdb',
-))
-
-info_src = INDEXER_TVDB_V1
-indexerConfig[info_src].update(dict(
-    base_url=(indexerConfig[info_src]['main_url'] +
-              'api/%(apikey)s/series/' % indexerConfig[info_src]['api_params']),
-    show_url='%s?tab=series&id=%%d' % indexerConfig[info_src]['main_url'],
-    finder=(indexerConfig[info_src]['main_url'] +
-            'index.php?fieldlocation=2&language=7&order=translation&searching=Search&tab=advancedsearch&seriesname=%s'),
 ))
 
 info_src = INDEXER_TVRAGE
