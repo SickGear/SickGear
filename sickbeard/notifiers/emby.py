@@ -30,6 +30,27 @@ class EmbyNotifier(Notifier):
 
         self.response = None
 
+    def is_min_server_version(self, version, host, token):
+        """ Test if Emby `host` server version is greater than or equal `version` arg
+
+        :param version: Major, Minor, Build, Revision
+        :type version: List
+        :param host: Emby host
+        :type host: Basestring
+        :param token: Accesstoken
+        :type token: Basestring
+        :return: True if Emby `host` server version is greater than or equal `version` arg, otherwise False
+        :rtype: bool
+        """
+        self.response = None
+        response = sickbeard.helpers.getURL(
+            'http://%s/emby/System/Info/Public' % host,
+            headers={'Content-type': 'application/json', 'X-MediaBrowser-Token': token},
+            timeout=20, hooks=dict(response=self._cb_response), json=True)
+
+        return self.response and self.response.get('ok') and 200 == self.response.get('status_code') and \
+            version <= map(lambda x: int(x), response.get('Version', '0.0.0.0').split('.'))
+
     def update_library(self, show=None, **kwargs):
         """ Update library function
 
@@ -48,11 +69,25 @@ class EmbyNotifier(Notifier):
         mode_to_log = show and 'show "%s"' % show.name or 'all shows'
         total_success = True
         for i, cur_host in enumerate(hosts):
+            endpoint = 'Series'
+            # 'Series' endpoint noted in Swagger as deprecated but still works at 4.3.0.30 (2019.11.29)
+            # 'Media' recommended as replacement, but it replaces ID with a clunky 'Path' param, so keep using 'Series'
+            # Added fallback to 404 response for endpoint when/if Emby removes 'Series' endpoint - this renders
+            # the following section not reqd. for a long time - if ever, but kept here just in case.
+            # if self.is_min_server_version([4, 3, 0, 31], cur_host, keys[i]):
+            #     endpoint = 'Media'
+            #     if 'data' in args:
+            #         del(args['data'])
+            #         args.update(dict(post_json={'Path': '', 'UpdateType': ''}))
+            if self.is_min_server_version([4, 3, 0, 0], cur_host, keys[i]):
+                if 'data' in args:
+                    # del(args['data'])
+                    args.update(dict(post_data=True))
 
             self.response = None
             # noinspection PyArgumentList
             response = sickbeard.helpers.getURL(
-                'http://%s/emby/Library/Series/Updated' % cur_host,
+                'http://%s/emby/Library/%s/Updated' % (cur_host, endpoint),
                 headers={'Content-type': 'application/json', 'X-MediaBrowser-Token': keys[i]},
                 timeout=20, hooks=dict(response=self._cb_response), **args)
             # Emby will initiate a LibraryMonitor path refresh one minute after this success
@@ -62,7 +97,17 @@ class EmbyNotifier(Notifier):
             elif self.response and 401 == self.response.get('status_code'):
                 self._log_warning(u'Failed to authenticate with %s' % cur_host)
             elif self.response and 404 == self.response.get('status_code'):
-                self._log_debug(u'Warning, Library update responded 404 not found at %s' % cur_host)
+                self.response = None
+                sickbeard.helpers.getURL(
+                    'http://%s/emby/Library/Media/Updated' % cur_host,
+                    headers={'Content-type': 'application/json', 'X-MediaBrowser-Token': keys[i]},
+                    timeout=20, hooks=dict(response=self._cb_response), post_json={'Path': '', 'UpdateType': ''})
+                if self.response and 204 == self.response.get('status_code') and self.response.get('ok'):
+                    self._log(u'Success: fallback to sending Library/Media/Updated call'
+                              u' to scan all shows at host %s' % cur_host)
+                    continue
+                self._log_debug(u'Warning, Library update responded 404 not found and'
+                                u' fallback to new /Library/Media/Updated api call failed at %s' % cur_host)
             elif not response and not self.response or not self.response.get('ok'):
                 self._log_warning(u'Warning, could not connect with server at %s' % cur_host)
             else:
