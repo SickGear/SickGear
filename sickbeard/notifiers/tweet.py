@@ -97,7 +97,7 @@ class TwitterNotifier(Notifier):
 
         # don't use title with updates or testing, as only one str is used
         body = '::'.join(([], [sickbeard.TWITTER_PREFIX])[bool(sickbeard.TWITTER_PREFIX)]
-                         + [body.replace('#: ', ': ') if 'SickGear' in title else body])
+                         + [title] + [body.replace('#: ', ': ') if 'SickGear' in title else body])
 
         username = self.consumer_key
         password = self.consumer_secret

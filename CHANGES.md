@@ -3,6 +3,7 @@
 * Remove redundant tvdb_api v1
 * Change update Emby api
 * Fix update CF IUAM handler
+* Fix issue with duplicate tweets
 
 
 ### 0.20.10 (2019-11-25 23:45:00 UTC)
