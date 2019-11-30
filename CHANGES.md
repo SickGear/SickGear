@@ -1,4 +1,11 @@
-﻿### 0.20.10 (2019-11-25 23:45:00 UTC)
+﻿### 0.20.11 (2019-11-30 02:45:00 UTC)
+
+* Remove redundant tvdb_api v1
+* Change update Emby api
+* Fix update CF IUAM handler
+
+
+### 0.20.10 (2019-11-25 23:45:00 UTC)
 
 * Fix history activity hits when there are no stats
 * Fix 401 authentication issues caused by Requests lib using Linux environment vars

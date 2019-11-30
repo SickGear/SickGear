@@ -24,6 +24,8 @@ import re
 
 from sickbeard.helpers import getURL, tryInt, clean_data
 import sickbeard
+from collections import OrderedDict
+
 
 from lib.dateutil.parser import parse
 from lib.cachecontrol import CacheControl, caches
@@ -804,9 +806,9 @@ class Tvdb:
                 if None is btype or None is btype2:
                     continue
                 if btype not in banners:
-                    banners[btype] = {}
+                    banners[btype] = OrderedDict()
                 if btype2 not in banners[btype]:
-                    banners[btype][btype2] = {}
+                    banners[btype][btype2] = OrderedDict()
                 if bid not in banners[btype][btype2]:
                     banners[btype][btype2][bid] = {}
 
@@ -1027,7 +1029,7 @@ class Tvdb:
                     k = k.lower()
 
                     if None is not v:
-                        if 'filename' == k:
+                        if 'filename' == k and v:
                             v = self.config['url_artworkPrefix'] % v
                         else:
                             v = clean_data(v)
