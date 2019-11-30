@@ -40,7 +40,7 @@
 * Update TZlocal 2.0.0.dev0 (b73a692) to 2.0.0b3 (410a838)
 * Update unidecode module 1.0.22 (a5045ab) to 1.1.1 (632af82)
 * Update urllib3 release 1.25.2 (49eea80) to 1.25.6 (4a6c288)
-* Update xmltodict library 0.12.0 (f3ab7e1) to 0.12.0 (02c9b71)
+* Change simplify parsing TVDB images
 
 
 [develop changelog]
@@ -50,11 +50,13 @@
 * Update urllib3 release 1.25.2 (49eea80) to 1.25.3 (3387b20)
 * Update urllib3 release 1.25.3 (3387b20) to 1.25.3 (67715fd)
 * Update urllib3 release 1.25.5 (edc3ddb) to 1.25.6 (4a6c288)
+* Update xmltodict library 0.12.0 (f3ab7e1) to 0.12.0 (02c9b71)
 
 
 ### 0.20.11 (2019-11-30 02:45:00 UTC)
 
 * Remove redundant tvdb_api v1
+* Remove xmltodict and etreetodict
 * Change update Emby api
 * Fix update CF IUAM handler
 
