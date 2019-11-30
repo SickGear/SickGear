@@ -56,6 +56,7 @@ class CloudflareScraper(Session):
 
         self.cipher_suite = self.load_cipher_suite()
         self.mount('https://', CloudflareAdapter(self.cipher_suite))
+        self.trust_env = False
 
     def request(self, method, url, *args, **kwargs):
         resp = super(CloudflareScraper, self).request(method, url, *args, **kwargs)
@@ -99,17 +100,26 @@ class CloudflareScraper(Session):
         parsed_url = urlparse(resp.url)
         domain = parsed_url.netloc
 
-        if '/cdn-cgi/l/chk_captcha' in body:
+        if '/cdn-cgi/l/chk_captcha' in body or 'cf_chl_captcha' in body:
             raise CloudflareError(
                 'Cloudflare captcha presented for %s, please notify SickGear for an update, ua: %s' %
                 (domain, self.cf_ua), response=resp)
 
-        submit_url = '%s://%s/cdn-cgi/l/chk_jschl' % (parsed_url.scheme, domain)
+        try:
+            action, method = re.findall(r'(?sim)<form.*?id="challenge.*?action="/?([^?"]+).*?method="([^"]+)', body)[0]
+        except(Exception, BaseException):
+            action, method = 'cdn-cgi/l/chk_jschl', resp.request.method
+        submit_url = '%s://%s/%s' % (parsed_url.scheme, domain, action)
 
         cloudflare_kwargs = {k: v for k, v in original_kwargs.items() if k not in ['hooks']}
-        params = cloudflare_kwargs.setdefault('params', {})
+        params = cloudflare_kwargs.setdefault(('data', 'params')['GET' == method.upper()], {})
         headers = cloudflare_kwargs.setdefault('headers', {})
         headers['Referer'] = resp.url
+        try:
+            token = re.findall(r'(?sim)__cf_chl_jschl_tk__=([^"]+)', body)[0]
+            cloudflare_kwargs['params'] = dict(__cf_chl_jschl_tk__=token)
+        except(Exception, BaseException):
+            pass
 
         if self.delay == self.default_delay:
             try:
@@ -139,17 +149,25 @@ class CloudflareScraper(Session):
         # Requests transforms any request into a GET after a redirect,
         # so the redirect has to be handled manually here to allow for
         # performing other types of requests even as the first request.
-        method = resp.request.method
         cloudflare_kwargs['allow_redirects'] = False
 
         self.wait()
-        redirect = self.request(method, submit_url, **cloudflare_kwargs)
+        response = self.request(method, submit_url, **cloudflare_kwargs)
+        if response:
+            if 200 == getattr(response, 'status_code'):
+                return response
 
-        location = redirect.headers.get('Location')
-        r = urlparse(location)
-        if not r.netloc:
-            location = urlunparse((parsed_url.scheme, domain, r.path, r.params, r.query, r.fragment))
-        return self.request(method, location, **original_kwargs)
+            # legacy redirection handler (pre 2019.11.xx)
+            location = response.headers.get('Location')
+            try:
+                r = urlparse(location)
+            except(Exception, BaseException):
+                # Something is wrong with the page, perhaps CF changed their anti-bot technique
+                raise ValueError('Unable to find a new location from Cloudflare anti-bot IUAM page')
+
+            if not r.netloc:
+                location = urlunparse((parsed_url.scheme, domain, r.path, r.params, r.query, r.fragment))
+            return self.request(resp.request.method, location, **original_kwargs)
 
     @staticmethod
     def extract_js(body, domain):
