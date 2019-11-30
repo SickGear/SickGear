@@ -16,282 +16,250 @@
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import print_function
-import unittest
+
 import datetime
-import test_lib as test
+import unittest
 
 import sickbeard
+import test_lib as test
 from sickbeard import db
-from sickbeard.tv import TVEpisode, TVShow
+from sickbeard.common import Quality, UNAIRED, SKIPPED, WANTED, wantedQualities, statusStrings
 from sickbeard.show_queue import QueueItemAdd
-from sickbeard.common import Quality, UNAIRED, SKIPPED, WANTED, DOWNLOADED, SNATCHED, wantedQualities, statusStrings
+from sickbeard.tv import TVEpisode, TVShow
 
+# noinspection DuplicatedCode
+wanted_tests = [
+    dict(
+        name='Start and End',
+        show=dict(indexer=1, indexerid=1, quality=Quality.combineQualities([Quality.SDTV], [])),
+        episodes=[
+            dict(season=1, episode=1, status=SKIPPED, quality=Quality.NONE, airdate=datetime.date(2019, 1, 1)),
+            dict(season=1, episode=2, status=SKIPPED, quality=Quality.NONE, airdate=datetime.date(2019, 1, 1)),
+            dict(season=1, episode=3, status=UNAIRED, quality=Quality.NONE, airdate=datetime.date(2019, 1, 1)),
+            dict(season=1, episode=4, status=UNAIRED, quality=Quality.NONE, airdate=datetime.date(2019, 1, 1)),
+            dict(season=1, episode=5, status=UNAIRED, quality=Quality.NONE, airdate=datetime.date.fromordinal(1)),
+            dict(season=2, episode=1, status=UNAIRED, quality=Quality.NONE, airdate=datetime.date.fromordinal(1)),
+            dict(season=2, episode=2, status=UNAIRED, quality=Quality.NONE, airdate=datetime.date.fromordinal(1)),
+            dict(season=2, episode=3, status=UNAIRED, quality=Quality.NONE, airdate=datetime.date.fromordinal(1)),
+            dict(season=2, episode=4, status=UNAIRED, quality=Quality.NONE, airdate=datetime.date.fromordinal(1)),
+            dict(season=3, episode=1, status=UNAIRED, quality=Quality.NONE, airdate=datetime.date.fromordinal(1)),
+            dict(season=3, episode=2, status=UNAIRED, quality=Quality.NONE, airdate=datetime.date.fromordinal(1)),
+            dict(season=3, episode=3, status=UNAIRED, quality=Quality.NONE, airdate=datetime.date.fromordinal(1)),
+        ],
+        start_wanted=4, end_wanted=1,
+        result=dict(
+            start=dict(
+                count=2, episodes={
+                    1: {1: WANTED, 2: WANTED, 3: UNAIRED, 4: UNAIRED, 5: UNAIRED},
+                    2: {1: UNAIRED, 2: UNAIRED, 3: UNAIRED, 4: UNAIRED},
+                    3: {1: UNAIRED, 2: UNAIRED, 3: UNAIRED}
+                }),
+            end=dict(
+                count=0, episodes={
+                    1: {1: WANTED, 2: WANTED, 3: UNAIRED, 4: UNAIRED, 5: UNAIRED},
+                    2: {1: UNAIRED, 2: UNAIRED, 3: UNAIRED, 4: UNAIRED},
+                    3: {1: UNAIRED, 2: UNAIRED, 3: UNAIRED}
+                }))
+    ),
 
-wanted_tests = [{'name': 'Start and End',
-                 'show': {'indexer': 1, 'indexerid': 1, 'quality': Quality.combineQualities([Quality.SDTV], [])},
-                'episodes': [
-                    {'season': 1, 'episode': 1, 'status': SKIPPED, 'quality': Quality.NONE,
-                     'airdate': datetime.date(2019, 1, 1)},
-                    {'season': 1, 'episode': 2, 'status': SKIPPED, 'quality': Quality.NONE,
-                     'airdate': datetime.date(2019, 1, 1)},
-                    {'season': 1, 'episode': 3, 'status': UNAIRED, 'quality': Quality.NONE,
-                     'airdate': datetime.date(2019, 1, 1)},
-                    {'season': 1, 'episode': 4, 'status': UNAIRED, 'quality': Quality.NONE,
-                     'airdate': datetime.date(2019, 1, 1)},
-                    {'season': 1, 'episode': 5, 'status': UNAIRED, 'quality': Quality.NONE,
-                     'airdate': datetime.date.fromordinal(1)},
-                    {'season': 2, 'episode': 1, 'status': UNAIRED, 'quality': Quality.NONE,
-                     'airdate': datetime.date.fromordinal(1)},
-                    {'season': 2, 'episode': 2, 'status': UNAIRED, 'quality': Quality.NONE,
-                     'airdate': datetime.date.fromordinal(1)},
-                    {'season': 2, 'episode': 3, 'status': UNAIRED, 'quality': Quality.NONE,
-                     'airdate': datetime.date.fromordinal(1)},
-                    {'season': 2, 'episode': 4, 'status': UNAIRED, 'quality': Quality.NONE,
-                     'airdate': datetime.date.fromordinal(1)},
-                    {'season': 3, 'episode': 1, 'status': UNAIRED, 'quality': Quality.NONE,
-                     'airdate': datetime.date.fromordinal(1)},
-                    {'season': 3, 'episode': 2, 'status': UNAIRED, 'quality': Quality.NONE,
-                     'airdate': datetime.date.fromordinal(1)},
-                    {'season': 3, 'episode': 3, 'status': UNAIRED, 'quality': Quality.NONE,
-                     'airdate': datetime.date.fromordinal(1)},
-                ],
-                'start_wanted': 4,
-                'end_wanted': 1,
-                'result': {'start': {'count': 2,
-                                     'episodes': {
-                                         1: {1: WANTED, 2: WANTED, 3: UNAIRED, 4: UNAIRED, 5: UNAIRED},
-                                         2: {1: UNAIRED, 2: UNAIRED, 3: UNAIRED, 4: UNAIRED},
-                                         3: {1: UNAIRED, 2: UNAIRED, 3: UNAIRED}},
-                                     },
-                           'end': {'count': 0,
-                                   'episodes': {
-                                       1: {1: WANTED, 2: WANTED, 3: UNAIRED, 4: UNAIRED, 5: UNAIRED},
-                                       2: {1: UNAIRED, 2: UNAIRED, 3: UNAIRED, 4: UNAIRED},
-                                       3: {1: UNAIRED, 2: UNAIRED, 3: UNAIRED}},
-                                   }
-                           }
-                 },
-                {'name': 'Start and End, entire season',
-                 'show': {'indexer': 1, 'indexerid': 10, 'quality': Quality.combineQualities([Quality.SDTV], [])},
-                'episodes': [
-                    {'season': 1, 'episode': 1, 'status': SKIPPED, 'quality': Quality.NONE,
-                     'airdate': datetime.date(2019, 1, 1)},
-                    {'season': 1, 'episode': 2, 'status': SKIPPED, 'quality': Quality.NONE,
-                     'airdate': datetime.date(2019, 1, 1)},
-                    {'season': 1, 'episode': 3, 'status': SKIPPED, 'quality': Quality.NONE,
-                     'airdate': datetime.date(2019, 1, 1)},
-                    {'season': 1, 'episode': 4, 'status': SKIPPED, 'quality': Quality.NONE,
-                     'airdate': datetime.date(2019, 1, 1)},
-                    {'season': 1, 'episode': 5, 'status': UNAIRED, 'quality': Quality.NONE,
-                     'airdate': datetime.date.fromordinal(1)},
-                    {'season': 2, 'episode': 1, 'status': UNAIRED, 'quality': Quality.NONE,
-                     'airdate': datetime.date.fromordinal(1)},
-                    {'season': 2, 'episode': 2, 'status': UNAIRED, 'quality': Quality.NONE,
-                     'airdate': datetime.date.fromordinal(1)},
-                    {'season': 2, 'episode': 3, 'status': UNAIRED, 'quality': Quality.NONE,
-                     'airdate': datetime.date.fromordinal(1)},
-                    {'season': 2, 'episode': 4, 'status': UNAIRED, 'quality': Quality.NONE,
-                     'airdate': datetime.date.fromordinal(1)},
-                    {'season': 3, 'episode': 1, 'status': UNAIRED, 'quality': Quality.NONE,
-                     'airdate': datetime.date.fromordinal(1)},
-                    {'season': 3, 'episode': 2, 'status': UNAIRED, 'quality': Quality.NONE,
-                     'airdate': datetime.date.fromordinal(1)},
-                    {'season': 3, 'episode': 3, 'status': UNAIRED, 'quality': Quality.NONE,
-                     'airdate': datetime.date.fromordinal(1)},
-                ],
-                'start_wanted': -1,
-                'end_wanted': -1,
-                'result': {'start': {'count': 4,
-                                     'episodes': {
-                                         1: {1: WANTED, 2: WANTED, 3: WANTED, 4: WANTED, 5: UNAIRED},
-                                         2: {1: UNAIRED, 2: UNAIRED, 3: UNAIRED, 4: UNAIRED},
-                                         3: {1: UNAIRED, 2: UNAIRED, 3: UNAIRED}},
-                                     },
-                           'end': {'count': 0,
-                                   'episodes': {
-                                       1: {1: WANTED, 2: WANTED, 3: WANTED, 4: WANTED, 5: UNAIRED},
-                                       2: {1: UNAIRED, 2: UNAIRED, 3: UNAIRED, 4: UNAIRED},
-                                       3: {1: UNAIRED, 2: UNAIRED, 3: UNAIRED}},
-                                   }
-                           }
-                 },
-                {'name': 'End only',
-                 'show': {'indexer': 1, 'indexerid': 2, 'quality': Quality.combineQualities([Quality.SDTV], [])},
-                'episodes': [
-                    {'season': 1, 'episode': 1, 'status': SKIPPED, 'quality': Quality.NONE,
-                     'airdate': datetime.date(2019, 1, 1)},
-                    {'season': 1, 'episode': 2, 'status': SKIPPED, 'quality': Quality.NONE,
-                     'airdate': datetime.date(2019, 1, 1)},
-                    {'season': 1, 'episode': 3, 'status': UNAIRED, 'quality': Quality.NONE,
-                     'airdate': datetime.date(2019, 1, 1)},
-                    {'season': 1, 'episode': 4, 'status': UNAIRED, 'quality': Quality.NONE,
-                     'airdate': datetime.date(2019, 1, 1)},
-                    {'season': 1, 'episode': 5, 'status': UNAIRED, 'quality': Quality.NONE,
-                     'airdate': datetime.date.fromordinal(1)},
-                    {'season': 2, 'episode': 1, 'status': UNAIRED, 'quality': Quality.NONE,
-                     'airdate': datetime.date.fromordinal(1)},
-                    {'season': 2, 'episode': 2, 'status': UNAIRED, 'quality': Quality.NONE,
-                     'airdate': datetime.date.fromordinal(1)},
-                    {'season': 2, 'episode': 3, 'status': UNAIRED, 'quality': Quality.NONE,
-                     'airdate': datetime.date.fromordinal(1)},
-                    {'season': 2, 'episode': 4, 'status': UNAIRED, 'quality': Quality.NONE,
-                     'airdate': datetime.date.fromordinal(1)},
-                    {'season': 3, 'episode': 1, 'status': UNAIRED, 'quality': Quality.NONE,
-                     'airdate': datetime.date.fromordinal(1)},
-                    {'season': 3, 'episode': 2, 'status': UNAIRED, 'quality': Quality.NONE,
-                     'airdate': datetime.date.fromordinal(1)},
-                    {'season': 3, 'episode': 3, 'status': UNAIRED, 'quality': Quality.NONE,
-                     'airdate': datetime.date.fromordinal(1)},
-                ],
-                'start_wanted': 0,
-                'end_wanted': 1,
-                'result': {'start': {'count': 0,
-                                     'episodes': {
-                                         1: {1: SKIPPED, 2: SKIPPED, 3: UNAIRED, 4: UNAIRED, 5: UNAIRED},
-                                         2: {1: UNAIRED, 2: UNAIRED, 3: UNAIRED, 4: UNAIRED},
-                                         3: {1: UNAIRED, 2: UNAIRED, 3: UNAIRED}},
-                                     },
-                           'end': {'count': 1,
-                                   'episodes': {
-                                       1: {1: SKIPPED, 2: WANTED, 3: UNAIRED, 4: UNAIRED, 5: UNAIRED},
-                                       2: {1: UNAIRED, 2: UNAIRED, 3: UNAIRED, 4: UNAIRED},
-                                       3: {1: UNAIRED, 2: UNAIRED, 3: UNAIRED}},
-                                   }
-                           }
-                 },
-                {'name': 'End only, entire season',
-                 'show': {'indexer': 1, 'indexerid': 20, 'quality': Quality.combineQualities([Quality.SDTV], [])},
-                'episodes': [
-                    {'season': 1, 'episode': 1, 'status': SKIPPED, 'quality': Quality.NONE,
-                     'airdate': datetime.date(2019, 1, 1)},
-                    {'season': 1, 'episode': 2, 'status': SKIPPED, 'quality': Quality.NONE,
-                     'airdate': datetime.date(2019, 1, 1)},
-                    {'season': 1, 'episode': 3, 'status': SKIPPED, 'quality': Quality.NONE,
-                     'airdate': datetime.date(2019, 1, 1)},
-                    {'season': 1, 'episode': 4, 'status': UNAIRED, 'quality': Quality.NONE,
-                     'airdate': datetime.date(2019, 1, 1)},
-                    {'season': 1, 'episode': 5, 'status': UNAIRED, 'quality': Quality.NONE,
-                     'airdate': datetime.date.fromordinal(1)},
-                    {'season': 2, 'episode': 1, 'status': UNAIRED, 'quality': Quality.NONE,
-                     'airdate': datetime.date.fromordinal(1)},
-                    {'season': 2, 'episode': 2, 'status': UNAIRED, 'quality': Quality.NONE,
-                     'airdate': datetime.date.fromordinal(1)},
-                    {'season': 2, 'episode': 3, 'status': UNAIRED, 'quality': Quality.NONE,
-                     'airdate': datetime.date.fromordinal(1)},
-                    {'season': 2, 'episode': 4, 'status': UNAIRED, 'quality': Quality.NONE,
-                     'airdate': datetime.date.fromordinal(1)},
-                    {'season': 3, 'episode': 1, 'status': UNAIRED, 'quality': Quality.NONE,
-                     'airdate': datetime.date.fromordinal(1)},
-                    {'season': 3, 'episode': 2, 'status': UNAIRED, 'quality': Quality.NONE,
-                     'airdate': datetime.date.fromordinal(1)},
-                    {'season': 3, 'episode': 3, 'status': UNAIRED, 'quality': Quality.NONE,
-                     'airdate': datetime.date.fromordinal(1)},
-                ],
-                'start_wanted': 0,
-                'end_wanted': -1,
-                'result': {'start': {'count': 0,
-                                     'episodes': {
-                                         1: {1: SKIPPED, 2: SKIPPED, 3: SKIPPED, 4: UNAIRED, 5: UNAIRED},
-                                         2: {1: UNAIRED, 2: UNAIRED, 3: UNAIRED, 4: UNAIRED},
-                                         3: {1: UNAIRED, 2: UNAIRED, 3: UNAIRED}},
-                                     },
-                           'end': {'count': 3,
-                                   'episodes': {
-                                       1: {1: WANTED, 2: WANTED, 3: WANTED, 4: UNAIRED, 5: UNAIRED},
-                                       2: {1: UNAIRED, 2: UNAIRED, 3: UNAIRED, 4: UNAIRED},
-                                       3: {1: UNAIRED, 2: UNAIRED, 3: UNAIRED}},
-                                   }
-                           }
-                 },
-                {'name': 'End only, multi season',
-                 'show': {'indexer': 1, 'indexerid': 3, 'quality': Quality.combineQualities([Quality.SDTV], [])},
-                'episodes': [
-                    {'season': 1, 'episode': 1, 'status': SKIPPED, 'quality': Quality.NONE,
-                     'airdate': datetime.date(2019, 1, 1)},
-                    {'season': 1, 'episode': 2, 'status': SKIPPED, 'quality': Quality.NONE,
-                     'airdate': datetime.date(2019, 1, 1)},
-                    {'season': 1, 'episode': 3, 'status': SKIPPED, 'quality': Quality.NONE,
-                     'airdate': datetime.date(2019, 1, 1)},
-                    {'season': 1, 'episode': 4, 'status': SKIPPED, 'quality': Quality.NONE,
-                     'airdate': datetime.date(2019, 1, 1)},
-                    {'season': 1, 'episode': 5, 'status': SKIPPED, 'quality': Quality.NONE,
-                     'airdate': datetime.date.fromordinal(1)},
-                    {'season': 2, 'episode': 1, 'status': SKIPPED, 'quality': Quality.NONE,
-                     'airdate': datetime.date.fromordinal(1)},
-                    {'season': 2, 'episode': 2, 'status': SKIPPED, 'quality': Quality.NONE,
-                     'airdate': datetime.date.fromordinal(1)},
-                    {'season': 2, 'episode': 3, 'status': SKIPPED, 'quality': Quality.NONE,
-                     'airdate': datetime.date.fromordinal(1)},
-                    {'season': 2, 'episode': 4, 'status': SKIPPED, 'quality': Quality.NONE,
-                     'airdate': datetime.date.fromordinal(1)},
-                    {'season': 3, 'episode': 1, 'status': SKIPPED, 'quality': Quality.NONE,
-                     'airdate': datetime.date.fromordinal(1)},
-                    {'season': 3, 'episode': 2, 'status': SKIPPED, 'quality': Quality.NONE,
-                     'airdate': datetime.date.fromordinal(1)},
-                    {'season': 3, 'episode': 3, 'status': UNAIRED, 'quality': Quality.NONE,
-                     'airdate': datetime.date.fromordinal(1)},
-                ],
-                'start_wanted': 0,
-                'end_wanted': 1,
-                'result': {'start': {'count': 0,
-                                     'episodes': {
-                                         1: {1: SKIPPED, 2: SKIPPED, 3: SKIPPED, 4: SKIPPED, 5: SKIPPED},
-                                         2: {1: SKIPPED, 2: SKIPPED, 3: SKIPPED, 4: SKIPPED},
-                                         3: {1: SKIPPED, 2: SKIPPED, 3: UNAIRED}},
-                                     },
-                           'end': {'count': 1,
-                                   'episodes': {
-                                       1: {1: SKIPPED, 2: SKIPPED, 3: SKIPPED, 4: SKIPPED, 5: SKIPPED},
-                                       2: {1: SKIPPED, 2: SKIPPED, 3: SKIPPED, 4: SKIPPED},
-                                       3: {1: SKIPPED, 2: WANTED, 3: UNAIRED}},
-                                   }
-                           }
-                 },
-                {'name': 'End only, multi season, entire season',
-                 'show': {'indexer': 1, 'indexerid': 30, 'quality': Quality.combineQualities([Quality.SDTV], [])},
-                'episodes': [
-                    {'season': 1, 'episode': 1, 'status': SKIPPED, 'quality': Quality.NONE,
-                     'airdate': datetime.date(2019, 1, 1)},
-                    {'season': 1, 'episode': 2, 'status': SKIPPED, 'quality': Quality.NONE,
-                     'airdate': datetime.date(2019, 1, 1)},
-                    {'season': 1, 'episode': 3, 'status': SKIPPED, 'quality': Quality.NONE,
-                     'airdate': datetime.date(2019, 1, 1)},
-                    {'season': 1, 'episode': 4, 'status': SKIPPED, 'quality': Quality.NONE,
-                     'airdate': datetime.date(2019, 1, 1)},
-                    {'season': 1, 'episode': 5, 'status': SKIPPED, 'quality': Quality.NONE,
-                     'airdate': datetime.date.fromordinal(1)},
-                    {'season': 2, 'episode': 1, 'status': SKIPPED, 'quality': Quality.NONE,
-                     'airdate': datetime.date.fromordinal(1)},
-                    {'season': 2, 'episode': 2, 'status': SKIPPED, 'quality': Quality.NONE,
-                     'airdate': datetime.date.fromordinal(1)},
-                    {'season': 2, 'episode': 3, 'status': SKIPPED, 'quality': Quality.NONE,
-                     'airdate': datetime.date.fromordinal(1)},
-                    {'season': 2, 'episode': 4, 'status': SKIPPED, 'quality': Quality.NONE,
-                     'airdate': datetime.date.fromordinal(1)},
-                    {'season': 3, 'episode': 1, 'status': SKIPPED, 'quality': Quality.NONE,
-                     'airdate': datetime.date.fromordinal(1)},
-                    {'season': 3, 'episode': 2, 'status': SKIPPED, 'quality': Quality.NONE,
-                     'airdate': datetime.date.fromordinal(1)},
-                    {'season': 3, 'episode': 3, 'status': UNAIRED, 'quality': Quality.NONE,
-                     'airdate': datetime.date.fromordinal(1)},
-                ],
-                'start_wanted': 0,
-                'end_wanted': -1,
-                'result': {'start': {'count': 0,
-                                     'episodes': {
-                                         1: {1: SKIPPED, 2: SKIPPED, 3: SKIPPED, 4: SKIPPED, 5: SKIPPED},
-                                         2: {1: SKIPPED, 2: SKIPPED, 3: SKIPPED, 4: SKIPPED},
-                                         3: {1: SKIPPED, 2: SKIPPED, 3: UNAIRED}},
-                                     },
-                           'end': {'count': 2,
-                                   'episodes': {
-                                       1: {1: SKIPPED, 2: SKIPPED, 3: SKIPPED, 4: SKIPPED, 5: SKIPPED},
-                                       2: {1: SKIPPED, 2: SKIPPED, 3: SKIPPED, 4: SKIPPED},
-                                       3: {1: WANTED, 2: WANTED, 3: UNAIRED}},
-                                   }
-                           }
-                 }
-                ]
+    dict(
+        name='Start and End, entire season',
+        show=dict(indexer=1, indexerid=10, quality=Quality.combineQualities([Quality.SDTV], [])),
+        episodes=[
+            dict(season=1, episode=1, status=SKIPPED, quality=Quality.NONE, airdate=datetime.date(2019, 1, 2)),
+            dict(season=1, episode=2, status=SKIPPED, quality=Quality.NONE, airdate=datetime.date(2019, 1, 1)),
+            dict(season=1, episode=3, status=SKIPPED, quality=Quality.NONE, airdate=datetime.date(2019, 1, 1)),
+            dict(season=1, episode=4, status=SKIPPED, quality=Quality.NONE, airdate=datetime.date(2019, 1, 1)),
+            dict(season=1, episode=5, status=UNAIRED, quality=Quality.NONE, airdate=datetime.date.fromordinal(1)),
+            dict(season=2, episode=1, status=UNAIRED, quality=Quality.NONE, airdate=datetime.date.fromordinal(1)),
+            dict(season=2, episode=2, status=UNAIRED, quality=Quality.NONE, airdate=datetime.date.fromordinal(1)),
+            dict(season=2, episode=3, status=UNAIRED, quality=Quality.NONE, airdate=datetime.date.fromordinal(1)),
+            dict(season=2, episode=4, status=UNAIRED, quality=Quality.NONE, airdate=datetime.date.fromordinal(1)),
+            dict(season=3, episode=1, status=UNAIRED, quality=Quality.NONE, airdate=datetime.date.fromordinal(1)),
+            dict(season=3, episode=2, status=UNAIRED, quality=Quality.NONE, airdate=datetime.date.fromordinal(1)),
+            dict(season=3, episode=3, status=UNAIRED, quality=Quality.NONE, airdate=datetime.date.fromordinal(1)),
+        ],
+        start_wanted=-1, end_wanted=-1,
+        result=dict(
+            start=dict(
+                count=4, episodes={
+                    1: {1: WANTED, 2: WANTED, 3: WANTED, 4: WANTED, 5: UNAIRED},
+                    2: {1: UNAIRED, 2: UNAIRED, 3: UNAIRED, 4: UNAIRED},
+                    3: {1: UNAIRED, 2: UNAIRED, 3: UNAIRED}
+                }),
+            end=dict(
+                count=0, episodes={
+                    1: {1: WANTED, 2: WANTED, 3: WANTED, 4: WANTED, 5: UNAIRED},
+                    2: {1: UNAIRED, 2: UNAIRED, 3: UNAIRED, 4: UNAIRED},
+                    3: {1: UNAIRED, 2: UNAIRED, 3: UNAIRED}
+                }))
+    ),
+
+    dict(
+        name='End only',
+        show=dict(indexer=1, indexerid=2, quality=Quality.combineQualities([Quality.SDTV], [])),
+        episodes=[
+            dict(season=1, episode=1, status=SKIPPED, quality=Quality.NONE, airdate=datetime.date(2019, 1, 3)),
+            dict(season=1, episode=2, status=SKIPPED, quality=Quality.NONE, airdate=datetime.date(2019, 1, 1)),
+            dict(season=1, episode=3, status=UNAIRED, quality=Quality.NONE, airdate=datetime.date(2019, 1, 1)),
+            dict(season=1, episode=4, status=UNAIRED, quality=Quality.NONE, airdate=datetime.date(2019, 1, 1)),
+            dict(season=1, episode=5, status=UNAIRED, quality=Quality.NONE, airdate=datetime.date.fromordinal(1)),
+            dict(season=2, episode=1, status=UNAIRED, quality=Quality.NONE, airdate=datetime.date.fromordinal(1)),
+            dict(season=2, episode=2, status=UNAIRED, quality=Quality.NONE, airdate=datetime.date.fromordinal(1)),
+            dict(season=2, episode=3, status=UNAIRED, quality=Quality.NONE, airdate=datetime.date.fromordinal(1)),
+            dict(season=2, episode=4, status=UNAIRED, quality=Quality.NONE, airdate=datetime.date.fromordinal(1)),
+            dict(season=3, episode=1, status=UNAIRED, quality=Quality.NONE, airdate=datetime.date.fromordinal(1)),
+            dict(season=3, episode=2, status=UNAIRED, quality=Quality.NONE, airdate=datetime.date.fromordinal(1)),
+            dict(season=3, episode=3, status=UNAIRED, quality=Quality.NONE, airdate=datetime.date.fromordinal(1)),
+        ],
+        start_wanted=0, end_wanted=1,
+        result=dict(
+            start=dict(
+                count=0, episodes={
+                    1: {1: SKIPPED, 2: SKIPPED, 3: UNAIRED, 4: UNAIRED, 5: UNAIRED},
+                    2: {1: UNAIRED, 2: UNAIRED, 3: UNAIRED, 4: UNAIRED},
+                    3: {1: UNAIRED, 2: UNAIRED, 3: UNAIRED}
+                }),
+            end=dict(
+                count=1, episodes={
+                    1: {1: SKIPPED, 2: WANTED, 3: UNAIRED, 4: UNAIRED, 5: UNAIRED},
+                    2: {1: UNAIRED, 2: UNAIRED, 3: UNAIRED, 4: UNAIRED},
+                    3: {1: UNAIRED, 2: UNAIRED, 3: UNAIRED}
+                }))
+    ),
+
+    dict(
+        name='End only, entire season',
+        show=dict(indexer=1, indexerid=20, quality=Quality.combineQualities([Quality.SDTV], [])),
+        episodes=[
+            dict(season=1, episode=1, status=SKIPPED, quality=Quality.NONE, airdate=datetime.date(2019, 1, 4)),
+            dict(season=1, episode=2, status=SKIPPED, quality=Quality.NONE, airdate=datetime.date(2019, 1, 1)),
+            dict(season=1, episode=3, status=SKIPPED, quality=Quality.NONE, airdate=datetime.date(2019, 1, 1)),
+            dict(season=1, episode=4, status=UNAIRED, quality=Quality.NONE, airdate=datetime.date(2019, 1, 1)),
+            dict(season=1, episode=5, status=UNAIRED, quality=Quality.NONE, airdate=datetime.date.fromordinal(1)),
+            dict(season=2, episode=1, status=UNAIRED, quality=Quality.NONE, airdate=datetime.date.fromordinal(1)),
+            dict(season=2, episode=2, status=UNAIRED, quality=Quality.NONE, airdate=datetime.date.fromordinal(1)),
+            dict(season=2, episode=3, status=UNAIRED, quality=Quality.NONE, airdate=datetime.date.fromordinal(1)),
+            dict(season=2, episode=4, status=UNAIRED, quality=Quality.NONE, airdate=datetime.date.fromordinal(1)),
+            dict(season=3, episode=1, status=UNAIRED, quality=Quality.NONE, airdate=datetime.date.fromordinal(1)),
+            dict(season=3, episode=2, status=UNAIRED, quality=Quality.NONE, airdate=datetime.date.fromordinal(1)),
+            dict(season=3, episode=3, status=UNAIRED, quality=Quality.NONE, airdate=datetime.date.fromordinal(1)),
+        ],
+        start_wanted=0, end_wanted=-1,
+        result=dict(
+            start=dict(
+                count=0, episodes={
+                    1: {1: SKIPPED, 2: SKIPPED, 3: SKIPPED, 4: UNAIRED, 5: UNAIRED},
+                    2: {1: UNAIRED, 2: UNAIRED, 3: UNAIRED, 4: UNAIRED},
+                    3: {1: UNAIRED, 2: UNAIRED, 3: UNAIRED}
+                }),
+            end=dict(
+                count=3, episodes={
+                    1: {1: WANTED, 2: WANTED, 3: WANTED, 4: UNAIRED, 5: UNAIRED},
+                    2: {1: UNAIRED, 2: UNAIRED, 3: UNAIRED, 4: UNAIRED},
+                    3: {1: UNAIRED, 2: UNAIRED, 3: UNAIRED}
+                }))
+    ),
+
+    dict(
+        name='End only, multi season',
+        show=dict(indexer=1, indexerid=3, quality=Quality.combineQualities([Quality.SDTV], [])),
+        episodes=[
+            dict(season=1, episode=1, status=SKIPPED, quality=Quality.NONE, airdate=datetime.date(2019, 1, 5)),
+            dict(season=1, episode=2, status=SKIPPED, quality=Quality.NONE, airdate=datetime.date(2019, 1, 1)),
+            dict(season=1, episode=3, status=SKIPPED, quality=Quality.NONE, airdate=datetime.date(2019, 1, 1)),
+            dict(season=1, episode=4, status=SKIPPED, quality=Quality.NONE, airdate=datetime.date(2019, 1, 1)),
+            dict(season=1, episode=5, status=SKIPPED, quality=Quality.NONE, airdate=datetime.date.fromordinal(1)),
+            dict(season=2, episode=1, status=SKIPPED, quality=Quality.NONE, airdate=datetime.date.fromordinal(1)),
+            dict(season=2, episode=2, status=SKIPPED, quality=Quality.NONE, airdate=datetime.date.fromordinal(1)),
+            dict(season=2, episode=3, status=SKIPPED, quality=Quality.NONE, airdate=datetime.date.fromordinal(1)),
+            dict(season=2, episode=4, status=SKIPPED, quality=Quality.NONE, airdate=datetime.date.fromordinal(1)),
+            dict(season=3, episode=1, status=SKIPPED, quality=Quality.NONE, airdate=datetime.date.fromordinal(1)),
+            dict(season=3, episode=2, status=SKIPPED, quality=Quality.NONE, airdate=datetime.date.fromordinal(1)),
+            dict(season=3, episode=3, status=UNAIRED, quality=Quality.NONE, airdate=datetime.date.fromordinal(1)),
+        ],
+        start_wanted=0, end_wanted=1,
+        result=dict(
+            start=dict(
+                count=0, episodes={
+                    1: {1: SKIPPED, 2: SKIPPED, 3: SKIPPED, 4: SKIPPED, 5: SKIPPED},
+                    2: {1: SKIPPED, 2: SKIPPED, 3: SKIPPED, 4: SKIPPED},
+                    3: {1: SKIPPED, 2: SKIPPED, 3: UNAIRED}
+                }),
+            end=dict(
+                count=1, episodes={
+                    1: {1: SKIPPED, 2: SKIPPED, 3: SKIPPED, 4: SKIPPED, 5: SKIPPED},
+                    2: {1: SKIPPED, 2: SKIPPED, 3: SKIPPED, 4: SKIPPED},
+                    3: {1: SKIPPED, 2: WANTED, 3: UNAIRED}
+                }))
+    ),
+
+    dict(
+        name='End only, multi season, entire season',
+        show=dict(indexer=1, indexerid=30, quality=Quality.combineQualities([Quality.SDTV], [])),
+        episodes=[
+            dict(season=1, episode=1, status=SKIPPED, quality=Quality.NONE, airdate=datetime.date(2019, 1, 6)),
+            dict(season=1, episode=2, status=SKIPPED, quality=Quality.NONE, airdate=datetime.date(2019, 1, 1)),
+            dict(season=1, episode=3, status=SKIPPED, quality=Quality.NONE, airdate=datetime.date(2019, 1, 1)),
+            dict(season=1, episode=4, status=SKIPPED, quality=Quality.NONE, airdate=datetime.date(2019, 1, 1)),
+            dict(season=1, episode=5, status=SKIPPED, quality=Quality.NONE, airdate=datetime.date.fromordinal(1)),
+            dict(season=2, episode=1, status=SKIPPED, quality=Quality.NONE, airdate=datetime.date.fromordinal(1)),
+            dict(season=2, episode=2, status=SKIPPED, quality=Quality.NONE, airdate=datetime.date.fromordinal(1)),
+            dict(season=2, episode=3, status=SKIPPED, quality=Quality.NONE, airdate=datetime.date.fromordinal(1)),
+            dict(season=2, episode=4, status=SKIPPED, quality=Quality.NONE, airdate=datetime.date.fromordinal(1)),
+            dict(season=3, episode=1, status=SKIPPED, quality=Quality.NONE, airdate=datetime.date.fromordinal(1)),
+            dict(season=3, episode=2, status=SKIPPED, quality=Quality.NONE, airdate=datetime.date.fromordinal(1)),
+            dict(season=3, episode=3, status=UNAIRED, quality=Quality.NONE, airdate=datetime.date.fromordinal(1)),
+        ],
+        start_wanted=0, end_wanted=-1,
+        result=dict(
+            start=dict(
+                count=0, episodes={
+                    1: {1: SKIPPED, 2: SKIPPED, 3: SKIPPED, 4: SKIPPED, 5: SKIPPED},
+                    2: {1: SKIPPED, 2: SKIPPED, 3: SKIPPED, 4: SKIPPED},
+                    3: {1: SKIPPED, 2: SKIPPED, 3: UNAIRED}
+                }),
+            end=dict(
+                count=2, episodes={
+                    1: {1: SKIPPED, 2: SKIPPED, 3: SKIPPED, 4: SKIPPED, 5: SKIPPED},
+                    2: {1: SKIPPED, 2: SKIPPED, 3: SKIPPED, 4: SKIPPED},
+                    3: {1: WANTED, 2: WANTED, 3: UNAIRED}
+                }))
+    ),
+
+    dict(
+        name='End only, multi season, cross season',
+        show=dict(indexer=1, indexerid=33, quality=Quality.combineQualities([Quality.SDTV], [])),
+        episodes=[
+            dict(season=1, episode=1, status=SKIPPED, quality=Quality.NONE, airdate=datetime.date(2019, 1, 7)),
+            dict(season=1, episode=2, status=SKIPPED, quality=Quality.NONE, airdate=datetime.date(2019, 1, 1)),
+            dict(season=1, episode=3, status=SKIPPED, quality=Quality.NONE, airdate=datetime.date(2019, 1, 1)),
+            dict(season=1, episode=4, status=SKIPPED, quality=Quality.NONE, airdate=datetime.date(2019, 1, 1)),
+            dict(season=1, episode=5, status=SKIPPED, quality=Quality.NONE, airdate=datetime.date.fromordinal(1)),
+            dict(season=2, episode=1, status=SKIPPED, quality=Quality.NONE, airdate=datetime.date.fromordinal(1)),
+            dict(season=2, episode=2, status=SKIPPED, quality=Quality.NONE, airdate=datetime.date.fromordinal(1)),
+            dict(season=2, episode=3, status=SKIPPED, quality=Quality.NONE, airdate=datetime.date.fromordinal(1)),
+            dict(season=2, episode=4, status=SKIPPED, quality=Quality.NONE, airdate=datetime.date.fromordinal(1)),
+            dict(season=3, episode=1, status=SKIPPED, quality=Quality.NONE, airdate=datetime.date.fromordinal(1)),
+            dict(season=3, episode=2, status=SKIPPED, quality=Quality.NONE, airdate=datetime.date.fromordinal(1)),
+            dict(season=3, episode=3, status=UNAIRED, quality=Quality.NONE, airdate=datetime.date.fromordinal(1)),
+        ],
+        start_wanted=7, end_wanted=3,
+        result=dict(
+            start=dict(
+                count=7, episodes={
+                    1: {1: WANTED, 2: WANTED, 3: WANTED, 4: WANTED, 5: WANTED},
+                    2: {1: WANTED, 2: WANTED, 3: SKIPPED, 4: SKIPPED},
+                    3: {1: SKIPPED, 2: SKIPPED, 3: UNAIRED}
+                }),
+            end=dict(
+                count=3, episodes={
+                    1: {1: WANTED, 2: WANTED, 3: WANTED, 4: WANTED, 5: WANTED},
+                    2: {1: WANTED, 2: WANTED, 3: SKIPPED, 4: WANTED},
+                    3: {1: WANTED, 2: WANTED, 3: UNAIRED}
+                }))
+    ),
+]
 
 
 class ShowAddTests(test.SickbeardTestDBCase):
@@ -335,40 +303,40 @@ class ShowAddTests(test.SickbeardTestDBCase):
                 cur_db.mass_action(cl)
 
             qi = QueueItemAdd(w['show']['indexer'], w['show']['indexerid'], '', None, None,
-                                          None, None, None, False, False, False, None, None,
-                                          w['start_wanted'], w['end_wanted'], None, None
-                                          )
+                              None, None, None, False, False, False, None, None,
+                              w['start_wanted'], w['end_wanted'], None, None)
             qi.show = show
             # start tests
             tr = qi._get_wanted(cur_db, w['start_wanted'], False)
-            self.assertEqual(tr, w['result']['start']['count'],
-                             msg='%s: start: got: %s, expected: %s' % (w['name'], tr, w['result']['start']['count']))
+            self.assertEqual(
+                tr, w['result']['start'].get('count'),
+                msg='%s: start: got: %s, expected: %s' % (w['name'], tr, w['result']['start'].get('count')))
             results = cur_db.select('SELECT status, season, episode FROM tv_episodes WHERE indexer = ? AND showid = ?'
                                     ' ORDER BY season, episode',
                                     [show.indexer, show.indexerid])
             for r in results:
-                expected = w['result']['start']['episodes'].get(r['season'], {}).get(r['episode'], None)
-                self.assertEqual(r['status'], expected,
-                                 msg='%s: start %sx%s: got: %s, expected: %s' %
-                                     (w['name'], r['season'], r['episode'], statusStrings[r['status']],
-                                      statusStrings[expected]))
+                expected = w['result']['start'].get('episodes').get(r['season'], {}).get(r['episode'], None)
+                self.assertEqual(
+                    r['status'], expected,
+                    msg='%s: start %sx%s: got: %s, expected: %s' %
+                        (w['name'], r['season'], r['episode'], statusStrings[r['status']], statusStrings[expected]))
 
             # end tests
             tr = qi._get_wanted(cur_db, w['end_wanted'], True)
-            self.assertEqual(tr, w['result']['end']['count'],
-                             msg='%s: end: got: %s, expected: %s' % (w['name'], tr, w['result']['end']['count']))
+            self.assertEqual(tr, w['result']['end'].get('count'),
+                             msg='%s: end: got: %s, expected: %s' % (w['name'], tr, w['result']['end'].get('count')))
             results = cur_db.select('SELECT status, season, episode FROM tv_episodes WHERE indexer = ? AND showid = ?'
                                     ' ORDER BY season, episode',
                                     [show.indexer, show.indexerid])
             for r in results:
-                expected = w['result']['end']['episodes'].get(r['season'], {}).get(r['episode'], None)
+                expected = w['result']['end'].get('episodes').get(r['season'], {}).get(r['episode'], None)
                 self.assertEqual(r['status'], expected,
-                                 msg='%s: start %sx%s: got: %s, expected: %s' %
+                                 msg='%s: end %sx%s: got: %s, expected: %s' %
                                      (w['name'], r['season'], r['episode'], statusStrings[r['status']],
                                       statusStrings[expected]))
 
 
-if __name__ == '__main__':
+if '__main__' == __name__:
     print('==================')
     print('STARTING - SHOW TESTS')
     print('==================')

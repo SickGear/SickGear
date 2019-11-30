@@ -41,6 +41,7 @@
 * Update unidecode module 1.0.22 (a5045ab) to 1.1.1 (632af82)
 * Update urllib3 release 1.25.2 (49eea80) to 1.25.6 (4a6c288)
 * Change simplify parsing TVDB images
+* Fix setting episodes wanted when adding show
 
 
 [develop changelog]
