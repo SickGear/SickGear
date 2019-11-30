@@ -513,17 +513,17 @@ class Tvdb:
         # http://thetvdb.com/wiki/index.php/Programmers_API
         self.config['base_url'] = 'https://api.thetvdb.com/'
 
-        self.config['url_get_series'] = '%(base_url)s/search/series' % self.config
-        self.config['params_get_series'] = {'name': ''}
+        self.config['url_search_series'] = '%(base_url)s/search/series' % self.config
+        self.config['params_search_series'] = {'name': ''}
 
-        self.config['url_epInfo'] = '%(base_url)sseries/%%s/episodes?page=%%s' % self.config
+        self.config['url_series_episodes_info'] = '%(base_url)sseries/%%s/episodes?page=%%s' % self.config
 
-        self.config['url_seriesInfo'] = '%(base_url)sseries/%%s' % self.config
-        self.config['url_episodeInfo'] = '%(base_url)sepisodes/%%s' % self.config
-        self.config['url_actorsInfo'] = '%(base_url)sseries/%%s/actors' % self.config
+        self.config['url_series_info'] = '%(base_url)sseries/%%s' % self.config
+        self.config['url_episodes_info'] = '%(base_url)sepisodes/%%s' % self.config
+        self.config['url_actors_info'] = '%(base_url)sseries/%%s/actors' % self.config
 
-        self.config['url_seriesBanner'] = '%(base_url)sseries/%%s/images/query?keyType=%%s' % self.config
-        self.config['url_artworkPrefix'] = 'https://artworks.thetvdb.com/banners/%s'
+        self.config['url_series_images'] = '%(base_url)sseries/%%s/images/query?keyType=%%s' % self.config
+        self.config['url_artworks'] = 'https://artworks.thetvdb.com/banners/%s'
 
     def get_new_token(self):
         token = sickbeard.THETVDB_V2_API_TOKEN.get('token', None)
@@ -590,7 +590,7 @@ class Tvdb:
             headers.update({'Accept-Language': language})
 
         resp = None
-        is_series_info = self._match_url_pattern('url_seriesInfo', url)
+        is_series_info = self._match_url_pattern('url_series_info', url)
         if is_series_info:
             self.show_not_found = False
         self.not_found = False
@@ -605,7 +605,7 @@ class Tvdb:
             elif 404 == e.response.status_code:
                 if is_series_info:
                     self.show_not_found = True
-                elif self._match_url_pattern('url_epInfo', url):
+                elif self._match_url_pattern('url_series_episodes_info', url):
                     resp = {'data': []}
                 self.not_found = True
             elif 404 != e.response.status_code:
@@ -631,7 +631,7 @@ class Tvdb:
                 k = k.lower()
                 if None is not v:
                     if k in ['banner', 'fanart', 'poster'] and v:
-                        v = self.config['url_artworkPrefix'] % v
+                        v = self.config['url_artworks'] % v
                     elif 'genre' == k:
                         keep_data['genre_list'] = v
                         v = '|%s|' % '|'.join([clean_data(c) for c in v if isinstance(c, basestring)])
@@ -754,11 +754,11 @@ class Tvdb:
         and returns the result list
         """
         series = series.encode('utf-8')
-        self.config['params_get_series']['name'] = series
+        self.config['params_search_series']['name'] = series
         log().debug('Searching for show %s' % series)
 
         try:
-            series_found = self._getetsrc(self.config['url_get_series'], params=self.config['params_get_series'],
+            series_found = self._getetsrc(self.config['url_search_series'], params=self.config['params_search_series'],
                                           language=self.config['language'])
             if series_found:
                 return series_found.values()[0]
@@ -802,15 +802,10 @@ class Tvdb:
             for cur_banner in img_list:
                 bid = cur_banner['id']
                 btype = (cur_banner['keytype'], 'banner')['series' == cur_banner['keytype']]
-                btype2 = (cur_banner['resolution'], tryInt(cur_banner['subkey'], cur_banner['subkey']))[btype in ('season', 'seasonwide')]
+                btype2 = (cur_banner['resolution'], tryInt(cur_banner['subkey'], cur_banner['subkey']))[
+                    btype in ('season', 'seasonwide')]
                 if None is btype or None is btype2:
                     continue
-                if btype not in banners:
-                    banners[btype] = OrderedDict()
-                if btype2 not in banners[btype]:
-                    banners[btype][btype2] = OrderedDict()
-                if bid not in banners[btype][btype2]:
-                    banners[btype][btype2][bid] = {}
 
                 for k, v in cur_banner.iteritems():
                     if None is k or None is v:
@@ -818,13 +813,15 @@ class Tvdb:
 
                     k, v = k.lower(), v.lower() if isinstance(v, (str, unicode)) else v
                     if k == 'filename':
-                        banners[btype][btype2][bid]['bannerpath'] = self.config['url_artworkPrefix'] % v
+                        k = 'bannerpath'
+                        v = self.config['url_artworks'] % v
                     elif k == 'thumbnail':
-                        banners[btype][btype2][bid]['thumbnailpath'] = self.config['url_artworkPrefix'] % v
+                        k = 'thumbnailpath'
+                        v = self.config['url_artworks'] % v
                     elif k == 'keytype':
-                        banners[btype][btype2][bid]['bannertype'] = v
-                    else:
-                        banners[btype][btype2][bid][k] = v
+                        k = 'bannertype'
+                    banners.setdefault(btype, OrderedDict()).setdefault(btype2, OrderedDict()).setdefault(bid, {})[
+                        k] = v
 
         except (StandardError, Exception):
             pass
@@ -839,7 +836,7 @@ class Tvdb:
                 a.append({'character': {'id': None,
                                         'name': n.get('role', '').strip(),
                                         'url': None,  # not supported by tvdb
-                                        'image': (None, self.config['url_artworkPrefix'] %
+                                        'image': (None, self.config['url_artworks'] %
                                                   n.get('image'))[any([n.get('image')])],
                                         },
                           'person': {'id': None,  # not supported by tvdb
@@ -860,7 +857,7 @@ class Tvdb:
         # Parse episode information
         data = None
         log().debug('Getting all episode data for %s' % epid)
-        url = self.config['url_episodeInfo'] % epid
+        url = self.config['url_episodes_info'] % epid
         episode_data = self._getetsrc(url, language=self.config['language'])
 
         if episode_data and 'data' in episode_data:
@@ -871,12 +868,32 @@ class Tvdb:
 
                     if None is not v:
                         if 'filename' == k and v:
-                            v = self.config['url_artworkPrefix'] % v
+                            v = self.config['url_artworks'] % v
                         else:
                             v = clean_data(v)
                     data[k] = v
 
         return data
+
+    def _parse_images(self, sid, language, show_data, image_type, enabled_type):
+        mapped_img_types = {'banner': 'series'}
+        excluded_main_data = ['seasons_enabled', 'seasonwides_enabled']
+        if self.config[enabled_type]:
+            image_data = self._getetsrc(self.config['url_series_images'] %
+                                        (sid, mapped_img_types.get(image_type, image_type)), language=language)
+            if image_data and 0 < len(image_data.get('data', '') or ''):
+                image_data['data'] = sorted(image_data['data'], reverse=True,
+                                            key=lambda x: (x['ratingsinfo']['average'], x['ratingsinfo']['count']))
+                if enabled_type not in excluded_main_data:
+                    url_image = self.config['url_artworks'] % image_data['data'][0]['filename']
+                    url_thumb = self.config['url_artworks'] % image_data['data'][0]['thumbnail']
+                    self._set_show_data(sid, image_type, url_image)
+                    self._set_show_data(sid, u'%s_thumb' % image_type, url_thumb)
+                self._parse_banners(sid, image_data['data'])
+
+        if enabled_type not in excluded_main_data and show_data['data'][image_type]:
+            self._set_show_data(sid, u'%s_thumb' % image_type,
+                                re.sub(r'\.jpg$', '_t.jpg', show_data['data'][image_type], flags=re.I))
 
     def _get_show_data(self, sid, language, get_ep_info=False):
         """Takes a series ID, gets the epInfo URL and parses the TVDB
@@ -886,7 +903,7 @@ class Tvdb:
 
         # Parse show information
         log().debug('Getting all series data for %s' % sid)
-        url = self.config['url_seriesInfo'] % sid
+        url = self.config['url_series_info'] % sid
         show_data = self._getetsrc(url, language=language)
 
         # check and make sure we have data to process and that it contains a series name
@@ -899,76 +916,13 @@ class Tvdb:
         if sid in self.shows:
             self.shows[sid].ep_loaded = get_ep_info
 
-        p = ''
-        pt = ''
-        if self.config['posters_enabled']:
-            poster_data = self._getetsrc(self.config['url_seriesBanner'] % (sid, 'poster'), language=language)
-            if poster_data and len(poster_data.get('data', '') or '') > 0:
-                poster_data['data'] = sorted(poster_data['data'], reverse=True,
-                                             key=lambda x: (x['ratingsinfo']['average'], x['ratingsinfo']['count']))
-                p = self.config['url_artworkPrefix'] % poster_data['data'][0]['filename']
-                pt = self.config['url_artworkPrefix'] % poster_data['data'][0]['thumbnail']
-                self._parse_banners(sid, poster_data['data'])
-        if p:
-            self._set_show_data(sid, u'poster', p)
-        if pt:
-            self._set_show_data(sid, u'poster_thumb', pt)
-        elif show_data['data']['poster']:
-            self._set_show_data(sid, u'poster_thumb',
-                                re.sub(r'\.jpg$', '_t.jpg', show_data['data']['poster'], flags=re.I))
-
-        b = ''
-        bt = ''
-        if self.config['banners_enabled']:
-            poster_data = self._getetsrc(self.config['url_seriesBanner'] % (sid, 'series'), language=language)
-            if poster_data and len(poster_data.get('data', '') or '') > 0:
-                poster_data['data'] = sorted(poster_data['data'], reverse=True,
-                                             key=lambda x: (x['ratingsinfo']['average'], x['ratingsinfo']['count']))
-                b = self.config['url_artworkPrefix'] % poster_data['data'][0]['filename']
-                bt = self.config['url_artworkPrefix'] % poster_data['data'][0]['thumbnail']
-                self._parse_banners(sid, poster_data['data'])
-        if b:
-            self._set_show_data(sid, u'banner', b)
-        if bt:
-            self._set_show_data(sid, u'banner_thumb', bt)
-        elif show_data['data']['banner']:
-            self._set_show_data(sid, u'banner_thumb',
-                                re.sub(r'\.jpg$', '_t.jpg', show_data['data']['banner'], flags=re.I))
-
-        if self.config['seasons_enabled']:
-            poster_data = self._getetsrc(self.config['url_seriesBanner'] % (sid, 'season'), language=language)
-            if poster_data and len(poster_data.get('data', '') or '') > 0:
-                poster_data['data'] = sorted(poster_data['data'], reverse=True,
-                                             key=lambda x: (-1 * tryInt(x['subkey']), x['ratingsinfo']['average'], x['ratingsinfo']['count']))
-                self._parse_banners(sid, poster_data['data'])
-
-        if self.config['seasonwides_enabled']:
-            poster_data = self._getetsrc(self.config['url_seriesBanner'] % (sid, 'seasonwide'), language=language)
-            if poster_data and len(poster_data.get('data', '') or '') > 0:
-                poster_data['data'] = sorted(poster_data['data'], reverse=True,
-                                             key=lambda x: (-1 * tryInt(x['subkey']), x['ratingsinfo']['average'], x['ratingsinfo']['count']))
-                self._parse_banners(sid, poster_data['data'])
-
-        f = ''
-        ft = ''
-        if self.config['fanart_enabled']:
-            fanart_data = self._getetsrc(self.config['url_seriesBanner'] % (sid, 'fanart'), language=language)
-            if fanart_data and len(fanart_data.get('data', '') or '') > 0:
-                fanart_data['data'] = sorted(fanart_data['data'], reverse=True,
-                                             key=lambda x: (x['ratingsinfo']['average'], x['ratingsinfo']['count']))
-                f = self.config['url_artworkPrefix'] % fanart_data['data'][0]['filename']
-                ft = self.config['url_artworkPrefix'] % fanart_data['data'][0]['thumbnail']
-                self._parse_banners(sid, fanart_data['data'])
-        if f:
-            self._set_show_data(sid, u'fanart', f)
-        if ft:
-            self._set_show_data(sid, u'fanart_thumb', ft)
-        elif show_data[u'data'][u'fanart']:
-            self._set_show_data(sid, u'fanart_thumb',
-                                re.sub(r'\.jpg$', '_t.jpg', show_data[u'data'][u'fanart'], flags=re.I))
+        for img_type, en_type in [(u'poster', 'posters_enabled'), (u'banner', 'banners_enabled'),
+                                  (u'fanart', 'fanart_enabled'), (u'season', 'seasons_enabled'),
+                                  (u'seasonwide', 'seasonwides_enabled')]:
+            self._parse_images(sid, language, show_data, img_type, en_type)
 
         if self.config['actors_enabled']:
-            actor_data = self._getetsrc(self.config['url_actorsInfo'] % sid, language=language)
+            actor_data = self._getetsrc(self.config['url_actors_info'] % sid, language=language)
             if actor_data and len(actor_data.get('data', '') or '') > 0:
                 self._parse_actors(sid, actor_data['data'])
 
@@ -979,7 +933,7 @@ class Tvdb:
             page = 1
             episodes = []
             while page <= 400:
-                episode_data = self._getetsrc(self.config['url_epInfo'] % (sid, page), language=language)
+                episode_data = self._getetsrc(self.config['url_series_episodes_info'] % (sid, page), language=language)
                 if None is episode_data:
                     raise tvdb_error('Exception retrieving episodes for show')
                 if isinstance(episode_data, dict) and not episode_data.get('data', []):
@@ -1030,7 +984,7 @@ class Tvdb:
 
                     if None is not v:
                         if 'filename' == k and v:
-                            v = self.config['url_artworkPrefix'] % v
+                            v = self.config['url_artworks'] % v
                         else:
                             v = clean_data(v)
 
