@@ -23,7 +23,7 @@ import os
 
 import sickbeard
 
-from sickbeard.common import SKIPPED, WANTED, UNAIRED, statusStrings
+from sickbeard.common import SKIPPED, WANTED, UNAIRED, statusStrings, Quality
 from sickbeard.tv import TVShow
 from sickbeard import exceptions, logger, ui, db
 from sickbeard import generic_queue
@@ -294,6 +294,78 @@ class QueueItemAdd(ShowQueueItem):
 
     isLoading = property(_isLoading)
 
+    # if they gave a number to start or number to end as wanted, then change those eps to it
+    def _get_wanted(self, db_obj, wanted_max, latest):
+        # type (...) -> int
+
+        latest_season = 0
+        actual = 0
+        upgradable = 0
+        process_sql = True
+        wanted_updates = []
+        if latest:
+            # find season number with latest aired episode
+            latest_result = db_obj.select('SELECT MAX(season) AS latest_season FROM tv_episodes WHERE season > 0 '
+                                          'AND indexer = ? AND showid = ? AND status != ?',
+                                          [self.show.indexer, self.show.indexerid, UNAIRED])
+            if latest_result:
+                latest_season = int(latest_result[0]['latest_season'])
+            else:
+                process_sql = False
+
+        if process_sql:
+            if -1 == wanted_max:
+                compare_op = ''  # equal, we only want the specific season
+            else:
+                compare_op = ('>', '<')[latest]  # less/more then equal season
+            base_sql = 'SELECT indexerid, season, episode, status FROM tv_episodes WHERE indexer = ?' \
+                       ' AND showid = ? AND season != 0 AND season %s= ? AND status != ?' \
+                       ' ORDER BY season%s, episode%s%s' % \
+                       (compare_op, ('', ' DESC')[latest], ('', ' DESC')[latest],
+                        (' LIMIT ?', '')[-1 == wanted_max])
+
+            selected_res = db_obj.select(base_sql, [self.show.indexer, self.show.indexerid,
+                                                    (1, latest_season)[latest], UNAIRED] +
+                                         ([wanted_max], [])[-1 == wanted_max])
+            selected_ids = []
+            for sr in selected_res:
+                if sr['status'] in [SKIPPED]:
+                    selected_ids.append(sr['indexerid'])
+                    wanted_updates.append({'season': sr['season'], 'episode': sr['episode'],
+                                           'status': sr['status']})
+                elif sr['status'] not in [WANTED]:
+                    cur_status, cur_quality = Quality.splitCompositeStatus(int(sr['status']))
+                    if sickbeard.WANTEDLIST_CACHE.get_wantedlist(
+                            self.quality, self.upgrade_once, cur_quality, cur_status,
+                            unaired=(sickbeard.SEARCH_UNAIRED and not sickbeard.UNAIRED_RECENT_SEARCH_ONLY)):
+                        upgradable += 1
+
+            if selected_ids:
+                update = 'UPDATE [tv_episodes] SET status = ? WHERE indexer = ? AND indexerid IN (%s)' % \
+                         ','.join(['?'] * len(selected_ids))
+                db_obj.action(update, [WANTED, self.show.indexer] + selected_ids)
+
+                result = db_obj.select('SELECT changes() as last FROM [tv_episodes]')
+
+                for cur_result in result:
+                    actual = cur_result['last']
+                    break
+
+        action_log = 'didn\'t find any episodes that need to be set wanted'
+        if actual:
+            action_log = ('updated %s %s episodes > %s' % (
+                (((('%s of %s' % (actual, wanted_max)),
+                   ('%s of max %s limited' % (actual, wanted_max)))[10 == wanted_max]),
+                 ('max %s available' % actual))[-1 == wanted_max],
+                ('first season', 'latest')[latest],
+                ', '.join([
+                    ('S%02dE%02d=%s' % (a['season'], a['episode'], statusStrings[a['status']]))
+                    for a in wanted_updates
+                ])
+            ))
+        logger.log('Get wanted ' + action_log)
+        return actual + upgradable
+
     def run(self):
 
         ShowQueueItem.run(self)
@@ -427,47 +499,8 @@ class QueueItemAdd(ShowQueueItem):
             my_db.action('UPDATE tv_episodes SET status = ? WHERE status = ? AND showid = ? AND season != 0',
                         [self.default_status, SKIPPED, self.show.indexerid])
 
-        # if they gave a number to start or number to end as wanted, then change those eps to it
-        def get_wanted(db_obj, wanted_max, latest):
-            actual = 0
-            if wanted_max:
-                select_id = 'FROM [tv_episodes] t5 JOIN (SELECT t3.indexerid, t3.status, t3.season*1000000+t3.episode AS t3_se, t2.start_season FROM [tv_episodes] t3'\
-                            + ' JOIN (SELECT t1.showid, M%s(t1.season) AS start_season' % ('IN', 'AX')[latest]\
-                            + ', MAX(t1.airdate) AS airdate, t1.episode, t1.season*1000000+t1.episode AS se FROM [tv_episodes] t1'\
-                            + ' WHERE %s=t1.showid' % self.show.indexerid\
-                            + ' AND 0<t1.season AND t1.status NOT IN (%s)) AS t2' % UNAIRED\
-                            + ' ON t2.showid=t3.showid AND 0<t3.season AND t2.se>=t3_se ORDER BY t3_se %sSC' % ('A', 'DE')[latest]\
-                            + ' %s) as t4' % (' LIMIT %s' % wanted_max, '')[-1 == wanted_max]\
-                            + ' ON t4.indexerid=t5.indexerid'\
-                            + '%s' % ('', ' AND t4.start_season=t5.season')[-1 == wanted_max]\
-                            + ' AND t4.status NOT IN (%s)' % ','.join([str(x) for x in sickbeard.common.Quality.DOWNLOADED + [WANTED]])
-                select = 'SELECT t5.indexerid as indexerid, t5.season as season, t5.episode as episode, t5.status as status ' + select_id
-                update = 'UPDATE [tv_episodes] SET status=%s WHERE indexerid IN (SELECT t5.indexerid %s)' % (WANTED, select_id)
-
-                wanted_updates = db_obj.select(select)
-                db_obj.action(update)
-                result = db_obj.select('SELECT changes() as last FROM [tv_episodes]')
-                for cur_result in result:
-                    actual = cur_result['last']
-                    break
-
-                action_log = 'didn\'t find any episodes that need to be set wanted'
-                if actual:
-                    action_log = ('updated %s %s episodes > %s' % (
-                        (((('%s of %s' % (actual, wanted_max)),
-                           ('%s of max %s limited' % (actual, wanted_max)))[10 == wanted_max]),
-                         ('max %s available' % actual))[-1 == wanted_max],
-                        ('first season', 'latest')[latest],
-                        ', '.join([
-                            ('S%02dE%02d=%s' % (a['season'], a['episode'], statusStrings[a['status']]))
-                            for a in wanted_updates
-                        ])
-                    ))
-                logger.log('Get wanted ' + action_log)
-            return actual
-
-        items_wanted = get_wanted(my_db, self.default_wanted_begin, latest=False)
-        items_wanted += get_wanted(my_db, self.default_wanted_latest, latest=True)
+        items_wanted = self._get_wanted(my_db, self.default_wanted_begin, latest=False)
+        items_wanted += self._get_wanted(my_db, self.default_wanted_latest, latest=True)
 
         self.show.writeMetadata()
         self.show.updateMetadata()
