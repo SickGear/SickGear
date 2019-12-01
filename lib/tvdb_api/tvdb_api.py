@@ -877,21 +877,23 @@ class Tvdb:
 
     def _parse_images(self, sid, language, show_data, image_type, enabled_type):
         mapped_img_types = {'banner': 'series'}
-        excluded_main_data = ['seasons_enabled', 'seasonwides_enabled']
+        excluded_main_data = enabled_type in ['seasons_enabled', 'seasonwides_enabled']
         if self.config[enabled_type]:
             image_data = self._getetsrc(self.config['url_series_images'] %
                                         (sid, mapped_img_types.get(image_type, image_type)), language=language)
             if image_data and 0 < len(image_data.get('data', '') or ''):
                 image_data['data'] = sorted(image_data['data'], reverse=True,
                                             key=lambda x: (x['ratingsinfo']['average'], x['ratingsinfo']['count']))
-                if enabled_type not in excluded_main_data:
+                if not excluded_main_data:
                     url_image = self.config['url_artworks'] % image_data['data'][0]['filename']
                     url_thumb = self.config['url_artworks'] % image_data['data'][0]['thumbnail']
                     self._set_show_data(sid, image_type, url_image)
                     self._set_show_data(sid, u'%s_thumb' % image_type, url_thumb)
+                    excluded_main_data = True  # artwork found so prevent fallback
                 self._parse_banners(sid, image_data['data'])
 
-        if enabled_type not in excluded_main_data and show_data['data'][image_type]:
+        # fallback image thumbnail for none excluded_main_data if artwork is not found
+        if not excluded_main_data and show_data['data'].get(image_type):
             self._set_show_data(sid, u'%s_thumb' % image_type,
                                 re.sub(r'\.jpg$', '_t.jpg', show_data['data'][image_type], flags=re.I))
 
