@@ -1393,10 +1393,14 @@ def maybe_plural(number=1):
 
 def re_valid_hostname(with_allowed=True):
     this_host = socket.gethostname()
-    return re.compile(r'(?i)(%slocalhost|.*\.local|%s%s)$' % (
+    return re.compile(r'(?i)(%slocalhost|.*\.local%s%s)$' % (
         (with_allowed
-         and '%s|' % (sickbeard.ALLOWED_HOSTS and re.escape(sickbeard.ALLOWED_HOSTS).replace(',', '|') or '.*')
-         or ''), bool(this_host) and ('%s|' % this_host) or '', valid_ipaddr_expr()))
+         and '%s|' % (sickbeard.ALLOWED_HOSTS
+                      and '|'.join(re.escape(x.strip()) for x in sickbeard.ALLOWED_HOSTS.split(','))
+                      or '.*')
+         or ''),
+        bool(this_host) and ('|%s' % this_host) or '',
+        sickbeard.ALLOW_ANYIP and ('|%s' % valid_ipaddr_expr()) or ''))
 
 
 def valid_ipaddr_expr():

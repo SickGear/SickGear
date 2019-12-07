@@ -628,6 +628,16 @@ class IsAliveHandler(BaseHandler):
         self.write(results)
 
 
+class WrongHostWebHandler(BaseHandler):
+    def __init__(self, *arg, **kwargs):
+        super(BaseHandler, self).__init__(*arg, **kwargs)
+        self.lock = threading.Lock()
+
+    @gen.coroutine
+    def prepare(self):
+        self.send_error(404)
+
+
 class LoadingWebHandler(BaseHandler):
     def __init__(self, *arg, **kwargs):
         super(BaseHandler, self).__init__(*arg, **kwargs)
@@ -5919,7 +5929,7 @@ class ConfigGeneral(Config):
                     trash_remove_show=None, trash_rotate_logs=None, update_frequency=None, launch_browser=None, web_username=None,
                     use_api=None, api_key=None, indexer_default=None, timezone_display=None, cpu_preset=None, file_logging_preset=None,
                     web_password=None, version_notify=None, enable_https=None, https_cert=None, https_key=None,
-                    handle_reverse_proxy=None, send_security_headers=None, allowed_hosts=None,
+                    handle_reverse_proxy=None, send_security_headers=None, allowed_hosts=None, allow_anyip=None,
                     home_search_focus=None, display_freespace=None, sort_article=None, auto_update=None, notify_on_update=None,
                     proxy_setting=None, proxy_indexers=None, anon_redirect=None, git_path=None, git_remote=None, calendar_unprotected=None,
                     fuzzy_dating=None, trim_zero=None, date_preset=None, date_preset_na=None, time_preset=None,
@@ -6021,6 +6031,7 @@ class ConfigGeneral(Config):
                                 config.clean_hosts(allowed_hosts).split(',')))
         if not hosts or self.request.host_name in hosts:
             sickbeard.ALLOWED_HOSTS = hosts
+        sickbeard.ALLOW_ANYIP = config.checkbox_to_value(allow_anyip)
 
         # Advanced
         sickbeard.GIT_REMOTE = git_remote
