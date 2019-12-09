@@ -127,6 +127,8 @@ class WebServer(threading.Thread):
             (r'%s(/?.*)' % self.options['web_root'], webserve.LoadingWebHandler),
         ])
 
+        self.app.add_handlers(r'.*', [(r'.*', webserve.WrongHostWebHandler)])
+
     def _add_default_rules(self):
         # webui login/logout handlers
         self.app.add_handlers(self.re_host_pattern, [
@@ -194,6 +196,8 @@ class WebServer(threading.Thread):
             (r'%s(/?update_watched_state_kodi/?)' % self.options['web_root'], webserve.NoXSRFHandler),
             (r'%s(/?.*)' % self.options['web_root'], webserve.MainHandler),
         ])
+
+        self.app.add_handlers(r'.*', [(r'.*', webserve.WrongHostWebHandler)])
 
     def run(self):
         protocol, ssl_options = (('http', None),
