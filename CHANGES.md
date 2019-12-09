@@ -54,6 +54,14 @@
 * Update xmltodict library 0.12.0 (f3ab7e1) to 0.12.0 (02c9b71)
 
 
+### 0.20.12 (2019-12-09 16:30:00 UTC)
+
+* Fix using multiple hostnames with config General/Interface/"Allowed browser hostnames"
+* Add config General/Interface/"Allow IP use for connections"
+* Change add WrongHostWebHandler to handle a bad hostname request with a 404 response
+* Fix Shazbat torrent provider backlog issue
+
+
 ### 0.20.11 (2019-11-30 02:45:00 UTC)
 
 * Remove redundant tvdb_api v1

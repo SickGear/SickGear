@@ -138,6 +138,7 @@ WEB_IPV64 = 0
 HANDLE_REVERSE_PROXY = False
 SEND_SECURITY_HEADERS = True
 ALLOWED_HOSTS = None
+ALLOW_ANYIP = True
 PROXY_SETTING = None
 PROXY_INDEXERS = True
 
@@ -621,7 +622,7 @@ def init_stage_1(console_logging):
         DATE_PRESET, TIME_PRESET, TIME_PRESET_W_SECONDS, TIMEZONE_DISPLAY, \
         WEB_USERNAME, WEB_PASSWORD, CALENDAR_UNPROTECTED, USE_API, API_KEYS, WEB_PORT, WEB_LOG, \
         ENABLE_HTTPS, HTTPS_CERT, HTTPS_KEY, WEB_IPV6, WEB_IPV64, HANDLE_REVERSE_PROXY, \
-        SEND_SECURITY_HEADERS, ALLOWED_HOSTS
+        SEND_SECURITY_HEADERS, ALLOWED_HOSTS, ALLOW_ANYIP
     # Gen Config/Advanced
     global BRANCH, CUR_COMMIT_BRANCH, GIT_REMOTE, CUR_COMMIT_HASH, GIT_PATH, CPU_PRESET, ANON_REDIRECT, \
         ENCRYPTION_VERSION, PROXY_SETTING, PROXY_INDEXERS, FILE_LOGGING_PRESET
@@ -830,6 +831,7 @@ def init_stage_1(console_logging):
     HANDLE_REVERSE_PROXY = bool(check_setting_int(CFG, 'General', 'handle_reverse_proxy', 0))
     SEND_SECURITY_HEADERS = bool(check_setting_int(CFG, 'General', 'send_security_headers', 1))
     ALLOWED_HOSTS = check_setting_str(CFG, 'General', 'allowed_hosts', '')
+    ALLOW_ANYIP = bool(check_setting_int(CFG, 'General', 'allow_anyip', 1))
 
     ROOT_DIRS = check_setting_str(CFG, 'General', 'root_dirs', '')
     if not re.match(r'\d+\|[^|]+(?:\|[^|]+)*', ROOT_DIRS):
@@ -1680,6 +1682,7 @@ def save_config():
     new_config['General']['handle_reverse_proxy'] = int(HANDLE_REVERSE_PROXY)
     new_config['General']['send_security_headers'] = int(SEND_SECURITY_HEADERS)
     new_config['General']['allowed_hosts'] = ALLOWED_HOSTS
+    new_config['General']['allow_anyip'] = int(ALLOW_ANYIP)
     new_config['General']['use_nzbs'] = int(USE_NZBS)
     new_config['General']['use_torrents'] = int(USE_TORRENTS)
     new_config['General']['nzb_method'] = NZB_METHOD

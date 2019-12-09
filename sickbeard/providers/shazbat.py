@@ -98,9 +98,9 @@ class ShazbatProvider(generic.TorrentProvider):
                         raise generic.HaltParseException
 
                     with BS4Parser(html) as tbl:
-                        tbl_rows = tbl.tbody.find_all('tr') or tbl.table.find_all('tr') or []
+                        tbl_rows = tbl.tbody and tbl.tbody.find_all('tr') or tbl.table and tbl.table.find_all('tr')
 
-                        if 2 > len(tbl_rows):
+                        if 2 > len(tbl_rows or []):
                             raise generic.HaltParseException
 
                         head = None
