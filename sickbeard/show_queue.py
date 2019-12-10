@@ -308,7 +308,7 @@ class QueueItemAdd(ShowQueueItem):
             latest_result = db_obj.select('SELECT MAX(season) AS latest_season FROM tv_episodes WHERE season > 0 '
                                           'AND indexer = ? AND showid = ? AND status != ?',
                                           [self.show.indexer, self.show.indexerid, UNAIRED])
-            if latest_result:
+            if latest_result and None is not latest_result[0]['latest_season']:
                 latest_season = int(latest_result[0]['latest_season'])
             else:
                 process_sql = False
