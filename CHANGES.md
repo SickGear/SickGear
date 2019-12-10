@@ -42,6 +42,7 @@
 * Update urllib3 release 1.25.2 (49eea80) to 1.25.6 (4a6c288)
 * Change simplify parsing TVDB images
 * Fix setting episodes wanted when adding show
+* Fix _get_wanted and add test for case when all episodes are unaired
 
 
 [develop changelog]
