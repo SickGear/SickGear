@@ -22,7 +22,6 @@ import time
 from . import generic
 from sickbeard.bs4_parser import BS4Parser
 from sickbeard.helpers import tryInt, anon_url
-from sickbeard import logger
 
 
 class TorrentDayProvider(generic.TorrentProvider):
@@ -54,7 +53,7 @@ class TorrentDayProvider(generic.TorrentProvider):
         return super(TorrentDayProvider, self)._authorised(
             logged_in=(lambda y='': all(
                 ['RSS URL' in y, self.has_all_cookies()] +
-                [(self.session.cookies.get(x) or 'sg!no!pw') in self.digest for x in 'uid', 'pass'])),
+                [(self.session.cookies.get(x, domain='') or 'sg!no!pw') in self.digest for x in ('uid', 'pass')])),
             failed_msg=(lambda y=None: u'Invalid cookie details for %s. Check settings'))
 
     @staticmethod
@@ -88,7 +87,7 @@ class TorrentDayProvider(generic.TorrentProvider):
 
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
-        rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {'get': 'download', 'id': r'download.*?/([\d]+)'}.items())
+        rc = dict((k, re.compile('(?i)' + v)) for (k, v) in dict(get='download', id=r'download.*?/([\d]+)').items())
         lrs_found = False
         lrs_new = True
         for search_urls in urls:  # this intentionally iterates once to preserve indentation
@@ -124,7 +123,7 @@ class TorrentDayProvider(generic.TorrentProvider):
                                 head = head if None is not head else self._header_row(
                                     tr, header_strip='(?i)(?:leechers|seeders|size);')
                                 seeders, leechers, size = [tryInt(n, n) for n in [
-                                    cells[head[x]].get_text().strip() for x in 'seed', 'leech', 'size']]
+                                    cells[head[x]].get_text().strip() for x in ('seed', 'leech', 'size')]]
                                 if self._reject_item(seeders, leechers):
                                     continue
 
@@ -146,9 +145,7 @@ class TorrentDayProvider(generic.TorrentProvider):
                 except (BaseException, Exception):
                     time.sleep(1.1)
 
-                self._log_search(mode, len(items[mode]) - cnt, search_url)
-                if log_settings_hint:
-                    logger.log('Perfomance tip: change "Torrents per Page" to 100 at the TD site/Settings page')
+                self._log_search(mode, len(items[mode]) - cnt, search_url, log_settings_hint)
 
                 if self.is_search_finished(mode, items, cnt_search, rc['id'], last_recent_search, lrs_new, lrs_found):
                     break
