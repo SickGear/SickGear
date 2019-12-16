@@ -29,7 +29,7 @@ import time
 import urlparse
 import threading
 import socket
-from urllib import quote_plus
+from urllib import quote, quote_plus
 import zlib
 from base64 import b16encode, b32decode, b64decode
 
@@ -805,7 +805,14 @@ class GenericProvider(object):
 
     def _link(self, url, url_tmpl=None):
 
-        url = url and str(url).strip().replace('&amp;', '&') or ''
+        if url:
+            try:
+                url = url.encode('utf-8')
+            except (BaseException, Exception):
+                pass
+            url = quote(url).strip().replace('&amp;', '&')
+        if not url:
+            url = ''
         return url if re.match('(?i)(https?://|magnet:)', url) \
             else (url_tmpl or self.urls.get('get', (getattr(self, 'url', '') or
                                                     getattr(self, 'url_base')) + '%s')) % url.lstrip('/')
@@ -1124,7 +1131,7 @@ class GenericProvider(object):
         """
         return ''
 
-    def _log_search(self, mode='Cache', count=0, url='url missing'):
+    def _log_search(self, mode='Cache', count=0, url='url missing', log_setting_hint=False):
         """
         Simple function to log the result of a search types except propers
         :param count: count of successfully processed items
@@ -1132,6 +1139,9 @@ class GenericProvider(object):
         """
         if 'Propers' != mode:
             self.log_result(mode, count, url)
+
+        if log_setting_hint:
+            logger.log('Perfomance tip: change "Torrents per Page" to 100 at the site/Settings page')
 
     def log_result(self, mode='Cache', count=0, url='url missing'):
         """

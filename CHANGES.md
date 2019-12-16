@@ -1,4 +1,13 @@
-﻿### 0.20.12 (2019-12-09 16:30:00 UTC)
+﻿### 0.20.13 (2019-12-16 04:00:00 UTC)
+
+* Fix TL provider - replace user/pass with digest auth method
+* Change improve TL and IPT provider recent search performance to process new items since the previous cycle
+* Change log a tip for TL and IPT users who have not improved on the default site setting "Torrents per page"
+* Add recommended.txt file with recommended libs that can be installed via: python -m pip install -r recommended.txt
+* Fix saving .nfo metadata where the file name contains unicode on certain Linux OS configurations
+
+
+### 0.20.12 (2019-12-09 16:30:00 UTC)
 
 * Fix using multiple hostnames with config General/Interface/"Allowed browser hostnames"
 * Add config General/Interface/"Allow IP use for connections"

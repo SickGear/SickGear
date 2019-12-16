@@ -1754,7 +1754,7 @@ def write_file(filepath, data, raw=False, xmltree=False, utf8=False, raise_excep
     if make_dirs(ek.ek(os.path.dirname, filepath), False):
         try:
             if raw:
-                with io.FileIO(filepath, 'wb') as fh:
+                with ek.ek(io.FileIO, filepath, 'wb') as fh:
                     for chunk in data.iter_content(chunk_size=1024):
                         if chunk:
                             fh.write(chunk)
@@ -1764,17 +1764,17 @@ def write_file(filepath, data, raw=False, xmltree=False, utf8=False, raise_excep
                 w_mode = 'w'
                 if utf8:
                     w_mode = 'a'
-                    with io.FileIO(filepath, 'wb') as fh:
+                    with ek.ek(io.FileIO, filepath, 'wb') as fh:
                         fh.write(codecs.BOM_UTF8)
 
                 if xmltree:
-                    with io.FileIO(filepath, w_mode) as fh:
+                    with ek.ek(io.FileIO, filepath, w_mode) as fh:
                         if utf8:
                             data.write(fh, encoding='utf-8')
                         else:
                             data.write(fh)
                 else:
-                    with io.FileIO(filepath, w_mode) as fh:
+                    with ek.ek(io.FileIO, filepath, w_mode) as fh:
                         fh.write(data)
 
             chmodAsParent(filepath)
