@@ -56,6 +56,11 @@
 * Update xmltodict library 0.12.0 (f3ab7e1) to 0.12.0 (02c9b71)
 
 
+### 0.20.14 (2019-12-20 00:15:00 UTC)
+
+* Fix fetching static files for Kodi repo
+
+
 ### 0.20.13 (2019-12-16 04:00:00 UTC)
 
 * Fix TL provider - replace user/pass with digest auth method
