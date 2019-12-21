@@ -187,11 +187,7 @@ class BeautifulSoupHTMLParser(HTMLParser):
 
     def handle_decl(self, data):
         self.soup.endData()
-        if data.startswith("DOCTYPE "):
-            data = data[len("DOCTYPE "):]
-        elif data == 'DOCTYPE':
-            # i.e. "<!DOCTYPE>"
-            data = ''
+        data = data[len("DOCTYPE "):]
         self.soup.handle_data(data)
         self.soup.endData(Doctype)
 
