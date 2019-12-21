@@ -301,9 +301,9 @@ class CalendarHandler(BaseHandler):
 
 class RepoHandler(BaseStaticFileHandler):
 
-    def get(self, path, include_body=True, *args, **kwargs):
-        super(RepoHandler, self).get(path, include_body)
-        logger.log('Kodi req... get(path): %s' % path, logger.DEBUG)
+    def parse_url_path(self, url_path):
+        logger.log('Kodi req... get(path): %s' % url_path, logger.DEBUG)
+        return super(RepoHandler, self).parse_url_path(url_path)
 
     def set_extra_headers(self, *args, **kwargs):
         super(RepoHandler, self).set_extra_headers(*args, **kwargs)
@@ -400,6 +400,8 @@ class RepoHandler(BaseStaticFileHandler):
                  (cache_client_kodi_watchedstate, 'icon.png')),
                 (('service.sickgear.watchedstate.updater', 'resources', 'settings.xml'),
                  (cache_client_kodi_watchedstate, 'resources', 'settings.xml')),
+                (('service.sickgear.watchedstate.updater', 'icon.png'),
+                 (cache_client_kodi_watchedstate, 'resources', 'icon.png')),
                 (('service.sickgear.watchedstate.updater', 'resources', 'language', 'English', 'strings.xml'),
                  (cache_client_kodi_watchedstate, 'resources', 'language', 'English', 'strings.xml')),
         ):
