@@ -515,7 +515,7 @@ methods = [
     Method(Torrent, 'get_bitfield', 'd.get_bitfield',
            aliases=('d.bitfield',)),
     Method(Torrent, 'get_local_id_html', 'd.get_local_id_html',
-           aliases=('d.bitfield',)),
+           aliases=('d.local_id_html',)),
     Method(Torrent, 'get_connection_leech', 'd.get_connection_leech',
            aliases=('d.connection_leech',)),
     Method(Torrent, 'get_peers_accounted', 'd.get_peers_accounted',

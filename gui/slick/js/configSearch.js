@@ -65,6 +65,7 @@ $(document).ready(function(){
 				verifyCertOption = '#torrent-verify-cert-option',
 				labelOption = '#torrent-label-option',
 				qBitTorrent = '.qbittorrent',
+				rTorrent = '.rtorrent',
 				synology = '.synology',
 				transmission = '.transmission',
 				pathOption = '#torrent-path-option',
@@ -75,7 +76,7 @@ $(document).ready(function(){
 				torrentHost$ = $('#torrent_host');
 
 			$([labelWarningDeluge, hostDescDeluge, hostDescRtorrent, verifyCertOption, seedTimeOption,
-				highBandwidthOption, qBitTorrent, synology, transmission].join(',')).hide();
+				highBandwidthOption, qBitTorrent, rTorrent, synology, transmission].join(',')).hide();
 
 			$([hostDesc, usernameOption, pathOption, labelOption, pathBlank, pausedOption].join(',')).show();
 			$(pathOption).find('.fileBrowser').show();
@@ -98,18 +99,17 @@ $(document).ready(function(){
 					$([transmission, highBandwidthOption].join(',')).show();
 					break;
 				case 'qbittorrent':
-					// Setting Paused is buggy on qB, remove from use
-					client = 'qBittorrent'; hidePausedOption = !0; hidePathBlank = !0;
-					$(qBitTorrent).show();
+					client = 'qBittorrent'; hidePathBlank = !0;
+					$([qBitTorrent, highBandwidthOption].join(',')).show();
 					break;
 				case 'download_station':
-					client = 'Synology DS'; hideLabelOption = !0; hidePausedOption = !0;
+					client = 'Synology DS'; hideLabelOption = !0;
 					$(pathOption).find('.fileBrowser').hide();
 					$(synology).show();
 					break;
 				case 'rtorrent':
 					client = 'rTorrent'; hideHostDesc = !0;
-					$(hostDescRtorrent).show();
+					$([rTorrent, hostDescRtorrent].join(',')).show();
 					torrentHost$.on('blur', handleSCGI);
 					break;
 			}

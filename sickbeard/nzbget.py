@@ -83,10 +83,9 @@ def send_nzb(nzb):
                 sickbeard.indexerApi(curEp.show.indexer).config.get('dupekey', ''), curEp.show.indexerid)
         dupekey += '-%s.%s' % (curEp.season, curEp.episode)
 
-        if datetime.date.today() - curEp.airdate <= datetime.timedelta(days=7) or \
-                datetime.date.fromordinal(1) >= curEp.airdate:
-            add_to_top = True
-            nzbget_prio = sickbeard.NZBGET_PRIORITY
+    if 1 == nzb.priority:
+        add_to_top = True
+        nzbget_prio = sickbeard.NZBGET_PRIORITY
 
     if Quality.UNKNOWN != nzb.quality:
         dupescore = nzb.quality * 100

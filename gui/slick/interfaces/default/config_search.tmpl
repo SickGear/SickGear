@@ -1,6 +1,8 @@
 #import sickbeard
 #from sickbeard import clients
 #from sickbeard.helpers import starify
+<% def sg_var(varname, default=False): return getattr(sickbeard, varname, default) %>#slurp#
+<% def sg_str(varname, default=''): return getattr(sickbeard, varname, default) %>#slurp#
 ##
 #set global $title = 'Config - Media Search'
 #set global $header = 'Search Settings'
@@ -400,7 +402,7 @@
 											<option value="100"${prio_veryhigh}>Very high</option>
 											<option value="900"${prio_force}>Force</option>
 										</select>
-										<span>priority for daily snatches (no backlog)</span>
+										<span>applies to releases from last 7 days</span>
 									</span>
 								</label>
 							</div>
@@ -531,8 +533,15 @@
 									<span class="component-title">Set torrent label<span class="qbittorrent">/category</span></span>
 									<span class="component-desc">
 										<input type="text" name="torrent_label" id="torrent_label" value="$sickbeard.TORRENT_LABEL" class="form-control input-sm input200">
+										<span class="rtorrent" style="display:none">
+											<p style="float:left;margin-right:6px">as custom#</p>
+											<input class="rtorrent form-control input-sm" style="width:40px" type="text" name="torrent_label_var" id="torrent_label_var" value="$sg_str('TORRENT_LABEL_VAR', '1')">
+										</span>
 										<span id="label-warning-deluge" style="display:none"><p>(blank spaces are not allowed)</p>
 											<p class="clear-left note">note: label plugin must be enabled in Deluge clients</p>
+										</span>
+										<span class="rtorrent" style="display:none">
+											<p class="clear-left note">note: do not use space char in label</p>
 										</span>
 										<span class="qbittorrent" style="display:none"><p>(qB 3.3.1 and newer clients)</p></span>
 									</span>
@@ -568,17 +577,24 @@
 									<span class="component-title">Start torrent paused</span>
 									<span class="component-desc">
 										<input type="checkbox" name="torrent_paused" class="enabler" id="torrent_paused"<%= html_checked if sickbeard.TORRENT_PAUSED == True else '' %>>
-										<p>add .torrent to client but do <b style="font-weight:900">not</b> start downloading</p>
+										<p>pause item in client as soon as it allows (note: a small transfer can occur)</p>
 									</span>
 								</label>
 							</div>
 
 							<div class="field-pair" id="torrent-high-bandwidth-option">
-								<label>
+								<label class="transmission">
 									<span class="component-title">Allow high bandwidth</span>
 									<span class="component-desc">
 										<input type="checkbox" name="torrent_high_bandwidth" class="enabler" id="torrent_high_bandwidth"<%= html_checked if sickbeard.TORRENT_HIGH_BANDWIDTH == True else '' %>>
 										<p>use high bandwidth allocation if priority is high</p>
+									</span>
+								</label>
+								<label class="qbittorrent">
+									<span class="component-title">Add release at top priority</span>
+									<span class="component-desc">
+										<input type="checkbox" name="torrent_high_bandwidth" class="enabler" id="torrent_high_bandwidth"<%= html_checked if sickbeard.TORRENT_HIGH_BANDWIDTH == True else '' %>>
+										<p>applies to releases from last 7 days</p>
 									</span>
 								</label>
 							</div>
