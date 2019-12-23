@@ -1,14 +1,13 @@
+from base64 import b16encode, b32decode
+from hashlib import sha1
 import re
 import time
-from hashlib import sha1
-from base64 import b16encode, b32decode
 
+import requests
 import sickbeard
 from sickbeard import logger
 from sickbeard.exceptions import ex
-from sickbeard.clients import http_error_code
 from lib.bencode import bencode, bdecode
-from lib import requests
 
 
 class GenericClient(object):
@@ -17,26 +16,24 @@ class GenericClient(object):
         self.name = name
         self.username = sickbeard.TORRENT_USERNAME if username is None else username
         self.password = sickbeard.TORRENT_PASSWORD if password is None else password
-        self.host = sickbeard.TORRENT_HOST if host is None else host
+        self.host = sickbeard.TORRENT_HOST if host is None else host.rstrip('/') + '/'
 
         self.url = None
         self.auth = None
         self.last_time = time.time()
         self.session = requests.session()
         self.session.auth = (self.username, self.password)
+        self.created_id = None
 
-    def _request(self, method='get', params=None, data=None, files=None, **kwargs):
+    def _log_request_details(self, method, params=None, data=None, files=None, **kwargs):
 
-        params = params or {}
+        logger.log('%s: sending %s request to %s with ...' % (self.name, method, self.url), logger.DEBUG)
 
-        if time.time() > self.last_time + 1800 or not self.auth:
-            self.last_time = time.time()
-            self._get_auth()
-
-        logger.log('%s: sending %s request to %s with ...' % (self.name, method.upper(), self.url), logger.DEBUG)
         lines = [('params', (str(params), '')[not params]),
                  ('data', (str(data), '')[not data]),
                  ('files', (str(files), '')[not files]),
+                 ('post_data', (str(kwargs.get('post_data')), '')[not kwargs.get('post_data')]),
+                 ('post_json', (str(kwargs.get('post_json')), '')[not kwargs.get('post_json')]),
                  ('json', (str(kwargs.get('json')), '')[not kwargs.get('json')])]
         m, c = 300, 100
         type_chunks = [(linetype, [ln[i:i + c] for i in range(0, min(len(ln), m), c)]) for linetype, ln in lines if ln]
@@ -51,9 +48,19 @@ class GenericClient(object):
             for out in output:
                 logger.log(out, logger.DEBUG)
 
-        if not self.auth:
-            logger.log('%s: Authentication Failed' % self.name, logger.ERROR)
-            return False
+    def _request(self, method='get', params=None, data=None, files=None, **kwargs):
+
+        params = params or {}
+
+        if time.time() > self.last_time + 1800 or not self.auth:
+            self.last_time = time.time()
+
+            if not self._get_auth():
+                logger.log('%s: Authentication failed' % self.name, logger.ERROR)
+                return False
+
+        # self._log_request_details(method, params, data, files, **kwargs)
+
         try:
             response = self.session.__getattribute__(method)(self.url, params=params, data=data, files=files,
                                                              timeout=kwargs.pop('timeout', 120), verify=False, **kwargs)
@@ -61,13 +68,13 @@ class GenericClient(object):
             logger.log('%s: Unable to connect %s' % (self.name, ex(e)), logger.ERROR)
             return False
         except (requests.exceptions.MissingSchema, requests.exceptions.InvalidURL):
-            logger.log('%s: Invalid Host' % self.name, logger.ERROR)
+            logger.log('%s: Invalid host' % self.name, logger.ERROR)
             return False
         except requests.exceptions.HTTPError as e:
-            logger.log('%s: Invalid HTTP Request %s' % (self.name, ex(e)), logger.ERROR)
+            logger.log('%s: Invalid HTTP request %s' % (self.name, ex(e)), logger.ERROR)
             return False
         except requests.exceptions.Timeout as e:
-            logger.log('%s: Connection Timeout %s' % (self.name, ex(e)), logger.ERROR)
+            logger.log('%s: Connection timeout %s' % (self.name, ex(e)), logger.ERROR)
             return False
         except Exception as e:
             logger.log('%s: Unknown exception raised when sending torrent to %s: %s' % (self.name, self.name, ex(e)),
@@ -75,22 +82,37 @@ class GenericClient(object):
             return False
 
         if 401 == response.status_code:
-            logger.log('%s: Invalid Username or Password, check your config' % self.name, logger.ERROR)
+            logger.log('%s: Invalid username or password, check your config' % self.name, logger.ERROR)
             return False
 
-        if response.status_code in http_error_code.keys():
-            logger.log('%s: %s' % (self.name, http_error_code[response.status_code]), logger.DEBUG)
+        if response.status_code in sickbeard.clients.http_error_code:
+            logger.log('%s: %s' % (self.name, sickbeard.clients.http_error_code[response.status_code]), logger.DEBUG)
             return False
 
         logger.log('%s: Response to %s request is %s' % (self.name, method.upper(), response.text), logger.DEBUG)
 
         return response
 
-    def _get_auth(self):
+    def _tinf(self, ids=None):
         """
-        This should be overridden and should return the auth_id needed for the client
+        This should be overridden and return client fetched task information
+
+        :param ids: Optional id(s) to get task info for. None to get all task info
+        :type ids: list or None
+        :return: Zero or more task object(s) from response
+        :rtype: list
         """
-        return None
+        return []
+
+    def _active_state(self, ids=None):
+        """
+        This should be overridden to fetch state of items, return items that are actually downloading or seeding
+        :param ids: Optional id(s) to get state info for. None to get all
+        :type ids: list or None
+        :return: Zero or more object(s) assigned with state `down`loading or `seed`ing
+        :rtype: list
+        """
+        return []
 
     def _add_torrent_uri(self, result):
         """
@@ -148,6 +170,27 @@ class GenericClient(object):
         """
         return True
 
+    def _resume_torrent(self, ids):
+        """
+        This should be overridden to resume task(s) in client
+
+        :param ids: Id(s) to act on
+        :type ids: list or string
+        :return: True if success, Id(s) that could not be resumed, else Falsy if failure
+        :rtype: bool or list
+        """
+        return False
+
+    def _delete_torrent(self, ids):
+        """
+        This should be overridden to delete task(s) from client
+        :param ids: Id(s) to act on
+        :type ids: list or string
+        :return: True if success, Id(s) that could not be deleted, else Falsy if failure
+        :rtype: bool or list
+        """
+        return False
+
     @staticmethod
     def _get_torrent_hash(result):
 
@@ -165,10 +208,10 @@ class GenericClient(object):
 
         r_code = False
 
-        logger.log('Calling %s Client' % self.name, logger.DEBUG)
+        logger.log('Calling %s client' % self.name, logger.DEBUG)
 
         if not self._get_auth():
-            logger.log('%s: Authentication Failed' % self.name, logger.ERROR)
+            logger.log('%s: Authentication failed' % self.name, logger.ERROR)
             return r_code
 
         try:
@@ -187,6 +230,7 @@ class GenericClient(object):
             else:
                 r_code = self._add_torrent_file(result)
 
+            self.created_id = isinstance(r_code, basestring) and r_code or None
             if not r_code:
                 logger.log('%s: Unable to send torrent to client' % self.name, logger.ERROR)
                 return False
@@ -212,29 +256,33 @@ class GenericClient(object):
         except Exception as e:
             logger.log('%s: Failed sending torrent: %s - %s' % (self.name, result.name, result.hash), logger.ERROR)
             logger.log('%s: Exception raised when sending torrent: %s' % (self.name, ex(e)), logger.DEBUG)
-            return r_code
 
         return r_code
 
-    def test_authentication(self):
-
+    def _get_auth(self):
+        """
+        This may be overridden and should return the auth_id needed for the client
+        """
         try:
             response = self.session.get(self.url, timeout=120, verify=False)
 
             if 401 == response.status_code:
-                return False, 'Error: Invalid %s Username or Password, check your config!' % self.name
+                return False, 'Error: Invalid %s username or password, check your config!' % self.name
         except requests.exceptions.ConnectionError:
-            return False, 'Error: %s Connection Error' % self.name
+            return False, 'Error: Connecting to %s' % self.name
         except (requests.exceptions.MissingSchema, requests.exceptions.InvalidURL):
             return False, 'Error: Invalid %s host' % self.name
 
+    def test_authentication(self):
+
         try:
-            authenticated = self._get_auth()
-            # FIXME: This test is redundant
-            if authenticated and self.auth:
-                return True, 'Success: Connected and Authenticated'
-            if getattr(self, '_errmsg', None):
-                return False, 'Error: Failed to get %s authentication.%s' % (self.name, self._errmsg)
-            return False, 'Error: Unable to get %s authentication, check your config!' % self.name
-        except (StandardError, Exception):
-            return False, 'Error: Unable to connect to %s' % self.name
+            result = self._get_auth()
+            if result:
+                return ((True, 'Success: Connected and authenticated to %s' % self.name),
+                        result)[isinstance(result, tuple)]
+
+            failed_msg = 'Error: Failed %s authentication.%s' % (self.name, getattr(self, '_errmsg', None) or '')
+        except (BaseException, Exception):
+            failed_msg = 'Error: Unable to connect to %s' % self.name
+
+        return False, failed_msg

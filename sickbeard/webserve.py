@@ -6119,7 +6119,7 @@ class ConfigSearch(Config):
                    download_propers=None, propers_webdl_onegrp=None,
                    allow_high_priority=None,
                    torrent_dir=None, torrent_username=None, torrent_password=None, torrent_host=None,
-                   torrent_label=None, torrent_path=None, torrent_verify_cert=None,
+                   torrent_label=None, torrent_label_var=None, torrent_path=None, torrent_verify_cert=None,
                    torrent_seed_time=None, torrent_paused=None, torrent_high_bandwidth=None,
                    ignore_words=None, require_words=None, backlog_nofull=None):
 
@@ -6183,6 +6183,10 @@ class ConfigSearch(Config):
         if set('*') != set(torrent_password):
             sickbeard.TORRENT_PASSWORD = torrent_password
         sickbeard.TORRENT_LABEL = torrent_label
+        sickbeard.TORRENT_LABEL_VAR = config.to_int((0, torrent_label_var)['rtorrent' == torrent_method], 1)
+        if not (0 <= sickbeard.TORRENT_LABEL_VAR <= 5):
+            logger.log('Setting rTorrent custom%s is not 0-5, defaulting to custom1' % torrent_label_var, logger.DEBUG)
+            sickbeard.TORRENT_LABEL_VAR = 1
         sickbeard.TORRENT_VERIFY_CERT = config.checkbox_to_value(torrent_verify_cert)
         sickbeard.TORRENT_PATH = torrent_path
         sickbeard.TORRENT_SEED_TIME = config.to_int(torrent_seed_time, 0)

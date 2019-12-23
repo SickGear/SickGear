@@ -112,7 +112,8 @@ def snatch_episode(result, end_status=SNATCHED):
     if sickbeard.ALLOW_HIGH_PRIORITY:
         # if it aired recently make it high priority
         for cur_ep in result.episodes:
-            if datetime.date.today() - cur_ep.airdate <= datetime.timedelta(days=7):
+            if datetime.date.today() - cur_ep.airdate <= datetime.timedelta(days=7) or \
+                    datetime.date.fromordinal(1) >= cur_ep.airdate:
                 result.priority = 1
     if 0 < result.properlevel:
         end_status = SNATCHED_PROPER
@@ -161,8 +162,7 @@ def snatch_episode(result, end_status=SNATCHED):
                     logger.log(u'Torrent content failed to download from %s' % result.url, logger.ERROR)
                     return False
             # Snatches torrent with client
-            client = clients.get_client_instance(sickbeard.TORRENT_METHOD)()
-            dl_result = client.send_torrent(result)
+            dl_result = clients.get_client_instance(sickbeard.TORRENT_METHOD)().send_torrent(result)
 
             if getattr(result, 'cache_file', None):
                 helpers.remove_file_failed(result.cache_file)
