@@ -35,6 +35,7 @@ def get_client_instance(name):
     module = __import__('sickbeard.clients.%s' % name.lower(), fromlist=__all__)
     return getattr(module, module.api.__class__.__name__)
 
+
 # Mapping error status codes to official W3C names
 http_error_code = {
     300: 'Multiple Choices',

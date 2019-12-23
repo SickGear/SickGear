@@ -57,6 +57,20 @@
 * Update xmltodict library 0.12.0 (f3ab7e1) to 0.12.0 (02c9b71)
 
 
+### 0.20.15 (2019-12-23 22:40:00 UTC)
+
+* Change overhaul qBittorrent 4.2.1 client to add compatibility for breaking API 2.4
+* Add search setting for qBittorrent client "Start torrent paused"
+* Add search setting for qBittorrent client "Add release at top priority"
+* Add option choose custom variable to use for label in rTorrent Torrent Results
+* Add warning to rTorrent users not to use space in label
+* Change overhaul DiskStation client to add compatibility for latest API
+* Change improve Synology DownloadStation functions
+* Add search setting for DiskStation client "Start torrent paused"
+* Fix the priority set for snatched items is now also set for episodes without air date
+* Change NZBGet client to use property .priority of SearchResult
+
+
 ### 0.20.14 (2019-12-20 00:15:00 UTC)
 
 * Fix fetching static files for Kodi repo

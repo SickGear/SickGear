@@ -287,6 +287,7 @@ TORRENT_SEED_TIME = 0
 TORRENT_PAUSED = False
 TORRENT_HIGH_BANDWIDTH = False
 TORRENT_LABEL = ''
+TORRENT_LABEL_VAR = 1
 TORRENT_VERIFY_CERT = False
 
 USE_EMBY = False
@@ -636,7 +637,8 @@ def init_stage_1(console_logging):
         NZBGET_SCRIPT_VERSION, NZBGET_MAP
     # Search Settings/Torrent search
     global USE_TORRENTS, TORRENT_METHOD, TORRENT_DIR, TORRENT_HOST, TORRENT_USERNAME, TORRENT_PASSWORD, \
-        TORRENT_LABEL, TORRENT_PATH, TORRENT_SEED_TIME, TORRENT_PAUSED, TORRENT_HIGH_BANDWIDTH, TORRENT_VERIFY_CERT
+        TORRENT_LABEL, TORRENT_LABEL_VAR, TORRENT_PATH, TORRENT_SEED_TIME, TORRENT_PAUSED, \
+        TORRENT_HIGH_BANDWIDTH, TORRENT_VERIFY_CERT
     # Media Providers
     global PROVIDER_ORDER, NEWZNAB_DATA, PROVIDER_HOMES
     # Subtitles
@@ -975,6 +977,7 @@ def init_stage_1(console_logging):
     TORRENT_PAUSED = bool(check_setting_int(CFG, 'TORRENT', 'torrent_paused', 0))
     TORRENT_HIGH_BANDWIDTH = bool(check_setting_int(CFG, 'TORRENT', 'torrent_high_bandwidth', 0))
     TORRENT_LABEL = check_setting_str(CFG, 'TORRENT', 'torrent_label', '')
+    TORRENT_LABEL_VAR = check_setting_int(CFG, 'TORRENT', 'torrent_label_var', 1)
     TORRENT_VERIFY_CERT = bool(check_setting_int(CFG, 'TORRENT', 'torrent_verify_cert', 0))
 
     USE_EMBY = bool(check_setting_int(CFG, 'Emby', 'use_emby', 0))
@@ -1870,6 +1873,7 @@ def save_config():
             ('paused', int(TORRENT_PAUSED)),
             ('high_bandwidth', int(TORRENT_HIGH_BANDWIDTH)),
             ('label', TORRENT_LABEL),
+            ('label_var', int(TORRENT_LABEL_VAR)),
             ('verify_cert', int(TORRENT_VERIFY_CERT)),
         ]),
         # -----------------------------------
@@ -2026,7 +2030,8 @@ def save_config():
         new_config[cfg] = {}
         for (k, v) in filter(lambda (_, y): any([y]) or (
                 # allow saving where item value default is non-zero but 0 is a required setting value
-                cfg_lc in ('kodi', 'xbmc', 'synoindex', 'nzbget') and _ in ('always_on', 'priority')), items):
+                cfg_lc in ('kodi', 'xbmc', 'synoindex', 'nzbget', 'torrent') and _ in ('always_on', 'priority')
+                or (_ == 'label_var' and 'rtorrent' == new_config['General']['torrent_method'])), items):
             k = '%s' in k and (k % cfg_lc) or (cfg_lc + '_' + k)
             # correct for cases where keys are named in an inconsistent manner to parent stanza
             k = k.replace('blackhole_', '').replace('sabnzbd_', 'sab_')
