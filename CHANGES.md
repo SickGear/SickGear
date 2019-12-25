@@ -1,4 +1,9 @@
-﻿### 0.20.16 (2019-12-25 00:40:00 UTC)
+﻿### 0.20.17 (2019-12-25 01:40:00 UTC)
+
+* Fix Synology DownloadStation test dev mode
+
+
+### 0.20.16 (2019-12-25 00:40:00 UTC)
 
 * Fix SkyTorrents provider
 * Fix download link quote url process
