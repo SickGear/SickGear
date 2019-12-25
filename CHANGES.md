@@ -1,4 +1,11 @@
-﻿### 0.20.15 (2019-12-23 22:40:00 UTC)
+﻿### 0.20.16 (2019-12-25 00:40:00 UTC)
+
+* Fix SkyTorrents provider
+* Fix download link quote url process
+* Fix remove Synology DownloadStation test dev mode
+
+
+### 0.20.15 (2019-12-23 22:40:00 UTC)
 
 * Change overhaul qBittorrent 4.2.1 client to add compatibility for breaking API 2.4
 * Add search setting for qBittorrent client "Start torrent paused"
