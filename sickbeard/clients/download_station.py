@@ -36,6 +36,7 @@ class DownloadStationAPI(GenericClient):
         self.url_info = self.url_base + 'query.cgi'
         self.url = self.url_base + 'DownloadStation/task.cgi'
         self._errmsg = None
+        self._testmode = False
 
     common_errors = {
         -1: 'Could not get a response', 100: 'Unknown error', 101: 'Invalid parameter',
