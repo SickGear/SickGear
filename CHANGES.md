@@ -57,6 +57,13 @@
 * Update xmltodict library 0.12.0 (f3ab7e1) to 0.12.0 (02c9b71)
 
 
+### 0.20.16 (2019-12-25 00:40:00 UTC)
+
+* Fix SkyTorrents provider
+* Fix download link quote url process
+* Fix remove Synology DownloadStation test dev mode
+
+
 ### 0.20.15 (2019-12-23 22:40:00 UTC)
 
 * Change overhaul qBittorrent 4.2.1 client to add compatibility for breaking API 2.4

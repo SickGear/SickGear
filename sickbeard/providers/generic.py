@@ -810,12 +810,12 @@ class GenericProvider(object):
                 url = url.encode('utf-8')
             except (BaseException, Exception):
                 pass
-            url = quote(url).strip().replace('&amp;', '&')
+            url = url.strip().replace('&amp;', '&')
         if not url:
             url = ''
         return url if re.match('(?i)(https?://|magnet:)', url) \
             else (url_tmpl or self.urls.get('get', (getattr(self, 'url', '') or
-                                                    getattr(self, 'url_base')) + '%s')) % url.lstrip('/')
+                                                    getattr(self, 'url_base')) + '%s')) % quote(url).lstrip('/')
 
     @staticmethod
     def _header_row(table_row, custom_match=None, custom_tags=None, header_strip=''):

@@ -84,10 +84,10 @@ class SkytorrentsProvider(generic.TorrentProvider):
                                     continue
 
                                 info = tr.select_one(
-                                    '[alt*="magnet"], [title*="magnet"], [alt*="torrent"], [title*="torrent"]') \
+                                    '[alt*="magnet"], [title*="magnet"]') \
                                     or tr.find('a', href=rc['info'])
-                                title = re.sub(r'\s(using|use|magnet|link)', '', (
-                                        info.attrs.get('title') or info.attrs.get('alt') or info.get_text())).strip()
+                                title = re.sub(r'(^www\.\w+\.\w{3}\s[^0-9A-Za-z]\s|\s(using|use|magnet|link))', '', (
+                                        info.attrs.get('title') or info.attrs.get('alt'))).strip()
                                 download_url = self._link(tr.find('a', href=rc['get'])['href'])
                             except (AttributeError, TypeError, ValueError, KeyError):
                                 continue

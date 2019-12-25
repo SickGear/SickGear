@@ -37,12 +37,6 @@ class DownloadStationAPI(GenericClient):
         self.url = self.url_base + 'DownloadStation/task.cgi'
         self._errmsg = None
 
-        self._testmode = int(sickbeard.ENV.get('DEVENV'))
-        if self._testmode:
-            from download_station_data import client_data
-            self._testdata, self.auth, self._task_version = client_data, '1234', 3
-            self._testid = 'dbid_3185'
-
     common_errors = {
         -1: 'Could not get a response', 100: 'Unknown error', 101: 'Invalid parameter',
         102: 'The requested API does not exist', 103: 'The requested method does not exist',
