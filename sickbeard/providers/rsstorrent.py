@@ -18,27 +18,28 @@
 import re
 
 from . import generic
-from sickbeard import logger, tvcache
-from sickbeard.helpers import tryInt
-from sickbeard.exceptions import ex
+from ..helpers import try_int
+from exceptions_helper import ex
 from lib.bencode import bdecode
+
+from _23 import make_btih
 
 
 class TorrentRssProvider(generic.TorrentProvider):
 
     def __init__(self, name, url, cookies='', search_mode='eponly', search_fallback=False,
                  enable_recentsearch=False, enable_backlog=False, enable_scheduled_backlog=False):
-        self.enable_backlog = bool(tryInt(enable_backlog))
-        self.enable_scheduled_backlog = bool(tryInt(enable_scheduled_backlog))
+        self.enable_backlog = bool(try_int(enable_backlog))
+        self.enable_scheduled_backlog = bool(try_int(enable_scheduled_backlog))
         generic.TorrentProvider.__init__(self, name, supports_backlog=self.enable_backlog, cache_update_freq=15)
 
         self.url = url.rstrip('/')
         self.url_base = self.url
         self.cookies = cookies
 
-        self.enable_recentsearch = bool(tryInt(enable_recentsearch)) or not self.enable_backlog
+        self.enable_recentsearch = bool(try_int(enable_recentsearch)) or not self.enable_backlog
         self.search_mode = search_mode
-        self.search_fallback = bool(tryInt(search_fallback))
+        self.search_fallback = bool(try_int(search_fallback))
 
     def image_name(self):
 
@@ -89,16 +90,15 @@ class TorrentRssProvider(generic.TorrentProvider):
                 if url.startswith('magnet:'):
                     btih = None
                     try:
-                        btih = re.findall('urn:btih:([\w]{32,40})', url)[0]
+                        btih = re.findall(r'urn:btih:([\w]{32,40})', url)[0]
                         if 32 == len(btih):
-                            from base64 import b16encode, b32decode
-                            btih = b16encode(b32decode(btih))
+                            btih = make_btih(btih)
                     except (BaseException, Exception):
                         pass
                     if re.search('(?i)[0-9a-f]{32,40}', btih):
                         break
                 else:
-                    torrent_file = self.get_url(url)
+                    torrent_file = self.get_url(url, as_binary=True)
                     if self.should_skip():
                         break
 
@@ -113,13 +113,13 @@ class TorrentRssProvider(generic.TorrentProvider):
 
             return True, None
 
-        except Exception as e:
+        except (BaseException, Exception) as e:
             return False, 'Error when trying to load RSS: ' + ex(e)
 
     def _search_provider(self, search_params, **kwargs):
 
         result = []
-        for mode in search_params.keys():
+        for mode in search_params:
             data = self.cache.get_rss(self.url)
 
             result += (data and 'entries' in data) and data.entries or []

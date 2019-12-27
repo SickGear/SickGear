@@ -6,13 +6,13 @@ $(document).ready(function () {
 		if (!$('#nameToSearch').length)
 			return;
 
-		if (1 >= $('#indexerLangSelect').find('option').length) {
+		if (1 >= $('#infosrc-lang-select').find('option').length) {
 
-			$.getJSON(sbRoot + '/home/addShows/getIndexerLanguages', {}, function (data) {
+			$.getJSON(sbRoot + '/add-shows/get-infosrc-languages', {}, function (data) {
 
 				var resultStr = '',
 					selected = ' selected="selected"',
-					elIndexerLang = $('#indexerLangSelect');
+					elInfosrcLang = $('#infosrc-lang-select');
 
 				if (0 === data.results.length) {
 					resultStr = '<option value="en"' + selected + '>en</option>';
@@ -24,8 +24,8 @@ $(document).ready(function () {
 					});
 				}
 
-				elIndexerLang.html(resultStr);
-				elIndexerLang.change(function () {
+				elInfosrcLang.html(resultStr);
+				elInfosrcLang.change(function () {
 					searchIndexers();
 				});
 			});
@@ -54,22 +54,22 @@ $(document).ready(function () {
 		if (searchRequestXhr)
 			searchRequestXhr.abort();
 
-		var elTvDatabase = $('#providedIndexer'),
-			elIndexerLang = $('#indexerLangSelect'),
+		var elTvDatabase = $('#provided-tvid'),
+			elInfosrcLang = $('#infosrc-lang-select'),
 			tvsrcName = elTvDatabase.find('option:selected').text(),
 			tvSearchSrc = 0 < tvsrcName.length ? ' on ' + tvsrcName : '';
 
 		$('#search-results').empty().html('<img id="searchingAnim" src="' + sbRoot + '/images/loading32' + themeSpinner + '.gif" height="32" width="32" />'
 			+ ' searching <span class="boldest">' + cleanseText(elNameToSearch.val(), !0) + '</span>'
-			+ tvSearchSrc + ' in ' + elIndexerLang.val()
+			+ tvSearchSrc + ' in ' + elInfosrcLang.val()
 			+ '...');
 
 		searchRequestXhr = $.ajax({
-			url: sbRoot + '/home/addShows/searchIndexersForShowName',
+			url: sbRoot + '/add-shows/search-tvinfo-for-showname',
 			data: {
 				'search_term': cleanseText(elNameToSearch.val(), !1),
-				'lang': elIndexerLang.val(),
-				'indexer': elTvDatabase.val()
+				'lang': elInfosrcLang.val(),
+				'search_tvid': elTvDatabase.val()
 			},
 			timeout: parseInt($('#indexer_timeout').val(), 10) * parseInt($('#indexer_count').val(), 2) * 1000 + 15000,
 			dataType: 'json',
@@ -108,12 +108,12 @@ $(document).ready(function () {
 							!1 === item[result.isInDB] ? '' : '<span class="exists-db"><a href="' + sbRoot + item[result.isInDB] + '" target="_blank">exists in db</a></span>']
 							.join(' - ').replace(/(^[\s-]+|[\s-]+$)/, '');
 						resultItem = '<div class="results-item' + rowType + '" data-indb="' +  (!1 === item[result.isInDB] ? '' : '1') + '" data-sort-rel="' + item[result.RelSort] + '" data-sort-newest="' + item[result.NewestAired] + '" data-sort-oldest="' + item[result.OldestAired] + '" data-sort-az="' + item[result.AzSort] + '" data-sort-za="' + item[result.ZaSort] + '">'
-							+ '<input id="whichSeries" type="radio"'
+							+ '<input id="which_series" type="radio"'
 							+ ' class="stepone-result-radio"'
 							+ (!1 === item[result.isInDB]
 								? ' title="Add show <span style=\'color: rgb(66, 139, 202)\'>' + displayShowName + '</span>"'
 								: ' title="Show exists in DB,<br><span style=\'font-weight:700\'>selection not possible</span>"')
-							+ ' name="whichSeries"'
+							+ ' name="which_series"'
 							+ ' value="' + cleanseText([item[result.SrcDBId], item[result.SrcName], item[result.ShowID], item[result.Title]].join('|'), !0) + '"'
 							+ attrs
 							+ ' />'
@@ -245,7 +245,7 @@ $(document).ready(function () {
 					container$.isotope('updateSortData').isotope({sortBy: sortby});
 
 					config.resultsSortby = sortby + ($(this).find('option[value$="notop"]').hasClass(selClass) ? ' notop' : '');
-					$.get(sbRoot + '/config/general/saveResultPrefs', {ui_results_sortby: selectedSort});
+					$.get(sbRoot + '/config/general/save-result-prefs', {ui_results_sortby: selectedSort});
 				});
 
 				updateSampleText();
@@ -269,8 +269,8 @@ $(document).ready(function () {
 			$('input[name=cancel_form]').val('1');
 		} else {
 			// if they haven't picked a show don't let them submit
-			if (!$('input:radio[name="whichSeries"]:checked').val()
-				&& !$('input:hidden[name="whichSeries"]').val().length) {
+			if (!$('input:radio[name="which_series"]:checked').val()
+				&& !$('input:hidden[name="which_series"]').val().length) {
 					alert('You must choose a show to continue');
 					return !1;
 			}
@@ -301,7 +301,7 @@ $(document).ready(function () {
 		oninit: function () {
 			populateLangSelect();
 			updateSampleText();
-			if ($('input:hidden[name="whichSeries"]').length && $('#fullShowPath').length) {
+			if ($('input:hidden[name="which_series"]').length && $('#fullShowPath').length) {
 				goToStep(3);
 			}
 		}
@@ -325,10 +325,10 @@ $(document).ready(function () {
 		}
 		// if something's selected then we have some behavior to figure out
 
-		var show_name = '',
+		var showName = '',
 			sep_char,
-			elRadio = $('input:radio[name="whichSeries"]:checked'),
-			elInput = $('input:hidden[name="whichSeries"]'),
+			elRadio = $('input:radio[name="which_series"]:checked'),
+			elInput = $('input:hidden[name="which_series"]'),
 			elScene = $('#scene'),
 			elRootDirs = $('#rootDirs'),
 			elFullShowPath = $('#fullShowPath'),
@@ -336,17 +336,17 @@ $(document).ready(function () {
 
 		// if they've picked a radio button then use that
 		if (elRadio.length) {
-			show_name = elRadio.val().split('|')[idxWhichTitle];
-			elScene[0].checked = 0 <= show_scene_maps.indexOf(parseInt(elRadio.val().split('|')[idxWhichShowID], 10));
+			showName = elRadio.val().split('|')[idxWhichTitle];
+			elScene[0].checked = 0 <= showSceneMaps.indexOf(parseInt(elRadio.val().split('|')[idxWhichShowID], 10));
 			$('#scene-maps-found').css('display', elScene.is(':checked') ? 'block' : 'None');
 		}
 		// if we provided a show in the hidden field, use that
 		else if (elInput.length && elInput.val().length) {
-			show_name = $('#providedName').val();
+			showName = $('#provided-show-name').val();
 		}
-		update_bwlist(show_name);
-		var sample_text = '<p>Adding show <span class="show-name">' + cleanseText(show_name, !0) + '</span>'
-			+ ('' == show_name ? 'into<br />' : '<br />into')
+		update_bwlist(showName);
+		var sample_text = '<p>Adding show <span class="show-name">' + cleanseText(showName, !0) + '</span>'
+			+ ('' == showName ? 'into<br />' : '<br />into')
 			+ ' <span class="show-dest">';
 
 		// if we have a root dir selected, figure out the path
@@ -375,8 +375,8 @@ $(document).ready(function () {
 		sample_text += '</span></p>';
 
 		// if we have a show name then sanitize and use it for the dir name
-		if (show_name.length) {
-			$.get(sbRoot + '/home/addShows/generate_show_dir_name', {show_name: cleanseText(show_name, !1)}, function (data) {
+		if (showName.length) {
+			$.get(sbRoot + '/add-shows/generate-show-dir-name', {show_name: cleanseText(showName, !1)}, function (data) {
 				$('#displayText').html(sample_text.replace('||', data));
 			});
 		// if not then it's unknown
@@ -454,7 +454,7 @@ $(document).ready(function () {
 		if ($('#anime').prop('checked')) {
 			$('#blackwhitelist').show();
 			if (show_name) {
-				$.getJSON(sbRoot + '/home/fetch_releasegroups', {'show_name': cleanseText(show_name, !1)}, function (data) {
+				$.getJSON(sbRoot + '/home/fetch-releasegroups', {'show_name': cleanseText(show_name, !1)}, function (data) {
 					if ('success' == data['result']) {
 						var groups = [];
 						$.each(data.groups, function (i, group) {

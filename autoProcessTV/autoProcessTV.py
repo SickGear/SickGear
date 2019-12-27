@@ -38,20 +38,21 @@ except ImportError:
     print ('You need to install python requests library')
     sys.exit(1)
 
-
-# Try importing Python 2 modules using new names
-try:
+try:  # Try importing Python 3 modules
+    import configparser
+    # noinspection PyUnresolvedReferences
+    import urllib.request as urllib2
+    # noinspection PyUnresolvedReferences,PyCompatibility
+    from urllib.parse import urlencode
+except ImportError:  # On error import Python 2 modules using new names
+    # noinspection PyPep8Naming
     import ConfigParser as configparser
     import urllib2
     from urllib import urlencode
 
-# On error import Python 3 modules
-except ImportError:
-    import configparser
-    import urllib.request as urllib2
-    from urllib.parse import urlencode
 
-def processEpisode(dir_to_process, org_NZB_name=None, status=None):
+# noinspection DuplicatedCode
+def process_files(dir_to_process, org_nzb_name=None, status=None):
     # Default values
     host = 'localhost'
     port = '8081'
@@ -111,17 +112,12 @@ def processEpisode(dir_to_process, org_NZB_name=None, status=None):
             # There was a config_file, don't use default values but exit
             sys.exit(1)
 
-    params = {}
+    params = {'dir_name': dir_to_process, 'quiet': 1, 'is_basedir': 0}
 
-    params['is_basedir'] = 0
+    if None is not org_nzb_name:
+        params['nzb_name'] = org_nzb_name
 
-    params['quiet'] = 1
-
-    params['dir'] = dir_to_process
-    if org_NZB_name != None:
-        params['nzbName'] = org_NZB_name
-
-    if status != None:
+    if None is not status:
         params['failed'] = status
 
     if ssl:
@@ -129,7 +125,7 @@ def processEpisode(dir_to_process, org_NZB_name=None, status=None):
     else:
         protocol = 'http://'
 
-    url = protocol + host + ':' + port + web_root + 'home/postprocess/processEpisode'
+    url = protocol + host + ':' + port + web_root + 'home/process-media/files'
     login_url = protocol + host + ':' + port + web_root + 'login'
 
     print ('Opening URL: ' + url)
@@ -143,12 +139,12 @@ def processEpisode(dir_to_process, org_NZB_name=None, status=None):
                 login_params['_xsrf'] = r.cookies.get('_xsrf')
             sess.post(login_url, data=login_params, stream=True, verify=False)
         result = sess.get(url, params=params, stream=True, verify=False)
-        if result.status_code == 401:
+        if 401 == result.status_code:
             print('Verify and use correct username and password in autoProcessTV.cfg')
         else:
             for line in result.iter_lines():
                 if line:
-                   print (line.strip())
+                    print (line.strip())
 
     except IOError:
         e = sys.exc_info()[1]
@@ -156,7 +152,7 @@ def processEpisode(dir_to_process, org_NZB_name=None, status=None):
         sys.exit(1)
 
 
-if __name__ == '__main__':
+if '__main__' == __name__:
     print ('This module is supposed to be used as import in other scripts and not run standalone.')
     print ('Use sabToSickBeard instead.')
     sys.exit(1)

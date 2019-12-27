@@ -152,7 +152,7 @@ class Torrent(object):
 
         try:
             return filter(lambda method: self._rt_obj.method_exists(method), choices)[0]
-        except(Exception, BaseException):
+        except (BaseException, Exception):
             pass
 
     def get_state(self):

@@ -17,11 +17,10 @@ __version__ = "1.9"
 import os
 import time
 import errno
-import httplib
-import urllib2
-import StringIO
 from hashlib import md5
 from threading import RLock
+from six import StringIO
+from six.moves import urllib, http_client as httplib
 
 cache_lock = RLock()
 
@@ -102,7 +101,7 @@ def delete_from_cache(cache_location, url):
     else:
         return False
 
-class CacheHandler(urllib2.BaseHandler):
+class CacheHandler(urllib.request.BaseHandler):
     """Stores responses in a persistant on-disk cache.
 
     If a subsequent GET request is made for the same URL, the stored
@@ -116,7 +115,7 @@ class CacheHandler(urllib2.BaseHandler):
         if not os.path.exists(self.cache_location):
             try:
                 os.mkdir(self.cache_location)
-            except OSError, e:
+            except OSError as e:
                 if e.errno == errno.EEXIST and os.path.isdir(self.cache_location):
                     # File exists, and it's a directory,
                     # another process beat us to creating this dir, that's OK.
@@ -129,7 +128,7 @@ class CacheHandler(urllib2.BaseHandler):
     def default_open(self, request):
         """Handles GET requests, if the response is cached it returns it
         """
-        if request.get_method() != "GET":
+        if "GET" != request.get_method():
             return None # let the next handler try to handle the request
 
         if exists_in_cache(
@@ -147,9 +146,8 @@ class CacheHandler(urllib2.BaseHandler):
         """Gets a HTTP response, if it was a GET request and the status code
         starts with 2 (200 OK etc) it caches it and returns a CachedResponse
         """
-        if (request.get_method() == "GET"
-            and str(response.code).startswith("2")
-        ):
+        if ("GET" == request.get_method()
+                and str(response.code).startswith("2")):
             if 'x-local-cache' not in response.info():
                 # Response is not cached
                 set_cache_header = store_in_cache(
@@ -168,7 +166,7 @@ class CacheHandler(urllib2.BaseHandler):
         else:
             return response
 
-class CachedResponse(StringIO.StringIO):
+class CachedResponse(StringIO):
     """An urllib2.response-like object for cached responses.
 
     To determine if a response is cached or coming directly from
@@ -180,15 +178,15 @@ class CachedResponse(StringIO.StringIO):
         self.cache_location = cache_location
         hpath, bpath = calculate_cache_path(cache_location, url)
 
-        StringIO.StringIO.__init__(self, file(bpath, "rb").read())
+        StringIO.__init__(self, open(bpath, "rb").read())
 
         self.url     = url
         self.code    = 200
         self.msg     = "OK"
-        headerbuf = file(hpath, "rb").read()
+        headerbuf = open(hpath, "rb").read()
         if set_cache_header:
             headerbuf += "x-local-cache: %s\r\n" % (bpath)
-        self.headers = httplib.HTTPMessage(StringIO.StringIO(headerbuf))
+        self.headers = httplib.HTTPMessage(StringIO(headerbuf))
 
     def info(self):
         """Returns headers
@@ -202,7 +200,7 @@ class CachedResponse(StringIO.StringIO):
 
     @locked_function
     def recache(self):
-        new_request = urllib2.urlopen(self.url)
+        new_request = urllib.request.urlopen(self.url)
         set_cache_header = store_in_cache(
             self.cache_location,
             new_request.url,
@@ -221,31 +219,33 @@ class CachedResponse(StringIO.StringIO):
 if __name__ == "__main__":
     def main():
         """Quick test/example of CacheHandler"""
-        opener = urllib2.build_opener(CacheHandler("/tmp/"))
-        response = opener.open("http://google.com")
-        print response.headers
-        print "Response:", response.read()
+        opener = urllib.request.build_opener(CacheHandler("/tmp/"))
+        response = opener.open('http://google.com')
+        print(response.headers)
+        print('Response:', response.read())
 
         response.recache()
-        print response.headers
-        print "After recache:", response.read()
+        print(response.headers)
+        print('After recache:', response.read())
 
         # Test usage in threads
         from threading import Thread
+
         class CacheThreadTest(Thread):
             lastdata = None
+
             def run(self):
                 req = opener.open("http://google.com")
                 newdata = req.read()
-                if self.lastdata is None:
+                if None is self.lastdata:
                     self.lastdata = newdata
                 assert self.lastdata == newdata, "Data was not consistent, uhoh"
                 req.recache()
-        threads = [CacheThreadTest() for x in range(50)]
-        print "Starting threads"
+        threads = [CacheThreadTest() for _ in range(50)]
+        print('Starting threads')
         [t.start() for t in threads]
-        print "..done"
-        print "Joining threads"
+        print('..done')
+        print('Joining threads')
         [t.join() for t in threads]
-        print "..done"
+        print('..done')
     main()

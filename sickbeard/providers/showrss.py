@@ -21,11 +21,12 @@ import re
 import traceback
 
 from . import generic
-from sickbeard import logger
-from sickbeard.bs4_parser import BS4Parser
-from sickbeard.helpers import tryInt, sanitizeSceneName
-from lib.unidecode import unidecode
-from six.moves.html_parser import HTMLParser
+from .. import logger
+from ..helpers import sanitize_scene_name
+from bs4_parser import BS4Parser
+
+from _23 import decode_str, filter_list, html_unescape, list_keys, list_values, unidecode
+from six import iteritems, iterkeys
 
 
 class ShowRSSProvider(generic.TorrentProvider):
@@ -50,12 +51,11 @@ class ShowRSSProvider(generic.TorrentProvider):
 
     def logged_in(self, y):
         if all([None is y or 'logout' in y,
-                bool(filter(lambda c: 'remember_web_' in c, self.session.cookies.keys()))]):
+                bool(filter_list(lambda c: 'remember_web_' in c, iterkeys(self.session.cookies)))]):
             if None is not y:
-                self.shows = dict(re.findall('<option value="(\d+)">(.*?)</option>', y))
-                h = HTMLParser()
-                for k, v in self.shows.items():
-                    self.shows[k] = sanitizeSceneName(h.unescape(unidecode(v.decode('utf-8'))))
+                self.shows = dict(re.findall(r'<option value="(\d+)">(.*?)</option>', y))
+                for k, v in iteritems(self.shows):
+                    self.shows[k] = sanitize_scene_name(html_unescape(unidecode(decode_str(v))))
             return True
         return False
 
@@ -67,19 +67,20 @@ class ShowRSSProvider(generic.TorrentProvider):
 
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
-        rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {'get': 'magnet'}.items())
+        rc = dict([(k, re.compile('(?i)' + v)) for (k, v) in iteritems({'get': 'magnet'})])
         urls = []
-        for mode in search_params.keys():
+        for mode in search_params:
             for search_string in search_params[mode]:
                 if 'Cache' == mode:
                     search_url = self.urls['browse']
                 else:
-                    search_string = isinstance(search_string, unicode) and unidecode(search_string) or search_string
-                    show_name = filter(lambda x: x.lower() == re.sub('\s.*', '', search_string.lower()),
-                                       self.shows.values())
+                    search_string = unidecode(search_string)
+                    show_name = filter_list(lambda x: x.lower() == re.sub(r'\s.*', '', search_string.lower()),
+                                            list_values(self.shows))
                     if not show_name:
                         continue
-                    search_url = self.urls['search'] % self.shows.keys()[self.shows.values().index(show_name[0])]
+                    search_url = self.urls['search'] % list_keys(self.shows)[
+                        list_values(self.shows).index(show_name[0])]
 
                 if search_url in urls:
                     continue
@@ -140,7 +141,7 @@ class ShowRSSProvider(generic.TorrentProvider):
                 diff += 1
                 if 1 < diff:
                     break
-        return '%s%s' % (title, re.sub('(?i)(xvid|divx|[hx].?26[45])\s(\w+)$', r'\1-\2',
+        return '%s%s' % (title, re.sub(r'(?i)(xvid|divx|[hx].?26[45])\s(\w+)$', r'\1-\2',
                                        ''.join(t1[x - (offset + diff)::]).strip()))
 
     @staticmethod

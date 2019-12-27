@@ -17,13 +17,14 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with enzyme.  If not, see <http://www.gnu.org/licenses/>.
-from exceptions import ParseError
-import core
+from .exceptions import ParseError
+from . import core
 import logging
 import struct
 
-__all__ = ['Parser']
+from six import byte2int, indexbytes
 
+__all__ = ['Parser']
 
 # get logging object
 log = logging.getLogger(__name__)
@@ -43,7 +44,7 @@ FLV_AUDIO_CODECID = (0x0001, 0x0002, 0x0055, 0x0001)
 
 # video flags
 FLV_VIDEO_CODECID_MASK = 0x0f
-FLV_VIDEO_CODECID = ('FLV1', 'MSS1', 'VP60') # wild guess
+FLV_VIDEO_CODECID = ('FLV1', 'MSS1', 'VP60')  # wild guess
 
 FLV_DATA_TYPE_NUMBER = 0x00
 FLV_DATA_TYPE_BOOL = 0x01
@@ -61,13 +62,14 @@ FLVINFO = {
     'creator': 'copyright',
 }
 
+
 class FlashVideo(core.AVContainer):
     """
     Experimental parser for Flash videos. It requires certain flags to
     be set to report video resolutions and in most cases it does not
     provide that information.
     """
-    table_mapping = { 'FLVINFO' : FLVINFO }
+    table_mapping = {'FLVINFO': FLVINFO}
 
     def __init__(self, file):
         core.AVContainer.__init__(self)
@@ -87,7 +89,7 @@ class FlashVideo(core.AVContainer):
             size = (chunk[1] << 8) + chunk[2]
 
             if chunk[0] == FLV_TAG_TYPE_AUDIO:
-                flags = ord(file.read(1))
+                flags = byte2int([file.read(1)])
                 if not self.audio:
                     a = core.AudioStream()
                     a.channels = (flags & FLV_AUDIO_CHANNEL_MASK) + 1
@@ -101,7 +103,7 @@ class FlashVideo(core.AVContainer):
                 file.seek(size - 1, 1)
 
             elif chunk[0] == FLV_TAG_TYPE_VIDEO:
-                flags = ord(file.read(1))
+                flags = byte2int([file.read(1)])
                 if not self.video:
                     v = core.VideoStream()
                     codec = (flags & FLV_VIDEO_CODECID_MASK) - 2
@@ -147,24 +149,24 @@ class FlashVideo(core.AVContainer):
         """
         Parse the next metadata value.
         """
-        if ord(data[0]) == FLV_DATA_TYPE_NUMBER:
+        if byte2int(data) == FLV_DATA_TYPE_NUMBER:
             value = struct.unpack('>d', data[1:9])[0]
             return 9, value
 
-        if ord(data[0]) == FLV_DATA_TYPE_BOOL:
+        if byte2int(data) == FLV_DATA_TYPE_BOOL:
             return 2, bool(data[1])
 
-        if ord(data[0]) == FLV_DATA_TYPE_STRING:
-            length = (ord(data[1]) << 8) + ord(data[2])
+        if byte2int(data) == FLV_DATA_TYPE_STRING:
+            length = (indexbytes(data, 1) << 8) + indexbytes(data, 2)
             return length + 3, data[3:length + 3]
 
-        if ord(data[0]) == FLV_DATA_TYPE_ECMARRAY:
+        if byte2int(data) == FLV_DATA_TYPE_ECMARRAY:
             init_length = len(data)
             num = struct.unpack('>I', data[1:5])[0]
             data = data[5:]
             result = {}
             for _ in range(num):
-                length = (ord(data[0]) << 8) + ord(data[1])
+                length = (byte2int(data) << 8) + indexbytes(data, 1)
                 key = data[2:length + 2]
                 data = data[length + 2:]
                 length, value = self._parse_value(data)
@@ -174,7 +176,7 @@ class FlashVideo(core.AVContainer):
                 data = data[length:]
             return init_length - len(data), result
 
-        log.info(u'unknown code: %x. Stop metadata parser', ord(data[0]))
+        log.info(u'unknown code: %x. Stop metadata parser', byte2int(data))
         return 0, None
 
 

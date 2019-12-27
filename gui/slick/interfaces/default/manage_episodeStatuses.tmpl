@@ -23,7 +23,7 @@
 	<h3>no episodes have status <span class="grey-text">$statusStrings[$which_status].lower()</span></h3>
     #end if
 
-	<form action="$sbRoot/manage/episode_statuses" method="get">
+	<form action="$sbRoot/manage/episode-overview" method="get">
 
 		Manage episodes with status
 		<select name="which_status" class="form-control form-control-inline input-sm" style="margin:0 10px">
@@ -37,9 +37,7 @@
 	</form>
 ##
 #else
-    #if $which_status == $IGNORED:
-        #set $row_class = 'skipped'
-    #elif $which_status == $ARCHIVED:
+    #if $which_status in ($ARCHIVED, $IGNORED):
         #set $row_class = 'good'
     #elif $which_status == $SNATCHED:
         #set $row_class = 'snatched'
@@ -62,10 +60,11 @@
     #end if
 
 <script type="text/javascript" src="$sbRoot/js/manageEpisodeStatuses.js?v=$sbPID"></script>
-	<form action="$sbRoot/manage/change_episode_statuses" method="post">
+
+	<form action="$sbRoot/manage/change-episode-statuses" method="post">
+		<input type="hidden" id="old-status" name="old_status" value="$which_status">
 		$xsrf_form_html
 
-		<input type="hidden" id="old-status" name="old_status" value="$which_status">
 
 		<h3><span class="grey-text">$ep_count</span> episode#echo ('s', '')[1 == $ep_count]# marked <span class="grey-text">$statusStrings[$which_status].lower()</span> in <span class="grey-text">${len($sorted_show_ids)}</span> show#echo ('s', '')[1 == len($sorted_show_ids)]#</h3>
 
@@ -104,19 +103,19 @@
 			<thead></thead>
 			<tbody>
     #set $row = 0
-    #for $cur_indexer_id in $sorted_show_ids:
-        #if 0 == int($never_counts[$cur_indexer_id])
-            #set $output = '%d' % $ep_counts[$cur_indexer_id]
-        #elif $ep_counts[$cur_indexer_id] != $never_counts[$cur_indexer_id]
-            #set $diff = $ep_counts[$cur_indexer_id] - $never_counts[$cur_indexer_id]
-            #set $output = '%d' % $diff + ('', (' episode%s plus %s never with an airdate' % (('s', '')[1 == $ep_counts[$cur_indexer_id]], $never_counts[$cur_indexer_id])))[0 < $never_counts[$cur_indexer_id]]
+    #for $tvid_prodid in $sorted_show_ids:
+        #if 0 == int($never_counts[$tvid_prodid])
+            #set $output = '%d' % $ep_counts[$tvid_prodid]
+        #elif $ep_counts[$tvid_prodid] != $never_counts[$tvid_prodid]
+            #set $diff = $ep_counts[$tvid_prodid] - $never_counts[$tvid_prodid]
+            #set $output = '%d' % $diff + ('', (' episode%s plus %s never with an airdate' % (('s', '')[1 == $ep_counts[$tvid_prodid]], $never_counts[$tvid_prodid])))[0 < $never_counts[$tvid_prodid]]
         #else
-            #set $output = '%s never with an airdate' % (('all %s %ss', '%s %s')[1 == $ep_counts[$cur_indexer_id]] % ($ep_counts[$cur_indexer_id], 'episode'))
+            #set $output = '%s never with an airdate' % (('all %s %ss', '%s %s')[1 == $ep_counts[$tvid_prodid]] % ($ep_counts[$tvid_prodid], 'episode'))
         #end if
-				<tr id="$cur_indexer_id" class="#echo ('odd', 'even')[$row % 2]##set $row+=1#">
-					<td><input type="checkbox" class="allCheck" id="allCheck-$cur_indexer_id" name="$cur_indexer_id-all"></td>
+				<tr id="$tvid_prodid" class="#echo ('odd', 'even')[$row % 2]##set $row+=1#">
+					<td><input type="checkbox" class="allCheck" id="allCheck-$tvid_prodid" name="$tvid_prodid-all"></td>
 					<td colspan="2" style="width:100%;text-align:left">
-						<a class="whitelink" href="$sbRoot/home/displayShow?show=$cur_indexer_id">$show_names[$cur_indexer_id]</a> <span style="color:#999">($output)</span><input type="button" class="pull-right get_more_eps btn" id="$cur_indexer_id-more" value="Expand"><input type="button" class="pull-right get_less_eps btn" id="$cur_indexer_id-less" value="Collapse">
+						<a class="whitelink" href="$sbRoot/home/view-show?tvid_prodid=$tvid_prodid">$show_names[$tvid_prodid]</a> <span style="color:#999">($output)</span><input type="button" class="pull-right get_more_eps btn" id="$tvid_prodid-more" value="Expand"><input type="button" class="pull-right get_less_eps btn" id="$tvid_prodid-less" value="Collapse">
 					</td>
 				</tr>
     #end for

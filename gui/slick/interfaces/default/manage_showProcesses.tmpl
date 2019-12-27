@@ -1,8 +1,9 @@
 #import sickbeard
-#from sickbeard.helpers import findCertainShow, maybe_plural
+#from sickbeard.helpers import find_show_by_id, maybe_plural
+#from sickbeard.sgdatetime import SGDatetime
 ##
-#set global $title = 'Show Processes'
-#set global $header = 'Show Processes'
+#set global $title = 'Show Tasks'
+#set global $header = 'Show Tasks'
 #set global $sbPath = '..'
 #set global $topmenu = 'manage'
 ##
@@ -19,9 +20,9 @@
 
 	<div id="summary2" class="align-left">
 		<h3>Daily show update:</h3>
-		<a id="showupdatebutton" class="btn#if $show_update_running# disabled#end if#" href="$sbRoot/manage/showProcesses/forceShowUpdate"><i class="sgicon-play"></i> Force</a>
+		<a id="showupdatebutton" class="btn#if $show_update_running# disabled#end if#" href="$sbRoot/manage/show-tasks/force-show-update"><i class="sgicon-play"></i> Force</a>
 #if not $show_update_running:
-		Not in progress<br />
+		Not in progress (Next run: $SGDatetime.sbftime($next_run))<br />
 #else:
 		Currently running<br />
 #end if
@@ -45,12 +46,12 @@
     #for $cur_show in $not_found_shows:
 				<tr class="#echo ('odd', 'even')[$row % 2]##set $row+=1#">
 					<td style="text-align:left">
-						<span style="padding-right:5px" class="logger item snf"><i class="sgicon-warning"></i></span><a class="whitelink" href="$sbRoot/home/editShow?show=$cur_show['indexer_id']&tvsrc=0&srcid=$cur_show['indexer_id']#core-component-group3">$cur_show['show_name']</a>
+						<span style="padding-right:5px" class="logger item snf"><i class="sgicon-warning"></i></span><a class="whitelink" href="$sbRoot/home/edit-show?tvid_prodid=$cur_show['tvid_prodid']&tvsrc=0&srcid=$cur_show['prodid']#core-component-group3">$cur_show['show_name']</a>
 					</td>
 					<td style="text-align:center;color:white">
 						$cur_show['last_success']</td>
 					<td>
-						<input class="nowarnicon" type="checkbox" #if $cur_show['ignore_warning'] then 'checked="checked"' else ''# data-indexer="$cur_show['indexer']" data-indexer-id="$cur_show['indexer_id']">
+						<input class="nowarnicon" type="checkbox" #if $cur_show['ignore_warning'] then 'checked="checked"' else ''# data-tvid-prodid="$cur_show['tvid_prodid']">
 					</td>
 				</tr>
     #end for
@@ -80,7 +81,7 @@
     #for $cur_show in $defunct_indexer:
 				<tr class="#echo ('odd', 'even')[$row % 2]##set $row+=1#">
 					<td style="text-align:left">
-						<a class="whitelink" href="$sbRoot/home/displayShow?show=$cur_show['indexer_id']">$cur_show['show_name']</a>
+						<a class="whitelink" href="$sbRoot/home/view-show?tvid_prodid=$cur_show['tvid_prodid']">$cur_show['show_name']</a>
 					</td>
 				</tr>
     #end for
@@ -132,11 +133,16 @@
 			<tbody>
     #set $row = 0
     #for $cur_show in $queue_length['update']:
-        #set $show = $findCertainShow($show_list, $cur_show['indexerid'])
-        #set $show_name = $show.name if $show else str($cur_show['name'])
+        #set $show_name = $cur_show['name']
+        #if not $cur_show['name']
+            #set $show_obj = $find_show_by_id({$cur_show['tvid']: $cur_show['prodid']})
+            #if $show_obj
+                #set $show_name = $show_obj.name
+            #end if
+        #end if
 				<tr class="#echo ('odd', 'even')[$row % 2]##set $row+=1#">
 					<td style="text-align:left">
-						<a class="whitelink" href="$sbRoot/home/displayShow?show=$cur_show['indexerid']">$show_name</a>
+						<a class="whitelink" href="$sbRoot/home/view-show?tvid_prodid=$cur_show['tvid_prodid']">$show_name</a>
 					</td>
 					<td style="text-align:center;color:white">#if $cur_show['scheduled_update']#Scheduled, #end if#$cur_show['update_type']</td>
 				</tr>
@@ -160,11 +166,9 @@
 			<tbody>
     #set $row = 0
     #for $cur_show in $queue_length['refresh']:
-        #set $show = $findCertainShow($show_list, $cur_show['indexerid'])
-        #set $show_name = $show.name if $show else str($cur_show['name'])
 				<tr class="#echo ('odd', 'even')[$row % 2]##set $row+=1#">
 					<td style="text-align:left">
-						<a class="whitelink" href="$sbRoot/home/displayShow?show=$cur_show['indexerid']">$show_name</a>
+						<a class="whitelink" href="$sbRoot/home/view-show?tvid_prodid=$cur_show['tvid_prodid']">$cur_show['name']</a>
 					</td>
 					<td style="text-align:center;color:white">#if $cur_show['scheduled_update']#Scheduled#end if#</td>
 				</tr>
@@ -189,11 +193,9 @@
 			<tbody>
 	#set $row = 0
 	#for $cur_show in $queue_length['rename']:
-		#set $show = $findCertainShow($show_list, $cur_show['indexerid'])
-		#set $show_name = $show.name if $show else str($cur_show['name'])
 				<tr class="#echo ('odd', 'even')[$row % 2]##set $row+=1#">
 					<td style="text-align:left">
-						<a class="whitelink" href="$sbRoot/home/displayShow?show=$cur_show['indexerid']">$show_name</a>
+						<a class="whitelink" href="$sbRoot/home/view-show?tvid_prodid=$cur_show['tvid_prodid']">$cur_show['name']</a>
 					</td>
 					<td style="text-align:center;color:white">#if $cur_show['scheduled_update']#Scheduled#end if#</td>
 				</tr>
@@ -218,11 +220,9 @@
 			<tbody>
         #set $row = 0
         #for $cur_show in $queue_length['subtitle']:
-            #set $show = $findCertainShow($show_list, $cur_show['indexerid'])
-            #set $show_name = $show.name if $show else str($cur_show['name'])
 				<tr class="#echo ('odd', 'even')[$row % 2]##set $row+=1#">
 					<td style="text-align:left">
-						<a class="whitelink" href="$sbRoot/home/displayShow?show=$cur_show['indexerid']">$show_name</a>
+						<a class="whitelink" href="$sbRoot/home/view-show?tvid_prodid=$cur_show['tvid_prodid']">$cur_show['name']</a>
 					</td>
 					<td style="text-align:center;color:white">#if $cur_show['scheduled_update']#Scheduled#end if#</td>
 				</tr>

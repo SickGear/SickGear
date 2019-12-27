@@ -1,8 +1,7 @@
 #import sickbeard
-#from sickbeard import sbdatetime
 ##
-#set global $title = 'Media Search'
-#set global $header = 'Media Search'
+#set global $title = 'Search Tasks'
+#set global $header = 'Search Tasks'
 #set global $sbPath = '..'
 #set global $topmenu = 'manage'
 ##
@@ -25,13 +24,25 @@
 
 	<div id="backlog-search" class="section">
 		<h3>Backlog Search:</h3>
-		<a id="forcebacklog" class="btn#if $standard_backlog_running or $backlog_is_active# disabled#end if#" href="$sbRoot/manage/manageSearches/forceBacklog"><i class="sgicon-play"></i> Force</a>
-		<a id="pausebacklog" class="btn" href="$sbRoot/manage/manageSearches/pauseBacklog?paused=#if $backlog_paused then "0" else "1"#"><i class="#if $backlog_paused then "sgicon-play" else "sgicon-pause"#"></i> #if $backlog_paused then "Unpause" else "Pause"#</a>
+		<a id="forcebacklog" class="btn#if $standard_backlog_running or $backlog_is_active or not $scheduled_backlog_active_providers# disabled#end if#" href="$sbRoot/manage/search-tasks/force-backlog"><i class="sgicon-play"></i> Force</a>
+		<a id="pausebacklog" class="btn" href="$sbRoot/manage/search-tasks/pause-backlog?paused=#if $backlog_paused then "0" else "1"#"><i class="#if $backlog_paused then "sgicon-play" else "sgicon-pause"#"></i> #if $backlog_paused then "Unpause" else "Pause"#</a>
 #if $backlog_paused
 		Paused:
 #end if##slurp#
 #if not $backlog_running and not $backlog_is_active:
-		Not in progress
+		#if not $scheduled_backlog_active_providers
+            #set $text = 'Enable both active AND scheduled search for one or more providers at config media providers'
+            #for ($tag_class, $sub) in (
+                ('grey-text', 'Enable'), ('red-text', 'both'),
+                ('red-text', 'AND'), ('grey-text', 'for one or more providers at config')):
+                #set $text = $text.replace($sub, '<span class="%s">%s</span>' % ($tag_class, $sub))
+            #end for
+            #set $sub = 'media providers'
+            #set $text = $text.replace($sub, '<a href="%s/config/providers/#core-component-group2">%s</a>' % ($sbRoot, $sub))
+			<i class="img-warning-16"></i>$text
+		#else
+			Not in progress
+		#end if
 #else
 		Currently running#if $backlog_running_type != "None"# ($backlog_running_type)#end if#
 #end if
@@ -41,7 +52,7 @@
 
 	<div id="recent-search" class="section">
 		<h3>Recent Search:</h3>
-		<a id="recentsearch" class="btn#if $recent_search_status# disabled#end if#" href="$sbRoot/manage/manageSearches/forceSearch"><i class="sgicon-play"></i> Force</a>
+		<a id="recentsearch" class="btn#if $recent_search_status# disabled#end if#" href="$sbRoot/manage/search-tasks/force-search"><i class="sgicon-play"></i> Force</a>
 #if not $recent_search_status
 		Not in progress
 #else
@@ -53,7 +64,7 @@
 
 	<div id="propers-search" class="section">
 		<h3>Find Propers Search:</h3>
-		<a id="propersearch" class="btn#if $find_propers_status# disabled#end if#" href="$sbRoot/manage/manageSearches/forceFindPropers"><i class="sgicon-play"></i> Force</a>
+		<a id="propersearch" class="btn#if $find_propers_status# disabled#end if#" href="$sbRoot/manage/search-tasks/force-find-propers"><i class="sgicon-play"></i> Force</a>
 #if not $find_propers_status
 		Not in progress
 #else
@@ -125,7 +136,7 @@
         #end if
 					<tr class="#echo ('odd', 'even')[$row % 2]##set $row+=1#">
 						<td style="width:80%;text-align:left;color:white">
-							<a class="whitelink" href="$sbRoot/home/displayShow?show=$cur_item['indexerid']">$cur_item['name']</a> - $sickbeard.helpers.make_search_segment_html_string($cur_item['segment'])
+							<a class="whitelink" href="$sbRoot/home/view-show?tvid_prodid=$cur_item['tvid_prodid']">$cur_item['name']</a> - $sickbeard.helpers.make_search_segment_html_string($cur_item['segment'])
 						</td>
 						<td style="width:20%;text-align:center;color:white">$search_type</td>
 					</tr>
@@ -147,7 +158,7 @@
     #for $cur_item in $queue_length['manual']:
 					<tr class="#echo ('odd', 'even')[$row % 2]##set $row+=1#">
 						<td style="width:100%;text-align:left;color:white">
-							<a class="whitelink" href="$sbRoot/home/displayShow?show=$cur_item['indexerid']">$cur_item['name']</a> - $sickbeard.helpers.make_search_segment_html_string($cur_item['segment'])
+							<a class="whitelink" href="$sbRoot/home/view-show?tvid_prodid=$cur_item['tvid_prodid']">$cur_item['name']</a> - $sickbeard.helpers.make_search_segment_html_string($cur_item['segment'])
 						</td>
 					</tr>
     #end for
@@ -168,7 +179,7 @@
     #for $cur_item in $queue_length['failed']:
 					<tr class="#echo ('odd', 'even')[$row % 2]##set $row+=1#">
 						<td style="width:100%;text-align:left;color:white">
-							<a class="whitelink" href="$sbRoot/home/displayShow?show=$cur_item['indexerid']">$cur_item['name']</a> - $sickbeard.helpers.make_search_segment_html_string($cur_item['segment'])
+							<a class="whitelink" href="$sbRoot/home/view-show?tvid_prodid=$cur_item['tvid_prodid']">$cur_item['name']</a> - $sickbeard.helpers.make_search_segment_html_string($cur_item['segment'])
 						</td>
 					</tr>
     #end for

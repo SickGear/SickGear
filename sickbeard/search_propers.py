@@ -22,17 +22,17 @@ import threading
 import sickbeard
 
 
-class ProperSearcher:
+class ProperSearcher(object):
     def __init__(self):
         self.lock = threading.Lock()
         self.amActive = False
 
     @staticmethod
     def is_enabled():
+        # type: (...) -> bool
         return sickbeard.DOWNLOAD_PROPERS
 
     def run(self):
-
         self.amActive = True
 
         propersearch_queue_item = sickbeard.search_queue.ProperSearchQueueItem()

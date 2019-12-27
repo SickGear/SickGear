@@ -141,7 +141,7 @@ $(document).ready(function(){
 		$('#test-torrent-result').html(loading);
 		var method = $('#torrent_method').find(':selected').val();
 		(('rtorrent' === method) && handleSCGI());
-		$.get(sbRoot + '/home/test_torrent',
+		$.get(sbRoot + '/home/test-torrent',
 			{'torrent_method': method, 'host': $('#torrent_host').val(),
 				'username': $('#torrent_username').val(), 'password': $('#torrent_password').val()},
 				function(data) { $(this).testResult(data, '#test-torrent-result'); });
@@ -149,7 +149,7 @@ $(document).ready(function(){
 
 	$('#test_nzbget').click(function() {
 		$('#test-nzb-result').html(loading);
-		$.get(sbRoot + '/home/test_nzbget',
+		$.get(sbRoot + '/home/test-nzbget',
 			{'host': $('#nzbget_host').val(), 'use_https': $('#nzbget_use_https').prop('checked'),
 				'username': $('#nzbget_username').val(), 'password': $('#nzbget_password').val()},
 			function(data) { $(this).testResult(data, '#test-nzb-result'); });
@@ -157,7 +157,7 @@ $(document).ready(function(){
 
 	$('#test_sabnzbd').click(function() {
 		$('#test-nzb-result').html(loading);
-		$.get(sbRoot + '/home/test_sabnzbd',
+		$.get(sbRoot + '/home/test-sabnzbd',
 			{'host': $('#sab_host').val(), 'username': $('#sab_username').val(),
 				'password': $('#sab_password').val(), 'apikey': $('#sab_apikey').val()},
 			function(data) { $(this).testResult(data, '#test-nzb-result'); });

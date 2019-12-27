@@ -22,14 +22,15 @@ try:
 except ImportError:
     from lib import simplejson as json
 import time
-import urllib
 import xml.etree.cElementTree as XmlEtree
 
+from .generic import Notifier
+from .. import logger
 import sickbeard
 import sickbeard.helpers
-from sickbeard import logger
-from sickbeard.exceptions import ex
-from sickbeard.notifiers.generic import Notifier
+from exceptions_helper import ex
+
+from _23 import decode_str, quote, unquote, unquote_plus
 
 
 class KodiNotifier(Notifier):
@@ -185,8 +186,8 @@ class KodiNotifier(Notifier):
             args['auth'] = (self.username or sickbeard.KODI_USERNAME, self.password or sickbeard.KODI_PASSWORD)
 
         url = 'http://%s/%sCmds/%sHttp' % (host, self.prefix or 'kodi', self.prefix or 'kodi')
-        response = sickbeard.helpers.getURL(url=url, params=command,
-                                            timeout=timeout, hooks=dict(response=self.cb_response), **args)
+        response = sickbeard.helpers.get_url(url=url, params=command,
+                                             timeout=timeout, hooks=dict(response=self.cb_response), **args)
 
         return response or False
 
@@ -232,7 +233,7 @@ class KodiNotifier(Notifier):
                 return False
 
             try:
-                et = XmlEtree.fromstring(urllib.quote(response, ':\\/<>'))
+                et = XmlEtree.fromstring(quote(response, ':\\/<>'))
             except SyntaxError as e:
                 self._log_error(u'Unable to parse XML in response: %s' % ex(e))
                 return False
@@ -244,7 +245,7 @@ class KodiNotifier(Notifier):
 
             for path in paths:
                 # we do not need it double-encoded, gawd this is dumb
-                un_enc_path = urllib.unquote(path.text).decode(sickbeard.SYS_ENCODING)
+                un_enc_path = decode_str(unquote(path.text), sickbeard.SYS_ENCODING)
                 self._log_debug(u'Updating %s on %s at %s' % (show_name, host, un_enc_path))
 
                 if not self._send(
@@ -298,9 +299,9 @@ class KodiNotifier(Notifier):
         if self.password or sickbeard.KODI_PASSWORD:
             args['auth'] = (self.username or sickbeard.KODI_USERNAME, self.password or sickbeard.KODI_PASSWORD)
 
-        response = sickbeard.helpers.getURL(url='http://%s/jsonrpc' % host, timeout=timeout,
-                                            headers={'Content-type': 'application/json'}, json=True,
-                                            hooks=dict(response=self.cb_response), **args)
+        response = sickbeard.helpers.get_url(url='http://%s/jsonrpc' % host, timeout=timeout,
+                                             headers={'Content-type': 'application/json'}, parse_json=True,
+                                             hooks=dict(response=self.cb_response), **args)
         if response:
             if not response.get('error'):
                 return 'OK' == response.get('result') and {'OK': True} or response.get('result')
@@ -330,7 +331,7 @@ class KodiNotifier(Notifier):
             self._log_debug(u'JSON library update. Host: %s Show: %s' % (host, show_name))
 
             # try fetching tvshowid using show_name with a fallback to getting show list
-            show_name = urllib.unquote_plus(show_name)
+            show_name = unquote_plus(show_name)
             commands = [dict(method='VideoLibrary.GetTVShows',
                              params={'filter': {'field': 'title', 'operator': 'is', 'value': '%s' % show_name},
                                      'properties': ['title']}),
@@ -427,7 +428,7 @@ class KodiNotifier(Notifier):
         success = True
         message = []
         for host in [x.strip() for x in hosts.split(',')]:
-            cur_host = urllib.unquote_plus(host)
+            cur_host = unquote_plus(host)
 
             api_version = self._get_kodi_version(cur_host)
             if self.response and 401 == self.response.get('status_code'):

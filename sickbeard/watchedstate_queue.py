@@ -16,8 +16,8 @@
 
 from __future__ import with_statement
 
-from sickbeard import generic_queue, logger
-from sickbeard.webserve import History
+from . import logger, generic_queue
+from .webserve import History
 
 EMBYWATCHEDSTATE = 10
 PLEXWATCHEDSTATE = 20

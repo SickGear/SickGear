@@ -22,8 +22,9 @@
 
 from ...compat import xmlrpclib
 
-from base64 import b64encode
-import httplib
+# noinspection PyUnresolvedReferences
+from six.moves import http_client as httplib
+from _23 import b64encodestring
 
 
 class BasicAuthTransport(xmlrpclib.Transport):
@@ -39,7 +40,7 @@ class BasicAuthTransport(xmlrpclib.Transport):
 
     def send_auth(self, h):
         if self.username and self.password:
-            h.putheader('Authorization', 'Basic %s' % b64encode('%s:%s' % (self.username, self.password)))
+            h.putheader('Authorization', 'Basic %s' % b64encodestring('%s:%s' % (self.username, self.password)))
 
     def make_connection(self, host):
         if self._connection and host == self._connection[0]:

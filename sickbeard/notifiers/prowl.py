@@ -18,11 +18,11 @@
 
 import socket
 from ssl import SSLError
-from urllib import urlencode
 
+from .generic import Notifier
 import sickbeard
-from sickbeard.notifiers.generic import Notifier
 
+from _23 import urlencode
 from lib.six import moves
 
 
@@ -43,7 +43,8 @@ class ProwlNotifier(Notifier):
 
         try:
             http_handler.request('POST', '/publicapi/add',
-                                 headers={'Content-type': 'application/x-www-form-urlencoded'}, body=urlencode(data))
+                                 headers={'Content-type': 'application/x-www-form-urlencoded'},
+                                 body=urlencode(data))
         except (SSLError, moves.http_client.HTTPException, socket.error):
             result = 'Connection failed'
             self._log_error(result)

@@ -17,11 +17,12 @@
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
 import re
-from base64 import b64encode
 
+from .generic import GenericClient
+from .. import logger
 import sickbeard
-from sickbeard import logger
-from sickbeard.clients.generic import GenericClient
+
+from _23 import b64encodestring
 
 
 class TransmissionAPI(GenericClient):
@@ -38,7 +39,7 @@ class TransmissionAPI(GenericClient):
             response = self.session.post(self.url, json={'method': 'session-get'},
                                          timeout=120, verify=sickbeard.TORRENT_VERIFY_CERT)
             self.auth = re.search(r'(?i)X-Transmission-Session-Id:\s*(\w+)', response.text).group(1)
-        except:
+        except (BaseException, Exception):
             return None
 
         self.session.headers.update({'x-transmission-session-id': self.auth})
@@ -50,7 +51,7 @@ class TransmissionAPI(GenericClient):
             resp = response.json()
             self.blankable = 14386 >= int(re.findall(r'.*[(](\d+)', resp.get('arguments', {}).get('version', '(0)'))[0])
             self.download_dir = resp.get('arguments', {}).get('download-dir', '')
-        except:
+        except (BaseException, Exception):
             pass
 
         return self.auth
@@ -61,7 +62,7 @@ class TransmissionAPI(GenericClient):
 
     def _add_torrent_file(self, result):
 
-        return self._add_torrent({'metainfo': b64encode(result.content)})
+        return self._add_torrent({'metainfo': b64encodestring(result.content)})
 
     def _add_torrent(self, t_object):
 
@@ -106,8 +107,7 @@ class TransmissionAPI(GenericClient):
                 'arguments': {'ids': [result.hash], 'seedIdleLimit': int(seed_time) * 60, 'seedIdleMode': 1}})
 
             return 'success' == response.json().get('result', '')
-        else:
-            return True
+        return True
 
     def _set_torrent_priority(self, result):
 

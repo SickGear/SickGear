@@ -24,35 +24,37 @@ import os
 import struct
 import logging
 import stat
-from exceptions import ParseError
-import core
+from .exceptions import ParseError
+from . import core
+
+from six import byte2int, indexbytes
 
 # get logging object
 log = logging.getLogger(__name__)
 
-##------------------------------------------------------------------------
-## START_CODE
-##
-## Start Codes, with 'slice' occupying 0x01..0xAF
-##------------------------------------------------------------------------
+# #------------------------------------------------------------------------
+# # START_CODE
+# #
+# # Start Codes, with 'slice' occupying 0x01..0xAF
+# #------------------------------------------------------------------------
 START_CODE = {
-    0x00 : 'picture_start_code',
-    0xB0 : 'reserved',
-    0xB1 : 'reserved',
-    0xB2 : 'user_data_start_code',
-    0xB3 : 'sequence_header_code',
-    0xB4 : 'sequence_error_code',
-    0xB5 : 'extension_start_code',
-    0xB6 : 'reserved',
-    0xB7 : 'sequence end',
-    0xB8 : 'group of pictures',
+    0x00: 'picture_start_code',
+    0xB0: 'reserved',
+    0xB1: 'reserved',
+    0xB2: 'user_data_start_code',
+    0xB3: 'sequence_header_code',
+    0xB4: 'sequence_error_code',
+    0xB5: 'extension_start_code',
+    0xB6: 'reserved',
+    0xB7: 'sequence end',
+    0xB8: 'group of pictures',
 }
 for i in range(0x01, 0xAF):
     START_CODE[i] = 'slice_start_code'
 
-##------------------------------------------------------------------------
-## START CODES
-##------------------------------------------------------------------------
+# #------------------------------------------------------------------------
+# # START CODES
+# #------------------------------------------------------------------------
 PICTURE = 0x00
 USERDATA = 0xB2
 SEQ_HEAD = 0xB3
@@ -73,51 +75,51 @@ PRIVATE_STREAM2 = 0xBf
 TS_PACKET_LENGTH = 188
 TS_SYNC = 0x47
 
-##------------------------------------------------------------------------
-## FRAME_RATE
-##
-## A lookup table of all the standard frame rates.  Some rates adhere to
-## a particular profile that ensures compatibility with VLSI capabilities
-## of the early to mid 1990s.
-##
-## CPB
-##   Constrained Parameters Bitstreams, an MPEG-1 set of sampling and
-##   bitstream parameters designed to normalize decoder computational
-##   complexity, buffer size, and memory bandwidth while still addressing
-##   the widest possible range of applications.
-##
-## Main Level
-##   MPEG-2 Video Main Profile and Main Level is analogous to MPEG-1's
-##   CPB, with sampling limits at CCIR 601 parameters (720x480x30 Hz or
-##   720x576x24 Hz).
-##
-##------------------------------------------------------------------------
+# #------------------------------------------------------------------------
+# # FRAME_RATE
+# #
+# # A lookup table of all the standard frame rates.  Some rates adhere to
+# # a particular profile that ensures compatibility with VLSI capabilities
+# # of the early to mid 1990s.
+# #
+# # CPB
+# #   Constrained Parameters Bitstreams, an MPEG-1 set of sampling and
+# #   bitstream parameters designed to normalize decoder computational
+# #   complexity, buffer size, and memory bandwidth while still addressing
+# #   the widest possible range of applications.
+# #
+# # Main Level
+# #   MPEG-2 Video Main Profile and Main Level is analogous to MPEG-1's
+# #   CPB, with sampling limits at CCIR 601 parameters (720x480x30 Hz or
+# #   720x576x24 Hz).
+# #
+# #------------------------------------------------------------------------
 FRAME_RATE = [
-      0,
-      24000.0 / 1001, ## 3-2 pulldown NTSC (CPB/Main Level)
-      24, ## Film (CPB/Main Level)
-      25, ## PAL/SECAM or 625/60 video
-      30000.0 / 1001, ## NTSC (CPB/Main Level)
-      30, ## drop-frame NTSC or component 525/60  (CPB/Main Level)
-      50, ## double-rate PAL
-      60000.0 / 1001, ## double-rate NTSC
-      60, ## double-rate, drop-frame NTSC/component 525/60 video
-      ]
+    0,
+    24000.0 / 1001,  # # 3-2 pulldown NTSC (CPB/Main Level)
+    24,  # # Film (CPB/Main Level)
+    25,  # # PAL/SECAM or 625/60 video
+    30000.0 / 1001,  # # NTSC (CPB/Main Level)
+    30,  # # drop-frame NTSC or component 525/60  (CPB/Main Level)
+    50,  # # double-rate PAL
+    60000.0 / 1001,  # # double-rate NTSC
+    60,  # # double-rate, drop-frame NTSC/component 525/60 video
+]
 
-##------------------------------------------------------------------------
-## ASPECT_RATIO -- INCOMPLETE?
-##
-## This lookup table maps the header aspect ratio index to a float value.
-## These are just the defined ratios for CPB I believe.  As I understand
-## it, a stream that doesn't adhere to one of these aspect ratios is
-## technically considered non-compliant.
-##------------------------------------------------------------------------
-ASPECT_RATIO = (None, # Forbidden
-                 1.0, # 1/1 (VGA)
-                 4.0 / 3, # 4/3 (TV)
-                 16.0 / 9, # 16/9 (Widescreen)
-                 2.21      # (Cinema)
-               )
+# #------------------------------------------------------------------------
+# # ASPECT_RATIO -- INCOMPLETE?
+# #
+# # This lookup table maps the header aspect ratio index to a float value.
+# # These are just the defined ratios for CPB I believe.  As I understand
+# # it, a stream that doesn't adhere to one of these aspect ratios is
+# # technically considered non-compliant.
+# #------------------------------------------------------------------------
+ASPECT_RATIO = (None,  # Forbidden
+                1.0,  # 1/1 (VGA)
+                4.0 / 3,  # 4/3 (TV)
+                16.0 / 9,  # 16/9 (Widescreen)
+                2.21  # (Cinema)
+                )
 
 
 class MPEG(core.AVContainer):
@@ -129,10 +131,21 @@ class MPEG(core.AVContainer):
     no additional metadata like title, etc; only codecs, length and
     resolution is reported back.
     """
+
     def __init__(self, file):
         core.AVContainer.__init__(self)
         self.sequence_header_offset = 0
         self.mpeg_version = 2
+        self.get_time = None
+        self.audio = []
+        self.video = []
+        self.start = None
+        self.__seek_size__ = None
+        self.__sample_size__ = None
+        self.__search__ = None
+        self.filename = None
+        self.length = None
+        self.audio_ok = None
 
         # detect TS (fast scan)
         if not self.isTS(file):
@@ -145,13 +158,13 @@ class MPEG(core.AVContainer):
                         # If isES() succeeds, we needn't do anything further.
                         return
                     if file.name.lower().endswith('mpeg') or \
-                             file.name.lower().endswith('mpg'):
+                            file.name.lower().endswith('mpg'):
                         # This has to be an mpeg file. It could be a bad
                         # recording from an ivtv based hardware encoder with
                         # same bytes missing at the beginning.
                         # Do some more digging...
                         if not self.isMPEG(file, force=True) or \
-                           not self.video or not self.audio:
+                                not self.video or not self.audio:
                             # does not look like an mpeg at all
                             raise ParseError()
                     else:
@@ -187,7 +200,6 @@ class MPEG(core.AVContainer):
             if not a.codec:
                 a.codec = ac
 
-
     def dxy(self, file):
         """
         get width and height of the video
@@ -196,8 +208,7 @@ class MPEG(core.AVContainer):
         v = file.read(4)
         x = struct.unpack('>H', v[:2])[0] >> 4
         y = struct.unpack('>H', v[1:3])[0] & 0x0FFF
-        return (x, y)
-
+        return x, y
 
     def framerate_aspect(self, file):
         """
@@ -213,8 +224,7 @@ class MPEG(core.AVContainer):
             aspect = ASPECT_RATIO[v >> 4]
         else:
             aspect = None
-        return (fps, aspect)
-
+        return fps, aspect
 
     def progressive(self, file):
         """
@@ -236,11 +246,11 @@ class MPEG(core.AVContainer):
             if pos == -1 or len(buffer) - pos < 5:
                 buffer = buffer[-10:]
                 continue
-            ext = (ord(buffer[pos + 4]) >> 4)
+            ext = (indexbytes(buffer, pos + 4) >> 4)
             if ext == 8:
                 pass
             elif ext == 1:
-                if (ord(buffer[pos + 5]) >> 3) & 1:
+                if (indexbytes(buffer, pos + 5) >> 3) & 1:
                     self._set('progressive', True)
                 else:
                     self._set('interlaced', True)
@@ -250,45 +260,43 @@ class MPEG(core.AVContainer):
             buffer = buffer[pos + 4:]
         return False
 
+    # #------------------------------------------------------------------------
+    # # bitrate()
+    # #
+    # # From the MPEG-2.2 spec:
+    # #
+    # #   bit_rate -- This is a 30-bit integer.  The lower 18 bits of the
+    # #   integer are in bit_rate_value and the upper 12 bits are in
+    # #   bit_rate_extension.  The 30-bit integer specifies the bitrate of the
+    # #   bitstream measured in units of 400 bits/second, rounded upwards.
+    # #   The value zero is forbidden.
+    # #
+    # # So ignoring all the variable bitrate stuff for now, this 30 bit integer
+    # # multiplied times 400 bits/sec should give the rate in bits/sec.
+    # #
+    # # TODO: Variable bitrates?  I need one that implements this.
+    # #
+    # # Continued from the MPEG-2.2 spec:
+    # #
+    # #    If the bitstream is a constant bitrate stream, the bitrate specified
+    # #   is the actual rate of operation of the VBV specified in annex C.  If
+    # #   the bitstream is a variable bitrate stream, the STD specifications in
+    # #   ISO/IEC 13818-1 supersede the VBV, and the bitrate specified here is
+    # #   used to dimension the transport stream STD (2.4.2 in ITU-T Rec. xxx |
+    # #   ISO/IEC 13818-1), or the program stream STD (2.4.5 in ITU-T Rec. xxx |
+    # #   ISO/IEC 13818-1).
+    # #
+    # #   If the bitstream is not a constant rate bitstream the vbv_delay
+    # #   field shall have the value FFFF in hexadecimal.
+    # #
+    # #   Given the value encoded in the bitrate field, the bitstream shall be
+    # #   generated so that the video encoding and the worst case multiplex
+    # #   jitter do not cause STD buffer overflow or underflow.
+    # #
+    # #
+    # # ------------------------------------------------------------------------
 
-    ##------------------------------------------------------------------------
-    ## bitrate()
-    ##
-    ## From the MPEG-2.2 spec:
-    ##
-    ##   bit_rate -- This is a 30-bit integer.  The lower 18 bits of the
-    ##   integer are in bit_rate_value and the upper 12 bits are in
-    ##   bit_rate_extension.  The 30-bit integer specifies the bitrate of the
-    ##   bitstream measured in units of 400 bits/second, rounded upwards.
-    ##   The value zero is forbidden.
-    ##
-    ## So ignoring all the variable bitrate stuff for now, this 30 bit integer
-    ## multiplied times 400 bits/sec should give the rate in bits/sec.
-    ##
-    ## TODO: Variable bitrates?  I need one that implements this.
-    ##
-    ## Continued from the MPEG-2.2 spec:
-    ##
-    ##   If the bitstream is a constant bitrate stream, the bitrate specified
-    ##   is the actual rate of operation of the VBV specified in annex C.  If
-    ##   the bitstream is a variable bitrate stream, the STD specifications in
-    ##   ISO/IEC 13818-1 supersede the VBV, and the bitrate specified here is
-    ##   used to dimension the transport stream STD (2.4.2 in ITU-T Rec. xxx |
-    ##   ISO/IEC 13818-1), or the program stream STD (2.4.5 in ITU-T Rec. xxx |
-    ##   ISO/IEC 13818-1).
-    ##
-    ##   If the bitstream is not a constant rate bitstream the vbv_delay
-    ##   field shall have the value FFFF in hexadecimal.
-    ##
-    ##   Given the value encoded in the bitrate field, the bitstream shall be
-    ##   generated so that the video encoding and the worst case multiplex
-    ##   jitter do not cause STD buffer overflow or underflow.
-    ##
-    ##
-    ##------------------------------------------------------------------------
-
-
-    ## Some parts in the code are based on mpgtx (mpgtx.sf.net)
+    # # Some parts in the code are based on mpgtx (mpgtx.sf.net)
 
     def bitrate(self, file):
         """
@@ -299,57 +307,56 @@ class MPEG(core.AVContainer):
         vrate = t << 2 | b >> 6
         return vrate * 400
 
-
-    def ReadSCRMpeg2(self, buffer):
+    @staticmethod
+    def ReadSCRMpeg2(buffer):
         """
         read SCR (timestamp) for MPEG2 at the buffer beginning (6 Bytes)
         """
         if len(buffer) < 6:
             return None
 
-        highbit = (ord(buffer[0]) & 0x20) >> 5
+        highbit = (byte2int(buffer) & 0x20) >> 5
 
-        low4Bytes = ((long(ord(buffer[0])) & 0x18) >> 3) << 30
-        low4Bytes |= (ord(buffer[0]) & 0x03) << 28
-        low4Bytes |= ord(buffer[1]) << 20
-        low4Bytes |= (ord(buffer[2]) & 0xF8) << 12
-        low4Bytes |= (ord(buffer[2]) & 0x03) << 13
-        low4Bytes |= ord(buffer[3]) << 5
-        low4Bytes |= (ord(buffer[4])) >> 3
+        low4Bytes = ((int(byte2int(buffer)) & 0x18) >> 3) << 30
+        low4Bytes |= (byte2int(buffer) & 0x03) << 28
+        low4Bytes |= indexbytes(buffer, 1) << 20
+        low4Bytes |= (indexbytes(buffer, 2) & 0xF8) << 12
+        low4Bytes |= (indexbytes(buffer, 2) & 0x03) << 13
+        low4Bytes |= indexbytes(buffer, 3) << 5
+        low4Bytes |= (indexbytes(buffer, 4)) >> 3
 
-        sys_clock_ref = (ord(buffer[4]) & 0x3) << 7
-        sys_clock_ref |= (ord(buffer[5]) >> 1)
+        sys_clock_ref = (indexbytes(buffer, 4) & 0x3) << 7
+        sys_clock_ref |= (indexbytes(buffer, 5) >> 1)
 
-        return (long(highbit * (1 << 16) * (1 << 16)) + low4Bytes) / 90000
+        return (int(highbit * (1 << 16) * (1 << 16)) + low4Bytes) / 90000
 
-
-    def ReadSCRMpeg1(self, buffer):
+    @staticmethod
+    def ReadSCRMpeg1(buffer):
         """
         read SCR (timestamp) for MPEG1 at the buffer beginning (5 Bytes)
         """
         if len(buffer) < 5:
             return None
 
-        highbit = (ord(buffer[0]) >> 3) & 0x01
+        highbit = (byte2int(buffer) >> 3) & 0x01
 
-        low4Bytes = ((long(ord(buffer[0])) >> 1) & 0x03) << 30
-        low4Bytes |= ord(buffer[1]) << 22;
-        low4Bytes |= (ord(buffer[2]) >> 1) << 15;
-        low4Bytes |= ord(buffer[3]) << 7;
-        low4Bytes |= ord(buffer[4]) >> 1;
+        low4Bytes = ((int(byte2int(buffer)) >> 1) & 0x03) << 30
+        low4Bytes |= indexbytes(buffer, 1) << 22
+        low4Bytes |= (indexbytes(buffer, 2) >> 1) << 15
+        low4Bytes |= indexbytes(buffer, 3) << 7
+        low4Bytes |= indexbytes(buffer, 4) >> 1
 
-        return (long(highbit) * (1 << 16) * (1 << 16) + low4Bytes) / 90000;
+        return (int(highbit) * (1 << 16) * (1 << 16) + low4Bytes) / 90000
 
-
-    def ReadPTS(self, buffer):
+    @staticmethod
+    def ReadPTS(buffer):
         """
         read PTS (PES timestamp) at the buffer beginning (5 Bytes)
         """
-        high = ((ord(buffer[0]) & 0xF) >> 1)
-        med = (ord(buffer[1]) << 7) + (ord(buffer[2]) >> 1)
-        low = (ord(buffer[3]) << 7) + (ord(buffer[4]) >> 1)
-        return ((long(high) << 30) + (med << 15) + low) / 90000
-
+        high = ((byte2int(buffer) & 0xF) >> 1)
+        med = (indexbytes(buffer, 1) << 7) + (indexbytes(buffer, 2) >> 1)
+        low = (indexbytes(buffer, 3) << 7) + (indexbytes(buffer, 4) >> 1)
+        return ((int(high) << 30) + (med << 15) + low) / 90000
 
     def ReadHeader(self, buffer, offset):
         """
@@ -359,22 +366,22 @@ class MPEG(core.AVContainer):
         if buffer[offset:offset + 3] != '\x00\x00\x01':
             return None
 
-        id = ord(buffer[offset + 3])
+        _id = indexbytes(buffer, offset + 3)
 
-        if id == PADDING_PKT:
-            return offset + (ord(buffer[offset + 4]) << 8) + \
-                   ord(buffer[offset + 5]) + 6
+        if _id == PADDING_PKT:
+            return offset + (indexbytes(buffer, offset + 4) << 8) + \
+                   indexbytes(buffer, offset + 5) + 6
 
-        if id == PACK_PKT:
-            if ord(buffer[offset + 4]) & 0xF0 == 0x20:
+        if _id == PACK_PKT:
+            if indexbytes(buffer, offset + 4) & 0xF0 == 0x20:
                 self.type = 'MPEG-1 Video'
                 self.get_time = self.ReadSCRMpeg1
                 self.mpeg_version = 1
                 return offset + 12
-            elif (ord(buffer[offset + 4]) & 0xC0) == 0x40:
+            elif (indexbytes(buffer, offset + 4) & 0xC0) == 0x40:
                 self.type = 'MPEG-2 Video'
                 self.get_time = self.ReadSCRMpeg2
-                return offset + (ord(buffer[offset + 13]) & 0x07) + 14
+                return offset + (indexbytes(buffer, offset + 13) & 0x07) + 14
             else:
                 # I have no idea what just happened, but for some DVB
                 # recordings done with mencoder this points to a
@@ -383,55 +390,54 @@ class MPEG(core.AVContainer):
                 # fixes it.
                 return 0
 
-        if 0xC0 <= id <= 0xDF:
+        if 0xC0 <= _id <= 0xDF:
             # code for audio stream
             for a in self.audio:
-                if a.id == id:
+                if a.id == _id:
                     break
             else:
                 self.audio.append(core.AudioStream())
-                self.audio[-1]._set('id', id)
+                self.audio[-1]._set('id', _id)
             return 0
 
-        if 0xE0 <= id <= 0xEF:
+        if 0xE0 <= _id <= 0xEF:
             # code for video stream
             for v in self.video:
-                if v.id == id:
+                if v.id == _id:
                     break
             else:
                 self.video.append(core.VideoStream())
-                self.video[-1]._set('id', id)
+                self.video[-1]._set('id', _id)
             return 0
 
-        if id == SEQ_HEAD:
+        if _id == SEQ_HEAD:
             # sequence header, remember that position for later use
             self.sequence_header_offset = offset
             return 0
 
-        if id in [PRIVATE_STREAM1, PRIVATE_STREAM2]:
+        if _id in [PRIVATE_STREAM1, PRIVATE_STREAM2]:
             # private stream. we don't know, but maybe we can guess later
-            add = ord(buffer[offset + 8])
-            # if (ord(buffer[offset+6]) & 4) or 1:
-            # id = ord(buffer[offset+10+add])
+            add = indexbytes(buffer, offset + 8)
+            # if (indexbytes(buffer, offset+6) & 4) or 1:
+            # id = indexbytes(buffer, offset+10+add)
             if buffer[offset + 11 + add:offset + 15 + add].find('\x0b\x77') != -1:
                 # AC3 stream
                 for a in self.audio:
-                    if a.id == id:
+                    if a.id == _id:
                         break
                 else:
                     self.audio.append(core.AudioStream())
-                    self.audio[-1]._set('id', id)
-                    self.audio[-1].codec = 0x2000 # AC3
+                    self.audio[-1]._set('id', _id)
+                    self.audio[-1].codec = 0x2000  # AC3
             return 0
 
-        if id == SYS_PKT:
+        if _id == SYS_PKT:
             return 0
 
-        if id == EXT_START:
+        if _id == EXT_START:
             return 0
 
         return 0
-
 
     # Normal MPEG (VCD, SVCD) ========================================
 
@@ -470,12 +476,12 @@ class MPEG(core.AVContainer):
         # store first timestamp
         self.start = self.get_time(buffer[offset + 4:])
         while len(buffer) > offset + 1000 and \
-                  buffer[offset:offset + 3] == '\x00\x00\x01':
+                buffer[offset:offset + 3] == '\x00\x00\x01':
             # read the mpeg header
             new_offset = self.ReadHeader(buffer, offset)
 
             # header scanning detected error, this is no mpeg
-            if new_offset == None:
+            if new_offset is None:
                 return 0
 
             if new_offset:
@@ -484,7 +490,7 @@ class MPEG(core.AVContainer):
 
                 # skip padding 0 before a new header
                 while len(buffer) > offset + 10 and \
-                          not ord(buffer[offset + 2]):
+                        not indexbytes(buffer, offset + 2):
                     offset += 1
 
             else:
@@ -501,8 +507,8 @@ class MPEG(core.AVContainer):
         self.length = self.get_length()
         return 1
 
-
-    def _find_timer_(self, buffer):
+    @staticmethod
+    def _find_timer_(buffer):
         """
         Return position of timer in buffer or None if not found.
         This function is valid for 'normal' mpeg files
@@ -512,10 +518,7 @@ class MPEG(core.AVContainer):
             return None
         return pos + 4
 
-
-
     # PES ============================================================
-
 
     def ReadPESHeader(self, offset, buffer, id=0):
         """
@@ -529,13 +532,13 @@ class MPEG(core.AVContainer):
         if not buffer[0:3] == '\x00\x00\x01':
             return 0, None
 
-        packet_length = (ord(buffer[4]) << 8) + ord(buffer[5]) + 6
-        align = ord(buffer[6]) & 4
-        header_length = ord(buffer[8])
+        packet_length = (indexbytes(buffer, 4) << 8) + indexbytes(buffer, 5) + 6
+        align = indexbytes(buffer, 6) & 4
+        header_length = indexbytes(buffer, 8)
 
         # PES ID (starting with 001)
-        if ord(buffer[3]) & 0xE0 == 0xC0:
-            id = id or ord(buffer[3]) & 0x1F
+        if indexbytes(buffer, 3) & 0xE0 == 0xC0:
+            id = id or indexbytes(buffer, 3) & 0x1F
             for a in self.audio:
                 if a.id == id:
                     break
@@ -543,8 +546,8 @@ class MPEG(core.AVContainer):
                 self.audio.append(core.AudioStream())
                 self.audio[-1]._set('id', id)
 
-        elif ord(buffer[3]) & 0xF0 == 0xE0:
-            id = id or ord(buffer[3]) & 0xF
+        elif indexbytes(buffer, 3) & 0xF0 == 0xE0:
+            id = id or indexbytes(buffer, 3) & 0xF
             for v in self.video:
                 if v.id == id:
                     break
@@ -554,14 +557,14 @@ class MPEG(core.AVContainer):
 
             # new mpeg starting
             if buffer[header_length + 9:header_length + 13] == \
-                   '\x00\x00\x01\xB3' and not self.sequence_header_offset:
+                    '\x00\x00\x01\xB3' and not self.sequence_header_offset:
                 # yes, remember offset for later use
                 self.sequence_header_offset = offset + header_length + 9
-        elif ord(buffer[3]) == 189 or ord(buffer[3]) == 191:
+        elif indexbytes(buffer, 3) == 189 or indexbytes(buffer, 3) == 191:
             # private stream. we don't know, but maybe we can guess later
-            id = id or ord(buffer[3]) & 0xF
+            id = id or indexbytes(buffer, 3) & 0xF
             if align and \
-                   buffer[header_length + 9:header_length + 11] == '\x0b\x77':
+                    buffer[header_length + 9:header_length + 11] == '\x0b\x77':
                 # AC3 stream
                 for a in self.audio:
                     if a.id == id:
@@ -569,28 +572,26 @@ class MPEG(core.AVContainer):
                 else:
                     self.audio.append(core.AudioStream())
                     self.audio[-1]._set('id', id)
-                    self.audio[-1].codec = 0x2000 # AC3
+                    self.audio[-1].codec = 0x2000  # AC3
 
         else:
             # unknown content
             pass
 
-        ptsdts = ord(buffer[7]) >> 6
+        ptsdts = indexbytes(buffer, 7) >> 6
 
-        if ptsdts and ptsdts == ord(buffer[9]) >> 4:
-            if ord(buffer[9]) >> 4 != ptsdts:
+        if ptsdts and ptsdts == indexbytes(buffer, 9) >> 4:
+            if indexbytes(buffer, 9) >> 4 != ptsdts:
                 log.warning(u'WARNING: bad PTS/DTS, please contact us')
                 return packet_length, None
 
             # timestamp = self.ReadPTS(buffer[9:14])
-            high = ((ord(buffer[9]) & 0xF) >> 1)
-            med = (ord(buffer[10]) << 7) + (ord(buffer[11]) >> 1)
-            low = (ord(buffer[12]) << 7) + (ord(buffer[13]) >> 1)
+            high = ((indexbytes(buffer, 9) & 0xF) >> 1)
+            med = (indexbytes(buffer, 10) << 7) + (indexbytes(buffer, 11) >> 1)
+            low = (indexbytes(buffer, 12) << 7) + (indexbytes(buffer, 13) >> 1)
             return packet_length, 9
 
         return packet_length, None
-
-
 
     def isPES(self, file):
         log.info(u'trying mpeg-pes scan')
@@ -609,7 +610,7 @@ class MPEG(core.AVContainer):
             pos, timestamp = self.ReadPESHeader(offset, buffer[offset:])
             if not pos:
                 return 0
-            if timestamp != None and not hasattr(self, 'start'):
+            if timestamp is not None and not hasattr(self, 'start'):
                 self.get_time = self.ReadPTS
                 bpos = buffer[offset + timestamp:offset + timestamp + 5]
                 self.start = self.get_time(bpos)
@@ -618,7 +619,7 @@ class MPEG(core.AVContainer):
                 break
 
             offset += pos
-            if offset + 1000 < len(buffer) and len(buffer) < 1000000 or 1:
+            if offset + 1000 < len(buffer) < 1000000 or 1:
                 # looks like a pes, read more
                 buffer += file.read(10000)
 
@@ -630,14 +631,13 @@ class MPEG(core.AVContainer):
 
         # fill in values for support functions:
         self.__seek_size__ = 10000000  # 10 MB
-        self.__sample_size__ = 500000    # 500 k scanning
+        self.__sample_size__ = 500000  # 500 k scanning
         self.__search__ = self._find_timer_PES_
         self.filename = file.name
 
         # get length of the file
         self.length = self.get_length()
         return 1
-
 
     def _find_timer_PES_(self, buffer):
         """
@@ -653,7 +653,7 @@ class MPEG(core.AVContainer):
         ackcount = 0
         while offset + 1000 < len(buffer):
             pos, timestamp = self.ReadPESHeader(offset, buffer[offset:])
-            if timestamp != None and retpos == -1:
+            if timestamp is not None and retpos == -1:
                 retpos = offset + timestamp
             if pos == 0:
                 # Oops, that was a mpeg header, no PES header
@@ -668,7 +668,6 @@ class MPEG(core.AVContainer):
                 # looks ok to me
                 return retpos
         return None
-
 
     # Elementary Stream ===============================================
 
@@ -696,7 +695,6 @@ class MPEG(core.AVContainer):
         self.video.append(video)
         return True
 
-
     # Transport Stream ===============================================
 
     def isTS(self, file):
@@ -706,7 +704,7 @@ class MPEG(core.AVContainer):
         c = 0
 
         while c + TS_PACKET_LENGTH < len(buffer):
-            if ord(buffer[c]) == ord(buffer[c + TS_PACKET_LENGTH]) == TS_SYNC:
+            if indexbytes(buffer, c) == indexbytes(buffer, c + TS_PACKET_LENGTH) == TS_SYNC:
                 break
             c += 1
         else:
@@ -716,7 +714,7 @@ class MPEG(core.AVContainer):
         self.type = 'MPEG-TS'
 
         while c + TS_PACKET_LENGTH < len(buffer):
-            start = ord(buffer[c + 1]) & 0x40
+            start = indexbytes(buffer, c + 1) & 0x40
             # maybe load more into the buffer
             if c + 2 * TS_PACKET_LENGTH > len(buffer) and c < 500000:
                 buffer += file.read(10000)
@@ -726,23 +724,23 @@ class MPEG(core.AVContainer):
                 c += TS_PACKET_LENGTH
                 continue
 
-            tsid = ((ord(buffer[c + 1]) & 0x3F) << 8) + ord(buffer[c + 2])
-            adapt = (ord(buffer[c + 3]) & 0x30) >> 4
+            tsid = ((indexbytes(buffer, c + 1) & 0x3F) << 8) + indexbytes(buffer, c + 2)
+            adapt = (indexbytes(buffer, c + 3) & 0x30) >> 4
 
             offset = 4
             if adapt & 0x02:
                 # meta info present, skip it for now
-                adapt_len = ord(buffer[c + offset])
+                adapt_len = indexbytes(buffer, c + offset)
                 offset += adapt_len + 1
 
-            if not ord(buffer[c + 1]) & 0x40:
+            if not indexbytes(buffer, c + 1) & 0x40:
                 # no new pes or psi in stream payload starting
                 pass
             elif adapt & 0x01:
                 # PES
                 timestamp = self.ReadPESHeader(c + offset, buffer[c + offset:],
                                                tsid)[1]
-                if timestamp != None:
+                if timestamp is not None:
                     if not hasattr(self, 'start'):
                         self.get_time = self.ReadPTS
                         timestamp = c + offset + timestamp
@@ -751,7 +749,7 @@ class MPEG(core.AVContainer):
                         timestamp = c + offset + timestamp
                         start = self.get_time(buffer[timestamp:timestamp + 5])
                         if start is not None and self.start is not None and \
-                               abs(start - self.start) < 10:
+                                abs(start - self.start) < 10:
                             # looks ok
                             self.audio_ok = True
                         else:
@@ -760,18 +758,17 @@ class MPEG(core.AVContainer):
                             log.warning(u'Timestamp error, correcting')
 
             if hasattr(self, 'start') and self.start and \
-                   self.sequence_header_offset and self.video and self.audio:
+                    self.sequence_header_offset and self.video and self.audio:
                 break
 
             c += TS_PACKET_LENGTH
-
 
         if not self.sequence_header_offset:
             return 0
 
         # fill in values for support functions:
         self.__seek_size__ = 10000000  # 10 MB
-        self.__sample_size__ = 100000    # 100 k scanning
+        self.__sample_size__ = 100000  # 100 k scanning
         self.__search__ = self._find_timer_TS_
         self.filename = file.name
 
@@ -779,30 +776,29 @@ class MPEG(core.AVContainer):
         self.length = self.get_length()
         return 1
 
-
     def _find_timer_TS_(self, buffer):
         c = 0
 
         while c + TS_PACKET_LENGTH < len(buffer):
-            if ord(buffer[c]) == ord(buffer[c + TS_PACKET_LENGTH]) == TS_SYNC:
+            if indexbytes(buffer, c) == indexbytes(buffer, c + TS_PACKET_LENGTH) == TS_SYNC:
                 break
             c += 1
         else:
             return None
 
         while c + TS_PACKET_LENGTH < len(buffer):
-            start = ord(buffer[c + 1]) & 0x40
+            start = indexbytes(buffer, c + 1) & 0x40
             if not start:
                 c += TS_PACKET_LENGTH
                 continue
 
-            tsid = ((ord(buffer[c + 1]) & 0x3F) << 8) + ord(buffer[c + 2])
-            adapt = (ord(buffer[c + 3]) & 0x30) >> 4
+            tsid = ((indexbytes(buffer, c + 1) & 0x3F) << 8) + indexbytes(buffer, c + 2)
+            adapt = (indexbytes(buffer, c + 3) & 0x30) >> 4
 
             offset = 4
             if adapt & 0x02:
                 # meta info present, skip it for now
-                offset += ord(buffer[c + offset]) + 1
+                offset += indexbytes(buffer, c + offset) + 1
 
             if adapt & 0x01:
                 timestamp = self.ReadPESHeader(c + offset, buffer[c + offset:], tsid)[1]
@@ -813,8 +809,6 @@ class MPEG(core.AVContainer):
                 return c + offset + timestamp
             c += TS_PACKET_LENGTH
         return None
-
-
 
     # Support functions ==============================================
 
@@ -836,7 +830,7 @@ class MPEG(core.AVContainer):
         end = None
         while 1:
             pos = self.__search__(buffer)
-            if pos == None:
+            if pos is None:
                 break
             end = self.get_time(buffer[pos:]) or end
             buffer = buffer[pos + 100:]
@@ -844,18 +838,16 @@ class MPEG(core.AVContainer):
         file.close()
         return end
 
-
     def get_length(self):
         """
         get the length in seconds, return -1 if this is not possible
         """
         end = self.get_endpos()
-        if end == None or self.start == None:
+        if end is None or self.start is None:
             return None
         if self.start > end:
-            return int(((long(1) << 33) - 1) / 90000) - self.start + end
+            return int(((int(1) << 33) - 1) / 90000) - self.start + end
         return end - self.start
-
 
     def seek(self, end_time):
         """
@@ -874,7 +866,7 @@ class MPEG(core.AVContainer):
             if len(buffer) < 10000:
                 break
             pos = self.__search__(buffer)
-            if pos != None:
+            if pos is not None:
                 # found something
                 nt = self.get_time(buffer[pos:])
                 if nt is not None and nt >= end_time:
@@ -885,7 +877,6 @@ class MPEG(core.AVContainer):
 
         file.close()
         return seek_to
-
 
     def __scan__(self):
         """
@@ -902,7 +893,7 @@ class MPEG(core.AVContainer):
             if len(buffer) < 10000:
                 break
             pos = self.__search__(buffer)
-            if pos == None:
+            if pos is None:
                 continue
             log.debug(u'buffer position: %r' % self.get_time(buffer[pos:]))
 

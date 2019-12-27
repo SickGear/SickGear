@@ -78,7 +78,7 @@
 					<label for="statusSelect">
 						<span class="component-title">Initial episode status</span>
 						<span class="component-desc">
-							<select name="defaultStatus" id="statusSelect" class="form-control form-control-inline input-sm">
+							<select name="default_status" id="statusSelect" class="form-control form-control-inline input-sm">
 #for $curStatus in [$SKIPPED, $WANTED, $ARCHIVED, $IGNORED]:
 								<option value="$curStatus"#if $sg_var('STATUS_DEFAULT', SKIPPED) == $curStatus then $selected else ''#>$statusStrings[$curStatus].replace('SD DVD', 'SD DVD/BR/BD')</option>
 #end for
@@ -134,7 +134,7 @@
 		</div>
 
 #if $enable_anime_options
-#import sickbeard.blackandwhitelist
+#import sickbeard.anime
 #include $os.path.join($sg_str('PROG_DIR'), 'gui/slick/interfaces/default/inc_blackwhitelist.tmpl')
 #else
 		<input type="hidden" name="anime" id="anime" value="0" />

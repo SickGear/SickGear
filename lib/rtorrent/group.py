@@ -70,7 +70,7 @@ class Group(object):
     def _get_method(self, *choices):
         try:
             return filter(lambda method: self._rt_obj.method_exists(method), choices)[0]
-        except(Exception, BaseException):
+        except (BaseException, Exception):
             pass
 
     def set_command(self, *methods):

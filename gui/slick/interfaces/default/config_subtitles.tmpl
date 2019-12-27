@@ -1,6 +1,7 @@
 #import sickbeard
 #from sickbeard import subtitles
 #from sickbeard.helpers import anon_url
+<% def sg_var(varname, default=False): return getattr(sickbeard, varname, default) %>#slurp#
 ##
 #set global $title = 'Config - Subtitles'
 #set global $header = 'Subtitles'
@@ -18,7 +19,7 @@
 	\$(document).ready(function() {
 		\$('#subtitles_languages').tokenInput(
 			[
-				<%=',\r\n'.join('{id: "' + lang[2] + '", name: "' + lang[3] + '"}' for lang in subtitles.subtitleLanguageFilter()) %>
+				<%=',\r\n'.join('{id: "' + lang[2] + '", name: "' + lang[3] + '"}' for lang in subtitles.subtitle_language_filter()) %>
 			],
 			{
 				method: 'POST',
@@ -27,8 +28,8 @@
 				prePopulate:
 					[
 						<%=
-						    ',\r\n'.join('{id: "' + lang + '", name: "' + subtitles.getLanguageName(lang) + '"}' for lang in sickbeard.SUBTITLES_LANGUAGES) if sickbeard.SUBTITLES_LANGUAGES != '' else ''
-		          		%>
+							',\r\n'.join('{id: "' + lang + '", name: "' + subtitles.get_language_name(lang) + '"}' for lang in sickbeard.SUBTITLES_LANGUAGES) if sickbeard.SUBTITLES_LANGUAGES != '' else ''
+						%>
 					],
 					resultsFormatter: function(item){ return '<li><img src="$sbRoot/images/flags/' + item['id'] + '.png"> ' + item[this.propertyToSearch] + '</li>' },
 					tokenFormatter: function(item) { return '<li><img src="$sbRoot/images/flags/' + item['id'] + '.png"> <p>' + item[this.propertyToSearch] + '</p></li>' },
@@ -45,10 +46,12 @@
 	<h1 class="title">$title</h1>
 #end if
 
+##
+#set $html_checked = ' checked="checked"'
 <div id="config">
 	<div id="config-content">
 
-		<form id="configForm" action="saveSubtitles" method="post">
+		<form id="configForm" action="save_subtitles" method="post">
 			$xsrf_form_html
 
 			<div id="config-components">
@@ -120,26 +123,44 @@
 						<h3>Subtitle Plugins</h3>
 						<p>Check off and drag the plugins into the order you want them to be used.</p>
 						<p class="note">At least one plugin is required.</p>
-						<p class="note"><span style="font-size:16px">*</span> Web-scraping plugin</p>
+						##<p class="note"><span style="font-size:16px">*</span> Web-scraping plugin</p>
 					</div>
 
 					<fieldset class="component-group-list" style="margin-left:50px;margin-top:36px">
 						<ul id="service_order_list">
-#for $curService in $sickbeard.subtitles.sortedServiceList():
+#for $curService in $sickbeard.subtitles.sorted_service_list():
     #set $curName = $curService.id
 							<li class="ui-state-default" id="$curName">
-								<input type="checkbox" id="enable_$curName" class="service_enabler"#if $curService.enabled# checked="checked"#end if#>
+								<span class="pull-left">
+									<input type="checkbox" id="enable_$curName" class="service_enabler"#if $curService.enabled# checked="checked"#end if#>
     #set $provider_url = $curService.url
-								<a href="<%= anon_url(provider_url) %>" class="imgLink" target="_new">
-									<img src="$sbRoot/images/subtitles/$curService.image" alt="$curService.name" title="$curService.name" width="16" height="16" style="vertical-align:middle">
-								</a>
-								<span style="vertical-align:middle">$curService.name.capitalize()</span>
-								#if not $curService.api_based#*#end if#
+									<a href="<%= anon_url(provider_url) %>" class="imgLink" target="_new">
+										<img src="$sbRoot/images/subtitles/$curService.image" alt="$curService.name" title="$curService.name" width="16" height="16" style="vertical-align:middle">
+									</a>
+								</span>
+								<span style="display:inline-block;margin-left:6px">
+									<span class="pull-left" style="vertical-align:middle">$curService.name.capitalize()</span>
+									##if not $curService.api_based#*#end if#
+    #if 'open' == $curService.name[0:4]
+									<span class="pull-left" style="clear:left;margin:3px 0">
+										Enforce media hash match
+										<input name="os_hash" type="checkbox" style="margin:0 0 0 3px" class="form-control-inline"#echo ('', $html_checked)[$sg_var('SUBTITLES_OS_HASH', True)]#>
+									</span>
+									<span class="pull-left" style="clear:left">
+										Username
+										<br>Password
+									</span>
+									<span class="pull-right" style="margin-left:6px">
+										<input name="os_user" value="$sickbeard.SUBTITLES_SERVICES_AUTH[0][0]" type="text" placeholder="optional" class="form-control form-control-inline input-sm">
+										<br><input name="os_pass" value="$sickbeard.SUBTITLES_SERVICES_AUTH[0][1]" type="text" placeholder="optional" class="form-control form-control-inline input-sm">
+									</span>
+    #end if
+								</span>
 								<span class="ui-icon ui-icon-arrowthick-2-n-s pull-right" style="vertical-align:middle"></span>
 							</li>
 #end for
 						</ul>
-						<input type="hidden" name="service_order" id="service_order" value="<%=" ".join([x.get('id')+':'+str(int(x.get('enabled'))) for x in sickbeard.subtitles.sortedServiceList()])%>">
+						<input type="hidden" name="service_order" id="service_order" value="<%=" ".join([x.get('id')+':'+str(int(x.get('enabled'))) for x in sickbeard.subtitles.sorted_service_list()])%>">
 
 						<br /><input type="submit" class="btn config_submitter" value="Save Changes"><br />
 					</fieldset>

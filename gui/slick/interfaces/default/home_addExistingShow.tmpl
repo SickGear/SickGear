@@ -37,15 +37,15 @@ var config = { sortArticle: #echo ['!1','!0'][$sg_var('SORT_ARTICLE')]# }
 <image class="preload-image" style="position:absolute;top:-999px" src="$sbRoot/images/loading32#echo ('', '-dark')['dark' == $sg_str('THEME_NAME', 'dark')]#.gif" width="32" height="32" border="0">
 
 <h3>Existing show folders</h3>
-<form id="addShowForm" method="post" action="$sbRoot/home/addShows/addNewShow" accept-charset="utf-8">
+<form id="addShowForm" method="post" action="$sbRoot/add-shows/add-new-show" accept-charset="utf-8">
 	$xsrf_form_html
 
 	<span#if $kwargs.get('hash_dir', None)# class="hide"#end if#>
 		<p>Tip: shows are added quicker when usable show nfo and xml metadata is found</p>
 
 		<p style="margin-top:15px">
-			<input type="checkbox" id="promptForSettings" name="promptForSettings" style="vertical-align: top;" />
-			<label for="promptForSettings">Enable to change the following options per show, otherwise use these options with all shows added below</label>
+			<input type="checkbox" id="prompt-for-settings" name="prompt_for_settings" style="vertical-align: top;" />
+			<label for="prompt-for-settings">Enable to change the following options per show, otherwise use these options with all shows added below</label>
 		</p>
 
 		<div id="tabs">

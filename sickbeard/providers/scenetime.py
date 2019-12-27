@@ -19,10 +19,12 @@ import re
 import traceback
 
 from . import generic
-from sickbeard import logger
-from sickbeard.bs4_parser import BS4Parser
-from sickbeard.helpers import tryInt, anon_url
-from lib.unidecode import unidecode
+from .. import logger
+from ..helpers import anon_url, try_int
+from bs4_parser import BS4Parser
+
+from _23 import unidecode
+from six import iteritems
 
 
 class SceneTimeProvider(generic.TorrentProvider):
@@ -30,7 +32,7 @@ class SceneTimeProvider(generic.TorrentProvider):
     def __init__(self):
         generic.TorrentProvider.__init__(self, 'SceneTime', cache_update_freq=15)
 
-        self.url_home = ['https://%s.scenetime.com/' % u for u in 'www', 'uk']
+        self.url_home = ['https://%s.scenetime.com/' % u for u in ('www', 'uk')]
 
         self.url_vars = {'login': 'support.php', 'search': 'browse.php?cata=yes&%s&search=%s%s',
                          'get': 'download.php/%s.torrent'}
@@ -47,7 +49,7 @@ class SceneTimeProvider(generic.TorrentProvider):
         return super(SceneTimeProvider, self)._authorised(
             logged_in=(lambda y='': all(
                 ['staff-support' in y, self.has_all_cookies()] +
-                [(self.session.cookies.get(x) or 'sg!no!pw') in self.digest for x in 'uid', 'pass'])),
+                [(self.session.cookies.get(x) or 'sg!no!pw') in self.digest for x in ('uid', 'pass')])),
             failed_msg=(lambda y=None: u'Invalid cookie details for %s. Check settings'))
 
     @staticmethod
@@ -62,13 +64,13 @@ class SceneTimeProvider(generic.TorrentProvider):
 
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
-        for mode in search_params.keys():
-            rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {
+        for mode in search_params:
+            rc = dict([(k, re.compile('(?i)' + v)) for (k, v) in iteritems({
                 'info': 'detail', 'get': r'.*id=(\d+).*', 'fl': r'\[freeleech\]',
-                'cats': 'cat=(?:%s)' % self._categories_string(mode=mode, template='', delimiter='|')}.items())
+                'cats': 'cat=(?:%s)' % self._categories_string(mode=mode, template='', delimiter='|')})])
 
             for search_string in search_params[mode]:
-                search_string = isinstance(search_string, unicode) and unidecode(search_string) or search_string
+                search_string = unidecode(search_string)
 
                 search_url = self.urls['search'] % (self._categories_string(),
                                                     '+'.join(search_string.replace('.', ' ').split()),
@@ -96,8 +98,8 @@ class SceneTimeProvider(generic.TorrentProvider):
                                 continue
                             try:
                                 head = head if None is not head else self._header_row(tr)
-                                seeders, leechers, size = [tryInt(n, n) for n in [
-                                    cells[head[x]].get_text().strip() for x in 'seed', 'leech', 'size']]
+                                seeders, leechers, size = [try_int(n, n) for n in [
+                                    cells[head[x]].get_text().strip() for x in ('seed', 'leech', 'size')]]
                                 if None is tr.find('a', href=rc['cats']) or self._reject_item(
                                         seeders, leechers,
                                         self.freeleech and (None is rc['fl'].search(cells[1].get_text()))):

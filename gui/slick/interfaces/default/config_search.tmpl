@@ -4,7 +4,7 @@
 <% def sg_var(varname, default=False): return getattr(sickbeard, varname, default) %>#slurp#
 <% def sg_str(varname, default=''): return getattr(sickbeard, varname, default) %>#slurp#
 ##
-#set global $title = 'Config - Media Search'
+#set global $title = 'Config - Search Tasks'
 #set global $header = 'Search Settings'
 #set global $sbPath = '../..'
 #set global $topmenu = 'config'
@@ -31,12 +31,12 @@
 <div id="config">
 	<div id="config-content" class="linefix">
 
-		<form id="configForm" action="saveSearch" method="post">
+		<form id="configForm" action="save_search" method="post">
 			$xsrf_form_html
 
 			<div id="config-components">
 				<ul>
-					<li><a href="#core-component-group1">Media Search</a></li>
+					<li><a href="#core-component-group1">Search Tasks</a></li>
 					<li><a href="#core-component-group2">NZB Results</a></li>
 					<li><a href="#core-component-group3">Torrent Results</a></li>
 				</ul>
@@ -45,7 +45,7 @@
 				<div id="core-component-group1" class="component-group">
 
 					<div class="component-group-desc">
-						<h3>Media Search</h3>
+						<h3>Search Tasks</h3>
 						<p>How to manage searching with <a href="$sbRoot/config/providers/">providers</a>.</p>
 					</div>
 
@@ -150,7 +150,7 @@
 								<span class="component-desc">
 #set $shows = []
 #for $show in $using_rls_ignore_words
-    #set void = $shows.append('<a href="%s/home/editShow?show=%s" style="vertical-align:middle">%s</a>' % ($sbRoot, $show[0], $show[1]))
+    #set void = $shows.append('<a href="%s/home/edit-show?tvid_prodid=%s" style="vertical-align:middle">%s</a>' % ($sbRoot, $show[0], $show[1]))
 #end for
 #if len($using_rls_ignore_words)
 									<p style="line-height:1.2em;margin-top:6px">#echo ', '.join($shows)#</p>
@@ -172,7 +172,7 @@
 								<span class="component-desc">
 #set $shows = []
 #for $show in $using_rls_require_words
-    #set void = $shows.append('<a href="%s/home/editShow?show=%s" style="vertical-align:middle">%s</a>' % ($sbRoot, $show[0], $show[1]))
+    #set void = $shows.append('<a href="%s/home/edit-show?tvid_prodid=%s" style="vertical-align:middle">%s</a>' % ($sbRoot, $show[0], $show[1]))
 #end for
 #if len($using_rls_require_words)
 									<p style="line-height:1.2em;margin-top:6px">#echo ', '.join($shows)#</p>

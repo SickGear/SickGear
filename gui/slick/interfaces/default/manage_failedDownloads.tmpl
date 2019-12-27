@@ -47,7 +47,7 @@
 			</tr>
 		</thead>
 
-#set $oldest = $len($failedResults)
+#set $oldest = $len($failed_results)
 		<tfoot>
 			<tr>
 				<td colspan="4" class="text-left">
@@ -61,7 +61,7 @@
 
 		<tbody>
 #set $order = $oldest
-#for $hItem in $failedResults[::-1]
+#for $hItem in $failed_results[::-1]
     #set $provider = $providers.getProviderClass($generic.GenericProvider.make_id($hItem['provider']))
     #set $provider_name = None is not $provider and $provider.name or 'missing provider'
     #set $provider_image = None is not $provider and $provider.image_name() or 'missing.png'

@@ -18,6 +18,7 @@
 from .language import Language
 from .utils import to_unicode
 import os.path
+from _23 import decode_str
 
 
 __all__ = ['Subtitle', 'EmbeddedSubtitle', 'ExternalSubtitle', 'ResultSubtitle', 'get_subtitle_path']
@@ -51,7 +52,7 @@ class Subtitle(object):
         return to_unicode(self.path)
 
     def __str__(self):
-        return unicode(self).encode('utf-8')
+        return decode_str(self)
 
     def __repr__(self):
         return '%s(%s, %s)' % (self.__class__.__name__, self, self.language)

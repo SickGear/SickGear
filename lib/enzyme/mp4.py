@@ -22,14 +22,14 @@ __all__ = ['Parser']
 
 import zlib
 import logging
-import StringIO
 import struct
-from exceptions import ParseError
-import core
+from .exceptions import ParseError
+from . import core
+from six import byte2int, indexbytes, StringIO
+from _23 import decode_str
 
 # get logging object
 log = logging.getLogger(__name__)
-
 
 # http://developer.apple.com/documentation/QuickTime/QTFF/index.html
 # http://developer.apple.com/documentation/QuickTime/QTFF/QTFFChap4/\
@@ -151,6 +151,7 @@ QTLANGUAGES = {
     138: "JavaneseRom",
 }
 
+
 class MPEG4(core.AVContainer):
     """
     Parser for the MP4 container format. This format is mostly
@@ -167,12 +168,12 @@ class MPEG4(core.AVContainer):
         self.type = 'Quicktime Video'
         h = file.read(8)
         try:
-            (size, type) = struct.unpack('>I4s', h)
+            (size, t) = struct.unpack('>I4s', h)
         except struct.error:
             # EOF.
             raise ParseError()
 
-        if type == 'ftyp':
+        if t == 'ftyp':
             # file type information
             if size >= 12:
                 # this should always happen
@@ -183,16 +184,16 @@ class MPEG4(core.AVContainer):
                 size -= 4
             file.seek(size - 8, 1)
             h = file.read(8)
-            (size, type) = struct.unpack('>I4s', h)
+            (size, t) = struct.unpack('>I4s', h)
 
-        while type in ['mdat', 'skip']:
+        while t in ['mdat', 'skip']:
             # movie data at the beginning, skip
             file.seek(size - 8, 1)
             h = file.read(8)
-            (size, type) = struct.unpack('>I4s', h)
+            (size, t) = struct.unpack('>I4s', h)
 
-        if not type in ['moov', 'wide', 'free']:
-            log.debug(u'invalid header: %r' % type)
+        if t not in ['moov', 'wide', 'free']:
+            log.debug(u'invalid header: %r' % t)
             raise ParseError()
 
         # Extended size
@@ -208,14 +209,13 @@ class MPEG4(core.AVContainer):
         if self._references:
             self._set('references', self._references)
 
-
     def _readatom(self, file):
         s = file.read(8)
         if len(s) < 8:
             return 0
 
         atomsize, atomtype = struct.unpack('>I4s', s)
-        if not str(atomtype).decode('latin1').isalnum():
+        if not decode_str(atomtype, 'latin1').isalnum():
             # stop at nonsense data
             return 0
 
@@ -229,26 +229,26 @@ class MPEG4(core.AVContainer):
             atomdata = file.read(atomsize - 8)
             while pos < atomsize - 12:
                 (datasize, datatype) = struct.unpack('>I4s', atomdata[pos:pos + 8])
-                if ord(datatype[0]) == 169:
+                if byte2int(datatype) == 169:
                     # i18n Metadata...
                     mypos = 8 + pos
                     while mypos + 4 < datasize + pos:
                         # first 4 Bytes are i18n header
                         (tlen, lang) = struct.unpack('>HH', atomdata[mypos:mypos + 4])
                         i18ntabl[lang] = i18ntabl.get(lang, {})
-                        l = atomdata[mypos + 4:mypos + tlen + 4]
-                        i18ntabl[lang][datatype[1:]] = l
+                        length = atomdata[mypos + 4:mypos + tlen + 4]
+                        i18ntabl[lang][datatype[1:]] = length
                         mypos += tlen + 4
                 elif datatype == 'WLOC':
                     # Drop Window Location
                     pass
                 else:
-                    if ord(atomdata[pos + 8:pos + datasize][0]) > 1:
+                    if byte2int(atomdata[pos + 8:pos + datasize]) > 1:
                         tabl[datatype] = atomdata[pos + 8:pos + datasize]
                 pos += datasize
             if len(i18ntabl.keys()) > 0:
                 for k in i18ntabl.keys():
-                    if QTLANGUAGES.has_key(k) and QTLANGUAGES[k] == 'en':
+                    if k in QTLANGUAGES and QTLANGUAGES[k] == 'en':
                         self._appendtable('QTUDTA', i18ntabl[k])
                         self._appendtable('QTUDTA', tabl)
             else:
@@ -274,7 +274,7 @@ class MPEG4(core.AVContainer):
                         # XXX 2082844800 is the difference between Unix and
                         # XXX Apple time. FIXME to work on Apple, too
                         self.timestamp = int(tkhd[1]) - 2082844800
-                    except Exception, e:
+                    except (BaseException, Exception):
                         log.exception(u'There was trouble extracting timestamp')
 
                 elif datatype == 'mdia':
@@ -287,7 +287,7 @@ class MPEG4(core.AVContainer):
                         if mdia[1] == 'mdhd':
                             # Parse based on version of mdhd header.  See
                             # http://wiki.multimedia.cx/index.php?title=QuickTime_container#mdhd
-                            ver = ord(atomdata[pos + 8])
+                            ver = indexbytes(atomdata, pos + 8)
                             if ver == 0:
                                 mdhd = struct.unpack('>IIIIIhh', atomdata[pos + 8:pos + 8 + 24])
                             elif ver == 1:
@@ -305,7 +305,9 @@ class MPEG4(core.AVContainer):
                                 elif mdhd[5] >= 0x400:
                                     # language code detected as explained in:
                                     # https://developer.apple.com/library/mac/documentation/QuickTime/qtff/QTFFChap4/qtff4.html#//apple_ref/doc/uid/TP40000939-CH206-35103
-                                    language = bytearray([ ((mdhd[5] & 0x7C00) >> 10) + 0x60, ((mdhd[5] & 0x3E0) >> 5) + 0x60, (mdhd[5] & 0x1F) + 0x60])
+                                    language = bytearray(
+                                        [((mdhd[5] & 0x7C00) >> 10) + 0x60, ((mdhd[5] & 0x3E0) >> 5) + 0x60,
+                                         (mdhd[5] & 0x1F) + 0x60])
                                     trackinfo['language'] = str(language)
                                 # mdhd[6] == quality
                                 self.length = max(self.length, mdhd[4] / mdhd[3])
@@ -364,11 +366,9 @@ class MPEG4(core.AVContainer):
                     log.debug(u'udta: %r' % struct.unpack('>I4s', atomdata[:8]))
                 else:
                     if datatype == 'edts':
-                        log.debug(u'--> %r [%d] (edit list)' % \
-                                  (datatype, datasize))
+                        log.debug(u'--> %r [%d] (edit list)' % (datatype, datasize))
                     else:
-                        log.debug(u'--> %r [%d] (unknown)' % \
-                                  (datatype, datasize))
+                        log.debug(u'--> %r [%d] (unknown)' % (datatype, datasize))
                 pos += datasize
 
             info = None
@@ -392,7 +392,6 @@ class MPEG4(core.AVContainer):
             self.volume = mvhd[6]
             file.seek(atomsize - 8 - 28, 1)
 
-
         elif atomtype == 'cmov':
             # compressed movie
             datasize, atomtype = struct.unpack('>I4s', file.read(8))
@@ -409,10 +408,10 @@ class MPEG4(core.AVContainer):
                 data = file.read(datasize - 8)
                 try:
                     decompressed = zlib.decompress(data)
-                except Exception, e:
+                except Exception:
                     try:
                         decompressed = zlib.decompress(data[4:])
-                    except Exception, e:
+                    except Exception:
                         log.exception(u'There was a proble decompressiong atom')
                         return atomsize
 
@@ -438,7 +437,6 @@ class MPEG4(core.AVContainer):
                 pass
             log.info(u'end of mdat')
             file.seek(pos, 0)
-
 
         elif atomtype == 'rmra':
             # reference list
@@ -470,8 +468,7 @@ class MPEG4(core.AVContainer):
             if url:
                 self._references.append((url, quality, datarate))
 
-        else:
-            if not atomtype in ['wide', 'free']:
+            if atomtype not in ['wide', 'free']:
                 log.info(u'unhandled base atom %r' % atomtype)
 
             # Skip unknown atoms

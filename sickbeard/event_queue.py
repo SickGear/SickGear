@@ -3,7 +3,7 @@ from lib.six import moves
 import threading
 
 
-class Event:
+class Event(object):
     def __init__(self, etype):
         self._type = etype
 
@@ -19,16 +19,16 @@ class Events(threading.Thread):
         self.daemon = True
         self.callback = callback
         self.name = 'EVENT-QUEUE'
-        self._stop = threading.Event()
+        self._stopper = threading.Event()
 
     def put(self, etype):
         self.queue.put(etype)
 
-    def stop(self):
-        self._stop.set()
+    def stopit(self):
+        self._stopper.set()
 
     def run(self):
-        while not self._stop.is_set():
+        while not self._stopper.is_set():
             try:
                 # get event type
                 etype = self.queue.get(True, 1)
@@ -42,7 +42,7 @@ class Events(threading.Thread):
                 pass
 
         # exiting thread
-        self._stop.clear()
+        self._stopper.clear()
 
     # System Events
     class SystemEvent(Event):

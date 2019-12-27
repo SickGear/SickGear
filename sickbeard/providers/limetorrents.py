@@ -15,16 +15,16 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
-import base64
 import re
 import traceback
-import urllib
 
 from . import generic
-from sickbeard import logger
-from sickbeard.bs4_parser import BS4Parser
-from sickbeard.helpers import tryInt
-from lib.unidecode import unidecode
+from .. import logger
+from ..helpers import try_int
+
+from bs4_parser import BS4Parser
+
+from _23 import b64decodestring, quote_plus, unidecode
 
 
 class LimeTorrentsProvider(generic.TorrentProvider):
@@ -33,7 +33,7 @@ class LimeTorrentsProvider(generic.TorrentProvider):
         generic.TorrentProvider.__init__(self, 'LimeTorrents')
 
         self.url_home = ['https://www.limetorrents.cc/'] + \
-                        ['https://%s/' % base64.b64decode(x) for x in [''.join(x) for x in [
+                        ['https://%s/' % b64decodestring(x) for x in [''.join(x) for x in [
                             [re.sub(r'[F\sp]+', '', x[::-1]) for x in [
                                 'XZFtlpGb', 'lJn pcvR', 'nFLpzRnb', 'v xpmYuV', 'CZlt F2Y', '=F QXYs5']],
                             [re.sub(r'[K\sP]+', '', x[::-1]) for x in [
@@ -58,13 +58,13 @@ class LimeTorrentsProvider(generic.TorrentProvider):
 
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
-        for mode in search_params.keys():
+        for mode in search_params:
             for search_string in search_params[mode]:
 
-                search_string = isinstance(search_string, unicode) and unidecode(search_string) or search_string
+                search_string = unidecode(search_string)
 
                 search_url = self.urls['browse'] if 'Cache' == mode \
-                    else self.urls['search'] % (urllib.quote_plus(search_string))
+                    else self.urls['search'] % (quote_plus(search_string))
 
                 html = self.get_url(search_url, provider=self)
                 if self.should_skip():
@@ -97,8 +97,8 @@ class LimeTorrentsProvider(generic.TorrentProvider):
                                 continue
                             try:
                                 head = head if None is not head else self._header_row(tr)
-                                seeders, leechers, size = [tryInt(n.replace(',', ''), n) for n in [
-                                    cells[head[x]].get_text().strip() for x in 'seed', 'leech', 'size']]
+                                seeders, leechers, size = [try_int(n.replace(',', ''), n) for n in [
+                                    cells[head[x]].get_text().strip() for x in ('seed', 'leech', 'size')]]
                                 if self._reject_item(seeders, leechers):
                                     continue
 

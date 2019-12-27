@@ -19,10 +19,12 @@ import re
 import traceback
 
 from . import generic
-from sickbeard import logger
-from sickbeard.bs4_parser import BS4Parser
-from sickbeard.helpers import tryInt
-from lib.unidecode import unidecode
+from .. import logger
+from ..helpers import try_int
+from bs4_parser import BS4Parser
+
+from _23 import unidecode
+from six import iteritems
 
 
 class TorrentLeechProvider(generic.TorrentProvider):
@@ -59,14 +61,14 @@ class TorrentLeechProvider(generic.TorrentProvider):
 
         last_recent_search = self.last_recent_search
         last_recent_search = '' if not last_recent_search else last_recent_search.replace('id-', '')
-        for mode in search_params.keys():
+        for mode in search_params:
             urls = []
             for search_string in search_params[mode]:
                 urls += [[]]
                 for page in range((3, 5)['Cache' == mode])[1:]:
                     urls[-1] += [self.urls[('search', 'browse')['Cache' == mode]] % {
                         'cats': self._categories_string(mode, '', ','),
-                        'query': isinstance(search_string, unicode) and unidecode(search_string) or search_string,
+                        'query': unidecode(search_string) or search_string,
                         'x': '%spage/%s' % (('facets/tags:FREELEECH/', '')[not self.freeleech], page)
                     }]
             results += self._search_urls(mode, last_recent_search, urls)
@@ -79,7 +81,7 @@ class TorrentLeechProvider(generic.TorrentProvider):
         results = []
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
-        rc = dict((k, re.compile('(?i)' + v)) for (k, v) in dict(get='download', id=r'download.*?/([\d]+)').items())
+        rc = dict((k, re.compile('(?i)' + v)) for (k, v) in iteritems(dict(get='download', id=r'download.*?/([\d]+)')))
         lrs_found = False
         lrs_new = True
         for search_urls in urls:  # this intentionally iterates once to preserve indentation
@@ -114,7 +116,7 @@ class TorrentLeechProvider(generic.TorrentProvider):
                             cnt_search += 1
                             try:
                                 head = head if None is not head else self._header_row(tr)
-                                seeders, leechers = [tryInt(n) for n in [
+                                seeders, leechers = [try_int(n) for n in [
                                     tr.find('td', class_=x).get_text().strip() for x in ('seeders', 'leechers')]]
                                 if self._reject_item(seeders, leechers):
                                     continue

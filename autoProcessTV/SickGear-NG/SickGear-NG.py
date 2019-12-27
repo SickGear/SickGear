@@ -3,12 +3,12 @@
 # ##############################################################################
 # ##############################################################################
 #
-# SickGear PostProcessing script for NZBGet
-# =========================================
+# SickGear Process Media extension for NZBGet
+# ===========================================
 #
 # If NZBGet v17+ is installed on the same system as SickGear then as a local install,
 #
-# 1) Add the location of this script file to NZBGet Settings/PATHS/ScriptDir
+# 1) Add the location of this extension to NZBGet Settings/PATHS/ScriptDir
 #
 # 2) Navigate to any named TV category at Settings/Categories, click "Choose" Category.Extensions then Apply SickGear-NG
 #
@@ -16,19 +16,7 @@
 #
 # #############
 #
-# If NZBGet v16 or earlier is installed, then as an older install,
-#
-# 1) Copy the directory with/or this single script file to path set in NZBGet Settings/PATHS/ScriptDir
-#
-# 2) Refresh the NZBGet page and navigate to Settings/SickGear-NG
-#
-# 3) Click View -> Compact to remove any tick and un hide tips and suggestions
-#
-# 4) The bare minimum change is the sg_base_path setting or enter `python -m pip install requests` at admin commandline
-#
-# 5) Navigate to any named TV category at Settings/Categories, click "Choose" Category.Extensions then Apply SickGear-NG
-#
-# You will need to manually update your script with this set up
+# NZBGet version 16 and earlier are no longer supported, please upgrade
 #
 # ############
 #
@@ -61,55 +49,55 @@
 ### NZBGET QUEUE/POST-PROCESSING SCRIPT                                    ###
 ### QUEUE EVENTS: NZB_ADDED, NZB_DELETED, URL_COMPLETED, NZB_MARKED        ###
 
-# Send PostProcessing requests to SickGear
+# Send "Process Media" requests to SickGear
 #
-# PostProcessing-Script version: 1.7.
+# Process Media extension version: 2.4.
 # <!--
 # For more info and updates please visit forum topic at
 # -->
 # <span style="display:block;position:absolute;right:20px;top:105px;width:138px;height:74px;background:url(https://raw.githubusercontent.com/SickGear/SickGear/master/gui/slick/images/sickgear.png)"></span>
-# <span style="display:inline-block;margin-top:10px" class="label label-important">
-# Setup steps</span> <span class="label label-important" style="display:inline-block;cursor:pointer" data-toggle="modal" href="#InfoDialog">NZBGet Version</span>
-# <span style="display:block;color:#666">
-# <span style="display:block;padding:4px;margin-top:3px;background-color:#efefef;border:1px solid #ccc;-webkit-border-radius:3px;-moz-border-radius:3px;border-radius:3px">
+# <span id="steps-btn" style="display:inline-block;margin-top:10px;padding:5px 10px;cursor:pointer" class="label label-important" onclick="var steps$ = $('#setup-steps'), isShown=-1 !== $('#steps-btn').html().search('View'), ngVersion = parseInt(/^\d+/.exec(Options.option('version'))[0], 10); $('#ng-version').html('v'+ngVersion); (16 < ngVersion) && $('#sgng-newer').show() || $('#sgng-older').show() && $('#sgng-step2').hide(); !isShown ? steps$.hide() && $(this).html('View setup guide') && $(this).removeClass('label-info') && $(this).addClass('label-important'): steps$.show() && $(this).html('Hide setup guide') && $(this).removeClass('label-important') && $(this).addClass('label-info'); return !1;">View setup guide</span>
+# <span id="setup-steps" style="display:none;color:#666">
+# <span style="display:block;padding:7px 4px;margin-top:3px;background-color:#efefef;border:1px solid #ccc;-webkit-border-radius:3px;-moz-border-radius:3px;border-radius:3px">
 # <span style="width:1em;float:left;padding:3px 0 0 3px">
 # <span class="label label-important">1</span>
 # </span>
 # <span style="display:block;margin-left:1.75em;padding:3px 3px 3px 0">
-# If <span style="font-weight:bold">NZBGet v17 or newer</span> is installed on the same system as SickGear, then add the
-# location of this script file to NZBGet Settings/PATHS/ScriptDir
-# <br /><br />
-# Or, if <span style="font-weight:bold">NZBGet v16 or earlier</span> is installed on the same system as SickGear and
-# if python <a href="https://pypi.python.org/pypi/requests" title="requests library page" target="_blank">requests library</a>
-# is not installed, then <strong style="font-weight:bold;color:#128D12 !important">sg_base_path</strong> must be set
+# <span id="sgng-newer" style="display:none">
+# With this <span style="font-weight:bold">NZBGet <span id="ng-version"></span></span> installed on the same system as SickGear,
+# add the location of this extension to NZBGet Settings/PATHS/ScriptDir
+# </span>
+# <span id="sgng-older" style="display:none">
+# <!-- if python <a href="https://pypi.python.org/pypi/requests" title="requests library page" target="_blank">requests library</a>
+# is not installed, then <strong style="font-weight:bold;color:#128D12 !important">sg_base_path</strong> must be set -->
+# NZBGet 17.0 or later required, please upgrade.
 # </span>
 # </span>
-# <span style="display:block;padding:4px;margin-top:3px;background-color:#efefef;border:1px solid #ccc;-webkit-border-radius:3px;-moz-border-radius:3px;border-radius:3px">
+# </span>
+# <span id="sgng-step2">
+# <span style="display:block;padding:7px 4px;margin-top:3px;background-color:#efefef;border:1px solid #ccc;-webkit-border-radius:3px;-moz-border-radius:3px;border-radius:3px">
 # <span style="width:1em;float:left;padding:3px 0 0 3px">
 # <span class="label label-important">2</span>
 # </span>
-# <span style="display:block;margin-left:1.75em;padding:3px 3px 3px 0">
-# Then, for <span style="font-weight:bold">any install</span> type, click <span class="btn" style="padding:1px 5px 0;line-height:16px">Choose</span>
-# then apply "<span style="color:#222">SickGear-NG</span>" in a TV Category at NZBGet Settings/CATEGORIES,
-# save all changes and reload NZBGet
-#
+# <span style="display:block;margin-left:1.75em;padding-left: 0">
+# For a TV Category at NZBGet Settings/CATEGORIES, click <span class="btn" style="vertical-align:text-bottom;padding:1px 5px 0;line-height:16px">Choose</span>, enable "<span style="color:#222">SickGear-NG</span>", apply, save all changes, and reload NZBGet
 # </span>
+# </span> <!-- /sgng-step2 -->
 # </span>
-# </span>
-#
-# <span class="label label-warning">Note</span> This script requires Python 2.7+ and may not work with Python 3.x+
-#
+# </span> <!-- /setup-steps -->
 ##############################################################################
 ### OPTIONS                                                                ###
 #
-#test connection@Test SickGear connection
+#Test connection@Test SickGear connection
 #
+# <!-- commented out as no longer supported
 # <span class="label label-info">
 # Optional</span>
 # SickGear <span style="font-weight:bold;color:#128D12 !important">base installation path</span>.
 # use where NZBGet v16 or older is installed on the same system as SickGear, and no python requests library is installed
 # (use "pip list" to check installed modules)
-#sg_base_path=
+# #sg_base_path=
+# -->
 
 # <span class="label label-info">
 # Optional</span>
@@ -157,7 +145,31 @@ import re
 import sys
 import warnings
 
-__version__ = '1.7'
+# set the version number in the comments above (the old __version__ var is deprecated)
+with open(os.path.join(os.path.dirname(__file__), __file__)) as fp:
+    __version__ = (
+        re.compile(r""".*version: (\d+\.\d+)""", re.S).match(fp.read()).group(1)
+    )
+
+PY2 = 2 == sys.version_info[0]
+
+if not PY2:
+    string_types = str,
+    binary_type = bytes
+    text_type = str
+
+    def iteritems(d, **kw):
+        return iter(d.items(**kw))
+else:
+    # noinspection PyUnresolvedReferences,PyCompatibility
+    string_types = basestring,
+    binary_type = str
+    # noinspection PyUnresolvedReferences
+    text_type = unicode
+
+    def iteritems(d, **kw):
+        # noinspection PyCompatibility
+        return d.iteritems(**kw)
 
 verbose = 0 or 'yes' == os.environ.get('NZBPO_SG_VERBOSE', 'no')
 
@@ -173,7 +185,7 @@ failed = False
 min_dir_size = 20 * 1024 * 1024
 
 
-class Logger:
+class Logger(object):
     INFO, DETAIL, ERROR, WARNING = 'INFO', 'DETAIL', 'ERROR', 'WARNING'
     # '[NZB]' send a command message to NZBGet (no log)
     NZB = 'NZB'
@@ -182,17 +194,28 @@ class Logger:
         pass
 
     @staticmethod
+    def decode_str(s, encoding='utf-8', errors=None):
+        if isinstance(s, binary_type):
+            if None is errors:
+                return s.decode(encoding)
+            return s.decode(encoding, errors)
+        return s
+
+    @staticmethod
     def safe_print(msg_type, message):
-        try:
-            print '[%s] %s' % (msg_type, message.encode(SYS_ENCODING))
-        except (StandardError, Exception):
+        if not PY2:
+            print('[%s] %s' % (msg_type, Logger.decode_str(message, encoding=SYS_ENCODING, errors='replace')))
+        else:
             try:
-                print '[%s] %s' % (msg_type, message)
-            except (StandardError, Exception):
+                print('[%s] %s' % (msg_type, message.encode(SYS_ENCODING)))
+            except (BaseException, Exception):
                 try:
-                    print '[%s] %s' % (msg_type, repr(message))
-                except (StandardError, Exception):
-                    pass
+                    print('[%s] %s' % (msg_type, message))
+                except (BaseException, Exception):
+                    try:
+                        print('[%s] %s' % (msg_type, repr(message)))
+                    except (BaseException, Exception):
+                        pass
 
     @staticmethod
     def log(message, msg_type=INFO):
@@ -200,25 +223,39 @@ class Logger:
         if size > len(message):
             Logger.safe_print(msg_type, message)
         else:
-            for group in (message[pos:pos + size] for pos in xrange(0, len(message), size)):
+            for group in [message[pos:pos + size] for pos in range(0, len(message), size)]:
                 Logger.safe_print(msg_type, group)
 
 
-if 'nt' == os.name:
-    import ctypes
+class EnvVar(object):
+    def __init__(self):
+        pass
 
-    class WinEnv:
-        def __init__(self):
-            pass
+    def __getitem__(self, key):
+        return os.environ[key]
+
+    @staticmethod
+    def get(key, default=None):
+        return os.environ.get(key, default)
+
+
+if not PY2:
+    env_var = EnvVar()
+
+elif 'nt' == os.name:
+    from ctypes import windll, create_unicode_buffer
+
+    # noinspection PyCompatibility
+    class WinEnvVar(EnvVar):
 
         @staticmethod
         def get_environment_variable(name):
-            name = unicode(name)  # ensures string argument is unicode
-            n = ctypes.windll.kernel32.GetEnvironmentVariableW(name, None, 0)
+            name = text_type(name)  # ensures string argument is unicode
+            n = windll.kernel32.GetEnvironmentVariableW(name, None, 0)
             env_value = None
             if n:
-                buf = ctypes.create_unicode_buffer(u'\0'*n)
-                ctypes.windll.kernel32.GetEnvironmentVariableW(name, buf, n)
+                buf = create_unicode_buffer(u'\0' * n)
+                windll.kernel32.GetEnvironmentVariableW(name, buf, n)
                 env_value = buf.value
             verbose and Logger.log('Get var(%s) = %s' % (name, env_value or n))
             return env_value
@@ -228,26 +265,27 @@ if 'nt' == os.name:
 
         def get(self, key, default=None):
             r = self.get_environment_variable(key)
-            return r if r is not None else default
+            return r if None is not r else default
 
-    env_var = WinEnv()
+    env_var = WinEnvVar()
 else:
-    class LinuxEnv(object):
+    class LinuxEnvVar(EnvVar):
+        # noinspection PyMissingConstructor
         def __init__(self, environ):
             self.environ = environ
 
         def __getitem__(self, key):
             v = self.environ.get(key)
             try:
-                return v.decode(SYS_ENCODING) if isinstance(v, str) else v
+                return v if not isinstance(v, str) else v.decode(SYS_ENCODING)
             except (UnicodeDecodeError, UnicodeEncodeError):
                 return v
 
         def get(self, key, default=None):
             v = self[key]
-            return v if v is not None else default
+            return v if None is not v else default
 
-    env_var = LinuxEnv(os.environ)
+    env_var = LinuxEnvVar(os.environ)
 
 
 SYS_ENCODING = None
@@ -266,35 +304,44 @@ if not SYS_ENCODING or SYS_ENCODING in ('ANSI_X3.4-1968', 'US-ASCII', 'ASCII'):
 verbose and Logger.log('%s(%s) env dump = %s' % (('posix', 'nt')['nt' == os.name], SYS_ENCODING, os.environ))
 
 
-class Ek:
+# noinspection PyCompatibility
+class Ek(object):
     def __init__(self):
         pass
 
     @staticmethod
     def fix_string_encoding(x):
+        if not PY2:
+            return x
+
         if str == type(x):
             try:
                 return x.decode(SYS_ENCODING)
             except UnicodeDecodeError:
-                return None
-        elif unicode == type(x):
+                pass
+        elif text_type == type(x):
             return x
-        return None
 
     @staticmethod
     def fix_out_encoding(x):
-        if isinstance(x, basestring):
+        if PY2 and isinstance(x, string_types):
             return Ek.fix_string_encoding(x)
         return x
 
     @staticmethod
     def fix_list_encoding(x):
+        if not PY2:
+            return x
+
         if type(x) not in (list, tuple):
             return x
         return filter(lambda i: None is not i, map(Ek.fix_out_encoding, x))
 
     @staticmethod
     def encode_item(x):
+        if not PY2:
+            return x
+
         try:
             return x.encode(SYS_ENCODING)
         except UnicodeEncodeError:
@@ -302,20 +349,22 @@ class Ek:
 
     @staticmethod
     def win_encode_unicode(x):
-        if isinstance(x, str):
+        if PY2 and isinstance(x, str):
             try:
                 return x.decode('UTF-8')
             except UnicodeDecodeError:
-                return x
+                pass
         return x
 
     @staticmethod
     def ek(func, *args, **kwargs):
+        if not PY2:
+            return func(*args, **kwargs)
+
         if 'nt' == os.name:
             # convert all str parameter values to unicode
             args = tuple([x if not isinstance(x, str) else Ek.win_encode_unicode(x) for x in args])
-            kwargs = {k: x if not isinstance(x, str) else Ek.win_encode_unicode(x) for k, x in
-                      kwargs.iteritems()}
+            kwargs = {k: x if not isinstance(x, str) else Ek.win_encode_unicode(x) for k, x in iteritems(kwargs)}
             func_result = func(*args, **kwargs)
         else:
             func_result = func(*[Ek.encode_item(x) if type(x) == str else x for x in args], **kwargs)
@@ -325,6 +374,47 @@ class Ek:
         elif str == type(func_result):
             return Ek.fix_string_encoding(func_result)
         return func_result
+
+
+def long_path(path):
+    """add long path prefix for Windows"""
+    if 'win32' == sys.platform and 260 < len(path) and not path.startswith('\\\\?\\') and Ek.ek(os.path.isabs, path):
+        return '\\\\?\\' + path
+    return path
+
+
+def ex(e):
+    """Returns a unicode string from the exception text if it exists"""
+
+    if not PY2:
+        return str(e)
+
+    e_message = u''
+
+    if not e or not e.args:
+        return e_message
+
+    for arg in e.args:
+
+        if None is not arg:
+            if isinstance(arg, (str, text_type)):
+                fixed_arg = Ek.fix_string_encoding(arg)
+
+            else:
+                try:
+                    fixed_arg = u'error ' + Ek.fix_string_encoding(str(arg))
+
+                except (BaseException, Exception):
+                    fixed_arg = None
+
+            if fixed_arg:
+                if not e_message:
+                    e_message = fixed_arg
+
+                else:
+                    e_message = e_message + ' : ' + fixed_arg
+
+    return e_message
 
 
 # Depending on the mode in which the script was called (queue-script NZBNA_DELETESTATUS
@@ -352,7 +442,7 @@ if not sg_path or not Ek.ek(os.path.isdir, sg_path):
     try:
         script_path = Ek.ek(os.path.dirname, __file__)
         sg_path = Ek.ek(os.path.dirname, Ek.ek(os.path.dirname, script_path))
-    except (StandardError, Exception):
+    except (BaseException, Exception):
         pass
 if sg_path and Ek.ek(os.path.isdir, Ek.ek(os.path.join, sg_path, 'lib')):
     sys.path.insert(1, Ek.ek(os.path.join, sg_path, 'lib'))
@@ -361,38 +451,39 @@ if sg_path and Ek.ek(os.path.isdir, Ek.ek(os.path.join, sg_path, 'lib')):
 try:
     import requests
 except ImportError:
-    Logger.log('You must set SickGear sg_base_path in script config or install python requests library', Logger.ERROR)
+    # Logger.log('You must set SickGear sg_base_path in script config or install python requests library', Logger.ERROR)
+    Logger.log('You must install python requests library', Logger.ERROR)
     sys.exit(1)
 
 
 def get_size(start_path='.'):
-    if Ek.ek(os.path.isfile, start_path):
-        return Ek.ek(os.path.getsize, start_path)
+    if Ek.ek(os.path.isfile, long_path(start_path)):
+        return Ek.ek(os.path.getsize, long_path(start_path))
     total_size = 0
-    for dirpath, dirnames, filenames in Ek.ek(os.walk, start_path):
+    for dirpath, dirnames, filenames in Ek.ek(os.walk, long_path(start_path)):
         for f in filenames:
             if not f.lower().endswith(('.nzb', '.jpg', '.jpeg', '.gif', '.png', '.tif', '.nfo', '.txt', '.srt', '.sub',
                                        '.sbv', '.idx', '.bat', '.sh', '.exe', '.pdf')):
-                fp = Ek.ek(os.path.join, dirpath, f)
-                total_size += Ek.ek(os.path.getsize, fp)
+                fh = Ek.ek(os.path.join, long_path(dirpath), f)
+                total_size += Ek.ek(os.path.getsize, long_path(fh))
     return total_size
 
 
 def try_int(s, s_default=0):
     try:
         return int(s)
-    except (StandardError, Exception):
+    except (BaseException, Exception):
         return s_default
 
 
 def try_float(s, s_default=0):
     try:
         return float(s)
-    except (StandardError, Exception):
+    except (BaseException, Exception):
         return s_default
 
 
-class ExitReason:
+class ExitReason(object):
     def __init__(self):
         pass
     PP_SUCCESS = 0
@@ -416,7 +507,7 @@ def script_exit(status, reason, runmode=None):
 def get_old_status():
     old_status = env_var.get('NZBPR_SICKGEAR_PROCESSED', '')
     status_regex = re.compile(r'(\d+)_(\w\w)_(\d+)')
-    if old_status and status_regex.search(old_status) is not None:
+    if old_status and None is not status_regex.search(old_status):
         s = status_regex.match(old_status)
         return try_int(s.group(1)), s.group(2), try_int(s.group(3))
     return POSTPROCESS_NONE, env_run_mode, ExitReason.NONE
@@ -437,7 +528,7 @@ def start_check():
 
     # Check if the script is called from a compatible NZBGet version (as queue-script or as pp-script)
     nzbget_version = re.search(r'^(\d+\.\d+)', nzbget_opt('VERSION', '0.1'))
-    nzbget_version = nzbget_version.group(1) if nzbget_version and len(nzbget_version.groups()) >= 1 else '0.1'
+    nzbget_version = nzbget_version.group(1) if nzbget_version and 1 <= len(nzbget_version.groups()) else '0.1'
     nzbget_version = try_float(nzbget_version)
     if 17 > nzbget_version:
         Logger.log('This script is designed to be called from NZBGet 17.0 or later.')
@@ -465,7 +556,7 @@ def start_check():
     # If called via "Post-process again" from history details dialog the download may not exist anymore
     if 'NZBNA_EVENT' not in os.environ and 'NZBPP_DIRECTORY' in os.environ:
         directory = nzbget_var('DIRECTORY')
-        if not directory or not Ek.ek(os.path.exists, directory):
+        if not directory or not Ek.ek(os.path.exists, long_path(directory)):
             Logger.log('No files for postprocessor, look back in your NZBGet logs if required, exiting')
             script_exit(POSTPROCESS_NONE, ExitReason.NONE)
 
@@ -474,7 +565,7 @@ def call_nzbget_direct(url_command):
     # Connect to NZBGet and call an RPC-API method without using python's XML-RPC which is slow for large amount of data
     # First we need connection info: host, port and password of NZBGet server, NZBGet passes configuration options to
     # scripts using environment variables
-    host, port, username, password = [nzbget_opt('CONTROL%s' % name) for name in 'IP', 'PORT', 'USERNAME', 'PASSWORD']
+    host, port, username, password = [nzbget_opt('CONTROL%s' % name) for name in ('IP', 'PORT', 'USERNAME', 'PASSWORD')]
     url = 'http://%s:%s/jsonrpc/%s' % ((host, '127.0.0.1')['0.0.0.0' == host], port, url_command)
 
     try:
@@ -485,25 +576,27 @@ def call_nzbget_direct(url_command):
     return response.content if response.ok else ''
 
 
+# noinspection DuplicatedCode
 def call_sickgear(nzb_name, dir_name, test=False):
 
     global failed
     ssl, host, port, username, password, webroot = [nzbget_plugin_opt(name, default) for name, default in
-                                                    ('SSL', 'no'), ('HOST', 'localhost'), ('PORT', '8081'),
-                                                    ('USERNAME', ''), ('PASSWORD', ''), ('WEB_ROOT', '')]
+                                                    (('SSL', 'no'), ('HOST', 'localhost'), ('PORT', '8081'),
+                                                    ('USERNAME', ''), ('PASSWORD', ''), ('WEB_ROOT', ''))]
     protocol = 'http%s://' % ('', 's')['yes' == ssl]
     webroot = any(webroot) and '/%s' % webroot.strip('/') or ''
-    url = '%s%s:%s%s/home/postprocess/processEpisode' % (protocol, host, port, webroot)
+    url = '%s%s:%s%s/home/process-media/files' % (protocol, host, port, webroot)
 
     dupescore = nzbget_var('DUPESCORE')
     dupekey = nzbget_var('DUPEKEY')
     nzbid = nzbget_var('NZBID')
-    params = {'nzbName': '%s.nzb' % (nzb_name and re.sub('(?i)\.nzb$', '', nzb_name) or None), 'dir': dir_name,
-              'failed': int(failed), 'quiet': 1, 'stream': 1, 'force': 1, 'dupekey': dupekey, 'dupescore': dupescore,
-              'nzbid': nzbid, 'ppVersion': __version__, 'is_basedir': 0, 'client': 'nzbget'}
+    params = {'dir_name': dir_name, 'nzb_name': '%s.nzb' % (nzb_name and re.sub(r'(?i)\.nzb$', '', nzb_name) or None),
+              'quiet': 1, 'force': 1, 'failed': int(failed), 'stream': 1, 'dupekey': dupekey, 'is_basedir': 0,
+              'client': 'nzbget', 'dupescore': dupescore, 'nzbid': nzbid, 'pp_version': __version__}
     if test:
         params['test'] = '1'
-    Logger.log('Opening URL: %s with params: %s' % (url, params))
+    py_ver = '%s.%s.%s' % sys.version_info[0:3]
+    Logger.log('Opening URL: %s with: py%s and params: %s' % (url, py_ver, params))
     try:
         s = requests.Session()
         if username or password:
@@ -514,7 +607,7 @@ def call_sickgear(nzb_name, dir_name, test=False):
                 login_params['_xsrf'] = r.cookies.get('_xsrf')
             s.post(login, data=login_params, stream=True, verify=False)
         r = s.get(url, auth=(username, password), params=params, stream=True, verify=False, timeout=900)
-    except (StandardError, Exception):
+    except (BaseException, Exception):
         Logger.log('Unable to open URL: %s' % url, Logger.ERROR)
         return False
 
@@ -526,19 +619,19 @@ def call_sickgear(nzb_name, dir_name, test=False):
 
         for line in r.iter_lines():
             if line:
-                Logger.log(line, Logger.DETAIL)
+                Logger.log(line.decode('utf-8'), Logger.DETAIL)
                 if test:
-                    if 'Connection success!' in line:
+                    if b'Connection success!' in line:
                         return True
-                elif not failed and 'Failed download detected:' in line:
+                elif not failed and b'Failed download detected:' in line:
                     failed = True
                     global markbad
                     markbad = True
                     Logger.log('MARK=BAD', Logger.NZB)
-                success = ('Processing succeeded' in line or 'Successfully processed' in line or
-                           (1 == failed and 'Successful failed download processing' in line))
-    except Exception as e:
-        Logger.log(str(e), Logger.ERROR)
+                success = (b'Processing succeeded' in line or b'Successfully processed' in line or
+                           (1 == failed and b'Successful failed download processing' in line))
+    except (BaseException, Exception) as e:
+        Logger.log(ex(e), Logger.ERROR)
 
     return success
 
@@ -613,7 +706,7 @@ def check_for_failure(directory):
             Logger.log('Download with same Dupekey in download queue or history, exiting')
             script_exit(POSTPROCESS_NONE, ExitReason.SAME_DUPEKEY)
         nzb_delete_status = nzbget_var('DELETESTATUS')
-        if nzb_delete_status == 'MANUAL':
+        if 'MANUAL' == nzb_delete_status:
             Logger.log('Download was manually deleted, exiting')
             script_exit(POSTPROCESS_NONE, ExitReason.DELETED)
 
@@ -628,7 +721,7 @@ def check_for_failure(directory):
 # Check if the script is executed from settings page with a custom command
 command = os.environ.get('NZBCP_COMMAND')
 if None is not command:
-    if 'test connection' == command:
+    if 'Test connection' == command:
         Logger.log('Test connection...')
         result = call_sickgear('', '', test=True)
         if True is result:

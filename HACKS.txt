@@ -1,7 +1,14 @@
 Libs with customisations...
 
+/lib/apprise
+/lib/backports/configparser
+/lib/browser_ua
+/lib/bs4
 /lib/dateutil/zoneinfo/__init__.py
 /lib/dateutil/tz/tz.py
+/lib/enzyme
+/lib/feedparser
+/lib/guessit
 /lib/hachoir_core/config.py
 /lib/hachoir_core/stream/input_helpers.py
 /lib/hachoir_metadata/jpeg.py
@@ -13,7 +20,9 @@ Libs with customisations...
 /lib/lockfile/mkdirlockfile.py
 /lib/rtorrent
 /lib/scandir/scandir.py
-/lib/tmdb_api/tmdb_api.py
+/lib/send2trash
+/lib/subliminal
+/lib/tmdbsimple
 /lib/tornado
 /lib/tvdb_api/tvdb_api.py
 /lib/tzlocal/unix.py

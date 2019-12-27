@@ -11,12 +11,12 @@ $(document).ready(function() {
 	$('#pickShow').change(function() {
 		var val = $(this).val();
 		if (val != 0)
-			window.location.href = $.SickGear.Root + '/home/displayShow?show=' + val;
+			window.location.href = $.SickGear.Root + '/home/view-show?tvid_prodid=' + val;
 	});
 
 	$('#prevShow, #nextShow').on('click', function() {
 		var select$ = $('#pickShow'),
-			index = $.inArray(select$.find('option:selected').val()*1, config.TVShowList);
+			index = $.inArray(select$.find('option:selected').val(), config.TVShowList);
 		//noinspection JSUnresolvedVariable
 		select$.find('option[value="' + config.TVShowList[('nextShow' === $(this).attr('id')
 			? (index < config.TVShowList.length - 1 ? index + 1 : 0)
@@ -56,7 +56,7 @@ $(document).ready(function() {
 			this.checked && epArr.push($(this).attr('id'))
 		});
 		if (epArr.length)
-			window.location.href = $.SickGear.Root + '/home/setStatus?show=' + $('#showID').val() +
+			window.location.href = $.SickGear.Root + '/home/set-show-status?tvid_prodid=' + $('#tvid-prodid').val() +
 				'&eps=' + epArr.join('|') + '&status=' + $('#statusSelect').val();
 	});
 
@@ -110,25 +110,24 @@ $(document).ready(function() {
 	$('.clearAll').on('click', function() { checkState(!1); });
 
 	function setEpisodeSceneNumbering(forSeason, forEpisode, sceneSeason, sceneEpisode) {
-		var showId = $('#showID').val(), indexer = $('#indexer').val();
+		var show = $('#tvid-prodid').val();
 
 		if ('' === sceneSeason) sceneSeason = null;
 		if ('' === sceneEpisode) sceneEpisode = null;
 
-		$.getJSON($.SickGear.Root + '/home/setSceneNumbering',
+		$.getJSON($.SickGear.Root + '/home/set-scene-numbering',
 			{
-				'show': showId,
-				'indexer': indexer,
-				'forSeason': forSeason,
-				'forEpisode': forEpisode,
-				'sceneSeason': sceneSeason,
-				'sceneEpisode': sceneEpisode
+				'tvid_prodid': show,
+				'for_season': forSeason,
+				'for_episode': forEpisode,
+				'scene_season': sceneSeason,
+				'scene_episode': sceneEpisode
 			},
 			function(data) {
 				//	Set the values we get back
 				var value = ((null === data.sceneSeason || null === data.sceneEpisode)
 						? '' : data.sceneSeason + 'x' + data.sceneEpisode);
-				$('#sceneSeasonXEpisode_' + showId + '_' + forSeason + '_' + forEpisode)
+				$(document.getElementById('sceneSeasonXEpisode_' + show + '_' + forSeason + '_' + forEpisode))
 					.val(value).attr('value', value);
 				if (!data.success)
 					alert(data.errorMessage ? data.errorMessage : 'Update failed.');
@@ -137,23 +136,22 @@ $(document).ready(function() {
 	}
 
 	function setAbsoluteSceneNumbering(forSeason, forEpisode, sceneAbsolute) {
-		var showId = $('#showID').val(), indexer = $('#indexer').val();
+		var show = $('#tvid-prodid').val();
 
 		if ('' === sceneAbsolute)
 			sceneAbsolute = null;
 
-		$.getJSON($.SickGear.Root + '/home/setSceneNumbering',
+		$.getJSON($.SickGear.Root + '/home/set-scene-numbering',
 			{
-				'show': showId,
-				'indexer': indexer,
-				'forSeason': forSeason,
-				'forEpisode': forEpisode,
-				'sceneAbsolute': sceneAbsolute
+				'tvid_prodid': show,
+				'for_season': forSeason,
+				'for_episode': forEpisode,
+				'scene_absolute': sceneAbsolute
 			},
 			function(data) {
 				//	Set the values we get back
 				var value = (null === data.sceneAbsolute ? '' : data.sceneAbsolute);
-				$('#sceneAbsolute_' + showId + '_' + forSeason + '_' + forEpisode)
+				$(document.getElementById('sceneAbsolute_' + show + '_' + forSeason + '_' + forEpisode))
 					.val(value).attr('value', value);
 				if (!data.success)
 					alert(data.errorMessage ? data.errorMessage : 'Update failed.');
@@ -282,7 +280,7 @@ $(document).ready(function() {
 
 				var season = $.SickGear.season[0];
 				$.SickGear.season.shift();
-				$.getJSON($.SickGear.Root + '/home/display_season', {'show': $('#showID').val(), 'season': season},
+				$.getJSON($.SickGear.Root + '/home/season-render', {'tvid_prodid': $('#tvid-prodid').val(), 'season': season},
 					function(data) {
 						if (!data.success) {
 							alert('Season listing failed.');

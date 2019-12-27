@@ -1,10 +1,14 @@
 #!/usr/bin/env python2
 from __future__ import print_function
-import sys
-import os
-import time
-import ConfigParser
+try:  # PY3
+    import configparser
+except ImportError:  # PY2
+    # noinspection PyPep8Naming
+    import ConfigParser as configparser
 import logging
+import os
+import sys
+import time
 import warnings
 
 sickbeardPath = os.path.split(os.path.split(sys.argv[0])[0])[0]
@@ -21,7 +25,7 @@ except ImportError:
     print ('You need to install python requests library')
     sys.exit(1)
 
-config = ConfigParser.ConfigParser()
+config = configparser.ConfigParser()
 
 try:
     fp = open(configFilename, 'r')
@@ -47,7 +51,7 @@ logfile = os.path.join(logdir, 'sickbeard.log')
 
 try:
     handler = logging.FileHandler(logfile)
-except:
+except (BaseException, Exception):
     print('Unable to open/create the log file at ' + logfile)
     time.sleep(3)
     sys.exit()
@@ -56,9 +60,10 @@ handler.setFormatter(formatter)
 scriptlogger.addHandler(handler)
 scriptlogger.setLevel(logging.DEBUG)
 
+
 def utorrent():
-#    print 'Calling utorrent'
-    if len(sys.argv) < 2:
+    # print 'Calling utorrent'
+    if 2 > len(sys.argv):
         scriptlogger.error('No folder supplied - is this being called from uTorrent?')
         print('No folder supplied - is this being called from uTorrent?')
         time.sleep(3)
@@ -66,32 +71,36 @@ def utorrent():
 
     dirName = sys.argv[1]
     nzbName = sys.argv[2]
-    
-    return (dirName, nzbName)
-    
+
+    return dirName, nzbName
+
+
 def transmission():
-    
+
     dirName = os.getenv('TR_TORRENT_DIR')
     nzbName = os.getenv('TR_TORRENT_NAME')
-    
-    return (dirName, nzbName)
-    
+
+    return dirName, nzbName
+
+
+# noinspection DuplicatedCode
 def deluge():
 
-    if len(sys.argv) < 4:
+    if 4 > len(sys.argv):
         scriptlogger.error('No folder supplied - is this being called from Deluge?')
         print('No folder supplied - is this being called from Deluge?')
         time.sleep(3)
         sys.exit()
-    
+
     dirName = sys.argv[3]
     nzbName = sys.argv[2]
-    
-    return (dirName, nzbName)
+
+    return dirName, nzbName
+
 
 def blackhole():
 
-    if None != os.getenv('TR_TORRENT_DIR'):
+    if None is not os.getenv('TR_TORRENT_DIR'):
         scriptlogger.debug('Processing script triggered by Transmission')
         print('Processing script triggered by Transmission')
         scriptlogger.debug(u'TR_TORRENT_DIR: ' + os.getenv('TR_TORRENT_DIR'))
@@ -99,7 +108,7 @@ def blackhole():
         dirName = os.getenv('TR_TORRENT_DIR')
         nzbName = os.getenv('TR_TORRENT_NAME')
     else:
-        if len(sys.argv) < 2:
+        if 2 > len(sys.argv):
             scriptlogger.error('No folder supplied - Your client should invoke the script with a Dir and a Relese Name')
             print('No folder supplied - Your client should invoke the script with a Dir and a Release Name')
             time.sleep(3)
@@ -108,9 +117,10 @@ def blackhole():
         dirName = sys.argv[1]
         nzbName = sys.argv[2]
 
-    return (dirName, nzbName)
+    return dirName, nzbName
 
 
+# noinspection DuplicatedCode
 def main():
     scriptlogger.info(u'Starting external PostProcess script ' + __file__)
 
@@ -120,33 +130,33 @@ def main():
     password = config.get('General', 'web_password')
     try:
         ssl = int(config.get('General', 'enable_https'))
-    except (ConfigParser.NoOptionError, ValueError):
+    except (configparser.NoOptionError, ValueError):
         ssl = 0
-        
+
     try:
         web_root = config.get('General', 'web_root')
-    except ConfigParser.NoOptionError:
+    except configparser.NoOptionError:
         web_root = ''
-    
+
     tv_dir = config.get('General', 'tv_download_dir')
     use_torrents = int(config.get('General', 'use_torrents'))
     torrent_method = config.get('General', 'torrent_method')
-    
+
     if not use_torrents:
         scriptlogger.error(u'Enable Use Torrent on Sickbeard to use this Script. Aborting!')
         print(u'Enable Use Torrent on Sickbeard to use this Script. Aborting!')
         time.sleep(3)
         sys.exit()
-        
-    if not torrent_method in ['utorrent', 'transmission', 'deluge', 'blackhole']:
+
+    if torrent_method not in ['utorrent', 'transmission', 'deluge', 'blackhole']:
         scriptlogger.error(u'Unknown Torrent Method. Aborting!')
         print(u'Unknown Torrent Method. Aborting!')
         time.sleep(3)
         sys.exit()
-    
+
     dirName, nzbName = eval(locals()['torrent_method'])()
 
-    if dirName is None:
+    if None is dirName:
         scriptlogger.error(u'MediaToSickbeard script need a dir to be run. Aborting!')
         print(u'MediaToSickbeard script need a dir to be run. Aborting!')
         time.sleep(3)
@@ -160,29 +170,26 @@ def main():
 
     if nzbName and os.path.isdir(os.path.join(dirName, nzbName)):
         dirName = os.path.join(dirName, nzbName)
-        
-    params = {}
-        
-    params['quiet'] = 1
-    
-    params['dir'] = dirName
-    if nzbName != None:
-        params['nzbName'] = nzbName
-    
+
+    params = {'dir_name': dirName, 'quiet': 1}
+
+    if None is not nzbName:
+        params['nzb_name'] = nzbName
+
     if ssl:
         protocol = 'https://'
     else:
         protocol = 'http://'
-    
-    if host == '0.0.0.0':
+
+    if '0.0.0.0' == host:
         host = 'localhost'
-    
-    url = protocol + host + ':' + port + web_root + '/home/postprocess/processEpisode'
+
+    url = protocol + host + ':' + port + web_root + '/home/process-media/files'
     login_url = protocol + host + ':' + port + web_root + '/login'
-    
+
     scriptlogger.debug('Opening URL: ' + url + ' with params=' + str(params))
     print('Opening URL: ' + url + ' with params=' + str(params))
-    
+
     try:
         sess = requests.Session()
         if username or password:
@@ -192,22 +199,23 @@ def main():
                 login_params['_xsrf'] = r.cookies.get('_xsrf')
             sess.post(login_url, data=login_params, stream=True, verify=False)
         response = sess.get(url, auth=(username, password), params=params, verify=False,  allow_redirects=False)
-    except Exception as e:
-        scriptlogger.error(u': Unknown exception raised when opening url: ' + str(e))
+    except (BaseException, Exception) as _e:
+        scriptlogger.error(u': Unknown exception raised when opening url: ' + str(_e))
         time.sleep(3)
         sys.exit()
-    
-    if response.status_code == 401:
+
+    if 401 == response.status_code:
         scriptlogger.error(u'Verify and use correct username and password in autoProcessTV.cfg')
         print('Verify and use correct username and password in autoProcessTV.cfg')
         time.sleep(3)
         sys.exit()
-    
-    if response.status_code == 200:
+
+    if 200 == response.status_code:
         scriptlogger.info(u'Script ' + __file__ + ' Succesfull')
         print('Script ' + __file__ + ' Succesfull')
         time.sleep(3)
         sys.exit()
-        
-if __name__ == '__main__':
+
+
+if '__main__' == __name__:
     main()

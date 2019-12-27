@@ -1,16 +1,16 @@
 var plotter = function(select$) {
 	select$.each(function() {
-		var match = $(this).attr('id').match(/^plot(?:_info_|-)((\d+)_(\d+)[_x](\d+))$/);
-		var showName = $('#show-' + match[1]).attr('data-rawname');
+		var match = $(this).attr('id').match(/^plot(?:_info_|-)(([^_]+)_(\d+)[_x](\d+))$/);
+		var showName = $(document.getElementById('show-' + match[1])).attr('data-rawname');
 		$(this).qtip({
 			content: {
 				text: function(event, api) {
 					// deferred object ensuring the request is only made once
 					$.ajax({
-						url: $.SickGear.Root + '/home/plotDetails',
+						url: $.SickGear.Root + '/home/plot-details',
 						type: 'GET',
 						data: {
-							show: match[2],
+							tvid_prodid: match[2],
 							episode: match[4],
 							season: match[3]
 						}

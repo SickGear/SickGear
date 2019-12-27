@@ -15,13 +15,16 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
-
 try:
     import json
 except ImportError:
     from lib import simplejson as json
 
-import helpers
+from . import helpers
+
+# noinspection PyUnreachableCode
+if False:
+    from typing import Dict, Optional
 
 
 class GitHub(object):
@@ -36,7 +39,8 @@ class GitHub(object):
         self.github_repo = github_repo
         self.branch = branch
 
-    def _access_API(self, path, params=None):
+    @staticmethod
+    def _access_API(path, params=None):
         """
         Access the API at the path given and with the optional params given.
 
@@ -49,9 +53,9 @@ class GitHub(object):
         url = 'https://api.github.com/' + '/'.join(path)
 
         if params and type(params) is dict:
-            url += '?' + '&'.join([str(x) + '=' + str(params[x]) for x in params.keys()])
+            url += '?' + '&'.join([str(x) + '=' + str(params[x]) for x in params])
 
-        parsedJSON = helpers.getURL(url, json=True)
+        parsedJSON = helpers.get_url(url, parse_json=True)
         if not parsedJSON:
             return []
 
@@ -59,7 +63,7 @@ class GitHub(object):
 
     def commits(self):
         """
-        Uses the API to get a list of the 100 most recent commits from the specified user/repo/branch, starting from HEAD.
+        Get a list of the 100 most recent commits from the specified user/repo/branch, starting from HEAD.
 
         user: The github username of the person whose repo you're querying
         repo: The repo name to query
@@ -81,7 +85,7 @@ class GitHub(object):
         head: Current commit sha or branch name to compare
         per_page: number of items per page
 
-        Returns a deserialized json object containing the compare info. See http://developer.github.com/v3/repos/commits/
+        Returns a deserialized json object containing the compare info. See http://developer.github.com/v3/repos/commits
         """
         access_API = self._access_API(
             ['repos', self.github_repo_user, self.github_repo, 'compare', base + '...' + head],
@@ -97,15 +101,16 @@ class GitHub(object):
     def pull_requests(self):
         access_API = self._access_API(
             ['repos', self.github_repo_user, self.github_repo, 'pulls'],
-            params={'per_page': 100})
+            params={'per_page': 100})  # type: Optional[Dict]
         pulls = []
         for x in access_API:
             try:
                 pull = PullRequest(x['head']['ref'], x['number'])
                 pulls.append((repr(pull), pull.fetch_name()))
-            except:
+            except (BaseException, Exception):
                 continue
         return pulls
+
 
 class PullRequest(object):
     def __init__(self, ref, number):

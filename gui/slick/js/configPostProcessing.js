@@ -10,7 +10,7 @@ $(document).ready(function () {
 	})();
 
 	function israr_supported() {
-		$.get(sbRoot + '/config/postProcessing/isRarSupported',
+		$.get(sbRoot + '/config/media-process/is-rar-supported',
 			function (data) {
 				if (data == "supported") {
 				} else {
@@ -29,7 +29,7 @@ $(document).ready(function () {
 		var pattern = $('#naming_pattern').val();
 		var multi = $('#naming_multi_ep :selected').val();
 
-		$.get(sbRoot + '/config/postProcessing/testNaming', {pattern: pattern},
+		$.get(sbRoot + '/config/media-process/test-naming', {pattern: pattern},
 			function (data) {
 				if (data) {
 					$('#naming_example').text(data + '.ext');
@@ -39,7 +39,7 @@ $(document).ready(function () {
 				}
 			});
 
-		$.get(sbRoot + '/config/postProcessing/testNaming', {pattern: pattern, multi: multi},
+		$.get(sbRoot + '/config/media-process/test-naming', {pattern: pattern, multi: multi},
 			function (data) {
 				if (data) {
 					$('#naming_example_multi').text(data + '.ext');
@@ -49,8 +49,12 @@ $(document).ready(function () {
 				}
 			});
 
-		$.get(sbRoot + '/config/postProcessing/isNamingValid', {pattern: pattern, multi: multi},
+		$.get(sbRoot + '/config/media-process/is-naming-valid', {pattern: pattern, multi: multi},
 			function (data) {
+				if (!$('#naming_pattern').is(':visible')){
+					$('#naming_pattern').qtip('toggle', false);
+					return;
+				}
 				if (data == "invalid") {
 					$('#naming_pattern').qtip('option', {
 						'content.text': 'This pattern is invalid.',
@@ -82,7 +86,7 @@ $(document).ready(function () {
 			return;
 		var pattern = $('#naming_abd_pattern').val();
 
-		$.get(sbRoot + '/config/postProcessing/testNaming', {pattern: pattern, abd: 'True'},
+		$.get(sbRoot + '/config/media-process/test-naming', {pattern: pattern, abd: 'True'},
 			function (data) {
 				if (data) {
 					$('#naming_abd_example').text(data + '.ext');
@@ -92,8 +96,12 @@ $(document).ready(function () {
 				}
 			});
 
-		$.get(sbRoot + '/config/postProcessing/isNamingValid', {pattern: pattern, abd: 'True'},
+		$.get(sbRoot + '/config/media-process/is-naming-valid', {pattern: pattern, abd: 'True'},
 			function (data) {
+				if (!$('#naming_abd_pattern').is(':visible')){
+					$('#naming_abd_pattern').qtip('toggle', false);
+					return;
+				}
 				if (data == "invalid") {
 					$('#naming_abd_pattern').qtip('option', {
 						'content.text': 'This pattern is invalid.',
@@ -125,7 +133,7 @@ $(document).ready(function () {
 			return;
 		var pattern = $('#naming_sports_pattern').val();
 
-		$.get(sbRoot + '/config/postProcessing/testNaming', {pattern: pattern, sports: 'True'},
+		$.get(sbRoot + '/config/media-process/test-naming', {pattern: pattern, sports: 'True'},
 			function (data) {
 				if (data) {
 					$('#naming_sports_example').text(data + '.ext');
@@ -135,8 +143,12 @@ $(document).ready(function () {
 				}
 			});
 
-		$.get(sbRoot + '/config/postProcessing/isNamingValid', {pattern: pattern, sports: 'True'},
+		$.get(sbRoot + '/config/media-process/is-naming-valid', {pattern: pattern, sports: 'True'},
 			function (data) {
+				if (!$('#naming_sports_pattern').is(':visible')){
+					$('#naming_sports_pattern').qtip('toggle', false);
+					return;
+				}
 				if (data == "invalid") {
 					$('#naming_sports_pattern').qtip('option', {
 						'content.text': 'This pattern is invalid.',
@@ -170,7 +182,7 @@ $(document).ready(function () {
 		var multi = $('#naming_anime_multi_ep :selected').val();
 		var anime_type = $('input[name="naming_anime"]:checked').val();
 
-		$.get(sbRoot + '/config/postProcessing/testNaming', {pattern: pattern, anime: 'True', anime_type: anime_type},
+		$.get(sbRoot + '/config/media-process/test-naming', {pattern: pattern, anime: 'True', anime_type: anime_type},
 			function (data) {
 				if (data) {
 					$('#naming_example_anime').text(data + '.ext');
@@ -180,7 +192,7 @@ $(document).ready(function () {
 				}
 			});
 
-		$.get(sbRoot + '/config/postProcessing/testNaming', {pattern: pattern, multi: multi, anime: 'True', anime_type: anime_type},
+		$.get(sbRoot + '/config/media-process/test-naming', {pattern: pattern, multi: multi, anime: 'True', anime_type: anime_type},
 			function (data) {
 				if (data) {
 					$('#naming_example_multi_anime').text(data + '.ext');
@@ -190,8 +202,12 @@ $(document).ready(function () {
 				}
 			});
 
-		$.get(sbRoot + '/config/postProcessing/isNamingValid', {pattern: pattern, multi: multi, anime: 'True', anime_type: anime_type},
+		$.get(sbRoot + '/config/media-process/is-naming-valid', {pattern: pattern, multi: multi, anime_type: anime_type},
 			function (data) {
+				if (!$('#naming_anime_pattern').is(':visible')){
+					$('#naming_anime_pattern').qtip('toggle', false);
+					return;
+				}
 				if (data == "invalid") {
 					$('#naming_anime_pattern').qtip('option', {
 						'content.text': 'This pattern is invalid.',

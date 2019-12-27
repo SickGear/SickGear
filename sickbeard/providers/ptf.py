@@ -22,10 +22,12 @@ import time
 import traceback
 
 from . import generic
-from sickbeard import logger
-from sickbeard.bs4_parser import BS4Parser
-from sickbeard.helpers import tryInt, anon_url
-from lib.unidecode import unidecode
+from .. import logger
+from ..helpers import anon_url, try_int
+from bs4_parser import BS4Parser
+
+from _23 import unidecode
+from six import iteritems
 
 
 class PTFProvider(generic.TorrentProvider):
@@ -65,8 +67,9 @@ class PTFProvider(generic.TorrentProvider):
 
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
-        rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {'info': 'details', 'get': 'dl.php', 'snatch': 'snatches',
-                                                             'seeders': r'(^\d+)', 'leechers': r'(\d+)$'}.items())
+        rc = dict([(k, re.compile('(?i)' + v)) for (k, v) in iteritems({'info': 'details', 'get': 'dl.php',
+                                                                        'snatch': 'snatches', 'seeders': r'(^\d+)',
+                                                                        'leechers': r'(\d+)$'})])
         log = ''
         if self.filter:
             non_marked = 'f0' in self.filter
@@ -76,10 +79,10 @@ class PTFProvider(generic.TorrentProvider):
             rc['filter'] = re.compile('(?i)(%s)' % '|'.join(
                 [self.may_filter[f][2] for f in filters if self.may_filter[f][1]]))
             log = '%sing (%s) ' % (('keep', 'skipp')[non_marked], ', '.join([self.may_filter[f][0] for f in filters]))
-        for mode in search_params.keys():
+        for mode in search_params:
             rc['cats'] = re.compile('(?i)cat=(?:%s)' % self._categories_string(mode, template='', delimiter='|'))
             for search_string in search_params[mode]:
-                search_string = isinstance(search_string, unicode) and unidecode(search_string) or search_string
+                search_string = unidecode(search_string)
 
                 search_url = self.urls['search'] % ('+'.join(search_string.split()), self._categories_string(mode))
                 html = self.get_url(search_url)
@@ -123,7 +126,7 @@ class PTFProvider(generic.TorrentProvider):
                             try:
                                 head = head if None is not head else self._header_row(tr)
                                 seeders, leechers = 2 * [cells[head['seed']].get_text().strip()]
-                                seeders, leechers = [tryInt(n) for n in [
+                                seeders, leechers = [try_int(n) for n in [
                                     rc['seeders'].findall(seeders)[0], rc['leechers'].findall(leechers)[0]]]
                                 if not rc['cats'].findall(tr.find('td').get('onclick', ''))[0] or self._reject_item(
                                         seeders, leechers):

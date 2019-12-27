@@ -19,11 +19,11 @@
 
 import socket
 from ssl import SSLError
-from urllib import urlencode
 
+from .generic import Notifier
 import sickbeard
-from sickbeard.notifiers.generic import Notifier
 
+from _23 import urlencode
 from lib.six import moves
 
 
@@ -39,7 +39,8 @@ class PushalotNotifier(Notifier):
 
         try:
             http_handler.request('POST', '/api/sendmessage',
-                                 body=urlencode(dict(Title=title.encode('utf-8'), Body=body.encode('utf-8'),
+                                 body=urlencode(dict(Title=title.encode('utf-8'),
+                                                     Body=body.encode('utf-8'),
                                                      AuthorizationToken=pushalot_auth_token)),
                                  headers={'Content-type': 'application/x-www-form-urlencoded'})
         except (SSLError, moves.http_client.HTTPException, socket.error):

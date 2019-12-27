@@ -11,16 +11,18 @@ import os.path
 sys.path.insert(1, os.path.abspath('..'))
 
 from sickbeard import show_name_helpers, scene_exceptions, common, name_cache
+from sickbeard.indexers.indexer_config import TVINFO_TVDB
 
 import sickbeard
 from sickbeard import db
-from sickbeard.tv import TVShow as Show
+from sickbeard.tv import TVShow
 
 
 class SceneTests(test.SickbeardTestDBCase):
 
-    def _test_allPossibleShowNames(self, name, indexerid=0, expected=[]):
-        s = Show(1, indexerid)
+    def _test_allPossibleShowNames(self, name, prodid=0, expected=[]):
+        s = TVShow(TVINFO_TVDB, prodid)
+        s.tvid = TVINFO_TVDB
         s.name = name
 
         result = show_name_helpers.allPossibleShowNames(s)
@@ -33,7 +35,9 @@ class SceneTests(test.SickbeardTestDBCase):
     def test_allPossibleShowNames(self):
         # common.sceneExceptions[-1] = ['Exception Test']
         my_db = db.DBConnection()
-        my_db.action('INSERT INTO scene_exceptions (indexer_id, show_name, season) VALUES (?,?,?)', [-1, 'Exception Test', -1])
+        my_db.action('INSERT INTO scene_exceptions'
+                     ' (indexer, indexer_id, show_name, season) VALUES (?,?,?,?)',
+                     [TVINFO_TVDB, -1, 'Exception Test', -1])
         common.countryList['Full Country Name'] = 'FCN'
 
         self._test_allPossibleShowNames('Show Name', expected=['Show Name'])
@@ -56,50 +60,50 @@ class SceneExceptionTestCase(test.SickbeardTestDBCase):
     def setUp(self):
         super(SceneExceptionTestCase, self).setUp()
 
-        sickbeard.showList = [Show(1, 79604), Show(1, 251085)]
+        sickbeard.showList = [TVShow(TVINFO_TVDB, 79604), TVShow(TVINFO_TVDB, 251085)]
         scene_exceptions.retrieve_exceptions()
         name_cache.buildNameCache()
 
     def test_sceneExceptionsEmpty(self):
-        self.assertEqual(scene_exceptions.get_scene_exceptions(0), [])
+        self.assertEqual(scene_exceptions.get_scene_exceptions(0, 0), [])
 
     def test_sceneExceptionsBlack_Lagoon(self):
-        self.assertEqual(sorted(scene_exceptions.get_scene_exceptions(79604)), ['Black-Lagoon'])
+        self.assertEqual(sorted(scene_exceptions.get_scene_exceptions(1, 79604)), ['Black-Lagoon'])
 
     def test_sceneExceptionByName(self):
-        self.assertEqual(scene_exceptions.get_scene_exception_by_name('Black-Lagoon'), [79604, -1])
-        self.assertEqual(scene_exceptions.get_scene_exception_by_name('Black Lagoon: The Second Barrage'), [79604, 2])
-        self.assertEqual(scene_exceptions.get_scene_exception_by_name('Rokka no Yuusha'), [None, None])
+        self.assertEqual(scene_exceptions.get_scene_exception_by_name('Black-Lagoon'), [1, 79604, -1])
+        self.assertEqual(scene_exceptions.get_scene_exception_by_name('Black Lagoon: The Second Barrage'), [1, 79604, 2])
+        self.assertEqual(scene_exceptions.get_scene_exception_by_name('Rokka no Yuusha'), [None, None, None])
 
     def test_sceneExceptionByNameAnime(self):
         sickbeard.showList = None
-        sickbeard.showList = [Show(1, 79604), Show(1, 295243)]
+        sickbeard.showList = [TVShow(TVINFO_TVDB, 79604), TVShow(TVINFO_TVDB, 295243)]
         sickbeard.showList[0].anime = 1
         sickbeard.showList[1].anime = 1
         scene_exceptions.retrieve_exceptions()
         name_cache.buildNameCache()
-        self.assertEqual(scene_exceptions.get_scene_exception_by_name(u'ブラック・ラグーン'), [79604, -1])
-        self.assertEqual(scene_exceptions.get_scene_exception_by_name(u'Burakku Ragūn'), [79604, -1])
-        self.assertEqual(scene_exceptions.get_scene_exception_by_name('Rokka no Yuusha'), [295243, -1])
+        self.assertEqual(scene_exceptions.get_scene_exception_by_name(u'ブラック・ラグーン'), [1, 79604, -1])
+        self.assertEqual(scene_exceptions.get_scene_exception_by_name(u'Burakku Ragūn'), [1, 79604, -1])
+        self.assertEqual(scene_exceptions.get_scene_exception_by_name('Rokka no Yuusha'), [1, 295243, -1])
 
     def test_sceneExceptionByNameEmpty(self):
-        self.assertEqual(scene_exceptions.get_scene_exception_by_name('nothing useful'), [None, None])
+        self.assertEqual(scene_exceptions.get_scene_exception_by_name('nothing useful'), [None, None, None])
 
     def test_sceneExceptionsResetNameCache(self):
         # clear the exceptions
         my_db = db.DBConnection()
-        my_db.action('DELETE FROM scene_exceptions')
+        my_db.action('DELETE FROM scene_exceptions WHERE 1=1')
 
         # put something in the cache
-        name_cache.addNameToCache('Cached Name', 0)
+        name_cache.addNameToCache('Cached Name', prodid=0)
 
         # updating should not clear the cache this time since our exceptions didn't change
         scene_exceptions.retrieve_exceptions()
-        self.assertEqual(name_cache.retrieveNameFromCache('Cached Name'), 0)
+        self.assertEqual(name_cache.retrieveNameFromCache('Cached Name'), (0, 0))
 
 
-if __name__ == '__main__':
-    if len(sys.argv) > 1:
+if '__main__' == __name__:
+    if 1 < len(sys.argv):
         suite = unittest.TestLoader().loadTestsFromName('scene_helpers_tests.SceneExceptionTestCase.test_' + sys.argv[1])
         unittest.TextTestRunner(verbosity=2).run(suite)
     else:

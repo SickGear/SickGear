@@ -1,6 +1,6 @@
 #import sickbeard
 #from sickbeard import common
-#from sickbeard import exceptions
+#from lib import exceptions_helper as exceptions
 <% def sg_var(varname, default=False): return getattr(sickbeard, varname, default) %>#slurp#
 <% def sg_str(varname, default=''): return getattr(sickbeard, varname, default) %>#slurp#
 ##
@@ -21,10 +21,10 @@
 <script type="text/javascript" src="$sbRoot/js/qualityChooser.js?v=$sbPID"></script>
 <script type="text/javascript" src="$sbRoot/js/massEdit.js?v=$sbPID"></script>
 
-<form action="massEditSubmit" method="post">
+<form action="mass_edit_submit" method="post">
 	$xsrf_form_html
 
-	<input type="hidden" name="toEdit" value="$showList">
+	<input type="hidden" name="to_edit" value="$showList">
 
 	<div class="optionWrapper">
 		<span class="selectTitle">Parent folder <span class="separator">*</span></span><br />
@@ -68,7 +68,7 @@
 			<div class="manageCustom pull-left">
 				<h4 style="font-size:14px">Initial</h4>
 #set $anyQualityList = filter(lambda x: x > $common.Quality.NONE, $common.Quality.qualityStrings)
-				<select id="wanted-qualities" name="anyQualities" multiple="multiple" size="$len($anyQualityList)">
+				<select id="wanted-qualities" name="any_qualities" multiple="multiple" size="$len($anyQualityList)">
 #for $curQuality in sorted($anyQualityList):
 					<option value="$curQuality" #if $curQuality in $anyQualities then $selected else ''#>$common.Quality.get_quality_ui($curQuality)</option>
 #end for
@@ -77,7 +77,7 @@
 			<div class="manageCustom pull-left">
 				<h4 style="font-size:14px">Upgrade to</h4>
 #set $bestQualityList = filter(lambda x: x > $common.Quality.SDTV, $common.Quality.qualityStrings)
-				<select id="upgrade-qualities" name="bestQualities" multiple="multiple" size="$len($bestQualityList)">
+				<select id="upgrade-qualities" name="best_qualities" multiple="multiple" size="$len($bestQualityList)">
 #for $curQuality in sorted($bestQualityList):
 					<option value="$curQuality" #if $curQuality in $bestQualities then $selected else ''#>$common.Quality.get_quality_ui($curQuality)</option>
 #end for
@@ -139,7 +139,7 @@
 	<div class="optionWrapper">
 	<span class="selectTitle">Subtitles<span class="separator"></span></span>
 		<div class="selectChoices">
-			<select id="edit_subtitles" name="subtitles" class="form-control form-control-inline input-sm">
+			<select id="edit_subtitles" name="subs" class="form-control form-control-inline input-sm">
 				<option value="keep">&lt; keep &gt;</option>
 				<option value="enable" #if $subtitles_value then $selected else ''#>enable</option>
 				<option value="disable" #if $subtitles_value == False then $selected else ''#>disable</option>

@@ -1,11 +1,9 @@
 #import sickbeard
-#import datetime
 #import re
-#import urllib
 #from sickbeard import WEB_ROOT, THEME_NAME
 #from sickbeard.common import *
-#from sickbeard import sbdatetime
 #from sickbeard.helpers import anon_url
+#from _23 import quote
 <% def sg_var(varname, default=False): return getattr(sickbeard, varname, default) %>#slurp#
 <% def sg_str(varname, default=''): return getattr(sickbeard, varname, default) %>#slurp#
 ##
@@ -185,7 +183,7 @@ $(document).ready(function(){
 				filterValue = $('#showfilter').find('option:not([value="more_imdb"]).selected').val() + '&more=1';
 			}
 #end raw
-			location = '$sg_root/home/addShows/' + filterValue;
+			location = '$sg_root/add-shows/' + filterValue;
 #raw
 		}
 	});
@@ -301,11 +299,11 @@ $(document).ready(function(){
                         #if not $i % 2
                             #set $id = $v
                         #elif not $v.startswith('(Off) ')
-			<option value="watchlist_imdb?account=$id"#echo ('', selected)[('watchlist-%s' % $id) == $mode]#>#echo '%s%s' % ($v, ('\'s', '')['your' == $v.replace('(Off) ', '').lower()])# list</option>
+			<option value="watchlist-imdb?account=$id"#echo ('', selected)[('watchlist-%s' % $id) == $mode]#>#echo '%s%s' % ($v, ('\'s', '')['your' == $v.replace('(Off) ', '').lower()])# list</option>
                         #end if
                     #end for
                 #end if
-			<option value="watchlist_imdb?action=add"><< Add lists >></option>
+			<option value="watchlist-imdb?action=add"><< Add lists >></option>
 		</optgroup>
             #end if
         #end if
@@ -335,13 +333,9 @@ $(document).ready(function(){
             #set $overview = $this_show['overview']
         #end if
 
-        #set $known = 'not'
-        #set $show_id = $this_show['show_id']
-        #if ':' in $show_id
-            #set $known = ''
-            #set $show_id = $show_id[2:]
-        #end if
-        #set $hide = ('', 'hide ')[$show_id in $sickbeard.BROWSELIST_HIDDEN]
+        #set $show_id = $this_show.get('show_id')
+        #set $known = ('not', '')[bool($this_show.get('indb'))]
+        #set $hide = ('', 'hide ')[bool($this_show.get('hide'))]
 
 	<div class="show-card ${hide}${known}inlibrary" data-name="#echo re.sub(r'([\'\"])', r'', $this_show['title'])#" data_id="$show_id" data-rating="$this_show['rating']" data-votes="$this_show['votes']" data-premiered="$this_show['premiered']">
 		<div class="show-card-inner">
@@ -363,24 +357,24 @@ $(document).ready(function(){
 			</div>
 
 			<div class="show-title">
-				#echo ((re.sub('^((?:A(?!\s+to)n?)|The)\s(\w)', r'<span class="article">\1</span> \2', $this_show['title']), $this_show['title'])[$sg_var('SORT_ARTICLE')], '<span>&nbsp;</span>')['' == $this_show['title']]#
+				#echo ((re.sub(r'^((?:A(?!\s+to)n?)|The)\s(\w)', r'<span class="article">\1</span> \2', $this_show['title']), $this_show['title'])[$sg_var('SORT_ARTICLE')], '<span>&nbsp;</span>')['' == $this_show['title']]#
 			</div>
         #if 'Ani' not in $browse_type
-			<a class="show-toggle-hide" href="$sg_root/home/addShows/show_toggle_hide?ids=$show_id#echo ('', ':%s' % $this_show['ids'].get('imdb', '-'))['Trakt' == $browse_type]#" title="#echo ('H', 'Unh')[any($hide)]#ide"><i class="sgicon-delete"></i></a>
+			<a class="show-toggle-hide" href="$sg_root/add-shows/show-toggle-hide?ids=$show_id" title="#echo ('H', 'Unh')[any($hide)]#ide"><i class="sgicon-delete"></i></a>
         #end if
 			<div class="clearfix">
 				<p>$this_show['rating']%<i class="heart icon-glyph"></i><i>$this_show['votes'] votes</i></p>
         #if 'url_tvdb' in $this_show and $this_show['url_tvdb']
 				<a class="service" href="<%= anon_url(this_show['url_tvdb']) %>" onclick="window.open(this.href, '_blank'); return false;"
 				title="View <span class='boldest'>tvdb</span> detail for <span style='color: rgb(66, 139, 202)'>$title_html</span>">
-				<i><img style="margin-top:5px" alt="tvdb" height="16" width="16" src="$sg_root/images/$sickbeard.indexerApi($sickbeard.indexers.indexer_config.INDEXER_TVDB).config['icon']" /></i></a>
+				<i><img style="margin-top:5px" alt="tvdb" height="16" width="16" src="$sg_root/images/$sickbeard.TVInfoAPI($sickbeard.indexers.indexer_config.TVINFO_TVDB).config['icon']" /></i></a>
         #end if
 
 				<div class="browse-add-show-holder">
-        #if ':' in $this_show['show_id']
-					<p style="line-height:1.5;padding:2px 5px 3px" title="#echo '%s added' % $sickbeard.indexerApi(this_show['show_id'][:1]).config.get('name')#">In library</p>
+        #if bool($this_show.get('indb'))
+					<p style="line-height:1.5;padding:2px 5px 3px" title="#echo '%s added' % $this_show.get('indb')#">In library</p>
         #else
-					<a href="$sg_root/home/addShows/add${browse_type}Show?indexer_id=${this_show['show_id']}&amp;showName=${urllib.quote($this_show['title'].encode("utf-8"))}" class="btn btn-xs">Add Show</a>
+					<a href="$sg_root/add-shows/info-${browse_type.lower()}?ids=${this_show['show_id']}&amp;show_name=${quote($this_show['title'].encode("utf-8"))}" class="btn btn-xs">Add Show</a>
         #end if
 				</div>
 			</div>

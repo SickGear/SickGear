@@ -16,17 +16,25 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 import os
-import sickbeard
 import time
 
-from indexer_config import initConfig, indexerConfig
-from sickbeard.helpers import proxy_setting
+from .indexer_config import init_config, tvinfo_config
+from ..helpers import proxy_setting
+import sickbeard
+
+from _23 import list_values
+
+# noinspection PyUnreachableCode
+if False:
+    from typing import AnyStr, Dict
 
 
 class ShowContainer(dict):
-    """Simple dict that holds a series of Show instances
+    """
+    Simple dict that holds a series of Show instances
     """
 
+    # noinspection PyMissingConstructor
     def __init__(self):
         self._stack = []
         self._lastgc = time.time()
@@ -46,7 +54,8 @@ class ShowContainer(dict):
         super(ShowContainer, self).__setitem__(key, value)
 
 
-class DummyIndexer:
+class DummyIndexer(object):
+    # noinspection PyUnusedLocal
     def __init__(self, *args, **kwargs):
         self.config = {
             'apikey': '',
@@ -70,51 +79,56 @@ class DummyIndexer:
     def __repr__(self):
         return str(self.shows)
 
-    def search(self, series):
+    # noinspection PyUnusedLocal
+    @staticmethod
+    def search(series):
         return []
 
 
-class indexerApi(object):
-    def __init__(self, indexerID=None):
-        self.indexerID = int(indexerID) if indexerID else None
+class TVInfoAPI(object):
+    def __init__(self, tvid=None):
+        self.tvid = int(tvid) if tvid else None
 
     def __del__(self):
         pass
 
-    def indexer(self, *args, **kwargs):
-        if self.indexerID:
-            if indexerConfig[self.indexerID]['active'] or ('no_dummy' in kwargs and True is kwargs['no_dummy']):
+    def setup(self, *args, **kwargs):
+        if self.tvid:
+            if tvinfo_config[self.tvid]['active'] or ('no_dummy' in kwargs and True is kwargs['no_dummy']):
                 if 'no_dummy' in kwargs:
                     kwargs.pop('no_dummy')
-                return indexerConfig[self.indexerID]['module'](*args, **kwargs)
+                return tvinfo_config[self.tvid]['module'](*args, **kwargs)
             else:
                 return DummyIndexer(*args, **kwargs)
 
     @property
     def config(self):
-        if self.indexerID:
-            return indexerConfig[self.indexerID]
-        return initConfig
+        # type: () -> Dict
+        if self.tvid:
+            return tvinfo_config[self.tvid]
+        return init_config
 
     @property
     def name(self):
-        if self.indexerID:
-            return indexerConfig[self.indexerID]['name']
+        # type: () -> AnyStr
+        if self.tvid:
+            return tvinfo_config[self.tvid]['name']
 
     @property
     def api_params(self):
-        if self.indexerID:
+        # type: () -> Dict
+        if self.tvid:
             if sickbeard.CACHE_DIR:
-                indexerConfig[self.indexerID]['api_params']['cache'] = os.path.join(
+                tvinfo_config[self.tvid]['api_params']['cache'] = os.path.join(
                     sickbeard.CACHE_DIR, 'indexers', self.name)
             if sickbeard.PROXY_SETTING and sickbeard.PROXY_INDEXERS:
                 (proxy_address, pac_found) = proxy_setting(sickbeard.PROXY_SETTING,
-                                                           indexerConfig[self.indexerID]['base_url'],
+                                                           tvinfo_config[self.tvid]['base_url'],
                                                            force=True)
                 if proxy_address:
-                    indexerConfig[self.indexerID]['api_params']['proxy'] = proxy_address
+                    tvinfo_config[self.tvid]['api_params']['proxy'] = proxy_address
 
-            return indexerConfig[self.indexerID]['api_params']
+            return tvinfo_config[self.tvid]['api_params']
 
     @property
     def cache(self):
@@ -122,28 +136,34 @@ class indexerApi(object):
             return self.api_params['cache']
 
     @property
-    def indexers(self):
-        return dict((int(x['id']), x['name']) for x in indexerConfig.values() if not x['mapped_only'] and True is not x.get('fallback'))
+    def sources(self):
+        # type: () -> Dict[int, AnyStr]
+        return dict([(int(x['id']), x['name']) for x in list_values(tvinfo_config) if not x['mapped_only'] and
+                     True is not x.get('fallback')])
 
     @property
-    def search_indexers(self):
-        return dict((int(x['id']), x['name']) for x in indexerConfig.values() if not x['mapped_only'] and
-                    x.get('active') and not x.get('defunct') and True is not x.get('fallback'))
+    def search_sources(self):
+        # type: () -> Dict[int, AnyStr]
+        return dict([(int(x['id']), x['name']) for x in list_values(tvinfo_config) if not x['mapped_only'] and
+                     x.get('active') and not x.get('defunct') and True is not x.get('fallback')])
 
     @property
-    def all_indexers(self):
+    def all_sources(self):
+        # type: () -> Dict[int, AnyStr]
         """
-        return all indexers including mapped only indexers excluding fallback indexers
+        :return: return all indexers including mapped only indexers excluding fallback indexers
         """
-        return dict((int(x['id']), x['name']) for x in indexerConfig.values() if True is not x.get('fallback'))
+        return dict([(int(x['id']), x['name']) for x in list_values(tvinfo_config) if True is not x.get('fallback')])
 
     @property
-    def fallback_indexers(self):
+    def fallback_sources(self):
+        # type: () -> Dict[int, AnyStr]
         """
-        return all fallback indexers
+        :return: return all fallback indexers
         """
-        return dict((int(x['id']), x['name']) for x in indexerConfig.values() if True is x.get('fallback'))
+        return dict([(int(x['id']), x['name']) for x in list_values(tvinfo_config) if True is x.get('fallback')])
 
     @property
-    def xem_supported_indexers(self):
-        return dict((int(x['id']), x['name']) for x in indexerConfig.values() if x.get('xem_origin'))
+    def xem_supported_sources(self):
+        # type: () -> Dict[int, AnyStr]
+        return dict([(int(x['id']), x['name']) for x in list_values(tvinfo_config) if x.get('xem_origin')])

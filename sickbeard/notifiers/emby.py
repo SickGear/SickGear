@@ -15,12 +15,16 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear. If not, see <http://www.gnu.org/licenses/>.
 
+try:
+    import json
+except ImportError:
+    from lib import simplejson as json
 from socket import socket, AF_INET, SOCK_DGRAM, SOL_SOCKET, SO_REUSEADDR, SO_BROADCAST, SHUT_RDWR
 
+from .generic import Notifier
 import sickbeard
-from sickbeard.notifiers.generic import Notifier
 
-from lib import simplejson as json
+from _23 import map_list
 
 
 class EmbyNotifier(Notifier):
@@ -43,18 +47,18 @@ class EmbyNotifier(Notifier):
         :rtype: bool
         """
         self.response = None
-        response = sickbeard.helpers.getURL(
+        response = sickbeard.helpers.get_url(
             'http://%s/emby/System/Info/Public' % host,
             headers={'Content-type': 'application/json', 'X-MediaBrowser-Token': token},
             timeout=20, hooks=dict(response=self._cb_response), json=True)
 
         return self.response and self.response.get('ok') and 200 == self.response.get('status_code') and \
-            version <= map(lambda x: int(x), response.get('Version', '0.0.0.0').split('.'))
+            version <= map_list(lambda x: int(x), response.get('Version', '0.0.0.0').split('.'))
 
-    def update_library(self, show=None, **kwargs):
+    def update_library(self, show_obj=None, **kwargs):
         """ Update library function
 
-        :param show: TVShow object
+        :param show_obj: TVShow object
 
         Returns: None if no processing done, True if processing succeeded with no issues else False if any issues found
         """
@@ -63,10 +67,15 @@ class EmbyNotifier(Notifier):
             self._log_warning(u'Issue with hosts or api keys, check your settings')
             return False
 
-        from sickbeard.indexers.indexer_config import INDEXER_TVDB
-        args = show and INDEXER_TVDB == show.indexer \
-            and dict(post_json={'TvdbId': '%s' % show.indexerid}) or dict(data=None)
-        mode_to_log = show and 'show "%s"' % show.name or 'all shows'
+        from sickbeard.indexers import indexer_config
+        tvdb_id = None
+        try:
+            tvdb_id = show_obj.ids.get(indexer_config.TVINFO_TVDB, {}).get('id', None)
+        except (BaseException, Exception):
+            pass
+        args = (dict(post_json={'TvdbId': '%s' % tvdb_id}), dict(data=None))[not any([tvdb_id])]
+
+        mode_to_log = show_obj and 'show "%s"' % show_obj.name or 'all shows'
         total_success = True
         for i, cur_host in enumerate(hosts):
             endpoint = 'Series'
@@ -86,7 +95,7 @@ class EmbyNotifier(Notifier):
 
             self.response = None
             # noinspection PyArgumentList
-            response = sickbeard.helpers.getURL(
+            response = sickbeard.helpers.get_url(
                 'http://%s/emby/Library/%s/Updated' % (cur_host, endpoint),
                 headers={'Content-type': 'application/json', 'X-MediaBrowser-Token': keys[i]},
                 timeout=20, hooks=dict(response=self._cb_response), **args)
@@ -98,7 +107,7 @@ class EmbyNotifier(Notifier):
                 self._log_warning(u'Failed to authenticate with %s' % cur_host)
             elif self.response and 404 == self.response.get('status_code'):
                 self.response = None
-                sickbeard.helpers.getURL(
+                sickbeard.helpers.get_url(
                     'http://%s/emby/Library/Media/Updated' % cur_host,
                     headers={'Content-type': 'application/json', 'X-MediaBrowser-Token': keys[i]},
                     timeout=20, hooks=dict(response=self._cb_response), post_json={'Path': '', 'UpdateType': ''})
@@ -145,12 +154,12 @@ class EmbyNotifier(Notifier):
                         break
             except AssertionError:
                 sock_issue = True
-            except (StandardError, Exception):
+            except (BaseException, Exception):
                 pass
         if not sock_issue:
             try:
                 cs.shutdown(SHUT_RDWR)
-            except (StandardError, Exception):
+            except (BaseException, Exception):
                 pass
         return result
 
@@ -200,7 +209,7 @@ class EmbyNotifier(Notifier):
         for i, cur_host in enumerate(hosts):
 
             self.response = None
-            response = sickbeard.helpers.getURL(
+            response = sickbeard.helpers.get_url(
                 'http://%s/emby/Notifications/Admin' % cur_host,
                 headers={'Content-type': 'application/json', 'X-MediaBrowser-Token': keys[i]},
                 timeout=10, hooks=dict(response=self._cb_response), **args)

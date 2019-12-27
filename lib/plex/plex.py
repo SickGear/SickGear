@@ -17,18 +17,8 @@
 
 from time import sleep
 
-import datetime
-import math
-import os
 import platform
 import re
-import sys
-
-try:
-    from urllib import urlencode  # Python2
-except ImportError:
-    import urllib
-    from urllib.parse import urlencode  # Python3
 
 try:
     import urllib.request as urllib2
@@ -36,18 +26,13 @@ except ImportError:
     import urllib2
 
 from sickbeard import logger
-from sickbeard.helpers import getURL, tryInt
+from sickbeard.helpers import get_url, try_int, parse_xml
 
-try:
-    from lxml import etree
-except ImportError:
-    try:
-        import xml.etree.cElementTree as etree
-    except ImportError:
-        import xml.etree.ElementTree as etree
+from _23 import unquote, urlencode
+from six import iteritems
 
 
-class Plex:
+class Plex(object):
     def __init__(self, settings=None):
 
         settings = settings or {}
@@ -116,25 +101,25 @@ class Plex:
                     logger.log(msg)
             # else:
             #     print(msg.encode('ascii', 'replace').decode())
-        except (StandardError, Exception):
+        except (BaseException, Exception):
             pass
 
     def get_token(self, user, passw):
 
         auth = ''
         try:
-            auth = getURL('https://plex.tv/users/sign_in.json',
-                          headers={'X-Plex-Device-Name': 'SickGear',
-                                   'X-Plex-Platform': platform.system(), 'X-Plex-Device': platform.system(),
-                                   'X-Plex-Platform-Version': platform.release(),
-                                   'X-Plex-Provides': 'Python', 'X-Plex-Product': 'Python',
-                                   'X-Plex-Client-Identifier': self.client_id,
-                                   'X-Plex-Version': str(self.config_version),
-                                   'X-Plex-Username': user
-                                   },
-                          json=True,
-                          post_data=urlencode({b'user[login]': user, b'user[password]': passw}).encode('utf-8')
-                          )['user']['authentication_token']
+            auth = get_url('https://plex.tv/users/sign_in.json',
+                           headers={'X-Plex-Device-Name': 'SickGear',
+                                    'X-Plex-Platform': platform.system(), 'X-Plex-Device': platform.system(),
+                                    'X-Plex-Platform-Version': platform.release(),
+                                    'X-Plex-Provides': 'Python', 'X-Plex-Product': 'Python',
+                                    'X-Plex-Client-Identifier': self.client_id,
+                                    'X-Plex-Version': str(self.config_version),
+                                    'X-Plex-Username': user
+                                    },
+                           parse_json=True,
+                           post_data=urlencode({b'user[login]': user, b'user[password]': passw}).encode('utf-8')
+                           )['user']['authentication_token']
         except TypeError:
             self.log('Error in response from plex.tv auth server')
         except IndexError:
@@ -154,8 +139,7 @@ class Plex:
                     or self.machine_client_identifier == device.get('clientIdentifier') \
                     or (self.device_name
                         and (self.device_name.lower() in device.get('name').lower()
-                             or self.device_name.lower() in device.get('clientIdentifier').lower())
-                        ):
+                             or self.device_name.lower() in device.get('clientIdentifier').lower())):
                 access_token = device.get('accessToken')
                 if not access_token:
                     return ''
@@ -168,7 +152,7 @@ class Plex:
                     if not access_token:
                         return ''
                     uri = connection.get('uri')
-                    match = re.compile('(http[s]?://.*?):(\d*)').match(uri)
+                    match = re.compile(r'(http[s]?://.*?):(\d*)').match(uri)
                     if match:
                         self.plex_host = match.group(1)
                         self.plex_port = match.group(2)
@@ -214,9 +198,9 @@ class Plex:
                            }
                 if self.username:
                     headers.update({'X-Plex-Username': self.username})
-                page = getURL(url, headers=headers, **kwargs)
+                page = get_url(url, headers=headers, **kwargs)
                 if page:
-                    parsed = etree.fromstring(page)
+                    parsed = parse_xml(page)
                     if None is not parsed and len(parsed):
                         return parsed
                     return None
@@ -235,7 +219,7 @@ class Plex:
                                   None, {'X-Plex-Token': self.token})
             req.get_method = lambda: 'DELETE'
             urllib2.urlopen(req)
-        except (StandardError, Exception):
+        except (BaseException, Exception):
             return False
         return True
 
@@ -244,7 +228,7 @@ class Plex:
 
         progress = 0
         if None is not video_node.get('viewOffset') and None is not video_node.get('duration'):
-            progress = tryInt(video_node.get('viewOffset')) * 100 / tryInt(video_node.get('duration'))
+            progress = try_int(video_node.get('viewOffset')) * 100 / try_int(video_node.get('duration'))
 
         for media in video_node.findall('Media'):
             for part in media.findall('Part'):
@@ -252,7 +236,7 @@ class Plex:
                 # if '3' > sys.version:  # remove HTML quoted characters, only works in python < 3
                 #     file_name = urllib2.unquote(file_name.encode('utf-8', errors='replace'))
                 # else:
-                file_name = urllib2.unquote(file_name)
+                file_name = unquote(file_name)
 
                 return {'path_file': file_name, 'media_id': video_node.get('ratingKey'),
                         'played': int(video_node.get('viewCount') or 0), 'progress': progress}
@@ -273,14 +257,14 @@ class Plex:
 
                 progress = 0
                 if None is not video_node.get('viewOffset') and None is not video_node.get('duration'):
-                    progress = tryInt(video_node.get('viewOffset')) * 100 / tryInt(video_node.get('duration'))
+                    progress = try_int(video_node.get('viewOffset')) * 100 / try_int(video_node.get('duration'))
 
                 played = int(video_node.get('viewCount') or 0)
                 if not progress and not played:
                     continue
 
                 date_watched = 0
-                if (0 < tryInt(video_node.get('viewCount'))) or (0 < self.default_progress_as_watched < progress):
+                if (0 < try_int(video_node.get('viewCount'))) or (0 < self.default_progress_as_watched < progress):
                     last_viewed_at = video_node.get('lastViewedAt')
                     if last_viewed_at and last_viewed_at not in ('', '0'):
                         date_watched = last_viewed_at
@@ -300,7 +284,7 @@ class Plex:
     # parse episode information from season pages
     def stat_show(self, node):
 
-        episodes = []
+        ep_nodes = []
         if 'directory' == node.tag.lower() and 'show' == node.get('type'):
             show = self.get_url_pms(node.get('key'))
             if None is show:  # Check if show page is None or empty
@@ -311,13 +295,13 @@ class Plex:
                 if 'season' != season_node.get('type'):  # skips Specials
                     continue
 
-                season_key = season_node.get('key')
-                season = self.get_url_pms(season_key)
-                if None is not season:
-                    episodes += [season]
+                season_node_key = season_node.get('key')
+                season_node = self.get_url_pms(season_node_key)
+                if None is not season_node:
+                    ep_nodes += [season_node]
 
         elif 'mediacontainer' == node.tag.lower() and 'episode' == node.get('viewGroup'):
-            episodes = [node]
+            ep_nodes = [node]
 
         check_users = []
         if self.default_home_users:
@@ -325,7 +309,7 @@ class Plex:
             for k in range(0, len(check_users)):  # Remove extra spaces and commas
                 check_users[k] = check_users[k].strip(', ')
 
-        for episode_node in episodes:
+        for episode_node in ep_nodes:
             for video_node in episode_node.findall('Video'):
 
                 media_info = self.get_media_info(video_node)
@@ -403,7 +387,7 @@ class Plex:
                             and section.get('title') not in self.ignore_sections:
                         section_key = section.get('key')
 
-                        for (user, token) in (self.home_user_tokens or {'': None}).iteritems():
+                        for (user, token) in iteritems(self.home_user_tokens or {'': None}):
                             self.username = user
 
                             resp_section = self.get_url_pms('/library/sections/%s/%s' % (

@@ -19,10 +19,12 @@ import re
 import traceback
 
 from . import generic
-from sickbeard import logger
-from sickbeard.bs4_parser import BS4Parser
-from sickbeard.helpers import tryInt
-from lib.unidecode import unidecode
+from .. import logger
+from ..helpers import try_int
+from bs4_parser import BS4Parser
+
+from _23 import unidecode
+from six import iteritems
 
 
 class RevTTProvider(generic.TorrentProvider):
@@ -54,12 +56,12 @@ class RevTTProvider(generic.TorrentProvider):
 
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
-        rc = dict((k, re.compile('(?i)' + v))
-                  for (k, v) in {'info': 'details', 'get': 'download', 'size': '(.*)\n.*'}.items())
-        for mode in search_params.keys():
+        rc = dict([(k, re.compile('(?i)' + v))
+                   for (k, v) in iteritems({'info': 'details', 'get': 'download', 'size': '(.*)\n.*'})])
+        for mode in search_params:
             rc['cats'] = re.compile('(?i)cat=(?:%s)' % self._categories_string(mode, template='', delimiter='|'))
             for search_string in search_params[mode]:
-                search_string = isinstance(search_string, unicode) and unidecode(search_string) or search_string
+                search_string = unidecode(search_string)
 
                 html = self.get_url(self.urls['search'] % ('+'.join(search_string.split()),
                                                            self._categories_string(mode)))
@@ -85,8 +87,8 @@ class RevTTProvider(generic.TorrentProvider):
                             try:
                                 head = head if None is not head else self._header_row(
                                     tr, {'seed': r'(?:up\.png|seed|s/l)', 'leech': r'(?:down\.png|leech|peers)'})
-                                seeders, leechers, size = [tryInt(n, n) for n in [
-                                    cells[head[x]].get_text().strip() for x in 'seed', 'leech', 'size']]
+                                seeders, leechers, size = [try_int(n, n) for n in [
+                                    cells[head[x]].get_text().strip() for x in ('seed', 'leech', 'size')]]
                                 if not tr.find('a', href=rc['cats']) or self._reject_item(seeders, leechers):
                                     continue
 

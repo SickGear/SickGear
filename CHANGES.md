@@ -1,5 +1,51 @@
 ﻿### 0.21.0 (2019-xx-xx xx:xx:xx UTC)
 
+* Change core system to improve performance and facilitate multi TV info sources
+* Change migrate core objects TVShow and TVEpisode and everywhere that these objects affect.
+* Add message to logs and disable ui backlog buttons when no media provider has active and/or scheduled searching enabled
+* Change views for py3 compat
+* Change set default runtime of 5 mins if none is given for layout Day by Day
+* Change if no qualities are wanted, exit manual search thread
+* Change add case insensitive ordering to anime black/whitelist
+* Fix anime groups list not excluding whitelisted stuff
+* Add OpenSubtitles authentication support to config/Subtitles/Subtitles Plugin
+* Add "Enforce media hash match" to config/Subtitles Plugin/Opensubtitles for accurate subs if enabled, but if disabled,
+  search failures will fallback to use less reliable subtitle results
+* Update NZBGet Process Media extension, SickGear-NG 1.7 to 2.4
+* Update Kodi addon to 1.0.3 to 1.0.4
+* Change requirements.txt for Cheetah3 to minimum 3.2.4
+* Change update SABnzbd sabToSickBeard
+* Change update autoProcessTV
+* Add Apprise 0.8.0 (6aa52c3)
+* Change use GNTP (Growl Notification Transport Protocol) from Apprise
+* Change add multi host support to Growl notifier
+* Fix Growl notifier when using empty password
+* Change update links for Growl notifications
+* Change config/Notifications/Growl links and guidance
+* Change deprecate confg/Notifications/Growl password field as these are now stored with host setting
+* Add hachoir_py3 3.0a6 (5b9e05a)
+* Add sgmllib3k 1.0.0
+* Update soupsieve 1.9.1 (24859cc) to soupsieve_py2 1.9.5 (6a38398)
+* Add soupsieve_py3 2.0.0.dev (69194a2)
+* Add Tornado_py3 Web Server 6.0.3 (ff985fe)
+* Add xmlrpclib_to 0.1.1 (c37db9e)
+* Remove ancient Growl lib 0.1
+* Change remove Twitter notifier
+* Remove redundant httplib2 
+* Remove redundant oauth2
+* Fix prevent infinite memoryError from a particular jpg data structure
+* Change browser_ua for py3
+* Change feedparser for py3
+* Change Subliminal for py3
+* Change Enzyme for py3
+* Fix Guessit
+* Fix parse_xml for py3
+* Fix name parser with multi eps for py3
+* Fix tvdb_api fixes for py3 (search show)
+* Fix config/media process to only display "pattern is invalid" qtip on "Episode naming" tab if the associated field is
+  actually visible. Also, if the field becomes hidden due to a setting change, hide any previously displayed qtip.
+* Remove xmltodict library
+* Update ADBA for py3
 * Add ability to use multiple SG apikeys 
 * Add UI for multiple apikeys to config/General/Web Interface
 * Add jquery-qrcode 0.17.0
@@ -12,10 +58,10 @@
 * Change ui typo in apiBuilder
 * Fix display of fanart in apibuilder
 * Add help command to apiBuilder and fix help call
-* Fix add shows via api
-* Change fix sg.searchqueue output
-* Add missing sg.show.delete parameter "full"
-* Add missing sg.setdefaults and sg.shutdown methods
+* Fix api add shows
+* Change fix api sg.searchqueue output
+* Add missing api sg.show.delete parameter "full"
+* Add missing api sg.setdefaults and sg.shutdown methods
 * Change increase api version because missing sg.* methods are added
 * Change add some extra checks for Sick-Beard call add (existing) show
 * Change patch imdbpie to add cachedir folder and set imdbpie cachedir in SG
@@ -26,7 +72,7 @@
 * Update cachecontrol library 0.12.4 (bd94f7e) to 0.12.5 (007e8ca)
 * Update Certifi 2019.03.09 (401100f) to 2019.06.16 (84dc766)
 * Update ConfigObj 5.1.0 (a68530a) to 5.1.0 (45fbf1b)
-* Update dateutil 2.8.0 (c90a30c) to 2.8.0 (27848c5)
+* Update dateutil 2.8.0 (c90a30c) to 2.8.1 (fc9b162)
 * Update DiskCache library 3.1.1 (2649ac9) to 4.0.0 (2c79bb9)
 * Update feedparser 5.2.1 (2b11c80) to 6.0.0b1 (d12d3bd)
 * Update Fuzzywuzzy 0.15.1 to 0.17.0 (778162c)
@@ -35,22 +81,41 @@
 * Update MsgPack 0.6.1 (737f08a) to 0.6.1 (05ff11d)
 * Update rarfile 3.0 (2704344) to 3.1 (1b14c85)
 * Update Requests library 2.22.0 (0b6c110) to 2.22.0 (3d968ff)
-* Update Six compatibility library 1.12.0 (8da94b8) to 1.12.0 (aa4e90b)
-* Update soupsieve 1.9.1 (24859cc) to 2.0.0.dev (beeb4ab)
+* Update Send2Trash 1.3.0 (a568370) to 1.5.0 (66afce7)
+* Update Six compatibility library 1.12.0 (8da94b8) to 1.13.0 (ec58185)
+* Update tmdb_api to tmdbsimple 2.2.0 (ff17893)
 * Update TZlocal 2.0.0.dev0 (b73a692) to 2.0.0b3 (410a838)
 * Update unidecode module 1.0.22 (a5045ab) to 1.1.1 (632af82)
 * Update urllib3 release 1.25.2 (49eea80) to 1.25.6 (4a6c288)
 * Change simplify parsing TVDB images
 * Fix setting episodes wanted when adding show
 * Fix _get_wanted and add test for case when all episodes are unaired
+* Change add a once a month update of tvinfo show mappings to the daily updater
+* Change autocorrect ids of new shows by updating from -8 to 31 days of the airdate of episode one
+* Add next run time to Manage/Show Tasks/Daily show update
+* Change when fetching imdb data, if imdb id is an episode id then try to find and use real show id
+* Change delete diskcache db in imdbpie when value error (due to change in Python version)
+* Change during startup, cleanup any _cleaner.pyc/o to prevent issues when switching python versions
+* Add .pyc cleaner if python version is switched
+* Change rebrand "SickGear PostProcessing script" to "SickGear Process Media extension"
+* Change improve setup guide to use the NZBGet version to minimise displayed text based on version
+* Change NZBGet versions prior to v17 now told to upgrade as those version are no longer supported - code has actually
+  exit on start up for some time but docs were outdated
+* Change comment out code and unused option sg_base_path
+* Change supported Python version 2.7.9-2.7.18 inclusive expanded to 3.7.1-3.8.1 inclusive
+* Change pidfile creation under Linux 0o644
+* Fix long path issues with Windows process media
 
 
 [develop changelog]
 
 * Update attr 19.2.0.dev0 (de84609) to 19.2.0.dev0 (154b4e5)
 * Update Beautiful Soup 4.7.1 (r497) to 4.8.0 (r526)
+* Update Beautiful Soup 4.8.0 (r526) to 4.8.1 (r531)
+* Update dateutil 2.8.0 (c90a30c) to 2.8.0 (27848c5)
 * Update feedparser 5.2.1 (2b11c80) to 5.2.1 (cbe18d0)
 * Update Requests library 2.22.0 (aeda65b) to 2.22.0 (0b6c110)
+* Update Six compatibility library 1.12.0 (8da94b8) to 1.12.0 (aa4e90b)
 * Update urllib3 release 1.25.2 (49eea80) to 1.25.3 (3387b20)
 * Update urllib3 release 1.25.3 (3387b20) to 1.25.3 (67715fd)
 * Update urllib3 release 1.25.5 (edc3ddb) to 1.25.6 (4a6c288)

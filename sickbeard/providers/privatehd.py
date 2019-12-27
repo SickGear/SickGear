@@ -21,10 +21,12 @@ import re
 import traceback
 
 from . import generic
-from sickbeard import logger
-from sickbeard.bs4_parser import BS4Parser
-from sickbeard.helpers import tryInt
-from lib.unidecode import unidecode
+from .. import logger
+from ..helpers import try_int
+from bs4_parser import BS4Parser
+
+from _23 import filter_iter, unidecode
+from six import iteritems
 
 
 class PrivateHDProvider(generic.TorrentProvider):
@@ -64,33 +66,33 @@ class PrivateHDProvider(generic.TorrentProvider):
 
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
-        rc = dict((k, re.compile('(?i)' + v))
-                  for (k, v) in {'info': r'.*?details\s*-\s*', 'get': 'download'}.items())
+        rc = dict([(k, re.compile('(?i)' + v))
+                   for (k, v) in iteritems({'info': r'.*?details\s*-\s*', 'get': 'download'})])
         log = ''
         if self.filter:
             non_marked = 'f0' in self.filter
             # if search_any, use unselected to exclude, else use selected to keep
             filters = ([f for f in self.may_filter if f in self.filter],
                        [f for f in self.may_filter if f not in self.filter])[non_marked]
-            filters += (((all([x in filters for x in 'free', 'double']) and ['freedouble'] or [])
-                        + (all([x in filters for x in 'half', 'double']) and ['halfdouble'] or [])),
-                        ((not all([x not in filters for x in 'free', 'double']) and ['freedouble'] or [])
-                         + (not all([x not in filters for x in 'half', 'double']) and ['halfdouble'] or []))
+            filters += (((all([x in filters for x in ('free', 'double')]) and ['freedouble'] or [])
+                        + (all([x in filters for x in ('half', 'double')]) and ['halfdouble'] or [])),
+                        ((not all([x not in filters for x in ('free', 'double')]) and ['freedouble'] or [])
+                         + (not all([x not in filters for x in ('half', 'double')]) and ['halfdouble'] or []))
                         )[non_marked]
             rc['filter'] = re.compile('(?i)^(%s)$' % '|'.join(
                 ['%s' % f for f in filters if (f in self.may_filter and self.may_filter[f][1]) or f]))
             log = '%sing (%s) ' % (('keep', 'skipp')[non_marked], ', '.join(
                 [f in self.may_filter and self.may_filter[f][0] or f for f in filters]))
-        for mode in search_params.keys():
+        for mode in search_params:
             if mode in ['Season', 'Episode']:
-                show_type = self.show.air_by_date and 'Air By Date' \
-                    or self.show.is_sports and 'Sports' or self.show.is_anime and 'Anime' or None
+                show_type = self.show_obj.air_by_date and 'Air By Date' \
+                            or self.show_obj.is_sports and 'Sports' or self.show_obj.is_anime and 'Anime' or None
                 if show_type:
                     logger.log(u'Provider does not carry shows of type: [%s], skipping' % show_type, logger.DEBUG)
                     return results
 
             for search_string in search_params[mode]:
-                search_string = isinstance(search_string, unicode) and unidecode(search_string) or search_string
+                search_string = unidecode(search_string)
                 search_url = self.urls['search'] % (
                     '+'.join(search_string.split()), self._categories_string(mode, ''))
 
@@ -117,15 +119,15 @@ class PrivateHDProvider(generic.TorrentProvider):
                             if any(self.filter):
                                 marked = ','.join([x.attrs.get('title', '').lower() for x in tr.find_all(
                                     'i', attrs={'class': ['fa-star', 'fa-diamond', 'fa-star-half-o']})])
-                                munged = ''.join(filter(marked.__contains__, ['free', 'half', 'double']))
+                                munged = ''.join(filter_iter(marked.__contains__, ['free', 'half', 'double']))
                                 # noinspection PyUnboundLocalVariable
                                 if ((non_marked and rc['filter'].search(munged)) or
                                         (not non_marked and not rc['filter'].search(munged))):
                                     continue
                             try:
                                 head = head if None is not head else self._header_row(tr)
-                                seeders, leechers, size = [tryInt(n, n) for n in [
-                                    cells[head[x]].get_text().strip() for x in 'seed', 'leech', 'size']]
+                                seeders, leechers, size = [try_int(n, n) for n in [
+                                    cells[head[x]].get_text().strip() for x in ('seed', 'leech', 'size')]]
                                 if self._reject_item(seeders, leechers):
                                     continue
 

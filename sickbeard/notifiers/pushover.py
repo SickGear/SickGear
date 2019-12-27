@@ -18,15 +18,15 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
-import base64
 import socket
 import time
-import urllib
-import urllib2
 
+from .generic import Notifier
 import sickbeard
-from sickbeard.exceptions import ex
-from sickbeard.notifiers.generic import Notifier
+
+from _23 import urlencode
+# noinspection PyUnresolvedReferences
+from six.moves import urllib
 
 API_URL = 'https://api.pushover.net/1/messages.json'
 DEVICE_URL = 'https://api.pushover.net/1/users/validate.json'
@@ -39,17 +39,17 @@ class PushoverNotifier(Notifier):
         user_key = self._choose(user_key, sickbeard.PUSHOVER_USERKEY)
         api_key = self._choose(api_key, sickbeard.PUSHOVER_APIKEY)
 
-        data = urllib.urlencode(dict(token=api_key, user=user_key))
+        data = urlencode(dict(token=api_key, user=user_key))
 
         # get devices from pushover
         result = False
         try:
-            req = urllib2.Request(DEVICE_URL)
-            handle = urllib2.urlopen(req, data)
+            req = urllib.request.Request(DEVICE_URL)
+            handle = urllib.request.urlopen(req, data)
             if handle:
                 result = handle.read()
             handle.close()
-        except (urllib2.URLError, socket.timeout):
+        except (urllib.error.URLError, socket.timeout):
             pass
 
         return ('{}', result)[bool(result)]
@@ -84,11 +84,11 @@ class PushoverNotifier(Notifier):
         # send the request to pushover
         result = None
         try:
-            req = urllib2.Request(API_URL)
-            handle = urllib2.urlopen(req, urllib.urlencode(params))
+            req = urllib.request.Request(API_URL)
+            handle = urllib.request.urlopen(req, urlencode(params))
             handle.close()
 
-        except urllib2.URLError as e:
+        except urllib.error.HTTPError as e:
             # HTTP status 404 if the provided email address isn't a Pushover user.
             if 404 == e.code:
                 result = 'Username is wrong/not a Pushover email. Pushover will send an email to it'
@@ -99,7 +99,7 @@ class PushoverNotifier(Notifier):
             elif 401 == e.code:
 
                 # HTTP status 401 if the user doesn't have the service added
-                subscribe_note = self._send_pushover(title, body, user_key)
+                subscribe_note = self._notify(title, body, user_key)
                 if subscribe_note:
                     self._log_debug('Subscription sent')
                     # return True
@@ -119,9 +119,6 @@ class PushoverNotifier(Notifier):
                 # If you receive a HTTP status code of 500, service is unavailable
                 elif 500 == e.code:
                     result = 'Unable to connect to API, service unavailable'
-
-                else:
-                    result = 'Http response code "%s"' % response.status
 
                 self._log_error(result)
 

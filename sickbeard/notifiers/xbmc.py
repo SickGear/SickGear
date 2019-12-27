@@ -16,22 +16,27 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
-import base64
-
 try:
     import json
 except ImportError:
     from lib import simplejson as json
 import socket
 import time
-import urllib
-import urllib2
 import xml.etree.cElementTree as XmlEtree
 
+from .generic import Notifier
 import sickbeard
-from sickbeard.exceptions import ex
-from sickbeard.encodingKludge import fixStupidEncodings
-from sickbeard.notifiers.generic import Notifier
+from exceptions_helper import ex
+from encodingKludge import fixStupidEncodings
+
+from _23 import b64encodestring, decode_str, quote, unquote, unquote_plus, urlencode
+from six import PY2, text_type
+# noinspection PyUnresolvedReferences
+from six.moves import urllib
+
+# noinspection PyUnreachableCode
+if False:
+    from typing import Dict, Union
 
 
 class XBMCNotifier(Notifier):
@@ -152,32 +157,30 @@ class XBMCNotifier(Notifier):
         password = self._choose(password, sickbeard.XBMC_PASSWORD)
 
         for key in command:
-            if type(command[key]) == unicode:
+            if not PY2 or type(command[key]) == text_type:
                 command[key] = command[key].encode('utf-8')
 
-        enc_command = urllib.urlencode(command)
+        enc_command = urlencode(command)
         self._log_debug(u'Encoded API command: ' + enc_command)
 
         url = 'http://%s/xbmcCmds/xbmcHttp/?%s' % (host, enc_command)
         try:
-            req = urllib2.Request(url)
+            req = urllib.request.Request(url)
             # if we have a password, use authentication
             if password:
-                base64string = base64.encodestring('%s:%s' % (username, password))[:-1]
-                authheader = 'Basic %s' % base64string
-                req.add_header('Authorization', authheader)
+                req.add_header('Authorization', 'Basic %s' % b64encodestring('%s:%s' % (username, password)))
                 self._log_debug(u'Contacting (with auth header) via url: ' + fixStupidEncodings(url))
             else:
                 self._log_debug(u'Contacting via url: ' + fixStupidEncodings(url))
 
-            response = urllib2.urlopen(req)
-            result = response.read().decode(sickbeard.SYS_ENCODING)
+            response = urllib.request.urlopen(req)
+            result = decode_str(response.read(), sickbeard.SYS_ENCODING)
             response.close()
 
             self._log_debug(u'HTTP response: ' + result.replace('\n', ''))
             return result
 
-        except (urllib2.URLError, IOError) as e:
+        except (urllib.error.URLError, IOError) as e:
             self._log_warning(u'Couldn\'t contact HTTP at %s %s' % (fixStupidEncodings(url), ex(e)))
             return False
 
@@ -233,7 +236,7 @@ class XBMCNotifier(Notifier):
                 self._log_debug(u'Invalid response for ' + show_name + ' on ' + host)
                 return False
 
-            enc_sql_xml = urllib.quote(sql_xml, ':\\/<>')
+            enc_sql_xml = quote(sql_xml, ':\\/<>')
             try:
                 et = XmlEtree.fromstring(enc_sql_xml)
             except SyntaxError as e:
@@ -248,7 +251,7 @@ class XBMCNotifier(Notifier):
 
             for path in paths:
                 # we do not need it double-encoded, gawd this is dumb
-                un_enc_path = urllib.unquote(path.text).decode(sickbeard.SYS_ENCODING)
+                un_enc_path = decode_str(unquote(path.text), sickbeard.SYS_ENCODING)
                 self._log_debug(u'Updating ' + show_name + ' on ' + host + ' at ' + un_enc_path)
                 update_command = dict(command='ExecBuiltIn', parameter='XBMC.updatelibrary(video, %s)' % un_enc_path)
                 request = self._send_to_xbmc(update_command, host)
@@ -257,7 +260,7 @@ class XBMCNotifier(Notifier):
                                     + ' on ' + host + ' at ' + un_enc_path)
                     return False
                 # sleep for a few seconds just to be sure xbmc has a chance to finish each directory
-                if len(paths) > 1:
+                if 1 < len(paths):
                     time.sleep(5)
         # do a full update if requested
         else:
@@ -276,6 +279,7 @@ class XBMCNotifier(Notifier):
     ##############################################################################
 
     def _send_to_xbmc_json(self, command, host=None, username=None, password=None):
+        # type: () -> Union[bool, Dict]
         """Handles communication to XBMC servers via JSONRPC
 
         Args:
@@ -300,20 +304,18 @@ class XBMCNotifier(Notifier):
 
         url = 'http://%s/jsonrpc' % host
         try:
-            req = urllib2.Request(url, command)
+            req = urllib.request.Request(url, command)
             req.add_header('Content-type', 'application/json')
             # if we have a password, use authentication
             if password:
-                base64string = base64.encodestring('%s:%s' % (username, password))[:-1]
-                authheader = 'Basic %s' % base64string
-                req.add_header('Authorization', authheader)
+                req.add_header('Authorization', 'Basic %s' % b64encodestring('%s:%s' % (username, password)))
                 self._log_debug(u'Contacting (with auth header) via url: ' + fixStupidEncodings(url))
             else:
                 self._log_debug(u'Contacting via url: ' + fixStupidEncodings(url))
 
             try:
-                response = urllib2.urlopen(req)
-            except urllib2.URLError as e:
+                response = urllib.request.urlopen(req)
+            except urllib.error.URLError as e:
                 self._log_warning(u'Error while trying to retrieve API version for "%s": %s' % (host, ex(e)))
                 return False
 
@@ -446,7 +448,7 @@ class XBMCNotifier(Notifier):
         success = False
         result = []
         for cur_host in [x.strip() for x in hosts.split(',')]:
-            cur_host = urllib.unquote_plus(cur_host)
+            cur_host = unquote_plus(cur_host)
 
             self._log(u'Sending notification to "%s"' % cur_host)
 
@@ -467,7 +469,7 @@ class XBMCNotifier(Notifier):
                               (title.encode('utf-8'), body.encode('utf-8'), self._sg_logo_url)
                     notify_result = self._send_to_xbmc_json(command, cur_host, username, password)
                     if notify_result.get('result'):
-                        result += [cur_host + ':' + notify_result['result'].decode(sickbeard.SYS_ENCODING)]
+                        result += [cur_host + ':' + decode_str(notify_result['result'], sickbeard.SYS_ENCODING)]
                         success |= 'OK' in notify_result or success
             else:
                 if sickbeard.XBMC_ALWAYS_ON or self._testing:

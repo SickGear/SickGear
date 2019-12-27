@@ -16,13 +16,11 @@
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import subprocess
 
-import sickbeard
+from .generic import Notifier
 # noinspection PyPep8Naming
-from sickbeard import encodingKludge as ek
-from sickbeard.exceptions import ex
-from sickbeard.notifiers.generic import Notifier
+import encodingKludge as ek
+from exceptions_helper import ex
 
 
 class SynologyNotifier(Notifier):
@@ -33,10 +31,9 @@ class SynologyNotifier(Notifier):
         self._log(u'Executing command ' + str(synodsmnotify_cmd))
         self._log_debug(u'Absolute path to command: ' + ek.ek(os.path.abspath, synodsmnotify_cmd[0]))
         try:
-            p = subprocess.Popen(synodsmnotify_cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                                 cwd=sickbeard.PROG_DIR)
-            out, err = p.communicate()
-            self._log_debug(u'Script result: ' + str(out))
+            from sickbeard.helpers import cmdline_runner
+            output, err, exit_status = cmdline_runner(synodsmnotify_cmd)
+            self._log_debug(u'Script result: %s' % output)
         except OSError as e:
             self._log(u'Unable to run synodsmnotify: ' + ex(e))
 

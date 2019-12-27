@@ -15,21 +15,21 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import with_statement
+from __future__ import with_statement, division
 
-import base64
 import os
 import re
 import traceback
-import urllib
 
 from . import generic
-from sickbeard import config, logger, show_name_helpers
-from sickbeard.bs4_parser import BS4Parser
-from sickbeard.common import Quality, mediaExtensions
-from sickbeard.helpers import tryInt
-from sickbeard.name_parser.parser import NameParser, InvalidNameException, InvalidShowException
-from lib.unidecode import unidecode
+from .. import logger, show_name_helpers
+from ..common import mediaExtensions, Quality
+from ..helpers import try_int
+from ..name_parser.parser import InvalidNameException, InvalidShowException, NameParser
+from bs4_parser import BS4Parser
+
+from _23 import b64decodestring, filter_list, quote, unidecode
+from six import iteritems
 
 
 class ThePirateBayProvider(generic.TorrentProvider):
@@ -38,7 +38,7 @@ class ThePirateBayProvider(generic.TorrentProvider):
         generic.TorrentProvider.__init__(self, 'The Pirate Bay')
 
         self.url_home = ['https://thepiratebay.se/'] + \
-                        ['https://%s/' % base64.b64decode(x) for x in [''.join(x) for x in [
+                        ['https://%s/' % b64decodestring(x) for x in [''.join(x) for x in [
                             [re.sub(r'[h\sI]+', '', x[::-1]) for x in [
                                 'm IY', '5  F', 'HhIc', 'vI J', 'HIhe', 'uI k', '2  d', 'uh l']],
                             [re.sub(r'[N\sQ]+', '', x[::-1]) for x in [
@@ -77,7 +77,7 @@ class ThePirateBayProvider(generic.TorrentProvider):
         if not files_list:
             logger.log(u'Unable to get the torrent file list for ' + title, logger.ERROR)
 
-        video_files = filter(lambda x: x.rpartition('.')[2].lower() in mediaExtensions, files_list)
+        video_files = filter_list(lambda x: x.rpartition('.')[2].lower() in mediaExtensions, files_list)
 
         # Filtering SingleEpisode/MultiSeason Torrent
         if ep_number > len(video_files) or float(ep_number * 1.1) < len(video_files):
@@ -103,7 +103,7 @@ class ThePirateBayProvider(generic.TorrentProvider):
             return None
 
         try:
-            my_parser = NameParser(showObj=self.show, indexer_lookup=False)
+            my_parser = NameParser(show_obj=self.show_obj, indexer_lookup=False)
             parse_result = my_parser.parse(file_name)
         except (InvalidNameException, InvalidShowException):
             return None
@@ -119,13 +119,13 @@ class ThePirateBayProvider(generic.TorrentProvider):
 
     def _season_strings(self, ep_obj, **kwargs):
 
-        if ep_obj.show.air_by_date or ep_obj.show.sports:
+        if ep_obj.show_obj.air_by_date or ep_obj.show_obj.sports:
             airdate = str(ep_obj.airdate).split('-')[0]
             ep_detail = [airdate, 'Season ' + airdate]
-        elif ep_obj.show.anime:
+        elif ep_obj.show_obj.anime:
             ep_detail = '%02i' % ep_obj.scene_absolute_number
         else:
-            season = (ep_obj.season, ep_obj.scene_season)[bool(ep_obj.show.is_scene)]
+            season = (ep_obj.season, ep_obj.scene_season)[bool(ep_obj.show_obj.is_scene)]
             ep_detail = ['S%02d' % int(season), 'Season %s -Ep*' % season]
 
         return [{'Season': self._build_search_strings(ep_detail)}]
@@ -144,19 +144,19 @@ class ThePirateBayProvider(generic.TorrentProvider):
 
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
-        rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {
+        rc = dict([(k, re.compile('(?i)' + v)) for (k, v) in iteritems({
             'info': 'detail', 'get': 'download[^"]+magnet', 'tid': r'.*/(\d{5,}).*',
-            'verify': '(?:helper|moderator|trusted|vip)', 'size': r'size[^\d]+(\d+(?:[.,]\d+)?\W*[bkmgt]\w+)'}.items())
+            'verify': '(?:helper|moderator|trusted|vip)', 'size': r'size[^\d]+(\d+(?:[.,]\d+)?\W*[bkmgt]\w+)'})])
 
-        for mode in search_params.keys():
+        for mode in search_params:
             for search_string in search_params[mode]:
-                search_string = isinstance(search_string, unicode) and unidecode(search_string) or search_string
+                search_string = unidecode(search_string)
 
                 s_mode = 'browse' if 'Cache' == mode else 'search'
                 for i in ('', '2'):
                     search_url = self.urls['%s%s' % (s_mode, i)]
                     if 'Cache' != mode:
-                        search_url = search_url % urllib.quote(search_string)
+                        search_url = search_url % quote(search_string)
 
                     html = self.get_url(search_url)
                     if self.should_skip():
@@ -184,7 +184,8 @@ class ThePirateBayProvider(generic.TorrentProvider):
                                 continue
                             try:
                                 head = head if None is not head else self._header_row(tr)
-                                seeders, leechers = [tryInt(cells[head[x]].get_text().strip()) for x in 'seed', 'leech']
+                                seeders, leechers = [try_int(cells[head[x]].get_text().strip())
+                                                     for x in ('seed', 'leech')]
                                 if self._reject_item(seeders, leechers):
                                     continue
 
@@ -202,7 +203,8 @@ class ThePirateBayProvider(generic.TorrentProvider):
                             # Check number video files = episode in season and
                             # find the real Quality for full season torrent analyzing files in torrent
                             if 'Season' == mode and 'sponly' == search_mode:
-                                ep_number = int(epcount / len(set(show_name_helpers.allPossibleShowNames(self.show))))
+                                ep_number = int(epcount // len(set(show_name_helpers.allPossibleShowNames(
+                                    self.show_obj))))
                                 title = self._find_season_quality(title, tid, ep_number)
 
                             if title and download_magnet:

@@ -16,16 +16,18 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
-import urllib
-import urllib2
-import base64
 import re
 import xml.etree.cElementTree as XmlEtree
 
+from .generic import Notifier
 import sickbeard
-from sickbeard.encodingKludge import fixStupidEncodings
-from sickbeard.exceptions import ex
-from sickbeard.notifiers.generic import Notifier
+from encodingKludge import fixStupidEncodings
+from exceptions_helper import ex
+
+from _23 import b64encodestring, decode_str, filter_iter, list_values, unquote_plus, urlencode
+from six import iteritems, text_type, PY2
+# noinspection PyUnresolvedReferences
+from six.moves import urllib
 
 
 class PLEXNotifier(Notifier):
@@ -51,31 +53,28 @@ class PLEXNotifier(Notifier):
             return False
 
         for key in command:
-            if type(command[key]) == unicode:
+            if not PY2 or type(command[key]) == text_type:
                 command[key] = command[key].encode('utf-8')
 
-        enc_command = urllib.urlencode(command)
+        enc_command = urlencode(command)
         self._log_debug(u'Encoded API command: ' + enc_command)
 
         url = 'http://%s/xbmcCmds/xbmcHttp/?%s' % (host, enc_command)
         try:
-            req = urllib2.Request(url)
+            req = urllib.request.Request(url)
             if password:
-                base64string = base64.encodestring('%s:%s' % (username, password))[:-1]
-                authheader = 'Basic %s' % base64string
-                req.add_header('Authorization', authheader)
+                req.add_header('Authorization', 'Basic %s' % b64encodestring('%s:%s' % (username, password)))
                 self._log_debug(u'Contacting (with auth header) via url: ' + url)
             else:
                 self._log_debug(u'Contacting via url: ' + url)
 
-            response = urllib2.urlopen(req)
-            result = response.read().decode(sickbeard.SYS_ENCODING)
-            response.close()
+            with urllib.request.urlopen(req) as response:
+                result = decode_str(response.read(), sickbeard.SYS_ENCODING)
 
             self._log_debug(u'HTTP response: ' + result.replace('\n', ''))
             return True
 
-        except (urllib2.URLError, IOError) as e:
+        except (urllib.error.URLError, IOError) as e:
             self._log_warning(u'Couldn\'t contact Plex at ' + fixStupidEncodings(url) + ' ' + ex(e))
             return False
 
@@ -117,7 +116,7 @@ class PLEXNotifier(Notifier):
 
         results = []
         for cur_host in [x.strip() for x in host.split(',')]:
-            cur_host = urllib.unquote_plus(cur_host)
+            cur_host = unquote_plus(cur_host)
             self._log(u'Sending notification to \'%s\'' % cur_host)
             result = self._send_to_plex(command, cur_host, username, password)
             results += [self._choose(('%s Plex client ... %s' % (('Successful test notice sent to',
@@ -136,7 +135,7 @@ class PLEXNotifier(Notifier):
 
     def test_update_library(self, host=None, username=None, password=None):
         self._testing = True
-        result = self.update_library(host=urllib.unquote_plus(host), username=username, password=password)
+        result = self.update_library(host=unquote_plus(host), username=username, password=password)
         if '<br>' == result:
             result += 'Fail: No valid host set to connect with'
         return (('Test result for', 'Successful test of')['Fail' not in result]
@@ -165,9 +164,8 @@ class PLEXNotifier(Notifier):
         if username and password:
 
             self._log_debug(u'Fetching plex.tv credentials for user: ' + username)
-            req = urllib2.Request('https://plex.tv/users/sign_in.xml', data='')
-            authheader = 'Basic %s' % base64.encodestring('%s:%s' % (username, password))[:-1]
-            req.add_header('Authorization', authheader)
+            req = urllib.request.Request('https://plex.tv/users/sign_in.xml', data=b'')
+            req.add_header('Authorization', 'Basic %s' % b64encodestring('%s:%s' % (username, password)))
             req.add_header('X-Plex-Device-Name', 'SickGear')
             req.add_header('X-Plex-Product', 'SickGear Notifier')
             req.add_header('X-Plex-Client-Identifier', '5f48c063eaf379a565ff56c9bb2b401e')
@@ -175,12 +173,12 @@ class PLEXNotifier(Notifier):
             token_arg = False
 
             try:
-                response = urllib2.urlopen(req)
-                auth_tree = XmlEtree.parse(response)
-                token = auth_tree.findall('.//authentication-token')[0].text
-                token_arg = '?X-Plex-Token=' + token
+                with urllib.request.urlopen(req) as response:
+                    auth_tree = XmlEtree.parse(response)
+                    token = auth_tree.findall('.//authentication-token')[0].text
+                    token_arg = '?X-Plex-Token=' + token
 
-            except urllib2.URLError as e:
+            except urllib.error.URLError as e:
                 self._log(u'Error fetching credentials from plex.tv for user %s: %s' % (username, ex(e)))
 
             except (ValueError, IndexError) as e:
@@ -192,12 +190,12 @@ class PLEXNotifier(Notifier):
         hosts_match = {}
         hosts_failed = []
         for cur_host in host_validate:
-            response = sickbeard.helpers.getURL(
+            response = sickbeard.helpers.get_url(
                 '%s/library/sections%s' % (cur_host, token_arg or ''), timeout=10,
                 mute_connect_err=True, mute_read_timeout=True, mute_connect_timeout=True)
             if response:
                 response = sickbeard.helpers.parse_xml(response)
-            if not response:
+            if None is response or not len(response):
                 hosts_failed.append(cur_host)
                 continue
 
@@ -207,7 +205,7 @@ class PLEXNotifier(Notifier):
                 hosts_failed.append(cur_host)
                 continue
 
-            for section in filter(lambda x: 'show' == x.attrib['type'], sections):
+            for section in filter_iter(lambda x: 'show' == x.attrib['type'], sections):
                 if str(section.attrib['key']) in hosts_all:
                     continue
                 keyed_host = [(str(section.attrib['key']), cur_host)]
@@ -228,10 +226,10 @@ class PLEXNotifier(Notifier):
         if not self._testing:
             hosts_try = (hosts_all.copy(), hosts_match.copy())[any(hosts_match)]
             host_list = []
-            for section_key, cur_host in hosts_try.items():
+            for section_key, cur_host in iteritems(hosts_try):
                 refresh_result = None
                 if not self._testing:
-                    refresh_result = sickbeard.helpers.getURL(
+                    refresh_result = sickbeard.helpers.get_url(
                         '%s/library/sections/%s/refresh%s' % (cur_host, section_key, token_arg or ''))
                 if (not self._testing and '' == refresh_result) or self._testing:
                     host_list.append(cur_host)
@@ -241,7 +239,7 @@ class PLEXNotifier(Notifier):
 
             if len(hosts_failed) == len(host_validate):
                 self._log(u'No successful Plex host updated')
-                return 'Fail no successful Plex host updated: %s' % ', '.join(host for host in hosts_failed)
+                return 'Fail no successful Plex host updated: %s' % ', '.join([host for host in hosts_failed])
             else:
                 hosts = ', '.join(set(host_list))
                 if len(hosts_match):
@@ -251,20 +249,25 @@ class PLEXNotifier(Notifier):
                 return ''
 
         hosts = [
-            host.replace('http://', '') for host in filter(lambda x: x.startswith('http:'), hosts_all.values())]
+            host.replace('http://', '') for host in filter_iter(lambda x: x.startswith('http:'),
+                                                                list_values(hosts_all))]
         secured = [
-            host.replace('https://', '') for host in filter(lambda x: x.startswith('https:'), hosts_all.values())]
+            host.replace('https://', '') for host in filter_iter(lambda x: x.startswith('https:'),
+                                                                 list_values(hosts_all))]
         failed = ', '.join([
-            host.replace('http://', '') for host in filter(lambda x: x.startswith('http:'), hosts_failed)])
-        failed_secured = ', '.join(filter(
+            host.replace('http://', '') for host in filter_iter(lambda x: x.startswith('http:'),
+                                                                hosts_failed)])
+        failed_secured = ', '.join(filter_iter(
             lambda x: x not in hosts,
-            [host.replace('https://', '') for host in filter(lambda x: x.startswith('https:'), hosts_failed)]))
-        return '<br>' + '<br>'.join(result for result in [
+            [host.replace('https://', '') for host in filter_iter(lambda x: x.startswith('https:'),
+                                                                  hosts_failed)]))
+
+        return '<br>' + '<br>'.join([result for result in [
             ('', 'Fail: username/password when fetching credentials from plex.tv')[False is token_arg],
             ('', 'OK (secure connect): %s' % ', '.join(secured))[any(secured)],
             ('', 'OK%s: %s' % ((' (legacy connect)', '')[None is token_arg], ', '.join(hosts)))[any(hosts)],
             ('', 'Fail (secure connect): %s' % failed_secured)[any(failed_secured)],
-            ('', 'Fail%s: %s' % ((' (legacy connect)', '')[None is token_arg], failed))[bool(failed)]] if result)
+            ('', 'Fail%s: %s' % ((' (legacy connect)', '')[None is token_arg], failed))[bool(failed)]] if result])
 
 
 notifier = PLEXNotifier

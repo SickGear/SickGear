@@ -19,10 +19,13 @@ import re
 import traceback
 
 from . import generic
-from sickbeard import logger
-from sickbeard.bs4_parser import BS4Parser
-from sickbeard.helpers import tryInt
-from lib.unidecode import unidecode
+from .. import logger
+from ..helpers import try_int
+
+from bs4_parser import BS4Parser
+
+from _23 import unidecode
+from six import iteritems
 
 
 class MagnetDLProvider(generic.TorrentProvider):
@@ -44,13 +47,13 @@ class MagnetDLProvider(generic.TorrentProvider):
 
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
-        rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {'info': '^/file/', 'get': '^magnet:'}.items())
+        rc = dict([(k, re.compile('(?i)' + v)) for (k, v) in iteritems({'info': '^/file/', 'get': '^magnet:'})])
 
-        for mode in search_params.keys():
+        for mode in search_params:
             for search_string in search_params[mode]:
                 urls = [self.urls['browse'], self.urls['browse'] + '2']
                 if 'Cache' != mode:
-                    search_string = isinstance(search_string, unicode) and unidecode(search_string) or search_string
+                    search_string = unidecode(search_string)
                     urls = [self.urls['search'] % re.sub(r'[.\s]+', ' ', search_string)]
 
                 html = ''
@@ -81,8 +84,8 @@ class MagnetDLProvider(generic.TorrentProvider):
                                 continue
                             try:
                                 head = head if None is not head else self._header_row(tr)
-                                seeders, leechers, size = [tryInt(n, n) for n in [
-                                    cells[head[x]].get_text().strip() for x in 'seed', 'leech', 'size']]
+                                seeders, leechers, size = [try_int(n, n) for n in [
+                                    cells[head[x]].get_text().strip() for x in ('seed', 'leech', 'size')]]
                                 if self._reject_item(seeders, leechers):
                                     continue
 

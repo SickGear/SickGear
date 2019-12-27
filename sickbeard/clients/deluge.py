@@ -17,13 +17,12 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
-import json
-from base64 import b64encode
-
+from .generic import GenericClient
+from .. import logger
 import sickbeard
-from sickbeard import logger
-from sickbeard.clients.generic import GenericClient
 from lib.requests.exceptions import RequestException
+
+from _23 import b64encodestring
 
 
 class DelugeAPI(GenericClient):
@@ -84,7 +83,7 @@ class DelugeAPI(GenericClient):
         result.hash = self._request_json({
             'method': 'core.add_torrent_file',
             'params': ['%s.torrent' % result.name,
-                       b64encode(result.content),
+                       b64encodestring(result.content),
                        {'move_completed': 'true',
                         'move_completed_path': sickbeard.TV_DOWNLOAD_DIR}],
             'id': 2}, True)

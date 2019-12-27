@@ -19,15 +19,16 @@ import random
 import re
 import time
 import traceback
-from urllib import unquote_plus
 
 from . import generic
-from sickbeard import logger
-from sickbeard.bs4_parser import BS4Parser
-from sickbeard.config import naming_ep_type
-from sickbeard.helpers import tryInt
+from .. import logger
+from ..config import naming_ep_type
+from ..helpers import try_int
+from bs4_parser import BS4Parser
 from dateutil.parser import parse
-from lib.unidecode import unidecode
+
+from _23 import unidecode, unquote_plus
+from six import iteritems
 
 
 class TVChaosUKProvider(generic.TorrentProvider):
@@ -58,10 +59,11 @@ class TVChaosUKProvider(generic.TorrentProvider):
 
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
-        rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {'info': 'detail', 'get': 'download', 'fl': 'free'}.items())
-        for mode in search_params.keys():
+        rc = dict([(k, re.compile('(?i)' + v)) for (k, v) in
+                   iteritems({'info': 'detail', 'get': 'download', 'fl': 'free'})])
+        for mode in search_params:
             for search_string in search_params[mode]:
-                search_string = isinstance(search_string, unicode) and unidecode(search_string) or search_string
+                search_string = unidecode(search_string)
                 search_string = re.sub(r'(?i)[^a-z0-9\s]', '%', unquote_plus(search_string))
 
                 kwargs = dict(post_data={'keywords': search_string, 'do': 'quick_sort', 'page': '0',
@@ -84,7 +86,7 @@ class TVChaosUKProvider(generic.TorrentProvider):
                             if tbl:
                                 fetch = 'data fetched'                                                 
                                 break
-                        except(BaseException, Exception):
+                        except (BaseException, Exception):
                             pass
                 if attempts:
                     logger.log('%s %s after %s attempts' % (mode, fetch, attempts+1))
@@ -107,7 +109,7 @@ class TVChaosUKProvider(generic.TorrentProvider):
                             continue
                         try:
                             head = head if None is not head else self._header_row(tr)
-                            seeders, leechers, size = [tryInt(n, n) for n in [
+                            seeders, leechers, size = [try_int(n, n) for n in [
                                 cells[head[x]].get_text().strip() for x in ('seed', 'leech', 'size')]]
                             if self._reject_item(seeders, leechers, self.freeleech and (
                                     None is cells[1].find('img', title=rc['fl']))):
@@ -185,7 +187,7 @@ class TVChaosUKProvider(generic.TorrentProvider):
         sxe_build = None
 
         if len(title_parts):
-            new_parts = [tryInt(part, part) for part in title_parts[0]]
+            new_parts = [try_int(part, part) for part in title_parts[0]]
             if not new_parts[1]:
                 new_parts[1] = 1
             new_parts[2] = ('E%02d', ' Pack %d')[any([re.search('(?i)season|series', title),
@@ -217,7 +219,7 @@ class TVChaosUKProvider(generic.TorrentProvider):
         bl = r'[*\[({]+\s*'
         br = r'\s*[})\]*]+'
         title = re.sub('(.*?)((?i)%sproper%s)(.*)' % (bl, br), r'\1\3\2', title)
-        for r in r'\s+-\s+', r'(?:19|20)\d\d(?:\-\d\d\-\d\d)?', r'S\d\d+(?:E\d\d+)?':
+        for r in (r'\s+-\s+', r'(?:19|20)\d\d(?:\-\d\d\-\d\d)?', r'S\d\d+(?:E\d\d+)?'):
             m = re.findall('(.*%s)(.*)' % r, title)
             if any(m) and len(m[0][0]) > len(t[0]):
                 t = m[0]
@@ -322,7 +324,7 @@ class TVChaosUKProvider(generic.TorrentProvider):
         return self.show_name_wildcard(
             generic.TorrentProvider._season_strings(
                 self, ep_obj, scene=False, prefix='%', sp_detail=(
-                    lambda e: [(('', 'Series %(seasonnumber)d%%')[1 < tryInt(e.get('seasonnumber'))]
+                    lambda e: [(('', 'Series %(seasonnumber)d%%')[1 < try_int(e.get('seasonnumber'))]
                                 + '%(episodenumber)dof') % e, 'Series %(seasonnumber)d' % e])))
 
     def _episode_strings(self, ep_obj, **kwargs):
@@ -333,8 +335,8 @@ class TVChaosUKProvider(generic.TorrentProvider):
                     lambda date: ['%s %s%% %s'.lstrip('0') % x for x in
                                   [((d[-1], '%s' % m, y), (d, m, y)) + (((d, mf, y),), ())[m == mf]
                                    for (d, m, mf, y) in [(date.strftime(x) for x in ('%d', '%b', '%B', '%Y'))]][0]]),
-                ep_detail=(lambda e: [naming_ep_type[2] % e] + (
-                    [], ['%(episodenumber)dof' % e])[1 == tryInt(e.get('seasonnumber'))]), **kwargs))
+            ep_detail=(lambda e: [naming_ep_type[2] % e] + (
+                    [], ['%(episodenumber)dof' % e])[1 == try_int(e.get('seasonnumber'))]), **kwargs))
 
     @staticmethod
     def show_name_wildcard(search_items):

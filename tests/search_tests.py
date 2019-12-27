@@ -25,6 +25,6 @@ class ProperTests(test.SickbeardTestDBCase):
         ])
 
 
-if __name__ == '__main__':
+if '__main__' == __name__:
     suite = unittest.TestLoader().loadTestsFromTestCase(ProperTests)
     unittest.TextTestRunner(verbosity=2).run(suite)

@@ -18,19 +18,19 @@
 	<h1 class="title">$title</h1>
 #end if
 ##
-#if $whichSubs
-    #set subsLanguage = $subliminal.language.Language($whichSubs, strict=False) if not $whichSubs == 'all' else 'All'
+#if $which_subs
+    #set subs_language = $subliminal.language.Language($which_subs, strict=False) if not $which_subs == 'all' else 'All'
 #end if
-#if not $whichSubs or ($whichSubs and not $ep_counts)
-    #if $whichSubs:
+#if not $which_subs or ($which_subs and not $ep_counts)
+    #if $which_subs:
 
-	<h2>All of your episodes have $subsLanguage subtitles.</h2>
+	<h2>All of your episodes have $subs_language subtitles.</h2>
 	<br />
     #end if
 
-	<form action="$sbRoot/manage/subtitleMissed" method="get">
+	<form action="$sbRoot/manage/subtitle-missed" method="get">
 		Manage episodes without
-		<select name="whichSubs" class="form-control form-control-inline input-sm">
+		<select name="which_subs" class="form-control form-control-inline input-sm">
 			<option value="all">All</option>
     #for $sub_lang in $subliminal.language.language_list($sickbeard.SUBTITLES_LANGUAGES):
 			<option value="$sub_lang.alpha2">$sub_lang</option>
@@ -42,12 +42,12 @@
 #else
 
 <script type="text/javascript" src="$sbRoot/js/manageSubtitleMissed.js?v=$sbPID"></script>
-	<input type="hidden" id="selectSubLang" name="selectSubLang" value="$whichSubs">
+	<input type="hidden" id="selectSubLang" value="$which_subs">
 
-	<form action="$sbRoot/manage/downloadSubtitleMissed" method="post">
+	<form action="$sbRoot/manage/download-subtitle-missed" method="post">
 		$xsrf_form_html
 
-		<h2>Episodes without $subsLanguage subtitles.</h2>
+		<h2>Episodes without $subs_language subtitles.</h2>
 		<br />
 		Download missed subtitles for selected episodes <input class="btn btn-inline" type="submit" value="Go" />
 		<div>
@@ -56,10 +56,10 @@
 		</div>
 		<br />
 		<table class="sickbeardTable manageTable" cellspacing="1" border="0" cellpadding="0">
-    #for $cur_indexer_id in $sorted_show_ids:
-			<tr id="$cur_indexer_id">
-				<th><input type="checkbox" class="allCheck" id="allCheck-$cur_indexer_id" name="$cur_indexer_id-all" checked="checked"></th>
-				<th colspan="3" style="width: 100%; text-align: left;"><a class="whitelink" href="$sbRoot/home/displayShow?show=$cur_indexer_id">$show_names[$cur_indexer_id]</a> ($ep_counts[$cur_indexer_id]) <input type="button" class="get_more_eps btn" id="$cur_indexer_id" value="Expand"></th>
+    #for $tvid_prodid in $sorted_show_ids:
+			<tr id="$tvid_prodid">
+				<th><input type="checkbox" class="allCheck" id="allCheck-$tvid_prodid" name="$tvid_prodid-all" checked="checked"></th>
+				<th colspan="3" style="width: 100%; text-align: left;"><a class="whitelink" href="$sbRoot/home/view-show?tvid_prodid=$tvid_prodid">$show_names[$tvid_prodid]</a> ($ep_counts[$tvid_prodid]) <input type="button" class="get_more_eps btn pull-right" id="$tvid_prodid" value="Expand"></th>
 			</tr>
     #end for
 		</table>

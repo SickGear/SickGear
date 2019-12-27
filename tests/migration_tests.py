@@ -37,7 +37,7 @@ class MigrationBasicTests(test.SickbeardTestDBCase):
                   }
 
         count = 1
-        while count < len(schema.keys()):
+        while count < len(schema):
             my_db = db.DBConnection()
 
             for version in sorted(schema.keys())[:count]:
@@ -107,7 +107,7 @@ class AddDefaultEpStatusToTvShows(db.SchemaUpgrade):
         self.setDBVersion(41)
 
 
-if __name__ == '__main__':
+if '__main__' == __name__:
     print('==================')
     print('Starting - Migration Tests')
     print('==================')

@@ -19,34 +19,17 @@
 import os
 import re
 
-import emby
-import kodi
-import plex
-import xbmc
-import nmj
-import nmjv2
-import synoindex
-import synologynotifier
-import pytivo
-
-import boxcar2
 # import pushalot
-import pushbullet
-import pushover
-import growl
-import prowl
-from . import libnotify
-
-from lib import libtrakt
-import trakt
-import slack
-import discordapp
-import gitter
-import tweet
-import emailnotify
+# from lib import libtrakt
+from . import emby, kodi, plex, xbmc, \
+    boxcar2, nmj, nmjv2, pushbullet, pushover, pytivo, synoindex, synologynotifier, \
+    discordapp, emailnotify, gitter, libnotify, growl, prowl, slack, trakt
 
 import sickbeard
-from sickbeard import encodingKludge as ek
+# noinspection PyPep8Naming
+import encodingKludge as ek
+
+from _23 import filter_iter, list_values
 
 
 class NotifierFactory(object):
@@ -78,7 +61,6 @@ class NotifierFactory(object):
             SLACK=slack.SlackNotifier,
             DISCORDAPP=discordapp.DiscordappNotifier,
             GITTER=gitter.GitterNotifier,
-            TWITTER=tweet.TwitterNotifier,
             EMAIL=emailnotify.EmailNotifier,
         )
 
@@ -89,27 +71,32 @@ class NotifierFactory(object):
         :return: ID String
         :rtype: String
         """
-        for n in filter(lambda v: v.is_enabled(), self.notifiers.values()):
+        for n in filter_iter(lambda v: v.is_enabled(),
+                             list_values(self.notifiers)):
             yield n.id()
 
     @property
     def enabled_onsnatch(self):
-        for n in filter(lambda v: v.is_enabled() and v.is_enabled_onsnatch(), self.notifiers.values()):
+        for n in filter_iter(lambda v: v.is_enabled() and v.is_enabled_onsnatch(),
+                             list_values(self.notifiers)):
             yield n.id()
 
     @property
     def enabled_ondownload(self):
-        for n in filter(lambda v: v.is_enabled() and v.is_enabled_ondownload(), self.notifiers.values()):
+        for n in filter_iter(lambda v: v.is_enabled() and v.is_enabled_ondownload(),
+                             list_values(self.notifiers)):
             yield n.id()
 
     @property
     def enabled_onsubtitledownload(self):
-        for n in filter(lambda v: v.is_enabled() and v.is_enabled_onsubtitledownload(), self.notifiers.values()):
+        for n in filter_iter(lambda v: v.is_enabled() and v.is_enabled_onsubtitledownload(),
+                             list_values(self.notifiers)):
             yield n.id()
 
     @property
     def enabled_library(self):
-        for n in filter(lambda v: v.is_enabled() and v.is_enabled_library(), self.notifiers.values()):
+        for n in filter_iter(lambda v: v.is_enabled() and v.is_enabled_library(),
+                             list_values(self.notifiers)):
             yield n.id()
 
     def get(self, nid):
@@ -163,7 +150,7 @@ def notify_update_library(ep_obj, flush_q=None):
 
             if isinstance(n, (plex.PLEXNotifier, kodi.KodiNotifier)):
                 if not flush_q:
-                    sickbeard.QUEUE_UPDATE_LIBRARY += [(ep_obj.show.name, ep_obj.location)]
+                    sickbeard.QUEUE_UPDATE_LIBRARY += [(ep_obj.show_obj.name, ep_obj.location)]
                 else:
                     shows = set()
                     locations = set()
@@ -183,7 +170,7 @@ def notify_update_library(ep_obj, flush_q=None):
 
             elif not flush_q:
 
-                n.update_library(show=ep_obj.show, show_name=ep_obj.show.name, ep_obj=ep_obj)
+                n.update_library(show_obj=ep_obj.show_obj, show_name=ep_obj.show_obj.name, ep_obj=ep_obj)
 
         if flush_q:
             sickbeard.QUEUE_UPDATE_LIBRARY = []

@@ -16,8 +16,8 @@
 
 #set selected = ' selected="selected"'
 
-	<form name="processForm" method="post" action="processEpisode">
-		<input type="hidden" id="type" name="type" value="manual">
+	<form name="processForm" method="post" action="process-files">
+		<input type="hidden" id="type" name="process_type" value="manual">
 		$xsrf_form_html
 
 		<div id="postProcess" class="stepDiv">
@@ -26,7 +26,7 @@
 				<label for="episodeDir">
 					<span class="component-title input">Folder to process</span>
 					<span class="component-desc">
-						<input id="episodeDir" name="dir" type="text" class="form-control form-control-inline input-sm input350">
+						<input id="episodeDir" name="dir_name" type="text" class="form-control form-control-inline input-sm input350">
 						<p class="clear-left">select a folder containing episode files</p>
 					</span>
 				</label>

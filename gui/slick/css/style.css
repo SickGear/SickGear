@@ -704,12 +704,16 @@ inc_top.tmpl
 	cursor:pointer
 }
 
+#service_order_list .input-sm,
 #add-show-name input{
 	margin:0 0 0 -1px;
 	padding:0 2px;
 	height:18px;
 	width:135px;
 	font-size:12px
+}
+#service_order_list .input-sm{
+	width:100px
 }
 
 /* =======================================================================
@@ -1235,8 +1239,11 @@ div.formpaginate{
 }
 
 #addShowForm #nameToSearch{
-	width:460px;
+	width:520px;
 	margin-top:0
+}
+#addShowForm #nameToSearch.wide{
+	width:611px;
 }
 
 #addShowForm #providedIndexer,
@@ -3049,6 +3056,9 @@ select .selected:before{
 	padding-left:20px;
 	list-style-type:none
 }
+#service_order_list{
+	width:300px;
+}
 
 #config.search_providers #core-component-group1 #provider_key h4{
 	display:inline-block;
@@ -3742,6 +3752,15 @@ img[src=""],img:not([src]){
 	border-radius:4px 4px 4px 4px;
 	-moz-border-radius:3px;
 	-webkit-border-radius:3px
+}
+
+.img-warning-16{
+	background-image:url("../images/warning16.png");
+	display:inline-block;
+	vertical-align:middle;
+	margin-right:3px;
+	width:16px;
+	height:16px
 }
 
 /* =======================================================================

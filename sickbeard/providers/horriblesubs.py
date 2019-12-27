@@ -17,12 +17,13 @@
 import re
 import time
 import traceback
-import urllib
 
 from . import generic
-from sickbeard import logger, show_name_helpers
-from sickbeard.bs4_parser import BS4Parser
-from lib.unidecode import unidecode
+from .. import logger, show_name_helpers
+from bs4_parser import BS4Parser
+
+from _23 import filter_iter, map_consume, map_iter, map_list, unidecode
+from six import iteritems
 
 
 class HorribleSubsProvider(generic.TorrentProvider):
@@ -42,16 +43,16 @@ class HorribleSubsProvider(generic.TorrentProvider):
     def _search_provider(self, search_params, **kwargs):
 
         results = []
-        if self.show and not self.show.is_anime:
+        if self.show_obj and not self.show_obj.is_anime:
             return results
 
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
-        rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {'nodots': r'[\.\s]+'}.items())
+        rc = dict([(k, re.compile('(?i)' + v)) for (k, v) in iteritems({'nodots': r'[\.\s]+'})])
 
-        for mode in search_params.keys():
+        for mode in search_params:
             for search_string in search_params[mode]:
-                search_string = isinstance(search_string, unicode) and unidecode(search_string) or search_string
+                search_string = unidecode(search_string)
 
                 search_url = self.urls['browse'] if 'Cache' == mode else \
                     self.urls['search'] % (rc['nodots'].sub(' ', search_string), str(time.time()).replace('.', '3'))
@@ -78,14 +79,14 @@ class HorribleSubsProvider(generic.TorrentProvider):
                     with BS4Parser('<html><body>%s</body></html>' % html) as soup:
                         for link in soup.find_all('a'):
                             try:
-                                variants = map(lambda t: t.get_text().replace('SD', '480p'),
-                                               link.find_all('span', class_='badge'))
-                                map(lambda t: t.decompose(), link.find_all('span') + link.find_all('div'))
+                                variants = map_list(lambda t: t.get_text().replace('SD', '480p'),
+                                                    link.find_all('span', class_='badge'))
+                                map_consume(lambda t: t.decompose(), link.find_all('span') + link.find_all('div'))
                                 title = '[HorribleSubs] ' + re.sub(r'\s*\[HorribleSubs\]\s*', '', link.get_text())
                                 download_url = self._link(link.get('href'))
                                 if title and download_url:
-                                    items[mode] += map(lambda v: (
-                                        '%s [%s]' % (title, v), '%s-%s' % (download_url, v), '', ''), variants)
+                                    items[mode] += map_list(lambda _v: (
+                                        '%s [%s]' % (title, _v), '%s-%s' % (download_url, _v), '', ''), variants)
                             except (AttributeError, TypeError, ValueError):
                                 continue
 
@@ -100,10 +101,12 @@ class HorribleSubsProvider(generic.TorrentProvider):
         return results
 
     def _season_strings(self, *args, **kwargs):
-        return [{'Season': show_name_helpers.makeSceneSeasonSearchString(self.show, *args, ignore_wl=True, **kwargs)}]
+        return [{'Season': show_name_helpers.makeSceneSeasonSearchString(
+            self.show_obj, *args, ignore_wl=True, **kwargs)}]
 
     def _episode_strings(self, *args, **kwargs):
-        return [{'Episode': show_name_helpers.makeSceneSearchString(self.show, *args, ignore_wl=True, **kwargs)}]
+        return [{'Episode': show_name_helpers.makeSceneSearchString(
+            self.show_obj, *args, ignore_wl=True, **kwargs)}]
 
     def get_data(self, url):
         result = None
@@ -114,18 +117,19 @@ class HorribleSubsProvider(generic.TorrentProvider):
             re_showid = re.compile(r'(?i)hs_showid\s*=\s*(\d+)')
             try:
                 hs_id = re_showid.findall(
-                    filter(lambda s: re_showid.search(s), map(lambda t: t.get_text(), soup.find_all('script')))[0])[0]
-            except (Exception, BaseException):
+                    next(filter_iter(lambda s: re_showid.search(s),
+                                     map_iter(lambda t: t.get_text(), soup.find_all('script')))))[0]
+            except (BaseException, Exception):
                 return result
         html = self.get_url(self.urls['get_data'] % hs_id)
         if self.should_skip():
             return result
         with BS4Parser(html) as soup:
             try:
-                result = sorted(map(lambda t: t.get('href'),
-                                    soup.find(id=re.findall(r'.*#(\d+-\d+\w)$', url)[0])
-                                    .find_all('a', href=re.compile('(?i)(torrent$|^magnet:)'))))[0]
-            except (Exception, BaseException):
+                result = sorted(map_iter(lambda t: t.get('href'),
+                                         soup.find(id=re.findall(r'.*#(\d+-\d+\w)$', url)[0])
+                                         .find_all('a', href=re.compile('(?i)(torrent$|^magnet:)'))))[0]
+            except (BaseException, Exception):
                 pass
         return result
 

@@ -23,7 +23,9 @@ from ..utils import get_keywords, split_keyword
 from ..videos import Episode, Movie
 from bs4 import BeautifulSoup
 import logging
-import urllib
+
+from _23 import quote
+from six import PY2, text_type
 
 
 logger = logging.getLogger("subliminal")
@@ -45,27 +47,29 @@ class SubsWiki(ServiceBase):
     def list_checked(self, video, languages):
         results = []
         if isinstance(video, Episode):
-            results = self.query(video.path or video.release, languages, get_keywords(video.guess), series=video.series, season=video.season, episode=video.episode)
+            results = self.query(video.path or video.release, languages, get_keywords(video.guess), series=video.series,
+                                 season=video.season, episode=video.episode)
         elif isinstance(video, Movie) and video.year:
-            results = self.query(video.path or video.release, languages, get_keywords(video.guess), movie=video.title, year=video.year)
+            results = self.query(video.path or video.release, languages, get_keywords(video.guess), movie=video.title,
+                                 year=video.year)
         return results
 
     def query(self, filepath, languages, keywords=None, series=None, season=None, episode=None, movie=None, year=None):
         if series and season and episode:
             request_series = series.lower().replace(' ', '_')
-            if isinstance(request_series, unicode):
+            if PY2 and isinstance(request_series, text_type):
                 request_series = request_series.encode('utf-8')
             logger.debug(u'Getting subtitles for %s season %d episode %d with languages %r' % (series, season, episode, languages))
-            r = self.session.get('%s/serie/%s/%s/%s/' % (self.server_url, urllib.quote(request_series), season, episode))
+            r = self.session.get('%s/serie/%s/%s/%s/' % (self.server_url, quote(request_series), season, episode))
             if r.status_code == 404:
                 logger.debug(u'Could not find subtitles for %s season %d episode %d with languages %r' % (series, season, episode, languages))
                 return []
         elif movie and year:
             request_movie = movie.title().replace(' ', '_')
-            if isinstance(request_movie, unicode):
+            if PY2 and isinstance(request_movie, text_type):
                 request_movie = request_movie.encode('utf-8')
             logger.debug(u'Getting subtitles for %s (%d) with languages %r' % (movie, year, languages))
-            r = self.session.get('%s/film/%s_(%d)' % (self.server_url, urllib.quote(request_movie), year))
+            r = self.session.get('%s/film/%s_(%d)' % (self.server_url, quote(request_movie), year))
             if r.status_code == 404:
                 logger.debug(u'Could not find subtitles for %s (%d) with languages %r' % (movie, year, languages))
                 return []
@@ -92,7 +96,8 @@ class SubsWiki(ServiceBase):
                     logger.debug(u'Wrong subtitle status %s' % status)
                     continue
                 path = get_subtitle_path(filepath, language, self.config.multi)
-                subtitle = ResultSubtitle(path, language, self.__class__.__name__.lower(), '%s%s' % (self.server_url, html_status.find_next('td').find('a')['href']))
+                subtitle = ResultSubtitle(path, language, self.__class__.__name__.lower(), '%s%s' %
+                                          (self.server_url, html_status.find_next('td').find('a')['href']))
                 subtitles.append(subtitle)
         return subtitles
 

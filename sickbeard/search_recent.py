@@ -22,13 +22,12 @@ import threading
 import sickbeard
 
 
-class RecentSearcher():
+class RecentSearcher(object):
     def __init__(self):
         self.lock = threading.Lock()
         self.amActive = False
 
     def run(self):
-
         self.amActive = True
 
         recentsearch_queue_item = sickbeard.search_queue.RecentSearchQueueItem()

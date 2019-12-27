@@ -16,13 +16,15 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
+from __future__ import division
+
 import datetime
 import time
 import threading
 import traceback
 
-from sickbeard import logger
-from sickbeard.exceptions import ex
+from . import logger
+from exceptions_helper import ex
 
 
 class Scheduler(threading.Thread):
@@ -38,7 +40,7 @@ class Scheduler(threading.Thread):
 
         self.name = threadName
         self.silent = silent
-        self._stop = threading.Event()
+        self._stopper = threading.Event()
         self._unpause = threading.Event()
         if not paused:
             self._unpause.set()
@@ -51,8 +53,10 @@ class Scheduler(threading.Thread):
     def unpause(self):
         self._unpause.set()
 
-    def stop(self):
-        self._stop.set()
+    def stopit(self):
+        """ Stop the thread's activity.
+        """
+        self._stopper.set()
         self.unpause()
 
     def set_paused_state(self):
@@ -76,7 +80,7 @@ class Scheduler(threading.Thread):
         self.set_paused_state()
 
         # if self._unpause Event() is NOT set the loop pauses
-        while self._unpause.wait() and not self._stop.is_set():
+        while self._unpause.wait() and not self._stopper.is_set():
 
             if getattr(self.action, 'is_enabled', True):
                 try:
@@ -88,7 +92,7 @@ class Scheduler(threading.Thread):
                         # check if wanting to start around certain time taking interval into account
                         if self.start_time:
                             hour_diff = current_time.time().hour - self.start_time.hour
-                            if not hour_diff < 0 and hour_diff < self.cycleTime.seconds / 3600:
+                            if not hour_diff < 0 and hour_diff < self.cycleTime.seconds // 3600:
                                 should_run = True
                             else:
                                 # set lastRun to only check start_time after another cycleTime
@@ -114,7 +118,7 @@ class Scheduler(threading.Thread):
                                 logger.log(u"Starting new thread: " + self.name, logger.DEBUG)
 
                             self.action.run()
-                        except Exception as e:
+                        except (BaseException, Exception) as e:
                             logger.log(u"Exception generated in thread " + self.name + ": " + ex(e), logger.ERROR)
                             logger.log(repr(traceback.format_exc()), logger.ERROR)
 
@@ -128,5 +132,5 @@ class Scheduler(threading.Thread):
             time.sleep(1)
 
         # exiting thread
-        self._stop.clear()
+        self._stopper.clear()
         self._unpause.clear()

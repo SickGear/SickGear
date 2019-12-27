@@ -31,7 +31,7 @@ sys.path.insert(1, os.path.abspath('..'))
 sys.path.insert(1, os.path.abspath('../lib'))
 
 import sickbeard
-from sickbeard import db, encodingKludge as ek, providers, tvcache
+from sickbeard import db, providers, tvcache
 from sickbeard.databases import cache_db, failed_db, mainDB
 
 # =================
@@ -90,6 +90,7 @@ sickbeard.newznabProviderList = providers.getNewznabProviderList(
 sickbeard.providerList = providers.makeProviderList()
 
 sickbeard.PROG_DIR = os.path.abspath('..')
+# sickbeard.DATA_DIR = os.path.join(sickbeard.PROG_DIR, 'tests')
 sickbeard.DATA_DIR = os.path.join(TESTDIR, 'data')
 sickbeard.LOG_DIR = os.path.join(TESTDIR, 'Logs')
 create_test_log_folder()
@@ -118,7 +119,7 @@ def _fake_specify_ep(self, season, episode, show_sql=None):
     pass
 
 
-sickbeard.tv.TVEpisode.specifyEpisode = _fake_specify_ep
+sickbeard.tv.TVEpisode.specify_episode = _fake_specify_ep
 
 
 # =================
@@ -201,13 +202,21 @@ def teardown_test_db():
     """
     # uncomment next line so leave the db intact between test and at the end
     # return False
+    try:
+        sickbeard.db.DBConnection().close()
+    except (BaseException, Exception):
+        pass
+    try:
+        sickbeard.tvcache.CacheDBConnection().close()
+    except (BaseException, Exception):
+        pass
 
     for filename in glob.glob(os.path.join(TESTDIR, TESTDBNAME) + '*'):
         os.remove(filename)
-    if os.path.exists(os.path.join(TESTDIR, TESTCACHEDBNAME)):
-        os.remove(os.path.join(TESTDIR, TESTCACHEDBNAME))
-    if os.path.exists(os.path.join(TESTDIR, TESTFAILEDDBNAME)):
-        os.remove(os.path.join(TESTDIR, TESTFAILEDDBNAME))
+    for filename in glob.glob(os.path.join(TESTDIR, TESTCACHEDBNAME) + '*'):
+        os.remove(filename)
+    for filename in glob.glob(os.path.join(TESTDIR, TESTFAILEDDBNAME) + '*'):
+        os.remove(filename)
 
 
 def setup_test_episode_file():
@@ -239,7 +248,7 @@ def teardown_test_show_dir():
 
 teardown_test_db()
 
-if __name__ == '__main__':
+if '__main__' == __name__:
     print('=========================')
     print('Dont call this directly')
     print('=========================')
@@ -247,7 +256,7 @@ if __name__ == '__main__':
 
     dirList = os.listdir(TESTDIR)
     for fname in dirList:
-        if (fname.find('_test') > 0) and (fname.find('pyc') < 0):
+        if (0 < fname.find('_test')) and (0 > fname.find('pyc')):
             print('- ' + fname)
 
     print('=========================')

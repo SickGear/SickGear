@@ -20,9 +20,10 @@
 from __future__ import print_function
 import unittest
 import test_lib as test
+from random import  randint
 
 import sickbeard
-from sickbeard.tv import TVEpisode, TVShow
+from sickbeard.tv import TVEpisode, TVShow, TVidProdid, prodid_bitshift
 
 
 class TVShowTests(test.SickbeardTestDBCase):
@@ -32,35 +33,35 @@ class TVShowTests(test.SickbeardTestDBCase):
         sickbeard.showList = []
 
     def test_init_indexerid(self):
-        show = TVShow(1, 1, 'en')
-        self.assertEqual(show.indexerid, 1)
+        show_obj = TVShow(1, 1, 'en')
+        self.assertEqual(show_obj.prodid, 1)
 
     def test_change_indexerid(self):
-        show = TVShow(1, 1, 'en')
-        show.name = 'show name'
-        show.tvrname = 'show name'
-        show.network = 'cbs'
-        show.genre = 'crime'
-        show.runtime = 40
-        show.status = '5'
-        show.airs = 'monday'
-        show.startyear = 1987
+        show_obj = TVShow(1, 1, 'en')
+        show_obj.name = 'show name'
+        show_obj.tvrname = 'show name'
+        show_obj.network = 'cbs'
+        show_obj.genre = 'crime'
+        show_obj.runtime = 40
+        show_obj.status = '5'
+        show_obj.airs = 'monday'
+        show_obj.startyear = 1987
 
-        show.saveToDB()
-        show.loadFromDB(skipNFO=True)
+        show_obj.save_to_db()
+        show_obj.load_from_db()
 
-        show.indexerid = 2
-        show.saveToDB()
-        show.loadFromDB(skipNFO=True)
+        show_obj.prodid = 2
+        show_obj.save_to_db()
+        show_obj.load_from_db()
 
-        self.assertEqual(show.indexerid, 2)
+        self.assertEqual(show_obj.prodid, 2)
 
     def test_set_name(self):
-        show = TVShow(1, 1, 'en')
-        show.name = 'newName'
-        show.saveToDB()
-        show.loadFromDB(skipNFO=True)
-        self.assertEqual(show.name, 'newName')
+        show_obj = TVShow(1, 1, 'en')
+        show_obj.name = 'newName'
+        show_obj.save_to_db()
+        show_obj.load_from_db()
+        self.assertEqual(show_obj.name, 'newName')
 
 
 class TVEpisodeTests(test.SickbeardTestDBCase):
@@ -70,12 +71,12 @@ class TVEpisodeTests(test.SickbeardTestDBCase):
         sickbeard.showList = []
 
     def test_init_empty_db(self):
-        show = TVShow(1, 1, 'en')
-        ep = TVEpisode(show, 1, 1)
-        ep.name = 'asdasdasdajkaj'
-        ep.saveToDB()
-        ep.loadFromDB(1, 1)
-        self.assertEqual(ep.name, 'asdasdasdajkaj')
+        show_obj = TVShow(1, 1, 'en')
+        ep_obj = TVEpisode(show_obj, 1, 1)
+        ep_obj.name = 'asdasdasdajkaj'
+        ep_obj.save_to_db()
+        ep_obj.load_from_db(1, 1)
+        self.assertEqual(ep_obj.name, 'asdasdasdajkaj')
 
 
 class TVTests(test.SickbeardTestDBCase):
@@ -86,17 +87,17 @@ class TVTests(test.SickbeardTestDBCase):
 
     @staticmethod
     def test_getEpisode():
-        show = TVShow(1, 1, 'en')
-        show.name = 'show name'
-        show.tvrname = 'show name'
-        show.network = 'cbs'
-        show.genre = 'crime'
-        show.runtime = 40
-        show.status = '5'
-        show.airs = 'monday'
-        show.startyear = 1987
-        show.saveToDB()
-        sickbeard.showList = [show]
+        show_obj = TVShow(1, 1, 'en')
+        show_obj.name = 'show name'
+        show_obj.tvrname = 'show name'
+        show_obj.network = 'cbs'
+        show_obj.genre = 'crime'
+        show_obj.runtime = 40
+        show_obj.status = '5'
+        show_obj.airs = 'monday'
+        show_obj.startyear = 1987
+        show_obj.save_to_db()
+        sickbeard.showList = [show_obj]
 
 
 class TVFormatPatternTests(test.SickbeardTestDBCase):
@@ -106,33 +107,70 @@ class TVFormatPatternTests(test.SickbeardTestDBCase):
         sickbeard.showList = []
 
     def test_getEpisode(self):
-        show = TVShow(1, 1, 'en')
-        show.name = 'show name'
-        show.tvrname = 'show name'
-        show.network = 'cbs'
-        show.genre = 'crime'
-        show.runtime = 40
-        show.status = '5'
-        show.airs = 'monday'
-        show.startyear = 1987
-        sickbeard.showList = [show]
-        show.episodes[1] = {}
-        show.episodes[1][1] = TVEpisode(show, 1, 1, '16)')
-        show.episodes[1][1].dirty = False
-        show.episodes[1][1].name = None
-        self.assertEqual(show.episodes[1][1].dirty, False)
+        show_obj = TVShow(1, 1, 'en')
+        show_obj.name = 'show name'
+        show_obj.tvrname = 'show name'
+        show_obj.network = 'cbs'
+        show_obj.genre = 'crime'
+        show_obj.runtime = 40
+        show_obj.status = '5'
+        show_obj.airs = 'monday'
+        show_obj.startyear = 1987
+        sickbeard.showList = [show_obj]
+        show_obj.sxe_ep_obj[1] = {}
+        show_obj.sxe_ep_obj[1][1] = TVEpisode(show_obj, 1, 1, '16)')
+        show_obj.sxe_ep_obj[1][1].dirty = False
+        show_obj.sxe_ep_obj[1][1].name = None
+        self.assertEqual(show_obj.sxe_ep_obj[1][1].dirty, False)
         self.assertEqual(
-            show.episodes[1][1]._format_pattern('%SN - %Sx%0E - %EN - %QN'),
+            show_obj.sxe_ep_obj[1][1]._format_pattern('%SN - %Sx%0E - %EN - %QN'),
             'show name - 1x01 - tba - Unknown')
-        show.episodes[1][1].dirty = False
-        show.episodes[1][1].name = 'ep name'
-        self.assertEqual(show.episodes[1][1].dirty, True)
+        show_obj.sxe_ep_obj[1][1].dirty = False
+        show_obj.sxe_ep_obj[1][1].name = 'ep name'
+        self.assertEqual(show_obj.sxe_ep_obj[1][1].dirty, True)
         self.assertEqual(
-            show.episodes[1][1]._format_pattern('%SN - %Sx%0E - %EN - %QN'),
+            show_obj.sxe_ep_obj[1][1]._format_pattern('%SN - %Sx%0E - %EN - %QN'),
             'show name - 1x01 - ep name - Unknown')
 
 
-if __name__ == '__main__':
+class TVidProdidTests(test.SickbeardTestDBCase):
+    @staticmethod
+    def max_bits(b):
+        return (1 << b) - 1
+
+    def test_TVidProdid(self):
+        max_tvid = self.max_bits(prodid_bitshift)
+        max_prodid = self.max_bits(60)
+        i = 0
+        while 1000 > i:
+            i += 1
+            tvid = randint(1, max_tvid)
+            prodid = randint(1, max_prodid)
+            tvid_prodid_obj = TVidProdid({tvid: prodid})
+
+            msg_vars = ': tvid = %s ; prodid = %s' % (tvid, prodid)
+
+            self.assertEqual(tvid, tvid_prodid_obj.tvid, msg='dict tvid test%s' % msg_vars)
+            self.assertEqual(prodid, tvid_prodid_obj.prodid, msg='dict prodid test%s' % msg_vars)
+
+            self.assertEqual((tvid, prodid), tvid_prodid_obj.tuple, msg='tuple test%s' % msg_vars)
+            self.assertEqual({tvid: prodid}, tvid_prodid_obj.dict, msg='dict test%s' % msg_vars)
+            self.assertEqual([tvid, prodid], tvid_prodid_obj.list, msg='list test%s' % msg_vars)
+
+            new_sid = prodid << prodid_bitshift | tvid
+            self.assertEqual(new_sid, tvid_prodid_obj.int, msg='int test%s' % msg_vars)
+
+            sid = tvid_prodid_obj.int
+            reverse_obj = TVidProdid(sid)
+            self.assertEqual(tvid, reverse_obj.tvid, msg='reverse int tvid test%s' % msg_vars)
+            self.assertEqual(prodid, reverse_obj.prodid, msg='reverse int prodid test%s' % msg_vars)
+
+            str_reverse_obj = TVidProdid('%s%s%s' % (tvid, TVidProdid.glue, prodid))
+            self.assertEqual(tvid, str_reverse_obj.tvid, msg='reverse str tvid test%s' % msg_vars)
+            self.assertEqual(prodid, str_reverse_obj.prodid, msg='reverse str prodid test%s' % msg_vars)
+
+
+if '__main__' == __name__:
     print('==================')
     print('STARTING - TV TESTS')
     print('==================')
@@ -147,4 +185,7 @@ if __name__ == '__main__':
     unittest.TextTestRunner(verbosity=2).run(suite)
     print('######################################################################')
     suite = unittest.TestLoader().loadTestsFromTestCase(TVFormatPatternTests)
+    unittest.TextTestRunner(verbosity=2).run(suite)
+    print('######################################################################')
+    suite = unittest.TestLoader().loadTestsFromTestCase(TVidProdidTests)
     unittest.TextTestRunner(verbosity=2).run(suite)

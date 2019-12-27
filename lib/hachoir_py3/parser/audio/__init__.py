@@ -1,0 +1,11 @@
+from hachoir_py3.parser.audio.aiff import AiffFile  # noqa
+from hachoir_py3.parser.audio.au import AuFile  # noqa
+from hachoir_py3.parser.audio.itunesdb import ITunesDBFile  # noqa
+from hachoir_py3.parser.audio.midi import MidiFile  # noqa
+from hachoir_py3.parser.audio.mpeg_audio import MpegAudioFile  # noqa
+from hachoir_py3.parser.audio.real_audio import RealAudioFile  # noqa
+from hachoir_py3.parser.audio.xm import XMModule  # noqa
+from hachoir_py3.parser.audio.s3m import S3MModule  # noqa
+from hachoir_py3.parser.audio.s3m import PTMModule  # noqa
+from hachoir_py3.parser.audio.mod import AmigaModule  # noqa
+from hachoir_py3.parser.audio.flac import FlacParser  # noqa

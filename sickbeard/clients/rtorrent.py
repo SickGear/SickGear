@@ -14,11 +14,11 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
-from lib.rtorrent.compat import xmlrpclib
-from lib.rtorrent import RTorrent
-from sickbeard import logger
-from sickbeard.clients.generic import GenericClient
+from .generic import GenericClient
+from .. import logger
 import sickbeard
+from lib.rtorrent import RTorrent
+from lib.rtorrent.compat import xmlrpclib
 
 
 class RtorrentAPI(GenericClient):
@@ -65,7 +65,7 @@ class RtorrentAPI(GenericClient):
                         logger.log('%s: could not change custom%s label value \'%s\' to \'%s\' for %s' % (
                             self.name, custom_var, label, sickbeard.TORRENT_LABEL, torrent.name), logger.WARNING)
 
-            except(Exception, BaseException):
+            except (BaseException, Exception):
                 pass
 
         return any([torrent])

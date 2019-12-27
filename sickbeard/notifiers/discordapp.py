@@ -17,8 +17,8 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
+from .generic import Notifier
 import sickbeard
-from sickbeard.notifiers.generic import Notifier
 
 
 class DiscordappNotifier(Notifier):
@@ -32,7 +32,7 @@ class DiscordappNotifier(Notifier):
              ('avatar_url', self._choose(icon_url, sickbeard.DISCORDAPP_ICON_URL) or self._sg_logo_url)]
         as_tts = self._choose(as_tts, bool(sickbeard.DISCORDAPP_AS_TTS))
 
-        resp = sickbeard.helpers.getURL(
+        resp = sickbeard.helpers.get_url(
             url=self._choose(access_token, sickbeard.DISCORDAPP_ACCESS_TOKEN),
             post_json=dict([('content', self._body_only(title, body)), ('tts', as_tts)] + params))
 
