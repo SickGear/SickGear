@@ -95,7 +95,7 @@
 * Add next run time to Manage/Show Tasks/Daily show update
 * Change when fetching imdb data, if imdb id is an episode id then try to find and use real show id
 * Change delete diskcache db in imdbpie when value error (due to change in Python version)
-* Change during startup, cleanup any _cleaner.pyc/o to prevent issues when switching python versions
+* Change during startup, cleanup any cleaner.pyc/o to prevent issues when switching python versions
 * Add .pyc cleaner if python version is switched
 * Change rebrand "SickGear PostProcessing script" to "SickGear Process Media extension"
 * Change improve setup guide to use the NZBGet version to minimise displayed text based on version
@@ -105,6 +105,10 @@
 * Change supported Python version 2.7.9-2.7.18 inclusive expanded to 3.7.1-3.8.1 inclusive
 * Change pidfile creation under Linux 0o644
 * Fix long path issues with Windows process media
+* Fix search result priority for nzbget
+* Change move priority property to SearchResult base class
+* Add new test for wanted whole first season (add show)
+* Change SickGear-NG version
 
 
 [develop changelog]

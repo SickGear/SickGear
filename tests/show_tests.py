@@ -96,6 +96,39 @@ wanted_tests = [
     ),
 
     dict(
+        name='Start, entire season',
+        show=dict(indexer=1, indexerid=210, quality=Quality.combineQualities([Quality.SDTV], [])),
+        episodes=[
+            dict(season=1, episode=1, status=SKIPPED, quality=Quality.NONE, airdate=datetime.date(2019, 1, 2)),
+            dict(season=1, episode=2, status=SKIPPED, quality=Quality.NONE, airdate=datetime.date(2019, 1, 1)),
+            dict(season=1, episode=3, status=SKIPPED, quality=Quality.NONE, airdate=datetime.date(2019, 1, 1)),
+            dict(season=1, episode=4, status=SKIPPED, quality=Quality.NONE, airdate=datetime.date(2019, 1, 1)),
+            dict(season=1, episode=5, status=UNAIRED, quality=Quality.NONE, airdate=datetime.date.fromordinal(1)),
+            dict(season=2, episode=1, status=UNAIRED, quality=Quality.NONE, airdate=datetime.date.fromordinal(1)),
+            dict(season=2, episode=2, status=UNAIRED, quality=Quality.NONE, airdate=datetime.date.fromordinal(1)),
+            dict(season=2, episode=3, status=UNAIRED, quality=Quality.NONE, airdate=datetime.date.fromordinal(1)),
+            dict(season=2, episode=4, status=UNAIRED, quality=Quality.NONE, airdate=datetime.date.fromordinal(1)),
+            dict(season=3, episode=1, status=UNAIRED, quality=Quality.NONE, airdate=datetime.date.fromordinal(1)),
+            dict(season=3, episode=2, status=UNAIRED, quality=Quality.NONE, airdate=datetime.date.fromordinal(1)),
+            dict(season=3, episode=3, status=UNAIRED, quality=Quality.NONE, airdate=datetime.date.fromordinal(1)),
+        ],
+        start_wanted=-1, end_wanted=0,
+        result=dict(
+            start=dict(
+                count=4, episodes={
+                    1: {1: WANTED, 2: WANTED, 3: WANTED, 4: WANTED, 5: UNAIRED},
+                    2: {1: UNAIRED, 2: UNAIRED, 3: UNAIRED, 4: UNAIRED},
+                    3: {1: UNAIRED, 2: UNAIRED, 3: UNAIRED}
+                }),
+            end=dict(
+                count=0, episodes={
+                    1: {1: WANTED, 2: WANTED, 3: WANTED, 4: WANTED, 5: UNAIRED},
+                    2: {1: UNAIRED, 2: UNAIRED, 3: UNAIRED, 4: UNAIRED},
+                    3: {1: UNAIRED, 2: UNAIRED, 3: UNAIRED}
+                }))
+    ),
+
+    dict(
         name='End only',
         show=dict(indexer=1, indexerid=2, quality=Quality.combineQualities([Quality.SDTV], [])),
         episodes=[
@@ -288,6 +321,51 @@ wanted_tests = [
         episodes=[
         ],
         start_wanted=7, end_wanted=3,
+        result=dict(
+            start=dict(
+                count=0, episodes={
+                }),
+            end=dict(
+                count=0, episodes={
+                }))
+    ),
+
+    dict(
+        name='no episodes, whole first season',
+        show=dict(indexer=1, indexerid=37, quality=Quality.combineQualities([Quality.SDTV], [])),
+        episodes=[
+        ],
+        start_wanted=-1, end_wanted=0,
+        result=dict(
+            start=dict(
+                count=0, episodes={
+                }),
+            end=dict(
+                count=0, episodes={
+                }))
+    ),
+
+    dict(
+        name='no episodes, whole last season',
+        show=dict(indexer=1, indexerid=38, quality=Quality.combineQualities([Quality.SDTV], [])),
+        episodes=[
+        ],
+        start_wanted=0, end_wanted=-1,
+        result=dict(
+            start=dict(
+                count=0, episodes={
+                }),
+            end=dict(
+                count=0, episodes={
+                }))
+    ),
+
+    dict(
+        name='no episodes, whole first and last season',
+        show=dict(indexer=1, indexerid=39, quality=Quality.combineQualities([Quality.SDTV], [])),
+        episodes=[
+        ],
+        start_wanted=-1, end_wanted=-1,
         result=dict(
             start=dict(
                 count=0, episodes={

@@ -95,6 +95,10 @@ class SearchResult(LegacySearchResult):
         # path to cache file
         self.cache_filepath = ''  # type: AnyStr
 
+        # priority of result
+        # -1 = low, 0 = normal, 1 = high
+        self.priority = 0  # type: int
+
     @property
     def show_obj(self):
         # type: (...) -> Optional[sickbeard.tv.TVShow]
