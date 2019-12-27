@@ -93,7 +93,7 @@ def send_nzb(search_result):
                 sickbeard.TVInfoAPI(cur_ep_obj.show_obj.tvid).config.get('dupekey', ''), cur_ep_obj.show_obj.prodid)
         dupekey += '-%s.%s' % (cur_ep_obj.season, cur_ep_obj.episode)
 
-    if 1 == nzb.priority:
+    if 1 == search_result.priority:
         add_to_top = True
         nzbget_prio = sickbeard.NZBGET_PRIORITY
 

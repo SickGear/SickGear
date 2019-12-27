@@ -51,7 +51,7 @@
 
 # Send "Process Media" requests to SickGear
 #
-# Process Media extension version: 2.4.
+# Process Media extension version: 2.5.
 # <!--
 # For more info and updates please visit forum topic at
 # -->

@@ -109,12 +109,11 @@ def snatch_episode(result, end_status=SNATCHED):
     if None is result:
         return False
 
-    result.priority = 0  # -1 = low, 0 = normal, 1 = high
     if sickbeard.ALLOW_HIGH_PRIORITY:
         # if it aired recently make it high priority
         for cur_ep_obj in result.ep_obj_list:
             if datetime.date.today() - cur_ep_obj.airdate <= datetime.timedelta(days=7) or \
-            		datetime.date.fromordinal(1) >= cur_ep_obj.airdate:
+                    datetime.date.fromordinal(1) >= cur_ep_obj.airdate:
                 result.priority = 1
     if 0 < result.properlevel:
         end_status = SNATCHED_PROPER
