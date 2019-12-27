@@ -109,6 +109,7 @@
 * Change move priority property to SearchResult base class
 * Add new test for wanted whole first season (add show)
 * Change SickGear-NG version
+* Fix "Update shows on startup" (change update_shows_on_start = 0 in config.ini, restart SG, then update)
 
 
 [develop changelog]

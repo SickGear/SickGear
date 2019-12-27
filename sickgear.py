@@ -536,7 +536,7 @@ class SickGear(object):
         # Start an update if we're supposed to
         if self.force_update or sickbeard.UPDATE_SHOWS_ON_START:
             sickbeard.classes.loading_msg.message = 'Starting a forced show update'
-            sickbeard.showUpdateScheduler.action.run(force=True)
+            sickbeard.showUpdateScheduler.action.run()
 
         sickbeard.classes.loading_msg.message = 'Switching to default web server'
         time.sleep(2)
