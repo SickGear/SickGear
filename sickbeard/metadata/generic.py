@@ -200,24 +200,26 @@ class GenericMetadata(object):
         return result
 
     @staticmethod
-    def get_show_year(show_obj, show_info):
-        # type: (sickbeard.tv.TVShow, Dict) -> Optional[AnyStr]
+    def get_show_year(show_obj, show_info, year_only=True):
+        # type: (sickbeard.tv.TVShow, Dict, bool) -> Optional[AnyStr]
         if None is not getattr(show_info, 'firstaired', None):
             try:
-                year_text = str(datetime.datetime.strptime(show_info['firstaired'], '%Y-%m-%d').year)
-                if year_text:
-                    return '%s' % year_text
+                first_aired = datetime.datetime.strptime(show_info['firstaired'], '%Y-%m-%d')
+                if first_aired:
+                    if year_only:
+                        return str(first_aired.year)
+                    return str(first_aired.date())
             except (BaseException, Exception):
                 pass
         if isinstance(show_obj, sickbeard.tv.TVShow):
-            if show_obj.startyear:
+            if year_only and show_obj.startyear:
                 return '%s' % show_obj.startyear
             if not show_obj.sxe_ep_obj.get(1, {}).get(1, None):
                 show_obj.get_all_episodes()
             first_ep_obj = show_obj.get_episode(1, 1, no_create=True)
             if isinstance(first_ep_obj, sickbeard.tv.TVEpisode) \
                     and isinstance(first_ep_obj.airdate, datetime.date) and 1900 < first_ep_obj.airdate.year:
-                return '%s' % first_ep_obj.airdate.year
+                return '%s' % (first_ep_obj.airdate.year, first_ep_obj.airdate)[not year_only]
 
     def get_show_file_path(self, show_obj):
         # type: (sickbeard.tv.TVShow) -> AnyStr
@@ -334,10 +336,10 @@ class GenericMetadata(object):
         """
         return None
 
-    def create_show_metadata(self, show_obj):
-        # type: (sickbeard.tv.TVShow) -> bool
+    def create_show_metadata(self, show_obj, force=False):
+        # type: (sickbeard.tv.TVShow, bool) -> bool
         result = False
-        if self.show_metadata and show_obj and not self._has_show_metadata(show_obj):
+        if self.show_metadata and show_obj and (not self._has_show_metadata(show_obj) or force):
             logger.log('Metadata provider %s creating show metadata for %s' % (self.name, show_obj.name), logger.DEBUG)
             try:
                 result = self.write_show_file(show_obj)
@@ -350,10 +352,10 @@ class GenericMetadata(object):
 
         return result
 
-    def create_episode_metadata(self, ep_obj):
-        # type: (sickbeard.tv.TVEpisode) -> bool
+    def create_episode_metadata(self, ep_obj, force=False):
+        # type: (sickbeard.tv.TVEpisode, bool) -> bool
         result = False
-        if self.episode_metadata and ep_obj and not self.has_episode_metadata(ep_obj):
+        if self.episode_metadata and ep_obj and (not self.has_episode_metadata(ep_obj) or force):
             logger.log('Metadata provider %s creating episode metadata for %s' % (self.name, ep_obj.pretty_name()),
                        logger.DEBUG)
             try:

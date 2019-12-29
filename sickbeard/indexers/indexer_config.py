@@ -23,8 +23,9 @@ init_config = {
 tvinfo_config = {
     TVINFO_TVDB: dict(
         main_url='https://thetvdb.com/',
+        api_url='https://api.thetvdb.com/',
         id=TVINFO_TVDB,
-        name='TheTVDB', slug='tvdb',
+        name='TheTVDB', slug='tvdb', kodi_slug='tvdb',
         module=Tvdb,
         api_params=dict(apikey='6cfd6399fd2bee018a8793da976f6522', language='en'),
         active=True,
@@ -57,7 +58,7 @@ tvinfo_config = {
     TVINFO_IMDB: dict(
         main_url='https://www.imdb.com/',
         id=TVINFO_IMDB,
-        name='IMDb', slug='imdb',
+        name='IMDb', slug='imdb', kodi_slug='imdb',
         module=None,
         api_params={},
         active=False,
@@ -79,7 +80,7 @@ tvinfo_config = {
     TVINFO_TMDB: dict(
         main_url='https://www.themoviedb.org/',
         id=TVINFO_TMDB,
-        name='TMDb', slug='tmdb',
+        name='TMDb', slug='tmdb',  kodi_slug='tmdb',
         module=None,
         api_params={},
         active=False,
@@ -98,6 +99,15 @@ tvinfo_config[src].update(dict(
             'index.php?fieldlocation=2&language=7&order=translation&searching=Search&tab=advancedsearch&seriesname=%s'),
     scene_url='https://midgetspy.github.io/sb_tvdb_scene_exceptions/exceptions.txt',
     xem_origin='tvdb',
+    # use kodi key for kodi <> tvdb api
+    # https://github.com/xbmc/metadata.tvdb.com.python/blob/master/resources/lib/tvdb.py
+    epg_url=(tvinfo_config[src]['api_url'] +
+             'login?{&quot;apikey&quot;:&quot;%(apikey)s&quot;,&quot;id&quot;:{MID}}|Content-Type=application/json'
+             % {'apikey': 'd60d3c015fdb148931e8254c0e96f072'}),
+    # use internal key (backup, last resort)
+    # epg_url=(tvinfo_config[src]['api_url'] +
+    #          'login?{&quot;apikey&quot;:&quot;%(apikey)s&quot;,&quot;id&quot;:{MID}}|Content-Type=application/json'
+    #          % tvinfo_config[src]['api_params']),
 ))
 
 src = TVINFO_TVRAGE

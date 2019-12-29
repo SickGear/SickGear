@@ -623,7 +623,7 @@ class TVShow(TVShowBase):
         # update shows without an airdate for the last episode for update_days_limit days every 7 days
         return last_airdate_unknown and airdate_diff <= ended_limit and last_update_diff >= datetime.timedelta(days=7)
 
-    def write_show_nfo(self):
+    def write_show_nfo(self, force=False):
 
         result = False
 
@@ -633,15 +633,15 @@ class TVShow(TVShowBase):
 
         logger.log('%s: Writing NFOs for show' % self.tvid_prodid)
         for cur_provider in itervalues(sickbeard.metadata_provider_dict):
-            result = cur_provider.create_show_metadata(self) or result
+            result = cur_provider.create_show_metadata(self, force) or result
 
         return result
 
-    def write_metadata(self, show_only=False):
+    def write_metadata(self, show_only=False, force=False):
+        # type:(bool, bool) -> None
         """
-
         :param show_only: only for show
-        :type show_only: bool
+        :param force:
         """
         if not ek.ek(os.path.isdir, self._location):
             logger.log('%s: Show directory doesn\'t exist, skipping NFO generation' % self.tvid_prodid)
@@ -649,12 +649,14 @@ class TVShow(TVShowBase):
 
         self.get_images()
 
-        self.write_show_nfo()
+        force_nfo = force or not db.DBConnection().has_flag('kodi_nfo_uid')
+
+        self.write_show_nfo(force_nfo)
 
         if not show_only:
-            self.write_episode_nfo()
+            self.write_episode_nfo(force_nfo)
 
-    def write_episode_nfo(self):
+    def write_episode_nfo(self, force=False):
 
         if not ek.ek(os.path.isdir, self._location):
             logger.log('%s: Show directory doesn\'t exist, skipping NFO generation' % self.tvid_prodid)
@@ -674,7 +676,7 @@ class TVShow(TVShowBase):
             logger.log('%s: Retrieving/creating episode %sx%s'
                        % (self.tvid_prodid, cur_result['season'], cur_result['episode']), logger.DEBUG)
             ep_obj = self.get_episode(cur_result['season'], cur_result['episode'])
-            ep_obj.create_meta_files()
+            ep_obj.create_meta_files(force)
 
     def update_metadata(self):
 
@@ -2622,7 +2624,7 @@ class TVEpisode(TVEpisodeBase):
                + 'hastbn: %s\n' % self.hastbn \
                + 'status: %s\n' % self.status
 
-    def create_meta_files(self):
+    def create_meta_files(self, force=False):
 
         # noinspection PyProtectedMember
         if not ek.ek(os.path.isdir, self.show_obj._location):
@@ -2630,13 +2632,13 @@ class TVEpisode(TVEpisodeBase):
                        % self.show_obj.tvid_prodid)
             return
 
-        self.create_nfo()
+        self.create_nfo(force)
         self.create_thumbnail()
 
         if self.check_for_meta_files():
             self.save_to_db()
 
-    def create_nfo(self):
+    def create_nfo(self, force=False):
         """
 
         :return:
@@ -2645,7 +2647,7 @@ class TVEpisode(TVEpisodeBase):
         result = False
 
         for cur_provider in itervalues(sickbeard.metadata_provider_dict):
-            result = cur_provider.create_episode_metadata(self) or result
+            result = cur_provider.create_episode_metadata(self, force) or result
 
         return result
 

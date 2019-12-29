@@ -111,6 +111,13 @@
 * Change SickGear-NG version
 * Fix "Update shows on startup" (change update_shows_on_start = 0 in config.ini, restart SG, then update)
 * Fix Plex notifier, PY2 urllib2.urlopen has no `with` context manager and six.moves.urllib.request.urlopen does not provide
+* Change Kodi show nfo tag 'episodeguide' to use v2.0 format
+* Change Kodi show nfo add tag show/premiered and use full date
+* Change Kodi show nfo add tag uniqueid and add missing attributes for episode nfo
+* Change use Kodi metadata.tvdb.com repo api_key for requests that the addon will make
+* Change Kodi show nfo remove tags 'episodeguideurl', 'indexer', and 'year' as deprecated
+* Change Kodi show nfo remove tags 'id'
+* Change output non valid xml that Kodi will accept
 
 
 [develop changelog]
