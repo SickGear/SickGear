@@ -68,8 +68,9 @@ class PLEXNotifier(Notifier):
             else:
                 self._log_debug(u'Contacting via url: ' + url)
 
-            with urllib.request.urlopen(req) as response:
-                result = decode_str(response.read(), sickbeard.SYS_ENCODING)
+            http_response_obj = urllib.request.urlopen(req)  # PY2 http_response_obj has no `with` context manager
+            result = decode_str(http_response_obj.read(), sickbeard.SYS_ENCODING)
+            http_response_obj.close()
 
             self._log_debug(u'HTTP response: ' + result.replace('\n', ''))
             return True
@@ -173,10 +174,11 @@ class PLEXNotifier(Notifier):
             token_arg = False
 
             try:
-                with urllib.request.urlopen(req) as response:
-                    auth_tree = XmlEtree.parse(response)
-                    token = auth_tree.findall('.//authentication-token')[0].text
-                    token_arg = '?X-Plex-Token=' + token
+                http_response_obj = urllib.request.urlopen(req)  # PY2 http_response_obj has no `with` context manager
+                auth_tree = XmlEtree.parse(http_response_obj)
+                http_response_obj.close()
+                token = auth_tree.findall('.//authentication-token')[0].text
+                token_arg = '?X-Plex-Token=' + token
 
             except urllib.error.URLError as e:
                 self._log(u'Error fetching credentials from plex.tv for user %s: %s' % (username, ex(e)))

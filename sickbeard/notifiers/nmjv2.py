@@ -49,8 +49,9 @@ class NMJv2Notifier(BaseNotifier):
             req = urllib.request.Request('%s%s%s' % (base_url, 'file_operation?', urlencode(
                 dict(arg0='list_user_storage_file', arg1='', arg2=instance, arg3=20, arg4='true', arg5='true',
                      arg6='true', arg7='all', arg8='name_asc', arg9='false', arg10='false'))))
-            handle = urllib.request.urlopen(req)
-            response = handle.read()
+            http_response_obj = urllib.request.urlopen(req)  # PY2 http_response_obj has no `with` context manager
+            response = http_response_obj.read()
+            http_response_obj.close()
             xml_data = parseString(response)
 
             time.sleep(300.0 / 1000.0)
@@ -60,8 +61,9 @@ class NMJv2Notifier(BaseNotifier):
                 reqdb = urllib.request.Request('%s%s%s' % (base_url, 'metadata_database?', urlencode(
                     dict(arg0='check_database',
                          arg1=xml_tag.replace('<path>', '').replace('</path>', '').replace('[=]', '')))))
-                handledb = urllib.request.urlopen(reqdb)
-                responsedb = handledb.read()
+                http_response_obj_db = urllib.request.urlopen(reqdb)  # PY2 http_response_obj has no `with` context mgr
+                responsedb = http_response_obj_db.read()
+                http_response_obj.close()
                 xml_db = parseString(responsedb)
 
                 if '0' == xml_db.getElementsByTagName('returnValue')[0].toxml().replace(
@@ -117,13 +119,15 @@ class NMJv2Notifier(BaseNotifier):
             prereq = urllib.request.Request(url_scandir)
             req = urllib.request.Request(url_updatedb)
 
-            handle1 = urllib.request.urlopen(prereq)
-            response1 = handle1.read()
+            http_response_obj1 = urllib.request.urlopen(prereq)  # PY2 http_response_obj has no `with` context manager
+            response1 = http_response_obj1.read()
+            http_response_obj1.close()
 
             time.sleep(300.0 / 1000.0)
 
-            handle2 = urllib.request.urlopen(req)
-            response2 = handle2.read()
+            http_response_obj2 = urllib.request.urlopen(req)  # PY2 http_response_obj has no `with` context manager
+            response2 = http_response_obj2.read()
+            http_response_obj2.close()
         except IOError as e:
             self._log_warning(u'Couldn\'t contact popcorn hour on host %s: %s' % (host, ex(e)))
             return False

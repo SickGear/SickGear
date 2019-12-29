@@ -45,10 +45,10 @@ class PushoverNotifier(Notifier):
         result = False
         try:
             req = urllib.request.Request(DEVICE_URL)
-            handle = urllib.request.urlopen(req, data)
-            if handle:
-                result = handle.read()
-            handle.close()
+            http_response_obj = urllib.request.urlopen(req)  # PY2 http_response_obj has no `with` context manager
+            if http_response_obj:
+                result = http_response_obj.read()
+                http_response_obj.close()
         except (urllib.error.URLError, socket.timeout):
             pass
 
@@ -85,8 +85,9 @@ class PushoverNotifier(Notifier):
         result = None
         try:
             req = urllib.request.Request(API_URL)
-            handle = urllib.request.urlopen(req, urlencode(params))
-            handle.close()
+            # PY2 http_response_obj has no `with` context manager
+            http_response_obj = urllib.request.urlopen(req, urlencode(params))
+            http_response_obj.close()
 
         except urllib.error.HTTPError as e:
             # HTTP status 404 if the provided email address isn't a Pushover user.
