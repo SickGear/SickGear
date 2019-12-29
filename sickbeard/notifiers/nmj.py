@@ -105,7 +105,8 @@ class NMJNotifier(BaseNotifier):
             try:
                 req = urllib.request.Request(mount)
                 self._log_debug(u'Try to mount network drive via url: %s' % mount)
-                urllib.request.urlopen(req)
+                http_response_obj = urllib.request.urlopen(req)  # PY2 http_response_obj has no `with` context manager
+                http_response_obj.close()
             except IOError as e:
                 if hasattr(e, 'reason'):
                     self._log_warning(u'Could not contact Popcorn Hour on host %s: %s' % (host, e.reason))
@@ -125,8 +126,9 @@ class NMJNotifier(BaseNotifier):
         try:
             req = urllib.request.Request(update_url)
             self._log_debug(u'Sending scan update command via url: %s' % update_url)
-            handle = urllib.request.urlopen(req)
-            response = handle.read()
+            http_response_obj = urllib.request.urlopen(req)
+            response = http_response_obj.read()
+            http_response_obj.close()
         except IOError as e:
             if hasattr(e, 'reason'):
                 self._log_warning(u'Could not contact Popcorn Hour on host %s: %s' % (host, e.reason))

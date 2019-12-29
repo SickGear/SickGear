@@ -173,9 +173,9 @@ class XBMCNotifier(Notifier):
             else:
                 self._log_debug(u'Contacting via url: ' + fixStupidEncodings(url))
 
-            response = urllib.request.urlopen(req)
-            result = decode_str(response.read(), sickbeard.SYS_ENCODING)
-            response.close()
+            http_response_obj = urllib.request.urlopen(req)  # PY2 http_response_obj has no `with` context manager
+            result = decode_str(http_response_obj.read(), sickbeard.SYS_ENCODING)
+            http_response_obj.close()
 
             self._log_debug(u'HTTP response: ' + result.replace('\n', ''))
             return result
@@ -279,7 +279,7 @@ class XBMCNotifier(Notifier):
     ##############################################################################
 
     def _send_to_xbmc_json(self, command, host=None, username=None, password=None):
-        # type: () -> Union[bool, Dict]
+        # type: (...) -> Union[bool, Dict]
         """Handles communication to XBMC servers via JSONRPC
 
         Args:
@@ -314,19 +314,19 @@ class XBMCNotifier(Notifier):
                 self._log_debug(u'Contacting via url: ' + fixStupidEncodings(url))
 
             try:
-                response = urllib.request.urlopen(req)
+                http_response_obj = urllib.request.urlopen(req)  # PY2 http_response_obj has no `with` context manager
             except urllib.error.URLError as e:
                 self._log_warning(u'Error while trying to retrieve API version for "%s": %s' % (host, ex(e)))
                 return False
 
             # parse the json result
             try:
-                result = json.load(response)
-                response.close()
+                result = json.load(http_response_obj)
+                http_response_obj.close()
                 self._log_debug(u'JSON response: ' + str(result))
                 return result  # need to return response for parsing
             except ValueError:
-                self._log_warning(u'Unable to decode JSON: ' + response)
+                self._log_warning(u'Unable to decode JSON: ' + http_response_obj)
                 return False
 
         except IOError as e:

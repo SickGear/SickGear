@@ -67,8 +67,8 @@ class Boxcar2Notifier(Notifier):
         result = None
         try:
             req = urllib.request.Request('https://new.boxcar.io/api/notifications')
-            handle = urllib.request.urlopen(req, data)
-            handle.close()
+            http_response_obj = urllib.request.urlopen(req, data)  # PY2 http_response_obj has no `with` context manager
+            http_response_obj.close()
 
         except urllib.error.HTTPError as e:
             if not hasattr(e, 'code'):

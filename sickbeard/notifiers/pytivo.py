@@ -75,7 +75,8 @@ class PyTivoNotifier(BaseNotifier):
         request = urllib.request.Request(request_url)
 
         try:
-            urllib.request.urlopen(request)
+            http_response_obj = urllib.request.urlopen(request)  # PY2 http_response_obj has no `with` context manager
+            http_response_obj.close()
 
         except urllib.error.HTTPError as e:
             if hasattr(e, 'reason'):
