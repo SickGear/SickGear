@@ -1,4 +1,9 @@
-﻿### 0.20.17 (2019-12-25 01:40:00 UTC)
+﻿### 0.20.18 (2019-12-30 12:15:00 UTC)
+
+* Update UnRar for Windows 5.71 to 5.80 x64
+
+
+### 0.20.17 (2019-12-25 01:40:00 UTC)
 
 * Fix Synology DownloadStation test dev mode
 

@@ -37,6 +37,10 @@ class DownloadStationAPI(GenericClient):
         self.url = self.url_base + 'DownloadStation/task.cgi'
         self._errmsg = None
         self._testmode = False
+        self._auth_version = None
+        self._auth_path = None
+        self._task_version = None
+        self._task_path = None
 
     common_errors = {
         -1: 'Could not get a response', 100: 'Unknown error', 101: 'Invalid parameter',
@@ -112,6 +116,7 @@ class DownloadStationAPI(GenericClient):
                     tasks = self._client_request(('list', 'getinfo')[getinfo], t_id=rid,
                                                  t_params=dict(additional='detail,file,transfer'))['data']['tasks']
                 else:
+                    # noinspection PyUnresolvedReferences
                     tasks = (filter(lambda d: d.get('id') == rid, self._testdata), self._testdata)[not rid]
                 result += tasks and (isinstance(tasks, list) and tasks or (isinstance(tasks, dict) and [tasks])) \
                     or ([], [{'error': True, 'id': rid}])[err]
@@ -274,6 +279,7 @@ class DownloadStationAPI(GenericClient):
         :rtype: string or bool
         """
         if self._testmode:
+            # noinspection PyUnresolvedReferences
             return self._testid
 
         tasks = self._tinf()
