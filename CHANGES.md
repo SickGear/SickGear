@@ -128,6 +128,11 @@
 * Update xmltodict library 0.12.0 (f3ab7e1) to 0.12.0 (02c9b71)
 
 
+### 0.20.18 (2019-12-30 12:15:00 UTC)
+
+* Update UnRar for Windows 5.71 to 5.80 x64
+
+
 ### 0.20.17 (2019-12-25 01:40:00 UTC)
 
 * Fix Synology DownloadStation test dev mode
