@@ -43,10 +43,22 @@ if False:
     from typing import AnyStr, Dict, List
 
 
+DAILY_SHOW_UPDATE_FINISHED_EVENT = 1
+
+
 class ShowQueue(generic_queue.GenericQueue):
     def __init__(self):
         generic_queue.GenericQueue.__init__(self)
         self.queue_name = 'SHOWQUEUE'
+        self.daily_update_running = False
+        if not db.DBConnection().has_flag('kodi_nfo_uid'):
+            self.add_event(DAILY_SHOW_UPDATE_FINISHED_EVENT, sickbeard.metadata.kodi.set_nfo_uid_updated)
+
+    def check_events(self):
+        if self.daily_update_running and \
+                not (self.isShowUpdateRunning() or sickbeard.showUpdateScheduler.action.amActive):
+            self.execute_events(DAILY_SHOW_UPDATE_FINISHED_EVENT)
+            self.daily_update_running = False
 
     def _isInQueue(self, show_obj, actions):
         # type: (TVShow, tuple) -> bool
