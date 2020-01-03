@@ -1,6 +1,11 @@
+/** @namespace $.SickGear.Root */
 /** @namespace config.sortArticle */
 /** @namespace config.resultsSortby */
 $(document).ready(function () {
+
+	function htmlFlag(lang) {
+		return ' class="flag" style="background-image:url(' + $.SickGear.Root + '/images/flags/' + lang + '.png)"'
+	}
 
 	function populateLangSelect() {
 		if (!$('#nameToSearch').length)
@@ -10,17 +15,20 @@ $(document).ready(function () {
 
 			$.getJSON(sbRoot + '/add-shows/get-infosrc-languages', {}, function (data) {
 
-				var resultStr = '',
+				var resultStr = '', flag,
 					selected = ' selected="selected"',
 					elInfosrcLang = $('#infosrc-lang-select');
 
 				if (0 === data.results.length) {
-					resultStr = '<option value="en"' + selected + '>en</option>';
+					resultStr = '<option value="en"' + selected + '>&gt; en</option>';
 				} else {
 					$.each(data.results, function (index, obj) {
+						flag = htmlFlag(obj);
 						resultStr += '<option value="' + obj + '"'
-							+ ('' == resultStr ? selected : '')
-							+ '>' + obj + '</option>';
+							+ ('' === resultStr
+								? flag.replace('"flag', '"flag selected-text') + selected + '>&gt; '
+								: flag + '>')
+							+ obj + '</option>';
 					});
 				}
 

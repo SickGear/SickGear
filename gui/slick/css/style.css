@@ -1239,11 +1239,11 @@ div.formpaginate{
 }
 
 #addShowForm #nameToSearch{
-	width:520px;
+	width:500px;
 	margin-top:0
 }
 #addShowForm #nameToSearch.wide{
-	width:611px;
+	width:591px;
 }
 
 #addShowForm #providedIndexer,
