@@ -158,6 +158,9 @@ class ShowUpdater(object):
                 except (exceptions_helper.CantUpdateException, exceptions_helper.CantRefreshException) as e:
                     logger.log(u'Automatic update failed: ' + ex(e), logger.ERROR)
 
+            if len(pi_list):
+                sickbeard.showQueueScheduler.action.daily_update_running = True
+
             ui.ProgressIndicators.setIndicator('dailyUpdate', ui.QueueProgressIndicator('Daily Update', pi_list))
 
             logger.log(u'Added all shows to show queue for full update')

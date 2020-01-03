@@ -21,10 +21,12 @@ import datetime
 import threading
 
 from . import logger
+from exceptions_helper import ex
+from six import integer_types
 
 # noinspection PyUnreachableCode
 if False:
-    from typing import AnyStr, List, Union
+    from typing import AnyStr, Callable, Dict, List, Tuple, Union
     from .search_queue import BaseSearchQueueItem
     from .show_queue import ShowQueueItem
 
@@ -47,7 +49,9 @@ class GenericQueue(object):
 
         self.min_priority = 0  # type: int
 
-        self.lock = threading.Lock()
+        self.events = {}  # type: Dict[int, List[Callable]]
+
+        self.lock = threading.RLock()
 
     def pause(self):
         logger.log(u'Pausing queue')
@@ -73,6 +77,37 @@ class GenericQueue(object):
 
             return item
 
+    def check_events(self):
+        pass
+
+    def add_event(self, event_type, method):
+        # type: (int, Callable) -> None
+        if isinstance(event_type, integer_types) and callable(method):
+            if event_type not in self.events:
+                self.events[event_type] = []
+            if method not in self.events[event_type]:
+                self.events[event_type].append(method)
+
+    def remove_event(self, event_type, method):
+        # type: (int, Callable) -> None
+        if isinstance(event_type, integer_types) and callable(method):
+            if event_type in self.events and method in self.events[event_type]:
+                try:
+                    self.events[event_type].remove(method)
+                    if 0 == len(self.events[event_type]):
+                        del self.events[event_type]
+                except (BaseException, Exception) as e:
+                    logger.log('Error removing event method from queue: %s' % ex(e), logger.ERROR)
+
+    def execute_events(self, event_type, *args, **kwargs):
+        # type: (int, Tuple, Dict) -> None
+        if event_type in self.events:
+            for event in self.events.get(event_type):
+                try:
+                    event(*args, **kwargs)
+                except (BaseException, Exception) as e:
+                    logger.log('Error executing Event: %s' % ex(e), logger.ERROR)
+
     def run(self):
 
         # only start a new task if one isn't already going
@@ -96,6 +131,8 @@ class GenericQueue(object):
                     if 'SEARCHQUEUE' != self.queue_name:
                         self.currentItem.name = self.queue_name + '-' + self.currentItem.name
                     self.currentItem.start()
+
+                self.check_events()
 
 
 class QueueItem(threading.Thread):
