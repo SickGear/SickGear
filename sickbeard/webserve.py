@@ -3268,11 +3268,11 @@ class AddShows(Home):
     def get_infosrc_languages():
         result = sickbeard.TVInfoAPI().config['valid_languages']
 
-        # Make sure list is sorted alphabetically but 'en' is in front
-        if 'en' in result:
-            del result[result.index('en')]
+        # sort list alphabetically with sickbeard.ADD_SHOWS_METALANG as the first item
+        if sickbeard.ADD_SHOWS_METALANG in result:
+            del result[result.index(sickbeard.ADD_SHOWS_METALANG)]
         result.sort()
-        result.insert(0, 'en')
+        result.insert(0, sickbeard.ADD_SHOWS_METALANG)
 
         return json.dumps({'results': result})
 
@@ -3287,7 +3287,11 @@ class AddShows(Home):
     # noinspection PyPep8Naming
     def search_tvinfo_for_showname(self, search_term, lang='en', search_tvid=None):
         if not lang or 'null' == lang:
-            lang = 'en'
+            lang = sickbeard.ADD_SHOWS_METALANG or 'en'
+        if lang != sickbeard.ADD_SHOWS_METALANG:
+            sickbeard.ADD_SHOWS_METALANG = lang
+            sickbeard.save_config()
+
         search_term = re.sub(r'^\d+%s' % TVidProdid.glue, '', search_term.strip())
         try:
             search_term = re.findall(r'(?i)thetvdb.*?seriesid=([\d]+)', search_term)[0]
@@ -3659,6 +3663,7 @@ class AddShows(Home):
         t.other_shows = other_shows
         t.provided_tvid = int(tvid or sickbeard.TVINFO_DEFAULT)
         t.infosrc = sickbeard.TVInfoAPI().search_sources
+        t.meta_lang = sickbeard.ADD_SHOWS_METALANG
         t.whitelist = []
         t.blacklist = []
         t.groups = []

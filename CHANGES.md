@@ -109,8 +109,7 @@
 * Change move priority property to SearchResult base class
 * Add new test for wanted whole first season (add show)
 * Change SickGear-NG version
-* Fix "Update shows on startup" (change update_shows_on_start = 0 in config.ini, restart SG, then update)
-* Fix Plex notifier, PY2 urllib2.urlopen has no `with` context manager and six.moves.urllib.request.urlopen does not provide
+* Add persistent meta language selection to first step of add show + flag images to the drop down
 * Change Kodi show nfo tag 'episodeguide' to use v2.0 format
 * Change Kodi show nfo add tag show/premiered and use full date
 * Change Kodi show nfo add tag uniqueid and add missing attributes for episode nfo
@@ -133,6 +132,8 @@
 * Update urllib3 release 1.25.3 (3387b20) to 1.25.3 (67715fd)
 * Update urllib3 release 1.25.5 (edc3ddb) to 1.25.6 (4a6c288)
 * Update xmltodict library 0.12.0 (f3ab7e1) to 0.12.0 (02c9b71)
+* Fix "Update shows on startup" (change update_shows_on_start = 0 in config.ini, restart SG, then update)
+* Fix Plex notifier, PY2 urllib2.urlopen has no `with` context manager and six.moves.urllib.request.urlopen does not provide
 
 
 ### 0.20.18 (2019-12-30 12:15:00 UTC)
