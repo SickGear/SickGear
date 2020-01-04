@@ -117,6 +117,7 @@
 * Change Kodi show nfo remove tags 'episodeguideurl', 'indexer', and 'year' as deprecated
 * Change Kodi show nfo remove tags 'id'
 * Change output non valid xml that Kodi will accept
+* Change remove redundant py26 version check
 
 
 [develop changelog]
