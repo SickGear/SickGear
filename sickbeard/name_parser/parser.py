@@ -729,6 +729,10 @@ class ParseResult(LegacyParseResult):
 
         return True
 
+    def __hash__(self):
+        return hash((self.series_name, self.season_number, tuple(self.episode_numbers), self.extra_info,
+                     self.release_group, self.air_date, tuple(self.ab_episode_numbers)))
+
     def __str__(self):
         if None is not self.series_name:
             to_return = self.series_name + u' - '

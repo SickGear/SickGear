@@ -1,6 +1,7 @@
 ﻿### 0.22.0 (2019-xx-xx xx:xx:xx UTC)
 
 * Fix creating show list when there is no list at the cycle of backlog search spread
+* Change improve Python performance of handling core objects
 
 
 [develop changelog]
