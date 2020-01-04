@@ -32,6 +32,9 @@ import time
 import threading
 import warnings
 
+# We only need this for compiling an EXE
+from multiprocessing import freeze_support  # @UnresolvedImport
+
 warnings.filterwarnings('ignore', module=r'.*fuzzywuzzy.*')
 warnings.filterwarnings('ignore', module=r'.*Cheetah.*')
 warnings.filterwarnings('ignore', module=r'.*connectionpool.*', message='.*certificate verification.*')
@@ -63,10 +66,6 @@ except (StandardError, Exception):
 
 sys.path.insert(1, os.path.abspath(os.path.join(os.path.dirname(__file__), 'lib')))
 from lib.six import moves
-
-# We only need this for compiling an EXE and I will just always do that on 2.6+
-if sys.hexversion >= 0x020600F0:
-    from multiprocessing import freeze_support  # @UnresolvedImport
 
 import sickbeard
 from sickbeard import db, logger, network_timezones, failed_history, name_cache
@@ -681,8 +680,7 @@ class SickGear(object):
 
 
 if __name__ == '__main__':
-    if sys.hexversion >= 0x020600F0:
-        freeze_support()
+    freeze_support()
     try:
         try:
             # start SickGear
