@@ -78,9 +78,8 @@ except (BaseException, Exception):
 if 'win32' == sys.platform:
     codecs.register(lambda name: codecs.lookup('utf-8') if name == 'cp65001' else None)
 
-# We only need this for compiling an EXE and I will just always do that on 2.6+
-if 0x020600F0 <= sys.hexversion:
-    from multiprocessing import freeze_support
+# We only need this for compiling an EXE
+from multiprocessing import freeze_support
 
 sys.path.insert(1, os.path.abspath(os.path.join(os.path.dirname(__file__), 'lib')))
 
@@ -701,8 +700,7 @@ class SickGear(object):
 
 
 if '__main__' == __name__:
-    if 0x020600F0 <= sys.hexversion:
-        freeze_support()
+    freeze_support()
     try:
         try:
             # start SickGear
