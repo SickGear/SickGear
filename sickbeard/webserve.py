@@ -4304,7 +4304,7 @@ class AddShows(Home):
         if 'recommended' not in kwargs.get('mode', '') and 'watchlist' not in kwargs.get('mode', ''):
             mode = kwargs.get('mode', '').split('-')
             if mode:
-                func = 'trakt-%s' % mode[0]
+                func = 'trakt_%s' % mode[0]
                 if callable(getattr(self, func, None)):
                     param = '' if 1 == len(mode) or mode[1] not in ['year', 'month', 'week', 'all'] else \
                         '?period=' + mode[1]
@@ -4352,8 +4352,8 @@ class AddShows(Home):
                     list(sickbeard.TVInfoAPI().search_sources) + [sickbeard.indexers.indexer_config.TVINFO_IMDB]):
                 try:
                     # TODO: use this to pass tvid when it is known what info sources will become
-                    # tvid_prodid_list += ['%s%s%s' % (tvid, TVidProdid.glue, item['ids'][infosrc_slug])]
-                    tvid_prodid_list += ['%s' % item['ids'][infosrc_slug]]
+                    tvid_prodid_list += ['%s%s%s' % (tvid, TVidProdid.glue, item['ids'][infosrc_slug])]
+                    # tvid_prodid_list += ['%s' % item['ids'][infosrc_slug]]
                     show_obj = helpers.find_show_by_id({tvid: item['ids'][infosrc_slug]})
                 except (BaseException, Exception):
                     continue
