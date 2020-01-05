@@ -2091,7 +2091,7 @@ class TorrentProvider(GenericProvider):
 
     @last_recent_search.setter
     def last_recent_search(self, value):
-        value = 0 if not value else 'id-%s' % value
+        value = 0 if not value else re.sub('^(id-)+', r'\1', 'id-%s' % value)
         try:
             my_db = db.DBConnection('cache.db')
             my_db.action('INSERT OR REPLACE INTO "lastrecentsearch" (name, datetime) VALUES (?,?)',
@@ -2109,12 +2109,13 @@ class TorrentProvider(GenericProvider):
 
                 if not self.last_recent_search:
                     try:
-                        self.last_recent_search = helpers.try_int(rc_dlid.findall(items[mode][0][1])[0])
+                        self.last_recent_search = helpers.try_int(rc_dlid.findall(items[mode][0][1])[0]) \
+                                                  or rc_dlid.findall(items[mode][0][1])[0]
                     except IndexError:
                         self.last_recent_search = last_recent_search
 
                 if last_recent_search and lrs_found:
                     return result
-            if 50 == cnt_search or 100 == cnt_search:
+            if cnt_search in (25, 50, 100):
                 result = False
         return result

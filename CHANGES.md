@@ -119,6 +119,7 @@
 * Change output non valid xml that Kodi will accept
 * Change remove redundant py26 version check
 * Fix reduce quote usage to optional
+* Change improve Scenetime + SkyTorrent provider recent search performance to process new items since the previous cycle
 
 
 [develop changelog]
