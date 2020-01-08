@@ -6,6 +6,9 @@ from exceptions_helper import ex
 from six import iteritems
 from .trakt import TraktAPI
 
+log = logging.getLogger('trakt_api')
+log.addHandler(logging.NullHandler())
+
 
 class ShowContainer(dict):
     """Simple dict that holds a series of Show instances
@@ -31,10 +34,6 @@ class ShowContainer(dict):
             self._lastgc = time.time()
 
         super(ShowContainer, self).__setitem__(key, value)
-
-
-def log():
-    return logging.getLogger('trakt_api')
 
 
 class TraktSearchTypes(object):
@@ -98,11 +97,11 @@ class TraktIndexer(object):
             all_series = [all_series]
 
         if 0 == len(all_series):
-            log().debug('Series result returned zero')
+            log.debug('Series result returned zero')
             raise TraktShowNotFound('Show-name search returned zero results (cannot find show on TVDB)')
 
         if None is not self.config['custom_ui']:
-            log().debug('Using custom UI %s' % (repr(self.config['custom_ui'])))
+            log.debug('Using custom UI %s' % (repr(self.config['custom_ui'])))
             custom_ui = self.config['custom_ui']
             ui = custom_ui(config=self.config)
 
@@ -162,6 +161,6 @@ class TraktIndexer(object):
                                                re.sub(r'T.*$', '', str(d.get('first_aired'))) or d.get('year'))
                         filtered.append(d)
         except TraktException as e:
-            log().debug('Could not connect to Trakt service: %s' % ex(e))
+            log.debug('Could not connect to Trakt service: %s' % ex(e))
 
         return filtered
