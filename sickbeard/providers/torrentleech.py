@@ -26,6 +26,8 @@ from bs4_parser import BS4Parser
 from _23 import unidecode
 from six import iteritems
 
+from six import PY2
+
 
 class TorrentLeechProvider(generic.TorrentProvider):
     def __init__(self):
@@ -130,7 +132,7 @@ class TorrentLeechProvider(generic.TorrentProvider):
                                 info = tr.find('td', class_='name').a
                                 title = (info.attrs.get('title') or info.get_text()).strip()
                                 size = cells[head['size']].get_text().strip()
-                                download_url = self._link(dl)
+                                download_url = self._link(dl, url_quote=PY2 and isinstance(dl, unicode) or None)
                             except (AttributeError, TypeError, ValueError):
                                 continue
 

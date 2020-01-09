@@ -864,7 +864,7 @@ class GenericProvider(object):
 
         return title, url
 
-    def _link(self, url, url_tmpl=None):
+    def _link(self, url, url_tmpl=None, url_quote=None):
 
         if url:
             if PY2:
@@ -878,7 +878,8 @@ class GenericProvider(object):
         # noinspection PyUnresolvedReferences
         return url if re.match('(?i)(https?://|magnet:)', url) \
             else (url_tmpl or self.urls.get('get', (getattr(self, 'url', '') or
-                                                    getattr(self, 'url_base')) + '%s')) % quote(url).lstrip('/')
+                                                    getattr(self, 'url_base')) + '%s')) % (
+                not url_quote and url or quote(url)).lstrip('/')
 
     @staticmethod
     def _header_row(table_row, custom_match=None, custom_tags=None, header_strip=''):
