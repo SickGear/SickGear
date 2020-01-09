@@ -137,6 +137,7 @@
 * Fix "Update shows on startup" (change update_shows_on_start = 0 in config.ini, restart SG, then update)
 * Fix Plex notifier, PY2 urllib2.urlopen has no `with` context manager and six.moves.urllib.request.urlopen does not provide
 * Fix hidden items on browse show page with new id system
+* Change ensure Kodi metadata is consistently a text string type
 
 
 ### 0.20.18 (2019-12-30 12:15:00 UTC)

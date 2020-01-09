@@ -26,7 +26,7 @@ import exceptions_helper
 from exceptions_helper import ex
 from lxml_etree import etree
 
-from _23 import map_iter
+from _23 import decode_str, map_iter
 from six import string_types
 
 # noinspection PyUnreachableCode
@@ -219,7 +219,7 @@ class KODIMetadata(generic.GenericMetadata):
         # output valid xml
         # data = etree.ElementTree(tv_node)
         # output non valid xml that Kodi accepts
-        data = etree.tostring(tv_node)
+        data = decode_str(etree.tostring(tv_node))
         parts = data.split('episodeguide')
         if 3 == len(parts):
             data = 'episodeguide'.join([parts[0], parts[1].replace('&amp;quot;', '&quot;'), parts[2]])
