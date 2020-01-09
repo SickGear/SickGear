@@ -118,6 +118,7 @@
 * Change Kodi show nfo remove tags 'id'
 * Change output non valid xml that Kodi will accept
 * Change remove redundant py26 version check
+* Fix reduce quote usage to optional
 
 
 [develop changelog]
