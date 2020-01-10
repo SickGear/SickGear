@@ -58,8 +58,8 @@ class TvSubtitles(ServiceBase):
         maindiv = soup.find('div', 'left')
         results = []
         for elem in maindiv.find_all('li'):
-            sid = int(match('tvshow-([0-9]+)\.html', elem.a['href']))
-            show_name = match('(.*) \(', elem.a.text)
+            sid = int(match(r'tvshow-([0-9]+)\.html', elem.a['href']))
+            show_name = match(r'(.*) \(', elem.a.text)
             results.append((show_name, sid))
 
         if len(results):

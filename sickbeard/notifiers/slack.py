@@ -17,8 +17,8 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
+from .generic import Notifier
 import sickbeard
-from sickbeard.notifiers.generic import Notifier
 
 
 class SlackNotifier(Notifier):
@@ -29,7 +29,7 @@ class SlackNotifier(Notifier):
     def _notify(self, title, body, channel='', as_authed=None, bot_name='', icon_url='', access_token='', **kwargs):
 
         custom = not self._choose(as_authed, sickbeard.SLACK_AS_AUTHED)
-        resp = sickbeard.helpers.getURL(
+        resp = sickbeard.helpers.get_url(
             url='https://slack.com/api/chat.postMessage',
             post_data=dict(
                 [('text', self._body_only(title, body)),
@@ -37,7 +37,7 @@ class SlackNotifier(Notifier):
                  ('token', self._choose(access_token, sickbeard.SLACK_ACCESS_TOKEN))]
                 + ([], [('username', self._choose(bot_name, sickbeard.SLACK_BOT_NAME) or 'SickGear'),
                         ('icon_url', self._choose(icon_url, sickbeard.SLACK_ICON_URL) or self._sg_logo_url)])[custom]),
-            json=True)
+            parse_json=True)
 
         result = resp and resp.get('ok') or 'response: "%s"' % (resp.get('error') or self._choose(
             'bad oath access token?', None))

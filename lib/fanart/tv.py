@@ -5,7 +5,8 @@ __all__ = (
     'ArtItem',
     'LogoItem',
     'BackgroundItem',
-    'SeasonItem',
+    'SeasonThumbItem',
+    'SeasonPosterItem',
     'ThumbItem',
     'HdLogoItem',
     'HdArtItem',
@@ -17,16 +18,16 @@ __all__ = (
 
 class TvItem(LeafItem):
     @Immutable.mutablemethod
-    def __init__(self, id, url, likes, lang):
-        super(TvItem, self).__init__(id, url, likes)
+    def __init__(self, fa_id, url, likes, lang):
+        super(TvItem, self).__init__(fa_id, url, likes)
         self.lang = lang
 
 
 class SeasonedTvItem(TvItem):
     @Immutable.mutablemethod
-    def __init__(self, id, url, likes, lang, season):
-        super(SeasonedTvItem, self).__init__(id, url, likes, lang)
-        self.season = 0 if season == 'all' else int(season or 0)
+    def __init__(self, fa_id, url, likes, lang, season):
+        super(SeasonedTvItem, self).__init__(fa_id, url, likes, lang)
+        self.season = 0 if 'all' == season else int(season or 0)
 
 
 class CharacterItem(TvItem):
@@ -45,8 +46,12 @@ class BackgroundItem(SeasonedTvItem):
     KEY = fanart.TYPE.TV.BACKGROUND
 
 
-class SeasonItem(SeasonedTvItem):
+class SeasonThumbItem(SeasonedTvItem):
     KEY = fanart.TYPE.TV.SEASONTHUMB
+
+
+class SeasonPosterItem(SeasonedTvItem):
+    KEY = fanart.TYPE.TV.SEASONPOSTER
 
 
 class ThumbItem(TvItem):
@@ -73,15 +78,16 @@ class TvShow(ResourceItem):
     WS = fanart.WS.TV
 
     @Immutable.mutablemethod
-    def __init__(self, name, tvdbid, backgrounds, characters, arts, logos, seasons, thumbs, hdlogos, hdarts, posters,
-                 banners):
+    def __init__(self, name, tvdbid, backgrounds, characters, arts, logos,
+                 seasonthumb, seasonposter, thumbs, hdlogos, hdarts, posters, banners):
         self.name = name
         self.tvdbid = tvdbid
         self.backgrounds = backgrounds
         self.characters = characters
         self.arts = arts
         self.logos = logos
-        self.seasons = seasons
+        self.seasonthumb = seasonthumb
+        self.seasonposter = seasonposter
         self.thumbs = thumbs
         self.hdlogos = hdlogos
         self.hdarts = hdarts
@@ -90,7 +96,7 @@ class TvShow(ResourceItem):
 
     @classmethod
     def from_dict(cls, resource):
-        assert len(resource) == 1, 'Bad Format Map'
+        assert 1 == len(resource), 'Bad Format Map'
         name, resource = resource.items()[0]
         return cls(
             name=name,
@@ -99,7 +105,8 @@ class TvShow(ResourceItem):
             characters=CharacterItem.extract(resource),
             arts=ArtItem.extract(resource),
             logos=LogoItem.extract(resource),
-            seasons=SeasonItem.extract(resource),
+            seasonthumb=SeasonThumbItem.extract(resource),
+            seasonposter=SeasonPosterItem.extract(resource),
             thumbs=ThumbItem.extract(resource),
             hdlogos=HdLogoItem.extract(resource),
             hdarts=HdArtItem.extract(resource),

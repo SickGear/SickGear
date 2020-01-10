@@ -23,7 +23,7 @@ from ..utils import to_unicode
 from ..videos import Episode, Movie
 from hashlib import md5, sha256
 import logging
-import xmlrpclib
+import lib.xmlrpclib_to as xmlrpclib
 
 
 logger = logging.getLogger("subliminal")
@@ -48,7 +48,7 @@ class Podnapisi(ServiceBase):
 
     def __init__(self, config=None):
         super(Podnapisi, self).__init__(config)
-        self.server = xmlrpclib.ServerProxy(self.server_url)
+        self.server = xmlrpclib.ServerProxy(self.server_url, timeout=180)
         self.token = None
 
     def init(self):

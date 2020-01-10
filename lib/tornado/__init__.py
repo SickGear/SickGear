@@ -1,28 +1,15 @@
-#
-# Copyright 2009 Facebook
-#
-# Licensed under the Apache License, Version 2.0 (the "License"); you may
-# not use this file except in compliance with the License. You may obtain
-# a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
-# License for the specific language governing permissions and limitations
-# under the License.
+import sys
 
-"""The Tornado web server and tools."""
+PY2 = sys.version_info[0] == 2
+sub_name = 'tornado_py%s' % ('3', '2')[PY2]
 
-from __future__ import absolute_import, division, print_function
-
-# version is a human-readable version number.
-
-# version_info is a four-tuple for programmatic comparison. The first
-# three numbers are the components of the version number.  The fourth
-# is zero for an official release, positive for a development branch,
-# or negative for a release candidate or beta (after the base version
-# number has been incremented)
-version = "5.1.1"
-version_info = (5, 1, 1, 0)
+main_subs = ['gen', 'escape']
+locals()['tornado'] = __import__('tornado', fromlist=main_subs)
+sys.modules['tornado'] = __import__(sub_name, fromlist=main_subs)
+for mod, subs in [('web', ['RequestHandler', 'StaticFileHandler', 'authenticated', 'Application',
+                           '_ApplicationRouter']),
+                  ('ioloop', ['IOLoop']),
+                  ('routing', ['AnyMatches', 'Rule'])]:
+    package = __import__('%s.%s' % (sub_name, mod), fromlist=subs)
+    sys.modules['tornado.%s' % mod] = package
+    sys.modules['lib.tornado.%s' % mod] = package

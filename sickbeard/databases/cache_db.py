@@ -17,12 +17,11 @@
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
 from collections import OrderedDict
-from sickbeard import db
 
-import re
+from .. import db
 
 MIN_DB_VERSION = 1
-MAX_DB_VERSION = 4
+MAX_DB_VERSION = 5
 TEST_BASE_VERSION = None  # the base production db version, only needed for TEST db versions (>=100000)
 
 
@@ -58,6 +57,9 @@ class InitialSchema(db.SchemaUpgrade):
                 'CREATE TABLE provider_fails_count(prov_name TEXT PRIMARY KEY,'
                 ' failure_count NUMERIC, failure_time NUMERIC,'
                 ' tmr_limit_count NUMERIC, tmr_limit_time NUMERIC, tmr_limit_wait NUMERIC)'
+            ]),
+            ('add_indexer_to_tables', [
+                'DELETE FROM provider_cache WHERE 1=1'
             ])
         ])
 
@@ -65,11 +67,8 @@ class InitialSchema(db.SchemaUpgrade):
         return self.hasTable('lastUpdate')
 
     def execute(self):
-        self.do_query(self.queries.values())
-        self.setDBVersion(MAX_DB_VERSION)
-
-    def backup(self):
-        db.backup_database('cache.db', self.checkDBVersion())
+        self.do_query(self.queries[next(iter(self.queries))])
+        self.setDBVersion(MIN_DB_VERSION)
 
 
 class ConsolidateProviders(InitialSchema):
@@ -77,10 +76,10 @@ class ConsolidateProviders(InitialSchema):
         return 1 < self.checkDBVersion()
 
     def execute(self):
-        self.backup()
         keep_tables = {'lastUpdate', 'lastSearch', 'db_version',
                        'network_timezones', 'network_conversions', 'provider_cache'}
         # old provider_cache is dropped before re-creation
+        # noinspection SqlResolve
         self.do_query(['DROP TABLE [provider_cache]'] + self.queries['consolidate_providers'] +
                       ['DROP TABLE [%s]' % t for t in (set(self.listTables()) - keep_tables)])
         self.finish(True)
@@ -91,7 +90,7 @@ class AddBacklogParts(ConsolidateProviders):
         return 2 < self.checkDBVersion()
 
     def execute(self):
-        self.backup()
+        # noinspection SqlResolve
         self.do_query(self.queries['add_backlogparts'] +
                       ['DROP TABLE [%s]' % t for t in ('scene_names', 'scene_exceptions_refresh', 'scene_exceptions')])
         self.finish(True)
@@ -102,6 +101,15 @@ class AddProviderFailureHandling(AddBacklogParts):
         return 3 < self.checkDBVersion()
 
     def execute(self):
-        self.backup()
         self.do_query(self.queries['add_provider_fails'])
+        self.finish()
+
+
+class AddIndexerToTables(AddProviderFailureHandling):
+    def test(self):
+        return 4 < self.checkDBVersion()
+
+    def execute(self):
+        self.do_query(self.queries['add_indexer_to_tables'])
+        self.addColumn('provider_cache', 'indexer', 'NUMERIC')
         self.finish()

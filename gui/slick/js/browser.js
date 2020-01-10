@@ -6,7 +6,7 @@
 			title:             'Choose Directory (or enter manually)',
 			url:               sbRoot + '/browser/',
 			autocompleteURL:   sbRoot + '/browser/complete',
-			includeFiles:      0,
+			include_files:      0,
 			showBrowseButton:  !0
 		}
 	};
@@ -27,7 +27,7 @@
 
 		fileBrowserDialog.dialog('option', 'classes.ui-dialog', 'browserDialog busy');
 
-		currentRequest = $.getJSON(endpoint, {path: path, includeFiles: includeFiles}, function(data){
+		currentRequest = $.getJSON(endpoint, {path: path, include_files: includeFiles}, function(data){
 			fileBrowserDialog.empty();
 			var firstVal = data[0], i = 0, list, link = null;
 			data = $.grep(data, function(){

@@ -1,7 +1,17 @@
 $(document).ready(function() {
 
+	$('#failedTable:has(tbody tr)').tablesorter({
+		widgets: ['zebra'],
+		sortList: [[0,0]],
+		sortAppend: [[0,0]],
+		textExtraction: {
+			0: function(node) { return $(node).attr('data-order'); },
+			3: function(node) { return $(node).find('img').attr('title'); },
+			4: function(node) { return $(node).attr('data-order'); }}
+	});
+
 	$('#limit').change(function() {
-		window.location.href = sbRoot + '/manage/failedDownloads/?limit=' + $(this).val();
+		window.location.href = sbRoot + '/manage/failed-downloads/?limit=' + $(this).val();
 	});
 
 	$('#submitMassRemove').click(function() {
@@ -17,7 +27,7 @@ $(document).ready(function() {
 		if (0 == removeArr.length)
 			return !1;
 
-		window.location.href = sbRoot + '/manage/failedDownloads?toRemove=' + removeArr.join('|');
+		window.location.href = sbRoot + '/manage/failed-downloads?to_remove=' + removeArr.join('|');
 	});
 
 	$('.bulkCheck').click(function() {
@@ -60,16 +70,6 @@ $(document).ready(function() {
 
 			table$.trigger('update');
 		});
-	});
-
-	$('#failedTable:has(tbody tr)').tablesorter({
-		widgets: ['zebra'],
-		sortList: [[0,0]],
-		sortAppend: [[0,0]],
-		textExtraction: {
-			0: function(node) { return $(node).attr('data-order'); },
-			3: function(node) { return $(node).find('img').attr('title'); },
-			4: function(node) { return $(node).attr('data-order'); }}
 	});
 
 });

@@ -17,14 +17,16 @@
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
-from urllib import urlencode
-from urllib2 import Request, urlopen, HTTPError
 
+from .generic import BaseNotifier
 import sickbeard
 # noinspection PyPep8Naming
-from sickbeard import encodingKludge as ek
-from sickbeard.exceptions import ex
-from sickbeard.notifiers.generic import BaseNotifier
+import encodingKludge as ek
+from exceptions_helper import ex
+
+from _23 import urlencode
+# noinspection PyUnresolvedReferences
+from six.moves import urllib
 
 
 class PyTivoNotifier(BaseNotifier):
@@ -49,8 +51,8 @@ class PyTivoNotifier(BaseNotifier):
 
         # Calculated values
 
-        show_path = ep_obj.show.location
-        show_name = ep_obj.show.name
+        show_path = ep_obj.show_obj.location
+        show_name = ep_obj.show_obj.name
         root_show_and_season = ek.ek(os.path.dirname, ep_obj.location)
         abs_path = ep_obj.location
 
@@ -70,12 +72,13 @@ class PyTivoNotifier(BaseNotifier):
 
         self._log_debug(u'Requesting ' + request_url)
 
-        request = Request(request_url)
+        request = urllib.request.Request(request_url)
 
         try:
-            urlopen(request)
+            http_response_obj = urllib.request.urlopen(request)  # PY2 http_response_obj has no `with` context manager
+            http_response_obj.close()
 
-        except HTTPError as e:
+        except urllib.error.HTTPError as e:
             if hasattr(e, 'reason'):
                 self._log_error(u'Error, failed to reach a server - ' + e.reason)
                 return False
@@ -83,7 +86,7 @@ class PyTivoNotifier(BaseNotifier):
                 self._log_error(u'Error, the server couldn\'t fulfill the request - ' + e.code)
             return False
 
-        except Exception as e:
+        except (BaseException, Exception) as e:
             self._log_error(u'Unknown exception: ' + ex(e))
             return False
 

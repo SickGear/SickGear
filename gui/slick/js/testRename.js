@@ -33,13 +33,13 @@ $(document).ready(function(){
             if (this.checked == true) {
                 epArr.push($(this).attr('id'))
             }
-        });  
+        });
 
         if (epArr.length == 0)
             return false
 
-        url = sbRoot+'/home/doRename?show='+$('#showID').val()+'&eps='+epArr.join('|')
+        url = sbRoot + '/home/do-rename?tvid_prodid=' + $('#tvid-prodid').val() + '&eps=' + epArr.join('|');
         window.location.href = url
     });
-    
+
 });

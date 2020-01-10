@@ -134,7 +134,7 @@ $(document).ready(function() {
 
 	$('#show-watched-help').click(function () {
 		$('#watched-help').fadeToggle('fast', 'linear');
-		$.get($.SickGear.Root + '/history/toggle_help');
+		$.get($.SickGear.Root + '/history/toggle-help');
 	});
 
 	var addQTip = (function(){
@@ -211,7 +211,7 @@ $(document).ready(function() {
 		var that = $(clicked), el$=$(that.parent());
 		that.attr('disabled', !0);
 		$.ajax({
-			url: $.SickGear.Root + '/history/check_site/?site_name=' + el$.attr('data-check'),
+			url: $.SickGear.Root + '/history/check-site/?site_name=' + el$.attr('data-check'),
 			type: 'GET',
 			dataType: 'json',
 			complete: function (data) {
@@ -248,7 +248,7 @@ $(document).ready(function() {
 		$(this).addClass('disabled');
 		var match = $(this).attr('id').match(/^(.+)-btn-retry$/);
 		$.ajax({
-			url: $.SickGear.Root + '/manage/manageSearches/retryProvider?provider=' + match[1],
+			url: $.SickGear.Root + '/manage/search-tasks/retry-provider?provider=' + match[1],
 			type: 'GET',
 			complete: function () {
 				window.location.reload(true);

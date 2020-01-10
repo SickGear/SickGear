@@ -17,97 +17,138 @@
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 from collections import OrderedDict
 
-from sickbeard.common import Quality
-from unidecode import unidecode
-
+import copy
 import datetime
 import os
 import re
 import threading
-import copy
 
 import sickbeard
+from ._legacy_classes import LegacySearchResult, LegacyProper
+from .common import Quality
+
+from six import integer_types, iteritems, PY2, string_types
+
+# noinspection PyUnreachableCode
+if False:
+    from typing import Any, AnyStr, Callable, Dict, List, Optional
 
 
-class SearchResult(object):
+class SearchResult(LegacySearchResult):
     """
     Represents a search result from an indexer.
     """
 
-    def __init__(self, episodes):
-        self.provider = -1
+    # type of result (overwritten in subclass)
+    resultType = 'generic'
+
+    def __init__(self, ep_obj_list):
+        # type: (Optional[List[sickbeard.tv.TVEpisode]]) -> None
+        """
+        :param ep_obj_list: list of episode objs
+        """
+        # noinspection PyTypeChecker
+        self.provider = -1  # type: sickbeard.providers.generic.GenericProvider
 
         # release show object
-        self.show = None
+        self._show_obj = None
 
         # URL to the NZB/torrent file
-        self.url = ''
+        self.url = ''  # type: AnyStr
 
         # used by some providers to store extra info associated with the result
         self.extraInfo = []
 
         # assign function to get the data for the download
-        self.get_data_func = None
+        self.get_data_func = None  # type: Callable or None
 
         # assign function for after getting the download data
-        self.after_get_data_func = None
+        self.after_get_data_func = None  # type: Callable or None
 
         # list of TVEpisode objects that this result is associated with
-        self.episodes = episodes
+        self.ep_obj_list = ep_obj_list  # type: Optional[List[sickbeard.tv.TVEpisode]]
 
         # quality of the release
-        self.quality = Quality.UNKNOWN
+        self.quality = Quality.UNKNOWN  # type: int
 
         # release name
-        self.name = ''
+        self.name = ''  # type: AnyStr
 
         # size of the release (-1 = n/a)
-        self.size = -1
+        self.size = -1  # type: int
 
         # release group
-        self.release_group = ''
+        self.release_group = ''  # type: AnyStr
 
         # version
-        self.version = -1
+        self.version = -1  # type: int
 
         # proper level
-        self._properlevel = 0
+        self._properlevel = 0  # type: int
 
         # is a repack
-        self.is_repack = False
+        self.is_repack = False  # type: bool
 
         # provider unique id
-        self.puid = None
+        self.puid = None  # type: Any
+
+        # path to cache file
+        self.cache_filepath = ''  # type: AnyStr
+
+        # priority of result
+        # -1 = low, 0 = normal, 1 = high
+        self.priority = 0  # type: int
+
+    @property
+    def show_obj(self):
+        # type: (...) -> Optional[sickbeard.tv.TVShow]
+        return self._show_obj
+
+    @show_obj.setter
+    def show_obj(self, val):
+        # type: (sickbeard.tv.TVShow) -> None
+        self._show_obj = val
 
     @property
     def properlevel(self):
+        """
+        :rtype: int or long
+        """
         return self._properlevel
 
     @properlevel.setter
     def properlevel(self, v):
-        if isinstance(v, (int, long)):
+        """
+        :param v: proper level
+        :type v: int or long
+        """
+        if isinstance(v, integer_types):
             self._properlevel = v
 
     def __str__(self):
 
-        if self.provider is None:
+        if None is self.provider:
             return 'Invalid provider, unable to print self'
 
         return '\n'.join([
             '%s @ %s' % (self.provider.name, self.url),
             'Extra Info:',
             '\n'.join(['  %s' % x for x in self.extraInfo]),
-            'Episode: %s' % self.episodes,
+            'Episode: %s' % self.ep_obj_list,
             'Quality: %s' % Quality.qualityStrings[self.quality],
             'Name: %s' % self.name,
             'Size: %s' % self.size,
             'Release Group: %s' % self.release_group])
 
     def get_data(self):
+        """
+        :return: None or data
+        :rtype: Any
+        """
         if None is not self.get_data_func:
             try:
                 return self.get_data_func(self.url)
-            except (StandardError, Exception):
+            except (BaseException, Exception):
                 pass
         if self.extraInfo and 0 < len(self.extraInfo):
             return self.extraInfo[0]
@@ -138,26 +179,30 @@ class TorrentSearchResult(SearchResult):
     content = None
     hash = None
 
+    provider = None  # type: sickbeard.providers.generic.TorrentProvider
 
-class ShowFilter(object):
+
+class ShowInfoFilter(object):
     def __init__(self, config, log=None):
         self.config = config
         self.log = log
         self.bad_names = [re.compile('(?i)%s' % r) for r in (
-            '[*]+\s*(?:403:|do not add|dupli[^s]+\s*(?:\d+|<a\s|[*])|inval)',
-            '(?:inval|not? allow(ed)?)(?:[,\s]*period)?\s*[*]',
-            '[*]+\s*dupli[^\s*]+\s*[*]+\s*(?:\d+|<a\s)',
-            '\s(?:dupli[^s]+\s*(?:\d+|<a\s|[*]))'
+            r'[*]+\s*(?:403:|do not add|dupli[^s]+\s*(?:\d+|<a\s|[*])|inval)',
+            r'(?:inval|not? allow(ed)?)(?:[,\s]*period)?\s*[*]',
+            r'[*]+\s*dupli[^\s*]+\s*[*]+\s*(?:\d+|<a\s)',
+            r'\s(?:dupli[^s]+\s*(?:\d+|<a\s|[*]))'
         )]
 
-    def _is_bad_name(self, show):
-        return isinstance(show, dict) and 'seriesname' in show and isinstance(show['seriesname'], (str, unicode)) \
-               and any([x.search(show['seriesname']) for x in self.bad_names])
+    def _is_bad_name(self, show_info):
+        return isinstance(show_info, dict) \
+               and 'seriesname' in show_info \
+               and isinstance(show_info['seriesname'], string_types) \
+               and any([x.search(show_info['seriesname']) for x in self.bad_names])
 
     @staticmethod
-    def _fix_firstaired(show):
-        if 'firstaired' not in show:
-            show['firstaired'] = '1900-01-01'
+    def _fix_firstaired(show_info):
+        if 'firstaired' not in show_info:
+            show_info['firstaired'] = '1900-01-01'
 
     @staticmethod
     def _dict_prevent_none(d, key, default):
@@ -167,110 +212,59 @@ class ShowFilter(object):
         return (v, default)[None is v]
 
     @staticmethod
-    def _fix_seriesname(show):
-        if isinstance(show, dict) and 'seriesname' in show and isinstance(show['seriesname'], (str, unicode)):
-            show['seriesname'] = ShowFilter._dict_prevent_none(show, 'seriesname', '').strip()
+    def _fix_seriesname(show_info):
+        if isinstance(show_info, dict) \
+                and 'seriesname' in show_info \
+                and isinstance(show_info['seriesname'], string_types):
+            show_info['seriesname'] = ShowInfoFilter._dict_prevent_none(show_info, 'seriesname', '').strip()
 
 
-class AllShowsNoFilterListUI(ShowFilter):
+class AllShowInfosNoFilterListUI(ShowInfoFilter):
     """
-    This class is for indexer api. Used for searching, no filter or smart select
+    This class is for indexer api. Used for searching.
     """
 
     def __init__(self, config, log=None):
-        super(AllShowsNoFilterListUI, self).__init__(config, log)
+        super(AllShowInfosNoFilterListUI, self).__init__(config, log)
 
     def select_series(self, all_series):
         search_results = []
 
         # get all available shows
         if all_series:
-            for cur_show in all_series:
-                self._fix_seriesname(cur_show)
-                if cur_show in search_results or self._is_bad_name(cur_show):
+            for cur_show_info in all_series:
+                self._fix_seriesname(cur_show_info)
+                if cur_show_info in search_results or self._is_bad_name(cur_show_info):
                     continue
 
-                self._fix_firstaired(cur_show)
+                self._fix_firstaired(cur_show_info)
 
-                if cur_show not in search_results:
-                    search_results += [cur_show]
+                if cur_show_info not in search_results:
+                    search_results += [cur_show_info]
 
         return search_results
 
 
-class AllShowsListUI(ShowFilter):
-    """
-    This class is for indexer api. Instead of prompting with a UI to pick the
-    desired result out of a list of shows it tries to be smart about it
-    based on what shows are in SB.
-    """
+class Proper(LegacyProper):
+    def __init__(self, name, url, date, show_obj, parsed_show_obj=None, size=-1, puid=None, **kwargs):
+        """
 
-    def __init__(self, config, log=None):
-        super(AllShowsListUI, self).__init__(config, log)
-
-    def select_series(self, all_series):
-        search_results = []
-
-        # get all available shows
-        if all_series:
-            search_term = self.config.get('searchterm', '').strip().lower()
-            if search_term:
-                # try to pick a show that's in my show list
-                for cur_show in all_series:
-                    self._fix_seriesname(cur_show)
-                    if cur_show in search_results or self._is_bad_name(cur_show):
-                        continue
-
-                    seriesnames = []
-                    if 'seriesname' in cur_show:
-                        name = cur_show['seriesname'].lower()
-                        seriesnames += [name, unidecode(name.encode('utf-8').decode('utf-8'))]
-                    if 'aliases' in cur_show:
-                        if isinstance(cur_show['aliases'], list):
-                            for a in cur_show['aliases']:
-                                name = a.strip().lower()
-                                seriesnames += [name, unidecode(name.encode('utf-8').decode('utf-8'))]
-                        elif isinstance(cur_show['aliases'], (str, unicode)):
-                            name = cur_show['aliases'].strip().lower()
-                            seriesnames += name.split('|') + unidecode(name.encode('utf-8').decode('utf-8')).split('|')
-
-                    if search_term in set(seriesnames):
-                        self._fix_firstaired(cur_show)
-
-                        if cur_show not in search_results:
-                            search_results += [cur_show]
-
-        return search_results
-
-
-class ShowListUI(ShowFilter):
-    """
-    This class is for tvdb-api. Instead of prompting with a UI to pick the
-    desired result out of a list of shows it tries to be smart about it
-    based on what shows are in SB.
-    """
-
-    def __init__(self, config, log=None):
-        super(ShowListUI, self).__init__(config, log)
-
-    def select_series(self, all_series):
-        try:
-            # try to pick a show that's in my show list
-            for curShow in all_series:
-                self._fix_seriesname(curShow)
-                if self._is_bad_name(curShow):
-                    continue
-                if filter(lambda x: int(x.indexerid) == int(curShow['id']), sickbeard.showList):
-                    return curShow
-        except (StandardError, Exception):
-            pass
-
-        # if nothing matches then return first result
-        return all_series[0]
-
-
-class Proper:
-    def __init__(self, name, url, date, show, parsed_show=None, size=-1, puid=None):
+        :param name: release name
+        :type name: AnyStr
+        :param url: url
+        :type url: AnyStr
+        :param date: date
+        :type date:
+        :param show_obj: show object or None
+        :type show_obj: sickbeard.tv.TVShow or None
+        :param parsed_show_obj: parsed show object
+        :type parsed_show_obj: sickbread.tv.TVShow
+        :param size: size
+        :type size: int or long
+        :param puid: puid
+        :type puid: AnyStr
+        :param kwargs:
+        """
         self.name = name
         self.url = url
         self.date = date
@@ -278,24 +272,45 @@ class Proper:
         self.puid = puid
         self.provider = None
         self.quality = Quality.UNKNOWN
-        self.release_group = None
-        self.version = -1
+        self.release_group = None  # type: Optional[AnyStr]
+        self.version = -1  # type: int
 
-        self.parsed_show = parsed_show
-        self.show = show
-        self.indexer = None
-        self.indexerid = -1
-        self.season = -1
-        self.episode = -1
-        self.scene_season = -1
-        self.scene_episode = -1
+        self.parsed_show_obj = parsed_show_obj
+        self.show_obj = show_obj
+        self.tvid = None  # type: Optional[int]
+        self.prodid = -1  # type: int
+        self.season = -1  # type: int
+        self.episode = -1  # type: int
+        self.scene_season = -1  # type: int
+        self.scene_episode = -1  # type: int
+
+        super(Proper, self).__init__(**kwargs)
+
+    @property
+    def show_obj(self):
+        # type: (...) -> Optional[sickbeard.tv.TVShow]
+        return self._show_obj
+
+    @show_obj.setter
+    def show_obj(self, val):
+        # type: (sickbeard.tv.TVShow) -> None
+        self._show_obj = val
 
     def __str__(self):
-        return str(self.date) + ' ' + self.name + ' ' + str(self.season) + 'x' + str(self.episode) + ' of ' + str(
-            self.indexerid) + ' from ' + str(sickbeard.indexerApi(self.indexer).name)
+        if self.show_obj:
+            prodid = self.show_obj.prodid
+            tvid = self.show_obj.tvid
+        elif self.parsed_show_obj:
+            prodid = self.parsed_show_obj.prodid
+            tvid = self.parsed_show_obj.tvid
+        else:
+            prodid = self.prodid
+            tvid = self.tvid
+        return '%s %s %sx%s of %s from %s' % (self.date, self.name, self.season, self.episode, prodid,
+                                              sickbeard.TVInfoAPI(tvid).name)
 
 
-class ErrorViewer:
+class ErrorViewer(object):
     """
     Keeps a static list of UIErrors to be displayed on the UI and allows
     the list to be cleared.
@@ -315,7 +330,7 @@ class ErrorViewer:
         ErrorViewer.errors = []
 
 
-class UIError:
+class UIError(object):
     """
     Represents an error to be displayed in the web UI.
     """
@@ -330,58 +345,75 @@ class OrderedDefaultdict(OrderedDict):
         if not args:
             self.default_factory = None
         else:
-            if not (args[0] is None or callable(args[0])):
+            if not (None is args[0] or callable(args[0])):
                 raise TypeError('first argument must be callable or None')
             self.default_factory = args[0]
             args = args[1:]
         super(OrderedDefaultdict, self).__init__(*args, **kwargs)
 
     def __missing__(self, key):
-        if self.default_factory is None:
+        if None is self.default_factory:
             raise KeyError(key)
         self[key] = default = self.default_factory()
         return default
 
     def __reduce__(self):  # optional, for pickle support
         args = (self.default_factory,) if self.default_factory else ()
-        return self.__class__, args, None, None, self.iteritems()
+        return self.__class__, args, None, None, iteritems(self)
 
-    # backport from python 3
-    def move_to_end(self, key, last=True):
-        """Move an existing element to the end (or beginning if last==False).
+    if PY2:
+        # backport from python 3
+        def move_to_end(self, key, last=True):
+            """Move an existing element to the end (or beginning if last==False).
 
-        Raises KeyError if the element does not exist.
-        When last=True, acts like a fast version of self[key]=self.pop(key).
+            Raises KeyError if the element does not exist.
+            When last=True, acts like a fast version of self[key]=self.pop(key).
 
-        """
-        link_prev, link_next, key = link = self._OrderedDict__map[key]
-        link_prev[1] = link_next
-        link_next[0] = link_prev
-        root = self._OrderedDict__root
-        if last:
-            last = root[0]
-            link[0] = last
-            link[1] = root
-            last[1] = root[0] = link
-        else:
-            first = root[1]
-            link[0] = root
-            link[1] = first
-            root[1] = first[0] = link
+            """
+            link_prev, link_next, key = link = getattr(self, '_OrderedDict__map')[key]
+            link_prev[1] = link_next
+            link_next[0] = link_prev
+            root = getattr(self, '_OrderedDict__root')
+            if last:
+                last = root[0]
+                link[0] = last
+                link[1] = root
+                last[1] = root[0] = link
+            else:
+                first = root[1]
+                link[0] = root
+                link[1] = first
+                root[1] = first[0] = link
 
-    def first_key(self):
-        return self._OrderedDict__root[1][2]
+        def first_key(self):
+            return getattr(self, '_OrderedDict__root')[1][2]
 
-    def last_key(self):
-        return self._OrderedDict__root[0][2]
+        def last_key(self):
+            return getattr(self, '_OrderedDict__root')[0][2]
+    else:
+        def first_key(self):
+            return next(iter(self))
+
+        def last_key(self):
+            return next(reversed(self))
 
 
 class ImageUrlList(list):
     def __init__(self, max_age=30):
+        """
+        :param max_age: max age in days
+        :type max_age: int
+        """
         super(ImageUrlList, self).__init__()
         self.max_age = max_age
 
     def add_url(self, url):
+        """
+        adds url to list
+
+        :param url: url
+        :type url: AnyStr
+        """
         self.remove_old()
         cache_item = (url, datetime.datetime.now())
         for n, x in enumerate(self):
@@ -408,65 +440,88 @@ class ImageUrlList(list):
         return False
 
     def remove(self, url):
+        """
+        removes url from list
+
+        :param url: url
+        :type url: AnyStr
+        """
         for x in self:
             if self._is_cache_item(x) and url == x[0]:
                 super(ImageUrlList, self).remove(x)
                 break
 
 
-if 'nt' == os.name:
-    import ctypes
+class EnvVar(object):
+    def __init__(self):
+        pass
 
-    class WinEnv:
-        def __init__(self):
-            pass
+    def __getitem__(self, key):
+        return os.environ(key)
+
+    @staticmethod
+    def get(key, default=None):
+        return os.environ.get(key, default)
+
+
+if not PY2:
+    sickbeard.ENV = EnvVar()
+
+elif 'nt' == os.name:
+    from ctypes import windll, create_unicode_buffer
+
+    # noinspection PyCompatibility
+    class WinEnvVar(EnvVar):
 
         @staticmethod
         def get_environment_variable(name):
+            # noinspection PyUnresolvedReferences
             name = unicode(name)  # ensures string argument is unicode
-            n = ctypes.windll.kernel32.GetEnvironmentVariableW(name, None, 0)
-            result = None
+            n = windll.kernel32.GetEnvironmentVariableW(name, None, 0)
+            env_value = None
             if n:
-                buf = ctypes.create_unicode_buffer(u'\0'*n)
-                ctypes.windll.kernel32.GetEnvironmentVariableW(name, buf, n)
-                result = buf.value
-            return result
+                buf = create_unicode_buffer(u'\0' * n)
+                windll.kernel32.GetEnvironmentVariableW(name, buf, n)
+                env_value = buf.value
+            return env_value
 
         def __getitem__(self, key):
             return self.get_environment_variable(key)
 
         def get(self, key, default=None):
             r = self.get_environment_variable(key)
-            return r if r is not None else default
+            return r if None is not r else default
 
-    sickbeard.ENV = WinEnv()
+    sickbeard.ENV = WinEnvVar()
 else:
-    class LinuxEnv(object):
+    # noinspection PyCompatibility
+    class LinuxEnvVar(EnvVar):
+        # noinspection PyMissingConstructor
         def __init__(self, environ):
             self.environ = environ
 
         def __getitem__(self, key):
             v = self.environ.get(key)
             try:
-                return v.decode(SYS_ENCODING) if isinstance(v, str) else v
+                return v if not isinstance(v, str) else v.decode(sickbeard.SYS_ENCODING)
             except (UnicodeDecodeError, UnicodeEncodeError):
                 return v
 
         def get(self, key, default=None):
             v = self[key]
-            return v if v is not None else default
+            return v if None is not v else default
 
-    sickbeard.ENV = LinuxEnv(os.environ)
+    sickbeard.ENV = LinuxEnvVar(os.environ)
 
 
 # backport from python 3
-class SimpleNamespace:
+class SimpleNamespace(object):
     def __init__(self, **kwargs):
         self.__dict__.update(kwargs)
 
     def __repr__(self):
         keys = sorted(self.__dict__)
-        items = ("{}={!r}".format(k, self.__dict__[k]) for k in keys)
+        items = ["{}={!r}".format(k, self.__dict__[k]) for k in keys]
         return "{}({})".format(type(self).__name__, ", ".join(items))
 
     def __eq__(self, other):
@@ -480,16 +535,34 @@ class LoadingMessage(object):
 
     @property
     def message(self):
+        """
+        :return: list of messages
+        :rtype: List[Dict[AnyStr, int]]
+        """
         with self.lock:
             return copy.deepcopy(self._message)
 
     @message.setter
     def message(self, msg):
+        """
+        add message to list
+
+        :param msg: message
+        :type msg: AnyStr
+        """
         with self.lock:
             if 0 != len(self._message) and msg != self._message[-1:][0]['msg']:
                 self._message.append({'msg': msg, 'progress': -1})
 
     def set_msg_progress(self, msg, progress):
+        """
+        add message with progress
+
+        :param msg: message
+        :type msg: AnyStr
+        :param progress: progress message
+        :type progress: Any
+        """
         with self.lock:
             for m in self._message:
                 if msg == m.get('msg'):
@@ -498,6 +571,12 @@ class LoadingMessage(object):
             self._message.append({'msg': msg, 'progress': progress})
 
     def reset(self, msg=None):
+        """
+        resets message list
+
+        :param msg: optional message dict to reset to
+        :type msg: Dict[AnyStr, int] or None
+        """
         msg = msg or {'msg': 'Loading', 'progress': -1}
         with self.lock:
             self._message = [msg]

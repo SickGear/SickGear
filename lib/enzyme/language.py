@@ -18,6 +18,7 @@
 # You should have received a copy of the GNU General Public License
 # along with enzyme.  If not, see <http://www.gnu.org/licenses/>.
 import re
+from six import string_types
 
 __all__ = ['resolve']
 
@@ -31,7 +32,7 @@ def resolve(code):
     """
     if not code:
         return None, None
-    if not isinstance(code, basestring):
+    if not isinstance(code, string_types):
         raise ValueError('Invalid language code specified by parser')
 
     # Take up to 3 letters from the code.

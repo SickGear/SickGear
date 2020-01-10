@@ -1,1 +1,1 @@
-Cheetah3>=3.1.0
+Cheetah3>=3.2.4

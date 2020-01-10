@@ -17,10 +17,12 @@ import re
 import traceback
 
 from . import generic
-from sickbeard import logger
-from sickbeard.bs4_parser import BS4Parser
-from sickbeard.helpers import tryInt
-from lib.unidecode import unidecode
+from .. import logger
+from ..helpers import try_int
+from bs4_parser import BS4Parser
+
+from _23 import unidecode
+from six import iteritems, string_types
 
 
 class PiSexyProvider(generic.TorrentProvider):
@@ -50,12 +52,12 @@ class PiSexyProvider(generic.TorrentProvider):
 
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
-        rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {
+        rc = dict([(k, re.compile('(?i)' + v)) for (k, v) in iteritems({
             'get': r'info.php\?id', 'cats': 'cat=(?:0|50[12])', 'filter': 'free',
-            'title': r'Download\s([^"\']+)', 'seeders': r'(^\d+)', 'leechers': r'(\d+)$'}.items())
-        for mode in search_params.keys():
+            'title': r'Download\s([^"\']+)', 'seeders': r'(^\d+)', 'leechers': r'(\d+)$'})])
+        for mode in search_params:
             for search_string in search_params[mode]:
-                search_string = isinstance(search_string, unicode) and unidecode(search_string) or search_string
+                search_string = unidecode(search_string)
                 search_url = self.urls['search'] % search_string
 
                 html = self.get_url(search_url)
@@ -81,7 +83,7 @@ class PiSexyProvider(generic.TorrentProvider):
                             try:
                                 head = head if None is not head else self._header_row(tr, {'seed': r'(?:see/lee|seed)'})
                                 seeders, leechers = 2 * [cells[head['seed']].get_text().strip()]
-                                seeders, leechers = [tryInt(n) for n in [
+                                seeders, leechers = [try_int(n) for n in [
                                     rc['seeders'].findall(seeders)[0], rc['leechers'].findall(leechers)[0]]]
                                 if not tr.find('a', href=rc['cats']) or self._reject_item(
                                         seeders, leechers, self.freeleech and not tr.find('img', src=rc['filter'])):
@@ -91,7 +93,7 @@ class PiSexyProvider(generic.TorrentProvider):
                                 tag = tr.find('a', alt=rc['title']) or tr.find('a', title=rc['title'])
                                 title = tag and rc['title'].findall(str(tag))
                                 title = title and title[0]
-                                if not isinstance(title, basestring) or 10 > len(title):
+                                if not isinstance(title, string_types) or 10 > len(title):
                                     title = (rc['title'].sub(r'\1', info.attrs.get('title', ''))
                                              or info.get_text()).strip()
                                 if (10 > len(title)) or (4 > len(re.sub(r'[^.\-\s]', '', title))):

@@ -20,11 +20,13 @@
 import string
 import re
 import struct
+from six import string_types, integer_types
+from _23 import decode_str, list_items
 
 __all__ = ['resolve']
 
 
-def resolve(code):
+def resolve(_code):
     """
     Transform a twocc or fourcc code into a name.  Returns a 2-tuple of (cc,
     codec) where both are strings and cc is a string in the form '0xXX' if it's
@@ -33,30 +35,30 @@ def resolve(code):
     code is otherwise a printable string in which case it will be returned as
     the codec.
     """
-    if isinstance(code, basestring):
+    if isinstance(_code, string_types):
         codec = u'Unknown'
         # Check for twocc
-        if re.match(r'^0x[\da-f]{1,4}$', code, re.I):
+        if re.match(r'^0x[\da-f]{1,4}$', _code, re.I):
             # Twocc in hex form
-            return code, TWOCC.get(int(code, 16), codec)
-        elif code.isdigit() and 0 <= int(code) <= 0xff:
+            return _code, TWOCC.get(int(_code, 16), codec)
+        elif _code.isdigit() and 0 <= int(_code) <= 0xff:
             # Twocc in decimal form
-            return hex(int(code)), TWOCC.get(int(code), codec)
-        elif len(code) == 2:
-            code = struct.unpack('H', code)[0]
-            return hex(code), TWOCC.get(code, codec)
-        elif len(code) != 4 and len([x for x in code if x not in string.printable]) == 0:
+            return hex(int(_code)), TWOCC.get(int(_code), codec)
+        elif len(_code) == 2:
+            _code = struct.unpack('H', _code)[0]
+            return hex(_code), TWOCC.get(_code, codec)
+        elif len(_code) != 4 and len([x for x in _code if x not in string.printable]) == 0:
             # Code is a printable string.
-            codec = unicode(code)
+            codec = decode_str(_code)
 
-        if code[:2] == 'MS' and code[2:].upper() in FOURCC:
-            code = code[2:]
+        if _code[:2] == 'MS' and _code[2:].upper() in FOURCC:
+            _code = _code[2:]
 
-        if code.upper() in FOURCC:
-            return code.upper(), unicode(FOURCC[code.upper()])
+        if _code.upper() in FOURCC:
+            return _code.upper(), decode_str(FOURCC[_code.upper()])
         return None, codec
-    elif isinstance(code, (int, long)):
-        return hex(code), TWOCC.get(code, u'Unknown')
+    elif isinstance(_code, integer_types):
+        return hex(_code), TWOCC.get(_code, u'Unknown')
 
     return None, u'Unknown'
 
@@ -843,7 +845,7 @@ FOURCC = {
 }
 
 # make it fool prove
-for code, value in FOURCC.items():
+for code, value in list_items(FOURCC):
     if not code.upper() in FOURCC:
         FOURCC[code.upper()] = value
     if code.endswith(' '):

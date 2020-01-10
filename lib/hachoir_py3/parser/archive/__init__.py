@@ -1,0 +1,15 @@
+from hachoir_py3.parser.archive.ace import AceFile  # noqa
+from hachoir_py3.parser.archive.ar import ArchiveFile  # noqa
+from hachoir_py3.parser.archive.bomstore import BomFile  # noqa
+from hachoir_py3.parser.archive.bzip2_parser import Bzip2Parser  # noqa
+from hachoir_py3.parser.archive.cab import CabFile  # noqa
+from hachoir_py3.parser.archive.gzip_parser import GzipParser  # noqa
+from hachoir_py3.parser.archive.tar import TarFile  # noqa
+from hachoir_py3.parser.archive.zip import ZipFile  # noqa
+from hachoir_py3.parser.archive.rar import RarFile  # noqa
+from hachoir_py3.parser.archive.rpm import RpmFile  # noqa
+from hachoir_py3.parser.archive.sevenzip import SevenZipParser  # noqa
+from hachoir_py3.parser.archive.mar import MarFile  # noqa
+from hachoir_py3.parser.archive.mozilla_ar import MozillaArchive  # noqa
+from hachoir_py3.parser.archive.zlib import ZlibData  # noqa
+from hachoir_py3.parser.archive.prs_pak import PRSPakFile  # noqa

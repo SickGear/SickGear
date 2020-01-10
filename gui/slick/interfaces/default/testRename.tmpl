@@ -1,9 +1,9 @@
 #import sickbeard
 #from sickbeard import common
-#from sickbeard import exceptions
+#from lib import exceptions_helper as exceptions
 ##
-#set global $title = 'Media Renamer ' + $show.name
-#set global $header = $show.name
+#set global $title = 'Media Rename ' + $show_obj.name
+#set global $header = $show_obj.name
 #set global $sbPath = '..'
 #set global $topmenu = 'home'
 #set $css = $getVar('css', 'reg')
@@ -16,7 +16,7 @@
 <script type="text/javascript" src="$sbRoot/js/testRename.js"></script>
 <script type="text/javascript" src="$sbRoot/js/livepanel.js?v=$sbPID"></script>
 #if $varExists('header')
-	<h1 class="header"><span class="grey-text">Media Renamer&nbsp;</span>$header</h1>
+	<h1 class="header"><span class="grey-text">Media Rename&nbsp;</span>$header</h1>
 #else
 	<h1 class="title">$title</h1>
 #end if
@@ -25,7 +25,7 @@
 #if $has_art
 		<ul>
     #for $k, ($image, $rating) in enumerate($fanart)
-			<li class="#echo ' '.join((x for x in ({10:'group', 20:'fave', 30:'avoid'}.get($rating, ''), ('', 'background first-load')[$start_image == $k]) if x)) #" style="background-image:url($sbRoot/showPoster/?show=$show.indexerid&which=fanart_$image)"></li>
+			<li class="#echo ' '.join((x for x in ({10:'group', 20:'fave', 30:'avoid'}.get($rating, ''), ('', 'background first-load')[$start_image == $k]) if x)) #" style="background-image:url($sbRoot/show-poster/?tvid_prodid=$show_obj.tvid_prodid&which=fanart_$image)"></li>
     #end for
 		</ul>
 #end if
@@ -33,7 +33,7 @@
 
 	<div id="config">
 		<div id="config-content" class="linefix container">
-			<input type="hidden" id="showID" value="$show.indexerid">
+			<input type="hidden" id="tvid-prodid" value="$show_obj.tvid_prodid">
 
 			<div id="config-components">
 				<ul>
@@ -42,10 +42,10 @@
 
 				<div id="core-component-group1" class="component-group">
 
-#if 1 == int($show.air_by_date) and $sickbeard.NAMING_CUSTOM_ABD:
+#if 1 == int($show_obj.air_by_date) and $sickbeard.NAMING_CUSTOM_ABD:
     #set $type = 'Air-by-date'
     #set $pattern = $sickbeard.NAMING_ABD_PATTERN
-#elif 1 == int($show.sports) and $sickbeard.NAMING_CUSTOM_SPORTS:
+#elif 1 == int($show_obj.sports) and $sickbeard.NAMING_CUSTOM_SPORTS:
     #set $type = 'Sports'
     #set $pattern = $sickbeard.NAMING_SPORTS_PATTERN
 #else
@@ -58,7 +58,7 @@
 						<h3>$type sample:</h3>
 					</div>
 					<div class="example" style="margin-bottom:30px">
-						<span class="jumbo">$pattern</span>&nbsp;<a href="$sbRoot/config/postProcessing/#core-component-group2">edit pattern</a>
+						<span class="jumbo">$pattern</span>&nbsp;<a href="$sbRoot/config/media-process/#core-component-group2">edit pattern</a>
 					</div>
 
 					<div>
@@ -91,9 +91,9 @@
 					<tbody>
     #end if
 ##
-#set $curLoc = $cur_ep_obj.location[len($cur_ep_obj.show.location) + 1:]
+#set $curLoc = $cur_ep_obj.location[len($cur_ep_obj.show_obj.location) + 1:]
 #set $newLoc = '%s.%s' % ($cur_ep_obj.proper_path(), $curLoc.split('.')[-1])
-#set $epList = sorted([cur_ep_obj.episode] + [x.episode for x in cur_ep_obj.relatedEps])
+#set $epList = sorted([cur_ep_obj.episode] + [x.episode for x in cur_ep_obj.related_ep_obj])
 #if 1 < len($epList)
     #set $epList = [$min($epList), $max($epList)]
 #end if
@@ -118,12 +118,12 @@
 					</table>
 
 					<div style="clear:both;margin-top:20px">
-						<input type="submit" value="Rename Selected" class="btn btn-success"> <a href="$sbRoot/home/displayShow?show=$show.indexerid" class="btn btn-danger">Cancel Rename</a>
+						<input type="submit" value="Rename Selected" class="btn btn-success"> <a href="$sbRoot/home/view-show?tvid_prodid=$show_obj.tvid_prodid" class="btn btn-danger">Cancel Rename</a>
 					</div>
 				</div>
 			</div>
 		</div>
 	</div>
 
-	<input type="submit" value="Rename Selected" class="btn btn-success"> <a href="$sbRoot/home/displayShow?show=$show.indexerid" class="btn btn-danger">Cancel Rename</a>
+	<input type="submit" value="Rename Selected" class="btn btn-success"> <a href="$sbRoot/home/view-show?tvid_prodid=$show_obj.tvid_prodid" class="btn btn-danger">Cancel Rename</a>
 #include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_bottom.tmpl')

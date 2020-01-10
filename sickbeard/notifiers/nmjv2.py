@@ -17,17 +17,17 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
-import re
-import telnetlib
 import time
-import urllib
-import urllib2
-import xml.dom.minidom
 from xml.dom.minidom import parseString
 import xml.etree.cElementTree as XmlEtree
 
+from .generic import BaseNotifier
 import sickbeard
-from sickbeard.notifiers.generic import BaseNotifier
+from exceptions_helper import ex
+
+from _23 import urlencode
+# noinspection PyUnresolvedReferences
+from six.moves import urllib
 
 
 class NMJv2Notifier(BaseNotifier):
@@ -46,22 +46,24 @@ class NMJv2Notifier(BaseNotifier):
         try:
             base_url = 'http://%s:8008/' % host
 
-            req = urllib2.Request('%s%s%s' % (base_url, 'file_operation?', urllib.urlencode(
+            req = urllib.request.Request('%s%s%s' % (base_url, 'file_operation?', urlencode(
                 dict(arg0='list_user_storage_file', arg1='', arg2=instance, arg3=20, arg4='true', arg5='true',
                      arg6='true', arg7='all', arg8='name_asc', arg9='false', arg10='false'))))
-            handle = urllib2.urlopen(req)
-            response = handle.read()
+            http_response_obj = urllib.request.urlopen(req)  # PY2 http_response_obj has no `with` context manager
+            response = http_response_obj.read()
+            http_response_obj.close()
             xml_data = parseString(response)
 
             time.sleep(300.0 / 1000.0)
             for node in xml_data.getElementsByTagName('path'):
                 xml_tag = node.toxml()
 
-                reqdb = urllib2.Request('%s%s%s' % (base_url, 'metadata_database?', urllib.urlencode(
+                reqdb = urllib.request.Request('%s%s%s' % (base_url, 'metadata_database?', urlencode(
                     dict(arg0='check_database',
                          arg1=xml_tag.replace('<path>', '').replace('</path>', '').replace('[=]', '')))))
-                handledb = urllib2.urlopen(reqdb)
-                responsedb = handledb.read()
+                http_response_obj_db = urllib.request.urlopen(reqdb)  # PY2 http_response_obj has no `with` context mgr
+                responsedb = http_response_obj_db.read()
+                http_response_obj.close()
                 xml_db = parseString(responsedb)
 
                 if '0' == xml_db.getElementsByTagName('returnValue')[0].toxml().replace(
@@ -78,7 +80,7 @@ class NMJv2Notifier(BaseNotifier):
                         result = True
 
         except IOError as e:
-            self._log_warning(u'Couldn\'t contact popcorn hour on host %s: %s' % (host, e))
+            self._log_warning(u'Couldn\'t contact popcorn hour on host %s: %s' % (host, ex(e)))
 
         if result:
             return '{"message": "Success, NMJ Database found at: %(host)s", "database": "%(database)s"}' % {
@@ -106,40 +108,42 @@ class NMJv2Notifier(BaseNotifier):
         try:
             base_url = 'http://%s:8008/' % host
 
-            url_scandir = '%s%s%s' % (base_url, 'metadata_database?', urllib.urlencode(
+            url_scandir = '%s%s%s' % (base_url, 'metadata_database?', urlencode(
                 dict(arg0='update_scandir', arg1=sickbeard.NMJv2_DATABASE, arg2='', arg3='update_all')))
             self._log_debug(u'Scan update command sent to host: %s' % host)
 
-            url_updatedb = '%s%s%s' % (base_url, 'metadata_database?', urllib.urlencode(
+            url_updatedb = '%s%s%s' % (base_url, 'metadata_database?', urlencode(
                 dict(arg0='scanner_start', arg1=sickbeard.NMJv2_DATABASE, arg2='background', arg3='')))
             self._log_debug(u'Try to mount network drive via url: %s' % host)
 
-            prereq = urllib2.Request(url_scandir)
-            req = urllib2.Request(url_updatedb)
+            prereq = urllib.request.Request(url_scandir)
+            req = urllib.request.Request(url_updatedb)
 
-            handle1 = urllib2.urlopen(prereq)
-            response1 = handle1.read()
+            http_response_obj1 = urllib.request.urlopen(prereq)  # PY2 http_response_obj has no `with` context manager
+            response1 = http_response_obj1.read()
+            http_response_obj1.close()
 
             time.sleep(300.0 / 1000.0)
 
-            handle2 = urllib2.urlopen(req)
-            response2 = handle2.read()
+            http_response_obj2 = urllib.request.urlopen(req)  # PY2 http_response_obj has no `with` context manager
+            response2 = http_response_obj2.read()
+            http_response_obj2.close()
         except IOError as e:
-            self._log_warning(u'Couldn\'t contact popcorn hour on host %s: %s' % (host, e))
+            self._log_warning(u'Couldn\'t contact popcorn hour on host %s: %s' % (host, ex(e)))
             return False
 
         try:
             et = XmlEtree.fromstring(response1)
             result1 = et.findtext('returnValue')
         except SyntaxError as e:
-            self._log_error(u'Unable to parse XML returned from the Popcorn Hour: update_scandir, %s' % e)
+            self._log_error(u'Unable to parse XML returned from the Popcorn Hour: update_scandir, %s' % ex(e))
             return False
 
         try:
             et = XmlEtree.fromstring(response2)
             result2 = et.findtext('returnValue')
         except SyntaxError as e:
-            self._log_error(u'Unable to parse XML returned from the Popcorn Hour: scanner_start, %s' % e)
+            self._log_error(u'Unable to parse XML returned from the Popcorn Hour: scanner_start, %s' % ex(e))
             return False
 
         # if the result was a number then consider that an error

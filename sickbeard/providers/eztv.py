@@ -15,15 +15,16 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
-import base64
 import re
 import traceback
 
 from . import generic
-from sickbeard import logger
-from sickbeard.bs4_parser import BS4Parser
-from sickbeard.helpers import tryInt
-from lib.unidecode import unidecode
+from .. import logger
+from ..helpers import try_int
+from bs4_parser import BS4Parser
+
+from _23 import b64decodestring, unidecode
+from six import iteritems
 
 
 class EztvProvider(generic.TorrentProvider):
@@ -33,7 +34,7 @@ class EztvProvider(generic.TorrentProvider):
         generic.TorrentProvider.__init__(self, 'EZTV')
 
         self.url_home = ['https://eztv.ag/'] + \
-                        ['https://%s/' % base64.b64decode(x) for x in [''.join(x) for x in [
+                        ['https://%s/' % b64decodestring(x) for x in [''.join(x) for x in [
                             [re.sub(r'[v\sz]+', '', x[::-1]) for x in [
                                 '0vp XZ', 'uvEj d', 'i5 Wzd', 'j9 vGb', 'kV2v a', '0zdvnL', '==vg Z']],
                             [re.sub(r'[f\sT]+', '', x[::-1]) for x in [
@@ -57,11 +58,11 @@ class EztvProvider(generic.TorrentProvider):
 
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
-        rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {'get': '^magnet:'}.items())
+        rc = dict([(k, re.compile('(?i)' + v)) for (k, v) in iteritems({'get': '^magnet:'})])
 
-        for mode in search_params.keys():
+        for mode in search_params:
             for search_string in search_params[mode]:
-                search_string = isinstance(search_string, unicode) and unidecode(search_string) or search_string
+                search_string = unidecode(search_string)
                 search_url = self.urls['browse'] % search_string if 'Cache' == mode else \
                     self.urls['search'] % search_string.replace('.', ' ')
 
@@ -90,7 +91,7 @@ class EztvProvider(generic.TorrentProvider):
                             cells = tr.find_all('td')
                             try:
                                 head = head if None is not head else self._header_row(tr)
-                                seeders = tryInt(cells[head['seed']].get_text().strip())
+                                seeders = try_int(cells[head['seed']].get_text().strip())
                                 if self._reject_item(seeders):
                                     continue
 

@@ -26,8 +26,11 @@ import mimetypes
 import os
 import struct
 
-from sickbeard import encodingKludge as ek
-import sickbeard
+from six import PY2, text_type
+from _23 import decode_str
+
+# noinspection PyPep8Naming
+import encodingKludge as ek
 
 
 __all__ = ['EXTENSIONS', 'MIMETYPES', 'Video', 'Episode', 'Movie', 'UnknownVideo',
@@ -52,14 +55,15 @@ class Video(object):
     :param string imdbid: imdbid
 
     """
-    def __init__(self, path, guess, imdbid=None):
+    def __init__(self, path, guess, imdbid=None, subtitle_path=None):
         self.release = path
         self.guess = guess
         self.imdbid = imdbid
         self._path = None
         self.hashes = {}
+        self.subtitle_path = subtitle_path
         
-        if isinstance(path, unicode):
+        if PY2 and isinstance(path, text_type):
             path = path.encode('utf-8')
         
         if os.path.exists(path):
@@ -134,7 +138,7 @@ class Video(object):
         try:
             video_infos = enzyme.parse(self.path)
             logger.debug(u'Succeeded parsing %s with enzyme: %r' % (self.path, video_infos))
-        except:
+        except (BaseException, Exception):
             logger.debug(u'Failed parsing %s with enzyme' % self.path)
         if isinstance(video_infos, enzyme.core.AVContainer):
             results.extend([subtitles.EmbeddedSubtitle.from_enzyme(self.path, s) for s in video_infos.subtitles])
@@ -145,8 +149,8 @@ class Video(object):
         if folder == '':
             folder = '.'
         existing = [f for f in os.listdir(folder) if f.startswith(basename)]
-        if sickbeard.SUBTITLES_DIR:
-            subsDir = ek.ek(os.path.join, folder, sickbeard.SUBTITLES_DIR)
+        if self.subtitle_path:
+            subsDir = ek.ek(os.path.join, folder, self.subtitle_path)
             if ek.ek(os.path.isdir, subsDir):
                 existing.extend([f for f in os.listdir(subsDir) if f.startswith(basename)])
         for path in existing:
@@ -160,10 +164,10 @@ class Video(object):
         return to_unicode(self.path or self.release)
 
     def __str__(self):
-        return unicode(self).encode('utf-8')
+        return decode_str(self)
 
     def __repr__(self):
-        return '%s(%s)' % (self.__class__.__name__, self)
+        return '%s' % (self.__class__.__name__)
 
     def __hash__(self):
         return hash(self.path or self.release)
@@ -219,16 +223,17 @@ def scan(entry, max_depth=3, scan_filter=None, depth=0):
 
     :param string entry: path
     :param int max_depth: maximum folder depth
-    :param function scan_filter: filter function that takes a path as argument and returns a boolean indicating whether it has to be filtered out (``True``) or not (``False``)
+    :param function scan_filter: filter function that takes a path as argument and returns a boolean indicating whether
+     it has to be filtered out (``True``) or not (``False``)
     :param int depth: starting depth
     :return: found videos and subtitles
     :rtype: list of (:class:`Video`, [:class:`~subliminal.subtitles.Subtitle`])
 
     """
-    if isinstance(entry, unicode):
+    if PY2 and isinstance(entry, text_type):
         entry = entry.encode('utf-8')
     
-    if depth > max_depth and max_depth != 0:  # we do not want to search the whole file system except if max_depth = 0
+    if depth > max_depth != 0:  # we do not want to search the whole file system except if max_depth = 0
         return []
     if os.path.isdir(entry):  # a dir? recurse
         logger.debug(u'Scanning directory %s with depth %d/%d' % (entry, depth, max_depth))
@@ -264,13 +269,13 @@ def hash_opensubtitles(path):
         filehash = filesize
         if filesize < 65536 * 2:
             return None
-        for _ in range(65536 / bytesize):
+        for _ in range(int(65536 / bytesize)):
             filebuffer = f.read(bytesize)
             (l_value,) = struct.unpack(longlongformat, filebuffer)
             filehash += l_value
             filehash = filehash & 0xFFFFFFFFFFFFFFFF  # to remain as 64bit number
         f.seek(max(0, filesize - 65536), 0)
-        for _ in range(65536 / bytesize):
+        for _ in range(int(65536 / bytesize)):
             filebuffer = f.read(bytesize)
             (l_value,) = struct.unpack(longlongformat, filebuffer)
             filehash += l_value

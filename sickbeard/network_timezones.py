@@ -16,20 +16,25 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
-from lib.six import iteritems
-
-from lib.dateutil import tz, zoneinfo
-from lib.tzlocal import get_localzone
-from sickbeard import db
-from sickbeard import helpers
-from sickbeard import logger
-from sickbeard import encodingKludge as ek
-from os.path import basename, join, isfile
 from itertools import chain
+from os.path import basename, join, isfile
+import datetime
 import os
 import re
-import datetime
+
 import sickbeard
+from . import db, helpers, logger
+
+# noinspection PyPep8Naming
+import encodingKludge as ek
+from lib.dateutil import tz, zoneinfo
+from lib.tzlocal import get_localzone
+
+from six import iteritems
+
+# noinspection PyUnreachableCode
+if False:
+    from typing import AnyStr, Optional, Tuple, Union
 
 # regex to parse time (12/24 hour format)
 time_regex = re.compile(r'(\d{1,2})(([:.](\d{2}))? ?([PA][. ]? ?M)|[:.](\d{2}))\b', flags=re.I)
@@ -65,7 +70,8 @@ def update_last_retry():
 def should_try_loading():
     global last_failure
     if last_failure.get('count', 0) >= max_retry_count and \
-            (datetime.datetime.now() - last_failure.get('datetime', datetime.datetime.fromordinal(1))).seconds < max_retry_time:
+            (datetime.datetime.now() - last_failure.get('datetime',
+                                                        datetime.datetime.fromordinal(1))).seconds < max_retry_time:
         return False
     return True
 
@@ -82,26 +88,34 @@ def get_tz():
         pass
     if isinstance(t, datetime.tzinfo) and hasattr(t, 'zone') and t.zone and hasattr(sickbeard, 'ZONEINFO_DIR'):
         try:
+            # noinspection PyUnresolvedReferences
             t = tz_fallback(tz.gettz(t.zone, zoneinfo_priority=True))
-        except:
+        except (BaseException, Exception):
             t = tz_fallback(t)
     else:
         t = tz_fallback(t)
     return t
 
+
 sb_timezone = get_tz()
 
 
-# helper to remove failed temp download
 def _remove_zoneinfo_failed(filename):
+    # type: (AnyStr) -> None
+    """
+    helper to remove failed temp download
+    """
     try:
         ek.ek(os.remove, filename)
-    except:
+    except (BaseException, Exception):
         pass
 
 
-# helper to remove old unneeded zoneinfo files
 def _remove_old_zoneinfo():
+    # type: (...) -> None
+    """
+    helper to remove old unneeded zoneinfo files
+    """
     zonefilename = zoneinfo.ZONEFILENAME
     if None is zonefilename:
         return
@@ -109,8 +123,9 @@ def _remove_old_zoneinfo():
 
     cur_file = helpers.real_path(ek.ek(join, sickbeard.ZONEINFO_DIR, cur_zoneinfo))
 
-    for (path, dirs, files) in chain.from_iterable(ek.ek(os.walk,
-                                     helpers.real_path(di)) for di in (sickbeard.ZONEINFO_DIR, ek.ek(os.path.dirname, zoneinfo.__file__))):
+    for (path, dirs, files) in chain.from_iterable(
+            [ek.ek(os.walk, helpers.real_path(_dir))
+             for _dir in (sickbeard.ZONEINFO_DIR, ek.ek(os.path.dirname, zoneinfo.__file__))]):
         for filename in files:
             if filename.endswith('.tar.gz'):
                 file_w_path = ek.ek(join, path, filename)
@@ -118,12 +133,15 @@ def _remove_old_zoneinfo():
                     try:
                         ek.ek(os.remove, file_w_path)
                         logger.log(u'Delete unneeded old zoneinfo File: %s' % file_w_path)
-                    except:
+                    except (BaseException, Exception):
                         logger.log(u'Unable to delete: %s' % file_w_path, logger.ERROR)
 
 
-# update the dateutil zoneinfo
 def _update_zoneinfo():
+    # type: (...) -> None
+    """
+    update the dateutil zoneinfo
+    """
     if not should_try_loading():
         return
 
@@ -133,10 +151,10 @@ def _update_zoneinfo():
     # now check if the zoneinfo needs update
     url_zv = 'https://raw.githubusercontent.com/Prinz23/sb_network_timezones/master/zoneinfo.txt'
 
-    url_data = helpers.getURL(url_zv)
-    if url_data is None:
+    url_data = helpers.get_url(url_zv)
+    if None is url_data:
         update_last_retry()
-        # When urlData is None, trouble connecting to github
+        # When None is urlData, trouble connecting to github
         logger.log(u'Loading zoneinfo.txt failed, this can happen from time to time. Unable to get URL: %s' % url_zv,
                    logger.WARNING)
         return
@@ -148,14 +166,18 @@ def _update_zoneinfo():
     if None is not cur_zoneinfo:
         cur_zoneinfo = ek.ek(basename, zonefilename)
     zonefile = helpers.real_path(ek.ek(join, sickbeard.ZONEINFO_DIR, cur_zoneinfo))
-    zonemetadata = zoneinfo.gettz_db_metadata() if ek.ek(os.path.isfile, zonefile) else None
-    (new_zoneinfo, zoneinfo_md5) = url_data.decode('utf-8').strip().rsplit(u' ')
+    zonemetadata = None if not ek.ek(os.path.isfile, zonefile) else \
+        zoneinfo.ZoneInfoFile(zoneinfo.getzoneinfofile_stream()).metadata
+    (new_zoneinfo, zoneinfo_md5) = url_data.strip().rsplit(u' ')
     newtz_regex = re.search(r'(\d{4}[^.]+)', new_zoneinfo)
-    if not newtz_regex or len(newtz_regex.groups()) != 1:
+    if not newtz_regex or 1 != len(newtz_regex.groups()):
         return
     newtzversion = newtz_regex.group(1)
 
-    if cur_zoneinfo is not None and zonemetadata is not None and 'tzversion' in zonemetadata and zonemetadata['tzversion'] == newtzversion:
+    if None is not cur_zoneinfo \
+            and None is not zonemetadata \
+            and 'tzversion' in zonemetadata \
+            and zonemetadata['tzversion'] == newtzversion:
         return
 
     # now load the new zoneinfo
@@ -166,7 +188,7 @@ def _update_zoneinfo():
     if ek.ek(os.path.exists, zonefile_tmp):
         try:
             ek.ek(os.remove, zonefile_tmp)
-        except:
+        except (BaseException, Exception):
             logger.log(u'Unable to delete: %s' % zonefile_tmp, logger.ERROR)
             return
 
@@ -183,16 +205,14 @@ def _update_zoneinfo():
         logger.log(u'Updating timezone info with new one: %s' % new_zoneinfo, logger.MESSAGE)
         try:
             # remove the old zoneinfo file
-            if cur_zoneinfo is not None:
+            if None is not cur_zoneinfo:
                 old_file = helpers.real_path(
                     ek.ek(os.path.join, sickbeard.ZONEINFO_DIR, cur_zoneinfo))
                 if ek.ek(os.path.exists, old_file):
                     ek.ek(os.remove, old_file)
             # rename downloaded file
             ek.ek(os.rename, zonefile_tmp, zonefile)
-            from dateutil.zoneinfo import gettz
-            if '_CLASS_ZONE_INSTANCE' in gettz.func_globals:
-                gettz.func_globals.__setitem__('_CLASS_ZONE_INSTANCE', list())
+            setattr(zoneinfo, '_CLASS_ZONE_INSTANCE', list())
             tz.gettz.cache_clear()
             from dateutil.zoneinfo import get_zonefile_instance
             try:
@@ -201,7 +221,7 @@ def _update_zoneinfo():
                 pass
 
             sb_timezone = get_tz()
-        except:
+        except (BaseException, Exception):
             _remove_zoneinfo_failed(zonefile_tmp)
             return
     else:
@@ -210,8 +230,11 @@ def _update_zoneinfo():
         return
 
 
-# update the network timezone table
 def update_network_dict():
+    # type: (...) -> None
+    """
+    update the network timezone table
+    """
     if not should_try_loading():
         return
 
@@ -224,11 +247,12 @@ def update_network_dict():
     # network timezones are stored on github pages
     url = 'https://raw.githubusercontent.com/Prinz23/sb_network_timezones/master/network_timezones.txt'
 
-    url_data = helpers.getURL(url)
-    if url_data is None:
+    url_data = helpers.get_url(url)
+    if None is url_data:
         update_last_retry()
-        # When urlData is None, trouble connecting to github
-        logger.log(u'Updating network timezones failed, this can happen from time to time. URL: %s' % url, logger.WARNING)
+        # When None is urlData, trouble connecting to github
+        logger.log(u'Updating network timezones failed, this can happen from time to time. URL: %s' % url,
+                   logger.WARNING)
         load_network_dict(load=False)
         return
     else:
@@ -237,10 +261,10 @@ def update_network_dict():
     try:
         for line in url_data.splitlines():
             try:
-                (key, val) = line.decode('utf-8').strip().rsplit(u':', 1)
-            except (StandardError, Exception):
+                (key, val) = line.strip().rsplit(u':', 1)
+            except (BaseException, Exception):
                 continue
-            if key is None or val is None:
+            if None is key or None is val:
                 continue
             d[key] = val
     except (IOError, OSError):
@@ -266,18 +290,24 @@ def update_network_dict():
             del old_d[cur_d]
 
     # remove deleted records
-    if len(old_d) > 0:
-        old_items = list(va for va in old_d)
-        cl.append(['DELETE FROM network_timezones WHERE network_name IN (%s)' % ','.join(['?'] * len(old_items)), old_items])
+    if 0 < len(old_d):
+        old_items = list([va for va in old_d])
+        cl.append(['DELETE FROM network_timezones WHERE network_name IN (%s)'
+                   % ','.join(['?'] * len(old_items)), old_items])
 
     # change all network timezone infos at once (much faster)
-    if len(cl) > 0:
+    if 0 < len(cl):
         my_db.mass_action(cl)
         load_network_dict()
 
 
-# load network timezones from db into dict
 def load_network_dict(load=True):
+    # type: (bool) -> None
+    """
+    load network timezones from db into dict
+
+    :param load: load networks
+    """
     global network_dict, network_dupes
 
     my_db = db.DBConnection('cache.db')
@@ -286,11 +316,11 @@ def load_network_dict(load=True):
         sql = 'SELECT %s AS network_name, timezone FROM [network_timezones] ' % sql_name + \
               'GROUP BY %s HAVING COUNT(*) = 1 ORDER BY %s;' % (sql_name, sql_name)
         cur_network_list = my_db.select(sql)
-        if load and (cur_network_list is None or len(cur_network_list) < 1):
+        if load and (None is cur_network_list or 1 > len(cur_network_list)):
             update_network_dict()
             cur_network_list = my_db.select(sql)
         network_dict = dict(cur_network_list)
-    except:
+    except (BaseException, Exception):
         network_dict = {}
 
     try:
@@ -300,36 +330,43 @@ def load_network_dict(load=True):
                                   ' GROUP BY %s HAVING COUNT(*) > 1)' % sql_name +
                                   ' ORDER BY %s;' % sql_name)
         network_dupes = dict(case_dupes)
-    except:
+    except (BaseException, Exception):
         network_dupes = {}
 
 
-# get timezone of a network or return default timezone
 def get_network_timezone(network, return_name=False):
-    if network is None:
+    # type: (AnyStr, bool) -> Optional[datetime.tzinfo, Tuple[datetime.tzinfo, AnyStr]]
+    """
+    get timezone of a network or return default timezone
+
+    :param network: network name
+    :param return_name: return name
+    :return: timezone info or tuple of timezone info, timezone name
+    """
+    if None is network:
         return sb_timezone
 
     timezone = None
     timezone_name = None
 
     try:
-        if zoneinfo.ZONEFILENAME is not None:
+        if None is not zoneinfo.ZONEFILENAME:
             if not network_dict:
                 load_network_dict()
             try:
                 timezone_name = network_dupes.get(network) or network_dict.get(network.replace(' ', '').lower())
                 timezone = tz.gettz(timezone_name, zoneinfo_priority=True)
-            except (StandardError, Exception):
+            except (BaseException, Exception):
                 pass
 
-            if timezone is None:
+            if None is timezone:
                 cc = re.search(r'\(([a-z]+)\)$', network, flags=re.I)
                 try:
                     timezone_name = country_timezones.get(cc.group(1).upper())
                     timezone = tz.gettz(timezone_name, zoneinfo_priority=True)
-                except (StandardError, Exception):
+                except (BaseException, Exception):
                     pass
-    except (StandardError, Exception):
+    except (BaseException, Exception):
         pass
 
     if return_name:
@@ -338,27 +375,33 @@ def get_network_timezone(network, return_name=False):
 
 
 def parse_time(t):
+    # type: (AnyStr) -> Tuple[int, int]
+    """
+
+    :param t: time string
+    :return: tuple of hour, minute
+    """
     mo = time_regex.search(t)
-    if mo is not None and len(mo.groups()) >= 5:
-        if mo.group(5) is not None:
+    if None is not mo and 5 <= len(mo.groups()):
+        if None is not mo.group(5):
             try:
-                hr = helpers.tryInt(mo.group(1))
-                m = helpers.tryInt(mo.group(4))
+                hr = helpers.try_int(mo.group(1))
+                m = helpers.try_int(mo.group(4))
                 ap = mo.group(5)
                 # convert am/pm to 24 hour clock
-                if ap is not None:
-                    if pm_regex.search(ap) is not None and hr != 12:
+                if None is not ap:
+                    if None is not pm_regex.search(ap) and 12 != hr:
                         hr += 12
-                    elif am_regex.search(ap) is not None and hr == 12:
+                    elif None is not am_regex.search(ap) and 12 == hr:
                         hr -= 12
-            except:
+            except (BaseException, Exception):
                 hr = 0
                 m = 0
         else:
             try:
-                hr = helpers.tryInt(mo.group(1))
-                m = helpers.tryInt(mo.group(6))
-            except:
+                hr = helpers.try_int(mo.group(1))
+                m = helpers.try_int(mo.group(6))
+            except (BaseException, Exception):
                 hr = 0
                 m = 0
     else:
@@ -371,15 +414,21 @@ def parse_time(t):
     return hr, m
 
 
-# parse date and time string into local time
 def parse_date_time(d, t, network):
+    # type: (int, Union[AnyStr or Tuple[int, int]], AnyStr) -> datetime.datetime
+    """
+    parse date and time string into local time
 
-    if isinstance(t, tuple) and len(t) == 2 and isinstance(t[0], int) and isinstance(t[1], int):
+    :param d: ordinal datetime
+    :param t: time as a string or as a tuple(hr, m)
+    :param network: network names
+    """
+    if isinstance(t, tuple) and 2 == len(t) and isinstance(t[0], int) and isinstance(t[1], int):
         (hr, m) = t
     else:
         (hr, m) = parse_time(t)
 
-    te = datetime.datetime.fromordinal(helpers.tryInt(d))
+    te = datetime.datetime.fromordinal(helpers.try_int(d))
     try:
         if isinstance(network, datetime.tzinfo):
             foreign_timezone = network
@@ -387,30 +436,43 @@ def parse_date_time(d, t, network):
             foreign_timezone = get_network_timezone(network)
         foreign_naive = datetime.datetime(te.year, te.month, te.day, hr, m, tzinfo=foreign_timezone)
         return foreign_naive
-    except:
+    except (BaseException, Exception):
         return datetime.datetime(te.year, te.month, te.day, hr, m, tzinfo=sb_timezone)
 
 
 def test_timeformat(t):
+    # type: (AnyStr) -> bool
+    """
+
+    :param t: time to check
+    :return: is valid timeformat
+    """
     mo = time_regex.search(t)
-    if mo is None or len(mo.groups()) < 2:
+    if None is mo or 2 > len(mo.groups()):
         return False
-    else:
-        return True
+    return True
 
 
 def standardize_network(network, country):
+    # type: (AnyStr, AnyStr) -> AnyStr
+    """
+
+    :param network: network name
+    :param country: country name
+    :return: network name
+    """
     my_db = db.DBConnection('cache.db')
-    sql_results = my_db.select('SELECT * FROM network_conversions WHERE tvrage_network = ? and tvrage_country = ?',
-                               [network, country])
-    if len(sql_results) == 1:
-        return sql_results[0]['tvdb_network']
-    else:
-        return network
+    sql_result = my_db.select('SELECT * FROM network_conversions'
+                              ' WHERE tvrage_network = ? AND tvrage_country = ?',
+                              [network, country])
+    if 1 == len(sql_result):
+        return sql_result[0]['tvdb_network']
+    return network
 
 
 def load_network_conversions():
-
+    # type: (...) -> None
+    
     if not should_try_loading():
         return
 
@@ -419,21 +481,24 @@ def load_network_conversions():
     # network conversions are stored on github pages
     url = 'https://raw.githubusercontent.com/prinz23/sg_network_conversions/master/conversions.txt'
 
-    url_data = helpers.getURL(url)
-    if url_data is None:
+    url_data = helpers.get_url(url)
+    if None is url_data:
         update_last_retry()
-        # When urlData is None, trouble connecting to github
-        logger.log(u'Updating network conversions failed, this can happen from time to time. URL: %s' % url, logger.WARNING)
+        # When None is urlData, trouble connecting to github
+        logger.log(u'Updating network conversions failed, this can happen from time to time. URL: %s' % url,
+                   logger.WARNING)
         return
     else:
         reset_last_retry()
 
     try:
         for line in url_data.splitlines():
-            (tvdb_network, tvrage_network, tvrage_country) = line.decode('utf-8').strip().rsplit(u'::', 2)
+            (tvdb_network, tvrage_network, tvrage_country) = line.strip().rsplit(u'::', 2)
             if not (tvdb_network and tvrage_network and tvrage_country):
                 continue
-            conversions.append({'tvdb_network': tvdb_network, 'tvrage_network': tvrage_network, 'tvrage_country': tvrage_country})
+            conversions.append({'tvdb_network': tvdb_network,
+                                'tvrage_network': tvrage_network,
+                                'tvrage_country': tvrage_country})
     except (IOError, OSError):
         pass
 
@@ -450,15 +515,15 @@ def load_network_conversions():
                    'VALUES (?,?,?)', [n_w['tvdb_network'], n_w['tvrage_network'], n_w['tvrage_country']]])
         try:
             del old_d[n_w['tvdb_network']]
-        except:
+        except (BaseException, Exception):
             pass
 
     # remove deleted records
-    if len(old_d) > 0:
-        old_items = list(va for va in old_d)
+    if 0 < len(old_d):
+        old_items = list([va for va in old_d])
         cl.append(['DELETE FROM network_conversions WHERE tvdb_network'
                    ' IN (%s)' % ','.join(['?'] * len(old_items)), old_items])
 
     # change all network conversion info at once (much faster)
-    if len(cl) > 0:
+    if 0 < len(cl):
         my_db.mass_action(cl)

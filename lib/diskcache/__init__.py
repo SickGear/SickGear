@@ -1,23 +1,38 @@
-"DiskCache: disk and file backed cache."
+"""
+DiskCache API Reference
+=======================
 
-from .core import Cache, Disk, UnknownFileWarning, EmptyDirWarning, Timeout
+The :doc:`tutorial` provides a helpful walkthrough of most methods.
+
+"""
+
+from .core import Cache, Disk, EmptyDirWarning, UnknownFileWarning, Timeout
 from .core import DEFAULT_SETTINGS, ENOVAL, EVICTION_POLICY, UNKNOWN
 from .fanout import FanoutCache
 from .persistent import Deque, Index
+from .recipes import Averager, BoundedSemaphore, Lock, RLock
+from .recipes import barrier, memoize_stampede, throttle
 
 __all__ = [
+    'Averager',
+    'BoundedSemaphore',
     'Cache',
-    'Disk',
-    'UnknownFileWarning',
-    'EmptyDirWarning',
-    'Timeout',
     'DEFAULT_SETTINGS',
+    'Deque',
+    'Disk',
     'ENOVAL',
     'EVICTION_POLICY',
-    'UNKNOWN',
+    'EmptyDirWarning',
     'FanoutCache',
-    'Deque',
     'Index',
+    'Lock',
+    'RLock',
+    'Timeout',
+    'UNKNOWN',
+    'UnknownFileWarning',
+    'barrier',
+    'memoize_stampede',
+    'throttle',
 ]
 
 try:
@@ -27,10 +42,9 @@ except Exception:  # pylint: disable=broad-except
     # Django not installed or not setup so ignore.
     pass
 
-
 __title__ = 'diskcache'
-__version__ = '3.1.1'
-__build__ = 0x030101
+__version__ = '4.0.0'
+__build__ = 0x040000
 __author__ = 'Grant Jenks'
 __license__ = 'Apache 2.0'
 __copyright__ = 'Copyright 2016-2018 Grant Jenks'

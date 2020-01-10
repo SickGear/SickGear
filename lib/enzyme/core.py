@@ -20,9 +20,13 @@
 # along with enzyme.  If not, see <http://www.gnu.org/licenses/>.
 import re
 import logging
-import fourcc
-import language
-from strutils import str_to_unicode, unicode_to_str
+
+from . import fourcc
+from . import language
+from .strutils import str_to_unicode, unicode_to_str
+
+from _23 import decode_str
+from six import PY2, string_types, text_type
 
 UNPRINTABLE_KEYS = ['thumbnail', 'url', 'codec_private']
 MEDIACORE = ['title', 'caption', 'comment', 'size', 'type', 'subtype', 'timestamp',
@@ -56,10 +60,10 @@ class Media(object):
     _keys = MEDIACORE
     table_mapping = {}
 
-    def __init__(self, hash=None):
-        if hash is not None:
+    def __init__(self, _hash=None):
+        if _hash is not None:
             # create Media based on dict
-            for key, value in hash.items():
+            for key, value in _hash.items():
                 if isinstance(value, list) and value and isinstance(value[0], dict):
                     value = [Media(x) for x in value]
                 self._set(key, value)
@@ -80,7 +84,7 @@ class Media(object):
     #
     # unicode and string convertion for debugging
     #
-    #TODO: Fix that mess
+    # TODO: Fix that mess
     def __unicode__(self):
         result = u''
 
@@ -88,12 +92,12 @@ class Media(object):
         lists = []
         for key in self._keys:
             value = getattr(self, key, None)
-            if value == None or key == 'url':
+            if value is None or key == 'url':
                 continue
             if isinstance(value, list):
                 if not value:
                     continue
-                elif isinstance(value[0], basestring):
+                elif isinstance(value[0], string_types):
                     # Just a list of strings (keywords?), so don't treat it specially.
                     value = u', '.join(value)
                 else:
@@ -104,7 +108,7 @@ class Media(object):
                 continue
             if key in UNPRINTABLE_KEYS:
                 value = '<unprintable data, size=%d>' % len(value)
-            result += u'| %10s: %s\n' % (unicode(key), unicode(value))
+            result += u'| %10s: %s\n' % (decode_str(key), decode_str(value))
 
         # print tags (recursively, to support nested tags).
         def print_tags(tags, suffix, show_label):
@@ -119,6 +123,7 @@ class Media(object):
                 if isinstance(tag, dict):
                     result += print_tags(tag, '    ', False)
             return result
+
         result += print_tags(self.tags, '', True)
 
         # print lists
@@ -128,28 +133,28 @@ class Media(object):
                 if key not in ['tracks', 'subtitles', 'chapters']:
                     label += ' Track'
                 result += u'%s #%d\n' % (label, n + 1)
-                result += '|    ' + re.sub(r'\n(.)', r'\n|    \1', unicode(item))
+                result += '|    ' + re.sub(r'\n(.)', r'\n|    \1', decode_str(item))
 
         # print tables
-        #FIXME: WTH?
-#        if log.level >= 10:
-#            for name, table in self.tables.items():
-#                result += '+-- Table %s\n' % str(name)
-#                for key, value in table.items():
-#                    try:
-#                        value = unicode(value)
-#                        if len(value) > 50:
-#                            value = u'<unprintable data, size=%d>' % len(value)
-#                    except (UnicodeDecodeError, TypeError):
-#                        try:
-#                            value = u'<unprintable data, size=%d>' % len(value)
-#                        except AttributeError:
-#                            value = u'<unprintable data>'
-#                    result += u'|    | %s: %s\n' % (unicode(key), value)
+        # FIXME: WTH?
+        #        if log.level >= 10:
+        #            for name, table in self.tables.items():
+        #                result += '+-- Table %s\n' % str(name)
+        #                for key, value in table.items():
+        #                    try:
+        #                        value = unicode(value)
+        #                        if len(value) > 50:
+        #                            value = u'<unprintable data, size=%d>' % len(value)
+        #                    except (UnicodeDecodeError, TypeError):
+        #                        try:
+        #                            value = u'<unprintable data, size=%d>' % len(value)
+        #                        except AttributeError:
+        #                            value = u'<unprintable data>'
+        #                    result += u'|    | %s: %s\n' % (unicode(key), value)
         return result
 
     def __str__(self):
-        return unicode(self).encode()
+        return decode_str(self)
 
     def __repr__(self):
         if hasattr(self, 'url'):
@@ -183,7 +188,7 @@ class Media(object):
         if isinstance(value, str):
             value = str_to_unicode(value)
         setattr(self, key, value)
-        if not key in self._keys:
+        if key not in self._keys:
             self._keys.append(key)
 
     def _set_url(self, url):
@@ -204,12 +209,12 @@ class Media(object):
             if value is None:
                 continue
             if key == 'image':
-                if isinstance(value, unicode):
+                if PY2 and isinstance(value, text_type):
                     setattr(self, key, unicode_to_str(value))
                 continue
             if isinstance(value, str):
                 setattr(self, key, str_to_unicode(value))
-            if isinstance(value, unicode):
+            if isinstance(value, text_type):
                 setattr(self, key, value.strip().rstrip().replace(u'\0', u''))
             if isinstance(value, list) and value and isinstance(value[0], Media):
                 for submenu in value:
@@ -223,7 +228,7 @@ class Media(object):
                     continue
                 value = table.get(tag, None)
                 if value is not None:
-                    if not isinstance(value, (str, unicode)):
+                    if not isinstance(value, string_types):
                         value = str_to_unicode(str(value))
                     elif isinstance(value, str):
                         value = str_to_unicode(value)
@@ -308,6 +313,7 @@ class Tag(object):
     Tag values are strings (for binary data), unicode objects, or datetime
     objects for tags that represent dates or times.
     """
+
     def __init__(self, value=None, langcode='und', binary=False):
         super(Tag, self).__init__()
         self.value = value
@@ -315,7 +321,7 @@ class Tag(object):
         self.binary = binary
 
     def __unicode__(self):
-        return unicode(self.value)
+        return decode_str(self.value)
 
     def __str__(self):
         return str(self.value)
@@ -356,6 +362,7 @@ class Tags(dict, Tag):
     The attribute RATING has a value (PG), but it also has a child tag
     COUNTRY that specifies the country code the rating belongs to.
     """
+
     def __init__(self, value=None, langcode='und', binary=False):
         super(Tags, self).__init__()
         self.value = value

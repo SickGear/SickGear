@@ -19,10 +19,13 @@ import re
 import traceback
 
 from . import generic
-from sickbeard import common, helpers, logger
-from sickbeard.bs4_parser import BS4Parser
-from sickbeard.helpers import tryInt
-from lib.unidecode import unidecode
+from .. import common, logger
+from ..helpers import try_int
+
+from bs4_parser import BS4Parser
+
+from _23 import filter_list, unidecode
+from six import iteritems
 
 
 class NebulanceProvider(generic.TorrentProvider):
@@ -51,11 +54,11 @@ class NebulanceProvider(generic.TorrentProvider):
                 post_params={'keeplogged': '1', 'form_tmpl': True}):
             return False
         if not self.user_authkey:
-            response = self.get_url(self.urls['user'], skip_auth=True, json=True)
+            response = self.get_url(self.urls['user'], skip_auth=True, parse_json=True)
             if self.should_skip():
                 return False
             if 'response' in response:
-                self.user_authkey, self.user_passkey = [response['response'].get(v) for v in 'authkey', 'passkey']
+                self.user_authkey, self.user_passkey = [response['response'].get(v) for v in ('authkey', 'passkey')]
         return self.user_authkey
 
     def _search_provider(self, search_params, **kwargs):
@@ -66,16 +69,16 @@ class NebulanceProvider(generic.TorrentProvider):
 
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
-        rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {'nodots': r'[\.\s]+'}.items())
-        for mode in search_params.keys():
+        rc = dict([(k, re.compile('(?i)' + v)) for (k, v) in iteritems({'nodots': r'[\.\s]+'})])
+        for mode in search_params:
             for search_string in search_params[mode]:
-                search_string = isinstance(search_string, unicode) and unidecode(search_string) or search_string
+                search_string = unidecode(search_string)
 
                 search_url = self.urls['browse'] % (self.user_authkey, self.user_passkey)
                 if 'Cache' != mode:
                     search_url += self.urls['search'] % rc['nodots'].sub('+', search_string)
 
-                data_json = self.get_url(search_url, json=True)
+                data_json = self.get_url(search_url, parse_json=True)
                 if self.should_skip():
                     return results
 
@@ -85,8 +88,8 @@ class NebulanceProvider(generic.TorrentProvider):
                         if self.freeleech and not item.get('isFreeleech'):
                             continue
 
-                        seeders, leechers, group_name, torrent_id, size = [tryInt(n, n) for n in [item.get(x) for x in [
-                            'seeders', 'leechers', 'groupName', 'torrentId', 'size']]]
+                        seeders, leechers, group_name, torrent_id, size = [try_int(n, n) for n in [
+                            item.get(x) for x in ['seeders', 'leechers', 'groupName', 'torrentId', 'size']]]
                         if self._reject_item(seeders, leechers):
                             continue
 
@@ -124,7 +127,7 @@ class NebulanceProvider(generic.TorrentProvider):
         bl = r'[*\[({]+\s*'
         br = r'\s*[})\]*]+'
         title = re.sub('(.*?)((?i)%sproper%s)(.*)' % (bl, br), r'\1\3\2', item['groupName'])
-        for r in r'\s+-\s+', r'(?:19|20)\d\d(?:\-\d\d\-\d\d)?', r'S\d\d+(?:E\d\d+)?':
+        for r in (r'\s+-\s+', r'(?:19|20)\d\d(?:\-\d\d\-\d\d)?', r'S\d\d+(?:E\d\d+)?'):
             m = re.findall('(.*%s)(.*)' % r, title)
             if any(m) and len(m[0][0]) > len(t[0]):
                 t = m[0]
@@ -151,7 +154,7 @@ class NebulanceProvider(generic.TorrentProvider):
                   ('(?i)%s(Proper)%s' % (bl, br), r'`\1`'), (r'%s\s*%s' % (bl, br), '`')]:
             title = re.sub(r[0], r[1], title)
 
-        grp = filter(lambda rn: '.release' in rn.lower(), item['tags'])
+        grp = filter_list(lambda rn: '.release' in rn.lower(), item['tags'])
         title = '%s%s-%s' % (('', t[0])[1 < len(t)], title,
                              (any(grp) and grp[0] or 'nogrp').upper().replace('.RELEASE', ''))
 

@@ -26,6 +26,7 @@ from itertools import groupby
 import bs4
 import guessit
 import logging
+from six import iteritems
 
 
 __all__ = ['SERVICES', 'LANGUAGE_INDEX', 'SERVICE_INDEX', 'SERVICE_CONFIDENCE', 'MATCHING_CONFIDENCE',
@@ -72,7 +73,7 @@ def create_list_tasks(paths, languages, services, force, multi, cache_dir, max_d
             continue
         logger.debug(u'Listing subtitles %r for %r with services %r' % (wanted_languages, video, services))
         for service_name in services:
-            mod = __import__('services.' + service_name, globals=globals(), locals=locals(), fromlist=['Service'], level=-1)
+            mod = __import__('services.' + service_name, globals=globals(), locals=locals(), fromlist=['Service'], level=1)
             service = mod.Service
             if not service.check_validity(video, wanted_languages):
                 continue
@@ -95,7 +96,7 @@ def create_download_tasks(subtitles_by_video, languages, multi):
 
     """
     tasks = []
-    for video, subtitles in subtitles_by_video.iteritems():
+    for video, subtitles in iteritems(subtitles_by_video):
         if not subtitles:
             continue
         if not multi:
@@ -110,7 +111,7 @@ def create_download_tasks(subtitles_by_video, languages, multi):
     return tasks
 
 
-def consume_task(task, services=None):
+def consume_task(task, services=None, os_auth=None):
     """Consume a task. If the ``services`` parameter is given, the function will attempt
     to get the service from it. In case the service is not in ``services``, it will be initialized
     and put in ``services``
@@ -127,7 +128,7 @@ def consume_task(task, services=None):
     logger.info(u'Consuming %r' % task)
     result = None
     if isinstance(task, ListTask):
-        service = get_service(services, task.service, config=task.config)
+        service = get_service(services, task.service, config=task.config, os_auth=os_auth)
         result = service.list(task.video, task.languages)
     elif isinstance(task, DownloadTask):
         for subtitle in task.subtitles:
@@ -189,7 +190,7 @@ def matching_confidence(video, subtitle):
     return confidence
 
 
-def get_service(services, service_name, config=None):
+def get_service(services, service_name, config=None, os_auth=None):
     """Get a service from its name in the service dict with the specified config.
     If the service does not exist in the service dict, it is created and added to the dict.
 
@@ -202,8 +203,8 @@ def get_service(services, service_name, config=None):
 
     """
     if service_name not in services:
-        mod = __import__('services.' + service_name, globals=globals(), locals=locals(), fromlist=['Service'], level=-1)
-        services[service_name] = mod.Service()
+        mod = __import__('services.' + service_name, globals=globals(), locals=locals(), fromlist=['Service'], level=1)
+        services[service_name] = mod.Service(os_auth=os_auth)
         services[service_name].init()
     services[service_name].config = config
     return services[service_name]
@@ -267,7 +268,7 @@ def filter_services(services):
     """
     filtered_services = services[:]
     for service_name in services:
-        mod = __import__('services.' + service_name, globals=globals(), locals=locals(), fromlist=['Service'], level=-1)
+        mod = __import__('services.' + service_name, globals=globals(), locals=locals(), fromlist=['Service'], level=1)
         service = mod.Service
         if service.required_features is not None and bs4.builder_registry.lookup(*service.required_features) is None:
             logger.warning(u'Service %s not available: none of available features could be used. One of %r required' % (service_name, service.required_features))

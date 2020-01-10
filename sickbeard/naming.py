@@ -20,13 +20,16 @@ import datetime
 import os
 
 import sickbeard
-from sickbeard import encodingKludge as ek
-from sickbeard import tv
-from sickbeard import common
-from sickbeard import logger
-from sickbeard.name_parser.parser import NameParser
+from . import common, logger, tv
+from .common import Quality, DOWNLOADED
+from .name_parser.parser import NameParser
 
-from common import Quality, DOWNLOADED
+# noinspection PyPep8Naming
+import encodingKludge as ek
+
+# noinspection PyUnreachableCode
+if False:
+    from typing import AnyStr, Dict, List
 
 name_presets = (
     '%SN - %Sx%0E - %EN',
@@ -51,48 +54,70 @@ name_sports_presets = (
 )
 
 
-class TVShow:
+class TVShowSample(object):
     def __init__(self):
-        self.name = 'Show Name'
-        self.genre = 'Comedy'
-        self.indexerid = 1
-        self.air_by_date = 0
-        self.sports = 0
-        self.anime = 0
-        self.scene = 0
+        self.name = 'Show Name'  # type: AnyStr
+        self.genre = 'Comedy'  # type: AnyStr
+        self.tvid = 1  # type: int
+        self.prodid = 1  # type: int
+        self.air_by_date = 0  # type: int
+        self.sports = 0  # type: int or bool
+        self.anime = 0  # type: int or bool
+        self.scene = 0  # type: int or bool
 
     def _is_anime(self):
+        """
+        :rtype: bool
+        """
         return 0 < self.anime
 
-    is_anime = property(_is_anime)
+    is_anime = property(_is_anime)  # type: bool
 
     def _is_sports(self):
+        """
+        :rtype: bool
+        """
         return 0 < self.sports
 
-    is_sports = property(_is_sports)
+    is_sports = property(_is_sports)  # type: bool
 
     def _is_scene(self):
+        """
+        :rtype: bool
+        """
         return 0 < self.scene
 
-    is_scene = property(_is_scene)
+    is_scene = property(_is_scene)  # type: bool
 
 
-class TVEpisode(tv.TVEpisode):
+class TVEpisodeSample(tv.TVEpisode):
+    # noinspection PyMissingConstructor
     def __init__(self, season, episode, absolute_number, name):
-        self.relatedEps = []
-        self._name = name
-        self._season = season
-        self._episode = episode
-        self._absolute_number = absolute_number
-        self.scene_season = season
-        self.scene_episode = episode
-        self.scene_absolute_number = absolute_number
-        self._airdate = datetime.date(2010, 3, 9)
-        self.show = TVShow()
-        self._status = Quality.compositeStatus(common.DOWNLOADED, common.Quality.SDTV)
-        self._release_name = 'Show.Name.S02E03.HDTV.XviD-RLSGROUP'
-        self._is_proper = True
-        self._version = 2
+        """
+
+        :param season: season number
+        :type season: int
+        :param episode: episode number
+        :type episode: int
+        :param absolute_number: absolute number
+        :type absolute_number: int
+        :param name: name
+        :type name: AnyStr
+        """
+        self.related_ep_obj = []  # type: List
+        self._name = name  # type: AnyStr
+        self._season = season  # type: int
+        self._episode = episode  # type: int
+        self._absolute_number = absolute_number  # type: int
+        self.scene_season = season  # type: int
+        self.scene_episode = episode  # type: int
+        self.scene_absolute_number = absolute_number  # type: int
+        self._airdate = datetime.date(2010, 3, 9)  # type: datetime.date
+        self.show_obj = TVShowSample()  # type: TVShowSample
+        self._status = Quality.compositeStatus(common.DOWNLOADED, common.Quality.SDTV)  # type: int
+        self._release_name = 'Show.Name.S02E03.HDTV.XviD-RLSGROUP'  # type: AnyStr
+        self._is_proper = True  # type: bool
+        self._version = 2  # type: int
 
 
 def check_force_season_folders(pattern=None, multi=None, anime_type=None):
@@ -102,8 +127,13 @@ def check_force_season_folders(pattern=None, multi=None, anime_type=None):
 
     Returns true if season folders need to be forced on or false otherwise.
     :param pattern: String Naming Pattern
+    :type pattern: AnyStr or None
     :param multi: Bool Multi-episode pattern
+    :type multi: bool or None
     :param anime_type: Integer Numbering type to use for anime pattern
+    :type anime_type: int or None
+    :return:
+    :rtype: bool
     """
     if None is pattern:
         pattern = sickbeard.NAMING_PATTERN
@@ -125,8 +155,13 @@ def check_valid_naming(pattern=None, multi=None, anime_type=None):
 
     Returns true if the naming is valid, false if not.
     :param pattern: String Naming Pattern
+    :type pattern: AnyStr or None
     :param multi: Bool Multi-episode pattern
+    :type multi: bool or None
     :param anime_type: Integer Numbering type to use for anime pattern
+    :type anime_type: int or None
+    :return:
+    :rtype: bool
     """
     if None is pattern:
         pattern = sickbeard.NAMING_PATTERN
@@ -150,6 +185,9 @@ def check_valid_abd_naming(pattern=None):
 
     Returns true if the naming is valid, false if not.
     :param pattern: String Naming Pattern
+    :type pattern: AnyStr or None
+    :return:
+    :rtype: bool
     """
     if None is pattern:
         pattern = sickbeard.NAMING_PATTERN
@@ -166,6 +204,9 @@ def check_valid_sports_naming(pattern=None):
 
     Returns true if the naming is valid, false if not.
     :param pattern: String Naming Pattern
+    :type pattern: AnyStr or None
+    :return:
+    :rtype: bool
     """
     if None is pattern:
         pattern = sickbeard.NAMING_PATTERN
@@ -177,10 +218,27 @@ def check_valid_sports_naming(pattern=None):
 
 
 def validate_name(pattern, multi=None, anime_type=None, file_only=False, abd=False, sports=False):
-    ep = generate_sample_ep(multi, abd, sports, anime_type=anime_type)
+    """
 
-    new_name = u'%s.ext' % ep.formatted_filename(pattern, multi, anime_type)
-    new_path = ep.formatted_dir(pattern, multi)
+    :param pattern:
+    :type pattern: AnyStr or None
+    :param multi:
+    :type multi: bool or None
+    :param anime_type:
+    :type anime_type: int or None
+    :param file_only:
+    :type file_only: bool
+    :param abd:
+    :type abd: bool
+    :param sports:
+    :type sports: bool
+    :return:
+    :rtype: bool
+    """
+    sample_ep_obj = generate_sample_ep(multi, abd, sports, anime_type=anime_type)
+
+    new_name = u'%s.ext' % sample_ep_obj.formatted_filename(pattern, multi, anime_type)
+    new_path = sample_ep_obj.formatted_dir(pattern, multi)
     if not file_only:
         new_name = ek.ek(os.path.join, new_path, new_name)
 
@@ -190,30 +248,31 @@ def validate_name(pattern, multi=None, anime_type=None, file_only=False, abd=Fal
 
     logger.log(u'Trying to parse %s' % new_name, logger.DEBUG)
 
-    parser = NameParser(True, showObj=ep.show, naming_pattern=True)
+    parser = NameParser(True, show_obj=sample_ep_obj.show_obj, naming_pattern=True)
 
     try:
         result = parser.parse(new_name)
-    except Exception as e:
+    except (BaseException, Exception):
         logger.log(u'Unable to parse %s, not valid' % new_name, logger.DEBUG)
         return False
 
     logger.log(u'The name %s parsed into %s' % (new_name, result), logger.DEBUG)
 
     if abd or sports:
-        if result.air_date != ep.airdate:
+        if result.air_date != sample_ep_obj.airdate:
             logger.log(u'Air date incorrect in parsed episode, pattern isn\'t valid', logger.DEBUG)
             return False
     elif 3 == anime_type:
-        if result.season_number != ep.season:
+        if result.season_number != sample_ep_obj.season:
             logger.log(u'Season number incorrect in parsed episode, pattern isn\'t valid', logger.DEBUG)
             return False
-        if result.episode_numbers != [x.episode for x in [ep] + ep.relatedEps]:
+        if result.episode_numbers != [x.episode for x in [sample_ep_obj] + sample_ep_obj.related_ep_obj]:
             logger.log(u'Episode numbering incorrect in parsed episode, pattern isn\'t valid', logger.DEBUG)
             return False
     else:
-        if len(result.ab_episode_numbers) and result.ab_episode_numbers != [x.absolute_number for x in
-                                                                            [ep] + ep.relatedEps]:
+        if len(result.ab_episode_numbers) \
+                and result.ab_episode_numbers != [x.absolute_number
+                                                  for x in [sample_ep_obj] + sample_ep_obj.related_ep_obj]:
             logger.log(u'Absolute numbering incorrect in parsed episode, pattern isn\'t valid', logger.DEBUG)
             return False
 
@@ -221,45 +280,78 @@ def validate_name(pattern, multi=None, anime_type=None, file_only=False, abd=Fal
 
 
 def generate_sample_ep(multi=None, abd=False, sports=False, anime=False, anime_type=None):
-    # make a fake episode object
-    ep = TVEpisode(2, 3, 3, 'Ep Name')
+    """
 
-    ep._status = Quality.compositeStatus(DOWNLOADED, Quality.HDTV)
-    ep._airdate = datetime.date(2011, 3, 9)
+    :param multi:
+    :type multi: None or bool
+    :param abd:
+    :type abd: bool
+    :param sports:
+    :type sports: bool
+    :param anime:
+    :type anime: bool
+    :param anime_type:
+    :type anime_type: int or None
+    :return:
+    :rtype: TVEpisodeSample
+    """
+    # make a fake episode object
+    sample_ep_obj = TVEpisodeSample(2, 3, 3, 'Ep Name')
+
+    sample_ep_obj._status = Quality.compositeStatus(DOWNLOADED, Quality.HDTV)
+    sample_ep_obj._airdate = datetime.date(2011, 3, 9)
 
     if abd:
-        ep._release_name = 'Show.Name.2011.03.09.HDTV.XviD-RLSGROUP'
-        ep.show.air_by_date = 1
+        sample_ep_obj._release_name = 'Show.Name.2011.03.09.HDTV.XviD-RLSGROUP'
+        sample_ep_obj.show_obj.air_by_date = 1
     elif sports:
-        ep._release_name = 'Show.Name.2011.03.09.HDTV.XviD-RLSGROUP'
-        ep.show.sports = 1
+        sample_ep_obj._release_name = 'Show.Name.2011.03.09.HDTV.XviD-RLSGROUP'
+        sample_ep_obj.show_obj.sports = 1
     else:
         if not anime or 3 == anime_type:
-            ep._release_name = 'Show.Name.S02E03.HDTV.XviD-RLSGROUP'
+            sample_ep_obj._release_name = 'Show.Name.S02E03.HDTV.XviD-RLSGROUP'
         else:
-            ep._release_name = 'Show.Name.003.HDTV.XviD-RLSGROUP'
-            ep.show.anime = 1
+            sample_ep_obj._release_name = 'Show.Name.003.HDTV.XviD-RLSGROUP'
+            sample_ep_obj.show_obj.anime = 1
 
     if None is not multi:
-        ep._name = 'Ep Name (1)'
-        second_ep = TVEpisode(2, 4, 4, 'Ep Name (2)')
+        sample_ep_obj._name = 'Ep Name (1)'
+        second_ep = TVEpisodeSample(2, 4, 4, 'Ep Name (2)')
         second_ep._status = Quality.compositeStatus(DOWNLOADED, Quality.HDTV)
         normal_naming = not anime or 3 == anime_type
-        release_name = ep._release_name = second_ep._release_name = \
+        release_name = sample_ep_obj._release_name = second_ep._release_name = \
             ('Show.Name.003-004.HDTV.XviD-RLSGROUP', 'Show.Name.S02E03E04E05.HDTV.XviD-RLSGROUP')[normal_naming]
-        ep.relatedEps.append(second_ep)
+        sample_ep_obj.related_ep_obj.append(second_ep)
         if normal_naming:
-            third_ep = TVEpisode(2, 5, 5, 'Ep Name (3)')
+            third_ep = TVEpisodeSample(2, 5, 5, 'Ep Name (3)')
             third_ep._status = Quality.compositeStatus(DOWNLOADED, Quality.HDTV)
             third_ep._release_name = release_name
-            ep.relatedEps.append(third_ep)
+            sample_ep_obj.related_ep_obj.append(third_ep)
         else:
-            ep.show.anime = 1
+            sample_ep_obj.show_obj.anime = 1
 
-    return ep
+    return sample_ep_obj
 
 
 def test_name(pattern, multi=None, abd=False, sports=False, anime=False, anime_type=None):
-    ep = generate_sample_ep(multi, abd, sports, anime, anime_type)
+    """
 
-    return {'name': ep.formatted_filename(pattern, multi, anime_type), 'dir': ep.formatted_dir(pattern, multi)}
+    :param pattern:
+    :type pattern: AnyStr or None
+    :param multi:
+    :type multi: bool or None
+    :param abd:
+    :type abd: bool
+    :param sports:
+    :type sports: bool
+    :param anime:
+    :type anime: bool
+    :param anime_type:
+    :type anime_type: int or None
+    :return:
+    :rtype: Dict[AnyStr, AnyStr]
+    """
+    sample_ep_obj = generate_sample_ep(multi, abd, sports, anime, anime_type)
+
+    return {'name': sample_ep_obj.formatted_filename(pattern, multi, anime_type),
+            'dir': sample_ep_obj.formatted_dir(pattern, multi)}

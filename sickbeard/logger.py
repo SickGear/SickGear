@@ -29,10 +29,15 @@ import zipfile
 from logging.handlers import TimedRotatingFileHandler
 
 import sickbeard
-from sickbeard import classes
-import sickbeard.helpers
+from . import classes
+from sg_helpers import remove_file_failed
+
+# noinspection PyUnreachableCode
+if False:
+    from typing import AnyStr, Union
 
 try:
+    # noinspection PyUnresolvedReferences
     from lib.send2trash import send2trash
 except ImportError:
     pass
@@ -55,21 +60,32 @@ class NullHandler(logging.Handler):
 
 class SBRotatingLogHandler(object):
     def __init__(self, log_file):
-        self.log_file = log_file
-        self.log_file_path = log_file
+        """
+
+        :param log_file: log file
+        :type log_file: AnyStr
+        """
+        self.log_file = log_file  # type: AnyStr
+        self.log_file_path = log_file  # type: AnyStr
         self.h_file = None
         self.h_console = None
 
-        self.console_logging = False
+        self.console_logging = False  # type: bool
         self.log_lock = threading.Lock()
-        self.log_types = ['sickbeard', 'tornado.application', 'tornado.general', 'imdbpy', 'subliminal', 'tvdb_api']
+        self.log_types = ['sickbeard', 'tornado.application', 'tornado.general', 'subliminal', 'adba', 'encodingKludge',
+                          'tvdb_api']
+        self.external_loggers = ['sg_helper', 'libtrakt', 'trakt_api']
         self.log_types_null = ['tornado.access']
 
     def __del__(self):
         pass
 
     def close_log(self, handler=None):
+        """
 
+        :param handler:
+        :type handler:
+        """
         handlers = []
         if not handler:
             if None is not self.h_console:
@@ -79,7 +95,7 @@ class SBRotatingLogHandler(object):
             handlers = [handler]
 
         for handler in handlers:
-            for logger_name in self.log_types + self.log_types_null:
+            for logger_name in self.log_types + self.log_types_null + self.external_loggers:
                 logging.getLogger(logger_name).removeHandler(handler)
 
             if type(handler) != type(logging.StreamHandler()):  # check exact type, not an inherited instance
@@ -87,7 +103,11 @@ class SBRotatingLogHandler(object):
                 handler.close()
 
     def init_logging(self, console_logging=False):
+        """
 
+        :param console_logging: console logging
+        :type console_logging: bool
+        """
         self.console_logging |= console_logging
         self.log_file_path = os.path.join(sickbeard.LOG_DIR, self.log_file)
 
@@ -111,7 +131,7 @@ class SBRotatingLogHandler(object):
                 self.h_console = h_console
 
             # add the handler to the root logger
-            for logger_name in self.log_types:
+            for logger_name in self.log_types + self.external_loggers:
                 logging.getLogger(logger_name).addHandler(h_console)
 
         for logger_name in self.log_types_null:
@@ -121,6 +141,10 @@ class SBRotatingLogHandler(object):
         h_file.setLevel(reverseNames[sickbeard.FILE_LOGGING_PRESET])
         h_file.setFormatter(DispatchingFormatter(self._formatters(False), logging.Formatter('%(message)s'), ))
         self.h_file = h_file
+
+        for logger_name in self.external_loggers:
+            logging.getLogger(logger_name).addHandler(h_file)
+            logging.getLogger(logger_name).setLevel(DEBUG)
 
         for logger_name in self.log_types:
             logging.getLogger(logger_name).addHandler(h_file)
@@ -137,9 +161,15 @@ class SBRotatingLogHandler(object):
             self.close_log(old_h_console)
 
     def _formatters(self, log_simple=True):
+        """
+
+        :param log_simple: simple log
+        :type log_simple: bool
+        :return:
+        """
         fmt = {}
-        for logger_name in self.log_types:
-            source = (re.sub('(.*\.\w\w\w).*$', r'\1', logger_name).upper() + ' :: ', '')['sickbeard' == logger_name]
+        for logger_name in self.log_types + self.external_loggers:
+            source = (re.sub(r'(.*\.\w\w\w).*$', r'\1', logger_name).upper() + ' :: ', '')['sickbeard' == logger_name]
             fmt.setdefault(logger_name, logging.Formatter(
                 '%(asctime)s %(levelname)' + ('-8', '')[log_simple] + 's ' + source
                 + '%(message)s', ('%Y-%m-%d ', '')[log_simple] + '%H:%M:%S'))
@@ -147,8 +177,22 @@ class SBRotatingLogHandler(object):
         return fmt
 
     def log(self, to_log, log_level=MESSAGE):
-
+        # type: (Union[AnyStr, list], int) -> None
+        """Log an item, or a list of items using log_lock so to_log list items are continuous in output.
+        :param to_log: log message, list of log messages
+        :param log_level: log level
+        """
         with self.log_lock:
+            self.output_log((to_log, [to_log])[not isinstance(to_log, list)], log_level)
+
+    @staticmethod
+    def output_log(log_list, log_level=MESSAGE):
+        # type: (list, int) -> None
+        """
+        :param log_list: log message
+        :param log_level: log level
+        """
+        for to_log in log_list:
 
             out_line = '%s :: %s' % (threading.currentThread().getName(), to_log)
 
@@ -156,7 +200,6 @@ class SBRotatingLogHandler(object):
             setattr(sb_logger, 'db', lambda *args: sb_logger.log(DB, *args))
 
             # sub_logger = logging.getLogger('subliminal')
-            # imdb_logger = logging.getLogger('imdbpy')
             # tornado_logger = logging.getLogger('tornado')
 
             try:
@@ -178,6 +221,11 @@ class SBRotatingLogHandler(object):
                 pass
 
     def log_error_and_exit(self, error_msg):
+        """
+
+        :param error_msg: error message
+        :type error_msg: AnyStr
+        """
         log(error_msg, ERROR)
 
         if not self.console_logging:
@@ -187,13 +235,18 @@ class SBRotatingLogHandler(object):
 
     @staticmethod
     def reverse_readline(filename, buf_size=4096):
-        """a generator that returns the lines of a file in reverse order"""
-        with open(filename) as fh:
+        """a generator that returns the lines of a file in reverse order
+        :param filename: file name
+        :type filename: AnyStr
+        :param buf_size: buffer size
+        :type buf_size: int or long
+        """
+        with codecs.open(filename, 'r', encoding='utf-8', errors='replace') as fh:
             segment = None
             offset = 0
             fh.seek(0, os.SEEK_END)
             file_size = remaining_size = fh.tell()
-            while remaining_size > 0:
+            while 0 < remaining_size:
                 offset = min(file_size, offset + buf_size)
                 fh.seek(file_size - offset)
                 buf = fh.read(min(remaining_size, buf_size))
@@ -202,11 +255,11 @@ class SBRotatingLogHandler(object):
                 # the first line of the buffer is probably not a complete line so
                 # we'll save it and append it to the last line of the next buffer
                 # we read
-                if segment is not None:
+                if None is not segment:
                     # if the previous chunk starts right from the beginning of line
                     # do not concat the segment to the last line of new chunk
                     # instead, yield the segment first
-                    if buf[-1] is not '\n':
+                    if buf[-1] != '\n':
                         lines[-1] += segment
                     else:
                         yield segment + '\n'
@@ -217,7 +270,7 @@ class SBRotatingLogHandler(object):
             yield None is not segment and segment + '\n' or ''
 
 
-class DispatchingFormatter:
+class DispatchingFormatter(object):
     def __init__(self, formatters, default_formatter):
         self._formatters = formatters
         self._default_formatter = default_formatter
@@ -273,10 +326,10 @@ class TimedCompressedRotatingFileHandler(TimedRotatingFileHandler):
         except AttributeError:
             pass
 
-        from sickbeard import encodingKludge
+        import encodingKludge
         try:
             encodingKludge.ek(os.rename, self.baseFilename, dfn)
-        except (StandardError, Exception):
+        except (BaseException, Exception):
             pass
 
         self.logger_instance.init_logging()
@@ -307,21 +360,39 @@ class TimedCompressedRotatingFileHandler(TimedRotatingFileHandler):
 
     @staticmethod
     def delete_logfile(filepath):
+        """
+
+        :param filepath: file path
+        :type filepath: AnyStr
+        """
         if os.path.exists(filepath):
             if sickbeard.TRASH_ROTATE_LOGS:
-                send2trash(filepath)
+                try:
+                    send2trash(filepath)
+                except (OSError, WindowsError):
+                    pass
             else:
-                sickbeard.helpers.remove_file_failed(filepath)
+                remove_file_failed(filepath)
 
 
 sb_log_instance = SBRotatingLogHandler('sickgear.log')
 
 
 def log(to_log, log_level=MESSAGE):
+    # type: (Union[AnyStr, list], int) -> None
+    """
+    :param to_log: log message
+    :param log_level: log level
+    """
     sb_log_instance.log(to_log, log_level)
 
 
 def log_error_and_exit(error_msg):
+    """
+
+    :param error_msg: error message
+    :type error_msg: AnyStr
+    """
     sb_log_instance.log_error_and_exit(error_msg)
 
 

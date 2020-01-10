@@ -6,8 +6,8 @@
 #from sickbeard.metadata.generic import GenericMetadata
 #from sickbeard import naming
 ##
-#set global $title = 'Config - Post Processing'
-#set global $header = 'Post Processing'
+#set global $title = 'Config - Media Process'
+#set global $header = 'Media Process'
 #set global $sbPath = '../..'
 #set global $topmenu = 'config'
 ##
@@ -29,7 +29,7 @@
 <div id="config" class="pp">
 	<div id="config-content" class="linefix">
 
-		<form id="configForm" action="savePostProcessing" method="post">
+		<form id="configForm" action="save_post_processing" method="post">
 			$xsrf_form_html
 
 			<div id="config-components">
@@ -111,10 +111,20 @@
 						</div>
 
 						<div class="field-pair">
-							<label for="extra_scripts">
+							<label for="sg_extra_scripts">
 								<span class="component-title">Extra scripts</span>
 								<span class="component-desc">
-									<input type="text" name="extra_scripts" id="extra_scripts" value="<%='|'.join(sickbeard.EXTRA_SCRIPTS)%>" class="form-control input-sm input350">
+#set $extra_scripts = '|'.join(sickbeard.EXTRA_SCRIPTS)
+#if $extra_scripts
+									<input type="text" name="extra_scripts" value="$extra_scripts" class="form-control input-sm input350">
+									<div class="clear-left">
+										<p class="note">2019 July: SickBeard scripts are deprecated.
+										<span class="grey-text">Click image below for the parameters to update in each script, after editing, move each from the above field to below</span></p>
+									</div>
+#else
+									<input type="hidden" name="extra_scripts" value="">
+#end if
+									<input type="text" name="sg_extra_scripts" id="sg_extra_scripts" value="<%= '|'.join(sickbeard.SG_EXTRA_SCRIPTS) %>" class="form-control input-sm input350">
 									<img src="$sbRoot/images/legend16.png" width="16" height="16" alt="[Toggle Key]" id="show_extra_params" title="Toggle info for script arguments">
 									<div class="clear-left">
 										<p class="note">scripts are called after built-in post processing.
@@ -124,27 +134,30 @@
 											<table class="Key" style="width:auto">
 												<thead>
 													<tr>
-														<th class="text-center">Arg</th>
+														<th class="text-center">Param</th>
 														<th>Description</th>
 														<th style="width:5%"></th>
-														<th class="text-center">Arg</th>
+														<th class="text-center">Param</th>
 														<th>Description</th>
 													</tr>
 												</thead>
 												<tfoot>
 													<tr>
-														<th colspan="5">These arguments are passed to every script</th>
+														<th colspan="5">These parameters are passed in order to every script</th>
 													</tr>
 												</tfoot>
 												<tbody>
 													<tr><td class="text-center"><span class="grey-text">1</span></td><td>final full episode file path</td>
-													<td>&nbsp;</td><td class="text-center"><span class="grey-text">4</span></td><td>season number</td></tr>
+													<td>&nbsp;</td><td class="text-center"><span class="grey-text">5</span></td><td>season number</td></tr>
 
 													<tr class="even"><td class="text-center"><span class="grey-text">2</span></td><td>original episode file name</td>
-													<td>&nbsp;</td><td class="text-center"><span class="grey-text">5</span></td><td style="padding-right:1.5em !important">episode number</td></tr>
+													<td>&nbsp;</td><td class="text-center"><span class="grey-text">6</span></td><td style="padding-right:1.5em !important">episode number</td></tr>
 
-													<tr><td class="text-center"><span class="grey-text">3</span></td><td>show id</td>
-													<td>&nbsp;</td><td class="text-center"><span class="grey-text">6</span></td><td>episode air date</td></tr>
+													<tr><td class="text-center"><span class="grey-text">3</span></td><td>#if $extra_scripts#*<span class="grey-text">NEW</span>* #end if#source TV info id</td>
+													<td>&nbsp;</td><td class="text-center"><span class="grey-text">7</span></td><td>episode air date</td></tr>
+
+													<tr class="even"><td class="text-center"><span class="grey-text">4</span></td><td>production id (i.e show id)</td>
+													<td>&nbsp;</td><td class="text-center"><span class="grey-text">&nbsp;</span></td><td>&nbsp;</td></tr>
 												</tbody>
 											</table>
 										</div>

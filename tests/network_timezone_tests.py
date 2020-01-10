@@ -10,7 +10,8 @@ import datetime
 from lib.dateutil import tz
 import sickbeard
 from sickbeard import network_timezones, helpers
-import sickbeard.encodingKludge as ek
+# noinspection PyPep8Naming
+import encodingKludge as ek
 
 
 class NetworkTimezoneTests(test.SickbeardTestDBCase):
@@ -20,7 +21,7 @@ class NetworkTimezoneTests(test.SickbeardTestDBCase):
         cls.remove_zoneinfo()
         try:
             os.rmdir(sickbeard.ZONEINFO_DIR)
-        except (StandardError, Exception):
+        except (BaseException, Exception):
             pass
 
     @classmethod
@@ -37,7 +38,7 @@ class NetworkTimezoneTests(test.SickbeardTestDBCase):
                     file_w_path = ek.ek(os.path.join, path, filename)
                     try:
                         ek.ek(os.remove, file_w_path)
-                    except (StandardError, Exception):
+                    except (BaseException, Exception):
                         pass
 
     def test_timezone(self):
@@ -51,6 +52,6 @@ class NetworkTimezoneTests(test.SickbeardTestDBCase):
         self.assertEqual(r, local_date)
 
 
-if __name__ == '__main__':
+if '__main__' == __name__:
     suite = unittest.TestLoader().loadTestsFromTestCase(NetworkTimezoneTests)
     unittest.TextTestRunner(verbosity=2).run(suite)

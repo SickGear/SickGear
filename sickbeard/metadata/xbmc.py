@@ -16,16 +16,20 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
-import generic
-import xbmc_12plus
-
 import os
 
-from sickbeard import helpers
-from sickbeard import encodingKludge as ek
+from . import generic, xbmc_12plus
+from .. import helpers
+import sickbeard
+# noinspection PyPep8Naming
+import encodingKludge as ek
+
+# noinspection PyUnreachableCode
+if False:
+    from typing import AnyStr, Optional
 
 
-class XBMCMetadata(xbmc_12plus.XBMC_12PlusMetadata):
+class XBMCMetadata(xbmc_12plus.XBMC12PlusMetadata):
     """
     Metadata generation class for XBMC (legacy).
 
@@ -43,54 +47,58 @@ class XBMCMetadata(xbmc_12plus.XBMC_12PlusMetadata):
     """
 
     def __init__(self,
-                 show_metadata=False,
-                 episode_metadata=False,
-                 fanart=False,
-                 poster=False,
-                 banner=False,
-                 episode_thumbnails=False,
-                 season_posters=False,
-                 season_banners=False,
-                 season_all_poster=False,
-                 season_all_banner=False):
+                 show_metadata=False,  # type: bool
+                 episode_metadata=False,  # type: bool
+                 use_fanart=False,  # type: bool
+                 use_poster=False,  # type: bool
+                 use_banner=False,  # type: bool
+                 episode_thumbnails=False,  # type: bool
+                 season_posters=False,  # type: bool
+                 season_banners=False,  # type: bool
+                 season_all_poster=False,  # type: bool
+                 season_all_banner=False  # type: bool
+                 ):
 
         generic.GenericMetadata.__init__(self,
                                          show_metadata,
                                          episode_metadata,
-                                         fanart,
-                                         poster,
-                                         banner,
+                                         use_fanart,
+                                         use_poster,
+                                         use_banner,
                                          episode_thumbnails,
                                          season_posters,
                                          season_banners,
                                          season_all_poster,
                                          season_all_banner)
 
-        self.name = 'XBMC'
+        self.name = 'XBMC'  # type: AnyStr
 
-        self.poster_name = self.banner_name = "folder.jpg"
-        self.season_all_poster_name = "season-all.tbn"
+        self.poster_name = self.banner_name = "folder.jpg"  # type: AnyStr
+        self.season_all_poster_name = "season-all.tbn"  # type: AnyStr
 
         # web-ui metadata template
-        self.eg_show_metadata = "tvshow.nfo"
-        self.eg_episode_metadata = "Season##\\<i>filename</i>.nfo"
-        self.eg_fanart = "fanart.jpg"
-        self.eg_poster = "folder.jpg"
-        self.eg_banner = "folder.jpg"
-        self.eg_episode_thumbnails = "Season##\\<i>filename</i>.tbn"
-        self.eg_season_posters = "season##.tbn"
-        self.eg_season_banners = "<i>not supported</i>"
-        self.eg_season_all_poster = "season-all.tbn"
-        self.eg_season_all_banner = "<i>not supported</i>"
+        self.eg_show_metadata = "tvshow.nfo"  # type: AnyStr
+        self.eg_episode_metadata = "Season##\\<i>filename</i>.nfo"  # type: AnyStr
+        self.eg_fanart = "fanart.jpg"  # type: AnyStr
+        self.eg_poster = "folder.jpg"  # type: AnyStr
+        self.eg_banner = "folder.jpg"  # type: AnyStr
+        self.eg_episode_thumbnails = "Season##\\<i>filename</i>.tbn"  # type: AnyStr
+        self.eg_season_posters = "season##.tbn"  # type: AnyStr
+        self.eg_season_banners = "<i>not supported</i>"  # type: AnyStr
+        self.eg_season_all_poster = "season-all.tbn"  # type: AnyStr
+        self.eg_season_all_banner = "<i>not supported</i>"  # type: AnyStr
 
     # Override with empty methods for unsupported features
     def create_season_banners(self, ep_obj):
+        # type: (sickbeard.tv.TVEpisode) -> None
         pass
 
     def create_season_all_banner(self, show_obj):
+        # type: (sickbeard.tv.TVShow) -> None
         pass
 
     def get_episode_thumb_path(self, ep_obj):
+        # type: (sickbeard.tv.TVEpisode) -> Optional[AnyStr]
         """
         Returns the path where the episode thumbnail should be stored. Defaults to
         the same path as the episode file but with a .tbn extension.
@@ -98,13 +106,14 @@ class XBMCMetadata(xbmc_12plus.XBMC_12PlusMetadata):
         ep_obj: a TVEpisode instance for which to create the thumbnail
         """
         if ek.ek(os.path.isfile, ep_obj.location):
-            tbn_filename = helpers.replaceExtension(ep_obj.location, 'tbn')
+            tbn_filename = helpers.replace_extension(ep_obj.location, 'tbn')
         else:
             return None
 
         return tbn_filename
 
     def get_season_poster_path(self, show_obj, season):
+        # type: (sickbeard.tv.TVShow, int) -> AnyStr
         """
         Returns the full path to the file for a given season poster.
 
@@ -114,7 +123,7 @@ class XBMCMetadata(xbmc_12plus.XBMC_12PlusMetadata):
         """
 
         # Our specials thumbnail is, well, special
-        if season == 0:
+        if 0 == season:
             season_poster_filename = 'season-specials'
         else:
             season_poster_filename = 'season' + str(season).zfill(2)

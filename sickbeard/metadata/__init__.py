@@ -20,18 +20,12 @@ __all__ = ['generic', 'helpers', 'kodi', 'mede8er', 'mediabrowser', 'ps3', 'tivo
 
 import sys
 
-import kodi
-import mede8er
-import mediabrowser
-import ps3
-import tivo
-import wdtv
-import xbmc
-import xbmc_12plus
+from . import kodi, mede8er, mediabrowser, ps3, tivo, wdtv, xbmc, xbmc_12plus
+from _23 import filter_list
 
 
 def available_generators():
-    return filter(lambda x: x not in ('generic', 'helpers'), __all__)
+    return filter_list(lambda x: x not in ('generic', 'helpers'), __all__)
 
 
 def _getMetadataModule(name):
@@ -39,8 +33,7 @@ def _getMetadataModule(name):
     prefix = "sickbeard.metadata."
     if name in __all__ and prefix + name in sys.modules:
         return sys.modules[prefix + name]
-    else:
-        return None
+    return None
 
 
 def _getMetadataClass(name):

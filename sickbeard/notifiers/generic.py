@@ -19,7 +19,7 @@
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
 import sickbeard
-from sickbeard import logger
+from .. import logger
 
 notify_strings = dict(
     snatch='Started download',
@@ -137,5 +137,5 @@ class Notifier(BaseNotifier):
         self._log_debug(u'Sending notification "%s"' % (self._body_only(notify_strings[notify_string], message)))
         try:
             return self._notify(notify_strings[notify_string], message, *args, **kwargs)
-        except (StandardError, Exception):
+        except (BaseException, Exception):
             return False

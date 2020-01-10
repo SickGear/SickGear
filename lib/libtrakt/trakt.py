@@ -4,12 +4,16 @@ import json
 import sickbeard
 import time
 import datetime
-from sickbeard import logger
+import logging
+from exceptions_helper import ex
 
 from .exceptions import *
 
+log = logging.getLogger('libtrakt')
+log.addHandler(logging.NullHandler())
 
-class TraktAccount:
+
+class TraktAccount(object):
     max_auth_fail = 9
 
     def __init__(self, account_id=None, token='', refresh_token='', auth_fail=0, last_fail=None, token_valid_date=None):
@@ -94,7 +98,7 @@ class TraktAccount:
                 self.inc_auth_failure()
 
 
-class TraktAPI:
+class TraktAPI(object):
     max_retrys = 3
 
     def __init__(self, timeout=None):
@@ -143,8 +147,7 @@ class TraktAPI:
             sickbeard.TRAKT_ACCOUNTS[account].reset_auth_failure()
             sickbeard.save_config()
             return True
-        else:
-            return False
+        return False
 
     @staticmethod
     def delete_account(account):
@@ -152,7 +155,7 @@ class TraktAPI:
             try:
                 TraktAPI().trakt_request('/oauth/revoke', send_oauth=account, method='POST')
             except TraktException:
-                logger.log('Failed to remove account from trakt.tv')
+                log.info('Failed to remove account from trakt.tv')
             sickbeard.TRAKT_ACCOUNTS.pop(account)
             sickbeard.save_config()
             return True
@@ -190,7 +193,7 @@ class TraktAPI:
             return False
 
         if 'access_token' in resp and 'refresh_token' in resp and 'expires_in' in resp:
-            token_valid_date = now + datetime.timedelta(seconds=sickbeard.helpers.tryInt(resp['expires_in']))
+            token_valid_date = now + datetime.timedelta(seconds=sickbeard.helpers.try_int(resp['expires_in']))
             if refresh or (not refresh and None is not account and account in sickbeard.TRAKT_ACCOUNTS):
                 return self.replace_account(account, resp['access_token'], resp['refresh_token'],
                                             token_valid_date, refresh)
@@ -204,8 +207,8 @@ class TraktAPI:
         if method not in ['GET', 'POST', 'PUT', 'DELETE', None]:
             return {}
         if None is method:
-            method = ('GET', 'POST')['data' in kwargs.keys() or data is not None]
-        if path != 'oauth/token' and None is send_oauth and method in ['POST', 'PUT', 'DELETE']:
+            method = ('GET', 'POST')['data' in kwargs.keys() or None is not data]
+        if 'oauth/token' != path and None is send_oauth and method in ['POST', 'PUT', 'DELETE']:
             return {}
 
         count += 1
@@ -214,7 +217,7 @@ class TraktAPI:
 
         # wait before retry
         if 'users/settings' != path:
-            count > 1 and time.sleep(sleep_retry)
+            1 < count and time.sleep(sleep_retry)
 
         headers = headers or self.headers
         if None is not send_oauth and send_oauth in sickbeard.TRAKT_ACCOUNTS:
@@ -256,8 +259,8 @@ class TraktAPI:
         except requests.RequestException as e:
             code = getattr(e.response, 'status_code', None)
             if not code:
-                if 'timed out' in e:
-                    logger.log(u'Timeout connecting to Trakt', logger.WARNING)
+                if 'timed out' in ex(e):
+                    log.warning(u'Timeout connecting to Trakt')
                     if count >= self.max_retrys:
                         raise TraktTimeout()
                     return self.trakt_request(path, data, headers, url, count=count, sleep_retry=sleep_retry,
@@ -265,25 +268,25 @@ class TraktAPI:
                 # This is pretty much a fatal error if there is no status_code
                 # It means there basically was no response at all
                 else:
-                    logger.log(u'Could not connect to Trakt. Error: {0}'.format(e), logger.WARNING)
-                    raise TraktException('Could not connect to Trakt. Error: {0}'.format(e))
+                    log.warning(u'Could not connect to Trakt. Error: %s' % ex(e))
+                    raise TraktException('Could not connect to Trakt. Error: %s' % ex(e))
 
             elif 502 == code:
                 # Retry the request, Cloudflare had a proxying issue
-                logger.log(u'Retrying Trakt api request: %s' % path, logger.WARNING)
+                log.warning(u'Retrying Trakt api request: %s' % path)
                 if count >= self.max_retrys:
                     raise TraktCloudFlareException()
                 return self.trakt_request(path, data, headers, url, count=count, sleep_retry=sleep_retry,
                                           send_oauth=send_oauth, method=method)
 
-            elif 401 == code and path != 'oauth/token':
+            elif 401 == code and 'oauth/token' != path:
                 if None is not send_oauth:
                     if sickbeard.TRAKT_ACCOUNTS[send_oauth].needs_refresh:
                         if self.trakt_token(refresh=True, count=count, account=send_oauth):
                             return self.trakt_request(path, data, headers, url, count=count, sleep_retry=sleep_retry,
                                                       send_oauth=send_oauth, method=method)
 
-                        logger.log(u'Unauthorized. Please check your Trakt settings', logger.WARNING)
+                        log.warning(u'Unauthorized. Please check your Trakt settings')
                         sickbeard.TRAKT_ACCOUNTS[send_oauth].auth_failure()
                         raise TraktAuthException()
 
@@ -298,21 +301,24 @@ class TraktAPI:
                 raise TraktAuthException()
             elif code in (500, 501, 503, 504, 520, 521, 522):
                 if count >= self.max_retrys:
-                    logger.log(u'Trakt may have some issues and it\'s unavailable. Code: %s' % code, logger.WARNING)
+                    log.warning(u'Trakt may have some issues and it\'s unavailable. Code: %s' % code)
                     raise TraktServerError(error_code=code)
                 # http://docs.trakt.apiary.io/#introduction/status-codes
-                logger.log(u'Trakt may have some issues and it\'s unavailable. Trying again', logger.WARNING)
+                log.warning(u'Trakt may have some issues and it\'s unavailable. Trying again')
                 return self.trakt_request(path, data, headers, url, count=count, sleep_retry=sleep_retry,
                                           send_oauth=send_oauth, method=method)
             elif 404 == code:
-                logger.log(u'Trakt error (404) the resource does not exist: %s%s' % (url, path), logger.WARNING)
+                log.warning(u'Trakt error (404) the resource does not exist: %s%s' % (url, path))
                 raise TraktMethodNotExisting('Trakt error (404) the resource does not exist: %s%s' % (url, path))
             else:
-                logger.log(u'Could not connect to Trakt. Code error: {0}'.format(code), logger.ERROR)
-                raise TraktException('Could not connect to Trakt. Code error: {0}'.format(code))
+                log.error(u'Could not connect to Trakt. Code error: {0}'.format(code))
+                raise TraktException('Could not connect to Trakt. Code error: %s' % ex(code))
         except ValueError as e:
-            logger.log(u'Value Error: {0}'.format(e), logger.ERROR)
-            raise TraktValueError(u'Value Error: {0}'.format(e))
+            log.error(u'Value Error: %s' % ex(e))
+            raise TraktValueError(u'Value Error: %s' % ex(e))
+        except (BaseException, Exception) as e:
+            log.error('Exception: %s' % ex(e))
+            raise TraktException('Could not connect to Trakt. Code error: %s' % ex(e))
 
         # check and confirm Trakt call did not fail
         if isinstance(resp, dict) and 'failure' == resp.get('status', None):

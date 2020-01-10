@@ -19,6 +19,7 @@
 from __future__ import print_function
 from __future__ import with_statement
 
+import codecs
 import datetime
 import errno
 import getopt
@@ -32,21 +33,33 @@ import time
 import threading
 import warnings
 
-warnings.filterwarnings('ignore', module=r'.*fuzzywuzzy.*')
+warnings.filterwarnings('ignore', module=r'.*bs4_parser.*', message='.*No parser was explicitly specified.*')
 warnings.filterwarnings('ignore', module=r'.*Cheetah.*')
 warnings.filterwarnings('ignore', module=r'.*connectionpool.*', message='.*certificate verification.*')
+warnings.filterwarnings('ignore', module=r'.*fuzzywuzzy.*')
 warnings.filterwarnings('ignore', module=r'.*ssl_.*', message='.*SSLContext object.*')
 warnings.filterwarnings('ignore', module=r'.*zoneinfo.*', message='.*file or directory.*')
-warnings.filterwarnings('ignore', module=r'.*bs4_parser.*', message='.*No parser was explicitly specified.*')
 
-if not (2, 7, 9) <= sys.version_info < (3, 0):
+versions = [((2, 7, 9), (2, 7, 18)), ((3, 7, 1), (3, 8, 1))]  # inclusive version ranges
+if not any(list(map(lambda v: v[0] <= sys.version_info[:3] <= v[1], versions))) and not int(os.environ.get('PYT', 0)):
     print('Python %s.%s.%s detected.' % sys.version_info[:3])
-    print('Sorry, SickGear requires Python 2.7.9 or higher. Python 3 is not supported.')
+    print('Sorry, SickGear requires a Python version %s' % ', '.join(map(
+        lambda r: '%s - %s' % tuple(map(lambda v: str(v).replace(',', '.')[1:-1], r)), versions)))
     sys.exit(1)
 
 try:
+    try:
+        py_cache_path = os.path.normpath(os.path.join(os.path.dirname(__file__), '__pycache__'))
+        for pf in ['_cleaner.pyc', '_cleaner.pyo']:
+            cleaner_file = os.path.normpath(os.path.join(os.path.normpath(os.path.dirname(__file__)), pf))
+            if os.path.isfile(cleaner_file):
+                os.remove(cleaner_file)
+        if os.path.isdir(py_cache_path):
+            shutil.rmtree(py_cache_path)
+    except (BaseException, Exception):
+        pass
     import _cleaner
-except (StandardError, Exception):
+except (BaseException, Exception):
     pass
 
 try:
@@ -57,32 +70,34 @@ try:
 except ValueError:
     print('Sorry, requires Python module Cheetah 2.1.0 or newer.')
     sys.exit(1)
-except (StandardError, Exception):
+except (BaseException, Exception):
     print('The Python module Cheetah is required')
     sys.exit(1)
 
+# Compatibility fixes for Windows
+if 'win32' == sys.platform:
+    codecs.register(lambda name: codecs.lookup('utf-8') if name == 'cp65001' else None)
+
+# We only need this for compiling an EXE
+from multiprocessing import freeze_support
+
 sys.path.insert(1, os.path.abspath(os.path.join(os.path.dirname(__file__), 'lib')))
-from lib.six import moves
 
-# We only need this for compiling an EXE and I will just always do that on 2.6+
-if sys.hexversion >= 0x020600F0:
-    from multiprocessing import freeze_support  # @UnresolvedImport
-
+from configobj import ConfigObj
+from exceptions_helper import ex
 import sickbeard
-from sickbeard import db, logger, network_timezones, failed_history, name_cache
+from sickbeard import db, failed_history, logger, name_cache, network_timezones
+from sickbeard.event_queue import Events
 from sickbeard.tv import TVShow
 from sickbeard.webserveInit import WebServer
-from sickbeard.event_queue import Events
-from sickbeard.exceptions import ex
-from lib.configobj import ConfigObj
+
+from six import moves, PY2
 
 throwaway = datetime.datetime.strptime('20110101', '%Y%m%d')
 rollback_loaded = None
 
-signal.signal(signal.SIGINT, sickbeard.sig_handler)
-signal.signal(signal.SIGTERM, sickbeard.sig_handler)
-if 'win32' == sys.platform:
-    signal.signal(signal.SIGBREAK, sickbeard.sig_handler)
+for signal_type in [signal.SIGTERM, signal.SIGINT] + ([] if 'win32' != sys.platform else [signal.SIGBREAK]):
+    signal.signal(signal_type, lambda signum, void: sickbeard.sig_handler(signum=signum, _=void))
 
 
 class SickGear(object):
@@ -167,7 +182,7 @@ class SickGear(object):
                 rc.run(max_v)
             else:
                 print(u'ERROR: Could not download Rollback Module.')
-        except (StandardError, Exception):
+        except (BaseException, Exception):
             pass
 
     def start(self):
@@ -195,17 +210,19 @@ class SickGear(object):
         if not hasattr(sys, 'setdefaultencoding'):
             moves.reload_module(sys)
 
-        try:
-            # pylint: disable=E1101
-            # On non-unicode builds this raises an AttributeError, if encoding type is not valid it throws a LookupError
-            sys.setdefaultencoding(sickbeard.SYS_ENCODING)
-        except (StandardError, Exception):
-            print('Sorry, you MUST add the SickGear folder to the PYTHONPATH environment variable')
-            print('or find another way to force Python to use %s for string encoding.' % sickbeard.SYS_ENCODING)
-            sys.exit(1)
+        if PY2:
+            try:
+                # On non-unicode builds this raises an AttributeError,
+                # if encoding type is not valid it throws a LookupError
+                # noinspection PyUnresolvedReferences
+                sys.setdefaultencoding(sickbeard.SYS_ENCODING)
+            except (BaseException, Exception):
+                print('Sorry, you MUST add the SickGear folder to the PYTHONPATH environment variable')
+                print('or find another way to force Python to use %s for string encoding.' % sickbeard.SYS_ENCODING)
+                sys.exit(1)
 
         # Need console logging for sickgear.py and SickBeard-console.exe
-        self.console_logging = (not hasattr(sys, 'frozen')) or (sickbeard.MY_NAME.lower().find('-console') > 0)
+        self.console_logging = (not hasattr(sys, 'frozen')) or (0 < sickbeard.MY_NAME.lower().find('-console'))
 
         # Rename the main thread
         threading.currentThread().name = 'MAIN'
@@ -213,7 +230,7 @@ class SickGear(object):
         try:
             opts, args = getopt.getopt(sys.argv[1:], 'hfqdsp::',
                                        ['help', 'forceupdate', 'quiet', 'nolaunch', 'daemon', 'systemd', 'pidfile=',
-                                        'port=', 'datadir=', 'config=', 'noresize'])  # @UnusedVariable
+                                        'port=', 'datadir=', 'config=', 'noresize'])
         except getopt.GetoptError:
             sys.exit(self.help_message())
 
@@ -330,14 +347,14 @@ class SickGear(object):
         sickbeard.CFG = ConfigObj(sickbeard.CONFIG_FILE)
         try:
             stack_size = int(sickbeard.CFG['General']['stack_size'])
-        except (StandardError, Exception):
+        except (BaseException, Exception):
             stack_size = None
 
         if stack_size:
             try:
                 threading.stack_size(stack_size)
-            except (StandardError, Exception) as er:
-                print('Stack Size %s not set: %s' % (stack_size, er.message))
+            except (BaseException, Exception) as er:
+                print('Stack Size %s not set: %s' % (stack_size, ex(er)))
 
         if self.run_as_daemon:
             self.daemonize()
@@ -361,7 +378,7 @@ class SickGear(object):
 
         # sickbeard.WEB_HOST is available as a configuration value in various
         # places but is not configurable. It is supported here for historic reasons.
-        if sickbeard.WEB_HOST and sickbeard.WEB_HOST != '0.0.0.0':
+        if sickbeard.WEB_HOST and '0.0.0.0' != sickbeard.WEB_HOST:
             self.webhost = sickbeard.WEB_HOST
         else:
             self.webhost = (('0.0.0.0', '::')[sickbeard.WEB_IPV6], '')[sickbeard.WEB_IPV64]
@@ -393,10 +410,12 @@ class SickGear(object):
             sickbeard.helpers.wait_for_free_port(
                 sickbeard.WEB_IPV6 and '::1' or self.web_options['host'], self.web_options['port'])
 
-            self.webserver = WebServer(self.web_options)
+            self.webserver = WebServer(options=self.web_options)
             self.webserver.start()
+            # wait for server thread to be started
+            self.webserver.wait_server_start()
             sickbeard.started = True
-        except (StandardError, Exception):
+        except (BaseException, Exception):
             logger.log(u'Unable to start web server, is something else running on port %d?' % self.start_port,
                        logger.ERROR)
             if self.run_as_systemd:
@@ -423,13 +442,13 @@ class SickGear(object):
 
             # handling of standalone TEST db versions
             load_msg = 'Downgrading %s to production version' % d
-            if cur_db_version >= 100000 and cur_db_version != max_v:
+            if 100000 <= cur_db_version != max_v:
                 sickbeard.classes.loading_msg.set_msg_progress(load_msg, 'Rollback')
                 print('Your [%s] database version (%s) is a test db version and doesn\'t match SickGear required '
                       'version (%s), downgrading to production db' % (d, cur_db_version, max_v))
                 self.execute_rollback(mo, max_v, load_msg)
                 cur_db_version = db.DBConnection(d).checkDBVersion()
-                if cur_db_version >= 100000:
+                if 100000 <= cur_db_version:
                     print(u'Rollback to production failed.')
                     sys.exit(u'If you have used other forks, your database may be unusable due to their changes')
                 if 100000 <= max_v and None is not base_v:
@@ -516,7 +535,7 @@ class SickGear(object):
         # Start an update if we're supposed to
         if self.force_update or sickbeard.UPDATE_SHOWS_ON_START:
             sickbeard.classes.loading_msg.message = 'Starting a forced show update'
-            sickbeard.showUpdateScheduler.action.run(force=True)  # @UndefinedVariable
+            sickbeard.showUpdateScheduler.action.run()
 
         sickbeard.classes.loading_msg.message = 'Switching to default web server'
         time.sleep(2)
@@ -537,14 +556,14 @@ class SickGear(object):
         # pylint: disable=E1101
         # Make a non-session-leader child process
         try:
-            pid = os.fork()  # @UndefinedVariable - only available in UNIX
-            if pid != 0:
+            pid = os.fork()  # only available in UNIX
+            if 0 != pid:
                 self.exit(0)
         except OSError as er:
             sys.stderr.write('fork #1 failed: %d (%s)\n' % (er.errno, er.strerror))
             sys.exit(1)
 
-        os.setsid()  # @UndefinedVariable - only available in UNIX
+        os.setsid()  # only available in UNIX
 
         # Make sure I can read my own files and shut out others
         prev = os.umask(0)
@@ -552,8 +571,8 @@ class SickGear(object):
 
         # Make the child a session-leader by detaching from the terminal
         try:
-            pid = os.fork()  # @UndefinedVariable - only available in UNIX
-            if pid != 0:
+            pid = os.fork()  # only available in UNIX
+            if 0 != pid:
                 self.exit(0)
         except OSError as er:
             sys.stderr.write('fork #2 failed: %d (%s)\n' % (er.errno, er.strerror))
@@ -564,8 +583,8 @@ class SickGear(object):
             pid = str(os.getpid())
             logger.log(u'Writing PID: %s to %s' % (pid, self.pid_file))
             try:
-                open(self.pid_file, 'w').write('%s\n' % pid)
-            except IOError as er:
+                os.fdopen(os.open(self.pid_file, os.O_CREAT | os.O_WRONLY, 0o644), 'w').write('%s\n' % pid)
+            except (BaseException, Exception) as er:
                 logger.log_error_and_exit('Unable to write PID file: %s Error: %s [%s]' % (
                     self.pid_file, er.strerror, er.errno))
 
@@ -601,17 +620,16 @@ class SickGear(object):
         logger.log(u'Loading initial show list')
 
         my_db = db.DBConnection()
-        sql_results = my_db.select('SELECT * FROM tv_shows')
+        sql_result = my_db.select('SELECT indexer AS tv_id, indexer_id AS prod_id, location FROM tv_shows')
 
         sickbeard.showList = []
-        for sqlShow in sql_results:
+        for cur_result in sql_result:
             try:
-                cur_show = TVShow(int(sqlShow['indexer']), int(sqlShow['indexer_id']))
-                cur_show.nextEpisode()
-                sickbeard.showList.append(cur_show)
-            except Exception as er:
+                show_obj = TVShow(int(cur_result['tv_id']), int(cur_result['prod_id']))
+                sickbeard.showList.append(show_obj)
+            except (BaseException, Exception) as err:
                 logger.log('There was an error creating the show in %s: %s' % (
-                    sqlShow['location'], str(er).decode('utf-8', 'replace')), logger.ERROR)
+                    cur_result['location'], ex(err)), logger.ERROR)
 
     @staticmethod
     def restore(src_dir, dst_dir):
@@ -625,7 +643,7 @@ class SickGear(object):
 
             os.rmdir(src_dir)
             return True
-        except (StandardError, Exception):
+        except (BaseException, Exception):
             return False
 
     def shutdown(self, ev_type):
@@ -642,7 +660,7 @@ class SickGear(object):
                 self.webserver.shut_down()
                 try:
                     self.webserver.join(10)
-                except (StandardError, Exception):
+                except (BaseException, Exception):
                     pass
 
             # if run as daemon delete the pidfile
@@ -677,12 +695,12 @@ class SickGear(object):
 
     @staticmethod
     def exit(code):
+        # noinspection PyProtectedMember
         os._exit(code)
 
 
-if __name__ == '__main__':
-    if sys.hexversion >= 0x020600F0:
-        freeze_support()
+if '__main__' == __name__:
+    freeze_support()
     try:
         try:
             # start SickGear
@@ -690,5 +708,7 @@ if __name__ == '__main__':
         except IOError as e:
             if e.errno != errno.EINTR:
                 raise
-    except Exception as e:
-        logger.log('SickGear.Start() exception caught %s' % ex(e))
+    except (BaseException, Exception) as e:
+        import traceback
+        print(traceback.format_exc())
+        logger.log('SickGear.Start() exception caught %s: %s' % (ex(e), traceback.format_exc()))

@@ -18,9 +18,9 @@
 
 import os
 import cgi
-import sickbeard
 
-from sickbeard.notifiers.generic import Notifier
+from .generic import Notifier
+import sickbeard
 
 
 def diagnose():

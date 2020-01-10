@@ -24,13 +24,17 @@ from ..videos import Episode, Movie
 import gzip
 import logging
 import os.path
-import xmlrpclib
+import lib.xmlrpclib_to as xmlrpclib
 
 
 logger = logging.getLogger("subliminal")
 
 
 class OpenSubtitles(ServiceBase):
+    # Defaults
+    username = ''
+    password = ''
+
     server_url = 'http://api.opensubtitles.org/xml-rpc'
     site_url = 'http://www.opensubtitles.org'
     api_based = True
@@ -82,19 +86,45 @@ class OpenSubtitles(ServiceBase):
     require_video = False
     confidence_order = ['moviehash', 'imdbid', 'fulltext']
 
-    def __init__(self, config=None):
+    def __init__(self, config=None, os_auth=None):
         super(OpenSubtitles, self).__init__(config)
-        self.server = xmlrpclib.ServerProxy(self.server_url)
+        self.server = None
         self.token = None
+        self.username = '' if not isinstance(os_auth, list) else os_auth[0]
+        self.password = '' if not isinstance(os_auth, list) else os_auth[1]
 
-    def init(self):
+    def init(self, fallback=False):
         super(OpenSubtitles, self).init()
-        result = self.server.LogIn('', '', 'eng', self.user_agent)
-        if result['status'] != '200 OK':
-            raise ServiceError('Login failed')
+
+        msg = 'Fallback to setting up OpenSubtitles service without login' if fallback else \
+              'Setting up OpenSubtitles service' + ('', ' using login')[all([self.username, self.password])]
+        logger.info(msg)
+
+        try:
+            self.server = xmlrpclib.ServerProxy(self.server_url, timeout=180)
+            result = self.server.LogIn(self.username, self.password, 'eng', self.user_agent)
+        except xmlrpclib.ProtocolError:
+            raise ServiceError('ProviderNotAvailable')
+
+        if result['status'].startswith('401'):
+            # Unauthorized login attempt
+            logger.warning('Failed to authenticate with OpenSubtitles')
+
+            # Reset and recursively try again
+            self.username = self.password = ''
+            return self.init(fallback=True)
+
+        if '200 OK' != result['status']:
+            raise ServiceError('Login/connection failed')
+
         self.token = result['token']
+        if not self.token:
+            raise ServiceError('Failed to acquire a token for OpenSubtitles')
 
     def terminate(self):
+        if None is self.server:
+            return
+
         super(OpenSubtitles, self).terminate()
         if self.token:
             try:
@@ -102,9 +132,12 @@ class OpenSubtitles(ServiceBase):
             except Exception as e:
                 raise ServiceError(str(e))
 
-
     def query(self, filepath, languages, moviehash=None, size=None, imdbid=None, query=None):
         searches = []
+
+        if None is self.server:
+            return searches
+
         if moviehash and size:
             searches.append({'moviehash': moviehash, 'moviebytesize': size})
         if imdbid:
@@ -133,17 +166,22 @@ class OpenSubtitles(ServiceBase):
     def list_checked(self, video, languages):
         results = []
         if video.exists:
-            results = self.query(video.path or video.release, languages, moviehash=video.hashes['OpenSubtitles'], size=str(video.size))
-        elif video.imdbid:
-            results = self.query(video.path or video.release, languages, imdbid=video.imdbid)
-        elif isinstance(video, Episode):
-            results = self.query(video.path or video.release, languages, query=video.series)
-        elif isinstance(video, Movie):
-            results = self.query(video.path or video.release, languages, query=video.title)
+            results = self.query(video.path or video.release, languages, moviehash=video.hashes['OpenSubtitles'],
+                                 size=str(video.size))
+        if not video.exists or not (getattr(self.config, 'enforce_hash') or results):
+            if video.imdbid:
+                results = self.query(video.path or video.release, languages, imdbid=video.imdbid)
+            elif isinstance(video, Episode):
+                results = self.query(video.path or video.release, languages, query=video.series)
+            elif isinstance(video, Movie):
+                results = self.query(video.path or video.release, languages, query=video.title)
         return results
 
     def download(self, subtitle):
-        #TODO: Use OpenSubtitles DownloadSubtitles method
+        if None is self.server:
+            raise ServiceError('Provider not initialized.')
+        
+        # TODO: Use OpenSubtitles DownloadSubtitles method
         try:
             self.download_file(subtitle.link, subtitle.path + '.gz')
             with open(subtitle.path, 'wb') as dump:

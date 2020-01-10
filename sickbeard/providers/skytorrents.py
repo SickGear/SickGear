@@ -19,10 +19,12 @@ import re
 import traceback
 
 from . import generic
-from sickbeard import logger
-from sickbeard.bs4_parser import BS4Parser
-from sickbeard.helpers import tryInt
-from lib.unidecode import unidecode
+from .. import logger
+from ..helpers import try_int
+from bs4_parser import BS4Parser
+
+from _23 import unidecode
+from six import iteritems
 
 
 class SkytorrentsProvider(generic.TorrentProvider):
@@ -39,27 +41,42 @@ class SkytorrentsProvider(generic.TorrentProvider):
         self.minseed, self.minleech = 2 * [None]
 
     def _search_provider(self, search_params, **kwargs):
+        results = []
+        self.session.headers['Cache-Control'] = 'max-age=0'
+        last_recent_search = self.last_recent_search
+        last_recent_search = '' if not last_recent_search else last_recent_search.replace('id-', '')
+        for mode in search_params:
+            urls = []
+            for search_string in search_params[mode]:
+                urls += [[]]
+                search_string = unidecode(search_string)
+                search_string = search_string if 'Cache' == mode else search_string.replace('.', ' ')
+                for page in range((3, 5)['Cache' == mode])[1:]:
+                    urls[-1] += [self.urls['search'] % (search_string, page)]
+            results += self._search_urls(mode, last_recent_search, urls)
+            last_recent_search = ''
+
+        return results
+
+    def _search_urls(self, mode, last_recent_search, urls):
 
         results = []
 
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
-        rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {
-            'info': r'(^(info|torrent)/|/[\w+]{40,}\s*$)', 'get': '^magnet:'}.items())
+        rc = dict([(k, re.compile('(?i)' + v)) for (k, v) in iteritems({
+            'info': r'(^(info|torrent)/|/[\w+]{40,}\s*$)', 'get': '^magnet:.*?btih:([^&]+)'})])
 
-        for mode in search_params.keys():
-            for search_string in search_params[mode]:
-                search_string = isinstance(search_string, unicode) and unidecode(search_string) or search_string
-
-                if 'Cache' == mode:
-                    search_url = self.urls['search'] % tuple(search_string.split(','))
-                else:
-                    search_url = self.urls['search'] % (search_string.replace('.', ' '), '')
+        lrs_found = False
+        lrs_new = True
+        for search_urls in urls:  # this intentionally iterates once to preserve indentation
+            for search_url in search_urls:
                 html = self.get_url(search_url)
                 if self.should_skip():
                     return results
 
                 cnt = len(items[mode])
+                cnt_search = 0
                 try:
                     if not html or self._has_no_results(html):
                         raise generic.HaltParseException
@@ -76,19 +93,26 @@ class SkytorrentsProvider(generic.TorrentProvider):
                             cells = tr.find_all('td')
                             if 5 > len(cells):
                                 continue
+                            cnt_search += 1
                             try:
                                 head = head if None is not head else self._header_row(tr)
-                                seeders, leechers, size = [tryInt(n, n) for n in [
-                                    cells[head[x]].get_text().strip() for x in 'seed', 'leech', 'size']]
+                                seeders, leechers, size = [try_int(n, n) for n in [
+                                    cells[head[x]].get_text().strip() for x in ('seed', 'leech', 'size')]]
                                 if self._reject_item(seeders, leechers):
                                     continue
+
+                                dl = tr.find('a', href=rc['get'])['href']
+                                dl_id = rc['get'].findall(dl)[0]
+                                lrs_found = dl_id == last_recent_search
+                                if lrs_found:
+                                    break
 
                                 info = tr.select_one(
                                     '[alt*="magnet"], [title*="magnet"]') \
                                     or tr.find('a', href=rc['info'])
                                 title = re.sub(r'(^www\.\w+\.\w{3}\s[^0-9A-Za-z]\s|\s(using|use|magnet|link))', '', (
                                         info.attrs.get('title') or info.attrs.get('alt'))).strip()
-                                download_url = self._link(tr.find('a', href=rc['get'])['href'])
+                                download_url = self._link(dl)
                             except (AttributeError, TypeError, ValueError, KeyError):
                                 continue
 
@@ -102,13 +126,27 @@ class SkytorrentsProvider(generic.TorrentProvider):
 
                 self._log_search(mode, len(items[mode]) - cnt, search_url)
 
+                if self.is_search_finished(mode, items, cnt_search, rc['get'], last_recent_search, lrs_new, lrs_found):
+                    break
+                lrs_new = False
+
             results = self._sort_seeding(mode, results + items[mode])
 
         return results
 
     def _cache_data(self, **kwargs):
+        result_1 = self._search_provider({'Cache': ['x264']})
+        lrs_1 = self.last_recent_search
 
-        return self._search_provider({'Cache': ['x264,', 'x264,2', 'x264,3', 'x264,4', 'x264,5']})
+        self.last_recent_search = None
+        name_1 = self.name
+        self.name += '2'
+        result_2 = self._search_provider({'Cache': ['x265']})
+
+        self.name = name_1
+        self.last_recent_search = lrs_1
+
+        return result_1 + result_2
 
 
 provider = SkytorrentsProvider()

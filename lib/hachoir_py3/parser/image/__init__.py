@@ -1,0 +1,12 @@
+from hachoir_py3.parser.image.bmp import BmpFile  # noqa
+from hachoir_py3.parser.image.gif import GifFile  # noqa
+from hachoir_py3.parser.image.ico import IcoFile  # noqa
+from hachoir_py3.parser.image.jpeg import JpegFile  # noqa
+from hachoir_py3.parser.image.pcx import PcxFile  # noqa
+from hachoir_py3.parser.image.psd import PsdFile  # noqa
+from hachoir_py3.parser.image.png import PngFile  # noqa
+from hachoir_py3.parser.image.tga import TargaFile  # noqa
+from hachoir_py3.parser.image.tiff import TiffFile  # noqa
+from hachoir_py3.parser.image.wmf import WMF_File  # noqa
+from hachoir_py3.parser.image.xcf import XcfFile  # noqa
+from hachoir_py3.parser.image.cr2 import CR2File  # noqa

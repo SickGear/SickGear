@@ -14,7 +14,7 @@
 							<h4 style="margin:0 41px 6px 0">Whitelist<br /><span class="grey-text">Only snatch releases by group(s)</span></h4>
 							<div style="width:243px; height:110px">
 								<select style="width:202px" class="pull-left" id="white" multiple="multiple" size="12">
-#for $keyword in sorted($whitelist):
+#for $keyword in sorted($whitelist, key=lambda x: x.lower()):
 									<option value="$keyword">$keyword</option>
 #end for
 								</select>
@@ -29,7 +29,7 @@
 							<h4 style="margin:0 41px 6px 0">Blacklist<br /><span class="grey-text">Ignore releases by group(s)</span></h4>
 							<div style="width:243px; height:110px">
 								<select style="width:202px" class="pull-left" id="black" multiple="multiple" size="12">
-#for $keyword in sorted($blacklist):
+#for $keyword in sorted($blacklist, key=lambda x: x.lower()):
 									<option value="$keyword">$keyword</option>
 #end for
 								</select>
@@ -43,8 +43,8 @@
 					<div class="blackwhitelist pool">
 						<h4 style="margin:0 0 6px 0">Available groups<br /><span class="grey-text">Name (Rating) Number of subbed episodes</span></h4>
 						<select id="pool" multiple="multiple" size="12">
-#for $group in sorted($groups)
-	#if $group not in $whitelist and $group['name'] not in $blacklist:
+#for $group in sorted($groups, key=lambda x: x['name'].lower())
+	#if $group['name'] not in $whitelist and $group['name'] not in $blacklist:
 							<option value="$group['name']">$group['name'] ($group['rating']) $group['range']</option>
 	#end if
 #end for

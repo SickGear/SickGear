@@ -21,10 +21,12 @@ import re
 import traceback
 
 from . import generic
-from sickbeard import logger
-from sickbeard.bs4_parser import BS4Parser
-from sickbeard.helpers import tryInt
-from lib.unidecode import unidecode
+from .. import logger
+from ..helpers import try_int
+from bs4_parser import BS4Parser
+
+from _23 import unidecode
+from six import iteritems
 
 
 class HDSpaceProvider(generic.TorrentProvider):
@@ -61,8 +63,8 @@ class HDSpaceProvider(generic.TorrentProvider):
 
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
-        rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {
-            'info': 'torrent-details', 'get': 'download', 'peers': 'page=peers', 'nodots': r'[\.\s]+'}.items())
+        rc = dict([(k, re.compile('(?i)' + v)) for (k, v) in iteritems({
+            'info': 'torrent-details', 'get': 'download', 'peers': 'page=peers', 'nodots': r'[\.\s]+'})])
         log = ''
         if self.filter:
             non_marked = 'f0' in self.filter
@@ -72,9 +74,9 @@ class HDSpaceProvider(generic.TorrentProvider):
             rc['filter'] = re.compile('(?i)(%s).png' % '|'.join(
                 [self.may_filter[f][2] for f in filters if self.may_filter[f][1]]))
             log = '%sing (%s) ' % (('keep', 'skipp')[non_marked], ', '.join([self.may_filter[f][0] for f in filters]))
-        for mode in search_params.keys():
+        for mode in search_params:
             for search_string in search_params[mode]:
-                search_string = isinstance(search_string, unicode) and unidecode(search_string) or search_string
+                search_string = unidecode(search_string)
 
                 search_url = self.urls['browse'] + self._categories_string(template='', delimiter=';')
                 if 'Cache' != mode:
@@ -110,7 +112,7 @@ class HDSpaceProvider(generic.TorrentProvider):
                                 continue
                             try:
                                 head = head if None is not head else self._header_row(tr)
-                                seeders, leechers = [tryInt(x.get_text().strip())
+                                seeders, leechers = [try_int(x.get_text().strip())
                                                      for x in tr.find_all('a', href=rc['peers'])]
                                 if self._reject_item(seeders, leechers):
                                     continue

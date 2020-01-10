@@ -15,16 +15,16 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
-import base64
 import re
 import traceback
-import urllib
 
 from . import generic
-from sickbeard import logger
-from sickbeard.bs4_parser import BS4Parser
-from sickbeard.helpers import tryInt
-from lib.unidecode import unidecode
+from .. import logger
+from ..helpers import try_int
+from bs4_parser import BS4Parser
+
+from _23 import b64decodestring, quote_plus, unidecode
+from six import iteritems
 
 
 class TorLockProvider(generic.TorrentProvider):
@@ -33,7 +33,7 @@ class TorLockProvider(generic.TorrentProvider):
         generic.TorrentProvider.__init__(self, 'TorLock')
 
         self.url_home = ['https://www.torlock.com/'] + \
-                        ['https://%s/' % base64.b64decode(x) for x in [''.join(x) for x in [
+                        ['https://%s/' % b64decodestring(x) for x in [''.join(x) for x in [
                             [re.sub(r'[g\sF]+', '', x[::-1]) for x in [
                                 'y9FFGd', 'j9FgGb', '15 Fya', 'sF Jmb', 'rN 2Fb', 'uQW FZ', '0Vmg Y']],
                             [re.sub(r'[O\si]+', '', x[::-1]) for x in [
@@ -60,16 +60,16 @@ class TorLockProvider(generic.TorrentProvider):
 
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
-        rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {
-            'info': r'torrent.?(\d+)', 'versrc': r'ver\.', 'verified': 'Verified'}.iteritems())
+        rc = dict([(k, re.compile('(?i)' + v)) for (k, v) in iteritems({
+            'info': r'torrent.?(\d+)', 'versrc': r'ver\.', 'verified': 'Verified'})])
 
-        for mode in search_params.keys():
+        for mode in search_params:
             for search_string in search_params[mode]:
 
-                search_string = isinstance(search_string, unicode) and unidecode(search_string) or search_string
+                search_string = unidecode(search_string)
 
                 search_url = self.urls['browse'] if 'Cache' == mode \
-                    else self.urls['search'] % (urllib.quote_plus(search_string).replace('+', '-'))
+                    else self.urls['search'] % (quote_plus(search_string).replace('+', '-'))
 
                 html = self.get_url(search_url)
                 if self.should_skip():
@@ -99,15 +99,15 @@ class TorLockProvider(generic.TorrentProvider):
                                 continue
                             try:
                                 head = head if None is not head else self._header_row(tr)
-                                seeders, leechers, size = [tryInt(n, n) for n in [
-                                    cells[head[x]].get_text().strip() for x in 'seed', 'leech', 'size']]
+                                seeders, leechers, size = [try_int(n, n) for n in [
+                                    cells[head[x]].get_text().strip() for x in ('seed', 'leech', 'size')]]
                                 if self._reject_item(seeders, leechers, verified=self.confirmed and not (
                                         tr.find('img', src=rc['versrc']) or tr.find('img', title=rc['verified']))):
                                     continue
 
                                 info = tr.find('a', href=rc['info']) or {}
                                 title = info and info.get_text().strip()
-                                tid_href = info and tryInt(rc['info'].findall(info['href'])[0])
+                                tid_href = info and try_int(rc['info'].findall(info['href'])[0])
                                 download_url = tid_href and self._link(tid_href)
                             except (AttributeError, TypeError, ValueError, IndexError):
                                 continue

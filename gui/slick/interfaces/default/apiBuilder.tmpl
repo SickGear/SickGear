@@ -34,6 +34,12 @@ addListGroup("api", "Command");
 addOption("Command", "SickGear", "?cmd=sg", 1); //make default
 addOption("Command", "SickBeard", "?cmd=sb");
 addOption("Command", "List Commands", "?cmd=listcommands");
+addList("Command", "Help", "?cmd=help", "sg.functions-list", "","", "action");
+#from sickbeard.webapi import _functionMaper
+#from six import iterkeys
+#for $k in sorted(iterkeys(_functionMaper), key=lambda x: x.replace('sg.', '').replace('sb.', ''))
+addOption("sg.functions-list", "$k", "&subject=$k")
+#end for
 addList("Command", "SickBeard.AddRootDir", "?cmd=sb.addrootdir", "sb.addrootdir", "", "", "action");
 addList("Command", "SickGear.AddRootDir", "?cmd=sg.addrootdir", "sb.addrootdir", "", "", "action");
 addOption("Command", "SickBeard.CheckScheduler", "?cmd=sb.checkscheduler", "", "", "action");
@@ -53,7 +59,7 @@ addList("Command", "SickGear.GetIndexers", "?cmd=sg.getindexers", "listindexers"
 addList("Command", "SickGear.GetIndexerIcon", "?cmd=sg.getindexericon", "getindexericon", "", "action");
 addList("Command", "SickGear.GetNetworkIcon", "?cmd=sg.getnetworkicon", "getnetworkicon", "", "action");
 addOption("Command", "SickBeard.GetRootDirs", "?cmd=sb.getrootdirs", "", "", "action");
-addOption("Command", "SickGar.GetRootDirs", "?cmd=sg.getrootdirs", "", "", "action");
+addOption("Command", "SickGear.GetRootDirs", "?cmd=sg.getrootdirs", "", "", "action");
 addList("Command", "SickBeard.PauseBacklog", "?cmd=sb.pausebacklog", "sb.pausebacklog", "", "", "action");
 addList("Command", "SickGear.PauseBacklog", "?cmd=sg.pausebacklog", "sb.pausebacklog", "", "", "action");
 addOption("Command", "SickBeard.Ping", "?cmd=sb.ping", "", "", "action");
@@ -63,7 +69,9 @@ addOption("Command", "SickGear.Restart", "?cmd=sg.restart", "", "", "action");
 addList("Command", "SickBeard.SearchTVDB", "?cmd=sb.searchtvdb", "sb.searchtvdb", "", "", "action");
 addList("Command", "SickGear.SearchTV", "?cmd=sg.searchtv", "sg.searchtv", "", "", "action");
 addList("Command", "SickBeard.SetDefaults", "?cmd=sb.setdefaults", "sb.setdefaults", "", "", "action");
+addList("Command", "SickGear.SetDefaults", "?cmd=sg.setdefaults", "sb.setdefaults", "", "", "action");
 addOption("Command", "SickBeard.Shutdown", "?cmd=sb.shutdown", "", "", "action");
+addOption("Command", "SickGear.Shutdown", "?cmd=sg.shutdown", "", "", "action");
 addList("Command", "SickGear.ListIgnoreWords", "?cmd=sg.listignorewords", "listignorewords", "", "action");
 addList("Command", "SickGear.SetIgnoreWords", "?cmd=sg.setignorewords", "setwords", "", "action");
 addList("Command", "SickGear.ListRequiredWords", "?cmd=sg.listrequiredwords", "listrequiredwords", "", "action");
@@ -101,7 +109,7 @@ addList("Command", "SickGear.Show.AddNew", "?cmd=sg.show.addnew", "sg.show.addne
 addList("Command", "Show.Cache", "?cmd=show.cache", "indexerid", "", "", "action");
 addList("Command", "SickGear.Show.Cache", "?cmd=sg.show.cache", "sg.indexerid", "", "", "action");
 addList("Command", "Show.Delete", "?cmd=show.delete", "indexerid", "", "", "action");
-addList("Command", "SickGear.Show.Delete", "?cmd=sg.show.delete", "sg.indexerid", "", "", "action");
+addList("Command", "SickGear.Show.Delete", "?cmd=sg.show.delete", "show-delete", "", "", "action");
 addList("Command", "Show.GetBanner", "?cmd=show.getbanner", "indexerid", "", "", "action");
 addList("Command", "SickGear.Show.GetBanner", "?cmd=sg.show.getbanner", "sg.indexerid", "", "", "action");
 addList("Command", "SickGear.Show.ListFanart", "?cmd=sg.show.listfanart", "sg.indexerid", "", "", "action");
@@ -163,24 +171,24 @@ addOption("getnetworkicon", "Crime & Investigation Network", "&network=crime%20%
 addList("getindexericon", "$indexers[$i]", "&indexer=$i", "");
 #end for
 
-#for $curShow in $sortedShowList:
-addList("activatescenenumber", "$curShow.name", "&indexerid=$curShow.indexerid&indexer=$curShow.indexer", "scenenumber-active");
+#for $cur_show_obj in $sortedShowList:
+addList("activatescenenumber", "$cur_show_obj.name", "&indexerid=$cur_show_obj.prodid&indexer=$cur_show_obj.tvid", "scenenumber-active");
 #end for
 addOption("scenenumber-active", "Activate", "&activate=1");
 addOption("scenenumber-active", "Deactivate", "&activate=0");
 
-#for $curShow in $sortedShowList:
-addList("setscenenumber", "$curShow.name", "&indexerid=$curShow.indexerid&indexer=$curShow.indexer", "setscene-fseason");
+#for $cur_show_obj in $sortedShowList:
+addList("setscenenumber", "$cur_show_obj.name", "&indexerid=$cur_show_obj.prodid&indexer=$cur_show_obj.tvid", "setscene-fseason");
 #end for
 
 addOption("listignorewords", "Optional Param", "", 1);
-#for $curShow in $sortedShowList:
-addOption("listignorewords", "$curShow.name", "&indexerid=$curShow.indexerid&indexer=$curShow.indexer");
+#for $cur_show_obj in $sortedShowList:
+addOption("listignorewords", "$cur_show_obj.name", "&indexerid=$cur_show_obj.prodid&indexer=$cur_show_obj.tvid");
 #end for
 
 addList("setwords", "Optional Param", "", "addwords");
-#for $curShow in $sortedShowList:
-addList("setwords", "$curShow.name", "&indexerid=$curShow.indexerid&indexer=$curShow.indexer", "addwords");
+#for $cur_show_obj in $sortedShowList:
+addList("setwords", "$cur_show_obj.name", "&indexerid=$cur_show_obj.prodid&indexer=$cur_show_obj.tvid", "addwords");
 #end for
 
 addList("addwords", "Optional Param", "", "removewords");
@@ -197,8 +205,8 @@ addOption("useregex", "as Regex", "&regex=1");
 addOption("useregex", "as Words", "&regex=0");
 
 addOption("listrequiredwords", "Optional Param", "", 1);
-#for $curShow in $sortedShowList:
-addOption("listrequiredwords", "$curShow.name", "&indexerid=$curShow.indexerid&indexer=$curShow.indexer");
+#for $cur_show_obj in $sortedShowList:
+addOption("listrequiredwords", "$cur_show_obj.name", "&indexerid=$cur_show_obj.prodid&indexer=$cur_show_obj.tvid");
 #end for
 
 addList("setscene-fseason", "forSeason", "", "setscene-fepisode", 1);
@@ -218,12 +226,12 @@ addList("setscene-absolute", "$c", "&sceneAbsolute=$c", "");
 #end for
 
 // addOption("indexerid", "Optional Param", "", 1);
-#for $curShow in $sortedShowList:
-addOption("indexerid", "$curShow.name", "&indexerid=$curShow.indexerid");
+#for $cur_show_obj in $sortedShowList:
+addOption("indexerid", "$cur_show_obj.name", "&indexerid=$cur_show_obj.prodid");
 #end for
 
-#for $curShow in $sortedShowList:
-addOption("sg.indexerid", "$curShow.name", "&indexer=$curShow.indexer&indexerid=$curShow.indexerid");
+#for $cur_show_obj in $sortedShowList:
+addOption("sg.indexerid", "$cur_show_obj.name", "&indexer=$cur_show_obj.tvid&indexerid=$cur_show_obj.prodid");
 #end for
 
 addOption("logs", "Optional Param", "", 1);
@@ -241,8 +249,8 @@ addOption("postprocess", "process_method", "&process_method=copy");
 addOption("postprocess", "type", "&type=manual")
 
 addOption("sb.setdefaults", "Optional Param", "", 1);
-addList("sb.setdefaults", "Exclude Paused Shows on EpisodeView", "&future_show_paused=0", "sb.setdefaults-status");
-addList("sb.setdefaults", "Include Paused Shows on EpisodeView", "&future_show_paused=1", "sb.setdefaults-status");
+addList("sb.setdefaults", "Exclude Paused Shows on Daily Schedule", "&future_show_paused=0", "sb.setdefaults-status");
+addList("sb.setdefaults", "Include Paused Shows on Daily Schedule", "&future_show_paused=1", "sb.setdefaults-status");
 
 addOption("sb.setdefaults-status", "Optional Param", "", 1);
 addList("sb.setdefaults-status", "Wanted", "&status=wanted", "sb.setdefaults-opt");
@@ -332,31 +340,31 @@ addOption("indexertosearch", "All Indexers", "&indexers=-1");
 addOption("indexertosearch", "$searchindexers[$i]", "&indexers=$i");
 #end for
 
-#for $curShow in $sortedShowList:
-addList("seasons", "$curShow.name", "&indexerid=$curShow.indexerid", "seasons-$curShow.indexerid");
+#for $cur_show_obj in $sortedShowList:
+addList("seasons", "$cur_show_obj.name", "&indexerid=$cur_show_obj.prodid", "seasons-$cur_show_obj.tvid_prodid");
 #end for
 
-#for $curShow in $sortedShowList:
-addList("sg.seasons", "$curShow.name", "&indexer=$curShow.indexer&indexerid=$curShow.indexerid", "seasons-$curShow.indexerid");
+#for $cur_show_obj in $sortedShowList:
+addList("sg.seasons", "$cur_show_obj.name", "&indexer=$cur_show_obj.tvid&indexerid=$cur_show_obj.prodid", "seasons-$cur_show_obj.tvid_prodid");
 #end for
 
-#for $curShow in $sortedShowList:
-addList("show.seasonlist", "$curShow.name", "&indexerid=$curShow.indexerid", "show.seasonlist-sort");
+#for $cur_show_obj in $sortedShowList:
+addList("show.seasonlist", "$cur_show_obj.name", "&indexerid=$cur_show_obj.prodid", "show.seasonlist-sort");
 #end for
 
-#for $curShow in $sortedShowList:
-addList("sg.show.seasonlist", "$curShow.name", "&indexer=$curShow.indexer&indexerid=$curShow.indexerid", "show.seasonlist-sort");
+#for $cur_show_obj in $sortedShowList:
+addList("sg.show.seasonlist", "$cur_show_obj.name", "&indexer=$cur_show_obj.tvid&indexerid=$cur_show_obj.prodid", "show.seasonlist-sort");
 #end for
 
 addOption("show.seasonlist-sort", "Optional Param", "", 1);
 addOption("show.seasonlist-sort", "Sort by Ascending", "&sort=asc");
 
-#for $curShow in $sortedShowList:
-addList("show.setquality", "$curShow.name", "&indexerid=$curShow.indexerid", "quality");
+#for $cur_show_obj in $sortedShowList:
+addList("show.setquality", "$cur_show_obj.name", "&indexerid=$cur_show_obj.prodid", "quality");
 #end for
 
-#for $curShow in $sortedShowList:
-addList("sg.show.setquality", "$curShow.name", "&indexer=$curShow.indexer&indexerid=$curShow.indexerid", "quality");
+#for $cur_show_obj in $sortedShowList:
+addList("sg.show.setquality", "$cur_show_obj.name", "&indexer=$cur_show_obj.tvid&indexerid=$cur_show_obj.prodid", "quality");
 #end for
 
 //build out generic quality options
@@ -401,55 +409,55 @@ addList("quality-archive", "720p Web-DL/720p BluRay", "&archive=hdwebdl|hdbluray
 endOptGroup("quality-archive");
 
 // build out each show's season list for season cmd
-#for $curShow in $seasonSQLResults:
-addOption("seasons-$curShow", "Optional Param", "", 1);
-    #for $curShowSeason in $seasonSQLResults[$curShow]:
-addOption("seasons-$curShow", "$curShowSeason.season", "&season=$curShowSeason.season");
+#for $tvid_prodid in $seasonSQLResults:
+addOption("seasons-$tvid_prodid", "Optional Param", "", 1);
+    #for $sql_result in $seasonSQLResults[$tvid_prodid]:
+addOption("seasons-$tvid_prodid", "$sql_result.season", "&season=$sql_result.season");
     #end for
 #end for
 
-#for $curShow in $sortedShowList:
-addList("sg.episode", "$curShow.name", "&indexer=$curShow.indexer&indexerid=$curShow.indexerid", "episode-$curShow.indexerid");
+#for $cur_show_obj in $sortedShowList:
+addList("sg.episode", "$cur_show_obj.name", "&indexer=$cur_show_obj.tvid&indexerid=$cur_show_obj.prodid", "episode-$cur_show_obj.tvid_prodid");
 #end for
 
-#for $curShow in $sortedShowList:
-addList("episode", "$curShow.name", "&indexerid=$curShow.indexerid", "episode-$curShow.indexerid");
+#for $cur_show_obj in $sortedShowList:
+addList("episode", "$cur_show_obj.name", "&indexerid=$cur_show_obj.prodid", "episode-$cur_show_obj.tvid_prodid");
 #end for
 
 // build out each show's season+episode list for episode cmd
-#for $curShow in $episodeSQLResults:
-    #for $curShowSeason in $episodeSQLResults[$curShow]:
-addList("episode-$curShow", "$curShowSeason.season x $curShowSeason.episode", "&season=$curShowSeason.season&episode=$curShowSeason.episode", "episode-full");
+#for $tvid_prodid in $episodeSQLResults:
+    #for $sql_result in $episodeSQLResults[$tvid_prodid]:
+addList("episode-$tvid_prodid", "$sql_result.season x $sql_result.episode", "&season=$sql_result.season&episode=$sql_result.episode", "episode-full");
     #end for
 #end for
 addOption("episode-full", "Optional Param", "", 1);
 addOption("episode-full", "Show Full Path", "&full_path=1");
 
 // build out tvshow list for sg.episode.search
-#for $curShow in $sortedShowList:
-addList("sg.episode.search", "$curShow.name", "&indexer=$curShow.indexer&indexerid=$curShow.indexerid", "episode.search-$curShow.indexerid");
+#for $cur_show_obj in $sortedShowList:
+addList("sg.episode.search", "$cur_show_obj.name", "&indexer=$cur_show_obj.tvid&indexerid=$cur_show_obj.prodid", "episode.search-$cur_show_obj.tvid_prodid");
 #end for
 
 // build out tvshow list for episode.search
-#for $curShow in $sortedShowList:
-addList("episode.search", "$curShow.name", "&indexerid=$curShow.indexerid", "episode.search-$curShow.indexerid");
+#for $cur_show_obj in $sortedShowList:
+addList("episode.search", "$cur_show_obj.name", "&indexerid=$cur_show_obj.prodid", "episode.search-$cur_show_obj.tvid_prodid");
 #end for
 
 // build out each show's season+episode list for episode.search cmd
-#for $curShow in $episodeSQLResults:
-    #for $curShowSeason in $episodeSQLResults[$curShow]:
-addOption("episode.search-$curShow", "$curShowSeason.season x $curShowSeason.episode", "&season=$curShowSeason.season&episode=$curShowSeason.episode");
+#for $tvid_prodid in $episodeSQLResults:
+    #for $sql_result in $episodeSQLResults[$tvid_prodid]:
+addOption("episode.search-$tvid_prodid", "$sql_result.season x $sql_result.episode", "&season=$sql_result.season&episode=$sql_result.episode");
     #end for
 #end for
 
 // build out tvshow list for sg.episode.setstatus
-#for $curShow in $sortedShowList:
-addList("sg.episode.setstatus", "$curShow.name", "&indexer=$curShow.indexer&indexerid=$curShow.indexerid", "sg.episode.setstatus-$curShow.indexerid");
+#for $cur_show_obj in $sortedShowList:
+addList("sg.episode.setstatus", "$cur_show_obj.name", "&indexer=$cur_show_obj.tvid&indexerid=$cur_show_obj.prodid", "sg.episode.setstatus-$cur_show_obj.tvid_prodid");
 #end for
 
-#for $curShow in $episodeSQLResults:
-    #for $curShowSeason in $episodeSQLResults[$curShow]:
-addList("sg.episode.setstatus-$curShow", "$curShowSeason.season x $curShowSeason.episode", "&season=$curShowSeason.season&episode=$curShowSeason.episode", "sg.episode-status");
+#for $tvid_prodid in $episodeSQLResults:
+    #for $sql_result in $episodeSQLResults[$tvid_prodid]:
+addList("sg.episode.setstatus-$tvid_prodid", "$sql_result.season x $sql_result.episode", "&season=$sql_result.season&episode=$sql_result.episode", "sg.episode-status");
     #end for
 #end for
 
@@ -468,20 +476,28 @@ addOption("sg.episode.quality", "$q", "&quality=$q");
 #end for
 
 // build out tvshow list for episode.setstatus
-#for $curShow in $sortedShowList:
-addList("episode.setstatus", "$curShow.name", "&indexerid=$curShow.indexerid", "episode.setstatus-$curShow.indexerid");
+#for $cur_show_obj in $sortedShowList:
+addList("episode.setstatus", "$cur_show_obj.name", "&indexerid=$cur_show_obj.prodid", "episode.setstatus-$cur_show_obj.tvid_prodid");
 #end for
 
 // build out each show's season+episode list for episode.setstatus cmd
-#for $curShow in $episodeSQLResults:
-    #for $curShowSeason in $episodeSQLResults[$curShow]:
-addList("episode.setstatus-$curShow", "$curShowSeason.season x $curShowSeason.episode", "&season=$curShowSeason.season&episode=$curShowSeason.episode", "episode-status");
+#for $tvid_prodid in $episodeSQLResults:
+    #for $sql_result in $episodeSQLResults[$tvid_prodid]:
+addList("episode.setstatus-$tvid_prodid", "$sql_result.season x $sql_result.episode", "&season=$sql_result.season&episode=$sql_result.episode", "episode-status");
     #end for
 #end for
 addOption("episode-status", "Wanted", "&status=wanted");
 addOption("episode-status", "Skipped", "&status=skipped");
 addOption("episode-status", "Archived", "&status=archived");
 addOption("episode-status", "Ignored", "&status=ignored");
+
+#for $curShow in $sortedShowList:
+addList("show-delete", "$curShow.name", "&indexer=$curShow.tvid&indexerid=$curShow.prodid", "delete-options");
+#end for
+
+addOption("delete-options", "Optional Param", "", 1)
+addList("delete-options", "Keep Files/Folders", "&full=0")
+addList("delete-options", "Delete Files/Folders", "&full=1")
 
 addOption("future", "Optional Param", "", 1);
 addList("future", "Sort by Date", "&sort=date", "future-type");
@@ -519,17 +535,17 @@ addOption("history-limit", "Show Only Downloaded", "&type=downloaded");
 addOption("history-limit", "Show Only Snatched", "&type=snatched");
 
 addOption("exceptions", "Optional Param", "", 1);
-#for $curShow in $sortedShowList:
-addOption("exceptions", "$curShow.name", "&indexerid=$curShow.indexerid");
+#for $cur_show_obj in $sortedShowList:
+addOption("exceptions", "$cur_show_obj.name", "&indexerid=$cur_show_obj.prodid");
 #end for
 
 addOption("sg.exceptions", "Optional Param", "", 1);
-#for $curShow in $sortedShowList:
-addOption("sg.exceptions", "$curShow.name", "&indexer=$curShow.indexer&indexerid=$curShow.indexerid");
+#for $cur_show_obj in $sortedShowList:
+addOption("sg.exceptions", "$cur_show_obj.name", "&indexer=$cur_show_obj.tvid&indexerid=$cur_show_obj.prodid");
 #end for
 
-#for $curShow in $sortedShowList:
-addList("changeexceptions", "$curShow.name", "&indexerid=$curShow.indexerid&indexer=$curShow.indexer", "exceptionforseason");
+#for $cur_show_obj in $sortedShowList:
+addList("changeexceptions", "$cur_show_obj.name", "&indexerid=$cur_show_obj.prodid&indexer=$cur_show_obj.tvid", "exceptionforseason");
 #end for
 
 addList("exceptionforseason", "All Seasons", "&forseason=-1", "addexceptions");
@@ -561,11 +577,11 @@ addOption("sb.deleterootdir", "C:\\Temp", "&location=C:\\Temp", "", 1);
 addOption("sb.deleterootdir", "/usr/bin", "&location=/usr/bin/");
 addOption("sb.deleterootdir", "S:\\Invalid_Location", "&location=S:\\Invalid_Location");
 
-#for $curShow in $sortedShowList:
-addList("show.pause", "$curShow.name", "&indexerid=$curShow.indexerid", "show.pause-opt");
+#for $cur_show_obj in $sortedShowList:
+addList("show.pause", "$cur_show_obj.name", "&indexerid=$cur_show_obj.prodid", "show.pause-opt");
 #end for
-#for $curShow in $sortedShowList:
-addList("sg.show.pause", "$curShow.name", "&indexer=$curShow.indexer&indexerid=$curShow.indexerid", "show.pause-opt");
+#for $cur_show_obj in $sortedShowList:
+addList("sg.show.pause", "$cur_show_obj.name", "&indexer=$cur_show_obj.tvid&indexerid=$cur_show_obj.prodid", "show.pause-opt");
 #end for
 addOption("show.pause-opt", "Optional Param", "", 1);
 addOption("show.pause-opt", "Unpause", "&pause=0");

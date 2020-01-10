@@ -16,16 +16,20 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
-import os.path
 import datetime
+import os.path
 import re
-import urlparse
+
+# noinspection PyPep8Naming
+import encodingKludge as ek
 
 import sickbeard
 import sickbeard.providers
-from sickbeard import encodingKludge as ek
-from sickbeard import helpers, logger, naming, db
+from . import db, helpers, logger, naming
 from lib.libtrakt import TraktAPI
+
+from _23 import filter_list, urlsplit, urlunsplit
+from six import string_types
 
 
 naming_ep_type = ('%(seasonnumber)dx%(episodenumber)02d',
@@ -50,12 +54,12 @@ naming_sep_type_text = (' - ', 'space')
 
 
 def change_https_cert(https_cert):
-    if https_cert == '':
+    if '' == https_cert:
         sickbeard.HTTPS_CERT = ''
         return True
 
     if os.path.normpath(sickbeard.HTTPS_CERT) != os.path.normpath(https_cert):
-        if helpers.makeDir(os.path.dirname(os.path.abspath(https_cert))):
+        if helpers.make_dir(os.path.dirname(os.path.abspath(https_cert))):
             sickbeard.HTTPS_CERT = os.path.normpath(https_cert)
             logger.log(u'Changed https cert path to %s' % https_cert)
         else:
@@ -65,12 +69,12 @@ def change_https_cert(https_cert):
 
 
 def change_https_key(https_key):
-    if https_key == '':
+    if '' == https_key:
         sickbeard.HTTPS_KEY = ''
         return True
 
     if os.path.normpath(sickbeard.HTTPS_KEY) != os.path.normpath(https_key):
-        if helpers.makeDir(os.path.dirname(os.path.abspath(https_key))):
+        if helpers.make_dir(os.path.dirname(os.path.abspath(https_key))):
             sickbeard.HTTPS_KEY = os.path.normpath(https_key)
             logger.log(u'Changed https key path to %s' % https_key)
         else:
@@ -85,7 +89,7 @@ def change_log_dir(log_dir, web_log):
     web_log_value = checkbox_to_value(web_log)
 
     if os.path.normpath(sickbeard.LOG_DIR) != abs_log_dir:
-        if helpers.makeDir(abs_log_dir):
+        if helpers.make_dir(abs_log_dir):
             sickbeard.ACTUAL_LOG_DIR = os.path.normpath(log_dir)
             sickbeard.LOG_DIR = abs_log_dir
 
@@ -103,12 +107,12 @@ def change_log_dir(log_dir, web_log):
 
 
 def change_nzb_dir(nzb_dir):
-    if nzb_dir == '':
+    if '' == nzb_dir:
         sickbeard.NZB_DIR = ''
         return True
 
     if os.path.normpath(sickbeard.NZB_DIR) != os.path.normpath(nzb_dir):
-        if helpers.makeDir(nzb_dir):
+        if helpers.make_dir(nzb_dir):
             sickbeard.NZB_DIR = os.path.normpath(nzb_dir)
             logger.log(u'Changed NZB folder to %s' % nzb_dir)
         else:
@@ -118,12 +122,12 @@ def change_nzb_dir(nzb_dir):
 
 
 def change_torrent_dir(torrent_dir):
-    if torrent_dir == '':
+    if '' == torrent_dir:
         sickbeard.TORRENT_DIR = ''
         return True
 
     if os.path.normpath(sickbeard.TORRENT_DIR) != os.path.normpath(torrent_dir):
-        if helpers.makeDir(torrent_dir):
+        if helpers.make_dir(torrent_dir):
             sickbeard.TORRENT_DIR = os.path.normpath(torrent_dir)
             logger.log(u'Changed torrent folder to %s' % torrent_dir)
         else:
@@ -133,12 +137,12 @@ def change_torrent_dir(torrent_dir):
 
 
 def change_tv_download_dir(tv_download_dir):
-    if tv_download_dir == '':
+    if '' == tv_download_dir:
         sickbeard.TV_DOWNLOAD_DIR = ''
         return True
 
     if os.path.normpath(sickbeard.TV_DOWNLOAD_DIR) != os.path.normpath(tv_download_dir):
-        if helpers.makeDir(tv_download_dir):
+        if helpers.make_dir(tv_download_dir):
             sickbeard.TV_DOWNLOAD_DIR = os.path.normpath(tv_download_dir)
             logger.log(u'Changed TV download folder to %s' % tv_download_dir)
         else:
@@ -261,7 +265,7 @@ def checkbox_to_value(option, value_on=1, value_off=0):
     if type(option) is list:
         option = option[-1]
 
-    if option == 'on' or option == 'true':
+    if 'on' == option or 'true' == option:
         return value_on
 
     return value_off
@@ -327,14 +331,14 @@ def clean_url(url, add_slash=True):
         if '://' not in url:
             url = '//' + url
 
-        scheme, netloc, path, query, fragment = urlparse.urlsplit(url, 'http')
+        scheme, netloc, path, query, fragment = urlsplit(url, 'http')
 
         if not path.endswith('/'):
             basename, ext = ek.ek(os.path.splitext, ek.ek(os.path.basename, path))
             if not ext and add_slash:
                 path += '/'
 
-        cleaned_url = urlparse.urlunsplit((scheme, netloc, path, query, fragment))
+        cleaned_url = urlunsplit((scheme, netloc, path, query, fragment))
 
     else:
         cleaned_url = ''
@@ -348,10 +352,10 @@ def kv_csv(data, default=''):
     Elements must have one '=' in order to be returned
     Elements are stripped of leading/trailing whitespace but may contain whitespace (e.g. "tv shows")
     """
-    if not isinstance(data, basestring):
+    if not isinstance(data, string_types):
         return default
 
-    return ','.join(['='.join(i.strip() for i in i.split('=')) for i in data.split(',')
+    return ','.join(['='.join([i.strip() for i in i.split('=')]) for i in data.split(',')
                      if 1 == len(re.findall('=', i)) and all(i.replace(' ', '').split('='))])
 
 
@@ -360,7 +364,7 @@ def to_int(val, default=0):
 
     try:
         val = int(val)
-    except(StandardError, Exception):
+    except (BaseException, Exception):
         val = default
 
     return val
@@ -382,11 +386,11 @@ def minimax(val, default, low, high):
 def check_setting_int(config, cfg_name, item_name, def_val):
     try:
         my_val = int(config[cfg_name][item_name])
-    except(StandardError, Exception):
+    except (BaseException, Exception):
         my_val = def_val
         try:
             config[cfg_name][item_name] = my_val
-        except(StandardError, Exception):
+        except (BaseException, Exception):
             config[cfg_name] = {}
             config[cfg_name][item_name] = my_val
     logger.log('%s -> %s' % (item_name, my_val), logger.DEBUG)
@@ -396,11 +400,11 @@ def check_setting_int(config, cfg_name, item_name, def_val):
 def check_setting_float(config, cfg_name, item_name, def_val):
     try:
         my_val = float(config[cfg_name][item_name])
-    except(StandardError, Exception):
+    except (BaseException, Exception):
         my_val = def_val
         try:
             config[cfg_name][item_name] = my_val
-        except(StandardError, Exception):
+        except (BaseException, Exception):
             config[cfg_name] = {}
             config[cfg_name][item_name] = my_val
 
@@ -422,11 +426,11 @@ def check_setting_str(config, cfg_name, item_name, def_val, log=True):
 
     try:
         my_val = helpers.decrypt(config[cfg_name][item_name], encryption_version)
-    except(StandardError, Exception):
+    except (BaseException, Exception):
         my_val = def_val
         try:
             config[cfg_name][item_name] = helpers.encrypt(my_val, encryption_version)
-        except(StandardError, Exception):
+        except (BaseException, Exception):
             config[cfg_name] = {}
             config[cfg_name][item_name] = helpers.encrypt(my_val, encryption_version)
 
@@ -438,7 +442,7 @@ def check_setting_str(config, cfg_name, item_name, def_val, log=True):
     return (my_val, def_val)['None' == my_val]
 
 
-class ConfigMigrator:
+class ConfigMigrator(object):
     def __init__(self, config_obj):
         """
         Initializes a config migrator that can take the config from the version indicated in the config
@@ -469,6 +473,7 @@ class ConfigMigrator:
                                 17: 'Add "vp9", "av1" to ignore words if not found',
                                 18: 'Update "Spanish" ignore word',
                                 19: 'Change (mis)use of Anonymous redirect dereferer.org service to nullrefer.com',
+                                20: 'Change Growl',
                                 }
 
     def migrate_config(self):
@@ -491,7 +496,7 @@ class ConfigMigrator:
                 migration_name = ''
 
             logger.log(u'Backing up config before upgrade')
-            if not helpers.backupVersionedFile(sickbeard.CONFIG_FILE, self.config_version):
+            if not helpers.backup_versioned_file(sickbeard.CONFIG_FILE, self.config_version):
                 logger.log_error_and_exit(u'Config backup failed, abort upgrading config')
             else:
                 logger.log(u'Proceeding with upgrade')
@@ -647,7 +652,7 @@ class ConfigMigrator:
                                logger.ERROR)
                     continue
 
-                if name == 'Sick Beard Index':
+                if 'Sick Beard Index' == name:
                     key = '0'
 
                 cat_ids = '5030,5040,5060'
@@ -700,7 +705,7 @@ class ConfigMigrator:
         def _migrate_metadata(metadata, metadata_name, banner):
             cur_metadata = metadata.split('|')
             # if target has the old number of values, do upgrade
-            if len(cur_metadata) == 6:
+            if 6 == len(cur_metadata):
                 logger.log(u'Upgrading ' + metadata_name + ' metadata, old value: ' + metadata)
                 cur_metadata.insert(4, '0')
                 cur_metadata.append('0')
@@ -716,7 +721,7 @@ class ConfigMigrator:
                 metadata = '|'.join(cur_metadata)
                 logger.log(u'Upgrading %s metadata, new value: %s' % (metadata_name, metadata))
 
-            elif len(cur_metadata) == 10:
+            elif 10 == len(cur_metadata):
                 metadata = '|'.join(cur_metadata)
                 logger.log(u'Keeping %s metadata, value: %s' % (metadata_name, metadata))
             else:
@@ -801,7 +806,7 @@ class ConfigMigrator:
     @staticmethod
     def _migrate_v13():
         # change dereferrer.org urls to blank, but leave any other url untouched
-        if sickbeard.ANON_REDIRECT == 'http://dereferer.org/?':
+        if 'http://dereferer.org/?' == sickbeard.ANON_REDIRECT:
             sickbeard.ANON_REDIRECT = ''
 
     def _migrate_v14(self):
@@ -813,8 +818,8 @@ class ConfigMigrator:
     # Migration v15: Transmithe.net variables
     def _migrate_v15(self):
         try:
-            neb = filter(lambda p: 'Nebulance' in p.name, sickbeard.providers.sortedProviderList())[0]
-        except (StandardError, Exception):
+            neb = filter_list(lambda p: 'Nebulance' in p.name, sickbeard.providers.sortedProviderList())[0]
+        except (BaseException, Exception):
             return
         # get the old settings from the file and store them in the new variable names
         old_id = 'transmithe_net'
@@ -841,7 +846,7 @@ class ConfigMigrator:
             dead_paths = ['anidb', 'imdb', 'trakt']
             for path in dead_paths:
                 sickbeard.CACHE_DIR = '%s/images/%s' % (cache_default, path)
-                helpers.clearCache(True)
+                helpers.clear_cache(True)
                 try:
                     ek.ek(os.rmdir, sickbeard.CACHE_DIR)
                 except OSError:
@@ -889,3 +894,9 @@ class ConfigMigrator:
         # change misuse of dereferrer.org to the nullrefer.com service, but leave any other url untouched
         if re.search(r'https?://dereferer.org', sickbeard.ANON_REDIRECT):
             sickbeard.ANON_REDIRECT = 'https://nullrefer.com/?'
+
+    def _migrate_v20(self):
+        GROWL_HOST = check_setting_str(self.config_obj, 'Growl', 'growl_host', '')
+        GROWL_PASSWORD = check_setting_str(self.config_obj, 'Growl', 'growl_password', '')
+        if GROWL_PASSWORD:
+            sickbeard.GROWL_HOST = '%s@%s' % (GROWL_PASSWORD, GROWL_HOST)

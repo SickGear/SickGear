@@ -24,7 +24,9 @@ from bs4 import BeautifulSoup
 import logging
 import re
 import unicodedata
-import urllib
+
+from _23 import quote
+from six import PY2, text_type
 
 
 logger = logging.getLogger("subliminal")
@@ -53,10 +55,10 @@ class Subtitulos(ServiceBase):
 
     def query(self, filepath, languages, keywords, series, season, episode):
         request_series = series.lower().replace(' ', '-').replace('&', '@').replace('(','').replace(')','')
-        if isinstance(request_series, unicode):
+        if PY2 and isinstance(request_series, text_type):
             request_series = unicodedata.normalize('NFKD', request_series).encode('ascii', 'ignore')
         logger.debug(u'Getting subtitles for %s season %d episode %d with languages %r' % (series, season, episode, languages))
-        r = self.session.get('%s/%s/%sx%.2d' % (self.server_url, urllib.quote(request_series), season, episode))
+        r = self.session.get('%s/%s/%sx%.2d' % (self.server_url, quote(request_series), season, episode))
         if r.status_code == 404:
             logger.debug(u'Could not find subtitles for %s season %d episode %d with languages %r' % (series, season, episode, languages))
             return []

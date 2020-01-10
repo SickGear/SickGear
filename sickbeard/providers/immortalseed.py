@@ -20,11 +20,15 @@
 import re
 import time
 
-from . import generic
-from sickbeard.helpers import tryInt
-from lib.unidecode import unidecode
-import feedparser
 import sickbeard
+from . import generic
+from ..helpers import try_int
+
+import exceptions_helper
+import feedparser
+
+from _23 import unidecode
+from six import iteritems
 
 
 class ImmortalSeedProvider(generic.TorrentProvider):
@@ -47,9 +51,9 @@ class ImmortalSeedProvider(generic.TorrentProvider):
 
     def _check_auth(self, **kwargs):
         try:
-            secret_key = 'secret_key=' + re.split('secret_key\s*=\s*([0-9a-zA-Z]+)', self.api_key)[1]
+            secret_key = 'secret_key=' + re.split(r'secret_key\s*=\s*([0-9a-zA-Z]+)', self.api_key)[1]
         except (BaseException, Exception):
-            raise sickbeard.exceptions.AuthException('Invalid secret key for %s in Media Providers/Options' % self.name)
+            raise exceptions_helper.AuthException('Invalid secret key for %s in Media Providers/Options' % self.name)
 
         if secret_key != self.api_key:
             self.api_key = secret_key
@@ -63,12 +67,12 @@ class ImmortalSeedProvider(generic.TorrentProvider):
 
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
-        rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {
-            'seed': 'seed[^\d/]+([\d]+)', 'leech': 'leech[^\d/]+([\d]+)',
-            'size': 'size[^\d/]+([^/]+)', 'get': '(.*download.*)', 'title': 'NUKED\b\.(.*)$'}.items())
-        for mode in search_params.keys():
+        rc = dict([(k, re.compile('(?i)' + v)) for (k, v) in iteritems({
+            'seed': r'seed[^\d/]+([\d]+)', 'leech': r'leech[^\d/]+([\d]+)',
+            'size': r'size[^\d/]+([^/]+)', 'get': '(.*download.*)', 'title': r'NUKED\b\.(.*)$'})])
+        for mode in search_params:
             for search_string in search_params[mode]:
-                search_string = isinstance(search_string, unicode) and unidecode(search_string) or search_string
+                search_string = unidecode(search_string)
                 search_string = search_string.replace(' ', '.')
 
                 search_url = self.urls['search'] % (
@@ -84,8 +88,8 @@ class ImmortalSeedProvider(generic.TorrentProvider):
                 cnt = len(items[mode])
                 for item in tr:
                     try:
-                        seeders, leechers, size = [tryInt(n, n) for n in [
-                            rc[x].findall(item.summary)[0].strip() for x in 'seed', 'leech', 'size']]
+                        seeders, leechers, size = [try_int(n, n) for n in [
+                            rc[x].findall(item.summary)[0].strip() for x in ('seed', 'leech', 'size')]]
                         if self._reject_item(seeders, leechers):
                             continue
                         title = rc['title'].sub(r'\1', item.title.strip())

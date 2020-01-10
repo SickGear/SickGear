@@ -20,17 +20,21 @@ import datetime
 import os
 import re
 
+from . import generic
+from .. import helpers, logger
+from ..indexers.indexer_exceptions import check_exception_type, ExceptionTuples
 import sickbeard
+# noinspection PyPep8Naming
+import encodingKludge as ek
+import exceptions_helper
+from exceptions_helper import ex
+from lxml_etree import etree
 
-import generic
-
-from sickbeard import logger, exceptions, helpers
-from sickbeard import encodingKludge as ek
-
-from sickbeard.exceptions import ex
-
-import xml.etree.cElementTree as etree
 from six import iteritems
+
+# noinspection PyUnreachableCode
+if False:
+    from typing import AnyStr, Optional, Tuple, Union
 
 
 class MediaBrowserMetadata(generic.GenericMetadata):
@@ -49,61 +53,66 @@ class MediaBrowserMetadata(generic.GenericMetadata):
     """
 
     def __init__(self,
-                 show_metadata=False,
-                 episode_metadata=False,
-                 fanart=False,
-                 poster=False,
-                 banner=False,
-                 episode_thumbnails=False,
-                 season_posters=False,
-                 season_banners=False,
-                 season_all_poster=False,
-                 season_all_banner=False):
+                 show_metadata=False,  # type: bool
+                 episode_metadata=False,  # type: bool
+                 use_fanart=False,  # type: bool
+                 use_poster=False,  # type: bool
+                 use_banner=False,  # type: bool
+                 episode_thumbnails=False,  # type: bool
+                 season_posters=False,  # type: bool
+                 season_banners=False,  # type: bool
+                 season_all_poster=False,  # type: bool
+                 season_all_banner=False  # type: bool
+                 ):
 
         generic.GenericMetadata.__init__(self,
                                          show_metadata,
                                          episode_metadata,
-                                         fanart,
-                                         poster,
-                                         banner,
+                                         use_fanart,
+                                         use_poster,
+                                         use_banner,
                                          episode_thumbnails,
                                          season_posters,
                                          season_banners,
                                          season_all_poster,
                                          season_all_banner)
 
-        self.name = 'MediaBrowser'
+        self.name = 'MediaBrowser'  # type: AnyStr
 
-        self._ep_nfo_extension = 'xml'
-        self._show_metadata_filename = 'series.xml'
+        self._ep_nfo_extension = 'xml'  # type: AnyStr
+        self._show_metadata_filename = 'series.xml'  # type: AnyStr
 
-        self.fanart_name = "backdrop.jpg"
-        self.poster_name = "folder.jpg"
+        self.fanart_name = "backdrop.jpg"  # type: AnyStr
+        self.poster_name = "folder.jpg"  # type: AnyStr
 
         # web-ui metadata template
-        self.eg_show_metadata = "series.xml"
-        self.eg_episode_metadata = "Season##\\metadata\\<i>filename</i>.xml"
-        self.eg_fanart = "backdrop.jpg"
-        self.eg_poster = "folder.jpg"
-        self.eg_banner = "banner.jpg"
-        self.eg_episode_thumbnails = "Season##\\metadata\\<i>filename</i>.jpg"
-        self.eg_season_posters = "Season##\\folder.jpg"
-        self.eg_season_banners = "Season##\\banner.jpg"
-        self.eg_season_all_poster = "<i>not supported</i>"
-        self.eg_season_all_banner = "<i>not supported</i>"
+        self.eg_show_metadata = "series.xml"  # type: AnyStr
+        self.eg_episode_metadata = "Season##\\metadata\\<i>filename</i>.xml"  # type: AnyStr
+        self.eg_fanart = "backdrop.jpg"  # type: AnyStr
+        self.eg_poster = "folder.jpg"  # type: AnyStr
+        self.eg_banner = "banner.jpg"  # type: AnyStr
+        self.eg_episode_thumbnails = "Season##\\metadata\\<i>filename</i>.jpg"  # type: AnyStr
+        self.eg_season_posters = "Season##\\folder.jpg"  # type: AnyStr
+        self.eg_season_banners = "Season##\\banner.jpg"  # type: AnyStr
+        self.eg_season_all_poster = "<i>not supported</i>"  # type: AnyStr
+        self.eg_season_all_banner = "<i>not supported</i>"  # type: AnyStr
 
     # Override with empty methods for unsupported features
     def retrieveShowMetadata(self, folder):
+        # type: (AnyStr) -> Tuple[None, None, None]
         # while show metadata is generated, it is not supported for our lookup
-        return (None, None, None)
+        return None, None, None
 
     def create_season_all_poster(self, show_obj):
+        # type: (sickbeard.tv.TVShow) -> None
         pass
 
     def create_season_all_banner(self, show_obj):
+        # type: (sickbeard.tv.TVShow) -> None
         pass
 
     def get_episode_file_path(self, ep_obj):
+        # type: (sickbeard.tv.TVEpisode) -> AnyStr
         """
         Returns a full show dir/metadata/episode.xml path for MediaBrowser
         episode metadata files
@@ -112,7 +121,7 @@ class MediaBrowserMetadata(generic.GenericMetadata):
         """
 
         if ek.ek(os.path.isfile, ep_obj.location):
-            xml_file_name = helpers.replaceExtension(ek.ek(os.path.basename, ep_obj.location), self._ep_nfo_extension)
+            xml_file_name = helpers.replace_extension(ek.ek(os.path.basename, ep_obj.location), self._ep_nfo_extension)
             metadata_dir_name = ek.ek(os.path.join, ek.ek(os.path.dirname, ep_obj.location), 'metadata')
             xml_file_path = ek.ek(os.path.join, metadata_dir_name, xml_file_name)
         else:
@@ -122,6 +131,7 @@ class MediaBrowserMetadata(generic.GenericMetadata):
         return xml_file_path
 
     def get_episode_thumb_path(self, ep_obj):
+        # type: (sickbeard.tv.TVEpisode) -> AnyStr
         """
         Returns a full show dir/metadata/episode.jpg path for MediaBrowser
         episode thumbs.
@@ -130,15 +140,12 @@ class MediaBrowserMetadata(generic.GenericMetadata):
         """
 
         if ek.ek(os.path.isfile, ep_obj.location):
-            tbn_file_name = helpers.replaceExtension(ek.ek(os.path.basename, ep_obj.location), 'jpg')
             metadata_dir_name = ek.ek(os.path.join, ek.ek(os.path.dirname, ep_obj.location), 'metadata')
-            tbn_file_path = ek.ek(os.path.join, metadata_dir_name, tbn_file_name)
-        else:
-            return None
-
-        return tbn_file_path
+            tbn_file_name = helpers.replace_extension(ek.ek(os.path.basename, ep_obj.location), 'jpg')
+            return ek.ek(os.path.join, metadata_dir_name, tbn_file_name)
 
     def get_season_poster_path(self, show_obj, season):
+        # type: (sickbeard.tv.TVShow, int) -> Optional[AnyStr]
         """
         Season thumbs for MediaBrowser go in Show Dir/Season X/folder.jpg
 
@@ -148,7 +155,7 @@ class MediaBrowserMetadata(generic.GenericMetadata):
         dir_list = [x for x in ek.ek(os.listdir, show_obj.location) if
                     ek.ek(os.path.isdir, ek.ek(os.path.join, show_obj.location, x))]
 
-        season_dir_regex = '^Season\s+(\d+)$'
+        season_dir_regex = r'^Season\s+(\d+)$'
 
         season_dir = None
 
@@ -156,7 +163,7 @@ class MediaBrowserMetadata(generic.GenericMetadata):
             # MediaBrowser 1.x only supports 'Specials'
             # MediaBrowser 2.x looks to only support 'Season 0'
             # MediaBrowser 3.x looks to mimic XBMC/Plex support
-            if season == 0 and cur_dir == "Specials":
+            if 0 == season and "Specials" == cur_dir:
                 season_dir = cur_dir
                 break
 
@@ -179,6 +186,7 @@ class MediaBrowserMetadata(generic.GenericMetadata):
         return ek.ek(os.path.join, show_obj.location, season_dir, 'folder.jpg')
 
     def get_season_banner_path(self, show_obj, season):
+        # type: (sickbeard.tv.TVShow, int) -> Optional[AnyStr]
         """
         Season thumbs for MediaBrowser go in Show Dir/Season X/banner.jpg
 
@@ -188,7 +196,7 @@ class MediaBrowserMetadata(generic.GenericMetadata):
         dir_list = [x for x in ek.ek(os.listdir, show_obj.location) if
                     ek.ek(os.path.isdir, ek.ek(os.path.join, show_obj.location, x))]
 
-        season_dir_regex = '^Season\s+(\d+)$'
+        season_dir_regex = r'^Season\s+(\d+)$'
 
         season_dir = None
 
@@ -196,7 +204,7 @@ class MediaBrowserMetadata(generic.GenericMetadata):
             # MediaBrowser 1.x only supports 'Specials'
             # MediaBrowser 2.x looks to only support 'Season 0'
             # MediaBrowser 3.x looks to mimic XBMC/Plex support
-            if season == 0 and cur_dir == "Specials":
+            if 0 == season and "Specials" == cur_dir:
                 season_dir = cur_dir
                 break
 
@@ -219,6 +227,7 @@ class MediaBrowserMetadata(generic.GenericMetadata):
         return ek.ek(os.path.join, show_obj.location, season_dir, 'banner.jpg')
 
     def _show_data(self, show_obj):
+        # type: (sickbeard.tv.TVShow) -> Optional[Union[bool, etree.Element]]
         """
         Creates an elementTree XML structure for a MediaBrowser-style series.xml
         returns the resulting data object.
@@ -226,164 +235,164 @@ class MediaBrowserMetadata(generic.GenericMetadata):
         show_obj: a TVShow instance to create the NFO for
         """
 
-        indexer_lang = show_obj.lang
+        show_lang = show_obj.lang
+
         # There's gotta be a better way of doing this but we don't wanna
         # change the language value elsewhere
-        lINDEXER_API_PARMS = sickbeard.indexerApi(show_obj.indexer).api_params.copy()
+        tvinfo_config = sickbeard.TVInfoAPI(show_obj.tvid).api_params.copy()
 
-        lINDEXER_API_PARMS['actors'] = True
+        tvinfo_config['actors'] = True
 
-        if indexer_lang and not indexer_lang == 'en':
-            lINDEXER_API_PARMS['language'] = indexer_lang
+        if show_lang and not 'en' == show_lang:
+            tvinfo_config['language'] = show_lang
 
-        if show_obj.dvdorder != 0:
-            lINDEXER_API_PARMS['dvdorder'] = True
+        if 0 != show_obj.dvdorder:
+            tvinfo_config['dvdorder'] = True
 
-        t = sickbeard.indexerApi(show_obj.indexer).indexer(**lINDEXER_API_PARMS)
+        t = sickbeard.TVInfoAPI(show_obj.tvid).setup(**tvinfo_config)
 
         tv_node = etree.Element("Series")
 
         try:
-            myShow = t[int(show_obj.indexerid)]
-        except sickbeard.indexer_shownotfound:
-            logger.log(u"Unable to find show with id " + str(show_obj.indexerid) + " on " + sickbeard.indexerApi(
-                show_obj.indexer).name + ", skipping it", logger.ERROR)
-            raise
+            show_info = t[int(show_obj.prodid)]
+        except Exception as e:
+            if check_exception_type(e, ExceptionTuples.tvinfo_shownotfound):
+                logger.log("Unable to find show with id %s on %s, skipping it" %
+                           (show_obj.prodid, sickbeard.TVInfoAPI(show_obj.tvid).name), logger.ERROR)
+                raise
 
-        except sickbeard.indexer_error:
-            logger.log(
-                u"" + sickbeard.indexerApi(show_obj.indexer).name + " is down, can't use its data to make the NFO",
-                logger.ERROR)
-            raise
+            elif check_exception_type(e, ExceptionTuples.tvinfo_error):
+                logger.log("%s is down, can't use its data to make the NFO" % sickbeard.TVInfoAPI(show_obj.tvid).name,
+                           logger.ERROR)
+                raise
+            else:
+                raise e
 
-        if not self._valid_show(myShow, show_obj):
+        if not self._valid_show(show_info, show_obj):
             return
 
         # check for title and id
-        if getattr(myShow, 'seriesname', None) is None or getattr(myShow, 'id', None) is None:
-            logger.log(u"Incomplete info for show with id " + str(show_obj.indexerid) + " on " + sickbeard.indexerApi(
-                show_obj.indexer).name + ", skipping it", logger.ERROR)
+        if None is getattr(show_info, 'seriesname', None) or None is getattr(show_info, 'id', None):
+            logger.log("Incomplete info for show with id %s on %s, skipping it" %
+                       (show_obj.prodid, sickbeard.TVInfoAPI(show_obj.tvid).name), logger.ERROR)
             return False
 
-        indexerid = etree.SubElement(tv_node, "id")
-        if getattr(myShow, 'id', None) is not None:
-            indexerid.text = str(myShow['id'])
+        prodid = etree.SubElement(tv_node, "id")
+        if None is not getattr(show_info, 'id', None):
+            prodid.text = str(show_info['id'])
 
-        indexer = etree.SubElement(tv_node, "indexer")
-        if show_obj.indexer != None:
-            indexer.text = str(show_obj.indexer)
+        tvid = etree.SubElement(tv_node, "indexer")
+        if None is not show_obj.tvid:
+            tvid.text = str(show_obj.tvid)
 
         SeriesName = etree.SubElement(tv_node, "SeriesName")
-        if getattr(myShow, 'seriesname', None) is not None:
-            SeriesName.text = myShow['seriesname']
+        if None is not getattr(show_info, 'seriesname', None):
+            SeriesName.text = '%s' % show_info['seriesname']
 
         Status = etree.SubElement(tv_node, "Status")
-        if getattr(myShow, 'status', None) is not None:
-            Status.text = myShow['status']
+        if None is not getattr(show_info, 'status', None):
+            Status.text = '%s' % show_info['status']
 
         Network = etree.SubElement(tv_node, "Network")
-        if getattr(myShow, 'network', None) is not None:
-            Network.text = myShow['network']
+        if None is not getattr(show_info, 'network', None):
+            Network.text = '%s' % show_info['network']
 
         Airs_Time = etree.SubElement(tv_node, "Airs_Time")
-        if getattr(myShow, 'airs_time', None) is not None:
-            Airs_Time.text = myShow['airs_time']
+        if None is not getattr(show_info, 'airs_time', None):
+            Airs_Time.text = '%s' % show_info['airs_time']
 
         Airs_DayOfWeek = etree.SubElement(tv_node, "Airs_DayOfWeek")
-        if getattr(myShow, 'airs_dayofweek', None) is not None:
-            Airs_DayOfWeek.text = myShow['airs_dayofweek']
+        if None is not getattr(show_info, 'airs_dayofweek', None):
+            Airs_DayOfWeek.text = '%s' % show_info['airs_dayofweek']
 
         FirstAired = etree.SubElement(tv_node, "FirstAired")
-        if getattr(myShow, 'firstaired', None) is not None:
-            FirstAired.text = myShow['firstaired']
+        if None is not getattr(show_info, 'firstaired', None):
+            FirstAired.text = '%s' % show_info['firstaired']
 
         ContentRating = etree.SubElement(tv_node, "ContentRating")
         MPAARating = etree.SubElement(tv_node, "MPAARating")
         certification = etree.SubElement(tv_node, "certification")
-        if getattr(myShow, 'contentrating', None) is not None:
-            ContentRating.text = myShow['contentrating']
-            MPAARating.text = myShow['contentrating']
-            certification.text = myShow['contentrating']
+        if None is not getattr(show_info, 'contentrating', None):
+            ContentRating.text = '%s' % show_info['contentrating']
+            MPAARating.text = '%s' % show_info['contentrating']
+            certification.text = '%s' % show_info['contentrating']
 
         MetadataType = etree.SubElement(tv_node, "Type")
         MetadataType.text = "Series"
 
         Overview = etree.SubElement(tv_node, "Overview")
-        if getattr(myShow, 'overview', None) is not None:
-            Overview.text = myShow['overview']
+        if None is not getattr(show_info, 'overview', None):
+            Overview.text = '%s' % show_info['overview']
 
         PremiereDate = etree.SubElement(tv_node, "PremiereDate")
-        if getattr(myShow, 'firstaired', None) is not None:
-            PremiereDate.text = myShow['firstaired']
+        if None is not getattr(show_info, 'firstaired', None):
+            PremiereDate.text = '%s' % show_info['firstaired']
 
         Rating = etree.SubElement(tv_node, "Rating")
-        if getattr(myShow, 'rating', None) is not None:
-            Rating.text = myShow['rating']
+        if None is not getattr(show_info, 'rating', None):
+            Rating.text = '%s' % show_info['rating']
 
         ProductionYear = etree.SubElement(tv_node, "ProductionYear")
-        if getattr(myShow, 'firstaired', None) is not None:
-            try:
-                year_text = str(datetime.datetime.strptime(myShow['firstaired'], '%Y-%m-%d').year)
-                if year_text:
-                    ProductionYear.text = year_text
-            except:
-                pass
+        year_text = self.get_show_year(show_obj, show_info)
+        if year_text:
+            ProductionYear.text = '%s' % year_text
 
         RunningTime = etree.SubElement(tv_node, "RunningTime")
         Runtime = etree.SubElement(tv_node, "Runtime")
-        if getattr(myShow, 'runtime', None) is not None:
-            RunningTime.text = myShow['runtime']
-            Runtime.text = myShow['runtime']
+        if None is not getattr(show_info, 'runtime', None):
+            RunningTime.text = '%s' % show_info['runtime']
+            Runtime.text = '%s' % show_info['runtime']
 
         IMDB_ID = etree.SubElement(tv_node, "IMDB_ID")
         IMDB = etree.SubElement(tv_node, "IMDB")
         IMDbId = etree.SubElement(tv_node, "IMDbId")
-        if getattr(myShow, 'imdb_id', None) is not None:
-            IMDB_ID.text = myShow['imdb_id']
-            IMDB.text = myShow['imdb_id']
-            IMDbId.text = myShow['imdb_id']
+        if None is not getattr(show_info, 'imdb_id', None):
+            IMDB_ID.text = '%s' % show_info['imdb_id']
+            IMDB.text = '%s' % show_info['imdb_id']
+            IMDbId.text = '%s' % show_info['imdb_id']
 
         Zap2ItId = etree.SubElement(tv_node, "Zap2ItId")
-        if getattr(myShow, 'zap2it_id', None) is not None:
-            Zap2ItId.text = myShow['zap2it_id']
+        if None is not getattr(show_info, 'zap2it_id', None):
+            Zap2ItId.text = '%s' % show_info['zap2it_id']
 
         Genres = etree.SubElement(tv_node, "Genres")
-        for genre in myShow['genre'].split('|'):
+        for genre in show_info['genre'].split('|'):
             if genre:
                 cur_genre = etree.SubElement(Genres, "Genre")
-                cur_genre.text = genre
+                cur_genre.text = '%s' % genre
 
         Genre = etree.SubElement(tv_node, "Genre")
-        if getattr(myShow, 'genre', None) is not None:
-            Genre.text = "|".join([x for x in myShow["genre"].split('|') if x])
+        if None is not getattr(show_info, 'genre', None):
+            Genre.text = "|".join([x for x in show_info["genre"].split('|') if x])
 
         Studios = etree.SubElement(tv_node, "Studios")
         Studio = etree.SubElement(Studios, "Studio")
-        if getattr(myShow, 'network', None) is not None:
-            Studio.text = myShow['network']
+        if None is not getattr(show_info, 'network', None):
+            Studio.text = '%s' % show_info['network']
 
         Persons = etree.SubElement(tv_node, 'Persons')
-        for actor in getattr(myShow, 'actors', []):
+        for actor in getattr(show_info, 'actors', []):
             cur_actor = etree.SubElement(Persons, 'Person')
 
             cur_actor_name = etree.SubElement(cur_actor, 'Name')
-            cur_actor_name.text = actor['person']['name']
+            cur_actor_name.text = '%s' % actor['person']['name']
 
             cur_actor_type = etree.SubElement(cur_actor, 'Type')
             cur_actor_type.text = 'Actor'
 
             cur_actor_role = etree.SubElement(cur_actor, 'Role')
-            cur_actor_role_text = actor['character']['name']
+            cur_actor_role_text = '%s' % actor['character']['name']
             if cur_actor_role_text:
-                cur_actor_role.text = cur_actor_role_text
+                cur_actor_role.text = '%s' % cur_actor_role_text
 
-        helpers.indentXML(tv_node)
+        helpers.indent_xml(tv_node)
 
         data = etree.ElementTree(tv_node)
 
         return data
 
     def _ep_data(self, ep_obj):
+        # type: (sickbeard.tv.TVEpisode) -> Optional[Union[bool, etree.Element]]
         """
         Creates an elementTree XML structure for a MediaBrowser style episode.xml
         and returns the resulting data object.
@@ -391,88 +400,87 @@ class MediaBrowserMetadata(generic.GenericMetadata):
         show_obj: a TVShow instance to create the NFO for
         """
 
-        eps_to_write = [ep_obj] + ep_obj.relatedEps
+        ep_obj_list_to_write = [ep_obj] + ep_obj.related_ep_obj
 
-        persons_dict = {}
-        persons_dict['Director'] = []
-        persons_dict['GuestStar'] = []
-        persons_dict['Writer'] = []
+        persons_dict = {'Director': [], 'GuestStar': [], 'Writer': []}
 
-        indexer_lang = ep_obj.show.lang
+        show_lang = ep_obj.show_obj.lang
 
         try:
-            lINDEXER_API_PARMS = sickbeard.indexerApi(ep_obj.show.indexer).api_params.copy()
+            tvinfo_config = sickbeard.TVInfoAPI(ep_obj.show_obj.tvid).api_params.copy()
 
-            lINDEXER_API_PARMS['actors'] = True
+            tvinfo_config['actors'] = True
 
-            if indexer_lang and not indexer_lang == 'en':
-                lINDEXER_API_PARMS['language'] = indexer_lang
+            if show_lang and not 'en' == show_lang:
+                tvinfo_config['language'] = show_lang
 
-            if ep_obj.show.dvdorder != 0:
-                lINDEXER_API_PARMS['dvdorder'] = True
+            if 0 != ep_obj.show_obj.dvdorder:
+                tvinfo_config['dvdorder'] = True
 
-            t = sickbeard.indexerApi(ep_obj.show.indexer).indexer(**lINDEXER_API_PARMS)
+            t = sickbeard.TVInfoAPI(ep_obj.show_obj.tvid).setup(**tvinfo_config)
 
-            myShow = t[ep_obj.show.indexerid]
-        except sickbeard.indexer_shownotfound as e:
-            raise exceptions.ShowNotFoundException(e.message)
-        except sickbeard.indexer_error as e:
-            logger.log(u"Unable to connect to " + sickbeard.indexerApi(
-                ep_obj.show.indexer).name + " while creating meta files - skipping - " + ex(e), logger.ERROR)
-            return False
+            show_info = t[ep_obj.show_obj.prodid]
+        except Exception as e:
+            if check_exception_type(e, ExceptionTuples.tvinfo_shownotfound):
+                raise exceptions_helper.ShowNotFoundException(ex(e))
+            elif check_exception_type(e, ExceptionTuples.tvinfo_error):
+                logger.log("Unable to connect to %s while creating meta files - skipping - %s" %
+                           (sickbeard.TVInfoAPI(ep_obj.show_obj.tvid).name, ex(e)), logger.ERROR)
+                return False
+            else:
+                raise e
 
-        if not self._valid_show(myShow, ep_obj.show):
+        if not self._valid_show(show_info, ep_obj.show_obj):
             return
 
         rootNode = etree.Element("Item")
 
         # write an MediaBrowser XML containing info for all matching episodes
-        for curEpToWrite in eps_to_write:
+        for cur_ep_obj in ep_obj_list_to_write:
 
             try:
-                myEp = myShow[curEpToWrite.season][curEpToWrite.episode]
-            except (StandardError, Exception):
-                logger.log(u"Unable to find episode " + str(curEpToWrite.season) + "x" + str(
-                    curEpToWrite.episode) + " on " + sickbeard.indexerApi(
-                    ep_obj.show.indexer).name + ".. has it been removed? Should I delete from db?")
+                ep_info = show_info[cur_ep_obj.season][cur_ep_obj.episode]
+            except (BaseException, Exception):
+                logger.log("Unable to find episode %sx%s on %s.. has it been removed? Should I delete from db?" %
+                           (cur_ep_obj.season, cur_ep_obj.episode, sickbeard.TVInfoAPI(ep_obj.show_obj.tvid).name))
                 return None
 
-            if curEpToWrite == ep_obj:
+            if cur_ep_obj == ep_obj:
                 # root (or single) episode
 
                 # default to today's date for specials if firstaired is not set
-                if getattr(myEp, 'firstaired', None) is None and ep_obj.season == 0:
-                    myEp['firstaired'] = str(datetime.date.fromordinal(1))
+                if None is getattr(ep_info, 'firstaired', None) and 0 == ep_obj.season:
+                    ep_info['firstaired'] = str(datetime.date.fromordinal(1))
 
-                if getattr(myEp, 'episodename', None) is None or getattr(myEp, 'firstaired', None) is None:
+                if None is getattr(ep_info, 'episodename', None) or None is getattr(ep_info, 'firstaired', None):
                     return None
 
                 episode = rootNode
 
                 EpisodeName = etree.SubElement(episode, "EpisodeName")
-                if curEpToWrite.name != None:
-                    EpisodeName.text = curEpToWrite.name
+                if None is not cur_ep_obj.name:
+                    EpisodeName.text = '%s' % cur_ep_obj.name
                 else:
                     EpisodeName.text = ""
 
                 EpisodeNumber = etree.SubElement(episode, "EpisodeNumber")
                 EpisodeNumber.text = str(ep_obj.episode)
 
-                if ep_obj.relatedEps:
+                if ep_obj.related_ep_obj:
                     EpisodeNumberEnd = etree.SubElement(episode, "EpisodeNumberEnd")
-                    EpisodeNumberEnd.text = str(curEpToWrite.episode)
+                    EpisodeNumberEnd.text = str(cur_ep_obj.episode)
 
                 SeasonNumber = etree.SubElement(episode, "SeasonNumber")
-                SeasonNumber.text = str(curEpToWrite.season)
+                SeasonNumber.text = str(cur_ep_obj.season)
 
-                if not ep_obj.relatedEps:
+                if not ep_obj.related_ep_obj:
                     absolute_number = etree.SubElement(episode, "absolute_number")
-                    if getattr(myEp, 'absolute_number', None) is not None:
-                        absolute_number.text = myEp['absolute_number']
+                    if None is not getattr(ep_info, 'absolute_number', None):
+                        absolute_number.text = '%s' % ep_info['absolute_number']
 
                 FirstAired = etree.SubElement(episode, "FirstAired")
-                if curEpToWrite.airdate != datetime.date.fromordinal(1):
-                    FirstAired.text = str(curEpToWrite.airdate)
+                if cur_ep_obj.airdate != datetime.date.fromordinal(1):
+                    FirstAired.text = str(cur_ep_obj.airdate)
                 else:
                     FirstAired.text = ""
 
@@ -480,36 +488,36 @@ class MediaBrowserMetadata(generic.GenericMetadata):
                 MetadataType.text = "Episode"
 
                 Overview = etree.SubElement(episode, "Overview")
-                if curEpToWrite.description != None:
-                    Overview.text = curEpToWrite.description
+                if None is not cur_ep_obj.description:
+                    Overview.text = '%s' % cur_ep_obj.description
                 else:
                     Overview.text = ""
 
-                if not ep_obj.relatedEps:
+                if not ep_obj.related_ep_obj:
                     Rating = etree.SubElement(episode, "Rating")
-                    if getattr(myEp, 'rating', None) is not None:
-                        Rating.text = myEp['rating']
+                    if None is not getattr(ep_info, 'rating', None):
+                        Rating.text = '%s' % ep_info['rating']
 
                     IMDB_ID = etree.SubElement(episode, "IMDB_ID")
                     IMDB = etree.SubElement(episode, "IMDB")
                     IMDbId = etree.SubElement(episode, "IMDbId")
-                    if getattr(myShow, 'imdb_id', None) is not None:
-                        IMDB_ID.text = myShow['imdb_id']
-                        IMDB.text = myShow['imdb_id']
-                        IMDbId.text = myShow['imdb_id']
+                    if None is not getattr(show_info, 'imdb_id', None):
+                        IMDB_ID.text = '%s' % show_info['imdb_id']
+                        IMDB.text = '%s' % show_info['imdb_id']
+                        IMDbId.text = '%s' % show_info['imdb_id']
 
-                indexerid = etree.SubElement(episode, "id")
-                indexerid.text = str(curEpToWrite.indexerid)
+                prodid = etree.SubElement(episode, "id")
+                prodid.text = str(cur_ep_obj.show_obj.prodid)
 
-                indexer = etree.SubElement(episode, "indexer")
-                indexer.text = str(curEpToWrite.show.indexer)
+                tvid = etree.SubElement(episode, "indexer")
+                tvid.text = str(cur_ep_obj.show_obj.tvid)
 
                 Persons = etree.SubElement(episode, "Persons")
 
                 Language = etree.SubElement(episode, "Language")
                 try:
-                    Language.text = curEpToWrite.show.lang
-                except:
+                    Language.text = '%s' % cur_ep_obj.show_obj.lang
+                except (BaseException, Exception):
                     Language.text = 'en'  # tvrage api doesn't provide language so we must assume a value here
 
                 thumb = etree.SubElement(episode, "filename")
@@ -518,31 +526,31 @@ class MediaBrowserMetadata(generic.GenericMetadata):
                 # note: renaming files after nfo generation will break this, tough luck
                 thumb_text = self.get_episode_thumb_path(ep_obj)
                 if thumb_text:
-                    thumb.text = thumb_text
+                    thumb.text = '%s' % thumb_text
 
             else:
                 # append data from (if any) related episodes
-                EpisodeNumberEnd.text = str(curEpToWrite.episode)
+                EpisodeNumberEnd.text = str(cur_ep_obj.episode)
 
-                if curEpToWrite.name:
+                if cur_ep_obj.name:
                     if not EpisodeName.text:
-                        EpisodeName.text = curEpToWrite.name
+                        EpisodeName.text = '%s' % cur_ep_obj.name
                     else:
-                        EpisodeName.text = EpisodeName.text + ", " + curEpToWrite.name
+                        EpisodeName.text = '%s, %s' % (EpisodeName.text, cur_ep_obj.name)
 
-                if curEpToWrite.description:
+                if cur_ep_obj.description:
                     if not Overview.text:
-                        Overview.text = curEpToWrite.description
+                        Overview.text = '%s' % cur_ep_obj.description
                     else:
-                        Overview.text = Overview.text + "\r" + curEpToWrite.description
+                        Overview.text = '%s\r%s' % (Overview.text, cur_ep_obj.description)
 
             # collect all directors, guest stars and writers
-            if getattr(myEp, 'director', None) is not None:
-                persons_dict['Director'] += [x.strip() for x in myEp['director'].split('|') if x]
-            if getattr(myEp, 'gueststars', None) is not None:
-                persons_dict['GuestStar'] += [x.strip() for x in myEp['gueststars'].split('|') if x]
-            if getattr(myEp, 'writer', None) is not None:
-                persons_dict['Writer'] += [x.strip() for x in myEp['writer'].split('|') if x]
+            if None is not getattr(ep_info, 'director', None):
+                persons_dict['Director'] += [x.strip() for x in ep_info['director'].split('|') if x]
+            if None is not getattr(ep_info, 'gueststars', None):
+                persons_dict['GuestStar'] += [x.strip() for x in ep_info['gueststars'].split('|') if x]
+            if None is not getattr(ep_info, 'writer', None):
+                persons_dict['Writer'] += [x.strip() for x in ep_info['writer'].split('|') if x]
 
         # fill in Persons section with collected directors, guest starts and writers
         for person_type, names in iteritems(persons_dict):
@@ -551,11 +559,11 @@ class MediaBrowserMetadata(generic.GenericMetadata):
             for cur_name in names:
                 Person = etree.SubElement(Persons, "Person")
                 cur_person_name = etree.SubElement(Person, "Name")
-                cur_person_name.text = cur_name
+                cur_person_name.text = '%s' % cur_name
                 cur_person_type = etree.SubElement(Person, "Type")
-                cur_person_type.text = person_type
+                cur_person_type.text = '%s' % person_type
 
-        helpers.indentXML(rootNode)
+        helpers.indent_xml(rootNode)
         data = etree.ElementTree(rootNode)
 
         return data

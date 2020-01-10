@@ -25,7 +25,10 @@ from bs4 import BeautifulSoup
 import logging
 import urllib
 
+from six import PY2, text_type
+
 logger = logging.getLogger("subliminal")
+
 
 class Usub(ServiceBase):
     server_url = 'http://www.u-sub.net/sous-titres'
@@ -44,21 +47,21 @@ class Usub(ServiceBase):
         ## Check if we really got informations about our episode
         if series and season and episode:
             request_series = series.lower().replace(' ', '-')
-            if isinstance(request_series, unicode):
+            if PY2 and isinstance(request_series, text_type):
                 request_series = request_series.encode('utf-8')
             logger.debug(u'Getting subtitles for %s season %d episode %d with language %r' % (series, season, episode, languages))
             r = self.session.get('%s/%s/saison_%s' % (self.server_url, urllib.quote(request_series),season))
             if r.status_code == 404:
-                print "Error 404"
+                print("Error 404")
                 logger.debug(u'Could not find subtitles for %s' % (series))
                 return []
         else:
-            print "One or more parameter missing"
+            print("One or more parameter missing")
             raise ServiceError('One or more parameter missing')
         
         ## Check if we didn't got an big and nasty http error
         if r.status_code != 200:
-            print u'Request %s returned status code %d' % (r.url, r.status_code)
+            print(u'Request %s returned status code %d' % (r.url, r.status_code))
             logger.error(u'Request %s returned status code %d' % (r.url, r.status_code))
             return []
             

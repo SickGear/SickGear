@@ -21,12 +21,14 @@ import re
 import traceback
 
 from . import generic
-from sickbeard import logger
-from sickbeard.bs4_parser import BS4Parser
-from sickbeard.helpers import tryInt
-from lib.unidecode import unidecode
+from .. import logger
+from ..helpers import try_int
+from bs4_parser import BS4Parser
 
-FLTAG = '</a>\s+<img[^>]+%s[^<]+<br'
+from _23 import unidecode
+from six import iteritems
+
+FLTAG = r'</a>\s+<img[^>]+%s[^<]+<br'
 
 
 class FanoProvider(generic.TorrentProvider):
@@ -62,8 +64,8 @@ class FanoProvider(generic.TorrentProvider):
 
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
-        rc = dict((k, re.compile('(?i)' + v))
-                  for (k, v) in {'abd': '(\d{4}(?:[.]\d{2}){2})', 'info': 'details', 'get': 'download'}.items())
+        rc = dict([(k, re.compile('(?i)' + v))
+                   for (k, v) in iteritems({'abd': r'(\d{4}(?:[.]\d{2}){2})', 'info': 'details', 'get': 'download'})])
         log = ''
         if self.filter:
             non_marked = 'f0' in self.filter
@@ -73,10 +75,10 @@ class FanoProvider(generic.TorrentProvider):
             rc['filter'] = re.compile('(?i)(%s)' % '|'.join(
                 [self.may_filter[f][2] for f in filters if self.may_filter[f][1]]))
             log = '%sing (%s) ' % (('keep', 'skipp')[non_marked], ', '.join([self.may_filter[f][0] for f in filters]))
-        for mode in search_params.keys():
+        for mode in search_params:
             rc['cats'] = re.compile('(?i)cat=(?:%s)' % self._categories_string(mode, template='', delimiter='|'))
             for search_string in search_params[mode]:
-                search_string = isinstance(search_string, unicode) and unidecode(search_string) or search_string
+                search_string = unidecode(search_string)
                 search_string = '+'.join(rc['abd'].sub(r'%22\1%22', search_string).split())
                 search_url = self.urls['search'] % (search_string, self._categories_string(mode))
 
@@ -98,6 +100,7 @@ class FanoProvider(generic.TorrentProvider):
                         head = None
                         for tr in tbl_rows[1:]:
                             cells = tr.find_all('td')
+                            # noinspection PyUnboundLocalVariable
                             if (5 > len(cells)
                                 or (any(self.filter)
                                     and ((non_marked and rc['filter'].search(str(tr)))
@@ -105,8 +108,8 @@ class FanoProvider(generic.TorrentProvider):
                                 continue
                             try:
                                 head = head if None is not head else self._header_row(tr)
-                                seeders, leechers, size = [tryInt(n, n) for n in [
-                                    cells[head[x]].get_text().strip() for x in 'seed', 'leech', 'size']]
+                                seeders, leechers, size = [try_int(n, n) for n in [
+                                    cells[head[x]].get_text().strip() for x in ('seed', 'leech', 'size')]]
                                 if not tr.find('a', href=rc['cats']) or self._reject_item(seeders, leechers):
                                     continue
 

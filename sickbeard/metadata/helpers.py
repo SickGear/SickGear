@@ -16,26 +16,37 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
-from sickbeard import helpers
-from sickbeard import logger
+from .. import helpers, logger
+
+# noinspection PyUnreachableCode
+if False:
+    from typing import AnyStr, Optional
 
 
-def getShowImage(url, imgNum=None, showName=None, supress_log=False):
+def getShowImage(url, img_num=None, show_name=None, supress_log=False):
+    # type: (AnyStr, Optional[int], Optional[AnyStr], bool) -> Optional[bytes]
+    """
 
+    :param url: url
+    :param img_num:
+    :param show_name:
+    :param supress_log:
+    :type show_name: AnyStr or None
+    """
     if None is url:
         return None
 
     # if they provided a fanart number try to use it instead
-    temp_url = url if None is imgNum else url.split('-')[0] + '-' + str(imgNum) + '.jpg'
+    temp_url = url if None is img_num else url.split('-')[0] + '-' + str(img_num) + '.jpg'
 
     logger.log(u'Fetching image from ' + temp_url, logger.DEBUG)
 
-    image_data = helpers.getURL(temp_url)
+    image_data = helpers.get_url(temp_url, as_binary=True)
     if None is image_data:
         if supress_log:
             return
         logger.log('There was an error trying to retrieve the image%s, aborting' %
-                   ('', ' for show: %s' % showName)[None is not showName], logger.WARNING)
+                   ('', ' for show: %s' % show_name)[None is not show_name], logger.WARNING)
         return
 
     return image_data

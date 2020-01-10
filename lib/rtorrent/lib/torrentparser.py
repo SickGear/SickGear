@@ -87,7 +87,7 @@ class TorrentParser(object):
             try:
                 parsed = urlparse(self.torrent)
                 query = parse_qs(parsed.query)
-            except(Exception, BaseException):
+            except (BaseException, Exception):
                 pass
             self.title = query.get('dn', [''])[0]
             self.info_hash = query.get('xt', [''])[0].split(':')[-1]

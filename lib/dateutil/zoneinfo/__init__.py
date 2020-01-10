@@ -9,7 +9,8 @@ from io import BytesIO
 
 from dateutil.tz import tzfile as _tzfile
 
-from sickbeard import encodingKludge as ek
+# noinspection PyPep8Naming
+import encodingKludge as ek
 import sickbeard
 
 __all__ = ["get_zonefile_instance", "gettz", "gettz_db_metadata"]

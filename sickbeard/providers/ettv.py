@@ -19,10 +19,12 @@ import re
 import traceback
 
 from . import generic
-from sickbeard import logger
-from sickbeard.bs4_parser import BS4Parser
-from sickbeard.helpers import tryInt
-from lib.unidecode import unidecode
+from .. import logger
+from ..helpers import try_int
+from bs4_parser import BS4Parser
+
+from _23 import unidecode
+from six import iteritems
 
 
 class ETTVProvider(generic.TorrentProvider):
@@ -54,12 +56,12 @@ class ETTVProvider(generic.TorrentProvider):
 
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
-        rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {'info': 'torrent/'}.iteritems())
+        rc = dict([(k, re.compile('(?i)' + v)) for (k, v) in iteritems({'info': 'torrent/'})])
 
-        for mode in search_params.keys():
+        for mode in search_params:
             for search_string in search_params[mode]:
 
-                search_string = isinstance(search_string, unicode) and unidecode(search_string) or search_string
+                search_string = unidecode(search_string)
 
                 search_url = self.urls[('browse', 'search')['Cache' != mode]] % (
                     self._categories_string(mode), search_string)
@@ -86,8 +88,8 @@ class ETTVProvider(generic.TorrentProvider):
                             try:
                                 head = head if None is not head else self._header_row(
                                     tr, {'seed': r'seed', 'leech': r'leech', 'size': r'^size'})
-                                seeders, leechers, size = [tryInt(n, n) for n in [
-                                    cells[head[x]].get_text().strip() for x in 'seed', 'leech', 'size']]
+                                seeders, leechers, size = [try_int(n, n) for n in [
+                                    cells[head[x]].get_text().strip() for x in ('seed', 'leech', 'size')]]
                                 if self._reject_item(seeders, leechers):
                                     continue
 

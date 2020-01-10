@@ -1,13 +1,16 @@
-from base64 import b16encode, b32decode
 from hashlib import sha1
 import re
 import time
 
-import requests
+from . import http_error_code
+from .. import logger
 import sickbeard
-from sickbeard import logger
-from sickbeard.exceptions import ex
+from exceptions_helper import ex
 from lib.bencode import bencode, bdecode
+from lib import requests
+
+from _23 import make_btih
+from six import string_types
 
 
 class GenericClient(object):
@@ -27,7 +30,8 @@ class GenericClient(object):
 
     def _log_request_details(self, method, params=None, data=None, files=None, **kwargs):
 
-        logger.log('%s: sending %s request to %s with ...' % (self.name, method, self.url), logger.DEBUG)
+        output = []
+        output += ['%s: sending %s request to %s' % (self.name, method, self.url)]
 
         lines = [('params', (str(params), '')[not params]),
                  ('data', (str(data), '')[not data]),
@@ -37,16 +41,17 @@ class GenericClient(object):
                  ('json', (str(kwargs.get('json')), '')[not kwargs.get('json')])]
         m, c = 300, 100
         type_chunks = [(linetype, [ln[i:i + c] for i in range(0, min(len(ln), m), c)]) for linetype, ln in lines if ln]
+        if type_chunks:
+            output[-1] += ' with ...'
         for (arg, chunks) in type_chunks:
-            output = []
             nch = len(chunks) - 1
             for i, seg in enumerate(chunks):
                 if nch == i and 'files' == arg:
                     sample = ' ..excerpt(%s/%s)' % (m, len(lines[2][1]))
                     seg = seg[0:c - (len(sample) - 2)] + sample
                 output += ['%s: request %s= %s%s%s' % (self.name, arg, ('', '..')[bool(i)], seg, ('', '..')[i != nch])]
-            for out in output:
-                logger.log(out, logger.DEBUG)
+
+        logger.log(output, logger.DEBUG)
 
     def _request(self, method='get', params=None, data=None, files=None, **kwargs):
 
@@ -76,7 +81,7 @@ class GenericClient(object):
         except requests.exceptions.Timeout as e:
             logger.log('%s: Connection timeout %s' % (self.name, ex(e)), logger.ERROR)
             return False
-        except Exception as e:
+        except (BaseException, Exception) as e:
             logger.log('%s: Unknown exception raised when sending torrent to %s: %s' % (self.name, self.name, ex(e)),
                        logger.ERROR)
             return False
@@ -85,8 +90,8 @@ class GenericClient(object):
             logger.log('%s: Invalid username or password, check your config' % self.name, logger.ERROR)
             return False
 
-        if response.status_code in sickbeard.clients.http_error_code:
-            logger.log('%s: %s' % (self.name, sickbeard.clients.http_error_code[response.status_code]), logger.DEBUG)
+        if response.status_code in http_error_code:
+            logger.log('%s: %s' % (self.name, http_error_code[response.status_code]), logger.DEBUG)
             return False
 
         logger.log('%s: Response to %s request is %s' % (self.name, method.upper(), response.text), logger.DEBUG)
@@ -197,7 +202,7 @@ class GenericClient(object):
         if result.url.startswith('magnet'):
             result.hash = re.findall(r'urn:btih:([\w]{32,40})', result.url)[0]
             if 32 == len(result.hash):
-                result.hash = b16encode(b32decode(result.hash)).lower()
+                result.hash = make_btih(result.hash).lower()
         else:
             info = bdecode(result.content)['info']
             result.hash = sha1(bencode(info)).hexdigest()
@@ -219,7 +224,7 @@ class GenericClient(object):
             result.ratio = result.provider.seed_ratio()
 
             result = self._get_torrent_hash(result)
-        except Exception as e:
+        except (BaseException, Exception) as e:
             logger.log('Bad torrent data: hash is %s for [%s]' % (result.hash, result.name), logger.ERROR)
             logger.log('Exception raised when checking torrent data: %s' % (ex(e)), logger.DEBUG)
             return r_code
@@ -230,7 +235,7 @@ class GenericClient(object):
             else:
                 r_code = self._add_torrent_file(result)
 
-            self.created_id = isinstance(r_code, basestring) and r_code or None
+            self.created_id = isinstance(r_code, string_types) and r_code or None
             if not r_code:
                 logger.log('%s: Unable to send torrent to client' % self.name, logger.ERROR)
                 return False
@@ -253,7 +258,7 @@ class GenericClient(object):
             if 0 != result.priority and not self._set_torrent_priority(result):
                 logger.log('%s: Unable to set priority for torrent' % self.name, logger.ERROR)
 
-        except Exception as e:
+        except (BaseException, Exception) as e:
             logger.log('%s: Failed sending torrent: %s - %s' % (self.name, result.name, result.hash), logger.ERROR)
             logger.log('%s: Exception raised when sending torrent: %s' % (self.name, ex(e)), logger.DEBUG)
 

@@ -23,15 +23,19 @@ import threading
 from math import ceil
 
 import sickbeard
+from . import db, logger, scheduler, search_queue, ui
+from .helpers import find_show_by_id
+from .providers.generic import GenericProvider
+from .search import wanted_episodes
+from .sgdatetime import SGDatetime
+from .tv import TVidProdid, TVEpisode, TVShow
 
-from sickbeard import db, scheduler, helpers
-from sickbeard import search_queue
-from sickbeard import logger
-from sickbeard import ui
-from sickbeard.providers.generic import GenericProvider
-from sickbeard.search import wanted_episodes
-from sickbeard.helpers import find_show_by_id
-from sickbeard.sbdatetime import sbdatetime
+from _23 import filter_list, map_iter, map_list
+from six import iteritems, itervalues, moves
+
+# noinspection PyUnreachableCode
+if False:
+    from typing import Dict, List, Optional
 
 NORMAL_BACKLOG = 0
 LIMITED_BACKLOG = 10
@@ -50,8 +54,7 @@ class BacklogSearchScheduler(scheduler.Scheduler):
             return datetime.date.today()
         elif (self.action._lastBacklog + self.action.cycleTime) < datetime.date.today().toordinal():
             return datetime.date.today()
-        else:
-            return datetime.date.fromordinal(self.action._lastBacklog + self.action.cycleTime)
+        return datetime.date.fromordinal(self.action._lastBacklog + self.action.cycleTime)
 
     def next_backlog_timeleft(self):
         now = datetime.datetime.now()
@@ -62,7 +65,7 @@ class BacklogSearchScheduler(scheduler.Scheduler):
             if not torrent_enabled:
                 nextpossibleruntime = (datetime.datetime.fromtimestamp(self.action.last_runtime) +
                                        datetime.timedelta(hours=23))
-                for _ in xrange(5):
+                for _ in moves.xrange(5):
                     if nextruntime > nextpossibleruntime:
                         self.action.nextBacklog = nextruntime
                         self.action.nextCyleTime = self.cycleTime
@@ -74,18 +77,18 @@ class BacklogSearchScheduler(scheduler.Scheduler):
         return self.action.nextBacklog - now if self.action.nextBacklog > now else datetime.timedelta(seconds=0)
 
 
-class BacklogSearcher:
+class BacklogSearcher(object):
     def __init__(self):
 
         self._lastBacklog = self._get_last_backlog()
         self.cycleTime = sickbeard.BACKLOG_FREQUENCY
         self.lock = threading.Lock()
-        self.amActive = False
-        self.amPaused = False
-        self.amWaiting = False
-        self.forcetype = NORMAL_BACKLOG
-        self.force = False
-        self.nextBacklog = datetime.datetime.fromtimestamp(1)
+        self.amActive = False  # type: bool
+        self.amPaused = False  # type: bool
+        self.amWaiting = False  # type: bool
+        self.forcetype = NORMAL_BACKLOG  # type: int
+        self.force = False  # type: bool
+        self.nextBacklog = datetime.datetime.fromtimestamp(1)  # type: datetime.datetime
         self.nextCyleTime = None
         self.currentSearchInfo = None
 
@@ -102,21 +105,36 @@ class BacklogSearcher:
     def get_progress_indicator(self):
         if self.amActive:
             return ui.ProgressIndicator(self.percentDone, self.currentSearchInfo)
-        else:
-            return None
 
     def am_running(self):
+        # type: (...) -> bool
         logger.log(u'amWaiting: ' + str(self.amWaiting) + ', amActive: ' + str(self.amActive), logger.DEBUG)
         return (not self.amWaiting) and self.amActive
 
-    def add_backlog_item(self, items, standard_backlog, limited_backlog, forced, torrent_only):
+    def add_backlog_item(self,
+                         items,  # type: List[Dict[int, List[TVEpisode]]]
+                         standard_backlog,  # type: bool
+                         limited_backlog,  # type: bool
+                         forced,  # type: bool
+                         torrent_only  # type: bool
+                         ):
+        """
+        add given list of show items to search backlog queue
+
+        :param items: list of episodes to add to search
+        :param standard_backlog: standard (scheduled) backlog
+        :param limited_backlog: limited search
+        :param forced: forced search
+        :param torrent_only: only torrents
+        """
         for segments in items:
             if len(segments):
-                for season, segment in segments.items():
-                    self.currentSearchInfo = {'title': segment[0].show.name + ' Season ' + str(season)}
+                for season, segment in iteritems(segments):  # type: int, List[TVEpisode]
+                    self.currentSearchInfo = {'title': segment[0].show_obj.name + ' Season ' + str(season)}
 
                     backlog_queue_item = search_queue.BacklogQueueItem(
-                        segment[0].show, segment, standard_backlog=standard_backlog, limited_backlog=limited_backlog,
+                        segment[0].show_obj, segment,
+                        standard_backlog=standard_backlog, limited_backlog=limited_backlog,
                         forced=forced, torrent_only=torrent_only)
                     sickbeard.searchQueueScheduler.action.add_item(backlog_queue_item)
 
@@ -126,25 +144,52 @@ class BacklogSearcher:
             my_db = db.DBConnection('cache.db')
             sql_result = my_db.select('SELECT * FROM backlogparts')
             if sql_result:
-                current_parts = len(set(s['part'] for s in sql_result))
+                current_parts = len(set([s['part'] for s in sql_result]))
                 parts_count = len(sql_result)
                 new_part_count = int(ceil(new_count / old_count * current_parts))
                 parts = int(ceil(parts_count / new_part_count))
-                cl = ([], [['DELETE FROM backlogparts']])[parts_count > 1]
+                # noinspection SqlConstantCondition
+                cl = ([], [['DELETE FROM backlogparts WHERE 1=1']])[1 < parts_count]
                 p = new_count - new_part_count
                 for i, s in enumerate(sql_result):
-                    if i % parts == 0:
+                    if 0 == i % parts:
                         p += 1
                     cl.append(['INSERT INTO backlogparts (part, indexerid, indexer) VALUES (?,?,?)',
                                [p, s['indexerid'], s['indexer']]])
 
                 if 0 < len(cl):
                     my_db.mass_action(cl)
-        except (StandardError, Exception):
+        except (BaseException, Exception):
             pass
 
-    def search_backlog(self, which_shows=None, force_type=NORMAL_BACKLOG, force=False):
+    @staticmethod
+    def providers_active(torrent_only=False, scheduled=False):
+        # type: (bool, bool) -> bool
+        """
+        Checks if there are any providers active for backlog search
 
+        :param torrent_only: only check torrent providers
+        :param scheduled: scheduled backlog search (can be from webif or scheduler)
+        :return: any provider is active for given backlog
+        """
+        return 0 < len([x for x in sickbeard.providers.sortedProviderList() if x.is_active() and x.enable_backlog and
+                        (not torrent_only or GenericProvider.TORRENT == x.providerType) and
+                        (not scheduled or x.enable_scheduled_backlog)])
+
+    def search_backlog(self,
+                       which_shows=None,  # type: Optional[List[TVShow]]
+                       force_type=NORMAL_BACKLOG,  # type: int
+                       force=False  # type: bool
+                       ):
+        """
+        start backlog for given list of shows or start next scheduled backlog
+
+        :param which_shows: optional list of shows to backlog search
+        :param force_type: type of backlog
+        :param force: force backlog
+        :return: nothing
+        :rtype: None
+        """
         if self.amActive and not which_shows:
             logger.log(u'Backlog is still running, not starting it again', logger.DEBUG)
             return
@@ -160,11 +205,17 @@ class BacklogSearcher:
         any_torrent_enabled = continued_backlog = False
         if not force and standard_backlog and (datetime.datetime.now() - datetime.datetime.fromtimestamp(
                 self._get_last_runtime())) < datetime.timedelta(hours=23):
-            any_torrent_enabled = any([x for x in sickbeard.providers.sortedProviderList() if x.is_active()
-                                       and x.enable_backlog and x.providerType == GenericProvider.TORRENT])
+            any_torrent_enabled = any(map_iter(
+                lambda x: x.is_active() and x.enable_backlog and x.providerType == GenericProvider.TORRENT,
+                sickbeard.providers.sortedProviderList()))
             if not any_torrent_enabled:
-                logger.log('Last scheduled Backlog run was within the last day, skipping this run.', logger.DEBUG)
+                logger.log('Last scheduled backlog run was within the last day, skipping this run.', logger.DEBUG)
                 return
+
+        if not self.providers_active(any_torrent_enabled, standard_backlog):
+            logger.log('No NZB/Torrent provider has active searching enabled in config/Media Providers,'
+                       ' cannot start backlog.', logger.WARNING)
+            return
 
         self._get_last_backlog()
         self.amActive = True
@@ -192,10 +243,10 @@ class BacklogSearcher:
                 sl = []
                 part_nr = int(sql_result[0]['part'])
                 for s in sql_result:
-                    show_obj = find_show_by_id(sickbeard.showList, {int(s['indexer']): int(s['indexerid'])})
+                    show_obj = find_show_by_id({int(s['indexer']): int(s['indexerid'])})
                     if show_obj:
                         sl.append(show_obj)
-                        runparts.append([int(s['indexerid']), int(s['indexer'])])
+                        runparts.append(show_obj.tvid_prodid)
                 show_list = sl
                 continued_backlog = True
                 my_db.action('DELETE FROM backlogparts WHERE part = ?', [part_nr])
@@ -203,9 +254,9 @@ class BacklogSearcher:
         forced = standard_backlog and force_type != NORMAL_BACKLOG
 
         wanted_list = []
-        for curShow in show_list:
-            if not curShow.paused:
-                w = wanted_episodes(curShow, from_date, make_dict=True,
+        for cur_show_obj in show_list:
+            if not cur_show_obj.paused:
+                w = wanted_episodes(cur_show_obj, from_date, make_dict=True,
                                     unaired=(sickbeard.SEARCH_UNAIRED and not sickbeard.UNAIRED_RECENT_SEARCH_ONLY))
                 if w:
                     wanted_list.append(w)
@@ -215,12 +266,12 @@ class BacklogSearcher:
             fullbacklogparts = sum([len(w) for w in wanted_list if w]) // sickbeard.BACKLOG_FREQUENCY
             h_part = []
             counter = 0
-            for w in wanted_list:
+            for w in wanted_list:  # type: Dict
                 f = False
-                for season, segment in w.iteritems():
+                for season, segment in iteritems(w):  # type: int, List[TVEpisode]
                     counter += 1
                     if not f:
-                        h_part.append([segment[0].show.indexerid, segment[0].show.indexer])
+                        h_part.append(segment[0].show_obj.tvid_prodid)
                         f = True
                 if counter > fullbacklogparts:
                     counter = 0
@@ -230,18 +281,16 @@ class BacklogSearcher:
             if h_part:
                 parts.append(h_part)
 
-        def in_showlist(show, showlist):
-            return 0 < len([item for item in showlist if item[1] == show.indexer and item[0] == show.indexerid])
-
         if not runparts and parts:
             runparts = parts[0]
-            wanted_list = [w for w in wanted_list if w and in_showlist(w.itervalues().next()[0].show, runparts)]
+            wanted_list = filter_list(
+                lambda wi: wi and itervalues(wi).next()[0].show_obj.tvid_prodid in runparts, wanted_list)
 
         limited_wanted_list = []
         if standard_backlog and not any_torrent_enabled and runparts:
-            for curShow in sickbeard.showList:
-                if not curShow.paused and not in_showlist(curShow, runparts):
-                    w = wanted_episodes(curShow, limited_from_date, make_dict=True,
+            for cur_show_obj in sickbeard.showList:
+                if not cur_show_obj.paused and cur_show_obj.tvid_prodid not in runparts:
+                    w = wanted_episodes(cur_show_obj, limited_from_date, make_dict=True,
                                         unaired=(sickbeard.SEARCH_UNAIRED and not sickbeard.UNAIRED_RECENT_SEARCH_ONLY))
                     if w:
                         limited_wanted_list.append(w)
@@ -251,13 +300,13 @@ class BacklogSearcher:
             self.add_backlog_item(limited_wanted_list, standard_backlog, True, forced, any_torrent_enabled)
 
         if standard_backlog and not sickbeard.BACKLOG_NOFULL and not any_torrent_enabled and not continued_backlog:
-            cl = ([], [['DELETE FROM backlogparts']])[len(parts) > 1]
+            # noinspection SqlConstantCondition
+            cl = ([], [['DELETE FROM backlogparts WHERE 1=1']])[any(parts)]
             for i, l in enumerate(parts):
                 if 0 == i:
                     continue
-                for m in l:
-                    cl.append(['INSERT INTO backlogparts (part, indexerid, indexer) VALUES (?,?,?)',
-                               [i + 1, m[0], m[1]]])
+                cl += map_list(lambda m: ['INSERT INTO backlogparts (part, indexer, indexerid) VALUES (?,?,?)',
+                                          [i + 1] + TVidProdid(m).list], l)
 
             if 0 < len(cl):
                 my_db.mass_action(cl)
@@ -279,15 +328,15 @@ class BacklogSearcher:
         logger.log('Retrieving the last runtime of Backlog from the DB', logger.DEBUG)
 
         my_db = db.DBConnection()
-        sql_results = my_db.select('SELECT * FROM info')
+        sql_result = my_db.select('SELECT * FROM info')
 
-        if 0 == len(sql_results):
+        if 0 == len(sql_result):
             last_run_time = 1
-        elif None is sql_results[0]['last_run_backlog'] or '' == sql_results[0]['last_run_backlog']:
+        elif None is sql_result[0]['last_run_backlog'] or '' == sql_result[0]['last_run_backlog']:
             last_run_time = 1
         else:
-            last_run_time = int(sql_results[0]['last_run_backlog'])
-            if last_run_time > sbdatetime.now().totimestamp(default=0):
+            last_run_time = int(sql_result[0]['last_run_backlog'])
+            if last_run_time > SGDatetime.now().totimestamp(default=0):
                 last_run_time = 1
 
         return last_run_time
@@ -296,13 +345,14 @@ class BacklogSearcher:
         logger.log('Setting the last backlog runtime in the DB to %s' % when, logger.DEBUG)
 
         my_db = db.DBConnection()
-        sql_results = my_db.select('SELECT * FROM info')
+        sql_result = my_db.select('SELECT * FROM info')
 
-        if len(sql_results) == 0:
+        if 0 == len(sql_result):
             my_db.action('INSERT INTO info (last_backlog, last_indexer, last_run_backlog) VALUES (?,?,?)',
-                        [1, 0, sbdatetime.totimestamp(when, default=0)])
+                         [1, 0, SGDatetime.totimestamp(when, default=0)])
         else:
-            my_db.action('UPDATE info SET last_run_backlog=%s' % sbdatetime.totimestamp(when, default=0))
+            # noinspection SqlConstantCondition
+            my_db.action('UPDATE info SET last_run_backlog=%s WHERE 1=1' % SGDatetime.totimestamp(when, default=0))
 
         self.nextBacklog = datetime.datetime.fromtimestamp(1)
 
@@ -311,14 +361,14 @@ class BacklogSearcher:
         logger.log('Retrieving the last check time from the DB', logger.DEBUG)
 
         my_db = db.DBConnection()
-        sql_results = my_db.select('SELECT * FROM info')
+        sql_result = my_db.select('SELECT * FROM info')
 
-        if 0 == len(sql_results):
+        if 0 == len(sql_result):
             last_backlog = 1
-        elif None is sql_results[0]['last_backlog'] or '' == sql_results[0]['last_backlog']:
+        elif None is sql_result[0]['last_backlog'] or '' == sql_result[0]['last_backlog']:
             last_backlog = 1
         else:
-            last_backlog = int(sql_results[0]['last_backlog'])
+            last_backlog = int(sql_result[0]['last_backlog'])
             if last_backlog > datetime.date.today().toordinal():
                 last_backlog = 1
 
@@ -331,13 +381,14 @@ class BacklogSearcher:
         logger.log('Setting the last backlog in the DB to %s' % when, logger.DEBUG)
 
         my_db = db.DBConnection()
-        sql_results = my_db.select('SELECT * FROM info')
+        sql_result = my_db.select('SELECT * FROM info')
 
-        if len(sql_results) == 0:
+        if 0 == len(sql_result):
             my_db.action('INSERT INTO info (last_backlog, last_indexer, last_run_backlog) VALUES (?,?,?)',
                          [str(when), 0, 1])
         else:
-            my_db.action('UPDATE info SET last_backlog=%s' % when)
+            # noinspection SqlConstantCondition
+            my_db.action('UPDATE info SET last_backlog=%s WHERE 1=1' % when)
 
     def run(self):
         try:
@@ -346,6 +397,6 @@ class BacklogSearcher:
             self.forcetype = NORMAL_BACKLOG
             self.force = False
             self.search_backlog(force_type=force_type, force=force)
-        except:
+        except (BaseException, Exception):
             self.amActive = False
             raise

@@ -18,6 +18,8 @@
 from .utils import to_unicode
 import re
 import logging
+from six import string_types
+from _23 import decode_str
 
 
 logger = logging.getLogger("subliminal")
@@ -806,7 +808,7 @@ class Country(object):
         return self.name
 
     def __str__(self):
-        return unicode(self).encode('utf-8')
+        return decode_str(self)
 
     def __repr__(self):
         return 'Country(%s)' % self
@@ -832,7 +834,7 @@ class Language(object):
         False
 
     """
-    with_country_regexps = [re.compile('(.*)\((.*)\)'), re.compile('(.*)[-_](.*)')]
+    with_country_regexps = [re.compile(r'(.*)\((.*)\)'), re.compile('(.*)[-_](.*)')]
 
     def __init__(self, language, country=None, languages=None, countries=None, strict=True):
         languages = languages or LANGUAGES
@@ -842,7 +844,7 @@ class Language(object):
         self.country = None
         if isinstance(country, Country):
             self.country = country
-        elif isinstance(country, basestring):
+        elif isinstance(country, string_types):
             try:
                 self.country = Country(country, countries)
             except ValueError:
@@ -921,7 +923,7 @@ class Language(object):
         return '%s (%s)' % (self.name, self.country)
 
     def __str__(self):
-        return unicode(self).encode('utf-8')
+        return decode_str(self.name)
 
     def __repr__(self):
         if self.country is None:

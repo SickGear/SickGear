@@ -8,14 +8,19 @@
 #set global $topmenu = 'home'
 <% def sg_var(varname, default=False): return getattr(sickbeard, varname, default) %>#slurp#
 <% def sg_str(varname, default=''): return getattr(sickbeard, varname, default) %>#slurp#
+##########
+## legacy
+#set $provided_tvid = $getVar('provided_tvid', None) or $getVar('provided_indexer', 1)
+#set $provided_prodid = $getVar('provided_prodid', None) or $getVar('provided_indexer_id', 0)
+#set $provided_show_name = $getVar('provided_show_name', None) or $getVar('provided_indexer_name', '')
 ##
 #import os.path
 #include $os.path.join($sg_str('PROG_DIR'), 'gui/slick/interfaces/default/inc_top.tmpl')
 
-#set indexer_count = len([$i for $i in $sickbeard.indexerApi().indexers if $sickbeard.indexerApi(i).config.get('active', False) and not $sickbeard.indexerApi(i).config.get('defunct', False)]) + 1
+#set indexer_count = len([$i for $i in $sickbeard.TVInfoAPI().sources if $sickbeard.TVInfoAPI(i).config.get('active', False) and not $sickbeard.TVInfoAPI(i).config.get('defunct', False)]) + 1
 
 <script>
-	var show_scene_maps = ${show_scene_maps},
+	var showSceneMaps = ${show_scene_maps},
 		config = {
 			sortArticle: #echo ['!1','!0'][$sg_var('SORT_ARTICLE')]#,
 			resultsSortby: '#echo $sg_str('RESULTS_SORTBY', 'rel')#'
@@ -42,17 +47,17 @@
 	<br>
 #end if
 
-	<form id="addShowForm"#if $kwargs.get('action')# class="fullwidth"#end if# method="post" action="$sbRoot/home/addShows/addNewShow" accept-charset="utf-8">
+	<form id="addShowForm"#if $kwargs.get('action')# class="fullwidth"#end if# method="post" action="$sbRoot/add-shows/add-new-show" accept-charset="utf-8">
 		$xsrf_form_html
 
 		<fieldset class="sectionwrap step-one">
 			<legend class="legendStep"><p>#if $use_provided_info#Using known show information#else#Find show at TV info source#end if#</p></legend>
 
 			<div class="stepDiv">
-				<input type="hidden" id="indexer_timeout" value="$sg_var('INDEXER_TIMEOUT', 20)">
+				<input type="hidden" id="indexer_timeout" value="$sg_var('TVINFO_TIMEOUT', 20)">
 				<input type="hidden" id="indexer_count" value="$indexer_count">
 #if $kwargs.get('action')
-				<input type="hidden" name="providedIndexer" value="$provided_indexer">
+				<input type="hidden" name="provided-tvid" value="$provided_tvid">
 				<input type="hidden" name="return_to" value="$kwargs.get('return_to')">
 				<input type="hidden" name="cancel_form" value="0">
 <style>
@@ -60,32 +65,31 @@
 </style>
 #end if
 #if $use_provided_info
-    #set $provided_indexer_local = $provided_indexer
-    #set $provided_indexer_id_local = $provided_indexer_id
-				Show: <a href="<%= anon_url(sickbeard.indexerApi(provided_indexer_local).config['show_url'] % provided_indexer_id_local) %>">$provided_indexer_name</a>
-				<input type="hidden" name="indexerLang" value="en">
-				<input type="hidden" name="whichSeries" value="#echo '|'.join([str($provided_indexer), '', str($provided_indexer_id), $provided_indexer_name])#">
-				<input type="hidden" id="providedName" value="$provided_indexer_name">
-				<input type="hidden" id="providedIndexer" value="$provided_indexer">
+    #set $provided_tvid_local = $provided_tvid
+    #set $provided_prodid_local = $provided_prodid
+				Show: <a href="<%= anon_url(sickbeard.TVInfoAPI(provided_tvid_local).config['show_url'] % provided_prodid_local) %>">$provided_show_name</a>
+				<input type="hidden" name="tvinfo_lang" value="en">
+				<input type="hidden" name="which_series" value="#echo '|'.join([str($provided_tvid), '', str($provided_prodid), $provided_show_name])#">
+				<input type="hidden" id="provided-tvid" value="$provided_tvid">
+				<input type="hidden" id="provided-show-name" value="$provided_show_name">
 #else
-    #if 2 > $len($indexers)
-<style>
-	#addShowForm input#nameToSearch{width:611px}
-</style>
-				<input type="hidden" id="providedIndexer" value="$provided_indexer">
+    #set $multi_infosrc = $getVar('infosrc', None) and 1 < $len($infosrc)
+
+    #if not $multi_infosrc
+				<input type="hidden" id="provided-tvid" value="$provided_tvid">
     #end if
-				<input type="text" id="nameToSearch" value="$default_show_name" placeholder="Enter a show name, TVDB ID/Url, IMDb ID/Url" class="form-control form-control-inline input-sm input350">
+				<input type="text" id="nameToSearch" value="$default_show_name" placeholder="Enter a show name, TVDB ID/Url, IMDb ID/Url" class="form-control form-control-inline input-sm#if not $multi_infosrc# wide#end if#">
 				&nbsp;
 				<span style="float:right">
-					<select name="indexerLang" id="indexerLangSelect" class="form-control form-control-inline input-sm">
-						<option value="en" selected="selected">en</option>
+					<select name="tvinfo_lang" id="infosrc-lang-select" class="form-control form-control-inline input-sm">
+						<option value="$meta_lang" class="selected-text" selected="selected">&gt; $meta_lang</option>
 					</select><b>&nbsp;*</b>
 
-    #if 1 < $len($indexers)
-					<select name="providedIndexer" id="providedIndexer" class="form-control form-control-inline input-sm">
-						<option value="0" #if $provided_indexer == 0 then "selected=\"selected\"" else ""#>All Indexers</option>
-        #for $indexer in $indexers
-						<option value="$indexer" #if $provided_indexer == $indexer then "selected=\"selected\"" else ""#>$indexers[$indexer]</option>
+    #if $multi_infosrc
+					<select name="provided-tvid" id="provided-tvid" class="form-control form-control-inline input-sm">
+						<option value="0" #if $provided_tvid == 0 then "selected=\"selected\"" else ""#>All Sources</option>
+        #for $cur_isrc in $infosrc
+						<option value="$cur_isrc" #if $provided_tvid == $cur_isrc then "selected=\"selected\"" else ""#>$infosrc[$cur_isrc]</option>
         #end for
 					</select>
     #end if
@@ -111,7 +115,7 @@
 			<div class="stepDiv parent-folder">
     #if $provided_show_dir
 				Pre-chosen Destination Folder: <b>$provided_show_dir</b> <br>
-				<input type="hidden" id="fullShowPath" name="fullShowPath" value="$provided_show_dir"><br>
+				<input type="hidden" id="fullShowPath" name="full_show_path" value="$provided_show_dir"><br>
     #else
     #include $os.path.join($sg_str('PROG_DIR'), 'gui/slick/interfaces/default/inc_rootDirs.tmpl')
     #end if
@@ -130,7 +134,7 @@
     #for $curNextDir in $other_shows
 		<input type="hidden" name="other_shows" value="$curNextDir">
     #end for
-		<input type="hidden" name="skipShow" id="skipShow" value="">
+		<input type="hidden" name="skip_show" id="skipShow" value="">
 #end if
 	</form>
 

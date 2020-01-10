@@ -18,13 +18,14 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
-import time
-import urllib
-import urllib2
-
+from .generic import Notifier
 import sickbeard
-from sickbeard.exceptions import ex
-from sickbeard.notifiers.generic import Notifier
+
+from exceptions_helper import ex
+
+from _23 import urlencode
+# noinspection PyUnresolvedReferences
+from six.moves import urllib
 
 
 class Boxcar2Notifier(Notifier):
@@ -53,7 +54,7 @@ class Boxcar2Notifier(Notifier):
         # https://boxcar.uservoice.com/knowledgebase/articles/306788-how-to-send-your-boxcar-account-a-notification
         body = body.strip().encode('utf-8')
 
-        data = urllib.urlencode({
+        data = urlencode({
                 'user_credentials': access_token,
                 'notification[title]': '%s - %s' % (title, body),
                 'notification[long_message]': body,
@@ -65,11 +66,11 @@ class Boxcar2Notifier(Notifier):
         # send the request to boxcar2
         result = None
         try:
-            req = urllib2.Request('https://new.boxcar.io/api/notifications')
-            handle = urllib2.urlopen(req, data)
-            handle.close()
+            req = urllib.request.Request('https://new.boxcar.io/api/notifications')
+            http_response_obj = urllib.request.urlopen(req, data)  # PY2 http_response_obj has no `with` context manager
+            http_response_obj.close()
 
-        except urllib2.URLError as e:
+        except urllib.error.HTTPError as e:
             if not hasattr(e, 'code'):
                 self._log_error(u'Notification failed: %s' % ex(e))
             else:
@@ -89,6 +90,8 @@ class Boxcar2Notifier(Notifier):
                     elif 400 == e.code:
                         result = 'Wrong data sent to Boxcar'
                         self._log_error(result)
+        except urllib.error.URLError as e:
+            self._log_error(u'Notification failed: %s' % ex(e))
 
         return self._choose((True, 'Failed to send notification: %s' % result)[bool(result)], not bool(result))
 

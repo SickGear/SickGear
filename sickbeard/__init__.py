@@ -17,6 +17,8 @@
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import with_statement
+
+from collections import OrderedDict
 from threading import Lock
 
 import datetime
@@ -28,35 +30,38 @@ import webbrowser
 
 # apparently py2exe won't build these unless they're imported somewhere
 import ast
-import base64
 import os.path
 import sys
+import threading
 import uuid
 
-sys.path.insert(1, os.path.abspath('../lib'))
-from sickbeard import helpers, encodingKludge as ek
-from sickbeard import db, image_cache, logger, naming, metadata, providers, scene_exceptions, scene_numbering, \
-    scheduler, auto_post_processer, search_queue, search_propers, search_recent, search_backlog, \
-    show_queue, show_updater, subtitles, traktChecker, version_checker, indexermapper, classes, properFinder, \
-    watchedstate_queue
-from sickbeard.config import check_section, check_setting_int, check_setting_str, ConfigMigrator, minimax
-from sickbeard.common import SD, SKIPPED
-from sickbeard.databases import mainDB, cache_db, failed_db
-from sickbeard.exceptions import ex
-from sickbeard.providers.generic import GenericProvider
-from sickbeard.providers.newznab import NewznabConstants
-from sickbeard.watchedstate import EmbyWatchedStateUpdater, PlexWatchedStateUpdater
-from indexers.indexer_config import INDEXER_TVDB
-from indexers.indexer_api import indexerApi
-from indexers.indexer_exceptions import indexer_shownotfound, indexer_exception, indexer_error, \
-    indexer_episodenotfound, indexer_attributenotfound, indexer_seasonnotfound, indexer_userabort, indexerExcepts
-from lib.adba.aniDBerrors import (AniDBError, AniDBBannedError)
-from lib.configobj import ConfigObj
-from lib.libtrakt import TraktAPI
-import trakt_helpers
-import threading
+# noinspection PyPep8Naming
+import encodingKludge as ek
+from . import classes, db, helpers, image_cache, indexermapper, logger, metadata, naming, providers, \
+    scene_exceptions, scene_numbering, scheduler, search_backlog, search_propers, search_queue, search_recent, \
+    show_queue, show_updater, subtitles, trakt_helpers, traktChecker, version_checker, watchedstate_queue
+from . import auto_post_processer, properFinder  # must come after the above imports
+from .common import SD, SKIPPED, USER_AGENT
+from .config import check_section, check_setting_int, check_setting_str, ConfigMigrator, minimax
+from .databases import cache_db, failed_db, mainDB
+from .indexers.indexer_api import TVInfoAPI
+from .indexers.indexer_config import TVINFO_IMDB, TVINFO_TVDB
+from .indexers.indexer_exceptions import *
+from .providers.generic import GenericProvider
+from .providers.newznab import NewznabConstants
+from .tv import TVidProdid
+from .watchedstate import EmbyWatchedStateUpdater, PlexWatchedStateUpdater
+
+from adba.aniDBerrors import AniDBError
+from configobj import ConfigObj
+from libtrakt import TraktAPI
+
+from _23 import b64encodestring, filter_iter, list_items, map_list
+from six import iteritems, PY2, string_types
+import sg_helpers
 
 PID = None
+ENV = {}
 
 CFG = None
 CONFIG_FILE = None
@@ -92,7 +97,7 @@ watchedStateQueueScheduler = None
 
 provider_ping_thread_pool = {}
 
-showList = None
+showList = []
 UPDATE_SHOWS_ON_START = False
 SHOW_UPDATE_HOUR = 3
 
@@ -147,7 +152,7 @@ CPU_PRESET = 'DISABLED'
 ANON_REDIRECT = None
 
 USE_API = False
-API_KEY = None
+API_KEYS = []
 
 ENABLE_HTTPS = False
 HTTPS_CERT = None
@@ -185,8 +190,8 @@ WANTED_BEGIN_DEFAULT = 0
 WANTED_LATEST_DEFAULT = 0
 FLATTEN_FOLDERS_DEFAULT = False
 SUBTITLES_DEFAULT = False
-INDEXER_DEFAULT = 0
-INDEXER_TIMEOUT = 20
+TVINFO_DEFAULT = 0
+TVINFO_TIMEOUT = 20
 SCENE_DEFAULT = False
 ANIME_DEFAULT = False
 USE_IMDB_INFO = True
@@ -250,6 +255,7 @@ SEARCH_UNAIRED = False
 UNAIRED_RECENT_SEARCH_ONLY = True
 
 ADD_SHOWS_WO_DIR = False
+ADD_SHOWS_METALANG = 'en'
 CREATE_MISSING_SHOW_DIRS = False
 SHOW_DIRS_WITH_DOTS = False
 RENAME_EPISODES = False
@@ -390,7 +396,6 @@ GROWL_NOTIFY_ONSNATCH = False
 GROWL_NOTIFY_ONDOWNLOAD = False
 GROWL_NOTIFY_ONSUBTITLEDOWNLOAD = False
 GROWL_HOST = ''
-GROWL_PASSWORD = None
 
 USE_PROWL = False
 PROWL_NOTIFY_ONSNATCH = False
@@ -446,14 +451,6 @@ GITTER_NOTIFY_ONDOWNLOAD = False
 GITTER_NOTIFY_ONSUBTITLEDOWNLOAD = False
 GITTER_ROOM = None
 GITTER_ACCESS_TOKEN = None
-
-USE_TWITTER = False
-TWITTER_NOTIFY_ONSNATCH = False
-TWITTER_NOTIFY_ONDOWNLOAD = False
-TWITTER_NOTIFY_ONSUBTITLEDOWNLOAD = False
-TWITTER_USERNAME = None
-TWITTER_PASSWORD = None
-TWITTER_PREFIX = None
 
 USE_EMAIL = False
 EMAIL_OLD_SUBJECTS = False
@@ -512,8 +509,10 @@ THEME_NAME = None
 USE_SUBTITLES = False
 SUBTITLES_LANGUAGES = []
 SUBTITLES_DIR = ''
+SUBTITLES_OS_HASH = True
 SUBTITLES_SERVICES_LIST = []
 SUBTITLES_SERVICES_ENABLED = []
+SUBTITLES_SERVICES_AUTH = [['', '']]
 SUBTITLES_HISTORY = False
 SUBTITLES_FINDER_FREQUENCY = 1
 
@@ -521,6 +520,7 @@ USE_FAILED_DOWNLOADS = False
 DELETE_FAILED = False
 
 EXTRA_SCRIPTS = []
+SG_EXTRA_SCRIPTS = []
 
 GIT_PATH = None
 
@@ -558,9 +558,7 @@ else:
     TRAKT_PIN_URL = 'https://trakt.tv/pin/6314'
     TRAKT_BASE_URL = 'https://api.trakt.tv/'
 
-THETVDB_V2_API_TOKEN = {'token': None, 'datetime': datetime.datetime.fromordinal(1)}
-
-COOKIE_SECRET = base64.b64encode(uuid.uuid4().bytes + uuid.uuid4().bytes)
+COOKIE_SECRET = b64encodestring(uuid.uuid4().bytes + uuid.uuid4().bytes)
 
 CACHE_IMAGE_URL_LIST = classes.ImageUrlList()
 
@@ -594,9 +592,9 @@ def init_stage_1(console_logging):
 
     # Misc
     global showList, providerList, newznabProviderList, torrentRssProviderList, \
-        WEB_HOST, WEB_ROOT, ACTUAL_CACHE_DIR, CACHE_DIR, ZONEINFO_DIR, ADD_SHOWS_WO_DIR, CREATE_MISSING_SHOW_DIRS, \
-        SHOW_DIRS_WITH_DOTS, \
-        RECENTSEARCH_STARTUP, NAMING_FORCE_FOLDERS, SOCKET_TIMEOUT, DEBUG, INDEXER_DEFAULT, CONFIG_FILE, \
+        WEB_HOST, WEB_ROOT, ACTUAL_CACHE_DIR, CACHE_DIR, ZONEINFO_DIR, ADD_SHOWS_WO_DIR, ADD_SHOWS_METALANG, \
+        CREATE_MISSING_SHOW_DIRS, SHOW_DIRS_WITH_DOTS, \
+        RECENTSEARCH_STARTUP, NAMING_FORCE_FOLDERS, SOCKET_TIMEOUT, DEBUG, TVINFO_DEFAULT, CONFIG_FILE, \
         CONFIG_FILE, CONFIG_VERSION, \
         REMOVE_FILENAME_CHARS, IMPORT_DEFAULT_CHECKED_SHOWS, WANTEDLIST_CACHE, MODULE_UPDATE_STRING, EXT_UPDATES
     # Add Show Search
@@ -615,13 +613,13 @@ def init_stage_1(console_logging):
         DISPLAY_SHOW_VIEWART, DISPLAY_SHOW_MINIMUM, DISPLAY_SHOW_SPECIALS, HISTORY_LAYOUT, BROWSELIST_HIDDEN
     # Gen Config/Misc
     global LAUNCH_BROWSER, UPDATE_SHOWS_ON_START, SHOW_UPDATE_HOUR, \
-        TRASH_REMOVE_SHOW, TRASH_ROTATE_LOGS, ACTUAL_LOG_DIR, LOG_DIR, INDEXER_TIMEOUT, ROOT_DIRS, \
+        TRASH_REMOVE_SHOW, TRASH_ROTATE_LOGS, ACTUAL_LOG_DIR, LOG_DIR, TVINFO_TIMEOUT, ROOT_DIRS, \
         VERSION_NOTIFY, AUTO_UPDATE, UPDATE_FREQUENCY, NOTIFY_ON_UPDATE
     # Gen Config/Interface
     global THEME_NAME, DEFAULT_HOME, FANART_LIMIT, SHOWLIST_TAGVIEW, SHOW_TAGS, \
         HOME_SEARCH_FOCUS, USE_IMDB_INFO, IMDB_ACCOUNTS, DISPLAY_FREESPACE, SORT_ARTICLE, FUZZY_DATING, TRIM_ZERO, \
         DATE_PRESET, TIME_PRESET, TIME_PRESET_W_SECONDS, TIMEZONE_DISPLAY, \
-        WEB_USERNAME, WEB_PASSWORD, CALENDAR_UNPROTECTED, USE_API, API_KEY, WEB_PORT, WEB_LOG, \
+        WEB_USERNAME, WEB_PASSWORD, CALENDAR_UNPROTECTED, USE_API, API_KEYS, WEB_PORT, WEB_LOG, \
         ENABLE_HTTPS, HTTPS_CERT, HTTPS_KEY, WEB_IPV6, WEB_IPV64, HANDLE_REVERSE_PROXY, \
         SEND_SECURITY_HEADERS, ALLOWED_HOSTS, ALLOW_ANYIP
     # Gen Config/Advanced
@@ -642,19 +640,19 @@ def init_stage_1(console_logging):
     # Media Providers
     global PROVIDER_ORDER, NEWZNAB_DATA, PROVIDER_HOMES
     # Subtitles
-    global USE_SUBTITLES, SUBTITLES_LANGUAGES, SUBTITLES_DIR, SUBTITLES_FINDER_FREQUENCY,  \
-        SUBTITLES_HISTORY, SUBTITLES_SERVICES_ENABLED, SUBTITLES_SERVICES_LIST
-    # Post Processing/Post-Processing
+    global USE_SUBTITLES, SUBTITLES_LANGUAGES, SUBTITLES_DIR, SUBTITLES_FINDER_FREQUENCY, SUBTITLES_OS_HASH, \
+        SUBTITLES_HISTORY, SUBTITLES_SERVICES_LIST, SUBTITLES_SERVICES_ENABLED, SUBTITLES_SERVICES_AUTH
+    # Media Process/Post-Processing
     global TV_DOWNLOAD_DIR, PROCESS_METHOD, PROCESS_AUTOMATICALLY, AUTOPOSTPROCESSER_FREQUENCY, \
-        POSTPONE_IF_SYNC_FILES, EXTRA_SCRIPTS, \
+        POSTPONE_IF_SYNC_FILES, EXTRA_SCRIPTS, SG_EXTRA_SCRIPTS, \
         DEFAULT_AUTOPOSTPROCESSER_FREQUENCY, MIN_AUTOPOSTPROCESSER_FREQUENCY, \
         UNPACK, SKIP_REMOVED_FILES, MOVE_ASSOCIATED_FILES, NFO_RENAME, RENAME_EPISODES, AIRDATE_EPISODES, \
         USE_FAILED_DOWNLOADS, DELETE_FAILED
-    # Post Processing/Episode Naming
+    # Media Process/Episode Naming
     global NAMING_PATTERN, NAMING_MULTI_EP, NAMING_STRIP_YEAR, NAMING_CUSTOM_ABD, NAMING_ABD_PATTERN, \
         NAMING_CUSTOM_SPORTS, NAMING_SPORTS_PATTERN, \
         NAMING_CUSTOM_ANIME, NAMING_ANIME_PATTERN, NAMING_ANIME_MULTI_EP, NAMING_ANIME
-    # Post Processing/Metadata
+    # Media Process/Metadata
     global METADATA_KODI, METADATA_MEDE8ER, METADATA_XBMC, METADATA_MEDIABROWSER, \
         METADATA_PS3, METADATA_TIVO, METADATA_WDTV, METADATA_XBMC_12PLUS
     # Notification Settings/HT and NAS
@@ -676,7 +674,7 @@ def init_stage_1(console_logging):
         USE_PYTIVO, PYTIVO_HOST, PYTIVO_SHARE_NAME, PYTIVO_TIVO_NAME
     # Notification Settings/Devices
     global USE_GROWL, GROWL_NOTIFY_ONSNATCH, GROWL_NOTIFY_ONDOWNLOAD, GROWL_NOTIFY_ONSUBTITLEDOWNLOAD, \
-        GROWL_HOST, GROWL_PASSWORD, \
+        GROWL_HOST, \
         USE_PROWL, PROWL_NOTIFY_ONSNATCH, PROWL_NOTIFY_ONDOWNLOAD, PROWL_NOTIFY_ONSUBTITLEDOWNLOAD, \
         PROWL_API, PROWL_PRIORITY, \
         USE_LIBNOTIFY, LIBNOTIFY_NOTIFY_ONSNATCH, LIBNOTIFY_NOTIFY_ONDOWNLOAD, \
@@ -690,9 +688,7 @@ def init_stage_1(console_logging):
         USE_PUSHBULLET, PUSHBULLET_NOTIFY_ONSNATCH, PUSHBULLET_NOTIFY_ONDOWNLOAD, \
         PUSHBULLET_NOTIFY_ONSUBTITLEDOWNLOAD, PUSHBULLET_ACCESS_TOKEN, PUSHBULLET_DEVICE_IDEN
     # Notification Settings/Social
-    global USE_TWITTER, TWITTER_NOTIFY_ONSNATCH, TWITTER_NOTIFY_ONDOWNLOAD, TWITTER_NOTIFY_ONSUBTITLEDOWNLOAD, \
-        TWITTER_USERNAME, TWITTER_PASSWORD, TWITTER_PREFIX, \
-        USE_TRAKT, TRAKT_CONNECTED_ACCOUNT, TRAKT_ACCOUNTS, TRAKT_MRU, TRAKT_VERIFY, \
+    global USE_TRAKT, TRAKT_CONNECTED_ACCOUNT, TRAKT_ACCOUNTS, TRAKT_MRU, TRAKT_VERIFY, \
         TRAKT_USE_WATCHLIST, TRAKT_REMOVE_WATCHLIST, TRAKT_TIMEOUT, TRAKT_METHOD_ADD, TRAKT_START_PAUSED, \
         TRAKT_SYNC, TRAKT_DEFAULT_INDEXER, TRAKT_REMOVE_SERIESLIST, TRAKT_UPDATE_COLLECTION, \
         USE_SLACK, SLACK_NOTIFY_ONSNATCH, SLACK_NOTIFY_ONDOWNLOAD, SLACK_NOTIFY_ONSUBTITLEDOWNLOAD, \
@@ -708,14 +704,14 @@ def init_stage_1(console_logging):
     global ANIME_TREAT_AS_HDTV, USE_ANIDB, ANIDB_USERNAME, ANIDB_PASSWORD, ANIDB_USE_MYLIST
 
     for stanza in ('General', 'Blackhole', 'SABnzbd', 'NZBGet', 'Emby', 'Kodi', 'XBMC', 'PLEX',
-                   'Growl', 'Prowl', 'Twitter', 'Slack', 'Discordapp', 'Boxcar2', 'NMJ', 'NMJv2',
+                   'Growl', 'Prowl', 'Slack', 'Discordapp', 'Boxcar2', 'NMJ', 'NMJv2',
                    'Synology', 'SynologyNotifier',
                    'pyTivo', 'Pushalot', 'Pushbullet', 'Subtitles'):
         check_section(CFG, stanza)
 
     update_config = False
 
-    WANTEDLIST_CACHE = common.wantedQualities()
+    WANTEDLIST_CACHE = common.WantedQualities()
 
     # wanted branch
     BRANCH = check_setting_str(CFG, 'General', 'branch', '')
@@ -739,16 +735,17 @@ def init_stage_1(console_logging):
     else:
         CACHE_DIR = ACTUAL_CACHE_DIR
 
-    if not helpers.makeDir(CACHE_DIR):
+    if not helpers.make_dir(CACHE_DIR):
         logger.log(u'!!! Creating local cache dir failed, using system default', logger.ERROR)
         CACHE_DIR = None
 
     # clean cache folders
     if CACHE_DIR:
-        helpers.clearCache()
+        helpers.clear_cache()
         ZONEINFO_DIR = ek.ek(os.path.join, CACHE_DIR, 'zoneinfo')
         if not ek.ek(os.path.isdir, ZONEINFO_DIR) and not helpers.make_dirs(ZONEINFO_DIR):
             logger.log(u'!!! Creating local zoneinfo dir failed', logger.ERROR)
+    sg_helpers.CACHE_DIR = CACHE_DIR
 
     THEME_NAME = check_setting_str(CFG, 'GUI', 'theme_name', 'dark')
     GUI_NAME = check_setting_str(CFG, 'GUI', 'gui_name', 'slick')
@@ -758,9 +755,6 @@ def init_stage_1(console_logging):
     FANART_RATINGS = check_setting_str(CFG, 'GUI', 'fanart_ratings', None)
     if None is not FANART_RATINGS:
         FANART_RATINGS = ast.literal_eval(FANART_RATINGS or '{}')
-    else:
-        FANART_RATINGS = ast.literal_eval(check_setting_str(CFG, 'GUI', 'backart_ratings', None) or '{}')
-        update_config |= image_cache.ImageCache().clean_fanart()
     USE_IMDB_INFO = bool(check_setting_int(CFG, 'GUI', 'use_imdb_info', 1))
     IMDB_ACCOUNTS = CFG.get('GUI', []).get('imdb_accounts', [IMDB_DEFAULT_LIST_ID, IMDB_DEFAULT_LIST_NAME])
     HOME_SEARCH_FOCUS = bool(check_setting_int(CFG, 'General', 'home_search_focus', HOME_SEARCH_FOCUS))
@@ -781,7 +775,7 @@ def init_stage_1(console_logging):
     # put the log dir inside the data dir, unless an absolute path
     LOG_DIR = os.path.normpath(os.path.join(DATA_DIR, ACTUAL_LOG_DIR))
 
-    if not helpers.makeDir(LOG_DIR):
+    if not helpers.make_dir(LOG_DIR):
         logger.log(u'!!! No log folder, logging to screen only!', logger.ERROR)
 
     FILE_LOGGING_PRESET = check_setting_str(CFG, 'General', 'file_logging_preset', 'DB')
@@ -804,6 +798,10 @@ def init_stage_1(console_logging):
 
     ANON_REDIRECT = check_setting_str(CFG, 'General', 'anon_redirect', '')
     PROXY_SETTING = check_setting_str(CFG, 'General', 'proxy_setting', '')
+    sg_helpers.PROXY_SETTING = PROXY_SETTING
+    sg_helpers.USER_AGENT = USER_AGENT
+    from . import notifiers
+    sg_helpers.NOTIFIERS = notifiers
     PROXY_INDEXERS = bool(check_setting_int(CFG, 'General', 'proxy_indexers', 1))
     # attempt to help prevent users from breaking links by using a bad url
     if not ANON_REDIRECT.endswith('?'):
@@ -817,7 +815,11 @@ def init_stage_1(console_logging):
     TRASH_ROTATE_LOGS = bool(check_setting_int(CFG, 'General', 'trash_rotate_logs', 0))
 
     USE_API = bool(check_setting_int(CFG, 'General', 'use_api', 0))
-    API_KEY = check_setting_str(CFG, 'General', 'api_key', '')
+    API_KEYS = [k.split(':::') for k in check_setting_str(CFG, 'General', 'api_keys', '').split('|||') if k]
+    if not API_KEYS:
+        tmp_api_key = check_setting_str(CFG, 'General', 'api_key', None)
+        if None is not tmp_api_key:
+            API_KEYS = [['app name (old key)', tmp_api_key]]
 
     DEBUG = bool(check_setting_int(CFG, 'General', 'debug', 0))
 
@@ -845,10 +847,10 @@ def init_stage_1(console_logging):
     AUTO_UPDATE = bool(check_setting_int(CFG, 'General', 'auto_update', 0))
     NOTIFY_ON_UPDATE = bool(check_setting_int(CFG, 'General', 'notify_on_update', 1))
     FLATTEN_FOLDERS_DEFAULT = bool(check_setting_int(CFG, 'General', 'flatten_folders_default', 0))
-    INDEXER_DEFAULT = check_setting_int(CFG, 'General', 'indexer_default', 0)
-    if INDEXER_DEFAULT and not indexerApi(INDEXER_DEFAULT).config['active']:
-        INDEXER_DEFAULT = INDEXER_TVDB
-    INDEXER_TIMEOUT = check_setting_int(CFG, 'General', 'indexer_timeout', 20)
+    TVINFO_DEFAULT = check_setting_int(CFG, 'General', 'indexer_default', 0)
+    if TVINFO_DEFAULT and not TVInfoAPI(TVINFO_DEFAULT).config['active']:
+        TVINFO_DEFAULT = TVINFO_TVDB
+    TVINFO_TIMEOUT = check_setting_int(CFG, 'General', 'indexer_timeout', 20)
     ANIME_DEFAULT = bool(check_setting_int(CFG, 'General', 'anime_default', 0))
     SCENE_DEFAULT = bool(check_setting_int(CFG, 'General', 'scene_default', 0))
 
@@ -930,6 +932,7 @@ def init_stage_1(console_logging):
     CREATE_MISSING_SHOW_DIRS = bool(check_setting_int(CFG, 'General', 'create_missing_show_dirs', 0))
     SHOW_DIRS_WITH_DOTS = bool(check_setting_int(CFG, 'General', 'show_dirs_with_dots', 0))
     ADD_SHOWS_WO_DIR = bool(check_setting_int(CFG, 'General', 'add_shows_wo_dir', 0))
+    ADD_SHOWS_METALANG = check_setting_str(CFG, 'General', 'add_shows_metalang', 'en')
     REMOVE_FILENAME_CHARS = check_setting_str(CFG, 'General', 'remove_filename_chars', '')
     IMPORT_DEFAULT_CHECKED_SHOWS = bool(check_setting_int(CFG, 'General', 'import_default_checked_shows', 0))
 
@@ -961,8 +964,8 @@ def init_stage_1(console_logging):
                                'autoProcessTV', 'SickGear-NG', 'SickGear-NG.py')
         with open(ng_script_file, 'r') as ng:
             text = ng.read()
-        NZBGET_SCRIPT_VERSION = re.search(r'__version__ =.*\'([0-9.]+)\'.*$', text, flags=re.M).group(1)
-    except (StandardError, Exception):
+        NZBGET_SCRIPT_VERSION = re.search(r""".*version: (\d+\.\d+)""", text, flags=re.M).group(1)
+    except (BaseException, Exception):
         NZBGET_SCRIPT_VERSION = None
 
     TORRENT_USERNAME = check_setting_str(CFG, 'TORRENT', 'torrent_username', '')
@@ -1031,7 +1034,7 @@ def init_stage_1(console_logging):
     GROWL_NOTIFY_ONDOWNLOAD = bool(check_setting_int(CFG, 'Growl', 'growl_notify_ondownload', 0))
     GROWL_NOTIFY_ONSUBTITLEDOWNLOAD = bool(check_setting_int(CFG, 'Growl', 'growl_notify_onsubtitledownload', 0))
     GROWL_HOST = check_setting_str(CFG, 'Growl', 'growl_host', '')
-    GROWL_PASSWORD = check_setting_str(CFG, 'Growl', 'growl_password', '')
+    # GROWL_PASSWORD = check_setting_str(CFG, 'Growl', 'growl_password', '')
 
     USE_PROWL = bool(check_setting_int(CFG, 'Prowl', 'use_prowl', 0))
     PROWL_NOTIFY_ONSNATCH = bool(check_setting_int(CFG, 'Prowl', 'prowl_notify_onsnatch', 0))
@@ -1039,15 +1042,6 @@ def init_stage_1(console_logging):
     PROWL_NOTIFY_ONSUBTITLEDOWNLOAD = bool(check_setting_int(CFG, 'Prowl', 'prowl_notify_onsubtitledownload', 0))
     PROWL_API = check_setting_str(CFG, 'Prowl', 'prowl_api', '')
     PROWL_PRIORITY = check_setting_str(CFG, 'Prowl', 'prowl_priority', '0')
-
-    USE_TWITTER = bool(check_setting_int(CFG, 'Twitter', 'use_twitter', 0))
-    TWITTER_NOTIFY_ONSNATCH = bool(check_setting_int(CFG, 'Twitter', 'twitter_notify_onsnatch', 0))
-    TWITTER_NOTIFY_ONDOWNLOAD = bool(check_setting_int(CFG, 'Twitter', 'twitter_notify_ondownload', 0))
-    TWITTER_NOTIFY_ONSUBTITLEDOWNLOAD = bool(
-        check_setting_int(CFG, 'Twitter', 'twitter_notify_onsubtitledownload', 0))
-    TWITTER_USERNAME = check_setting_str(CFG, 'Twitter', 'twitter_username', '')
-    TWITTER_PASSWORD = check_setting_str(CFG, 'Twitter', 'twitter_password', '')
-    TWITTER_PREFIX = check_setting_str(CFG, 'Twitter', 'twitter_prefix', 'SickGear')
 
     USE_BOXCAR2 = bool(check_setting_int(CFG, 'Boxcar2', 'use_boxcar2', 0))
     BOXCAR2_NOTIFY_ONSNATCH = bool(check_setting_int(CFG, 'Boxcar2', 'boxcar2_notify_onsnatch', 0))
@@ -1178,9 +1172,13 @@ def init_stage_1(console_logging):
     SUBTITLES_SERVICES_ENABLED = [int(x) for x in
                                   check_setting_str(CFG, 'Subtitles', 'SUBTITLES_SERVICES_ENABLED', '').split('|')
                                   if x]
+    SUBTITLES_SERVICES_AUTH = [k.split(':::') for k in
+                               check_setting_str(CFG, 'Subtitles', 'subtitles_services_auth', ':::').split('|||')
+                               if k]
     SUBTITLES_DEFAULT = bool(check_setting_int(CFG, 'Subtitles', 'subtitles_default', 0))
     SUBTITLES_HISTORY = bool(check_setting_int(CFG, 'Subtitles', 'subtitles_history', 0))
     SUBTITLES_FINDER_FREQUENCY = check_setting_int(CFG, 'Subtitles', 'subtitles_finder_frequency', 1)
+    SUBTITLES_OS_HASH = bool(check_setting_int(CFG, 'Subtitles', 'subtitles_os_hash', 1))
 
     USE_FAILED_DOWNLOADS = bool(check_setting_int(CFG, 'FailedDownloads', 'use_failed_downloads', 0))
     DELETE_FAILED = bool(check_setting_int(CFG, 'FailedDownloads', 'delete_failed', 0))
@@ -1194,6 +1192,9 @@ def init_stage_1(console_logging):
 
     EXTRA_SCRIPTS = [x.strip() for x in check_setting_str(CFG, 'General', 'extra_scripts', '').split('|') if
                      x.strip()]
+
+    SG_EXTRA_SCRIPTS = [x.strip() for x in check_setting_str(CFG, 'General', 'sg_extra_scripts', '').split('|') if
+                        x.strip()]
 
     USE_ANIDB = bool(check_setting_int(CFG, 'ANIDB', 'use_anidb', 0))
     ANIDB_USERNAME = check_setting_str(CFG, 'ANIDB', 'anidb_username', '')
@@ -1234,8 +1235,10 @@ def init_stage_1(console_logging):
     EPISODE_VIEW_MISSED_RANGE = check_setting_int(CFG, 'GUI', 'episode_view_missed_range', 7)
 
     HISTORY_LAYOUT = check_setting_str(CFG, 'GUI', 'history_layout', 'detailed')
-    BROWSELIST_HIDDEN = [
-        x.strip() for x in check_setting_str(CFG, 'GUI', 'browselist_hidden', '').split('|~|') if x.strip()]
+    BROWSELIST_HIDDEN = map_list(
+        lambda y: TVidProdid.glue in y and y or '%s%s%s' % (
+            (TVINFO_TVDB, TVINFO_IMDB)[bool(re.search(r'(?i)tt\d{7}', y))], TVidProdid.glue, y),
+        [x.strip() for x in check_setting_str(CFG, 'GUI', 'browselist_hidden', '').split('|~|') if x.strip()])
 
     # initialize NZB and TORRENT providers
     providerList = providers.makeProviderList()
@@ -1287,7 +1290,7 @@ def init_stage_1(console_logging):
                 attr_check = '%s_%s' % (prov_id, attr.strip('_'))
                 if isinstance(default, bool):
                     setattr(torrent_prov, attr, bool(check_setting_int(CFG, prov_id_uc, attr_check, default)))
-                elif isinstance(default, basestring):
+                elif isinstance(default, string_types):
                     setattr(torrent_prov, attr, check_setting_str(CFG, prov_id_uc, attr_check, default))
                 elif isinstance(default, int):
                     setattr(torrent_prov, attr, check_setting_int(CFG, prov_id_uc, attr_check, default))
@@ -1314,7 +1317,7 @@ def init_stage_1(console_logging):
                 attr_check = '%s_%s' % (prov_id, attr.strip('_'))
                 if isinstance(default, bool):
                     setattr(nzb_prov, attr, bool(check_setting_int(CFG, prov_id_uc, attr_check, default)))
-                elif isinstance(default, basestring):
+                elif isinstance(default, string_types):
                     setattr(nzb_prov, attr, check_setting_str(CFG, prov_id_uc, attr_check, default))
                 elif isinstance(default, int):
                     setattr(nzb_prov, attr, check_setting_int(CFG, prov_id_uc, attr_check, default))
@@ -1324,7 +1327,7 @@ def init_stage_1(console_logging):
         update_config = True
 
     # Get expected config version
-    CONFIG_VERSION = max(ConfigMigrator(CFG).migration_names.keys())
+    CONFIG_VERSION = max(ConfigMigrator(CFG).migration_names)
     if update_config:
         save_config()
 
@@ -1333,26 +1336,27 @@ def init_stage_1(console_logging):
     if os.path.isfile(old_log):
         try:
             os.rename(old_log, os.path.join(LOG_DIR, logger.sb_log_instance.log_file))
-        except (StandardError, Exception):
+        except (BaseException, Exception):
             pass
     logger.sb_log_instance.init_logging(console_logging=console_logging)
 
-    try:
-        import _scandir
-    except ImportError:
-        _scandir = None
+    if PY2:
+        try:
+            import _scandir
+        except ImportError:
+            _scandir = None
 
-    try:
-        import ctypes
-    except ImportError:
-        ctypes = None
+        try:
+            import ctypes
+        except ImportError:
+            ctypes = None
 
-    if None is not _scandir and None is not ctypes and not getattr(_scandir, 'DirEntry', None):
-        MODULE_UPDATE_STRING = \
-            'Your scandir binary module is outdated, using the slow but newer Python module.' \
-            '<br>Upgrade the binary at a command prompt with' \
-            ' # <span class="boldest">python -m pip install -U scandir</span>' \
-            '<br>Important: You <span class="boldest">must</span> Shutdown SickGear before upgrading'
+        if None is not _scandir and None is not ctypes and not getattr(_scandir, 'DirEntry', None):
+            MODULE_UPDATE_STRING = \
+                'Your scandir binary module is outdated, using the slow but newer Python module.' \
+                '<br>Upgrade the binary at a command prompt with' \
+                ' # <span class="boldest">python -m pip install -U scandir</span>' \
+                '<br>Important: You <span class="boldest">must</span> Shutdown SickGear before upgrading'
 
     showList = []
 
@@ -1374,9 +1378,9 @@ def init_stage_2():
     global RECENTSEARCH_FREQUENCY
     # Subtitles
     global USE_SUBTITLES, SUBTITLES_FINDER_FREQUENCY
-    # Post Processing/Post-Processing
+    # Media Process/Post-Processing
     global PROCESS_AUTOMATICALLY, AUTOPOSTPROCESSER_FREQUENCY
-    # Post Processing/Metadata
+    # Media Process/Metadata
     global metadata_provider_dict, METADATA_KODI, METADATA_MEDE8ER, METADATA_MEDIABROWSER, \
         METADATA_PS3, METADATA_TIVO, METADATA_WDTV, METADATA_XBMC, METADATA_XBMC_12PLUS
     # Notification Settings/HT and NAS
@@ -1441,12 +1445,14 @@ def init_stage_2():
         cycleTime=datetime.timedelta(seconds=3),
         threadName='SEARCHQUEUE')
 
+    init_search_delay = int(os.environ.get('INIT_SEARCH_DELAY', 0))
+
     # enter 4490 (was 4489) for experimental internal provider frequencies
     update_interval = datetime.timedelta(minutes=(RECENTSEARCH_FREQUENCY, 1)[4499 == RECENTSEARCH_FREQUENCY])
     recentSearchScheduler = scheduler.Scheduler(
         search_recent.RecentSearcher(),
         cycleTime=update_interval,
-        run_delay=update_now if RECENTSEARCH_STARTUP else datetime.timedelta(minutes=5),
+        run_delay=update_now if RECENTSEARCH_STARTUP else datetime.timedelta(minutes=init_search_delay or 5),
         threadName='RECENTSEARCHER',
         prevent_cycle_run=searchQueueScheduler.action.is_recentsearch_in_progress)
 
@@ -1462,13 +1468,13 @@ def init_stage_2():
                 time_diff = time_diff - datetime.timedelta(hours=12)
         else:
             time_diff = datetime.timedelta(minutes=0)
-        backlogdelay = helpers.tryInt((time_diff.total_seconds() / 60) + 10, 10)
+        backlogdelay = helpers.try_int((time_diff.total_seconds() / 60) + 10, 10)
     else:
         backlogdelay = 10
     backlogSearchScheduler = search_backlog.BacklogSearchScheduler(
         search_backlog.BacklogSearcher(),
         cycleTime=datetime.timedelta(minutes=get_backlog_cycle_time()),
-        run_delay=datetime.timedelta(minutes=backlogdelay),
+        run_delay=datetime.timedelta(minutes=init_search_delay or backlogdelay),
         threadName='BACKLOG',
         prevent_cycle_run=searchQueueScheduler.action.is_standard_backlog_in_progress)
 
@@ -1478,12 +1484,12 @@ def init_stage_2():
     if time_diff < datetime.timedelta(seconds=0):
         properdelay = 20
     else:
-        properdelay = helpers.tryInt((time_diff.total_seconds() / 60) + 5, 20)
+        properdelay = helpers.try_int((time_diff.total_seconds() / 60) + 5, 20)
 
     properFinderScheduler = scheduler.Scheduler(
         propers_searcher,
         cycleTime=datetime.timedelta(days=1),
-        run_delay=datetime.timedelta(minutes=properdelay),
+        run_delay=datetime.timedelta(minutes=init_search_delay or properdelay),
         threadName='FINDPROPERS',
         prevent_cycle_run=searchQueueScheduler.action.is_propersearch_in_progress)
 
@@ -1529,13 +1535,12 @@ def init_stage_2():
 
 def enabled_schedulers(is_init=False):
     # ([], [traktCheckerScheduler])[USE_TRAKT] + \
-    for s in ([], [events])[is_init] + \
-            [recentSearchScheduler, backlogSearchScheduler, showUpdateScheduler,
-             versionCheckScheduler, showQueueScheduler, searchQueueScheduler, properFinderScheduler,
-             autoPostProcesserScheduler, subtitlesFinderScheduler,
-             embyWatchedStateScheduler, plexWatchedStateScheduler, watchedStateQueueScheduler] + \
-            ([events], [])[is_init]:
-        yield s
+    return ([], [events])[is_init] \
+           + [recentSearchScheduler, backlogSearchScheduler, showUpdateScheduler,
+              versionCheckScheduler, showQueueScheduler, searchQueueScheduler, properFinderScheduler,
+              autoPostProcesserScheduler, subtitlesFinderScheduler,
+              embyWatchedStateScheduler, plexWatchedStateScheduler, watchedStateQueueScheduler]\
+           + ([events], [])[is_init]
 
 
 def start():
@@ -1545,8 +1550,8 @@ def start():
         if __INITIALIZED__:
             # Load all Indexer mappings in background
             indexermapper.defunct_indexer = [
-                i for i in indexerApi().all_indexers if indexerApi(i).config.get('defunct')]
-            indexermapper.indexer_list = [i for i in indexerApi().all_indexers]
+                i for i in TVInfoAPI().all_sources if TVInfoAPI(i).config.get('defunct')]
+            indexermapper.indexer_list = [i for i in TVInfoAPI().all_sources]
             background_mapping_task.start()
 
             for p in providers.sortedProviderList():
@@ -1556,7 +1561,7 @@ def start():
                         name='PING-PROVIDER %s' % p.name, target=p._ping)
                     provider_ping_thread_pool[p.get_id()].start()
 
-            for thread in enabled_schedulers(is_init=True):
+            for thread in enabled_schedulers(is_init=True):  # type: threading.Thread
                 thread.start()
 
             started = True
@@ -1606,25 +1611,29 @@ def halt():
             if ADBA_CONNECTION:
                 try:
                     ADBA_CONNECTION.logout()
-                except AniDBBannedError as e:
-                    logger.log('AniDB Error %s' % ex(e), logger.DEBUG)
                 except AniDBError:
                     pass
                 try:
                     ADBA_CONNECTION.join(10)
                     logger.log('Thread %s has exit' % ADBA_CONNECTION.name)
-                except (StandardError, Exception):
+                except (BaseException, Exception):
                     logger.log('Fail, thread %s did not exit' % ADBA_CONNECTION.name)
 
-            for thread in enabled_schedulers():
-                thread.stop()
+            for thread in enabled_schedulers():  # type: scheduler.Scheduler
+                try:
+                    thread.stopit()
+                except Exception as e:
+                    logger.log('Thread %s stop failed with: %s' % (thread.name, e))
 
-            for thread in enabled_schedulers():
+            for thread in enabled_schedulers():  # type: threading.Thread
                 try:
                     thread.join(10)
                     logger.log('Thread %s has exit' % thread.name)
                 except RuntimeError:
-                    logger.log('Thread %s did not exit' % thread.name)
+                    # this just means it's the current thread, can be ignored
+                    logger.log('Thread %s is exiting' % thread.name)
+                except (BaseException, Exception) as e:
+                    logger.log('Thread %s exception %s' % (thread.name, e))
 
             __INITIALIZED__ = False
             started = False
@@ -1635,8 +1644,8 @@ def save_all():
 
     # write all shows
     logger.log(u'Saving all shows to the database')
-    for show in showList:
-        show.saveToDB()
+    for show_obj in showList:  # type: tv.TVShow
+        show_obj.save_to_db()
 
     # save config
     logger.log(u'Saving config file to disk')
@@ -1673,7 +1682,7 @@ def save_config():
     new_config['General']['cpu_preset'] = CPU_PRESET
     new_config['General']['anon_redirect'] = ANON_REDIRECT
     new_config['General']['use_api'] = int(USE_API)
-    new_config['General']['api_key'] = API_KEY
+    new_config['General']['api_keys'] = '|||'.join([':::'.join(a) for a in API_KEYS])
     new_config['General']['debug'] = int(DEBUG)
     new_config['General']['enable_https'] = int(ENABLE_HTTPS)
     new_config['General']['https_cert'] = HTTPS_CERT
@@ -1703,12 +1712,12 @@ def save_config():
     new_config['General']['wanted_begin_default'] = int(WANTED_BEGIN_DEFAULT)
     new_config['General']['wanted_latest_default'] = int(WANTED_LATEST_DEFAULT)
     new_config['General']['flatten_folders_default'] = int(FLATTEN_FOLDERS_DEFAULT)
-    new_config['General']['indexer_default'] = int(INDEXER_DEFAULT)
-    new_config['General']['indexer_timeout'] = int(INDEXER_TIMEOUT)
+    new_config['General']['indexer_default'] = int(TVINFO_DEFAULT)
+    new_config['General']['indexer_timeout'] = int(TVINFO_TIMEOUT)
     new_config['General']['anime_default'] = int(ANIME_DEFAULT)
     new_config['General']['scene_default'] = int(SCENE_DEFAULT)
     new_config['General']['provider_order'] = ' '.join(PROVIDER_ORDER)
-    new_config['General']['provider_homes'] = '%s' % dict([(pid, v) for pid, v in PROVIDER_HOMES.items() if pid in [
+    new_config['General']['provider_homes'] = '%s' % dict([(pid, v) for pid, v in list_items(PROVIDER_HOMES) if pid in [
         p.get_id() for p in [x for x in providers.sortedProviderList() if GenericProvider.TORRENT == x.providerType]]])
     new_config['General']['version_notify'] = int(VERSION_NOTIFY)
     new_config['General']['auto_update'] = int(AUTO_UPDATE)
@@ -1733,6 +1742,7 @@ def save_config():
     new_config['General']['display_freespace'] = int(DISPLAY_FREESPACE)
     new_config['General']['sort_article'] = int(SORT_ARTICLE)
     new_config['General']['proxy_setting'] = PROXY_SETTING
+    sg_helpers.PROXY_SETTING = PROXY_SETTING
     new_config['General']['proxy_indexers'] = int(PROXY_INDEXERS)
 
     new_config['General']['metadata_xbmc'] = METADATA_XBMC
@@ -1749,6 +1759,7 @@ def save_config():
     new_config['General']['unaired_recent_search_only'] = int(UNAIRED_RECENT_SEARCH_ONLY)
 
     new_config['General']['cache_dir'] = ACTUAL_CACHE_DIR if ACTUAL_CACHE_DIR else 'cache'
+    sg_helpers.CACHE_DIR = CACHE_DIR
     new_config['General']['root_dirs'] = ROOT_DIRS if ROOT_DIRS else ''
     new_config['General']['tv_download_dir'] = TV_DOWNLOAD_DIR
     new_config['General']['keep_processed_dir'] = int(KEEP_PROCESSED_DIR)
@@ -1763,17 +1774,19 @@ def save_config():
     new_config['General']['create_missing_show_dirs'] = int(CREATE_MISSING_SHOW_DIRS)
     new_config['General']['show_dirs_with_dots'] = int(SHOW_DIRS_WITH_DOTS)
     new_config['General']['add_shows_wo_dir'] = int(ADD_SHOWS_WO_DIR)
+    new_config['General']['add_shows_metalang'] = ADD_SHOWS_METALANG
     new_config['General']['remove_filename_chars'] = REMOVE_FILENAME_CHARS
     new_config['General']['import_default_checked_shows'] = int(IMPORT_DEFAULT_CHECKED_SHOWS)
 
     new_config['General']['extra_scripts'] = '|'.join(EXTRA_SCRIPTS)
+    new_config['General']['sg_extra_scripts'] = '|'.join(SG_EXTRA_SCRIPTS)
     new_config['General']['git_path'] = GIT_PATH
     new_config['General']['ignore_words'] = IGNORE_WORDS
     new_config['General']['require_words'] = REQUIRE_WORDS
     new_config['General']['calendar_unprotected'] = int(CALENDAR_UNPROTECTED)
 
     default_not_zero = ('enable_recentsearch', 'enable_backlog', 'enable_scheduled_backlog', 'use_after_get_data')
-    for src in filter(lambda px: GenericProvider.TORRENT == px.providerType, providers.sortedProviderList()):
+    for src in filter_iter(lambda px: GenericProvider.TORRENT == px.providerType, providers.sortedProviderList()):
         src_id = src.get_id()
         src_id_uc = src_id.upper()
         new_config[src_id_uc] = {}
@@ -1786,7 +1799,7 @@ def save_config():
             new_config[src_id_uc][src_id + '_password'] = helpers.encrypt(src.password, ENCRYPTION_VERSION)
 
         for (attr, value) in [
-            (k, getattr(src, k, v) if not v else helpers.tryInt(getattr(src, k, None)))
+            (k, getattr(src, k, v) if not v else helpers.try_int(getattr(src, k, None)))
             for (k, v) in [
                 ('enable_recentsearch', 1), ('enable_backlog', 1), ('enable_scheduled_backlog', 1),
                 ('api_key', None), ('passkey', None), ('digest', None), ('hash', None), ('username', ''), ('uid', ''),
@@ -1811,23 +1824,23 @@ def save_config():
             del new_config[src_id_uc]
 
     default_not_zero = ('enable_recentsearch', 'enable_backlog', 'enable_scheduled_backlog')
-    for src in filter(lambda px: GenericProvider.NZB == px.providerType, providers.sortedProviderList()):
+    for src in filter_iter(lambda px: GenericProvider.NZB == px.providerType, providers.sortedProviderList()):
         src_id = src.get_id()
         src_id_uc = src.get_id().upper()
         new_config[src_id_uc] = {}
         if int(src.enabled):
             new_config[src_id_uc][src_id] = int(src.enabled)
 
-        for attr in filter(lambda a: None is not getattr(src, a, None), ('api_key', 'username', 'search_mode')):
+        for attr in filter_iter(lambda a: None is not getattr(src, a, None), ('api_key', 'username', 'search_mode')):
             if 'search_mode' != attr or 'eponly' != getattr(src, attr):
                 new_config[src_id_uc]['%s_%s' % (src_id, attr)] = getattr(src, attr)
 
-        for attr in filter(lambda a: None is not getattr(src, a, None), (
+        for attr in filter_iter(lambda a: None is not getattr(src, a, None), (
                 'enable_recentsearch', 'enable_backlog', 'enable_scheduled_backlog',
                 'scene_only', 'scene_loose', 'scene_loose_active',
                 'scene_rej_nuked', 'scene_nuked_active',
                 'search_fallback', 'server_type')):
-            value = helpers.tryInt(getattr(src, attr, None))
+            value = helpers.try_int(getattr(src, attr, None))
             # must allow the following to save '0' not '1' because default is enable (1) instead of disable (0)
             if (value and (attr not in default_not_zero)) or (not value and (attr in default_not_zero)):
                 new_config[src_id_uc]['%s_%s' % (src_id, attr)] = value
@@ -1839,9 +1852,8 @@ def save_config():
         if not new_config[src_id_uc]:
             del new_config[src_id_uc]
 
-    from collections import OrderedDict
     cfg_keys = []
-    for (cfg, items) in OrderedDict([
+    for (cfg, items) in iteritems(OrderedDict([
         # -----------------------------------
         # Config/Search
         # -----------------------------------
@@ -1955,7 +1967,7 @@ def save_config():
         ('Growl', [
             ('use_%s', int(USE_GROWL)),
             ('host', GROWL_HOST),
-            ('password', helpers.encrypt(GROWL_PASSWORD, ENCRYPTION_VERSION)),
+            # ('password', helpers.encrypt(GROWL_PASSWORD, ENCRYPTION_VERSION)),
         ]),
         ('Prowl', [
             ('use_%s', int(USE_PROWL)),
@@ -2005,11 +2017,6 @@ def save_config():
             ('room', GITTER_ROOM),
             ('access_token', GITTER_ACCESS_TOKEN),
         ]),
-        ('Twitter', [
-            ('use_%s', int(USE_TWITTER)),
-            ('username', TWITTER_USERNAME), ('password', helpers.encrypt(TWITTER_PASSWORD, ENCRYPTION_VERSION)),
-            ('prefix', TWITTER_PREFIX),
-        ]),
         ('Email', [
             ('use_%s', int(USE_EMAIL)),
             ('old_subjects', int(EMAIL_OLD_SUBJECTS)),
@@ -2020,14 +2027,14 @@ def save_config():
             ('list', EMAIL_LIST),
         ]),
         # (, [(, )]),
-    ]).items():
+    ])):
         cfg_lc = cfg.lower()
         cfg_keys += [cfg]
         new_config[cfg] = {}
-        for (k, v) in filter(lambda (_, y): any([y]) or (
+        for (k, v) in filter_iter(lambda arg: any([arg[1]]) or (
                 # allow saving where item value default is non-zero but 0 is a required setting value
-                cfg_lc in ('kodi', 'xbmc', 'synoindex', 'nzbget', 'torrent') and _ in ('always_on', 'priority')
-                or (_ == 'label_var' and 'rtorrent' == new_config['General']['torrent_method'])), items):
+                cfg_lc in ('kodi', 'xbmc', 'synoindex', 'nzbget', 'torrent') and arg[0] in ('always_on', 'priority')
+                or (arg[0] == 'label_var' and 'rtorrent' == new_config['General']['torrent_method'])), items):
             k = '%s' in k and (k % cfg_lc) or (cfg_lc + '_' + k)
             # correct for cases where keys are named in an inconsistent manner to parent stanza
             k = k.replace('blackhole_', '').replace('sabnzbd_', 'sab_')
@@ -2051,7 +2058,6 @@ def save_config():
         ('Slack', SLACK_NOTIFY_ONSNATCH, SLACK_NOTIFY_ONDOWNLOAD, SLACK_NOTIFY_ONSUBTITLEDOWNLOAD),
         ('Discordapp', DISCORDAPP_NOTIFY_ONSNATCH, DISCORDAPP_NOTIFY_ONDOWNLOAD, DISCORDAPP_NOTIFY_ONSUBTITLEDOWNLOAD),
         ('Gitter', GITTER_NOTIFY_ONSNATCH, GITTER_NOTIFY_ONDOWNLOAD, GITTER_NOTIFY_ONSUBTITLEDOWNLOAD),
-        ('Twitter', TWITTER_NOTIFY_ONSNATCH, TWITTER_NOTIFY_ONDOWNLOAD, TWITTER_NOTIFY_ONSUBTITLEDOWNLOAD),
         ('Email', EMAIL_NOTIFY_ONSNATCH, EMAIL_NOTIFY_ONDOWNLOAD, EMAIL_NOTIFY_ONSUBTITLEDOWNLOAD),
     ]:
         if any([onsnatch, ondownload, onsubtitledownload]):
@@ -2063,7 +2069,7 @@ def save_config():
                 new_config[notifier]['%s_notify_onsubtitledownload' % notifier.lower()] = int(onsubtitledownload)
 
     # remove empty stanzas
-    for k in filter(lambda c: not new_config[c], cfg_keys):
+    for k in filter_iter(lambda c: not new_config[c], cfg_keys):
         del new_config[k]
 
     new_config['Newznab'] = {}
@@ -2125,10 +2131,12 @@ def save_config():
     new_config['Subtitles']['subtitles_languages'] = ','.join(SUBTITLES_LANGUAGES)
     new_config['Subtitles']['SUBTITLES_SERVICES_LIST'] = ','.join(SUBTITLES_SERVICES_LIST)
     new_config['Subtitles']['SUBTITLES_SERVICES_ENABLED'] = '|'.join([str(x) for x in SUBTITLES_SERVICES_ENABLED])
+    new_config['Subtitles']['subtitles_services_auth'] = '|||'.join([':::'.join(a) for a in SUBTITLES_SERVICES_AUTH])
     new_config['Subtitles']['subtitles_dir'] = SUBTITLES_DIR
     new_config['Subtitles']['subtitles_default'] = int(SUBTITLES_DEFAULT)
     new_config['Subtitles']['subtitles_history'] = int(SUBTITLES_HISTORY)
     new_config['Subtitles']['subtitles_finder_frequency'] = int(SUBTITLES_FINDER_FREQUENCY)
+    new_config['Subtitles']['subtitles_os_hash'] = SUBTITLES_OS_HASH
 
     new_config['FailedDownloads'] = {}
     new_config['FailedDownloads']['use_failed_downloads'] = int(USE_FAILED_DOWNLOADS)
@@ -2152,8 +2160,8 @@ def launch_browser(start_port=None):
     browser_url = 'http%s://localhost:%d%s' % (('s', '')[not ENABLE_HTTPS], start_port, WEB_ROOT)
     try:
         webbrowser.open(browser_url, 2, 1)
-    except (StandardError, Exception):
+    except (BaseException, Exception):
         try:
             webbrowser.open(browser_url, 1, 1)
-        except (StandardError, Exception):
+        except (BaseException, Exception):
             logger.log('Unable to launch a browser', logger.ERROR)

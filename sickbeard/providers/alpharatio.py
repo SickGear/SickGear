@@ -21,10 +21,12 @@ import re
 import traceback
 
 from . import generic
-from sickbeard import logger
-from sickbeard.bs4_parser import BS4Parser
-from sickbeard.helpers import tryInt
-from lib.unidecode import unidecode
+from .. import logger
+from ..helpers import try_int
+from bs4_parser import BS4Parser
+
+from _23 import unidecode
+from six import iteritems
 
 
 class AlphaRatioProvider(generic.TorrentProvider):
@@ -38,7 +40,7 @@ class AlphaRatioProvider(generic.TorrentProvider):
                      'login_action': self.url_base + 'login.php',
                      'search': self.url_base + 'torrents.php?searchstr=%s%s&' + '&'.join(
                          ['tags_type=1', 'order_by=time', 'order_way=desc'] +
-                         ['filter_cat[%s]=1' % c for c in 1, 2, 3, 4, 5] +
+                         ['filter_cat[%s]=1' % c for c in (1, 2, 3, 4, 5)] +
                          ['action=basic', 'searchsubmit=1'])}
 
         self.url = self.urls['config_provider_home_uri']
@@ -58,10 +60,10 @@ class AlphaRatioProvider(generic.TorrentProvider):
 
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
-        rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {'info': 'view', 'get': 'download'}.items())
-        for mode in search_params.keys():
+        rc = dict([(k, re.compile('(?i)' + v)) for (k, v) in iteritems({'info': 'view', 'get': 'download'})])
+        for mode in search_params:
             for search_string in search_params[mode]:
-                search_string = isinstance(search_string, unicode) and unidecode(search_string) or search_string
+                search_string = unidecode(search_string)
                 search_url = self.urls['search'] % (search_string, ('&freetorrent=1', '')[not self.freeleech])
 
                 html = self.get_url(search_url)
@@ -86,8 +88,8 @@ class AlphaRatioProvider(generic.TorrentProvider):
                                 continue
                             try:
                                 head = head if None is not head else self._header_row(tr)
-                                seeders, leechers, size = [tryInt(n, n) for n in [
-                                    cells[head[x]].get_text().strip() for x in 'seed', 'leech', 'size']]
+                                seeders, leechers, size = [try_int(n, n) for n in [
+                                    cells[head[x]].get_text().strip() for x in ('seed', 'leech', 'size')]]
                                 if self._reject_item(seeders, leechers, self.freeleech and (
                                         any([not tr.select('.tl_free'),
                                              tr.select('.tl_timed'), tr.select('[title^="Timed Free"]'),

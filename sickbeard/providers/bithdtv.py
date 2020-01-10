@@ -19,10 +19,12 @@ import re
 import traceback
 
 from . import generic
-from sickbeard import logger
-from sickbeard.bs4_parser import BS4Parser
-from sickbeard.helpers import tryInt
-from lib.unidecode import unidecode
+from .. import logger
+from ..helpers import try_int
+from bs4_parser import BS4Parser
+
+from _23 import unidecode
+from six import iteritems
 
 
 class BitHDTVProvider(generic.TorrentProvider):
@@ -45,9 +47,9 @@ class BitHDTVProvider(generic.TorrentProvider):
 
         return super(BitHDTVProvider, self)._authorised(
             logged_in=(lambda y=None: all(
-                [(None is y or re.search('(?i)rss\slink', y)),
+                [(None is y or re.search(r'(?i)rss\slink', y)),
                  self.has_all_cookies(['su', 'sp', 'sl'], 'h_'), 'search' in self.urls] +
-                [(self.session.cookies.get('h_' + x) or 'sg!no!pw') in self.digest for x in 'su', 'sp', 'sl'])),
+                [(self.session.cookies.get('h_' + x) or 'sg!no!pw') in self.digest for x in ('su', 'sp', 'sl')])),
             failed_msg=(lambda y=None: u'Invalid cookie details for %s. Check settings'))
 
     @staticmethod
@@ -63,11 +65,11 @@ class BitHDTVProvider(generic.TorrentProvider):
 
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
-        rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {'info': 'detail', 'get': 'download\.',
-                                                             'fl': '\[\W*F\W?L\W*\]'}.items())
-        for mode in search_params.keys():
+        rc = dict([(k, re.compile('(?i)' + v)) for (k, v) in iteritems({'info': 'detail', 'get': r'download\.',
+                                                                        'fl': r'\[\W*F\W?L\W*\]'})])
+        for mode in search_params:
             for search_string in search_params[mode]:
-                search_string = isinstance(search_string, unicode) and unidecode(search_string) or search_string
+                search_string = unidecode(search_string)
                 search_url = self.urls['search'] % (search_string, self._categories_string(mode))
 
                 html = self.get_url(search_url, timeout=90)
@@ -79,7 +81,7 @@ class BitHDTVProvider(generic.TorrentProvider):
                     if not html or self._has_no_results(html):
                         raise generic.HaltParseException
 
-                    html = '<table%s' % re.split('</table>\s*<table', html)[-1]
+                    html = '<table%s' % re.split(r'</table>\s*<table', html)[-1]
                     html = re.sub(r'</td>([^<]*)<tr', r'</td></tr>\1<tr', html)
                     with BS4Parser(html, parse_only='table') as tbl:
                         tbl_rows = [] if not tbl else tbl.find_all('tr')
@@ -94,8 +96,8 @@ class BitHDTVProvider(generic.TorrentProvider):
                                 continue
                             try:
                                 head = head if None is not head else self._header_row(tr)
-                                seeders, leechers, size = [tryInt(n, n) for n in [
-                                    cells[head[x]].get_text().strip() for x in 'seed', 'leech', 'size']]
+                                seeders, leechers, size = [try_int(n, n) for n in [
+                                    cells[head[x]].get_text().strip() for x in ('seed', 'leech', 'size')]]
                                 if self._reject_item(seeders, leechers, self.freeleech and (
                                         not tr.attrs.get('bgcolor').endswith('FF99'))):
                                     continue

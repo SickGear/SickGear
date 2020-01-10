@@ -15,15 +15,17 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
-import base64
 import re
 import traceback
 
 from . import generic
-from sickbeard import logger
-from sickbeard.bs4_parser import BS4Parser
-from sickbeard.helpers import tryInt
-from lib.unidecode import unidecode
+from .. import logger
+from ..helpers import try_int
+
+from bs4_parser import BS4Parser
+
+from _23 import b64decodestring, unidecode
+from six import iteritems
 
 
 class IPTorrentsProvider(generic.TorrentProvider):
@@ -32,7 +34,7 @@ class IPTorrentsProvider(generic.TorrentProvider):
         generic.TorrentProvider.__init__(self, 'IPTorrents')
 
         self.url_home = (['https://iptorrents.com/'] +
-                         [base64.b64decode(x) for x in [''.join(x) for x in [
+                         [b64decodestring(x) for x in [''.join(x) for x in [
                              [re.sub(r'(?i)[q\s1]+', '', x[::-1]) for x in [
                                  'c0RHa', 'vo1QD', 'hJ2L', 'GdhdXe', 'vdnLoN', 'J21cptmc', '5yZulmcv', '02bj', '=iq=']],
                              [re.sub(r'(?i)[q\seg]+', '', x[::-1]) for x in [
@@ -70,11 +72,11 @@ class IPTorrentsProvider(generic.TorrentProvider):
         last_recent_search = self.last_recent_search
         last_recent_search = '' if not last_recent_search else last_recent_search.replace('id-', '')
 
-        for mode in search_params.keys():
+        for mode in search_params:
             urls = []
             for search_string in search_params[mode]:
                 urls += [[]]
-                search_string = isinstance(search_string, unicode) and unidecode(search_string) or search_string
+                search_string = unidecode(search_string) or search_string
                 for page in range((3, 5)['Cache' == mode])[1:]:
                     # URL with 50 tv-show results, or max 150 if adjusted in IPTorrents profile
                     urls[-1] += [self.urls['search'] % (
@@ -90,8 +92,8 @@ class IPTorrentsProvider(generic.TorrentProvider):
         results = []
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
-        rc = dict((k, re.compile('(?i)' + v)) for (k, v) in dict(
-            info='detail', get='download', id=r'download.*?/([\d]+)').items())
+        rc = dict((k, re.compile('(?i)' + v)) for (k, v) in iteritems(dict(
+            info='detail', get='download', id=r'download.*?/([\d]+)')))
         lrs_found = False
         lrs_new = True
         for search_urls in urls:  # this intentionally iterates once to preserve indentation
@@ -127,7 +129,7 @@ class IPTorrentsProvider(generic.TorrentProvider):
                             try:
                                 head = head if None is not head else self._header_row(
                                     tr, header_strip='(?i)(?:leechers|seeders|size);')
-                                seeders, leechers = [tryInt(tr.find('td', class_='t_' + x).get_text().strip())
+                                seeders, leechers = [try_int(tr.find('td', class_='t_' + x).get_text().strip())
                                                      for x in ('seeders', 'leechers')]
                                 if self._reject_item(seeders, leechers):
                                     continue

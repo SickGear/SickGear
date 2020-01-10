@@ -25,8 +25,10 @@ import struct
 import string
 import logging
 import time
-from exceptions import ParseError
-import core
+from .exceptions import ParseError
+from . import core
+
+from six import byte2int, indexbytes
 
 # get logging object
 log = logging.getLogger(__name__)
@@ -66,7 +68,7 @@ class Riff(core.AVContainer):
     """
     AVI parser also parsing metadata like title, languages, etc.
     """
-    table_mapping = { 'AVIINFO' : AVIINFO }
+    table_mapping = {'AVIINFO': AVIINFO}
 
     def __init__(self, file):
         core.AVContainer.__init__(self)
@@ -96,14 +98,13 @@ class Riff(core.AVContainer):
             log.debug(u'WARNING: avi has no index')
             self._set('corrupt', True)
 
-
     def _find_subtitles(self, filename):
         """
         Search for subtitle files. Right now only VobSub is supported
         """
         base = os.path.splitext(filename)[0]
         if os.path.isfile(base + '.idx') and \
-               (os.path.isfile(base + '.sub') or os.path.isfile(base + '.rar')):
+                (os.path.isfile(base + '.sub') or os.path.isfile(base + '.rar')):
             file = open(base + '.idx')
             if file.readline().find('VobSub index file') > 0:
                 for line in file.readlines():
@@ -114,72 +115,70 @@ class Riff(core.AVContainer):
                         self.subtitles.append(sub)
             file.close()
 
-
-    def _parseAVIH(self, t):
+    @staticmethod
+    def _parseAVIH(t):
         retval = {}
         v = struct.unpack('<IIIIIIIIIIIIII', t[0:56])
         (retval['dwMicroSecPerFrame'],
-          retval['dwMaxBytesPerSec'],
-          retval['dwPaddingGranularity'],
-          retval['dwFlags'],
-          retval['dwTotalFrames'],
-          retval['dwInitialFrames'],
-          retval['dwStreams'],
-          retval['dwSuggestedBufferSize'],
-          retval['dwWidth'],
-          retval['dwHeight'],
-          retval['dwScale'],
-          retval['dwRate'],
-          retval['dwStart'],
-          retval['dwLength']) = v
+         retval['dwMaxBytesPerSec'],
+         retval['dwPaddingGranularity'],
+         retval['dwFlags'],
+         retval['dwTotalFrames'],
+         retval['dwInitialFrames'],
+         retval['dwStreams'],
+         retval['dwSuggestedBufferSize'],
+         retval['dwWidth'],
+         retval['dwHeight'],
+         retval['dwScale'],
+         retval['dwRate'],
+         retval['dwStart'],
+         retval['dwLength']) = v
         if retval['dwMicroSecPerFrame'] == 0:
             log.warning(u'ERROR: Corrupt AVI')
             raise ParseError()
 
         return retval
 
-
     def _parseSTRH(self, t):
-        retval = {}
-        retval['fccType'] = t[0:4]
+        retval = {'fccType': t[0:4]}
         log.debug(u'_parseSTRH(%r) : %d bytes' % (retval['fccType'], len(t)))
         if retval['fccType'] != 'auds':
             retval['fccHandler'] = t[4:8]
+            # noinspection DuplicatedCode
             v = struct.unpack('<IHHIIIIIIIII', t[8:52])
             (retval['dwFlags'],
-              retval['wPriority'],
-              retval['wLanguage'],
-              retval['dwInitialFrames'],
-              retval['dwScale'],
-              retval['dwRate'],
-              retval['dwStart'],
-              retval['dwLength'],
-              retval['dwSuggestedBufferSize'],
-              retval['dwQuality'],
-              retval['dwSampleSize'],
-              retval['rcFrame']) = v
+             retval['wPriority'],
+             retval['wLanguage'],
+             retval['dwInitialFrames'],
+             retval['dwScale'],
+             retval['dwRate'],
+             retval['dwStart'],
+             retval['dwLength'],
+             retval['dwSuggestedBufferSize'],
+             retval['dwQuality'],
+             retval['dwSampleSize'],
+             retval['rcFrame']) = v
         else:
             try:
+                # noinspection DuplicatedCode
                 v = struct.unpack('<IHHIIIIIIIII', t[8:52])
                 (retval['dwFlags'],
-                  retval['wPriority'],
-                  retval['wLanguage'],
-                  retval['dwInitialFrames'],
-                  retval['dwScale'],
-                  retval['dwRate'],
-                  retval['dwStart'],
-                  retval['dwLength'],
-                  retval['dwSuggestedBufferSize'],
-                  retval['dwQuality'],
-                  retval['dwSampleSize'],
-                  retval['rcFrame']) = v
-                self.delay = float(retval['dwStart']) / \
-                             (float(retval['dwRate']) / retval['dwScale'])
+                 retval['wPriority'],
+                 retval['wLanguage'],
+                 retval['dwInitialFrames'],
+                 retval['dwScale'],
+                 retval['dwRate'],
+                 retval['dwStart'],
+                 retval['dwLength'],
+                 retval['dwSuggestedBufferSize'],
+                 retval['dwQuality'],
+                 retval['dwSampleSize'],
+                 retval['rcFrame']) = v
+                self.delay = float(retval['dwStart']) / (float(retval['dwRate']) / retval['dwScale'])
             except (KeyError, IndexError, ValueError, ZeroDivisionError):
                 pass
 
         return retval
-
 
     def _parseSTRF(self, t, strh):
         fccType = strh['fccType']
@@ -187,18 +186,18 @@ class Riff(core.AVContainer):
         if fccType == 'auds':
             v = struct.unpack('<HHHHHH', t[0:12])
             (retval['wFormatTag'],
-              retval['nChannels'],
-              retval['nSamplesPerSec'],
-              retval['nAvgBytesPerSec'],
-              retval['nBlockAlign'],
-              retval['nBitsPerSample'],
-            ) = v
+             retval['nChannels'],
+             retval['nSamplesPerSec'],
+             retval['nAvgBytesPerSec'],
+             retval['nBlockAlign'],
+             retval['nBitsPerSample'],
+             ) = v
             ai = core.AudioStream()
             ai.samplerate = retval['nSamplesPerSec']
             ai.channels = retval['nChannels']
             # FIXME: Bitrate calculation is completely wrong.
-            #ai.samplebits = retval['nBitsPerSample']
-            #ai.bitrate = retval['nAvgBytesPerSec'] * 8
+            # ai.samplebits = retval['nBitsPerSample']
+            # ai.bitrate = retval['nAvgBytesPerSec'] * 8
 
             # TODO: set code if possible
             # http://www.stats.uwa.edu.au/Internal/Specs/DXALL/FileSpec/\
@@ -209,31 +208,30 @@ class Riff(core.AVContainer):
         elif fccType == 'vids':
             v = struct.unpack('<IIIHH', t[0:16])
             (retval['biSize'],
-              retval['biWidth'],
-              retval['biHeight'],
-              retval['biPlanes'],
-              retval['biBitCount']) = v
+             retval['biWidth'],
+             retval['biHeight'],
+             retval['biPlanes'],
+             retval['biBitCount']) = v
             v = struct.unpack('IIIII', t[20:40])
             (retval['biSizeImage'],
-              retval['biXPelsPerMeter'],
-              retval['biYPelsPerMeter'],
-              retval['biClrUsed'],
-              retval['biClrImportant']) = v
+             retval['biXPelsPerMeter'],
+             retval['biYPelsPerMeter'],
+             retval['biClrUsed'],
+             retval['biClrImportant']) = v
             vi = core.VideoStream()
             vi.codec = t[16:20]
             vi.width = retval['biWidth']
             vi.height = retval['biHeight']
             # FIXME: Bitrate calculation is completely wrong.
-            #vi.bitrate = strh['dwRate']
+            # vi.bitrate = strh['dwRate']
             vi.fps = float(strh['dwRate']) / strh['dwScale']
             vi.length = strh['dwLength'] / vi.fps
             self.video.append(vi)
         return retval
 
-
     def _parseSTRL(self, t):
         retval = {}
-        size = len(t)
+        # size = len(t)
         i = 0
 
         while i < len(t) - 8:
@@ -253,34 +251,33 @@ class Riff(core.AVContainer):
 
         return retval, i
 
-
-    def _parseODML(self, t):
+    @staticmethod
+    def _parseODML(t):
         retval = {}
-        size = len(t)
+        # size = len(t)
         i = 0
         key = t[i:i + 4]
         sz = struct.unpack('<I', t[i + 4:i + 8])[0]
         i += 8
-        value = t[i:]
+        # value = t[i:]
         if key != 'dmlh':
             log.debug(u'_parseODML: Error')
 
         i += sz - 8
-        return (retval, i)
-
+        return retval, i
 
     def _parseVPRP(self, t):
         retval = {}
         v = struct.unpack('<IIIIIIIIII', t[:4 * 10])
 
         (retval['VideoFormat'],
-          retval['VideoStandard'],
-          retval['RefreshRate'],
-          retval['HTotalIn'],
-          retval['VTotalIn'],
-          retval['FrameAspectRatio'],
-          retval['wPixel'],
-          retval['hPixel']) = v[1:-1]
+         retval['VideoStandard'],
+         retval['RefreshRate'],
+         retval['HTotalIn'],
+         retval['VTotalIn'],
+         retval['FrameAspectRatio'],
+         retval['wPixel'],
+         retval['hPixel']) = v[1:-1]
 
         # I need an avi with more informations
         # enum {FORMAT_UNKNOWN, FORMAT_PAL_SQUARE, FORMAT_PAL_CCIR_601,
@@ -292,9 +289,8 @@ class Riff(core.AVContainer):
         r = float(r >> 16) / (r & 0xFFFF)
         retval['FrameAspectRatio'] = r
         if self.video:
-            map(lambda v: setattr(v, 'aspect', r), self.video)
-        return (retval, v[0])
-
+            map(lambda _v: setattr(_v, 'aspect', r), self.video)
+        return retval, v[0]
 
     def _parseLISTmovi(self, size, file):
         """
@@ -309,7 +305,7 @@ class Riff(core.AVContainer):
         # pathological cases.
         while i < min(1024 * 1024 * 5, size - 8) and n_dc < 5:
             data = file.read(8)
-            if ord(data[0]) == 0:
+            if byte2int(data) == 0:
                 # Eat leading nulls.
                 data = data[1:] + file.read(1)
                 i += 1
@@ -326,29 +322,30 @@ class Riff(core.AVContainer):
             # Read video chunk into memory
             data = file.read(sz)
 
-            #for p in range(0,min(80, sz)):
-            #    print "%02x " % ord(data[p]),
-            #print "\n\n"
+            # for p in range(0,min(80, sz)):
+            #    print "%02x " % indexbytes(data, p),
+            # print "\n\n"
 
             # Look through the picture header for VOL startcode.  The basic
             # logic for this is taken from libavcodec, h263.c
             pos = 0
             startcode = 0xff
-            def bits(v, o, n):
+
+            def bits(_v, o, n):
                 # Returns n bits in v, offset o bits.
-                return (v & 2 ** n - 1 << (64 - n - o)) >> 64 - n - o
+                return (_v & 2 ** n - 1 << (64 - n - o)) >> 64 - n - o
 
             while pos < sz:
-                startcode = ((startcode << 8) | ord(data[pos])) & 0xffffffff
+                startcode = ((startcode << 8) | indexbytes(data, pos)) & 0xffffffff
                 pos += 1
                 if startcode & 0xFFFFFF00 != 0x100:
                     # No startcode found yet
                     continue
 
-                if startcode >= 0x120 and startcode <= 0x12F:
+                if 0x120 <= startcode <= 0x12F:
                     # We have the VOL startcode.  Pull 64 bits of it and treat
                     # as a bitstream
-                    v = struct.unpack(">Q", data[pos : pos + 8])[0]
+                    v = struct.unpack(">Q", data[pos: pos + 8])[0]
                     offset = 10
                     if bits(v, 9, 1):
                         # is_ol_id, skip over vo_ver_id and vo_priority
@@ -380,12 +377,9 @@ class Riff(core.AVContainer):
                 # list, so break out of the loop.
                 break
 
-
         if i < size:
             # Seek past whatever might be remaining of the movi list.
             file.seek(size - i, 1)
-
-
 
     def _parseLIST(self, t):
         retval = {}
@@ -394,9 +388,10 @@ class Riff(core.AVContainer):
 
         while i < size - 8:
             # skip zero
-            if ord(t[i]) == 0: i += 1
+            if indexbytes(t, i) == 0:
+                i += 1
             key = t[i:i + 4]
-            sz = 0
+            # sz = 0
 
             if key == 'LIST':
                 sz = struct.unpack('<I', t[i + 4:i + 8])[0]
@@ -404,7 +399,7 @@ class Riff(core.AVContainer):
                 key = "LIST:" + t[i:i + 4]
                 value = self._parseLIST(t[i:i + sz])
                 if key == 'strl':
-                    for k in value.keys():
+                    for k in value:  # .keys():
                         retval[k] = value[k]
                 else:
                     retval[key] = value
@@ -437,7 +432,7 @@ class Riff(core.AVContainer):
                 sz = struct.unpack('<I', t[i + 4:i + 8])[0]
                 i += 8
                 # in most cases this is some info stuff
-                if not key in AVIINFO.keys() and key != 'IDIT':
+                if key not in AVIINFO.keys() and key != 'IDIT':
                     log.debug(u'Unknown Key: %r, len: %d' % (key, sz))
                 value = t[i:i + sz]
                 if key == 'ISFT':
@@ -468,7 +463,6 @@ class Riff(core.AVContainer):
                 i += sz
         return retval
 
-
     def _parseRIFFChunk(self, file):
         h = file.read(8)
         if len(h) < 8:
@@ -480,8 +474,8 @@ class Riff(core.AVContainer):
             pos = file.tell() - 8
             key = file.read(4)
             if key == 'movi' and self.video and not self.video[-1].aspect and \
-               self.video[-1].width and self.video[-1].height and \
-               self.video[-1].format in ['DIVX', 'XVID', 'FMP4']: # any others?
+                    self.video[-1].width and self.video[-1].height and \
+                    self.video[-1].format in ['DIVX', 'XVID', 'FMP4']:  # any others?
                 # If we don't have the aspect (i.e. it isn't in odml vprp
                 # header), but we do know the video's dimensions, and
                 # we're dealing with an mpeg4 stream, try to get the aspect
@@ -490,15 +484,15 @@ class Riff(core.AVContainer):
                 return True
             elif size > 80000:
                 log.debug(u'RIFF LIST %r too long to parse: %r bytes' % (key, size))
-                t = file.seek(size - 4, 1)
+                _ = file.seek(size - 4, 1)
                 return True
             elif size < 5:
                 log.debug(u'RIFF LIST %r too short: %r bytes' % (key, size))
                 return True
 
-            t = file.read(size - 4)
+            _ = file.read(size - 4)
             log.debug(u'parse RIFF LIST %r: %d bytes' % (key, size))
-            value = self._parseLIST(t)
+            value = self._parseLIST(_)
             self.header[key] = value
             if key == 'INFO':
                 self.infoStart = pos
@@ -519,12 +513,12 @@ class Riff(core.AVContainer):
             self.has_idx = True
             log.debug(u'idx1: %r bytes' % size)
             # no need to parse this
-            t = file.seek(size, 1)
+            _ = file.seek(size, 1)
         elif name == 'RIFF':
             log.debug(u'New RIFF chunk, extended avi [%i]' % size)
-            type = file.read(4)
-            if type != 'AVIX':
-                log.debug(u'Second RIFF chunk is %r, not AVIX, skipping', type)
+            ftype = file.read(4)
+            if ftype != 'AVIX':
+                log.debug(u'Second RIFF chunk is %r, not AVIX, skipping', ftype)
                 file.seek(size - 4, 1)
             # that's it, no new informations should be in AVIX
             return False
@@ -554,7 +548,7 @@ class Riff(core.AVContainer):
         elif not name.strip(string.printable + string.whitespace):
             # check if name is something usefull at all, maybe it is no
             # avi or broken
-            t = file.seek(size, 1)
+            _ = file.seek(size, 1)
             log.debug(u'Skipping %r [%i]' % (name, size))
         else:
             # bad avi

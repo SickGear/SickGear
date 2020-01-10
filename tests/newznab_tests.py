@@ -3,6 +3,7 @@ from __future__ import print_function
 import warnings
 warnings.filterwarnings('ignore', module=r'.*fuz.*', message='.*Sequence.*')
 warnings.filterwarnings('ignore', module=r'.*dateutil.*', message='.*Unicode.*')
+warnings.filterwarnings('ignore', module=r'.*', message=r'.*Python 2\.6.*')
 
 import datetime
 import os.path
@@ -14,18 +15,12 @@ import unittest
 sys.path.insert(1, os.path.abspath('..'))
 sys.path.insert(1, os.path.abspath('../lib'))
 
-try:
-    from lxml import etree
-except ImportError:
-    try:
-        import xml.etree.cElementTree as etree
-    except ImportError:
-        import xml.etree.ElementTree as etree
-
+from lxml_etree import etree
 from lib.dateutil import parser
 from sickbeard.indexers.indexer_config import *
 from sickbeard.network_timezones import sb_timezone
 from sickbeard.providers import newznab
+from six import iteritems, iterkeys
 
 import sickbeard
 
@@ -68,7 +63,7 @@ caps_test_cases = [
         'name': 'newznab',
         'data_files': {'caps': 'newznab_caps.xml'},
         'caps': {
-            INDEXER_TVDB: 'tvdbid', INDEXER_TVRAGE: 'rid', INDEXER_TVMAZE: 'tvmazeid',
+            TVINFO_TVDB: 'tvdbid', TVINFO_TVRAGE: 'rid', TVINFO_TVMAZE: 'tvmazeid',
             newznab.NewznabConstants.SEARCH_EPISODE: 'ep', newznab.NewznabConstants.SEARCH_SEASON: 'season',
             newznab.NewznabConstants.SEARCH_TEXT: 'q'
         },
@@ -90,8 +85,8 @@ caps_test_cases = [
         'name': 'nzedb',
         'data_files': {'caps': 'nzedb_caps.xml'},
         'caps': {
-            INDEXER_TVDB: 'tvdbid', INDEXER_TVRAGE: 'rid', INDEXER_TVMAZE: 'tvmazeid', INDEXER_TRAKT: 'traktid',
-            INDEXER_IMDB: 'imdbid', INDEXER_TMDB: 'tmdbid',
+            TVINFO_TVDB: 'tvdbid', TVINFO_TVRAGE: 'rid', TVINFO_TVMAZE: 'tvmazeid', TVINFO_TRAKT: 'traktid',
+            TVINFO_IMDB: 'imdbid', TVINFO_TMDB: 'tmdbid',
             newznab.NewznabConstants.SEARCH_EPISODE: 'ep', newznab.NewznabConstants.SEARCH_SEASON: 'season',
             newznab.NewznabConstants.SEARCH_TEXT: 'q'
         },
@@ -113,8 +108,8 @@ caps_test_cases = [
         'name': 'nntmux',
         'data_files': {'caps': 'nntmux_caps.xml'},
         'caps': {
-            INDEXER_TVDB: 'tvdbid', INDEXER_TVRAGE: 'rid', INDEXER_TVMAZE: 'tvmazeid', INDEXER_TRAKT: 'traktid',
-            INDEXER_IMDB: 'imdbid', INDEXER_TMDB: 'tmdbid',
+            TVINFO_TVDB: 'tvdbid', TVINFO_TVRAGE: 'rid', TVINFO_TVMAZE: 'tvmazeid', TVINFO_TRAKT: 'traktid',
+            TVINFO_IMDB: 'imdbid', TVINFO_TMDB: 'tmdbid',
             newznab.NewznabConstants.SEARCH_EPISODE: 'ep', newznab.NewznabConstants.SEARCH_SEASON: 'season',
             newznab.NewznabConstants.SEARCH_TEXT: 'q'
         },
@@ -135,7 +130,7 @@ caps_test_cases = [
         'name': 'spotweb',
         'data_files': {'caps': 'spotweb_caps.xml'},
         'caps': {
-            INDEXER_TVRAGE: 'rid', INDEXER_TVMAZE: 'tvmazeid',
+            TVINFO_TVRAGE: 'rid', TVINFO_TVMAZE: 'tvmazeid',
             newznab.NewznabConstants.SEARCH_EPISODE: 'ep', newznab.NewznabConstants.SEARCH_SEASON: 'season',
             newznab.NewznabConstants.SEARCH_TEXT: 'q'
         },
@@ -153,7 +148,7 @@ caps_test_cases = [
         'name': 'NZBHydra',
         'data_files': {'caps': 'hydra1_caps.xml'},
         'caps': {
-            INDEXER_TVDB: 'tvdbid', INDEXER_TVRAGE: 'rid',
+            TVINFO_TVDB: 'tvdbid', TVINFO_TVRAGE: 'rid',
             newznab.NewznabConstants.SEARCH_EPISODE: 'ep', newznab.NewznabConstants.SEARCH_SEASON: 'season',
             newznab.NewznabConstants.SEARCH_TEXT: 'q'
         },
@@ -172,7 +167,7 @@ caps_test_cases = [
         'name': 'NZBHydra 2',
         'data_files': {'caps': 'hydra2_caps.xml'},
         'caps': {
-            INDEXER_TVDB: 'tvdbid', INDEXER_TVRAGE: 'rid', INDEXER_TVMAZE: 'tvmazeid', INDEXER_TRAKT: 'traktid',
+            TVINFO_TVDB: 'tvdbid', TVINFO_TVRAGE: 'rid', TVINFO_TVMAZE: 'tvmazeid', TVINFO_TRAKT: 'traktid',
             newznab.NewznabConstants.SEARCH_EPISODE: 'ep', newznab.NewznabConstants.SEARCH_SEASON: 'season',
             newznab.NewznabConstants.SEARCH_TEXT: 'q'
         },
@@ -202,9 +197,9 @@ class FakeNewznabProvider(newznab.NewznabProvider):
         try:
             f = os.path.join(self.FILEDIR, filename)
             if os.path.isfile(f):
-                with open(f, 'r') as d:
-                    return d.read().decode('UTF-8')
-        except (StandardError, Exception):
+                with open(f, 'rb') as d:
+                    return d.read()
+        except (BaseException, Exception):
             return
 
     # simulate Data from provider
@@ -242,7 +237,7 @@ class BasicTests(test.SickbeardTestDBCase):
             uuid_item.set('value', '%s' % uuid)
             item.append(uuid_item)
         if ids:
-            for a, b in ids.iteritems():
+            for a, b in iteritems(ids):
                 ids_item = etree.Element('{%s}attr' % BasicTests.ns['newznab'], nsmap=BasicTests.ns)
                 ids_item.set('name', a)
                 ids_item.set('value', '%s' % b)
@@ -276,13 +271,13 @@ class BasicTests(test.SickbeardTestDBCase):
 
     def test_parse_ids(self):
         ids_test_cases = []
-        for k in newznab.NewznabConstants.providerToIndexerMapping.iterkeys():
+        for k in iterkeys(newznab.NewznabConstants.providerToIndexerMapping):
             rand_id = random.randrange(1, 99999999)
             ids_test_cases.append(({k: rand_id}, {newznab.NewznabConstants.providerToIndexerMapping[k]: rand_id}))
 
         all_case = {}
         all_case_ex = {}
-        for k in newznab.NewznabConstants.providerToIndexerMapping.iterkeys():
+        for k in iterkeys(newznab.NewznabConstants.providerToIndexerMapping):
             rand_id = random.randrange(1, 99999999)
             all_case.update({k: rand_id})
             all_case_ex.update({newznab.NewznabConstants.providerToIndexerMapping[k]: rand_id})
@@ -304,11 +299,11 @@ class BasicTests(test.SickbeardTestDBCase):
                 p = parser.parse(date_str, fuzzy=True)
                 try:
                     p = p.astimezone(sb_timezone)
-                except (StandardError, Exception):
+                except (BaseException, Exception):
                     pass
                 if isinstance(p, datetime.datetime):
                     parsed_date = p.replace(tzinfo=None)
-        except (StandardError, Exception):
+        except (BaseException, Exception):
             pass
 
         return parsed_date
@@ -330,6 +325,7 @@ class FakeProviderTests(test.SickbeardTestDBCase):
         for cur_test in caps_test_cases:
             newznab_provider = FakeNewznabProvider('test', 'https://fake.fake/', data_files_dict=cur_test['data_files'])
             newznab_provider.enabled = True
+            # TODO: This test is now failing, this next line returns data that does not match the test data
             newznab_provider.get_caps()
             msg = 'Test case: %s' % cur_test['name']
             self.assertEqual(cur_test['server_type'], newznab_provider.server_type, msg=msg)
@@ -339,8 +335,8 @@ class FakeProviderTests(test.SickbeardTestDBCase):
             self.assertEqual(cur_test['all_cats'], newznab_provider.all_cats, msg=msg)
 
 
-if __name__ == '__main__':
-    if len(sys.argv) > 1:
+if '__main__' == __name__:
+    if 1 < len(sys.argv):
         suite = unittest.TestLoader().loadTestsFromName('newznab_tests.BasicTests.test_' + sys.argv[1])
     else:
         suite = unittest.TestLoader().loadTestsFromTestCase(BasicTests)

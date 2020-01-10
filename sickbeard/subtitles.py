@@ -16,20 +16,22 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
-import time
 import datetime
+
+# noinspection PyPep8Naming
+import encodingKludge as ek
+
+from . import db, helpers, logger
+from .common import *
+
 import sickbeard
-from sickbeard.common import *
-from sickbeard import notifiers
-from sickbeard import logger
-from sickbeard import helpers
-from sickbeard import encodingKludge as ek
-from sickbeard import db
-from sickbeard import history
+
 from lib import subliminal
 
 SINGLE = 'und'
-def sortedServiceList():
+
+
+def sorted_service_list():
     servicesMapping = dict([(x.lower(), x) for x in subliminal.core.SERVICES])
 
     newList = []
@@ -38,36 +40,58 @@ def sortedServiceList():
     curIndex = 0
     for curService in sickbeard.SUBTITLES_SERVICES_LIST:
         if curService in servicesMapping:
-            curServiceDict = {'id': curService, 'image': curService+'.png', 'name': servicesMapping[curService], 'enabled': sickbeard.SUBTITLES_SERVICES_ENABLED[curIndex] == 1, 'api_based': __import__('lib.subliminal.services.' + curService, globals=globals(), locals=locals(), fromlist=['Service'], level=-1).Service.api_based, 'url': __import__('lib.subliminal.services.' + curService, globals=globals(), locals=locals(), fromlist=['Service'], level=-1).Service.site_url}
+            curServiceDict = dict(
+                id=curService,
+                image=curService + '.png',
+                name=servicesMapping[curService],
+                enabled=1 == sickbeard.SUBTITLES_SERVICES_ENABLED[curIndex],
+                api_based=__import__('lib.subliminal.services.' + curService, globals=globals(),
+                                     locals=locals(), fromlist=['Service']).Service.api_based,
+                url=__import__('lib.subliminal.services.' + curService, globals=globals(),
+                               locals=locals(), fromlist=['Service']).Service.site_url)
             newList.append(curServiceDict)
         curIndex += 1
 
     # add any services that are missing from that list
-    for curService in servicesMapping.keys():
+    for curService in servicesMapping:
         if curService not in [x['id'] for x in newList]:
-            curServiceDict = {'id': curService, 'image': curService+'.png', 'name': servicesMapping[curService], 'enabled': False, 'api_based': __import__('lib.subliminal.services.' + curService, globals=globals(), locals=locals(), fromlist=['Service'], level=-1).Service.api_based, 'url': __import__('lib.subliminal.services.' + curService, globals=globals(), locals=locals(), fromlist=['Service'], level=-1).Service.site_url}
+            curServiceDict = dict(
+                id=curService,
+                image=curService + '.png',
+                name=servicesMapping[curService],
+                enabled=False,
+                api_based=__import__('lib.subliminal.services.' + curService, globals=globals(),
+                                     locals=locals(), fromlist=['Service']).Service.api_based,
+                url=__import__('lib.subliminal.services.' + curService, globals=globals(),
+                               locals=locals(), fromlist=['Service']).Service.site_url)
             newList.append(curServiceDict)
 
     return newList
 
-def getEnabledServiceList():
-    return [x['name'] for x in sortedServiceList() if x['enabled']]
 
-def isValidLanguage(language):
+def get_enabled_service_list():
+    return [x['name'] for x in sorted_service_list() if x['enabled']]
+
+
+def is_valid_language(language):
     return subliminal.language.language_list(language)
 
-def getLanguageName(selectLang):
-    return subliminal.language.Language(selectLang).name
 
-def wantedLanguages(sqlLike = False):
+def get_language_name(select_lang):
+    return subliminal.language.Language(select_lang).name
+
+
+def wanted_languages(sql_like=False):
     wantedLanguages = sorted(sickbeard.SUBTITLES_LANGUAGES)
-    if sqlLike:
+    if sql_like:
         return '%' + ','.join(wantedLanguages) + '%'
     return wantedLanguages
 
-def subtitlesLanguages(video_path):
+
+def subtitles_languages(video_path):
     """Return a list detected subtitles for the given video file"""
     video = subliminal.videos.Video.from_path(video_path)
+    video.subtitle_path = sickbeard.SUBTITLES_DIR
     subtitles = video.scan()
     languages = set()
     for subtitle in subtitles:
@@ -77,16 +101,18 @@ def subtitlesLanguages(video_path):
             languages.add(SINGLE)
     return list(languages)
 
+
 # Return a list with languages that have alpha2 code
-def subtitleLanguageFilter():
+def subtitle_language_filter():
     return [language for language in subliminal.language.LANGUAGES if language[2] != ""]
 
 
-class SubtitlesFinder:
+class SubtitlesFinder(object):
     """
     The SubtitlesFinder will be executed every hour but will not necessarly search
     and download subtitles. Only if the defined rule is true
     """
+
     def __init__(self):
         self.amActive = False
 
@@ -101,8 +127,9 @@ class SubtitlesFinder:
             self.amActive = False
 
     def _main(self):
-        if len(sickbeard.subtitles.getEnabledServiceList()) < 1:
-            logger.log(u'Not enough services selected. At least 1 service is required to search subtitles in the background', logger.ERROR)
+        if 1 > len(sickbeard.subtitles.get_enabled_service_list()):
+            logger.log(u'Not enough services selected. At least 1 service is required to'
+                       u' search subtitles in the background', logger.ERROR)
             return
 
         logger.log(u'Checking for subtitles', logger.MESSAGE)
@@ -117,46 +144,68 @@ class SubtitlesFinder:
         today = datetime.date.today().toordinal()
 
         # you have 5 minutes to understand that one. Good luck
-        myDB = db.DBConnection()
-        sqlResults = myDB.select('SELECT s.show_name, e.showid, e.season, e.episode, e.status, e.subtitles, e.subtitles_searchcount AS searchcount, e.subtitles_lastsearch AS lastsearch, e.location, (? - e.airdate) AS airdate_daydiff FROM tv_episodes AS e INNER JOIN tv_shows AS s ON (e.showid = s.indexer_id) WHERE s.subtitles = 1 AND e.subtitles NOT LIKE (?) AND ((e.subtitles_searchcount <= 2 AND (? - e.airdate) > 7) OR (e.subtitles_searchcount <= 7 AND (? - e.airdate) <= 7)) AND (e.status IN ('+','.join([str(x) for x in Quality.DOWNLOADED])+') OR (e.status IN ('+','.join([str(x) for x in Quality.SNATCHED + Quality.SNATCHED_PROPER])+') AND e.location != ""))', [today, wantedLanguages(True), today, today])
-        if len(sqlResults) == 0:
+        my_db = db.DBConnection()
+        sql_result = my_db.select(
+            'SELECT s.show_name, e.indexer AS tv_id, e.showid AS prod_id,'
+            ' e.season, e.episode, e.status, e.subtitles,'
+            ' e.subtitles_searchcount AS searchcount, e.subtitles_lastsearch AS lastsearch,'
+            ' e.location, (? - e.airdate) AS airdate_daydiff'
+            ' FROM tv_episodes AS e'
+            ' INNER JOIN tv_shows AS s'
+            ' ON (e.indexer = s.indexer AND e.showid = s.indexer_id)'
+            ' WHERE s.subtitles = 1 AND e.subtitles NOT LIKE (?)'
+            ' AND ((e.subtitles_searchcount <= 2 AND (? - e.airdate) > 7)'
+            ' OR (e.subtitles_searchcount <= 7 AND (? - e.airdate) <= 7))'
+            ' AND (e.status IN (%s)' % ','.join([str(x) for x in Quality.DOWNLOADED])
+            + ' OR (e.status IN (%s)' % ','.join([str(x) for x in Quality.SNATCHED + Quality.SNATCHED_PROPER])
+            + ' AND e.location != \'\'))', [today, wanted_languages(True), today, today])
+        if 0 == len(sql_result):
             logger.log('No subtitles to download', logger.MESSAGE)
             return
 
-        rules = self._getRules()
+        rules = self._get_rules()
         now = datetime.datetime.now()
-        for epToSub in sqlResults:
+        for cur_result in sql_result:
 
-            if not ek.ek(os.path.isfile, epToSub['location']):
-                logger.log('Episode file does not exist, cannot download subtitles for episode %dx%d of show %s' % (epToSub['season'], epToSub['episode'], epToSub['show_name']), logger.DEBUG)
+            if not ek.ek(os.path.isfile, cur_result['location']):
+                logger.log('Episode file does not exist, cannot download subtitles for episode %dx%d of show %s'
+                           % (cur_result['season'], cur_result['episode'], cur_result['show_name']), logger.DEBUG)
                 continue
 
             # Old shows rule
-            throwaway = datetime.datetime.strptime('20110101', '%Y%m%d')
-            if ((epToSub['airdate_daydiff'] > 7 and epToSub['searchcount'] < 2 and now - datetime.datetime.strptime(epToSub['lastsearch'], '%Y-%m-%d %H:%M:%S') > datetime.timedelta(hours=rules['old'][epToSub['searchcount']])) or
-                # Recent shows rule
-                (epToSub['airdate_daydiff'] <= 7 and epToSub['searchcount'] < 7 and now - datetime.datetime.strptime(epToSub['lastsearch'], '%Y-%m-%d %H:%M:%S') > datetime.timedelta(hours=rules['new'][epToSub['searchcount']]))):
-                logger.log('Downloading subtitles for episode %dx%d of show %s' % (epToSub['season'], epToSub['episode'], epToSub['show_name']), logger.DEBUG)
+            _ = datetime.datetime.strptime('20110101', '%Y%m%d')
+            if ((cur_result['airdate_daydiff'] > 7 and cur_result['searchcount'] < 2
+                 and now - datetime.datetime.strptime(cur_result['lastsearch'], '%Y-%m-%d %H:%M:%S')
+                 > datetime.timedelta(hours=rules['old'][cur_result['searchcount']])) or
+                    # Recent shows rule
+                    (cur_result['airdate_daydiff'] <= 7 and cur_result['searchcount'] < 7
+                     and now - datetime.datetime.strptime(cur_result['lastsearch'], '%Y-%m-%d %H:%M:%S')
+                     > datetime.timedelta(hours=rules['new'][cur_result['searchcount']]))):
+                logger.log('Downloading subtitles for episode %dx%d of show %s'
+                           % (cur_result['season'], cur_result['episode'], cur_result['show_name']), logger.DEBUG)
 
-                showObj = helpers.findCertainShow(sickbeard.showList, int(epToSub['showid']))
-                if not showObj:
+                show_obj = helpers.find_show_by_id({int(cur_result['tv_id']): int(cur_result['prod_id'])})
+                if not show_obj:
                     logger.log(u'Show not found', logger.DEBUG)
                     return
 
-                epObj = showObj.getEpisode(int(epToSub["season"]), int(epToSub["episode"]))
-                if isinstance(epObj, str):
+                ep_obj = show_obj.get_episode(int(cur_result['season']), int(cur_result['episode']))
+                if isinstance(ep_obj, str):
                     logger.log(u'Episode not found', logger.DEBUG)
                     return
 
-                previous_subtitles = epObj.subtitles
+                # noinspection PyUnusedLocal
+                previous_subtitles = ep_obj.subtitles
 
                 try:
-                    subtitles = epObj.downloadSubtitles()
-                except:
+                    # noinspection PyUnusedLocal
+                    subtitles = ep_obj.download_subtitles()
+                except (BaseException, Exception):
                     logger.log(u'Unable to find subtitles', logger.DEBUG)
                     return
 
-    def _getRules(self):
+    @staticmethod
+    def _get_rules():
         """
         Define the hours to wait between 2 subtitles search depending on:
         - the episode: new or old

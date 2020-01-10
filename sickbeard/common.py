@@ -15,7 +15,9 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
+from __future__ import division
 
+from functools import reduce
 import operator
 import os.path
 import platform
@@ -23,8 +25,15 @@ import re
 import traceback
 import uuid
 
-import logger
 import sickbeard
+
+from _23 import map_list
+from six import integer_types, iterkeys, string_types
+
+# noinspection PyUnresolvedReferences
+# noinspection PyUnreachableCode
+if False:
+    from typing import List, Tuple
 
 try:
     INSTANCE_ID = str(uuid.uuid1())
@@ -74,7 +83,7 @@ multiEpStrings = {NAMING_REPEAT: 'Repeat',
                   NAMING_LIMITED_EXTEND_E_PREFIXED: 'Extend (Limited, E-prefixed)'}
 
 
-class Quality:
+class Quality(object):
     NONE = 0  # 0
     SDTV = 1  # 1
     SDDVD = 1 << 1  # 2
@@ -111,20 +120,35 @@ class Quality:
                       FAILED: 'Failed',
                       SNATCHED_BEST: 'Snatched (Best)'}
 
-    real_check = r'\breal\b\W?(?=proper|repack|e?ac3|aac|dts|read\Wnfo|(ws\W)?[ph]dtv|(ws\W)?dsr|web|dvd|blu|\d{2,3}0(p|i))(?!.*\d+(e|x)\d+)'
+    real_check = r'\breal\b\W?' \
+                 r'(?=proper|repack|e?ac3|aac|dts|read\Wnfo|(ws\W)?[ph]dtv|(ws\W)?dsr|web|dvd|blu|\d{2,3}0([pi]))' \
+                 r'(?!.*\d+([ex])\d+)'
 
-    proper_levels = [(re.compile(r'\brepack\b(?!.*\d+(e|x)\d+)', flags=re.I), True),
-                     (re.compile(r'\bproper\b(?!.*\d+(e|x)\d+)', flags=re.I), False),
+    proper_levels = [(re.compile(r'\brepack\b(?!.*\d+([ex])\d+)', flags=re.I), True),
+                     (re.compile(r'\bproper\b(?!.*\d+([ex])\d+)', flags=re.I), False),
                      (re.compile(real_check, flags=re.I), False)]
 
     @staticmethod
     def get_proper_level(extra_no_name, version, is_anime=False, check_is_repack=False):
+        """
+
+        :param extra_no_name: extra info
+        :type extra_no_name: AnyStr
+        :param version: version
+        :type version: int
+        :param is_anime: is anime
+        :type is_anime: bool
+        :param check_is_repack: check for repack
+        :type check_is_repack: bool
+        :return: proper level or tuple of is_repack, proper level
+        :rtype: int or Tuple[bool, int]
+        """
         level = 0
         is_repack = False
         if is_anime:
-            if isinstance(version, (int, long)):
+            if isinstance(version, integer_types):
                 level = (0, version - 1)[1 < version]
-        elif isinstance(extra_no_name, basestring):
+        elif isinstance(extra_no_name, string_types):
             for p, r_check in Quality.proper_levels:
                 a = len(p.findall(extra_no_name))
                 level += a
@@ -136,73 +160,119 @@ class Quality:
 
     @staticmethod
     def get_quality_css(quality):
+        """
+
+        :param quality: quality
+        :type quality: int
+        :return:
+        :rtype: AnyStr
+        """
         return (Quality.qualityStrings[quality].replace('2160p', 'UHD2160p').replace('1080p', 'HD1080p')
                 .replace('720p', 'HD720p').replace('HD TV', 'HD720p').replace('RawHD TV', 'RawHD'))
 
     @staticmethod
     def get_quality_ui(quality):
+        """
+
+        :param quality: quality
+        :type quality: int
+        :return:
+        :rtype: AnyStr
+        """
         return Quality.qualityStrings[quality].replace('SD DVD', 'SD DVD/BR/BD')
 
     @staticmethod
     def _getStatusStrings(status):
+        """
+
+        :param status: status
+        :type status: int
+        :return:
+        :rtype: AnyStr
+        """
         toReturn = {}
-        for x in Quality.qualityStrings.keys():
-            toReturn[Quality.compositeStatus(status, x)] = '%s (%s)' % (
-                Quality.statusPrefixes[status], Quality.qualityStrings[x])
+        for _x in Quality.qualityStrings:
+            toReturn[Quality.compositeStatus(status, _x)] = '%s (%s)' % (
+                Quality.statusPrefixes[status], Quality.qualityStrings[_x])
         return toReturn
 
     @staticmethod
-    def combineQualities(anyQualities, bestQualities):
-        anyQuality = 0
-        bestQuality = 0
-        if anyQualities:
-            anyQuality = reduce(operator.or_, anyQualities)
-        if bestQualities:
-            bestQuality = reduce(operator.or_, bestQualities)
-        return anyQuality | (bestQuality << 16)
+    def combineQualities(any_qualities, best_qualities):
+        # type: (List[int], List[int]) -> int
+        """
+
+        :param any_qualities: any qualities
+        :param best_qualities: best qualities
+        """
+        any_quality = 0
+        best_quality = 0
+        if any_qualities:
+            any_quality = reduce(operator.or_, any_qualities)
+        if best_qualities:
+            best_quality = reduce(operator.or_, best_qualities)
+        return any_quality | (best_quality << 16)
 
     @staticmethod
     def splitQuality(quality):
-        anyQualities = []
-        bestQualities = []
-        for curQual in Quality.qualityStrings.keys():
-            if curQual & quality:
-                anyQualities.append(curQual)
-            if curQual << 16 & quality:
-                bestQualities.append(curQual)
+        # type: (int) -> Tuple[List[int], List[int]]
+        """
 
-        return sorted(anyQualities), sorted(bestQualities)
+        :param quality: show quality
+        """
+        any_qualities = []
+        best_qualities = []
+        for cur_quality in Quality.qualityStrings:
+            if cur_quality & quality:
+                any_qualities.append(cur_quality)
+            if cur_quality << 16 & quality:
+                best_qualities.append(cur_quality)
+
+        return sorted(any_qualities), sorted(best_qualities)
 
     @staticmethod
     def nameQuality(name, anime=False):
         """
         Return The quality from an episode File renamed by SickGear
         If no quality is achieved it will try sceneQuality regex
+        :param name: name
+        :type name: AnyStr
+        :param anime: is anmie
+        :type anime: bool
+        :return:
+        :rtype: int
         """
 
-        from sickbeard import encodingKludge as ek
+        # noinspection PyPep8Naming
+        import encodingKludge as ek
         name = ek.ek(os.path.basename, name)
 
         # if we have our exact text then assume we put it there
-        for x in sorted(Quality.qualityStrings.keys(), reverse=True):
-            if x == Quality.UNKNOWN:
+        for _x in sorted(iterkeys(Quality.qualityStrings), reverse=True):
+            if Quality.UNKNOWN == _x:
                 continue
 
-            if x == Quality.NONE:  # Last chance
+            if Quality.NONE == _x:  # Last chance
                 return Quality.sceneQuality(name, anime)
 
-            regex = '\W' + Quality.qualityStrings[x].replace(' ', '\W') + '\W'
+            regex = r'\W' + Quality.qualityStrings[_x].replace(' ', r'\W') + r'\W'
             regex_match = re.search(regex, name, re.I)
             if regex_match:
-                return x
+                return _x
 
     @staticmethod
     def sceneQuality(name, anime=False):
         """
         Return The quality from the scene episode File
+        :param name: name
+        :type name: AnyStr
+        :param anime: is anmie
+        :type anime: bool
+        :return:
+        :rtype: int
         """
-
-        from sickbeard import encodingKludge as ek
+        # noinspection PyPep8Naming
+        import encodingKludge as ek
+        from sickbeard import logger
         name = ek.ek(os.path.basename, name)
 
         name_has = (lambda quality_list, func=all: func([re.search(q, name, re.I) for q in quality_list]))
@@ -281,9 +351,17 @@ class Quality:
 
     @staticmethod
     def fileQuality(filename):
+        """
 
-        from sickbeard import encodingKludge as ek
-        from sickbeard.exceptions import ex
+        :param filename: filename
+        :type filename: AnyStr
+        :return:
+        :rtype: int
+        """
+        # noinspection PyPep8Naming
+        import encodingKludge as ek
+        from exceptions_helper import ex
+        from sickbeard import logger
         if ek.ek(os.path.isfile, filename):
 
             from hachoir.parser import createParser
@@ -291,12 +369,12 @@ class Quality:
             from hachoir.stream import InputStreamError
 
             parser = height = None
-            msg = u'Hachoir can\'t parse file "%s" content quality because it found error: %s'
+            msg = 'Hachoir can\'t parse file "%s" content quality because it found error: %s'
             try:
                 parser = ek.ek(createParser, filename)
             except InputStreamError as e:
                 logger.log(msg % (filename, ex(e)), logger.WARNING)
-            except Exception as e:
+            except (BaseException, Exception) as e:
                 logger.log(msg % (filename, ex(e)), logger.ERROR)
                 logger.log(traceback.format_exc(), logger.ERROR)
 
@@ -304,8 +382,11 @@ class Quality:
                 extract = None
                 try:
                     args = ({}, {'scan_index': False})['.avi' == filename[-4::].lower()]
+                    parser.parse_exif = False
+                    parser.parse_photoshop_content = False
+                    parser.parse_comments = False
                     extract = extractMetadata(parser, **args)
-                except (StandardError, Exception) as e:
+                except (BaseException, Exception) as e:
                     logger.log(msg % (filename, ex(e)), logger.WARNING)
                 if extract:
                     try:
@@ -319,9 +400,10 @@ class Quality:
                         except (AttributeError, ValueError):
                             pass
 
+                    # noinspection PyProtectedMember
                     parser.stream._input.close()
 
-                    tolerance = lambda value, percent: int(round(value - (value * percent / 100.0)))
+                    tolerance = (lambda value, percent: int(round(value - (value * percent / 100.0))))
                     if height >= tolerance(352, 5):
                         if height <= tolerance(720, 2):
                             return Quality.SDTV
@@ -330,35 +412,72 @@ class Quality:
 
     @staticmethod
     def assumeQuality(name):
+        """
+
+        :param name: name
+        :type name: AnyStr
+        :return:
+        :rtype: int
+        """
         if name.lower().endswith(('.avi', '.mp4', '.mkv')):
             return Quality.SDTV
         elif name.lower().endswith('.ts'):
             return Quality.RAWHDTV
-        else:
-            return Quality.UNKNOWN
+        return Quality.UNKNOWN
 
     @staticmethod
     def compositeStatus(status, quality):
+        """
+
+        :param status: status
+        :type status: int
+        :param quality: quality
+        :type quality: int
+        :return:
+        :rtype: int or long
+        """
         return status + 100 * quality
 
     @staticmethod
     def qualityDownloaded(status):
-        return (status - DOWNLOADED) / 100
+        # type: (int) -> int
+        """
+
+        :param status: status
+        :type status: int or long
+        :return:
+        :rtype: int or long
+        """
+        return (status - DOWNLOADED) // 100
 
     @staticmethod
     def splitCompositeStatus(status):
-        """Returns a tuple containing (status, quality)"""
-        if status == UNKNOWN:
+        # type: (int) -> Tuple[int, int]
+        """Returns a tuple containing (status, quality)
+        :param status: status
+        """
+        if UNKNOWN == status:
             return UNKNOWN, Quality.UNKNOWN
 
-        for x in sorted(Quality.qualityStrings.keys(), reverse=True):
-            if status > x * 100:
-                return status - x * 100, x
+        for q in sorted(iterkeys(Quality.qualityStrings), reverse=True):
+            if status > q * 100:
+                return status - q * 100, q
 
         return status, Quality.NONE
 
     @staticmethod
     def statusFromName(name, assume=True, anime=False):
+        """
+
+        :param name: name
+        :type name: AnyStr
+        :param assume:
+        :type assume: bool
+        :param anime: is anime
+        :type anime: bool
+        :return:
+        :rtype: int or long
+        """
         quality = Quality.nameQuality(name, anime)
         if assume and Quality.UNKNOWN == quality:
             quality = Quality.assumeQuality(name)
@@ -366,6 +485,17 @@ class Quality:
 
     @staticmethod
     def statusFromNameOrFile(file_path, assume=True, anime=False):
+        """
+
+        :param file_path: file path
+        :type file_path: AnyStr
+        :param assume:
+        :type assume: bool
+        :param anime: is anime
+        :type anime: bool
+        :return:
+        :rtype: int or long
+        """
         quality = Quality.nameQuality(file_path, anime)
         if Quality.UNKNOWN == quality:
             quality = Quality.fileQuality(file_path)
@@ -382,13 +512,13 @@ class Quality:
     FAILED = None
 
 
-class wantedQualities(dict):
+class WantedQualities(dict):
     wantedlist = 1
     bothlists = 2
     upgradelist = 3
 
     def __init__(self, **kwargs):
-        super(wantedQualities, self).__init__(**kwargs)
+        super(WantedQualities, self).__init__(**kwargs)
 
     def _generate_wantedlist(self, qualities):
         initial_qualities, upgrade_qualities = Quality.splitQuality(qualities)
@@ -415,12 +545,12 @@ class wantedQualities(dict):
     def __getitem__(self, k):
         if k not in self:
             self._generate_wantedlist(k)
-        return super(wantedQualities, self).__getitem__(k)
+        return super(WantedQualities, self).__getitem__(k)
 
     def get(self, k, *args, **kwargs):
         if k not in self:
             self._generate_wantedlist(k)
-        return super(wantedQualities, self).get(k, *args, **kwargs)
+        return super(WantedQualities, self).get(k, *args, **kwargs)
 
     def get_wantedlist(self, qualities, upgradeonce, quality, status, unaired=False, manual=False):
         if not manual:
@@ -434,13 +564,13 @@ class wantedQualities(dict):
         return self[qualities][quality][self.wantedlist]
 
 
-Quality.SNATCHED = [Quality.compositeStatus(SNATCHED, x) for x in Quality.qualityStrings.keys()]
-Quality.SNATCHED_PROPER = [Quality.compositeStatus(SNATCHED_PROPER, x) for x in Quality.qualityStrings.keys()]
-Quality.SNATCHED_BEST = [Quality.compositeStatus(SNATCHED_BEST, x) for x in Quality.qualityStrings.keys()]
+for (attr_name, qual_val) in [
+    ('SNATCHED', SNATCHED), ('SNATCHED_PROPER', SNATCHED_PROPER), ('SNATCHED_BEST', SNATCHED_BEST),
+    ('DOWNLOADED', DOWNLOADED), ('ARCHIVED', ARCHIVED), ('FAILED', FAILED),
+]:
+    setattr(Quality, attr_name, map_list(lambda qk: Quality.compositeStatus(qual_val, qk),
+                                         iterkeys(Quality.qualityStrings)))
 Quality.SNATCHED_ANY = Quality.SNATCHED + Quality.SNATCHED_PROPER + Quality.SNATCHED_BEST
-Quality.DOWNLOADED = [Quality.compositeStatus(DOWNLOADED, x) for x in Quality.qualityStrings.keys()]
-Quality.ARCHIVED = [Quality.compositeStatus(ARCHIVED, x) for x in Quality.qualityStrings.keys()]
-Quality.FAILED = [Quality.compositeStatus(FAILED, x) for x in Quality.qualityStrings.keys()]
 
 SD = Quality.combineQualities([Quality.SDTV, Quality.SDDVD], [])
 HD = Quality.combineQualities(
@@ -466,7 +596,7 @@ qualityPresetStrings = {SD: 'SD',
                         ANY: 'Any'}
 
 
-class StatusStrings:
+class StatusStrings(object):
     def __init__(self):
         self.statusStrings = {UNKNOWN: 'Unknown',
                               UNAIRED: 'Unaired',
@@ -487,16 +617,16 @@ class StatusStrings:
             if quality == Quality.NONE:
                 return self.statusStrings[status]
             return '%s (%s)' % (self.statusStrings[status], Quality.qualityStrings[quality])
-        return self.statusStrings[name] if self.statusStrings.has_key(name) else ''
+        return self.statusStrings[name] if name in self.statusStrings else ''
 
-    def has_key(self, name):
-        return name in self.statusStrings or name in Quality.SNATCHED_ANY + Quality.DOWNLOADED + Quality.ARCHIVED
+    def __contains__(self, item):
+        return item in self.statusStrings or item in Quality.SNATCHED_ANY + Quality.DOWNLOADED + Quality.ARCHIVED
 
 
 statusStrings = StatusStrings()
 
 
-class Overview:
+class Overview(object):
     UNAIRED = UNAIRED  # 1
     QUAL = 2
     WANTED = WANTED  # 3
@@ -514,12 +644,13 @@ class Overview:
                        UNAIRED: 'unaired',
                        SNATCHED: 'snatched'}
 
+
 countryList = {'Australia': 'AU',
                'Canada': 'CA',
                'USA': 'US'}
 
 
-class neededQualities(object):
+class NeededQualities(object):
     def __init__(self, need_anime=False, need_sports=False, need_sd=False, need_hd=False, need_uhd=False,
                  need_webdl=False, need_all_qualities=False, need_all_types=False, need_all=False):
         self.need_anime = need_anime or need_all_types or need_all
@@ -530,61 +661,92 @@ class neededQualities(object):
         self.need_webdl = need_webdl or need_all_qualities or need_all
 
     max_sd = Quality.SDDVD
-    hd_qualities = [Quality.HDTV, Quality.FULLHDTV, Quality.HDWEBDL, Quality.FULLHDWEBDL, Quality.HDBLURAY, Quality.FULLHDBLURAY]
+    hd_qualities = [Quality.HDTV, Quality.FULLHDTV, Quality.HDWEBDL, Quality.FULLHDWEBDL,
+                    Quality.HDBLURAY, Quality.FULLHDBLURAY]
     webdl_qualities = [Quality.SDTV, Quality.HDWEBDL, Quality.FULLHDWEBDL, Quality.UHD4KWEB]
     max_hd = Quality.FULLHDBLURAY
 
     @property
     def all_needed(self):
+        """
+        :rtype: bool
+        """
         return self.all_qualities_needed and self.all_types_needed
 
     @property
     def all_types_needed(self):
+        """
+        :rtype: bool
+        """
         return self.need_anime and self.need_sports
 
     @property
     def all_qualities_needed(self):
+        """
+        :rtype: bool
+        """
         return self.need_sd and self.need_hd and self.need_uhd and self.need_webdl
 
     @all_qualities_needed.setter
     def all_qualities_needed(self, v):
+        """
+        :param v:
+        :type v: bool
+        """
         if isinstance(v, bool) and True is v:
             self.need_sd = self.need_hd = self.need_uhd = self.need_webdl = True
 
-    def all_show_qualities_needed(self, show):
+    def all_show_qualities_needed(self, show_obj):
+        """
+
+        :param show_obj: show object
+        :type show_obj: sickbeard.tv.TVShow
+        :return:
+        :rtype: bool
+        """
         from sickbeard.tv import TVShow
-        if isinstance(show, TVShow):
-            init, upgrade = Quality.splitQuality(show.quality)
+        if isinstance(show_obj, TVShow):
+            init, upgrade = Quality.splitQuality(show_obj.quality)
             all_qual = set(init + upgrade)
             need_sd = need_hd = need_uhd = need_webdl = False
             for wanted_qualities in all_qual:
-                if not need_sd and wanted_qualities <= neededQualities.max_sd:
+                if not need_sd and wanted_qualities <= NeededQualities.max_sd:
                     need_sd = True
-                if not need_hd and wanted_qualities in neededQualities.hd_qualities:
+                if not need_hd and wanted_qualities in NeededQualities.hd_qualities:
                     need_hd = True
-                if not need_webdl and wanted_qualities in neededQualities.webdl_qualities:
+                if not need_webdl and wanted_qualities in NeededQualities.webdl_qualities:
                     need_webdl = True
-                if not need_uhd and wanted_qualities > neededQualities.max_hd:
+                if not need_uhd and wanted_qualities > NeededQualities.max_hd:
                     need_uhd = True
             return self.need_sd == need_sd and self.need_hd == need_hd and self.need_webdl == need_webdl and \
                 self.need_uhd == need_uhd
 
-    def check_needed_types(self, show):
-        if getattr(show, 'is_anime', False):
+    def check_needed_types(self, show_obj):
+        """
+
+        :param show_obj: show object
+        :type show_obj: sickbeard.tv.TVShow
+        """
+        if getattr(show_obj, 'is_anime', False):
             self.need_anime = True
-        if getattr(show, 'is_sports', False):
+        if getattr(show_obj, 'is_sports', False):
             self.need_sports = True
 
     def check_needed_qualities(self, wanted_qualities):
+        # type: (List[int]) -> None
+        """
+
+        :param wanted_qualities: wanted qualities list
+        """
         if wanted_qualities:
             if Quality.UNKNOWN in wanted_qualities:
                 self.need_sd = self.need_hd = self.need_uhd = self.need_webdl = True
             else:
-                if not self.need_sd and min(wanted_qualities) <= neededQualities.max_sd:
+                if not self.need_sd and min(wanted_qualities) <= NeededQualities.max_sd:
                     self.need_sd = True
-                if not self.need_hd and any(i in neededQualities.hd_qualities for i in wanted_qualities):
+                if not self.need_hd and any([i in NeededQualities.hd_qualities for i in wanted_qualities]):
                     self.need_hd = True
-                if not self.need_webdl and any(i in neededQualities.webdl_qualities for i in wanted_qualities):
+                if not self.need_webdl and any([i in NeededQualities.webdl_qualities for i in wanted_qualities]):
                     self.need_webdl = True
-                if not self.need_uhd and max(wanted_qualities) > neededQualities.max_hd:
+                if not self.need_uhd and max(wanted_qualities) > NeededQualities.max_hd:
                     self.need_uhd = True

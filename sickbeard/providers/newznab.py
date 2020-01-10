@@ -17,39 +17,40 @@
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import division
-from collections import OrderedDict
+# from collections import OrderedDict
+from io import BytesIO
 from math import ceil
 
 import datetime
 import re
 import time
-import urllib
 
 import sickbeard
-
-from io import BytesIO
-from lib.dateutil import parser
 from . import generic
-from sickbeard import classes, db, helpers, logger, tvcache
-from sickbeard.common import neededQualities, Quality, DOWNLOADED, SNATCHED, SNATCHED_PROPER, SNATCHED_BEST
-from sickbeard.exceptions import AuthException, MultipleShowObjectsException
-from sickbeard.helpers import tryInt, remove_non_release_groups
-from sickbeard.indexers.indexer_config import *
-from sickbeard.network_timezones import sb_timezone
-from sickbeard.sbdatetime import sbdatetime
-from sickbeard.search import get_aired_in_season, get_wanted_qualities
-from sickbeard.show_name_helpers import get_show_names
+from .. import classes, db, helpers, logger, tvcache
+from ..classes import SearchResult
+from ..common import NeededQualities, Quality
+from ..helpers import remove_non_release_groups, try_int
+from ..indexers.indexer_config import *
+from ..network_timezones import sb_timezone
+from ..sgdatetime import SGDatetime
+from ..search import get_aired_in_season, get_wanted_qualities
+from ..show_name_helpers import get_show_names
+from ..tv import TVEpisode, TVShow
 
-try:
-    from lxml import etree
-except ImportError:
-    try:
-        import xml.etree.cElementTree as etree
-    except ImportError:
-        import xml.etree.ElementTree as etree
+from lib.dateutil import parser
+from exceptions_helper import AuthException, MultipleShowObjectsException
+from lxml_etree import etree
+
+from six import iteritems, itervalues, string_types
+from _23 import urlencode
+
+# noinspection PyUnreachableCode
+if False:
+    from typing import Any, AnyStr, Dict, List, Tuple, Union
 
 
-class NewznabConstants:
+class NewznabConstants(object):
     SEARCH_TEXT = -100
     SEARCH_SEASON = -101
     SEARCH_EPISODE = -102
@@ -73,21 +74,21 @@ class NewznabConstants:
                         # r'^HEVC$': CAT_HEVC,
                         r'^WEB.?DL$': CAT_WEBDL}
 
-    providerToIndexerMapping = {'tvdbid': INDEXER_TVDB,
-                                'rageid': INDEXER_TVRAGE,
-                                'tvmazeid': INDEXER_TVMAZE,
-                                'imdbid': INDEXER_IMDB,
-                                'tmdbid': INDEXER_TMDB,
-                                'traktid': INDEXER_TRAKT}
+    providerToIndexerMapping = {'tvdbid': TVINFO_TVDB,
+                                'rageid': TVINFO_TVRAGE,
+                                'tvmazeid': TVINFO_TVMAZE,
+                                'imdbid': TVINFO_IMDB,
+                                'tmdbid': TVINFO_TMDB,
+                                'traktid': TVINFO_TRAKT}
 
-    indexer_priority_list = [INDEXER_TVDB, INDEXER_TVMAZE, INDEXER_TVRAGE, INDEXER_TRAKT, INDEXER_TMDB, INDEXER_TMDB]
+    indexer_priority_list = [TVINFO_TVDB, TVINFO_TVMAZE, TVINFO_TVRAGE, TVINFO_TRAKT, TVINFO_TMDB, TVINFO_TMDB]
 
-    searchTypes = {'rid': INDEXER_TVRAGE,
-                   'tvdbid': INDEXER_TVDB,
-                   'tvmazeid': INDEXER_TVMAZE,
-                   'imdbid': INDEXER_IMDB,
-                   'tmdbid': INDEXER_TMDB,
-                   'traktid': INDEXER_TRAKT,
+    searchTypes = {'rid': TVINFO_TVRAGE,
+                   'tvdbid': TVINFO_TVDB,
+                   'tvmazeid': TVINFO_TVMAZE,
+                   'imdbid': TVINFO_IMDB,
+                   'tmdbid': TVINFO_TMDB,
+                   'traktid': TVINFO_TRAKT,
                    'q': SEARCH_TEXT,
                    'season': SEARCH_SEASON,
                    'ep': SEARCH_EPISODE}
@@ -108,21 +109,44 @@ class NewznabConstants:
 
 class NewznabProvider(generic.NZBProvider):
 
-    def __init__(self, name, url, key='', cat_ids=None, search_mode=None, search_fallback=False,
-                 enable_recentsearch=False, enable_backlog=False, enable_scheduled_backlog=False, server_type=None):
+    def __init__(self,
+                 name,  # type: AnyStr
+                 url,  # type: AnyStr
+                 key='',  # type: AnyStr
+                 cat_ids=None,  # type: Union[List, AnyStr]
+                 search_mode=None,  # type: AnyStr
+                 search_fallback=False,  # type: bool
+                 enable_recentsearch=False,  # type: bool
+                 enable_backlog=False,  # type: bool
+                 enable_scheduled_backlog=False,  # type: bool
+                 server_type=None  # type: Union[int, None]
+                 ):
+        """
+
+        :param name: provider name
+        :param url: url
+        :param key:
+        :param cat_ids:
+        :param search_mode:
+        :param search_fallback:
+        :param enable_recentsearch:
+        :param enable_backlog:
+        :param enable_scheduled_backlog:
+        :param server_type:
+        """
         generic.NZBProvider.__init__(self, name, True, False)
 
         self.url = url
         self.key = key
-        self.server_type = tryInt(server_type, None) or NewznabConstants.SERVER_DEFAULT
+        self.server_type = try_int(server_type, None) or NewznabConstants.SERVER_DEFAULT
         self._exclude = set()
         self.cat_ids = cat_ids or ''
         self._cat_ids = None
         self.search_mode = search_mode or 'eponly'
-        self.search_fallback = bool(tryInt(search_fallback))
-        self.enable_recentsearch = bool(tryInt(enable_recentsearch))
-        self.enable_backlog = bool(tryInt(enable_backlog))
-        self.enable_scheduled_backlog = bool(tryInt(enable_scheduled_backlog, 1))
+        self.search_fallback = bool(try_int(search_fallback))
+        self.enable_recentsearch = bool(try_int(enable_recentsearch))
+        self.enable_backlog = bool(try_int(enable_backlog))
+        self.enable_scheduled_backlog = bool(try_int(enable_scheduled_backlog, 1))
         self.needs_auth = '0' != self.key.strip()  # '0' in the key setting indicates that api_key is not needed
         self.default = False
         self._caps = {}
@@ -191,13 +215,15 @@ class NewznabProvider(generic.NZBProvider):
         try:
             my_db = db.DBConnection('cache.db')
             my_db.action('INSERT OR REPLACE INTO "lastrecentsearch" (name, datetime) VALUES (?,?)',
-                         [self.get_id(), sbdatetime.totimestamp(value, default=0)])
+                         [self.get_id(), SGDatetime.totimestamp(value, default=0)])
         except (BaseException, Exception):
             pass
         self._last_recent_search = value
 
     def image_name(self):
-
+        """
+        :rtype: AnyStr
+        """
         if self.server_type not in (NewznabConstants.SERVER_DEFAULT, NewznabConstants.SERVER_SPOTWEB):
             return 'warning16.png'
         return generic.GenericProvider.image_name(
@@ -217,24 +243,26 @@ class NewznabProvider(generic.NZBProvider):
                 data = self.get_url('%s/api?t=caps' % self.url)
                 if data:
                     xml_caps = helpers.parse_xml(data)
-            if xml_caps is None or not hasattr(xml_caps, 'tag') or xml_caps.tag == 'error' or xml_caps.tag != 'caps':
+            if None is xml_caps or not hasattr(xml_caps, 'tag') or 'error' == xml_caps.tag or 'caps' != xml_caps.tag:
                 api_key = self.maybe_apikey()
-                if isinstance(api_key, basestring) and api_key not in ('0', ''):
+                if isinstance(api_key, string_types) and api_key not in ('0', ''):
                     data = self.get_url('%s/api?t=caps&apikey=%s' % (self.url, api_key))
                     if data:
                         xml_caps = helpers.parse_xml(data)
-                        if xml_caps and hasattr(xml_caps, 'tag') and xml_caps.tag == 'caps':
+                        if xml_caps and hasattr(xml_caps, 'tag') and 'caps' == xml_caps.tag:
                             self._caps_need_apikey = {'need': True, 'date': datetime.date.today()}
         return xml_caps
 
-    def _check_excludes(self, cats):
+    def _check_excludes(self,
+                        cats  # type: Union[Dict, List]
+                        ):
         if isinstance(cats, dict):
             c = []
-            for v in cats.itervalues():
+            for v in itervalues(cats):
                 c.extend(v)
             self._exclude = set(c)
         else:
-            self._exclude = set(v for v in cats)
+            self._exclude = set([v for v in cats])
 
     def get_caps(self):
         caps = {}
@@ -252,7 +280,7 @@ class NewznabProvider(generic.NZBProvider):
                         'nzbhydra2' in server_node.get('url', '').lower():
                     self.server_type = NewznabConstants.SERVER_HYDRA2
                 elif 'nzbhydra' == server_node.get('title', '').lower().strip() or \
-                         server_node.get('url', '').lower().strip().endswith('nzbhydra'):
+                        server_node.get('url', '').lower().strip().endswith('nzbhydra'):
                     self.server_type = NewznabConstants.SERVER_HYDRA1
                 else:
                     self.server_type = NewznabConstants.SERVER_DEFAULT
@@ -270,8 +298,8 @@ class NewznabProvider(generic.NZBProvider):
 
             limit = xml_caps.find('.//limits')
             if None is not limit:
-                lim = helpers.tryInt(limit.get('max'), 100)
-                self._limits = (100, lim)[lim >= 100]
+                lim = helpers.try_int(limit.get('max'), 100)
+                self._limits = (100, lim)[100 <= lim]
 
             try:
                 for category in xml_caps.iter('category'):
@@ -281,7 +309,7 @@ class NewznabProvider(generic.NZBProvider):
                                 cat_name = subcat.attrib['name']
                                 cat_id = subcat.attrib['id']
                                 all_cats.append({'id': cat_id, 'name': cat_name})
-                                for s, v in NewznabConstants.catSearchStrings.iteritems():
+                                for s, v in iteritems(NewznabConstants.catSearchStrings):
                                     if None is not re.search(s, cat_name, re.IGNORECASE):
                                         cats.setdefault(v, []).append(cat_id)
                             except (BaseException, Exception):
@@ -306,13 +334,13 @@ class NewznabProvider(generic.NZBProvider):
 
         if not old_api and (self.url and 'nzbplanet.net' not in self.url.lower()):
             if not caps and self.get_id() not in ['sick_beard_index']:
-                caps[INDEXER_TVDB] = 'tvdbid'
+                caps[TVINFO_TVDB] = 'tvdbid'
             if NewznabConstants.SEARCH_SEASON not in caps or not caps.get(NewznabConstants.SEARCH_SEASON):
                 caps[NewznabConstants.SEARCH_SEASON] = 'season'
             if NewznabConstants.SEARCH_EPISODE not in caps or not caps.get(NewznabConstants.SEARCH_EPISODE):
                 caps[NewznabConstants.SEARCH_TEXT] = 'ep'
-            if (INDEXER_TVRAGE not in caps or not caps.get(INDEXER_TVRAGE)) and self.get_id() not in ['sick_beard_index']:
-                caps[INDEXER_TVRAGE] = 'rid'
+            if (TVINFO_TVRAGE not in caps or not caps.get(TVINFO_TVRAGE)) and self.get_id() not in ['sick_beard_index']:
+                caps[TVINFO_TVRAGE] = 'rid'
         if NewznabConstants.SEARCH_TEXT not in caps or not caps.get(NewznabConstants.SEARCH_TEXT):
             caps[NewznabConstants.SEARCH_TEXT] = 'q'
 
@@ -330,9 +358,13 @@ class NewznabProvider(generic.NZBProvider):
         self._caps_cats = cats
         self._caps_all_cats = all_cats
 
-    def clean_newznab_categories(self, cats):
+    def clean_newznab_categories(self,
+                                 cats  # type: Union[List, AnyStr]
+                                 ):  # type: (...) -> Union[List, AnyStr]
         """
         Removes automatically mapped categories from the list
+        :param cats:
+        :return:
         """
         if isinstance(cats, list):
             return [x for x in cats if x['id'] not in self.excludes]
@@ -343,9 +375,17 @@ class NewznabProvider(generic.NZBProvider):
             return False
         return super(NewznabProvider, self)._check_auth(is_required)
 
-    def _check_auth_from_data(self, data, url):
+    def _check_auth_from_data(self,
+                              data,  # type: etree.Element
+                              url  # type: AnyStr
+                              ):  # type: (...) -> bool
+        """
 
-        if data is None or not hasattr(data, 'tag'):
+        :param data:
+        :param url:
+        :return:
+        """
+        if None is data or not hasattr(data, 'tag'):
             return False
 
         if 'error' == data.tag:
@@ -379,36 +419,43 @@ class NewznabProvider(generic.NZBProvider):
         return True
 
     def config_str(self):
+        # type: (...) -> AnyStr
         return '%s|%s|%s|%s|%i|%s|%i|%i|%i|%i|%i' \
                % (self.name or '', self.url or '', self.maybe_apikey() or '', self.cat_ids or '', self.enabled,
                   self.search_mode or '', self.search_fallback, self.enable_recentsearch, self.enable_backlog,
                   self.enable_scheduled_backlog, self.server_type)
 
-    def _season_strings(self, ep_obj):
+    def _season_strings(self,
+                        ep_obj  # type: TVEpisode
+                        ):  # type: (...) -> List[Dict[AnyStr, List[AnyStr]]]
+        """
 
+        :param ep_obj: episode object
+        :return:
+        """
         search_params = []
         base_params = {}
 
         # season
         ep_detail = None
-        if ep_obj.show.air_by_date or ep_obj.show.is_sports:
+        if ep_obj.show_obj.air_by_date or ep_obj.show_obj.is_sports:
             airdate = str(ep_obj.airdate).split('-')[0]
             base_params['season'] = airdate
             base_params['q'] = airdate
-            if ep_obj.show.air_by_date:
+            if ep_obj.show_obj.air_by_date:
                 ep_detail = '+"%s"' % airdate
-        elif ep_obj.show.is_anime:
+        elif ep_obj.show_obj.is_anime:
             base_params['season'] = '%d' % ep_obj.scene_absolute_number
         else:
-            base_params['season'] = str((ep_obj.season, ep_obj.scene_season)[bool(ep_obj.show.is_scene)])
-            ep_detail = 'S%02d' % helpers.tryInt(base_params['season'], 1)
+            base_params['season'] = str((ep_obj.season, ep_obj.scene_season)[bool(ep_obj.show_obj.is_scene)])
+            ep_detail = 'S%02d' % helpers.try_int(base_params['season'], 1)
 
         # id search
         params = base_params.copy()
         use_id = False
-        for i in sickbeard.indexerApi().all_indexers:
-            if i in ep_obj.show.ids and 0 < ep_obj.show.ids[i]['id'] and i in self.caps:
-                params[self.caps[i]] = ep_obj.show.ids[i]['id']
+        for i in sickbeard.TVInfoAPI().all_sources:
+            if i in ep_obj.show_obj.ids and 0 < ep_obj.show_obj.ids[i]['id'] and i in self.caps:
+                params[self.caps[i]] = ep_obj.show_obj.ids[i]['id']
                 use_id = True
         use_id and search_params.append(params)
 
@@ -430,8 +477,14 @@ class NewznabProvider(generic.NZBProvider):
 
         return [{'Season': search_params}]
 
-    def _episode_strings(self, ep_obj):
+    def _episode_strings(self,
+                         ep_obj  # type: TVEpisode
+                         ):  # type: (...) -> List[Dict[AnyStr, List[AnyStr]]]
+        """
 
+        :param ep_obj: episode object
+        :return:
+        """
         search_params = []
         base_params = {}
 
@@ -439,29 +492,29 @@ class NewznabProvider(generic.NZBProvider):
             return [base_params]
 
         ep_detail = None
-        if ep_obj.show.air_by_date or ep_obj.show.is_sports:
+        if ep_obj.show_obj.air_by_date or ep_obj.show_obj.is_sports:
             airdate = str(ep_obj.airdate).split('-')
             base_params['season'] = airdate[0]
-            if ep_obj.show.air_by_date:
+            if ep_obj.show_obj.air_by_date:
                 base_params['ep'] = '/'.join(airdate[1:])
                 ep_detail = '+"%s.%s"' % (base_params['season'], '.'.join(airdate[1:]))
-        elif ep_obj.show.is_anime:
-            base_params['ep'] = '%i' % (helpers.tryInt(ep_obj.scene_absolute_number) or
-                                        helpers.tryInt(ep_obj.scene_episode))
-            ep_detail = '%02d' % helpers.tryInt(base_params['ep'])
+        elif ep_obj.show_obj.is_anime:
+            base_params['ep'] = '%i' % (helpers.try_int(ep_obj.scene_absolute_number) or
+                                        helpers.try_int(ep_obj.scene_episode))
+            ep_detail = '%02d' % helpers.try_int(base_params['ep'])
         else:
             base_params['season'], base_params['ep'] = (
-                (ep_obj.season, ep_obj.episode), (ep_obj.scene_season, ep_obj.scene_episode))[ep_obj.show.is_scene]
+                (ep_obj.season, ep_obj.episode), (ep_obj.scene_season, ep_obj.scene_episode))[ep_obj.show_obj.is_scene]
             ep_detail = sickbeard.config.naming_ep_type[2] % {
-                'seasonnumber': helpers.tryInt(base_params['season'], 1),
-                'episodenumber': helpers.tryInt(base_params['ep'], 1)}
+                'seasonnumber': helpers.try_int(base_params['season'], 1),
+                'episodenumber': helpers.try_int(base_params['ep'], 1)}
 
         # id search
         params = base_params.copy()
         use_id = False
-        for i in sickbeard.indexerApi().all_indexers:
-            if i in ep_obj.show.ids and 0 < ep_obj.show.ids[i]['id'] and i in self.caps:
-                params[self.caps[i]] = ep_obj.show.ids[i]['id']
+        for i in sickbeard.TVInfoAPI().all_sources:
+            if i in ep_obj.show_obj.ids and 0 < ep_obj.show_obj.ids[i]['id'] and i in self.caps:
+                params[self.caps[i]] = ep_obj.show_obj.ids[i]['id']
                 use_id = True
         use_id and search_params.append(params)
 
@@ -469,7 +522,7 @@ class NewznabProvider(generic.NZBProvider):
         # query search and exceptions
         name_exceptions = get_show_names(ep_obj, spacer)
         if sickbeard.scene_exceptions.has_abs_episodes(ep_obj):
-            search_params.append({'q': '%s%s%s' % (ep_obj.show.name, spacer, base_params['ep'])})
+            search_params.append({'q': '%s%s%s' % (ep_obj.show_obj.name, spacer, base_params['ep'])})
         for cur_exception in name_exceptions:
             params = base_params.copy()
             params['q'] = cur_exception
@@ -485,10 +538,18 @@ class NewznabProvider(generic.NZBProvider):
         return [{'Episode': search_params}]
 
     def supports_tvdbid(self):
-
+        # type: (...) -> bool
         return self.get_id() not in ['sick_beard_index']
 
-    def _title_and_url(self, item):
+    def _title_and_url(self,
+                       item  # type: etree.Element
+                       ):  # type: (...) -> Union[Tuple[AnyStr, AnyStr], Tuple[None, None]]
+        """
+
+        :param item:
+        :return:
+        :rtype: Tuple[AnyStr, AnyStr] or Tuple[None, None]
+        """
         title, url = None, None
         try:
             url = str(item.findtext('link')).replace('&amp;', '&')
@@ -510,49 +571,78 @@ class NewznabProvider(generic.NZBProvider):
 
         return title, url
 
-    def get_size_uid(self, item, **kwargs):
+    def get_size_uid(self,
+                     item,  # type: etree.Element
+                     **kwargs
+                     ):  # type: (...) -> Tuple[int, Union[AnyStr, None]]
+        """
+
+        :param item:
+        :param kwargs:
+        :return:
+        """
         size = -1
         uid = None
         if 'name_space' in kwargs and 'newznab' in kwargs['name_space']:
             size, uid = self._parse_size_uid(item, kwargs['name_space'])
         return size, uid
 
-    def get_show(self, item, **kwargs):
+    def get_show(self,
+                 item,  # type: etree.Element
+                 **kwargs
+                 ):  # type: (...) -> Union[TVShow, None]
+        """
+
+        :param item:
+        :param kwargs:
+        :return:
+        """
         show_obj = None
         if 'name_space' in kwargs and 'newznab' in kwargs['name_space']:
-            ids = self.cache.parse_ids(item, kwargs['name_space'])
+            tvid_prodid = self.cache.parse_ids(item, kwargs['name_space'])
 
-            if ids:
+            if tvid_prodid:
                 try:
-                    show_obj = helpers.find_show_by_id(sickbeard.showList, id_dict=ids, no_mapped_ids=False)
+                    show_obj = helpers.find_show_by_id(tvid_prodid, no_mapped_ids=False)
                 except MultipleShowObjectsException:
                     return None
         return show_obj
 
-    def choose_search_mode(self, episodes, ep_obj, hits_per_page=100):
-        searches = [e for e in episodes if (not ep_obj.show.is_scene and e.season == ep_obj.season) or
-                    (ep_obj.show.is_scene and e.scene_season == ep_obj.scene_season)]
+    def choose_search_mode(self,
+                           ep_obj_list,  # type: List[TVEpisode]
+                           ep_obj,  # type: TVEpisode
+                           hits_per_page=100  # type: int
+                           ):  # type: (...) -> Tuple[bool, NeededQualities, int]
+        """
 
-        needed = neededQualities()
-        needed.check_needed_types(ep_obj.show)
+        :param ep_obj_list: episode object list
+        :param ep_obj: episode object
+        :param hits_per_page:
+        :return: season search, needed qualities class, max hits
+        """
+        searches = [eo for eo in ep_obj_list if (not ep_obj.show_obj.is_scene and eo.season == ep_obj.season) or
+                    (ep_obj.show_obj.is_scene and eo.scene_season == ep_obj.scene_season)]
+
+        needed = NeededQualities()
+        needed.check_needed_types(ep_obj.show_obj)
         for s in searches:
             if needed.all_qualities_needed:
                 break
-            if not s.show.is_anime and not s.show.is_sports:
-                if not getattr(s, 'wantedQuality', None):
+            if not s.show_obj.is_anime and not s.show_obj.is_sports:
+                if not getattr(s, 'wanted_quality', None):
                     # this should not happen, the creation is missing for the search in this case
-                    logger.log('wantedQuality property was missing for search, creating it', logger.WARNING)
+                    logger.log('wanted_quality property was missing for search, creating it', logger.WARNING)
                     ep_status, ep_quality = Quality.splitCompositeStatus(ep_obj.status)
-                    s.wantedQuality = get_wanted_qualities(ep_obj, ep_status, ep_quality, unaired=True)
-                needed.check_needed_qualities(s.wantedQuality)
+                    s.wanted_quality = get_wanted_qualities(ep_obj, ep_status, ep_quality, unaired=True)
+                needed.check_needed_qualities(s.wanted_quality)
 
         if not hasattr(ep_obj, 'eps_aired_in_season'):
             # this should not happen, the creation is missing for the search in this case
             logger.log('eps_aired_in_season property was missing for search, creating it', logger.WARNING)
-            ep_count, ep_count_scene = get_aired_in_season(ep_obj.show)
+            ep_count, ep_count_scene = get_aired_in_season(ep_obj.show_obj)
             ep_obj.eps_aired_in_season = ep_count.get(ep_obj.season, 0)
-            ep_obj.eps_aired_in_scene_season = ep_count_scene.get(ep_obj.scene_season, 0) if ep_obj.show.is_scene else \
-                ep_obj.eps_aired_in_season
+            ep_obj.eps_aired_in_scene_season = ep_count_scene.get(ep_obj.scene_season, 0) if ep_obj.show_obj.is_scene \
+                else ep_obj.eps_aired_in_season
 
         per_ep, limit_per_ep = 0, 0
         if needed.need_sd and not needed.need_hd:
@@ -565,49 +655,67 @@ class NewznabProvider(generic.NZBProvider):
         if needed.need_uhd or (needed.need_hd and not self.cats.get(NewznabConstants.CAT_UHD)):
             per_ep += 4
             limit_per_ep += 10
-        if ep_obj.show.is_anime or ep_obj.show.is_sports or ep_obj.show.air_by_date:
+        if ep_obj.show_obj.is_anime or ep_obj.show_obj.is_sports or ep_obj.show_obj.air_by_date:
             rel_per_ep, limit_per_ep = 5, 10
         else:
             rel_per_ep = per_ep
-        rel = max(1, int(ceil((ep_obj.eps_aired_in_scene_season if ep_obj.show.is_scene else
+        rel = max(1, int(ceil((ep_obj.eps_aired_in_scene_season if ep_obj.show_obj.is_scene else
                                ep_obj.eps_aired_in_season * rel_per_ep) / hits_per_page)))
-        rel_limit = max(1, int(ceil((ep_obj.eps_aired_in_scene_season if ep_obj.show.is_scene else
+        rel_limit = max(1, int(ceil((ep_obj.eps_aired_in_scene_season if ep_obj.show_obj.is_scene else
                                      ep_obj.eps_aired_in_season * limit_per_ep) / hits_per_page)))
         season_search = rel < (len(searches) * 100 // hits_per_page)
         if not season_search:
-            needed = neededQualities()
-            needed.check_needed_types(ep_obj.show)
-            if not ep_obj.show.is_anime and not ep_obj.show.is_sports:
-                if not getattr(ep_obj, 'wantedQuality', None):
+            needed = NeededQualities()
+            needed.check_needed_types(ep_obj.show_obj)
+            if not ep_obj.show_obj.is_anime and not ep_obj.show_obj.is_sports:
+                if not getattr(ep_obj, 'wanted_quality', None):
                     ep_status, ep_quality = Quality.splitCompositeStatus(ep_obj.status)
-                    ep_obj.wantedQuality = get_wanted_qualities(ep_obj, ep_status, ep_quality, unaired=True)
-                needed.check_needed_qualities(ep_obj.wantedQuality)
+                    ep_obj.wanted_quality = get_wanted_qualities(ep_obj, ep_status, ep_quality, unaired=True)
+                needed.check_needed_qualities(ep_obj.wanted_quality)
         else:
-            if not ep_obj.show.is_anime and not ep_obj.show.is_sports:
-                for ep in episodes:
-                    if not getattr(ep, 'wantedQuality', None):
-                        ep_status, ep_quality = Quality.splitCompositeStatus(ep.status)
-                        ep.wantedQuality = get_wanted_qualities(ep, ep_status, ep_quality, unaired=True)
-                    needed.check_needed_qualities(ep.wantedQuality)
+            if not ep_obj.show_obj.is_anime and not ep_obj.show_obj.is_sports:
+                for cur_ep_obj in ep_obj_list:
+                    if not getattr(cur_ep_obj, 'wanted_quality', None):
+                        ep_status, ep_quality = Quality.splitCompositeStatus(cur_ep_obj.status)
+                        cur_ep_obj.wanted_quality = get_wanted_qualities(cur_ep_obj, ep_status, ep_quality,
+                                                                         unaired=True)
+                    needed.check_needed_qualities(cur_ep_obj.wanted_quality)
         return (season_search, needed,
                 (hits_per_page * 100 // hits_per_page * 2, hits_per_page * int(ceil(rel_limit * 1.5)))[season_search])
 
-    def find_search_results(self, show, episodes, search_mode, manual_search=False, try_other_searches=False, **kwargs):
+    def find_search_results(self,
+                            show_obj,  # type: TVShow
+                            ep_obj_list,  # type: List[TVEpisode]
+                            search_mode,  # type: AnyStr
+                            manual_search=False,  # type: bool
+                            try_other_searches=False,  # type: bool
+                            **kwargs
+                            ):  # type: (...) -> Union[Dict[TVEpisode, Dict[TVEpisode, SearchResult]], Dict]
+        """
+
+        :param show_obj: show object
+        :param ep_obj_list: episode list
+        :param search_mode: search mode
+        :param manual_search: maunal search
+        :param try_other_searches:
+        :param kwargs:
+        :return:
+        """
         check = self._check_auth()
-        results = {}
+        results = {}  # type: Dict[int, List]
         if (isinstance(check, bool) and not check) or self.should_skip():
             return results
 
-        self.show = show
+        self.show_obj = show_obj
 
         item_list = []
         name_space = {}
 
         searched_scene_season = s_mode = None
         search_list = []
-        for ep_obj in episodes:
+        for ep_obj in ep_obj_list:
             # skip if season already searched
-            if (s_mode or 'sponly' == search_mode) and 1 < len(episodes) \
+            if (s_mode or 'sponly' == search_mode) and 1 < len(ep_obj_list) \
                     and searched_scene_season == ep_obj.scene_season:
                 continue
 
@@ -622,8 +730,8 @@ class NewznabProvider(generic.NZBProvider):
                 # found result, search next episode
                 continue
 
-            s_mode, needed, max_items = self.choose_search_mode(episodes, ep_obj, hits_per_page=self.limits)
-            needed.check_needed_types(self.show)
+            s_mode, needed, max_items = self.choose_search_mode(ep_obj_list, ep_obj, hits_per_page=self.limits)
+            needed.check_needed_types(self.show_obj)
 
             if 'sponly' == search_mode:
                 searched_scene_season = ep_obj.scene_season
@@ -632,7 +740,7 @@ class NewznabProvider(generic.NZBProvider):
                 search_params = self._season_strings(ep_obj)
             else:
                 # get single episode search params
-                if s_mode and 1 < len(episodes):
+                if s_mode and 1 < len(ep_obj_list):
                     searched_scene_season = ep_obj.scene_season
                     search_params = self._season_strings(ep_obj)
                 else:
@@ -648,7 +756,7 @@ class NewznabProvider(generic.NZBProvider):
                 if cur_param in search_done:
                     continue
                 search_done += [cur_param]
-                items, n_space = self._search_provider(cur_param, search_mode=search_mode, epcount=len(episodes),
+                items, n_space = self._search_provider(cur_param, search_mode=search_mode, epcount=len(ep_obj_list),
                                                        needed=needed, max_items=max_items,
                                                        try_all_searches=try_other_searches)
                 item_list += items
@@ -657,10 +765,17 @@ class NewznabProvider(generic.NZBProvider):
                     break
 
         return self.finish_find_search_results(
-            show, episodes, search_mode, manual_search, results, item_list, name_space=name_space)
+            show_obj, ep_obj_list, search_mode, manual_search, results, item_list, name_space=name_space)
 
     @staticmethod
     def _parse_pub_date(item, default=None):
+        # type: (etree.Element, Union[int, None]) -> Union[datetime.date, None]
+        """
+
+        :param item:
+        :param default:
+        :return:
+        """
         parsed_date = default
         try:
             p = item.findtext('pubDate')
@@ -678,23 +793,46 @@ class NewznabProvider(generic.NZBProvider):
         return parsed_date
 
     @staticmethod
-    def _parse_size_uid(item, ns, default=-1):
+    def _parse_size_uid(item,  # type: etree.Element
+                        ns,  # type: Dict
+                        default=-1  # type: int
+                        ):  # type: (...) -> Tuple[int, Union[AnyStr, None]]
+        """
+
+        :param item:
+        :param ns:
+        :param default:
+        :return:
+        """
         parsed_size = default
         uid = None
         try:
             if ns and 'newznab' in ns:
                 for attr in item.findall('%sattr' % ns['newznab']):
                     if 'size' == attr.get('name', ''):
-                        parsed_size = helpers.tryInt(attr.get('value'), -1)
+                        parsed_size = helpers.try_int(attr.get('value'), -1)
                     elif 'guid' == attr.get('name', ''):
                         uid = attr.get('value')
         except (BaseException, Exception):
             pass
         return parsed_size, uid
 
-    def _search_provider(self, search_params, needed=neededQualities(need_all=True), max_items=400,
-                         try_all_searches=False, **kwargs):
+    def _search_provider(self,
+                         search_params,  # type: Dict[AnyStr, List[Dict[AnyStr, List[AnyStr]]]]
+                         needed=NeededQualities(need_all=True),  # type: NeededQualities
+                         max_items=400,  # type: int
+                         try_all_searches=False,   # type: bool
+                         **kwargs
+                         ):  # type: (...) -> Tuple[List, Dict]
+        """
 
+        :param search_params:
+        :param needed:
+        :param max_items:
+        :param try_all_searches:
+        :param kwargs:
+        :return:
+        """
         results, n_spaces = [], {}
         if self.should_skip():
             return results, n_spaces
@@ -706,14 +844,14 @@ class NewznabProvider(generic.NZBProvider):
         base_params = {'t': 'tvsearch',
                        'maxage': sickbeard.USENET_RETENTION or 0,
                        'limit': self.limits,
-                       'attrs': ','.join([k for k, v in NewznabConstants.providerToIndexerMapping.iteritems()
+                       'attrs': ','.join([k for k, v in iteritems(NewznabConstants.providerToIndexerMapping)
                                           if v in self.caps]),
                        'offset': 0}
 
         uc_only = all([re.search('(?i)usenet_crawler', self.get_id())])
         base_params_uc = {'num': self.limits, 'dl': '1', 'i': '64660'}
 
-        if isinstance(api_key, basestring) and api_key not in ('0', ''):
+        if isinstance(api_key, string_types) and api_key not in ('0', ''):
             base_params['apikey'] = api_key
             base_params_uc['r'] = api_key
 
@@ -727,10 +865,10 @@ class NewznabProvider(generic.NZBProvider):
         cat_uhd = self.cats.get(NewznabConstants.CAT_UHD)
         cat_webdl = self.cats.get(NewznabConstants.CAT_WEBDL)
 
-        for mode in search_params.keys():
+        for mode in search_params:
             if self.should_skip(log_warning=False):
                 break
-            for i, params in enumerate(search_params[mode]):
+            for i, params in enumerate(search_params[mode]):  # type: int, List[Dict[AnyStr, List[AnyStr]]]
 
                 if self.should_skip(log_warning=False):
                     break
@@ -738,8 +876,9 @@ class NewznabProvider(generic.NZBProvider):
                 # category ids
                 cat = []
                 if 'Episode' == mode or 'Season' == mode:
-                    if not (any(x in params for x in [v for c, v in self.caps.iteritems()
-                                if c not in [NewznabConstants.SEARCH_EPISODE, NewznabConstants.SEARCH_SEASON]])
+                    if not (any([x in params for x in
+                                 [v for c, v in iteritems(self.caps)
+                                  if c not in [NewznabConstants.SEARCH_EPISODE, NewznabConstants.SEARCH_SEASON]]])
                             or not self.supports_tvdbid()):
                         logger.log('Show is missing either an id or search term for search')
                         continue
@@ -753,9 +892,9 @@ class NewznabProvider(generic.NZBProvider):
                     cat.extend(cat_hd)
                 if needed.need_sd:
                     cat.extend(cat_sd)
-                if needed.need_uhd and cat_uhd is not None:
+                if needed.need_uhd and None is not cat_uhd:
                     cat.extend(cat_uhd)
-                if needed.need_webdl and cat_webdl is not None:
+                if needed.need_webdl and None is not cat_webdl:
                     cat.extend(cat_webdl)
 
                 if self.cat_ids or len(cat):
@@ -765,7 +904,7 @@ class NewznabProvider(generic.NZBProvider):
                 request_params = base_params.copy()
                 # if ('Propers' == mode or 'nzbs_org' == self.get_id()) \
                 if 'Propers' == mode \
-                        and 'q' in params and not (any(x in params for x in ['season', 'ep'])):
+                        and 'q' in params and not (any([x in params for x in ['season', 'ep']])):
                     request_params['t'] = 'search'
                 request_params.update(params)
 
@@ -775,7 +914,7 @@ class NewznabProvider(generic.NZBProvider):
                 #         request_params['rls'] = ((0, 1)['so' in self.filter], 2)['snn' in self.filter]
 
                 # workaround a strange glitch
-                if sum(ord(i) for i in self.get_id()) in [383] and 5 == 14 - request_params['maxage']:
+                if sum([ord(i) for i in self.get_id()]) in [383] and 5 == 14 - request_params['maxage']:
                     request_params['maxage'] += 1
 
                 offset = 0
@@ -787,9 +926,9 @@ class NewznabProvider(generic.NZBProvider):
                     cnt = len(results)
 
                     if 'Cache' == mode and uc_only:
-                        search_url = '%srss?%s' % (self.url, urllib.urlencode(base_params_uc))
+                        search_url = '%srss?%s' % (self.url, urlencode(base_params_uc))
                     else:
-                        search_url = '%sapi?%s' % (self.url, urllib.urlencode(request_params))
+                        search_url = '%sapi?%s' % (self.url, urlencode(request_params))
                     i and time.sleep(2.1)
 
                     data = self.get_url(search_url)
@@ -829,11 +968,12 @@ class NewznabProvider(generic.NZBProvider):
                     # get total and offset attributes
                     try:
                         if 0 == total:
-                            total = (helpers.tryInt(parsed_xml.find(
+                            total = (helpers.try_int(parsed_xml.find(
                                 './/%sresponse' % n_spaces['newznab']).get('total', 0)), 1000)['Cache' == mode]
                             hits = (total // self.limits + int(0 < (total % self.limits)))
                             hits += int(0 == hits)
-                        offset = helpers.tryInt(parsed_xml.find('.//%sresponse' % n_spaces['newznab']).get('offset', 0))
+                        offset = helpers.try_int(parsed_xml.find('.//%sresponse'
+                                                                 % n_spaces['newznab']).get('offset', 0))
                     except (AttributeError, KeyError):
                         if not uc_only:
                             break
@@ -875,18 +1015,31 @@ class NewznabProvider(generic.NZBProvider):
                 if exit_log:
                     self._log_search(mode, total, search_url)
 
-                if not try_all_searches and any(x in request_params for x in [
-                    v for c, v in self.caps.iteritems()
+                if not try_all_searches and any([x in request_params for x in [
+                    v for c, v in iteritems(self.caps)
                     if c not in [NewznabConstants.SEARCH_EPISODE, NewznabConstants.SEARCH_SEASON,
-                                 NewznabConstants.SEARCH_TEXT]]) and len(results):
+                                 NewznabConstants.SEARCH_TEXT]]]) and len(results):
                     break
 
         return results, n_spaces
 
-    def find_propers(self, search_date=None, shows=None, anime=None, **kwargs):
+    def find_propers(self,
+                     search_date=None,  # type: Union[datetime.date, None]
+                     shows=None,  # type: Union[List[int, int], None]
+                     anime=None,  # type: Union[List[int, int], None]
+                     **kwargs
+                     ):  # type: (...) -> List[classes.Proper]
+        """
+
+        :param search_date:
+        :param shows:
+        :param anime:
+        :param kwargs:
+        :return:
+        """
         cache_results = self.cache.listPropers(search_date)
-        results = [classes.Proper(x['name'], x['url'], datetime.datetime.fromtimestamp(x['time']), self.show) for x in
-                   cache_results]
+        results = [classes.Proper(x['name'], x['url'],
+                                  datetime.datetime.fromtimestamp(x['time']), self.show_obj) for x in cache_results]
 
         check = self._check_auth()
         if isinstance(check, bool) and not check:
@@ -932,6 +1085,7 @@ class NewznabProvider(generic.NZBProvider):
 
                 (title, url) = self._title_and_url(item)
 
+                # noinspection PyUnboundLocalVariable
                 if not proper_check.search(title) or url in urls:
                     continue
                 urls.append(url)
@@ -944,7 +1098,7 @@ class NewznabProvider(generic.NZBProvider):
                 result_size, result_uid = self._parse_size_uid(item, ns=n_space)
                 if not search_date or search_date < result_date:
                     show_obj = self.get_show(item, name_space=n_space)
-                    search_result = classes.Proper(title, url, result_date, self.show, parsed_show=show_obj,
+                    search_result = classes.Proper(title, url, result_date, self.show_obj, parsed_show_obj=show_obj,
                                                    size=result_size, puid=result_uid)
                     results.append(search_result)
 
@@ -964,11 +1118,17 @@ class NewznabCache(tvcache.TVCache):
     def __init__(self, provider):
         tvcache.TVCache.__init__(self, provider)
 
-        self.update_freq = 5
+        self.update_freq = 5  # type: int
 
     # helper method to read the namespaces from xml
     @staticmethod
     def parse_and_get_ns(data):
+        # type: (AnyStr) -> Tuple[etree.Element, Dict]
+        """
+
+        :param data:
+        :return:
+        """
         events = 'start', 'start-ns'
         root = None
         ns = {}
@@ -980,10 +1140,15 @@ class NewznabCache(tvcache.TVCache):
                     root = elem
         return root, ns
 
-    def updateCache(self, needed=neededQualities(need_all=True), **kwargs):
+    def updateCache(self,
+                    needed=NeededQualities(need_all=True),  # type: NeededQualities
+                    **kwargs
+                    ):
+        """
 
-        result = []
-
+        :param needed: needed qualites class
+        :param kwargs:
+        """
         if 4489 != sickbeard.RECENTSEARCH_FREQUENCY or self.should_update():
             n_spaces = {}
             try:
@@ -1002,7 +1167,7 @@ class NewznabCache(tvcache.TVCache):
                 cl = []
                 for item in items:
                     ci = self._parseItem(n_spaces, item)
-                    if ci is not None:
+                    if None is not ci:
                         cl.append(ci)
 
                 if 0 < len(cl):
@@ -1012,28 +1177,41 @@ class NewznabCache(tvcache.TVCache):
             # set updated as time the attempt to fetch data is
             self.setLastUpdate()
 
-        return result
-
     @staticmethod
     def parse_ids(item, ns):
+        # type: (etree.Element, Dict) -> Dict[int, int]
+        """
+
+        :param item:
+        :param ns:
+        :return:
+        """
         ids = {}
         if 'newznab' in ns:
             for attr in item.findall('%sattr' % ns['newznab']):
                 if attr.get('name', '') in NewznabConstants.providerToIndexerMapping:
-                    v = helpers.tryInt(attr.get('value'))
-                    if v > 0:
+                    v = helpers.try_int(attr.get('value'))
+                    if 0 < v:
                         ids[NewznabConstants.providerToIndexerMapping[attr.get('name')]] = v
         return ids
 
     # overwrite method with that parses the rageid from the newznab feed
-    def _parseItem(self, ns, item):
+    def _parseItem(self,
+                   ns,  # type: Dict
+                   item  # type: etree.Element
+                   ):  # type: (...) -> Union[List[AnyStr, List[Any]], None]
+        """
 
+        :param ns:
+        :param item:
+        :return:
+        """
         title, url = self._title_and_url(item)
 
         ids = self.parse_ids(item, ns)
 
         if title and url:
-            return self.add_cache_entry(title, url, id_dict=ids)
+            return self.add_cache_entry(title, url, tvid_prodid=ids)
 
         logger.log('Data returned from the %s feed is incomplete, this result is unusable' % self.provider.name,
                    logger.DEBUG)

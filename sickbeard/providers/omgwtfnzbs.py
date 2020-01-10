@@ -20,16 +20,24 @@ from datetime import datetime
 import re
 import time
 import traceback
-import urllib
 
-import feedparser
 import sickbeard
-
 from . import generic
-from sickbeard import classes, logger, show_name_helpers, tvcache
-from sickbeard.bs4_parser import BS4Parser
-from sickbeard.exceptions import AuthException
-from sickbeard.common import neededQualities
+from .. import classes, logger, show_name_helpers, tvcache
+from ..classes import NZBDataSearchResult, NZBSearchResult
+from ..common import NeededQualities
+from ..tv import TVEpisode
+
+from bs4_parser import BS4Parser
+from exceptions_helper import AuthException
+import feedparser
+
+from six import iteritems
+from _23 import urlencode
+
+# noinspection PyUnreachableCode
+if False:
+    from typing import AnyStr, Dict, List, Optional, Tuple
 
 
 class OmgwtfnzbsProvider(generic.NZBProvider):
@@ -37,16 +45,16 @@ class OmgwtfnzbsProvider(generic.NZBProvider):
     def __init__(self):
         generic.NZBProvider.__init__(self, 'omgwtfnzbs')
 
-        self.url = 'https://omgwtfnzbs.me/'
-        self.url_base = 'https://omgwtfnzbs.me/'
-        self.url_api = 'https://api.omgwtfnzbs.me/'
+        self.url = 'https://omgwtfnzbs.me/'  # type: AnyStr
+        self.url_base = 'https://omgwtfnzbs.me/'  # type: AnyStr
+        self.url_api = 'https://api.omgwtfnzbs.me/'  # type: AnyStr
         self.urls = {'config_provider_home_uri': self.url_base,
                      'cache': self.url_api + 'xml/?%s',
                      'search': self.url_api + 'json/?%s',
                      'cache_html': self.url_base + 'browse.php?cat=tv%s',
-                     'search_html': self.url_base + 'browse.php?cat=tv&search=%s'}
+                     'search_html': self.url_base + 'browse.php?cat=tv&search=%s'}  # type: Dict[AnyStr, AnyStr]
 
-        self.needs_auth = True
+        self.needs_auth = True  # type: bool
         self.username, self.api_key, self.cookies = 3 * [None]
         self.cache = OmgwtfnzbsCache(self)
 
@@ -55,7 +63,15 @@ class OmgwtfnzbsProvider(generic.NZBProvider):
     cat_uhd = ['30']
 
     def _check_auth_from_data(self, parsed_data, is_xml=True):
+        """
 
+        :param parsed_data:
+        :type parsed_data:
+        :param is_xml:
+        :type is_xml: bool
+        :return:
+        :rtype: bool
+        """
         if parsed_data is None:
             return self._check_auth()
 
@@ -85,18 +101,43 @@ class OmgwtfnzbsProvider(generic.NZBProvider):
             return True
 
     def _season_strings(self, ep_obj):
+        """
 
-        return [x for x in show_name_helpers.makeSceneSeasonSearchString(self.show, ep_obj)]
+        :param ep_obj: episode object
+        :type ep_obj: sickbeard.tv.TVEpisode
+        :return: list of search strings
+        :rtype: List[AnyStr]
+        """
+        return [x for x in show_name_helpers.makeSceneSeasonSearchString(self.show_obj, ep_obj)]
 
     def _episode_strings(self, ep_obj):
+        """
 
-        return [x for x in show_name_helpers.makeSceneSearchString(self.show, ep_obj)]
+        :param ep_obj: episode object
+        :type ep_obj: sickbeard.tv.TVEpisode
+        :return: list of search strings
+        :rtype: List[AnyStr]
+        """
+        return [x for x in show_name_helpers.makeSceneSearchString(self.show_obj, ep_obj)]
 
     def _title_and_url(self, item):
+        """
 
+        :param item:
+        :type item:
+        :return:
+        :rtype: Tuple[AnyStr, AnyStr]
+        """
         return item['release'].replace('_', '.'), item['getnzb']
 
     def get_data(self, url):
+        """
+
+        :param url: url
+        :type url: AnyStr
+        :return:
+        :rtype:
+        """
         result = None
         if url and False is self._init_api():
             data = self.get_url(url, timeout=90)
@@ -112,16 +153,24 @@ class OmgwtfnzbsProvider(generic.NZBProvider):
                     result = data
         return result
 
-    def get_result(self, episodes, url):
+    def get_result(self, ep_obj_list, url):
+        # type: (List[TVEpisode], AnyStr) -> Optional[NZBDataSearchResult or NZBSearchResult]
+        """
 
+        :param ep_obj_list: list of episode objects
+        :param url: url
+        """
         result = None
-        if url and False is self._init_api():
-            result = classes.NZBDataSearchResult(episodes)
-            result.get_data_func = self.get_data
-            result.url = url
+        try:
+            if url and ':' == self._check_auth()[6]:
+                result = classes.NZBDataSearchResult(ep_obj_list)
+                result.get_data_func = self.get_data
+                result.url = url
+        except (BaseException, Exception):
+            pass
 
         if None is result:
-            result = classes.NZBSearchResult(episodes)
+            result = classes.NZBSearchResult(ep_obj_list)
             result.url = url
 
         result.provider = self
@@ -130,6 +179,13 @@ class OmgwtfnzbsProvider(generic.NZBProvider):
 
     @staticmethod
     def _get_cats(needed):
+        """
+
+        :param needed: needed class
+        :type needed: NeededQualities
+        :return:
+        :rtype: List
+        """
         cats = []
         if needed.need_sd:
             cats.extend(OmgwtfnzbsProvider.cat_sd)
@@ -139,8 +195,15 @@ class OmgwtfnzbsProvider(generic.NZBProvider):
             cats.extend(OmgwtfnzbsProvider.cat_uhd)
         return cats
 
-    def cache_data(self, needed=neededQualities(need_all=True), **kwargs):
+    def cache_data(self, needed=NeededQualities(need_all=True), **kwargs):
+        """
 
+        :param needed: needed class
+        :type needed: NeededQualities
+        :param kwargs:
+        :return:
+        :rtype: List
+        """
         if self.should_skip():
             return []
 
@@ -156,7 +219,7 @@ class OmgwtfnzbsProvider(generic.NZBProvider):
                       'eng': 1,
                       'catid': ','.join(cats)}  # SD,HD
 
-            url = self.urls['cache'] % urllib.urlencode(params)
+            url = self.urls['cache'] % urlencode(params)
 
             response = self.get_url(url)
             if self.should_skip():
@@ -172,8 +235,23 @@ class OmgwtfnzbsProvider(generic.NZBProvider):
         return results
 
     def _search_provider(self, search, search_mode='eponly', epcount=0, retention=0,
-                         needed=neededQualities(need_all=True), **kwargs):
+                         needed=NeededQualities(need_all=True), **kwargs):
+        """
 
+        :param search:
+        :type search: AnyStr
+        :param search_mode:
+        :type search_mode: AnyStr
+        :param epcount:
+        :type epcount: int or long
+        :param retention:
+        :type retention: int
+        :param needed:
+        :type needed: NeededQualities
+        :param kwargs:
+        :return:
+        :rtype: List
+        """
         api_key = self._init_api()
         if False is api_key:
             return self.search_html(search, search_mode, needed=needed, **kwargs)
@@ -188,9 +266,9 @@ class OmgwtfnzbsProvider(generic.NZBProvider):
                       'retention': retention or sickbeard.USENET_RETENTION or 0,
                       'search': search}
 
-            search_url = self.urls['search'] % urllib.urlencode(params)
+            search_url = self.urls['search'] % urlencode(params)
 
-            data_json = self.get_url(search_url, json=True)
+            data_json = self.get_url(search_url, parse_json=True)
             if self.should_skip():
                 return results
             if data_json and self._check_auth_from_data(data_json, is_xml=False):
@@ -208,16 +286,28 @@ class OmgwtfnzbsProvider(generic.NZBProvider):
             self._log_search(mode, len(results), search_url)
         return results
 
-    def search_html(self, search='', search_mode='', needed=neededQualities(need_all=True), **kwargs):
+    # noinspection PyUnusedLocal
+    def search_html(self, search='', search_mode='', needed=NeededQualities(need_all=True), **kwargs):
+        """
 
+        :param search:
+        :type search: AnyStr
+        :param search_mode:
+        :type search_mode: AnyStr
+        :param needed: needed class
+        :type needed: NeededQualities
+        :param kwargs:
+        :return:
+        :rtype: List
+        """
         results = []
         if None is self.cookies:
             return results
 
         cats = self._get_cats(needed=needed)
 
-        rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {'info': 'detail', 'get': r'send\?', 'nuked': r'\bnuked',
-                                                             'cat': 'cat=(?:%s)' % '|'.join(cats)}.items())
+        rc = dict((k, re.compile('(?i)' + v)) for (k, v) in iteritems(
+            dict(info='detail', get=r'send\?', nuked=r'\bnuked', cat='cat=(?:%s)' % '|'.join(cats))))
         mode = ('search', 'cache')['' == search]
         search_url = self.urls[mode + '_html'] % search
         html = self.get_url(search_url)
@@ -261,7 +351,12 @@ class OmgwtfnzbsProvider(generic.NZBProvider):
         return results
 
     def find_propers(self, **kwargs):
+        """
 
+        :param kwargs:
+        :return:
+        :rtype: List[classes.Proper]
+        """
         search_terms = ['.PROPER.', '.REPACK.', '.REAL.']
         results = []
         if self.should_skip():
@@ -278,12 +373,16 @@ class OmgwtfnzbsProvider(generic.NZBProvider):
                         result_date = None
 
                     if result_date:
-                        results.append(classes.Proper(title, url, result_date, self.show))
+                        results.append(classes.Proper(title, url, result_date, self.show_obj))
 
         return results
 
     def _init_api(self):
+        """
 
+        :return:
+        :rtype: None or bool
+        """
         if self.should_skip():
             return None
 
@@ -304,7 +403,13 @@ class OmgwtfnzbsProvider(generic.NZBProvider):
 
     @staticmethod
     def ui_string(key):
+        """
 
+        :param key:
+        :type key: AnyStr
+        :return:
+        :rtype: AnyStr
+        """
         return 'omgwtfnzbs_api_key' == key and 'Or use... \'cookie: cookname=xx; cookpass=yy\'' or ''
 
 
@@ -313,7 +418,7 @@ class OmgwtfnzbsCache(tvcache.TVCache):
     def __init__(self, this_provider):
         tvcache.TVCache.__init__(self, this_provider)
 
-        self.update_freq = 20
+        self.update_freq = 20  # type: int
 
     def _cache_data(self, **kwargs):
 

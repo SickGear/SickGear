@@ -15,13 +15,15 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
-import base64
 import re
 import time
 
 from . import generic
-from sickbeard.bs4_parser import BS4Parser
-from sickbeard.helpers import tryInt, anon_url
+from ..helpers import anon_url, try_int
+from bs4_parser import BS4Parser
+
+from _23 import b64decodestring
+from six import iteritems
 
 
 class TorrentDayProvider(generic.TorrentProvider):
@@ -30,10 +32,10 @@ class TorrentDayProvider(generic.TorrentProvider):
         generic.TorrentProvider.__init__(self, 'TorrentDay')
 
         self.url_home = ['https://www.torrentday.com/'] + \
-                        ['http://td.%s/' % base64.b64decode(x) for x in [''.join(x) for x in [
-                            [re.sub('(?i)[I\s1]+', '', x[::-1]) for x in [
+                        ['http://td.%s/' % b64decodestring(x) for x in [''.join(x) for x in [
+                            [re.sub(r'(?i)[I\s1]+', '', x[::-1]) for x in [
                                 'y92d', 'zl12a', 'y9mY', 'n5 Wa', 'vNmIL', '=i1=Qb']],
-                            [re.sub('(?i)[T\sq]+', '', x[::-1]) for x in [
+                            [re.sub(r'(?i)[T\sq]+', '', x[::-1]) for x in [
                                 '15TWd', 'hV 3c', 'lBHb', 'vNncq', 'j5ib', '=qQ02b']],
                         ]]]
 
@@ -69,7 +71,7 @@ class TorrentDayProvider(generic.TorrentProvider):
 
         last_recent_search = self.last_recent_search
         last_recent_search = '' if not last_recent_search else last_recent_search.replace('id-', '')
-        for mode in search_params.keys():
+        for mode in search_params:
             urls = []
             for search_string in search_params[mode]:
                 search_string = '+'.join(search_string.split())
@@ -87,7 +89,7 @@ class TorrentDayProvider(generic.TorrentProvider):
 
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
-        rc = dict((k, re.compile('(?i)' + v)) for (k, v) in dict(get='download', id=r'download.*?/([\d]+)').items())
+        rc = dict((k, re.compile('(?i)' + v)) for (k, v) in iteritems(dict(get='download', id=r'download.*?/([\d]+)')))
         lrs_found = False
         lrs_new = True
         for search_urls in urls:  # this intentionally iterates once to preserve indentation
@@ -122,7 +124,7 @@ class TorrentDayProvider(generic.TorrentProvider):
                             try:
                                 head = head if None is not head else self._header_row(
                                     tr, header_strip='(?i)(?:leechers|seeders|size);')
-                                seeders, leechers, size = [tryInt(n, n) for n in [
+                                seeders, leechers, size = [try_int(n, n) for n in [
                                     cells[head[x]].get_text().strip() for x in ('seed', 'leech', 'size')]]
                                 if self._reject_item(seeders, leechers):
                                     continue

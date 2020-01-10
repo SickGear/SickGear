@@ -16,13 +16,17 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear. If not, see <http://www.gnu.org/licenses/>.
 
-import base64
-import simplejson as json
+try:
+    import json
+except ImportError:
+    from lib import simplejson as json
 
+from .generic import Notifier
 import sickbeard
-from sickbeard.notifiers.generic import Notifier
-
 import requests
+
+from _23 import b64encodestring
+
 
 PUSHAPI_ENDPOINT = 'https://api.pushbullet.com/v2/pushes'
 DEVICEAPI_ENDPOINT = 'https://api.pushbullet.com/v2/devices'
@@ -38,10 +42,9 @@ class PushbulletNotifier(Notifier):
 
         # get devices from pushbullet
         try:
-            base64string = base64.encodestring('%s:%s' % (access_token, ''))[:-1]
-            headers = dict(Authorization='Basic %s' % base64string)
+            headers = dict(Authorization='Basic %s' % b64encodestring('%s:%s' % (access_token, '')))
             return requests.get(DEVICEAPI_ENDPOINT, headers=headers).text
-        except (StandardError, Exception):
+        except (BaseException, Exception):
             return json.dumps(dict(error=dict(message='Error failed to connect')))
 
     def _notify(self, title, body, access_token=None, device_iden=None, **kwargs):
@@ -59,18 +62,18 @@ class PushbulletNotifier(Notifier):
         # send the request to Pushbullet
         result = None
         try:
-            base64string = base64.encodestring('%s:%s' % (access_token, ''))[:-1]
-            headers = {'Authorization': 'Basic %s' % base64string, 'Content-Type': 'application/json'}
+            headers = {'Authorization': 'Basic %s' % b64encodestring('%s:%s' % (access_token, '')),
+                       'Content-Type': 'application/json'}
             resp = requests.post(PUSHAPI_ENDPOINT, headers=headers,
                                  data=json.dumps(dict(
                                      type='note', title=title, body=body.strip().encode('utf-8'),
                                      device_iden=device_iden)))
             resp.raise_for_status()
-        except (StandardError, Exception):
+        except (BaseException, Exception):
             try:
                 # noinspection PyUnboundLocalVariable
                 result = resp.json()['error']['message']
-            except (StandardError, Exception):
+            except (BaseException, Exception):
                 result = 'no response'
             self._log_warning(u'%s' % result)
 

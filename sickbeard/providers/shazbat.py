@@ -20,13 +20,14 @@
 import re
 import time
 import traceback
-from urllib import unquote_plus
 
 from . import generic
-from sickbeard import helpers, logger
-from sickbeard.bs4_parser import BS4Parser
-from sickbeard.helpers import tryInt
-from lib.unidecode import unidecode
+from .. import logger
+from ..helpers import try_int
+from bs4_parser import BS4Parser
+
+from _23 import unidecode, unquote_plus
+from six import iteritems, text_type
 
 
 class ShazbatProvider(generic.TorrentProvider):
@@ -61,12 +62,12 @@ class ShazbatProvider(generic.TorrentProvider):
 
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
-        rc = dict((k, re.compile('(?i)' + v)) for (k, v) in {'show_id': r'"show\?id=(\d+)[^>]+>([^<]+)<\/a>',
-                                                             'get': 'load_torrent'}.items())
-        search_types = sorted([x for x in search_params.items()], key=lambda tup: tup[0], reverse=True)
+        rc = dict([(k, re.compile('(?i)' + v)) for (k, v) in iteritems({'show_id': r'"show\?id=(\d+)[^>]+>([^<]+)<\/a>',
+                                                                        'get': 'load_torrent'})])
+        search_types = sorted([x for x in iteritems(search_params)], key=lambda tup: tup[0], reverse=True)
         maybe_only = search_types[0][0]
         show_detail = '_only' in maybe_only and search_params.pop(maybe_only)[0] or ''
-        for mode in search_params.keys():
+        for mode in search_params:
             for search_string in search_params[mode]:
                 if 'Cache' == mode:
                     search_url = self.urls['browse']
@@ -74,7 +75,7 @@ class ShazbatProvider(generic.TorrentProvider):
                     if self.should_skip():
                         return results
                 else:
-                    search_string = isinstance(search_string, unicode) and unidecode(search_string) or search_string
+                    search_string = unidecode(search_string)
                     search_string = search_string.replace(show_detail, '').strip()
                     search_url = self.urls['search'] % search_string
                     html = self.get_url(search_url)
@@ -111,17 +112,17 @@ class ShazbatProvider(generic.TorrentProvider):
                             try:
                                 head = head if None is not head else self._header_row(tr)
                                 stats = cells[head['leech']].get_text().strip()
-                                seeders, leechers = [(tryInt(x[0], 0), tryInt(x[1], 0)) for x in
+                                seeders, leechers = [(try_int(x[0], 0), try_int(x[1], 0)) for x in
                                                      re.findall(r'(?::(\d+))(?:\W*[/]\W*:(\d+))?', stats) if x[0]][0]
                                 if self._reject_item(seeders, leechers):
                                     continue
-                                sizes = [(tryInt(x[0], x[0]), tryInt(x[1], False)) for x in
+                                sizes = [(try_int(x[0], x[0]), try_int(x[1], False)) for x in
                                          re.findall(r'([\d.]+\w+)?(?:\s*[(\[](\d+)[)\]])?', stats) if x[0]][0]
                                 size = sizes[(0, 1)[1 < len(sizes)]]
 
-                                for element in [x for x in cells[2].contents[::-1] if unicode(x).strip()]:
+                                for element in [x for x in cells[2].contents[::-1] if text_type(x).strip()]:
                                     if 'NavigableString' in str(element.__class__):
-                                        title = unicode(element).strip()
+                                        title = text_type(element).strip()
                                         break
 
                                 download_url = self._link(tr.find('a', href=rc['get'])['href'])

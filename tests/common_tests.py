@@ -7,8 +7,9 @@ import os.path
 sys.path.insert(1, os.path.abspath('..'))
 
 from sickbeard import common
-from sickbeard.common import Quality, wantedQualities
+from sickbeard.common import Quality, WantedQualities
 from sickbeard.name_parser.parser import NameParser
+from six import iteritems
 
 
 quality_tests = {
@@ -148,17 +149,17 @@ class QualityTests(unittest.TestCase):
     def check_wantedquality_list(self, cases):
         for show_quality, result in cases:
             sq = common.Quality.combineQualities(*show_quality)
-            wd = common.wantedQualities()
+            wd = common.WantedQualities()
             _ = wd.get_wantedlist(sq, False, common.Quality.NONE, common.UNAIRED, manual=True)
-            for w, v in wd.iteritems():
+            for w, v in iteritems(wd):
                 if w == sq:
-                    for u, o in sorted(v.iteritems()):
+                    for u, o in sorted(iteritems(v)):
                         self.assertEqual(o, result.get(u))
 
     def check_wantedquality_get_wantedlist(self, cases):
         for show_quality, result in cases:
             sq = common.Quality.combineQualities(*show_quality)
-            wd = common.wantedQualities()
+            wd = common.WantedQualities()
             for case, wlist in result:
                 ka = {'qualities': sq}
                 ka.update(case)
@@ -181,7 +182,7 @@ class QualityTests(unittest.TestCase):
 
     def test_qualites(self):
         self.longMessage = True
-        for q, l in quality_tests.iteritems():
+        for q, l in iteritems(quality_tests):
             self.check_quality_names(q, l)
 
     def test_reverse_parsing(self):
@@ -227,122 +228,122 @@ class QualityTests(unittest.TestCase):
             [(Quality.SDTV, Quality.HDTV),
              (Quality.HDWEBDL, Quality.FULLHDBLURAY)],
             {Quality.NONE: {
-                wantedQualities.wantedlist: [Quality.SDTV, Quality.HDTV],
-                wantedQualities.bothlists: False, wantedQualities.upgradelist: False},
+                WantedQualities.wantedlist: [Quality.SDTV, Quality.HDTV],
+                WantedQualities.bothlists: False, WantedQualities.upgradelist: False},
              Quality.SDTV: {
-                wantedQualities.wantedlist: [Quality.HDWEBDL, Quality.FULLHDBLURAY],
-                wantedQualities.bothlists: False, wantedQualities.upgradelist: False},
+                WantedQualities.wantedlist: [Quality.HDWEBDL, Quality.FULLHDBLURAY],
+                WantedQualities.bothlists: False, WantedQualities.upgradelist: False},
              Quality.SDDVD: {
-                wantedQualities.wantedlist: [Quality.HDWEBDL, Quality.FULLHDBLURAY],
-                wantedQualities.bothlists: False, wantedQualities.upgradelist: False},
+                WantedQualities.wantedlist: [Quality.HDWEBDL, Quality.FULLHDBLURAY],
+                WantedQualities.bothlists: False, WantedQualities.upgradelist: False},
              Quality.HDTV: {
-                wantedQualities.wantedlist: [Quality.HDWEBDL, Quality.FULLHDBLURAY],
-                wantedQualities.bothlists: False, wantedQualities.upgradelist: False},
+                WantedQualities.wantedlist: [Quality.HDWEBDL, Quality.FULLHDBLURAY],
+                WantedQualities.bothlists: False, WantedQualities.upgradelist: False},
              Quality.RAWHDTV: {
-                wantedQualities.wantedlist: [Quality.HDWEBDL, Quality.FULLHDBLURAY],
-                wantedQualities.bothlists: False, wantedQualities.upgradelist: False},
+                WantedQualities.wantedlist: [Quality.HDWEBDL, Quality.FULLHDBLURAY],
+                WantedQualities.bothlists: False, WantedQualities.upgradelist: False},
              Quality.FULLHDTV: {
-                wantedQualities.wantedlist: [Quality.HDWEBDL, Quality.FULLHDBLURAY],
-                wantedQualities.bothlists: False, wantedQualities.upgradelist: False},
+                WantedQualities.wantedlist: [Quality.HDWEBDL, Quality.FULLHDBLURAY],
+                WantedQualities.bothlists: False, WantedQualities.upgradelist: False},
              Quality.HDWEBDL: {
-                wantedQualities.wantedlist: [Quality.FULLHDBLURAY],
-                wantedQualities.bothlists: False, wantedQualities.upgradelist: True},
+                WantedQualities.wantedlist: [Quality.FULLHDBLURAY],
+                WantedQualities.bothlists: False, WantedQualities.upgradelist: True},
              Quality.FULLHDWEBDL: {
-                wantedQualities.wantedlist: [Quality.FULLHDBLURAY],
-                wantedQualities.bothlists: False, wantedQualities.upgradelist: False},
+                WantedQualities.wantedlist: [Quality.FULLHDBLURAY],
+                WantedQualities.bothlists: False, WantedQualities.upgradelist: False},
              Quality.HDBLURAY: {
-                wantedQualities.wantedlist: [Quality.FULLHDBLURAY],
-                wantedQualities.bothlists: False, wantedQualities.upgradelist: False},
+                WantedQualities.wantedlist: [Quality.FULLHDBLURAY],
+                WantedQualities.bothlists: False, WantedQualities.upgradelist: False},
              Quality.FULLHDBLURAY: {
-                wantedQualities.wantedlist: [],
-                wantedQualities.bothlists: False, wantedQualities.upgradelist: True},
+                WantedQualities.wantedlist: [],
+                WantedQualities.bothlists: False, WantedQualities.upgradelist: True},
              Quality.UHD4KWEB: {
-                wantedQualities.wantedlist: [],
-                wantedQualities.bothlists: False, wantedQualities.upgradelist: False},
+                WantedQualities.wantedlist: [],
+                WantedQualities.bothlists: False, WantedQualities.upgradelist: False},
              Quality.UNKNOWN: {
-                wantedQualities.wantedlist: [],
-                wantedQualities.bothlists: False, wantedQualities.upgradelist: False
+                WantedQualities.wantedlist: [],
+                WantedQualities.bothlists: False, WantedQualities.upgradelist: False
              }}),
 
             ([(Quality.SDTV, Quality.HDTV),
               ()],
              {Quality.NONE: {
-                wantedQualities.wantedlist: [Quality.SDTV, Quality.HDTV],
-                wantedQualities.bothlists: False, wantedQualities.upgradelist: False},
+                WantedQualities.wantedlist: [Quality.SDTV, Quality.HDTV],
+                WantedQualities.bothlists: False, WantedQualities.upgradelist: False},
              Quality.SDTV: {
-                wantedQualities.wantedlist: [],
-                wantedQualities.bothlists: False, wantedQualities.upgradelist: False},
+                WantedQualities.wantedlist: [],
+                WantedQualities.bothlists: False, WantedQualities.upgradelist: False},
              Quality.SDDVD: {
-                wantedQualities.wantedlist: [],
-                wantedQualities.bothlists: False, wantedQualities.upgradelist: False},
+                WantedQualities.wantedlist: [],
+                WantedQualities.bothlists: False, WantedQualities.upgradelist: False},
              Quality.HDTV: {
-                wantedQualities.wantedlist: [],
-                wantedQualities.bothlists: False, wantedQualities.upgradelist: False},
+                WantedQualities.wantedlist: [],
+                WantedQualities.bothlists: False, WantedQualities.upgradelist: False},
              Quality.RAWHDTV: {
-                wantedQualities.wantedlist: [],
-                wantedQualities.bothlists: False, wantedQualities.upgradelist: False},
+                WantedQualities.wantedlist: [],
+                WantedQualities.bothlists: False, WantedQualities.upgradelist: False},
              Quality.FULLHDTV: {
-                wantedQualities.wantedlist: [],
-                wantedQualities.bothlists: False, wantedQualities.upgradelist: False},
+                WantedQualities.wantedlist: [],
+                WantedQualities.bothlists: False, WantedQualities.upgradelist: False},
              Quality.HDWEBDL: {
-                wantedQualities.wantedlist: [],
-                wantedQualities.bothlists: False, wantedQualities.upgradelist: False},
+                WantedQualities.wantedlist: [],
+                WantedQualities.bothlists: False, WantedQualities.upgradelist: False},
              Quality.FULLHDWEBDL: {
-                wantedQualities.wantedlist: [],
-                wantedQualities.bothlists: False, wantedQualities.upgradelist: False},
+                WantedQualities.wantedlist: [],
+                WantedQualities.bothlists: False, WantedQualities.upgradelist: False},
              Quality.HDBLURAY: {
-                wantedQualities.wantedlist: [],
-                wantedQualities.bothlists: False, wantedQualities.upgradelist: False},
+                WantedQualities.wantedlist: [],
+                WantedQualities.bothlists: False, WantedQualities.upgradelist: False},
              Quality.FULLHDBLURAY: {
-                wantedQualities.wantedlist: [],
-                wantedQualities.bothlists: False, wantedQualities.upgradelist: False},
+                WantedQualities.wantedlist: [],
+                WantedQualities.bothlists: False, WantedQualities.upgradelist: False},
              Quality.UHD4KWEB: {
-                wantedQualities.wantedlist: [],
-                wantedQualities.bothlists: False, wantedQualities.upgradelist: False},
+                WantedQualities.wantedlist: [],
+                WantedQualities.bothlists: False, WantedQualities.upgradelist: False},
              Quality.UNKNOWN: {
-                wantedQualities.wantedlist: [],
-                wantedQualities.bothlists: False, wantedQualities.upgradelist: False
+                WantedQualities.wantedlist: [],
+                WantedQualities.bothlists: False, WantedQualities.upgradelist: False
              }}),
 
             ([(Quality.SDTV, Quality.HDTV, Quality.HDWEBDL, Quality.HDBLURAY, Quality.FULLHDBLURAY),
               (Quality.HDWEBDL, Quality.FULLHDWEBDL, Quality.FULLHDBLURAY)],
              {Quality.NONE: {
-                wantedQualities.wantedlist: [
+                WantedQualities.wantedlist: [
                     Quality.SDTV, Quality.HDTV, Quality.HDWEBDL, Quality.HDBLURAY, Quality.FULLHDBLURAY],
-                wantedQualities.bothlists: False, wantedQualities.upgradelist: False},
+                WantedQualities.bothlists: False, WantedQualities.upgradelist: False},
              Quality.SDTV: {
-                wantedQualities.wantedlist: [Quality.HDWEBDL, Quality.FULLHDWEBDL, Quality.FULLHDBLURAY],
-                wantedQualities.bothlists: False, wantedQualities.upgradelist: False},
+                WantedQualities.wantedlist: [Quality.HDWEBDL, Quality.FULLHDWEBDL, Quality.FULLHDBLURAY],
+                WantedQualities.bothlists: False, WantedQualities.upgradelist: False},
              Quality.SDDVD: {
-                wantedQualities.wantedlist: [Quality.HDWEBDL, Quality.FULLHDWEBDL, Quality.FULLHDBLURAY],
-                wantedQualities.bothlists: False, wantedQualities.upgradelist: False},
+                WantedQualities.wantedlist: [Quality.HDWEBDL, Quality.FULLHDWEBDL, Quality.FULLHDBLURAY],
+                WantedQualities.bothlists: False, WantedQualities.upgradelist: False},
              Quality.HDTV: {
-                wantedQualities.wantedlist: [Quality.HDWEBDL, Quality.FULLHDWEBDL, Quality.FULLHDBLURAY],
-                wantedQualities.bothlists: False, wantedQualities.upgradelist: False},
+                WantedQualities.wantedlist: [Quality.HDWEBDL, Quality.FULLHDWEBDL, Quality.FULLHDBLURAY],
+                WantedQualities.bothlists: False, WantedQualities.upgradelist: False},
              Quality.RAWHDTV: {
-                wantedQualities.wantedlist: [Quality.HDWEBDL, Quality.FULLHDWEBDL, Quality.FULLHDBLURAY],
-                wantedQualities.bothlists: False, wantedQualities.upgradelist: False},
+                WantedQualities.wantedlist: [Quality.HDWEBDL, Quality.FULLHDWEBDL, Quality.FULLHDBLURAY],
+                WantedQualities.bothlists: False, WantedQualities.upgradelist: False},
              Quality.FULLHDTV: {
-                wantedQualities.wantedlist: [Quality.HDWEBDL, Quality.FULLHDWEBDL, Quality.FULLHDBLURAY],
-                wantedQualities.bothlists: False, wantedQualities.upgradelist: False},
+                WantedQualities.wantedlist: [Quality.HDWEBDL, Quality.FULLHDWEBDL, Quality.FULLHDBLURAY],
+                WantedQualities.bothlists: False, WantedQualities.upgradelist: False},
              Quality.HDWEBDL: {
-                wantedQualities.wantedlist: [Quality.FULLHDWEBDL, Quality.FULLHDBLURAY],
-                wantedQualities.bothlists: True, wantedQualities.upgradelist: True},
+                WantedQualities.wantedlist: [Quality.FULLHDWEBDL, Quality.FULLHDBLURAY],
+                WantedQualities.bothlists: True, WantedQualities.upgradelist: True},
              Quality.FULLHDWEBDL: {
-                wantedQualities.wantedlist: [Quality.FULLHDBLURAY],
-                wantedQualities.bothlists: False, wantedQualities.upgradelist: True},
+                WantedQualities.wantedlist: [Quality.FULLHDBLURAY],
+                WantedQualities.bothlists: False, WantedQualities.upgradelist: True},
              Quality.HDBLURAY: {
-                wantedQualities.wantedlist: [Quality.FULLHDBLURAY],
-                wantedQualities.bothlists: False, wantedQualities.upgradelist: False},
+                WantedQualities.wantedlist: [Quality.FULLHDBLURAY],
+                WantedQualities.bothlists: False, WantedQualities.upgradelist: False},
              Quality.FULLHDBLURAY: {
-                wantedQualities.wantedlist: [],
-                wantedQualities.bothlists: True, wantedQualities.upgradelist: True},
+                WantedQualities.wantedlist: [],
+                WantedQualities.bothlists: True, WantedQualities.upgradelist: True},
              Quality.UHD4KWEB: {
-                wantedQualities.wantedlist: [],
-                wantedQualities.bothlists: False, wantedQualities.upgradelist: False},
+                WantedQualities.wantedlist: [],
+                WantedQualities.bothlists: False, WantedQualities.upgradelist: False},
              Quality.UNKNOWN: {
-                wantedQualities.wantedlist: [],
-                wantedQualities.bothlists: False, wantedQualities.upgradelist: False
+                WantedQualities.wantedlist: [],
+                WantedQualities.bothlists: False, WantedQualities.upgradelist: False
              }})
         ])
 
@@ -3092,7 +3093,7 @@ class QualityTests(unittest.TestCase):
             (('The.Show.S01E10.Name.2160p.UHD.BluRay.REMUX.HDR.HEVC.DTS-HD.MA.5.1', False), common.Quality.UNKNOWN),
             (('Show.S01E07.2160p.4K.UHD.10bit.NF.WEBRip.5.1.x265.HEVC-Group', False), common.Quality.UHD4KWEB),
         ])
-        for q, l in quality_tests.iteritems():
+        for q, l in iteritems(quality_tests):
             self.check_sceneQuality([((v, False), q) for v in l])
 
     # TODO: fix these anime test cases at travis
@@ -3107,6 +3108,6 @@ class QualityTests(unittest.TestCase):
         ], is_anime=True)
 
 
-if __name__ == '__main__':
+if '__main__' == __name__:
     suite = unittest.TestLoader().loadTestsFromTestCase(QualityTests)
     unittest.TextTestRunner(verbosity=2).run(suite)

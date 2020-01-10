@@ -35,7 +35,7 @@ $(document).ready(function(){
 
 		var params = {url: url, name: name, key: key};
 
-		$.getJSON($.SickGear.Root + '/config/providers/getNewznabCategories', params,
+		$.getJSON($.SickGear.Root + '/config/providers/get-newznab-categories', params,
 			function(data){
 				updateNewznabCaps(data, selectedProvider);
 			});
@@ -441,7 +441,7 @@ $(document).ready(function(){
 			return;
 
 		// send to the form with ajax, get a return value
-		$.getJSON($.SickGear.Root + '/config/providers/canAddNewznabProvider', {name: name},
+		$.getJSON($.SickGear.Root + '/config/providers/can-add-newznab-provider', {name: name},
 			function(data){
 				if (data.error != undefined){
 					alert(data.error);
@@ -465,7 +465,7 @@ $(document).ready(function(){
 		var params = { name: name, url: url, cookies: cookies};
 
 		// send to the form with ajax, get a return value
-		$.getJSON($.SickGear.Root + '/config/providers/canAddTorrentRssProvider', params,
+		$.getJSON($.SickGear.Root + '/config/providers/can-add-torrent-rss-provider', params,
 			function(data){
 				if (data.error != undefined){
 					alert(data.error);

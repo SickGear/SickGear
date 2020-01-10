@@ -704,12 +704,16 @@ inc_top.tmpl
 	cursor:pointer
 }
 
+#service_order_list .input-sm,
 #add-show-name input{
 	margin:0 0 0 -1px;
 	padding:0 2px;
 	height:18px;
 	width:135px;
 	font-size:12px
+}
+#service_order_list .input-sm{
+	width:100px
 }
 
 /* =======================================================================
@@ -1235,8 +1239,11 @@ div.formpaginate{
 }
 
 #addShowForm #nameToSearch{
-	width:460px;
+	width:500px;
 	margin-top:0
+}
+#addShowForm #nameToSearch.wide{
+	width:591px;
 }
 
 #addShowForm #providedIndexer,
@@ -3029,6 +3036,7 @@ select .selected:before{
 	margin:0 !important
 }
 
+.dotted-surround,
 .test-notification{
 	padding:5px;
 	margin-bottom:10px;
@@ -3047,6 +3055,9 @@ select .selected:before{
 	width:250px;
 	padding-left:20px;
 	list-style-type:none
+}
+#service_order_list{
+	width:300px;
 }
 
 #config.search_providers #core-component-group1 #provider_key h4{
@@ -3150,6 +3161,18 @@ select .selected:before{
 .icon16-win{
 	background-position:-104px 0
 }
+
+#api-keys > div{display:inline-block}
+#api-keys span{float:left}
+#api-keys span, #generate-result{line-height:22px}
+#api-keys .api-key{width:235px}
+#api-keys .app-name{width:135px}
+.qr-btn{margin-right:6px}
+.qr-btn .glyphicon-qrcode{cursor:pointer;font-size:15px}
+.apikey-qr-dlg .qr-title{padding:0 25px 5px 25px;text-align:right}
+.apikey-qr-dlg .qr-title em{color:#999;font-weight:bolder}
+.apikey-qr-dlg .qr-title span{color:#333}
+.apikey-qr-dlg .qr-body{padding:25px 25px 0}
 
 /* =======================================================================
 config_postProcessing.tmpl
@@ -3729,6 +3752,15 @@ img[src=""],img:not([src]){
 	border-radius:4px 4px 4px 4px;
 	-moz-border-radius:3px;
 	-webkit-border-radius:3px
+}
+
+.img-warning-16{
+	background-image:url("../images/warning16.png");
+	display:inline-block;
+	vertical-align:middle;
+	margin-right:3px;
+	width:16px;
+	height:16px
 }
 
 /* =======================================================================
