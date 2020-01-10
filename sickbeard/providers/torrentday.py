@@ -71,7 +71,7 @@ class TorrentDayProvider(generic.TorrentProvider):
 
         last_recent_search = self.last_recent_search
         last_recent_search = '' if not last_recent_search else last_recent_search.replace('id-', '')
-        for mode in search_params.keys():
+        for mode in search_params:
             urls = []
             for search_string in search_params[mode]:
                 search_string = '+'.join(search_string.split())

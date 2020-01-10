@@ -30,7 +30,7 @@ from six import iteritems
 class SceneTimeProvider(generic.TorrentProvider):
 
     def __init__(self):
-        generic.TorrentProvider.__init__(self, 'SceneTime', cache_update_freq=15)
+        generic.TorrentProvider.__init__(self, 'SceneTime')
 
         self.url_home = ['https://%s.scenetime.com/' % u for u in ('www', 'uk')]
 
@@ -39,7 +39,7 @@ class SceneTimeProvider(generic.TorrentProvider):
         self.url_tmpl = {'config_provider_home_uri': '%(home)s', 'login': '%(home)s%(vars)s',
                          'search': '%(home)s%(vars)s', 'get': '%(home)s%(vars)s'}
 
-        self.categories = {'Season': [43], 'Episode': [2, 9, 63, 77, 79, 100, 83, 19], 'anime': [18]}
+        self.categories = {'Season': [43], 'Episode': [2, 9, 63, 77, 79, 100, 83, 8, 19], 'anime': [18]}
         self.categories['Cache'] = self.categories['Season'] + self.categories['Episode']
 
         self.digest, self.freeleech, self.minseed, self.minleech = 4 * [None]
@@ -49,7 +49,7 @@ class SceneTimeProvider(generic.TorrentProvider):
         return super(SceneTimeProvider, self)._authorised(
             logged_in=(lambda y='': all(
                 ['staff-support' in y, self.has_all_cookies()] +
-                [(self.session.cookies.get(x) or 'sg!no!pw') in self.digest for x in ('uid', 'pass')])),
+                [(self.session.cookies.get(x, domain='') or 'sg!no!pw') in self.digest for x in ('uid', 'pass')])),
             failed_msg=(lambda y=None: u'Invalid cookie details for %s. Check settings'))
 
     @staticmethod
@@ -62,40 +62,65 @@ class SceneTimeProvider(generic.TorrentProvider):
         if not self._authorised():
             return results
 
-        items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
+        last_recent_search = self.last_recent_search
+        last_recent_search = '' if not last_recent_search else last_recent_search.replace('id-', '')
 
         for mode in search_params:
-            rc = dict([(k, re.compile('(?i)' + v)) for (k, v) in iteritems({
-                'info': 'detail', 'get': r'.*id=(\d+).*', 'fl': r'\[freeleech\]',
-                'cats': 'cat=(?:%s)' % self._categories_string(mode=mode, template='', delimiter='|')})])
-
+            urls = []
             for search_string in search_params[mode]:
+                urls += [[]]
                 search_string = unidecode(search_string)
-
                 search_url = self.urls['search'] % (self._categories_string(),
                                                     '+'.join(search_string.replace('.', ' ').split()),
                                                     ('', '&freeleech=on')[self.freeleech])
+                for page in range((3, 5)['Cache' == mode])[:-1]:
+                    urls[-1] += [search_url + '&page=%s' % page]
+            results += self._search_urls(mode, last_recent_search, urls)
+            last_recent_search = ''
+
+        return results
+
+    def _search_urls(self, mode, last_recent_search, urls):
+
+        results = []
+
+        items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
+
+        rc = dict([(k, re.compile('(?i)' + v)) for (k, v) in iteritems({
+            'info': 'detail', 'get': r'.*id=(\d+).*', 'id': r'.php\/(\d+)', 'fl': r'\[freeleech\]',
+            'cats': 'cat=(?:%s)' % self._categories_string(mode=mode, template='', delimiter='|')})])
+
+        lrs_found = False
+        lrs_new = True
+        for search_urls in urls:  # this intentionally iterates once to preserve indentation
+            for search_url in search_urls:
                 html = self.get_url(search_url)
                 if self.should_skip():
                     return results
 
                 cnt = len(items[mode])
+                cnt_search = 0
+                log_settings_hint = False
                 try:
                     if not html or self._has_no_results(html):
                         raise generic.HaltParseException
 
-                    with BS4Parser(html) as soup:
+                    with BS4Parser(html, parse_only=dict(div={'id': 'torrenttable'})) as soup:
                         tbl = soup.find('table', attrs={'cellpadding': 5})
                         tbl_rows = [] if not tbl else tbl.find_all('tr')
 
                         if 2 > len(tbl_rows):
                             raise generic.HaltParseException
 
+                        if 'Cache' == mode and 100 > len(tbl_rows):
+                            log_settings_hint = True
+
                         head = None
                         for tr in tbl_rows[1:]:
                             cells = tr.find_all('td')
                             if 4 > len(cells):
                                 continue
+                            cnt_search += 1
                             try:
                                 head = head if None is not head else self._header_row(tr)
                                 seeders, leechers, size = [try_int(n, n) for n in [
@@ -106,9 +131,12 @@ class SceneTimeProvider(generic.TorrentProvider):
                                     continue
 
                                 info = tr.find('a', href=rc['info'])
+                                dl_id = re.sub(rc['get'], r'\1', str(info.attrs['href']))
+                                lrs_found = dl_id == last_recent_search
+                                if lrs_found:
+                                    break
                                 title = (info.attrs.get('title') or info.get_text()).strip()
-                                download_url = self._link('%s/%s' % (
-                                    re.sub(rc['get'], r'\1', str(info.attrs['href'])), str(title).replace(' ', '.')))
+                                download_url = self._link('%s/%s' % (dl_id, str(title).replace(' ', '.')))
                             except (AttributeError, TypeError, ValueError, KeyError):
                                 continue
 
@@ -120,7 +148,11 @@ class SceneTimeProvider(generic.TorrentProvider):
                 except (BaseException, Exception):
                     logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
 
-                self._log_search(mode, len(items[mode]) - cnt, search_url)
+                self._log_search(mode, len(items[mode]) - cnt, search_url, log_settings_hint)
+
+                if self.is_search_finished(mode, items, cnt_search, rc['id'], last_recent_search, lrs_new, lrs_found):
+                    break
+                lrs_new = False
 
             results = self._sort_seeding(mode, results + items[mode])
 
