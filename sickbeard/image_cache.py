@@ -213,7 +213,7 @@ class ImageCache(object):
         :return: true if a cached fanart exists for the given tvid prodid
         :rtype: bool
         """
-        return self.has_file(self.fanart_path(tvid, prodid).replace('fanart.jpg', '*.fanart.jpg'))
+        return self.has_file(self.fanart_path(tvid, prodid).replace('fanart.jpg', '*.001.*.fanart.jpg'))
 
     def has_poster_thumbnail(self, tvid, prodid):
         # type: (int, int) -> bool
