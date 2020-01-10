@@ -1,4 +1,4 @@
-﻿### 0.21.0 (2019-xx-xx xx:xx:xx UTC)
+﻿### 0.21.0 (2020-01-10 00:40:00 UTC)
 
 * Change core system to improve performance and facilitate multi TV info sources
 * Change migrate core objects TVShow and TVEpisode and everywhere that these objects affect.
@@ -120,25 +120,6 @@
 * Change remove redundant py26 version check
 * Fix reduce quote usage to optional
 * Change improve Scenetime + SkyTorrent provider recent search performance to process new items since the previous cycle
-
-
-[develop changelog]
-
-* Update attr 19.2.0.dev0 (de84609) to 19.2.0.dev0 (154b4e5)
-* Update Beautiful Soup 4.7.1 (r497) to 4.8.0 (r526)
-* Update Beautiful Soup 4.8.0 (r526) to 4.8.1 (r531)
-* Update dateutil 2.8.0 (c90a30c) to 2.8.0 (27848c5)
-* Update feedparser 5.2.1 (2b11c80) to 5.2.1 (cbe18d0)
-* Update Requests library 2.22.0 (aeda65b) to 2.22.0 (0b6c110)
-* Update Six compatibility library 1.12.0 (8da94b8) to 1.12.0 (aa4e90b)
-* Update urllib3 release 1.25.2 (49eea80) to 1.25.3 (3387b20)
-* Update urllib3 release 1.25.3 (3387b20) to 1.25.3 (67715fd)
-* Update urllib3 release 1.25.5 (edc3ddb) to 1.25.6 (4a6c288)
-* Update xmltodict library 0.12.0 (f3ab7e1) to 0.12.0 (02c9b71)
-* Fix "Update shows on startup" (change update_shows_on_start = 0 in config.ini, restart SG, then update)
-* Fix Plex notifier, PY2 urllib2.urlopen has no `with` context manager and six.moves.urllib.request.urlopen does not provide
-* Fix hidden items on browse show page with new id system
-* Change ensure Kodi metadata is consistently a text string type
 
 
 ### 0.20.18 (2019-12-30 12:15:00 UTC)
