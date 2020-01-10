@@ -21,8 +21,13 @@ from six import PY2, string_types
 if PY2:
     from encodingKludge import fixStupidEncodings
 
+# noinspection PyUnreachableCode
+if False:
+    from typing import AnyStr
+
 
 def ex(e):
+    # type: (BaseException) -> AnyStr
     """Returns a unicode string from the exception text if it exists"""
 
     if not PY2:

@@ -74,7 +74,7 @@ class SBRotatingLogHandler(object):
         self.log_lock = threading.Lock()
         self.log_types = ['sickbeard', 'tornado.application', 'tornado.general', 'subliminal', 'adba', 'encodingKludge',
                           'tvdb_api']
-        self.external_loggers = ['sg_helper']
+        self.external_loggers = ['sg_helper', 'libtrakt', 'trakt_api']
         self.log_types_null = ['tornado.access']
 
     def __del__(self):
