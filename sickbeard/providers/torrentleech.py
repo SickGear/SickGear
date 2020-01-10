@@ -24,9 +24,7 @@ from ..helpers import try_int
 from bs4_parser import BS4Parser
 
 from _23 import unidecode
-from six import iteritems
-
-from six import PY2
+from six import iteritems, PY2
 
 
 class TorrentLeechProvider(generic.TorrentProvider):
