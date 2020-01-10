@@ -1,4 +1,12 @@
-﻿### 0.21.0 (2020-01-10 00:40:00 UTC)
+﻿### 0.22.0 (2019-xx-xx xx:xx:xx UTC)
+
+
+
+[develop changelog]
+
+
+
+### 0.21.0 (2020-01-10 00:40:00 UTC)
 
 * Change core system to improve performance and facilitate multi TV info sources
 * Change migrate core objects TVShow and TVEpisode and everywhere that these objects affect.
