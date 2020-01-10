@@ -755,6 +755,8 @@ def init_stage_1(console_logging):
     FANART_RATINGS = check_setting_str(CFG, 'GUI', 'fanart_ratings', None)
     if None is not FANART_RATINGS:
         FANART_RATINGS = ast.literal_eval(FANART_RATINGS or '{}')
+    if not isinstance(FANART_RATINGS, dict):
+        FANART_RATINGS = {}
     USE_IMDB_INFO = bool(check_setting_int(CFG, 'GUI', 'use_imdb_info', 1))
     IMDB_ACCOUNTS = CFG.get('GUI', []).get('imdb_accounts', [IMDB_DEFAULT_LIST_ID, IMDB_DEFAULT_LIST_NAME])
     HOME_SEARCH_FOCUS = bool(check_setting_int(CFG, 'General', 'home_search_focus', HOME_SEARCH_FOCUS))
