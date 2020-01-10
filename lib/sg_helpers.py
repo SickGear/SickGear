@@ -16,7 +16,7 @@ import traceback
 import encodingKludge as ek
 from exceptions_helper import ex
 from _23 import filter_list, html_unescape, urlparse, urlunparse
-from six import iteritems, string_types
+from six import iteritems, string_types, text_type
 from lib.cachecontrol import CacheControl, caches
 from cfscrape import CloudflareScraper
 import requests
@@ -557,8 +557,12 @@ def write_file(filepath,  # type: AnyStr
                         else:
                             data.write(fh)
                 else:
-                    with ek.ek(io.FileIO, filepath, w_mode) as fh:
-                        fh.write(data)
+                    if isinstance(data, text_type):
+                        with ek.ek(io.open, filepath, w_mode, encoding='utf-8') as fh:
+                            fh.write(data)
+                    else:
+                        with ek.ek(io.FileIO, filepath, w_mode) as fh:
+                            fh.write(data)
 
             chmod_as_parent(filepath)
 
