@@ -1,4 +1,9 @@
-﻿### 0.21.1 (2020-01-10 14:45:00 UTC)
+﻿### 0.21.2 (2020-01-12 14:00:00 UTC)
+
+* Fix Kodi meta Nfo files to workaround a Kodi library update crash bug that may occur on particular systems
+
+
+### 0.21.1 (2020-01-10 14:45:00 UTC)
 
 * Fix viewing an show added before any application configuration is saved (very rare under normal use)
 

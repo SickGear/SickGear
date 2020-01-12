@@ -529,6 +529,9 @@ class SickGear(object):
                                                             target=sickbeard.history.history_snatched_proper_fix)
             history_snatched_proper_task.start()
 
+        if not db.DBConnection().has_flag('kodi_nfo_default_removed'):
+            sickbeard.metadata.kodi.remove_default_attr()
+
         if sickbeard.USE_FAILED_DOWNLOADS:
             failed_history.remove_old_history()
 
