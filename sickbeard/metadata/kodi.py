@@ -16,12 +16,16 @@
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
 import datetime
+import io
+import os
 
 from . import generic
 from .. import helpers, logger
 from ..indexers.indexer_config import TVINFO_IMDB, TVINFO_TVDB
 from ..indexers.indexer_exceptions import check_exception_type, ExceptionTuples
 import sickbeard
+# noinspection PyPep8Naming
+import encodingKludge as ek
 import exceptions_helper
 from exceptions_helper import ex
 from lxml_etree import etree
@@ -164,11 +168,11 @@ class KODIMetadata(generic.GenericMetadata):
             mid = slug and show_obj.ids[tvid].get('id')
             if mid:
                 has_id = True
-                default = ''
+                kwargs = dict(type=slug)
                 if TVINFO_TVDB == tvid:
-                    default = 'true'
+                    kwargs.update(dict(default='true'))
                     tvdb_id = str(mid)
-                uniqueid = etree.SubElement(tv_node, 'uniqueid', type=slug, default=default)
+                uniqueid = etree.SubElement(tv_node, 'uniqueid', **kwargs)
                 uniqueid.text = '%s%s' % (('', 'tt')[TVINFO_IMDB == tvid], mid)
         if not has_id:
             logger.log('Incomplete info for show with id %s on %s, skipping it' % (show_ID, sickbeard.TVInfoAPI(
@@ -178,7 +182,7 @@ class KODIMetadata(generic.GenericMetadata):
         ratings = etree.SubElement(tv_node, 'ratings')
         if None is not getattr(show_info, 'rating', None):
             # todo: name dynamic depending on source
-            rating = etree.SubElement(ratings, 'rating', name='thetvdb', max='10', default='')
+            rating = etree.SubElement(ratings, 'rating', name='thetvdb', max='10')
             rating_value = etree.SubElement(rating, 'value')
             rating_value.text = '%s' % show_info['rating']
             if None is not getattr(show_info, 'siteratingcount', None):
@@ -202,10 +206,6 @@ class KODIMetadata(generic.GenericMetadata):
         if None is not getattr(show_info, 'genre', None):
             if isinstance(show_info['genre'], string_types):
                 genre.text = ' / '.join([x.strip() for x in show_info['genre'].split('|') if x.strip()])
-
-        premiered = etree.SubElement(tv_node, 'premiered')
-        if None is not getattr(show_info, 'firstaired', None):
-            premiered.text = '%s' % show_info['firstaired']
 
         studio = etree.SubElement(tv_node, 'studio')
         if None is not getattr(show_info, 'network', None):
@@ -376,7 +376,7 @@ class KODIMetadata(generic.GenericMetadata):
             ratings = etree.SubElement(ep_node, 'ratings')
             if None is not getattr(ep_info, 'rating', None):
                 # todo: name dynamic depending on source
-                rating = etree.SubElement(ratings, 'rating', name='thetvdb', max='10', default='')
+                rating = etree.SubElement(ratings, 'rating', name='thetvdb', max='10')
                 rating_value = etree.SubElement(rating, 'value')
                 rating_value.text = '%s' % ep_info['rating']
                 if None is not getattr(show_info, 'siteratingcount', None):
@@ -427,6 +427,94 @@ def set_nfo_uid_updated(*args, **kwargs):
         db.DBConnection().set_flag('kodi_nfo_uid')
     sickbeard.showQueueScheduler.action.remove_event(sickbeard.show_queue.DAILY_SHOW_UPDATE_FINISHED_EVENT,
                                                      set_nfo_uid_updated)
+
+
+def remove_default_attr(*args, **kwargs):
+    from .. import db
+    msg = 'Changing Kodi Nfo'
+    sickbeard.classes.loading_msg.set_msg_progress(msg, '0%')
+
+    kodi = metadata_class()
+    num_shows = len(sickbeard.showList)
+    for n, cur_show_obj in enumerate(sickbeard.showList):
+        changed = False
+        with cur_show_obj.lock:
+            # call for progress with value
+            sickbeard.classes.loading_msg.set_msg_progress(msg, '{:6.2f}%'.format(float(n)/num_shows * 100))
+
+            # shows
+            try:
+                nfo_path = kodi.get_show_file_path(cur_show_obj)
+            except(BaseException, Exception):
+                nfo_path = None
+            if nfo_path:
+                if ek.ek(os.path.isfile, nfo_path):
+                    with ek.ek(io.open, nfo_path, 'r', encoding='utf8') as xml_file_obj:
+                        xmltree = etree.ElementTree(file=xml_file_obj)
+
+                    # remove default="" attributes
+                    default = False
+                    ratings = xmltree.find('ratings')
+                    r = None is not ratings and ratings.findall('rating') or []
+                    for element in r:
+                        if not element.attrib.get('default'):
+                            changed |= None is not element.attrib.pop('default', None)
+                        else:
+                            default = True
+                    if len(r) and not default:
+                        ratings.find('rating').attrib['default'] = 'true'
+                        changed = True
+
+                    # remove default="" attributes
+                    default = False
+                    uniques = xmltree.findall('uniqueid')
+                    for element in uniques:
+                        if not element.attrib.get('default'):
+                            changed |= None is not element.attrib.pop('default', None)
+                        else:
+                            default = True
+                    if len(uniques) and not default:
+                        xmltree.find('uniqueid').attrib['default'] = 'true'
+                        changed = True
+
+                    # remove redundant duplicate tags
+                    root = xmltree.getroot()
+                    for element in xmltree.findall('premiered')[1:]:
+                        root.remove(element)
+                        changed = True
+
+                    if changed:
+                        helpers.indent_xml(root)
+                        helpers.write_file(nfo_path, xmltree, xmltree=True, utf8=True)
+
+                # episodes
+                episodes = cur_show_obj.get_all_episodes(has_location=True)
+                for cur_ep_obj in episodes:
+                    changed = False
+                    nfo_path = kodi.get_episode_file_path(cur_ep_obj)
+                    if nfo_path and ek.ek(os.path.isfile, nfo_path):
+                        with ek.ek(io.open, nfo_path, 'r', encoding='utf8') as xml_file_obj:
+                            xmltree = etree.ElementTree(file=xml_file_obj)
+
+                        # remove default="" attributes
+                        default = False
+                        ratings = xmltree.find('ratings')
+                        r = None is not ratings and ratings.findall('rating') or []
+                        for element in r:
+                            if not element.attrib.get('default'):
+                                changed |= None is not element.attrib.pop('default', None)
+                            else:
+                                default = True
+                        if len(r) and not default:
+                            ratings.find('rating').attrib['default'] = 'true'
+                            changed = True
+
+                    if changed:
+                        helpers.indent_xml(xmltree.getroot())
+                        helpers.write_file(nfo_path, xmltree, xmltree=True, utf8=True)
+
+    db.DBConnection().set_flag('kodi_nfo_default_removed')
+    sickbeard.classes.loading_msg.set_msg_progress(msg, '100%')
 
 
 # present a standard "interface" from the module
