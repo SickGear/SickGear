@@ -1,4 +1,14 @@
-﻿### 0.21.2 (2020-01-12 14:00:00 UTC)
+﻿### 0.21.4 (2020-01-12 17:40:00 UTC)
+
+* Change try to interity verify episode .nfo files even if tvshow.nfo can't be parsed
+
+
+### 0.21.3 (2020-01-12 17:11:00 UTC)
+
+* Fix gracefully handle tvshow.nfo files that fail to be xml parsed
+
+
+### 0.21.2 (2020-01-12 14:00:00 UTC)
 
 * Fix Kodi meta Nfo files to workaround a Kodi library update crash bug that may occur on particular systems
 
