@@ -444,50 +444,53 @@ def remove_default_attr(*args, **kwargs):
                     # call for progress with value
                     sickbeard.classes.loading_msg.set_msg_progress(msg, '{:6.2f}%'.format(float(n)/num_shows * 100))
 
-                    # shows
                     try:
                         nfo_path = kodi.get_show_file_path(cur_show_obj)
                     except(BaseException, Exception):
                         nfo_path = None
                     if nfo_path:
-                        if ek.ek(os.path.isfile, nfo_path):
-                            with ek.ek(io.open, nfo_path, 'r', encoding='utf8') as xml_file_obj:
-                                xmltree = etree.ElementTree(file=xml_file_obj)
+                        # show
+                        try:
+                            if ek.ek(os.path.isfile, nfo_path):
+                                with ek.ek(io.open, nfo_path, 'r', encoding='utf8') as xml_file_obj:
+                                    xmltree = etree.ElementTree(file=xml_file_obj)
 
-                            # remove default="" attributes
-                            default = False
-                            ratings = xmltree.find('ratings')
-                            r = None is not ratings and ratings.findall('rating') or []
-                            for element in r:
-                                if not element.attrib.get('default'):
-                                    changed |= None is not element.attrib.pop('default', None)
-                                else:
-                                    default = True
-                            if len(r) and not default:
-                                ratings.find('rating').attrib['default'] = 'true'
-                                changed = True
+                                # remove default="" attributes
+                                default = False
+                                ratings = xmltree.find('ratings')
+                                r = None is not ratings and ratings.findall('rating') or []
+                                for element in r:
+                                    if not element.attrib.get('default'):
+                                        changed |= None is not element.attrib.pop('default', None)
+                                    else:
+                                        default = True
+                                if len(r) and not default:
+                                    ratings.find('rating').attrib['default'] = 'true'
+                                    changed = True
 
-                            # remove default="" attributes
-                            default = False
-                            uniques = xmltree.findall('uniqueid')
-                            for element in uniques:
-                                if not element.attrib.get('default'):
-                                    changed |= None is not element.attrib.pop('default', None)
-                                else:
-                                    default = True
-                            if len(uniques) and not default:
-                                xmltree.find('uniqueid').attrib['default'] = 'true'
-                                changed = True
+                                # remove default="" attributes
+                                default = False
+                                uniques = xmltree.findall('uniqueid')
+                                for element in uniques:
+                                    if not element.attrib.get('default'):
+                                        changed |= None is not element.attrib.pop('default', None)
+                                    else:
+                                        default = True
+                                if len(uniques) and not default:
+                                    xmltree.find('uniqueid').attrib['default'] = 'true'
+                                    changed = True
 
-                            # remove redundant duplicate tags
-                            root = xmltree.getroot()
-                            for element in xmltree.findall('premiered')[1:]:
-                                root.remove(element)
-                                changed = True
+                                # remove redundant duplicate tags
+                                root = xmltree.getroot()
+                                for element in xmltree.findall('premiered')[1:]:
+                                    root.remove(element)
+                                    changed = True
 
-                            if changed:
-                                helpers.indent_xml(root)
-                                helpers.write_file(nfo_path, xmltree, xmltree=True, utf8=True)
+                                if changed:
+                                    helpers.indent_xml(root)
+                                    helpers.write_file(nfo_path, xmltree, xmltree=True, utf8=True)
+                        except(BaseException, Exception):
+                            pass
 
                         # episodes
                         episodes = cur_show_obj.get_all_episodes(has_location=True)
@@ -518,7 +521,6 @@ def remove_default_attr(*args, **kwargs):
 
                             except(BaseException, Exception):
                                 pass
-                            
             except(BaseException, Exception):
                 pass
 
@@ -527,6 +529,7 @@ def remove_default_attr(*args, **kwargs):
 
     except(BaseException, Exception):
         pass
+
 
 # present a standard "interface" from the module
 metadata_class = KODIMetadata
