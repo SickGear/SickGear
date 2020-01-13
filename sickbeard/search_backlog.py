@@ -284,7 +284,7 @@ class BacklogSearcher(object):
         if not runparts and parts:
             runparts = parts[0]
             wanted_list = filter_list(
-                lambda wi: wi and itervalues(wi).next()[0].show_obj.tvid_prodid in runparts, wanted_list)
+                lambda wi: wi and next(itervalues(wi))[0].show_obj.tvid_prodid in runparts, wanted_list)
 
         limited_wanted_list = []
         if standard_backlog and not any_torrent_enabled and runparts:
