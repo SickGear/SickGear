@@ -527,6 +527,12 @@ class SimpleNamespace(object):
     def __eq__(self, other):
         return self.__dict__ == other.__dict__
 
+    def __ne__(self, o):
+        return not self.__eq__(o)
+
+    def __hash__(self):
+        return hash(tuple(self.__dict__))
+
 
 class LoadingMessage(object):
     def __init__(self):
