@@ -26,6 +26,7 @@ import sys
 import time
 import traceback
 
+
 # these are Kodi specific libs, so block the error reports in pycharm
 # noinspection PyUnresolvedReferences
 import xbmc
@@ -40,7 +41,9 @@ PY2 = 2 == sys.version_info[0]
 
 if PY2:
     # noinspection PyCompatibility,PyUnresolvedReferences
-    from urllib2 import Request, urlopen, URLError, urlencode
+    from urllib2 import Request, urlopen, URLError
+    # doesn't exist in urllib2
+    from urllib import urlencode
 
     # noinspection PyCompatibility,PyUnresolvedReferences
     string_types = (basestring,)
@@ -113,9 +116,9 @@ class SickGearWatchedStateUpdater(object):
         :return:
         :rtype:
         """
-
-        if not self.enable_kodi_allow_remote():
-            return
+        #the below check returns None - I believe this to be a depreciated function call, but I've been unable to find a replacement
+        #if not self.enable_kodi_allow_remote():
+            #return
 
         self.sock_kodi = socket.socket()
         self.sock_kodi.setblocking(True)
@@ -261,8 +264,7 @@ class SickGearWatchedStateUpdater(object):
 
         self.notify('Update sent to SickGear')
 
-        url = 'http://%s:%s/update-watched-state-kodi/' % (
-            self.addon.getSetting('sickgear_ip'), self.addon.getSetting('sickgear_port'))
+        url = 'http://%s:%s/update-watched-state-kodi/' % (self.addon.getSetting('sickgear_ip'), self.addon.getSetting('sickgear_port'))
         self.log('Notify state to %s with path_file=%s' % (url, path_file))
 
         msg_bad = 'Failed to contact SickGear on port %s at %s' % (
