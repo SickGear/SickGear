@@ -270,17 +270,6 @@ def remove_file(filepath, tree=False, prefix_failure='', log_level=logger.MESSAG
     return (None, result)[filepath and not ek.ek(os.path.exists, filepath)]
 
 
-# def find_certain_show(showList, prodid):
-#     results = []
-#     if showList and prodid:
-#         results = filter(lambda x: int(x.prodid) == int(prodid), showList)
-#
-#     if 1 == len(results):
-#         return results[0]
-#     elif 1 < len(results):
-#         raise MultipleShowObjectsException()
-
-
 def find_show_by_id(
         show_id,  # type: Union[AnyStr, Dict[int, int], int]
         show_list=None,  # type: Optional[List[sickbeard.tv.TVShow]]
