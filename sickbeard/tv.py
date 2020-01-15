@@ -99,7 +99,7 @@ class TVidProdid(object):
         """
         self._tvid = None
         self._prodid = None
-        self._sid_int = None
+        self.sid_int = None
 
         if isinstance(tvid_prodid, dict) and 1 == len(tvid_prodid):
             try:
@@ -137,11 +137,11 @@ class TVidProdid(object):
         elif isinstance(tvid_prodid, integer_types):
             self._tvid = tvid_prodid & tvid_bitmask
             self._prodid = tvid_prodid >> prodid_bitshift
-            self._sid_int = tvid_prodid
+            self.sid_int = tvid_prodid
             return
 
         if None not in (self._prodid, self._tvid):
-            self._sid_int = self._prodid << prodid_bitshift | self._tvid
+            self.sid_int = self._prodid << prodid_bitshift | self._tvid
 
     def __call__(self, *args, **kwargs):
         return self._get(*args, **kwargs)
@@ -186,7 +186,7 @@ class TVidProdid(object):
     def _get(self, kind=None):
         if None is not kind:
             if self._checktype(kind, int):
-                return self._sid_int
+                return self.sid_int
             elif self._checktype(kind, dict):
                 return {self.tvid: self.prodid}
             elif self._checktype(kind, tuple):
@@ -212,7 +212,7 @@ class TVShow(TVShowBase):
 
         self._tvid = int(tvid)
         self._prodid = int(prodid)
-        self._sid_int = self.create_sid(self._tvid, self._prodid)
+        self.sid_int = self.create_sid(self._tvid, self._prodid)
         self._paused = 0
         self._mapped_ids = {}  # type: Dict
         self._not_found_count = None  # type: None or int
@@ -229,7 +229,7 @@ class TVShow(TVShowBase):
         # noinspection PyTypeChecker
         self.release_groups = None  # type: BlackAndWhiteList
 
-        show_obj = helpers.find_show_by_id(self._sid_int)
+        show_obj = helpers.find_show_by_id(self.sid_int)
         if None is not show_obj:
             raise exceptions_helper.MultipleShowObjectsException('Can\'t create a show if it already exists')
 
@@ -270,19 +270,15 @@ class TVShow(TVShowBase):
         # type: (...) -> AnyStr
         return TVidProdid({self._tvid: self._prodid})()
 
-    @property
-    def sid_int(self):
-        return self._sid_int
-
     @tvid_prodid.setter
     def tvid_prodid(self, val):
         tvid_prodid_obj = TVidProdid(val)
-        if getattr(self, 'tvid_prodid') != tvid_prodid_obj():
+        if getattr(self, 'tvid_prodid', None) != tvid_prodid_obj():
             self.tvid, self.prodid = tvid_prodid_obj.list
             self.dirty = True
         tvid_prodid_int = int(tvid_prodid_obj)
-        if getattr(self, '_sid_int') != tvid_prodid_int:
-            self._sid_int = tvid_prodid_int
+        if getattr(self, 'sid_int', None) != tvid_prodid_int:
+            self.sid_int = tvid_prodid_int
 
     def _helper_load_failed_db(self):
         if None is self._not_found_count or self._last_found_on_indexer == -1:
