@@ -8,9 +8,15 @@
 
 
 
+### 0.21.5 (2020-01-15 02:25:00 UTC)
+
+* Update Fuzzywuzzy 0.17.0 (778162c) to 0.17.0 (0cfb2c8)
+* Fix multi-episode .nfo files
+
+
 ### 0.21.4 (2020-01-12 17:40:00 UTC)
 
-* Change try to interity verify episode .nfo files even if tvshow.nfo can't be parsed
+* Change try to integrity verify episode .nfo files even if tvshow.nfo can't be parsed
 
 
 ### 0.21.3 (2020-01-12 17:11:00 UTC)
