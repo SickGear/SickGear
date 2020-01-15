@@ -672,10 +672,22 @@ class TVShow(TVShowBase):
             ' AND location != ""',
             [self.tvid, self.prodid])
 
+        processed = []
         for cur_result in sql_result:
+            if (cur_result['season'], cur_result['episode']) in processed:
+                continue
             logger.log('%s: Retrieving/creating episode %sx%s'
                        % (self.tvid_prodid, cur_result['season'], cur_result['episode']), logger.DEBUG)
             ep_obj = self.get_episode(cur_result['season'], cur_result['episode'])
+            if not ep_obj.related_ep_obj:
+                processed += [(cur_result['season'], cur_result['episode'])]
+            else:
+                logger.log('%s: Found related to %sx%s episode(s)... %s'
+                           % (self.tvid_prodid, cur_result['season'], cur_result['episode'],
+                              ', '.join(['%sx%s' % (x.season, x.episode) for x in ep_obj.related_ep_obj])),
+                           logger.DEBUG)
+                processed += list(set([(cur_result['season'], cur_result['episode'])] +
+                                      [(x.season, x.episode) for x in ep_obj.related_ep_obj]))
             ep_obj.create_meta_files(force)
 
     def update_metadata(self):
