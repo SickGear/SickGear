@@ -3,6 +3,7 @@
 * Fix creating show list when there is no list at the cycle of backlog search spread
 * Change improve Python performance of handling core objects
 * Change improve performance for find_show_by_id
+* Change episode overview, move pulldown from 'Set/Failed' to 'Override/Failed'
 
 
 [develop changelog]
