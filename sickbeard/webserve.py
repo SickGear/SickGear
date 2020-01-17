@@ -4850,8 +4850,9 @@ class Manage(MainHandler):
                     to_change[tvid_prodid].setdefault(to, [])
                     to_change[tvid_prodid][to] += [what]
 
-        if WANTED == int(wanted_status):
-            new_status = WANTED
+        wanted_status = int(wanted_status)
+        if wanted_status in (FAILED, WANTED):
+            new_status = wanted_status
 
         changes = {}
         for tvid_prodid, to_what in iteritems(to_change):
