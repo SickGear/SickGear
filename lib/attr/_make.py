@@ -74,7 +74,7 @@ def attrib(
     default=NOTHING,
     validator=None,
     repr=True,
-    cmp=True,
+    cmp=None,
     hash=None,
     init=True,
     metadata=None,
@@ -82,6 +82,8 @@ def attrib(
     converter=None,
     factory=None,
     kw_only=False,
+    eq=None,
+    order=None,
 ):
     """
     Create a new attribute on a class.
@@ -89,30 +91,30 @@ def attrib(
     ..  warning::
 
         Does *not* do anything unless the class is also decorated with
-        :func:`attr.s`!
+        `attr.s`!
 
     :param default: A value that is used if an ``attrs``-generated ``__init__``
         is used and no value is passed while instantiating or the attribute is
         excluded using ``init=False``.
 
-        If the value is an instance of :class:`Factory`, its callable will be
+        If the value is an instance of `Factory`, its callable will be
         used to construct a new value (useful for mutable data types like lists
         or dicts).
 
         If a default is not set (or set manually to ``attr.NOTHING``), a value
-        *must* be supplied when instantiating; otherwise a :exc:`TypeError`
+        *must* be supplied when instantiating; otherwise a `TypeError`
         will be raised.
 
         The default can also be set using decorator notation as shown below.
 
-    :type default: Any value.
+    :type default: Any value
 
     :param callable factory: Syntactic sugar for
         ``default=attr.Factory(callable)``.
 
-    :param validator: :func:`callable` that is called by ``attrs``-generated
+    :param validator: `callable` that is called by ``attrs``-generated
         ``__init__`` methods after the instance has been initialized.  They
-        receive the initialized instance, the :class:`Attribute`, and the
+        receive the initialized instance, the `Attribute`, and the
         passed value.
 
         The return value is *not* inspected so the validator has to throw an
@@ -122,18 +124,29 @@ def attrib(
         all pass.
 
         Validators can be globally disabled and re-enabled using
-        :func:`get_run_validators`.
+        `get_run_validators`.
 
         The validator can also be set using decorator notation as shown below.
 
     :type validator: ``callable`` or a ``list`` of ``callable``\\ s.
 
-    :param bool repr: Include this attribute in the generated ``__repr__``
-        method.
-    :param bool cmp: Include this attribute in the generated comparison methods
-        (``__eq__`` et al).
+    :param repr: Include this attribute in the generated ``__repr__``
+        method. If ``True``, include the attribute; if ``False``, omit it. By
+        default, the built-in ``repr()`` function is used. To override how the
+        attribute value is formatted, pass a ``callable`` that takes a single
+        value and returns a string. Note that the resulting string is used
+        as-is, i.e. it will be used directly *instead* of calling ``repr()``
+        (the default).
+    :type repr: a ``bool`` or a ``callable`` to use a custom function.
+    :param bool eq: If ``True`` (default), include this attribute in the
+        generated ``__eq__`` and ``__ne__`` methods that check two instances
+        for equality.
+    :param bool order: If ``True`` (default), include this attributes in the
+        generated ``__lt__``, ``__le__``, ``__gt__`` and ``__ge__`` methods.
+    :param bool cmp: Setting to ``True`` is equivalent to setting ``eq=True,
+        order=True``. Deprecated in favor of *eq* and *order*.
     :param hash: Include this attribute in the generated ``__hash__``
-        method.  If ``None`` (default), mirror *cmp*'s value.  This is the
+        method.  If ``None`` (default), mirror *eq*'s value.  This is the
         correct behavior according the Python spec.  Setting this value to
         anything else than ``None`` is *discouraged*.
     :type hash: ``bool`` or ``None``
@@ -141,13 +154,13 @@ def attrib(
         method.  It is possible to set this to ``False`` and set a default
         value.  In that case this attributed is unconditionally initialized
         with the specified default value or factory.
-    :param callable converter: :func:`callable` that is called by
-        ``attrs``-generated ``__init__`` methods to converter attribute's value
+    :param callable converter: `callable` that is called by
+        ``attrs``-generated ``__init__`` methods to convert attribute's value
         to the desired format.  It is given the passed-in value, and the
         returned value will be used as the new value of the attribute.  The
         value is converted before being passed to the validator, if any.
     :param metadata: An arbitrary mapping, to be used by third-party
-        components.  See :ref:`extending_metadata`.
+        components.  See `extending_metadata`.
     :param type: The type of the attribute.  In Python 3.6 or greater, the
         preferred method to specify the type is using a variable annotation
         (see `PEP 526 <https://www.python.org/dev/peps/pep-0526/>`_).
@@ -157,7 +170,7 @@ def attrib(
 
         Please note that ``attrs`` doesn't do anything with this metadata by
         itself. You can use it as part of your own code or for
-        :doc:`static type checking <types>`.
+        `static type checking <types>`.
     :param kw_only: Make this attribute keyword-only (Python 3+)
         in the generated ``__init__`` (if ``init`` is ``False``, this
         parameter is ignored).
@@ -166,7 +179,7 @@ def attrib(
     .. versionadded:: 16.3.0 *metadata*
     .. versionchanged:: 17.1.0 *validator* can be a ``list`` now.
     .. versionchanged:: 17.1.0
-       *hash* is ``None`` and therefore mirrors *cmp* by default.
+       *hash* is ``None`` and therefore mirrors *eq* by default.
     .. versionadded:: 17.3.0 *type*
     .. deprecated:: 17.4.0 *convert*
     .. versionadded:: 17.4.0 *converter* as a replacement for the deprecated
@@ -175,7 +188,12 @@ def attrib(
        ``factory=f`` is syntactic sugar for ``default=attr.Factory(f)``.
     .. versionadded:: 18.2.0 *kw_only*
     .. versionchanged:: 19.2.0 *convert* keyword argument removed
+    .. versionchanged:: 19.2.0 *repr* also accepts a custom callable.
+    .. deprecated:: 19.2.0 *cmp* Removal on or after 2021-06-01.
+    .. versionadded:: 19.2.0 *eq* and *order*
     """
+    eq, order = _determine_eq_order(cmp, eq, order)
+
     if hash is not None and hash is not True and hash is not False:
         raise TypeError(
             "Invalid value for hash.  Must be True, False, or None."
@@ -198,13 +216,15 @@ def attrib(
         default=default,
         validator=validator,
         repr=repr,
-        cmp=cmp,
+        cmp=None,
         hash=hash,
         init=init,
         converter=converter,
         metadata=metadata,
         type=type,
         kw_only=kw_only,
+        eq=eq,
+        order=order,
     )
 
 
@@ -489,7 +509,7 @@ class _ClassBuilder(object):
             for name in self._attr_names:
                 if (
                     name not in base_names
-                    and getattr(cls, name, _sentinel) != _sentinel
+                    and getattr(cls, name, _sentinel) is not _sentinel
                 ):
                     try:
                         delattr(cls, name)
@@ -517,11 +537,19 @@ class _ClassBuilder(object):
                     "See https://github.com/python-attrs/attrs/issues/494 ."
                 )
 
-            def cache_hash_set_state(chss_self, _):
-                # clear hash code cache
-                setattr(chss_self, _hash_cache_field, None)
+            # Clears the cached hash state on serialization; for frozen
+            # classes we need to bypass the class's setattr method.
+            if self._frozen:
 
-            setattr(cls, "__setstate__", cache_hash_set_state)
+                def cache_hash_set_state(chss_self, _):
+                    object.__setattr__(chss_self, _hash_cache_field, None)
+
+            else:
+
+                def cache_hash_set_state(chss_self, _):
+                    setattr(chss_self, _hash_cache_field, None)
+
+            cls.__setstate__ = cache_hash_set_state
 
         return cls
 
@@ -672,14 +700,22 @@ class _ClassBuilder(object):
 
         return self
 
-    def add_cmp(self):
+    def add_eq(self):
         cd = self._cls_dict
 
-        cd["__eq__"], cd["__ne__"], cd["__lt__"], cd["__le__"], cd[
-            "__gt__"
-        ], cd["__ge__"] = (
+        cd["__eq__"], cd["__ne__"] = (
             self._add_method_dunders(meth)
-            for meth in _make_cmp(self._cls, self._attrs)
+            for meth in _make_eq(self._cls, self._attrs)
+        )
+
+        return self
+
+    def add_order(self):
+        cd = self._cls_dict
+
+        cd["__lt__"], cd["__le__"], cd["__gt__"], cd["__ge__"] = (
+            self._add_method_dunders(meth)
+            for meth in _make_order(self._cls, self._attrs)
         )
 
         return self
@@ -703,12 +739,45 @@ class _ClassBuilder(object):
         return method
 
 
+_CMP_DEPRECATION = (
+    "The usage of `cmp` is deprecated and will be removed on or after "
+    "2021-06-01.  Please use `eq` and `order` instead."
+)
+
+
+def _determine_eq_order(cmp, eq, order):
+    """
+    Validate the combination of *cmp*, *eq*, and *order*. Derive the effective
+    values of eq and order.
+    """
+    if cmp is not None and any((eq is not None, order is not None)):
+        raise ValueError("Don't mix `cmp` with `eq' and `order`.")
+
+    # cmp takes precedence due to bw-compatibility.
+    if cmp is not None:
+        warnings.warn(_CMP_DEPRECATION, DeprecationWarning, stacklevel=3)
+
+        return cmp, cmp
+
+    # If left None, equality is on and ordering mirrors equality.
+    if eq is None:
+        eq = True
+
+    if order is None:
+        order = eq
+
+    if eq is False and order is True:
+        raise ValueError("`order` can only be True if `eq` is True too.")
+
+    return eq, order
+
+
 def attrs(
     maybe_cls=None,
     these=None,
     repr_ns=None,
     repr=True,
-    cmp=True,
+    cmp=None,
     hash=None,
     init=True,
     slots=False,
@@ -719,13 +788,15 @@ def attrs(
     kw_only=False,
     cache_hash=False,
     auto_exc=False,
+    eq=None,
+    order=None,
 ):
     r"""
     A class decorator that adds `dunder
     <https://wiki.python.org/moin/DunderAlias>`_\ -methods according to the
-    specified attributes using :func:`attr.ib` or the *these* argument.
+    specified attributes using `attr.ib` or the *these* argument.
 
-    :param these: A dictionary of name to :func:`attr.ib` mappings.  This is
+    :param these: A dictionary of name to `attr.ib` mappings.  This is
         useful to avoid the definition of your attributes within the class body
         because you can't (e.g. if you want to add ``__repr__`` methods to
         Django models) or don't want to.
@@ -733,12 +804,12 @@ def attrs(
         If *these* is not ``None``, ``attrs`` will *not* search the class body
         for attributes and will *not* remove any attributes from it.
 
-        If *these* is an ordered dict (:class:`dict` on Python 3.6+,
-        :class:`collections.OrderedDict` otherwise), the order is deduced from
+        If *these* is an ordered dict (`dict` on Python 3.6+,
+        `collections.OrderedDict` otherwise), the order is deduced from
         the order of the attributes inside *these*.  Otherwise the order
         of the definition of the attributes is used.
 
-    :type these: :class:`dict` of :class:`str` to :func:`attr.ib`
+    :type these: `dict` of `str` to `attr.ib`
 
     :param str repr_ns: When using nested classes, there's no way in Python 2
         to automatically detect that.  Therefore it's possible to set the
@@ -747,18 +818,29 @@ def attrs(
         representation of ``attrs`` attributes..
     :param bool str: Create a ``__str__`` method that is identical to
         ``__repr__``.  This is usually not necessary except for
-        :class:`Exception`\ s.
-    :param bool cmp: Create ``__eq__``, ``__ne__``, ``__lt__``, ``__le__``,
-        ``__gt__``, and ``__ge__`` methods that compare the class as if it were
-        a tuple of its ``attrs`` attributes.  But the attributes are *only*
-        compared, if the types of both classes are *identical*!
+        `Exception`\ s.
+    :param bool eq: If ``True`` or ``None`` (default), add ``__eq__`` and
+        ``__ne__`` methods that check two instances for equality.
+
+        They compare the instances as if they were tuples of their ``attrs``
+        attributes if and only if the types of both classes are *identical*!
+    :type eq: `bool` or `None`
+    :param bool order: If ``True``, add ``__lt__``, ``__le__``, ``__gt__``,
+        and ``__ge__`` methods that behave like *eq* above and allow instances
+        to be ordered. If ``None`` (default) mirror value of *eq*.
+    :type order: `bool` or `None`
+    :param cmp: Setting to ``True`` is equivalent to setting ``eq=True,
+        order=True``. Deprecated in favor of *eq* and *order*, has precedence
+        over them for backward-compatibility though. Must not be mixed with
+        *eq* or *order*.
+    :type cmp: `bool` or `None`
     :param hash: If ``None`` (default), the ``__hash__`` method is generated
-        according how *cmp* and *frozen* are set.
+        according how *eq* and *frozen* are set.
 
         1. If *both* are True, ``attrs`` will generate a ``__hash__`` for you.
-        2. If *cmp* is True and *frozen* is False, ``__hash__`` will be set to
+        2. If *eq* is True and *frozen* is False, ``__hash__`` will be set to
            None, marking it unhashable (which it is).
-        3. If *cmp* is False, ``__hash__`` will be left untouched meaning the
+        3. If *eq* is False, ``__hash__`` will be left untouched meaning the
            ``__hash__`` method of the base class will be used (if base class is
            ``object``, this means it will fall back to id-based hashing.).
 
@@ -767,29 +849,29 @@ def attrs(
         didn't freeze it programmatically) by passing ``True`` or not.  Both of
         these cases are rather special and should be used carefully.
 
-        See the `Python documentation \
-        <https://docs.python.org/3/reference/datamodel.html#object.__hash__>`_
-        and the `GitHub issue that led to the default behavior \
-        <https://github.com/python-attrs/attrs/issues/136>`_ for more details.
+        See our documentation on `hashing`, Python's documentation on
+        `object.__hash__`, and the `GitHub issue that led to the default \
+        behavior <https://github.com/python-attrs/attrs/issues/136>`_ for more
+        details.
     :type hash: ``bool`` or ``None``
     :param bool init: Create a ``__init__`` method that initializes the
         ``attrs`` attributes.  Leading underscores are stripped for the
         argument name.  If a ``__attrs_post_init__`` method exists on the
         class, it will be called after the class is fully initialized.
-    :param bool slots: Create a slots_-style class that's more
-        memory-efficient.  See :ref:`slots` for further ramifications.
+    :param bool slots: Create a `slotted class <slotted classes>` that's more
+        memory-efficient.
     :param bool frozen: Make instances immutable after initialization.  If
         someone attempts to modify a frozen instance,
-        :exc:`attr.exceptions.FrozenInstanceError` is raised.
+        `attr.exceptions.FrozenInstanceError` is raised.
 
         Please note:
 
             1. This is achieved by installing a custom ``__setattr__`` method
-               on your class so you can't implement an own one.
+               on your class, so you can't implement your own.
 
             2. True immutability is impossible in Python.
 
-            3. This *does* have a minor a runtime performance :ref:`impact
+            3. This *does* have a minor a runtime performance `impact
                <how-frozen>` when initializing new instances.  In other words:
                ``__init__`` is slightly slower with ``frozen=True``.
 
@@ -798,24 +880,24 @@ def attrs(
                circumvent that limitation by using
                ``object.__setattr__(self, "attribute_name", value)``.
 
-        ..  _slots: https://docs.python.org/3/reference/datamodel.html#slots
     :param bool weakref_slot: Make instances weak-referenceable.  This has no
         effect unless ``slots`` is also enabled.
     :param bool auto_attribs: If True, collect `PEP 526`_-annotated attributes
         (Python 3.6 and later only) from the class body.
 
         In this case, you **must** annotate every field.  If ``attrs``
-        encounters a field that is set to an :func:`attr.ib` but lacks a type
-        annotation, an :exc:`attr.exceptions.UnannotatedAttributeError` is
+        encounters a field that is set to an `attr.ib` but lacks a type
+        annotation, an `attr.exceptions.UnannotatedAttributeError` is
         raised.  Use ``field_name: typing.Any = attr.ib(...)`` if you don't
         want to set a type.
 
         If you assign a value to those attributes (e.g. ``x: int = 42``), that
         value becomes the default value like if it were passed using
-        ``attr.ib(default=42)``.  Passing an instance of :class:`Factory` also
+        ``attr.ib(default=42)``.  Passing an instance of `Factory` also
         works as expected.
 
-        Attributes annotated as :data:`typing.ClassVar` are **ignored**.
+        Attributes annotated as `typing.ClassVar`, and attributes that are
+        neither annotated nor set to an `attr.ib` are **ignored**.
 
         .. _`PEP 526`: https://www.python.org/dev/peps/pep-0526/
     :param bool kw_only: Make all attributes keyword-only (Python 3+)
@@ -828,15 +910,15 @@ def attrs(
         fields involved in hash code computation or mutations of the objects
         those fields point to after object creation.  If such changes occur,
         the behavior of the object's hash code is undefined.
-    :param bool auto_exc: If the class subclasses :class:`BaseException`
+    :param bool auto_exc: If the class subclasses `BaseException`
         (which implicitly includes any subclass of any exception), the
         following happens to behave like a well-behaved Python exceptions
         class:
 
-        - the values for *cmp* and *hash* are ignored and the instances compare
-          and hash by the instance's ids (N.B. ``attrs`` will *not* remove
-          existing implementations of ``__hash__`` or the equality methods. It
-          just won't add own ones.),
+        - the values for *eq*, *order*, and *hash* are ignored and the
+          instances compare and hash by the instance's ids (N.B. ``attrs`` will
+          *not* remove existing implementations of ``__hash__`` or the equality
+          methods. It just won't add own ones.),
         - all attributes that are either passed into ``__init__`` or have a
           default value are additionally available as a tuple in the ``args``
           attribute,
@@ -855,13 +937,19 @@ def attrs(
     .. versionadded:: 18.2.0 *weakref_slot*
     .. deprecated:: 18.2.0
        ``__lt__``, ``__le__``, ``__gt__``, and ``__ge__`` now raise a
-       :class:`DeprecationWarning` if the classes compared are subclasses of
+       `DeprecationWarning` if the classes compared are subclasses of
        each other. ``__eq`` and ``__ne__`` never tried to compared subclasses
        to each other.
+    .. versionchanged:: 19.2.0
+       ``__lt__``, ``__le__``, ``__gt__``, and ``__ge__`` now do not consider
+       subclasses comparable anymore.
     .. versionadded:: 18.2.0 *kw_only*
     .. versionadded:: 18.2.0 *cache_hash*
     .. versionadded:: 19.1.0 *auto_exc*
+    .. deprecated:: 19.2.0 *cmp* Removal on or after 2021-06-01.
+    .. versionadded:: 19.2.0 *eq* and *order*
     """
+    eq, order = _determine_eq_order(cmp, eq, order)
 
     def wrap(cls):
 
@@ -886,15 +974,17 @@ def attrs(
             builder.add_repr(repr_ns)
         if str is True:
             builder.add_str()
-        if cmp is True and not is_exc:
-            builder.add_cmp()
+        if eq is True and not is_exc:
+            builder.add_eq()
+        if order is True and not is_exc:
+            builder.add_order()
 
         if hash is not True and hash is not False and hash is not None:
             # Can't use `hash in` because 1 == True for example.
             raise TypeError(
                 "Invalid value for hash.  Must be True, False, or None."
             )
-        elif hash is False or (hash is None and cmp is False) or is_exc:
+        elif hash is False or (hash is None and eq is False) or is_exc:
             # Don't do anything. Should fall back to __object__'s __hash__
             # which is by id.
             if cache_hash:
@@ -903,7 +993,7 @@ def attrs(
                     " hashing must be either explicitly or implicitly "
                     "enabled."
                 )
-        elif hash is True or (hash is None and cmp is True and frozen is True):
+        elif hash is True or (hash is None and eq is True and frozen is True):
             # Build a __hash__ if told so, or if it's safe.
             builder.add_hash()
         else:
@@ -1005,9 +1095,7 @@ def _generate_unique_filename(cls, func_name):
 
 def _make_hash(cls, attrs, frozen, cache_hash):
     attrs = tuple(
-        a
-        for a in attrs
-        if a.hash is True or (a.hash is None and a.cmp is True)
+        a for a in attrs if a.hash is True or (a.hash is None and a.eq is True)
     )
 
     tab = "        "
@@ -1085,14 +1173,8 @@ def __ne__(self, other):
     return not result
 
 
-WARNING_CMP_ISINSTANCE = (
-    "Comparision of subclasses using __%s__ is deprecated and will be removed "
-    "in 2019."
-)
-
-
-def _make_cmp(cls, attrs):
-    attrs = [a for a in attrs if a.cmp]
+def _make_eq(cls, attrs):
+    attrs = [a for a in attrs if a.eq]
 
     unique_filename = _generate_unique_filename(cls, "eq")
     lines = [
@@ -1127,8 +1209,11 @@ def _make_cmp(cls, attrs):
         script.splitlines(True),
         unique_filename,
     )
-    eq = locs["__eq__"]
-    ne = __ne__
+    return locs["__eq__"], __ne__
+
+
+def _make_order(cls, attrs):
+    attrs = [a for a in attrs if a.order]
 
     def attrs_to_tuple(obj):
         """
@@ -1140,67 +1225,49 @@ def _make_cmp(cls, attrs):
         """
         Automatically created by attrs.
         """
-        if isinstance(other, self.__class__):
-            if other.__class__ is not self.__class__:
-                warnings.warn(
-                    WARNING_CMP_ISINSTANCE % ("lt",), DeprecationWarning
-                )
+        if other.__class__ is self.__class__:
             return attrs_to_tuple(self) < attrs_to_tuple(other)
-        else:
-            return NotImplemented
+
+        return NotImplemented
 
     def __le__(self, other):
         """
         Automatically created by attrs.
         """
-        if isinstance(other, self.__class__):
-            if other.__class__ is not self.__class__:
-                warnings.warn(
-                    WARNING_CMP_ISINSTANCE % ("le",), DeprecationWarning
-                )
+        if other.__class__ is self.__class__:
             return attrs_to_tuple(self) <= attrs_to_tuple(other)
-        else:
-            return NotImplemented
+
+        return NotImplemented
 
     def __gt__(self, other):
         """
         Automatically created by attrs.
         """
-        if isinstance(other, self.__class__):
-            if other.__class__ is not self.__class__:
-                warnings.warn(
-                    WARNING_CMP_ISINSTANCE % ("gt",), DeprecationWarning
-                )
+        if other.__class__ is self.__class__:
             return attrs_to_tuple(self) > attrs_to_tuple(other)
-        else:
-            return NotImplemented
+
+        return NotImplemented
 
     def __ge__(self, other):
         """
         Automatically created by attrs.
         """
-        if isinstance(other, self.__class__):
-            if other.__class__ is not self.__class__:
-                warnings.warn(
-                    WARNING_CMP_ISINSTANCE % ("ge",), DeprecationWarning
-                )
+        if other.__class__ is self.__class__:
             return attrs_to_tuple(self) >= attrs_to_tuple(other)
-        else:
-            return NotImplemented
 
-    return eq, ne, __lt__, __le__, __gt__, __ge__
+        return NotImplemented
+
+    return __lt__, __le__, __gt__, __ge__
 
 
-def _add_cmp(cls, attrs=None):
+def _add_eq(cls, attrs=None):
     """
-    Add comparison methods to *cls*.
+    Add equality methods to *cls* with *attrs*.
     """
     if attrs is None:
         attrs = cls.__attrs_attrs__
 
-    cls.__eq__, cls.__ne__, cls.__lt__, cls.__le__, cls.__gt__, cls.__ge__ = _make_cmp(  # noqa
-        cls, attrs
-    )
+    cls.__eq__, cls.__ne__ = _make_eq(cls, attrs)
 
     return cls
 
@@ -1210,9 +1277,17 @@ _already_repring = threading.local()
 
 def _make_repr(attrs, ns):
     """
-    Make a repr method for *attr_names* adding *ns* to the full name.
+    Make a repr method that includes relevant *attrs*, adding *ns* to the full
+    name.
     """
-    attr_names = tuple(a.name for a in attrs if a.repr)
+
+    # Figure out which attributes to include, and which function to use to
+    # format them. The a.repr value can be either bool or a custom callable.
+    attr_names_with_reprs = tuple(
+        (a.name, repr if a.repr is True else a.repr)
+        for a in attrs
+        if a.repr is not False
+    )
 
     def __repr__(self):
         """
@@ -1244,12 +1319,14 @@ def _make_repr(attrs, ns):
         try:
             result = [class_name, "("]
             first = True
-            for name in attr_names:
+            for name, attr_repr in attr_names_with_reprs:
                 if first:
                     first = False
                 else:
                     result.append(", ")
-                result.extend((name, "=", repr(getattr(self, name, NOTHING))))
+                result.extend(
+                    (name, "=", attr_repr(getattr(self, name, NOTHING)))
+                )
             return "".join(result) + ")"
         finally:
             working_set.remove(id(self))
@@ -1318,7 +1395,7 @@ def fields(cls):
     :raise attr.exceptions.NotAnAttrsClassError: If *cls* is not an ``attrs``
         class.
 
-    :rtype: tuple (with name accessors) of :class:`attr.Attribute`
+    :rtype: tuple (with name accessors) of `attr.Attribute`
 
     ..  versionchanged:: 16.2.0 Returned tuple allows accessing the fields
         by name.
@@ -1345,7 +1422,7 @@ def fields_dict(cls):
         class.
 
     :rtype: an ordered dict where keys are attribute names and values are
-        :class:`attr.Attribute`\\ s. This will be a :class:`dict` if it's
+        `attr.Attribute`\\ s. This will be a `dict` if it's
         naturally ordered like on Python 3.6+ or an
         :class:`~collections.OrderedDict` otherwise.
 
@@ -1675,10 +1752,10 @@ class Attribute(object):
 
     :attribute name: The name of the attribute.
 
-    Plus *all* arguments of :func:`attr.ib` (except for `factory` which is only
-    syntactic sugar for ``default=Factory(...)``.
+    Plus *all* arguments of `attr.ib` (except for ``factory``
+    which is only syntactic sugar for ``default=Factory(...)``.
 
-    For the version history of the fields, see :func:`attr.ib`.
+    For the version history of the fields, see `attr.ib`.
     """
 
     __slots__ = (
@@ -1686,7 +1763,8 @@ class Attribute(object):
         "default",
         "validator",
         "repr",
-        "cmp",
+        "eq",
+        "order",
         "hash",
         "init",
         "metadata",
@@ -1701,14 +1779,18 @@ class Attribute(object):
         default,
         validator,
         repr,
-        cmp,
+        cmp,  # XXX: unused, remove along with other cmp code.
         hash,
         init,
         metadata=None,
         type=None,
         converter=None,
         kw_only=False,
+        eq=None,
+        order=None,
     ):
+        eq, order = _determine_eq_order(cmp, eq, order)
+
         # Cache this descriptor here to speed things up later.
         bound_setattr = _obj_setattr.__get__(self, Attribute)
 
@@ -1718,7 +1800,8 @@ class Attribute(object):
         bound_setattr("default", default)
         bound_setattr("validator", validator)
         bound_setattr("repr", repr)
-        bound_setattr("cmp", cmp)
+        bound_setattr("eq", eq)
+        bound_setattr("order", order)
         bound_setattr("hash", hash)
         bound_setattr("init", init)
         bound_setattr("converter", converter)
@@ -1761,8 +1844,18 @@ class Attribute(object):
             validator=ca._validator,
             default=ca._default,
             type=type,
+            cmp=None,
             **inst_dict
         )
+
+    @property
+    def cmp(self):
+        """
+        Simulate the presence of a cmp attribute and warn.
+        """
+        warnings.warn(_CMP_DEPRECATION, DeprecationWarning, stacklevel=2)
+
+        return self.eq and self.order
 
     # Don't use attr.assoc since fields(Attribute) doesn't work
     def _assoc(self, **changes):
@@ -1811,7 +1904,9 @@ _a = [
         default=NOTHING,
         validator=None,
         repr=True,
-        cmp=True,
+        cmp=None,
+        eq=True,
+        order=False,
         hash=(name != "metadata"),
         init=True,
     )
@@ -1819,7 +1914,7 @@ _a = [
 ]
 
 Attribute = _add_hash(
-    _add_cmp(_add_repr(Attribute, attrs=_a), attrs=_a),
+    _add_eq(_add_repr(Attribute, attrs=_a), attrs=_a),
     attrs=[a for a in _a if a.hash],
 )
 
@@ -1837,7 +1932,8 @@ class _CountingAttr(object):
         "counter",
         "_default",
         "repr",
-        "cmp",
+        "eq",
+        "order",
         "hash",
         "init",
         "metadata",
@@ -1852,22 +1948,34 @@ class _CountingAttr(object):
             default=NOTHING,
             validator=None,
             repr=True,
-            cmp=True,
+            cmp=None,
             hash=True,
             init=True,
             kw_only=False,
+            eq=True,
+            order=False,
         )
-        for name in ("counter", "_default", "repr", "cmp", "hash", "init")
+        for name in (
+            "counter",
+            "_default",
+            "repr",
+            "eq",
+            "order",
+            "hash",
+            "init",
+        )
     ) + (
         Attribute(
             name="metadata",
             default=None,
             validator=None,
             repr=True,
-            cmp=True,
+            cmp=None,
             hash=False,
             init=True,
             kw_only=False,
+            eq=True,
+            order=False,
         ),
     )
     cls_counter = 0
@@ -1877,13 +1985,15 @@ class _CountingAttr(object):
         default,
         validator,
         repr,
-        cmp,
+        cmp,  # XXX: unused, remove along with cmp
         hash,
         init,
         converter,
         metadata,
         type,
         kw_only,
+        eq,
+        order,
     ):
         _CountingAttr.cls_counter += 1
         self.counter = _CountingAttr.cls_counter
@@ -1894,7 +2004,8 @@ class _CountingAttr(object):
         else:
             self._validator = validator
         self.repr = repr
-        self.cmp = cmp
+        self.eq = eq
+        self.order = order
         self.hash = hash
         self.init = init
         self.converter = converter
@@ -1934,7 +2045,7 @@ class _CountingAttr(object):
         return meth
 
 
-_CountingAttr = _add_cmp(_add_repr(_CountingAttr))
+_CountingAttr = _add_eq(_add_repr(_CountingAttr))
 
 
 @attrs(slots=True, init=False, hash=True)
@@ -1942,7 +2053,7 @@ class Factory(object):
     """
     Stores a factory callable.
 
-    If passed as the default value to :func:`attr.ib`, the factory is used to
+    If passed as the default value to `attr.ib`, the factory is used to
     generate a new value.
 
     :param callable factory: A callable that takes either none or exactly one
@@ -1975,15 +2086,15 @@ def make_class(name, attrs, bases=(object,), **attributes_arguments):
     :param attrs: A list of names or a dictionary of mappings of names to
         attributes.
 
-        If *attrs* is a list or an ordered dict (:class:`dict` on Python 3.6+,
-        :class:`collections.OrderedDict` otherwise), the order is deduced from
+        If *attrs* is a list or an ordered dict (`dict` on Python 3.6+,
+        `collections.OrderedDict` otherwise), the order is deduced from
         the order of the names or attributes inside *attrs*.  Otherwise the
         order of the definition of the attributes is used.
-    :type attrs: :class:`list` or :class:`dict`
+    :type attrs: `list` or `dict`
 
     :param tuple bases: Classes that the new class will subclass.
 
-    :param attributes_arguments: Passed unmodified to :func:`attr.s`.
+    :param attributes_arguments: Passed unmodified to `attr.s`.
 
     :return: A new class with *attrs*.
     :rtype: type
@@ -2014,6 +2125,15 @@ def make_class(name, attrs, bases=(object,), **attributes_arguments):
         )
     except (AttributeError, ValueError):
         pass
+
+    # We do it here for proper warnings with meaningful stacklevel.
+    cmp = attributes_arguments.pop("cmp", None)
+    (
+        attributes_arguments["eq"],
+        attributes_arguments["order"],
+    ) = _determine_eq_order(
+        cmp, attributes_arguments.get("eq"), attributes_arguments.get("order")
+    )
 
     return _attrs(these=cls_dict, **attributes_arguments)(type_)
 
