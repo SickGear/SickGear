@@ -424,14 +424,14 @@ class RequestHandler(object):
     def get_argument(self, name: str, default: str, strip: bool = True) -> str:
         pass
 
-    @overload  # noqa: F811
-    def get_argument(
+    @overload
+    def get_argument(  # noqa: F811
         self, name: str, default: _ArgDefaultMarker = _ARG_DEFAULT, strip: bool = True
     ) -> str:
         pass
 
-    @overload  # noqa: F811
-    def get_argument(
+    @overload
+    def get_argument(  # noqa: F811
         self, name: str, default: None, strip: bool = True
     ) -> Optional[str]:
         pass
@@ -624,7 +624,9 @@ class RequestHandler(object):
             # Don't let us accidentally inject bad stuff
             raise ValueError("Invalid cookie %r: %r" % (name, value))
         if not hasattr(self, "_new_cookie"):
-            self._new_cookie = http.cookies.SimpleCookie()
+            self._new_cookie = (
+                http.cookies.SimpleCookie()
+            )  # type: http.cookies.SimpleCookie
         if name in self._new_cookie:
             del self._new_cookie[name]
         self._new_cookie[name] = value
@@ -1070,7 +1072,11 @@ class RequestHandler(object):
             self._headers_written = True
             for transform in self._transforms:
                 assert chunk is not None
-                self._status_code, self._headers, chunk = transform.transform_first_chunk(
+                (
+                    self._status_code,
+                    self._headers,
+                    chunk,
+                ) = transform.transform_first_chunk(
                     self._status_code, self._headers, chunk, include_footers
                 )
             # Ignore the chunk and only write the headers for HEAD requests
@@ -1132,13 +1138,11 @@ class RequestHandler(object):
                 if self.check_etag_header():
                     self._write_buffer = []
                     self.set_status(304)
-            if self._status_code in (204, 304) or (
-                self._status_code >= 100 and self._status_code < 200
-            ):
+            if self._status_code in (204, 304) or (100 <= self._status_code < 200):
                 assert not self._write_buffer, (
                     "Cannot send body with %s" % self._status_code
                 )
-                self._clear_headers_for_304()
+                self._clear_representation_headers()
             elif "Content-Length" not in self._headers:
                 content_length = sum(len(part) for part in self._write_buffer)
                 self.set_header("Content-Length", content_length)
@@ -1782,11 +1786,11 @@ class RequestHandler(object):
                 args = [value.status_code, self._request_summary()] + list(value.args)
                 gen_log.warning(format, *args)
         else:
-            app_log.error(  # type: ignore
+            app_log.error(
                 "Uncaught exception %s\n%r",
                 self._request_summary(),
                 self.request,
-                exc_info=(typ, value, tb),
+                exc_info=(typ, value, tb),  # type: ignore
             )
 
     def _ui_module(self, name: str, module: Type["UIModule"]) -> Callable[..., str]:
@@ -1803,21 +1807,13 @@ class RequestHandler(object):
     def _ui_method(self, method: Callable[..., str]) -> Callable[..., str]:
         return lambda *args, **kwargs: method(self, *args, **kwargs)
 
-    def _clear_headers_for_304(self) -> None:
-        # 304 responses should not contain entity headers (defined in
-        # http://www.w3.org/Protocols/rfc2616/rfc2616-sec7.html#sec7.1)
+    def _clear_representation_headers(self) -> None:
+        # 304 responses should not contain representation metadata
+        # headers (defined in
+        # https://tools.ietf.org/html/rfc7231#section-3.1)
         # not explicitly allowed by
-        # http://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html#sec10.3.5
-        headers = [
-            "Allow",
-            "Content-Encoding",
-            "Content-Language",
-            "Content-Length",
-            "Content-MD5",
-            "Content-Range",
-            "Content-Type",
-            "Last-Modified",
-        ]
+        # https://tools.ietf.org/html/rfc7232#section-4.1
+        headers = ["Content-Encoding", "Content-Language", "Content-Type"]
         for h in headers:
             self.clear_header(h)
 
@@ -1933,8 +1929,8 @@ class _ApplicationRouter(ReversibleRuleRouter):
         rule = super(_ApplicationRouter, self).process_rule(rule)
 
         if isinstance(rule.target, (list, tuple)):
-            rule.target = _ApplicationRouter(  # type: ignore
-                self.application, rule.target
+            rule.target = _ApplicationRouter(
+                self.application, rule.target  # type: ignore
             )
 
         return rule
@@ -2832,12 +2828,12 @@ class StaticFileHandler(RequestHandler):
         """Returns a version string for the resource at the given path.
 
         This class method may be overridden by subclasses.  The
-        default implementation is a hash of the file's contents.
+        default implementation is a SHA-512 hash of the file's contents.
 
         .. versionadded:: 3.1
         """
         data = cls.get_content(abspath)
-        hasher = hashlib.md5()
+        hasher = hashlib.sha512()
         if isinstance(data, bytes):
             hasher.update(data)
         else:
@@ -3534,9 +3530,13 @@ def _decode_signed_value_v2(
     clock: Callable[[], float],
 ) -> Optional[bytes]:
     try:
-        key_version, timestamp_bytes, name_field, value_field, passed_sig = _decode_fields_v2(
-            value
-        )
+        (
+            key_version,
+            timestamp_bytes,
+            name_field,
+            value_field,
+            passed_sig,
+        ) = _decode_fields_v2(value)
     except ValueError:
         return None
     signed_string = value[: -len(passed_sig)]

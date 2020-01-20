@@ -1133,7 +1133,7 @@ class IOStream(BaseIOStream):
             del data
 
     def connect(
-        self: _IOStreamType, address: tuple, server_hostname: Optional[str] = None
+        self: _IOStreamType, address: Any, server_hostname: Optional[str] = None
     ) -> "Future[_IOStreamType]":
         """Connects the socket to a remote address without blocking.
 

@@ -235,7 +235,7 @@ class HTTP1Connection(httputil.HTTPConnection):
                     # but do not actually have a body.
                     # http://tools.ietf.org/html/rfc7230#section-3.3
                     skip_body = True
-                if code >= 100 and code < 200:
+                if 100 <= code < 200:
                     # 1xx responses should never indicate the presence of
                     # a body.
                     if "Content-Length" in headers or "Transfer-Encoding" in headers:
@@ -406,6 +406,8 @@ class HTTP1Connection(httputil.HTTPConnection):
                 # self._request_start_line.version or
                 # start_line.version?
                 self._request_start_line.version == "HTTP/1.1"
+                # Omit payload header field for HEAD request.
+                and self._request_start_line.method != "HEAD"
                 # 1xx, 204 and 304 responses have no body (not even a zero-length
                 # body), and so should not have either Content-Length or
                 # Transfer-Encoding headers.
