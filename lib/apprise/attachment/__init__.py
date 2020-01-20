@@ -30,22 +30,22 @@ from os import listdir
 from os.path import dirname
 from os.path import abspath
 
-# Maintains a mapping of all of the configuration services
+# Maintains a mapping of all of the attachment services
 SCHEMA_MAP = {}
 
 __all__ = []
 
 
 # Load our Lookup Matrix
-def __load_matrix(path=abspath(dirname(__file__)), name='apprise.config'):
+def __load_matrix(path=abspath(dirname(__file__)), name='apprise.attachment'):
     """
     Dynamically load our schema map; this allows us to gracefully
     skip over modules we simply don't have the dependencies for.
 
     """
-    # Used for the detection of additional Configuration Services objects
+    # Used for the detection of additional Attachment Services objects
     # The .py extension is optional as we support loading directories too
-    module_re = re.compile(r'^(?P<name>Config[a-z0-9]+)(\.py)?$', re.I)
+    module_re = re.compile(r'^(?P<name>Attach[a-z0-9]+)(\.py)?$', re.I)
 
     for f in listdir(path):
         match = module_re.match(f)

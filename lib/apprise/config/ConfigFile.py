@@ -26,9 +26,9 @@
 import re
 import io
 import os
-from os.path import expanduser
 from .ConfigBase import ConfigBase
 from ..common import ConfigFormat
+from ..AppriseLocale import gettext_lazy as _
 
 
 class ConfigFile(ConfigBase):
@@ -36,8 +36,8 @@ class ConfigFile(ConfigBase):
     A wrapper for File based configuration sources
     """
 
-    # The default descriptive name associated with the Notification
-    service_name = 'Local File'
+    # The default descriptive name associated with the service
+    service_name = _('Local File')
 
     # The default protocol
     protocol = 'file'
@@ -53,27 +53,35 @@ class ConfigFile(ConfigBase):
         super(ConfigFile, self).__init__(**kwargs)
 
         # Store our file path as it was set
-        self.path = path
+        self.path = os.path.expanduser(path)
 
         return
 
-    def url(self):
+    def url(self, privacy=False, *args, **kwargs):
         """
         Returns the URL built dynamically based on specified arguments.
         """
 
+        # Prepare our cache value
+        if isinstance(self.cache, bool) or not self.cache:
+            cache = 'yes' if self.cache else 'no'
+
+        else:
+            cache = int(self.cache)
+
         # Define any arguments set
         args = {
             'encoding': self.encoding,
+            'cache': cache,
         }
 
         if self.config_format:
             # A format was enforced; make sure it's passed back with the url
             args['format'] = self.config_format
 
-        return 'file://{path}?{args}'.format(
+        return 'file://{path}{args}'.format(
             path=self.quote(self.path),
-            args=self.urlencode(args),
+            args='?{}'.format(self.urlencode(args)) if args else '',
         )
 
     def read(self, **kwargs):
@@ -131,14 +139,6 @@ class ConfigFile(ConfigBase):
                 'File can not be opened for read: {}'.format(path))
             return None
 
-        # Detect config format based on file extension if it isn't already
-        # enforced
-        # if self.config_format is None and \
-        #         re.match(r'^.*\.ya?ml\s*$', path, re.I) is not None:
-        #
-        #     # YAML Filename Detected
-        #     self.default_config_format = ConfigFormat.YAML
-
         # Return our response object
         return response
 
@@ -159,5 +159,5 @@ class ConfigFile(ConfigBase):
         if not match:
             return None
 
-        results['path'] = expanduser(ConfigFile.unquote(match.group('path')))
+        results['path'] = ConfigFile.unquote(match.group('path'))
         return results

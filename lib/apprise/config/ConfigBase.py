@@ -26,7 +26,7 @@
 import os
 import re
 import six
-# import yaml
+import time
 
 from .. import plugins
 from ..AppriseAsset import AppriseAsset
@@ -35,6 +35,7 @@ from ..common import ConfigFormat
 from ..common import CONFIG_FORMATS
 from ..utils import GET_SCHEMA_RE
 from ..utils import parse_list
+from ..utils import parse_bool
 
 
 class ConfigBase(URLBase):
@@ -58,15 +59,30 @@ class ConfigBase(URLBase):
     # anything else. 128KB (131072B)
     max_buffer_size = 131072
 
-    def __init__(self, **kwargs):
+    def __init__(self, cache=True, **kwargs):
         """
         Initialize some general logging and common server arguments that will
         keep things consistent when working with the configurations that
         inherit this class.
 
+        By default we cache our responses so that subsiquent calls does not
+        cause the content to be retrieved again.  For local file references
+        this makes no difference at all.  But for remote content, this does
+        mean more then one call can be made to retrieve the (same) data.  This
+        method can be somewhat inefficient if disabled.  Only disable caching
+        if you understand the consequences.
+
+        You can alternatively set the cache value to an int identifying the
+        number of seconds the previously retrieved can exist for before it
+        should be considered expired.
         """
 
         super(ConfigBase, self).__init__(**kwargs)
+
+        # Tracks the time the content was last retrieved on.  This place a role
+        # for cases where we are not caching our response and are required to
+        # re-retrieve our settings.
+        self._cached_time = None
 
         # Tracks previously loaded content for speed
         self._cached_servers = None
@@ -86,20 +102,34 @@ class ConfigBase(URLBase):
                 self.logger.warning(err)
                 raise TypeError(err)
 
+        # Set our cache flag; it can be True or a (positive) integer
+        try:
+            self.cache = cache if isinstance(cache, bool) else int(cache)
+            if self.cache < 0:
+                err = 'A negative cache value ({}) was specified.'.format(
+                    cache)
+                self.logger.warning(err)
+                raise TypeError(err)
+
+        except (ValueError, TypeError):
+            err = 'An invalid cache value ({}) was specified.'.format(cache)
+            self.logger.warning(err)
+            raise TypeError(err)
+
         return
 
-    def servers(self, asset=None, cache=True, **kwargs):
+    def servers(self, asset=None, **kwargs):
         """
         Performs reads loaded configuration and returns all of the services
         that could be parsed and loaded.
 
         """
 
-        if cache is True and isinstance(self._cached_servers, list):
+        if not self.expired():
             # We already have cached results to return; use them
             return self._cached_servers
 
-        # Our response object
+        # Our cached response object
         self._cached_servers = list()
 
         # read() causes the child class to do whatever it takes for the
@@ -107,8 +137,11 @@ class ConfigBase(URLBase):
         # None is returned if there was an error or simply no data
         content = self.read(**kwargs)
         if not isinstance(content, six.string_types):
-            # Nothing more to do
-            return list()
+            # Set the time our content was cached at
+            self._cached_time = time.time()
+
+            # Nothing more to do; return our empty cache list
+            return self._cached_servers
 
         # Our Configuration format uses a default if one wasn't one detected
         # or enfored.
@@ -129,6 +162,9 @@ class ConfigBase(URLBase):
             self.logger.warning('Failed to load configuration from {}'.format(
                 self.url()))
 
+        # Set the time our content was cached at
+        self._cached_time = time.time()
+
         return self._cached_servers
 
     def read(self):
@@ -138,12 +174,34 @@ class ConfigBase(URLBase):
         """
         return None
 
+    def expired(self):
+        """
+        Simply returns True if the configuration should be considered
+        as expired or False if content should be retrieved.
+        """
+        if isinstance(self._cached_servers, list) and self.cache:
+            # We have enough reason to look further into our cached content
+            # and verify it has not expired.
+            if self.cache is True:
+                # we have not expired, return False
+                return False
+
+            # Verify our cache time to determine whether we will get our
+            # content again.
+            age_in_sec = time.time() - self._cached_time
+            if age_in_sec <= self.cache:
+                # We have not expired; return False
+                return False
+
+        # If we reach here our configuration should be considered
+        # missing and/or expired.
+        return True
+
     @staticmethod
     def parse_url(url, verify_host=True):
         """Parses the URL and returns it broken apart into a dictionary.
 
         This is very specific and customized for Apprise.
-
 
         Args:
             url (str): The URL you want to fully parse.
@@ -176,6 +234,17 @@ class ConfigBase(URLBase):
         # Defines the encoding of the payload
         if 'encoding' in results['qsd']:
             results['encoding'] = results['qsd'].get('encoding')
+
+        # Our cache value
+        if 'cache' in results['qsd']:
+            # First try to get it's integer value
+            try:
+                results['cache'] = int(results['qsd']['cache'])
+
+            except (ValueError, TypeError):
+                # No problem, it just isn't an integer; now treat it as a bool
+                # instead:
+                results['cache'] = parse_bool(results['qsd']['cache'])
 
         return results
 
@@ -236,35 +305,14 @@ class ConfigBase(URLBase):
                 # otherwise.
                 return list()
 
-            if not result.group('url'):
+            # Store our url read in
+            url = result.group('url')
+            if not url:
                 # Comment/empty line; do nothing
                 continue
 
-            # Store our url read in
-            url = result.group('url')
-
-            # swap hash (#) tag values with their html version
-            _url = url.replace('/#', '/%23')
-
-            # Attempt to acquire the schema at the very least to allow our
-            # plugins to determine if they can make a better
-            # interpretation of a URL geared for them
-            schema = GET_SCHEMA_RE.match(_url)
-
-            # Ensure our schema is always in lower case
-            schema = schema.group('schema').lower()
-
-            # Some basic validation
-            if schema not in plugins.SCHEMA_MAP:
-                ConfigBase.logger.warning(
-                    'Unsupported schema {} on line {}.'.format(
-                        schema, line))
-                continue
-
-            # Parse our url details of the server object as dictionary
-            # containing all of the information parsed from our URL
-            results = plugins.SCHEMA_MAP[schema].parse_url(_url)
-
+            # Acquire our url tokens
+            results = plugins.url_to_dict(url)
             if results is None:
                 # Failed to parse the server URL
                 ConfigBase.logger.warning(
@@ -306,274 +354,16 @@ class ConfigBase(URLBase):
         # Return what was loaded
         return response
 
-    # @staticmethod
-    # def config_parse_yaml(content, asset=None):
-    #     """
-    #     Parse the specified content as though it were a yaml file
-    #     specifically formatted for apprise. Return a list of loaded
-    #     notification plugins.
-    #
-    #     Optionally associate an asset with the notification.
-    #
-    #     """
-    #     response = list()
-    #
-    #     try:
-    #         # Load our data (safely)
-    #         result = yaml.load(content, Loader=yaml.SafeLoader)
-    #
-    #     except (AttributeError, yaml.error.MarkedYAMLError) as e:
-    #         # Invalid content
-    #         ConfigBase.logger.error(
-    #             'Invalid apprise yaml data specified.')
-    #         ConfigBase.logger.debug(
-    #             'YAML Exception:{}{}'.format(os.linesep, e))
-    #         return list()
-    #
-    #     if not isinstance(result, dict):
-    #         # Invalid content
-    #         ConfigBase.logger.error('Invalid apprise yaml structure specified')
-    #         return list()
-    #
-    #     # YAML Version
-    #     version = result.get('version', 1)
-    #     if version != 1:
-    #         # Invalid syntax
-    #         ConfigBase.logger.error(
-    #             'Invalid apprise yaml version specified {}.'.format(version))
-    #         return list()
-    #
-    #     #
-    #     # global asset object
-    #     #
-    #     asset = asset if isinstance(asset, AppriseAsset) else AppriseAsset()
-    #     tokens = result.get('asset', None)
-    #     if tokens and isinstance(tokens, dict):
-    #         for k, v in tokens.items():
-    #
-    #             if k.startswith('_') or k.endswith('_'):
-    #                 # Entries are considered reserved if they start or end
-    #                 # with an underscore
-    #                 ConfigBase.logger.warning(
-    #                     'Ignored asset key "{}".'.format(k))
-    #                 continue
-    #
-    #             if not (hasattr(asset, k) and
-    #                     isinstance(getattr(asset, k), six.string_types)):
-    #                 # We can't set a function or non-string set value
-    #                 ConfigBase.logger.warning(
-    #                     'Invalid asset key "{}".'.format(k))
-    #                 continue
-    #
-    #             if v is None:
-    #                 # Convert to an empty string
-    #                 v = ''
-    #
-    #             if not isinstance(v, six.string_types):
-    #                 # we must set strings with a string
-    #                 ConfigBase.logger.warning(
-    #                     'Invalid asset value to "{}".'.format(k))
-    #                 continue
-    #
-    #             # Set our asset object with the new value
-    #             setattr(asset, k, v.strip())
-    #
-    #     #
-    #     # global tag root directive
-    #     #
-    #     global_tags = set()
-    #
-    #     tags = result.get('tag', None)
-    #     if tags and isinstance(tags, (list, tuple, six.string_types)):
-    #         # Store any preset tags
-    #         global_tags = set(parse_list(tags))
-    #
-    #     #
-    #     # urls root directive
-    #     #
-    #     urls = result.get('urls', None)
-    #     if not isinstance(urls, (list, tuple)):
-    #         # Unsupported
-    #         ConfigBase.logger.error(
-    #             'Missing "urls" directive in apprise yaml.')
-    #         return list()
-    #
-    #     # Iterate over each URL
-    #     for no, url in enumerate(urls):
-    #
-    #         # Our results object is what we use to instantiate our object if
-    #         # we can. Reset it to None on each iteration
-    #         results = list()
-    #
-    #         if isinstance(url, six.string_types):
-    #             # We're just a simple URL string
-    #
-    #             # swap hash (#) tag values with their html version
-    #             _url = url.replace('/#', '/%23')
-    #
-    #             # Attempt to acquire the schema at the very least to allow our
-    #             # plugins to determine if they can make a better
-    #             # interpretation of a URL geared for them
-    #             schema = GET_SCHEMA_RE.match(_url)
-    #             if schema is None:
-    #                 ConfigBase.logger.warning(
-    #                     'Unsupported schema in urls entry #{}'.format(no + 1))
-    #                 continue
-    #
-    #             # Ensure our schema is always in lower case
-    #             schema = schema.group('schema').lower()
-    #
-    #             # Some basic validation
-    #             if schema not in plugins.SCHEMA_MAP:
-    #                 ConfigBase.logger.warning(
-    #                     'Unsupported schema {} in urls entry #{}'.format(
-    #                         schema, no + 1))
-    #                 continue
-    #
-    #             # Parse our url details of the server object as dictionary
-    #             # containing all of the information parsed from our URL
-    #             _results = plugins.SCHEMA_MAP[schema].parse_url(_url)
-    #             if _results is None:
-    #                 ConfigBase.logger.warning(
-    #                     'Unparseable {} based url; entry #{}'.format(
-    #                         schema, no + 1))
-    #                 continue
-    #
-    #             # add our results to our global set
-    #             results.append(_results)
-    #
-    #         elif isinstance(url, dict):
-    #             # We are a url string with additional unescaped options
-    #             if six.PY2:
-    #                 _url, tokens = next(url.iteritems())
-    #             else:  # six.PY3
-    #                 _url, tokens = next(iter(url.items()))
-    #
-    #             # swap hash (#) tag values with their html version
-    #             _url = _url.replace('/#', '/%23')
-    #
-    #             # Get our schema
-    #             schema = GET_SCHEMA_RE.match(_url)
-    #             if schema is None:
-    #                 ConfigBase.logger.warning(
-    #                     'Unsupported schema in urls entry #{}'.format(no + 1))
-    #                 continue
-    #
-    #             # Ensure our schema is always in lower case
-    #             schema = schema.group('schema').lower()
-    #
-    #             # Some basic validation
-    #             if schema not in plugins.SCHEMA_MAP:
-    #                 ConfigBase.logger.warning(
-    #                     'Unsupported schema {} in urls entry #{}'.format(
-    #                         schema, no + 1))
-    #                 continue
-    #
-    #             # Parse our url details of the server object as dictionary
-    #             # containing all of the information parsed from our URL
-    #             _results = plugins.SCHEMA_MAP[schema].parse_url(_url)
-    #             if _results is None:
-    #                 # Setup dictionary
-    #                 _results = {
-    #                     # Minimum requirements
-    #                     'schema': schema,
-    #                 }
-    #
-    #             if tokens is not None:
-    #                 # populate and/or override any results populated by
-    #                 # parse_url()
-    #                 for entries in tokens:
-    #                     # Copy ourselves a template of our parsed URL as a base
-    #                     # to work with
-    #                     r = _results.copy()
-    #
-    #                     # We are a url string with additional unescaped options
-    #                     if isinstance(entries, dict):
-    #                         if six.PY2:
-    #                             _url, tokens = next(url.iteritems())
-    #                         else:  # six.PY3
-    #                             _url, tokens = next(iter(url.items()))
-    #
-    #                         # Tags you just can't over-ride
-    #                         if 'schema' in entries:
-    #                             del entries['schema']
-    #
-    #                         # Extend our dictionary with our new entries
-    #                         r.update(entries)
-    #
-    #                         # add our results to our global set
-    #                         results.append(r)
-    #
-    #             else:
-    #                 # add our results to our global set
-    #                 results.append(_results)
-    #
-    #         else:
-    #             # Unsupported
-    #             ConfigBase.logger.warning(
-    #                 'Unsupported apprise yaml entry #{}'.format(no + 1))
-    #             continue
-    #
-    #         # Track our entries
-    #         entry = 0
-    #
-    #         while len(results):
-    #             # Increment our entry count
-    #             entry += 1
-    #
-    #             # Grab our first item
-    #             _results = results.pop(0)
-    #
-    #             # tag is a special keyword that is managed by apprise object.
-    #             # The below ensures our tags are set correctly
-    #             if 'tag' in _results:
-    #                 # Tidy our list up
-    #                 _results['tag'] = \
-    #                     set(parse_list(_results['tag'])) | global_tags
-    #
-    #             else:
-    #                 # Just use the global settings
-    #                 _results['tag'] = global_tags
-    #
-    #             ConfigBase.logger.trace(
-    #                 'URL #{}: {} unpacked as:{}{}'
-    #                 .format(no + 1, url, os.linesep, os.linesep.join(
-    #                     ['{}="{}"'.format(k, a)
-    #                      for k, a in _results.items()])))
-    #
-    #             # Prepare our Asset Object
-    #             _results['asset'] = asset
-    #
-    #             try:
-    #                 # Attempt to create an instance of our plugin using the
-    #                 # parsed URL information
-    #                 plugin = plugins.SCHEMA_MAP[_results['schema']](**_results)
-    #
-    #                 # Create log entry of loaded URL
-    #                 ConfigBase.logger.debug(
-    #                     'Loaded URL: {}'.format(plugin.url()))
-    #
-    #             except Exception:
-    #                 # the arguments are invalid or can not be used.
-    #                 ConfigBase.logger.warning(
-    #                     'Could not load apprise yaml entry #{}, item #{}'
-    #                     .format(no + 1, entry))
-    #                 continue
-    #
-    #             # if we reach here, we successfully loaded our data
-    #             response.append(plugin)
-    #
-    #     return response
-    #
-    def pop(self, index):
+    def pop(self, index=-1):
         """
-        Removes an indexed Notification Service from the stack and
-        returns it.
+        Removes an indexed Notification Service from the stack and returns it.
+
+        By default, the last element of the list is removed.
         """
 
         if not isinstance(self._cached_servers, list):
             # Generate ourselves a list of content we can pull from
-            self.servers(cache=True)
+            self.servers()
 
         # Pop the element off of the stack
         return self._cached_servers.pop(index)
@@ -585,7 +375,7 @@ class ConfigBase(URLBase):
         """
         if not isinstance(self._cached_servers, list):
             # Generate ourselves a list of content we can pull from
-            self.servers(cache=True)
+            self.servers()
 
         return self._cached_servers[index]
 
@@ -595,7 +385,7 @@ class ConfigBase(URLBase):
         """
         if not isinstance(self._cached_servers, list):
             # Generate ourselves a list of content we can pull from
-            self.servers(cache=True)
+            self.servers()
 
         return iter(self._cached_servers)
 
@@ -605,6 +395,28 @@ class ConfigBase(URLBase):
         """
         if not isinstance(self._cached_servers, list):
             # Generate ourselves a list of content we can pull from
-            self.servers(cache=True)
+            self.servers()
 
         return len(self._cached_servers)
+
+    def __bool__(self):
+        """
+        Allows the Apprise object to be wrapped in an Python 3.x based 'if
+        statement'.  True is returned if our content was downloaded correctly.
+        """
+        if not isinstance(self._cached_servers, list):
+            # Generate ourselves a list of content we can pull from
+            self.servers()
+
+        return True if self._cached_servers else False
+
+    def __nonzero__(self):
+        """
+        Allows the Apprise object to be wrapped in an Python 2.x based 'if
+        statement'.  True is returned if our content was downloaded correctly.
+        """
+        if not isinstance(self._cached_servers, list):
+            # Generate ourselves a list of content we can pull from
+            self.servers()
+
+        return True if self._cached_servers else False

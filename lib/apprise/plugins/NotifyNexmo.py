@@ -33,13 +33,11 @@ import re
 import requests
 
 from .NotifyBase import NotifyBase
+from ..URLBase import PrivacyMode
 from ..common import NotifyType
 from ..utils import parse_list
+from ..utils import validate_regex
 from ..AppriseLocale import gettext_lazy as _
-
-# Token required as part of the API request
-VALIDATE_APIKEY = re.compile(r'^[a-z0-9]{8}$', re.I)
-VALIDATE_SECRET = re.compile(r'^[a-z0-9]{16}$', re.I)
 
 # Some Phone Number Detection
 IS_PHONE_NO = re.compile(r'^\+?(?P<phone>[0-9\s)(+-]+)\s*$')
@@ -72,15 +70,6 @@ class NotifyNexmo(NotifyBase):
     # cause any title (if defined) to get placed into the message body.
     title_maxlen = 0
 
-    # Default Time To Live
-    # By default Nexmo attempt delivery for 72 hours, however the maximum
-    # effective value depends on the operator and is typically 24 - 48 hours.
-    # We recommend this value should be kept at its default or at least 30
-    # minutes.
-    default_ttl = 900000
-    ttl_max = 604800000
-    ttl_min = 20000
-
     # Define object templates
     templates = (
         '{schema}://{apikey}:{secret}@{from_phone}',
@@ -93,27 +82,28 @@ class NotifyNexmo(NotifyBase):
             'name': _('API Key'),
             'type': 'string',
             'required': True,
-            'regex': (r'AC[a-z0-9]{8}', 'i'),
+            'regex': (r'^AC[a-z0-9]{8}$', 'i'),
+            'private': True,
         },
         'secret': {
             'name': _('API Secret'),
             'type': 'string',
             'private': True,
             'required': True,
-            'regex': (r'[a-z0-9]{16}', 'i'),
+            'regex': (r'^[a-z0-9]{16}$', 'i'),
         },
         'from_phone': {
             'name': _('From Phone No'),
             'type': 'string',
             'required': True,
-            'regex': (r'\+?[0-9\s)(+-]+', 'i'),
+            'regex': (r'^\+?[0-9\s)(+-]+$', 'i'),
             'map_to': 'source',
         },
         'target_phone': {
             'name': _('Target Phone No'),
             'type': 'string',
             'prefix': '+',
-            'regex': (r'[0-9\s)(+-]+', 'i'),
+            'regex': (r'^[0-9\s)(+-]+$', 'i'),
             'map_to': 'targets',
         },
         'targets': {
@@ -136,6 +126,12 @@ class NotifyNexmo(NotifyBase):
         'secret': {
             'alias_of': 'secret',
         },
+
+        # Default Time To Live
+        # By default Nexmo attempt delivery for 72 hours, however the maximum
+        # effective value depends on the operator and is typically 24 - 48
+        # hours. We recommend this value should be kept at its default or at
+        # least 30 minutes.
         'ttl': {
             'name': _('ttl'),
             'type': 'int',
@@ -152,40 +148,26 @@ class NotifyNexmo(NotifyBase):
         """
         super(NotifyNexmo, self).__init__(**kwargs)
 
-        try:
-            # The Account SID associated with the account
-            self.apikey = apikey.strip()
-
-        except AttributeError:
-            # Token was None
-            msg = 'No Nexmo APIKey was specified.'
+        # API Key (associated with project)
+        self.apikey = validate_regex(
+            apikey, *self.template_tokens['apikey']['regex'])
+        if not self.apikey:
+            msg = 'An invalid Nexmo API Key ' \
+                  '({}) was specified.'.format(apikey)
             self.logger.warning(msg)
             raise TypeError(msg)
 
-        if not VALIDATE_APIKEY.match(self.apikey):
-            msg = 'The Nexmo API Key specified ({}) is invalid.'\
-                .format(self.apikey)
-            self.logger.warning(msg)
-            raise TypeError(msg)
-
-        try:
-            # The Account SID associated with the account
-            self.secret = secret.strip()
-
-        except AttributeError:
-            # Token was None
-            msg = 'No Nexmo API Secret was specified.'
-            self.logger.warning(msg)
-            raise TypeError(msg)
-
-        if not VALIDATE_SECRET.match(self.secret):
-            msg = 'The Nexmo API Secret specified ({}) is invalid.'\
-                .format(self.secret)
+        # API Secret (associated with project)
+        self.secret = validate_regex(
+            secret, *self.template_tokens['secret']['regex'])
+        if not self.secret:
+            msg = 'An invalid Nexmo API Secret ' \
+                  '({}) was specified.'.format(secret)
             self.logger.warning(msg)
             raise TypeError(msg)
 
         # Set our Time to Live Flag
-        self.ttl = self.default_ttl
+        self.ttl = self.template_args['ttl']['default']
         try:
             self.ttl = int(ttl)
 
@@ -193,7 +175,8 @@ class NotifyNexmo(NotifyBase):
             # Do nothing
             pass
 
-        if self.ttl < self.ttl_min or self.ttl > self.ttl_max:
+        if self.ttl < self.template_args['ttl']['min'] or \
+                self.ttl > self.template_args['ttl']['max']:
             msg = 'The Nexmo TTL specified ({}) is out of range.'\
                 .format(self.ttl)
             self.logger.warning(msg)
@@ -240,6 +223,8 @@ class NotifyNexmo(NotifyBase):
                 'Dropped invalid phone # '
                 '({}) specified.'.format(target),
             )
+
+        return
 
     def send(self, body, title='', notify_type=NotifyType.INFO, **kwargs):
         """
@@ -334,7 +319,7 @@ class NotifyNexmo(NotifyBase):
 
         return not has_error
 
-    def url(self):
+    def url(self, privacy=False, *args, **kwargs):
         """
         Returns the URL built dynamically based on specified arguments.
         """
@@ -349,8 +334,9 @@ class NotifyNexmo(NotifyBase):
 
         return '{schema}://{key}:{secret}@{source}/{targets}/?{args}'.format(
             schema=self.secure_protocol,
-            key=self.apikey,
-            secret=self.secret,
+            key=self.pprint(self.apikey, privacy, safe=''),
+            secret=self.pprint(
+                self.secret, privacy, mode=PrivacyMode.Secret, safe=''),
             source=NotifyNexmo.quote(self.source, safe=''),
             targets='/'.join(
                 [NotifyNexmo.quote(x, safe='') for x in self.targets]),
