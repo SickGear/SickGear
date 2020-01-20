@@ -23,40 +23,68 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-import re
+# Sources
+# - https://dreambox.de/en/
+# - https://dream.reichholf.net/wiki/Hauptseite
+# - https://dream.reichholf.net/wiki/Enigma2:WebInterface#Message
+# - https://github.com/E2OpenPlugins/e2openplugin-OpenWebif
+# - https://github.com/E2OpenPlugins/e2openplugin-OpenWebif/wiki/\
+#       OpenWebif-API-documentation#message
+
 import six
 import requests
+from json import loads
 
 from .NotifyBase import NotifyBase
 from ..URLBase import PrivacyMode
-from ..common import NotifyImageSize
 from ..common import NotifyType
 from ..AppriseLocale import gettext_lazy as _
 
 
-class NotifyXML(NotifyBase):
+class Enigma2MessageType(object):
+    # Defines the Enigma2 notification types Apprise can map to
+    INFO = 1
+    WARNING = 2
+    ERROR = 3
+
+
+# If a mapping fails, the default of Enigma2MessageType.INFO is used
+MESSAGE_MAPPING = {
+    NotifyType.INFO: Enigma2MessageType.INFO,
+    NotifyType.SUCCESS: Enigma2MessageType.INFO,
+    NotifyType.WARNING: Enigma2MessageType.WARNING,
+    NotifyType.FAILURE: Enigma2MessageType.ERROR,
+}
+
+
+class NotifyEnigma2(NotifyBase):
     """
-    A wrapper for XML Notifications
+    A wrapper for Enigma2 Notifications
     """
 
     # The default descriptive name associated with the Notification
-    service_name = 'XML'
+    service_name = 'Enigma2'
+
+    # The services URL
+    service_url = 'https://dreambox.de/'
 
     # The default protocol
-    protocol = 'xml'
+    protocol = 'enigma2'
 
     # The default secure protocol
-    secure_protocol = 'xmls'
+    secure_protocol = 'enigma2s'
 
     # A URL that takes you to the setup/help of the specific protocol
-    setup_url = 'https://github.com/caronc/apprise/wiki/Notify_Custom_XML'
+    setup_url = 'https://github.com/caronc/apprise/wiki/Notify_enigma2'
 
-    # Allows the user to specify the NotifyImageSize object
-    image_size = NotifyImageSize.XY_128
+    # Enigma2 does not support a title
+    title_maxlen = 0
 
-    # Disable throttle rate for JSON requests since they are normally
-    # local anyway
-    request_rate_per_sec = 0
+    # The maximum allowable characters allowed in the body per message
+    body_maxlen = 1000
+
+    # Throttle a wee-bit to avoid thrashing
+    request_rate_per_sec = 0.5
 
     # Define object templates
     templates = (
@@ -66,11 +94,15 @@ class NotifyXML(NotifyBase):
         '{schema}://{user}@{host}:{port}',
         '{schema}://{user}:{password}@{host}',
         '{schema}://{user}:{password}@{host}:{port}',
+        '{schema}://{host}/{fullpath}',
+        '{schema}://{host}:{port}/{fullpath}',
+        '{schema}://{user}@{host}/{fullpath}',
+        '{schema}://{user}@{host}:{port}/{fullpath}',
+        '{schema}://{user}:{password}@{host}/{fullpath}',
+        '{schema}://{user}:{password}@{host}:{port}/{fullpath}',
     )
 
-    # Define our tokens; these are the minimum tokens required required to
-    # be passed into this function (as arguments). The syntax appends any
-    # previously defined in the base package and builds onto them
+    # Define our template tokens
     template_tokens = dict(NotifyBase.template_tokens, **{
         'host': {
             'name': _('Hostname'),
@@ -92,6 +124,21 @@ class NotifyXML(NotifyBase):
             'type': 'string',
             'private': True,
         },
+        'fullpath': {
+            'name': _('Path'),
+            'type': 'string',
+        },
+    })
+
+    template_args = dict(NotifyBase.template_args, **{
+        'timeout': {
+            'name': _('Server Timeout'),
+            'type': 'int',
+            # The number of seconds to display the message for
+            'default': 13,
+            # -1 means infinit
+            'min': -1,
+        },
     })
 
     # Define any kwargs we're using
@@ -102,30 +149,24 @@ class NotifyXML(NotifyBase):
         },
     }
 
-    def __init__(self, headers=None, **kwargs):
+    def __init__(self, timeout=None, headers=None, **kwargs):
         """
-        Initialize XML Object
+        Initialize Enigma2 Object
 
         headers can be a dictionary of key/value pairs that you want to
         additionally include as part of the server headers to post with
-
         """
-        super(NotifyXML, self).__init__(**kwargs)
+        super(NotifyEnigma2, self).__init__(**kwargs)
 
-        self.payload = """<?xml version='1.0' encoding='utf-8'?>
-<soapenv:Envelope
-    xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
-    xmlns:xsd="http://www.w3.org/2001/XMLSchema"
-    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-    <soapenv:Body>
-        <Notification xmlns:xsi="http://nuxref.com/apprise/NotifyXML-1.0.xsd">
-            <Version>1.0</Version>
-            <Subject>{SUBJECT}</Subject>
-            <MessageType>{MESSAGE_TYPE}</MessageType>
-            <Message>{MESSAGE}</Message>
-       </Notification>
-    </soapenv:Body>
-</soapenv:Envelope>"""
+        try:
+            self.timeout = int(timeout)
+            if self.timeout < self.template_args['timeout']['min']:
+                # Bulletproof; can't go lower then min value
+                self.timeout = self.template_args['timeout']['min']
+
+        except (ValueError, TypeError):
+            # Use default timeout
+            self.timeout = self.template_args['timeout']['default']
 
         self.fullpath = kwargs.get('fullpath')
         if not isinstance(self.fullpath, six.string_types):
@@ -148,6 +189,7 @@ class NotifyXML(NotifyBase):
             'format': self.notify_format,
             'overflow': self.overflow_mode,
             'verify': 'yes' if self.verify_certificate else 'no',
+            'timeout': str(self.timeout),
         }
 
         # Append our headers into our args
@@ -157,53 +199,46 @@ class NotifyXML(NotifyBase):
         auth = ''
         if self.user and self.password:
             auth = '{user}:{password}@'.format(
-                user=NotifyXML.quote(self.user, safe=''),
+                user=NotifyEnigma2.quote(self.user, safe=''),
                 password=self.pprint(
                     self.password, privacy, mode=PrivacyMode.Secret, safe=''),
             )
         elif self.user:
             auth = '{user}@'.format(
-                user=NotifyXML.quote(self.user, safe=''),
+                user=NotifyEnigma2.quote(self.user, safe=''),
             )
 
         default_port = 443 if self.secure else 80
 
-        return '{schema}://{auth}{hostname}{port}{fullpath}/?{args}'.format(
+        return '{schema}://{auth}{hostname}{port}{fullpath}?{args}'.format(
             schema=self.secure_protocol if self.secure else self.protocol,
             auth=auth,
-            hostname=NotifyXML.quote(self.host, safe=''),
+            hostname=NotifyEnigma2.quote(self.host, safe=''),
             port='' if self.port is None or self.port == default_port
                  else ':{}'.format(self.port),
-            fullpath=NotifyXML.quote(self.fullpath, safe='/'),
-            args=NotifyXML.urlencode(args),
+            fullpath=NotifyEnigma2.quote(self.fullpath, safe='/'),
+            args=NotifyEnigma2.urlencode(args),
         )
 
     def send(self, body, title='', notify_type=NotifyType.INFO, **kwargs):
         """
-        Perform XML Notification
+        Perform Enigma2 Notification
         """
 
-        # prepare XML Object
+        # prepare Enigma2 Object
         headers = {
             'User-Agent': self.app_id,
-            'Content-Type': 'application/xml'
+        }
+
+        params = {
+            'text': body,
+            'type': MESSAGE_MAPPING.get(
+                notify_type, Enigma2MessageType.INFO),
+            'timeout': self.timeout,
         }
 
         # Apply any/all header over-rides defined
         headers.update(self.headers)
-
-        re_map = {
-            '{MESSAGE_TYPE}': NotifyXML.escape_html(
-                notify_type, whitespace=False),
-            '{SUBJECT}': NotifyXML.escape_html(title, whitespace=False),
-            '{MESSAGE}': NotifyXML.escape_html(body, whitespace=False),
-        }
-
-        # Iterate over above list and store content accordingly
-        re_table = re.compile(
-            r'(' + '|'.join(re_map.keys()) + r')',
-            re.IGNORECASE,
-        )
 
         auth = None
         if self.user:
@@ -216,32 +251,33 @@ class NotifyXML(NotifyBase):
         if isinstance(self.port, int):
             url += ':%d' % self.port
 
-        url += self.fullpath
-        payload = re_table.sub(lambda x: re_map[x.group()], self.payload)
+        # Prepare our message URL
+        url += self.fullpath.rstrip('/') + '/api/message'
 
-        self.logger.debug('XML POST URL: %s (cert_verify=%r)' % (
+        self.logger.debug('Enigma2 POST URL: %s (cert_verify=%r)' % (
             url, self.verify_certificate,
         ))
-        self.logger.debug('XML Payload: %s' % str(payload))
+        self.logger.debug('Enigma2 Parameters: %s' % str(params))
 
         # Always call throttle before any remote server i/o is made
         self.throttle()
 
         try:
-            r = requests.post(
+            r = requests.get(
                 url,
-                data=payload,
+                params=params,
                 headers=headers,
                 auth=auth,
                 verify=self.verify_certificate,
             )
+
             if r.status_code != requests.codes.ok:
                 # We had a problem
                 status_str = \
-                    NotifyXML.http_response_code_lookup(r.status_code)
+                    NotifyEnigma2.http_response_code_lookup(r.status_code)
 
                 self.logger.warning(
-                    'Failed to send XML notification: '
+                    'Failed to send Enigma2 notification: '
                     '{}{}error={}.'.format(
                         status_str,
                         ', ' if status_str else '',
@@ -252,12 +288,32 @@ class NotifyXML(NotifyBase):
                 # Return; we're done
                 return False
 
-            else:
-                self.logger.info('Sent XML notification.')
+            # We were able to post our message; now lets evaluate the response
+            try:
+                # Acquire our result
+                result = loads(r.content).get('result', False)
+
+            except (AttributeError, TypeError, ValueError):
+                # ValueError = r.content is Unparsable
+                # TypeError = r.content is None
+                # AttributeError = r is None
+
+                # We could not parse JSON response.
+                result = False
+
+            if not result:
+                self.logger.warning(
+                    'Failed to send Enigma2 notification: '
+                    'There was no server acknowledgement.')
+                self.logger.debug('Response Details:\r\n{}'.format(r.content))
+                # Return; we're done
+                return False
+
+            self.logger.info('Sent Enigma2 notification.')
 
         except requests.RequestException as e:
             self.logger.warning(
-                'A Connection error occured sending XML '
+                'A Connection error occured sending Enigma2 '
                 'notification to %s.' % self.host)
             self.logger.debug('Socket Exception: %s' % str(e))
 
@@ -285,7 +341,12 @@ class NotifyXML(NotifyBase):
         results['headers'].update(results['qsd+'])
 
         # Tidy our header entries by unquoting them
-        results['headers'] = {NotifyXML.unquote(x): NotifyXML.unquote(y)
-                              for x, y in results['headers'].items()}
+        results['headers'] = {
+            NotifyEnigma2.unquote(x): NotifyEnigma2.unquote(y)
+            for x, y in results['headers'].items()}
+
+        # Save timeout value (if specified)
+        if 'timeout' in results['qsd'] and len(results['qsd']['timeout']):
+            results['timeout'] = results['qsd']['timeout']
 
         return results

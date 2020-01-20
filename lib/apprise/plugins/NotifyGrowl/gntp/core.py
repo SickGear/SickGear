@@ -4,7 +4,6 @@
 import hashlib
 import re
 import time
-from six import string_types
 
 from . import shim
 from . import errors as errors
@@ -45,7 +44,7 @@ class _GNTPBuffer(shim.StringIO):
 		self.write(GNTP_EOL)
 
 	def writeheader(self, key, value):
-		if not isinstance(value, string_types):
+		if not isinstance(value, str):
 			value = str(value)
 		self.write(shim.b(key))
 		self.write(GNTP_SEP)

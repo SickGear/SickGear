@@ -120,11 +120,13 @@ class ConfigFormat(object):
 
     # YAML files allow a more rich of an experience when settig up your
     # apprise configuration files.
-    # YAML = 'yaml'
 
 
 # Define our configuration formats mostly used for verification
 CONFIG_FORMATS = (
     ConfigFormat.TEXT,
-    # ConfigFormat.YAML,
 )
+
+# This is a reserved tag that is automatically assigned to every
+# Notification Plugin
+MATCH_ALL_TAG = 'all'

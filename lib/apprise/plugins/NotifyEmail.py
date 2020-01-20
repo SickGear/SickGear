@@ -27,10 +27,14 @@ import re
 import six
 import smtplib
 from email.mime.text import MIMEText
+from email.mime.application import MIMEApplication
+from email.mime.multipart import MIMEMultipart
+
 from socket import error as SocketError
 from datetime import datetime
 
 from .NotifyBase import NotifyBase
+from ..URLBase import PrivacyMode
 from ..common import NotifyFormat
 from ..common import NotifyType
 from ..utils import is_email
@@ -508,7 +512,8 @@ class NotifyEmail(NotifyBase):
 
                 break
 
-    def send(self, body, title='', notify_type=NotifyType.INFO, **kwargs):
+    def send(self, body, title='', notify_type=NotifyType.INFO, attach=None,
+             **kwargs):
         """
         Perform Email Notification
         """
@@ -550,18 +555,51 @@ class NotifyEmail(NotifyBase):
 
             # Prepare Email Message
             if self.notify_format == NotifyFormat.HTML:
-                email = MIMEText(body, 'html')
+                content = MIMEText(body, 'html')
 
             else:
-                email = MIMEText(body, 'plain')
+                content = MIMEText(body, 'plain')
 
-            email['Subject'] = title
-            email['From'] = '{} <{}>'.format(from_name, self.from_addr)
-            email['To'] = to_addr
-            email['Cc'] = ','.join(cc)
-            email['Date'] = \
+            base = MIMEMultipart() if attach else content
+            base['Subject'] = title
+            base['From'] = '{} <{}>'.format(from_name, self.from_addr)
+            base['To'] = to_addr
+            base['Cc'] = ','.join(cc)
+            base['Date'] = \
                 datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S +0000")
-            email['X-Application'] = self.app_id
+            base['X-Application'] = self.app_id
+
+            if attach:
+                # First attach our body to our content as the first element
+                base.attach(content)
+
+                # Now store our attachments
+                for attachment in attach:
+                    if not attachment:
+                        # We could not load the attachment; take an early
+                        # exit since this isn't what the end user wanted
+
+                        # We could not access the attachment
+                        self.logger.error(
+                            'Could not access attachment {}.'.format(
+                                attachment.url(privacy=True)))
+
+                        return False
+
+                    self.logger.debug(
+                        'Preparing Email attachment {}'.format(
+                            attachment.url(privacy=True)))
+
+                    with open(attachment.path, "rb") as abody:
+                        app = MIMEApplication(
+                            abody.read(), attachment.mimetype)
+
+                        app.add_header(
+                            'Content-Disposition',
+                            'attachment; filename="{}"'.format(
+                                attachment.name))
+
+                        base.attach(app)
 
             # bind the socket variable to the current namespace
             socket = None
@@ -597,7 +635,7 @@ class NotifyEmail(NotifyBase):
                 socket.sendmail(
                     self.from_addr,
                     [to_addr] + list(cc) + list(bcc),
-                    email.as_string())
+                    base.as_string())
 
                 self.logger.info(
                     'Sent Email notification to "{}".'.format(to_addr))
@@ -618,7 +656,7 @@ class NotifyEmail(NotifyBase):
 
         return not has_error
 
-    def url(self):
+    def url(self, privacy=False, *args, **kwargs):
         """
         Returns the URL built dynamically based on specified arguments.
         """
@@ -652,7 +690,8 @@ class NotifyEmail(NotifyBase):
         if self.user and self.password:
             auth = '{user}:{password}@'.format(
                 user=NotifyEmail.quote(user, safe=''),
-                password=NotifyEmail.quote(self.password, safe=''),
+                password=self.pprint(
+                    self.password, privacy, mode=PrivacyMode.Secret, safe=''),
             )
         else:
             # user url
