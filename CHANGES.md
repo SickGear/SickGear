@@ -5,6 +5,7 @@
 * Change improve performance for find_show_by_id
 * Change episode overview, move pulldown from 'Set/Failed' to 'Override/Failed'
 * Update Apprise 0.8.0 (6aa52c3) to 0.8.3 (4aee9de)
+* Update attr 19.2.0.dev0 (daf2bc8) to 20.1.0.dev0 (9b5e988)
 
 
 [develop changelog]
