@@ -7,6 +7,7 @@
 * Update Apprise 0.8.0 (6aa52c3) to 0.8.3 (4aee9de)
 * Update attr 19.2.0.dev0 (daf2bc8) to 20.1.0.dev0 (9b5e988)
 * Update Certifi 2019.06.16 (84dc766) to 2019.11.28 (21abb9b)
+* Update DiskCache library 4.0.0 (2c79bb9) to 4.1.0 (b0451e0)
 
 
 [develop changelog]
