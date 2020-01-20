@@ -8,6 +8,7 @@
 * Update attr 19.2.0.dev0 (daf2bc8) to 20.1.0.dev0 (9b5e988)
 * Update Certifi 2019.06.16 (84dc766) to 2019.11.28 (21abb9b)
 * Update DiskCache library 4.0.0 (2c79bb9) to 4.1.0 (b0451e0)
+* Update PySocks 1.7.0 (91dcdf0) to 1.7.1 (c2fa43c)
 * Update Requests library 2.22.0 (3d968ff) to 2.22.0 (d2f65af)
 * Update Six compatibility library 1.13.0 (ec58185) to 1.14.0 (3a3db75)
 
