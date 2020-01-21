@@ -583,11 +583,30 @@ class RepoHandler(BaseStaticFileHandler):
         return re.findall(r'(?si)addon\sid="([^"]+)[^>]+version="([^"]+)',
                           self.get_watchedstate_updater_addon_xml())[0]
 
-    @staticmethod
-    def get_watchedstate_updater_addon_xml():
+    def get_watchedstate_updater_addon_xml(self):
+        mem_key = 'kodi_xml'
+        if SGDatetime.now().totimestamp(default=0) < sickbeard.MEMCACHE.get(mem_key, {}).get('last_update', 0):
+            return sickbeard.MEMCACHE.get(mem_key).get('data')
+
         with io.open(ek.ek(os.path.join, sickbeard.PROG_DIR, 'sickbeard', 'clients',
                            'kodi', 'service.sickgear.watchedstate.updater', 'addon.xml'), 'r') as fh:
-            return fh.read().strip()
+            xml = fh.read().strip() % dict(ADDON_VERSION=self.get_addon_version())
+
+        sickbeard.MEMCACHE[mem_key] = dict(last_update=30 + SGDatetime.now().totimestamp(default=0), data=xml)
+        return xml
+
+    @staticmethod
+    def get_addon_version():
+        mem_key = 'kodi_ver'
+        if SGDatetime.now().totimestamp(default=0) < sickbeard.MEMCACHE.get(mem_key, {}).get('last_update', 0):
+            return sickbeard.MEMCACHE.get(mem_key).get('data')
+
+        with io.open(ek.ek(os.path.join, sickbeard.PROG_DIR, 'sickbeard', 'clients',
+                           'kodi', 'service.sickgear.watchedstate.updater', 'service.py'), 'r') as fh:
+            version = re.findall(r'ADDON_VERSION\s*?=\s*?\'([^\']+)', fh.read())[0]
+
+        sickbeard.MEMCACHE[mem_key] = dict(last_update=30 + SGDatetime.now().totimestamp(default=0), data=version)
+        return version
 
     def render_kodi_repo_addon_xml(self):
         t = PageTemplate(web_handler=self, file='repo_kodi_addon.tmpl')
@@ -633,8 +652,7 @@ class RepoHandler(BaseStaticFileHandler):
         bfr.close()
         return zip_data
 
-    @staticmethod
-    def kodi_service_sickgear_watchedstate_updater_zip():
+    def kodi_service_sickgear_watchedstate_updater_zip(self):
         bfr = io.BytesIO()
 
         basepath = ek.ek(os.path.join, sickbeard.PROG_DIR, 'sickbeard', 'clients', 'kodi')
@@ -650,8 +668,12 @@ class RepoHandler(BaseStaticFileHandler):
         for f in helpers.scantree(zip_path):
             if f.is_file(follow_symlinks=False) and f.name[-4:] not in '.xcf':
                 try:
-                    with io.open(f.path, 'rb') as fh:
-                        infile = fh.read()
+                    infile = None
+                    if 'service.sickgear.watchedstate.updater' in f.path and f.path.endswith('addon.xml'):
+                        infile = self.get_watchedstate_updater_addon_xml()
+                    if not infile:
+                        with io.open(f.path, 'rb') as fh:
+                            infile = fh.read()
 
                     with zipfile.ZipFile(bfr, 'a') as zh:
                         zh.writestr(ek.ek(os.path.relpath, f.path, basepath), infile, zipfile.ZIP_DEFLATED)
@@ -680,7 +702,7 @@ class NoXSRFHandler(RouteHandler):
         self.route_method(route, limit_route=False, xsrf_filter=False)
 
     @staticmethod
-    def update_watched_state_kodi(payload=None, as_json=True):
+    def update_watched_state_kodi(payload=None, as_json=True, **kwargs):
         data = {}
         try:
             data = json.loads(payload)
@@ -712,6 +734,12 @@ class NoXSRFHandler(RouteHandler):
         if mapping:
             logger.log('Folder mappings used, the first of %s is [%s] in Kodi is [%s] in SickGear' %
                        (mapped, mapping[0], mapping[1]))
+
+        req_version = tuple([int(x) for x in kwargs.get('version', '0.0.0').split('.')])
+        this_version = RepoHandler.get_addon_version()
+        if not kwargs or (req_version < tuple([int(x) for x in this_version.split('.')])):
+            logger.log('Kodi Add-on update available. To upgrade to version %s; '
+                       'select "Check for updates" on menu of "SickGear Add-on repository"' % this_version)
 
         return MainHandler.update_watched_state(data, as_json)
 

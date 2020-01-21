@@ -1,4 +1,17 @@
-﻿### 0.21.5 (2020-01-15 02:25:00 UTC)
+﻿### 0.21.6 (2020-01-21 22:30:00 UTC)
+
+* Fix Kodi service addon + bump to 1.0.7 (select "Check for updates" on menu of "SickGear Add-on repository")
+* Change Kodi Add-on/"What's new" list order to be latest version info at top
+* Add output to SG log when a new Kodi Add-on version is available for upgrade
+* Fix a rare post processing issue that created `dictionary changed size` error
+* Fix ensure PySocks is available for Requests/urllib3
+* Fix fanart image update issue
+* Change add examples to config/general/advanced/"Proxy host" that show scheme and authentication usage
+* Change add warning that Kodi Add-on requires IP to setting config/general/"Allow IP use for connections"
+* Change About page version string
+
+
+### 0.21.5 (2020-01-15 02:25:00 UTC)
 
 * Update Fuzzywuzzy 0.17.0 (778162c) to 0.17.0 (0cfb2c8)
 * Fix multi-episode .nfo files

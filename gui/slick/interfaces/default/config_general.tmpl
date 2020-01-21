@@ -619,8 +619,9 @@
 							<label for="allow_anyip">
 								<span class="component-title">Allow IP use for connections</span>
 								<span class="component-desc">
-									<input type="checkbox" name="allow_anyip""#echo ('', $checked)[$sg_var('ALLOW_ANYIP')]#>
-									<p>disable to only accept "Allowed browser hostnames" for connections</p>
+									<input type="checkbox" name="allow_anyip" id="allow_anyip"#echo ('', $checked)[$sg_var('ALLOW_ANYIP')]#>
+									<p>disable to only accept "Allowed browser hostnames" for connections<br>
+									Warning: Kodi Add-on requires IP and will correctly fail with this disabled</p>
 								</span>
 							</label>
 						</div>
@@ -744,7 +745,8 @@
 								<span class="component-desc">
 									<input type="text" name="proxy_setting" value="$sg_str('PROXY_SETTING')" class="form-control input-sm input300">
 									<p>blank to disable</p>
-									<div class="clear-left"><p>proxy address for connecting to providers (use 'PAC:Url' for PAC support)</p></div>
+									<div class="clear-left"><p>proxy address for connecting to providers (use 'PAC:Url' for PAC support)<br>
+									e.g. socks5://host:port, socks5://user:pass@host:port, socks4a://user:pass@host:port</p></div>
 								</span>
 							</label>
 						</div>

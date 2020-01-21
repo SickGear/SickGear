@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<addon id="service.sickgear.watchedstate.updater" name="SickGear Watched State Updater" version="1.0.4" provider-name="SickGear">
+<addon id="service.sickgear.watchedstate.updater" name="SickGear Watched State Updater" version="%(ADDON_VERSION)s" provider-name="SickGear">
 	<requires>
 		<import addon="xbmc.python" version="2.19.0" />
 		<import addon="xbmc.json"   version="6.20.0" />
@@ -24,14 +24,20 @@
 		<assets>
 			<icon>icon.png</icon>
 		</assets>
-		<news>[B]1.0.0[/B] (2017-10-04)
-- Initial release
-[B]1.0.2[/B] (2017-11-15)
-- Devel release for an SG API change
+		<news>[B]1.0.7[/B] (2020-01-21)
+- Public release
+[B]1.0.6[/B] (2020-01-18)
+- Public test release
+[B]1.0.5[/B] (2020-01-16)
+- Fix service code for py3
+[B]1.0.4[/B] (2019-08-13)
+- Tidy up service code
 [B]1.0.3[/B] (2018-02-28)
 - Add episodeid to payload
-[B]1.0.4[/B] (2019-08-13)
-- Tidy up Service code
+[B]1.0.2[/B] (2017-11-15)
+- Devel release for an SG API change
+[B]1.0.0[/B] (2017-10-04)
+- Initial release
 		</news>
 	</extension>
 </addon>
