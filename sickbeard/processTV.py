@@ -43,7 +43,7 @@ from .history import reset_status
 from .name_parser.parser import InvalidNameException, InvalidShowException, NameParser
 
 from _23 import filter_list, filter_iter, list_values, map_iter
-from six import iterkeys, string_types, PY2, text_type
+from six import iteritems, iterkeys, string_types, PY2, text_type
 from sg_helpers import long_path
 
 import lib.rarfile.rarfile as rarfile
@@ -566,9 +566,7 @@ class ProcessTVShow(object):
 
             init_history_cnt = len(archive_history)
 
-            for archive in archive_history:
-                if not ek.ek(os.path.isfile, archive):
-                    del archive_history[archive]
+            archive_history = {k_arc: v for k_arc, v in iteritems(archive_history) if ek.ek(os.path.isfile, k_arc)}
 
             unused_files = list(set([ek.ek(os.path.join, path, x) for x in archives]) - set(iterkeys(archive_history)))
             archives = [ek.ek(os.path.basename, x) for x in unused_files]

@@ -36,14 +36,19 @@ import xbmcgui
 # noinspection PyUnresolvedReferences
 import xbmcvfs
 
+ADDON_VERSION = '1.0.7'
+
 PY2 = 2 == sys.version_info[0]
 
 if PY2:
     # noinspection PyCompatibility,PyUnresolvedReferences
-    from urllib2 import Request, urlopen, URLError, urlencode
+    from urllib2 import Request, urlopen, URLError
+    # noinspection PyUnresolvedReferences
+    from urllib import urlencode
 
     # noinspection PyCompatibility,PyUnresolvedReferences
     string_types = (basestring,)
+    binary_type = str
 
     def iterkeys(d, **kw):
         # noinspection PyCompatibility
@@ -57,8 +62,12 @@ if PY2:
         # noinspection PyCompatibility
         return d.iteritems(**kw)
 
-    def iterlists(d, **kw):
-        return d.iterlists(**kw)
+    # noinspection PyUnusedLocal
+    def decode_bytes(d, **kw):
+        if not isinstance(d, binary_type):
+            return bytes(d)
+        return d
+
 else:
     # noinspection PyCompatibility,PyUnresolvedReferences
     from urllib.error import URLError
@@ -68,6 +77,7 @@ else:
     from urllib.request import Request, urlopen
 
     string_types = (str,)
+    binary_type = bytes
 
     def iterkeys(d, **kw):
         return iter(d.keys(**kw))
@@ -78,8 +88,19 @@ else:
     def iteritems(d, **kw):
         return iter(d.items(**kw))
 
-    def iterlists(d, **kw):
-        return iter(d.lists(**kw))
+    def decode_bytes(d, encoding='utf-8', errors='replace'):
+        if not isinstance(d, binary_type):
+            # noinspection PyArgumentList
+            return bytes(d, encoding=encoding, errors=errors)
+        return d
+
+
+def decode_str(s, encoding='utf-8', errors=None):
+    if isinstance(s, binary_type):
+        if None is errors:
+            return s.decode(encoding)
+        return s.decode(encoding, errors)
+    return s
 
 
 class SickGearWatchedStateUpdater(object):
@@ -128,13 +149,20 @@ class SickGearWatchedStateUpdater(object):
         self.log('Started')
         self.notify('Started in background')
 
+        cache_pkg = 'special://home/addons/packages/service.sickgear.watchedstate.updater-%s.zip' % ADDON_VERSION
+        if xbmcvfs.exists(cache_pkg):
+            try:
+                xbmcvfs.delete(cache_pkg)
+            except (BaseException, Exception):
+                pass
+
         self.kodi_events = xbmc.Monitor()
 
         sock_buffer, depth, methods, method = '', 0, {'VideoLibrary.OnUpdate': self.video_library_on_update}, None
 
         # socks listener parsing Kodi json output into action to perform
         while not self.kodi_events.abortRequested():
-            chunk = self.sock_kodi.recv(1)
+            chunk = decode_str(self.sock_kodi.recv(1))
             sock_buffer += chunk
             if chunk in '{}':
                 if '{' == chunk:
@@ -229,7 +257,7 @@ class SickGearWatchedStateUpdater(object):
 
     def video_library_on_update(self, json_msg):
         """
-        Actions to perform for: Kodi Notifications / VideoLibrary/ VideoLibrary.OnUpdate
+        Actions to perform for: Kodi Notifications / VideoLibrary / VideoLibrary.OnUpdate
         invoked in Kodi when: A video item has been updated
         source: http://kodi.wiki/view/JSON-RPC_API/v8#VideoLibrary.OnUpdate
 
@@ -270,9 +298,9 @@ class SickGearWatchedStateUpdater(object):
 
         payload_json = self.payload_prep(dict(media_id=media_id, path_file=path_file, played=play_count, label=profile))
         if payload_json:
-            payload = urlencode(dict(payload=payload_json))
+            payload = urlencode(dict(payload=payload_json, version=ADDON_VERSION))
             try:
-                rq = Request(url, data=payload)
+                rq = Request(url, data=decode_bytes(payload))
                 r = urlopen(rq)
                 response = json.load(r)
                 r.close()
@@ -282,7 +310,7 @@ class SickGearWatchedStateUpdater(object):
                         msg = 'Success, watched state updated'
                     else:
                         msg = 'Success, %s/%s watched stated updated' % (
-                            len([v for v in itervalues(response) if v]), len(itervalues(response)))
+                            len([None for v in itervalues(response) if v]), len([None for _ in itervalues(response)]))
                     self.log(msg)
                     self.notify(msg, error=False)
                 else:
@@ -362,18 +390,19 @@ class SickGearWatchedStateUpdater(object):
             # setting esallinterfaces: allow remote control by programs on other systems
             settings = [dict(esenabled=True), dict(esallinterfaces=True)]
             for setting in settings:
+                name = next(iterkeys(setting))
                 if not self.kodi_request(dict(
                         method='Settings.SetSettingValue',
-                        params=dict(setting='services.%s' % iterkeys(setting)[0], value=itervalues(setting)[0])
+                        params=dict(setting='services.%s' % name, value=next(itervalues(setting)))
                 )).get('result', {}):
                     settings[setting] = self.kodi_request(dict(
                         method='Settings.GetSettingValue',
-                        params=dict(setting='services.%s' % iterkeys(setting)[0])
+                        params=dict(setting='services.%s' % name)
                     )).get('result', {}).get('value')
         except (BaseException, Exception):
             return
 
-        setting_states = [itervalues(setting)[0] for setting in settings]
+        setting_states = [next(itervalues(setting)) for setting in settings]
         if not all(setting_states):
             if not (any(setting_states)):
                 msg = 'Please enable *all* Kodi settings to allow remote control by programs...'
