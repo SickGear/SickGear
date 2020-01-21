@@ -182,7 +182,7 @@ class ProviderFailList(object):
                 self.dirty = False
                 if cl:
                     my_db.mass_action(cl)
-        self.last_save = datetime.datetime.now()
+            self.last_save = datetime.datetime.now()
 
     def load_list(self):
         with self.lock:
@@ -436,7 +436,10 @@ class GenericProvider(object):
         Return how long since most recent failure
         :return: Period since most recent failure on record
         """
-        return datetime.datetime.now() - self.failure_time
+        try:
+            return datetime.datetime.now() - self.failure_time
+        except (BaseException, Exception):
+            return datetime.timedelta(days=1000)
 
     def is_waiting(self):
         # type: (...) -> bool
@@ -544,6 +547,7 @@ class GenericProvider(object):
 
         kwargs['raise_exceptions'] = True
         kwargs['raise_status_code'] = True
+        kwargs['failure_handling'] = False
         for k, v in iteritems(dict(headers=self.headers, hooks=dict(response=self.cb_response))):
             kwargs.setdefault(k, v)
         if 'nzbs.in' not in url:  # this provider returns 503's 3 out of 4 requests with the persistent session system

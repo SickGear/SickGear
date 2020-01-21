@@ -30,6 +30,7 @@ from tvinfo_base import TVInfoBase, CastList, Character, CrewList, Person, RoleT
 
 from lib.dateutil.parser import parse
 from lib.cachecontrol import CacheControl, caches
+from lib.exceptions_helper import ConnectionSkipException
 
 from .tvdb_ui import BaseUI, ConsoleUI
 from .tvdb_exceptions import TvdbError, TvdbShownotfound, TvdbTokenexpired
@@ -91,12 +92,16 @@ def retry(exception_to_check, tries=4, delay=3, backoff=2):
                     else:
                         mtries -= 1
                         mdelay *= backoff
+                except ConnectionSkipException:
+                    raise TvdbError('Connection skipped because of previous connection issues')
             try:
                 return f(*args, **kwargs)
             except TvdbTokenexpired:
                 if not auth_error:
                     return f(*args, **kwargs)
                 raise TvdbTokenexpired
+            except ConnectionSkipException:
+                raise TvdbError
 
         return f_retry  # true decorator
 
@@ -314,7 +319,7 @@ class Tvdb(TVInfoBase):
         dt = THETVDB_V2_API_TOKEN.get('datetime', datetime.datetime.fromordinal(1))
         url = '%s%s' % (self.config['base_url'], 'login')
         params = {'apikey': self.config['apikey']}
-        resp = get_url(url.strip(), post_json=params, parse_json=True)
+        resp = get_url(url.strip(), post_json=params, parse_json=True, raise_skip_exception=True)
         if resp:
             if 'token' in resp:
                 token = resp['token']
@@ -385,7 +390,9 @@ class Tvdb(TVInfoBase):
         self.not_found = False
         try:
             resp = get_url(url.strip(), params=params, session=session, headers=headers, parse_json=True,
-                           raise_status_code=True, raise_exceptions=True)
+                           raise_status_code=True, raise_exceptions=True, raise_skip_exception=True)
+        except ConnectionSkipException as e:
+            raise e
         except requests.exceptions.HTTPError as e:
             if 401 == e.response.status_code:
                 # token expired, get new token, raise error to retry

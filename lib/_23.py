@@ -31,6 +31,8 @@ if False:
     # ----------------------
     # noinspection PyUnresolvedReferences
     from typing import Any, AnyStr, Callable, Dict, Iterable, Iterator, List, Optional, Tuple, Union
+    import datetime
+    from six import integer_types
     # -------------------
     # resolve pyc imports
     # -------------------
@@ -138,6 +140,7 @@ if 2 != version_info[0]:
     # ---------
     # Python 3+
     # ---------
+    import datetime
     # noinspection PyUnresolvedReferences,PyProtectedMember
     from base64 import decodebytes, encodebytes
     b64decodebytes = decodebytes
@@ -153,6 +156,9 @@ if 2 != version_info[0]:
 
     # noinspection PyUnresolvedReferences
     from subprocess import Popen
+
+    native_timestamp = datetime.datetime.timestamp  # type: Callable[[datetime.datetime], float]
+
 
     def unquote(string, encoding='utf-8', errors='replace'):
         return decode_str(six_unquote(decode_str(string, encoding, errors), encoding=encoding, errors=errors),
@@ -209,6 +215,7 @@ else:
     # ---------
     # Python 2
     # ---------
+    import time
     from lib.unidecode import unidecode as unicode_decode
     # noinspection PyProtectedMember,PyDeprecation
     from base64 import decodestring, encodestring
@@ -222,6 +229,16 @@ else:
     from lib.scandir.scandir import scandir, GenericDirEntry as DirEntry
     # noinspection PyUnresolvedReferences,PyDeprecation
     from inspect import getargspec
+
+
+    def _totimestamp(dt=None):
+        # type: (datetime.datetime) -> float
+        """ This function should only be used in this module due to its 1970s+ limitation as that's all we need here and
+        sgdatatime can't be used at this module level
+        """
+        return time.mktime(dt.timetuple())
+
+    native_timestamp = _totimestamp  # type: Callable[[datetime.datetime], float]
 
     from subprocess import Popen as _Popen
     class Popen(_Popen):

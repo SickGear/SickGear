@@ -1,7 +1,17 @@
 class BaseTVinfoException(Exception):
     """Base Exception
     """
-    pass
+
+    def __init__(self, *args, **kwargs):
+        default_message = kwargs.pop('default_message', type(self).__name__)
+
+        # if any arguments are passed...
+        if args or kwargs:
+            # ... pass them to the super constructor
+            super(BaseTVinfoException, self).__init__(*args, **kwargs)
+        else:  # else, the exception was raised without arguments ...
+            # ... pass the default message to the super constructor
+            super(BaseTVinfoException, self).__init__(default_message)
 
 
 class BaseTVinfoError(BaseTVinfoException):

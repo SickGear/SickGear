@@ -147,3 +147,7 @@ class FailedHistoryNotFoundException(SickBeardException):
 
 class EpisodeNotFoundByAbsoluteNumberException(SickBeardException):
     """The show wasn't found in the DB while looking at Absolute Numbers"""
+
+
+class ConnectionSkipException(SickBeardException):
+    """Connection was skipped because of previous errors"""

@@ -204,7 +204,7 @@ class NewznabProvider(generic.NZBProvider):
                 my_db = db.DBConnection('cache.db')
                 res = my_db.select('SELECT' + ' "datetime" FROM "lastrecentsearch" WHERE "name"=?', [self.get_id()])
                 if res:
-                    self._last_recent_search = datetime.datetime.fromtimestamp(int(res[0]['datetime']))
+                    self._last_recent_search = SGDatetime.from_timestamp(int(res[0]['datetime']))
             except (BaseException, Exception):
                 pass
         return self._last_recent_search
@@ -988,7 +988,7 @@ class NewznabProvider(generic.NZBProvider):
                             if not first_date:
                                 first_date = self._parse_pub_date(items[0])
                             last_date = self._parse_pub_date(items[-1])
-                        if not first_date or not last_date or not self._last_recent_search or \
+                        if not first_date or not last_date or not self.last_recent_search or \
                                 last_date <= self.last_recent_search or uc_only:
                             break
 

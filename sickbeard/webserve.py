@@ -5821,11 +5821,19 @@ class History(MainHandler):
 
         elif 'failures' in sickbeard.HISTORY_LAYOUT:
 
-            t.provider_fail_stats = filter_list(lambda stat: len(stat['fails']), [{
+            t.provider_fail_stats = filter_list(lambda stat: len(stat['fails']), [{'type': 'provider',
                 'active': p.is_active(), 'name': p.name, 'prov_id': p.get_id(), 'prov_img': p.image_name(),
                 'fails': p.fails.fails_sorted, 'tmr_limit_time': p.tmr_limit_time,
                 'next_try': p.get_next_try_time, 'has_limit': getattr(p, 'has_limit', False)}
                 for p in sickbeard.providerList + sickbeard.newznabProviderList])
+            with sg_helpers.DOMAIN_FAILURES.lock:
+                t.provider_fail_stats.extend(filter_list(lambda stat: len(stat['fails']),
+                                                         [{'type': 'domain', 'name': k, 'fails': v.fails_sorted,
+                                                           'next_try': v.get_next_try_time,
+                                                           'tmr_limit_time': v.tmr_limit_time,
+                                                           'has_limit': getattr(v, 'has_limit', False)}
+                                                          for k, v in
+                                                          iteritems(sg_helpers.DOMAIN_FAILURES.domain_list)]))
             t.provider_fail_stats = sorted([item for item in t.provider_fail_stats],
                                            key=lambda y: y.get('fails')[0].get('timestamp'),
                                            reverse=True)
@@ -5912,6 +5920,13 @@ class History(MainHandler):
 
         ui.notifications.message('Removed history entries greater than 30 days old')
         self.redirect('/history/')
+
+    @staticmethod
+    def retry_domain(domain=None):
+
+        if domain in sg_helpers.DOMAIN_FAILURES.domain_list:
+            sg_helpers.DOMAIN_FAILURES.domain_list[domain].retry_next()
+            time.sleep(3)
 
     @staticmethod
     def update_watched_state_emby():
