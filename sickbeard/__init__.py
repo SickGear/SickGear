@@ -565,6 +565,8 @@ CACHE_IMAGE_URL_LIST = classes.ImageUrlList()
 __INITIALIZED__ = False
 __INIT_STAGE__ = 0
 
+MEMCACHE = {}
+
 
 def get_backlog_cycle_time():
     cycletime = RECENTSEARCH_FREQUENCY * 2 + 7
@@ -1366,7 +1368,7 @@ def init_stage_1(console_logging):
 def init_stage_2():
 
     # Misc
-    global __INITIALIZED__, RECENTSEARCH_STARTUP
+    global __INITIALIZED__, MEMCACHE, RECENTSEARCH_STARTUP
     # Schedulers
     # global traktCheckerScheduler
     global recentSearchScheduler, backlogSearchScheduler, showUpdateScheduler, \
