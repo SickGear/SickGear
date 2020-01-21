@@ -1038,6 +1038,7 @@ class CommonParser(object):
                     more_vols = False
                     endarc = False
                     self._vol_list.append(volfile)
+                    self._main = None
                     continue
                 break
             h.volume = volume
@@ -1045,7 +1046,7 @@ class CommonParser(object):
 
             if h.type == RAR_BLOCK_MAIN and not self._main:
                 self._main = h
-                if h.flags & RAR_MAIN_NEWNUMBERING:
+                if volume == 0 and (h.flags & RAR_MAIN_NEWNUMBERING):
                     # RAR 2.x does not set FIRSTVOLUME,
                     # so check it only if NEWNUMBERING is used
                     if (h.flags & RAR_MAIN_FIRSTVOLUME) == 0:
