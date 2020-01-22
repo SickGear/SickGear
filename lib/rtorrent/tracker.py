@@ -19,8 +19,7 @@
 # WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 from .common import safe_repr
-from .rpc import Method
-import rpc
+from .rpc import Method, Multicall
 
 
 class Tracker(object):
@@ -56,7 +55,7 @@ class Tracker(object):
 
         @return: None
         """
-        mc = rpc.Multicall(self)
+        mc = Multicall(self)
 
         for method in filter(lambda fx: fx.is_retriever() and fx.is_available(self._rt_obj), methods):
             mc.add(method, self.rpc_id)
@@ -73,7 +72,7 @@ class Tracker(object):
         @return: if successful, 0
         @rtype: int
         """
-        mc = rpc.Multicall(self)
+        mc = Multicall(self)
 
         self.multicall_add(mc, 'd.tracker.insert', self.index, tracker)
 

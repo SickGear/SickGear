@@ -19,8 +19,7 @@
 # WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 from .common import safe_repr
-from .rpc import Method
-import rpc
+from .rpc import Method, Multicall
 
 
 class Peer(object):
@@ -44,7 +43,7 @@ class Peer(object):
 
         @return: None
         """
-        mc = rpc.Multicall(self)
+        mc = Multicall(self)
 
         for method in filter(lambda fx: fx.is_retriever() and fx.is_available(self._rt_obj), methods):
             mc.add(method, self.rpc_id)

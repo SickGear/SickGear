@@ -19,8 +19,7 @@
 # WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 from .common import safe_repr
-from .rpc import Method
-import rpc
+from .rpc import Method, Multicall
 
 
 class File(object):
@@ -43,7 +42,7 @@ class File(object):
 
         @return: None
         """
-        mc = rpc.Multicall(self)
+        mc = Multicall(self)
 
         for method in filter(lambda m: m.is_retriever() and m.is_available(self._rt_obj), methods):
             mc.add(method, self.rpc_id)

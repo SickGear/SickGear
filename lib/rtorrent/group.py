@@ -18,8 +18,7 @@
 # OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 # WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-from .rpc import Method
-import rpc
+from .rpc import Method, _build_rpc_methods, Multicall
 
 
 class Group(object):
@@ -42,7 +41,7 @@ class Group(object):
         ]
 
         # noinspection PyProtectedMember
-        rpc._build_rpc_methods(self, self.methods)
+        _build_rpc_methods(self, self.methods)
 
         # Setup multicall_add method
         caller = (lambda mc, method, *args: mc.add(method, *args))
@@ -52,7 +51,7 @@ class Group(object):
         return 'group.' + self.name + '.ratio.'
 
     def update(self):
-        mc = rpc.Multicall(self)
+        mc = Multicall(self)
 
         for method in filter(lambda m: m.is_retriever() and m.is_available(self._rt_obj), self.methods):
             mc.add(method)
@@ -78,7 +77,7 @@ class Group(object):
         if method:
             methods = [m + '=' for m in methods]
 
-            mc = rpc.Multicall(self)
+            mc = Multicall(self)
 
             self.multicall_add(
                 mc, method,

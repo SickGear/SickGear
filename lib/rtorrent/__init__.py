@@ -26,8 +26,7 @@ from .lib.torrentparser import TorrentParser
 from .lib.xmlrpc.basic_auth import BasicAuthTransport
 from .lib.xmlrpc.http import HTTPServerProxy
 from .lib.xmlrpc.scgi import SCGIServerProxy
-from .rpc import Method
-import rpc  # @UnresolvedImport
+from .rpc import Method, process_result, _build_rpc_methods, find_method, Multicall
 
 from .file import File, methods as file_methods
 from .group import Group
@@ -181,7 +180,7 @@ class RTorrent(object):
         """
         self.torrents = []
         retriever_methods = filter(lambda m: m.is_retriever() and m.is_available(self), torrent_methods)
-        mc = rpc.Multicall(self)
+        mc = Multicall(self)
 
         if self.method_exists('d.multicall2'):
             mc.add('d.multicall2', '', view, 'd.hash=',
@@ -195,7 +194,7 @@ class RTorrent(object):
         for result in results:
             self.torrents.append(
                 Torrent(self, info_hash=result[0],
-                        **dict((mc.varname, rpc.process_result(mc, r))
+                        **dict((mc.varname, process_result(mc, r))
                                for (mc, r) in list(zip(retriever_methods, result[1:])))))  # result[0]=info_hash
 
         self._manage_torrent_cache()
@@ -235,7 +234,7 @@ class RTorrent(object):
         for x in (extra or []):
             try:
                 call, arg = x.split('=')
-                method = rpc.find_method(call)
+                method = find_method(call)
                 method_name = filter(lambda m: self.method_exists(m), (method.rpc_call,) + method.aliases)[0]
                 param += ['%s=%s' % (method_name, arg)]
             except (BaseException, Exception):
@@ -427,7 +426,7 @@ class RTorrent(object):
         return common.find_torrent(info_hash, self.get_torrents())
 
     def has_local_id(self, info_hash):
-        method = rpc.find_method('d.get_local_id')
+        method = find_method('d.get_local_id')
         result = True
         try:
             func = filter(lambda m: self.method_exists(m), (method.rpc_call,) + method.aliases)[0]
@@ -785,5 +784,5 @@ class_methods = [
 
 for c, methods in class_methods:
     # noinspection PyProtectedMember
-    rpc._build_rpc_methods(c, methods)
+    _build_rpc_methods(c, methods)
     _build_class_methods(c)
