@@ -118,7 +118,7 @@ class WebServer(threading.Thread):
         self.app.add_handlers(self.re_host_pattern, [
             # favicon
             (r'%s/(favicon\.ico)' % self.options['web_root'], webserve.BaseStaticFileHandler,
-             {'path': os.path.join(self.options['data_root'], 'images/ico/favicon.ico')}),
+             {'path': os.path.join(self.options['data_root'], 'images', 'ico')}),
 
             # images
             (r'%s/images/(.*)' % self.options['web_root'], webserve.BaseStaticFileHandler,
@@ -162,7 +162,7 @@ class WebServer(threading.Thread):
         self.app.add_handlers(self.re_host_pattern, [
             # favicon
             (r'%s/(favicon\.ico)' % self.options['web_root'], webserve.BaseStaticFileHandler,
-             {'path': os.path.join(self.options['data_root'], 'images/ico/favicon.ico')}),
+             {'path': os.path.join(self.options['data_root'], 'images', 'ico')}),
 
             # images
             (r'%s/images/(.*)' % self.options['web_root'], webserve.BaseStaticFileHandler,

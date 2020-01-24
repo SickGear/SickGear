@@ -27,6 +27,8 @@ import re
 
 import rtorrent
 
+from _23 import filter_iter, map_list
+
 
 def get_varname(rpc_call):
     """Transform rpc method into variable name.
@@ -92,8 +94,8 @@ class Method(object):
 
         if rt_obj.get_client_version_tuple() >= self.min_version:
             try:
-                self.varname = get_varname(filter(lambda f: rt_obj.method_exists(f),
-                                                  (self.rpc_call,) + tuple(getattr(self, 'aliases', '')))[0])
+                self.varname = get_varname(next(filter_iter(lambda f: rt_obj.method_exists(f),
+                                                            (self.rpc_call,) + tuple(getattr(self, 'aliases', '')))))
                 return True
             except IndexError:
                 pass
@@ -160,7 +162,7 @@ class Multicall(object):
             getattr(xmc, rpc_call)(*args)
 
         try:
-            results = tuple(filter(lambda x: isinstance(x, list), xmc().results)[0])
+            results = tuple(next(filter_iter(lambda x: isinstance(x, list), xmc().results)))
         except IndexError:
             return [[]]
 
@@ -195,7 +197,7 @@ def call_method(class_obj, method, *args):
     if 'RTorrent' == class_obj.__class__.__name__:
         rt_obj = class_obj
     else:
-        # noinspection PyProtectedMember
+        # noinspection PyProtectedMember,PyUnresolvedReferences
         rt_obj = class_obj._rt_obj
 
     # check if rpc method is even available
@@ -214,9 +216,10 @@ def find_method(rpc_call):
     """Return L{Method} instance associated with given RPC call"""
     try:
         rpc_call = rpc_call.lower()
-        return filter(lambda m: rpc_call in map(lambda n: n.lower(), [m.rpc_call] + list(getattr(m, 'aliases', []))),
+        return next(filter_iter(lambda m: rpc_call in map_list(
+            lambda n: n.lower(), [m.rpc_call] + list(getattr(m, 'aliases', []))),
                       rtorrent.methods + rtorrent.torrent.methods +
-                      rtorrent.file.methods + rtorrent.tracker.methods + rtorrent.peer.methods)[0]
+                      rtorrent.file.methods + rtorrent.tracker.methods + rtorrent.peer.methods))
     except IndexError:
         return -1
 
