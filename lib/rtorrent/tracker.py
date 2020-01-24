@@ -18,9 +18,11 @@
 # OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 # WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+from . import rpc
 from .common import safe_repr
 from .rpc import Method
-import rpc
+
+from _23 import filter_iter
 
 
 class Tracker(object):
@@ -29,6 +31,10 @@ class Tracker(object):
     def __init__(self, _rt_obj, info_hash, **kwargs):
         self._rt_obj = _rt_obj
         self.info_hash = info_hash  # : info hash for the torrent using this tracker
+        self.group = None
+        self.multicall_add = None
+        self.set_enabled = lambda x: True
+        self.url = None
         for k in kwargs:
             setattr(self, k, kwargs.get(k, None))
 
@@ -58,7 +64,7 @@ class Tracker(object):
         """
         mc = rpc.Multicall(self)
 
-        for method in filter(lambda fx: fx.is_retriever() and fx.is_available(self._rt_obj), methods):
+        for method in filter_iter(lambda fx: fx.is_retriever() and fx.is_available(self._rt_obj), methods):
             mc.add(method, self.rpc_id)
 
         mc.call()

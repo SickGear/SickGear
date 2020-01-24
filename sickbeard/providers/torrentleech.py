@@ -116,10 +116,6 @@ class TorrentLeechProvider(generic.TorrentProvider):
                             cnt_search += 1
                             try:
                                 head = head if None is not head else self._header_row(tr)
-                                seeders, leechers = [try_int(n) for n in [
-                                    tr.find('td', class_=x).get_text().strip() for x in ('seeders', 'leechers')]]
-                                if self._reject_item(seeders, leechers):
-                                    continue
 
                                 dl = tr.find('a', href=rc['get'])['href']
                                 dl_id = rc['id'].findall(dl)[0]
@@ -127,9 +123,15 @@ class TorrentLeechProvider(generic.TorrentProvider):
                                 if lrs_found:
                                     break
 
+                                seeders, leechers = [try_int(n) for n in [
+                                    tr.find('td', class_=x).get_text().strip() for x in ('seeders', 'leechers')]]
+                                if self._reject_item(seeders, leechers):
+                                    continue
+
                                 info = tr.find('td', class_='name').a
                                 title = (info.attrs.get('title') or info.get_text()).strip()
                                 size = cells[head['size']].get_text().strip()
+                                # noinspection PyUnresolvedReferences
                                 download_url = self._link(dl, url_quote=PY2 and isinstance(dl, unicode) or None)
                             except (AttributeError, TypeError, ValueError):
                                 continue

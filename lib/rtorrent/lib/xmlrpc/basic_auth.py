@@ -22,6 +22,7 @@
 
 from ...compat import xmlrpclib
 
+from six import PY2
 # noinspection PyUnresolvedReferences
 from six.moves import http_client as httplib
 from _23 import b64encodestring
@@ -68,9 +69,16 @@ class BasicAuthTransport(xmlrpclib.Transport):
             h.set_debuglevel(1)
 
         try:
-            self.send_request(h, handler, request_body)
-            self.send_host(h, host)
-            self.send_user_agent(h)
+            if not PY2:
+                # noinspection PyArgumentList
+                self.send_request(h, handler, request_body, False)
+            else:
+                # noinspection PyArgumentList
+                self.send_request(h, handler, request_body)
+                # noinspection PyUnresolvedReferences
+                self.send_host(h, host)
+                # noinspection PyUnresolvedReferences
+                self.send_user_agent(h)
             self.send_auth(h)
             self.send_content(h, request_body)
 

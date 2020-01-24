@@ -166,6 +166,8 @@ class BaseStaticFileHandler(StaticFileHandler):
 
     def set_extra_headers(self, path):
         self.set_header('X-Robots-Tag', 'noindex, nofollow, noarchive, nocache, noodp, noydir, noimageindex, nosnippet')
+        self.set_header('Cache-Control', 'no-cache, max-age=0')
+        self.set_header('Pragma', 'no-cache')
         if sickbeard.SEND_SECURITY_HEADERS:
             self.set_header('X-Frame-Options', 'SAMEORIGIN')
 
@@ -175,10 +177,11 @@ class RouteHandler(LegacyBaseHandler):
     def data_received(self, *args):
         pass
 
-    @staticmethod
-    def decode_data(data):
+    def decode_data(self, data):
         if isinstance(data, binary_type):
             return decode_str(data)
+        if isinstance(data, list):
+            return [self.decode_data(d) for d in data]
         if not isinstance(data, string_types):
             return data
         if not PY2:

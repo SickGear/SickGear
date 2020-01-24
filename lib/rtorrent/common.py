@@ -17,9 +17,10 @@
 # LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
 # OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 # WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-from compat import is_py3, urlparse, urlunparse, ParseResult
 
 import os
+
+from .compat import is_py3, urlparse, urlunparse, ParseResult
 
 
 def bool_to_int(value):

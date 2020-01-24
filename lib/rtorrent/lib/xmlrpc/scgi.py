@@ -84,9 +84,10 @@ from __future__ import print_function
 
 import re
 import socket
-import sys
 
 from ...compat import urlparse, xmlrpclib
+
+from _23 import decode_bytes
 
 
 class SCGITransport(xmlrpclib.Transport):
@@ -116,11 +117,7 @@ class SCGITransport(xmlrpclib.Transport):
             # noinspection PyAttributeOutsideInit
             self.verbose = verbose
 
-            if sys.version_info[0] > 2:
-                # noinspection PyArgumentList
-                sock.send(bytes(request_body, 'utf-8'))  # py3
-            else:
-                sock.send(request_body)
+            sock.send(decode_bytes(request_body))
             return self.parse_response(sock.makefile())
         finally:
             if sock:

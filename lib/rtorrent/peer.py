@@ -18,24 +18,25 @@
 # OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 # WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+from . import rpc
 from .common import safe_repr
 from .rpc import Method
-import rpc
 
 
 class Peer(object):
     """Represents an individual peer within a L{Torrent} instance."""
     def __init__(self, _rt_obj, info_hash, **kwargs):
         self._rt_obj = _rt_obj
+        self.id = None
         self.info_hash = info_hash  # : info hash for the torrent the peer is associated with
         for k in kwargs:
             setattr(self, k, kwargs.get(k, None))
 
         self.rpc_id = '{0}:p{1}'.format(
-            self.info_hash, self.id)  # : unique id to pass to rTorrent
+            self.info_hash, self.id or '')  # : unique id to pass to rTorrent
 
     def __repr__(self):
-        return safe_repr('Peer(id={0})', self.id)
+        return safe_repr('Peer(id={0})', self.id or '')
 
     def update(self):
         """Refresh peer data

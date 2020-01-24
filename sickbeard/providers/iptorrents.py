@@ -129,16 +129,17 @@ class IPTorrentsProvider(generic.TorrentProvider):
                             try:
                                 head = head if None is not head else self._header_row(
                                     tr, header_strip='(?i)(?:leechers|seeders|size);')
-                                seeders, leechers = [try_int(tr.find('td', class_='t_' + x).get_text().strip())
-                                                     for x in ('seeders', 'leechers')]
-                                if self._reject_item(seeders, leechers):
-                                    continue
 
                                 dl = tr.find('a', href=rc['get'])['href']
                                 dl_id = rc['id'].findall(dl)[0]
                                 lrs_found = dl_id == last_recent_search
                                 if lrs_found:
                                     break
+
+                                seeders, leechers = [try_int(tr.find('td', class_='t_' + x).get_text().strip())
+                                                     for x in ('seeders', 'leechers')]
+                                if self._reject_item(seeders, leechers):
+                                    continue
 
                                 info = tr.find('a', href=rc['info'])
                                 title = (info.attrs.get('title') or info.get_text()).strip()

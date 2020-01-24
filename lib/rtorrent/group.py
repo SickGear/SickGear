@@ -18,8 +18,10 @@
 # OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 # WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+from . import rpc
 from .rpc import Method
-import rpc
+
+from _23 import filter_iter
 
 
 class Group(object):
@@ -28,6 +30,7 @@ class Group(object):
     def __init__(self, _rt_obj, name):
         self._rt_obj = _rt_obj
         self.name = name
+        self.multicall_add = None
 
         self.methods = [
             # RETRIEVERS
@@ -69,7 +72,7 @@ class Group(object):
 
     def _get_method(self, *choices):
         try:
-            return filter(lambda method: self._rt_obj.method_exists(method), choices)[0]
+            return next(filter_iter(lambda method: self._rt_obj.method_exists(method), choices))
         except (BaseException, Exception):
             pass
 

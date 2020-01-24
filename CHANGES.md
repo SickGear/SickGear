@@ -22,6 +22,14 @@
 
 
 
+### 0.21.7 (2020-01-24 15:05:00 UTC)
+
+* Fix rTorrent py3 compat
+* Fix edit show with multiple list values under py3
+* Change improve search performance of some providers
+* Change cache control of static files sent to browser to ensure page content is updated
+
+
 ### 0.21.6 (2020-01-21 22:30:00 UTC)
 
 * Fix Kodi service addon + bump to 1.0.7 (select "Check for updates" on menu of "SickGear Add-on repository")
@@ -30,7 +38,7 @@
 * Fix a rare post processing issue that created `dictionary changed size` error
 * Fix ensure PySocks is available for Requests/urllib3
 * Fix fanart image update issue
-* Change add examples to config/general/advanced/"Proxy host" that show scheme and authentication usage
+* Change add examples that show scheme and authentication usage to config/general/advanced/"Proxy host"
 * Change add warning that Kodi Add-on requires IP to setting config/general/"Allow IP use for connections"
 * Change About page version string
 
