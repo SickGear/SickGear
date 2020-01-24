@@ -18,9 +18,11 @@
 # OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 # WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+from . import rpc
 from .common import safe_repr
 from .rpc import Method
-import rpc
+
+from _23 import filter_iter
 
 
 class File(object):
@@ -30,6 +32,7 @@ class File(object):
         self._rt_obj = _rt_obj
         self.info_hash = info_hash  # : info hash for the torrent the file is associated with
         self.index = index  # : The position of the file within the file list
+        self.path = ''
         for k in kwargs:
             setattr(self, k, kwargs.get(k, None))
 
@@ -45,7 +48,7 @@ class File(object):
         """
         mc = rpc.Multicall(self)
 
-        for method in filter(lambda m: m.is_retriever() and m.is_available(self._rt_obj), methods):
+        for method in filter_iter(lambda m: m.is_retriever() and m.is_available(self._rt_obj), methods):
             mc.add(method, self.rpc_id)
 
         mc.call()

@@ -17,23 +17,27 @@
 # LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
 # OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 # WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
 import os.path
 import time
 
-from .common import convert_version_tuple_to_str, find_torrent, is_valid_port, join_uri, update_uri
-from .compat import urlparse, xmlrpclib
 from .lib.torrentparser import TorrentParser
 from .lib.xmlrpc.basic_auth import BasicAuthTransport
 from .lib.xmlrpc.http import HTTPServerProxy
 from .lib.xmlrpc.scgi import SCGIServerProxy
-from .rpc import Method
-import rpc  # @UnresolvedImport
 
+from . import rpc
+from .common import convert_version_tuple_to_str, find_torrent, is_valid_port, join_uri, update_uri
+from .compat import urlparse, xmlrpclib
 from .file import File, methods as file_methods
 from .group import Group
 from .peer import Peer, methods as peer_methods
+from .rpc import Method
 from .torrent import Torrent, methods as torrent_methods
 from .tracker import Tracker, methods as tracker_methods
+
+from _23 import filter_iter, filter_list, map_list
+
 
 __version__ = '0.2.10'
 __author__ = 'Chris Lucas'
@@ -180,15 +184,15 @@ class RTorrent(object):
         @todo: add validity check for specified view
         """
         self.torrents = []
-        retriever_methods = filter(lambda m: m.is_retriever() and m.is_available(self), torrent_methods)
+        retriever_methods = filter_list(lambda m: m.is_retriever() and m.is_available(self), torrent_methods)
         mc = rpc.Multicall(self)
 
         if self.method_exists('d.multicall2'):
             mc.add('d.multicall2', '', view, 'd.hash=',
-                   *map(lambda m2: ((getattr(m2, 'aliases') or [''])[-1] or m2.rpc_call) + '=', retriever_methods))
+                   *map_list(lambda m2: ((getattr(m2, 'aliases') or [''])[-1] or m2.rpc_call) + '=', retriever_methods))
         else:
             mc.add('d.multicall', view, 'd.get_hash=',
-                   *map(lambda m1: m1.rpc_call + '=', retriever_methods))
+                   *map_list(lambda m1: m1.rpc_call + '=', retriever_methods))
 
         results = mc.call()[0]  # only sent one call, only need first result
 
@@ -236,7 +240,7 @@ class RTorrent(object):
             try:
                 call, arg = x.split('=')
                 method = rpc.find_method(call)
-                method_name = filter(lambda m: self.method_exists(m), (method.rpc_call,) + method.aliases)[0]
+                method_name = next(filter_iter(lambda m: self.method_exists(m), (method.rpc_call,) + method.aliases))
                 param += ['%s=%s' % (method_name, arg)]
             except (BaseException, Exception):
                 pass
@@ -263,7 +267,7 @@ class RTorrent(object):
             max_retries = 10
             while max_retries:
                 try:
-                    t = filter(lambda td: td.info_hash.upper() == info_hash, self.get_torrents())[0]
+                    t = next(filter_iter(lambda td: td.info_hash.upper() == info_hash, self.get_torrents()))
                     break
                 except (BaseException, Exception):
                     time.sleep(self.request_interval)
@@ -322,7 +326,7 @@ class RTorrent(object):
         if verify_load:
             while verify_retries:
                 try:
-                    t = filter(lambda td: td.info_hash == info_hash, self.get_torrents())[0]
+                    t = next(filter_iter(lambda td: td.info_hash == info_hash, self.get_torrents()))
                     break
                 except (BaseException, Exception):
                     time.sleep(self.request_interval)
@@ -412,14 +416,17 @@ class RTorrent(object):
         @raise AssertionError: if invalid port is given
         """
         assert is_valid_port(port), 'Valid port range is 0-65535'
+        # noinspection PyUnresolvedReferences
         self.dht_port = self._p.set_dht_port(port)
 
     def enable_check_hash(self):
         """Alias for set_check_hash(True)"""
+        # noinspection PyUnresolvedReferences
         self.set_check_hash(True)
 
     def disable_check_hash(self):
         """Alias for set_check_hash(False)"""
+        # noinspection PyUnresolvedReferences
         self.set_check_hash(False)
 
     def find_torrent(self, info_hash):
@@ -430,7 +437,7 @@ class RTorrent(object):
         method = rpc.find_method('d.get_local_id')
         result = True
         try:
-            func = filter(lambda m: self.method_exists(m), (method.rpc_call,) + method.aliases)[0]
+            func = next(filter_iter(lambda m: self.method_exists(m), (method.rpc_call,) + method.aliases))
             getattr(self.get_connection(), func)(info_hash)
         except(xmlrpclib.Fault, BaseException):
             result = False
@@ -459,7 +466,7 @@ class RTorrent(object):
         """
         mc = rpc.Multicall(self)
 
-        for method in filter(lambda m: m.is_retriever() and m.is_available(self), methods):
+        for method in filter_iter(lambda m: m.is_retriever() and m.is_available(self), methods):
             mc.add(method)
 
         mc.call()

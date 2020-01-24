@@ -85,8 +85,8 @@ class TorrentDayProvider(generic.TorrentProvider):
         return results
 
     def _search_urls(self, mode, last_recent_search, urls):
-        results = []
 
+        results = []
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
         rc = dict((k, re.compile('(?i)' + v)) for (k, v) in iteritems(dict(get='download', id=r'download.*?/([\d]+)')))
@@ -124,16 +124,18 @@ class TorrentDayProvider(generic.TorrentProvider):
                             try:
                                 head = head if None is not head else self._header_row(
                                     tr, header_strip='(?i)(?:leechers|seeders|size);')
-                                seeders, leechers, size = [try_int(n, n) for n in [
-                                    cells[head[x]].get_text().strip() for x in ('seed', 'leech', 'size')]]
-                                if self._reject_item(seeders, leechers):
-                                    continue
 
                                 dl = tr.find('a', href=rc['get'])['href']
                                 dl_id = rc['id'].findall(dl)[0]
                                 lrs_found = dl_id == last_recent_search
                                 if lrs_found:
                                     break
+
+                                seeders, leechers, size = [try_int(n, n) for n in [
+                                    cells[head[x]].get_text().strip() for x in ('seed', 'leech', 'size')]]
+                                if self._reject_item(seeders, leechers):
+                                    continue
+
                                 title = tr.find('a', href=re.compile('/t/%s' % dl_id)).get_text().strip()
                                 download_url = self._link(dl)
                             except (AttributeError, TypeError, ValueError, IndexError):

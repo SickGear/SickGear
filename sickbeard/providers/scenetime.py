@@ -83,7 +83,6 @@ class SceneTimeProvider(generic.TorrentProvider):
     def _search_urls(self, mode, last_recent_search, urls):
 
         results = []
-
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
         rc = dict([(k, re.compile('(?i)' + v)) for (k, v) in iteritems({
@@ -123,6 +122,13 @@ class SceneTimeProvider(generic.TorrentProvider):
                             cnt_search += 1
                             try:
                                 head = head if None is not head else self._header_row(tr)
+
+                                info = tr.find('a', href=rc['info'])
+                                dl_id = re.sub(rc['get'], r'\1', str(info.attrs['href']))
+                                lrs_found = dl_id == last_recent_search
+                                if lrs_found:
+                                    break
+
                                 seeders, leechers, size = [try_int(n, n) for n in [
                                     cells[head[x]].get_text().strip() for x in ('seed', 'leech', 'size')]]
                                 if None is tr.find('a', href=rc['cats']) or self._reject_item(
@@ -130,11 +136,6 @@ class SceneTimeProvider(generic.TorrentProvider):
                                         self.freeleech and (None is rc['fl'].search(cells[1].get_text()))):
                                     continue
 
-                                info = tr.find('a', href=rc['info'])
-                                dl_id = re.sub(rc['get'], r'\1', str(info.attrs['href']))
-                                lrs_found = dl_id == last_recent_search
-                                if lrs_found:
-                                    break
                                 title = (info.attrs.get('title') or info.get_text()).strip()
                                 download_url = self._link('%s/%s' % (dl_id, str(title).replace(' ', '.')))
                             except (AttributeError, TypeError, ValueError, KeyError):

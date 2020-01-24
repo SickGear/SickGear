@@ -61,7 +61,6 @@ class SkytorrentsProvider(generic.TorrentProvider):
     def _search_urls(self, mode, last_recent_search, urls):
 
         results = []
-
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
         rc = dict([(k, re.compile('(?i)' + v)) for (k, v) in iteritems({
@@ -96,16 +95,17 @@ class SkytorrentsProvider(generic.TorrentProvider):
                             cnt_search += 1
                             try:
                                 head = head if None is not head else self._header_row(tr)
-                                seeders, leechers, size = [try_int(n, n) for n in [
-                                    cells[head[x]].get_text().strip() for x in ('seed', 'leech', 'size')]]
-                                if self._reject_item(seeders, leechers):
-                                    continue
 
                                 dl = tr.find('a', href=rc['get'])['href']
                                 dl_id = rc['get'].findall(dl)[0]
                                 lrs_found = dl_id == last_recent_search
                                 if lrs_found:
                                     break
+
+                                seeders, leechers, size = [try_int(n, n) for n in [
+                                    cells[head[x]].get_text().strip() for x in ('seed', 'leech', 'size')]]
+                                if self._reject_item(seeders, leechers):
+                                    continue
 
                                 info = tr.select_one(
                                     '[alt*="magnet"], [title*="magnet"]') \

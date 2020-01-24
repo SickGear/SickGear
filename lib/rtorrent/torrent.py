@@ -18,13 +18,14 @@
 # OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 # WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+from . import rpc
 from .common import safe_repr
-
 from .file import File, methods as file_methods
 from .peer import Peer, methods as peer_methods
-from .tracker import Tracker, methods as tracker_methods
 from .rpc import Method
-import rpc
+from .tracker import Tracker, methods as tracker_methods
+
+from _23 import filter_iter, filter_list
 
 
 class Torrent(object):
@@ -33,6 +34,9 @@ class Torrent(object):
     def __init__(self, _rt_obj, info_hash, **kwargs):
         self._rt_obj = _rt_obj
         self.info_hash = info_hash  # : info hash for the torrent
+        self.hash_checking = None
+        self.multicall_add = None
+        self.name = None
         self.rpc_id = self.info_hash  # : unique id to pass to rTorrent
         for k in kwargs:
             setattr(self, k, kwargs.get(k, None))
@@ -49,7 +53,7 @@ class Torrent(object):
 
     def __repr__(self):
         return safe_repr('Torrent(info_hash="{0}" name="{1}")',
-                         self.info_hash, self.name)
+                         self.info_hash, self.name or '')
 
     def _call_custom_methods(self):
         """only calls methods that check instance variables."""
@@ -66,7 +70,7 @@ class Torrent(object):
         @note: also assigns return value to self.peers
         """
         self.peers = []
-        retriever_methods = filter(lambda m: m.is_retriever() and m.is_available(self._rt_obj), peer_methods)
+        retriever_methods = filter_list(lambda m: m.is_retriever() and m.is_available(self._rt_obj), peer_methods)
         mc = rpc.Multicall(self)
 
         # need to leave 2nd arg empty (dunno why)
@@ -93,7 +97,7 @@ class Torrent(object):
         @note: also assigns return value to self.trackers
         """
         self.trackers = []
-        retriever_methods = filter(lambda m: m.is_retriever() and m.is_available(self._rt_obj), tracker_methods)
+        retriever_methods = filter_list(lambda m: m.is_retriever() and m.is_available(self._rt_obj), tracker_methods)
         mc = rpc.Multicall(self)
 
         # need to leave 2nd arg empty (dunno why)
@@ -121,7 +125,7 @@ class Torrent(object):
         """
 
         self.files = []
-        retriever_methods = filter(lambda m: m.is_retriever() and m.is_available(self._rt_obj), file_methods)
+        retriever_methods = filter_list(lambda m: m.is_retriever() and m.is_available(self._rt_obj), file_methods)
         mc = rpc.Multicall(self)
 
         # 2nd arg can be anything, but it'll return all files in torrent
@@ -151,7 +155,7 @@ class Torrent(object):
     def _get_method(self, *choices):
 
         try:
-            return filter(lambda method: self._rt_obj.method_exists(method), choices)[0]
+            return next(filter_iter(lambda method: self._rt_obj.method_exists(method), choices))
         except (BaseException, Exception):
             pass
 
@@ -272,7 +276,7 @@ class Torrent(object):
         """
         mc = rpc.Multicall(self)
 
-        for method in filter(lambda m: m.is_retriever() and m.is_available(self._rt_obj), methods):
+        for method in filter_iter(lambda m: m.is_retriever() and m.is_available(self._rt_obj), methods):
             mc.add(method, self.rpc_id)
 
         mc.call()
