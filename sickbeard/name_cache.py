@@ -22,12 +22,12 @@ import sickbeard
 from . import db
 from .helpers import try_int
 
-from _23 import list_items
 from six import iteritems
 
 # noinspection PyUnreachableCode
 if False:
-    from typing import AnyStr, Tuple, Union
+    from typing import AnyStr, Optional, Tuple, Union
+    from .tv import TVShow, TVShowBase
 
 nameCache = {}
 nameCacheLock = threading.Lock()
@@ -47,10 +47,11 @@ def addNameToCache(name, tvid=0, prodid=0, season=-1):
     """
     global nameCache
 
-    # standardize the name we're using to account for small differences in providers
-    name = sickbeard.helpers.full_sanitize_scene_name(name)
-    if name not in nameCache:
-        nameCache[name] = [int(tvid), int(prodid), season]
+    with nameCacheLock:
+        # standardize the name we're using to account for small differences in providers
+        name = sickbeard.helpers.full_sanitize_scene_name(name)
+        if name not in nameCache:
+            nameCache[name] = [int(tvid), int(prodid), season]
 
 
 def retrieveNameFromCache(name):
@@ -63,16 +64,19 @@ def retrieveNameFromCache(name):
     global nameCache
 
     name = sickbeard.helpers.full_sanitize_scene_name(name)
-    if name in nameCache:
-        return int(nameCache[name][0]), int(nameCache[name][1])
+    try:
+        if name in nameCache:
+            return int(nameCache[name][0]), int(nameCache[name][1])
+    except (BaseException, Exception):
+        pass
     return None, None
 
 
 def buildNameCache(show_obj=None):
+    # type: (Optional[Union[TVShow, TVShowBase]]) -> None
     """Adds all new name exceptions to the namecache memory and flushes any removed name exceptions
 
-    :param show_obj : (optional) Only update namecache for this show object
-    :type show_obj: sickbeard.tv.TVShow or None
+    :param show_obj : Only update name cache for this show object, otherwise update all
     """
     global nameCache
     with nameCacheLock:
@@ -80,7 +84,8 @@ def buildNameCache(show_obj=None):
         if show_obj:
             # search for only the requested show id and flush old show entries from namecache
             show_ids = {show_obj.tvid: [show_obj.prodid]}
-            nameCache = dict([(k, v) for k, v in list_items(nameCache) if v != (show_obj.tvid, show_obj.prodid)])
+            nameCache = dict([(k, v) for k, v in iteritems(nameCache)
+                              if not (v[0] == show_obj.tvid and v[1] == show_obj.prodid)])
 
             # add standard indexer name to namecache
             nameCache[sickbeard.helpers.full_sanitize_scene_name(show_obj.name)] = [show_obj.tvid, show_obj.prodid, -1]
@@ -123,5 +128,6 @@ def remove_from_namecache(tvid, prodid):
     """
     global nameCache
 
-    if nameCache:
-        nameCache = dict([(k, v) for k, v in list_items(nameCache) if v != (tvid, prodid)])
+    with nameCacheLock:
+        if nameCache:
+            nameCache = dict([(k, v) for k, v in iteritems(nameCache) if not (v[0] == tvid and v[1] == prodid)])

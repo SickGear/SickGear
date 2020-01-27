@@ -66,7 +66,8 @@ class PostProcessor(object):
         nzb_name: The name of the NZB which resulted in this file being downloaded (optional)
         """
         # absolute path to the folder that is being processed
-        self.folder_path = long_path(ek.ek(os.path.dirname, long_path(ek.ek(os.path.abspath, long_path(file_path)))))  # type: AnyStr
+        self.folder_path = long_path(ek.ek(os.path.dirname, long_path(
+            ek.ek(os.path.abspath, long_path(file_path)))))  # type: AnyStr
 
         # full path to file
         self.file_path = long_path(file_path)  # type: AnyStr
@@ -1032,12 +1033,11 @@ class PostProcessor(object):
         ep_obj = self._get_ep_obj(show_obj, season_number, episode_numbers)
 
         # get the quality of the episode we're processing
-        if common.Quality.UNKNOWN == quality:
+        if quality in (None, common.Quality.UNKNOWN):
             new_ep_quality = self._get_quality(ep_obj)
         else:
             new_ep_quality = quality
-            self._log(u'Using "%s" quality from the snatch history'
-                      % common.Quality.qualityStrings[new_ep_quality], logger.DEBUG)
+            self._log(u'Using "%s" quality' % common.Quality.qualityStrings[new_ep_quality], logger.DEBUG)
 
         # see if it's safe to replace existing episode (is download snatched, PROPER, better quality)
         if not self._safe_replace(ep_obj, new_ep_quality):
