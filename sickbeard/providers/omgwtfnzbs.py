@@ -55,6 +55,7 @@ class OmgwtfnzbsProvider(generic.NZBProvider):
                      'search_html': self.url_base + 'browse.php?cat=tv&search=%s'}  # type: Dict[AnyStr, AnyStr]
 
         self.needs_auth = True  # type: bool
+        self.nn = True  # type: bool
         self.username, self.api_key, self.cookies = 3 * [None]
         self.cache = OmgwtfnzbsCache(self)
 
@@ -395,6 +396,8 @@ class OmgwtfnzbsProvider(generic.NZBProvider):
 
         self.cookies = re.sub(r'(?i)([\s\']+|cookie\s*:)', '', api_key)
         success, msg = self._check_cookie()
+        if success and self.nn:
+            success, msg = None, 'pm dev in irc about this feature'
         if not success:
             logger.log(u'%s: %s' % (msg, self.cookies), logger.WARNING)
             self.cookies = None
