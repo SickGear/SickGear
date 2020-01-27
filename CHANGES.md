@@ -1,4 +1,11 @@
-﻿### 0.21.7 (2020-01-24 15:05:00 UTC)
+﻿### 0.21.8 (2020-01-27 09:00:00 UTC)
+
+* Fix issue processing files with no quality parsed
+* Change remove nonsense text that quality of pp item is from snatch history given that it may not be
+* Fix update NameCache in case show name changes
+
+
+### 0.21.7 (2020-01-24 15:05:00 UTC)
 
 * Fix rTorrent py3 compat
 * Fix edit show with multiple list values under py3
