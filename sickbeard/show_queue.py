@@ -37,6 +37,7 @@ from .indexers.indexer_config import TVINFO_TVDB, TVINFO_TVRAGE
 from .indexers.indexer_exceptions import check_exception_type, ExceptionTuples
 from .name_parser.parser import NameParser
 from .tv import TVShow
+from six import integer_types
 
 # noinspection PyUnreachableCode
 if False:
@@ -518,8 +519,8 @@ class QueueItemAdd(ShowQueueItem):
         self.prodid = prodid  # type: int
         self.showDir = show_dir  # type: AnyStr
         self.default_status = default_status
-        self.default_wanted_begin = default_wanted_begin
-        self.default_wanted_latest = default_wanted_latest
+        self.default_wanted_begin = (0, default_wanted_begin)[isinstance(default_wanted_begin, integer_types)]
+        self.default_wanted_latest = (0, default_wanted_latest)[isinstance(default_wanted_latest, integer_types)]
         self.quality = quality  # type: int
         self.upgrade_once = upgrade_once
         self.flatten_folders = flatten_folders
