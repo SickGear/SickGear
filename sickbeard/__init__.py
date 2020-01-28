@@ -22,6 +22,7 @@ from collections import OrderedDict
 from threading import Lock
 
 import datetime
+import io
 import os
 import re
 import signal
@@ -966,7 +967,7 @@ def init_stage_1(console_logging):
     try:
         ng_script_file = ek.ek(os.path.join, ek.ek(os.path.dirname, ek.ek(os.path.dirname, __file__)),
                                'autoProcessTV', 'SickGear-NG', 'SickGear-NG.py')
-        with open(ng_script_file, 'r') as ng:
+        with io.open(ng_script_file, 'r', encoding='utf8') as ng:
             text = ng.read()
         NZBGET_SCRIPT_VERSION = re.search(r""".*version: (\d+\.\d+)""", text, flags=re.M).group(1)
     except (BaseException, Exception):

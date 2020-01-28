@@ -22,6 +22,13 @@
 
 
 
+### 0.21.9 (2020-01-28 01:00:00 UTC)
+
+* Fix reading service.py under Docker
+* Fix a particular case with Add show for imported shows
+* Change enforce reading text files as utf8 on environments that don't e.g. Docker
+
+
 ### 0.21.8 (2020-01-27 09:00:00 UTC)
 
 * Fix issue processing files with no quality parsed

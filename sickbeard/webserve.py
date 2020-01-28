@@ -468,7 +468,7 @@ class RepoHandler(BaseStaticFileHandler):
         repo_md5_file = ek.ek(os.path.join, cache_client_kodi, 'addons.xml.md5')
         saved_md5 = None
         try:
-            with io.open(repo_md5_file, 'r') as fh:
+            with io.open(repo_md5_file, 'r', encoding='utf8') as fh:
                 saved_md5 = fh.readline()
         except (BaseException, Exception):
             pass
@@ -592,7 +592,7 @@ class RepoHandler(BaseStaticFileHandler):
             return sickbeard.MEMCACHE.get(mem_key).get('data')
 
         with io.open(ek.ek(os.path.join, sickbeard.PROG_DIR, 'sickbeard', 'clients',
-                           'kodi', 'service.sickgear.watchedstate.updater', 'addon.xml'), 'r') as fh:
+                           'kodi', 'service.sickgear.watchedstate.updater', 'addon.xml'), 'r', encoding='utf8') as fh:
             xml = fh.read().strip() % dict(ADDON_VERSION=self.get_addon_version())
 
         sickbeard.MEMCACHE[mem_key] = dict(last_update=30 + SGDatetime.now().totimestamp(default=0), data=xml)
@@ -605,7 +605,7 @@ class RepoHandler(BaseStaticFileHandler):
             return sickbeard.MEMCACHE.get(mem_key).get('data')
 
         with io.open(ek.ek(os.path.join, sickbeard.PROG_DIR, 'sickbeard', 'clients',
-                           'kodi', 'service.sickgear.watchedstate.updater', 'service.py'), 'r') as fh:
+                           'kodi', 'service.sickgear.watchedstate.updater', 'service.py'), 'r', encoding='utf8') as fh:
             version = re.findall(r'ADDON_VERSION\s*?=\s*?\'([^\']+)', fh.read())[0]
 
         sickbeard.MEMCACHE[mem_key] = dict(last_update=30 + SGDatetime.now().totimestamp(default=0), data=version)
