@@ -28,7 +28,7 @@ from . import helpers as metadata_helpers
 from .. import helpers, logger
 from ..indexers import indexer_config
 from ..indexers.indexer_config import TVINFO_TVDB
-from ..indexers.indexer_exceptions import check_exception_type, ExceptionTuples
+from tvinfo_base.exceptions import *
 import sickbeard
 # noinspection PyPep8Naming
 import encodingKludge as ek
@@ -343,12 +343,9 @@ class GenericMetadata(object):
             logger.log('Metadata provider %s creating show metadata for %s' % (self.name, show_obj.name), logger.DEBUG)
             try:
                 result = self.write_show_file(show_obj)
-            except Exception as e:
-                if check_exception_type(e, ExceptionTuples.tvinfo_error):
-                    logger.log('Unable to find useful show metadata for %s on %s: %s' % (
-                        self.name, sickbeard.TVInfoAPI(show_obj.tvid).name, ex(e)), logger.WARNING)
-                else:
-                    raise e
+            except BaseTVinfoError as e:
+                logger.log('Unable to find useful show metadata for %s on %s: %s' % (
+                    self.name, sickbeard.TVInfoAPI(show_obj.tvid).name, ex(e)), logger.WARNING)
 
         return result
 
@@ -360,12 +357,9 @@ class GenericMetadata(object):
                        logger.DEBUG)
             try:
                 result = self.write_ep_file(ep_obj)
-            except Exception as e:
-                if check_exception_type(e, ExceptionTuples.tvinfo_error):
-                    logger.log('Unable to find useful episode metadata for %s on %s: %s' % (
-                        self.name, sickbeard.TVInfoAPI(ep_obj.show_obj.tvid).name, ex(e)), logger.WARNING)
-                else:
-                    raise e
+            except BaseTVinfoError as e:
+                logger.log('Unable to find useful episode metadata for %s on %s: %s' % (
+                    self.name, sickbeard.TVInfoAPI(ep_obj.show_obj.tvid).name, ex(e)), logger.WARNING)
 
         return result
 
@@ -504,12 +498,8 @@ class GenericMetadata(object):
                     t = sickbeard.TVInfoAPI(TVINFO_TVDB).setup(**tvinfo_config)
 
                     ep_info = t[cur_ep_obj.show_obj.prodid][cur_ep_obj.season][cur_ep_obj.episode]
-                except Exception as e:
-                    if check_exception_type(e, ExceptionTuples.tvinfo_episodenotfound,
-                                            ExceptionTuples.tvinfo_seasonnotfound, TypeError):
-                        ep_info = None
-                    else:
-                        raise e
+                except (BaseTVinfoEpisodenotfound, BaseTVinfoSeasonnotfound, TypeError):
+                    ep_info = None
             else:
                 ep_info = helpers.validate_show(cur_ep_obj.show_obj, cur_ep_obj.season, cur_ep_obj.episode)
 
@@ -861,13 +851,10 @@ class GenericMetadata(object):
 
             t = sickbeard.TVInfoAPI(show_obj.tvid).setup(**tvinfo_config)
             show_info = t[show_obj.prodid, False]
-        except Exception as e:
-            if check_exception_type(e, ExceptionTuples.tvinfo_error, IOError):
-                logger.log(u"Unable to look up show on " + sickbeard.TVInfoAPI(
-                    show_obj.tvid).name + ", not downloading images: " + ex(e), logger.WARNING)
-                return None
-            else:
-                raise e
+        except (BaseTVinfoError, IOError) as e:
+            logger.log(u"Unable to look up show on " + sickbeard.TVInfoAPI(
+                show_obj.tvid).name + ", not downloading images: " + ex(e), logger.WARNING)
+            return None
 
         if not self._valid_show(show_info, show_obj):
             return None
@@ -999,13 +986,10 @@ class GenericMetadata(object):
 
             t = sickbeard.TVInfoAPI(show_obj.tvid).setup(**tvinfo_config)
             tvinfo_obj_show = t[show_obj.prodid]
-        except Exception as e:
-            if check_exception_type(e, ExceptionTuples.tvinfo_error, IOError):
-                logger.log(u'Unable to look up show on ' + sickbeard.TVInfoAPI(
-                    show_obj.tvid).name + ', not downloading images: ' + ex(e), logger.WARNING)
-                return result
-            else:
-                raise e
+        except (BaseTVinfoError, IOError) as e:
+            logger.log(u'Unable to look up show on ' + sickbeard.TVInfoAPI(
+                show_obj.tvid).name + ', not downloading images: ' + ex(e), logger.WARNING)
+            return result
 
         if not self._valid_show(tvinfo_obj_show, show_obj):
             return result

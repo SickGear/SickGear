@@ -16,73 +16,17 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 import os
-import time
 
 from .indexer_config import init_config, tvinfo_config
 from ..helpers import proxy_setting
 import sickbeard
+from tvinfo_base import TVInfoBase
 
 from _23 import list_values
 
 # noinspection PyUnreachableCode
 if False:
     from typing import AnyStr, Dict
-
-
-class ShowContainer(dict):
-    """
-    Simple dict that holds a series of Show instances
-    """
-
-    # noinspection PyMissingConstructor
-    def __init__(self):
-        self._stack = []
-        self._lastgc = time.time()
-
-    def __setitem__(self, key, value):
-        self._stack.append(key)
-
-        # keep only the 100th latest results
-        if time.time() - self._lastgc > 20:
-            for o in self._stack[:-100]:
-                del self[o]
-
-            self._stack = self._stack[-100:]
-
-            self._lastgc = time.time()
-
-        super(ShowContainer, self).__setitem__(key, value)
-
-
-class DummyIndexer(object):
-    # noinspection PyUnusedLocal
-    def __init__(self, *args, **kwargs):
-        self.config = {
-            'apikey': '',
-            'debug_enabled': False,
-            'custom_ui': None,
-            'proxy': None,
-            'cache_enabled': False,
-            'cache_location': '',
-            'valid_languages': [],
-            'langabbv_to_id': {},
-            'language': 'en',
-            'base_url': '',
-        }
-
-        self.corrections = {}
-        self.shows = ShowContainer()
-
-    def __getitem__(self, key):
-        return None
-
-    def __repr__(self):
-        return str(self.shows)
-
-    # noinspection PyUnusedLocal
-    @staticmethod
-    def search(series):
-        return []
 
 
 class TVInfoAPI(object):
@@ -93,13 +37,14 @@ class TVInfoAPI(object):
         pass
 
     def setup(self, *args, **kwargs):
+        # type: (...) -> TVInfoBase
         if self.tvid:
             if tvinfo_config[self.tvid]['active'] or ('no_dummy' in kwargs and True is kwargs['no_dummy']):
                 if 'no_dummy' in kwargs:
                     kwargs.pop('no_dummy')
                 return tvinfo_config[self.tvid]['module'](*args, **kwargs)
             else:
-                return DummyIndexer(*args, **kwargs)
+                return TVInfoBase(*args, **kwargs)
 
     @property
     def config(self):

@@ -34,7 +34,7 @@ from .common import SKIPPED, WANTED, UNAIRED, Quality, statusStrings
 from .helpers import should_delete_episode
 from .indexermapper import map_indexers_to_show
 from .indexers.indexer_config import TVINFO_TVDB, TVINFO_TVRAGE
-from .indexers.indexer_exceptions import check_exception_type, ExceptionTuples
+from tvinfo_base.exceptions import *
 from .name_parser.parser import NameParser
 from .tv import TVShow
 from six import integer_types
@@ -722,31 +722,30 @@ class QueueItemAdd(ShowQueueItem):
             if self.show_obj.classification and 'sports' in self.show_obj.classification.lower():
                 self.show_obj.sports = 1
 
-        except Exception as e:
-            if check_exception_type(e, ExceptionTuples.tvinfo_exception):
-                logger.log(
-                    'Unable to add show due to an error with %s: %s' % (sickbeard.TVInfoAPI(self.tvid).name, ex(e)),
-                    logger.ERROR)
-                if self.show_obj:
-                    ui.notifications.error('Unable to add %s due to an error with %s'
-                                           % (self.show_obj.name, sickbeard.TVInfoAPI(self.tvid).name))
-                else:
-                    ui.notifications.error(
-                        'Unable to add show due to an error with %s' % sickbeard.TVInfoAPI(self.tvid).name)
-                self._finishEarly()
-                return
-
-            elif check_exception_type(e, exceptions_helper.MultipleShowObjectsException):
-                logger.log('The show in %s is already in your show list, skipping' % self.showDir, logger.ERROR)
-                ui.notifications.error('Show skipped', 'The show in %s is already in your show list' % self.showDir)
-                self._finishEarly()
-                return
-
+        except BaseTVinfoException as e:
+            logger.log(
+                'Unable to add show due to an error with %s: %s' % (sickbeard.TVInfoAPI(self.tvid).name, ex(e)),
+                logger.ERROR)
+            if self.show_obj:
+                ui.notifications.error('Unable to add %s due to an error with %s'
+                                       % (self.show_obj.name, sickbeard.TVInfoAPI(self.tvid).name))
             else:
-                logger.log('Error trying to add show: %s' % ex(e), logger.ERROR)
-                logger.log(traceback.format_exc(), logger.ERROR)
-                self._finishEarly()
-                raise
+                ui.notifications.error(
+                    'Unable to add show due to an error with %s' % sickbeard.TVInfoAPI(self.tvid).name)
+            self._finishEarly()
+            return
+
+        except exceptions_helper.MultipleShowObjectsException:
+            logger.log('The show in %s is already in your show list, skipping' % self.showDir, logger.ERROR)
+            ui.notifications.error('Show skipped', 'The show in %s is already in your show list' % self.showDir)
+            self._finishEarly()
+            return
+
+        except (BaseException, Exception) as e:
+            logger.log('Error trying to add show: %s' % ex(e), logger.ERROR)
+            logger.log(traceback.format_exc(), logger.ERROR)
+            self._finishEarly()
+            raise
 
         self.show_obj.load_imdb_info()
 
@@ -1029,17 +1028,14 @@ class QueueItemUpdate(ShowQueueItem):
             result = self.show_obj.load_from_tvinfo(cache=not self.force)
             if None is not result:
                 return
-        except Exception as e:
-            if check_exception_type(e, ExceptionTuples.tvinfo_error):
-                logger.log('Unable to contact %s, aborting: %s' % (sickbeard.TVInfoAPI(self.show_obj.tvid).name, ex(e)),
-                           logger.WARNING)
-                return
-            elif check_exception_type(e, ExceptionTuples.tvinfo_attributenotfound):
-                logger.log('Data retrieved from %s was incomplete, aborting: %s' %
-                           (sickbeard.TVInfoAPI(self.show_obj.tvid).name, ex(e)), logger.ERROR)
-                return
-            else:
-                raise e
+        except BaseTVinfoAttributenotfound as e:
+            logger.log('Data retrieved from %s was incomplete, aborting: %s' %
+                       (sickbeard.TVInfoAPI(self.show_obj.tvid).name, ex(e)), logger.ERROR)
+            return
+        except BaseTVinfoError as e:
+            logger.log('Unable to contact %s, aborting: %s' % (sickbeard.TVInfoAPI(self.show_obj.tvid).name, ex(e)),
+                       logger.WARNING)
+            return
 
         if self.force_web:
             self.show_obj.load_imdb_info()
@@ -1058,13 +1054,10 @@ class QueueItemUpdate(ShowQueueItem):
         logger.log('Loading all episodes from %s' % sickbeard.TVInfoAPI(self.show_obj.tvid).name, logger.DEBUG)
         try:
             tvinfo_ep_list = self.show_obj.load_episodes_from_tvinfo(cache=not self.force, update=True)
-        except Exception as e:
-            if check_exception_type(e, ExceptionTuples.tvinfo_exception):
-                logger.log('Unable to get info from %s, the show info will not be refreshed: %s' %
-                           (sickbeard.TVInfoAPI(self.show_obj.tvid).name, ex(e)), logger.ERROR)
-                tvinfo_ep_list = None
-            else:
-                raise e
+        except BaseTVinfoException as e:
+            logger.log('Unable to get info from %s, the show info will not be refreshed: %s' %
+                       (sickbeard.TVInfoAPI(self.show_obj.tvid).name, ex(e)), logger.ERROR)
+            tvinfo_ep_list = None
 
         if None is tvinfo_ep_list:
             logger.log('No data returned from %s, unable to update episodes for show: %s' %

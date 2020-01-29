@@ -22,23 +22,23 @@ import requests.exceptions
 import datetime
 import re
 
-from six import integer_types, string_types, text_type, iteritems, PY2
-from _23 import list_values
+from six import integer_types, string_types, iteritems, PY2
+from _23 import list_values, map_list
 from sg_helpers import clean_data, try_int, get_url
 from collections import OrderedDict
+from tvinfo_base import TVInfoBase, CastList, Character, CrewList, Person, RoleTypes
 
 from lib.dateutil.parser import parse
 from lib.cachecontrol import CacheControl, caches
 
 from .tvdb_ui import BaseUI, ConsoleUI
-from .tvdb_exceptions import (
-    TvdbError, TvdbShownotfound, TvdbSeasonnotfound, TvdbEpisodenotfound,
-    TvdbAttributenotfound, TvdbTokenexpired)
+from .tvdb_exceptions import TvdbError, TvdbShownotfound, TvdbTokenexpired
 
 # noinspection PyUnreachableCode
 if False:
     # noinspection PyUnresolvedReferences
-    from typing import AnyStr, Dict, Optional
+    from typing import Any, AnyStr, Dict, List, Optional
+    from tvinfo_base import TVInfoShow
 
 
 THETVDB_V2_API_TOKEN = {'token': None, 'datetime': datetime.datetime.fromordinal(1)}
@@ -103,241 +103,6 @@ def retry(exception_to_check, tries=4, delay=3, backoff=2):
     return deco_retry
 
 
-class ShowContainer(dict):
-    """Simple dict that holds a series of Show instances
-    """
-
-    def __init__(self, **kwargs):
-        super(ShowContainer, self).__init__(**kwargs)
-        self._stack = []
-        self._lastgc = time.time()
-
-    def __setitem__(self, key, value):
-        self._stack.append(key)
-
-        # keep only the 100th latest results
-        if time.time() - self._lastgc > 20:
-            for o in self._stack[:-100]:
-                del self[o]
-
-            self._stack = self._stack[-100:]
-
-            self._lastgc = time.time()
-
-        super(ShowContainer, self).__setitem__(key, value)
-
-
-class Show(dict):
-    """Holds a dict of seasons, and show data.
-    """
-
-    def __init__(self):
-        dict.__init__(self)
-        self.data = {}
-        self.ep_loaded = False
-
-    def __repr__(self):
-        return '<Show %r (containing %s seasons)>' % (self.data.get(u'seriesname', 'instance'), len(self))
-
-    def __getattr__(self, key):
-        if key in self:
-            # Key is an episode, return it
-            return self[key]
-
-        if key in self.data:
-            # Non-numeric request is for show-data
-            return self.data[key]
-
-        raise AttributeError
-
-    def __getitem__(self, key):
-        if key in self:
-            # Key is an episode, return it
-            return dict.__getitem__(self, key)
-
-        if key in self.data:
-            # Non-numeric request is for show-data
-            return dict.__getitem__(self.data, key)
-
-        # Data wasn't found, raise appropriate error
-        if isinstance(key, integer_types) or isinstance(key, string_types) and key.isdigit():
-            # Episode number x was not found
-            raise TvdbSeasonnotfound('Could not find season %s' % (repr(key)))
-        else:
-            # If it's not numeric, it must be an attribute name, which
-            # doesn't exist, so attribute error.
-            raise TvdbAttributenotfound('Cannot find attribute %s' % (repr(key)))
-
-    def __nonzero__(self):
-        return any(self.data.keys())
-
-    def aired_on(self, date):
-        ret = self.search(str(date), 'firstaired')
-        if 0 == len(ret):
-            raise TvdbEpisodenotfound('Could not find any episodes that aired on %s' % date)
-        return ret
-
-    def search(self, term=None, key=None):
-        """
-        Search all episodes in show. Can search all data, or a specific key (for
-        example, episodename)
-
-        Always returns an array (can be empty). First index contains the first
-        match, and so on.
-
-        Each array index is an Episode() instance, so doing
-        search_results[0]['episodename'] will retrieve the episode name of the
-        first match.
-
-        Search terms are converted to lower case (unicode) strings.
-
-        # Examples
-
-        These examples assume t is an instance of Tvdb():
-
-        >> t = Tvdb()
-        >>
-
-        To search for all episodes of Scrubs with a bit of data
-        containing "my first day":
-
-        >> t['Scrubs'].search("my first day")
-        [<Episode 01x01 - My First Day>]
-        >>
-
-        Search for "My Name Is Earl" episode named "Faked His Own Death":
-
-        >> t['My Name Is Earl'].search('Faked His Own Death', key = 'episodename')
-        [<Episode 01x04 - Faked His Own Death>]
-        >>
-
-        To search Scrubs for all episodes with "mentor" in the episode name:
-
-        >> t['scrubs'].search('mentor', key = 'episodename')
-        [<Episode 01x02 - My Mentor>, <Episode 03x15 - My Tormented Mentor>]
-        >>
-
-        # Using search results
-
-        >> results = t['Scrubs'].search("my first")
-        >> print results[0]['episodename']
-        My First Day
-        >> for x in results: print x['episodename']
-        My First Day
-        My First Step
-        My First Kill
-        >>
-        """
-        results = []
-        for cur_season in list_values(self):
-            searchresult = cur_season.search(term=term, key=key)
-            if 0 != len(searchresult):
-                results.extend(searchresult)
-
-        return results
-
-
-class Season(dict):
-    def __init__(self, show=None, **kwargs):
-        """The show attribute points to the parent show
-        """
-        super(Season, self).__init__(**kwargs)
-        self.show = show
-
-    def __repr__(self):
-        return '<Season instance (containing %s episodes)>' % (len(self.keys()))
-
-    def __getattr__(self, episode_number):
-        if episode_number in self:
-            return self[episode_number]
-        raise AttributeError
-
-    def __getitem__(self, episode_number):
-        if episode_number not in self:
-            raise TvdbEpisodenotfound('Could not find episode %s' % (repr(episode_number)))
-        else:
-            return dict.__getitem__(self, episode_number)
-
-    def search(self, term=None, key=None):
-        """Search all episodes in season, returns a list of matching Episode
-        instances.
-
-        >> t = Tvdb()
-        >> t['scrubs'][1].search('first day')
-        [<Episode 01x01 - My First Day>]
-        >>
-
-        See Show.search documentation for further information on search
-        """
-        results = []
-        for ep in list_values(self):
-            searchresult = ep.search(term=term, key=key)
-            if None is not searchresult:
-                results.append(searchresult)
-        return results
-
-
-class Episode(dict):
-    def __init__(self, season=None, **kwargs):
-        """The season attribute points to the parent season
-        """
-        super(Episode, self).__init__(**kwargs)
-        self.season = season
-
-    def __repr__(self):
-        seasno, epno = int(self.get(u'seasonnumber', 0)), int(self.get(u'episodenumber', 0))
-        epname = self.get(u'episodename')
-        if None is not epname:
-            return '<Episode %02dx%02d - %r>' % (seasno, epno, epname)
-        else:
-            return '<Episode %02dx%02d>' % (seasno, epno)
-
-    def __getattr__(self, key):
-        if key in self:
-            return self[key]
-        raise AttributeError
-
-    def __getitem__(self, key):
-        try:
-            return dict.__getitem__(self, key)
-        except KeyError:
-            raise TvdbAttributenotfound('Cannot find attribute %s' % (repr(key)))
-
-    def search(self, term=None, key=None):
-        """Search episode data for term, if it matches, return the Episode (self).
-        The key parameter can be used to limit the search to a specific element,
-        for example, episodename.
-
-        This primarily for use use by Show.search and Season.search. See
-        Show.search for further information on search
-
-        Simple example:
-
-        >> e = Episode()
-        >> e['episodename'] = "An Example"
-        >> e.search("examp")
-        <Episode 00x00 - An Example>
-        >>
-
-        Limiting by key:
-
-        >> e.search("examp", key = "episodename")
-        <Episode 00x00 - An Example>
-        >>
-        """
-        if None is term:
-            raise TypeError('must supply string to search for (contents)')
-
-        term = text_type(term).lower()
-        for cur_key, cur_value in iteritems(self):
-            cur_key, cur_value = text_type(cur_key).lower(), text_type(cur_value).lower()
-            if None is not key and cur_key != key:
-                # Do not search this key
-                continue
-            if cur_value.find(text_type(term).lower()) > -1:
-                return self
-
-
 class Actors(list):
     """Holds all Actor instances for a show
     """
@@ -358,7 +123,7 @@ class Actor(dict):
         return '<Actor "%r">' % self.get('name')
 
 
-class Tvdb(object):
+class Tvdb(TVInfoBase):
     """Create easy-to-use interface to name of season/episode name
     >> t = Tvdb()
     >> t['Scrubs'][1][24]['episodename']
@@ -448,11 +213,7 @@ class Tvdb(object):
 
         """
 
-        self.shows = ShowContainer()  # Holds all Show classes
-        self.corrections = {}  # Holds show-name to show_id mapping
-        self.show_not_found = False
-        self.not_found = False
-
+        super(Tvdb, self).__init__(*args, **kwargs)
         self.config = {}
 
         if None is not apikey:
@@ -538,6 +299,14 @@ class Tvdb(object):
 
         self.config['url_series_images'] = '%(base_url)sseries/%%s/images/query?keyType=%%s' % self.config
         self.config['url_artworks'] = 'https://artworks.thetvdb.com/banners/%s'
+
+    def _search_show(self, name, **kwargs):
+        # type: (AnyStr, Optional[Any]) -> List[TVInfoShow]
+        def map_data(data):
+            data['poster'] = data.get('image')
+            return data
+
+        return map_list(map_data, self.get_series(name))
 
     def get_new_token(self):
         global THETVDB_V2_API_TOKEN
@@ -737,40 +506,8 @@ class Tvdb(object):
         except (KeyError, IndexError, Exception):
             pass
 
-    def _set_item(self, sid, seas, ep, attrib, value):
-        """Creates a new episode, creating Show(), Season() and
-        Episode()s as required. Called by _get_show_data to populate show
-
-        Since the nice-to-use tvdb[1][24]['name] interface
-        makes it impossible to do tvdb[1][24]['name] = "name"
-        and still be capable of checking if an episode exists
-        so we can raise tvdb_shownotfound, we have a slightly
-        less pretty method of setting items.. but since the API
-        is supposed to be read-only, this is the best way to
-        do it!
-        The problem is that calling tvdb[1][24]['episodename'] = "name"
-        calls __getitem__ on tvdb[1], there is no way to check if
-        tvdb.__dict__ should have a key "1" before we auto-create it
-        """
-        if sid not in self.shows:
-            self.shows[sid] = Show()
-        if seas not in self.shows[sid]:
-            self.shows[sid][seas] = Season(show=self.shows[sid])
-        if ep not in self.shows[sid][seas]:
-            self.shows[sid][seas][ep] = Episode(season=self.shows[sid][seas])
-        self.shows[sid][seas][ep][attrib] = value
-
-    def _set_show_data(self, sid, key, value, add=False):
-        """Sets self.shows[sid] to a new Show instance, or sets the data
-        """
-        if sid not in self.shows:
-            self.shows[sid] = Show()
-        if add and isinstance(self.shows[sid].data, dict) and key in self.shows[sid].data:
-            self.shows[sid].data[key].update(value)
-        else:
-            self.shows[sid].data[key] = value
-
     def search(self, series):
+        # type: (AnyStr) -> List
         """This searches TheTVDB.com for the series name
         and returns the result list
         """
@@ -789,7 +526,7 @@ class Tvdb(object):
 
         return []
 
-    def _get_series(self, series):
+    def get_series(self, series):
         """This searches TheTVDB.com for the series name,
         If a custom_ui UI is configured, it uses this to select the correct
         series. If not, and interactive == True, ConsoleUI is used, if not
@@ -853,16 +590,20 @@ class Tvdb(object):
     def _parse_actors(self, sid, actor_list):
 
         a = []
+        cast = CastList()
         try:
             for n in sorted(actor_list, key=lambda x: x['sortorder']):
-                a.append({'character': {'id': None,
-                                        'name': n.get('role', '').strip(),
+                role_image = (None, self.config['url_artworks'] % n.get('image'))[any([n.get('image')])]
+                character_name = n.get('role', '').strip()
+                person_name = n.get('name', '').strip()
+                character_id = n.get('id', None)
+                a.append({'character': {'id': character_id,
+                                        'name': character_name,
                                         'url': None,  # not supported by tvdb
-                                        'image': (None, self.config['url_artworks'] %
-                                                  n.get('image'))[any([n.get('image')])],
+                                        'image': role_image,
                                         },
-                          'person': {'id': None,  # not supported by tvdb
-                                     'name': n.get('name', '').strip(),
+                          'person': {'id': None,
+                                     'name': person_name,
                                      'url': None,  # not supported by tvdb
                                      'image': None,  # not supported by tvdb
                                      'birthday': None,  # not supported by tvdb
@@ -871,9 +612,14 @@ class Tvdb(object):
                                      'country': None,  # not supported by tvdb
                                      },
                           })
+                cast[RoleTypes.ActorMain].append(
+                    Character(p_id=character_id, name=character_name,
+                              person=Person(name=person_name), image=role_image))
         except (BaseException, Exception):
             pass
         self._set_show_data(sid, 'actors', a)
+        self._set_show_data(sid, 'cast', cast)
+        self.shows[sid].actors_loaded = True
 
     def get_episode_data(self, epid):
         # Parse episode information
@@ -900,7 +646,8 @@ class Tvdb(object):
     def _parse_images(self, sid, language, show_data, image_type, enabled_type):
         mapped_img_types = {'banner': 'series'}
         excluded_main_data = enabled_type in ['seasons_enabled', 'seasonwides_enabled']
-        if self.config[enabled_type]:
+        loaded_name = '%s_loaded' % image_type
+        if self.config[enabled_type] and not getattr(self.shows.get(sid), loaded_name, False):
             image_data = self._getetsrc(self.config['url_series_images'] %
                                         (sid, mapped_img_types.get(image_type, image_type)), language=language)
             if image_data and 0 < len(image_data.get('data', '') or ''):
@@ -913,44 +660,46 @@ class Tvdb(object):
                     self._set_show_data(sid, u'%s_thumb' % image_type, url_thumb)
                     excluded_main_data = True  # artwork found so prevent fallback
                 self._parse_banners(sid, image_data['data'])
+                self.shows[sid].__dict__[loaded_name] = True
 
         # fallback image thumbnail for none excluded_main_data if artwork is not found
         if not excluded_main_data and show_data['data'].get(image_type):
             self._set_show_data(sid, u'%s_thumb' % image_type,
                                 re.sub(r'\.jpg$', '_t.jpg', show_data['data'][image_type], flags=re.I))
 
-    def _get_show_data(self, sid, language, get_ep_info=False):
+    def _get_show_data(self, sid, language, get_ep_info=False, **kwargs):
+        # type: (integer_types, AnyStr, bool, Optional[Any]) -> bool
         """Takes a series ID, gets the epInfo URL and parses the TVDB
         XML file into the shows dict in layout:
         shows[series_id][season_number][episode_number]
         """
 
         # Parse show information
-        log.debug('Getting all series data for %s' % sid)
         url = self.config['url_series_info'] % sid
-        show_data = self._getetsrc(url, language=language)
+        if sid not in self.shows or None is self.shows[sid].id:
+            log.debug('Getting all series data for %s' % sid)
+            show_data = self._getetsrc(url, language=language)
 
-        # check and make sure we have data to process and that it contains a series name
-        if not (show_data and 'seriesname' in show_data.get('data', {}) or {}):
-            return False
+            # check and make sure we have data to process and that it contains a series name
+            if not (show_data and 'seriesname' in show_data.get('data', {}) or {}):
+                return False
 
-        for k, v in iteritems(show_data['data']):
-            self._set_show_data(sid, k, v)
-
-        if sid in self.shows:
-            self.shows[sid].ep_loaded = get_ep_info
+            for k, v in iteritems(show_data['data']):
+                self._set_show_data(sid, k, v)
+        else:
+            show_data = {'data': {}}
 
         for img_type, en_type in [(u'poster', 'posters_enabled'), (u'banner', 'banners_enabled'),
                                   (u'fanart', 'fanart_enabled'), (u'season', 'seasons_enabled'),
                                   (u'seasonwide', 'seasonwides_enabled')]:
             self._parse_images(sid, language, show_data, img_type, en_type)
 
-        if self.config['actors_enabled']:
+        if self.config['actors_enabled'] and not getattr(self.shows.get(sid), 'actors_loaded', False):
             actor_data = self._getetsrc(self.config['url_actors_info'] % sid, language=language)
             if actor_data and 0 < len(actor_data.get('data', '') or ''):
                 self._parse_actors(sid, actor_data['data'])
 
-        if get_ep_info:
+        if get_ep_info and not getattr(self.shows.get(sid), 'ep_loaded', False):
             # Parse episode data
             log.debug('Getting all episodes of %s' % sid)
 
@@ -1016,6 +765,28 @@ class Tvdb(object):
                         k = ep_map_keys[k]
                     self._set_item(sid, seas_no, ep_no, k, v)
 
+                crew = CrewList()
+                cast = CastList()
+                try:
+                    for director in cur_ep.get('directors', []):
+                        crew[RoleTypes.CrewDirector].append(Person(name=director))
+                except (BaseException, Exception):
+                    pass
+                try:
+                    for guest in cur_ep.get('gueststars_list', []):
+                        cast[RoleTypes.ActorGuest].append(Character(person=Person(name=guest)))
+                except (BaseException, Exception):
+                    pass
+                try:
+                    for writers in cur_ep.get('writers', []):
+                        crew[RoleTypes.CrewWriter].append(Person(name=writers))
+                except (BaseException, Exception):
+                    pass
+                self._set_item(sid, seas_no, ep_no, 'crew', crew)
+                self._set_item(sid, seas_no, ep_no, 'cast', cast)
+
+            self.shows[sid].ep_loaded = True
+
         return True
 
     def _name_to_sid(self, name):
@@ -1028,40 +799,13 @@ class Tvdb(object):
             return self.corrections[name]
         else:
             log.debug('Getting show %s' % name)
-            selected_series = self._get_series(name)
+            selected_series = self.get_series(name)
             if isinstance(selected_series, dict):
                 selected_series = [selected_series]
             sids = [int(x['id']) for x in selected_series if
                     self._get_show_data(int(x['id']), self.config['language'])]
             self.corrections.update(dict([(x['seriesname'], int(x['id'])) for x in selected_series]))
             return sids
-
-    def __getitem__(self, key):
-        """Handles tvdb_instance['seriesname'] calls.
-        The dict index should be the show id
-        """
-        arg = None
-        if isinstance(key, tuple) and 2 == len(key):
-            key, arg = key
-            if not isinstance(arg, bool):
-                arg = None
-
-        if isinstance(key, integer_types):
-            # Item is integer, treat as show id
-            if key not in self.shows or (not self.shows[key].ep_loaded and arg in (None, True)):
-                self._get_show_data(key, self.config['language'], (True, arg)[None is not arg])
-            return None if key not in self.shows else self.shows[key]
-
-        key = str(key).lower()
-        self.config['searchterm'] = key
-        selected_series = self._get_series(key)
-        if isinstance(selected_series, dict):
-            selected_series = [selected_series]
-        [[self._set_show_data(show['id'], k, v) for k, v in iteritems(show)] for show in selected_series]
-        return selected_series
-
-    def __repr__(self):
-        return str(self.shows)
 
 
 def main():

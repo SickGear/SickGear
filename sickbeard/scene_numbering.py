@@ -39,7 +39,8 @@ if False:
     from typing import Dict, Tuple
 
 
-def get_scene_numbering(tvid, prodid, season, episode, fallback_to_xem=True):
+def get_scene_numbering(tvid, prodid, season, episode, fallback_to_xem=True, show_sql=None, scene_sql=None,
+                        show_obj=None):
     """
     Returns a tuple, (season, episode), with the scene numbering (if there is one),
     otherwise returns the xem numbering (if fallback_to_xem is set), otherwise
@@ -63,22 +64,23 @@ def get_scene_numbering(tvid, prodid, season, episode, fallback_to_xem=True):
         return season, episode
 
     tvid, prodid = int(tvid), int(prodid)
-    show_obj = sickbeard.helpers.find_show_by_id({tvid: prodid})
+    if None is show_obj:
+        show_obj = sickbeard.helpers.find_show_by_id({tvid: prodid})
     if show_obj and not show_obj.is_scene:
         return season, episode
 
-    result = find_scene_numbering(tvid, prodid, season, episode)
+    result = find_scene_numbering(tvid, prodid, season, episode, scene_sql=scene_sql)
     if result:
         return result
     else:
         if fallback_to_xem:
-            xem_result = find_xem_numbering(tvid, prodid, season, episode)
+            xem_result = find_xem_numbering(tvid, prodid, season, episode, show_sql=show_sql)
             if xem_result:
                 return xem_result
         return season, episode
 
 
-def find_scene_numbering(tvid, prodid, season, episode):
+def find_scene_numbering(tvid, prodid, season, episode, scene_sql=None):
     """
     Same as get_scene_numbering(), but returns None if scene numbering is not set
     :param tvid: tvid
@@ -97,19 +99,30 @@ def find_scene_numbering(tvid, prodid, season, episode):
 
     tvid, prodid = int(tvid), int(prodid)
 
-    my_db = db.DBConnection()
-    rows = my_db.select(
-        'SELECT scene_season, scene_episode'
-        ' FROM scene_numbering'
-        ' WHERE indexer = ? AND indexer_id = ?'
-        ' AND season = ? AND episode = ? AND (scene_season OR scene_episode) != 0',
-        [tvid, prodid, season, episode])
+    rows = None
+    if None is not scene_sql:
+        for e in scene_sql:
+            if e['season'] == season and e['episode'] == episode:
+                if e['scene_season'] or e['scene_episode']:
+                    rows = [e]
+                break
+    else:
+        my_db = db.DBConnection()
+        rows = my_db.select(
+            'SELECT scene_season, scene_episode'
+            ' FROM scene_numbering'
+            ' WHERE indexer = ? AND indexer_id = ?'
+            ' AND season = ? AND episode = ? AND (scene_season OR scene_episode) != 0',
+            [tvid, prodid, season, episode])
 
     if rows:
-        return int(rows[0]['scene_season']), int(rows[0]['scene_episode'])
+        s_s, s_e = int(rows[0]['scene_season']), int(rows[0]['scene_episode'])
+        if None is not s_s and None is not s_e:
+            return s_s, s_e
 
 
-def get_scene_absolute_numbering(tvid, prodid, absolute_number, season, episode, fallback_to_xem=True):
+def get_scene_absolute_numbering(tvid, prodid, absolute_number, season, episode, fallback_to_xem=True, show_sql=None,
+                                 scene_sql=None, show_obj=None):
     """
     Returns a tuple, (season, episode), with the scene numbering (if there is one),
     otherwise returns the xem numbering (if fallback_to_xem is set), otherwise
@@ -138,22 +151,23 @@ def get_scene_absolute_numbering(tvid, prodid, absolute_number, season, episode,
 
     tvid, prodid = int(tvid), int(prodid)
 
-    show_obj = sickbeard.helpers.find_show_by_id({tvid: prodid})
+    if None is show_obj:
+        show_obj = sickbeard.helpers.find_show_by_id({tvid: prodid})
     if show_obj and not show_obj.is_scene and not has_sxe:
         return absolute_number
 
-    result = find_scene_absolute_numbering(tvid, prodid, absolute_number, season, episode)
+    result = find_scene_absolute_numbering(tvid, prodid, absolute_number, season, episode, scene_sql=scene_sql)
     if result:
         return result
     else:
         if fallback_to_xem:
-            xem_result = find_xem_absolute_numbering(tvid, prodid, absolute_number, season, episode)
+            xem_result = find_xem_absolute_numbering(tvid, prodid, absolute_number, season, episode, show_sql=show_sql)
             if xem_result:
                 return xem_result
         return absolute_number
 
 
-def find_scene_absolute_numbering(tvid, prodid, absolute_number, season=None, episode=None):
+def find_scene_absolute_numbering(tvid, prodid, absolute_number, season=None, episode=None, scene_sql=None):
     """
     Same as get_scene_numbering(), but returns None if scene numbering is not set
 
@@ -176,18 +190,26 @@ def find_scene_absolute_numbering(tvid, prodid, absolute_number, season=None, ep
 
     tvid, prodid = int(tvid), int(prodid)
 
-    my_db = db.DBConnection()
-    sql_vars, cond = (([absolute_number], 'AND absolute_number = ?'),
-                      ([season, episode], 'AND season = ? AND episode = ?'))[has_sxe]
-    rows = my_db.select(
-        'SELECT scene_absolute_number'
-        ' FROM scene_numbering'
-        ' WHERE indexer = ? AND indexer_id = ?'
-        ' %s AND scene_absolute_number != 0' % cond,
-        [tvid, prodid] + sql_vars)
+    rows = None
+    if None is not scene_sql:
+        for e in scene_sql:
+            if e['season'] == season and e['episode'] == episode:
+                if e['scene_absolute_number']:
+                    rows = [e]
+                break
+    else:
+        my_db = db.DBConnection()
+        sql_vars, cond = (([absolute_number], 'AND absolute_number = ?'),
+                          ([season, episode], 'AND season = ? AND episode = ?'))[has_sxe]
+        rows = my_db.select(
+            'SELECT scene_absolute_number'
+            ' FROM scene_numbering'
+            ' WHERE indexer = ? AND indexer_id = ?'
+            ' %s AND scene_absolute_number != 0' % cond,
+            [tvid, prodid] + sql_vars)
 
     if rows:
-        return int(rows[0]['scene_absolute_number'])
+        return try_int(rows[0]['scene_absolute_number'], None)
 
 
 def get_indexer_numbering(tvid, prodid, scene_season, scene_episode, fallback_to_xem=True):
@@ -358,7 +380,7 @@ def set_scene_numbering(tvid=None, prodid=None, season=None, episode=None, absol
             [scene_absolute, tvid, prodid, absolute_number])
 
 
-def find_xem_numbering(tvid, prodid, season, episode):
+def find_xem_numbering(tvid, prodid, season, episode, show_sql=None):
     """
     Returns the scene numbering, as retrieved from xem.
     Refreshes/Loads as needed.
@@ -381,19 +403,29 @@ def find_xem_numbering(tvid, prodid, season, episode):
 
     xem_refresh(tvid, prodid)
 
-    my_db = db.DBConnection()
-    rows = my_db.select(
-        'SELECT scene_season, scene_episode'
-        ' FROM tv_episodes'
-        ' WHERE indexer = ? AND showid = ?'
-        ' AND season = ? AND episode = ? AND (scene_season OR scene_episode) != 0',
-        [tvid, prodid, season, episode])
+    rows = None
+    if None is not show_sql:
+        for e in show_sql:
+            if e['season'] == season and e['episode'] == episode:
+                if e['scene_season'] or e['scene_episode']:
+                    rows = [e]
+                break
+    else:
+        my_db = db.DBConnection()
+        rows = my_db.select(
+            'SELECT scene_season, scene_episode'
+            ' FROM tv_episodes'
+            ' WHERE indexer = ? AND showid = ?'
+            ' AND season = ? AND episode = ? AND (scene_season OR scene_episode) != 0',
+            [tvid, prodid, season, episode])
 
     if rows:
-        return int(rows[0]['scene_season']), int(rows[0]['scene_episode'])
+        s_s, s_e = try_int(rows[0]['scene_season'], None), try_int(rows[0]['scene_episode'], None)
+        if None is not s_s and None is not s_e:
+            return s_s, s_e
 
 
-def find_xem_absolute_numbering(tvid, prodid, absolute_number, season, episode):
+def find_xem_absolute_numbering(tvid, prodid, absolute_number, season, episode, show_sql=None):
     """
     Returns the scene numbering, as retrieved from xem.
     Refreshes/Loads as needed.
@@ -418,16 +450,24 @@ def find_xem_absolute_numbering(tvid, prodid, absolute_number, season, episode):
 
     xem_refresh(tvid, prodid)
 
-    my_db = db.DBConnection()
-    rows = my_db.select(
-        'SELECT scene_absolute_number'
-        ' FROM tv_episodes'
-        ' WHERE indexer = ? AND showid = ?'
-        ' AND season = ? AND episode = ? AND scene_absolute_number != 0',
-        [tvid, prodid, season, episode])
+    rows = None
+    if None is not show_sql:
+        for e in show_sql:
+            if e['season'] == season and e['episode'] == episode:
+                if e['scene_absolute_number']:
+                    rows = [e]
+                break
+    else:
+        my_db = db.DBConnection()
+        rows = my_db.select(
+            'SELECT scene_absolute_number'
+            ' FROM tv_episodes'
+            ' WHERE indexer = ? AND showid = ?'
+            ' AND season = ? AND episode = ? AND scene_absolute_number != 0',
+            [tvid, prodid, season, episode])
 
     if rows:
-        return int(rows[0]['scene_absolute_number'])
+        return try_int(rows[0]['scene_absolute_number'], None)
 
 
 def get_indexer_numbering_for_xem(tvid, prodid, scene_season, scene_episode):
@@ -972,11 +1012,12 @@ def set_scene_numbering_helper(tvid, prodid, for_season=None, for_episode=None, 
         result['errorMessage'] = "Episode couldn't be retrieved, invalid parameters"
 
     if not show_obj.is_anime:
-        scene_numbering = get_scene_numbering(tvid, prodid, for_season, for_episode)
+        scene_numbering = get_scene_numbering(tvid, prodid, for_season, for_episode, show_obj=show_obj)
         if scene_numbering:
             (result['sceneSeason'], result['sceneEpisode']) = scene_numbering
     else:
-        scene_numbering = get_scene_absolute_numbering(tvid, prodid, for_absolute, for_season, for_episode)
+        scene_numbering = get_scene_absolute_numbering(tvid, prodid, for_absolute, for_season, for_episode,
+                                                       show_obj=show_obj)
         if scene_numbering:
             result['sceneAbsolute'] = scene_numbering
 

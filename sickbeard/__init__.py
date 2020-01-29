@@ -47,7 +47,7 @@ from .config import check_section, check_setting_int, check_setting_str, ConfigM
 from .databases import cache_db, failed_db, mainDB
 from .indexers.indexer_api import TVInfoAPI
 from .indexers.indexer_config import TVINFO_IMDB, TVINFO_TVDB
-from .indexers.indexer_exceptions import *
+from tvinfo_base.exceptions import *
 from .providers.generic import GenericProvider
 from .providers.newznab import NewznabConstants
 from .tv import TVidProdid

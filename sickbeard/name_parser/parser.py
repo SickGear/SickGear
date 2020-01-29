@@ -39,7 +39,7 @@ import encodingKludge as ek
 from exceptions_helper import ex
 import sickbeard
 from .. import common, db, helpers, logger, scene_exceptions, scene_numbering
-from ..indexers.indexer_exceptions import check_exception_type, ExceptionTuples
+from tvinfo_base.exceptions import *
 from ..classes import OrderedDefaultdict
 
 from .._legacy_classes import LegacyParseResult
@@ -382,17 +382,14 @@ class NameParser(object):
 
                             season_number = int(ep_obj['seasonnumber'])
                             episode_numbers = [int(ep_obj['episodenumber'])]
-                        except Exception as e:
-                            if check_exception_type(e, ExceptionTuples.tvinfo_episodenotfound):
-                                logger.log(u'Unable to find episode with date ' + str(best_result.air_date)
-                                           + ' for show ' + show_obj.name + ', skipping', logger.WARNING)
-                                episode_numbers = []
-                            elif check_exception_type(e, ExceptionTuples.tvinfo_error):
-                                logger.log(u'Unable to contact ' + sickbeard.TVInfoAPI(show_obj.tvid).name
-                                           + ': ' + ex(e), logger.WARNING)
-                                episode_numbers = []
-                            else:
-                                raise e
+                        except BaseTVinfoEpisodenotfound as e:
+                            logger.log(u'Unable to find episode with date ' + str(best_result.air_date)
+                                       + ' for show ' + show_obj.name + ', skipping', logger.WARNING)
+                            episode_numbers = []
+                        except BaseTVinfoError as e:
+                            logger.log(u'Unable to contact ' + sickbeard.TVInfoAPI(show_obj.tvid).name
+                                       + ': ' + ex(e), logger.WARNING)
+                            episode_numbers = []
 
                     for epNo in episode_numbers:
                         s = season_number
