@@ -453,6 +453,14 @@ GITTER_NOTIFY_ONSUBTITLEDOWNLOAD = False
 GITTER_ROOM = None
 GITTER_ACCESS_TOKEN = None
 
+USE_TELEGRAM = False
+TELEGRAM_NOTIFY_ONSNATCH = False
+TELEGRAM_NOTIFY_ONDOWNLOAD = False
+TELEGRAM_NOTIFY_ONSUBTITLEDOWNLOAD = False
+TELEGRAM_SEND_ICON = True
+TELEGRAM_ACCESS_TOKEN = None
+TELEGRAM_CHATID = None
+
 USE_EMAIL = False
 EMAIL_OLD_SUBJECTS = False
 EMAIL_NOTIFY_ONSNATCH = False
@@ -701,6 +709,8 @@ def init_stage_1(console_logging):
         DISCORDAPP_AS_AUTHED, DISCORDAPP_USERNAME, DISCORDAPP_ICON_URL, DISCORDAPP_AS_TTS, DISCORDAPP_ACCESS_TOKEN,\
         USE_GITTER, GITTER_NOTIFY_ONSNATCH, GITTER_NOTIFY_ONDOWNLOAD, GITTER_NOTIFY_ONSUBTITLEDOWNLOAD,\
         GITTER_ROOM, GITTER_ACCESS_TOKEN, \
+        USE_TELEGRAM, TELEGRAM_NOTIFY_ONSNATCH, TELEGRAM_NOTIFY_ONDOWNLOAD, TELEGRAM_NOTIFY_ONSUBTITLEDOWNLOAD, \
+        TELEGRAM_SEND_ICON, TELEGRAM_ACCESS_TOKEN, TELEGRAM_CHATID, \
         USE_EMAIL, EMAIL_NOTIFY_ONSNATCH, EMAIL_NOTIFY_ONDOWNLOAD, EMAIL_NOTIFY_ONSUBTITLEDOWNLOAD, EMAIL_FROM, \
         EMAIL_HOST, EMAIL_PORT, EMAIL_TLS, EMAIL_USER, EMAIL_PASSWORD, EMAIL_LIST, EMAIL_OLD_SUBJECTS
     # Anime Settings
@@ -1153,6 +1163,15 @@ def init_stage_1(console_logging):
     GITTER_NOTIFY_ONSUBTITLEDOWNLOAD = bool(check_setting_int(CFG, 'Gitter', 'gitter_notify_onsubtitledownload', 0))
     GITTER_ROOM = check_setting_str(CFG, 'Gitter', 'gitter_room', '')
     GITTER_ACCESS_TOKEN = check_setting_str(CFG, 'Gitter', 'gitter_access_token', '')
+
+    USE_TELEGRAM = bool(check_setting_int(CFG, 'Telegram', 'use_telegram', 0))
+    TELEGRAM_NOTIFY_ONSNATCH = bool(check_setting_int(CFG, 'Telegram', 'telegram_notify_onsnatch', 0))
+    TELEGRAM_NOTIFY_ONDOWNLOAD = bool(check_setting_int(CFG, 'Telegram', 'telegram_notify_ondownload', 0))
+    TELEGRAM_NOTIFY_ONSUBTITLEDOWNLOAD = bool(check_setting_int(
+        CFG, 'Telegram', 'telegram_notify_onsubtitledownload', 0))
+    TELEGRAM_SEND_ICON = bool(check_setting_int(CFG, 'Telegram', 'telegram_send_icon', 1))
+    TELEGRAM_ACCESS_TOKEN = check_setting_str(CFG, 'Telegram', 'telegram_access_token', '')
+    TELEGRAM_CHATID = check_setting_str(CFG, 'Telegram', 'telegram_chatid', '')
 
     USE_EMAIL = bool(check_setting_int(CFG, 'Email', 'use_email', 0))
     EMAIL_OLD_SUBJECTS = bool(check_setting_int(CFG, 'Email', 'email_old_subjects',
@@ -2022,6 +2041,12 @@ def save_config():
             ('room', GITTER_ROOM),
             ('access_token', GITTER_ACCESS_TOKEN),
         ]),
+        ('Telegram', [
+            ('use_%s', int(USE_TELEGRAM)),
+            ('send_icon', int(TELEGRAM_SEND_ICON)),
+            ('access_token', TELEGRAM_ACCESS_TOKEN),
+            ('chatid', TELEGRAM_CHATID),
+        ]),
         ('Email', [
             ('use_%s', int(USE_EMAIL)),
             ('old_subjects', int(EMAIL_OLD_SUBJECTS)),
@@ -2063,6 +2088,7 @@ def save_config():
         ('Slack', SLACK_NOTIFY_ONSNATCH, SLACK_NOTIFY_ONDOWNLOAD, SLACK_NOTIFY_ONSUBTITLEDOWNLOAD),
         ('Discordapp', DISCORDAPP_NOTIFY_ONSNATCH, DISCORDAPP_NOTIFY_ONDOWNLOAD, DISCORDAPP_NOTIFY_ONSUBTITLEDOWNLOAD),
         ('Gitter', GITTER_NOTIFY_ONSNATCH, GITTER_NOTIFY_ONDOWNLOAD, GITTER_NOTIFY_ONSUBTITLEDOWNLOAD),
+        ('Telegram', TELEGRAM_NOTIFY_ONSNATCH, TELEGRAM_NOTIFY_ONDOWNLOAD, TELEGRAM_NOTIFY_ONSUBTITLEDOWNLOAD),
         ('Email', EMAIL_NOTIFY_ONSNATCH, EMAIL_NOTIFY_ONDOWNLOAD, EMAIL_NOTIFY_ONSUBTITLEDOWNLOAD),
     ]:
         if any([onsnatch, ondownload, onsubtitledownload]):

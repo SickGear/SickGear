@@ -47,6 +47,8 @@ from .utils import parse_url
 from .utils import parse_bool
 from .utils import parse_list
 
+from six import iteritems
+
 # Used to break a path list into parts
 PATHSPLIT_LIST_DELIM = re.compile(r'[ \t\r\n,\\/]+')
 
@@ -378,7 +380,7 @@ class URLBase(object):
               pass in an empty variable, set it to an empty string.
 
         Args:
-            query (str): The dictionary to encode
+            query (dict): The dictionary to encode
             doseq (:obj:`bool`, optional): Handle sequences
             safe (:obj:`str`): non-ascii characters and URI specific ones that
                 you do not wish to escape (if detected). Setting this string
@@ -391,7 +393,7 @@ class URLBase(object):
             str: The escaped parameters returned as a string
         """
         # Tidy query by eliminating any records set to None
-        _query = {k: v for (k, v) in query.items() if v is not None}
+        _query = {k: v for (k, v) in iteritems(query) if v is not None}
         try:
             # Python v3.x
             return _urlencode(

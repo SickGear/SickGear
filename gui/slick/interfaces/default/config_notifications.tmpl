@@ -1425,6 +1425,7 @@
 							<div class="item"><a href="#slack" rel="noreferrer"><img height="16px" src="$sbRoot/images/notifiers/slack.png">Slack</a></div>
 							<div class="item"><a href="#discordapp" rel="noreferrer"><img height="16px" src="$sbRoot/images/notifiers/discordapp.png">Discordapp</a></div>
 							<div class="item"><a href="#gitter" rel="noreferrer"><img height="16px" src="$sbRoot/images/notifiers/gitter.png">Gitter</a></div>
+							<div class="item"><a href="#telegram" rel="noreferrer"><img height="16px" src="$sbRoot/images/notifiers/telegram.png">Telegram</a></div>
 							<div class="item"><a href="#email" rel="noreferrer"><img height="16px" src="$sbRoot/images/notifiers/email.png">Email</a></div>
 						</span>
 					</div>
@@ -1814,7 +1815,7 @@
 				<div class="component-group">
 					<div class="component-group-desc">
 						<img class="notifier-icon" src="$sbRoot/images/notifiers/gitter.png" alt="" title="Gitter">
-						<h3><a name="gitter" href="<%= anon_url('https://gitter.com/') %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;">Gitter</a></h3>
+						<h3><a name="gitter" href="<%= anon_url('https://gitter.im/') %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;">Gitter</a></h3>
 						<p>Gitter chat and networking platform.</p>
 					</div>
 					<fieldset class="component-group-list">
@@ -1879,6 +1880,88 @@
 						</div><!-- /content_use-gitter //-->
 					</fieldset>
 				</div><!-- /gitter component-group //-->
+
+
+				<div class="component-group">
+					<div class="component-group-desc">
+						<img class="notifier-icon" src="$sbRoot/images/notifiers/telegram.png" alt="" title="Telegram">
+						<h3><a name="telegram" href="<%= anon_url('https://telegram.org/') %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;">Telegram</a></h3>
+						<p>Mobile and desktop messaging with a focus on security and speed.</p>
+					</div>
+					<fieldset class="component-group-list">
+						<div class="field-pair">
+							<label for="use-telegram">
+								<span class="component-title">Enable</span>
+								<span class="component-desc">
+									<input type="checkbox" class="enabler" name="use_telegram" id="use-telegram" #if $sickbeard.USE_TELEGRAM then 'checked="checked"' else ''#>
+									<p>should SickGear send Telegram notifications ?</p>
+								</span>
+							</label>
+						</div>
+
+						<div id="content_use-telegram">
+							<div class="field-pair">
+								<label for="telegram-notify-onsnatch">
+									<span class="component-title">Notify on snatch</span>
+									<span class="component-desc">
+										<input type="checkbox" name="telegram_notify_onsnatch" id="telegram-notify-onsnatch" #if $sickbeard.TELEGRAM_NOTIFY_ONSNATCH then 'checked="checked"' else ''#>
+										<p>send a notification when a download starts ?</p>
+									</span>
+								</label>
+							</div>
+							<div class="field-pair">
+								<label for="telegram-notify-ondownload">
+									<span class="component-title">Notify on download</span>
+									<span class="component-desc">
+										<input type="checkbox" name="telegram_notify_ondownload" id="telegram-notify-ondownload" #if $sickbeard.TELEGRAM_NOTIFY_ONDOWNLOAD then 'checked="checked"' else ''#>
+										<p>send a notification when a download finishes ?</p>
+									</span>
+								</label>
+							</div>
+							<div class="field-pair">
+								<label for="telegram-notify-onsubtitledownload">
+									<span class="component-title">Notify on subtitle download</span>
+									<span class="component-desc">
+										<input type="checkbox" name="telegram_notify_onsubtitledownload" id="telegram-notify-onsubtitledownload" #if $sickbeard.TELEGRAM_NOTIFY_ONSUBTITLEDOWNLOAD then 'checked="checked"' else ''#>
+										<p>send a notification when subtitles are downloaded ?</p>
+									</span>
+								</label>
+							</div>
+							<div class="field-pair">
+								<label for="telegram-send-icon">
+									<span class="component-title">Send icon image</span>
+									<span class="component-desc">
+										<input type="checkbox" name="telegram_send_icon" id="telegram-send-icon"#if $sg_var('TELEGRAM_SEND_ICON') then 'checked="checked"' else ''#>
+										<p>send icon image before the notification</p>
+									</span>
+								</label>
+							</div>
+							<div class="field-pair">
+								<label for="telegram-access-token">
+									<span class="component-title">Telegram bot access token</span>
+									<span class="component-desc">
+										<input type="text" name="telegram_access_token" id="telegram-access-token" value="$sickbeard.TELEGRAM_ACCESS_TOKEN" class="form-control input-sm input350">
+										<div class="clear-left"><p>msg BotFather with <code>/newbot</code> for a token. (tip: enter <code>tg://resolve?domain=BotFather</code> in a browser to make a running desktop client connect to BotFather)</p></div>
+									</span>
+								</label>
+							</div>
+							<div class="field-pair">
+								<label for="telegram-chatid">
+									<span class="component-title">Telegram chat id</span>
+									<span class="component-desc">
+										<input type="text" name="telegram_chatid" id="telegram-chatid" value="$sickbeard.TELEGRAM_CHATID" class="form-control input-sm input250">
+										<span style="float:left">where to send notifications</span>
+										<div class="clear-left"><p>if a private msg has already been sent to the bot, the "Test..." button<br>
+										 will auto-fill the chat id. Otherwise, find and enter a chat id manually</p></div>
+									</span>
+								</label>
+							</div>
+							<div class="test-notification" id="test-telegram-result">Click below to test</div>
+							<input type="button" class="btn" value="Test Telegram" id="test-telegram">
+							<input type="submit" class="btn config_submitter" value="Save Changes">
+						</div><!-- /content_use-telegram //-->
+					</fieldset>
+				</div><!-- /telegram component-group //-->
 
 
 				<div class="component-group">

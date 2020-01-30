@@ -1772,6 +1772,13 @@ class Home(MainHandler):
         return notifiers.NotifierFactory().get('GITTER').test_notify(
             room_name=room_name, access_token=access_token)
 
+    def test_telegram(self, send_icon=False, access_token=None, chatid=None):
+        self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
+
+        r = notifiers.NotifierFactory().get('TELEGRAM').test_notify(
+            send_icon=bool(config.checkbox_to_value(send_icon)), access_token=access_token, chatid=chatid)
+        return json.dumps(r)
+    
     def test_email(self, host=None, port=None, smtp_from=None, use_tls=None, user=None, pwd=None, to=None):
         self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
 
@@ -7255,6 +7262,9 @@ class ConfigNotifications(Config):
             discordapp_as_tts=None,
             use_gitter=None, gitter_notify_onsnatch=None, gitter_notify_ondownload=None,
             gitter_notify_onsubtitledownload=None, gitter_access_token=None, gitter_room=None,
+            use_telegram=None, telegram_notify_onsnatch=None, telegram_notify_ondownload=None,
+            telegram_notify_onsubtitledownload=None, telegram_access_token=None, telegram_chatid=None,
+            telegram_send_icon=None,
             use_email=None, email_notify_onsnatch=None, email_notify_ondownload=None,
             email_notify_onsubtitledownload=None, email_host=None, email_port=25, email_from=None,
             email_tls=None, email_user=None, email_password=None, email_list=None,
@@ -7409,6 +7419,14 @@ class ConfigNotifications(Config):
         sickbeard.GITTER_NOTIFY_ONSUBTITLEDOWNLOAD = config.checkbox_to_value(gitter_notify_onsubtitledownload)
         sickbeard.GITTER_ACCESS_TOKEN = gitter_access_token
         sickbeard.GITTER_ROOM = gitter_room
+
+        sickbeard.USE_TELEGRAM = config.checkbox_to_value(use_telegram)
+        sickbeard.TELEGRAM_NOTIFY_ONSNATCH = config.checkbox_to_value(telegram_notify_onsnatch)
+        sickbeard.TELEGRAM_NOTIFY_ONDOWNLOAD = config.checkbox_to_value(telegram_notify_ondownload)
+        sickbeard.TELEGRAM_NOTIFY_ONSUBTITLEDOWNLOAD = config.checkbox_to_value(telegram_notify_onsubtitledownload)
+        sickbeard.TELEGRAM_ACCESS_TOKEN = telegram_access_token
+        sickbeard.TELEGRAM_CHATID = telegram_chatid
+        sickbeard.TELEGRAM_SEND_ICON = config.checkbox_to_value(telegram_send_icon)
 
         sickbeard.USE_EMAIL = config.checkbox_to_value(use_email)
         sickbeard.EMAIL_NOTIFY_ONSNATCH = config.checkbox_to_value(email_notify_onsnatch)
