@@ -141,7 +141,6 @@ class NewznabProvider(generic.NZBProvider):
         self.server_type = try_int(server_type, None) or NewznabConstants.SERVER_DEFAULT
         self._exclude = set()
         self.cat_ids = cat_ids or ''
-        self._cat_ids = None
         self.search_mode = search_mode or 'eponly'
         self.search_fallback = bool(try_int(search_fallback))
         self.enable_recentsearch = bool(try_int(enable_recentsearch))
@@ -1111,6 +1110,17 @@ class NewznabProvider(generic.NZBProvider):
         if count:
             self._log_search(mode, count, url)
         return count
+
+    def __str__(self):
+        return 'NewznabProvider: %s (%s); server type: %s; enabled searches: %s' % \
+               (self.name, ('disabled', 'enabled')[self.enabled in (True, 1)],
+                NewznabConstants.server_types.get(self.server_type, 'unknown'),
+                ','.join(en[1] for en in
+                         ((self.enable_recentsearch, 'recent'), (self.enable_scheduled_backlog, 'backlog'),
+                          (self.enable_scheduled_backlog, 'scheduled'))) or 'None')
+
+    def __repr__(self):
+        return self.__str__()
 
 
 class NewznabCache(tvcache.TVCache):
