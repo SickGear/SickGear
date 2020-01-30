@@ -1,4 +1,10 @@
-﻿### 0.21.9 (2020-01-28 01:00:00 UTC)
+﻿### 0.21.9 (2020-01-30 21:00:00 UTC)
+
+* Fix init of custom newznab categories
+* Change improve clarity of custom newznab category selection with "+/-" and usage text
+
+
+### 0.21.9 (2020-01-28 01:00:00 UTC)
 
 * Fix reading service.py under Docker
 * Fix a particular case with Add show for imported shows
