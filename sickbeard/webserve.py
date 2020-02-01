@@ -2655,7 +2655,7 @@ class Home(MainHandler):
         if do_update_exceptions:
             try:
                 scene_exceptions.update_scene_exceptions(show_obj.tvid, show_obj.prodid, exceptions_list)
-                buildNameCache(show_obj)
+                # buildNameCache(show_obj)
                 helpers.cpu_sleep()
             except exceptions_helper.CantUpdateException:
                 errors.append('Unable to force an update on scene exceptions of the show.')
