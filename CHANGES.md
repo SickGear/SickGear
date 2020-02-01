@@ -22,6 +22,7 @@
 
 [develop changelog]
 
+* Fix name_parser_tests
 
 
 ### 0.21.9 (2020-01-30 21:00:00 UTC)
