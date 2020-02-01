@@ -61,6 +61,11 @@ from _23 import b64encodestring, filter_iter, list_items, map_list
 from six import iteritems, PY2, string_types
 import sg_helpers
 
+# noinspection PyUnreachableCode
+if False:
+    from typing import Dict, List
+    from .tv import TVShow
+
 PID = None
 ENV = {}
 
@@ -98,7 +103,8 @@ watchedStateQueueScheduler = None
 
 provider_ping_thread_pool = {}
 
-showList = []
+showList = []  # type: List[TVShow]
+showDict = {}  # type: Dict[int, TVShow]
 UPDATE_SHOWS_ON_START = False
 SHOW_UPDATE_HOUR = 3
 
@@ -602,7 +608,7 @@ def initialize(console_logging=True):
 def init_stage_1(console_logging):
 
     # Misc
-    global showList, providerList, newznabProviderList, torrentRssProviderList, \
+    global showList, showDict, providerList, newznabProviderList, torrentRssProviderList, \
         WEB_HOST, WEB_ROOT, ACTUAL_CACHE_DIR, CACHE_DIR, ZONEINFO_DIR, ADD_SHOWS_WO_DIR, ADD_SHOWS_METALANG, \
         CREATE_MISSING_SHOW_DIRS, SHOW_DIRS_WITH_DOTS, \
         RECENTSEARCH_STARTUP, NAMING_FORCE_FOLDERS, SOCKET_TIMEOUT, DEBUG, TVINFO_DEFAULT, CONFIG_FILE, \
@@ -1383,6 +1389,7 @@ def init_stage_1(console_logging):
                 '<br>Important: You <span class="boldest">must</span> Shutdown SickGear before upgrading'
 
     showList = []
+    showDict = {}
 
 
 def init_stage_2():

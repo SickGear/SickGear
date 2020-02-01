@@ -53,7 +53,7 @@ import subliminal
 from lxml_etree import etree, is_lxml
 from send2trash import send2trash
 
-from _23 import b64decodebytes, b64encodebytes, decode_bytes, DirEntry, filter_iter, filter_list, scandir
+from _23 import b64decodebytes, b64encodebytes, decode_bytes, DirEntry, filter_iter, scandir
 from six import iteritems, PY2, string_types, text_type
 # noinspection PyUnresolvedReferences
 from six.moves import zip
@@ -276,14 +276,15 @@ def remove_file(filepath, tree=False, prefix_failure='', log_level=logger.MESSAG
 def find_show_by_id(
         show_id,  # type: Union[AnyStr, Dict[int, int], int]
         show_list=None,  # type: Optional[List[TVShow]]
-        no_mapped_ids=True  # type: bool
+        no_mapped_ids=True,  # type: bool
+        check_multishow=False  # type: bool
 ):
-    # type: (...) -> TVShow or MultipleShowObjectsException
+    # type: (...) -> Optional[TVShow]
     """
     :param show_id: {indexer: id} or 'tvid_prodid'.
     :param show_list: (optional) TVShow objects list
     :param no_mapped_ids: don't check mapped ids
-    :return: TVShow object or MultipleShowObjectsException
+    :param check_multishow: check for multiple show matches
     """
     results = []
     if None is show_list:
@@ -295,8 +296,7 @@ def find_show_by_id(
         if tvid_prodid_obj and no_mapped_ids:
             if None is tvid_prodid_obj.prodid:
                 return None
-            sid_int = int(tvid_prodid_obj)
-            results = filter_list(lambda _show_obj: sid_int == _show_obj.sid_int, show_list)
+            return sickbeard.showDict.get(int(tvid_prodid_obj))
         else:
             if tvid_prodid_obj:
                 if None is tvid_prodid_obj.prodid:
@@ -304,12 +304,21 @@ def find_show_by_id(
                 show_id = tvid_prodid_obj.dict
 
             if isinstance(show_id, dict):
-                show_id = {k: v for k, v in iteritems(show_id) if 0 < v}
                 if no_mapped_ids:
-                    results = filter_list(lambda _show_obj: show_id == {_show_obj.tvid: _show_obj.prodid}, show_list)
+                    sid_int_list = [sickbeard.tv.TVShow.create_sid(sk, sv) for sk, sv in iteritems(show_id) if 0 < sv
+                                    and sickbeard.tv.tvid_bitmask >= sk]
+                    if check_multishow:
+                        results = [sickbeard.showDict.get(_show_sid_id) for _show_sid_id in sid_int_list
+                                   if sickbeard.showDict.get(_show_sid_id)]
+                    else:
+                        for _show_sid_id in sid_int_list:
+                            if _show_sid_id in sickbeard.showDict:
+                                return sickbeard.showDict.get(_show_sid_id)
+                        return None
                 else:
+                    show_id = {k: v for k, v in iteritems(show_id) if 0 < v}
                     results = [_show_obj for k, v in iteritems(show_id)
-                               for _show_obj in show_list if v == _show_obj.ids.get(k, {'id': 0})['id']]
+                               for _show_obj in show_list if v == _show_obj.internal_ids.get(k, {'id': 0})['id']]
 
     num_shows = len(set(results))
     if 1 == num_shows:

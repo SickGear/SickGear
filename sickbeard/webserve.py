@@ -2279,7 +2279,7 @@ class Home(MainHandler):
         m_prodid = helpers.try_int(m_prodid)
         show_obj = helpers.find_show_by_id({tvid: prodid}, no_mapped_ids=True)
         try:
-            m_show_obj = helpers.find_show_by_id({m_tvid: m_prodid}, no_mapped_ids=False)
+            m_show_obj = helpers.find_show_by_id({m_tvid: m_prodid}, no_mapped_ids=False, check_multishow=True)
         except exceptions_helper.MultipleShowObjectsException:
             msg = 'Duplicate shows in DB'
             ui.notifications.message('TV info source switch', 'Error: ' + msg)
@@ -2360,7 +2360,7 @@ class Home(MainHandler):
                 not sickbeard.TVInfoAPI(m_tvid).config.get('mapped_only') and \
                 (m_tvid != show_obj.tvid or m_prodid != show_obj.prodid):
             try:
-                new_show_obj = helpers.find_show_by_id({m_tvid: m_prodid}, no_mapped_ids=False)
+                new_show_obj = helpers.find_show_by_id({m_tvid: m_prodid}, no_mapped_ids=False, check_multishow=True)
                 mtvid_prodid = TVidProdid({m_tvid: m_prodid})()
                 if not new_show_obj or (new_show_obj.tvid == show_obj.tvid and new_show_obj.prodid == show_obj.prodid):
                     master_ids += [bool(helpers.try_int(kwargs.get(x))) for x in ('paused', 'markwanted')]

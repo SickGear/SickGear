@@ -626,10 +626,12 @@ class SickGear(object):
         sql_result = my_db.select('SELECT indexer AS tv_id, indexer_id AS prod_id, location FROM tv_shows')
 
         sickbeard.showList = []
+        sickbeard.showDict = {}
         for cur_result in sql_result:
             try:
                 show_obj = TVShow(int(cur_result['tv_id']), int(cur_result['prod_id']))
                 sickbeard.showList.append(show_obj)
+                sickbeard.showDict[show_obj.sid_int] = show_obj
             except (BaseException, Exception) as err:
                 logger.log('There was an error creating the show in %s: %s' % (
                     cur_result['location'], ex(err)), logger.ERROR)

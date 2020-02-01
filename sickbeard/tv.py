@@ -214,7 +214,7 @@ class TVShow(TVShowBase):
         self._prodid = int(prodid)
         self.sid_int = self.create_sid(self._tvid, self._prodid)
         self._paused = 0
-        self._mapped_ids = {}  # type: Dict
+        self.internal_ids = {}  # type: Dict
         self._not_found_count = None  # type: None or int
         self._last_found_on_indexer = -1  # type: int
 
@@ -229,7 +229,7 @@ class TVShow(TVShowBase):
         # noinspection PyTypeChecker
         self.release_groups = None  # type: BlackAndWhiteList
 
-        show_obj = helpers.find_show_by_id(self.sid_int)
+        show_obj = helpers.find_show_by_id(self.sid_int, check_multishow=True)
         if None is not show_obj:
             raise exceptions_helper.MultipleShowObjectsException('Can\'t create a show if it already exists')
 
@@ -363,14 +363,14 @@ class TVShow(TVShowBase):
 
     @property
     def ids(self):
-        if not self._mapped_ids:
+        if not self.internal_ids:
             acquired_lock = self.lock.acquire(False)
             if acquired_lock:
                 try:
                     indexermapper.map_indexers_to_show(self)
                 finally:
                     self.lock.release()
-        return self._mapped_ids
+        return self.internal_ids
 
     @ids.setter
     def ids(self, value):
@@ -383,7 +383,7 @@ class TVShow(TVShowBase):
                         v.get('status') not in indexermapper.MapStatus.allstatus or \
                         not isinstance(v.get('date'), datetime.date):
                     return
-            self._mapped_ids = value
+            self.internal_ids = value
 
     @property
     def is_anime(self):
@@ -1514,6 +1514,10 @@ class TVShow(TVShowBase):
 
         # remove self from show list
         sickbeard.showList = filter_list(lambda so: so.tvid_prodid != self.tvid_prodid, sickbeard.showList)
+        try:
+            del sickbeard.showDict[self.sid_int]
+        except (BaseException, Exception):
+            pass
 
         # clear the cache
         ic = image_cache.ImageCache()
@@ -1752,6 +1756,13 @@ class TVShow(TVShowBase):
 
         name_cache.buildNameCache(self)
         self.reset_not_found_count()
+        old_sid_int = self.create_sid(old_tvid, old_prodid)
+        if old_sid_int != self.sid_int:
+            try:
+                del sickbeard.showDict[old_sid_int]
+            except (BaseException, Exception):
+                pass
+            sickbeard.showDict[self.sid_int] = self
 
         # force the update
         try:
