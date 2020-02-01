@@ -2,6 +2,7 @@
 /** @namespace JSONData.account_name */
 /** @namespace JSONData.error_message */
 /** @namespace JSONData.num_accounts */
+/** @namespace JSONData.chatid */
 $(document).ready(function(){
 	var loading = '<img src="' + sbRoot + '/images/loading16' + themeSpinner + '.gif" height="16" width="16" />';
 
@@ -506,6 +507,48 @@ $(document).ready(function(){
 					$('#test-gitter-result').html(data);
 					$('#test-gitter').prop('disabled', !1);
 				});
+		}
+	});
+
+	$('#test-telegram').click(function () {
+		var telegramSendIcon = $('#telegram-send-icon').prop('checked'),
+			accessToken = '#telegram-access-token', telegramAccessToken = $(accessToken).val().replace(/\s/g, ''),
+			chatid = '#telegram-chatid', telegramChatid = $(chatid).val().replace(/\s/g, '');
+
+		$(accessToken + ', ' + chatid).removeClass('warning');
+		if (!telegramAccessToken) {
+			$('#test-telegram-result').html('Please fill out the necessary fields above.');
+			$(accessToken).addClass('warning');
+		} else {
+			$(this).prop('disabled', !0);
+			$('#test-telegram-result').html(loading);
+			$.getJSON(sbRoot + '/home/test-telegram',
+				{send_icon: telegramSendIcon, access_token: telegramAccessToken, chatid: telegramChatid})
+				.done(function (JSONdata) {
+					$('#test-telegram-result').html(JSONdata.result);
+					if ('' === telegramChatid) {
+						if ('' === JSONdata.chatid) {
+							$(chatid).addClass('warning');
+						} else {
+							$(chatid).val(JSONdata.chatid);
+						}
+					}
+					$('#test-telegram').prop('disabled', !1);
+				});
+		}
+	});
+
+	$('.config_submitter').click(function (e) {
+		if ($('#use-telegram').prop('checked')){
+			var chatid$ = $('#telegram-chatid');
+			if ('' === chatid$.val().replace(/\s/g, '')){
+				chatid$.addClass('warning');
+				alert('Cannot save, Telegram is enabled and the chat id field needs attention');
+				e.preventDefault();
+				return !1;
+			} else {
+				chatid$.removeClass('warning');
+			}
 		}
 	});
 

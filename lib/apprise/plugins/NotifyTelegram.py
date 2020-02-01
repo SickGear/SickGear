@@ -87,6 +87,8 @@ class NotifyTelegram(NotifyBase):
     # The services URL
     service_url = 'https://telegram.org/'
 
+    icon_path = None
+
     # The default secure protocol
     secure_protocol = 'tgram'
 
@@ -182,7 +184,6 @@ class NotifyTelegram(NotifyBase):
             'name': _('Target Chat ID'),
             'type': 'string',
             'map_to': 'targets',
-            'map_to': 'targets',
             'regex': (r'^((-?[0-9]{1,32})|([a-z_-][a-z0-9_-]+))$', 'i'),
         },
         'targets': {
@@ -264,7 +265,6 @@ class NotifyTelegram(NotifyBase):
         # Our function name and payload are determined on the path
         function_name = 'SendPhoto'
         key = 'photo'
-        path = None
 
         if isinstance(attach, AttachBase):
             if not attach:
@@ -295,7 +295,8 @@ class NotifyTelegram(NotifyBase):
                 return True
 
             # Take on specified attachent as path
-            path = attach
+            # hack in self.icon_path to use alt icon as nothing on homepage docs shows how)
+            path = self.icon_path or attach
             file_name = os.path.basename(path)
 
         url = '%s%s/%s' % (
@@ -385,9 +386,6 @@ class NotifyTelegram(NotifyBase):
             'Telegram User Detection POST URL: %s (cert_verify=%r)' % (
                 url, self.verify_certificate))
 
-        # Track our response object
-        response = None
-
         try:
             r = requests.post(
                 url,
@@ -427,6 +425,7 @@ class NotifyTelegram(NotifyBase):
 
                 return 0
 
+            # Track our response object
             # Load our response and attempt to fetch our userid
             response = loads(r.content)
 
@@ -577,7 +576,7 @@ class NotifyTelegram(NotifyBase):
                 # Define our path
                 if not self.send_media(payload['chat_id'], notify_type):
                     # We failed to send the image associated with our
-                    notify_type
+                    # notify_type
                     self.logger.warning(
                         'Failed to send Telegram type image to {}.',
                         payload['chat_id'])
@@ -683,7 +682,7 @@ class NotifyTelegram(NotifyBase):
             args=NotifyTelegram.urlencode(args))
 
     @staticmethod
-    def parse_url(url):
+    def parse_url(url, **kwargs):
         """
         Parses the URL and returns enough arguments that can allow
         us to substantiate this object.
