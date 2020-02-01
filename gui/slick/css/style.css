@@ -1724,9 +1724,6 @@ body.back-art.avoid #livepanel #rate-art .icon-glyph:hover,
 	font-weight:700;
 	color:#888
 }
-#display-show.pro #pickShow .ended:before{
-	content:"[ ! ] "
-}
 
 #details-top{
 	height:70px
