@@ -89,6 +89,7 @@ class PPBasicTests(test.SickbeardTestDBCase):
         show_obj.save_to_db()
 
         sickbeard.showList = [show_obj]
+        sickbeard.showDict = {show_obj.sid_int: show_obj}
         ep_obj = TVEpisode(show_obj, test.SEASON, test.EPISODE)
         ep_obj.name = 'some ep name'
         ep_obj.release_name = 'test setter'
@@ -144,6 +145,7 @@ class PPScriptTests(test.SickbeardTestDBCase):
         show_obj.save_to_db()
 
         sickbeard.showList = [show_obj]
+        sickbeard.showDict = {show_obj.sid_int: show_obj}
         ep_obj = TVEpisode(show_obj, test.SEASON, test.EPISODE)
         ep_obj.name = 'some ep name'
         ep_obj.location = '/mnt/hdd/folder/the show/season 01/the show - s01e01 - name.mkv'
