@@ -602,7 +602,7 @@ class NewznabProvider(generic.NZBProvider):
 
             if tvid_prodid:
                 try:
-                    show_obj = helpers.find_show_by_id(tvid_prodid, no_mapped_ids=False)
+                    show_obj = helpers.find_show_by_id(tvid_prodid, no_mapped_ids=False, check_multishow=True)
                 except MultipleShowObjectsException:
                     return None
         return show_obj

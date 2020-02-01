@@ -369,16 +369,11 @@ class RecentSearchQueueItem(generic_queue.QueueItem):
 
         for cur_result in sql_result:
             tvid, prodid = int(cur_result['tvid']), int(cur_result['prodid'])
-            try:
-                if not show_obj or not (show_obj.tvid == tvid and show_obj.prodid == prodid):
-                    show_obj = helpers.find_show_by_id({tvid: prodid})
+            if not show_obj or not (show_obj.tvid == tvid and show_obj.prodid == prodid):
+                show_obj = helpers.find_show_by_id({tvid: prodid})
 
-                # for when there is orphaned series in the database but not loaded into our showlist
-                if not show_obj:
-                    continue
-
-            except exceptions_helper.MultipleShowObjectsException:
-                logger.log(u'ERROR: expected to find a single show matching %s' % cur_result['showid'])
+            # for when there is orphaned series in the database but not loaded into our showlist
+            if not show_obj:
                 continue
 
             try:

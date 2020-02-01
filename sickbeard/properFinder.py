@@ -570,7 +570,8 @@ def get_needed_qualites(needed=None):
         if needed.all_needed:
             break
         try:
-            show_obj = helpers.find_show_by_id({int(cur_result['tv_id']): int(cur_result['prod_id'])})
+            show_obj = helpers.find_show_by_id({int(cur_result['tv_id']): int(cur_result['prod_id'])},
+                                               check_multishow=True)
         except MultipleShowObjectsException:
             continue
         if show_obj:
@@ -612,7 +613,8 @@ def _recent_history(aired_since_shows, aired_since_anime):
     for cur_result in sql_result:
 
         try:
-            show_obj = helpers.find_show_by_id({int(cur_result['tv_id']): int(cur_result['prod_id'])})
+            show_obj = helpers.find_show_by_id({int(cur_result['tv_id']): int(cur_result['prod_id'])},
+                                               check_multishow=True)
         except MultipleShowObjectsException:
             continue
         if show_obj:

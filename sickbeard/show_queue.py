@@ -760,6 +760,7 @@ class QueueItemAdd(ShowQueueItem):
 
         # add it to the show list
         sickbeard.showList.append(self.show_obj)
+        sickbeard.showDict[self.show_obj.sid_int] = self.show_obj
 
         try:
             self.show_obj.load_episodes_from_tvinfo()

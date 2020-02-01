@@ -212,7 +212,8 @@ class ProcessTVShow(object):
             ' ORDER BY rowid', [name])
         if sql_result:
             try:
-                show_obj = helpers.find_show_by_id({int(sql_result[-1]['indexer']): int(sql_result[-1]['showid'])})
+                show_obj = helpers.find_show_by_id({int(sql_result[-1]['indexer']): int(sql_result[-1]['showid'])},
+                                                   check_multishow=True)
                 if hasattr(show_obj, 'name'):
                     logger.log('Found Show: %s in snatch history for: %s' % (show_obj.name, name), logger.DEBUG)
             except MultipleShowObjectsException:
