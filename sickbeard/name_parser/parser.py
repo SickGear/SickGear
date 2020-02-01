@@ -56,7 +56,7 @@ class NameParser(object):
     NORMAL_REGEX = 1
     ANIME_REGEX = 2
 
-    def __init__(self, file_name=True, show_obj=None, try_scene_exceptions=False, convert=False,
+    def __init__(self, file_name=True, show_obj=None, try_scene_exceptions=True, convert=False,
                  naming_pattern=False, testing=False, indexer_lookup=True):
 
         self.file_name = file_name  # type: bool
@@ -212,7 +212,7 @@ class NameParser(object):
                             if hasattr(self.show_obj, 'get_episode'):
                                 _ep_obj = self.show_obj.get_episode(parse_result.season_number, ep_num)
                             else:
-                                tmp_show_obj = helpers.get_show(parse_result.series_name, True, False)
+                                tmp_show_obj = helpers.get_show(parse_result.series_name, True)
                                 if tmp_show_obj and hasattr(tmp_show_obj, 'get_episode'):
                                     _ep_obj = tmp_show_obj.get_episode(parse_result.season_number, ep_num)
                                 else:

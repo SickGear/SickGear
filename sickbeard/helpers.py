@@ -68,6 +68,9 @@ from sg_helpers import chmod_as_parent, clean_data, get_system_temp_dir, \
 if False:
     # noinspection PyUnresolvedReferences
     from typing import Any, AnyStr, Dict, NoReturn, Iterable, Iterator, List, Optional, Tuple, Union
+    from .tv import TVShow
+    # the following workaround hack resolves a pyc resolution bug
+    from .name_cache import retrieveNameFromCache
 
 RE_XML_ENCODING = re.compile(r'^(<\?xml[^>]+)\s+(encoding\s*=\s*[\"\'][^\"\']*[\"\'])(\s*\?>|)', re.U)
 
@@ -272,10 +275,10 @@ def remove_file(filepath, tree=False, prefix_failure='', log_level=logger.MESSAG
 
 def find_show_by_id(
         show_id,  # type: Union[AnyStr, Dict[int, int], int]
-        show_list=None,  # type: Optional[List[sickbeard.tv.TVShow]]
+        show_list=None,  # type: Optional[List[TVShow]]
         no_mapped_ids=True  # type: bool
 ):
-    # type: (...) -> sickbeard.tv.TVShow or MultipleShowObjectsException
+    # type: (...) -> TVShow or MultipleShowObjectsException
     """
     :param show_id: {indexer: id} or 'tvid_prodid'.
     :param show_list: (optional) TVShow objects list
@@ -681,7 +684,7 @@ def get_absolute_number_from_season_and_episode(show_obj, season, episode):
     """
 
     :param show_obj: show object
-    :type show_obj: sickbeard.tv.TVShow
+    :type show_obj: TVShow
     :param season: season number
     :type season: int
     :param episode: episode number
@@ -713,7 +716,7 @@ def get_absolute_number_from_season_and_episode(show_obj, season, episode):
 
 
 def get_all_episodes_from_absolute_number(show_obj, absolute_numbers):
-    # type: (sickbeard.tv.TVShow, List[int]) -> Tuple[int, List[int]]
+    # type: (TVShow, List[int]) -> Tuple[int, List[int]]
     """
 
     :param show_obj: show object
@@ -1097,7 +1100,8 @@ def full_sanitize_scene_name(name):
     return re.sub('[. -]', ' ', sanitize_scene_name(name)).lower().lstrip()
 
 
-def get_show(name, try_scene_exceptions=False, use_cache=True):
+def get_show(name, try_scene_exceptions=False):
+    # type: (AnyStr, bool) -> Optional[TVShow]
     """
     get show object for show with given name
 
@@ -1105,32 +1109,23 @@ def get_show(name, try_scene_exceptions=False, use_cache=True):
     :type name: AnyStr
     :param try_scene_exceptions: check scene exceptions
     :type try_scene_exceptions: bool
-    :param use_cache: use cache
-    :type use_cache: bool
     :return: None or show object
-    :type: sickbeard.tv.TVShow or None
+    :type: TVShow or None
     """
     if not sickbeard.showList or None is name:
         return
 
     show_obj = None
-    from_cache = False
 
     try:
         tvid, prodid = sickbeard.name_cache.retrieveNameFromCache(name)
         if tvid and prodid:
-            from_cache = True
             show_obj = find_show_by_id({tvid: prodid})
 
         if not show_obj and try_scene_exceptions:
             tvid, prodid, season = sickbeard.scene_exceptions.get_scene_exception_by_name(name)
             if tvid and prodid:
                 show_obj = find_show_by_id({tvid: prodid})
-
-        # add show to cache
-        if use_cache and show_obj and not from_cache:
-            from sickbeard.name_cache import addNameToCache
-            sickbeard.name_cache.addNameToCache(name, tvid=show_obj.tvid, prodid=show_obj.prodid)
     except (BaseException, Exception) as e:
         logger.log(u'Error when attempting to find show: ' + name + ' in SickGear: ' + ex(e), logger.DEBUG)
 
@@ -1169,7 +1164,7 @@ def validate_show(show_obj, season=None, episode=None):
     """
 
     :param show_obj: show object
-    :type show_obj: sickbeard.tv.TVShow
+    :type show_obj: TVShow
     :param season: optional season
     :type season: int or None
     :param episode: opitonal episode

@@ -266,8 +266,7 @@ def _get_proper_list(aired_since_shows, recent_shows, recent_anime, proper_dict=
                 continue
 
             try:
-                np = NameParser(False, try_scene_exceptions=True, show_obj=cur_proper.parsed_show_obj,
-                                indexer_lookup=False)
+                np = NameParser(False, show_obj=cur_proper.parsed_show_obj, indexer_lookup=False)
                 parse_result = np.parse(cur_proper.name)
             except (InvalidNameException, InvalidShowException, Exception):
                 continue
@@ -346,7 +345,7 @@ def _get_proper_list(aired_since_shows, recent_shows, recent_anime, proper_dict=
                     or (cur_proper.is_repack and not same_release_group):
                 continue
 
-            np = NameParser(False, try_scene_exceptions=True, show_obj=cur_proper.parsed_show_obj, indexer_lookup=False)
+            np = NameParser(False, show_obj=cur_proper.parsed_show_obj, indexer_lookup=False)
             try:
                 extra_info = np.parse(sql_result[0]['release_name']).extra_info_no_name()
             except (BaseException, Exception):

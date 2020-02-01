@@ -934,13 +934,13 @@ class ProcessTVShow(object):
 
         parse_result = None
         try:
-            parse_result = NameParser(try_scene_exceptions=True, convert=True).parse(videofile, cache_result=False)
+            parse_result = NameParser(convert=True).parse(videofile, cache_result=False)
         except (InvalidNameException, InvalidShowException):
             # Does not parse, move on to directory check
             pass
         if None is parse_result:
             try:
-                parse_result = NameParser(try_scene_exceptions=True, convert=True).parse(dir_name, cache_result=False)
+                parse_result = NameParser(convert=True).parse(dir_name, cache_result=False)
             except (InvalidNameException, InvalidShowException):
                 # If the filename doesn't parse, then return false as last
                 # resort. We can assume that unparseable filenames are not

@@ -17,6 +17,7 @@
 * Update Tornado_py3 Web Server 6.0.3 (ff985fe) to 6.0.xx (18b653c)
 * Update urllib3 release 1.25.6 (4a6c288) to 1.25.7 (37ba61a)
 * Add Telegram notifier
+* Change update sceneNameCache after scene names are updated
 
 
 [develop changelog]

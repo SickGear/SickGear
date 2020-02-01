@@ -140,7 +140,7 @@ class QualityTests(unittest.TestCase):
                                                   (Quality.qualityStrings[quality], Quality.qualityStrings[second], fn))
 
     def check_proper_level(self, cases, is_anime=False):
-        np = NameParser(False, indexer_lookup=False, try_scene_exceptions=False, testing=True)
+        np = NameParser(False, indexer_lookup=False, testing=True)
         for case, level in cases:
             p = np.parse(case)
             second = common.Quality.get_proper_level(p.extra_info_no_name(), p.version, is_anime)

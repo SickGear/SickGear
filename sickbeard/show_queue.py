@@ -838,7 +838,7 @@ class QueueItemAdd(ShowQueueItem):
             if oh:
                 found = False
                 for o in oh:
-                    np = NameParser(file_name=True, indexer_lookup=False, try_scene_exceptions=True)
+                    np = NameParser(file_name=True, indexer_lookup=False)
                     try:
                         pr = np.parse(o['resource'])
                     except (BaseException, Exception):
