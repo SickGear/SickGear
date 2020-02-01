@@ -1117,7 +1117,7 @@ class NewznabProvider(generic.NZBProvider):
                 NewznabConstants.server_types.get(self.server_type, 'unknown'),
                 ','.join(en[1] for en in
                          ((self.enable_recentsearch, 'recent'), (self.enable_scheduled_backlog, 'backlog'),
-                          (self.enable_scheduled_backlog, 'scheduled'))) or 'None')
+                          (self.enable_scheduled_backlog, 'scheduled')) if en[0]) or 'None')
 
     def __repr__(self):
         return self.__str__()

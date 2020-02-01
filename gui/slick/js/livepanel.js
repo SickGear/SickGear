@@ -288,6 +288,25 @@ $(document).ready(function() {
 					: (isSet('pro') ? pTitle['viewmode1']
 						: pTitle['viewmode0']),
 				refreshAll);
+
+			// update pick show drop down
+			var reg = new RegExp(isSet('pro') ? '^(?!\\[\\s!\\s]).' : '^\\[\\s!\\s]'),
+				ended$ = $('#display-show').find('#pickShow').find('.ended')
+					.filter(function () { return reg.test(this.text);});
+			if (ended$.length) {
+				var change;
+				if (isSet('pro')) {
+					change = function() {
+						this.prepend('[ ! ] ');
+					};
+				} else {
+					reg = new RegExp('^\\[\\s!\\s]\\s');
+					change = function() {
+						this.text = this.text.replace(reg, '');
+					};
+				}
+				ended$.each(change);
+			}
 		}
 		return result;
 	}
