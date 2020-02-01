@@ -42,6 +42,12 @@ class MainSanityCheck(db.DBSanityCheck):
         self.fix_scene_exceptions()
         self.fix_orphan_not_found_show()
         self.fix_fallback_mapping()
+        self.fix_indexer_mapping_tvdb()
+
+    def fix_indexer_mapping_tvdb(self):
+        if not self.connection.has_flag('fix_indexer_mapping_tvdb'):
+            self.connection.action('DELETE FROM indexer_mapping WHERE mindexer = ?', [10001])
+            self.connection.set_flag('fix_indexer_mapping_tvdb')
 
     def fix_duplicate_shows(self, column='indexer_id'):
 
@@ -823,8 +829,9 @@ class ConvertTVShowsToIndexerScheme(db.SchemaUpgrade):
 
         self.connection.action('CREATE UNIQUE INDEX idx_indexer_id ON tv_shows (indexer_id);')
 
-        # noinspection SqlResolve
+        # noinspection SqlResolve,SqlConstantCondition
         self.connection.action('UPDATE tv_shows SET classification = "Scripted" WHERE 1=1')
+        # noinspection SqlConstantCondition
         self.connection.action('UPDATE tv_shows SET indexer = 1 WHERE 1=1')
 
         self.incDBVersion()
@@ -865,6 +872,7 @@ class ConvertTVEpisodesToIndexerScheme(db.SchemaUpgrade):
         self.connection.action('CREATE INDEX idx_sta_epi_air ON tv_episodes (status,episode, airdate)')
         self.connection.action('CREATE INDEX idx_sta_epi_sta_air ON tv_episodes (season,episode, status, airdate)')
 
+        # noinspection SqlConstantCondition
         self.connection.action('UPDATE tv_episodes SET indexer = 1 WHERE 1=1')
 
         self.incDBVersion()

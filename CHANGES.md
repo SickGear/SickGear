@@ -1,4 +1,10 @@
-﻿### 0.21.9 (2020-01-30 21:00:00 UTC)
+﻿### 0.21.11 (2020-02-01 21:40:00 UTC)
+
+* Change ended show mark "[ ! ]" of view-show/"Change show" pull down because Chromium removed the CSS method
+* Fix creating show list when there is no list at the cycle of backlog search spread
+
+
+### 0.21.10 (2020-01-30 21:00:00 UTC)
 
 * Fix init of custom newznab categories
 * Change improve clarity of custom newznab category selection with "+/-" and usage text
