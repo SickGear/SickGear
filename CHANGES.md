@@ -28,6 +28,11 @@
 * Change remove deprecated `buildNameCache`
 
 
+### 0.21.12 (2020-02-02 00:40:00 UTC)
+
+* Fix handling the error when failing to remove a file
+
+
 ### 0.21.11 (2020-02-01 21:40:00 UTC)
 
 * Change ended show mark "[ ! ]" of view-show/"Change show" pull down because Chromium removed the CSS method
