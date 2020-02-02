@@ -263,7 +263,7 @@ def remove_file(filepath, tree=False, prefix_failure='', log_level=logger.MESSAG
                 ek.ek(shutil.rmtree, filepath)
             else:
                 ek.ek(os.remove, filepath)
-        except (OSError, WindowsError) as e:
+        except OSError as e:
             logger.log(u'%sUnable to %s %s %s: %s' % (prefix_failure, ('delete', 'trash')[sickbeard.TRASH_REMOVE_SHOW],
                                                       ('file', 'dir')[tree], filepath, ex(e)), log_level)
 
