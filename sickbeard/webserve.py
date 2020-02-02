@@ -54,7 +54,6 @@ from .common import ARCHIVED, DOWNLOADED, FAILED, IGNORED, SKIPPED, SNATCHED, SN
 from .helpers import has_image_ext, remove_article, starify
 from .indexermapper import MapStatus, map_indexers_to_show, save_mapping
 from .indexers.indexer_config import TVINFO_IMDB, TVINFO_TRAKT, TVINFO_TVDB
-from .name_cache import buildNameCache
 from .providers import newznab, rsstorrent
 from .scene_numbering import get_scene_absolute_numbering_for_show, get_scene_numbering_for_show, \
     get_xem_absolute_numbering_for_show, get_xem_numbering_for_show, set_scene_numbering_helper
@@ -168,6 +167,7 @@ class BaseStaticFileHandler(StaticFileHandler):
         self.set_header('X-Robots-Tag', 'noindex, nofollow, noarchive, nocache, noodp, noydir, noimageindex, nosnippet')
         self.set_header('Cache-Control', 'no-cache, max-age=0')
         self.set_header('Pragma', 'no-cache')
+        self.set_header('Expires', '0')
         if sickbeard.SEND_SECURITY_HEADERS:
             self.set_header('X-Frame-Options', 'SAMEORIGIN')
 
@@ -2655,7 +2655,6 @@ class Home(MainHandler):
         if do_update_exceptions:
             try:
                 scene_exceptions.update_scene_exceptions(show_obj.tvid, show_obj.prodid, exceptions_list)
-                # buildNameCache(show_obj)
                 helpers.cpu_sleep()
             except exceptions_helper.CantUpdateException:
                 errors.append('Unable to force an update on scene exceptions of the show.')
@@ -6784,7 +6783,7 @@ class ConfigMediaProcess(Config):
             if 'win32' == sys.platform:
                 rarfile.UNRAR_TOOL = ek.ek(os.path.join, sickbeard.PROG_DIR, 'lib', 'rarfile', 'UnRAR.exe')
             rar_path = ek.ek(os.path.join, sickbeard.PROG_DIR, 'lib', 'rarfile', 'test.rar')
-            if 'This is only a test.' == rarfile.RarFile(rar_path).read(r'test\test.txt'):
+            if 'This is only a test.' == decode_str(rarfile.RarFile(rar_path).read(r'test\test.txt')):
                 return 'supported'
             msg = 'Could not read test file content'
         except (BaseException, Exception) as e:
@@ -7758,6 +7757,12 @@ class Cache(MainHandler):
 
 
 class CachedImages(MainHandler):
+
+    def set_default_headers(self):
+        super(CachedImages, self).set_default_headers()
+        self.set_header('Cache-Control', 'no-cache, max-age=0')
+        self.set_header('Pragma', 'no-cache')
+        self.set_header('Expires', '0')
 
     @staticmethod
     def should_try_image(filename, source, days=1, minutes=0):

@@ -17,12 +17,15 @@
 * Update Tornado_py3 Web Server 6.0.3 (ff985fe) to 6.0.xx (18b653c)
 * Update urllib3 release 1.25.6 (4a6c288) to 1.25.7 (37ba61a)
 * Add Telegram notifier
+* Change enable image caching on browse pages
 * Change update sceneNameCache after scene names are updated
 
 
 [develop changelog]
 
 * Fix name_parser_tests
+* Fix config/Media Process/Unpack test unrar under py3
+* Change remove deprecated `buildNameCache`
 
 
 ### 0.21.11 (2020-02-01 21:40:00 UTC)
