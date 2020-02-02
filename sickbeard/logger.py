@@ -369,7 +369,7 @@ class TimedCompressedRotatingFileHandler(TimedRotatingFileHandler):
             if sickbeard.TRASH_ROTATE_LOGS:
                 try:
                     send2trash(filepath)
-                except (OSError, WindowsError):
+                except OSError:
                     pass
             else:
                 remove_file_failed(filepath)
