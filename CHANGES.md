@@ -1,4 +1,9 @@
-﻿### 0.21.12 (2020-02-02 00:40:00 UTC)
+﻿### 0.21.13 (2020-02-08 20:55:00 UTC)
+
+* Fix Windows Kodi episode library update
+
+
+### 0.21.12 (2020-02-02 00:40:00 UTC)
 
 * Fix handling the error when failing to remove a file
 
