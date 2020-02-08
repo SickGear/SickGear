@@ -375,7 +375,8 @@ class KodiNotifier(Notifier):
                 return False
 
             self._log_debug(u'Updating %s on %s at %s' % (show_name, host, path))
-            command = dict(method='VideoLibrary.Scan', params={'directory': '%s' % json.dumps(path)[1:-1]})
+            command = dict(method='VideoLibrary.Scan',
+                           params={'directory': '%s' % json.dumps(path)[1:-1].replace('\\\\', '\\')})
             response_scan = self._send_json(host, command)
             if not response_scan.get('OK'):
                 self._log_error(u'Update of show directory failed for %s on %s at %s response: %s' %
