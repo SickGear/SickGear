@@ -3089,21 +3089,28 @@ class Home(MainHandler):
                 not tvid_prodid or tvid_prodid == str(r.show_ns.tvid_prodid)), results):
             for ep_ns in filter_iter(
                     lambda e: (e.show_ns.tvid, e.show_ns.prodid, e.season, e.episode) not in seen_eps, item.segment_ns):
-                try:
-                    show_obj = helpers.find_show_by_id(dict({ep_ns.show_ns.tvid: ep_ns.show_ns.prodid}))
-                    ep_obj = show_obj.get_episode(season=ep_ns.show_ns.season, episode=ep_ns.show_ns.episode)
-                except (BaseException, Exception):
+                ep_obj = getattr(ep_ns, 'ep_obj', None)
+                if not ep_obj:
                     continue
+                # try:
+                #     show_obj = helpers.find_show_by_id(dict({ep_ns.show_ns.tvid: ep_ns.show_ns.prodid}))
+                #     ep_obj = show_obj.get_episode(season=ep_ns.season, episode=ep_ns.episode)
+                # except (BaseException, Exception):
+                #     continue
                 ep_data, uniq_sxe = self.prepare_episode(ep_obj, **episode_params)
                 ep_data_list.append(ep_data)
                 seen_eps.add(uniq_sxe)
 
-            for snatched in filter_iter(lambda s: (s not in seen_eps), item.snatched_eps):
-                try:
-                    show_obj = helpers.find_show_by_id(snatched[0])
-                    ep_obj = show_obj.get_episode(season=snatched[1], episode=snatched[2])
-                except (BaseException, Exception):
+            for snatched in filter_iter(lambda s: ((s.tvid, s.prodid, s.season, s.episode) not in seen_eps),
+                                        item.snatched_eps):
+                ep_obj = getattr(snatched, 'ep_obj', None)
+                if not ep_obj:
                     continue
+                # try:
+                #     show_obj = helpers.find_show_by_id(snatched[0])
+                #     ep_obj = show_obj.get_episode(season=snatched[1], episode=snatched[2])
+                # except (BaseException, Exception):
+                #     continue
                 ep_data, uniq_sxe = self.prepare_episode(ep_obj, **episode_params)
                 ep_data_list.append(ep_data)
                 seen_eps.add(uniq_sxe)

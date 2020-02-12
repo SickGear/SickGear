@@ -23,7 +23,7 @@ import sickbeard
 
 from exceptions_helper import ex
 
-from _23 import urlencode
+from _23 import decode_str, urlencode
 # noinspection PyUnresolvedReferences
 from six.moves import urllib
 
@@ -52,7 +52,7 @@ class Boxcar2Notifier(Notifier):
         # build up the URL and parameters
         # more info goes here -
         # https://boxcar.uservoice.com/knowledgebase/articles/306788-how-to-send-your-boxcar-account-a-notification
-        body = body.strip().encode('utf-8')
+        body = decode_str(body.strip())
 
         data = urlencode({
                 'user_credentials': access_token,
