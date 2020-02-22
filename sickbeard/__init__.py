@@ -1242,7 +1242,7 @@ def init_stage_1(console_logging):
     HISTORY_LAYOUT = check_setting_str(CFG, 'GUI', 'history_layout', 'detailed')
     BROWSELIST_HIDDEN = map_list(
         lambda y: TVidProdid.glue in y and y or '%s%s%s' % (
-            (TVINFO_TVDB, TVINFO_IMDB)[bool(re.search(r'(?i)tt\d{7}', y))], TVidProdid.glue, y),
+            (TVINFO_TVDB, TVINFO_IMDB)[bool(helpers.parse_imdb_id(y))], TVidProdid.glue, y),
         [x.strip() for x in check_setting_str(CFG, 'GUI', 'browselist_hidden', '').split('|~|') if x.strip()])
 
     # initialize NZB and TORRENT providers

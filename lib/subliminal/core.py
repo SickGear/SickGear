@@ -204,7 +204,7 @@ def get_service(services, service_name, config=None, os_auth=None):
     """
     if service_name not in services:
         mod = __import__('services.' + service_name, globals=globals(), locals=locals(), fromlist=['Service'], level=1)
-        services[service_name] = mod.Service(os_auth=os_auth)
+        services[service_name] = mod.Service(**(dict(os_auth=os_auth), {})[not hasattr(mod.Service, 'username')])
         services[service_name].init()
     services[service_name].config = config
     return services[service_name]

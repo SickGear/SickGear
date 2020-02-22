@@ -97,7 +97,7 @@ class Method(object):
                 self.varname = get_varname(next(filter_iter(lambda f: rt_obj.method_exists(f),
                                                             (self.rpc_call,) + tuple(getattr(self, 'aliases', '')))))
                 return True
-            except IndexError:
+            except (BaseException, Exception):
                 pass
 
         return False
@@ -163,7 +163,7 @@ class Multicall(object):
 
         try:
             results = tuple(next(filter_iter(lambda x: isinstance(x, list), xmc().results)))
-        except IndexError:
+        except (BaseException, Exception):
             return [[]]
 
         results_processed = []
@@ -220,7 +220,7 @@ def find_method(rpc_call):
             lambda n: n.lower(), [m.rpc_call] + list(getattr(m, 'aliases', []))),
                       rtorrent.methods + rtorrent.torrent.methods +
                       rtorrent.file.methods + rtorrent.tracker.methods + rtorrent.peer.methods))
-    except IndexError:
+    except (BaseException, Exception):
         return -1
 
 

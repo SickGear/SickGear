@@ -1338,7 +1338,7 @@ class TVShow(TVShowBase):
         try:
             response = requests.head(page_url, allow_redirects=True)
             if response.history and any([h for h in response.history if 301 == h.status_code]):
-                return re.search(r'(tt\d{7})', response.url, flags=re.I).group(1)
+                return helpers.parse_imdb_id(response.url)
         except (BaseException, Exception):
             pass
 
@@ -1370,7 +1370,7 @@ class TVShow(TVShowBase):
                 imdb_id = redirect_check
                 imdb_info['imdb_id'] = self.imdbid
             i = imdbpie.Imdb(exclude_episodes=True, cachedir=ek.ek(os.path.join, sickbeard.CACHE_DIR, 'imdb-pie'))
-            if not re.search(r'tt\d{7}', imdb_id, flags=re.I):
+            if not helpers.parse_imdb_id(imdb_id):
                 logger.log('Not a valid imdbid: %s for show: %s' % (imdb_id, self.name), logger.WARNING)
                 return
             imdb_ratings = i.get_title_ratings(imdb_id=imdb_id)

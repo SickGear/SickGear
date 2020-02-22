@@ -3089,21 +3089,28 @@ class Home(MainHandler):
                 not tvid_prodid or tvid_prodid == str(r.show_ns.tvid_prodid)), results):
             for ep_ns in filter_iter(
                     lambda e: (e.show_ns.tvid, e.show_ns.prodid, e.season, e.episode) not in seen_eps, item.segment_ns):
-                try:
-                    show_obj = helpers.find_show_by_id(dict({ep_ns.show_ns.tvid: ep_ns.show_ns.prodid}))
-                    ep_obj = show_obj.get_episode(season=ep_ns.show_ns.season, episode=ep_ns.show_ns.episode)
-                except (BaseException, Exception):
+                ep_obj = getattr(ep_ns, 'ep_obj', None)
+                if not ep_obj:
                     continue
+                # try:
+                #     show_obj = helpers.find_show_by_id(dict({ep_ns.show_ns.tvid: ep_ns.show_ns.prodid}))
+                #     ep_obj = show_obj.get_episode(season=ep_ns.season, episode=ep_ns.episode)
+                # except (BaseException, Exception):
+                #     continue
                 ep_data, uniq_sxe = self.prepare_episode(ep_obj, **episode_params)
                 ep_data_list.append(ep_data)
                 seen_eps.add(uniq_sxe)
 
-            for snatched in filter_iter(lambda s: (s not in seen_eps), item.snatched_eps):
-                try:
-                    show_obj = helpers.find_show_by_id(snatched[0])
-                    ep_obj = show_obj.get_episode(season=snatched[1], episode=snatched[2])
-                except (BaseException, Exception):
+            for snatched in filter_iter(lambda s: ((s.tvid, s.prodid, s.season, s.episode) not in seen_eps),
+                                        item.snatched_eps):
+                ep_obj = getattr(snatched, 'ep_obj', None)
+                if not ep_obj:
                     continue
+                # try:
+                #     show_obj = helpers.find_show_by_id(snatched[0])
+                #     ep_obj = show_obj.get_episode(season=snatched[1], episode=snatched[2])
+                # except (BaseException, Exception):
+                #     continue
                 ep_data, uniq_sxe = self.prepare_episode(ep_obj, **episode_params)
                 ep_data_list.append(ep_data)
                 seen_eps.add(uniq_sxe)
@@ -3343,7 +3350,7 @@ class AddShows(Home):
 
         search_id, tvdb_prodid, trakt_prodid, tmdb_prodid, trakt_id = '', None, None, None, TVINFO_TRAKT
         try:
-            search_id = re.search(r'(?m)((?:tt\d{4,})|^\d{4,}$)', search_term).group(1)
+            search_id = helpers.parse_imdb_id(search_term) or re.search(r'(?m)(^\d{4,}$)', search_term).group(1)
 
             tvinfo_config = sickbeard.TVInfoAPI(trakt_id).api_params.copy()
             tvinfo_config['language'] = lang
@@ -3940,7 +3947,6 @@ class AddShows(Home):
     def parse_imdb_html(self, html, filtered, kwargs):
 
         img_size = re.compile(r'(?im)(V1[^XY]+([XY]))(\d+)([^\d]+)(\d+)([^\d]+)(\d+)([^\d]+)(\d+)([^\d]+)(\d+)(.*?)$')
-        imdb_id = re.compile(r'(?i).*(tt\d+).*')
 
         with BS4Parser(html, features=['html5lib', 'permissive']) as soup:
             show_list = soup.select('.lister-list')
@@ -3951,7 +3957,7 @@ class AddShows(Home):
                 try:
                     title = row.select('.lister-item-header a[href*=title]')[0]
                     url_path = title['href'].strip('/')
-                    ids = dict(imdb=imdb_id.sub(r'\1', url_path))
+                    ids = dict(imdb=helpers.parse_imdb_id(url_path))
                     year, ended = 2 * [None]
                     first_aired = row.select('.lister-item-header .lister-item-year')
                     if len(first_aired):
@@ -4119,7 +4125,7 @@ class AddShows(Home):
 
     def info_imdb(self, ids, show_name):
 
-        return self.new_show('|'.join(['', '', '', re.search(r'(?i)tt\d+$', ids) and ids or show_name]),
+        return self.new_show('|'.join(['', '', '', helpers.parse_imdb_id(ids) and ids or show_name]),
                              use_show_name=True)
 
     def trakt_anticipated(self):

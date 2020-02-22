@@ -25,7 +25,7 @@ from .generic import Notifier
 import sickbeard
 import requests
 
-from _23 import b64encodestring
+from _23 import b64encodestring, decode_str
 
 
 PUSHAPI_ENDPOINT = 'https://api.pushbullet.com/v2/pushes'
@@ -66,7 +66,7 @@ class PushbulletNotifier(Notifier):
                        'Content-Type': 'application/json'}
             resp = requests.post(PUSHAPI_ENDPOINT, headers=headers,
                                  data=json.dumps(dict(
-                                     type='note', title=title, body=body.strip().encode('utf-8'),
+                                     type='note', title=title, body=decode_str(body.strip()),
                                      device_iden=device_iden)))
             resp.raise_for_status()
         except (BaseException, Exception):
