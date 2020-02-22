@@ -302,7 +302,13 @@ class RecentSearchQueueItem(generic_queue.QueueItem):
                             self.success = search.snatch_episode(result)
                             if self.success:
                                 for ep_obj in result.ep_obj_list:
-                                    self.snatched_eps.add((ep_obj.show_obj.tvid_prodid, ep_obj.season, ep_obj.episode))
+                                    self.snatched_eps.add(SimpleNamespace(tvid_prodid=ep_obj.show_obj.tvid_prodid,
+                                                                          tvid=ep_obj.show_obj.tvid,
+                                                                          prodid=ep_obj.show_obj.prodid,
+                                                                          season=ep_obj.season,
+                                                                          episode=ep_obj.episode,
+                                                                          show=ep_obj.show_obj,
+                                                                          ep_obj=ep_obj))
 
                             helpers.cpu_sleep()
 
@@ -487,7 +493,7 @@ class BaseSearchQueueItem(generic_queue.QueueItem):
                 tvid=self.show_obj.tvid, prodid=self.show_obj.prodid, tvid_prodid=self.show_obj.tvid_prodid,
                 quality=self.show_obj.quality, upgrade_once=self.show_obj.upgrade_once),
             segment_ns=[SimpleNamespace(
-                season=s.season, episode=s.episode, status=s.status,
+                season=s.season, episode=s.episode, status=s.status, ep_obj=s,
                 show_ns=SimpleNamespace(
                     tvid=s.show_obj.tvid, prodid=s.show_obj.prodid, tvid_prodid=self.show_obj.tvid_prodid,
                     quality=s.show_obj.quality, upgrade_once=s.show_obj.upgrade_once
@@ -533,7 +539,13 @@ class ManualSearchQueueItem(BaseSearchQueueItem):
                     logger.log(u'Downloading %s from %s' % (result.name, result.provider.name))
                     self.success = search.snatch_episode(result)
                     for ep_obj in result.ep_obj_list:  # type: sickbeard.tv.TVEpisode
-                        self.snatched_eps.add((ep_obj.show_obj.tvid_prodid, ep_obj.season, ep_obj.episode))
+                        self.snatched_eps.add(SimpleNamespace(tvid_prodid=ep_obj.show_obj.tvid_prodid,
+                                                              tvid=ep_obj.show_obj.tvid,
+                                                              prodid=ep_obj.show_obj.prodid,
+                                                              season=ep_obj.season,
+                                                              episode=ep_obj.episode,
+                                                              show=ep_obj.show_obj,
+                                                              ep_obj=ep_obj))
 
                     helpers.cpu_sleep()
 
@@ -606,7 +618,13 @@ class BacklogQueueItem(BaseSearchQueueItem):
                     logger.log(u'Downloading %s from %s' % (result.name, result.provider.name))
                     if search.snatch_episode(result):
                         for ep_obj in result.ep_obj_list:  # type: sickbeard.tv.TVEpisode
-                            self.snatched_eps.add((ep_obj.show_obj.tvid_prodid, ep_obj.season, ep_obj.episode))
+                            self.snatched_eps.add(SimpleNamespace(tvid_prodid=ep_obj.show_obj.tvid_prodid,
+                                                                  tvid=ep_obj.show_obj.tvid,
+                                                                  prodid=ep_obj.show_obj.prodid,
+                                                                  season=ep_obj.season,
+                                                                  episode=ep_obj.episode,
+                                                                  show=ep_obj.show_obj,
+                                                                  ep_obj=ep_obj))
 
                     helpers.cpu_sleep()
             else:
@@ -661,7 +679,13 @@ class FailedQueueItem(BaseSearchQueueItem):
                 logger.log(u'Downloading %s from %s' % (result.name, result.provider.name))
                 if search.snatch_episode(result):
                     for ep_obj in result.ep_obj_list:  # type: sickbeard.tv.TVEpisode
-                        self.snatched_eps.add((ep_obj.show_obj.tvid_prodid, ep_obj.season, ep_obj.episode))
+                        self.snatched_eps.add(SimpleNamespace(tvid_prodid=ep_obj.show_obj.tvid_prodid,
+                                                              tvid=ep_obj.show_obj.tvid,
+                                                              prodid=ep_obj.show_obj.prodid,
+                                                              season=ep_obj.season,
+                                                              episode=ep_obj.episode,
+                                                              show=ep_obj.show_obj,
+                                                              ep_obj=ep_obj))
 
                 helpers.cpu_sleep()
             else:

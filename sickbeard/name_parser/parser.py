@@ -1,3 +1,4 @@
+# coding=utf-8
 # Author: Nic Wolfe <nic@wolfeden.ca>
 # URL: http://code.google.com/p/sickbeard/
 #
@@ -634,8 +635,7 @@ class NameParser(object):
         if cache_result:
             name_parser_cache.add(name, final_result)
 
-        logger.log(u'Parsed %s into %s' % (name, decode_str(str(final_result), errors='xmlcharrefreplace')),
-                   logger.DEBUG)
+        logger.log(u'Parsed %s into %s' % (name, final_result), logger.DEBUG)
         return final_result
 
 
@@ -734,6 +734,11 @@ class ParseResult(LegacyParseResult):
                      self.release_group, self.air_date, tuple(self.ab_episode_numbers)))
 
     def __str__(self):
+        if not PY2:
+            return self.__unicode__()
+        return self.__unicode__().encode('utf-8', errors='ignore')
+
+    def __unicode__(self):
         if None is not self.series_name:
             to_return = self.series_name + u' - '
         else:
@@ -759,7 +764,10 @@ class ParseResult(LegacyParseResult):
         to_return += ' [ANIME: %s]' % str(self.is_anime)
         to_return += ' [whichReg: %s]' % str(self.which_regex)
 
-        return decode_str(to_return.encode('utf-8'))
+        return decode_str(to_return, errors='xmlcharrefreplace')
+
+    def __repr__(self):
+        return self.__str__()
 
     @staticmethod
     def _replace_ep_name_helper(e_i_n_n, n):

@@ -24,7 +24,7 @@ import time
 from .generic import Notifier
 import sickbeard
 
-from _23 import urlencode
+from _23 import decode_str, urlencode
 # noinspection PyUnresolvedReferences
 from six.moves import urllib
 
@@ -71,7 +71,7 @@ class PushoverNotifier(Notifier):
         sound = self._choose(sound, sickbeard.PUSHOVER_SOUND)
 
         # build up the URL and parameters
-        params = dict(title=title, message=body.strip().encode('utf-8'), user=user_key, timestamp=int(time.time()))
+        params = dict(title=title, message=decode_str(body.strip()), user=user_key, timestamp=int(time.time()))
         if api_key:
             params.update(token=api_key)
         if priority:
