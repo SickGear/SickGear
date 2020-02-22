@@ -439,7 +439,7 @@ class RTorrent(object):
         try:
             func = next(filter_iter(lambda m: self.method_exists(m), (method.rpc_call,) + method.aliases))
             getattr(self.get_connection(), func)(info_hash)
-        except(xmlrpclib.Fault, BaseException):
+        except (BaseException, Exception):
             result = False
         return result
 

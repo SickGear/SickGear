@@ -44,13 +44,13 @@ class Addic7ed(ServiceBase):
                     u'Català': Language('cat')}
     videos = [Episode]
     require_video = False
-    required_features = ['permissive']
+    required_features = ['lxml']  # ['permissive']
 
     @cachedmethod
     def get_series_id(self, name):
         """Get the show page and cache every show found in it"""
         r = self.session.get('%s/shows.php' % self.server_url)
-        soup = BeautifulSoup(r.content, self.required_features)
+        soup = BeautifulSoup(r.content, self.required_features[0])
         for html_series in soup.select('h3 > a'):
             series_name = html_series.text.lower()
             match = re.search('show/([0-9]+)', html_series['href'])
@@ -73,7 +73,7 @@ class Addic7ed(ServiceBase):
             logger.debug(u'Could not find series id for %s' % series)
             return []
         r = self.session.get('%s/show/%d&season=%d' % (self.server_url, series_id, season))
-        soup = BeautifulSoup(r.content, self.required_features)
+        soup = BeautifulSoup(r.content, self.required_features[0])
         subtitles = []
         for row in soup('tr', {'class': 'epeven completed'}):
             cells = row('td')
@@ -105,7 +105,7 @@ class Addic7ed(ServiceBase):
         logger.info(u'Downloading %s in %s' % (subtitle.link, subtitle.path))
         try:
             r = self.session.get(subtitle.link, headers={'Referer': subtitle.link, 'User-Agent': self.user_agent})
-            soup = BeautifulSoup(r.content, self.required_features)
+            soup = BeautifulSoup(r.content, self.required_features[0])
             if soup.title is not None and u'Addic7ed.com' in soup.title.text.strip():
                 raise DownloadFailedError('Download limit exceeded')
             with open(subtitle.path, 'wb') as f:

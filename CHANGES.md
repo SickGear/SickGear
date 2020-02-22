@@ -1,4 +1,13 @@
-﻿### 0.21.13 (2020-02-08 20:55:00 UTC)
+﻿### 0.21.14 (2020-02-22 17:55:00 UTC)
+
+* Fix manual search status change on display show
+* Fix encoding issue in Boxcar2, Pushbullet, and Pushover notifiers
+* Fix ParseResult logging during Process Media
+* Fix subtitle providers that don't use auth
+* Fix rTorrent exception handling
+
+
+### 0.21.13 (2020-02-08 20:55:00 UTC)
 
 * Fix Windows Kodi episode library update
 

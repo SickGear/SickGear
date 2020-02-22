@@ -70,6 +70,7 @@ if False:
     from typing import Any, AnyStr, Dict, NoReturn, Iterable, Iterator, List, Optional, Tuple, Union
 
 RE_XML_ENCODING = re.compile(r'^(<\?xml[^>]+)\s+(encoding\s*=\s*[\"\'][^\"\']*[\"\'])(\s*\?>|)', re.U)
+RE_IMDB_ID = re.compile(r'(?i)(tt\d{4,})')
 
 
 def indent_xml(elem, level=0):
@@ -2021,3 +2022,19 @@ def cmdline_runner(cmd, shell=False):
         out = out.strip()
 
     return out, err, p.returncode
+
+
+def parse_imdb_id(string):
+    # type: (AnyStr) -> Optional[AnyStr]
+    """ Parse an IMDB ID from a string
+
+    :param string: string to parse
+    :return: parsed ID of the form char, char, number of digits or None if no match
+    """
+    result = None
+    try:
+        result = RE_IMDB_ID.findall(string)[0]
+    except(BaseException, Exception):
+        pass
+
+    return result

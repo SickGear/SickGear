@@ -3350,7 +3350,7 @@ class AddShows(Home):
 
         search_id, tvdb_prodid, trakt_prodid, tmdb_prodid, trakt_id = '', None, None, None, TVINFO_TRAKT
         try:
-            search_id = re.search(r'(?m)((?:tt\d{4,})|^\d{4,}$)', search_term).group(1)
+            search_id = helpers.parse_imdb_id(search_term) or re.search(r'(?m)(^\d{4,}$)', search_term).group(1)
 
             tvinfo_config = sickbeard.TVInfoAPI(trakt_id).api_params.copy()
             tvinfo_config['language'] = lang
@@ -3947,7 +3947,6 @@ class AddShows(Home):
     def parse_imdb_html(self, html, filtered, kwargs):
 
         img_size = re.compile(r'(?im)(V1[^XY]+([XY]))(\d+)([^\d]+)(\d+)([^\d]+)(\d+)([^\d]+)(\d+)([^\d]+)(\d+)(.*?)$')
-        imdb_id = re.compile(r'(?i).*(tt\d+).*')
 
         with BS4Parser(html, features=['html5lib', 'permissive']) as soup:
             show_list = soup.select('.lister-list')
@@ -3958,7 +3957,7 @@ class AddShows(Home):
                 try:
                     title = row.select('.lister-item-header a[href*=title]')[0]
                     url_path = title['href'].strip('/')
-                    ids = dict(imdb=imdb_id.sub(r'\1', url_path))
+                    ids = dict(imdb=helpers.parse_imdb_id(url_path))
                     year, ended = 2 * [None]
                     first_aired = row.select('.lister-item-header .lister-item-year')
                     if len(first_aired):
@@ -4126,7 +4125,7 @@ class AddShows(Home):
 
     def info_imdb(self, ids, show_name):
 
-        return self.new_show('|'.join(['', '', '', re.search(r'(?i)tt\d+$', ids) and ids or show_name]),
+        return self.new_show('|'.join(['', '', '', helpers.parse_imdb_id(ids) and ids or show_name]),
                              use_show_name=True)
 
     def trakt_anticipated(self):
