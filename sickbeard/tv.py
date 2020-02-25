@@ -1817,6 +1817,19 @@ class TVShow(TVShowBase):
             my_db = db.DBConnection()
             my_db.upsert('imdb_info', newValueDict, control_value_dict)
 
+    def __ne__(self, o):
+        # type: (TVShow) -> bool
+        return not self.__eq__(o)
+
+    def __eq__(self, o):
+        # type: (TVShow) -> bool
+        if not isinstance(o, TVShow):
+            return False
+        return o._tvid == self._tvid and o._prodid == self._prodid
+
+    def __hash__(self):
+        return hash((self._tvid, self._prodid))
+
     def __repr__(self):
         return 'TVShow(%s)' % self.__str__()
 
@@ -2619,6 +2632,19 @@ class TVEpisode(TVEpisodeBase):
                 self.hastbn = True
             else:
                 self.hastbn = False
+
+    def __ne__(self, o):
+        # type: (TVEpisode) -> bool
+        return not self.__eq__(o)
+
+    def __eq__(self, o):
+        # type: (TVEpisode) -> bool
+        if not isinstance(o, TVEpisode):
+            return False
+        return o._show_obj == self._show_obj and o._epid == self._epid
+
+    def __hash__(self):
+        return hash((self._show_obj, self._epid))
 
     def __repr__(self):
         return 'TVEpisode(%s)' % self.__str__()
