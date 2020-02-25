@@ -185,7 +185,8 @@ if '__main__' == __name__:
     unittest.TextTestRunner(verbosity=2).run(suite)
     suite = unittest.TestLoader().loadTestsFromTestCase(PPFolderTests)
     unittest.TextTestRunner(verbosity=2).run(suite)
-    suite = unittest.TestLoader().loadTestsFromTestCase(PPScriptTests)
-    unittest.TextTestRunner(verbosity=2).run(suite)
+    # disabled due to security alert... https://github.com/clinton-hall/nzbToMedia/issues/1721
+    # suite = unittest.TestLoader().loadTestsFromTestCase(PPScriptTests)
+    # unittest.TextTestRunner(verbosity=2).run(suite)
 
     print('===============================')

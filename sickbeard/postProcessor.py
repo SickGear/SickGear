@@ -1235,7 +1235,8 @@ class PostProcessor(object):
         # trigger library updates
         notifiers.notify_update_library(ep_obj=ep_obj)
 
-        self._run_extra_scripts(ep_obj)
+        # disabled due to security alert... https://github.com/clinton-hall/nzbToMedia/issues/1721
+        # self._run_extra_scripts(ep_obj)
 
         return True
 
