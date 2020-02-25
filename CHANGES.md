@@ -1,4 +1,10 @@
-﻿### 0.21.14 (2020-02-22 17:55:00 UTC)
+﻿### 0.21.15 (2020-02-25 08:50:00 UTC)
+
+* Fix disable Media Process/Extra Scripts due to security alert
+* Fix missing __hash__ for tvshow/tvepisode obj's
+
+
+### 0.21.14 (2020-02-22 17:55:00 UTC)
 
 * Fix manual search status change on display show
 * Fix encoding issue in Boxcar2, Pushbullet, and Pushover notifiers
