@@ -73,7 +73,7 @@ class SBRotatingLogHandler(object):
         self.console_logging = False  # type: bool
         self.log_lock = threading.Lock()
         self.log_types = ['sickbeard', 'tornado.application', 'tornado.general', 'subliminal', 'adba', 'encodingKludge',
-                          'tvdb_api']
+                          'tvdb_api', 'TVInfo']
         self.external_loggers = ['sg_helper', 'libtrakt', 'trakt_api']
         self.log_types_null = ['tornado.access']
 

@@ -30,10 +30,12 @@ import encodingKludge as ek
 from lib.dateutil import tz, zoneinfo
 from lib.tzlocal import get_localzone
 
+from _23 import scandir
 from six import iteritems
 
 # noinspection PyUnreachableCode
 if False:
+    from _23 import DirEntry
     from typing import AnyStr, Optional, Tuple, Union
 
 # regex to parse time (12/24 hour format)
@@ -123,18 +125,17 @@ def _remove_old_zoneinfo():
 
     cur_file = helpers.real_path(ek.ek(join, sickbeard.ZONEINFO_DIR, cur_zoneinfo))
 
-    for (path, dirs, files) in chain.from_iterable(
-            [ek.ek(os.walk, helpers.real_path(_dir))
+    for entry in chain.from_iterable(
+            [ek.ek(scandir, helpers.real_path(_dir))
              for _dir in (sickbeard.ZONEINFO_DIR, ek.ek(os.path.dirname, zoneinfo.__file__))]):
-        for filename in files:
-            if filename.endswith('.tar.gz'):
-                file_w_path = ek.ek(join, path, filename)
-                if file_w_path != cur_file and ek.ek(isfile, file_w_path):
+        if entry.is_file(follow_symlinks=False):
+            if entry.name.endswith('.tar.gz'):
+                if entry.path != cur_file:
                     try:
-                        ek.ek(os.remove, file_w_path)
-                        logger.log(u'Delete unneeded old zoneinfo File: %s' % file_w_path)
+                        ek.ek(os.remove, entry.path)
+                        logger.log(u'Delete unneeded old zoneinfo File: %s' % entry.path)
                     except (BaseException, Exception):
-                        logger.log(u'Unable to delete: %s' % file_w_path, logger.ERROR)
+                        logger.log(u'Unable to delete: %s' % entry.path, logger.ERROR)
 
 
 def _update_zoneinfo():

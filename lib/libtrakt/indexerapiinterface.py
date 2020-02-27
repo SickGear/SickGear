@@ -1,39 +1,19 @@
 import logging
 import re
-import time
-from .exceptions import TraktShowNotFound, TraktException
+from .exceptions import TraktException
 from exceptions_helper import ex
 from six import iteritems
 from .trakt import TraktAPI
+from tvinfo_base.exceptions import BaseTVinfoShownotfound
+from tvinfo_base import TVInfoBase
+
+# noinspection PyUnreachableCode
+if False:
+    from typing import Any, AnyStr, List, Optional
+    from tvinfo_base import TVInfoShow
 
 log = logging.getLogger('trakt_api')
 log.addHandler(logging.NullHandler())
-
-
-class ShowContainer(dict):
-    """Simple dict that holds a series of Show instances
-    """
-
-    def __init__(self, **kwargs):
-        super(ShowContainer, self).__init__(**kwargs)
-
-        self._stack = []
-        self._lastgc = time.time()
-
-    def __setitem__(self, key, value):
-
-        self._stack.append(key)
-
-        # keep only the 100th latest results
-        if time.time() - self._lastgc > 20:
-            for o in self._stack[:-100]:
-                del self[o]
-
-            self._stack = self._stack[-100:]
-
-            self._lastgc = time.time()
-
-        super(ShowContainer, self).__setitem__(key, value)
 
 
 class TraktSearchTypes(object):
@@ -61,13 +41,13 @@ class TraktResultTypes(object):
         pass
 
 
-class TraktIndexer(object):
+class TraktIndexer(TVInfoBase):
     # noinspection PyUnusedLocal
     # noinspection PyDefaultArgument
     def __init__(self, custom_ui=None, sleep_retry=None, search_type=TraktSearchTypes.text,
                  result_types=[TraktResultTypes.show], *args, **kwargs):
-
-        self.config = {
+        super(TraktIndexer, self).__init__(*args, **kwargs)
+        self.config.update({
             'apikey': '',
             'debug_enabled': False,
             'custom_ui': custom_ui,
@@ -82,23 +62,21 @@ class TraktIndexer(object):
             'sleep_retry': sleep_retry,
             'result_types': result_types if isinstance(result_types, list) and all(
                 [x in TraktResultTypes.all for x in result_types]) else [TraktResultTypes.show],
-        }
+        })
 
-        self.corrections = {}
-        self.shows = ShowContainer()
-
-    def _get_series(self, series):
+    def _search_show(self, name, **kwargs):
+        # type: (AnyStr, Optional[Any]) -> List[TVInfoShow]
         """This searches Trakt for the series name,
         If a custom_ui UI is configured, it uses this to select the correct
         series.
         """
-        all_series = self.search(series)
+        all_series = self.search(name)
         if not isinstance(all_series, list):
             all_series = [all_series]
 
         if 0 == len(all_series):
             log.debug('Series result returned zero')
-            raise TraktShowNotFound('Show-name search returned zero results (cannot find show on TVDB)')
+            raise BaseTVinfoShownotfound('Show-name search returned zero results (cannot find show on TVDB)')
 
         if None is not self.config['custom_ui']:
             log.debug('Using custom UI %s' % (repr(self.config['custom_ui'])))
@@ -109,23 +87,6 @@ class TraktIndexer(object):
 
         return all_series
 
-    def __getitem__(self, key):
-        """Handles trakt_instance['seriesname'] calls.
-        The dict index should be the show id
-        """
-        if isinstance(key, tuple) and 2 == len(key):
-            key = key[0]
-
-        self.config['searchterm'] = key
-        selected_series = self._get_series(key)
-        if isinstance(selected_series, dict):
-            selected_series = [selected_series]
-
-        return selected_series
-
-    def __repr__(self):
-        return str(self.shows)
-
     @staticmethod
     def _dict_prevent_none(d, key, default):
         v = None
@@ -134,6 +95,7 @@ class TraktIndexer(object):
         return (v, default)[None is v]
 
     def search(self, series):
+        # type: (AnyStr) -> List
         if TraktSearchTypes.text != self.config['search_type']:
             url = '/search/%s/%s?type=%s&extended=full&limit=100' % (self.config['search_type'], series,
                                                                      ','.join(self.config['result_types']))

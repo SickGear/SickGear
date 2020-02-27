@@ -83,7 +83,7 @@ from lib.libtrakt.exceptions import TraktException, TraktAuthException
 from lib.libtrakt.indexerapiinterface import TraktSearchTypes
 # noinspection PyPep8Naming
 from lib import tmdbsimple as TMDB
-from lib.tvdb_api.tvdb_exceptions import TvdbException
+from tvinfo_base import BaseTVinfoException
 
 import lib.rarfile.rarfile as rarfile
 
@@ -3365,7 +3365,7 @@ class AddShows(Home):
             tvinfo_config['search_type'] = (TraktSearchTypes.tvdb_id, TraktSearchTypes.imdb_id)['tt' in search_id]
             t = sickbeard.TVInfoAPI(trakt_id).setup(**tvinfo_config)
 
-            resp = t[search_id][0]
+            resp = t.search_show(search_id)[0]
             search_term = resp['seriesname']
             tvdb_prodid = resp['ids']['tvdb']
             trakt_prodid = resp['ids'].get('trakt')
@@ -3387,7 +3387,7 @@ class AddShows(Home):
                 if bool(tvdb_prodid):
                     logger.log('Fetching show using id: %s (%s) from tv datasource %s' % (
                         search_id, search_term, sickbeard.TVInfoAPI(cur_tvid).name), logger.DEBUG)
-                    r = t[tvdb_prodid, False]
+                    r = t.get_show(tvdb_prodid, load_episodes=False)
                     results.setdefault((cur_tvid, trakt_id)['tt' in search_id], {})[int(tvdb_prodid)] = {
                         'id': tvdb_prodid, 'seriesname': r['seriesname'], 'firstaired': r['firstaired'],
                         'network': r['network'], 'overview': r['overview'],
@@ -3401,13 +3401,13 @@ class AddShows(Home):
                     results.setdefault(cur_tvid, {})
                     for term in terms:
                         try:
-                            for r in t[term]:
+                            for r in t.search_show(term):
                                 tvdb_prodid = int(r['id'])
                                 if tvdb_prodid not in results[cur_tvid]:
                                     results.setdefault(cur_tvid, {})[tvdb_prodid] = r.copy()
                                 elif r['seriesname'] != results[cur_tvid][tvdb_prodid]['seriesname']:
                                     results[cur_tvid][tvdb_prodid].setdefault('aliases', []).append(r['seriesname'])
-                        except TvdbException:
+                        except BaseTVinfoException:
                             pass
             except (BaseException, Exception):
                 pass
@@ -3424,7 +3424,7 @@ class AddShows(Home):
             t = sickbeard.TVInfoAPI(trakt_id).setup(**tvinfo_config)
 
             for term in terms:
-                result = t[term]
+                result = t.search_show(term)
                 resp += result
                 match = False
                 for r in result:

@@ -20,7 +20,7 @@ import datetime
 
 from . import mediabrowser
 from .. import helpers, logger
-from ..indexers.indexer_exceptions import check_exception_type, ExceptionTuples
+from tvinfo_base.exceptions import *
 import sickbeard
 import exceptions_helper
 from exceptions_helper import ex
@@ -126,16 +126,12 @@ class Mede8erMetadata(mediabrowser.MediaBrowserMetadata):
 
         try:
             show_info = t[int(show_obj.prodid)]
-        except Exception as e:
-            if check_exception_type(e, ExceptionTuples.tvinfo_shownotfound):
-                logger.log(u'Unable to find show with id ' + str(show_obj.prodid) + ' on tvdb, skipping it', logger.ERROR)
-                raise
-
-            elif check_exception_type(e, ExceptionTuples.tvinfo_error):
-                logger.log(u'TVDB is down, can\'t use its data to make the NFO', logger.ERROR)
-                raise
-            else:
-                raise e
+        except BaseTVinfoShownotfound as e:
+            logger.log(u'Unable to find show with id ' + str(show_obj.prodid) + ' on tvdb, skipping it', logger.ERROR)
+            raise e
+        except BaseTVinfoError as e:
+            logger.log(u'TVDB is down, can\'t use its data to make the NFO', logger.ERROR)
+            raise e
 
         if not self._valid_show(show_info, show_obj):
             return
@@ -149,13 +145,10 @@ class Mede8erMetadata(mediabrowser.MediaBrowserMetadata):
                 logger.log('Incomplete info for show with id %s on %s, skipping it' %
                            (show_obj.prodid, sickbeard.TVInfoAPI(show_obj.tvid).name), logger.ERROR)
                 return False
-        except Exception as e:
-            if check_exception_type(e, ExceptionTuples.tvinfo_attributenotfound):
-                logger.log('Incomplete info for show with id %s on %s, skipping it' %
-                           (show_obj.prodid, sickbeard.TVInfoAPI(show_obj.tvid).name), logger.ERROR)
-                return False
-            else:
-                raise e
+        except BaseTVinfoAttributenotfound:
+            logger.log('Incomplete info for show with id %s on %s, skipping it' %
+                       (show_obj.prodid, sickbeard.TVInfoAPI(show_obj.tvid).name), logger.ERROR)
+            return False
 
         SeriesName = etree.SubElement(tv_node, 'title')
         if None is not show_info['seriesname']:
@@ -245,15 +238,12 @@ class Mede8erMetadata(mediabrowser.MediaBrowserMetadata):
 
             t = sickbeard.TVInfoAPI(ep_obj.show_obj.tvid).setup(**tvinfo_config)
             show_info = t[ep_obj.show_obj.prodid]
-        except Exception as e:
-            if check_exception_type(e, ExceptionTuples.tvinfo_shownotfound):
-                raise exceptions_helper.ShowNotFoundException(ex(e))
-            elif check_exception_type(e, ExceptionTuples.tvinfo_error):
-                logger.log('Unable to connect to %s while creating meta files - skipping - %s' %
-                           (sickbeard.TVInfoAPI(ep_obj.show_obj.tvid).name, ex(e)), logger.ERROR)
-                return False
-            else:
-                raise e
+        except BaseTVinfoShownotfound as e:
+            raise exceptions_helper.ShowNotFoundException(ex(e))
+        except BaseTVinfoError as e:
+            logger.log('Unable to connect to %s while creating meta files - skipping - %s' %
+                       (sickbeard.TVInfoAPI(ep_obj.show_obj.tvid).name, ex(e)), logger.ERROR)
+            return False
 
         if not self._valid_show(show_info, ep_obj.show_obj):
             return

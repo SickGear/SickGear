@@ -49,7 +49,7 @@ from .common import ARCHIVED, DOWNLOADED, IGNORED, SKIPPED, SNATCHED, SNATCHED_A
 from .helpers import remove_article
 from .indexers import indexer_api, indexer_config
 from .indexers.indexer_config import *
-from .indexers.indexer_exceptions import check_exception_type, ExceptionTuples
+from tvinfo_base.exceptions import *
 from .scene_numbering import set_scene_numbering_helper
 from .search_backlog import FORCED_BACKLOG
 from .sgdatetime import SGDatetime
@@ -2569,12 +2569,9 @@ class CMD_SickGearSearchIndexers(ApiCall):
 
             try:
                 show_info = t[int(self.prodid), False]
-            except Exception as e:
-                if check_exception_type(e, ExceptionTuples.tvinfo_shownotfound, ExceptionTuples.tvinfo_error):
-                    self.log(u"Unable to find show with id " + str(self.prodid), logger.WARNING)
-                    return _responds(RESULT_SUCCESS, {"results": [], "langid": lang_id})
-                else:
-                    raise e
+            except BaseTVinfoError as e:
+                self.log(u"Unable to find show with id " + str(self.prodid), logger.WARNING)
+                return _responds(RESULT_SUCCESS, {"results": [], "langid": lang_id})
 
             if not show_info.data['seriesname']:
                 self.log(
@@ -3234,12 +3231,9 @@ class CMD_SickGearShowAddExisting(ApiCall):
 
         try:
             myShow = t[int(self.prodid), False]
-        except Exception as e:
-            if check_exception_type(e, ExceptionTuples.tvinfo_shownotfound, ExceptionTuples.tvinfo_error):
-                self.log(u"Unable to find show with id " + str(self.tvid), logger.WARNING)
-                return _responds(RESULT_FAILURE, msg="Unable to retrieve information from indexer")
-            else:
-                raise e
+        except BaseTVinfoError as e:
+            self.log(u"Unable to find show with id " + str(self.tvid), logger.WARNING)
+            return _responds(RESULT_FAILURE, msg="Unable to retrieve information from indexer")
 
         indexerName = None
         if not myShow.data['seriesname']:
@@ -3397,12 +3391,9 @@ class CMD_SickGearShowAddNew(ApiCall):
 
         try:
             myShow = t[int(self.prodid), False]
-        except Exception as e:
-            if check_exception_type(e, ExceptionTuples.tvinfo_shownotfound, ExceptionTuples.tvinfo_error):
-                self.log(u"Unable to find show with id " + str(self.tvid), logger.WARNING)
-                return _responds(RESULT_FAILURE, msg="Unable to retrieve information from indexer")
-            else:
-                raise e
+        except BaseTVinfoError as e:
+            self.log(u"Unable to find show with id " + str(self.tvid), logger.WARNING)
+            return _responds(RESULT_FAILURE, msg="Unable to retrieve information from indexer")
 
         indexerName = None
         if not myShow.data['seriesname']:

@@ -43,6 +43,7 @@ import sickbeard
 from . import db, logger, notifiers
 from .common import cpu_presets, mediaExtensions, Overview, Quality, statusStrings, subtitleExtensions, \
     ARCHIVED, DOWNLOADED, FAILED, IGNORED, SKIPPED, SNATCHED_ANY, SUBTITLED, UNAIRED, UNKNOWN, WANTED
+from tvinfo_base.exceptions import *
 # noinspection PyPep8Naming
 import encodingKludge as ek
 from exceptions_helper import ex, MultipleShowObjectsException
@@ -1196,12 +1197,8 @@ def validate_show(show_obj, season=None, episode=None):
             return t
 
         return t[show_obj.prodid][season][episode]
-    except Exception as e:
-        if sickbeard.check_exception_type(e, sickbeard.ExceptionTuples.tvinfo_episodenotfound,
-                                          sickbeard.ExceptionTuples.tvinfo_seasonnotfound, TypeError):
-            pass
-        else:
-            raise e
+    except (BaseTVinfoEpisodenotfound, BaseTVinfoSeasonnotfound, TypeError):
+        pass
 
 
 def touch_file(fname, atime=None):
