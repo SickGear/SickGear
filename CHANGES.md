@@ -28,6 +28,11 @@
 * Change remove deprecated `buildNameCache`
 
 
+### 0.21.16 (2020-02-26 15:10:00 UTC)
+
+* Change alert users of Python 3.8.1 or 3.7.6 to change Python version due to a known critical issue parsing URLs
+
+
 ### 0.21.15 (2020-02-25 08:50:00 UTC)
 
 * Fix disable Media Process/Extra Scripts due to security alert
