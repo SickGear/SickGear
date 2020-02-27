@@ -7680,9 +7680,8 @@ class WebFileBrowser(MainHandler):
         """ /legacy """
 
         self.set_header('Content-Type', 'application/json')
-        paths = [entry['path'] for entry in folders_at_path(os.path.dirname(term),
-                                                            include_files=bool(int(include_files))) if 'path' in entry]
-        return json.dumps(paths)
+        return json.dumps([entry['path'] for entry in folders_at_path(
+            os.path.dirname(term), include_files=bool(int(include_files))) if 'path' in entry])
 
 
 class ApiBuilder(MainHandler):
