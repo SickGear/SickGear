@@ -25,6 +25,35 @@ from exceptions_helper import ex
 import sickbeard
 from . import db, failed_history, logger, network_timezones, properFinder, ui
 
+# noinspection PyUnreachableCode
+if False:
+    from sickbeard.tv import TVShow
+
+
+def clean_ignore_require_words():
+    """
+    removes duplicate ignore/require words from shows and global lists
+    """
+    try:
+        for s in sickbeard.showList:  # type: TVShow
+            # test before set to prevent dirty setter from setting unchanged shows to dirty
+            if s.rls_ignore_words - sickbeard.IGNORE_WORDS != s.rls_ignore_words:
+                s.rls_ignore_words -= sickbeard.IGNORE_WORDS
+                if 0 == len(s.rls_ignore_words):
+                    s.rls_ignore_words_regex = False
+            if s.rls_require_words - sickbeard.REQUIRE_WORDS != s.rls_require_words:
+                s.rls_require_words -= sickbeard.REQUIRE_WORDS
+                if 0 == len(s.rls_require_words):
+                    s.rls_require_words_regex = False
+            if s.rls_global_exclude_ignore & sickbeard.IGNORE_WORDS != s.rls_global_exclude_ignore:
+                s.rls_global_exclude_ignore &= sickbeard.IGNORE_WORDS
+            if s.rls_global_exclude_require & sickbeard.REQUIRE_WORDS != s.rls_global_exclude_require:
+                s.rls_global_exclude_require &= sickbeard.REQUIRE_WORDS
+            if s.dirty:
+                s.save_to_db()
+    except (BaseException, Exception):
+        pass
+
 
 class ShowUpdater(object):
     def __init__(self):
@@ -85,6 +114,13 @@ class ShowUpdater(object):
                 sickbeard.helpers.cleanup_cache()
             except (BaseException, Exception):
                 logger.log('image cache cleanup error', logger.ERROR)
+                logger.log(traceback.format_exc(), logger.ERROR)
+
+            # cleanup ignore and require lists
+            try:
+                clean_ignore_require_words()
+            except Exception:
+                logger.log('ignore, require words cleanup error', logger.ERROR)
                 logger.log(traceback.format_exc(), logger.ERROR)
 
             # cleanup manual search history

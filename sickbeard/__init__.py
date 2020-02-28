@@ -539,10 +539,14 @@ SG_EXTRA_SCRIPTS = []
 
 GIT_PATH = None
 
-IGNORE_WORDS = 'regex:^(?=.*?\bspanish\b)((?!spanish.?princess).)*$, ' + \
-               'core2hd, hevc, MrLss, reenc, x265, danish, deutsch, dutch, flemish, french, ' + \
-               'german, italian, nordic, norwegian, portuguese, swedish, turkish'
-REQUIRE_WORDS = ''
+IGNORE_WORDS = {
+    '^(?=.*?\bspanish\b)((?!spanish.?princess).)*$',
+    'core2hd', 'hevc', 'MrLss', 'reenc', 'x265', 'danish', 'deutsch', 'dutch', 'flemish', 'french',
+    'german', 'italian', 'nordic', 'norwegian', 'portuguese', 'spanish', 'swedish', 'turkish'
+}
+IGNORE_WORDS_REGEX = True
+REQUIRE_WORDS = set()
+REQUIRE_WORDS_REGEX = False
 
 WANTEDLIST_CACHE = None
 
@@ -645,6 +649,7 @@ def init_stage_1(console_logging):
     # Search Settings/Episode
     global DOWNLOAD_PROPERS, PROPERS_WEBDL_ONEGRP, WEBDL_TYPES, RECENTSEARCH_FREQUENCY, \
         BACKLOG_DAYS, BACKLOG_NOFULL, BACKLOG_FREQUENCY, USENET_RETENTION, IGNORE_WORDS, REQUIRE_WORDS, \
+        IGNORE_WORDS, IGNORE_WORDS_REGEX, REQUIRE_WORDS, REQUIRE_WORDS_REGEX, \
         ALLOW_HIGH_PRIORITY, SEARCH_UNAIRED, UNAIRED_RECENT_SEARCH_ONLY
     # Search Settings/NZB search
     global USE_NZBS, NZB_METHOD, NZB_DIR, SAB_HOST, SAB_USERNAME, SAB_PASSWORD, SAB_APIKEY, SAB_CATEGORY, \
@@ -1215,8 +1220,8 @@ def init_stage_1(console_logging):
 
     GIT_PATH = check_setting_str(CFG, 'General', 'git_path', '')
 
-    IGNORE_WORDS = check_setting_str(CFG, 'General', 'ignore_words', IGNORE_WORDS)
-    REQUIRE_WORDS = check_setting_str(CFG, 'General', 'require_words', REQUIRE_WORDS)
+    IGNORE_WORDS, IGNORE_WORDS_REGEX = helpers.split_word_str(check_setting_str(CFG, 'General', 'ignore_words', IGNORE_WORDS))
+    REQUIRE_WORDS, REQUIRE_WORDS_REGEX = helpers.split_word_str(check_setting_str(CFG, 'General', 'require_words', REQUIRE_WORDS))
 
     CALENDAR_UNPROTECTED = bool(check_setting_int(CFG, 'General', 'calendar_unprotected', 0))
 
@@ -1812,8 +1817,8 @@ def save_config():
     new_config['General']['extra_scripts'] = '|'.join(EXTRA_SCRIPTS)
     new_config['General']['sg_extra_scripts'] = '|'.join(SG_EXTRA_SCRIPTS)
     new_config['General']['git_path'] = GIT_PATH
-    new_config['General']['ignore_words'] = IGNORE_WORDS
-    new_config['General']['require_words'] = REQUIRE_WORDS
+    new_config['General']['ignore_words'] = helpers.generate_word_str(IGNORE_WORDS, IGNORE_WORDS_REGEX)
+    new_config['General']['require_words'] = helpers.generate_word_str(REQUIRE_WORDS, REQUIRE_WORDS_REGEX)
     new_config['General']['calendar_unprotected'] = int(CALENDAR_UNPROTECTED)
 
     default_not_zero = ('enable_recentsearch', 'enable_backlog', 'enable_scheduled_backlog', 'use_after_get_data')

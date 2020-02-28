@@ -2,7 +2,7 @@
 #from sickbeard import TVInfoAPI, indexermapper, network_timezones
 #from sickbeard.common import Overview, qualityPresets, qualityPresetStrings, \
     Quality, statusStrings, WANTED, SKIPPED, ARCHIVED, IGNORED, FAILED, DOWNLOADED
-#from sickbeard.helpers import anon_url, get_size, human, maybe_plural
+#from sickbeard.helpers import anon_url, get_size, human, maybe_plural, generate_word_str
 #from sickbeard.indexers.indexer_config import TVINFO_TVDB, TVINFO_IMDB
 #from six import iteritems
 <% def sg_var(varname, default=False): return getattr(sickbeard, varname, default) %>#slurp#
@@ -348,10 +348,16 @@
 						<span class="label addQTip" title="$exceptions_string.replace(', ', '<br />')">Scene names</span>
 #end if
 #if $show_obj.rls_ignore_words
-						<span class="label addQTip" title="#echo $show_obj.rls_ignore_words.replace(',', '<br />')#">Ignored words</span>
+						<span class="label addQTip" title="#echo $generate_word_str($show_obj.rls_ignore_words, $show_obj.rls_ignore_words_regex, join_chr='<br />')#">Ignored words</span>
 #end if
 #if $show_obj.rls_require_words
-						<span class="label addQTip" title="#echo $show_obj.rls_require_words.replace(',', '<br />')#">Required words</span>
+						<span class="label addQTip" title="#echo $generate_word_str($show_obj.rls_require_words, $show_obj.rls_require_words_regex, join_chr='<br />')#">Required words</span>
+#end if
+#if $show_obj.rls_global_exclude_ignore
+						<span class="label addQTip" title="#echo $generate_word_str($show_obj.rls_global_exclude_ignore, join_chr='<br />')#">Excluded global ignored words</span>
+#end if
+#if $show_obj.rls_global_exclude_require
+						<span class="label addQTip" title="#echo $generate_word_str($show_obj.rls_global_exclude_require, join_chr='<br />')#">Excluded global required words</span>
 #end if
 #if $show_obj.flatten_folders or $sg_var('NAMING_FORCE_FOLDERS')
 						<span class="label">Flat folders</span>

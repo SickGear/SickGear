@@ -503,6 +503,11 @@ class SickGear(object):
         # Build from the DB to start with
         sickbeard.classes.loading_msg.message = 'Loading shows from db'
         self.load_shows_from_db()
+        if not db.DBConnection().has_flag('ignore_require_cleaned'):
+            from sickbeard.show_updater import clean_ignore_require_words
+            sickbeard.classes.loading_msg.message = 'Cleaning ignore/require words lists'
+            clean_ignore_require_words()
+            db.DBConnection().set_flag('ignore_require_cleaned')
 
         # Fire up all our threads
         sickbeard.classes.loading_msg.message = 'Starting threads'

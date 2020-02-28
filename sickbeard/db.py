@@ -618,6 +618,7 @@ def MigrationCode(my_db):
         20008: sickbeard.mainDB.AddWatched,
         20009: sickbeard.mainDB.AddPrune,
         20010: sickbeard.mainDB.AddIndexerToTables,
+        20011: sickbeard.mainDB.AddShowExludeGlobals,
         # 20002: sickbeard.mainDB.AddCoolSickGearFeature3,
     }
 

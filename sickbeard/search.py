@@ -216,12 +216,14 @@ def pass_show_wordlist_checks(name, show_obj):
     :return: passed check
     """
     re_extras = dict(re_prefix='.*', re_suffix='.*')
-    result = show_name_helpers.contains_any(name, show_obj.rls_ignore_words, **re_extras)
+    result = show_name_helpers.contains_any(name, show_obj.rls_ignore_words, rx=show_obj.rls_ignore_words_regex,
+                                            **re_extras)
     if None is not result and result:
         logger.log(u'Ignored: %s for containing ignore word' % name)
         return False
 
-    result = show_name_helpers.contains_any(name, show_obj.rls_require_words, **re_extras)
+    result = show_name_helpers.contains_any(name, show_obj.rls_require_words, rx=show_obj.rls_require_words_regex,
+                                            **re_extras)
     if None is not result and not result:
         logger.log(u'Ignored: %s for not containing any required word match' % name)
         return False
@@ -797,8 +799,8 @@ def search_providers(
                 for cur_search_result in search_result_list:
                     # skip non-tv crap
                     search_result_list[cur_search_result] = filter_list(
-                        lambda ep_item: show_name_helpers.pass_wordlist_checks(
-                            ep_item.name, parse=False, indexer_lookup=False) and ep_item.show_obj == show_obj,
+                        lambda ep_item: ep_item.show_obj == show_obj and show_name_helpers.pass_wordlist_checks(
+                            ep_item.name, parse=False, indexer_lookup=False, show_obj=ep_item.show_obj),
                         search_result_list[cur_search_result])
 
                     if cur_search_result in found_results:
@@ -881,8 +883,8 @@ def search_providers(
                     individual_results = nzbSplitter.splitResult(best_season_result)
 
                     for cur_result in filter_iter(
-                        lambda r: show_name_helpers.pass_wordlist_checks(
-                            r.name, parse=False, indexer_lookup=False) and r.show_obj == show_obj, individual_results):
+                        lambda r: r.show_obj == show_obj and show_name_helpers.pass_wordlist_checks(
+                            r.name, parse=False, indexer_lookup=False, show_obj=r.show_obj), individual_results):
                         ep_num = None
                         if 1 == len(cur_result.ep_obj_list):
                             ep_num = cur_result.ep_obj_list[0].episode
@@ -1032,7 +1034,8 @@ def search_providers(
                         if name:
                             if not pass_show_wordlist_checks(name, show_obj):
                                 continue
-                            if not show_name_helpers.pass_wordlist_checks(name, indexer_lookup=False):
+                            if not show_name_helpers.pass_wordlist_checks(name, indexer_lookup=False,
+                                                                          show_obj=show_obj):
                                 logger.log('Ignored: %s (debug log has detail)' % name)
                                 continue
                             best_result.name = name

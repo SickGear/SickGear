@@ -292,13 +292,14 @@ def _get_proper_list(aired_since_shows, recent_shows, recent_anime, proper_dict=
                            logger.DEBUG)
                 continue
 
-            if not show_name_helpers.pass_wordlist_checks(cur_proper.name, parse=False, indexer_lookup=False):
+            if not show_name_helpers.pass_wordlist_checks(cur_proper.name, parse=False, indexer_lookup=False,
+                                                          show_obj=cur_proper.parsed_show_obj):
                 logger.log('Ignored unwanted Proper [%s]' % cur_proper.name, logger.DEBUG)
                 continue
 
             re_x = dict(re_prefix='.*', re_suffix='.*')
             result = show_name_helpers.contains_any(cur_proper.name, cur_proper.parsed_show_obj.rls_ignore_words,
-                                                    **re_x)
+                                                    rx=cur_proper.parsed_show_obj.rls_ignore_words_regex, **re_x)
             if None is not result and result:
                 logger.log('Ignored Proper containing ignore word [%s]' % cur_proper.name, logger.DEBUG)
                 continue

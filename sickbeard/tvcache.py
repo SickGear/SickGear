@@ -407,13 +407,14 @@ class TVCache(object):
         # for each cache entry
         for cur_result in sql_result:
 
-            # skip non-tv crap
-            if not show_name_helpers.pass_wordlist_checks(cur_result['name'], parse=False, indexer_lookup=False):
-                continue
-
             # get the show object, or if it's not one of our shows then ignore it
             show_obj = helpers.find_show_by_id({int(cur_result['indexer']): int(cur_result['indexerid'])})
             if not show_obj:
+                continue
+
+            # skip non-tv crap
+            if not show_name_helpers.pass_wordlist_checks(cur_result['name'], parse=False, indexer_lookup=False,
+                                                          show_obj=show_obj):
                 continue
 
             # skip if provider is anime only and show is not anime

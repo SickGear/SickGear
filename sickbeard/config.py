@@ -783,25 +783,11 @@ class ConfigMigrator(object):
         else:
             sickbeard.SHOWLIST_TAGVIEW = 'default'
 
-    @staticmethod
-    def _migrate_v12():
+    def _migrate_v12(self):
         # add words to ignore list and insert spaces to improve the ui config readability
         words_to_add = ['hevc', 'reenc', 'x265', 'danish', 'deutsch', 'flemish', 'italian',
                         'nordic', 'norwegian', 'portuguese', 'spanish', 'turkish']
-        config_words = sickbeard.IGNORE_WORDS.split(',')
-        new_list = []
-        for new_word in words_to_add:
-            add_word = True
-            for ignore_word in config_words:
-                ignored = ignore_word.strip().lower()
-                if ignored and ignored not in new_list:
-                    new_list += [ignored]
-                if re.search(r'(?i)%s' % new_word, ignored):
-                    add_word = False
-            if add_word:
-                new_list += [new_word]
-
-        sickbeard.IGNORE_WORDS = ', '.join(sorted(new_list))
+        self.add_ignore_words(words_to_add)
 
     @staticmethod
     def _migrate_v13():
@@ -861,25 +847,24 @@ class ConfigMigrator(object):
         if not isinstance(removelist, list):
             removelist = ([removelist], [])[None is removelist]
 
-        words = sickbeard.IGNORE_WORDS.split(',') + wordlist
-
-        new_list = []
+        new_list = set()
         dedupe = []
-        using_regex = ''
-        for ignore_word in words:
+        using_regex = False
+        for ignore_word in list(sickbeard.IGNORE_WORDS) + wordlist:  # words:
             word = ignore_word.strip()
             if word.startswith('regex:'):
                 word = word.lstrip('regex:').strip()
-                using_regex = 'regex:'
+                using_regex = True  # 'regex:'
             if word:
                 check_word = word.lower()
                 if check_word not in dedupe and check_word not in removelist:
                     dedupe += [check_word]
                     if 'spanish' in check_word:
                         word = re.sub(r'(?i)(portuguese)\|spanish(\|swedish)', r'\1\2', word)
-                    new_list += [word]
+                    new_list.add(word)
 
-        sickbeard.IGNORE_WORDS = '%s%s' % (using_regex, ', '.join(new_list))
+        sickbeard.IGNORE_WORDS = new_list
+        sickbeard.IGNORE_WORDS_REGEX = using_regex
 
     def _migrate_v17(self):
 
