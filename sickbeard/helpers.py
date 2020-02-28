@@ -68,7 +68,7 @@ from sg_helpers import chmod_as_parent, clean_data, get_system_temp_dir, \
 # noinspection PyUnreachableCode
 if False:
     # noinspection PyUnresolvedReferences
-    from typing import Any, AnyStr, Dict, NoReturn, Iterable, Iterator, List, Optional, Tuple, Union
+    from typing import Any, AnyStr, Dict, NoReturn, Iterable, Iterator, List, Optional, Set, Tuple, Union
     from .tv import TVShow
     # the following workaround hack resolves a pyc resolution bug
     from .name_cache import retrieveNameFromCache
@@ -2028,3 +2028,43 @@ def parse_imdb_id(string):
         pass
 
     return result
+ 
+ 
+def generate_word_str(words, regex=False, join_chr=','):
+    # type: (Set[AnyStr], bool, AnyStr) -> AnyStr
+    """
+    combine a list or set to a string with optional prefix 'regex:'
+
+    :param words: list or set of words
+    :type words: set
+    :param regex: prefix regex: ?
+    :type regex: bool
+    :param join_chr: character(s) used for join words
+    :type join_chr: basestring
+    :return: combined string
+    :rtype: basestring
+    """
+    return '%s%s' % (('', 'regex:')[True is regex], join_chr.join(words))
+
+
+def split_word_str(word_list):
+    # type: (AnyStr) -> Tuple[Set[AnyStr], bool]
+    """
+    split string into set and boolean regex
+
+    :param word_list: string with words
+    :type word_list: basestring
+    :return: set of words, is it regex
+    :rtype: (set, bool)
+    """
+    try:
+        if word_list.startswith('regex:'):
+            rx = True
+            word_list = word_list.replace('regex:', '')
+        else:
+            rx = False
+        s = set(w.strip() for w in word_list.split(',') if w.strip())
+    except (BaseException, Exception):
+        rx = False
+        s = set()
+    return s, rx

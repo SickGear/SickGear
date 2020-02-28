@@ -191,18 +191,28 @@ addList("setwords", "Optional Param", "", "addwords");
 addList("setwords", "$cur_show_obj.name", "&indexerid=$cur_show_obj.prodid&indexer=$cur_show_obj.tvid", "addwords");
 #end for
 
-addList("addwords", "Optional Param", "", "removewords");
+addList("addwords", "Add (Optional)", "", "removewords");
 addList("addwords", "ignore1", "&add=ignore1", "removewords");
 addList("addwords", "ignore2, ignore3", "&add=ignore2|ignore3", "removewords");
 
-addList("removewords", "Optional Param", "", "useregex");
+addList("removewords", "Remove (Optional)", "", "useregex");
 addList("removewords", "ignore1", "&remove=ignore1", "useregex");
 addList("removewords", "ignore2", "&remove=ignore2", "useregex");
 addList("removewords", "ignore2, ignore3", "&remove=ignore2|ignore3", "useregex");
 
-addOption("useregex", "Optional Param", "", 1);
-addOption("useregex", "as Regex", "&regex=1");
-addOption("useregex", "as Words", "&regex=0");
+addList("useregex", "Optional Param", "", "excludeadd");
+addList("useregex", "as Regex", "&regex=1", "excludeadd");
+addList("useregex", "as Words", "&regex=0", "excludeadd");
+
+addList("excludeadd", "Add Exclude (Optional)", "", "excluderemove");
+addList("excludeadd", "ignore1", "&add_exclude=ignore1", "excluderemove");
+addList("excludeadd", "ignore2", "&add_exclude=ignore2", "excluderemove");
+addList("excludeadd", "ignore2, ignore3", "&add_exclude=ignore2|ignore3", "excluderemove");
+
+addList("excluderemove", "Remove Exclude (Optional)", "", "");
+addList("excluderemove", "ignore1", "&remove_exclude=ignore1", "");
+addList("excluderemove", "ignore2", "&remove_exclude=ignore2", "");
+addList("excluderemove", "ignore2, ignore3", "&remove_exclude=ignore2|ignore3", "");
 
 addOption("listrequiredwords", "Optional Param", "", 1);
 #for $cur_show_obj in $sortedShowList:

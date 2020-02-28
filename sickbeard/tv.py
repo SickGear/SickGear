@@ -1206,8 +1206,13 @@ class TVShow(TVShowBase):
 
             self._last_update_indexer = sql_result[0]['last_update_indexer']
 
-            self._rls_ignore_words = sql_result[0]['rls_ignore_words']
-            self._rls_require_words = sql_result[0]['rls_require_words']
+            self._rls_ignore_words, self._rls_ignore_words_regex = helpers.split_word_str(sql_result[0]['rls_ignore_words'])
+
+            self._rls_require_words, self._rls_require_words_regex = helpers.split_word_str(sql_result[0]['rls_require_words'])
+
+            self._rls_global_exclude_ignore = helpers.split_word_str(sql_result[0]['rls_global_exclude_ignore'])[0]
+
+            self._rls_global_exclude_require = helpers.split_word_str(sql_result[0]['rls_global_exclude_require'])[0]
 
             if not self._imdbid:
                 imdbid = sql_result[0]['imdb_id'] or ''
@@ -1806,8 +1811,10 @@ class TVShow(TVShowBase):
             startyear=self.startyear,
             lang=self.lang, imdb_id=self.imdbid,
             last_update_indexer=self.last_update_indexer,
-            rls_ignore_words=self.rls_ignore_words,
-            rls_require_words=self.rls_require_words,
+            rls_ignore_words=helpers.generate_word_str(self.rls_ignore_words, self.rls_ignore_words_regex),
+            rls_require_words=helpers.generate_word_str(self.rls_require_words, self.rls_require_words_regex),
+            rls_global_exclude_ignore=','.join(self.rls_global_exclude_ignore),
+            rls_global_exclude_require=','.join(self.rls_global_exclude_require),
             overview=self.overview,
             prune=self.prune,
             tag=self.tag)

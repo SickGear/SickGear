@@ -18,6 +18,7 @@
 import datetime
 import fnmatch
 import os
+import copy
 import re
 
 # noinspection PyPep8Naming
@@ -35,21 +36,32 @@ from six import iterkeys, itervalues
 
 # noinspection PyUnreachableCode
 if False:
-    from typing import AnyStr, List, Union
+    from typing import AnyStr, List, Optional, Set, Union
+    from .tv import TVShow
+    # noinspection PyUnresolvedReferences
+    from re import Pattern
 
 
-def pass_wordlist_checks(name,  # type: AnyStr
+def pass_wordlist_checks(name,  # type: AnyStr 
                          parse=True,  # type: bool
-                         indexer_lookup=True  # type: bool
+                         indexer_lookup=True,  # type: bool
+                         show_obj=None  # type: TVShow
                          ):  # type: (...) -> bool
     """
     Filters out non-english and just all-around stupid releases by comparing
     the word list contents at boundaries or the end of name.
 
     :param name: the release name to check
-    :param parse: try to parse release name
-    :param indexer_lookup: try to look up on tvinfo source
+    :type name: basestring
+    :param parse: parse release name
+    :type parse: bool
+    :param indexer_lookup: use indexer lookup during paring
+    :type indexer_lookup: bool
+    :param show_obj: TVShow object
+    :type show_obj: TVShow
+
     :return: True if the release name is OK, False if it's bad.
+    :rtype: bool
     """
 
     if parse:
@@ -63,21 +75,43 @@ def pass_wordlist_checks(name,  # type: AnyStr
             logger.log(err_msg + 'show', logger.DEBUG)
             return False
 
-    word_list = ['sub(bed|ed|pack|s)', '(dk|fin|heb|kor|nor|nordic|pl|swe)sub(bed|ed|s)?',
+    word_list = {'sub(bed|ed|pack|s)', '(dk|fin|heb|kor|nor|nordic|pl|swe)sub(bed|ed|s)?',
                  '(dir|sample|sub|nfo)fix', 'sample', '(dvd)?extras',
-                 'dub(bed)?']
+                 'dub(bed)?'}
 
     # if any of the bad strings are in the name then say no
     if sickbeard.IGNORE_WORDS:
-        word_list = ','.join([sickbeard.IGNORE_WORDS] + word_list)
+        word_list.update(sickbeard.IGNORE_WORDS)
 
-    result = contains_any(name, word_list)
+    req_word_list = copy.copy(sickbeard.REQUIRE_WORDS)
+
+    result = None
+    if show_obj:
+        if show_obj.rls_ignore_words and isinstance(show_obj.rls_ignore_words, set):
+            if sickbeard.IGNORE_WORDS_REGEX == show_obj.rls_ignore_words_regex:
+                word_list.update(show_obj.rls_ignore_words)
+            else:
+                result = contains_any(name, show_obj.rls_ignore_words, rx=show_obj.rls_ignore_words_regex)
+        if show_obj.rls_global_exclude_ignore and isinstance(show_obj.rls_global_exclude_ignore, set):
+            word_list = word_list - show_obj.rls_global_exclude_ignore
+
+    result = result or contains_any(name, word_list, rx=sickbeard.IGNORE_WORDS_REGEX)
     if None is not result and result:
         logger.log(u'Ignored: %s for containing ignore word' % name, logger.DEBUG)
         return False
 
+    result = None
+    if show_obj:
+        if show_obj.rls_require_words and isinstance(show_obj.rls_require_words, set):
+            if sickbeard.REQUIRE_WORDS_REGEX == show_obj.rls_require_words_regex:
+                req_word_list.update(show_obj.rls_require_words)
+            else:
+                result = not_contains_any(name, show_obj.rls_require_words, rx=show_obj.rls_require_words_regex)
+        if show_obj.rls_global_exclude_require and isinstance(show_obj.rls_global_exclude_require, set):
+            req_word_list = req_word_list - show_obj.rls_global_exclude_require
+
     # if any of the good strings aren't in the name then say no
-    result = not_contains_any(name, sickbeard.REQUIRE_WORDS)
+    result = result or not_contains_any(name, req_word_list, rx=sickbeard.REQUIRE_WORDS_REGEX)
     if None is not result and result:
         logger.log(u'Ignored: %s for not containing required word match' % name, logger.DEBUG)
         return False
@@ -86,33 +120,45 @@ def pass_wordlist_checks(name,  # type: AnyStr
 
 
 def not_contains_any(subject,  # type: AnyStr
-                     lookup_words,  # type: Union[AnyStr, List[AnyStr]]
+                     lookup_words,  # type: Union[AnyStr, Set[AnyStr]]
+                     rx=None,
                      **kwargs
                      ):  # type: (...) -> bool
 
-    return contains_any(subject, lookup_words, invert=True, **kwargs)
+    return contains_any(subject, lookup_words, invert=True, rx=rx, **kwargs)
 
 
 def contains_any(subject,  # type: AnyStr
-                 lookup_words,  # type: Union[AnyStr, List[AnyStr]]
+                 lookup_words,  # type: Union[AnyStr, Set[AnyStr]]
                  invert=False,  # type: bool
+                 rx=None,
                  **kwargs
-                 ):  # type: (...) -> Union[bool, None]
+                 ):  # type: (...) -> Optional[bool]
     """
     Check if subject does or does not contain a match from a list or string of regular expression lookup words
 
-    word: word to test existence of
-    re_prefix: insert string to all lookup words
-    re_suffix: append string to all lookup words
+    :param subject: word to test existence of
+    :type subject: basestring
+    :param lookup_words: List or comma separated string of words to search
+    :type lookup_words: Union(list, set, basestring)
+    :param re_prefix: insert string to all lookup words
+    :type re_prefix: basestring
+    :param re_suffix: append string to all lookup words
+    :type re_suffix: basestring
+    :param invert: invert function logic "contains any" into "does not contain any"
+    :type invert: bool
+    :param rx: lookup_words are regex
+    :type rx: Union(NoneType, bool)
 
-    :param subject:
+    :return: None if no checking was done. True for first match found, or if invert is False,
     :param lookup_words: List or comma separated string of words to search
     :param invert: invert function logic "contains any" into "does not contain any"
     :param kwargs:
     :return: None if no checking was done. True for first match found, or if invert is False,
              then True for first pattern that does not match, or False
+    :rtype: Union(NoneType, bool)
     """
-    compiled_words = compile_word_list(lookup_words, **kwargs)
+    compiled_words = compile_word_list(lookup_words, rx=rx, **kwargs)
     if subject and compiled_words:
         for rc_filter in compiled_words:
             match = rc_filter.search(subject)
@@ -125,19 +171,25 @@ def contains_any(subject,  # type: AnyStr
     return None
 
 
-def compile_word_list(lookup_words,  # type: AnyStr
+def compile_word_list(lookup_words,  # type: Union[AnyStr, Set[AnyStr]]
                       re_prefix=r'(^|[\W_])',  # type: AnyStr
-                      re_suffix=r'($|[\W_])'  # type: AnyStr
-                      ):  # type: (...) -> List[AnyStr]
+                      re_suffix=r'($|[\W_])',  # type: AnyStr
+                      rx=None
+                      ):  # type: (...) -> List[Pattern[AnyStr]]
 
     result = []
     if lookup_words:
-        search_raw = isinstance(lookup_words, list)
-        if not search_raw:
-            search_raw = not lookup_words.startswith('regex:')
-            lookup_words = lookup_words[(6, 0)[search_raw]:].split(',')
-        lookup_words = [x.strip() for x in lookup_words]
-        for word in [x for x in lookup_words if x]:
+        if None is rx:
+            search_raw = isinstance(lookup_words, list)
+            if not search_raw:
+                # noinspection PyUnresolvedReferences
+                search_raw = not lookup_words.startswith('regex:')
+                # noinspection PyUnresolvedReferences
+                lookup_words = lookup_words[(6, 0)[search_raw]:].split(',')
+            lookup_words = [x.strip() for x in lookup_words if x.strip()]
+        else:
+            search_raw = not rx
+        for word in lookup_words:
             try:
                 # !0 == regex and subject = s / 'what\'s the "time"' / what\'s\ the\ \"time\"
                 subject = search_raw and re.escape(word) or re.sub(r'([\" \'])', r'\\\1', word)

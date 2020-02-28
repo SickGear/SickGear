@@ -59,6 +59,7 @@ from .scene_numbering import get_scene_absolute_numbering_for_show, get_scene_nu
     get_xem_absolute_numbering_for_show, get_xem_numbering_for_show, set_scene_numbering_helper
 from .search_backlog import FORCED_BACKLOG
 from .sgdatetime import SGDatetime
+from .show_updater import clean_ignore_require_words
 from .trakt_helpers import build_config, trakt_collection_remove_account
 from .tv import TVidProdid
 
@@ -2444,7 +2445,8 @@ class Home(MainHandler):
                   flatten_folders=None, paused=None, direct_call=False, air_by_date=None, sports=None, dvdorder=None,
                   tvinfo_lang=None, subs=None, upgrade_once=None, rls_ignore_words=None,
                   rls_require_words=None, anime=None, blacklist=None, whitelist=None,
-                  scene=None, prune=None, tag=None, quality_preset=None, reset_fanart=None, **kwargs):
+                 scene=None, prune=None, tag=None, quality_preset=None, reset_fanart=None,
+                 rls_global_exclude_ignore=None, rls_global_exclude_require=None, **kwargs):
 
         any_qualities = any_qualities if None is not any_qualities else []
         best_qualities = best_qualities if None is not best_qualities else []
@@ -2612,8 +2614,29 @@ class Home(MainHandler):
             if not direct_call:
                 show_obj.lang = infosrc_lang
                 show_obj.dvdorder = dvdorder
-                show_obj.rls_ignore_words = rls_ignore_words.strip()
-                show_obj.rls_require_words = rls_require_words.strip()
+                new_ignore_words, new_i_regex = helpers.split_word_str(rls_ignore_words.strip())
+                new_ignore_words -= sickbeard.IGNORE_WORDS
+                if 0 == len(new_ignore_words):
+                    new_i_regex = False
+                show_obj.rls_ignore_words, show_obj.rls_ignore_words_regex = new_ignore_words, new_i_regex
+                new_require_words, new_r_regex = helpers.split_word_str(rls_require_words.strip())
+                new_require_words -= sickbeard.REQUIRE_WORDS
+                if 0 == len(new_require_words):
+                    new_r_regex = False
+                show_obj.rls_require_words, show_obj.rls_require_words_regex = new_require_words, new_r_regex
+                if isinstance(rls_global_exclude_ignore, list):
+                    show_obj.rls_global_exclude_ignore = set(r for r in rls_global_exclude_ignore if '.*' != r)
+                elif isinstance(rls_global_exclude_ignore, string_types) and '.*' != rls_global_exclude_ignore:
+                    show_obj.rls_global_exclude_ignore = {rls_global_exclude_ignore}
+                else:
+                    show_obj.rls_global_exclude_ignore = set()
+                if isinstance(rls_global_exclude_require, list):
+                    show_obj.rls_global_exclude_require = set(r for r in rls_global_exclude_require if '.*' != r)
+                elif isinstance(rls_global_exclude_require, string_types) and '.*' != rls_global_exclude_require:
+                    show_obj.rls_global_exclude_require = {rls_global_exclude_require}
+                else:
+                    show_obj.rls_global_exclude_require = set()
+                clean_ignore_require_words()
 
             # if we change location clear the db of episodes, change it, write to db, and rescan
             # noinspection PyProtectedMember
@@ -6494,11 +6517,17 @@ class ConfigSearch(Config):
         t = PageTemplate(web_handler=self, file='config_search.tmpl')
         t.submenu = self.config_menu('Search')
         t.using_rls_ignore_words = [(cur_so.tvid_prodid, cur_so.name) for cur_so in sickbeard.showList
-                                    if cur_so.rls_ignore_words and cur_so.rls_ignore_words.strip()]
+                                    if cur_so.rls_ignore_words and cur_so.rls_ignore_words]
         t.using_rls_ignore_words.sort(key=lambda x: x[1], reverse=False)
         t.using_rls_require_words = [(cur_so.tvid_prodid, cur_so.name) for cur_so in sickbeard.showList
-                                     if cur_so.rls_require_words and cur_so.rls_require_words.strip()]
+                                     if cur_so.rls_require_words and cur_so.rls_require_words]
         t.using_rls_require_words.sort(key=lambda x: x[1], reverse=False)
+        t.using_exclude_ignore_words = [(cur_so.tvid_prodid, cur_so.name)
+                                        for cur_so in sickbeard.showList if cur_so.rls_global_exclude_ignore]
+        t.using_exclude_ignore_words.sort(key=lambda x: x[1], reverse=False)
+        t.using_exclude_require_words = [(cur_so.tvid_prodid, cur_so.name)
+                                         for cur_so in sickbeard.showList if cur_so.rls_global_exclude_require]
+        t.using_exclude_require_words.sort(key=lambda x: x[1], reverse=False)
         t.using_regex = False
         try:
             from sickbeard.name_parser.parser import regex
@@ -6550,8 +6579,10 @@ class ConfigSearch(Config):
         sickbeard.TORRENT_METHOD = torrent_method
         sickbeard.USENET_RETENTION = config.to_int(usenet_retention, default=500)
 
-        sickbeard.IGNORE_WORDS = ignore_words if ignore_words else ''
-        sickbeard.REQUIRE_WORDS = require_words if require_words else ''
+        sickbeard.IGNORE_WORDS, sickbeard.IGNORE_WORDS_REGEX = helpers.split_word_str(ignore_words if ignore_words else '')
+        sickbeard.REQUIRE_WORDS, sickbeard.REQUIRE_WORDS_REGEX = helpers.split_word_str(require_words if require_words else '')
+
+        clean_ignore_require_words()
 
         config.schedule_download_propers(config.checkbox_to_value(download_propers))
         sickbeard.PROPERS_WEBDL_ONEGRP = config.checkbox_to_value(propers_webdl_onegrp)

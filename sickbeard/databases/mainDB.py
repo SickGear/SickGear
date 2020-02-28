@@ -28,7 +28,7 @@ import encodingKludge as ek
 from six import iteritems
 
 MIN_DB_VERSION = 9  # oldest db version we support migrating from
-MAX_DB_VERSION = 20011
+MAX_DB_VERSION = 20012
 TEST_BASE_VERSION = None  # the base production db version, only needed for TEST db versions (>=100000)
 
 
@@ -1641,4 +1641,32 @@ class AddIndexerToTables(db.SchemaUpgrade):
         self.connection.action('VACUUM')
 
         self.setDBVersion(20011)
+        return self.checkDBVersion()
+
+
+# 20011 -> 20012
+class AddShowExludeGlobals(db.SchemaUpgrade):
+    def execute(self):
+
+        if not self.hasColumn('tv_shows', 'rls_global_exclude_ignore'):
+            logger.log('Adding rls_global_exclude_ignore, rls_global_exclude_require to tv_shows')
+
+            db.backup_database('sickbeard.db', self.checkDBVersion())
+            self.addColumn('tv_shows', 'rls_global_exclude_ignore', data_type='TEXT', default='')
+            self.addColumn('tv_shows', 'rls_global_exclude_require', data_type='TEXT', default='')
+
+        if self.hasTable('tv_shows_exclude_backup'):
+            self.connection.mass_action([['UPDATE tv_shows SET rls_global_exclude_ignore = '
+                                          '(SELECT te.rls_global_exclude_ignore FROM tv_shows_exclude_backup te WHERE '
+                                          'te.show_id = tv_shows.show_id AND te.indexer = tv_shows.indexer), '
+                                          'rls_global_exclude_require = (SELECT te.rls_global_exclude_require FROM '
+                                          'tv_shows_exclude_backup te WHERE te.show_id = tv_shows.show_id AND '
+                                          'te.indexer = tv_shows.indexer) WHERE EXISTS (SELECT 1 FROM '
+                                          'tv_shows_exclude_backup WHERE tv_shows.show_id = '
+                                          'tv_shows_exclude_backup.show_id AND '
+                                          'tv_shows.indexer = tv_shows_exclude_backup.indexer)'],
+                                         ['DROP TABLE tv_shows_exclude_backup']
+                                         ])
+
+        self.setDBVersion(20012)
         return self.checkDBVersion()
