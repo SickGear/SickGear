@@ -22,6 +22,7 @@ try:
 except ImportError:
     from lib import simplejson as json
 
+# noinspection PyProtectedMember
 from mimetypes import MimeTypes
 
 import base64
@@ -5928,22 +5929,26 @@ class History(MainHandler):
             mapped = 0
             mapping = None
             maps = [x.split('=') for x in sickbeard.EMBY_PARENT_MAPS.split(',') if any(x)]
+            args = dict(params=dict(format='json'), timeout=10, parse_json=True)
             for i, cur_host in enumerate(hosts):
-                base_url = 'http://%s/emby/Users' % cur_host
+                base_url = 'http://%s/emby' % cur_host
                 headers.update({'X-MediaBrowser-Token': keys[i]})
 
-                users = helpers.get_url(base_url, headers=headers,
-                                        params=dict(format='json'), timeout=10, parse_json=True)
+                users = helpers.get_url(base_url + '/Users', headers=headers, **args)
 
                 for user_id in users and [u.get('Id') for u in users if u.get('Id')] or []:
-                    user_url = '%s/%s' % (base_url, user_id)
-                    user = helpers.get_url(user_url, headers=headers,
-                                           params=dict(format='json'), timeout=10, parse_json=True)
+                    user_url = '%s/Users/%s' % (base_url, user_id)
+                    user = helpers.get_url(user_url, headers=headers, **args)
 
-                    for folder_id in user.get('Policy', {}).get('EnabledFolders') or []:
+                    folder_ids = user.get('Policy', {}).get('EnabledFolders') or []
+                    if not folder_ids and user.get('Policy', {}).get('EnableAllFolders'):
+                        folders = helpers.get_url('%s/Library/MediaFolders' % base_url, headers=headers, **args)
+                        folder_ids = [_f.get('Id') for _f in folders.get('Items', {}) if _f.get('IsFolder')
+                                      and 'tvshows' == _f.get('CollectionType', '') and _f.get('Id')]
+
+                    for folder_id in folder_ids:
                         folder = helpers.get_url('%s/Items/%s' % (user_url, folder_id), headers=headers,
-                                                 params=dict(format='json'), timeout=10, parse_json=True,
-                                                 mute_http_error=True)
+                                                 mute_http_error=True, **args)
 
                         if not folder or 'tvshows' != folder.get('CollectionType', ''):
                             continue
@@ -6649,7 +6654,7 @@ class ConfigMediaProcess(Config):
 
     def save_post_processing(self, tv_download_dir=None, process_automatically=None, autopostprocesser_frequency=None,
                              unpack=None, keep_processed_dir=None, process_method=None,
-                             extra_scripts=None, sg_extra_scripts=None,
+                             extra_scripts='', sg_extra_scripts='',
                              rename_episodes=None, airdate_episodes=None,
                              move_associated_files=None, postpone_if_sync_files=None,
                              naming_custom_abd=None, naming_custom_sports=None, naming_custom_anime=None,
