@@ -860,13 +860,14 @@ class GenericProvider(object):
             pass
 
         title = title and re.sub(r'\s+', '.', u'%s' % title)
-        url = url and str(url).replace('&amp;', '&')
+        if url and not re.match('(?i)magnet:', url):
+            url = str(url).replace('&amp;', '&')
 
         return title, url
 
     def _link(self, url, url_tmpl=None, url_quote=None):
 
-        if url:
+        if url and not re.match('(?i)magnet:', url):
             if PY2:
                 try:
                     url = url.encode('utf-8')

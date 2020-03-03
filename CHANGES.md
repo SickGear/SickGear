@@ -1,4 +1,11 @@
-﻿### 0.21.16 (2020-02-26 15:10:00 UTC)
+﻿### 0.21.17 (2020-03-03 21:35:00 UTC)
+
+* Fix do not process magnet links in search results
+* Fix saving media process settings
+* Add handler for Emby user access 'Enable access to all libraries', specifying folder access rights operate as normal
+
+
+### 0.21.16 (2020-02-26 15:10:00 UTC)
 
 * Change alert users of Python 3.8.1 or 3.7.6 to change Python version due to a known critical issue parsing URLs
 
