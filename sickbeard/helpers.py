@@ -600,7 +600,7 @@ def rename_ep_file(cur_path, new_path, old_path_length=0):
     # put the extension on the incoming file
     new_path += cur_file_ext
 
-    make_dirs(ek.ek(os.path.dirname, new_path))
+    make_dirs(ek.ek(os.path.dirname, new_path), syno=True)
 
     # move the file
     try:

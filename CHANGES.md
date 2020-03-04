@@ -30,6 +30,11 @@
 * Change remove deprecated `buildNameCache`
 
 
+### 0.21.18 (2020-03-04 19:20:00 UTC)
+
+* Fix NotifierFactory AttributeError on first run init
+
+
 ### 0.21.17 (2020-03-03 21:35:00 UTC)
 
 * Fix do not process magnet links in search results

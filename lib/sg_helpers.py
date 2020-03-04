@@ -465,13 +465,13 @@ def chmod_as_parent(child_path):
         logger.error(u'Failed to set permission for %s to %o' % (child_path, child_mode))
 
 
-def make_dirs(path, syno=True):
+def make_dirs(path, syno=False):
     """
     Creates any folders that are missing and assigns them the permissions of their
     parents
     :param path: path
     :type path: AnyStr
-    :param syno:
+    :param syno: whether to trigger a syno library update for path
     :type syno: bool
     :return: success
     :rtype: bool
@@ -504,7 +504,6 @@ def make_dirs(path, syno=True):
                     ek.ek(os.mkdir, sofar)
                     # use normpath to remove end separator, otherwise checks permissions against itself
                     chmod_as_parent(ek.ek(os.path.normpath, sofar))
-                    # todo: reenable
                     if syno:
                         # do the library update for synoindex
                         NOTIFIERS.NotifierFactory().get('SYNOINDEX').addFolder(sofar)
@@ -534,7 +533,7 @@ def write_file(filepath,  # type: AnyStr
     """
     result = False
 
-    if make_dirs(ek.ek(os.path.dirname, filepath), False):
+    if make_dirs(ek.ek(os.path.dirname, filepath)):
         try:
             if raw:
                 with ek.ek(io.FileIO, filepath, 'wb') as fh:
