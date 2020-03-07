@@ -28,7 +28,11 @@ from tornado_py3.ioloop import IOLoop
 from tornado_py3.platform.auto import set_close_exec
 from tornado_py3.util import Configurable, errno_from_exception
 
-from typing import List, Callable, Any, Type, Dict, Union, Tuple, Awaitable, Optional
+import typing
+from typing import List, Callable, Any, Type, Dict, Union, Tuple, Awaitable
+
+if typing.TYPE_CHECKING:
+    from asyncio import Future  # noqa: F401
 
 # Note that the naming of ssl.Purpose is confusing; the purpose
 # of a context is to authentiate the opposite side of the connection.
@@ -49,16 +53,24 @@ u"foo".encode("idna")
 # For undiagnosed reasons, 'latin1' codec may also need to be preloaded.
 u"foo".encode("latin1")
 
+# These errnos indicate that a non-blocking operation must be retried
+# at a later time.  On most platforms they're the same value, but on
+# some they differ.
+_ERRNO_WOULDBLOCK = (errno.EWOULDBLOCK, errno.EAGAIN)
+
+if hasattr(errno, "WSAEWOULDBLOCK"):
+    _ERRNO_WOULDBLOCK += (errno.WSAEWOULDBLOCK,)  # type: ignore
+
 # Default backlog used when calling sock.listen()
 _DEFAULT_BACKLOG = 128
 
 
 def bind_sockets(
     port: int,
-    address: Optional[str] = None,
+    address: str = None,
     family: socket.AddressFamily = socket.AF_UNSPEC,
     backlog: int = _DEFAULT_BACKLOG,
-    flags: Optional[int] = None,
+    flags: int = None,
     reuse_port: bool = False,
 ) -> List[socket.socket]:
     """Creates listening sockets bound to the given port and address.
@@ -159,29 +171,7 @@ def bind_sockets(
             sockaddr = tuple([host, bound_port] + list(sockaddr[2:]))
 
         sock.setblocking(False)
-        try:
-            sock.bind(sockaddr)
-        except OSError as e:
-            if (
-                errno_from_exception(e) == errno.EADDRNOTAVAIL
-                and address == "localhost"
-                and sockaddr[0] == "::1"
-            ):
-                # On some systems (most notably docker with default
-                # configurations), ipv6 is partially disabled:
-                # socket.has_ipv6 is true, we can create AF_INET6
-                # sockets, and getaddrinfo("localhost", ...,
-                # AF_PASSIVE) resolves to ::1, but we get an error
-                # when binding.
-                #
-                # Swallow the error, but only for this specific case.
-                # If EADDRNOTAVAIL occurs in other situations, it
-                # might be a real problem like a typo in a
-                # configuration.
-                sock.close()
-                continue
-            else:
-                raise
+        sock.bind(sockaddr)
         bound_port = sock.getsockname()[1]
         sock.listen(backlog)
         sockets.append(sock)
@@ -213,8 +203,9 @@ if hasattr(socket, "AF_UNIX"):
         sock.setblocking(False)
         try:
             st = os.stat(file)
-        except FileNotFoundError:
-            pass
+        except OSError as err:
+            if errno_from_exception(err) != errno.ENOENT:
+                raise
         else:
             if stat.S_ISSOCK(st.st_mode):
                 os.remove(file)
@@ -267,15 +258,17 @@ def add_accept_handler(
                 return
             try:
                 connection, address = sock.accept()
-            except BlockingIOError:
-                # EWOULDBLOCK indicates we have accepted every
+            except socket.error as e:
+                # _ERRNO_WOULDBLOCK indicate we have accepted every
                 # connection that is available.
-                return
-            except ConnectionAbortedError:
+                if errno_from_exception(e) in _ERRNO_WOULDBLOCK:
+                    return
                 # ECONNABORTED indicates that there was a connection
                 # but it was closed while still in the accept queue.
                 # (observed on FreeBSD).
-                continue
+                if errno_from_exception(e) == errno.ECONNABORTED:
+                    continue
+                raise
             set_close_exec(connection.fileno())
             callback(connection, address)
 
@@ -387,7 +380,7 @@ def _resolve_addr(
     results = []
     for fam, socktype, proto, canonname, address in addrinfo:
         results.append((fam, address))
-    return results  # type: ignore
+    return results
 
 
 class DefaultExecutorResolver(Resolver):
@@ -424,9 +417,7 @@ class ExecutorResolver(Resolver):
     """
 
     def initialize(
-        self,
-        executor: Optional[concurrent.futures.Executor] = None,
-        close_executor: bool = True,
+        self, executor: concurrent.futures.Executor = None, close_executor: bool = True
     ) -> None:
         self.io_loop = IOLoop.current()
         if executor is not None:
@@ -600,7 +591,7 @@ def ssl_options_to_context(
 def ssl_wrap_socket(
     socket: socket.socket,
     ssl_options: Union[Dict[str, Any], ssl.SSLContext],
-    server_hostname: Optional[str] = None,
+    server_hostname: str = None,
     **kwargs: Any
 ) -> ssl.SSLSocket:
     """Returns an ``ssl.SSLSocket`` wrapping the given socket.

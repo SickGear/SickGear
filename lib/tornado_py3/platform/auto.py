@@ -19,7 +19,7 @@ For each function or class described in `tornado.platform.interface`,
 the appropriate platform-specific implementation exists in this module.
 Most code that needs access to this functionality should do e.g.::
 
-    from tornado.platform.auto import set_close_exec
+    from tornado_py3.platform.auto import set_close_exec
 """
 
 import os

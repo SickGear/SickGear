@@ -28,7 +28,7 @@ generally at the top level of a module. The options are then
 accessible as attributes of `tornado.options.options`::
 
     # myapp/db.py
-    from tornado.options import define, options
+    from tornado_py3.options import define, options
 
     define("mysql_host", default="127.0.0.1:3306", help="Main user DB")
     define("memcache_hosts", default="127.0.0.1:11011", multiple=True,
@@ -39,7 +39,7 @@ accessible as attributes of `tornado.options.options`::
         ...
 
     # myapp/server.py
-    from tornado.options import define, options
+    from tornado_py3.options import define, options
 
     define("port", default=8080, help="port to listen on")
 
@@ -82,7 +82,7 @@ instances to define isolated sets of options, such as for subcommands.
    alone so you can manage it yourself, either pass ``--logging=none``
    on the command line or do the following to disable it in code::
 
-       from tornado.options import options, parse_command_line
+       from tornado_py3.options import options, parse_command_line
        options.logging = None
        parse_command_line()
 
@@ -104,18 +104,11 @@ from tornado_py3.escape import _unicode, native_str
 from tornado_py3.log import define_logging_options
 from tornado_py3.util import basestring_type, exec_in
 
-from typing import (
-    Any,
-    Iterator,
-    Iterable,
-    Tuple,
-    Set,
-    Dict,
-    Callable,
-    List,
-    TextIO,
-    Optional,
-)
+import typing
+from typing import Any, Iterator, Iterable, Tuple, Set, Dict, Callable, List, TextIO
+
+if typing.TYPE_CHECKING:
+    from typing import Optional  # noqa: F401
 
 
 class Error(Exception):
@@ -189,7 +182,7 @@ class OptionParser(object):
 
         Useful for copying options into Application settings::
 
-            from tornado.options import define, parse_command_line, options
+            from tornado_py3.options import define, parse_command_line, options
 
             define('template_path', group='application')
             define('static_path', group='application')
@@ -218,12 +211,12 @@ class OptionParser(object):
         self,
         name: str,
         default: Any = None,
-        type: Optional[type] = None,
-        help: Optional[str] = None,
-        metavar: Optional[str] = None,
+        type: type = None,
+        help: str = None,
+        metavar: str = None,
         multiple: bool = False,
-        group: Optional[str] = None,
-        callback: Optional[Callable[[Any], None]] = None,
+        group: str = None,
+        callback: Callable[[Any], None] = None,
     ) -> None:
         """Defines a new command line option.
 
@@ -302,7 +295,7 @@ class OptionParser(object):
         self._options[normalized] = option
 
     def parse_command_line(
-        self, args: Optional[List[str]] = None, final: bool = True
+        self, args: List[str] = None, final: bool = True
     ) -> List[str]:
         """Parses all options given on the command line (defaults to
         `sys.argv`).
@@ -424,7 +417,7 @@ class OptionParser(object):
         if final:
             self.run_parse_callbacks()
 
-    def print_help(self, file: Optional[TextIO] = None) -> None:
+    def print_help(self, file: TextIO = None) -> None:
         """Prints all the command line options to stderr (or another file)."""
         if file is None:
             file = sys.stderr
@@ -525,13 +518,13 @@ class _Option(object):
         self,
         name: str,
         default: Any = None,
-        type: Optional[type] = None,
-        help: Optional[str] = None,
-        metavar: Optional[str] = None,
+        type: type = None,
+        help: str = None,
+        metavar: str = None,
         multiple: bool = False,
-        file_name: Optional[str] = None,
-        group_name: Optional[str] = None,
-        callback: Optional[Callable[[Any], None]] = None,
+        file_name: str = None,
+        group_name: str = None,
+        callback: Callable[[Any], None] = None,
     ) -> None:
         if default is None and multiple:
             default = []
@@ -674,12 +667,12 @@ All defined options are available as attributes on this object.
 def define(
     name: str,
     default: Any = None,
-    type: Optional[type] = None,
-    help: Optional[str] = None,
-    metavar: Optional[str] = None,
+    type: type = None,
+    help: str = None,
+    metavar: str = None,
     multiple: bool = False,
-    group: Optional[str] = None,
-    callback: Optional[Callable[[Any], None]] = None,
+    group: str = None,
+    callback: Callable[[Any], None] = None,
 ) -> None:
     """Defines an option in the global namespace.
 
@@ -697,9 +690,7 @@ def define(
     )
 
 
-def parse_command_line(
-    args: Optional[List[str]] = None, final: bool = True
-) -> List[str]:
+def parse_command_line(args: List[str] = None, final: bool = True) -> List[str]:
     """Parses global options from the command line.
 
     See `OptionParser.parse_command_line`.
@@ -715,7 +706,7 @@ def parse_config_file(path: str, final: bool = True) -> None:
     return options.parse_config_file(path, final=final)
 
 
-def print_help(file: Optional[TextIO] = None) -> None:
+def print_help(file: TextIO = None) -> None:
     """Prints all the command line options to stderr (or another file).
 
     See `OptionParser.print_help`.
