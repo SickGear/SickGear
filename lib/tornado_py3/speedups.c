@@ -56,6 +56,7 @@ static PyMethodDef methods[] = {
     {NULL, NULL, 0, NULL}
 };
 
+#if PY_MAJOR_VERSION >= 3
 static struct PyModuleDef speedupsmodule = {
    PyModuleDef_HEAD_INIT,
    "speedups",
@@ -68,3 +69,9 @@ PyMODINIT_FUNC
 PyInit_speedups(void) {
     return PyModule_Create(&speedupsmodule);
 }
+#else  // Python 2.x
+PyMODINIT_FUNC
+initspeedups(void) {
+    Py_InitModule("tornado.speedups", methods);
+}
+#endif

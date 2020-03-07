@@ -24,7 +24,6 @@ import collections
 import copy
 import datetime
 import email.utils
-from functools import lru_cache
 from http.client import responses
 import http.cookies
 import re
@@ -63,14 +62,42 @@ if typing.TYPE_CHECKING:
     import unittest  # noqa: F401
 
 
-@lru_cache(1000)
-def _normalize_header(name: str) -> str:
-    """Map a header name to Http-Header-Case.
+# RFC 7230 section 3.5: a recipient MAY recognize a single LF as a line
+# terminator and ignore any preceding CR.
+_CRLF_RE = re.compile(r"\r?\n")
 
-    >>> _normalize_header("coNtent-TYPE")
+
+class _NormalizedHeaderCache(dict):
+    """Dynamic cached mapping of header names to Http-Header-Case.
+
+    Implemented as a dict subclass so that cache hits are as fast as a
+    normal dict lookup, without the overhead of a python function
+    call.
+
+    >>> normalized_headers = _NormalizedHeaderCache(10)
+    >>> normalized_headers["coNtent-TYPE"]
     'Content-Type'
     """
-    return "-".join([w.capitalize() for w in name.split("-")])
+
+    def __init__(self, size: int) -> None:
+        super(_NormalizedHeaderCache, self).__init__()
+        self.size = size
+        self.queue = collections.deque()  # type: Deque[str]
+
+    def __missing__(self, key: str) -> str:
+        normalized = "-".join([w.capitalize() for w in key.split("-")])
+        self[key] = normalized
+        self.queue.append(key)
+        if len(self.queue) > self.size:
+            # Limit the size of the cache.  LRU would be better, but this
+            # simpler approach should be fine.  In Python 2.7+ we could
+            # use OrderedDict (or in 3.2+, @functools.lru_cache).
+            old_key = self.queue.popleft()
+            del self[old_key]
+        return normalized
+
+
+_normalized_headers = _NormalizedHeaderCache(1000)
 
 
 class HTTPHeaders(collections.abc.MutableMapping):
@@ -121,7 +148,7 @@ class HTTPHeaders(collections.abc.MutableMapping):
     def __init__(self, *args: typing.Any, **kwargs: str) -> None:  # noqa: F811
         self._dict = {}  # type: typing.Dict[str, str]
         self._as_list = {}  # type: typing.Dict[str, typing.List[str]]
-        self._last_key = None  # type: Optional[str]
+        self._last_key = None
         if len(args) == 1 and len(kwargs) == 0 and isinstance(args[0], HTTPHeaders):
             # Copy constructor
             for k, v in args[0].get_all():
@@ -134,7 +161,7 @@ class HTTPHeaders(collections.abc.MutableMapping):
 
     def add(self, name: str, value: str) -> None:
         """Adds a new value for the given key."""
-        norm_name = _normalize_header(name)
+        norm_name = _normalized_headers[name]
         self._last_key = norm_name
         if norm_name in self:
             self._dict[norm_name] = (
@@ -146,7 +173,7 @@ class HTTPHeaders(collections.abc.MutableMapping):
 
     def get_list(self, name: str) -> List[str]:
         """Returns all values for the given header as a list."""
-        norm_name = _normalize_header(name)
+        norm_name = _normalized_headers[name]
         return self._as_list.get(norm_name, [])
 
     def get_all(self) -> Iterable[Tuple[str, str]]:
@@ -196,11 +223,7 @@ class HTTPHeaders(collections.abc.MutableMapping):
 
         """
         h = cls()
-        # RFC 7230 section 3.5: a recipient MAY recognize a single LF as a line
-        # terminator and ignore any preceding CR.
-        for line in headers.split("\n"):
-            if line.endswith("\r"):
-                line = line[:-1]
+        for line in _CRLF_RE.split(headers):
             if line:
                 h.parse_line(line)
         return h
@@ -208,15 +231,15 @@ class HTTPHeaders(collections.abc.MutableMapping):
     # MutableMapping abstract method implementations.
 
     def __setitem__(self, name: str, value: str) -> None:
-        norm_name = _normalize_header(name)
+        norm_name = _normalized_headers[name]
         self._dict[norm_name] = value
         self._as_list[norm_name] = [value]
 
     def __getitem__(self, name: str) -> str:
-        return self._dict[_normalize_header(name)]
+        return self._dict[_normalized_headers[name]]
 
     def __delitem__(self, name: str) -> None:
-        norm_name = _normalize_header(name)
+        norm_name = _normalized_headers[name]
         del self._dict[norm_name]
         del self._as_list[norm_name]
 
@@ -345,16 +368,16 @@ class HTTPServerRequest(object):
 
     def __init__(
         self,
-        method: Optional[str] = None,
-        uri: Optional[str] = None,
+        method: str = None,
+        uri: str = None,
         version: str = "HTTP/1.0",
-        headers: Optional[HTTPHeaders] = None,
-        body: Optional[bytes] = None,
-        host: Optional[str] = None,
-        files: Optional[Dict[str, List["HTTPFile"]]] = None,
-        connection: Optional["HTTPConnection"] = None,
-        start_line: Optional["RequestStartLine"] = None,
-        server_connection: Optional[object] = None,
+        headers: HTTPHeaders = None,
+        body: bytes = None,
+        host: str = None,
+        files: Dict[str, List["HTTPFile"]] = None,
+        connection: "HTTPConnection" = None,
+        start_line: "RequestStartLine" = None,
+        server_connection: object = None,
     ) -> None:
         if start_line is not None:
             method, uri, version = start_line
@@ -387,9 +410,7 @@ class HTTPServerRequest(object):
     def cookies(self) -> Dict[str, http.cookies.Morsel]:
         """A dictionary of ``http.cookies.Morsel`` objects."""
         if not hasattr(self, "_cookies"):
-            self._cookies = (
-                http.cookies.SimpleCookie()
-            )  # type: http.cookies.SimpleCookie
+            self._cookies = http.cookies.SimpleCookie()
             if "Cookie" in self.headers:
                 try:
                     parsed = parse_cookie(self.headers["Cookie"])
@@ -570,7 +591,7 @@ class HTTPConnection(object):
         self,
         start_line: Union["RequestStartLine", "ResponseStartLine"],
         headers: HTTPHeaders,
-        chunk: Optional[bytes] = None,
+        chunk: bytes = None,
     ) -> "Future[None]":
         """Write an HTTP header block.
 
@@ -746,7 +767,7 @@ def parse_body_arguments(
     body: bytes,
     arguments: Dict[str, List[bytes]],
     files: Dict[str, List[HTTPFile]],
-    headers: Optional[HTTPHeaders] = None,
+    headers: HTTPHeaders = None,
 ) -> None:
     """Parses a form request body.
 
@@ -763,8 +784,7 @@ def parse_body_arguments(
             )
             return
         try:
-            # real charset decoding will happen in RequestHandler.decode_argument()
-            uri_arguments = parse_qs_bytes(body, keep_blank_values=True)
+            uri_arguments = parse_qs_bytes(native_str(body), keep_blank_values=True)
         except Exception as e:
             gen_log.warning("Invalid x-www-form-urlencoded body: %s", e)
             uri_arguments = {}
@@ -876,9 +896,6 @@ RequestStartLine = collections.namedtuple(
 )
 
 
-_http_version_re = re.compile(r"^HTTP/1\.[0-9]$")
-
-
 def parse_request_start_line(line: str) -> RequestStartLine:
     """Returns a (method, path, version) tuple for an HTTP 1.x request line.
 
@@ -893,7 +910,7 @@ def parse_request_start_line(line: str) -> RequestStartLine:
         # https://tools.ietf.org/html/rfc7230#section-3.1.1
         # invalid request-line SHOULD respond with a 400 (Bad Request)
         raise HTTPInputError("Malformed HTTP request line")
-    if not _http_version_re.match(version):
+    if not re.match(r"^HTTP/1\.[0-9]$", version):
         raise HTTPInputError(
             "Malformed HTTP version in HTTP Request-Line: %r" % version
         )
@@ -905,9 +922,6 @@ ResponseStartLine = collections.namedtuple(
 )
 
 
-_http_response_line_re = re.compile(r"(HTTP/1.[0-9]) ([0-9]+) ([^\r]*)")
-
-
 def parse_response_start_line(line: str) -> ResponseStartLine:
     """Returns a (version, code, reason) tuple for an HTTP 1.x response line.
 
@@ -917,7 +931,7 @@ def parse_response_start_line(line: str) -> ResponseStartLine:
     ResponseStartLine(version='HTTP/1.1', code=200, reason='OK')
     """
     line = native_str(line)
-    match = _http_response_line_re.match(line)
+    match = re.match("(HTTP/1.[0-9]) ([0-9]+) ([^\r]*)", line)
     if not match:
         raise HTTPInputError("Error parsing response start line")
     return ResponseStartLine(match.group(1), int(match.group(2)), match.group(3))
@@ -1022,9 +1036,6 @@ def doctests():
     return doctest.DocTestSuite()
 
 
-_netloc_re = re.compile(r"^(.+):(\d+)$")
-
-
 def split_host_and_port(netloc: str) -> Tuple[str, Optional[int]]:
     """Returns ``(host, port)`` tuple from ``netloc``.
 
@@ -1032,7 +1043,7 @@ def split_host_and_port(netloc: str) -> Tuple[str, Optional[int]]:
 
     .. versionadded:: 4.1
     """
-    match = _netloc_re.match(netloc)
+    match = re.match(r"^(.+):(\d+)$", netloc)
     if match:
         host = match.group(1)
         port = int(match.group(2))  # type: Optional[int]

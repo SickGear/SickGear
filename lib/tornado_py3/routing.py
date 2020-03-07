@@ -300,7 +300,7 @@ _RuleList = List[
 class RuleRouter(Router):
     """Rule-based router implementation."""
 
-    def __init__(self, rules: Optional[_RuleList] = None) -> None:
+    def __init__(self, rules: _RuleList = None) -> None:
         """Constructs a router from an ordered list of rules::
 
             RuleRouter([
@@ -409,7 +409,7 @@ class ReversibleRuleRouter(ReversibleRouter, RuleRouter):
     in a rule's matcher (see `Matcher.reverse`).
     """
 
-    def __init__(self, rules: Optional[_RuleList] = None) -> None:
+    def __init__(self, rules: _RuleList = None) -> None:
         self.named_rules = {}  # type: Dict[str, Any]
         super(ReversibleRuleRouter, self).__init__(rules)
 
@@ -445,8 +445,8 @@ class Rule(object):
         self,
         matcher: "Matcher",
         target: Any,
-        target_kwargs: Optional[Dict[str, Any]] = None,
-        name: Optional[str] = None,
+        target_kwargs: Dict[str, Any] = None,
+        name: str = None,
     ) -> None:
         """Constructs a Rule instance.
 
@@ -627,13 +627,7 @@ class PathMatches(Matcher):
             if ")" in fragment:
                 paren_loc = fragment.index(")")
                 if paren_loc >= 0:
-                    try:
-                        unescaped_fragment = re_unescape(fragment[paren_loc + 1 :])
-                    except ValueError:
-                        # If we can't unescape part of it, we can't
-                        # reverse this url.
-                        return (None, None)
-                    pieces.append("%s" + unescaped_fragment)
+                    pieces.append("%s" + fragment[paren_loc + 1 :])
             else:
                 try:
                     unescaped_fragment = re_unescape(fragment)
@@ -658,8 +652,8 @@ class URLSpec(Rule):
         self,
         pattern: Union[str, Pattern],
         handler: Any,
-        kwargs: Optional[Dict[str, Any]] = None,
-        name: Optional[str] = None,
+        kwargs: Dict[str, Any] = None,
+        name: str = None,
     ) -> None:
         """Parameters:
 

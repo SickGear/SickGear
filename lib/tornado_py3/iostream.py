@@ -64,6 +64,14 @@ try:
 except ImportError:
     _set_nonblocking = None  # type: ignore
 
+# These errnos indicate that a non-blocking operation must be retried
+# at a later time.  On most platforms they're the same value, but on
+# some they differ.
+_ERRNO_WOULDBLOCK = (errno.EWOULDBLOCK, errno.EAGAIN)
+
+if hasattr(errno, "WSAEWOULDBLOCK"):
+    _ERRNO_WOULDBLOCK += (errno.WSAEWOULDBLOCK,)  # type: ignore
+
 # These errnos indicate that a connection has been abruptly terminated.
 # They should be caught and handled less noisily than other errors.
 _ERRNO_CONNRESET = (errno.ECONNRESET, errno.ECONNABORTED, errno.EPIPE, errno.ETIMEDOUT)
@@ -83,6 +91,12 @@ if sys.platform == "darwin":
     # instead of an unexpected error.
     _ERRNO_CONNRESET += (errno.EPROTOTYPE,)  # type: ignore
 
+# More non-portable errnos:
+_ERRNO_INPROGRESS = (errno.EINPROGRESS,)
+
+if hasattr(errno, "WSAEINPROGRESS"):
+    _ERRNO_INPROGRESS += (errno.WSAEINPROGRESS,)  # type: ignore
+
 _WINDOWS = sys.platform.startswith("win")
 
 
@@ -100,7 +114,7 @@ class StreamClosedError(IOError):
        Added the ``real_error`` attribute.
     """
 
-    def __init__(self, real_error: Optional[BaseException] = None) -> None:
+    def __init__(self, real_error: BaseException = None) -> None:
         super(StreamClosedError, self).__init__("Stream is closed")
         self.real_error = real_error
 
@@ -232,9 +246,9 @@ class BaseIOStream(object):
 
     def __init__(
         self,
-        max_buffer_size: Optional[int] = None,
-        read_chunk_size: Optional[int] = None,
-        max_write_buffer_size: Optional[int] = None,
+        max_buffer_size: int = None,
+        read_chunk_size: int = None,
+        max_write_buffer_size: int = None,
     ) -> None:
         """`BaseIOStream` constructor.
 
@@ -332,9 +346,7 @@ class BaseIOStream(object):
         """
         return None
 
-    def read_until_regex(
-        self, regex: bytes, max_bytes: Optional[int] = None
-    ) -> Awaitable[bytes]:
+    def read_until_regex(self, regex: bytes, max_bytes: int = None) -> Awaitable[bytes]:
         """Asynchronously read until we have matched the given regex.
 
         The result includes the data that matches the regex and anything
@@ -371,9 +383,7 @@ class BaseIOStream(object):
             raise
         return future
 
-    def read_until(
-        self, delimiter: bytes, max_bytes: Optional[int] = None
-    ) -> Awaitable[bytes]:
+    def read_until(self, delimiter: bytes, max_bytes: int = None) -> Awaitable[bytes]:
         """Asynchronously read until we have found the given delimiter.
 
         The result includes all the data read including the delimiter.
@@ -599,6 +609,15 @@ class BaseIOStream(object):
             if self._read_until_close:
                 self._read_until_close = False
                 self._finish_read(self._read_buffer_size, False)
+            elif self._read_future is not None:
+                # resolve reads that are pending and ready to complete
+                try:
+                    pos = self._find_read_pos()
+                except UnsatisfiableReadError:
+                    pass
+                else:
+                    if pos is not None:
+                        self._read_from_buffer(pos)
             if self._state is not None:
                 self.io_loop.remove_handler(self.fileno())
                 self._state = None
@@ -786,8 +805,25 @@ class BaseIOStream(object):
             self._read_from_buffer(pos)
 
     def _start_read(self) -> Future:
-        self._check_closed()  # Before reading, check that stream is not closed.
-        assert self._read_future is None, "Already reading"
+        if self._read_future is not None:
+            # It is an error to start a read while a prior read is unresolved.
+            # However, if the prior read is unresolved because the stream was
+            # closed without satisfying it, it's better to raise
+            # StreamClosedError instead of AssertionError. In particular, this
+            # situation occurs in harmless situations in http1connection.py and
+            # an AssertionError would be logged noisily.
+            #
+            # On the other hand, it is legal to start a new read while the
+            # stream is closed, in case the read can be satisfied from the
+            # read buffer. So we only want to check the closed status of the
+            # stream if we need to decide what kind of error to raise for
+            # "already reading".
+            #
+            # These conditions have proven difficult to test; we have no
+            # unittests that reliably verify this behavior so be careful
+            # when making changes here. See #2651 and #2719.
+            self._check_closed()
+            assert self._read_future is None, "Already reading"
         self._read_future = Future()
         return self._read_future
 
@@ -847,6 +883,8 @@ class BaseIOStream(object):
                         buf = bytearray(self.read_chunk_size)
                     bytes_read = self.read_from_fd(buf)
                 except (socket.error, IOError, OSError) as e:
+                    if errno_from_exception(e) == errno.EINTR:
+                        continue
                     # ssl.SSLError is a subclass of socket.error
                     if self._is_connreset(e):
                         # Treat ECONNRESET as a connection close rather than
@@ -954,16 +992,17 @@ class BaseIOStream(object):
                     break
                 self._write_buffer.advance(num_bytes)
                 self._total_write_done_index += num_bytes
-            except BlockingIOError:
-                break
             except (socket.error, IOError, OSError) as e:
-                if not self._is_connreset(e):
-                    # Broken pipe errors are usually caused by connection
-                    # reset, and its better to not log EPIPE errors to
-                    # minimize log spam
-                    gen_log.warning("Write error on %s: %s", self.fileno(), e)
-                self.close(exc_info=e)
-                return
+                if e.args[0] in _ERRNO_WOULDBLOCK:
+                    break
+                else:
+                    if not self._is_connreset(e):
+                        # Broken pipe errors are usually caused by connection
+                        # reset, and its better to not log EPIPE errors to
+                        # minimize log spam
+                        gen_log.warning("Write error on %s: %s", self.fileno(), e)
+                    self.close(exc_info=e)
+                    return
 
         while self._write_futures:
             index, future = self._write_futures[0]
@@ -1119,8 +1158,11 @@ class IOStream(BaseIOStream):
     def read_from_fd(self, buf: Union[bytearray, memoryview]) -> Optional[int]:
         try:
             return self.socket.recv_into(buf, len(buf))
-        except BlockingIOError:
-            return None
+        except socket.error as e:
+            if e.args[0] in _ERRNO_WOULDBLOCK:
+                return None
+            else:
+                raise
         finally:
             del buf
 
@@ -1133,7 +1175,7 @@ class IOStream(BaseIOStream):
             del data
 
     def connect(
-        self: _IOStreamType, address: Any, server_hostname: Optional[str] = None
+        self: _IOStreamType, address: tuple, server_hostname: str = None
     ) -> "Future[_IOStreamType]":
         """Connects the socket to a remote address without blocking.
 
@@ -1184,27 +1226,32 @@ class IOStream(BaseIOStream):
         self._connect_future = typing.cast("Future[IOStream]", future)
         try:
             self.socket.connect(address)
-        except BlockingIOError:
+        except socket.error as e:
             # In non-blocking mode we expect connect() to raise an
             # exception with EINPROGRESS or EWOULDBLOCK.
-            pass
-        except socket.error as e:
+            #
             # On freebsd, other errors such as ECONNREFUSED may be
             # returned immediately when attempting to connect to
             # localhost, so handle them the same way as an error
             # reported later in _handle_connect.
-            if future is None:
-                gen_log.warning("Connect error on fd %s: %s", self.socket.fileno(), e)
-            self.close(exc_info=e)
-            return future
+            if (
+                errno_from_exception(e) not in _ERRNO_INPROGRESS
+                and errno_from_exception(e) not in _ERRNO_WOULDBLOCK
+            ):
+                if future is None:
+                    gen_log.warning(
+                        "Connect error on fd %s: %s", self.socket.fileno(), e
+                    )
+                self.close(exc_info=e)
+                return future
         self._add_io_state(self.io_loop.WRITE)
         return future
 
     def start_tls(
         self,
         server_side: bool,
-        ssl_options: Optional[Union[Dict[str, Any], ssl.SSLContext]] = None,
-        server_hostname: Optional[str] = None,
+        ssl_options: Union[Dict[str, Any], ssl.SSLContext] = None,
+        server_hostname: str = None,
     ) -> Awaitable["SSLIOStream"]:
         """Convert this `IOStream` to an `SSLIOStream`.
 
@@ -1461,7 +1508,7 @@ class SSLIOStream(IOStream):
         super(SSLIOStream, self)._handle_write()
 
     def connect(
-        self, address: Tuple, server_hostname: Optional[str] = None
+        self, address: Tuple, server_hostname: str = None
     ) -> "Future[SSLIOStream]":
         self._server_hostname = server_hostname
         # Ignore the result of connect(). If it fails,
@@ -1572,8 +1619,11 @@ class SSLIOStream(IOStream):
                     return None
                 else:
                     raise
-            except BlockingIOError:
-                return None
+            except socket.error as e:
+                if e.args[0] in _ERRNO_WOULDBLOCK:
+                    return None
+                else:
+                    raise
         finally:
             del buf
 
