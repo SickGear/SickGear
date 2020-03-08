@@ -31,6 +31,12 @@
 * Update Tornado_py3 Web Server 6.0.3 (ff985fe) to 6.1.dev1 (18b653c)
 
 
+### 0.21.19 (2019-03-08 15:45:00 UTC)
+
+* Change update provider TL from v4/classic to V5
+* Fix webapi (add show) wrong error message if show is not at info source
+
+
 ### 0.21.18 (2020-03-04 19:20:00 UTC)
 
 * Fix NotifierFactory AttributeError on first run init
