@@ -15,13 +15,11 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
+from datetime import datetime
 import re
-import traceback
 
 from . import generic
-from .. import logger
 from ..helpers import try_int
-from bs4_parser import BS4Parser
 
 from _23 import unidecode
 from six import iteritems, PY2
@@ -31,13 +29,13 @@ class TorrentLeechProvider(generic.TorrentProvider):
     def __init__(self):
         generic.TorrentProvider.__init__(self, 'TorrentLeech')
 
-        self.url_base = 'https://v4.torrentleech.org/'
+        self.url_base = 'https://torrentleech.org/'
         self.urls = {'config_provider_home_uri': self.url_base,
                      'login': self.url_base,
-                     'browse': self.url_base + 'torrents/browse/index/categories/%(cats)s/%(x)s',
-                     'search': self.url_base + 'torrents/browse/index/query/%(query)s/categories/%(cats)s/%(x)s'}
+                     'browse': self.url_base + 'torrents/browse/list/categories/%(cats)s/%(x)s',
+                     'search': self.url_base + 'torrents/browse/list/categories/%(cats)s/%(x)s/query/%(query)s'}
 
-        self.categories = {'shows': [2, 26, 27, 32], 'anime': [7, 34, 35]}
+        self.categories = {'shows': [26, 27, 32, 35], 'anime': [34]}
 
         self.url = self.urls['config_provider_home_uri']
         self.digest, self.minseed, self.minleech, self.freeleech = 4 * [None]
@@ -81,13 +79,13 @@ class TorrentLeechProvider(generic.TorrentProvider):
         results = []
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
-        rc = dict((k, re.compile('(?i)' + v)) for (k, v) in iteritems(dict(get='download', id=r'download.*?/([\d]+)')))
+        rc = dict((k, re.compile('(?i)' + v)) for (k, v) in iteritems(dict(id=r'download.*?/([\d]+)')))
         lrs_found = False
         lrs_new = True
         for search_urls in urls:  # this intentionally iterates once to preserve indentation
             for search_url in search_urls:
 
-                html = self.get_url(search_url)
+                data_json = self.get_url(search_url, parse_json=True)
                 if self.should_skip():
                     return results
 
@@ -95,54 +93,48 @@ class TorrentLeechProvider(generic.TorrentProvider):
                 cnt_search = 0
                 log_settings_hint = False
                 try:
-                    if not html or self._has_no_results(html):
+                    if not isinstance(data_json, dict) or not data_json.get('torrentList'):
                         raise generic.HaltParseException
 
-                    with BS4Parser(html) as soup:
-                        tbl = soup.find(id='torrenttable')
-                        tbl_rows = [] if not tbl else tbl.find_all('tr')
+                    if 'Cache' == mode and 100 > len(data_json.get('torrentList')):
+                        log_settings_hint = True
 
-                        if 2 > len(tbl_rows):
-                            raise generic.HaltParseException
+                    try:
+                        # attempt to order the data
+                        order_by = '%sTimestamp' % (data_json.get('orderBy') or 'added')
+                        tbl_rows = sorted(data_json['torrentList'], key=lambda _i: datetime.strptime(
+                            _i.get(order_by) or '0001-01-01 00:00:00', '%Y-%m-%d %H:%M:%S'), reverse=True)
+                    except (BaseException, Exception):
+                        tbl_rows = []
 
-                        if 'Cache' == mode and 100 > len(tbl_rows):
-                            log_settings_hint = True
+                    for item in tbl_rows or data_json.get('torrentList'):
+                        try:
+                            dl = item.get('filename')
+                            dl_id = item.get('fid')
+                            lrs_found = dl_id == last_recent_search
+                            if tbl_rows and lrs_found:
+                                break  # can break when data is ordered
 
-                        head = None
-                        for tr in tbl_rows[1:]:
-                            cells = tr.find_all('td')
-                            if 6 > len(cells):
+                            seeders, leechers = [try_int(n) for n in [item.get(x) for x in ('seeders', 'leechers')]]
+                            if self._reject_item(seeders, leechers):
                                 continue
-                            cnt_search += 1
-                            try:
-                                head = head if None is not head else self._header_row(tr)
 
-                                dl = tr.find('a', href=rc['get'])['href']
-                                dl_id = rc['id'].findall(dl)[0]
-                                lrs_found = dl_id == last_recent_search
-                                if lrs_found:
-                                    break
+                            title = item.get('name').strip()
+                            size = item.get('size')
 
-                                seeders, leechers = [try_int(n) for n in [
-                                    tr.find('td', class_=x).get_text().strip() for x in ('seeders', 'leechers')]]
-                                if self._reject_item(seeders, leechers):
-                                    continue
-
-                                info = tr.find('td', class_='name').a
-                                title = (info.attrs.get('title') or info.get_text()).strip()
-                                size = cells[head['size']].get_text().strip()
+                            download_url = None
+                            if dl and dl_id:
                                 # noinspection PyUnresolvedReferences
-                                download_url = self._link(dl, url_quote=PY2 and isinstance(dl, unicode) or None)
-                            except (AttributeError, TypeError, ValueError):
-                                continue
+                                download_url = self._link('download/%s/%s' % (dl_id, dl),
+                                                          url_quote=PY2 and isinstance(dl, unicode) or None)
+                        except (BaseException, Exception):
+                            continue
 
-                            if title and download_url:
-                                items[mode].append((title, download_url, seeders, self._bytesizer(size)))
+                        if title and download_url:
+                            items[mode].append((title, download_url, seeders, self._bytesizer(size)))
 
                 except generic.HaltParseException:
                     pass
-                except (BaseException, Exception):
-                    logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
                 self._log_search(mode, len(items[mode]) - cnt, search_url, log_settings_hint)
 
                 if self.is_search_finished(mode, items, cnt_search, rc['id'], last_recent_search, lrs_new, lrs_found):
