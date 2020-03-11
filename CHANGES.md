@@ -17,6 +17,7 @@
 * Update Fuzzywuzzy 0.17.0 (0cfb2c8) to 0.18.0 (2188520)
 * Update html5lib 1.1-dev (4b22754) to 1.1-dev (05b73ef)
 * Update idna library 2.8 (032fc55) to 2.9 (1233a73)
+* Update functools_lru_cache 1.5 (21e85f5) to 1.6.1 (2dc65b5)
 * Update MsgPack 0.6.1 (05ff11d) to 1.0.0 (fa7d744)
 * Update profilehooks module 1.11.0 (e17f378) to 1.11.2 (d72cc2b)
 * Update PySocks 1.7.0 (91dcdf0) to 1.7.1 (c2fa43c)
