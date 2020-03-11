@@ -10,6 +10,7 @@
 * Update attr 19.2.0.dev0 (daf2bc8) to 20.1.0.dev0 (4bd6827)
 * Update Beautiful Soup 4.8.1 (r540) to 4.8.2 (r554)
 * Update Certifi 2019.06.16 (84dc766) to 2019.11.28 (21abb9b)
+* Update dateutil 2.8.1 (fc9b162) to 2.8.1 (110a09b)
 * Update DiskCache library 4.0.0 (2c79bb9) to 4.1.0 (b0451e0)
 * Update Fuzzywuzzy 0.17.0 (0cfb2c8) to 0.18.0 (2188520)
 * Update html5lib 1.1-dev (4b22754) to 1.1-dev (05b73ef)
