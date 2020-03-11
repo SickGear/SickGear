@@ -70,6 +70,31 @@ Sentinel to indicate the lack of a value when ``None`` is ambiguous.
 """
 
 
+class _CacheHashWrapper(int):
+    """
+    An integer subclass that pickles / copies as None
+
+    This is used for non-slots classes with ``cache_hash=True``, to avoid
+    serializing a potentially (even likely) invalid hash value. Since ``None``
+    is the default value for uncalculated hashes, whenever this is copied,
+    the copy's value for the hash should automatically reset.
+
+    See GH #613 for more details.
+    """
+
+    if PY2:
+        # For some reason `type(None)` isn't callable in Python 2, but we don't
+        # actually need a constructor for None objects, we just need any
+        # available function that returns None.
+        def __reduce__(self, _none_constructor=getattr, _args=(0, "", None)):
+            return _none_constructor, _args
+
+    else:
+
+        def __reduce__(self, _none_constructor=type(None), _args=()):
+            return _none_constructor, _args
+
+
 def attrib(
     default=NOTHING,
     validator=None,
@@ -109,8 +134,8 @@ def attrib(
 
     :type default: Any value
 
-    :param callable factory: Syntactic sugar for
-        ``default=attr.Factory(callable)``.
+    :param factory: Syntactic sugar for ``default=attr.Factory(callable)``.
+    :type factory: `callable`
 
     :param validator: `callable` that is called by ``attrs``-generated
         ``__init__`` methods after the instance has been initialized.  They
@@ -120,7 +145,7 @@ def attrib(
         The return value is *not* inspected so the validator has to throw an
         exception itself.
 
-        If a ``list`` is passed, its items are treated as validators and must
+        If a `list` is passed, its items are treated as validators and must
         all pass.
 
         Validators can be globally disabled and re-enabled using
@@ -128,7 +153,7 @@ def attrib(
 
         The validator can also be set using decorator notation as shown below.
 
-    :type validator: ``callable`` or a ``list`` of ``callable``\\ s.
+    :type validator: `callable` or a `list` of `callable`\\ s.
 
     :param repr: Include this attribute in the generated ``__repr__``
         method. If ``True``, include the attribute; if ``False``, omit it. By
@@ -137,7 +162,7 @@ def attrib(
         value and returns a string. Note that the resulting string is used
         as-is, i.e. it will be used directly *instead* of calling ``repr()``
         (the default).
-    :type repr: a ``bool`` or a ``callable`` to use a custom function.
+    :type repr: a `bool` or a `callable` to use a custom function.
     :param bool eq: If ``True`` (default), include this attribute in the
         generated ``__eq__`` and ``__ne__`` methods that check two instances
         for equality.
@@ -149,16 +174,17 @@ def attrib(
         method.  If ``None`` (default), mirror *eq*'s value.  This is the
         correct behavior according the Python spec.  Setting this value to
         anything else than ``None`` is *discouraged*.
-    :type hash: ``bool`` or ``None``
+    :type hash: `bool` or `None`
     :param bool init: Include this attribute in the generated ``__init__``
         method.  It is possible to set this to ``False`` and set a default
         value.  In that case this attributed is unconditionally initialized
         with the specified default value or factory.
-    :param callable converter: `callable` that is called by
+    :param converter: `callable` that is called by
         ``attrs``-generated ``__init__`` methods to convert attribute's value
         to the desired format.  It is given the passed-in value, and the
         returned value will be used as the new value of the attribute.  The
         value is converted before being passed to the validator, if any.
+    :type converter: `callable`
     :param metadata: An arbitrary mapping, to be used by third-party
         components.  See `extending_metadata`.
     :param type: The type of the attribute.  In Python 3.6 or greater, the
@@ -523,34 +549,6 @@ class _ClassBuilder(object):
         for name, value in self._cls_dict.items():
             setattr(cls, name, value)
 
-        # Attach __setstate__. This is necessary to clear the hash code
-        # cache on deserialization. See issue
-        # https://github.com/python-attrs/attrs/issues/482 .
-        # Note that this code only handles setstate for dict classes.
-        # For slotted classes, see similar code in _create_slots_class .
-        if self._cache_hash:
-            existing_set_state_method = getattr(cls, "__setstate__", None)
-            if existing_set_state_method:
-                raise NotImplementedError(
-                    "Currently you cannot use hash caching if "
-                    "you specify your own __setstate__ method."
-                    "See https://github.com/python-attrs/attrs/issues/494 ."
-                )
-
-            # Clears the cached hash state on serialization; for frozen
-            # classes we need to bypass the class's setattr method.
-            if self._frozen:
-
-                def cache_hash_set_state(chss_self, _):
-                    object.__setattr__(chss_self, _hash_cache_field, None)
-
-            else:
-
-                def cache_hash_set_state(chss_self, _):
-                    setattr(chss_self, _hash_cache_field, None)
-
-            cls.__setstate__ = cache_hash_set_state
-
         return cls
 
     def _create_slots_class(self):
@@ -612,11 +610,10 @@ class _ClassBuilder(object):
             __bound_setattr = _obj_setattr.__get__(self, Attribute)
             for name, value in zip(state_attr_names, state):
                 __bound_setattr(name, value)
-            # Clearing the hash code cache on deserialization is needed
-            # because hash codes can change from run to run. See issue
-            # https://github.com/python-attrs/attrs/issues/482 .
-            # Note that this code only handles setstate for slotted classes.
-            # For dict classes, see similar code in _patch_original_class .
+
+            # The hash code cache is not included when the object is
+            # serialized, but it still needs to be initialized to None to
+            # indicate that the first call to __hash__ should be a cache miss.
             if hash_caching_enabled:
                 __bound_setattr(_hash_cache_field, None)
 
@@ -703,10 +700,10 @@ class _ClassBuilder(object):
     def add_eq(self):
         cd = self._cls_dict
 
-        cd["__eq__"], cd["__ne__"] = (
-            self._add_method_dunders(meth)
-            for meth in _make_eq(self._cls, self._attrs)
+        cd["__eq__"] = self._add_method_dunders(
+            _make_eq(self._cls, self._attrs)
         )
+        cd["__ne__"] = self._add_method_dunders(_make_ne())
 
         return self
 
@@ -732,6 +729,13 @@ class _ClassBuilder(object):
         try:
             method.__qualname__ = ".".join(
                 (self._cls.__qualname__, method.__name__)
+            )
+        except AttributeError:
+            pass
+
+        try:
+            method.__doc__ = "Method generated by attrs for class {}.".format(
+                self._cls.__qualname__
             )
         except AttributeError:
             pass
@@ -853,7 +857,7 @@ def attrs(
         `object.__hash__`, and the `GitHub issue that led to the default \
         behavior <https://github.com/python-attrs/attrs/issues/136>`_ for more
         details.
-    :type hash: ``bool`` or ``None``
+    :type hash: `bool` or `None`
     :param bool init: Create a ``__init__`` method that initializes the
         ``attrs`` attributes.  Leading underscores are stripped for the
         argument name.  If a ``__attrs_post_init__`` method exists on the
@@ -1103,7 +1107,23 @@ def _make_hash(cls, attrs, frozen, cache_hash):
     unique_filename = _generate_unique_filename(cls, "hash")
     type_hash = hash(unique_filename)
 
-    method_lines = ["def __hash__(self):"]
+    hash_def = "def __hash__(self"
+    hash_func = "hash(("
+    closing_braces = "))"
+    if not cache_hash:
+        hash_def += "):"
+    else:
+        if not PY2:
+            hash_def += ", *"
+
+        hash_def += (
+            ", _cache_wrapper="
+            + "__import__('attr._make')._make._CacheHashWrapper):"
+        )
+        hash_func = "_cache_wrapper(" + hash_func
+        closing_braces += ")"
+
+    method_lines = [hash_def]
 
     def append_hash_computation_lines(prefix, indent):
         """
@@ -1111,14 +1131,18 @@ def _make_hash(cls, attrs, frozen, cache_hash):
         Below this will either be returned directly or used to compute
         a value which is then cached, depending on the value of cache_hash
         """
+
         method_lines.extend(
-            [indent + prefix + "hash((", indent + "        %d," % (type_hash,)]
+            [
+                indent + prefix + hash_func,
+                indent + "        %d," % (type_hash,),
+            ]
         )
 
         for a in attrs:
             method_lines.append(indent + "        self.%s," % a.name)
 
-        method_lines.append(indent + "    ))")
+        method_lines.append(indent + "    " + closing_braces)
 
     if cache_hash:
         method_lines.append(tab + "if self.%s is None:" % _hash_cache_field)
@@ -1161,19 +1185,29 @@ def _add_hash(cls, attrs):
     return cls
 
 
-def __ne__(self, other):
+def _make_ne():
     """
-    Check equality and either forward a NotImplemented or return the result
-    negated.
+    Create __ne__ method.
     """
-    result = self.__eq__(other)
-    if result is NotImplemented:
-        return NotImplemented
 
-    return not result
+    def __ne__(self, other):
+        """
+        Check equality and either forward a NotImplemented or
+        return the result negated.
+        """
+        result = self.__eq__(other)
+        if result is NotImplemented:
+            return NotImplemented
+
+        return not result
+
+    return __ne__
 
 
 def _make_eq(cls, attrs):
+    """
+    Create __eq__ method for *cls* with *attrs*.
+    """
     attrs = [a for a in attrs if a.eq]
 
     unique_filename = _generate_unique_filename(cls, "eq")
@@ -1209,10 +1243,13 @@ def _make_eq(cls, attrs):
         script.splitlines(True),
         unique_filename,
     )
-    return locs["__eq__"], __ne__
+    return locs["__eq__"]
 
 
 def _make_order(cls, attrs):
+    """
+    Create ordering methods for *cls* with *attrs*.
+    """
     attrs = [a for a in attrs if a.order]
 
     def attrs_to_tuple(obj):
@@ -1267,7 +1304,8 @@ def _add_eq(cls, attrs=None):
     if attrs is None:
         attrs = cls.__attrs_attrs__
 
-    cls.__eq__, cls.__ne__ = _make_eq(cls, attrs)
+    cls.__eq__ = _make_eq(cls, attrs)
+    cls.__ne__ = _make_ne()
 
     return cls
 
@@ -2003,12 +2041,15 @@ class _CountingAttr(object):
             self._validator = and_(*validator)
         else:
             self._validator = validator
+        if converter and isinstance(converter, (list, tuple)):
+            self.converter = chain(*converter)
+        else:
+            self.converter = converter
         self.repr = repr
         self.eq = eq
         self.order = order
         self.hash = hash
         self.init = init
-        self.converter = converter
         self.metadata = metadata
         self.type = type
         self.kw_only = kw_only
@@ -2139,7 +2180,7 @@ def make_class(name, attrs, bases=(object,), **attributes_arguments):
 
 
 # These are required by within this module so we define them here and merely
-# import into .validators.
+# import into .validators / .converters.
 
 
 @attrs(slots=True, hash=True)
@@ -2175,3 +2216,23 @@ def and_(*validators):
         )
 
     return _AndValidator(tuple(vals))
+
+
+def chain(*converters):
+    """
+    A converter that composes multiple converters into one.
+
+    When called on a value, it runs all wrapped converters.
+
+    :param converters: Arbitrary number of converters.
+    :type converters: callables
+
+    .. versionadded:: 20.1.0
+    """
+
+    def chain_converter(val):
+        for converter in converters:
+            val = converter(val)
+        return val
+
+    return chain_converter
