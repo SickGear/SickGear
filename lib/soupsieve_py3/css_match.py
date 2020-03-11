@@ -99,13 +99,6 @@ class _DocumentNav(object):
         return isinstance(obj, bs4.Tag)
 
     @staticmethod
-    def is_comment(obj):
-        """Is comment."""
-
-        import bs4
-        return isinstance(obj, bs4.Comment)
-
-    @staticmethod
     def is_declaration(obj):  # pragma: no cover
         """Is declaration."""
 
@@ -1428,30 +1421,6 @@ class CSSMatch(_DocumentNav, _Match):
     """The Beautiful Soup CSS match class."""
 
 
-class CommentsMatch(_DocumentNav):
-    """Comments matcher."""
-
-    def __init__(self, el):
-        """Initialize."""
-
-        self.assert_valid_input(el)
-        self.tag = el
-
-    def get_comments(self, limit=0):
-        """Get comments."""
-
-        if limit < 1:
-            limit = None
-
-        for child in self.get_descendants(self.tag, tags=False):
-            if self.is_comment(child):
-                yield child
-                if limit is not None:
-                    limit -= 1
-                    if limit < 1:
-                        break
-
-
 class SoupSieve(ct.Immutable):
     """Compiled Soup Sieve selector matching object."""
 
@@ -1494,19 +1463,6 @@ class SoupSieve(ct.Immutable):
             return CSSMatch(self.selectors, iterable, self.namespaces, self.flags).filter()
         else:
             return [node for node in iterable if not CSSMatch.is_navigable_string(node) and self.match(node)]
-
-    @util.deprecated("'comments' is not related to CSS selectors and will be removed in the future.")
-    def comments(self, tag, limit=0):
-        """Get comments only."""
-
-        return [comment for comment in CommentsMatch(tag).get_comments(limit)]
-
-    @util.deprecated("'icomments' is not related to CSS selectors and will be removed in the future.")
-    def icomments(self, tag, limit=0):
-        """Iterate comments only."""
-
-        for comment in CommentsMatch(tag).get_comments(limit):
-            yield comment
 
     def select_one(self, tag):
         """Select a single tag."""
