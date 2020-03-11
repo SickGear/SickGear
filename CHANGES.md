@@ -8,7 +8,7 @@
 * Change backport rarfile_py2; Fixes for multivolume RAR3 with encrypted headers
 * Update Apprise 0.8.0 (6aa52c3) to 0.8.4 (1ce7cbb)
 * Update attr 19.2.0.dev0 (daf2bc8) to 20.1.0.dev0 (4bd6827)
-* Update Beautiful Soup 4.8.1 (r540) to 4.8.2 (r554)
+* Update Beautiful Soup 4.8.1 (r540) to 4.8.2 (r556)
 * Update Certifi 2019.06.16 (84dc766) to 2019.11.28 (21abb9b)
 * Update dateutil 2.8.1 (fc9b162) to 2.8.1 (110a09b)
 * Update DiskCache library 4.0.0 (2c79bb9) to 4.1.0 (b0451e0)
@@ -38,6 +38,7 @@
 * Change remove deprecated `buildNameCache`
 * Update Apprise 0.8.0 (6aa52c3) to 0.8.3 (4aee9de)
 * Update attr 19.2.0.dev0 (daf2bc8) to 20.1.0.dev0 (9b5e988)
+* Update Beautiful Soup 4.8.1 (r540) to 4.8.2 (r554)
 * Update Requests library 2.22.0 (3d968ff) to 2.22.0 (d2f65af)
 * Update Tornado_py3 Web Server 6.0.3 (ff985fe) to 6.1.dev1 (18b653c)
 * Update urllib3 release 1.25.6 (4a6c288) to 1.25.7 (37ba61a)
