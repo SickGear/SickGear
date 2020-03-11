@@ -4,7 +4,7 @@ import json
 import os
 
 from tarfile import TarFile
-from pkgutil import get_data
+# from pkgutil import get_data
 from io import BytesIO
 
 from dateutil.tz import tzfile as _tzfile
@@ -27,7 +27,11 @@ class tzfile(_tzfile):
 def getzoneinfofile_stream():
     try:
         # return BytesIO(get_data(__name__, ZONEFILENAME))
-        with open(ek.ek(os.path.join, sickbeard.ZONEINFO_DIR, ZONEFILENAME), 'rb') as f:
+        zonefile = ek.ek(os.path.join, sickbeard.ZONEINFO_DIR, ZONEFILENAME)
+        if not ek.ek(os.path.isfile, zonefile):
+            warnings.warn('Falling back to included zoneinfo file')
+            zonefile = ek.ek(os.path.join, ek.ek(os.path.dirname, __file__), ZONEFILENAME)
+        with open(zonefile, 'rb') as f:
             return BytesIO(f.read())
     except IOError as e:  # TODO  switch to FileNotFoundError?
         warnings.warn("I/O error({0}): {1}".format(e.errno, e.strerror))

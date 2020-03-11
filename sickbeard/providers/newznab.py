@@ -32,7 +32,7 @@ from ..classes import SearchResult
 from ..common import NeededQualities, Quality
 from ..helpers import remove_non_release_groups, try_int
 from ..indexers.indexer_config import *
-from ..network_timezones import sb_timezone
+from ..network_timezones import SG_TIMEZONE
 from ..sgdatetime import SGDatetime
 from ..search import get_aired_in_season, get_wanted_qualities
 from ..show_name_helpers import get_show_names
@@ -781,7 +781,7 @@ class NewznabProvider(generic.NZBProvider):
             if p:
                 p = parser.parse(p, fuzzy=True)
                 try:
-                    p = p.astimezone(sb_timezone)
+                    p = p.astimezone(SG_TIMEZONE)
                 except (BaseException, Exception):
                     pass
                 if isinstance(p, datetime.datetime):
