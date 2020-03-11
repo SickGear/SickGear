@@ -13,6 +13,7 @@
 * Update DiskCache library 4.0.0 (2c79bb9) to 4.1.0 (b0451e0)
 * Update idna library 2.8 (032fc55) to 2.9 (1233a73)
 * Update MsgPack 0.6.1 (05ff11d) to 1.0.0 (fa7d744)
+* Update profilehooks module 1.11.0 (e17f378) to 1.11.2 (d72cc2b)
 * Update PySocks 1.7.0 (91dcdf0) to 1.7.1 (c2fa43c)
 * Update Requests library 2.22.0 (3d968ff) to 2.23.0 (b7c6aba)
 * Update Six compatibility library 1.13.0 (ec58185) to 1.14.0 (3a3db75)
