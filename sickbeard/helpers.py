@@ -1669,8 +1669,8 @@ def datetime_to_epoch(dt):
     """
     """ can raise an error with dates pre 1970-1-1 """
     if not isinstance(getattr(dt, 'tzinfo'), datetime.tzinfo):
-        from sickbeard.network_timezones import sb_timezone
-        dt = dt.replace(tzinfo=sb_timezone)
+        from sickbeard.network_timezones import SG_TIMEZONE
+        dt = dt.replace(tzinfo=SG_TIMEZONE)
     utc_naive = dt.replace(tzinfo=None) - dt.utcoffset()
     return int((utc_naive - datetime.datetime(1970, 1, 1)).total_seconds())
 

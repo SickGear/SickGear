@@ -2451,7 +2451,7 @@ class TVEpisode(TVEpisodeBase):
                                                       self.show_obj.airs,
                                                       self.show_obj.network)
         show_length = datetime.timedelta(minutes=helpers.try_int(self.show_obj.runtime, 60))
-        tz_now = datetime.datetime.now(network_timezones.sb_timezone)
+        tz_now = datetime.datetime.now(network_timezones.SG_TIMEZONE)
         future_airtime = (self.airdate > (today + delta) or
                           (not self.airdate < (today - delta) and ((show_time + show_length) > tz_now)))
 
@@ -3313,7 +3313,8 @@ class TVEpisode(TVEpisodeBase):
 
         aired_dt = datetime.datetime.combine(self.airdate, airtime)
         try:
-            aired_epoch = helpers.datetime_to_epoch(aired_dt)
+            # aired_epoch = helpers.datetime_to_epoch(aired_dt)
+            aired_epoch = SGDatetime.to_file_timestamp(aired_dt)
             filemtime = int(ek.ek(os.path.getmtime, self.location))
         except (BaseException, Exception):
             return

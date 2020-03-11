@@ -1087,8 +1087,8 @@ class MainHandler(WebHandler):
 
         sql_result.sort(key=sorts[sickbeard.EPISODE_VIEW_SORT])
 
-        t.next_week = datetime.datetime.combine(next_week_dt, datetime.time(tzinfo=network_timezones.sb_timezone))
-        t.today = datetime.datetime.now(network_timezones.sb_timezone)
+        t.next_week = datetime.datetime.combine(next_week_dt, datetime.time(tzinfo=network_timezones.SG_TIMEZONE))
+        t.today = datetime.datetime.now(network_timezones.SG_TIMEZONE)
         t.sql_results = sql_result
 
         return t.respond()

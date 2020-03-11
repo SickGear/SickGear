@@ -9,6 +9,7 @@ Attempting to import this module on a non-Windows platform will raise an
 # This code was originally contributed by Jeffrey Harris.
 import datetime
 import struct
+import sys
 
 from six.moves import winreg
 from six import text_type
@@ -278,7 +279,8 @@ class tzwinlocal(tzwinbase):
             with winreg.OpenKey(handle, TZLOCALKEYNAME) as tzlocalkey:
                 keydict = valuestodict(tzlocalkey)
 
-            self._std_abbr = keydict["StandardName"]
+            # only windows 7+ has the "TimeZoneKeyName" reg key
+            self._std_abbr = keydict["TimeZoneKeyName" if (6, 1) <= sys.getwindowsversion()[:2] else "StandardName"]
             self._dst_abbr = keydict["DaylightName"]
 
             try:

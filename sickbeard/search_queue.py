@@ -360,7 +360,7 @@ class RecentSearchQueueItem(generic_queue.QueueItem):
         else:
             cur_date = (datetime.date.today() - datetime.timedelta(days=2)).toordinal()
 
-        cur_time = datetime.datetime.now(network_timezones.sb_timezone)
+        cur_time = datetime.datetime.now(network_timezones.SG_TIMEZONE)
 
         my_db = db.DBConnection()
         sql_result = my_db.select(

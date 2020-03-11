@@ -18,7 +18,7 @@ sys.path.insert(1, os.path.abspath('../lib'))
 from lxml_etree import etree
 from lib.dateutil import parser
 from sickbeard.indexers.indexer_config import *
-from sickbeard.network_timezones import sb_timezone
+from sickbeard.network_timezones import SG_TIMEZONE
 from sickbeard.providers import newznab
 from six import iteritems, iterkeys
 
@@ -298,7 +298,7 @@ class BasicTests(test.SickbeardTestDBCase):
             if date_str:
                 p = parser.parse(date_str, fuzzy=True)
                 try:
-                    p = p.astimezone(sb_timezone)
+                    p = p.astimezone(SG_TIMEZONE)
                 except (BaseException, Exception):
                     pass
                 if isinstance(p, datetime.datetime):

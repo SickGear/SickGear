@@ -20,12 +20,12 @@ import datetime
 import functools
 import locale
 import re
-import time
+import sys
 
 import sickbeard
-from .network_timezones import sb_timezone
+from dateutil import tz
 
-from six import string_types
+from six import integer_types, string_types
 
 # noinspection PyUnreachableCode
 if False:
@@ -96,6 +96,8 @@ time_presets = ('%I:%M:%S %p',
                 '%I:%M:%S %P',
                 '%H:%M:%S')
 
+is_win = 'win32' == sys.platform
+
 
 # helper decorator class
 # noinspection PyPep8Naming
@@ -122,10 +124,11 @@ class SGDatetime(datetime.datetime):
     @static_or_instance
     def convert_to_setting(self, dt=None, force_local=False):
         # type: (Optional[datetime.datetime, SGDatetime], bool) -> Union[SGDatetime, datetime.datetime]
-        obj = (dt, self)[self is not None]
+        obj = (dt, self)[self is not None]  # type: datetime.datetime
         try:
             if force_local or 'local' == sickbeard.TIMEZONE_DISPLAY:
-                return obj.astimezone(sb_timezone)
+                from sickbeard.network_timezones import SG_TIMEZONE
+                return obj.astimezone(SG_TIMEZONE)
         except (BaseException, Exception):
             pass
 
@@ -150,7 +153,7 @@ class SGDatetime(datetime.datetime):
 
         strt = ''
 
-        obj = (dt, self)[self is not None]
+        obj = (dt, self)[self is not None]  # type: datetime.datetime
         if None is not obj:
             tmpl = (((sickbeard.TIME_PRESET, sickbeard.TIME_PRESET_W_SECONDS)[show_seconds]),
                     t_preset)[None is not t_preset]
@@ -192,7 +195,7 @@ class SGDatetime(datetime.datetime):
 
         strd = ''
         try:
-            obj = (dt, self)[self is not None]
+            obj = (dt, self)[self is not None]  # type: datetime.datetime
             if None is not obj:
                 strd = SGDatetime.sbstrftime(obj, (sickbeard.DATE_PRESET, d_preset)[None is not d_preset])
 
@@ -207,7 +210,7 @@ class SGDatetime(datetime.datetime):
         SGDatetime.setlocale()
 
         strd = ''
-        obj = (dt, self)[self is not None]
+        obj = (dt, self)[self is not None]  # type: datetime.datetime
         try:
             if None is not obj:
                 strd = u'%s, %s' % (
@@ -229,10 +232,43 @@ class SGDatetime(datetime.datetime):
 
     @static_or_instance
     def totimestamp(self, dt=None, default=None):
-        # type: (Optional[SGDatetime, datetime.datetime], Optional[float]) -> float
-        obj = (dt, self)[self is not None]
+        # type: (Optional[Union[SGDatetime, datetime.datetime]], Optional[float]) -> Union[float, integer_types]
+        """ Calculate timestamp from datetime.datetime obj
+        """
+        obj = (dt, self)[self is not None]  # type: datetime.datetime
+        if not isinstance(getattr(obj, 'tzinfo', None), datetime.tzinfo):
+            from sickbeard.network_timezones import SG_TIMEZONE
+            obj = obj.replace(tzinfo=SG_TIMEZONE)
+        from .network_timezones import EPOCH_START
         timestamp = default
         try:
-            timestamp = time.mktime(obj.timetuple())
+            timestamp = (obj - EPOCH_START).total_seconds()
         finally:
-            return (default, timestamp)[isinstance(timestamp, float)]
+            return (default, timestamp)[isinstance(timestamp, (float, integer_types))]
+
+    @staticmethod
+    def from_timestamp(ts, local_time=True):
+        # type: (Union[integer_types, float], bool) -> datetime.datetime
+        """
+        convert timestamp to datetime.datetime obj
+        :param ts: timestamp integer, float
+        :param local_time: return as local timezone (SG_TIMEZONE)
+        """
+        from .network_timezones import EPOCH_START, SG_TIMEZONE
+        if local_time and SG_TIMEZONE:
+            return (EPOCH_START + datetime.timedelta(seconds=ts)).astimezone(SG_TIMEZONE)
+        return EPOCH_START + datetime.timedelta(seconds=ts)
+
+    @static_or_instance
+    def to_file_timestamp(self, dt=None):
+        # type: (Optional[SGDatetime, datetime.datetime]) -> Union[float, integer_types]
+        """
+        convert datetime to filetime
+        special handling for windows filetime issues
+        for pre Windows 7 this can result in an exception for pre 1970 dates
+        """
+        obj = (dt, self)[self is not None]  # type: datetime.datetime
+        if is_win:
+            from .network_timezones import EPOCH_START_WIN
+            return (obj.replace(tzinfo=tz.tzwinlocal()) - EPOCH_START_WIN).total_seconds()
+        return self.totimestamp(obj)

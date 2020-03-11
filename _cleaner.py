@@ -46,8 +46,8 @@ if old_magic != magic_number:
 
 # skip cleaned005 as used during dev by testers
 cleanups = [
-    ['.cleaned006.tmp', ('lib', 'bs4', 'builder'), [
-        ('lib', 'boto'), ('lib', 'bs4', 'builder'), ('lib', 'growl'),
+    ['.cleaned006.tmp', ('lib', 'boto'), [
+        ('lib', 'boto'), ('lib', 'growl'),
         ('lib', 'hachoir', 'core'), ('lib', 'hachoir', 'field'), ('lib', 'hachoir', 'metadata'),
         ('lib', 'hachoir', 'parser', 'archive'), ('lib', 'hachoir', 'parser', 'audio'),
         ('lib', 'hachoir', 'parser', 'common'), ('lib', 'hachoir', 'parser', 'container'),
@@ -84,8 +84,8 @@ for cleaned_path, test_path, dir_list in cleanups:
                 except (BaseException, Exception):
                     pass
 
-        with open(cleaned_file, 'wb') as fp:
-            fp.write('This file exists to prevent a rerun delete of *.pyc, *.pyo files')
+        with io.open(cleaned_file, 'w+', encoding='utf-8') as fp:
+            fp.write(u'This file exists to prevent a rerun delete of *.pyc, *.pyo files')
             fp.flush()
             os.fsync(fp.fileno())
 
@@ -126,12 +126,12 @@ if not os.path.isfile(cleaned_file) or os.path.exists(test):
         swap_name = cleaned_file
         cleaned_file = danger_output
         danger_output = swap_name
-        msg = 'Failed (permissions?) to delete file(s). You must manually delete:\r\n%s' % '\r\n'.join(bad_files)
+        msg = u'Failed (permissions?) to delete file(s). You must manually delete:\r\n%s' % '\r\n'.join(bad_files)
         print(msg)
     else:
-        msg = 'This file exists to prevent a rerun delete of dead lib/html5lib files'
+        msg = u'This file exists to prevent a rerun delete of dead lib/html5lib files'
 
-    with open(cleaned_file, 'wb') as fp:
+    with io.open(cleaned_file, 'w+', encoding='utf-8') as fp:
         fp.write(msg)
         fp.flush()
         os.fsync(fp.fileno())
