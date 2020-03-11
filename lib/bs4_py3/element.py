@@ -239,7 +239,7 @@ class PageElement(object):
             raise ValueError("Cannot replace a Tag with its parent.")
         old_parent = self.parent
         my_index = self.parent.index(self)
-        self.extract()
+        self.extract(_self_index=my_index)
         old_parent.insert(my_index, replace_with)
         return self
     replaceWith = replace_with  # BS3
@@ -255,7 +255,7 @@ class PageElement(object):
                 "Cannot replace an element with its contents when that"
                 "element is not part of a tree.")
         my_index = self.parent.index(self)
-        self.extract()
+        self.extract(_self_index=my_index)
         for child in reversed(self.contents[:]):
             my_parent.insert(my_index, child)
         return self
@@ -273,13 +273,19 @@ class PageElement(object):
         wrap_inside.append(me)
         return wrap_inside
 
-    def extract(self):
+    def extract(self, _self_index=None):
         """Destructively rips this element out of the tree.
+
+        :param _self_index: The location of this element in its parent's
+           .contents, if known. Passing this in allows for a performance
+           optimization.
 
         :return: `self`, no longer part of the tree.
         """
         if self.parent is not None:
-            del self.parent.contents[self.parent.index(self)]
+            if _self_index is None:
+                _self_index = self.parent.index(self)
+            del self.parent.contents[_self_index]
 
         #Find the two elements that would be next to each other if
         #this element (and any children) hadn't been parsed. Connect
