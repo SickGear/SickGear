@@ -44,7 +44,7 @@ class NetworkTimezoneTests(test.SickbeardTestDBCase):
 
     def test_timezone(self):
         network_timezones.update_network_dict()
-        network_timezones.sb_timezone = tz.gettz('CET', zoneinfo_priority=True)
+        network_timezones.SG_TIMEZONE = tz.gettz('CET', zoneinfo_priority=True)
         d = datetime.date(2018, 9, 2).toordinal()
         t = 'Monday 9:00 PM'
         network = 'NBC'

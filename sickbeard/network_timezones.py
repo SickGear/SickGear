@@ -21,6 +21,7 @@ from os.path import basename, join, isfile
 import datetime
 import os
 import re
+import sys
 
 import sickbeard
 from . import db, helpers, logger
@@ -45,9 +46,10 @@ pm_regex = re.compile(r'(P[. ]? ?M)', flags=re.I)
 
 network_dict = None
 network_dupes = None
-last_failure = {'datetime': datetime.datetime.fromordinal(1), 'count': 0}
+last_failure = {'datetime': datetime.datetime.fromordinal(1), 'count': 0}  # type: dict
 max_retry_time = 900
 max_retry_count = 3
+is_win = 'win32' == sys.platform
 
 country_timezones = {
     'AU': 'Australia/Sydney', 'AR': 'America/Buenos_Aires', 'AUSTRALIA': 'Australia/Sydney', 'BR': 'America/Sao_Paulo',
@@ -58,18 +60,25 @@ country_timezones = {
     'PT': 'Europe/Lisbon', 'RU': 'Europe/Kaliningrad', 'SE': 'Europe/Stockholm', 'SG': 'Asia/Singapore',
     'TW': 'Asia/Taipei', 'UK': 'Europe/London', 'US': 'US/Eastern', 'ZA': 'Africa/Johannesburg'}
 
+EPOCH_START = None  # type: Optional[datetime.datetime]
+EPOCH_START_WIN = None  # type: Optional[datetime.datetime]
+SG_TIMEZONE = None  # type: Optional[datetime.tzinfo]
+
 
 def reset_last_retry():
+    # type: (...) -> None
     global last_failure
     last_failure = {'datetime': datetime.datetime.fromordinal(1), 'count': 0}
 
 
 def update_last_retry():
+    # type: (...) -> None
     global last_failure
     last_failure = {'datetime': datetime.datetime.now(), 'count': last_failure.get('count', 0) + 1}
 
 
 def should_try_loading():
+    # type: (...) -> bool
     global last_failure
     if last_failure.get('count', 0) >= max_retry_count and \
             (datetime.datetime.now() - last_failure.get('datetime',
@@ -79,10 +88,16 @@ def should_try_loading():
 
 
 def tz_fallback(t):
-    return t if isinstance(t, datetime.tzinfo) else tz.tzlocal()
+    # type: (...) -> datetime.tzinfo
+    if isinstance(t, datetime.tzinfo):
+        return t
+    if is_win:
+        return tz.tzwinlocal()
+    return tz.tzlocal()
 
 
 def get_tz():
+    # type: (...) -> datetime.tzinfo
     t = None
     try:
         t = get_localzone()
@@ -99,7 +114,36 @@ def get_tz():
     return t
 
 
-sb_timezone = get_tz()
+def get_utc():
+    # type: (...) -> Optional[datetime.tzinfo]
+    if hasattr(sickbeard, 'ZONEINFO_DIR'):
+        utc = None
+        try:
+            utc = tz.gettz('GMT', zoneinfo_priority=True)
+        except (BaseException, Exception):
+            pass
+        if isinstance(utc, datetime.tzinfo):
+            return utc
+    tz_utc_file = ek.ek(os.path.join, ek.ek(os.path.dirname, zoneinfo.__file__), 'Greenwich')
+    if ek.ek(os.path.isfile, tz_utc_file):
+        return tz.tzfile(tz_utc_file)
+    return None
+
+
+def set_vars():
+    # type: (...) -> None
+    global EPOCH_START, EPOCH_START_WIN, SG_TIMEZONE
+    SG_TIMEZONE = get_tz()
+    params = dict(year=1970, month=1, day=1)
+    EPOCH_START_WIN = EPOCH_START = datetime.datetime(tzinfo=get_utc(), **params)
+    if is_win:
+        try:
+            EPOCH_START_WIN = datetime.datetime(tzinfo=tz.win.tzwin('UTC'), **params)
+        except (BaseException, Exception):
+            pass
+
+
+set_vars()
 
 
 def _remove_zoneinfo_failed(filename):
@@ -127,7 +171,7 @@ def _remove_old_zoneinfo():
 
     for entry in chain.from_iterable(
             [ek.ek(scandir, helpers.real_path(_dir))
-             for _dir in (sickbeard.ZONEINFO_DIR, ek.ek(os.path.dirname, zoneinfo.__file__))]):
+             for _dir in (sickbeard.ZONEINFO_DIR, )]):
         if entry.is_file(follow_symlinks=False):
             if entry.name.endswith('.tar.gz'):
                 if entry.path != cur_file:
@@ -146,8 +190,7 @@ def _update_zoneinfo():
     if not should_try_loading():
         return
 
-    global sb_timezone
-    sb_timezone = get_tz()
+    set_vars()
 
     # now check if the zoneinfo needs update
     url_zv = 'https://raw.githubusercontent.com/Prinz23/sb_network_timezones/master/zoneinfo.txt'
@@ -221,7 +264,7 @@ def _update_zoneinfo():
             except AttributeError:
                 pass
 
-            sb_timezone = get_tz()
+            set_vars()
         except (BaseException, Exception):
             _remove_zoneinfo_failed(zonefile_tmp)
             return
@@ -345,7 +388,7 @@ def get_network_timezone(network, return_name=False):
     :return: timezone info or tuple of timezone info, timezone name
     """
     if None is network:
-        return sb_timezone
+        return SG_TIMEZONE
 
     timezone = None
     timezone_name = None
@@ -370,9 +413,11 @@ def get_network_timezone(network, return_name=False):
     except (BaseException, Exception):
         pass
 
+    if isinstance(timezone, datetime.tzinfo):
+        return timezone
     if return_name:
-        return timezone if isinstance(timezone, datetime.tzinfo) else sb_timezone, timezone_name
-    return timezone if isinstance(timezone, datetime.tzinfo) else sb_timezone
+        return SG_TIMEZONE, timezone_name
+    return SG_TIMEZONE
 
 
 def parse_time(t):
@@ -438,7 +483,7 @@ def parse_date_time(d, t, network):
         foreign_naive = datetime.datetime(te.year, te.month, te.day, hr, m, tzinfo=foreign_timezone)
         return foreign_naive
     except (BaseException, Exception):
-        return datetime.datetime(te.year, te.month, te.day, hr, m, tzinfo=sb_timezone)
+        return datetime.datetime(te.year, te.month, te.day, hr, m, tzinfo=SG_TIMEZONE)
 
 
 def test_timeformat(t):
