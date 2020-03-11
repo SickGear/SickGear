@@ -15,7 +15,7 @@
 * Update Requests library 2.22.0 (3d968ff) to 2.23.0 (b7c6aba)
 * Update Six compatibility library 1.13.0 (ec58185) to 1.14.0 (3a3db75)
 * Update Tornado_py3 Web Server 6.0.3 (ff985fe) to 6.0.4 (b4e39e5)
-* Update urllib3 release 1.25.6 (4a6c288) to 1.25.7 (37ba61a)
+* Update urllib3 release 1.25.6 (4a6c288) to 1.25.8 (2a57bc5)
 * Add Telegram notifier
 * Change enable image caching on browse pages
 * Change update sceneNameCache after scene names are updated
@@ -30,6 +30,7 @@
 * Change remove deprecated `buildNameCache`
 * Update Requests library 2.22.0 (3d968ff) to 2.22.0 (d2f65af)
 * Update Tornado_py3 Web Server 6.0.3 (ff985fe) to 6.1.dev1 (18b653c)
+* Update urllib3 release 1.25.6 (4a6c288) to 1.25.7 (37ba61a)
 
 
 ### 0.21.20 (2019-03-11 18:35:00 UTC)
