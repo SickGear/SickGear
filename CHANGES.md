@@ -47,6 +47,11 @@
 * Update urllib3 release 1.25.6 (4a6c288) to 1.25.7 (37ba61a)
 
 
+### 0.21.21 (2019-03-11 21:15:00 UTC)
+
+* Fix get_network_timezone
+
+
 ### 0.21.20 (2019-03-11 18:35:00 UTC)
 
 * Fix timezone handling on Windows to correct timestamps related to file system and db episode management

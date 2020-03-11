@@ -413,11 +413,11 @@ def get_network_timezone(network, return_name=False):
     except (BaseException, Exception):
         pass
 
-    if isinstance(timezone, datetime.tzinfo):
-        return timezone
+    if not isinstance(timezone, datetime.tzinfo):
+        timezone = SG_TIMEZONE
     if return_name:
-        return SG_TIMEZONE, timezone_name
-    return SG_TIMEZONE
+        return timezone, timezone_name
+    return timezone
 
 
 def parse_time(t):
