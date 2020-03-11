@@ -22,6 +22,8 @@
 * Update PySocks 1.7.0 (91dcdf0) to 1.7.1 (c2fa43c)
 * Update Requests library 2.22.0 (3d968ff) to 2.23.0 (b7c6aba)
 * Update Six compatibility library 1.13.0 (ec58185) to 1.14.0 (3a3db75)
+* Update soupsieve_py3 2.0.0.dev (69194a2) to 2.0.0.final (8832584)
+* Update soupsieve_py2 1.9.5 (6a38398) to 1.9.5 final (e00a882)
 * Update Tornado_py3 Web Server 6.0.3 (ff985fe) to 6.0.4 (b4e39e5)
 * Update urllib3 release 1.25.6 (4a6c288) to 1.25.8 (2a57bc5)
 * Add Telegram notifier
