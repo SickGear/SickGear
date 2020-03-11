@@ -11,6 +11,7 @@
 * Update Beautiful Soup 4.8.1 (r540) to 4.8.2 (r554)
 * Update Certifi 2019.06.16 (84dc766) to 2019.11.28 (21abb9b)
 * Update DiskCache library 4.0.0 (2c79bb9) to 4.1.0 (b0451e0)
+* Update idna library 2.8 (032fc55) to 2.9 (1233a73)
 * Update PySocks 1.7.0 (91dcdf0) to 1.7.1 (c2fa43c)
 * Update Requests library 2.22.0 (3d968ff) to 2.23.0 (b7c6aba)
 * Update Six compatibility library 1.13.0 (ec58185) to 1.14.0 (3a3db75)
