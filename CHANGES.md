@@ -12,6 +12,8 @@
 * Update Certifi 2019.06.16 (84dc766) to 2019.11.28 (21abb9b)
 * Update dateutil 2.8.1 (fc9b162) to 2.8.1 (110a09b)
 * Update DiskCache library 4.0.0 (2c79bb9) to 4.1.0 (b0451e0)
+* Update feedparser 6.0.0b1 (d12d3bd) to feedparser_py2 6.0.0b3 (7e255f0)
+* Add feedparser_py3 6.0.0b3 (7e255f0)
 * Update Fuzzywuzzy 0.17.0 (0cfb2c8) to 0.18.0 (2188520)
 * Update html5lib 1.1-dev (4b22754) to 1.1-dev (05b73ef)
 * Update idna library 2.8 (032fc55) to 2.9 (1233a73)
