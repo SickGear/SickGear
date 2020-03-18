@@ -15,15 +15,16 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
+import datetime
 from collections import deque
 from itertools import islice
 from sys import version_info
 
 from six import binary_type, moves
-
 # noinspection PyUnresolvedReferences
 from six.moves.urllib.parse import quote, quote_plus, unquote as six_unquote, unquote_plus as six_unquote_plus, \
     urlencode, urlsplit, urlunparse, urlunsplit
+
 # noinspection PyUnreachableCode
 if False:
     # ----------------------
@@ -31,8 +32,6 @@ if False:
     # ----------------------
     # noinspection PyUnresolvedReferences
     from typing import Any, AnyStr, Callable, Dict, Iterable, Iterator, List, Optional, Tuple, Union
-    import datetime
-    from six import integer_types
     # -------------------
     # resolve pyc imports
     # -------------------
@@ -140,7 +139,6 @@ if 2 != version_info[0]:
     # ---------
     # Python 3+
     # ---------
-    import datetime
     # noinspection PyUnresolvedReferences,PyProtectedMember
     from base64 import decodebytes, encodebytes
     b64decodebytes = decodebytes
@@ -158,7 +156,6 @@ if 2 != version_info[0]:
     from subprocess import Popen
 
     native_timestamp = datetime.datetime.timestamp  # type: Callable[[datetime.datetime], float]
-
 
     def unquote(string, encoding='utf-8', errors='replace'):
         return decode_str(six_unquote(decode_str(string, encoding, errors), encoding=encoding, errors=errors),

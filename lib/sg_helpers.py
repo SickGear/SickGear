@@ -5,6 +5,7 @@
 import codecs
 import datetime
 import getpass
+import hashlib
 import io
 import logging
 import os
@@ -17,8 +18,8 @@ import traceback
 # noinspection PyPep8Naming
 import encodingKludge as ek
 from exceptions_helper import ex, ConnectionSkipException
-from _23 import filter_list, html_unescape, native_timestamp, urlparse, urlsplit, urlunparse
-from six import integer_types, iteritems, iterkeys, itervalues, string_types, text_type
+from _23 import decode_bytes, filter_list, html_unescape, urlparse, urlsplit, urlunparse
+from six import integer_types, iteritems, iterkeys, itervalues, PY2, string_types, text_type
 from lib.cachecontrol import CacheControl, caches
 from cfscrape import CloudflareScraper
 import requests
@@ -142,16 +143,17 @@ class ConnectionFailDict(object):
         if None is not host:
             with self.lock:
                 if host in self.domain_list:
-                    cur_domain = self.domain_list[host]
+                    domain = self.domain_list[host]
                     fail_type = ('fail_type' in kwargs and kwargs['fail_type'].fail_type) or \
                                 (isinstance(args, tuple) and isinstance(args[0], ConnectionFail) and args[0].fail_type)
-                    if not isinstance(cur_domain.failure_time, datetime.datetime) or \
-                            fail_type != cur_domain._last_fail_type or \
-                            cur_domain.fail_newest_delta() > datetime.timedelta(seconds=3):
-                        cur_domain.failure_count += 1
-                        cur_domain.failure_time = datetime.datetime.now()
-                        cur_domain._last_fail_type = fail_type
-                        cur_domain.add_fail(*args, **kwargs)
+                    # noinspection PyProtectedMember
+                    if not isinstance(domain.failure_time, datetime.datetime) or \
+                            fail_type != domain._last_fail_type or \
+                            domain.fail_newest_delta() > datetime.timedelta(seconds=3):
+                        domain.failure_count += 1
+                        domain.failure_time = datetime.datetime.now()
+                        domain._last_fail_type = fail_type
+                        domain.add_fail(*args, **kwargs)
                     else:
                         logger.debug('%s: Not logging same failure within 3 seconds' % url)
 
@@ -541,17 +543,18 @@ class ConnectionFailList(object):
                     pass
 
 
-def _totimestamp(dt=None, default=None):
-    # type: (datetime.datetime, Optional[float, integer_types]) -> Union[integer_types, float]
+def _totimestamp(dt=None):
+    # type: (Optional[datetime.datetime]) -> integer_types
     """ This function should only be used in this module due to its 1970s+ limitation as that's all we need here and
     sgdatatime can't be used at this module level
     """
-    timestamp = default
     try:
-        # py3 native uses milliseconds
-        timestamp = int(native_timestamp(dt))
-    finally:
-        return (default, timestamp)[isinstance(timestamp, (integer_types, float))]
+        if PY2:
+            import time
+            return int(time.mktime(dt.timetuple()))
+        return int(datetime.datetime.timestamp(dt))
+    except (BaseException, Exception):
+        return 0
 
 
 def _log_failure_url(url, post_data=None, post_json=None):
@@ -698,8 +701,8 @@ def get_url(url,  # type: AnyStr
     Returned data is either:
     1) a byte-string retrieved from the URL provider.
     2) a boolean if successfully used kwargs 'savefile' set to file pathname.
-    3) `Requests::response`, with `Requests::session` if success after setting kwargs 'resp_sess' True.
-    4) JSON dict if parse_json is True.
+    3) JSON dict if parse_json is True, and `Requests::session` when kwargs 'resp_sess' True.
+    4) `Requests::response`, and `Requests::session` when kwargs 'resp_sess' is True.
 
     :param url: address to request fetch data from
     :param post_data: post data
@@ -779,7 +782,7 @@ def get_url(url,  # type: AnyStr
     # don't trust os environments (auth, proxies, ...)
     session.trust_env = False
 
-    result = None
+    result = response = raised = connection_fail_params = log_failure_url = None
     try:
         # sanitise url
         parsed = list(urlparse(url))
@@ -847,86 +850,74 @@ def get_url(url,  # type: AnyStr
                                      % (response.status_code, http_err_text, url))
 
     except requests.exceptions.HTTPError as e:
+        raised = e
         is_client_error = 400 <= e.response.status_code < 500
         if failure_handling and e.response.status_code not in exclude_http_codes and \
                 not (exclude_client_http_codes and is_client_error):
-            DOMAIN_FAILURES.inc_failure_count(
-                url, ConnectionFail(fail_type=ConnectionFailTypes.http, code=e.response.status_code))
-            save_failure(url, domain, False, post_data, post_json)
-        if raise_status_code:
-            raise e
-        logger.warning(u'HTTP error %s while loading URL%s' % (
-            e.errno, _maybe_request_url(e)))
-        return
+            connection_fail_params = dict(fail_type=ConnectionFailTypes.http, code=e.response.status_code)
+        if not raise_status_code:
+            logger.warning(u'HTTP error %s while loading URL%s' % (e.errno, _maybe_request_url(e)))
     except requests.exceptions.ConnectionError as e:
+        raised = e
         if 'mute_connect_err' not in mute:
-            logger.warning(u'Connection error msg:%s while loading URL%s' % (
-                ex(e), _maybe_request_url(e)))
+            logger.warning(u'Connection error msg:%s while loading URL%s' % (ex(e), _maybe_request_url(e)))
         if failure_handling:
-            DOMAIN_FAILURES.inc_failure_count(url, ConnectionFail(fail_type=ConnectionFailTypes.connection))
-            save_failure(url, domain, False, post_data, post_json)
-        if raise_exceptions:
-            raise e
-        return
+            connection_fail_params = dict(fail_type=ConnectionFailTypes.connection)
     except requests.exceptions.ReadTimeout as e:
+        raised = e
         if 'mute_read_timeout' not in mute:
-            logger.warning(u'Read timed out msg:%s while loading URL%s' % (
-                ex(e), _maybe_request_url(e)))
+            logger.warning(u'Read timed out msg:%s while loading URL%s' % (ex(e), _maybe_request_url(e)))
         if failure_handling:
-            DOMAIN_FAILURES.inc_failure_count(url, ConnectionFail(fail_type=ConnectionFailTypes.timeout))
-            save_failure(url, domain, False, post_data, post_json)
-        if raise_exceptions:
-            raise e
-        return
+            connection_fail_params = dict(fail_type=ConnectionFailTypes.timeout)
     except (requests.exceptions.Timeout, socket.timeout) as e:
+        raised = e
         if 'mute_connect_timeout' not in mute:
-            logger.warning(u'Connection timed out msg:%s while loading URL %s' % (
-                ex(e), _maybe_request_url(e, url)))
+            logger.warning(u'Connection timed out msg:%s while loading URL %s' % (ex(e), _maybe_request_url(e, url)))
         if failure_handling:
-            DOMAIN_FAILURES.inc_failure_count(url, ConnectionFail(fail_type=ConnectionFailTypes.connection_timeout))
-            save_failure(url, domain, False, post_data, post_json)
-        if raise_exceptions:
-            raise e
-        return
+            connection_fail_params = dict(fail_type=ConnectionFailTypes.connection_timeout)
     except (BaseException, Exception) as e:
-        if ex(e):
-            logger.warning(u'Exception caught while loading URL %s\r\nDetail... %s\r\n%s'
-                           % (url, ex(e), traceback.format_exc()))
-        else:
-            logger.warning(u'Unknown exception while loading URL %s\r\nDetail... %s'
-                           % (url, traceback.format_exc()))
+        raised = e
+        logger.warning((u'Exception caught while loading URL {0}\r\nDetail... %s\r\n{1}' % ex(e),
+                        u'Unknown exception while loading URL {0}\r\nDetail... {1}')[not ex(e)]
+                       .format(url, traceback.format_exc()))
         if failure_handling:
-            DOMAIN_FAILURES.inc_failure_count(url, ConnectionFail(fail_type=ConnectionFailTypes.other))
-            save_failure(url, domain, True, post_data, post_json)
-        if raise_exceptions:
-            raise e
-        return
+            connection_fail_params = dict(fail_type=ConnectionFailTypes.other)
+            log_failure_url = True
+    finally:
+        if None is not connection_fail_params:
+            DOMAIN_FAILURES.inc_failure_count(url, ConnectionFail(**connection_fail_params))
+            save_failure(url, domain, log_failure_url, post_data, post_json)
 
-    if response.ok:
+        if isinstance(raised, Exception):
+            if raise_exceptions or raise_status_code:
+                raise raised
+            return
+
+    if None is result and None is not response and response.ok:
         if parse_json:
             try:
                 data_json = response.json()
-                if resp_sess:
-                    result = ({}, data_json)[isinstance(data_json, (dict, list))], session
                 result = ({}, data_json)[isinstance(data_json, (dict, list))]
+                if resp_sess:
+                    result = result, session
             except (TypeError, Exception) as e:
+                raised = e
                 logger.warning(u'JSON data issue from URL %s\r\nDetail... %s' % (url, ex(e)))
-                if raise_exceptions:
-                    raise e
 
         elif savename:
             try:
                 write_file(savename, response, raw=True, raise_exceptions=raise_exceptions)
                 result = True
             except (BaseException, Exception) as e:
-                if raise_exceptions:
-                    raise e
-
-        elif resp_sess:
-            result = getattr(response, response_attr), session
+                raised = e
 
         else:
             result = getattr(response, response_attr)
+            if resp_sess:
+                result = result, session
+
+        if raise_exceptions and isinstance(raised, Exception):
+            raise raised
 
     if failure_handling:
         if result and not isinstance(result, tuple) \
@@ -1132,3 +1123,22 @@ def long_path(path):
     if 'nt' == os.name and 260 < len(path) and not path.startswith('\\\\?\\') and ek.ek(os.path.isabs, path):
         return '\\\\?\\' + path
     return path
+
+
+def md5_for_text(text):
+    """
+
+    :param text: test
+    :type text: AnyStr
+    :return:
+    :rtype: AnyStr or None
+    """
+    result = None
+    try:
+        md5 = hashlib.md5()
+        md5.update(decode_bytes(str(text)))
+        raw_md5 = md5.hexdigest()
+        result = raw_md5[17:] + raw_md5[9:17] + raw_md5[0:9]
+    except (BaseException, Exception):
+        pass
+    return result

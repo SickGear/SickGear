@@ -256,11 +256,23 @@ $(document).ready(function() {
 		});
 	});
 
-	$('.provider-failures').tablesorter({widgets : ['zebra'],
+	$('.domain-retry').click(function () {
+		$(this).addClass('disabled');
+		var domain = $(this).data('domain');
+		$.ajax({
+			url: $.SickGear.Root + '/history/retry_domain?domain=' + domain,
+			type: 'GET',
+			complete: function () {
+				window.location.reload(true);
+			}
+		});
+	});
+
+	$('.server-failures').tablesorter({widgets : ['zebra'],
 		headers : { 0:{sorter:!1}, 1:{sorter:!1}, 2:{sorter:!1}, 3:{sorter:!1}, 4:{sorter:!1}, 5:{sorter:!1} }
 	});
 
-	$('.provider-fail-parent-toggle').click(function(){
+	$('.server-fail-parent-toggle').click(function(){
 		$(this).closest('tr').nextUntil('tr:not(.tablesorter-childRow)').find('td').toggle();
 		return !1;
 	});

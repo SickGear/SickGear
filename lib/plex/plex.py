@@ -118,6 +118,7 @@ class Plex(object):
                                     'X-Plex-Username': user
                                     },
                            parse_json=True,
+                           failure_handling=False,
                            post_data=urlencode({b'user[login]': user, b'user[password]': passw}).encode('utf-8')
                            )['user']['authentication_token']
         except TypeError:
@@ -198,7 +199,7 @@ class Plex(object):
                            }
                 if self.username:
                     headers.update({'X-Plex-Username': self.username})
-                page = get_url(url, headers=headers, **kwargs)
+                page = get_url(url, headers=headers, failure_handling=False, **kwargs)
                 if page:
                     parsed = parse_xml(page)
                     if None is not parsed and len(parsed):

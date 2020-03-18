@@ -31,6 +31,7 @@ import sickbeard
 from . import db, logger
 from .helpers import try_int
 from .scene_exceptions import xem_ids_list
+from .sgdatetime import timestamp_near
 
 from _23 import filter_iter, map_list
 
@@ -765,7 +766,7 @@ def xem_refresh(tvid, prodid, force=False):
         [tvid, prodid])
     if rows:
         last_refresh = int(rows[0]['last_refreshed'])
-        refresh = int(time.mktime(datetime.datetime.today().timetuple())) > last_refresh + max_refresh_age_secs
+        refresh = int(timestamp_near(datetime.datetime.now())) > last_refresh + max_refresh_age_secs
     else:
         refresh = True
 
@@ -774,7 +775,7 @@ def xem_refresh(tvid, prodid, force=False):
 
         # mark refreshed
         my_db.upsert('xem_refresh',
-                     dict(last_refreshed=int(time.mktime(datetime.datetime.today().timetuple()))),
+                     dict(last_refreshed=int(timestamp_near(datetime.datetime.now()))),
                      dict(indexer=tvid, indexer_id=prodid))
 
         try:

@@ -1761,7 +1761,7 @@ class CMD_SickGearHistoryTrim(ApiCall):
         """ trim sickgear's history """
         my_db = db.DBConnection()
         my_db.action("DELETE FROM history WHERE date < " + str(
-            (datetime.datetime.today() - datetime.timedelta(days=30)).strftime(history.dateFormat)))
+            (datetime.datetime.now() - datetime.timedelta(days=30)).strftime(history.dateFormat)))
 
         return _responds(RESULT_SUCCESS, msg="Removed history entries greater than 30 days old")
 

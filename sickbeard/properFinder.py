@@ -34,7 +34,7 @@ from .common import ARCHIVED, FAILED, DOWNLOADED, SNATCHED_ANY, SNATCHED_PROPER,
     NeededQualities, Quality
 from .history import dateFormat
 from .name_parser.parser import InvalidNameException, InvalidShowException, NameParser
-from .sgdatetime import SGDatetime
+from .sgdatetime import timestamp_near
 
 from _23 import filter_iter, list_values, map_consume, map_list
 from six import string_types
@@ -58,8 +58,8 @@ def search_propers(provider_proper_obj=None):
     logger.log(('Checking Propers from recent search', 'Beginning search for new Propers')[None is provider_proper_obj])
 
     age_shows, age_anime = sickbeard.BACKLOG_DAYS + 2, 14
-    aired_since_shows = datetime.datetime.today() - datetime.timedelta(days=age_shows)
-    aired_since_anime = datetime.datetime.today() - datetime.timedelta(days=age_anime)
+    aired_since_shows = datetime.datetime.now() - datetime.timedelta(days=age_shows)
+    aired_since_anime = datetime.datetime.now() - datetime.timedelta(days=age_anime)
     recent_shows, recent_anime = _recent_history(aired_since_shows, aired_since_anime)
     if recent_shows or recent_anime:
         propers = _get_proper_list(aired_since_shows, recent_shows, recent_anime, proper_dict=provider_proper_obj)
@@ -230,7 +230,7 @@ def _get_proper_list(aired_since_shows, recent_shows, recent_anime, proper_dict=
     """
     propers = {}
     # make sure the episode has been downloaded before
-    history_limit = datetime.datetime.today() - datetime.timedelta(days=30)
+    history_limit = datetime.datetime.now() - datetime.timedelta(days=30)
 
     my_db = db.DBConnection()
     # for each provider get a list of arbitrary Propers
@@ -573,8 +573,8 @@ def get_needed_qualites(needed=None):
         return needed
 
     age_shows, age_anime = sickbeard.BACKLOG_DAYS + 2, 14
-    aired_since_shows = datetime.datetime.today() - datetime.timedelta(days=age_shows)
-    aired_since_anime = datetime.datetime.today() - datetime.timedelta(days=age_anime)
+    aired_since_shows = datetime.datetime.now() - datetime.timedelta(days=age_shows)
+    aired_since_anime = datetime.datetime.now() - datetime.timedelta(days=age_anime)
 
     my_db = db.DBConnection()
     sql_result = my_db.select(
@@ -664,10 +664,10 @@ def _set_last_proper_search(when):
 
     if 0 == len(sql_result):
         my_db.action('INSERT INTO info (last_backlog, last_indexer, last_proper_search) VALUES (?,?,?)',
-                     [0, 0, SGDatetime.totimestamp(when)])
+                     [0, 0, int(timestamp_near(when))])
     else:
         # noinspection SqlConstantCondition
-        my_db.action('UPDATE info SET last_proper_search=%s WHERE 1=1' % SGDatetime.totimestamp(when))
+        my_db.action('UPDATE info SET last_proper_search=%s WHERE 1=1' % int(timestamp_near(when)))
 
 
 def next_proper_timeleft():

@@ -20,7 +20,6 @@ import datetime
 import glob
 import os.path
 import re
-import time
 import zlib
 
 # noinspection PyPep8Naming
@@ -30,6 +29,7 @@ from exceptions_helper import ex
 import sickbeard
 from . import db, helpers, logger
 from .metadata.generic import GenericMetadata
+from .sgdatetime import timestamp_near
 
 from six import itervalues
 
@@ -324,7 +324,7 @@ class ImageCache(object):
             minutes_freq = 60 * 3
             # daily_freq = 60 * 60 * 23
             freq = minutes_freq
-            now_stamp = int(time.mktime(datetime.datetime.today().timetuple()))
+            now_stamp = int(timestamp_near(datetime.datetime.now()))
             the_time = int(sql_result[0]['time'])
             return now_stamp - the_time > freq
 
@@ -341,7 +341,7 @@ class ImageCache(object):
         """
         my_db = db.DBConnection('cache.db')
         my_db.upsert('lastUpdate',
-                     {'time': int(time.mktime(datetime.datetime.today().timetuple()))},
+                     {'time': int(timestamp_near(datetime.datetime.now()))},
                      {'provider': 'imsg_%s_%s' % ((image_type, self.FANART)[None is image_type], provider)})
 
     def _cache_image_from_file(self, image_path, img_type, tvid, prodid, prefix='', move_file=False):

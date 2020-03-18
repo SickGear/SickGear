@@ -41,6 +41,7 @@ from . import common, db, failedProcessor, helpers, logger, notifiers, postProce
 from .common import SNATCHED_ANY
 from .history import reset_status
 from .name_parser.parser import InvalidNameException, InvalidShowException, NameParser
+from .sgdatetime import timestamp_near
 
 from _23 import filter_list, filter_iter, list_values, map_iter
 from six import iteritems, iterkeys, string_types, PY2, text_type
@@ -574,7 +575,7 @@ class ProcessTVShow(object):
             archives = [ek.ek(os.path.basename, x) for x in unused_files]
             if unused_files:
                 for f in unused_files:
-                    archive_history.setdefault(f, time.mktime(datetime.datetime.utcnow().timetuple()))
+                    archive_history.setdefault(f, int(timestamp_near(datetime.datetime.utcnow())))
 
             if init_history_cnt != len(archive_history):
                 try:

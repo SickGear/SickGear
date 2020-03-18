@@ -25,11 +25,11 @@ import sys
 import sickbeard
 from dateutil import tz
 
-from six import integer_types, string_types
+from six import integer_types, PY2, string_types
 
 # noinspection PyUnreachableCode
 if False:
-    from typing import Optional, Union
+    from typing import Callable, Optional, Union
 
 date_presets = ('%Y-%m-%d',
                 '%a, %Y-%m-%d',
@@ -231,35 +231,6 @@ class SGDatetime(datetime.datetime):
             isinstance(result, tuple) and 1 == len(result) and '%s' % result[0] or ''
 
     @static_or_instance
-    def totimestamp(self, dt=None, default=None):
-        # type: (Optional[Union[SGDatetime, datetime.datetime]], Optional[float]) -> Union[float, integer_types]
-        """ Calculate timestamp from datetime.datetime obj
-        """
-        obj = (dt, self)[self is not None]  # type: datetime.datetime
-        if not isinstance(getattr(obj, 'tzinfo', None), datetime.tzinfo):
-            from sickbeard.network_timezones import SG_TIMEZONE
-            obj = obj.replace(tzinfo=SG_TIMEZONE)
-        from .network_timezones import EPOCH_START
-        timestamp = default
-        try:
-            timestamp = (obj - EPOCH_START).total_seconds()
-        finally:
-            return (default, timestamp)[isinstance(timestamp, (float, integer_types))]
-
-    @staticmethod
-    def from_timestamp(ts, local_time=True):
-        # type: (Union[integer_types, float], bool) -> datetime.datetime
-        """
-        convert timestamp to datetime.datetime obj
-        :param ts: timestamp integer, float
-        :param local_time: return as local timezone (SG_TIMEZONE)
-        """
-        from .network_timezones import EPOCH_START, SG_TIMEZONE
-        if local_time and SG_TIMEZONE:
-            return (EPOCH_START + datetime.timedelta(seconds=ts)).astimezone(SG_TIMEZONE)
-        return EPOCH_START + datetime.timedelta(seconds=ts)
-
-    @static_or_instance
     def to_file_timestamp(self, dt=None):
         # type: (Optional[SGDatetime, datetime.datetime]) -> Union[float, integer_types]
         """
@@ -271,4 +242,61 @@ class SGDatetime(datetime.datetime):
         if is_win:
             from .network_timezones import EPOCH_START_WIN
             return (obj.replace(tzinfo=tz.tzwinlocal()) - EPOCH_START_WIN).total_seconds()
-        return self.totimestamp(obj)
+        return self.timestamp_far(obj)
+
+    @staticmethod
+    def from_timestamp(ts, local_time=True, tz_aware=False):
+        # type: (Union[float, integer_types], bool, bool) -> datetime.datetime
+        """
+        convert timestamp to datetime.datetime obj
+        :param ts: timestamp integer, float
+        :param local_time: return as local timezone (SG_TIMEZONE)
+        :param tz_aware: return tz aware datetime
+        """
+        from .network_timezones import EPOCH_START, SG_TIMEZONE
+        result = EPOCH_START + datetime.timedelta(seconds=ts)
+        if local_time and SG_TIMEZONE:
+            result = result.astimezone(SG_TIMEZONE)
+        if not tz_aware:
+            result = result.replace(tzinfo=None)
+        return result
+
+    @static_or_instance
+    def timestamp_far(self,
+                      dt=None,  # type: Optional[SGDatetime, datetime.datetime]
+                      default=None  # type: Optional[float, integer_types]
+                      ):
+        # type: (...) -> Union[float, integer_types, None]
+        """
+        Use `timestamp_far` for a timezone aware UTC timestamp in far future or far past
+        """
+        obj = (dt, self)[self is not None]  # type: datetime.datetime
+        if isinstance(obj, datetime.datetime) and not isinstance(getattr(obj, 'tzinfo', None), datetime.tzinfo):
+            from sickbeard.network_timezones import SG_TIMEZONE
+            obj = obj.replace(tzinfo=SG_TIMEZONE)
+        from .network_timezones import EPOCH_START
+        timestamp = default
+        try:
+            timestamp = (obj - EPOCH_START).total_seconds()
+        finally:
+            return (default, timestamp)[isinstance(timestamp, (float, integer_types))]
+
+
+if PY2:
+    """
+    Use `timestamp_near` for a timezone aware UTC timestamp in the near future or recent past.
+
+    Under py3, using the faster variable assigned cpython callable, so py2 is set up to mimick the signature types.
+    Note: the py3 callable is limited to datetime.datetime and does not work with datetime.date.
+    """
+    def _py2timestamp(dt=None):
+        # type: (datetime.datetime) -> float
+        try:
+            import time
+            return int(time.mktime(dt.timetuple()))
+        except (BaseException, Exception):
+            return 0
+    timestamp_near = _py2timestamp  # type: Callable[[datetime.datetime], float]
+else:
+    # py3 native timestamp uses milliseconds
+    timestamp_near = datetime.datetime.timestamp  # type: Callable[[datetime.datetime], float]

@@ -141,7 +141,7 @@ def add_snatched(search_result):
     :type search_result: sickbeard.classes.SearchResult
     """
 
-    log_date = datetime.datetime.today().strftime(dateFormat)
+    log_date = datetime.datetime.now().strftime(dateFormat)
 
     provider = 'unknown'
     if None is not search_result.provider:
@@ -199,7 +199,7 @@ def remove_snatched(release, size, provider):
 def remove_old_history():
 
     db_action('DELETE FROM history WHERE date < %s' %
-              str((datetime.datetime.today() - datetime.timedelta(days=30)).strftime(dateFormat)))
+              str((datetime.datetime.now() - datetime.timedelta(days=30)).strftime(dateFormat)))
 
 
 def has_failed(release, size, provider='%'):

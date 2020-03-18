@@ -29,6 +29,7 @@ from .classes import SearchResult
 from .common import Quality
 from .name_parser.parser import InvalidNameException, InvalidShowException, NameParser, ParseResult
 from .rssfeeds import RSSFeeds
+from .sgdatetime import timestamp_near
 from .tv import TVEpisode
 
 from _23 import filter_list, map_iter
@@ -191,7 +192,7 @@ class TVCache(object):
 
         if sql_result:
             lastTime = int(sql_result[0]['time'])
-            if lastTime > int(time.mktime(datetime.datetime.today().timetuple())):
+            if lastTime > int(timestamp_near(datetime.datetime.now())):
                 lastTime = 0
         else:
             lastTime = 0
@@ -209,7 +210,7 @@ class TVCache(object):
 
         if sql_result:
             lastTime = int(sql_result[0]['time'])
-            if lastTime > int(time.mktime(datetime.datetime.today().timetuple())):
+            if lastTime > int(timestamp_near(datetime.datetime.now())):
                 lastTime = 0
         else:
             lastTime = 0
@@ -223,7 +224,7 @@ class TVCache(object):
         :type to_date: datetime.datetime or None
         """
         if not to_date:
-            to_date = datetime.datetime.today()
+            to_date = datetime.datetime.now()
 
         my_db = self.get_db()
         my_db.upsert('lastUpdate',
@@ -237,7 +238,7 @@ class TVCache(object):
         :type to_date: datetime.datetime or None
         """
         if not to_date:
-            to_date = datetime.datetime.today()
+            to_date = datetime.datetime.now()
 
         my_db = self.get_db()
         my_db.upsert('lastSearch',
@@ -254,7 +255,7 @@ class TVCache(object):
         :rtype: bool
         """
         # if we've updated recently then skip the update
-        return datetime.datetime.today() - self.lastUpdate >= datetime.timedelta(minutes=self.update_freq)
+        return datetime.datetime.now() - self.lastUpdate >= datetime.timedelta(minutes=self.update_freq)
 
     def should_clear_cache(self):
         """
@@ -311,7 +312,7 @@ class TVCache(object):
             episode_text = '|%s|' % '|'.join(map_iter(str, episode_numbers))
 
             # get the current timestamp
-            cur_timestamp = int(time.mktime(datetime.datetime.today().timetuple()))
+            cur_timestamp = int(timestamp_near(datetime.datetime.now()))
 
             # get quality of release
             quality = parse_result.quality

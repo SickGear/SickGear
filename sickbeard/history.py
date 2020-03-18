@@ -47,7 +47,7 @@ def _log_history_item(action, tvid, prodid, season, episode, quality, resource, 
     :param provider: provider name
     :param version: version
     """
-    log_date = datetime.datetime.today().strftime(dateFormat)
+    log_date = datetime.datetime.now().strftime(dateFormat)
 
     if PY2 and not isinstance(resource, text_type):
         resource = text_type(resource, 'utf-8', 'replace')

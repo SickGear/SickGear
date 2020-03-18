@@ -33,7 +33,7 @@ from ..common import NeededQualities, Quality
 from ..helpers import remove_non_release_groups, try_int
 from ..indexers.indexer_config import *
 from ..network_timezones import SG_TIMEZONE
-from ..sgdatetime import SGDatetime
+from ..sgdatetime import SGDatetime, timestamp_near
 from ..search import get_aired_in_season, get_wanted_qualities
 from ..show_name_helpers import get_show_names
 from ..tv import TVEpisode, TVShow
@@ -213,8 +213,12 @@ class NewznabProvider(generic.NZBProvider):
     def last_recent_search(self, value):
         try:
             my_db = db.DBConnection('cache.db')
+            if isinstance(value, datetime.datetime):
+                value = int(timestamp_near(value))
+            else:
+                value = SGDatetime.timestamp_far(value, default=0)
             my_db.action('INSERT OR REPLACE INTO "lastrecentsearch" (name, datetime) VALUES (?,?)',
-                         [self.get_id(), SGDatetime.totimestamp(value, default=0)])
+                         [self.get_id(), value])
         except (BaseException, Exception):
             pass
         self._last_recent_search = value
