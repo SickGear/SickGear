@@ -49,16 +49,22 @@
 
 
 ### 0.21.21 (2019-03-11 21:15:00 UTC)
+### 0.21.22 (2020-03-20 20:00:00 UTC)
+
+* Fix Bulk Change/Edit for py3
+
+
+### 0.21.21 (2020-03-11 21:15:00 UTC)
 
 * Fix get_network_timezone
 
 
-### 0.21.20 (2019-03-11 18:35:00 UTC)
+### 0.21.20 (2020-03-11 18:35:00 UTC)
 
 * Fix timezone handling on Windows to correct timestamps related to file system and db episode management
 
 
-### 0.21.19 (2019-03-08 15:45:00 UTC)
+### 0.21.19 (2020-03-08 15:45:00 UTC)
 
 * Change update provider TL from v4/classic to V5
 * Fix webapi (add show) wrong error message if show is not at info source
