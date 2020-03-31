@@ -12,8 +12,7 @@
 #set $has_any_sports = False
 #set $has_any_anime = False
 #set $has_any_flat_folders = False
-#set $show_list = $sickbeard.showList
-$show_list.sort(key=lambda _x: _x.name)
+#set $show_list = sorted($sickbeard.showList, key=lambda _x: _x.name)
 #for $cur_show_obj in $show_list
     #set $has_any_sports |= bool($cur_show_obj.sports)
     #set $has_any_anime |= bool($cur_show_obj.anime)
