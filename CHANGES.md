@@ -50,6 +50,12 @@
 * Update urllib3 release 1.25.6 (4a6c288) to 1.25.7 (37ba61a)
 
 
+### 0.21.23 (2020-03-31 10:00:00 UTC)
+
+* Update UnRar for Windows 5.80 to 5.90 x64
+* Fix viewing Manage/Bulk Change" page skews "Added last..." list
+
+
 ### 0.21.22 (2020-03-20 20:00:00 UTC)
 
 * Fix Bulk Change/Edit for py3
