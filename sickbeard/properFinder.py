@@ -507,8 +507,12 @@ def _download_propers(proper_list):
 
             # scene release checking
             scene_only = getattr(cur_proper.provider, 'scene_only', False)
+            non_scene_fallback = getattr(cur_proper.provider, 'scene_loose', False) \
+                or getattr(cur_proper.provider, 'scene_loose_active', False)
             scene_rej_nuked = getattr(cur_proper.provider, 'scene_rej_nuked', False)
-            if any([scene_only, scene_rej_nuked]) and not cur_proper.parsed_show_obj.is_anime:
+            scene_nuked_active = getattr(cur_proper.provider, 'scene_nuked_active', False)
+            if any([scene_only, non_scene_fallback, scene_rej_nuked, scene_nuked_active]) \
+                    and not cur_proper.parsed_show_obj.is_anime:
                 scene_or_contain = getattr(cur_proper.provider, 'scene_or_contain', '')
                 scene_contains = False
                 if scene_only and scene_or_contain:
@@ -523,14 +527,14 @@ def _download_propers(proper_list):
                     reject, url = search.can_reject(cur_proper.name)
                     if reject:
                         if isinstance(reject, string_types):
-                            if scene_rej_nuked:
+                            if scene_rej_nuked and not scene_nuked_active:
                                 logger.log('Rejecting nuked release. Nuke reason [%s] source [%s]' % (reject, url),
                                            logger.DEBUG)
                             else:
                                 logger.log('Considering nuked release. Nuke reason [%s] source [%s]' % (reject, url),
                                            logger.DEBUG)
                                 reject = False
-                        elif scene_contains:
+                        elif scene_contains or non_scene_fallback:
                             reject = False
                         else:
                             logger.log('Rejecting as not scene release listed at any [%s]' % url, logger.DEBUG)

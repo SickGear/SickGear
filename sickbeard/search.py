@@ -249,15 +249,15 @@ def pick_best_result(
     # find the best result for the current episode
     best_result = None
     best_fallback_result = None
-    scene_only = scene_or_contain = scene_loose = scene_loose_active = scene_rej_nuked = scene_nuked_active = False
+    scene_only = scene_or_contain = non_scene_fallback = scene_rej_nuked = scene_nuked_active = False
     if filter_rls:
         try:
             provider = getattr(results[0], 'provider', None)
             scene_only = getattr(provider, 'scene_only', False)
             scene_or_contain = getattr(provider, 'scene_or_contain', '')
             recent_task = 'RECENT' in filter_rls
-            scene_loose = getattr(provider, 'scene_loose', False) and recent_task
-            scene_loose_active = getattr(provider, 'scene_loose_active', False) and not recent_task
+            non_scene_fallback = (getattr(provider, 'scene_loose', False) and recent_task) \
+                or (getattr(provider, 'scene_loose_active', False) and not recent_task)
             scene_rej_nuked = getattr(provider, 'scene_rej_nuked', False)
             scene_nuked_active = getattr(provider, 'scene_nuked_active', False) and not recent_task
         except (BaseException, Exception):
@@ -283,7 +283,7 @@ def pick_best_result(
             logger.log(u'Rejecting previously failed [%s]' % cur_result.name)
             continue
 
-        if filter_rls and any([scene_only, scene_loose, scene_loose_active, scene_rej_nuked, scene_nuked_active]):
+        if filter_rls and any([scene_only, non_scene_fallback, scene_rej_nuked, scene_nuked_active]):
             if show_obj.is_anime:
                 addendum = u'anime (skipping scene/nuke filter) '
             else:
@@ -310,7 +310,7 @@ def pick_best_result(
                                 logger.log(u'Considering nuked release. Nuke reason [%s] source [%s]' % (reject, url),
                                            logger.DEBUG)
                                 reject = False
-                        elif scene_contains or any([scene_loose, scene_loose_active]):
+                        elif scene_contains or non_scene_fallback:
                             best_fallback_result = best_candidate(best_fallback_result, cur_result)
                         else:
                             logger.log(u'Rejecting as not scene release listed at any [%s]' % url, logger.DEBUG)

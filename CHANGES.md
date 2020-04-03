@@ -1,4 +1,10 @@
-﻿### 0.21.23 (2020-03-31 10:00:00 UTC)
+﻿### 0.21.24 (2020-04-04 00:30:00 UTC)
+
+* Fix use release group for Propers check from history if status is snatched
+* Change add provider filter fallbacks into Propers search flow
+
+
+### 0.21.23 (2020-03-31 10:00:00 UTC)
 
 * Update UnRar for Windows 5.80 to 5.90 x64
 * Fix viewing Manage/Bulk Change" page skews "Added last..." list
