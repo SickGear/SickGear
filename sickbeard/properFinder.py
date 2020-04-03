@@ -229,6 +229,8 @@ def _get_proper_list(aired_since_shows, recent_shows, recent_anime, proper_dict=
     :rtype: List[sickbeard.classes.Proper]
     """
     propers = {}
+    # make sure the episode has been downloaded before
+    history_limit = datetime.datetime.today() - datetime.timedelta(days=30)
 
     my_db = db.DBConnection()
     # for each provider get a list of arbitrary Propers
@@ -336,7 +338,25 @@ def _get_proper_list(aired_since_shows, recent_shows, recent_anime, proper_dict=
             cur_proper.is_repack, cur_proper.properlevel = Quality.get_proper_level(
                 parse_result.extra_info_no_name(), parse_result.version, parse_result.is_anime, check_is_repack=True)
             cur_proper.proper_level = cur_proper.properlevel    # local non global value
-            old_release_group = sql_result[0]['release_group']
+            if old_status in SNATCHED_ANY:
+                old_release_group = ''
+                # noinspection SqlResolve
+                history_results = my_db.select(
+                    'SELECT resource FROM history'
+                    ' WHERE indexer = ? AND showid = ?'
+                    ' AND season = ? AND episode = ? AND quality = ? AND date >= ?'
+                    ' AND (%s) ORDER BY date DESC LIMIT 1' % ' OR '.join(
+                        ['action = "%d%02d"' % (old_quality, x) for x in SNATCHED_ANY]),
+                    [cur_proper.tvid, cur_proper.prodid,
+                     cur_proper.season, cur_proper.episode, cur_proper.quality,
+                     history_limit.strftime(history.dateFormat)])
+                if len(history_results):
+                    try:
+                        old_release_group = np.parse(history_results[0]['resource']).release_group
+                    except (BaseException, Exception):
+                        pass
+            else:
+                old_release_group = sql_result[0]['release_group']
             try:
                 same_release_group = parse_result.release_group.lower() == old_release_group.lower()
             except (BaseException, Exception):
@@ -393,8 +413,6 @@ def _get_proper_list(aired_since_shows, recent_shows, recent_anime, proper_dict=
             else:
                 found_msg = 'Found Proper [%s]' % cur_proper.name
 
-            # make sure the episode has been downloaded before
-            history_limit = datetime.datetime.today() - datetime.timedelta(days=30)
             # noinspection SqlResolve
             history_results = my_db.select(
                 'SELECT resource FROM history'
