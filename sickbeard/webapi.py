@@ -3915,10 +3915,10 @@ class CMD_SickGearShowRefresh(ApiCall):
 
         try:
             sickbeard.showQueueScheduler.action.refreshShow(show_obj)
-            return _responds(RESULT_SUCCESS, msg=str(show_obj.name) + " has queued to be refreshed")
-        except exceptions_helper.CantRefreshException:
+            return _responds(RESULT_SUCCESS, msg="%s has queued to be refreshed" % show_obj.name)
+        except exceptions_helper.CantRefreshException as e:
             # TODO: log the exception
-            return _responds(RESULT_FAILURE, msg="Unable to refresh " + str(show_obj.name))
+            return _responds(RESULT_FAILURE, msg="Unable to refresh %s. %s" % (show_obj.name, ex(e)))
 
 
 class CMD_ShowRefresh(CMD_SickGearShowRefresh):
@@ -4336,10 +4336,10 @@ class CMD_SickGearShowUpdate(ApiCall):
 
         try:
             sickbeard.showQueueScheduler.action.updateShow(show_obj, True)
-            return _responds(RESULT_SUCCESS, msg=str(show_obj.name) + " has queued to be updated")
+            return _responds(RESULT_SUCCESS, msg="%s has queued to be updated" % show_obj.name)
         except exceptions_helper.CantUpdateException as e:
             self.log(u"Unable to update %s. %s" % (show_obj.name, ex(e)), logger.ERROR)
-            return _responds(RESULT_FAILURE, msg="Unable to update " + str(show_obj.name))
+            return _responds(RESULT_FAILURE, msg="Unable to update %s. %s" % (show_obj.name, ex(e)))
 
 
 class CMD_ShowUpdate(CMD_SickGearShowUpdate):
