@@ -1,4 +1,14 @@
-﻿### 0.21.24 (2020-04-04 00:30:00 UTC)
+﻿### 0.21.25 (2020-04-10 01:50:00 UTC)
+
+* Fix Kodi uniqueid tag not validated during import
+* Change slightly improve performance iterating metadata providers
+* Fix AttributeError in anime manager while editing show
+* Remove DigitalHive torrent provider
+* Fix failure time reset of service URLs
+* Change improve clarity of show update/refresh API failure message
+
+
+### 0.21.24 (2020-04-04 00:30:00 UTC)
 
 * Fix use release group for Propers check from history if status is snatched
 * Change add provider filter fallbacks into Propers search flow
