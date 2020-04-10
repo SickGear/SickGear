@@ -17,7 +17,7 @@
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
 import importlib
-from os import sys
+import sys
 
 from . import generic, newznab
 from .newznab import NewznabConstants
