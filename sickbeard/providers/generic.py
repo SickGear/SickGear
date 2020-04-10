@@ -335,8 +335,12 @@ class GenericProvider(object):
             changed_val = self._failure_time != value
             self._failure_time = value
             if changed_val:
-                # noinspection PyCallByClass,PyTypeChecker
-                self._save_fail_value('failure_time', (SGDatetime.totimestamp(value), value)[None is value])
+                if isinstance(value, datetime.datetime):
+                    # noinspection PyCallByClass,PyTypeChecker
+                    save_value = SGDatetime.totimestamp(value)
+                else:
+                    save_value = value
+                self._save_fail_value('failure_time', save_value)
 
     @property
     def tmr_limit_count(self):
