@@ -3659,7 +3659,7 @@ class AddShows(Home):
                 prodid = show_name = tvid = None
                 for cur_provider in itervalues(sickbeard.metadata_provider_dict):
                     if prodid and show_name:
-                        continue
+                        break
 
                     (tvid, prodid, show_name) = cur_provider.retrieveShowMetadata(cur_path)
 

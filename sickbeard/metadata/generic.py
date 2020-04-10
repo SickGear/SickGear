@@ -1027,9 +1027,10 @@ class GenericMetadata(object):
                 showXML = etree.ElementTree(file=xmlFileObj)
 
             if None is showXML.findtext('title') \
-                    or (None is showXML.findtext('tvdbid')
-                        and None is showXML.findtext('id')) \
-                    and None is showXML.findtext('indexer'):
+                    or (None is showXML.find('//uniqueid[@type="tvdb"]')
+                        and (None is showXML.findtext('tvdbid')
+                             and None is showXML.findtext('id'))
+                        and None is showXML.findtext('indexer')):
                 logger.log(u"Invalid info in tvshow.nfo (missing name or id):"
                            + str(showXML.findtext('title')) + ' '
                            + str(showXML.findtext('indexer')) + ' '
@@ -1044,7 +1045,11 @@ class GenericMetadata(object):
             except (BaseException, Exception):
                 tvid = None
 
-            if None is not showXML.findtext('tvdbid'):
+            prodid = showXML.find('//uniqueid[@type="tvdb"]')
+            if None is not prodid:
+                prodid = int(prodid.text)
+                tvid = TVINFO_TVDB
+            elif None is not showXML.findtext('tvdbid'):
                 prodid = int(showXML.findtext('tvdbid'))
                 tvid = TVINFO_TVDB
             elif None is not showXML.findtext('id'):
