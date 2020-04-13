@@ -30,7 +30,7 @@ from .aniDBfileInfo import read_anidb_xml
 
 from _23 import decode_str
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('adba')
 logger.addHandler(logging.NullHandler())
 
 
@@ -281,7 +281,7 @@ class Episode(aniDBabstractObject):
         try:
             self.aniDB.mylistadd(size=self.size, ed2k=self.ed2k, state=state, viewed=viewed, source=source, storage=storage, other=other)
         except Exception as e:
-            logger.exception("Exception: %s", e)
+            logger.exception("Exception: %s" % e)
         else:
             # TODO: add the name or something
             logger.info("Added the episode to anidb")
@@ -292,7 +292,7 @@ class Episode(aniDBabstractObject):
         try:
             self.aniDB.mylistdel(size=self.size, ed2k=self.ed2k)
         except Exception as e:
-            logger.exception("Exception: %s", e)
+            logger.exception("Exception: %s" % e)
         else:
             logger.info("Deleted the episode from anidb")
 

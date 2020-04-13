@@ -31,7 +31,7 @@ from .aniDBAbstracter import Anime, Episode
 
 version = 100
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('adba')
 logger.addHandler(logging.NullHandler())
 
 
@@ -189,13 +189,13 @@ class Connection(threading.Thread):
             self._username = username
             self._password = password
             if False is self.is_alive():
-                logging.debug("You wanted to keep this thing alive!")
+                logger.debug("You wanted to keep this thing alive!")
                 if False is self._iamALIVE:
-                    logging.info("Starting thread now...")
+                    logger.info("Starting thread now...")
                     self.start()
                     self._iamALIVE = True
                 else:
-                    logging.info("not starting thread seems like it is already running. this must be a _reAuthenticate")
+                    logger.info("not starting thread seems like it is already running. this must be a _reAuthenticate")
 
         config = ConfigParser()
         config.read(self.SessionFile)
@@ -224,7 +224,7 @@ class Connection(threading.Thread):
             try:
                 self.handle(AuthCommand(username, password, 3, self.clientname, self.clientver, nat, 1, 'utf8', mtu), callback)
             except Exception as error:
-                logger.debug('Auth command with exception %r', error)
+                logger.debug('Auth command with exception %r' % error)
                 # we force a config file with logged out to ensure a known state if an exception occurs, forcing us to log in again
                 config['DEFAULT'] = {'loggedin': 'yes', 'sessionkey': str(self.link.session or ''), 'exception': str(error),
                                      'lastcommandtime': repr(time())}

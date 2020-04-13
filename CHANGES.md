@@ -1,4 +1,10 @@
-﻿### 0.21.25 (2020-04-10 01:50:00 UTC)
+﻿### 0.21.26 (2020-04-13 00:30:00 UTC)
+
+* Fix AttributeError in anime manager while editing show (part deux)
+* Fix use lib logger instead of global logger
+
+
+### 0.21.25 (2020-04-10 01:50:00 UTC)
 
 * Fix Kodi uniqueid tag not validated during import
 * Change slightly improve performance iterating metadata providers

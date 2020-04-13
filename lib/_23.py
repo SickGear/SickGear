@@ -30,7 +30,7 @@ if False:
     # resolve typing imports
     # ----------------------
     # noinspection PyUnresolvedReferences
-    from typing import Any, AnyStr, Callable, Dict, Iterator, List, Optional, Tuple, Union
+    from typing import Any, AnyStr, Callable, Dict, Iterable, Iterator, List, Optional, Tuple, Union
     # -------------------
     # resolve pyc imports
     # -------------------
@@ -42,8 +42,8 @@ if False:
 PY38 = version_info[0:2] >= (3, 8)
 
 """ one off consumables (Iterators) """
-filter_iter = moves.filter  # type: Callable[[], Iterator]
-map_iter = moves.map  # type: Callable[[], Iterator]
+filter_iter = moves.filter  # type: Callable[[Callable, Iterable], Iterator]
+map_iter = moves.map  # type: Callable[[Callable, ...], Iterator]
 
 
 def map_consume(*args):
