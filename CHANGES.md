@@ -51,6 +51,12 @@
 * Update urllib3 release 1.25.6 (4a6c288) to 1.25.7 (37ba61a)
 
 
+### 0.21.26 (2020-04-13 00:30:00 UTC)
+
+* Fix AttributeError in anime manager while editing show (part deux)
+* Fix use lib logger instead of global logger
+
+
 ### 0.21.25 (2020-04-10 01:50:00 UTC)
 
 * Fix Kodi uniqueid tag not validated during import

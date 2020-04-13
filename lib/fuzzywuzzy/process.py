@@ -6,6 +6,9 @@ import heapq
 import logging
 from functools import partial
 
+logger = logging.getLogger(__name__)
+logger.addHandler(logging.NullHandler())
+
 
 default_scorer = fuzz.WRatio
 
@@ -78,9 +81,9 @@ def extractWithoutOrder(query, choices, processor=default_processor, scorer=defa
     processed_query = processor(query)
 
     if len(processed_query) == 0:
-        logging.warning(u"Applied processor reduces input query to empty string, "
-                        "all comparisons will have score 0. "
-                        "[Query: \'{0}\']".format(query))
+        logger.warning(u"Applied processor reduces input query to empty string, "
+                       "all comparisons will have score 0. "
+                       "[Query: \'{0}\']".format(query))
 
     # Don't run full_process twice
     if scorer in [fuzz.WRatio, fuzz.QRatio,

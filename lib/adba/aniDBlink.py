@@ -26,7 +26,7 @@ from time import time, sleep
 from .aniDBerrors import *
 from .aniDBresponses import ResponseResolver
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('adba')
 logger.addHandler(logging.NullHandler())
 
 
@@ -99,9 +99,9 @@ class AniDBLink(threading.Thread):
                 self._handle_timeouts()
                 continue
             except OSError as error:
-                logger.exception('Exception: %s', error)
+                logger.exception('Exception: %s' % error)
                 break
-            logger.debug("NetIO < %r", data)
+            logger.debug("NetIO < %r" % data)
             try:
                 for i in range(2):
                     try:
@@ -109,10 +109,10 @@ class AniDBLink(threading.Thread):
                         resp = None
                         if tmp[:2] == b'\x00\x00':
                             tmp = zlib.decompressobj().decompress(tmp[2:])
-                            logger.debug("UnZip | %r", tmp)
+                            logger.debug("UnZip | %r" % tmp)
                         resp = ResponseResolver(tmp)
                     except Exception as e:
-                        logger.exception('Exception: %s', e)
+                        logger.exception('Exception: %s' % e)
                         sys.excepthook(*sys.exc_info())
                         self.crypt = None
                         self.session = None

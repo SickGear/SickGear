@@ -27,7 +27,7 @@ import time
 import xml.etree.cElementTree as etree
 
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('adba')
 logger.addHandler(logging.NullHandler())
 
 
@@ -140,7 +140,7 @@ def _remove_file_failed(file):
     try:
         os.remove(file)
     except OSError:
-        logger.warning("Error occurred while trying to remove file %s", file)
+        logger.warning("Error occurred while trying to remove file %s" % file)
 
 
 def download_file(url, filename):

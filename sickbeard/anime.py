@@ -174,7 +174,7 @@ def short_group_names(groups):
                 pass
             if isinstance(adba_result, LoginFirstResponse):
                 break
-            if None is adba_result or not adba_result.hasattr('datalines', None):
+            if None is adba_result or not hasattr(adba_result, 'datalines'):
                 continue
             for line in adba_result.datalines:
                 if line['shortname']:
