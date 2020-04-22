@@ -32,13 +32,12 @@ class FLProvider(generic.TorrentProvider):
     def __init__(self):
         generic.TorrentProvider.__init__(self, 'FileList')
 
-        self.url_base = 'https://filelist.ro/'
+        self.url_base = 'https://filelist.io/'
         self.urls = {'config_provider_home_uri': self.url_base,
                      'login_action': self.url_base + 'login.php',
                      'search': self.url_base + 'browse.php?search=%s&%s&incldead=0'}
 
-        self.categories = {'Season': [14], 'Episode': [13, 21, 23], 'anime': [24]}
-        self.categories['Cache'] = self.categories['Season'] + self.categories['Episode']
+        self.categories = dict(shows=[13, 21, 23, 27], anime=[24])
 
         self.url = self.urls['config_provider_home_uri']
 

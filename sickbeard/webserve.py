@@ -7317,7 +7317,7 @@ class ConfigNotifications(Config):
         sickbeard.USE_EMBY = config.checkbox_to_value(use_emby)
         sickbeard.EMBY_UPDATE_LIBRARY = config.checkbox_to_value(emby_update_library)
         sickbeard.EMBY_PARENT_MAPS = config.kv_csv(emby_parent_maps)
-        sickbeard.EMBY_HOST = config.clean_hosts(emby_host)
+        sickbeard.EMBY_HOST = config.clean_hosts(emby_host, allow_base=True)
         keys_changed = False
         all_keys = []
         old_keys = [x.strip() for x in sickbeard.EMBY_APIKEY.split(',') if x.strip()]

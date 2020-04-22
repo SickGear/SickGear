@@ -271,7 +271,7 @@ def checkbox_to_value(option, value_on=1, value_off=0):
     return value_off
 
 
-def clean_host(host, default_port=None):
+def clean_host(host, default_port=None, allow_base=False):
     """
     Returns host or host:port or empty string from a given url or host
     If no port is found and default_port is given use host:default_port
@@ -281,21 +281,25 @@ def clean_host(host, default_port=None):
 
     if host:
 
-        match_host_port = re.search(r'(?:http.*://)?(?P<host>[^:/]+).?(?P<port>[0-9]*).*', host)
+        match_host_port = re.search(r'(?:http.*://)?(?P<host>[^:/]+).?(?P<port>(?<!/)[0-9]*)(?P<base>.*)', host)
 
         cleaned_host = match_host_port.group('host')
         cleaned_port = match_host_port.group('port')
+        if allow_base:
+            cleaned_base = match_host_port.group('base')
+        else:
+            cleaned_base = ''
 
         if cleaned_host:
 
             if cleaned_port:
-                host = '%s:%s' % (cleaned_host, cleaned_port)
+                host = '%s:%s%s' % (cleaned_host, cleaned_port, cleaned_base)
 
             elif default_port:
-                host = '%s:%s' % (cleaned_host, default_port)
+                host = '%s:%s%s' % (cleaned_host, default_port, cleaned_base)
 
             else:
-                host = cleaned_host
+                host = '%s%s' % (cleaned_host, cleaned_base)
 
         else:
             host = ''
@@ -303,12 +307,12 @@ def clean_host(host, default_port=None):
     return host
 
 
-def clean_hosts(hosts, default_port=None):
+def clean_hosts(hosts, default_port=None, allow_base=False):
     cleaned_hosts = []
 
     for cur_host in [host.strip() for host in hosts.split(',')]:
         if cur_host:
-            cleaned_host = clean_host(cur_host, default_port)
+            cleaned_host = clean_host(cur_host, default_port, allow_base=allow_base)
             if cleaned_host:
                 cleaned_hosts.append(cleaned_host)
 
