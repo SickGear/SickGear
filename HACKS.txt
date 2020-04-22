@@ -25,4 +25,3 @@ Libs with customisations...
 /lib/tmdbsimple
 /lib/tornado
 /lib/tvdb_api/tvdb_api.py
-/lib/tzlocal/unix.py
