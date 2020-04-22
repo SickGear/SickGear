@@ -1,4 +1,11 @@
-﻿### 0.21.26 (2020-04-13 00:30:00 UTC)
+﻿### 0.21.27 (2020-04-22 02:50:00 UTC)
+
+* Update TZlocal 2.0.0b3 (410a838) to 2.1b1 (dd79171)
+* Change Emby notifier to add unofficial support for Jellyfin
+* Change Filelist torrent provider
+
+
+### 0.21.26 (2020-04-13 00:30:00 UTC)
 
 * Fix AttributeError in anime manager while editing show (part deux)
 * Fix use lib logger instead of global logger

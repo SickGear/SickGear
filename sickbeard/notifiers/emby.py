@@ -53,7 +53,7 @@ class EmbyNotifier(Notifier):
             timeout=20, hooks=dict(response=self._cb_response), json=True)
 
         return self.response and self.response.get('ok') and 200 == self.response.get('status_code') and \
-            version <= map_list(lambda x: int(x), response.get('Version', '0.0.0.0').split('.'))
+            version <= map_list(lambda x: int(x), (response and response.get('Version') or '0.0.0.0').split('.'))
 
     def update_library(self, show_obj=None, **kwargs):
         """ Update library function
@@ -140,7 +140,7 @@ class EmbyNotifier(Notifier):
         cs.setsockopt(SOL_SOCKET, SO_BROADCAST, 1)
         cs.settimeout(10)
         result, sock_issue = '', None
-        for server in ('EmbyServer', 'MediaBrowserServer'):
+        for server in ('EmbyServer', 'MediaBrowserServer', 'JellyfinServer'):
             bufr = 'who is %s?' % server
             try:
                 assert len(bufr) == cs.sendto(bufr, ('255.255.255.255', mb_listen_port)), \
