@@ -13,27 +13,6 @@ import re
 
 __all__ = ["SGMLParser", "SGMLParseError"]
 
-# Regular expressions used for parsing
-
-interesting = re.compile('[&<]')
-incomplete = re.compile('&([a-zA-Z][a-zA-Z0-9]*|#[0-9]*)?|'
-                           '<([a-zA-Z][^<>]*|'
-                              '/([a-zA-Z][^<>]*)?|'
-                              '![^<>]*)?')
-
-entityref = re.compile('&([a-zA-Z][-.a-zA-Z0-9]*)[^a-zA-Z0-9]')
-charref = re.compile('&#([0-9]+)[^0-9]')
-
-starttagopen = re.compile('<[>a-zA-Z]')
-shorttagopen = re.compile('<[a-zA-Z][-.a-zA-Z0-9]*/')
-shorttag = re.compile('<([a-zA-Z][-.a-zA-Z0-9]*)/([^/]*)/')
-piclose = re.compile('>')
-endbracket = re.compile('[<>]')
-tagfind = re.compile('[a-zA-Z][-_.a-zA-Z0-9]*')
-attrfind = re.compile(
-    r'\s*([a-zA-Z_][-:.a-zA-Z_0-9]*)(\s*=\s*'
-    r'(\'[^\']*\'|"[^"]*"|[][\-a-zA-Z0-9./,:;+*%?!&$\(\)_#=~\'"@]*))?')
-
 
 class SGMLParseError(RuntimeError):
     """Exception raised for all parse errors."""
@@ -56,6 +35,27 @@ class SGMLParser(_markupbase.ParserBase):
     entity_or_charref = re.compile('&(?:'
       '([a-zA-Z][-.a-zA-Z0-9]*)|#([0-9]+)'
       ')(;?)')
+
+    # Regular expressions used for parsing
+
+    interesting = re.compile('[&<]')
+    incomplete = re.compile('&([a-zA-Z][a-zA-Z0-9]*|#[0-9]*)?|'
+                            '<([a-zA-Z][^<>]*|'
+                            '/([a-zA-Z][^<>]*)?|'
+                            '![^<>]*)?')
+
+    entityref = re.compile('&([a-zA-Z][-.a-zA-Z0-9]*)[^a-zA-Z0-9]')
+    charref = re.compile('&#([0-9]+)[^0-9]')
+
+    starttagopen = re.compile('<[>a-zA-Z]')
+    shorttagopen = re.compile('<[a-zA-Z][-.a-zA-Z0-9]*/')
+    shorttag = re.compile('<([a-zA-Z][-.a-zA-Z0-9]*)/([^/]*)/')
+    piclose = re.compile('>')
+    endbracket = re.compile('[<>]')
+    tagfind = re.compile('[a-zA-Z][-_.a-zA-Z0-9]*')
+    attrfind = re.compile(
+        r'\s*([a-zA-Z_][-:.a-zA-Z_0-9]*)(\s*=\s*'
+        r'(\'[^\']*\'|"[^"]*"|[][\-a-zA-Z0-9./,:;+*%?!&$\(\)_#=~\'"@]*))?')
 
     def __init__(self, verbose=0):
         """Initialize and reset this instance."""
@@ -116,7 +116,7 @@ class SGMLParser(_markupbase.ParserBase):
                 self.handle_data(rawdata[i:n])
                 i = n
                 break
-            match = interesting.search(rawdata, i)
+            match = self.interesting.search(rawdata, i)
             if match: j = match.start()
             else: j = n
             if i < j:
@@ -124,7 +124,7 @@ class SGMLParser(_markupbase.ParserBase):
             i = j
             if i == n: break
             if rawdata[i] == '<':
-                if starttagopen.match(rawdata, i):
+                if self.starttagopen.match(rawdata, i):
                     if self.literal:
                         self.handle_data(rawdata[i])
                         i = i+1
@@ -174,14 +174,14 @@ class SGMLParser(_markupbase.ParserBase):
                     self.handle_data(rawdata[i])
                     i = i+1
                     continue
-                match = charref.match(rawdata, i)
+                match = self.charref.match(rawdata, i)
                 if match:
                     name = match.group(1)
                     self.handle_charref(name)
                     i = match.end(0)
                     if rawdata[i-1] != ';': i = i-1
                     continue
-                match = entityref.match(rawdata, i)
+                match = self.entityref.match(rawdata, i)
                 if match:
                     name = match.group(1)
                     self.handle_entityref(name)
@@ -192,7 +192,7 @@ class SGMLParser(_markupbase.ParserBase):
                 self.error('neither < nor & ??')
             # We get here only if incomplete matches but
             # nothing else
-            match = incomplete.match(rawdata, i)
+            match = self.incomplete.match(rawdata, i)
             if not match:
                 self.handle_data(rawdata[i])
                 i = i+1
@@ -217,7 +217,7 @@ class SGMLParser(_markupbase.ParserBase):
         rawdata = self.rawdata
         if rawdata[i:i+2] != '<?':
             self.error('unexpected call to parse_pi()')
-        match = piclose.search(rawdata, i+2)
+        match = self.piclose.search(rawdata, i+2)
         if not match:
             return -1
         j = match.start(0)
@@ -233,12 +233,12 @@ class SGMLParser(_markupbase.ParserBase):
         self.__starttag_text = None
         start_pos = i
         rawdata = self.rawdata
-        if shorttagopen.match(rawdata, i):
+        if self.shorttagopen.match(rawdata, i):
             # SGML shorthand: <tag/data/ == <tag>data</tag>
             # XXX Can data contain &... (entity or char refs)?
             # XXX Can data contain < or > (tag characters)?
             # XXX Can there be whitespace before the first /?
-            match = shorttag.match(rawdata, i)
+            match = self.shorttag.match(rawdata, i)
             if not match:
                 return -1
             tag, data = match.group(1, 2)
@@ -252,7 +252,7 @@ class SGMLParser(_markupbase.ParserBase):
         # As a shortcut way to exit, this isn't so bad, but shouldn't
         # be used to locate the actual end of the start tag since the
         # < or > characters may be embedded in an attribute value.
-        match = endbracket.search(rawdata, i+1)
+        match = self.endbracket.search(rawdata, i+1)
         if not match:
             return -1
         j = match.start(0)
@@ -263,14 +263,14 @@ class SGMLParser(_markupbase.ParserBase):
             k = j
             tag = self.lasttag
         else:
-            match = tagfind.match(rawdata, i+1)
+            match = self.tagfind.match(rawdata, i+1)
             if not match:
                 self.error('unexpected call to parse_starttag')
             k = match.end(0)
             tag = rawdata[i+1:k].lower()
             self.lasttag = tag
         while k < j:
-            match = attrfind.match(rawdata, k)
+            match = self.attrfind.match(rawdata, k)
             if not match: break
             attrname, rest, attrvalue = match.group(1, 2, 3)
             if not rest:
@@ -304,7 +304,7 @@ class SGMLParser(_markupbase.ParserBase):
     # Internal -- parse endtag
     def parse_endtag(self, i):
         rawdata = self.rawdata
-        match = endbracket.search(rawdata, i+1)
+        match = self.endbracket.search(rawdata, i+1)
         if not match:
             return -1
         j = match.start(0)

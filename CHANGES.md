@@ -1,8 +1,11 @@
-﻿### 0.21.27 (2020-04-22 02:50:00 UTC)
+﻿### 0.21.27 (2020-04-22 20:35:00 UTC)
 
 * Update TZlocal 2.0.0b3 (410a838) to 2.1b1 (dd79171)
 * Change Emby notifier to add unofficial support for Jellyfin
 * Change Filelist torrent provider
+* Fix regex references in sgmllib3k
+* Fix settings/Notifications/Emby/"Discover" Emby/Jellyfin server in py3
+* Change add allow_base to clean_host, clean_hosts to permit the base address format Jellyfin introduced at 10.4.0
 
 
 ### 0.21.26 (2020-04-13 00:30:00 UTC)

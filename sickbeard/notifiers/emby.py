@@ -24,7 +24,7 @@ from socket import socket, AF_INET, SOCK_DGRAM, SOL_SOCKET, SO_REUSEADDR, SO_BRO
 from .generic import Notifier
 import sickbeard
 
-from _23 import map_list
+from _23 import decode_bytes, decode_str, map_list
 
 
 class EmbyNotifier(Notifier):
@@ -143,10 +143,11 @@ class EmbyNotifier(Notifier):
         for server in ('EmbyServer', 'MediaBrowserServer', 'JellyfinServer'):
             bufr = 'who is %s?' % server
             try:
-                assert len(bufr) == cs.sendto(bufr, ('255.255.255.255', mb_listen_port)), \
+                assert len(bufr) == cs.sendto(decode_bytes(bufr), ('255.255.255.255', mb_listen_port)), \
                     'Not all data sent through the socket'
                 message, host = cs.recvfrom(1024)
                 if message:
+                    message = decode_str(message)
                     self._log('%s found at %s: udp query response (%s)' % (server, host[0], message))
                     result = ('{"Address":' not in message and message.split('|')[1] or
                               json.loads(message).get('Address', ''))
