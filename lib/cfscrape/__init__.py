@@ -157,7 +157,7 @@ class CloudflareScraper(Session):
                 # Something is wrong with the page, perhaps CF changed their anti-bot technique
                 raise ValueError('Unable to find a new location from Cloudflare anti-bot IUAM page')
 
-            if not r.netloc:
+            if not r.netloc or location.startswith('/'):
                 location = urlunparse((parsed_url.scheme, domain, r.path, r.params, r.query, r.fragment))
             return self.request(resp.request.method, location, **original_kwargs)
 
@@ -167,7 +167,7 @@ class CloudflareScraper(Session):
             js = re.search(
                 r'''(?x)
                 setTimeout\(function\(\){\s*?(var\s*?
-                (?:s,t,o,p,b,r,e,a,k,i,n,g|t,r,a),f.+?[\r\n\s\S]*?a\.value\s*=.+?)[\r\n]+
+                (?:s,t,o,p,\s*?b,r,e,a,k,i,n,g|t,r,a),f.+?[\r\n\s\S]*?a\.value\s*=.+?)[\r\n]+
                 ''', body).group(1)
         except (BaseException, Exception):
             raise RuntimeError('Error #1 Cloudflare anti-bots changed, please notify SickGear for an update')

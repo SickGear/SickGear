@@ -51,6 +51,11 @@
 * Update urllib3 release 1.25.6 (4a6c288) to 1.25.7 (37ba61a)
 
 
+### 0.21.28 (2020-04-24 09:40:00 UTC)
+
+* Change improve Cloudflare connectivity 
+
+
 ### 0.21.27 (2020-04-22 20:35:00 UTC)
 
 * Update TZlocal 2.0.0b3 (410a838) to 2.1b1 (dd79171)
