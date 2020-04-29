@@ -118,6 +118,7 @@ class TVEpisodeSample(tv.TVEpisode):
         self._release_name = 'Show.Name.S02E03.HDTV.XviD-RLSGROUP'  # type: AnyStr
         self._is_proper = True  # type: bool
         self._version = 2  # type: int
+        self._epid = season + (100 * episode)  # type: int
 
 
 def check_force_season_folders(pattern=None, multi=None, anime_type=None):
