@@ -1,6 +1,13 @@
-﻿### 0.21.28 (2020-04-24 09:40:00 UTC)
+﻿### 0.21.29 (2020-04-29 02:10:00 UTC)
 
-* Change improve Cloudflare connectivity 
+* Change update fallback timezone info file to 2020a
+* Fix TVEpisodeSample to fix comparison on patterns with limited multi ep naming
+* Update Js2Py 0.64 (7858d1d) to 0.70 (f297498)
+
+
+### 0.21.28 (2020-04-24 09:40:00 UTC)
+
+* Change improve Cloudflare connectivity
 
 
 ### 0.21.27 (2020-04-22 20:35:00 UTC)
