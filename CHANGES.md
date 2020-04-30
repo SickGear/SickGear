@@ -1,4 +1,9 @@
-﻿### 0.21.29 (2020-04-29 02:10:00 UTC)
+﻿### 0.21.30 (2020-04-30 10:20:00 UTC)
+
+* Fix Milkie torrent provider breaking changes
+
+
+### 0.21.29 (2020-04-29 02:10:00 UTC)
 
 * Change update fallback timezone info file to 2020a
 * Fix TVEpisodeSample to fix comparison on patterns with limited multi ep naming
