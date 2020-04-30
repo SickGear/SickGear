@@ -285,6 +285,7 @@ NZBGET_USE_HTTPS = False
 NZBGET_PRIORITY = 100
 NZBGET_SCRIPT_VERSION = None
 NZBGET_MAP = None
+NZBGET_SKIP_PM = False
 
 SAB_USERNAME = None
 SAB_PASSWORD = None
@@ -654,7 +655,7 @@ def init_stage_1(console_logging):
     # Search Settings/NZB search
     global USE_NZBS, NZB_METHOD, NZB_DIR, SAB_HOST, SAB_USERNAME, SAB_PASSWORD, SAB_APIKEY, SAB_CATEGORY, \
         NZBGET_USE_HTTPS, NZBGET_HOST, NZBGET_USERNAME, NZBGET_PASSWORD, NZBGET_CATEGORY, NZBGET_PRIORITY, \
-        NZBGET_SCRIPT_VERSION, NZBGET_MAP
+        NZBGET_SCRIPT_VERSION, NZBGET_MAP, NZBGET_SKIP_PM
     # Search Settings/Torrent search
     global USE_TORRENTS, TORRENT_METHOD, TORRENT_DIR, TORRENT_HOST, TORRENT_USERNAME, TORRENT_PASSWORD, \
         TORRENT_LABEL, TORRENT_LABEL_VAR, TORRENT_PATH, TORRENT_SEED_TIME, TORRENT_PAUSED, \
@@ -984,6 +985,7 @@ def init_stage_1(console_logging):
     if None is NZBGET_PRIORITY:
         NZBGET_PRIORITY = check_setting_int(CFG, 'NZBget', 'nzbget_priority', 100)
     NZBGET_MAP = check_setting_str(CFG, 'NZBGet', 'nzbget_map', '')
+    NZBGET_SKIP_PM = bool(check_setting_int(CFG, 'NZBGet', 'nzbget_skip_process_media', 0))
 
     try:
         ng_script_file = ek.ek(os.path.join, ek.ek(os.path.dirname, ek.ek(os.path.dirname, __file__)),
@@ -1902,6 +1904,7 @@ def save_config():
             ('use_https', int(NZBGET_USE_HTTPS)),
             ('priority', NZBGET_PRIORITY),
             ('map', NZBGET_MAP),
+            ('nzbget_skip_process_media', int(NZBGET_SKIP_PM)),
         ]),
         ('SABnzbd', [
             ('username', SAB_USERNAME), ('password', helpers.encrypt(SAB_PASSWORD, ENCRYPTION_VERSION)),

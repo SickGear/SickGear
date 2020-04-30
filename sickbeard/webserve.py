@@ -1360,7 +1360,7 @@ class Home(MainHandler):
         :param tvid_prodid:
         :type tvid_prodid:
         :param season:
-        :type season: 
+        :type season:
         :param episode:
         :type episode:
         :param absolute:
@@ -1780,7 +1780,7 @@ class Home(MainHandler):
         r = notifiers.NotifierFactory().get('TELEGRAM').test_notify(
             send_icon=bool(config.checkbox_to_value(send_icon)), access_token=access_token, chatid=chatid)
         return json.dumps(r)
-    
+
     def test_email(self, host=None, port=None, smtp_from=None, use_tls=None, user=None, pwd=None, to=None):
         self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
 
@@ -1993,8 +1993,8 @@ class Home(MainHandler):
             last_found = ('', ' since %s' % SGDatetime.fromordinal(
                 show_obj.last_found_on_indexer).sbfdate())[1 < show_obj.last_found_on_indexer]
             show_message = (
-                'The master ID of this show has been <span class="addQTip" title="many reasons exist, including: ' + 
-                '<br>show flagged as a duplicate, removed completely... etc">abandoned</span>%s, ' % last_found + 
+                'The master ID of this show has been <span class="addQTip" title="many reasons exist, including: ' +
+                '<br>show flagged as a duplicate, removed completely... etc">abandoned</span>%s, ' % last_found +
                 '<a href="%s/home/edit-show?tvid_prodid=%s&tvsrc=0&srcid=%s#core-component-group3">replace it here</a>'
                 % (sickbeard.WEB_ROOT, tvid_prodid, show_obj.prodid)
                 + ('', '<br>%s' % show_message)[0 < len(show_message)])
@@ -3281,30 +3281,36 @@ class HomeProcessMedia(Home):
                 logger.log('Calling SickGear-NG.py script %s is not current version %s, please update.' %
                            (kwargs.get('pp_version', '0'), sickbeard.NZBGET_SCRIPT_VERSION), logger.ERROR)
 
-            if isinstance(dir_name, string_types):
-                dir_name = decode_str(dir_name)
-                if nzbget_call and isinstance(sickbeard.NZBGET_MAP, string_types) and sickbeard.NZBGET_MAP:
-                    m = sickbeard.NZBGET_MAP.split('=')
-                    dir_name, not_used = helpers.path_mapper(m[0], m[1], dir_name)
+            if sickbeard.NZBGET_SKIP_PM and nzbget_call and nzbget_dupekey and nzb_name and show_obj:
+                processTV.process_minimal(nzb_name, show_obj,
+                                          failed in (1, '1', True, 'True', 'true'),
+                                          webhandler=None if '0' == stream else self.send_message)
+            else:
 
-            result = processTV.processDir(dir_name if dir_name else None,
-                                          None if not nzb_name else decode_str(nzb_name),
-                                          process_method=process_method, pp_type=process_type,
-                                          cleanup=kwargs.get('cleanup') in ('on', '1'),
-                                          force=force in ('on', '1'),
-                                          force_replace=force_replace in ('on', '1'),
-                                          failed='0' != failed,
-                                          webhandler=None if '0' == stream else self.send_message,
-                                          show_obj=show_obj, is_basedir=is_basedir in ('on', '1'),
-                                          skip_failure_processing=skip_failure_processing)
+                if isinstance(dir_name, string_types):
+                    dir_name = decode_str(dir_name)
+                    if nzbget_call and isinstance(sickbeard.NZBGET_MAP, string_types) and sickbeard.NZBGET_MAP:
+                        m = sickbeard.NZBGET_MAP.split('=')
+                        dir_name, not_used = helpers.path_mapper(m[0], m[1], dir_name)
 
-            if '0' == stream:
-                regexp = re.compile(r'(?i)<br(?:[\s/]+)>', flags=re.UNICODE)
-                result = regexp.sub('\n', result)
-                if None is not quiet and 1 == int(quiet):
-                    regexp = re.compile(u'(?i)<a[^>]+>([^<]+)<[/]a>', flags=re.UNICODE)
-                    return u'%s' % regexp.sub(r'\1', result)
-                return self._generic_message('Postprocessing results', u'<pre>%s</pre>' % result)
+                result = processTV.processDir(dir_name if dir_name else None,
+                                              None if not nzb_name else decode_str(nzb_name),
+                                              process_method=process_method, pp_type=process_type,
+                                              cleanup=kwargs.get('cleanup') in ('on', '1'),
+                                              force=force in ('on', '1'),
+                                              force_replace=force_replace in ('on', '1'),
+                                              failed='0' != failed,
+                                              webhandler=None if '0' == stream else self.send_message,
+                                              show_obj=show_obj, is_basedir=is_basedir in ('on', '1'),
+                                              skip_failure_processing=skip_failure_processing)
+
+                if '0' == stream:
+                    regexp = re.compile(r'(?i)<br(?:[\s/]+)>', flags=re.UNICODE)
+                    result = regexp.sub('\n', result)
+                    if None is not quiet and 1 == int(quiet):
+                        regexp = re.compile(u'(?i)<a[^>]+>([^<]+)<[/]a>', flags=re.UNICODE)
+                        return u'%s' % regexp.sub(r'\1', result)
+                    return self._generic_message('Postprocessing results', u'<pre>%s</pre>' % result)
 
     def processEpisode(self, dir_name=None, nzb_name=None, process_type=None, **kwargs):
         """ legacy function name, stubbed but can _not_ be removed as this
@@ -6551,7 +6557,7 @@ class ConfigSearch(Config):
                     sab_username=None, sab_password=None, sab_apikey=None, sab_category=None, sab_host=None,
                     nzbget_username=None, nzbget_password=None, nzbget_category=None, nzbget_host=None,
                     nzbget_use_https=None, nzbget_priority=None, nzbget_parent_map=None,
-                    torrent_username=None, torrent_password=None, torrent_label=None, torrent_label_var=None, 
+                    torrent_username=None, torrent_password=None, torrent_label=None, torrent_label_var=None,
                     torrent_verify_cert=None, torrent_path=None, torrent_seed_time=None, torrent_paused=None,
                     torrent_high_bandwidth=None, torrent_host=None):
 

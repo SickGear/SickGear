@@ -611,7 +611,7 @@ class PostProcessor(object):
             logger.log(u' or Parse result(air_date): ' + str(parse_result.air_date), logger.DEBUG)
             logger.log(u'Parse result(release_group): ' + str(parse_result.release_group), logger.DEBUG)
 
-    def _find_info(self):
+    def _find_info(self, history_only=False):
         """
         For a given file try to find the show_obj, season, and episode.
         :return: tuple of tv show object, season number, list of episode numbers, quality or None, None, [], None
@@ -622,7 +622,7 @@ class PostProcessor(object):
         episode_numbers = []
 
         # try to look up the nzb in history
-        try_list = [self._history_lookup,
+        try_list = [self._history_lookup] + ([
 
                     # try to analyze the nzb name
                     lambda: self._analyze_name(self.nzb_name),
@@ -640,7 +640,9 @@ class PostProcessor(object):
                     lambda: self._analyze_name(self.folder_name + u' ' + self.file_name),
 
                     # try to analyze file name with previously parsed show_obj
-                    lambda: self._analyze_name(self.file_name, show_obj=show_obj, rel_grp=rel_grp)]
+                    lambda: self._analyze_name(self.file_name, show_obj=show_obj, rel_grp=rel_grp)],
+
+                [])[history_only]
 
         # attempt every possible method to get our info
         for cur_try in try_list:
@@ -719,7 +721,7 @@ class PostProcessor(object):
 
         If the episode(s) can be found then a TVEpisode object with the correct related eps will
         be instantiated and returned. If the episode can't be found then None will be returned.
-        
+
         :param show_obj:
         :type show_obj: sickbeard.tv.TVShow
         :param season_number:
@@ -995,6 +997,63 @@ class PostProcessor(object):
                   u' would be better to examine the files', logger.DEBUG)
         return False
 
+    def _change_ep_objs(self, show_obj, season_number, episode_numbers, quality):
+        sql_l = []
+        ep_obj = self._get_ep_obj(show_obj, season_number, episode_numbers)
+        # if we're processing an episode of type anime, get the anime version
+        anime_version = (-1, self.anime_version)[ep_obj.show_obj.is_anime and None is not self.anime_version]
+        for cur_ep_obj in [ep_obj] + ep_obj.related_ep_obj:
+            with cur_ep_obj.lock:
+                if self.release_name:
+                    self._log(u'Found release name ' + self.release_name, logger.DEBUG)
+
+                cur_ep_obj.release_name = self.release_name or ''
+
+                any_qualities, best_qualities = common.Quality.splitQuality(cur_ep_obj.show_obj.quality)
+                cur_status, cur_quality = common.Quality.splitCompositeStatus(cur_ep_obj.status)
+
+                cur_ep_obj.status = common.Quality.compositeStatus(
+                    **({'status': common.DOWNLOADED, 'quality': quality},
+                       {'status': common.ARCHIVED, 'quality': quality})
+                    [cur_ep_obj.status in common.Quality.SNATCHED_BEST or
+                     (cur_ep_obj.show_obj.upgrade_once and
+                      (quality in best_qualities and
+                       (quality not in any_qualities or (cur_status in
+                                                         (common.SNATCHED, common.SNATCHED_BEST,
+                                                          common.SNATCHED_PROPER, common.DOWNLOADED) and
+                                                         cur_quality != quality))))])
+
+                cur_ep_obj.release_group = self.release_group or ''
+
+                cur_ep_obj.is_proper = self.is_proper
+
+                cur_ep_obj.version = anime_version
+
+                cur_ep_obj.subtitles = []
+
+                cur_ep_obj.subtitles_searchcount = 0
+
+                cur_ep_obj.subtitles_lastsearch = '0001-01-01 00:00:00'
+
+                sql = cur_ep_obj.get_sql()
+                if None is not sql:
+                    sql_l.append(sql)
+
+        if 0 < len(sql_l):
+            my_db = db.DBConnection()
+            my_db.mass_action(sql_l)
+
+    def process_minimal(self):
+        self._log('Processing without any files...')
+        (show_obj, season_number, episode_numbers, quality) = self._find_info(history_only=True)
+        if show_obj and season_number and episode_numbers and quality and quality not in (None, common.Quality.UNKNOWN):
+            self._change_ep_objs(show_obj, season_number, episode_numbers, quality)
+            self._log('Successfully processed.', logger.MESSAGE)
+
+        else:
+            self._log('Can\'t figure out what show/episode to process', logger.WARNING)
+            raise exceptions_helper.PostProcessingFailed()
+
     def process(self):
         """
         Post-process a given file
@@ -1075,51 +1134,7 @@ class PostProcessor(object):
             # get metadata for the show (but not episode because it hasn't been fully processed)
             ep_obj.show_obj.write_metadata(True)
 
-        # if we're processing an episode of type anime, get the anime version
-        anime_version = (-1, self.anime_version)[ep_obj.show_obj.is_anime and None is not self.anime_version]
-
-        # update the ep info before we rename so the quality & release name go into the name properly
-        sql_l = []
-        for cur_ep_obj in [ep_obj] + ep_obj.related_ep_obj:
-            with cur_ep_obj.lock:
-
-                if self.release_name:
-                    self._log(u'Found release name ' + self.release_name, logger.DEBUG)
-
-                cur_ep_obj.release_name = self.release_name or ''
-
-                any_qualities, best_qualities = common.Quality.splitQuality(cur_ep_obj.show_obj.quality)
-                cur_status, cur_quality = common.Quality.splitCompositeStatus(cur_ep_obj.status)
-
-                cur_ep_obj.status = common.Quality.compositeStatus(
-                    **({'status': common.DOWNLOADED, 'quality': new_ep_quality},
-                       {'status': common.ARCHIVED, 'quality': new_ep_quality})
-                    [ep_obj.status in common.Quality.SNATCHED_BEST or
-                     (cur_ep_obj.show_obj.upgrade_once and
-                      (new_ep_quality in best_qualities and
-                       (new_ep_quality not in any_qualities or (cur_status in
-                        (common.SNATCHED, common.SNATCHED_BEST, common.SNATCHED_PROPER, common.DOWNLOADED) and
-                                                                cur_quality != new_ep_quality))))])
-
-                cur_ep_obj.release_group = self.release_group or ''
-
-                cur_ep_obj.is_proper = self.is_proper
-
-                cur_ep_obj.version = anime_version
-
-                cur_ep_obj.subtitles = []
-
-                cur_ep_obj.subtitles_searchcount = 0
-
-                cur_ep_obj.subtitles_lastsearch = '0001-01-01 00:00:00'
-
-                sql = cur_ep_obj.get_sql()
-                if None is not sql:
-                    sql_l.append(sql)
-
-        if 0 < len(sql_l):
-            my_db = db.DBConnection()
-            my_db.mass_action(sql_l)
+        self._change_ep_objs(show_obj, season_number, episode_numbers, new_ep_quality)
 
         # Just want to keep this consistent for failed handling right now
         release_name = show_name_helpers.determineReleaseName(self.folder_path, self.nzb_name)
@@ -1226,6 +1241,7 @@ class PostProcessor(object):
         ep_obj.create_meta_files()
 
         # log it to history
+        anime_version = (-1, self.anime_version)[ep_obj.show_obj.is_anime and None is not self.anime_version]
         history.log_download(ep_obj, self.file_path, new_ep_quality, self.release_group, anime_version)
 
         # send notifications
