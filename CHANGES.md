@@ -32,6 +32,7 @@
 * Change update sceneNameCache after scene names are updated
 * Change add core dedicated base class tvinfo_base to unify future info sources
 * Add exclude ignore words and exclude required words to settings/Search, Edit and View show
+* Change improve Popen resource usage under py2
 
 
 [develop changelog]

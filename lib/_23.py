@@ -151,6 +151,9 @@ if 2 != version_info[0]:
     # noinspection PyUnresolvedReferences
     from inspect import getfullargspec as getargspec
 
+    # noinspection PyUnresolvedReferences
+    from subprocess import Popen
+
     def unquote(string, encoding='utf-8', errors='replace'):
         return decode_str(six_unquote(decode_str(string, encoding, errors), encoding=encoding, errors=errors),
                           encoding, errors)
@@ -219,6 +222,17 @@ else:
     from lib.scandir.scandir import scandir, GenericDirEntry as DirEntry
     # noinspection PyUnresolvedReferences,PyDeprecation
     from inspect import getargspec
+
+    from subprocess import Popen as _Popen
+    class Popen(_Popen):
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args, **kwargs):
+            for x in filter_iter(lambda y: y, [self.stdout, self.stderr, self.stdin]):
+                x.close()
+            self.wait()
 
     def unquote(string, encoding='utf-8', errors='replace'):
         return decode_str(six_unquote(decode_str(string, encoding, errors)), encoding, errors)

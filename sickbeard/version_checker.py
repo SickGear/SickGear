@@ -221,7 +221,10 @@ class GitUpdateManager(UpdateManager):
             logger.log(u'git output: %s' % output, logger.DEBUG)
 
         except OSError:
-            logger.log(u'Failed command: %s' % cmd)
+            logger.log('Failed command: %s' % cmd)
+
+        except (BaseException, Exception) as e:
+            logger.log('Failed command: %s, %s' % (cmd, ex(e)))
 
         if 0 == exit_status:
             logger.log(u'Successful return: %s' % cmd, logger.DEBUG)
