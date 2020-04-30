@@ -50,7 +50,8 @@ import lib.rarfile.rarfile as rarfile
 
 # noinspection PyUnreachableCode
 if False:
-    from typing import AnyStr, Dict, List, Optional, Tuple
+    from typing import Any, AnyStr, Dict, List, Optional, Tuple
+    from .tv import TVShow
 
 
 # noinspection PyArgumentList
@@ -1148,6 +1149,14 @@ class ProcessTVShow(object):
                 self._log_helper(u'%s failed: (%s, %s): %s'
                                  % (task, str(nzb_name), dir_name, process_fail_message), logger.WARNING)
 
+    def process_minimal(self, nzb_name, show_obj, failed, webhandler):
+        if failed:
+            self._process_failed('', nzb_name=nzb_name, show_obj=show_obj)
+        else:
+            processor = postProcessor.PostProcessor('', nzb_name=nzb_name, webhandler=webhandler, show_obj=show_obj)
+            processor.process_minimal()
+            self._buffer(processor.log.strip('\n'))
+
 
 # backward compatibility prevents the case of this function name from being updated to PEP8
 def processDir(dir_name, nzb_name=None, process_method=None, force=False, force_replace=None,
@@ -1185,3 +1194,8 @@ def processDir(dir_name, nzb_name=None, process_method=None, force=False, force_
     # backward compatibility prevents the case of this function name from being updated to PEP8
     return ProcessTVShow(webhandler, is_basedir, skip_failure_processing=skip_failure_processing).process_dir(
         dir_name, nzb_name, process_method, force, force_replace, failed, pp_type, cleanup, show_obj)
+
+
+def process_minimal(nzb_name, show_obj, failed, webhandler):
+    # type: (AnyStr, TVShow, bool, Any) -> None
+    ProcessTVShow(webhandler).process_minimal(nzb_name, show_obj, failed, webhandler)
