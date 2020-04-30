@@ -51,6 +51,11 @@
 * Update urllib3 release 1.25.6 (4a6c288) to 1.25.7 (37ba61a)
 
 
+### 0.21.30 (2020-04-30 10:20:00 UTC)
+
+* Fix Milkie torrent provider breaking changes
+
+
 ### 0.21.29 (2020-04-29 02:10:00 UTC)
 
 * Change update fallback timezone info file to 2020a
