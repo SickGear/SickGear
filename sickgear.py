@@ -28,7 +28,6 @@ import os
 import signal
 import sys
 import shutil
-import subprocess
 import time
 import threading
 import warnings
@@ -698,7 +697,9 @@ class SickGear(object):
                         popen_list += ['--nolaunch']
                     logger.log(u'Restarting SickGear with %s' % popen_list)
                     logger.close()
-                    subprocess.Popen(popen_list, cwd=os.getcwd())
+                    from _23 import Popen
+                    with Popen(popen_list, cwd=os.getcwd()):
+                        pass
 
         # system exit
         self.exit(0)

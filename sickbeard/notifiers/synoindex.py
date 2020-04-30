@@ -40,8 +40,8 @@ class SynoIndexNotifier(BaseNotifier):
             from sickbeard.helpers import cmdline_runner
             output, err, exit_status = cmdline_runner(synoindex_cmd)
             self._log_debug(u'Script result: %s' % output)
-        except OSError as e:
-            self._log_error(u'Unable to run synoindex: ' + ex(e))
+        except (BaseException, Exception) as e:
+            self._log_error('Unable to run synoindex: %s' % ex(e))
 
     def _move_object(self, old_path, new_path):
         if self.is_enabled():

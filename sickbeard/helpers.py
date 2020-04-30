@@ -54,7 +54,7 @@ import subliminal
 from lxml_etree import etree, is_lxml
 from send2trash import send2trash
 
-from _23 import b64decodebytes, b64encodebytes, decode_bytes, DirEntry, filter_iter, scandir
+from _23 import b64decodebytes, b64encodebytes, decode_bytes, DirEntry, filter_iter, Popen, scandir
 from six import iteritems, PY2, string_types, text_type
 # noinspection PyUnresolvedReferences
 from six.moves import zip
@@ -2006,12 +2006,12 @@ def cmdline_runner(cmd, shell=False):
     if 'win32' == sys.platform:
         kw['creationflags'] = 0x08000000   # CREATE_NO_WINDOW (needed for py2exe)
 
-    p = subprocess.Popen(cmd,  **kw)
-    out, err = p.communicate()
-    if out:
-        out = out.strip()
+    with Popen(cmd, **kw) as p:
+        out, err = p.communicate()
+        if out:
+            out = out.strip()
 
-    return out, err, p.returncode
+        return out, err, p.returncode
 
 
 def parse_imdb_id(string):
