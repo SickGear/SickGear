@@ -47,7 +47,6 @@ from .config import check_section, check_setting_int, check_setting_str, ConfigM
 from .databases import cache_db, failed_db, mainDB
 from .indexers.indexer_api import TVInfoAPI
 from .indexers.indexer_config import TVINFO_IMDB, TVINFO_TVDB
-from tvinfo_base.exceptions import *
 from .providers.generic import GenericProvider
 from .providers.newznab import NewznabConstants
 from .tv import TVidProdid
@@ -64,13 +63,16 @@ import sg_helpers
 # noinspection PyUnreachableCode
 if False:
     from typing import Dict, List
+    from adba import Connection
+    from .event_queue import Events
     from .tv import TVShow
 
 PID = None
 ENV = {}
 
-CFG = None
-CONFIG_FILE = None
+# noinspection PyTypeChecker
+CFG = None  # type: ConfigObj
+CONFIG_FILE = ''
 CONFIG_VERSION = None
 
 # Default encryption version (0 for None)
@@ -84,7 +86,8 @@ SYS_ENCODING = ''
 DATA_DIR = ''
 
 # system events
-events = None
+# noinspection PyTypeChecker
+events = None  # type: Events
 
 recentSearchScheduler = None
 backlogSearchScheduler = None
@@ -96,7 +99,8 @@ properFinderScheduler = None
 autoPostProcesserScheduler = None
 subtitlesFinderScheduler = None
 # traktCheckerScheduler = None
-background_mapping_task = None
+# noinspection PyTypeChecker
+background_mapping_task = None  # type: threading.Thread
 embyWatchedStateScheduler = None
 plexWatchedStateScheduler = None
 watchedStateQueueScheduler = None
@@ -485,7 +489,8 @@ USE_ANIDB = False
 ANIDB_USERNAME = None
 ANIDB_PASSWORD = None
 ANIDB_USE_MYLIST = False
-ADBA_CONNECTION = None
+# noinspection PyTypeChecker
+ADBA_CONNECTION = None  # type: Connection
 ANIME_TREAT_AS_HDTV = False
 
 GUI_NAME = None
@@ -616,7 +621,7 @@ def init_stage_1(console_logging):
     global showList, showDict, providerList, newznabProviderList, torrentRssProviderList, \
         WEB_HOST, WEB_ROOT, ACTUAL_CACHE_DIR, CACHE_DIR, ZONEINFO_DIR, ADD_SHOWS_WO_DIR, ADD_SHOWS_METALANG, \
         CREATE_MISSING_SHOW_DIRS, SHOW_DIRS_WITH_DOTS, \
-        RECENTSEARCH_STARTUP, NAMING_FORCE_FOLDERS, SOCKET_TIMEOUT, DEBUG, TVINFO_DEFAULT, CONFIG_FILE, \
+        RECENTSEARCH_STARTUP, NAMING_FORCE_FOLDERS, SOCKET_TIMEOUT, DEBUG, TVINFO_DEFAULT, \
         CONFIG_FILE, CONFIG_VERSION, \
         REMOVE_FILENAME_CHARS, IMPORT_DEFAULT_CHECKED_SHOWS, WANTEDLIST_CACHE, MODULE_UPDATE_STRING, EXT_UPDATES
     # Add Show Search
@@ -1222,8 +1227,10 @@ def init_stage_1(console_logging):
 
     GIT_PATH = check_setting_str(CFG, 'General', 'git_path', '')
 
-    IGNORE_WORDS, IGNORE_WORDS_REGEX = helpers.split_word_str(check_setting_str(CFG, 'General', 'ignore_words', IGNORE_WORDS))
-    REQUIRE_WORDS, REQUIRE_WORDS_REGEX = helpers.split_word_str(check_setting_str(CFG, 'General', 'require_words', REQUIRE_WORDS))
+    IGNORE_WORDS, IGNORE_WORDS_REGEX = helpers.split_word_str(
+        check_setting_str(CFG, 'General', 'ignore_words', IGNORE_WORDS))
+    REQUIRE_WORDS, REQUIRE_WORDS_REGEX = helpers.split_word_str(
+        check_setting_str(CFG, 'General', 'require_words', REQUIRE_WORDS))
 
     CALENDAR_UNPROTECTED = bool(check_setting_int(CFG, 'General', 'calendar_unprotected', 0))
 
@@ -2205,9 +2212,9 @@ def launch_browser(start_port=None):
         start_port = WEB_PORT
     browser_url = 'http%s://localhost:%d%s' % (('s', '')[not ENABLE_HTTPS], start_port, WEB_ROOT)
     try:
-        webbrowser.open(browser_url, 2, 1)
+        webbrowser.open(browser_url, 2, True)
     except (BaseException, Exception):
         try:
-            webbrowser.open(browser_url, 1, 1)
+            webbrowser.open(browser_url, 1, True)
         except (BaseException, Exception):
             logger.log('Unable to launch a browser', logger.ERROR)
