@@ -43,6 +43,7 @@ import sickbeard
 from . import db, logger, notifiers
 from .common import cpu_presets, mediaExtensions, Overview, Quality, statusStrings, subtitleExtensions, \
     ARCHIVED, DOWNLOADED, FAILED, IGNORED, SKIPPED, SNATCHED_ANY, SUBTITLED, UNAIRED, UNKNOWN, WANTED
+from .sgdatetime import timestamp_near
 from tvinfo_base.exceptions import *
 # noinspection PyPep8Naming
 import encodingKludge as ek
@@ -63,7 +64,7 @@ from six.moves import zip
 # therefore, they intentionally don't resolve and are unused in this particular file.
 # noinspection PyUnresolvedReferences
 from sg_helpers import chmod_as_parent, clean_data, get_system_temp_dir, \
-    get_url, make_dirs, proxy_setting, remove_file_failed, try_int, write_file
+    get_url, make_dirs, md5_for_text, proxy_setting, remove_file_failed, try_int, write_file
 
 # noinspection PyUnreachableCode
 if False:
@@ -963,25 +964,6 @@ def md5_for_file(filename, block_size=2 ** 16):
         return None
 
 
-def md5_for_text(text):
-    """
-
-    :param text: test
-    :type text: AnyStr
-    :return:
-    :rtype: AnyStr or None
-    """
-    result = None
-    try:
-        md5 = hashlib.md5()
-        md5.update(decode_bytes(str(text)))
-        raw_md5 = md5.hexdigest()
-        result = raw_md5[17:] + raw_md5[9:17] + raw_md5[0:9]
-    except (BaseException, Exception):
-        pass
-    return result
-
-
 def get_lan_ip():
     """
     Simple function to get LAN localhost_ip
@@ -1263,7 +1245,7 @@ def clear_cache(force=False):
             logger.log(u'Skipping clean of non-existing folder: %s' % sickbeard.CACHE_DIR, logger.WARNING)
         else:
             exclude = ['rss', 'images', 'zoneinfo']
-            del_time = time.mktime((datetime.datetime.now() - datetime.timedelta(hours=12)).timetuple())
+            del_time = int(timestamp_near((datetime.datetime.now() - datetime.timedelta(hours=12))))
             for f in scantree(sickbeard.CACHE_DIR, exclude, follow_symlinks=True):
                 if f.is_file(follow_symlinks=False) and (force or del_time > f.stat(follow_symlinks=False).st_mtime):
                     try:
@@ -1578,7 +1560,7 @@ def delete_not_changed_in(paths, days=30, minutes=0):
     :param minutes: Purge files not modified in this number of minutes (default: 0 minutes)
     :return: tuple; number of files that qualify for deletion, number of qualifying files that failed to be deleted
     """
-    del_time = time.mktime((datetime.datetime.now() - datetime.timedelta(days=days, minutes=minutes)).timetuple())
+    del_time = int(timestamp_near((datetime.datetime.now() - datetime.timedelta(days=days, minutes=minutes))))
     errors = 0
     qualified = 0
     for c in (paths, [paths])[not isinstance(paths, list)]:
@@ -1605,7 +1587,7 @@ def set_file_timestamp(filename, min_age=3, new_time=None):
     :param new_time:
     :type new_time: None or int
     """
-    min_time = time.mktime((datetime.datetime.now() - datetime.timedelta(days=min_age)).timetuple())
+    min_time = int(timestamp_near((datetime.datetime.now() - datetime.timedelta(days=min_age))))
     try:
         if ek.ek(os.path.isfile, filename) and ek.ek(os.path.getmtime, filename) < min_time:
             ek.ek(os.utime, filename, new_time)
@@ -1991,7 +1973,7 @@ def xhtml_escape(text, br=True):
 def cmdline_runner(cmd, shell=False):
     # type: (Union[AnyStr, List[AnyStr]], bool) -> Tuple[AnyStr, Optional[AnyStr], int]
     """ Execute a child program in a new process.
-    
+
     Can raise an exception to be caught in callee
 
     :param cmd: A string, or a sequence of program arguments
@@ -2028,8 +2010,8 @@ def parse_imdb_id(string):
         pass
 
     return result
- 
- 
+
+
 def generate_word_str(words, regex=False, join_chr=','):
     # type: (Set[AnyStr], bool, AnyStr) -> AnyStr
     """

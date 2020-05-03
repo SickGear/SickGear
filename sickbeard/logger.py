@@ -17,6 +17,7 @@
 from __future__ import with_statement
 
 import codecs
+import datetime
 import logging
 import glob
 import os
@@ -30,7 +31,8 @@ from logging.handlers import TimedRotatingFileHandler
 
 import sickbeard
 from . import classes
-from sg_helpers import remove_file_failed
+from .sgdatetime import timestamp_near
+from sg_helpers import md5_for_text, remove_file_failed
 
 # noinspection PyUnreachableCode
 if False:
@@ -192,7 +194,15 @@ class SBRotatingLogHandler(object):
         :param log_list: log message
         :param log_level: log level
         """
+        mem_key = 'logger'
         for to_log in log_list:
+            log_id = md5_for_text(to_log)
+            now = int(timestamp_near(datetime.datetime.now()))
+            expired = now > sickbeard.MEMCACHE.get(mem_key, {}).get(log_id, 0)
+            sickbeard.MEMCACHE[mem_key] = {}
+            sickbeard.MEMCACHE[mem_key][log_id] = 2 + now
+            if not expired:
+                continue
 
             out_line = '%s :: %s' % (threading.currentThread().getName(), to_log)
 

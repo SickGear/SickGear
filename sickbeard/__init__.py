@@ -776,6 +776,7 @@ def init_stage_1(console_logging):
         if not ek.ek(os.path.isdir, ZONEINFO_DIR) and not helpers.make_dirs(ZONEINFO_DIR):
             logger.log(u'!!! Creating local zoneinfo dir failed', logger.ERROR)
     sg_helpers.CACHE_DIR = CACHE_DIR
+    sg_helpers.DATA_DIR = DATA_DIR
 
     THEME_NAME = check_setting_str(CFG, 'GUI', 'theme_name', 'dark')
     GUI_NAME = check_setting_str(CFG, 'GUI', 'gui_name', 'slick')
@@ -1283,6 +1284,9 @@ def init_stage_1(console_logging):
         lambda y: TVidProdid.glue in y and y or '%s%s%s' % (
             (TVINFO_TVDB, TVINFO_IMDB)[bool(helpers.parse_imdb_id(y))], TVidProdid.glue, y),
         [x.strip() for x in check_setting_str(CFG, 'GUI', 'browselist_hidden', '').split('|~|') if x.strip()])
+
+    sg_helpers.db = db
+    sg_helpers.DOMAIN_FAILURES.load_from_db()
 
     # initialize NZB and TORRENT providers
     providerList = providers.makeProviderList()
@@ -1805,6 +1809,7 @@ def save_config():
 
     new_config['General']['cache_dir'] = ACTUAL_CACHE_DIR if ACTUAL_CACHE_DIR else 'cache'
     sg_helpers.CACHE_DIR = CACHE_DIR
+    sg_helpers.DATA_DIR = DATA_DIR
     new_config['General']['root_dirs'] = ROOT_DIRS if ROOT_DIRS else ''
     new_config['General']['tv_download_dir'] = TV_DOWNLOAD_DIR
     new_config['General']['keep_processed_dir'] = int(KEEP_PROCESSED_DIR)

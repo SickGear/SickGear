@@ -11,7 +11,7 @@
 <% def sg_str(varname, default=''): return getattr(sickbeard, varname, default) %>#slurp#
 ##
 #set $layout = $sg_str('HISTORY_LAYOUT', 'detailed')
-#set $layout_name = 'watched' in $layout and 'Watched' or 'stats' in $layout and 'Activity Hits' or 'provider_failures'in $layout and 'Provider Failures' or 'Activity'
+#set $layout_name = 'watched' in $layout and 'Watched' or 'stats' in $layout and 'Activity Hits' or 'provider_failures'in $layout and 'Connect Failures' or 'Activity'
 #set sg_port = str($getVar('sbHttpPort', WEB_PORT))
 #set global $title = 'History : %s' % $layout_name
 #set global $header = 'History <span class="grey-text">: %s</span>' % $layout_name
@@ -87,7 +87,7 @@
 				<optgroup label="Stats">
 					<option value="$sbRoot/set-layout-history/?layout=compact_stats"#echo ('', $selected)['compact_stats' == $sg_str('HISTORY_LAYOUT')]#>Activity hits</option>
 					<option value="$sbRoot/set-layout-history/?layout=graph_stats"#echo ('', $selected)['graph_stats' == $sg_str('HISTORY_LAYOUT')]#>Graphed hits</option>
-					<option value="$sbRoot/set-layout-history/?layout=provider_failures"#echo ('', $selected)['provider_failures' == $sg_str('HISTORY_LAYOUT')]#>Provider fails</option>
+					<option value="$sbRoot/set-layout-history/?layout=connect_failures"#echo ('', $selected)['connect_failures' == $sg_str('HISTORY_LAYOUT')]#>Connect fails</option>
 				</optgroup>
 			</select>
 		</span>
@@ -589,7 +589,7 @@
 #elif 'failures' in $layout
 ##
 ##
-	<div id="provider-failures">
+	<div id="server-failures">
 		<div style="padding-bottom:10px">
     #for ($check, $check_name, $check_url) in [
         ('tvdb', 'TVDB Api', 'api.thetvdb.com'), ('thexem', 'The Xem', 'thexem.de'), ('github', 'GitHub', 'github.com'),
@@ -603,36 +603,125 @@
     #end for
 		</div>
 
-    #if not $provider_fails
-		<p>No current provider failures. Failure stats display here when appropriate.</p>
-    #else
+    #if $domain_fail_cnt or $provider_fail_cnt
 <style>
 	.component-group{min-height:50px}
 	.component-group.bubblelist{padding:0;border-bottom:none}
 	.component-group.bubblelist .item a{font-size:14px;padding-right:14px}
 </style>
-        #set dev = (1, 3)[False]
-        #if 1 < len([$prov for $prov in $provider_fail_stats * $dev if len($prov['fails'])])
+        #set $dev = (1, 3)[False]
+        #set $last_n = 0
+        #set $show_bubble = 1 < $domain_fail_cnt or 1 < $provider_fail_cnt
+
+        #if $show_bubble:
 		<div class="component-group bubblelist" style="margin:0 0 3px">
 			<div class="type bgcol">
 				<span class="list"><div class="item text">Bubble links:</div>
-            #for $n, $prov in enumerate($provider_fail_stats * $dev)
-                #if $len($prov['fails'])
-					<div class="item"><a href="#$prov['prov_id']-section-$n" rel="noreferrer"><img height="16px" src="$sbRoot/images/providers/$prov['prov_img']">$prov['name']</a></div>
-                #end if
-            #end for
+            #if 1 < $domain_fail_cnt
+              #for $n, $item in enumerate($domain_fail_stats * $dev)
+                    #if $len($item['fails'])
+                        #set $last_n = $n + 1
+					<div class="item"><a href="#$item['id']-section-$n" rel="noreferrer">#if $item['img']#<img height="16px" src="$sbRoot/images/$item['img']">#elif $item['cls']#<i class="$item['cls']"></i>#end if#$item['name']</a></div>
+                    #end if
+                #end for
+            #end if
+            #if 1 < $provider_fail_cnt
+                #for $n, $prov in enumerate($provider_fail_stats * $dev)
+                    #if $len($prov['fails'])
+                        #set $n += $last_n
+					<div class="item"><a href="#$prov['id']-section-$n" rel="noreferrer"><img height="16px" src="$sbRoot/images/providers/$prov['prov_img']">$prov['name']</a></div>
+                    #end if
+                #end for
+            #end if
 				</span>
 			</div>
 		</div>
         #end if
-		<p id="bubble-after">When a provider cannot be contacted over a period, SickGear backs off and waits an increasing interval between each retry</p>
+		<p id="bubble-after">When a server cannot be contacted over a period, SickGear backs off and waits an increasing interval between each retry</p>
+    #end if
 
+    #if not $domain_fail_cnt
+		<p>No current domain failures. Failure stats display here when appropriate.</p>
+    #else
+        #for $n, $item in enumerate($domain_fail_stats * $dev)
+            #if $len($item['fails'])
+
+		<!-- $item['name'] -->
+		<div class="component-group bubble">
+			<div name="$item['id']-section-$n" style="text-align:left">
+                #set $item_class = '<span %sstyle="vertical-align:middle">'
+                #set $item_class = $item_class % ''
+
+				<input type="button" class="shows-more btn" value="Expand" style="display:none"><input type="button" class="shows-less btn" value="Collapse">#if $item['img']#<img height="16px" src="$sbRoot/images/$item['img']">#elif $item['cls']#<i class="$item['cls']"></i>#end if#$item_class$item['name']
+                #if $item['next_try']
+                    #set nt = $str($item['next_try']).split('.', 2)[0][::-1].replace(':', ' m', 1).replace(':', ' h', 1)[::-1]
+				... is paused until $SGDatetime.sbftime($SGDatetime.now() + $item['next_try'], markup=True) (in ${nt}s) <input type="button" data-domain="$item['name']" class="domain-retry btn" id="$item['id']-btn-retry" value="Ignore pause on next search">
+                #end if
+				</span>
+			</div>
+			<table class="manageTable server-failures tablesorter hover-highlight focus-highlight text-center" cellspacing="0" border="0" cellpadding="0">
+				<thead>
+					<tr>
+						<th class="text-center" style="width:13em;padding-right:20px">period of 1hr</th>
+						<th class="text-center" style="padding-right:20px">server/timeout</th>
+						<th class="text-center" style="padding-right:20px">network</th>
+						<th class="text-center" style="padding-right:20px">no data</th>
+						<th class="text-center" style="padding-right:20px">other</th>
+                #if $item['has_limit']
+					<th class="text-center" style="padding-right:20px">hit limit</th>
+                #end if
+					</tr>
+				</thead>
+				<tbody>
+                #set $day = []
+                #for $fail in $item['fails']
+                    #set $child = True
+                    #if $fail['date'] not in $day
+                        #set $day += [$fail['date']]
+                        #set $child = False
+                    #end if
+                    #slurp#
+					<tr#if $fail['multirow'] and $child# class="tablesorter-childRow"#end if#>
+                    #if $fail['multirow']
+                        #if not $child
+						<td><a href="#" class="server-fail-parent-toggle" title="Totals (expand for detail)">$SGDatetime.sbfdate($fail['date_time'])</a></td>
+                        #else
+						<td>$SGDatetime.sbftime($fail['date_time'], markup=True)</td>
+                        #end if
+                    #else
+						<td>$SGDatetime.sbfdatetime($fail['date_time'], markup=True)</td>
+                    #end if
+                    #set $blank = '-'
+                    #set $title=None
+                    #if $fail['http']['count']
+                        #set $title=$fail['http']['code']
+                    #end if
+						<td>#if $fail['http']['count']#<span title="#if $child or not $fail['multirow']#$title#else#Expand for fail codes#end if#">$fail['http']['count']</span>#else#$blank#end if# / #echo $fail['timeout'].get('count', 0) or $blank#</td>
+						<td>#echo ($fail['connection'].get('count', 0) + $fail['connection_timeout'].get('count', 0)) or $blank#</td>
+						<td>#echo $fail['nodata'].get('count', 0) or $blank#</td>
+						<td>#echo $fail['other'].get('count', 0) or $blank#</td>
+                    #if $item['has_limit']
+						<td>#echo $fail.get('limit', {}).get('count', 0) or $blank#</td>
+                    #end if
+					</tr>
+                #end for
+				</tbody>
+			</table>
+		</div><!-- /$item['name'] -->
+            #end if
+        #end for
+    #end if
+
+    #if not $provider_fail_cnt
+		<p>No current provider failures. Failure stats display here when appropriate.</p>
+    #else
         #for $n, $prov in enumerate($provider_fail_stats * $dev)
             #if $len($prov['fails'])
 
 		<!-- $prov['name'] -->
 		<div class="component-group bubble#if $n + 1 == $len($provider_fail_stats * $dev)# last#end if#">
-			<div name="$prov['prov_id']-section-$n" style="text-align:left">
+                #set $n += $last_n
+			<div name="$prov['id']-section-$n" style="text-align:left">
                 #set $prov_class = '<span %sstyle="vertical-align:middle">'
                 #if not $prov['active']
                     #set $prov_class = $prov_class % 'class="grey-text" '
@@ -643,14 +732,14 @@
                 #if $prov['active']
                     #if $prov['next_try']
                         #set nt = $str($prov['next_try']).split('.', 2)[0][::-1].replace(':', ' m', 1).replace(':', ' h', 1)[::-1]
-				... is paused until $SGDatetime.sbftime($SGDatetime.now() + $prov['next_try'], markup=True) (in ${nt}s) <input type="button" class="provider-retry btn" id="$prov['prov_id']-btn-retry" value="Ignore pause on next search">
+				... is paused until $SGDatetime.sbftime($SGDatetime.now() + $prov['next_try'], markup=True) (in ${nt}s) <input type="button" class="provider-retry btn" id="$prov['id']-btn-retry" value="Ignore pause on next search">
                     #end if
                 #else
 				... is not enabled
                 #end if
 				</span>
 			</div>
-			<table class="manageTable provider-failures tablesorter hover-highlight focus-highlight text-center" cellspacing="0" border="0" cellpadding="0">
+			<table class="manageTable server-failures tablesorter hover-highlight focus-highlight text-center" cellspacing="0" border="0" cellpadding="0">
 				<thead>
 					<tr>
 						<th class="text-center" style="width:13em;padding-right:20px">period of 1hr</th>
@@ -675,7 +764,7 @@
 					<tr#if $fail['multirow'] and $child# class="tablesorter-childRow"#end if#>
                     #if $fail['multirow']
                         #if not $child
-						<td><a href="#" class="provider-fail-parent-toggle" title="Totals (expand for detail)">$SGDatetime.sbfdate($fail['date_time'])</a></td>
+						<td><a href="#" class="server-fail-parent-toggle" title="Totals (expand for detail)">$SGDatetime.sbfdate($fail['date_time'])</a></td>
                         #else
 						<td>$SGDatetime.sbftime($fail['date_time'], markup=True)</td>
                         #end if

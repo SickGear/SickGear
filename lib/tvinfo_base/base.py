@@ -119,7 +119,7 @@ class TVInfoShow(dict):
         self.banner = None  # type: Optional[AnyStr]
         self.banner_thumb = None  # type: Optional[AnyStr]
         self.fanart = None  # type: Optional[AnyStr]
-        self.banners = []  # type: Union[List, Dict]
+        self.banners = {}  # type: Dict
 
     def __str__(self):
         nr_seasons = len(self)

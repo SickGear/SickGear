@@ -42,7 +42,7 @@ from ..common import Quality, MULTI_EP_RESULT, SEASON_RESULT, USER_AGENT
 from ..helpers import maybe_plural, remove_file_failed
 from ..name_parser.parser import InvalidNameException, InvalidShowException, NameParser
 from ..show_name_helpers import get_show_names_all_possible
-from ..sgdatetime import SGDatetime
+from ..sgdatetime import SGDatetime, timestamp_near
 from ..tv import TVEpisode, TVShow
 
 from cfscrape import CloudflareScraper
@@ -113,8 +113,12 @@ class ProviderFailList(object):
             fail_hour = e.fail_time.time().hour
             date_time = datetime.datetime.combine(fail_date, datetime.time(hour=fail_hour))
             if ProviderFailTypes.names[e.fail_type] not in fail_dict.get(date_time, {}):
+                if isinstance(e.fail_time, datetime.datetime):
+                    value = timestamp_near(e.fail_time)
+                else:
+                    value = SGDatetime.timestamp_far(e.fail_time)
                 default = {'date': str(fail_date), 'date_time': date_time,
-                           'timestamp': helpers.try_int(SGDatetime.totimestamp(e.fail_time)), 'multirow': False}
+                           'timestamp': helpers.try_int(value), 'multirow': False}
                 for et in itervalues(ProviderFailTypes.names):
                     default[et] = b_d.copy()
                 fail_dict.setdefault(date_time, default)[ProviderFailTypes.names[e.fail_type]]['count'] = 1
@@ -176,13 +180,16 @@ class ProviderFailList(object):
                 my_db = db.DBConnection('cache.db')
                 cl = []
                 for f in self._fails:
+                    if isinstance(f.fail_time, datetime.datetime):
+                        value = int(timestamp_near(f.fail_time))
+                    else:
+                        value = SGDatetime.timestamp_far(f.fail_time)
                     cl.append(['INSERT OR IGNORE INTO provider_fails (prov_name, fail_type, fail_code, fail_time) '
-                               'VALUES (?,?,?,?)', [self.provider_name(), f.fail_type, f.code,
-                                                    SGDatetime.totimestamp(f.fail_time)]])
+                               'VALUES (?,?,?,?)', [self.provider_name(), f.fail_type, f.code, value]])
                 self.dirty = False
                 if cl:
                     my_db.mass_action(cl)
-        self.last_save = datetime.datetime.now()
+            self.last_save = datetime.datetime.now()
 
     def load_list(self):
         with self.lock:
@@ -207,7 +214,7 @@ class ProviderFailList(object):
                 my_db = db.DBConnection('cache.db')
                 if my_db.hasTable('provider_fails'):
                     # noinspection PyCallByClass,PyTypeChecker
-                    time_limit = SGDatetime.totimestamp(datetime.datetime.now() - datetime.timedelta(days=28))
+                    time_limit = int(timestamp_near(datetime.datetime.now()) - datetime.timedelta(days=28))
                     my_db.action('DELETE FROM provider_fails WHERE fail_time < ?', [time_limit])
             except (BaseException, Exception):
                 pass
@@ -336,11 +343,11 @@ class GenericProvider(object):
             self._failure_time = value
             if changed_val:
                 if isinstance(value, datetime.datetime):
-                    # noinspection PyCallByClass,PyTypeChecker
-                    save_value = SGDatetime.totimestamp(value)
-                else:
-                    save_value = value
-                self._save_fail_value('failure_time', save_value)
+                    value = int(timestamp_near(value))
+                elif value:
+                    # noinspection PyCallByClass
+                    value = SGDatetime.timestamp_far(value)
+                self._save_fail_value('failure_time', value)
 
     @property
     def tmr_limit_count(self):
@@ -365,8 +372,12 @@ class GenericProvider(object):
             changed_val = self._tmr_limit_time != value
             self._tmr_limit_time = value
             if changed_val:
-                # noinspection PyCallByClass,PyTypeChecker
-                self._save_fail_value('tmr_limit_time', (SGDatetime.totimestamp(value), value)[None is value])
+                if isinstance(value, datetime.datetime):
+                    value = int(timestamp_near(value))
+                elif value:
+                    # noinspection PyCallByClass
+                    value = SGDatetime.timestamp_far(value)
+                self._save_fail_value('tmr_limit_time', value)
 
     @property
     def max_index(self):
@@ -436,7 +447,10 @@ class GenericProvider(object):
         Return how long since most recent failure
         :return: Period since most recent failure on record
         """
-        return datetime.datetime.now() - self.failure_time
+        try:
+            return datetime.datetime.now() - self.failure_time
+        except (BaseException, Exception):
+            return datetime.timedelta(days=1000)
 
     def is_waiting(self):
         # type: (...) -> bool
@@ -544,6 +558,7 @@ class GenericProvider(object):
 
         kwargs['raise_exceptions'] = True
         kwargs['raise_status_code'] = True
+        kwargs['failure_handling'] = False
         for k, v in iteritems(dict(headers=self.headers, hooks=dict(response=self.cb_response))):
             kwargs.setdefault(k, v)
         if 'nzbs.in' not in url:  # this provider returns 503's 3 out of 4 requests with the persistent session system
@@ -737,7 +752,8 @@ class GenericProvider(object):
             cache_file = ek.ek(os.path.join, cache_dir, base_name)
 
             self.session.headers['Referer'] = url
-            if cached or helpers.download_file(url, cache_file, session=self.session, allow_redirects='/it' not in url):
+            if cached or helpers.download_file(url, cache_file, session=self.session, allow_redirects='/it' not in url,
+                                               failure_handling=False):
 
                 if self._verify_download(cache_file):
                     logger.log(u'Downloaded %s result from %s' % (self.name, url))
@@ -2034,7 +2050,7 @@ class TorrentProvider(GenericProvider):
 
                 title, url = self._title_and_url(item)
                 if proper_check.search(title):
-                    results.append(classes.Proper(title, url, datetime.datetime.today(), None))
+                    results.append(classes.Proper(title, url, datetime.datetime.now(), None))
         return results
 
     @staticmethod

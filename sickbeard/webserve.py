@@ -59,7 +59,8 @@ from .providers import newznab, rsstorrent
 from .scene_numbering import get_scene_absolute_numbering_for_show, get_scene_numbering_for_show, \
     get_xem_absolute_numbering_for_show, get_xem_numbering_for_show, set_scene_numbering_helper
 from .search_backlog import FORCED_BACKLOG
-from .sgdatetime import SGDatetime
+from .sgdatetime import SGDatetime, timestamp_near
+
 from .show_updater import clean_ignore_require_words
 from .trakt_helpers import build_config, trakt_collection_remove_account
 from .tv import TVidProdid
@@ -95,7 +96,7 @@ from six import binary_type, integer_types, iteritems, iterkeys, itervalues, PY2
 
 # noinspection PyUnreachableCode
 if False:
-    from typing import List
+    from typing import AnyStr, List, Optional
 
 
 # noinspection PyAbstractClass
@@ -590,27 +591,27 @@ class RepoHandler(BaseStaticFileHandler):
 
     def get_watchedstate_updater_addon_xml(self):
         mem_key = 'kodi_xml'
-        if SGDatetime.now().totimestamp(default=0) < sickbeard.MEMCACHE.get(mem_key, {}).get('last_update', 0):
+        if int(timestamp_near(datetime.datetime.now())) < sickbeard.MEMCACHE.get(mem_key, {}).get('last_update', 0):
             return sickbeard.MEMCACHE.get(mem_key).get('data')
 
         with io.open(ek.ek(os.path.join, sickbeard.PROG_DIR, 'sickbeard', 'clients',
                            'kodi', 'service.sickgear.watchedstate.updater', 'addon.xml'), 'r', encoding='utf8') as fh:
             xml = fh.read().strip() % dict(ADDON_VERSION=self.get_addon_version())
 
-        sickbeard.MEMCACHE[mem_key] = dict(last_update=30 + SGDatetime.now().totimestamp(default=0), data=xml)
+        sickbeard.MEMCACHE[mem_key] = dict(last_update=30 + int(timestamp_near(datetime.datetime.now())), data=xml)
         return xml
 
     @staticmethod
     def get_addon_version():
         mem_key = 'kodi_ver'
-        if SGDatetime.now().totimestamp(default=0) < sickbeard.MEMCACHE.get(mem_key, {}).get('last_update', 0):
+        if int(timestamp_near(datetime.datetime.now())) < sickbeard.MEMCACHE.get(mem_key, {}).get('last_update', 0):
             return sickbeard.MEMCACHE.get(mem_key).get('data')
 
         with io.open(ek.ek(os.path.join, sickbeard.PROG_DIR, 'sickbeard', 'clients',
                            'kodi', 'service.sickgear.watchedstate.updater', 'service.py'), 'r', encoding='utf8') as fh:
             version = re.findall(r'ADDON_VERSION\s*?=\s*?\'([^\']+)', fh.read())[0]
 
-        sickbeard.MEMCACHE[mem_key] = dict(last_update=30 + SGDatetime.now().totimestamp(default=0), data=version)
+        sickbeard.MEMCACHE[mem_key] = dict(last_update=30 + int(timestamp_near(datetime.datetime.now())), data=version)
         return version
 
     def render_kodi_repo_addon_xml(self):
@@ -1275,7 +1276,7 @@ r.close()
                     continue
 
                 if bname in ep_results:
-                    date_watched = now = SGDatetime.now().totimestamp(default=0)
+                    date_watched = now = int(timestamp_near(datetime.datetime.now()))
                     if 1500000000 < date_watched:
                         date_watched = helpers.try_int(float(v.get('date_watched')))
 
@@ -1311,8 +1312,11 @@ r.close()
     def set_layout_history(self, layout):
 
         if layout not in ('compact', 'detailed', 'compact_watched', 'detailed_watched',
-                          'compact_stats', 'graph_stats', 'provider_failures'):
-            layout = 'detailed'
+                          'compact_stats', 'graph_stats', 'connect_failures'):
+            if 'provider_failures' == layout:  # layout renamed
+                layout = 'connect_failures'
+            else:
+                layout = 'detailed'
 
         sickbeard.HISTORY_LAYOUT = layout
 
@@ -2446,8 +2450,8 @@ class Home(MainHandler):
                   flatten_folders=None, paused=None, direct_call=False, air_by_date=None, sports=None, dvdorder=None,
                   tvinfo_lang=None, subs=None, upgrade_once=None, rls_ignore_words=None,
                   rls_require_words=None, anime=None, blacklist=None, whitelist=None,
-                 scene=None, prune=None, tag=None, quality_preset=None, reset_fanart=None,
-                 rls_global_exclude_ignore=None, rls_global_exclude_require=None, **kwargs):
+                  scene=None, prune=None, tag=None, quality_preset=None, reset_fanart=None,
+                  rls_global_exclude_ignore=None, rls_global_exclude_require=None, **kwargs):
 
         any_qualities = any_qualities if None is not any_qualities else []
         best_qualities = best_qualities if None is not best_qualities else []
@@ -3754,7 +3758,7 @@ class AddShows(Home):
         xref_src = 'https://raw.githubusercontent.com/ScudLee/anime-lists/master/anime-list.xml'
         xml_data = helpers.get_url(xref_src)
         xref_root = xml_data and helpers.parse_xml(xml_data)
-        if not len(xref_root):
+        if None is not xref_root and not len(xref_root):
             xref_root = None
 
         url = 'http://api.anidb.net:9001/httpapi?client=sickgear&clientver=1&protover=1&request=main'
@@ -5690,7 +5694,9 @@ class History(MainHandler):
         t = PageTemplate(web_handler=self, file='history.tmpl')
         t.limit = limit
 
-        if layout in ('compact', 'detailed', 'compact_watched', 'detailed_watched', 'provider_failures'):
+        if 'provider_failures' == layout:  # layout renamed
+            layout = 'connect_failures'
+        if layout in ('compact', 'detailed', 'compact_watched', 'detailed_watched', 'connect_failures'):
             sickbeard.HISTORY_LAYOUT = layout
 
         my_db = db.DBConnection(row_type='dict')
@@ -5821,11 +5827,16 @@ class History(MainHandler):
 
         elif 'failures' in sickbeard.HISTORY_LAYOUT:
 
-            t.provider_fail_stats = filter_list(lambda stat: len(stat['fails']), [{
-                'active': p.is_active(), 'name': p.name, 'prov_id': p.get_id(), 'prov_img': p.image_name(),
-                'fails': p.fails.fails_sorted, 'tmr_limit_time': p.tmr_limit_time,
-                'next_try': p.get_next_try_time, 'has_limit': getattr(p, 'has_limit', False)}
+            t.provider_fail_stats = filter_list(lambda stat: len(stat['fails']), [
+                dict(name=p.name, id=p.get_id(), active=p.is_active(), prov_img=p.image_name(),
+                     prov_id=p.get_id(),  # 2020.03.17 legacy var, remove at future date
+                     fails=p.fails.fails_sorted, next_try=p.get_next_try_time,
+                     has_limit=getattr(p, 'has_limit', False), tmr_limit_time=p.tmr_limit_time)
                 for p in sickbeard.providerList + sickbeard.newznabProviderList])
+
+            t.provider_fail_cnt = len([p for p in t.provider_fail_stats if len(p['fails'])])
+            t.provider_fails = t.provider_fail_cnt  # 2020.03.17 legacy var, remove at future date
+
             t.provider_fail_stats = sorted([item for item in t.provider_fail_stats],
                                            key=lambda y: y.get('fails')[0].get('timestamp'),
                                            reverse=True)
@@ -5833,7 +5844,41 @@ class History(MainHandler):
                                            key=lambda y: y.get('next_try') or datetime.timedelta(weeks=65535),
                                            reverse=False)
 
-            t.provider_fails = 0 < len([p for p in t.provider_fail_stats if len(p['fails'])])
+            def img(item, as_class=False):
+                # type: (AnyStr, bool) -> Optional[AnyStr]
+                """
+                Return an image src, image class, or None based on a recognised identifier
+
+                :param item: to search for a known domain identifier
+                :param as_class: wether a search should return an image (by default) or class
+                :return: image src, image class, or None if unknown identifier
+                """
+                for identifier, result in (
+                    (('fanart', 'fanart.png'), ('imdb', 'imdb16.png'),
+                     ('predb', 'predb16.png'), ('srrdb', 'srrdb16.png'),
+                     ('thexem', 'xem.png'), ('tmdb', 'tmdb16.png'), ('trakt', 'trakt16.png'),
+                     ('tvdb', 'thetvdb16.png'), ('tvmaze', 'tvmaze16.png')),
+                    (('anidb', 'img-anime-16 square-16'), ('github', 'icon16-github'),
+                     ('emby', 'sgicon-emby'), ('plex', 'sgicon-plex'))
+                )[as_class]:
+                    if identifier in item:
+                        return result
+
+            with sg_helpers.DOMAIN_FAILURES.lock:
+                t.domain_fail_stats = filter_list(lambda stat: len(stat['fails']), [
+                    dict(name=k, id=sickbeard.GenericProvider.make_id(k), img=img(k), cls=img(k, True),
+                         fails=v.fails_sorted, next_try=v.get_next_try_time,
+                         has_limit=getattr(v, 'has_limit', False), tmr_limit_time=v.tmr_limit_time)
+                    for k, v in iteritems(sg_helpers.DOMAIN_FAILURES.domain_list)])
+
+                t.domain_fail_cnt = len([d for d in t.domain_fail_stats if len(d['fails'])])
+
+                t.domain_fail_stats = sorted([item for item in t.domain_fail_stats],
+                                             key=lambda y: y.get('fails')[0].get('timestamp'),
+                                             reverse=True)
+                t.domain_fail_stats = sorted([item for item in t.domain_fail_stats],
+                                             key=lambda y: y.get('next_try') or datetime.timedelta(weeks=65535),
+                                             reverse=False)
 
         article_match = r'^((?:A(?!\s+to)n?)|The)\s+(.*)$'
         for rs in [getattr(t, name, []) for name in result_sets]:
@@ -5908,10 +5953,17 @@ class History(MainHandler):
 
         my_db = db.DBConnection()
         my_db.action('DELETE FROM history WHERE date < ' + str(
-            (datetime.datetime.today() - datetime.timedelta(days=30)).strftime(history.dateFormat)))
+            (datetime.datetime.now() - datetime.timedelta(days=30)).strftime(history.dateFormat)))
 
         ui.notifications.message('Removed history entries greater than 30 days old')
         self.redirect('/history/')
+
+    @staticmethod
+    def retry_domain(domain=None):
+
+        if domain in sg_helpers.DOMAIN_FAILURES.domain_list:
+            sg_helpers.DOMAIN_FAILURES.domain_list[domain].retry_next()
+            time.sleep(3)
 
     @staticmethod
     def update_watched_state_emby():
@@ -5935,7 +5987,7 @@ class History(MainHandler):
             mapped = 0
             mapping = None
             maps = [x.split('=') for x in sickbeard.EMBY_PARENT_MAPS.split(',') if any(x)]
-            args = dict(params=dict(format='json'), timeout=10, parse_json=True)
+            args = dict(params=dict(format='json'), timeout=10, parse_json=True, failure_handling=False)
             for i, cur_host in enumerate(hosts):
                 base_url = 'http://%s/emby' % cur_host
                 headers.update({'X-MediaBrowser-Token': keys[i]})
@@ -5959,7 +6011,7 @@ class History(MainHandler):
                         if not folder or 'tvshows' != folder.get('CollectionType', ''):
                             continue
 
-                        items = helpers.get_url('%s/Items' % user_url, headers=headers,
+                        items = helpers.get_url('%s/Items' % user_url, failure_handling=False, headers=headers,
                                                 params=dict(SortBy='DatePlayed,SeriesSortName,SortName',
                                                             SortOrder='Descending',
                                                             IncludeItemTypes='Episode',
@@ -5992,7 +6044,7 @@ class History(MainHandler):
                                             (d.get('UserData', {}).get('Played') and
                                              d.get('UserData', {}).get('PlayCount') * 100) or 0),
                                     label='%s%s{Emby}' % (user.get('Name', ''), bool(user.get('Name')) and ' ' or ''),
-                                    date_watched=SGDatetime.totimestamp(
+                                    date_watched=SGDatetime.timestamp_far(
                                         dateutil.parser.parse(d.get('UserData', {}).get('LastPlayedDate'))))
 
                                 for m in maps:
@@ -6590,8 +6642,10 @@ class ConfigSearch(Config):
         sickbeard.TORRENT_METHOD = torrent_method
         sickbeard.USENET_RETENTION = config.to_int(usenet_retention, default=500)
 
-        sickbeard.IGNORE_WORDS, sickbeard.IGNORE_WORDS_REGEX = helpers.split_word_str(ignore_words if ignore_words else '')
-        sickbeard.REQUIRE_WORDS, sickbeard.REQUIRE_WORDS_REGEX = helpers.split_word_str(require_words if require_words else '')
+        sickbeard.IGNORE_WORDS, sickbeard.IGNORE_WORDS_REGEX = helpers.split_word_str(ignore_words
+                                                                                      if ignore_words else '')
+        sickbeard.REQUIRE_WORDS, sickbeard.REQUIRE_WORDS_REGEX = helpers.split_word_str(require_words
+                                                                                        if require_words else '')
 
         clean_ignore_require_words()
 
@@ -7818,8 +7872,8 @@ class CachedImages(MainHandler):
             dummy_file = '%s.%s.dummy' % (ek.ek(os.path.splitext, filename)[0], source)
             if ek.ek(os.path.isfile, dummy_file):
                 if ek.ek(os.stat, dummy_file).st_mtime \
-                        < (time.mktime((datetime.datetime.now()
-                                        - datetime.timedelta(days=days, minutes=minutes)).timetuple())):
+                        < (int(timestamp_near((datetime.datetime.now()
+                                               - datetime.timedelta(days=days, minutes=minutes))))):
                     CachedImages.delete_dummy_image(dummy_file)
                 else:
                     result = False

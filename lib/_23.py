@@ -15,15 +15,16 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
+import datetime
 from collections import deque
 from itertools import islice
 from sys import version_info
 
 from six import binary_type, moves
-
 # noinspection PyUnresolvedReferences
 from six.moves.urllib.parse import quote, quote_plus, unquote as six_unquote, unquote_plus as six_unquote_plus, \
     urlencode, urlsplit, urlunparse, urlunsplit
+
 # noinspection PyUnreachableCode
 if False:
     # ----------------------
@@ -154,6 +155,8 @@ if 2 != version_info[0]:
     # noinspection PyUnresolvedReferences
     from subprocess import Popen
 
+    native_timestamp = datetime.datetime.timestamp  # type: Callable[[datetime.datetime], float]
+
     def unquote(string, encoding='utf-8', errors='replace'):
         return decode_str(six_unquote(decode_str(string, encoding, errors), encoding=encoding, errors=errors),
                           encoding, errors)
@@ -209,6 +212,7 @@ else:
     # ---------
     # Python 2
     # ---------
+    import time
     from lib.unidecode import unidecode as unicode_decode
     # noinspection PyProtectedMember,PyDeprecation
     from base64 import decodestring, encodestring
@@ -222,6 +226,16 @@ else:
     from lib.scandir.scandir import scandir, GenericDirEntry as DirEntry
     # noinspection PyUnresolvedReferences,PyDeprecation
     from inspect import getargspec
+
+
+    def _totimestamp(dt=None):
+        # type: (datetime.datetime) -> float
+        """ This function should only be used in this module due to its 1970s+ limitation as that's all we need here and
+        sgdatatime can't be used at this module level
+        """
+        return time.mktime(dt.timetuple())
+
+    native_timestamp = _totimestamp  # type: Callable[[datetime.datetime], float]
 
     from subprocess import Popen as _Popen
     class Popen(_Popen):
