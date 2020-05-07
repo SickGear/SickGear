@@ -1921,7 +1921,7 @@ def save_config():
             ('use_https', int(NZBGET_USE_HTTPS)),
             ('priority', NZBGET_PRIORITY),
             ('map', NZBGET_MAP),
-            ('nzbget_skip_process_media', int(NZBGET_SKIP_PM)),
+            ('skip_process_media', int(NZBGET_SKIP_PM)),
         ]),
         ('SABnzbd', [
             ('username', SAB_USERNAME), ('password', helpers.encrypt(SAB_PASSWORD, ENCRYPTION_VERSION)),
