@@ -9,7 +9,9 @@ sys.modules['tornado'] = __import__(sub_name, fromlist=main_subs)
 for mod, subs in [('web', ['RequestHandler', 'StaticFileHandler', 'authenticated', 'Application',
                            '_ApplicationRouter']),
                   ('ioloop', ['IOLoop']),
-                  ('routing', ['AnyMatches', 'Rule'])]:
+                  ('routing', ['AnyMatches', 'Rule']),
+                  ('escape', ['utf8']),
+                  ('concurrent', ['run_on_executor'])]:
     package = __import__('%s.%s' % (sub_name, mod), fromlist=subs)
     sys.modules['tornado.%s' % mod] = package
     sys.modules['lib.tornado.%s' % mod] = package

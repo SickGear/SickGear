@@ -375,6 +375,12 @@ if futures is None:
 else:
     FUTURES = (futures.Future, Future)
 
+try:
+    from sg_futures.futures._base import Future as sg_future
+    FUTURES += (sg_future, )
+except ImportError:
+    pass
+
 
 def is_future(x):
     return isinstance(x, FUTURES)
