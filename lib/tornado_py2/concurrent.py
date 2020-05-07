@@ -371,7 +371,7 @@ if asyncio is not None:
     Future = asyncio.Future  # noqa
 
 if futures is None:
-    FUTURES = Future  # type: typing.Union[type, typing.Tuple[type, ...]]
+    FUTURES = (Future, )  # type: typing.Union[type, typing.Tuple[type, ...]]
 else:
     FUTURES = (futures.Future, Future)
 

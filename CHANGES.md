@@ -55,6 +55,7 @@
 * Update soupsieve_py2 1.9.5 (6a38398) to 1.9.5 final (e00a882)
 * Update Tornado_py3 Web Server 6.0.3 (ff985fe) to 6.1.dev1 (18b653c)
 * Update urllib3 release 1.25.6 (4a6c288) to 1.25.7 (37ba61a)
+* Fix import in Tornado py2
 
 
 ### 0.21.30 (2020-04-30 10:20:00 UTC)
