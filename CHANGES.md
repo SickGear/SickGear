@@ -1,5 +1,6 @@
 ﻿### 0.22.0 (2020-xx-xx xx:xx:xx UTC)
 
+* Add menu Shows/"Metacritic Cards"
 * Change make web UI calls async so that, for example, process media will not block page requests
 * Fix creating show list when there is no list at the cycle of backlog search spread
 * Change improve Python performance of handling core objects

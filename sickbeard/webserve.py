@@ -55,6 +55,7 @@ from .common import ARCHIVED, DOWNLOADED, FAILED, IGNORED, SKIPPED, SNATCHED, SN
 from .helpers import has_image_ext, remove_article, starify
 from .indexermapper import MapStatus, map_indexers_to_show, save_mapping
 from .indexers.indexer_config import TVINFO_IMDB, TVINFO_TRAKT, TVINFO_TVDB
+from .name_parser.parser import InvalidNameException, InvalidShowException, NameParser
 from .providers import newznab, rsstorrent
 from .scene_numbering import get_scene_absolute_numbering_for_show, get_scene_numbering_for_show, \
     get_xem_absolute_numbering_for_show, get_xem_numbering_for_show, set_scene_numbering_helper
@@ -4419,6 +4420,137 @@ class AddShows(Home):
         if not filter_list(lambda tvid_prodid: helpers.find_show_by_id(tvid_prodid), ids.split(' ')):
             return self.new_show('|'.join(['', '', '', ids or show_name]), use_show_name=True)
 
+    def mc_default(self):
+
+        return self.redirect('/add-shows/%s' % ('mc_newseries', sickbeard.MC_MRU)[any(sickbeard.MC_MRU)])
+
+    def mc_newseries(self, **kwargs):
+        return self.browse_mc(
+            'release-date/new-series/date?', 'New Series at Metacritic', mode='newseries', **kwargs)
+
+    def mc_90days(self, **kwargs):
+        return self.browse_mc(
+            'score/metascore/90day/filtered?sort=desc&', 'Last 90 days at Metacritic', mode='90days', **kwargs)
+
+    def mc_year(self, **kwargs):
+        return self.browse_mc(
+            'score/metascore/year/filtered?sort=desc&', 'By year at Metacritic', mode='year', **kwargs)
+
+    def mc_discussed(self, **kwargs):
+        return self.browse_mc(
+            'score/metascore/discussed/filtered?sort=desc&', 'Most discussed at Metacritic', mode='discussed', **kwargs)
+
+    def mc_shared(self, **kwargs):
+        return self.browse_mc(
+            'score/metascore/shared/filtered?sort=desc&', 'Most shared at Metacritic', mode='shared', **kwargs)
+
+    def browse_mc(self, url_path, browse_title, **kwargs):
+
+        browse_type = 'Metacritic'
+
+        footnote = None
+
+        page = 'more' in kwargs and '&page=1' or ''
+        if page:
+            kwargs['mode'] += '-more'
+
+        filtered = []
+
+        import browser_ua
+        url = 'https://www.metacritic.com/browse/tv/%sview=detailed%s' % (url_path, page)
+        html = helpers.get_url(url, headers={'User-Agent': browser_ua.get_ua()})
+        if html:
+            try:
+                if re.findall('(<a[^>]+rel="next"[^>]+)', html)[0]:
+                    kwargs.update(dict(more=1))
+            except (BaseException, Exception):
+                pass
+
+            with BS4Parser(html, parse_only=dict(table={'class': (lambda at: at and 'clamp-list' in at)})) as tbl:
+                # with BS4Parser(html, features=['html5lib', 'permissive']) as soup:
+                shows = [] if not tbl else tbl.find_all('tr')
+                oldest, newest, oldest_dt, newest_dt = None, None, 9999999, 0
+                for row in shows:
+                    try:
+                        ids = dict(custom=row.select('input[type="checkbox"]')[0].attrs['id'], name='mc')
+                        info = row.find('a', href=re.compile('^/tv'))
+                        url_path = info['href'].strip()
+
+                        images = {}
+                        img_uri = None
+                        img = info.find('img')
+                        if img and isinstance(img.attrs, dict):
+                            title = img.attrs.get('alt')
+                            img_src = img.attrs.get('src').split('-')
+                            img_uri = img_src.pop(0)
+                            if img_src:
+                                img_uri += '.' + img_src[0].split('.')[-1]
+                            images = dict(poster=dict(thumb='imagecache?path=browse/thumb/metac&source=%s' % img_uri))
+                            sickbeard.CACHE_IMAGE_URL_LIST.add_url(img_uri)
+                        if not title:
+                            title = row.find('h3').get_text()
+                        title = re.sub(r'(?i)(?::\s*season\s*\d+|\s*\((?:19|20)\d{2}\))?$', '', title.strip())
+
+                        dt_ordinal = 0
+                        dt_string = ''
+                        date_tags = filter_list(lambda t: t.find('span'), row.find_all('div', class_='clamp-details'))
+                        if date_tags:
+                            dt = dateutil.parser.parse(date_tags[0].get_text().strip())
+                            dt_ordinal = dt.toordinal()
+                            dt_string = SGDatetime.sbfdate(dt)
+                            if dt_ordinal < oldest_dt:
+                                oldest_dt = dt_ordinal
+                                oldest = dt_string
+                            if dt_ordinal > newest_dt:
+                                newest_dt = dt_ordinal
+                                newest = dt_string
+
+                        overview = row.find('div', class_='summary').get_text().strip()
+
+                        rating = row.find('div', class_='clamp-metascore')
+                        if rating:
+                            rating = rating.find('div', class_='metascore_w')
+                            if rating:
+                                rating = rating.get_text().strip()
+                        rating_user = row.find('div', class_='clamp-userscore')
+                        if rating_user:
+                            rating_user = rating_user.find('div', class_='metascore_w')
+                            if rating_user:
+                                rating_user = rating_user.get_text().strip()
+
+                        filtered.append(dict(
+                            premiered=dt_ordinal,
+                            premiered_str=dt_string,
+                            when_past=dt_ordinal < datetime.datetime.now().toordinal(),
+                            genres='',
+                            ids=ids,
+                            images='' if not img_uri else images,
+                            overview='No overview yet' if not overview else helpers.xhtml_escape(overview[:250:]),
+                            rating=0 if not rating else rating or 'TBD',
+                            rating_user='tbd' if not rating_user else int(helpers.try_float(rating_user) * 10) or 'tbd',
+                            title=title,
+                            url_src_db='https://www.metacritic.com/%s/' % url_path.strip('/'),
+                            votes=None))
+
+                    except (AttributeError, IndexError, KeyError, TypeError):
+                        continue
+
+                kwargs.update(dict(oldest=oldest, newest=newest))
+
+        kwargs.update(dict(footnote=footnote, use_votes=False))
+
+        mode = kwargs.get('mode', '')
+        if mode:
+            func = 'mc_%s' % mode
+            if callable(getattr(self, func, None)):
+                sickbeard.MC_MRU = func
+                sickbeard.save_config()
+        return self.browse_shows(browse_type, browse_title, filtered, **kwargs)
+
+    def info_metacritic(self, ids, show_name):
+
+        return self.new_show('|'.join(['', '', '', show_name]), use_show_name=True)
+
     def browse_shows(self, browse_type, browse_title, shows, **kwargs):
         """
         Display the new show page which collects a tvdb id, folder, and extra options and
@@ -4434,6 +4566,7 @@ class AddShows(Home):
 
         t.num_inlibrary = 0
         t.num_hidden = 0
+        n_p = NameParser(indexer_lookup=False)
         for item in shows:
             tvid_prodid_list = []
             for tvid, infosrc_slug in map_iter(
@@ -4441,9 +4574,16 @@ class AddShows(Home):
                     list(sickbeard.TVInfoAPI().search_sources) + [sickbeard.indexers.indexer_config.TVINFO_IMDB]):
                 try:
                     # TODO: use this to pass tvid when it is known what info sources will become
-                    tvid_prodid_list += ['%s%s%s' % (tvid, TVidProdid.glue, item['ids'][infosrc_slug])]
-                    # tvid_prodid_list += ['%s' % item['ids'][infosrc_slug]]
-                    show_obj = helpers.find_show_by_id({tvid: item['ids'][infosrc_slug]})
+                    if 'custom' not in item['ids']:
+                        tvid_prodid_list += ['%s%s%s' % (tvid, TVidProdid.glue, item['ids'][infosrc_slug])]
+                        # tvid_prodid_list += ['%s' % item['ids'][infosrc_slug]]
+                        show_obj = helpers.find_show_by_id({tvid: item['ids'][infosrc_slug]})
+                    else:
+                        tvid_prodid_list += ['%s%s%s' % (item['ids']['name'], TVidProdid.glue, item['ids']['custom'])]
+                        try:
+                            show_obj = n_p.parse(item['title'] + '.s01e01.mp4')
+                        except (InvalidNameException, InvalidShowException):
+                            show_obj = None
                 except (BaseException, Exception):
                     continue
                 if not item.get('indb') and show_obj:
@@ -4457,6 +4597,9 @@ class AddShows(Home):
 
             if not item['show_id'] and 'tt' in item['ids'].get('imdb', ''):
                 item['show_id'] = item['ids']['imdb']
+
+            if not item['show_id'] and item['ids'].get('custom'):
+                item['show_id'] = item['ids']['custom']
 
             if item['show_id'] not in dedupe:
                 dedupe.append(item['show_id'])
@@ -5866,7 +6009,7 @@ class History(MainHandler):
                 :return: image src, image class, or None if unknown identifier
                 """
                 for identifier, result in (
-                    (('fanart', 'fanart.png'), ('imdb', 'imdb16.png'),
+                    (('fanart', 'fanart.png'), ('imdb', 'imdb16.png'), ('metac', 'metac16.png'),
                      ('predb', 'predb16.png'), ('srrdb', 'srrdb16.png'),
                      ('thexem', 'xem.png'), ('tmdb', 'tmdb16.png'), ('trakt', 'trakt16.png'),
                      ('tvdb', 'thetvdb16.png'), ('tvmaze', 'tvmaze16.png')),
