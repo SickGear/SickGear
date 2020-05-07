@@ -43,7 +43,7 @@ if False:
 
 
 THETVDB_V2_API_TOKEN = {'token': None, 'datetime': datetime.datetime.fromordinal(1)}
-log = logging.getLogger('tvdb_api')
+log = logging.getLogger('tvdb.api')
 log.addHandler(logging.NullHandler())
 
 
@@ -548,7 +548,7 @@ class Tvdb(TVInfoBase):
             raise TvdbShownotfound('Show-name search returned zero results (cannot find show on TVDB)')
 
         if None is not self.config['custom_ui']:
-            log.debug('Using custom UI %s' % (repr(self.config['custom_ui'])))
+            log.debug('Using custom UI %s' % self.config['custom_ui'].__name__)
             custom_ui = self.config['custom_ui']
             ui = custom_ui(config=self.config)
         else:

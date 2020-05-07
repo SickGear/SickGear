@@ -12,7 +12,7 @@ if False:
     from typing import Any, AnyStr, List, Optional
     from tvinfo_base import TVInfoShow
 
-log = logging.getLogger('trakt_api')
+log = logging.getLogger('libtrakt.api')
 log.addHandler(logging.NullHandler())
 
 
@@ -79,7 +79,7 @@ class TraktIndexer(TVInfoBase):
             raise BaseTVinfoShownotfound('Show-name search returned zero results (cannot find show on TVDB)')
 
         if None is not self.config['custom_ui']:
-            log.debug('Using custom UI %s' % (repr(self.config['custom_ui'])))
+            log.debug('Using custom UI %s' % self.config['custom_ui'].__name__)
             custom_ui = self.config['custom_ui']
             ui = custom_ui(config=self.config)
 

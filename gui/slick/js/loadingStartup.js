@@ -12,6 +12,8 @@ var baseUrl = function () {
 	return $.SickGear.Root;
 };
 
+var reloading = false
+
 var ajaxConsumer = function () {
 	var that = this;
 	that.timeoutId = 0;
@@ -29,7 +31,8 @@ var ajaxConsumer = function () {
 				uiUpdateComplete(data.message);
 			})
 			.fail(function (jqXHR, textStatus, errorThrown) {
-				if (404 === jqXHR.status) {
+				if (404 === jqXHR.status && !reloading) {
+					reloading = true;
 					putMsg('Finished loading. Reloading page');
 					location.reload();
 				}
@@ -37,10 +40,12 @@ var ajaxConsumer = function () {
 			})
 			.always(function (jqXHR, textStatus) {
 				clearTimeout(that.timeoutId);
-				if (that.pollInterval)
-					that.timeoutId = setTimeout(ajaxConsumer.checkLoadNotifications, that.pollInterval);
-				logInfo(that.pollInterval ? '^-- ' + that.pollInterval/1000 + 's to next work' : '^-- no more work');
-				logInfo('====');
+				if (!reloading){
+					if (that.pollInterval)
+						that.timeoutId = setTimeout(ajaxConsumer.checkLoadNotifications, that.pollInterval);
+					logInfo(that.pollInterval ? '^-- ' + that.pollInterval/1000 + 's to next work' : '^-- no more work');
+					logInfo('====');
+				}
 			});
 		}
 	};

@@ -41,7 +41,9 @@ import encodingKludge as ek
 import exceptions_helper
 from exceptions_helper import ex
 from tornado import gen
+from tornado.concurrent import run_on_executor
 from lib import subliminal
+from concurrent.futures import ThreadPoolExecutor
 
 import sickbeard
 from . import classes, db, helpers, history, image_cache, logger, network_timezones, processTV, search_queue, ui
@@ -190,7 +192,8 @@ class Api(webserve.BaseHandler):
             api_log(self, accessMsg, logger.DEBUG)
         else:
             api_log(self, accessMsg, logger.WARNING)
-            return outputCallbackDict['default'](_responds(RESULT_DENIED, msg=accessMsg))
+            yield outputCallbackDict['default'](_responds(RESULT_DENIED, msg=accessMsg))
+            return
 
         # set the original call_dispatcher as the local _call_dispatcher
         _call_dispatcher = call_dispatcher
@@ -208,7 +211,7 @@ class Api(webserve.BaseHandler):
             del kwargs["debug"]
         else:  # if debug was not set we wrap the "call_dispatcher" in a try block to assure a json output
             try:
-                outDict = _call_dispatcher(self, args, kwargs)
+                outDict = yield self.async_call(_call_dispatcher, (self, args, kwargs))
             except Exception as e:  # real internal error
                 api_log(self, ex(e), logger.ERROR)
                 errorData = {"error_msg": ex(e),
@@ -222,6 +225,15 @@ class Api(webserve.BaseHandler):
         else:
             outputCallback = outputCallbackDict['default']
         self.finish(outputCallback(outDict))
+
+    @run_on_executor
+    def async_call(self, function, ag):
+        try:
+            result = function(*ag)
+            return result
+        except Exception as e:
+            logger.log(ex(e), logger.ERROR)
+            raise e
 
     def _out_as_json(self, dict):
         self.set_header('Content-Type', 'application/json; charset=UTF-8')

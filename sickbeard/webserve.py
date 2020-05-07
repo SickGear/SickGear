@@ -73,6 +73,7 @@ import dateutil.parser
 from tornado import gen
 # noinspection PyUnresolvedReferences
 from tornado.web import RequestHandler, StaticFileHandler, authenticated
+from tornado.concurrent import run_on_executor
 # tornado.web.RequestHandler above is unresolved until...
 # 1) RouteHandler derives from RequestHandler instead of LegacyBaseHandler
 # 2) the following line is removed (plus the noinspection deleted)
@@ -176,7 +177,6 @@ class BaseStaticFileHandler(StaticFileHandler):
 
 
 class RouteHandler(LegacyBaseHandler):
-
     def data_received(self, *args):
         pass
 
@@ -191,6 +191,7 @@ class RouteHandler(LegacyBaseHandler):
             return data.encode('latin1').decode('utf-8')
         return data.decode('utf-8')
 
+    @gen.coroutine
     def route_method(self, route, use_404=False, limit_route=None, xsrf_filter=True):
 
         route = route.strip('/')
@@ -216,14 +217,26 @@ class RouteHandler(LegacyBaseHandler):
                 if not isinstance(arg, list):
                     arg = [arg]
                 method_args += [item for item in arg if None is not item]
-            if 'kwargs' in method_args or re.search('[A-Z]', route):
-                # no filtering for legacy and routes that depend on *args and **kwargs
-                result = method(**request_kwargs)
-            else:
-                filter_kwargs = dict(filter_iter(lambda kv: kv[0] in method_args, iteritems(request_kwargs)))
-                result = method(**filter_kwargs)
-            if result:
+            try:
+                if 'kwargs' in method_args or re.search('[A-Z]', route):
+                    # no filtering for legacy and routes that depend on *args and **kwargs
+                    result = yield self.async_call(method, request_kwargs)  #  method(**request_kwargs)
+                else:
+                    filter_kwargs = dict(filter_iter(lambda kv: kv[0] in method_args, iteritems(request_kwargs)))
+                    result = yield self.async_call(method, filter_kwargs)  # method(**filter_kwargs)
                 self.finish(result)
+            except (BaseException, Exception) as e:
+                logger.log(ex(e), logger.ERROR)
+                self.finish(use_404 and self.page_not_found() or None)
+
+    @run_on_executor
+    def async_call(self, function, kw):
+        try:
+            result = function(**kw)
+            return result
+        except Exception as e:
+            logger.log(ex(e), logger.ERROR)
+            raise e
 
     def page_not_found(self):
         self.set_status(404)
@@ -705,7 +718,7 @@ class NoXSRFHandler(RouteHandler):
     @gen.coroutine
     def post(self, route, *args, **kwargs):
 
-        self.route_method(route, limit_route=False, xsrf_filter=False)
+        yield self.route_method(route, limit_route=False, xsrf_filter=False)
 
     @staticmethod
     def update_watched_state_kodi(payload=None, as_json=True, **kwargs):
@@ -805,8 +818,7 @@ class LoadingWebHandler(BaseHandler):
     @authenticated
     @gen.coroutine
     def get(self, route, *args, **kwargs):
-        self.route_method(route, use_404=True,
-                          limit_route=(lambda _route: not re.search('get[_-]message', _route)
+        yield self.route_method(route, use_404=True, limit_route=(lambda _route: not re.search('get[_-]message', _route)
                                        and 'loading-page' or _route))
 
     post = get
@@ -821,7 +833,7 @@ class WebHandler(BaseHandler):
     @authenticated
     @gen.coroutine
     def get(self, route, *args, **kwargs):
-        self.route_method(route, use_404=True)
+        yield self.route_method(route, use_404=True)
 
     def send_message(self, message):
         with self.lock:

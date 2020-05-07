@@ -70,7 +70,7 @@ http_error_code = {
     505: 'HTTP Version Not Supported',
     511: 'Network Authentication Required'}
 
-logger = logging.getLogger('sg_helper')
+logger = logging.getLogger('sg.helper')
 logger.addHandler(logging.NullHandler())
 
 USER_AGENT = ''
