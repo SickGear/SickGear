@@ -166,6 +166,13 @@
 									<div class="menu-item-desc opacity60">trends, tailored suggestions...</div></a></li>
 								<li><a href="$sbRoot/add-shows/imdb-default/" tabindex="$tab#set $tab += 1#"><i class="sgicon-imdb"></i>IMDb Cards
 									<div class="menu-item-desc opacity60">popular decades, watchlists...</div></a></li>
+#set $mc_mode = 'new seasons'
+#set $mc_modes = dict(mc_90days='last 90 days', mc_year='by year', mc_discussed='most discussed', mc_shared='most shared')
+#if $sg_var('MC_MRU') in $mc_modes
+    #set $mc_mode = $mc_modes[$sg_var('MC_MRU')]
+#end if
+								<li><a href="$sbRoot/add-shows/mc-default/" tabindex="$tab#set $tab += 1#"><i class="sgicon-metac"></i>Metacritic Cards
+									<div class="menu-item-desc opacity60">$mc_mode...</div></a></li>
 #if $sg_var('USE_ANIDB')
 								<li><a href="$sbRoot/add-shows/anime-default/" tabindex="$tab#set $tab += 1#"><div class="img-anime-16 square-16"></div>Anime Cards
 									<div class="menu-item-desc opacity60">browse anime to add</div></a></li>
@@ -175,7 +182,7 @@
 #end if
 								</ul>
 								<ul class="nav added-last">
-#set $added_last = ($sg_var('showList', []) or [])[-5:][::-1]
+#set $added_last = ($sg_var('showList', []) or [])[-7:][::-1]
 #if not $added_last:
 									<li><span style="padding-left:20px">This will list added shows</span></li>
 #else

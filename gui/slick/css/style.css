@@ -674,6 +674,10 @@ inc_top.tmpl
 	content:"\e685"
 }
 
+.sgicon-metac:before{
+	content:"\e890"
+}
+
 .sgicon-imdb:before{
 	content:"\e898"
 }

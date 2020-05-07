@@ -583,6 +583,8 @@ else:
     TRAKT_PIN_URL = 'https://trakt.tv/pin/6314'
     TRAKT_BASE_URL = 'https://api.trakt.tv/'
 
+MC_MRU = ''
+
 COOKIE_SECRET = b64encodestring(uuid.uuid4().bytes + uuid.uuid4().bytes)
 
 CACHE_IMAGE_URL_LIST = classes.ImageUrlList()
@@ -719,6 +721,7 @@ def init_stage_1(console_logging):
     global USE_TRAKT, TRAKT_CONNECTED_ACCOUNT, TRAKT_ACCOUNTS, TRAKT_MRU, TRAKT_VERIFY, \
         TRAKT_USE_WATCHLIST, TRAKT_REMOVE_WATCHLIST, TRAKT_TIMEOUT, TRAKT_METHOD_ADD, TRAKT_START_PAUSED, \
         TRAKT_SYNC, TRAKT_DEFAULT_INDEXER, TRAKT_REMOVE_SERIESLIST, TRAKT_UPDATE_COLLECTION, \
+        MC_MRU, \
         USE_SLACK, SLACK_NOTIFY_ONSNATCH, SLACK_NOTIFY_ONDOWNLOAD, SLACK_NOTIFY_ONSUBTITLEDOWNLOAD, \
         SLACK_CHANNEL, SLACK_AS_AUTHED, SLACK_BOT_NAME, SLACK_ICON_URL, SLACK_ACCESS_TOKEN, \
         USE_DISCORDAPP, DISCORDAPP_NOTIFY_ONSNATCH, DISCORDAPP_NOTIFY_ONDOWNLOAD, \
@@ -1134,6 +1137,8 @@ def init_stage_1(console_logging):
         check_setting_str(CFG, 'Trakt', 'trakt_update_collection', ''))
     TRAKT_ACCOUNTS = TraktAPI.read_config_string(check_setting_str(CFG, 'Trakt', 'trakt_accounts', ''))
     TRAKT_MRU = check_setting_str(CFG, 'Trakt', 'trakt_mru', '')
+
+    MC_MRU = check_setting_str(CFG, 'Metacritic', 'mc_mru', '')
 
     USE_PYTIVO = bool(check_setting_int(CFG, 'pyTivo', 'use_pytivo', 0))
     PYTIVO_HOST = check_setting_str(CFG, 'pyTivo', 'pytivo_host', '')
@@ -2046,6 +2051,9 @@ def save_config():
             # new_config['Trakt']['trakt_start_paused'] = int(TRAKT_START_PAUSED)
             # new_config['Trakt']['trakt_sync'] = int(TRAKT_SYNC)
             # new_config['Trakt']['trakt_default_indexer'] = int(TRAKT_DEFAULT_INDEXER)
+        ]),
+        ('Metacritic', [
+            ('mru', MC_MRU)
         ]),
         ('Slack', [
             ('use_%s', int(USE_SLACK)),
