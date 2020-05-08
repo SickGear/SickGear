@@ -43,7 +43,6 @@ from exceptions_helper import ex
 from tornado import gen
 from tornado.concurrent import run_on_executor
 from lib import subliminal
-from concurrent.futures import ThreadPoolExecutor
 
 import sickbeard
 from . import classes, db, helpers, history, image_cache, logger, network_timezones, processTV, search_queue, ui
