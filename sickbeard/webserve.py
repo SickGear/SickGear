@@ -6142,7 +6142,7 @@ class History(MainHandler):
             mapped = 0
             mapping = None
             maps = [x.split('=') for x in sickbeard.EMBY_PARENT_MAPS.split(',') if any(x)]
-            args = dict(params=dict(format='json'), timeout=10, parse_json=True, failure_handling=False)
+            args = dict(params=dict(format='json'), timeout=10, parse_json=True, failure_monitor=False)
             for i, cur_host in enumerate(hosts):
                 base_url = 'http://%s/emby' % cur_host
                 headers.update({'X-MediaBrowser-Token': keys[i]})
@@ -6166,7 +6166,7 @@ class History(MainHandler):
                         if not folder or 'tvshows' != folder.get('CollectionType', ''):
                             continue
 
-                        items = helpers.get_url('%s/Items' % user_url, failure_handling=False, headers=headers,
+                        items = helpers.get_url('%s/Items' % user_url, failure_monitor=False, headers=headers,
                                                 params=dict(SortBy='DatePlayed,SeriesSortName,SortName',
                                                             SortOrder='Descending',
                                                             IncludeItemTypes='Episode',

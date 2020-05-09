@@ -180,7 +180,7 @@ def splitResult(result):
     :return: list of search results
     :rtype: List[sickbeard.classes.SearchResult]
     """
-    resp = helpers.get_url(result.url, failure_handling=False)
+    resp = helpers.get_url(result.url, failure_monitor=False)
     if None is resp:
         logger.log(u'Unable to load url %s, can\'t download season NZB' % result.url, logger.ERROR)
         return False
