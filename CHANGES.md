@@ -59,6 +59,8 @@
 * Fix removed unneeded import
 * Change add exclude_no_data to get_url, in most cases `no_data` is not a failure
 * Change prevent log sources containing `sg.` from clipping in log format
+* Fix webapi access denied with async server
+
 
 ### 0.21.30 (2020-04-30 10:20:00 UTC)
 
