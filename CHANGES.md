@@ -57,7 +57,8 @@
 * Update urllib3 release 1.25.6 (4a6c288) to 1.25.7 (37ba61a)
 * Fix import in Tornado py2
 * Fix removed unneeded import
-
+* Change add exclude_no_data to get_url, in most cases `no_data` is not a failure
+* Change prevent log sources containing `sg.` from clipping in log format
 
 ### 0.21.30 (2020-04-30 10:20:00 UTC)
 

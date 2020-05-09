@@ -171,7 +171,8 @@ class SBRotatingLogHandler(object):
         """
         fmt = {}
         for logger_name in self.log_types + self.external_loggers:
-            source = (re.sub(r'(.*\.\w\w\w).*$', r'\1', logger_name).upper() + ' :: ', '')['sickbeard' == logger_name]
+            source = ((re.sub(r'(.*\.\w\w\w).*$', r'\1', logger_name), logger_name)['sg.' in logger_name]
+                      .upper() + ' :: ', '')['sickbeard' == logger_name]
             fmt.setdefault(logger_name, logging.Formatter(
                 '%(asctime)s %(levelname)' + ('-8', '')[log_simple] + 's ' + source
                 + '%(message)s', ('%Y-%m-%d ', '')[log_simple] + '%H:%M:%S'))

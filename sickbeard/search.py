@@ -1007,7 +1007,7 @@ def search_providers(
                     cache_file = ek.ek(os.path.join, sickbeard.CACHE_DIR or helpers.get_system_temp_dir(),
                                        '%s.torrent' % (helpers.sanitize_filename(best_result.name)))
                     if not helpers.download_file(best_result.url, cache_file, session=best_result.provider.session,
-                                                 failure_handling=False):
+                                                 failure_monitor=False):
                         continue
 
                     try:

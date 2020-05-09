@@ -687,11 +687,12 @@ def get_url(url,  # type: AnyStr
             raise_exceptions=False,  # type: bool
             as_binary=False,  # type: bool
             encoding=None,  # type: Optional[AnyStr]
-            failure_handling=True,  # type: bool
+            failure_monitor=True,  # type: bool
             use_tmr_limit=True,  # type: bool
             raise_skip_exception=False,  # type: bool
             exclude_client_http_codes=True,  # type: bool
             exclude_http_codes=(404, 429),  # type: Tuple[integer_types]
+            exclude_no_data=True,  # type: bool
             **kwargs):
     # type: (...) -> Optional[Union[AnyStr, bool, bytes, Dict, Tuple[Union[Dict, List], requests.Session]]]
     """
@@ -715,17 +716,18 @@ def get_url(url,  # type: AnyStr
     :param raise_exceptions: raise exceptions
     :param as_binary: return bytes instead of text
     :param encoding: overwrite encoding return header if as_binary is False
-    :param failure_handling: if True, will enable failure handling for this request
+    :param failure_monitor: if True, will enable failure monitor for this request
     :param use_tmr_limit: an API limit can be +ve before a fetch, but unwanted, set False to short should_skip
     :param raise_skip_exception: if True, will raise ConnectionSkipException if this request should be skipped
-    :param exclude_client_http_codes: if True, exclude client http codes 4XX from failure handling
-    :param exclude_http_codes: http codes to exclude from failure handling, default: (404, 429)
+    :param exclude_client_http_codes: if True, exclude client http codes 4XX from failure monitor
+    :param exclude_http_codes: http codes to exclude from failure monitor, default: (404, 429)
+    :param exclude_no_data: exclude no data as failure
     :param kwargs: keyword params to passthru to Requests
     :return: None or data fetched from address
     """
 
     domain = None
-    if failure_handling:
+    if failure_monitor:
         domain = DOMAIN_FAILURES.get_domain(url)
         if domain not in DOMAIN_FAILURES.domain_list:
             DOMAIN_FAILURES.domain_list[domain] = ConnectionFailList(domain)
@@ -852,7 +854,7 @@ def get_url(url,  # type: AnyStr
     except requests.exceptions.HTTPError as e:
         raised = e
         is_client_error = 400 <= e.response.status_code < 500
-        if failure_handling and e.response.status_code not in exclude_http_codes and \
+        if failure_monitor and e.response.status_code not in exclude_http_codes and \
                 not (exclude_client_http_codes and is_client_error):
             connection_fail_params = dict(fail_type=ConnectionFailTypes.http, code=e.response.status_code)
         if not raise_status_code:
@@ -861,26 +863,26 @@ def get_url(url,  # type: AnyStr
         raised = e
         if 'mute_connect_err' not in mute:
             logger.warning(u'Connection error msg:%s while loading URL%s' % (ex(e), _maybe_request_url(e)))
-        if failure_handling:
+        if failure_monitor:
             connection_fail_params = dict(fail_type=ConnectionFailTypes.connection)
     except requests.exceptions.ReadTimeout as e:
         raised = e
         if 'mute_read_timeout' not in mute:
             logger.warning(u'Read timed out msg:%s while loading URL%s' % (ex(e), _maybe_request_url(e)))
-        if failure_handling:
+        if failure_monitor:
             connection_fail_params = dict(fail_type=ConnectionFailTypes.timeout)
     except (requests.exceptions.Timeout, socket.timeout) as e:
         raised = e
         if 'mute_connect_timeout' not in mute:
             logger.warning(u'Connection timed out msg:%s while loading URL %s' % (ex(e), _maybe_request_url(e, url)))
-        if failure_handling:
+        if failure_monitor:
             connection_fail_params = dict(fail_type=ConnectionFailTypes.connection_timeout)
     except (BaseException, Exception) as e:
         raised = e
         logger.warning((u'Exception caught while loading URL {0}\r\nDetail... %s\r\n{1}' % ex(e),
                         u'Unknown exception while loading URL {0}\r\nDetail... {1}')[not ex(e)]
                        .format(url, traceback.format_exc()))
-        if failure_handling:
+        if failure_monitor:
             connection_fail_params = dict(fail_type=ConnectionFailTypes.other)
             log_failure_url = True
     finally:
@@ -919,7 +921,7 @@ def get_url(url,  # type: AnyStr
         if raise_exceptions and isinstance(raised, Exception):
             raise raised
 
-    if failure_handling:
+    if failure_monitor:
         if result and not isinstance(result, tuple) \
                 or isinstance(result, tuple) and result[0]:
             domain = DOMAIN_FAILURES.get_domain(url)
@@ -928,7 +930,7 @@ def get_url(url,  # type: AnyStr
             DOMAIN_FAILURES.domain_list[domain].failure_count = 0
             DOMAIN_FAILURES.domain_list[domain].failure_time = None
             save_failure(url, domain, False, post_data, post_json)
-        else:
+        elif not exclude_no_data:
             DOMAIN_FAILURES.inc_failure_count(url, ConnectionFail(fail_type=ConnectionFailTypes.nodata))
             save_failure(url, domain, True, post_data, post_json)
 

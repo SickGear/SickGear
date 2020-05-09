@@ -558,7 +558,8 @@ class GenericProvider(object):
 
         kwargs['raise_exceptions'] = True
         kwargs['raise_status_code'] = True
-        kwargs['failure_handling'] = False
+        kwargs['failure_monitor'] = False
+        kwargs['exclude_no_data'] = False
         for k, v in iteritems(dict(headers=self.headers, hooks=dict(response=self.cb_response))):
             kwargs.setdefault(k, v)
         if 'nzbs.in' not in url:  # this provider returns 503's 3 out of 4 requests with the persistent session system
@@ -753,7 +754,7 @@ class GenericProvider(object):
 
             self.session.headers['Referer'] = url
             if cached or helpers.download_file(url, cache_file, session=self.session, allow_redirects='/it' not in url,
-                                               failure_handling=False):
+                                               failure_monitor=False):
 
                 if self._verify_download(cache_file):
                     logger.log(u'Downloaded %s result from %s' % (self.name, url))
