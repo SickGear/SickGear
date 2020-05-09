@@ -191,7 +191,8 @@ class Api(webserve.BaseHandler):
             api_log(self, accessMsg, logger.DEBUG)
         else:
             api_log(self, accessMsg, logger.WARNING)
-            yield outputCallbackDict['default'](_responds(RESULT_DENIED, msg=accessMsg))
+            result = yield self.async_call(outputCallbackDict['default'], (_responds(RESULT_DENIED, msg=accessMsg), ))
+            self.finish(result)
             return
 
         # set the original call_dispatcher as the local _call_dispatcher
