@@ -214,11 +214,11 @@ class NewznabProvider(generic.NZBProvider):
         try:
             my_db = db.DBConnection('cache.db')
             if isinstance(value, datetime.datetime):
-                value = int(timestamp_near(value))
+                save_value = int(timestamp_near(value))
             else:
-                value = SGDatetime.timestamp_far(value, default=0)
+                save_value = SGDatetime.timestamp_far(value, default=0)
             my_db.action('INSERT OR REPLACE INTO "lastrecentsearch" (name, datetime) VALUES (?,?)',
-                         [self.get_id(), value])
+                         [self.get_id(), save_value])
         except (BaseException, Exception):
             pass
         self._last_recent_search = value
