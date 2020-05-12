@@ -39,7 +39,7 @@ from ..show_name_helpers import get_show_names
 from ..tv import TVEpisode, TVShow
 
 from lib.dateutil import parser
-from exceptions_helper import AuthException, MultipleShowObjectsException
+from exceptions_helper import AuthException, ex, MultipleShowObjectsException
 from lxml_etree import etree
 
 from six import iteritems, itervalues, string_types
@@ -1171,7 +1171,8 @@ class NewznabCache(tvcache.TVCache):
                     items = None
                 else:
                     (items, n_spaces) = self.provider.cache_data(needed=needed)
-            except (BaseException, Exception):
+            except (BaseException, Exception) as e:
+                logger.log('Error updating Cache: %s' % ex(e), logger.ERROR)
                 items = None
 
             if items:

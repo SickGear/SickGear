@@ -36,6 +36,7 @@
 * Add exclude ignore words and exclude required words to settings/Search, Edit and View show
 * Change improve Popen resource usage under py2
 * Add overall failure monitoring to History/Connect fails (renamed from "Provider fails")
+* Change log exception during updateCache in newznab
 
 
 [develop changelog]
