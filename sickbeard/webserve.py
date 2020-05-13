@@ -1359,7 +1359,7 @@ class Home(MainHandler):
         :param tvid_prodid:
         :type tvid_prodid:
         :param season:
-        :type season: 
+        :type season:
         :param episode:
         :type episode:
         :param absolute:
@@ -1985,8 +1985,8 @@ class Home(MainHandler):
             last_found = ('', ' since %s' % SGDatetime.fromordinal(
                 show_obj.last_found_on_indexer).sbfdate())[1 < show_obj.last_found_on_indexer]
             show_message = (
-                'The master ID of this show has been <span class="addQTip" title="many reasons exist, including: ' + 
-                '<br>show flagged as a duplicate, removed completely... etc">abandoned</span>%s, ' % last_found + 
+                'The master ID of this show has been <span class="addQTip" title="many reasons exist, including: ' +
+                '<br>show flagged as a duplicate, removed completely... etc">abandoned</span>%s, ' % last_found +
                 '<a href="%s/home/edit-show?tvid_prodid=%s&tvsrc=0&srcid=%s#core-component-group3">replace it here</a>'
                 % (sickbeard.WEB_ROOT, tvid_prodid, show_obj.prodid)
                 + ('', '<br>%s' % show_message)[0 < len(show_message)])
@@ -6203,7 +6203,7 @@ class ConfigGeneral(Config):
         # Create some values to seed md5
         seed = str(time.time()) + str(random.random())
 
-        result = hashlib.new('md5', seed).hexdigest()
+        result = hashlib.new('md5', decode_bytes(seed)).hexdigest()
 
         # Return a hex digest of the md5, eg 49f68a5c8493ec2c0bf489821c21fc3b
         logger.log(u'New API generated')
@@ -6515,7 +6515,7 @@ class ConfigSearch(Config):
                     sab_username=None, sab_password=None, sab_apikey=None, sab_category=None, sab_host=None,
                     nzbget_username=None, nzbget_password=None, nzbget_category=None, nzbget_host=None,
                     nzbget_use_https=None, nzbget_priority=None, nzbget_parent_map=None,
-                    torrent_username=None, torrent_password=None, torrent_label=None, torrent_label_var=None, 
+                    torrent_username=None, torrent_password=None, torrent_label=None, torrent_label_var=None,
                     torrent_verify_cert=None, torrent_path=None, torrent_seed_time=None, torrent_paused=None,
                     torrent_high_bandwidth=None, torrent_host=None):
 
