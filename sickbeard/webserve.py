@@ -6446,7 +6446,7 @@ class ConfigGeneral(Config):
         # Create some values to seed md5
         seed = str(time.time()) + str(random.random())
 
-        result = hashlib.new('md5', seed).hexdigest()
+        result = hashlib.new('md5', decode_bytes(seed)).hexdigest()
 
         # Return a hex digest of the md5, eg 49f68a5c8493ec2c0bf489821c21fc3b
         logger.log(u'New API generated')

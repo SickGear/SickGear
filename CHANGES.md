@@ -63,6 +63,13 @@
 * Fix last_recent_search in newznab
 
 
+### 0.21.31 (2020-05-13 19:10:00 UTC)
+
+* Fix correct type for hashlib call under py3
+* Change improve loading logic, stop loop when reloading and only call location.reload(); once
+* Fix RarBG under py3
+
+
 ### 0.21.30 (2020-04-30 10:20:00 UTC)
 
 * Fix Milkie torrent provider breaking changes
