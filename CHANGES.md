@@ -63,6 +63,11 @@
 * Fix last_recent_search in newznab
 
 
+### 0.21.32 (2020-05-14 15:00:00 UTC)
+
+* Change improve Cloudflare connectivity
+
+
 ### 0.21.31 (2020-05-13 19:10:00 UTC)
 
 * Fix correct type for hashlib call under py3
