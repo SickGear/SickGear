@@ -120,7 +120,7 @@ class CloudflareScraper(Session):
             except (BaseException, Exception):
                 pass
 
-        for i in re.findall(r'(<input[^>]+?hidden[^>]+?>)', body):
+        for i in re.findall(r'(<input[^>]+?hidden[^>]+?>)', re.sub(r'(?sim)<!--\s+<input.*?(?=<)', '', body)):
             value = re.findall(r'value="([^"\']+?)["\']', i)
             name = re.findall(r'name="([^"\']+?)["\']', i)
             if all([name, value]):
