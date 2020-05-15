@@ -64,6 +64,11 @@
 * Fix last_recent_search in newznab
 
 
+### 0.21.33 (2020-05-15 08:25:00 UTC)
+
+* Change allow Python 3.8.3
+
+
 ### 0.21.32 (2020-05-14 15:00:00 UTC)
 
 * Change improve Cloudflare connectivity
