@@ -218,26 +218,17 @@ class RouteHandler(LegacyBaseHandler):
                 if not isinstance(arg, list):
                     arg = [arg]
                 method_args += [item for item in arg if None is not item]
-            try:
-                if 'kwargs' in method_args or re.search('[A-Z]', route):
-                    # no filtering for legacy and routes that depend on *args and **kwargs
-                    result = yield self.async_call(method, request_kwargs)  #  method(**request_kwargs)
-                else:
-                    filter_kwargs = dict(filter_iter(lambda kv: kv[0] in method_args, iteritems(request_kwargs)))
-                    result = yield self.async_call(method, filter_kwargs)  # method(**filter_kwargs)
-                self.finish(result)
-            except (BaseException, Exception) as e:
-                logger.log(ex(e), logger.ERROR)
-                self.finish(use_404 and self.page_not_found() or None)
+            if 'kwargs' in method_args or re.search('[A-Z]', route):
+                # no filtering for legacy and routes that depend on *args and **kwargs
+                result = yield self.async_call(method, request_kwargs)  #  method(**request_kwargs)
+            else:
+                filter_kwargs = dict(filter_iter(lambda kv: kv[0] in method_args, iteritems(request_kwargs)))
+                result = yield self.async_call(method, filter_kwargs)  # method(**filter_kwargs)
+            self.finish(result)
 
     @run_on_executor
     def async_call(self, function, kw):
-        try:
-            result = function(**kw)
-            return result
-        except Exception as e:
-            logger.log(ex(e), logger.ERROR)
-            raise e
+        return function(**kw)
 
     def page_not_found(self):
         self.set_status(404)
@@ -5238,43 +5229,51 @@ class Manage(MainHandler):
         t = PageTemplate(web_handler=self, file='manage_backlogOverview.tmpl')
         t.submenu = self.manage_menu('Backlog')
 
-        showCounts = {}
-        showCats = {}
-        showSQLResults = {}
+        show_counts = {}
+        show_cats = {}
+        t.ep_sql_results = {}
 
-        my_db = db.DBConnection()
+        my_db = db.DBConnection(row_type='dict')
+        sql_cmds = []
+        show_objects = []
         for cur_show_obj in sickbeard.showList:
-
-            epCounts = {}
-            epCats = {}
-            epCounts[Overview.SKIPPED] = 0
-            epCounts[Overview.WANTED] = 0
-            epCounts[Overview.QUAL] = 0
-            epCounts[Overview.GOOD] = 0
-            epCounts[Overview.UNAIRED] = 0
-            epCounts[Overview.SNATCHED] = 0
-
-            sql_result = my_db.select(
-                'SELECT * FROM tv_episodes'
+            sql_cmds.append([
+                'SELECT season, episode, status, airdate, name'
+                ' FROM tv_episodes'
                 ' WHERE indexer = ? AND showid = ?'
                 ' ORDER BY season DESC, episode DESC',
-                [cur_show_obj.tvid, cur_show_obj.prodid])
+                [cur_show_obj.tvid, cur_show_obj.prodid]])
+            show_objects.append(cur_show_obj)
+
+        sql_results = my_db.mass_action(sql_cmds)
+
+        for i, sql_result in enumerate(sql_results):
+            ep_cats = {}
+            ep_counts = {
+                Overview.UNAIRED: 0, Overview.GOOD: 0, Overview.SKIPPED: 0,
+                Overview.WANTED: 0, Overview.QUAL: 0, Overview.SNATCHED: 0}
 
             for cur_result in sql_result:
                 if not sickbeard.SEARCH_UNAIRED and 1 == cur_result['airdate']:
                     continue
-                curEpCat = cur_show_obj.get_overview(int(cur_result['status']))
-                if curEpCat:
-                    epCats[str(cur_result['season']) + 'x' + str(cur_result['episode'])] = curEpCat
-                    epCounts[curEpCat] += 1
+                ep_cat = show_objects[i].get_overview(int(cur_result['status']), split_snatch=True)
+                if ep_cat in (Overview.WANTED, Overview.QUAL, Overview.SNATCHED_QUAL):
+                    cur_result['backlog'] = True
+                    if Overview.SNATCHED_QUAL == ep_cat:
+                        ep_cat = Overview.SNATCHED
+                else:
+                    cur_result['backlog'] = False
+                if ep_cat:
+                    ep_cats['%sx%s' % (cur_result['season'], cur_result['episode'])] = ep_cat
+                    ep_counts[ep_cat] += 1
 
-            showCounts[cur_show_obj.tvid_prodid] = epCounts
-            showCats[cur_show_obj.tvid_prodid] = epCats
-            showSQLResults[cur_show_obj.tvid_prodid] = sql_result
+            tvid_prodid = show_objects[i].tvid_prodid
+            show_counts[tvid_prodid] = ep_counts
+            show_cats[tvid_prodid] = ep_cats
+            t.ep_sql_results[tvid_prodid] = sql_result
 
-        t.showCounts = showCounts
-        t.showCats = showCats
-        t.showSQLResults = showSQLResults
+        t.show_counts = show_counts
+        t.show_cats = show_cats
         t.backlog_active_providers = sickbeard.search_backlog.BacklogSearcher.providers_active(scheduled=False)
 
         return t.respond()

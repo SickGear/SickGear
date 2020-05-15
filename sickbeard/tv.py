@@ -1977,7 +1977,7 @@ class TVShow(TVShowBase):
         logger.log('None of the conditions were met, ignoring found episode', logger.DEBUG)
         return False
 
-    def get_overview(self, ep_status):
+    def get_overview(self, ep_status, split_snatch=False):
         """
 
         :param ep_status: episode status
@@ -1985,7 +1985,7 @@ class TVShow(TVShowBase):
         :return:
         :rtype: int
         """
-        return helpers.get_overview(ep_status, self.quality, self.upgrade_once)
+        return helpers.get_overview(ep_status, self.quality, self.upgrade_once, split_snatch=split_snatch)
 
     def __getstate__(self):
         d = dict(self.__dict__)
