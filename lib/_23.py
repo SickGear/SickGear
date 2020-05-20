@@ -155,6 +155,9 @@ if 2 != version_info[0]:
     # noinspection PyUnresolvedReferences
     from subprocess import Popen
 
+    # noinspection PyUnresolvedReferences
+    import xml.etree.ElementTree as etree
+
     native_timestamp = datetime.datetime.timestamp  # type: Callable[[datetime.datetime], float]
 
     def unquote(string, encoding='utf-8', errors='replace'):
@@ -227,6 +230,12 @@ else:
     # noinspection PyUnresolvedReferences,PyDeprecation
     from inspect import getargspec
 
+    try:
+        # noinspection PyPep8Naming
+        import xml.etree.cElementTree as etree
+    except ImportError:
+        # noinspection PyPep8Naming
+        import xml.etree.ElementTree as etree
 
     def _totimestamp(dt=None):
         # type: (datetime.datetime) -> float

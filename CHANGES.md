@@ -40,6 +40,7 @@
 * Change improve Popen resource usage under py2
 * Add overall failure monitoring to History/Connect fails (renamed from "Provider fails")
 * Change log exception during updateCache in newznab
+* Change make Py3.9 preparations
 
 
 [develop changelog]
