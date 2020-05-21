@@ -76,7 +76,7 @@
 			<label for="upgrade-once">
 				<span class="component-title">Upgrade once</span>
 				<span class="component-desc">
-					<input type="checkbox" name="upgrade_once" id="upgrade-once"#echo ('', $html_checked)[$varExists('show') and $show.upgrade_once]#>
+					<input type="checkbox" name="upgrade_once" id="upgrade-once"#echo ('', $html_checked)[$varExists('show_obj') and $show_obj.upgrade_once]#>
 					<p>stop upgrading after matching the first best <em>upgrade</em> quality</p>
 				</span>
 			</label>
