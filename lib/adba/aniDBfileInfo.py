@@ -24,8 +24,8 @@ import pickle
 import requests
 import sys
 import time
-import xml.etree.cElementTree as etree
 
+from _23 import etree
 
 logger = logging.getLogger('adba')
 logger.addHandler(logging.NullHandler())

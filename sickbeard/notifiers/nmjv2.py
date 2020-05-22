@@ -19,13 +19,12 @@
 
 import time
 from xml.dom.minidom import parseString
-import xml.etree.cElementTree as XmlEtree
 
 from .generic import BaseNotifier
 import sickbeard
 from exceptions_helper import ex
 
-from _23 import urlencode
+from _23 import etree, urlencode
 # noinspection PyUnresolvedReferences
 from six.moves import urllib
 
@@ -133,14 +132,14 @@ class NMJv2Notifier(BaseNotifier):
             return False
 
         try:
-            et = XmlEtree.fromstring(response1)
+            et = etree.fromstring(response1)
             result1 = et.findtext('returnValue')
         except SyntaxError as e:
             self._log_error(u'Unable to parse XML returned from the Popcorn Hour: update_scandir, %s' % ex(e))
             return False
 
         try:
-            et = XmlEtree.fromstring(response2)
+            et = etree.fromstring(response2)
             result2 = et.findtext('returnValue')
         except SyntaxError as e:
             self._log_error(u'Unable to parse XML returned from the Popcorn Hour: scanner_start, %s' % ex(e))

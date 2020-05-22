@@ -17,14 +17,13 @@
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
 import re
-import xml.etree.cElementTree as XmlEtree
 
 from .generic import Notifier
 import sickbeard
 from encodingKludge import fixStupidEncodings
 from exceptions_helper import ex
 
-from _23 import b64encodestring, decode_str, filter_iter, list_values, unquote_plus, urlencode
+from _23 import b64encodestring, decode_str, etree, filter_iter, list_values, unquote_plus, urlencode
 from six import iteritems, text_type, PY2
 # noinspection PyUnresolvedReferences
 from six.moves import urllib
@@ -175,7 +174,7 @@ class PLEXNotifier(Notifier):
 
             try:
                 http_response_obj = urllib.request.urlopen(req)  # PY2 http_response_obj has no `with` context manager
-                auth_tree = XmlEtree.parse(http_response_obj)
+                auth_tree = etree.parse(http_response_obj)
                 http_response_obj.close()
                 token = auth_tree.findall('.//authentication-token')[0].text
                 token_arg = '?X-Plex-Token=' + token

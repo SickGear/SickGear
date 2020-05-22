@@ -22,7 +22,6 @@ try:
 except ImportError:
     from lib import simplejson as json
 import time
-import xml.etree.cElementTree as XmlEtree
 
 from .generic import Notifier
 from .. import logger
@@ -30,7 +29,7 @@ import sickbeard
 import sickbeard.helpers
 from exceptions_helper import ex
 
-from _23 import decode_str, quote, unquote, unquote_plus
+from _23 import decode_str, etree, quote, unquote, unquote_plus
 
 
 class KodiNotifier(Notifier):
@@ -233,7 +232,7 @@ class KodiNotifier(Notifier):
                 return False
 
             try:
-                et = XmlEtree.fromstring(quote(response, ':\\/<>'))
+                et = etree.fromstring(quote(response, ':\\/<>'))
             except SyntaxError as e:
                 self._log_error(u'Unable to parse XML in response: %s' % ex(e))
                 return False
