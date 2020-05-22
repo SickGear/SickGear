@@ -1732,7 +1732,7 @@ def path_mapper(search, replace, subject):
     return result, result != subject
 
 
-def get_overview(ep_status, show_quality, upgrade_once):
+def get_overview(ep_status, show_quality, upgrade_once, split_snatch=False):
     """
 
     :param ep_status: episode status
@@ -1757,7 +1757,7 @@ def get_overview(ep_status, show_quality, upgrade_once):
 
         if FAILED == status:
             return Overview.WANTED
-        if status in SNATCHED_ANY:
+        if not split_snatch and status in SNATCHED_ANY:
             return Overview.SNATCHED
 
         void, best_qualities = Quality.splitQuality(show_quality)
@@ -1770,7 +1770,7 @@ def get_overview(ep_status, show_quality, upgrade_once):
                 or (upgrade_once and
                     (quality in best_qualities or (None is not min_best and quality > min_best))):
             return Overview.GOOD
-        return Overview.QUAL
+        return (Overview.QUAL, Overview.SNATCHED_QUAL)[status in SNATCHED_ANY]
 
 
 def generate_show_dir_name(root_dir, show_name):

@@ -2,6 +2,9 @@
 
 * Add menu Shows/"Metacritic Cards"
 * Change make web UI calls async so that, for example, process media will not block page requests
+* Change improve speed of backlog overview
+* Fix the missing snatched low quality on backlog overview
+* Fix print trace to webinterface
 * Fix creating show list when there is no list at the cycle of backlog search spread
 * Change improve Python performance of handling core objects
 * Change improve performance for find_show_by_id

@@ -636,13 +636,16 @@ class Overview(object):
     # For both snatched statuses. Note: SNATCHED/QUAL have same value and break dict.
     SNATCHED = SNATCHED_PROPER = SNATCHED_BEST  # 9
 
+    SNATCHED_QUAL = 15
+
     overviewStrings = {UNKNOWN: 'unknown',
                        SKIPPED: 'skipped',
                        WANTED: 'wanted',
                        QUAL: 'qual',
                        GOOD: 'good',
                        UNAIRED: 'unaired',
-                       SNATCHED: 'snatched'}
+                       SNATCHED: 'snatched',
+                       SNATCHED_QUAL: 'snatched/qual'}
 
 
 countryList = {'Australia': 'AU',

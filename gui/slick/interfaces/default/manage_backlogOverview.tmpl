@@ -25,7 +25,7 @@
     });
 
     #set $fuzzydate = 'airdate'
-    #if $sickbeard.FUZZY_DATING:
+    #if $sickbeard.FUZZY_DATING
     fuzzyMoment({
         containerClass: '.${fuzzydate}',
         dateHasTime: !1,
@@ -46,27 +46,27 @@
 	<h1 class="title">$title</h1>
 #end if
 ##
-#set $totalWanted = 0
-#set $totalQual = 0
+#set $total_wanted = 0
+#set $total_qual = 0
 #for $cur_show_obj in $sickbeard.showList
-    #set $totalWanted += $showCounts[$cur_show_obj.tvid_prodid][$Overview.WANTED]
-    #set $totalQual += $showCounts[$cur_show_obj.tvid_prodid][$Overview.QUAL]
+    #set $total_wanted += $show_counts[$cur_show_obj.tvid_prodid][$Overview.WANTED]
+    #set $total_qual += $show_counts[$cur_show_obj.tvid_prodid][$Overview.QUAL]
 #end for
 ##
 	<div class="h2footer pull-right">
-		<span class="listing-key wanted">Wanted: <b>$totalWanted</b></span>
-		<span class="listing-key qual">Low Quality: <b>$totalQual</b></span>
+		<span class="listing-key wanted">Wanted: <b>$total_wanted</b></span>
+		<span class="listing-key qual">Low Quality: <b>$total_qual</b></span>
 	</div>
 	<br/>
 
-#if not $totalWanted
+#if not $total_wanted
 	<h3>no shows require a <span class="grey-text">backlog search</span></h3>
 #else
 	<div class="pull-left">
 		Jump to Show
 		<select id="pickShow" class="form-control form-control-inline input-sm">
-    #for $cur_show_obj in sorted($sickbeard.showList, key = operator.attrgetter('name')):
-        #if 0 != $showCounts[$cur_show_obj.tvid_prodid][$Overview.QUAL] + $showCounts[$cur_show_obj.tvid_prodid][$Overview.WANTED]:
+    #for $cur_show_obj in sorted($sickbeard.showList, key = operator.attrgetter('name'))
+        #if 0 != $show_counts[$cur_show_obj.tvid_prodid][$Overview.QUAL] + $show_counts[$cur_show_obj.tvid_prodid][$Overview.WANTED]
 			<option value="$cur_show_obj.tvid_prodid">$cur_show_obj.name</option>
         #end if
     #end for
@@ -75,9 +75,9 @@
 #end if
 
 	<table class="sickbeardTable" border="0">
-    #for $cur_show_obj in sorted($sickbeard.showList, key = operator.attrgetter('name')):
+    #for $cur_show_obj in sorted($sickbeard.showList, key = operator.attrgetter('name'))
         ##
-        #if 0 == $showCounts[$cur_show_obj.tvid_prodid][$Overview.QUAL] + $showCounts[$cur_show_obj.tvid_prodid][$Overview.WANTED]:
+        #if 0 == $show_counts[$cur_show_obj.tvid_prodid][$Overview.QUAL] + $show_counts[$cur_show_obj.tvid_prodid][$Overview.WANTED]
             #continue
         #end if
 
@@ -85,10 +85,10 @@
 			<td colspan="3" class="text-left">
 				<br/>
 				<h2><a href="$sbRoot/home/view-show?tvid_prodid=$cur_show_obj.tvid_prodid">$cur_show_obj.name</a></h2>
-        #if not $cur_show_obj.paused and not $backlog_active_providers:
+        #if not $cur_show_obj.paused and not $backlog_active_providers
             #set $text = 'Enable allow active searching for one or more providers at config media providers'
             #for ($tag_class, $sub) in (
-                ('grey-text', 'Enable'), ('grey-text', 'for one or more providers at config')):
+                ('grey-text', 'Enable'), ('grey-text', 'for one or more providers at config'))
                 #set $text = $text.replace($sub, '<span class="%s">%s</span>' % ($tag_class, $sub))
             #end for
             #set $sub = 'media providers'
@@ -97,9 +97,9 @@
 				<span style="position:relative;float:right;margin-top:-48px;text-align:right;"><i class="img-warning-16"></i>$text</span>
         #end if
 				<div class="pull-right">
-					<span class="listing-key wanted">Wanted: <b>$showCounts[$cur_show_obj.tvid_prodid][$Overview.WANTED]</b></span>
-					<span class="listing-key qual">Low Quality: <b>$showCounts[$cur_show_obj.tvid_prodid][$Overview.QUAL]</b></span>
-        #if not $cur_show_obj.paused:
+					<span class="listing-key wanted">Wanted: <b>$show_counts[$cur_show_obj.tvid_prodid][$Overview.WANTED]</b></span>
+					<span class="listing-key qual">Low Quality: <b>$show_counts[$cur_show_obj.tvid_prodid][$Overview.QUAL]</b></span>
+        #if not $cur_show_obj.paused
 					<a class="btn btn-inline forceBacklog #if not $backlog_active_providers# disabled#end if#" href="$sbRoot/manage/backlog-show?tvid_prodid=$cur_show_obj.tvid_prodid"><i class="sgicon-play"></i> Force Backlog</a>
         #else
 					<span class="quality SD btn-inline forceBacklog" style="padding:4px 10px; margin-bottom:1px"><i class="sgicon-pause"></i> Paused</span>
@@ -110,20 +110,25 @@
 
 		<tr class="seasoncols"><th style="width:10%">Episode</th><th class="text-left">Name</th><th class="text-nowrap">Airdate</th></tr>
         ##
-        #for $curResult in $showSQLResults[$cur_show_obj.tvid_prodid]:
-            #set $whichStr = '%sx%s' % ($str($curResult['season']), $str($curResult['episode']))
-            #try:
-                #set $overview = $showCats[$cur_show_obj.tvid_prodid][$whichStr]
+        #for $cur_result in $ep_sql_results[$cur_show_obj.tvid_prodid]
+            #set $which_idx = '%sx%s' % ($cur_result['season'], $cur_result['episode'])
+            #try
+                #set $which_str = '%s x %02d' % ($cur_result['season'], $cur_result['episode'])
+            #except Exception
+                #set $which_str = '%s x %s' % ($cur_result['season'], $cur_result['episode'])
+            #end try
+            #try
+                #set $overview = $show_cats[$cur_show_obj.tvid_prodid][$which_idx]
             #except Exception
                 #continue
             #end try
             ##
-            #if $overview in ($Overview.QUAL, $Overview.WANTED)
+            #if $cur_result['backlog']
             #
-		<tr class="seasonstyle $Overview.overviewStrings[$showCats[$cur_show_obj.tvid_prodid][$whichStr]]">
-			<td>$whichStr</td>
-			<td class="text-left">$curResult['name']</td>
-			<td class="text-nowrap"><div class="${fuzzydate}">#if 1 == int($curResult['airdate']) then 'never' else $SGDatetime.sbfdate($SGDatetime.convert_to_setting($network_timezones.parse_date_time($curResult['airdate'], $cur_show_obj.airs, $cur_show_obj.network)))#</div></td>
+		<tr class="seasonstyle $Overview.overviewStrings[$show_cats[$cur_show_obj.tvid_prodid][$which_idx]]">
+			<td>$which_str</td>
+			<td class="text-left">$cur_result['name']</td>
+			<td class="text-nowrap"><div class="${fuzzydate}">#if 1 == int($cur_result['airdate']) then 'never' else $SGDatetime.sbfdate($SGDatetime.convert_to_setting($network_timezones.parse_date_time($cur_result['airdate'], $cur_show_obj.airs, $cur_show_obj.network)))#</div></td>
 		</tr>
             #
             #end if
