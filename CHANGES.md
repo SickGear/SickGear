@@ -69,6 +69,11 @@
 * Fix last_recent_search in newznab
 
 
+### 0.21.35 (2020-05-25 01:30:00 UTC)
+
+* Fix RarBG under py2
+
+
 ### 0.21.34 (2020-05-21 14:50:00 UTC)
 
 * Fix edit show "Upgrade once"

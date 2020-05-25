@@ -1786,8 +1786,8 @@ class TorrentProvider(GenericProvider):
     def _decode(data, c):
         try:
             fx = (lambda x: x, lambda x: str(x))[PY2]
-            result = ''.join([chr(int(fx(bytearray([(8 * c)[i] ^ x for i, x in enumerate(data)])[i:i + 2]), 16))
-                              for i in range(0, len(data), 2)])
+            result = ''.join(chr(int(fx(bytearray([(8 * c)[i] ^ x for i, x in enumerate(data)])[i:i + 2]), 16))
+                             for i in range(0, len(data), 2))
         except (BaseException, Exception):
             result = '|'
         return result
