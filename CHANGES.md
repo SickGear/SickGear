@@ -30,6 +30,7 @@
 * Update Six compatibility library 1.13.0 (ec58185) to 1.15.0 (c0be881)
 * Update soupsieve_py3 2.0.0.dev (69194a2) to 2.0.0.final (e66c311)
 * Update soupsieve_py2 1.9.5 (6a38398) to 1.9.6 final (f9c96ec)
+* Update tmdbsimple 2.2.0 (ff17893) to 2.2.6 (310d933)
 * Update Tornado_py3 Web Server 6.0.3 (ff985fe) to 6.0.4 (b4e39e5)
 * Update urllib3 release 1.25.6 (4a6c288) to 1.25.8 (2a57bc5)
 * Add Telegram notifier
