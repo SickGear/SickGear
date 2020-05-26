@@ -1,4 +1,9 @@
-﻿### 0.21.35 (2020-05-25 01:30:00 UTC)
+﻿### 0.21.36 (2020-05-26 16:45:00 UTC)
+
+* Change improve Cloudflare connectivity
+
+
+### 0.21.35 (2020-05-25 01:30:00 UTC)
 
 * Fix RarBG under py2
 
