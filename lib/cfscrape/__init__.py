@@ -167,7 +167,7 @@ class CloudflareScraper(Session):
             js = re.search(
                 r'''(?x)
                 setTimeout\(function\(\){\s*?(var\s*?
-                (?:s,t,o,p,\s*?b,r,e,a,k,i,n,g|t,r,a),f.+?[\r\n\s\S]*?a\.value\s*=.+?)[\r\n]+
+                (?:s,t,o,p,\s*?b,r,e,a,k,i,n,g|t,r,a),f.+?[\r\n\s\S]*a\.value\s*=.+?)[\r\n]+
                 ''', body).group(1)
         except (BaseException, Exception):
             raise RuntimeError('Error #1 Cloudflare anti-bots changed, please notify SickGear for an update')
@@ -195,6 +195,7 @@ class CloudflareScraper(Session):
                 }
             };
             String.prototype.italics=function() {return '<i>' + this + '</i>';};
+            setInterval=function(){};
             %s;a.value
         ''' % (domain, innerHTML, js)
 
