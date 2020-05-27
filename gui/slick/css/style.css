@@ -678,6 +678,10 @@ inc_top.tmpl
 	content:"\e890"
 }
 
+.sgicon-tvc:before{
+	content:"\e891"
+}
+
 .sgicon-imdb:before{
 	content:"\e898"
 }
@@ -1415,6 +1419,25 @@ home_browseShows.tmpl
 	background-image:url("../images/poster-dark.jpg")
 }
 
+#browse-list.tvcalendar .browse-image{
+	height:104px /* 62% of image height */
+}
+
+#browse-list.tvcalendar .show-toggle-hide{
+	top:105px
+}
+
+#browse-list.tvcalendar .show-card{
+	height:172px /* -169px */
+}
+
+#browse-list.tvcalendar.no-votes .show-card{
+	height:155px
+}
+
+#browse-list.tvcalendar .show-card-inner .heart.icon-glyph{
+	margin-left:0
+}
 /* =======================================================================
 home_postprocess.tmpl
 ========================================================================== */

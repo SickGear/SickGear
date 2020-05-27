@@ -220,7 +220,7 @@ class RouteHandler(LegacyBaseHandler):
                 method_args += [item for item in arg if None is not item]
             if 'kwargs' in method_args or re.search('[A-Z]', route):
                 # no filtering for legacy and routes that depend on *args and **kwargs
-                result = yield self.async_call(method, request_kwargs)  #  method(**request_kwargs)
+                result = yield self.async_call(method, request_kwargs)  # method(**request_kwargs)
             else:
                 filter_kwargs = dict(filter_iter(lambda kv: kv[0] in method_args, iteritems(request_kwargs)))
                 result = yield self.async_call(method, filter_kwargs)  # method(**filter_kwargs)
@@ -810,8 +810,8 @@ class LoadingWebHandler(BaseHandler):
     @authenticated
     @gen.coroutine
     def get(self, route, *args, **kwargs):
-        yield self.route_method(route, use_404=True, limit_route=(lambda _route: not re.search('get[_-]message', _route)
-                                       and 'loading-page' or _route))
+        yield self.route_method(route, use_404=True, limit_route=(
+            lambda _route: not re.search('get[_-]message', _route) and 'loading-page' or _route))
 
     post = get
 
@@ -4410,6 +4410,220 @@ class AddShows(Home):
 
         if not filter_list(lambda tvid_prodid: helpers.find_show_by_id(tvid_prodid), ids.split(' ')):
             return self.new_show('|'.join(['', '', '', ids or show_name]), use_show_name=True)
+
+    def tvc_default(self):
+
+        return self.redirect('/add-shows/%s' % ('tvc_newshows', sickbeard.TVC_MRU)[any(sickbeard.TVC_MRU)])
+
+    def tvc_newshows(self, **kwargs):
+        return self.browse_tvc(
+            'TV-shows-starting-', 'New Shows at TV Calendar', mode='newshows', **kwargs)
+
+    def tvc_returning(self, **kwargs):
+        return self.browse_tvc(
+            'TV-shows-starting-', 'Returning Shows at TV Calendar', mode='returning', **kwargs)
+
+    def tvc_latest(self, **kwargs):
+        return self.browse_tvc(
+            'recent-additions', 'Latest new shows at TV Calendar', mode='latest', **kwargs)
+
+    def browse_tvc(self, url_path, browse_title, **kwargs):
+
+        browse_type = 'TVCalendar'
+
+        footnote = None
+        filtered = []
+        today = datetime.datetime.today()
+        months = ['', 'January', 'February', 'March', 'April', 'May', 'June', 'July',
+                  'August', 'September', 'October', 'November', 'December']
+        this_month = '%s-%s' % (months[today.month], today.strftime('%Y'))
+        section = ''
+        if kwargs.get('mode', '') in ('newshows', 'returning'):
+            section = (kwargs.get('page') or this_month)
+            url_path += section
+
+        import browser_ua
+        url = 'https://www.pogdesign.co.uk/cat/%s' % url_path
+        html = helpers.get_url(url, headers={'User-Agent': browser_ua.get_ua()})
+        use_votes = False
+        if html:
+            prev_month = dt_prev_month = None
+            if kwargs.get('mode', '') in ('newshows', 'returning'):
+                try:
+                    prev_month = re.findall('(?i)href="/cat/tv-shows-starting-([^"]+)', html)[0]
+                    dt_prev_month = dateutil.parser.parse('1-%s' % prev_month)
+                except (BaseException, Exception):
+                    prev_month = None
+            get_prev_month = (lambda _dt: _dt.replace(day=1) - datetime.timedelta(days=1))
+            get_next_month = (lambda _dt: _dt.replace(day=28) + datetime.timedelta(days=5))
+            get_month_year = (lambda _dt: '%s-%s' % (months[_dt.month], _dt.strftime('%Y')))
+            if prev_month:
+                dt_next_month = get_next_month(dt_prev_month)
+                while True:
+                    next_month = get_month_year(dt_next_month)
+                    if next_month not in (this_month, kwargs.get('page')):
+                        break
+                    dt_next_month = get_next_month(dt_next_month)
+                while True:
+                    if prev_month not in (this_month, kwargs.get('page')):
+                        break
+                    dt_prev_month = get_prev_month(dt_prev_month)
+                    prev_month = get_month_year(dt_prev_month)
+
+            else:
+                dt_next_month = get_next_month(today)
+                next_month = get_month_year(dt_next_month)
+                dt_prev_month = get_prev_month(today)
+                prev_month = get_month_year(dt_prev_month)
+
+            suppress_item = not kwargs.get('page') or kwargs.get('page') == this_month
+            get_date_text = (lambda m_y: m_y.replace('-', ' '))
+            next_month_text = get_date_text(next_month)
+            prev_month_text = get_date_text(prev_month)
+            page_month_text = suppress_item and 'void' or get_date_text(kwargs.get('page'))
+            kwargs.update(dict(pages=[
+                ('tvc_newshows?page=%s' % this_month, 'New this month'),
+                ('tvc_newshows?page=%s' % next_month, '...in %s' % next_month_text)] +
+                ([('tvc_newshows?page=%s' % kwargs.get('page'), '...in %s' % page_month_text)], [])[suppress_item] +
+                [('tvc_newshows?page=%s' % prev_month, '...in %s' % prev_month_text)] +
+                [('tvc_returning?page=%s' % this_month, 'Returning this month'),
+                 ('tvc_returning?page=%s' % next_month, '...in %s' % next_month_text)] +
+                ([('tvc_returning?page=%s' % kwargs.get('page'), '...in %s' % page_month_text)], [])[suppress_item] +
+                [('tvc_returning?page=%s' % prev_month, '...in %s' % prev_month_text)]
+            ))
+
+            with BS4Parser(html, parse_only=dict(div={'class': (lambda at: at and 'pgwidth' in at)})) as tbl:
+                shows = []
+                if kwargs.get('mode', '') in ('latest', 'newshows', 'returning'):
+                    tags = tbl.select('h2[class*="midtitle"], div[class*="contbox"]')
+                    collect = False
+                    for cur_tag in tags:
+                        if re.match(r'(?i)h\d+', cur_tag.name) and 'midtitle' in cur_tag.attrs.get('class', []):
+                            text = cur_tag.get_text(strip=True)
+                            if kwargs['mode'] in ('latest', 'newshows'):
+                                if not collect and ('Latest' in text or 'New' in text):
+                                    collect = True
+                                    continue
+                                break
+                            elif 'New' in text:
+                                continue
+                            elif 'Return' in text:
+                                collect = True
+                                continue
+                            break
+                        if collect:
+                            shows += [cur_tag]
+
+                if not len(shows):
+                    kwargs['error_msg'] = 'No TV titles found in <a target="_blank" href="%s">%s</a>%s,' \
+                                          ' try another selection' % (
+                        helpers.anon_url(url), browse_title, (' for %s' % section.replace('-', ' '), '')[not section])
+
+                # build batches to correct htmlentity typos in overview
+                from html5lib.constants import entities
+                batches = []
+                for cur_n, cur_name in enumerate(entities):
+                    if 0 == cur_n % 150:
+                        if cur_n:
+                            batches += [batch]
+                        batch = []
+                    batch += [cur_name]
+                else:
+                    batches += [batch]
+
+                oldest, newest, oldest_dt, newest_dt = None, None, 9999999, 0
+                for row in shows:
+                    try:
+                        ids = dict(custom=row.select('input[type="checkbox"]')[0].attrs['value'], name='tvc')
+                        info = row.find('a', href=re.compile('^/cat'))
+                        url_path = info['href'].strip()
+
+                        title = info.find('h2').get_text(strip=True)
+                        img_uri = info.get('data-original', '').strip()
+                        if not img_uri:
+                            img_uri = re.findall(r'(?i).*?image:\s*url\(([^)]+)', info.attrs['style'])[0].strip()
+                        images = dict(poster=dict(thumb='imagecache?path=browse/thumb/tvc&source=%s' % img_uri))
+                        sickbeard.CACHE_IMAGE_URL_LIST.add_url(img_uri)
+                        title = re.sub(r'(?i)(?::\s*season\s*\d+|\s*\((?:19|20)\d{2}\))?$', '', title.strip())
+
+                        dt_ordinal = 0
+                        dt_string = ''
+                        date = genre = network = ''
+                        date_tag = row.find('span', class_='startz')
+                        if date_tag:
+                            date_network = re.split(r'(?i)\son\s', ''.join(
+                                [t.name and t.get_text() or str(t) for t in date_tag][0:2]))
+                            date = re.sub('(?i)^(starts|returns)', '', date_network[0]).strip()
+                            network = ('', date_network[1].strip())[2 == len(date_network)]
+                        else:
+                            date_tag = row.find('span', class_='selby')
+                            if date_tag:
+                                date = date_tag.get_text(strip=True)
+                            network_genre = info.find('span')
+                            if network_genre:
+                                network_genre = network_genre.get_text(strip=True).split('//')
+                                network = network_genre[0]
+                                genre = ('', network_genre[1].strip())[2 == len(network_genre)]
+
+                        if date:
+                            dt = dateutil.parser.parse(date)
+                            dt_ordinal = dt.toordinal()
+                            dt_string = SGDatetime.sbfdate(dt)
+                            if dt_ordinal < oldest_dt:
+                                oldest_dt = dt_ordinal
+                                oldest = dt_string
+                            if dt_ordinal > newest_dt:
+                                newest_dt = dt_ordinal
+                                newest = dt_string
+
+                        overview = row.find('span', class_='shwtxt')
+                        if overview:
+                            overview = re.sub(r'(?sim)(.*?)(?:[.\s]*\*\*NOTE.*?)?(\.{1,3})$', r'\1\2',
+                                              overview.get_text(strip=True))
+                            for cur_entities in batches:
+                                overview = re.sub(r'and(%s)' % '|'.join(cur_entities), r'&\1', overview)
+
+                        votes = None
+                        votes_tag = row.find('span', class_='selby')
+                        if votes_tag:
+                            votes_tag = votes_tag.find('strong')
+                            if votes_tag:
+                                votes = re.sub(r'(?i)\s*users', '', votes_tag.get_text()).strip()
+                                use_votes = True
+
+                        filtered.append(dict(
+                            premiered=dt_ordinal,
+                            premiered_str=dt_string,
+                            when_past=dt_ordinal < datetime.datetime.now().toordinal(),
+                            genres=genre,
+                            network=network or None,
+                            ids=ids,
+                            images='' if not img_uri else images,
+                            overview='No overview yet' if not overview else helpers.xhtml_escape(overview[:250:]),
+                            rating=None,
+                            title=title,
+                            url_src_db='https://www.pogdesign.co.uk/%s' % url_path.strip('/'),
+                            votes=votes or 'n/a'))
+
+                    except (AttributeError, IndexError, KeyError, TypeError):
+                        continue
+
+                kwargs.update(dict(oldest=oldest, newest=newest))
+
+        kwargs.update(dict(footnote=footnote, use_ratings=False, use_votes=use_votes, show_header=True))
+
+        mode = kwargs.get('mode', '')
+        if mode:
+            func = 'tvc_%s' % mode
+            if callable(getattr(self, func, None)):
+                sickbeard.TVC_MRU = func
+                sickbeard.save_config()
+
+        return self.browse_shows(browse_type, browse_title, filtered, **kwargs)
+
+    def info_tvcalendar(self, ids, show_name):
+
+        return self.new_show('|'.join(['', '', '', show_name]), use_show_name=True)
 
     def mc_default(self):
 

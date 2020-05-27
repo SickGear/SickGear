@@ -173,6 +173,13 @@
 #end if
 								<li><a href="$sbRoot/add-shows/mc-default/" tabindex="$tab#set $tab += 1#"><i class="sgicon-metac"></i>Metacritic Cards
 									<div class="menu-item-desc opacity60">$mc_mode...</div></a></li>
+#set $tvc_mode = 'new shows'
+#set $tvc_modes = dict(tvc_newshows='new shows', tvc_returning='returning', tvc_latest='latest')
+#if $sg_var('TVC_MRU') in $tvc_modes
+    #set $tvc_mode = $tvc_modes[$sg_var('TVC_MRU')]
+#end if
+								<li><a href="$sbRoot/add-shows/tvc-default/" tabindex="$tab#set $tab += 1#"><i class="sgicon-tvc"></i>TV Calendar Cards
+									<div class="menu-item-desc opacity60">$tvc_mode...</div></a></li>
 #if $sg_var('USE_ANIDB')
 								<li><a href="$sbRoot/add-shows/anime-default/" tabindex="$tab#set $tab += 1#"><div class="img-anime-16 square-16"></div>Anime Cards
 									<div class="menu-item-desc opacity60">browse anime to add</div></a></li>
@@ -182,7 +189,7 @@
 #end if
 								</ul>
 								<ul class="nav added-last">
-#set $added_last = ($sg_var('showList', []) or [])[-7:][::-1]
+#set $added_last = ($sg_var('showList', []) or [])[-9:][::-1]
 #if not $added_last:
 									<li><span style="padding-left:20px">This will list added shows</span></li>
 #else
