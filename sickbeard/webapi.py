@@ -60,7 +60,7 @@ from .tv import TVEpisode, TVShow,  TVidProdid
 from .webserve import AddShows
 
 from _23 import decode_str, unquote_plus
-from six import integer_types, iteritems, iterkeys, string_types, text_type
+from six import integer_types, iteritems, iterkeys, PY2, string_types, text_type
 
 # noinspection PyUnreachableCode
 if False:
@@ -232,6 +232,8 @@ class Api(webserve.BaseHandler):
             result = function(*ag)
             return result
         except Exception as e:
+            if PY2:
+                logger.log('traceback: %s' % traceback.format_exc(), logger.ERROR)
             logger.log(ex(e), logger.ERROR)
             raise e
 

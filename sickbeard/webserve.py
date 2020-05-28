@@ -228,7 +228,12 @@ class RouteHandler(LegacyBaseHandler):
 
     @run_on_executor
     def async_call(self, function, kw):
-        return function(**kw)
+        try:
+            return function(**kw)
+        except (BaseException, Exception) as e:
+            if PY2:
+                raise Exception(traceback.format_exc().replace('\n', '<br>'))
+            raise e
 
     def page_not_found(self):
         self.set_status(404)

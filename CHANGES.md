@@ -69,6 +69,7 @@
 * Change prevent log sources containing `sg.` from clipping in log format
 * Fix webapi access denied with async server
 * Fix last_recent_search in newznab
+* Fix traceback for py2 async webserver calls
 
 
 ### 0.21.36 (2020-05-26 16:45:00 UTC)
