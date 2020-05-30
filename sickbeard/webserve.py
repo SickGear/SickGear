@@ -4728,7 +4728,14 @@ class AddShows(Home):
                             if rating_user:
                                 rating_user = rating_user.get_text().strip()
 
+                        season = -1
+                        try:
+                            season = re.findall(r'(\d+)(?:[.]\d*?)?$', url_path)[0]
+                        except(BaseException, Exception):
+                            pass
+
                         filtered.append(dict(
+                            season=int(season),
                             premiered=dt_ordinal,
                             premiered_str=dt_string,
                             when_past=dt_ordinal < datetime.datetime.now().toordinal(),
@@ -4791,9 +4798,16 @@ class AddShows(Home):
                     else:
                         tvid_prodid_list += ['%s%s%s' % (item['ids']['name'], TVidProdid.glue, item['ids']['custom'])]
                         try:
-                            show_obj = n_p.parse(item['title'] + '.s01e01.mp4')
+                            show_obj = n_p.parse('%s.s01e01.mp4' % item['title'])
                         except (InvalidNameException, InvalidShowException):
-                            show_obj = None
+                            if 'premiered' in item and 1 == item.get('season', -1):
+                                try:
+                                    show_obj = n_p.parse('%s.%s.s01e01.mp4' % (
+                                        item['title'], datetime.date.fromordinal(item['premiered']).year))
+                                except (BaseException, Exception):
+                                    show_obj = None
+                            else:
+                                show_obj = None
                 except (BaseException, Exception):
                     continue
                 if not item.get('indb') and show_obj:
