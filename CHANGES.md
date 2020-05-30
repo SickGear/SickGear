@@ -71,6 +71,8 @@
 * Fix last_recent_search in newznab
 * Fix traceback for py2 async webserver calls
 * Change add fallback to premiered year to lookup browse card show
+* Change display % after rating value only if value is numeric
+* Change add fallback to remove a premiered year to lookup browse card show
 
 
 ### 0.21.36 (2020-05-26 16:45:00 UTC)
