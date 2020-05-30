@@ -370,6 +370,16 @@ $(document).ready(function(){
 			<div class="browse-image">
 				<a class="browse-image" href="<%= anon_url(this_show['url_src_db']) %>" target="_blank"
 					title="<span style='color: rgb(66, 139, 202)'>$re.sub(r'(?m)\s+\((?:19|20)\d\d\)\s*$', '', $title_html)</span>#if $this_show['genres']#<br /><div style='font-weight:bold'>(<em>$this_show['genres']</em>)</div>#end if#
+        #if $this_show.get('country') or $this_show.get('language')
+					 <p style='line-height:15px;margin-bottom:2px'>
+            #if $this_show.get('country')
+						<span style='font-size:0.9em;color:#888'><em>Country:#if not $this_show.get('country_img')#&nbsp;$this_show.get('country').upper()#else#<img style='margin:0 0 2px 4px;width:16px;height:11px;vertical-align:middle' title='${this_show['country']}' src='$sbRoot/images/flags/${$this_show['country'].lower()}.png' width='16' height='11'>#end if#</em></span>
+            #end if
+            #if $this_show.get('language')
+						<span style='font-size:0.9em;color:#888#if $this_show.get('country')#;padding-left:6px#end if#'><em>Language:#if not $this_show.get('language_img')#&nbsp;$this_show.get('language')#else#<img style='margin:0 0 2px 4px;width:16px;height:11px;vertical-align:middle' title='${this_show['language']}' src='$sbRoot/images/flags/${$this_show['language'].lower()}.png' width='16' height='11'>#end if#</em></span>
+            #end if
+					</p>
+        #end if
 					<p style='margin:0 0 2px'>#echo re.sub(r'([,\.!][^,\.!]*?)$', '...', re.sub(r'([!\?\.])(?=\w)', r'\1 ', $overview)).replace('.....', '...')#</p>
 					<p><span style='font-weight:bold;font-size:0.9em;color:#888'><em>#if $kwargs and 'newseasons' == $mode#Air#else#First air#end if##echo ('s', 'ed')[$this_show['when_past']]#: $this_show['premiered_str']</em></span>
 					#if $this_show.get('ended_str')# - <span style='font-weight:bold;font-size:0.9em;color:#888'><em>Ended: $this_show['ended_str']</em></span>#end if#
@@ -388,14 +398,6 @@ $(document).ready(function(){
 
 			<div class="show-title">
 				#echo ((re.sub(r'^((?:A(?!\s+to)n?)|The)\s(\w)', r'<span class="article">\1</span> \2', $this_show['title']), $this_show['title'])[$sg_var('SORT_ARTICLE')], '<span>&nbsp;</span>')['' == $this_show['title']]#
-			</div>
-			<div class="show-title">
-				#if $this_show['country']
-					<span>Country:</span><img class="flag" title="${this_show['country']}" src="$sbRoot/images/flags/${$this_show['country'].lower()}.png" width="16" height="11" />
-				#end if
-				#if $this_show['language']
-					<span>Language:</span><img class="flag" title="${this_show['language']}" src="$sbRoot/images/flags/${$this_show['language'].lower()}.png" width="16" height="11" />
-				#end if
 			</div>
         #if 'Ani' not in $browse_type
 			<a class="show-toggle-hide" href="$sg_root/add-shows/show-toggle-hide?ids=$show_id" title="#echo ('H', 'Unh')[any($hide)]#ide"><i class="sgicon-delete"></i></a>

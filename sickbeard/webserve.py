@@ -4311,7 +4311,13 @@ class AddShows(Home):
             ignore = r'''
             ((bbc|channel\s*?5.*?|itv)\s*?(drama|documentaries))|bbc\s*?(comedy|music)|music\s*?specials|tedtalks
                     '''
-            if re.search(ignore, item['show']['title'].strip(), re.I | re.X):
+            language = (item.get('show', {}).get('language') or '').lower()
+            language_en = 'en' == language
+            country = (item.get('show', {}).get('country') or '').lower()
+            country_ok = country in ('uk', 'gb', 'ie', 'ca', 'us', 'au', 'nz', 'za')
+            if re.search(ignore, item['show']['title'].strip(), re.I | re.X) or \
+                    (not language_en and not country_ok) or \
+                    not (item.get('show', {}).get('overview') or item.get('episode', {}).get('overview')):
                 continue
             try:
                 dt = dateutil.parser.parse(item['show']['first_aired'])
@@ -4329,26 +4335,28 @@ class AddShows(Home):
                 traktid = item.get('show', {}).get('ids', {}).get('trakt', 0)
                 images = dict(poster=dict(thumb='imagecache?path=browse/thumb/trakt&filename=%s&tmdbid=%s&tvdbid=%s' %
                                                 ('%s.jpg' % traktid, tmdbid, tvdbid)))
-
                 filtered.append(dict(
                     premiered=dt_ordinal,
                     premiered_str=dt_string,
                     when_past=dt_ordinal < datetime.datetime.now().toordinal(),  # air time not yet available 16.11.2015
                     episode_number='' if 'episode' not in item else item['episode']['number'] or 1,
-                    episode_overview=('' if 'episode' not in item else
-                                      item['episode']['overview'].strip() or ''),
+                    episode_overview=(
+                        '' if 'episode' not in item else
+                        '' if None is item.get('episode', {}).get('overview') and (language_en or country_ok)
+                        else item['episode']['overview'].strip() or ''),
                     episode_season='' if 'episode' not in item else item['episode']['season'] or 1,
                     genres=('' if 'genres' not in item['show'] else
                             ', '.join(['%s' % v for v in item['show']['genres']])),
                     ids=item['show']['ids'],
                     images=images,
-                    overview=('' if 'overview' not in item['show'] or None is item['show']['overview'] else
-                              item['show']['overview'].strip()),
+                    overview=(item.get('show', {}).get('overview') or '').strip(),
                     rating=0 < item['show'].get('rating', 0) and
                            ('%.2f' % (item['show'].get('rating') * 10)).replace('.00', '') or 0,
                     title=item['show']['title'].strip(),
-                    language=item['show']['language'],
-                    country=item['show']['country'],
+                    language=language,
+                    language_img=not language_en and sickbeard.MEMCACHE_FLAG_IMAGES.get(language, False),
+                    country=country,
+                    country_img=sickbeard.MEMCACHE_FLAG_IMAGES.get(country, False),
                     url_src_db='https://trakt.tv/shows/%s' % item['show']['ids']['slug'],
                     url_tvdb=('', sickbeard.TVInfoAPI(TVINFO_TVDB).config['show_url'] % item['show']['ids']['tvdb'])[
                         isinstance(item['show']['ids']['tvdb'], integer_types)

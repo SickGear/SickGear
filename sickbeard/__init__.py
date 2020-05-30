@@ -56,7 +56,7 @@ from adba.aniDBerrors import AniDBError
 from configobj import ConfigObj
 from libtrakt import TraktAPI
 
-from _23 import b64encodestring, filter_iter, list_items, map_list
+from _23 import b64encodestring, filter_iter, list_items, map_list, scandir
 from six import iteritems, PY2, string_types
 import sg_helpers
 
@@ -594,6 +594,7 @@ __INITIALIZED__ = False
 __INIT_STAGE__ = 0
 
 MEMCACHE = {}
+MEMCACHE_FLAG_IMAGES = {}
 
 
 def get_backlog_cycle_time():
@@ -1420,7 +1421,7 @@ def init_stage_1(console_logging):
 def init_stage_2():
 
     # Misc
-    global __INITIALIZED__, MEMCACHE, RECENTSEARCH_STARTUP
+    global __INITIALIZED__, MEMCACHE, MEMCACHE_FLAG_IMAGES, RECENTSEARCH_STARTUP
     # Schedulers
     # global traktCheckerScheduler
     global recentSearchScheduler, backlogSearchScheduler, showUpdateScheduler, \
@@ -1584,6 +1585,13 @@ def init_stage_2():
         cycleTime=datetime.timedelta(minutes=PLEX_WATCHEDSTATE_FREQUENCY),
         run_delay=datetime.timedelta(minutes=5),
         threadName='PLEXWATCHEDSTATE')
+
+    try:
+        for f in ek.ek(scandir, ek.ek(os.path.join, PROG_DIR, 'gui', GUI_NAME, 'images', 'flags')):
+            if f.is_file():
+                MEMCACHE_FLAG_IMAGES[ek.ek(os.path.splitext, f.name)[0].lower()] = True
+    except (BaseException, Exception):
+        pass
 
     __INITIALIZED__ = True
     return True

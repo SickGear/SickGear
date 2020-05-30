@@ -2,6 +2,7 @@
 
 * Add menu Shows/"Metacritic Cards"
 * Add menu Shows/"TV Calendar Cards"
+* Add country and language to Shows/"Trakt Cards"
 * Change make web UI calls async so that, for example, process media will not block page requests
 * Change improve speed of backlog overview
 * Fix the missing snatched low quality on backlog overview
