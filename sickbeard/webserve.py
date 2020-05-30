@@ -4347,6 +4347,8 @@ class AddShows(Home):
                     rating=0 < item['show'].get('rating', 0) and
                            ('%.2f' % (item['show'].get('rating') * 10)).replace('.00', '') or 0,
                     title=item['show']['title'].strip(),
+                    language=item['show']['language'],
+                    country=item['show']['country'],
                     url_src_db='https://trakt.tv/shows/%s' % item['show']['ids']['slug'],
                     url_tvdb=('', sickbeard.TVInfoAPI(TVINFO_TVDB).config['show_url'] % item['show']['ids']['tvdb'])[
                         isinstance(item['show']['ids']['tvdb'], integer_types)

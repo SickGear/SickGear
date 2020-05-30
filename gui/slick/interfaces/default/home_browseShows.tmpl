@@ -389,6 +389,14 @@ $(document).ready(function(){
 			<div class="show-title">
 				#echo ((re.sub(r'^((?:A(?!\s+to)n?)|The)\s(\w)', r'<span class="article">\1</span> \2', $this_show['title']), $this_show['title'])[$sg_var('SORT_ARTICLE')], '<span>&nbsp;</span>')['' == $this_show['title']]#
 			</div>
+			<div class="show-title">
+				#if $this_show['country']
+					<span>Country:</span><img class="flag" title="${this_show['country']}" src="$sbRoot/images/flags/${$this_show['country'].lower()}.png" width="16" height="11" />
+				#end if
+				#if $this_show['language']
+					<span>Language:</span><img class="flag" title="${this_show['language']}" src="$sbRoot/images/flags/${$this_show['language'].lower()}.png" width="16" height="11" />
+				#end if
+			</div>
         #if 'Ani' not in $browse_type
 			<a class="show-toggle-hide" href="$sg_root/add-shows/show-toggle-hide?ids=$show_id" title="#echo ('H', 'Unh')[any($hide)]#ide"><i class="sgicon-delete"></i></a>
         #end if
