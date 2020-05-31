@@ -4728,7 +4728,14 @@ class AddShows(Home):
                             if rating_user:
                                 rating_user = rating_user.get_text().strip()
 
+                        season = -1
+                        try:
+                            season = re.findall(r'(\d+)(?:[.]\d*?)?$', url_path)[0]
+                        except(BaseException, Exception):
+                            pass
+
                         filtered.append(dict(
+                            season=int(season),
                             premiered=dt_ordinal,
                             premiered_str=dt_string,
                             when_past=dt_ordinal < datetime.datetime.now().toordinal(),
@@ -4777,8 +4784,31 @@ class AddShows(Home):
         t.num_inlibrary = 0
         t.num_hidden = 0
         n_p = NameParser(indexer_lookup=False)
+        rc_base = re.compile(r"(?i)^(?:dc|marvel)(?:['s]+\s)?")
+        rc_nopost = re.compile(r'(?i)(?:\s*\([^)]+\))?$')
+        rc_nopre = re.compile(r'(?i)(?:^\([^)]+\)\s*)?')
         for item in shows:
             tvid_prodid_list = []
+            titles = []
+            if 'custom' in item['ids']:
+                base_title = rc_base.sub('', item['title'])
+                nopost_title = rc_nopost.sub('', item['title'])
+                nopre_title = rc_nopre.sub('', item['title'])
+                nopost_base_title = rc_nopost.sub('', base_title)
+                nopre_base_title = rc_nopre.sub('', base_title)
+                nopost_nopre_base_title = rc_nopost.sub('', nopre_base_title)
+                titles = [item['title']]
+                titles += ([], [base_title])[base_title not in titles]
+                titles += ([], [nopost_title])[nopost_title not in titles]
+                titles += ([], [nopre_title])[nopre_title not in titles]
+                titles += ([], [nopost_base_title])[nopost_base_title not in titles]
+                titles += ([], [nopre_base_title])[nopre_base_title not in titles]
+                titles += ([], [nopost_nopre_base_title])[nopost_nopre_base_title not in titles]
+                if 'premiered' in item and 1 == item.get('season', -1):
+                    with_year = []
+                    for title in titles:
+                        with_year += ['%s.%s' % (title, datetime.date.fromordinal(item['premiered']).year)]
+                    titles += with_year
             for tvid, infosrc_slug in map_iter(
                     lambda _tvid: (_tvid, sickbeard.TVInfoAPI(_tvid).config['slug']),
                     list(sickbeard.TVInfoAPI().search_sources) + [sickbeard.indexers.indexer_config.TVINFO_IMDB]):
@@ -4790,10 +4820,13 @@ class AddShows(Home):
                         show_obj = helpers.find_show_by_id({tvid: item['ids'][infosrc_slug]})
                     else:
                         tvid_prodid_list += ['%s%s%s' % (item['ids']['name'], TVidProdid.glue, item['ids']['custom'])]
-                        try:
-                            show_obj = n_p.parse(item['title'] + '.s01e01.mp4')
-                        except (InvalidNameException, InvalidShowException):
-                            show_obj = None
+                        show_obj = None
+                        for cur_title in titles:
+                            try:
+                                show_obj = n_p.parse('%s.s01e01.mp4' % cur_title)
+                                break
+                            except (InvalidNameException, InvalidShowException):
+                                pass
                 except (BaseException, Exception):
                     continue
                 if not item.get('indb') and show_obj:

@@ -394,7 +394,7 @@ $(document).ready(function(){
         #end if
 			<div class="clearfix">
         #if $use_ratings or $use_votes
-				<p>#if $use_ratings#$this_show['rating']%#end if##if $use_votes#<i class="heart icon-glyph"></i><i>$this_show['votes'] votes</i>#end if#</p>#slurp#
+				<p>#if $use_ratings#$this_show['rating']#if $re.search(r'^\d+$', (str($this_show['rating'])))#%#end if##end if##if $use_votes#<i class="heart icon-glyph"></i><i>$this_show['votes'] votes</i>#end if#</p>#slurp#
         #end if
         #if 'url_tvdb' in $this_show and $this_show['url_tvdb']
 				<a class="service" href="<%= anon_url(this_show['url_tvdb']) %>" onclick="window.open(this.href, '_blank'); return false;"
