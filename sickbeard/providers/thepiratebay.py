@@ -38,12 +38,24 @@ class ThePirateBayProvider(generic.TorrentProvider):
         generic.TorrentProvider.__init__(self, 'The Pirate Bay')
 
         self.url_home = ['https://thepiratebay.se/'] + \
-                        ['https://%s/' % b64decodestring(x) for x in [''.join(x) for x in [
-                            [re.sub(r'[h\sI]+', '', x[::-1]) for x in [
-                                'm IY', '5  F', 'HhIc', 'vI J', 'HIhe', 'uI k', '2  d', 'uh l']],
-                            [re.sub(r'[N\sQ]+', '', x[::-1]) for x in [
-                                'lN Gc', 'X  Yy', 'c lNR', 'vNJNH', 'kQNHe', 'GQdQu', 'wNN9']],
-                        ]]]
+                        ['https://thepiratebay0.org/'] + \
+                        ['https://thepiratebay10.org/'] + \
+                        ['https://pirateproxy.live/'] + \
+                        ['https://thehiddenbay.com/'] + \
+                        ['https://piratebay.live/'] + \
+                        ['https://thepiratebay.zone/'] + \
+                        ['https://tpb.party/'] + \
+                        ['https://piratebay1.live/'] + \
+                        ['https://piratebay1.xyz/'] + \
+                        ['https://piratebay1.top/'] + \
+                        ['https://piratebayproxy.live/'] + \
+                        ['https://piratebay1.info/'] + \
+                        ['https://thepiratebay1.com/'] + \
+                        ['https://thepiratebay1.live/'] + \
+                        ['https://thepiratebays.info/'] + \
+                        ['https://thepiratebays.live/'] + \
+                        ['https://thepiratebay1.top/'] + \
+                        ['https://thepiratebay1.info/']
 
         self.url_vars = {'search': 'search/%s/0/7/200', 'browse': 'tv/latest/',
                          'search2': 'search.php?q=%s&video=on&category=0&page=0&orderby=99', 'browse2': '?load=/recent'}
