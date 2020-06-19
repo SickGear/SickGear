@@ -34,30 +34,30 @@ if False:
     from typing import Any, AnyStr, List, Optional, Tuple
 
 
-class BlackWhitelistNoShowIDException(Exception):
+class AllowBlockNoShowIDException(Exception):
     """
     No prodid or tvid was given
     """
 
 
-class BlackAndWhiteList(object):
-    blacklist = []  # type: List[AnyStr]
-    whitelist = []  # type: List[AnyStr]
+class AniGroupList(object):
+    allowlist = []  # type: List[AnyStr]
+    blocklist = []  # type: List[AnyStr]
 
     def __init__(self, tvid, prodid, tvid_prodid=None):
         # type: (int, int, AnyStr) -> None
 
         if not tvid or not prodid:
-            raise BlackWhitelistNoShowIDException()
+            raise AllowBlockNoShowIDException()
         self.tvid = tvid  # type: int
         self.prodid = prodid  # type: int
         self.tvid_prodid = tvid_prodid  # type: AnyStr
         self.load()
 
     def load(self):
-        logger.log(u'Building black and white list for %s' % self.tvid_prodid, logger.DEBUG)
-        self.blacklist = self._load_list('blacklist')
-        self.whitelist = self._load_list('whitelist')
+        logger.log(u'Building allow amd block list for %s' % self.tvid_prodid, logger.DEBUG)
+        self.allowlist = self._load_list('allowlist')
+        self.blocklist = self._load_list('blocklist')
 
     def _load_list(self, table):
         # type: (AnyStr) -> List[AnyStr]
@@ -77,32 +77,32 @@ class BlackAndWhiteList(object):
         for cur_result in sql_result:
             groups.append(cur_result['keyword'])
 
-        logger.log('BWL: %s loaded keywords from %s: %s' % (self.tvid_prodid, table, groups),
+        logger.log('AniPermsList: %s loaded keywords from %s: %s' % (self.tvid_prodid, table, groups),
                    logger.DEBUG)
 
         return groups
 
-    def set_black_keywords(self, values):
+    def set_allow_keywords(self, values):
         # type: (List[AnyStr]) -> None
         """
 
         :param values: list of words
         """
-        self._del_all_keywords('blacklist')
-        self._add_keywords('blacklist', values)
-        self.blacklist = values
-        logger.log('Blacklist set to: %s' % self.blacklist, logger.DEBUG)
+        self._del_all_keywords('allowlist')
+        self._add_keywords('allowlist', values)
+        self.allowlist = values
+        logger.log('Allowlist set to: %s' % self.allowlist, logger.DEBUG)
 
-    def set_white_keywords(self, values):
+    def set_block_keywords(self, values):
         # type: (List[AnyStr]) -> None
         """
 
         :param values: list of words
         """
-        self._del_all_keywords('whitelist')
-        self._add_keywords('whitelist', values)
-        self.whitelist = values
-        logger.log('Whitelist set to: %s' % self.whitelist, logger.DEBUG)
+        self._del_all_keywords('blocklist')
+        self._add_keywords('blocklist', values)
+        self.blocklist = values
+        logger.log('Blocklist set to: %s' % self.blocklist, logger.DEBUG)
 
     def _del_all_keywords(self, table):
         # type: (AnyStr) -> None
@@ -139,20 +139,12 @@ class BlackAndWhiteList(object):
             logger.log('Failed to detect release group, invalid result', logger.DEBUG)
             return False
 
-        if result.release_group.lower() in [x.lower() for x in self.whitelist] or not self.whitelist:
-            white_result = True
-        else:
-            white_result = False
+        allowed = result.release_group.lower() in [x.lower() for x in self.allowlist] or not self.allowlist
+        blocked = result.release_group.lower() in [x.lower() for x in self.blocklist]
 
-        if result.release_group.lower() in [x.lower() for x in self.blacklist]:
-            black_result = False
-        else:
-            black_result = True
+        logger.log('Allow list valid: %s. Block list valid: %s' % (allowed, blocked), logger.DEBUG)
 
-        logger.log('Whitelist check passed: %s. Blacklist check passed: %s' % (white_result, black_result),
-                   logger.DEBUG)
-
-        return white_result and black_result
+        return allowed and blocked
 
 
 def short_group_names(groups):

@@ -48,7 +48,7 @@ import sg_helpers
 import sickbeard
 from . import classes, clients, config, db, helpers, history, image_cache, logger, naming, \
     network_timezones, notifiers, nzbget, processTV, sab, scene_exceptions, search_queue, subtitles, ui
-from .anime import BlackAndWhiteList, pull_anidb_groups, short_group_names
+from .anime import AniGroupList, pull_anidb_groups, short_group_names
 from .browser import folders_at_path
 from .common import ARCHIVED, DOWNLOADED, FAILED, IGNORED, SKIPPED, SNATCHED, SNATCHED_ANY, UNAIRED, UNKNOWN, WANTED, \
      SD, HD720p, HD1080p, UHD2160p, Overview, Quality, qualityPresetStrings, statusStrings
@@ -2165,9 +2165,9 @@ class Home(MainHandler):
             t.prev_title = 'Prev show, %s' % tvshow_names[(cur_sel - 2, last_item - 1)[1 == cur_sel]]
             t.next_title = 'Next show, %s' % tvshow_names[(cur_sel, 0)[last_item == cur_sel]]
 
-        t.bwl = None
+        t.anigroups = None
         if show_obj.is_anime:
-            t.bwl = show_obj.release_groups
+            t.anigroups = show_obj.release_groups
 
         t.fanart = []
         cache_obj = image_cache.ImageCache()
@@ -2458,7 +2458,7 @@ class Home(MainHandler):
                   any_qualities=None, best_qualities=None, exceptions_list=None,
                   flatten_folders=None, paused=None, direct_call=False, air_by_date=None, sports=None, dvdorder=None,
                   tvinfo_lang=None, subs=None, upgrade_once=None, rls_ignore_words=None,
-                  rls_require_words=None, anime=None, blacklist=None, whitelist=None,
+                  rls_require_words=None, anime=None, allowlist=None, blocklist=None,
                   scene=None, prune=None, tag=None, quality_preset=None, reset_fanart=None,
                   rls_global_exclude_ignore=None, rls_global_exclude_require=None, **kwargs):
 
@@ -2503,15 +2503,17 @@ class Home(MainHandler):
 
             if show_obj.is_anime:
                 if not show_obj.release_groups:
-                    show_obj.release_groups = BlackAndWhiteList(show_obj.tvid, show_obj.prodid, show_obj.tvid_prodid)
-                t.whitelist = show_obj.release_groups.whitelist
-                t.blacklist = show_obj.release_groups.blacklist
+                    show_obj.release_groups = AniGroupList(show_obj.tvid, show_obj.prodid, show_obj.tvid_prodid)
+                t.allowlist = show_obj.release_groups.allowlist
+                t.blocklist = show_obj.release_groups.blocklist
 
                 t.groups = pull_anidb_groups(show_obj.name)
                 if None is t.groups:
                     t.groups = [dict(name='Did not initialise AniDB. Check debug log if reqd.', rating='', range='')]
                 elif False is t.groups:
                     t.groups = [dict(name='Fail: AniDB connect. Restart SG else check debug log', rating='', range='')]
+                elif isinstance(t.groups, list) and 0 == len(t.groups):
+                    t.groups = [dict(name='No groups listed in API response', rating='', range='')]
 
             with show_obj.lock:
                 t.show_obj = show_obj
@@ -2579,7 +2581,7 @@ class Home(MainHandler):
         if type(exceptions_list) != list:
             exceptions_list = [exceptions_list]
 
-        # If direct call from mass_edit_update no scene exceptions handling or blackandwhite list handling or tags
+        # If direct call from mass_edit_update no scene exceptions handling or blockandallow list handling or tags
         if direct_call:
             do_update_exceptions = False
         else:
@@ -2588,19 +2590,19 @@ class Home(MainHandler):
             with show_obj.lock:
                 if anime:
                     if not show_obj.release_groups:
-                        show_obj.release_groups = BlackAndWhiteList(
+                        show_obj.release_groups = AniGroupList(
                             show_obj.tvid, show_obj.prodid, show_obj.tvid_prodid)
-                    if whitelist:
-                        shortwhitelist = short_group_names(whitelist)
-                        show_obj.release_groups.set_white_keywords(shortwhitelist)
+                    if allowlist:
+                        shortallowlist = short_group_names(allowlist)
+                        show_obj.release_groups.set_allow_keywords(shortallowlist)
                     else:
-                        show_obj.release_groups.set_white_keywords([])
+                        show_obj.release_groups.set_allow_keywords([])
 
-                    if blacklist:
-                        shortblacklist = short_group_names(blacklist)
-                        show_obj.release_groups.set_black_keywords(shortblacklist)
+                    if blocklist:
+                        shortblocklist = short_group_names(blocklist)
+                        show_obj.release_groups.set_block_keywords(shortblocklist)
                     else:
-                        show_obj.release_groups.set_black_keywords([])
+                        show_obj.release_groups.set_block_keywords([])
 
         errors = []
         with show_obj.lock:
@@ -3244,6 +3246,8 @@ class Home(MainHandler):
             result = dict(result='fail', resp='init')
         elif False is result:
             result = dict(result='fail', resp='connect')
+        elif isinstance(result, list) and 0 == len(result):
+            result = dict(result='success', groups=[dict(name='No groups fetched in API response', rating='', range='')])
         else:
             result = dict(result='success', groups=result)
         return json.dumps(result)
@@ -3751,8 +3755,8 @@ class AddShows(Home):
         t.provided_tvid = int(tvid or sickbeard.TVINFO_DEFAULT)
         t.infosrc = sickbeard.TVInfoAPI().search_sources
         t.meta_lang = sickbeard.ADD_SHOWS_METALANG
-        t.whitelist = []
-        t.blacklist = []
+        t.allowlist = []
+        t.blocklist = []
         t.groups = []
 
         t.show_scene_maps = list(*itervalues(sickbeard.scene_exceptions.xem_ids_list))
@@ -4880,7 +4884,7 @@ class AddShows(Home):
                      quality_preset=None, any_qualities=None, best_qualities=None, upgrade_once=None,
                      flatten_folders=None, subs=None,
                      full_show_path=None, other_shows=None, skip_show=None, provided_tvid=None, anime=None,
-                     scene=None, blacklist=None, whitelist=None, wanted_begin=None, wanted_latest=None,
+                     scene=None, allowlist=None, blocklist=None, wanted_begin=None, wanted_latest=None,
                      prune=None, tag=None, return_to=None, cancel_form=None, **kwargs):
         """
         Receive tvdb id, dir, and other options and create a show from them. If extra show dirs are
@@ -4973,10 +4977,10 @@ class AddShows(Home):
         flatten_folders = config.checkbox_to_value(flatten_folders)
         subs = config.checkbox_to_value(subs)
 
-        if whitelist:
-            whitelist = short_group_names(whitelist)
-        if blacklist:
-            blacklist = short_group_names(blacklist)
+        if allowlist:
+            allowlist = short_group_names(allowlist)
+        if blocklist:
+            blocklist = short_group_names(blocklist)
 
         if not any_qualities:
             any_qualities = []
@@ -4996,7 +5000,7 @@ class AddShows(Home):
         # add the show
         sickbeard.showQueueScheduler.action.addShow(tvid, prodid, show_dir, int(default_status), newQuality,
                                                     flatten_folders, tvinfo_lang, subs, anime,
-                                                    scene, None, blacklist, whitelist,
+                                                    scene, None, allowlist, blocklist,
                                                     wanted_begin, wanted_latest, prune, tag, new_show=new_show,
                                                     show_name=show_name, upgrade_once=upgrade_once)
         # ui.notifications.message('Show added', 'Adding the specified show into ' + show_dir)

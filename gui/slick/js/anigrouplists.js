@@ -1,5 +1,5 @@
-function generate_bwlist() {
-	$.each(['white', 'black'], function(i, list) {
+function generateAniGroupList() {
+	$.each(['allow', 'block'], function(i, list) {
 		var group_list = [];
 
 		$('#' + list + ' option').each(function(i, option) {
@@ -10,15 +10,15 @@ function generate_bwlist() {
 	});
 }
 
-$('#add-white, #add-black').click(function() {
+$('#add-allow, #add-block').click(function() {
 	!$('#pool option:selected').remove().appendTo('#' + $(this).attr('id').replace(/add[-]/i, ''));
 });
 
-$('#remove-white, #remove-black').click(function() {
+$('#remove-allow, #remove-block').click(function() {
 	!$('#' + $(this).attr('id').replace(/remove[-]/i, '') + ' option:selected').remove().appendTo('#pool');
 });
 
-$('#new-white, #new-black').click(function() {
+$('#new-allow, #new-block').click(function() {
 	var group = $('#addToPoolText').val();
 	if ('' != group) {
 		var option = $('<option>');

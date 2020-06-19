@@ -1317,16 +1317,16 @@ div.formpaginate{
 	font-weight:900
 }
 
-#addShowForm #blackwhitelist{
+#addShowForm #anigrouplists{
 	padding:0 0 0 15px
 }
 
-#edit-show #blackwhitelist,
-#edit-show #blackwhitelist h4,
-#edit-show #blackwhitelist p,
-#addShowForm #blackwhitelist,
-#addShowForm #blackwhitelist h4,
-#addShowForm #blackwhitelist p{
+#edit-show #anigrouplists,
+#edit-show #anigrouplists h4,
+#edit-show #anigrouplists p,
+#addShowForm #anigrouplists,
+#addShowForm #anigrouplists h4,
+#addShowForm #anigrouplists p{
 	font-size:13px
 }
 
@@ -3042,21 +3042,21 @@ select .selected:before{
 	border:1px transparent
 }
 
-#addShowForm #add-white,
-#addShowForm #add-black{
+#addShowForm #add-allow,
+#addShowForm #add-block{
 	margin:0 0 10px 30px !important
 }
-#addShowForm #remove-white,
-#addShowForm #remove-black{
+#addShowForm #remove-allow,
+#addShowForm #remove-block{
 	margin:0 0 0 30px !important
 }
-#edit-show #add-white,
-#edit-show #add-black{
+#edit-show #add-allow,
+#edit-show #add-block{
 	margin:0 0 10px !important
 }
 
-#edit-show #remove-white,
-#edit-show #remove-black{
+#edit-show #remove-allow,
+#edit-show #remove-block{
 	margin:0 !important
 }
 
@@ -3636,7 +3636,7 @@ option.flag{
 }
 
 /* Anime section for editShow */
-.bwlWrapper{
+.anigrouplists-wrapper{
 	height:auto;
 	margin:0 auto
 }
@@ -3658,62 +3658,69 @@ option.flag{
 	width:95%
 }
 
-div.blackwhitelist h4{
+div.anigrouplists h4{
 	margin-top:0
 }
-div.blackwhitelist{
+#addShowForm .anigrouplists.pool h4{
+	margin-right:20px !important
+}
+div.anigrouplists{
 	text-align:center
 }
 
-div.blackwhitelist.white input,
-div.blackwhitelist.black input,
-div.blackwhitelist.pool input{
+div.anigrouplists.allow input,
+div.anigrouplists.block input,
+div.anigrouplists.pool input{
 	margin:5px 0 !important
 }
-div.blackwhitelist select{
+div.anigrouplists select{
 	margin:0 !important
 }
 
-div.blackwhitelist .inuse{
+div.anigrouplists .inuse{
 	margin-right:5px;
 	width:243px;
 	float:left
 }
 
-div.blackwhitelist.white,
-div.blackwhitelist.black{
+div.anigrouplists.allow,
+div.anigrouplists.block{
 	width:243px
 }
-div.blackwhitelist.white select,
-div.blackwhitelist.black select{
+div.anigrouplists.allow select,
+div.anigrouplists.block select{
 	margin:0;
 	width:215px
 /*	clear:both*/
 }
-div.blackwhitelist.white select,
-div.blackwhitelist.black select{
+div.anigrouplists.allow select,
+div.anigrouplists.block select{
 	height:110px
 }
-#edit-show div.blackwhitelist.pool{
+#edit-show div.anigrouplists.pool{
 	width:330px;
 	height:265px;
 	margin-left:248px;
 	float:none
 }
-#edit-show div.blackwhitelist.pool select,
-div.blackwhitelist.pool,
-div.blackwhitelist.pool select{
+#edit-show div.anigrouplists.pool select,
+div.anigrouplists.pool,
+div.anigrouplists.pool select{
 	width:330px;
 	height:265px;
 	float:right
 }
+#addShowForm #pool{
+	width:310px;
+	margin-right:20px !important
+}
 
-div.blackwhitelist span{
+div.anigrouplists span{
 	text-align:center
 }
 
-div#blackwhitelist,
-div.blackwhitelist.manual{
+div#anigrouplists,
+div.anigrouplists.manual{
 	margin:7px 0
 }
 

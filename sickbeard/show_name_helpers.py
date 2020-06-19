@@ -42,7 +42,7 @@ if False:
     from re import Pattern
 
 
-def pass_wordlist_checks(name,  # type: AnyStr 
+def pass_wordlist_checks(name,  # type: AnyStr
                          parse=True,  # type: bool
                          indexer_lookup=True,  # type: bool
                          show_obj=None  # type: TVShow
@@ -251,14 +251,14 @@ def get_show_names_all_possible(show_obj, season=-1, scenify=True, spacer='.'):
 
 def makeSceneSeasonSearchString(show_obj,  # type: sickbeard.tv.TVShow
                                 ep_obj,  # type: sickbeard.tv.TVEpisode
-                                ignore_wl=False,  # type: bool
+                                ignore_allowlist=False,  # type: bool
                                 extra_search_type=None
                                 ):  # type: (...) -> List[AnyStr]
     """
 
     :param show_obj: show object
     :param ep_obj: episode object
-    :param ignore_wl:
+    :param ignore_allowlist:
     :param extra_search_type:
     :return: list of search strings
     """
@@ -321,9 +321,9 @@ def makeSceneSeasonSearchString(show_obj,  # type: sickbeard.tv.TVShow
             # for providers that don't allow multiple searches in one request we only search for Sxx style stuff
             else:
                 for cur_season in seasonStrings:
-                    if not ignore_wl and show_obj.is_anime \
-                            and None is not show_obj.release_groups and show_obj.release_groups.whitelist:
-                        for keyword in show_obj.release_groups.whitelist:
+                    if not ignore_allowlist and show_obj.is_anime \
+                            and None is not show_obj.release_groups and show_obj.release_groups.allowlist:
+                        for keyword in show_obj.release_groups.allowlist:
 
                             to_return.append(keyword + '.' + cur_name + "." + cur_season)
                     else:
@@ -334,13 +334,13 @@ def makeSceneSeasonSearchString(show_obj,  # type: sickbeard.tv.TVShow
 
 def makeSceneSearchString(show_obj,  # type: sickbeard.tv.TVShow
                           ep_obj,  # type: sickbeard.tv.TVEpisode
-                          ignore_wl=False  # type: bool
+                          ignore_allowlist=False  # type: bool
                           ):  # type: (...) -> List[AnyStr]
     """
 
     :param show_obj: show object
     :param ep_obj: episode object
-    :param ignore_wl:
+    :param ignore_allowlist:
     :return: list or search strings
     """
     my_db = db.DBConnection()
@@ -372,9 +372,9 @@ def makeSceneSearchString(show_obj,  # type: sickbeard.tv.TVShow
 
     for cur_show_obj in show_names:
         for cur_ep_string in ep_strings:
-            if not ignore_wl and ep_obj.show_obj.is_anime and \
-                    None is not ep_obj.show_obj.release_groups and ep_obj.show_obj.release_groups.whitelist:
-                for keyword in ep_obj.show_obj.release_groups.whitelist:
+            if not ignore_allowlist and ep_obj.show_obj.is_anime and \
+                    None is not ep_obj.show_obj.release_groups and ep_obj.show_obj.release_groups.allowlist:
+                for keyword in ep_obj.show_obj.release_groups.allowlist:
                     to_return.append(keyword + '.' + cur_show_obj + '.' + cur_ep_string)
             else:
                 to_return.append(cur_show_obj + '.' + cur_ep_string)

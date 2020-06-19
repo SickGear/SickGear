@@ -27,7 +27,7 @@ class MigrationBasicTests(test.SickbeardTestDBCase):
                   31: sickbeard.mainDB.AddAnimeTVShow,
                   32: sickbeard.mainDB.AddAbsoluteNumbering,
                   33: sickbeard.mainDB.AddSceneAbsoluteNumbering,
-                  34: sickbeard.mainDB.AddAnimeBlacklistWhitelist,
+                  34: sickbeard.mainDB.AddAnimeAllowlistBlocklist,
                   35: sickbeard.mainDB.AddSceneAbsoluteNumbering2,
                   36: sickbeard.mainDB.AddXemRefresh,
                   37: sickbeard.mainDB.AddSceneToTvShows,
