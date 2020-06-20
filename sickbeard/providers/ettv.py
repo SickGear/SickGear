@@ -32,7 +32,7 @@ class ETTVProvider(generic.TorrentProvider):
     def __init__(self):
         generic.TorrentProvider.__init__(self, 'ETTV')
 
-        self.url_home = ['https://www.ettv.tv/']
+        self.url_home = ['https://www.ettvdl.com/']
         self.url_vars = {'browse': 'torrents.php?%s&search=%s&sort=id&order=desc',
                          'search': 'torrents-search.php?%s&search=%s&sort=id&order=desc'}
         self.url_tmpl = {'config_provider_home_uri': '%(home)s',

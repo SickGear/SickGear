@@ -3755,7 +3755,8 @@ class AddShows(Home):
                             newest_dt = dt_ordinal
                             newest = dt_string
 
-                        img_uri = 'http://img7.anidb.net/pics/anime/%s' % image
+                        # img_uri = 'http://img7.anidb.net/pics/anime/%s' % image
+                        img_uri = 'https://cdn-eu.anidb.net/images/main/%s' % image
                         images = dict(poster=dict(thumb='imagecache?path=browse/thumb/anidb&source=%s' % img_uri))
                         sickbeard.CACHE_IMAGE_URL_LIST.add_url(img_uri)
 
