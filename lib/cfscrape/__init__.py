@@ -166,8 +166,7 @@ class CloudflareScraper(Session):
         try:
             js = re.search(
                 r'''(?x)
-                setTimeout\(function\(\){\s*?(var\s*?
-                (?:s,t,o,p,\s*?b,r,e,a,k,i,n,g|t,r,a),f.+?[\r\n\s\S]*a\.value\s*=.+?)[\r\n]+
+                setTimeout\(function\(\){\s*([\w\W]+)[\r\n]*[\w\W]\.action
                 ''', body).group(1)
         except (BaseException, Exception):
             raise RuntimeError('Error #1 Cloudflare anti-bots changed, please notify SickGear for an update')
@@ -175,7 +174,7 @@ class CloudflareScraper(Session):
         if not re.search(r'(?i)(toFixed|t\.length)', js):
             raise RuntimeError('Error #2 Cloudflare anti-bots changed, please notify SickGear for an update')
 
-        js = re.sub(r'(;\s+);', r'\1', js)
+        js = re.sub(r'(;\s+);', r'\1', js.strip())
         js = re.sub(r'([)\]];)(\w)', r'\1\n\n\2', js)
         js = re.sub(r'\s*\';\s*\d+\'\s*$', '', js)
 
