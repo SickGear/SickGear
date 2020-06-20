@@ -3807,7 +3807,8 @@ class AddShows(Home):
                             newest_dt = dt_ordinal
                             newest = dt_string
 
-                        img_uri = 'http://img7.anidb.net/pics/anime/%s' % image
+                        # img_uri = 'http://img7.anidb.net/pics/anime/%s' % image
+                        img_uri = 'https://cdn-eu.anidb.net/images/main/%s' % image
                         images = dict(poster=dict(thumb='imagecache?path=browse/thumb/anidb&source=%s' % img_uri))
                         sickbeard.CACHE_IMAGE_URL_LIST.add_url(img_uri)
 
@@ -4782,6 +4783,17 @@ class AddShows(Home):
 
         return self.new_show('|'.join(['', '', '', show_name]), use_show_name=True)
 
+    @staticmethod
+    def browse_mru(browse_type, **kwargs):
+        save_config = False
+        if browse_type in ('AniDB', 'IMDb', 'Metacritic', 'Trakt', 'TVCalendar'):
+            save_config = True
+            sickbeard.BROWSELIST_MRU[browse_type] = dict(
+                showfilter=kwargs.get('showfilter', ''), showsort=kwargs.get('showsort', ''))
+        if save_config:
+            sickbeard.save_config()
+        return json.dumps({'success': save_config})
+
     def browse_shows(self, browse_type, browse_title, shows, **kwargs):
         """
         Display the new show page which collects a tvdb id, folder, and extra options and
@@ -4791,6 +4803,14 @@ class AddShows(Home):
         t.submenu = self.home_menu()
         t.browse_type = browse_type
         t.browse_title = browse_title
+        t.saved_showfilter = sickbeard.BROWSELIST_MRU.get(browse_type, {}).get('showfilter', '')
+        t.saved_showsort = sickbeard.BROWSELIST_MRU.get(browse_type, {}).get('showsort', '*,asc,by_order')
+        showsort = t.saved_showsort.split(',')
+        t.saved_showsort_sortby = 3 == len(showsort) and showsort[2] or 'by_order'
+        t.reset_showsort_sortby = ('votes' in t.saved_showsort_sortby and not kwargs.get('use_votes', True)
+                                   or 'rating' in t.saved_showsort_sortby and not kwargs.get('use_ratings', True))
+        t.is_showsort_desc = ('desc' == (2 <= len(showsort) and showsort[1] or 'asc')) and not t.reset_showsort_sortby
+        t.saved_showsort_view = 1 <= len(showsort) and showsort[0] or '*'
         t.all_shows = []
         t.kwargs = kwargs
         dedupe = []
@@ -4801,7 +4821,8 @@ class AddShows(Home):
         rc_base = re.compile(r"(?i)^(?:dc|marvel)(?:['s]+\s)?")
         rc_nopost = re.compile(r'(?i)(?:\s*\([^)]+\))?$')
         rc_nopre = re.compile(r'(?i)(?:^\([^)]+\)\s*)?')
-        for item in shows:
+        for order, item in enumerate(shows):
+            item['order'] = order
             tvid_prodid_list = []
             titles = []
             if 'custom' in item['ids']:
@@ -4865,6 +4886,21 @@ class AddShows(Home):
                 if any(filter_iter(lambda tp: tp in sickbeard.BROWSELIST_HIDDEN, tvid_prodid_list)):
                     item['hide'] = True
                     t.num_hidden += 1
+
+        def _title(text):
+            return ((remove_article(text), text)[sickbeard.SORT_ARTICLE]).lower()
+        if 'order' not in t.saved_showsort_sortby or t.is_showsort_desc:
+            for sort_when, sort_type in (
+                    ('order', lambda _x: _x['order']),
+                    ('name', lambda _x: _title(_x['title'])),
+                    ('premiered', lambda _x: (_x['premiered'], _title(_x['title']))),
+                    ('votes', lambda _x: (helpers.try_int(_x['votes']), _title(_x['title']))),
+                    ('rating', lambda _x: (helpers.try_float(_x['rating']), _title(_x['title']))),
+                    ('rating_votes', lambda _x: (helpers.try_float(_x['rating']), helpers.try_int(_x['votes']),
+                                                 _title(_x['title'])))):
+                if sort_when in t.saved_showsort_sortby:
+                    t.all_shows.sort(key=sort_type, reverse=t.is_showsort_desc)
+                    break
 
         return t.respond()
 
