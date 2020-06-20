@@ -45,7 +45,7 @@ from exceptions_helper import ex
 import sickbeard
 from . import db, helpers, history, image_cache, indexermapper, logger, \
     name_cache, network_timezones, notifiers, postProcessor, subtitles
-from .anime import BlackAndWhiteList
+from .anime import AniGroupList
 from .common import Quality, statusStrings, \
     ARCHIVED, DOWNLOADED, FAILED, IGNORED, SNATCHED, SNATCHED_PROPER, SNATCHED_ANY, SKIPPED, UNAIRED, UNKNOWN, WANTED, \
     NAMING_DUPLICATE, NAMING_EXTEND, NAMING_LIMITED_EXTEND, NAMING_LIMITED_EXTEND_E_PREFIXED, NAMING_SEPARATED_REPEAT
@@ -228,7 +228,7 @@ class TVShow(TVShowBase):
         # noinspection added so that None _can_ be excluded from type annotation
         # so that this property evaluates directly to the class on ctrl+hover instead of "multiple implementations"
         # noinspection PyTypeChecker
-        self.release_groups = None  # type: BlackAndWhiteList
+        self.release_groups = None  # type: AniGroupList
 
         show_obj = helpers.find_show_by_id(self.sid_int, check_multishow=True)
         if None is not show_obj:
@@ -1219,7 +1219,7 @@ class TVShow(TVShowBase):
                 self._imdbid = ('', imdbid)[2 < len(imdbid)]
 
             if self._anime:
-                self.release_groups = BlackAndWhiteList(self.tvid, self.prodid, self.tvid_prodid)
+                self.release_groups = AniGroupList(self.tvid, self.prodid, self.tvid_prodid)
 
             if not self._overview:
                 self._overview = sql_result[0]['overview']
@@ -1505,8 +1505,8 @@ class TVShow(TVShowBase):
                  ["DELETE FROM imdb_info WHERE indexer = ? AND indexer_id = ?", [self.tvid, self.prodid]],
                  ["DELETE FROM xem_refresh WHERE indexer = ? AND indexer_id = ?", [self.tvid, self.prodid]],
                  ["DELETE FROM scene_numbering WHERE indexer = ? AND indexer_id = ?", [self.tvid, self.prodid]],
-                 ["DELETE FROM whitelist WHERE indexer = ? AND show_id = ?", [self.tvid, self.prodid]],
-                 ["DELETE FROM blacklist WHERE indexer = ? AND show_id = ?", [self.tvid, self.prodid]],
+                 ["DELETE FROM allowlist WHERE indexer = ? AND show_id = ?", [self.tvid, self.prodid]],
+                 ["DELETE FROM blocklist WHERE indexer = ? AND show_id = ?", [self.tvid, self.prodid]],
                  ["DELETE FROM indexer_mapping WHERE indexer = ? AND indexer_id = ?", [self.tvid, self.prodid]],
                  ["DELETE FROM tv_shows_not_found WHERE indexer = ? AND indexer_id = ?", [self.tvid, self.prodid]]]
 
@@ -1713,7 +1713,7 @@ class TVShow(TVShowBase):
              [self.tvid, self.prodid, old_tvid, old_prodid]],
             ['UPDATE tv_episodes SET indexer = ?, showid = ?, indexerid = 0 WHERE indexer = ? AND showid = ?',
              [self.tvid, self.prodid, old_tvid, old_prodid]],
-            ['UPDATE blacklist SET indexer = ?, show_id = ? WHERE indexer = ? AND show_id = ?',
+            ['UPDATE blocklist SET indexer = ?, show_id = ? WHERE indexer = ? AND show_id = ?',
              [self.tvid, self.prodid, old_tvid, old_prodid]],
             ['UPDATE history SET indexer = ?, showid = ? WHERE indexer = ? AND showid = ?',
              [self.tvid, self.prodid, old_tvid, old_prodid]],
@@ -1723,7 +1723,7 @@ class TVShow(TVShowBase):
              [self.tvid, self.prodid, old_tvid, old_prodid]],
             ['UPDATE scene_numbering SET indexer = ?, indexer_id = ? WHERE indexer = ? AND indexer_id = ?',
              [self.tvid, self.prodid, old_tvid, old_prodid]],
-            ['UPDATE whitelist SET indexer = ?, show_id = ? WHERE indexer = ? AND show_id = ?',
+            ['UPDATE allowlist SET indexer = ?, show_id = ? WHERE indexer = ? AND show_id = ?',
              [self.tvid, self.prodid, old_tvid, old_prodid]],
             ['UPDATE xem_refresh SET indexer = ?, indexer_id = ? WHERE indexer = ? AND indexer_id = ?',
              [self.tvid, self.prodid, old_tvid, old_prodid]],
@@ -2001,7 +2001,7 @@ class TVEpisode(TVEpisodeBase):
 
     def __init__(self, show_obj, season, episode, path='', show_sql=None):
         super(TVEpisode, self).__init__(season, episode, int(show_obj.tvid))
-        
+
         self._show_obj = show_obj  # type: TVShow
 
         self.scene_season = 0  # type: int
@@ -2298,7 +2298,7 @@ class TVEpisode(TVEpisodeBase):
             else:
                 self._file_size = 0
 
-            # todo: change to _tvid , _epid after removing indexer, indexerid 
+            # todo: change to _tvid , _epid after removing indexer, indexerid
             self.tvid = int(sql_result[0]['indexer'])
             self.epid = int(sql_result[0]['indexerid'])
 
@@ -2322,7 +2322,7 @@ class TVEpisode(TVEpisodeBase):
             if 0 == self.scene_absolute_number:
                 self.scene_absolute_number = sickbeard.scene_numbering.get_scene_absolute_numbering(
                     self.show_obj.tvid, self.show_obj.prodid,
-                    absolute_number=self.absolute_number, 
+                    absolute_number=self.absolute_number,
                     season=self.season, episode=episode, show_sql=show_sql, scene_sql=scene_sql, show_obj=self.show_obj)
 
             if 0 == self.scene_season or 0 == self.scene_episode:

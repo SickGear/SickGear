@@ -45,6 +45,8 @@
 * Add overall failure monitoring to History/Connect fails (renamed from "Provider fails")
 * Change log exception during updateCache in newznab
 * Change make Py3.9 preparations
+* Change anime "Available groups" to display "No groups listed..." when API is fine with no results instead of blank
+* Change improve clarity of anime group lists by using terms Allow list and Block list
 
 
 [develop changelog]

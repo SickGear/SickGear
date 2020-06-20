@@ -29,7 +29,7 @@ from exceptions_helper import ex
 
 import sickbeard
 from . import logger, ui, db, generic_queue, name_cache
-from .anime import BlackAndWhiteList
+from .anime import AniGroupList
 from .common import SKIPPED, WANTED, UNAIRED, Quality, statusStrings
 from .helpers import should_delete_episode
 from .indexermapper import map_indexers_to_show
@@ -343,7 +343,7 @@ class ShowQueue(generic_queue.GenericQueue):
         return queue_item_obj
 
     def addShow(self, tvid, prodid, show_dir, default_status=None, quality=None, flatten_folders=None,
-                lang='en', subtitles=None, anime=None, scene=None, paused=None, blacklist=None, whitelist=None,
+                lang='en', subtitles=None, anime=None, scene=None, paused=None, blocklist=None, allowlist=None,
                 wanted_begin=None, wanted_latest=None, prune=None, tag=None,
                 new_show=False, show_name=None, upgrade_once=False):
         """
@@ -370,10 +370,10 @@ class ShowQueue(generic_queue.GenericQueue):
         :type scene: int or None
         :param paused:
         :type paused: None or int
-        :param blacklist:
-        :type blacklist: AnyStr or None
-        :param whitelist:
-        :type whitelist: AnyStr or None
+        :param blocklist:
+        :type blocklist: AnyStr or None
+        :param allowlist:
+        :type allowlist: AnyStr or None
         :param wanted_begin:
         :type wanted_begin: int or None
         :param wanted_latest:
@@ -392,7 +392,7 @@ class ShowQueue(generic_queue.GenericQueue):
         :rtype: QueueItemAdd
         """
         queue_item_obj = QueueItemAdd(tvid, prodid, show_dir, default_status, quality, flatten_folders, lang,
-                                      subtitles, anime, scene, paused, blacklist, whitelist,
+                                      subtitles, anime, scene, paused, blocklist, allowlist,
                                       wanted_begin, wanted_latest, prune, tag,
                                       new_show=new_show, show_name=show_name, upgrade_once=upgrade_once)
 
@@ -468,7 +468,7 @@ class ShowQueueItem(generic_queue.QueueItem):
 
 class QueueItemAdd(ShowQueueItem):
     def __init__(self, tvid, prodid, show_dir, default_status, quality, flatten_folders, lang, subtitles, anime,
-                 scene, paused, blacklist, whitelist, default_wanted_begin, default_wanted_latest, prune, tag,
+                 scene, paused, blocklist, allowlist, default_wanted_begin, default_wanted_latest, prune, tag,
                  scheduled_update=False, new_show=False, show_name=None, upgrade_once=False):
         """
 
@@ -494,10 +494,10 @@ class QueueItemAdd(ShowQueueItem):
         :type scene:
         :param paused:
         :type paused:
-        :param blacklist:
-        :type blacklist:
-        :param whitelist:
-        :type whitelist:
+        :param blocklist:
+        :type blocklist:
+        :param allowlist:
+        :type allowlist:
         :param default_wanted_begin:
         :type default_wanted_begin:
         :param default_wanted_latest:
@@ -529,8 +529,8 @@ class QueueItemAdd(ShowQueueItem):
         self.anime = anime
         self.scene = scene
         self.paused = paused
-        self.blacklist = blacklist
-        self.whitelist = whitelist
+        self.blocklist = blocklist
+        self.allowlist = allowlist
         self.prune = prune
         self.tag = tag
         self.new_show = new_show
@@ -706,13 +706,13 @@ class QueueItemAdd(ShowQueueItem):
             self.show_obj.tag = self.tag if None is not self.tag else 'Show List'
 
             if self.show_obj.anime:
-                self.show_obj.release_groups = BlackAndWhiteList(self.show_obj.tvid,
-                                                                 self.show_obj.prodid,
-                                                                 self.show_obj.tvid_prodid)
-                if self.blacklist:
-                    self.show_obj.release_groups.set_black_keywords(self.blacklist)
-                if self.whitelist:
-                    self.show_obj.release_groups.set_white_keywords(self.whitelist)
+                self.show_obj.release_groups = AniGroupList(self.show_obj.tvid,
+                                                            self.show_obj.prodid,
+                                                            self.show_obj.tvid_prodid)
+                if self.allowlist:
+                    self.show_obj.release_groups.set_allow_keywords(self.allowlist)
+                if self.blocklist:
+                    self.show_obj.release_groups.set_block_keywords(self.blocklist)
 
             # be smartish about this
             if self.show_obj.genre and 'talk show' in self.show_obj.genre.lower():

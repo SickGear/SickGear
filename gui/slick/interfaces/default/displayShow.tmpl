@@ -380,11 +380,11 @@
 #if int($show_obj.is_anime)
 						<span class="label">Anime</span>
 #end if
-#if $bwl and $bwl.whitelist
-						<span class="label addQTip" title="#echo ', '.join($bwl.whitelist).replace(',', '<br />')#">Wanted group$maybe_plural(len($bwl.whitelist))</span>
+#if $anigroups and $anigroups.allowlist
+						<span class="label addQTip" title="#echo ', '.join($anigroups.allowlist).replace(',', '<br />')#">Wanted group$maybe_plural(len($anigroups.allowlist))</span>
 #end if
-#if $bwl and $bwl.blacklist
-						<span class="label addQTip" title="#echo ', '.join($bwl.blacklist).replace(',', '<br />')#">Unwanted group$maybe_plural(len($bwl.blacklist))</span>
+#if $anigroups and $anigroups.blocklist
+						<span class="label addQTip" title="#echo ', '.join($anigroups.blocklist).replace(',', '<br />')#">Unwanted group$maybe_plural(len($anigroups.blocklist))</span>
 #end if
 					</div>
 				</div>

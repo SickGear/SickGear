@@ -2,7 +2,7 @@
 /** @namespace config.showLang */
 /** @namespace config.showIsAnime */
 /** @namespace config.expandIds */
-/*globals $, config, sbRoot, generate_bwlist*/
+/*globals $, config, sbRoot, generateAniGroupList*/
 
 $(document).ready(function () {
 
@@ -52,7 +52,7 @@ $(document).ready(function () {
 	$('#submit').on('click', function () {
 		$('#exceptions_list').val(getExceptions());
 		if (config.showIsAnime)
-			generate_bwlist();
+			generateAniGroupList();
 	});
 
 	$('#addSceneName').on('click', function () {
@@ -101,10 +101,10 @@ $(document).ready(function () {
 
 	function isAnime() {
 		uncheck(elABD); uncheck(elSports);
-		if (config.showIsAnime) { $('#blackwhitelist').fadeIn('fast', 'linear'); } return !0; }
+		if (config.showIsAnime) { $('#anigrouplists').fadeIn('fast', 'linear'); } return !0; }
 	function isScene() { uncheck(elABD); uncheck(elSports); }
-	function isABD() { uncheck(elAnime); uncheck(elScene); $('#blackwhitelist, #anime-options').fadeOut('fast', 'linear'); }
-	function isSports() { uncheck(elAnime); uncheck(elScene); $('#blackwhitelist, #anime-options').fadeOut('fast', 'linear'); }
+	function isABD() { uncheck(elAnime); uncheck(elScene); $('#anigrouplists, #anime-options').fadeOut('fast', 'linear'); }
+	function isSports() { uncheck(elAnime); uncheck(elScene); $('#anigrouplists, #anime-options').fadeOut('fast', 'linear'); }
 
 	if (checked(elAnime)) { isAnime(); }
 	if (checked(elScene)) { isScene(); }
@@ -115,7 +115,7 @@ $(document).ready(function () {
 		if (checked(elAnime))
 			isAnime() && !config.showIsAnime && $('#anime-options').fadeIn('fast', 'linear');
 		else
-			$('#blackwhitelist, #anime-options').fadeOut('fast', 'linear');
+			$('#anigrouplists, #anime-options').fadeOut('fast', 'linear');
 	});
 	elIdMap.on('click', function() {
 		var elMapOptions = $('#idmapping-options'), anim = {fast: 'linear'};

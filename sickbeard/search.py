@@ -387,7 +387,7 @@ def is_final_result(result):
     if best_qualities and max(best_qualities) > result.quality:
         return False
 
-    # if it does not match the shows black and white list its no good
+    # if it does not match the shows block and allow list its no good
     elif show_obj.is_anime and show_obj.release_groups.is_valid(result):
         return False
 

@@ -102,11 +102,11 @@ class HorribleSubsProvider(generic.TorrentProvider):
 
     def _season_strings(self, *args, **kwargs):
         return [{'Season': show_name_helpers.makeSceneSeasonSearchString(
-            self.show_obj, *args, ignore_wl=True, **kwargs)}]
+            self.show_obj, *args, ignore_allowlist=True, **kwargs)}]
 
     def _episode_strings(self, *args, **kwargs):
         return [{'Episode': show_name_helpers.makeSceneSearchString(
-            self.show_obj, *args, ignore_wl=True, **kwargs)}]
+            self.show_obj, *args, ignore_allowlist=True, **kwargs)}]
 
     def get_data(self, url):
         result = None
