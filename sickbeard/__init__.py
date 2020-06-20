@@ -518,6 +518,7 @@ EPISODE_VIEW_POSTERS = True
 EPISODE_VIEW_MISSED_RANGE = 7
 HISTORY_LAYOUT = None
 BROWSELIST_HIDDEN = []
+BROWSELIST_MRU = {}
 
 FUZZY_DATING = False
 TRIM_ZERO = False
@@ -641,7 +642,8 @@ def init_stage_1(console_logging):
         EPISODE_VIEW_MISSED_RANGE, EPISODE_VIEW_POSTERS, FANART_PANEL, FANART_RATINGS, \
         EPISODE_VIEW_VIEWMODE, EPISODE_VIEW_BACKGROUND, EPISODE_VIEW_BACKGROUND_TRANSLUCENT, \
         DISPLAY_SHOW_VIEWMODE, DISPLAY_SHOW_BACKGROUND, DISPLAY_SHOW_BACKGROUND_TRANSLUCENT, \
-        DISPLAY_SHOW_VIEWART, DISPLAY_SHOW_MINIMUM, DISPLAY_SHOW_SPECIALS, HISTORY_LAYOUT, BROWSELIST_HIDDEN
+        DISPLAY_SHOW_VIEWART, DISPLAY_SHOW_MINIMUM, DISPLAY_SHOW_SPECIALS, HISTORY_LAYOUT, \
+        BROWSELIST_HIDDEN, BROWSELIST_MRU
     # Gen Config/Misc
     global LAUNCH_BROWSER, UPDATE_SHOWS_ON_START, SHOW_UPDATE_HOUR, \
         TRASH_REMOVE_SHOW, TRASH_ROTATE_LOGS, ACTUAL_LOG_DIR, LOG_DIR, TVINFO_TIMEOUT, ROOT_DIRS, \
@@ -1292,6 +1294,11 @@ def init_stage_1(console_logging):
         lambda y: TVidProdid.glue in y and y or '%s%s%s' % (
             (TVINFO_TVDB, TVINFO_IMDB)[bool(helpers.parse_imdb_id(y))], TVidProdid.glue, y),
         [x.strip() for x in check_setting_str(CFG, 'GUI', 'browselist_hidden', '').split('|~|') if x.strip()])
+    BROWSELIST_MRU = check_setting_str(CFG, 'GUI', 'browselist_prefs', None)
+    if None is not BROWSELIST_MRU:
+        BROWSELIST_MRU = ast.literal_eval(BROWSELIST_MRU or '{}')
+    if not isinstance(BROWSELIST_MRU, dict):
+        BROWSELIST_MRU = {}
 
     sg_helpers.db = db
     sg_helpers.DOMAIN_FAILURES.load_from_db()
@@ -2204,6 +2211,7 @@ def save_config():
     new_config['GUI']['show_tag_default'] = SHOW_TAG_DEFAULT
     new_config['GUI']['history_layout'] = HISTORY_LAYOUT
     new_config['GUI']['browselist_hidden'] = '|~|'.join(BROWSELIST_HIDDEN)
+    new_config['GUI']['browselist_prefs'] = '%s' % BROWSELIST_MRU
 
     new_config['Subtitles'] = {}
     new_config['Subtitles']['use_subtitles'] = int(USE_SUBTITLES)
