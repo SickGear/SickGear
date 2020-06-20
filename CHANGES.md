@@ -80,6 +80,12 @@
 * Change add fallback to remove a premiered year to lookup browse card show
 
 
+### 0.21.37 (2020-05-30 12:00:00 UTC)
+
+* Fix Anime cards images
+* Fix ETTV torrent provider
+
+
 ### 0.21.36 (2020-05-26 16:45:00 UTC)
 
 * Change improve Cloudflare connectivity
