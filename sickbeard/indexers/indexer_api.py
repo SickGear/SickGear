@@ -18,7 +18,7 @@
 import os
 
 from .indexer_config import init_config, tvinfo_config
-from ..helpers import proxy_setting
+from sg_helpers import proxy_setting
 import sickbeard
 from tvinfo_base import TVInfoBase
 

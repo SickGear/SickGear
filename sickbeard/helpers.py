@@ -53,7 +53,6 @@ import requests
 import requests.exceptions
 import subliminal
 from lxml_etree import etree, is_lxml
-from send2trash import send2trash
 
 from _23 import b64decodebytes, b64encodebytes, decode_bytes, DirEntry, filter_iter, Popen, scandir
 from six import iteritems, PY2, string_types, text_type
@@ -63,8 +62,9 @@ from six.moves import zip
 # the following are imported from elsewhere,
 # therefore, they intentionally don't resolve and are unused in this particular file.
 # noinspection PyUnresolvedReferences
-from sg_helpers import chmod_as_parent, clean_data, get_system_temp_dir, \
-    get_url, make_dirs, md5_for_text, proxy_setting, remove_file_failed, try_int, write_file
+from sg_helpers import chmod_as_parent, clean_data, copy_file, fix_set_group_id, get_system_temp_dir, \
+    get_url, indent_xml, make_dirs, maybe_plural, md5_for_text, move_file, proxy_setting, remove_file, \
+    remove_file_failed, replace_extension, try_int, write_file
 
 # noinspection PyUnreachableCode
 if False:
@@ -76,28 +76,6 @@ if False:
 
 RE_XML_ENCODING = re.compile(r'^(<\?xml[^>]+)\s+(encoding\s*=\s*[\"\'][^\"\']*[\"\'])(\s*\?>|)', re.U)
 RE_IMDB_ID = re.compile(r'(?i)(tt\d{4,})')
-
-
-def indent_xml(elem, level=0):
-    """
-    Does our pretty printing, makes Matt very happy
-    """
-    i = '\n' + level * '  '
-    if len(elem):
-        if not elem.text or not ('%s' % elem.text).strip():
-            elem.text = i + '  '
-        if not elem.tail or not elem.tail.strip():
-            elem.tail = i
-        for elem in elem:
-            indent_xml(elem, level + 1)
-        if not elem.tail or not elem.tail.strip():
-            elem.tail = i
-    else:
-        # Strip out the newlines from text
-        if elem.text:
-            elem.text = ('%s' % elem.text).replace('\n', ' ')
-        if level and (not elem.tail or not elem.tail.strip()):
-            elem.tail = i
 
 
 def remove_extension(name):
@@ -145,22 +123,6 @@ def remove_non_release_groups(name, is_anime=False):
             rename = (name, False)[name == rename]
 
     return name
-
-
-def replace_extension(filename, new_ext):
-    """
-
-    :param filename: filename
-    :type filename: AnyStr
-    :param new_ext: new extension
-    :type new_ext: AnyStr
-    :return: filename with new extension
-    :rtype: AnyStr
-    """
-    sepFile = filename.rpartition('.')
-    if sepFile[0] == '':
-        return filename
-    return sepFile[0] + '.' + new_ext
 
 
 def is_sync_file(filename):
@@ -241,39 +203,6 @@ def sanitize_filename(name):
         name = name.replace(char, '')
 
     return name
-
-
-def remove_file(filepath, tree=False, prefix_failure='', log_level=logger.MESSAGE):
-    """
-    Remove file based on setting for trash v permanent delete
-
-    :param filepath: Path and file name
-    :type filepath: String
-    :param tree: Remove file tree
-    :type tree: Bool
-    :param prefix_failure: Text to prepend to error log, e.g. show id
-    :type prefix_failure: String
-    :param log_level: Log level to use for error
-    :type log_level: Int
-    :return: Type of removal ('Deleted' or 'Trashed') if filepath does not exist or None if no removal occurred
-    :rtype: String or None
-    """
-    result = None
-    if filepath:
-        try:
-            result = 'Deleted'
-            if sickbeard.TRASH_REMOVE_SHOW:
-                result = 'Trashed'
-                ek.ek(send2trash, filepath)
-            elif tree:
-                ek.ek(shutil.rmtree, filepath)
-            else:
-                ek.ek(os.remove, filepath)
-        except OSError as e:
-            logger.log(u'%sUnable to %s %s %s: %s' % (prefix_failure, ('delete', 'trash')[sickbeard.TRASH_REMOVE_SHOW],
-                                                      ('file', 'dir')[tree], filepath, ex(e)), log_level)
-
-    return (None, result)[filepath and not ek.ek(os.path.exists, filepath)]
 
 
 def find_show_by_id(
@@ -460,18 +389,6 @@ def copyFile(src_file, dest_file):
     return copy_file(src_file, dest_file)
 
 
-def copy_file(src_file, dest_file):
-    if os.name.startswith('posix'):
-        ek.ek(subprocess.call, ['cp', src_file, dest_file])
-    else:
-        ek.ek(shutil.copyfile, src_file, dest_file)
-
-    try:
-        ek.ek(shutil.copymode, src_file, dest_file)
-    except OSError:
-        pass
-
-
 def moveFile(src_file, dest_file):
     """ deprecated_item, remove in 2020, kept here as rollback uses it
     :param src_file: source file
@@ -482,15 +399,6 @@ def moveFile(src_file, dest_file):
     :rtype: None
     """
     return move_file(src_file, dest_file)
-
-
-def move_file(src_file, dest_file):
-    try:
-        ek.ek(shutil.move, src_file, dest_file)
-        fix_set_group_id(dest_file)
-    except OSError:
-        copy_file(src_file, dest_file)
-        ek.ek(os.unlink, src_file)
 
 
 def link(src_file, dest_file):
@@ -651,45 +559,6 @@ def delete_empty_folders(check_empty_dir, keep_dir=None):
             check_empty_dir = ek.ek(os.path.dirname, check_empty_dir)
         else:
             break
-
-
-def fix_set_group_id(child_path):
-    """
-
-    :param child_path: path
-    :type child_path: AnyStr
-    :return:
-    :rtype: None
-    """
-    if os.name in ('nt', 'ce'):
-        return
-
-    parent_path = ek.ek(os.path.dirname, child_path)
-    parent_stat = ek.ek(os.stat, parent_path)
-    parent_mode = stat.S_IMODE(parent_stat[stat.ST_MODE])
-
-    if parent_mode & stat.S_ISGID:
-        parent_gid = parent_stat[stat.ST_GID]
-        child_stat = ek.ek(os.stat, child_path)
-        child_gid = child_stat[stat.ST_GID]
-
-        if child_gid == parent_gid:
-            return
-
-        child_path_owner = child_stat.st_uid
-        user_id = os.geteuid()  # only available on UNIX
-
-        if 0 != user_id and user_id != child_path_owner:
-            logger.log(u'Not running as root or owner of %s, not trying to set the set-group-id' % child_path,
-                       logger.DEBUG)
-            return
-
-        try:
-            ek.ek(os.chown, child_path, -1, parent_gid)  # only available on UNIX
-            logger.log(u'Respecting the set-group-ID bit on the parent directory for %s' % child_path, logger.DEBUG)
-        except OSError:
-            logger.log(u'Failed to respect the set-group-id bit on the parent directory for %s (setting group id %i)'
-                       % (child_path, parent_gid), logger.ERROR)
 
 
 def get_absolute_number_from_season_and_episode(show_obj, season, episode):
@@ -1319,19 +1188,6 @@ def remove_article(text=''):
     :rtype: AnyStr
     """
     return re.sub(r'(?i)^(?:(?:A(?!\s+to)n?)|The)\s(\w)', r'\1', text)
-
-
-def maybe_plural(subject=1):
-    """
-    returns 's' or '' depending on numeric subject or length of subject
-
-    :param subject: number or list or dict
-    :type subject: int or list or dict
-    :return: returns s or ''
-    :rtype: AnyStr
-    """
-    number = subject if not isinstance(subject, (list, dict)) else len(subject)
-    return ('s', '')[1 == number]
 
 
 def re_valid_hostname(with_allowed=True):

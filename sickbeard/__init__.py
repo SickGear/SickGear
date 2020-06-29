@@ -852,6 +852,7 @@ def init_stage_1(console_logging):
     SHOW_UPDATE_HOUR = minimax(SHOW_UPDATE_HOUR, 3, 0, 23)
 
     TRASH_REMOVE_SHOW = bool(check_setting_int(CFG, 'General', 'trash_remove_show', 0))
+    sg_helpers.TRASH_REMOVE_SHOW = TRASH_REMOVE_SHOW
     TRASH_ROTATE_LOGS = bool(check_setting_int(CFG, 'General', 'trash_rotate_logs', 0))
 
     USE_API = bool(check_setting_int(CFG, 'General', 'use_api', 0))

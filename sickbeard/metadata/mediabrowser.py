@@ -15,13 +15,15 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
+from __future__ import absolute_import
 
 import datetime
 import os
 import re
 
 from . import generic
-from .. import helpers, logger
+from .. import logger
+import sg_helpers
 from tvinfo_base.exceptions import *
 import sickbeard
 # noinspection PyPep8Naming
@@ -121,7 +123,7 @@ class MediaBrowserMetadata(generic.GenericMetadata):
         """
 
         if ek.ek(os.path.isfile, ep_obj.location):
-            xml_file_name = helpers.replace_extension(ek.ek(os.path.basename, ep_obj.location), self._ep_nfo_extension)
+            xml_file_name = sg_helpers.replace_extension(ek.ek(os.path.basename, ep_obj.location), self._ep_nfo_extension)
             metadata_dir_name = ek.ek(os.path.join, ek.ek(os.path.dirname, ep_obj.location), 'metadata')
             xml_file_path = ek.ek(os.path.join, metadata_dir_name, xml_file_name)
         else:
@@ -141,7 +143,7 @@ class MediaBrowserMetadata(generic.GenericMetadata):
 
         if ek.ek(os.path.isfile, ep_obj.location):
             metadata_dir_name = ek.ek(os.path.join, ek.ek(os.path.dirname, ep_obj.location), 'metadata')
-            tbn_file_name = helpers.replace_extension(ek.ek(os.path.basename, ep_obj.location), 'jpg')
+            tbn_file_name = sg_helpers.replace_extension(ek.ek(os.path.basename, ep_obj.location), 'jpg')
             return ek.ek(os.path.join, metadata_dir_name, tbn_file_name)
 
     def get_season_poster_path(self, show_obj, season):
@@ -381,7 +383,7 @@ class MediaBrowserMetadata(generic.GenericMetadata):
             if cur_actor_role_text:
                 cur_actor_role.text = '%s' % cur_actor_role_text
 
-        helpers.indent_xml(tv_node)
+        sg_helpers.indent_xml(tv_node)
 
         data = etree.ElementTree(tv_node)
 
@@ -556,7 +558,7 @@ class MediaBrowserMetadata(generic.GenericMetadata):
                 cur_person_type = etree.SubElement(Person, "Type")
                 cur_person_type.text = '%s' % person_type
 
-        helpers.indent_xml(rootNode)
+        sg_helpers.indent_xml(rootNode)
         data = etree.ElementTree(rootNode)
 
         return data

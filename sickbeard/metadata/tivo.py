@@ -17,13 +17,14 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import with_statement
+from __future__ import with_statement, absolute_import
 
 import datetime
 import os
 
 from . import generic
-from .. import helpers, logger
+from .. import logger
+import sg_helpers
 from tvinfo_base.exceptions import *
 import sickbeard
 # noinspection PyPep8Naming
@@ -343,7 +344,7 @@ class TIVOMetadata(generic.GenericMetadata):
             if not ek.ek(os.path.isdir, nfo_file_dir):
                 logger.log(u"Metadata dir didn't exist, creating it at " + nfo_file_dir, logger.DEBUG)
                 ek.ek(os.makedirs, nfo_file_dir)
-                helpers.chmod_as_parent(nfo_file_dir)
+                sg_helpers.chmod_as_parent(nfo_file_dir)
 
             logger.log(u"Writing episode nfo file to " + nfo_file_path, logger.DEBUG)
 
@@ -351,7 +352,7 @@ class TIVOMetadata(generic.GenericMetadata):
                 # Calling encode directly, b/c often descriptions have wonky characters.
                 nfo_file.write(data.encode("utf-8"))
 
-            helpers.chmod_as_parent(nfo_file_path)
+            sg_helpers.chmod_as_parent(nfo_file_path)
 
         except EnvironmentError as e:
             logger.log(u"Unable to write file to " + nfo_file_path + " - are you sure the folder is writable? " + ex(e),

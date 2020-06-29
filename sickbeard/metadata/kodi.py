@@ -14,13 +14,15 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
+from __future__ import absolute_import
 
 import datetime
 import io
 import os
 
 from . import generic
-from .. import helpers, logger
+from .. import logger
+import sg_helpers
 from ..indexers.indexer_config import TVINFO_IMDB, TVINFO_TVDB
 from tvinfo_base.exceptions import *
 import sickbeard
@@ -210,7 +212,7 @@ class KODIMetadata(generic.GenericMetadata):
         self.add_actor_element(show_info, etree, tv_node)
 
         # Make it purdy
-        helpers.indent_xml(tv_node)
+        sg_helpers.indent_xml(tv_node)
 
         # output valid xml
         # data = etree.ElementTree(tv_node)
@@ -237,7 +239,7 @@ class KODIMetadata(generic.GenericMetadata):
 
         logger.log(u'Writing Kodi metadata file: %s' % nfo_file_path, logger.DEBUG)
 
-        return helpers.write_file(nfo_file_path, data, utf8=True)
+        return sg_helpers.write_file(nfo_file_path, data, utf8=True)
 
     def _ep_data(self, ep_obj):
         # type: (sickbeard.tv.TVEpisode) -> Optional[etree.Element]
@@ -386,7 +388,7 @@ class KODIMetadata(generic.GenericMetadata):
             self.add_actor_element(show_info, etree, ep_node)
 
         # Make it purdy
-        helpers.indent_xml(root_node)
+        sg_helpers.indent_xml(root_node)
 
         data = etree.ElementTree(root_node)
 
@@ -480,8 +482,8 @@ def remove_default_attr(*args, **kwargs):
                                     changed = True
 
                                 if changed:
-                                    helpers.indent_xml(root)
-                                    helpers.write_file(nfo_path, xmltree, xmltree=True, utf8=True)
+                                    sg_helpers.indent_xml(root)
+                                    sg_helpers.write_file(nfo_path, xmltree, xmltree=True, utf8=True)
                         except(BaseException, Exception):
                             pass
 
@@ -509,8 +511,8 @@ def remove_default_attr(*args, **kwargs):
                                         changed = True
 
                                 if changed:
-                                    helpers.indent_xml(xmltree.getroot())
-                                    helpers.write_file(nfo_path, xmltree, xmltree=True, utf8=True)
+                                    sg_helpers.indent_xml(xmltree.getroot())
+                                    sg_helpers.write_file(nfo_path, xmltree, xmltree=True, utf8=True)
 
                             except(BaseException, Exception):
                                 pass

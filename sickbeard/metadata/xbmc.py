@@ -15,11 +15,12 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
+from __future__ import absolute_import
 
 import os
 
 from . import generic, xbmc_12plus
-from .. import helpers
+import sg_helpers
 import sickbeard
 # noinspection PyPep8Naming
 import encodingKludge as ek
@@ -106,7 +107,7 @@ class XBMCMetadata(xbmc_12plus.XBMC12PlusMetadata):
         ep_obj: a TVEpisode instance for which to create the thumbnail
         """
         if ek.ek(os.path.isfile, ep_obj.location):
-            tbn_filename = helpers.replace_extension(ep_obj.location, 'tbn')
+            tbn_filename = sg_helpers.replace_extension(ep_obj.location, 'tbn')
         else:
             return None
 
