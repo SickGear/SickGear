@@ -1928,11 +1928,20 @@
 								</label>
 							</div>
 							<div class="field-pair">
-								<label for="telegram-send-icon">
-									<span class="component-title">Send icon image</span>
+								<label for="telegram-send-image">
+									<span class="component-title">Send with image</span>
 									<span class="component-desc">
-										<input type="checkbox" name="telegram_send_icon" id="telegram-send-icon"#if $sg_var('TELEGRAM_SEND_ICON') then 'checked="checked"' else ''#>
-										<p>send icon image before the notification</p>
+										<input type="checkbox" name="telegram_send_image" id="telegram-send-image"#if $sg_var('TELEGRAM_SEND_IMAGE') then 'checked="checked"' else ''#>
+										<p>send show image with notification</p>
+									</span>
+								</label>
+							</div>
+							<div class="field-pair">
+								<label for="telegram-quiet">
+									<span class="component-title">Send quietly</span>
+									<span class="component-desc">
+										<input type="checkbox" name="telegram_quiet" id="telegram-quiet"#if $sg_var('TELEGRAM_QUIET') then 'checked="checked"' else ''#>
+										<p>mute client notification sound</p>
 									</span>
 								</label>
 							</div>

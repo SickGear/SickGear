@@ -511,7 +511,8 @@ $(document).ready(function(){
 	});
 
 	$('#test-telegram').click(function () {
-		var telegramSendIcon = $('#telegram-send-icon').prop('checked'),
+		var telegramSendImage = $('#telegram-send-image').prop('checked'),
+			telegramQuiet = $('#telegram-quiet').prop('checked'),
 			accessToken = '#telegram-access-token', telegramAccessToken = $(accessToken).val().replace(/\s/g, ''),
 			chatid = '#telegram-chatid', telegramChatid = $(chatid).val().replace(/\s/g, '');
 
@@ -523,7 +524,7 @@ $(document).ready(function(){
 			$(this).prop('disabled', !0);
 			$('#test-telegram-result').html(loading);
 			$.getJSON(sbRoot + '/home/test-telegram',
-				{send_icon: telegramSendIcon, access_token: telegramAccessToken, chatid: telegramChatid})
+				{send_icon: telegramSendImage, access_token: telegramAccessToken, chatid: telegramChatid, quiet: telegramQuiet})
 				.done(function (JSONdata) {
 					$('#test-telegram-result').html(JSONdata.result);
 					if ('' === telegramChatid) {

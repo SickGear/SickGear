@@ -2149,7 +2149,7 @@ class TVEpisode(TVEpisodeBase):
             logger.log('%s: Downloaded %s subtitles for episode %sx%s' %
                        (self.show_obj.tvid_prodid, subtitleList, self.season, self.episode), logger.DEBUG)
 
-            notifiers.notify_subtitle_download(self.pretty_name(), subtitleList)
+            notifiers.notify_subtitle_download(self, subtitleList)
 
         else:
             logger.log('%s: No subtitles downloaded for episode %sx%s'

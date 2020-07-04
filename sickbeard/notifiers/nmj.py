@@ -167,10 +167,10 @@ class NMJNotifier(BaseNotifier):
     # notify_snatch() Not implemented: Start the scanner when snatched does not make sense
     # notify_git_update() Not implemented, no reason to start scanner
 
-    def notify_download(self):
+    def notify_download(self, *args, **kwargs):
         self._notify()
 
-    def notify_subtitle_download(self):
+    def notify_subtitle_download(self, *args, **kwargs):
         self._notify()
 
 
