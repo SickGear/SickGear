@@ -249,7 +249,7 @@ class NotifyNotifico(NotifyBase):
             # Colors were specified, make sure we capture and correctly
             # allow them to exist inline in the message
             # \g<1> is less ambigious than \1
-            body = re.sub(r'\\x03(\d{0,2})', '\x03\g<1>', body)
+            body = re.sub(r'\\x03(\d{0,2})', r'\x03\g<1>', body)
 
         else:
             # no colors specified, make sure we strip out any colors found
