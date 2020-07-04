@@ -29,7 +29,6 @@ import re
 import shutil
 import stat
 import sys
-import time
 
 # noinspection PyPep8Naming
 import encodingKludge as ek

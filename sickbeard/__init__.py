@@ -468,7 +468,8 @@ USE_TELEGRAM = False
 TELEGRAM_NOTIFY_ONSNATCH = False
 TELEGRAM_NOTIFY_ONDOWNLOAD = False
 TELEGRAM_NOTIFY_ONSUBTITLEDOWNLOAD = False
-TELEGRAM_SEND_ICON = True
+TELEGRAM_SEND_IMAGE = True
+TELEGRAM_QUIET = False
 TELEGRAM_ACCESS_TOKEN = None
 TELEGRAM_CHATID = None
 
@@ -734,7 +735,7 @@ def init_stage_1(console_logging):
         USE_GITTER, GITTER_NOTIFY_ONSNATCH, GITTER_NOTIFY_ONDOWNLOAD, GITTER_NOTIFY_ONSUBTITLEDOWNLOAD,\
         GITTER_ROOM, GITTER_ACCESS_TOKEN, \
         USE_TELEGRAM, TELEGRAM_NOTIFY_ONSNATCH, TELEGRAM_NOTIFY_ONDOWNLOAD, TELEGRAM_NOTIFY_ONSUBTITLEDOWNLOAD, \
-        TELEGRAM_SEND_ICON, TELEGRAM_ACCESS_TOKEN, TELEGRAM_CHATID, \
+        TELEGRAM_SEND_IMAGE, TELEGRAM_QUIET, TELEGRAM_ACCESS_TOKEN, TELEGRAM_CHATID, \
         USE_EMAIL, EMAIL_NOTIFY_ONSNATCH, EMAIL_NOTIFY_ONDOWNLOAD, EMAIL_NOTIFY_ONSUBTITLEDOWNLOAD, EMAIL_FROM, \
         EMAIL_HOST, EMAIL_PORT, EMAIL_TLS, EMAIL_USER, EMAIL_PASSWORD, EMAIL_LIST, EMAIL_OLD_SUBJECTS
     # Anime Settings
@@ -1199,7 +1200,8 @@ def init_stage_1(console_logging):
     TELEGRAM_NOTIFY_ONDOWNLOAD = bool(check_setting_int(CFG, 'Telegram', 'telegram_notify_ondownload', 0))
     TELEGRAM_NOTIFY_ONSUBTITLEDOWNLOAD = bool(check_setting_int(
         CFG, 'Telegram', 'telegram_notify_onsubtitledownload', 0))
-    TELEGRAM_SEND_ICON = bool(check_setting_int(CFG, 'Telegram', 'telegram_send_icon', 1))
+    TELEGRAM_SEND_IMAGE = bool(check_setting_int(CFG, 'Telegram', 'telegram_send_image', 1))
+    TELEGRAM_QUIET = bool(check_setting_int(CFG, 'Telegram', 'telegram_quiet', 0))
     TELEGRAM_ACCESS_TOKEN = check_setting_str(CFG, 'Telegram', 'telegram_access_token', '')
     TELEGRAM_CHATID = check_setting_str(CFG, 'Telegram', 'telegram_chatid', '')
 
@@ -2099,7 +2101,8 @@ def save_config():
         ]),
         ('Telegram', [
             ('use_%s', int(USE_TELEGRAM)),
-            ('send_icon', int(TELEGRAM_SEND_ICON)),
+            ('send_image', int(TELEGRAM_SEND_IMAGE)),
+            ('quiet', int(TELEGRAM_QUIET)),
             ('access_token', TELEGRAM_ACCESS_TOKEN),
             ('chatid', TELEGRAM_CHATID),
         ]),
@@ -2119,8 +2122,9 @@ def save_config():
         new_config[cfg] = {}
         for (k, v) in filter_iter(lambda arg: any([arg[1]]) or (
                 # allow saving where item value default is non-zero but 0 is a required setting value
-                cfg_lc in ('kodi', 'xbmc', 'synoindex', 'nzbget', 'torrent') and arg[0] in ('always_on', 'priority')
-                or (arg[0] == 'label_var' and 'rtorrent' == new_config['General']['torrent_method'])), items):
+                cfg_lc in ('kodi', 'xbmc', 'synoindex', 'nzbget', 'torrent', 'telegram')
+                and arg[0] in ('always_on', 'priority', 'send_image'))
+                or ('rtorrent' == new_config['General']['torrent_method'] and 'label_var' == arg[0]), items):
             k = '%s' in k and (k % cfg_lc) or (cfg_lc + '_' + k)
             # correct for cases where keys are named in an inconsistent manner to parent stanza
             k = k.replace('blackhole_', '').replace('sabnzbd_', 'sab_')

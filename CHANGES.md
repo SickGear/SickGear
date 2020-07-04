@@ -78,6 +78,8 @@
 * Change add fallback to premiered year to lookup browse card show
 * Change display % after rating value only if value is numeric
 * Change add fallback to remove a premiered year to lookup browse card show
+* Replace Telegram notififier "Send icon" with "Send show image"
+* Add Telegram notifier option "Send quietly" to mute client notification sound
 
 
 ### 0.21.37 (2020-05-30 12:00:00 UTC)

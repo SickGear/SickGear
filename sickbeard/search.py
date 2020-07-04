@@ -195,7 +195,7 @@ def snatch_episode(result, end_status=SNATCHED):
                 sql_l.append(item)
 
         if cur_ep_obj.status not in Quality.DOWNLOADED:
-            notifiers.notify_snatch(cur_ep_obj._format_pattern('%SN - %Sx%0E - %EN - %QN'))
+            notifiers.notify_snatch(cur_ep_obj)
 
             update_imdb_data = update_imdb_data and cur_ep_obj.show_obj.load_imdb_info()
 

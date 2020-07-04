@@ -14,15 +14,20 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
+from __future__ import absolute_import
 
 import os
+import re
+
+from ..common import USER_AGENT
 from .generic import Notifier
-import sickbeard
 
 # noinspection PyPep8Naming
 import encodingKludge as ek
 from exceptions_helper import ex
-from lib.apprise.plugins.NotifyTelegram import NotifyTelegram
+import sickbeard
+from sickbeard.image_cache import ImageCache
+from sg_helpers import get_url
 
 
 class TelegramNotifier(Notifier):
@@ -30,22 +35,38 @@ class TelegramNotifier(Notifier):
     def __init__(self):
         super(TelegramNotifier, self).__init__()
 
-    def _notify(self, title, body, send_icon='', access_token='', chatid='', **kwargs):
+    def _notify(self, title, body, send_icon='', quiet=False, access_token='', chatid='', ep_obj=None, **kwargs):
         result = None
-        cid = ''
-        use_icon = bool(self._choose(send_icon, sickbeard.TELEGRAM_SEND_ICON))
+        use_icon = bool(self._choose(send_icon, sickbeard.TELEGRAM_SEND_IMAGE))
+        quiet = bool(self._choose(quiet, sickbeard.TELEGRAM_QUIET))
+        access_token = self._choose(access_token, sickbeard.TELEGRAM_ACCESS_TOKEN)
+        cid = self._choose(chatid, sickbeard.TELEGRAM_CHATID)
         try:
-            tg = NotifyTelegram(
-                bot_token=self._choose(access_token, sickbeard.TELEGRAM_ACCESS_TOKEN),
-                targets=self._choose(chatid, sickbeard.TELEGRAM_CHATID),
-                include_image=use_icon
-            )
-            cid = chatid or isinstance(tg.targets, list) and 1 == len(tg.targets) and tg.targets[0] or ''
+            msg = self._body_only(('' if not title else u'<b>%s</b>' % title), body)
+            msg = msg.replace(u'<b>%s</b>: ' % title, u'<b>%s:</b>\r\n' % ('SickGear ' + title, title)[use_icon])
+            # HTML spaces (&nbsp;) and tabs (&emsp;) aren't supported
+            # See https://core.telegram.org/bots/api#html-style
+            msg = re.sub('(?i)&nbsp;?', ' ', msg)
+            # Tabs become 3 spaces
+            msg = re.sub('(?i)&emsp;?', '   ', msg)
+
             if use_icon:
-                tg.icon_path = ek.ek(os.path.join, sickbeard.PROG_DIR, 'gui', 'slick',
-                                     'images', 'ico', 'apple-touch-icon-76x76.png')
-                tg.image_size = '72x72'
-            result = tg.send(body, title=title)
+                image_path = ek.ek(os.path.join, sickbeard.PROG_DIR, 'gui', 'slick', 'images', 'banner_thumb.jpg')
+                if not self._testing:
+                    show_obj = ep_obj.show_obj
+                    banner_path = ImageCache().banner_thumb_path(show_obj.tvid, show_obj.prodid)
+                    if ek.ek(os.path.isfile, banner_path):
+                        image_path = banner_path
+
+                with open(image_path, 'rb') as f:
+                    response = self.post('sendPhoto', access_token, cid, quiet,
+                                         dict(files={'photo': ('image.png', f)}, post_data=dict(caption=msg)))
+
+            else:
+                response = self.post('sendMessage', access_token, cid, quiet, dict(post_data=dict(text=msg)))
+
+            result = response and response.get('ok') or False
+
         except (BaseException, Exception) as e:
             if 'No chat_id' in ex(e):
                 result = 'a chat id is not set, and a msg has not been sent to the bot to auto detect one.'
@@ -56,6 +77,12 @@ class TelegramNotifier(Notifier):
         return dict(chatid=cid,
                     result=self._choose(('Successful test notice sent.',
                                          'Error sending notification, %s' % result)[True is not result], result))
+
+    @staticmethod
+    def post(action, access_token, cid, quiet, params):
+        params.update(dict(headers={'User-Agent': USER_AGENT}, verify=True, json=True))
+        params['post_data'].update(dict(chat_id=cid, parse_mode='HTML', disable_notification=quiet))
+        return get_url('https://api.telegram.org/bot%s/%s' % (access_token, action), **params)
 
 
 notifier = TelegramNotifier

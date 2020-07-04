@@ -1245,11 +1245,10 @@ class PostProcessor(object):
         history.log_download(ep_obj, self.file_path, new_ep_quality, self.release_group, anime_version)
 
         # send notifications
-        # noinspection PyProtectedMember
-        notifiers.notify_download(ep_obj._format_pattern('%SN - %Sx%0E - %EN - %QN'))
+        notifiers.notify_download(ep_obj)
 
         # trigger library updates
-        notifiers.notify_update_library(ep_obj=ep_obj)
+        notifiers.notify_update_library(ep_obj)
 
         # disabled due to security alert... https://github.com/clinton-hall/nzbToMedia/issues/1721
         # self._run_extra_scripts(ep_obj)

@@ -111,7 +111,7 @@ class BaseNotifier(object):
     @staticmethod
     def _body_only(title, body):
         # don't use title with updates or testing, as only one str is used
-        return body if 'SickGear' in title else '%s: %s' % (title, body.replace('#: ', '# '))
+        return body if 'SickGear' in title else u'%s: %s' % (title, body.replace('#: ', '# '))
 
 
 class Notifier(BaseNotifier):
@@ -121,14 +121,19 @@ class Notifier(BaseNotifier):
         r = self._pre_notify('test_title', notify_strings['test_body'] % (self.name + ' notifier'), *args, **kwargs)
         return (r, (('Success, notification sent.', 'Failed to send notification.')[not r]))[r in (True, False)]
 
-    def notify_snatch(self, ep_name, **kwargs):
-        self._pre_notify('snatch', ep_name, **kwargs)
+    @staticmethod
+    def pretty_name(ep_obj):
+        # noinspection PyProtectedMember
+        return ('%s%s' % (ep_obj.pretty_name(), ep_obj._format_pattern(' - %QN'))).replace(' - N-A', '')
 
-    def notify_download(self, ep_name, **kwargs):
-        self._pre_notify('download', ep_name, **kwargs)
+    def notify_snatch(self, ep_obj, **kwargs):
+        self._pre_notify('snatch', self.pretty_name(ep_obj), ep_obj=ep_obj, **kwargs)
 
-    def notify_subtitle_download(self, ep_name, lang, **kwargs):
-        self._pre_notify('subtitle_download', '%s : %s' % (ep_name, lang), **kwargs)
+    def notify_download(self, ep_obj, **kwargs):
+        self._pre_notify('download', self.pretty_name(ep_obj), ep_obj=ep_obj, **kwargs)
+
+    def notify_subtitle_download(self, ep_obj, lang, **kwargs):
+        self._pre_notify('subtitle_download', '%s : %s' % (ep_obj.pretty_name(), lang), ep_obj=ep_obj, **kwargs)
 
     def notify_git_update(self, new_version='??', **kwargs):
         self._pre_notify('git_updated', notify_strings['git_updated_text'] + new_version, **kwargs)
