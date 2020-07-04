@@ -36,7 +36,7 @@
 * Update soupsieve_py2 1.9.5 (6a38398) to 1.9.6 final (f9c96ec)
 * Update tmdbsimple 2.2.0 (ff17893) to 2.2.6 (310d933)
 * Update Tornado_py3 Web Server 6.0.3 (ff985fe) to 6.0.4 (b4e39e5)
-* Update urllib3 release 1.25.6 (4a6c288) to 1.25.8 (2a57bc5)
+* Update urllib3 release 1.25.6 (4a6c288) to 1.25.9 (a5a45dc)
 * Add Telegram notifier
 * Change enable image caching on browse pages
 * Change update sceneNameCache after scene names are updated
@@ -70,6 +70,8 @@
 * Update soupsieve_py2 1.9.5 (6a38398) to 1.9.5 final (e00a882)
 * Update Tornado_py3 Web Server 6.0.3 (ff985fe) to 6.1.dev1 (18b653c)
 * Update urllib3 release 1.25.6 (4a6c288) to 1.25.7 (37ba61a)
+* Update urllib3 release 1.25.7 (37ba61a) to 1.25.8 (2a57bc5)
+* Update urllib3 release 1.25.8 (2a57bc5) to 1.25.9 (a5a45dc)
 * Fix import in Tornado py2
 * Fix removed unneeded import
 * Change add exclude_no_data to get_url, in most cases `no_data` is not a failure
