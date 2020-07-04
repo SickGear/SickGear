@@ -16,7 +16,8 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
-from .. import helpers, logger
+from .. import logger
+import sg_helpers
 
 # noinspection PyUnreachableCode
 if False:
@@ -41,7 +42,7 @@ def getShowImage(url, img_num=None, show_name=None, supress_log=False):
 
     logger.log(u'Fetching image from ' + temp_url, logger.DEBUG)
 
-    image_data = helpers.get_url(temp_url, as_binary=True)
+    image_data = sg_helpers.get_url(temp_url, as_binary=True)
     if None is image_data:
         if supress_log:
             return

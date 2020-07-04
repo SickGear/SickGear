@@ -14,11 +14,13 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
+from __future__ import absolute_import
 
 import datetime
 
 from . import generic
-from .. import helpers, logger
+from .. import logger
+import sg_helpers
 from tvinfo_base.exceptions import *
 import sickbeard
 import exceptions_helper
@@ -192,7 +194,7 @@ class XBMC12PlusMetadata(generic.GenericMetadata):
         self.add_actor_element(show_info, etree, tv_node)
 
         # Make it purdy
-        helpers.indent_xml(tv_node)
+        sg_helpers.indent_xml(tv_node)
 
         data = etree.ElementTree(tv_node)
 
@@ -342,7 +344,7 @@ class XBMC12PlusMetadata(generic.GenericMetadata):
             self.add_actor_element(show_info, etree, episode)
 
         # Make it purdy
-        helpers.indent_xml(rootNode)
+        sg_helpers.indent_xml(rootNode)
 
         data = etree.ElementTree(rootNode)
 

@@ -6890,6 +6890,7 @@ class ConfigGeneral(Config):
         except (BaseException, Exception) as e:
             logger.log('Could not change Show Update Scheduler time: %s' % ex(e), logger.ERROR)
         sickbeard.TRASH_REMOVE_SHOW = config.checkbox_to_value(trash_remove_show)
+        sg_helpers.TRASH_REMOVE_SHOW = sickbeard.TRASH_REMOVE_SHOW
         sickbeard.TRASH_ROTATE_LOGS = config.checkbox_to_value(trash_rotate_logs)
         if not config.change_log_dir(log_dir, web_log):
             results += ['Unable to create directory ' + os.path.normpath(log_dir) + ', log directory not changed.']

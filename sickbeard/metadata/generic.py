@@ -25,7 +25,8 @@ import os.path
 import re
 
 from . import helpers as metadata_helpers
-from .. import helpers, logger
+from .. import logger
+import sg_helpers
 from ..indexers import indexer_config
 from ..indexers.indexer_config import TVINFO_TVDB
 from tvinfo_base.exceptions import *
@@ -227,7 +228,7 @@ class GenericMetadata(object):
 
     def get_episode_file_path(self, ep_obj):
         # type: (sickbeard.tv.TVEpisode) -> AnyStr
-        return helpers.replace_extension(ep_obj.location, self._ep_nfo_extension)
+        return sg_helpers.replace_extension(ep_obj.location, self._ep_nfo_extension)
 
     def get_fanart_path(self, show_obj):
         # type: (sickbeard.tv.TVShow) -> AnyStr
@@ -390,9 +391,9 @@ class GenericMetadata(object):
                 etree.SubElement(root, 'id').text = '%s' % show_prodid
 
             # Make it purdy
-            helpers.indent_xml(root)
+            sg_helpers.indent_xml(root)
 
-            helpers.write_file(nfo_file_path, show_xml, xmltree=True, utf8=True)
+            sg_helpers.write_file(nfo_file_path, show_xml, xmltree=True, utf8=True)
 
             return True
 
@@ -479,6 +480,7 @@ class GenericMetadata(object):
         ep_obj_list = [ep_obj] + ep_obj.related_ep_obj
 
         # validate show
+        from .. import helpers
         if not helpers.validate_show(ep_obj.show_obj):
             return None
 
@@ -538,7 +540,7 @@ class GenericMetadata(object):
 
         logger.log(u'Writing show metadata file: %s' % nfo_file_path, logger.DEBUG)
 
-        return helpers.write_file(nfo_file_path, data, xmltree=True, utf8=True)
+        return sg_helpers.write_file(nfo_file_path, data, xmltree=True, utf8=True)
 
     def write_ep_file(self, ep_obj):
         # type: (sickbeard.tv.TVEpisode) -> bool
@@ -567,7 +569,7 @@ class GenericMetadata(object):
 
         logger.log(u'Writing episode metadata file: %s' % nfo_file_path, logger.DEBUG)
 
-        return helpers.write_file(nfo_file_path, data, xmltree=True, utf8=True)
+        return sg_helpers.write_file(nfo_file_path, data, xmltree=True, utf8=True)
 
     def save_thumbnail(self, ep_obj):
         # type: (sickbeard.tv.TVEpisode) -> bool
@@ -806,12 +808,12 @@ class GenericMetadata(object):
             if not ek.ek(os.path.isdir, image_dir):
                 logger.log(u"Metadata dir didn't exist, creating it at " + image_dir, logger.DEBUG)
                 ek.ek(os.makedirs, image_dir)
-                helpers.chmod_as_parent(image_dir)
+                sg_helpers.chmod_as_parent(image_dir)
 
             outFile = ek.ek(open, image_path, 'wb')
             outFile.write(image_data)
             outFile.close()
-            helpers.chmod_as_parent(image_path)
+            sg_helpers.chmod_as_parent(image_path)
         except IOError as e:
             logger.log(
                 u"Unable to write image to " + image_path + " - are you sure the show folder is writable? " + ex(e),

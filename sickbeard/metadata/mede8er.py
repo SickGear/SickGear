@@ -15,11 +15,13 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
+from __future__ import absolute_import
 
 import datetime
 
 from . import mediabrowser
-from .. import helpers, logger
+from .. import logger
+import sg_helpers
 from tvinfo_base.exceptions import *
 import sickbeard
 import exceptions_helper
@@ -90,11 +92,11 @@ class Mede8erMetadata(mediabrowser.MediaBrowserMetadata):
 
     def get_episode_file_path(self, ep_obj):
         # type: (sickbeard.tv.TVEpisode) -> AnyStr
-        return helpers.replace_extension(ep_obj.location, self._ep_nfo_extension)
+        return sg_helpers.replace_extension(ep_obj.location, self._ep_nfo_extension)
 
     def get_episode_thumb_path(self, ep_obj):
         # type: (sickbeard.tv.TVEpisode) -> AnyStr
-        return helpers.replace_extension(ep_obj.location, 'jpg')
+        return sg_helpers.replace_extension(ep_obj.location, 'jpg')
 
     def _show_data(self, show_obj):
         # type: (sickbeard.tv.TVShow) -> Optional[Union[bool, etree.Element]]
@@ -206,7 +208,7 @@ class Mede8erMetadata(mediabrowser.MediaBrowserMetadata):
         cast = etree.SubElement(tv_node, 'cast')
         self.add_actor_element(show_info, etree, cast)
 
-        helpers.indent_xml(rootNode)
+        sg_helpers.indent_xml(rootNode)
 
         data = etree.ElementTree(rootNode)
 
@@ -347,7 +349,7 @@ class Mede8erMetadata(mediabrowser.MediaBrowserMetadata):
                     else:
                         Overview.text = '%s\r%s' % (Overview.text, cur_ep_obj.description)
 
-        helpers.indent_xml(rootNode)
+        sg_helpers.indent_xml(rootNode)
         data = etree.ElementTree(rootNode)
 
         return data
