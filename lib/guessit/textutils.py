@@ -58,7 +58,7 @@ def clean_string(s):
     return result
 
 
-_words_rexp = re.compile('\w+', re.UNICODE)
+_words_rexp = re.compile(r'\w+', re.UNICODE)
 
 def find_words(s):
     return _words_rexp.findall(s.replace('_', ' '))
