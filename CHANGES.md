@@ -1,4 +1,11 @@
-﻿### 0.21.37 (2020-05-30 12:00:00 UTC)
+﻿### 0.21.38 (2020-07-08 23:15:00 UTC)
+
+* Change add handling for when a dev db is based on an older production db
+* Update UnRar for Windows 5.90 to 5.91 x64
+* Fix saving Trakt notification under py3
+
+
+### 0.21.37 (2020-05-30 12:00:00 UTC)
 
 * Fix Anime cards images
 * Fix ETTV torrent provider

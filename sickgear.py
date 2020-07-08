@@ -91,7 +91,7 @@ from sickbeard.event_queue import Events
 from sickbeard.tv import TVShow
 from sickbeard.webserveInit import WebServer
 
-from six import moves, PY2
+from six import integer_types, moves, PY2
 
 throwaway = datetime.datetime.strptime('20110101', '%Y%m%d')
 rollback_loaded = None
@@ -456,6 +456,21 @@ class SickGear(object):
                 print(u'Rollback to production of [%s] successful.' % d)
                 sickbeard.classes.loading_msg.set_msg_progress(load_msg, 'Finished')
 
+            # handling of production version higher then current base of test db
+            if isinstance(base_v, integer_types) and max_v >= 100000 > cur_db_version > base_v:
+                sickbeard.classes.loading_msg.set_msg_progress(load_msg, 'Rollback')
+                print('Your [%s] database version (%s) is a db version and doesn\'t match SickGear required '
+                      'version (%s), downgrading to production base db' % (d, cur_db_version, max_v))
+                self.execute_rollback(mo, base_v, load_msg)
+                cur_db_version = db.DBConnection(d).checkDBVersion()
+                if 100000 <= cur_db_version:
+                    print(u'Rollback to production base failed.')
+                    sys.exit(u'If you have used other forks, your database may be unusable due to their changes')
+                if 100000 <= max_v and None is not base_v:
+                    max_v = base_v  # set max_v to the needed base production db for test_db
+                print(u'Rollback to production base of [%s] successful.' % d)
+                sickbeard.classes.loading_msg.set_msg_progress(load_msg, 'Finished')
+
             # handling of production db versions
             if 0 < cur_db_version < 100000:
                 if cur_db_version < min_v:
@@ -547,7 +562,7 @@ class SickGear(object):
         # # Launch browser
         # if sickbeard.LAUNCH_BROWSER and not self.no_launch:
         #     sickbeard.launch_browser(self.start_port)
-        
+
         # main loop
         while True:
             time.sleep(1)
