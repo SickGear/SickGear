@@ -1506,8 +1506,9 @@ class AddIndexerToTables(db.SchemaUpgrade):
                     self.connection.select('SELECT indexer AS tv_id, indexer_id AS prod_id FROM tv_shows')}
 
         allowtbl, blocktbl = (('allow', 'block'), ('white', 'black'))[not self.connection.hasTable('blocklist')]
-        columns = {'%slist' % allowtbl: 'show_id, range, keyword, indexer',
-                   '%slist' % blocktbl: 'show_id, range, keyword, indexer',
+        allowtbl, blocktbl = '%slist' % allowtbl, '%slist' % blocktbl
+        columns = {allowtbl: 'show_id, range, keyword, indexer',
+                   blocktbl: 'show_id, range, keyword, indexer',
                    'history': 'action, date, showid, season, episode, quality, resource, provider, version, indexer',
                    'scene_exceptions': 'exception_id , indexer_id, show_name, season, custom, indexer'}
 
