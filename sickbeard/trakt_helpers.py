@@ -5,7 +5,7 @@ import re
 import sickbeard
 from .helpers import try_int
 
-from _23 import decode_str, list_items
+from _23 import decode_bytes, decode_str, list_items
 from six import iteritems, text_type
 
 
@@ -37,7 +37,7 @@ def build_config(**kwargs):
                 continue
             for cur_dir in root_dirs:
                 account_id = try_int(account_id, None)
-                if account_id and decode_str(base64.urlsafe_b64encode(cur_dir)) == location:
+                if account_id and decode_str(base64.urlsafe_b64encode(decode_bytes(cur_dir))) == location:
                     if isinstance(config.get(account_id), list):
                         config[account_id] += [cur_dir]
                     else:
