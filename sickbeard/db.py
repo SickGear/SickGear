@@ -516,10 +516,10 @@ class SchemaUpgrade(object):
         self.connection.action('UPDATE db_version SET db_version = ? WHERE 1=1', [new_version])
         return new_version
 
-    def setDBVersion(self, new_version):
+    def setDBVersion(self, new_version, check_db_version=True):
         # noinspection SqlConstantCondition
         self.connection.action('UPDATE db_version SET db_version = ? WHERE 1=1', [new_version])
-        return new_version
+        return check_db_version and self.checkDBVersion()
 
     def listTables(self):
         tables = []
