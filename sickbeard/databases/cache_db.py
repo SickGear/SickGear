@@ -77,7 +77,7 @@ class InitialSchema(db.SchemaUpgrade):
 
     def execute(self):
         self.do_query(self.queries[next(iter(self.queries))])
-        self.setDBVersion(MIN_DB_VERSION)
+        self.setDBVersion(MIN_DB_VERSION, check_db_version=False)
 
 
 class ConsolidateProviders(InitialSchema):
@@ -130,5 +130,4 @@ class AddGenericFailureHandling(AddBacklogParts):
 
     def execute(self):
         self.do_query(self.queries['connection_fails'])
-        self.setDBVersion(100001)
-        #self.finish()
+        self.setDBVersion(100001, check_db_version=False)

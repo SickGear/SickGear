@@ -714,8 +714,7 @@ class AddProperNamingSupport(db.SchemaUpgrade):
         if not self.hasColumn('tv_shows', 'imdb_id')\
                 and self.hasColumn('tv_shows', 'rls_require_words')\
                 and self.hasColumn('tv_shows', 'rls_ignore_words'):
-            self.setDBVersion(5816)
-            return self.checkDBVersion()
+            return self.setDBVersion(5816)
 
         if not self.hasColumn('tv_episodes', 'is_proper'):
             self.upgrade_log(u'Adding column is_proper to tv_episodes')
@@ -734,8 +733,7 @@ class AddEmailSubscriptionTable(db.SchemaUpgrade):
                 and self.hasColumn('tv_shows', 'rls_require_words')\
                 and self.hasColumn('tv_shows', 'rls_ignore_words')\
                 and self.hasColumn('tv_shows', 'skip_notices'):
-            self.setDBVersion(5817)
-            return self.checkDBVersion()
+            return self.setDBVersion(5817)
 
         if not self.hasColumn('tv_shows', 'notify_list'):
             self.upgrade_log(u'Adding column notify_list to tv_shows')
@@ -750,16 +748,14 @@ class AddEmailSubscriptionTable(db.SchemaUpgrade):
 class AddProperSearch(db.SchemaUpgrade):
     def execute(self):
         if not self.hasColumn('tv_episodes', 'is_proper'):
-            self.setDBVersion(12)
-            return self.checkDBVersion()
+            return self.setDBVersion(12)
 
         if not self.hasColumn('tv_shows', 'notify_list')\
                 and self.hasColumn('tv_shows', 'rls_require_words')\
                 and self.hasColumn('tv_shows', 'rls_ignore_words')\
                 and self.hasColumn('tv_shows', 'skip_notices')\
                 and self.hasColumn('history', 'source'):
-            self.setDBVersion(5818)
-            return self.checkDBVersion()
+            return self.setDBVersion(5818)
 
         if not self.hasColumn('info', 'last_proper_search'):
             self.upgrade_log(u'Adding column last_proper_search to info')
@@ -1179,8 +1175,7 @@ class BumpDatabaseVersion(db.SchemaUpgrade):
 
         self.upgrade_log(u'Bumping database version')
 
-        self.setDBVersion(10000)
-        return self.checkDBVersion()
+        return self.setDBVersion(10000)
 
 
 # 41,42 -> 10001
@@ -1190,8 +1185,7 @@ class Migrate41(db.SchemaUpgrade):
 
         self.upgrade_log(u'Bumping database version')
 
-        self.setDBVersion(10001)
-        return self.checkDBVersion()
+        return self.setDBVersion(10001)
 
 
 # 43,44 -> 10001
@@ -1227,8 +1221,7 @@ class Migrate43(db.SchemaUpgrade):
         if not db_chg:
             self.upgrade_log(u'Bumping database version')
 
-        self.setDBVersion(10001)
-        return self.checkDBVersion()
+        return self.setDBVersion(10001)
 
 
 # 4301 -> 10002
@@ -1238,8 +1231,7 @@ class Migrate4301(db.SchemaUpgrade):
 
         self.upgrade_log(u'Bumping database version')
 
-        self.setDBVersion(10002)
-        return self.checkDBVersion()
+        return self.setDBVersion(10002)
 
 
 # 4302,4400 -> 10003
@@ -1249,8 +1241,7 @@ class Migrate4302(db.SchemaUpgrade):
 
         self.upgrade_log(u'Bumping database version')
 
-        self.setDBVersion(10003)
-        return self.checkDBVersion()
+        return self.setDBVersion(10003)
 
 
 # 5816 - 5818 -> 15
@@ -1260,8 +1251,7 @@ class MigrateUpstream(db.SchemaUpgrade):
 
         self.upgrade_log(u'Migrate SickBeard db v%s into v15' % str(self.checkDBVersion()).replace('58', ''))
 
-        self.setDBVersion(15)
-        return self.checkDBVersion()
+        return self.setDBVersion(15)
 
 
 # 10000 -> 20000
@@ -1271,8 +1261,7 @@ class SickGearDatabaseVersion(db.SchemaUpgrade):
 
         self.upgrade_log(u'Bumping database version to new SickGear standards')
 
-        self.setDBVersion(20000)
-        return self.checkDBVersion()
+        return self.setDBVersion(20000)
 
 
 # 10001 -> 10000
@@ -1283,8 +1272,7 @@ class RemoveDefaultEpStatusFromTvShows(db.SchemaUpgrade):
         self.upgrade_log(u'Dropping redundant column default_ep_status from tv_shows')
         self.dropColumn('tv_shows', 'default_ep_status')
 
-        self.setDBVersion(10000)
-        return self.checkDBVersion()
+        return self.setDBVersion(10000)
 
 
 # 10002 -> 10001
@@ -1295,8 +1283,7 @@ class RemoveMinorDBVersion(db.SchemaUpgrade):
         self.upgrade_log(u'Dropping redundant column db_minor_version from db_version')
         self.dropColumn('db_version', 'db_minor_version')
 
-        self.setDBVersion(10001)
-        return self.checkDBVersion()
+        return self.setDBVersion(10001)
 
 
 # 10003 -> 10002
@@ -1307,8 +1294,7 @@ class RemoveMetadataSub(db.SchemaUpgrade):
             db.backup_database('sickbeard.db', self.checkDBVersion())
             self.dropColumn('tv_shows', 'sub_use_sr_metadata')
 
-        self.setDBVersion(10002)
-        return self.checkDBVersion()
+        return self.setDBVersion(10002)
 
 
 # 20000 -> 20001
@@ -1321,8 +1307,7 @@ class DBIncreaseTo20001(db.SchemaUpgrade):
         self.connection.action('VACUUM')
         self.upgrade_log(u'Performed a vacuum on the database', logger.DEBUG)
 
-        self.setDBVersion(20001)
-        return self.checkDBVersion()
+        return self.setDBVersion(20001)
 
 
 # 20001 -> 20002
@@ -1333,8 +1318,7 @@ class AddTvShowOverview(db.SchemaUpgrade):
             db.backup_database('sickbeard.db', self.checkDBVersion())
             self.addColumn('tv_shows', 'overview', 'TEXT', '')
 
-        self.setDBVersion(20002)
-        return self.checkDBVersion()
+        return self.setDBVersion(20002)
 
 
 # 20002 -> 20003
@@ -1346,8 +1330,7 @@ class AddTvShowTags(db.SchemaUpgrade):
             db.backup_database('sickbeard.db', self.checkDBVersion())
             self.addColumn('tv_shows', 'tag', 'TEXT', 'Show List')
 
-        self.setDBVersion(20003)
-        return self.checkDBVersion()
+        return self.setDBVersion(20003)
 
 
 # 20003 -> 20004
@@ -1408,8 +1391,7 @@ class ChangeMapIndexer(db.SchemaUpgrade):
 
         self.connection.action('VACUUM')
 
-        self.setDBVersion(20004)
-        return self.checkDBVersion()
+        return self.setDBVersion(20004)
 
 
 # 20004 -> 20005
@@ -1424,8 +1406,7 @@ class AddShowNotFoundCounter(db.SchemaUpgrade):
                 ' fail_count NUMERIC NOT NULL DEFAULT 0, last_check NUMERIC NOT NULL, last_success NUMERIC,'
                 ' PRIMARY KEY (indexer_id, indexer))')
 
-        self.setDBVersion(20005)
-        return self.checkDBVersion()
+        return self.setDBVersion(20005)
 
 
 # 20005 -> 20006
@@ -1437,8 +1418,7 @@ class AddFlagTable(db.SchemaUpgrade):
             db.backup_database('sickbeard.db', self.checkDBVersion())
             self.connection.action('CREATE TABLE flags (flag  PRIMARY KEY  NOT NULL )')
 
-        self.setDBVersion(20006)
-        return self.checkDBVersion()
+        return self.setDBVersion(20006)
 
 
 # 20006 -> 20007
@@ -1447,8 +1427,7 @@ class DBIncreaseTo20007(db.SchemaUpgrade):
 
         self.upgrade_log(u'Bumping database version')
 
-        self.setDBVersion(20007)
-        return self.checkDBVersion()
+        return self.setDBVersion(20007)
 
 
 # 20007 -> 20008
@@ -1457,8 +1436,7 @@ class AddWebdlTypesTable(db.SchemaUpgrade):
         db.backup_database('sickbeard.db', self.checkDBVersion())
         self.connection.action('CREATE TABLE webdl_types (dname TEXT NOT NULL , regex TEXT NOT NULL )')
 
-        self.setDBVersion(20008)
-        return self.checkDBVersion()
+        return self.setDBVersion(20008)
 
 
 # 20008 -> 20009
@@ -1479,8 +1457,7 @@ class AddWatched(db.SchemaUpgrade):
                 ' status NUMERIC, location TEXT, file_size NUMERIC, hide INT default 0 not null)'
                 )
 
-        self.setDBVersion(20009)
-        return self.checkDBVersion()
+        return self.setDBVersion(20009)
 
 
 # 20009 -> 20010
@@ -1493,8 +1470,7 @@ class AddPrune(db.SchemaUpgrade):
             db.backup_database('sickbeard.db', self.checkDBVersion())
             self.addColumn('tv_shows', 'prune', 'INT', 0)
 
-        self.setDBVersion(20010)
-        return self.checkDBVersion()
+        return self.setDBVersion(20010)
 
 
 # 20010 -> 20011
@@ -1643,8 +1619,7 @@ class AddIndexerToTables(db.SchemaUpgrade):
 
         self.connection.action('VACUUM')
 
-        self.setDBVersion(20011)
-        return self.checkDBVersion()
+        return self.setDBVersion(20011)
 
 
 # 20011 -> 20012
@@ -1671,8 +1646,7 @@ class AddShowExludeGlobals(db.SchemaUpgrade):
                                          ['DROP TABLE tv_shows_exclude_backup']
                                          ])
 
-        self.setDBVersion(20012)
-        return self.checkDBVersion()
+        return self.setDBVersion(20012)
 
 
 # 20012 -> 20013
@@ -1693,5 +1667,4 @@ class RenameAllowBlockListTables(db.SchemaUpgrade):
                     ['DROP TABLE tmp_%slist' % new]
                 ])
 
-            self.setDBVersion(20013)
-        return self.checkDBVersion()
+        return self.setDBVersion(20013)
