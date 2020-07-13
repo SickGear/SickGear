@@ -49,6 +49,7 @@
 * Change anime "Available groups" to display "No groups listed..." when API is fine with no results instead of blank
 * Change improve clarity of anime group lists by using terms Allow list and Block list
 * Change add alternative locations for git.exe on Windows with a log warning
+* Add link to the wiki setup guide for NZBGet and SABnzbd at Search Settings/"NZB Results"
 
 
 [develop changelog]
