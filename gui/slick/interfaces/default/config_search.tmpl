@@ -290,6 +290,11 @@
 
 						<div id="sabnzbd-settings">
 							<div class="field-pair">
+								<span class="component-desc" style="margin:0;width:100%">
+									<div class="clear-left"><p><span class="grey-text"><span class="red-text">Important!</span> To set up SABnzbd to comminucate with SickGear, follow the guide <a href="https://github.com/SickGear/SickGear/wiki/Install-SickGear-%5B80%5D-Extras">here</a></span></p></div>
+								</span>
+							</div>
+							<div class="field-pair">
 								<label>
 									<span class="component-title">SABnzbd server URL</span>
 									<span class="component-desc">
@@ -341,13 +346,16 @@
 						</div>
 
 						<div id="nzbget-settings">
-#if $sickbeard.NZBGET_SKIP_PM
 							<div class="field-pair">
+								<span class="component-desc" style="margin:0;width:100%">
+									<div class="clear-left"><p><span class="grey-text"><span class="red-text">Important!</span> To set up NZBGet to comminucate with SickGear, follow the guide <a href="https://github.com/SickGear/SickGear/wiki/Install-SickGear-%5B80%5D-Extras">here</a></span></p></div>
+								</span>
+#if not $sickbeard.NZBGET_SKIP_PM
 								<span class="component-desc" style="margin:0;width:100%">
 									<div class="clear-left"><p><span class="grey-text"><span class="red-text">Important!</span> NZBGet script calls will not process media. Set</span> nzbget_skip_process_media = 0 <span class="grey-text">in <code>config.ini</code> for full process</span></p></div>
 								</span>
-							</div>
 #end if
+							</div>
 							<div class="field-pair">
 								<label for="nzbget_use_https">
 									<span class="component-title">Connect using HTTPS</span>
