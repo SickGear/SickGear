@@ -94,6 +94,11 @@
 * Change db migration patterns to always increase db version regardless of function logic outcome
 
 
+### 0.21.39 (2020-07-14 01:15:00 UTC)
+
+* Change allow Python 3.8.4
+
+
 ### 0.21.38 (2020-07-08 23:15:00 UTC)
 
 * Change add handling for when a dev db is based on an older production db
