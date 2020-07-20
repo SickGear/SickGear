@@ -130,7 +130,7 @@ class AniGroupList(object):
     def is_valid(self, result):
         # type: (NZBSearchResult or NZBDataSearchResult or TorrentSearchResult) -> bool
         """
-        Test if release group parsed from result is in white list and not in black list
+        Test if release group parsed from result is in allow list and not in block list
 
         :param result: Search result
         :return: True or False
@@ -142,9 +142,11 @@ class AniGroupList(object):
         allowed = result.release_group.lower() in [x.lower() for x in self.allowlist] or not self.allowlist
         blocked = result.release_group.lower() in [x.lower() for x in self.blocklist]
 
-        logger.log('Allow list valid: %s. Block list valid: %s' % (allowed, blocked), logger.DEBUG)
+        logger.log('Result %sallowed%s in block list. Parsed group name: "%s" from result "%s"' %
+                   (('not ', '')[allowed], (' and not', ', but')[not blocked], result.release_group, result.name),
+                   logger.DEBUG)
 
-        return allowed and blocked
+        return allowed and not blocked
 
 
 def short_group_names(groups):

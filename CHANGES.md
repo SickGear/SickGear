@@ -92,6 +92,7 @@
 * Add Telegram notifier option "Send quietly" to mute client notification sound
 * Fix AddIndexerToTables function used for tests
 * Change db migration patterns to always increase db version regardless of function logic outcome
+* Change improve log clarity of anime group validation and fix its validation
 
 
 ### 0.21.39 (2020-07-14 01:15:00 UTC)
