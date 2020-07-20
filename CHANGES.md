@@ -95,6 +95,11 @@
 * Change improve log clarity of anime group validation and fix its validation
 
 
+### 0.21.40 (2020-07-20 22:00:00 UTC)
+
+* Change allow Python 3.8.5
+
+
 ### 0.21.39 (2020-07-14 01:15:00 UTC)
 
 * Change allow Python 3.8.4
