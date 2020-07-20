@@ -143,7 +143,7 @@ class AniGroupList(object):
         blocked = result.release_group.lower() in [x.lower() for x in self.blocklist]
 
         logger.log('Result %sallowed%s in block list. Parsed group name: "%s" from result "%s"' %
-                   (('not ', '')[allowed], (' and not', ', but')[not blocked], result.release_group, result.name),
+                   (('not ', '')[allowed], (', but', ' and not')[not blocked], result.release_group, result.name),
                    logger.DEBUG)
 
         return allowed and not blocked
