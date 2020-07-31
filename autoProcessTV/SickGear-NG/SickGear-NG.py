@@ -51,7 +51,7 @@
 
 # Send "Process Media" requests to SickGear
 #
-# Process Media extension version: 2.5.
+# Process Media extension version: 2.6.
 # <!--
 # For more info and updates please visit forum topic at
 # -->
@@ -573,7 +573,7 @@ def call_nzbget_direct(url_command):
     except requests.RequestException:
         return ''
 
-    return response.content if response.ok else ''
+    return response.text if response.ok else ''
 
 
 # noinspection DuplicatedCode
