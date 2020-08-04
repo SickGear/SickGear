@@ -2516,6 +2516,7 @@ class CMD_SickGearSearchIndexers(ApiCall):
             raise ApiError('Mix of -1 (all Indexer) and specific Indexer not allowed')
 
         all_indexer = 1 == len(self.indexers) and -1 == self.indexers[0]
+        lang_id = self.valid_languages['en']
 
         if self.name and not self.prodid:  # only name was given
             results = []
@@ -2554,12 +2555,11 @@ class CMD_SickGearSearchIndexers(ApiCall):
 
             results = sorted(results, key=lambda x: x['relevance'], reverse=True)
 
-            return _responds(RESULT_SUCCESS, {"results": results, "langid": 'en'})
+            return _responds(RESULT_SUCCESS, {"results": results, "langid": lang_id, "lang": 'en'})
 
         elif self.prodid and not all_indexer and 1 == len(self.indexers):
             tvinfo_config = sickbeard.TVInfoAPI(self.indexers[0]).api_params.copy()
 
-            lang_id = 'en'
             tvinfo_config['language'] = 'en'
             tvinfo_config['custom_ui'] = classes.AllShowInfosNoFilterListUI
 
@@ -2572,7 +2572,7 @@ class CMD_SickGearSearchIndexers(ApiCall):
             except Exception as e:
                 if check_exception_type(e, ExceptionTuples.tvinfo_shownotfound, ExceptionTuples.tvinfo_error):
                     self.log(u"Unable to find show with id " + str(self.prodid), logger.WARNING)
-                    return _responds(RESULT_SUCCESS, {"results": [], "langid": lang_id})
+                    return _responds(RESULT_SUCCESS, {"results": [], "langid": lang_id, "lang": 'en'})
                 else:
                     raise e
 
@@ -2596,7 +2596,7 @@ class CMD_SickGearSearchIndexers(ApiCall):
                 showOut[0]["tvdbid"] = None
 
             showOut = sorted(showOut, key=lambda x: x['relevance'], reverse=True)
-            return _responds(RESULT_SUCCESS, {"results": showOut, "langid": lang_id})
+            return _responds(RESULT_SUCCESS, {"results": showOut, "langid": lang_id, "lang": 'en'})
         else:
             return _responds(RESULT_FAILURE, msg="Either indexer + indexerid or name is required")
 
