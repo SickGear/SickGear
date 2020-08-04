@@ -2587,7 +2587,7 @@ class CMD_SickGearSearchIndexers(ApiCall):
                 show_info = t[int(self.prodid), False]
             except BaseTVinfoError as e:
                 self.log(u"Unable to find show with id " + str(self.prodid), logger.WARNING)
-                return _responds(RESULT_SUCCESS, {"results": [], "langid": lang_id})
+                return _responds(RESULT_SUCCESS, {"results": [], "langid": lang_id, "lang": 'en'})
 
             if not show_info.data['seriesname']:
                 self.log(
