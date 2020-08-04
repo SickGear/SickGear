@@ -1,4 +1,9 @@
-﻿### 0.21.41 (2020-07-31 09:25:00 UTC)
+﻿### 0.21.42 (2020-08-04 15:45:00 UTC)
+
+* Fix SickBeard search API compatibility issue
+
+
+### 0.21.41 (2020-07-31 09:25:00 UTC)
 
 * Update NZBGet extension 2.5 to 2.6
 
