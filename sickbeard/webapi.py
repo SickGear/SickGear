@@ -129,7 +129,7 @@ class PythonObjectEncoder(json.JSONEncoder):
 
 class Api(webserve.BaseHandler):
     """ api class that returns json results """
-    version = 11  # use an int since float-point is unpredictable
+    version = 12  # use an int since float-point is unpredictable
     intent = 4
 
     def check_xsrf_cookie(self):
@@ -841,12 +841,12 @@ class CMD_ListCommands(ApiCall):
         ApiCall.__init__(self, handler, args, kwargs)
 
     def run(self):
-        """ display help information for all commands """
+        """ get help information for all commands """
         out = ''
         table_sickgear_commands = ''
         table_sickbeard_commands = ''
         for f, v in sorted(iteritems(_functionMaper), key=lambda x: (re.sub(r'^s[bg]\.', '', x[0], flags=re.I),
-                                                                      re.sub(r'^sg\.', '1', x[0], flags=re.I))):
+                                                                     re.sub(r'^sg\.', '1', x[0], flags=re.I))):
             if 'listcommands' == f:
                 continue
             help = getattr(v, '_help', None)
@@ -924,7 +924,7 @@ class CMD_ListCommands(ApiCall):
 
 
 class CMD_Help(ApiCall):
-    _help = {"desc": "display help information for a given subject/command",
+    _help = {"desc": "get help information for a given subject/command",
              "optionalParameters": {"subject": {"desc": "command - the top level command"}}}
 
     def __init__(self, handler, args, kwargs):
@@ -935,7 +935,7 @@ class CMD_Help(ApiCall):
         ApiCall.__init__(self, handler, args, kwargs)
 
     def run(self):
-        """ display help information for a given subject/command """
+        """ get help information for a given subject/command """
         if self.subject in _functionMaper:
             out = _responds(RESULT_SUCCESS, _functionMaper.get(self.subject)(None, (), {"help": 1}).run())
         else:
@@ -944,11 +944,11 @@ class CMD_Help(ApiCall):
 
 
 class CMD_SickGearComingEpisodes(ApiCall):
-    _help = {"desc": "display the coming episodes",
-             "optionalParameters": 
+    _help = {"desc": "get the daily schedule",
+             "optionalParameters":
                  {"sort": {"desc": "change the sort order"},
-                  "type": {"desc": "one or more of allowedValues separated by |"},
-                  "paused": {"desc": "0 to exclude paused shows, 1 to include them, or omitted to use the SB default"},
+                  "type": {"desc": "one or more of allowed values separated by |"},
+                  "paused": {"desc": "0 to exclude paused shows, 1 to include them, or omitted to use the SG default"},
                   }
              }
 
@@ -964,7 +964,7 @@ class CMD_SickGearComingEpisodes(ApiCall):
         ApiCall.__init__(self, handler, args, kwargs)
 
     def run(self):
-        """ display the coming episodes """
+        """ get the daily schedule """
         today_dt = datetime.date.today()
         today = today_dt.toordinal()
         yesterday_dt = today_dt - datetime.timedelta(days=1)
@@ -1120,11 +1120,11 @@ class CMD_SickGearComingEpisodes(ApiCall):
 
 
 class CMD_ComingEpisodes(CMD_SickGearComingEpisodes):
-    _help = {"desc": "display the coming episodes",
-             "optionalParameters": 
+    _help = {"desc": "get the daily schedule",
+             "optionalParameters":
                  {"sort": {"desc": "change the sort order"},
-                  "type": {"desc": "one or more of allowedValues separated by |"},
-                  "paused": {"desc": "0 to exclude paused shows, 1 to include them, or omitted to use the SB default"}
+                  "type": {"desc": "one or more of allowed values separated by |"},
+                  "paused": {"desc": "0 to exclude paused shows, 1 to include them, or omitted to use the SG default"}
                   },
              "SickGearCommand": "sg.future"}
 
@@ -1137,7 +1137,7 @@ class CMD_ComingEpisodes(CMD_SickGearComingEpisodes):
 
 
 class CMD_SickGearEpisode(ApiCall):
-    _help = {"desc": "display detailed info about an episode",
+    _help = {"desc": "get episode information",
              "requiredParameters": {"indexer": {"desc": "indexer of a show"},
                                     "indexerid": {"desc": "unique id of a show"},
                                     "season": {"desc": "the season number"},
@@ -1160,7 +1160,7 @@ class CMD_SickGearEpisode(ApiCall):
         ApiCall.__init__(self, handler, args, kwargs)
 
     def run(self):
-        """ display detailed info about an episode """
+        """ get episode information """
         show_obj = helpers.find_show_by_id({self.tvid: self.prodid})
         if not show_obj:
             return _responds(RESULT_FAILURE, msg="Show not found")
@@ -1205,7 +1205,7 @@ class CMD_SickGearEpisode(ApiCall):
 
 
 class CMD_Episode(CMD_SickGearEpisode):
-    _help = {"desc": "display detailed info about an episode",
+    _help = {"desc": "get detailed episode info",
              "requiredParameters": {"indexerid": {"desc": "unique id of a show"},
                                     "season": {"desc": "the season number"},
                                     "episode": {"desc": "the episode number"}
@@ -1279,7 +1279,7 @@ class CMD_EpisodeSearch(CMD_SickGearEpisodeSearch):
                                     "season": {"desc": "the season number"},
                                     "episode": {"desc": "the episode number"}
                                     },
-             "SickGearCommand": "episode.search",
+             "SickGearCommand": "sg.episode.search",
              }
 
     def __init__(self, handler, args, kwargs):
@@ -1292,7 +1292,7 @@ class CMD_EpisodeSearch(CMD_SickGearEpisodeSearch):
 
 
 class CMD_SickGearEpisodeSetStatus(ApiCall):
-    _help = {"desc": "set status of an episode or season (when no ep is provided)",
+    _help = {"desc": "set status of an episode (or season if episode is not provided)",
              "requiredParameters": {
                  "indexer": {"desc": "indexer of a show"},
                  "indexerid": {"desc": "unique id of a show"},
@@ -1516,7 +1516,7 @@ class CMD_SubtitleSearch(ApiCall):
 
 
 class CMD_SickGearExceptions(ApiCall):
-    _help = {"desc": "display scene exceptions for all or a given show",
+    _help = {"desc": "get scene exceptions for all or a given show",
              "optionalParameters": {"indexerid": {"desc": "unique id of a show"},
                                     "indexer": {"desc": "indexer of a show"},
                                     }
@@ -1532,7 +1532,7 @@ class CMD_SickGearExceptions(ApiCall):
         ApiCall.__init__(self, handler, args, kwargs)
 
     def run(self):
-        """ display scene exceptions for all or a given show """
+        """ get scene exceptions for all or a given show """
         my_db = db.DBConnection(row_type="dict")
 
         if None is self.prodid:
@@ -1568,7 +1568,7 @@ class CMD_SickGearExceptions(ApiCall):
 
 
 class CMD_Exceptions(CMD_SickGearExceptions):
-    _help = {"desc": "display scene exceptions for all or a given show",
+    _help = {"desc": "get scene exceptions for all or a given show",
              "optionalParameters": {"indexerid": {"desc": "thetvdb.com id of a show"},
                                     },
              "SickGearCommand": "sg.exceptions",
@@ -1653,7 +1653,7 @@ class CMD_SetExceptions(ApiCall):
 
 
 class CMD_SickGearHistory(ApiCall):
-    _help = {"desc": "display sickgear downloaded/snatched history",
+    _help = {"desc": "get the sickgear downloaded/snatched history",
              "optionalParameters": {"limit": {"desc": "limit returned results"},
                                     "type": {"desc": "only show a specific type of results"},
                                     }
@@ -1668,7 +1668,7 @@ class CMD_SickGearHistory(ApiCall):
         ApiCall.__init__(self, handler, args, kwargs)
 
     def run(self):
-        """ display sickgear downloaded/snatched history """
+        """ get the sickgear downloaded/snatched history """
 
         # typeCodes = []
         if "downloaded" == self.type:
@@ -1718,7 +1718,7 @@ class CMD_SickGearHistory(ApiCall):
 
 
 class CMD_History(CMD_SickGearHistory):
-    _help = {"desc": "display sickgear downloaded/snatched history",
+    _help = {"desc": "get the sickgear downloaded/snatched history",
              "optionalParameters": {"limit": {"desc": "limit returned results"},
                                     "type": {"desc": "only show a specific type of results"},
                                     },
@@ -1734,7 +1734,7 @@ class CMD_History(CMD_SickGearHistory):
 
 
 class CMD_SickGearHistoryClear(ApiCall):
-    _help = {"desc": "clear sickgear's history"}
+    _help = {"desc": "clear the sickgear history"}
 
     def __init__(self, handler, args, kwargs):
         # required
@@ -1743,7 +1743,7 @@ class CMD_SickGearHistoryClear(ApiCall):
         ApiCall.__init__(self, handler, args, kwargs)
 
     def run(self):
-        """ clear sickgear's history """
+        """ clear the sickgear history """
         my_db = db.DBConnection()
         my_db.action("DELETE FROM history WHERE 1=1")
 
@@ -1751,7 +1751,7 @@ class CMD_SickGearHistoryClear(ApiCall):
 
 
 class CMD_HistoryClear(CMD_SickGearHistoryClear):
-    _help = {"desc": "clear sickgear's history",
+    _help = {"desc": "clear the sickgear history",
              "SickGearCommand": "sg.history.clear"}
 
     def __init__(self, handler, args, kwargs):
@@ -1763,7 +1763,7 @@ class CMD_HistoryClear(CMD_SickGearHistoryClear):
 
 
 class CMD_SickGearHistoryTrim(ApiCall):
-    _help = {"desc": "trim sickgear's history by removing entries greater than 30 days old"}
+    _help = {"desc": "trim the sickgear history by removing entries greater than 30 days old"}
 
     def __init__(self, handler, args, kwargs):
         # required
@@ -1772,7 +1772,7 @@ class CMD_SickGearHistoryTrim(ApiCall):
         ApiCall.__init__(self, handler, args, kwargs)
 
     def run(self):
-        """ trim sickgear's history """
+        """ trim the sickgear history """
         my_db = db.DBConnection()
         my_db.action("DELETE FROM history WHERE date < " + str(
             (datetime.datetime.now() - datetime.timedelta(days=30)).strftime(history.dateFormat)))
@@ -1781,7 +1781,7 @@ class CMD_SickGearHistoryTrim(ApiCall):
 
 
 class CMD_HistoryTrim(CMD_SickGearHistoryTrim):
-    _help = {"desc": "trim sickgear's history by removing entries greater than 30 days old",
+    _help = {"desc": "trim the sickgear history by removing entries greater than 30 days old",
              "SickGearCommand": "sg.history.trim"}
 
     def __init__(self, handler, args, kwargs):
@@ -1793,10 +1793,10 @@ class CMD_HistoryTrim(CMD_SickGearHistoryTrim):
 
 
 class CMD_SickGearLogs(ApiCall):
-    _help = {"desc": "view sickgear's log",
+    _help = {"desc": "get log file entries",
              "optionalParameters": {"min_level ": {
-                 "desc": "the minimum level classification of log entries to show,"
-                         " with each level inherting its above level"}}
+                 "desc": "the minimum level classification of log entries to return,"
+                         " with each level inheriting log entries from the level above"}}
              }
 
     def __init__(self, handler, args, kwargs):
@@ -1808,7 +1808,7 @@ class CMD_SickGearLogs(ApiCall):
         ApiCall.__init__(self, handler, args, kwargs)
 
     def run(self):
-        """ view sickgear's log """
+        """ get log file entries """
         # 10 = Debug / 20 = Info / 30 = Warning / 40 = Error
         min_level = logger.reverseNames[str(self.min_level).upper()]
         max_lines = 50
@@ -1869,10 +1869,10 @@ class CMD_SickGearLogs(ApiCall):
 
 
 class CMD_Logs(CMD_SickGearLogs):
-    _help = {"desc": "view sickgear's log",
+    _help = {"desc": "get log file entries",
              "optionalParameters": {"min_level ": {
-                 "desc": "the minimum level classification of log entries to show,"
-                         " with each level inherting its above level"}},
+                 "desc": "the minimum level classification of log entries to return,"
+                         " with each level inheriting log entries from the level above"}},
              "SickGearCommand": "sg.logs",
              }
 
@@ -1885,13 +1885,14 @@ class CMD_Logs(CMD_SickGearLogs):
 
 
 class CMD_SickGearPostProcess(ApiCall):
-    _help = {"desc": "Manual postprocess TV Download Dir",
-             "optionalParameters": {"path": {"desc": "Post process this folder"},
-                                    "force_replace": {"desc": "Force already Post Processed Dir/Files"},
-                                    "return_data": {"desc": "Returns result for the process"},
-                                    "process_method": {"desc": "Symlink, hardlink, move or copy the file"},
-                                    "is_priority": {"desc": "Replace the file even if it exists in a higher quality)"},
-                                    "type": {"desc": "What type of postprocess request is this, auto of manual"}
+    _help = {"desc": "process completed media files to a show location",
+             "optionalParameters": {"path": {"desc": "Path to process"},
+                                    "force_replace": {"desc": "Force already processed dir/files"},
+                                    "return_data": {"desc": "Return results for the process"},
+                                    "process_method": {"desc": "Symlink, hardlink, move, or copy file(s)"},
+                                    "is_priority": {"desc": "Replace file(s) even if existing at a higher quality"},
+                                    "type": {"desc": "Type of media process request this is, auto or manual"},
+                                    "failed": {"desc": "Mark as failed download"},
                                     }
              }
 
@@ -1905,6 +1906,7 @@ class CMD_SickGearPostProcess(ApiCall):
             "copy", "symlink", "hardlink", "move"])
         self.is_priority, args = self.check_params(args, kwargs, "is_priority", 0, False, "bool", [])
         self.type, args = self.check_params(args, kwargs, "type", "auto", None, "string", ["auto", "manual"])
+        self.failed, args = self.check_params(args, kwargs, "failed", 0, False, "bool", [])
         # super, missing, help
         ApiCall.__init__(self, handler, args, kwargs)
 
@@ -1920,7 +1922,7 @@ class CMD_SickGearPostProcess(ApiCall):
             self.type = 'manual'
 
         data = processTV.processDir(self.path, process_method=self.process_method, force=self.force_replace,
-                                    force_replace=self.is_priority, failed=False, pp_type=self.type)
+                                    force_replace=self.is_priority, failed=self.failed, pp_type=self.type)
 
         if not self.return_data:
             data = ""
@@ -1929,13 +1931,13 @@ class CMD_SickGearPostProcess(ApiCall):
 
 
 class CMD_PostProcess(CMD_SickGearPostProcess):
-    _help = {"desc": "Manual postprocess TV Download Dir",
-             "optionalParameters": {"path": {"desc": "Post process this folder"},
-                                    "force_replace": {"desc": "Force already Post Processed Dir/Files"},
-                                    "return_data": {"desc": "Returns result for the process"},
-                                    "process_method": {"desc": "Symlink, hardlink, move or copy the file"},
-                                    "is_priority": {"desc": "Replace the file even if it exists in a higher quality)"},
-                                    "type": {"desc": "What type of postprocess request is this, auto of manual"}
+    _help = {"desc": "process completed media files to a show location",
+             "optionalParameters": {"path": {"desc": "Path to process"},
+                                    "force_replace": {"desc": "Force already processed dir/files"},
+                                    "return_data": {"desc": "Return results for the process"},
+                                    "process_method": {"desc": "Symlink, hardlink, move, or copy file(s)"},
+                                    "is_priority": {"desc": "Replace file(s) even if existing at a higher quality"},
+                                    "type": {"desc": "Type of media process request this is, auto or manual"}
                                     },
              "SickGearCommand": "sg.postprocess",
              }
@@ -1945,11 +1947,12 @@ class CMD_PostProcess(CMD_SickGearPostProcess):
         # optional
         # super, missing, help
         self.sickbeard_call = True
+        kwargs['failed'] = "0"
         CMD_SickGearPostProcess.__init__(self, handler, args, kwargs)
 
 
 class CMD_SickGear(ApiCall):
-    _help = {"desc": "display misc sickgear related information"}
+    _help = {"desc": "get API information"}
 
     def __init__(self, handler, args, kwargs):
         # required
@@ -1958,14 +1961,14 @@ class CMD_SickGear(ApiCall):
         ApiCall.__init__(self, handler, args, kwargs)
 
     def run(self):
-        """ display misc sickgear related information """
+        """ get API information """
         data = {"sb_version": sickbeard.BRANCH, "api_version": Api.version, "fork": "SickGear",
                 "api_commands": sorted([x for x in _functionMaper if 'listcommands' != x])}
         return _responds(RESULT_SUCCESS, data)
 
 
 class CMD_SickBeard(CMD_SickGear):
-    _help = {"desc": "display misc sickgear related information",
+    _help = {"desc": "get API information",
              "SickGearCommand": "sg", }
 
     def __init__(self, handler, args, kwargs):
@@ -1977,7 +1980,7 @@ class CMD_SickBeard(CMD_SickGear):
 
 
 class CMD_SickGearAddRootDir(ApiCall):
-    _help = {"desc": "add a sickgear user's parent directory",
+    _help = {"desc": "add a user configured parent directory",
              "requiredParameters": {"location": {"desc": "the full path to root (parent) directory"}
                                     },
              "optionalParameters": {"default": {"desc": "make the location passed the default root (parent) directory"}
@@ -1993,7 +1996,7 @@ class CMD_SickGearAddRootDir(ApiCall):
         ApiCall.__init__(self, handler, args, kwargs)
 
     def run(self):
-        """ add a parent directory to sickgear's config """
+        """ add a user configured parent directory """
 
         self.location = unquote_plus(self.location)
         location_matched = 0
@@ -2035,7 +2038,7 @@ class CMD_SickGearAddRootDir(ApiCall):
 
 
 class CMD_SickBeardAddRootDir(CMD_SickGearAddRootDir):
-    _help = {"desc": "add a sickgear user's parent directory",
+    _help = {"desc": "add a user configured parent directory ",
              "requiredParameters": {"location": {"desc": "the full path to root (parent) directory"}
                                     },
              "optionalParameters": {"default": {"desc": "make the location passed the default root (parent) directory"}
@@ -2052,7 +2055,7 @@ class CMD_SickBeardAddRootDir(CMD_SickGearAddRootDir):
 
 
 class CMD_SickGearCheckScheduler(ApiCall):
-    _help = {"desc": "query the scheduler"}
+    _help = {"desc": "query the scheduler for event statuses, upcoming, running, and past"}
 
     def __init__(self, handler, args, kwargs):
         # required
@@ -2061,7 +2064,7 @@ class CMD_SickGearCheckScheduler(ApiCall):
         ApiCall.__init__(self, handler, args, kwargs)
 
     def run(self):
-        """ query the scheduler """
+        """ query the scheduler for event statuses, upcoming, running, and past """
         my_db = db.DBConnection()
         sql_result = my_db.select("SELECT last_backlog FROM info")
 
@@ -2076,7 +2079,7 @@ class CMD_SickGearCheckScheduler(ApiCall):
 
 
 class CMD_SickBeardCheckScheduler(CMD_SickGearCheckScheduler):
-    _help = {"desc": "query the scheduler",
+    _help = {"desc": "query the scheduler for event statuses, upcoming, running, and past",
              "SickGearCommand": "sg.checkscheduler"}
 
     def __init__(self, handler, args, kwargs):
@@ -2088,7 +2091,7 @@ class CMD_SickBeardCheckScheduler(CMD_SickGearCheckScheduler):
 
 
 class CMD_SickGearDeleteRootDir(ApiCall):
-    _help = {"desc": "delete a sickgear user's parent directory",
+    _help = {"desc": "delete a user configured parent directory",
              "requiredParameters": {"location": {"desc": "the full path to root (parent) directory"}}
              }
 
@@ -2100,7 +2103,7 @@ class CMD_SickGearDeleteRootDir(ApiCall):
         ApiCall.__init__(self, handler, args, kwargs)
 
     def run(self):
-        """ delete a parent directory from sickgear's config """
+        """ delete a user configured parent directory """
         if sickbeard.ROOT_DIRS == "":
             return _responds(RESULT_FAILURE, _getRootDirs(), msg="No root directories detected")
 
@@ -2134,7 +2137,7 @@ class CMD_SickGearDeleteRootDir(ApiCall):
 
 
 class CMD_SickBeardDeleteRootDir(CMD_SickGearDeleteRootDir):
-    _help = {"desc": "delete a sickgear user's parent directory",
+    _help = {"desc": "delete a user configured parent directory",
              "requiredParameters": {"location": {"desc": "the full path to root (parent) directory"}},
              "SickGearCommand": "sg.deleterootdir"
              }
@@ -2148,7 +2151,7 @@ class CMD_SickBeardDeleteRootDir(CMD_SickGearDeleteRootDir):
 
 
 class CMD_SickGearForceSearch(ApiCall):
-    _help = {'desc': 'force the given search type searches',
+    _help = {'desc': 'force the specified search type to run',
              "requiredParameters": {"searchtype": {"desc": "type of search to be forced: recent, backlog, proper"}}
              }
 
@@ -2161,7 +2164,7 @@ class CMD_SickGearForceSearch(ApiCall):
         ApiCall.__init__(self, handler, args, kwargs)
 
     def run(self):
-        """ force the given search type search """
+        """ force the specified search type to run """
         result = None
         if 'recent' == self.searchtype and not sickbeard.searchQueueScheduler.action.is_recentsearch_in_progress() \
                 and not sickbeard.recentSearchScheduler.action.amActive:
@@ -2180,7 +2183,7 @@ class CMD_SickGearForceSearch(ApiCall):
 
 
 class CMD_SickBeardForceSearch(CMD_SickGearForceSearch):
-    _help = {'desc': 'force the episode recent search early',
+    _help = {'desc': 'force the episode recent search',
              "SickGearCommand": "sg.forcesearch", }
 
     def __init__(self, handler, args, kwargs):
@@ -2193,7 +2196,7 @@ class CMD_SickBeardForceSearch(CMD_SickGearForceSearch):
 
 
 class CMD_SickGearSearchQueue(ApiCall):
-    _help = {'desc': 'list sickgear\'s search queue'}
+    _help = {'desc': 'get a list of the sickgear search queue states'}
 
     def __init__(self, handler, args, kwargs):
         # required
@@ -2202,12 +2205,12 @@ class CMD_SickGearSearchQueue(ApiCall):
         ApiCall.__init__(self, handler, args, kwargs)
 
     def run(self):
-        """ list sickgear's search queue """
+        """ get a list of the sickgear search queue states """
         return _responds(RESULT_SUCCESS, sickbeard.searchQueueScheduler.action.queue_length())
 
 
 class CMD_SickGearGetDefaults(ApiCall):
-    _help = {"desc": "get sickgear user defaults"}
+    _help = {"desc": "get various sickgear default system values"}
 
     def __init__(self, handler, args, kwargs):
         # required
@@ -2216,7 +2219,7 @@ class CMD_SickGearGetDefaults(ApiCall):
         ApiCall.__init__(self, handler, args, kwargs)
 
     def run(self):
-        """ get sickgear user defaults """
+        """ get various sickgear default system values """
 
         anyQualities, bestQualities = _mapQuality(sickbeard.QUALITY_DEFAULT)
 
@@ -2227,7 +2230,7 @@ class CMD_SickGearGetDefaults(ApiCall):
 
 
 class CMD_SickBeardGetDefaults(CMD_SickGearGetDefaults):
-    _help = {"desc": "get sickgear user defaults",
+    _help = {"desc": "get various sickgear default system values",
              "SickGearCommand": "sg.getdefaults"}
 
     def __init__(self, handler, args, kwargs):
@@ -2239,7 +2242,7 @@ class CMD_SickBeardGetDefaults(CMD_SickGearGetDefaults):
 
 
 class CMD_SickGearGetMessages(ApiCall):
-    _help = {"desc": "get all messages"}
+    _help = {"desc": "get list of ui notifications"}
 
     def __init__(self, handler, args, kwargs):
         # required
@@ -2257,7 +2260,7 @@ class CMD_SickGearGetMessages(ApiCall):
 
 
 class CMD_SickBeardGetMessages(CMD_SickGearGetMessages):
-    _help = {"desc": "get all messages",
+    _help = {"desc": "get list of ui notifications",
              "SickGearCommand": "sg.getmessages"}
 
     def __init__(self, handler, args, kwargs):
@@ -2269,7 +2272,7 @@ class CMD_SickBeardGetMessages(CMD_SickGearGetMessages):
 
 
 class CMD_SickGearGetQualities(ApiCall):
-    _help = {"desc": "get all qualities"}
+    _help = {"desc": "get globally available qualities"}
 
     def __init__(self, handler, args, kwargs):
         # required
@@ -2282,8 +2285,8 @@ class CMD_SickGearGetQualities(ApiCall):
 
 
 class CMD_SickGearGetIndexers(ApiCall):
-    _help = {"desc": "get indexer list",
-             "optionalParameters": {"searchable-only ": {"desc": "searchable indexers only"}}}
+    _help = {"desc": "get tv info source list",
+             "optionalParameters": {"searchable-only": {"desc": "only return searchable sources"}}}
 
     def __init__(self, handler, args, kwargs):
         # required
@@ -2317,7 +2320,7 @@ class CMD_SickGearGetIndexers(ApiCall):
 
 
 class CMD_SickGearGetIndexerIcon(ApiCall):
-    _help = {"desc": "get indexer icon",
+    _help = {"desc": "get tv info source icon",
              "requiredParameters": {"indexer": {"desc": "indexer"},
                                     },
              }
@@ -2380,7 +2383,7 @@ class CMD_SickGearGetqualityStrings(ApiCall):
 
 
 class CMD_SickGearGetRootDirs(ApiCall):
-    _help = {"desc": "get sickgear user parent directories"}
+    _help = {"desc": "get list of user configured parent directories"}
 
     def __init__(self, handler, args, kwargs):
         # required
@@ -2389,13 +2392,13 @@ class CMD_SickGearGetRootDirs(ApiCall):
         ApiCall.__init__(self, handler, args, kwargs)
 
     def run(self):
-        """ get the parent directories defined in sickgear's config """
+        """ get list of user configured parent directories """
 
         return _responds(RESULT_SUCCESS, _getRootDirs())
 
 
 class CMD_SickBeardGetRootDirs(CMD_SickGearGetRootDirs):
-    _help = {"desc": "get sickgear user parent directories",
+    _help = {"desc": "get list of user configured parent directories",
              "SickGearCommand": "sg.getrootdirs"}
 
     def __init__(self, handler, args, kwargs):
@@ -2408,7 +2411,7 @@ class CMD_SickBeardGetRootDirs(CMD_SickGearGetRootDirs):
 
 class CMD_SickGearPauseBacklog(ApiCall):
     _help = {"desc": "pause the backlog search",
-             "optionalParameters": {"pause ": {"desc": "pause or unpause the global backlog"}}
+             "optionalParameters": {"pause": {"desc": "pause or unpause the global backlog"}}
              }
 
     def __init__(self, handler, args, kwargs):
@@ -2430,7 +2433,7 @@ class CMD_SickGearPauseBacklog(ApiCall):
 
 class CMD_SickBeardPauseBacklog(CMD_SickGearPauseBacklog):
     _help = {"desc": "pause the backlog search",
-             "optionalParameters": {"pause ": {"desc": "pause or unpause the global backlog"}},
+             "optionalParameters": {"pause": {"desc": "pause or unpause the global backlog"}},
              "SickGearCommand": "sg.pausebacklog"
              }
 
@@ -2500,7 +2503,7 @@ class CMD_SickBeardRestart(CMD_SickGearRestart):
 
 
 class CMD_SickGearSearchIndexers(ApiCall):
-    _help = {"desc": "search for show on the indexers with a given string and language",
+    _help = {"desc": "search for show on a tv info source with a given string and language",
              "optionalParameters": {"name": {"desc": "name of the show you want to search for"},
                                     "indexerid": {"desc": "thetvdb.com or tvrage.com unique id of a show"},
                                     "lang": {"desc": "the 2 letter abbreviation lang id"},
@@ -2527,7 +2530,7 @@ class CMD_SickGearSearchIndexers(ApiCall):
         ApiCall.__init__(self, handler, args, kwargs)
 
     def run(self):
-        """ search for show at indexers with a given string and language """
+        """ search for show on a tv info source with a given string and language """
         if 1 > len(self.indexers) and -1 in self.indexers:
             raise ApiError('Mix of -1 (all Indexer) and specific Indexer not allowed')
 
@@ -2631,11 +2634,12 @@ class CMD_SickBeardSearchIndexers(CMD_SickGearSearchIndexers):
 
 
 class CMD_SickGearSetDefaults(ApiCall):
-    _help = {"desc": "set sickgear user defaults",
-             "optionalParameters": {"initial": {"desc": "initial quality for the show"},
-                                    "archive": {"desc": "archive quality for the show"},
-                                    "flatten_folders": {"desc": "flatten subfolders within the show directory"},
-                                    "status": {"desc": "status of missing episodes"}
+    _help = {"desc": "set various sickgear default system values",
+             "optionalParameters": {"initial": {"desc": "initial quality to use when adding shows"},
+                                    "archive": {"desc": "archive quality to use when adding shows"},
+                                    "flatten_folders": {"desc": "flatten show subfolders when adding shows"},
+                                    "status": {"desc": "status to change episodes to with missing media"},
+                                    "future_show_paused": {"desc": "show/hide paused shows on the daily schedule page"},
                                     }
              }
 
@@ -2652,7 +2656,7 @@ class CMD_SickGearSetDefaults(ApiCall):
         ApiCall.__init__(self, handler, args, kwargs)
 
     def run(self):
-        """ set sickgear user defaults """
+        """ set various sickgear default system values """
 
         iqualityID = []
         aqualityID = []
@@ -2687,15 +2691,17 @@ class CMD_SickGearSetDefaults(ApiCall):
         if None is not self.future_show_paused:
             sickbeard.EPISODE_VIEW_DISPLAY_PAUSED = int(self.future_show_paused)
 
+        sickbeard.save_config()
+
         return _responds(RESULT_SUCCESS, msg="Saved defaults")
 
 
 class CMD_SickBeardSetDefaults(CMD_SickGearSetDefaults):
-    _help = {"desc": "set sickgear user defaults",
-             "optionalParameters": {"initial": {"desc": "initial quality for the show"},
-                                    "archive": {"desc": "archive quality for the show"},
-                                    "flatten_folders": {"desc": "flatten subfolders within the show directory"},
-                                    "status": {"desc": "status of missing episodes"}
+    _help = {"desc": "set various sickgear default system values",
+             "optionalParameters": {"initial": {"desc": "initial quality to use when adding shows"},
+                                    "archive": {"desc": "archive quality to use when adding shows"},
+                                    "flatten_folders": {"desc": "flatten show subfolders when adding shows"},
+                                    "status": {"desc": "status to change episodes to with missing media"}
              },
              "SickGearCommand": "sg.setdefaults",
     }
@@ -2707,7 +2713,7 @@ class CMD_SickBeardSetDefaults(CMD_SickGearSetDefaults):
 
 
 class CMD_SickGearSetSceneNumber(ApiCall):
-    _help = {"desc": "set Scene Numbers",
+    _help = {"desc": "set scene numbers for a show",
              "requiredParameters": {"indexerid": {"desc": "unique id of a show"},
                                     "indexer": {"desc": "indexer of a show"},
                                     },
@@ -2748,7 +2754,7 @@ class CMD_SickGearSetSceneNumber(ApiCall):
 
 
 class CMD_SickGearActivateSceneNumber(ApiCall):
-    _help = {"desc": "De-/Activate Scene Numbers",
+    _help = {"desc": "de-/activate scene numbers",
              "requiredParameters": {"indexerid": {"desc": "unique id of a show"},
                                     "indexer": {"desc": "indexer of a show"},
                                     "activate": {"desc": "de-/activate scene numbering"}},
@@ -2805,7 +2811,7 @@ class CMD_SickBeardShutdown(CMD_SickGearShutdown):
 
 
 class CMD_SickGearListIgnoreWords(ApiCall):
-    _help = {"desc": "list ignore words",
+    _help = {"desc": "get ignore word list (uses global list if no indexerid and indexer param)",
              "optionalParameters": {"indexerid": {"desc": "unique id of a show"},
                                     "indexer": {"desc": "indexer of a show"},
                                     }
@@ -2821,7 +2827,7 @@ class CMD_SickGearListIgnoreWords(ApiCall):
         ApiCall.__init__(self, handler, args, kwargs)
 
     def run(self):
-        """ list ignore words """
+        """ get ignore word list """
         if self.tvid and self.prodid:
             my_db = db.DBConnection()
             sql_result = my_db.select(
@@ -2846,11 +2852,11 @@ class CMD_SickGearListIgnoreWords(ApiCall):
 
         return_data['use regex'] = ignore_words.startswith('regex:')
         return_data['ignore words'] = [w.strip() for w in ignore_words.replace('regex:', '').split(',') if w.strip()]
-        return _responds(RESULT_SUCCESS, data=return_data, msg="%s ignore words" % return_type)
+        return _responds(RESULT_SUCCESS, data=return_data, msg="%s ignore word list" % return_type)
 
 
 class CMD_SickGearSetIgnoreWords(ApiCall):
-    _help = {"desc": "set ignore words",
+    _help = {"desc": "set ignore word list (uses global list if no indexerid and indexer param)",
              "optionalParameters": {"indexerid": {"desc": "unique id of a show"},
                                     "indexer": {"desc": "indexer of a show"},
                                     "add": {"desc": "add words to list"},
@@ -2876,7 +2882,7 @@ class CMD_SickGearSetIgnoreWords(ApiCall):
         ApiCall.__init__(self, handler, args, kwargs)
 
     def run(self):
-        """ set ignore words """
+        """ set ignore word list """
         if (not self.add and not self.remove and not self.add_exclude and not self.remove_exclude) or \
                 ((self.add_exclude or self.remove_exclude) and not (self.tvid and self.prodid)):
             return _responds(RESULT_FAILURE, msg=('No indexer, indexerid provided',
@@ -2968,11 +2974,11 @@ class CMD_SickGearSetIgnoreWords(ApiCall):
             return_data['use regex'] = self.regex
         return_data['ignore words'] = ignore_list
         clean_ignore_require_words()
-        return _responds(RESULT_SUCCESS, data=return_data, msg="%s set ignore words" % return_type)
+        return _responds(RESULT_SUCCESS, data=return_data, msg="%s set ignore word list" % return_type)
 
 
 class CMD_SickGearListRequireWords(ApiCall):
-    _help = {"desc": "list requried words",
+    _help = {"desc": "get require word list (uses global list if no indexerid and indexer param)",
              "optionalParameters": {"indexerid": {"desc": "unique id of a show"},
                                     "indexer": {"desc": "indexer of a show"},
                                     }
@@ -2986,9 +2992,10 @@ class CMD_SickGearListRequireWords(ApiCall):
                                             [i for i in indexer_api.TVInfoAPI().sources])
         # super, missing, help
         ApiCall.__init__(self, handler, args, kwargs)
+        self.old_call = False
 
     def run(self):
-        """ list required words """
+        """ get require word list """
         if self.tvid and self.prodid:
             my_db = db.DBConnection()
             sql_result = my_db.select(
@@ -2997,7 +3004,7 @@ class CMD_SickGearListRequireWords(ApiCall):
                 ' WHERE indexer = ? AND indexer_id = ?',
                 [self.tvid, self.prodid])
             if sql_result:
-                required_words = sql_result[0]['rls_require_words']
+                require_words = sql_result[0]['rls_require_words']
                 return_data = {'type': 'show', 'indexer': self.tvid, 'indexerid': self.prodid,
                                'show name': sql_result[0]['show_name'],
                                'global_exclude_require': sql_result[0]['rls_global_exclude_require']}
@@ -3007,18 +3014,25 @@ class CMD_SickGearListRequireWords(ApiCall):
         elif (None is self.tvid) != (None is self.prodid):
             return _responds(RESULT_FAILURE, msg='You must supply indexer + indexerid.')
         else:
-            required_words = helpers.generate_word_str(sickbeard.REQUIRE_WORDS, sickbeard.REQUIRE_WORDS_REGEX)
+            require_words = helpers.generate_word_str(sickbeard.REQUIRE_WORDS, sickbeard.REQUIRE_WORDS_REGEX)
             return_data = {'type': 'global'}
             return_type = 'Global'
 
-        return_data['use regex'] = required_words.startswith('regex:')
-        return_data['required words'] = [w.strip() for w in required_words.replace('regex:', '').split(',')
-                                         if w.strip()]
-        return _responds(RESULT_SUCCESS, data=return_data, msg="%s required words" % return_type)
+        return_data['use regex'] = require_words.startswith('regex:')
+        return_data['require%s words' % ('', 'd')[self.old_call]] = [w.strip() for w in
+                                                                     require_words.replace('regex:', '').split(',')
+                                                                     if w.strip()]
+        return _responds(RESULT_SUCCESS, data=return_data, msg="%s require word list" % return_type)
 
 
-class CMD_SickGearSetRequrieWords(ApiCall):
-    _help = {"desc": "set required words",
+class CMD_SickGearListRequireWords_old(CMD_SickGearListRequireWords):
+    def __init__(self, handler, args, kwargs):
+        CMD_SickGearListRequireWords.__init__(self, handler, args, kwargs)
+        self.old_call = True
+
+
+class CMD_SickGearSetRequireWords(ApiCall):
+    _help = {"desc": "set require word list (uses global list if no indexerid and indexer param)",
              "optionalParameters": {"indexerid": {"desc": "unique id of a show"},
                                     "indexer": {"desc": "indexer of a show"},
                                     "add": {"desc": "add words to list"},
@@ -3042,6 +3056,7 @@ class CMD_SickGearSetRequrieWords(ApiCall):
         self.regex, args = self.check_params(args, kwargs, "regex", None, False, "bool", [])
         # super, missing, help
         ApiCall.__init__(self, handler, args, kwargs)
+        self.old_call = False
 
     def run(self):
         """ set require words """
@@ -3053,26 +3068,26 @@ class CMD_SickGearSetRequrieWords(ApiCall):
 
         use_regex = None
         return_type = ''
-        required_list = set()
+        require_list = set()
 
-        def _create_required_words():
-            _use_regex = requried_words.startswith('regex:')
-            require_list = {w.strip() for w in requried_words.replace('regex:', '').split(',') if w.strip()}
+        def _create_require_words():
+            _use_regex = require_words.startswith('regex:')
+            _require_list = {w.strip() for w in require_words.replace('regex:', '').split(',') if w.strip()}
 
             if None is not self.regex:
                 _use_regex = self.regex
             if self.add:
                 for a in self.add:
-                    require_list.add(a.strip())
+                    _require_list.add(a.strip())
             if self.remove:
                 for r in self.remove:
                     try:
-                        require_list.remove(r)
+                        _require_list.remove(r)
                     except KeyError:
                         pass
-            return _use_regex, require_list, \
+            return _use_regex, _require_list, \
                 ('', '%s%s' % (('', 'regex:')[_use_regex],
-                               ', '.join([r.strip() for r in require_list if r.strip()])))[0 < len(require_list)]
+                               ', '.join([r.strip() for r in _require_list if r.strip()])))[0 < len(_require_list)]
 
         if self.tvid and self.prodid:
             show_obj = helpers.find_show_by_id({self.tvid: self.prodid})
@@ -3087,17 +3102,17 @@ class CMD_SickGearSetRequrieWords(ApiCall):
                 sql_result = my_db.select('SELECT show_name, rls_require_words FROM tv_shows WHERE indexer = ? AND '
                                           'indexer_id = ?', [self.tvid, self.prodid])
 
-                requried_words = ''
+                require_words = ''
                 if sql_result:
-                    requried_words = sql_result[0]['rls_require_words']
+                    require_words = sql_result[0]['rls_require_words']
                     return_type = '%s:' % sql_result[0]['show_name']
 
-                    use_regex, required_list, new_required_words = _create_required_words()
+                    use_regex, require_list, new_require_words = _create_require_words()
                     my_db.action('UPDATE tv_shows SET rls_require_words = ? WHERE indexer = ? AND indexer_id = ?',
-                                 [new_required_words, self.tvid, self.prodid])
+                                 [new_require_words, self.tvid, self.prodid])
 
                     show_obj.rls_require_words, show_obj.rls_require_words_regex = helpers.split_word_str(
-                        new_required_words)
+                        new_require_words)
 
             if self.add_exclude or self.remove_exclude:
                 sql_result = my_db.select('SELECT rls_global_exclude_require FROM tv_shows WHERE indexer = ? AND '
@@ -3125,9 +3140,9 @@ class CMD_SickGearSetRequrieWords(ApiCall):
         elif (None is self.tvid) != (None is self.prodid):
             return _responds(RESULT_FAILURE, msg='You must supply indexer + indexerid.')
         else:
-            requried_words = helpers.generate_word_str(sickbeard.REQUIRE_WORDS, sickbeard.REQUIRE_WORDS_REGEX)
-            use_regex, required_list, new_required_words = _create_required_words()
-            sickbeard.REQUIRE_WORDS, sickbeard.REQUIRE_WORDS_REGEX = helpers.split_word_str(new_required_words)
+            require_words = helpers.generate_word_str(sickbeard.REQUIRE_WORDS, sickbeard.REQUIRE_WORDS_REGEX)
+            use_regex, require_list, new_require_words = _create_require_words()
+            sickbeard.REQUIRE_WORDS, sickbeard.REQUIRE_WORDS_REGEX = helpers.split_word_str(new_require_words)
             sickbeard.save_config()
             return_data = {'type': 'global'}
             return_type = 'Global'
@@ -3136,16 +3151,22 @@ class CMD_SickGearSetRequrieWords(ApiCall):
             return_data['use regex'] = use_regex
         elif None is not self.regex:
             return_data['use regex'] = self.regex
-        return_data['required words'] = required_list
+        return_data['require%s words' % ('', 'd')[self.old_call]] = require_list
         clean_ignore_require_words()
         return _responds(RESULT_SUCCESS, data=return_data, msg="%s set requried words" % return_type)
 
 
+class CMD_SickGearSetRequireWords_old(CMD_SickGearSetRequireWords):
+    def __init__(self, handler, args, kwargs):
+        CMD_SickGearSetRequireWords.__init__(self, handler, args, kwargs)
+        self.old_call = True
+
+
 class CMD_SickGearUpdateWatchedState(ApiCall):
-    _help = {"desc": "Update db with details of media file that is watched or unwatched",
+    _help = {"desc": "Update db with details of media file(s) that are watched or unwatched",
              "requiredParameters": {
                  "payloadjson": {
-                     "desc": "Payload is a dict of dicts transmitted as JSON via POST request"},
+                     "desc": "a dict of dicts transmitted as JSON via POST request"},
              }}
 
     def __init__(self, handler, args, kwargs):
@@ -3168,7 +3189,7 @@ class CMD_SickGearUpdateWatchedState(ApiCall):
 
 
 class CMD_SickGearShow(ApiCall):
-    _help = {"desc": "display information for a given show",
+    _help = {"desc": "get show information",
              "requiredParameters": {"indexer": {"desc": "indexer of a show"},
                                     "indexerid": {"desc": "unique id of a show"},
                                     },
@@ -3187,7 +3208,7 @@ class CMD_SickGearShow(ApiCall):
         ApiCall.__init__(self, handler, args, kwargs)
 
     def run(self):
-        """ display information for a given show """
+        """ get show information """
         show_obj = helpers.find_show_by_id({self.tvid: self.prodid})
         if not show_obj:
             return _responds(RESULT_FAILURE, msg="Show not found")
@@ -3253,8 +3274,7 @@ class CMD_SickGearShow(ApiCall):
         if show_obj.next_episode():
             dtEpisodeAirs = SGDatetime.convert_to_setting(
                 network_timezones.parse_date_time(show_obj.nextaired, showDict['airs'], timezone))
-            showDict['airs'] = SGDatetime.sbftime(dtEpisodeAirs,
-                                                             t_preset=timeFormat).lstrip('0').replace(' 0', ' ')
+            showDict['airs'] = SGDatetime.sbftime(dtEpisodeAirs, t_preset=timeFormat).lstrip('0').replace(' 0', ' ')
             showDict['next_ep_airdate'] = SGDatetime.sbfdate(dtEpisodeAirs, d_preset=dateFormat)
         else:
             showDict['next_ep_airdate'] = ''
@@ -3263,7 +3283,7 @@ class CMD_SickGearShow(ApiCall):
 
 
 class CMD_Show(CMD_SickGearShow):
-    _help = {"desc": "display information for a given thetvdb.com show",
+    _help = {"desc": "get thetvdb.com show information",
              "requiredParameters": {"indexerid": {"desc": "thetvdb.com id of a show"},
                                     },
              "optionalParameters": {"overview": {"desc": "include overview"},
@@ -3281,7 +3301,7 @@ class CMD_Show(CMD_SickGearShow):
 
 
 class CMD_SickGearShowAddExisting(ApiCall):
-    _help = {"desc": "add a show in SickGear with an existing folder",
+    _help = {"desc": "add a show to SickGear from an existing folder",
              "requiredParameters": {"indexer": {"desc": "indexer of a show"},
                                     "indexerid": {"desc": "production id of a show"},
                                     "location": {"desc": "full path to the existing folder for the show"}
@@ -3313,7 +3333,7 @@ class CMD_SickGearShowAddExisting(ApiCall):
         ApiCall.__init__(self, handler, args, kwargs)
 
     def run(self):
-        """ add a show in sickgear with an existing folder """
+        """ add a show to SickGear from an existing folder """
         show_obj = helpers.find_show_by_id({self.tvid: self.prodid})
         if show_obj:
             return _responds(RESULT_FAILURE, msg="An existing indexerid already exists in the database")
@@ -3370,7 +3390,7 @@ class CMD_SickGearShowAddExisting(ApiCall):
 
 
 class CMD_ShowAddExisting(CMD_SickGearShowAddExisting):
-    _help = {"desc": "add a show in sickgear with an existing folder",
+    _help = {"desc": "add a show to SickGear from an existing folder",
              "requiredParameters": {"tvdbid": {"desc": "thetvdb.com id"},
                                     "location": {"desc": "full path to the existing folder for the show"}
                                     },
@@ -3433,7 +3453,7 @@ class CMD_SickGearShowAddNew(ApiCall):
         ApiCall.__init__(self, handler, args, kwargs)
 
     def run(self):
-        """ add a show in sickgear with an existing folder """
+        """ add a show to SickGear from an existing folder """
         show_obj = helpers.find_show_by_id({self.tvid: self.prodid})
         if show_obj:
             return _responds(RESULT_FAILURE, msg="An existing indexerid already exists in database")
@@ -3623,7 +3643,7 @@ class CMD_ShowCache(CMD_SickGearShowCache):
 
 
 class CMD_SickGearShowDelete(ApiCall):
-    _help = {"desc": "delete a show in sickgear",
+    _help = {"desc": "delete a show from sickgear",
              "requiredParameters": {"indexer": {"desc": "indexer of a show"},
                                     "indexerid": {"desc": "unique id of a show"},
                                     },
@@ -3641,7 +3661,7 @@ class CMD_SickGearShowDelete(ApiCall):
         ApiCall.__init__(self, handler, args, kwargs)
 
     def run(self):
-        """ delete a show in sickgear """
+        """ delete a show from sickgear """
         show_obj = helpers.find_show_by_id({self.tvid: self.prodid})
         if not show_obj:
             return _responds(RESULT_FAILURE, msg="Show not found")
@@ -3655,7 +3675,7 @@ class CMD_SickGearShowDelete(ApiCall):
 
 
 class CMD_ShowDelete(CMD_SickGearShowDelete):
-    _help = {"desc": "delete a show in sickgear",
+    _help = {"desc": "delete a show from sickgear",
              "requiredParameters": {"indexerid": {"desc": "thetvdb.com id of a show"},
                                     },
              "SickGearCommand": "sg.show.delete",
@@ -3671,7 +3691,7 @@ class CMD_ShowDelete(CMD_SickGearShowDelete):
 
 
 class CMD_SickGearShowGetQuality(ApiCall):
-    _help = {"desc": "get quality setting for a show in sickgear",
+    _help = {"desc": "get the quality setting for a show in sickgear",
              "requiredParameters": {"indexer": {"desc": "indexer of a show"},
                                     "indexerid": {"desc": "unique id of a show"},
                                     },
@@ -3687,7 +3707,7 @@ class CMD_SickGearShowGetQuality(ApiCall):
         ApiCall.__init__(self, handler, args, kwargs)
 
     def run(self):
-        """ get quality setting for a show in sickgear """
+        """ get the quality setting for a show in sickgear """
         show_obj = helpers.find_show_by_id({self.tvid: self.prodid})
         if not show_obj:
             return _responds(RESULT_FAILURE, msg="Show not found")
@@ -3703,7 +3723,7 @@ class CMD_SickGearShowGetQuality(ApiCall):
 
 
 class CMD_ShowGetQuality(CMD_SickGearShowGetQuality):
-    _help = {"desc": "get quality setting for a show in sickgear",
+    _help = {"desc": "get the quality setting for a show in sickgear",
              "requiredParameters": {"indexerid": {"desc": "thetvdb.com id of a show"},
                                     },
              "SickGearCommand": "sg.show.getquality",
@@ -3793,7 +3813,7 @@ class CMD_ShowGetBanner(CMD_SickGearShowGetBanner):
 
 
 class CMD_SickGearShowListFanart(ApiCall):
-    _help = {"desc": "list the fanart's stored for a show in sickgear",
+    _help = {"desc": "get list of fanarts stored for a show",
              "requiredParameters": {"indexer": {"desc": "indexer of a show"},
                                     "indexerid": {"desc": "unique id of a show"},
                                     },
@@ -3809,7 +3829,7 @@ class CMD_SickGearShowListFanart(ApiCall):
         ApiCall.__init__(self, handler, args, kwargs)
 
     def run(self):
-        """ list the fanart's for a show in sickgear """
+        """ get list of fanarts stored for a show """
         show_obj = helpers.find_show_by_id({self.tvid: self.prodid})
         if not show_obj:
             return _responds(RESULT_FAILURE, msg="Show not found")
@@ -3828,7 +3848,7 @@ class CMD_SickGearShowListFanart(ApiCall):
 
 
 class CMD_SickGearShowRateFanart(ApiCall):
-    _help = {"desc": "rate the fanart's stored for a show in sickgear",
+    _help = {"desc": "set a fanart rating",
              "requiredParameters": {"indexer": {"desc": "indexer of a show"},
                                     "indexerid": {"desc": "unique id of a show"},
                                     "fanartname": {"desc": "fanart name form sg.show.listfanart"},
@@ -3849,7 +3869,7 @@ class CMD_SickGearShowRateFanart(ApiCall):
         ApiCall.__init__(self, handler, args, kwargs)
 
     def run(self):
-        """ rate the fanart's for a show in sickgear """
+        """ set a fanart rating """
         cache_obj = image_cache.ImageCache()
         fanartfile = cache_obj.fanart_path(self.tvid, self.prodid).replace('fanart.jpg',
                                                                            '%s.fanart.jpg' % self.fanartname)
@@ -3861,13 +3881,13 @@ class CMD_SickGearShowRateFanart(ApiCall):
                 and self.fanartname in sickbeard.FANART_RATINGS[str(show_id)]:
             del sickbeard.FANART_RATINGS[str(show_id)][self.fanartname]
         else:
-            sickbeard.FANART_RATINGS[str(show_id)][self.fanartname] = fan_ratings[self.rating]
+            sickbeard.FANART_RATINGS.setdefault(str(show_id), {})[self.fanartname] = fan_ratings[self.rating]
         sickbeard.save_config()
         return _responds(RESULT_SUCCESS, msg='Rated Fanart: %s = %s' % (self.fanartname, self.rating))
 
 
 class CMD_SickGearShowGetFanart(ApiCall):
-    _help = {"desc": "get the fanart stored for a show in sickgear."
+    _help = {"desc": "get the fanart stored for a show"
                      " X-Fanartname response header resturns Fanart name or default for not found",
              "requiredParameters": {"indexer": {"desc": "indexer of a show"},
                                     "indexerid": {"desc": "unique id of a show"},
@@ -3887,7 +3907,7 @@ class CMD_SickGearShowGetFanart(ApiCall):
         ApiCall.__init__(self, handler, args, kwargs)
 
     def run(self):
-        """ get the fanart for a show in sickgear """
+        """ get the fanart stored for a show """
         cache_obj = image_cache.ImageCache()
         default_fanartfile = ek.ek(os.path.join, sickbeard.PROG_DIR, 'gui', 'slick', 'images', 'trans.png')
         fanartfile = default_fanartfile
@@ -3928,11 +3948,11 @@ class CMD_SickGearShowGetFanart(ApiCall):
 
 
 class CMD_SickGearShowPause(ApiCall):
-    _help = {"desc": "set a show's paused state in sickgear",
+    _help = {"desc": "set the paused state for a show",
              "requiredParameters": {"indexer": {"desc": "indexer of a show"},
                                     "indexerid": {"desc": "unique id of a show"},
                                     },
-             "optionalParameters": {"pause": {"desc": "set the pause state of the show"}
+             "optionalParameters": {"pause": {"desc": "the pause state to set"}
                                     }
              }
 
@@ -3947,7 +3967,7 @@ class CMD_SickGearShowPause(ApiCall):
         ApiCall.__init__(self, handler, args, kwargs)
 
     def run(self):
-        """ set a show's paused state in sickgear """
+        """ set the paused state for a show """
         show_obj = helpers.find_show_by_id({self.tvid: self.prodid})
         if not show_obj:
             return _responds(RESULT_FAILURE, msg="Show not found")
@@ -3965,10 +3985,10 @@ class CMD_SickGearShowPause(ApiCall):
 
 
 class CMD_ShowPause(CMD_SickGearShowPause):
-    _help = {"desc": "set a show's paused state in sickgear",
+    _help = {"desc": "set the paused state for a show",
              "requiredParameters": {"indexerid": {"desc": "thetvdb.com id of a show"},
                                     },
-             "optionalParameters": {"pause": {"desc": "set the pause state of the show"}
+             "optionalParameters": {"pause": {"desc": "the pause state to set"}
                                     },
              "SickGearCommand": "sg.show.pause",
              }
@@ -4028,7 +4048,7 @@ class CMD_ShowRefresh(CMD_SickGearShowRefresh):
 
 
 class CMD_SickGearShowSeasonList(ApiCall):
-    _help = {"desc": "display the season list for a given show",
+    _help = {"desc": "get a season list for a show",
              "requiredParameters": {"indexer": {"desc": "indexer of a show"},
                                     "indexerid": {"desc": "unique id of a show"},
                                     },
@@ -4047,7 +4067,7 @@ class CMD_SickGearShowSeasonList(ApiCall):
         ApiCall.__init__(self, handler, args, kwargs)
 
     def run(self):
-        """ display the season list for a given show """
+        """ get a season list for a show """
         show_obj = helpers.find_show_by_id({self.tvid: self.prodid})
         if not show_obj:
             return _responds(RESULT_FAILURE, msg="Show not found")
@@ -4076,7 +4096,7 @@ class CMD_SickGearShowSeasonList(ApiCall):
 
 
 class CMD_ShowSeasonList(CMD_SickGearShowSeasonList):
-    _help = {"desc": "display the season list for a given show",
+    _help = {"desc": "get a season list for a show",
              "requiredParameters": {"indexerid": {"desc": "thetvdb.com id of a show"},
                                     },
              "optionalParameters": {"sort": {"desc": "change the sort order from descending to ascending"}
@@ -4098,7 +4118,7 @@ class CMD_ShowSeasonList(CMD_SickGearShowSeasonList):
 
 
 class CMD_SickGearShowSeasons(ApiCall):
-    _help = {"desc": "display a listing of episodes for all or a given season",
+    _help = {"desc": "get episode list of all or a specific season",
              "requiredParameters": {"indexer": {"desc": "indexer of a show"},
                                     "indexerid": {"desc": "unique id of a show"},
                                     },
@@ -4117,7 +4137,7 @@ class CMD_SickGearShowSeasons(ApiCall):
         ApiCall.__init__(self, handler, args, kwargs)
 
     def run(self):
-        """ display a listing of episodes for all or a given show """
+        """ get episode list of all or a specific season """
         show_obj = helpers.find_show_by_id({self.tvid: self.prodid})
         if not show_obj:
             return _responds(RESULT_FAILURE, msg="Show not found")
@@ -4186,7 +4206,7 @@ class CMD_SickGearShowSeasons(ApiCall):
 
 
 class CMD_ShowSeasons(CMD_SickGearShowSeasons):
-    _help = {"desc": "display a listing of episodes for all or a given season",
+    _help = {"desc": "get episode list of all or a specific season",
              "requiredParameters": {"indexerid": {"desc": "thetvdb.com id of a show"},
                                     },
              "optionalParameters": {"season": {"desc": "the season number"},
@@ -4205,7 +4225,7 @@ class CMD_ShowSeasons(CMD_SickGearShowSeasons):
 
 class CMD_SickGearShowSetQuality(ApiCall):
     _help = {
-        "desc": "set desired quality of a show in sickgear."
+        "desc": "set desired quality of a show in sickgear"
                 " if neither initial or archive are provided then the config default quality will be used",
         "requiredParameters": {"indexer": {"desc": "indexer of a show"},
                                "indexerid": {"desc": "unique id of a show"}},
@@ -4264,7 +4284,7 @@ class CMD_SickGearShowSetQuality(ApiCall):
 
 class CMD_ShowSetQuality(CMD_SickGearShowSetQuality):
     _help = {
-        "desc": "set desired quality of a show in sickgear."
+        "desc": "set desired quality of a show in sickgear"
                 " if neither initial or archive are provided then the config default quality will be used",
         "requiredParameters": {"indexerid": {"desc": "thetvdb.com id of a show"}},
         "optionalParameters": {"initial": {"desc": "initial quality for the show"},
@@ -4283,7 +4303,7 @@ class CMD_ShowSetQuality(CMD_SickGearShowSetQuality):
 
 
 class CMD_SickGearShowStats(ApiCall):
-    _help = {"desc": "display episode statistics for a given show",
+    _help = {"desc": "get episode statistics for a show",
              "requiredParameters": {"indexer": {"desc": "indexer of a show"},
                                     "indexerid": {"desc": "unique id of a show"},
                                     },
@@ -4299,7 +4319,7 @@ class CMD_SickGearShowStats(ApiCall):
         ApiCall.__init__(self, handler, args, kwargs)
 
     def run(self):
-        """ display episode statistics for a given show """
+        """ get episode statistics for a given show """
         show_obj = helpers.find_show_by_id({self.tvid: self.prodid})
         if not show_obj:
             return _responds(RESULT_FAILURE, msg="Show not found")
@@ -4387,7 +4407,7 @@ class CMD_SickGearShowStats(ApiCall):
 
 
 class CMD_ShowStats(CMD_SickGearShowStats):
-    _help = {"desc": "display episode statistics for a given show",
+    _help = {"desc": "get episode statistics for a show",
              "requiredParameters": {"indexerid": {"desc": "thetvdb.com id of a show"},
                                     },
              "SickGearCommand": "sg.show.stats",
@@ -4449,9 +4469,9 @@ class CMD_ShowUpdate(CMD_SickGearShowUpdate):
 
 
 class CMD_SickGearShows(ApiCall):
-    _help = {"desc": "display all shows in sickgear",
+    _help = {"desc": "get all shows in sickgear",
              "optionalParameters": {"sort": {"desc": "sort the list of shows by show name instead of indexerid"},
-                                    "paused": {"desc": "only show the shows that are set to paused"},
+                                    "paused": {"desc": "only return shows that are set to paused"},
                                     "overview": {"desc": "include overview"},
                                     },
              }
@@ -4466,7 +4486,7 @@ class CMD_SickGearShows(ApiCall):
         ApiCall.__init__(self, handler, args, kwargs)
 
     def run(self):
-        """ display_is_int_multi( self.prodid )shows in sickgear """
+        """ display_is_int_multi( self.prodid ) shows in sickgear """
         shows = {}
 
         for cur_show_obj in sickbeard.showList:
@@ -4537,7 +4557,7 @@ class CMD_SickGearShows(ApiCall):
 
 
 class CMD_Shows(CMD_SickGearShows):
-    _help = {"desc": "display all thetvdb.com shows in sickgear",
+    _help = {"desc": "get all thetvdb.com shows in sickgear",
              "optionalParameters": {"sort": {"desc": "sort the list of shows by show name instead of indexerid"},
                                     "paused": {"desc": "only show the shows that are set to paused"},
                                     "overview": {"desc": "include overview"},
@@ -4614,7 +4634,7 @@ class CMD_SickGearListTraktAccounts(ApiCall):
 
 
 class CMD_SickGearShowsForceUpdate(ApiCall):
-    _help = {"desc": "force the daily show update now."}
+    _help = {"desc": "force the daily show update now"}
 
     def __init__(self, handler, args, kwargs):
         # required
@@ -4634,7 +4654,7 @@ class CMD_SickGearShowsForceUpdate(ApiCall):
 
 
 class CMD_SickGearShowsQueue(ApiCall):
-    _help = {"desc": "list the show update queue."}
+    _help = {"desc": "list the show update queue"}
 
     def __init__(self, handler, args, kwargs):
         # required
@@ -4648,7 +4668,7 @@ class CMD_SickGearShowsQueue(ApiCall):
 
 
 class CMD_SickGearShowsStats(ApiCall):
-    _help = {"desc": "display the global shows and episode stats"}
+    _help = {"desc": "get the global shows and episode stats"}
 
     def __init__(self, handler, args, kwargs):
         # required
@@ -4657,7 +4677,7 @@ class CMD_SickGearShowsStats(ApiCall):
         ApiCall.__init__(self, handler, args, kwargs)
 
     def run(self):
-        """ display the global shows and episode stats """
+        """ get the global shows and episode stats """
         stats = {}
 
         indexer_limit = ('', ' AND indexer = %s' % TVINFO_TVDB)[self.sickbeard_call]
@@ -4689,10 +4709,10 @@ class CMD_SickGearShowsStats(ApiCall):
 
 # WARNING: never define a cmd call string that contains a "_" (underscore)
 class CMD_ShowsStats(CMD_SickGearShowsStats):
-    _help = {"desc": "display the global thetvdb.com shows and episode stats",
+    _help = {"desc": "get the global thetvdb.com shows and episode stats",
              "SickGearCommand": "sg.shows.stats"}
 # this is reserved for cmd indexes used while cmd chaining
-    
+
     def __init__(self, handler, args, kwargs):
         # required
         # optional
@@ -4730,7 +4750,7 @@ _functionMaper = {"help": CMD_Help,
                   "history.trim": CMD_HistoryTrim,
                   "sg.history.trim": CMD_SickGearHistoryTrim,
                   "logs": CMD_Logs,
-                  "sg.logs": CMD_Logs,
+                  "sg.logs": CMD_SickGearLogs,
                   "sb": CMD_SickBeard,
                   "sg": CMD_SickGear,
                   "postprocess": CMD_PostProcess,
@@ -4771,8 +4791,10 @@ _functionMaper = {"help": CMD_Help,
                   "sg.shutdown": CMD_SickGearShutdown,
                   "sg.listignorewords": CMD_SickGearListIgnoreWords,
                   "sg.setignorewords": CMD_SickGearSetIgnoreWords,
-                  "sg.listrequiredwords": CMD_SickGearListRequireWords,
-                  "sg.setrequiredwords": CMD_SickGearSetRequrieWords,
+                  "sg.listrequiredwords": CMD_SickGearListRequireWords_old,  # old method name
+                  "sg.setrequiredwords": CMD_SickGearSetRequireWords_old,  # old method name
+                  "sg.listrequirewords": CMD_SickGearListRequireWords,
+                  "sg.setrequirewords": CMD_SickGearSetRequireWords,
                   "sg.updatewatchedstate": CMD_SickGearUpdateWatchedState,
                   "show": CMD_Show,
                   "sg.show": CMD_SickGearShow,

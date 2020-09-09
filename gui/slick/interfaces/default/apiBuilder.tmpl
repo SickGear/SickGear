@@ -1,6 +1,6 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml"> 
+<html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <title>API Builder</title>
 <link rel="stylesheet" type="text/css" href="$sbRoot/css/style.css?v=$sbPID">
@@ -26,7 +26,7 @@ sbRoot = "$sbRoot";
 </style>
 
 <script type="text/javascript">
-var hide_empty_list=true; 
+var hide_empty_list=true;
 var disable_empty_list=true;
 
 addListGroup("api", "Command");
@@ -74,8 +74,8 @@ addOption("Command", "SickBeard.Shutdown", "?cmd=sb.shutdown", "", "", "action")
 addOption("Command", "SickGear.Shutdown", "?cmd=sg.shutdown", "", "", "action");
 addList("Command", "SickGear.ListIgnoreWords", "?cmd=sg.listignorewords", "listignorewords", "", "action");
 addList("Command", "SickGear.SetIgnoreWords", "?cmd=sg.setignorewords", "setwords", "", "action");
-addList("Command", "SickGear.ListRequiredWords", "?cmd=sg.listrequiredwords", "listrequiredwords", "", "action");
-addList("Command", "SickGear.SetRequiredWords", "?cmd=sg.setrequiredwords", "setwords", "", "action");
+addList("Command", "SickGear.ListRequireWords", "?cmd=sg.listrequirewords", "listrequirewords", "", "action");
+addList("Command", "SickGear.SetRequireWords", "?cmd=sg.setrequirewords", "setwords", "", "action");
 addList("Command", "Coming Episodes", "?cmd=future", "future");
 addList("Command", "SickGear - Coming Episodes", "?cmd=sg.future", "future");
 addList("Command", "Episode", "?cmd=episode", "episode");
@@ -96,7 +96,7 @@ addOption("Command", "SickGear.History.Clear", "?cmd=sg.history.clear", "", "", 
 addOption("Command", "History.Trim", "?cmd=history.trim", "", "", "action");
 addOption("Command", "SickGear.History.Trim", "?cmd=sg.history.trim", "", "", "action");
 addList("Command", "PostProcess", "?cmd=postprocess", "postprocess", "", "","action");
-addList("Command", "SickGear PostProcess", "?cmd=sg.postprocess", "postprocess", "", "","action");
+addList("Command", "SickGear PostProcess", "?cmd=sg.postprocess", "sg.postprocess", "", "","action");
 
 addList("Command", "Logs", "?cmd=logs", "logs");
 addList("Command", "SickGear Logs", "?cmd=sg.logs", "logs");
@@ -192,13 +192,13 @@ addList("setwords", "$cur_show_obj.name", "&indexerid=$cur_show_obj.prodid&index
 #end for
 
 addList("addwords", "Add (Optional)", "", "removewords");
-addList("addwords", "ignore1", "&add=ignore1", "removewords");
-addList("addwords", "ignore2, ignore3", "&add=ignore2|ignore3", "removewords");
+addList("addwords", "word1", "&add=word1", "removewords");
+addList("addwords", "word2, word3", "&add=word2|word3", "removewords");
 
 addList("removewords", "Remove (Optional)", "", "useregex");
-addList("removewords", "ignore1", "&remove=ignore1", "useregex");
-addList("removewords", "ignore2", "&remove=ignore2", "useregex");
-addList("removewords", "ignore2, ignore3", "&remove=ignore2|ignore3", "useregex");
+addList("removewords", "word1", "&remove=word1", "useregex");
+addList("removewords", "word2", "&remove=word2", "useregex");
+addList("removewords", "word2, word3", "&remove=word2|word3", "useregex");
 
 addList("useregex", "Optional Param", "", "excludeadd");
 addList("useregex", "as Regex", "&regex=1", "excludeadd");
@@ -215,8 +215,9 @@ addList("excluderemove", "ignore2", "&remove_exclude=ignore2", "");
 addList("excluderemove", "ignore2, ignore3", "&remove_exclude=ignore2|ignore3", "");
 
 addOption("listrequiredwords", "Optional Param", "", 1);
+addOption("listrequirewords", "Optional Param", "", 1);
 #for $cur_show_obj in $sortedShowList:
-addOption("listrequiredwords", "$cur_show_obj.name", "&indexerid=$cur_show_obj.prodid&indexer=$cur_show_obj.tvid");
+addOption("listrequirewords", "$cur_show_obj.name", "&indexerid=$cur_show_obj.prodid&indexer=$cur_show_obj.tvid");
 #end for
 
 addList("setscene-fseason", "forSeason", "", "setscene-fepisode", 1);
@@ -257,6 +258,15 @@ addOption("postprocess", "force_replace", "&force_replace=1");
 addOption("postprocess", "is_priority", "&is_priority=1");
 addOption("postprocess", "process_method", "&process_method=copy");
 addOption("postprocess", "type", "&type=manual")
+
+addOption("sg.postprocess", "Optional Param", "", 1);
+addOption("sg.postprocess", "C:\\PATH\\TO\\DIR", "&path=C:\\Temp");
+addOption("sg.postprocess", "return_data", "&return_data=1");
+addOption("sg.postprocess", "force_replace", "&force_replace=1");
+addOption("sg.postprocess", "is_priority", "&is_priority=1");
+addOption("sg.postprocess", "process_method", "&process_method=copy");
+addOption("sg.postprocess", "type", "&type=manual")
+addOption("sg.postprocess", "failed", "&failed=1")
 
 addOption("sb.setdefaults", "Optional Param", "", 1);
 addList("sb.setdefaults", "Exclude Paused Shows on Daily Schedule", "&future_show_paused=0", "sb.setdefaults-status");
