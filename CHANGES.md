@@ -1,4 +1,17 @@
-﻿### 0.21.42 (2020-08-04 15:45:00 UTC)
+﻿### 0.21.43 (2020-09-09 19:20:00 UTC)
+
+* Add missing parameter 'failed' to sg.postprocess
+* Fix legacy command help for episode.search
+* Fix sg.show.ratefanart
+* Fix sg.logs command wrongly mapped to legacy logs command
+* Change return API data depending on old/new method call used for require words
+* Change add missing parameter docs for CMD_SickGearSetDefaults
+* Fix API CMD_SickGearSetDefaults save to config
+* Change increase API version to 12
+* Change remove whitespaces from parameter docu
+
+
+### 0.21.42 (2020-08-04 15:45:00 UTC)
 
 * Fix SickBeard search API compatibility issue
 
