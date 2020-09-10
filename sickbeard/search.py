@@ -28,6 +28,7 @@ import traceback
 import encodingKludge as ek
 import exceptions_helper
 from exceptions_helper import ex
+from sg_helpers import write_file
 
 import sickbeard
 from . import clients, common, db, failed_history, helpers, history, logger, \
@@ -78,12 +79,9 @@ def _download_result(result):
             if not data:
                 new_result = False
             else:
-                with ek.ek(open, file_name, 'wb') as file_out:
-                    file_out.write(data)
+                write_file(file_name, data, raise_exceptions=True)
 
-                helpers.chmod_as_parent(file_name)
-
-        except EnvironmentError as e:
+        except (EnvironmentError, IOError) as e:
             logger.log(u'Error trying to save NZB to black hole: %s' % ex(e), logger.ERROR)
             new_result = False
     elif 'torrent' == res_provider.providerType:
@@ -747,9 +745,10 @@ def search_providers(
             use_quality_list = (status not in (
                 common.WANTED, common.FAILED, common.UNAIRED, common.SKIPPED, common.IGNORED, common.UNKNOWN))
 
-    provider_list = [x for x in sickbeard.providers.sortedProviderList() if x.is_active() and x.enable_backlog and
-                     (not torrent_only or x.providerType == GenericProvider.TORRENT) and
-                     (not scheduled or x.enable_scheduled_backlog)]
+    provider_list = [x for x in sickbeard.providers.sortedProviderList() if x.is_active() and
+                     getattr(x, 'enable_backlog', None) and
+                     (not torrent_only or GenericProvider.TORRENT == x.providerType) and
+                     (not scheduled or getattr(x, 'enable_scheduled_backlog', None))]
     for cur_provider in provider_list:
         if cur_provider.anime_only and not show_obj.is_anime:
             logger.log(u'%s is not an anime, skipping' % show_obj.name, logger.DEBUG)

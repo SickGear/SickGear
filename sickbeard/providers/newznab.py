@@ -248,7 +248,7 @@ class NewznabProvider(generic.NZBProvider):
                     data = self.get_url('%s/api?t=caps&apikey=%s' % (self.url, api_key))
                     if data:
                         xml_caps = helpers.parse_xml(data)
-                        if xml_caps and hasattr(xml_caps, 'tag') and 'caps' == xml_caps.tag:
+                        if None is not xml_caps and 'caps' == getattr(xml_caps, 'tag', ''):
                             self._caps_need_apikey = {'need': True, 'date': datetime.date.today()}
         return xml_caps
 
@@ -421,8 +421,9 @@ class NewznabProvider(generic.NZBProvider):
         # type: (...) -> AnyStr
         return '%s|%s|%s|%s|%i|%s|%i|%i|%i|%i|%i' \
                % (self.name or '', self.url or '', self.maybe_apikey() or '', self.cat_ids or '', self.enabled,
-                  self.search_mode or '', self.search_fallback, self.enable_recentsearch, self.enable_backlog,
-                  self.enable_scheduled_backlog, self.server_type)
+                  self.search_mode or '', self.search_fallback, getattr(self, 'enable_recentsearch', False),
+                  getattr(self, 'enable_backlog', False), getattr(self, 'enable_scheduled_backlog', False),
+                  self.server_type)
 
     def _season_strings(self,
                         ep_obj  # type: TVEpisode
@@ -1116,8 +1117,9 @@ class NewznabProvider(generic.NZBProvider):
                (self.name, ('disabled', 'enabled')[self.enabled in (True, 1)],
                 NewznabConstants.server_types.get(self.server_type, 'unknown'),
                 ','.join(en[1] for en in
-                         ((self.enable_recentsearch, 'recent'), (self.enable_scheduled_backlog, 'backlog'),
-                          (self.enable_scheduled_backlog, 'scheduled')) if en[0]) or 'None')
+                         ((getattr(self, 'enable_recentsearch', False), 'recent'),
+                          (getattr(self, 'enable_backlog', False), 'backlog'),
+                          (getattr(self, 'enable_scheduled_backlog', False), 'scheduled')) if en[0]) or 'None')
 
     def __repr__(self):
         return self.__str__()

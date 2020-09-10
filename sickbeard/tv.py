@@ -1987,7 +1987,7 @@ class TVEpisode(TVEpisodeBase):
 
     def __init__(self, show_obj, season, episode, path='', show_sql=None):
         super(TVEpisode, self).__init__(season, episode, int(show_obj.tvid))
-        
+
         self._show_obj = show_obj  # type: TVShow
 
         self.scene_season = 0  # type: int
@@ -2280,7 +2280,7 @@ class TVEpisode(TVEpisodeBase):
             else:
                 self._file_size = 0
 
-            # todo: change to _tvid , _epid after removing indexer, indexerid 
+            # todo: change to _tvid , _epid after removing indexer, indexerid
             self.tvid = int(sql_result[0]['indexer'])
             self.epid = int(sql_result[0]['indexerid'])
 
@@ -2304,7 +2304,7 @@ class TVEpisode(TVEpisodeBase):
             if 0 == self.scene_absolute_number:
                 self.scene_absolute_number = sickbeard.scene_numbering.get_scene_absolute_numbering(
                     self.show_obj.tvid, self.show_obj.prodid,
-                    absolute_number=self.absolute_number, 
+                    absolute_number=self.absolute_number,
                     season=self.season, episode=episode)
 
             if 0 == self.scene_season or 0 == self.scene_episode:
@@ -2767,7 +2767,8 @@ class TVEpisode(TVEpisodeBase):
              self.season, self.episode,
              self.epid, self.tvid,
              self.name, self.description,
-             ','.join([sub for sub in self.subtitles]), self.subtitles_searchcount, self.subtitles_lastsearch,
+             ','.join([isinstance(sub, string_types) and sub or sub.alpha2 for sub in self.subtitles]),
+             self.subtitles_searchcount, self.subtitles_lastsearch,
              self.airdate.toordinal(), self.hasnfo, self.hastbn, self.status, self.location, self.file_size,
              self.release_name, self.is_proper,
              self.show_obj.prodid, self.season, self.episode, self.absolute_number,

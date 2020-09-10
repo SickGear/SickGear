@@ -35,7 +35,7 @@ warnings.filterwarnings('ignore', module=r'.*ssl_.*', message='.*SSLContext obje
 try:
     import requests
 except ImportError:
-    print ('You need to install python requests library')
+    print('You need to install python requests library')
     sys.exit(1)
 
 try:  # Try importing Python 3 modules
@@ -44,10 +44,12 @@ try:  # Try importing Python 3 modules
     import urllib.request as urllib2
     # noinspection PyUnresolvedReferences,PyCompatibility
     from urllib.parse import urlencode
-except ImportError:  # On error import Python 2 modules using new names
-    # noinspection PyPep8Naming
+except ImportError:  # On error, import Python 2 modules
+    # noinspection PyPep8Naming,PyUnresolvedReferences
     import ConfigParser as configparser
+    # noinspection PyUnresolvedReferences
     import urllib2
+    # noinspection PyUnresolvedReferences
     from urllib import urlencode
 
 
@@ -56,32 +58,25 @@ def process_files(dir_to_process, org_nzb_name=None, status=None):
     # Default values
     host = 'localhost'
     port = '8081'
-    username = ''
-    password = ''
-    ssl = 0
+    default_url = 'http://%s:%s/' % (host, port)
+    ssl = username = password = ''
     web_root = '/'
-
-    default_url = host + ':' + port + web_root
-    if ssl:
-        default_url = 'https://' + default_url
-    else:
-        default_url = 'http://' + default_url
 
     # Get values from config_file
     config = configparser.RawConfigParser()
     config_filename = os.path.join(os.path.dirname(sys.argv[0]), 'autoProcessTV.cfg')
 
     if not os.path.isfile(config_filename):
-        print ('ERROR: ' + config_filename + " doesn't exist")
-        print ('copy /rename ' + config_filename + '.sample and edit\n')
-        print ('Trying default url: ' + default_url + '\n')
+        print('ERROR: %s doesn\'t exist' % config_filename)
+        print('copy /rename %s.sample and edit\n' % config_filename)
+        print('Trying default url: %s\n' % default_url)
 
     else:
         try:
-            print ('Loading config from ' + config_filename + '\n')
+            print('Loading config from %s\n' % config_filename)
 
             with open(config_filename, 'r') as fp:
-                config.readfp(fp)
+                config.read_file(fp)
 
             # Replace default values with config_file values
             host = config.get('SickBeard', 'host')
@@ -90,25 +85,21 @@ def process_files(dir_to_process, org_nzb_name=None, status=None):
             password = config.get('SickBeard', 'password')
 
             try:
-                ssl = int(config.get('SickBeard', 'ssl'))
+                ssl = int(config.get('SickBeard', 'ssl')) and 's' or ''
 
             except (configparser.NoOptionError, ValueError):
                 pass
 
             try:
                 web_root = config.get('SickBeard', 'web_root')
-                if not web_root.startswith('/'):
-                    web_root = '/' + web_root
-
-                if not web_root.endswith('/'):
-                    web_root = web_root + '/'
+                web_root = ('/%s/' % web_root.strip('/')).replace('//', '/')
 
             except configparser.NoOptionError:
                 pass
 
         except EnvironmentError:
             e = sys.exc_info()[1]
-            print ('Could not read configuration file: ' + str(e))
+            print('Could not read configuration file: ' + str(e))
             # There was a config_file, don't use default values but exit
             sys.exit(1)
 
@@ -120,15 +111,11 @@ def process_files(dir_to_process, org_nzb_name=None, status=None):
     if None is not status:
         params['failed'] = status
 
-    if ssl:
-        protocol = 'https://'
-    else:
-        protocol = 'http://'
+    url = 'http%s://%s:%s%s' % (ssl, host, port, web_root)
+    login_url = url + 'login'
+    url = url + 'home/process-media/files'
 
-    url = protocol + host + ':' + port + web_root + 'home/process-media/files'
-    login_url = protocol + host + ':' + port + web_root + 'login'
-
-    print ('Opening URL: ' + url)
+    print('Opening URL: ' + url)
 
     try:
         sess = requests.Session()
@@ -142,17 +129,17 @@ def process_files(dir_to_process, org_nzb_name=None, status=None):
         if 401 == result.status_code:
             print('Verify and use correct username and password in autoProcessTV.cfg')
         else:
-            for line in result.iter_lines():
+            for line in result.iter_lines(decode_unicode=True):
                 if line:
-                    print (line.strip())
+                    print(line.strip())
 
     except IOError:
         e = sys.exc_info()[1]
-        print ('Unable to open URL: ' + str(e))
+        print('Unable to open URL: ' + str(e))
         sys.exit(1)
 
 
 if '__main__' == __name__:
-    print ('This module is supposed to be used as import in other scripts and not run standalone.')
-    print ('Use sabToSickBeard instead.')
+    print('This module is supposed to be used as import in other scripts and not run standalone.')
+    print('Use sabToSickBeard instead.')
     sys.exit(1)

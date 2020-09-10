@@ -40,27 +40,30 @@ class TheSubDB(ServiceBase):
     def list_checked(self, video, languages):
         return self.query(video.path, video.hashes['TheSubDB'], languages)
 
-    def query(self, filepath, moviehash, languages):
-        r = self.session.get(self.server_url, params={'action': 'search', 'hash': moviehash})
-        if r.status_code == 404:
-            logger.debug(u'Could not find subtitles for hash %s' % moviehash)
+    def query(self, filepath, filehash, languages):
+        r = self.session.get(self.server_url, params={'action': 'search', 'hash': filehash})
+        if 404 == r.status_code or (200 == r.status_code and not r.text):
+            logger.debug(u'Could not find subtitles for hash %s' % filehash)
             return []
-        if r.status_code != 200:
+        if 200 != r.status_code:
             logger.error(u'Request %s returned status code %d' % (r.url, r.status_code))
             return []
-        available_languages = language_set(r.content.split(','))
-        #this is needed becase for theSubDB pt languages is Portoguese Brazil and not Portoguese#
-        #So we are deleting pt language and adding pb language 
+        available_languages = language_set(r.text.split(','))
+        # this is needed because for theSubDB pt languages is Portuguese Brazil and not Portuguese #
+        # So we are deleting pt language and adding pb language
         if Language('pt') in available_languages:
             available_languages = available_languages - language_set(['pt']) | language_set(['pb'])
         languages &= available_languages
         if not languages:
-            logger.debug(u'Could not find subtitles for hash %s with languages %r (only %r available)' % (moviehash, languages, available_languages))
+            logger.debug(u'Could not find subtitles for hash %s with languages %r (only %r available)' % (
+                filehash, languages, available_languages))
             return []
         subtitles = []
         for language in languages:
             path = get_subtitle_path(filepath, language, self.config.multi)
-            subtitle = ResultSubtitle(path, language, self.__class__.__name__.lower(), '%s?action=download&hash=%s&language=%s' % (self.server_url, moviehash, language.alpha2))
+            subtitle = ResultSubtitle(
+                path, language, self.__class__.__name__.lower(),
+                '%s?action=download&hash=%s&language=%s' % (self.server_url, filehash, language.alpha2))
             subtitles.append(subtitle)
         return subtitles
 

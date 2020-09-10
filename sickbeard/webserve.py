@@ -7013,9 +7013,10 @@ class ConfigProviders(Config):
                                 [k for k in nzb_src.may_filter
                                  if config.checkbox_to_value(kwargs.get('%s_filter_%s' % (cur_id, k)))])
 
-                    for attr in ['search_fallback', 'enable_recentsearch', 'enable_backlog', 'enable_scheduled_backlog',
-                                 'scene_only', 'scene_loose', 'scene_loose_active',
-                                 'scene_rej_nuked', 'scene_nuked_active']:
+                    for attr in filter_iter(lambda a: hasattr(nzb_src, a), [
+                        'search_fallback', 'enable_recentsearch', 'enable_backlog', 'enable_scheduled_backlog',
+                        'scene_only', 'scene_loose', 'scene_loose_active', 'scene_rej_nuked', 'scene_nuked_active'
+                    ]):
                         setattr(nzb_src, attr, config.checkbox_to_value(kwargs.get(cur_id + '_' + attr)))
 
                     for attr in ['scene_or_contain', 'search_mode']:
@@ -7175,7 +7176,7 @@ class ConfigProviders(Config):
                 setattr(nzb_src, attr, config.checkbox_to_value(kwargs.get(src_id_prefix + attr)) or
                         not getattr(nzb_src, 'supports_backlog', True))
 
-            for attr in filter_iter(lambda _x: hasattr(nzb_src, _x),
+            for attr in filter_iter(lambda a: hasattr(nzb_src, a),
                                     ['search_fallback', 'enable_backlog', 'enable_scheduled_backlog',
                                      'scene_only', 'scene_loose', 'scene_loose_active',
                                      'scene_rej_nuked', 'scene_nuked_active']):
