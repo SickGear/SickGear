@@ -104,6 +104,11 @@
 * Change API response fieldname `global_exclude_require` to `global exclude require` in sg.listignorewords endpoint
 
 
+### 0.21.45 (2020-09-11 16:25:00 UTC)
+
+* Fix autoProcessTV.py to use `config.readfp` under py2 as `config.read_file` is py3.x+.
+
+
 ### 0.21.44 (2020-09-11 10:10:00 UTC)
 
 * Fix thesubdb subtitle service under py3
