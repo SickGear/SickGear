@@ -42,6 +42,8 @@
 * Change update sceneNameCache after scene names are updated
 * Change add core dedicated base class tvinfo_base to unify future info sources
 * Add exclude ignore words and exclude required words to settings/Search, Edit and View show
+* Add API response field `global exclude ignore` to sg.listignorewords endpoint
+* Add API response field `global exclude require` to sg.listrequirewords endpoint
 * Change improve Popen resource usage under py2
 * Add overall failure monitoring to History/Connect fails (renamed from "Provider fails")
 * Change log exception during updateCache in newznab
@@ -50,6 +52,7 @@
 * Change improve clarity of anime group lists by using terms Allow list and Block list
 * Change add alternative locations for git.exe on Windows with a log warning
 * Add link to the wiki setup guide for NZBGet and SABnzbd at Search Settings/"NZB Results"
+* Change API version to 13
 
 
 [develop changelog]
@@ -93,6 +96,12 @@
 * Fix AddIndexerToTables function used for tests
 * Change db migration patterns to always increase db version regardless of function logic outcome
 * Change improve log clarity of anime group validation and fix its validation
+* Fix missing regex parameter for show require words in proper search
+* Fix API add_exclude and remove_exclude in sg.setrequirewords and sg.setignorewords
+* Change API sg.listignorewords response data type for global_exclude_ignore to list
+* Change API sg.listrequirewords response data type for global_exclude_require to list
+* Change API response fieldname `global_exclude_ignore` to `global exclude ignore` in sg.listignorewords endpoint
+* Change API response fieldname `global_exclude_require` to `global exclude require` in sg.listignorewords endpoint
 
 
 ### 0.21.44 (2020-09-11 10:10:00 UTC)
@@ -105,6 +114,10 @@
 ### 0.21.43 (2020-09-09 19:20:00 UTC)
 
 * Add missing parameter 'failed' to sg.postprocess
+* Change API rename sg.`listrequiedwords` typo endpoint to sg.`listrequirewords`
+* Change API rename sg.`setrequiredwords` endpoint to sg.`setrequirewords`
+* Change API responses of sg.listrequirewords and sg.setrequirewords to `require words` instead of `required words`
+* Add API aliases for old endpoint names with old responses for backwards compatibility
 * Fix legacy command help for episode.search
 * Fix sg.show.ratefanart
 * Fix sg.logs command wrongly mapped to legacy logs command

@@ -307,7 +307,7 @@ def _get_proper_list(aired_since_shows, recent_shows, recent_anime, proper_dict=
                 continue
 
             result = show_name_helpers.contains_any(cur_proper.name, cur_proper.parsed_show_obj.rls_require_words,
-                                                    **re_x)
+                                                    rx=cur_proper.parsed_show_obj.rls_require_words_regex, **re_x)
             if None is not result and not result:
                 logger.log('Ignored Proper for not containing any required word [%s]' % cur_proper.name, logger.DEBUG)
                 continue
