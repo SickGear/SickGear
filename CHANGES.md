@@ -53,6 +53,7 @@
 * Change add alternative locations for git.exe on Windows with a log warning
 * Add link to the wiki setup guide for NZBGet and SABnzbd at Search Settings/"NZB Results"
 * Change API version to 13
+* Fix backlog search in season search mode
 
 
 [develop changelog]
