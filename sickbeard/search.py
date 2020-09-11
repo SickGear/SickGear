@@ -739,14 +739,6 @@ def search_providers(
 
     orig_thread_name = threading.currentThread().name
 
-    use_quality_list = None
-    if any([ep_obj_list]):
-        old_status = old_status or failed_history.find_old_status(ep_obj_list[0]) or ep_obj_list[0].status
-        if old_status:
-            status, quality = Quality.splitCompositeStatus(old_status)
-            use_quality_list = (status not in (
-                common.WANTED, common.FAILED, common.UNAIRED, common.SKIPPED, common.IGNORED, common.UNKNOWN))
-
     provider_list = [x for x in sickbeard.providers.sortedProviderList() if x.is_active() and
                      getattr(x, 'enable_backlog', None) and
                      (not torrent_only or GenericProvider.TORRENT == x.providerType) and
@@ -977,13 +969,27 @@ def search_providers(
 
         # of all the single ep results narrow it down to the best one for each episode
         final_results += set(itervalues(multi_results))
-        quality_list = use_quality_list and (None, best_qualities)[any(best_qualities)] or None
-        for cur_search_result in found_results[provider_id]:
+
+        for cur_search_result in found_results[provider_id]:  # type: int
             if cur_search_result in (MULTI_EP_RESULT, SEASON_RESULT):
                 continue
 
             if 0 == len(found_results[provider_id][cur_search_result]):
                 continue
+
+            use_quality_list = None
+            if 0 < len(found_results[provider_id][cur_search_result]) and \
+                    any([found_results[provider_id][cur_search_result][0].ep_obj_list]):
+                old_status = old_status or \
+                             failed_history.find_old_status(
+                                 found_results[provider_id][cur_search_result][0].ep_obj_list[0]) or \
+                             found_results[provider_id][cur_search_result][0].ep_obj_list[0].status
+                if old_status:
+                    status, quality = Quality.splitCompositeStatus(old_status)
+                    use_quality_list = (status not in (
+                        common.WANTED, common.FAILED, common.UNAIRED, common.SKIPPED, common.IGNORED, common.UNKNOWN))
+
+            quality_list = use_quality_list and (None, best_qualities)[any(best_qualities)] or None
 
             best_result = pick_best_result(found_results[provider_id][cur_search_result], show_obj, quality_list,
                                            filter_rls=orig_thread_name)
