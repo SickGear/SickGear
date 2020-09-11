@@ -24,7 +24,7 @@ from .newznab import NewznabConstants
 from .. import logger
 import sickbeard
 
-from _23 import decode_bytes, filter_list, filter_iter
+from _23 import filter_list, filter_iter
 from six import iteritems, itervalues
 
 __all__ = [
@@ -80,14 +80,7 @@ def sortedProviderList():
 
 
 def makeProviderList():
-    providers = [x.provider for x in [getProviderModule(y) for y in __all__] if x]
-    import browser_ua
-    import zlib
-    headers = [1449593765, 1597250020, 1524942228]
-    for p in providers:
-        if abs(zlib.crc32(decode_bytes(p.name))) + 40000400 in headers:
-            p.headers.update({'User-Agent': browser_ua.get_ua()})
-    return providers
+    return [x.provider for x in [getProviderModule(y) for y in __all__] if x]
 
 
 def getNewznabProviderList(data):
