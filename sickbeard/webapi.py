@@ -129,8 +129,8 @@ class PythonObjectEncoder(json.JSONEncoder):
 
 class Api(webserve.BaseHandler):
     """ api class that returns json results """
-    version = 12  # use an int since float-point is unpredictable
-    intent = 4
+    version = 13  # use an int since float-point is unpredictable
+    indent = 4
 
     def check_xsrf_cookie(self):
         pass
@@ -240,7 +240,7 @@ class Api(webserve.BaseHandler):
     def _out_as_json(self, dict):
         self.set_header('Content-Type', 'application/json; charset=UTF-8')
         try:
-            out = json.dumps(dict, indent=self.intent, sort_keys=True, cls=PythonObjectEncoder)
+            out = json.dumps(dict, indent=self.indent, sort_keys=True, cls=PythonObjectEncoder)
             callback = self.get_query_argument('callback', None) or self.get_query_argument('jsonp', None)
             if None is not callback:
                 out = '%s(%s);' % (callback, out)  # wrap with JSONP call if requested
@@ -2811,7 +2811,7 @@ class CMD_SickBeardShutdown(CMD_SickGearShutdown):
 
 
 class CMD_SickGearListIgnoreWords(ApiCall):
-    _help = {"desc": "get ignore word list (uses global list if no indexerid and indexer param)",
+    _help = {"desc": "get ignore word list (uses global list if both indexerid and indexer params are not set)",
              "optionalParameters": {"indexerid": {"desc": "unique id of a show"},
                                     "indexer": {"desc": "indexer of a show"},
                                     }
@@ -2839,7 +2839,8 @@ class CMD_SickGearListIgnoreWords(ApiCall):
                 ignore_words = sql_result[0]['rls_ignore_words']
                 return_data = {'type': 'show', 'indexer': self.tvid, 'indexerid': self.prodid,
                                'show name': sql_result[0]['show_name'],
-                               'global_exclude_ignore': sql_result[0]['rls_global_exclude_ignore']}
+                               'global exclude ignore':
+                                   helpers.split_word_str(sql_result[0]['rls_global_exclude_ignore'])[0]}
                 return_type = '%s:' % sql_result[0]['show_name']
             else:
                 return _responds(RESULT_FAILURE, msg='Show not found.')
@@ -2855,17 +2856,7 @@ class CMD_SickGearListIgnoreWords(ApiCall):
         return _responds(RESULT_SUCCESS, data=return_data, msg="%s ignore word list" % return_type)
 
 
-class CMD_SickGearSetIgnoreWords(ApiCall):
-    _help = {"desc": "set ignore word list (uses global list if no indexerid and indexer param)",
-             "optionalParameters": {"indexerid": {"desc": "unique id of a show"},
-                                    "indexer": {"desc": "indexer of a show"},
-                                    "add": {"desc": "add words to list"},
-                                    "remove": {"desc": "remove words from list"},
-                                    "add_exclude": {"desc": "add global exclude words"},
-                                    "remove_exclude": {"desc": "remove global exclude words"},
-                                    "regex": {"desc": "interpret ALL (including existing) ignore words as regex"},
-                                    }
-             }
+class ApiSetWords(ApiCall):
 
     def __init__(self, handler, args, kwargs):
         # required
@@ -2881,6 +2872,41 @@ class CMD_SickGearSetIgnoreWords(ApiCall):
         # super, missing, help
         ApiCall.__init__(self, handler, args, kwargs)
 
+    def _create_words(self, words, exclude_list=None):
+        exclude_list = exclude_list or []
+        word_list = {w.strip() for w in words.replace('regex:', '').split(',') if w.strip()}
+
+        use_regex = self.regex if None is not self.regex else words.startswith('regex:')
+
+        for a in self.add or []:
+            if a not in exclude_list:
+                word_list.add(a.strip())
+        for r in self.remove or []:
+            try:
+                word_list.remove(r)
+            except KeyError:
+                pass
+
+        return use_regex, word_list, \
+            ('', '%s%s' % (('', 'regex:')[use_regex],
+                           ', '.join([w.strip() for w in word_list if w.strip()])))[0 < len(word_list)]
+
+
+class CMD_SickGearSetIgnoreWords(ApiSetWords):
+    _help = {"desc": "set ignore word list (uses global list if both indexerid and indexer params are not set)",
+             "optionalParameters": {"indexerid": {"desc": "unique id of a show"},
+                                    "indexer": {"desc": "indexer of a show"},
+                                    "add": {"desc": "add words to list"},
+                                    "remove": {"desc": "remove words from list"},
+                                    "add_exclude": {"desc": "add global exclude words"},
+                                    "remove_exclude": {"desc": "remove global exclude words"},
+                                    "regex": {"desc": "interpret ALL (including existing) ignore words as regex"},
+                                    }
+             }
+
+    def __init__(self, handler, args, kwargs):
+        super(CMD_SickGearSetIgnoreWords, self).__init__(handler, args, kwargs)
+
     def run(self):
         """ set ignore word list """
         if (not self.add and not self.remove and not self.add_exclude and not self.remove_exclude) or \
@@ -2893,25 +2919,6 @@ class CMD_SickGearSetIgnoreWords(ApiCall):
         return_type = ''
         ignore_list = set()
 
-        def _create_ignore_words():
-            _use_regex = ignore_words.startswith('regex:')
-            _ignore_list = {w.strip() for w in ignore_words.replace('regex:', '').split(',') if w.strip()}
-
-            if None is not self.regex:
-                _use_regex = self.regex
-            if self.add:
-                for a in self.add:
-                    _ignore_list.add(a.strip())
-            if self.remove:
-                for r in self.remove:
-                    try:
-                        _ignore_list.remove(r)
-                    except KeyError:
-                        pass
-            return _use_regex, _ignore_list, \
-                ('', '%s%s' % (('', 'regex:')[_use_regex],
-                               ', '.join([i.strip() for i in _ignore_list if i.strip()])))[0 < len(_ignore_list)]
-
         if self.tvid and self.prodid:
             show_obj = helpers.find_show_by_id({self.tvid: self.prodid})
             if not show_obj:
@@ -2920,49 +2927,50 @@ class CMD_SickGearSetIgnoreWords(ApiCall):
             return_data = {'type': 'show', 'indexer': self.tvid, 'indexerid': self.prodid,
                            'show name': show_obj.name}
 
-            my_db = db.DBConnection()
-            if self.add or self.remove:
-                sql_results = my_db.select('SELECT show_name, rls_ignore_words FROM tv_shows WHERE indexer = ? AND '
-                                           'indexer_id = ?', [self.tvid, self.prodid])
-
-                ignore_words = ''
+            if any([self.add, self.remove, self.add_exclude, self.remove_exclude]):
+                my_db = db.DBConnection()
+                sql_results = my_db.select(
+                    'SELECT show_name, rls_ignore_words, rls_global_exclude_ignore'
+                    ' FROM tv_shows'
+                    ' WHERE indexer = ? AND indexer_id = ?', [self.tvid, self.prodid])
                 if sql_results:
                     ignore_words = sql_results[0]['rls_ignore_words']
+                    ignore_list, use_regex = helpers.split_word_str(ignore_words)
+                    exclude_ignore = helpers.split_word_str(sql_results[0]['rls_global_exclude_ignore'])[0]
+                    exclude_ignore = {i for i in exclude_ignore if i in sickbeard.IGNORE_WORDS}
                     return_type = '%s:' % sql_results[0]['show_name']
 
-                    use_regex, ignore_list, new_ignore_words = _create_ignore_words()
-                    my_db.action('UPDATE tv_shows SET rls_ignore_words = ? WHERE indexer = ? AND indexer_id = ?',
-                                 [new_ignore_words, self.tvid, self.prodid])
-                    show_obj.rls_ignore_words, show_obj.rls_ignore_words_regex = helpers.split_word_str(new_ignore_words)
+                    if self.add or self.remove:
+                        use_regex, ignore_list, new_ignore_words = \
+                            self._create_words(ignore_words, sickbeard.IGNORE_WORDS)
+                        my_db.action('UPDATE tv_shows'
+                                     ' SET rls_ignore_words = ?'
+                                     ' WHERE indexer = ? AND indexer_id = ?',
+                                     [new_ignore_words, self.tvid, self.prodid])
+                        show_obj.rls_ignore_words, show_obj.rls_ignore_words_regex = \
+                            helpers.split_word_str(new_ignore_words)
 
-            if self.add_exclude or self.remove_exclude:
-                sql_results = my_db.select('SELECT rls_global_exclude_ignore FROM tv_shows WHERE indexer = ? AND '
-                                           'indexer_id = ?', [self.tvid, self.prodid])
+                    if self.add_exclude or self.remove_exclude:
+                        for a in self.add_exclude or []:
+                            if a in sickbeard.IGNORE_WORDS:
+                                exclude_ignore.add(a)
+                        for r in self.remove_exclude or []:
+                            try:
+                                exclude_ignore.remove(r)
+                            except KeyError:
+                                pass
 
-                exclude_ignore = set()
-                if sql_results:
-                    exclude_ignore = helpers.split_word_str(sql_results[0]['rls_global_exclude_ignore'])[0]
-                exclude_ignore = {i for i in exclude_ignore if i not in sickbeard.IGNORE_WORDS}
-                if self.add_exclude:
-                    for a in self.add_exclude:
-                        if a not in sickbeard.IGNORE_WORDS:
-                            exclude_ignore.add(a)
-                if self.remove_exclude:
-                    for r in self.remove_exclude:
-                        try:
-                            exclude_ignore.remove(r)
-                        except KeyError:
-                            pass
+                        my_db.action('UPDATE tv_shows SET rls_global_exclude_ignore = ?'
+                                     ' WHERE indexer = ? AND indexer_id = ?',
+                                     [helpers.generate_word_str(exclude_ignore), self.tvid, self.prodid])
+                        show_obj.rls_global_exclude_ignore = copy.copy(exclude_ignore)
 
-                my_db.action('UPDATE tv_shows SET rls_global_exclude_ignore = ? WHERE indexer = ? AND indexer_id = ?',
-                             [helpers.generate_word_str(exclude_ignore), self.tvid, self.prodid])
-                show_obj.rls_global_exclude_ignore = copy.copy(exclude_ignore)
-                return_data['global exclude ignore'] = exclude_ignore
+                    return_data['global exclude ignore'] = exclude_ignore
         elif (None is self.tvid) != (None is self.prodid):
             return _responds(RESULT_FAILURE, msg='You must supply indexer + indexerid.')
         else:
             ignore_words = helpers.generate_word_str(sickbeard.IGNORE_WORDS, sickbeard.IGNORE_WORDS_REGEX)
-            use_regex, ignore_list, new_ignore_words = _create_ignore_words()
+            use_regex, ignore_list, new_ignore_words = self._create_words(ignore_words)
             sickbeard.IGNORE_WORDS, sickbeard.IGNORE_WORDS_REGEX = helpers.split_word_str(new_ignore_words)
             sickbeard.save_config()
             return_data = {'type': 'global'}
@@ -2978,7 +2986,7 @@ class CMD_SickGearSetIgnoreWords(ApiCall):
 
 
 class CMD_SickGearListRequireWords(ApiCall):
-    _help = {"desc": "get require word list (uses global list if no indexerid and indexer param)",
+    _help = {"desc": "get require word list (uses global list if both indexerid and indexer params are not set)",
              "optionalParameters": {"indexerid": {"desc": "unique id of a show"},
                                     "indexer": {"desc": "indexer of a show"},
                                     }
@@ -3007,7 +3015,8 @@ class CMD_SickGearListRequireWords(ApiCall):
                 require_words = sql_result[0]['rls_require_words']
                 return_data = {'type': 'show', 'indexer': self.tvid, 'indexerid': self.prodid,
                                'show name': sql_result[0]['show_name'],
-                               'global_exclude_require': sql_result[0]['rls_global_exclude_require']}
+                               'global exclude require':
+                                   helpers.split_word_str(sql_result[0]['rls_global_exclude_require'])[0]}
                 return_type = '%s:' % sql_result[0]['show_name']
             else:
                 return _responds(RESULT_FAILURE, msg='Show not found.')
@@ -3031,8 +3040,8 @@ class CMD_SickGearListRequireWords_old(CMD_SickGearListRequireWords):
         self.old_call = True
 
 
-class CMD_SickGearSetRequireWords(ApiCall):
-    _help = {"desc": "set require word list (uses global list if no indexerid and indexer param)",
+class CMD_SickGearSetRequireWords(ApiSetWords):
+    _help = {"desc": "set require word list (uses global list if both indexerid and indexer params are not set)",
              "optionalParameters": {"indexerid": {"desc": "unique id of a show"},
                                     "indexer": {"desc": "indexer of a show"},
                                     "add": {"desc": "add words to list"},
@@ -3044,18 +3053,7 @@ class CMD_SickGearSetRequireWords(ApiCall):
              }
 
     def __init__(self, handler, args, kwargs):
-        # required
-        # optional
-        self.prodid, args = self.check_params(args, kwargs, "indexerid", None, False, "int", [])
-        self.tvid, args = self.check_params(args, kwargs, "indexer", None, False, "int",
-                                            [i for i in indexer_api.TVInfoAPI().sources])
-        self.add, args = self.check_params(args, kwargs, "add", None, False, "list", [])
-        self.remove, args = self.check_params(args, kwargs, "remove", None, False, "list", [])
-        self.add_exclude, args = self.check_params(args, kwargs, "add_exclude", None, False, "list", [])
-        self.remove_exclude, args = self.check_params(args, kwargs, "remove_exclude", None, False, "list", [])
-        self.regex, args = self.check_params(args, kwargs, "regex", None, False, "bool", [])
-        # super, missing, help
-        ApiCall.__init__(self, handler, args, kwargs)
+        super(CMD_SickGearSetRequireWords, self).__init__(handler, args, kwargs)
         self.old_call = False
 
     def run(self):
@@ -3070,25 +3068,6 @@ class CMD_SickGearSetRequireWords(ApiCall):
         return_type = ''
         require_list = set()
 
-        def _create_require_words():
-            _use_regex = require_words.startswith('regex:')
-            _require_list = {w.strip() for w in require_words.replace('regex:', '').split(',') if w.strip()}
-
-            if None is not self.regex:
-                _use_regex = self.regex
-            if self.add:
-                for a in self.add:
-                    _require_list.add(a.strip())
-            if self.remove:
-                for r in self.remove:
-                    try:
-                        _require_list.remove(r)
-                    except KeyError:
-                        pass
-            return _use_regex, _require_list, \
-                ('', '%s%s' % (('', 'regex:')[_use_regex],
-                               ', '.join([r.strip() for r in _require_list if r.strip()])))[0 < len(_require_list)]
-
         if self.tvid and self.prodid:
             show_obj = helpers.find_show_by_id({self.tvid: self.prodid})
             if not show_obj:
@@ -3097,51 +3076,51 @@ class CMD_SickGearSetRequireWords(ApiCall):
             return_data = {'type': 'show', 'indexer': self.tvid, 'indexerid': self.prodid,
                            'show name': show_obj.name}
 
-            my_db = db.DBConnection()
-            if self.add or self.remove:
-                sql_result = my_db.select('SELECT show_name, rls_require_words FROM tv_shows WHERE indexer = ? AND '
-                                          'indexer_id = ?', [self.tvid, self.prodid])
-
-                require_words = ''
+            if any([self.add, self.remove, self.add_exclude, self.remove_exclude]):
+                my_db = db.DBConnection()
+                sql_result = my_db.select(
+                    'SELECT show_name, rls_require_words, rls_global_exclude_require'
+                    ' FROM tv_shows'
+                    ' WHERE indexer = ? AND indexer_id = ?', [self.tvid, self.prodid])
                 if sql_result:
                     require_words = sql_result[0]['rls_require_words']
+                    require_list, use_regex = helpers.split_word_str(require_words)
+                    exclude_require = helpers.split_word_str(sql_result[0]['rls_global_exclude_require'])[0]
+                    exclude_require = {r for r in exclude_require if r in sickbeard.REQUIRE_WORDS}
                     return_type = '%s:' % sql_result[0]['show_name']
 
-                    use_regex, require_list, new_require_words = _create_require_words()
-                    my_db.action('UPDATE tv_shows SET rls_require_words = ? WHERE indexer = ? AND indexer_id = ?',
-                                 [new_require_words, self.tvid, self.prodid])
+                    if self.add or self.remove:
+                        use_regex, require_list, new_require_words = \
+                            self._create_words(require_words, sickbeard.REQUIRE_WORDS)
+                        my_db.action('UPDATE tv_shows'
+                                     ' SET rls_require_words = ?'
+                                     ' WHERE indexer = ? AND indexer_id = ?',
+                                     [new_require_words, self.tvid, self.prodid])
+                        show_obj.rls_require_words, show_obj.rls_require_words_regex = \
+                            helpers.split_word_str(new_require_words)
 
-                    show_obj.rls_require_words, show_obj.rls_require_words_regex = helpers.split_word_str(
-                        new_require_words)
+                    if self.add_exclude or self.remove_exclude:
+                        for a in self.add_exclude or []:
+                            if a in sickbeard.REQUIRE_WORDS:
+                                exclude_require.add(a)
+                        for r in self.remove_exclude or []:
+                            try:
+                                exclude_require.remove(r)
+                            except KeyError:
+                                pass
+                        my_db.action(
+                            'UPDATE tv_shows SET rls_global_exclude_require = ?'
+                            ' WHERE indexer = ? AND indexer_id = ?',
+                            [helpers.generate_word_str(exclude_require), self.tvid, self.prodid])
+                        show_obj.rls_global_exclude_require = copy.copy(exclude_require)
 
-            if self.add_exclude or self.remove_exclude:
-                sql_result = my_db.select('SELECT rls_global_exclude_require FROM tv_shows WHERE indexer = ? AND '
-                                          'indexer_id = ?', [self.tvid, self.prodid])
-
-                exclude_require = set()
-                if sql_result:
-                    exclude_require = helpers.split_word_str(sql_result[0]['rls_global_exclude_require'])[0]
-                exclude_require = {r for r in exclude_require if r not in sickbeard.REQUIRE_WORDS}
-                if self.add_exclude:
-                    for a in self.add_exclude:
-                        if a not in sickbeard.REQUIRE_WORDS:
-                            exclude_require.add(a)
-                if self.remove_exclude:
-                    for r in self.remove_exclude:
-                        try:
-                            exclude_require.remove(r)
-                        except KeyError:
-                            pass
-                my_db.action(
-                    'UPDATE tv_shows SET rls_global_exclude_require = ? WHERE indexer = ? AND indexer_id = ?',
-                    [helpers.generate_word_str(exclude_require), self.tvid, self.prodid])
-                show_obj.rls_global_exclude_require = copy.copy(exclude_require)
-                return_data['global exclude require'] = exclude_require
+                    return_data['global exclude require'] = exclude_require
         elif (None is self.tvid) != (None is self.prodid):
             return _responds(RESULT_FAILURE, msg='You must supply indexer + indexerid.')
         else:
             require_words = helpers.generate_word_str(sickbeard.REQUIRE_WORDS, sickbeard.REQUIRE_WORDS_REGEX)
-            use_regex, require_list, new_require_words = _create_require_words()
+            use_regex, require_list, new_require_words = self._create_words(require_words)
+
             sickbeard.REQUIRE_WORDS, sickbeard.REQUIRE_WORDS_REGEX = helpers.split_word_str(new_require_words)
             sickbeard.save_config()
             return_data = {'type': 'global'}
@@ -3153,7 +3132,8 @@ class CMD_SickGearSetRequireWords(ApiCall):
             return_data['use regex'] = self.regex
         return_data['require%s words' % ('', 'd')[self.old_call]] = require_list
         clean_ignore_require_words()
-        return _responds(RESULT_SUCCESS, data=return_data, msg="%s set requried words" % return_type)
+        return _responds(RESULT_SUCCESS, data=return_data,
+                         msg="%s set %s" % (return_type, ('require word list', 'requried words')[self.old_call]))
 
 
 class CMD_SickGearSetRequireWords_old(CMD_SickGearSetRequireWords):
