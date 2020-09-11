@@ -59,7 +59,7 @@ class BacklogSearchScheduler(scheduler.Scheduler):
     def next_backlog_timeleft(self):
         now = datetime.datetime.now()
         torrent_enabled = 0 < len([x for x in sickbeard.providers.sortedProviderList() if x.is_active() and
-                                   x.enable_backlog and x.providerType == GenericProvider.TORRENT])
+                                   getattr(x, 'enable_backlog', None) and GenericProvider.TORRENT == x.providerType])
         if now > self.action.nextBacklog or self.action.nextCyleTime != self.cycleTime:
             nextruntime = now + self.timeLeft()
             if not torrent_enabled:
@@ -172,9 +172,10 @@ class BacklogSearcher(object):
         :param scheduled: scheduled backlog search (can be from webif or scheduler)
         :return: any provider is active for given backlog
         """
-        return 0 < len([x for x in sickbeard.providers.sortedProviderList() if x.is_active() and x.enable_backlog and
+        return 0 < len([x for x in sickbeard.providers.sortedProviderList() if x.is_active() and
+                        getattr(x, 'enable_backlog', None) and
                         (not torrent_only or GenericProvider.TORRENT == x.providerType) and
-                        (not scheduled or x.enable_scheduled_backlog)])
+                        (not scheduled or getattr(x, 'enable_scheduled_backlog', None))])
 
     def search_backlog(self,
                        which_shows=None,  # type: Optional[List[TVShow]]
@@ -206,7 +207,8 @@ class BacklogSearcher(object):
         if not force and standard_backlog and (datetime.datetime.now() - datetime.datetime.fromtimestamp(
                 self._get_last_runtime())) < datetime.timedelta(hours=23):
             any_torrent_enabled = any(map_iter(
-                lambda x: x.is_active() and x.enable_backlog and x.providerType == GenericProvider.TORRENT,
+                lambda x: x.is_active() and getattr(x, 'enable_backlog', None)
+                and GenericProvider.TORRENT == x.providerType,
                 sickbeard.providers.sortedProviderList()))
             if not any_torrent_enabled:
                 logger.log('Last scheduled backlog run was within the last day, skipping this run.', logger.DEBUG)

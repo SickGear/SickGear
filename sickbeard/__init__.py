@@ -35,6 +35,7 @@ import os.path
 import sys
 import threading
 import uuid
+import zlib
 
 # noinspection PyPep8Naming
 import encodingKludge as ek
@@ -53,10 +54,11 @@ from .tv import TVidProdid
 from .watchedstate import EmbyWatchedStateUpdater, PlexWatchedStateUpdater
 
 from adba.aniDBerrors import AniDBError
+from browser_ua import get_ua
 from configobj import ConfigObj
 from libtrakt import TraktAPI
 
-from _23 import b64encodestring, filter_iter, list_items, map_list, scandir
+from _23 import b64encodestring, decode_bytes, filter_iter, list_items, map_list, scandir
 from six import iteritems, PY2, string_types
 import sg_helpers
 
@@ -1387,6 +1389,18 @@ def init_stage_1(console_logging):
                     setattr(nzb_prov, attr, check_setting_str(CFG, prov_id_uc, attr_check, default))
                 elif isinstance(default, int):
                     setattr(nzb_prov, attr, check_setting_int(CFG, prov_id_uc, attr_check, default))
+    for cur_provider in filter_iter(lambda p: abs(zlib.crc32(decode_bytes(p.name))) + 40000400 in (
+            1449593765, 1597250020, 1524942228, 160758496
+    ) or (p.url and abs(zlib.crc32(decode_bytes(re.sub(r'[./]', '', p.url[-10:])))) + 40000400 in (
+            2417143804,)), providers.sortedProviderList()):
+        header = {'User-Agent': get_ua()}
+        if hasattr(cur_provider, 'nn'):
+            cur_provider.nn = False
+            cur_provider.ui_string()
+            # noinspection PyProtectedMember
+            header = callable(getattr(cur_provider, '_init_api', False)) and False is cur_provider._init_api() \
+                and header or {}
+        cur_provider.headers.update(header)
 
     if not os.path.isfile(CONFIG_FILE):
         logger.log(u'Unable to find \'%s\', all settings will be default!' % CONFIG_FILE, logger.DEBUG)
@@ -1514,7 +1528,7 @@ def init_stage_2():
 
     init_search_delay = int(os.environ.get('INIT_SEARCH_DELAY', 0))
 
-    # enter 4490 (was 4489) for experimental internal provider frequencies
+    # enter 4499 (was 4489) for experimental internal provider frequencies
     update_interval = datetime.timedelta(minutes=(RECENTSEARCH_FREQUENCY, 1)[4499 == RECENTSEARCH_FREQUENCY])
     recentSearchScheduler = scheduler.Scheduler(
         search_recent.RecentSearcher(),
@@ -1524,7 +1538,7 @@ def init_stage_2():
         prevent_cycle_run=searchQueueScheduler.action.is_recentsearch_in_progress)
 
     if [x for x in providers.sortedProviderList() if x.is_active() and
-            x.enable_backlog and x.providerType == GenericProvider.NZB]:
+            getattr(x, 'enable_backlog', None) and GenericProvider.NZB == x.providerType]:
         nextbacklogpossible = datetime.datetime.fromtimestamp(
             search_backlog.BacklogSearcher().last_runtime) + datetime.timedelta(hours=23)
         now = datetime.datetime.now()

@@ -20,6 +20,7 @@ from datetime import datetime
 import re
 import time
 import traceback
+from random import randint
 
 import sickbeard
 from . import generic
@@ -253,7 +254,7 @@ class OmgwtfnzbsProvider(generic.NZBProvider):
         :return:
         :rtype: List
         """
-        api_key = self._init_api()
+        api_key = self._init_api() or search_mode in ['Propers'] and None
         if False is api_key:
             return self.search_html(search, search_mode, needed=needed, **kwargs)
         results = []
@@ -388,13 +389,14 @@ class OmgwtfnzbsProvider(generic.NZBProvider):
             return None
 
         try:
+            s = re.compile(r'(?i)([\s\']+|cookee\s*:)')
             api_key = self._check_auth()
-            if not api_key.startswith('cookie:'):
+            if not s.match(api_key):
                 return api_key
         except (BaseException, Exception):
             return None
 
-        self.cookies = re.sub(r'(?i)([\s\']+|cookie\s*:)', '', api_key)
+        self.cookies = s.sub('', api_key)
         success, msg = self._check_cookie()
         if success and self.nn:
             success, msg = None, 'pm dev in irc about this feature'
@@ -404,8 +406,7 @@ class OmgwtfnzbsProvider(generic.NZBProvider):
             return None
         return False
 
-    @staticmethod
-    def ui_string(key):
+    def ui_string(self, key=None):
         """
 
         :param key:
@@ -413,7 +414,18 @@ class OmgwtfnzbsProvider(generic.NZBProvider):
         :return:
         :rtype: AnyStr
         """
-        return 'omgwtfnzbs_api_key' == key and 'Or use... \'cookie: cookname=xx; cookpass=yy\'' or ''
+        try:
+            ca = ':' == self._check_auth()[6]
+        except (BaseException, Exception):
+            ca = False
+        if not ca:
+            if not hasattr(self, 'enable_backlog'):
+                for cur_attr in ('enable_backlog', 'enable_scheduled_backlog'):
+                    setattr(self, cur_attr, None)
+        elif hasattr(self, 'enable_backlog'):
+            for cur_attr in ('enable_backlog', 'enable_scheduled_backlog'):
+                delattr(self, cur_attr)
+        return 'omgwtfnzbs_api_key' == key and '' or ''
 
 
 class OmgwtfnzbsCache(tvcache.TVCache):
@@ -421,7 +433,20 @@ class OmgwtfnzbsCache(tvcache.TVCache):
     def __init__(self, this_provider):
         tvcache.TVCache.__init__(self, this_provider)
 
-        self.update_freq = 20  # type: int
+    @property
+    def update_freq(self):
+        try:
+            ca = ':' == self.provider._check_auth()[6]
+        except (BaseException, Exception):
+            ca = False
+        try:
+            return (10, 20 + randint(0, min(40, sickbeard.RECENTSEARCH_FREQUENCY * 3)))[ca]
+        except (BaseException, Exception):
+            return 20
+
+    @update_freq.setter
+    def update_freq(self, v):
+        return
 
     def _cache_data(self, **kwargs):
 

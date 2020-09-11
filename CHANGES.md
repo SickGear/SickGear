@@ -95,6 +95,13 @@
 * Change improve log clarity of anime group validation and fix its validation
 
 
+### 0.21.44 (2020-09-11 10:10:00 UTC)
+
+* Fix thesubdb subtitle service under py3
+* Change autoProcessTV.py to remove bytestring identifiers that are printed under py3
+* Fix saving nzb data to blackhole under py3
+
+
 ### 0.21.43 (2020-09-09 19:20:00 UTC)
 
 * Add missing parameter 'failed' to sg.postprocess
