@@ -76,7 +76,14 @@ def process_files(dir_to_process, org_nzb_name=None, status=None):
             print('Loading config from %s\n' % config_filename)
 
             with open(config_filename, 'r') as fp:
-                config.read_file(fp)
+                """ Under py3, `config.readfp` is flagged deprecated with advice to use read_file instead.
+                However, py2 doesn't have `read_file`, so a little defensive coding is added here
+                """
+                if callable(getattr(config, 'read_file', None)):
+                    config.read_file(fp)
+                else:
+                    # noinspection PyDeprecation
+                    config.readfp(fp)
 
             # Replace default values with config_file values
             host = config.get('SickBeard', 'host')
