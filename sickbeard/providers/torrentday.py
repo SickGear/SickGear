@@ -55,7 +55,8 @@ class TorrentDayProvider(generic.TorrentProvider):
         return super(TorrentDayProvider, self)._authorised(
             logged_in=(lambda y='': all(
                 ['RSS URL' in y, self.has_all_cookies()] +
-                [(self.session.cookies.get(x, domain='') or 'sg!no!pw') in self.digest for x in ('uid', 'pass')])),
+                [(self.session.cookies.get(c, domain='') or 'sg!no!pw') in self.digest
+                 for c in ('uid', 'pass', 'cf_clearance')])),
             failed_msg=(lambda y=None: u'Invalid cookie details for %s. Check settings'))
 
     @staticmethod
@@ -166,8 +167,8 @@ class TorrentDayProvider(generic.TorrentProvider):
     def ui_string(self, key):
         if 'torrentday_digest' == key and self._valid_home():
             current_url = getattr(self, 'urls', {}).get('config_provider_home_uri')
-            return ('use... \'uid=xx; pass=yy\'' +
-                    (current_url and (' from a session logged in at <a target="_blank" href="%s">%s</a>' %
+            return ('use... \'uid=xx; pass=yy; cf_clearance=zz\'' +
+                    (current_url and ('<br>from a session logged in at <a target="_blank" href="%s">%s</a>' %
                                       (anon_url(current_url), current_url.strip('/'))) or ''))
         return ''
 
