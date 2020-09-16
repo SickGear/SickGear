@@ -1799,6 +1799,16 @@ class TorrentProvider(GenericProvider):
         :param url_exclude:
         :return: signature verified home url else None if validation fail
         """
+
+        if getattr(self, 'digest', None):
+            # noinspection PyUnresolvedReferences
+            self.cookies = re.sub(r'(?i)([\s\']+|cookie\s*:)', '', self.digest)
+            success, msg = self._check_cookie()
+            if not success:
+                self.cookies = None
+                logger.log(u'%s: [%s]' % (msg, self.cookies), logger.WARNING)
+                return
+
         url_base = getattr(self, 'url_base', None)
         if url_base:
             return url_base
@@ -1889,15 +1899,7 @@ class TorrentProvider(GenericProvider):
         if not self._valid_home():
             return False
 
-        if getattr(self, 'digest', None):
-            # noinspection PyUnresolvedReferences
-            self.cookies = re.sub(r'(?i)([\s\']+|cookie\s*:)', '', self.digest)
-            success, msg = self._check_cookie()
-            if not success:
-                self.cookies = None
-                logger.log(u'%s: [%s]' % (msg, self.cookies), logger.WARNING)
-                return False
-        else:
+        if not getattr(self, 'digest', None):
             try:
                 if not self._check_auth():
                     return False
