@@ -1,6 +1,12 @@
-﻿### 0.21.45 (2020-09-11 16:25:00 UTC)
+﻿### 0.21.46 (2020-09-16 20:00:00 UTC)
 
-* Fix autoProcessTV.py to use `config.readfp` under py2 as `config.read_file` is py3.x+.
+* Fix TorrentDay and IPTorrents. Important: user must add browser cookie `cf_clearance` to provider 'Cookies' setting.
+  If `cf_clearance` not found in browser, log out, delete site cookies, refresh browser, `cf_clearance` will be created.
+
+
+### 0.21.45 (2020-09-11 16:25:00 UTC)
+
+* Fix autoProcessTV.py to use `config.readfp` under py2 as `config.read_file` is py3.x+
 
 
 ### 0.21.44 (2020-09-11 10:10:00 UTC)
