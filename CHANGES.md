@@ -1,4 +1,9 @@
-﻿### 0.21.46 (2020-09-16 20:00:00 UTC)
+﻿### 0.21.47 (2020-09-xx xx:xx:00 UTC)
+
+* Change add warning to logs for enabled providers where `cf_clearance` cookie is missing
+
+
+### 0.21.46 (2020-09-16 20:00:00 UTC)
 
 * Fix TorrentDay and IPTorrents. Important: user must add browser cookie `cf_clearance` to provider 'Cookies' setting.
   If `cf_clearance` not found in browser, log out, delete site cookies, refresh browser, `cf_clearance` will be created.

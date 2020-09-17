@@ -154,11 +154,13 @@ class PTFProvider(generic.TorrentProvider):
         return results
 
     def ui_string(self, key):
+        cookies = 'use... \'session_key=xx\''
+        if 'cookie_str_only' == key:
+            return cookies
         if 'ptfiles_digest' == key and self._valid_home():
             current_url = getattr(self, 'urls', {}).get('config_provider_home_uri')
-            return ('use... \'session_key=xx\'' +
-                    (current_url and (' from a session logged in at <a target="_blank" href="%s">%s</a>' %
-                                      (anon_url(current_url), current_url.strip('/'))) or ''))
+            return (cookies + (current_url and (' from a session logged in at <a target="_blank" href="%s">%s</a>' %
+                                                (anon_url(current_url), current_url.strip('/'))) or ''))
         return ''
 
 
