@@ -761,7 +761,7 @@ class TVShow(TVShowBase):
 
             # store the reference in the show
             if None is not ep_obj:
-                if self.subtitles:
+                if sickbeard.USE_SUBTITLES and self.subtitles:
                     try:
                         ep_obj.refresh_subtitles()
                     except (BaseException, Exception):
@@ -2067,7 +2067,8 @@ class TVEpisode(TVEpisodeBase):
 
     def refresh_subtitles(self):
         """Look for subtitles files and refresh the subtitles property"""
-        self.subtitles = subtitles.subtitles_languages(self.location)
+        if sickbeard.USE_SUBTITLES:
+            self.subtitles = subtitles.subtitles_languages(self.location)
 
     def download_subtitles(self, force=False):
         """
@@ -2077,6 +2078,9 @@ class TVEpisode(TVEpisodeBase):
         :return:
         :rtype:
         """
+        if not sickbeard.USE_SUBTITLES:
+            return
+
         # TODO: Add support for force option
         if not ek.ek(os.path.isfile, self.location):
             logger.log('%s: Episode file doesn\'t exist, can\'t download subtitles for episode %sx%s' %

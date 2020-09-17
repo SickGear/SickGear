@@ -1,6 +1,8 @@
-﻿### 0.21.47 (2020-09-xx xx:xx:00 UTC)
+﻿### 0.21.47 (2020-09-17 16:10:00 UTC)
 
 * Change add warning to logs for enabled providers where `cf_clearance` cookie is missing
+* Fix backlog search in season search mode
+* Fix don't search if subtitles disabled
 
 
 ### 0.21.46 (2020-09-16 20:00:00 UTC)
