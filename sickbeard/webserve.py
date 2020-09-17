@@ -3161,7 +3161,7 @@ class Home(MainHandler):
     def search_episode_subtitles(self, tvid_prodid=None, season=None, episode=None):
 
         if not sickbeard.USE_SUBTITLES:
-            return json.dumps({'result': 'falure'})
+            return json.dumps({'result': 'failure'})
 
         # retrieve the episode object and fail if we can't get one
         ep_obj = self._get_episode(tvid_prodid, season, episode)
