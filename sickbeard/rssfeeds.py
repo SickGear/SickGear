@@ -15,7 +15,10 @@ class RSSFeeds(object):
 
     def get_feed(self, url, **kwargs):
 
-        if self.provider and self.provider.check_auth_cookie():
+        if self.provider:
+            success, err_msg = self.provider.check_auth_cookie()
+            if not success:
+                return
             response = self.provider.get_url(url, **kwargs)
             if not self.provider.should_skip() and response:
                 try:

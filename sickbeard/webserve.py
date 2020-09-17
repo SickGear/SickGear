@@ -2747,9 +2747,10 @@ class Home(MainHandler):
             return self._generic_message('Error', 'Unable to find the specified show')
 
         # search and download subtitles
-        sickbeard.showQueueScheduler.action.download_subtitles(show_obj)
+        if sickbeard.USE_SUBTITLES:
+            sickbeard.showQueueScheduler.action.download_subtitles(show_obj)
 
-        helpers.cpu_sleep()
+            helpers.cpu_sleep()
 
         self.redirect('/home/view-show?tvid_prodid=%s' % show_obj.tvid_prodid)
 
@@ -3158,6 +3159,9 @@ class Home(MainHandler):
         return ep_data, (show_item.tvid, show_item.prodid, ep_type.season, ep_type.episode)
 
     def search_episode_subtitles(self, tvid_prodid=None, season=None, episode=None):
+
+        if not sickbeard.USE_SUBTITLES:
+            return json.dumps({'result': 'falure'})
 
         # retrieve the episode object and fail if we can't get one
         ep_obj = self._get_episode(tvid_prodid, season, episode)
@@ -4995,38 +4999,39 @@ class Manage(MainHandler):
 
     def download_subtitle_missed(self, **kwargs):
 
-        to_download = {}
+        if sickbeard.USE_SUBTITLES:
+            to_download = {}
 
-        # make a list of all shows and their associated args
-        for arg in kwargs:
-            tvid_prodid, what = arg.split('-')
+            # make a list of all shows and their associated args
+            for arg in kwargs:
+                tvid_prodid, what = arg.split('-')
 
-            # we don't care about unchecked checkboxes
-            if kwargs[arg] != 'on':
-                continue
+                # we don't care about unchecked checkboxes
+                if kwargs[arg] != 'on':
+                    continue
 
-            if tvid_prodid not in to_download:
-                to_download[tvid_prodid] = []
+                if tvid_prodid not in to_download:
+                    to_download[tvid_prodid] = []
 
-            to_download[tvid_prodid].append(what)
+                to_download[tvid_prodid].append(what)
 
-        for cur_tvid_prodid in to_download:
-            # get a list of all the eps we want to download subtitles if 'all' is selected
-            if 'all' in to_download[cur_tvid_prodid]:
-                my_db = db.DBConnection()
-                sql_result = my_db.select(
-                    'SELECT season, episode'
-                    ' FROM tv_episodes'
-                    ' WHERE indexer = ? AND showid = ?'
-                    ' AND season != 0 AND status LIKE \'%4\'',
-                    TVidProdid(cur_tvid_prodid).list)
-                to_download[cur_tvid_prodid] = map_list(lambda x: '%sx%s' % (x['season'], x['episode']), sql_result)
+            for cur_tvid_prodid in to_download:
+                # get a list of all the eps we want to download subtitles if 'all' is selected
+                if 'all' in to_download[cur_tvid_prodid]:
+                    my_db = db.DBConnection()
+                    sql_result = my_db.select(
+                        'SELECT season, episode'
+                        ' FROM tv_episodes'
+                        ' WHERE indexer = ? AND showid = ?'
+                        ' AND season != 0 AND status LIKE \'%4\'',
+                        TVidProdid(cur_tvid_prodid).list)
+                    to_download[cur_tvid_prodid] = map_list(lambda x: '%sx%s' % (x['season'], x['episode']), sql_result)
 
-            for epResult in to_download[cur_tvid_prodid]:
-                season, episode = epResult.split('x')
+                for epResult in to_download[cur_tvid_prodid]:
+                    season, episode = epResult.split('x')
 
-                show_obj = helpers.find_show_by_id(cur_tvid_prodid)
-                _ = show_obj.get_episode(int(season), int(episode)).download_subtitles()
+                    show_obj = helpers.find_show_by_id(cur_tvid_prodid)
+                    _ = show_obj.get_episode(int(season), int(episode)).download_subtitles()
 
         self.redirect('/manage/subtitle-missed/')
 
@@ -5441,7 +5446,7 @@ class Manage(MainHandler):
                 sickbeard.showQueueScheduler.action.renameShowEpisodes(show_obj)
                 renames.append(show_obj.name)
 
-            if cur_tvid_prodid in to_subtitle:
+            if sickbeard.USE_SUBTITLES and cur_tvid_prodid in to_subtitle:
                 sickbeard.showQueueScheduler.action.download_subtitles(show_obj)
                 subs.append(show_obj.name)
 

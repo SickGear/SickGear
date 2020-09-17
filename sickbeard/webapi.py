@@ -1448,6 +1448,9 @@ class CMD_SickGearSubtitleSearch(ApiCall):
 
     def run(self):
         """ search episode subtitles """
+        if not sickbeard.USE_SUBTITLES:
+            return _responds(RESULT_FAILURE, msg='Subtitle search is disabled in SickGear')
+
         show_obj = helpers.find_show_by_id({self.tvid: self.prodid})
         if not show_obj:
             return _responds(RESULT_FAILURE, msg="Show not found")

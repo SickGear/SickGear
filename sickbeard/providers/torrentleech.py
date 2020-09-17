@@ -150,7 +150,10 @@ class TorrentLeechProvider(generic.TorrentProvider):
         return super(TorrentLeechProvider, self)._episode_strings(ep_obj, sep_date='|', **kwargs)
 
     def ui_string(self, key):
-        return 'torrentleech_digest' == key and self._valid_home() and 'use... \'tluid=xx; tlpass=yy\'' or ''
+        cookies = 'use... \'tluid=xx; tlpass=yy\''
+        if 'cookie_str_only' == key:
+            return cookies
+        return 'torrentleech_digest' == key and self._valid_home() and cookies or ''
 
 
 provider = TorrentLeechProvider()
