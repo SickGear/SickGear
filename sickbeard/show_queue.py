@@ -336,11 +336,12 @@ class ShowQueue(generic_queue.GenericQueue):
         :return:
         :rtype: QueueItemSubtitle
         """
-        queue_item_obj = QueueItemSubtitle(show_obj)
+        if sickbeard.USE_SUBTITLES:
+            queue_item_obj = QueueItemSubtitle(show_obj)
 
-        self.add_item(queue_item_obj)
+            self.add_item(queue_item_obj)
 
-        return queue_item_obj
+            return queue_item_obj
 
     def addShow(self, tvid, prodid, show_dir, default_status=None, quality=None, flatten_folders=None,
                 lang='en', subtitles=None, anime=None, scene=None, paused=None, blocklist=None, allowlist=None,
@@ -986,6 +987,9 @@ class QueueItemSubtitle(ShowQueueItem):
 
     def run(self):
         ShowQueueItem.run(self)
+        if not sickbeard.USE_SUBTITLES:
+            self.finish()
+            return
 
         logger.log('Downloading subtitles for %s' % self.show_obj.name)
 

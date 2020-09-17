@@ -1308,21 +1308,36 @@ class GenericProvider(object):
             cookies = self.cookies
 
             if not (cookies and re.match(r'^(?:\w+=[^;\s]+[;\s]*)+$', cookies)):
-                return False
+                return False, None
+
+            if self.enabled:
+                ui_string_method = getattr(self, 'ui_string', None)
+                if callable(ui_string_method):
+                    pid = self.get_id()
+                    # `cookie_str_only` prevents circular call via _valid_home() in ui_string_method
+                    key = ('%s_digest' % pid, 'cookie_str_only')[
+                        pid in ('ptfiles', 'scenetime', 'torrentday', 'torrentleech')]
+                    reqd = 'cf_clearance'
+                    if reqd in ui_string_method(key) and reqd not in cookies:
+                        return False, \
+                               u'%(p)s Cookies setting require %(r)s. If %(r)s not found in browser, log out,' \
+                               u' delete site cookies, refresh browser, %(r)s should be created' % \
+                               dict(p=self.name, r='\'%s\'' % reqd)
 
             cj = requests.utils.add_dict_to_cookiejar(self.session.cookies,
                                                       dict([x.strip().split('=') for x in cookies.split(';')
                                                             if '' != x])),
             for item in cj:
                 if not isinstance(item, requests.cookies.RequestsCookieJar):
-                    return False
+                    return False, None
 
-        return True
+        return True, None
 
     def _check_cookie(self):
 
-        if self.check_auth_cookie():
-            return True, None
+        success, err_msg = self.check_auth_cookie()
+        if success or (not success and err_msg):
+            return success, err_msg
 
         return False, 'Cookies not correctly formatted key=value pairs e.g. uid=xx;pass=yy)'
 
@@ -1806,7 +1821,7 @@ class TorrentProvider(GenericProvider):
             success, msg = self._check_cookie()
             if not success:
                 self.cookies = None
-                logger.log(u'%s: [%s]' % (msg, self.cookies), logger.WARNING)
+                logger.log(u'%s' % msg, logger.WARNING)
                 return
 
         url_base = getattr(self, 'url_base', None)

@@ -105,6 +105,13 @@
 * Change API response fieldname `global_exclude_require` to `global exclude require` in sg.listignorewords endpoint
 
 
+### 0.21.47 (2020-09-17 16:10:00 UTC)
+
+* Change add warning to logs for enabled providers where `cf_clearance` cookie is missing
+* Fix backlog search in season search mode
+* Fix don't search if subtitles disabled
+
+
 ### 0.21.46 (2020-09-16 20:00:00 UTC)
 
 * Fix TorrentDay and IPTorrents. Important: user must add browser cookie `cf_clearance` to provider 'Cookies' setting.
