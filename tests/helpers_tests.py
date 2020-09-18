@@ -59,6 +59,15 @@ class HelpersTests(unittest.TestCase):
         for c, b in test_cases:
             self.assertEqual(helpers.should_delete_episode(Quality.compositeStatus(*c)), b)
 
+    def test_encrypt(self):
+        crypt_test = [
+            {'param': ('Test', 0, False), 'result': 'Test'},
+            {'param': ('Test', 1, False), 'result': 'ZB0QFQ=='},
+            {'param': ('ZB0QFQ==', 1, True), 'result': 'Test'},
+        ]
+        for t in crypt_test:
+            self.assertEqual(t['result'], helpers.encrypt(*t['param']))
+
 
 if '__main__' == __name__:
     suite = unittest.TestLoader().loadTestsFromTestCase(HelpersTests)
