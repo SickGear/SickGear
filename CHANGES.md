@@ -105,6 +105,12 @@
 * Change API response fieldname `global_exclude_require` to `global exclude require` in sg.listignorewords endpoint
 
 
+### 0.21.48 (2020-09-18 21:00:00 UTC)
+
+* Change typo on search_episode_subtitles when subtitles are disabled
+* Fix enabled encrypt option on startup under py3
+
+
 ### 0.21.47 (2020-09-17 16:10:00 UTC)
 
 * Change add warning to logs for enabled providers where `cf_clearance` cookie is missing
