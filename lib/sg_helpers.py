@@ -76,6 +76,14 @@ PROXY_SETTING = None
 NOTIFIERS = None
 
 
+# try to convert to int, if the value is not already int
+def try_ord(c):
+    # type: (Union[int, chr]) -> int
+    if isinstance(c, int):
+        return c
+    return ord(c)
+
+
 # try to convert to int, if it fails the default will be returned
 def try_int(s, s_default=0):
     try:

@@ -53,7 +53,7 @@ import subliminal
 from lxml_etree import etree, is_lxml
 from send2trash import send2trash
 
-from _23 import b64decodebytes, b64encodebytes, decode_bytes, DirEntry, filter_iter, filter_list, scandir
+from _23 import b64decodebytes, b64encodebytes, decode_bytes, decode_str, DirEntry, filter_iter, filter_list, scandir
 from six import iteritems, PY2, string_types, text_type
 # noinspection PyUnresolvedReferences
 from six.moves import zip
@@ -62,7 +62,7 @@ from six.moves import zip
 # therefore, they intentionally don't resolve and are unused in this particular file.
 # noinspection PyUnresolvedReferences
 from sg_helpers import chmod_as_parent, clean_data, get_system_temp_dir, \
-    get_url, make_dirs, proxy_setting, remove_file_failed, try_int, write_file
+    get_url, make_dirs, proxy_setting, remove_file_failed, try_int, try_ord, write_file
 
 # noinspection PyUnreachableCode
 if False:
@@ -1084,10 +1084,11 @@ def encrypt(data, encryption_version=0, do_decrypt=False):
     # Version 1: Simple XOR encryption (this is not very secure, but works)
     if 1 == encryption_version:
         if do_decrypt:
-            return ''.join([chr(ord(x) ^ ord(y)) for (x, y) in zip(b64decodebytes(data), cycle(unique_key1))])
+            return ''.join([chr(try_ord(x) ^ try_ord(y)) for (x, y) in
+                            zip(b64decodebytes(decode_bytes(data)), cycle(unique_key1))])
 
-        return b64encodebytes(
-            ''.join([chr(ord(x) ^ ord(y)) for (x, y) in zip(data, cycle(unique_key1))])).strip()
+        return decode_str(b64encodebytes(decode_bytes(
+            ''.join([chr(try_ord(x) ^ try_ord(y)) for (x, y) in zip(data, cycle(unique_key1))])))).strip()
 
     # Version 0: Plain text
     return data
