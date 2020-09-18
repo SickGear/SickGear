@@ -13,6 +13,14 @@ sys.path.insert(1, os.path.abspath('..'))
 
 
 class HelpersTests(unittest.TestCase):
+    def setUp(self):
+        super(HelpersTests, self).setUp()
+        self.orig_u_key = helpers.unique_key1
+
+    def tearDown(self):
+        super(HelpersTests, self).tearDown()
+        helpers.unique_key1 = self.orig_u_key
+
     def test_replaceExtension(self):
         self.assertEqual(helpers.replace_extension('foo.avi', 'mkv'), 'foo.mkv')
         self.assertEqual(helpers.replace_extension('.vimrc', 'arglebargle'), '.vimrc')
@@ -60,10 +68,11 @@ class HelpersTests(unittest.TestCase):
             self.assertEqual(helpers.should_delete_episode(Quality.compositeStatus(*c)), b)
 
     def test_encrypt(self):
+        helpers.unique_key1 = '0x12d48f154876c16164a1646'
         crypt_test = [
             {'param': ('Test', 0, False), 'result': 'Test'},
-            {'param': ('Test', 1, False), 'result': 'ZB0QFQ=='},
-            {'param': ('ZB0QFQ==', 1, True), 'result': 'Test'},
+            {'param': ('Test', 1, False), 'result': 'ZB1CRg=='},
+            {'param': ('ZB1CRg==', 1, True), 'result': 'Test'},
         ]
         for t in crypt_test:
             self.assertEqual(t['result'], helpers.encrypt(*t['param']))
