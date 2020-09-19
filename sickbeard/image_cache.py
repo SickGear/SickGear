@@ -20,7 +20,6 @@ import datetime
 import glob
 import os.path
 import re
-import time
 import zlib
 
 # noinspection PyPep8Naming
@@ -28,8 +27,10 @@ import encodingKludge as ek
 import exceptions_helper
 from exceptions_helper import ex
 import sickbeard
-from . import db, helpers, logger
+import sg_helpers
+from . import db, logger
 from .metadata.generic import GenericMetadata
+from .sgdatetime import timestamp_near
 
 from six import itervalues
 
@@ -324,7 +325,7 @@ class ImageCache(object):
             minutes_freq = 60 * 3
             # daily_freq = 60 * 60 * 23
             freq = minutes_freq
-            now_stamp = int(time.mktime(datetime.datetime.today().timetuple()))
+            now_stamp = int(timestamp_near(datetime.datetime.now()))
             the_time = int(sql_result[0]['time'])
             return now_stamp - the_time > freq
 
@@ -341,7 +342,7 @@ class ImageCache(object):
         """
         my_db = db.DBConnection('cache.db')
         my_db.upsert('lastUpdate',
-                     {'time': int(time.mktime(datetime.datetime.today().timetuple()))},
+                     {'time': int(timestamp_near(datetime.datetime.now()))},
                      {'provider': 'imsg_%s_%s' % ((image_type, self.FANART)[None is image_type], provider)})
 
     def _cache_image_from_file(self, image_path, img_type, tvid, prodid, prefix='', move_file=False):
@@ -382,13 +383,13 @@ class ImageCache(object):
             return False
 
         for cache_dir in [self.shows_dir, self._thumbnails_dir(*id_args)] + fanart_dir:
-            helpers.make_dirs(cache_dir)
+            sg_helpers.make_dirs(cache_dir)
 
         logger.log(u'%sing from %s to %s' % (('Copy', 'Mov')[move_file], image_path, dest_path))
         if move_file:
-            helpers.move_file(image_path, dest_path)
+            sg_helpers.move_file(image_path, dest_path)
         else:
-            helpers.copy_file(image_path, dest_path)
+            sg_helpers.copy_file(image_path, dest_path)
 
         return ek.ek(os.path.isfile, dest_path) and dest_path or None
 
@@ -450,7 +451,7 @@ class ImageCache(object):
             count_urls = len(image_urls)
             sources = []
             for image_url in image_urls or []:
-                img_data = helpers.get_url(image_url, nocache=True, as_binary=True)
+                img_data = sg_helpers.get_url(image_url, nocache=True, as_binary=True)
                 if None is img_data:
                     continue
                 crc = '%05X' % (zlib.crc32(img_data) & 0xFFFFFFFF)
@@ -487,7 +488,7 @@ class ImageCache(object):
                 logger.log(u'Saved %s of %s fanart images%s. Cached %s of max %s fanart file%s'
                            % (success, count_urls,
                               ('', ' from ' + ', '.join([x for x in list(set(sources))]))[0 < len(sources)],
-                              total, sickbeard.FANART_LIMIT, helpers.maybe_plural(total)))
+                              total, sickbeard.FANART_LIMIT, sg_helpers.maybe_plural(total)))
             return bool(count_urls) and not bool(count_urls - success)
 
         img_data = metadata_generator.retrieve_show_image(img_type_name, show_obj)
@@ -533,7 +534,7 @@ class ImageCache(object):
             for cache_dir in ek.ek(glob.glob, cache_path):
                 if show_obj.tvid_prodid in sickbeard.FANART_RATINGS:
                     del (sickbeard.FANART_RATINGS[show_obj.tvid_prodid])
-                result = helpers.remove_file(cache_dir, tree=True)
+                result = sg_helpers.remove_file(cache_dir, tree=True)
                 if result:
                     logger.log(u'%s cache file %s' % (result, cache_dir), logger.DEBUG)
 

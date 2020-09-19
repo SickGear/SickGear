@@ -51,7 +51,7 @@ from tornado_py3.log import gen_log
 
 from tornado_py3._locale_data import LOCALE_NAMES
 
-from typing import Iterable, Any, Union, Dict, Optional
+from typing import Iterable, Any, Union, Dict
 
 _default_locale = "en_US"
 _translations = {}  # type: Dict[str, Any]
@@ -88,7 +88,7 @@ def set_default_locale(code: str) -> None:
     _supported_locales = frozenset(list(_translations.keys()) + [_default_locale])
 
 
-def load_translations(directory: str, encoding: Optional[str] = None) -> None:
+def load_translations(directory: str, encoding: str = None) -> None:
     """Loads translations from CSV files in a directory.
 
     Translations are strings with optional Python-style named placeholders
@@ -196,6 +196,8 @@ def load_gettext_translations(directory: str, domain: str) -> None:
 
         msgfmt mydomain.po -o {directory}/pt_BR/LC_MESSAGES/mydomain.mo
     """
+    import gettext
+
     global _translations
     global _supported_locales
     global _use_gettext
@@ -304,10 +306,7 @@ class Locale(object):
         ]
 
     def translate(
-        self,
-        message: str,
-        plural_message: Optional[str] = None,
-        count: Optional[int] = None,
+        self, message: str, plural_message: str = None, count: int = None
     ) -> str:
         """Returns the translation for the given message for this locale.
 
@@ -319,11 +318,7 @@ class Locale(object):
         raise NotImplementedError()
 
     def pgettext(
-        self,
-        context: str,
-        message: str,
-        plural_message: Optional[str] = None,
-        count: Optional[int] = None,
+        self, context: str, message: str, plural_message: str = None, count: int = None
     ) -> str:
         raise NotImplementedError()
 
@@ -486,10 +481,7 @@ class CSVLocale(Locale):
         super(CSVLocale, self).__init__(code)
 
     def translate(
-        self,
-        message: str,
-        plural_message: Optional[str] = None,
-        count: Optional[int] = None,
+        self, message: str, plural_message: str = None, count: int = None
     ) -> str:
         if plural_message is not None:
             assert count is not None
@@ -503,11 +495,7 @@ class CSVLocale(Locale):
         return message_dict.get(message, message)
 
     def pgettext(
-        self,
-        context: str,
-        message: str,
-        plural_message: Optional[str] = None,
-        count: Optional[int] = None,
+        self, context: str, message: str, plural_message: str = None, count: int = None
     ) -> str:
         if self.translations:
             gen_log.warning("pgettext is not supported by CSVLocale")
@@ -525,10 +513,7 @@ class GettextLocale(Locale):
         super(GettextLocale, self).__init__(code)
 
     def translate(
-        self,
-        message: str,
-        plural_message: Optional[str] = None,
-        count: Optional[int] = None,
+        self, message: str, plural_message: str = None, count: int = None
     ) -> str:
         if plural_message is not None:
             assert count is not None
@@ -537,11 +522,7 @@ class GettextLocale(Locale):
             return self.gettext(message)
 
     def pgettext(
-        self,
-        context: str,
-        message: str,
-        plural_message: Optional[str] = None,
-        count: Optional[int] = None,
+        self, context: str, message: str, plural_message: str = None, count: int = None
     ) -> str:
         """Allows to set context for translation, accepts plural forms.
 

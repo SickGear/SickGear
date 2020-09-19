@@ -28,7 +28,7 @@ import encodingKludge as ek
 from six import iteritems
 
 MIN_DB_VERSION = 9  # oldest db version we support migrating from
-MAX_DB_VERSION = 20011
+MAX_DB_VERSION = 20013
 TEST_BASE_VERSION = None  # the base production db version, only needed for TEST db versions (>=100000)
 
 
@@ -174,8 +174,9 @@ class MainSanityCheck(db.DBSanityCheck):
             self.connection.action('CREATE UNIQUE INDEX idx_tv_episodes_unique ON '
                                    'tv_episodes(indexer,showid,season,episode)')
 
-        for t in [('blacklist', 'show_id'), ('history', 'showid'), ('scene_exceptions', 'indexer_id'),
-                  ('whitelist', 'show_id')]:
+        allowtbl, blocktbl = (('allow', 'block'), ('white', 'black'))[not self.connection.hasTable('blocklist')]
+        for t in [('%slist' % allowtbl, 'show_id'), ('%slist' % blocktbl, 'show_id'),
+                  ('history', 'showid'), ('scene_exceptions', 'indexer_id')]:
             if not self.connection.hasIndex('%s' % t[0], 'idx_id_indexer_%s' % t[0]):
                 # noinspection SqlResolve
                 self.connection.action('CREATE INDEX idx_id_indexer_%s ON %s (indexer, %s)' % (t[0], t[0], t[1]))
@@ -243,8 +244,9 @@ class InitialSchema(db.SchemaUpgrade):
 
         if not self.hasTable('tv_shows') and not self.hasTable('db_version'):
             queries = [
-                # blacklist
-                'CREATE TABLE blacklist (show_id INTEGER, range TEXT, keyword TEXT)',
+                # anime allow and block list
+                'CREATE TABLE allowlist (show_id INTEGER, range TEXT, keyword TEXT, indexer NUMERIC)',
+                'CREATE TABLE blocklist (show_id INTEGER, range TEXT, keyword TEXT, indexer NUMERIC)',
                 # db_version
                 'CREATE TABLE db_version (db_version INTEGER)',
                 'INSERT INTO db_version (db_version) VALUES (20008)',
@@ -305,8 +307,6 @@ class InitialSchema(db.SchemaUpgrade):
                 ' PRIMARY KEY (indexer_id, indexer))',
                 # webdl_types
                 'CREATE TABLE webdl_types (dname TEXT NOT NULL, regex TEXT NOT NULL)',
-                # whitelist
-                'CREATE TABLE whitelist (show_id INTEGER, range TEXT, keyword TEXT)',
                 # xem_refresh
                 'CREATE TABLE xem_refresh (indexer TEXT, indexer_id INTEGER PRIMARY KEY, last_refreshed INTEGER)',
             ]
@@ -714,8 +714,7 @@ class AddProperNamingSupport(db.SchemaUpgrade):
         if not self.hasColumn('tv_shows', 'imdb_id')\
                 and self.hasColumn('tv_shows', 'rls_require_words')\
                 and self.hasColumn('tv_shows', 'rls_ignore_words'):
-            self.setDBVersion(5816)
-            return self.checkDBVersion()
+            return self.setDBVersion(5816)
 
         if not self.hasColumn('tv_episodes', 'is_proper'):
             self.upgrade_log(u'Adding column is_proper to tv_episodes')
@@ -734,8 +733,7 @@ class AddEmailSubscriptionTable(db.SchemaUpgrade):
                 and self.hasColumn('tv_shows', 'rls_require_words')\
                 and self.hasColumn('tv_shows', 'rls_ignore_words')\
                 and self.hasColumn('tv_shows', 'skip_notices'):
-            self.setDBVersion(5817)
-            return self.checkDBVersion()
+            return self.setDBVersion(5817)
 
         if not self.hasColumn('tv_shows', 'notify_list'):
             self.upgrade_log(u'Adding column notify_list to tv_shows')
@@ -750,16 +748,14 @@ class AddEmailSubscriptionTable(db.SchemaUpgrade):
 class AddProperSearch(db.SchemaUpgrade):
     def execute(self):
         if not self.hasColumn('tv_episodes', 'is_proper'):
-            self.setDBVersion(12)
-            return self.checkDBVersion()
+            return self.setDBVersion(12)
 
         if not self.hasColumn('tv_shows', 'notify_list')\
                 and self.hasColumn('tv_shows', 'rls_require_words')\
                 and self.hasColumn('tv_shows', 'rls_ignore_words')\
                 and self.hasColumn('tv_shows', 'skip_notices')\
                 and self.hasColumn('history', 'source'):
-            self.setDBVersion(5818)
-            return self.checkDBVersion()
+            return self.setDBVersion(5818)
 
         if not self.hasColumn('info', 'last_proper_search'):
             self.upgrade_log(u'Adding column last_proper_search to info')
@@ -1089,13 +1085,13 @@ class AddSceneAbsoluteNumbering(db.SchemaUpgrade):
 
 
 # 34 -> 35
-class AddAnimeBlacklistWhitelist(db.SchemaUpgrade):
+class AddAnimeAllowlistBlocklist(db.SchemaUpgrade):
     def execute(self):
         db.backup_database('sickbeard.db', self.checkDBVersion())
 
-        cl = [['CREATE TABLE blacklist (show_id INTEGER, range TEXT, keyword TEXT)'],
-              ['CREATE TABLE whitelist (show_id INTEGER, range TEXT, keyword TEXT)']]
-        self.upgrade_log(u'Creating table blacklist whitelist')
+        cl = [['CREATE TABLE allowlist (show_id INTEGER, range TEXT, keyword TEXT, indexer NUMERIC)'],
+              ['CREATE TABLE blocklist (show_id INTEGER, range TEXT, keyword TEXT, indexer NUMERIC)']]
+        self.upgrade_log(u'Creating tables for anime allow and block lists')
         self.connection.mass_action(cl)
 
         self.incDBVersion()
@@ -1179,8 +1175,7 @@ class BumpDatabaseVersion(db.SchemaUpgrade):
 
         self.upgrade_log(u'Bumping database version')
 
-        self.setDBVersion(10000)
-        return self.checkDBVersion()
+        return self.setDBVersion(10000)
 
 
 # 41,42 -> 10001
@@ -1190,8 +1185,7 @@ class Migrate41(db.SchemaUpgrade):
 
         self.upgrade_log(u'Bumping database version')
 
-        self.setDBVersion(10001)
-        return self.checkDBVersion()
+        return self.setDBVersion(10001)
 
 
 # 43,44 -> 10001
@@ -1227,8 +1221,7 @@ class Migrate43(db.SchemaUpgrade):
         if not db_chg:
             self.upgrade_log(u'Bumping database version')
 
-        self.setDBVersion(10001)
-        return self.checkDBVersion()
+        return self.setDBVersion(10001)
 
 
 # 4301 -> 10002
@@ -1238,8 +1231,7 @@ class Migrate4301(db.SchemaUpgrade):
 
         self.upgrade_log(u'Bumping database version')
 
-        self.setDBVersion(10002)
-        return self.checkDBVersion()
+        return self.setDBVersion(10002)
 
 
 # 4302,4400 -> 10003
@@ -1249,8 +1241,7 @@ class Migrate4302(db.SchemaUpgrade):
 
         self.upgrade_log(u'Bumping database version')
 
-        self.setDBVersion(10003)
-        return self.checkDBVersion()
+        return self.setDBVersion(10003)
 
 
 # 5816 - 5818 -> 15
@@ -1260,8 +1251,7 @@ class MigrateUpstream(db.SchemaUpgrade):
 
         self.upgrade_log(u'Migrate SickBeard db v%s into v15' % str(self.checkDBVersion()).replace('58', ''))
 
-        self.setDBVersion(15)
-        return self.checkDBVersion()
+        return self.setDBVersion(15)
 
 
 # 10000 -> 20000
@@ -1271,8 +1261,7 @@ class SickGearDatabaseVersion(db.SchemaUpgrade):
 
         self.upgrade_log(u'Bumping database version to new SickGear standards')
 
-        self.setDBVersion(20000)
-        return self.checkDBVersion()
+        return self.setDBVersion(20000)
 
 
 # 10001 -> 10000
@@ -1283,8 +1272,7 @@ class RemoveDefaultEpStatusFromTvShows(db.SchemaUpgrade):
         self.upgrade_log(u'Dropping redundant column default_ep_status from tv_shows')
         self.dropColumn('tv_shows', 'default_ep_status')
 
-        self.setDBVersion(10000)
-        return self.checkDBVersion()
+        return self.setDBVersion(10000)
 
 
 # 10002 -> 10001
@@ -1295,8 +1283,7 @@ class RemoveMinorDBVersion(db.SchemaUpgrade):
         self.upgrade_log(u'Dropping redundant column db_minor_version from db_version')
         self.dropColumn('db_version', 'db_minor_version')
 
-        self.setDBVersion(10001)
-        return self.checkDBVersion()
+        return self.setDBVersion(10001)
 
 
 # 10003 -> 10002
@@ -1307,8 +1294,7 @@ class RemoveMetadataSub(db.SchemaUpgrade):
             db.backup_database('sickbeard.db', self.checkDBVersion())
             self.dropColumn('tv_shows', 'sub_use_sr_metadata')
 
-        self.setDBVersion(10002)
-        return self.checkDBVersion()
+        return self.setDBVersion(10002)
 
 
 # 20000 -> 20001
@@ -1321,8 +1307,7 @@ class DBIncreaseTo20001(db.SchemaUpgrade):
         self.connection.action('VACUUM')
         self.upgrade_log(u'Performed a vacuum on the database', logger.DEBUG)
 
-        self.setDBVersion(20001)
-        return self.checkDBVersion()
+        return self.setDBVersion(20001)
 
 
 # 20001 -> 20002
@@ -1333,8 +1318,7 @@ class AddTvShowOverview(db.SchemaUpgrade):
             db.backup_database('sickbeard.db', self.checkDBVersion())
             self.addColumn('tv_shows', 'overview', 'TEXT', '')
 
-        self.setDBVersion(20002)
-        return self.checkDBVersion()
+        return self.setDBVersion(20002)
 
 
 # 20002 -> 20003
@@ -1346,8 +1330,7 @@ class AddTvShowTags(db.SchemaUpgrade):
             db.backup_database('sickbeard.db', self.checkDBVersion())
             self.addColumn('tv_shows', 'tag', 'TEXT', 'Show List')
 
-        self.setDBVersion(20003)
-        return self.checkDBVersion()
+        return self.setDBVersion(20003)
 
 
 # 20003 -> 20004
@@ -1396,9 +1379,10 @@ class ChangeMapIndexer(db.SchemaUpgrade):
         except (BaseException, Exception):
             pass
 
-        keep_tables = {'scene_exceptions', 'scene_exceptions_refresh', 'info', 'indexer_mapping', 'blacklist',
+        keep_tables = {'allowlist', 'blocklist', 'whitelist', 'blacklist',
+                       'scene_exceptions', 'scene_exceptions_refresh', 'info', 'indexer_mapping',
                        'db_version', 'history', 'imdb_info', 'lastUpdate', 'scene_numbering', 'tv_episodes', 'tv_shows',
-                       'whitelist', 'xem_refresh'}
+                       'xem_refresh'}
         current_tables = set(self.listTables())
         remove_tables = list(current_tables - keep_tables)
         for table in remove_tables:
@@ -1407,8 +1391,7 @@ class ChangeMapIndexer(db.SchemaUpgrade):
 
         self.connection.action('VACUUM')
 
-        self.setDBVersion(20004)
-        return self.checkDBVersion()
+        return self.setDBVersion(20004)
 
 
 # 20004 -> 20005
@@ -1423,8 +1406,7 @@ class AddShowNotFoundCounter(db.SchemaUpgrade):
                 ' fail_count NUMERIC NOT NULL DEFAULT 0, last_check NUMERIC NOT NULL, last_success NUMERIC,'
                 ' PRIMARY KEY (indexer_id, indexer))')
 
-        self.setDBVersion(20005)
-        return self.checkDBVersion()
+        return self.setDBVersion(20005)
 
 
 # 20005 -> 20006
@@ -1436,8 +1418,7 @@ class AddFlagTable(db.SchemaUpgrade):
             db.backup_database('sickbeard.db', self.checkDBVersion())
             self.connection.action('CREATE TABLE flags (flag  PRIMARY KEY  NOT NULL )')
 
-        self.setDBVersion(20006)
-        return self.checkDBVersion()
+        return self.setDBVersion(20006)
 
 
 # 20006 -> 20007
@@ -1446,8 +1427,7 @@ class DBIncreaseTo20007(db.SchemaUpgrade):
 
         self.upgrade_log(u'Bumping database version')
 
-        self.setDBVersion(20007)
-        return self.checkDBVersion()
+        return self.setDBVersion(20007)
 
 
 # 20007 -> 20008
@@ -1456,8 +1436,7 @@ class AddWebdlTypesTable(db.SchemaUpgrade):
         db.backup_database('sickbeard.db', self.checkDBVersion())
         self.connection.action('CREATE TABLE webdl_types (dname TEXT NOT NULL , regex TEXT NOT NULL )')
 
-        self.setDBVersion(20008)
-        return self.checkDBVersion()
+        return self.setDBVersion(20008)
 
 
 # 20008 -> 20009
@@ -1478,8 +1457,7 @@ class AddWatched(db.SchemaUpgrade):
                 ' status NUMERIC, location TEXT, file_size NUMERIC, hide INT default 0 not null)'
                 )
 
-        self.setDBVersion(20009)
-        return self.checkDBVersion()
+        return self.setDBVersion(20009)
 
 
 # 20009 -> 20010
@@ -1492,8 +1470,7 @@ class AddPrune(db.SchemaUpgrade):
             db.backup_database('sickbeard.db', self.checkDBVersion())
             self.addColumn('tv_shows', 'prune', 'INT', 0)
 
-        self.setDBVersion(20010)
-        return self.checkDBVersion()
+        return self.setDBVersion(20010)
 
 
 # 20010 -> 20011
@@ -1504,14 +1481,16 @@ class AddIndexerToTables(db.SchemaUpgrade):
         show_ids = {s['prod_id']: s['tv_id'] for s in
                     self.connection.select('SELECT indexer AS tv_id, indexer_id AS prod_id FROM tv_shows')}
 
-        columns = {'blacklist': 'show_id, range, keyword, indexer',
+        allowtbl, blocktbl = (('allow', 'block'), ('white', 'black'))[not self.connection.hasTable('blocklist')]
+        allowtbl, blocktbl = '%slist' % allowtbl, '%slist' % blocktbl
+        columns = {allowtbl: 'show_id, range, keyword, indexer',
+                   blocktbl: 'show_id, range, keyword, indexer',
                    'history': 'action, date, showid, season, episode, quality, resource, provider, version, indexer',
-                   'scene_exceptions': 'exception_id , indexer_id, show_name, season, custom, indexer',
-                   'whitelist': 'show_id, range, keyword, indexer'}
+                   'scene_exceptions': 'exception_id , indexer_id, show_name, season, custom, indexer'}
 
         # add missing indexer column
-        for t in [('blacklist', 'show_id'), ('history', 'showid'), ('scene_exceptions', 'indexer_id'),
-                  ('whitelist', 'show_id')]:
+        for t in [(allowtbl, 'show_id'), (blocktbl, 'show_id'),
+                  ('history', 'showid'), ('scene_exceptions', 'indexer_id')]:
             if not self.hasColumn(t[0], 'indexer'):
                 self.upgrade_log(u'Adding TV info support to %s table' % t[0])
                 self.addColumn(t[0], 'indexer')
@@ -1640,5 +1619,52 @@ class AddIndexerToTables(db.SchemaUpgrade):
 
         self.connection.action('VACUUM')
 
-        self.setDBVersion(20011)
-        return self.checkDBVersion()
+        return self.setDBVersion(20011)
+
+
+# 20011 -> 20012
+class AddShowExludeGlobals(db.SchemaUpgrade):
+    def execute(self):
+
+        if not self.hasColumn('tv_shows', 'rls_global_exclude_ignore'):
+            logger.log('Adding rls_global_exclude_ignore, rls_global_exclude_require to tv_shows')
+
+            db.backup_database('sickbeard.db', self.checkDBVersion())
+            self.addColumn('tv_shows', 'rls_global_exclude_ignore', data_type='TEXT', default='')
+            self.addColumn('tv_shows', 'rls_global_exclude_require', data_type='TEXT', default='')
+
+        if self.hasTable('tv_shows_exclude_backup'):
+            self.connection.mass_action([['UPDATE tv_shows SET rls_global_exclude_ignore = '
+                                          '(SELECT te.rls_global_exclude_ignore FROM tv_shows_exclude_backup te WHERE '
+                                          'te.show_id = tv_shows.show_id AND te.indexer = tv_shows.indexer), '
+                                          'rls_global_exclude_require = (SELECT te.rls_global_exclude_require FROM '
+                                          'tv_shows_exclude_backup te WHERE te.show_id = tv_shows.show_id AND '
+                                          'te.indexer = tv_shows.indexer) WHERE EXISTS (SELECT 1 FROM '
+                                          'tv_shows_exclude_backup WHERE tv_shows.show_id = '
+                                          'tv_shows_exclude_backup.show_id AND '
+                                          'tv_shows.indexer = tv_shows_exclude_backup.indexer)'],
+                                         ['DROP TABLE tv_shows_exclude_backup']
+                                         ])
+
+        return self.setDBVersion(20012)
+
+
+# 20012 -> 20013
+class RenameAllowBlockListTables(db.SchemaUpgrade):
+    def execute(self):
+        db.backup_database('sickbeard.db', self.checkDBVersion())
+
+        if not self.connection.hasTable('blocklist'):
+            self.upgrade_log('Renaming allow/block list tables')
+
+            for old, new in (('black', 'block'), ('white', 'allow')):
+                # noinspection SqlResolve
+                self.connection.mass_action([
+                    ['ALTER TABLE %slist RENAME TO tmp_%slist' % (old, new)],
+                    ['CREATE TABLE %slist (show_id INTEGER, range TEXT, keyword TEXT, indexer NUMERIC)' % new],
+                    ['INSERT INTO %slist(show_id, range, keyword, indexer)'
+                     ' SELECT show_id, range, keyword, indexer FROM tmp_%slist' % (new, new)],
+                    ['DROP TABLE tmp_%slist' % new]
+                ])
+
+        return self.setDBVersion(20013)

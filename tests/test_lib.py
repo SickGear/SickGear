@@ -97,7 +97,7 @@ create_test_log_folder()
 sickbeard.logger.sb_log_instance.init_logging(False)
 
 sickbeard.CACHE_DIR = os.path.join(TESTDIR, 'cache')
-sickbeard.ZONEINFO_DIR = os.path.join(TESTDIR, 'zoneinfo')
+sickbeard.ZONEINFO_DIR = os.path.join(TESTDIR, 'cache', 'zoneinfo')
 create_test_cache_folder()
 
 

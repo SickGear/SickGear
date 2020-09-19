@@ -17,12 +17,13 @@
 # Uses the Synology Download Station API:
 # http://download.synology.com/download/Document/DeveloperGuide/Synology_Download_Station_Web_API.pdf
 
+from datetime import datetime
 import re
 import time
 
 from .generic import GenericClient
 from .. import logger
-from ..sgdatetime import SGDatetime
+from ..sgdatetime import timestamp_near
 import sickbeard
 
 from _23 import filter_iter, filter_list, map_list, unquote_plus
@@ -289,7 +290,7 @@ class DownloadStationAPI(GenericClient):
         if 1 < self._task_version and sickbeard.TORRENT_PATH:
             params['destination'] = re.sub(r'^/(volume\d*/)?', '', sickbeard.TORRENT_PATH)
 
-        task_stamp = int(SGDatetime.now().totimestamp(default=0))
+        task_stamp = int(timestamp_near(datetime.now()))
         response = self._client_request('create', t_params=params, files=files)
         # noinspection PyUnresolvedReferences
         if response and response.get('success'):

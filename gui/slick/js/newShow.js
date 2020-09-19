@@ -282,7 +282,7 @@ $(document).ready(function () {
 					alert('You must choose a show to continue');
 					return !1;
 			}
-			generate_bwlist();
+			generateAniGroupList();
 		}
 		$('#addShowForm').submit();
 	});
@@ -352,7 +352,7 @@ $(document).ready(function () {
 		else if (elInput.length && elInput.val().length) {
 			showName = $('#provided-show-name').val();
 		}
-		update_bwlist(showName);
+		updateAniGrouplist(showName);
 		var sample_text = '<p>Adding show <span class="show-name">' + cleanseText(showName, !0) + '</span>'
 			+ ('' == showName ? 'into<br />' : '<br />into')
 			+ ' <span class="show-dest">';
@@ -455,19 +455,19 @@ $(document).ready(function () {
 		option.appendTo('#pool');
 	}
 
-	function update_bwlist (show_name) {
+	function updateAniGrouplist (show_name) {
 
-		$('#black, #white, #pool').children().remove();
+		$('#allow, #block, #pool').children().remove();
 
 		if ($('#anime').prop('checked')) {
-			$('#blackwhitelist').show();
+			$('#anigrouplists').show();
 			if (show_name) {
 				$.getJSON(sbRoot + '/home/fetch-releasegroups', {'show_name': cleanseText(show_name, !1)}, function (data) {
 					if ('success' == data['result']) {
 						var groups = [];
 						$.each(data.groups, function (i, group) {
 							if ('' != group.name) {
-								groups.push(group.name + '#<3SG#' + ' (' + group.rating + ') ' + group.range)
+								groups.push(group.name + '#<3SG#' + ('' === group.rating ? '' : ' (' + group.rating + ') ') + group.range)
 							}
 						});
 						if (0 < groups.length) {
@@ -488,7 +488,7 @@ $(document).ready(function () {
 			 	});
 			}
 		} else {
-			$('#blackwhitelist').hide();
+			$('#anigrouplists').hide();
 		}
 	}
 });

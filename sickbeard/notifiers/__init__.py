@@ -23,7 +23,7 @@ import re
 # from lib import libtrakt
 from . import emby, kodi, plex, xbmc, \
     boxcar2, nmj, nmjv2, pushbullet, pushover, pytivo, synoindex, synologynotifier, \
-    discordapp, emailnotify, gitter, libnotify, growl, prowl, slack, trakt
+    discordapp, emailnotify, gitter, libnotify, growl, prowl, slack, telegram, trakt
 
 import sickbeard
 # noinspection PyPep8Naming
@@ -61,6 +61,7 @@ class NotifierFactory(object):
             SLACK=slack.SlackNotifier,
             DISCORDAPP=discordapp.DiscordappNotifier,
             GITTER=gitter.GitterNotifier,
+            TELEGRAM=telegram.TelegramNotifier,
             EMAIL=emailnotify.EmailNotifier,
         )
 
@@ -121,19 +122,19 @@ class NotifierFactory(object):
             yield self.get(n)
 
 
-def notify_snatch(ep_name):
+def notify_snatch(ep_obj):
     for n in NotifierFactory().get_enabled('onsnatch'):
-        n.notify_snatch(ep_name)
+        n.notify_snatch(ep_obj)
 
 
-def notify_download(ep_name):
+def notify_download(ep_obj):
     for n in NotifierFactory().get_enabled('ondownload'):
-        n.notify_download(ep_name)
+        n.notify_download(ep_obj)
 
 
-def notify_subtitle_download(ep_name, lang):
+def notify_subtitle_download(ep_obj, lang):
     for n in NotifierFactory().get_enabled('onsubtitledownload'):
-        n.notify_subtitle_download(ep_name, lang)
+        n.notify_subtitle_download(ep_obj, lang)
 
 
 def notify_git_update(new_version=''):
@@ -142,7 +143,7 @@ def notify_git_update(new_version=''):
             n.notify_git_update(new_version)
 
 
-def notify_update_library(ep_obj, flush_q=None):
+def notify_update_library(ep_obj, flush_q=False):
 
     if not flush_q or sickbeard.QUEUE_UPDATE_LIBRARY:
 

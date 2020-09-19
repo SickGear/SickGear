@@ -7,6 +7,7 @@ import contextlib as cl
 import errno
 import functools as ft
 import io
+import json
 import os
 import os.path as op
 import pickletools
@@ -359,6 +360,50 @@ class Disk(object):
                 # ENOENT may occur if two caches attempt to delete the same
                 # file at the same time.
                 raise
+
+
+class JSONDisk(Disk):
+    "Cache key and value using JSON serialization with zlib compression."
+    def __init__(self, directory, compress_level=1, **kwargs):
+        """Initialize JSON disk instance.
+
+        Keys and values are compressed using the zlib library. The
+        `compress_level` is an integer from 0 to 9 controlling the level of
+        compression; 1 is fastest and produces the least compression, 9 is
+        slowest and produces the most compression, and 0 is no compression.
+
+        :param str directory: directory path
+        :param int compress_level: zlib compression level (default 1)
+        :param kwargs: super class arguments
+
+        """
+        self.compress_level = compress_level
+        super(JSONDisk, self).__init__(directory, **kwargs)
+
+
+    def put(self, key):
+        json_bytes = json.dumps(key).encode('utf-8')
+        data = zlib.compress(json_bytes, self.compress_level)
+        return super(JSONDisk, self).put(data)
+
+
+    def get(self, key, raw):
+        data = super(JSONDisk, self).get(key, raw)
+        return json.loads(zlib.decompress(data).decode('utf-8'))
+
+
+    def store(self, value, read, key=UNKNOWN):
+        if not read:
+            json_bytes = json.dumps(value).encode('utf-8')
+            value = zlib.compress(json_bytes, self.compress_level)
+        return super(JSONDisk, self).store(value, read, key=key)
+
+
+    def fetch(self, mode, filename, value, read):
+        data = super(JSONDisk, self).fetch(mode, filename, value, read)
+        if not read:
+            data = json.loads(zlib.decompress(data).decode('utf-8'))
+        return data
 
 
 class Timeout(Exception):
@@ -737,9 +782,6 @@ class Cache(object):
         When `read` is `True`, `value` should be a file-like object opened
         for reading in binary mode.
 
-        If `expire` is less than or equal to zero then immediately returns
-        `False`.
-
         Raises :exc:`Timeout` error when database timeout occurs and `retry` is
         `False` (default).
 
@@ -754,9 +796,6 @@ class Cache(object):
         :raises Timeout: if database timeout occurs
 
         """
-        if expire is not None and expire <= 0:
-            return False
-
         now = time.time()
         db_key, raw = self._disk.put(key)
         expire_time = None if expire is None else now + expire
@@ -1779,6 +1818,10 @@ class Cache(object):
         If name is set to None (default), the callable name will be determined
         automatically.
 
+        When expire is set to zero, function results will not be set in the
+        cache. Cache lookups still occur, however. Read
+        :doc:`case-study-landing-page-caching` for example usage.
+
         If typed is set to True, function arguments of different types will be
         cached separately. For example, f(3) and f(3.0) will be treated as
         distinct calls with distinct results.
@@ -1843,7 +1886,8 @@ class Cache(object):
 
                 if result is ENOVAL:
                     result = func(*args, **kwargs)
-                    self.set(key, result, expire=expire, tag=tag, retry=True)
+                    if expire is None or expire > 0:
+                        self.set(key, result, expire, tag=tag, retry=True)
 
                 return result
 

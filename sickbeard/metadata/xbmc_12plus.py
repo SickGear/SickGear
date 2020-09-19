@@ -14,12 +14,14 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
+from __future__ import absolute_import
 
 import datetime
 
 from . import generic
-from .. import helpers, logger
-from ..indexers.indexer_exceptions import check_exception_type, ExceptionTuples
+from .. import logger
+import sg_helpers
+from tvinfo_base.exceptions import *
 import sickbeard
 import exceptions_helper
 from exceptions_helper import ex
@@ -121,18 +123,14 @@ class XBMC12PlusMetadata(generic.GenericMetadata):
 
         try:
             show_info = t[int(show_id)]
-        except Exception as e:
-            if check_exception_type(e, ExceptionTuples.tvinfo_shownotfound):
-                logger.log('Unable to find show with id %s on %s, skipping it' %
-                           (show_id, sickbeard.TVInfoAPI(show_obj.tvid).name), logger.ERROR)
-                raise
-
-            elif check_exception_type(e, ExceptionTuples.tvinfo_error):
-                logger.log('%s is down, can\'t use its data to add this show' % sickbeard.TVInfoAPI(show_obj.tvid).name,
-                           logger.ERROR)
-                raise
-            else:
-                raise e
+        except BaseTVinfoShownotfound as e:
+            logger.log('Unable to find show with id %s on %s, skipping it' %
+                       (show_id, sickbeard.TVInfoAPI(show_obj.tvid).name), logger.ERROR)
+            raise e
+        except BaseTVinfoError as e:
+            logger.log('%s is down, can\'t use its data to add this show' % sickbeard.TVInfoAPI(show_obj.tvid).name,
+                       logger.ERROR)
+            raise e
 
         if not self._valid_show(show_info, show_obj):
             return
@@ -196,7 +194,7 @@ class XBMC12PlusMetadata(generic.GenericMetadata):
         self.add_actor_element(show_info, etree, tv_node)
 
         # Make it purdy
-        helpers.indent_xml(tv_node)
+        sg_helpers.indent_xml(tv_node)
 
         data = etree.ElementTree(tv_node)
 
@@ -227,15 +225,12 @@ class XBMC12PlusMetadata(generic.GenericMetadata):
         try:
             t = sickbeard.TVInfoAPI(ep_obj.show_obj.tvid).setup(**tvinfo_config)
             show_info = t[ep_obj.show_obj.prodid]
-        except Exception as e:
-            if check_exception_type(e, ExceptionTuples.tvinfo_shownotfound):
-                raise exceptions_helper.ShowNotFoundException(ex(e))
-            elif check_exception_type(e, ExceptionTuples.tvinfo_error):
-                logger.log('Unable to connect to %s while creating meta files - skipping - %s' %
-                           (sickbeard.TVInfoAPI(ep_obj.show_obj.tvid).name, ex(e)), logger.ERROR)
-                return
-            else:
-                raise e
+        except BaseTVinfoShownotfound as e:
+            raise exceptions_helper.ShowNotFoundException(ex(e))
+        except BaseTVinfoError as e:
+            logger.log('Unable to connect to %s while creating meta files - skipping - %s' %
+                       (sickbeard.TVInfoAPI(ep_obj.show_obj.tvid).name, ex(e)), logger.ERROR)
+            return
 
         if not self._valid_show(show_info, ep_obj.show_obj):
             return
@@ -250,15 +245,13 @@ class XBMC12PlusMetadata(generic.GenericMetadata):
 
             try:
                 ep_info = show_info[cur_ep_obj.season][cur_ep_obj.episode]
-            except Exception as e:
-                if check_exception_type(e, ExceptionTuples.tvinfo_episodenotfound,
-                                        ExceptionTuples.tvinfo_seasonnotfound):
-                    logger.log('Unable to find episode %sx%s on %s.. has it been removed? Should I delete from db?' %
-                               (cur_ep_obj.season, cur_ep_obj.episode, sickbeard.TVInfoAPI(ep_obj.show_obj.tvid).name))
-                    return None
-                else:
-                    logger.log(u'Not generating nfo because failed to fetched tv info data at this time', logger.DEBUG)
-                    return None
+            except (BaseTVinfoEpisodenotfound, BaseTVinfoSeasonnotfound) as e:
+                logger.log('Unable to find episode %sx%s on %s.. has it been removed? Should I delete from db?' %
+                           (cur_ep_obj.season, cur_ep_obj.episode, sickbeard.TVInfoAPI(ep_obj.show_obj.tvid).name))
+                return None
+            except (BaseException, Exception):
+                logger.log(u'Not generating nfo because failed to fetched tv info data at this time', logger.DEBUG)
+                return None
 
             if None is getattr(ep_info, 'firstaired', None):
                 ep_info['firstaired'] = str(datetime.date.fromordinal(1))
@@ -351,7 +344,7 @@ class XBMC12PlusMetadata(generic.GenericMetadata):
             self.add_actor_element(show_info, etree, episode)
 
         # Make it purdy
-        helpers.indent_xml(rootNode)
+        sg_helpers.indent_xml(rootNode)
 
         data = etree.ElementTree(rootNode)
 

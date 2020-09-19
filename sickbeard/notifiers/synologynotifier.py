@@ -34,8 +34,8 @@ class SynologyNotifier(Notifier):
             from sickbeard.helpers import cmdline_runner
             output, err, exit_status = cmdline_runner(synodsmnotify_cmd)
             self._log_debug(u'Script result: %s' % output)
-        except OSError as e:
-            self._log(u'Unable to run synodsmnotify: ' + ex(e))
+        except (BaseException, Exception) as e:
+            self._log('Unable to run synodsmnotify: %s' % ex(e))
 
 
 notifier = SynologyNotifier

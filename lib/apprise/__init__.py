@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2019 Chris Caron <lead2gold@gmail.com>
+# Copyright (C) 2020 Chris Caron <lead2gold@gmail.com>
 # All rights reserved.
 #
 # This code is licensed under the MIT License.
@@ -24,10 +24,10 @@
 # THE SOFTWARE.
 
 __title__ = 'apprise'
-__version__ = '0.8.0'
+__version__ = '0.8.5'
 __author__ = 'Chris Caron'
 __license__ = 'MIT'
-__copywrite__ = 'Copyright (C) 2019 Chris Caron <lead2gold@gmail.com>'
+__copywrite__ = 'Copyright (C) 2020 Chris Caron <lead2gold@gmail.com>'
 __email__ = 'lead2gold@gmail.com'
 __status__ = 'Production'
 
@@ -43,12 +43,15 @@ from .common import ConfigFormat
 from .common import CONFIG_FORMATS
 
 from .URLBase import URLBase
+from .URLBase import PrivacyMode
 from .plugins.NotifyBase import NotifyBase
 from .config.ConfigBase import ConfigBase
+from .attachment.AttachBase import AttachBase
 
 from .Apprise import Apprise
 from .AppriseAsset import AppriseAsset
 from .AppriseConfig import AppriseConfig
+from .AppriseAttachment import AppriseAttachment
 
 # Set default logging handler to avoid "No handler found" warnings.
 import logging
@@ -57,11 +60,11 @@ logging.getLogger(__name__).addHandler(NullHandler())
 
 __all__ = [
     # Core
-    'Apprise', 'AppriseAsset', 'AppriseConfig', 'URLBase', 'NotifyBase',
-    'ConfigBase',
+    'Apprise', 'AppriseAsset', 'AppriseConfig', 'AppriseAttachment', 'URLBase',
+    'NotifyBase', 'ConfigBase', 'AttachBase',
 
     # Reference
     'NotifyType', 'NotifyImageSize', 'NotifyFormat', 'OverflowMode',
     'NOTIFY_TYPES', 'NOTIFY_IMAGE_SIZES', 'NOTIFY_FORMATS', 'OVERFLOW_MODES',
-    'ConfigFormat', 'CONFIG_FORMATS',
+    'ConfigFormat', 'CONFIG_FORMATS', 'PrivacyMode',
 ]

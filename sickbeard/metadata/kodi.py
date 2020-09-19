@@ -14,15 +14,17 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
+from __future__ import absolute_import
 
 import datetime
 import io
 import os
 
 from . import generic
-from .. import helpers, logger
+from .. import logger
+import sg_helpers
 from ..indexers.indexer_config import TVINFO_IMDB, TVINFO_TVDB
-from ..indexers.indexer_exceptions import check_exception_type, ExceptionTuples
+from tvinfo_base.exceptions import *
 import sickbeard
 # noinspection PyPep8Naming
 import encodingKludge as ek
@@ -127,19 +129,15 @@ class KODIMetadata(generic.GenericMetadata):
 
         try:
             show_info = t[int(show_ID)]
-        except Exception as e:
-            if check_exception_type(e, ExceptionTuples.tvinfo_shownotfound):
-                logger.log('Unable to find show with id %s on %s, skipping it' % (show_ID, sickbeard.TVInfoAPI(
-                    show_obj.tvid).name), logger.ERROR)
-                raise
-
-            elif check_exception_type(e, ExceptionTuples.tvinfo_error):
-                logger.log(
-                    '%s is down, can\'t use its data to add this show' % sickbeard.TVInfoAPI(show_obj.tvid).name,
-                    logger.ERROR)
-                raise
-            else:
-                raise e
+        except BaseTVinfoShownotfound as e:
+            logger.log('Unable to find show with id %s on %s, skipping it' % (show_ID, sickbeard.TVInfoAPI(
+                show_obj.tvid).name), logger.ERROR)
+            raise e
+        except BaseTVinfoError as e:
+            logger.log(
+                '%s is down, can\'t use its data to add this show' % sickbeard.TVInfoAPI(show_obj.tvid).name,
+                logger.ERROR)
+            raise e
 
         if not self._valid_show(show_info, show_obj):
             return
@@ -214,7 +212,7 @@ class KODIMetadata(generic.GenericMetadata):
         self.add_actor_element(show_info, etree, tv_node)
 
         # Make it purdy
-        helpers.indent_xml(tv_node)
+        sg_helpers.indent_xml(tv_node)
 
         # output valid xml
         # data = etree.ElementTree(tv_node)
@@ -241,7 +239,7 @@ class KODIMetadata(generic.GenericMetadata):
 
         logger.log(u'Writing Kodi metadata file: %s' % nfo_file_path, logger.DEBUG)
 
-        return helpers.write_file(nfo_file_path, data, utf8=True)
+        return sg_helpers.write_file(nfo_file_path, data, utf8=True)
 
     def _ep_data(self, ep_obj):
         # type: (sickbeard.tv.TVEpisode) -> Optional[etree.Element]
@@ -267,15 +265,12 @@ class KODIMetadata(generic.GenericMetadata):
         try:
             t = sickbeard.TVInfoAPI(ep_obj.show_obj.tvid).setup(**tvinfo_config)
             show_info = t[ep_obj.show_obj.prodid]
-        except Exception as e:
-            if check_exception_type(e, ExceptionTuples.tvinfo_shownotfound):
-                raise exceptions_helper.ShowNotFoundException(ex(e))
-            elif check_exception_type(e, ExceptionTuples.tvinfo_error):
-                logger.log('Unable to connect to %s while creating meta files - skipping - %s' % (sickbeard.TVInfoAPI(
-                    ep_obj.show_obj.tvid).name, ex(e)), logger.ERROR)
-                return
-            else:
-                raise e
+        except BaseTVinfoShownotfound as e:
+            raise exceptions_helper.ShowNotFoundException(ex(e))
+        except BaseTVinfoError as e:
+            logger.log('Unable to connect to %s while creating meta files - skipping - %s' % (sickbeard.TVInfoAPI(
+                ep_obj.show_obj.tvid).name, ex(e)), logger.ERROR)
+            return
 
         if not self._valid_show(show_info, ep_obj.show_obj):
             return
@@ -393,7 +388,7 @@ class KODIMetadata(generic.GenericMetadata):
             self.add_actor_element(show_info, etree, ep_node)
 
         # Make it purdy
-        helpers.indent_xml(root_node)
+        sg_helpers.indent_xml(root_node)
 
         data = etree.ElementTree(root_node)
 
@@ -487,8 +482,8 @@ def remove_default_attr(*args, **kwargs):
                                     changed = True
 
                                 if changed:
-                                    helpers.indent_xml(root)
-                                    helpers.write_file(nfo_path, xmltree, xmltree=True, utf8=True)
+                                    sg_helpers.indent_xml(root)
+                                    sg_helpers.write_file(nfo_path, xmltree, xmltree=True, utf8=True)
                         except(BaseException, Exception):
                             pass
 
@@ -516,8 +511,8 @@ def remove_default_attr(*args, **kwargs):
                                         changed = True
 
                                 if changed:
-                                    helpers.indent_xml(xmltree.getroot())
-                                    helpers.write_file(nfo_path, xmltree, xmltree=True, utf8=True)
+                                    sg_helpers.indent_xml(xmltree.getroot())
+                                    sg_helpers.write_file(nfo_path, xmltree, xmltree=True, utf8=True)
 
                             except(BaseException, Exception):
                                 pass

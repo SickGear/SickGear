@@ -80,13 +80,49 @@ class TVShowBase(LegacyTVShow, TVBase):
         self._sports = 0
         self._anime = 0
         self._scene = 0
-        self._rls_ignore_words = ''
-        self._rls_require_words = ''
+        self._rls_ignore_words = set()
+        self._rls_require_words = set()
         self._overview = ''
         self._prune = 0
         self._tag = ''
+        self._rls_ignore_words_regex = False
+        self._rls_require_words_regex = False
+        self._rls_global_exclude_ignore = set()
+        self._rls_global_exclude_require = set()
 
     # name = property(lambda self: self._name, dirty_setter('_name'))
+    @property
+    def rls_ignore_words_regex(self):
+        return self._rls_ignore_words_regex
+
+    @rls_ignore_words_regex.setter
+    def rls_ignore_words_regex(self, val):
+        self.dirty_setter('_rls_ignore_words_regex')(self, val)
+
+    @property
+    def rls_require_words_regex(self):
+        return self._rls_require_words_regex
+
+    @rls_require_words_regex.setter
+    def rls_require_words_regex(self, val):
+        self.dirty_setter('_rls_require_words_regex')(self, val)
+
+    @property
+    def rls_global_exclude_ignore(self):
+        return self._rls_global_exclude_ignore
+
+    @rls_global_exclude_ignore.setter
+    def rls_global_exclude_ignore(self, val):
+        self.dirty_setter('_rls_global_exclude_ignore', set)(self, val)
+
+    @property
+    def rls_global_exclude_require(self):
+        return self._rls_global_exclude_require
+
+    @rls_global_exclude_require.setter
+    def rls_global_exclude_require(self, val):
+        self.dirty_setter('_rls_global_exclude_require', set)(self, val)
+
     @property
     def name(self):
         return self._name
@@ -285,7 +321,7 @@ class TVShowBase(LegacyTVShow, TVBase):
 
     @rls_ignore_words.setter
     def rls_ignore_words(self, *arg):
-        self.dirty_setter('_rls_ignore_words')(self, *arg)
+        self.dirty_setter('_rls_ignore_words', set)(self, *arg)
 
     # rls_require_words = property(lambda self: self._rls_require_words, dirty_setter('_rls_require_words'))
     @property
@@ -294,7 +330,7 @@ class TVShowBase(LegacyTVShow, TVBase):
 
     @rls_require_words.setter
     def rls_require_words(self, *arg):
-        self.dirty_setter('_rls_require_words')(self, *arg)
+        self.dirty_setter('_rls_require_words', set)(self, *arg)
 
     # overview = property(lambda self: self._overview, dirty_setter('_overview'))
     @property

@@ -687,6 +687,7 @@ class TVShowTest(tv.TVShow):
         self._name = name
         self._tvid = tvid
         self._prodid = prodid
+        self.sid_int = self.create_sid(self._tvid, self._prodid)
         self.sxe_ep_obj = {}
 
 
@@ -718,6 +719,7 @@ class ExtraInfoNoNameTests(test.SickbeardTestDBCase):
                     tvs.sxe_ep_obj.setdefault(e[1], {}).update({e[2]: TVEpisodeTest(e[0])})
 
                 sickbeard.showList = [tvs]
+                sickbeard.showDict = {tvs.sid_int: tvs}
                 name_cache.nameCache = {}
                 name_cache.buildNameCache()
 

@@ -17,6 +17,7 @@
 the server into multiple processes and managing subprocesses.
 """
 
+import errno
 import os
 import multiprocessing
 import signal
@@ -35,6 +36,7 @@ from tornado_py3 import ioloop
 from tornado_py3.iostream import PipeIOStream
 from tornado_py3.log import gen_log
 from tornado_py3.platform.auto import set_close_exec
+from tornado_py3.util import errno_from_exception
 
 import typing
 from typing import Tuple, Optional, Any, Callable
@@ -87,9 +89,7 @@ def _pipe_cloexec() -> Tuple[int, int]:
 _task_id = None
 
 
-def fork_processes(
-    num_processes: Optional[int], max_restarts: Optional[int] = None
-) -> int:
+def fork_processes(num_processes: Optional[int], max_restarts: int = None) -> int:
     """Starts multiple worker processes.
 
     If ``num_processes`` is None or <= 0, we detect the number of cores
@@ -115,8 +115,6 @@ def fork_processes(
     exception.
 
     max_restarts defaults to 100.
-
-    Availability: Unix
     """
     if max_restarts is None:
         max_restarts = 100
@@ -146,7 +144,12 @@ def fork_processes(
             return id
     num_restarts = 0
     while children:
-        pid, status = os.wait()
+        try:
+            pid, status = os.wait()
+        except OSError as e:
+            if errno_from_exception(e) == errno.EINTR:
+                continue
+            raise
         if pid not in children:
             continue
         id = children.pop(pid)
@@ -270,8 +273,6 @@ class Subprocess(object):
         In many cases a close callback on the stdout or stderr streams
         can be used as an alternative to an exit callback if the
         signal handler is causing a problem.
-
-        Availability: Unix
         """
         self._exit_callback = callback
         Subprocess.initialize()
@@ -293,8 +294,6 @@ class Subprocess(object):
         to suppress this behavior and return the exit status without raising.
 
         .. versionadded:: 4.2
-
-        Availability: Unix
         """
         future = Future()  # type: Future[int]
 
@@ -322,8 +321,6 @@ class Subprocess(object):
         .. versionchanged:: 5.0
            The ``io_loop`` argument (deprecated since version 4.1) has been
            removed.
-
-        Availability: Unix
         """
         if cls._initialized:
             return
@@ -351,8 +348,9 @@ class Subprocess(object):
     def _try_cleanup_process(cls, pid: int) -> None:
         try:
             ret_pid, status = os.waitpid(pid, os.WNOHANG)
-        except ChildProcessError:
-            return
+        except OSError as e:
+            if errno_from_exception(e) == errno.ECHILD:
+                return
         if ret_pid == 0:
             return
         assert ret_pid == pid

@@ -371,9 +371,15 @@ if asyncio is not None:
     Future = asyncio.Future  # noqa
 
 if futures is None:
-    FUTURES = Future  # type: typing.Union[type, typing.Tuple[type, ...]]
+    FUTURES = (Future, )  # type: typing.Union[type, typing.Tuple[type, ...]]
 else:
     FUTURES = (futures.Future, Future)
+
+try:
+    from sg_futures.futures._base import Future as sg_future
+    FUTURES += (sg_future, )
+except ImportError:
+    pass
 
 
 def is_future(x):

@@ -248,6 +248,8 @@ class WebServer(threading.Thread):
                 # noinspection PyUnresolvedReferences
                 asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
             asyncio.set_event_loop(asyncio.new_event_loop())
+            from tornado_py3.platform.asyncio import AnyThreadEventLoopPolicy
+            asyncio.set_event_loop_policy(AnyThreadEventLoopPolicy())
 
         try:
             self.server = self.app.listen(self.options['port'], self.options['host'], ssl_options=ssl_options,

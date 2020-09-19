@@ -28,7 +28,6 @@ import os
 import signal
 import sys
 import shutil
-import subprocess
 import time
 import threading
 import warnings
@@ -518,6 +517,11 @@ class SickGear(object):
         # Build from the DB to start with
         sickbeard.classes.loading_msg.message = 'Loading shows from db'
         self.load_shows_from_db()
+        if not db.DBConnection().has_flag('ignore_require_cleaned'):
+            from sickbeard.show_updater import clean_ignore_require_words
+            sickbeard.classes.loading_msg.message = 'Cleaning ignore/require words lists'
+            clean_ignore_require_words()
+            db.DBConnection().set_flag('ignore_require_cleaned')
 
         # Fire up all our threads
         sickbeard.classes.loading_msg.message = 'Starting threads'
@@ -641,10 +645,12 @@ class SickGear(object):
         sql_result = my_db.select('SELECT indexer AS tv_id, indexer_id AS prod_id, location FROM tv_shows')
 
         sickbeard.showList = []
+        sickbeard.showDict = {}
         for cur_result in sql_result:
             try:
                 show_obj = TVShow(int(cur_result['tv_id']), int(cur_result['prod_id']))
                 sickbeard.showList.append(show_obj)
+                sickbeard.showDict[show_obj.sid_int] = show_obj
             except (BaseException, Exception) as err:
                 logger.log('There was an error creating the show in %s: %s' % (
                     cur_result['location'], ex(err)), logger.ERROR)
@@ -706,7 +712,9 @@ class SickGear(object):
                         popen_list += ['--nolaunch']
                     logger.log(u'Restarting SickGear with %s' % popen_list)
                     logger.close()
-                    subprocess.Popen(popen_list, cwd=os.getcwd())
+                    from _23 import Popen
+                    with Popen(popen_list, cwd=os.getcwd()):
+                        pass
 
         # system exit
         self.exit(0)

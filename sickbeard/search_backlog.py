@@ -27,7 +27,7 @@ from . import db, logger, scheduler, search_queue, ui
 from .helpers import find_show_by_id
 from .providers.generic import GenericProvider
 from .search import wanted_episodes
-from .sgdatetime import SGDatetime
+from .sgdatetime import SGDatetime, timestamp_near
 from .tv import TVidProdid, TVEpisode, TVShow
 
 from _23 import filter_list, map_iter, map_list
@@ -338,7 +338,7 @@ class BacklogSearcher(object):
             last_run_time = 1
         else:
             last_run_time = int(sql_result[0]['last_run_backlog'])
-            if last_run_time > SGDatetime.now().totimestamp(default=0):
+            if last_run_time > int(timestamp_near(datetime.datetime.now())):
                 last_run_time = 1
 
         return last_run_time
@@ -349,12 +349,15 @@ class BacklogSearcher(object):
         my_db = db.DBConnection()
         sql_result = my_db.select('SELECT * FROM info')
 
+        if isinstance(when, datetime.datetime):
+            when = int(timestamp_near(when))
+        else:
+            when = SGDatetime.timestamp_far(when, default=0)
         if 0 == len(sql_result):
-            my_db.action('INSERT INTO info (last_backlog, last_indexer, last_run_backlog) VALUES (?,?,?)',
-                         [1, 0, SGDatetime.totimestamp(when, default=0)])
+            my_db.action('INSERT INTO info (last_backlog, last_indexer, last_run_backlog) VALUES (?,?,?)', [1, 0, when])
         else:
             # noinspection SqlConstantCondition
-            my_db.action('UPDATE info SET last_run_backlog=%s WHERE 1=1' % SGDatetime.totimestamp(when, default=0))
+            my_db.action('UPDATE info SET last_run_backlog=%s WHERE 1=1' % when)
 
         self.nextBacklog = datetime.datetime.fromtimestamp(1)
 

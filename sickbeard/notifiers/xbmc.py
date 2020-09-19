@@ -22,14 +22,13 @@ except ImportError:
     from lib import simplejson as json
 import socket
 import time
-import xml.etree.cElementTree as XmlEtree
 
 from .generic import Notifier
 import sickbeard
 from exceptions_helper import ex
 from encodingKludge import fixStupidEncodings
 
-from _23 import b64encodestring, decode_str, quote, unquote, unquote_plus, urlencode
+from _23 import b64encodestring, decode_str, etree, quote, unquote, unquote_plus, urlencode
 from six import PY2, text_type
 # noinspection PyUnresolvedReferences
 from six.moves import urllib
@@ -238,7 +237,7 @@ class XBMCNotifier(Notifier):
 
             enc_sql_xml = quote(sql_xml, ':\\/<>')
             try:
-                et = XmlEtree.fromstring(enc_sql_xml)
+                et = etree.fromstring(enc_sql_xml)
             except SyntaxError as e:
                 self._log_error(u'Unable to parse XML response: ' + ex(e))
                 return False

@@ -13,6 +13,7 @@
 # under the License.
 
 import collections
+from concurrent.futures import CancelledError
 import datetime
 import types
 
@@ -60,9 +61,9 @@ class Condition(_TimeoutGarbageCollector):
 
     .. testcode::
 
-        from tornado import gen
-        from tornado.ioloop import IOLoop
-        from tornado.locks import Condition
+        from tornado_py3 import gen
+        from tornado_py3.ioloop import IOLoop
+        from tornado_py3.locks import Condition
 
         condition = Condition()
 
@@ -120,9 +121,7 @@ class Condition(_TimeoutGarbageCollector):
             result += " waiters[%s]" % len(self._waiters)
         return result + ">"
 
-    def wait(
-        self, timeout: Optional[Union[float, datetime.timedelta]] = None
-    ) -> Awaitable[bool]:
+    def wait(self, timeout: Union[float, datetime.timedelta] = None) -> Awaitable[bool]:
         """Wait for `.notify`.
 
         Returns a `.Future` that resolves ``True`` if the condition is notified,
@@ -169,9 +168,9 @@ class Event(object):
 
     .. testcode::
 
-        from tornado import gen
-        from tornado.ioloop import IOLoop
-        from tornado.locks import Event
+        from tornado_py3 import gen
+        from tornado_py3.ioloop import IOLoop
+        from tornado_py3.locks import Event
 
         event = Event()
 
@@ -232,9 +231,7 @@ class Event(object):
         """
         self._value = False
 
-    def wait(
-        self, timeout: Optional[Union[float, datetime.timedelta]] = None
-    ) -> Awaitable[None]:
+    def wait(self, timeout: Union[float, datetime.timedelta] = None) -> Awaitable[None]:
         """Block until the internal flag is true.
 
         Returns an awaitable, which raises `tornado.util.TimeoutError` after a
@@ -249,7 +246,9 @@ class Event(object):
         if timeout is None:
             return fut
         else:
-            timeout_fut = gen.with_timeout(timeout, fut)
+            timeout_fut = gen.with_timeout(
+                timeout, fut, quiet_exceptions=(CancelledError,)
+            )
             # This is a slightly clumsy workaround for the fact that
             # gen.with_timeout doesn't cancel its futures. Cancelling
             # fut will remove it from the waiters list.
@@ -298,9 +297,9 @@ class Semaphore(_TimeoutGarbageCollector):
 
        from collections import deque
 
-       from tornado import gen
-       from tornado.ioloop import IOLoop
-       from tornado.concurrent import Future
+       from tornado_py3 import gen
+       from tornado_py3.ioloop import IOLoop
+       from tornado_py3.concurrent import Future
 
        # Ensure reliable doctest output: resolve Futures one at a time.
        futures_q = deque([Future() for _ in range(3)])
@@ -319,9 +318,9 @@ class Semaphore(_TimeoutGarbageCollector):
 
     .. testcode:: semaphore
 
-        from tornado import gen
-        from tornado.ioloop import IOLoop
-        from tornado.locks import Semaphore
+        from tornado_py3 import gen
+        from tornado_py3.ioloop import IOLoop
+        from tornado_py3.locks import Semaphore
 
         sem = Semaphore(2)
 
@@ -413,7 +412,7 @@ class Semaphore(_TimeoutGarbageCollector):
                 break
 
     def acquire(
-        self, timeout: Optional[Union[float, datetime.timedelta]] = None
+        self, timeout: Union[float, datetime.timedelta] = None
     ) -> Awaitable[_ReleasingContextManager]:
         """Decrement the counter. Returns an awaitable.
 
@@ -527,7 +526,7 @@ class Lock(object):
         return "<%s _block=%s>" % (self.__class__.__name__, self._block)
 
     def acquire(
-        self, timeout: Optional[Union[float, datetime.timedelta]] = None
+        self, timeout: Union[float, datetime.timedelta] = None
     ) -> Awaitable[_ReleasingContextManager]:
         """Attempt to lock. Returns an awaitable.
 

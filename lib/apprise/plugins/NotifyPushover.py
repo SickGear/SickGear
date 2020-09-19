@@ -30,18 +30,14 @@ import requests
 from .NotifyBase import NotifyBase
 from ..common import NotifyType
 from ..utils import parse_list
+from ..utils import validate_regex
 from ..AppriseLocale import gettext_lazy as _
+from ..attachment.AttachBase import AttachBase
 
 # Flag used as a placeholder to sending to all devices
 PUSHOVER_SEND_TO_ALL = 'ALL_DEVICES'
 
-# Used to validate API Key
-VALIDATE_TOKEN = re.compile(r'^[a-z0-9]{30}$', re.I)
-
-# Used to detect a User and/or Group
-VALIDATE_USER_KEY = re.compile(r'^[a-z0-9]{30}$', re.I)
-
-# Used to detect a User and/or Group
+# Used to detect a Device
 VALIDATE_DEVICE = re.compile(r'^[a-z0-9_]{1,25}$', re.I)
 
 
@@ -145,6 +141,14 @@ class NotifyPushover(NotifyBase):
     # Default Pushover sound
     default_pushover_sound = PushoverSound.PUSHOVER
 
+    # 2.5MB is the maximum supported image filesize as per documentation
+    # here: https://pushover.net/api#attachments (Dec 26th, 2019)
+    attach_max_size_bytes = 2621440
+
+    # The regular expression of the current attachment supported mime types
+    # At this time it is only images
+    attach_supported_mime_type = r'^image/.*'
+
     # Define object templates
     templates = (
         '{schema}://{user_key}@{token}',
@@ -158,20 +162,19 @@ class NotifyPushover(NotifyBase):
             'type': 'string',
             'private': True,
             'required': True,
-            'regex': (r'[a-z0-9]{30}', 'i'),
-            'map_to': 'user',
+            'regex': (r'^[a-z0-9]{30}$', 'i'),
         },
         'token': {
             'name': _('Access Token'),
             'type': 'string',
             'private': True,
             'required': True,
-            'regex': (r'[a-z0-9]{30}', 'i'),
+            'regex': (r'^[a-z0-9]{30}$', 'i'),
         },
         'target_device': {
             'name': _('Target Device'),
             'type': 'string',
-            'regex': (r'[a-z0-9_]{1,25}', 'i'),
+            'regex': (r'^[a-z0-9_]{1,25}$', 'i'),
             'map_to': 'targets',
         },
         'targets': {
@@ -191,7 +194,7 @@ class NotifyPushover(NotifyBase):
         'sound': {
             'name': _('Sound'),
             'type': 'string',
-            'regex': (r'[a-z]{1,12}', 'i'),
+            'regex': (r'^[a-z]{1,12}$', 'i'),
             'default': PushoverSound.PUSHOVER,
         },
         'retry': {
@@ -212,26 +215,28 @@ class NotifyPushover(NotifyBase):
         },
     })
 
-    def __init__(self, token, targets=None, priority=None, sound=None,
-                 retry=None, expire=None,
-                 **kwargs):
+    def __init__(self, user_key, token, targets=None, priority=None,
+                 sound=None, retry=None, expire=None, **kwargs):
         """
         Initialize Pushover Object
         """
         super(NotifyPushover, self).__init__(**kwargs)
 
-        try:
-            # The token associated with the account
-            self.token = token.strip()
-
-        except AttributeError:
-            # Token was None
-            msg = 'No API Token was specified.'
+        # Access Token (associated with project)
+        self.token = validate_regex(
+            token, *self.template_tokens['token']['regex'])
+        if not self.token:
+            msg = 'An invalid Pushover Access Token ' \
+                  '({}) was specified.'.format(token)
             self.logger.warning(msg)
             raise TypeError(msg)
 
-        if not VALIDATE_TOKEN.match(self.token):
-            msg = 'The API Token specified (%s) is invalid.'.format(token)
+        # User Key (associated with project)
+        self.user_key = validate_regex(
+            user_key, *self.template_tokens['user_key']['regex'])
+        if not self.user_key:
+            msg = 'An invalid Pushover User Key ' \
+                  '({}) was specified.'.format(user_key)
             self.logger.warning(msg)
             raise TypeError(msg)
 
@@ -249,7 +254,7 @@ class NotifyPushover(NotifyBase):
 
         # The Priority of the message
         if priority not in PUSHOVER_PRIORITIES:
-            self.priority = PushoverPriority.NORMAL
+            self.priority = self.template_args['priority']['default']
 
         else:
             self.priority = priority
@@ -258,7 +263,7 @@ class NotifyPushover(NotifyBase):
         if self.priority == PushoverPriority.EMERGENCY:
 
             # How often to resend notification, in seconds
-            self.retry = NotifyPushover.template_args['retry']['default']
+            self.retry = self.template_args['retry']['default']
             try:
                 self.retry = int(retry)
             except (ValueError, TypeError):
@@ -266,7 +271,7 @@ class NotifyPushover(NotifyBase):
                 pass
 
             # How often to resend notification, in seconds
-            self.expire = NotifyPushover.template_args['expire']['default']
+            self.expire = self.template_args['expire']['default']
             try:
                 self.expire = int(expire)
             except (ValueError, TypeError):
@@ -274,34 +279,22 @@ class NotifyPushover(NotifyBase):
                 pass
 
             if self.retry < 30:
-                msg = 'Retry must be at least 30.'
+                msg = 'Pushover retry must be at least 30 seconds.'
                 self.logger.warning(msg)
                 raise TypeError(msg)
+
             if self.expire < 0 or self.expire > 10800:
-                msg = 'Expire has a max value of at most 10800 seconds.'
+                msg = 'Pushover expire must reside in the range of ' \
+                      '0 to 10800 seconds.'
                 self.logger.warning(msg)
                 raise TypeError(msg)
+        return
 
-        if not self.user:
-            msg = 'No user key was specified.'
-            self.logger.warning(msg)
-            raise TypeError(msg)
-
-        if not VALIDATE_USER_KEY.match(self.user):
-            msg = 'The user key specified (%s) is invalid.' % self.user
-            self.logger.warning(msg)
-            raise TypeError(msg)
-
-    def send(self, body, title='', notify_type=NotifyType.INFO, **kwargs):
+    def send(self, body, title='', notify_type=NotifyType.INFO, attach=None,
+             **kwargs):
         """
         Perform Pushover Notification
         """
-
-        headers = {
-            'User-Agent': self.app_id,
-            'Content-Type': 'application/x-www-form-urlencoded'
-        }
-        auth = (self.token, '')
 
         # error tracking (used for function return)
         has_error = False
@@ -323,9 +316,9 @@ class NotifyPushover(NotifyBase):
             # prepare JSON Object
             payload = {
                 'token': self.token,
-                'user': self.user,
+                'user': self.user_key,
                 'priority': str(self.priority),
-                'title': title,
+                'title': title if title else self.app_desc,
                 'message': body,
                 'device': device,
                 'sound': self.sound,
@@ -334,61 +327,163 @@ class NotifyPushover(NotifyBase):
             if self.priority == PushoverPriority.EMERGENCY:
                 payload.update({'retry': self.retry, 'expire': self.expire})
 
-            self.logger.debug('Pushover POST URL: %s (cert_verify=%r)' % (
-                self.notify_url, self.verify_certificate,
-            ))
-            self.logger.debug('Pushover Payload: %s' % str(payload))
+            if attach:
+                # Create a copy of our payload
+                _payload = payload.copy()
 
-            # Always call throttle before any remote server i/o is made
-            self.throttle()
+                # Send with attachments
+                for attachment in attach:
+                    # Simple send
+                    if not self._send(_payload, attachment):
+                        # Mark our failure
+                        has_error = True
+                        # clean exit from our attachment loop
+                        break
 
-            try:
-                r = requests.post(
-                    self.notify_url,
-                    data=payload,
-                    headers=headers,
-                    auth=auth,
-                    verify=self.verify_certificate,
-                )
-                if r.status_code != requests.codes.ok:
-                    # We had a problem
-                    status_str = \
-                        NotifyPushover.http_response_code_lookup(
-                            r.status_code, PUSHOVER_HTTP_ERROR_MAP)
+                    # To handle multiple attachments, clean up our message
+                    _payload['title'] = '...'
+                    _payload['message'] = attachment.name
+                    # No need to alarm for each consecutive attachment uploaded
+                    # afterwards
+                    _payload['sound'] = PushoverSound.NONE
 
-                    self.logger.warning(
-                        'Failed to send Pushover notification to {}: '
-                        '{}{}error={}.'.format(
-                            device,
-                            status_str,
-                            ', ' if status_str else '',
-                            r.status_code))
-
-                    self.logger.debug(
-                        'Response Details:\r\n{}'.format(r.content))
-
+            else:
+                # Simple send
+                if not self._send(payload):
                     # Mark our failure
                     has_error = True
-                    continue
-
-                else:
-                    self.logger.info(
-                        'Sent Pushover notification to %s.' % device)
-
-            except requests.RequestException as e:
-                self.logger.warning(
-                    'A Connection error occured sending Pushover:%s ' % (
-                        device) + 'notification.'
-                )
-                self.logger.debug('Socket Exception: %s' % str(e))
-
-                # Mark our failure
-                has_error = True
-                continue
 
         return not has_error
 
-    def url(self):
+    def _send(self, payload, attach=None):
+        """
+        Wrapper to the requests (post) object
+        """
+
+        if isinstance(attach, AttachBase):
+            # Perform some simple error checking
+            if not attach:
+                # We could not access the attachment
+                self.logger.error(
+                    'Could not access attachment {}.'.format(
+                        attach.url(privacy=True)))
+                return False
+
+            # Perform some basic checks as we want to gracefully skip
+            # over unsupported mime types.
+            if not re.match(
+                    self.attach_supported_mime_type,
+                    attach.mimetype,
+                    re.I):
+                # No problem; we just don't support this attachment
+                # type; gracefully move along
+                self.logger.debug(
+                    'Ignored unsupported Pushover attachment ({}): {}'
+                    .format(
+                        attach.mimetype,
+                        attach.url(privacy=True)))
+
+                return True
+
+            # If we get here, we're dealing with a supported image.
+            # Verify that the filesize is okay though.
+            file_size = len(attach)
+            if not (file_size > 0
+                    and file_size <= self.attach_max_size_bytes):
+
+                # File size is no good
+                self.logger.warning(
+                    'Pushover attachment size ({}B) exceeds limit: {}'
+                    .format(file_size, attach.url(privacy=True)))
+
+                return False
+
+            self.logger.debug(
+                'Posting Pushover attachment {}'.format(
+                    attach.url(privacy=True)))
+
+        # Default Header
+        headers = {
+            'User-Agent': self.app_id,
+        }
+
+        # Authentication
+        auth = (self.token, '')
+
+        # Some default values for our request object to which we'll update
+        # depending on what our payload is
+        files = None
+
+        self.logger.debug('Pushover POST URL: %s (cert_verify=%r)' % (
+            self.notify_url, self.verify_certificate,
+        ))
+        self.logger.debug('Pushover Payload: %s' % str(payload))
+
+        # Always call throttle before any remote server i/o is made
+        self.throttle()
+
+        try:
+            # Open our attachment path if required:
+            if attach:
+                files = {'attachment': (attach.name, open(attach.path, 'rb'))}
+
+            r = requests.post(
+                self.notify_url,
+                data=payload,
+                headers=headers,
+                files=files,
+                auth=auth,
+                verify=self.verify_certificate,
+            )
+
+            if r.status_code != requests.codes.ok:
+                # We had a problem
+                status_str = \
+                    NotifyPushover.http_response_code_lookup(
+                        r.status_code, PUSHOVER_HTTP_ERROR_MAP)
+
+                self.logger.warning(
+                    'Failed to send Pushover notification to {}: '
+                    '{}{}error={}.'.format(
+                        payload['device'],
+                        status_str,
+                        ', ' if status_str else '',
+                        r.status_code))
+
+                self.logger.debug(
+                    'Response Details:\r\n{}'.format(r.content))
+
+                return False
+
+            else:
+                self.logger.info(
+                    'Sent Pushover notification to %s.' % payload['device'])
+
+        except requests.RequestException as e:
+            self.logger.warning(
+                'A Connection error occured sending Pushover:%s ' % (
+                    payload['device']) + 'notification.'
+            )
+            self.logger.debug('Socket Exception: %s' % str(e))
+
+            return False
+
+        except (OSError, IOError) as e:
+            self.logger.warning(
+                'An I/O error occured while reading {}.'.format(
+                    attach.name if attach else 'attachment'))
+            self.logger.debug('I/O Exception: %s' % str(e))
+            return False
+
+        finally:
+            # Close our file (if it's open) stored in the second element
+            # of our files tuple (index 1)
+            if files:
+                files['attachment'][1].close()
+
+        return True
+
+    def url(self, privacy=False, *args, **kwargs):
         """
         Returns the URL built dynamically based on specified arguments.
         """
@@ -406,8 +501,8 @@ class NotifyPushover(NotifyBase):
             'format': self.notify_format,
             'overflow': self.overflow_mode,
             'priority':
-                _map[PushoverPriority.NORMAL] if self.priority not in _map
-                else _map[self.priority],
+                _map[self.template_args['priority']['default']]
+                if self.priority not in _map else _map[self.priority],
             'verify': 'yes' if self.verify_certificate else 'no',
         }
         # Only add expire and retry for emergency messages,
@@ -424,12 +519,10 @@ class NotifyPushover(NotifyBase):
             # it from the devices list
             devices = ''
 
-        return '{schema}://{auth}{token}/{devices}/?{args}'.format(
+        return '{schema}://{user_key}@{token}/{devices}/?{args}'.format(
             schema=self.secure_protocol,
-            auth='' if not self.user
-                 else '{user}@'.format(
-                     user=NotifyPushover.quote(self.user, safe='')),
-            token=NotifyPushover.quote(self.token, safe=''),
+            user_key=self.pprint(self.user_key, privacy, safe=''),
+            token=self.pprint(self.token, privacy, safe=''),
             devices=devices,
             args=NotifyPushover.urlencode(args))
 
@@ -465,6 +558,9 @@ class NotifyPushover(NotifyBase):
 
         # Retrieve all of our targets
         results['targets'] = NotifyPushover.split_path(results['fullpath'])
+
+        # User Key is retrieved from the user
+        results['user_key'] = NotifyPushover.unquote(results['user'])
 
         # Get the sound
         if 'sound' in results['qsd'] and len(results['qsd']['sound']):

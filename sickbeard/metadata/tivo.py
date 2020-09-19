@@ -17,14 +17,15 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import with_statement
+from __future__ import with_statement, absolute_import
 
 import datetime
 import os
 
 from . import generic
-from .. import helpers, logger
-from ..indexers.indexer_exceptions import check_exception_type, ExceptionTuples
+from .. import logger
+import sg_helpers
+from tvinfo_base.exceptions import *
 import sickbeard
 # noinspection PyPep8Naming
 import encodingKludge as ek
@@ -203,15 +204,12 @@ class TIVOMetadata(generic.GenericMetadata):
 
             t = sickbeard.TVInfoAPI(ep_obj.show_obj.tvid).setup(**tvinfo_config)
             show_info = t[ep_obj.show_obj.prodid]
-        except Exception as e:
-            if check_exception_type(e, ExceptionTuples.tvinfo_shownotfound):
-                raise exceptions_helper.ShowNotFoundException(ex(e))
-            elif check_exception_type(e, ExceptionTuples.tvinfo_error):
-                logger.log("Unable to connect to %s while creating meta files - skipping - %s" %
-                           (sickbeard.TVInfoAPI(ep_obj.show_obj.tvid).name, ex(e)), logger.ERROR)
-                return False
-            else:
-                raise e
+        except BaseTVinfoShownotfound as e:
+            raise exceptions_helper.ShowNotFoundException(ex(e))
+        except BaseTVinfoError as e:
+            logger.log("Unable to connect to %s while creating meta files - skipping - %s" %
+                       (sickbeard.TVInfoAPI(ep_obj.show_obj.tvid).name, ex(e)), logger.ERROR)
+            return False
 
         if not self._valid_show(show_info, ep_obj.show_obj):
             return
@@ -346,7 +344,7 @@ class TIVOMetadata(generic.GenericMetadata):
             if not ek.ek(os.path.isdir, nfo_file_dir):
                 logger.log(u"Metadata dir didn't exist, creating it at " + nfo_file_dir, logger.DEBUG)
                 ek.ek(os.makedirs, nfo_file_dir)
-                helpers.chmod_as_parent(nfo_file_dir)
+                sg_helpers.chmod_as_parent(nfo_file_dir)
 
             logger.log(u"Writing episode nfo file to " + nfo_file_path, logger.DEBUG)
 
@@ -354,7 +352,7 @@ class TIVOMetadata(generic.GenericMetadata):
                 # Calling encode directly, b/c often descriptions have wonky characters.
                 nfo_file.write(data.encode("utf-8"))
 
-            helpers.chmod_as_parent(nfo_file_path)
+            sg_helpers.chmod_as_parent(nfo_file_path)
 
         except EnvironmentError as e:
             logger.log(u"Unable to write file to " + nfo_file_path + " - are you sure the folder is writable? " + ex(e),

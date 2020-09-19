@@ -45,7 +45,10 @@ class SSLError(HTTPError):
 
 class ProxyError(HTTPError):
     "Raised when the connection to a proxy fails."
-    pass
+
+    def __init__(self, message, error, *args):
+        super(ProxyError, self).__init__(message, error, *args)
+        self.original_error = error
 
 
 class DecodeError(HTTPError):
@@ -150,6 +153,16 @@ class LocationParseError(LocationValueError):
         self.location = location
 
 
+class URLSchemeUnknown(LocationValueError):
+    "Raised when a URL input has an unsupported scheme."
+
+    def __init__(self, scheme):
+        message = "Not supported URL scheme %s" % scheme
+        super(URLSchemeUnknown, self).__init__(message)
+
+        self.scheme = scheme
+
+
 class ResponseError(HTTPError):
     "Used as a container for an error reason supplied in a MaxRetryError."
     GENERIC_ERROR = "too many error responses"
@@ -222,9 +235,26 @@ class IncompleteRead(HTTPError, httplib_IncompleteRead):
         super(IncompleteRead, self).__init__(partial, expected)
 
     def __repr__(self):
-        return "IncompleteRead(%i bytes read, " "%i more expected)" % (
+        return "IncompleteRead(%i bytes read, %i more expected)" % (
             self.partial,
             self.expected,
+        )
+
+
+class InvalidChunkLength(HTTPError, httplib_IncompleteRead):
+    """Invalid chunk length in a chunked response."""
+
+    def __init__(self, response, length):
+        super(InvalidChunkLength, self).__init__(
+            response.tell(), response.length_remaining
+        )
+        self.response = response
+        self.length = length
+
+    def __repr__(self):
+        return "InvalidChunkLength(got length %r, %i bytes read)" % (
+            self.length,
+            self.partial,
         )
 
 
@@ -233,13 +263,18 @@ class InvalidHeader(HTTPError):
     pass
 
 
-class ProxySchemeUnknown(AssertionError, ValueError):
+class ProxySchemeUnknown(AssertionError, URLSchemeUnknown):
     "ProxyManager does not support the supplied scheme"
     # TODO(t-8ch): Stop inheriting from AssertionError in v2.0.
 
     def __init__(self, scheme):
         message = "Not supported proxy scheme %s" % scheme
         super(ProxySchemeUnknown, self).__init__(message)
+
+
+class ProxySchemeUnsupported(ValueError):
+    "Fetching HTTPS resources through HTTPS proxies is unsupported"
+    pass
 
 
 class HeaderParsingError(HTTPError):

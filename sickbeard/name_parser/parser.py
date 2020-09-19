@@ -39,7 +39,7 @@ import encodingKludge as ek
 from exceptions_helper import ex
 import sickbeard
 from .. import common, db, helpers, logger, scene_exceptions, scene_numbering
-from ..indexers.indexer_exceptions import check_exception_type, ExceptionTuples
+from tvinfo_base.exceptions import *
 from ..classes import OrderedDefaultdict
 
 from .._legacy_classes import LegacyParseResult
@@ -57,7 +57,7 @@ class NameParser(object):
     NORMAL_REGEX = 1
     ANIME_REGEX = 2
 
-    def __init__(self, file_name=True, show_obj=None, try_scene_exceptions=False, convert=False,
+    def __init__(self, file_name=True, show_obj=None, try_scene_exceptions=True, convert=False,
                  naming_pattern=False, testing=False, indexer_lookup=True):
 
         self.file_name = file_name  # type: bool
@@ -213,7 +213,7 @@ class NameParser(object):
                             if hasattr(self.show_obj, 'get_episode'):
                                 _ep_obj = self.show_obj.get_episode(parse_result.season_number, ep_num)
                             else:
-                                tmp_show_obj = helpers.get_show(parse_result.series_name, True, False)
+                                tmp_show_obj = helpers.get_show(parse_result.series_name, True)
                                 if tmp_show_obj and hasattr(tmp_show_obj, 'get_episode'):
                                     _ep_obj = tmp_show_obj.get_episode(parse_result.season_number, ep_num)
                                 else:
@@ -382,17 +382,14 @@ class NameParser(object):
 
                             season_number = int(ep_obj['seasonnumber'])
                             episode_numbers = [int(ep_obj['episodenumber'])]
-                        except Exception as e:
-                            if check_exception_type(e, ExceptionTuples.tvinfo_episodenotfound):
-                                logger.log(u'Unable to find episode with date ' + str(best_result.air_date)
-                                           + ' for show ' + show_obj.name + ', skipping', logger.WARNING)
-                                episode_numbers = []
-                            elif check_exception_type(e, ExceptionTuples.tvinfo_error):
-                                logger.log(u'Unable to contact ' + sickbeard.TVInfoAPI(show_obj.tvid).name
-                                           + ': ' + ex(e), logger.WARNING)
-                                episode_numbers = []
-                            else:
-                                raise e
+                        except BaseTVinfoEpisodenotfound as e:
+                            logger.log(u'Unable to find episode with date ' + str(best_result.air_date)
+                                       + ' for show ' + show_obj.name + ', skipping', logger.WARNING)
+                            episode_numbers = []
+                        except BaseTVinfoError as e:
+                            logger.log(u'Unable to contact ' + sickbeard.TVInfoAPI(show_obj.tvid).name
+                                       + ': ' + ex(e), logger.WARNING)
+                            episode_numbers = []
 
                     for epNo in episode_numbers:
                         s = season_number
@@ -728,6 +725,10 @@ class ParseResult(LegacyParseResult):
             return False
 
         return True
+
+    def __hash__(self):
+        return hash((self.series_name, self.season_number, tuple(self.episode_numbers), self.extra_info,
+                     self.release_group, self.air_date, tuple(self.ab_episode_numbers)))
 
     def __str__(self):
         if not PY2:

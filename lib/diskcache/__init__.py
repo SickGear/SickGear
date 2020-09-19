@@ -6,7 +6,7 @@ The :doc:`tutorial` provides a helpful walkthrough of most methods.
 
 """
 
-from .core import Cache, Disk, EmptyDirWarning, UnknownFileWarning, Timeout
+from .core import Cache, Disk, EmptyDirWarning, JSONDisk, UnknownFileWarning, Timeout
 from .core import DEFAULT_SETTINGS, ENOVAL, EVICTION_POLICY, UNKNOWN
 from .fanout import FanoutCache
 from .persistent import Deque, Index
@@ -25,6 +25,7 @@ __all__ = [
     'EmptyDirWarning',
     'FanoutCache',
     'Index',
+    'JSONDisk',
     'Lock',
     'RLock',
     'Timeout',
@@ -43,8 +44,8 @@ except Exception:  # pylint: disable=broad-except
     pass
 
 __title__ = 'diskcache'
-__version__ = '4.0.0'
-__build__ = 0x040000
+__version__ = '4.1.0'
+__build__ = 0x040100
 __author__ = 'Grant Jenks'
 __license__ = 'Apache 2.0'
 __copyright__ = 'Copyright 2016-2018 Grant Jenks'

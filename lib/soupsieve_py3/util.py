@@ -1,9 +1,7 @@
 """Utility."""
 from functools import wraps
 import warnings
-import os
 import re
-MODULE = os.path.dirname(__file__)
 
 DEBUG = 0x00001
 

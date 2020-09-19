@@ -239,7 +239,7 @@ class PageElement(object):
             raise ValueError("Cannot replace a Tag with its parent.")
         old_parent = self.parent
         my_index = self.parent.index(self)
-        self.extract()
+        self.extract(_self_index=my_index)
         old_parent.insert(my_index, replace_with)
         return self
     replaceWith = replace_with  # BS3
@@ -255,7 +255,7 @@ class PageElement(object):
                 "Cannot replace an element with its contents when that"
                 "element is not part of a tree.")
         my_index = self.parent.index(self)
-        self.extract()
+        self.extract(_self_index=my_index)
         for child in reversed(self.contents[:]):
             my_parent.insert(my_index, child)
         return self
@@ -273,13 +273,19 @@ class PageElement(object):
         wrap_inside.append(me)
         return wrap_inside
 
-    def extract(self):
+    def extract(self, _self_index=None):
         """Destructively rips this element out of the tree.
+
+        :param _self_index: The location of this element in its parent's
+           .contents, if known. Passing this in allows for a performance
+           optimization.
 
         :return: `self`, no longer part of the tree.
         """
         if self.parent is not None:
-            del self.parent.contents[self.parent.index(self)]
+            if _self_index is None:
+                _self_index = self.parent.index(self)
+            del self.parent.contents[_self_index]
 
         #Find the two elements that would be next to each other if
         #this element (and any children) hadn't been parsed. Connect
@@ -481,7 +487,7 @@ class PageElement(object):
         :param text: A filter for a NavigableString with specific text.
         :kwargs: A dictionary of filters on attribute values.
         :return: A PageElement.
-
+        :rtype: Union[bs4.element.Tag, bs4.element.NavigableString]
         """
         return self._find_one(self.find_all_next, name, attrs, text, **kwargs)
     findNext = find_next  # BS3
@@ -517,6 +523,7 @@ class PageElement(object):
         :param text: A filter for a NavigableString with specific text.
         :kwargs: A dictionary of filters on attribute values.
         :return: A PageElement.
+        :rtype: Union[bs4.element.Tag, bs4.element.NavigableString]
         """
         return self._find_one(self.find_next_siblings, name, attrs, text,
                              **kwargs)
@@ -536,6 +543,7 @@ class PageElement(object):
         :param limit: Stop looking after finding this many results.
         :kwargs: A dictionary of filters on attribute values.
         :return: A ResultSet of PageElements.
+        :rtype: bs4.element.ResultSet
         """
         return self._find_all(name, attrs, text, limit,
                               self.next_siblings, **kwargs)
@@ -554,6 +562,7 @@ class PageElement(object):
         :param text: A filter for a NavigableString with specific text.
         :kwargs: A dictionary of filters on attribute values.
         :return: A PageElement.
+        :rtype: Union[bs4.element.Tag, bs4.element.NavigableString]
         """
         return self._find_one(
             self.find_all_previous, name, attrs, text, **kwargs)
@@ -573,6 +582,7 @@ class PageElement(object):
         :param limit: Stop looking after finding this many results.
         :kwargs: A dictionary of filters on attribute values.
         :return: A ResultSet of PageElements.
+        :rtype: bs4.element.ResultSet
         """
         return self._find_all(name, attrs, text, limit, self.previous_elements,
                            **kwargs)
@@ -591,6 +601,7 @@ class PageElement(object):
         :param text: A filter for a NavigableString with specific text.
         :kwargs: A dictionary of filters on attribute values.
         :return: A PageElement.
+        :rtype: Union[bs4.element.Tag, bs4.element.NavigableString]
         """
         return self._find_one(self.find_previous_siblings, name, attrs, text,
                              **kwargs)
@@ -610,6 +621,7 @@ class PageElement(object):
         :param limit: Stop looking after finding this many results.
         :kwargs: A dictionary of filters on attribute values.
         :return: A ResultSet of PageElements.
+        :rtype: bs4.element.ResultSet
         """
         return self._find_all(name, attrs, text, limit,
                               self.previous_siblings, **kwargs)
@@ -628,6 +640,7 @@ class PageElement(object):
         :kwargs: A dictionary of filters on attribute values.
 
         :return: A PageElement.
+        :rtype: Union[bs4.element.Tag, bs4.element.NavigableString]
         """
         # NOTE: We can't use _find_one because findParents takes a different
         # set of arguments.
@@ -650,6 +663,7 @@ class PageElement(object):
         :kwargs: A dictionary of filters on attribute values.
 
         :return: A PageElement.
+        :rtype: Union[bs4.element.Tag, bs4.element.NavigableString]
         """
         return self._find_all(name, attrs, None, limit, self.parents,
                              **kwargs)
@@ -661,6 +675,7 @@ class PageElement(object):
         """The PageElement, if any, that was parsed just after this one.
 
         :return: A PageElement.
+        :rtype: Union[bs4.element.Tag, bs4.element.NavigableString]
         """
         return self.next_element
 
@@ -669,6 +684,7 @@ class PageElement(object):
         """The PageElement, if any, that was parsed just before this one.
 
         :return: A PageElement.
+        :rtype: Union[bs4.element.Tag, bs4.element.NavigableString]
         """
         return self.previous_element
 
@@ -792,6 +808,14 @@ class PageElement(object):
             yield i
             i = i.parent
 
+    @property
+    def decomposed(self):
+        """Check whether a PageElement has been decomposed.
+
+        :rtype: bool
+        """
+        return getattr(self, '_decomposed', False) or False
+            
     # Old non-property versions of the generators, for backwards
     # compatibility with BS3.
     def nextGenerator(self):
@@ -935,8 +959,8 @@ class Comment(PreformattedString):
 
 class Declaration(PreformattedString):
     """An XML declaration."""
-    PREFIX = u'<?'
-    SUFFIX = u'?>'
+    PREFIX = '<?'
+    SUFFIX = '?>'
 
 
 class Doctype(PreformattedString):
@@ -1201,15 +1225,21 @@ class Tag(PageElement):
 
         This element will be removed from the tree and wiped out; so
         will everything beneath it.
+
+        The behavior of a decomposed PageElement is undefined and you
+        should never use one for anything, but if you need to _check_
+        whether an element has been decomposed, you can use the
+        `decomposed` property.
         """
         self.extract()
         i = self
         while i is not None:
-            next = i.next_element
+            n = i.next_element
             i.__dict__.clear()
             i.contents = []
-            i = next
-
+            i._decomposed = True
+            i = n
+           
     def clear(self, decompose=False):
         """Wipe out all children of this PageElement by calling extract()
            on them.
@@ -1660,6 +1690,7 @@ class Tag(PageElement):
         :param limit: Stop looking after finding this many results.
         :kwargs: A dictionary of filters on attribute values.
         :return: A PageElement.
+        :rtype: Union[bs4.element.Tag, bs4.element.NavigableString]
         """
         r = None
         l = self.find_all(name, attrs, recursive, text, 1, **kwargs)
@@ -1684,6 +1715,7 @@ class Tag(PageElement):
         :param limit: Stop looking after finding this many results.
         :kwargs: A dictionary of filters on attribute values.
         :return: A ResultSet of PageElements.
+        :rtype: bs4.element.ResultSet
         """
         generator = self.descendants
         if not recursive:
@@ -1732,6 +1764,7 @@ class Tag(PageElement):
            soupsieve.select() method.
 
         :return: A PageElement.
+        :rtype: Union[bs4.element.Tag, bs4.element.NavigableString]
         """
         value = self.select(selector, namespaces, 1, **kwargs)
         if value:
@@ -1756,6 +1789,7 @@ class Tag(PageElement):
            soupsieve.select() method.
 
         :return: A ResultSet of PageElements.
+        :rtype: bs4.element.ResultSet
         """
         if namespaces is None:
             namespaces = self._namespaces
@@ -1784,8 +1818,9 @@ class Tag(PageElement):
 
     def has_key(self, key):
         """Deprecated method. This was kind of misleading because has_key()
-        (attributes) was different from __in__ (contents). has_key()
-        is gone in Python 3, anyway.
+        (attributes) was different from __in__ (contents).
+
+        has_key() is gone in Python 3, anyway.
         """
         warnings.warn('has_key is deprecated. Use has_attr("%s") instead.' % (
                 key))
@@ -1794,7 +1829,13 @@ class Tag(PageElement):
 # Next, a couple classes to represent queries and their results.
 class SoupStrainer(object):
     """Encapsulates a number of ways of matching a markup element (tag or
-    text)."""
+    string).
+
+    This is primarily used to underpin the find_* methods, but you can
+    create one yourself and pass it in as `parse_only` to the
+    `BeautifulSoup` constructor, to parse a subset of a large
+    document.
+    """
 
     def __init__(self, name=None, attrs={}, text=None, **kwargs):
         """Constructor.
@@ -1865,7 +1906,7 @@ class SoupStrainer(object):
         return str(str(value))
 
     def __str__(self):
-        """A string representation of this SoupStrainer."""
+        """A human-readable representation of this SoupStrainer."""
         if self.text:
             return self.text
         else:
@@ -2055,7 +2096,7 @@ class ResultSet(list):
         self.source = source
 
     def __getattr__(self, key):
-        """Raise a helpful exception."""
+        """Raise a helpful exception to explain a common code fix."""
         raise AttributeError(
             "ResultSet object has no attribute '%s'. You're probably treating a list of elements like a single element. Did you call find_all() when you meant to call find()?" % key
         )

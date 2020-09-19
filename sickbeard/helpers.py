@@ -43,6 +43,8 @@ import sickbeard
 from . import db, logger, notifiers
 from .common import cpu_presets, mediaExtensions, Overview, Quality, statusStrings, subtitleExtensions, \
     ARCHIVED, DOWNLOADED, FAILED, IGNORED, SKIPPED, SNATCHED_ANY, SUBTITLED, UNAIRED, UNKNOWN, WANTED
+from .sgdatetime import timestamp_near
+from tvinfo_base.exceptions import *
 # noinspection PyPep8Naming
 import encodingKludge as ek
 from exceptions_helper import ex, MultipleShowObjectsException
@@ -51,9 +53,8 @@ import requests
 import requests.exceptions
 import subliminal
 from lxml_etree import etree, is_lxml
-from send2trash import send2trash
 
-from _23 import b64decodebytes, b64encodebytes, decode_bytes, decode_str, DirEntry, filter_iter, filter_list, scandir
+from _23 import b64decodebytes, b64encodebytes, decode_bytes, decode_str, DirEntry, filter_iter, Popen, scandir
 from six import iteritems, PY2, string_types, text_type
 # noinspection PyUnresolvedReferences
 from six.moves import zip
@@ -61,38 +62,20 @@ from six.moves import zip
 # the following are imported from elsewhere,
 # therefore, they intentionally don't resolve and are unused in this particular file.
 # noinspection PyUnresolvedReferences
-from sg_helpers import chmod_as_parent, clean_data, get_system_temp_dir, \
-    get_url, make_dirs, proxy_setting, remove_file_failed, try_int, try_ord, write_file
+from sg_helpers import chmod_as_parent, clean_data, copy_file, fix_set_group_id, get_system_temp_dir, \
+    get_url, indent_xml, make_dirs, maybe_plural, md5_for_text, move_file, proxy_setting, remove_file, \
+    remove_file_failed, replace_extension, try_int, try_ord, write_file
 
 # noinspection PyUnreachableCode
 if False:
     # noinspection PyUnresolvedReferences
-    from typing import Any, AnyStr, Dict, NoReturn, Iterable, Iterator, List, Optional, Tuple, Union
+    from typing import Any, AnyStr, Dict, NoReturn, Iterable, Iterator, List, Optional, Set, Tuple, Union
+    from .tv import TVShow
+    # the following workaround hack resolves a pyc resolution bug
+    from .name_cache import retrieveNameFromCache
 
 RE_XML_ENCODING = re.compile(r'^(<\?xml[^>]+)\s+(encoding\s*=\s*[\"\'][^\"\']*[\"\'])(\s*\?>|)', re.U)
 RE_IMDB_ID = re.compile(r'(?i)(tt\d{4,})')
-
-
-def indent_xml(elem, level=0):
-    """
-    Does our pretty printing, makes Matt very happy
-    """
-    i = '\n' + level * '  '
-    if len(elem):
-        if not elem.text or not ('%s' % elem.text).strip():
-            elem.text = i + '  '
-        if not elem.tail or not elem.tail.strip():
-            elem.tail = i
-        for elem in elem:
-            indent_xml(elem, level + 1)
-        if not elem.tail or not elem.tail.strip():
-            elem.tail = i
-    else:
-        # Strip out the newlines from text
-        if elem.text:
-            elem.text = ('%s' % elem.text).replace('\n', ' ')
-        if level and (not elem.tail or not elem.tail.strip()):
-            elem.tail = i
 
 
 def remove_extension(name):
@@ -140,22 +123,6 @@ def remove_non_release_groups(name, is_anime=False):
             rename = (name, False)[name == rename]
 
     return name
-
-
-def replace_extension(filename, new_ext):
-    """
-
-    :param filename: filename
-    :type filename: AnyStr
-    :param new_ext: new extension
-    :type new_ext: AnyStr
-    :return: filename with new extension
-    :rtype: AnyStr
-    """
-    sepFile = filename.rpartition('.')
-    if sepFile[0] == '':
-        return filename
-    return sepFile[0] + '.' + new_ext
 
 
 def is_sync_file(filename):
@@ -238,61 +205,18 @@ def sanitize_filename(name):
     return name
 
 
-def remove_file(filepath, tree=False, prefix_failure='', log_level=logger.MESSAGE):
-    """
-    Remove file based on setting for trash v permanent delete
-
-    :param filepath: Path and file name
-    :type filepath: String
-    :param tree: Remove file tree
-    :type tree: Bool
-    :param prefix_failure: Text to prepend to error log, e.g. show id
-    :type prefix_failure: String
-    :param log_level: Log level to use for error
-    :type log_level: Int
-    :return: Type of removal ('Deleted' or 'Trashed') if filepath does not exist or None if no removal occurred
-    :rtype: String or None
-    """
-    result = None
-    if filepath:
-        try:
-            result = 'Deleted'
-            if sickbeard.TRASH_REMOVE_SHOW:
-                result = 'Trashed'
-                ek.ek(send2trash, filepath)
-            elif tree:
-                ek.ek(shutil.rmtree, filepath)
-            else:
-                ek.ek(os.remove, filepath)
-        except OSError as e:
-            logger.log(u'%sUnable to %s %s %s: %s' % (prefix_failure, ('delete', 'trash')[sickbeard.TRASH_REMOVE_SHOW],
-                                                      ('file', 'dir')[tree], filepath, ex(e)), log_level)
-
-    return (None, result)[filepath and not ek.ek(os.path.exists, filepath)]
-
-
-# def find_certain_show(showList, prodid):
-#     results = []
-#     if showList and prodid:
-#         results = filter(lambda x: int(x.prodid) == int(prodid), showList)
-#
-#     if 1 == len(results):
-#         return results[0]
-#     elif 1 < len(results):
-#         raise MultipleShowObjectsException()
-
-
 def find_show_by_id(
         show_id,  # type: Union[AnyStr, Dict[int, int], int]
-        show_list=None,  # type: Optional[List[sickbeard.tv.TVShow]]
-        no_mapped_ids=True  # type: bool
+        show_list=None,  # type: Optional[List[TVShow]]
+        no_mapped_ids=True,  # type: bool
+        check_multishow=False  # type: bool
 ):
-    # type: (...) -> sickbeard.tv.TVShow or MultipleShowObjectsException
+    # type: (...) -> Optional[TVShow]
     """
     :param show_id: {indexer: id} or 'tvid_prodid'.
     :param show_list: (optional) TVShow objects list
     :param no_mapped_ids: don't check mapped ids
-    :return: TVShow object or MultipleShowObjectsException
+    :param check_multishow: check for multiple show matches
     """
     results = []
     if None is show_list:
@@ -304,8 +228,7 @@ def find_show_by_id(
         if tvid_prodid_obj and no_mapped_ids:
             if None is tvid_prodid_obj.prodid:
                 return None
-            sid_int = int(tvid_prodid_obj)
-            results = filter_list(lambda _show_obj: sid_int == _show_obj.sid_int, show_list)
+            return sickbeard.showDict.get(int(tvid_prodid_obj))
         else:
             if tvid_prodid_obj:
                 if None is tvid_prodid_obj.prodid:
@@ -313,12 +236,21 @@ def find_show_by_id(
                 show_id = tvid_prodid_obj.dict
 
             if isinstance(show_id, dict):
-                show_id = {k: v for k, v in iteritems(show_id) if 0 < v}
                 if no_mapped_ids:
-                    results = filter_list(lambda _show_obj: show_id == {_show_obj.tvid: _show_obj.prodid}, show_list)
+                    sid_int_list = [sickbeard.tv.TVShow.create_sid(sk, sv) for sk, sv in iteritems(show_id) if 0 < sv
+                                    and sickbeard.tv.tvid_bitmask >= sk]
+                    if check_multishow:
+                        results = [sickbeard.showDict.get(_show_sid_id) for _show_sid_id in sid_int_list
+                                   if sickbeard.showDict.get(_show_sid_id)]
+                    else:
+                        for _show_sid_id in sid_int_list:
+                            if _show_sid_id in sickbeard.showDict:
+                                return sickbeard.showDict.get(_show_sid_id)
+                        return None
                 else:
+                    show_id = {k: v for k, v in iteritems(show_id) if 0 < v}
                     results = [_show_obj for k, v in iteritems(show_id)
-                               for _show_obj in show_list if v == _show_obj.ids.get(k, {'id': 0})['id']]
+                               for _show_obj in show_list if v == _show_obj.internal_ids.get(k, {'id': 0})['id']]
 
     num_shows = len(set(results))
     if 1 == num_shows:
@@ -457,18 +389,6 @@ def copyFile(src_file, dest_file):
     return copy_file(src_file, dest_file)
 
 
-def copy_file(src_file, dest_file):
-    if os.name.startswith('posix'):
-        ek.ek(subprocess.call, ['cp', src_file, dest_file])
-    else:
-        ek.ek(shutil.copyfile, src_file, dest_file)
-
-    try:
-        ek.ek(shutil.copymode, src_file, dest_file)
-    except OSError:
-        pass
-
-
 def moveFile(src_file, dest_file):
     """ deprecated_item, remove in 2020, kept here as rollback uses it
     :param src_file: source file
@@ -479,15 +399,6 @@ def moveFile(src_file, dest_file):
     :rtype: None
     """
     return move_file(src_file, dest_file)
-
-
-def move_file(src_file, dest_file):
-    try:
-        ek.ek(shutil.move, src_file, dest_file)
-        fix_set_group_id(dest_file)
-    except OSError:
-        copy_file(src_file, dest_file)
-        ek.ek(os.unlink, src_file)
 
 
 def link(src_file, dest_file):
@@ -650,50 +561,11 @@ def delete_empty_folders(check_empty_dir, keep_dir=None):
             break
 
 
-def fix_set_group_id(child_path):
-    """
-
-    :param child_path: path
-    :type child_path: AnyStr
-    :return:
-    :rtype: None
-    """
-    if os.name in ('nt', 'ce'):
-        return
-
-    parent_path = ek.ek(os.path.dirname, child_path)
-    parent_stat = ek.ek(os.stat, parent_path)
-    parent_mode = stat.S_IMODE(parent_stat[stat.ST_MODE])
-
-    if parent_mode & stat.S_ISGID:
-        parent_gid = parent_stat[stat.ST_GID]
-        child_stat = ek.ek(os.stat, child_path)
-        child_gid = child_stat[stat.ST_GID]
-
-        if child_gid == parent_gid:
-            return
-
-        child_path_owner = child_stat.st_uid
-        user_id = os.geteuid()  # only available on UNIX
-
-        if 0 != user_id and user_id != child_path_owner:
-            logger.log(u'Not running as root or owner of %s, not trying to set the set-group-id' % child_path,
-                       logger.DEBUG)
-            return
-
-        try:
-            ek.ek(os.chown, child_path, -1, parent_gid)  # only available on UNIX
-            logger.log(u'Respecting the set-group-ID bit on the parent directory for %s' % child_path, logger.DEBUG)
-        except OSError:
-            logger.log(u'Failed to respect the set-group-id bit on the parent directory for %s (setting group id %i)'
-                       % (child_path, parent_gid), logger.ERROR)
-
-
 def get_absolute_number_from_season_and_episode(show_obj, season, episode):
     """
 
     :param show_obj: show object
-    :type show_obj: sickbeard.tv.TVShow
+    :type show_obj: TVShow
     :param season: season number
     :type season: int
     :param episode: episode number
@@ -725,7 +597,7 @@ def get_absolute_number_from_season_and_episode(show_obj, season, episode):
 
 
 def get_all_episodes_from_absolute_number(show_obj, absolute_numbers):
-    # type: (sickbeard.tv.TVShow, List[int]) -> Tuple[int, List[int]]
+    # type: (TVShow, List[int]) -> Tuple[int, List[int]]
     """
 
     :param show_obj: show object
@@ -961,25 +833,6 @@ def md5_for_file(filename, block_size=2 ** 16):
         return None
 
 
-def md5_for_text(text):
-    """
-
-    :param text: test
-    :type text: AnyStr
-    :return:
-    :rtype: AnyStr or None
-    """
-    result = None
-    try:
-        md5 = hashlib.md5()
-        md5.update(decode_bytes(str(text)))
-        raw_md5 = md5.hexdigest()
-        result = raw_md5[17:] + raw_md5[9:17] + raw_md5[0:9]
-    except (BaseException, Exception):
-        pass
-    return result
-
-
 def get_lan_ip():
     """
     Simple function to get LAN localhost_ip
@@ -1110,7 +963,8 @@ def full_sanitize_scene_name(name):
     return re.sub('[. -]', ' ', sanitize_scene_name(name)).lower().lstrip()
 
 
-def get_show(name, try_scene_exceptions=False, use_cache=True):
+def get_show(name, try_scene_exceptions=False):
+    # type: (AnyStr, bool) -> Optional[TVShow]
     """
     get show object for show with given name
 
@@ -1118,32 +972,23 @@ def get_show(name, try_scene_exceptions=False, use_cache=True):
     :type name: AnyStr
     :param try_scene_exceptions: check scene exceptions
     :type try_scene_exceptions: bool
-    :param use_cache: use cache
-    :type use_cache: bool
     :return: None or show object
-    :type: sickbeard.tv.TVShow or None
+    :type: TVShow or None
     """
     if not sickbeard.showList or None is name:
         return
 
     show_obj = None
-    from_cache = False
 
     try:
         tvid, prodid = sickbeard.name_cache.retrieveNameFromCache(name)
         if tvid and prodid:
-            from_cache = True
             show_obj = find_show_by_id({tvid: prodid})
 
         if not show_obj and try_scene_exceptions:
             tvid, prodid, season = sickbeard.scene_exceptions.get_scene_exception_by_name(name)
             if tvid and prodid:
                 show_obj = find_show_by_id({tvid: prodid})
-
-        # add show to cache
-        if use_cache and show_obj and not from_cache:
-            from sickbeard.name_cache import addNameToCache
-            sickbeard.name_cache.addNameToCache(name, tvid=show_obj.tvid, prodid=show_obj.prodid)
     except (BaseException, Exception) as e:
         logger.log(u'Error when attempting to find show: ' + name + ' in SickGear: ' + ex(e), logger.DEBUG)
 
@@ -1182,7 +1027,7 @@ def validate_show(show_obj, season=None, episode=None):
     """
 
     :param show_obj: show object
-    :type show_obj: sickbeard.tv.TVShow
+    :type show_obj: TVShow
     :param season: optional season
     :type season: int or None
     :param episode: opitonal episode
@@ -1204,12 +1049,8 @@ def validate_show(show_obj, season=None, episode=None):
             return t
 
         return t[show_obj.prodid][season][episode]
-    except Exception as e:
-        if sickbeard.check_exception_type(e, sickbeard.ExceptionTuples.tvinfo_episodenotfound,
-                                          sickbeard.ExceptionTuples.tvinfo_seasonnotfound, TypeError):
-            pass
-        else:
-            raise e
+    except (BaseTVinfoEpisodenotfound, BaseTVinfoSeasonnotfound, TypeError):
+        pass
 
 
 def touch_file(fname, atime=None):
@@ -1274,7 +1115,7 @@ def clear_cache(force=False):
             logger.log(u'Skipping clean of non-existing folder: %s' % sickbeard.CACHE_DIR, logger.WARNING)
         else:
             exclude = ['rss', 'images', 'zoneinfo']
-            del_time = time.mktime((datetime.datetime.now() - datetime.timedelta(hours=12)).timetuple())
+            del_time = int(timestamp_near((datetime.datetime.now() - datetime.timedelta(hours=12))))
             for f in scantree(sickbeard.CACHE_DIR, exclude, follow_symlinks=True):
                 if f.is_file(follow_symlinks=False) and (force or del_time > f.stat(follow_symlinks=False).st_mtime):
                     try:
@@ -1348,19 +1189,6 @@ def remove_article(text=''):
     :rtype: AnyStr
     """
     return re.sub(r'(?i)^(?:(?:A(?!\s+to)n?)|The)\s(\w)', r'\1', text)
-
-
-def maybe_plural(subject=1):
-    """
-    returns 's' or '' depending on numeric subject or length of subject
-
-    :param subject: number or list or dict
-    :type subject: int or list or dict
-    :return: returns s or ''
-    :rtype: AnyStr
-    """
-    number = subject if not isinstance(subject, (list, dict)) else len(subject)
-    return ('s', '')[1 == number]
 
 
 def re_valid_hostname(with_allowed=True):
@@ -1589,7 +1417,7 @@ def delete_not_changed_in(paths, days=30, minutes=0):
     :param minutes: Purge files not modified in this number of minutes (default: 0 minutes)
     :return: tuple; number of files that qualify for deletion, number of qualifying files that failed to be deleted
     """
-    del_time = time.mktime((datetime.datetime.now() - datetime.timedelta(days=days, minutes=minutes)).timetuple())
+    del_time = int(timestamp_near((datetime.datetime.now() - datetime.timedelta(days=days, minutes=minutes))))
     errors = 0
     qualified = 0
     for c in (paths, [paths])[not isinstance(paths, list)]:
@@ -1616,7 +1444,7 @@ def set_file_timestamp(filename, min_age=3, new_time=None):
     :param new_time:
     :type new_time: None or int
     """
-    min_time = time.mktime((datetime.datetime.now() - datetime.timedelta(days=min_age)).timetuple())
+    min_time = int(timestamp_near((datetime.datetime.now() - datetime.timedelta(days=min_age))))
     try:
         if ek.ek(os.path.isfile, filename) and ek.ek(os.path.getmtime, filename) < min_time:
             ek.ek(os.utime, filename, new_time)
@@ -1761,7 +1589,7 @@ def path_mapper(search, replace, subject):
     return result, result != subject
 
 
-def get_overview(ep_status, show_quality, upgrade_once):
+def get_overview(ep_status, show_quality, upgrade_once, split_snatch=False):
     """
 
     :param ep_status: episode status
@@ -1786,7 +1614,7 @@ def get_overview(ep_status, show_quality, upgrade_once):
 
         if FAILED == status:
             return Overview.WANTED
-        if status in SNATCHED_ANY:
+        if not split_snatch and status in SNATCHED_ANY:
             return Overview.SNATCHED
 
         void, best_qualities = Quality.splitQuality(show_quality)
@@ -1799,7 +1627,7 @@ def get_overview(ep_status, show_quality, upgrade_once):
                 or (upgrade_once and
                     (quality in best_qualities or (None is not min_best and quality > min_best))):
             return Overview.GOOD
-        return Overview.QUAL
+        return (Overview.QUAL, Overview.SNATCHED_QUAL)[status in SNATCHED_ANY]
 
 
 def generate_show_dir_name(root_dir, show_name):
@@ -2002,7 +1830,7 @@ def xhtml_escape(text, br=True):
 def cmdline_runner(cmd, shell=False):
     # type: (Union[AnyStr, List[AnyStr]], bool) -> Tuple[AnyStr, Optional[AnyStr], int]
     """ Execute a child program in a new process.
-    
+
     Can raise an exception to be caught in callee
 
     :param cmd: A string, or a sequence of program arguments
@@ -2017,12 +1845,12 @@ def cmdline_runner(cmd, shell=False):
     if 'win32' == sys.platform:
         kw['creationflags'] = 0x08000000   # CREATE_NO_WINDOW (needed for py2exe)
 
-    p = subprocess.Popen(cmd,  **kw)
-    out, err = p.communicate()
-    if out:
-        out = out.strip()
+    with Popen(cmd, **kw) as p:
+        out, err = p.communicate()
+        if out:
+            out = out.strip()
 
-    return out, err, p.returncode
+        return out, err, p.returncode
 
 
 def parse_imdb_id(string):
@@ -2039,3 +1867,43 @@ def parse_imdb_id(string):
         pass
 
     return result
+
+
+def generate_word_str(words, regex=False, join_chr=','):
+    # type: (Set[AnyStr], bool, AnyStr) -> AnyStr
+    """
+    combine a list or set to a string with optional prefix 'regex:'
+
+    :param words: list or set of words
+    :type words: set
+    :param regex: prefix regex: ?
+    :type regex: bool
+    :param join_chr: character(s) used for join words
+    :type join_chr: basestring
+    :return: combined string
+    :rtype: basestring
+    """
+    return '%s%s' % (('', 'regex:')[True is regex], join_chr.join(words))
+
+
+def split_word_str(word_list):
+    # type: (AnyStr) -> Tuple[Set[AnyStr], bool]
+    """
+    split string into set and boolean regex
+
+    :param word_list: string with words
+    :type word_list: basestring
+    :return: set of words, is it regex
+    :rtype: (set, bool)
+    """
+    try:
+        if word_list.startswith('regex:'):
+            rx = True
+            word_list = word_list.replace('regex:', '')
+        else:
+            rx = False
+        s = set(w.strip() for w in word_list.split(',') if w.strip())
+    except (BaseException, Exception):
+        rx = False
+        s = set()
+    return s, rx

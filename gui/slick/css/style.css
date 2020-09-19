@@ -674,6 +674,14 @@ inc_top.tmpl
 	content:"\e685"
 }
 
+.sgicon-metac:before{
+	content:"\e890"
+}
+
+.sgicon-tvc:before{
+	content:"\e891"
+}
+
 .sgicon-imdb:before{
 	content:"\e898"
 }
@@ -1309,16 +1317,16 @@ div.formpaginate{
 	font-weight:900
 }
 
-#addShowForm #blackwhitelist{
+#addShowForm #anigrouplists{
 	padding:0 0 0 15px
 }
 
-#edit-show #blackwhitelist,
-#edit-show #blackwhitelist h4,
-#edit-show #blackwhitelist p,
-#addShowForm #blackwhitelist,
-#addShowForm #blackwhitelist h4,
-#addShowForm #blackwhitelist p{
+#edit-show #anigrouplists,
+#edit-show #anigrouplists h4,
+#edit-show #anigrouplists p,
+#addShowForm #anigrouplists,
+#addShowForm #anigrouplists h4,
+#addShowForm #anigrouplists p{
 	font-size:13px
 }
 
@@ -1411,6 +1419,25 @@ home_browseShows.tmpl
 	background-image:url("../images/poster-dark.jpg")
 }
 
+#browse-list.tvcalendar .browse-image{
+	height:104px /* 62% of image height */
+}
+
+#browse-list.tvcalendar .show-toggle-hide{
+	top:105px
+}
+
+#browse-list.tvcalendar .show-card{
+	height:172px /* -169px */
+}
+
+#browse-list.tvcalendar.no-votes .show-card{
+	height:155px
+}
+
+#browse-list.tvcalendar .show-card-inner .heart.icon-glyph{
+	margin-left:0
+}
 /* =======================================================================
 home_postprocess.tmpl
 ========================================================================== */
@@ -3015,21 +3042,21 @@ select .selected:before{
 	border:1px transparent
 }
 
-#addShowForm #add-white,
-#addShowForm #add-black{
+#addShowForm #add-allow,
+#addShowForm #add-block{
 	margin:0 0 10px 30px !important
 }
-#addShowForm #remove-white,
-#addShowForm #remove-black{
+#addShowForm #remove-allow,
+#addShowForm #remove-block{
 	margin:0 0 0 30px !important
 }
-#edit-show #add-white,
-#edit-show #add-black{
+#edit-show #add-allow,
+#edit-show #add-block{
 	margin:0 0 10px !important
 }
 
-#edit-show #remove-white,
-#edit-show #remove-black{
+#edit-show #remove-allow,
+#edit-show #remove-block{
 	margin:0 !important
 }
 
@@ -3405,30 +3432,30 @@ input.get_less_eps{
 	padding-bottom:10px
 }
 #media-search .btn,
-#provider-failures .btn{
+#server-failures .btn{
 	margin:0 6px 0 0;
 	min-width:70px
 }
-#provider-failures .check-site .btn{
+#server-failures .check-site .btn{
 	min-width:115px
 }
 #media-search .btn.shows-more,
 #media-search .btn.shows-less,
-#provider-failures .btn.shows-more,
-#provider-failures .btn.shows-less{
+#server-failures .btn.shows-more,
+#server-failures .btn.shows-less{
 	margin:6px 6px 6px 0;
 }
-#provider-failures .btn.provider-retry{
+#server-failures .btn.provider-retry{
 	margin:6px 0 6px 4px;
 }
-.tablesorter.provider-failures{width:auto;clear:both;margin-bottom:10px}
-.tablesorter.provider-failures > tbody > tr.tablesorter-childRow td{display:none}
-.tablesorter.provider-failures.tablesorter > tbody > tr{background-color:transparent}
+.tablesorter.server-failures{width:auto;clear:both;margin-bottom:10px}
+.tablesorter.server-failures > tbody > tr.tablesorter-childRow td{display:none}
+.tablesorter.server-failures.tablesorter > tbody > tr{background-color:transparent}
 
-.provider-failures.hover-highlight th:hover::after,
-.provider-failures.hover-highlight td:hover::after,
-.provider-failures.focus-highlight th:focus::after,
-.provider-failures.focus-highlight td:focus::after{
+.server-failures.hover-highlight th:hover::after,
+.server-failures.hover-highlight td:hover::after,
+.server-failures.focus-highlight th:focus::after,
+.server-failures.focus-highlight td:focus::after{
 	content:'';
 	position:absolute;
 	width:100%;
@@ -3437,8 +3464,8 @@ input.get_less_eps{
 	top:-555em;
 	z-index:-1
 }
-.provider-failures.focus-highlight th:focus::before,
-.provider-failures.focus-highlight td:focus::before{
+.server-failures.focus-highlight th:focus::before,
+.server-failures.focus-highlight td:focus::before{
 	content:'';
 	position:absolute;
 	width:999em;
@@ -3448,36 +3475,36 @@ input.get_less_eps{
 	z-index:-2
 }
 /* required styles */
-.provider-failures.hover-highlight,
-.provider-failures.focus-highlight{
+.server-failures.hover-highlight,
+.server-failures.focus-highlight{
 	overflow:hidden
 }
-.provider-failures.hover-highlight th,
-.provider-failures.hover-highlight td,
-.provider-failures.focus-highlight th,
-.provider-failures.focus-highlight td{
+.server-failures.hover-highlight th,
+.server-failures.hover-highlight td,
+.server-failures.focus-highlight th,
+.server-failures.focus-highlight td{
 	position:relative;
 	outline:0
 }
 /* override the tablesorter theme styling */
-.provider-failures.hover-highlight,
-.provider-failures.hover-highlight tbody > tr > td,
-.provider-failures.focus-highlight,
-.provider-failures.focus-highlight tbody > tr > td,
+.server-failures.hover-highlight,
+.server-failures.hover-highlight tbody > tr > td,
+.server-failures.focus-highlight,
+.server-failures.focus-highlight tbody > tr > td,
 /* override zebra styling */
-.provider-failures.hover-highlight tbody tr.even > th,
-.provider-failures.hover-highlight tbody tr.even > td,
-.provider-failures.hover-highlight tbody tr.odd > th,
-.provider-failures.hover-highlight tbody tr.odd > td,
-.provider-failures.focus-highlight tbody tr.even > th,
-.provider-failures.focus-highlight tbody tr.even > td,
-.provider-failures.focus-highlight tbody tr.odd > th,
-.provider-failures.focus-highlight tbody tr.odd > td{
+.server-failures.hover-highlight tbody tr.even > th,
+.server-failures.hover-highlight tbody tr.even > td,
+.server-failures.hover-highlight tbody tr.odd > th,
+.server-failures.hover-highlight tbody tr.odd > td,
+.server-failures.focus-highlight tbody tr.even > th,
+.server-failures.focus-highlight tbody tr.even > td,
+.server-failures.focus-highlight tbody tr.odd > th,
+.server-failures.focus-highlight tbody tr.odd > td{
 	background:transparent
 }
 /* table background positioned under the highlight */
-.provider-failures.hover-highlight td:before,
-.provider-failures.focus-highlight td:before{
+.server-failures.hover-highlight td:before,
+.server-failures.focus-highlight td:before{
 	content:'';
 	position:absolute;
 	width:100%;
@@ -3609,7 +3636,7 @@ option.flag{
 }
 
 /* Anime section for editShow */
-.bwlWrapper{
+.anigrouplists-wrapper{
 	height:auto;
 	margin:0 auto
 }
@@ -3631,62 +3658,69 @@ option.flag{
 	width:95%
 }
 
-div.blackwhitelist h4{
+div.anigrouplists h4{
 	margin-top:0
 }
-div.blackwhitelist{
+#addShowForm .anigrouplists.pool h4{
+	margin-right:20px !important
+}
+div.anigrouplists{
 	text-align:center
 }
 
-div.blackwhitelist.white input,
-div.blackwhitelist.black input,
-div.blackwhitelist.pool input{
+div.anigrouplists.allow input,
+div.anigrouplists.block input,
+div.anigrouplists.pool input{
 	margin:5px 0 !important
 }
-div.blackwhitelist select{
+div.anigrouplists select{
 	margin:0 !important
 }
 
-div.blackwhitelist .inuse{
+div.anigrouplists .inuse{
 	margin-right:5px;
 	width:243px;
 	float:left
 }
 
-div.blackwhitelist.white,
-div.blackwhitelist.black{
+div.anigrouplists.allow,
+div.anigrouplists.block{
 	width:243px
 }
-div.blackwhitelist.white select,
-div.blackwhitelist.black select{
+div.anigrouplists.allow select,
+div.anigrouplists.block select{
 	margin:0;
 	width:215px
 /*	clear:both*/
 }
-div.blackwhitelist.white select,
-div.blackwhitelist.black select{
+div.anigrouplists.allow select,
+div.anigrouplists.block select{
 	height:110px
 }
-#edit-show div.blackwhitelist.pool{
+#edit-show div.anigrouplists.pool{
 	width:330px;
 	height:265px;
 	margin-left:248px;
 	float:none
 }
-#edit-show div.blackwhitelist.pool select,
-div.blackwhitelist.pool,
-div.blackwhitelist.pool select{
+#edit-show div.anigrouplists.pool select,
+div.anigrouplists.pool,
+div.anigrouplists.pool select{
 	width:330px;
 	height:265px;
 	float:right
 }
+#addShowForm #pool{
+	width:310px;
+	margin-right:20px !important
+}
 
-div.blackwhitelist span{
+div.anigrouplists span{
 	text-align:center
 }
 
-div#blackwhitelist,
-div.blackwhitelist.manual{
+div#anigrouplists,
+div.anigrouplists.manual{
 	margin:7px 0
 }
 
@@ -3939,15 +3973,25 @@ fieldset[disabled] .navbar-default .btn-link:focus{
 }
 
 .component-group.bubble.last{padding:0;margin:0;border-bottom:none}
+.component-group.bubble i[class^="icon16-"],
+.component-group.bubble i[class*="square-"],
+.component-group.bubble i[class^="sgicon-"]{display:inline-block;float:unset;vertical-align:middle}
+.component-group.bubble img{margin-right:5px}
 .component-group.bubblelist{min-height:30px}
 .component-group.bubblelist .type{padding:6px}
 .component-group.bubblelist .item{display:inline-block}
+.component-group.bubblelist .item i{display:inline-block;float:unset}
+.component-group.bubblelist .item i,
 .component-group.bubblelist .item img{margin-right:4px}
 .component-group.bubblelist .item.text{font-size:12px; padding-right:3px}
 .component-group.bubblelist .item a{font-size:16px;padding-right:20px}
 .component-group.bubblelist .item.text,
 .component-group.bubblelist .item a{line-height:16px;vertical-align:middle}
-.component-group.bubblelist .item a img{vertical-align:bottom;opacity:0.65;filter:alpha(opacity=65)}
+.component-group.bubblelist .item a i,
+.component-group.bubblelist .item a img{vertical-align:bottom}
+.component-group.bubblelist .item a i,
+.component-group.bubblelist .item a img{opacity:0.65;filter:alpha(opacity=65)}
+.component-group.bubblelist .item a:hover i,
 .component-group.bubblelist .item a:hover img{opacity:1;filter:alpha(opacity=1)}
 
 .dropdown-menu li > a{

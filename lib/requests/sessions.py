@@ -95,10 +95,6 @@ def merge_hooks(request_hooks, session_hooks, dict_class=OrderedDict):
 
 class SessionRedirectMixin(object):
 
-    def __init__(self):
-        #: A list of domains that will be excluded from auth stripping
-        self.trusted_domains = []
-
     def get_redirect_target(self, resp):
         """Receives a Response. Returns a redirect URI or ``None``"""
         # Due to the nature of how requests processes redirects this method will
@@ -124,8 +120,7 @@ class SessionRedirectMixin(object):
         """Decide whether Authorization header should be removed when redirecting"""
         old_parsed = urlparse(old_url)
         new_parsed = urlparse(new_url)
-        if (old_parsed.hostname != new_parsed.hostname
-                and new_parsed.hostname not in self.trusted_domains):
+        if old_parsed.hostname != new_parsed.hostname:
             return True
         # Special case: allow http -> https redirect when using the standard
         # ports. This isn't specified by RFC 7235, but is kept to avoid
@@ -360,7 +355,7 @@ class Session(SessionRedirectMixin):
 
     __attrs__ = [
         'headers', 'cookies', 'auth', 'proxies', 'hooks', 'params', 'verify',
-        'cert', 'prefetch', 'adapters', 'stream', 'trust_env',
+        'cert', 'adapters', 'stream', 'trust_env',
         'max_redirects',
     ]
 
@@ -418,8 +413,6 @@ class Session(SessionRedirectMixin):
         self.adapters = OrderedDict()
         self.mount('https://', HTTPAdapter())
         self.mount('http://', HTTPAdapter())
-
-        super(Session, self).__init__()
 
     def __enter__(self):
         return self
@@ -665,11 +658,13 @@ class Session(SessionRedirectMixin):
 
         extract_cookies_to_jar(self.cookies, request, r.raw)
 
-        # Redirect resolving generator.
-        gen = self.resolve_redirects(r, request, **kwargs)
-
         # Resolve redirects if allowed.
-        history = [resp for resp in gen] if allow_redirects else []
+        if allow_redirects:
+            # Redirect resolving generator.
+            gen = self.resolve_redirects(r, request, **kwargs)
+            history = [resp for resp in gen]
+        else:
+            history = []
 
         # Shuffle things around if there's history.
         if history:

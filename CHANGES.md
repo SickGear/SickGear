@@ -1,4 +1,61 @@
-﻿### 0.21.49 (2020-09-19 20:40:00 UTC)
+﻿### 0.22.0 (2020-09-19 20:50:00 UTC)
+
+* Add menu Shows/"Metacritic Cards"
+* Add menu Shows/"TV Calendar Cards"
+* Add country and language to Shows/"Trakt Cards"
+* Add persistence to views of Shows/Browse Cards
+* Change make web UI calls async so that, for example, process media will not block page requests
+* Change improve speed of backlog overview
+* Fix the missing snatched low quality on backlog overview
+* Fix print trace to webinterface
+* Fix creating show list when there is no list at the cycle of backlog search spread
+* Change improve Python performance of handling core objects
+* Change improve performance for find_show_by_id
+* Change episode overview, move pulldown from 'Set/Failed' to 'Override/Failed'
+* Change add rarfile_py3 3.1 (a4202ca)
+* Change backport rarfile_py2; Fixes for multivolume RAR3 with encrypted headers
+* Update Apprise 0.8.0 (6aa52c3) to 0.8.5 (55a2edc)
+* Update attr 19.2.0.dev0 (daf2bc8) to 20.1.0.dev0 (4bd6827)
+* Update Beautiful Soup 4.8.1 (r540) to 4.8.2 (r559)
+* Update Certifi 2019.06.16 (84dc766) to 2020.06.20 (f7e30d8)
+* Update dateutil 2.8.1 (fc9b162) to 2.8.1 (43b7838)
+* Update DiskCache library 4.0.0 (2c79bb9) to 4.1.0 (b0451e0)
+* Update feedparser 6.0.0b1 (d12d3bd) to feedparser_py2 6.0.0b3 (7e255f0)
+* Add feedparser_py3 6.0.0b3 (7e255f0)
+* Update Fuzzywuzzy 0.17.0 (0cfb2c8) to 0.18.0 (2188520)
+* Update html5lib 1.1-dev (4b22754) to 1.1 (f87487a)
+* Update idna library 2.8 (032fc55) to 2.9 (1233a73)
+* Update isotope library 3.0.1 (98ba374) to 3.0.6 (ad00807)
+* Update functools_lru_cache 1.5 (21e85f5) to 1.6.1 (2dc65b5)
+* Update MsgPack 0.6.1 (05ff11d) to 1.0.0 (fa7d744)
+* Update profilehooks module 1.11.0 (e17f378) to 1.11.2 (d72cc2b)
+* Update PySocks 1.7.0 (91dcdf0) to 1.7.1 (c2fa43c)
+* Update Requests library 2.22.0 (3d968ff) to 2.24.0 (1b41763)
+* Update Six compatibility library 1.13.0 (ec58185) to 1.15.0 (c0be881)
+* Update soupsieve_py3 2.0.0.dev (69194a2) to 2.0.0.final (e66c311)
+* Update soupsieve_py2 1.9.5 (6a38398) to 1.9.6 final (f9c96ec)
+* Update tmdbsimple 2.2.0 (ff17893) to 2.2.6 (310d933)
+* Update Tornado_py3 Web Server 6.0.3 (ff985fe) to 6.0.4 (b4e39e5)
+* Update urllib3 release 1.25.6 (4a6c288) to 1.25.9 (a5a45dc)
+* Add Telegram notifier
+* Change enable image caching on browse pages
+* Change update sceneNameCache after scene names are updated
+* Change add core dedicated base class tvinfo_base to unify future info sources
+* Add exclude ignore words and exclude required words to settings/Search, Edit and View show
+* Add API response field `global exclude ignore` to sg.listignorewords endpoint
+* Add API response field `global exclude require` to sg.listrequirewords endpoint
+* Change improve Popen resource usage under py2
+* Add overall failure monitoring to History/Connect fails (renamed from "Provider fails")
+* Change log exception during updateCache in newznab
+* Change make Py3.9 preparations
+* Change anime "Available groups" to display "No groups listed..." when API is fine with no results instead of blank
+* Change improve clarity of anime group lists by using terms Allow list and Block list
+* Change add alternative locations for git.exe on Windows with a log warning
+* Add link to the wiki setup guide for NZBGet and SABnzbd at Search Settings/"NZB Results"
+* Change API version to 13
+
+
+### 0.21.49 (2020-09-19 20:40:00 UTC)
 
 * Change make make test_encrypt hardware independent
 * Fix add `cf_clearance` to two providers that use CF IUAM, Scenetime and Torrenting
@@ -39,6 +96,10 @@
 ### 0.21.43 (2020-09-09 19:20:00 UTC)
 
 * Add missing parameter 'failed' to sg.postprocess
+* Change API rename sg.`listrequiedwords` typo endpoint to sg.`listrequirewords`
+* Change API rename sg.`setrequiredwords` endpoint to sg.`setrequirewords`
+* Change API responses of sg.listrequirewords and sg.setrequirewords to `require words` instead of `required words`
+* Add API aliases for old endpoint names with old responses for backwards compatibility
 * Fix legacy command help for episode.search
 * Fix sg.show.ratefanart
 * Fix sg.logs command wrongly mapped to legacy logs command

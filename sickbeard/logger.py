@@ -17,6 +17,7 @@
 from __future__ import with_statement
 
 import codecs
+import datetime
 import logging
 import glob
 import os
@@ -30,7 +31,8 @@ from logging.handlers import TimedRotatingFileHandler
 
 import sickbeard
 from . import classes
-from sg_helpers import remove_file_failed
+from .sgdatetime import timestamp_near
+from sg_helpers import md5_for_text, remove_file_failed
 
 # noinspection PyUnreachableCode
 if False:
@@ -73,8 +75,8 @@ class SBRotatingLogHandler(object):
         self.console_logging = False  # type: bool
         self.log_lock = threading.Lock()
         self.log_types = ['sickbeard', 'tornado.application', 'tornado.general', 'subliminal', 'adba', 'encodingKludge',
-                          'tvdb_api']
-        self.external_loggers = ['sg_helper', 'libtrakt', 'trakt_api']
+                          'tvdb.api', 'TVInfo']
+        self.external_loggers = ['sg.helper', 'libtrakt', 'libtrakt.api']
         self.log_types_null = ['tornado.access']
 
     def __del__(self):
@@ -169,7 +171,8 @@ class SBRotatingLogHandler(object):
         """
         fmt = {}
         for logger_name in self.log_types + self.external_loggers:
-            source = (re.sub(r'(.*\.\w\w\w).*$', r'\1', logger_name).upper() + ' :: ', '')['sickbeard' == logger_name]
+            source = ((re.sub(r'(.*\.\w\w\w).*$', r'\1', logger_name), logger_name)['sg.' in logger_name]
+                      .upper() + ' :: ', '')['sickbeard' == logger_name]
             fmt.setdefault(logger_name, logging.Formatter(
                 '%(asctime)s %(levelname)' + ('-8', '')[log_simple] + 's ' + source
                 + '%(message)s', ('%Y-%m-%d ', '')[log_simple] + '%H:%M:%S'))
@@ -192,7 +195,15 @@ class SBRotatingLogHandler(object):
         :param log_list: log message
         :param log_level: log level
         """
+        mem_key = 'logger'
         for to_log in log_list:
+            log_id = md5_for_text(to_log)
+            now = int(timestamp_near(datetime.datetime.now()))
+            expired = now > sickbeard.MEMCACHE.get(mem_key, {}).get(log_id, 0)
+            sickbeard.MEMCACHE[mem_key] = {}
+            sickbeard.MEMCACHE[mem_key][log_id] = 2 + now
+            if not expired:
+                continue
 
             out_line = '%s :: %s' % (threading.currentThread().getName(), to_log)
 

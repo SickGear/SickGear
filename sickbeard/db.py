@@ -516,10 +516,10 @@ class SchemaUpgrade(object):
         self.connection.action('UPDATE db_version SET db_version = ? WHERE 1=1', [new_version])
         return new_version
 
-    def setDBVersion(self, new_version):
+    def setDBVersion(self, new_version, check_db_version=True):
         # noinspection SqlConstantCondition
         self.connection.action('UPDATE db_version SET db_version = ? WHERE 1=1', [new_version])
-        return new_version
+        return check_db_version and self.checkDBVersion()
 
     def listTables(self):
         tables = []
@@ -581,7 +581,7 @@ def MigrationCode(my_db):
         31: sickbeard.mainDB.AddAnimeTVShow,
         32: sickbeard.mainDB.AddAbsoluteNumbering,
         33: sickbeard.mainDB.AddSceneAbsoluteNumbering,
-        34: sickbeard.mainDB.AddAnimeBlacklistWhitelist,
+        34: sickbeard.mainDB.AddAnimeAllowlistBlocklist,
         35: sickbeard.mainDB.AddSceneAbsoluteNumbering2,
         36: sickbeard.mainDB.AddXemRefresh,
         37: sickbeard.mainDB.AddSceneToTvShows,
@@ -618,6 +618,8 @@ def MigrationCode(my_db):
         20008: sickbeard.mainDB.AddWatched,
         20009: sickbeard.mainDB.AddPrune,
         20010: sickbeard.mainDB.AddIndexerToTables,
+        20011: sickbeard.mainDB.AddShowExludeGlobals,
+        20012: sickbeard.mainDB.RenameAllowBlockListTables,
         # 20002: sickbeard.mainDB.AddCoolSickGearFeature3,
     }
 

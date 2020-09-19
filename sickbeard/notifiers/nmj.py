@@ -18,13 +18,12 @@
 
 import re
 import telnetlib
-import xml.etree.cElementTree as XmlEtree
 
 from .generic import BaseNotifier
 import sickbeard
 from exceptions_helper import ex
 
-from _23 import urlencode
+from _23 import etree, urlencode
 # noinspection PyUnresolvedReferences
 from six.moves import urllib
 
@@ -141,7 +140,7 @@ class NMJNotifier(BaseNotifier):
 
         # try to parse the resulting XML
         try:
-            et = XmlEtree.fromstring(response)
+            et = etree.fromstring(response)
             result = et.findtext('returnValue')
         except SyntaxError as e:
             self._log_error(u'Unable to parse XML returned from the Popcorn Hour: %s' % ex(e))
@@ -168,10 +167,10 @@ class NMJNotifier(BaseNotifier):
     # notify_snatch() Not implemented: Start the scanner when snatched does not make sense
     # notify_git_update() Not implemented, no reason to start scanner
 
-    def notify_download(self):
+    def notify_download(self, *args, **kwargs):
         self._notify()
 
-    def notify_subtitle_download(self):
+    def notify_subtitle_download(self, *args, **kwargs):
         self._notify()
 
 

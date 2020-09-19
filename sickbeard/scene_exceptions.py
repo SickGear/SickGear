@@ -29,6 +29,7 @@ from . import db, helpers, logger, name_cache
 from .anime import create_anidb_obj
 from .classes import OrderedDefaultdict
 from .indexers.indexer_config import TVINFO_TVDB
+from .sgdatetime import timestamp_near
 
 from _23 import filter_iter, map_iter
 from six import iteritems, PY2, text_type
@@ -63,7 +64,7 @@ def should_refresh(name):
     rows = my_db.select('SELECT last_refreshed FROM scene_exceptions_refresh WHERE list = ?', [name])
     if rows:
         last_refresh = int(rows[0]['last_refreshed'])
-        return int(time.mktime(datetime.datetime.today().timetuple())) > last_refresh + max_refresh_age_secs
+        return int(timestamp_near(datetime.datetime.now())) > last_refresh + max_refresh_age_secs
     return True
 
 
@@ -75,7 +76,7 @@ def set_last_refresh(name):
     """
     my_db = db.DBConnection()
     my_db.upsert('scene_exceptions_refresh',
-                 {'last_refreshed': int(time.mktime(datetime.datetime.today().timetuple()))},
+                 {'last_refreshed': int(timestamp_near(datetime.datetime.now()))},
                  {'list': name})
 
 
@@ -194,7 +195,7 @@ def get_scene_exception_by_name_multiple(show_name):
     :rtype: Tuple[None, None, None] or Tuple[int, int or long, int]
     """
     try:
-        exception_result = name_cache.nameCache[helpers.full_sanitize_scene_name(show_name)]
+        exception_result = name_cache.sceneNameCache[helpers.full_sanitize_scene_name(show_name)]
         return [exception_result]
     except (BaseException, Exception):
         return [[None, None, None]]
@@ -294,6 +295,7 @@ def retrieve_exceptions():
 
     if cl:
         my_db.mass_action(cl)
+        name_cache.buildNameCache(update_only_scene=True)
 
     # since this could invalidate the results of the cache we clear it out after updating
     if changed_exceptions:
@@ -338,6 +340,8 @@ def update_scene_exceptions(tvid, prodid, scene_exceptions):
         my_db.action('INSERT INTO scene_exceptions'
                      ' (indexer, indexer_id, show_name, season) VALUES (?,?,?,?)',
                      [tvid, prodid, cur_exception, cur_season])
+
+    sickbeard.name_cache.buildNameCache(update_only_scene=True)
 
 
 def _anidb_exceptions_fetcher():

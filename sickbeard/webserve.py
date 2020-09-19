@@ -48,19 +48,21 @@ import sg_helpers
 import sickbeard
 from . import classes, clients, config, db, helpers, history, image_cache, logger, naming, \
     network_timezones, notifiers, nzbget, processTV, sab, scene_exceptions, search_queue, subtitles, ui
-from .anime import BlackAndWhiteList, pull_anidb_groups, short_group_names
+from .anime import AniGroupList, pull_anidb_groups, short_group_names
 from .browser import folders_at_path
 from .common import ARCHIVED, DOWNLOADED, FAILED, IGNORED, SKIPPED, SNATCHED, SNATCHED_ANY, UNAIRED, UNKNOWN, WANTED, \
      SD, HD720p, HD1080p, UHD2160p, Overview, Quality, qualityPresetStrings, statusStrings
 from .helpers import has_image_ext, remove_article, starify
 from .indexermapper import MapStatus, map_indexers_to_show, save_mapping
 from .indexers.indexer_config import TVINFO_IMDB, TVINFO_TRAKT, TVINFO_TVDB
-from .name_cache import buildNameCache
+from .name_parser.parser import InvalidNameException, InvalidShowException, NameParser
 from .providers import newznab, rsstorrent
 from .scene_numbering import get_scene_absolute_numbering_for_show, get_scene_numbering_for_show, \
     get_xem_absolute_numbering_for_show, get_xem_numbering_for_show, set_scene_numbering_helper
 from .search_backlog import FORCED_BACKLOG
-from .sgdatetime import SGDatetime
+from .sgdatetime import SGDatetime, timestamp_near
+
+from .show_updater import clean_ignore_require_words
 from .trakt_helpers import build_config, trakt_collection_remove_account
 from .tv import TVidProdid
 
@@ -72,6 +74,7 @@ import dateutil.parser
 from tornado import gen
 # noinspection PyUnresolvedReferences
 from tornado.web import RequestHandler, StaticFileHandler, authenticated
+from tornado.concurrent import run_on_executor
 # tornado.web.RequestHandler above is unresolved until...
 # 1) RouteHandler derives from RequestHandler instead of LegacyBaseHandler
 # 2) the following line is removed (plus the noinspection deleted)
@@ -85,7 +88,7 @@ from lib.libtrakt.exceptions import TraktException, TraktAuthException
 from lib.libtrakt.indexerapiinterface import TraktSearchTypes
 # noinspection PyPep8Naming
 from lib import tmdbsimple as TMDB
-from lib.tvdb_api.tvdb_exceptions import TvdbException
+from tvinfo_base import BaseTVinfoException
 
 import lib.rarfile.rarfile as rarfile
 
@@ -95,7 +98,7 @@ from six import binary_type, integer_types, iteritems, iterkeys, itervalues, PY2
 
 # noinspection PyUnreachableCode
 if False:
-    from typing import List
+    from typing import AnyStr, List, Optional
 
 
 # noinspection PyAbstractClass
@@ -169,12 +172,12 @@ class BaseStaticFileHandler(StaticFileHandler):
         self.set_header('X-Robots-Tag', 'noindex, nofollow, noarchive, nocache, noodp, noydir, noimageindex, nosnippet')
         self.set_header('Cache-Control', 'no-cache, max-age=0')
         self.set_header('Pragma', 'no-cache')
+        self.set_header('Expires', '0')
         if sickbeard.SEND_SECURITY_HEADERS:
             self.set_header('X-Frame-Options', 'SAMEORIGIN')
 
 
 class RouteHandler(LegacyBaseHandler):
-
     def data_received(self, *args):
         pass
 
@@ -189,6 +192,7 @@ class RouteHandler(LegacyBaseHandler):
             return data.encode('latin1').decode('utf-8')
         return data.decode('utf-8')
 
+    @gen.coroutine
     def route_method(self, route, use_404=False, limit_route=None, xsrf_filter=True):
 
         route = route.strip('/')
@@ -216,12 +220,20 @@ class RouteHandler(LegacyBaseHandler):
                 method_args += [item for item in arg if None is not item]
             if 'kwargs' in method_args or re.search('[A-Z]', route):
                 # no filtering for legacy and routes that depend on *args and **kwargs
-                result = method(**request_kwargs)
+                result = yield self.async_call(method, request_kwargs)  # method(**request_kwargs)
             else:
                 filter_kwargs = dict(filter_iter(lambda kv: kv[0] in method_args, iteritems(request_kwargs)))
-                result = method(**filter_kwargs)
-            if result:
-                self.finish(result)
+                result = yield self.async_call(method, filter_kwargs)  # method(**filter_kwargs)
+            self.finish(result)
+
+    @run_on_executor
+    def async_call(self, function, kw):
+        try:
+            return function(**kw)
+        except (BaseException, Exception) as e:
+            if PY2:
+                raise Exception(traceback.format_exc().replace('\n', '<br>'))
+            raise e
 
     def page_not_found(self):
         self.set_status(404)
@@ -589,27 +601,27 @@ class RepoHandler(BaseStaticFileHandler):
 
     def get_watchedstate_updater_addon_xml(self):
         mem_key = 'kodi_xml'
-        if SGDatetime.now().totimestamp(default=0) < sickbeard.MEMCACHE.get(mem_key, {}).get('last_update', 0):
+        if int(timestamp_near(datetime.datetime.now())) < sickbeard.MEMCACHE.get(mem_key, {}).get('last_update', 0):
             return sickbeard.MEMCACHE.get(mem_key).get('data')
 
         with io.open(ek.ek(os.path.join, sickbeard.PROG_DIR, 'sickbeard', 'clients',
                            'kodi', 'service.sickgear.watchedstate.updater', 'addon.xml'), 'r', encoding='utf8') as fh:
             xml = fh.read().strip() % dict(ADDON_VERSION=self.get_addon_version())
 
-        sickbeard.MEMCACHE[mem_key] = dict(last_update=30 + SGDatetime.now().totimestamp(default=0), data=xml)
+        sickbeard.MEMCACHE[mem_key] = dict(last_update=30 + int(timestamp_near(datetime.datetime.now())), data=xml)
         return xml
 
     @staticmethod
     def get_addon_version():
         mem_key = 'kodi_ver'
-        if SGDatetime.now().totimestamp(default=0) < sickbeard.MEMCACHE.get(mem_key, {}).get('last_update', 0):
+        if int(timestamp_near(datetime.datetime.now())) < sickbeard.MEMCACHE.get(mem_key, {}).get('last_update', 0):
             return sickbeard.MEMCACHE.get(mem_key).get('data')
 
         with io.open(ek.ek(os.path.join, sickbeard.PROG_DIR, 'sickbeard', 'clients',
                            'kodi', 'service.sickgear.watchedstate.updater', 'service.py'), 'r', encoding='utf8') as fh:
             version = re.findall(r'ADDON_VERSION\s*?=\s*?\'([^\']+)', fh.read())[0]
 
-        sickbeard.MEMCACHE[mem_key] = dict(last_update=30 + SGDatetime.now().totimestamp(default=0), data=version)
+        sickbeard.MEMCACHE[mem_key] = dict(last_update=30 + int(timestamp_near(datetime.datetime.now())), data=version)
         return version
 
     def render_kodi_repo_addon_xml(self):
@@ -703,7 +715,7 @@ class NoXSRFHandler(RouteHandler):
     @gen.coroutine
     def post(self, route, *args, **kwargs):
 
-        self.route_method(route, limit_route=False, xsrf_filter=False)
+        yield self.route_method(route, limit_route=False, xsrf_filter=False)
 
     @staticmethod
     def update_watched_state_kodi(payload=None, as_json=True, **kwargs):
@@ -803,9 +815,8 @@ class LoadingWebHandler(BaseHandler):
     @authenticated
     @gen.coroutine
     def get(self, route, *args, **kwargs):
-        self.route_method(route, use_404=True,
-                          limit_route=(lambda _route: not re.search('get[_-]message', _route)
-                                       and 'loading-page' or _route))
+        yield self.route_method(route, use_404=True, limit_route=(
+            lambda _route: not re.search('get[_-]message', _route) and 'loading-page' or _route))
 
     post = get
 
@@ -819,7 +830,7 @@ class WebHandler(BaseHandler):
     @authenticated
     @gen.coroutine
     def get(self, route, *args, **kwargs):
-        self.route_method(route, use_404=True)
+        yield self.route_method(route, use_404=True)
 
     def send_message(self, message):
         with self.lock:
@@ -1274,7 +1285,7 @@ r.close()
                     continue
 
                 if bname in ep_results:
-                    date_watched = now = SGDatetime.now().totimestamp(default=0)
+                    date_watched = now = int(timestamp_near(datetime.datetime.now()))
                     if 1500000000 < date_watched:
                         date_watched = helpers.try_int(float(v.get('date_watched')))
 
@@ -1310,8 +1321,11 @@ r.close()
     def set_layout_history(self, layout):
 
         if layout not in ('compact', 'detailed', 'compact_watched', 'detailed_watched',
-                          'compact_stats', 'graph_stats', 'provider_failures'):
-            layout = 'detailed'
+                          'compact_stats', 'graph_stats', 'connect_failures'):
+            if 'provider_failures' == layout:  # layout renamed
+                layout = 'connect_failures'
+            else:
+                layout = 'detailed'
 
         sickbeard.HISTORY_LAYOUT = layout
 
@@ -1773,6 +1787,13 @@ class Home(MainHandler):
         return notifiers.NotifierFactory().get('GITTER').test_notify(
             room_name=room_name, access_token=access_token)
 
+    def test_telegram(self, send_icon=False, access_token=None, chatid=None, quiet=False):
+        self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
+
+        r = notifiers.NotifierFactory().get('TELEGRAM').test_notify(
+            send_icon=bool(config.checkbox_to_value(send_icon)), access_token=access_token, chatid=chatid, quiet=quiet)
+        return json.dumps(r)
+
     def test_email(self, host=None, port=None, smtp_from=None, use_tls=None, user=None, pwd=None, to=None):
         self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
 
@@ -2144,9 +2165,9 @@ class Home(MainHandler):
             t.prev_title = 'Prev show, %s' % tvshow_names[(cur_sel - 2, last_item - 1)[1 == cur_sel]]
             t.next_title = 'Next show, %s' % tvshow_names[(cur_sel, 0)[last_item == cur_sel]]
 
-        t.bwl = None
+        t.anigroups = None
         if show_obj.is_anime:
-            t.bwl = show_obj.release_groups
+            t.anigroups = show_obj.release_groups
 
         t.fanart = []
         cache_obj = image_cache.ImageCache()
@@ -2273,7 +2294,7 @@ class Home(MainHandler):
         m_prodid = helpers.try_int(m_prodid)
         show_obj = helpers.find_show_by_id({tvid: prodid}, no_mapped_ids=True)
         try:
-            m_show_obj = helpers.find_show_by_id({m_tvid: m_prodid}, no_mapped_ids=False)
+            m_show_obj = helpers.find_show_by_id({m_tvid: m_prodid}, no_mapped_ids=False, check_multishow=True)
         except exceptions_helper.MultipleShowObjectsException:
             msg = 'Duplicate shows in DB'
             ui.notifications.message('TV info source switch', 'Error: ' + msg)
@@ -2354,7 +2375,7 @@ class Home(MainHandler):
                 not sickbeard.TVInfoAPI(m_tvid).config.get('mapped_only') and \
                 (m_tvid != show_obj.tvid or m_prodid != show_obj.prodid):
             try:
-                new_show_obj = helpers.find_show_by_id({m_tvid: m_prodid}, no_mapped_ids=False)
+                new_show_obj = helpers.find_show_by_id({m_tvid: m_prodid}, no_mapped_ids=False, check_multishow=True)
                 mtvid_prodid = TVidProdid({m_tvid: m_prodid})()
                 if not new_show_obj or (new_show_obj.tvid == show_obj.tvid and new_show_obj.prodid == show_obj.prodid):
                     master_ids += [bool(helpers.try_int(kwargs.get(x))) for x in ('paused', 'markwanted')]
@@ -2437,8 +2458,9 @@ class Home(MainHandler):
                   any_qualities=None, best_qualities=None, exceptions_list=None,
                   flatten_folders=None, paused=None, direct_call=False, air_by_date=None, sports=None, dvdorder=None,
                   tvinfo_lang=None, subs=None, upgrade_once=None, rls_ignore_words=None,
-                  rls_require_words=None, anime=None, blacklist=None, whitelist=None,
-                  scene=None, prune=None, tag=None, quality_preset=None, reset_fanart=None, **kwargs):
+                  rls_require_words=None, anime=None, allowlist=None, blocklist=None,
+                  scene=None, prune=None, tag=None, quality_preset=None, reset_fanart=None,
+                  rls_global_exclude_ignore=None, rls_global_exclude_require=None, **kwargs):
 
         any_qualities = any_qualities if None is not any_qualities else []
         best_qualities = best_qualities if None is not best_qualities else []
@@ -2481,15 +2503,17 @@ class Home(MainHandler):
 
             if show_obj.is_anime:
                 if not show_obj.release_groups:
-                    show_obj.release_groups = BlackAndWhiteList(show_obj.tvid, show_obj.prodid, show_obj.tvid_prodid)
-                t.whitelist = show_obj.release_groups.whitelist
-                t.blacklist = show_obj.release_groups.blacklist
+                    show_obj.release_groups = AniGroupList(show_obj.tvid, show_obj.prodid, show_obj.tvid_prodid)
+                t.allowlist = show_obj.release_groups.allowlist
+                t.blocklist = show_obj.release_groups.blocklist
 
                 t.groups = pull_anidb_groups(show_obj.name)
                 if None is t.groups:
                     t.groups = [dict(name='Did not initialise AniDB. Check debug log if reqd.', rating='', range='')]
                 elif False is t.groups:
                     t.groups = [dict(name='Fail: AniDB connect. Restart SG else check debug log', rating='', range='')]
+                elif isinstance(t.groups, list) and 0 == len(t.groups):
+                    t.groups = [dict(name='No groups listed in API response', rating='', range='')]
 
             with show_obj.lock:
                 t.show_obj = show_obj
@@ -2557,7 +2581,7 @@ class Home(MainHandler):
         if type(exceptions_list) != list:
             exceptions_list = [exceptions_list]
 
-        # If direct call from mass_edit_update no scene exceptions handling or blackandwhite list handling or tags
+        # If direct call from mass_edit_update no scene exceptions handling or blockandallow list handling or tags
         if direct_call:
             do_update_exceptions = False
         else:
@@ -2566,19 +2590,19 @@ class Home(MainHandler):
             with show_obj.lock:
                 if anime:
                     if not show_obj.release_groups:
-                        show_obj.release_groups = BlackAndWhiteList(
+                        show_obj.release_groups = AniGroupList(
                             show_obj.tvid, show_obj.prodid, show_obj.tvid_prodid)
-                    if whitelist:
-                        shortwhitelist = short_group_names(whitelist)
-                        show_obj.release_groups.set_white_keywords(shortwhitelist)
+                    if allowlist:
+                        shortallowlist = short_group_names(allowlist)
+                        show_obj.release_groups.set_allow_keywords(shortallowlist)
                     else:
-                        show_obj.release_groups.set_white_keywords([])
+                        show_obj.release_groups.set_allow_keywords([])
 
-                    if blacklist:
-                        shortblacklist = short_group_names(blacklist)
-                        show_obj.release_groups.set_black_keywords(shortblacklist)
+                    if blocklist:
+                        shortblocklist = short_group_names(blocklist)
+                        show_obj.release_groups.set_block_keywords(shortblocklist)
                     else:
-                        show_obj.release_groups.set_black_keywords([])
+                        show_obj.release_groups.set_block_keywords([])
 
         errors = []
         with show_obj.lock:
@@ -2606,8 +2630,29 @@ class Home(MainHandler):
             if not direct_call:
                 show_obj.lang = infosrc_lang
                 show_obj.dvdorder = dvdorder
-                show_obj.rls_ignore_words = rls_ignore_words.strip()
-                show_obj.rls_require_words = rls_require_words.strip()
+                new_ignore_words, new_i_regex = helpers.split_word_str(rls_ignore_words.strip())
+                new_ignore_words -= sickbeard.IGNORE_WORDS
+                if 0 == len(new_ignore_words):
+                    new_i_regex = False
+                show_obj.rls_ignore_words, show_obj.rls_ignore_words_regex = new_ignore_words, new_i_regex
+                new_require_words, new_r_regex = helpers.split_word_str(rls_require_words.strip())
+                new_require_words -= sickbeard.REQUIRE_WORDS
+                if 0 == len(new_require_words):
+                    new_r_regex = False
+                show_obj.rls_require_words, show_obj.rls_require_words_regex = new_require_words, new_r_regex
+                if isinstance(rls_global_exclude_ignore, list):
+                    show_obj.rls_global_exclude_ignore = set(r for r in rls_global_exclude_ignore if '.*' != r)
+                elif isinstance(rls_global_exclude_ignore, string_types) and '.*' != rls_global_exclude_ignore:
+                    show_obj.rls_global_exclude_ignore = {rls_global_exclude_ignore}
+                else:
+                    show_obj.rls_global_exclude_ignore = set()
+                if isinstance(rls_global_exclude_require, list):
+                    show_obj.rls_global_exclude_require = set(r for r in rls_global_exclude_require if '.*' != r)
+                elif isinstance(rls_global_exclude_require, string_types) and '.*' != rls_global_exclude_require:
+                    show_obj.rls_global_exclude_require = {rls_global_exclude_require}
+                else:
+                    show_obj.rls_global_exclude_require = set()
+                clean_ignore_require_words()
 
             # if we change location clear the db of episodes, change it, write to db, and rescan
             # noinspection PyProtectedMember
@@ -2649,7 +2694,6 @@ class Home(MainHandler):
         if do_update_exceptions:
             try:
                 scene_exceptions.update_scene_exceptions(show_obj.tvid, show_obj.prodid, exceptions_list)
-                buildNameCache(show_obj)
                 helpers.cpu_sleep()
             except exceptions_helper.CantUpdateException:
                 errors.append('Unable to force an update on scene exceptions of the show.')
@@ -3206,6 +3250,8 @@ class Home(MainHandler):
             result = dict(result='fail', resp='init')
         elif False is result:
             result = dict(result='fail', resp='connect')
+        elif isinstance(result, list) and 0 == len(result):
+            result = dict(result='success', groups=[dict(name='No groups fetched in API response', rating='', range='')])
         else:
             result = dict(result='success', groups=result)
         return json.dumps(result)
@@ -3256,30 +3302,36 @@ class HomeProcessMedia(Home):
                 logger.log('Calling SickGear-NG.py script %s is not current version %s, please update.' %
                            (kwargs.get('pp_version', '0'), sickbeard.NZBGET_SCRIPT_VERSION), logger.ERROR)
 
-            if isinstance(dir_name, string_types):
-                dir_name = decode_str(dir_name)
-                if nzbget_call and isinstance(sickbeard.NZBGET_MAP, string_types) and sickbeard.NZBGET_MAP:
-                    m = sickbeard.NZBGET_MAP.split('=')
-                    dir_name, not_used = helpers.path_mapper(m[0], m[1], dir_name)
+            if sickbeard.NZBGET_SKIP_PM and nzbget_call and nzbget_dupekey and nzb_name and show_obj:
+                processTV.process_minimal(nzb_name, show_obj,
+                                          failed in (1, '1', True, 'True', 'true'),
+                                          webhandler=None if '0' == stream else self.send_message)
+            else:
 
-            result = processTV.processDir(dir_name if dir_name else None,
-                                          None if not nzb_name else decode_str(nzb_name),
-                                          process_method=process_method, pp_type=process_type,
-                                          cleanup=kwargs.get('cleanup') in ('on', '1'),
-                                          force=force in ('on', '1'),
-                                          force_replace=force_replace in ('on', '1'),
-                                          failed='0' != failed,
-                                          webhandler=None if '0' == stream else self.send_message,
-                                          show_obj=show_obj, is_basedir=is_basedir in ('on', '1'),
-                                          skip_failure_processing=skip_failure_processing)
+                if isinstance(dir_name, string_types):
+                    dir_name = decode_str(dir_name)
+                    if nzbget_call and isinstance(sickbeard.NZBGET_MAP, string_types) and sickbeard.NZBGET_MAP:
+                        m = sickbeard.NZBGET_MAP.split('=')
+                        dir_name, not_used = helpers.path_mapper(m[0], m[1], dir_name)
 
-            if '0' == stream:
-                regexp = re.compile(r'(?i)<br(?:[\s/]+)>', flags=re.UNICODE)
-                result = regexp.sub('\n', result)
-                if None is not quiet and 1 == int(quiet):
-                    regexp = re.compile(u'(?i)<a[^>]+>([^<]+)<[/]a>', flags=re.UNICODE)
-                    return u'%s' % regexp.sub(r'\1', result)
-                return self._generic_message('Postprocessing results', u'<pre>%s</pre>' % result)
+                result = processTV.processDir(dir_name if dir_name else None,
+                                              None if not nzb_name else decode_str(nzb_name),
+                                              process_method=process_method, pp_type=process_type,
+                                              cleanup=kwargs.get('cleanup') in ('on', '1'),
+                                              force=force in ('on', '1'),
+                                              force_replace=force_replace in ('on', '1'),
+                                              failed='0' != failed,
+                                              webhandler=None if '0' == stream else self.send_message,
+                                              show_obj=show_obj, is_basedir=is_basedir in ('on', '1'),
+                                              skip_failure_processing=skip_failure_processing)
+
+                if '0' == stream:
+                    regexp = re.compile(r'(?i)<br(?:[\s/]+)>', flags=re.UNICODE)
+                    result = regexp.sub('\n', result)
+                    if None is not quiet and 1 == int(quiet):
+                        regexp = re.compile(u'(?i)<a[^>]+>([^<]+)<[/]a>', flags=re.UNICODE)
+                        return u'%s' % regexp.sub(r'\1', result)
+                    return self._generic_message('Postprocessing results', u'<pre>%s</pre>' % result)
 
     def processEpisode(self, dir_name=None, nzb_name=None, process_type=None, **kwargs):
         """ legacy function name, stubbed but can _not_ be removed as this
@@ -3364,7 +3416,7 @@ class AddShows(Home):
             tvinfo_config['search_type'] = (TraktSearchTypes.tvdb_id, TraktSearchTypes.imdb_id)['tt' in search_id]
             t = sickbeard.TVInfoAPI(trakt_id).setup(**tvinfo_config)
 
-            resp = t[search_id][0]
+            resp = t.search_show(search_id)[0]
             search_term = resp['seriesname']
             tvdb_prodid = resp['ids']['tvdb']
             trakt_prodid = resp['ids'].get('trakt')
@@ -3386,7 +3438,7 @@ class AddShows(Home):
                 if bool(tvdb_prodid):
                     logger.log('Fetching show using id: %s (%s) from tv datasource %s' % (
                         search_id, search_term, sickbeard.TVInfoAPI(cur_tvid).name), logger.DEBUG)
-                    r = t[tvdb_prodid, False]
+                    r = t.get_show(tvdb_prodid, load_episodes=False)
                     results.setdefault((cur_tvid, trakt_id)['tt' in search_id], {})[int(tvdb_prodid)] = {
                         'id': tvdb_prodid, 'seriesname': r['seriesname'], 'firstaired': r['firstaired'],
                         'network': r['network'], 'overview': r['overview'],
@@ -3400,13 +3452,13 @@ class AddShows(Home):
                     results.setdefault(cur_tvid, {})
                     for term in terms:
                         try:
-                            for r in t[term]:
+                            for r in t.search_show(term):
                                 tvdb_prodid = int(r['id'])
                                 if tvdb_prodid not in results[cur_tvid]:
                                     results.setdefault(cur_tvid, {})[tvdb_prodid] = r.copy()
                                 elif r['seriesname'] != results[cur_tvid][tvdb_prodid]['seriesname']:
                                     results[cur_tvid][tvdb_prodid].setdefault('aliases', []).append(r['seriesname'])
-                        except TvdbException:
+                        except BaseTVinfoException:
                             pass
             except (BaseException, Exception):
                 pass
@@ -3423,7 +3475,7 @@ class AddShows(Home):
             t = sickbeard.TVInfoAPI(trakt_id).setup(**tvinfo_config)
 
             for term in terms:
-                result = t[term]
+                result = t.search_show(term)
                 resp += result
                 match = False
                 for r in result:
@@ -3707,8 +3759,8 @@ class AddShows(Home):
         t.provided_tvid = int(tvid or sickbeard.TVINFO_DEFAULT)
         t.infosrc = sickbeard.TVInfoAPI().search_sources
         t.meta_lang = sickbeard.ADD_SHOWS_METALANG
-        t.whitelist = []
-        t.blacklist = []
+        t.allowlist = []
+        t.blocklist = []
         t.groups = []
 
         t.show_scene_maps = list(*itervalues(sickbeard.scene_exceptions.xem_ids_list))
@@ -3723,7 +3775,7 @@ class AddShows(Home):
         xref_src = 'https://raw.githubusercontent.com/ScudLee/anime-lists/master/anime-list.xml'
         xml_data = helpers.get_url(xref_src)
         xref_root = xml_data and helpers.parse_xml(xml_data)
-        if not len(xref_root):
+        if None is not xref_root and not len(xref_root):
             xref_root = None
 
         url = 'http://api.anidb.net:9001/httpapi?client=sickgear&clientver=1&protover=1&request=main'
@@ -4268,7 +4320,13 @@ class AddShows(Home):
             ignore = r'''
             ((bbc|channel\s*?5.*?|itv)\s*?(drama|documentaries))|bbc\s*?(comedy|music)|music\s*?specials|tedtalks
                     '''
-            if re.search(ignore, item['show']['title'].strip(), re.I | re.X):
+            language = (item.get('show', {}).get('language') or '').lower()
+            language_en = 'en' == language
+            country = (item.get('show', {}).get('country') or '').lower()
+            country_ok = country in ('uk', 'gb', 'ie', 'ca', 'us', 'au', 'nz', 'za')
+            if re.search(ignore, item['show']['title'].strip(), re.I | re.X) or \
+                    (not language_en and not country_ok) or \
+                    not (item.get('show', {}).get('overview') or item.get('episode', {}).get('overview')):
                 continue
             try:
                 dt = dateutil.parser.parse(item['show']['first_aired'])
@@ -4286,24 +4344,28 @@ class AddShows(Home):
                 traktid = item.get('show', {}).get('ids', {}).get('trakt', 0)
                 images = dict(poster=dict(thumb='imagecache?path=browse/thumb/trakt&filename=%s&tmdbid=%s&tvdbid=%s' %
                                                 ('%s.jpg' % traktid, tmdbid, tvdbid)))
-
                 filtered.append(dict(
                     premiered=dt_ordinal,
                     premiered_str=dt_string,
                     when_past=dt_ordinal < datetime.datetime.now().toordinal(),  # air time not yet available 16.11.2015
                     episode_number='' if 'episode' not in item else item['episode']['number'] or 1,
-                    episode_overview=('' if 'episode' not in item else
-                                      item['episode']['overview'].strip() or ''),
+                    episode_overview=(
+                        '' if 'episode' not in item else
+                        '' if None is item.get('episode', {}).get('overview') and (language_en or country_ok)
+                        else item['episode']['overview'].strip() or ''),
                     episode_season='' if 'episode' not in item else item['episode']['season'] or 1,
                     genres=('' if 'genres' not in item['show'] else
                             ', '.join(['%s' % v for v in item['show']['genres']])),
                     ids=item['show']['ids'],
                     images=images,
-                    overview=('' if 'overview' not in item['show'] or None is item['show']['overview'] else
-                              item['show']['overview'].strip()),
+                    overview=(item.get('show', {}).get('overview') or '').strip(),
                     rating=0 < item['show'].get('rating', 0) and
                            ('%.2f' % (item['show'].get('rating') * 10)).replace('.00', '') or 0,
                     title=item['show']['title'].strip(),
+                    language=language,
+                    language_img=not language_en and sickbeard.MEMCACHE_FLAG_IMAGES.get(language, False),
+                    country=country,
+                    country_img=sickbeard.MEMCACHE_FLAG_IMAGES.get(country, False),
                     url_src_db='https://trakt.tv/shows/%s' % item['show']['ids']['slug'],
                     url_tvdb=('', sickbeard.TVInfoAPI(TVINFO_TVDB).config['show_url'] % item['show']['ids']['tvdb'])[
                         isinstance(item['show']['ids']['tvdb'], integer_types)
@@ -4373,6 +4435,369 @@ class AddShows(Home):
         if not filter_list(lambda tvid_prodid: helpers.find_show_by_id(tvid_prodid), ids.split(' ')):
             return self.new_show('|'.join(['', '', '', ids or show_name]), use_show_name=True)
 
+    def tvc_default(self):
+
+        return self.redirect('/add-shows/%s' % ('tvc_newshows', sickbeard.TVC_MRU)[any(sickbeard.TVC_MRU)])
+
+    def tvc_newshows(self, **kwargs):
+        return self.browse_tvc(
+            'TV-shows-starting-', 'New Shows at TV Calendar', mode='newshows', **kwargs)
+
+    def tvc_returning(self, **kwargs):
+        return self.browse_tvc(
+            'TV-shows-starting-', 'Returning Shows at TV Calendar', mode='returning', **kwargs)
+
+    def tvc_latest(self, **kwargs):
+        return self.browse_tvc(
+            'recent-additions', 'Latest new shows at TV Calendar', mode='latest', **kwargs)
+
+    def browse_tvc(self, url_path, browse_title, **kwargs):
+
+        browse_type = 'TVCalendar'
+
+        footnote = None
+        filtered = []
+        today = datetime.datetime.today()
+        months = ['', 'January', 'February', 'March', 'April', 'May', 'June', 'July',
+                  'August', 'September', 'October', 'November', 'December']
+        this_month = '%s-%s' % (months[today.month], today.strftime('%Y'))
+        section = ''
+        if kwargs.get('mode', '') in ('newshows', 'returning'):
+            section = (kwargs.get('page') or this_month)
+            url_path += section
+
+        import browser_ua
+        url = 'https://www.pogdesign.co.uk/cat/%s' % url_path
+        html = helpers.get_url(url, headers={'User-Agent': browser_ua.get_ua()})
+        use_votes = False
+        if html:
+            prev_month = dt_prev_month = None
+            if kwargs.get('mode', '') in ('newshows', 'returning'):
+                try:
+                    prev_month = re.findall('(?i)href="/cat/tv-shows-starting-([^"]+)', html)[0]
+                    dt_prev_month = dateutil.parser.parse('1-%s' % prev_month)
+                except (BaseException, Exception):
+                    prev_month = None
+            get_prev_month = (lambda _dt: _dt.replace(day=1) - datetime.timedelta(days=1))
+            get_next_month = (lambda _dt: _dt.replace(day=28) + datetime.timedelta(days=5))
+            get_month_year = (lambda _dt: '%s-%s' % (months[_dt.month], _dt.strftime('%Y')))
+            if prev_month:
+                dt_next_month = get_next_month(dt_prev_month)
+                while True:
+                    next_month = get_month_year(dt_next_month)
+                    if next_month not in (this_month, kwargs.get('page')):
+                        break
+                    dt_next_month = get_next_month(dt_next_month)
+                while True:
+                    if prev_month not in (this_month, kwargs.get('page')):
+                        break
+                    dt_prev_month = get_prev_month(dt_prev_month)
+                    prev_month = get_month_year(dt_prev_month)
+
+            else:
+                dt_next_month = get_next_month(today)
+                next_month = get_month_year(dt_next_month)
+                dt_prev_month = get_prev_month(today)
+                prev_month = get_month_year(dt_prev_month)
+
+            suppress_item = not kwargs.get('page') or kwargs.get('page') == this_month
+            get_date_text = (lambda m_y: m_y.replace('-', ' '))
+            next_month_text = get_date_text(next_month)
+            prev_month_text = get_date_text(prev_month)
+            page_month_text = suppress_item and 'void' or get_date_text(kwargs.get('page'))
+            kwargs.update(dict(pages=[
+                ('tvc_newshows?page=%s' % this_month, 'New this month'),
+                ('tvc_newshows?page=%s' % next_month, '...in %s' % next_month_text)] +
+                ([('tvc_newshows?page=%s' % kwargs.get('page'), '...in %s' % page_month_text)], [])[suppress_item] +
+                [('tvc_newshows?page=%s' % prev_month, '...in %s' % prev_month_text)] +
+                [('tvc_returning?page=%s' % this_month, 'Returning this month'),
+                 ('tvc_returning?page=%s' % next_month, '...in %s' % next_month_text)] +
+                ([('tvc_returning?page=%s' % kwargs.get('page'), '...in %s' % page_month_text)], [])[suppress_item] +
+                [('tvc_returning?page=%s' % prev_month, '...in %s' % prev_month_text)]
+            ))
+
+            with BS4Parser(html, parse_only=dict(div={'class': (lambda at: at and 'pgwidth' in at)})) as tbl:
+                shows = []
+                if kwargs.get('mode', '') in ('latest', 'newshows', 'returning'):
+                    tags = tbl.select('h2[class*="midtitle"], div[class*="contbox"]')
+                    collect = False
+                    for cur_tag in tags:
+                        if re.match(r'(?i)h\d+', cur_tag.name) and 'midtitle' in cur_tag.attrs.get('class', []):
+                            text = cur_tag.get_text(strip=True)
+                            if kwargs['mode'] in ('latest', 'newshows'):
+                                if not collect and ('Latest' in text or 'New' in text):
+                                    collect = True
+                                    continue
+                                break
+                            elif 'New' in text:
+                                continue
+                            elif 'Return' in text:
+                                collect = True
+                                continue
+                            break
+                        if collect:
+                            shows += [cur_tag]
+
+                if not len(shows):
+                    kwargs['error_msg'] = 'No TV titles found in <a target="_blank" href="%s">%s</a>%s,' \
+                                          ' try another selection' % (
+                        helpers.anon_url(url), browse_title, (' for %s' % section.replace('-', ' '), '')[not section])
+
+                # build batches to correct htmlentity typos in overview
+                from html5lib.constants import entities
+                batches = []
+                for cur_n, cur_name in enumerate(entities):
+                    if 0 == cur_n % 150:
+                        if cur_n:
+                            batches += [batch]
+                        batch = []
+                    batch += [cur_name]
+                else:
+                    batches += [batch]
+
+                oldest, newest, oldest_dt, newest_dt = None, None, 9999999, 0
+                for row in shows:
+                    try:
+                        ids = dict(custom=row.select('input[type="checkbox"]')[0].attrs['value'], name='tvc')
+                        info = row.find('a', href=re.compile('^/cat'))
+                        url_path = info['href'].strip()
+
+                        title = info.find('h2').get_text(strip=True)
+                        img_uri = info.get('data-original', '').strip()
+                        if not img_uri:
+                            img_uri = re.findall(r'(?i).*?image:\s*url\(([^)]+)', info.attrs['style'])[0].strip()
+                        images = dict(poster=dict(thumb='imagecache?path=browse/thumb/tvc&source=%s' % img_uri))
+                        sickbeard.CACHE_IMAGE_URL_LIST.add_url(img_uri)
+                        title = re.sub(r'(?i)(?::\s*season\s*\d+|\s*\((?:19|20)\d{2}\))?$', '', title.strip())
+
+                        dt_ordinal = 0
+                        dt_string = ''
+                        date = genre = network = ''
+                        date_tag = row.find('span', class_='startz')
+                        if date_tag:
+                            date_network = re.split(r'(?i)\son\s', ''.join(
+                                [t.name and t.get_text() or str(t) for t in date_tag][0:2]))
+                            date = re.sub('(?i)^(starts|returns)', '', date_network[0]).strip()
+                            network = ('', date_network[1].strip())[2 == len(date_network)]
+                        else:
+                            date_tag = row.find('span', class_='selby')
+                            if date_tag:
+                                date = date_tag.get_text(strip=True)
+                            network_genre = info.find('span')
+                            if network_genre:
+                                network_genre = network_genre.get_text(strip=True).split('//')
+                                network = network_genre[0]
+                                genre = ('', network_genre[1].strip())[2 == len(network_genre)]
+
+                        if date:
+                            dt = dateutil.parser.parse(date)
+                            dt_ordinal = dt.toordinal()
+                            dt_string = SGDatetime.sbfdate(dt)
+                            if dt_ordinal < oldest_dt:
+                                oldest_dt = dt_ordinal
+                                oldest = dt_string
+                            if dt_ordinal > newest_dt:
+                                newest_dt = dt_ordinal
+                                newest = dt_string
+
+                        overview = row.find('span', class_='shwtxt')
+                        if overview:
+                            overview = re.sub(r'(?sim)(.*?)(?:[.\s]*\*\*NOTE.*?)?(\.{1,3})$', r'\1\2',
+                                              overview.get_text(strip=True))
+                            for cur_entities in batches:
+                                overview = re.sub(r'and(%s)' % '|'.join(cur_entities), r'&\1', overview)
+
+                        votes = None
+                        votes_tag = row.find('span', class_='selby')
+                        if votes_tag:
+                            votes_tag = votes_tag.find('strong')
+                            if votes_tag:
+                                votes = re.sub(r'(?i)\s*users', '', votes_tag.get_text()).strip()
+                                use_votes = True
+
+                        filtered.append(dict(
+                            premiered=dt_ordinal,
+                            premiered_str=dt_string,
+                            when_past=dt_ordinal < datetime.datetime.now().toordinal(),
+                            genres=genre,
+                            network=network or None,
+                            ids=ids,
+                            images='' if not img_uri else images,
+                            overview='No overview yet' if not overview else helpers.xhtml_escape(overview[:250:]),
+                            rating=None,
+                            title=title,
+                            url_src_db='https://www.pogdesign.co.uk/%s' % url_path.strip('/'),
+                            votes=votes or 'n/a'))
+
+                    except (AttributeError, IndexError, KeyError, TypeError):
+                        continue
+
+                kwargs.update(dict(oldest=oldest, newest=newest))
+
+        kwargs.update(dict(footnote=footnote, use_ratings=False, use_votes=use_votes, show_header=True))
+
+        mode = kwargs.get('mode', '')
+        if mode:
+            func = 'tvc_%s' % mode
+            if callable(getattr(self, func, None)):
+                sickbeard.TVC_MRU = func
+                sickbeard.save_config()
+
+        return self.browse_shows(browse_type, browse_title, filtered, **kwargs)
+
+    def info_tvcalendar(self, ids, show_name):
+
+        return self.new_show('|'.join(['', '', '', show_name]), use_show_name=True)
+
+    def mc_default(self):
+
+        return self.redirect('/add-shows/%s' % ('mc_newseries', sickbeard.MC_MRU)[any(sickbeard.MC_MRU)])
+
+    def mc_newseries(self, **kwargs):
+        return self.browse_mc(
+            'release-date/new-series/date?', 'New Series at Metacritic', mode='newseries', **kwargs)
+
+    def mc_90days(self, **kwargs):
+        return self.browse_mc(
+            'score/metascore/90day/filtered?sort=desc&', 'Last 90 days at Metacritic', mode='90days', **kwargs)
+
+    def mc_year(self, **kwargs):
+        return self.browse_mc(
+            'score/metascore/year/filtered?sort=desc&', 'By year at Metacritic', mode='year', **kwargs)
+
+    def mc_discussed(self, **kwargs):
+        return self.browse_mc(
+            'score/metascore/discussed/filtered?sort=desc&', 'Most discussed at Metacritic', mode='discussed', **kwargs)
+
+    def mc_shared(self, **kwargs):
+        return self.browse_mc(
+            'score/metascore/shared/filtered?sort=desc&', 'Most shared at Metacritic', mode='shared', **kwargs)
+
+    def browse_mc(self, url_path, browse_title, **kwargs):
+
+        browse_type = 'Metacritic'
+
+        footnote = None
+
+        page = 'more' in kwargs and '&page=1' or ''
+        if page:
+            kwargs['mode'] += '-more'
+
+        filtered = []
+
+        import browser_ua
+        url = 'https://www.metacritic.com/browse/tv/%sview=detailed%s' % (url_path, page)
+        html = helpers.get_url(url, headers={'User-Agent': browser_ua.get_ua()})
+        if html:
+            try:
+                if re.findall('(<a[^>]+rel="next"[^>]+)', html)[0]:
+                    kwargs.update(dict(more=1))
+            except (BaseException, Exception):
+                pass
+
+            with BS4Parser(html, parse_only=dict(table={'class': (lambda at: at and 'clamp-list' in at)})) as tbl:
+                # with BS4Parser(html, features=['html5lib', 'permissive']) as soup:
+                shows = [] if not tbl else tbl.find_all('tr')
+                oldest, newest, oldest_dt, newest_dt = None, None, 9999999, 0
+                for row in shows:
+                    try:
+                        ids = dict(custom=row.select('input[type="checkbox"]')[0].attrs['id'], name='mc')
+                        info = row.find('a', href=re.compile('^/tv'))
+                        url_path = info['href'].strip()
+
+                        images = {}
+                        img_uri = None
+                        img = info.find('img')
+                        if img and isinstance(img.attrs, dict):
+                            title = img.attrs.get('alt')
+                            img_src = img.attrs.get('src').split('-')
+                            img_uri = img_src.pop(0)
+                            if img_src:
+                                img_uri += '.' + img_src[0].split('.')[-1]
+                            images = dict(poster=dict(thumb='imagecache?path=browse/thumb/metac&source=%s' % img_uri))
+                            sickbeard.CACHE_IMAGE_URL_LIST.add_url(img_uri)
+                        if not title:
+                            title = row.find('h3').get_text()
+                        title = re.sub(r'(?i)(?::\s*season\s*\d+|\s*\((?:19|20)\d{2}\))?$', '', title.strip())
+
+                        dt_ordinal = 0
+                        dt_string = ''
+                        date_tags = filter_list(lambda t: t.find('span'), row.find_all('div', class_='clamp-details'))
+                        if date_tags:
+                            dt = dateutil.parser.parse(date_tags[0].get_text().strip())
+                            dt_ordinal = dt.toordinal()
+                            dt_string = SGDatetime.sbfdate(dt)
+                            if dt_ordinal < oldest_dt:
+                                oldest_dt = dt_ordinal
+                                oldest = dt_string
+                            if dt_ordinal > newest_dt:
+                                newest_dt = dt_ordinal
+                                newest = dt_string
+
+                        overview = row.find('div', class_='summary').get_text().strip()
+
+                        rating = row.find('div', class_='clamp-metascore')
+                        if rating:
+                            rating = rating.find('div', class_='metascore_w')
+                            if rating:
+                                rating = rating.get_text().strip()
+                        rating_user = row.find('div', class_='clamp-userscore')
+                        if rating_user:
+                            rating_user = rating_user.find('div', class_='metascore_w')
+                            if rating_user:
+                                rating_user = rating_user.get_text().strip()
+
+                        season = -1
+                        try:
+                            season = re.findall(r'(\d+)(?:[.]\d*?)?$', url_path)[0]
+                        except(BaseException, Exception):
+                            pass
+
+                        filtered.append(dict(
+                            season=int(season),
+                            premiered=dt_ordinal,
+                            premiered_str=dt_string,
+                            when_past=dt_ordinal < datetime.datetime.now().toordinal(),
+                            genres='',
+                            ids=ids,
+                            images='' if not img_uri else images,
+                            overview='No overview yet' if not overview else helpers.xhtml_escape(overview[:250:]),
+                            rating=0 if not rating else rating or 'TBD',
+                            rating_user='tbd' if not rating_user else int(helpers.try_float(rating_user) * 10) or 'tbd',
+                            title=title,
+                            url_src_db='https://www.metacritic.com/%s/' % url_path.strip('/'),
+                            votes=None))
+
+                    except (AttributeError, IndexError, KeyError, TypeError):
+                        continue
+
+                kwargs.update(dict(oldest=oldest, newest=newest))
+
+        kwargs.update(dict(footnote=footnote, use_votes=False))
+
+        mode = kwargs.get('mode', '')
+        if mode:
+            func = 'mc_%s' % mode
+            if callable(getattr(self, func, None)):
+                sickbeard.MC_MRU = func
+                sickbeard.save_config()
+        return self.browse_shows(browse_type, browse_title, filtered, **kwargs)
+
+    def info_metacritic(self, ids, show_name):
+
+        return self.new_show('|'.join(['', '', '', show_name]), use_show_name=True)
+
+    @staticmethod
+    def browse_mru(browse_type, **kwargs):
+        save_config = False
+        if browse_type in ('AniDB', 'IMDb', 'Metacritic', 'Trakt', 'TVCalendar'):
+            save_config = True
+            sickbeard.BROWSELIST_MRU[browse_type] = dict(
+                showfilter=kwargs.get('showfilter', ''), showsort=kwargs.get('showsort', ''))
+        if save_config:
+            sickbeard.save_config()
+        return json.dumps({'success': save_config})
+
     def browse_shows(self, browse_type, browse_title, shows, **kwargs):
         """
         Display the new show page which collects a tvdb id, folder, and extra options and
@@ -4382,22 +4807,65 @@ class AddShows(Home):
         t.submenu = self.home_menu()
         t.browse_type = browse_type
         t.browse_title = browse_title
+        t.saved_showfilter = sickbeard.BROWSELIST_MRU.get(browse_type, {}).get('showfilter', '')
+        t.saved_showsort = sickbeard.BROWSELIST_MRU.get(browse_type, {}).get('showsort', '*,asc,by_order')
+        showsort = t.saved_showsort.split(',')
+        t.saved_showsort_sortby = 3 == len(showsort) and showsort[2] or 'by_order'
+        t.reset_showsort_sortby = ('votes' in t.saved_showsort_sortby and not kwargs.get('use_votes', True)
+                                   or 'rating' in t.saved_showsort_sortby and not kwargs.get('use_ratings', True))
+        t.is_showsort_desc = ('desc' == (2 <= len(showsort) and showsort[1] or 'asc')) and not t.reset_showsort_sortby
+        t.saved_showsort_view = 1 <= len(showsort) and showsort[0] or '*'
         t.all_shows = []
         t.kwargs = kwargs
         dedupe = []
 
         t.num_inlibrary = 0
         t.num_hidden = 0
-        for item in shows:
+        n_p = NameParser(indexer_lookup=False)
+        rc_base = re.compile(r"(?i)^(?:dc|marvel)(?:['s]+\s)?")
+        rc_nopost = re.compile(r'(?i)(?:\s*\([^)]+\))?$')
+        rc_nopre = re.compile(r'(?i)(?:^\([^)]+\)\s*)?')
+        for order, item in enumerate(shows):
+            item['order'] = order
             tvid_prodid_list = []
+            titles = []
+            if 'custom' in item['ids']:
+                base_title = rc_base.sub('', item['title'])
+                nopost_title = rc_nopost.sub('', item['title'])
+                nopre_title = rc_nopre.sub('', item['title'])
+                nopost_base_title = rc_nopost.sub('', base_title)
+                nopre_base_title = rc_nopre.sub('', base_title)
+                nopost_nopre_base_title = rc_nopost.sub('', nopre_base_title)
+                titles = [item['title']]
+                titles += ([], [base_title])[base_title not in titles]
+                titles += ([], [nopost_title])[nopost_title not in titles]
+                titles += ([], [nopre_title])[nopre_title not in titles]
+                titles += ([], [nopost_base_title])[nopost_base_title not in titles]
+                titles += ([], [nopre_base_title])[nopre_base_title not in titles]
+                titles += ([], [nopost_nopre_base_title])[nopost_nopre_base_title not in titles]
+                if 'premiered' in item and 1 == item.get('season', -1):
+                    with_year = []
+                    for title in titles:
+                        with_year += ['%s.%s' % (title, datetime.date.fromordinal(item['premiered']).year)]
+                    titles += with_year
             for tvid, infosrc_slug in map_iter(
                     lambda _tvid: (_tvid, sickbeard.TVInfoAPI(_tvid).config['slug']),
                     list(sickbeard.TVInfoAPI().search_sources) + [sickbeard.indexers.indexer_config.TVINFO_IMDB]):
                 try:
                     # TODO: use this to pass tvid when it is known what info sources will become
-                    tvid_prodid_list += ['%s%s%s' % (tvid, TVidProdid.glue, item['ids'][infosrc_slug])]
-                    # tvid_prodid_list += ['%s' % item['ids'][infosrc_slug]]
-                    show_obj = helpers.find_show_by_id({tvid: item['ids'][infosrc_slug]})
+                    if 'custom' not in item['ids']:
+                        tvid_prodid_list += ['%s%s%s' % (tvid, TVidProdid.glue, item['ids'][infosrc_slug])]
+                        # tvid_prodid_list += ['%s' % item['ids'][infosrc_slug]]
+                        show_obj = helpers.find_show_by_id({tvid: item['ids'][infosrc_slug]})
+                    else:
+                        tvid_prodid_list += ['%s%s%s' % (item['ids']['name'], TVidProdid.glue, item['ids']['custom'])]
+                        show_obj = None
+                        for cur_title in titles:
+                            try:
+                                show_obj = n_p.parse('%s.s01e01.mp4' % cur_title)
+                                break
+                            except (InvalidNameException, InvalidShowException):
+                                pass
                 except (BaseException, Exception):
                     continue
                 if not item.get('indb') and show_obj:
@@ -4412,6 +4880,9 @@ class AddShows(Home):
             if not item['show_id'] and 'tt' in item['ids'].get('imdb', ''):
                 item['show_id'] = item['ids']['imdb']
 
+            if not item['show_id'] and item['ids'].get('custom'):
+                item['show_id'] = item['ids']['custom']
+
             if item['show_id'] not in dedupe:
                 dedupe.append(item['show_id'])
                 t.all_shows.append(item)
@@ -4419,6 +4890,21 @@ class AddShows(Home):
                 if any(filter_iter(lambda tp: tp in sickbeard.BROWSELIST_HIDDEN, tvid_prodid_list)):
                     item['hide'] = True
                     t.num_hidden += 1
+
+        def _title(text):
+            return ((remove_article(text), text)[sickbeard.SORT_ARTICLE]).lower()
+        if 'order' not in t.saved_showsort_sortby or t.is_showsort_desc:
+            for sort_when, sort_type in (
+                    ('order', lambda _x: _x['order']),
+                    ('name', lambda _x: _title(_x['title'])),
+                    ('premiered', lambda _x: (_x['premiered'], _title(_x['title']))),
+                    ('votes', lambda _x: (helpers.try_int(_x['votes']), _title(_x['title']))),
+                    ('rating', lambda _x: (helpers.try_float(_x['rating']), _title(_x['title']))),
+                    ('rating_votes', lambda _x: (helpers.try_float(_x['rating']), helpers.try_int(_x['votes']),
+                                                 _title(_x['title'])))):
+                if sort_when in t.saved_showsort_sortby:
+                    t.all_shows.sort(key=sort_type, reverse=t.is_showsort_desc)
+                    break
 
         return t.respond()
 
@@ -4438,7 +4924,7 @@ class AddShows(Home):
                      quality_preset=None, any_qualities=None, best_qualities=None, upgrade_once=None,
                      flatten_folders=None, subs=None,
                      full_show_path=None, other_shows=None, skip_show=None, provided_tvid=None, anime=None,
-                     scene=None, blacklist=None, whitelist=None, wanted_begin=None, wanted_latest=None,
+                     scene=None, allowlist=None, blocklist=None, wanted_begin=None, wanted_latest=None,
                      prune=None, tag=None, return_to=None, cancel_form=None, **kwargs):
         """
         Receive tvdb id, dir, and other options and create a show from them. If extra show dirs are
@@ -4531,10 +5017,10 @@ class AddShows(Home):
         flatten_folders = config.checkbox_to_value(flatten_folders)
         subs = config.checkbox_to_value(subs)
 
-        if whitelist:
-            whitelist = short_group_names(whitelist)
-        if blacklist:
-            blacklist = short_group_names(blacklist)
+        if allowlist:
+            allowlist = short_group_names(allowlist)
+        if blocklist:
+            blocklist = short_group_names(blocklist)
 
         if not any_qualities:
             any_qualities = []
@@ -4554,7 +5040,7 @@ class AddShows(Home):
         # add the show
         sickbeard.showQueueScheduler.action.addShow(tvid, prodid, show_dir, int(default_status), newQuality,
                                                     flatten_folders, tvinfo_lang, subs, anime,
-                                                    scene, None, blacklist, whitelist,
+                                                    scene, None, allowlist, blocklist,
                                                     wanted_begin, wanted_latest, prune, tag, new_show=new_show,
                                                     show_name=show_name, upgrade_once=upgrade_once)
         # ui.notifications.message('Show added', 'Adding the specified show into ' + show_dir)
@@ -4893,8 +5379,9 @@ class Manage(MainHandler):
                     to_change[tvid_prodid].setdefault(to, [])
                     to_change[tvid_prodid][to] += [what]
 
-        if WANTED == int(wanted_status):
-            new_status = WANTED
+        wanted_status = int(wanted_status)
+        if wanted_status in (FAILED, WANTED):
+            new_status = wanted_status
 
         changes = {}
         for tvid_prodid, to_what in iteritems(to_change):
@@ -5049,43 +5536,51 @@ class Manage(MainHandler):
         t = PageTemplate(web_handler=self, file='manage_backlogOverview.tmpl')
         t.submenu = self.manage_menu('Backlog')
 
-        showCounts = {}
-        showCats = {}
-        showSQLResults = {}
+        show_counts = {}
+        show_cats = {}
+        t.ep_sql_results = {}
 
-        my_db = db.DBConnection()
+        my_db = db.DBConnection(row_type='dict')
+        sql_cmds = []
+        show_objects = []
         for cur_show_obj in sickbeard.showList:
-
-            epCounts = {}
-            epCats = {}
-            epCounts[Overview.SKIPPED] = 0
-            epCounts[Overview.WANTED] = 0
-            epCounts[Overview.QUAL] = 0
-            epCounts[Overview.GOOD] = 0
-            epCounts[Overview.UNAIRED] = 0
-            epCounts[Overview.SNATCHED] = 0
-
-            sql_result = my_db.select(
-                'SELECT * FROM tv_episodes'
+            sql_cmds.append([
+                'SELECT season, episode, status, airdate, name'
+                ' FROM tv_episodes'
                 ' WHERE indexer = ? AND showid = ?'
                 ' ORDER BY season DESC, episode DESC',
-                [cur_show_obj.tvid, cur_show_obj.prodid])
+                [cur_show_obj.tvid, cur_show_obj.prodid]])
+            show_objects.append(cur_show_obj)
+
+        sql_results = my_db.mass_action(sql_cmds)
+
+        for i, sql_result in enumerate(sql_results):
+            ep_cats = {}
+            ep_counts = {
+                Overview.UNAIRED: 0, Overview.GOOD: 0, Overview.SKIPPED: 0,
+                Overview.WANTED: 0, Overview.QUAL: 0, Overview.SNATCHED: 0}
 
             for cur_result in sql_result:
                 if not sickbeard.SEARCH_UNAIRED and 1 == cur_result['airdate']:
                     continue
-                curEpCat = cur_show_obj.get_overview(int(cur_result['status']))
-                if curEpCat:
-                    epCats[str(cur_result['season']) + 'x' + str(cur_result['episode'])] = curEpCat
-                    epCounts[curEpCat] += 1
+                ep_cat = show_objects[i].get_overview(int(cur_result['status']), split_snatch=True)
+                if ep_cat in (Overview.WANTED, Overview.QUAL, Overview.SNATCHED_QUAL):
+                    cur_result['backlog'] = True
+                    if Overview.SNATCHED_QUAL == ep_cat:
+                        ep_cat = Overview.SNATCHED
+                else:
+                    cur_result['backlog'] = False
+                if ep_cat:
+                    ep_cats['%sx%s' % (cur_result['season'], cur_result['episode'])] = ep_cat
+                    ep_counts[ep_cat] += 1
 
-            showCounts[cur_show_obj.tvid_prodid] = epCounts
-            showCats[cur_show_obj.tvid_prodid] = epCats
-            showSQLResults[cur_show_obj.tvid_prodid] = sql_result
+            tvid_prodid = show_objects[i].tvid_prodid
+            show_counts[tvid_prodid] = ep_counts
+            show_cats[tvid_prodid] = ep_cats
+            t.ep_sql_results[tvid_prodid] = sql_result
 
-        t.showCounts = showCounts
-        t.showCats = showCats
-        t.showSQLResults = showSQLResults
+        t.show_counts = show_counts
+        t.show_cats = show_cats
         t.backlog_active_providers = sickbeard.search_backlog.BacklogSearcher.providers_active(scheduled=False)
 
         return t.respond()
@@ -5660,7 +6155,9 @@ class History(MainHandler):
         t = PageTemplate(web_handler=self, file='history.tmpl')
         t.limit = limit
 
-        if layout in ('compact', 'detailed', 'compact_watched', 'detailed_watched', 'provider_failures'):
+        if 'provider_failures' == layout:  # layout renamed
+            layout = 'connect_failures'
+        if layout in ('compact', 'detailed', 'compact_watched', 'detailed_watched', 'connect_failures'):
             sickbeard.HISTORY_LAYOUT = layout
 
         my_db = db.DBConnection(row_type='dict')
@@ -5791,11 +6288,16 @@ class History(MainHandler):
 
         elif 'failures' in sickbeard.HISTORY_LAYOUT:
 
-            t.provider_fail_stats = filter_list(lambda stat: len(stat['fails']), [{
-                'active': p.is_active(), 'name': p.name, 'prov_id': p.get_id(), 'prov_img': p.image_name(),
-                'fails': p.fails.fails_sorted, 'tmr_limit_time': p.tmr_limit_time,
-                'next_try': p.get_next_try_time, 'has_limit': getattr(p, 'has_limit', False)}
+            t.provider_fail_stats = filter_list(lambda stat: len(stat['fails']), [
+                dict(name=p.name, id=p.get_id(), active=p.is_active(), prov_img=p.image_name(),
+                     prov_id=p.get_id(),  # 2020.03.17 legacy var, remove at future date
+                     fails=p.fails.fails_sorted, next_try=p.get_next_try_time,
+                     has_limit=getattr(p, 'has_limit', False), tmr_limit_time=p.tmr_limit_time)
                 for p in sickbeard.providerList + sickbeard.newznabProviderList])
+
+            t.provider_fail_cnt = len([p for p in t.provider_fail_stats if len(p['fails'])])
+            t.provider_fails = t.provider_fail_cnt  # 2020.03.17 legacy var, remove at future date
+
             t.provider_fail_stats = sorted([item for item in t.provider_fail_stats],
                                            key=lambda y: y.get('fails')[0].get('timestamp'),
                                            reverse=True)
@@ -5803,7 +6305,41 @@ class History(MainHandler):
                                            key=lambda y: y.get('next_try') or datetime.timedelta(weeks=65535),
                                            reverse=False)
 
-            t.provider_fails = 0 < len([p for p in t.provider_fail_stats if len(p['fails'])])
+            def img(item, as_class=False):
+                # type: (AnyStr, bool) -> Optional[AnyStr]
+                """
+                Return an image src, image class, or None based on a recognised identifier
+
+                :param item: to search for a known domain identifier
+                :param as_class: wether a search should return an image (by default) or class
+                :return: image src, image class, or None if unknown identifier
+                """
+                for identifier, result in (
+                    (('fanart', 'fanart.png'), ('imdb', 'imdb16.png'), ('metac', 'metac16.png'),
+                     ('predb', 'predb16.png'), ('srrdb', 'srrdb16.png'),
+                     ('thexem', 'xem.png'), ('tmdb', 'tmdb16.png'), ('trakt', 'trakt16.png'),
+                     ('tvdb', 'thetvdb16.png'), ('tvmaze', 'tvmaze16.png')),
+                    (('anidb', 'img-anime-16 square-16'), ('github', 'icon16-github'),
+                     ('emby', 'sgicon-emby'), ('plex', 'sgicon-plex'))
+                )[as_class]:
+                    if identifier in item:
+                        return result
+
+            with sg_helpers.DOMAIN_FAILURES.lock:
+                t.domain_fail_stats = filter_list(lambda stat: len(stat['fails']), [
+                    dict(name=k, id=sickbeard.GenericProvider.make_id(k), img=img(k), cls=img(k, True),
+                         fails=v.fails_sorted, next_try=v.get_next_try_time,
+                         has_limit=getattr(v, 'has_limit', False), tmr_limit_time=v.tmr_limit_time)
+                    for k, v in iteritems(sg_helpers.DOMAIN_FAILURES.domain_list)])
+
+                t.domain_fail_cnt = len([d for d in t.domain_fail_stats if len(d['fails'])])
+
+                t.domain_fail_stats = sorted([item for item in t.domain_fail_stats],
+                                             key=lambda y: y.get('fails')[0].get('timestamp'),
+                                             reverse=True)
+                t.domain_fail_stats = sorted([item for item in t.domain_fail_stats],
+                                             key=lambda y: y.get('next_try') or datetime.timedelta(weeks=65535),
+                                             reverse=False)
 
         article_match = r'^((?:A(?!\s+to)n?)|The)\s+(.*)$'
         for rs in [getattr(t, name, []) for name in result_sets]:
@@ -5878,10 +6414,17 @@ class History(MainHandler):
 
         my_db = db.DBConnection()
         my_db.action('DELETE FROM history WHERE date < ' + str(
-            (datetime.datetime.today() - datetime.timedelta(days=30)).strftime(history.dateFormat)))
+            (datetime.datetime.now() - datetime.timedelta(days=30)).strftime(history.dateFormat)))
 
         ui.notifications.message('Removed history entries greater than 30 days old')
         self.redirect('/history/')
+
+    @staticmethod
+    def retry_domain(domain=None):
+
+        if domain in sg_helpers.DOMAIN_FAILURES.domain_list:
+            sg_helpers.DOMAIN_FAILURES.domain_list[domain].retry_next()
+            time.sleep(3)
 
     @staticmethod
     def update_watched_state_emby():
@@ -5905,7 +6448,7 @@ class History(MainHandler):
             mapped = 0
             mapping = None
             maps = [x.split('=') for x in sickbeard.EMBY_PARENT_MAPS.split(',') if any(x)]
-            args = dict(params=dict(format='json'), timeout=10, parse_json=True)
+            args = dict(params=dict(format='json'), timeout=10, parse_json=True, failure_monitor=False)
             for i, cur_host in enumerate(hosts):
                 base_url = 'http://%s/emby' % cur_host
                 headers.update({'X-MediaBrowser-Token': keys[i]})
@@ -5929,7 +6472,7 @@ class History(MainHandler):
                         if not folder or 'tvshows' != folder.get('CollectionType', ''):
                             continue
 
-                        items = helpers.get_url('%s/Items' % user_url, headers=headers,
+                        items = helpers.get_url('%s/Items' % user_url, failure_monitor=False, headers=headers,
                                                 params=dict(SortBy='DatePlayed,SeriesSortName,SortName',
                                                             SortOrder='Descending',
                                                             IncludeItemTypes='Episode',
@@ -5962,7 +6505,7 @@ class History(MainHandler):
                                             (d.get('UserData', {}).get('Played') and
                                              d.get('UserData', {}).get('PlayCount') * 100) or 0),
                                     label='%s%s{Emby}' % (user.get('Name', ''), bool(user.get('Name')) and ' ' or ''),
-                                    date_watched=SGDatetime.totimestamp(
+                                    date_watched=SGDatetime.timestamp_far(
                                         dateutil.parser.parse(d.get('UserData', {}).get('LastPlayedDate'))))
 
                                 for m in maps:
@@ -6352,6 +6895,7 @@ class ConfigGeneral(Config):
         except (BaseException, Exception) as e:
             logger.log('Could not change Show Update Scheduler time: %s' % ex(e), logger.ERROR)
         sickbeard.TRASH_REMOVE_SHOW = config.checkbox_to_value(trash_remove_show)
+        sg_helpers.TRASH_REMOVE_SHOW = sickbeard.TRASH_REMOVE_SHOW
         sickbeard.TRASH_ROTATE_LOGS = config.checkbox_to_value(trash_rotate_logs)
         if not config.change_log_dir(log_dir, web_log):
             results += ['Unable to create directory ' + os.path.normpath(log_dir) + ', log directory not changed.']
@@ -6498,11 +7042,17 @@ class ConfigSearch(Config):
         t = PageTemplate(web_handler=self, file='config_search.tmpl')
         t.submenu = self.config_menu('Search')
         t.using_rls_ignore_words = [(cur_so.tvid_prodid, cur_so.name) for cur_so in sickbeard.showList
-                                    if cur_so.rls_ignore_words and cur_so.rls_ignore_words.strip()]
+                                    if cur_so.rls_ignore_words and cur_so.rls_ignore_words]
         t.using_rls_ignore_words.sort(key=lambda x: x[1], reverse=False)
         t.using_rls_require_words = [(cur_so.tvid_prodid, cur_so.name) for cur_so in sickbeard.showList
-                                     if cur_so.rls_require_words and cur_so.rls_require_words.strip()]
+                                     if cur_so.rls_require_words and cur_so.rls_require_words]
         t.using_rls_require_words.sort(key=lambda x: x[1], reverse=False)
+        t.using_exclude_ignore_words = [(cur_so.tvid_prodid, cur_so.name)
+                                        for cur_so in sickbeard.showList if cur_so.rls_global_exclude_ignore]
+        t.using_exclude_ignore_words.sort(key=lambda x: x[1], reverse=False)
+        t.using_exclude_require_words = [(cur_so.tvid_prodid, cur_so.name)
+                                         for cur_so in sickbeard.showList if cur_so.rls_global_exclude_require]
+        t.using_exclude_require_words.sort(key=lambda x: x[1], reverse=False)
         t.using_regex = False
         try:
             from sickbeard.name_parser.parser import regex
@@ -6554,8 +7104,12 @@ class ConfigSearch(Config):
         sickbeard.TORRENT_METHOD = torrent_method
         sickbeard.USENET_RETENTION = config.to_int(usenet_retention, default=500)
 
-        sickbeard.IGNORE_WORDS = ignore_words if ignore_words else ''
-        sickbeard.REQUIRE_WORDS = require_words if require_words else ''
+        sickbeard.IGNORE_WORDS, sickbeard.IGNORE_WORDS_REGEX = helpers.split_word_str(ignore_words
+                                                                                      if ignore_words else '')
+        sickbeard.REQUIRE_WORDS, sickbeard.REQUIRE_WORDS_REGEX = helpers.split_word_str(require_words
+                                                                                        if require_words else '')
+
+        clean_ignore_require_words()
 
         config.schedule_download_propers(config.checkbox_to_value(download_propers))
         sickbeard.PROPERS_WEBDL_ONEGRP = config.checkbox_to_value(propers_webdl_onegrp)
@@ -6793,7 +7347,7 @@ class ConfigMediaProcess(Config):
             if 'win32' == sys.platform:
                 rarfile.UNRAR_TOOL = ek.ek(os.path.join, sickbeard.PROG_DIR, 'lib', 'rarfile', 'UnRAR.exe')
             rar_path = ek.ek(os.path.join, sickbeard.PROG_DIR, 'lib', 'rarfile', 'test.rar')
-            if 'This is only a test.' == rarfile.RarFile(rar_path).read(r'test\test.txt'):
+            if 'This is only a test.' == decode_str(rarfile.RarFile(rar_path).read(r'test\test.txt')):
                 return 'supported'
             msg = 'Could not read test file content'
         except (BaseException, Exception) as e:
@@ -7272,6 +7826,9 @@ class ConfigNotifications(Config):
             discordapp_as_tts=None,
             use_gitter=None, gitter_notify_onsnatch=None, gitter_notify_ondownload=None,
             gitter_notify_onsubtitledownload=None, gitter_access_token=None, gitter_room=None,
+            use_telegram=None, telegram_notify_onsnatch=None, telegram_notify_ondownload=None,
+            telegram_notify_onsubtitledownload=None, telegram_access_token=None, telegram_chatid=None,
+            telegram_send_image=None, telegram_quiet=None,
             use_email=None, email_notify_onsnatch=None, email_notify_ondownload=None,
             email_notify_onsubtitledownload=None, email_host=None, email_port=25, email_from=None,
             email_tls=None, email_user=None, email_password=None, email_list=None,
@@ -7426,6 +7983,15 @@ class ConfigNotifications(Config):
         sickbeard.GITTER_NOTIFY_ONSUBTITLEDOWNLOAD = config.checkbox_to_value(gitter_notify_onsubtitledownload)
         sickbeard.GITTER_ACCESS_TOKEN = gitter_access_token
         sickbeard.GITTER_ROOM = gitter_room
+
+        sickbeard.USE_TELEGRAM = config.checkbox_to_value(use_telegram)
+        sickbeard.TELEGRAM_NOTIFY_ONSNATCH = config.checkbox_to_value(telegram_notify_onsnatch)
+        sickbeard.TELEGRAM_NOTIFY_ONDOWNLOAD = config.checkbox_to_value(telegram_notify_ondownload)
+        sickbeard.TELEGRAM_NOTIFY_ONSUBTITLEDOWNLOAD = config.checkbox_to_value(telegram_notify_onsubtitledownload)
+        sickbeard.TELEGRAM_ACCESS_TOKEN = telegram_access_token
+        sickbeard.TELEGRAM_CHATID = telegram_chatid
+        sickbeard.TELEGRAM_SEND_IMAGE = config.checkbox_to_value(telegram_send_image)
+        sickbeard.TELEGRAM_QUIET = config.checkbox_to_value(telegram_quiet)
 
         sickbeard.USE_EMAIL = config.checkbox_to_value(use_email)
         sickbeard.EMAIL_NOTIFY_ONSNATCH = config.checkbox_to_value(email_notify_onsnatch)
@@ -7757,6 +8323,12 @@ class Cache(MainHandler):
 
 class CachedImages(MainHandler):
 
+    def set_default_headers(self):
+        super(CachedImages, self).set_default_headers()
+        self.set_header('Cache-Control', 'no-cache, max-age=0')
+        self.set_header('Pragma', 'no-cache')
+        self.set_header('Expires', '0')
+
     @staticmethod
     def should_try_image(filename, source, days=1, minutes=0):
         result = True
@@ -7764,8 +8336,8 @@ class CachedImages(MainHandler):
             dummy_file = '%s.%s.dummy' % (ek.ek(os.path.splitext, filename)[0], source)
             if ek.ek(os.path.isfile, dummy_file):
                 if ek.ek(os.stat, dummy_file).st_mtime \
-                        < (time.mktime((datetime.datetime.now()
-                                        - datetime.timedelta(days=days, minutes=minutes)).timetuple())):
+                        < (int(timestamp_near((datetime.datetime.now()
+                                               - datetime.timedelta(days=days, minutes=minutes))))):
                     CachedImages.delete_dummy_image(dummy_file)
                 else:
                     result = False

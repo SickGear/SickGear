@@ -27,11 +27,20 @@ from . import logger
 from .indexers.indexer_config import TVINFO_IMDB, TVINFO_TVDB
 from .tv import TVidProdid
 
+from requests.compat import urljoin
 from tornado import gen
+from tornado.escape import utf8
 from tornado.web import RequestHandler
 
 from _23 import decode_str, filter_iter
 from six import iteritems
+from sg_futures import SgThreadPoolExecutor
+try:
+    from multiprocessing import cpu_count
+except ImportError:
+    # some platforms don't have multiprocessing
+    def cpu_count():
+        return None
 
 """ deprecated_item, remove in 2020 = 8 items """
 """ prevent issues with requests using legacy params = 3 items"""
@@ -39,6 +48,35 @@ from six import iteritems
 
 
 class LegacyBase(RequestHandler):
+
+    # todo: move to RouteHandler after removing _legacy module
+    executor = SgThreadPoolExecutor(thread_name_prefix='WEBSERVER', max_workers=min(32, (cpu_count() or 1) + 4))
+
+    # todo: move to RouteHandler after removing _legacy module
+    def redirect(self, url, permanent=False, status=None):
+        """Send a redirect to the given (optionally relative) URL.
+
+        ----->>>>> NOTE: Removed self.finish <<<<<-----
+
+        If the ``status`` argument is specified, that value is used as the
+        HTTP status code; otherwise either 301 (permanent) or 302
+        (temporary) is chosen based on the ``permanent`` argument.
+        The default is 302 (temporary).
+        """
+        if not url.startswith(sickbeard.WEB_ROOT):
+            url = sickbeard.WEB_ROOT + url
+
+        # noinspection PyUnresolvedReferences
+        if self._headers_written:
+            raise Exception('Cannot redirect after headers have been written')
+        if status is None:
+            status = 301 if permanent else 302
+        else:
+            assert isinstance(status, int)
+            assert 300 <= status <= 399
+        self.set_status(status)
+        self.set_header('Location', urljoin(utf8(self.request.uri),
+                                            utf8(url)))
 
     # todo: move to RouteHandler after removing _legacy module
     def write_error(self, status_code, **kwargs):

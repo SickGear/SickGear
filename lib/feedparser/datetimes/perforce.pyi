@@ -1,0 +1,3 @@
+from typing import Any
+
+def _parse_date_perforce(date_string: Any): ...

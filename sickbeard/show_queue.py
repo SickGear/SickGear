@@ -29,12 +29,12 @@ from exceptions_helper import ex
 
 import sickbeard
 from . import logger, ui, db, generic_queue, name_cache
-from .anime import BlackAndWhiteList
+from .anime import AniGroupList
 from .common import SKIPPED, WANTED, UNAIRED, Quality, statusStrings
 from .helpers import should_delete_episode
 from .indexermapper import map_indexers_to_show
 from .indexers.indexer_config import TVINFO_TVDB, TVINFO_TVRAGE
-from .indexers.indexer_exceptions import check_exception_type, ExceptionTuples
+from tvinfo_base.exceptions import *
 from .name_parser.parser import NameParser
 from .tv import TVShow
 from six import integer_types
@@ -344,7 +344,7 @@ class ShowQueue(generic_queue.GenericQueue):
             return queue_item_obj
 
     def addShow(self, tvid, prodid, show_dir, default_status=None, quality=None, flatten_folders=None,
-                lang='en', subtitles=None, anime=None, scene=None, paused=None, blacklist=None, whitelist=None,
+                lang='en', subtitles=None, anime=None, scene=None, paused=None, blocklist=None, allowlist=None,
                 wanted_begin=None, wanted_latest=None, prune=None, tag=None,
                 new_show=False, show_name=None, upgrade_once=False):
         """
@@ -371,10 +371,10 @@ class ShowQueue(generic_queue.GenericQueue):
         :type scene: int or None
         :param paused:
         :type paused: None or int
-        :param blacklist:
-        :type blacklist: AnyStr or None
-        :param whitelist:
-        :type whitelist: AnyStr or None
+        :param blocklist:
+        :type blocklist: AnyStr or None
+        :param allowlist:
+        :type allowlist: AnyStr or None
         :param wanted_begin:
         :type wanted_begin: int or None
         :param wanted_latest:
@@ -393,7 +393,7 @@ class ShowQueue(generic_queue.GenericQueue):
         :rtype: QueueItemAdd
         """
         queue_item_obj = QueueItemAdd(tvid, prodid, show_dir, default_status, quality, flatten_folders, lang,
-                                      subtitles, anime, scene, paused, blacklist, whitelist,
+                                      subtitles, anime, scene, paused, blocklist, allowlist,
                                       wanted_begin, wanted_latest, prune, tag,
                                       new_show=new_show, show_name=show_name, upgrade_once=upgrade_once)
 
@@ -469,7 +469,7 @@ class ShowQueueItem(generic_queue.QueueItem):
 
 class QueueItemAdd(ShowQueueItem):
     def __init__(self, tvid, prodid, show_dir, default_status, quality, flatten_folders, lang, subtitles, anime,
-                 scene, paused, blacklist, whitelist, default_wanted_begin, default_wanted_latest, prune, tag,
+                 scene, paused, blocklist, allowlist, default_wanted_begin, default_wanted_latest, prune, tag,
                  scheduled_update=False, new_show=False, show_name=None, upgrade_once=False):
         """
 
@@ -495,10 +495,10 @@ class QueueItemAdd(ShowQueueItem):
         :type scene:
         :param paused:
         :type paused:
-        :param blacklist:
-        :type blacklist:
-        :param whitelist:
-        :type whitelist:
+        :param blocklist:
+        :type blocklist:
+        :param allowlist:
+        :type allowlist:
         :param default_wanted_begin:
         :type default_wanted_begin:
         :param default_wanted_latest:
@@ -530,8 +530,8 @@ class QueueItemAdd(ShowQueueItem):
         self.anime = anime
         self.scene = scene
         self.paused = paused
-        self.blacklist = blacklist
-        self.whitelist = whitelist
+        self.blocklist = blocklist
+        self.allowlist = allowlist
         self.prune = prune
         self.tag = tag
         self.new_show = new_show
@@ -707,13 +707,13 @@ class QueueItemAdd(ShowQueueItem):
             self.show_obj.tag = self.tag if None is not self.tag else 'Show List'
 
             if self.show_obj.anime:
-                self.show_obj.release_groups = BlackAndWhiteList(self.show_obj.tvid,
-                                                                 self.show_obj.prodid,
-                                                                 self.show_obj.tvid_prodid)
-                if self.blacklist:
-                    self.show_obj.release_groups.set_black_keywords(self.blacklist)
-                if self.whitelist:
-                    self.show_obj.release_groups.set_white_keywords(self.whitelist)
+                self.show_obj.release_groups = AniGroupList(self.show_obj.tvid,
+                                                            self.show_obj.prodid,
+                                                            self.show_obj.tvid_prodid)
+                if self.allowlist:
+                    self.show_obj.release_groups.set_allow_keywords(self.allowlist)
+                if self.blocklist:
+                    self.show_obj.release_groups.set_block_keywords(self.blocklist)
 
             # be smartish about this
             if self.show_obj.genre and 'talk show' in self.show_obj.genre.lower():
@@ -723,31 +723,30 @@ class QueueItemAdd(ShowQueueItem):
             if self.show_obj.classification and 'sports' in self.show_obj.classification.lower():
                 self.show_obj.sports = 1
 
-        except Exception as e:
-            if check_exception_type(e, ExceptionTuples.tvinfo_exception):
-                logger.log(
-                    'Unable to add show due to an error with %s: %s' % (sickbeard.TVInfoAPI(self.tvid).name, ex(e)),
-                    logger.ERROR)
-                if self.show_obj:
-                    ui.notifications.error('Unable to add %s due to an error with %s'
-                                           % (self.show_obj.name, sickbeard.TVInfoAPI(self.tvid).name))
-                else:
-                    ui.notifications.error(
-                        'Unable to add show due to an error with %s' % sickbeard.TVInfoAPI(self.tvid).name)
-                self._finishEarly()
-                return
-
-            elif check_exception_type(e, exceptions_helper.MultipleShowObjectsException):
-                logger.log('The show in %s is already in your show list, skipping' % self.showDir, logger.ERROR)
-                ui.notifications.error('Show skipped', 'The show in %s is already in your show list' % self.showDir)
-                self._finishEarly()
-                return
-
+        except BaseTVinfoException as e:
+            logger.log(
+                'Unable to add show due to an error with %s: %s' % (sickbeard.TVInfoAPI(self.tvid).name, ex(e)),
+                logger.ERROR)
+            if self.show_obj:
+                ui.notifications.error('Unable to add %s due to an error with %s'
+                                       % (self.show_obj.name, sickbeard.TVInfoAPI(self.tvid).name))
             else:
-                logger.log('Error trying to add show: %s' % ex(e), logger.ERROR)
-                logger.log(traceback.format_exc(), logger.ERROR)
-                self._finishEarly()
-                raise
+                ui.notifications.error(
+                    'Unable to add show due to an error with %s' % sickbeard.TVInfoAPI(self.tvid).name)
+            self._finishEarly()
+            return
+
+        except exceptions_helper.MultipleShowObjectsException:
+            logger.log('The show in %s is already in your show list, skipping' % self.showDir, logger.ERROR)
+            ui.notifications.error('Show skipped', 'The show in %s is already in your show list' % self.showDir)
+            self._finishEarly()
+            return
+
+        except (BaseException, Exception) as e:
+            logger.log('Error trying to add show: %s' % ex(e), logger.ERROR)
+            logger.log(traceback.format_exc(), logger.ERROR)
+            self._finishEarly()
+            raise
 
         self.show_obj.load_imdb_info()
 
@@ -761,6 +760,7 @@ class QueueItemAdd(ShowQueueItem):
 
         # add it to the show list
         sickbeard.showList.append(self.show_obj)
+        sickbeard.showDict[self.show_obj.sid_int] = self.show_obj
 
         try:
             self.show_obj.load_episodes_from_tvinfo()
@@ -839,7 +839,7 @@ class QueueItemAdd(ShowQueueItem):
             if oh:
                 found = False
                 for o in oh:
-                    np = NameParser(file_name=True, indexer_lookup=False, try_scene_exceptions=True)
+                    np = NameParser(file_name=True, indexer_lookup=False)
                     try:
                         pr = np.parse(o['resource'])
                     except (BaseException, Exception):
@@ -1032,17 +1032,14 @@ class QueueItemUpdate(ShowQueueItem):
             result = self.show_obj.load_from_tvinfo(cache=not self.force)
             if None is not result:
                 return
-        except Exception as e:
-            if check_exception_type(e, ExceptionTuples.tvinfo_error):
-                logger.log('Unable to contact %s, aborting: %s' % (sickbeard.TVInfoAPI(self.show_obj.tvid).name, ex(e)),
-                           logger.WARNING)
-                return
-            elif check_exception_type(e, ExceptionTuples.tvinfo_attributenotfound):
-                logger.log('Data retrieved from %s was incomplete, aborting: %s' %
-                           (sickbeard.TVInfoAPI(self.show_obj.tvid).name, ex(e)), logger.ERROR)
-                return
-            else:
-                raise e
+        except BaseTVinfoAttributenotfound as e:
+            logger.log('Data retrieved from %s was incomplete, aborting: %s' %
+                       (sickbeard.TVInfoAPI(self.show_obj.tvid).name, ex(e)), logger.ERROR)
+            return
+        except BaseTVinfoError as e:
+            logger.log('Unable to contact %s, aborting: %s' % (sickbeard.TVInfoAPI(self.show_obj.tvid).name, ex(e)),
+                       logger.WARNING)
+            return
 
         if self.force_web:
             self.show_obj.load_imdb_info()
@@ -1061,13 +1058,10 @@ class QueueItemUpdate(ShowQueueItem):
         logger.log('Loading all episodes from %s' % sickbeard.TVInfoAPI(self.show_obj.tvid).name, logger.DEBUG)
         try:
             tvinfo_ep_list = self.show_obj.load_episodes_from_tvinfo(cache=not self.force, update=True)
-        except Exception as e:
-            if check_exception_type(e, ExceptionTuples.tvinfo_exception):
-                logger.log('Unable to get info from %s, the show info will not be refreshed: %s' %
-                           (sickbeard.TVInfoAPI(self.show_obj.tvid).name, ex(e)), logger.ERROR)
-                tvinfo_ep_list = None
-            else:
-                raise e
+        except BaseTVinfoException as e:
+            logger.log('Unable to get info from %s, the show info will not be refreshed: %s' %
+                       (sickbeard.TVInfoAPI(self.show_obj.tvid).name, ex(e)), logger.ERROR)
+            tvinfo_ep_list = None
 
         if None is tvinfo_ep_list:
             logger.log('No data returned from %s, unable to update episodes for show: %s' %

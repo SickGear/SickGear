@@ -29,7 +29,6 @@ import re
 import shutil
 import stat
 import sys
-import time
 
 # noinspection PyPep8Naming
 import encodingKludge as ek
@@ -41,6 +40,7 @@ from . import common, db, failedProcessor, helpers, logger, notifiers, postProce
 from .common import SNATCHED_ANY
 from .history import reset_status
 from .name_parser.parser import InvalidNameException, InvalidShowException, NameParser
+from .sgdatetime import timestamp_near
 
 from _23 import filter_list, filter_iter, list_values, map_iter
 from six import iteritems, iterkeys, string_types, PY2, text_type
@@ -50,7 +50,8 @@ import lib.rarfile.rarfile as rarfile
 
 # noinspection PyUnreachableCode
 if False:
-    from typing import AnyStr, Dict, List, Optional, Tuple
+    from typing import Any, AnyStr, Dict, List, Optional, Tuple
+    from .tv import TVShow
 
 
 # noinspection PyArgumentList
@@ -212,7 +213,8 @@ class ProcessTVShow(object):
             ' ORDER BY rowid', [name])
         if sql_result:
             try:
-                show_obj = helpers.find_show_by_id({int(sql_result[-1]['indexer']): int(sql_result[-1]['showid'])})
+                show_obj = helpers.find_show_by_id({int(sql_result[-1]['indexer']): int(sql_result[-1]['showid'])},
+                                                   check_multishow=True)
                 if hasattr(show_obj, 'name'):
                     logger.log('Found Show: %s in snatch history for: %s' % (show_obj.name, name), logger.DEBUG)
             except MultipleShowObjectsException:
@@ -572,7 +574,7 @@ class ProcessTVShow(object):
             archives = [ek.ek(os.path.basename, x) for x in unused_files]
             if unused_files:
                 for f in unused_files:
-                    archive_history.setdefault(f, time.mktime(datetime.datetime.utcnow().timetuple()))
+                    archive_history.setdefault(f, int(timestamp_near(datetime.datetime.utcnow())))
 
             if init_history_cnt != len(archive_history):
                 try:
@@ -934,13 +936,13 @@ class ProcessTVShow(object):
 
         parse_result = None
         try:
-            parse_result = NameParser(try_scene_exceptions=True, convert=True).parse(videofile, cache_result=False)
+            parse_result = NameParser(convert=True).parse(videofile, cache_result=False)
         except (InvalidNameException, InvalidShowException):
             # Does not parse, move on to directory check
             pass
         if None is parse_result:
             try:
-                parse_result = NameParser(try_scene_exceptions=True, convert=True).parse(dir_name, cache_result=False)
+                parse_result = NameParser(convert=True).parse(dir_name, cache_result=False)
             except (InvalidNameException, InvalidShowException):
                 # If the filename doesn't parse, then return false as last
                 # resort. We can assume that unparseable filenames are not
@@ -1147,6 +1149,14 @@ class ProcessTVShow(object):
                 self._log_helper(u'%s failed: (%s, %s): %s'
                                  % (task, str(nzb_name), dir_name, process_fail_message), logger.WARNING)
 
+    def process_minimal(self, nzb_name, show_obj, failed, webhandler):
+        if failed:
+            self._process_failed('', nzb_name=nzb_name, show_obj=show_obj)
+        else:
+            processor = postProcessor.PostProcessor('', nzb_name=nzb_name, webhandler=webhandler, show_obj=show_obj)
+            processor.process_minimal()
+            self._buffer(processor.log.strip('\n'))
+
 
 # backward compatibility prevents the case of this function name from being updated to PEP8
 def processDir(dir_name, nzb_name=None, process_method=None, force=False, force_replace=None,
@@ -1184,3 +1194,8 @@ def processDir(dir_name, nzb_name=None, process_method=None, force=False, force_
     # backward compatibility prevents the case of this function name from being updated to PEP8
     return ProcessTVShow(webhandler, is_basedir, skip_failure_processing=skip_failure_processing).process_dir(
         dir_name, nzb_name, process_method, force, force_replace, failed, pp_type, cleanup, show_obj)
+
+
+def process_minimal(nzb_name, show_obj, failed, webhandler):
+    # type: (AnyStr, TVShow, bool, Any) -> None
+    ProcessTVShow(webhandler).process_minimal(nzb_name, show_obj, failed, webhandler)

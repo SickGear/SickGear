@@ -34,7 +34,7 @@ from .common import ARCHIVED, FAILED, DOWNLOADED, SNATCHED_ANY, SNATCHED_PROPER,
     NeededQualities, Quality
 from .history import dateFormat
 from .name_parser.parser import InvalidNameException, InvalidShowException, NameParser
-from .sgdatetime import SGDatetime
+from .sgdatetime import timestamp_near
 
 from _23 import filter_iter, list_values, map_consume, map_list
 from six import string_types
@@ -58,8 +58,8 @@ def search_propers(provider_proper_obj=None):
     logger.log(('Checking Propers from recent search', 'Beginning search for new Propers')[None is provider_proper_obj])
 
     age_shows, age_anime = sickbeard.BACKLOG_DAYS + 2, 14
-    aired_since_shows = datetime.datetime.today() - datetime.timedelta(days=age_shows)
-    aired_since_anime = datetime.datetime.today() - datetime.timedelta(days=age_anime)
+    aired_since_shows = datetime.datetime.now() - datetime.timedelta(days=age_shows)
+    aired_since_anime = datetime.datetime.now() - datetime.timedelta(days=age_anime)
     recent_shows, recent_anime = _recent_history(aired_since_shows, aired_since_anime)
     if recent_shows or recent_anime:
         propers = _get_proper_list(aired_since_shows, recent_shows, recent_anime, proper_dict=provider_proper_obj)
@@ -230,7 +230,7 @@ def _get_proper_list(aired_since_shows, recent_shows, recent_anime, proper_dict=
     """
     propers = {}
     # make sure the episode has been downloaded before
-    history_limit = datetime.datetime.today() - datetime.timedelta(days=30)
+    history_limit = datetime.datetime.now() - datetime.timedelta(days=30)
 
     my_db = db.DBConnection()
     # for each provider get a list of arbitrary Propers
@@ -268,8 +268,7 @@ def _get_proper_list(aired_since_shows, recent_shows, recent_anime, proper_dict=
                 continue
 
             try:
-                np = NameParser(False, try_scene_exceptions=True, show_obj=cur_proper.parsed_show_obj,
-                                indexer_lookup=False)
+                np = NameParser(False, show_obj=cur_proper.parsed_show_obj, indexer_lookup=False)
                 parse_result = np.parse(cur_proper.name)
             except (InvalidNameException, InvalidShowException, Exception):
                 continue
@@ -295,19 +294,20 @@ def _get_proper_list(aired_since_shows, recent_shows, recent_anime, proper_dict=
                            logger.DEBUG)
                 continue
 
-            if not show_name_helpers.pass_wordlist_checks(cur_proper.name, parse=False, indexer_lookup=False):
+            if not show_name_helpers.pass_wordlist_checks(cur_proper.name, parse=False, indexer_lookup=False,
+                                                          show_obj=cur_proper.parsed_show_obj):
                 logger.log('Ignored unwanted Proper [%s]' % cur_proper.name, logger.DEBUG)
                 continue
 
             re_x = dict(re_prefix='.*', re_suffix='.*')
             result = show_name_helpers.contains_any(cur_proper.name, cur_proper.parsed_show_obj.rls_ignore_words,
-                                                    **re_x)
+                                                    rx=cur_proper.parsed_show_obj.rls_ignore_words_regex, **re_x)
             if None is not result and result:
                 logger.log('Ignored Proper containing ignore word [%s]' % cur_proper.name, logger.DEBUG)
                 continue
 
             result = show_name_helpers.contains_any(cur_proper.name, cur_proper.parsed_show_obj.rls_require_words,
-                                                    **re_x)
+                                                    rx=cur_proper.parsed_show_obj.rls_require_words_regex, **re_x)
             if None is not result and not result:
                 logger.log('Ignored Proper for not containing any required word [%s]' % cur_proper.name, logger.DEBUG)
                 continue
@@ -366,7 +366,7 @@ def _get_proper_list(aired_since_shows, recent_shows, recent_anime, proper_dict=
                     or (cur_proper.is_repack and not same_release_group):
                 continue
 
-            np = NameParser(False, try_scene_exceptions=True, show_obj=cur_proper.parsed_show_obj, indexer_lookup=False)
+            np = NameParser(False, show_obj=cur_proper.parsed_show_obj, indexer_lookup=False)
             try:
                 extra_info = np.parse(sql_result[0]['release_name']).extra_info_no_name()
             except (BaseException, Exception):
@@ -573,8 +573,8 @@ def get_needed_qualites(needed=None):
         return needed
 
     age_shows, age_anime = sickbeard.BACKLOG_DAYS + 2, 14
-    aired_since_shows = datetime.datetime.today() - datetime.timedelta(days=age_shows)
-    aired_since_anime = datetime.datetime.today() - datetime.timedelta(days=age_anime)
+    aired_since_shows = datetime.datetime.now() - datetime.timedelta(days=age_shows)
+    aired_since_anime = datetime.datetime.now() - datetime.timedelta(days=age_anime)
 
     my_db = db.DBConnection()
     sql_result = my_db.select(
@@ -593,7 +593,8 @@ def get_needed_qualites(needed=None):
         if needed.all_needed:
             break
         try:
-            show_obj = helpers.find_show_by_id({int(cur_result['tv_id']): int(cur_result['prod_id'])})
+            show_obj = helpers.find_show_by_id({int(cur_result['tv_id']): int(cur_result['prod_id'])},
+                                               check_multishow=True)
         except MultipleShowObjectsException:
             continue
         if show_obj:
@@ -635,7 +636,8 @@ def _recent_history(aired_since_shows, aired_since_anime):
     for cur_result in sql_result:
 
         try:
-            show_obj = helpers.find_show_by_id({int(cur_result['tv_id']): int(cur_result['prod_id'])})
+            show_obj = helpers.find_show_by_id({int(cur_result['tv_id']): int(cur_result['prod_id'])},
+                                               check_multishow=True)
         except MultipleShowObjectsException:
             continue
         if show_obj:
@@ -662,10 +664,10 @@ def _set_last_proper_search(when):
 
     if 0 == len(sql_result):
         my_db.action('INSERT INTO info (last_backlog, last_indexer, last_proper_search) VALUES (?,?,?)',
-                     [0, 0, SGDatetime.totimestamp(when)])
+                     [0, 0, int(timestamp_near(when))])
     else:
         # noinspection SqlConstantCondition
-        my_db.action('UPDATE info SET last_proper_search=%s WHERE 1=1' % SGDatetime.totimestamp(when))
+        my_db.action('UPDATE info SET last_proper_search=%s WHERE 1=1' % int(timestamp_near(when)))
 
 
 def next_proper_timeleft():

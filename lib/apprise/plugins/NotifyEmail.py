@@ -27,10 +27,14 @@ import re
 import six
 import smtplib
 from email.mime.text import MIMEText
+from email.mime.application import MIMEApplication
+from email.mime.multipart import MIMEMultipart
+
 from socket import error as SocketError
 from datetime import datetime
 
 from .NotifyBase import NotifyBase
+from ..URLBase import PrivacyMode
 from ..common import NotifyFormat
 from ..common import NotifyType
 from ..utils import is_email
@@ -265,6 +269,14 @@ class NotifyEmail(NotifyBase):
 
     # Define object templates
     templates = (
+        '{schema}://{host}',
+        '{schema}://{host}:{port}',
+        '{schema}://{host}/{targets}',
+        '{schema}://{host}:{port}/{targets}',
+        '{schema}://{user}@{host}',
+        '{schema}://{user}@{host}:{port}',
+        '{schema}://{user}@{host}/{targets}',
+        '{schema}://{user}@{host}:{port}/{targets}',
         '{schema}://{user}:{password}@{host}',
         '{schema}://{user}:{password}@{host}:{port}',
         '{schema}://{user}:{password}@{host}/{targets}',
@@ -276,13 +288,11 @@ class NotifyEmail(NotifyBase):
         'user': {
             'name': _('User Name'),
             'type': 'string',
-            'required': True,
         },
         'password': {
             'name': _('Password'),
             'type': 'string',
             'private': True,
-            'required': True,
         },
         'host': {
             'name': _('Domain'),
@@ -384,7 +394,7 @@ class NotifyEmail(NotifyBase):
         self.from_name = from_name
         self.from_addr = from_addr
 
-        if not self.from_addr:
+        if self.user and not self.from_addr:
             # detect our email address
             self.from_addr = '{}@{}'.format(
                 re.split(r'[\s@]+', self.user)[0],
@@ -442,6 +452,10 @@ class NotifyEmail(NotifyBase):
         # Apply any defaults based on certain known configurations
         self.NotifyEmailDefaults()
 
+        # if there is still no smtp_host then we fall back to the hostname
+        if not self.smtp_host:
+            self.smtp_host = self.host
+
         return
 
     def NotifyEmailDefaults(self):
@@ -450,10 +464,11 @@ class NotifyEmail(NotifyBase):
         it was provided.
         """
 
-        if self.smtp_host:
+        if self.smtp_host or not self.user:
             # SMTP Server was explicitly specified, therefore it is assumed
             # the caller knows what he's doing and is intentionally
-            # over-riding any smarts to be applied
+            # over-riding any smarts to be applied. We also can not apply
+            # any default if there was no user specified.
             return
 
         # detect our email address using our user/host combo
@@ -508,7 +523,8 @@ class NotifyEmail(NotifyBase):
 
                 break
 
-    def send(self, body, title='', notify_type=NotifyType.INFO, **kwargs):
+    def send(self, body, title='', notify_type=NotifyType.INFO, attach=None,
+             **kwargs):
         """
         Perform Email Notification
         """
@@ -550,18 +566,51 @@ class NotifyEmail(NotifyBase):
 
             # Prepare Email Message
             if self.notify_format == NotifyFormat.HTML:
-                email = MIMEText(body, 'html')
+                content = MIMEText(body, 'html')
 
             else:
-                email = MIMEText(body, 'plain')
+                content = MIMEText(body, 'plain')
 
-            email['Subject'] = title
-            email['From'] = '{} <{}>'.format(from_name, self.from_addr)
-            email['To'] = to_addr
-            email['Cc'] = ','.join(cc)
-            email['Date'] = \
+            base = MIMEMultipart() if attach else content
+            base['Subject'] = title
+            base['From'] = '{} <{}>'.format(from_name, self.from_addr)
+            base['To'] = to_addr
+            base['Cc'] = ','.join(cc)
+            base['Date'] = \
                 datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S +0000")
-            email['X-Application'] = self.app_id
+            base['X-Application'] = self.app_id
+
+            if attach:
+                # First attach our body to our content as the first element
+                base.attach(content)
+
+                # Now store our attachments
+                for attachment in attach:
+                    if not attachment:
+                        # We could not load the attachment; take an early
+                        # exit since this isn't what the end user wanted
+
+                        # We could not access the attachment
+                        self.logger.error(
+                            'Could not access attachment {}.'.format(
+                                attachment.url(privacy=True)))
+
+                        return False
+
+                    self.logger.debug(
+                        'Preparing Email attachment {}'.format(
+                            attachment.url(privacy=True)))
+
+                    with open(attachment.path, "rb") as abody:
+                        app = MIMEApplication(
+                            abody.read(), attachment.mimetype)
+
+                        app.add_header(
+                            'Content-Disposition',
+                            'attachment; filename="{}"'.format(
+                                attachment.name))
+
+                        base.attach(app)
 
             # bind the socket variable to the current namespace
             socket = None
@@ -597,7 +646,7 @@ class NotifyEmail(NotifyBase):
                 socket.sendmail(
                     self.from_addr,
                     [to_addr] + list(cc) + list(bcc),
-                    email.as_string())
+                    base.as_string())
 
                 self.logger.info(
                     'Sent Email notification to "{}".'.format(to_addr))
@@ -618,7 +667,7 @@ class NotifyEmail(NotifyBase):
 
         return not has_error
 
-    def url(self):
+    def url(self, privacy=False, *args, **kwargs):
         """
         Returns the URL built dynamically based on specified arguments.
         """
@@ -645,16 +694,17 @@ class NotifyEmail(NotifyBase):
             args['bcc'] = ','.join(self.bcc)
 
         # pull email suffix from username (if present)
-        user = self.user.split('@')[0]
+        user = None if not self.user else self.user.split('@')[0]
 
         # Determine Authentication
         auth = ''
         if self.user and self.password:
             auth = '{user}:{password}@'.format(
                 user=NotifyEmail.quote(user, safe=''),
-                password=NotifyEmail.quote(self.password, safe=''),
+                password=self.pprint(
+                    self.password, privacy, mode=PrivacyMode.Secret, safe=''),
             )
-        else:
+        elif user:
             # user url
             auth = '{user}@'.format(
                 user=NotifyEmail.quote(user, safe=''),

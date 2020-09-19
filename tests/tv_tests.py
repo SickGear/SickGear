@@ -22,8 +22,20 @@ import unittest
 import test_lib as test
 from random import  randint
 
+import datetime
+import copy
 import sickbeard
 from sickbeard.tv import TVEpisode, TVShow, TVidProdid, prodid_bitshift
+from exceptions_helper import ex, MultipleShowObjectsException
+from sickbeard.helpers import find_show_by_id
+from sickbeard import indexermapper
+from sickbeard.indexers.indexer_api import TVInfoAPI
+from sickbeard.indexers.indexer_config import TVINFO_IMDB, TVINFO_TMDB, TVINFO_TRAKT, TVINFO_TVDB, TVINFO_TVMAZE, \
+    TVINFO_TVRAGE
+
+# noinspection PyUnreachableCode
+if False:
+    from typing import Optional
 
 
 class TVShowTests(test.SickbeardTestDBCase):
@@ -170,6 +182,88 @@ class TVidProdidTests(test.SickbeardTestDBCase):
             self.assertEqual(prodid, str_reverse_obj.prodid, msg='reverse str prodid test%s' % msg_vars)
 
 
+ids_base = {source: {'id': 0, 'status': indexermapper.MapStatus.NO_AUTOMATIC_CHANGE, 'date': datetime.date.today()}
+            for source in TVInfoAPI().all_sources}
+
+shows = [{'tvid': TVINFO_TVDB, 'prodid': 123,
+          'ids': {TVINFO_TVMAZE: {'id': 22}, TVINFO_IMDB: {'id': 54321}, TVINFO_TMDB: {'id': 9877}}},
+         {'tvid': TVINFO_TVDB, 'prodid': 222,
+          'ids': {TVINFO_TVMAZE: {'id': 854}, TVINFO_IMDB: {'id': 9435}, TVINFO_TMDB: {'id': 2457}}},
+         {'tvid': TVINFO_TVMAZE, 'prodid': 123,
+          'ids': {TVINFO_TVMAZE: {'id': 957}, TVINFO_IMDB: {'id': 4751}, TVINFO_TMDB: {'id': 659}}},
+         {'tvid': TVINFO_TMDB, 'prodid': 123,
+          'ids': {TVINFO_TVMAZE: {'id': 428}, TVINFO_IMDB: {'id': 999}, TVINFO_TMDB: {'id': 754}}}
+         ]
+
+find_tests = [
+              {'para': {'show_id': {TVINFO_TVMAZE: 22, TVINFO_TVRAGE: 785}, 'no_mapped_ids': False},
+               'result': {'tvid': TVINFO_TVDB, 'prodid': 123},
+               'description': 'search via mapped id'},
+              {'para': {'show_id': {TVINFO_TVDB: 123}}, 'result': {'tvid': TVINFO_TVDB, 'prodid': 123},
+               'description': 'simple standard search via master id dict'},
+              {'para': {'show_id': {TVINFO_TVDB: 12345}}, 'result': None,
+               'description': 'simple standard search via master id dict, for non-existing show'},
+              {'para': {'show_id': {TVINFO_TVDB: 123, TVINFO_TVMAZE: 123}, 'check_multishow': True}, 
+               'result': {'success': False},
+               'description': 'search via 2 ids matching multiple shows and multi show check'},
+              {'para': {'show_id': {TVINFO_TVDB: 5555, TVINFO_TVMAZE: 123}, 'check_multishow': True}, 
+               'result': {'tvid': TVINFO_TVMAZE, 'prodid': 123},
+               'description': 'search via 2 ids matching only 1 show and multi show check'},
+              {'para': {'show_id': {TVINFO_TVDB: 123, TVINFO_TVMAZE: 123}},
+               'result': {'tvid': TVINFO_TVDB, 'prodid': 123},
+               'description': 'search via 2 ids matching only 1 show without multi show check #1'},
+              {'para': {'show_id': {TVINFO_TVDB: 123, TVINFO_TVRAGE: 22}},
+               'result': {'tvid': TVINFO_TVDB, 'prodid': 123},
+               'description': 'search via 2 ids matching only 1 show without multi show check #2'},
+              {'para': {'show_id': {TVINFO_TVMAZE: 22, TVINFO_TVRAGE: 785}},
+               'result': None,
+               'description': 'search for 2 non-existing ids without mapping'},
+              {'para': {'show_id': {TVINFO_TMDB: 123}},
+               'result': None, 'description': 'invalid sid search (tvid above tvid_bitmask)'},
+              {'para': {'show_id': '%s:123' % TVINFO_TVDB}, 'result': {'tvid': TVINFO_TVDB, 'prodid': 123},
+               'description': 'simple search via tvid_prodid string'},
+              {'para': {'show_id': '%s:123' % TVINFO_TVDB, 'check_multishow': True},
+               'result': {'tvid': TVINFO_TVDB, 'prodid': 123},
+               'description': 'simple search via tvid_prodid string and check multishow'},
+              ]
+
+
+class TVFindTests(test.SickbeardTestDBCase):
+    def setUp(self):
+        super(TVFindTests, self).setUp()
+        sickbeard.showList = []
+        sickbeard.showDict = {}
+        sickbeard.indexermapper.indexer_list = [i for i in TVInfoAPI().all_sources]
+        for show in shows:
+            sh = TVShow(show['tvid'], show['prodid'])
+            ids = copy.deepcopy(ids_base)
+            if show.get('ids'):
+                for sub_ids in show['ids']:
+                    ids[sub_ids].update(show['ids'][sub_ids])
+            ids[show['tvid']]['status'] = indexermapper.MapStatus.SOURCE
+            ids[show['tvid']]['id'] = show['prodid']
+            sh.ids = ids
+            sickbeard.showList.append(sh)
+            sickbeard.showDict[sh.sid_int] = sh
+
+    def test_find_show_by_id(self):
+        result = None  # type: Optional[TVShow]
+        for show_test in find_tests:
+            success = True
+            try:
+                result = find_show_by_id(**show_test['para'])
+            except MultipleShowObjectsException:
+                success = False
+            if isinstance(show_test['result'], dict) and None is not show_test['result'].get('success', None):
+                self.assertEqual(success, show_test['result'].get('success', None),
+                                 msg='error finding show (%s) with para: %s' %
+                                     (show_test.get('description'), show_test['para']))
+            else:
+                self.assertEqual(result and {'tvid': result.tvid, 'prodid': result.prodid}, show_test['result'],
+                                 msg='error finding show (%s) with para: %s' %
+                                     (show_test.get('description'), show_test['para']))
+
+
 if '__main__' == __name__:
     print('==================')
     print('STARTING - TV TESTS')
@@ -188,4 +282,7 @@ if '__main__' == __name__:
     unittest.TextTestRunner(verbosity=2).run(suite)
     print('######################################################################')
     suite = unittest.TestLoader().loadTestsFromTestCase(TVidProdidTests)
+    unittest.TextTestRunner(verbosity=2).run(suite)
+    print('######################################################################')
+    suite = unittest.TestLoader().loadTestsFromTestCase(TVFindTests)
     unittest.TextTestRunner(verbosity=2).run(suite)

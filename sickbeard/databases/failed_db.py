@@ -103,4 +103,4 @@ class AddIndexerToTables(HistoryStatus):
 
         self.connection.action('VACUUM')
 
-        self.setDBVersion(2)
+        self.setDBVersion(2, check_db_version=False)

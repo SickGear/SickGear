@@ -27,7 +27,9 @@ from json import loads
 import requests
 
 from .NotifyBase import NotifyBase
+from ..URLBase import PrivacyMode
 from ..common import NotifyType
+from ..utils import validate_regex
 from ..AppriseLocale import gettext_lazy as _
 
 # Default our global support flag
@@ -119,11 +121,26 @@ class NotifySimplePush(NotifyBase):
         """
         super(NotifySimplePush, self).__init__(**kwargs)
 
-        # Store the API key
-        self.apikey = apikey
+        # API Key (associated with project)
+        self.apikey = validate_regex(apikey)
+        if not self.apikey:
+            msg = 'An invalid SimplePush API Key ' \
+                  '({}) was specified.'.format(apikey)
+            self.logger.warning(msg)
+            raise TypeError(msg)
 
-        # Event Name
-        self.event = event
+        if event:
+            # Event Name (associated with project)
+            self.event = validate_regex(event)
+            if not self.event:
+                msg = 'An invalid SimplePush Event Name ' \
+                      '({}) was specified.'.format(event)
+                self.logger.warning(msg)
+                raise TypeError(msg)
+
+        else:
+            # Default Event Name
+            self.event = None
 
         # Encrypt Message (providing support is available)
         if self.password and self.user and not CRYPTOGRAPHY_AVAILABLE:
@@ -181,7 +198,6 @@ class NotifySimplePush(NotifyBase):
         payload = {
             'key': self.apikey,
         }
-        event = self.event
 
         if self.password and self.user and CRYPTOGRAPHY_AVAILABLE:
             body = self._encrypt(body)
@@ -197,8 +213,9 @@ class NotifySimplePush(NotifyBase):
             'title': title,
         })
 
-        if event:
-            payload['event'] = event
+        if self.event:
+            # Store Event
+            payload['event'] = self.event
 
         self.logger.debug('SimplePush POST URL: %s (cert_verify=%r)' % (
             self.notify_url, self.verify_certificate,
@@ -263,7 +280,7 @@ class NotifySimplePush(NotifyBase):
 
         return True
 
-    def url(self):
+    def url(self, privacy=False, *args, **kwargs):
         """
         Returns the URL built dynamically based on specified arguments.
         """
@@ -282,14 +299,16 @@ class NotifySimplePush(NotifyBase):
         auth = ''
         if self.user and self.password:
             auth = '{salt}:{password}@'.format(
-                salt=NotifySimplePush.quote(self.user, safe=''),
-                password=NotifySimplePush.quote(self.password, safe=''),
+                salt=self.pprint(
+                    self.user, privacy, mode=PrivacyMode.Secret, safe=''),
+                password=self.pprint(
+                    self.password, privacy, mode=PrivacyMode.Secret, safe=''),
             )
 
         return '{schema}://{auth}{apikey}/?{args}'.format(
             schema=self.secure_protocol,
             auth=auth,
-            apikey=NotifySimplePush.quote(self.apikey, safe=''),
+            apikey=self.pprint(self.apikey, privacy, safe=''),
             args=NotifySimplePush.urlencode(args),
         )
 

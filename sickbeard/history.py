@@ -47,7 +47,7 @@ def _log_history_item(action, tvid, prodid, season, episode, quality, resource, 
     :param provider: provider name
     :param version: version
     """
-    log_date = datetime.datetime.today().strftime(dateFormat)
+    log_date = datetime.datetime.now().strftime(dateFormat)
 
     if PY2 and not isinstance(resource, text_type):
         resource = text_type(resource, 'utf-8', 'replace')
@@ -206,7 +206,7 @@ def history_snatched_proper_fix():
             for r in sql_result:
                 show_obj = None
                 try:
-                    show_obj = helpers.find_show_by_id({int(r['tv_id']): int(r['prod_id'])})
+                    show_obj = helpers.find_show_by_id({int(r['tv_id']): int(r['prod_id'])}, check_multishow=True)
                 except (BaseException, Exception):
                     pass
                 np = NameParser(False, show_obj=show_obj, testing=True)

@@ -33,13 +33,13 @@ from ..common import NeededQualities, Quality
 from ..helpers import remove_non_release_groups, try_int
 from ..indexers.indexer_config import *
 from ..network_timezones import SG_TIMEZONE
-from ..sgdatetime import SGDatetime
+from ..sgdatetime import SGDatetime, timestamp_near
 from ..search import get_aired_in_season, get_wanted_qualities
 from ..show_name_helpers import get_show_names
 from ..tv import TVEpisode, TVShow
 
 from lib.dateutil import parser
-from exceptions_helper import AuthException, MultipleShowObjectsException
+from exceptions_helper import AuthException, ex, MultipleShowObjectsException
 from lxml_etree import etree
 
 from six import iteritems, itervalues, string_types
@@ -204,7 +204,7 @@ class NewznabProvider(generic.NZBProvider):
                 my_db = db.DBConnection('cache.db')
                 res = my_db.select('SELECT' + ' "datetime" FROM "lastrecentsearch" WHERE "name"=?', [self.get_id()])
                 if res:
-                    self._last_recent_search = datetime.datetime.fromtimestamp(int(res[0]['datetime']))
+                    self._last_recent_search = SGDatetime.from_timestamp(int(res[0]['datetime']))
             except (BaseException, Exception):
                 pass
         return self._last_recent_search
@@ -213,8 +213,12 @@ class NewznabProvider(generic.NZBProvider):
     def last_recent_search(self, value):
         try:
             my_db = db.DBConnection('cache.db')
+            if isinstance(value, datetime.datetime):
+                save_value = int(timestamp_near(value))
+            else:
+                save_value = SGDatetime.timestamp_far(value, default=0)
             my_db.action('INSERT OR REPLACE INTO "lastrecentsearch" (name, datetime) VALUES (?,?)',
-                         [self.get_id(), SGDatetime.totimestamp(value, default=0)])
+                         [self.get_id(), save_value])
         except (BaseException, Exception):
             pass
         self._last_recent_search = value
@@ -603,7 +607,7 @@ class NewznabProvider(generic.NZBProvider):
 
             if tvid_prodid:
                 try:
-                    show_obj = helpers.find_show_by_id(tvid_prodid, no_mapped_ids=False)
+                    show_obj = helpers.find_show_by_id(tvid_prodid, no_mapped_ids=False, check_multishow=True)
                 except MultipleShowObjectsException:
                     return None
         return show_obj
@@ -989,7 +993,7 @@ class NewznabProvider(generic.NZBProvider):
                             if not first_date:
                                 first_date = self._parse_pub_date(items[0])
                             last_date = self._parse_pub_date(items[-1])
-                        if not first_date or not last_date or not self._last_recent_search or \
+                        if not first_date or not last_date or not self.last_recent_search or \
                                 last_date <= self.last_recent_search or uc_only:
                             break
 
@@ -1169,7 +1173,8 @@ class NewznabCache(tvcache.TVCache):
                     items = None
                 else:
                     (items, n_spaces) = self.provider.cache_data(needed=needed)
-            except (BaseException, Exception):
+            except (BaseException, Exception) as e:
+                logger.log('Error updating Cache: %s' % ex(e), logger.ERROR)
                 items = None
 
             if items:

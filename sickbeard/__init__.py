@@ -48,7 +48,6 @@ from .config import check_section, check_setting_int, check_setting_str, ConfigM
 from .databases import cache_db, failed_db, mainDB
 from .indexers.indexer_api import TVInfoAPI
 from .indexers.indexer_config import TVINFO_IMDB, TVINFO_TVDB
-from .indexers.indexer_exceptions import *
 from .providers.generic import GenericProvider
 from .providers.newznab import NewznabConstants
 from .tv import TVidProdid
@@ -59,15 +58,23 @@ from browser_ua import get_ua
 from configobj import ConfigObj
 from libtrakt import TraktAPI
 
-from _23 import b64encodestring, decode_bytes, filter_iter, list_items, map_list
+from _23 import b64encodestring, decode_bytes, filter_iter, list_items, map_list, scandir
 from six import iteritems, PY2, string_types
 import sg_helpers
+
+# noinspection PyUnreachableCode
+if False:
+    from typing import Dict, List
+    from adba import Connection
+    from .event_queue import Events
+    from .tv import TVShow
 
 PID = None
 ENV = {}
 
-CFG = None
-CONFIG_FILE = None
+# noinspection PyTypeChecker
+CFG = None  # type: ConfigObj
+CONFIG_FILE = ''
 CONFIG_VERSION = None
 
 # Default encryption version (0 for None)
@@ -81,7 +88,8 @@ SYS_ENCODING = ''
 DATA_DIR = ''
 
 # system events
-events = None
+# noinspection PyTypeChecker
+events = None  # type: Events
 
 recentSearchScheduler = None
 backlogSearchScheduler = None
@@ -93,14 +101,16 @@ properFinderScheduler = None
 autoPostProcesserScheduler = None
 subtitlesFinderScheduler = None
 # traktCheckerScheduler = None
-background_mapping_task = None
+# noinspection PyTypeChecker
+background_mapping_task = None  # type: threading.Thread
 embyWatchedStateScheduler = None
 plexWatchedStateScheduler = None
 watchedStateQueueScheduler = None
 
 provider_ping_thread_pool = {}
 
-showList = []
+showList = []  # type: List[TVShow]
+showDict = {}  # type: Dict[int, TVShow]
 UPDATE_SHOWS_ON_START = False
 SHOW_UPDATE_HOUR = 3
 
@@ -281,6 +291,7 @@ NZBGET_USE_HTTPS = False
 NZBGET_PRIORITY = 100
 NZBGET_SCRIPT_VERSION = None
 NZBGET_MAP = None
+NZBGET_SKIP_PM = False
 
 SAB_USERNAME = None
 SAB_PASSWORD = None
@@ -455,6 +466,15 @@ GITTER_NOTIFY_ONSUBTITLEDOWNLOAD = False
 GITTER_ROOM = None
 GITTER_ACCESS_TOKEN = None
 
+USE_TELEGRAM = False
+TELEGRAM_NOTIFY_ONSNATCH = False
+TELEGRAM_NOTIFY_ONDOWNLOAD = False
+TELEGRAM_NOTIFY_ONSUBTITLEDOWNLOAD = False
+TELEGRAM_SEND_IMAGE = True
+TELEGRAM_QUIET = False
+TELEGRAM_ACCESS_TOKEN = None
+TELEGRAM_CHATID = None
+
 USE_EMAIL = False
 EMAIL_OLD_SUBJECTS = False
 EMAIL_NOTIFY_ONSNATCH = False
@@ -472,7 +492,8 @@ USE_ANIDB = False
 ANIDB_USERNAME = None
 ANIDB_PASSWORD = None
 ANIDB_USE_MYLIST = False
-ADBA_CONNECTION = None
+# noinspection PyTypeChecker
+ADBA_CONNECTION = None  # type: Connection
 ANIME_TREAT_AS_HDTV = False
 
 GUI_NAME = None
@@ -500,6 +521,7 @@ EPISODE_VIEW_POSTERS = True
 EPISODE_VIEW_MISSED_RANGE = 7
 HISTORY_LAYOUT = None
 BROWSELIST_HIDDEN = []
+BROWSELIST_MRU = {}
 
 FUZZY_DATING = False
 TRIM_ZERO = False
@@ -527,10 +549,14 @@ SG_EXTRA_SCRIPTS = []
 
 GIT_PATH = None
 
-IGNORE_WORDS = 'regex:^(?=.*?\bspanish\b)((?!spanish.?princess).)*$, ' + \
-               'core2hd, hevc, MrLss, reenc, x265, danish, deutsch, dutch, flemish, french, ' + \
-               'german, italian, nordic, norwegian, portuguese, swedish, turkish'
-REQUIRE_WORDS = ''
+IGNORE_WORDS = {
+    '^(?=.*?\bspanish\b)((?!spanish.?princess).)*$',
+    'core2hd', 'hevc', 'MrLss', 'reenc', 'x265', 'danish', 'deutsch', 'dutch', 'flemish', 'french',
+    'german', 'italian', 'nordic', 'norwegian', 'portuguese', 'spanish', 'swedish', 'turkish'
+}
+IGNORE_WORDS_REGEX = True
+REQUIRE_WORDS = set()
+REQUIRE_WORDS_REGEX = False
 
 WANTEDLIST_CACHE = None
 
@@ -561,6 +587,9 @@ else:
     TRAKT_PIN_URL = 'https://trakt.tv/pin/6314'
     TRAKT_BASE_URL = 'https://api.trakt.tv/'
 
+MC_MRU = ''
+TVC_MRU = ''
+
 COOKIE_SECRET = b64encodestring(uuid.uuid4().bytes + uuid.uuid4().bytes)
 
 CACHE_IMAGE_URL_LIST = classes.ImageUrlList()
@@ -569,6 +598,7 @@ __INITIALIZED__ = False
 __INIT_STAGE__ = 0
 
 MEMCACHE = {}
+MEMCACHE_FLAG_IMAGES = {}
 
 
 def get_backlog_cycle_time():
@@ -596,10 +626,10 @@ def initialize(console_logging=True):
 def init_stage_1(console_logging):
 
     # Misc
-    global showList, providerList, newznabProviderList, torrentRssProviderList, \
+    global showList, showDict, providerList, newznabProviderList, torrentRssProviderList, \
         WEB_HOST, WEB_ROOT, ACTUAL_CACHE_DIR, CACHE_DIR, ZONEINFO_DIR, ADD_SHOWS_WO_DIR, ADD_SHOWS_METALANG, \
         CREATE_MISSING_SHOW_DIRS, SHOW_DIRS_WITH_DOTS, \
-        RECENTSEARCH_STARTUP, NAMING_FORCE_FOLDERS, SOCKET_TIMEOUT, DEBUG, TVINFO_DEFAULT, CONFIG_FILE, \
+        RECENTSEARCH_STARTUP, NAMING_FORCE_FOLDERS, SOCKET_TIMEOUT, DEBUG, TVINFO_DEFAULT, \
         CONFIG_FILE, CONFIG_VERSION, \
         REMOVE_FILENAME_CHARS, IMPORT_DEFAULT_CHECKED_SHOWS, WANTEDLIST_CACHE, MODULE_UPDATE_STRING, EXT_UPDATES
     # Add Show Search
@@ -615,7 +645,8 @@ def init_stage_1(console_logging):
         EPISODE_VIEW_MISSED_RANGE, EPISODE_VIEW_POSTERS, FANART_PANEL, FANART_RATINGS, \
         EPISODE_VIEW_VIEWMODE, EPISODE_VIEW_BACKGROUND, EPISODE_VIEW_BACKGROUND_TRANSLUCENT, \
         DISPLAY_SHOW_VIEWMODE, DISPLAY_SHOW_BACKGROUND, DISPLAY_SHOW_BACKGROUND_TRANSLUCENT, \
-        DISPLAY_SHOW_VIEWART, DISPLAY_SHOW_MINIMUM, DISPLAY_SHOW_SPECIALS, HISTORY_LAYOUT, BROWSELIST_HIDDEN
+        DISPLAY_SHOW_VIEWART, DISPLAY_SHOW_MINIMUM, DISPLAY_SHOW_SPECIALS, HISTORY_LAYOUT, \
+        BROWSELIST_HIDDEN, BROWSELIST_MRU
     # Gen Config/Misc
     global LAUNCH_BROWSER, UPDATE_SHOWS_ON_START, SHOW_UPDATE_HOUR, \
         TRASH_REMOVE_SHOW, TRASH_ROTATE_LOGS, ACTUAL_LOG_DIR, LOG_DIR, TVINFO_TIMEOUT, ROOT_DIRS, \
@@ -633,11 +664,12 @@ def init_stage_1(console_logging):
     # Search Settings/Episode
     global DOWNLOAD_PROPERS, PROPERS_WEBDL_ONEGRP, WEBDL_TYPES, RECENTSEARCH_FREQUENCY, \
         BACKLOG_DAYS, BACKLOG_NOFULL, BACKLOG_FREQUENCY, USENET_RETENTION, IGNORE_WORDS, REQUIRE_WORDS, \
+        IGNORE_WORDS, IGNORE_WORDS_REGEX, REQUIRE_WORDS, REQUIRE_WORDS_REGEX, \
         ALLOW_HIGH_PRIORITY, SEARCH_UNAIRED, UNAIRED_RECENT_SEARCH_ONLY
     # Search Settings/NZB search
     global USE_NZBS, NZB_METHOD, NZB_DIR, SAB_HOST, SAB_USERNAME, SAB_PASSWORD, SAB_APIKEY, SAB_CATEGORY, \
         NZBGET_USE_HTTPS, NZBGET_HOST, NZBGET_USERNAME, NZBGET_PASSWORD, NZBGET_CATEGORY, NZBGET_PRIORITY, \
-        NZBGET_SCRIPT_VERSION, NZBGET_MAP
+        NZBGET_SCRIPT_VERSION, NZBGET_MAP, NZBGET_SKIP_PM
     # Search Settings/Torrent search
     global USE_TORRENTS, TORRENT_METHOD, TORRENT_DIR, TORRENT_HOST, TORRENT_USERNAME, TORRENT_PASSWORD, \
         TORRENT_LABEL, TORRENT_LABEL_VAR, TORRENT_PATH, TORRENT_SEED_TIME, TORRENT_PAUSED, \
@@ -696,6 +728,7 @@ def init_stage_1(console_logging):
     global USE_TRAKT, TRAKT_CONNECTED_ACCOUNT, TRAKT_ACCOUNTS, TRAKT_MRU, TRAKT_VERIFY, \
         TRAKT_USE_WATCHLIST, TRAKT_REMOVE_WATCHLIST, TRAKT_TIMEOUT, TRAKT_METHOD_ADD, TRAKT_START_PAUSED, \
         TRAKT_SYNC, TRAKT_DEFAULT_INDEXER, TRAKT_REMOVE_SERIESLIST, TRAKT_UPDATE_COLLECTION, \
+        MC_MRU, TVC_MRU, \
         USE_SLACK, SLACK_NOTIFY_ONSNATCH, SLACK_NOTIFY_ONDOWNLOAD, SLACK_NOTIFY_ONSUBTITLEDOWNLOAD, \
         SLACK_CHANNEL, SLACK_AS_AUTHED, SLACK_BOT_NAME, SLACK_ICON_URL, SLACK_ACCESS_TOKEN, \
         USE_DISCORDAPP, DISCORDAPP_NOTIFY_ONSNATCH, DISCORDAPP_NOTIFY_ONDOWNLOAD, \
@@ -703,6 +736,8 @@ def init_stage_1(console_logging):
         DISCORDAPP_AS_AUTHED, DISCORDAPP_USERNAME, DISCORDAPP_ICON_URL, DISCORDAPP_AS_TTS, DISCORDAPP_ACCESS_TOKEN,\
         USE_GITTER, GITTER_NOTIFY_ONSNATCH, GITTER_NOTIFY_ONDOWNLOAD, GITTER_NOTIFY_ONSUBTITLEDOWNLOAD,\
         GITTER_ROOM, GITTER_ACCESS_TOKEN, \
+        USE_TELEGRAM, TELEGRAM_NOTIFY_ONSNATCH, TELEGRAM_NOTIFY_ONDOWNLOAD, TELEGRAM_NOTIFY_ONSUBTITLEDOWNLOAD, \
+        TELEGRAM_SEND_IMAGE, TELEGRAM_QUIET, TELEGRAM_ACCESS_TOKEN, TELEGRAM_CHATID, \
         USE_EMAIL, EMAIL_NOTIFY_ONSNATCH, EMAIL_NOTIFY_ONDOWNLOAD, EMAIL_NOTIFY_ONSUBTITLEDOWNLOAD, EMAIL_FROM, \
         EMAIL_HOST, EMAIL_PORT, EMAIL_TLS, EMAIL_USER, EMAIL_PASSWORD, EMAIL_LIST, EMAIL_OLD_SUBJECTS
     # Anime Settings
@@ -751,6 +786,7 @@ def init_stage_1(console_logging):
         if not ek.ek(os.path.isdir, ZONEINFO_DIR) and not helpers.make_dirs(ZONEINFO_DIR):
             logger.log(u'!!! Creating local zoneinfo dir failed', logger.ERROR)
     sg_helpers.CACHE_DIR = CACHE_DIR
+    sg_helpers.DATA_DIR = DATA_DIR
 
     THEME_NAME = check_setting_str(CFG, 'GUI', 'theme_name', 'dark')
     GUI_NAME = check_setting_str(CFG, 'GUI', 'gui_name', 'slick')
@@ -819,6 +855,7 @@ def init_stage_1(console_logging):
     SHOW_UPDATE_HOUR = minimax(SHOW_UPDATE_HOUR, 3, 0, 23)
 
     TRASH_REMOVE_SHOW = bool(check_setting_int(CFG, 'General', 'trash_remove_show', 0))
+    sg_helpers.TRASH_REMOVE_SHOW = TRASH_REMOVE_SHOW
     TRASH_ROTATE_LOGS = bool(check_setting_int(CFG, 'General', 'trash_rotate_logs', 0))
 
     USE_API = bool(check_setting_int(CFG, 'General', 'use_api', 0))
@@ -965,6 +1002,7 @@ def init_stage_1(console_logging):
     if None is NZBGET_PRIORITY:
         NZBGET_PRIORITY = check_setting_int(CFG, 'NZBget', 'nzbget_priority', 100)
     NZBGET_MAP = check_setting_str(CFG, 'NZBGet', 'nzbget_map', '')
+    NZBGET_SKIP_PM = bool(check_setting_int(CFG, 'NZBGet', 'nzbget_skip_process_media', 0))
 
     try:
         ng_script_file = ek.ek(os.path.join, ek.ek(os.path.dirname, ek.ek(os.path.dirname, __file__)),
@@ -1108,6 +1146,9 @@ def init_stage_1(console_logging):
     TRAKT_ACCOUNTS = TraktAPI.read_config_string(check_setting_str(CFG, 'Trakt', 'trakt_accounts', ''))
     TRAKT_MRU = check_setting_str(CFG, 'Trakt', 'trakt_mru', '')
 
+    MC_MRU = check_setting_str(CFG, 'Metacritic', 'mc_mru', '')
+    TVC_MRU = check_setting_str(CFG, 'TVCalendar', 'tvc_mru', '')
+
     USE_PYTIVO = bool(check_setting_int(CFG, 'pyTivo', 'use_pytivo', 0))
     PYTIVO_HOST = check_setting_str(CFG, 'pyTivo', 'pytivo_host', '')
     PYTIVO_SHARE_NAME = check_setting_str(CFG, 'pyTivo', 'pytivo_share_name', '')
@@ -1156,6 +1197,16 @@ def init_stage_1(console_logging):
     GITTER_ROOM = check_setting_str(CFG, 'Gitter', 'gitter_room', '')
     GITTER_ACCESS_TOKEN = check_setting_str(CFG, 'Gitter', 'gitter_access_token', '')
 
+    USE_TELEGRAM = bool(check_setting_int(CFG, 'Telegram', 'use_telegram', 0))
+    TELEGRAM_NOTIFY_ONSNATCH = bool(check_setting_int(CFG, 'Telegram', 'telegram_notify_onsnatch', 0))
+    TELEGRAM_NOTIFY_ONDOWNLOAD = bool(check_setting_int(CFG, 'Telegram', 'telegram_notify_ondownload', 0))
+    TELEGRAM_NOTIFY_ONSUBTITLEDOWNLOAD = bool(check_setting_int(
+        CFG, 'Telegram', 'telegram_notify_onsubtitledownload', 0))
+    TELEGRAM_SEND_IMAGE = bool(check_setting_int(CFG, 'Telegram', 'telegram_send_image', 1))
+    TELEGRAM_QUIET = bool(check_setting_int(CFG, 'Telegram', 'telegram_quiet', 0))
+    TELEGRAM_ACCESS_TOKEN = check_setting_str(CFG, 'Telegram', 'telegram_access_token', '')
+    TELEGRAM_CHATID = check_setting_str(CFG, 'Telegram', 'telegram_chatid', '')
+
     USE_EMAIL = bool(check_setting_int(CFG, 'Email', 'use_email', 0))
     EMAIL_OLD_SUBJECTS = bool(check_setting_int(CFG, 'Email', 'email_old_subjects',
                                                 None is not EMAIL_HOST and any(EMAIL_HOST)))
@@ -1192,8 +1243,10 @@ def init_stage_1(console_logging):
 
     GIT_PATH = check_setting_str(CFG, 'General', 'git_path', '')
 
-    IGNORE_WORDS = check_setting_str(CFG, 'General', 'ignore_words', IGNORE_WORDS)
-    REQUIRE_WORDS = check_setting_str(CFG, 'General', 'require_words', REQUIRE_WORDS)
+    IGNORE_WORDS, IGNORE_WORDS_REGEX = helpers.split_word_str(
+        check_setting_str(CFG, 'General', 'ignore_words', IGNORE_WORDS))
+    REQUIRE_WORDS, REQUIRE_WORDS_REGEX = helpers.split_word_str(
+        check_setting_str(CFG, 'General', 'require_words', REQUIRE_WORDS))
 
     CALENDAR_UNPROTECTED = bool(check_setting_int(CFG, 'General', 'calendar_unprotected', 0))
 
@@ -1246,6 +1299,14 @@ def init_stage_1(console_logging):
         lambda y: TVidProdid.glue in y and y or '%s%s%s' % (
             (TVINFO_TVDB, TVINFO_IMDB)[bool(helpers.parse_imdb_id(y))], TVidProdid.glue, y),
         [x.strip() for x in check_setting_str(CFG, 'GUI', 'browselist_hidden', '').split('|~|') if x.strip()])
+    BROWSELIST_MRU = check_setting_str(CFG, 'GUI', 'browselist_prefs', None)
+    if None is not BROWSELIST_MRU:
+        BROWSELIST_MRU = ast.literal_eval(BROWSELIST_MRU or '{}')
+    if not isinstance(BROWSELIST_MRU, dict):
+        BROWSELIST_MRU = {}
+
+    sg_helpers.db = db
+    sg_helpers.DOMAIN_FAILURES.load_from_db()
 
     # initialize NZB and TORRENT providers
     providerList = providers.makeProviderList()
@@ -1378,12 +1439,13 @@ def init_stage_1(console_logging):
                 '<br>Important: You <span class="boldest">must</span> Shutdown SickGear before upgrading'
 
     showList = []
+    showDict = {}
 
 
 def init_stage_2():
 
     # Misc
-    global __INITIALIZED__, MEMCACHE, RECENTSEARCH_STARTUP
+    global __INITIALIZED__, MEMCACHE, MEMCACHE_FLAG_IMAGES, RECENTSEARCH_STARTUP
     # Schedulers
     # global traktCheckerScheduler
     global recentSearchScheduler, backlogSearchScheduler, showUpdateScheduler, \
@@ -1547,6 +1609,13 @@ def init_stage_2():
         cycleTime=datetime.timedelta(minutes=PLEX_WATCHEDSTATE_FREQUENCY),
         run_delay=datetime.timedelta(minutes=5),
         threadName='PLEXWATCHEDSTATE')
+
+    try:
+        for f in ek.ek(scandir, ek.ek(os.path.join, PROG_DIR, 'gui', GUI_NAME, 'images', 'flags')):
+            if f.is_file():
+                MEMCACHE_FLAG_IMAGES[ek.ek(os.path.splitext, f.name)[0].lower()] = True
+    except (BaseException, Exception):
+        pass
 
     __INITIALIZED__ = True
     return True
@@ -1779,6 +1848,7 @@ def save_config():
 
     new_config['General']['cache_dir'] = ACTUAL_CACHE_DIR if ACTUAL_CACHE_DIR else 'cache'
     sg_helpers.CACHE_DIR = CACHE_DIR
+    sg_helpers.DATA_DIR = DATA_DIR
     new_config['General']['root_dirs'] = ROOT_DIRS if ROOT_DIRS else ''
     new_config['General']['tv_download_dir'] = TV_DOWNLOAD_DIR
     new_config['General']['keep_processed_dir'] = int(KEEP_PROCESSED_DIR)
@@ -1800,8 +1870,8 @@ def save_config():
     new_config['General']['extra_scripts'] = '|'.join(EXTRA_SCRIPTS)
     new_config['General']['sg_extra_scripts'] = '|'.join(SG_EXTRA_SCRIPTS)
     new_config['General']['git_path'] = GIT_PATH
-    new_config['General']['ignore_words'] = IGNORE_WORDS
-    new_config['General']['require_words'] = REQUIRE_WORDS
+    new_config['General']['ignore_words'] = helpers.generate_word_str(IGNORE_WORDS, IGNORE_WORDS_REGEX)
+    new_config['General']['require_words'] = helpers.generate_word_str(REQUIRE_WORDS, REQUIRE_WORDS_REGEX)
     new_config['General']['calendar_unprotected'] = int(CALENDAR_UNPROTECTED)
 
     default_not_zero = ('enable_recentsearch', 'enable_backlog', 'enable_scheduled_backlog', 'use_after_get_data')
@@ -1885,6 +1955,7 @@ def save_config():
             ('use_https', int(NZBGET_USE_HTTPS)),
             ('priority', NZBGET_PRIORITY),
             ('map', NZBGET_MAP),
+            ('skip_process_media', int(NZBGET_SKIP_PM)),
         ]),
         ('SABnzbd', [
             ('username', SAB_USERNAME), ('password', helpers.encrypt(SAB_PASSWORD, ENCRYPTION_VERSION)),
@@ -2015,6 +2086,12 @@ def save_config():
             # new_config['Trakt']['trakt_sync'] = int(TRAKT_SYNC)
             # new_config['Trakt']['trakt_default_indexer'] = int(TRAKT_DEFAULT_INDEXER)
         ]),
+        ('Metacritic', [
+            ('mru', MC_MRU)
+        ]),
+        ('TVCalendar', [
+            ('mru', TVC_MRU)
+        ]),
         ('Slack', [
             ('use_%s', int(USE_SLACK)),
             ('channel', SLACK_CHANNEL),
@@ -2036,6 +2113,13 @@ def save_config():
             ('room', GITTER_ROOM),
             ('access_token', GITTER_ACCESS_TOKEN),
         ]),
+        ('Telegram', [
+            ('use_%s', int(USE_TELEGRAM)),
+            ('send_image', int(TELEGRAM_SEND_IMAGE)),
+            ('quiet', int(TELEGRAM_QUIET)),
+            ('access_token', TELEGRAM_ACCESS_TOKEN),
+            ('chatid', TELEGRAM_CHATID),
+        ]),
         ('Email', [
             ('use_%s', int(USE_EMAIL)),
             ('old_subjects', int(EMAIL_OLD_SUBJECTS)),
@@ -2052,8 +2136,9 @@ def save_config():
         new_config[cfg] = {}
         for (k, v) in filter_iter(lambda arg: any([arg[1]]) or (
                 # allow saving where item value default is non-zero but 0 is a required setting value
-                cfg_lc in ('kodi', 'xbmc', 'synoindex', 'nzbget', 'torrent') and arg[0] in ('always_on', 'priority')
-                or (arg[0] == 'label_var' and 'rtorrent' == new_config['General']['torrent_method'])), items):
+                cfg_lc in ('kodi', 'xbmc', 'synoindex', 'nzbget', 'torrent', 'telegram')
+                and arg[0] in ('always_on', 'priority', 'send_image'))
+                or ('rtorrent' == new_config['General']['torrent_method'] and 'label_var' == arg[0]), items):
             k = '%s' in k and (k % cfg_lc) or (cfg_lc + '_' + k)
             # correct for cases where keys are named in an inconsistent manner to parent stanza
             k = k.replace('blackhole_', '').replace('sabnzbd_', 'sab_')
@@ -2077,6 +2162,7 @@ def save_config():
         ('Slack', SLACK_NOTIFY_ONSNATCH, SLACK_NOTIFY_ONDOWNLOAD, SLACK_NOTIFY_ONSUBTITLEDOWNLOAD),
         ('Discordapp', DISCORDAPP_NOTIFY_ONSNATCH, DISCORDAPP_NOTIFY_ONDOWNLOAD, DISCORDAPP_NOTIFY_ONSUBTITLEDOWNLOAD),
         ('Gitter', GITTER_NOTIFY_ONSNATCH, GITTER_NOTIFY_ONDOWNLOAD, GITTER_NOTIFY_ONSUBTITLEDOWNLOAD),
+        ('Telegram', TELEGRAM_NOTIFY_ONSNATCH, TELEGRAM_NOTIFY_ONDOWNLOAD, TELEGRAM_NOTIFY_ONSUBTITLEDOWNLOAD),
         ('Email', EMAIL_NOTIFY_ONSNATCH, EMAIL_NOTIFY_ONDOWNLOAD, EMAIL_NOTIFY_ONSUBTITLEDOWNLOAD),
     ]:
         if any([onsnatch, ondownload, onsubtitledownload]):
@@ -2144,6 +2230,7 @@ def save_config():
     new_config['GUI']['show_tag_default'] = SHOW_TAG_DEFAULT
     new_config['GUI']['history_layout'] = HISTORY_LAYOUT
     new_config['GUI']['browselist_hidden'] = '|~|'.join(BROWSELIST_HIDDEN)
+    new_config['GUI']['browselist_prefs'] = '%s' % BROWSELIST_MRU
 
     new_config['Subtitles'] = {}
     new_config['Subtitles']['use_subtitles'] = int(USE_SUBTITLES)
@@ -2178,9 +2265,9 @@ def launch_browser(start_port=None):
         start_port = WEB_PORT
     browser_url = 'http%s://localhost:%d%s' % (('s', '')[not ENABLE_HTTPS], start_port, WEB_ROOT)
     try:
-        webbrowser.open(browser_url, 2, 1)
+        webbrowser.open(browser_url, 2, True)
     except (BaseException, Exception):
         try:
-            webbrowser.open(browser_url, 1, 1)
+            webbrowser.open(browser_url, 1, True)
         except (BaseException, Exception):
             logger.log('Unable to launch a browser', logger.ERROR)

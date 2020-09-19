@@ -15,14 +15,16 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
+from __future__ import absolute_import
 
 import datetime
 import os
 import re
 
 from . import generic
-from .. import helpers, logger
-from ..indexers.indexer_exceptions import check_exception_type, ExceptionTuples
+from .. import logger
+import sg_helpers
+from tvinfo_base.exceptions import *
 import sickbeard
 # noinspection PyPep8Naming
 import encodingKludge as ek
@@ -138,7 +140,7 @@ class WDTVMetadata(generic.GenericMetadata):
         ep_obj: a TVEpisode instance for which to create the thumbnail
         """
         if ek.ek(os.path.isfile, ep_obj.location):
-            return helpers.replace_extension(ep_obj.location, 'metathumb')
+            return sg_helpers.replace_extension(ep_obj.location, 'metathumb')
 
     def get_season_poster_path(self, show_obj, season):
         # type: (sickbeard.tv.TVShow, int) -> Optional[AnyStr]
@@ -204,15 +206,12 @@ class WDTVMetadata(generic.GenericMetadata):
 
             t = sickbeard.TVInfoAPI(ep_obj.show_obj.tvid).setup(**tvinfo_config)
             show_info = t[ep_obj.show_obj.prodid]
-        except Exception as e:
-            if check_exception_type(e, ExceptionTuples.tvinfo_shownotfound):
-                raise exceptions_helper.ShowNotFoundException(ex(e))
-            elif check_exception_type(e, ExceptionTuples.tvinfo_error):
-                logger.log("Unable to connect to %s while creating meta files - skipping - %s" %
-                           (sickbeard.TVInfoAPI(ep_obj.show_obj.tvid).name, ex(e)), logger.ERROR)
-                return False
-            else:
-                raise e
+        except BaseTVinfoShownotfound as e:
+            raise exceptions_helper.ShowNotFoundException(ex(e))
+        except BaseTVinfoError as e:
+            logger.log("Unable to connect to %s while creating meta files - skipping - %s" %
+                       (sickbeard.TVInfoAPI(ep_obj.show_obj.tvid).name, ex(e)), logger.ERROR)
+            return False
 
         if not self._valid_show(show_info, ep_obj.show_obj):
             return
@@ -301,7 +300,7 @@ class WDTVMetadata(generic.GenericMetadata):
                 overview.text = '%s' % cur_ep_obj.description
 
             # Make it purdy
-            helpers.indent_xml(rootNode)
+            sg_helpers.indent_xml(rootNode)
             data = etree.ElementTree(rootNode)
 
         return data

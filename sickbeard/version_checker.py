@@ -185,6 +185,14 @@ class GitUpdateManager(UpdateManager):
         if 'windows' == platform.system().lower():
             if main_git != main_git.lower():
                 alternative_git.append(main_git.lower())
+            if sickbeard.GIT_PATH:
+                logger.log(u'git.exe is missing, remove `git_path` from config.ini: %s' % main_git, logger.DEBUG)
+                if re.search(r' \(x86\)', main_git):
+                    alternative_git.append(re.sub(r' \(x86\)', '', main_git))
+                else:
+                    alternative_git.append(re.sub('Program Files', 'Program Files (x86)', main_git))
+                logger.log(
+                    u'Until `git_path` is removed by a config.ini edit, trying: %s' % alternative_git[-1], logger.DEBUG)
 
         if alternative_git:
             logger.log(u'Trying known alternative git locations', logger.DEBUG)
@@ -221,7 +229,10 @@ class GitUpdateManager(UpdateManager):
             logger.log(u'git output: %s' % output, logger.DEBUG)
 
         except OSError:
-            logger.log(u'Failed command: %s' % cmd)
+            logger.log('Failed command: %s' % cmd)
+
+        except (BaseException, Exception) as e:
+            logger.log('Failed command: %s, %s' % (cmd, ex(e)))
 
         if 0 == exit_status:
             logger.log(u'Successful return: %s' % cmd, logger.DEBUG)

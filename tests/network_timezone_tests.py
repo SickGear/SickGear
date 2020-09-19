@@ -27,6 +27,7 @@ class NetworkTimezoneTests(test.SickbeardTestDBCase):
     @classmethod
     def setUpClass(cls):
         super(NetworkTimezoneTests, cls).setUpClass()
+        os.makedirs(sickbeard.ZONEINFO_DIR)
         cls.remove_zoneinfo()
 
     @classmethod

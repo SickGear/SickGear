@@ -55,10 +55,6 @@
         $statusList.remove($which_status)
     #end if
 
-    #if $which_status in $SNATCHED_ANY
-        $statusList.append($FAILED)
-    #end if
-
 <script type="text/javascript" src="$sbRoot/js/manageEpisodeStatuses.js?v=$sbPID"></script>
 
 	<form action="$sbRoot/manage/change-episode-statuses" method="post">
@@ -84,6 +80,9 @@
 			<select name="wanted_status" class="form-control form-control-inline input-sm" style="margin:0 10px 0 5px">
 				<option value="$UNKNOWN">nothing</option>
 				<option value="$WANTED">$statusStrings[$WANTED]</option>
+        #if $which_status in $SNATCHED_ANY
+				<option value="$FAILED">$statusStrings[$FAILED]</option>
+        #end if
 			</select>
 			<input class="btn btn-inline go" type="submit" value="Go">
 	#end if

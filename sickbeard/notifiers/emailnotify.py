@@ -148,39 +148,40 @@ class EmailNotifier(Notifier):
         return self._choose(('Success, notification sent.',
                              'Failed to send notification: %s' % self.last_err)[not r], r)
 
-    def notify_snatch(self, ep_name, title=None):
+    def notify_snatch(self, ep_obj, title=None, **kwargs):
         """
         Send a notification that an episode was snatched
 
-        :param ep_name: The name of the episode that was snatched
+        :param ep_obj: The snatched episode
         :param title: The title of the notification (optional)
         """
 
         title = sickbeard.EMAIL_OLD_SUBJECTS and 'Snatched' or title or notify_strings['snatch']
-        self._notify(title, ep_name)
+        # noinspection PyProtectedMember
+        self._notify(title, self.pretty_name(ep_obj))
 
-    def notify_download(self, ep_name, title=None):
+    def notify_download(self, ep_obj, title=None, **kwargs):
         """
         Send a notification that an episode was downloaded
 
-        :param ep_name: The name of the episode that was downloaded
+        :param ep_obj: The downloaded episode
         :param title: The title of the notification (optional)
         """
 
         title = sickbeard.EMAIL_OLD_SUBJECTS and 'Downloaded' or title or notify_strings['download']
-        self._notify(title, ep_name)
+        self._notify(title, self.pretty_name(ep_obj))
 
-    def notify_subtitle_download(self, ep_name, lang, title=None):
+    def notify_subtitle_download(self, ep_obj, lang, title=None, **kwargs):
         """
         Send a notification that a subtitle was downloaded
 
-        :param ep_name: The name of the episode that was downloaded
+        :param ep_obj: The downloaded episode
         :param lang: Subtitle language
         :param title: The title of the notification (optional)
         """
 
         title = sickbeard.EMAIL_OLD_SUBJECTS and 'Subtitle Downloaded' or title or notify_strings['subtitle_download']
-        self._notify(title, ep_name, '%s ' % lang, '</b></p>\n<p>Language: <b>%s' % lang)
+        self._notify(title, ep_obj.pretty_name(), '%s ' % lang, '</b></p>\n<p>Language: <b>%s' % lang)
 
 
 notifier = EmailNotifier

@@ -21,8 +21,8 @@ from collections import OrderedDict
 from .. import db
 
 MIN_DB_VERSION = 1
-MAX_DB_VERSION = 5
-TEST_BASE_VERSION = None  # the base production db version, only needed for TEST db versions (>=100000)
+MAX_DB_VERSION = 100001
+TEST_BASE_VERSION = 5  # the base production db version, only needed for TEST db versions (>=100000)
 
 
 # Add new migrations at the bottom of the list; subclass the previous migration.
@@ -60,7 +60,16 @@ class InitialSchema(db.SchemaUpgrade):
             ]),
             ('add_indexer_to_tables', [
                 'DELETE FROM provider_cache WHERE 1=1'
-            ])
+            ]),
+            ('connection_fails', [
+                'CREATE TABLE connection_fails(domain_url TEXT, fail_type INTEGER, fail_code INTEGER,'
+                ' fail_time NUMERIC)',
+                'CREATE INDEX idx_conn_error ON connection_fails (domain_url)',
+                'CREATE UNIQUE INDEX idx_conn_errors ON connection_fails (domain_url, fail_time)',
+                'CREATE TABLE connection_fails_count(domain_url TEXT PRIMARY KEY,'
+                ' failure_count NUMERIC, failure_time NUMERIC,'
+                ' tmr_limit_count NUMERIC, tmr_limit_time NUMERIC, tmr_limit_wait NUMERIC)'
+            ]),
         ])
 
     def test(self):
@@ -68,7 +77,7 @@ class InitialSchema(db.SchemaUpgrade):
 
     def execute(self):
         self.do_query(self.queries[next(iter(self.queries))])
-        self.setDBVersion(MIN_DB_VERSION)
+        self.setDBVersion(MIN_DB_VERSION, check_db_version=False)
 
 
 class ConsolidateProviders(InitialSchema):
@@ -113,3 +122,12 @@ class AddIndexerToTables(AddProviderFailureHandling):
         self.do_query(self.queries['add_indexer_to_tables'])
         self.addColumn('provider_cache', 'indexer', 'NUMERIC')
         self.finish()
+
+
+class AddGenericFailureHandling(AddBacklogParts):
+    def test(self):
+        return 5 < self.checkDBVersion()
+
+    def execute(self):
+        self.do_query(self.queries['connection_fails'])
+        self.setDBVersion(100001, check_db_version=False)
