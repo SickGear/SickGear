@@ -1,6 +1,8 @@
-﻿### 0.21.49 (2020-09-xx xx:xx:00 UTC)
+﻿### 0.21.49 (2020-09-19 20:40:00 UTC)
 
 * Change make make test_encrypt hardware independent
+* Fix add `cf_clearance` to two providers that use CF IUAM, Scenetime and Torrenting
+* Change convert Scenetime Quicktime SD release titles to formal SD quality title
 
 
 ### 0.21.48 (2020-09-18 21:00:00 UTC)

@@ -49,7 +49,8 @@ class SceneTimeProvider(generic.TorrentProvider):
         return super(SceneTimeProvider, self)._authorised(
             logged_in=(lambda y='': all(
                 ['staff-support' in y, self.has_all_cookies()] +
-                [(self.session.cookies.get(x, domain='') or 'sg!no!pw') in self.digest for x in ('uid', 'pass')])),
+                [(self.session.cookies.get(x, domain='') or 'sg!no!pw') in self.digest
+                 for x in ('uid', 'pass', 'cf_clearance')])),
             failed_msg=(lambda y=None: u'Invalid cookie details for %s. Check settings'))
 
     @staticmethod
@@ -136,7 +137,7 @@ class SceneTimeProvider(generic.TorrentProvider):
                                         self.freeleech and (None is rc['fl'].search(cells[1].get_text()))):
                                     continue
 
-                                title = (info.attrs.get('title') or info.get_text()).strip()
+                                title = self.regulate_title((info.attrs.get('title') or info.get_text()).strip())
                                 download_url = self._link('%s/%s' % (dl_id, str(title).replace(' ', '.')))
                             except (AttributeError, TypeError, ValueError, KeyError):
                                 continue
@@ -159,8 +160,26 @@ class SceneTimeProvider(generic.TorrentProvider):
 
         return results
 
+    @staticmethod
+    def regulate_title(name):
+        # convert a non-standard release title into a usable format
+        name_has = (lambda quality_list, func=all: func([re.search(q, name, re.I) for q in quality_list]))
+        fmt = '((h.?|x)26[45]|vp9|av1|hevc)'
+        webfmt = 'web.?(dl|rip|.%s)' % fmt
+        rips = 'b[r|d]rip'
+        # check none of the formal structures apply to this title
+        if not name_has(['(720|1080|2160)[pi]|720hd']) and \
+                not name_has(['(dvd.?rip|%s)(.ws)?(.(xvid|divx|%s))?' % (rips, fmt)]):
+            if (not name_has(['hr.ws.pdtv.(h.?|x)264'])
+                and not (name_has([r'(hdtv|pdtv|dsr|tvrip)([-]|.((aac|ac3|dd).?\d\.?\d.)*(xvid|%s))' % fmt])
+                         or name_has(['(xvid|divx|480p|hevc|x265)']))) \
+                    or not name_has([webfmt, 'xvid|%s' % fmt]):
+                # non standard SD `aac.mp4-` -> `hdtv.x264.aac-`
+                name = re.sub(r'([.\s])AAC([.\s])MP4[-]', r'\1hdtv\2x264\2aac-', name)
+        return name
+
     def ui_string(self, key):
-        cookies = 'use... \'uid=xx; pass=yy\''
+        cookies = 'use... \'uid=xx; pass=yy; cf_clearance=zz\''
         if 'cookie_str_only' == key:
             return cookies
         if 'scenetime_digest' == key and self._valid_home():
