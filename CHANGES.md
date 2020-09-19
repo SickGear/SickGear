@@ -1,4 +1,12 @@
-﻿### 0.22.0 (2020-09-19 20:50:00 UTC)
+﻿### 0.23.0 (2019-xx-xx xx:xx:xx UTC)
+
+
+
+[develop changelog]
+
+
+
+### 0.22.0 (2020-09-19 20:50:00 UTC)
 
 * Add menu Shows/"Metacritic Cards"
 * Add menu Shows/"TV Calendar Cards"
