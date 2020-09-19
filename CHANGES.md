@@ -1,4 +1,4 @@
-﻿### 0.22.0 (2020-xx-xx xx:xx:xx UTC)
+﻿### 0.22.0 (2020-09-19 20:50:00 UTC)
 
 * Add menu Shows/"Metacritic Cards"
 * Add menu Shows/"TV Calendar Cards"
@@ -53,56 +53,6 @@
 * Change add alternative locations for git.exe on Windows with a log warning
 * Add link to the wiki setup guide for NZBGet and SABnzbd at Search Settings/"NZB Results"
 * Change API version to 13
-* Fix backlog search in season search mode
-
-
-[develop changelog]
-
-* Fix name_parser_tests
-* Fix config/Media Process/Unpack test unrar under py3
-* Change remove deprecated `buildNameCache`
-* Update Apprise 0.8.0 (6aa52c3) to 0.8.3 (4aee9de)
-* Update Apprise 0.8.3 (4aee9de) to 0.8.4 (1ce7cbb)
-* Update attr 19.2.0.dev0 (daf2bc8) to 20.1.0.dev0 (9b5e988)
-* Update Beautiful Soup 4.8.1 (r540) to 4.8.2 (r554)
-* Update Beautiful Soup 4.8.2 (r544) to 4.8.2 (r556)
-* Update Certifi 2019.06.16 (84dc766) to 2019.11.28 (21abb9b)
-* Update Certifi 2020.04.05.1 (5efdd48) to 2020.06.20 (f7e30d8) 
-* Update dateutil 2.8.1 (fc9b162) to 2.8.1 (110a09b)
-* Update dateutil 2.8.1 (110a09b) to 2.8.1 (16e9c62)
-* Update html5lib 1.1-dev (4b22754) to 1.1-dev (05b73ef)
-* Update html5lib 1.1-dev (05b73ef) to 1.1 (f87487a)
-* Update Requests library 2.22.0 (3d968ff) to 2.22.0 (d2f65af)
-* Update Requests library 2.22.0 (d2f65af) to 2.23.0 (b7c6aba)
-* Update Requests library 2.23.0 (b7c6aba) to 2.24.0 (1b41763)
-* Update Six compatibility library 1.13.0 (ec58185) to 1.14.0 (3a3db75)
-* Update soupsieve_py3 2.0.0.dev (69194a2) to 2.0.0.final (8832584)
-* Update soupsieve_py2 1.9.5 (6a38398) to 1.9.5 final (e00a882)
-* Update Tornado_py3 Web Server 6.0.3 (ff985fe) to 6.1.dev1 (18b653c)
-* Update urllib3 release 1.25.6 (4a6c288) to 1.25.7 (37ba61a)
-* Update urllib3 release 1.25.7 (37ba61a) to 1.25.8 (2a57bc5)
-* Update urllib3 release 1.25.8 (2a57bc5) to 1.25.9 (a5a45dc)
-* Fix import in Tornado py2
-* Fix removed unneeded import
-* Change add exclude_no_data to get_url, in most cases `no_data` is not a failure
-* Change prevent log sources containing `sg.` from clipping in log format
-* Fix webapi access denied with async server
-* Fix last_recent_search in newznab
-* Fix traceback for py2 async webserver calls
-* Change add fallback to premiered year to lookup browse card show
-* Change display % after rating value only if value is numeric
-* Change add fallback to remove a premiered year to lookup browse card show
-* Replace Telegram notififier "Send icon" with "Send show image"
-* Add Telegram notifier option "Send quietly" to mute client notification sound
-* Fix AddIndexerToTables function used for tests
-* Change db migration patterns to always increase db version regardless of function logic outcome
-* Change improve log clarity of anime group validation and fix its validation
-* Fix missing regex parameter for show require words in proper search
-* Fix API add_exclude and remove_exclude in sg.setrequirewords and sg.setignorewords
-* Change API sg.listignorewords response data type for global_exclude_ignore to list
-* Change API sg.listrequirewords response data type for global_exclude_require to list
-* Change API response fieldname `global_exclude_ignore` to `global exclude ignore` in sg.listignorewords endpoint
-* Change API response fieldname `global_exclude_require` to `global exclude require` in sg.listignorewords endpoint
 
 
 ### 0.21.49 (2020-09-19 20:40:00 UTC)
