@@ -1774,10 +1774,10 @@ class Home(MainHandler):
             channel=channel, as_authed='true' == as_authed,
             bot_name=bot_name, icon_url=icon_url, access_token=access_token)
 
-    def test_discordapp(self, as_authed=False, username=None, icon_url=None, as_tts=False, access_token=None):
+    def test_discord(self, as_authed=False, username=None, icon_url=None, as_tts=False, access_token=None):
         self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
 
-        return notifiers.NotifierFactory().get('DISCORDAPP').test_notify(
+        return notifiers.NotifierFactory().get('DISCORD').test_notify(
             as_authed='true' == as_authed, username=username, icon_url=icon_url,
             as_tts='true' == as_tts, access_token=access_token)
 
@@ -7820,10 +7820,10 @@ class ConfigNotifications(Config):
             use_slack=None, slack_notify_onsnatch=None, slack_notify_ondownload=None,
             slack_notify_onsubtitledownload=None, slack_access_token=None, slack_channel=None,
             slack_as_authed=None, slack_bot_name=None, slack_icon_url=None,
-            use_discordapp=None, discordapp_notify_onsnatch=None, discordapp_notify_ondownload=None,
-            discordapp_notify_onsubtitledownload=None, discordapp_access_token=None,
-            discordapp_as_authed=None, discordapp_username=None, discordapp_icon_url=None,
-            discordapp_as_tts=None,
+            use_discord=None, discord_notify_onsnatch=None, discord_notify_ondownload=None,
+            discord_notify_onsubtitledownload=None, discord_access_token=None,
+            discord_as_authed=None, discord_username=None, discord_icon_url=None,
+            discord_as_tts=None,
             use_gitter=None, gitter_notify_onsnatch=None, gitter_notify_ondownload=None,
             gitter_notify_onsubtitledownload=None, gitter_access_token=None, gitter_room=None,
             use_telegram=None, telegram_notify_onsnatch=None, telegram_notify_ondownload=None,
@@ -7967,15 +7967,15 @@ class ConfigNotifications(Config):
         sickbeard.SLACK_BOT_NAME = slack_bot_name
         sickbeard.SLACK_ICON_URL = slack_icon_url
 
-        sickbeard.USE_DISCORDAPP = config.checkbox_to_value(use_discordapp)
-        sickbeard.DISCORDAPP_NOTIFY_ONSNATCH = config.checkbox_to_value(discordapp_notify_onsnatch)
-        sickbeard.DISCORDAPP_NOTIFY_ONDOWNLOAD = config.checkbox_to_value(discordapp_notify_ondownload)
-        sickbeard.DISCORDAPP_NOTIFY_ONSUBTITLEDOWNLOAD = config.checkbox_to_value(discordapp_notify_onsubtitledownload)
-        sickbeard.DISCORDAPP_ACCESS_TOKEN = discordapp_access_token
-        sickbeard.DISCORDAPP_AS_AUTHED = config.checkbox_to_value(discordapp_as_authed)
-        sickbeard.DISCORDAPP_USERNAME = discordapp_username
-        sickbeard.DISCORDAPP_ICON_URL = discordapp_icon_url
-        sickbeard.DISCORDAPP_AS_TTS = config.checkbox_to_value(discordapp_as_tts)
+        sickbeard.USE_DISCORD = config.checkbox_to_value(use_discord)
+        sickbeard.DISCORD_NOTIFY_ONSNATCH = config.checkbox_to_value(discord_notify_onsnatch)
+        sickbeard.DISCORD_NOTIFY_ONDOWNLOAD = config.checkbox_to_value(discord_notify_ondownload)
+        sickbeard.DISCORD_NOTIFY_ONSUBTITLEDOWNLOAD = config.checkbox_to_value(discord_notify_onsubtitledownload)
+        sickbeard.DISCORD_ACCESS_TOKEN = discord_access_token
+        sickbeard.DISCORD_AS_AUTHED = config.checkbox_to_value(discord_as_authed)
+        sickbeard.DISCORD_USERNAME = discord_username
+        sickbeard.DISCORD_ICON_URL = discord_icon_url
+        sickbeard.DISCORD_AS_TTS = config.checkbox_to_value(discord_as_tts)
 
         sickbeard.USE_GITTER = config.checkbox_to_value(use_gitter)
         sickbeard.GITTER_NOTIFY_ONSNATCH = config.checkbox_to_value(gitter_notify_onsnatch)
