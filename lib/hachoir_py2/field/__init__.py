@@ -32,11 +32,12 @@ from hachoir_py2.field.parser import Parser
 from hachoir_py2.field.vector import GenericVector, UserVector
 
 # Complex types
-from hachoir_py2.field.float import Float32, Float64, Float80
-from hachoir_py2.field.timestamp import (GenericTimestamp,
-                                         TimestampUnix32, TimestampUnix64, TimestampMac32, TimestampUUID60,
-                                         TimestampWin64, TimedeltaMillisWin64,
-                                         DateTimeMSDOS32, TimeDateMSDOS32, TimedeltaWin64)
+from hachoir_py2.field.float import Float32, Float64, Float80  # noqa
+from hachoir_py2.field.timestamp import (  # noqa
+    GenericTimestamp,
+    TimestampUnix32, TimestampUnix64, TimestampMac32, TimestampUUID60,
+    TimestampWin64, TimedeltaMillisWin64,
+    DateTimeMSDOS32, TimeDateMSDOS32, TimedeltaWin64)
 
 # Special Field classes
 from hachoir_py2.field.link import Link, Fragment
