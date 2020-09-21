@@ -29,7 +29,6 @@ from __future__ import absolute_import
 from __future__ import unicode_literals
 
 import re
-from six import PY2
 
 try:
     from html.entities import name2codepoint
