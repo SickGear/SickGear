@@ -43,6 +43,35 @@ def _alias(attr):
     return alias
 
 
+# These encodings are recognized by Python (so PageElement.encode
+# could theoretically support them) but XML and HTML don't recognize
+# them (so they should not show up in an XML or HTML document as that
+# document's encoding).
+#
+# If an XML document is encoded in one of these encodings, no encoding
+# will be mentioned in the XML declaration. If an HTML document is
+# encoded in one of these encodings, and the HTML document has a
+# <meta> tag that mentions an encoding, the encoding will be given as
+# the empty string.
+#
+# Source:
+# https://docs.python.org/3/library/codecs.html#python-specific-encodings
+PYTHON_SPECIFIC_ENCODINGS = set([
+    "idna",
+    "mbcs",
+    "oem",
+    "palmos",
+    "punycode",
+    "raw_unicode_escape",
+    "undefined",
+    "unicode_escape",
+    "raw-unicode-escape",
+    "unicode-escape",
+    "string-escape",
+    "string_escape",
+])
+    
+
 class NamespacedAttribute(str):
     """A namespaced string (e.g. 'xml:lang') that remembers the namespace
     ('xml') and the name ('lang') that were used to create it.
@@ -85,6 +114,8 @@ class CharsetMetaAttributeValue(AttributeValueWithCharsetSubstitution):
         """When an HTML document is being encoded to a given encoding, the
         value of a meta tag's 'charset' is the name of the encoding.
         """
+        if encoding in PYTHON_SPECIFIC_ENCODINGS:
+            return ''
         return encoding
 
 
@@ -110,6 +141,8 @@ class ContentMetaAttributeValue(AttributeValueWithCharsetSubstitution):
         return obj
 
     def encode(self, encoding):
+        if encoding in PYTHON_SPECIFIC_ENCODINGS:
+            return ''
         def rewrite(match):
             return match.group(1) + encoding
         return self.CHARSET_RE.sub(rewrite, self.original_value)
@@ -487,7 +520,7 @@ class PageElement(object):
         :param text: A filter for a NavigableString with specific text.
         :kwargs: A dictionary of filters on attribute values.
         :return: A PageElement.
-        :rtype: Union[bs4.element.Tag, bs4.element.NavigableString]
+        :rtype: bs4.element.Tag | bs4.element.NavigableString
         """
         return self._find_one(self.find_all_next, name, attrs, text, **kwargs)
     findNext = find_next  # BS3
@@ -523,7 +556,7 @@ class PageElement(object):
         :param text: A filter for a NavigableString with specific text.
         :kwargs: A dictionary of filters on attribute values.
         :return: A PageElement.
-        :rtype: Union[bs4.element.Tag, bs4.element.NavigableString]
+        :rtype: bs4.element.Tag | bs4.element.NavigableString
         """
         return self._find_one(self.find_next_siblings, name, attrs, text,
                              **kwargs)
@@ -562,7 +595,7 @@ class PageElement(object):
         :param text: A filter for a NavigableString with specific text.
         :kwargs: A dictionary of filters on attribute values.
         :return: A PageElement.
-        :rtype: Union[bs4.element.Tag, bs4.element.NavigableString]
+        :rtype: bs4.element.Tag | bs4.element.NavigableString
         """
         return self._find_one(
             self.find_all_previous, name, attrs, text, **kwargs)
@@ -601,7 +634,7 @@ class PageElement(object):
         :param text: A filter for a NavigableString with specific text.
         :kwargs: A dictionary of filters on attribute values.
         :return: A PageElement.
-        :rtype: Union[bs4.element.Tag, bs4.element.NavigableString]
+        :rtype: bs4.element.Tag | bs4.element.NavigableString
         """
         return self._find_one(self.find_previous_siblings, name, attrs, text,
                              **kwargs)
@@ -640,7 +673,7 @@ class PageElement(object):
         :kwargs: A dictionary of filters on attribute values.
 
         :return: A PageElement.
-        :rtype: Union[bs4.element.Tag, bs4.element.NavigableString]
+        :rtype: bs4.element.Tag | bs4.element.NavigableString
         """
         # NOTE: We can't use _find_one because findParents takes a different
         # set of arguments.
@@ -663,7 +696,7 @@ class PageElement(object):
         :kwargs: A dictionary of filters on attribute values.
 
         :return: A PageElement.
-        :rtype: Union[bs4.element.Tag, bs4.element.NavigableString]
+        :rtype: bs4.element.Tag | bs4.element.NavigableString
         """
         return self._find_all(name, attrs, None, limit, self.parents,
                              **kwargs)
@@ -675,7 +708,7 @@ class PageElement(object):
         """The PageElement, if any, that was parsed just after this one.
 
         :return: A PageElement.
-        :rtype: Union[bs4.element.Tag, bs4.element.NavigableString]
+        :rtype: bs4.element.Tag | bs4.element.NavigableString
         """
         return self.next_element
 
@@ -684,7 +717,7 @@ class PageElement(object):
         """The PageElement, if any, that was parsed just before this one.
 
         :return: A PageElement.
-        :rtype: Union[bs4.element.Tag, bs4.element.NavigableString]
+        :rtype: bs4.element.Tag | bs4.element.NavigableString
         """
         return self.previous_element
 
@@ -992,6 +1025,33 @@ class Doctype(PreformattedString):
     SUFFIX = '>\n'
 
 
+class Stylesheet(NavigableString):
+    """A NavigableString representing an stylesheet (probably
+    CSS).
+
+    Used to distinguish embedded stylesheets from textual content.
+    """
+    pass
+
+    
+class Script(NavigableString):
+    """A NavigableString representing an executable script (probably
+    Javascript).
+
+    Used to distinguish executable code from textual content.
+    """
+    pass
+
+
+class TemplateString(NavigableString):
+    """A NavigableString representing a string found inside an HTML
+    template embedded in a larger document.
+
+    Used to distinguish such strings from the main body of the document.
+    """
+    pass
+
+
 class Tag(PageElement):
     """Represents an HTML or XML tag that is part of a parse tree, along
     with its attributes and contents.
@@ -1211,7 +1271,7 @@ class Tag(PageElement):
             a subclass not found in this list will be ignored. By
             default, this means only NavigableString and CData objects
             will be considered. So no comments, processing instructions,
-            etc.
+            stylesheets, etc.
 
         :return: A string.
         """
@@ -1372,7 +1432,7 @@ class Tag(PageElement):
 
     def __getattr__(self, tag):
         """Calling tag.subtag is the same as calling tag.find(name="subtag")"""
-        #print "Getattr %s.%s" % (self.__class__, tag)
+        #print("Getattr %s.%s" % (self.__class__, tag))
         if len(tag) > 3 and tag.endswith('Tag'):
             # BS3: soup.aTag -> "soup.find("a")
             tag_name = tag[:-3]
@@ -1690,14 +1750,14 @@ class Tag(PageElement):
         :param limit: Stop looking after finding this many results.
         :kwargs: A dictionary of filters on attribute values.
         :return: A PageElement.
-        :rtype: Union[bs4.element.Tag, bs4.element.NavigableString]
+        :rtype: bs4.element.Tag | bs4.element.NavigableString
         """
         r = None
         l = self.find_all(name, attrs, recursive, text, 1, **kwargs)
         if l:
             r = l[0]
         return r
-    findChild = find
+    findChild = find #BS2
 
     def find_all(self, name=None, attrs={}, recursive=True, text=None,
                  limit=None, **kwargs):
@@ -1763,8 +1823,8 @@ class Tag(PageElement):
         :param kwargs: Keyword arguments to be passed into SoupSieve's 
            soupsieve.select() method.
 
-        :return: A PageElement.
-        :rtype: Union[bs4.element.Tag, bs4.element.NavigableString]
+        :return: A Tag.
+        :rtype: bs4.element.Tag
         """
         value = self.select(selector, namespaces, 1, **kwargs)
         if value:
@@ -1788,7 +1848,7 @@ class Tag(PageElement):
         :param kwargs: Keyword arguments to be passed into SoupSieve's 
            soupsieve.select() method.
 
-        :return: A ResultSet of PageElements.
+        :return: A ResultSet of Tags.
         :rtype: bs4.element.ResultSet
         """
         if namespaces is None:
@@ -1975,7 +2035,7 @@ class SoupStrainer(object):
 
         :param markup: A PageElement or a list of them.
         """
-        # print 'looking for %s in %s' % (self, markup)
+        # print('looking for %s in %s' % (self, markup))
         found = None
         # If given a list of items, scan it for a text element that
         # matches.
@@ -2001,7 +2061,7 @@ class SoupStrainer(object):
         return found
 
     def _matches(self, markup, match_against, already_tried=None):
-        # print u"Matching %s against %s" % (markup, match_against)
+        # print(u"Matching %s against %s" % (markup, match_against))
         result = False
         if isinstance(markup, list) or isinstance(markup, tuple):
             # This should only happen when searching a multi-valued attribute

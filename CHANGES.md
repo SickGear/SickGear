@@ -1,6 +1,7 @@
 ﻿### 0.23.0 (2019-xx-xx xx:xx:xx UTC)
 
 * Update attr 20.1.0.dev0 (4bd6827) to 20.2.0 (4f74fba)
+* Update Beautiful Soup 4.8.2 (r559) to 4.9.1 (r585)
 * Change add diskcache_py3 5.0.1 (9670fbb)
 * Change add diskcache_py2 4.1.0 (b0451e0)
 * Update feedparser_py3 6.0.0b3 (7e255f0) to 6.0.1 (98d189fa)
