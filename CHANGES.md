@@ -8,6 +8,8 @@
 * Update feedparser_py2 backport
 * Update Js2Py 0.70 (f297498) to 0.70 (92250a4)
 * Update profilehooks module 1.11.2 (d72cc2b) to 1.12.0 (3ee1f60)
+* Update soupsieve_py3 2.0.0.final (e66c311) to 2.0.2.dev (05086ef)
+* Update soupsieve_py2 backport
 
 
 [develop changelog]
