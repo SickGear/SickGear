@@ -1,6 +1,8 @@
 ﻿### 0.23.0 (2019-xx-xx xx:xx:xx UTC)
 
 * Update attr 20.1.0.dev0 (4bd6827) to 20.2.0 (4f74fba)
+* Change add diskcache_py3 5.0.1 (9670fbb)
+* Change add diskcache_py2 4.1.0 (b0451e0)
 * Update feedparser_py3 6.0.0b3 (7e255f0) to 6.0.1 (98d189fa)
 * Update feedparser_py2 backport
 * Update Js2Py 0.70 (f297498) to 0.70 (92250a4)

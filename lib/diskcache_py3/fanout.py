@@ -1,26 +1,15 @@
 "Fanout cache automatically shards keys and values."
 
+import functools
 import itertools as it
 import operator
 import os.path as op
 import sqlite3
-import sys
 import tempfile
 import time
 
 from .core import ENOVAL, DEFAULT_SETTINGS, Cache, Disk, Timeout
 from .persistent import Deque, Index
-
-############################################################################
-# BEGIN Python 2/3 Shims
-############################################################################
-
-if sys.hexversion >= 0x03000000:
-    from functools import reduce
-
-############################################################################
-# END Python 2/3 Shims
-############################################################################
 
 
 class FanoutCache(object):
@@ -300,7 +289,7 @@ class FanoutCache(object):
         return key in shard
 
 
-    def pop(self, key, default=None, expire_time=False, tag=False, retry=False):
+    def pop(self, key, default=None, expire_time=False, tag=False, retry=False):  # noqa: E501
         """Remove corresponding item for `key` from cache and return value.
 
         If `key` is missing, return `default`.
@@ -383,7 +372,7 @@ class FanoutCache(object):
 
         """
         warnings = (shard.check(fix, retry) for shard in self._shards)
-        return reduce(operator.iadd, warnings, [])
+        return functools.reduce(operator.iadd, warnings, [])
 
 
     def expire(self, retry=False):
@@ -661,17 +650,4 @@ class FanoutCache(object):
             return temp
 
 
-############################################################################
-# BEGIN Python 2/3 Shims
-############################################################################
-
-if sys.hexversion < 0x03000000:
-    import types
-    memoize_func = Cache.__dict__['memoize']  # pylint: disable=invalid-name
-    FanoutCache.memoize = types.MethodType(memoize_func, None, FanoutCache)
-else:
-    FanoutCache.memoize = Cache.memoize
-
-############################################################################
-# END Python 2/3 Shims
-############################################################################
+FanoutCache.memoize = Cache.memoize

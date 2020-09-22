@@ -95,7 +95,11 @@ class Lock(object):
         "Acquire lock using spin-lock algorithm."
         while True:
             added = self._cache.add(
-                self._key, None, expire=self._expire, tag=self._tag, retry=True,
+                self._key,
+                None,
+                expire=self._expire,
+                tag=self._tag,
+                retry=True,
             )
             if added:
                 break
@@ -104,6 +108,10 @@ class Lock(object):
     def release(self):
         "Release lock by deleting key."
         self._cache.delete(self._key, retry=True)
+
+    def locked(self):
+        "Return true if the lock is acquired."
+        return self._key in self._cache
 
     def __enter__(self):
         self.acquire()
