@@ -26,7 +26,8 @@ def format_header_param_rfc2231(name, value):
     strategy defined in RFC 2231.
 
     Particularly useful for header parameters which might contain
-    non-ASCII values, like file names. This follows RFC 2388 Section 4.4.
+    non-ASCII values, like file names. This follows
+    `RFC 2388 Section 4.4 <https://tools.ietf.org/html/rfc2388#section-4.4>`_.
 
     :param name:
         The name of the parameter, a string expected to be ASCII only.
@@ -64,7 +65,6 @@ def format_header_param_rfc2231(name, value):
 _HTML5_REPLACEMENTS = {
     u"\u0022": u"%22",
     # Replace "\" with "\\".
-    u"\u005C": u"\u005C\u005C",
     u"\u005C": u"\u005C\u005C",
 }
 

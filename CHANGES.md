@@ -12,6 +12,7 @@
 * Update Requests library 2.24.0 (1b41763) to 2.24.0 (967a05b)
 * Update soupsieve_py3 2.0.0.final (e66c311) to 2.0.2.dev (05086ef)
 * Update soupsieve_py2 backport
+* Update urllib3 1.25.9 (a5a45dc) to 1.26.0.dev0 (41eae64)
 
 
 [develop changelog]
