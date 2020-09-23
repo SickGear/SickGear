@@ -30,6 +30,15 @@ except NameError:
         pass
 
 
+try:  # Python 3:
+    # Not a no-op, we're adding this to the namespace so it can be imported.
+    BrokenPipeError = BrokenPipeError
+except NameError:  # Python 2:
+
+    class BrokenPipeError(Exception):
+        pass
+
+
 from .exceptions import (
     NewConnectionError,
     ConnectTimeoutError,
@@ -63,34 +72,30 @@ RECENT_DATE = datetime.date(2019, 1, 1)
 _CONTAINS_CONTROL_CHAR_RE = re.compile(r"[^-!#$%&'*+.^_`|~0-9a-zA-Z]")
 
 
-class DummyConnection(object):
-    """Used to detect a failed ConnectionCls import."""
-
-    pass
-
-
 class HTTPConnection(_HTTPConnection, object):
     """
-    Based on httplib.HTTPConnection but provides an extra constructor
+    Based on :class:`http.client.HTTPConnection` but provides an extra constructor
     backwards-compatibility layer between older and newer Pythons.
 
     Additional keyword parameters are used to configure attributes of the connection.
     Accepted parameters include:
 
-      - ``strict``: See the documentation on :class:`urllib3.connectionpool.HTTPConnectionPool`
-      - ``source_address``: Set the source address for the current connection.
-      - ``socket_options``: Set specific options on the underlying socket. If not specified, then
-        defaults are loaded from ``HTTPConnection.default_socket_options`` which includes disabling
-        Nagle's algorithm (sets TCP_NODELAY to 1) unless the connection is behind a proxy.
+    - ``strict``: See the documentation on :class:`urllib3.connectionpool.HTTPConnectionPool`
+    - ``source_address``: Set the source address for the current connection.
+    - ``socket_options``: Set specific options on the underlying socket. If not specified, then
+      defaults are loaded from ``HTTPConnection.default_socket_options`` which includes disabling
+      Nagle's algorithm (sets TCP_NODELAY to 1) unless the connection is behind a proxy.
 
-        For example, if you wish to enable TCP Keep Alive in addition to the defaults,
-        you might pass::
+      For example, if you wish to enable TCP Keep Alive in addition to the defaults,
+      you might pass:
 
-            HTTPConnection.default_socket_options + [
-                (socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1),
-            ]
+      .. code-block:: python
 
-        Or you may want to disable the defaults by passing an empty list (e.g., ``[]``).
+         HTTPConnection.default_socket_options + [
+             (socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1),
+         ]
+
+      Or you may want to disable the defaults by passing an empty list (e.g., ``[]``).
     """
 
     default_port = port_by_scheme["http"]
@@ -144,7 +149,7 @@ class HTTPConnection(_HTTPConnection, object):
         self._dns_host = value
 
     def _new_conn(self):
-        """ Establish a socket connection and set nodelay settings on it.
+        """Establish a socket connection and set nodelay settings on it.
 
         :return: New socket connection.
         """
@@ -191,7 +196,9 @@ class HTTPConnection(_HTTPConnection, object):
         self._prepare_conn(conn)
 
     def putrequest(self, method, url, *args, **kwargs):
-        """Send a request to the server"""
+        """"""
+        # Empty docstring because the indentation of CPython's implementation
+        # is broken but we don't want this method in our documentation.
         match = _CONTAINS_CONTROL_CHAR_RE.search(method)
         if match:
             raise ValueError(
@@ -240,16 +247,22 @@ class HTTPConnection(_HTTPConnection, object):
                 if not isinstance(chunk, bytes):
                     chunk = chunk.encode("utf8")
                 len_str = hex(len(chunk))[2:]
-                self.send(len_str.encode("utf-8"))
-                self.send(b"\r\n")
-                self.send(chunk)
-                self.send(b"\r\n")
+                to_send = bytearray(len_str.encode())
+                to_send += b"\r\n"
+                to_send += chunk
+                to_send += b"\r\n"
+                self.send(to_send)
 
         # After the if clause, to always have a closed body
         self.send(b"0\r\n\r\n")
 
 
 class HTTPSConnection(HTTPConnection):
+    """
+    Many of the parameters to this constructor are passed to the underlying SSL
+    socket by means of :py:func:`urllib3.util.ssl_wrap_socket`.
+    """
+
     default_port = port_by_scheme["https"]
 
     cert_reqs = None
@@ -433,6 +446,12 @@ def _match_hostname(cert, asserted_hostname):
 
 def _get_default_user_agent():
     return "python-urllib3/%s" % __version__
+
+
+class DummyConnection(object):
+    """Used to detect a failed ConnectionCls import."""
+
+    pass
 
 
 if not ssl:
