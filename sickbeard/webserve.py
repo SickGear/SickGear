@@ -8390,7 +8390,7 @@ class CachedImages(MainHandler):
                 tmdbimage = True
                 try:
                     TMDB.API_KEY = sickbeard.TMDB_API_KEY
-                    tmdbconfig = TMDB.Configuration().info()
+                    tmdbconfig = sg_helpers.get_tmdb_info()
                     images = TMDB.TV(helpers.try_int(tmdbid)).images()
                     s = '%s%s%s' % (tmdbconfig['images']['base_url'], tmdbconfig['images']['poster_sizes'][3],
                                     sorted(images['posters'], key=lambda x: x['vote_average'],
