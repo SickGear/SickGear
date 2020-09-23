@@ -1,5 +1,8 @@
 ﻿### 0.23.0 (2019-xx-xx xx:xx:xx UTC)
 
+* Change `Discordapp` to `Discord` in line with company change
+* Change remove `app` from URL when calling webhook
+* Change remind user when testing Notifications config / Discord to update URL
 * Update attr 20.1.0.dev0 (4bd6827) to 20.2.0 (4f74fba)
 * Update Beautiful Soup 4.8.2 (r559) to 4.9.1 (r585)
 * Update dateutil 2.8.1 (43b7838) to 2.8.1 (c496b4f)

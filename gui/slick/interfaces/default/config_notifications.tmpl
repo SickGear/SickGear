@@ -1423,7 +1423,7 @@
 						<span class="list"><div class="item text">Bubble links:</div>
 							<div class="item"><a href="#trakt" rel="noreferrer"><img height="16px" src="$sbRoot/images/notifiers/trakt.png">Trakt</a></div>
 							<div class="item"><a href="#slack" rel="noreferrer"><img height="16px" src="$sbRoot/images/notifiers/slack.png">Slack</a></div>
-							<div class="item"><a href="#discordapp" rel="noreferrer"><img height="16px" src="$sbRoot/images/notifiers/discordapp.png">Discordapp</a></div>
+							<div class="item"><a href="#discord" rel="noreferrer"><img height="16px" src="$sbRoot/images/notifiers/discord.png">Discord</a></div>
 							<div class="item"><a href="#gitter" rel="noreferrer"><img height="16px" src="$sbRoot/images/notifiers/gitter.png">Gitter</a></div>
 							<div class="item"><a href="#telegram" rel="noreferrer"><img height="16px" src="$sbRoot/images/notifiers/telegram.png">Telegram</a></div>
 							<div class="item"><a href="#email" rel="noreferrer"><img height="16px" src="$sbRoot/images/notifiers/email.png">Email</a></div>
@@ -1710,106 +1710,106 @@
 
 				<div class="component-group">
 					<div class="component-group-desc">
-						<img class="notifier-icon" src="$sbRoot/images/notifiers/discordapp.png" alt="" title="Discordapp">
-						<h3><a name="discordapp" href="<%= anon_url('https://discordapp.com/') %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;">Discordapp</a></h3>
+						<img class="notifier-icon" src="$sbRoot/images/notifiers/discord.png" alt="" title="Discord">
+						<h3><a name="discord" href="<%= anon_url('https://discord.com/') %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;">Discord</a></h3>
 						<p>Voice and text chat.</p>
 					</div>
 					<fieldset class="component-group-list">
 						<div class="field-pair">
-							<label for="use-discordapp">
+							<label for="use-discord">
 								<span class="component-title">Enable</span>
 								<span class="component-desc">
-									<input type="checkbox" class="enabler" name="use_discordapp" id="use-discordapp" #if $sickbeard.USE_DISCORDAPP then 'checked="checked"' else ''#>
-									<p>should SickGear send Discordapp notifications ?</p>
+									<input type="checkbox" class="enabler" name="use_discord" id="use-discord" #if $sickbeard.USE_DISCORD then 'checked="checked"' else ''#>
+									<p>should SickGear send Discord notifications ?</p>
 								</span>
 							</label>
 						</div>
 
-						<div id="content_use-discordapp">
+						<div id="content_use-discord">
 							<div class="field-pair">
-								<label for="discordapp-notify-onsnatch">
+								<label for="discord-notify-onsnatch">
 									<span class="component-title">Notify on snatch</span>
 									<span class="component-desc">
-										<input type="checkbox" name="discordapp_notify_onsnatch" id="discordapp-notify-onsnatch" #if $sickbeard.DISCORDAPP_NOTIFY_ONSNATCH then 'checked="checked"' else ''#>
+										<input type="checkbox" name="discord_notify_onsnatch" id="discord-notify-onsnatch" #if $sickbeard.DISCORD_NOTIFY_ONSNATCH then 'checked="checked"' else ''#>
 										<p>send a notification when a download starts ?</p>
 									</span>
 								</label>
 							</div>
 							<div class="field-pair">
-								<label for="discordapp-notify-ondownload">
+								<label for="discord-notify-ondownload">
 									<span class="component-title">Notify on download</span>
 									<span class="component-desc">
-										<input type="checkbox" name="discordapp_notify_ondownload" id="discordapp-notify-ondownload" #if $sickbeard.DISCORDAPP_NOTIFY_ONDOWNLOAD then 'checked="checked"' else ''#>
+										<input type="checkbox" name="discord_notify_ondownload" id="discord-notify-ondownload" #if $sickbeard.DISCORD_NOTIFY_ONDOWNLOAD then 'checked="checked"' else ''#>
 										<p>send a notification when a download finishes ?</p>
 									</span>
 								</label>
 							</div>
 							<div class="field-pair">
-								<label for="discordapp-notify-onsubtitledownload">
+								<label for="discord-notify-onsubtitledownload">
 									<span class="component-title">Notify on subtitle download</span>
 									<span class="component-desc">
-										<input type="checkbox" name="discordapp_notify_onsubtitledownload" id="discordapp-notify-onsubtitledownload" #if $sickbeard.DISCORDAPP_NOTIFY_ONSUBTITLEDOWNLOAD then 'checked="checked"' else ''#>
+										<input type="checkbox" name="discord_notify_onsubtitledownload" id="discord-notify-onsubtitledownload" #if $sickbeard.DISCORD_NOTIFY_ONSUBTITLEDOWNLOAD then 'checked="checked"' else ''#>
 										<p>send a notification when subtitles are downloaded ?</p>
 									</span>
 								</label>
 							</div>
 
 							<div class="field-pair">
-								<label for="discordapp-as-authed">
+								<label for="discord-as-authed">
 									<span class="component-title">Post as authed user</span>
 									<span class="component-desc">
-										<input type="checkbox" class="view-if" name="discordapp_as_authed" id="discordapp-as-authed" #if $sickbeard.DISCORDAPP_AS_AUTHED then 'checked="checked"' else ''#>
+										<input type="checkbox" class="view-if" name="discord_as_authed" id="discord-as-authed" #if $sickbeard.DISCORD_AS_AUTHED then 'checked="checked"' else ''#>
 										<p>send notifications using the username and avatar of the channel webhook</p>
 									</span>
 								</label>
 							</div>
-							<div class="hide-if-discordapp-as-authed">
+							<div class="hide-if-discord-as-authed">
 								<div class="field-pair">
-									<label for="discordapp-username">
+									<label for="discord-username">
 										<span class="component-title">Post as a custom name</span>
 										<span class="component-desc">
-											<input type="text" name="discordapp_username" id="discordapp-username" value="$sickbeard.DISCORDAPP_USERNAME" class="form-control input-sm input250">
+											<input type="text" name="discord_username" id="discord-username" value="$sickbeard.DISCORD_USERNAME" class="form-control input-sm input250">
 											<p>blank for 'SickGear'</p>
 										</span>
 									</label>
 								</div>
 								<div class="field-pair">
-									<label for="discordapp-icon-url">
+									<label for="discord-icon-url">
 										<span class="component-title">Custom icon image url</span>
 										<span class="component-desc">
-											<input type="text" name="discordapp_icon_url" id="discordapp-icon-url" value="$sickbeard.DISCORDAPP_ICON_URL" class="form-control input-sm input250">
+											<input type="text" name="discord_icon_url" id="discord-icon-url" value="$sickbeard.DISCORD_ICON_URL" class="form-control input-sm input250">
 											<p>blank for SickGear image</p>
 										</span>
 									</label>
 								</div>
 							</div>
 							<div class="field-pair">
-								<label for="discordapp-as-tts">
+								<label for="discord-as-tts">
 									<span class="component-title">Post as Text-To-Speech</span>
 									<span class="component-desc">
-										<input type="checkbox" name="discordapp_as_tts" id="discordapp-as-tts" #if $sickbeard.DISCORDAPP_AS_TTS then 'checked="checked"' else ''#>
+										<input type="checkbox" name="discord_as_tts" id="discord-as-tts" #if $sickbeard.DISCORD_AS_TTS then 'checked="checked"' else ''#>
 										<p>send notifications with Text-To-Speech enabled</p>
 									</span>
 								</label>
 							</div>
 							<div class="field-pair">
-								<label for="discordapp-access-token">
-									<span class="component-title">Discordapp channel webhook</span>
+								<label for="discord-access-token">
+									<span class="component-title">Discord channel webhook</span>
 									<span class="component-desc">
-										<input type="text" name="discordapp_access_token" id="discordapp-access-token" value="$sickbeard.DISCORDAPP_ACCESS_TOKEN" class="form-control input-sm input350">
+										<input type="text" name="discord_access_token" id="discord-access-token" value="$sickbeard.DISCORD_ACCESS_TOKEN" class="form-control input-sm input350">
 										<div class="clear-left"><p>1. 'Edit Channel' for the server where you have permission<br>
 										2. select the 'Webhooks' menu item then 'Create Webhook'<br>
 										3. copy the webook url, paste it to the above field<br>
-										4. select 'Save' in Discordapp</p></div>
+										4. select 'Save' in Discord</p></div>
 									</span>
 								</label>
 							</div>
-							<div class="test-notification" id="test-discordapp-result">Click below to test</div>
-							<input type="button" class="btn" value="Test Discordapp" id="test-discordapp">
+							<div class="test-notification" id="test-discord-result">Click below to test</div>
+							<input type="button" class="btn" value="Test Discord" id="test-discord">
 							<input type="submit" class="btn config_submitter" value="Save Changes">
-						</div><!-- /content_use-discordapp //-->
+						</div><!-- /content_use-discord //-->
 					</fieldset>
-				</div><!-- /discordapp component-group //-->
+				</div><!-- /discord component-group //-->
 
 
 				<div class="component-group">

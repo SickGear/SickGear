@@ -449,15 +449,15 @@ SLACK_BOT_NAME = None
 SLACK_ICON_URL = None
 SLACK_ACCESS_TOKEN = None
 
-USE_DISCORDAPP = False
-DISCORDAPP_NOTIFY_ONSNATCH = False
-DISCORDAPP_NOTIFY_ONDOWNLOAD = False
-DISCORDAPP_NOTIFY_ONSUBTITLEDOWNLOAD = False
-DISCORDAPP_AS_AUTHED = False
-DISCORDAPP_USERNAME = None
-DISCORDAPP_ICON_URL = None
-DISCORDAPP_AS_TTS = 0
-DISCORDAPP_ACCESS_TOKEN = None
+USE_DISCORD = False
+DISCORD_NOTIFY_ONSNATCH = False
+DISCORD_NOTIFY_ONDOWNLOAD = False
+DISCORD_NOTIFY_ONSUBTITLEDOWNLOAD = False
+DISCORD_AS_AUTHED = False
+DISCORD_USERNAME = None
+DISCORD_ICON_URL = None
+DISCORD_AS_TTS = 0
+DISCORD_ACCESS_TOKEN = None
 
 USE_GITTER = False
 GITTER_NOTIFY_ONSNATCH = False
@@ -731,9 +731,9 @@ def init_stage_1(console_logging):
         MC_MRU, TVC_MRU, \
         USE_SLACK, SLACK_NOTIFY_ONSNATCH, SLACK_NOTIFY_ONDOWNLOAD, SLACK_NOTIFY_ONSUBTITLEDOWNLOAD, \
         SLACK_CHANNEL, SLACK_AS_AUTHED, SLACK_BOT_NAME, SLACK_ICON_URL, SLACK_ACCESS_TOKEN, \
-        USE_DISCORDAPP, DISCORDAPP_NOTIFY_ONSNATCH, DISCORDAPP_NOTIFY_ONDOWNLOAD, \
-        DISCORDAPP_NOTIFY_ONSUBTITLEDOWNLOAD, \
-        DISCORDAPP_AS_AUTHED, DISCORDAPP_USERNAME, DISCORDAPP_ICON_URL, DISCORDAPP_AS_TTS, DISCORDAPP_ACCESS_TOKEN,\
+        USE_DISCORD, DISCORD_NOTIFY_ONSNATCH, DISCORD_NOTIFY_ONDOWNLOAD, \
+        DISCORD_NOTIFY_ONSUBTITLEDOWNLOAD, \
+        DISCORD_AS_AUTHED, DISCORD_USERNAME, DISCORD_ICON_URL, DISCORD_AS_TTS, DISCORD_ACCESS_TOKEN,\
         USE_GITTER, GITTER_NOTIFY_ONSNATCH, GITTER_NOTIFY_ONDOWNLOAD, GITTER_NOTIFY_ONSUBTITLEDOWNLOAD,\
         GITTER_ROOM, GITTER_ACCESS_TOKEN, \
         USE_TELEGRAM, TELEGRAM_NOTIFY_ONSNATCH, TELEGRAM_NOTIFY_ONDOWNLOAD, TELEGRAM_NOTIFY_ONSUBTITLEDOWNLOAD, \
@@ -744,7 +744,7 @@ def init_stage_1(console_logging):
     global ANIME_TREAT_AS_HDTV, USE_ANIDB, ANIDB_USERNAME, ANIDB_PASSWORD, ANIDB_USE_MYLIST
 
     for stanza in ('General', 'Blackhole', 'SABnzbd', 'NZBGet', 'Emby', 'Kodi', 'XBMC', 'PLEX',
-                   'Growl', 'Prowl', 'Slack', 'Discordapp', 'Boxcar2', 'NMJ', 'NMJv2',
+                   'Growl', 'Prowl', 'Slack', 'Discord', 'Boxcar2', 'NMJ', 'NMJv2',
                    'Synology', 'SynologyNotifier',
                    'pyTivo', 'Pushalot', 'Pushbullet', 'Subtitles'):
         check_section(CFG, stanza)
@@ -1179,16 +1179,16 @@ def init_stage_1(console_logging):
     SLACK_ICON_URL = check_setting_str(CFG, 'Slack', 'slack_icon_url', '')
     SLACK_ACCESS_TOKEN = check_setting_str(CFG, 'Slack', 'slack_access_token', '')
 
-    USE_DISCORDAPP = bool(check_setting_int(CFG, 'Discordapp', 'use_discordapp', 0))
-    DISCORDAPP_NOTIFY_ONSNATCH = bool(check_setting_int(CFG, 'Discordapp', 'discordapp_notify_onsnatch', 0))
-    DISCORDAPP_NOTIFY_ONDOWNLOAD = bool(check_setting_int(CFG, 'Discordapp', 'discordapp_notify_ondownload', 0))
-    DISCORDAPP_NOTIFY_ONSUBTITLEDOWNLOAD = bool(
-        check_setting_int(CFG, 'Discordapp', 'discordapp_notify_onsubtitledownload', 0))
-    DISCORDAPP_AS_AUTHED = bool(check_setting_int(CFG, 'Discordapp', 'discordapp_as_authed', 0))
-    DISCORDAPP_USERNAME = check_setting_str(CFG, 'Discordapp', 'discordapp_username', '')
-    DISCORDAPP_ICON_URL = check_setting_str(CFG, 'Discordapp', 'discordapp_icon_url', '')
-    DISCORDAPP_AS_TTS = bool(check_setting_str(CFG, 'Discordapp', 'discordapp_as_tts', 0))
-    DISCORDAPP_ACCESS_TOKEN = check_setting_str(CFG, 'Discordapp', 'discordapp_access_token', '')
+    USE_DISCORD = bool(check_setting_int(CFG, 'Discord', 'use_discord', 0))
+    DISCORD_NOTIFY_ONSNATCH = bool(check_setting_int(CFG, 'Discord', 'discord_notify_onsnatch', 0))
+    DISCORD_NOTIFY_ONDOWNLOAD = bool(check_setting_int(CFG, 'Discord', 'discord_notify_ondownload', 0))
+    DISCORD_NOTIFY_ONSUBTITLEDOWNLOAD = bool(
+        check_setting_int(CFG, 'Discord', 'discord_notify_onsubtitledownload', 0))
+    DISCORD_AS_AUTHED = bool(check_setting_int(CFG, 'Discord', 'discord_as_authed', 0))
+    DISCORD_USERNAME = check_setting_str(CFG, 'Discord', 'discord_username', '')
+    DISCORD_ICON_URL = check_setting_str(CFG, 'Discord', 'discord_icon_url', '')
+    DISCORD_AS_TTS = bool(check_setting_str(CFG, 'Discord', 'discord_as_tts', 0))
+    DISCORD_ACCESS_TOKEN = check_setting_str(CFG, 'Discord', 'discord_access_token', '')
 
     USE_GITTER = bool(check_setting_int(CFG, 'Gitter', 'use_gitter', 0))
     GITTER_NOTIFY_ONSNATCH = bool(check_setting_int(CFG, 'Gitter', 'gitter_notify_onsnatch', 0))
@@ -2100,13 +2100,13 @@ def save_config():
             ('icon_url', SLACK_ICON_URL),
             ('access_token', SLACK_ACCESS_TOKEN),
         ]),
-        ('Discordapp', [
-            ('use_%s', int(USE_DISCORDAPP)),
-            ('as_authed', int(DISCORDAPP_AS_AUTHED)),
-            ('username', DISCORDAPP_USERNAME),
-            ('icon_url', DISCORDAPP_ICON_URL),
-            ('as_tts', int(DISCORDAPP_AS_TTS)),
-            ('access_token', DISCORDAPP_ACCESS_TOKEN),
+        ('Discord', [
+            ('use_%s', int(USE_DISCORD)),
+            ('as_authed', int(DISCORD_AS_AUTHED)),
+            ('username', DISCORD_USERNAME),
+            ('icon_url', DISCORD_ICON_URL),
+            ('as_tts', int(DISCORD_AS_TTS)),
+            ('access_token', DISCORD_ACCESS_TOKEN),
         ]),
         ('Gitter', [
             ('use_%s', int(USE_GITTER)),
@@ -2160,7 +2160,7 @@ def save_config():
         # ('Pushalot', PUSHALOT_NOTIFY_ONSNATCH, PUSHALOT_NOTIFY_ONDOWNLOAD, PUSHALOT_NOTIFY_ONSUBTITLEDOWNLOAD),
 
         ('Slack', SLACK_NOTIFY_ONSNATCH, SLACK_NOTIFY_ONDOWNLOAD, SLACK_NOTIFY_ONSUBTITLEDOWNLOAD),
-        ('Discordapp', DISCORDAPP_NOTIFY_ONSNATCH, DISCORDAPP_NOTIFY_ONDOWNLOAD, DISCORDAPP_NOTIFY_ONSUBTITLEDOWNLOAD),
+        ('Discord', DISCORD_NOTIFY_ONSNATCH, DISCORD_NOTIFY_ONDOWNLOAD, DISCORD_NOTIFY_ONSUBTITLEDOWNLOAD),
         ('Gitter', GITTER_NOTIFY_ONSNATCH, GITTER_NOTIFY_ONDOWNLOAD, GITTER_NOTIFY_ONSUBTITLEDOWNLOAD),
         ('Telegram', TELEGRAM_NOTIFY_ONSNATCH, TELEGRAM_NOTIFY_ONDOWNLOAD, TELEGRAM_NOTIFY_ONSUBTITLEDOWNLOAD),
         ('Email', EMAIL_NOTIFY_ONSNATCH, EMAIL_NOTIFY_ONDOWNLOAD, EMAIL_NOTIFY_ONSUBTITLEDOWNLOAD),

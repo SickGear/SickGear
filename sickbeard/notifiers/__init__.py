@@ -23,7 +23,7 @@ import re
 # from lib import libtrakt
 from . import emby, kodi, plex, xbmc, \
     boxcar2, nmj, nmjv2, pushbullet, pushover, pytivo, synoindex, synologynotifier, \
-    discordapp, emailnotify, gitter, libnotify, growl, prowl, slack, telegram, trakt
+    discord, emailnotify, gitter, libnotify, growl, prowl, slack, telegram, trakt
 
 import sickbeard
 # noinspection PyPep8Naming
@@ -59,7 +59,7 @@ class NotifierFactory(object):
             # social
             TRAKT=trakt.TraktNotifier,
             SLACK=slack.SlackNotifier,
-            DISCORDAPP=discordapp.DiscordappNotifier,
+            DISCORD=discord.DiscordNotifier,
             GITTER=gitter.GitterNotifier,
             TELEGRAM=telegram.TelegramNotifier,
             EMAIL=emailnotify.EmailNotifier,
