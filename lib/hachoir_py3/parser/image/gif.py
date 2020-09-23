@@ -27,7 +27,7 @@ MAX_HEIGHT = MAX_WIDTH
 MAX_FILE_SIZE = 100 * 1024 * 1024
 
 
-def rle_repr(l):
+def rle_repr(chain):
     """Run-length encode a list into an "eval"-able form
 
     Example:
@@ -46,7 +46,7 @@ def rle_repr(l):
                 result[-1] = '[%s, %s]' % (result[-1][1:-1], previous)
             else:
                 result.append('[%s]' % previous)
-    iterable = iter(l)
+    iterable = iter(chain)
     runlen = 1
     result = []
     try:

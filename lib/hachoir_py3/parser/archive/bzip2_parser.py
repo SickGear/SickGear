@@ -57,8 +57,8 @@ class ZeroTerminatedNumber(Field):
         return self._value
 
 
-def move_to_front(l, c):
-    l[:] = l[c:c + 1] + l[0:c] + l[c + 1:]
+def move_to_front(seq, index):
+    seq[:] = seq[index:index + 1] + seq[0:index] + seq[index + 1:]
 
 
 class Bzip2Bitmap(FieldSet):

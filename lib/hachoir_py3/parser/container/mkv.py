@@ -177,7 +177,7 @@ def CueTrackPositions(parent):
             time -= cluster['Timecode/unsigned'].value
             for field in cluster:
                 if field.name.startswith('BlockGroup['):
-                    for path in 'Block/block', 'SimpleBlock':
+                    for path in ('Block/block', 'SimpleBlock'):
                         try:
                             block = field[path]
                             if block['track'].value == track and \

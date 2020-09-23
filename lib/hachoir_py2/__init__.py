@@ -1,2 +1,2 @@
-# noinspection PyPep8Naming
-from hachoir_py2.version import VERSION as __version__
+VERSION = (2, 1, 2)
+__version__ = ".".join(map(str, VERSION))

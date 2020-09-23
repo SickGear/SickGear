@@ -7,6 +7,8 @@
 * Change add diskcache_py2 4.1.0 (b0451e0)
 * Update feedparser_py3 6.0.0b3 (7e255f0) to 6.0.1 (98d189fa)
 * Update feedparser_py2 backport
+* Update hachoir_py3 3.0a6 (5b9e05a) to 3.1.2 (f739b43)
+* Update hachoir_py2 2.0a6 (5b9e05a) to 2.1.2
 * Update Js2Py 0.70 (f297498) to 0.70 (92250a4)
 * Update profilehooks module 1.11.2 (d72cc2b) to 1.12.0 (3ee1f60)
 * Update Requests library 2.24.0 (1b41763) to 2.24.0 (967a05b)
