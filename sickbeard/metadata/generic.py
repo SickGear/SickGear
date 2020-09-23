@@ -1089,8 +1089,7 @@ class GenericMetadata(object):
 
         # get TMDB configuration info
         TMDB.API_KEY = sickbeard.TMDB_API_KEY
-        config = TMDB.Configuration()
-        response = config.info()
+        response = sg_helpers.get_tmdb_info()
         base_url = response['images']['base_url']
         sizes = response['images']['poster_sizes']
 

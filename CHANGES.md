@@ -1,5 +1,6 @@
 ﻿### 0.23.0 (2019-xx-xx xx:xx:xx UTC)
 
+* Change add 3 days cache for tmdb base info only
 * Change `Discordapp` to `Discord` in line with company change
 * Change remove `app` from URL when calling webhook
 * Change remind user when testing Notifications config / Discord to update URL

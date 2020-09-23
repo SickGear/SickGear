@@ -20,6 +20,7 @@ import traceback
 
 from exceptions_helper import ex, ConnectionSkipException
 from lib.cachecontrol import CacheControl, caches
+from lib.tmdbsimple.configuration import Configuration
 from cfscrape import CloudflareScraper
 from send2trash import send2trash
 
@@ -35,6 +36,10 @@ if False:
     # noinspection PyUnresolvedReferences
     from typing import Any, AnyStr, Dict, NoReturn, integer_types, Iterable, Iterator, List, Optional, Tuple, Union
     from lxml_etree import etree
+
+# global tmdb_info cache
+_TMDB_INFO_CACHE = {'date': datetime.datetime(2000, 1, 1), 'data': None}
+
 
 # Mapping error status codes to official W3C names
 http_error_code = {
@@ -1303,3 +1308,13 @@ def indent_xml(elem, level=0):
             elem.text = ('%s' % elem.text).replace('\n', ' ')
         if level and (not elem.tail or not elem.tail.strip()):
             elem.tail = i
+
+
+def get_tmdb_info():
+    # type: (...) -> Dict
+    """return tmdbsimple Configuration().info() or cached copy"""
+    global _TMDB_INFO_CACHE
+    # only retrieve info data if older then 3 days
+    if 3 < (datetime.datetime.now() - _TMDB_INFO_CACHE['date']).days or not _TMDB_INFO_CACHE['data']:
+        _TMDB_INFO_CACHE = {'date': datetime.datetime.now(), 'data': Configuration().info()}
+    return _TMDB_INFO_CACHE['data']
