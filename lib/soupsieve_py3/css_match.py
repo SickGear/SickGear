@@ -5,6 +5,8 @@ import re
 from .import css_types as ct
 import unicodedata
 
+import bs4
+
 # Empty tag pattern (whitespace okay)
 RE_NOT_EMPTY = re.compile('[^ \t\r\n\f]')
 
@@ -87,50 +89,36 @@ class _DocumentNav(object):
     @staticmethod
     def is_doc(obj):
         """Is `BeautifulSoup` object."""
-
-        import bs4
         return isinstance(obj, bs4.BeautifulSoup)
 
     @staticmethod
     def is_tag(obj):
         """Is tag."""
-
-        import bs4
         return isinstance(obj, bs4.Tag)
 
     @staticmethod
     def is_declaration(obj):  # pragma: no cover
         """Is declaration."""
-
-        import bs4
         return isinstance(obj, bs4.Declaration)
 
     @staticmethod
     def is_cdata(obj):
         """Is CDATA."""
-
-        import bs4
         return isinstance(obj, bs4.CData)
 
     @staticmethod
     def is_processing_instruction(obj):  # pragma: no cover
         """Is processing instruction."""
-
-        import bs4
         return isinstance(obj, bs4.ProcessingInstruction)
 
     @staticmethod
     def is_navigable_string(obj):
         """Is navigable string."""
-
-        import bs4
         return isinstance(obj, bs4.NavigableString)
 
     @staticmethod
     def is_special_string(obj):
         """Is special string."""
-
-        import bs4
         return isinstance(obj, (bs4.Comment, bs4.Declaration, bs4.CData, bs4.ProcessingInstruction, bs4.Doctype))
 
     @classmethod
