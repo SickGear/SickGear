@@ -296,7 +296,7 @@ def search_infosrc_for_show_id(reg_show_name, tvid=None, prodid=None, ui=None):
     show_names = [re.sub('[. -]', ' ', reg_show_name)]
 
     # Query Indexers for each search term and build the list of results
-    for _tvid in [sickbeard.TVInfoAPI().sources if not tvid else int(tvid)] or []:
+    for _tvid in (sickbeard.TVInfoAPI().sources if not tvid else [int(tvid)]) or []:
         # Query Indexers for each search term and build the list of results
         tvinfo_config = sickbeard.TVInfoAPI(_tvid).api_params.copy()
         if ui is not None:

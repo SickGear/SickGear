@@ -1,4 +1,9 @@
-﻿### 0.22.0 (2020-09-19 20:50:00 UTC)
+﻿### 0.22.1 (2020-09-24 13:00:00 UTC)
+
+* Fix rare case with import existing shows where shows are not listed due to a corrupt `.nfo` file
+
+
+### 0.22.0 (2020-09-19 20:50:00 UTC)
 
 * Add menu Shows/"Metacritic Cards"
 * Add menu Shows/"TV Calendar Cards"

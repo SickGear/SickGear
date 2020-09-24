@@ -57,7 +57,11 @@
 			</td>
     #if $curDir['existing_info'][2] and $indexer > 0
 			<td>
+        #if curDir['existing_info'][1]
 				<a href="<%= anon_url(sickbeard.TVInfoAPI(indexer).config['show_url'] % curDir['existing_info'][1]) %>" target="_new">$curDir['existing_info'][2]</a>
+        #else
+				$curDir['existing_info'][2]
+        #end if
 			</td>
     #else
 			<td>?</td>
