@@ -1,4 +1,9 @@
-﻿### 0.22.1 (2020-09-24 13:00:00 UTC)
+﻿### 0.22.2 (2020-09-25 09:00:00 UTC)
+
+* Change allow Python 3.8.6
+
+
+### 0.22.1 (2020-09-24 13:00:00 UTC)
 
 * Fix rare case with import existing shows where shows are not listed due to a corrupt `.nfo` file
 
