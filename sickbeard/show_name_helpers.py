@@ -103,10 +103,8 @@ def pass_wordlist_checks(name,  # type: AnyStr
     result = None
     if show_obj:
         if show_obj.rls_require_words and isinstance(show_obj.rls_require_words, set):
-            if sickbeard.REQUIRE_WORDS_REGEX == show_obj.rls_require_words_regex:
-                req_word_list.update(show_obj.rls_require_words)
-            else:
-                result = not_contains_any(name, show_obj.rls_require_words, rx=show_obj.rls_require_words_regex)
+            result = not contains_any(name, show_obj.rls_require_words, rx=show_obj.rls_require_words_regex)
+
         if show_obj.rls_global_exclude_require and isinstance(show_obj.rls_global_exclude_require, set):
             req_word_list = req_word_list - show_obj.rls_global_exclude_require
 

@@ -1,6 +1,7 @@
 ﻿### 0.22.2 (2020-09-25 09:00:00 UTC)
 
 * Change allow Python 3.8.6
+* Fix show saved require word list to require at least one word during search
 
 
 ### 0.22.1 (2020-09-24 13:00:00 UTC)
