@@ -3,19 +3,23 @@ import sys
 import unittest
 
 import sickbeard
-from sickbeard import show_name_helpers, helpers
+from sickbeard import helpers, show_name_helpers
 
 sys.path.insert(1, os.path.abspath('..'))
 
 
 class TVShow(object):
-    def __init__(self, ei=set(), er=set(), i=set(), r=set(), ir=False, rr=False):
-        self.rls_global_exclude_ignore = ei
-        self.rls_global_exclude_require = er
+    def __init__(self, i=None, r=None, ir=False, rr=False, ei=None, er=None):
+        i = i or set()
+        r = r or set()
+        ei = ei or set()
+        er = er or set()
         self.rls_ignore_words = i
         self.rls_ignore_words_regex = ir
         self.rls_require_words = r
         self.rls_require_words_regex = rr
+        self.rls_global_exclude_ignore = ei
+        self.rls_global_exclude_require = er
 
 
 class TestCase(unittest.TestCase):
@@ -30,6 +34,9 @@ class TestCase(unittest.TestCase):
         ('[GroupName].Show.Name.-.%02d.[blahblah]', 'not_ignored', 'Show.Name', True, TVShow()),
         ('[GroupName].Show.Name.-.%02d.[required]', 'not_ignored', 'required', True, TVShow()),
         ('[GroupName].Show.Name.-.%02d.[required]', '[not_ignored]', '[required]', True, TVShow()),
+        ('[GroupName].Show.Name.-.%02d.[required]', '[not_ignored]', 'something,[required]', False, TVShow()),
+        ('[GroupName].Show.Name.-.%02d.[required]', '[not_ignored]', r'regex:something,\[required\]', False, TVShow()),
+        ('[GroupName].Show.Name.-.%02d.[required]', '[not_ignored]', r'regex:(something|\[required\])', True, TVShow()),
 
         ('[GroupName].Show.Name.-.%02d.[ignore]', '[ignore]', '', False, TVShow()),
         ('[GroupName].Show.Name.-.%02d.[required]', '[GroupName]', 'required', False, TVShow()),
@@ -52,8 +59,147 @@ class TestCase(unittest.TestCase):
         ('[GroupName].Show.TWO.-.%02d.[required]', '[GroupName]', '', True, TVShow(ei={'[GroupName]'})),
         ('[GroupName].Show.TWO.-.%02d.[something]', '[GroupName]', 'required', False, TVShow(er={'required'})),
 
-        ('[GroupName].Show.TWO.-.%02d.[required]-[GroupName]', '', '', False, TVShow(i={'[GroupName]'})),
-        ('[GroupName].Show.TWO.-.%02d.[something]-required', '', '', True, TVShow(r={'required'})),
+        # show specific ignore word tests
+        ('[GroupName].Show.TWO.-.%02d.[required]-[GroupName]', '', '',
+         False, TVShow(i={'[GroupName]'})),
+        ('[GroupName].Show.TWO.-.%02d.[required]-[GroupName]', '', 'required',
+         False, TVShow(i={'[GroupName]'})),
+        ('[GroupName].Show.TWO.-.%02d.[required]-[GroupName]', 'nothing', 'required',
+         False, TVShow(i={'[GroupName]'})),
+        ('[GroupName].Show.TWO.-.%02d.[required]-[GroupName]', 'nothing', '',
+         False, TVShow(i={'[GroupName]'})),
+        ('[GroupName].Show.TWO.-.%02d.[required]-[GroupName]', '', '',
+         False, TVShow(i={'nothing', '[GroupName]'})),
+        ('[GroupName].Show.TWO.-.%02d.[required]-[GroupName]', '', '',
+         True, TVShow(i={'nothing', 'notthis'})),
+        ('[GroupName].Show.TWO.-.%02d.[required]-[GroupName]', '', 'GroupName',
+         True, TVShow(i={'nothing', 'notthis'})),
+        ('[GroupName].Show.TWO.-.%02d.[required]-[GroupName]', 'something', 'GroupName',
+         True, TVShow(i={'nothing', 'notthis'})),
+        ('[GroupName].Show.TWO.-.%02d.[required]-[GroupName]', '', 'regex:GroupName',
+         True, TVShow(i={'nothing', 'notthis'})),
+        ('[GroupName].Show.TWO.-.%02d.[required]-[GroupName]', 'regex:something', 'regex:GroupName',
+         True, TVShow(i={'nothing', 'notthis'})),
+        ('[GroupName].Show.TWO.-.%02d.[required]-[GroupName]', '', '',
+         False, TVShow(i={r'\[GroupName\]'}, ir=True)),
+        ('[GroupName].Show.TWO.-.%02d.[required]-[GroupName]', '', '',
+         False, TVShow(i={'nothing', r'\[GroupName\]'}, ir=True)),
+        ('[GroupName].Show.TWO.-.%02d.[required]-[GroupName]', '', '',
+         True, TVShow(i={'nothing', 'nothis'}, ir=True)),
+
+        # show specific require word tests
+        ('[GroupName].Show.TWO.-.%02d.[something]-required', '', '',
+         True, TVShow(r={'required'})),
+        ('[GroupName].Show.TWO.-.%02d.[something]-required', '', 'something',
+         True, TVShow(r={'required'})),
+        ('[GroupName].Show.TWO.-.%02d.[something]-required', '', 'nothing',
+         False, TVShow(r={'required'})),
+        ('[GroupName].Show.TWO.-.%02d.[something]-required', 'notthis', 'something',
+         True, TVShow(r={'required'})),
+        ('[GroupName].Show.TWO.-.%02d.[something]-required', 'notthis', 'something,nothing',
+         False, TVShow(r={'required'})),
+        ('[GroupName].Show.TWO.-.%02d.[something]-required', 'notthis', 'nothing',
+         False, TVShow(r={'required'})),
+        ('[GroupName].Show.TWO.-.%02d.[something]-required', 'regex:notthis', 'something',
+         True, TVShow(r={'required'})),
+        ('[GroupName].Show.TWO.-.%02d.[something]-required', 'regex:notthis', 'nothing',
+         False, TVShow(r={'required'})),
+        ('[GroupName].Show.TWO.-.%02d.[something]-required', 'regex:notthis,nothing',
+         'something', True, TVShow(r={'required'})),
+        ('[GroupName].Show.TWO.-.%02d.[something]-required', 'regex:notthis,nothing', 'nothing',
+         False, TVShow(r={'required'})),
+        ('[GroupName].Show.TWO.-.%02d.[something]-required', 'something', 'something',
+         False, TVShow(r={'required'})),
+        ('[GroupName].Show.TWO.-.%02d.[something]-required', 'regex:something', 'something',
+         False, TVShow(r={'required'})),
+        ('[GroupName].Show.TWO.-.%02d.[something]-required', 'regex:something,nothing', 'something',
+         False, TVShow(r={'required'})),
+        ('[GroupName].Show.TWO.-.%02d.[something]-required', '', 'regex:something',
+         True, TVShow(r={'required'})),
+        ('[GroupName].Show.TWO.-.%02d.[something]-required', '', 'something,thistoo',
+         False, TVShow(r={'required'})),
+        ('[GroupName].Show.TWO.-.%02d.[something]-required', '', 'regex:something,thistoo',
+         False, TVShow(r={'required'})),
+        ('[GroupName].Show.TWO.-.%02d.[something]-required', '', '',
+         True, TVShow(r={'nothing', 'required'})),
+        ('[GroupName].Show.TWO.-.%02d.[something]-required', '', '',
+         True, TVShow(r={'required'}, rr=True)),
+        ('[GroupName].Show.TWO.-.%02d.[something]-required', '', '',
+         True, TVShow(r={'nothing', 'required'}, rr=True)),
+
+        # global and show specific require words
+        ('[GroupName].Show.TWO.-.%02d.[something]-required', '', 'Group,Show, TWO',
+         False, TVShow(r={'nothing', 'nothing2', 'required'})),  # `Group` is a partial word and not acceptable
+        ('[GroupName].Show.TWO.-.%02d.[something]-required', '', 'GROUPNAME, SHOW, TWOO',
+         False, TVShow(r={'nothing', 'nothing2', 'required'})),
+        ('[GroupName].Show.TWO.-.%02d.[something]-required', '', 'GroupName,Show, TWO',
+         True, TVShow(r={'nothing', 'nothing2', 'required'})),
+        ('[GroupName].Show.TWO.-.%02d.[something]-required', '', 'GROUPNAME, SHOW,TWO',
+         True, TVShow(r={'nothing', 'nothing2', 'required'})),
+        ('[GroupName].Show.TWO.-.%02d.[something]-required', '', 'GroupName, Show,TWO',
+         True, TVShow(r={'nothing', 'nothing2', 'something', 'nothing3'})),
+
+        # show specific required and ignore words
+        ('[GroupName].Show.TWO.-.%02d.[something]-required', '', '',
+         True, TVShow(r={'required'}, i={'nothing'})),
+        ('[GroupName].Show.TWO.-.%02d.[something]-required', '', 'something',
+         True, TVShow(r={'required'}, i={'nothing'})),
+        ('[GroupName].Show.TWO.-.%02d.[something]-required', '', 'nothing',
+         False, TVShow(r={'required'}, i={'nothing'})),
+        ('[GroupName].Show.TWO.-.%02d.[something]-required', 'notthis', 'something',
+         False, TVShow(r={'required'}, i={'something'})),
+        ('[GroupName].Show.TWO.-.%02d.[something]-required', 'notthis', 'something',
+         False, TVShow(r={'required', 'else'}, i={'something'})),
+        ('[GroupName].Show.TWO.-.%02d.[something]-required', 'notthis', 'something',
+         True, TVShow(r={'required', 'else'}, i={'nothing'})),
+
+        # test global require exclude lists
+        ('[GroupName].Show.TWO.-.%02d.[something]-required', '', 'required,something,nothing',
+         True, TVShow(er={'nothing'})),
+        ('[GroupName].Show.TWO.-.%02d.[something]-required', '', 'regex:required,something,nothing',
+         True, TVShow(er={'nothing'})),
+        ('[GroupName].Show.TWO.-.%02d.[something]-required', '', 'required,something,nothing',
+         True, TVShow(er={'nothing', 'something'})),
+        ('[GroupName].Show.TWO.-.%02d.[something]-required', '', 'regex:required,something,nothing',
+         True, TVShow(er={'nothing', 'something'})),
+        ('[GroupName].Show.TWO.-.%02d.[something]-required', '', 'required,something,nothing',
+         False, TVShow(er={'something'})),
+        ('[GroupName].Show.TWO.-.%02d.[something]-required', '', 'regex:required,something,nothing',
+         False, TVShow(er={'something'})),
+        ('[GroupName].Show.TWO.-.%02d.[something]-required', '', 'required,something,nothing',
+         False, TVShow(er={'something', 'required'})),
+        ('[GroupName].Show.TWO.-.%02d.[something]-required', '', 'regex:required,something,nothing',
+         False, TVShow(er={'something', 'required'})),
+
+        # test global ignore exclude lists
+        ('[GroupName].Show.TWO.-.%02d.[required]-[GroupName]', 'GroupName', '',
+         True, TVShow(ei={'GroupName'})),
+        ('[GroupName].Show.TWO.-.%02d.[required]-[GroupName]', 'nothing,GroupName', '',
+         True, TVShow(ei={'GroupName'})),
+        ('[GroupName].Show.TWO.-.%02d.[required]-[GroupName]', 'regex:nothing,GroupName', '',
+         True, TVShow(ei={'GroupName'})),
+        ('[GroupName].Show.TWO.-.%02d.[required]-[GroupName]', 'required,GroupName', '',
+         True, TVShow(ei={'GroupName', 'required'})),
+        ('[GroupName].Show.TWO.-.%02d.[required]-[GroupName]', 'regex:required,GroupName', '',
+         True, TVShow(ei={'GroupName', 'required'})),
+        ('[GroupName].Show.TWO.-.%02d.[required]-[GroupName]', 'GroupName', '',
+         True, TVShow(ei={'GroupName', 'nothing'})),
+        ('[GroupName].Show.TWO.-.%02d.[required]-[GroupName]', 'nothing,GroupName', '',
+         True, TVShow(ei={'GroupName', 'nothing'})),
+        ('[GroupName].Show.TWO.-.%02d.[required]-[GroupName]', 'regex:nothing,GroupName', '',
+         True, TVShow(ei={'GroupName', 'nothing'})),
+        ('[GroupName].Show.TWO.-.%02d.[required]-[GroupName]', 'GroupName', '',
+         False, TVShow(ei={'something'})),
+        ('[GroupName].Show.TWO.-.%02d.[required]-[GroupName]', 'nothing,GroupName', '',
+         False, TVShow(ei={'something'})),
+        ('[GroupName].Show.TWO.-.%02d.[required]-[GroupName]', 'GroupName,required', '',
+         False, TVShow(ei={'something'})),
+        ('[GroupName].Show.TWO.-.%02d.[required]-[GroupName]', 'required,GroupName', '',
+         False, TVShow(ei={'something'})),
+        ('[GroupName].Show.TWO.-.%02d.[required]-[GroupName]', 'GroupName', '',
+         False, TVShow(ei={'something', 'nothing'})),
+        ('[GroupName].Show.TWO.-.%02d.[required]-[GroupName]', 'regex:nothing,GroupName', '',
+         False, TVShow(ei={'something', 'nothing'})),
 
         ('The.Spanish.Princess.-.%02d',
          r'regex:^(?:(?=.*?\bspanish\b)((?!spanish.?princess).)*|.*princess.*?spanish.*)$, ignore', '', True, TVShow()),

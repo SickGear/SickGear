@@ -13,7 +13,7 @@ def FileInputStream(filename, real_filename=None, **args):
     use unicode(name, 'replace') or unicode(name, 'ignore')).
     """
     if not real_filename:
-        real_filename = (filename if isinstance(filename, str)
+        real_filename = (filename if isinstance(filename, basestring)
                          else getattr(filename, 'name', ''))
     try:
         if isinstance(filename, basestring):
