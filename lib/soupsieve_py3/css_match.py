@@ -5,7 +5,7 @@ import re
 from .import css_types as ct
 import unicodedata
 
-import bs4
+import bs4_py3 as bs4
 
 # Empty tag pattern (whitespace okay)
 RE_NOT_EMPTY = re.compile('[^ \t\r\n\f]')

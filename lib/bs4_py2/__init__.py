@@ -15,7 +15,7 @@ documentation: http://www.crummy.com/software/BeautifulSoup/bs4/doc/
 """
 
 __author__ = "Leonard Richardson (leonardr@segfault.org)"
-__version__ = "4.9.1"
+__version__ = "4.9.2"
 __copyright__ = "Copyright (c) 2004-2020 Leonard Richardson"
 # Use of this source code is governed by the MIT license.
 __license__ = "MIT"
@@ -253,7 +253,9 @@ class BeautifulSoup(Tag):
             if not original_builder and not (
                     original_features == builder.NAME or
                     original_features in builder.ALTERNATE_NAMES
-            ):
+            ) and markup:
+                # The user did not tell us which TreeBuilder to use,
+                # and we had to guess. Issue a warning.
                 if builder.is_xml:
                     markup_type = "XML"
                 else:
@@ -496,13 +498,13 @@ class BeautifulSoup(Tag):
         container = self.string_container(subclass)
         return container(s)
 
-    def insert_before(self, successor):
+    def insert_before(self, *args):
         """This method is part of the PageElement API, but `BeautifulSoup` doesn't implement
         it because there is nothing before or after it in the parse tree.
         """
         raise NotImplementedError("BeautifulSoup objects don't support insert_before().")
 
-    def insert_after(self, successor):
+    def insert_after(self, *args):
         """This method is part of the PageElement API, but `BeautifulSoup` doesn't implement
         it because there is nothing before or after it in the parse tree.
         """
