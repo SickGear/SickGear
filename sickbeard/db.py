@@ -18,6 +18,7 @@
 
 from __future__ import with_statement
 
+import datetime
 import itertools
 import os.path
 import re
@@ -30,9 +31,11 @@ import encodingKludge as ek
 from exceptions_helper import ex
 
 import sickbeard
-from . import logger
+from . import logger, sgdatetime
+from .sgdatetime import timestamp_near
 
-from _23 import filter_iter, list_values, scandir
+from _23 import filter_iter, filter_list, list_values, scandir
+from sg_helpers import make_dirs, compress_file
 from six import iterkeys, iteritems, itervalues
 
 # noinspection PyUnreachableCode
@@ -114,6 +117,55 @@ class DBConnection(object):
             self.connection.row_factory = self._dict_factory
         else:
             self.connection.row_factory = sqlite3.Row
+
+    def backup_db(self, target, backup_filename=None):
+        # type: (AnyStr, AnyStr) -> Tuple[bool, AnyStr]
+        """
+        backups the db ot target dir + optional filename
+
+        Availability: SQLite 3.6.11 or higher
+        New in version 3.7
+
+        :param target: target dir
+        :param backup_filename: optional backup filename (default is the source name)
+        :return: success, message
+        """
+        if not db_supports_backup:
+            logger.log('this python sqlite3 version doesn\'t support backups', logger.DEBUG)
+            return False, 'this python sqlite3 version doesn\'t support backups'
+
+        if not ek.ek(os.path.isdir, target):
+            logger.log('Backup target invalid', logger.ERROR)
+            return False, 'Backup target invalid'
+
+        target_db = ek.ek(os.path.join, target, (backup_filename, self.filename)[None is backup_filename])
+        if ek.ek(os.path.exists, target_db):
+            logger.log('Backup target file already exists', logger.ERROR)
+            return False, 'Backup target file already exists'
+
+        def progress(status, remaining, total):
+            logger.log('Copied %s of %s pages...' % (total - remaining, total), logger.DEBUG)
+
+        backup_con = None
+
+        try:
+            # copy into this DB
+            backup_con = sqlite3.connect(target_db, 20)
+            with backup_con:
+                with db_lock:
+                    self.connection.backup(backup_con, progress=progress)
+            logger.log('%s backup successful' % self.filename, logger.DEBUG)
+        except sqlite3.Error as error:
+            logger.log("Error while taking backup: %s" % ex(error), logger.ERROR)
+            return False, 'Backup failed'
+        finally:
+            if backup_con:
+                try:
+                    backup_con.close()
+                except (BaseException, Exception):
+                    pass
+
+        return True, 'Backup successful'
 
     def checkDBVersion(self):
         # type: (...) -> int
@@ -719,3 +771,75 @@ def get_rollback_module():
         pass
 
     return None
+
+
+def delete_old_db_backups(target):
+    # type: (AnyStr) -> None
+    """
+    remove old db backups (> MAX_DB_BACKUP_COUNT)
+
+    :param target: backup folder to check
+    """
+    try:
+        if not ek.ek(os.path.isdir, target):
+            return
+        file_list = [f for f in ek.ek(scandir, target) if f.is_file()]
+        for filename in ['sickbeard', 'cache', 'failed']:
+            tb = filter_list(lambda fn: fn.is_file() and filename in fn.name, file_list)
+            if sickbeard.MAX_DB_BACKUP_COUNT < len(tb):
+                tb.sort(key=lambda f: f.stat(follow_symlinks=False).st_mtime, reverse=True)
+                for t in tb[sickbeard.MAX_DB_BACKUP_COUNT:]:
+                    try:
+                        ek.ek(os.unlink, t.path)
+                    except (BaseException, Exception):
+                        pass
+    except (BaseException, Exception):
+        pass
+
+
+def backup_all_dbs(target, compress=True, prefer_7z=True):
+    # type: (AnyStr, bool, bool) -> Tuple[bool, AnyStr]
+    """
+    backups all dbs to specified dir
+
+    optional compress with zip or 7z (python 3 only, external lib py7zr required)
+    7z falls back to zip if py7zr is not available
+
+    :param target: target folder to backup to
+    :param compress: compress db backups
+    :param prefer_7z: prefer 7z compression if available
+    :return: success, message
+    """
+    if not ek.ek(os.path.isdir, target):
+        make_dirs(target)
+    if not ek.ek(os.path.isdir, target):
+        logger.log('Failed to create db backup dir', logger.ERROR)
+        return False, 'Failed to create db backup dir'
+    my_db = DBConnection()
+    last_backup = my_db.select('SELECT time FROM lastUpdate WHERE provider = ?', ['sickgear_db_backup'])
+    if last_backup:
+        now_stamp = int(timestamp_near(datetime.datetime.now()))
+        the_time = int(last_backup[0]['time'])
+        # only backup every 23 hours
+        if now_stamp - the_time < 60 * 60 * 23:
+            return False, 'Too early to backup db again'
+    now = datetime.datetime.now()
+    d = sgdatetime.SGDatetime.sbfdate(now, d_preset='%d-%m-%Y')
+    t = sgdatetime.SGDatetime.sbftime(now, t_preset='%H-%M')
+    ds = '%s_%s' % (t, d)
+    for c in ['sickbeard', 'cache', 'failed']:
+        cur_db = DBConnection('%s.db' % c)
+        b_name = '%s_%s.db' % (c, ds)
+        success, msg = cur_db.backup_db(target=target, backup_filename=b_name)
+        if not success:
+            return False, msg
+        if compress:
+            full_path = ek.ek(os.path.join, target, b_name)
+            if not compress_file(full_path, '%s.db' % c, prefer_7z=prefer_7z):
+                return False, 'Failure to compress backup'
+    delete_old_db_backups(target)
+    my_db.upsert('lastUpdate',
+                 {'time': int(time.mktime(datetime.datetime.now().timetuple()))},
+                 {'provider': 'sickgear_db_backup'})
+    logger.log('successfully backed up all dbs')
+    return True, 'successfully backed up all dbs'

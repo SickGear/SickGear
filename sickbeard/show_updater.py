@@ -17,10 +17,13 @@
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
 import datetime
+import os
 import traceback
 
 import exceptions_helper
 from exceptions_helper import ex
+# noinspection PyPep8Naming
+import encodingKludge as ek
 
 import sickbeard
 from . import db, logger, network_timezones, properFinder, ui
@@ -66,6 +69,15 @@ class ShowUpdater(object):
         try:
             update_datetime = datetime.datetime.now()
             update_date = update_datetime.date()
+
+            # backup db's
+            if sickbeard.db.db_supports_backup and 0 < sickbeard.MAX_DB_BACKUP_COUNT:
+                logger.log('backing up all db\'s')
+                try:
+                    sickbeard.db.backup_all_dbs(sickbeard.DB_BACKUP_PATH or
+                                                ek.ek(os.path.join, sickbeard.DATA_DIR, 'backup'))
+                except (BaseException, Exception):
+                    logger.log('DB backup error', logger.ERROR)
 
             # refresh network timezones
             try:

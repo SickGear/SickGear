@@ -32,6 +32,12 @@ import requests
 from _23 import decode_bytes, filter_list, html_unescape, list_range, urlparse, urlsplit, urlunparse
 from six import integer_types, iteritems, iterkeys, itervalues, PY2, string_types, text_type
 
+import zipfile
+try:
+    import py7zr
+except ImportError:
+    py7zr = None
+
 # noinspection PyUnreachableCode
 if False:
     # noinspection PyUnresolvedReferences
@@ -1332,3 +1338,37 @@ def get_tmdb_info():
     if 3 < (datetime.datetime.now() - _TMDB_INFO_CACHE['date']).days or not _TMDB_INFO_CACHE['data']:
         _TMDB_INFO_CACHE = {'date': datetime.datetime.now(), 'data': Configuration().info()}
     return _TMDB_INFO_CACHE['data']
+
+
+def compress_file(target, filename, prefer_7z=True, remove_source=True):
+    # type: (AnyStr, AnyStr, bool, bool) -> bool
+    """
+    compress given file to zip or 7z archive
+
+    :param target: file to compress with full path
+    :param filename: filename inside the archive
+    :param prefer_7z: prefer 7z over zip compression if available
+    :param remove_source: remove source file after successful creation of archive
+    :return: success of compression
+    """
+    try:
+        if prefer_7z and None is not py7zr:
+            z_name = '%s.7z' % target.rpartition('.')[0]
+            with py7zr.SevenZipFile(z_name, 'w') as z_file:
+                z_file.write(target, filename)
+        else:
+            zip_name = '%s.zip' % target.rpartition('.')[0]
+            with zipfile.ZipFile(zip_name, 'w', zipfile.ZIP_DEFLATED) as zip_fh:
+                zip_fh.write(target, filename)
+    except (BaseException, Exception) as e:
+        logger.error('error compressing %s' % target)
+        logger.debug('traceback: %s' % ex(e))
+        return False
+    if remove_source:
+        try:
+            remove_file_failed(target)
+        except (BaseException, Exception) as e:
+            logger.error('error removing %s' % target)
+            logger.debug('traceback: %s' % ex(e))
+            return False
+    return True
