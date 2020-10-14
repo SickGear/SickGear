@@ -1,4 +1,12 @@
-﻿### 0.22.2 (2020-09-25 09:00:00 UTC)
+﻿### 0.22.3 (2020-10-14 15:00:00 UTC)
+
+* Fix use qualities saved as default during Add Show to set up qualities in Bulk Change
+* Fix add manual indents to Quality dropdown select that browsers removed from CSS styles
+* Change allow Python 3.9.0
+* Fix English flag
+
+
+### 0.22.2 (2020-09-25 09:00:00 UTC)
 
 * Change allow Python 3.8.6
 * Fix show saved require word list to require at least one word during search
