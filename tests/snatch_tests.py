@@ -75,6 +75,7 @@ def test_generator(tvdbdid, show_name, curData, forceSearch):
         show_obj.quality = curData['q']
         show_obj.save_to_db()
         sickbeard.showList.append(show_obj)
+        sickbeard.showDict[show_obj.sid_int] = show_obj
         episode = None
 
         for epNumber in curData['e']:

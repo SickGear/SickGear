@@ -382,6 +382,7 @@ class ShowAddTests(test.SickbeardTestDBCase):
     def setUp(self):
         super(ShowAddTests, self).setUp()
         sickbeard.showList = []
+        sickbeard.showDict = {}
         sickbeard.WANTEDLIST_CACHE = WantedQualities()
 
     def test_getWanted(self):
@@ -398,6 +399,7 @@ class ShowAddTests(test.SickbeardTestDBCase):
             show_obj.startyear = 1987
             show_obj.save_to_db()
             sickbeard.showList = [show_obj]
+            sickbeard.showDict[show_obj.sid_int] = show_obj
             cl = []
             ep_id = ep_base * 10000
             for ep in w['episodes']:

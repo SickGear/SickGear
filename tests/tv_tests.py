@@ -43,6 +43,7 @@ class TVShowTests(test.SickbeardTestDBCase):
     def setUp(self):
         super(TVShowTests, self).setUp()
         sickbeard.showList = []
+        sickbeard.showDict = {}
 
     def test_init_indexerid(self):
         show_obj = TVShow(1, 1, 'en')
@@ -81,6 +82,7 @@ class TVEpisodeTests(test.SickbeardTestDBCase):
     def setUp(self):
         super(TVEpisodeTests, self).setUp()
         sickbeard.showList = []
+        sickbeard.showDict = {}
 
     def test_init_empty_db(self):
         show_obj = TVShow(1, 1, 'en')
@@ -96,6 +98,7 @@ class TVTests(test.SickbeardTestDBCase):
     def setUp(self):
         super(TVTests, self).setUp()
         sickbeard.showList = []
+        sickbeard.showDict = {}
 
     @staticmethod
     def test_getEpisode():
@@ -110,6 +113,7 @@ class TVTests(test.SickbeardTestDBCase):
         show_obj.startyear = 1987
         show_obj.save_to_db()
         sickbeard.showList = [show_obj]
+        sickbeard.showDict = {show_obj.sid_int: show_obj}
 
 
 class TVFormatPatternTests(test.SickbeardTestDBCase):
@@ -117,6 +121,7 @@ class TVFormatPatternTests(test.SickbeardTestDBCase):
     def setUp(self):
         super(TVFormatPatternTests, self).setUp()
         sickbeard.showList = []
+        sickbeard.showDict = {}
 
     def test_getEpisode(self):
         show_obj = TVShow(1, 1, 'en')
@@ -129,6 +134,7 @@ class TVFormatPatternTests(test.SickbeardTestDBCase):
         show_obj.airs = 'monday'
         show_obj.startyear = 1987
         sickbeard.showList = [show_obj]
+        sickbeard.showDict = {show_obj.sid_int: show_obj}
         show_obj.sxe_ep_obj[1] = {}
         show_obj.sxe_ep_obj[1][1] = TVEpisode(show_obj, 1, 1, '16)')
         show_obj.sxe_ep_obj[1][1].dirty = False

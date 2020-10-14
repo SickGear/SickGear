@@ -393,7 +393,11 @@ extra_info_no_name_tests = [('The Show Name', [('Episode 302', 3, 2)],
 class InvalidCases(unittest.TestCase):
 
     def _test_invalid(self, rls_name, show_name, prodid, tvid, is_anime):
-        sickbeard.showList.append(TVShowTest(name=rls_name, prodid=prodid, tvid=tvid, is_anime=is_anime))
+        sickbeard.showList = []
+        sickbeard.showDict = {}
+        for s in [TVShowTest(name=rls_name, prodid=prodid, tvid=tvid, is_anime=is_anime)]:
+            sickbeard.showList.append(s)
+            sickbeard.showDict[s.sid_int] = s
         name_cache.addNameToCache(show_name, tvid=tvid, prodid=prodid)
         invalidexception = False
         try:

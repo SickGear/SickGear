@@ -60,7 +60,11 @@ class SceneExceptionTestCase(test.SickbeardTestDBCase):
     def setUp(self):
         super(SceneExceptionTestCase, self).setUp()
 
-        sickbeard.showList = [TVShow(TVINFO_TVDB, 79604), TVShow(TVINFO_TVDB, 251085)]
+        sickbeard.showList = []
+        sickbeard.showDict = {}
+        for s in [TVShow(TVINFO_TVDB, 79604), TVShow(TVINFO_TVDB, 251085), TVShow(TVINFO_TVDB, 78744)]:
+            sickbeard.showList.append(s)
+            sickbeard.showDict[s.sid_int] = s
         scene_exceptions.retrieve_exceptions()
         name_cache.buildNameCache()
 
@@ -76,10 +80,12 @@ class SceneExceptionTestCase(test.SickbeardTestDBCase):
         self.assertEqual(scene_exceptions.get_scene_exception_by_name('Rokka no Yuusha'), [None, None, None])
 
     def test_sceneExceptionByNameAnime(self):
-        sickbeard.showList = None
-        sickbeard.showList = [TVShow(TVINFO_TVDB, 79604), TVShow(TVINFO_TVDB, 295243)]
-        sickbeard.showList[0].anime = 1
-        sickbeard.showList[1].anime = 1
+        sickbeard.showList = []
+        sickbeard.showDict = {}
+        for s in [TVShow(TVINFO_TVDB, 79604), TVShow(TVINFO_TVDB, 295243)]:
+            s.anime = 1
+            sickbeard.showList.append(s)
+            sickbeard.showDict[s.sid_int] = s
         scene_exceptions.retrieve_exceptions()
         name_cache.buildNameCache()
         self.assertEqual(scene_exceptions.get_scene_exception_by_name(u'ブラック・ラグーン'), [1, 79604, -1])
