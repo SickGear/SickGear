@@ -6168,6 +6168,7 @@ class History(MainHandler):
             sql = 'SELECT h.*, show_name, s.indexer || ? || s.indexer_id AS tvid_prodid' \
                   ' FROM history h, tv_shows s' \
                   ' WHERE h.indexer=s.indexer AND h.showid=s.indexer_id' \
+                  ' AND h.hide = 0' \
                   ' ORDER BY date DESC%s' % (' LIMIT %s' % limit, '')['0' == limit]
             sql_result = my_db.select(sql, [TVidProdid.glue])
 
@@ -6273,6 +6274,7 @@ class History(MainHandler):
                   ' WHERE h.showid=s.indexer_id' \
                   ' AND h.provider in ("%s")' % '","'.join(prov_list) + \
                   ' AND h.action in ("%s")' % '","'.join([str(x) for x in Quality.SNATCHED_ANY]) + \
+                  ' AND h.hide = 0' \
                   ' ORDER BY date DESC%s)' % (' LIMIT %s' % limit, '')['0' == limit] + \
                   ' GROUP BY provider' \
                   ' ORDER BY count DESC'
@@ -6405,7 +6407,7 @@ class History(MainHandler):
 
         my_db = db.DBConnection()
         # noinspection SqlConstantCondition
-        my_db.action('DELETE FROM history WHERE 1=1')
+        my_db.action('UPDATE history SET hide = ? WHERE hide = 0', [1])
 
         ui.notifications.message('History cleared')
         self.redirect('/history/')
@@ -6413,8 +6415,8 @@ class History(MainHandler):
     def trim_history(self):
 
         my_db = db.DBConnection()
-        my_db.action('DELETE FROM history WHERE date < ' + str(
-            (datetime.datetime.now() - datetime.timedelta(days=30)).strftime(history.dateFormat)))
+        my_db.action('UPDATE history SET hide = ? WHERE date < ' + str(
+            (datetime.datetime.now() - datetime.timedelta(days=30)).strftime(history.dateFormat)), [1])
 
         ui.notifications.message('Removed history entries greater than 30 days old')
         self.redirect('/history/')

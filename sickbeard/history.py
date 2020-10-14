@@ -54,9 +54,10 @@ def _log_history_item(action, tvid, prodid, season, episode, quality, resource, 
 
     my_db = db.DBConnection()
     my_db.action(
-        'INSERT INTO history (action, date, showid, season, episode, quality, resource, provider, version, indexer)'
-        ' VALUES (?,?,?,?,?,?,?,?,?,?)',
-        [action, log_date, int(prodid), int(season), int(episode), quality, resource, provider, version, int(tvid)])
+        'INSERT INTO history'
+        ' (action, date, showid, season, episode, quality, resource, provider, version, indexer, hide)'
+        ' VALUES (?,?,?,?,?,?,?,?,?,?,?)',
+        [action, log_date, int(prodid), int(season), int(episode), quality, resource, provider, version, int(tvid), 0])
 
 
 def log_snatch(search_result):

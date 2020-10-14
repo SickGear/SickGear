@@ -54,6 +54,7 @@ from .tv import TVidProdid
 from .watchedstate import EmbyWatchedStateUpdater, PlexWatchedStateUpdater
 
 from adba.aniDBerrors import AniDBError
+# noinspection PyProtectedMember
 from browser_ua import get_ua
 from configobj import ConfigObj
 from libtrakt import TraktAPI
@@ -1920,11 +1921,11 @@ def save_config():
         if int(src.enabled):
             new_config[src_id_uc][src_id] = int(src.enabled)
 
-        for attr in filter_iter(lambda a: None is not getattr(src, a, None), ('api_key', 'username', 'search_mode')):
+        for attr in filter_iter(lambda _a: None is not getattr(src, _a, None), ('api_key', 'username', 'search_mode')):
             if 'search_mode' != attr or 'eponly' != getattr(src, attr):
                 new_config[src_id_uc]['%s_%s' % (src_id, attr)] = getattr(src, attr)
 
-        for attr in filter_iter(lambda a: None is not getattr(src, a, None), (
+        for attr in filter_iter(lambda _a: None is not getattr(src, _a, None), (
                 'enable_recentsearch', 'enable_backlog', 'enable_scheduled_backlog',
                 'scene_only', 'scene_loose', 'scene_loose_active',
                 'scene_rej_nuked', 'scene_nuked_active',

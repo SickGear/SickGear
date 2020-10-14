@@ -23,7 +23,7 @@ import exceptions_helper
 from exceptions_helper import ex
 
 import sickbeard
-from . import db, failed_history, logger, network_timezones, properFinder, ui
+from . import db, logger, network_timezones, properFinder, ui
 
 # noinspection PyUnreachableCode
 if False:
@@ -93,14 +93,6 @@ class ShowUpdater(object):
             except (BaseException, Exception):
                 logger.log('scene exceptions update error', logger.ERROR)
                 logger.log(traceback.format_exc(), logger.ERROR)
-
-            # sure, why not?
-            if sickbeard.USE_FAILED_DOWNLOADS:
-                try:
-                    failed_history.remove_old_history()
-                except (BaseException, Exception):
-                    logger.log('Failed History cleanup error', logger.ERROR)
-                    logger.log(traceback.format_exc(), logger.ERROR)
 
             # clear the data of unused providers
             try:
