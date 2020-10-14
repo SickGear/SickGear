@@ -76,6 +76,7 @@ def create_test_cache_folder():
 # =================
 sickbeard.SYS_ENCODING = 'UTF-8'
 sickbeard.showList = []
+sickbeard.showDict = {}
 sickbeard.QUALITY_DEFAULT = 4  # hdtv
 sickbeard.FLATTEN_FOLDERS_DEFAULT = 0
 
@@ -128,12 +129,14 @@ sickbeard.tv.TVEpisode.specify_episode = _fake_specify_ep
 class SickbeardTestDBCase(unittest.TestCase):
     def setUp(self):
         sickbeard.showList = []
+        sickbeard.showDict = {}
         setup_test_db()
         setup_test_episode_file()
         setup_test_show_dir()
 
     def tearDown(self):
         sickbeard.showList = []
+        sickbeard.showDict = {}
         teardown_test_db()
         teardown_test_episode_file()
         teardown_test_show_dir()
