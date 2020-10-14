@@ -196,12 +196,6 @@ def remove_snatched(release, size, provider):
               [prepare_failed_name(release), size, provider])
 
 
-def remove_old_history():
-
-    db_action('DELETE FROM history WHERE date < %s' %
-              str((datetime.datetime.now() - datetime.timedelta(days=30)).strftime(dateFormat)))
-
-
 def has_failed(release, size, provider='%'):
     """
     Returns True if a release has previously failed.

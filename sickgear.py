@@ -85,7 +85,7 @@ sys.path.insert(1, os.path.abspath(os.path.join(os.path.dirname(__file__), 'lib'
 from configobj import ConfigObj
 from exceptions_helper import ex
 import sickbeard
-from sickbeard import db, failed_history, logger, name_cache, network_timezones
+from sickbeard import db, logger, name_cache, network_timezones
 from sickbeard.event_queue import Events
 from sickbeard.tv import TVShow
 from sickbeard.webserveInit import WebServer
@@ -551,9 +551,6 @@ class SickGear(object):
         if not db.DBConnection().has_flag('kodi_nfo_default_removed'):
             sickbeard.metadata.kodi.remove_default_attr()
 
-        if sickbeard.USE_FAILED_DOWNLOADS:
-            failed_history.remove_old_history()
-
         # Start an update if we're supposed to
         if self.force_update or sickbeard.UPDATE_SHOWS_ON_START:
             sickbeard.classes.loading_msg.message = 'Starting a forced show update'
@@ -562,10 +559,6 @@ class SickGear(object):
         sickbeard.classes.loading_msg.message = 'Switching to default web server'
         time.sleep(2)
         self.webserver.switch_handlers()
-
-        # # Launch browser
-        # if sickbeard.LAUNCH_BROWSER and not self.no_launch:
-        #     sickbeard.launch_browser(self.start_port)
 
         # main loop
         while True:

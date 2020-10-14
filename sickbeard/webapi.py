@@ -1748,7 +1748,7 @@ class CMD_SickGearHistoryClear(ApiCall):
     def run(self):
         """ clear the sickgear history """
         my_db = db.DBConnection()
-        my_db.action("DELETE FROM history WHERE 1=1")
+        my_db.action('UPDATE history SET hide = ? WHERE hide = 0', [1])
 
         return _responds(RESULT_SUCCESS, msg="History cleared")
 
@@ -1777,8 +1777,8 @@ class CMD_SickGearHistoryTrim(ApiCall):
     def run(self):
         """ trim the sickgear history """
         my_db = db.DBConnection()
-        my_db.action("DELETE FROM history WHERE date < " + str(
-            (datetime.datetime.now() - datetime.timedelta(days=30)).strftime(history.dateFormat)))
+        my_db.action("UPDATE history SET hide = ? WHERE date < " + str(
+            (datetime.datetime.now() - datetime.timedelta(days=30)).strftime(history.dateFormat)), [1])
 
         return _responds(RESULT_SUCCESS, msg="Removed history entries greater than 30 days old")
 

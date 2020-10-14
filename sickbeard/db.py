@@ -41,6 +41,8 @@ if False:
 
 
 db_lock = threading.Lock()
+db_support_column_rename = (3, 25, 0) <= sqlite3.sqlite_version_info  # type: bool
+db_supports_backup = hasattr(sqlite3.Connection, 'backup') and (3, 6, 11) <= sqlite3.sqlite_version_info  # type: bool
 
 
 def dbFilename(filename='sickbeard.db', suffix=None):
@@ -439,8 +441,9 @@ class SchemaUpgrade(object):
         return column in self.connection.tableInfo(table_name)
 
     # noinspection SqlResolve
-    def addColumn(self, table, column, data_type='NUMERIC', default=0):
-        self.connection.action('ALTER TABLE [%s] ADD %s %s' % (table, column, data_type))
+    def addColumn(self, table, column, data_type='NUMERIC', default=0, set_default=False):
+        self.connection.action('ALTER TABLE [%s] ADD %s %s%s' %
+                               (table, column, data_type, ('', ' DEFAULT "%s"' % default)[set_default]))
         self.connection.action('UPDATE [%s] SET %s = ?' % (table, column), (default,))
 
     def dropColumn(self, table, column):
@@ -620,6 +623,7 @@ def MigrationCode(my_db):
         20010: sickbeard.mainDB.AddIndexerToTables,
         20011: sickbeard.mainDB.AddShowExludeGlobals,
         20012: sickbeard.mainDB.RenameAllowBlockListTables,
+        20013: sickbeard.mainDB.AddHistoryHideColumn,
         # 20002: sickbeard.mainDB.AddCoolSickGearFeature3,
     }
 

@@ -4,6 +4,7 @@
 * Change `Discordapp` to `Discord` in line with company change
 * Change remove `app` from URL when calling webhook
 * Change remind user when testing Notifications config / Discord to update URL
+* Change Trim/Clear history to hide items because the data is needed for core management
 * Fix incorrect text for some drop down list items in the apiBuilder view that affected some browsers
 * Fix connection skip error handling in tvdb_api
 * Add client parameter to pp class and add it to API sg.postprocess

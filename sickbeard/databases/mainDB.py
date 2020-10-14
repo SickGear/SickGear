@@ -28,7 +28,7 @@ import encodingKludge as ek
 from six import iteritems
 
 MIN_DB_VERSION = 9  # oldest db version we support migrating from
-MAX_DB_VERSION = 20013
+MAX_DB_VERSION = 20014
 TEST_BASE_VERSION = None  # the base production db version, only needed for TEST db versions (>=100000)
 
 
@@ -254,14 +254,14 @@ class InitialSchema(db.SchemaUpgrade):
                 'CREATE TABLE flags (flag PRIMARY KEY NOT NULL)',
                 # history
                 'CREATE TABLE history (action NUMERIC, date NUMERIC, showid NUMERIC, season NUMERIC, episode NUMERIC,'
-                ' quality NUMERIC, resource TEXT, provider TEXT, version NUMERIC)',
+                ' quality NUMERIC, resource TEXT, provider TEXT, version NUMERIC, hide NUMERIC DEFAULT 0)',
                 # imdb_info
                 'CREATE TABLE imdb_info (indexer_id INTEGER PRIMARY KEY, imdb_id TEXT, title TEXT, year NUMERIC,'
                 ' akas TEXT, runtimes NUMERIC, genres TEXT, countries TEXT, country_codes TEXT, certificates TEXT,'
                 ' rating TEXT, votes INTEGER, last_update NUMERIC)',
                 # indexer_mapping
                 'CREATE TABLE indexer_mapping (indexer_id INTEGER, indexer NUMERIC, mindexer_id INTEGER NOT NULL,'
-                ' mindexer NUMERIC, date NUMERIC NOT NULL  DEFAULT 0, status INTEGER NOT NULL DEFAULT 0,'
+                ' mindexer NUMERIC, date NUMERIC NOT NULL DEFAULT 0, status INTEGER NOT NULL DEFAULT 0,'
                 ' PRIMARY KEY (indexer_id, indexer, mindexer))',
                 'CREATE INDEX idx_mapping ON indexer_mapping (indexer_id, indexer)',
                 # info
@@ -290,8 +290,8 @@ class InitialSchema(db.SchemaUpgrade):
                 'CREATE INDEX idx_status ON tv_episodes (status,season,episode,airdate)',
                 # tv_episodes_watched
                 'CREATE TABLE tv_episodes_watched (tvep_id NUMERIC NOT NULL, clientep_id TEXT, label TEXT,'
-                ' played NUMERIC DEFAULT 0 NOT NULL, date_watched NUMERIC NOT NULL, date_added NUMERIC,'
-                ' status NUMERIC, location TEXT, file_size NUMERIC, hide INT DEFAULT 0 not null)',
+                ' played NUMERIC NOT NULL DEFAULT 0, date_watched NUMERIC NOT NULL, date_added NUMERIC,'
+                ' status NUMERIC, location TEXT, file_size NUMERIC, hide INT NOT NULL DEFAULT 0)',
                 # tv_shows
                 'CREATE TABLE tv_shows (show_id INTEGER PRIMARY KEY, indexer_id NUMERIC, indexer NUMERIC,'
                 ' show_name TEXT, location TEXT, network TEXT, genre TEXT, classification TEXT, runtime NUMERIC,'
@@ -1668,3 +1668,25 @@ class RenameAllowBlockListTables(db.SchemaUpgrade):
                 ])
 
         return self.setDBVersion(20013)
+
+
+# 20013 -> 20014
+class AddHistoryHideColumn(db.SchemaUpgrade):
+    def execute(self):
+        db.backup_database('sickbeard.db', self.checkDBVersion())
+
+        if not self.hasColumn('history', 'hide'):
+            self.upgrade_log('Adding hide column to history')
+            self.addColumn('history', 'hide', default=0, set_default=True)
+
+            if self.hasTable('history_hide_backup'):
+                self.upgrade_log('Restoring hide status in history from backup')
+                self.connection.mass_action([
+                    ['UPDATE history SET hide = (SELECT hide FROM history_hide_backup as hh WHERE'
+                     ' hh.ROWID = history.ROWID AND hh.showid = history.showid AND hh.indexer = history.indexer AND'
+                     ' hh.season = history.season AND hh.episode = history.episode AND hh.action = history.action AND'
+                     ' hh.date = history.date)'],
+                    ['DROP TABLE history_hide_backup']
+                ])
+
+        return self.setDBVersion(20014)
