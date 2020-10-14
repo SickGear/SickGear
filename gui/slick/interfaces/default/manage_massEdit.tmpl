@@ -1,5 +1,5 @@
 #import sickbeard
-#from sickbeard import common
+#from sickbeard.common import Quality, qualityPresets, qualityPresetStrings, SD
 #from lib import exceptions_helper as exceptions
 #from _23 import filter_list
 <% def sg_var(varname, default=False): return getattr(sickbeard, varname, default) %>#slurp#
@@ -16,9 +16,9 @@
 #if None is not $quality_value:
     #set $initial_quality = int($quality_value)
 #else:
-    #set $initial_quality = $common.SD
+    #set $initial_quality = $SD
 #end if
-#set $anyQualities, $bestQualities = $common.Quality.splitQuality($initial_quality)
+#set $anyQualities, $bestQualities = $Quality.splitQuality($sg_var('QUALITY_DEFAULT', $initial_quality))
 <script type="text/javascript" src="$sbRoot/js/qualityChooser.js?v=$sbPID"></script>
 <script type="text/javascript" src="$sbRoot/js/massEdit.js?v=$sbPID"></script>
 
@@ -58,9 +58,9 @@
 		<div class="selectChoices">
 			<select id="quality-preset" name="quality_preset" class="form-control form-control-inline input-sm">
 				<option value="keep">&lt; keep &gt;</option>
-				<option value="0"  #if None is not $quality_value and $quality_value not in $common.qualityPresets then $selected else ''#>Custom</option>
-#for $curPreset in sorted($common.qualityPresets):
-				<option value="$curPreset" #if $quality_value == $curPreset then $selected else ''#>$common.qualityPresetStrings[$curPreset]</option>
+				<option value="0"  #if None is not $quality_value and $quality_value not in $qualityPresets then $selected else ''#>Custom</option>
+#for $curPreset in $qualityPresets:
+				<option value="$curPreset" #if $quality_value == $curPreset then $selected else ''##echo ('>', '>... ')[$qualityPresetStrings[$curPreset].endswith('0p') and 'UHD' not in $qualityPresetStrings[$curPreset]]#$qualityPresetStrings[$curPreset]</option>
 #end for
 			</select>
 		</div><br />
@@ -68,19 +68,19 @@
 		<div id="custom-quality" class="show-if-quality-custom">
 			<div class="manageCustom pull-left">
 				<h4 style="font-size:14px">Initial</h4>
-#set $anyQualityList = filter_list(lambda x: x > $common.Quality.NONE, $common.Quality.qualityStrings)
+#set $anyQualityList = filter_list(lambda x: x > $Quality.NONE, $Quality.qualityStrings)
 				<select id="wanted-qualities" name="any_qualities" multiple="multiple" size="$len($anyQualityList)">
 #for $curQuality in sorted($anyQualityList):
-					<option value="$curQuality" #if $curQuality in $anyQualities then $selected else ''#>$common.Quality.get_quality_ui($curQuality)</option>
+					<option value="$curQuality" #if $curQuality in $anyQualities then $selected else ''#>$Quality.get_quality_ui($curQuality)</option>
 #end for
 				</select>
 			</div>
 			<div class="manageCustom pull-left">
 				<h4 style="font-size:14px">Upgrade to</h4>
-#set $bestQualityList = filter_list(lambda x: x > $common.Quality.SDTV, $common.Quality.qualityStrings)
+#set $bestQualityList = filter_list(lambda x: x > $Quality.SDTV, $Quality.qualityStrings)
 				<select id="upgrade-qualities" name="best_qualities" multiple="multiple" size="$len($bestQualityList)">
 #for $curQuality in sorted($bestQualityList):
-					<option value="$curQuality" #if $curQuality in $bestQualities then $selected else ''#>$common.Quality.get_quality_ui($curQuality)</option>
+					<option value="$curQuality" #if $curQuality in $bestQualities then $selected else ''#>$Quality.get_quality_ui($curQuality)</option>
 #end for
 				</select>
 			</div><br />

@@ -13,7 +13,7 @@
 			<select id="quality-preset" name="quality_preset" class="form-control form-control-inline input-sm">
 				<option value="0">Custom</option>
 #for $cur_preset in $qualityPresets:
-				<option value="$cur_preset"#echo ('', $html_selected)[$cur_preset == $overall_quality]##echo ('', ' style="padding-left:15px"')[$qualityPresetStrings[$cur_preset].endswith('0p') and 'UHD' not in $qualityPresetStrings[$cur_preset]]#>$qualityPresetStrings[$cur_preset]</option>
+				<option value="$cur_preset"#echo ('', $html_selected)[$cur_preset == $overall_quality]##echo ('>', '>... ')[$qualityPresetStrings[$cur_preset].endswith('0p') and 'UHD' not in $qualityPresetStrings[$cur_preset]]#$qualityPresetStrings[$cur_preset]</option>
 #end for
 			</select>
 			<span>tip: select a quality then "Custom" for a default selection</span>
