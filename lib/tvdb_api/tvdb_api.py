@@ -92,16 +92,16 @@ def retry(exception_to_check, tries=4, delay=3, backoff=2):
                     else:
                         mtries -= 1
                         mdelay *= backoff
-                except ConnectionSkipException:
-                    raise TvdbError('Connection skipped because of previous connection issues')
+                except ConnectionSkipException as e:
+                    raise e
             try:
                 return f(*args, **kwargs)
             except TvdbTokenexpired:
                 if not auth_error:
                     return f(*args, **kwargs)
                 raise TvdbTokenexpired
-            except ConnectionSkipException:
-                raise TvdbError
+            except ConnectionSkipException as e:
+                raise e
 
         return f_retry  # true decorator
 
