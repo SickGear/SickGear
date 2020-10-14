@@ -3323,7 +3323,7 @@ class HomeProcessMedia(Home):
                                               failed='0' != failed,
                                               webhandler=None if '0' == stream else self.send_message,
                                               show_obj=show_obj, is_basedir=is_basedir in ('on', '1'),
-                                              skip_failure_processing=skip_failure_processing)
+                                              skip_failure_processing=skip_failure_processing, client=client)
 
                 if '0' == stream:
                     regexp = re.compile(r'(?i)<br(?:[\s/]+)>', flags=re.UNICODE)

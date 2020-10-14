@@ -58,7 +58,7 @@ if False:
 class ProcessTVShow(object):
     """ Process a TV Show """
 
-    def __init__(self, webhandler=None, is_basedir=True, skip_failure_processing=False):
+    def __init__(self, webhandler=None, is_basedir=True, skip_failure_processing=False, client=None):
         self.files_passed = 0  # type: int
         self.files_failed = 0  # type: int
         self.fail_detected = False  # type: bool
@@ -66,6 +66,7 @@ class ProcessTVShow(object):
         self._output = []  # type: List
         self.webhandler = webhandler
         self.is_basedir = is_basedir  # type: bool
+        self.client = client  # type: Optional[AnyStr]
 
     @property
     def any_vid_processed(self):
@@ -1161,7 +1162,7 @@ class ProcessTVShow(object):
 # backward compatibility prevents the case of this function name from being updated to PEP8
 def processDir(dir_name, nzb_name=None, process_method=None, force=False, force_replace=None,
                failed=False, pp_type='auto', cleanup=False, webhandler=None, show_obj=None, is_basedir=True,
-               skip_failure_processing=False):
+               skip_failure_processing=False, client=None):
     """
 
     :param dir_name: dir name
@@ -1188,12 +1189,15 @@ def processDir(dir_name, nzb_name=None, process_method=None, force=False, force_
     :type is_basedir: bool
     :param skip_failure_processing:
     :type skip_failure_processing: bool
+    :param client: string to represent the client
+    :type client: Optional[AnyStr]
     :return:
     :rtype: AnyStr
     """
     # backward compatibility prevents the case of this function name from being updated to PEP8
-    return ProcessTVShow(webhandler, is_basedir, skip_failure_processing=skip_failure_processing).process_dir(
-        dir_name, nzb_name, process_method, force, force_replace, failed, pp_type, cleanup, show_obj)
+    return ProcessTVShow(webhandler, is_basedir, skip_failure_processing=skip_failure_processing,
+                         client=client).process_dir(dir_name, nzb_name, process_method, force, force_replace, failed,
+                                                    pp_type, cleanup, show_obj)
 
 
 def process_minimal(nzb_name, show_obj, failed, webhandler):

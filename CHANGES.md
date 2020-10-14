@@ -5,6 +5,8 @@
 * Change remove `app` from URL when calling webhook
 * Change remind user when testing Notifications config / Discord to update URL
 * Fix incorrect text for some drop down list items in the apiBuilder view that affected some browsers
+* Add client parameter to pp class and add it to API sg.postprocess
+* Change API version to 14
 * Change add a test for both require and ignore show specific words with partial match, both should fail
 * Change init showDict for all unit tests
 * Update attr 20.1.0.dev0 (4bd6827) to 20.2.0 (4f74fba)

@@ -129,7 +129,7 @@ class PythonObjectEncoder(json.JSONEncoder):
 
 class Api(webserve.BaseHandler):
     """ api class that returns json results """
-    version = 13  # use an int since float-point is unpredictable
+    version = 14  # use an int since float-point is unpredictable
     indent = 4
 
     def check_xsrf_cookie(self):
@@ -1896,6 +1896,7 @@ class CMD_SickGearPostProcess(ApiCall):
                                     "is_priority": {"desc": "Replace file(s) even if existing at a higher quality"},
                                     "type": {"desc": "Type of media process request this is, auto or manual"},
                                     "failed": {"desc": "Mark as failed download"},
+                                    "client": {"desc": "String representing the calling client"},
                                     }
              }
 
@@ -1908,8 +1909,9 @@ class CMD_SickGearPostProcess(ApiCall):
         self.process_method, args = self.check_params(args, kwargs, "process_method", False, False, "string", [
             "copy", "symlink", "hardlink", "move"])
         self.is_priority, args = self.check_params(args, kwargs, "is_priority", 0, False, "bool", [])
-        self.type, args = self.check_params(args, kwargs, "type", "auto", None, "string", ["auto", "manual"])
+        self.type, args = self.check_params(args, kwargs, "type", "auto", False, "string", ["auto", "manual"])
         self.failed, args = self.check_params(args, kwargs, "failed", 0, False, "bool", [])
+        self.client, args = self.check_params(args, kwargs, "client", None, False, "string", [])
         # super, missing, help
         ApiCall.__init__(self, handler, args, kwargs)
 
@@ -1925,7 +1927,8 @@ class CMD_SickGearPostProcess(ApiCall):
             self.type = 'manual'
 
         data = processTV.processDir(self.path, process_method=self.process_method, force=self.force_replace,
-                                    force_replace=self.is_priority, failed=self.failed, pp_type=self.type)
+                                    force_replace=self.is_priority, failed=self.failed, pp_type=self.type,
+                                    client=self.client)
 
         if not self.return_data:
             data = ""
@@ -1951,6 +1954,11 @@ class CMD_PostProcess(CMD_SickGearPostProcess):
         # super, missing, help
         self.sickbeard_call = True
         kwargs['failed'] = "0"
+        try:
+            if 'client' in kwargs:
+                del kwargs['client']
+        except (BaseException, Exception):
+            pass
         CMD_SickGearPostProcess.__init__(self, handler, args, kwargs)
 
 
