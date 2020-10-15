@@ -29,6 +29,7 @@ import encodingKludge as ek
 from exceptions_helper import ex
 
 from . import logger
+from .helpers import scantree
 
 # this is for the drive letter code, it only works on windows
 if 'nt' == os.name:
@@ -122,11 +123,7 @@ def get_file_list(path, include_files):
         '.git']
 
     # filter directories to protect
-    for name in ek.ek(os.listdir, path):
-        if name.lower() not in hide_names:
-            path_file = ek.ek(os.path.join, path, name)
-            is_dir = ek.ek(os.path.isdir, path_file)
-            if include_files or is_dir:
-                result.append({'name': name, 'path': path_file, 'isFile': (1, 0)[is_dir]})
+    for direntry in scantree(path, exclude=hide_names, filter_kind=not include_files, recurse=False) or []:
+        result.append(dict(name=direntry.name, path=direntry.path, isFile=int(direntry.is_file(follow_symlinks=False))))
 
     return result

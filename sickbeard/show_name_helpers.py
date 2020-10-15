@@ -27,11 +27,11 @@ from exceptions_helper import ex
 
 import sickbeard
 from . import common, db, logger
-from .helpers import sanitize_scene_name
+from .helpers import sanitize_scene_name, scantree
 from .name_parser.parser import InvalidNameException, InvalidShowException, NameParser
 from .scene_exceptions import get_scene_exceptions
 
-from _23 import filter_list, map_list, quote_plus
+from _23 import map_list, quote_plus
 from six import iterkeys, itervalues
 
 # noinspection PyUnreachableCode
@@ -440,20 +440,19 @@ def determineReleaseName(dir_name=None, nzb_name=None):
         return None
 
     # try to get the release name from nzb/nfo
-    file_types = ["*.nzb", "*.nfo"]
+    file_types = ['*.nzb', '*.nfo']
 
     for search in file_types:
 
         reg_expr = re.compile(fnmatch.translate(search), re.IGNORECASE)
-        files = [file_name for file_name in ek.ek(os.listdir, dir_name) if
-                 ek.ek(os.path.isfile, ek.ek(os.path.join, dir_name, file_name))]
-        results = filter_list(reg_expr.search, files)
+        results = [direntry.name for direntry in scantree(dir_name, filter_kind=False, recurse=False)
+                   if reg_expr.search(direntry.name)]
 
         if 1 == len(results):
             found_file = ek.ek(os.path.basename, results[0])
             found_file = found_file.rpartition('.')[0]
             if pass_wordlist_checks(found_file):
-                logger.log(u"Release name (" + found_file + ") found from file (" + results[0] + ")")
+                logger.log(u'Release name (%s) found from file (%s)' % (found_file, results[0]))
                 return found_file.rpartition('.')[0]
 
     # If that fails, we try the folder
@@ -462,7 +461,7 @@ def determineReleaseName(dir_name=None, nzb_name=None):
         # NOTE: Multiple failed downloads will change the folder name.
         # (e.g., appending #s)
         # Should we handle that?
-        logger.log(u"Folder name (" + folder + ") appears to be a valid release name. Using it.")
+        logger.log(u'Folder name (%s) appears to be a valid release name. Using it.' % folder)
         return folder
 
     return None

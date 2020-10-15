@@ -28,7 +28,6 @@ import os
 import re
 import shutil
 import socket
-import stat
 import time
 import uuid
 import subprocess
@@ -360,27 +359,14 @@ def list_media_files(path):
     :param path: path
     :return: list of media files
     """
-    if not dir or not ek.ek(os.path.isdir, path):
-        return []
-
-    files = []
-    file_list = ek.ek(os.listdir, path)
-
-    if '.sickgearignore' in file_list:
-        logger.log('Folder "%s" contains ".sickgearignore", ignoring Folder' % path, logger.DEBUG)
-        return []
-
-    for cur_file in file_list:
-        full_cur_file = ek.ek(os.path.join, path, cur_file)  # type: AnyStr
-
-        # if it's a folder do it recursively
-        if ek.ek(os.path.isdir, full_cur_file) and not cur_file.startswith('.') and 'Extras' != cur_file:
-            files += list_media_files(full_cur_file)
-
-        elif has_media_ext(cur_file):
-            files.append(full_cur_file)
-
-    return files
+    result = []
+    if path:
+        if '.sickgearignore' in [direntry.name for direntry in scantree(path, filter_kind=False, recurse=False)]:
+            logger.log('Skipping folder "%s" because it contains ".sickgearignore"' % path, logger.DEBUG)
+        else:
+            result = [direntry.path for direntry in scantree(path, filter_kind=False, exclude='Extras')
+                      if has_media_ext(direntry.name)]
+    return result
 
 
 def copyFile(src_file, dest_file):
@@ -1385,23 +1371,33 @@ def cpu_sleep():
         time.sleep(cpu_presets[sickbeard.CPU_PRESET])
 
 
-def scantree(path, exclude=None, follow_symlinks=False):
-    # type: (AnyStr, Optional[AnyStr, List[AnyStr]], bool) -> Optional[Iterator[DirEntry], Iterable]
-    """Recursively yield DirEntry objects for given directory.
-    :param path: path
-    :param exclude: excludes
-    :param follow_symlinks: follow symlinks
+def scantree(path,  # type: AnyStr
+             exclude=None,  # type: Optional[AnyStr, List[AnyStr]]
+             follow_symlinks=False,  # type: bool
+             filter_kind=None,  # type: Optional[bool]
+             recurse=True  # type: bool
+             ):
+    # type: (...) -> Optional[Iterator[DirEntry], Iterable]
+    """yield DirEntry objects for given path.
+    :param path: Path to scan
+    :param exclude: Exclusions
+    :param follow_symlinks: Follow symlinks
+    :param filter_kind: None to yield everything, True only yields directories, False only yields files
+    :param recurse: Recursively scan down the tree
     :return: iter of results
     """
-    exclude = (exclude, ([exclude], [])[None is exclude])[not isinstance(exclude, list)]
+    exclude = [x.lower() for x in (exclude, ([exclude], [])[None is exclude])[not isinstance(exclude, list)]]
     for entry in ek.ek(scandir, path):
-        if entry.is_dir(follow_symlinks=follow_symlinks):
-            if entry.name not in exclude:
-                for subentry in scantree(entry.path):
+        is_dir = entry.is_dir(follow_symlinks=follow_symlinks)
+        is_file = entry.is_file(follow_symlinks=follow_symlinks)
+        if entry.name.lower() not in exclude \
+                and any([None is filter_kind, filter_kind and is_dir,
+                         not filter_kind and is_dir and recurse, not filter_kind and is_file]):
+            if recurse and is_dir:
+                for subentry in scantree(entry.path, exclude, follow_symlinks, filter_kind):
                     yield subentry
+            if any([None is filter_kind, filter_kind and is_dir, not filter_kind and is_file]):
                 yield entry
-        else:
-            yield entry
 
 
 def cleanup_cache():
@@ -1604,6 +1600,8 @@ def get_overview(ep_status, show_quality, upgrade_once, split_snatch=False):
     :type show_quality: int
     :param upgrade_once: upgrade once
     :type upgrade_once: bool
+    :param split_snatch:
+    :type split_snatch: bool
     :return: constant from classes Overview
     :rtype: int
     """

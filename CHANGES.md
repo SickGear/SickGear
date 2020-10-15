@@ -1,5 +1,9 @@
 ﻿### 0.23.0 (2019-xx-xx xx:xx:xx UTC)
 
+* Change improve list performance for file/directory browser
+* Change improve import shows listing performance
+* Change improve performance during show rescan process
+* Change improve performance during media processing
 * Add config/General/Updates/Alias Process button, minimum interval for a fetch of custom names/numbering is 30 mins
 * Add Export alternatives button to edit show
 * Change season specific alt names now available not just for anime

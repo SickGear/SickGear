@@ -38,6 +38,7 @@ from exceptions_helper import ex, MultipleShowObjectsException
 import sickbeard
 from . import common, db, failedProcessor, helpers, logger, notifiers, postProcessor
 from .common import SNATCHED_ANY
+from .helpers import scantree
 from .history import reset_status
 from .name_parser.parser import InvalidNameException, InvalidShowException, NameParser
 from .sgdatetime import timestamp_near
@@ -137,7 +138,7 @@ class ProcessTVShow(object):
             return False
 
         # check if it's empty folder when wanted checked
-        if check_empty and ek.ek(os.listdir, folder):
+        if check_empty and len([direntry.path for direntry in scantree(folder, recurse=False)]):
             return False
 
         # try deleting folder
