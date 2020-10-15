@@ -28,10 +28,11 @@ from _23 import make_btih
 class TorrentRssProvider(generic.TorrentProvider):
 
     def __init__(self, name, url, cookies='', search_mode='eponly', search_fallback=False,
-                 enable_recentsearch=False, enable_backlog=False, enable_scheduled_backlog=False):
+                 enable_recentsearch=True, enable_backlog=True):
+        generic.TorrentProvider.__init__(self, name, cache_update_freq=15)
         self.enable_backlog = bool(try_int(enable_backlog))
-        self.enable_scheduled_backlog = bool(try_int(enable_scheduled_backlog))
-        generic.TorrentProvider.__init__(self, name, supports_backlog=self.enable_backlog, cache_update_freq=15)
+        # no use for rss, so disable by removal after init uses it
+        delattr(self, 'enable_scheduled_backlog')
 
         self.url = url.rstrip('/')
         self.url_base = self.url
@@ -47,13 +48,14 @@ class TorrentRssProvider(generic.TorrentProvider):
 
     def config_str(self):
 
-        return '%s|%s|%s|%d|%s|%d|%d|%d|%d' % (
+        return '%s|%s|%s|%d|%s|%d|%d|%d' % (
             self.name or '', self.url or '', self.cookies or '', self.enabled,
-            self.search_mode or '', self.search_fallback, self.enable_recentsearch, self.enable_backlog,
-            self.enable_scheduled_backlog)
+            self.search_mode or '', self.search_fallback, self.enable_recentsearch, self.enable_backlog)
 
+    # noinspection PyUnresolvedReferences
     def _title_and_url(self, item):
-
+        # note: feedparser .util.FeedParserDict has its properties defined in a dict which is hidden from typing
+        # therefore, unresolved references are hidden for this entire function
         title, url = None, None
 
         if item.title:

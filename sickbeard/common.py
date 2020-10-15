@@ -279,6 +279,7 @@ class Quality(object):
 
         if anime:
             sd_options = name_has(['360p', '480p', '848x480', 'XviD'], any)
+            sd_options |= name_has([r'^SD\.|\.SD$'], any)  # specific to a provider
             dvd_options = name_has(['dvd', 'dvdrip'], any)
             blue_ray_options = name_has(['bluray', 'blu-ray', 'BD'], any)
 
@@ -288,7 +289,9 @@ class Quality(object):
                 return Quality.SDDVD
 
             hd_options = name_has(['720p', r'\[720\]', '1280x720', '960x720'], any)
+            hd_options |= name_has([r'^HD\s*720\.|\.HD\s*720$'], any)  # specific to a provider
             full_hd = name_has(['1080p', r'\[1080\]', '1920x1080'], any)
+            full_hd |= name_has([r'^HD(\s*1080)?\.|\.HD(\s*1080)?$'], any)  # specific to a provider
             if not blue_ray_options:
                 if hd_options and not full_hd:
                     return Quality.HDTV
