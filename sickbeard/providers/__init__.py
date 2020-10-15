@@ -165,14 +165,10 @@ def makeTorrentRssProvider(config_string):
     search_fallback = 0
     enable_recentsearch = 0
     enable_backlog = 0
-    enable_scheduled_backlog = 1
 
     try:
-        values = config_string.split('|')
-        if 9 == len(values):
-            (name, url, cookies, enabled, search_mode, search_fallback,
-             enable_recentsearch, enable_backlog, enable_scheduled_backlog) = values
-        elif 8 == len(values):
+        values = config_string.split('|')[0:8]  # deprecated: enable_scheduled_backlog by using `[0:8]`
+        if 8 == len(values):
             name, url, cookies, enabled, search_mode, search_fallback, enable_recentsearch, enable_backlog = values
         else:
             name = values[0]
@@ -189,7 +185,7 @@ def makeTorrentRssProvider(config_string):
         return
 
     newProvider = torrentRss.TorrentRssProvider(name, url, cookies, search_mode, search_fallback, enable_recentsearch,
-                                                enable_backlog, enable_scheduled_backlog)
+                                                enable_backlog)
     newProvider.enabled = '1' == enabled
 
     return newProvider

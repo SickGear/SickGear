@@ -1,4 +1,13 @@
-﻿### 0.22.3 (2020-10-14 15:00:00 UTC)
+﻿### 0.22.4 (2020-10-15 13:20:00 UTC)
+
+* Fix enable "Perform search tasks" at config/Media Providers/Options for custom RSS
+* Fix remove enable_scheduled_backlog as it is not appropriate for custom RSS
+* Fix if no anime release group parsed, provider id is used to prevent skipping result
+* Fix if no anime season is parsed, assume season 1 to prevent skipping result
+* Change add some anime quality recognition to assist search
+
+
+### 0.22.3 (2020-10-14 15:00:00 UTC)
 
 * Fix use qualities saved as default during Add Show to set up qualities in Bulk Change
 * Fix add manual indents to Quality dropdown select that browsers removed from CSS styles
