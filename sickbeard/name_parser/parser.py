@@ -548,15 +548,14 @@ class NameParser(object):
 
         return number
 
-    def parse(self, name, cache_result=True):
+    def parse(self, name, cache_result=True, release_group=None):
+        # type: (AnyStr, bool, AnyStr) -> ParseResult
         """
 
         :param name:
-        :type name: AnyStr
         :param cache_result:
-        :type cache_result: bool
+        :param release_group: Name to use if anime and no group, otherwise pick_best_result will fail
         :return:
-        :rtype: ParseResult
         """
         name = self._unicodify(name)
 
@@ -628,6 +627,12 @@ class NameParser(object):
         if None is final_result.season_number and not final_result.episode_numbers and None is final_result.air_date \
                 and not final_result.ab_episode_numbers and not final_result.series_name:
             raise InvalidNameException('Unable to parse %s' % name.encode(sickbeard.SYS_ENCODING, 'xmlcharrefreplace'))
+
+        if final_result.show_obj and final_result.show_obj.is_anime:
+            if None is final_result.season_number:
+                final_result.season_number = 1  # assign season number or finish_find_search_results will fail
+            if not final_result.release_group:
+                final_result.release_group = release_group  # use provider id or pick_best_result fails
 
         if cache_result:
             name_parser_cache.add(name, final_result)
