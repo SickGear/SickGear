@@ -364,7 +364,13 @@ def list_media_files(path):
         return []
 
     files = []
-    for cur_file in ek.ek(os.listdir, path):
+    file_list = ek.ek(os.listdir, path)
+
+    if '.sickgearignore' in file_list:
+        logger.log('Folder "%s" contains ".sickgearignore", ignoring Folder' % path, logger.DEBUG)
+        return []
+
+    for cur_file in file_list:
         full_cur_file = ek.ek(os.path.join, path, cur_file)  # type: AnyStr
 
         # if it's a folder do it recursively
