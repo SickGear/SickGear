@@ -1,4 +1,9 @@
-﻿### 0.22.4 (2020-10-15 13:20:00 UTC)
+﻿### 0.22.5 (2020-10-16 00:45:00 UTC)
+
+* Fix reading scene numbers from db
+
+
+### 0.22.4 (2020-10-15 13:20:00 UTC)
 
 * Fix enable "Perform search tasks" at config/Media Providers/Options for custom RSS
 * Fix remove enable_scheduled_backlog as it is not appropriate for custom RSS

@@ -117,7 +117,7 @@ def find_scene_numbering(tvid, prodid, season, episode, scene_sql=None):
             [tvid, prodid, season, episode])
 
     if rows:
-        s_s, s_e = int(rows[0]['scene_season']), int(rows[0]['scene_episode'])
+        s_s, s_e = try_int(rows[0]['scene_season'], None), try_int(rows[0]['scene_episode'], None)
         if None is not s_s and None is not s_e:
             return s_s, s_e
 
@@ -244,11 +244,12 @@ def get_indexer_numbering(tvid, prodid, scene_season, scene_episode, fallback_to
         [tvid, prodid, scene_season, scene_episode])
 
     if rows:
-        return int(rows[0]['season']), int(rows[0]['episode'])
-    else:
-        if fallback_to_xem:
-            return get_indexer_numbering_for_xem(tvid, prodid, scene_season, scene_episode)
-        return scene_season, scene_episode
+        ss, se = try_int(rows[0]['season'], None), try_int(rows[0]['episode'], None)
+        if None is not ss and None is not se:
+            return ss, se
+    if fallback_to_xem:
+        return get_indexer_numbering_for_xem(tvid, prodid, scene_season, scene_episode)
+    return scene_season, scene_episode
 
 
 def get_indexer_absolute_numbering(tvid, prodid, scene_absolute_number, fallback_to_xem=True, scene_season=None):
@@ -290,11 +291,12 @@ def get_indexer_absolute_numbering(tvid, prodid, scene_absolute_number, fallback
             [tvid, prodid, scene_absolute_number, scene_season])
 
     if rows:
-        return int(rows[0]['absolute_number'])
-    else:
-        if fallback_to_xem:
-            return get_indexer_absolute_numbering_for_xem(tvid, prodid, scene_absolute_number, scene_season)
-        return scene_absolute_number
+        an = try_int(rows[0]['absolute_number'], None)
+        if None is not an:
+            return an
+    if fallback_to_xem:
+        return get_indexer_absolute_numbering_for_xem(tvid, prodid, scene_absolute_number, scene_season)
+    return scene_absolute_number
 
 
 def set_scene_numbering(tvid=None, prodid=None, season=None, episode=None, absolute_number=None,
@@ -502,7 +504,9 @@ def get_indexer_numbering_for_xem(tvid, prodid, scene_season, scene_episode):
         [tvid, prodid, scene_season, scene_episode])
 
     if rows:
-        return int(rows[0]['season']), int(rows[0]['episode'])
+        ss, se = try_int(rows[0]['season'], None), try_int(rows[0]['episode'], None)
+        if None is not ss and None is not se:
+            return ss, se
 
     return scene_season, scene_episode
 
@@ -546,7 +550,9 @@ def get_indexer_absolute_numbering_for_xem(tvid, prodid, scene_absolute_number, 
             [tvid, prodid, scene_absolute_number, scene_season])
 
     if rows:
-        return int(rows[0]['absolute_number'])
+        an = try_int(rows[0]['absolute_number'], None)
+        if None is not an:
+            return an
 
     return scene_absolute_number
 
