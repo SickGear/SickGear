@@ -37,6 +37,12 @@
 * Fix update Soupsieve (05086ef) broke MC and TVC browse cards
 
 
+### 0.22.5 (2020-10-16 00:45:00 UTC)
+
+* Fix reading scene numbers from db
+* Change improve clarity of notes when config/Media Process/Failed Download Handling is enabled
+
+
 ### 0.22.4 (2020-10-15 13:20:00 UTC)
 
 * Fix enable "Perform search tasks" at config/Media Providers/Options for custom RSS

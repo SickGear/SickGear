@@ -3257,6 +3257,7 @@ config_postProcessing.tmpl
 }
 
 #failed-guide .title{
+	height:unset;
 	list-style-type:none
 }
 
