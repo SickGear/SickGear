@@ -7,6 +7,10 @@
 $(document).ready(function () {
 
 	$('#location').fileBrowser({title: 'Select Show Location'});
+	String.prototype.padLeft = function padLeft(length, leadingChar) {
+		if (undefined === leadingChar) leadingChar = '0';
+		return this.length < length ? (leadingChar + this).padLeft(length, leadingChar) : this;
+	};
 
 	function htmlFlag(lang) {
 		return ' class="flag" style="background-image:url(' + $.SickGear.Root + '/images/flags/' + lang + '.png)"'
@@ -71,7 +75,7 @@ $(document).ready(function () {
 		if (null === sceneExSeason)
 			sceneExSeason = '-1';
 		option.val(sceneExSeason + '|' + sceneEx);
-		option.html((config.showIsAnime ? 'S' + ('-1' === sceneExSeason ? '*' : sceneExSeason) + ': ' : '') + sceneEx);
+		option.html(('S' + ('-1' === sceneExSeason ? '*' : sceneExSeason.padLeft(2)) + ': ') + sceneEx);
 
 		return option.appendTo($('#exceptions_list'));
 	});
@@ -80,6 +84,31 @@ $(document).ready(function () {
 		$('#exceptions_list').find('option:selected').remove();
 
 		$(this).toggle_SceneException();
+	});
+
+	/** @namespace data.text */
+	$('#export-alts').on('click', function (e) {
+		e.preventDefault();
+
+		var that$ = $(this);
+		that$.attr('disabled', 'disabled');
+		$.getJSON(sbRoot + '/config/general/export-alt', {'tvid_prodid': $('#tvid_prodid').val()},
+			function (data) {
+				if (data.text) {
+					$.confirm({
+						'title'		: 'Export names/numbers',
+						'message'	: 'Copy/paste the following for export...' +
+							'<div><pre style="width:95%;margin:0 auto;max-height:250px">' + data.text + '</pre></div>',
+						'buttons'	: {
+							'close'	: {
+								'class'	: 'green',
+								'action': function(){}	// Nothing to do in this case. You can as well omit the action property.
+							}
+						}
+					});
+				}
+				that$.removeAttr('disabled');
+		});
 	});
 
 	$.fn.toggle_SceneException = function () {

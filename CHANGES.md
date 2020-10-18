@@ -1,5 +1,19 @@
 ﻿### 0.23.0 (2019-xx-xx xx:xx:xx UTC)
 
+* Add config/General/Updates/Alias Process button, minimum interval for a fetch of custom names/numbering is 30 mins
+* Add Export alternatives button to edit show
+* Change season specific alt names now available not just for anime
+* Change improve tooltip over show title in display show for multiple alternatives
+* Add display season alternatives on hover over season titles in display show
+* Change single digit season display to zero-padded double digits in edit show
+* Change add note on edit show for season specific search rule
+* Add mark next to season titles that have exceptions
+* Add support for centralised sg alternative names and numbers
+* Change sg alts can overwrite scene number field only if field value is blank
+* Change add note on edit show for season specific search rule
+* Change add has_season_exceptions to control newznab id search
+* Change add season exceptions to torrent providers
+* Change give remove_file functions time to process
 * Add ignore folders that contain ".sickgearignore" flag file
 * Change add 3 days cache for tmdb base info only
 * Change `Discordapp` to `Discord` in line with company change

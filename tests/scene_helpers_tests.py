@@ -20,12 +20,12 @@ from sickbeard.tv import TVShow
 
 class SceneTests(test.SickbeardTestDBCase):
 
-    def _test_allPossibleShowNames(self, name, prodid=0, expected=[]):
+    def _test_allPossibleShowNames(self, name, prodid=0, expected=[], season=-1):
         s = TVShow(TVINFO_TVDB, prodid)
         s.tvid = TVINFO_TVDB
         s.name = name
 
-        result = show_name_helpers.allPossibleShowNames(s)
+        result = show_name_helpers.allPossibleShowNames(s, season=season)
         self.assertTrue(len(set(expected).intersection(set(result))) == len(expected))
 
     def _test_pass_wordlist_checks(self, name, expected):
@@ -35,9 +35,12 @@ class SceneTests(test.SickbeardTestDBCase):
     def test_allPossibleShowNames(self):
         # common.sceneExceptions[-1] = ['Exception Test']
         my_db = db.DBConnection()
-        my_db.action('INSERT INTO scene_exceptions'
-                     ' (indexer, indexer_id, show_name, season) VALUES (?,?,?,?)',
-                     [TVINFO_TVDB, -1, 'Exception Test', -1])
+        my_db.mass_action([
+            ['INSERT INTO scene_exceptions (indexer, indexer_id, show_name, season) VALUES (?,?,?,?)',
+             [TVINFO_TVDB, -1, 'Exception Test', -1]],
+            ['INSERT INTO scene_exceptions (indexer, indexer_id, show_name, season) VALUES (?,?,?,?)',
+             [TVINFO_TVDB, -1, 'Season Test', 19]]
+                           ])
         common.countryList['Full Country Name'] = 'FCN'
 
         self._test_allPossibleShowNames('Show Name', expected=['Show Name'])
@@ -46,6 +49,7 @@ class SceneTests(test.SickbeardTestDBCase):
         self._test_allPossibleShowNames('Show Name (FCN)', expected=['Show Name (FCN)', 'Show Name (Full Country Name)'])
         self._test_allPossibleShowNames('Show Name Full Country Name', expected=['Show Name Full Country Name', 'Show Name (FCN)'])
         self._test_allPossibleShowNames('Show Name (Full Country Name)', expected=['Show Name (Full Country Name)', 'Show Name (FCN)'])
+        self._test_allPossibleShowNames('Show Name', -1, expected=['Season Test'], season=19)
 
     def test_pass_wordlist_checks(self):
         self._test_pass_wordlist_checks('Show.S02.German.Stuff-Grp', False)

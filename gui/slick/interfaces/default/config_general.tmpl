@@ -212,12 +212,27 @@
 								</span>
 							</label>
 						</div>
-
-						<input type="submit" class="btn config_submitter" value="Save Changes">
-					</fieldset>
 #else
-					<div><p>Repo updates disabled. Using $sg_var('EXT_UPDATES') update method</p></div>
+						<div class="field-pair">
+							<span class="component-title">Built-in updates disabled</span>
+							<span class="component-desc"><p>using #echo $sg_var('EXT_UPDATES') or 'other'# update method instead</p>
+							</span>
+						</div>
 #end if
+
+						<div class="field-pair">
+							<span class="component-title">Alias show names/numbers</span>
+							<span class="component-desc" style="line-height:20px">
+								<input id="alias" class="btn btn-inline" type="button" value="Process">
+								<p>updates for alternative show names and numbers</p>
+								<span id="alias-result"></span>
+							</span>
+						</div>
+
+#if not $sg_var('EXT_UPDATES')
+						<input type="submit" class="btn config_submitter" value="Save Changes">
+#end if
+					</fieldset>
 
 				</div>
 				</div><!-- /component-group1 //-->

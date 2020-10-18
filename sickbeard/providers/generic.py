@@ -41,6 +41,7 @@ from ..classes import NZBSearchResult, TorrentSearchResult, SearchResult
 from ..common import Quality, MULTI_EP_RESULT, SEASON_RESULT, USER_AGENT
 from ..helpers import maybe_plural, remove_file_failed
 from ..name_parser.parser import InvalidNameException, InvalidShowException, NameParser
+from ..scene_exceptions import has_season_exceptions
 from ..show_name_helpers import get_show_names_all_possible
 from ..sgdatetime import SGDatetime, timestamp_near
 from ..tv import TVEpisode, TVShow
@@ -1652,6 +1653,7 @@ class TorrentProvider(GenericProvider):
             return []
 
         show_obj = ep_obj.show_obj
+        season = (-1, ep_obj.season)[has_season_exceptions(ep_obj.show_obj.tvid, ep_obj.show_obj.prodid, ep_obj.season)]
         ep_dict = self._ep_dict(ep_obj)
         sp_detail = (show_obj.air_by_date or show_obj.is_sports) and str(ep_obj.airdate).split('-')[0] or \
                     (show_obj.is_anime and ep_obj.scene_absolute_number or
@@ -1659,7 +1661,8 @@ class TorrentProvider(GenericProvider):
         sp_detail = ([sp_detail], sp_detail)[isinstance(sp_detail, list)]
         detail = ({}, {'Season_only': sp_detail})[detail_only
                                                   and not self.show_obj.is_sports and not self.show_obj.is_anime]
-        return [dict(itertools.chain(iteritems({'Season': self._build_search_strings(sp_detail, scene, prefix)}),
+        return [dict(itertools.chain(iteritems({'Season': self._build_search_strings(sp_detail, scene, prefix,
+                                                                                     season=season)}),
                                      iteritems(detail)))]
 
     def _episode_strings(self,
@@ -1686,6 +1689,7 @@ class TorrentProvider(GenericProvider):
             return []
 
         show_obj = ep_obj.show_obj
+        season = (-1, ep_obj.season)[has_season_exceptions(ep_obj.show_obj.tvid, ep_obj.show_obj.prodid, ep_obj.season)]
         if show_obj.air_by_date or show_obj.is_sports:
             ep_detail = [str(ep_obj.airdate).replace('-', sep_date)]\
                 if 'date_detail' not in kwargs else kwargs['date_detail'](ep_obj.airdate)
@@ -1703,7 +1707,8 @@ class TorrentProvider(GenericProvider):
                 ep_detail = ([ep_detail], ep_detail)[isinstance(ep_detail, list)] + ['%d' % ep_dict['episodenumber']]
         ep_detail = ([ep_detail], ep_detail)[isinstance(ep_detail, list)]
         detail = ({}, {'Episode_only': ep_detail})[detail_only and not show_obj.is_sports and not show_obj.is_anime]
-        return [dict(itertools.chain(iteritems({'Episode': self._build_search_strings(ep_detail, scene, prefix)}),
+        return [dict(itertools.chain(iteritems({'Episode': self._build_search_strings(ep_detail, scene, prefix,
+                                                                                      season=season)}),
                                      iteritems(detail)))]
 
     @staticmethod
@@ -1718,8 +1723,8 @@ class TorrentProvider(GenericProvider):
                            (ep_obj.scene_season, ep_obj.scene_episode))[bool(ep_obj.show_obj.is_scene)]
         return {'seasonnumber': season, 'episodenumber': episode}
 
-    def _build_search_strings(self, ep_detail, process_name=True, prefix=''):
-        # type: (Union[List[AnyStr], AnyStr], bool, AnyStr) -> List[AnyStr]
+    def _build_search_strings(self, ep_detail, process_name=True, prefix='', season=-1):
+        # type: (Union[List[AnyStr], AnyStr], bool, AnyStr, int) -> List[AnyStr]
         """
         Build a list of search strings for querying a provider
         :param ep_detail: String of episode detail or List of episode details
@@ -1733,7 +1738,8 @@ class TorrentProvider(GenericProvider):
 
         search_params = []
         crop = re.compile(r'([.\s])(?:\1)+')
-        for name in get_show_names_all_possible(self.show_obj, scenify=process_name and getattr(self, 'scene', True)):
+        for name in get_show_names_all_possible(self.show_obj, scenify=process_name and getattr(self, 'scene', True),
+                                                season=season):
             for detail in ep_detail:
                 search_params += [crop.sub(r'\1', '%s %s%s' % (name, x, detail)) for x in prefix]
         return search_params

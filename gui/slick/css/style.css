@@ -1029,6 +1029,16 @@ home.tmpl
 	background-image:linear-gradient(to left, rgba(223, 218, 207, 1), rgba(223, 218, 207, 0))
 }
 
+.exception-divider{
+	margin:3px 0
+}
+
+.season-mark-exception{
+	font-size:12px;
+	vertical-align:super;
+	margin-right:-6px
+}
+
 .show-toggle-hide{
 	position:absolute;
 	top:272px;
