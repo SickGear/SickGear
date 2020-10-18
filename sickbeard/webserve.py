@@ -52,7 +52,7 @@ from .anime import AniGroupList, pull_anidb_groups, short_group_names
 from .browser import folders_at_path
 from .common import ARCHIVED, DOWNLOADED, FAILED, IGNORED, SKIPPED, SNATCHED, SNATCHED_ANY, UNAIRED, UNKNOWN, WANTED, \
      SD, HD720p, HD1080p, UHD2160p, Overview, Quality, qualityPresetStrings, statusStrings
-from .helpers import has_image_ext, remove_article, starify
+from .helpers import has_image_ext, remove_article, scantree, starify
 from .indexermapper import MapStatus, map_indexers_to_show, save_mapping
 from .indexers.indexer_config import TVINFO_IMDB, TVINFO_TRAKT, TVINFO_TVDB
 from .name_parser.parser import InvalidNameException, InvalidShowException, NameParser
@@ -3644,15 +3644,13 @@ class AddShows(Home):
             try:
                 for root_dir in sickbeard.ROOT_DIRS.split('|')[1:]:
                     try:
-                        file_list = ek.ek(os.listdir, root_dir)
+                        file_list = [x for x in scantree(root_dir, filter_kind=True, recurse=False)]
                     except (BaseException, Exception):
                         continue
 
                     for cur_file in file_list:
 
-                        cur_path = ek.ek(os.path.normpath, ek.ek(os.path.join, root_dir, cur_file))
-                        if not ek.ek(os.path.isdir, cur_path):
-                            continue
+                        cur_path = ek.ek(os.path.normpath, cur_file.path)
 
                         display_one_dir = hash_dir == str(abs(hash(cur_path)))
                         if display_one_dir:
@@ -3664,20 +3662,18 @@ class AddShows(Home):
         for root_dir in root_dirs:
             if not file_list:
                 try:
-                    file_list = ek.ek(os.listdir, root_dir)
+                    file_list = [x for x in scantree(root_dir, filter_kind=True, recurse=False)]
                 except (BaseException, Exception):
                     continue
 
             for cur_file in file_list:
 
-                cur_path = ek.ek(os.path.normpath, ek.ek(os.path.join, root_dir, cur_file))
-                if not ek.ek(os.path.isdir, cur_path):
-                    continue
+                cur_path = ek.ek(os.path.normpath, cur_file.path)
 
                 highlight = hash_dir == str(abs(hash(cur_path)))
                 if display_one_dir and not highlight:
                     continue
-                cur_dir = dict(dir=cur_path, highlight=highlight, name=ek.ek(os.path.basename, cur_path),
+                cur_dir = dict(dir=cur_path, highlight=highlight, name=cur_file.name,
                                path='%s%s' % (ek.ek(os.path.dirname, cur_path), os.sep),
                                added_already=any(my_db.select(
                                    'SELECT indexer'
