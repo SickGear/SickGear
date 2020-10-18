@@ -449,7 +449,7 @@
         #set $scene_anime = True
     #end if
 
-    #for $season, $episodes in $seasons
+    #for $season, $episodes, $has_season_exceptions in $seasons
         #for $ep in $episodes
             #if None is not $ep
                 #set $ep_str = '%sx%s' % ($season, $ep['episode'])
@@ -466,6 +466,9 @@
                 #set $working_season = $season
 
                 #set $human_season = ('Season %s' % $season, 'Specials')[0 == $season]
+                #if $has_season_exceptions
+                    #set $human_season += '<b class="season-mark-exception">*</b>'
+                #end if
 ## one off variable migration, on next version apply... (s/$getVar('display_seasons', [])/[]/),
 <table class="sickbeardTable#echo '%s%s%s' % (('', ' season-min')[$season in $getVar('season_min', $getVar('display_seasons', []))], ('', ' latest-season')[$latest_season == $season], ('', ' open')[$season in $getVar('other_seasons', [])])#">
 	<thead>
@@ -484,7 +487,7 @@
                 #set $qual = $season_stats.get($Overview.QUAL, None)
                 #set $good = $season_stats.get($Overview.GOOD, '0')
                 #set $archived = False if $season not in $ep_counts['archived'] else $ep_counts['archived'][$season]
-				<h3>$human_season<a id="season-$season" name="season-$season"></a>
+				<h3 id="season-$show_obj.tvid_prodid-$season"><span class="title">$human_season</span><a id="season-$season" name="season-$season"></a>
                 #if None is not $has_art
 					<span class="season-status"><span class="good status-badge">&nbsp;D: <strong>$good</strong>&nbsp;</span>#if snatched#<span class="snatched status-badge">&nbsp;S: <strong>$snatched</strong>&nbsp;</span>#end if##if $wanted#<span class="wanted status-badge">&nbsp;W: <strong>$wanted</strong>&nbsp;</span>#end if##if $qual#<span class="qual status-badge">&nbsp;LQ: <strong>$qual</strong>&nbsp;</span>#end if#&nbsp;of&nbsp;<span class="footerhighlight">$ep_counts['totals'][$season]</span>#if 0 < $archived#&nbsp;with <span class="footerhighlight">$archived</span> archived#end if##if int($videos)#&nbsp;#echo ('with', 'and')[0 < $archived]#&nbsp;<span class="footerhighlight">$videos</span> file$maybe_plural($videos)#end if#</span>
                 #end if

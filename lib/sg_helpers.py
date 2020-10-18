@@ -16,6 +16,7 @@ import stat
 import subprocess
 import tempfile
 import threading
+import time
 import traceback
 
 from exceptions_helper import ex, ConnectionSkipException
@@ -28,7 +29,7 @@ from send2trash import send2trash
 import encodingKludge as ek
 import requests
 
-from _23 import decode_bytes, filter_list, html_unescape, urlparse, urlsplit, urlunparse
+from _23 import decode_bytes, filter_list, html_unescape, list_range, urlparse, urlsplit, urlunparse
 from six import integer_types, iteritems, iterkeys, itervalues, PY2, string_types, text_type
 
 # noinspection PyUnreachableCode
@@ -971,19 +972,6 @@ def file_bit_filter(mode):
     return mode
 
 
-def remove_file_failed(filename):
-    """
-    delete given file
-
-    :param filename: filename
-    :type filename: AnyStr
-    """
-    try:
-        ek.ek(os.remove, filename)
-    except (BaseException, Exception):
-        pass
-
-
 def chmod_as_parent(child_path):
     """
 
@@ -1138,6 +1126,26 @@ def move_file(src_file, dest_file):
         ek.ek(os.unlink, src_file)
 
 
+def remove_file_failed(filepath):
+    """
+    Remove file
+
+    :param filepath: Path and file name
+    :type filepath: AnyStr
+    """
+    for t in list_range(10):  # total seconds to wait 0 - 9 = 45s over 10 iterations
+        try:
+            ek.ek(os.remove, filepath)
+        except OSError as e:
+            if getattr(e, 'winerror', 0) not in (5, 32):  # 5=access denied (e.g. av), 32=another process has lock
+                break
+        except (BaseException, Exception):
+            pass
+        time.sleep(t)
+        if not ek.ek(os.path.exists, filepath):
+            break
+
+
 def remove_file(filepath, tree=False, prefix_failure='', log_level=logging.INFO):
     """
     Remove file based on setting for trash v permanent delete
@@ -1155,19 +1163,25 @@ def remove_file(filepath, tree=False, prefix_failure='', log_level=logging.INFO)
     """
     result = None
     if filepath:
-        try:
-            result = 'Deleted'
-            if TRASH_REMOVE_SHOW:
-                result = 'Trashed'
-                ek.ek(send2trash, filepath)
-            elif tree:
-                ek.ek(shutil.rmtree, filepath)
-            else:
-                ek.ek(os.remove, filepath)
-        except OSError as e:
-            logger.log(level=log_level, msg=u'%sUnable to %s %s %s: %s' %
-                                            (prefix_failure, ('delete', 'trash')[TRASH_REMOVE_SHOW],
-                                             ('file', 'dir')[tree], filepath, ex(e)))
+        for t in list_range(10):  # total seconds to wait 0 - 9 = 45s over 10 iterations
+            try:
+                result = 'Deleted'
+                if TRASH_REMOVE_SHOW:
+                    result = 'Trashed'
+                    ek.ek(send2trash, filepath)
+                elif tree:
+                    ek.ek(shutil.rmtree, filepath)
+                else:
+                    ek.ek(os.remove, filepath)
+            except OSError as e:
+                if getattr(e, 'winerror', 0) not in (5, 32):  # 5=access denied (e.g. av), 32=another process has lock
+                    logger.log(level=log_level, msg=u'%sUnable to %s %s %s: %s' %
+                                                    (prefix_failure, ('delete', 'trash')[TRASH_REMOVE_SHOW],
+                                                     ('file', 'dir')[tree], filepath, ex(e)))
+                    break
+            time.sleep(t)
+            if not ek.ek(os.path.exists, filepath):
+                break
 
     return (None, result)[filepath and not ek.ek(os.path.exists, filepath)]
 

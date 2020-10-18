@@ -43,6 +43,34 @@ $(document).ready(function () {
 		toggle$(this, 0 < $(this).find('option:selected').val());
 	});
 
+	/** @namespace data.names */
+	/** @namespace data.numbers */
+	/** @namespace data.min_remain_iv */
+	$('input#alias').on('click', function() {
+		var result$ = $('#alias-result'), that$ = $(this);
+		that$.attr('disabled', 'disabled');
+		result$.html('checking for updates...');
+		$.getJSON(sbRoot + '/config/general/update-alt',
+			function (data) {
+				var output = 'checked, ', remain;
+				result$.removeClass('grey-text');
+				if (data.names) {
+					output += 'new alias names found';
+					result$.addClass('grey-text');
+				} else if (!data.numbers) {
+					output += 'no updates found';
+				}
+				if (data.numbers) {
+					output += (data.names ? ' and ' : '') + data.numbers + ' alternative numbers updated';
+					result$.addClass('grey-text');
+				}
+				remain = data.min_remain_iv/60;
+				output += ', wait ' + parseInt(remain) + 'm before next fetch process'
+				result$.html(output);
+				that$.removeAttr('disabled');
+			});
+	});
+
 	var idSelect = '#imdb-accounts', idDel = '#imdb-list-del', idInput = '#imdb-url', idOnOff = '#imdb-list-onoff',
 		sel = 'selected', opt = 'option', selOpt = [opt, sel].join(':'),
 		elDropDown = $(idSelect), elDel = $(idDel), elInput = $(idInput), elOnOff = $(idOnOff);

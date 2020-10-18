@@ -93,7 +93,7 @@ from tvinfo_base import BaseTVinfoException
 import lib.rarfile.rarfile as rarfile
 
 from _23 import decode_bytes, decode_str, filter_list, filter_iter, getargspec, list_values, \
-    map_consume, map_iter, map_list, map_none, quote_plus, unquote_plus, urlparse
+    map_consume, map_iter, map_list, map_none, ordered_dict, quote_plus, unquote_plus, urlparse
 from six import binary_type, integer_types, iteritems, iterkeys, itervalues, PY2, string_types
 
 # noinspection PyUnreachableCode
@@ -2110,7 +2110,8 @@ class Home(MainHandler):
                 ' WHERE indexer = ? AND showid = ?'
                 ' AND season = ?'
                 ' ORDER BY episode DESC',
-                [show_obj.tvid, show_obj.prodid, x]))]
+                [show_obj.tvid, show_obj.prodid, x]
+            ), scene_exceptions.has_season_exceptions(show_obj.tvid, show_obj.prodid, x))]
 
         for row in my_db.select('SELECT season, episode, status'
                                 ' FROM tv_episodes'
@@ -2275,16 +2276,19 @@ class Home(MainHandler):
         return 'Episode not found.' if not sql_result else (sql_result[0]['description'] or '')[:250:]
 
     @staticmethod
-    def scene_exceptions(tvid_prodid):
+    def scene_exceptions(tvid_prodid, wanted_season=None):
 
         exceptionsList = sickbeard.scene_exceptions.get_all_scene_exceptions(tvid_prodid)
-        if not exceptionsList:
-            return 'No scene exceptions'
+        wanted_season = helpers.try_int(wanted_season, None)
+        wanted_not_found = None is not wanted_season and wanted_season not in exceptionsList
+        if not exceptionsList or wanted_not_found:
+            return ('No scene exceptions', 'No season exceptions')[wanted_not_found]
 
         out = []
         for season, names in iter(sorted(iteritems(exceptionsList))):
-            out.append('S%s: %s' % ((season, '*')[-1 == season], ',<br />\n'.join(names)))
-        return '---------<br />\n'.join(out)
+            if None is wanted_season or wanted_season == season:
+                out.append('S%s: %s' % (('%02d' % season, '*')[-1 == season], ',<br>\n'.join(names)))
+        return '\n<hr class="exception-divider">\n'.join(out)
 
     @staticmethod
     def switch_infosrc(prodid, tvid, m_prodid, m_tvid, set_pause=False, mark_wanted=False):
@@ -2498,7 +2502,7 @@ class Home(MainHandler):
                 'SELECT DISTINCT season'
                 ' FROM tv_episodes'
                 ' WHERE indexer = ? AND showid = ?'
-                ' ORDER BY season ASC',
+                ' ORDER BY season DESC',
                 [show_obj.tvid, show_obj.prodid])
 
             if show_obj.is_anime:
@@ -6746,6 +6750,80 @@ class ConfigGeneral(Config):
         api_keys = '|||'.join([':::'.join(a) for a in sickbeard.API_KEYS])
         t.api_keys = api_keys and sickbeard.API_KEYS or []
         return t.respond()
+
+    @staticmethod
+    def update_alt():
+        """ Load scene exceptions """
+
+        changed_exceptions, cnt_updated_numbers, min_remain_iv = scene_exceptions.retrieve_exceptions()
+
+        return json.dumps(dict(names=int(changed_exceptions), numbers=cnt_updated_numbers, min_remain_iv=min_remain_iv))
+
+    @staticmethod
+    def export_alt(tvid_prodid=None):
+        """ Return alternative release names and numbering as json text"""
+
+        alts = {}
+
+        # alternative release names and numbers
+        alt_names = scene_exceptions.get_all_scene_exceptions(tvid_prodid)
+        alt_numbers = get_scene_numbering_for_show(*TVidProdid(tvid_prodid).tuple)  # arbitrary order
+        ui_output = 'No alternative names or numbers to export'
+
+        # combine all possible season numbers into a sorted desc list
+        seasons = sorted(set(list(set([s for (s, e) in alt_numbers])) + [s for s in alt_names]), reverse=True)
+        if seasons:
+            if -1 == seasons[-1]:
+                seasons = [-1] + seasons[0:-1]  # bubble -1
+
+            # prepare a seasonal ordered dict for output
+            alts = ordered_dict([(season, {}) for season in seasons])
+
+            # add original show name
+            show_obj = sickbeard.helpers.find_show_by_id(tvid_prodid, no_mapped_ids=True)
+            first_key = next(iteritems(alts))[0]
+            alts[first_key].update(dict({'#': show_obj.name}))
+
+            # process alternative release names
+            for (season, names) in iteritems(alt_names):
+                alts[season].update(dict(n=names))
+
+            # process alternative release numbers
+            for_target_group = {}
+            # uses a sorted list of (for seasons, for episodes) as a method
+            # to group (for, target) seasons with lists of target episodes
+            for f_se in sorted(alt_numbers):  # sort season list (and therefore, implicitly asc/desc of targets)
+                t_se = alt_numbers[f_se]
+                for_target_group.setdefault((f_se[0], t_se[0]), [])  # f_se[0] = for_season, t_se[0] = target_season
+                for_target_group[(f_se[0], t_se[0])] += [(f_se[1], t_se[1])]  # f_se[1] = for_ep, t_se[1] = target_ep
+
+            # minimise episode lists into ranges e.g. 1x1, 2x2, ... 5x5 => 1x1-5
+            minimal = {}
+            for ft_s, ft_e_range in iteritems(for_target_group):
+                minimal.setdefault(ft_s, [])
+                last_f_e = None
+                for (f_e, t_e) in ft_e_range:
+                    add_new = True
+                    if minimal[ft_s]:
+                        last = minimal[ft_s][-1]
+                        last_t_e = last[-1]
+                        if (f_e, t_e) in ((last_f_e + 1, last_t_e + 1), (last_f_e - 1, last_t_e - 1)):
+                            add_new = False
+                            if 2 == len(last):
+                                minimal[ft_s][-1] += [t_e]  # create range
+                            else:
+                                minimal[ft_s][-1][-1] += (-1, 1)[t_e == last_t_e + 1]  # adjust range
+                    last_f_e = f_e
+                    if add_new:
+                        minimal[ft_s] += [[f_e, t_e]]  # singular
+
+            for (f_s, t_s), ft_list in iteritems(minimal):
+                alts[f_s].setdefault('se', [])
+                for fe_te in ft_list:
+                    alts[f_s]['se'] += [dict({fe_te[0]: '%sx%s' % (t_s, '-'.join(['%s' % x for x in fe_te[1:]]))})]
+
+            ui_output = json.dumps(dict({tvid_prodid: alts}), indent=2, separators=(',', ': '))
+        return json.dumps(dict(text='%s\n\n' % ui_output))
 
     @staticmethod
     def generate_key():

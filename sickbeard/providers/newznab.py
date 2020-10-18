@@ -36,6 +36,7 @@ from ..network_timezones import SG_TIMEZONE
 from ..sgdatetime import SGDatetime, timestamp_near
 from ..search import get_aired_in_season, get_wanted_qualities
 from ..show_name_helpers import get_show_names
+from ..scene_exceptions import has_season_exceptions
 from ..tv import TVEpisode, TVShow
 
 from lib.dateutil import parser
@@ -457,11 +458,12 @@ class NewznabProvider(generic.NZBProvider):
         # id search
         params = base_params.copy()
         use_id = False
-        for i in sickbeard.TVInfoAPI().all_sources:
-            if i in ep_obj.show_obj.ids and 0 < ep_obj.show_obj.ids[i]['id'] and i in self.caps:
-                params[self.caps[i]] = ep_obj.show_obj.ids[i]['id']
-                use_id = True
-        use_id and search_params.append(params)
+        if not has_season_exceptions(ep_obj.show_obj.tvid, ep_obj.show_obj.prodid, ep_obj.season):
+            for i in sickbeard.TVInfoAPI().all_sources:
+                if i in ep_obj.show_obj.ids and 0 < ep_obj.show_obj.ids[i]['id'] and i in self.caps:
+                    params[self.caps[i]] = ep_obj.show_obj.ids[i]['id']
+                    use_id = True
+            use_id and search_params.append(params)
 
         spacer = 'nzbgeek.info' in self.url.lower() and ' ' or '.'
         # query search and exceptions
@@ -516,11 +518,12 @@ class NewznabProvider(generic.NZBProvider):
         # id search
         params = base_params.copy()
         use_id = False
-        for i in sickbeard.TVInfoAPI().all_sources:
-            if i in ep_obj.show_obj.ids and 0 < ep_obj.show_obj.ids[i]['id'] and i in self.caps:
-                params[self.caps[i]] = ep_obj.show_obj.ids[i]['id']
-                use_id = True
-        use_id and search_params.append(params)
+        if not has_season_exceptions(ep_obj.show_obj.tvid, ep_obj.show_obj.prodid, ep_obj.season):
+            for i in sickbeard.TVInfoAPI().all_sources:
+                if i in ep_obj.show_obj.ids and 0 < ep_obj.show_obj.ids[i]['id'] and i in self.caps:
+                    params[self.caps[i]] = ep_obj.show_obj.ids[i]['id']
+                    use_id = True
+            use_id and search_params.append(params)
 
         spacer = 'nzbgeek.info' in self.url.lower() and ' ' or '.'
         # query search and exceptions

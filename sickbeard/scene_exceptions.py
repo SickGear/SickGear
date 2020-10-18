@@ -19,25 +19,33 @@
 from collections import defaultdict
 
 import datetime
+import io
+import os
 import re
+import sys
 import threading
-import time
 import traceback
 
 import sickbeard
+# noinspection PyPep8Naming
+import encodingKludge as ek
+from exceptions_helper import ex
 from . import db, helpers, logger, name_cache
 from .anime import create_anidb_obj
 from .classes import OrderedDefaultdict
+from .helpers import json
 from .indexers.indexer_config import TVINFO_TVDB
 from .sgdatetime import timestamp_near
 
-from _23 import filter_iter, map_iter
+import lib.rarfile.rarfile as rarfile
+
+from _23 import filter_iter, list_range, map_iter
 from six import iteritems, PY2, text_type
 
 # noinspection PyUnreachableCode
 if False:
     # noinspection PyUnresolvedReferences
-    from typing import AnyStr, List, Tuple
+    from typing import AnyStr, List, Tuple, Union
 
 exception_dict = {}
 anidb_exception_dict = {}
@@ -50,20 +58,22 @@ exceptionsSeasonCache = {}
 exceptionLock = threading.Lock()
 
 
-def should_refresh(name):
+def should_refresh(name, max_refresh_age_secs=86400, remaining=False):
+    # type: (AnyStr, int, bool) -> Union[bool, int]
     """
 
     :param name: name
-    :type name: AnyStr
+    :param max_refresh_age_secs:
+    :param remaining: True to return remaining seconds
     :return:
-    :rtype: bool
     """
-    max_refresh_age_secs = 86400  # 1 day
-
     my_db = db.DBConnection()
     rows = my_db.select('SELECT last_refreshed FROM scene_exceptions_refresh WHERE list = ?', [name])
     if rows:
         last_refresh = int(rows[0]['last_refreshed'])
+        if remaining:
+            time_left = (last_refresh + max_refresh_age_secs - int(timestamp_near(datetime.datetime.now())))
+            return (0, time_left)[time_left > 0]
         return int(timestamp_near(datetime.datetime.now())) > last_refresh + max_refresh_age_secs
     return True
 
@@ -78,6 +88,13 @@ def set_last_refresh(name):
     my_db.upsert('scene_exceptions_refresh',
                  {'last_refreshed': int(timestamp_near(datetime.datetime.now()))},
                  {'list': name})
+
+
+def has_season_exceptions(tvid, prodid, season):
+    get_scene_exceptions(tvid, prodid, season=season)
+    if (tvid, prodid) in exceptionsCache and -1 < season and season in exceptionsCache[(tvid, prodid)]:
+        return True
+    return False
 
 
 def get_scene_exceptions(tvid, prodid, season=-1):
@@ -133,11 +150,19 @@ def get_all_scene_exceptions(tvid_prodid):
     exceptions = my_db.select('SELECT show_name,season'
                               ' FROM scene_exceptions'
                               ' WHERE indexer = ? AND indexer_id = ?'
-                              ' ORDER BY season',
+                              ' ORDER BY season DESC, show_name DESC',
                               TVidProdid(tvid_prodid).list)
 
+    exceptions_seasons = []
     if exceptions:
         for cur_exception in exceptions:
+            # order as, s*, and then season desc, show_name also desc (so years in names may fall newest on top)
+            if -1 == cur_exception['season']:
+                exceptions_dict[cur_exception['season']].append(cur_exception['show_name'])
+            else:
+                exceptions_seasons += [cur_exception]
+
+        for cur_exception in exceptions_seasons:
             exceptions_dict[cur_exception['season']].append(cur_exception['show_name'])
 
     return exceptions_dict
@@ -257,6 +282,14 @@ def retrieve_exceptions():
         else:
             exception_dict[anidb_ex] = anidb_exception_dict[anidb_ex]
 
+    # Custom exceptions
+    custom_exception_dict, cnt_updated_numbers, min_remain_iv = _custom_exceptions_fetcher()
+    for custom_ex in custom_exception_dict:
+        if custom_ex in exception_dict:
+            exception_dict[custom_ex] = exception_dict[custom_ex] + custom_exception_dict[custom_ex]
+        else:
+            exception_dict[custom_ex] = custom_exception_dict[custom_ex]
+
     changed_exceptions = False
 
     # write all the exceptions we got off the net into the database
@@ -265,16 +298,14 @@ def retrieve_exceptions():
     for cur_tvid_prodid in exception_dict:
 
         # get a list of the existing exceptions for this ID
-        existing_exceptions = [x['show_name'] for x in
-                               my_db.select('SELECT show_name'
+        existing_exceptions = [{x['show_name']: x['season']} for x in
+                               my_db.select('SELECT show_name, season'
                                             ' FROM scene_exceptions'
                                             ' WHERE indexer = ? AND indexer_id = ?',
                                             list(cur_tvid_prodid))]
 
-        if cur_tvid_prodid not in exception_dict:
-            continue
-
-        for cur_exception_dict in exception_dict[cur_tvid_prodid]:
+        # if this exception isn't already in the DB then add it
+        for cur_exception_dict in filter_iter(lambda e: e not in existing_exceptions, exception_dict[cur_tvid_prodid]):
             try:
                 cur_exception, cur_season = next(iteritems(cur_exception_dict))
             except (BaseException, Exception):
@@ -282,16 +313,13 @@ def retrieve_exceptions():
                 logger.log(traceback.format_exc(), logger.ERROR)
                 continue
 
-            # if this exception isn't already in the DB then add it
-            if cur_exception not in existing_exceptions:
+            if PY2 and not isinstance(cur_exception, text_type):
+                cur_exception = text_type(cur_exception, 'utf-8', 'replace')
 
-                if PY2 and not isinstance(cur_exception, text_type):
-                    cur_exception = text_type(cur_exception, 'utf-8', 'replace')
-
-                cl.append(['INSERT INTO scene_exceptions'
-                           ' (indexer, indexer_id, show_name, season) VALUES (?,?,?,?)',
-                           list(cur_tvid_prodid) + [cur_exception, cur_season]])
-                changed_exceptions = True
+            cl.append(['INSERT INTO scene_exceptions'
+                       ' (indexer, indexer_id, show_name, season) VALUES (?,?,?,?)',
+                       list(cur_tvid_prodid) + [cur_exception, cur_season]])
+            changed_exceptions = True
 
     if cl:
         my_db.mass_action(cl)
@@ -307,6 +335,8 @@ def retrieve_exceptions():
     exception_dict.clear()
     anidb_exception_dict.clear()
     xem_exception_dict.clear()
+
+    return changed_exceptions, cnt_updated_numbers, min_remain_iv
 
 
 def update_scene_exceptions(tvid, prodid, scene_exceptions):
@@ -331,6 +361,12 @@ def update_scene_exceptions(tvid, prodid, scene_exceptions):
     logger.log(u'Updating scene exceptions', logger.MESSAGE)
     for exception in scene_exceptions:
         cur_season, cur_exception = exception.split('|', 1)
+        try:
+            cur_season = int(cur_season)
+        except (BaseException, Exception):
+            logger.log('invalid scene exception: %s - %s:%s' % ('%s:%s' % (tvid, prodid), cur_season, cur_exception),
+                       logger.ERROR)
+            continue
 
         exceptionsCache[(tvid, prodid)][cur_season].append(cur_exception)
 
@@ -342,6 +378,107 @@ def update_scene_exceptions(tvid, prodid, scene_exceptions):
                      [tvid, prodid, cur_exception, cur_season])
 
     sickbeard.name_cache.buildNameCache(update_only_scene=True)
+
+
+def _custom_exceptions_fetcher():
+    custom_exception_dict = {}
+    cnt_updated_numbers = 0
+
+    src_id = 'GHSG'
+    logger.log(u'Checking to update custom alternatives from %s' % src_id)
+
+    dirpath = ek.ek(os.path.join, sickbeard.CACHE_DIR, 'alts')
+    tmppath = ek.ek(os.path.join, dirpath, 'tmp')
+    file_rar = ek.ek(os.path.join, tmppath, 'alt.rar')
+    file_cache = ek.ek(os.path.join, dirpath, 'alt.json')
+    iv = 30 * 60  # min interval to fetch updates
+    refresh = should_refresh(src_id, iv)
+    fetch_data = not ek.ek(os.path.isfile, file_cache) or (not int(os.environ.get('NO_ALT_GET', 0)) and refresh)
+    if fetch_data:
+        if ek.ek(os.path.exists, tmppath):
+            helpers.remove_file(tmppath, tree=True)
+        helpers.make_dirs(tmppath)
+        helpers.download_file(r'https://github.com/SickGear/sickgear.altdata/raw/master/alt.rar', file_rar)
+
+        rar_handle = None
+        if 'win32' == sys.platform:
+            rarfile.UNRAR_TOOL = ek.ek(os.path.join, sickbeard.PROG_DIR, 'lib', 'rarfile', 'UnRAR.exe')
+        try:
+            rar_handle = rarfile.RarFile(file_rar)
+            rar_handle.extractall(path=dirpath, pwd='sickgear_alt')
+        except(BaseException, Exception) as e:
+            logger.log(u'Failed to unpack archive: %s with error: %s' % (file_rar, ex(e)), logger.ERROR)
+
+        if rar_handle:
+            rar_handle.close()
+            del rar_handle
+
+        helpers.remove_file(tmppath, tree=True)
+
+    if refresh:
+        set_last_refresh(src_id)
+
+    data = {}
+    try:
+        with io.open(file_cache) as fh:
+            data = json.load(fh)
+    except(BaseException, Exception) as e:
+        logger.log(u'Failed to unpack json data: %s with error: %s' % (file_rar, ex(e)), logger.ERROR)
+
+    # handle data
+    from .scene_numbering import find_scene_numbering, set_scene_numbering_helper
+    from .tv import TVidProdid
+
+    for tvid_prodid, season_data in iteritems(data):
+        show_obj = sickbeard.helpers.find_show_by_id(tvid_prodid, no_mapped_ids=True)
+        if not show_obj:
+            continue
+
+        used = set()
+        for for_season, data in iteritems(season_data):
+            for_season = helpers.try_int(for_season, None)
+            tvid, prodid = TVidProdid(tvid_prodid).tuple
+            if data.get('n'):  # alt names
+                custom_exception_dict.setdefault((tvid, prodid), [])
+                custom_exception_dict[(tvid, prodid)] += [{name: for_season} for name in data.get('n')]
+
+            for update in data.get('se') or []:
+                for for_episode, se_range in iteritems(update):  # scene episode alt numbers
+                    for_episode = helpers.try_int(for_episode, None)
+
+                    target_season, episode_range = se_range.split('x')
+                    scene_episodes = [int(x) for x in episode_range.split('-') if None is not helpers.try_int(x, None)]
+
+                    if 2 == len(scene_episodes):
+                        desc = scene_episodes[0] > scene_episodes[1]
+                        if desc:  # handle a descending range case
+                            scene_episodes.reverse()
+                        scene_episodes = list_range(*[scene_episodes[0], scene_episodes[1] + 1])
+                        if desc:
+                            scene_episodes.reverse()
+
+                    target_season = helpers.try_int(target_season, None)
+                    for target_episode in scene_episodes:
+                        sn = find_scene_numbering(tvid, prodid, for_season, for_episode)
+                        used.add((for_season, for_episode, target_season, target_episode))
+                        if sn and ((for_season, for_episode) + sn) not in used \
+                                and (for_season, for_episode) not in used:
+                            logger.log(
+                                u'Skipped setting "%s" episode %sx%s to target a release %sx%s because set to %sx%s'
+                                % (show_obj.name, for_season, for_episode, target_season, target_episode, sn[0], sn[1]),
+                                logger.DEBUG)
+                        else:
+                            used.add((for_season, for_episode))
+                            if not sn or sn != (target_season, target_episode):  # not already set
+                                result = set_scene_numbering_helper(
+                                    tvid, prodid, for_season=for_season, for_episode=for_episode,
+                                    scene_season=target_season, scene_episode=target_episode)
+                                if result.get('success'):
+                                    cnt_updated_numbers += 1
+
+                        for_episode = for_episode + 1
+
+    return custom_exception_dict, cnt_updated_numbers, should_refresh(src_id, iv, remaining=True)
 
 
 def _anidb_exceptions_fetcher():

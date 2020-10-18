@@ -21,7 +21,6 @@
 # @copyright: Dermot Buckley
 #
 
-import time
 import datetime
 import traceback
 
@@ -1015,6 +1014,11 @@ def set_scene_numbering_helper(tvid, prodid, for_season=None, for_episode=None, 
         logger.log(action_log, logger.DEBUG)
         set_scene_numbering(**scene_args)
         show_obj.flush_episodes()
+        if None is scene_season and None is scene_episode:
+            # when clearing the field, do not return existing values of sxe, otherwise this may be confusing
+            # with the case where manually setting sxe to the actual sxe is done to prevent a data overwrite.
+            # So now the only instance an actual sxe is in the field is if user enters it, else 0x0 is presented.
+            return result
     else:
         result['errorMessage'] = "Episode couldn't be retrieved, invalid parameters"
 

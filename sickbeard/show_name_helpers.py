@@ -396,7 +396,7 @@ def allPossibleShowNames(show_obj, season=-1):
         season = -1
         showNames = get_scene_exceptions(show_obj.tvid, show_obj.prodid, season=season)[:]
 
-    if season in [-1, 1]:
+    if -1 == season:
         showNames.append(show_obj.name)
 
     if not show_obj.is_anime:

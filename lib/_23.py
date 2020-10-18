@@ -155,8 +155,10 @@ if 2 != version_info[0]:
     # noinspection PyUnresolvedReferences
     from subprocess import Popen
 
-    # noinspection PyUnresolvedReferences
+    # noinspection PyUnresolvedReferences, PyPep8Naming
     import xml.etree.ElementTree as etree
+
+    ordered_dict = dict
 
     native_timestamp = datetime.datetime.timestamp  # type: Callable[[datetime.datetime], float]
 
@@ -237,6 +239,9 @@ else:
         # noinspection PyPep8Naming
         import xml.etree.ElementTree as etree
 
+    from collections import OrderedDict
+    ordered_dict = OrderedDict
+
     def _totimestamp(dt=None):
         # type: (datetime.datetime) -> float
         """ This function should only be used in this module due to its 1970s+ limitation as that's all we need here and
@@ -247,6 +252,7 @@ else:
     native_timestamp = _totimestamp  # type: Callable[[datetime.datetime], float]
 
     from subprocess import Popen as _Popen
+
     class Popen(_Popen):
 
         def __enter__(self):
