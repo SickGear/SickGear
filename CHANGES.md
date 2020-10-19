@@ -56,6 +56,11 @@
 * Fix update Soupsieve (05086ef) broke MC and TVC browse cards
 
 
+### 0.22.7 (2020-10-19 10:15:00 UTC)
+
+* Add `autoProcessTV/sabToSickGear.py` that works with SABnzbd under both py2 and py3
+
+
 ### 0.22.6 (2020-10-19 01:05:00 UTC)
 
 * Fix libtrakt logging error that created a Trakt notifier issue during media process
