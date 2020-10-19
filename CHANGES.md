@@ -1,4 +1,10 @@
-﻿### 0.22.7 (2020-10-19 10:15:00 UTC)
+﻿### 0.22.8 (2020-10-19 13:45:00 UTC)
+
+* Fix rare timing case on first-time startup with a network timezone update failure and an endless loop
+* Change ensure `autoProcessTV/sabToSickGear.py` is set executable
+
+
+### 0.22.7 (2020-10-19 10:15:00 UTC)
 
 * Add `autoProcessTV/sabToSickGear.py` that works with SABnzbd under both py2 and py3
 
