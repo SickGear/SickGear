@@ -56,6 +56,11 @@
 * Fix update Soupsieve (05086ef) broke MC and TVC browse cards
 
 
+### 0.22.6 (2020-10-19 01:05:00 UTC)
+
+* Fix libtrakt logging error that created a Trakt notifier issue during media process
+
+
 ### 0.22.5 (2020-10-16 00:45:00 UTC)
 
 * Fix reading scene numbers from db
