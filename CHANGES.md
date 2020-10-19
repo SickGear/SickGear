@@ -1,4 +1,9 @@
-﻿### 0.22.5 (2020-10-16 00:45:00 UTC)
+﻿### 0.22.6 (2020-10-19 01:05:00 UTC)
+
+* Fix libtrakt logging error that created a Trakt notifier issue during media process
+
+
+### 0.22.5 (2020-10-16 00:45:00 UTC)
 
 * Fix reading scene numbers from db
 * Change improve clarity of notes when config/Media Process/Failed Download Handling is enabled

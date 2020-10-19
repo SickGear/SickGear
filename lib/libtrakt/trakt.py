@@ -312,7 +312,7 @@ class TraktAPI(object):
                 raise TraktMethodNotExisting('Trakt error (404) the resource does not exist: %s%s' % (url, path))
             else:
                 log.error(u'Could not connect to Trakt. Code error: {0}'.format(code))
-                raise TraktException('Could not connect to Trakt. Code error: %s' % ex(code))
+                raise TraktException('Could not connect to Trakt. Code error: %s' % code)
         except ValueError as e:
             log.error(u'Value Error: %s' % ex(e))
             raise TraktValueError(u'Value Error: %s' % ex(e))
