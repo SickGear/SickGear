@@ -545,9 +545,10 @@ SUBTITLES_FINDER_FREQUENCY = 1
 USE_FAILED_DOWNLOADS = False
 DELETE_FAILED = False
 
-MAX_DB_BACKUP_COUNT = 14
-DEFAULT_DB_BACKUP_COUNT = 14
-DB_BACKUP_PATH = ''
+BACKUP_DB_PATH = ''
+BACKUP_DB_ONEDAY = False
+BACKUP_DB_MAX_COUNT = 14
+BACKUP_DB_DEFAULT_COUNT = 14
 
 EXTRA_SCRIPTS = []
 SG_EXTRA_SCRIPTS = []
@@ -748,7 +749,7 @@ def init_stage_1(console_logging):
     # Anime Settings
     global ANIME_TREAT_AS_HDTV, USE_ANIDB, ANIDB_USERNAME, ANIDB_PASSWORD, ANIDB_USE_MYLIST
     # db backup settings
-    global MAX_DB_BACKUP_COUNT, DEFAULT_DB_BACKUP_COUNT, DB_BACKUP_PATH
+    global BACKUP_DB_PATH, BACKUP_DB_ONEDAY, BACKUP_DB_MAX_COUNT, BACKUP_DB_DEFAULT_COUNT
 
     for stanza in ('General', 'Blackhole', 'SABnzbd', 'NZBGet', 'Emby', 'Kodi', 'XBMC', 'PLEX',
                    'Growl', 'Prowl', 'Slack', 'Discord', 'Boxcar2', 'NMJ', 'NMJv2',
@@ -1312,10 +1313,10 @@ def init_stage_1(console_logging):
     if not isinstance(BROWSELIST_MRU, dict):
         BROWSELIST_MRU = {}
 
-    MAX_DB_BACKUP_COUNT = minimax(check_setting_int(CFG, 'Backup', 'max_db_backup_count', DEFAULT_DB_BACKUP_COUNT),
-                                  DEFAULT_DB_BACKUP_COUNT, 0, 90)
-
-    DB_BACKUP_PATH = check_setting_str(CFG, 'Backup', 'db_backup_path', '')
+    BACKUP_DB_PATH = check_setting_str(CFG, 'Backup', 'backup_db_path', '')
+    BACKUP_DB_ONEDAY = bool(check_setting_int(CFG, 'Backup', 'backup_db_oneday', 0))
+    use_count = (1, BACKUP_DB_DEFAULT_COUNT)[not BACKUP_DB_ONEDAY]
+    BACKUP_DB_MAX_COUNT = minimax(check_setting_int(CFG, 'Backup', 'backup_db_max_count', use_count), use_count, 0, 90)
 
     sg_helpers.db = db
     sg_helpers.DOMAIN_FAILURES.load_from_db()
@@ -1885,9 +1886,12 @@ def save_config():
     new_config['General']['ignore_words'] = helpers.generate_word_str(IGNORE_WORDS, IGNORE_WORDS_REGEX)
     new_config['General']['require_words'] = helpers.generate_word_str(REQUIRE_WORDS, REQUIRE_WORDS_REGEX)
     new_config['General']['calendar_unprotected'] = int(CALENDAR_UNPROTECTED)
-    new_config['Backup']['max_db_backup_count'] = MAX_DB_BACKUP_COUNT
-    if DB_BACKUP_PATH:
-        new_config['Backup']['db_backup_path'] = DB_BACKUP_PATH
+
+    new_config['Backup'] = {}
+    if BACKUP_DB_PATH:
+        new_config['Backup']['backup_db_path'] = BACKUP_DB_PATH
+    new_config['Backup']['backup_db_oneday'] = int(BACKUP_DB_ONEDAY)
+    new_config['Backup']['backup_db_max_count'] = BACKUP_DB_MAX_COUNT
 
     default_not_zero = ('enable_recentsearch', 'enable_backlog', 'enable_scheduled_backlog', 'use_after_get_data')
     for src in filter_iter(lambda px: GenericProvider.TORRENT == px.providerType, providers.sortedProviderList()):

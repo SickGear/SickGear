@@ -776,7 +776,7 @@ def get_rollback_module():
 def delete_old_db_backups(target):
     # type: (AnyStr) -> None
     """
-    remove old db backups (> MAX_DB_BACKUP_COUNT)
+    remove old db backups (> BACKUP_DB_MAX_COUNT)
 
     :param target: backup folder to check
     """
@@ -786,9 +786,9 @@ def delete_old_db_backups(target):
         file_list = [f for f in ek.ek(scandir, target) if f.is_file()]
         for filename in ['sickbeard', 'cache', 'failed']:
             tb = filter_list(lambda fn: fn.is_file() and filename in fn.name, file_list)
-            if sickbeard.MAX_DB_BACKUP_COUNT < len(tb):
+            if sickbeard.BACKUP_DB_MAX_COUNT < len(tb):
                 tb.sort(key=lambda f: f.stat(follow_symlinks=False).st_mtime, reverse=True)
-                for t in tb[sickbeard.MAX_DB_BACKUP_COUNT:]:
+                for t in tb[sickbeard.BACKUP_DB_MAX_COUNT:]:
                     try:
                         ek.ek(os.unlink, t.path)
                     except (BaseException, Exception):
@@ -810,12 +810,10 @@ def backup_all_dbs(target, compress=True, prefer_7z=True):
     :param prefer_7z: prefer 7z compression if available
     :return: success, message
     """
-    if not ek.ek(os.path.isdir, target):
-        make_dirs(target)
-    if not ek.ek(os.path.isdir, target):
+    if not make_dirs(target):
         logger.log('Failed to create db backup dir', logger.ERROR)
         return False, 'Failed to create db backup dir'
-    my_db = DBConnection()
+    my_db = DBConnection('cache.db')
     last_backup = my_db.select('SELECT time FROM lastUpdate WHERE provider = ?', ['sickgear_db_backup'])
     if last_backup:
         now_stamp = int(timestamp_near(datetime.datetime.now()))
@@ -823,10 +821,10 @@ def backup_all_dbs(target, compress=True, prefer_7z=True):
         # only backup every 23 hours
         if now_stamp - the_time < 60 * 60 * 23:
             return False, 'Too early to backup db again'
-    now = datetime.datetime.now()
-    d = sgdatetime.SGDatetime.sbfdate(now, d_preset='%d-%m-%Y')
+    now = sgdatetime.SGDatetime.now()
+    d = sgdatetime.SGDatetime.sbfdate(now, d_preset='%Y-%m-%d')
     t = sgdatetime.SGDatetime.sbftime(now, t_preset='%H-%M')
-    ds = '%s_%s' % (t, d)
+    ds = '%s_%s' % (d, t)
     for c in ['sickbeard', 'cache', 'failed']:
         cur_db = DBConnection('%s.db' % c)
         b_name = '%s_%s.db' % (c, ds)

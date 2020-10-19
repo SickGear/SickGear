@@ -71,13 +71,13 @@ class ShowUpdater(object):
             update_date = update_datetime.date()
 
             # backup db's
-            if sickbeard.db.db_supports_backup and 0 < sickbeard.MAX_DB_BACKUP_COUNT:
+            if sickbeard.db.db_supports_backup and 0 < sickbeard.BACKUP_DB_MAX_COUNT:
                 logger.log('backing up all db\'s')
                 try:
-                    sickbeard.db.backup_all_dbs(sickbeard.DB_BACKUP_PATH or
+                    sickbeard.db.backup_all_dbs(sickbeard.BACKUP_DB_PATH or
                                                 ek.ek(os.path.join, sickbeard.DATA_DIR, 'backup'))
                 except (BaseException, Exception):
-                    logger.log('DB backup error', logger.ERROR)
+                    logger.log('backup db error', logger.ERROR)
 
             # refresh network timezones
             try:
