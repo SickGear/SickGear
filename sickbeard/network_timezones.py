@@ -22,6 +22,7 @@ import datetime
 import os
 import re
 import sys
+import threading
 
 import sickbeard
 from . import db, helpers, logger
@@ -63,6 +64,8 @@ country_timezones = {
 EPOCH_START = None  # type: Optional[datetime.datetime]
 EPOCH_START_WIN = None  # type: Optional[datetime.datetime]
 SG_TIMEZONE = None  # type: Optional[datetime.tzinfo]
+
+network_timezone_lock = threading.Lock()
 
 
 def reset_last_retry():
@@ -314,35 +317,37 @@ def update_network_dict():
     except (IOError, OSError):
         pass
 
-    my_db = db.DBConnection('cache.db')
+    with network_timezone_lock:
+        my_db = db.DBConnection('cache.db')
 
-    # load current network timezones
-    old_d = dict(my_db.select('SELECT * FROM network_timezones'))
+        # load current network timezones
+        old_d = dict(my_db.select('SELECT * FROM network_timezones'))
 
-    # list of sql commands to update the network_timezones table
-    cl = []
-    for cur_d, cur_t in iteritems(d):
-        h_k = cur_d in old_d
-        if h_k and cur_t != old_d[cur_d]:
-            # update old record
-            cl.append(
-                ['UPDATE network_timezones SET network_name=?, timezone=? WHERE network_name=?', [cur_d, cur_t, cur_d]])
-        elif not h_k:
-            # add new record
-            cl.append(['INSERT INTO network_timezones (network_name, timezone) VALUES (?,?)', [cur_d, cur_t]])
-        if h_k:
-            del old_d[cur_d]
+        # list of sql commands to update the network_timezones table
+        cl = []
+        for cur_d, cur_t in iteritems(d):
+            h_k = cur_d in old_d
+            if h_k and cur_t != old_d[cur_d]:
+                # update old record
+                cl.append(
+                    ['UPDATE network_timezones SET network_name=?, timezone=? WHERE network_name=?',
+                     [cur_d, cur_t, cur_d]])
+            elif not h_k:
+                # add new record
+                cl.append(['REPLACE INTO network_timezones (network_name, timezone) VALUES (?,?)', [cur_d, cur_t]])
+            if h_k:
+                del old_d[cur_d]
 
-    # remove deleted records
-    if 0 < len(old_d):
-        old_items = list([va for va in old_d])
-        cl.append(['DELETE FROM network_timezones WHERE network_name IN (%s)'
-                   % ','.join(['?'] * len(old_items)), old_items])
+        # remove deleted records
+        if 0 < len(old_d):
+            old_items = list([va for va in old_d])
+            cl.append(['DELETE FROM network_timezones WHERE network_name IN (%s)'
+                       % ','.join(['?'] * len(old_items)), old_items])
 
-    # change all network timezone infos at once (much faster)
-    if 0 < len(cl):
-        my_db.mass_action(cl)
-        load_network_dict()
+        # change all network timezone infos at once (much faster)
+        if 0 < len(cl):
+            my_db.mass_action(cl)
+            load_network_dict(load=False)
 
 
 def load_network_dict(load=True):
