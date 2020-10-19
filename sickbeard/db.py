@@ -35,7 +35,7 @@ from . import logger, sgdatetime
 from .sgdatetime import timestamp_near
 
 from _23 import filter_iter, filter_list, list_values, scandir
-from sg_helpers import make_dirs, compress_file
+from sg_helpers import make_dirs, compress_file, remove_file_failed
 from six import iterkeys, iteritems, itervalues
 
 # noinspection PyUnreachableCode
@@ -784,13 +784,14 @@ def delete_old_db_backups(target):
         if not ek.ek(os.path.isdir, target):
             return
         file_list = [f for f in ek.ek(scandir, target) if f.is_file()]
+        use_count = (1, sickbeard.BACKUP_DB_MAX_COUNT)[not sickbeard.BACKUP_DB_ONEDAY]
         for filename in ['sickbeard', 'cache', 'failed']:
-            tb = filter_list(lambda fn: fn.is_file() and filename in fn.name, file_list)
-            if sickbeard.BACKUP_DB_MAX_COUNT < len(tb):
+            tb = filter_list(lambda fn: filename in fn.name, file_list)
+            if use_count < len(tb):
                 tb.sort(key=lambda f: f.stat(follow_symlinks=False).st_mtime, reverse=True)
-                for t in tb[sickbeard.BACKUP_DB_MAX_COUNT:]:
+                for t in tb[use_count:]:
                     try:
-                        ek.ek(os.unlink, t.path)
+                        remove_file_failed(t.path)
                     except (BaseException, Exception):
                         pass
     except (BaseException, Exception):
@@ -837,7 +838,7 @@ def backup_all_dbs(target, compress=True, prefer_7z=True):
                 return False, 'Failure to compress backup'
     delete_old_db_backups(target)
     my_db.upsert('lastUpdate',
-                 {'time': int(time.mktime(datetime.datetime.now().timetuple()))},
+                 {'time': int(time.mktime(now.timetuple()))},
                  {'provider': 'sickgear_db_backup'})
     logger.log('successfully backed up all dbs')
     return True, 'successfully backed up all dbs'

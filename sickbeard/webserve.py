@@ -7070,7 +7070,7 @@ class ConfigGeneral(Config):
         sickbeard.PROXY_INDEXERS = config.checkbox_to_value(proxy_indexers)
         sickbeard.FILE_LOGGING_PRESET = file_logging_preset
         # sickbeard.LOG_DIR is set in config.change_log_dir()
-        sickbeard.BACKUP_DB_ONEDAY = config.checkbox_to_value(backup_db_oneday)
+        sickbeard.BACKUP_DB_ONEDAY = bool(config.checkbox_to_value(backup_db_oneday))
 
         logger.log_set_level()
 

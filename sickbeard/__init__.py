@@ -65,7 +65,7 @@ import sg_helpers
 
 # noinspection PyUnreachableCode
 if False:
-    from typing import Dict, List
+    from typing import AnyStr, Dict, List
     from adba import Connection
     from .event_queue import Events
     from .tv import TVShow
@@ -545,10 +545,10 @@ SUBTITLES_FINDER_FREQUENCY = 1
 USE_FAILED_DOWNLOADS = False
 DELETE_FAILED = False
 
-BACKUP_DB_PATH = ''
-BACKUP_DB_ONEDAY = False
-BACKUP_DB_MAX_COUNT = 14
-BACKUP_DB_DEFAULT_COUNT = 14
+BACKUP_DB_PATH = ''  # type: AnyStr
+BACKUP_DB_ONEDAY = False  # type: bool
+BACKUP_DB_MAX_COUNT = 14  # type: int
+BACKUP_DB_DEFAULT_COUNT = 14  # type: int
 
 EXTRA_SCRIPTS = []
 SG_EXTRA_SCRIPTS = []
@@ -1315,8 +1315,8 @@ def init_stage_1(console_logging):
 
     BACKUP_DB_PATH = check_setting_str(CFG, 'Backup', 'backup_db_path', '')
     BACKUP_DB_ONEDAY = bool(check_setting_int(CFG, 'Backup', 'backup_db_oneday', 0))
-    use_count = (1, BACKUP_DB_DEFAULT_COUNT)[not BACKUP_DB_ONEDAY]
-    BACKUP_DB_MAX_COUNT = minimax(check_setting_int(CFG, 'Backup', 'backup_db_max_count', use_count), use_count, 0, 90)
+    BACKUP_DB_MAX_COUNT = minimax(check_setting_int(CFG, 'Backup', 'backup_db_max_count', BACKUP_DB_DEFAULT_COUNT),
+                                  BACKUP_DB_DEFAULT_COUNT, 0, 90)
 
     sg_helpers.db = db
     sg_helpers.DOMAIN_FAILURES.load_from_db()
