@@ -163,7 +163,7 @@ def snatch_episode(result, end_status=SNATCHED):
             dl_result = clients.get_client_instance(sickbeard.TORRENT_METHOD)().send_torrent(result)
 
             if result.cache_filepath:
-                helpers.remove_file_failed(result.cache_filepath)
+                helpers.remove_file_perm(result.cache_filepath)
     else:
         logger.log(u'Unknown result type, unable to download it', logger.ERROR)
         dl_result = False

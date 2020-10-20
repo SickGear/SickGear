@@ -1132,24 +1132,29 @@ def move_file(src_file, dest_file):
         ek.ek(os.unlink, src_file)
 
 
-def remove_file_failed(filepath):
+def remove_file_perm(filepath):
+    # type: (AnyStr) -> Optional[bool]
     """
     Remove file
 
     :param filepath: Path and file name
-    :type filepath: AnyStr
+    :return True if filepath does not exist else None if no removal
     """
+    if not ek.ek(os.path.exists, filepath):
+        return True
     for t in list_range(10):  # total seconds to wait 0 - 9 = 45s over 10 iterations
         try:
             ek.ek(os.remove, filepath)
         except OSError as e:
             if getattr(e, 'winerror', 0) not in (5, 32):  # 5=access denied (e.g. av), 32=another process has lock
-                break
+                logger.warning('Unable to delete %s: %r / %s' % (filepath, e, ex(e)))
+                return
         except (BaseException, Exception):
             pass
         time.sleep(t)
         if not ek.ek(os.path.exists, filepath):
-            break
+            return True
+    logger.warning('Unable to delete %s' % filepath)
 
 
 def remove_file(filepath, tree=False, prefix_failure='', log_level=logging.INFO):
@@ -1365,10 +1370,5 @@ def compress_file(target, filename, prefer_7z=True, remove_source=True):
         logger.debug('traceback: %s' % ex(e))
         return False
     if remove_source:
-        try:
-            remove_file_failed(target)
-        except (BaseException, Exception) as e:
-            logger.error('error removing %s' % target)
-            logger.debug('traceback: %s' % ex(e))
-            return False
+        remove_file_perm(target)
     return True

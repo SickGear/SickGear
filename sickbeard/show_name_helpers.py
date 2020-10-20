@@ -443,14 +443,11 @@ def determineReleaseName(dir_name=None, nzb_name=None):
     file_types = ['*.nzb', '*.nfo']
 
     for search in file_types:
-
-        reg_expr = re.compile(fnmatch.translate(search), re.IGNORECASE)
-        results = [direntry.name for direntry in scantree(dir_name, filter_kind=False, recurse=False)
-                   if reg_expr.search(direntry.name)]
+        results = [direntry.name for direntry in scantree(dir_name, include=[fnmatch.translate(search)],
+                                                          filter_kind=False, recurse=False)]
 
         if 1 == len(results):
-            found_file = ek.ek(os.path.basename, results[0])
-            found_file = found_file.rpartition('.')[0]
+            found_file = results[0].rpartition('.')[0]
             if pass_wordlist_checks(found_file):
                 logger.log(u'Release name (%s) found from file (%s)' % (found_file, results[0]))
                 return found_file.rpartition('.')[0]

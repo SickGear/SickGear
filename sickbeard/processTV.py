@@ -137,7 +137,7 @@ class ProcessTVShow(object):
         if sickbeard.TV_DOWNLOAD_DIR and helpers.real_path(sickbeard.TV_DOWNLOAD_DIR) == helpers.real_path(folder):
             return False
 
-        # check if it's empty folder when wanted checked
+        # test if folder empty when check wanted
         if check_empty and len([direntry.path for direntry in scantree(folder, recurse=False)]):
             return False
 
