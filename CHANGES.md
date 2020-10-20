@@ -1,5 +1,11 @@
 ﻿### 0.23.0 (2019-xx-xx xx:xx:xx UTC)
 
+* Add db backup to the scheduled daily update
+* Add display "Database backups" location at config/about if feature available
+* Add option "Backup database plan" to config/general/advanced if feature available
+* Add py7zr to recommended.txt for optional 7z compression
+* Add `backup_db_path` setting to config.ini to customise backup db location
+* Add `backup_db_max_count` to config.ini with range 0-90 where 0 = disable backup, 14 = default
 * Change improve list performance for file/directory browser
 * Change improve import shows listing performance
 * Change improve performance during show rescan process
