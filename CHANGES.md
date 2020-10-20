@@ -1,4 +1,9 @@
-﻿### 0.22.8 (2020-10-19 13:45:00 UTC)
+﻿### 0.22.9 (2020-10-20 17:00:00 UTC)
+
+* Change remove DB file logging level from config/General and reduce DB levels to Debug to reduce log file noise
+
+
+### 0.22.8 (2020-10-19 13:45:00 UTC)
 
 * Fix rare timing case on first-time startup with a network timezone update failure and an endless loop
 * Change ensure `autoProcessTV/sabToSickGear.py` is set executable

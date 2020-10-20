@@ -772,12 +772,15 @@
 #for $level in $levels
     #set $level_title = $level.title().upper()
     #set $level_count -= 1
+    #if 'DB' == $level_title
+        #continue
+    #end if
     #set $level_text = '%s%s' % ($level.title(), (('', ' only')[0 == $level_count], ' and the next%s level%s' % ((' ' + str($level_count), '')[1 == $level_count], maybe_plural($level_count)))[0 < $level_count])
 										<option value="$level_title"#echo ('', $selected)[$level_title == $sg_str('FILE_LOGGING_PRESET', 'DB')]#>$level_text</option>
 #end for
 									</select>
-									<span>(default: Db)</span>
-									<p>enable Db or Debug to pin down an issue, the others are normal use</p>
+									<span>(default: Debug)</span>
+									<p>enable Debug to pin down an issue, the others are for light use</p>
 								</span>
 							</label>
 						</div>
