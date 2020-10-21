@@ -1,6 +1,7 @@
-﻿### 0.22.9 (2020-10-20 17:00:00 UTC)
+﻿### 0.22.9 (2020-10-21 11:55:00 UTC)
 
 * Change remove DB file logging level from config/General and reduce DB levels to Debug to reduce log file noise
+* Add Trakt rate-limiting http response code 429 handling to prevent request failure
 
 
 ### 0.22.8 (2020-10-19 13:45:00 UTC)
