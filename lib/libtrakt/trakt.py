@@ -6,8 +6,13 @@ import time
 import datetime
 import logging
 from exceptions_helper import ex
+from sg_helpers import try_int
 
 from .exceptions import *
+
+# noinspection PyUnreachableCode
+if False:
+    from typing import Any, AnyStr, Dict
 
 log = logging.getLogger('libtrakt')
 log.addHandler(logging.NullHandler())
@@ -193,7 +198,7 @@ class TraktAPI(object):
             return False
 
         if 'access_token' in resp and 'refresh_token' in resp and 'expires_in' in resp:
-            token_valid_date = now + datetime.timedelta(seconds=sickbeard.helpers.try_int(resp['expires_in']))
+            token_valid_date = now + datetime.timedelta(seconds=try_int(resp['expires_in']))
             if refresh or (not refresh and None is not account and account in sickbeard.TRAKT_ACCOUNTS):
                 return self.replace_account(account, resp['access_token'], resp['refresh_token'],
                                             token_valid_date, refresh)
@@ -203,6 +208,7 @@ class TraktAPI(object):
 
     def trakt_request(self, path, data=None, headers=None, url=None, count=0, sleep_retry=60,
                       send_oauth=None, method=None, **kwargs):
+        # type: (AnyStr, Dict, Dict, AnyStr, int, int, AnyStr, AnyStr, Any) -> Dict
 
         if method not in ['GET', 'POST', 'PUT', 'DELETE', None]:
             return {}
@@ -310,6 +316,22 @@ class TraktAPI(object):
             elif 404 == code:
                 log.warning(u'Trakt error (404) the resource does not exist: %s%s' % (url, path))
                 raise TraktMethodNotExisting('Trakt error (404) the resource does not exist: %s%s' % (url, path))
+            elif 429 == code:
+                if count >= self.max_retrys:
+                    log.warning(u'Trakt replied with Rate-Limiting, maximum retries exceeded.')
+                    raise TraktServerError(error_code=code)
+                r_headers = getattr(e.response, 'headers', None)
+                if None is not r_headers:
+                    wait_seconds = min(try_int(r_headers.get('Retry-After', 60), 60), 150)
+                else:
+                    wait_seconds = 60
+                log.warning('Trakt replied with Rate-Limiting, waiting %s seconds.' % wait_seconds)
+                wait_seconds = (wait_seconds, 60)[0 > wait_seconds]
+                wait_seconds -= sleep_retry
+                if 0 < wait_seconds:
+                    time.sleep(wait_seconds)
+                return self.trakt_request(path, data, headers, url, count=count, sleep_retry=sleep_retry,
+                                          send_oauth=send_oauth, method=method)
             else:
                 log.error(u'Could not connect to Trakt. Code error: {0}'.format(code))
                 raise TraktException('Could not connect to Trakt. Code error: %s' % code)
