@@ -27,9 +27,10 @@ from exceptions_helper import ex
 
 import sickbeard
 from . import common, db, logger
-from .helpers import sanitize_scene_name, scantree
+from .helpers import sanitize_scene_name
 from .name_parser.parser import InvalidNameException, InvalidShowException, NameParser
 from .scene_exceptions import get_scene_exceptions
+from sg_helpers import scantree
 
 from _23 import map_list, quote_plus
 from six import iterkeys, itervalues

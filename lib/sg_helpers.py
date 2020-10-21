@@ -29,7 +29,7 @@ from send2trash import send2trash
 import encodingKludge as ek
 import requests
 
-from _23 import decode_bytes, filter_list, html_unescape, list_range, urlparse, urlsplit, urlunparse
+from _23 import decode_bytes, filter_list, html_unescape, list_range, scandir, urlparse, urlsplit, urlunparse
 from six import integer_types, iteritems, iterkeys, itervalues, PY2, string_types, text_type
 
 import zipfile
@@ -41,8 +41,10 @@ except ImportError:
 # noinspection PyUnreachableCode
 if False:
     # noinspection PyUnresolvedReferences
-    from typing import Any, AnyStr, Dict, NoReturn, integer_types, Iterable, Iterator, List, Optional, Tuple, Union
+    from typing import Any, AnyStr, Dict, Generator, NoReturn, integer_types, Iterable, Iterator, List, Optional, \
+        Tuple, Union
     from lxml_etree import etree
+    from _23 import DirEntry
 
 # global tmdb_info cache
 _TMDB_INFO_CACHE = {'date': datetime.datetime(2000, 1, 1), 'data': None}
@@ -1372,3 +1374,37 @@ def compress_file(target, filename, prefer_7z=True, remove_source=True):
     if remove_source:
         remove_file_perm(target)
     return True
+
+
+def scantree(path,  # type: AnyStr
+             exclude=None,  # type: Optional[AnyStr, List[AnyStr]]
+             include=None,  # type: Optional[AnyStr, List[AnyStr]]
+             follow_symlinks=False,  # type: bool
+             filter_kind=None,  # type: Optional[bool]
+             recurse=True  # type: bool
+             ):
+    # type: (...) -> Generator[DirEntry, None, None]
+    """Yield DirEntry objects for given path. Returns without yield if path fails sanity check
+
+    :param path: Path to scan, sanity check is_dir and exists
+    :param exclude: Escaped regex string(s) to exclude
+    :param include: Escaped regex string(s) to include
+    :param follow_symlinks: Follow symlinks
+    :param filter_kind: None to yield everything, True yields directories, False yields files
+    :param recurse: Recursively scan the tree
+    """
+    if isinstance(path, string_types) and path and ek.ek(os.path.isdir, path):
+        rc_exc, rc_inc = [re.compile(rx % '|'.join(
+            [x for x in (param, ([param], [])[None is param])[not isinstance(param, list)]]))
+                          for rx, param in ((r'(?i)^(?:(?!%s).)*$', exclude), (r'(?i)%s', include))]
+        for entry in ek.ek(scandir, path):
+            is_dir = entry.is_dir(follow_symlinks=follow_symlinks)
+            is_file = entry.is_file(follow_symlinks=follow_symlinks)
+            no_filter = any([None is filter_kind, filter_kind and is_dir, not filter_kind and is_file])
+            if (rc_exc.search(entry.name), True)[not exclude] and (rc_inc.search(entry.name), True)[not include] \
+                    and (no_filter or (not filter_kind and is_dir and recurse)):
+                if recurse and is_dir:
+                    for subentry in scantree(entry.path, exclude, include, follow_symlinks, filter_kind, recurse):
+                        yield subentry
+                if no_filter:
+                    yield entry

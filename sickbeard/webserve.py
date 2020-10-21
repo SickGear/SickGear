@@ -44,6 +44,7 @@ import exceptions_helper
 # noinspection PyPep8Naming
 import encodingKludge as ek
 import sg_helpers
+from sg_helpers import scantree
 
 import sickbeard
 from . import classes, clients, config, db, helpers, history, image_cache, logger, naming, \
@@ -52,7 +53,7 @@ from .anime import AniGroupList, pull_anidb_groups, short_group_names
 from .browser import folders_at_path
 from .common import ARCHIVED, DOWNLOADED, FAILED, IGNORED, SKIPPED, SNATCHED, SNATCHED_ANY, UNAIRED, UNKNOWN, WANTED, \
      SD, HD720p, HD1080p, UHD2160p, Overview, Quality, qualityPresetStrings, statusStrings
-from .helpers import has_image_ext, remove_article, remove_file_perm, scantree, starify
+from .helpers import has_image_ext, remove_article, remove_file_perm, starify
 from .indexermapper import MapStatus, map_indexers_to_show, save_mapping
 from .indexers.indexer_config import TVINFO_IMDB, TVINFO_TRAKT, TVINFO_TVDB
 from .name_parser.parser import InvalidNameException, InvalidShowException, NameParser

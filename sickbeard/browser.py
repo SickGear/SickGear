@@ -29,7 +29,7 @@ import encodingKludge as ek
 from exceptions_helper import ex
 
 from . import logger
-from .helpers import scantree
+from sg_helpers import scantree
 
 # this is for the drive letter code, it only works on windows
 if 'nt' == os.name:
