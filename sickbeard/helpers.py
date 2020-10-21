@@ -1112,7 +1112,7 @@ def clear_cache(force=False):
             except OSError:
                 dirty = True
 
-    logger.log(u'%s from cache folder %s' % ((('Found items removed', 'Found items not removed')[dirty],
+    logger.log(u'%s from cache folder %s' % ((('Found items not removed', 'Found items removed')[not dirty],
                                               'No items found to remove')[None is dirty], sickbeard.CACHE_DIR))
 
 

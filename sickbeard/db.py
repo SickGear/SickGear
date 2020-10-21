@@ -32,7 +32,6 @@ from exceptions_helper import ex
 
 import sickbeard
 from . import logger, sgdatetime
-from .helpers import scantree
 from .sgdatetime import timestamp_near
 
 from sg_helpers import make_dirs, compress_file, remove_file_perm
@@ -782,6 +781,8 @@ def delete_old_db_backups(target):
 
     :param target: backup folder to check
     """
+    from .helpers import scantree
+
     use_count = (1, sickbeard.BACKUP_DB_MAX_COUNT)[not sickbeard.BACKUP_DB_ONEDAY]
     file_list = [f for f in scantree(target, include=['sickbeard|cache|failed'], filter_kind=False)]
     if use_count < len(file_list):
