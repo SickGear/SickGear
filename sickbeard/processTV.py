@@ -38,14 +38,13 @@ from exceptions_helper import ex, MultipleShowObjectsException
 import sickbeard
 from . import common, db, failedProcessor, helpers, logger, notifiers, postProcessor
 from .common import SNATCHED_ANY
-from .helpers import scantree
 from .history import reset_status
 from .name_parser.parser import InvalidNameException, InvalidShowException, NameParser
 from .sgdatetime import timestamp_near
 
 from _23 import filter_list, filter_iter, list_values, map_iter
 from six import iteritems, iterkeys, string_types, PY2, text_type
-from sg_helpers import long_path
+from sg_helpers import long_path, scantree
 
 import lib.rarfile.rarfile as rarfile
 

@@ -62,6 +62,7 @@
 * Update Beautiful Soup 4.9.1 (r585) to 4.9.2 (r590)
 * Update Beautiful Soup 4.8.2 (r559) to 4.9.1 (r585)
 * Fix update Soupsieve (05086ef) broke MC and TVC browse cards
+* Change move scantree to sg_helpers to prevent circular reference of it ever again
 
 
 ### 0.22.9 (2020-10-21 11:55:00 UTC)
