@@ -140,7 +140,7 @@ started = False
 
 ACTUAL_LOG_DIR = None
 LOG_DIR = None
-FILE_LOGGING_PRESET = 'DB'
+FILE_LOGGING_PRESET = 'DEBUG'
 
 SOCKET_TIMEOUT = None
 
@@ -821,7 +821,11 @@ def init_stage_1(console_logging):
     if not helpers.make_dir(LOG_DIR):
         logger.log(u'!!! No log folder, logging to screen only!', logger.ERROR)
 
-    FILE_LOGGING_PRESET = check_setting_str(CFG, 'General', 'file_logging_preset', 'DB')
+    FILE_LOGGING_PRESET = check_setting_str(CFG, 'General', 'file_logging_preset', 'DEBUG')
+    if bool(check_setting_int(CFG, 'General', 'file_logging_db', 0)):
+        FILE_LOGGING_PRESET = 'DB'
+    elif 'DB' == FILE_LOGGING_PRESET:
+        FILE_LOGGING_PRESET = 'DEBUG'
 
     SOCKET_TIMEOUT = check_setting_int(CFG, 'General', 'socket_timeout', 30)
     socket.setdefaulttimeout(SOCKET_TIMEOUT)
@@ -1757,7 +1761,9 @@ def save_config():
     new_config['General']['cur_commit_branch'] = CUR_COMMIT_BRANCH
     new_config['General']['encryption_version'] = int(ENCRYPTION_VERSION)
     new_config['General']['log_dir'] = ACTUAL_LOG_DIR if ACTUAL_LOG_DIR else 'Logs'
-    new_config['General']['file_logging_preset'] = FILE_LOGGING_PRESET if FILE_LOGGING_PRESET else 'DB'
+    new_config['General']['file_logging_preset'] = FILE_LOGGING_PRESET \
+        if FILE_LOGGING_PRESET and 'DB' != FILE_LOGGING_PRESET else 'DEBUG'
+    new_config['General']['file_logging_db'] = 0
     new_config['General']['socket_timeout'] = SOCKET_TIMEOUT
     new_config['General']['web_host'] = WEB_HOST
     new_config['General']['web_port'] = WEB_PORT
