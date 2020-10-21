@@ -115,12 +115,12 @@ def get_file_list(path, include_files):
 
     hide_names = [
         # windows specific
-        'boot', 'bootmgr', 'cache', 'config.msi', 'msocache', 'recovery', '$recycle.bin', 'recycler',
+        'boot', 'bootmgr', 'cache', r'config\.msi', 'msocache', 'recovery', r'\$recycle\.bin', 'recycler',
         'system volume information', 'temporary internet files',
         # osx specific
-        '.fseventd', '.spotlight', '.trashes', '.vol', 'cachedmessages', 'caches', 'trash',
+        r'\.fseventd', r'\.spotlight', r'\.trashes', r'\.vol', 'cachedmessages', 'caches', 'trash',
         # general
-        '.git']
+        r'\.git']
 
     # filter directories to protect
     for direntry in scantree(path, exclude=hide_names, filter_kind=not include_files, recurse=False) or []:

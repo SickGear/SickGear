@@ -32,7 +32,7 @@ from logging.handlers import TimedRotatingFileHandler
 import sickbeard
 from . import classes
 from .sgdatetime import timestamp_near
-from sg_helpers import md5_for_text, remove_file_failed
+from sg_helpers import md5_for_text, remove_file_perm
 
 # noinspection PyUnreachableCode
 if False:
@@ -383,7 +383,7 @@ class TimedCompressedRotatingFileHandler(TimedRotatingFileHandler):
                 except OSError:
                     pass
             else:
-                remove_file_failed(filepath)
+                remove_file_perm(filepath)
 
 
 sb_log_instance = SBRotatingLogHandler('sickgear.log')

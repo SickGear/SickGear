@@ -52,7 +52,7 @@ from .anime import AniGroupList, pull_anidb_groups, short_group_names
 from .browser import folders_at_path
 from .common import ARCHIVED, DOWNLOADED, FAILED, IGNORED, SKIPPED, SNATCHED, SNATCHED_ANY, UNAIRED, UNKNOWN, WANTED, \
      SD, HD720p, HD1080p, UHD2160p, Overview, Quality, qualityPresetStrings, statusStrings
-from .helpers import has_image_ext, remove_article, scantree, starify
+from .helpers import has_image_ext, remove_article, remove_file_perm, scantree, starify
 from .indexermapper import MapStatus, map_indexers_to_show, save_mapping
 from .indexers.indexer_config import TVINFO_IMDB, TVINFO_TRAKT, TVINFO_TVDB
 from .name_parser.parser import InvalidNameException, InvalidShowException, NameParser
@@ -499,12 +499,8 @@ class RepoHandler(BaseStaticFileHandler):
             def save_zip(name, version, zip_path, zip_method):
                 zip_name = '%s-%s.zip' % (name, version)
                 zip_file = ek.ek(os.path.join, zip_path, zip_name)
-                for f in helpers.scantree(zip_path, ['resources']):
-                    if f.is_file(follow_symlinks=False) and f.name[-4:] in ('.zip', '.md5'):
-                        try:
-                            ek.ek(os.remove, f.path)
-                        except OSError as e:
-                            logger.log('Unable to delete %s: %r / %s' % (f.path, e, ex(e)), logger.WARNING)
+                for direntry in helpers.scantree(zip_path, ['resources'], [r'\.(?:md5|zip)$'], filter_kind=False):
+                    remove_file_perm(direntry.path)
                 zip_data = zip_method()
                 with io.open(zip_file, 'wb') as zh:
                     zh.write(zip_data)
@@ -679,22 +675,21 @@ class RepoHandler(BaseStaticFileHandler):
         if sickbeard.ENV.get('DEVENV') and ek.ek(os.path.exists, devenv_src):
             helpers.copy_file(devenv_src, devenv_dst)
         else:
-            helpers.remove_file_failed(devenv_dst)
+            helpers.remove_file_perm(devenv_dst)
 
-        for f in helpers.scantree(zip_path):
-            if f.is_file(follow_symlinks=False) and f.name[-4:] not in '.xcf':
-                try:
-                    infile = None
-                    if 'service.sickgear.watchedstate.updater' in f.path and f.path.endswith('addon.xml'):
-                        infile = self.get_watchedstate_updater_addon_xml()
-                    if not infile:
-                        with io.open(f.path, 'rb') as fh:
-                            infile = fh.read()
+        for direntry in helpers.scantree(zip_path, exclude=[r'\.xcf$'], filter_kind=False):
+            try:
+                infile = None
+                if 'service.sickgear.watchedstate.updater' in direntry.path and direntry.path.endswith('addon.xml'):
+                    infile = self.get_watchedstate_updater_addon_xml()
+                if not infile:
+                    with io.open(direntry.path, 'rb') as fh:
+                        infile = fh.read()
 
-                    with zipfile.ZipFile(bfr, 'a') as zh:
-                        zh.writestr(ek.ek(os.path.relpath, f.path, basepath), infile, zipfile.ZIP_DEFLATED)
-                except OSError as e:
-                    logger.log('Unable to zip %s: %r / %s' % (f.path, e, ex(e)), logger.WARNING)
+                with zipfile.ZipFile(bfr, 'a') as zh:
+                    zh.writestr(ek.ek(os.path.relpath, direntry.path, basepath), infile, zipfile.ZIP_DEFLATED)
+            except OSError as e:
+                logger.log('Unable to zip %s: %r / %s' % (direntry.path, e, ex(e)), logger.WARNING)
 
         zip_data = bfr.getvalue()
         bfr.close()

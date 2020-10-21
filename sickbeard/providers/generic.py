@@ -39,7 +39,7 @@ import sickbeard
 from .. import classes, db, helpers, logger, tvcache
 from ..classes import NZBSearchResult, TorrentSearchResult, SearchResult
 from ..common import Quality, MULTI_EP_RESULT, SEASON_RESULT, USER_AGENT
-from ..helpers import maybe_plural, remove_file_failed
+from ..helpers import maybe_plural, remove_file_perm
 from ..name_parser.parser import InvalidNameException, InvalidShowException, NameParser
 from ..scene_exceptions import has_season_exceptions
 from ..show_name_helpers import get_show_names_all_possible
@@ -769,7 +769,7 @@ class GenericProvider(object):
                     saved = True
                     break
 
-                remove_file_failed(cache_file)
+                remove_file_perm(cache_file)
 
         if 'Referer' in self.session.headers:
             if ref_state:

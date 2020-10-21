@@ -32,10 +32,12 @@ from exceptions_helper import ex
 
 import sickbeard
 from . import logger, sgdatetime
+from .helpers import scantree
 from .sgdatetime import timestamp_near
 
-from _23 import filter_iter, filter_list, list_values, scandir
-from sg_helpers import make_dirs, compress_file, remove_file_failed
+from sg_helpers import make_dirs, compress_file, remove_file_perm
+
+from _23 import filter_iter, list_values, scandir
 from six import iterkeys, iteritems, itervalues
 
 # noinspection PyUnreachableCode
@@ -780,22 +782,12 @@ def delete_old_db_backups(target):
 
     :param target: backup folder to check
     """
-    try:
-        if not ek.ek(os.path.isdir, target):
-            return
-        file_list = [f for f in ek.ek(scandir, target) if f.is_file()]
-        use_count = (1, sickbeard.BACKUP_DB_MAX_COUNT)[not sickbeard.BACKUP_DB_ONEDAY]
-        for filename in ['sickbeard', 'cache', 'failed']:
-            tb = filter_list(lambda fn: filename in fn.name, file_list)
-            if use_count < len(tb):
-                tb.sort(key=lambda f: f.stat(follow_symlinks=False).st_mtime, reverse=True)
-                for t in tb[use_count:]:
-                    try:
-                        remove_file_failed(t.path)
-                    except (BaseException, Exception):
-                        pass
-    except (BaseException, Exception):
-        pass
+    use_count = (1, sickbeard.BACKUP_DB_MAX_COUNT)[not sickbeard.BACKUP_DB_ONEDAY]
+    file_list = [f for f in scantree(target, include=['sickbeard|cache|failed'], filter_kind=False)]
+    if use_count < len(file_list):
+        file_list.sort(key=lambda _f: _f.stat(follow_symlinks=False).st_mtime, reverse=True)
+        for direntry in file_list[use_count:]:
+            remove_file_perm(direntry.path)
 
 
 def backup_all_dbs(target, compress=True, prefer_7z=True):

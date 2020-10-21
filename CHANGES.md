@@ -10,6 +10,8 @@
 * Change improve import shows listing performance
 * Change improve performance during show rescan process
 * Change improve performance during media processing
+* Change improve scantree performance with regex params of what to include and/or exclude
+* Change rename remove_file_failed to remove_file_perm and make it return an outcome
 * Add config/General/Updates/Alias Process button, minimum interval for a fetch of custom names/numbering is 30 mins
 * Add Export alternatives button to edit show
 * Change season specific alt names now available not just for anime

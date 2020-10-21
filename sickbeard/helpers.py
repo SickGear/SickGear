@@ -63,12 +63,12 @@ from six.moves import zip
 # noinspection PyUnresolvedReferences
 from sg_helpers import chmod_as_parent, clean_data, copy_file, fix_set_group_id, get_system_temp_dir, \
     get_url, indent_xml, make_dirs, maybe_plural, md5_for_text, move_file, proxy_setting, remove_file, \
-    remove_file_failed, replace_extension, try_int, try_ord, write_file
+    remove_file_perm, replace_extension, try_int, try_ord, write_file
 
 # noinspection PyUnreachableCode
 if False:
     # noinspection PyUnresolvedReferences
-    from typing import Any, AnyStr, Dict, NoReturn, Iterable, Iterator, List, Optional, Set, Tuple, Union
+    from typing import Any, AnyStr, Dict, Generator, NoReturn, Iterable, Iterator, List, Optional, Set, Tuple, Union
     from .tv import TVShow
     # the following workaround hack resolves a pyc resolution bug
     from .name_cache import retrieveNameFromCache
@@ -361,10 +361,10 @@ def list_media_files(path):
     """
     result = []
     if path:
-        if '.sickgearignore' in [direntry.name for direntry in scantree(path, filter_kind=False, recurse=False)]:
+        if [direntry for direntry in scantree(path, include=[r'\.sickgearignore'], filter_kind=False, recurse=False)]:
             logger.log('Skipping folder "%s" because it contains ".sickgearignore"' % path, logger.DEBUG)
         else:
-            result = [direntry.path for direntry in scantree(path, filter_kind=False, exclude='Extras')
+            result = [direntry.path for direntry in scantree(path, exclude=['Extras'], filter_kind=False)
                       if has_media_ext(direntry.name)]
     return result
 
@@ -1086,7 +1086,7 @@ def download_file(url, filename, session=None, **kwargs):
     :rtype: bool
     """
     if None is get_url(url, session=session, savename=filename, **kwargs):
-        remove_file_failed(filename)
+        remove_file_perm(filename)
         return False
     return True
 
@@ -1099,26 +1099,21 @@ def clear_cache(force=False):
     :type force: bool
     """
     # clean out cache directory, remove everything > 12 hours old
-    if sickbeard.CACHE_DIR:
-        logger.log(u'Trying to clean cache folder %s' % sickbeard.CACHE_DIR)
+    dirty = None
+    del_time = int(timestamp_near((datetime.datetime.now() - datetime.timedelta(hours=12))))
+    direntry_args = dict(follow_symlinks=False)
+    for direntry in scantree(sickbeard.CACHE_DIR, ['images|rss|zoneinfo'], follow_symlinks=True):
+        if direntry.is_file(**direntry_args) and (force or del_time > direntry.stat(**direntry_args).st_mtime):
+            dirty = dirty or False if remove_file_perm(direntry.path) else True
+        elif direntry.is_dir(**direntry_args) and direntry.name not in ['cheetah', 'sessions', 'indexers']:
+            dirty = dirty or False
+            try:
+                ek.ek(os.rmdir, direntry.path)
+            except OSError:
+                dirty = True
 
-        # Does our cache_dir exists
-        if not ek.ek(os.path.isdir, sickbeard.CACHE_DIR):
-            logger.log(u'Skipping clean of non-existing folder: %s' % sickbeard.CACHE_DIR, logger.WARNING)
-        else:
-            exclude = ['rss', 'images', 'zoneinfo']
-            del_time = int(timestamp_near((datetime.datetime.now() - datetime.timedelta(hours=12))))
-            for f in scantree(sickbeard.CACHE_DIR, exclude, follow_symlinks=True):
-                if f.is_file(follow_symlinks=False) and (force or del_time > f.stat(follow_symlinks=False).st_mtime):
-                    try:
-                        ek.ek(os.remove, f.path)
-                    except OSError as e:
-                        logger.log('Unable to delete %s: %r / %s' % (f.path, e, ex(e)), logger.WARNING)
-                elif f.is_dir(follow_symlinks=False) and f.name not in ['cheetah', 'sessions', 'indexers']:
-                    try:
-                        ek.ek(os.rmdir, f.path)
-                    except OSError:
-                        pass
+    logger.log(u'%s from cache folder %s' % ((('Found items removed', 'Found items not removed')[dirty],
+                                              'No items found to remove')[None is dirty], sickbeard.CACHE_DIR))
 
 
 def human(size):
@@ -1373,31 +1368,36 @@ def cpu_sleep():
 
 def scantree(path,  # type: AnyStr
              exclude=None,  # type: Optional[AnyStr, List[AnyStr]]
+             include=None,  # type: Optional[AnyStr, List[AnyStr]]
              follow_symlinks=False,  # type: bool
              filter_kind=None,  # type: Optional[bool]
              recurse=True  # type: bool
              ):
-    # type: (...) -> Optional[Iterator[DirEntry], Iterable]
-    """yield DirEntry objects for given path.
-    :param path: Path to scan
-    :param exclude: Exclusions
+    # type: (...) -> Generator[DirEntry, None, None]
+    """Yield DirEntry objects for given path. Returns without yield if path fails sanity check
+
+    :param path: Path to scan, sanity check is_dir and exists
+    :param exclude: Escaped regex string(s) to exclude
+    :param include: Escaped regex string(s) to include
     :param follow_symlinks: Follow symlinks
-    :param filter_kind: None to yield everything, True only yields directories, False only yields files
-    :param recurse: Recursively scan down the tree
-    :return: iter of results
+    :param filter_kind: None to yield everything, True yields directories, False yields files
+    :param recurse: Recursively scan the tree
     """
-    exclude = [x.lower() for x in (exclude, ([exclude], [])[None is exclude])[not isinstance(exclude, list)]]
-    for entry in ek.ek(scandir, path):
-        is_dir = entry.is_dir(follow_symlinks=follow_symlinks)
-        is_file = entry.is_file(follow_symlinks=follow_symlinks)
-        if entry.name.lower() not in exclude \
-                and any([None is filter_kind, filter_kind and is_dir,
-                         not filter_kind and is_dir and recurse, not filter_kind and is_file]):
-            if recurse and is_dir:
-                for subentry in scantree(entry.path, exclude, follow_symlinks, filter_kind):
-                    yield subentry
-            if any([None is filter_kind, filter_kind and is_dir, not filter_kind and is_file]):
-                yield entry
+    if isinstance(path, string_types) and path and ek.ek(os.path.isdir, path):
+        rc_exc, rc_inc = [re.compile(rx % '|'.join(
+            [x for x in (param, ([param], [])[None is param])[not isinstance(param, list)]]))
+                          for rx, param in ((r'(?i)^(?:(?!%s).)*$', exclude), (r'(?i)%s', include))]
+        for entry in ek.ek(scandir, path):
+            is_dir = entry.is_dir(follow_symlinks=follow_symlinks)
+            is_file = entry.is_file(follow_symlinks=follow_symlinks)
+            no_filter = any([None is filter_kind, filter_kind and is_dir, not filter_kind and is_file])
+            if (rc_exc.search(entry.name), True)[not exclude] and (rc_inc.search(entry.name), True)[not include] \
+                    and (no_filter or (not filter_kind and is_dir and recurse)):
+                if recurse and is_dir:
+                    for subentry in scantree(entry.path, exclude, include, follow_symlinks, filter_kind, recurse):
+                        yield subentry
+                if no_filter:
+                    yield entry
 
 
 def cleanup_cache():
@@ -1422,13 +1422,11 @@ def delete_not_changed_in(paths, days=30, minutes=0):
     del_time = int(timestamp_near((datetime.datetime.now() - datetime.timedelta(days=days, minutes=minutes))))
     errors = 0
     qualified = 0
-    for c in (paths, [paths])[not isinstance(paths, list)]:
+    for cur_path in (paths, [paths])[not isinstance(paths, list)]:
         try:
-            for f in scantree(c):
-                if f.is_file(follow_symlinks=False) and del_time > f.stat(follow_symlinks=False).st_mtime:
-                    try:
-                        ek.ek(os.remove, f.path)
-                    except (BaseException, Exception):
+            for direntry in scantree(cur_path, filter_kind=False):
+                if del_time > direntry.stat(follow_symlinks=False).st_mtime:
+                    if not remove_file_perm(direntry.path):
                         errors += 1
                     qualified += 1
         except (BaseException, Exception):
