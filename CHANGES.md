@@ -38,7 +38,7 @@
 * Change API version to 14
 * Change add a test for both require and ignore show specific words with partial match, both should fail
 * Change init showDict for all unit tests
-* Update included fallback timezone info file to 2020c
+* Update included fallback timezone info file to 2020d
 * Update attr 20.1.0.dev0 (4bd6827) to 20.2.0 (4f74fba)
 * Update Beautiful Soup 4.8.2 (r559) to 4.9.3 (r593)
 * Update dateutil 2.8.1 (43b7838) to 2.8.1 (c496b4f)
@@ -63,6 +63,7 @@
 * Update Beautiful Soup 4.8.2 (r559) to 4.9.1 (r585)
 * Fix update Soupsieve (05086ef) broke MC and TVC browse cards
 * Change move scantree to sg_helpers to prevent circular reference of it ever again
+* Update included fallback timezone info file to 2020c
 
 
 ### 0.22.9 (2020-10-21 11:55:00 UTC)
