@@ -27,6 +27,10 @@ import sickbeard
 from _23 import filter_list, filter_iter
 from six import iteritems, itervalues
 
+# noinspection PyUnreachableCode
+if False:
+    from typing import AnyStr, List
+
 __all__ = [
     # usenet
     'omgwtfnzbs',
@@ -83,19 +87,54 @@ def makeProviderList():
     return [x.provider for x in [getProviderModule(y) for y in __all__] if x]
 
 
+def generic_provider_name(n):
+    # type: (AnyStr) -> AnyStr
+    return n.strip().lower()
+
+
+def generic_provider_url(u):
+    # type: (AnyStr) -> AnyStr
+    return u.strip().strip('/').lower().replace('https', 'http')
+
+
+def make_unique_list(p_list, d_list=None):
+    # type: (List, List) -> List
+    """
+    remove provider duplicates
+    duplicates: same name or api url
+
+    :param p_list: provider list
+    :param d_list: provider default list
+    :return: unique provider list
+    """
+    names = set()
+    urls = set()
+    new_p_list = []
+
+    default_names = [d.name for d in d_list or []]
+
+    for cur_p in p_list:
+        g_name = generic_provider_name(cur_p.name)
+        g_url = generic_provider_url(cur_p.url)
+        if g_name in names or g_url in urls:
+            # default entries have priority so remove the non default provider and add the default
+            if cur_p.name in default_names:
+                new_p_list = [n for n in new_p_list if generic_provider_name(n.name) != g_name and
+                              generic_provider_url(n.url) != g_url]
+            else:
+                continue
+        new_p_list.append(cur_p)
+        names.add(g_name)
+        urls.add(g_url)
+    return new_p_list
+
+
 def getNewznabProviderList(data):
+    # type: (AnyStr) -> List
     defaultList = [makeNewznabProvider(x) for x in getDefaultNewznabProviders().split('!!!')]
-    providerList = filter_list(lambda _x: _x, [makeNewznabProvider(x) for x in data.split('!!!')])
+    providerList = make_unique_list(filter_list(lambda _x: _x, [makeNewznabProvider(x) for x in data.split('!!!')]),
+                                    defaultList)
 
-    seen_values = set()
-    providerListDeduped = []
-    for d in providerList:
-        value = d.name
-        if value not in seen_values:
-            providerListDeduped.append(d)
-            seen_values.add(value)
-
-    providerList = providerListDeduped
     providerDict = dict(zip([x.name for x in providerList], providerList))
 
     for curDefault in defaultList:
@@ -144,14 +183,6 @@ def makeNewznabProvider(config_string):
 
 def getTorrentRssProviderList(data):
     providerList = filter_list(lambda _x: _x, [makeTorrentRssProvider(x) for x in data.split('!!!')])
-
-    seen_values = set()
-    providerListDeduped = []
-    for d in providerList:
-        value = d.name
-        if value not in seen_values:
-            providerListDeduped.append(d)
-            seen_values.add(value)
 
     return filter_list(lambda _x: _x, providerList)
 

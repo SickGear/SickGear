@@ -56,6 +56,8 @@
 * Update soupsieve_py2 backport
 * Update tmdbsimple 2.2.6 (310d933) to 2.6.6 (679e343)
 * Update urllib3 1.25.9 (a5a45dc) to 1.26.0.dev0 (41eae64)
+* Change add remove duplicates in newznab provider list based on name and url
+* Change remove old provider dupe cleanup
 
 
 [develop changelog]

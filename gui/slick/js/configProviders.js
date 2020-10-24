@@ -441,7 +441,7 @@ $(document).ready(function(){
 			return;
 
 		// send to the form with ajax, get a return value
-		$.getJSON($.SickGear.Root + '/config/providers/can-add-newznab-provider', {name: name},
+		$.getJSON($.SickGear.Root + '/config/providers/can-add-newznab-provider', {name: name, url: url},
 			function(data){
 				if (data.error != undefined){
 					alert(data.error);

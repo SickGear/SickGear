@@ -7462,18 +7462,24 @@ class ConfigProviders(Config):
         return t.respond()
 
     @staticmethod
-    def can_add_newznab_provider(name):
-        if not name:
-            return json.dumps({'error': 'No Provider Name specified'})
+    def can_add_newznab_provider(name, url):
+        if not name or not url:
+            return json.dumps({'error': 'No Provider Name or url specified'})
 
-        providerDict = dict(zip([x.get_id() for x in sickbeard.newznabProviderList], sickbeard.newznabProviderList))
+        provider_dict = dict(zip([sickbeard.providers.generic_provider_name(x.get_id())
+                                 for x in sickbeard.newznabProviderList], sickbeard.newznabProviderList))
+        provider_url_dict = dict(zip([sickbeard.providers.generic_provider_url(x.url)
+                                 for x in sickbeard.newznabProviderList], sickbeard.newznabProviderList))
 
-        tempProvider = newznab.NewznabProvider(name, '')
+        temp_provider = newznab.NewznabProvider(name, config.clean_url(url))
 
-        if tempProvider.get_id() in providerDict:
-            return json.dumps({'error': 'Provider Name already exists as ' + providerDict[tempProvider.get_id()].name})
+        e_p = provider_dict.get(sickbeard.providers.generic_provider_name(temp_provider.get_id()), None) or \
+              provider_url_dict.get(sickbeard.providers.generic_provider_url(temp_provider.url), None)
 
-        return json.dumps({'success': tempProvider.get_id()})
+        if e_p:
+            return json.dumps({'error': 'Provider already exists as %s' % e_p.name})
+
+        return json.dumps({'success': temp_provider.get_id()})
 
     @staticmethod
     def save_newznab_provider(name, url, key=''):
