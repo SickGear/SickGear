@@ -140,7 +140,15 @@ class PageTemplate(Template):
 
         self.addtab_limit = 9
         my_db = db.DBConnection(row_type='dict')
-        self.history_detailed, self.history_compact = History.query_history(my_db, self.addtab_limit, minimal=True)
+        history_detailed, history_compact = History.query_history(my_db)
+        self.history_compact = []
+        dedupe = set()
+        for item in history_compact:
+            if item.get('tvid_prodid') not in dedupe:
+                dedupe.add(item.get('tvid_prodid'))
+                self.history_compact += [item]
+                if self.addtab_limit == len(self.history_compact):
+                    break
 
         super(PageTemplate, self).__init__(*args, **kwargs)
 
@@ -6152,13 +6160,12 @@ class History(MainHandler):
         db.DBConnection().toggle_flag(self.flagname_help_watched)
 
     @staticmethod
-    def query_history(my_db, limit, minimal=False):
+    def query_history(my_db, limit=100):
         # type: (db.DBConnection, int, bool) -> Tuple[List[dict], List[dict]]
         """Query db for historical data
 
         :param my_db: dbconnection should be instantiated with row_type='dict'
         :param limit: number of db rows to fetch
-        :param minimal: tailored for menu, one of each tvid_prodid up to limit
         :return: two data sets, detailed and compact
         """
 
@@ -6166,8 +6173,8 @@ class History(MainHandler):
               ' FROM history h, tv_shows s' \
               ' WHERE h.indexer=s.indexer AND h.showid=s.indexer_id' \
               ' AND h.hide = 0' \
-              '%s ORDER BY date DESC' \
-              '%s' % (('', ' GROUP BY tvid_prodid')[minimal], (' LIMIT %s' % limit, '')['0' == limit])
+              ' ORDER BY date DESC' \
+              '%s' % (' LIMIT %s' % limit, '')['0' == limit]
         sql_result = my_db.select(sql, [TVidProdid.glue])
 
         compact = []
