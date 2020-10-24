@@ -99,7 +99,7 @@ from six import binary_type, integer_types, iteritems, iterkeys, itervalues, PY2
 
 # noinspection PyUnreachableCode
 if False:
-    from typing import AnyStr, List, Optional
+    from typing import AnyStr, List, Optional, Tuple
 
 
 # noinspection PyAbstractClass
@@ -137,6 +137,11 @@ class PageTemplate(Template):
 
         kwargs['file'] = os.path.join(sickbeard.PROG_DIR, 'gui/%s/interfaces/default/' %
                                       sickbeard.GUI_NAME, kwargs['file'])
+
+        self.addtab_limit = 9
+        my_db = db.DBConnection(row_type='dict')
+        self.history_detailed, self.history_compact = History.query_history(my_db, self.addtab_limit, minimal=True)
+
         super(PageTemplate, self).__init__(*args, **kwargs)
 
     def compile(self, *args, **kwargs):
@@ -6146,6 +6151,62 @@ class History(MainHandler):
     def toggle_help(self):
         db.DBConnection().toggle_flag(self.flagname_help_watched)
 
+    @staticmethod
+    def query_history(my_db, limit, minimal=False):
+        # type: (db.DBConnection, int, bool) -> Tuple[List[dict], List[dict]]
+        """Query db for historical data
+
+        :param my_db: dbconnection should be instantiated with row_type='dict'
+        :param limit: number of db rows to fetch
+        :param minimal: tailored for menu, one of each tvid_prodid up to limit
+        :return: two data sets, detailed and compact
+        """
+
+        sql = 'SELECT h.*, show_name, s.indexer || ? || s.indexer_id AS tvid_prodid' \
+              ' FROM history h, tv_shows s' \
+              ' WHERE h.indexer=s.indexer AND h.showid=s.indexer_id' \
+              ' AND h.hide = 0' \
+              '%s ORDER BY date DESC' \
+              '%s' % (('', ' GROUP BY tvid_prodid')[minimal], (' LIMIT %s' % limit, '')['0' == limit])
+        sql_result = my_db.select(sql, [TVidProdid.glue])
+
+        compact = []
+
+        for cur_result in sql_result:
+
+            action = dict(time=cur_result['date'], action=cur_result['action'],
+                          provider=cur_result['provider'], resource=cur_result['resource'])
+
+            if not any([(record['show_id'] == cur_result['showid']
+                         and record['indexer'] == cur_result['indexer']
+                         and record['season'] == cur_result['season']
+                         and record['episode'] == cur_result['episode']
+                         and record['quality'] == cur_result['quality']) for record in compact]):
+
+                cur_res = dict(show_id=cur_result['showid'], indexer=cur_result['indexer'],
+                               tvid_prodid=cur_result['tvid_prodid'],
+                               show_name=cur_result['show_name'],
+                               season=cur_result['season'], episode=cur_result['episode'],
+                               quality=cur_result['quality'], resource=cur_result['resource'], actions=[])
+
+                cur_res['actions'].append(action)
+                cur_res['actions'].sort(key=lambda _x: _x['time'])
+
+                compact.append(cur_res)
+            else:
+                index = [i for i, record in enumerate(compact)
+                         if record['show_id'] == cur_result['showid']
+                         and record['season'] == cur_result['season']
+                         and record['episode'] == cur_result['episode']
+                         and record['quality'] == cur_result['quality']][0]
+
+                cur_res = compact[index]
+
+                cur_res['actions'].append(action)
+                cur_res['actions'].sort(key=lambda _x: _x['time'], reverse=True)
+
+        return sql_result, compact
+
     def index(self, limit=100, layout=None):
 
         t = PageTemplate(web_handler=self, file='history.tmpl')
@@ -6161,47 +6222,7 @@ class History(MainHandler):
         result_sets = []
         if sickbeard.HISTORY_LAYOUT in ('compact', 'detailed'):
 
-            sql = 'SELECT h.*, show_name, s.indexer || ? || s.indexer_id AS tvid_prodid' \
-                  ' FROM history h, tv_shows s' \
-                  ' WHERE h.indexer=s.indexer AND h.showid=s.indexer_id' \
-                  ' AND h.hide = 0' \
-                  ' ORDER BY date DESC%s' % (' LIMIT %s' % limit, '')['0' == limit]
-            sql_result = my_db.select(sql, [TVidProdid.glue])
-
-            compact = []
-
-            for cur_result in sql_result:
-
-                action = dict(time=cur_result['date'], action=cur_result['action'],
-                              provider=cur_result['provider'], resource=cur_result['resource'])
-
-                if not any([(record['show_id'] == cur_result['showid']
-                             and record['indexer'] == cur_result['indexer']
-                             and record['season'] == cur_result['season']
-                             and record['episode'] == cur_result['episode']
-                             and record['quality'] == cur_result['quality']) for record in compact]):
-
-                    cur_res = dict(show_id=cur_result['showid'], indexer=cur_result['indexer'],
-                                   tvid_prodid=cur_result['tvid_prodid'],
-                                   show_name=cur_result['show_name'],
-                                   season=cur_result['season'], episode=cur_result['episode'],
-                                   quality=cur_result['quality'], resource=cur_result['resource'], actions=[])
-
-                    cur_res['actions'].append(action)
-                    cur_res['actions'].sort(key=lambda _x: _x['time'])
-
-                    compact.append(cur_res)
-                else:
-                    index = [i for i, record in enumerate(compact)
-                             if record['show_id'] == cur_result['showid']
-                             and record['season'] == cur_result['season']
-                             and record['episode'] == cur_result['episode']
-                             and record['quality'] == cur_result['quality']][0]
-
-                    cur_res = compact[index]
-
-                    cur_res['actions'].append(action)
-                    cur_res['actions'].sort(key=lambda _x: _x['time'], reverse=True)
+            sql_result, compact = self.query_history(my_db, limit)
 
             t.compact_results = compact
             t.history_results = sql_result
