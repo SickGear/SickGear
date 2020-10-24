@@ -1,5 +1,6 @@
 ﻿### 0.23.0 (2019-xx-xx xx:xx:xx UTC)
 
+* Add "History new..." to Shows menu by clicking the number
 * Add db backup to the scheduled daily update
 * Add display "Database backups" location at config/about if feature available
 * Add option "Backup database plan" to config/general/advanced if feature available

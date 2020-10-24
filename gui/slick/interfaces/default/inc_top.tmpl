@@ -1,6 +1,7 @@
 #import sickbeard
 #import datetime
 #import urllib
+#from sickbeard.common import Quality, SNATCHED_ANY, DOWNLOADED, ARCHIVED, FAILED
 #from sickbeard.helpers import anon_url
 <% def sg_var(varname, default=False): return getattr(sickbeard, varname, default) %>#slurp#
 <% def sg_str(varname, default=''): return getattr(sickbeard, varname, default) %>#slurp#
@@ -157,8 +158,8 @@
 #end if
 							</li>
 							<li class="divider"></li>
-							<li class="menu-item-noicon"><span class="add-show opacity60">Add show...</span><span class="added-last opacity60">Added last...</span><a id="add-view" data-view="add" href="#" tabindex="$tab#set $tab += 1#">[<span class="add-show">1</span><span class="added-last">2</span><span class="paginate">/2</span>]</a></li>
-							<li><ul class="nav add-show">
+							<li class="menu-item-noicon"><span class="add-tab1 opacity60">Add show...</span><span class="add-tab2 opacity60 default-off">Added last...</span><span class="add-tab3 opacity60 default-off">History new...</span><a id="add-view" data-view="add-tab1" href="#" tabindex="$tab#set $tab += 1#">[<span class="add-tab1">1</span><span class="add-tab2 default-off">2</span><span class="add-tab3 default-off">3</span><span class="paginate">/3</span>]</a></li>
+							<li><ul class="nav add-tab1">
 								<li><a id="add-show-name" data-href="$sbRoot/add-shows/find/" tabindex="$tab#set $tab += 1#"><i class="sgicon-addshow"></i>
 									<input  class="form-control form-control-inline input-sm" type="text" placeholder="Search" tabindex="$tab#set $tab += 1#">
 									<div class="menu-item-desc opacity60">find show at TV info source</div></a></li>
@@ -188,14 +189,32 @@
 									<div class="menu-item-desc">to use, first enable AniDB here</div></a></li>
 #end if
 								</ul>
-								<ul class="nav added-last">
-#set $added_last = ($sg_var('showList', []) or [])[-9:][::-1]
+								<ul class="nav add-tab2 default-off">
+#set $added_last = ($sg_var('showList', []) or [])[-$addtab_limit:][::-1]
 #if not $added_last:
 									<li><span style="padding-left:20px">This will list added shows</span></li>
 #else
     #for item in $added_last
         #if $hasattr($item, 'tvid_prodid')
 									<li><a href="$sbRoot/home/view-show?tvid_prodid=$item.tvid_prodid" tabindex="$tab#set $tab += 1#"><i class="sgicon-addshow"></i><span class="truncate">$item.name</span></a></li>
+        #end if
+    #end for
+#end if
+								</ul>
+								<ul class="nav add-tab3 default-off">
+#if not $history_compact:
+									<li><span style="padding-left:20px">This will list latest history</span></li>
+#else
+    #for item in $history_compact
+        #if 'tvid_prodid' in $item
+            #set $action = $item['actions'][0]
+            #set $curStatus, $curQuality = $Quality.splitCompositeStatus(int($action['action']))
+            #if $curStatus in $SNATCHED_ANY + [$FAILED]
+                #set $status = 'snatched'
+            #elif $curStatus in [$DOWNLOADED, $ARCHIVED]
+                #set $status = 'good'
+            #end if
+									<li><a href="$sbRoot/home/view-show?tvid_prodid=$item['tvid_prodid']" tabindex="$tab#set $tab += 1#"><span class="$status"><i class="sgicon-addshow"></i></span><span class="truncate">$item['show_name']</span></a></li>
         #end if
     #end for
 #end if
