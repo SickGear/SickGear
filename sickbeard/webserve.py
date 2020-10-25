@@ -139,16 +139,8 @@ class PageTemplate(Template):
                                       sickbeard.GUI_NAME, kwargs['file'])
 
         self.addtab_limit = 9
-        my_db = db.DBConnection(row_type='dict')
-        history_detailed, history_compact = History.query_history(my_db)
-        self.history_compact = []
-        dedupe = set()
-        for item in history_compact:
-            if item.get('tvid_prodid') not in dedupe:
-                dedupe.add(item.get('tvid_prodid'))
-                self.history_compact += [item]
-                if self.addtab_limit == len(self.history_compact):
-                    break
+        if not web_handler.application.is_loading_handler:
+            self.history_compact = History.menu_tab(self.addtab_limit)
 
         super(PageTemplate, self).__init__(*args, **kwargs)
 
@@ -6159,12 +6151,28 @@ class History(MainHandler):
     def toggle_help(self):
         db.DBConnection().toggle_flag(self.flagname_help_watched)
 
-    @staticmethod
-    def query_history(my_db, limit=100):
-        # type: (db.DBConnection, int, bool) -> Tuple[List[dict], List[dict]]
+    @classmethod
+    def menu_tab(cls, limit):
+
+        result = []
+        my_db = db.DBConnection(row_type='dict')  # type: db.DBConnection
+        history_detailed, history_compact = cls.query_history(my_db, limit)
+        dedupe = set()
+        for item in history_compact:
+            if item.get('tvid_prodid') not in dedupe:
+                dedupe.add(item.get('tvid_prodid'))
+                result += [item]
+                if limit == len(result):
+                    break
+
+        return result
+
+    @classmethod
+    def query_history(cls, my_db, limit=100):
+        # type: (db.DBConnection, int) -> Tuple[List[dict], List[dict]]
         """Query db for historical data
 
-        :param my_db: dbconnection should be instantiated with row_type='dict'
+        :param my_db: connection should be instantiated with row_type='dict'
         :param limit: number of db rows to fetch
         :return: two data sets, detailed and compact
         """
