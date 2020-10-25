@@ -6156,7 +6156,7 @@ class History(MainHandler):
 
         result = []
         my_db = db.DBConnection(row_type='dict')  # type: db.DBConnection
-        history_detailed, history_compact = cls.query_history(my_db, limit)
+        history_detailed, history_compact = cls.query_history(my_db)
         dedupe = set()
         for item in history_compact:
             if item.get('tvid_prodid') not in dedupe:
