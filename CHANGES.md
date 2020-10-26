@@ -66,6 +66,8 @@
 * Update urllib3 1.25.9 (a5a45dc) to 1.25.11 (5eb604f)
 * Change add remove duplicates in newznab provider list based on name and url
 * Change remove old provider dupe cleanup
+* Change add response rate limit handling for generic providers
+* Change add newznab retry handling
 
 
 [develop changelog]
