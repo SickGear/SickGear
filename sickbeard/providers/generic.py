@@ -214,7 +214,7 @@ class ProviderFailList(object):
                 my_db = db.DBConnection('cache.db')
                 if my_db.hasTable('provider_fails'):
                     # noinspection PyCallByClass,PyTypeChecker
-                    time_limit = int(timestamp_near(datetime.datetime.now()) - datetime.timedelta(days=28))
+                    time_limit = int(timestamp_near(datetime.datetime.now() - datetime.timedelta(days=28)))
                     my_db.action('DELETE FROM provider_fails WHERE fail_time < ?', [time_limit])
             except (BaseException, Exception):
                 pass
@@ -403,7 +403,9 @@ class GenericProvider(object):
 
     def fail_time_index(self, base_limit=2):
         # type: (int) -> int
-        i = self.failure_count - base_limit
+        i = max(self.failure_count - base_limit, 1)
+        if i not in self.fail_times:
+            i = list(self.fail_times)[-1]
         return (i, self.max_index)[i >= self.max_index]
 
     def tmr_limit_update(self, period, unit, desc):
