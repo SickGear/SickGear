@@ -69,6 +69,11 @@
 * Update included fallback timezone info file to 2020c
 
 
+### 0.22.10 (2020-10-28 14:10:00 UTC)
+
+* Fix clear of old fail times for providers
+
+
 ### 0.22.9 (2020-10-21 11:55:00 UTC)
 
 * Change remove DB file logging level from config/General and reduce DB levels to Debug to reduce log file noise
