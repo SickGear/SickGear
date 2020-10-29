@@ -29,7 +29,8 @@ from six import iteritems, itervalues
 
 # noinspection PyUnreachableCode
 if False:
-    from typing import AnyStr, List
+    from typing import AnyStr, List, Union
+    from .generic import GenericProvider, NZBProvider, TorrentProvider
 
 __all__ = [
     # usenet
@@ -57,6 +58,12 @@ for module in __all__:
 
 
 def sortedProviderList():
+    # type: (...) -> List[Union[GenericProvider, NZBProvider, TorrentProvider]]
+    """
+    return sorted provider list
+
+    :return: sorted list of providers
+    """
     initialList = sickbeard.providerList + sickbeard.newznabProviderList + sickbeard.torrentRssProviderList
     providerDict = dict(zip([x.get_id() for x in initialList], initialList))
 
