@@ -69,6 +69,11 @@
 * Update included fallback timezone info file to 2020c
 
 
+### 0.22.11 (2020-10-30 01:45:00 UTC)
+
+* Fix an old and rare thread timing case that can change a show to the wrong type while fetching alternative names
+
+
 ### 0.22.10 (2020-10-28 14:10:00 UTC)
 
 * Fix clear of old fail times for providers

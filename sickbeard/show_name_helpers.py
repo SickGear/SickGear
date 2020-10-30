@@ -224,16 +224,11 @@ def get_show_names(ep_obj, spacer='.'):
     :param spacer: spacer
     :return:
     """
-    old_anime, old_dirty = ep_obj.show_obj.is_anime, ep_obj.show_obj.dirty
-    ep_obj.show_obj.anime = 1  # used to limit results from all_possible(...)
-    show_names = get_show_names_all_possible(ep_obj.show_obj, season=ep_obj.season, spacer=spacer)
-    ep_obj.show_obj.anime = old_anime  # temporary measure, so restore property then dirty flag
-    ep_obj.show_obj.dirty = old_dirty
-    return show_names
+    return get_show_names_all_possible(ep_obj.show_obj, season=ep_obj.season, spacer=spacer, force_anime=True)
 
 
-def get_show_names_all_possible(show_obj, season=-1, scenify=True, spacer='.'):
-    # type: (sickbeard.tv.TVShow, int, bool, AnyStr) -> List[AnyStr]
+def get_show_names_all_possible(show_obj, season=-1, scenify=True, spacer='.', force_anime=False):
+    # type: (sickbeard.tv.TVShow, int, bool, AnyStr, bool) -> List[AnyStr]
     """
 
     :param show_obj: show object
@@ -242,7 +237,7 @@ def get_show_names_all_possible(show_obj, season=-1, scenify=True, spacer='.'):
     :param spacer: spacer
     :return:
     """
-    show_names = list(set(allPossibleShowNames(show_obj, season=season)))  # type: List[AnyStr]
+    show_names = list(set(allPossibleShowNames(show_obj, season=season, force_anime=force_anime)))  # type: List[AnyStr]
     if scenify:
         show_names = map_list(sanitize_scene_name, show_names)
     return url_encode(show_names, spacer)
@@ -381,8 +376,8 @@ def makeSceneSearchString(show_obj,  # type: sickbeard.tv.TVShow
     return to_return
 
 
-def allPossibleShowNames(show_obj, season=-1):
-    # type: (sickbeard.tv.TVShow, int) -> List[AnyStr]
+def allPossibleShowNames(show_obj, season=-1, force_anime=False):
+    # type: (sickbeard.tv.TVShow, int, bool) -> List[AnyStr]
     """
     Figures out every possible variation of the name for a particular show. Includes TVDB name, TVRage name,
     country codes on the end, eg. "Show Name (AU)", and any scene exception names.
@@ -400,7 +395,7 @@ def allPossibleShowNames(show_obj, season=-1):
     if -1 == season:
         showNames.append(show_obj.name)
 
-    if not show_obj.is_anime:
+    if not show_obj.is_anime and not force_anime:
         newShowNames = []
         country_list = common.countryList
         country_list.update(dict(zip(itervalues(common.countryList), iterkeys(common.countryList))))
