@@ -50,6 +50,7 @@
 * Update hachoir_py3 3.0a6 (5b9e05a) to 3.1.2 (f739b43)
 * Update hachoir_py2 2.0a6 (5b9e05a) to 2.1.2
 * Update Js2Py 0.70 (f297498) to 0.70 (92250a4)
+* Update package resource API to 49.6.0 (3d404fd)
 * Update profilehooks module 1.11.2 (d72cc2b) to 1.12.0 (3ee1f60)
 * Update Requests library 2.24.0 (1b41763) to 2.24.0 (967a05b)
 * Update soupsieve_py3 2.0.0.final (e66c311) to 2.0.2.dev (05086ef)

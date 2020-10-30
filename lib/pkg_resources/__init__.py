@@ -55,7 +55,7 @@ except NameError:
     FileExistsError = OSError
 
 from pkg_resources.extern import six
-from pkg_resources.extern.six.moves import urllib, map, filter
+from pkg_resources.extern.six.moves import map, filter
 
 # capture these to bypass sandboxing
 from os import utime
@@ -76,7 +76,6 @@ try:
 except ImportError:
     importlib_machinery = None
 
-from . import py31compat
 from pkg_resources.extern import appdirs
 from pkg_resources.extern import packaging
 __import__('pkg_resources.extern.packaging.version')
@@ -88,8 +87,8 @@ __import__('pkg_resources.extern.packaging.markers')
 __metaclass__ = type
 
 
-if (3, 0) < sys.version_info < (3, 4):
-    raise RuntimeError("Python 3.4 or later is required")
+if (3, 0) < sys.version_info < (3, 5):
+    raise RuntimeError("Python 3.5 or later is required")
 
 if six.PY2:
     # Those builtin exceptions are only defined in Python 3
@@ -178,10 +177,10 @@ def get_supported_platform():
     """Return this platform's maximum compatible version.
 
     distutils.util.get_platform() normally reports the minimum version
-    of Mac OS X that would be required to *use* extensions produced by
+    of macOS that would be required to *use* extensions produced by
     distutils.  But what we want when checking compatibility is to know the
-    version of Mac OS X that we are *running*.  To allow usage of packages that
-    explicitly require a newer version of Mac OS X, we must also know the
+    version of macOS that we are *running*.  To allow usage of packages that
+    explicitly require a newer version of macOS, we must also know the
     current version of the OS.
 
     If this condition occurs for any other platform with a version in its
@@ -191,9 +190,9 @@ def get_supported_platform():
     m = macosVersionString.match(plat)
     if m is not None and sys.platform == "darwin":
         try:
-            plat = 'macosx-%s-%s' % ('.'.join(_macosx_vers()[:2]), m.group(3))
+            plat = 'macosx-%s-%s' % ('.'.join(_macos_vers()[:2]), m.group(3))
         except ValueError:
-            # not Mac OS X
+            # not macOS
             pass
     return plat
 
@@ -333,7 +332,7 @@ class UnknownExtra(ResolutionError):
 
 _provider_factories = {}
 
-PY_MAJOR = sys.version[:3]
+PY_MAJOR = '{}.{}'.format(*sys.version_info)
 EGG_DIST = 3
 BINARY_DIST = 2
 SOURCE_DIST = 1
@@ -364,7 +363,7 @@ def get_provider(moduleOrReq):
     return _find_adapter(_provider_factories, loader)(module)
 
 
-def _macosx_vers(_cache=[]):
+def _macos_vers(_cache=[]):
     if not _cache:
         version = platform.mac_ver()[0]
         # fallback for MacPorts
@@ -380,7 +379,7 @@ def _macosx_vers(_cache=[]):
     return _cache[0]
 
 
-def _macosx_arch(machine):
+def _macos_arch(machine):
     return {'PowerPC': 'ppc', 'Power_Macintosh': 'ppc'}.get(machine, machine)
 
 
@@ -388,18 +387,18 @@ def get_build_platform():
     """Return this platform's string for platform-specific distributions
 
     XXX Currently this is the same as ``distutils.util.get_platform()``, but it
-    needs some hacks for Linux and Mac OS X.
+    needs some hacks for Linux and macOS.
     """
     from sysconfig import get_platform
 
     plat = get_platform()
     if sys.platform == "darwin" and not plat.startswith('macosx-'):
         try:
-            version = _macosx_vers()
+            version = _macos_vers()
             machine = os.uname()[4].replace(" ", "_")
             return "macosx-%d.%d-%s" % (
                 int(version[0]), int(version[1]),
-                _macosx_arch(machine),
+                _macos_arch(machine),
             )
         except ValueError:
             # if someone is running a non-Mac darwin system, this will fall
@@ -425,7 +424,7 @@ def compatible_platforms(provided, required):
         # easy case
         return True
 
-    # Mac OS X special cases
+    # macOS special cases
     reqMac = macosVersionString.match(required)
     if reqMac:
         provMac = macosVersionString.match(provided)
@@ -434,7 +433,7 @@ def compatible_platforms(provided, required):
         if not provMac:
             # this is backwards compatibility for packages built before
             # setuptools 0.6. All packages built after this point will
-            # use the new macosx designation.
+            # use the new macOS designation.
             provDarwin = darwinVersionString.match(provided)
             if provDarwin:
                 dversion = int(provDarwin.group(1))
@@ -442,7 +441,7 @@ def compatible_platforms(provided, required):
                 if dversion == 7 and macosversion >= "10.3" or \
                         dversion == 8 and macosversion >= "10.4":
                     return True
-            # egg isn't macosx or legacy darwin
+            # egg isn't macOS or legacy darwin
             return False
 
         # are they the same major version and machine type?
@@ -1234,12 +1233,13 @@ class ResourceManager:
         mode = os.stat(path).st_mode
         if mode & stat.S_IWOTH or mode & stat.S_IWGRP:
             msg = (
-                "%s is writable by group/others and vulnerable to attack "
-                "when "
-                "used with get_resource_filename. Consider a more secure "
+                "Extraction path is writable by group/others "
+                "and vulnerable to attack when "
+                "used with get_resource_filename ({path}). "
+                "Consider a more secure "
                 "location (set with .set_extraction_path or the "
-                "PYTHON_EGG_CACHE environment variable)." % path
-            )
+                "PYTHON_EGG_CACHE environment variable)."
+            ).format(**locals())
             warnings.warn(msg, UserWarning)
 
     def postprocess(self, tempname, filename):
@@ -1416,8 +1416,17 @@ class NullProvider:
     def get_metadata(self, name):
         if not self.egg_info:
             return ""
-        value = self._get(self._fn(self.egg_info, name))
-        return value.decode('utf-8') if six.PY3 else value
+        path = self._get_metadata_path(name)
+        value = self._get(path)
+        if six.PY2:
+            return value
+        try:
+            return value.decode('utf-8')
+        except UnicodeDecodeError as exc:
+            # Include the path in the error message to simplify
+            # troubleshooting, and without changing the exception type.
+            exc.reason += ' in {} file at path: {}'.format(name, path)
+            raise
 
     def get_metadata_lines(self, name):
         return yield_lines(self.get_metadata(name))
@@ -1448,7 +1457,8 @@ class NullProvider:
         script_filename = self._fn(self.egg_info, script)
         namespace['__file__'] = script_filename
         if os.path.exists(script_filename):
-            source = open(script_filename).read()
+            with open(script_filename) as fid:
+                source = fid.read()
             code = compile(source, script_filename, 'exec')
             exec(code, namespace, namespace)
         else:
@@ -1566,6 +1576,17 @@ is not allowed.
 register_loader_type(object, NullProvider)
 
 
+def _parents(path):
+    """
+    yield all parents of path including path
+    """
+    last = None
+    while path != last:
+        yield path
+        last = path
+        path, _ = os.path.split(path)
+
+
 class EggProvider(NullProvider):
     """Provider based on a virtual filesystem"""
 
@@ -1574,18 +1595,16 @@ class EggProvider(NullProvider):
         self._setup_prefix()
 
     def _setup_prefix(self):
-        # we assume here that our metadata may be nested inside a "basket"
-        # of multiple eggs; that's why we use module_path instead of .archive
-        path = self.module_path
-        old = None
-        while path != old:
-            if _is_egg_path(path):
-                self.egg_name = os.path.basename(path)
-                self.egg_info = os.path.join(path, 'EGG-INFO')
-                self.egg_root = path
-                break
-            old = path
-            path, base = os.path.split(path)
+        # Assume that metadata may be nested inside a "basket"
+        # of multiple eggs and use module_path instead of .archive.
+        eggs = filter(_is_egg_path, _parents(self.module_path))
+        egg = next(eggs, None)
+        egg and self._set_egg(egg)
+
+    def _set_egg(self, path):
+        self.egg_name = os.path.basename(path)
+        self.egg_info = os.path.join(path, 'EGG-INFO')
+        self.egg_root = path
 
 
 class DefaultProvider(EggProvider):
@@ -2037,7 +2056,10 @@ def find_on_path(importer, path_item, only=False):
         )
         return
 
-    entries = safe_listdir(path_item)
+    entries = (
+        os.path.join(path_item, child)
+        for child in safe_listdir(path_item)
+    )
 
     # for performance, before sorting by version,
     # screen entries for only those that will yield
@@ -2058,11 +2080,14 @@ def find_on_path(importer, path_item, only=False):
 
 
 def dist_factory(path_item, entry, only):
-    """
-    Return a dist_factory for a path_item and entry
-    """
+    """Return a dist_factory for the given entry."""
     lower = entry.lower()
-    is_meta = any(map(lower.endswith, ('.egg-info', '.dist-info')))
+    is_egg_info = lower.endswith('.egg-info')
+    is_dist_info = (
+        lower.endswith('.dist-info') and
+        os.path.isdir(os.path.join(path_item, entry))
+    )
+    is_meta = is_egg_info or is_dist_info
     return (
         distributions_from_metadata
         if is_meta else
@@ -2186,10 +2211,14 @@ def _handle_ns(packageName, path_item):
     if importer is None:
         return None
 
-    # capture warnings due to #1111
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        loader = importer.find_module(packageName)
+    # use find_spec (PEP 451) and fall-back to find_module (PEP 302)
+    try:
+        loader = importer.find_spec(packageName).loader
+    except AttributeError:
+        # capture warnings due to #1111
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            loader = importer.find_module(packageName)
 
     if loader is None:
         return None
@@ -2319,7 +2348,8 @@ register_namespace_handler(object, null_ns_handler)
 
 def normalize_path(filename):
     """Normalize a file/dir name for comparison purposes"""
-    return os.path.normcase(os.path.realpath(os.path.normpath(_cygwin_patch(filename))))
+    return os.path.normcase(os.path.realpath(os.path.normpath(
+        _cygwin_patch(filename))))
 
 
 def _cygwin_patch(filename):  # pragma: nocover
@@ -2345,7 +2375,15 @@ def _is_egg_path(path):
     """
     Determine if given path appears to be an egg.
     """
-    return path.lower().endswith('.egg')
+    return _is_zip_egg(path) or _is_unpacked_egg(path)
+
+
+def _is_zip_egg(path):
+    return (
+        path.lower().endswith('.egg') and
+        os.path.isfile(path) and
+        zipfile.is_zipfile(path)
+    )
 
 
 def _is_unpacked_egg(path):
@@ -2353,7 +2391,7 @@ def _is_unpacked_egg(path):
     Determine if given path appears to be an unpacked egg.
     """
     return (
-        _is_egg_path(path) and
+        path.lower().endswith('.egg') and
         os.path.isfile(os.path.join(path, 'EGG-INFO', 'PKG-INFO'))
     )
 
@@ -2527,15 +2565,6 @@ class EntryPoint:
         return maps
 
 
-def _remove_md5_fragment(location):
-    if not location:
-        return ''
-    parsed = urllib.parse.urlparse(location)
-    if parsed[-1].startswith('md5='):
-        return urllib.parse.urlunparse(parsed[:-1] + ('',))
-    return location
-
-
 def _version_from_file(lines):
     """
     Given an iterable of lines from a Metadata file, return
@@ -2592,7 +2621,7 @@ class Distribution:
             self.parsed_version,
             self.precedence,
             self.key,
-            _remove_md5_fragment(self.location),
+            self.location,
             self.py_version or '',
             self.platform or '',
         )
@@ -3058,11 +3087,6 @@ def issue_warning(*args, **kw):
     warnings.warn(stacklevel=level + 1, *args, **kw)
 
 
-class RequirementParseError(ValueError):
-    def __str__(self):
-        return ' '.join(self.args)
-
-
 def parse_requirements(strs):
     """Yield ``Requirement`` objects for each specification in `strs`
 
@@ -3085,13 +3109,14 @@ def parse_requirements(strs):
         yield Requirement(line)
 
 
+class RequirementParseError(packaging.requirements.InvalidRequirement):
+    "Compatibility wrapper for InvalidRequirement"
+
+
 class Requirement(packaging.requirements.Requirement):
     def __init__(self, requirement_string):
         """DO NOT CALL THIS UNDOCUMENTED METHOD; use Requirement.parse()!"""
-        try:
-            super(Requirement, self).__init__(requirement_string)
-        except packaging.requirements.InvalidRequirement as e:
-            raise RequirementParseError(str(e))
+        super(Requirement, self).__init__(requirement_string)
         self.unsafe_name = self.name
         project_name = safe_name(self.name)
         self.project_name, self.key = project_name, project_name.lower()
@@ -3100,6 +3125,7 @@ class Requirement(packaging.requirements.Requirement):
         self.extras = tuple(map(safe_extra, self.extras))
         self.hashCmp = (
             self.key,
+            self.url,
             self.specifier,
             frozenset(self.extras),
             str(self.marker) if self.marker else None,
@@ -3160,7 +3186,7 @@ def _find_adapter(registry, ob):
 def ensure_directory(path):
     """Ensure that the parent directory of `path` exists"""
     dirname = os.path.dirname(path)
-    py31compat.makedirs(dirname, exist_ok=True)
+    os.makedirs(dirname, exist_ok=True)
 
 
 def _bypass_ensure_directory(path):
@@ -3276,6 +3302,7 @@ def _initialize_master_working_set():
     # match order
     list(map(working_set.add_entry, sys.path))
     globals().update(locals())
+
 
 class PkgResourcesDeprecationWarning(Warning):
     """
