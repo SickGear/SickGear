@@ -2775,6 +2775,14 @@ history.tmpl
 	background-color:#3f993f
 }
 
+.yellow-bg{
+	background-color:#cfd958;
+	color:#282828
+}
+.blue-bg{
+	background-color:#2779d0
+}
+
 #history-table td,
 #history-table td.provider span{
 	text-align:center

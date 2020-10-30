@@ -146,6 +146,8 @@ if 2 != version_info[0]:
     # noinspection PyUnresolvedReferences,PyCompatibility
     from configparser import ConfigParser
     # noinspection PyUnresolvedReferences
+    from enum import Enum
+    # noinspection PyUnresolvedReferences
     from os import scandir, DirEntry
     # noinspection PyUnresolvedReferences
     from itertools import zip_longest
@@ -227,6 +229,8 @@ else:
     b64encodebytes = encodestring
     # noinspection PyUnresolvedReferences
     from lib.backports.configparser import ConfigParser
+    # noinspection PyUnresolvedReferences
+    from lib.enum34 import Enum
     # noinspection PyProtectedMember,PyUnresolvedReferences
     from lib.scandir.scandir import scandir, GenericDirEntry as DirEntry
     # noinspection PyUnresolvedReferences,PyDeprecation
