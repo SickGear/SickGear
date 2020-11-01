@@ -1,5 +1,6 @@
 ﻿### 0.23.0 (2019-xx-xx xx:xx:xx UTC)
 
+* Add overview of the last release age/date at each newznab provider to History/Layout "Connect fails" 
 * Add "History new..." to Shows menu by clicking the number
 * Add db backup to the scheduled daily update
 * Add display "Database backups" location at config/about if feature available
@@ -39,6 +40,8 @@
 * Change API version to 14
 * Change add a test for both require and ignore show specific words with partial match, both should fail
 * Change init showDict for all unit tests
+* Add enum34 1.1.10
+* Add humanize 3.1.0 (aec9dc2)
 * Update included fallback timezone info file to 2020d
 * Update attr 20.1.0.dev0 (4bd6827) to 20.2.0 (4f74fba)
 * Update Beautiful Soup 4.8.2 (r559) to 4.9.3 (r593)
