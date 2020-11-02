@@ -134,12 +134,12 @@ def import_object(name: str) -> Any:
     ``import_object('x')`` is equivalent to ``import x``.
     ``import_object('x.y.z')`` is equivalent to ``from x.y import z``.
 
-    >>> import tornado_py3.escape
-    >>> import_object('tornado.escape') is tornado_py3.escape
+    >>> import tornado.escape
+    >>> import_object('tornado.escape') is tornado.escape
     True
-    >>> import_object('tornado.escape.utf8') is tornado_py3.escape.utf8
+    >>> import_object('tornado.escape.utf8') is tornado.escape.utf8
     True
-    >>> import_object('tornado') is tornado_py3
+    >>> import_object('tornado') is tornado
     True
     >>> import_object('tornado.missing_module')
     Traceback (most recent call last):
@@ -157,7 +157,9 @@ def import_object(name: str) -> Any:
         raise ImportError("No module named %s" % parts[-1])
 
 
-def exec_in(code: Any, glob: Dict[str, Any], loc: Mapping[str, Any] = None) -> None:
+def exec_in(
+    code: Any, glob: Dict[str, Any], loc: Optional[Optional[Mapping[str, Any]]] = None
+) -> None:
     if isinstance(code, str):
         # exec(string) inherits the caller's future imports; compile
         # the string first to prevent that.
