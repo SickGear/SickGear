@@ -379,6 +379,7 @@ class ProcessTVShow(object):
         rar_content = self._unrar(path, rar_files, force)
         if self.fail_detected:
             self._process_failed(dir_name, nzb_name, show_obj=show_obj)
+            self.update_history_tab()
             return self.result
         rar_content = [x for x in rar_content if not helpers.is_link(ek.ek(os.path.join, path, x))]
         path, dirs, files = self._get_path_dir_files(dir_name, nzb_name, pp_type)
@@ -532,6 +533,8 @@ class ProcessTVShow(object):
 
         notifiers.notify_update_library(ep_obj=None, flush_q=True)
 
+        self.update_history_tab()
+
         if self.any_vid_processed:
             if not self.files_failed:
                 _bottom_line(u'Successfully processed.', logger.MESSAGE)
@@ -542,6 +545,11 @@ class ProcessTVShow(object):
             _bottom_line(u'Failed! Did not process any files.', logger.WARNING)
 
         return self.result
+
+    @staticmethod
+    def update_history_tab():
+        from .webserve import History
+        sickbeard.MEMCACHE['history_tab'] = History.menu_tab(sickbeard.MEMCACHE['history_tab_limit'])
 
     @staticmethod
     def unused_archives(path, archives, pp_type, process_method, archive_history=None):

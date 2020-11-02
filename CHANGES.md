@@ -72,6 +72,7 @@
 * Change move scantree to sg_helpers to prevent circular reference of it ever again
 * Update included fallback timezone info file to 2020c
 * Change use natural time for age if now is night time and the last recent is yesterday evening, otherwise output age as 'yesterday'
+* Change improve performance of History new
 
 
 ### 0.22.11 (2020-10-30 01:45:00 UTC)
