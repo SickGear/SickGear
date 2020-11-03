@@ -94,7 +94,7 @@ class IPTorrentsProvider(generic.TorrentProvider):
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
         rc = dict((k, re.compile('(?i)' + v)) for (k, v) in iteritems(dict(
-            info='detail', get='download', id=r'download.*?/([\d]+)')))
+            info='/t/', get='download', id=r'download.*?/([\d]+)')))
         lrs_found = False
         lrs_new = True
         for search_urls in urls:  # this intentionally iterates once to preserve indentation
@@ -137,8 +137,8 @@ class IPTorrentsProvider(generic.TorrentProvider):
                                 if lrs_found:
                                     break
 
-                                seeders, leechers = [try_int(tr.find('td', class_='t_' + x).get_text().strip())
-                                                     for x in ('seeders', 'leechers')]
+                                seeders, leechers = [try_int(tr.find_all('td')[head[x]].get_text().strip())
+                                                     for x in ('seed', 'leech')]
                                 if self._reject_item(seeders, leechers):
                                     continue
 
