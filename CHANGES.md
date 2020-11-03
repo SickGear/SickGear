@@ -60,7 +60,7 @@
 * Update soupsieve_py3 2.0.0.final (e66c311) to 2.0.2.dev (05086ef)
 * Update soupsieve_py2 backport
 * Update tmdbsimple 2.2.6 (310d933) to 2.6.6 (679e343)
-* Update urllib3 1.25.9 (a5a45dc) to 1.26.0.dev0 (41eae64)
+* Update urllib3 1.25.9 (a5a45dc) to 1.25.11 (5eb604f)
 * Change add remove duplicates in newznab provider list based on name and url
 * Change remove old provider dupe cleanup
 
@@ -71,6 +71,7 @@
 * Update Beautiful Soup 4.8.2 (r559) to 4.9.1 (r585)
 * Update Requests library 2.24.0 (967a05b) to 2.24.0 (2f70990)
 * Fix update Soupsieve (05086ef) broke MC and TVC browse cards
+* Update urllib3 1.26.0.dev0 (41eae64) to 1.25.11 (5eb604f) 
 * Change move scantree to sg_helpers to prevent circular reference of it ever again
 * Update included fallback timezone info file to 2020c
 * Change use natural time for age if now is night time and the last recent is yesterday evening, otherwise output age as 'yesterday'

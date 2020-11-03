@@ -1,18 +1,23 @@
 from __future__ import absolute_import
-import warnings
+
 import hmac
 import os
 import sys
-
+import warnings
 from binascii import hexlify, unhexlify
 from hashlib import md5, sha1, sha256
 
-from .url import IPV4_RE, BRACELESS_IPV6_ADDRZ_RE
-from ..exceptions import SSLError, InsecurePlatformWarning, SNIMissingWarning
+from ..exceptions import (
+    InsecurePlatformWarning,
+    ProxySchemeUnsupported,
+    SNIMissingWarning,
+    SSLError,
+)
 from ..packages import six
-
+from .url import BRACELESS_IPV6_ADDRZ_RE, IPV4_RE
 
 SSLContext = None
+SSLTransport = None
 HAS_SNI = False
 IS_PYOPENSSL = False
 IS_SECURETRANSPORT = False
@@ -39,8 +44,10 @@ _const_compare_digest = getattr(hmac, "compare_digest", _const_compare_digest_ba
 
 try:  # Test for SSL features
     import ssl
-    from ssl import wrap_socket, CERT_REQUIRED
     from ssl import HAS_SNI  # Has SNI?
+    from ssl import CERT_REQUIRED, wrap_socket
+
+    from .ssltransport import SSLTransport
 except ImportError:
     pass
 
@@ -58,10 +65,16 @@ except ImportError:
 
 
 try:
-    from ssl import OP_NO_SSLv2, OP_NO_SSLv3, OP_NO_COMPRESSION
+    from ssl import OP_NO_COMPRESSION, OP_NO_SSLv2, OP_NO_SSLv3
 except ImportError:
     OP_NO_SSLv2, OP_NO_SSLv3 = 0x1000000, 0x2000000
     OP_NO_COMPRESSION = 0x20000
+
+
+try:  # OP_NO_TICKET was added in Python 3.6
+    from ssl import OP_NO_TICKET
+except ImportError:
+    OP_NO_TICKET = 0x4000
 
 
 # A secure default.
@@ -250,7 +263,7 @@ def create_urllib3_context(
         ``ssl.CERT_REQUIRED``.
     :param options:
         Specific OpenSSL options. These default to ``ssl.OP_NO_SSLv2``,
-        ``ssl.OP_NO_SSLv3``, ``ssl.OP_NO_COMPRESSION``.
+        ``ssl.OP_NO_SSLv3``, ``ssl.OP_NO_COMPRESSION``, and ``ssl.OP_NO_TICKET``.
     :param ciphers:
         Which cipher suites to allow the server to select.
     :returns:
@@ -273,6 +286,11 @@ def create_urllib3_context(
         # Disable compression to prevent CRIME attacks for OpenSSL 1.0+
         # (issue #309)
         options |= OP_NO_COMPRESSION
+        # TLSv1.2 only. Unless set explicitly, do not request tickets.
+        # This may save some bandwidth on wire, and although the ticket is encrypted,
+        # there is a risk associated with it being on wire,
+        # if the server is not rotating its ticketing keys properly.
+        options |= OP_NO_TICKET
 
     context.options |= options
 
@@ -296,9 +314,11 @@ def create_urllib3_context(
         context.check_hostname = False
 
     # Enable logging of TLS session keys via defacto standard environment variable
-    # 'SSLKEYLOGFILE', if the feature is available (Python 3.8+).
+    # 'SSLKEYLOGFILE', if the feature is available (Python 3.8+). Skip empty values.
     if hasattr(context, "keylog_filename"):
-        context.keylog_filename = os.environ.get("SSLKEYLOGFILE")
+        sslkeylogfile = os.environ.get("SSLKEYLOGFILE")
+        if sslkeylogfile:
+            context.keylog_filename = sslkeylogfile
 
     return context
 
@@ -316,6 +336,7 @@ def ssl_wrap_socket(
     ca_cert_dir=None,
     key_password=None,
     ca_cert_data=None,
+    tls_in_tls=False,
 ):
     """
     All arguments except for server_hostname, ssl_context, and ca_cert_dir have
@@ -337,6 +358,8 @@ def ssl_wrap_socket(
     :param ca_cert_data:
         Optional string containing CA certificates in PEM format suitable for
         passing as the cadata parameter to SSLContext.load_verify_locations()
+    :param tls_in_tls:
+        Use SSLTransport to wrap the existing socket.
     """
     context = ssl_context
     if context is None:
@@ -394,9 +417,11 @@ def ssl_wrap_socket(
         )
 
     if send_sni:
-        ssl_sock = context.wrap_socket(sock, server_hostname=server_hostname)
+        ssl_sock = _ssl_wrap_socket_impl(
+            sock, context, tls_in_tls, server_hostname=server_hostname
+        )
     else:
-        ssl_sock = context.wrap_socket(sock)
+        ssl_sock = _ssl_wrap_socket_impl(sock, context, tls_in_tls)
     return ssl_sock
 
 
@@ -422,3 +447,20 @@ def _is_key_file_encrypted(key_file):
                 return True
 
     return False
+
+
+def _ssl_wrap_socket_impl(sock, ssl_context, tls_in_tls, server_hostname=None):
+    if tls_in_tls:
+        if not SSLTransport:
+            # Import error, ssl is not available.
+            raise ProxySchemeUnsupported(
+                "TLS in TLS requires support for the 'ssl' module"
+            )
+
+        SSLTransport._validate_ssl_context_for_tls_in_tls(ssl_context)
+        return SSLTransport(sock, ssl_context, server_hostname)
+
+    if server_hostname:
+        return ssl_context.wrap_socket(sock, server_hostname=server_hostname)
+    else:
+        return ssl_context.wrap_socket(sock)
