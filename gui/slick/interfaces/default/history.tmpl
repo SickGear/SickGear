@@ -633,12 +633,15 @@
             #set $last_rls_timedelta = ($SGDatetime.now() - $cur_provider.last_recent_search)
             #set $last_rls_age = $last_rls_timedelta.days
             #set $last_rls_age_str = '%s days ago' % $last_rls_age
-            #set $tmp = $humanize.naturalday(cur_provider.last_recent_search, format='', locale=False)
+            #set $tmp = $humanize.naturalday($cur_provider.last_recent_search, format='', locale=False)
             #if $tmp
+                #set $last_rls_age_str = $humanize.naturaltime($last_rls_timedelta)
                 #if 'yesterday' == $tmp
-                    #set $last_rls_age_str = $humanize.naturalday(cur_provider.last_recent_search)
-                #else
-                    #set $last_rls_age_str = $humanize.naturaltime($last_rls_timedelta)
+                    #set $is_now_night = 6 > $SGDatetime.now().hour
+                    #set $is_last_evening = 18 <= $cur_provider.last_recent_search.hour
+                    #if not ($is_now_night and $is_last_evening)
+                        #set $last_rls_age_str = $humanize.naturalday($cur_provider.last_recent_search)
+                    #end if
                 #end if
             #end if
         #end if

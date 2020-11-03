@@ -38,6 +38,11 @@ class Unit(Enum):
             return self.value < other.value
         return NotImplemented
 
+    def __gt__(self, other):
+        if self.__class__ is other.__class__:
+            return self.value > other.value
+        return NotImplemented
+
     def __eq__(self, other):
         if self.__class__ is other.__class__:
             return self.value == other.value
@@ -57,6 +62,9 @@ class Unit(Enum):
         if self.__class__ is other.__class__:
             return self.value != other.value
         return NotImplemented
+
+    def __hash__(self):
+        return hash(self.value)
 
 
 def _now():
