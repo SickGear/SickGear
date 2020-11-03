@@ -138,9 +138,9 @@ class PageTemplate(Template):
         kwargs['file'] = os.path.join(sickbeard.PROG_DIR, 'gui/%s/interfaces/default/' %
                                       sickbeard.GUI_NAME, kwargs['file'])
 
-        self.addtab_limit = 9
+        self.addtab_limit = sickbeard.MEMCACHE['history_tab_limit']
         if not web_handler.application.is_loading_handler:
-            self.history_compact = History.menu_tab(self.addtab_limit)
+            self.history_compact = sickbeard.MEMCACHE['history_tab']
 
         super(PageTemplate, self).__init__(*args, **kwargs)
 

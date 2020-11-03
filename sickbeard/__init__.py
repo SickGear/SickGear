@@ -52,6 +52,7 @@ from .providers.generic import GenericProvider
 from .providers.newznab import NewznabConstants
 from .tv import TVidProdid
 from .watchedstate import EmbyWatchedStateUpdater, PlexWatchedStateUpdater
+from .webserve import History
 
 from adba.aniDBerrors import AniDBError
 # noinspection PyProtectedMember
@@ -1626,6 +1627,9 @@ def init_stage_2():
         cycleTime=datetime.timedelta(minutes=PLEX_WATCHEDSTATE_FREQUENCY),
         run_delay=datetime.timedelta(minutes=5),
         threadName='PLEXWATCHEDSTATE')
+
+    MEMCACHE['history_tab_limit'] = 9
+    MEMCACHE['history_tab'] = History.menu_tab(MEMCACHE['history_tab_limit'])
 
     try:
         for f in ek.ek(scandir, ek.ek(os.path.join, PROG_DIR, 'gui', GUI_NAME, 'images', 'flags')):
