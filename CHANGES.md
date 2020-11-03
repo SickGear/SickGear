@@ -75,6 +75,11 @@
 * Change improve performance of History new
 
 
+### 0.21.12 (2020-11-03 16:05:00 UTC)
+
+* Fix IPTorrents
+
+
 ### 0.22.11 (2020-10-30 01:45:00 UTC)
 
 * Fix an old and rare thread timing case that can change a show to the wrong type while fetching alternative names
