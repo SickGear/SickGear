@@ -73,6 +73,7 @@
 * Update included fallback timezone info file to 2020c
 * Change use natural time for age if now is night time and the last recent is yesterday evening, otherwise output age as 'yesterday'
 * Change improve performance of History new
+* Fix initialise history_tab_limit during restart loading
 
 
 ### 0.21.12 (2020-11-03 16:05:00 UTC)
