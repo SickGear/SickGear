@@ -782,11 +782,12 @@ def delete_old_db_backups(target):
     :param target: backup folder to check
     """
     use_count = (1, sickbeard.BACKUP_DB_MAX_COUNT)[not sickbeard.BACKUP_DB_ONEDAY]
-    file_list = [f for f in scantree(target, include=['sickbeard|cache|failed'], filter_kind=False)]
-    if use_count < len(file_list):
-        file_list.sort(key=lambda _f: _f.stat(follow_symlinks=False).st_mtime, reverse=True)
-        for direntry in file_list[use_count:]:
-            remove_file_perm(direntry.path)
+    for include in ['sickbeard', 'cache', 'failed']:
+        file_list = [f for f in scantree(target, include=include, filter_kind=False)]
+        if use_count < len(file_list):
+            file_list.sort(key=lambda _f: _f.stat(follow_symlinks=False).st_mtime, reverse=True)
+            for direntry in file_list[use_count:]:
+                remove_file_perm(direntry.path)
 
 
 def backup_all_dbs(target, compress=True, prefer_7z=True):
