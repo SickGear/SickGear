@@ -1136,12 +1136,13 @@ def move_file(src_file, dest_file):
         ek.ek(os.unlink, src_file)
 
 
-def remove_file_perm(filepath):
-    # type: (AnyStr) -> Optional[bool]
+def remove_file_perm(filepath, log_err=True):
+    # type: (AnyStr, Optional[bool]) -> Optional[bool]
     """
     Remove file
 
     :param filepath: Path and file name
+    :param log_err: False to suppress log msgs
     :return True if filepath does not exist else None if no removal
     """
     if not ek.ek(os.path.exists, filepath):
@@ -1151,14 +1152,16 @@ def remove_file_perm(filepath):
             ek.ek(os.remove, filepath)
         except OSError as e:
             if getattr(e, 'winerror', 0) not in (5, 32):  # 5=access denied (e.g. av), 32=another process has lock
-                logger.warning('Unable to delete %s: %r / %s' % (filepath, e, ex(e)))
+                if log_err:
+                    logger.warning('Unable to delete %s: %r / %s' % (filepath, e, ex(e)))
                 return
         except (BaseException, Exception):
             pass
         time.sleep(t)
         if not ek.ek(os.path.exists, filepath):
             return True
-    logger.warning('Unable to delete %s' % filepath)
+    if log_err:
+        logger.warning('Unable to delete %s' % filepath)
 
 
 def remove_file(filepath, tree=False, prefix_failure='', log_level=logging.INFO):
