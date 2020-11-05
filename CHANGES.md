@@ -74,6 +74,7 @@
 * Change use natural time for age if now is night time and the last recent is yesterday evening, otherwise output age as 'yesterday'
 * Change improve performance of History new
 * Fix initialise history_tab_limit during restart loading
+* Fix removing old backup db files
 
 
 ### 0.21.13 (2020-11-05 01:00:00 UTC)
