@@ -40,6 +40,7 @@
 * Change API version to 14
 * Change add a test for both require and ignore show specific words with partial match, both should fail
 * Change init showDict for all unit tests
+* Change add error handling for zoneinfo update file parsing
 * Add enum34 1.1.10
 * Add humanize 3.1.0 (aec9dc2)
 * Update included fallback timezone info file to 2020d

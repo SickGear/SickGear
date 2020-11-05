@@ -17,7 +17,6 @@
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
 from itertools import chain
-from os.path import basename, join, isfile
 import datetime
 import os
 import re
@@ -32,7 +31,9 @@ import encodingKludge as ek
 from lib.dateutil import tz, zoneinfo
 from lib.tzlocal import get_localzone
 
-from _23 import scandir
+from sg_helpers import remove_file_perm, scantree
+
+from _23 import list_keys
 from six import iteritems
 
 # noinspection PyUnreachableCode
@@ -45,8 +46,8 @@ time_regex = re.compile(r'(\d{1,2})(([:.](\d{2}))? ?([PA][. ]? ?M)|[:.](\d{2}))\
 am_regex = re.compile(r'(A[. ]? ?M)', flags=re.I)
 pm_regex = re.compile(r'(P[. ]? ?M)', flags=re.I)
 
-network_dict = None
-network_dupes = None
+network_dict = {}
+network_dupes = {}
 last_failure = {'datetime': datetime.datetime.fromordinal(1), 'count': 0}  # type: dict
 max_retry_time = 900
 max_retry_count = 3
@@ -83,9 +84,9 @@ def update_last_retry():
 def should_try_loading():
     # type: (...) -> bool
     global last_failure
-    if last_failure.get('count', 0) >= max_retry_count and \
-            (datetime.datetime.now() - last_failure.get('datetime',
-                                                        datetime.datetime.fromordinal(1))).seconds < max_retry_time:
+    if last_failure.get('count', 0) >= max_retry_count \
+            and max_retry_time > (datetime.datetime.now() - last_failure.get(
+                'datetime', datetime.datetime.fromordinal(1))).seconds:
         return False
     return True
 
@@ -130,7 +131,6 @@ def get_utc():
     tz_utc_file = ek.ek(os.path.join, ek.ek(os.path.dirname, zoneinfo.__file__), 'Greenwich')
     if ek.ek(os.path.isfile, tz_utc_file):
         return tz.tzfile(tz_utc_file)
-    return None
 
 
 def set_vars():
@@ -149,40 +149,21 @@ def set_vars():
 set_vars()
 
 
-def _remove_zoneinfo_failed(filename):
-    # type: (AnyStr) -> None
-    """
-    helper to remove failed temp download
-    """
-    try:
-        ek.ek(os.remove, filename)
-    except (BaseException, Exception):
-        pass
-
-
 def _remove_old_zoneinfo():
     # type: (...) -> None
     """
     helper to remove old unneeded zoneinfo files
     """
-    zonefilename = zoneinfo.ZONEFILENAME
-    if None is zonefilename:
-        return
-    cur_zoneinfo = ek.ek(basename, zonefilename)
-
-    cur_file = helpers.real_path(ek.ek(join, sickbeard.ZONEINFO_DIR, cur_zoneinfo))
-
-    for entry in chain.from_iterable(
-            [ek.ek(scandir, helpers.real_path(_dir))
-             for _dir in (sickbeard.ZONEINFO_DIR, )]):
-        if entry.is_file(follow_symlinks=False):
-            if entry.name.endswith('.tar.gz'):
-                if entry.path != cur_file:
-                    try:
-                        ek.ek(os.remove, entry.path)
-                        logger.log(u'Delete unneeded old zoneinfo File: %s' % entry.path)
-                    except (BaseException, Exception):
-                        logger.log(u'Unable to delete: %s' % entry.path, logger.ERROR)
+    if None is not zoneinfo.ZONEFILENAME:
+        current_file = helpers.real_path(
+            ek.ek(os.path.join, sickbeard.ZONEINFO_DIR, ek.ek(os.path.basename, zoneinfo.ZONEFILENAME)))
+        for entry in chain.from_iterable([scantree(helpers.real_path(_dir), include=r'\.tar\.gz$', filter_kind=False)
+                                          for _dir in (sickbeard.ZONEINFO_DIR, )]):  # type: DirEntry
+            if current_file != entry.path:
+                if remove_file_perm(entry.path, log_err=False):
+                    logger.log(u'Delete unneeded old zoneinfo File: %s' % entry.path)
+                else:
+                    logger.log(u'Unable to delete: %s' % entry.path, logger.ERROR)
 
 
 def _update_zoneinfo():
@@ -190,54 +171,53 @@ def _update_zoneinfo():
     """
     update the dateutil zoneinfo
     """
-    if not should_try_loading():
-        return
-
     set_vars()
 
-    # now check if the zoneinfo needs update
-    url_zv = 'https://raw.githubusercontent.com/Prinz23/sb_network_timezones/master/zoneinfo.txt'
+    # check if the zoneinfo needs update
+    url = 'https://raw.githubusercontent.com/Prinz23/sb_network_timezones/master/zoneinfo.txt'
 
-    url_data = helpers.get_url(url_zv)
+    url_data = helpers.get_url(url)
     if None is url_data:
         update_last_retry()
-        # When None is urlData, trouble connecting to github
-        logger.log(u'Loading zoneinfo.txt failed, this can happen from time to time. Unable to get URL: %s' % url_zv,
+        # when None is urlData, trouble connecting to github
+        logger.log(u'Fetching zoneinfo.txt failed, this can happen from time to time. Unable to get URL: %s' % url,
                    logger.WARNING)
         return
-    else:
-        reset_last_retry()
 
-    zonefilename = zoneinfo.ZONEFILENAME
-    cur_zoneinfo = zonefilename
-    if None is not cur_zoneinfo:
-        cur_zoneinfo = ek.ek(basename, zonefilename)
-    zonefile = helpers.real_path(ek.ek(join, sickbeard.ZONEINFO_DIR, cur_zoneinfo))
+    reset_last_retry()
+
+    try:
+        (new_zoneinfo, zoneinfo_md5) = url_data.strip().rsplit(u' ')
+    except (BaseException, Exception):
+        logger.log('Fetching zoneinfo.txt failed, update contains unparsable data: %s' % url_data, logger.DEBUG)
+        return
+
+    current_file = zoneinfo.ZONEFILENAME
+    if None is not current_file:
+        current_file = ek.ek(os.path.basename, current_file)
+    zonefile = helpers.real_path(ek.ek(os.path.join, sickbeard.ZONEINFO_DIR, current_file))
     zonemetadata = None if not ek.ek(os.path.isfile, zonefile) else \
         zoneinfo.ZoneInfoFile(zoneinfo.getzoneinfofile_stream()).metadata
-    (new_zoneinfo, zoneinfo_md5) = url_data.strip().rsplit(u' ')
+
     newtz_regex = re.search(r'(\d{4}[^.]+)', new_zoneinfo)
     if not newtz_regex or 1 != len(newtz_regex.groups()):
         return
     newtzversion = newtz_regex.group(1)
 
-    if None is not cur_zoneinfo \
+    if None is not current_file \
             and None is not zonemetadata \
             and 'tzversion' in zonemetadata \
             and zonemetadata['tzversion'] == newtzversion:
         return
 
-    # now load the new zoneinfo
+    # load the new zoneinfo
     url_tar = u'https://raw.githubusercontent.com/Prinz23/sb_network_timezones/master/%s' % new_zoneinfo
 
     zonefile_tmp = re.sub(r'\.tar\.gz$', '.tmp', zonefile)
 
-    if ek.ek(os.path.exists, zonefile_tmp):
-        try:
-            ek.ek(os.remove, zonefile_tmp)
-        except (BaseException, Exception):
-            logger.log(u'Unable to delete: %s' % zonefile_tmp, logger.ERROR)
-            return
+    if not remove_file_perm(zonefile_tmp, log_err=False):
+        logger.log(u'Unable to delete: %s' % zonefile_tmp, logger.ERROR)
+        return
 
     if not helpers.download_file(url_tar, zonefile_tmp):
         return
@@ -252,11 +232,8 @@ def _update_zoneinfo():
         logger.log(u'Updating timezone info with new one: %s' % new_zoneinfo, logger.MESSAGE)
         try:
             # remove the old zoneinfo file
-            if None is not cur_zoneinfo:
-                old_file = helpers.real_path(
-                    ek.ek(os.path.join, sickbeard.ZONEINFO_DIR, cur_zoneinfo))
-                if ek.ek(os.path.exists, old_file):
-                    ek.ek(os.remove, old_file)
+            if None is not current_file:
+                remove_file_perm(zonefile)
             # rename downloaded file
             ek.ek(os.rename, zonefile_tmp, zonefile)
             setattr(zoneinfo, '_CLASS_ZONE_INSTANCE', list())
@@ -269,10 +246,10 @@ def _update_zoneinfo():
 
             set_vars()
         except (BaseException, Exception):
-            _remove_zoneinfo_failed(zonefile_tmp)
+            remove_file_perm(zonefile_tmp, log_err=False)
             return
     else:
-        _remove_zoneinfo_failed(zonefile_tmp)
+        remove_file_perm(zonefile_tmp, log_err=False)
         logger.log(u'MD5 hash does not match: %s File: %s' % (zoneinfo_md5.upper(), new_hash.upper()), logger.ERROR)
         return
 
@@ -287,9 +264,9 @@ def update_network_dict():
 
     _remove_old_zoneinfo()
     _update_zoneinfo()
-    load_network_conversions()
+    _load_network_conversions()
 
-    d = {}
+    network_tz_data = {}
 
     # network timezones are stored on github pages
     url = 'https://raw.githubusercontent.com/Prinz23/sb_network_timezones/master/network_timezones.txt'
@@ -302,18 +279,18 @@ def update_network_dict():
                    logger.WARNING)
         load_network_dict(load=False)
         return
-    else:
-        reset_last_retry()
+
+    reset_last_retry()
 
     try:
         for line in url_data.splitlines():
             try:
-                (key, val) = line.strip().rsplit(u':', 1)
+                (name, tzone) = line.strip().rsplit(u':', 1)
             except (BaseException, Exception):
                 continue
-            if None is key or None is val:
+            if None is name or None is tzone:
                 continue
-            d[key] = val
+            network_tz_data[name] = tzone
     except (IOError, OSError):
         pass
 
@@ -321,28 +298,28 @@ def update_network_dict():
         my_db = db.DBConnection('cache.db')
 
         # load current network timezones
-        old_d = dict(my_db.select('SELECT * FROM network_timezones'))
+        sql_result = dict(my_db.select('SELECT * FROM network_timezones'))
 
         # list of sql commands to update the network_timezones table
         cl = []
-        for cur_d, cur_t in iteritems(d):
-            h_k = cur_d in old_d
-            if h_k and cur_t != old_d[cur_d]:
+        for cur_name, cur_tz in iteritems(network_tz_data):
+            network_known = cur_name in sql_result
+            if network_known and cur_tz != sql_result[cur_name]:
                 # update old record
                 cl.append(
                     ['UPDATE network_timezones SET network_name=?, timezone=? WHERE network_name=?',
-                     [cur_d, cur_t, cur_d]])
-            elif not h_k:
+                     [cur_name, cur_tz, cur_name]])
+            elif not network_known:
                 # add new record
-                cl.append(['REPLACE INTO network_timezones (network_name, timezone) VALUES (?,?)', [cur_d, cur_t]])
-            if h_k:
-                del old_d[cur_d]
+                cl.append(['REPLACE INTO network_timezones (network_name, timezone) VALUES (?,?)', [cur_name, cur_tz]])
+            if network_known:
+                del sql_result[cur_name]
 
         # remove deleted records
-        if 0 < len(old_d):
-            old_items = list([va for va in old_d])
+        if 0 < len(sql_result):
+            network_names = list([network_name for network_name in sql_result])
             cl.append(['DELETE FROM network_timezones WHERE network_name IN (%s)'
-                       % ','.join(['?'] * len(old_items)), old_items])
+                       % ','.join(['?'] * len(network_names)), network_names])
 
         # change all network timezone infos at once (much faster)
         if 0 < len(cl):
@@ -425,70 +402,66 @@ def get_network_timezone(network, return_name=False):
     return timezone
 
 
-def parse_time(t):
+def parse_time(time_of_day):
     # type: (AnyStr) -> Tuple[int, int]
     """
 
-    :param t: time string
+    :param time_of_day: time string
     :return: tuple of hour, minute
     """
-    mo = time_regex.search(t)
-    if None is not mo and 5 <= len(mo.groups()):
-        if None is not mo.group(5):
+    time_parsed = time_regex.search(time_of_day)
+    hour = mins = 0
+    if None is not time_parsed and 5 <= len(time_parsed.groups()):
+        if None is not time_parsed.group(5):
             try:
-                hr = helpers.try_int(mo.group(1))
-                m = helpers.try_int(mo.group(4))
-                ap = mo.group(5)
+                hour = helpers.try_int(time_parsed.group(1))
+                mins = helpers.try_int(time_parsed.group(4))
+                ampm = time_parsed.group(5)
                 # convert am/pm to 24 hour clock
-                if None is not ap:
-                    if None is not pm_regex.search(ap) and 12 != hr:
-                        hr += 12
-                    elif None is not am_regex.search(ap) and 12 == hr:
-                        hr -= 12
+                if None is not ampm:
+                    if None is not pm_regex.search(ampm) and 12 != hour:
+                        hour += 12
+                    elif None is not am_regex.search(ampm) and 12 == hour:
+                        hour -= 12
             except (BaseException, Exception):
-                hr = 0
-                m = 0
+                hour = mins = 0
         else:
             try:
-                hr = helpers.try_int(mo.group(1))
-                m = helpers.try_int(mo.group(6))
+                hour = helpers.try_int(time_parsed.group(1))
+                mins = helpers.try_int(time_parsed.group(6))
             except (BaseException, Exception):
-                hr = 0
-                m = 0
-    else:
-        hr = 0
-        m = 0
-    if hr < 0 or hr > 23 or m < 0 or m > 59:
-        hr = 0
-        m = 0
+                hour = mins = 0
+    if 0 > hour or 23 < hour or 0 > mins or 59 < mins:
+        hour = mins = 0
 
-    return hr, m
+    return hour, mins
 
 
-def parse_date_time(d, t, network):
+def parse_date_time(date_stamp, time_of_day, network):
     # type: (int, Union[AnyStr or Tuple[int, int]], AnyStr) -> datetime.datetime
     """
     parse date and time string into local time
 
-    :param d: ordinal datetime
-    :param t: time as a string or as a tuple(hr, m)
+    :param date_stamp: ordinal datetime
+    :param time_of_day: time as a string or as a tuple(hr, m)
     :param network: network names
     """
-    if isinstance(t, tuple) and 2 == len(t) and isinstance(t[0], int) and isinstance(t[1], int):
-        (hr, m) = t
+    if isinstance(time_of_day, tuple) and 2 == len(time_of_day) \
+            and isinstance(time_of_day[0], int) and isinstance(time_of_day[1], int):
+        (hour, mins) = time_of_day
     else:
-        (hr, m) = parse_time(t)
+        (hour, mins) = parse_time(time_of_day)
 
-    te = datetime.datetime.fromordinal(helpers.try_int(d))
+    dt = datetime.datetime.fromordinal(helpers.try_int(date_stamp))
     try:
         if isinstance(network, datetime.tzinfo):
             foreign_timezone = network
         else:
             foreign_timezone = get_network_timezone(network)
-        foreign_naive = datetime.datetime(te.year, te.month, te.day, hr, m, tzinfo=foreign_timezone)
+        foreign_naive = datetime.datetime(dt.year, dt.month, dt.day, hour, mins, tzinfo=foreign_timezone)
         return foreign_naive
     except (BaseException, Exception):
-        return datetime.datetime(te.year, te.month, te.day, hr, m, tzinfo=SG_TIMEZONE)
+        return datetime.datetime(dt.year, dt.month, dt.day, hour, mins, tzinfo=SG_TIMEZONE)
 
 
 def test_timeformat(t):
@@ -498,10 +471,8 @@ def test_timeformat(t):
     :param t: time to check
     :return: is valid timeformat
     """
-    mo = time_regex.search(t)
-    if None is mo or 2 > len(mo.groups()):
-        return False
-    return True
+    time_parsed = time_regex.search(t)
+    return not (None is time_parsed or 2 > len(time_parsed.groups()))
 
 
 def standardize_network(network, country):
@@ -521,59 +492,56 @@ def standardize_network(network, country):
     return network
 
 
-def load_network_conversions():
+def _load_network_conversions():
     # type: (...) -> None
-    
-    if not should_try_loading():
-        return
 
-    conversions = []
+    conversions_in = []
 
     # network conversions are stored on github pages
     url = 'https://raw.githubusercontent.com/prinz23/sg_network_conversions/master/conversions.txt'
 
     url_data = helpers.get_url(url)
-    if None is url_data:
+    if url_data in (None, ''):
         update_last_retry()
-        # When None is urlData, trouble connecting to github
+        # when no url_data, trouble connecting to github
         logger.log(u'Updating network conversions failed, this can happen from time to time. URL: %s' % url,
                    logger.WARNING)
         return
-    else:
-        reset_last_retry()
+
+    reset_last_retry()
 
     try:
         for line in url_data.splitlines():
             (tvdb_network, tvrage_network, tvrage_country) = line.strip().rsplit(u'::', 2)
             if not (tvdb_network and tvrage_network and tvrage_country):
                 continue
-            conversions.append({'tvdb_network': tvdb_network,
-                                'tvrage_network': tvrage_network,
-                                'tvrage_country': tvrage_country})
+            conversions_in.append(
+                dict(tvdb_network=tvdb_network, tvrage_network=tvrage_network, tvrage_country=tvrage_country))
     except (IOError, OSError):
         pass
 
     my_db = db.DBConnection('cache.db')
 
-    old_d = my_db.select('SELECT * FROM network_conversions')
-    old_d = helpers.build_dict(old_d, 'tvdb_network')
+    sql_result = my_db.select('SELECT * FROM network_conversions')
+    conversions_db = helpers.build_dict(sql_result, 'tvdb_network')
 
     # list of sql commands to update the network_conversions table
     cl = []
 
-    for n_w in conversions:
-        cl.append(['INSERT OR REPLACE INTO network_conversions (tvdb_network, tvrage_network, tvrage_country)'
-                   'VALUES (?,?,?)', [n_w['tvdb_network'], n_w['tvrage_network'], n_w['tvrage_country']]])
+    for cur_network in conversions_in:
+        cl.append([
+            'INSERT OR REPLACE INTO network_conversions (tvdb_network, tvrage_network, tvrage_country) VALUES (?,?,?)',
+            [cur_network['tvdb_network'], cur_network['tvrage_network'], cur_network['tvrage_country']]])
         try:
-            del old_d[n_w['tvdb_network']]
+            del conversions_db[cur_network['tvdb_network']]
         except (BaseException, Exception):
             pass
 
     # remove deleted records
-    if 0 < len(old_d):
-        old_items = list([va for va in old_d])
+    if 0 < len(conversions_db):
+        network_name = list_keys(conversions_db)
         cl.append(['DELETE FROM network_conversions WHERE tvdb_network'
-                   ' IN (%s)' % ','.join(['?'] * len(old_items)), old_items])
+                   ' IN (%s)' % ','.join(['?'] * len(network_name)), network_name])
 
     # change all network conversion info at once (much faster)
     if 0 < len(cl):
