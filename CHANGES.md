@@ -55,7 +55,7 @@
 * Update Js2Py 0.70 (f297498) to 0.70 (92250a4)
 * Update package resource API to 49.6.0 (3d404fd)
 * Update profilehooks module 1.11.2 (d72cc2b) to 1.12.0 (3ee1f60)
-* Update Requests library 2.24.0 (1b41763) to 2.24.0 (967a05b)
+* Update Requests library 2.24.0 (1b41763) to 2.24.0 (2f70990)
 * Update soupsieve_py3 2.0.0.final (e66c311) to 2.0.2.dev (05086ef)
 * Update soupsieve_py2 backport
 * Update tmdbsimple 2.2.6 (310d933) to 2.6.6 (679e343)
@@ -68,6 +68,7 @@
 
 * Update Beautiful Soup 4.9.1 (r585) to 4.9.2 (r590)
 * Update Beautiful Soup 4.8.2 (r559) to 4.9.1 (r585)
+* Update Requests library 2.24.0 (967a05b) to 2.24.0 (2f70990)
 * Fix update Soupsieve (05086ef) broke MC and TVC browse cards
 * Change move scantree to sg_helpers to prevent circular reference of it ever again
 * Update included fallback timezone info file to 2020c
