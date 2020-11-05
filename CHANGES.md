@@ -59,6 +59,7 @@
 * Update Requests library 2.24.0 (1b41763) to 2.24.0 (2f70990)
 * Update soupsieve_py3 2.0.0.final (e66c311) to 2.0.2.dev (05086ef)
 * Update soupsieve_py2 backport
+* Update Tornado_py3 Web Server 6.0.4 (b4e39e5) to 6.1.0 (2047e7a)
 * Update tmdbsimple 2.2.6 (310d933) to 2.6.6 (679e343)
 * Update urllib3 1.25.9 (a5a45dc) to 1.25.11 (5eb604f)
 * Change add remove duplicates in newznab provider list based on name and url
