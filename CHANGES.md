@@ -76,6 +76,12 @@
 * Fix initialise history_tab_limit during restart loading
 
 
+### 0.21.13 (2020-11-05 01:00:00 UTC)
+
+* Fix SpeedCD provider
+* Remove HorribleSubs provider
+
+
 ### 0.21.12 (2020-11-03 16:05:00 UTC)
 
 * Fix IPTorrents
