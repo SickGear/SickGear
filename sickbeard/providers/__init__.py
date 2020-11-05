@@ -33,7 +33,7 @@ __all__ = [
     # torrent
     'alpharatio', 'bb', 'bithdtv', 'blutopia', 'btn',
     'custom01', 'custom11', 'ettv', 'eztv', 'fano', 'filelist', 'funfile', 'grabtheinfo',
-    'hdbits', 'hdme', 'hdspace', 'hdtorrents', 'horriblesubs',
+    'hdbits', 'hdme', 'hdspace', 'hdtorrents',
     'immortalseed', 'iptorrents', 'limetorrents', 'magnetdl', 'milkie', 'morethan', 'nebulance', 'ncore', 'nyaa',
     'pisexy', 'pretome', 'privatehd', 'ptf',
     'rarbg', 'revtt', 'scenehd', 'scenetime', 'shazbat', 'showrss', 'skytorrents', 'snowfl', 'speedcd',

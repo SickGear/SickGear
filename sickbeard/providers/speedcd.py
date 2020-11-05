@@ -23,9 +23,10 @@ from . import generic
 from .. import logger
 from ..helpers import try_int
 from bs4_parser import BS4Parser
+from requests.cookies import cookiejar_from_dict
 
-from _23 import quote, unquote, urlparse
-from six import iteritems
+from _23 import filter_list, quote, unquote
+from six import string_types, iteritems
 
 
 class SpeedCDProvider(generic.TorrentProvider):
@@ -35,57 +36,72 @@ class SpeedCDProvider(generic.TorrentProvider):
 
         self.url_home = ['https://speed.cd/']
 
-        self.url_vars = {'login': 'rss.php', 'search': 'V3/API/'}
-        self.url_tmpl = dict(config_provider_home_uri='%(home)s', login='%(home)s%(vars)s', do_login='%(home)s',
-                             login_action='', search='%(home)s%(vars)s')
+        self.url_vars = dict(
+            login_1='checkpoint/API', login_2='checkpoint/', login_chk='rss.php', logout='logout.php', search='API/')
+        self.url_tmpl = dict(
+            config_provider_home_uri='%(home)s', login_1='%(home)s%(vars)s', login_2='%(home)s%(vars)s',
+            login_chk='%(home)s%(vars)s', logout='%(home)s%(vars)s', search='%(home)s%(vars)s')
 
-        self.categories = {'Season': [41, 53, 57], 'Episode': [2, 49, 50, 55, 57], 'anime': [30]}
+        self.categories = dict(Season=[41, 52, 53, 57], Episode=[2, 49, 50, 55, 57], anime=[30])
         self.categories['Cache'] = self.categories['Season'] + self.categories['Episode']
 
         self.username, self.password, self.digest, self.freeleech, self.minseed, self.minleech = 6 * [None]
 
     def _authorised(self, **kwargs):
         result = False
-        if self.digest:
+        if self.digest and 'None' not in self.digest:
             digest = [x[::-1] for x in self.digest[::-1].rpartition('=')]
             self.digest = digest[2] + digest[1] + quote(unquote(digest[0]))
-            params = dict(
-                logged_in=(lambda y='': all(
-                    [self.url and self.session.cookies.get_dict(domain='.' + urlparse(self.url).netloc) and
-                     self.session.cookies.clear('.' + urlparse(self.url).netloc) is None or True] +
-                    ['RSS' in y, 'type="password"' not in y, self.has_all_cookies(['speedian'], 'inSpeed_')] +
-                    [(self.session.cookies.get('inSpeed_' + c) or 'sg!no!pw') in self.digest for c in ['speedian']])),
-                failed_msg=(lambda y=None: None), post_params={'login': False})
-            result = super(SpeedCDProvider, self)._authorised(**params)
+            self.session.cookies = cookiejar_from_dict(dict({digest[2]: quote(unquote(digest[0]))}))
+            html = self.get_url(self.urls['login_chk'], skip_auth=True)
+            result = html and 'RSS' in html and 'type="password"' not in html
 
         if not result and not self.failure_count:
             if self.url and self.digest:
-                self.get_url('%slogout.php' % self.url, skip_auth=True, post_data={'submit.x': 24, 'submit.y': 11})
+                self.get_url(self.urls['logout'], skip_auth=True, post_data={'submit.x': 24, 'submit.y': 11})
             self.digest = ''
-            params = dict(
-                logged_in=(lambda y='': all(
-                    [self.session.cookies.get_dict(domain='.speed.cd') and
-                     self.session.cookies.clear('.speed.cd') is None or True] +
-                    [bool(y), not re.search('(?i)type="password"', y)] +
-                    [re.search('(?i)Logout', y) or not self.digest
-                     or (self.session.cookies.get('inSpeed_speedian') or 'sg!no!pw') in self.digest])),
-                failed_msg=(lambda y='': (
-                    re.search(r'(?i)(username|password)((<[^>]+>)|\W)*' +
-                              r'(or|and|/|\s)((<[^>]+>)|\W)*(password|incorrect)', y) and
-                    u'Invalid username or password for %s. Check settings' or
-                    u'Failed to authenticate or parse a response from %s, abort provider')),
-                post_params={'form_tmpl': True})
-            self.urls['login_action'] = self.urls.get('do_login')
-            session = super(SpeedCDProvider, self)._authorised(session=None, resp_sess=True, **params)
-            self.urls['login_action'] = ''
-            if session:
-                self.digest = 'inSpeed_speedian=%s' % session.cookies.get('inSpeed_speedian')
-                sickbeard.save_config()
-                result = True
-                logger.log('Cookie details for %s updated.' % self.name, logger.DEBUG)
+            self.session.cookies.clear()
+            json = self.get_url(self.urls['login_1'], skip_auth=True,
+                                post_data={'username': self.username}, parse_json=True)
+            resp = filter_list(lambda l: isinstance(l, list), json.get('Fs', []))
+
+            def get_html(_resp):
+                for cur_item in _resp:
+                    if isinstance(cur_item, list):
+                        _html = filter_list(lambda s: isinstance(s, string_types) and 'password' in s, cur_item)
+                        if not _html:
+                            _html = get_html(cur_item)
+                        if _html:
+                            return _html
+
+            params = {}
+            html = get_html(resp)
+            if html:
+                tags = re.findall(r'(?is)(<input[^>]*?name=[\'"][^\'"]+[^>]*)', html[0])
+                attrs = [[(re.findall(r'(?is)%s=[\'"]([^\'"]+)' % attr, x) or [''])[0]
+                          for attr in ['type', 'name', 'value']] for x in tags]
+                for itype, name, value in attrs:
+                    if 'password' in [itype, name]:
+                        params[name] = self.password
+                    if name not in ('username', 'password') and 'password' != itype:
+                        params.setdefault(name, value)
+
+            if params:
+                html = self.get_url(self.urls['login_2'], skip_auth=True, post_data=params)
+                if html and 'RSS' in html:
+                    self.digest = None
+                    if self.session.cookies.get('inSpeed_speedian'):
+                        self.digest = 'inSpeed_speedian=%s' % self.session.cookies.get('inSpeed_speedian')
+                    sickbeard.save_config()
+                    result = True
+                    logger.log('Cookie details for %s updated.' % self.name, logger.DEBUG)
             elif not self.failure_count:
                 logger.log('Invalid cookie details for %s and login failed. Check settings' % self.name, logger.ERROR)
         return result
+
+    @staticmethod
+    def _has_signature(data=None):
+        return generic.TorrentProvider._has_signature(data) or (data and re.search(r'(?sim)speed', data))
 
     def _search_provider(self, search_params, **kwargs):
 
@@ -99,12 +115,12 @@ class SpeedCDProvider(generic.TorrentProvider):
             'info': '/t/', 'get': 'download', 'fl': r'\[freeleech\]'})])
 
         for mode in search_params:
-            rc['cats'] = re.compile(r'(?i)(cat|c\[\])=(?:%s)'
+            rc['cats'] = re.compile(r'(?i)browse/(?:%s)'
                                     % self._categories_string(mode, template='', delimiter='|'))
             for search_string in search_params[mode]:
-                post_data = dict([x.split('=') for x in self._categories_string(mode).split('&')],
-                                 search=search_string.replace('.', ' ').replace('^@^', '.'),
-                                 jxt=2, jxw='b', freeleech=('on', None)[not self.freeleech])
+                post_data = dict(jxt=2, jxw='b', route='/browse/%s%s/q/%s' % (
+                    self._categories_string(mode, '%s', '/'), ('/freeleech', '')[not self.freeleech],
+                    search_string.replace('.', ' ').replace('^@^', '.')))
 
                 data_json = self.get_url(self.urls['search'], post_data=post_data, parse_json=True)
                 if self.should_skip():
@@ -112,7 +128,16 @@ class SpeedCDProvider(generic.TorrentProvider):
 
                 cnt = len(items[mode])
                 try:
-                    html = data_json.get('Fs', [{}])[0].get('Cn', [{}])[0].get('d')
+                    html = filter_list(lambda l: isinstance(l, list), data_json.get('Fs', []))
+                    while html:
+                        if html and all(isinstance(x, string_types) for x in html):
+                            str_lengths = [len(x) for x in html]
+                            html = html[str_lengths.index(max(str_lengths))]
+                            break
+                        html = filter_list(lambda l: isinstance(l, list), html)
+                        if html and 0 < len(html):
+                            html = html[0]
+
                     if not html or self._has_no_results(html):
                         raise generic.HaltParseException
 
