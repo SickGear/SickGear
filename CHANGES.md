@@ -83,6 +83,11 @@
 * Fix removing old backup db files
 
 
+### 0.21.14 (2020-11-06 21:55:00 UTC)
+
+* Fix RarBG in cases where home page cannot be reached
+
+
 ### 0.21.13 (2020-11-05 01:00:00 UTC)
 
 * Fix SpeedCD provider
