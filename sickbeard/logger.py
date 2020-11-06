@@ -389,6 +389,30 @@ class TimedCompressedRotatingFileHandler(TimedRotatingFileHandler):
 sb_log_instance = SBRotatingLogHandler('sickgear.log')
 
 
+def debug(to_log):
+    # type: (AnyStr) -> None
+    """ log message flagged as debug
+    :param to_log: log message
+    """
+    sb_log_instance.log(to_log, DEBUG)
+
+
+def warning(to_log):
+    # type: (AnyStr) -> None
+    """ log message flagged as warning
+    :param to_log: log message
+    """
+    sb_log_instance.log(to_log, WARNING)
+
+
+def error(to_log):
+    # type: (AnyStr) -> None
+    """ log message flagged as error
+    :param to_log: log message
+    """
+    sb_log_instance.log(to_log, ERROR)
+
+
 def log(to_log, log_level=MESSAGE):
     # type: (Union[AnyStr, list], int) -> None
     """

@@ -272,11 +272,10 @@ def update_network_dict():
     url = 'https://raw.githubusercontent.com/Prinz23/sb_network_timezones/master/network_timezones.txt'
 
     url_data = helpers.get_url(url)
-    if None is url_data:
+    if url_data in (None, ''):
         update_last_retry()
         # When None is urlData, trouble connecting to github
-        logger.log(u'Updating network timezones failed, this can happen from time to time. URL: %s' % url,
-                   logger.WARNING)
+        logger.debug(u'Updating network timezones failed, this can happen from time to time. URL: %s' % url)
         load_network_dict(load=False)
         return
 
@@ -504,8 +503,7 @@ def _load_network_conversions():
     if url_data in (None, ''):
         update_last_retry()
         # when no url_data, trouble connecting to github
-        logger.log(u'Updating network conversions failed, this can happen from time to time. URL: %s' % url,
-                   logger.WARNING)
+        logger.debug(u'Updating network conversions failed, this can happen from time to time. URL: %s' % url)
         return
 
     reset_last_retry()
