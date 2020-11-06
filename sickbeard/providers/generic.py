@@ -1880,7 +1880,8 @@ class TorrentProvider(GenericProvider):
                    (self.name, len(url_list), ('URL', 'different URLs')[1 < len(url_list)]) +
                    (attempt_fetch and ('Suggest; 1) Disable "%s" 2) Use a proxy/VPN' % self.get_id()) or ''),
                    (logger.WARNING, logger.ERROR)[self.enabled])
-        self.urls = {}
+        if not hasattr(self, 'url_api'):
+            self.urls = {}
         sickbeard.PROVIDER_HOMES[self.get_id()] = ('site down', int(time.time()) + (5 * 60))
         sickbeard.save_config()
         return None
