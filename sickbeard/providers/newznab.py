@@ -401,8 +401,18 @@ class NewznabProvider(generic.NZBProvider):
             elif '101' == code:
                 raise AuthException('Your account on %s has been suspended, contact the admin.' % self.name)
             elif '102' == code:
-                raise AuthException('Your account isn\'t allowed to use the API on %s, contact the admin.' % self.name)
-            elif '500' == code:
+                try:
+                    retry_time, unit = re.findall(r'Try again in (\d+)\W+([a-z]+)', description, flags=re.I)[0]
+                except IndexError:
+                    retry_time, unit = None, None
+                if (description and 'limit' in description.lower()) or (retry_time and unit):
+                    self.tmr_limit_update(retry_time, unit, description)
+                    self.log_failure_url(url)
+                else:
+                    raise AuthException('Your account isn\'t allowed to use the API on %s, contact the admin.%s' %
+                                        (self.name, ('', ' Provider message: %s' % description)[
+                                            description not in ('', None)]))
+            elif code in ['429', '500']:
                 try:
                     retry_time, unit = re.findall(r'Retry in (\d+)\W+([a-z]+)', description, flags=re.I)[0]
                 except IndexError:

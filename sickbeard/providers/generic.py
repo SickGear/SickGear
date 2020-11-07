@@ -55,6 +55,7 @@ import requests.cookies
 
 from _23 import decode_bytes, filter_list, filter_iter, make_btih, map_list, quote, quote_plus, urlparse
 from six import iteritems, iterkeys, itervalues, PY2
+from sg_helpers import try_int
 
 # noinspection PyUnreachableCode
 if False:
@@ -587,7 +588,24 @@ class GenericProvider(object):
                 self.inc_failure_count(ProviderFail(fail_type=ProviderFailTypes.nodata))
                 log_failure_url = True
         except requests.exceptions.HTTPError as e:
-            self.inc_failure_count(ProviderFail(fail_type=ProviderFailTypes.http, code=e.response.status_code))
+            if 429 == e.response.status_code:
+                r_headers = getattr(e.response, 'headers', {})
+                retry_time = None
+                unit = None
+                if None is not r_headers and 'Retry-After' in r_headers:
+                    retry_time = try_int(r_headers.get('Retry-After', 60), 60)
+                    unit = 'seconds'
+                    retry_time = (retry_time, 60)[0 > retry_time]
+
+                description = r_headers.get('X-nZEDb', '')
+                if not retry_time:
+                    try:
+                        retry_time, unit = re.findall(r'Retry in (\d+)\W+([a-z]+)', description, flags=re.I)[0]
+                    except IndexError:
+                        retry_time, unit = None, None
+                self.tmr_limit_update(retry_time, unit, description)
+            else:
+                self.inc_failure_count(ProviderFail(fail_type=ProviderFailTypes.http, code=e.response.status_code))
         except requests.exceptions.ConnectionError:
             self.inc_failure_count(ProviderFail(fail_type=ProviderFailTypes.connection))
         except requests.exceptions.ReadTimeout:
