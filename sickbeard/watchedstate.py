@@ -30,13 +30,13 @@ class WatchedStateUpdater(object):
 
     @property
     def prevent_run(self):
-        return sickbeard.watchedStateQueueScheduler.action.is_in_queue(self.queue_item)
+        return sickbeard.watched_state_queue_scheduler.action.is_in_queue(self.queue_item)
 
     def run(self):
         if self.is_enabled():
             self.amActive = True
             new_item = self.queue_item()
-            sickbeard.watchedStateQueueScheduler.action.add_item(new_item)
+            sickbeard.watched_state_queue_scheduler.action.add_item(new_item)
             self.amActive = False
 
 

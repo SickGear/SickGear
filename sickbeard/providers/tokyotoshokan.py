@@ -107,9 +107,7 @@ class TokyoToshokanProvider(generic.TorrentProvider):
 class TokyoToshokanCache(tvcache.TVCache):
 
     def __init__(self, this_provider):
-        tvcache.TVCache.__init__(self, this_provider)
-
-        self.update_freq = 15
+        tvcache.TVCache.__init__(self, this_provider, interval=15)
 
     def _cache_data(self, **kwargs):
 

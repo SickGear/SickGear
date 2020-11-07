@@ -348,7 +348,7 @@ class RecentSearchQueueItem(generic_queue.QueueItem):
         if propers:
             logger.log('Found Proper/Repack/Real in recent search, sending data to properfinder')
             propersearch_queue_item = sickbeard.search_queue.ProperSearchQueueItem(provider_proper_obj=propers)
-            sickbeard.searchQueueScheduler.action.add_item(propersearch_queue_item)
+            sickbeard.search_queue_scheduler.action.add_item(propersearch_queue_item)
 
     @staticmethod
     def _change_missing_episodes():

@@ -151,39 +151,39 @@ def change_tv_download_dir(tv_download_dir):
     return True
 
 
-def schedule_autopostprocesser(freq):
-    sickbeard.AUTOPOSTPROCESSER_FREQUENCY = to_int(freq, default=sickbeard.DEFAULT_AUTOPOSTPROCESSER_FREQUENCY)
+def schedule_mediaprocess(iv):
+    sickbeard.MEDIAPROCESS_INTERVAL = to_int(iv, default=sickbeard.DEFAULT_MEDIAPROCESS_INTERVAL)
 
-    if sickbeard.AUTOPOSTPROCESSER_FREQUENCY < sickbeard.MIN_AUTOPOSTPROCESSER_FREQUENCY:
-        sickbeard.AUTOPOSTPROCESSER_FREQUENCY = sickbeard.MIN_AUTOPOSTPROCESSER_FREQUENCY
+    if sickbeard.MEDIAPROCESS_INTERVAL < sickbeard.MIN_MEDIAPROCESS_INTERVAL:
+        sickbeard.MEDIAPROCESS_INTERVAL = sickbeard.MIN_MEDIAPROCESS_INTERVAL
 
-    sickbeard.autoPostProcesserScheduler.cycleTime = datetime.timedelta(minutes=sickbeard.AUTOPOSTPROCESSER_FREQUENCY)
-    sickbeard.autoPostProcesserScheduler.set_paused_state()
-
-
-def schedule_recentsearch(freq):
-    sickbeard.RECENTSEARCH_FREQUENCY = to_int(freq, default=sickbeard.DEFAULT_RECENTSEARCH_FREQUENCY)
-
-    if sickbeard.RECENTSEARCH_FREQUENCY < sickbeard.MIN_RECENTSEARCH_FREQUENCY:
-        sickbeard.RECENTSEARCH_FREQUENCY = sickbeard.MIN_RECENTSEARCH_FREQUENCY
-
-    sickbeard.recentSearchScheduler.cycleTime = datetime.timedelta(minutes=sickbeard.RECENTSEARCH_FREQUENCY)
+    sickbeard.media_process_scheduler.cycleTime = datetime.timedelta(minutes=sickbeard.MEDIAPROCESS_INTERVAL)
+    sickbeard.media_process_scheduler.set_paused_state()
 
 
-def schedule_backlog(freq):
-    sickbeard.BACKLOG_FREQUENCY = minimax(freq, sickbeard.DEFAULT_BACKLOG_FREQUENCY,
-                                          sickbeard.MIN_BACKLOG_FREQUENCY, sickbeard.MAX_BACKLOG_FREQUENCY)
+def schedule_recentsearch(iv):
+    sickbeard.RECENTSEARCH_INTERVAL = to_int(iv, default=sickbeard.DEFAULT_RECENTSEARCH_INTERVAL)
 
-    sickbeard.backlogSearchScheduler.action.cycleTime = sickbeard.BACKLOG_FREQUENCY
+    if sickbeard.RECENTSEARCH_INTERVAL < sickbeard.MIN_RECENTSEARCH_INTERVAL:
+        sickbeard.RECENTSEARCH_INTERVAL = sickbeard.MIN_RECENTSEARCH_INTERVAL
+
+    sickbeard.recent_search_scheduler.cycleTime = datetime.timedelta(minutes=sickbeard.RECENTSEARCH_INTERVAL)
 
 
-def schedule_update(freq):
-    sickbeard.UPDATE_FREQUENCY = to_int(freq, default=sickbeard.DEFAULT_UPDATE_FREQUENCY)
+def schedule_backlog(iv):
+    sickbeard.BACKLOG_PERIOD = minimax(iv, sickbeard.DEFAULT_BACKLOG_PERIOD,
+                                       sickbeard.MIN_BACKLOG_PERIOD, sickbeard.MAX_BACKLOG_PERIOD)
 
-    if sickbeard.UPDATE_FREQUENCY < sickbeard.MIN_UPDATE_FREQUENCY:
-        sickbeard.UPDATE_FREQUENCY = sickbeard.MIN_UPDATE_FREQUENCY
+    sickbeard.backlog_search_scheduler.action.cycleTime = sickbeard.BACKLOG_PERIOD
 
-    sickbeard.versionCheckScheduler.cycleTime = datetime.timedelta(hours=sickbeard.UPDATE_FREQUENCY)
+
+def schedule_update(iv):
+    sickbeard.UPDATE_INTERVAL = to_int(iv, default=sickbeard.DEFAULT_UPDATE_INTERVAL)
+
+    if sickbeard.UPDATE_INTERVAL < sickbeard.MIN_UPDATE_INTERVAL:
+        sickbeard.UPDATE_INTERVAL = sickbeard.MIN_UPDATE_INTERVAL
+
+    sickbeard.version_check_scheduler.cycleTime = datetime.timedelta(hours=sickbeard.UPDATE_INTERVAL)
 
 
 def schedule_version_notify(version_notify):
@@ -195,13 +195,13 @@ def schedule_version_notify(version_notify):
         sickbeard.NEWEST_VERSION_STRING = None
 
     if not old_setting and version_notify:
-        sickbeard.versionCheckScheduler.action.run()
+        sickbeard.version_check_scheduler.action.run()
 
 
 def schedule_download_propers(download_propers):
     if sickbeard.DOWNLOAD_PROPERS != download_propers:
         sickbeard.DOWNLOAD_PROPERS = download_propers
-        sickbeard.properFinderScheduler.set_paused_state()
+        sickbeard.proper_finder_scheduler.set_paused_state()
 
 
 def schedule_trakt(use_trakt):
@@ -210,12 +210,12 @@ def schedule_trakt(use_trakt):
 
     sickbeard.USE_TRAKT = use_trakt
     # if sickbeard.USE_TRAKT:
-    #     sickbeard.traktCheckerScheduler.start()
+    #     sickbeard.trakt_checker_scheduler.start()
     # else:
-    #     sickbeard.traktCheckerScheduler.stop()
+    #     sickbeard.trakt_checker_scheduler.stop()
     #     logger.log(u'Waiting for the TRAKTCHECKER thread to exit')
     #     try:
-    #         sickbeard.traktCheckerScheduler.join(10)
+    #         sickbeard.trakt_checker_scheduler.join(10)
     #     except:
     #         pass
 
@@ -223,29 +223,29 @@ def schedule_trakt(use_trakt):
 def schedule_subtitles(use_subtitles):
     if sickbeard.USE_SUBTITLES != use_subtitles:
         sickbeard.USE_SUBTITLES = use_subtitles
-        sickbeard.subtitlesFinderScheduler.set_paused_state()
+        sickbeard.subtitles_finder_scheduler.set_paused_state()
 
 
 def schedule_emby_watched(emby_watched_interval):
-    emby_watched_freq = minimax(emby_watched_interval, sickbeard.DEFAULT_WATCHEDSTATE_FREQUENCY,
-                                0, sickbeard.MAX_WATCHEDSTATE_FREQUENCY)
-    if emby_watched_freq and emby_watched_freq != sickbeard.EMBY_WATCHEDSTATE_FREQUENCY:
-        sickbeard.EMBY_WATCHEDSTATE_FREQUENCY = emby_watched_freq
-        sickbeard.embyWatchedStateScheduler.cycleTime = datetime.timedelta(minutes=emby_watched_freq)
+    emby_watched_iv = minimax(emby_watched_interval, sickbeard.DEFAULT_WATCHEDSTATE_INTERVAL,
+                              0, sickbeard.MAX_WATCHEDSTATE_INTERVAL)
+    if emby_watched_iv and emby_watched_iv != sickbeard.EMBY_WATCHEDSTATE_INTERVAL:
+        sickbeard.EMBY_WATCHEDSTATE_INTERVAL = emby_watched_iv
+        sickbeard.emby_watched_state_scheduler.cycleTime = datetime.timedelta(minutes=emby_watched_iv)
 
-    sickbeard.EMBY_WATCHEDSTATE_SCHEDULED = bool(emby_watched_freq)
-    sickbeard.embyWatchedStateScheduler.set_paused_state()
+    sickbeard.EMBY_WATCHEDSTATE_SCHEDULED = bool(emby_watched_iv)
+    sickbeard.emby_watched_state_scheduler.set_paused_state()
 
 
 def schedule_plex_watched(plex_watched_interval):
-    plex_watched_freq = minimax(plex_watched_interval, sickbeard.DEFAULT_WATCHEDSTATE_FREQUENCY,
-                                0, sickbeard.MAX_WATCHEDSTATE_FREQUENCY)
-    if plex_watched_freq and plex_watched_freq != sickbeard.PLEX_WATCHEDSTATE_FREQUENCY:
-        sickbeard.PLEX_WATCHEDSTATE_FREQUENCY = plex_watched_freq
-        sickbeard.plexWatchedStateScheduler.cycleTime = datetime.timedelta(minutes=plex_watched_freq)
+    plex_watched_iv = minimax(plex_watched_interval, sickbeard.DEFAULT_WATCHEDSTATE_INTERVAL,
+                              0, sickbeard.MAX_WATCHEDSTATE_INTERVAL)
+    if plex_watched_iv and plex_watched_iv != sickbeard.PLEX_WATCHEDSTATE_INTERVAL:
+        sickbeard.PLEX_WATCHEDSTATE_INTERVAL = plex_watched_iv
+        sickbeard.plex_watched_state_scheduler.cycleTime = datetime.timedelta(minutes=plex_watched_iv)
 
-    sickbeard.PLEX_WATCHEDSTATE_SCHEDULED = bool(plex_watched_freq)
-    sickbeard.plexWatchedStateScheduler.set_paused_state()
+    sickbeard.PLEX_WATCHEDSTATE_SCHEDULED = bool(plex_watched_iv)
+    sickbeard.plex_watched_state_scheduler.set_paused_state()
 
 
 def check_section(cfg, section):
@@ -467,7 +467,7 @@ class ConfigMigrator(object):
                                 7: 'Rename coming episodes to episode view',
                                 8: 'Disable searches on start',
                                 9: 'Rename pushbullet variables',
-                                10: 'Reset backlog frequency to default',
+                                10: 'Reset backlog interval to default',
                                 11: 'Migrate anime split view to new layout',
                                 12: 'Add "hevc" and some non-english languages to ignore words if not found',
                                 13: 'Change default dereferrer url to blank',
@@ -478,6 +478,7 @@ class ConfigMigrator(object):
                                 18: 'Update "Spanish" ignore word',
                                 19: 'Change (mis)use of Anonymous redirect dereferer.org service to nullrefer.com',
                                 20: 'Change Growl',
+                                21: 'Rename vars misusing frequency',
                                 }
 
     def migrate_config(self):
@@ -746,12 +747,12 @@ class ConfigMigrator(object):
 
     # Migration v6: Rename daily search to recent search
     def _migrate_v6(self):
-        sickbeard.RECENTSEARCH_FREQUENCY = check_setting_int(self.config_obj, 'General', 'dailysearch_frequency',
-                                                             sickbeard.DEFAULT_RECENTSEARCH_FREQUENCY)
+        sickbeard.RECENTSEARCH_INTERVAL = check_setting_int(self.config_obj, 'General', 'dailysearch_frequency',
+                                                            sickbeard.DEFAULT_RECENTSEARCH_INTERVAL)
 
         sickbeard.RECENTSEARCH_STARTUP = bool(check_setting_int(self.config_obj, 'General', 'dailysearch_startup', 1))
-        if sickbeard.RECENTSEARCH_FREQUENCY < sickbeard.MIN_RECENTSEARCH_FREQUENCY:
-            sickbeard.RECENTSEARCH_FREQUENCY = sickbeard.MIN_RECENTSEARCH_FREQUENCY
+        if sickbeard.RECENTSEARCH_INTERVAL < sickbeard.MIN_RECENTSEARCH_INTERVAL:
+            sickbeard.RECENTSEARCH_INTERVAL = sickbeard.MIN_RECENTSEARCH_INTERVAL
 
         for curProvider in sickbeard.providers.sortedProviderList():
             if hasattr(curProvider, 'enable_recentsearch'):
@@ -778,8 +779,8 @@ class ConfigMigrator(object):
 
     @staticmethod
     def _migrate_v10():
-        # reset backlog frequency to default
-        sickbeard.BACKLOG_FREQUENCY = sickbeard.DEFAULT_BACKLOG_FREQUENCY
+        # reset backlog interval to default
+        sickbeard.BACKLOG_PERIOD = sickbeard.DEFAULT_BACKLOG_PERIOD
 
     def _migrate_v11(self):
         if check_setting_int(self.config_obj, 'ANIME', 'anime_split_home', ''):
@@ -889,3 +890,26 @@ class ConfigMigrator(object):
         GROWL_PASSWORD = check_setting_str(self.config_obj, 'Growl', 'growl_password', '')
         if GROWL_PASSWORD:
             sickbeard.GROWL_HOST = '%s@%s' % (GROWL_PASSWORD, GROWL_HOST)
+
+    def _migrate_v21(self):
+        sickbeard.MEDIAPROCESS_INTERVAL = check_setting_int(
+            self.config_obj, 'General', 'autopostprocesser_frequency', sickbeard.DEFAULT_MEDIAPROCESS_INTERVAL)
+        sickbeard.BACKLOG_PERIOD = check_setting_int(
+            self.config_obj, 'General', 'backlog_frequency', sickbeard.DEFAULT_BACKLOG_PERIOD)
+        sickbeard.BACKLOG_LIMITED_PERIOD = check_setting_int(self.config_obj, 'General', 'backlog_days', 7)
+        sickbeard.RECENTSEARCH_INTERVAL = check_setting_int(
+            self.config_obj, 'General', 'recentsearch_frequency', sickbeard.DEFAULT_RECENTSEARCH_INTERVAL)
+        sickbeard.UPDATE_INTERVAL = check_setting_int(
+            self.config_obj, 'General', 'update_frequency', sickbeard.DEFAULT_UPDATE_INTERVAL)
+
+        sickbeard.EMBY_WATCHEDSTATE_INTERVAL = minimax(check_setting_int(
+            self.config_obj, 'Emby', 'emby_watchedstate_frequency', sickbeard.DEFAULT_WATCHEDSTATE_INTERVAL),
+            sickbeard.DEFAULT_WATCHEDSTATE_INTERVAL, sickbeard.MIN_WATCHEDSTATE_INTERVAL,
+            sickbeard.MAX_WATCHEDSTATE_INTERVAL)
+        sickbeard.PLEX_WATCHEDSTATE_INTERVAL = minimax(check_setting_int(
+            self.config_obj, 'Plex', 'plex_watchedstate_frequency', sickbeard.DEFAULT_WATCHEDSTATE_INTERVAL),
+            sickbeard.DEFAULT_WATCHEDSTATE_INTERVAL, sickbeard.MIN_WATCHEDSTATE_INTERVAL,
+            sickbeard.MAX_WATCHEDSTATE_INTERVAL)
+
+        sickbeard.SUBTITLES_FINDER_INTERVAL = check_setting_int(
+            self.config_obj, 'Subtitles', 'subtitles_finder_frequency', 1)

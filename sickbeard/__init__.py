@@ -60,7 +60,7 @@ from browser_ua import get_ua
 from configobj import ConfigObj
 from libtrakt import TraktAPI
 
-from _23 import b64encodestring, decode_bytes, filter_iter, list_items, map_list, scandir
+from _23 import b64encodestring, decode_bytes, filter_iter, list_items, map_list, ordered_dict, scandir
 from six import iteritems, PY2, string_types
 import sg_helpers
 
@@ -93,21 +93,21 @@ DATA_DIR = ''
 # noinspection PyTypeChecker
 events = None  # type: Events
 
-recentSearchScheduler = None
-backlogSearchScheduler = None
-showUpdateScheduler = None
-versionCheckScheduler = None
-showQueueScheduler = None
-searchQueueScheduler = None
-properFinderScheduler = None
-autoPostProcesserScheduler = None
-subtitlesFinderScheduler = None
-# traktCheckerScheduler = None
+recent_search_scheduler = None
+backlog_search_scheduler = None
+show_update_scheduler = None
+version_check_scheduler = None
+show_queue_scheduler = None
+search_queue_scheduler = None
+proper_finder_scheduler = None
+media_process_scheduler = None
+subtitles_finder_scheduler = None
+# trakt_checker_scheduler = None
+emby_watched_state_scheduler = None
+plex_watched_state_scheduler = None
+watched_state_queue_scheduler = None
 # noinspection PyTypeChecker
 background_mapping_task = None  # type: threading.Thread
-embyWatchedStateScheduler = None
-plexWatchedStateScheduler = None
-watchedStateQueueScheduler = None
 
 provider_ping_thread_pool = {}
 
@@ -243,29 +243,29 @@ WEBDL_TYPES = []
 ALLOW_HIGH_PRIORITY = False
 NEWZNAB_DATA = ''
 
-DEFAULT_AUTOPOSTPROCESSER_FREQUENCY = 10
-DEFAULT_BACKLOG_FREQUENCY = 21
-DEFAULT_RECENTSEARCH_FREQUENCY = 40
-DEFAULT_UPDATE_FREQUENCY = 1
-DEFAULT_WATCHEDSTATE_FREQUENCY = 10
+DEFAULT_MEDIAPROCESS_INTERVAL = 10
+DEFAULT_BACKLOG_PERIOD = 21
+DEFAULT_RECENTSEARCH_INTERVAL = 40
+DEFAULT_UPDATE_INTERVAL = 1
+DEFAULT_WATCHEDSTATE_INTERVAL = 10
 
-AUTOPOSTPROCESSER_FREQUENCY = DEFAULT_AUTOPOSTPROCESSER_FREQUENCY
-BACKLOG_FREQUENCY = DEFAULT_BACKLOG_FREQUENCY
-RECENTSEARCH_FREQUENCY = DEFAULT_RECENTSEARCH_FREQUENCY
-UPDATE_FREQUENCY = DEFAULT_UPDATE_FREQUENCY
+MEDIAPROCESS_INTERVAL = DEFAULT_MEDIAPROCESS_INTERVAL
+BACKLOG_PERIOD = DEFAULT_BACKLOG_PERIOD
+BACKLOG_LIMITED_PERIOD = 7
+RECENTSEARCH_INTERVAL = DEFAULT_RECENTSEARCH_INTERVAL
+UPDATE_INTERVAL = DEFAULT_UPDATE_INTERVAL
 
 RECENTSEARCH_STARTUP = False
 BACKLOG_NOFULL = False
 
-MIN_AUTOPOSTPROCESSER_FREQUENCY = 1
-MIN_RECENTSEARCH_FREQUENCY = 10
-MIN_BACKLOG_FREQUENCY = 7
-MAX_BACKLOG_FREQUENCY = 42
-MIN_UPDATE_FREQUENCY = 1
-MIN_WATCHEDSTATE_FREQUENCY = 10
-MAX_WATCHEDSTATE_FREQUENCY = 60
+MIN_MEDIAPROCESS_INTERVAL = 1
+MIN_RECENTSEARCH_INTERVAL = 10
+MIN_BACKLOG_PERIOD = 7
+MAX_BACKLOG_PERIOD = 42
+MIN_UPDATE_INTERVAL = 1
+MIN_WATCHEDSTATE_INTERVAL = 10
+MAX_WATCHEDSTATE_INTERVAL = 60
 
-BACKLOG_DAYS = 7
 SEARCH_UNAIRED = False
 UNAIRED_RECENT_SEARCH_ONLY = True
 
@@ -318,7 +318,7 @@ EMBY_PARENT_MAPS = None
 EMBY_HOST = None
 EMBY_APIKEY = None
 EMBY_WATCHEDSTATE_SCHEDULED = False
-EMBY_WATCHEDSTATE_FREQUENCY = DEFAULT_WATCHEDSTATE_FREQUENCY
+EMBY_WATCHEDSTATE_INTERVAL = DEFAULT_WATCHEDSTATE_INTERVAL
 
 USE_KODI = False
 KODI_ALWAYS_ON = True
@@ -344,7 +344,7 @@ PLEX_HOST = None
 PLEX_USERNAME = None
 PLEX_PASSWORD = None
 PLEX_WATCHEDSTATE_SCHEDULED = False
-PLEX_WATCHEDSTATE_FREQUENCY = DEFAULT_WATCHEDSTATE_FREQUENCY
+PLEX_WATCHEDSTATE_INTERVAL = DEFAULT_WATCHEDSTATE_INTERVAL
 
 USE_XBMC = False
 XBMC_ALWAYS_ON = True
@@ -541,7 +541,7 @@ SUBTITLES_SERVICES_LIST = []
 SUBTITLES_SERVICES_ENABLED = []
 SUBTITLES_SERVICES_AUTH = [['', '']]
 SUBTITLES_HISTORY = False
-SUBTITLES_FINDER_FREQUENCY = 1
+SUBTITLES_FINDER_INTERVAL = 1
 
 USE_FAILED_DOWNLOADS = False
 DELETE_FAILED = False
@@ -609,7 +609,7 @@ MEMCACHE_FLAG_IMAGES = {}
 
 
 def get_backlog_cycle_time():
-    cycletime = RECENTSEARCH_FREQUENCY * 2 + 7
+    cycletime = RECENTSEARCH_INTERVAL * 2 + 7
     return max([cycletime, 720])
 
 
@@ -657,7 +657,7 @@ def init_stage_1(console_logging):
     # Gen Config/Misc
     global LAUNCH_BROWSER, UPDATE_SHOWS_ON_START, SHOW_UPDATE_HOUR, \
         TRASH_REMOVE_SHOW, TRASH_ROTATE_LOGS, ACTUAL_LOG_DIR, LOG_DIR, TVINFO_TIMEOUT, ROOT_DIRS, \
-        VERSION_NOTIFY, AUTO_UPDATE, UPDATE_FREQUENCY, NOTIFY_ON_UPDATE
+        VERSION_NOTIFY, AUTO_UPDATE, UPDATE_INTERVAL, NOTIFY_ON_UPDATE
     # Gen Config/Interface
     global THEME_NAME, DEFAULT_HOME, FANART_LIMIT, SHOWLIST_TAGVIEW, SHOW_TAGS, \
         HOME_SEARCH_FOCUS, USE_IMDB_INFO, IMDB_ACCOUNTS, DISPLAY_FREESPACE, SORT_ARTICLE, FUZZY_DATING, TRIM_ZERO, \
@@ -669,8 +669,8 @@ def init_stage_1(console_logging):
     global BRANCH, CUR_COMMIT_BRANCH, GIT_REMOTE, CUR_COMMIT_HASH, GIT_PATH, CPU_PRESET, ANON_REDIRECT, \
         ENCRYPTION_VERSION, PROXY_SETTING, PROXY_INDEXERS, FILE_LOGGING_PRESET
     # Search Settings/Episode
-    global DOWNLOAD_PROPERS, PROPERS_WEBDL_ONEGRP, WEBDL_TYPES, RECENTSEARCH_FREQUENCY, \
-        BACKLOG_DAYS, BACKLOG_NOFULL, BACKLOG_FREQUENCY, USENET_RETENTION, IGNORE_WORDS, REQUIRE_WORDS, \
+    global DOWNLOAD_PROPERS, PROPERS_WEBDL_ONEGRP, WEBDL_TYPES, RECENTSEARCH_INTERVAL, \
+        BACKLOG_LIMITED_PERIOD, BACKLOG_NOFULL, BACKLOG_PERIOD, USENET_RETENTION, IGNORE_WORDS, REQUIRE_WORDS, \
         IGNORE_WORDS, IGNORE_WORDS_REGEX, REQUIRE_WORDS, REQUIRE_WORDS_REGEX, \
         ALLOW_HIGH_PRIORITY, SEARCH_UNAIRED, UNAIRED_RECENT_SEARCH_ONLY
     # Search Settings/NZB search
@@ -684,12 +684,12 @@ def init_stage_1(console_logging):
     # Media Providers
     global PROVIDER_ORDER, NEWZNAB_DATA, PROVIDER_HOMES
     # Subtitles
-    global USE_SUBTITLES, SUBTITLES_LANGUAGES, SUBTITLES_DIR, SUBTITLES_FINDER_FREQUENCY, SUBTITLES_OS_HASH, \
+    global USE_SUBTITLES, SUBTITLES_LANGUAGES, SUBTITLES_DIR, SUBTITLES_FINDER_INTERVAL, SUBTITLES_OS_HASH, \
         SUBTITLES_HISTORY, SUBTITLES_SERVICES_LIST, SUBTITLES_SERVICES_ENABLED, SUBTITLES_SERVICES_AUTH
     # Media Process/Post-Processing
-    global TV_DOWNLOAD_DIR, PROCESS_METHOD, PROCESS_AUTOMATICALLY, AUTOPOSTPROCESSER_FREQUENCY, \
+    global TV_DOWNLOAD_DIR, PROCESS_METHOD, PROCESS_AUTOMATICALLY, MEDIAPROCESS_INTERVAL, \
         POSTPONE_IF_SYNC_FILES, EXTRA_SCRIPTS, SG_EXTRA_SCRIPTS, \
-        DEFAULT_AUTOPOSTPROCESSER_FREQUENCY, MIN_AUTOPOSTPROCESSER_FREQUENCY, \
+        DEFAULT_MEDIAPROCESS_INTERVAL, MIN_MEDIAPROCESS_INTERVAL, \
         UNPACK, SKIP_REMOVED_FILES, MOVE_ASSOCIATED_FILES, NFO_RENAME, RENAME_EPISODES, AIRDATE_EPISODES, \
         USE_FAILED_DOWNLOADS, DELETE_FAILED
     # Media Process/Episode Naming
@@ -701,7 +701,7 @@ def init_stage_1(console_logging):
         METADATA_PS3, METADATA_TIVO, METADATA_WDTV, METADATA_XBMC_12PLUS
     # Notification Settings/HT and NAS
     global USE_EMBY, EMBY_UPDATE_LIBRARY, EMBY_PARENT_MAPS, EMBY_HOST, EMBY_APIKEY, \
-        EMBY_WATCHEDSTATE_SCHEDULED, EMBY_WATCHEDSTATE_FREQUENCY, \
+        EMBY_WATCHEDSTATE_SCHEDULED, EMBY_WATCHEDSTATE_INTERVAL, \
         USE_KODI, KODI_ALWAYS_ON, KODI_UPDATE_LIBRARY, KODI_UPDATE_FULL, KODI_UPDATE_ONLYFIRST, \
         KODI_PARENT_MAPS, KODI_HOST, KODI_USERNAME, KODI_PASSWORD, KODI_NOTIFY_ONSNATCH, \
         KODI_NOTIFY_ONDOWNLOAD, KODI_NOTIFY_ONSUBTITLEDOWNLOAD, \
@@ -709,7 +709,7 @@ def init_stage_1(console_logging):
         XBMC_UPDATE_LIBRARY, XBMC_UPDATE_FULL, XBMC_UPDATE_ONLYFIRST, XBMC_HOST, XBMC_USERNAME, XBMC_PASSWORD, \
         USE_PLEX, PLEX_USERNAME, PLEX_PASSWORD, PLEX_UPDATE_LIBRARY, PLEX_PARENT_MAPS, PLEX_SERVER_HOST, \
         PLEX_NOTIFY_ONSNATCH, PLEX_NOTIFY_ONDOWNLOAD, PLEX_NOTIFY_ONSUBTITLEDOWNLOAD, PLEX_HOST, \
-        PLEX_WATCHEDSTATE_SCHEDULED, PLEX_WATCHEDSTATE_FREQUENCY, \
+        PLEX_WATCHEDSTATE_SCHEDULED, PLEX_WATCHEDSTATE_INTERVAL, \
         USE_NMJ, NMJ_HOST, NMJ_DATABASE, NMJ_MOUNT, \
         USE_NMJv2, NMJv2_HOST, NMJv2_DATABASE, NMJv2_DBLOC, \
         USE_SYNOINDEX, \
@@ -951,25 +951,24 @@ def init_stage_1(console_logging):
 
     USENET_RETENTION = check_setting_int(CFG, 'General', 'usenet_retention', 500)
 
-    AUTOPOSTPROCESSER_FREQUENCY = check_setting_int(CFG, 'General', 'autopostprocesser_frequency',
-                                                    DEFAULT_AUTOPOSTPROCESSER_FREQUENCY)
-    if AUTOPOSTPROCESSER_FREQUENCY < MIN_AUTOPOSTPROCESSER_FREQUENCY:
-        AUTOPOSTPROCESSER_FREQUENCY = MIN_AUTOPOSTPROCESSER_FREQUENCY
+    MEDIAPROCESS_INTERVAL = check_setting_int(CFG, 'General', 'mediaprocess_interval', DEFAULT_MEDIAPROCESS_INTERVAL)
+    if MEDIAPROCESS_INTERVAL < MIN_MEDIAPROCESS_INTERVAL:
+        MEDIAPROCESS_INTERVAL = MIN_MEDIAPROCESS_INTERVAL
 
-    RECENTSEARCH_FREQUENCY = check_setting_int(CFG, 'General', 'recentsearch_frequency',
-                                               DEFAULT_RECENTSEARCH_FREQUENCY)
-    if RECENTSEARCH_FREQUENCY < MIN_RECENTSEARCH_FREQUENCY:
-        RECENTSEARCH_FREQUENCY = MIN_RECENTSEARCH_FREQUENCY
+    RECENTSEARCH_INTERVAL = check_setting_int(CFG, 'General', 'recentsearch_interval', DEFAULT_RECENTSEARCH_INTERVAL)
+    if RECENTSEARCH_INTERVAL < MIN_RECENTSEARCH_INTERVAL:
+        RECENTSEARCH_INTERVAL = MIN_RECENTSEARCH_INTERVAL
 
-    BACKLOG_FREQUENCY = check_setting_int(CFG, 'General', 'backlog_frequency', DEFAULT_BACKLOG_FREQUENCY)
-    BACKLOG_FREQUENCY = minimax(BACKLOG_FREQUENCY, DEFAULT_BACKLOG_FREQUENCY,
-                                MIN_BACKLOG_FREQUENCY, MAX_BACKLOG_FREQUENCY)
+    # special case during dev to migrate backlog_interval to backlog_period
+    BACKLOG_PERIOD = check_setting_int(CFG, 'General', 'backlog_period',
+                                       check_setting_int(CFG, 'General', 'backlog_interval', DEFAULT_BACKLOG_PERIOD))
+    BACKLOG_PERIOD = minimax(BACKLOG_PERIOD, DEFAULT_BACKLOG_PERIOD, MIN_BACKLOG_PERIOD, MAX_BACKLOG_PERIOD)
+    BACKLOG_LIMITED_PERIOD = check_setting_int(CFG, 'General', 'backlog_limited_period', 7)
 
-    UPDATE_FREQUENCY = check_setting_int(CFG, 'General', 'update_frequency', DEFAULT_UPDATE_FREQUENCY)
-    if UPDATE_FREQUENCY < MIN_UPDATE_FREQUENCY:
-        UPDATE_FREQUENCY = MIN_UPDATE_FREQUENCY
+    UPDATE_INTERVAL = check_setting_int(CFG, 'General', 'update_interval', DEFAULT_UPDATE_INTERVAL)
+    if UPDATE_INTERVAL < MIN_UPDATE_INTERVAL:
+        UPDATE_INTERVAL = MIN_UPDATE_INTERVAL
 
-    BACKLOG_DAYS = check_setting_int(CFG, 'General', 'backlog_days', 7)
     SEARCH_UNAIRED = bool(check_setting_int(CFG, 'General', 'search_unaired', 0))
     UNAIRED_RECENT_SEARCH_ONLY = bool(check_setting_int(CFG, 'General', 'unaired_recent_search_only', 1))
 
@@ -1043,9 +1042,9 @@ def init_stage_1(console_logging):
     EMBY_HOST = check_setting_str(CFG, 'Emby', 'emby_host', '')
     EMBY_APIKEY = check_setting_str(CFG, 'Emby', 'emby_apikey', '')
     EMBY_WATCHEDSTATE_SCHEDULED = bool(check_setting_int(CFG, 'Emby', 'emby_watchedstate_scheduled', 0))
-    EMBY_WATCHEDSTATE_FREQUENCY = minimax(check_setting_int(
-        CFG, 'Emby', 'emby_watchedstate_frequency', DEFAULT_WATCHEDSTATE_FREQUENCY),
-        DEFAULT_WATCHEDSTATE_FREQUENCY, MIN_WATCHEDSTATE_FREQUENCY, MAX_WATCHEDSTATE_FREQUENCY)
+    EMBY_WATCHEDSTATE_INTERVAL = minimax(check_setting_int(
+        CFG, 'Emby', 'emby_watchedstate_interval', DEFAULT_WATCHEDSTATE_INTERVAL),
+        DEFAULT_WATCHEDSTATE_INTERVAL, MIN_WATCHEDSTATE_INTERVAL, MAX_WATCHEDSTATE_INTERVAL)
 
     USE_KODI = bool(check_setting_int(CFG, 'Kodi', 'use_kodi', 0))
     KODI_ALWAYS_ON = bool(check_setting_int(CFG, 'Kodi', 'kodi_always_on', 1))
@@ -1083,9 +1082,9 @@ def init_stage_1(console_logging):
     PLEX_USERNAME = check_setting_str(CFG, 'Plex', 'plex_username', '')
     PLEX_PASSWORD = check_setting_str(CFG, 'Plex', 'plex_password', '')
     PLEX_WATCHEDSTATE_SCHEDULED = bool(check_setting_int(CFG, 'Plex', 'plex_watchedstate_scheduled', 0))
-    PLEX_WATCHEDSTATE_FREQUENCY = minimax(check_setting_int(
-        CFG, 'Plex', 'plex_watchedstate_frequency', DEFAULT_WATCHEDSTATE_FREQUENCY),
-        DEFAULT_WATCHEDSTATE_FREQUENCY, MIN_WATCHEDSTATE_FREQUENCY, MAX_WATCHEDSTATE_FREQUENCY)
+    PLEX_WATCHEDSTATE_INTERVAL = minimax(check_setting_int(
+        CFG, 'Plex', 'plex_watchedstate_interval', DEFAULT_WATCHEDSTATE_INTERVAL),
+        DEFAULT_WATCHEDSTATE_INTERVAL, MIN_WATCHEDSTATE_INTERVAL, MAX_WATCHEDSTATE_INTERVAL)
 
     USE_GROWL = bool(check_setting_int(CFG, 'Growl', 'use_growl', 0))
     GROWL_NOTIFY_ONSNATCH = bool(check_setting_int(CFG, 'Growl', 'growl_notify_onsnatch', 0))
@@ -1248,7 +1247,7 @@ def init_stage_1(console_logging):
                                if k]
     SUBTITLES_DEFAULT = bool(check_setting_int(CFG, 'Subtitles', 'subtitles_default', 0))
     SUBTITLES_HISTORY = bool(check_setting_int(CFG, 'Subtitles', 'subtitles_history', 0))
-    SUBTITLES_FINDER_FREQUENCY = check_setting_int(CFG, 'Subtitles', 'subtitles_finder_frequency', 1)
+    SUBTITLES_FINDER_INTERVAL = check_setting_int(CFG, 'Subtitles', 'subtitles_finder_interval', 1)
     SUBTITLES_OS_HASH = bool(check_setting_int(CFG, 'Subtitles', 'subtitles_os_hash', 1))
 
     USE_FAILED_DOWNLOADS = bool(check_setting_int(CFG, 'FailedDownloads', 'use_failed_downloads', 0))
@@ -1465,25 +1464,25 @@ def init_stage_2():
     # Misc
     global __INITIALIZED__, MEMCACHE, MEMCACHE_FLAG_IMAGES, RECENTSEARCH_STARTUP
     # Schedulers
-    # global traktCheckerScheduler
-    global recentSearchScheduler, backlogSearchScheduler, showUpdateScheduler, \
-        versionCheckScheduler, showQueueScheduler, searchQueueScheduler, \
-        properFinderScheduler, autoPostProcesserScheduler, subtitlesFinderScheduler, \
+    # global trakt_checker_scheduler
+    global recent_search_scheduler, backlog_search_scheduler, show_update_scheduler, \
+        version_check_scheduler, show_queue_scheduler, search_queue_scheduler, \
+        proper_finder_scheduler, media_process_scheduler, subtitles_finder_scheduler, \
         background_mapping_task, \
-        watchedStateQueueScheduler, embyWatchedStateScheduler, plexWatchedStateScheduler
+        watched_state_queue_scheduler, emby_watched_state_scheduler, plex_watched_state_scheduler
     # Gen Config/Misc
-    global SHOW_UPDATE_HOUR, UPDATE_FREQUENCY
+    global SHOW_UPDATE_HOUR, UPDATE_INTERVAL
     # Search Settings/Episode
-    global RECENTSEARCH_FREQUENCY
+    global RECENTSEARCH_INTERVAL
     # Subtitles
-    global USE_SUBTITLES, SUBTITLES_FINDER_FREQUENCY
+    global USE_SUBTITLES, SUBTITLES_FINDER_INTERVAL
     # Media Process/Post-Processing
-    global PROCESS_AUTOMATICALLY, AUTOPOSTPROCESSER_FREQUENCY
+    global PROCESS_AUTOMATICALLY, MEDIAPROCESS_INTERVAL
     # Media Process/Metadata
     global metadata_provider_dict, METADATA_KODI, METADATA_MEDE8ER, METADATA_MEDIABROWSER, \
         METADATA_PS3, METADATA_TIVO, METADATA_WDTV, METADATA_XBMC, METADATA_XBMC_12PLUS
     # Notification Settings/HT and NAS
-    global EMBY_WATCHEDSTATE_FREQUENCY, PLEX_WATCHEDSTATE_FREQUENCY
+    global EMBY_WATCHEDSTATE_INTERVAL, PLEX_WATCHEDSTATE_INTERVAL
 
     # initialize main database
     my_db = db.DBConnection()
@@ -1520,40 +1519,40 @@ def init_stage_2():
     # initialize schedulers
     # updaters
     update_now = datetime.timedelta(minutes=0)
-    versionCheckScheduler = scheduler.Scheduler(
+    version_check_scheduler = scheduler.Scheduler(
         version_checker.CheckVersion(),
-        cycleTime=datetime.timedelta(hours=UPDATE_FREQUENCY),
+        cycleTime=datetime.timedelta(hours=UPDATE_INTERVAL),
         threadName='CHECKVERSION',
         silent=False)
 
-    showQueueScheduler = scheduler.Scheduler(
+    show_queue_scheduler = scheduler.Scheduler(
         show_queue.ShowQueue(),
         cycleTime=datetime.timedelta(seconds=3),
         threadName='SHOWQUEUE')
 
-    showUpdateScheduler = scheduler.Scheduler(
+    show_update_scheduler = scheduler.Scheduler(
         show_updater.ShowUpdater(),
         cycleTime=datetime.timedelta(hours=1),
         start_time=datetime.time(hour=SHOW_UPDATE_HOUR),
         threadName='SHOWUPDATER',
-        prevent_cycle_run=showQueueScheduler.action.isShowUpdateRunning)  # 3AM
+        prevent_cycle_run=show_queue_scheduler.action.isShowUpdateRunning)  # 3AM
 
     # searchers
-    searchQueueScheduler = scheduler.Scheduler(
+    search_queue_scheduler = scheduler.Scheduler(
         search_queue.SearchQueue(),
         cycleTime=datetime.timedelta(seconds=3),
         threadName='SEARCHQUEUE')
 
     init_search_delay = int(os.environ.get('INIT_SEARCH_DELAY', 0))
 
-    # enter 4499 (was 4489) for experimental internal provider frequencies
-    update_interval = datetime.timedelta(minutes=(RECENTSEARCH_FREQUENCY, 1)[4499 == RECENTSEARCH_FREQUENCY])
-    recentSearchScheduler = scheduler.Scheduler(
+    # enter 4499 (was 4489) for experimental internal provider intervals
+    update_interval = datetime.timedelta(minutes=(RECENTSEARCH_INTERVAL, 1)[4499 == RECENTSEARCH_INTERVAL])
+    recent_search_scheduler = scheduler.Scheduler(
         search_recent.RecentSearcher(),
         cycleTime=update_interval,
         run_delay=update_now if RECENTSEARCH_STARTUP else datetime.timedelta(minutes=init_search_delay or 5),
         threadName='RECENTSEARCHER',
-        prevent_cycle_run=searchQueueScheduler.action.is_recentsearch_in_progress)
+        prevent_cycle_run=search_queue_scheduler.action.is_recentsearch_in_progress)
 
     if [x for x in providers.sortedProviderList() if x.is_active() and
             getattr(x, 'enable_backlog', None) and GenericProvider.NZB == x.providerType]:
@@ -1570,12 +1569,12 @@ def init_stage_2():
         backlogdelay = helpers.try_int((time_diff.total_seconds() / 60) + 10, 10)
     else:
         backlogdelay = 10
-    backlogSearchScheduler = search_backlog.BacklogSearchScheduler(
+    backlog_search_scheduler = search_backlog.BacklogSearchScheduler(
         search_backlog.BacklogSearcher(),
         cycleTime=datetime.timedelta(minutes=get_backlog_cycle_time()),
         run_delay=datetime.timedelta(minutes=init_search_delay or backlogdelay),
         threadName='BACKLOG',
-        prevent_cycle_run=searchQueueScheduler.action.is_standard_backlog_in_progress)
+        prevent_cycle_run=search_queue_scheduler.action.is_standard_backlog_in_progress)
 
     propers_searcher = search_propers.ProperSearcher()
     last_proper_search = datetime.datetime.fromtimestamp(properFinder.get_last_proper_search())
@@ -1585,46 +1584,46 @@ def init_stage_2():
     else:
         properdelay = helpers.try_int((time_diff.total_seconds() / 60) + 5, 20)
 
-    properFinderScheduler = scheduler.Scheduler(
+    proper_finder_scheduler = scheduler.Scheduler(
         propers_searcher,
         cycleTime=datetime.timedelta(days=1),
         run_delay=datetime.timedelta(minutes=init_search_delay or properdelay),
         threadName='FINDPROPERS',
-        prevent_cycle_run=searchQueueScheduler.action.is_propersearch_in_progress)
+        prevent_cycle_run=search_queue_scheduler.action.is_propersearch_in_progress)
 
     # processors
-    autoPostProcesserScheduler = scheduler.Scheduler(
+    media_process_scheduler = scheduler.Scheduler(
         auto_post_processer.PostProcesser(),
-        cycleTime=datetime.timedelta(minutes=AUTOPOSTPROCESSER_FREQUENCY),
+        cycleTime=datetime.timedelta(minutes=MEDIAPROCESS_INTERVAL),
         threadName='POSTPROCESSER',
         silent=not PROCESS_AUTOMATICALLY)
     """
-    traktCheckerScheduler = scheduler.Scheduler(
+    trakt_checker_scheduler = scheduler.Scheduler(
         traktChecker.TraktChecker(), cycleTime=datetime.timedelta(hours=1),
         threadName='TRAKTCHECKER', silent=not USE_TRAKT)
     """
-    subtitlesFinderScheduler = scheduler.Scheduler(
+    subtitles_finder_scheduler = scheduler.Scheduler(
         subtitles.SubtitlesFinder(),
-        cycleTime=datetime.timedelta(hours=SUBTITLES_FINDER_FREQUENCY),
+        cycleTime=datetime.timedelta(hours=SUBTITLES_FINDER_INTERVAL),
         threadName='FINDSUBTITLES',
         silent=not USE_SUBTITLES)
 
     background_mapping_task = threading.Thread(name='LOAD-MAPPINGS', target=indexermapper.load_mapped_ids)
 
-    watchedStateQueueScheduler = scheduler.Scheduler(
+    watched_state_queue_scheduler = scheduler.Scheduler(
         watchedstate_queue.WatchedStateQueue(),
         cycleTime=datetime.timedelta(seconds=3),
         threadName='WATCHEDSTATEQUEUE')
 
-    embyWatchedStateScheduler = scheduler.Scheduler(
+    emby_watched_state_scheduler = scheduler.Scheduler(
         EmbyWatchedStateUpdater(),
-        cycleTime=datetime.timedelta(minutes=EMBY_WATCHEDSTATE_FREQUENCY),
+        cycleTime=datetime.timedelta(minutes=EMBY_WATCHEDSTATE_INTERVAL),
         run_delay=datetime.timedelta(minutes=5),
         threadName='EMBYWATCHEDSTATE')
 
-    plexWatchedStateScheduler = scheduler.Scheduler(
+    plex_watched_state_scheduler = scheduler.Scheduler(
         PlexWatchedStateUpdater(),
-        cycleTime=datetime.timedelta(minutes=PLEX_WATCHEDSTATE_FREQUENCY),
+        cycleTime=datetime.timedelta(minutes=PLEX_WATCHEDSTATE_INTERVAL),
         run_delay=datetime.timedelta(minutes=5),
         threadName='PLEXWATCHEDSTATE')
 
@@ -1643,12 +1642,12 @@ def init_stage_2():
 
 
 def enabled_schedulers(is_init=False):
-    # ([], [traktCheckerScheduler])[USE_TRAKT] + \
+    # ([], [trakt_checker_scheduler])[USE_TRAKT] + \
     return ([], [events])[is_init] \
-           + [recentSearchScheduler, backlogSearchScheduler, showUpdateScheduler,
-              versionCheckScheduler, showQueueScheduler, searchQueueScheduler, properFinderScheduler,
-              autoPostProcesserScheduler, subtitlesFinderScheduler,
-              embyWatchedStateScheduler, plexWatchedStateScheduler, watchedStateQueueScheduler]\
+           + [recent_search_scheduler, backlog_search_scheduler, show_update_scheduler,
+              version_check_scheduler, show_queue_scheduler, search_queue_scheduler, proper_finder_scheduler,
+              media_process_scheduler, subtitles_finder_scheduler,
+              emby_watched_state_scheduler, plex_watched_state_scheduler, watched_state_queue_scheduler]\
            + ([events], [])[is_init]
 
 
@@ -1664,7 +1663,7 @@ def start():
             background_mapping_task.start()
 
             for p in providers.sortedProviderList():
-                if p.is_active() and getattr(p, 'ping_freq', None):
+                if p.is_active() and getattr(p, 'ping_iv', None):
                     # noinspection PyProtectedMember
                     provider_ping_thread_pool[p.get_id()] = threading.Thread(
                         name='PING-PROVIDER %s' % p.name, target=p._ping)
@@ -1767,7 +1766,7 @@ def save_config():
 
     # For passwords you must include the word `password` in the item_name and
     # add `helpers.encrypt(ITEM_NAME, ENCRYPTION_VERSION)` in save_config()
-    new_config['General'] = {}
+    new_config['General'] = ordered_dict()
     s_z = check_setting_int(CFG, 'General', 'stack_size', 0)
     if s_z:
         new_config['General']['stack_size'] = s_z
@@ -1807,10 +1806,11 @@ def save_config():
     new_config['General']['nzb_method'] = NZB_METHOD
     new_config['General']['torrent_method'] = TORRENT_METHOD
     new_config['General']['usenet_retention'] = int(USENET_RETENTION)
-    new_config['General']['autopostprocesser_frequency'] = int(AUTOPOSTPROCESSER_FREQUENCY)
-    new_config['General']['recentsearch_frequency'] = int(RECENTSEARCH_FREQUENCY)
-    new_config['General']['backlog_frequency'] = int(BACKLOG_FREQUENCY)
-    new_config['General']['update_frequency'] = int(UPDATE_FREQUENCY)
+    new_config['General']['mediaprocess_interval'] = int(MEDIAPROCESS_INTERVAL)
+    new_config['General']['recentsearch_interval'] = int(RECENTSEARCH_INTERVAL)
+    new_config['General']['backlog_period'] = int(BACKLOG_PERIOD)
+    new_config['General']['backlog_limited_period'] = int(BACKLOG_LIMITED_PERIOD)
+    new_config['General']['update_interval'] = int(UPDATE_INTERVAL)
     new_config['General']['download_propers'] = int(DOWNLOAD_PROPERS)
     new_config['General']['propers_webdl_onegrp'] = int(PROPERS_WEBDL_ONEGRP)
     new_config['General']['allow_high_priority'] = int(ALLOW_HIGH_PRIORITY)
@@ -1865,7 +1865,6 @@ def save_config():
     new_config['General']['metadata_mede8er'] = METADATA_MEDE8ER
     new_config['General']['metadata_kodi'] = METADATA_KODI
 
-    new_config['General']['backlog_days'] = int(BACKLOG_DAYS)
     new_config['General']['search_unaired'] = int(SEARCH_UNAIRED)
     new_config['General']['unaired_recent_search_only'] = int(UNAIRED_RECENT_SEARCH_ONLY)
 
@@ -2011,7 +2010,7 @@ def save_config():
             ('apikey', EMBY_APIKEY), ('host', EMBY_HOST),
             ('update_library', int(EMBY_UPDATE_LIBRARY)),
             ('watchedstate_scheduled', int(EMBY_WATCHEDSTATE_SCHEDULED)),
-            ('watchedstate_frequency', int(EMBY_WATCHEDSTATE_FREQUENCY)),
+            ('watchedstate_interval', int(EMBY_WATCHEDSTATE_INTERVAL)),
             ('parent_maps', EMBY_PARENT_MAPS),
         ]),
         ('Kodi', [
@@ -2029,7 +2028,7 @@ def save_config():
             ('host', PLEX_HOST),
             ('update_library', int(PLEX_UPDATE_LIBRARY)),
             ('watchedstate_scheduled', int(PLEX_WATCHEDSTATE_SCHEDULED)),
-            ('watchedstate_frequency', int(PLEX_WATCHEDSTATE_FREQUENCY)),
+            ('watchedstate_interval', int(PLEX_WATCHEDSTATE_INTERVAL)),
             ('parent_maps', PLEX_PARENT_MAPS),
             ('server_host', PLEX_SERVER_HOST),
         ]),
@@ -2270,7 +2269,7 @@ def save_config():
     new_config['Subtitles']['subtitles_dir'] = SUBTITLES_DIR
     new_config['Subtitles']['subtitles_default'] = int(SUBTITLES_DEFAULT)
     new_config['Subtitles']['subtitles_history'] = int(SUBTITLES_HISTORY)
-    new_config['Subtitles']['subtitles_finder_frequency'] = int(SUBTITLES_FINDER_FREQUENCY)
+    new_config['Subtitles']['subtitles_finder_interval'] = int(SUBTITLES_FINDER_INTERVAL)
     new_config['Subtitles']['subtitles_os_hash'] = SUBTITLES_OS_HASH
 
     new_config['FailedDownloads'] = {}

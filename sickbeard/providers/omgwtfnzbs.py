@@ -434,18 +434,19 @@ class OmgwtfnzbsCache(tvcache.TVCache):
         tvcache.TVCache.__init__(self, this_provider)
 
     @property
-    def update_freq(self):
+    def update_iv(self):
         try:
+            # noinspection PyProtectedMember
             ca = ':' == self.provider._check_auth()[6]
         except (BaseException, Exception):
             ca = False
         try:
-            return (10, 20 + randint(0, min(40, sickbeard.RECENTSEARCH_FREQUENCY * 3)))[ca]
+            return (10, 20 + randint(0, min(40, sickbeard.RECENTSEARCH_INTERVAL * 3)))[ca]
         except (BaseException, Exception):
             return 20
 
-    @update_freq.setter
-    def update_freq(self, v):
+    @update_iv.setter
+    def update_iv(self, v):
         return
 
     def _cache_data(self, **kwargs):

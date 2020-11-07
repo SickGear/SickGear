@@ -1771,7 +1771,7 @@ class TVShow(TVShowBase):
 
         # force the update
         try:
-            sickbeard.showQueueScheduler.action.updateShow(
+            sickbeard.show_queue_scheduler.action.updateShow(
                 self, force=True, web=True, priority=QueuePriorities.VERYHIGH, pausestatus_after=pausestatus_after)
         except exceptions_helper.CantUpdateException as e:
             logger.log('Unable to update this show. %s' % ex(e), logger.ERROR)

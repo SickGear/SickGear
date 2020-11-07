@@ -81,7 +81,7 @@ class BacklogSearcher(object):
     def __init__(self):
 
         self._lastBacklog = self._get_last_backlog()
-        self.cycleTime = sickbeard.BACKLOG_FREQUENCY
+        self.cycleTime = sickbeard.BACKLOG_PERIOD
         self.lock = threading.Lock()
         self.amActive = False  # type: bool
         self.amPaused = False  # type: bool
@@ -136,7 +136,7 @@ class BacklogSearcher(object):
                         segment[0].show_obj, segment,
                         standard_backlog=standard_backlog, limited_backlog=limited_backlog,
                         forced=forced, torrent_only=torrent_only)
-                    sickbeard.searchQueueScheduler.action.add_item(backlog_queue_item)
+                    sickbeard.search_queue_scheduler.action.add_item(backlog_queue_item)
 
     @staticmethod
     def change_backlog_parts(old_count, new_count):
@@ -225,12 +225,12 @@ class BacklogSearcher(object):
 
         cur_date = datetime.date.today().toordinal()
         from_date = datetime.date.fromordinal(1)
-        limited_from_date = datetime.date.today() - datetime.timedelta(days=sickbeard.BACKLOG_DAYS)
+        limited_from_date = datetime.date.today() - datetime.timedelta(days=sickbeard.BACKLOG_LIMITED_PERIOD)
 
         limited_backlog = False
         if standard_backlog and (any_torrent_enabled or sickbeard.BACKLOG_NOFULL):
             logger.log(u'Running limited backlog for episodes missed during the last %s day(s)' %
-                       str(sickbeard.BACKLOG_DAYS))
+                       str(sickbeard.BACKLOG_LIMITED_PERIOD))
             from_date = limited_from_date
             limited_backlog = True
 
@@ -265,7 +265,7 @@ class BacklogSearcher(object):
 
         parts = []
         if standard_backlog and not any_torrent_enabled and not continued_backlog and not sickbeard.BACKLOG_NOFULL:
-            fullbacklogparts = sum([len(w) for w in wanted_list if w]) // sickbeard.BACKLOG_FREQUENCY
+            fullbacklogparts = sum([len(w) for w in wanted_list if w]) // sickbeard.BACKLOG_PERIOD
             h_part = []
             counter = 0
             for w in wanted_list:  # type: Dict

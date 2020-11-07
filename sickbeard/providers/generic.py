@@ -1488,7 +1488,7 @@ class NZBProvider(GenericProvider):
             if self.should_skip(log_warning=False):
                 break
 
-            search_params = {'q': search_terms[index], 'maxage': sickbeard.BACKLOG_DAYS + 2}
+            search_params = {'q': search_terms[index], 'maxage': sickbeard.BACKLOG_LIMITED_PERIOD + 2}
             # if alt_search:
             #
             #     if do_search_alt:
@@ -1534,15 +1534,15 @@ class NZBProvider(GenericProvider):
 
 class TorrentProvider(GenericProvider):
 
-    def __init__(self, name, supports_backlog=True, anime_only=False,  cache_update_freq=7, update_freq=None):
+    def __init__(self, name, supports_backlog=True, anime_only=False, cache_update_iv=7, update_iv=None):
         # type: (AnyStr, bool, bool, int, Optional[int]) -> None
         """
 
         :param name: provider name
         :param supports_backlog: supports backlog
         :param anime_only: is anime only
-        :param cache_update_freq:
-        :param update_freq:
+        :param cache_update_iv:
+        :param update_iv:
         """
         GenericProvider.__init__(self, name, supports_backlog, anime_only)
 
@@ -1553,9 +1553,9 @@ class TorrentProvider(GenericProvider):
         self._url = None
         self.urls = {}  # type: Dict[AnyStr]
         self.cache._cache_data = self._cache_data
-        if cache_update_freq:
-            self.cache.update_freq = cache_update_freq
-        self.ping_freq = update_freq
+        if cache_update_iv:
+            self.cache.update_iv = cache_update_iv
+        self.ping_iv = update_iv
         self.ping_skip = None
         self._reject_seed = None
         self._reject_leech = None
@@ -2120,9 +2120,9 @@ class TorrentProvider(GenericProvider):
             if self.ping_skip:
                 self.ping_skip -= 1
             else:
-                self.ping_skip = ((60*60) // self.ping_freq, None)[self._authorised()]
+                self.ping_skip = ((60*60) // self.ping_iv, None)[self._authorised()]
 
-            self._sleep_with_stop(self.ping_freq)
+            self._sleep_with_stop(self.ping_iv)
 
     def get_result(self, ep_obj_list, url):
         # type: (List[TVEpisode], AnyStr) -> Optional[NZBSearchResult, TorrentSearchResult]

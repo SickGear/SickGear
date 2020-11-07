@@ -1257,7 +1257,7 @@ class CMD_SickGearEpisodeSearch(ApiCall):
 
         # make a queue item for it and put it on the queue
         ep_queue_item = search_queue.ManualSearchQueueItem(show_obj, ep_obj)
-        sickbeard.searchQueueScheduler.action.add_item(ep_queue_item)
+        sickbeard.search_queue_scheduler.action.add_item(ep_queue_item)
 
         # wait until the queue item tells us whether it worked or not
         while None is ep_queue_item.success:
@@ -1408,7 +1408,7 @@ class CMD_SickGearEpisodeSetStatus(ApiCall):
         if start_backlog:
             for season, segment in iteritems(segments):  # type: int, List[TVEpisode]
                 backlog_queue_item = search_queue.BacklogQueueItem(show_obj, segment)
-                sickbeard.searchQueueScheduler.action.add_item(backlog_queue_item)
+                sickbeard.search_queue_scheduler.action.add_item(backlog_queue_item)
 
                 self.log(u"Starting backlog for " + show_obj.name + " season " + str(
                     season) + " because some episodes were set to WANTED")
@@ -2079,9 +2079,9 @@ class CMD_SickGearCheckScheduler(ApiCall):
         my_db = db.DBConnection()
         sql_result = my_db.select("SELECT last_backlog FROM info")
 
-        backlogPaused = sickbeard.searchQueueScheduler.action.is_backlog_paused()
-        backlogRunning = sickbeard.searchQueueScheduler.action.is_backlog_in_progress()
-        nextBacklog = sickbeard.backlogSearchScheduler.next_run().strftime(dateFormat)
+        backlogPaused = sickbeard.search_queue_scheduler.action.is_backlog_paused()
+        backlogRunning = sickbeard.search_queue_scheduler.action.is_backlog_in_progress()
+        nextBacklog = sickbeard.backlog_search_scheduler.next_run().strftime(dateFormat)
 
         data = {"backlog_is_paused": int(backlogPaused), "backlog_is_running": int(backlogRunning),
                 "last_backlog": _ordinal_to_dateForm(sql_result[0]["last_backlog"]),
@@ -2177,16 +2177,16 @@ class CMD_SickGearForceSearch(ApiCall):
     def run(self):
         """ force the specified search type to run """
         result = None
-        if 'recent' == self.searchtype and not sickbeard.searchQueueScheduler.action.is_recentsearch_in_progress() \
-                and not sickbeard.recentSearchScheduler.action.amActive:
-            result = sickbeard.recentSearchScheduler.forceRun()
-        elif 'backlog' == self.searchtype and not sickbeard.searchQueueScheduler.action.is_backlog_in_progress() \
-                and not sickbeard.backlogSearchScheduler.action.amActive:
-            sickbeard.backlogSearchScheduler.force_search(force_type=FORCED_BACKLOG)
+        if 'recent' == self.searchtype and not sickbeard.search_queue_scheduler.action.is_recentsearch_in_progress() \
+                and not sickbeard.recent_search_scheduler.action.amActive:
+            result = sickbeard.recent_search_scheduler.forceRun()
+        elif 'backlog' == self.searchtype and not sickbeard.search_queue_scheduler.action.is_backlog_in_progress() \
+                and not sickbeard.backlog_search_scheduler.action.amActive:
+            sickbeard.backlog_search_scheduler.force_search(force_type=FORCED_BACKLOG)
             result = True
-        elif 'proper' == self.searchtype and not sickbeard.searchQueueScheduler.action.is_propersearch_in_progress() \
-                and not sickbeard.properFinderScheduler.action.amActive:
-            result = sickbeard.properFinderScheduler.forceRun()
+        elif 'proper' == self.searchtype and not sickbeard.search_queue_scheduler.action.is_propersearch_in_progress() \
+                and not sickbeard.proper_finder_scheduler.action.amActive:
+            result = sickbeard.proper_finder_scheduler.forceRun()
         if result:
             return _responds(RESULT_SUCCESS, msg='%s search successfully forced' % self.searchtype)
         return _responds(RESULT_FAILURE,
@@ -2217,7 +2217,7 @@ class CMD_SickGearSearchQueue(ApiCall):
 
     def run(self):
         """ get a list of the sickgear search queue states """
-        return _responds(RESULT_SUCCESS, sickbeard.searchQueueScheduler.action.queue_length())
+        return _responds(RESULT_SUCCESS, sickbeard.search_queue_scheduler.action.queue_length())
 
 
 class CMD_SickGearGetDefaults(ApiCall):
@@ -2435,10 +2435,10 @@ class CMD_SickGearPauseBacklog(ApiCall):
     def run(self):
         """ pause the backlog search """
         if self.pause:
-            sickbeard.searchQueueScheduler.action.pause_backlog()
+            sickbeard.search_queue_scheduler.action.pause_backlog()
             return _responds(RESULT_SUCCESS, msg="Backlog paused")
         else:
-            sickbeard.searchQueueScheduler.action.unpause_backlog()
+            sickbeard.search_queue_scheduler.action.unpause_backlog()
             return _responds(RESULT_SUCCESS, msg="Backlog unpaused")
 
 
@@ -3373,9 +3373,9 @@ class CMD_SickGearShowAddExisting(ApiCall):
         if iqualityID or aqualityID:
             newQuality = Quality.combineQualities(iqualityID, aqualityID)
 
-        sickbeard.showQueueScheduler.action.addShow(int(self.tvid), int(self.prodid), self.location, SKIPPED,
-                                                    newQuality, int(self.flatten_folders),
-                                                    upgrade_once=self.upgradeonce)
+        sickbeard.show_queue_scheduler.action.addShow(int(self.tvid), int(self.prodid), self.location, SKIPPED,
+                                                      newQuality, int(self.flatten_folders),
+                                                      upgrade_once=self.upgradeonce)
 
         return _responds(RESULT_SUCCESS, {"name": indexerName}, indexerName + " has been queued to be added")
 
@@ -3533,10 +3533,10 @@ class CMD_SickGearShowAddNew(ApiCall):
             else:
                 helpers.chmod_as_parent(showPath)
 
-        sickbeard.showQueueScheduler.action.addShow(int(self.tvid), int(self.prodid), showPath, newStatus,
-                                                    newQuality,
-                                                    int(self.flatten_folders), self.lang, self.subtitles, self.anime,
-                                                    self.scene, new_show=True, upgrade_once=self.upgradeonce)
+        sickbeard.show_queue_scheduler.action.addShow(int(self.tvid), int(self.prodid), showPath, newStatus,
+                                                      newQuality,
+                                                      int(self.flatten_folders), self.lang, self.subtitles, self.anime,
+                                                      self.scene, new_show=True, upgrade_once=self.upgradeonce)
 
         return _responds(RESULT_SUCCESS, {"name": indexerName}, indexerName + " has been queued to be added")
 
@@ -3657,8 +3657,8 @@ class CMD_SickGearShowDelete(ApiCall):
         if not show_obj:
             return _responds(RESULT_FAILURE, msg="Show not found")
 
-        if sickbeard.showQueueScheduler.action.isBeingAdded(
-                show_obj) or sickbeard.showQueueScheduler.action.isBeingUpdated(show_obj):
+        if sickbeard.show_queue_scheduler.action.isBeingAdded(
+                show_obj) or sickbeard.show_queue_scheduler.action.isBeingUpdated(show_obj):
             return _responds(RESULT_FAILURE, msg="Show can not be deleted while being added or updated")
 
         show_obj.delete_show(full=self.full_delete)
@@ -4015,7 +4015,7 @@ class CMD_SickGearShowRefresh(ApiCall):
             return _responds(RESULT_FAILURE, msg="Show not found")
 
         try:
-            sickbeard.showQueueScheduler.action.refreshShow(show_obj)
+            sickbeard.show_queue_scheduler.action.refreshShow(show_obj)
             return _responds(RESULT_SUCCESS, msg="%s has queued to be refreshed" % show_obj.name)
         except exceptions_helper.CantRefreshException as e:
             # TODO: log the exception
@@ -4436,7 +4436,7 @@ class CMD_SickGearShowUpdate(ApiCall):
             return _responds(RESULT_FAILURE, msg="Show not found")
 
         try:
-            sickbeard.showQueueScheduler.action.updateShow(show_obj, True)
+            sickbeard.show_queue_scheduler.action.updateShow(show_obj, True)
             return _responds(RESULT_SUCCESS, msg="%s has queued to be updated" % show_obj.name)
         except exceptions_helper.CantUpdateException as e:
             self.log(u"Unable to update %s. %s" % (show_obj.name, ex(e)), logger.ERROR)
@@ -4635,10 +4635,11 @@ class CMD_SickGearShowsForceUpdate(ApiCall):
 
     def run(self):
         """ force the daily show update now """
-        if sickbeard.showQueueScheduler.action.isShowUpdateRunning() or sickbeard.showUpdateScheduler.action.amActive:
+        if sickbeard.show_queue_scheduler.action.isShowUpdateRunning() \
+                or sickbeard.show_update_scheduler.action.amActive:
             return _responds(RESULT_FAILURE, msg="show update already running.")
 
-        result = sickbeard.showUpdateScheduler.forceRun()
+        result = sickbeard.show_update_scheduler.forceRun()
         if result:
             return _responds(RESULT_SUCCESS, msg="daily show update started")
         return _responds(RESULT_FAILURE, msg="can't start show update currently")
@@ -4655,7 +4656,7 @@ class CMD_SickGearShowsQueue(ApiCall):
 
     def run(self):
         """ list the show update queue """
-        return _responds(RESULT_SUCCESS, sickbeard.showQueueScheduler.action.queue_length())
+        return _responds(RESULT_SUCCESS, sickbeard.show_queue_scheduler.action.queue_length())
 
 
 class CMD_SickGearShowsStats(ApiCall):

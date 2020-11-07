@@ -57,7 +57,7 @@ class ShowQueue(generic_queue.GenericQueue):
 
     def check_events(self):
         if self.daily_update_running and \
-                not (self.isShowUpdateRunning() or sickbeard.showUpdateScheduler.action.amActive):
+                not (self.isShowUpdateRunning() or sickbeard.show_update_scheduler.action.amActive):
             self.execute_events(DAILY_SHOW_UPDATE_FINISHED_EVENT)
             self.daily_update_running = False
 
@@ -448,8 +448,8 @@ class ShowQueueItem(generic_queue.QueueItem):
         """
         :rtype: bool
         """
-        return self in sickbeard.showQueueScheduler.action.queue + [
-            sickbeard.showQueueScheduler.action.currentItem]
+        return self in sickbeard.show_queue_scheduler.action.queue + [
+            sickbeard.show_queue_scheduler.action.currentItem]
 
     def _getName(self):
         """
@@ -803,11 +803,11 @@ class QueueItemAdd(ShowQueueItem):
 
         # if sickbeard.USE_TRAKT:
         #     # if there are specific episodes that need to be added by trakt
-        #     sickbeard.traktCheckerScheduler.action.manageNewShow(self.show_obj)
+        #     sickbeard.trakt_checker_scheduler.action.manageNewShow(self.show_obj)
         #
         #     # add show to trakt.tv library
         #     if sickbeard.TRAKT_SYNC:
-        #         sickbeard.traktCheckerScheduler.action.addShowToTraktLibrary(self.show_obj)
+        #         sickbeard.trakt_checker_scheduler.action.addShowToTraktLibrary(self.show_obj)
 
         # Load XEM data to DB for show
         sickbeard.scene_numbering.xem_refresh(self.show_obj.tvid, self.show_obj.prodid, force=True)
@@ -855,7 +855,7 @@ class QueueItemAdd(ShowQueueItem):
         # if started with WANTED eps then run the backlog
         if WANTED == self.default_status or items_wanted:
             logger.log('Launching backlog for this show since episodes are WANTED')
-            sickbeard.backlogSearchScheduler.action.search_backlog([self.show_obj])
+            sickbeard.backlog_search_scheduler.action.search_backlog([self.show_obj])
             ui.notifications.message('Show added/search', 'Adding and searching for episodes of' + msg)
         else:
             ui.notifications.message('Show added', 'Adding' + msg)
@@ -1021,8 +1021,8 @@ class QueueItemUpdate(ShowQueueItem):
         if not sickbeard.TVInfoAPI(self.show_obj.tvid).config['active']:
             logger.log('TV info source %s is marked inactive, aborting update for show %s and continue with refresh.'
                        % (sickbeard.TVInfoAPI(self.show_obj.tvid).config['name'], self.show_obj.name))
-            sickbeard.showQueueScheduler.action.refreshShow(self.show_obj, self.force, self.scheduled_update,
-                                                            after_update=True)
+            sickbeard.show_queue_scheduler.action.refreshShow(self.show_obj, self.force, self.scheduled_update,
+                                                              after_update=True)
             return
 
         logger.log('Beginning update of %s' % self.show_obj.name)
@@ -1104,9 +1104,9 @@ class QueueItemUpdate(ShowQueueItem):
 
         if self.priority != generic_queue.QueuePriorities.NORMAL:
             self.kwargs['priority'] = self.priority
-        sickbeard.showQueueScheduler.action.refreshShow(self.show_obj, self.force, self.scheduled_update,
-                                                        after_update=True, force_image_cache=self.force_web,
-                                                        **self.kwargs)
+        sickbeard.show_queue_scheduler.action.refreshShow(self.show_obj, self.force, self.scheduled_update,
+                                                          after_update=True, force_image_cache=self.force_web,
+                                                          **self.kwargs)
 
 
 class QueueItemForceUpdate(QueueItemUpdate):

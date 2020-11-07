@@ -186,12 +186,12 @@ class ShowUpdater(object):
                     # otherwise just refresh
                     if cur_show_obj.should_update(update_date=update_date) \
                             or cur_show_obj.tvid_prodid in stale_should_update:
-                        cur_queue_item = sickbeard.showQueueScheduler.action.updateShow(cur_show_obj,
-                                                                                        scheduled_update=True)
+                        cur_queue_item = sickbeard.show_queue_scheduler.action.updateShow(cur_show_obj,
+                                                                                          scheduled_update=True)
                     else:
                         logger.log(u'Not updating episodes for show %s because it\'s marked as ended and last/next'
                                    u' episode is not within the grace period.' % cur_show_obj.name, logger.DEBUG)
-                        cur_queue_item = sickbeard.showQueueScheduler.action.refreshShow(cur_show_obj, True, True)
+                        cur_queue_item = sickbeard.show_queue_scheduler.action.refreshShow(cur_show_obj, True, True)
 
                     pi_list.append(cur_queue_item)
 
@@ -199,7 +199,7 @@ class ShowUpdater(object):
                     logger.log(u'Automatic update failed: ' + ex(e), logger.ERROR)
 
             if len(pi_list):
-                sickbeard.showQueueScheduler.action.daily_update_running = True
+                sickbeard.show_queue_scheduler.action.daily_update_running = True
 
             ui.ProgressIndicators.setIndicator('dailyUpdate', ui.QueueProgressIndicator('Daily Update', pi_list))
 

@@ -178,7 +178,7 @@
 								<span class="component-desc">
 									<input type="checkbox" name="version_notify" id="version_notify"#echo ('', $checked)[$sg_var('VERSION_NOTIFY', True)]#>
 									<p>and display notifications when updates are available.
-									Checks are run on startup and at the frequency set below*</p>
+									Checks are run on startup and at the interval set below*</p>
 								</span>
 							</label>
 						</div>
@@ -189,7 +189,7 @@
 								<span class="component-desc">
 									<input type="checkbox" name="auto_update" id="auto_update"#echo ('', $checked)[$sg_var('AUTO_UPDATE')]#>
 									<p>fetch and install software updates.
-									Updates are run on startup and in the background at the frequency set below<sup>1</sup></p>
+									Updates are run on startup and in the background at the interval set below<sup>1</sup></p>
 								</span>
 							</label>
 						</div>
@@ -198,7 +198,7 @@
 							<label>
 								<span class="component-title">Check the server every<sup>1</sup></span>
 								<span class="component-desc">
-									<input type="text" name="update_frequency" id="update_frequency" value="$sg_var('UPDATE_FREQUENCY', 12)" class="form-control input-sm input75">
+									<input type="text" name="update_interval" id="update_interval" value="$sg_var('UPDATE_INTERVAL', 12)" class="form-control input-sm input75">
 									<p>hours for software updates (default:12)</p>
 								</span>
 							</label>

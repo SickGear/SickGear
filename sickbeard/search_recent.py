@@ -31,6 +31,6 @@ class RecentSearcher(object):
         self.amActive = True
 
         recentsearch_queue_item = sickbeard.search_queue.RecentSearchQueueItem()
-        sickbeard.searchQueueScheduler.action.add_item(recentsearch_queue_item)
+        sickbeard.search_queue_scheduler.action.add_item(recentsearch_queue_item)
 
         self.amActive = False

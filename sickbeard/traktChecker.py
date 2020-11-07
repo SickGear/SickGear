@@ -184,10 +184,10 @@ class TraktChecker(object):
                 else:
                     helpers.chmod_as_parent(showPath)
 
-                sickbeard.showQueueScheduler.action.addShow(int(tvid), int(prod_id), showPath, status,
-                                                            int(sickbeard.QUALITY_DEFAULT),
-                                                            int(sickbeard.FLATTEN_FOLDERS_DEFAULT),
-                                                            paused=sickbeard.TRAKT_START_PAUSED)
+                sickbeard.show_queue_scheduler.action.addShow(int(tvid), int(prod_id), showPath, status,
+                                                              int(sickbeard.QUALITY_DEFAULT),
+                                                              int(sickbeard.FLATTEN_FOLDERS_DEFAULT),
+                                                              paused=sickbeard.TRAKT_START_PAUSED)
             else:
                 logger.log(u"There was an error creating the show, no root directory setting found", logger.ERROR)
                 return
@@ -210,7 +210,7 @@ class TraktChecker(object):
                 ep_obj.save_to_db()
 
             backlog_queue_item = search_queue.BacklogQueueItem(show_obj, [ep_obj])
-            sickbeard.searchQueueScheduler.action.add_item(backlog_queue_item)
+            sickbeard.search_queue_scheduler.action.add_item(backlog_queue_item)
 
             logger.log(u"Starting backlog for " + show_obj.name + " season " + str(
                     s) + " episode " + str(e) + " because some eps were set to wanted")

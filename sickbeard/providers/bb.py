@@ -33,7 +33,7 @@ class BBProvider(generic.TorrentProvider):
 
     def __init__(self):
 
-        generic.TorrentProvider.__init__(self, 'bB', cache_update_freq=15)
+        generic.TorrentProvider.__init__(self, 'bB', cache_update_iv=15)
 
         self.url_base = [re.sub(r'(?i)[qx\sz]+', '', x[::-1]) for x in [
             'HaQ', 'c0Rz', 'MH', 'yL6', 'NW Yi9', 'pJmbv', 'Hd', 'buMz', 'wLn J3', '=xXx=']]

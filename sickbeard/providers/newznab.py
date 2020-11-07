@@ -1083,7 +1083,7 @@ class NewznabProvider(generic.NZBProvider):
             if self.should_skip(log_warning=False):
                 break
 
-            search_params = {'q': search_terms[index], 'maxage': sickbeard.BACKLOG_DAYS + 2}
+            search_params = {'q': search_terms[index], 'maxage': sickbeard.BACKLOG_LIMITED_PERIOD + 2}
             # if alt_search:
             #
             #     if do_search_alt:
@@ -1145,9 +1145,7 @@ class NewznabProvider(generic.NZBProvider):
 class NewznabCache(tvcache.TVCache):
 
     def __init__(self, provider):
-        tvcache.TVCache.__init__(self, provider)
-
-        self.update_freq = 5  # type: int
+        tvcache.TVCache.__init__(self, provider, interval=5)
 
     # helper method to read the namespaces from xml
     @staticmethod
@@ -1178,7 +1176,7 @@ class NewznabCache(tvcache.TVCache):
         :param needed: needed qualites class
         :param kwargs:
         """
-        if 4489 != sickbeard.RECENTSEARCH_FREQUENCY or self.should_update():
+        if 4489 != sickbeard.RECENTSEARCH_INTERVAL or self.should_update():
             n_spaces = {}
             try:
                 check = self._checkAuth()

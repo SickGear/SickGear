@@ -92,7 +92,7 @@
 										<select id="emby-watched-interval" name="emby_watched_interval" class="form-control input-sm view-if">
 											<option value="0"#if not $sg_var('EMBY_WATCHEDSTATE_SCHEDULED')#${selected}#end if#>Off </option>
     #for v in [10, 15, 30, 45, 60]
-											<option value="$v"#if $sg_var('EMBY_WATCHEDSTATE_SCHEDULED') and $v == $sg_var('EMBY_WATCHEDSTATE_FREQUENCY')#${selected}#end if#>$v #if not $sg_var('EMBY_WATCHEDSTATE_SCHEDULED') and $v == $sg_var('EMBY_WATCHEDSTATE_FREQUENCY')#(recent) #end if#</option>
+											<option value="$v"#if $sg_var('EMBY_WATCHEDSTATE_SCHEDULED') and $v == $sg_var('EMBY_WATCHEDSTATE_INTERVAL')#${selected}#end if#>$v #if not $sg_var('EMBY_WATCHEDSTATE_SCHEDULED') and $v == $sg_var('EMBY_WATCHEDSTATE_INTERVAL')#(recent) #end if#</option>
     #end for
 										</select>
 										<span>minutes to fetch episode watched states for the history page</span>
@@ -328,7 +328,7 @@
 											<select id="plex-watched-interval" name="plex_watched_interval" class="form-control input-sm view-if">
 												<option value="0"#if not $sg_var('PLEX_WATCHEDSTATE_SCHEDULED')#${selected}#end if#>Off </option>
 #for v in [10, 15, 30, 45, 60]
-												<option value="$v"#if $sg_var('PLEX_WATCHEDSTATE_SCHEDULED') and $v == $sg_var('PLEX_WATCHEDSTATE_FREQUENCY')#${selected}#end if#>$v #if not $sg_var('PLEX_WATCHEDSTATE_SCHEDULED') and $v == $sg_var('PLEX_WATCHEDSTATE_FREQUENCY')#(recent) #end if#</option>
+												<option value="$v"#if $sg_var('PLEX_WATCHEDSTATE_SCHEDULED') and $v == $sg_var('PLEX_WATCHEDSTATE_INTERVAL')#${selected}#end if#>$v #if not $sg_var('PLEX_WATCHEDSTATE_SCHEDULED') and $v == $sg_var('PLEX_WATCHEDSTATE_INTERVAL')#(recent) #end if#</option>
 #end for
 											</select>
 											<span>minutes to fetch episode watched states for the history page</span>

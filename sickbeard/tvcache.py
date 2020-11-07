@@ -54,12 +54,12 @@ class CacheDBConnection(db.DBConnection):
 
 
 class TVCache(object):
-    def __init__(self, provider):
-
+    def __init__(self, provider, interval=10):
+        # type: (AnyStr, int) -> None
         self.provider = provider
         self.providerID = self.provider.get_id()
         self.providerDB = None
-        self.update_freq = 10  # type: int
+        self.update_iv = interval
 
     @staticmethod
     def get_db():
@@ -255,7 +255,7 @@ class TVCache(object):
         :rtype: bool
         """
         # if we've updated recently then skip the update
-        return datetime.datetime.now() - self.lastUpdate >= datetime.timedelta(minutes=self.update_freq)
+        return datetime.datetime.now() - self.lastUpdate >= datetime.timedelta(minutes=self.update_iv)
 
     def should_clear_cache(self):
         """
