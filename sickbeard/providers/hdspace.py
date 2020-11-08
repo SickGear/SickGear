@@ -32,7 +32,7 @@ from six import iteritems
 class HDSpaceProvider(generic.TorrentProvider):
 
     def __init__(self):
-        generic.TorrentProvider.__init__(self, 'HDSpace', cache_update_freq=15)
+        generic.TorrentProvider.__init__(self, 'HDSpace', cache_update_iv=15)
 
         self.url_base = 'https://hd-space.org/'
         self.urls = {'config_provider_home_uri': self.url_base,

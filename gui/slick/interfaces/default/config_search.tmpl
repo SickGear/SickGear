@@ -81,10 +81,10 @@
 
 						<div class="field-pair">
 							<label>
-								<span class="component-title">Recent search frequency</span>
+								<span class="component-title">Recent search interval</span>
 								<span class="component-desc">
-									<input type="text" name="recentsearch_frequency" value="$sickbeard.RECENTSEARCH_FREQUENCY" class="form-control input-sm input75">
-									<p>minutes between checking recent updated shows (minimum $sickbeard.MIN_RECENTSEARCH_FREQUENCY)</p>
+									<input type="text" name="recentsearch_interval" value="$sickbeard.RECENTSEARCH_INTERVAL" class="form-control input-sm input75">
+									<p>minutes between checking recent updated shows (minimum $sickbeard.MIN_RECENTSEARCH_INTERVAL)</p>
 								</span>
 							</label>
 						</div>
@@ -93,7 +93,7 @@
 							<label>
 								<span class="component-title">Limited backlog search</span>
 								<span class="component-desc">
-									<input type="text" name="backlog_days" value="$sickbeard.BACKLOG_DAYS" class="form-control input-sm input75">
+									<input type="text" name="backlog_limited_period" value="$sickbeard.BACKLOG_LIMITED_PERIOD" class="form-control input-sm input75">
 									<p>day(s) that the limited search will cover (e.g. 7)</p>
 								</span>
 							</label>
@@ -121,8 +121,8 @@
 							<label>
 								<span class="component-title">Backlog search spread</span>
 								<span class="component-desc">
-									<input type="text" name="backlog_frequency" value="$sickbeard.BACKLOG_FREQUENCY" class="form-control input-sm input75">
-									<p>days to spread full backlog searches over (min $sickbeard.MIN_BACKLOG_FREQUENCY, default $sickbeard.DEFAULT_BACKLOG_FREQUENCY, max $sickbeard.MAX_BACKLOG_FREQUENCY)</p>
+									<input type="text" name="backlog_period" value="$sickbeard.BACKLOG_PERIOD" class="form-control input-sm input75">
+									<p>days to spread full backlog searches over (min $sickbeard.MIN_BACKLOG_PERIOD, default $sickbeard.DEFAULT_BACKLOG_PERIOD, max $sickbeard.MAX_BACKLOG_PERIOD)</p>
 								</span>
 							</label>
 						</div>

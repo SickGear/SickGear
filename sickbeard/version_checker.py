@@ -60,7 +60,7 @@ class CheckVersion(object):
             if sickbeard.AUTO_UPDATE:
                 logger.log(u'New update found for SickGear, starting auto-updater...')
                 ui.notifications.message('New update found for SickGear, starting auto-updater')
-                if sickbeard.versionCheckScheduler.action.update():
+                if sickbeard.version_check_scheduler.action.update():
                     logger.log(u'Update was successful!')
                     ui.notifications.message('Update was successful')
                     sickbeard.events.put(sickbeard.events.SystemEvent.RESTART)

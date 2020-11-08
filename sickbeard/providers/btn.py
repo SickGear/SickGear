@@ -368,13 +368,11 @@ class BTNProvider(generic.TorrentProvider):
 class BTNCache(tvcache.TVCache):
 
     def __init__(self, this_provider):
-        tvcache.TVCache.__init__(self, this_provider)
-
-        self.update_freq = 15
+        tvcache.TVCache.__init__(self, this_provider, interval=15)
 
     def _cache_data(self, **kwargs):
 
-        return self.provider.cache_data(age=self._getLastUpdate().timetuple(), min_time=self.update_freq)
+        return self.provider.cache_data(age=self._getLastUpdate().timetuple(), min_time=self.update_iv)
 
 
 provider = BTNProvider()

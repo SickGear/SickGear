@@ -554,7 +554,7 @@ class SickGear(object):
         # Start an update if we're supposed to
         if self.force_update or sickbeard.UPDATE_SHOWS_ON_START:
             sickbeard.classes.loading_msg.message = 'Starting a forced show update'
-            sickbeard.showUpdateScheduler.action.run()
+            sickbeard.show_update_scheduler.action.run()
 
         sickbeard.classes.loading_msg.message = 'Switching to default web server'
         time.sleep(2)
@@ -686,7 +686,7 @@ class SickGear(object):
 
             if sickbeard.events.SystemEvent.RESTART == ev_type:
 
-                install_type = sickbeard.versionCheckScheduler.action.install_type
+                install_type = sickbeard.version_check_scheduler.action.install_type
 
                 popen_list = []
 

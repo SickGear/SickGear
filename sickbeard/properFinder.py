@@ -57,7 +57,7 @@ def search_propers(provider_proper_obj=None):
 
     logger.log(('Checking Propers from recent search', 'Beginning search for new Propers')[None is provider_proper_obj])
 
-    age_shows, age_anime = sickbeard.BACKLOG_DAYS + 2, 14
+    age_shows, age_anime = sickbeard.BACKLOG_LIMITED_PERIOD + 2, 14
     aired_since_shows = datetime.datetime.now() - datetime.timedelta(days=age_shows)
     aired_since_anime = datetime.datetime.now() - datetime.timedelta(days=age_anime)
     recent_shows, recent_anime = _recent_history(aired_since_shows, aired_since_anime)
@@ -74,7 +74,7 @@ def search_propers(provider_proper_obj=None):
     if None is provider_proper_obj:
         _set_last_proper_search(datetime.datetime.now())
 
-        proper_sch = sickbeard.properFinderScheduler
+        proper_sch = sickbeard.proper_finder_scheduler
         if None is proper_sch.start_time:
             run_in = proper_sch.lastRun + proper_sch.cycleTime - datetime.datetime.now()
             run_at = ', next check '
@@ -572,7 +572,7 @@ def get_needed_qualites(needed=None):
     if not sickbeard.DOWNLOAD_PROPERS or needed.all_needed:
         return needed
 
-    age_shows, age_anime = sickbeard.BACKLOG_DAYS + 2, 14
+    age_shows, age_anime = sickbeard.BACKLOG_LIMITED_PERIOD + 2, 14
     aired_since_shows = datetime.datetime.now() - datetime.timedelta(days=age_shows)
     aired_since_anime = datetime.datetime.now() - datetime.timedelta(days=age_anime)
 
@@ -671,7 +671,7 @@ def _set_last_proper_search(when):
 
 
 def next_proper_timeleft():
-    return sickbeard.properFinderScheduler.timeLeft()
+    return sickbeard.proper_finder_scheduler.timeLeft()
 
 
 def get_last_proper_search():

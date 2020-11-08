@@ -31,7 +31,7 @@ from six import iteritems
 class FunFileProvider(generic.TorrentProvider):
 
     def __init__(self):
-        generic.TorrentProvider.__init__(self, 'FunFile', cache_update_freq=15)
+        generic.TorrentProvider.__init__(self, 'FunFile', cache_update_iv=15)
 
         self.url_base = 'https://www.funfile.org/'
         self.urls = {'config_provider_home_uri': self.url_base,

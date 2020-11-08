@@ -420,8 +420,8 @@ def set_nfo_uid_updated(*args, **kwargs):
     from .. import db
     if not db.DBConnection().has_flag('kodi_nfo_uid'):
         db.DBConnection().set_flag('kodi_nfo_uid')
-    sickbeard.showQueueScheduler.action.remove_event(sickbeard.show_queue.DAILY_SHOW_UPDATE_FINISHED_EVENT,
-                                                     set_nfo_uid_updated)
+    sickbeard.show_queue_scheduler.action.remove_event(sickbeard.show_queue.DAILY_SHOW_UPDATE_FINISHED_EVENT,
+                                                       set_nfo_uid_updated)
 
 
 def remove_default_attr(*args, **kwargs):

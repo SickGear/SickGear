@@ -36,6 +36,6 @@ class ProperSearcher(object):
         self.amActive = True
 
         propersearch_queue_item = sickbeard.search_queue.ProperSearchQueueItem()
-        sickbeard.searchQueueScheduler.action.add_item(propersearch_queue_item)
+        sickbeard.search_queue_scheduler.action.add_item(propersearch_queue_item)
 
         self.amActive = False

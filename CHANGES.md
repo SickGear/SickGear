@@ -69,6 +69,7 @@
 * Change add response rate limit handling for generic providers
 * Change add newznab retry handling
 * Change add 2s interval fetch retry for Github as it can sometimes return no data
+* Change rename misuse of terminology `frequency` to `interval`
 
 
 [develop changelog]
