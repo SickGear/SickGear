@@ -1,6 +1,8 @@
 ﻿### 0.21.16 (2020-11-10 20:15:00 UTC)
 
 * Fix anime name parser tests failing on assumed season number 1
+* Change increase number of IMDb ID digits parsed in TVDb lib
+* Change add Trakt requested guidance to the log for locked user accounts
 
 
 ### 0.21.15 (2020-11-09 14:10:00 UTC)
