@@ -49,6 +49,7 @@
 * Update attr 20.1.0.dev0 (4bd6827) to 20.2.0 (4f74fba)
 * Update Beautiful Soup 4.8.2 (r559) to 4.9.3 (r593)
 * Update cachecontrol library 0.12.5 (007e8ca) to 0.12.6 (167a605)
+* Update certifi 2020.06.20 to 2020.11.08
 * Update dateutil 2.8.1 (43b7838) to 2.8.1 (c496b4f)
 * Change add diskcache_py3 5.0.1 (9670fbb)
 * Change add diskcache_py2 4.1.0 (b0451e0)
