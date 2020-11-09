@@ -1,5 +1,6 @@
 ﻿### 0.23.0 (2019-xx-xx xx:xx:xx UTC)
 
+* Change improve search performance for backlog, manual, failed, and proper
 * Add overview of the last release age/date at each newznab provider to History/Layout "Connect fails" 
 * Add "History new..." to Shows menu by clicking the number
 * Add db backup to the scheduled daily update

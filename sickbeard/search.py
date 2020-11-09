@@ -710,6 +710,70 @@ def can_reject(release_name):
     return pred and (None, None) or (predb_rej or True,  ', '.join(rej_urls))
 
 
+def _search_provider_thread(provider, provider_results, show_obj, ep_obj_list, manual_search, try_other_searches):
+    # type: (GenericProvider, Dict, TVShow, List[TVEpisode], bool, bool) -> None
+    """
+    perform a search on a provider for specified show, episodes
+
+    :param provider: Provider to search
+    :param provider_results: reference to dict to return results
+    :param show_obj: show to search for
+    :param ep_obj_list: list of episodes to search for
+    :param manual_search: is manual search
+    :param try_other_searches: try other search methods
+    """
+    search_count = 0
+    search_mode = getattr(provider, 'search_mode', 'eponly')
+
+    while True:
+        search_count += 1
+
+        if 'eponly' == search_mode:
+            logger.log(u'Performing episode search for %s' % show_obj.name)
+        else:
+            logger.log(u'Performing season pack search for %s' % show_obj.name)
+
+        try:
+            provider.cache._clearCache()
+            search_result_list = provider.find_search_results(show_obj, ep_obj_list, search_mode, manual_search,
+                                                              try_other_searches=try_other_searches)
+            if any(search_result_list):
+                logger.log(', '.join(['%s %s candidate%s' % (
+                    len(v), (('multiep', 'season')[SEASON_RESULT == k], 'episode')['ep' in search_mode],
+                    helpers.maybe_plural(v)) for (k, v) in iteritems(search_result_list)]))
+        except exceptions_helper.AuthException as e:
+            logger.error(u'Authentication error: %s' % ex(e))
+            break
+        except (BaseException, Exception) as e:
+            logger.error(u'Error while searching %s, skipping: %s' % (provider.name, ex(e)))
+            logger.error(traceback.format_exc())
+            break
+
+        if len(search_result_list):
+            # make a list of all the results for this provider
+            for cur_search_result in search_result_list:
+                # skip non-tv crap
+                search_result_list[cur_search_result] = filter_list(
+                    lambda ep_item: ep_item.show_obj == show_obj and show_name_helpers.pass_wordlist_checks(
+                        ep_item.name, parse=False, indexer_lookup=False, show_obj=ep_item.show_obj),
+                    search_result_list[cur_search_result])
+
+                if cur_search_result in provider_results:
+                    provider_results[cur_search_result] += search_result_list[cur_search_result]
+                else:
+                    provider_results[cur_search_result] = search_result_list[cur_search_result]
+
+            break
+        elif not getattr(provider, 'search_fallback', False) or 2 == search_count:
+            break
+
+        search_mode = '%sonly' % ('ep', 'sp')['ep' in search_mode]
+        logger.log(u'Falling back to %s search ...' % ('season pack', 'episode')['ep' in search_mode])
+
+    if not provider_results:
+        logger.log('No suitable result at [%s]' % provider.name)
+
+
 def search_providers(
         show_obj,  # type: TVShow
         ep_obj_list,  # type: List[TVEpisode]
@@ -736,6 +800,7 @@ def search_providers(
     final_results = []
 
     search_done = False
+    search_threads = []
 
     orig_thread_name = threading.currentThread().name
 
@@ -743,71 +808,39 @@ def search_providers(
                      getattr(x, 'enable_backlog', None) and
                      (not torrent_only or GenericProvider.TORRENT == x.providerType) and
                      (not scheduled or getattr(x, 'enable_scheduled_backlog', None))]
+
+    # create a thread for each provider to search
     for cur_provider in provider_list:
         if cur_provider.anime_only and not show_obj.is_anime:
             logger.log(u'%s is not an anime, skipping' % show_obj.name, logger.DEBUG)
             continue
 
-        threading.currentThread().name = '%s :: [%s]' % (orig_thread_name, cur_provider.name)
         provider_id = cur_provider.get_id()
 
         found_results[provider_id] = {}
+        search_threads.append(threading.Thread(target=_search_provider_thread,
+                                               kwargs={'cur_provider': cur_provider,
+                                                       'provider_results': found_results[provider_id],
+                                                       'show_obj': show_obj,
+                                                       'ep_obj_list': ep_obj_list,
+                                                       'manual_search': manual_search,
+                                                       'try_other_searches': try_other_searches},
+                                               name='%s :: [%s]' % (orig_thread_name, cur_provider.name)))
 
-        search_count = 0
-        search_mode = getattr(cur_provider, 'search_mode', 'eponly')
+        # start the provider search thread
+        search_threads[-1].start()
+        search_done = True
 
-        while True:
-            search_count += 1
+    # wait for all searches to finish
+    for s_t in search_threads:
+        s_t.join()
 
-            if 'eponly' == search_mode:
-                logger.log(u'Performing episode search for %s' % show_obj.name)
-            else:
-                logger.log(u'Performing season pack search for %s' % show_obj.name)
-
-            search_result_list = {}
-            try:
-                cur_provider.cache._clearCache()
-                search_result_list = cur_provider.find_search_results(show_obj, ep_obj_list, search_mode, manual_search,
-                                                                      try_other_searches=try_other_searches)
-                if any(search_result_list):
-                    logger.log(', '.join(['%s %s candidate%s' % (
-                        len(v), (('multiep', 'season')[SEASON_RESULT == k], 'episode')['ep' in search_mode],
-                        helpers.maybe_plural(v)) for (k, v) in iteritems(search_result_list)]))
-            except exceptions_helper.AuthException as e:
-                logger.log(u'Authentication error: %s' % ex(e), logger.ERROR)
-                break
-            except (BaseException, Exception) as e:
-                logger.log(u'Error while searching %s, skipping: %s' % (cur_provider.name, ex(e)), logger.ERROR)
-                logger.log(traceback.format_exc(), logger.ERROR)
-                break
-            finally:
-                threading.currentThread().name = orig_thread_name
-
-            search_done = True
-
-            if len(search_result_list):
-                # make a list of all the results for this provider
-                for cur_search_result in search_result_list:
-                    # skip non-tv crap
-                    search_result_list[cur_search_result] = filter_list(
-                        lambda ep_item: ep_item.show_obj == show_obj and show_name_helpers.pass_wordlist_checks(
-                            ep_item.name, parse=False, indexer_lookup=False, show_obj=ep_item.show_obj),
-                        search_result_list[cur_search_result])
-
-                    if cur_search_result in found_results:
-                        found_results[provider_id][cur_search_result] += search_result_list[cur_search_result]
-                    else:
-                        found_results[provider_id][cur_search_result] = search_result_list[cur_search_result]
-
-                break
-            elif not getattr(cur_provider, 'search_fallback', False) or 2 == search_count:
-                break
-
-            search_mode = '%sonly' % ('ep', 'sp')['ep' in search_mode]
-            logger.log(u'Falling back to %s search ...' % ('season pack', 'episode')['ep' in search_mode])
+    # now look in all the results
+    for cur_provider in provider_list:
+        provider_id = cur_provider.get_id()
 
         # skip to next provider if we have no results to process
-        if not len(found_results[provider_id]):
+        if provider_id not in found_results or not len(found_results[provider_id]):
             continue
 
         any_qualities, best_qualities = Quality.splitQuality(show_obj.quality)
@@ -823,8 +856,7 @@ def search_providers(
             for cur_result in found_results[provider_id][cur_episode]:
                 if Quality.UNKNOWN != cur_result.quality and highest_quality_overall < cur_result.quality:
                     highest_quality_overall = cur_result.quality
-        logger.log(u'%s is the highest quality of any match' % Quality.qualityStrings[highest_quality_overall],
-                   logger.DEBUG)
+        logger.debug(u'%s is the highest quality of any match' % Quality.qualityStrings[highest_quality_overall])
 
         # see if every episode is wanted
         if best_season_result:
@@ -1077,8 +1109,7 @@ def search_providers(
             break
 
     if not len(provider_list):
-        logger.log('No NZB/Torrent providers in Media Providers/Options are allowed for active searching',
-                   logger.WARNING)
+        logger.warning('No NZB/Torrent providers in Media Providers/Options are allowed for active searching')
     elif not search_done:
         logger.log('Failed active search of %s enabled provider%s. More info in debug log.' % (
             len(provider_list), helpers.maybe_plural(provider_list)), logger.ERROR)
