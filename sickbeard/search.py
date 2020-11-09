@@ -819,12 +819,11 @@ def search_providers(
 
         found_results[provider_id] = {}
         search_threads.append(threading.Thread(target=_search_provider_thread,
-                                               kwargs={'cur_provider': cur_provider,
-                                                       'provider_results': found_results[provider_id],
-                                                       'show_obj': show_obj,
-                                                       'ep_obj_list': ep_obj_list,
-                                                       'manual_search': manual_search,
-                                                       'try_other_searches': try_other_searches},
+                                               kwargs=dict(provider=cur_provider,
+                                                           provider_results=found_results[provider_id],
+                                                           show_obj=show_obj, ep_obj_list=ep_obj_list,
+                                                           manual_search=manual_search,
+                                                           try_other_searches=try_other_searches),
                                                name='%s :: [%s]' % (orig_thread_name, cur_provider.name)))
 
         # start the provider search thread

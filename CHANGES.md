@@ -87,6 +87,7 @@
 * Change improve performance of History new
 * Fix initialise history_tab_limit during restart loading
 * Fix removing old backup db files
+* Fix search param
 
 
 ### 0.21.15 (2020-11-09 14:10:00 UTC)
