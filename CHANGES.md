@@ -72,6 +72,7 @@
 * Change add newznab retry handling
 * Change add 2s interval fetch retry for Github as it can sometimes return no data
 * Change rename misuse of terminology `frequency` to `interval`
+* Change add Trakt requested guidance to the log for locked user accounts
 
 
 [develop changelog]
