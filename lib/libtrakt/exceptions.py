@@ -39,3 +39,7 @@ class TraktServerError(TraktException):
         else:
             args = tuple(['Server Error: %s' % self.error_code])
         super(TraktServerError, self).__init__(*args, **kwargs)
+
+
+class TraktLockedUserAccount(TraktException):
+    pass

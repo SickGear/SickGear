@@ -332,6 +332,14 @@ class TraktAPI(object):
                     time.sleep(wait_seconds)
                 return self.trakt_request(path, data, headers, url, count=count, sleep_retry=sleep_retry,
                                           send_oauth=send_oauth, method=method)
+            elif 423 == code:
+                # locked account
+                log.error('An application that is NOT SickGear has flooded the Trakt API and they have locked access'
+                          ' to your account. They request you contact their support at https://support.trakt.tv/'
+                          ' This is not a fault of SickGear because it does *not* sync data or send the type of data'
+                          ' that triggers a Trakt access lock.'
+                          ' SickGear may only send a notification on a media process completion if set up for it.')
+                raise TraktLockedUserAccount()
             else:
                 log.error(u'Could not connect to Trakt. Code error: {0}'.format(code))
                 raise TraktException('Could not connect to Trakt. Code error: %s' % code)
