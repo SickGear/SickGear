@@ -88,6 +88,11 @@
 * Fix removing old backup db files
 
 
+### 0.21.15 (2020-11-09 14:10:00 UTC)
+
+* Fix IMDb cards not always displayed as `in library`
+
+
 ### 0.21.14 (2020-11-06 21:55:00 UTC)
 
 * Fix RarBG in cases where home page cannot be reached

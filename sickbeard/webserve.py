@@ -4073,7 +4073,8 @@ class AddShows(Home):
                         url_src_db='https://www.imdb.com/%s/' % url_path.strip('/'),
                         votes=0 if not len(voting) else helpers.try_int(voting, 'TBA')))
 
-                    show_obj = filter_list(lambda so: so.imdbid == ids['imdb'], sickbeard.showList)[0]
+                    show_obj = helpers.find_show_by_id({TVINFO_IMDB: int(ids['imdb'].replace('tt', ''))},
+                                                       no_mapped_ids=False)
                     for tvid in filter_iter(lambda _tvid: _tvid == show_obj.tvid, sickbeard.TVInfoAPI().search_sources):
                         infosrc_slug, infosrc_url = (sickbeard.TVInfoAPI(tvid).config[x] for x in
                                                      ('slug', 'show_url'))
