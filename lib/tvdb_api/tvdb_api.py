@@ -450,7 +450,7 @@ class Tvdb(TVInfoBase):
                             v = None
                     elif 'imdbid' == k:
                         if v:
-                            if re.search(r'^(tt)?\d{1,7}$', v, flags=re.I):
+                            if re.search(r'^(tt)?\d{1,9}$', v, flags=re.I):
                                 v = clean_data(v)
                             else:
                                 v = ''

@@ -269,6 +269,29 @@ def get_imdbid_by_name(name, startyear):
     return {k: v for k, v in iteritems(ids) if v not in (None, '', 0)}
 
 
+def check_imdbid_by_id(name, startyear, imdb_id):
+    # type: (AnyStr, int, int) -> bool
+    """
+    check if the name and start year match the imdb id
+
+    :param name: name
+    :param startyear: start year
+    :param imdb_id: imdb id
+    :return: match bool
+    """
+    try:
+        res = Imdb(exclude_episodes=True,
+                   cachedir=ek.ek(os.path.join, sickbeard.CACHE_DIR, 'imdb-pie')).get_title_auxiliary(
+            imdb_id='tt%07d' % imdb_id)
+        name = clean_show_name(name)
+        if (str(startyear) == str(res.get('year')) or abs(try_int(startyear, 10) - try_int(res.get('year'), 1)) <= 1
+                or 1930 > try_int(startyear, 0)) and clean_show_name(res.get('title')).lower() == name.lower():
+            return True
+    except (BaseException, Exception):
+        pass
+    return False
+
+
 def check_missing_trakt_id(n_ids, show_obj, url_trakt):
     """
 
@@ -350,11 +373,13 @@ def map_indexers_to_show(show_obj, update=False, force=False, recheck=False):
                             0 < v.get('id', 0):
                 url_tvmaze[m] = v['id']
 
-        new_ids = NewIdDict()
+        new_ids = NewIdDict()  # type: NewIdDict
+        src_imdb_id = None
 
         if isinstance(show_obj.imdbid, string_types) and re.search(r'\d+$', show_obj.imdbid):
             try:
                 new_ids[TVINFO_IMDB] = try_int(re.search(r'(?:tt)?(\d+)', show_obj.imdbid).group(1))
+                src_imdb_id = new_ids[TVINFO_IMDB]
             except (BaseException, Exception):
                 pass
 
@@ -429,6 +454,10 @@ def map_indexers_to_show(show_obj, update=False, force=False, recheck=False):
 
         for i in indexer_list:
             if i != show_obj.tvid and i in mis_map and 0 != new_ids.get(i, 0):
+                if TVINFO_IMDB == i and 0 > new_ids[i] and src_imdb_id and \
+                        check_imdbid_by_id(show_obj.name, startyear=show_obj.startyear, imdb_id=src_imdb_id):
+                    mapped[i] = {'status': MapStatus.NONE, 'id': src_imdb_id}
+                    continue
                 if 0 > new_ids[i]:
                     mapped[i] = {'status': new_ids[i], 'id': 0}
                 elif force or not recheck or 0 >= mapped.get(i, {'id': 0}).get('id', 0):

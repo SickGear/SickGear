@@ -295,6 +295,40 @@ anime_regexes = [
      '''
      ),
 
+    ('anime_ep_quality',
+     # Show Name 09 HD
+     # Show Name 09 HD1234
+     # Show Name 09 SD
+     r'''
+     ^(\[(?P<release_group>.+?)\][ ._-]*)?         (?# Release Group and separator)
+     (?P<series_name>.+?)[ ._-]+                   (?# Show_Name and separator)
+     (?P<ep_ab_num>\d{1,3})                        (?# E01)
+     (-(?P<extra_ab_ep_num>\d{1,3}))?              (?# E02)
+     .*
+     (v(?P<version>[0-9]))?                        (?# version)
+     [ ._-]+(?P<extra_info>[sh]d\d{0,4}.*?)        (?# Source_Quality_Etc-)
+     (\[(?P<crc>\w{8})\])?                         (?# CRC)
+     .*?                                           (?# Separator and EOL)
+     '''
+     ),
+
+    ('anime_quality_ep',
+     # Show Name HD 09
+     # Show Name HD1234 09
+     # Show Name SD 09
+     r'''
+     ^(\[(?P<release_group>.+?)\][ ._-]*)?         (?# Release Group and separator)
+     (?P<series_name>.+?)[ ._-]+                   (?# Show_Name and separator)
+     (?P<extra_info>[sh]d\d{0,4}.*?)[ ._-]+        (?# Source_Quality_Etc-)
+     (\[(?P<crc>\w{8})\])?                         (?# CRC)
+     (?P<ep_ab_num>\d{1,3})                        (?# E01)
+     (-(?P<extra_ab_ep_num>\d{1,3}))?              (?# E02)
+     .*
+     (v(?P<version>[0-9]))?                        (?# version)
+     .*?                                           (?# Separator and EOL)
+     '''
+     ),
+
     ('anime_slash',
      # [SGKK] Bleach 312v1 [720p/MKV]
      r'''
