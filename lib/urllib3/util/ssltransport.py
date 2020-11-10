@@ -42,7 +42,7 @@ class SSLTransport:
                 )
 
     def __init__(
-        self, socket, ssl_context, suppress_ragged_eofs=True, server_hostname=None
+        self, socket, ssl_context, server_hostname=None, suppress_ragged_eofs=True
     ):
         """
         Create an SSLTransport around socket using the provided ssl_context.
@@ -184,19 +184,18 @@ class SSLTransport:
         self.socket._decref_socketios()
 
     def _wrap_ssl_read(self, len, buffer=None):
-        response = None
         try:
-            response = self._ssl_io_loop(self.sslobj.read, len, buffer)
+            return self._ssl_io_loop(self.sslobj.read, len, buffer)
         except ssl.SSLError as e:
             if e.errno == ssl.SSL_ERROR_EOF and self.suppress_ragged_eofs:
-                response = 0  # eof, return 0.
+                return 0  # eof, return 0.
             else:
                 raise
-        return response
 
     def _ssl_io_loop(self, func, *args):
         """ Performs an I/O loop between incoming/outgoing and the socket."""
         should_loop = True
+        ret = None
 
         while should_loop:
             errno = None

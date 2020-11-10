@@ -65,7 +65,7 @@
 * Update soupsieve_py2 backport
 * Update Tornado_py3 Web Server 6.0.4 (b4e39e5) to 6.1.0 (2047e7a)
 * Update tmdbsimple 2.2.6 (310d933) to 2.6.6 (679e343)
-* Update urllib3 1.25.9 (a5a45dc) to 1.25.11 (5eb604f)
+* Update urllib3 1.25.9 (a5a45dc) to 1.25.11 (00f1769)
 * Change add remove duplicates in newznab provider list based on name and url
 * Change remove old provider dupe cleanup
 * Change add response rate limit handling for generic providers
@@ -81,6 +81,7 @@
 * Update Requests library 2.24.0 (967a05b) to 2.24.0 (2f70990)
 * Fix update Soupsieve (05086ef) broke MC and TVC browse cards
 * Update urllib3 1.26.0.dev0 (41eae64) to 1.25.11 (5eb604f) 
+* Update urllib3 1.25.11 (5eb604f) to 1.25.11 (00f1769)
 * Change move scantree to sg_helpers to prevent circular reference of it ever again
 * Update included fallback timezone info file to 2020c
 * Change use natural time for age if now is night time and the last recent is yesterday evening, otherwise output age as 'yesterday'
