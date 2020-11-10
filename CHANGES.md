@@ -72,7 +72,6 @@
 * Change add newznab retry handling
 * Change add 2s interval fetch retry for Github as it can sometimes return no data
 * Change rename misuse of terminology `frequency` to `interval`
-* Change add Trakt requested guidance to the log for locked user accounts
 
 
 [develop changelog]
@@ -89,6 +88,13 @@
 * Fix initialise history_tab_limit during restart loading
 * Fix removing old backup db files
 * Fix search param
+
+
+### 0.21.16 (2020-11-10 20:15:00 UTC)
+
+* Fix anime name parser tests failing on assumed season number 1
+* Change increase number of IMDb ID digits parsed in TVDb lib
+* Change add Trakt requested guidance to the log for locked user accounts
 
 
 ### 0.21.15 (2020-11-09 14:10:00 UTC)

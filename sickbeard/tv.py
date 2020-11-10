@@ -53,7 +53,7 @@ from .generic_queue import QueuePriorities
 from .name_parser.parser import NameParser, InvalidNameException, InvalidShowException
 from .helpers import try_int, try_float
 from .indexermapper import del_mapping, save_mapping, MapStatus
-from .indexers.indexer_config import TVINFO_TVDB, TVINFO_TVRAGE
+from .indexers.indexer_config import TVINFO_IMDB, TVINFO_TVDB, TVINFO_TVRAGE
 from tvinfo_base.exceptions import *
 from .sgdatetime import SGDatetime, timestamp_near
 from .tv_base import TVEpisodeBase, TVShowBase
@@ -1305,7 +1305,16 @@ class TVShow(TVShowBase):
         self.network = self.dict_prevent_nonetype(ep_info, 'network')
         self.runtime = self.dict_prevent_nonetype(ep_info, 'runtime')
 
+        old_imdb = self.imdbid
         self.imdbid = self.dict_prevent_nonetype(ep_info, 'imdb_id')
+        if old_imdb != self.imdbid:
+            try:
+                imdb_id = try_int(self.imdbid.replace('tt', ''), None)
+                mapped_imdb = self.ids.get(TVINFO_IMDB, {'id': 0})['id']
+                if imdb_id != mapped_imdb:
+                    indexermapper.map_indexers_to_show(self, recheck=True)
+            except (BaseException, Exception):
+                pass
 
         if None is not getattr(ep_info, 'airs_dayofweek', None) and None is not getattr(ep_info, 'airs_time', None):
             self.airs = ('%s %s' % (ep_info['airs_dayofweek'], ep_info['airs_time'])).strip()

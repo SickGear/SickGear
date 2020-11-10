@@ -628,11 +628,9 @@ class NameParser(object):
                 and not final_result.ab_episode_numbers and not final_result.series_name:
             raise InvalidNameException('Unable to parse %s' % name.encode(sickbeard.SYS_ENCODING, 'xmlcharrefreplace'))
 
-        if final_result.show_obj and final_result.show_obj.is_anime:
-            if None is final_result.season_number:
-                final_result.season_number = 1  # assign season number or finish_find_search_results will fail
-            if not final_result.release_group:
-                final_result.release_group = release_group  # use provider id or pick_best_result fails
+        if final_result.show_obj and final_result.show_obj.is_anime \
+                and not final_result.release_group and None is not release_group:
+            final_result.release_group = release_group  # use provider ID otherwise pick_best_result fails
 
         if cache_result:
             name_parser_cache.add(name, final_result)

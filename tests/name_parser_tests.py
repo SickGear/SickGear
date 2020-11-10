@@ -223,6 +223,20 @@ simple_test_cases = {
         'Show.Name.123-11001001': parser.ParseResult(None, 'Show Name', None, [], None, None, None, [123]),
     },
 
+    'anime_ep_quality': {
+        'Show Name 09 HD': parser.ParseResult(None, 'Show Name', None, [], 'HD', None, None, [9]),
+        'Show Name 09 SD': parser.ParseResult(None, 'Show Name', None, [], 'SD', None, None, [9]),
+        'Show Name 09 HD720': parser.ParseResult(None, 'Show Name', None, [], 'HD720', None, None, [9]),
+        'Show Name HD1080 09': parser.ParseResult(None, 'Show Name', None, [], 'HD1080', None, None, [9]),
+    },
+
+    'anime_quality_ep': {
+        'Show Name HD 09': parser.ParseResult(None, 'Show Name', None, [], 'HD', None, None, [9]),
+        'Show Name SD 09': parser.ParseResult(None, 'Show Name', None, [], 'SD', None, None, [9]),
+        'Show Name HD720 09': parser.ParseResult(None, 'Show Name', None, [], 'HD720', None, None, [9]),
+        'Show Name HD1080 09': parser.ParseResult(None, 'Show Name', None, [], 'HD1080', None, None, [9]),
+    },
+
     'anime_ep_name': {
         '[TzaTziki]_One_Piece_279_Chopper_Man_1_[720p][8AE5F25D]':
             parser.ParseResult(None, 'One Piece', None, [], '720p', 'TzaTziki', None, [279]),
@@ -650,6 +664,14 @@ class BasicTests(unittest.TestCase):
     def test_anime_standard(self):
         np = parser.NameParser(False, TVShowTest(is_anime=True), testing=True)
         self._test_names(np, 'anime_standard')
+
+    def test_anime_ep_quality(self):
+        np = parser.NameParser(False, TVShowTest(is_anime=True), testing=True)
+        self._test_names(np, 'anime_ep_quality')
+
+    def test_anime_quality_ep(self):
+        np = parser.NameParser(False, TVShowTest(is_anime=True), testing=True)
+        self._test_names(np, 'anime_quality_ep')
 
     def test_anime_ep_name(self):
         np = parser.NameParser(False, TVShowTest(is_anime=True), testing=True)
