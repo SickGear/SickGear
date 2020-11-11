@@ -82,17 +82,19 @@ $(function(){
 		.on('click', function(e){
 			e.stopPropagation();
 			e.preventDefault();
-			var that = $(this), viewing='add-show', view='added-last', t;
-			if (viewing === that.attr('data-view')){
-				t = viewing;
-				viewing = view;
-				view = t;
+			var that = $(this), view=['add-tab1', 'add-tab2', 'add-tab3'], i, is, to;
+			for(i = 0; i < view.length; i++){
+				if (view[i] === that.attr('data-view')){
+					is = view[i];
+					to = view[((i + 1) === view.length) ? 0 : i + 1];
+					break;
+				}
 			}
-			that.attr('data-view', viewing);
+			that.attr('data-view', to);
 			that.closest('.dropdown-menu')
-				.find('.' + viewing).fadeOut('fast', 'linear', function(){
+				.find('.' + is).fadeOut('fast', 'linear', function(){
 					that.closest('.dropdown-menu')
-						.find('.' + view).fadeIn('fast', 'linear', function(){
+						.find('.' + to).fadeIn('fast', 'linear', function(){
 							return !1;
 					});
 				});

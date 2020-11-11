@@ -16,10 +16,12 @@ import stat
 import subprocess
 import tempfile
 import threading
+import time
 import traceback
 
 from exceptions_helper import ex, ConnectionSkipException
 from lib.cachecontrol import CacheControl, caches
+from lib.tmdbsimple.configuration import Configuration
 from cfscrape import CloudflareScraper
 from send2trash import send2trash
 
@@ -27,14 +29,26 @@ from send2trash import send2trash
 import encodingKludge as ek
 import requests
 
-from _23 import decode_bytes, filter_list, html_unescape, urlparse, urlsplit, urlunparse
+from _23 import decode_bytes, filter_list, html_unescape, list_range, scandir, urlparse, urlsplit, urlunparse
 from six import integer_types, iteritems, iterkeys, itervalues, PY2, string_types, text_type
+
+import zipfile
+try:
+    import py7zr
+except ImportError:
+    py7zr = None
 
 # noinspection PyUnreachableCode
 if False:
     # noinspection PyUnresolvedReferences
-    from typing import Any, AnyStr, Dict, NoReturn, integer_types, Iterable, Iterator, List, Optional, Tuple, Union
+    from typing import Any, AnyStr, Dict, Generator, NoReturn, integer_types, Iterable, Iterator, List, Optional, \
+        Tuple, Union
     from lxml_etree import etree
+    from _23 import DirEntry
+
+# global tmdb_info cache
+_TMDB_INFO_CACHE = {'date': datetime.datetime(2000, 1, 1), 'data': None}
+
 
 # Mapping error status codes to official W3C names
 http_error_code = {
@@ -832,13 +846,19 @@ def get_url(url,  # type: AnyStr
 
             response = session.post(url, timeout=timeout, **kwargs)
         else:
-            response = session.get(url, timeout=timeout, **kwargs)
-            if response.ok and not response.content and 'url=' in response.headers.get('Refresh', '').lower():
-                url = response.headers.get('Refresh').lower().split('url=')[1].strip('/')
-                if not url.startswith('http'):
-                    parsed[2] = '/%s' % url
-                    url = urlunparse(parsed)
+            for r in range(0, 5):
                 response = session.get(url, timeout=timeout, **kwargs)
+                if response.ok and not response.content:
+                    if 'url=' in response.headers.get('Refresh', '').lower():
+                        url = response.headers.get('Refresh').lower().split('url=')[1].strip('/')
+                        if not url.startswith('http'):
+                            parsed[2] = '/%s' % url
+                            url = urlunparse(parsed)
+                        response = session.get(url, timeout=timeout, **kwargs)
+                    elif 'github' in url:
+                        time.sleep(2)
+                        continue
+                break
 
         # if encoding is not in header try to use best guess
         # ignore downloads with savename
@@ -966,19 +986,6 @@ def file_bit_filter(mode):
             mode -= bit
 
     return mode
-
-
-def remove_file_failed(filename):
-    """
-    delete given file
-
-    :param filename: filename
-    :type filename: AnyStr
-    """
-    try:
-        ek.ek(os.remove, filename)
-    except (BaseException, Exception):
-        pass
 
 
 def chmod_as_parent(child_path):
@@ -1135,6 +1142,34 @@ def move_file(src_file, dest_file):
         ek.ek(os.unlink, src_file)
 
 
+def remove_file_perm(filepath, log_err=True):
+    # type: (AnyStr, Optional[bool]) -> Optional[bool]
+    """
+    Remove file
+
+    :param filepath: Path and file name
+    :param log_err: False to suppress log msgs
+    :return True if filepath does not exist else None if no removal
+    """
+    if not ek.ek(os.path.exists, filepath):
+        return True
+    for t in list_range(10):  # total seconds to wait 0 - 9 = 45s over 10 iterations
+        try:
+            ek.ek(os.remove, filepath)
+        except OSError as e:
+            if getattr(e, 'winerror', 0) not in (5, 32):  # 5=access denied (e.g. av), 32=another process has lock
+                if log_err:
+                    logger.warning('Unable to delete %s: %r / %s' % (filepath, e, ex(e)))
+                return
+        except (BaseException, Exception):
+            pass
+        time.sleep(t)
+        if not ek.ek(os.path.exists, filepath):
+            return True
+    if log_err:
+        logger.warning('Unable to delete %s' % filepath)
+
+
 def remove_file(filepath, tree=False, prefix_failure='', log_level=logging.INFO):
     """
     Remove file based on setting for trash v permanent delete
@@ -1152,19 +1187,25 @@ def remove_file(filepath, tree=False, prefix_failure='', log_level=logging.INFO)
     """
     result = None
     if filepath:
-        try:
-            result = 'Deleted'
-            if TRASH_REMOVE_SHOW:
-                result = 'Trashed'
-                ek.ek(send2trash, filepath)
-            elif tree:
-                ek.ek(shutil.rmtree, filepath)
-            else:
-                ek.ek(os.remove, filepath)
-        except OSError as e:
-            logger.log(level=log_level, msg=u'%sUnable to %s %s %s: %s' %
-                                            (prefix_failure, ('delete', 'trash')[TRASH_REMOVE_SHOW],
-                                             ('file', 'dir')[tree], filepath, ex(e)))
+        for t in list_range(10):  # total seconds to wait 0 - 9 = 45s over 10 iterations
+            try:
+                result = 'Deleted'
+                if TRASH_REMOVE_SHOW:
+                    result = 'Trashed'
+                    ek.ek(send2trash, filepath)
+                elif tree:
+                    ek.ek(shutil.rmtree, filepath)
+                else:
+                    ek.ek(os.remove, filepath)
+            except OSError as e:
+                if getattr(e, 'winerror', 0) not in (5, 32):  # 5=access denied (e.g. av), 32=another process has lock
+                    logger.log(level=log_level, msg=u'%sUnable to %s %s %s: %s' %
+                                                    (prefix_failure, ('delete', 'trash')[TRASH_REMOVE_SHOW],
+                                                     ('file', 'dir')[tree], filepath, ex(e)))
+                    break
+            time.sleep(t)
+            if not ek.ek(os.path.exists, filepath):
+                break
 
     return (None, result)[filepath and not ek.ek(os.path.exists, filepath)]
 
@@ -1305,3 +1346,76 @@ def indent_xml(elem, level=0):
             elem.text = ('%s' % elem.text).replace('\n', ' ')
         if level and (not elem.tail or not elem.tail.strip()):
             elem.tail = i
+
+
+def get_tmdb_info():
+    # type: (...) -> Dict
+    """return tmdbsimple Configuration().info() or cached copy"""
+    global _TMDB_INFO_CACHE
+    # only retrieve info data if older then 3 days
+    if 3 < (datetime.datetime.now() - _TMDB_INFO_CACHE['date']).days or not _TMDB_INFO_CACHE['data']:
+        _TMDB_INFO_CACHE = {'date': datetime.datetime.now(), 'data': Configuration().info()}
+    return _TMDB_INFO_CACHE['data']
+
+
+def compress_file(target, filename, prefer_7z=True, remove_source=True):
+    # type: (AnyStr, AnyStr, bool, bool) -> bool
+    """
+    compress given file to zip or 7z archive
+
+    :param target: file to compress with full path
+    :param filename: filename inside the archive
+    :param prefer_7z: prefer 7z over zip compression if available
+    :param remove_source: remove source file after successful creation of archive
+    :return: success of compression
+    """
+    try:
+        if prefer_7z and None is not py7zr:
+            z_name = '%s.7z' % target.rpartition('.')[0]
+            with py7zr.SevenZipFile(z_name, 'w') as z_file:
+                z_file.write(target, filename)
+        else:
+            zip_name = '%s.zip' % target.rpartition('.')[0]
+            with zipfile.ZipFile(zip_name, 'w', zipfile.ZIP_DEFLATED) as zip_fh:
+                zip_fh.write(target, filename)
+    except (BaseException, Exception) as e:
+        logger.error('error compressing %s' % target)
+        logger.debug('traceback: %s' % ex(e))
+        return False
+    if remove_source:
+        remove_file_perm(target)
+    return True
+
+
+def scantree(path,  # type: AnyStr
+             exclude=None,  # type: Optional[AnyStr, List[AnyStr]]
+             include=None,  # type: Optional[AnyStr, List[AnyStr]]
+             follow_symlinks=False,  # type: bool
+             filter_kind=None,  # type: Optional[bool]
+             recurse=True  # type: bool
+             ):
+    # type: (...) -> Generator[DirEntry, None, None]
+    """Yield DirEntry objects for given path. Returns without yield if path fails sanity check
+
+    :param path: Path to scan, sanity check is_dir and exists
+    :param exclude: Escaped regex string(s) to exclude
+    :param include: Escaped regex string(s) to include
+    :param follow_symlinks: Follow symlinks
+    :param filter_kind: None to yield everything, True yields directories, False yields files
+    :param recurse: Recursively scan the tree
+    """
+    if isinstance(path, string_types) and path and ek.ek(os.path.isdir, path):
+        rc_exc, rc_inc = [re.compile(rx % '|'.join(
+            [x for x in (param, ([param], [])[None is param])[not isinstance(param, list)]]))
+                          for rx, param in ((r'(?i)^(?:(?!%s).)*$', exclude), (r'(?i)%s', include))]
+        for entry in ek.ek(scandir, path):
+            is_dir = entry.is_dir(follow_symlinks=follow_symlinks)
+            is_file = entry.is_file(follow_symlinks=follow_symlinks)
+            no_filter = any([None is filter_kind, filter_kind and is_dir, not filter_kind and is_file])
+            if (rc_exc.search(entry.name), True)[not exclude] and (rc_inc.search(entry.name), True)[not include] \
+                    and (no_filter or (not filter_kind and is_dir and recurse)):
+                if recurse and is_dir:
+                    for subentry in scantree(entry.path, exclude, include, follow_symlinks, filter_kind, recurse):
+                        yield subentry
+                if no_filter:
+                    yield entry

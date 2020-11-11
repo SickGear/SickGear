@@ -60,7 +60,7 @@ class CheckVersion(object):
             if sickbeard.AUTO_UPDATE:
                 logger.log(u'New update found for SickGear, starting auto-updater...')
                 ui.notifications.message('New update found for SickGear, starting auto-updater')
-                if sickbeard.versionCheckScheduler.action.update():
+                if sickbeard.version_check_scheduler.action.update():
                     logger.log(u'Update was successful!')
                     ui.notifications.message('Update was successful')
                     sickbeard.events.put(sickbeard.events.SystemEvent.RESTART)
@@ -402,8 +402,9 @@ class GitUpdateManager(UpdateManager):
                                                          % (sickbeard.GIT_REMOTE, self._cur_pr_number, self.branch))
 
         else:
-            output, err, exit_status = self._run_git(self._git_path, 'checkout -f %s'
-                                                     % self.branch)
+            output, err, exit_status = self._run_git(self._git_path, 'fetch %s' % sickbeard.GIT_REMOTE)
+            output, err, exit_status = self._run_git(self._git_path, 'checkout -f -B "%s" "%s/%s"'
+                                                     % (self.branch, sickbeard.GIT_REMOTE, self.branch))
 
         if 0 == exit_status:
             self._find_installed_version()

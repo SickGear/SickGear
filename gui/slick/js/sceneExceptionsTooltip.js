@@ -1,6 +1,9 @@
 $(function () {
-    $('.title span').each(function () {
-        var match = $(this).parent().attr('id').match(/^scene_exception_(.*)$/);
+    $('.title span, [id^="season"] .title').each(function () {
+        var match = $(this).parent().attr('id').match(/^scene_exception_(.*)$/)
+        if (undefined == typeof (match) || !match) {
+            match = $(this).parent().attr('id').match(/^season-([^-]+)-(\d+)$/);
+        }
         $(this).qtip({
             content: {
                 text: function(event, api) {
@@ -9,7 +12,8 @@ $(function () {
                         url: $.SickGear.Root + '/home/scene-exceptions',
                         type: 'GET',
                         data: {
-                            tvid_prodid: match[1]
+                            tvid_prodid: match[1],
+                            wanted_season: 3 === match.length ? match[2] : ''
                         }
                     })
                     .then(function(content) {

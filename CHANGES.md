@@ -1,4 +1,83 @@
-﻿### 0.21.16 (2020-11-10 20:15:00 UTC)
+﻿### 0.23.0 (2020-11-11 13:30:00 UTC)
+
+* Change improve search performance for backlog, manual, failed, and proper
+* Add overview of the last release age/date at each newznab provider to History/Layout "Connect fails" 
+* Add "History new..." to Shows menu by clicking the number
+* Add db backup to the scheduled daily update
+* Add display "Database backups" location at config/about if feature available
+* Add option "Backup database plan" to config/general/advanced if feature available
+* Add py7zr to recommended.txt for optional 7z compression
+* Add `backup_db_path` setting to config.ini to customise backup db location
+* Add `backup_db_max_count` to config.ini with range 0-90 where 0 = disable backup, 14 = default
+* Change improve list performance for file/directory browser
+* Change improve import shows listing performance
+* Change improve performance during show rescan process
+* Change improve performance during media processing
+* Change improve scantree performance with regex params of what to include and/or exclude
+* Change rename remove_file_failed to remove_file_perm and make it return an outcome
+* Add config/General/Updates/Alias Process button, minimum interval for a fetch of custom names/numbering is 30 mins
+* Add Export alternatives button to edit show
+* Change season specific alt names now available not just for anime
+* Change improve tooltip over show title in display show for multiple alternatives
+* Add display season alternatives on hover over season titles in display show
+* Change single digit season display to zero-padded double digits in edit show
+* Change add note on edit show for season specific search rule
+* Add mark next to season titles that have exceptions
+* Add support for centralised sg alternative names and numbers
+* Change sg alts can overwrite scene number field only if field value is blank
+* Change add note on edit show for season specific search rule
+* Change add has_season_exceptions to control newznab id search
+* Change add season exceptions to torrent providers
+* Change give remove_file functions time to process
+* Add ignore folders that contain ".sickgearignore" flag file
+* Change add 3 days cache for tmdb base info only
+* Change `Discordapp` to `Discord` in line with company change
+* Change remove `app` from URL when calling webhook
+* Change remind user when testing Notifications config / Discord to update URL
+* Change Trim/Clear history to hide items because the data is needed for core management
+* Fix incorrect text for some drop down list items in the apiBuilder view that affected some browsers
+* Fix connection skip error handling in tvdb_api
+* Add client parameter to pp class and add it to API sg.postprocess
+* Change API version to 14
+* Change add a test for both require and ignore show specific words with partial match, both should fail
+* Change expand to all providers, and season results, applying filters to .torrent content and not just search result...
+  name for where a found torrent result `named.this` contains `name.that` and ignore `that` did not ignore `named.this`
+* Change init showDict for all unit tests
+* Change add error handling for zoneinfo update file parsing
+* Change downgrade network conversions/timezone warnings on startup to debug level
+* Add enum34 1.1.10
+* Add humanize 3.1.0 (aec9dc2)
+* Add Torrent file parse 0.3.0 (2a4eecb)
+* Update included fallback timezone info file to 2020d
+* Update attr 20.1.0.dev0 (4bd6827) to 20.2.0 (4f74fba)
+* Update Beautiful Soup 4.8.2 (r559) to 4.9.3 (r593)
+* Update cachecontrol library 0.12.5 (007e8ca) to 0.12.6 (167a605)
+* Update certifi 2020.06.20 to 2020.11.08
+* Update dateutil 2.8.1 (43b7838) to 2.8.1 (c496b4f)
+* Change add diskcache_py3 5.0.1 (9670fbb)
+* Change add diskcache_py2 4.1.0 (b0451e0)
+* Update feedparser_py3 6.0.0b3 (7e255f0) to 6.0.1 (98d189fa)
+* Update feedparser_py2 backport
+* Update hachoir_py3 3.0a6 (5b9e05a) to 3.1.2 (f739b43)
+* Update hachoir_py2 2.0a6 (5b9e05a) to 2.1.2
+* Update Js2Py 0.70 (f297498) to 0.70 (92250a4)
+* Update package resource API to 49.6.0 (3d404fd)
+* Update profilehooks module 1.11.2 (d72cc2b) to 1.12.0 (3ee1f60)
+* Update Requests library 2.24.0 (1b41763) to 2.24.0 (2f70990)
+* Update soupsieve_py3 2.0.0.final (e66c311) to 2.0.2.dev (05086ef)
+* Update soupsieve_py2 backport
+* Update Tornado_py3 Web Server 6.0.4 (b4e39e5) to 6.1.0 (2047e7a)
+* Update tmdbsimple 2.2.6 (310d933) to 2.6.6 (679e343)
+* Update urllib3 1.25.9 (a5a45dc) to 1.25.11 (00f1769)
+* Change add remove duplicates in newznab provider list based on name and url
+* Change remove old provider dupe cleanup
+* Change add response rate limit handling for generic providers
+* Change add newznab retry handling
+* Change add 2s interval fetch retry for Github as it can sometimes return no data
+* Change rename misuse of terminology `frequency` to `interval`
+
+
+### 0.21.16 (2020-11-10 20:15:00 UTC)
 
 * Fix anime name parser tests failing on assumed season number 1
 * Change increase number of IMDb ID digits parsed in TVDb lib

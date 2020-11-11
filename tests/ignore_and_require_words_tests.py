@@ -138,6 +138,8 @@ class TestCase(unittest.TestCase):
          True, TVShow(r={'nothing', 'nothing2', 'required'})),
         ('[GroupName].Show.TWO.-.%02d.[something]-required', '', 'GroupName, Show,TWO',
          True, TVShow(r={'nothing', 'nothing2', 'something', 'nothing3'})),
+        ('[GroupName].Show.TWO.-.%02d.[something]-required', '', 'GroupName, Show,TWO',
+         False, TVShow(r={'noth', 'noth2', 'some', 'nothing3'})),  # partial word and not acceptable
 
         # show specific required and ignore words
         ('[GroupName].Show.TWO.-.%02d.[something]-required', '', '',
@@ -150,6 +152,8 @@ class TestCase(unittest.TestCase):
          False, TVShow(r={'required'}, i={'something'})),
         ('[GroupName].Show.TWO.-.%02d.[something]-required', 'notthis', 'something',
          False, TVShow(r={'required', 'else'}, i={'something'})),
+        ('[GroupName].Show.TWO.-.%02d.[something]-required', 'notthis', 'something',
+         True, TVShow(r={'required', 'else'}, i={'some'})),  # partial word and not acceptable
         ('[GroupName].Show.TWO.-.%02d.[something]-required', 'notthis', 'something',
          True, TVShow(r={'required', 'else'}, i={'nothing'})),
 

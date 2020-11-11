@@ -322,12 +322,12 @@ class ImageCache(object):
                                   ['imsg_%s_%s' % ((image_type, self.FANART)[None is image_type], provider)])
 
         if sql_result:
-            minutes_freq = 60 * 3
-            # daily_freq = 60 * 60 * 23
-            freq = minutes_freq
+            minutes_iv = 60 * 3
+            # daily_interval = 60 * 60 * 23
+            iv = minutes_iv
             now_stamp = int(timestamp_near(datetime.datetime.now()))
             the_time = int(sql_result[0]['time'])
-            return now_stamp - the_time > freq
+            return now_stamp - the_time > iv
 
         return True
 

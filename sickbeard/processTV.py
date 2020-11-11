@@ -44,7 +44,7 @@ from .sgdatetime import timestamp_near
 
 from _23 import filter_list, filter_iter, list_values, map_iter
 from six import iteritems, iterkeys, string_types, PY2, text_type
-from sg_helpers import long_path
+from sg_helpers import long_path, scantree
 
 import lib.rarfile.rarfile as rarfile
 
@@ -58,7 +58,7 @@ if False:
 class ProcessTVShow(object):
     """ Process a TV Show """
 
-    def __init__(self, webhandler=None, is_basedir=True, skip_failure_processing=False):
+    def __init__(self, webhandler=None, is_basedir=True, skip_failure_processing=False, client=None):
         self.files_passed = 0  # type: int
         self.files_failed = 0  # type: int
         self.fail_detected = False  # type: bool
@@ -66,6 +66,7 @@ class ProcessTVShow(object):
         self._output = []  # type: List
         self.webhandler = webhandler
         self.is_basedir = is_basedir  # type: bool
+        self.client = client  # type: Optional[AnyStr]
 
     @property
     def any_vid_processed(self):
@@ -135,8 +136,8 @@ class ProcessTVShow(object):
         if sickbeard.TV_DOWNLOAD_DIR and helpers.real_path(sickbeard.TV_DOWNLOAD_DIR) == helpers.real_path(folder):
             return False
 
-        # check if it's empty folder when wanted checked
-        if check_empty and ek.ek(os.listdir, folder):
+        # test if folder empty when check wanted
+        if check_empty and len([direntry.path for direntry in scantree(folder, recurse=False)]):
             return False
 
         # try deleting folder
@@ -378,6 +379,7 @@ class ProcessTVShow(object):
         rar_content = self._unrar(path, rar_files, force)
         if self.fail_detected:
             self._process_failed(dir_name, nzb_name, show_obj=show_obj)
+            self.update_history_tab()
             return self.result
         rar_content = [x for x in rar_content if not helpers.is_link(ek.ek(os.path.join, path, x))]
         path, dirs, files = self._get_path_dir_files(dir_name, nzb_name, pp_type)
@@ -531,6 +533,8 @@ class ProcessTVShow(object):
 
         notifiers.notify_update_library(ep_obj=None, flush_q=True)
 
+        self.update_history_tab()
+
         if self.any_vid_processed:
             if not self.files_failed:
                 _bottom_line(u'Successfully processed.', logger.MESSAGE)
@@ -541,6 +545,11 @@ class ProcessTVShow(object):
             _bottom_line(u'Failed! Did not process any files.', logger.WARNING)
 
         return self.result
+
+    @staticmethod
+    def update_history_tab():
+        from .webserve import History
+        sickbeard.MEMCACHE['history_tab'] = History.menu_tab(sickbeard.MEMCACHE['history_tab_limit'])
 
     @staticmethod
     def unused_archives(path, archives, pp_type, process_method, archive_history=None):
@@ -1161,7 +1170,7 @@ class ProcessTVShow(object):
 # backward compatibility prevents the case of this function name from being updated to PEP8
 def processDir(dir_name, nzb_name=None, process_method=None, force=False, force_replace=None,
                failed=False, pp_type='auto', cleanup=False, webhandler=None, show_obj=None, is_basedir=True,
-               skip_failure_processing=False):
+               skip_failure_processing=False, client=None):
     """
 
     :param dir_name: dir name
@@ -1188,12 +1197,15 @@ def processDir(dir_name, nzb_name=None, process_method=None, force=False, force_
     :type is_basedir: bool
     :param skip_failure_processing:
     :type skip_failure_processing: bool
+    :param client: string to represent the client
+    :type client: Optional[AnyStr]
     :return:
     :rtype: AnyStr
     """
     # backward compatibility prevents the case of this function name from being updated to PEP8
-    return ProcessTVShow(webhandler, is_basedir, skip_failure_processing=skip_failure_processing).process_dir(
-        dir_name, nzb_name, process_method, force, force_replace, failed, pp_type, cleanup, show_obj)
+    return ProcessTVShow(webhandler, is_basedir, skip_failure_processing=skip_failure_processing,
+                         client=client).process_dir(dir_name, nzb_name, process_method, force, force_replace, failed,
+                                                    pp_type, cleanup, show_obj)
 
 
 def process_minimal(nzb_name, show_obj, failed, webhandler):

@@ -33,7 +33,7 @@ class AlphaRatioProvider(generic.TorrentProvider):
 
     def __init__(self):
 
-        generic.TorrentProvider.__init__(self, 'AlphaRatio', cache_update_freq=15)
+        generic.TorrentProvider.__init__(self, 'AlphaRatio', cache_update_iv=15)
 
         self.url_base = 'https://alpharatio.cc/'
         self.urls = {'config_provider_home_uri': self.url_base,

@@ -1029,6 +1029,16 @@ home.tmpl
 	background-image:linear-gradient(to left, rgba(223, 218, 207, 1), rgba(223, 218, 207, 0))
 }
 
+.exception-divider{
+	margin:3px 0
+}
+
+.season-mark-exception{
+	font-size:12px;
+	vertical-align:super;
+	margin-right:-6px
+}
+
 .show-toggle-hide{
 	position:absolute;
 	top:272px;
@@ -2765,6 +2775,14 @@ history.tmpl
 	background-color:#3f993f
 }
 
+.yellow-bg{
+	background-color:#cfd958;
+	color:#282828
+}
+.blue-bg{
+	background-color:#2779d0
+}
+
 #history-table td,
 #history-table td.provider span{
 	text-align:center
@@ -4034,8 +4052,19 @@ fieldset[disabled] .navbar-default .btn-link:focus{
 	float:right
 }
 
-.dropdown-menu .added-last .truncate{
+.dropdown-menu ul[class*="nav"][class*="add-tab"] .truncate{
 	max-width:135px
+}
+
+.add-tab3 a span{
+	margin:0 6px 0 -3px;
+	-webkit-border-radius:5px;
+	   -moz-border-radius:5px;
+			border-radius:5px
+}
+
+.add-tab3 a i{
+	margin: 0 2px !important
 }
 
 .truncate{
@@ -4078,7 +4107,7 @@ fieldset[disabled] .navbar-default .btn-link:focus{
 	font-size:0.7em
 }
 
-.dropdown-menu .added-last{
+.dropdown-menu .default-off{
 	display:none
 }
 

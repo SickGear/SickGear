@@ -99,7 +99,7 @@
 	<div id="$cur_list_id" class="clearfix container" style="clear:both#if 'poster' == $layout#;padding:0#end if#">
 		<div class="posterview">
         ##
-        #for $curLoadingShow in $sickbeard.showQueueScheduler.action.loadingShowList
+        #for $curLoadingShow in $sickbeard.show_queue_scheduler.action.loadingShowList
             ##
             #if $curLoadingShow.show_obj != None and $curLoadingShow.show_obj in $sg_str('showList')
                 #continue
@@ -291,7 +291,7 @@
 		</tfoot>
 
 		<tbody>
-        #for $curLoadingShow in $sickbeard.showQueueScheduler.action.loadingShowList
+        #for $curLoadingShow in $sickbeard.show_queue_scheduler.action.loadingShowList
             #if $curLoadingShow.show_obj != None and $curLoadingShow.show_obj in $sg_str('showList')
                 #continue
             #end if

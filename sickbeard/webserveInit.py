@@ -26,8 +26,10 @@ class MyApplication(Application):
 
     def __init__(self, *args, **kwargs):
         super(MyApplication, self).__init__(*args, **kwargs)
+        self.is_loading_handler = False  # type: bool
 
     def reset_handlers(self):
+        self.is_loading_handler = False
         self.wildcard_router = _ApplicationRouter(self, [])
         self.default_router = _ApplicationRouter(self, [
             Rule(AnyMatches(), self.wildcard_router)
@@ -108,6 +110,7 @@ class WebServer(threading.Thread):
         self._add_loading_rules()
 
     def _add_loading_rules(self):
+        self.app.is_loading_handler = True
         # webui login/logout handlers
         self.app.add_handlers(self.re_host_pattern, [
             (r'%s/login(/?)' % self.options['web_root'], webserve.LoginHandler),
@@ -147,6 +150,7 @@ class WebServer(threading.Thread):
         self.app.add_handlers(r'.*', [(r'.*', webserve.WrongHostWebHandler)])
 
     def _add_default_rules(self):
+        self.app.is_loading_handler = False
         # webui login/logout handlers
         self.app.add_handlers(self.re_host_pattern, [
             (r'%s/login(/?)' % self.options['web_root'], webserve.LoginHandler),

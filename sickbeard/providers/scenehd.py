@@ -30,7 +30,7 @@ from six import iteritems
 class SceneHDProvider(generic.TorrentProvider):
 
     def __init__(self):
-        generic.TorrentProvider.__init__(self, 'SceneHD', cache_update_freq=15)
+        generic.TorrentProvider.__init__(self, 'SceneHD', cache_update_iv=15)
 
         self.url_home = ['https://scenehd.org/']
 

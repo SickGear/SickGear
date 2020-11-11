@@ -4,18 +4,23 @@ from hachoir_py3.stream import InputIOStream, InputSubStream, InputStreamError
 
 def FileInputStream(filename, real_filename=None, **args):
     """
-    Create an input stream of a file. filename must be unicode.
+    Create an input stream of a file. filename must be unicode or a file
+    object.
 
     real_filename is an optional argument used to specify the real filename,
     its type can be 'str' or 'unicode'. Use real_filename when you are
     not able to convert filename to real unicode string (ie. you have to
     use unicode(name, 'replace') or unicode(name, 'ignore')).
     """
-    assert isinstance(filename, str)
     if not real_filename:
-        real_filename = filename
+        real_filename = (filename if isinstance(filename, str)
+                         else getattr(filename, 'name', ''))
     try:
-        inputio = open(real_filename, 'rb')
+        if isinstance(filename, str):
+            inputio = open(real_filename, 'rb')
+        else:
+            inputio = filename
+            filename = getattr(filename, 'name', '')
     except IOError as err:
         errmsg = str(err)
         raise InputStreamError(

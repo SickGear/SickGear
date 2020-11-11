@@ -44,6 +44,7 @@ import exceptions_helper
 # noinspection PyPep8Naming
 import encodingKludge as ek
 import sg_helpers
+from sg_helpers import scantree
 
 import sickbeard
 from . import classes, clients, config, db, helpers, history, image_cache, logger, naming, \
@@ -52,7 +53,7 @@ from .anime import AniGroupList, pull_anidb_groups, short_group_names
 from .browser import folders_at_path
 from .common import ARCHIVED, DOWNLOADED, FAILED, IGNORED, SKIPPED, SNATCHED, SNATCHED_ANY, UNAIRED, UNKNOWN, WANTED, \
      SD, HD720p, HD1080p, UHD2160p, Overview, Quality, qualityPresetStrings, statusStrings
-from .helpers import has_image_ext, remove_article, starify
+from .helpers import has_image_ext, remove_article, remove_file_perm, starify
 from .indexermapper import MapStatus, map_indexers_to_show, save_mapping
 from .indexers.indexer_config import TVINFO_IMDB, TVINFO_TRAKT, TVINFO_TVDB
 from .name_parser.parser import InvalidNameException, InvalidShowException, NameParser
@@ -93,12 +94,12 @@ from tvinfo_base import BaseTVinfoException
 import lib.rarfile.rarfile as rarfile
 
 from _23 import decode_bytes, decode_str, filter_list, filter_iter, getargspec, list_values, \
-    map_consume, map_iter, map_list, map_none, quote_plus, unquote_plus, urlparse
+    map_consume, map_iter, map_list, map_none, ordered_dict, quote_plus, unquote_plus, urlparse
 from six import binary_type, integer_types, iteritems, iterkeys, itervalues, PY2, string_types
 
 # noinspection PyUnreachableCode
 if False:
-    from typing import AnyStr, List, Optional
+    from typing import AnyStr, List, Optional, Tuple
 
 
 # noinspection PyAbstractClass
@@ -136,6 +137,11 @@ class PageTemplate(Template):
 
         kwargs['file'] = os.path.join(sickbeard.PROG_DIR, 'gui/%s/interfaces/default/' %
                                       sickbeard.GUI_NAME, kwargs['file'])
+
+        self.addtab_limit = sickbeard.MEMCACHE.get('history_tab_limit', 0)
+        if not web_handler.application.is_loading_handler:
+            self.history_compact = sickbeard.MEMCACHE.get('history_tab')
+
         super(PageTemplate, self).__init__(*args, **kwargs)
 
     def compile(self, *args, **kwargs):
@@ -499,12 +505,8 @@ class RepoHandler(BaseStaticFileHandler):
             def save_zip(name, version, zip_path, zip_method):
                 zip_name = '%s-%s.zip' % (name, version)
                 zip_file = ek.ek(os.path.join, zip_path, zip_name)
-                for f in helpers.scantree(zip_path, ['resources']):
-                    if f.is_file(follow_symlinks=False) and f.name[-4:] in ('.zip', '.md5'):
-                        try:
-                            ek.ek(os.remove, f.path)
-                        except OSError as e:
-                            logger.log('Unable to delete %s: %r / %s' % (f.path, e, ex(e)), logger.WARNING)
+                for direntry in helpers.scantree(zip_path, ['resources'], [r'\.(?:md5|zip)$'], filter_kind=False):
+                    remove_file_perm(direntry.path)
                 zip_data = zip_method()
                 with io.open(zip_file, 'wb') as zh:
                     zh.write(zip_data)
@@ -679,22 +681,21 @@ class RepoHandler(BaseStaticFileHandler):
         if sickbeard.ENV.get('DEVENV') and ek.ek(os.path.exists, devenv_src):
             helpers.copy_file(devenv_src, devenv_dst)
         else:
-            helpers.remove_file_failed(devenv_dst)
+            helpers.remove_file_perm(devenv_dst)
 
-        for f in helpers.scantree(zip_path):
-            if f.is_file(follow_symlinks=False) and f.name[-4:] not in '.xcf':
-                try:
-                    infile = None
-                    if 'service.sickgear.watchedstate.updater' in f.path and f.path.endswith('addon.xml'):
-                        infile = self.get_watchedstate_updater_addon_xml()
-                    if not infile:
-                        with io.open(f.path, 'rb') as fh:
-                            infile = fh.read()
+        for direntry in helpers.scantree(zip_path, exclude=[r'\.xcf$'], filter_kind=False):
+            try:
+                infile = None
+                if 'service.sickgear.watchedstate.updater' in direntry.path and direntry.path.endswith('addon.xml'):
+                    infile = self.get_watchedstate_updater_addon_xml()
+                if not infile:
+                    with io.open(direntry.path, 'rb') as fh:
+                        infile = fh.read()
 
-                    with zipfile.ZipFile(bfr, 'a') as zh:
-                        zh.writestr(ek.ek(os.path.relpath, f.path, basepath), infile, zipfile.ZIP_DEFLATED)
-                except OSError as e:
-                    logger.log('Unable to zip %s: %r / %s' % (f.path, e, ex(e)), logger.WARNING)
+                with zipfile.ZipFile(bfr, 'a') as zh:
+                    zh.writestr(ek.ek(os.path.relpath, direntry.path, basepath), infile, zipfile.ZIP_DEFLATED)
+            except OSError as e:
+                logger.log('Unable to zip %s: %r / %s' % (direntry.path, e, ex(e)), logger.WARNING)
 
         zip_data = bfr.getvalue()
         bfr.close()
@@ -1150,8 +1151,8 @@ class MainHandler(WebHandler):
 
         now = datetime.datetime.now()
         events = [
-            ('recent', sickbeard.recentSearchScheduler.timeLeft),
-            ('backlog', sickbeard.backlogSearchScheduler.next_backlog_timeleft),
+            ('recent', sickbeard.recent_search_scheduler.timeLeft),
+            ('backlog', sickbeard.backlog_search_scheduler.next_backlog_timeleft),
         ]
 
         if sickbeard.DOWNLOAD_PROPERS:
@@ -1774,10 +1775,10 @@ class Home(MainHandler):
             channel=channel, as_authed='true' == as_authed,
             bot_name=bot_name, icon_url=icon_url, access_token=access_token)
 
-    def test_discordapp(self, as_authed=False, username=None, icon_url=None, as_tts=False, access_token=None):
+    def test_discord(self, as_authed=False, username=None, icon_url=None, as_tts=False, access_token=None):
         self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
 
-        return notifiers.NotifierFactory().get('DISCORDAPP').test_notify(
+        return notifiers.NotifierFactory().get('DISCORD').test_notify(
             as_authed='true' == as_authed, username=username, icon_url=icon_url,
             as_tts='true' == as_tts, access_token=access_token)
 
@@ -1820,7 +1821,7 @@ class Home(MainHandler):
 
     def check_update(self):
         # force a check to see if there is a new version
-        if sickbeard.versionCheckScheduler.action.check_for_new_version(force=True):
+        if sickbeard.version_check_scheduler.action.check_for_new_version(force=True):
             logger.log(u'Forcing version check')
 
         self.redirect('/home/')
@@ -1895,7 +1896,7 @@ class Home(MainHandler):
         if str(pid) != str(sickbeard.PID):
             return self.redirect('/home/')
 
-        if sickbeard.versionCheckScheduler.action.update():
+        if sickbeard.version_check_scheduler.action.update():
             return self.restart(pid)
 
         return self._generic_message('Update Failed',
@@ -1909,7 +1910,7 @@ class Home(MainHandler):
     def pull_request_checkout(self, branch):
         pull_request = branch
         branch = branch.split(':')[1]
-        fetched = sickbeard.versionCheckScheduler.action.fetch(pull_request)
+        fetched = sickbeard.version_check_scheduler.action.fetch(pull_request)
         if fetched:
             sickbeard.BRANCH = branch
             ui.notifications.message('Checking out branch: ', branch)
@@ -1981,25 +1982,25 @@ class Home(MainHandler):
 
         show_message = ''
 
-        if sickbeard.showQueueScheduler.action.isBeingAdded(show_obj):
+        if sickbeard.show_queue_scheduler.action.isBeingAdded(show_obj):
             show_message = 'This show is in the process of being downloaded - the info below is incomplete.'
 
-        elif sickbeard.showQueueScheduler.action.isBeingUpdated(show_obj):
+        elif sickbeard.show_queue_scheduler.action.isBeingUpdated(show_obj):
             show_message = 'The information on this page is in the process of being updated.'
 
-        elif sickbeard.showQueueScheduler.action.isBeingRefreshed(show_obj):
+        elif sickbeard.show_queue_scheduler.action.isBeingRefreshed(show_obj):
             show_message = 'The episodes below are currently being refreshed from disk'
 
-        elif sickbeard.showQueueScheduler.action.isBeingSubtitled(show_obj):
+        elif sickbeard.show_queue_scheduler.action.isBeingSubtitled(show_obj):
             show_message = 'Currently downloading subtitles for this show'
 
-        elif sickbeard.showQueueScheduler.action.isInRefreshQueue(show_obj):
+        elif sickbeard.show_queue_scheduler.action.isInRefreshQueue(show_obj):
             show_message = 'This show is queued to be refreshed.'
 
-        elif sickbeard.showQueueScheduler.action.isInUpdateQueue(show_obj):
+        elif sickbeard.show_queue_scheduler.action.isInUpdateQueue(show_obj):
             show_message = 'This show is queued and awaiting an update.'
 
-        elif sickbeard.showQueueScheduler.action.isInSubtitleQueue(show_obj):
+        elif sickbeard.show_queue_scheduler.action.isInSubtitleQueue(show_obj):
             show_message = 'This show is queued and awaiting subtitles download.'
 
         if 0 != show_obj.not_found_count:
@@ -2012,8 +2013,8 @@ class Home(MainHandler):
                 % (sickbeard.WEB_ROOT, tvid_prodid, show_obj.prodid)
                 + ('', '<br>%s' % show_message)[0 < len(show_message)])
         t.force_update = 'home/update-show?tvid_prodid=%s&amp;force=1&amp;web=1' % tvid_prodid
-        if not sickbeard.showQueueScheduler.action.isBeingAdded(show_obj):
-            if not sickbeard.showQueueScheduler.action.isBeingUpdated(show_obj):
+        if not sickbeard.show_queue_scheduler.action.isBeingAdded(show_obj):
+            if not sickbeard.show_queue_scheduler.action.isBeingUpdated(show_obj):
                 t.submenu.append(
                     {'title': 'Remove',
                      'path': 'home/delete-show?tvid_prodid=%s' % tvid_prodid, 'confirm': True})
@@ -2036,7 +2037,7 @@ class Home(MainHandler):
                 t.submenu.append(
                     {'title': 'Media Rename',
                      'path': 'home/rename-media?tvid_prodid=%s' % tvid_prodid})
-                if sickbeard.USE_SUBTITLES and not sickbeard.showQueueScheduler.action.isBeingSubtitled(
+                if sickbeard.USE_SUBTITLES and not sickbeard.show_queue_scheduler.action.isBeingSubtitled(
                         show_obj) and show_obj.subtitles:
                     t.submenu.append(
                         {'title': 'Download Subtitles',
@@ -2110,7 +2111,8 @@ class Home(MainHandler):
                 ' WHERE indexer = ? AND showid = ?'
                 ' AND season = ?'
                 ' ORDER BY episode DESC',
-                [show_obj.tvid, show_obj.prodid, x]))]
+                [show_obj.tvid, show_obj.prodid, x]
+            ), scene_exceptions.has_season_exceptions(show_obj.tvid, show_obj.prodid, x))]
 
         for row in my_db.select('SELECT season, episode, status'
                                 ' FROM tv_episodes'
@@ -2275,16 +2277,19 @@ class Home(MainHandler):
         return 'Episode not found.' if not sql_result else (sql_result[0]['description'] or '')[:250:]
 
     @staticmethod
-    def scene_exceptions(tvid_prodid):
+    def scene_exceptions(tvid_prodid, wanted_season=None):
 
         exceptionsList = sickbeard.scene_exceptions.get_all_scene_exceptions(tvid_prodid)
-        if not exceptionsList:
-            return 'No scene exceptions'
+        wanted_season = helpers.try_int(wanted_season, None)
+        wanted_not_found = None is not wanted_season and wanted_season not in exceptionsList
+        if not exceptionsList or wanted_not_found:
+            return ('No scene exceptions', 'No season exceptions')[wanted_not_found]
 
         out = []
         for season, names in iter(sorted(iteritems(exceptionsList))):
-            out.append('S%s: %s' % ((season, '*')[-1 == season], ',<br />\n'.join(names)))
-        return '---------<br />\n'.join(out)
+            if None is wanted_season or wanted_season == season:
+                out.append('S%s: %s' % (('%02d' % season, '*')[-1 == season], ',<br>\n'.join(names)))
+        return '\n<hr class="exception-divider">\n'.join(out)
 
     @staticmethod
     def switch_infosrc(prodid, tvid, m_prodid, m_tvid, set_pause=False, mark_wanted=False):
@@ -2498,7 +2503,7 @@ class Home(MainHandler):
                 'SELECT DISTINCT season'
                 ' FROM tv_episodes'
                 ' WHERE indexer = ? AND showid = ?'
-                ' ORDER BY season ASC',
+                ' ORDER BY season DESC',
                 [show_obj.tvid, show_obj.prodid])
 
             if show_obj.is_anime:
@@ -2614,7 +2619,7 @@ class Home(MainHandler):
             if bool(show_obj.flatten_folders) != bool(flatten_folders):
                 show_obj.flatten_folders = flatten_folders
                 try:
-                    sickbeard.showQueueScheduler.action.refreshShow(show_obj)
+                    sickbeard.show_queue_scheduler.action.refreshShow(show_obj)
                 except exceptions_helper.CantRefreshException as e:
                     errors.append('Unable to refresh this show: ' + ex(e))
 
@@ -2669,7 +2674,7 @@ class Home(MainHandler):
                     try:
                         show_obj.location = new_path
                         try:
-                            sickbeard.showQueueScheduler.action.refreshShow(show_obj)
+                            sickbeard.show_queue_scheduler.action.refreshShow(show_obj)
                         except exceptions_helper.CantRefreshException as e:
                             errors.append('Unable to refresh this show:' + ex(e))
                             # grab updated info from TVDB
@@ -2686,7 +2691,7 @@ class Home(MainHandler):
         # force the update
         if do_update:
             try:
-                sickbeard.showQueueScheduler.action.updateShow(show_obj, True)
+                sickbeard.show_queue_scheduler.action.updateShow(show_obj, True)
                 helpers.cpu_sleep()
             except exceptions_helper.CantUpdateException:
                 errors.append('Unable to force an update on the show.')
@@ -2724,13 +2729,13 @@ class Home(MainHandler):
         if None is show_obj:
             return self._generic_message('Error', 'Unable to find the specified show')
 
-        if sickbeard.showQueueScheduler.action.isBeingAdded(
-                show_obj) or sickbeard.showQueueScheduler.action.isBeingUpdated(show_obj):
+        if sickbeard.show_queue_scheduler.action.isBeingAdded(
+                show_obj) or sickbeard.show_queue_scheduler.action.isBeingUpdated(show_obj):
             return self._generic_message("Error", "Shows can't be deleted while they're being added or updated.")
 
         # if sickbeard.USE_TRAKT and sickbeard.TRAKT_SYNC:
         #     # remove show from trakt.tv library
-        #     sickbeard.traktCheckerScheduler.action.removeShowFromTraktLibrary(show_obj)
+        #     sickbeard.trakt_checker_scheduler.action.removeShowFromTraktLibrary(show_obj)
 
         show_obj.delete_show(bool(full))
 
@@ -2751,7 +2756,7 @@ class Home(MainHandler):
 
         # force the update from the DB
         try:
-            sickbeard.showQueueScheduler.action.refreshShow(show_obj)
+            sickbeard.show_queue_scheduler.action.refreshShow(show_obj)
         except exceptions_helper.CantRefreshException as e:
             ui.notifications.error('Unable to refresh this show.', ex(e))
 
@@ -2771,7 +2776,7 @@ class Home(MainHandler):
 
         # force the update
         try:
-            sickbeard.showQueueScheduler.action.updateShow(show_obj, bool(force), bool(web))
+            sickbeard.show_queue_scheduler.action.updateShow(show_obj, bool(force), bool(web))
         except exceptions_helper.CantUpdateException as e:
             ui.notifications.error('Unable to update this show.',
                                    ex(e))
@@ -2792,7 +2797,7 @@ class Home(MainHandler):
 
         # search and download subtitles
         if sickbeard.USE_SUBTITLES:
-            sickbeard.showQueueScheduler.action.download_subtitles(show_obj)
+            sickbeard.show_queue_scheduler.action.download_subtitles(show_obj)
 
             helpers.cpu_sleep()
 
@@ -2930,7 +2935,7 @@ class Home(MainHandler):
                 for season, segment in iteritems(segments):  # type: int, List[sickbeard.tv.TVEpisode]
                     if not show_obj.paused:
                         cur_backlog_queue_item = search_queue.BacklogQueueItem(show_obj, segment)
-                        sickbeard.searchQueueScheduler.action.add_item(cur_backlog_queue_item)
+                        sickbeard.search_queue_scheduler.action.add_item(cur_backlog_queue_item)
 
                     if season not in season_wanted:
                         season_wanted += [season]
@@ -2954,7 +2959,7 @@ class Home(MainHandler):
 
             for season, segment in iteritems(segments):  # type: int, List[sickbeard.tv.TVEpisode]
                 cur_failed_queue_item = search_queue.FailedQueueItem(show_obj, segment)
-                sickbeard.searchQueueScheduler.action.add_item(cur_failed_queue_item)
+                sickbeard.search_queue_scheduler.action.add_item(cur_failed_queue_item)
 
                 msg += '<li>Season %s</li>' % season
                 logger.log(u'Retrying search for %s season %s because some eps were set to failed' %
@@ -3085,7 +3090,7 @@ class Home(MainHandler):
             ep_queue_item = (search_queue.ManualSearchQueueItem(ep_obj.show_obj, ep_obj),
                              search_queue.FailedQueueItem(ep_obj.show_obj, [ep_obj]))[retry]
 
-            sickbeard.searchQueueScheduler.action.add_item(ep_queue_item)
+            sickbeard.search_queue_scheduler.action.add_item(ep_queue_item)
 
             if None is ep_queue_item.success:  # invocation
                 result.update(dict(result=('success', 'queuing')[not ep_queue_item.started]))
@@ -3106,10 +3111,10 @@ class Home(MainHandler):
         seen_eps = set([])
 
         # Queued searches
-        queued = sickbeard.searchQueueScheduler.action.get_queued_manual(tvid_prodid)
+        queued = sickbeard.search_queue_scheduler.action.get_queued_manual(tvid_prodid)
 
         # Active search
-        active = sickbeard.searchQueueScheduler.action.get_current_manual_item(tvid_prodid)
+        active = sickbeard.search_queue_scheduler.action.get_current_manual_item(tvid_prodid)
 
         # Finished searches
         sickbeard.search_queue.remove_old_fifo(sickbeard.search_queue.MANUAL_SEARCH_HISTORY)
@@ -3323,7 +3328,7 @@ class HomeProcessMedia(Home):
                                               failed='0' != failed,
                                               webhandler=None if '0' == stream else self.send_message,
                                               show_obj=show_obj, is_basedir=is_basedir in ('on', '1'),
-                                              skip_failure_processing=skip_failure_processing)
+                                              skip_failure_processing=skip_failure_processing, client=client)
 
                 if '0' == stream:
                     regexp = re.compile(r'(?i)<br(?:[\s/]+)>', flags=re.UNICODE)
@@ -3640,15 +3645,13 @@ class AddShows(Home):
             try:
                 for root_dir in sickbeard.ROOT_DIRS.split('|')[1:]:
                     try:
-                        file_list = ek.ek(os.listdir, root_dir)
+                        file_list = [x for x in scantree(root_dir, filter_kind=True, recurse=False)]
                     except (BaseException, Exception):
                         continue
 
                     for cur_file in file_list:
 
-                        cur_path = ek.ek(os.path.normpath, ek.ek(os.path.join, root_dir, cur_file))
-                        if not ek.ek(os.path.isdir, cur_path):
-                            continue
+                        cur_path = ek.ek(os.path.normpath, cur_file.path)
 
                         display_one_dir = hash_dir == str(abs(hash(cur_path)))
                         if display_one_dir:
@@ -3660,20 +3663,18 @@ class AddShows(Home):
         for root_dir in root_dirs:
             if not file_list:
                 try:
-                    file_list = ek.ek(os.listdir, root_dir)
+                    file_list = [x for x in scantree(root_dir, filter_kind=True, recurse=False)]
                 except (BaseException, Exception):
                     continue
 
             for cur_file in file_list:
 
-                cur_path = ek.ek(os.path.normpath, ek.ek(os.path.join, root_dir, cur_file))
-                if not ek.ek(os.path.isdir, cur_path):
-                    continue
+                cur_path = ek.ek(os.path.normpath, cur_file.path)
 
                 highlight = hash_dir == str(abs(hash(cur_path)))
                 if display_one_dir and not highlight:
                     continue
-                cur_dir = dict(dir=cur_path, highlight=highlight, name=ek.ek(os.path.basename, cur_path),
+                cur_dir = dict(dir=cur_path, highlight=highlight, name=cur_file.name,
                                path='%s%s' % (ek.ek(os.path.dirname, cur_path), os.sep),
                                added_already=any(my_db.select(
                                    'SELECT indexer'
@@ -5039,11 +5040,11 @@ class AddShows(Home):
         prune = config.minimax(prune, 0, 0, 9999)
 
         # add the show
-        sickbeard.showQueueScheduler.action.addShow(tvid, prodid, show_dir, int(default_status), newQuality,
-                                                    flatten_folders, tvinfo_lang, subs, anime,
-                                                    scene, None, allowlist, blocklist,
-                                                    wanted_begin, wanted_latest, prune, tag, new_show=new_show,
-                                                    show_name=show_name, upgrade_once=upgrade_once)
+        sickbeard.show_queue_scheduler.action.addShow(tvid, prodid, show_dir, int(default_status), newQuality,
+                                                      flatten_folders, tvinfo_lang, subs, anime,
+                                                      scene, None, allowlist, blocklist,
+                                                      wanted_begin, wanted_latest, prune, tag, new_show=new_show,
+                                                      show_name=show_name, upgrade_once=upgrade_once)
         # ui.notifications.message('Show added', 'Adding the specified show into ' + show_dir)
 
         return finish_add_show()
@@ -5109,14 +5110,14 @@ class AddShows(Home):
 
             if None is not tvid and None is not prodid:
                 # add the show
-                sickbeard.showQueueScheduler.action.addShow(tvid, prodid, show_dir,
-                                                            default_status=sickbeard.STATUS_DEFAULT,
-                                                            quality=sickbeard.QUALITY_DEFAULT,
-                                                            flatten_folders=sickbeard.FLATTEN_FOLDERS_DEFAULT,
-                                                            subtitles=sickbeard.SUBTITLES_DEFAULT,
-                                                            anime=sickbeard.ANIME_DEFAULT,
-                                                            scene=sickbeard.SCENE_DEFAULT,
-                                                            show_name=show_name)
+                sickbeard.show_queue_scheduler.action.addShow(tvid, prodid, show_dir,
+                                                              default_status=sickbeard.STATUS_DEFAULT,
+                                                              quality=sickbeard.QUALITY_DEFAULT,
+                                                              flatten_folders=sickbeard.FLATTEN_FOLDERS_DEFAULT,
+                                                              subtitles=sickbeard.SUBTITLES_DEFAULT,
+                                                              anime=sickbeard.ANIME_DEFAULT,
+                                                              scene=sickbeard.SCENE_DEFAULT,
+                                                              show_name=show_name)
                 num_added += 1
 
         if num_added:
@@ -5528,7 +5529,7 @@ class Manage(MainHandler):
         show_obj = helpers.find_show_by_id(tvid_prodid)
 
         if show_obj:
-            sickbeard.backlogSearchScheduler.action.search_backlog([show_obj])
+            sickbeard.backlog_search_scheduler.action.search_backlog([show_obj])
 
         self.redirect('/manage/backlog-overview/')
 
@@ -5925,7 +5926,7 @@ class Manage(MainHandler):
 
             if cur_tvid_prodid in to_update:
                 try:
-                    sickbeard.showQueueScheduler.action.updateShow(show_obj, True, True)
+                    sickbeard.show_queue_scheduler.action.updateShow(show_obj, True, True)
                     updates.append(show_obj.name)
                 except exceptions_helper.CantUpdateException as e:
                     errors.append('Unable to update show ' + show_obj.name + ': ' + ex(e))
@@ -5933,17 +5934,17 @@ class Manage(MainHandler):
             # don't bother refreshing shows that were updated anyway
             if cur_tvid_prodid in to_refresh and cur_tvid_prodid not in to_update:
                 try:
-                    sickbeard.showQueueScheduler.action.refreshShow(show_obj)
+                    sickbeard.show_queue_scheduler.action.refreshShow(show_obj)
                     refreshes.append(show_obj.name)
                 except exceptions_helper.CantRefreshException as e:
                     errors.append('Unable to refresh show ' + show_obj.name + ': ' + ex(e))
 
             if cur_tvid_prodid in to_rename:
-                sickbeard.showQueueScheduler.action.renameShowEpisodes(show_obj)
+                sickbeard.show_queue_scheduler.action.renameShowEpisodes(show_obj)
                 renames.append(show_obj.name)
 
             if sickbeard.USE_SUBTITLES and cur_tvid_prodid in to_subtitle:
-                sickbeard.showQueueScheduler.action.download_subtitles(show_obj)
+                sickbeard.show_queue_scheduler.action.download_subtitles(show_obj)
                 subs.append(show_obj.name)
 
         if 0 < len(errors):
@@ -6011,16 +6012,16 @@ class ManageSearch(Manage):
 
     def index(self):
         t = PageTemplate(web_handler=self, file='manage_manageSearches.tmpl')
-        # t.backlog_pi = sickbeard.backlogSearchScheduler.action.get_progress_indicator()
-        t.backlog_paused = sickbeard.searchQueueScheduler.action.is_backlog_paused()
+        # t.backlog_pi = sickbeard.backlog_search_scheduler.action.get_progress_indicator()
+        t.backlog_paused = sickbeard.search_queue_scheduler.action.is_backlog_paused()
         t.scheduled_backlog_active_providers = sickbeard.search_backlog.BacklogSearcher.providers_active(scheduled=True)
-        t.backlog_running = sickbeard.searchQueueScheduler.action.is_backlog_in_progress()
-        t.backlog_is_active = sickbeard.backlogSearchScheduler.action.am_running()
-        t.standard_backlog_running = sickbeard.searchQueueScheduler.action.is_standard_backlog_in_progress()
-        t.backlog_running_type = sickbeard.searchQueueScheduler.action.type_of_backlog_in_progress()
-        t.recent_search_status = sickbeard.searchQueueScheduler.action.is_recentsearch_in_progress()
-        t.find_propers_status = sickbeard.searchQueueScheduler.action.is_propersearch_in_progress()
-        t.queue_length = sickbeard.searchQueueScheduler.action.queue_length()
+        t.backlog_running = sickbeard.search_queue_scheduler.action.is_backlog_in_progress()
+        t.backlog_is_active = sickbeard.backlog_search_scheduler.action.am_running()
+        t.standard_backlog_running = sickbeard.search_queue_scheduler.action.is_standard_backlog_in_progress()
+        t.backlog_running_type = sickbeard.search_queue_scheduler.action.type_of_backlog_in_progress()
+        t.recent_search_status = sickbeard.search_queue_scheduler.action.is_recentsearch_in_progress()
+        t.find_propers_status = sickbeard.search_queue_scheduler.action.is_propersearch_in_progress()
+        t.queue_length = sickbeard.search_queue_scheduler.action.queue_length()
 
         t.submenu = self.manage_menu('Search')
 
@@ -6039,8 +6040,8 @@ class ManageSearch(Manage):
 
     def force_backlog(self):
         # force it to run the next time it looks
-        if not sickbeard.searchQueueScheduler.action.is_standard_backlog_in_progress():
-            sickbeard.backlogSearchScheduler.force_search(force_type=FORCED_BACKLOG)
+        if not sickbeard.search_queue_scheduler.action.is_standard_backlog_in_progress():
+            sickbeard.backlog_search_scheduler.force_search(force_type=FORCED_BACKLOG)
             logger.log(u'Backlog search forced')
             ui.notifications.message('Backlog search started')
 
@@ -6050,8 +6051,8 @@ class ManageSearch(Manage):
     def force_search(self):
 
         # force it to run the next time it looks
-        if not sickbeard.searchQueueScheduler.action.is_recentsearch_in_progress():
-            result = sickbeard.recentSearchScheduler.forceRun()
+        if not sickbeard.search_queue_scheduler.action.is_recentsearch_in_progress():
+            result = sickbeard.recent_search_scheduler.forceRun()
             if result:
                 logger.log(u'Recent search forced')
                 ui.notifications.message('Recent search started')
@@ -6062,7 +6063,7 @@ class ManageSearch(Manage):
     def force_find_propers(self):
 
         # force it to run the next time it looks
-        result = sickbeard.properFinderScheduler.forceRun()
+        result = sickbeard.proper_finder_scheduler.forceRun()
         if result:
             logger.log(u'Find propers search forced')
             ui.notifications.message('Find propers search started')
@@ -6072,9 +6073,9 @@ class ManageSearch(Manage):
 
     def pause_backlog(self, paused=None):
         if '1' == paused:
-            sickbeard.searchQueueScheduler.action.pause_backlog()
+            sickbeard.search_queue_scheduler.action.pause_backlog()
         else:
-            sickbeard.searchQueueScheduler.action.unpause_backlog()
+            sickbeard.search_queue_scheduler.action.unpause_backlog()
 
         time.sleep(5)
         self.redirect('/manage/search-tasks/')
@@ -6084,10 +6085,11 @@ class ShowTasks(Manage):
 
     def index(self):
         t = PageTemplate(web_handler=self, file='manage_showProcesses.tmpl')
-        t.queue_length = sickbeard.showQueueScheduler.action.queue_length()
-        t.next_run = sickbeard.showUpdateScheduler.lastRun.replace(hour=sickbeard.showUpdateScheduler.start_time.hour)
-        t.show_update_running = sickbeard.showQueueScheduler.action.isShowUpdateRunning() \
-            or sickbeard.showUpdateScheduler.action.amActive
+        t.queue_length = sickbeard.show_queue_scheduler.action.queue_length()
+        t.next_run = sickbeard.show_update_scheduler.lastRun.replace(
+            hour=sickbeard.show_update_scheduler.start_time.hour)
+        t.show_update_running = sickbeard.show_queue_scheduler.action.isShowUpdateRunning() \
+            or sickbeard.show_update_scheduler.action.amActive
 
         my_db = db.DBConnection(row_type='dict')
         sql_result = my_db.select('SELECT n.indexer || ? ||  n.indexer_id AS tvid_prodid,'
@@ -6118,7 +6120,7 @@ class ShowTasks(Manage):
 
     def force_show_update(self):
 
-        result = sickbeard.showUpdateScheduler.forceRun()
+        result = sickbeard.show_update_scheduler.forceRun()
         if result:
             logger.log(u'Show Update forced')
             ui.notifications.message('Forced Show Update started')
@@ -6151,6 +6153,77 @@ class History(MainHandler):
     def toggle_help(self):
         db.DBConnection().toggle_flag(self.flagname_help_watched)
 
+    @classmethod
+    def menu_tab(cls, limit):
+
+        result = []
+        my_db = db.DBConnection(row_type='dict')  # type: db.DBConnection
+        history_detailed, history_compact = cls.query_history(my_db)
+        dedupe = set()
+        for item in history_compact:
+            if item.get('tvid_prodid') not in dedupe:
+                dedupe.add(item.get('tvid_prodid'))
+                result += [item]
+                if limit == len(result):
+                    break
+
+        return result
+
+    @classmethod
+    def query_history(cls, my_db, limit=100):
+        # type: (db.DBConnection, int) -> Tuple[List[dict], List[dict]]
+        """Query db for historical data
+
+        :param my_db: connection should be instantiated with row_type='dict'
+        :param limit: number of db rows to fetch
+        :return: two data sets, detailed and compact
+        """
+
+        sql = 'SELECT h.*, show_name, s.indexer || ? || s.indexer_id AS tvid_prodid' \
+              ' FROM history h, tv_shows s' \
+              ' WHERE h.indexer=s.indexer AND h.showid=s.indexer_id' \
+              ' AND h.hide = 0' \
+              ' ORDER BY date DESC' \
+              '%s' % (' LIMIT %s' % limit, '')['0' == limit]
+        sql_result = my_db.select(sql, [TVidProdid.glue])
+
+        compact = []
+
+        for cur_result in sql_result:
+
+            action = dict(time=cur_result['date'], action=cur_result['action'],
+                          provider=cur_result['provider'], resource=cur_result['resource'])
+
+            if not any([(record['show_id'] == cur_result['showid']
+                         and record['indexer'] == cur_result['indexer']
+                         and record['season'] == cur_result['season']
+                         and record['episode'] == cur_result['episode']
+                         and record['quality'] == cur_result['quality']) for record in compact]):
+
+                cur_res = dict(show_id=cur_result['showid'], indexer=cur_result['indexer'],
+                               tvid_prodid=cur_result['tvid_prodid'],
+                               show_name=cur_result['show_name'],
+                               season=cur_result['season'], episode=cur_result['episode'],
+                               quality=cur_result['quality'], resource=cur_result['resource'], actions=[])
+
+                cur_res['actions'].append(action)
+                cur_res['actions'].sort(key=lambda _x: _x['time'])
+
+                compact.append(cur_res)
+            else:
+                index = [i for i, record in enumerate(compact)
+                         if record['show_id'] == cur_result['showid']
+                         and record['season'] == cur_result['season']
+                         and record['episode'] == cur_result['episode']
+                         and record['quality'] == cur_result['quality']][0]
+
+                cur_res = compact[index]
+
+                cur_res['actions'].append(action)
+                cur_res['actions'].sort(key=lambda _x: _x['time'], reverse=True)
+
+        return sql_result, compact
+
     def index(self, limit=100, layout=None):
 
         t = PageTemplate(web_handler=self, file='history.tmpl')
@@ -6166,46 +6239,7 @@ class History(MainHandler):
         result_sets = []
         if sickbeard.HISTORY_LAYOUT in ('compact', 'detailed'):
 
-            sql = 'SELECT h.*, show_name, s.indexer || ? || s.indexer_id AS tvid_prodid' \
-                  ' FROM history h, tv_shows s' \
-                  ' WHERE h.indexer=s.indexer AND h.showid=s.indexer_id' \
-                  ' ORDER BY date DESC%s' % (' LIMIT %s' % limit, '')['0' == limit]
-            sql_result = my_db.select(sql, [TVidProdid.glue])
-
-            compact = []
-
-            for cur_result in sql_result:
-
-                action = dict(time=cur_result['date'], action=cur_result['action'],
-                              provider=cur_result['provider'], resource=cur_result['resource'])
-
-                if not any([(record['show_id'] == cur_result['showid']
-                             and record['indexer'] == cur_result['indexer']
-                             and record['season'] == cur_result['season']
-                             and record['episode'] == cur_result['episode']
-                             and record['quality'] == cur_result['quality']) for record in compact]):
-
-                    cur_res = dict(show_id=cur_result['showid'], indexer=cur_result['indexer'],
-                                   tvid_prodid=cur_result['tvid_prodid'],
-                                   show_name=cur_result['show_name'],
-                                   season=cur_result['season'], episode=cur_result['episode'],
-                                   quality=cur_result['quality'], resource=cur_result['resource'], actions=[])
-
-                    cur_res['actions'].append(action)
-                    cur_res['actions'].sort(key=lambda _x: _x['time'])
-
-                    compact.append(cur_res)
-                else:
-                    index = [i for i, record in enumerate(compact)
-                             if record['show_id'] == cur_result['showid']
-                             and record['season'] == cur_result['season']
-                             and record['episode'] == cur_result['episode']
-                             and record['quality'] == cur_result['quality']][0]
-
-                    cur_res = compact[index]
-
-                    cur_res['actions'].append(action)
-                    cur_res['actions'].sort(key=lambda _x: _x['time'], reverse=True)
+            sql_result, compact = self.query_history(my_db, limit)
 
             t.compact_results = compact
             t.history_results = sql_result
@@ -6274,6 +6308,7 @@ class History(MainHandler):
                   ' WHERE h.showid=s.indexer_id' \
                   ' AND h.provider in ("%s")' % '","'.join(prov_list) + \
                   ' AND h.action in ("%s")' % '","'.join([str(x) for x in Quality.SNATCHED_ANY]) + \
+                  ' AND h.hide = 0' \
                   ' ORDER BY date DESC%s)' % (' LIMIT %s' % limit, '')['0' == limit] + \
                   ' GROUP BY provider' \
                   ' ORDER BY count DESC'
@@ -6406,7 +6441,7 @@ class History(MainHandler):
 
         my_db = db.DBConnection()
         # noinspection SqlConstantCondition
-        my_db.action('DELETE FROM history WHERE 1=1')
+        my_db.action('UPDATE history SET hide = ? WHERE hide = 0', [1])
 
         ui.notifications.message('History cleared')
         self.redirect('/history/')
@@ -6414,8 +6449,8 @@ class History(MainHandler):
     def trim_history(self):
 
         my_db = db.DBConnection()
-        my_db.action('DELETE FROM history WHERE date < ' + str(
-            (datetime.datetime.now() - datetime.timedelta(days=30)).strftime(history.dateFormat)))
+        my_db.action('UPDATE history SET hide = ? WHERE date < ' + str(
+            (datetime.datetime.now() - datetime.timedelta(days=30)).strftime(history.dateFormat)), [1])
 
         ui.notifications.message('Removed history entries greater than 30 days old')
         self.redirect('/history/')
@@ -6680,7 +6715,7 @@ class History(MainHandler):
 
         for tvid_prodid_dict in refresh:
             try:
-                sickbeard.showQueueScheduler.action.refreshShow(
+                sickbeard.show_queue_scheduler.action.refreshShow(
                     helpers.find_show_by_id(tvid_prodid_dict))
             except (BaseException, Exception):
                 pass
@@ -6729,6 +6764,9 @@ class Config(MainHandler):
         except (BaseException, Exception):
             t.version = ''
 
+        t.backup_db_path = sickbeard.BACKUP_DB_MAX_COUNT and \
+            (sickbeard.BACKUP_DB_PATH or ek.ek(os.path.join, sickbeard.DATA_DIR, 'backup')) or 'Disabled'
+
         return t.respond()
 
 
@@ -6745,6 +6783,80 @@ class ConfigGeneral(Config):
         api_keys = '|||'.join([':::'.join(a) for a in sickbeard.API_KEYS])
         t.api_keys = api_keys and sickbeard.API_KEYS or []
         return t.respond()
+
+    @staticmethod
+    def update_alt():
+        """ Load scene exceptions """
+
+        changed_exceptions, cnt_updated_numbers, min_remain_iv = scene_exceptions.retrieve_exceptions()
+
+        return json.dumps(dict(names=int(changed_exceptions), numbers=cnt_updated_numbers, min_remain_iv=min_remain_iv))
+
+    @staticmethod
+    def export_alt(tvid_prodid=None):
+        """ Return alternative release names and numbering as json text"""
+
+        alts = {}
+
+        # alternative release names and numbers
+        alt_names = scene_exceptions.get_all_scene_exceptions(tvid_prodid)
+        alt_numbers = get_scene_numbering_for_show(*TVidProdid(tvid_prodid).tuple)  # arbitrary order
+        ui_output = 'No alternative names or numbers to export'
+
+        # combine all possible season numbers into a sorted desc list
+        seasons = sorted(set(list(set([s for (s, e) in alt_numbers])) + [s for s in alt_names]), reverse=True)
+        if seasons:
+            if -1 == seasons[-1]:
+                seasons = [-1] + seasons[0:-1]  # bubble -1
+
+            # prepare a seasonal ordered dict for output
+            alts = ordered_dict([(season, {}) for season in seasons])
+
+            # add original show name
+            show_obj = sickbeard.helpers.find_show_by_id(tvid_prodid, no_mapped_ids=True)
+            first_key = next(iteritems(alts))[0]
+            alts[first_key].update(dict({'#': show_obj.name}))
+
+            # process alternative release names
+            for (season, names) in iteritems(alt_names):
+                alts[season].update(dict(n=names))
+
+            # process alternative release numbers
+            for_target_group = {}
+            # uses a sorted list of (for seasons, for episodes) as a method
+            # to group (for, target) seasons with lists of target episodes
+            for f_se in sorted(alt_numbers):  # sort season list (and therefore, implicitly asc/desc of targets)
+                t_se = alt_numbers[f_se]
+                for_target_group.setdefault((f_se[0], t_se[0]), [])  # f_se[0] = for_season, t_se[0] = target_season
+                for_target_group[(f_se[0], t_se[0])] += [(f_se[1], t_se[1])]  # f_se[1] = for_ep, t_se[1] = target_ep
+
+            # minimise episode lists into ranges e.g. 1x1, 2x2, ... 5x5 => 1x1-5
+            minimal = {}
+            for ft_s, ft_e_range in iteritems(for_target_group):
+                minimal.setdefault(ft_s, [])
+                last_f_e = None
+                for (f_e, t_e) in ft_e_range:
+                    add_new = True
+                    if minimal[ft_s]:
+                        last = minimal[ft_s][-1]
+                        last_t_e = last[-1]
+                        if (f_e, t_e) in ((last_f_e + 1, last_t_e + 1), (last_f_e - 1, last_t_e - 1)):
+                            add_new = False
+                            if 2 == len(last):
+                                minimal[ft_s][-1] += [t_e]  # create range
+                            else:
+                                minimal[ft_s][-1][-1] += (-1, 1)[t_e == last_t_e + 1]  # adjust range
+                    last_f_e = f_e
+                    if add_new:
+                        minimal[ft_s] += [[f_e, t_e]]  # singular
+
+            for (f_s, t_s), ft_list in iteritems(minimal):
+                alts[f_s].setdefault('se', [])
+                for fe_te in ft_list:
+                    alts[f_s]['se'] += [dict({fe_te[0]: '%sx%s' % (t_s, '-'.join(['%s' % x for x in fe_te[1:]]))})]
+
+            ui_output = json.dumps(dict({tvid_prodid: alts}), indent=2, separators=(',', ': '))
+        return json.dumps(dict(text='%s\n\n' % ui_output))
 
     @staticmethod
     def generate_key():
@@ -6870,7 +6982,8 @@ class ConfigGeneral(Config):
                      log_dir=None, web_log=None,
                      indexer_default=None, indexer_timeout=None,
                      show_dirs_with_dots=None,
-                     version_notify=None, auto_update=None, update_frequency=None, notify_on_update=None,
+                     version_notify=None, auto_update=None, update_interval=None, notify_on_update=None,
+                     update_frequency=None,
                      theme_name=None, default_home=None, fanart_limit=None, showlist_tagview=None, show_tags=None,
                      home_search_focus=None, use_imdb_info=None, display_freespace=None, sort_article=None,
                      fuzzy_dating=None, trim_zero=None, date_preset=None, time_preset=None,
@@ -6882,7 +6995,11 @@ class ConfigGeneral(Config):
                      handle_reverse_proxy=None, send_security_headers=None, allowed_hosts=None, allow_anyip=None,
                      git_remote=None,
                      git_path=None, cpu_preset=None, anon_redirect=None, encryption_version=None,
-                     proxy_setting=None, proxy_indexers=None, file_logging_preset=None):
+                     proxy_setting=None, proxy_indexers=None, file_logging_preset=None, backup_db_oneday=None):
+
+        # prevent deprecated var issues from existing ui, delete in future, added 2020.11.07
+        if None is update_interval and None is not update_frequency:
+            update_interval = update_frequency
 
         results = []
 
@@ -6891,8 +7008,8 @@ class ConfigGeneral(Config):
         sickbeard.UPDATE_SHOWS_ON_START = config.checkbox_to_value(update_shows_on_start)
         sickbeard.SHOW_UPDATE_HOUR = config.minimax(show_update_hour, 3, 0, 23)
         try:
-            with sickbeard.showUpdateScheduler.lock:
-                sickbeard.showUpdateScheduler.start_time = datetime.time(hour=sickbeard.SHOW_UPDATE_HOUR)
+            with sickbeard.show_update_scheduler.lock:
+                sickbeard.show_update_scheduler.start_time = datetime.time(hour=sickbeard.SHOW_UPDATE_HOUR)
         except (BaseException, Exception) as e:
             logger.log('Could not change Show Update Scheduler time: %s' % ex(e), logger.ERROR)
         sickbeard.TRASH_REMOVE_SHOW = config.checkbox_to_value(trash_remove_show)
@@ -6911,7 +7028,7 @@ class ConfigGeneral(Config):
         # Updates
         config.schedule_version_notify(config.checkbox_to_value(version_notify))
         sickbeard.AUTO_UPDATE = config.checkbox_to_value(auto_update)
-        config.schedule_update(update_frequency)
+        config.schedule_update(update_interval)
         sickbeard.NOTIFY_ON_UPDATE = config.checkbox_to_value(notify_on_update)
 
         # Interface
@@ -6992,6 +7109,7 @@ class ConfigGeneral(Config):
         sickbeard.PROXY_INDEXERS = config.checkbox_to_value(proxy_indexers)
         sickbeard.FILE_LOGGING_PRESET = file_logging_preset
         # sickbeard.LOG_DIR is set in config.change_log_dir()
+        sickbeard.BACKUP_DB_ONEDAY = bool(config.checkbox_to_value(backup_db_oneday))
 
         logger.log_set_level()
 
@@ -7020,7 +7138,7 @@ class ConfigGeneral(Config):
             return json.dumps({'result': 'success', 'pulls': []})
         else:
             try:
-                pulls = sickbeard.versionCheckScheduler.action.list_remote_pulls()
+                pulls = sickbeard.version_check_scheduler.action.list_remote_pulls()
                 return json.dumps({'result': 'success', 'pulls': pulls})
             except (BaseException, Exception) as e:
                 logger.log(u'exception msg: ' + ex(e), logger.DEBUG)
@@ -7029,7 +7147,7 @@ class ConfigGeneral(Config):
     @staticmethod
     def fetch_branches():
         try:
-            branches = sickbeard.versionCheckScheduler.action.list_remote_branches()
+            branches = sickbeard.version_check_scheduler.action.list_remote_branches()
             return json.dumps({'result': 'success', 'branches': branches, 'current': sickbeard.BRANCH or 'master'})
         except (BaseException, Exception) as e:
             logger.log(u'exception msg: ' + ex(e), logger.DEBUG)
@@ -7063,7 +7181,8 @@ class ConfigSearch(Config):
         return t.respond()
 
     def save_search(self, nzb_dir=None, torrent_dir=None,
-                    recentsearch_frequency=None, backlog_frequency=None, backlog_days=None, backlog_nofull=None,
+                    recentsearch_interval=None, backlog_period=None, backlog_limited_period=None, backlog_nofull=None,
+                    recentsearch_frequency=None, backlog_frequency=None, backlog_days=None,
                     use_nzbs=None, use_torrents=None, nzb_method=None, torrent_method=None,
                     usenet_retention=None, ignore_words=None, require_words=None,
                     download_propers=None, propers_webdl_onegrp=None,
@@ -7076,6 +7195,14 @@ class ConfigSearch(Config):
                     torrent_verify_cert=None, torrent_path=None, torrent_seed_time=None, torrent_paused=None,
                     torrent_high_bandwidth=None, torrent_host=None):
 
+        # prevent deprecated var issues from existing ui, delete in future, added 2020.11.07
+        if None is recentsearch_interval and None is not recentsearch_frequency:
+            recentsearch_interval = recentsearch_frequency
+        if None is backlog_period and None is not backlog_frequency:
+            backlog_period = backlog_frequency
+        if None is backlog_limited_period and None is not backlog_days:
+            backlog_limited_period = backlog_days
+
         results = []
 
         if not config.change_nzb_dir(nzb_dir):
@@ -7084,13 +7211,13 @@ class ConfigSearch(Config):
         if not config.change_torrent_dir(torrent_dir):
             results += ['Unable to create directory ' + os.path.normpath(torrent_dir) + ', dir not changed.']
 
-        config.schedule_recentsearch(recentsearch_frequency)
+        config.schedule_recentsearch(recentsearch_interval)
 
-        old_backlog_frequency = sickbeard.BACKLOG_FREQUENCY
-        config.schedule_backlog(backlog_frequency)
+        old_backlog_period = sickbeard.BACKLOG_PERIOD
+        config.schedule_backlog(backlog_period)
         sickbeard.search_backlog.BacklogSearcher.change_backlog_parts(
-            old_backlog_frequency, sickbeard.BACKLOG_FREQUENCY)
-        sickbeard.BACKLOG_DAYS = config.to_int(backlog_days, default=7)
+            old_backlog_period, sickbeard.BACKLOG_PERIOD)
+        sickbeard.BACKLOG_LIMITED_PERIOD = config.to_int(backlog_limited_period, default=7)
 
         sickbeard.BACKLOG_NOFULL = bool(config.checkbox_to_value(backlog_nofull))
         if sickbeard.BACKLOG_NOFULL:
@@ -7175,7 +7302,8 @@ class ConfigMediaProcess(Config):
         t.submenu = self.config_menu('Processing')
         return t.respond()
 
-    def save_post_processing(self, tv_download_dir=None, process_automatically=None, autopostprocesser_frequency=None,
+    def save_post_processing(self, tv_download_dir=None, process_automatically=None, mediaprocess_interval=None,
+                             autopostprocesser_frequency=None,
                              unpack=None, keep_processed_dir=None, process_method=None,
                              extra_scripts='', sg_extra_scripts='',
                              rename_episodes=None, airdate_episodes=None,
@@ -7189,6 +7317,10 @@ class ConfigMediaProcess(Config):
                              naming_anime=None, naming_anime_pattern=None, naming_anime_multi_ep=None,
                              naming_abd_pattern=None, naming_sports_pattern=None):
 
+        # prevent deprecated var issues from existing ui, delete in future, added 2020.11.07
+        if None is mediaprocess_interval and None is not autopostprocesser_frequency:
+            mediaprocess_interval = autopostprocesser_frequency
+
         results = []
 
         if not config.change_tv_download_dir(tv_download_dir):
@@ -7196,7 +7328,7 @@ class ConfigMediaProcess(Config):
 
         new_val = config.checkbox_to_value(process_automatically)
         sickbeard.PROCESS_AUTOMATICALLY = new_val
-        config.schedule_autopostprocesser(autopostprocesser_frequency)
+        config.schedule_mediaprocess(mediaprocess_interval)
 
         if unpack:
             if 'not supported' != self.is_rar_supported():
@@ -7366,18 +7498,24 @@ class ConfigProviders(Config):
         return t.respond()
 
     @staticmethod
-    def can_add_newznab_provider(name):
-        if not name:
-            return json.dumps({'error': 'No Provider Name specified'})
+    def can_add_newznab_provider(name, url):
+        if not name or not url:
+            return json.dumps({'error': 'No Provider Name or url specified'})
 
-        providerDict = dict(zip([x.get_id() for x in sickbeard.newznabProviderList], sickbeard.newznabProviderList))
+        provider_dict = dict(zip([sickbeard.providers.generic_provider_name(x.get_id())
+                                 for x in sickbeard.newznabProviderList], sickbeard.newznabProviderList))
+        provider_url_dict = dict(zip([sickbeard.providers.generic_provider_url(x.url)
+                                 for x in sickbeard.newznabProviderList], sickbeard.newznabProviderList))
 
-        tempProvider = newznab.NewznabProvider(name, '')
+        temp_provider = newznab.NewznabProvider(name, config.clean_url(url))
 
-        if tempProvider.get_id() in providerDict:
-            return json.dumps({'error': 'Provider Name already exists as ' + providerDict[tempProvider.get_id()].name})
+        e_p = provider_dict.get(sickbeard.providers.generic_provider_name(temp_provider.get_id()), None) or \
+              provider_url_dict.get(sickbeard.providers.generic_provider_url(temp_provider.url), None)
 
-        return json.dumps({'success': tempProvider.get_id()})
+        if e_p:
+            return json.dumps({'error': 'Provider already exists as %s' % e_p.name})
+
+        return json.dumps({'success': temp_provider.get_id()})
 
     @staticmethod
     def save_newznab_provider(name, url, key=''):
@@ -7502,7 +7640,7 @@ class ConfigProviders(Config):
     @staticmethod
     def check_providers_ping():
         for p in sickbeard.providers.sortedProviderList():
-            if getattr(p, 'ping_freq', None):
+            if getattr(p, 'ping_iv', None):
                 if p.is_active() and (p.get_id() not in sickbeard.provider_ping_thread_pool
                                       or not sickbeard.provider_ping_thread_pool[p.get_id()].is_alive()):
                     # noinspection PyProtectedMember
@@ -7821,10 +7959,10 @@ class ConfigNotifications(Config):
             use_slack=None, slack_notify_onsnatch=None, slack_notify_ondownload=None,
             slack_notify_onsubtitledownload=None, slack_access_token=None, slack_channel=None,
             slack_as_authed=None, slack_bot_name=None, slack_icon_url=None,
-            use_discordapp=None, discordapp_notify_onsnatch=None, discordapp_notify_ondownload=None,
-            discordapp_notify_onsubtitledownload=None, discordapp_access_token=None,
-            discordapp_as_authed=None, discordapp_username=None, discordapp_icon_url=None,
-            discordapp_as_tts=None,
+            use_discord=None, discord_notify_onsnatch=None, discord_notify_ondownload=None,
+            discord_notify_onsubtitledownload=None, discord_access_token=None,
+            discord_as_authed=None, discord_username=None, discord_icon_url=None,
+            discord_as_tts=None,
             use_gitter=None, gitter_notify_onsnatch=None, gitter_notify_ondownload=None,
             gitter_notify_onsubtitledownload=None, gitter_access_token=None, gitter_room=None,
             use_telegram=None, telegram_notify_onsnatch=None, telegram_notify_ondownload=None,
@@ -7949,7 +8087,7 @@ class ConfigNotifications(Config):
 
         sickbeard.USE_TRAKT = config.checkbox_to_value(use_trakt)
         sickbeard.TRAKT_UPDATE_COLLECTION = build_config(**kwargs)
-        # sickbeard.traktCheckerScheduler.silent = not sickbeard.USE_TRAKT
+        # sickbeard.trakt_checker_scheduler.silent = not sickbeard.USE_TRAKT
         # sickbeard.TRAKT_DEFAULT_INDEXER = int(trakt_default_indexer)
         # sickbeard.TRAKT_SYNC = config.checkbox_to_value(trakt_sync)
         # sickbeard.TRAKT_USE_WATCHLIST = config.checkbox_to_value(trakt_use_watchlist)
@@ -7968,15 +8106,15 @@ class ConfigNotifications(Config):
         sickbeard.SLACK_BOT_NAME = slack_bot_name
         sickbeard.SLACK_ICON_URL = slack_icon_url
 
-        sickbeard.USE_DISCORDAPP = config.checkbox_to_value(use_discordapp)
-        sickbeard.DISCORDAPP_NOTIFY_ONSNATCH = config.checkbox_to_value(discordapp_notify_onsnatch)
-        sickbeard.DISCORDAPP_NOTIFY_ONDOWNLOAD = config.checkbox_to_value(discordapp_notify_ondownload)
-        sickbeard.DISCORDAPP_NOTIFY_ONSUBTITLEDOWNLOAD = config.checkbox_to_value(discordapp_notify_onsubtitledownload)
-        sickbeard.DISCORDAPP_ACCESS_TOKEN = discordapp_access_token
-        sickbeard.DISCORDAPP_AS_AUTHED = config.checkbox_to_value(discordapp_as_authed)
-        sickbeard.DISCORDAPP_USERNAME = discordapp_username
-        sickbeard.DISCORDAPP_ICON_URL = discordapp_icon_url
-        sickbeard.DISCORDAPP_AS_TTS = config.checkbox_to_value(discordapp_as_tts)
+        sickbeard.USE_DISCORD = config.checkbox_to_value(use_discord)
+        sickbeard.DISCORD_NOTIFY_ONSNATCH = config.checkbox_to_value(discord_notify_onsnatch)
+        sickbeard.DISCORD_NOTIFY_ONDOWNLOAD = config.checkbox_to_value(discord_notify_ondownload)
+        sickbeard.DISCORD_NOTIFY_ONSUBTITLEDOWNLOAD = config.checkbox_to_value(discord_notify_onsubtitledownload)
+        sickbeard.DISCORD_ACCESS_TOKEN = discord_access_token
+        sickbeard.DISCORD_AS_AUTHED = config.checkbox_to_value(discord_as_authed)
+        sickbeard.DISCORD_USERNAME = discord_username
+        sickbeard.DISCORD_ICON_URL = discord_icon_url
+        sickbeard.DISCORD_AS_TTS = config.checkbox_to_value(discord_as_tts)
 
         sickbeard.USE_GITTER = config.checkbox_to_value(use_gitter)
         sickbeard.GITTER_NOTIFY_ONSNATCH = config.checkbox_to_value(gitter_notify_onsnatch)
@@ -8042,19 +8180,25 @@ class ConfigSubtitles(Config):
         return t.respond()
 
     def save_subtitles(self, use_subtitles=None, subtitles_languages=None, subtitles_dir=None,
-                       service_order=None, subtitles_history=None, subtitles_finder_frequency=None,
+                       service_order=None, subtitles_history=None, subtitles_finder_interval=None,
+                       subtitles_finder_frequency=None,
                        os_hash=None, os_user='', os_pass=''):
+
+        # prevent deprecated var issues from existing ui, delete in future, added 2020.11.07
+        if None is subtitles_finder_interval and None is not subtitles_finder_frequency:
+            subtitles_finder_interval = subtitles_finder_frequency
+
         results = []
 
-        if '' == subtitles_finder_frequency or None is subtitles_finder_frequency:
-            subtitles_finder_frequency = 1
+        if '' == subtitles_finder_interval or None is subtitles_finder_interval:
+            subtitles_finder_interval = 1
 
         config.schedule_subtitles(config.checkbox_to_value(use_subtitles))
         sickbeard.SUBTITLES_LANGUAGES = [lang.alpha2 for lang in subtitles.is_valid_language(
             subtitles_languages.replace(' ', '').split(','))] if '' != subtitles_languages else ''
         sickbeard.SUBTITLES_DIR = subtitles_dir
         sickbeard.SUBTITLES_HISTORY = config.checkbox_to_value(subtitles_history)
-        sickbeard.SUBTITLES_FINDER_FREQUENCY = config.to_int(subtitles_finder_frequency, default=1)
+        sickbeard.SUBTITLES_FINDER_INTERVAL = config.to_int(subtitles_finder_interval, default=1)
         sickbeard.SUBTITLES_OS_HASH = config.checkbox_to_value(os_hash)
 
         # Subtitles services
@@ -8391,7 +8535,7 @@ class CachedImages(MainHandler):
                 tmdbimage = True
                 try:
                     TMDB.API_KEY = sickbeard.TMDB_API_KEY
-                    tmdbconfig = TMDB.Configuration().info()
+                    tmdbconfig = sg_helpers.get_tmdb_info()
                     images = TMDB.TV(helpers.try_int(tmdbid)).images()
                     s = '%s%s%s' % (tmdbconfig['images']['base_url'], tmdbconfig['images']['poster_sizes'][3],
                                     sorted(images['posters'], key=lambda x: x['vote_average'],

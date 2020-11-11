@@ -2,7 +2,13 @@ from optparse import OptionGroup
 from hachoir_py2.core.log import log
 from hachoir_py2.core.i18n import _, getTerminalCharset
 from hachoir_py2.core.tools import makePrintable
+from hachoir_py2 import __version__
 import hachoir_py2.core.config as config
+
+
+def displayVersion(*args):
+    print("Hachoir version %s" % __version__)
+    sys.exit(0)
 
 
 def getHachoirOptions(parser):

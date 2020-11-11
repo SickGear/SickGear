@@ -10,6 +10,8 @@
 <% def sg_var(varname, default=False): return getattr(sickbeard, varname, default) %>#slurp#
 <% def sg_str(varname, default=''): return getattr(sickbeard, varname, default) %>#slurp#
 ##
+#import humanize
+##
 #set $layout = $sg_str('HISTORY_LAYOUT', 'detailed')
 #set $layout_name = 'watched' in $layout and 'Watched' or 'stats' in $layout and 'Activity Hits' or 'provider_failures'in $layout and 'Connect Failures' or 'Activity'
 #set sg_port = str($getVar('sbHttpPort', WEB_PORT))
@@ -396,7 +398,6 @@
 						<li>Label (Profile): <span class="grey-text">emby or kodi</span> , <span class="grey-text">!kodi and !plex</span> , <span class="grey-text">emby user2</span> , <span class="grey-text">emby user"</span> (single end quote excludes user2)</li>
 						<li>Quality: <span class="grey-text">sd or dl</span> , <span class="grey-text">blu</span></li>
 					</ul>
-				</td
 				</td>
 			</tr>
 			<tr class="$row_class()">
@@ -603,6 +604,85 @@
     #end for
 		</div>
 
+#if $sickbeard.USE_NZBS
+<style>
+	table.last_rls th{padding-right:20px}
+	table.last_rls td{vertical-align:middle;line-height:1.1em}
+	table.last_rls span.prov-name{display:inline-block;white-space:nowrap;overflow:hidden;vertical-align: middle}
+	table.last_rls img{margin:0 5px}
+	.status{padding:4px 20px;display:block}
+</style>
+		<div style="padding-bottom:20px">
+			<table style="margin-bottom:10px" class="manageTable last_rls server-failures tablesorter hover-highlight focus-highlight text-center tablesorter-default" cellspacing="0" border="0" cellpadding="0">
+			<thead>
+				<tr>
+					<th class="text-left" style="width:13em"></th>
+					<th class="text-center">last release age</th>
+					<th class="text-center">dated</th>
+					<th class="text-center">provider is...</th>
+				</tr>
+			</thead>
+    #set global $row = 0
+			<tbody>
+    #for $cur_provider in $sorted($sickbeard.newznabProviderList, key=lambda x: x.last_recent_search or SGDatetime(2000,1,1), reverse=True)
+        #set $last_rls_date = '-'
+        #set $last_rls_age = None
+        #set $last_rls_age_str = '-'
+        #if $cur_provider.last_recent_search
+            #set $last_rls_date = $SGDatetime.sbfdatetime($cur_provider.last_recent_search)
+            #set $last_rls_timedelta = ($SGDatetime.now() - $cur_provider.last_recent_search)
+            #set $last_rls_age = $last_rls_timedelta.days
+            #set $last_rls_age_str = '%s days ago' % $last_rls_age
+            #set $tmp = $humanize.naturalday($cur_provider.last_recent_search, format='', locale=False)
+            #if $tmp
+                #set $last_rls_age_str = $humanize.naturaltime($last_rls_timedelta)
+                #if 'yesterday' == $tmp
+                    #set $is_now_night = 6 > $SGDatetime.now().hour
+                    #set $is_last_evening = 18 <= $cur_provider.last_recent_search.hour
+                    #if not ($is_now_night and $is_last_evening)
+                        #set $last_rls_age_str = $humanize.naturalday($cur_provider.last_recent_search)
+                    #end if
+                #end if
+            #end if
+        #end if
+        #set $status_class = 'yellow-bg'
+        #set $status_text = 'not enabled'
+        #if $cur_provider.is_active()
+            #if not $cur_provider.enable_recentsearch
+                #set $status_text = 'recent ' + $status_text
+            #else
+                #set $status_class = 'contrast-text green-bg'
+                #set $status_text = 'enabled'
+                #if '-' != $last_rls_date
+                    #if 4 > $last_rls_age
+                        #set $status_text = 'normal'
+                    #else
+                        #set $status_class = 'contrast-text'
+                        #if 14 >= $last_rls_age
+                            #set $status_class += ' blue-bg'
+                            #set $status_text = 'overdue'
+                        #else
+                            #set $status_class += ' red-bg'
+                            #set $status_text = 'not normal'
+                        #end if
+                    #end if
+                #end if
+            #end if
+        #end if
+				<tr class="$row_class()#echo ('',' grey-text')[not $cur_provider.is_active()]#">
+					<td class="text-left">
+						<span class="prov-name"><img height="16px" src="$sbRoot/images/providers/$cur_provider.image_name()">$cur_provider.name</span>
+					</td>
+					<td>$last_rls_age_str</td>
+					<td>$last_rls_date</td>
+					<td><span class="status $status_class">$status_text</span></td>
+				</tr>
+    #end for
+			</tbody>
+			</table>
+		</div>
+#end if
+
     #if $domain_fail_cnt or $provider_fail_cnt
 <style>
 	.component-group{min-height:50px}
@@ -668,7 +748,7 @@
 						<th class="text-center" style="padding-right:20px">no data</th>
 						<th class="text-center" style="padding-right:20px">other</th>
                 #if $item['has_limit']
-					<th class="text-center" style="padding-right:20px">hit limit</th>
+						<th class="text-center" style="padding-right:20px">hit limit</th>
                 #end if
 					</tr>
 				</thead>

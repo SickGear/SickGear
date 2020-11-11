@@ -5,6 +5,7 @@
 #from sickbeard import config,  metadata
 #from sickbeard.metadata.generic import GenericMetadata
 #from sickbeard.common import *
+#from sickbeard.db import db_supports_backup
 #from sickbeard.helpers import anon_url, maybe_plural
 #from sickbeard.logger import reverseNames as file_logging_presets
 #from sickbeard.sgdatetime import *
@@ -177,7 +178,7 @@
 								<span class="component-desc">
 									<input type="checkbox" name="version_notify" id="version_notify"#echo ('', $checked)[$sg_var('VERSION_NOTIFY', True)]#>
 									<p>and display notifications when updates are available.
-									Checks are run on startup and at the frequency set below*</p>
+									Checks are run on startup and at the interval set below*</p>
 								</span>
 							</label>
 						</div>
@@ -188,7 +189,7 @@
 								<span class="component-desc">
 									<input type="checkbox" name="auto_update" id="auto_update"#echo ('', $checked)[$sg_var('AUTO_UPDATE')]#>
 									<p>fetch and install software updates.
-									Updates are run on startup and in the background at the frequency set below<sup>1</sup></p>
+									Updates are run on startup and in the background at the interval set below<sup>1</sup></p>
 								</span>
 							</label>
 						</div>
@@ -197,7 +198,7 @@
 							<label>
 								<span class="component-title">Check the server every<sup>1</sup></span>
 								<span class="component-desc">
-									<input type="text" name="update_frequency" id="update_frequency" value="$sg_var('UPDATE_FREQUENCY', 12)" class="form-control input-sm input75">
+									<input type="text" name="update_interval" id="update_interval" value="$sg_var('UPDATE_INTERVAL', 12)" class="form-control input-sm input75">
 									<p>hours for software updates (default:12)</p>
 								</span>
 							</label>
@@ -212,12 +213,27 @@
 								</span>
 							</label>
 						</div>
-
-						<input type="submit" class="btn config_submitter" value="Save Changes">
-					</fieldset>
 #else
-					<div><p>Repo updates disabled. Using $sg_var('EXT_UPDATES') update method</p></div>
+						<div class="field-pair">
+							<span class="component-title">Built-in updates disabled</span>
+							<span class="component-desc"><p>using #echo $sg_var('EXT_UPDATES') or 'other'# update method instead</p>
+							</span>
+						</div>
 #end if
+
+						<div class="field-pair">
+							<span class="component-title">Alias show names/numbers</span>
+							<span class="component-desc" style="line-height:20px">
+								<input id="alias" class="btn btn-inline" type="button" value="Process">
+								<p>updates for alternative show names and numbers</p>
+								<span id="alias-result"></span>
+							</span>
+						</div>
+
+#if not $sg_var('EXT_UPDATES')
+						<input type="submit" class="btn config_submitter" value="Save Changes">
+#end if
+					</fieldset>
 
 				</div>
 				</div><!-- /component-group1 //-->
@@ -784,6 +800,17 @@
 								</span>
 							</label>
 						</div>
+#if $db_supports_backup
+						<div class="field-pair">
+							<label for="backup_db_oneday">
+								<span class="component-title">Backup database plan</span>
+								<span class="component-desc">
+									<input type="checkbox" name="backup_db_oneday" id="backup_db_oneday"#echo ('', $checked)[True == $sg_var('BACKUP_DB_ONEDAY')]#>
+									<p>backup one day instead of multiple days (helps existing backup strategies)</p>
+								</span>
+							</label>
+						</div>
+#end if
 
 						<input type="submit" class="btn config_submitter" value="Save Changes">
 					</fieldset>

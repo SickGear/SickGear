@@ -30,7 +30,7 @@ from six import iteritems
 class GrabTheInfoProvider(generic.TorrentProvider):
 
     def __init__(self):
-        generic.TorrentProvider.__init__(self, 'GrabTheInfo', cache_update_freq=15)
+        generic.TorrentProvider.__init__(self, 'GrabTheInfo', cache_update_iv=15)
 
         self.url_base = 'http://grabthe.info/'
         self.urls = {'config_provider_home_uri': self.url_base,

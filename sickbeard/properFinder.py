@@ -36,20 +36,21 @@ from .history import dateFormat
 from .name_parser.parser import InvalidNameException, InvalidShowException, NameParser
 from .sgdatetime import timestamp_near
 
-from _23 import filter_iter, list_values, map_consume, map_list
+from _23 import filter_iter, filter_list, list_values, map_consume, map_list
 from six import string_types
 
 # noinspection PyUnreachableCode
 if False:
     # noinspection PyUnresolvedReferences
-    from typing import AnyStr, List, Tuple
+    from typing import AnyStr, Dict, List, Tuple
+    from .providers.generic import GenericProvider
 
 
 def search_propers(provider_proper_obj=None):
+    # type: (Dict[AnyStr, List[Proper]]) -> None
     """
 
     :param provider_proper_obj: Optional dict with provider keys containing Proper objects
-    :type provider_proper_obj: dict
     :return:
     """
     if not sickbeard.DOWNLOAD_PROPERS:
@@ -57,7 +58,7 @@ def search_propers(provider_proper_obj=None):
 
     logger.log(('Checking Propers from recent search', 'Beginning search for new Propers')[None is provider_proper_obj])
 
-    age_shows, age_anime = sickbeard.BACKLOG_DAYS + 2, 14
+    age_shows, age_anime = sickbeard.BACKLOG_LIMITED_PERIOD + 2, 14
     aired_since_shows = datetime.datetime.now() - datetime.timedelta(days=age_shows)
     aired_since_anime = datetime.datetime.now() - datetime.timedelta(days=age_anime)
     recent_shows, recent_anime = _recent_history(aired_since_shows, aired_since_anime)
@@ -74,7 +75,7 @@ def search_propers(provider_proper_obj=None):
     if None is provider_proper_obj:
         _set_last_proper_search(datetime.datetime.now())
 
-        proper_sch = sickbeard.properFinderScheduler
+        proper_sch = sickbeard.proper_finder_scheduler
         if None is proper_sch.start_time:
             run_in = proper_sch.lastRun + proper_sch.cycleTime - datetime.datetime.now()
             run_at = ', next check '
@@ -214,19 +215,35 @@ def load_webdl_types():
     sickbeard.WEBDL_TYPES = new_types + default_types
 
 
-def _get_proper_list(aired_since_shows, recent_shows, recent_anime, proper_dict=None):
+def _search_provider(cur_provider, provider_propers, aired_since_shows, recent_shows, recent_anime):
+    # type: (GenericProvider, List, datetime.datetime, List[Tuple[int, int]], List[Tuple[int, int]]) -> None
+    try:
+        # we need to extent the referenced list from parameter to update the original var
+        provider_propers.extend(cur_provider.find_propers(search_date=aired_since_shows, shows=recent_shows,
+                                                          anime=recent_anime))
+    except AuthException as e:
+        logger.log('Authentication error: %s' % ex(e), logger.ERROR)
+    except (BaseException, Exception) as e:
+        logger.log('Error while searching %s, skipping: %s' % (cur_provider.name, ex(e)), logger.ERROR)
+        logger.log(traceback.format_exc(), logger.ERROR)
+
+    if not provider_propers:
+        logger.log('No Proper releases found at [%s]' % cur_provider.name)
+
+
+def _get_proper_list(aired_since_shows,  # type: datetime.datetime
+                     recent_shows,  # type: List[Tuple[int, int]]
+                     recent_anime,  # type:  List[Tuple[int, int]]
+                     proper_dict=None  # type:  Dict[AnyStr, List[Proper]]
+                     ):
+    # type: (...) -> List[Proper]
     """
 
     :param aired_since_shows: date since aired
-    :type aired_since_shows: datetime.datetime
     :param recent_shows: list of recent shows
-    :type recent_shows: List[Tuple[int, int]]
     :param recent_anime: list of recent anime shows
-    :type recent_anime: List[Tuple[int, int]]
     :param proper_dict: dict with provider keys containing Proper objects
-    :type proper_dict: dict
     :return: list of propers
-    :rtype: List[sickbeard.classes.Proper]
     """
     propers = {}
     # make sure the episode has been downloaded before
@@ -235,31 +252,47 @@ def _get_proper_list(aired_since_shows, recent_shows, recent_anime, proper_dict=
     my_db = db.DBConnection()
     # for each provider get a list of arbitrary Propers
     orig_thread_name = threading.currentThread().name
-    for cur_provider in filter_iter(lambda p: p.is_active(), sickbeard.providers.sortedProviderList()):
+    # filter provider list for:
+    # 1. from recent search: recent search enabled providers
+    # 2. native proper search: active search enabled providers
+    provider_list = filter_list(
+        lambda p: p.is_active() and (p.enable_recentsearch, p.enable_backlog)[None is proper_dict],
+        sickbeard.providers.sortedProviderList())
+    search_threads = []
+
+    if None is proper_dict:
+        # if not a recent proper search create a thread per provider to search for Propers
+        proper_dict = {}
+        for cur_provider in provider_list:
+            if not recent_anime and cur_provider.anime_only:
+                continue
+
+            provider_id = cur_provider.get_id()
+
+            logger.log('Searching for new Proper releases at [%s]' % cur_provider.name)
+            proper_dict[provider_id] = []
+
+            search_threads.append(threading.Thread(target=_search_provider,
+                                                   kwargs={'cur_provider': cur_provider,
+                                                           'provider_propers': proper_dict[provider_id],
+                                                           'aired_since_shows': aired_since_shows,
+                                                           'recent_shows': recent_shows,
+                                                           'recent_anime': recent_anime},
+                                                   name='%s :: [%s]' % (orig_thread_name, cur_provider.name)))
+
+            search_threads[-1].start()
+
+        # wait for all searches to finish
+        for cur_thread in search_threads:
+            cur_thread.join()
+
+    for cur_provider in provider_list:
         if not recent_anime and cur_provider.anime_only:
             continue
 
-        if None is not proper_dict:
-            found_propers = proper_dict.get(cur_provider.get_id(), [])
-            if not found_propers:
-                continue
-        else:
-            threading.currentThread().name = '%s :: [%s]' % (orig_thread_name, cur_provider.name)
-
-            logger.log('Searching for new PROPER releases')
-
-            try:
-                found_propers = cur_provider.find_propers(search_date=aired_since_shows, shows=recent_shows,
-                                                          anime=recent_anime)
-            except AuthException as e:
-                logger.log('Authentication error: %s' % ex(e), logger.ERROR)
-                continue
-            except (BaseException, Exception) as e:
-                logger.log('Error while searching %s, skipping: %s' % (cur_provider.name, ex(e)), logger.ERROR)
-                logger.log(traceback.format_exc(), logger.ERROR)
-                continue
-            finally:
-                threading.currentThread().name = orig_thread_name
+        found_propers = proper_dict.get(cur_provider.get_id(), [])
+        if not found_propers:
+            continue
 
         # if they haven't been added by a different provider than add the Proper to the list
         for cur_proper in found_propers:
@@ -277,7 +310,7 @@ def _get_proper_list(aired_since_shows, recent_shows, recent_anime, proper_dict=
             cur_proper.parsed_show_obj = (cur_proper.parsed_show_obj
                                           or helpers.find_show_by_id(parse_result.show_obj.tvid_prodid))
             if None is cur_proper.parsed_show_obj:
-                logger.log('Skip download; cannot find show with ID [%s] from %s' %
+                logger.log('Skip download; cannot find show with ID [%s] at %s' %
                            (cur_proper.prodid, sickbeard.TVInfoAPI(cur_proper.tvid).name), logger.ERROR)
                 continue
 
@@ -462,11 +495,11 @@ def _get_proper_list(aired_since_shows, recent_shows, recent_anime, proper_dict=
 
 
 def _download_propers(proper_list):
+    # type: (List[Proper]) -> None
     """
     download propers from given list
 
     :param proper_list: proper list
-    :type proper_list: List[sickbeard.classes.Proper]
     """
     verified_propers = True
     consumed_proper = []
@@ -560,19 +593,18 @@ def _download_propers(proper_list):
 
 
 def get_needed_qualites(needed=None):
+    # type: (sickbeard.common.NeededQualities) -> sickbeard.common.NeededQualities
     """
 
     :param needed: optional needed object
-    :type needed: sickbeard.common.NeededQualities
     :return: needed object
-    :rtype: sickbeard.common.NeededQualities
     """
     if not isinstance(needed, NeededQualities):
         needed = NeededQualities()
     if not sickbeard.DOWNLOAD_PROPERS or needed.all_needed:
         return needed
 
-    age_shows, age_anime = sickbeard.BACKLOG_DAYS + 2, 14
+    age_shows, age_anime = sickbeard.BACKLOG_LIMITED_PERIOD + 2, 14
     aired_since_shows = datetime.datetime.now() - datetime.timedelta(days=age_shows)
     aired_since_anime = datetime.datetime.now() - datetime.timedelta(days=age_anime)
 
@@ -671,7 +703,7 @@ def _set_last_proper_search(when):
 
 
 def next_proper_timeleft():
-    return sickbeard.properFinderScheduler.timeLeft()
+    return sickbeard.proper_finder_scheduler.timeLeft()
 
 
 def get_last_proper_search():

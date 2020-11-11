@@ -34,7 +34,7 @@ class ShazbatProvider(generic.TorrentProvider):
 
     def __init__(self):
 
-        generic.TorrentProvider.__init__(self, 'Shazbat', cache_update_freq=15)
+        generic.TorrentProvider.__init__(self, 'Shazbat', cache_update_iv=15)
 
         self.url_base = 'https://www.shazbat.tv/'
         self.urls = {'config_provider_home_uri': self.url_base,

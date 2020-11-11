@@ -29,7 +29,7 @@ class TorrentRssProvider(generic.TorrentProvider):
 
     def __init__(self, name, url, cookies='', search_mode='eponly', search_fallback=False,
                  enable_recentsearch=True, enable_backlog=True):
-        generic.TorrentProvider.__init__(self, name, cache_update_freq=15)
+        generic.TorrentProvider.__init__(self, name, cache_update_iv=15)
         self.enable_backlog = bool(try_int(enable_backlog))
         # no use for rss, so disable by removal after init uses it
         delattr(self, 'enable_scheduled_backlog')

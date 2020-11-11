@@ -39,8 +39,9 @@ import sickbeard
 from .. import classes, db, helpers, logger, tvcache
 from ..classes import NZBSearchResult, TorrentSearchResult, SearchResult
 from ..common import Quality, MULTI_EP_RESULT, SEASON_RESULT, USER_AGENT
-from ..helpers import maybe_plural, remove_file_failed
+from ..helpers import maybe_plural, remove_file_perm
 from ..name_parser.parser import InvalidNameException, InvalidShowException, NameParser
+from ..scene_exceptions import has_season_exceptions
 from ..show_name_helpers import get_show_names_all_possible
 from ..sgdatetime import SGDatetime, timestamp_near
 from ..tv import TVEpisode, TVShow
@@ -54,6 +55,7 @@ import requests.cookies
 
 from _23 import decode_bytes, filter_list, filter_iter, make_btih, map_list, quote, quote_plus, urlparse
 from six import iteritems, iterkeys, itervalues, PY2
+from sg_helpers import try_int
 
 # noinspection PyUnreachableCode
 if False:
@@ -586,7 +588,24 @@ class GenericProvider(object):
                 self.inc_failure_count(ProviderFail(fail_type=ProviderFailTypes.nodata))
                 log_failure_url = True
         except requests.exceptions.HTTPError as e:
-            self.inc_failure_count(ProviderFail(fail_type=ProviderFailTypes.http, code=e.response.status_code))
+            if 429 == e.response.status_code:
+                r_headers = getattr(e.response, 'headers', {})
+                retry_time = None
+                unit = None
+                if None is not r_headers and 'Retry-After' in r_headers:
+                    retry_time = try_int(r_headers.get('Retry-After', 60), 60)
+                    unit = 'seconds'
+                    retry_time = (retry_time, 60)[0 > retry_time]
+
+                description = r_headers.get('X-nZEDb', '')
+                if not retry_time:
+                    try:
+                        retry_time, unit = re.findall(r'Retry in (\d+)\W+([a-z]+)', description, flags=re.I)[0]
+                    except IndexError:
+                        retry_time, unit = None, None
+                self.tmr_limit_update(retry_time, unit, description)
+            else:
+                self.inc_failure_count(ProviderFail(fail_type=ProviderFailTypes.http, code=e.response.status_code))
         except requests.exceptions.ConnectionError:
             self.inc_failure_count(ProviderFail(fail_type=ProviderFailTypes.connection))
         except requests.exceptions.ReadTimeout:
@@ -770,7 +789,7 @@ class GenericProvider(object):
                     saved = True
                     break
 
-                remove_file_failed(cache_file)
+                remove_file_perm(cache_file)
 
         if 'Referer' in self.session.headers:
             if ref_state:
@@ -1469,7 +1488,7 @@ class NZBProvider(GenericProvider):
             if self.should_skip(log_warning=False):
                 break
 
-            search_params = {'q': search_terms[index], 'maxage': sickbeard.BACKLOG_DAYS + 2}
+            search_params = {'q': search_terms[index], 'maxage': sickbeard.BACKLOG_LIMITED_PERIOD + 2}
             # if alt_search:
             #
             #     if do_search_alt:
@@ -1515,15 +1534,15 @@ class NZBProvider(GenericProvider):
 
 class TorrentProvider(GenericProvider):
 
-    def __init__(self, name, supports_backlog=True, anime_only=False,  cache_update_freq=7, update_freq=None):
+    def __init__(self, name, supports_backlog=True, anime_only=False, cache_update_iv=7, update_iv=None):
         # type: (AnyStr, bool, bool, int, Optional[int]) -> None
         """
 
         :param name: provider name
         :param supports_backlog: supports backlog
         :param anime_only: is anime only
-        :param cache_update_freq:
-        :param update_freq:
+        :param cache_update_iv:
+        :param update_iv:
         """
         GenericProvider.__init__(self, name, supports_backlog, anime_only)
 
@@ -1534,9 +1553,9 @@ class TorrentProvider(GenericProvider):
         self._url = None
         self.urls = {}  # type: Dict[AnyStr]
         self.cache._cache_data = self._cache_data
-        if cache_update_freq:
-            self.cache.update_freq = cache_update_freq
-        self.ping_freq = update_freq
+        if cache_update_iv:
+            self.cache.update_iv = cache_update_iv
+        self.ping_iv = update_iv
         self.ping_skip = None
         self._reject_seed = None
         self._reject_leech = None
@@ -1654,6 +1673,7 @@ class TorrentProvider(GenericProvider):
             return []
 
         show_obj = ep_obj.show_obj
+        season = (-1, ep_obj.season)[has_season_exceptions(ep_obj.show_obj.tvid, ep_obj.show_obj.prodid, ep_obj.season)]
         ep_dict = self._ep_dict(ep_obj)
         sp_detail = (show_obj.air_by_date or show_obj.is_sports) and str(ep_obj.airdate).split('-')[0] or \
                     (show_obj.is_anime and ep_obj.scene_absolute_number or
@@ -1661,7 +1681,8 @@ class TorrentProvider(GenericProvider):
         sp_detail = ([sp_detail], sp_detail)[isinstance(sp_detail, list)]
         detail = ({}, {'Season_only': sp_detail})[detail_only
                                                   and not self.show_obj.is_sports and not self.show_obj.is_anime]
-        return [dict(itertools.chain(iteritems({'Season': self._build_search_strings(sp_detail, scene, prefix)}),
+        return [dict(itertools.chain(iteritems({'Season': self._build_search_strings(sp_detail, scene, prefix,
+                                                                                     season=season)}),
                                      iteritems(detail)))]
 
     def _episode_strings(self,
@@ -1688,6 +1709,7 @@ class TorrentProvider(GenericProvider):
             return []
 
         show_obj = ep_obj.show_obj
+        season = (-1, ep_obj.season)[has_season_exceptions(ep_obj.show_obj.tvid, ep_obj.show_obj.prodid, ep_obj.season)]
         if show_obj.air_by_date or show_obj.is_sports:
             ep_detail = [str(ep_obj.airdate).replace('-', sep_date)]\
                 if 'date_detail' not in kwargs else kwargs['date_detail'](ep_obj.airdate)
@@ -1705,7 +1727,8 @@ class TorrentProvider(GenericProvider):
                 ep_detail = ([ep_detail], ep_detail)[isinstance(ep_detail, list)] + ['%d' % ep_dict['episodenumber']]
         ep_detail = ([ep_detail], ep_detail)[isinstance(ep_detail, list)]
         detail = ({}, {'Episode_only': ep_detail})[detail_only and not show_obj.is_sports and not show_obj.is_anime]
-        return [dict(itertools.chain(iteritems({'Episode': self._build_search_strings(ep_detail, scene, prefix)}),
+        return [dict(itertools.chain(iteritems({'Episode': self._build_search_strings(ep_detail, scene, prefix,
+                                                                                      season=season)}),
                                      iteritems(detail)))]
 
     @staticmethod
@@ -1720,8 +1743,8 @@ class TorrentProvider(GenericProvider):
                            (ep_obj.scene_season, ep_obj.scene_episode))[bool(ep_obj.show_obj.is_scene)]
         return {'seasonnumber': season, 'episodenumber': episode}
 
-    def _build_search_strings(self, ep_detail, process_name=True, prefix=''):
-        # type: (Union[List[AnyStr], AnyStr], bool, AnyStr) -> List[AnyStr]
+    def _build_search_strings(self, ep_detail, process_name=True, prefix='', season=-1):
+        # type: (Union[List[AnyStr], AnyStr], bool, AnyStr, int) -> List[AnyStr]
         """
         Build a list of search strings for querying a provider
         :param ep_detail: String of episode detail or List of episode details
@@ -1735,7 +1758,8 @@ class TorrentProvider(GenericProvider):
 
         search_params = []
         crop = re.compile(r'([.\s])(?:\1)+')
-        for name in get_show_names_all_possible(self.show_obj, scenify=process_name and getattr(self, 'scene', True)):
+        for name in get_show_names_all_possible(self.show_obj, scenify=process_name and getattr(self, 'scene', True),
+                                                season=season):
             for detail in ep_detail:
                 search_params += [crop.sub(r'\1', '%s %s%s' % (name, x, detail)) for x in prefix]
         return search_params
@@ -2096,9 +2120,9 @@ class TorrentProvider(GenericProvider):
             if self.ping_skip:
                 self.ping_skip -= 1
             else:
-                self.ping_skip = ((60*60) // self.ping_freq, None)[self._authorised()]
+                self.ping_skip = ((60*60) // self.ping_iv, None)[self._authorised()]
 
-            self._sleep_with_stop(self.ping_freq)
+            self._sleep_with_stop(self.ping_iv)
 
     def get_result(self, ep_obj_list, url):
         # type: (List[TVEpisode], AnyStr) -> Optional[NZBSearchResult, TorrentSearchResult]

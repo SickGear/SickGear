@@ -34,7 +34,7 @@ from _23 import urlencode
 class HDBitsProvider(generic.TorrentProvider):
 
     def __init__(self):
-        generic.TorrentProvider.__init__(self, 'HDBits', cache_update_freq=15)
+        generic.TorrentProvider.__init__(self, 'HDBits', cache_update_iv=15)
 
         # api_spec: https://hdbits.org/wiki/API
         self.url_base = 'https://hdbits.org/'

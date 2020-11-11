@@ -901,7 +901,7 @@ class CSSParser(object):
                 elif key == 'pseudo_class':
                     has_selector, is_html = self.parse_pseudo_class(sel, m, has_selector, iselector, is_html)
                 elif key == 'pseudo_element':
-                    raise NotImplementedError("Psuedo-element found at position {}".format(m.start(0)))
+                    raise NotImplementedError("Pseudo-element found at position {}".format(m.start(0)))
                 elif key == 'pseudo_contains':
                     has_selector = self.parse_pseudo_contains(sel, m, has_selector)
                 elif key in ('pseudo_nth_type', 'pseudo_nth_child'):

@@ -47,6 +47,7 @@ class XEMBasicTests(test.SickbeardTestDBCase):
             try:
                 show_obj = TVShow(int(cur_result['tvid']), int(cur_result['prodid']))
                 sickbeard.showList.append(show_obj)
+                sickbeard.showDict[show_obj.sid_int] = show_obj
             except (BaseException, Exception):
                 pass
 

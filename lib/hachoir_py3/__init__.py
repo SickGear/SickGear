@@ -1,1 +1,2 @@
-from hachoir_py3.version import VERSION as __version__   # noqa
+VERSION = (3, 1, 2)
+__version__ = ".".join(map(str, VERSION))

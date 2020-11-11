@@ -465,26 +465,26 @@ $(document).ready(function(){
 		}
 	});
 
-	$('#test-discordapp').click(function () {
-		var discordappAsAuthed = $('#discordapp-as-authed').prop('checked'),
-			discordappUsername = $('#discordapp-username').val(), discordappIconUrl = $('#discordapp-icon-url').val(),
-			discordappAsTts = $('#discordapp-as-tts').prop('checked'),
-			accessToken = '#discordapp-access-token', discordappAccessToken = $(accessToken).val();
+	$('#test-discord').click(function () {
+		var discordAsAuthed = $('#discord-as-authed').prop('checked'),
+			discordUsername = $('#discord-username').val(), discordIconUrl = $('#discord-icon-url').val(),
+			discordAsTts = $('#discord-as-tts').prop('checked'),
+			accessToken = '#discord-access-token', discordAccessToken = $(accessToken).val();
 
 		$(accessToken).removeClass('warning');
-		if (!discordappAccessToken) {
-			$('#test-discordapp-result').html('Please fill out the necessary fields above.');
-			if (!discordappAccessToken)
+		if (!discordAccessToken) {
+			$('#test-discord-result').html('Please fill out the necessary fields above.');
+			if (!discordAccessToken)
 				$(accessToken).addClass('warning');
 		} else {
 			$(this).prop('disabled', !0);
-			$('#test-discordapp-result').html(loading);
-			$.get(sbRoot + '/home/test-discordapp',
-				{as_authed: discordappAsAuthed, username: discordappUsername, icon_url: discordappIconUrl,
-					as_tts: discordappAsTts, access_token: discordappAccessToken})
+			$('#test-discord-result').html(loading);
+			$.get(sbRoot + '/home/test-discord',
+				{as_authed: discordAsAuthed, username: discordUsername, icon_url: discordIconUrl,
+					as_tts: discordAsTts, access_token: discordAccessToken})
 				.done(function (data) {
-					$('#test-discordapp-result').html(data);
-					$('#test-discordapp').prop('disabled', !1);
+					$('#test-discord-result').html(data);
+					$('#test-discord').prop('disabled', !1);
 				});
 		}
 	});

@@ -28,7 +28,6 @@ import os
 import re
 import shutil
 import socket
-import stat
 import time
 import uuid
 import subprocess
@@ -54,7 +53,7 @@ import requests.exceptions
 import subliminal
 from lxml_etree import etree, is_lxml
 
-from _23 import b64decodebytes, b64encodebytes, decode_bytes, decode_str, DirEntry, filter_iter, Popen, scandir
+from _23 import b64decodebytes, b64encodebytes, decode_bytes, decode_str, filter_iter, Popen, scandir
 from six import iteritems, PY2, string_types, text_type
 # noinspection PyUnresolvedReferences
 from six.moves import zip
@@ -64,12 +63,12 @@ from six.moves import zip
 # noinspection PyUnresolvedReferences
 from sg_helpers import chmod_as_parent, clean_data, copy_file, fix_set_group_id, get_system_temp_dir, \
     get_url, indent_xml, make_dirs, maybe_plural, md5_for_text, move_file, proxy_setting, remove_file, \
-    remove_file_failed, replace_extension, try_int, try_ord, write_file
+    remove_file_perm, replace_extension, scantree, try_int, try_ord, write_file
 
 # noinspection PyUnreachableCode
 if False:
     # noinspection PyUnresolvedReferences
-    from typing import Any, AnyStr, Dict, NoReturn, Iterable, Iterator, List, Optional, Set, Tuple, Union
+    from typing import Any, AnyStr, Dict, Generator, NoReturn, Iterable, Iterator, List, Optional, Set, Tuple, Union
     from .tv import TVShow
     # the following workaround hack resolves a pyc resolution bug
     from .name_cache import retrieveNameFromCache
@@ -360,21 +359,14 @@ def list_media_files(path):
     :param path: path
     :return: list of media files
     """
-    if not dir or not ek.ek(os.path.isdir, path):
-        return []
-
-    files = []
-    for cur_file in ek.ek(os.listdir, path):
-        full_cur_file = ek.ek(os.path.join, path, cur_file)  # type: AnyStr
-
-        # if it's a folder do it recursively
-        if ek.ek(os.path.isdir, full_cur_file) and not cur_file.startswith('.') and 'Extras' != cur_file:
-            files += list_media_files(full_cur_file)
-
-        elif has_media_ext(cur_file):
-            files.append(full_cur_file)
-
-    return files
+    result = []
+    if path:
+        if [direntry for direntry in scantree(path, include=[r'\.sickgearignore'], filter_kind=False, recurse=False)]:
+            logger.log('Skipping folder "%s" because it contains ".sickgearignore"' % path, logger.DEBUG)
+        else:
+            result = [direntry.path for direntry in scantree(path, exclude=['Extras'], filter_kind=False)
+                      if has_media_ext(direntry.name)]
+    return result
 
 
 def copyFile(src_file, dest_file):
@@ -1094,7 +1086,7 @@ def download_file(url, filename, session=None, **kwargs):
     :rtype: bool
     """
     if None is get_url(url, session=session, savename=filename, **kwargs):
-        remove_file_failed(filename)
+        remove_file_perm(filename)
         return False
     return True
 
@@ -1107,26 +1099,21 @@ def clear_cache(force=False):
     :type force: bool
     """
     # clean out cache directory, remove everything > 12 hours old
-    if sickbeard.CACHE_DIR:
-        logger.log(u'Trying to clean cache folder %s' % sickbeard.CACHE_DIR)
+    dirty = None
+    del_time = int(timestamp_near((datetime.datetime.now() - datetime.timedelta(hours=12))))
+    direntry_args = dict(follow_symlinks=False)
+    for direntry in scantree(sickbeard.CACHE_DIR, ['images|rss|zoneinfo'], follow_symlinks=True):
+        if direntry.is_file(**direntry_args) and (force or del_time > direntry.stat(**direntry_args).st_mtime):
+            dirty = dirty or False if remove_file_perm(direntry.path) else True
+        elif direntry.is_dir(**direntry_args) and direntry.name not in ['cheetah', 'sessions', 'indexers']:
+            dirty = dirty or False
+            try:
+                ek.ek(os.rmdir, direntry.path)
+            except OSError:
+                dirty = True
 
-        # Does our cache_dir exists
-        if not ek.ek(os.path.isdir, sickbeard.CACHE_DIR):
-            logger.log(u'Skipping clean of non-existing folder: %s' % sickbeard.CACHE_DIR, logger.WARNING)
-        else:
-            exclude = ['rss', 'images', 'zoneinfo']
-            del_time = int(timestamp_near((datetime.datetime.now() - datetime.timedelta(hours=12))))
-            for f in scantree(sickbeard.CACHE_DIR, exclude, follow_symlinks=True):
-                if f.is_file(follow_symlinks=False) and (force or del_time > f.stat(follow_symlinks=False).st_mtime):
-                    try:
-                        ek.ek(os.remove, f.path)
-                    except OSError as e:
-                        logger.log('Unable to delete %s: %r / %s' % (f.path, e, ex(e)), logger.WARNING)
-                elif f.is_dir(follow_symlinks=False) and f.name not in ['cheetah', 'sessions', 'indexers']:
-                    try:
-                        ek.ek(os.rmdir, f.path)
-                    except OSError:
-                        pass
+    logger.log(u'%s from cache folder %s' % ((('Found items not removed', 'Found items removed')[not dirty],
+                                              'No items found to remove')[None is dirty], sickbeard.CACHE_DIR))
 
 
 def human(size):
@@ -1379,25 +1366,6 @@ def cpu_sleep():
         time.sleep(cpu_presets[sickbeard.CPU_PRESET])
 
 
-def scantree(path, exclude=None, follow_symlinks=False):
-    # type: (AnyStr, Optional[AnyStr, List[AnyStr]], bool) -> Optional[Iterator[DirEntry], Iterable]
-    """Recursively yield DirEntry objects for given directory.
-    :param path: path
-    :param exclude: excludes
-    :param follow_symlinks: follow symlinks
-    :return: iter of results
-    """
-    exclude = (exclude, ([exclude], [])[None is exclude])[not isinstance(exclude, list)]
-    for entry in ek.ek(scandir, path):
-        if entry.is_dir(follow_symlinks=follow_symlinks):
-            if entry.name not in exclude:
-                for subentry in scantree(entry.path):
-                    yield subentry
-                yield entry
-        else:
-            yield entry
-
-
 def cleanup_cache():
     """
     Delete old cached files
@@ -1420,13 +1388,11 @@ def delete_not_changed_in(paths, days=30, minutes=0):
     del_time = int(timestamp_near((datetime.datetime.now() - datetime.timedelta(days=days, minutes=minutes))))
     errors = 0
     qualified = 0
-    for c in (paths, [paths])[not isinstance(paths, list)]:
+    for cur_path in (paths, [paths])[not isinstance(paths, list)]:
         try:
-            for f in scantree(c):
-                if f.is_file(follow_symlinks=False) and del_time > f.stat(follow_symlinks=False).st_mtime:
-                    try:
-                        ek.ek(os.remove, f.path)
-                    except (BaseException, Exception):
+            for direntry in scantree(cur_path, filter_kind=False):
+                if del_time > direntry.stat(follow_symlinks=False).st_mtime:
+                    if not remove_file_perm(direntry.path):
                         errors += 1
                     qualified += 1
         except (BaseException, Exception):
@@ -1598,6 +1564,8 @@ def get_overview(ep_status, show_quality, upgrade_once, split_snatch=False):
     :type show_quality: int
     :param upgrade_once: upgrade once
     :type upgrade_once: bool
+    :param split_snatch:
+    :type split_snatch: bool
     :return: constant from classes Overview
     :rtype: int
     """

@@ -884,6 +884,12 @@ class PostProcessor(object):
         :rtype: bool
         """
 
+        existing_show_path = ek.ek(os.path.isdir, ep_obj.show.location)
+        if not existing_show_path and not sickbeard.CREATE_MISSING_SHOW_DIRS:
+            # Show location does not exist, and cannot be created, marking it unsafe to proceed
+            self._log(u'.. marking it unsafe to proceed because show location does not exist', logger.DEBUG)
+            return False
+
         # if SickGear snatched this then assume it's safe
         if ep_obj.status in common.Quality.SNATCHED_ANY:
             self._log(u'SickGear snatched this episode, marking it safe to replace', logger.DEBUG)
@@ -919,6 +925,12 @@ class PostProcessor(object):
                           u' the episode to process has unknown quality', logger.DEBUG)
                 return False
 
+        existing_file_status = self._check_for_existing_file(ep_obj.location)
+        if PostProcessor.DOESNT_EXIST == existing_file_status \
+                and (existing_show_path or sickbeard.CREATE_MISSING_SHOW_DIRS):
+            self._log(u'.. there is no file to replace, marking it safe to continue', logger.DEBUG)
+            return True
+
         # if there's an existing downloaded file with same quality, check filesize to decide
         if new_ep_quality == old_ep_quality:
             np = NameParser(show_obj=self.show_obj)
@@ -945,19 +957,6 @@ class PostProcessor(object):
 
             self._log(u'An episode exists in the database with the same quality as the episode to process',
                       logger.DEBUG)
-
-            existing_file_status = self._check_for_existing_file(ep_obj.location)
-
-            # check for an existing file
-            if PostProcessor.DOESNT_EXIST == existing_file_status:
-                if not ek.ek(os.path.isdir, ep_obj.show_obj.location) and not sickbeard.CREATE_MISSING_SHOW_DIRS:
-                    # File and show location does not exist, marking it unsafe to replace
-                    self._log(u'.. marking it unsafe to replace because show location does not exist', logger.DEBUG)
-                    return False
-                else:
-                    # File does not exist, marking it safe to replace
-                    self._log(u'.. there is no file to replace, marking it safe to continue', logger.DEBUG)
-                    return True
 
             self._log(u'Checking size of existing file ' + ep_obj.location, logger.DEBUG)
 

@@ -32,7 +32,7 @@ from six import string_types, iteritems
 class SpeedCDProvider(generic.TorrentProvider):
 
     def __init__(self):
-        generic.TorrentProvider.__init__(self, 'SpeedCD', update_freq=4*60)
+        generic.TorrentProvider.__init__(self, 'SpeedCD', update_iv=4 * 60)
 
         self.url_home = ['https://speed.cd/']
 

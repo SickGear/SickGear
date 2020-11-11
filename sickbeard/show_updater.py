@@ -17,13 +17,16 @@
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
 import datetime
+import os
 import traceback
 
 import exceptions_helper
 from exceptions_helper import ex
+# noinspection PyPep8Naming
+import encodingKludge as ek
 
 import sickbeard
-from . import db, failed_history, logger, network_timezones, properFinder, ui
+from . import db, logger, network_timezones, properFinder, ui
 
 # noinspection PyUnreachableCode
 if False:
@@ -67,6 +70,15 @@ class ShowUpdater(object):
             update_datetime = datetime.datetime.now()
             update_date = update_datetime.date()
 
+            # backup db's
+            if sickbeard.db.db_supports_backup and 0 < sickbeard.BACKUP_DB_MAX_COUNT:
+                logger.log('backing up all db\'s')
+                try:
+                    sickbeard.db.backup_all_dbs(sickbeard.BACKUP_DB_PATH or
+                                                ek.ek(os.path.join, sickbeard.DATA_DIR, 'backup'))
+                except (BaseException, Exception):
+                    logger.log('backup db error', logger.ERROR)
+
             # refresh network timezones
             try:
                 network_timezones.update_network_dict()
@@ -93,14 +105,6 @@ class ShowUpdater(object):
             except (BaseException, Exception):
                 logger.log('scene exceptions update error', logger.ERROR)
                 logger.log(traceback.format_exc(), logger.ERROR)
-
-            # sure, why not?
-            if sickbeard.USE_FAILED_DOWNLOADS:
-                try:
-                    failed_history.remove_old_history()
-                except (BaseException, Exception):
-                    logger.log('Failed History cleanup error', logger.ERROR)
-                    logger.log(traceback.format_exc(), logger.ERROR)
 
             # clear the data of unused providers
             try:
@@ -182,12 +186,12 @@ class ShowUpdater(object):
                     # otherwise just refresh
                     if cur_show_obj.should_update(update_date=update_date) \
                             or cur_show_obj.tvid_prodid in stale_should_update:
-                        cur_queue_item = sickbeard.showQueueScheduler.action.updateShow(cur_show_obj,
-                                                                                        scheduled_update=True)
+                        cur_queue_item = sickbeard.show_queue_scheduler.action.updateShow(cur_show_obj,
+                                                                                          scheduled_update=True)
                     else:
                         logger.log(u'Not updating episodes for show %s because it\'s marked as ended and last/next'
                                    u' episode is not within the grace period.' % cur_show_obj.name, logger.DEBUG)
-                        cur_queue_item = sickbeard.showQueueScheduler.action.refreshShow(cur_show_obj, True, True)
+                        cur_queue_item = sickbeard.show_queue_scheduler.action.refreshShow(cur_show_obj, True, True)
 
                     pi_list.append(cur_queue_item)
 
@@ -195,7 +199,7 @@ class ShowUpdater(object):
                     logger.log(u'Automatic update failed: ' + ex(e), logger.ERROR)
 
             if len(pi_list):
-                sickbeard.showQueueScheduler.action.daily_update_running = True
+                sickbeard.show_queue_scheduler.action.daily_update_running = True
 
             ui.ProgressIndicators.setIndicator('dailyUpdate', ui.QueueProgressIndicator('Daily Update', pi_list))
 

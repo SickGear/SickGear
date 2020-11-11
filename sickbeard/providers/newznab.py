@@ -36,6 +36,7 @@ from ..network_timezones import SG_TIMEZONE
 from ..sgdatetime import SGDatetime, timestamp_near
 from ..search import get_aired_in_season, get_wanted_qualities
 from ..show_name_helpers import get_show_names
+from ..scene_exceptions import has_season_exceptions
 from ..tv import TVEpisode, TVShow
 
 from lib.dateutil import parser
@@ -400,8 +401,18 @@ class NewznabProvider(generic.NZBProvider):
             elif '101' == code:
                 raise AuthException('Your account on %s has been suspended, contact the admin.' % self.name)
             elif '102' == code:
-                raise AuthException('Your account isn\'t allowed to use the API on %s, contact the admin.' % self.name)
-            elif '500' == code:
+                try:
+                    retry_time, unit = re.findall(r'Try again in (\d+)\W+([a-z]+)', description, flags=re.I)[0]
+                except IndexError:
+                    retry_time, unit = None, None
+                if (description and 'limit' in description.lower()) or (retry_time and unit):
+                    self.tmr_limit_update(retry_time, unit, description)
+                    self.log_failure_url(url)
+                else:
+                    raise AuthException('Your account isn\'t allowed to use the API on %s, contact the admin.%s' %
+                                        (self.name, ('', ' Provider message: %s' % description)[
+                                            description not in ('', None)]))
+            elif code in ['429', '500']:
                 try:
                     retry_time, unit = re.findall(r'Retry in (\d+)\W+([a-z]+)', description, flags=re.I)[0]
                 except IndexError:
@@ -457,11 +468,12 @@ class NewznabProvider(generic.NZBProvider):
         # id search
         params = base_params.copy()
         use_id = False
-        for i in sickbeard.TVInfoAPI().all_sources:
-            if i in ep_obj.show_obj.ids and 0 < ep_obj.show_obj.ids[i]['id'] and i in self.caps:
-                params[self.caps[i]] = ep_obj.show_obj.ids[i]['id']
-                use_id = True
-        use_id and search_params.append(params)
+        if not has_season_exceptions(ep_obj.show_obj.tvid, ep_obj.show_obj.prodid, ep_obj.season):
+            for i in sickbeard.TVInfoAPI().all_sources:
+                if i in ep_obj.show_obj.ids and 0 < ep_obj.show_obj.ids[i]['id'] and i in self.caps:
+                    params[self.caps[i]] = ep_obj.show_obj.ids[i]['id']
+                    use_id = True
+            use_id and search_params.append(params)
 
         spacer = 'nzbgeek.info' in self.url.lower() and ' ' or '.'
         # query search and exceptions
@@ -516,11 +528,12 @@ class NewznabProvider(generic.NZBProvider):
         # id search
         params = base_params.copy()
         use_id = False
-        for i in sickbeard.TVInfoAPI().all_sources:
-            if i in ep_obj.show_obj.ids and 0 < ep_obj.show_obj.ids[i]['id'] and i in self.caps:
-                params[self.caps[i]] = ep_obj.show_obj.ids[i]['id']
-                use_id = True
-        use_id and search_params.append(params)
+        if not has_season_exceptions(ep_obj.show_obj.tvid, ep_obj.show_obj.prodid, ep_obj.season):
+            for i in sickbeard.TVInfoAPI().all_sources:
+                if i in ep_obj.show_obj.ids and 0 < ep_obj.show_obj.ids[i]['id'] and i in self.caps:
+                    params[self.caps[i]] = ep_obj.show_obj.ids[i]['id']
+                    use_id = True
+            use_id and search_params.append(params)
 
         spacer = 'nzbgeek.info' in self.url.lower() and ' ' or '.'
         # query search and exceptions
@@ -1070,7 +1083,7 @@ class NewznabProvider(generic.NZBProvider):
             if self.should_skip(log_warning=False):
                 break
 
-            search_params = {'q': search_terms[index], 'maxage': sickbeard.BACKLOG_DAYS + 2}
+            search_params = {'q': search_terms[index], 'maxage': sickbeard.BACKLOG_LIMITED_PERIOD + 2}
             # if alt_search:
             #
             #     if do_search_alt:
@@ -1132,9 +1145,7 @@ class NewznabProvider(generic.NZBProvider):
 class NewznabCache(tvcache.TVCache):
 
     def __init__(self, provider):
-        tvcache.TVCache.__init__(self, provider)
-
-        self.update_freq = 5  # type: int
+        tvcache.TVCache.__init__(self, provider, interval=5)
 
     # helper method to read the namespaces from xml
     @staticmethod
@@ -1165,7 +1176,7 @@ class NewznabCache(tvcache.TVCache):
         :param needed: needed qualites class
         :param kwargs:
         """
-        if 4489 != sickbeard.RECENTSEARCH_FREQUENCY or self.should_update():
+        if 4489 != sickbeard.RECENTSEARCH_INTERVAL or self.should_update():
             n_spaces = {}
             try:
                 check = self._checkAuth()
