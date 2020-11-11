@@ -1,4 +1,4 @@
-﻿### 0.23.0 (2019-xx-xx xx:xx:xx UTC)
+﻿### 0.23.0 (2020-11-11 13:30:00 UTC)
 
 * Change improve search performance for backlog, manual, failed, and proper
 * Add overview of the last release age/date at each newznab provider to History/Layout "Connect fails" 
@@ -75,23 +75,6 @@
 * Change add newznab retry handling
 * Change add 2s interval fetch retry for Github as it can sometimes return no data
 * Change rename misuse of terminology `frequency` to `interval`
-
-
-[develop changelog]
-
-* Update Beautiful Soup 4.9.1 (r585) to 4.9.2 (r590)
-* Update Beautiful Soup 4.8.2 (r559) to 4.9.1 (r585)
-* Update Requests library 2.24.0 (967a05b) to 2.24.0 (2f70990)
-* Fix update Soupsieve (05086ef) broke MC and TVC browse cards
-* Update urllib3 1.26.0.dev0 (41eae64) to 1.25.11 (5eb604f) 
-* Update urllib3 1.25.11 (5eb604f) to 1.25.11 (00f1769)
-* Change move scantree to sg_helpers to prevent circular reference of it ever again
-* Update included fallback timezone info file to 2020c
-* Change use natural time for age if now is night time and the last recent is yesterday evening, otherwise output age as 'yesterday'
-* Change improve performance of History new
-* Fix initialise history_tab_limit during restart loading
-* Fix removing old backup db files
-* Fix search param
 
 
 ### 0.21.16 (2020-11-10 20:15:00 UTC)
