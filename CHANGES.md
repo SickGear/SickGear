@@ -1,7 +1,7 @@
 ﻿### 0.23.0 (2020-11-11 13:30:00 UTC)
 
 * Change improve search performance for backlog, manual, failed, and proper
-* Add overview of the last release age/date at each newznab provider to History/Layout "Connect fails" 
+* Add overview of the last release age/date at each newznab provider to History/Layout "Connect fails"
 * Add "History new..." to Shows menu by clicking the number
 * Add db backup to the scheduled daily update
 * Add display "Database backups" location at config/about if feature available
@@ -77,30 +77,30 @@
 * Change rename misuse of terminology `frequency` to `interval`
 
 
-### 0.21.16 (2020-11-10 20:15:00 UTC)
+### 0.22.16 (2020-11-10 20:15:00 UTC)
 
 * Fix anime name parser tests failing on assumed season number 1
 * Change increase number of IMDb ID digits parsed in TVDb lib
 * Change add Trakt requested guidance to the log for locked user accounts
 
 
-### 0.21.15 (2020-11-09 14:10:00 UTC)
+### 0.22.15 (2020-11-09 14:10:00 UTC)
 
 * Fix IMDb cards not always displayed as `in library`
 
 
-### 0.21.14 (2020-11-06 21:55:00 UTC)
+### 0.22.14 (2020-11-06 21:55:00 UTC)
 
 * Fix RarBG in cases where home page cannot be reached
 
 
-### 0.21.13 (2020-11-05 01:00:00 UTC)
+### 0.22.13 (2020-11-05 01:00:00 UTC)
 
 * Fix SpeedCD provider
 * Remove HorribleSubs provider
 
 
-### 0.21.12 (2020-11-03 16:05:00 UTC)
+### 0.22.12 (2020-11-03 16:05:00 UTC)
 
 * Fix IPTorrents
 
