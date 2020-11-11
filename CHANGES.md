@@ -40,11 +40,14 @@
 * Add client parameter to pp class and add it to API sg.postprocess
 * Change API version to 14
 * Change add a test for both require and ignore show specific words with partial match, both should fail
+* Change expand to all providers, and season results, applying filters to .torrent content and not just search result...
+  name for where a found torrent result `named.this` contains `name.that` and ignore `that` did not ignore `named.this`
 * Change init showDict for all unit tests
 * Change add error handling for zoneinfo update file parsing
 * Change downgrade network conversions/timezone warnings on startup to debug level
 * Add enum34 1.1.10
 * Add humanize 3.1.0 (aec9dc2)
+* Add Torrent file parse 0.3.0 (2a4eecb)
 * Update included fallback timezone info file to 2020d
 * Update attr 20.1.0.dev0 (4bd6827) to 20.2.0 (4f74fba)
 * Update Beautiful Soup 4.8.2 (r559) to 4.9.3 (r593)

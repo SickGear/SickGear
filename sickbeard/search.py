@@ -43,7 +43,7 @@ from six import iteritems, itervalues, string_types
 
 # noinspection PyUnreachableCode
 if False:
-    from typing import AnyStr, Dict, List, Tuple, Union
+    from typing import AnyStr, Dict, List, Optional, Tuple, Union
 
 
 def _download_result(result):
@@ -60,7 +60,7 @@ def _download_result(result):
         logger.log(u'Invalid provider name - this is a coding error, report it please', logger.ERROR)
         return False
 
-    # nzbs with an URL can just be downloaded from the provider
+    # NZB files with a URL can just be downloaded from the provider
     if 'nzb' == result.resultType:
         new_result = res_provider.download_result(result)
     # if it's an nzb data result
@@ -116,7 +116,7 @@ def snatch_episode(result, end_status=SNATCHED):
     if 0 < result.properlevel:
         end_status = SNATCHED_PROPER
 
-    # NZBs can be sent straight to SAB or saved to disk
+    # NZB files can be sent straight to SAB or saved to disk
     if result.resultType in ('nzb', 'nzbdata'):
         if 'blackhole' == sickbeard.NZB_METHOD:
             dl_result = _download_result(result)
@@ -128,29 +128,15 @@ def snatch_episode(result, end_status=SNATCHED):
             logger.log(u'Unknown NZB action specified in config: %s' % sickbeard.NZB_METHOD, logger.ERROR)
             dl_result = False
 
-    # TORRENTs can be sent to clients or saved to disk
+    # TORRENT files can be sent to clients or saved to disk
     elif 'torrent' == result.resultType:
         if not result.url.startswith('magnet') and None is not result.get_data_func:
             result.url = result.get_data_func(result.url)
             result.get_data_func = None  # consume only once
             if not result.url:
                 return False
-        if not result.content and result.url.startswith('magnet-'):
-            if sickbeard.TORRENT_DIR:
-                filepath = ek.ek(os.path.join, sickbeard.TORRENT_DIR, 'files.txt')
-                try:
-                    with open(filepath, 'a') as fh:
-                        result.url = result.url[7:]
-                        fh.write('"%s"\t"%s"\n' % (result.url, sickbeard.TV_DOWNLOAD_DIR))
-                    dl_result = True
-                except IOError:
-                    logger.log(u'Failed to write to %s' % filepath, logger.ERROR)
-                    return False
-            else:
-                logger.log(u'Need to set a torrent blackhole folder', logger.ERROR)
-                return False
         # torrents are saved to disk when blackhole mode
-        elif 'blackhole' == sickbeard.TORRENT_METHOD:
+        if 'blackhole' == sickbeard.TORRENT_METHOD:
             dl_result = _download_result(result)
         else:
             # make sure we have the torrent file content
@@ -229,7 +215,7 @@ def pass_show_wordlist_checks(name, show_obj):
 
 
 def pick_best_result(
-        results,  # type: List[NZBDataSearchResult, NZBSearchResult, TorrentSearchResult]
+        results,  # type: List[Union[NZBDataSearchResult, NZBSearchResult, TorrentSearchResult]]
         show_obj,  # type: TVShow
         quality_list=None,  # type: List[int]
         filter_rls=''  # type: AnyStr
@@ -381,7 +367,7 @@ def is_final_result(result):
 
     any_qualities, best_qualities = Quality.splitQuality(show_obj.quality)
 
-    # if there is a redownload that's higher than this then we definitely need to keep looking
+    # if there is a download that's higher than this then we definitely need to keep looking
     if best_qualities and max(best_qualities) > result.quality:
         return False
 
@@ -389,17 +375,17 @@ def is_final_result(result):
     elif show_obj.is_anime and show_obj.release_groups.is_valid(result):
         return False
 
-    # if there's no redownload that's higher (above) and this is the highest initial download then we're good
+    # if there's no download that's higher (above) and this is the highest initial download then we're good
     elif any_qualities and result.quality in any_qualities:
         return True
 
     elif best_qualities and max(best_qualities) == result.quality:
 
-        # if this is the best redownload but we have a higher initial download then keep looking
+        # if this is the best download but we have a higher initial download then keep looking
         if any_qualities and max(any_qualities) > result.quality:
             return False
 
-        # if this is the best redownload and we don't have a higher initial download then we're done
+        # if this is the best download and we don't have a higher initial download then we're done
         return True
 
     # if we got here than it's either not on the lists, they're empty, or it's lower than the highest required
@@ -424,7 +410,7 @@ def is_first_best_match(ep_status, result):
 
     any_qualities, best_qualities = Quality.splitQuality(show_obj.quality)
 
-    # if there is a redownload that's a match to one of our best qualities and
+    # if there is a download that's a match to one of our best qualities and
     # we want to archive the episode then we are done
     if best_qualities and show_obj.upgrade_once and \
             (result.quality in best_qualities and
@@ -677,7 +663,7 @@ def can_reject(release_name):
     :return: None, None if release has no issue otherwise True/Nuke reason, URLs that rejected
     """
     rej_urls = []
-    srrdb_url = 'https://www.srrdb.com/api/search/r:%s/order:date-desc' % re.sub(r'\]\[', '', release_name)
+    srrdb_url = 'https://www.srrdb.com/api/search/r:%s/order:date-desc' % re.sub(r'[][]', '', release_name)
     resp = helpers.get_url(srrdb_url, parse_json=True)
     if not resp:
         srrdb_rej = True
@@ -772,6 +758,55 @@ def _search_provider_thread(provider, provider_results, show_obj, ep_obj_list, m
 
     if not provider_results:
         logger.log('No suitable result at [%s]' % provider.name)
+
+
+def cache_torrent_file(
+        search_result,  # type: Union[sickbeard.classes.SearchResult, TorrentSearchResult]
+        show_obj,  # type: TVShow
+        **kwargs
+):
+    # type: (...) -> Optional[TorrentSearchResult]
+
+    cache_file = ek.ek(os.path.join, sickbeard.CACHE_DIR or helpers.get_system_temp_dir(),
+                       '%s.torrent' % (helpers.sanitize_filename(search_result.name)))
+
+    if not helpers.download_file(
+            search_result.url, cache_file, session=search_result.provider.session, failure_monitor=False):
+        return
+
+    try:
+        with open(cache_file, 'rb') as fh:
+            torrent_content = fh.read()
+    except (BaseException, Exception):
+        return
+
+    try:
+        # verify header
+        re.findall(r'\w+\d+:', ('%s' % torrent_content)[0:6])[0]
+    except (BaseException, Exception):
+        return
+
+    try:
+        import torrent_parser as tp
+        torrent_meta = tp.decode(torrent_content, use_ordered_dict=True)
+    except (BaseException, Exception):
+        return
+
+    search_result.cache_filepath = cache_file
+    search_result.content = torrent_content
+
+    if isinstance(torrent_meta, dict):
+        torrent_name = torrent_meta.get('info', {}).get('name')
+        if torrent_name:
+            # verify the name in torrent also passes filtration
+            result_name = search_result.name
+            search_result.name = torrent_name
+            if not pick_best_result([search_result], show_obj, **kwargs) or \
+                    not show_name_helpers.pass_wordlist_checks(torrent_name, indexer_lookup=False, show_obj=show_obj):
+                logger.log(u'Ignored %s that contains %s (debug log has detail)' % (result_name, torrent_name))
+                return
+
+    return search_result
 
 
 def search_providers(
@@ -930,11 +965,15 @@ def search_providers(
                         ep_obj_list.append(show_obj.get_episode(ep_num[0], ep_num[1]))
                     best_season_result.ep_obj_list = ep_obj_list
 
-                    ep_num = MULTI_EP_RESULT
-                    if ep_num in found_results[provider_id]:
-                        found_results[provider_id][ep_num].append(best_season_result)
-                    else:
-                        found_results[provider_id][ep_num] = [best_season_result]
+                    best_season_result = cache_torrent_file(
+                        best_season_result, show_obj=show_obj, filter_rls=orig_thread_name)
+
+                    if best_season_result:
+                        ep_num = MULTI_EP_RESULT
+                        if ep_num in found_results[provider_id]:
+                            found_results[provider_id][ep_num].append(best_season_result)
+                        else:
+                            found_results[provider_id][ep_num] = [best_season_result]
 
         # go through multi-ep results and see if we really want them or not, get rid of the rest
         multi_results = {}
@@ -1022,8 +1061,9 @@ def search_providers(
 
             quality_list = use_quality_list and (None, best_qualities)[any(best_qualities)] or None
 
-            best_result = pick_best_result(found_results[provider_id][cur_search_result], show_obj, quality_list,
-                                           filter_rls=orig_thread_name)
+            params = dict(show_obj=show_obj, quality_list=quality_list, filter_rls=orig_thread_name)
+
+            best_result = pick_best_result(found_results[provider_id][cur_search_result], **params)
 
             # if all results were rejected move on to the next episode
             if not best_result:
@@ -1040,45 +1080,12 @@ def search_providers(
                     if 'blackhole' != sickbeard.TORRENT_METHOD:
                         best_result.content = None
                 else:
-                    cache_file = ek.ek(os.path.join, sickbeard.CACHE_DIR or helpers.get_system_temp_dir(),
-                                       '%s.torrent' % (helpers.sanitize_filename(best_result.name)))
-                    if not helpers.download_file(best_result.url, cache_file, session=best_result.provider.session,
-                                                 failure_monitor=False):
+                    best_result = cache_torrent_file(best_result, **params)
+                    if not best_result:
                         continue
 
-                    try:
-                        with open(cache_file, 'rb') as fh:
-                            td = fh.read()
-                        best_result.cache_filepath = cache_file
-                    except (BaseException, Exception):
-                        continue
-
-                    if getattr(best_result.provider, 'chk_td', None):
-                        name = None
-                        try:
-                            hdr = re.findall(r'(\w+(\d+):)', td[0:6])[0]
-                            x, v = len(hdr[0]), int(hdr[1])
-                            while x < len(td):
-                                y = x + v
-                                is_name = 'name' == td[x: y]
-                                w = re.findall(r'((?:i-?\d+e|e+|d|l+)*(\d+):)', td[y: y + 32])[0]
-                                x, v = y + len(w[0]), int(w[1])
-                                if is_name:
-                                    name = td[x: x + v]
-                                    break
-                        except (BaseException, Exception):
-                            continue
-                        if name:
-                            if not pass_show_wordlist_checks(name, show_obj):
-                                continue
-                            if not show_name_helpers.pass_wordlist_checks(name, indexer_lookup=False,
-                                                                          show_obj=show_obj):
-                                logger.log('Ignored: %s (debug log has detail)' % name)
-                                continue
-                            best_result.name = name
-
-                    if 'blackhole' != sickbeard.TORRENT_METHOD:
-                        best_result.content = td
+                    if 'blackhole' == sickbeard.TORRENT_METHOD:
+                        best_result.content = None
 
                 if None is not best_result.after_get_data_func:
                     best_result.after_get_data_func(best_result)
