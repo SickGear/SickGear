@@ -1,6 +1,7 @@
 ﻿### 0.24.0 (202x-xx-xx xx:xx:00 UTC)
 
 * Change abbreviate long titles under menu tab
+* Update Requests library 2.24.0 (2f70990) to 2.25.0 (03957eb)
 
 
 ### 0.23.0 (2020-11-11 13:30:00 UTC)
