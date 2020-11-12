@@ -1,4 +1,9 @@
-﻿### 0.23.0 (2020-11-11 13:30:00 UTC)
+﻿### 0.24.0 (202x-xx-xx xx:xx:00 UTC)
+
+* Change abbreviate long titles under menu tab
+
+
+### 0.23.0 (2020-11-11 13:30:00 UTC)
 
 * Change improve search performance for backlog, manual, failed, and proper
 * Add overview of the last release age/date at each newznab provider to History/Layout "Connect fails" 
