@@ -62,6 +62,7 @@ from .scene_numbering import get_scene_absolute_numbering_for_show, get_scene_nu
     get_xem_absolute_numbering_for_show, get_xem_numbering_for_show, set_scene_numbering_helper
 from .search_backlog import FORCED_BACKLOG
 from .sgdatetime import SGDatetime, timestamp_near
+from .show_name_helpers import abbr_showname
 
 from .show_updater import clean_ignore_require_words
 from .trakt_helpers import build_config, trakt_collection_remove_account
@@ -6163,10 +6164,10 @@ class History(MainHandler):
         for item in history_compact:
             if item.get('tvid_prodid') not in dedupe:
                 dedupe.add(item.get('tvid_prodid'))
+                item['show_name'] = abbr_showname(item['show_name'])
                 result += [item]
                 if limit == len(result):
                     break
-
         return result
 
     @classmethod
