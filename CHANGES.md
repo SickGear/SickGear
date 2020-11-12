@@ -2,6 +2,8 @@
 
 * Change abbreviate long titles under menu tab
 * Update attr 20.2.0 (4f74fba) to 20.3.0 (f3762ba)
+* Update diskcache_py3 5.0.1 (9670fbb) to 5.1.0 (40ce0de)
+* Update diskcache_py2 4.1.0 (b0451e0) from 5.1.0 (40ce0de)
 * Update Requests library 2.24.0 (2f70990) to 2.25.0 (03957eb)
 * Update urllib3 1.25.11 (00f1769) to 1.26.1 (7675532)
 
