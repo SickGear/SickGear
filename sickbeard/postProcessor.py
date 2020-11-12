@@ -38,7 +38,7 @@ from .name_parser.parser import InvalidNameException, InvalidShowException, Name
 
 from _23 import decode_str
 from six import iteritems, PY2, string_types
-from sg_helpers import long_path
+from sg_helpers import long_path, cmdline_runner
 
 # noinspection PyUnreachableCode
 if False:
@@ -849,7 +849,7 @@ class PostProcessor(object):
 
         try:
             # run the command and capture output
-            output, err, exit_status = helpers.cmdline_runner(script_cmd)
+            output, err, exit_status = cmdline_runner(script_cmd)
             self._log('Script result: %s' % output, logger.DEBUG)
 
         except OSError as e:

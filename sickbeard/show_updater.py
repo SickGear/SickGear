@@ -136,7 +136,7 @@ class ShowUpdater(object):
                 import threading
                 try:
                     sickbeard.background_mapping_task = threading.Thread(
-                        name='LOAD-MAPPINGS', target=sickbeard.indexermapper.load_mapped_ids, kwargs={'update': True})
+                        name='MAPPINGSUPDATER', target=sickbeard.indexermapper.load_mapped_ids, kwargs={'update': True})
                     sickbeard.background_mapping_task.start()
                 except (BaseException, Exception):
                     logger.log('missing mapped ids update error', logger.ERROR)

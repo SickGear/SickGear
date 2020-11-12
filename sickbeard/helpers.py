@@ -30,7 +30,6 @@ import shutil
 import socket
 import time
 import uuid
-import subprocess
 import sys
 
 try:
@@ -1791,32 +1790,6 @@ def xhtml_escape(text, br=True):
     if br:
         text = re.sub(r'\r?\n', '<br>', text)
     return escape.xhtml_escape(text)
-
-
-def cmdline_runner(cmd, shell=False):
-    # type: (Union[AnyStr, List[AnyStr]], bool) -> Tuple[AnyStr, Optional[AnyStr], int]
-    """ Execute a child program in a new process.
-
-    Can raise an exception to be caught in callee
-
-    :param cmd: A string, or a sequence of program arguments
-    :param shell: If true, the command will be executed through the shell.
-    """
-    kw = dict(cwd=sickbeard.PROG_DIR, shell=shell,
-              stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-
-    if not PY2:
-        kw.update(dict(encoding=sickbeard.SYS_ENCODING, text=True, bufsize=0))
-
-    if 'win32' == sys.platform:
-        kw['creationflags'] = 0x08000000   # CREATE_NO_WINDOW (needed for py2exe)
-
-    with Popen(cmd, **kw) as p:
-        out, err = p.communicate()
-        if out:
-            out = out.strip()
-
-        return out, err, p.returncode
 
 
 def parse_imdb_id(string):
