@@ -1,6 +1,7 @@
 ﻿### 0.24.0 (202x-xx-xx xx:xx:00 UTC)
 
 * Change abbreviate long titles under menu tab
+* Update attr 20.2.0 (4f74fba) to 20.3.0 (f3762ba)
 * Update Requests library 2.24.0 (2f70990) to 2.25.0 (03957eb)
 * Update urllib3 1.25.11 (00f1769) to 1.26.1 (7675532)
 
