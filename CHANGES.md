@@ -2,6 +2,7 @@
 
 * Change abbreviate long titles under menu tab
 * Update Requests library 2.24.0 (2f70990) to 2.25.0 (03957eb)
+* Update urllib3 1.25.11 (00f1769) to 1.26.1 (7675532)
 
 
 ### 0.23.0 (2020-11-11 13:30:00 UTC)
