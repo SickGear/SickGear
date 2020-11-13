@@ -1599,15 +1599,13 @@ def get_overview(ep_status, show_quality, upgrade_once, split_snatch=False):
 
 
 def generate_show_dir_name(root_dir, show_name):
+    # type: (Optional[AnyStr], AnyStr) -> AnyStr
     """
     generate show dir name
 
     :param root_dir: root dir
-    :type root_dir: Optional[AnyStr]
     :param show_name: show name
-    :type show_name: AnyStr
     :return: show dir name
-    :rtype: AnyStr
     """
     san_show_name = sanitize_filename(show_name)
     if sickbeard.SHOW_DIRS_WITH_DOTS:

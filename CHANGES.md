@@ -1,5 +1,7 @@
 ﻿### 0.24.0 (202x-xx-xx xx:xx:00 UTC)
 
+* Change initialise Manage/Media Process folder and method from Config/Media Process when no previous values are stored
+* Change remember Manage/Media Process folder and method when button 'Process' is used
 * Change abbreviate long titles under menu tab
 * Update attr 20.2.0 (4f74fba) to 20.3.0 (f3762ba)
 * Update diskcache_py3 5.0.1 (9670fbb) to 5.1.0 (40ce0de)

@@ -1,4 +1,6 @@
 #import sickbeard
+<% def sg_var(varname, default=False): return getattr(sickbeard, varname, default) %>#slurp#
+<% def sg_str(varname, default=''): return getattr(sickbeard, varname, default) %>#slurp#
 ##
 #set global $header = 'Process Media'
 #set global $title = $header
@@ -6,7 +8,7 @@
 #set global $sbPath = '../..'
 ##
 #import os.path
-#include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_top.tmpl')
+#include $os.path.join($sg_var('PROG_DIR'), 'gui/slick/interfaces/default/inc_top.tmpl')
 
 #if $varExists('header')
 	<h1 class="header">$header</h1>
@@ -26,7 +28,7 @@
 				<label for="episodeDir">
 					<span class="component-title input">Folder to process</span>
 					<span class="component-desc">
-						<input id="episodeDir" name="dir_name" type="text" class="form-control form-control-inline input-sm input350">
+						<input id="episodeDir" name="dir_name" type="text" value="$sg_str('PROCESS_LAST_DIR')" class="form-control form-control-inline input-sm input350">
 						<p class="clear-left">select a folder containing episode files</p>
 					</span>
 				</label>
@@ -39,12 +41,12 @@
 						<select id="process_method" name="process_method" class="form-control form-control-inline input-sm">
 #set $process_methods = {'copy': 'Copy', 'move': 'Move', 'hardlink': 'Hard Link', 'symlink': 'Symbolic Link'}
 #for $method in ('copy', 'move', 'hardlink', 'symlink'):
-							<option value="$method"#echo ('', $selected)[$method == $sickbeard.PROCESS_METHOD]#>$process_methods[$method]</option>
+							<option value="$method"#echo ('', $selected)[$method == $sg_str('PROCESS_LAST_METHOD')]#>$process_methods[$method]</option>
 #end for
 						</select>
 						<label for="cleanup">
-							<span id="move-and-trash" style="display:#echo ('none', 'block')['move' == $sickbeard.PROCESS_METHOD]#">
-								then trash left over subdirs/files<input id="cleanup" name="cleanup" type="checkbox" style="float:none;margin-left:10px">
+							<span id="move-and-trash" style="display:#echo ('none', 'block')['move' == $sg_str('PROCESS_LAST_METHOD')]#">
+								then trash left over subdirs/files<input id="cleanup" name="cleanup" type="checkbox" value="$sg_str('PROCESS_LAST_CLEANUP')" style="float:none;margin-left:10px">
 							</span>
 						</label>
 					</span>
@@ -71,7 +73,7 @@
 				</label>
 			</div>
 
-#if $sickbeard.USE_FAILED_DOWNLOADS:
+#if $sg_var('USE_FAILED_DOWNLOADS'):
 			<div class="field-pair">
 				<label for="failed">
 					<span class="component-title">Mark as failed</span>
@@ -103,4 +105,4 @@ $('#process_method').change(function(){
 //-->
 </script>
 
-#include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_bottom.tmpl')
+#include $os.path.join($sg_var('PROG_DIR'), 'gui/slick/interfaces/default/inc_bottom.tmpl')

@@ -818,15 +818,15 @@ def backup_all_dbs(target, compress=True, prefer_7z=True):
     d = sgdatetime.SGDatetime.sbfdate(now, d_preset='%Y-%m-%d')
     t = sgdatetime.SGDatetime.sbftime(now, t_preset='%H-%M')
     ds = '%s_%s' % (d, t)
-    for c in ['sickbeard', 'cache', 'failed']:
-        cur_db = DBConnection('%s.db' % c)
-        b_name = '%s_%s.db' % (c, ds)
-        success, msg = cur_db.backup_db(target=target, backup_filename=b_name)
+    for cur_db in ['sickbeard', 'cache', 'failed']:
+        db_conn = DBConnection('%s.db' % cur_db)
+        name = '%s_%s.db' % (cur_db, ds)
+        success, msg = db_conn.backup_db(target=target, backup_filename=name)
         if not success:
             return False, msg
         if compress:
-            full_path = ek.ek(os.path.join, target, b_name)
-            if not compress_file(full_path, '%s.db' % c, prefer_7z=prefer_7z):
+            full_path = ek.ek(os.path.join, target, name)
+            if not compress_file(full_path, '%s.db' % cur_db, prefer_7z=prefer_7z):
                 return False, 'Failure to compress backup'
     delete_old_db_backups(target)
     my_db.upsert('lastUpdate',
