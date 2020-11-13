@@ -277,6 +277,9 @@ RENAME_EPISODES = False
 AIRDATE_EPISODES = False
 PROCESS_AUTOMATICALLY = False
 KEEP_PROCESSED_DIR = False
+PROCESS_LAST_DIR = None
+PROCESS_LAST_METHOD = None
+PROCESS_LAST_CLEANUP = False
 PROCESS_METHOD = None
 MOVE_ASSOCIATED_FILES = False
 POSTPONE_IF_SYNC_FILES = True
@@ -645,7 +648,7 @@ def init_stage_1(console_logging):
     global STATUS_DEFAULT, QUALITY_DEFAULT, SHOW_TAG_DEFAULT, FLATTEN_FOLDERS_DEFAULT, SUBTITLES_DEFAULT, \
         WANTED_BEGIN_DEFAULT, WANTED_LATEST_DEFAULT, SCENE_DEFAULT, ANIME_DEFAULT
     # Post processing
-    global KEEP_PROCESSED_DIR
+    global KEEP_PROCESSED_DIR, PROCESS_LAST_DIR, PROCESS_LAST_METHOD, PROCESS_LAST_CLEANUP
     # Views
     global GUI_NAME, HOME_LAYOUT, FOOTER_TIME_LAYOUT, POSTER_SORTBY, POSTER_SORTDIR, DISPLAY_SHOW_SPECIALS, \
         EPISODE_VIEW_LAYOUT, EPISODE_VIEW_SORT, EPISODE_VIEW_DISPLAY_PAUSED, \
@@ -982,6 +985,9 @@ def init_stage_1(console_logging):
     AIRDATE_EPISODES = bool(check_setting_int(CFG, 'General', 'airdate_episodes', 0))
     KEEP_PROCESSED_DIR = bool(check_setting_int(CFG, 'General', 'keep_processed_dir', 1))
     PROCESS_METHOD = check_setting_str(CFG, 'General', 'process_method', 'copy' if KEEP_PROCESSED_DIR else 'move')
+    PROCESS_LAST_DIR = check_setting_str(CFG, 'General', 'process_last_dir', TV_DOWNLOAD_DIR)
+    PROCESS_LAST_METHOD = check_setting_str(CFG, 'General', 'process_last_method', PROCESS_METHOD)
+    PROCESS_LAST_CLEANUP = bool(check_setting_int(CFG, 'General', 'process_last_cleanup', 0))
     MOVE_ASSOCIATED_FILES = bool(check_setting_int(CFG, 'General', 'move_associated_files', 0))
     POSTPONE_IF_SYNC_FILES = bool(check_setting_int(CFG, 'General', 'postpone_if_sync_files', 1))
     NFO_RENAME = bool(check_setting_int(CFG, 'General', 'nfo_rename', 1))
@@ -1875,6 +1881,9 @@ def save_config():
     new_config['General']['tv_download_dir'] = TV_DOWNLOAD_DIR
     new_config['General']['keep_processed_dir'] = int(KEEP_PROCESSED_DIR)
     new_config['General']['process_method'] = PROCESS_METHOD
+    new_config['General']['process_last_dir'] = PROCESS_LAST_DIR
+    new_config['General']['process_last_method'] = PROCESS_LAST_METHOD
+    new_config['General']['process_last_cleanup'] = int(PROCESS_LAST_CLEANUP)
     new_config['General']['move_associated_files'] = int(MOVE_ASSOCIATED_FILES)
     new_config['General']['postpone_if_sync_files'] = int(POSTPONE_IF_SYNC_FILES)
     new_config['General']['nfo_rename'] = int(NFO_RENAME)

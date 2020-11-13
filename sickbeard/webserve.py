@@ -101,6 +101,7 @@ from six import binary_type, integer_types, iteritems, iterkeys, itervalues, PY2
 # noinspection PyUnreachableCode
 if False:
     from typing import AnyStr, List, Optional, Tuple
+    from sickbeard.providers.generic import TorrentProvider
 
 
 # noinspection PyAbstractClass
@@ -3257,7 +3258,8 @@ class Home(MainHandler):
         elif False is result:
             result = dict(result='fail', resp='connect')
         elif isinstance(result, list) and 0 == len(result):
-            result = dict(result='success', groups=[dict(name='No groups fetched in API response', rating='', range='')])
+            result = dict(result='success',
+                          groups=[dict(name='No groups fetched in API response', rating='', range='')])
         else:
             result = dict(result='success', groups=result)
         return json.dumps(result)
@@ -3314,8 +3316,15 @@ class HomeProcessMedia(Home):
                                           webhandler=None if '0' == stream else self.send_message)
             else:
 
+                cleanup = kwargs.get('cleanup') in ('on', '1')
                 if isinstance(dir_name, string_types):
                     dir_name = decode_str(dir_name)
+                    sickbeard.PROCESS_LAST_DIR = dir_name
+                    sickbeard.PROCESS_LAST_METHOD = process_method
+                    if 'move' == process_method:
+                        sickbeard.PROCESS_LAST_CLEANDUP = cleanup
+                    sickbeard.save_config()
+
                     if nzbget_call and isinstance(sickbeard.NZBGET_MAP, string_types) and sickbeard.NZBGET_MAP:
                         m = sickbeard.NZBGET_MAP.split('=')
                         dir_name, not_used = helpers.path_mapper(m[0], m[1], dir_name)
@@ -3323,7 +3332,7 @@ class HomeProcessMedia(Home):
                 result = processTV.processDir(dir_name if dir_name else None,
                                               None if not nzb_name else decode_str(nzb_name),
                                               process_method=process_method, pp_type=process_type,
-                                              cleanup=kwargs.get('cleanup') in ('on', '1'),
+                                              cleanup=cleanup,
                                               force=force in ('on', '1'),
                                               force_replace=force_replace in ('on', '1'),
                                               failed='0' != failed,
@@ -4648,6 +4657,7 @@ class AddShows(Home):
 
         return self.browse_shows(browse_type, browse_title, filtered, **kwargs)
 
+    # noinspection PyUnusedLocal
     def info_tvcalendar(self, ids, show_name):
 
         return self.new_show('|'.join(['', '', '', show_name]), use_show_name=True)
@@ -4786,6 +4796,7 @@ class AddShows(Home):
                 sickbeard.save_config()
         return self.browse_shows(browse_type, browse_title, filtered, **kwargs)
 
+    # noinspection PyUnusedLocal
     def info_metacritic(self, ids, show_name):
 
         return self.new_show('|'.join(['', '', '', show_name]), use_show_name=True)
@@ -6342,12 +6353,12 @@ class History(MainHandler):
                                            key=lambda y: y.get('next_try') or datetime.timedelta(weeks=65535),
                                            reverse=False)
 
-            def img(item, as_class=False):
+            def img(_item, as_class=False):
                 # type: (AnyStr, bool) -> Optional[AnyStr]
                 """
                 Return an image src, image class, or None based on a recognised identifier
 
-                :param item: to search for a known domain identifier
+                :param _item: to search for a known domain identifier
                 :param as_class: wether a search should return an image (by default) or class
                 :return: image src, image class, or None if unknown identifier
                 """
@@ -6359,7 +6370,7 @@ class History(MainHandler):
                     (('anidb', 'img-anime-16 square-16'), ('github', 'icon16-github'),
                      ('emby', 'sgicon-emby'), ('plex', 'sgicon-plex'))
                 )[as_class]:
-                    if identifier in item:
+                    if identifier in _item:
                         return result
 
             with sg_helpers.DOMAIN_FAILURES.lock:
@@ -6796,8 +6807,6 @@ class ConfigGeneral(Config):
     @staticmethod
     def export_alt(tvid_prodid=None):
         """ Return alternative release names and numbering as json text"""
-
-        alts = {}
 
         # alternative release names and numbers
         alt_names = scene_exceptions.get_all_scene_exceptions(tvid_prodid)
@@ -7511,7 +7520,7 @@ class ConfigProviders(Config):
         temp_provider = newznab.NewznabProvider(name, config.clean_url(url))
 
         e_p = provider_dict.get(sickbeard.providers.generic_provider_name(temp_provider.get_id()), None) or \
-              provider_url_dict.get(sickbeard.providers.generic_provider_url(temp_provider.url), None)
+            provider_url_dict.get(sickbeard.providers.generic_provider_url(temp_provider.url), None)
 
         if e_p:
             return json.dumps({'error': 'Provider already exists as %s' % e_p.name})
@@ -7810,7 +7819,7 @@ class ConfigProviders(Config):
 
         # update torrent source settings
         for torrent_src in [src for src in sickbeard.providers.sortedProviderList()
-                            if sickbeard.GenericProvider.TORRENT == src.providerType]:
+                            if sickbeard.GenericProvider.TORRENT == src.providerType]:  # type: TorrentProvider
             src_id_prefix = torrent_src.get_id() + '_'
 
             attr = 'url_edit'
@@ -7837,7 +7846,7 @@ class ConfigProviders(Config):
                 setattr(torrent_src, attr, config.to_int(str(kwargs.get(src_id_prefix + attr, '')).strip()))
 
             attr = 'filter'
-            if hasattr(torrent_src, attr):
+            if hasattr(torrent_src, attr) and torrent_src.may_filter:
                 setattr(torrent_src, attr,
                         [k for k in torrent_src.may_filter
                          if config.checkbox_to_value(kwargs.get('%sfilter_%s' % (src_id_prefix, k)))])

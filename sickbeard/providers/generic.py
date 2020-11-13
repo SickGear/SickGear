@@ -1563,6 +1563,7 @@ class TorrentProvider(GenericProvider):
         self._reject_notfree = None
         self._reject_container = None
         self._last_recent_search = None
+        self.may_filter = dict()
 
     @property
     def url(self):
