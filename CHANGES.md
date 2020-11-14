@@ -7,7 +7,12 @@
 * Update diskcache_py3 5.0.1 (9670fbb) to 5.1.0 (40ce0de)
 * Update diskcache_py2 4.1.0 (b0451e0) from 5.1.0 (40ce0de)
 * Update Requests library 2.24.0 (2f70990) to 2.25.0 (03957eb)
-* Update urllib3 1.25.11 (00f1769) to 1.26.1 (7675532)
+* Update urllib3 1.25.11 (00f1769) to 1.26.2 (eae04d6)
+
+
+[develop changelog]
+
+* Update urllib3 1.26.1 (7675532) to 1.26.2 (eae04d6)
 
 
 ### 0.23.0 (2020-11-11 13:30:00 UTC)
