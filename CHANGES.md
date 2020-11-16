@@ -1,4 +1,9 @@
-﻿### 0.23.0 (2020-11-11 13:30:00 UTC)
+﻿### 0.23.1 (2020-11-16 23:00:00 UTC)
+
+* Fix image failure for a show that is force updated, removed, then readded
+
+
+### 0.23.0 (2020-11-11 13:30:00 UTC)
 
 * Change improve search performance for backlog, manual, failed, and proper
 * Add overview of the last release age/date at each newznab provider to History/Layout "Connect fails"
