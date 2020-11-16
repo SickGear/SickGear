@@ -69,10 +69,13 @@ Other features and worthy points;
   * Forward search results directly to clients like NZBGet, SABNZBd, qBitTorrent, Deluge and others
   * Save search results to a "blackhole" folder, a place designated for clients to auto scan
   * Built-in post processing of episodes, with renaming to custom folder and/or file names
-  * Fetch metadata like fanart, poster and banner images, nfo's for clients like Kodi, Plex and many more
+  * Fetch metadata like fanart, poster and banner images, nfo's for clients like Kodi, Emby, Plex, Jellyfin and many more
   * Native advanced automated handling of failed downloads to ensure a success after failure
   * Overview of episodes, rating, version, airdate, episode status ([their meaning](https://github.com/SickGear/SickGear/wiki/Status-Modes))
   * Support for specials and multi episode media files
+* File management for media processing
+  * Configurable folder/file renaming for a consistent library
+  * Automatic unpacking of rar archives (and optionally 7z)
 * Automated subtitle management
 * Notification
   * Home Theater/NAS (Emby, Kodi, Plex, Syno, Tivo, and more) can be notified to update their library
