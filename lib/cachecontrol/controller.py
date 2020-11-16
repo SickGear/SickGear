@@ -410,7 +410,15 @@ class CacheController(object):
         cached_response.status = 200
 
         # update our cache
+        try:
+            cached_response._fp.seek(0)
+        except (BaseException, Exception):
+            pass
         body = cached_response.read(decode_content=False)
         self.cache.set(cache_url, self.serializer.dumps(request, cached_response, body))
 
+        try:
+            cached_response._fp.seek(0)
+        except (BaseException, Exception):
+            pass
         return cached_response
