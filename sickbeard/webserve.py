@@ -3319,11 +3319,12 @@ class HomeProcessMedia(Home):
                 cleanup = kwargs.get('cleanup') in ('on', '1')
                 if isinstance(dir_name, string_types):
                     dir_name = decode_str(dir_name)
-                    sickbeard.PROCESS_LAST_DIR = dir_name
-                    sickbeard.PROCESS_LAST_METHOD = process_method
-                    if 'move' == process_method:
-                        sickbeard.PROCESS_LAST_CLEANDUP = cleanup
-                    sickbeard.save_config()
+                    if 'auto' != process_type:
+                        sickbeard.PROCESS_LAST_DIR = dir_name
+                        sickbeard.PROCESS_LAST_METHOD = process_method
+                        if 'move' == process_method:
+                            sickbeard.PROCESS_LAST_CLEANUP = cleanup
+                        sickbeard.save_config()
 
                     if nzbget_call and isinstance(sickbeard.NZBGET_MAP, string_types) and sickbeard.NZBGET_MAP:
                         m = sickbeard.NZBGET_MAP.split('=')

@@ -13,6 +13,7 @@
 [develop changelog]
 
 * Update urllib3 1.26.1 (7675532) to 1.26.2 (eae04d6)
+* Change don't remember folder used during auto processing
 
 
 ### 0.23.1 (2020-11-16 23:00:00 UTC)
