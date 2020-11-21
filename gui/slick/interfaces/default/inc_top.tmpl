@@ -203,21 +203,27 @@
 #end if
 								</ul>
 								<ul class="nav add-tab3 default-off">
-#if not $history_compact:
-									<li><span style="padding-left:20px">This will list latest history</span></li>
-#else
+#set $history_count = 0
+#if $history_compact:
     #for item in $history_compact
         #if 'tvid_prodid' in $item
             #set $action = $item['actions'][0]
             #set $curStatus, $curQuality = $Quality.splitCompositeStatus(int($action['action']))
+            #set $status = None
             #if $curStatus in $SNATCHED_ANY + [$FAILED]
                 #set $status = 'snatched'
             #elif $curStatus in [$DOWNLOADED, $ARCHIVED]
                 #set $status = 'good'
             #end if
+            #if None is not $status
+                #set $history_count += 1
 									<li><a href="$sbRoot/home/view-show?tvid_prodid=$item['tvid_prodid']" tabindex="$tab#set $tab += 1#"><span class="$status"><i class="sgicon-addshow"></i></span><span class="truncate">$item['show_name']</span></a></li>
+            #end if
         #end if
     #end for
+#end if
+#if not $history_compact or not $history_count:
+									<li><span style="padding-left:20px">This will list latest history</span></li>
 #end if
 								</ul>
 							</li>

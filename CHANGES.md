@@ -16,6 +16,13 @@
 * Change don't remember folder used during auto processing
 
 
+### 0.23.2 (2020-11-21 18:40:00 UTC)
+
+* Change allow Python 3.8.7
+* Change suppress py27 startup cryptography deprecation warning
+* Fix filter out history items that don't qualify for status snatched/good
+
+
 ### 0.23.1 (2020-11-16 23:00:00 UTC)
 
 * Fix image failure for a show that is force updated, removed, then readded
