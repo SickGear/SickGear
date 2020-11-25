@@ -4,6 +4,8 @@ var dev = !1,
 	logInfo = dev && console.info.bind(window.console) || function (){},
 	logErr = dev && console.error.bind(window.console) || function (){};
 
+var p_id = 0;
+
 $(function () {
 	ajaxConsumer.checkLoadNotifications();
 });
@@ -53,7 +55,7 @@ var ajaxConsumer = function () {
 
 function putMsg(msg) {
 	var loading = '.loading-step', lastStep$ = $(loading).filter(':last');
-	if (msg !== lastStep$.attr('data-message')) {
+	if (msg !== unescape(lastStep$.attr('data-message'))) {
 		lastStep$.clone().insertAfter(lastStep$);
 
 		var result$ = lastStep$.find('.result');
@@ -64,7 +66,7 @@ function putMsg(msg) {
 			result$.addClass('hide');
 		}
 		lastStep$ =  $(loading).filter(':last');
-		lastStep$.attr('data-message', msg);
+		lastStep$.attr('data-message', escape(msg));
 		lastStep$.find('.desc').text(msg + ': ');
 		lastStep$.find('.count').text('');
 		lastStep$.find('.spinner').removeClass('hide');
@@ -75,11 +77,18 @@ function putMsg(msg) {
 function uiUpdateComplete(data) {
 	$.each(data, function (i, msg) {
 		var loading = '.loading-step';
+		if (msg.msg === 'Process-id') {
+			if (p_id !== msg.progress) {
+				p_id = msg.progress;
+				$('.loading-step:not(:first)').remove();
+			}
+			return
+		}
 		if (i >= $(loading).length) {
 			putMsg(msg.msg);
 		}
 		if (-1 !== msg.progress) {
-			var loading$ = $(loading + '[data-message="' + msg.msg + '"]');
+			var loading$ = $(loading + '[data-message="' + escape(msg.msg) + '"]');
 			loading$.find('.spinner, .result').addClass('hide');
 			loading$.find('.count').text(msg.progress);
 		}

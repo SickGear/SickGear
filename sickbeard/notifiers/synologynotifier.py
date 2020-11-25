@@ -21,6 +21,7 @@ from .generic import Notifier
 # noinspection PyPep8Naming
 import encodingKludge as ek
 from exceptions_helper import ex
+from sg_helpers import cmdline_runner
 
 
 class SynologyNotifier(Notifier):
@@ -31,7 +32,6 @@ class SynologyNotifier(Notifier):
         self._log(u'Executing command ' + str(synodsmnotify_cmd))
         self._log_debug(u'Absolute path to command: ' + ek.ek(os.path.abspath, synodsmnotify_cmd[0]))
         try:
-            from sickbeard.helpers import cmdline_runner
             output, err, exit_status = cmdline_runner(synodsmnotify_cmd)
             self._log_debug(u'Script result: %s' % output)
         except (BaseException, Exception) as e:

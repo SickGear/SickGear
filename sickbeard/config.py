@@ -177,25 +177,49 @@ def schedule_backlog(iv):
     sickbeard.backlog_search_scheduler.action.cycleTime = sickbeard.BACKLOG_PERIOD
 
 
-def schedule_update(iv):
+def schedule_update_software(iv):
     sickbeard.UPDATE_INTERVAL = to_int(iv, default=sickbeard.DEFAULT_UPDATE_INTERVAL)
 
     if sickbeard.UPDATE_INTERVAL < sickbeard.MIN_UPDATE_INTERVAL:
         sickbeard.UPDATE_INTERVAL = sickbeard.MIN_UPDATE_INTERVAL
 
-    sickbeard.version_check_scheduler.cycleTime = datetime.timedelta(hours=sickbeard.UPDATE_INTERVAL)
+    sickbeard.update_software_scheduler.cycleTime = datetime.timedelta(hours=sickbeard.UPDATE_INTERVAL)
 
 
-def schedule_version_notify(version_notify):
-    old_setting = sickbeard.VERSION_NOTIFY
+def schedule_update_software_notify(update_notify):
+    old_setting = sickbeard.UPDATE_NOTIFY
 
-    sickbeard.VERSION_NOTIFY = version_notify
+    sickbeard.UPDATE_NOTIFY = update_notify
 
-    if not version_notify:
+    if not update_notify:
         sickbeard.NEWEST_VERSION_STRING = None
 
-    if not old_setting and version_notify:
-        sickbeard.version_check_scheduler.action.run()
+    if not old_setting and update_notify:
+        sickbeard.update_software_scheduler.action.run()
+
+
+def schedule_update_packages(iv):
+    sickbeard.UPDATE_PACKAGES_INTERVAL = minimax(iv, sickbeard.DEFAULT_UPDATE_PACKAGES_INTERVAL,
+                                                 sickbeard.MIN_UPDATE_PACKAGES_INTERVAL,
+                                                 sickbeard.MAX_UPDATE_PACKAGES_INTERVAL)
+
+    sickbeard.update_packages_scheduler.cycleTime = datetime.timedelta(hours=sickbeard.UPDATE_PACKAGES_INTERVAL)
+
+
+def schedule_update_packages_notify(update_packages_notify):
+    # this adds too much time to the save_config button click, see below
+    # old_setting = sickbeard.UPDATE_PACKAGES_NOTIFY
+
+    sickbeard.UPDATE_PACKAGES_NOTIFY = update_packages_notify
+
+    if not update_packages_notify:
+        sickbeard.NEWEST_VERSION_STRING = None
+
+    # this adds too much time to the save_config button click,
+    # also the call to save_config raises the risk of a race condition
+    # user must instead restart to activate an update on startup
+    # if not old_setting and update_packages_notify:
+    #     sickbeard.update_packages_scheduler.action.run()
 
 
 def schedule_download_propers(download_propers):

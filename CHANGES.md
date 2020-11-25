@@ -1,5 +1,13 @@
 ﻿### 0.24.0 (202x-xx-xx xx:xx:00 UTC)
 
+* Add to config/General, "Package updates" and list packages, check packages by default on Windows, others must enable
+* Change simplify section config/General/Updates
+* Add check for package updates to menu item action "Check for Updates"
+* Add known failures are cleared for a fresh check when "Check for Updates" is used
+* Change auto-install Cheetah dependency on first time installations (tested on Win)
+* Change add cryptography to recommended.txt
+* Change add pycryptodome to recommended.txt
+* Change add prebuilt AMD64 python-Levenshtein to recommended.txt
 * Change initialise Manage/Media Process folder and method from Config/Media Process when no previous values are stored
 * Change remember Manage/Media Process folder and method when button 'Process' is used
 * Change abbreviate long titles under menu tab

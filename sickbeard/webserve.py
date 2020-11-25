@@ -1823,8 +1823,11 @@ class Home(MainHandler):
 
     def check_update(self):
         # force a check to see if there is a new version
-        if sickbeard.version_check_scheduler.action.check_for_new_version(force=True):
-            logger.log(u'Forcing version check')
+        if sickbeard.update_software_scheduler.action.check_for_new_version(force=True):
+            logger.log(u'Forced version check found results')
+
+        if sickbeard.update_packages_scheduler.action.check_for_new_version(force=True):
+            logger.log(u'Forced package version check found results')
 
         self.redirect('/home/')
 
@@ -1898,7 +1901,7 @@ class Home(MainHandler):
         if str(pid) != str(sickbeard.PID):
             return self.redirect('/home/')
 
-        if sickbeard.version_check_scheduler.action.update():
+        if sickbeard.update_software_scheduler.action.update():
             return self.restart(pid)
 
         return self._generic_message('Update Failed',
@@ -1912,7 +1915,7 @@ class Home(MainHandler):
     def pull_request_checkout(self, branch):
         pull_request = branch
         branch = branch.split(':')[1]
-        fetched = sickbeard.version_check_scheduler.action.fetch(pull_request)
+        fetched = sickbeard.update_software_scheduler.action.fetch(pull_request)
         if fetched:
             sickbeard.BRANCH = branch
             ui.notifications.message('Checking out branch: ', branch)
@@ -6993,8 +6996,9 @@ class ConfigGeneral(Config):
                      log_dir=None, web_log=None,
                      indexer_default=None, indexer_timeout=None,
                      show_dirs_with_dots=None,
-                     version_notify=None, auto_update=None, update_interval=None, notify_on_update=None,
-                     update_frequency=None,
+                     update_notify=None, update_auto=None, update_interval=None, notify_on_update=None,
+                     update_packages_notify=None, update_packages_auto=None, update_packages_interval=None,
+                     update_frequency=None,  # deprecated 2020.11.07
                      theme_name=None, default_home=None, fanart_limit=None, showlist_tagview=None, show_tags=None,
                      home_search_focus=None, use_imdb_info=None, display_freespace=None, sort_article=None,
                      fuzzy_dating=None, trim_zero=None, date_preset=None, time_preset=None,
@@ -7008,7 +7012,7 @@ class ConfigGeneral(Config):
                      git_path=None, cpu_preset=None, anon_redirect=None, encryption_version=None,
                      proxy_setting=None, proxy_indexers=None, file_logging_preset=None, backup_db_oneday=None):
 
-        # prevent deprecated var issues from existing ui, delete in future, added 2020.11.07
+        # 2020.11.07 prevent deprecated var issues from existing ui, delete in future, added
         if None is update_interval and None is not update_frequency:
             update_interval = update_frequency
 
@@ -7037,10 +7041,14 @@ class ConfigGeneral(Config):
         sickbeard.SHOW_DIRS_WITH_DOTS = config.checkbox_to_value(show_dirs_with_dots)
 
         # Updates
-        config.schedule_version_notify(config.checkbox_to_value(version_notify))
-        sickbeard.AUTO_UPDATE = config.checkbox_to_value(auto_update)
-        config.schedule_update(update_interval)
+        config.schedule_update_software_notify(config.checkbox_to_value(update_notify))
+        sickbeard.UPDATE_AUTO = config.checkbox_to_value(update_auto)
+        config.schedule_update_software(update_interval)
         sickbeard.NOTIFY_ON_UPDATE = config.checkbox_to_value(notify_on_update)
+
+        config.schedule_update_packages_notify(config.checkbox_to_value(update_packages_notify))
+        sickbeard.UPDATE_PACKAGES_AUTO = config.checkbox_to_value(update_packages_auto)
+        config.schedule_update_packages(update_packages_interval)
 
         # Interface
         sickbeard.THEME_NAME = theme_name
@@ -7149,7 +7157,7 @@ class ConfigGeneral(Config):
             return json.dumps({'result': 'success', 'pulls': []})
         else:
             try:
-                pulls = sickbeard.version_check_scheduler.action.list_remote_pulls()
+                pulls = sickbeard.update_software_scheduler.action.list_remote_pulls()
                 return json.dumps({'result': 'success', 'pulls': pulls})
             except (BaseException, Exception) as e:
                 logger.log(u'exception msg: ' + ex(e), logger.DEBUG)
@@ -7158,7 +7166,7 @@ class ConfigGeneral(Config):
     @staticmethod
     def fetch_branches():
         try:
-            branches = sickbeard.version_check_scheduler.action.list_remote_branches()
+            branches = sickbeard.update_software_scheduler.action.list_remote_branches()
             return json.dumps({'result': 'success', 'branches': branches, 'current': sickbeard.BRANCH or 'master'})
         except (BaseException, Exception) as e:
             logger.log(u'exception msg: ' + ex(e), logger.DEBUG)

@@ -31,13 +31,68 @@ from exceptions_helper import ex
 
 import sickbeard
 from . import logger, notifiers, ui
-from .helpers import cmdline_runner
+from .piper import check_pip_outdated
+from sg_helpers import cmdline_runner
 
 # noinspection PyUnresolvedReferences
 from six.moves import urllib
+from _23 import list_keys
 
 
-class CheckVersion(object):
+class PackagesUpdater(object):
+
+    def __init__(self):
+        self.install_type = 'Python package updates'
+
+    def run(self, force=False):
+        if not sickbeard.EXT_UPDATES \
+                and self.check_for_new_version(force) \
+                and sickbeard.UPDATE_PACKAGES_AUTO:
+            msg = 'Automatic %s enabled, restarting to update...' % self.install_type
+            logger.log(msg)
+            ui.notifications.message(msg)
+            sickbeard.restart()
+
+    def check_for_new_version(self, force=False):
+        """
+        Checks for available Python package installs/updates
+
+        :param force: ignore the UPDATE_PACKAGES_NOTIFY setting
+
+        :returns: True when package install/updates are available
+        """
+        if not sickbeard.UPDATE_PACKAGES_NOTIFY and not sickbeard.UPDATE_PACKAGES_AUTO and not force:
+            logger.log('Checking for %s is not enabled' % self.install_type)
+            return False
+
+        logger.log('Checking for %s%s' % (self.install_type, ('', ' (from menu)')[force]))
+        sickbeard.UPDATES_TODO = check_pip_outdated(force)
+        if not sickbeard.UPDATES_TODO:
+            msg = 'No %s needed' % self.install_type
+            logger.log(msg)
+
+            if force:
+                ui.notifications.message(msg)
+            return False
+
+        logger.log('Update(s) for %s found %s' % (self.install_type, list_keys(sickbeard.UPDATES_TODO)))
+
+        # save updates_todo to config to be loaded after restart
+        sickbeard.save_config()
+
+        msg = '%s available &mdash; <a href="%s">Update Now</a>' % (
+                self.install_type, '%s/home/restart/?pid=%s' % (sickbeard.WEB_ROOT, sickbeard.PID))
+        if None is sickbeard.NEWEST_VERSION_STRING:
+            sickbeard.NEWEST_VERSION_STRING = ''
+        if msg not in sickbeard.NEWEST_VERSION_STRING:
+            if sickbeard.NEWEST_VERSION_STRING:
+                sickbeard.NEWEST_VERSION_STRING += '<br>Also, '
+            sickbeard.NEWEST_VERSION_STRING += msg
+
+        return True
+
+
+class SoftwareUpdater(object):
     """
     Version check class meant to run as a thread object with the sg scheduler.
     """
@@ -56,14 +111,14 @@ class CheckVersion(object):
         # set current branch version
         sickbeard.BRANCH = self.get_branch()
 
-        if self.check_for_new_version(force):
-            if sickbeard.AUTO_UPDATE:
-                logger.log(u'New update found for SickGear, starting auto-updater...')
-                ui.notifications.message('New update found for SickGear, starting auto-updater')
-                if sickbeard.version_check_scheduler.action.update():
-                    logger.log(u'Update was successful!')
-                    ui.notifications.message('Update was successful')
-                    sickbeard.events.put(sickbeard.events.SystemEvent.RESTART)
+        if not sickbeard.EXT_UPDATES \
+                and self.check_for_new_version(force) \
+                and sickbeard.UPDATE_AUTO \
+                and sickbeard.update_software_scheduler.action.update():
+            msg = 'Automatic software updates enabled, restarting with updated...'
+            logger.log(msg)
+            ui.notifications.message(msg)
+            sickbeard.restart()
 
     @staticmethod
     def find_install_type():
@@ -81,29 +136,29 @@ class CheckVersion(object):
 
     def check_for_new_version(self, force=False):
         """
-        Checks the internet for a newer version.
+        Checks for a new software release
 
-        returns: bool, True for new version or False for no new version.
+        :param force: ignore the UPDATE_NOTIFY setting
 
-        force: if true the VERSION_NOTIFY setting will be ignored and a check will be forced
+        :returns: True when a new software version is available
         """
 
-        if not sickbeard.VERSION_NOTIFY and not sickbeard.AUTO_UPDATE and not force:
-            logger.log(u'Version checking is disabled, not checking for the newest version')
+        if not sickbeard.UPDATE_NOTIFY and not sickbeard.UPDATE_AUTO and not force:
+            logger.log('Checking for software updates is not enabled')
             return False
 
-        if not sickbeard.AUTO_UPDATE:
-            logger.log(u'Checking if %s needs an update' % self.install_type)
+        logger.log('Checking for "%s" software update%s' % (self.install_type, ('', ' (from menu)')[force]))
         if not self.updater.need_update():
             sickbeard.NEWEST_VERSION_STRING = None
-            if not sickbeard.AUTO_UPDATE:
-                logger.log(u'No update needed')
+            msg = 'No "%s" software update needed' % self.install_type
+            logger.log(msg)
 
             if force:
-                ui.notifications.message('No update needed')
+                ui.notifications.message(msg)
             return False
 
         self.updater.set_newest_text()
+
         return True
 
     def update(self):
@@ -147,9 +202,11 @@ class GitUpdateManager(UpdateManager):
         self.github_repo_user = self.get_github_repo_user()
         self.github_repo = self.get_github_repo()
 
-        self.branch = sickbeard.BRANCH
-        if '' == sickbeard.BRANCH:
-            self.branch = self._find_installed_branch()
+        self.branch = self._find_installed_branch()
+        if '' == self.branch:
+            self.branch = sickbeard.BRANCH
+        if self.branch and self.branch != sickbeard.BRANCH:
+            sickbeard.BRANCH = self.branch
 
         self._cur_commit_hash = None
         self._newest_commit_hash = None
@@ -242,8 +299,11 @@ class GitUpdateManager(UpdateManager):
             logger.log(u'Failed: %s returned: %s' % (cmd, output), logger.ERROR)
 
         elif 128 == exit_status or 'fatal:' in output or err:
-            logger.log(u'Fatal: %s returned: %s' % (cmd, output), logger.ERROR)
+            level = logger.DEBUG
             exit_status = 128
+            if 'develop' in output.lower() or 'master' in output.lower():
+                level = logger.ERROR
+            logger.log(u'Fatal: %s returned: %s' % (cmd, output), level)
 
         else:
             logger.log(u'Treat as error for now, command: %s returned: %s' % (cmd, output), logger.ERROR)
@@ -402,7 +462,7 @@ class GitUpdateManager(UpdateManager):
                                                          % (sickbeard.GIT_REMOTE, self._cur_pr_number, self.branch))
 
         else:
-            output, err, exit_status = self._run_git(self._git_path, 'fetch %s' % sickbeard.GIT_REMOTE)
+            self._run_git(self._git_path, 'fetch %s' % sickbeard.GIT_REMOTE)
             output, err, exit_status = self._run_git(self._git_path, 'checkout -f -B "%s" "%s/%s"'
                                                      % (self.branch, sickbeard.GIT_REMOTE, self.branch))
 

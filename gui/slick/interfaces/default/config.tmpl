@@ -24,8 +24,8 @@
 			<td class="infoTableCell">
 				BRANCH: #echo $sg_str('BRANCH') or 'UNKNOWN'# @ py#echo '.'.join(['%s' % x for x in sys.version_info[0:3]])# / COMMIT: #echo ($sg_str('CUR_COMMIT_HASH')[0:7] or 'UNKNOWN') + ('', ' @ ')[bool($version)]#$version<br />
 				<em class="red-text">This is BETA software</em><br />
-#if not $sg_var('VERSION_NOTIFY') and not $sg_var('EXT_UPDATES'):
-				You don't have version checking turned on, see "Check software updates" in Config > General.
+#if not $sg_var('UPDATE_NOTIFY') and not $sg_var('EXT_UPDATES'):
+				No checks are run for outdated software, see "Software updates" in Config > General.
 #end if
 			</td>
 		</tr>
