@@ -1711,13 +1711,15 @@ def start():
 
 
 def restart(soft=True):
-    if soft:
+
+    if not soft:
+        events.put(events.SystemEvent.RESTART)
+
+    else:
         halt()
         save_all()
         logger.log(u'Re-initializing all data')
         initialize()
-    else:
-        events.put(events.SystemEvent.RESTART)
 
 
 def sig_handler(signum=None, _=None):
