@@ -1892,7 +1892,7 @@ class Home(MainHandler):
         t = PageTemplate(web_handler=self, file='restart.tmpl')
         t.shutdown = False
 
-        sickbeard.events.put(sickbeard.events.SystemEvent.RESTART)
+        sickbeard.restart(soft=False)
 
         return t.respond()
 

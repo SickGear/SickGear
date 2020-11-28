@@ -2497,7 +2497,7 @@ class CMD_SickGearRestart(ApiCall):
 
     def run(self):
         """ restart sickgear """
-        sickbeard.events.put(sickbeard.events.SystemEvent.RESTART)
+        sickbeard.restart(soft=False)
         return _responds(RESULT_SUCCESS, msg="SickGear is restarting...")
 
 
