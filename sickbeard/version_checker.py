@@ -217,6 +217,7 @@ class GitUpdateManager(UpdateManager):
         self._cur_pr_number = self.get_cur_pr_number()
 
     def _find_working_git(self):
+        test_cmd = '--version'
 
         logger.debug(u'Checking if git commands are available')
 
