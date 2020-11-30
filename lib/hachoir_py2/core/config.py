@@ -8,7 +8,7 @@ import os
 max_string_length = 40    # Max. length in characters of GenericString.display
 max_byte_length = 14      # Max. length in bytes of RawBytes.display
 max_bit_length = 256      # Max. length in bits of RawBits.display
-unicode_stdout = True     # Replace stdout and stderr with Unicode compatible objects, disable for readline or ipython
+unicode_stdout = False     # Replace stdout and stderr with Unicode compatible objects, disable for readline or ipython
 
 # Global options
 debug = False             # Display many informations usefull to debug

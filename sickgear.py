@@ -40,7 +40,7 @@ warnings.filterwarnings('ignore', module=r'.*ssl_.*', message='.*SSLContext obje
 warnings.filterwarnings('ignore', module=r'.*zoneinfo.*', message='.*file or directory.*')
 warnings.filterwarnings('ignore', message='.*deprecated in cryptography.*')
 
-versions = [((2, 7, 9), (2, 7, 18)), ((3, 7, 1), (3, 8, 7)), ((3, 9, 0), (3, 9, 0))]  # inclusive version ranges
+versions = [((2, 7, 9), (2, 7, 18)), ((3, 7, 1), (3, 8, 7)), ((3, 9, 0), (3, 9, 1))]  # inclusive version ranges
 if not any(list(map(lambda v: v[0] <= sys.version_info[:3] <= v[1], versions))) and not int(os.environ.get('PYT', 0)):
     print('Python %s.%s.%s detected.' % sys.version_info[:3])
     print('Sorry, SickGear requires a Python version %s' % ', '.join(map(
@@ -728,6 +728,8 @@ if '__main__' == __name__:
         except IOError as e:
             if e.errno != errno.EINTR:
                 raise
+    except SystemExit as e:
+        print('%s' % ex(e))
     except (BaseException, Exception) as e:
         import traceback
         print(traceback.format_exc())

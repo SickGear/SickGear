@@ -1,4 +1,9 @@
-﻿### 0.23.3 (2020-11-30 17:20:00 UTC)
+﻿### 0.23.4 (2020-12-02 11:30:00 UTC)
+
+* Change allow Python 3.9.1
+
+
+### 0.23.3 (2020-11-30 17:20:00 UTC)
 
 * Change remove use of native Py 7zip as compressor found to crash Python binary under Linux with low memory conditions
 
