@@ -6,7 +6,6 @@
 * Add known failures are cleared for a fresh check when "Check for Updates" is used
 * Change auto-install Cheetah dependency on first time installations (tested on Win)
 * Change add cryptography to recommended.txt
-* Change add pycryptodome to recommended.txt
 * Change add prebuilt AMD64 python-Levenshtein to recommended.txt
 * Change initialise Manage/Media Process folder and method from Config/Media Process when no previous values are stored
 * Change remember Manage/Media Process folder and method when button 'Process' is used
@@ -24,6 +23,7 @@
 * Change don't remember folder used during auto processing
 * Fix update runner using shell that doesn't have env path to git binary in Linux (use `git pull` to get this fix)
 * Fix under py2, a hachoir config value, without 'readline' sys.module, using the `--daemon` SG startup option, fails
+* Change remove pycryptodome from recommended.txt as only used for removed py7z
 
 
 ### 0.23.3 (2020-11-30 17:20:00 UTC)
