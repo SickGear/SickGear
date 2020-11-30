@@ -1374,6 +1374,9 @@ def compress_file(target, filename, prefer_7z=True, remove_source=True):
     :return: success of compression
     """
     try:
+        # py7z is hardwired removed because Python 3.9 interpretor crashes with a process kill signal 9 when memory is
+        # low/exhausted during a native 7z compress action on Linux. Therefore, the native functions cannot be trusted
+        prefer_7z = False and prefer_7z
         if prefer_7z and None is not py7zr:
             z_name = '%s.7z' % target.rpartition('.')[0]
             with py7zr.SevenZipFile(z_name, 'w') as z_file:
