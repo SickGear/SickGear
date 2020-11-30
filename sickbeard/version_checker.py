@@ -217,7 +217,6 @@ class GitUpdateManager(UpdateManager):
         self._cur_pr_number = self.get_cur_pr_number()
 
     def _find_working_git(self):
-        test_cmd = '--version'
 
         logger.debug(u'Checking if git commands are available')
 
@@ -286,7 +285,7 @@ class GitUpdateManager(UpdateManager):
 
         try:
             logger.debug(u'Executing %s with your shell in %s' % (cmd, sickbeard.PROG_DIR))
-            output, err, exit_status = cmdline_runner([git_path] + arg_list, shell=True)
+            output, err, exit_status = cmdline_runner([git_path] + arg_list)
             logger.debug(u'git output: %s' % output)
 
         except OSError:

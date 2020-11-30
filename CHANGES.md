@@ -22,6 +22,7 @@
 
 * Update urllib3 1.26.1 (7675532) to 1.26.2 (eae04d6)
 * Change don't remember folder used during auto processing
+* Fix update runner using shell that doesn't have env path to git binary in Linux (use `git pull` to get this fix)
 
 
 ### 0.23.2 (2020-11-21 18:40:00 UTC)
