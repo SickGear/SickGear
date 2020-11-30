@@ -1,4 +1,9 @@
-﻿### 0.23.2 (2020-11-21 18:40:00 UTC)
+﻿### 0.23.3 (2020-11-30 17:20:00 UTC)
+
+* Change remove use of native Py 7zip as compressor found to crash Python binary under Linux with low memory conditions
+
+
+### 0.23.2 (2020-11-21 18:40:00 UTC)
 
 * Change allow Python 3.8.7
 * Change suppress py27 startup cryptography deprecation warning
