@@ -75,7 +75,7 @@ Other features and worthy points;
   * Support for specials and multi episode media files
 * File management for media processing
   * Configurable folder/file renaming for a consistent library
-  * Automatic unpacking of rar archives (and optionally 7z)
+  * Automatic unpacking of rar archives
 * Automated subtitle management
 * Notification
   * Home Theater/NAS (Emby, Kodi, Plex, Syno, Tivo, and more) can be notified to update their library
