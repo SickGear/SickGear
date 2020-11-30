@@ -733,6 +733,8 @@ if '__main__' == __name__:
         except IOError as e:
             if e.errno != errno.EINTR:
                 raise
+    except SystemExit as e:
+        print('%s' % ex(e))
     except (BaseException, Exception) as e:
         import traceback
         print(traceback.format_exc())
