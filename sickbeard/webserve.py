@@ -6997,7 +6997,8 @@ class ConfigGeneral(Config):
                      indexer_default=None, indexer_timeout=None,
                      show_dirs_with_dots=None,
                      update_notify=None, update_auto=None, update_interval=None, notify_on_update=None,
-                     update_packages_notify=None, update_packages_auto=None, update_packages_interval=None,
+                     update_packages_notify=None, update_packages_auto=None, update_packages_menu=None,
+                     update_packages_interval=None,
                      update_frequency=None,  # deprecated 2020.11.07
                      theme_name=None, default_home=None, fanart_limit=None, showlist_tagview=None, show_tags=None,
                      home_search_focus=None, use_imdb_info=None, display_freespace=None, sort_article=None,
@@ -7048,6 +7049,7 @@ class ConfigGeneral(Config):
 
         config.schedule_update_packages_notify(config.checkbox_to_value(update_packages_notify))
         sickbeard.UPDATE_PACKAGES_AUTO = config.checkbox_to_value(update_packages_auto)
+        sickbeard.UPDATE_PACKAGES_MENU = config.checkbox_to_value(update_packages_menu)
         config.schedule_update_packages(update_packages_interval)
 
         # Interface

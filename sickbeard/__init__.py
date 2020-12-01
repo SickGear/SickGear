@@ -141,6 +141,7 @@ MAX_UPDATE_PACKAGES_INTERVAL = 9999
 DEFAULT_UPDATE_PACKAGES_INTERVAL = 24
 UPDATE_PACKAGES_NOTIFY = False
 UPDATE_PACKAGES_AUTO = False
+UPDATE_PACKAGES_MENU = False
 UPDATE_PACKAGES_INTERVAL = DEFAULT_UPDATE_PACKAGES_INTERVAL
 
 CUR_COMMIT_HASH = None
@@ -672,7 +673,7 @@ def init_stage_1(console_logging):
     global LAUNCH_BROWSER, UPDATE_SHOWS_ON_START, SHOW_UPDATE_HOUR, \
         TRASH_REMOVE_SHOW, TRASH_ROTATE_LOGS, ACTUAL_LOG_DIR, LOG_DIR, TVINFO_TIMEOUT, ROOT_DIRS, \
         UPDATE_NOTIFY, UPDATE_AUTO, UPDATE_INTERVAL, NOTIFY_ON_UPDATE,\
-        UPDATE_PACKAGES_NOTIFY, UPDATE_PACKAGES_AUTO, UPDATE_PACKAGES_INTERVAL
+        UPDATE_PACKAGES_NOTIFY, UPDATE_PACKAGES_AUTO, UPDATE_PACKAGES_MENU, UPDATE_PACKAGES_INTERVAL
     # Gen Config/Interface
     global THEME_NAME, DEFAULT_HOME, FANART_LIMIT, SHOWLIST_TAGVIEW, SHOW_TAGS, \
         HOME_SEARCH_FOCUS, USE_IMDB_INFO, IMDB_ACCOUNTS, DISPLAY_FREESPACE, SORT_ARTICLE, FUZZY_DATING, TRIM_ZERO, \
@@ -928,6 +929,7 @@ def init_stage_1(console_logging):
     UPDATE_PACKAGES_NOTIFY = bool(
         check_setting_int(CFG, 'General', 'update_packages_notify', 'win' == sys.platform[0:3]))
     UPDATE_PACKAGES_AUTO = bool(check_setting_int(CFG, 'General', 'update_packages_auto', 0))
+    UPDATE_PACKAGES_MENU = bool(check_setting_int(CFG, 'General', 'update_packages_menu', 0))
     UPDATE_PACKAGES_INTERVAL = max(
         MIN_UPDATE_PACKAGES_INTERVAL,
         check_setting_int(CFG, 'General', 'update_packages_interval', DEFAULT_UPDATE_PACKAGES_INTERVAL))
@@ -1873,6 +1875,7 @@ def save_config():
     new_config['General']['notify_on_update'] = int(NOTIFY_ON_UPDATE)
     new_config['General']['update_packages_notify'] = int(UPDATE_PACKAGES_NOTIFY)
     new_config['General']['update_packages_auto'] = int(UPDATE_PACKAGES_AUTO)
+    new_config['General']['update_packages_menu'] = int(UPDATE_PACKAGES_MENU)
     new_config['General']['update_packages_interval'] = int(UPDATE_PACKAGES_INTERVAL)
     new_config['General']['naming_strip_year'] = int(NAMING_STRIP_YEAR)
     new_config['General']['naming_pattern'] = NAMING_PATTERN

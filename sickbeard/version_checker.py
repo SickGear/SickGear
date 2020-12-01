@@ -63,8 +63,12 @@ class PackagesUpdater(object):
 
         :returns: True when package install/updates are available
         """
+        if force and not sickbeard.UPDATE_PACKAGES_MENU:
+            logger.log('Checking not enabled from menu action for %s' % self.install_type)
+            return False
+
         if not sickbeard.UPDATE_PACKAGES_NOTIFY and not sickbeard.UPDATE_PACKAGES_AUTO and not force:
-            logger.log('Checking for %s is not enabled' % self.install_type)
+            logger.log('Checking not enabled for %s' % self.install_type)
             return False
 
         logger.log('Checking for %s%s' % (self.install_type, ('', ' (from menu)')[force]))
@@ -145,7 +149,7 @@ class SoftwareUpdater(object):
         """
 
         if not sickbeard.UPDATE_NOTIFY and not sickbeard.UPDATE_AUTO and not force:
-            logger.log('Checking for software updates is not enabled')
+            logger.log('Checking not enabled for software updates')
             return False
 
         logger.log('Checking for "%s" software update%s' % (self.install_type, ('', ' (from menu)')[force]))

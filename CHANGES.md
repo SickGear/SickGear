@@ -24,6 +24,7 @@
 * Fix update runner using shell that doesn't have env path to git binary in Linux (use `git pull` to get this fix)
 * Fix under py2, a hachoir config value, without 'readline' sys.module, using the `--daemon` SG startup option, fails
 * Change remove pycryptodome from recommended.txt as only used for removed py7z
+* Add to config/General, "Package updates" > include in 'Check for Updates' menu action
 
 
 ### 0.23.3 (2020-11-30 17:20:00 UTC)
