@@ -9,6 +9,27 @@ function toggle$(el, cond){
 	}
 }
 
+function viewsIf(){
+	var that, className, done = [], target;
+	$('[class*="views-if"]').each(function(){
+		that = this;
+		$.each(that.classList, function(){
+			if(/views-if-/i.test(this)){
+				className = this.replace('views-if-', '');
+				if (-1 === $.inArray(className, done)){
+					done.push(className);
+					target = '[class*="show-if-' + className + '"]';
+					if ($('[class*="views-if-' + className + '"]:checked').length){
+						$(target).fadeIn('fast', 'linear');
+					} else {
+						$(target).fadeOut('fast', 'linear');
+					}
+				}
+			}
+		});
+	});
+}
+
 $(document).ready(function () {
 	var enabler = $('.enabler'),
 		viewIf = $('input.view-if'),
@@ -26,6 +47,9 @@ $(document).ready(function () {
 		else
 			content_id.fadeOut('fast', 'linear');
 	});
+
+	$('[class*="views-if"]').on({click: viewsIf});
+	viewsIf();
 
 	viewIf.each(function () {
 		$(($(this).prop('checked') ? '.hide-if-' : '.show-if-') + $(this).attr('id')).hide();
