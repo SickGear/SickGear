@@ -3391,10 +3391,6 @@ class AddShows(Home):
         return json.dumps({'results': result})
 
     @staticmethod
-    def sanitize_file_name(name):
-        return helpers.sanitize_filename(name)
-
-    @staticmethod
     def generate_show_dir_name(show_name):
         return helpers.generate_show_dir_name(None, show_name)
 
@@ -5468,7 +5464,7 @@ class Manage(MainHandler):
         my_db = db.DBConnection()
         # noinspection SqlResolve
         sql_result = my_db.select(
-            'SELECT tv_episodes.subtitles subtitles, show_name,'
+            'SELECT tv_episodes.subtitles as subtitles, show_name,'
             ' tv_shows.indexer AS tv_id, tv_shows.indexer_id AS prod_id'
             ' FROM tv_episodes, tv_shows'
             ' WHERE tv_shows.subtitles = 1'
@@ -7554,29 +7550,6 @@ class ConfigProviders(Config):
         return json.dumps({'success': temp_provider.get_id()})
 
     @staticmethod
-    def save_newznab_provider(name, url, key=''):
-        if not name or not url:
-            return '0'
-
-        providerDict = dict(zip([x.name for x in sickbeard.newznabProviderList], sickbeard.newznabProviderList))
-
-        if name in providerDict:
-            if not providerDict[name].default:
-                providerDict[name].name = name
-                providerDict[name].url = config.clean_url(url)
-
-            providerDict[name].key = key
-            # a 0 in the key spot indicates that no key is needed
-            providerDict[name].needs_auth = '0' != key
-
-            return providerDict[name].get_id() + '|' + providerDict[name].config_str()
-
-        else:
-            newProvider = newznab.NewznabProvider(name, url, key=key)
-            sickbeard.newznabProviderList.append(newProvider)
-            return newProvider.get_id() + '|' + newProvider.config_str()
-
-    @staticmethod
     def get_newznab_categories(name, url, key):
         """
         Retrieves a list of possible categories with category id's
@@ -7604,21 +7577,6 @@ class ConfigProviders(Config):
         return json.dumps({'success': True, 'tv_categories': tv_categories, 'state': state, 'error': ''})
 
     @staticmethod
-    def delete_newznab_provider(nnid):
-        providerDict = dict(zip([x.get_id() for x in sickbeard.newznabProviderList], sickbeard.newznabProviderList))
-
-        if nnid not in providerDict or providerDict[nnid].default:
-            return '0'
-
-        # delete it from the list
-        sickbeard.newznabProviderList.remove(providerDict[nnid])
-
-        if nnid in sickbeard.PROVIDER_ORDER:
-            sickbeard.PROVIDER_ORDER.remove(nnid)
-
-        return '1'
-
-    @staticmethod
     def can_add_torrent_rss_provider(name, url, cookies):
         if not name:
             return json.dumps({'error': 'Invalid name specified'})
@@ -7636,42 +7594,6 @@ class ConfigProviders(Config):
                 return json.dumps({'success': tempProvider.get_id()})
 
             return json.dumps({'error': errMsg})
-
-    @staticmethod
-    def save_torrent_rss_provider(name, url, cookies):
-        if not name or not url:
-            return '0'
-
-        providerDict = dict(zip([x.name for x in sickbeard.torrentRssProviderList], sickbeard.torrentRssProviderList))
-
-        if name in providerDict:
-            providerDict[name].name = name
-            providerDict[name].url = config.clean_url(url)
-            providerDict[name].cookies = cookies
-
-            return providerDict[name].get_id() + '|' + providerDict[name].config_str()
-
-        else:
-            newProvider = rsstorrent.TorrentRssProvider(name, url, cookies)
-            sickbeard.torrentRssProviderList.append(newProvider)
-            return newProvider.get_id() + '|' + newProvider.config_str()
-
-    @staticmethod
-    def delete_torrent_rss_provider(provider_id):
-
-        providerDict = dict(
-            zip([x.get_id() for x in sickbeard.torrentRssProviderList], sickbeard.torrentRssProviderList))
-
-        if provider_id not in providerDict:
-            return '0'
-
-        # delete it from the list
-        sickbeard.torrentRssProviderList.remove(providerDict[provider_id])
-
-        if provider_id in sickbeard.PROVIDER_ORDER:
-            sickbeard.PROVIDER_ORDER.remove(provider_id)
-
-        return '1'
 
     @staticmethod
     def check_providers_ping():
@@ -7879,7 +7801,7 @@ class ConfigProviders(Config):
             attr = 'filter'
             if hasattr(torrent_src, attr) and torrent_src.may_filter:
                 setattr(torrent_src, attr,
-                        [k for k in torrent_src.may_filter
+                        [k for k in getattr(torrent_src, 'may_filter', 'nop')
                          if config.checkbox_to_value(kwargs.get('%sfilter_%s' % (src_id_prefix, k)))])
 
             for attr in filter_iter(lambda a: hasattr(torrent_src, a), [

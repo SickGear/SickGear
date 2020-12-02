@@ -36,18 +36,28 @@ from _23 import decode_bytes, filter_list, html_unescape, list_range, \
 from six import integer_types, iteritems, iterkeys, itervalues, PY2, string_types, text_type
 
 import zipfile
-try:
-    import py7zr
-except ImportError:
-    py7zr = None
+# py7z hardwired removed, see comment below
+py7zr = None
 
 # noinspection PyUnreachableCode
 if False:
+    from _23 import DirEntry
+    from lxml_etree import etree
+    try:
+        # py7z hardwired removed because Python 3.9 interpretor crashes with a process kill signal 9 when memory is
+        # low/exhausted during a native 7z compress action on Linux. Therefore, the native functions cannot be trusted.
+        # `import` moved to this non-runtime scope to preserve code resolution in case reinstated at a later PY release
+        # noinspection PyUnresolvedReferences,PyPackageRequirements
+        import py7zr
+    except ImportError:
+        py7zr = None
+    # sickbeard is strictly used here for resolution, this is only possible because
+    # this section is not used at runtime which would create circular reference issues
+    # noinspection PyPep8Naming
+    from sickbeard import db, notifiers as NOTIFIERS
     # noinspection PyUnresolvedReferences
     from typing import Any, AnyStr, Dict, Generator, NoReturn, integer_types, Iterable, Iterator, List, Optional, \
         Tuple, Union
-    from lxml_etree import etree
-    from _23 import DirEntry
 
 # global tmdb_info cache
 _TMDB_INFO_CACHE = {'date': datetime.datetime(2000, 1, 1), 'data': None}
@@ -101,10 +111,12 @@ USER_AGENT = ''
 CACHE_DIR = None
 DATA_DIR = None
 PROXY_SETTING = None
-NOTIFIERS = None
 TRASH_REMOVE_SHOW = False
 
+# noinspection PyRedeclaration
 db = None
+# noinspection PyRedeclaration
+NOTIFIERS = None
 
 
 class ConnectionFailTypes(object):
@@ -1124,7 +1136,7 @@ def fix_set_group_id(child_path):
             logger.debug(u'Respecting the set-group-ID bit on the parent directory for %s' % child_path)
         except OSError:
             logger.error(u'Failed to respect the set-group-id bit on the parent directory for %s (setting group id %i)'
-                       % (child_path, parent_gid))
+                         % (child_path, parent_gid))
 
 
 def copy_file(src_file, dest_file):
@@ -1376,9 +1388,6 @@ def compress_file(target, filename, prefer_7z=True, remove_source=True):
     :return: success of compression
     """
     try:
-        # py7z is hardwired removed because Python 3.9 interpretor crashes with a process kill signal 9 when memory is
-        # low/exhausted during a native 7z compress action on Linux. Therefore, the native functions cannot be trusted
-        prefer_7z = False and prefer_7z
         if prefer_7z and None is not py7zr:
             z_name = '%s.7z' % target.rpartition('.')[0]
             with py7zr.SevenZipFile(z_name, 'w') as z_file:

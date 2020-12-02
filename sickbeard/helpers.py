@@ -52,8 +52,8 @@ import requests.exceptions
 import subliminal
 from lxml_etree import etree, is_lxml
 
-from _23 import b64decodebytes, b64encodebytes, decode_bytes, decode_str, filter_iter, Popen, scandir
-from six import iteritems, PY2, string_types, text_type
+from _23 import b64decodebytes, b64encodebytes, decode_bytes, decode_str, filter_iter, scandir
+from six import iteritems, string_types, text_type
 # noinspection PyUnresolvedReferences
 from six.moves import zip
 
@@ -269,7 +269,7 @@ def make_dir(path):
     if not ek.ek(os.path.isdir, path):
         try:
             ek.ek(os.makedirs, path)
-            # do the library update for synoindex
+            # do a Synology library update
             notifiers.NotifierFactory().get('SYNOINDEX').addFolder(path)
         except OSError:
             return False
@@ -542,7 +542,7 @@ def delete_empty_folders(check_empty_dir, keep_dir=None):
                 logger.log(u"Deleting empty folder: " + check_empty_dir)
                 # need shutil.rmtree when ignore_items is really implemented
                 ek.ek(os.rmdir, check_empty_dir)
-                # do the library update for synoindex
+                # do a Synology library update
                 notifiers.NotifierFactory().get('SYNOINDEX').deleteFolder(check_empty_dir)
             except OSError as e:
                 logger.log(u"Unable to delete " + check_empty_dir + ": " + repr(e) + " / " + ex(e), logger.WARNING)
@@ -1309,8 +1309,7 @@ def check_port(host, port, timeout=1.0):
         s = None
         try:
             s = socket.socket(af, socktype, proto)
-            # See http://groups.google.com/group/cherrypy-users/
-            #        browse_frm/thread/bbfe5eb39c904fe0
+            # See http://groups.google.com/group/cherrypy-users/browse_frm/thread/bbfe5eb39c904fe0
             s.settimeout(timeout)
             s.connect((host, port))
             s.close()
