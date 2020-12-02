@@ -13,12 +13,13 @@
 * Update attr 20.2.0 (4f74fba) to 20.3.0 (f3762ba)
 * Update diskcache_py3 5.0.1 (9670fbb) to 5.1.0 (40ce0de)
 * Update diskcache_py2 4.1.0 (b0451e0) from 5.1.0 (40ce0de)
-* Update Requests library 2.24.0 (2f70990) to 2.25.0 (03957eb)
+* Update Requests library 2.24.0 (2f70990) to 2.25.0 (589c454)
 * Update urllib3 1.25.11 (00f1769) to 1.26.2 (eae04d6)
 
 
 [develop changelog]
 
+* Update Requests library 2.25.0 (03957eb) to 2.25.0 (589c454)
 * Update urllib3 1.26.1 (7675532) to 1.26.2 (eae04d6)
 * Change don't remember folder used during auto processing
 * Fix update runner using shell that doesn't have env path to git binary in Linux (use `git pull` to get this fix)
