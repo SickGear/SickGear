@@ -1923,8 +1923,8 @@ class TorrentProvider(GenericProvider):
 
     def _authorised(self, logged_in=None, post_params=None, failed_msg=None, url=None, timeout=30, **kwargs):
 
-        maxed_out = (lambda y: re.search(r'(?i)[1-3]((<[^>]+>)|\W)*' +
-                                         r'(attempts|tries|remain)[\W\w]{,40}?(remain|left|attempt)', y))
+        maxed_out = (lambda y: re.search(
+            r'(?i)([1-3]((<[^>]+>)|\W)*(attempts|tries|remain)[\W\w]{,40}?(remain|left|attempt)|last[^<]+?attempt)', y))
         logged_in, failed_msg = [None is not a and a or b for (a, b) in (
             (logged_in, (lambda y=None: self.has_all_cookies())),
             (failed_msg, (lambda y='': maxed_out(y) and u'Urgent abort, running low on login attempts. ' +

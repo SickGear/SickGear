@@ -36,20 +36,37 @@ class TVChaosUKProvider(generic.TorrentProvider):
     def __init__(self):
         generic.TorrentProvider.__init__(self, 'TVChaosUK')
 
-        self.url_base = 'https://www.tvchaosuk.com/'
+        self.url_base = 'https://tvchaosuk.com/'
         self.urls = {'config_provider_home_uri': self.url_base,
-                     'login_action': self.url_base + 'login.php',
-                     'search': self.url_base + 'browse.php'}
+                     'login_action': self.url_base + 'login',
+                     'search': self.url_base + 'torrents/filter?%s' % '&'.join(
+                         ['search=%s', 'page=0', 'tmdb=', 'imdb=', 'tvdb=', 'description=', 'uploader=', 'view=list',
+                          'start_year=', 'end_year=', 'sorting=created_at', 'direction=desc', 'qty=100', '_token=%s',
+                          'types[]=SD', 'types[]=HD720p', 'types[]=HD1080p',
+                          'types[]=SD Pack', 'types[]=HD720p Pack', 'types[]=HD1080p Pack'])}
 
         self.url = self.urls['config_provider_home_uri']
 
-        self.username, self.password, self.freeleech, self.minseed, self.minleech, self.use_after_get_data = 6 * [None]
-        self.search_fallback = True
+        self.username, self.password, self._token, \
+            self.freeleech, self.minseed, self.minleech, self.use_after_get_data = 7 * [None]
 
     def _authorised(self, **kwargs):
 
-        return super(TVChaosUKProvider, self)._authorised(
-            logged_in=(lambda y=None: self.has_all_cookies(pre='c_secure_')))
+        return super(TVChaosUKProvider, self)._authorised(logged_in=self.logged_in, post_params={'remember': '1'})
+
+    def logged_in(self, resp=None):
+
+        result = True
+        if not self._token:
+            try:
+                result = 'Username' not in resp and 'Logout' in resp
+                input_tag = re.findall(r'(<input[^>]+?"(?:hidden|_token)"[^>]+?"(?:hidden|_token)"[^>]+?>)', resp)[0]
+                token = re.findall(r'value\s*=\s*["\']\s*([^"\'\s]+)', input_tag)[0]
+                csrf = re.findall(r'<meta[^>]+csrf-token[^>]+content[^"]+"\s*([^\s"]+)', resp)[0]
+                self._token = csrf == token and token
+            except (BaseException, Exception):
+                result = False
+        return result
 
     def _search_provider(self, search_params, **kwargs):
 
@@ -59,16 +76,11 @@ class TVChaosUKProvider(generic.TorrentProvider):
 
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
-        rc = dict([(k, re.compile('(?i)' + v)) for (k, v) in
-                   iteritems({'info': 'detail', 'get': 'download', 'fl': 'free'})])
+        rc = dict([(k, re.compile('(?i)' + v)) for (k, v) in iteritems({
+            'info': r'/torrents?/(?P<tid>(?P<tid_num>\d{2,})[^"]*)', 'get': 'download'})])
         for mode in search_params:
             for search_string in search_params[mode]:
-                search_string = unidecode(search_string)
-                search_string = re.sub(r'(?i)[^a-z0-9\s]', '%', unquote_plus(search_string))
-
-                kwargs = dict(post_data={'keywords': search_string, 'do': 'quick_sort', 'page': '0',
-                                         'category': '0', 'search_type': 't_name', 'sort': 'added',
-                                         'order': 'desc', 'daysprune': '-1'})
+                search_string = unidecode(unquote_plus(search_string))
 
                 vals = [i for i in range(5, 16)]
                 random.SystemRandom().shuffle(vals)
@@ -76,15 +88,15 @@ class TVChaosUKProvider(generic.TorrentProvider):
                 fetch = 'failed fetch'
                 for attempts, s in enumerate((0, vals[0], vals[5], vals[10])):
                     time.sleep(s)
-                    html = self.get_url(self.urls['search'], **kwargs)
+                    html = self.get_url(self.urls['search'] % (search_string, self._token))
                     if self.should_skip():
                         return results
                     if html:
                         try:
                             soup = BS4Parser(html).soup
-                            tbl = soup.find('table', id='sortabletable')
+                            tbl = soup.find('table', class_='table')
                             if tbl:
-                                fetch = 'data fetched'                                                 
+                                fetch = 'data fetched'
                                 break
                         except (BaseException, Exception):
                             pass
@@ -97,7 +109,6 @@ class TVChaosUKProvider(generic.TorrentProvider):
                         raise generic.HaltParseException
 
                     tbl_rows = tbl.find_all('tr')
-                    get_detail = True
 
                     if 2 > len(tbl_rows):
                         raise generic.HaltParseException
@@ -112,28 +123,13 @@ class TVChaosUKProvider(generic.TorrentProvider):
                             seeders, leechers, size = [try_int(n, n) for n in [
                                 cells[head[x]].get_text().strip() for x in ('seed', 'leech', 'size')]]
                             if self._reject_item(seeders, leechers, self.freeleech and (
-                                    None is cells[1].find('img', title=rc['fl']))):
+                                    None is tr.find('i', class_='fa-star'))):
                                 continue
 
-                            info = tr.find('a', href=rc['info'])
-                            title = (tr.find('div', class_='tooltip-content').get_text() or info.get_text()).strip()
-                            title = re.findall('(?m)(^[^\r\n]+)', title)[0]
+                            title = tr.find('a', href=rc['info']).get_text().strip()
                             download_url = self._link(tr.find('a', href=rc['get'])['href'])
                         except (BaseException, Exception):
                             continue
-
-                        if get_detail and title.endswith('...'):
-                            try:
-                                with BS4Parser(self.get_url('%s%s' % (
-                                        self.urls['config_provider_home_uri'], info['href'].lstrip('/').replace(
-                                            self.urls['config_provider_home_uri'], '')))) as soup_detail:
-                                    title = soup_detail.find(
-                                        'td', class_='thead', attrs={'colspan': '3'}).get_text().strip()
-                                    title = re.findall('(?m)(^[^\r\n]+)', title)[0]
-                            except IndexError:
-                                continue
-                            except (BaseException, Exception):
-                                get_detail = False
 
                         try:
                             titles = self.regulate_title(title, mode, search_string)
@@ -169,7 +165,7 @@ class TVChaosUKProvider(generic.TorrentProvider):
         title = re.sub(r'((?:19|20)\d\d)/20(\d\d)?', r'\1', title)
         # s<x> ep<y> -> s<x>e<y>
         title = re.sub(r'(?i)s(\d\d+)[\W]*?e+(?:p|pisode)*(\d\d+)', r'S\1E\2', title)
-        
+
         has_series = re.findall(r'(?i)(.*?series[^\d]*?\d+)(.*)', title)
         if has_series:
             rc_xtras = re.compile(r'(?i)([. _-]|^)(special|extra)s?\w*([. _-]|$)')
@@ -245,7 +241,7 @@ class TVChaosUKProvider(generic.TorrentProvider):
         for r in [(r'(?i)(?:\W(?:Series|Season))?\W(Repack)\W', r'`\1`'),
                   ('(?i)%s(Proper)%s' % (bl, br), r'`\1`'), (r'%s\s*%s' % (bl, br), '`')]:
             title = re.sub(r[0], r[1], title)
-            
+
         title = re.sub(r'[][]', '', title)
         title = '%s%s-nogrp' % (('', t[0])[1 < len(t)], title)
         for r in [(r'\s+[-]?\s+|\s+`|`\s+', '`'), ('`+', ' ')]:
@@ -307,44 +303,29 @@ class TVChaosUKProvider(generic.TorrentProvider):
 
     def after_get_data(self, result):
         if self.use_after_get_data:
-            tid = None
             try:
-                tid = re.findall(r'id=(\d+)$', result.url)[0]
+                self.get_url(self.url_base + 'thanks/%s' % re.findall(r'download/(\d+)', result.url)[0])
             except IndexError:
                 pass
-            if tid:
-                response = self.get_url(self.url_base + 'takethanks.php', post_data={'torrentid': tid})
-                if not self.should_skip():
-                    msg = '' if not response else ' err=%s' % re.sub('</?error>', '', response)
-                    if not re.search('(?i)remove[^>]+?thank', msg):
-                        logger.log('Failed to "Say thanks!" to uploader of id=%s%s' % (tid, msg), logger.DEBUG)
 
     def _season_strings(self, ep_obj, **kwargs):
 
-        return self.show_name_wildcard(
+        return \
             generic.TorrentProvider._season_strings(
-                self, ep_obj, scene=False, prefix='%', sp_detail=(
-                    lambda e: [(('', 'Series %(seasonnumber)d%%')[1 < try_int(e.get('seasonnumber'))]
-                                + '%(episodenumber)dof') % e, 'Series %(seasonnumber)d' % e])))
+                self, ep_obj, scene=False, sp_detail=(
+                    lambda e: [(('', 'Series %(seasonnumber)d ')[1 < try_int(e.get('seasonnumber'))]
+                                + '%(episodenumber)d of') % e, 'Series %(seasonnumber)d' % e]))
 
     def _episode_strings(self, ep_obj, **kwargs):
 
-        return self.show_name_wildcard(
+        return \
             super(TVChaosUKProvider, self)._episode_strings(
-                ep_obj, scene=False, prefix='%', date_detail=(
-                    lambda date: ['%s %s%% %s'.lstrip('0') % x for x in
+                ep_obj, scene=False, date_detail=(
+                    lambda date: ['%s %s %s'.lstrip('0') % x for x in
                                   [((d[-1], '%s' % m, y), (d, m, y)) + (((d, mf, y),), ())[m == mf]
                                    for (d, m, mf, y) in [(date.strftime(x) for x in ('%d', '%b', '%B', '%Y'))]][0]]),
-            ep_detail=(lambda e: [naming_ep_type[2] % e] + (
-                    [], ['%(episodenumber)dof' % e])[1 == try_int(e.get('seasonnumber'))]), **kwargs))
-
-    @staticmethod
-    def show_name_wildcard(search_items):
-        for d in search_items:
-            for k, v in d.items():
-                for i, val in enumerate(v):
-                    v[i] = v[i].replace(' %', '% %', 1)
-        return search_items
+                ep_detail=(lambda e: [naming_ep_type[2] % e] + (
+                    [], ['%(episodenumber)d of' % e])[1 == try_int(e.get('seasonnumber'))]), **kwargs)
 
     @staticmethod
     def ui_string(key):

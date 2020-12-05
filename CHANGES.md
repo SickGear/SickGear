@@ -1,4 +1,12 @@
-﻿### 0.23.5 (2020-12-05 13:45:00 UTC)
+﻿### 0.23.6 (2020-12-11 01:50:00 UTC)
+
+* Update UnRar for Windows 5.91 to 6.00 x64
+* Fix providers BitHDTV, Blutopia, HDTorrents, Pretome, PrivateHD, PTFiles, SceneHD, TVChaosUK
+* Change handle redirects from POST requests
+* Change Kodi Addon 1.0.8
+
+
+### 0.23.5 (2020-12-05 13:45:00 UTC)
 
 * Change improve dark theme text legibility with green/gold background under "Downloads" in view-shows/simple layout
                                                            

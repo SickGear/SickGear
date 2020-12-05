@@ -24,7 +24,9 @@
 		<assets>
 			<icon>icon.png</icon>
 		</assets>
-		<news>[B]1.0.7[/B] (2020-01-21)
+		<news>[B]1.0.8[/B] (2020-12-08)
+- Auto-negotiate http/s when connecting
+[B]1.0.7[/B] (2020-01-21)
 - Public release
 [B]1.0.6[/B] (2020-01-18)
 - Public test release

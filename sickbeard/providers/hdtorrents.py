@@ -41,7 +41,7 @@ class HDTorrentsProvider(generic.TorrentProvider):
         self.url_tmpl = {'config_provider_home_uri': '%(home)s', 'login_action': '%(home)s%(vars)s',
                          'search': '%(home)s%(vars)s'}
 
-        self.categories = {'Episode': [59, 60, 30, 38, 65], 'anime': ['Animation']}
+        self.categories = {'Episode': [59, 60, 30, 38, 65], 'anime': [4489]}
         self.categories['Season'] = self.categories['Cache'] = self.categories['Episode']
 
         self.filter = []
@@ -84,7 +84,7 @@ class HDTorrentsProvider(generic.TorrentProvider):
                 search_url = self.urls['search'] % (
                     search_string,
                     self._categories_string(mode, template='category[]=%s')
-                        .replace('&category[]=Animation', ('&genre[]=Animation', '')[mode in ['Cache', 'Propers']]))
+                        .replace('&category[]=4489', ('&genre[]=Animation', '')[mode in ['Cache', 'Propers']]))
                 html = self.get_url(search_url)
                 if self.should_skip():
                     return results
