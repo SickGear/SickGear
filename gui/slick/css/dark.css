@@ -257,9 +257,23 @@ home.tmpl
 	border:1px solid #111
 }
 
+.progress-80{
+	background-image:-moz-linear-gradient(#77942c, #538C0C) !important;
+	background-image:linear-gradient(#77942c, #538C0C) !important;
+	background-image:-webkit-linear-gradient(#77942c, #538C0C) !important;
+	background-image:-o-linear-gradient(#77942c, #538C0C) !important;
+}
+
+.progress-60{
+	background-image:-moz-linear-gradient(#dea33b, #bf5405) !important;
+	background-image:linear-gradient(#dea33b, #bf5405) !important;
+	background-image:-webkit-linear-gradient(#dea33b, #bf5405) !important;
+	background-image:-o-linear-gradient(#dea33b, #bf5405) !important;
+}
+
 .ui-font,
 a.ui-font{
-	text-shadow:0 0 0.1em #000;
+	text-shadow:0 0 2px #000;
 	color:#ddd
 }
 
