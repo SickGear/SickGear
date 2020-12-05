@@ -28,6 +28,11 @@
 * Add to config/General, "Package updates" > include in 'Check for Updates' menu action
 
 
+### 0.23.5 (2020-12-05 13:45:00 UTC)
+
+* Change improve dark theme text legibility with green/gold background under "Downloads" in view-shows/simple layout
+                                                           
+
 ### 0.23.4 (2020-12-02 11:30:00 UTC)
 
 * Change allow Python 3.9.1
