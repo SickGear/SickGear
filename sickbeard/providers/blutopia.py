@@ -40,8 +40,8 @@ class BlutopiaProvider(generic.TorrentProvider):
 
         self.url_base = 'https://blutopia.xyz/'
         self.urls = {'config_provider_home_uri': self.url_base,
-                     'login': self.url_base + 'torrents',
-                     'search': self.url_base + 'filterTorrents?%s' % '&'.join(
+                     'login': self.url_base + 'pages/1',
+                     'search': self.url_base + 'torrents/filter?%s' % '&'.join(
                          ['_token=%s', 'search=%s', 'categories[]=%s', 'freeleech=%s', 'doubleupload=%s', 'featured=%s',
                           'username=', 'imdb=', 'tvdb=', 'tmdb=', 'mal=', 'view=list', 'sorting=created_at', 'qty=50',
                           'direction=desc'])}
@@ -53,23 +53,27 @@ class BlutopiaProvider(generic.TorrentProvider):
         self.filter = []
         self.may_filter = OrderedDict([
             ('f0', ('not marked', False)), ('free', ('free', True)),
-            ('double', ('2x up', True)), ('feat', ('featured', True))])
-        self.digest, self.token, self.resp, self.minseed, self.minleech = 5 * [None]
-
-    def logged_in(self, resp):
-        try:
-            self.token = re.findall(r'csrf[^=]*=\s*"([^"]+)', resp)[0]
-            resp = re.findall('(?sim)(<table.*?Result.*?</table>)', resp)
-            if resp:
-                self.resp = resp[0]
-        except (IndexError, TypeError):
-            return False
-        return self.has_all_cookies('XSRF-TOKEN')
+            ('double', ('double up', True)), ('feat', ('featured', True))])
+        self.digest, self._token, self.resp, self.minseed, self.minleech = 5 * [None]
 
     def _authorised(self, **kwargs):
 
         return super(BlutopiaProvider, self)._authorised(
-            logged_in=lambda y=None: self.logged_in(y))
+            logged_in=self.logged_in, failed_msg=(lambda y=None: u'Invalid cookie details for %s. Check settings'))
+
+    def logged_in(self, resp=None):
+
+        result = True
+        if not self._token:
+            try:
+                result = 'Username' not in resp and 'Logout' in resp
+                input_tag = re.findall(r'(<input[^>]+?"(?:hidden|_token)"[^>]+?"(?:hidden|_token)"[^>]+?>)', resp)[0]
+                token = re.findall(r'value\s*=\s*["\']\s*([^"\'\s]+)', input_tag)[0]
+                csrf = re.findall(r'<meta[^>]+csrf-token[^>]+content[^"]+"\s*([^\s"]+)', resp)[0]
+                self._token = csrf == token and token
+            except (BaseException, Exception):
+                result = False
+        return result
 
     def _search_provider(self, search_params, **kwargs):
 
@@ -109,27 +113,18 @@ class BlutopiaProvider(generic.TorrentProvider):
             for search_string in search_params[mode]:
                 search_string = unidecode(search_string)
                 search_url = self.urls['search'] % (
-                    self.token, search_string.replace('.', ' '), self._categories_string(template=''), '', '', '')
+                    self._token, search_string.replace('.', ' '), self._categories_string(template=''), '', '', '')
 
                 resp = self.get_url(search_url)
                 if self.should_skip():
                     return results
 
-                resp_json = None
-                if None is not self.resp:
-                    try:
-                        resp_json = json.loads(resp)
-                    except (BaseException, Exception):
-                        pass
-
                 cnt = len(items[mode])
                 try:
-                    if not resp or (resp_json and not resp_json.get('rows')):
+                    if not resp:
                         raise generic.HaltParseException
 
-                    html = '<html><body>%s</body></html>' % \
-                           (resp if None is self.resp else
-                            self.resp.replace('</tbody>', '%s</tbody>' % ''.join(resp_json.get('result', []))))
+                    html = '<html><body>%s</body></html>' % resp
                     with BS4Parser(html, parse_only=dict(table={'class': (lambda at: at and 'table' in at)})) as tbl:
                         tbl_rows = [] if not tbl else tbl.find_all('tr')
 
@@ -158,8 +153,7 @@ class BlutopiaProvider(generic.TorrentProvider):
                                 if self._reject_item(seeders, leechers):
                                     continue
 
-                                title = tr.find('a', href=rc['info'])
-                                title = title.get_text().strip() if None is self.resp else title['data-original-title']
+                                title = tr.find('a', href=rc['info']).get_text().strip()
                                 download_url = self._link(''.join(rc['get'].findall(
                                     tr.find('a', href=rc['get'])['href'])[0]))
                             except (AttributeError, TypeError, ValueError, IndexError):

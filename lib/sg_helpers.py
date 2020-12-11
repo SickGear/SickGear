@@ -848,21 +848,23 @@ def get_url(url,  # type: AnyStr
             if post_json:
                 kwargs.setdefault('json', post_json)
 
-            response = session.post(url, timeout=timeout, **kwargs)
+            method = session.post
         else:
-            for r in range(0, 5):
-                response = session.get(url, timeout=timeout, **kwargs)
-                if response.ok and not response.content:
-                    if 'url=' in response.headers.get('Refresh', '').lower():
-                        url = response.headers.get('Refresh').lower().split('url=')[1].strip('/')
-                        if not url.startswith('http'):
-                            parsed[2] = '/%s' % url
-                            url = urlunparse(parsed)
-                        response = session.get(url, timeout=timeout, **kwargs)
-                    elif 'github' in url:
-                        time.sleep(2)
-                        continue
-                break
+            method = session.get
+
+        for r in range(0, 5):
+            response = method(url, timeout=timeout, **kwargs)
+            if response.ok and not response.content:
+                if 'url=' in response.headers.get('Refresh', '').lower():
+                    url = response.headers.get('Refresh').lower().split('url=')[1].strip('/')
+                    if not url.startswith('http'):
+                        parsed[2] = '/%s' % url
+                        url = urlunparse(parsed)
+                    response = session.get(url, timeout=timeout, **kwargs)
+                elif 'github' in url:
+                    time.sleep(2)
+                    continue
+            break
 
         # if encoding is not in header try to use best guess
         # ignore downloads with savename

@@ -34,18 +34,21 @@ class SceneHDProvider(generic.TorrentProvider):
 
         self.url_home = ['https://scenehd.org/']
 
-        self.url_vars = {'login_action': 'login.php', 'search': 'browse.php?search=%s&cat=%s&sort=5'}
-        self.url_tmpl = {'config_provider_home_uri': '%(home)s', 'login_action': '%(home)s%(vars)s',
+        self.url_vars = {'login': 'getrss.php', 'search': 'browse.php?search=%s&cat=%s&sort=5'}
+        self.url_tmpl = {'config_provider_home_uri': '%(home)s', 'login': '%(home)s%(vars)s',
                          'search': '%(home)s%(vars)s'}
 
         self.categories = {'shows': [5, 6, 7]}
 
-        self.username, self.password, self.freeleech, self.minseed, self.minleech = 5 * [None]
+        self.digest, self.freeleech, self.minseed, self.minleech = 4 * [None]
         self.confirmed = False
 
     def _authorised(self, **kwargs):
 
-        return super(SceneHDProvider, self)._authorised(post_params={'form_tmpl': True})
+        return super(SceneHDProvider, self)._authorised(
+            logged_in=(lambda y='': ['RSS links' in y] and all(
+                [(self.session.cookies.get(c, domain='') or 'sg!no!pw') in self.digest for c in ('uid', 'pass')])),
+            failed_msg=(lambda y=None: u'Invalid cookie details for %s. Check settings'))
 
     def _search_provider(self, search_params, **kwargs):
 
@@ -118,7 +121,8 @@ class SceneHDProvider(generic.TorrentProvider):
 
     @staticmethod
     def ui_string(key):
-        return 'scenehd_confirm' == key and 'not marked as bad/nuked' or ''
+        return 'scenehd_confirm' == key and 'not marked as bad/nuked' or \
+               'scenehd_digest' == key and 'use... \'uid=xx; pass=yy\'' or ''
 
 
 provider = SceneHDProvider()

@@ -36,7 +36,7 @@ class PrivateHDProvider(generic.TorrentProvider):
 
         self.url_base = 'https://privatehd.to/'
         self.urls = {'config_provider_home_uri': self.url_base,
-                     'login_action': self.url_base + 'auth/login',
+                     'login': self.url_base + 'rules',
                      'search': self.url_base + 'torrents?%s' % '&'.join(
                          ['in=1', 'tags=', 'type=2', 'language=0', 'subtitle=0', 'rip_type=0',
                           'video_quality=0', 'uploader=', 'search=%s', 'tv_type[]=%s'])}
@@ -48,15 +48,16 @@ class PrivateHDProvider(generic.TorrentProvider):
         self.filter = []
         self.may_filter = OrderedDict([
             ('f0', ('not marked', False)), ('free', ('free', True)),
-            ('half', ('50% down', True)), ('double', ('2x up', True))])
-        self.username, self.password, self.minseed, self.minleech = 4 * [None]
+            ('half', ('half down', True)), ('double', ('double up', True))])
+        self.digest, self.minseed, self.minleech = 3 * [None]
         self.confirmed = False
 
     def _authorised(self, **kwargs):
 
         return super(PrivateHDProvider, self)._authorised(
-            logged_in=(lambda y=None: self.has_all_cookies('love')),
-            post_params={'email_username': self.username, 'form_tmpl': True})
+            logged_in=(lambda y='': 'English' in y and 'auth/login' not in y and all(
+                [(self.session.cookies.get('privatehdx_session', domain='') or 'sg!no!pw') in self.digest])),
+            failed_msg=(lambda y=None: u'Invalid cookie details for %s. Check settings'))
 
     def _search_provider(self, search_params, **kwargs):
 
@@ -149,6 +150,10 @@ class PrivateHDProvider(generic.TorrentProvider):
             results = self._sort_seeding(mode, results + items[mode])
 
         return results
+
+    @staticmethod
+    def ui_string(key):
+        return 'privatehd_digest' == key and 'use... \'privatehdx_session=xx\'' or ''
 
 
 provider = PrivateHDProvider()
