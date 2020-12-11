@@ -184,7 +184,7 @@ class WebServer(threading.Thread):
             (r'%s/js/(.*)' % self.options['web_root'], webserve.BaseStaticFileHandler,
              {'path': os.path.join(self.options['data_root'], 'js')}),
 
-            (r'%s/kodi/(.*)' % self.options['web_root'], webserve.RepoHandler,
+            (r'%s/kodi/((?:(?![|]verifypeer=false).)*)' % self.options['web_root'], webserve.RepoHandler,
              {'path': os.path.join(sickbeard.CACHE_DIR, 'clients', 'kodi'),
               'default_filename': 'index.html'}),
         ])

@@ -34,12 +34,11 @@ class BitHDTVProvider(generic.TorrentProvider):
 
         self.url_home = ['https://www.bit-hdtv.com/']
 
-        self.url_vars = {'login': 'getrss.php', 'search': 'torrents.php?search=%s&%s'}
+        self.url_vars = {'login': 'getrss.php', 'search': 'torrents.php?search=%s&cat=%s'}
         self.url_tmpl = {'config_provider_home_uri': '%(home)s', 'login': '%(home)s%(vars)s',
                          'search': '%(home)s%(vars)s'}
 
-        self.categories = {'Season': [12], 'Episode': [4, 5, 10], 'anime': [1]}
-        self.categories['Cache'] = self.categories['Season'] + self.categories['Episode']
+        self.categories = dict(shows=[10, 12])
 
         self.digest, self.freeleech, self.minseed, self.minleech = 4 * [None]
 
@@ -54,8 +53,7 @@ class BitHDTVProvider(generic.TorrentProvider):
 
     @staticmethod
     def _has_signature(data=None):
-        return generic.TorrentProvider._has_signature(data) or \
-               (data and re.search(r'(?sim)(<title[^<]+BIT-HDTV|<style)', data[0:500]))
+        return generic.TorrentProvider._has_signature(data) or (data and re.search(r'(?sim)bit-hdtv', data))
 
     def _search_provider(self, search_params, **kwargs):
 
@@ -65,12 +63,12 @@ class BitHDTVProvider(generic.TorrentProvider):
 
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
-        rc = dict([(k, re.compile('(?i)' + v)) for (k, v) in iteritems({'info': 'detail', 'get': r'download\.',
-                                                                        'fl': r'\[\W*F\W?L\W*\]'})])
+        rc = dict([(k, re.compile('(?i)' + v)) for (k, v) in iteritems({'info': 'detail', 'get': r'download\.'})])
+
         for mode in search_params:
             for search_string in search_params[mode]:
                 search_string = unidecode(search_string)
-                search_url = self.urls['search'] % (search_string, self._categories_string(mode))
+                search_url = self.urls['search'] % (search_string, self._categories_string(mode, '%s', ','))
 
                 html = self.get_url(search_url, timeout=90)
                 if self.should_skip():
@@ -99,7 +97,7 @@ class BitHDTVProvider(generic.TorrentProvider):
                                 seeders, leechers, size = [try_int(n, n) for n in [
                                     cells[head[x]].get_text().strip() for x in ('seed', 'leech', 'size')]]
                                 if self._reject_item(seeders, leechers, self.freeleech and (
-                                        not tr.attrs.get('bgcolor').endswith('FF99'))):
+                                        not tr.attrs.get('bgcolor', '').upper().endswith('FF99'))):
                                     continue
 
                                 info = tr.find('a', href=rc['info'])

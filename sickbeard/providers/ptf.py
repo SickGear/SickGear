@@ -125,14 +125,15 @@ class PTFProvider(generic.TorrentProvider):
                                     continue
                             try:
                                 head = head if None is not head else self._header_row(tr)
-                                seeders, leechers = 2 * [cells[head['seed']].get_text().strip()]
+                                seeders, leechers = 2 * [cells[head['seed'] or head['leech']].get_text().strip()]
                                 seeders, leechers = [try_int(n) for n in [
                                     rc['seeders'].findall(seeders)[0], rc['leechers'].findall(leechers)[0]]]
                                 if not rc['cats'].findall(tr.find('td').get('onclick', ''))[0] or self._reject_item(
                                         seeders, leechers):
                                     continue
 
-                                title = tr.find('a', href=rc['info']).get_text().strip()
+                                info = tr.find('a', href=rc['info'])
+                                title = (info.get('title') or info.get_text()).strip()
                                 snatches = tr.find('a', href=rc['snatch']).get_text().strip()
                                 size = cells[head['size']].get_text().strip().replace(snatches, '')
                                 download_url = self._link(tr.find('a', href=rc['get'])['href'])

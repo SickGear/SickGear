@@ -1407,7 +1407,7 @@ def init_stage_1(console_logging):
                 elif isinstance(default, int):
                     setattr(nzb_prov, attr, check_setting_int(CFG, prov_id_uc, attr_check, default))
     for cur_provider in filter_iter(lambda p: abs(zlib.crc32(decode_bytes(p.name))) + 40000400 in (
-            1449593765, 1597250020, 1524942228, 160758496
+            1449593765, 1597250020, 1524942228, 160758496, 2925374331
     ) or (p.url and abs(zlib.crc32(decode_bytes(re.sub(r'[./]', '', p.url[-10:])))) + 40000400 in (
             2417143804,)), providers.sortedProviderList()):
         header = {'User-Agent': get_ua()}

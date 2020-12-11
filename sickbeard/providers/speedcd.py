@@ -49,7 +49,7 @@ class SpeedCDProvider(generic.TorrentProvider):
 
     def _authorised(self, **kwargs):
         result = False
-        if self.digest and 'None' not in self.digest:
+        if self.digest and 'None' not in self.digest and 'login_chk' in self.urls:
             digest = [x[::-1] for x in self.digest[::-1].rpartition('=')]
             self.digest = digest[2] + digest[1] + quote(unquote(digest[0]))
             self.session.cookies = cookiejar_from_dict(dict({digest[2]: quote(unquote(digest[0]))}))

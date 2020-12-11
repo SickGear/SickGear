@@ -22,6 +22,8 @@ except (BaseException, Exception):
 from os import path, sep
 import datetime
 import socket
+# noinspection PyUnresolvedReferences,PyProtectedMember
+from ssl import _create_unverified_context
 import sys
 import time
 import traceback
@@ -36,7 +38,10 @@ import xbmcgui
 # noinspection PyUnresolvedReferences
 import xbmcvfs
 
-ADDON_VERSION = '1.0.7'
+ADDON_VERSION = '1.0.8'
+
+# try to locate /temp at parent location
+PATH_TEMP = path.join(path.dirname(path.dirname(path.realpath(__file__))), 'temp')
 
 PY2 = 2 == sys.version_info[0]
 
@@ -289,8 +294,12 @@ class SickGearWatchedStateUpdater(object):
 
         self.notify('Update sent to SickGear')
 
-        url = 'http://%s:%s/update-watched-state-kodi/' % (
-            self.addon.getSetting('sickgear_ip'), self.addon.getSetting('sickgear_port'))
+        file_name = 'sickgear_extra.txt'
+        data_extra = self.load_json(file_name)
+        scheme = data_extra.get('scheme', 'http')
+
+        url = '%s://%s:%s/update-watched-state-kodi/' % (
+            scheme, self.addon.getSetting('sickgear_ip'), self.addon.getSetting('sickgear_port'))
         self.log('Notify state to %s with path_file=%s' % (url, path_file))
 
         msg_bad = 'Failed to contact SickGear on port %s at %s' % (
@@ -299,12 +308,36 @@ class SickGearWatchedStateUpdater(object):
         payload_json = self.payload_prep(dict(media_id=media_id, path_file=path_file, played=play_count, label=profile))
         if payload_json:
             payload = urlencode(dict(payload=payload_json, version=ADDON_VERSION))
+            r = None
+            change_scheme = False
             try:
                 rq = Request(url, data=decode_bytes(payload))
-                r = urlopen(rq)
+                param = ({'context': _create_unverified_context()}, {})[url.startswith('http:')]
+                r = urlopen(rq, **param)
+            except (BaseException, Exception):
+                change_scheme = True
+
+            try:
+                if change_scheme:
+                    old_scheme, scheme = 'http', 'https'
+                    if url.startswith('https'):
+                        old_scheme, scheme = 'https', 'http'
+                    url = url.replace(old_scheme, scheme)
+
+                    self.log('Change scheme, notify state to %s' % url)
+
+                    rq = Request(url, data=decode_bytes(payload))
+                    param = ({'context': _create_unverified_context()}, {})[url.startswith('http:')]
+                    r = urlopen(rq, **param)
+
                 response = json.load(r)
                 r.close()
                 if 'OK' == r.msg:
+                    if change_scheme:
+                        data_extra['scheme'] = scheme
+                        output = json.dumps(data_extra)
+                        self.save_json(file_name, output)
+
                     self.payload_prep(response)
                     if not all(itervalues(response)):
                         msg = 'Success, watched state updated'
@@ -317,37 +350,47 @@ class SickGearWatchedStateUpdater(object):
                     msg_bad = 'Failed to update watched state'
                     self.log(msg_bad)
                     self.notify(msg_bad, error=True)
-            except (URLError, IOError) as e:
-                self.log(u'Couldn\'t contact SickGear %s' % self.ex(e), error=True)
-                self.notify(msg_bad, error=True, period=15)
             except (BaseException, Exception) as e:
                 self.log(u'Couldn\'t contact SickGear %s' % self.ex(e), error=True)
                 self.notify(msg_bad, error=True, period=15)
 
     @staticmethod
-    def payload_prep(payload):
-        # type: (dict) -> str
+    def load_json(file_name):
+        result = {}
 
-        name = 'sickgear_buffer.txt'
-        # try to locate /temp at parent location
-        path_temp = path.join(path.dirname(path.dirname(path.realpath(__file__))), 'temp')
-        path_data = path.join(path_temp, name)
-
-        data_pool = {}
-        if xbmcvfs.exists(path_data):
+        file_path = path.join(PATH_TEMP, file_name)
+        if xbmcvfs.exists(file_path):
             fh = None
             try:
-                fh = xbmcvfs.File(path_data)
-                data_pool = json.load(fh)
+                fh = xbmcvfs.File(file_path)
+                result = json.load(fh)
             except (BaseException, Exception):
                 pass
             fh and fh.close()
 
-        temp_ok = True
-        if not any([data_pool]):
-            temp_ok = xbmcvfs.exists(path_temp) or xbmcvfs.exists(path.join(path_temp, sep))
-            if not temp_ok:
-                temp_ok = xbmcvfs.mkdirs(path_temp)
+        return result
+
+    @staticmethod
+    def save_json(file_name, data):
+        temp_ok = xbmcvfs.exists(PATH_TEMP) or xbmcvfs.exists(path.join(PATH_TEMP, sep))
+        if not temp_ok:
+            temp_ok = xbmcvfs.mkdirs(PATH_TEMP)
+
+        if temp_ok:
+            fh = None
+            try:
+                fh = xbmcvfs.File(path.join(PATH_TEMP, file_name), 'w')
+                fh.write(data)
+            except (BaseException, Exception):
+                pass
+            fh and fh.close()
+
+    def payload_prep(self, payload):
+        # type: (dict) -> str
+
+        file_name = 'sickgear_buffer.txt'
+
+        data_pool = self.load_json(file_name)
 
         response_data = False
         for k, v in iteritems(payload):
@@ -373,14 +416,7 @@ class SickGearWatchedStateUpdater(object):
             data_pool.update({ts_now: payload})
 
         output = json.dumps(data_pool)
-        if temp_ok:
-            fh = None
-            try:
-                fh = xbmcvfs.File(path_data, 'w')
-                fh.write(output)
-            except (BaseException, Exception):
-                pass
-            fh and fh.close()
+        self.save_json(file_name, output)
 
         return output
 
