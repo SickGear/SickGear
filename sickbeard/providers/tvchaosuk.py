@@ -301,6 +301,10 @@ class TVChaosUKProvider(generic.TorrentProvider):
 
         return result
 
+    @staticmethod
+    def regulate_cache_torrent_file(title):
+        return re.sub(r'\b(\s*subs)\b([\W\w]{0,20})$', r'\2', title)
+
     def after_get_data(self, result):
         if self.use_after_get_data:
             try:

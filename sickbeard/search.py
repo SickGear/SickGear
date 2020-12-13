@@ -230,7 +230,8 @@ def pick_best_result(
     :param filter_rls: optional thread name
     :return: best search result
     """
-    logger.log(u'Picking the best result out of %s' % [x.name for x in results], logger.DEBUG)
+    msg = (u'Picking the best result out of %s', u'Checking the best result %s')[1 == len(results)]
+    logger.log(msg % [x.name for x in results], logger.DEBUG)
 
     # find the best result for the current episode
     best_result = None
@@ -313,7 +314,8 @@ def pick_best_result(
         best_result = best_fallback_result
 
     if best_result:
-        logger.log(u'Picked as the best %s[%s]' % (addendum, best_result.name), logger.DEBUG)
+        msg = (u'Picked as the best %s[%s]', u'Confirmed as the best %s[%s]')[1 == len(results)]
+        logger.log(msg % (addendum, best_result.name), logger.DEBUG)
     else:
         logger.log(u'No result picked.', logger.DEBUG)
 
@@ -801,6 +803,9 @@ def cache_torrent_file(
             # verify the name in torrent also passes filtration
             result_name = search_result.name
             search_result.name = torrent_name
+            if search_result.provider.get_id() in ['tvchaosuk'] \
+                    and hasattr(search_result.provider, 'regulate_cache_torrent_file'):
+                torrent_name = search_result.provider.regulate_cache_torrent_file(torrent_name)
             if not pick_best_result([search_result], show_obj, **kwargs) or \
                     not show_name_helpers.pass_wordlist_checks(torrent_name, indexer_lookup=False, show_obj=show_obj):
                 logger.log(u'Ignored %s that contains %s (debug log has detail)' % (result_name, torrent_name))
