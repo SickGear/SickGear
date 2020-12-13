@@ -1,4 +1,10 @@
-﻿### 0.23.6 (2020-12-11 01:50:00 UTC)
+﻿### 0.23.7 (2020-12-13 20:40:00 UTC)
+
+* Fix remove need to page refresh after entering an anime scene absolute number on view-show
+* Change add TVChaosUK custom name regulator to prevent a false trigger from the wordlist filter
+
+
+### 0.23.6 (2020-12-11 01:50:00 UTC)
 
 * Update UnRar for Windows 5.91 to 6.00 x64
 * Fix providers BitHDTV, Blutopia, HDTorrents, Pretome, PrivateHD, PTFiles, SceneHD, TVChaosUK
