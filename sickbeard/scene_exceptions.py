@@ -418,6 +418,10 @@ def _custom_exceptions_fetcher():
     if refresh:
         set_last_refresh(src_id)
 
+    if not fetch_data and not ek.ek(os.path.isfile, file_cache):
+        logger.debug(u'Unable to fetch custom exceptions, skipped: %s' % file_rar)
+        return custom_exception_dict, cnt_updated_numbers, should_refresh(src_id, iv, remaining=True)
+
     data = {}
     try:
         with io.open(file_cache) as fh:

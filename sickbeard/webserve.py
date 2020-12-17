@@ -7516,7 +7516,7 @@ class ConfigMediaProcess(Config):
             if 'win32' == sys.platform:
                 rarfile.UNRAR_TOOL = ek.ek(os.path.join, sickbeard.PROG_DIR, 'lib', 'rarfile', 'UnRAR.exe')
             rar_path = ek.ek(os.path.join, sickbeard.PROG_DIR, 'lib', 'rarfile', 'test.rar')
-            if 'This is only a test.' == decode_str(rarfile.RarFile(rar_path).read(r'test\test.txt')):
+            if 'This is only a test.' == decode_str(rarfile.RarFile(rar_path).read(r'test/test.txt')):
                 return 'supported'
             msg = 'Could not read test file content'
         except (BaseException, Exception) as e:
