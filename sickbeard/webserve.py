@@ -53,7 +53,7 @@ from .anime import AniGroupList, pull_anidb_groups, short_group_names
 from .browser import folders_at_path
 from .common import ARCHIVED, DOWNLOADED, FAILED, IGNORED, SKIPPED, SNATCHED, SNATCHED_ANY, UNAIRED, UNKNOWN, WANTED, \
      SD, HD720p, HD1080p, UHD2160p, Overview, Quality, qualityPresetStrings, statusStrings
-from .helpers import has_image_ext, remove_article, remove_file_perm, starify
+from .helpers import has_image_ext, real_path, remove_article, remove_file_perm, starify
 from .indexermapper import MapStatus, map_indexers_to_show, save_mapping
 from .indexers.indexer_config import TVINFO_IMDB, TVINFO_TRAKT, TVINFO_TVDB
 from .name_parser.parser import InvalidNameException, InvalidShowException, NameParser
@@ -83,7 +83,7 @@ from tornado.concurrent import run_on_executor
 from ._legacy import LegacyBaseHandler
 
 from lib import subliminal
-from lib.dateutil import tz
+from lib.dateutil import tz, zoneinfo
 from lib.fuzzywuzzy import fuzz
 from lib.libtrakt import TraktAPI
 from lib.libtrakt.exceptions import TraktException, TraktAuthException
@@ -6779,6 +6779,21 @@ class Config(MainHandler):
                 t.version = re.findall(r'###[^0-9]+([0-9]+\.[0-9]+\.[0-9]+)', fh.readline())[0]
         except (BaseException, Exception):
             t.version = ''
+
+        current_file = zoneinfo.ZONEFILENAME
+        t.tz_fallback = False
+        t.tz_version = None
+        try:
+            if None is not current_file:
+                current_file = ek.ek(os.path.basename, current_file)
+                zonefile = real_path(ek.ek(os.path.join, sickbeard.ZONEINFO_DIR, current_file))
+                if not ek.ek(os.path.isfile, zonefile):
+                    t.tz_fallback = True
+                    zonefile = ek.ek(os.path.join, ek.ek(os.path.dirname, zoneinfo.__file__), current_file)
+                if ek.ek(os.path.isfile, zonefile):
+                    t.tz_version = zoneinfo.ZoneInfoFile(zoneinfo.getzoneinfofile_stream()).metadata['tzversion']
+        except (BaseException, Exception):
+            pass
 
         t.backup_db_path = sickbeard.BACKUP_DB_MAX_COUNT and \
             (sickbeard.BACKUP_DB_PATH or ek.ek(os.path.join, sickbeard.DATA_DIR, 'backup')) or 'Disabled'
