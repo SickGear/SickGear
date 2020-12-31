@@ -24,7 +24,7 @@ import time
 from .generic import Notifier
 import sickbeard
 
-from _23 import decode_str, urlencode
+from _23 import decode_bytes, decode_str, urlencode
 # noinspection PyUnresolvedReferences
 from six.moves import urllib
 
@@ -86,7 +86,7 @@ class PushoverNotifier(Notifier):
         try:
             req = urllib.request.Request(API_URL)
             # PY2 http_response_obj has no `with` context manager
-            http_response_obj = urllib.request.urlopen(req, urlencode(params))
+            http_response_obj = urllib.request.urlopen(req, decode_bytes(urlencode(params)))
             http_response_obj.close()
 
         except urllib.error.HTTPError as e:

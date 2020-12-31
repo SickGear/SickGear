@@ -23,7 +23,7 @@ import sickbeard
 
 from exceptions_helper import ex
 
-from _23 import decode_str, urlencode
+from _23 import decode_bytes, decode_str, urlencode
 # noinspection PyUnresolvedReferences
 from six.moves import urllib
 
@@ -67,7 +67,8 @@ class Boxcar2Notifier(Notifier):
         result = None
         try:
             req = urllib.request.Request('https://new.boxcar.io/api/notifications')
-            http_response_obj = urllib.request.urlopen(req, data)  # PY2 http_response_obj has no `with` context manager
+            # PY2 http_response_obj has no `with` context manager
+            http_response_obj = urllib.request.urlopen(req, decode_bytes(data))
             http_response_obj.close()
 
         except urllib.error.HTTPError as e:
