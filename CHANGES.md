@@ -29,6 +29,13 @@
 * Add to config/General, "Package updates" > include in 'Check for Updates' menu action
 
 
+### 0.23.8 (2020-12-31 20:40:00 UTC)
+                     
+* Update dateutil zoneinfo fallback to 2020f
+* Fix notifiers Pushover and Boxcar2 under py3
+* Fix need to restart SG for a change in TVChaosUK password to take effect
+
+
 ### 0.23.7 (2020-12-13 20:40:00 UTC)
 
 * Fix remove need to page refresh after entering an anime scene absolute number on view-show

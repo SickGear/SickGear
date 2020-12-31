@@ -63,7 +63,7 @@ class TVChaosUKProvider(generic.TorrentProvider):
                 input_tag = re.findall(r'(<input[^>]+?"(?:hidden|_token)"[^>]+?"(?:hidden|_token)"[^>]+?>)', resp)[0]
                 token = re.findall(r'value\s*=\s*["\']\s*([^"\'\s]+)', input_tag)[0]
                 csrf = re.findall(r'<meta[^>]+csrf-token[^>]+content[^"]+"\s*([^\s"]+)', resp)[0]
-                self._token = csrf == token and token
+                self._token = result and csrf == token and token
             except (BaseException, Exception):
                 result = False
         return result
