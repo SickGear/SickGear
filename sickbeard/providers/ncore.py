@@ -35,7 +35,7 @@ class NcoreProvider(generic.TorrentProvider):
     def __init__(self):
         generic.TorrentProvider.__init__(self, 'nCore')
 
-        self.url_base = 'https://ncore.cc/'
+        self.url_base = 'https://ncore.pro/'
         self.urls = {'config_provider_home_uri': self.url_base,
                      'login_action': self.url_base + 'login.php',
                      'search': self.url_base + 'torrents.php?mire=%s&' + '&'.join([
