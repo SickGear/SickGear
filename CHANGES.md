@@ -1,6 +1,12 @@
-﻿### 0.23.8 (2020-12-31 20:40:00 UTC)
+﻿### 0.23.9 (2021-01-28 19:45:00 UTC)
+
+* Fix provider nCore
+* Change update dateutil fallback zoneinfo to 2021a
+
+
+### 0.23.8 (2020-12-31 20:40:00 UTC)
                      
-* Update dateutil zoneinfo fallback to 2020f
+* Change update dateutil fallback zoneinfo to 2020f
 * Fix notifiers Pushover and Boxcar2 under py3
 * Fix need to restart SG for a change in TVChaosUK password to take effect
 
