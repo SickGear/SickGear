@@ -1884,7 +1884,7 @@ class Home(MainHandler):
 
         return t.respond()
 
-    def restart(self, pid=None):
+    def restart(self, update_pkg=None, pid=None):
 
         if str(pid) != str(sickbeard.PID):
             return self.redirect('/home/')
@@ -1892,7 +1892,7 @@ class Home(MainHandler):
         t = PageTemplate(web_handler=self, file='restart.tmpl')
         t.shutdown = False
 
-        sickbeard.restart(soft=False)
+        sickbeard.restart(soft=False, update_pkg=bool(helpers.try_int(update_pkg)))
 
         return t.respond()
 

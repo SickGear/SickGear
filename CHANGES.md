@@ -29,6 +29,8 @@
 * Fix under py2, a hachoir config value, without 'readline' sys.module, using the `--daemon` SG startup option, fails
 * Change remove pycryptodome from recommended.txt as only used for removed py7z
 * Add to config/General, "Package updates" > include in 'Check for Updates' menu action
+* Change startup to update packages only if package auto update is enabled or via notification
+* Change don't check direct reference specification updates if user mode
 
 
 ### 0.23.9 (2021-01-28 19:45:00 UTC)

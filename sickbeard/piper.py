@@ -241,6 +241,15 @@ def _check_pip_env(pip_outdated=False, reset_fails=False):
             to_update = set(filter_list(
                 lambda name: name in specifiers and names_outdated[name]['latest_version'] in specifiers[name],
                 set(names_reco).intersection(set(names_outdated))))
+
+            # check whether to ignore direct reference specification updates if not dev mode
+            if not int(os.environ.get('CHK_URL_SPECIFIERS', 0)):
+                to_remove = set()
+                for cur_name in to_update:
+                    if '@' in output_reco[cur_name] and cur_name in specifiers:
+                        # direct reference spec update, is for a package met in the env, so remove update
+                        to_remove.add(cur_name)
+                to_update = to_update.difference(to_remove)
         except (BaseException, Exception):
             pass
 

@@ -214,7 +214,7 @@ class SickGear(object):
         try:
             opts, args = getopt.getopt(sys.argv[1:], 'hfqdsp::',
                                        ['help', 'forceupdate', 'quiet', 'nolaunch', 'daemon', 'systemd', 'pidfile=',
-                                        'port=', 'datadir=', 'config=', 'noresize', 'update-restart'])
+                                        'port=', 'datadir=', 'config=', 'noresize', 'update-restart', 'update-pkg'])
         except getopt.GetoptError:
             sys.exit(self.help_message())
 
@@ -503,11 +503,16 @@ class SickGear(object):
                 logger.log_error_and_exit(u'Restore FAILED!')
 
         update_arg = '--update-restart'
-        if update_arg not in sickbeard.MY_ARGS and sickbeard.UPDATES_TODO:
+        manual_update_arg = '--update-pkg'
+        if update_arg not in sickbeard.MY_ARGS and sickbeard.UPDATES_TODO \
+                and (manual_update_arg in sickbeard.MY_ARGS or sickbeard.UPDATE_PACKAGES_AUTO):
             sickbeard.MEMCACHE['update_restart'] = piper.pip_update(
                 sickbeard.classes.loading_msg, sickbeard.UPDATES_TODO, sickbeard.DATA_DIR)
             sickbeard.UPDATES_TODO = dict()
             sickbeard.save_config()
+
+        if manual_update_arg in sickbeard.MY_ARGS:
+            sickbeard.MY_ARGS.remove(manual_update_arg)
 
         if not sickbeard.MEMCACHE.get('update_restart'):
             # Build from the DB to start with
