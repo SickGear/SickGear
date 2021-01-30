@@ -242,7 +242,7 @@ class SGDatetime(datetime.datetime):
         if is_win:
             from .network_timezones import EPOCH_START_WIN
             return (obj.replace(tzinfo=tz.tzwinlocal()) - EPOCH_START_WIN).total_seconds()
-        return self.timestamp_far(obj)
+        return SGDatetime.timestamp_far(obj)
 
     @staticmethod
     def from_timestamp(ts, local_time=True, tz_aware=False):

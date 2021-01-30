@@ -3345,9 +3345,8 @@ class TVEpisode(TVEpisodeBase):
         hr, m = network_timezones.parse_time(self.show_obj.airs)
         airtime = datetime.time(hr, m)
 
-        aired_dt = datetime.datetime.combine(self.airdate, airtime)
+        aired_dt = SGDatetime.combine(self.airdate, airtime)
         try:
-            # aired_epoch = helpers.datetime_to_epoch(aired_dt)
             aired_epoch = SGDatetime.to_file_timestamp(aired_dt)
             filemtime = int(ek.ek(os.path.getmtime, self.location))
         except (BaseException, Exception):
