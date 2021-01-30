@@ -88,7 +88,7 @@ class PackagesUpdater(object):
 
         if not sickbeard.UPDATE_PACKAGES_AUTO:
             msg = '%s available &mdash; <a href="%s">Update Now</a>' % (
-                    self.install_type, '%s/home/restart/?pid=%s' % (sickbeard.WEB_ROOT, sickbeard.PID))
+                    self.install_type, '%s/home/restart/?update_pkg=1&pid=%s' % (sickbeard.WEB_ROOT, sickbeard.PID))
             if None is sickbeard.NEWEST_VERSION_STRING:
                 sickbeard.NEWEST_VERSION_STRING = ''
             if msg not in sickbeard.NEWEST_VERSION_STRING:

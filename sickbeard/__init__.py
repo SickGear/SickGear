@@ -1712,9 +1712,12 @@ def start():
             started = True
 
 
-def restart(soft=True):
+def restart(soft=True, update_pkg=None):
 
     if not soft:
+        if update_pkg:
+            MY_ARGS.append('--update-pkg')
+
         events.put(events.SystemEvent.RESTART)
 
     else:
