@@ -1454,21 +1454,6 @@ def is_link(filepath):
     return ek.ek(os.path.islink, filepath)
 
 
-def datetime_to_epoch(dt):
-    """ convert a datetime to seconds after (or possibly before) 1970-1-1
-    :param dt:
-    :type dt: datetime.datetime
-    :return: epoch
-    :rtype: int
-    """
-    """ can raise an error with dates pre 1970-1-1 """
-    if not isinstance(getattr(dt, 'tzinfo'), datetime.tzinfo):
-        from sickbeard.network_timezones import SG_TIMEZONE
-        dt = dt.replace(tzinfo=SG_TIMEZONE)
-    utc_naive = dt.replace(tzinfo=None) - dt.utcoffset()
-    return int((utc_naive - datetime.datetime(1970, 1, 1)).total_seconds())
-
-
 def df():
     """
     Return disk free space at known parent locations
