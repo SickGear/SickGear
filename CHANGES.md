@@ -31,6 +31,8 @@
 * Add to config/General, "Package updates" > include in 'Check for Updates' menu action
 * Change startup to update packages only if package auto update is enabled or via notification
 * Change don't check direct reference specification updates if user mode
+* Update python-Levenshtein package from 0.12.0 to 0.12.2 for py3 Win
+* Change prevent python-Levenshtein 0.12.1 on non Win due to membug
 
 
 ### 0.23.10 (2021-01-30 11:20:00 UTC)
