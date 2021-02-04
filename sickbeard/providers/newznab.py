@@ -40,6 +40,7 @@ from ..scene_exceptions import has_season_exceptions
 from ..tv import TVEpisode, TVShow
 
 from lib.dateutil import parser
+from lib.sg_helpers import md5_for_text
 from exceptions_helper import AuthException, ex, MultipleShowObjectsException
 from lxml_etree import etree
 
@@ -103,6 +104,9 @@ class NewznabConstants(object):
                     SERVER_SPOTWEB: 'spotweb',
                     SERVER_HYDRA1: 'NZBHydra',
                     SERVER_HYDRA2: 'NZBHydra 2'}
+
+    # md5_for_text values
+    custom_server_types = {SERVER_SPOTWEB: ('720db6d19d02339e9c320dd788291136',)}
 
     def __init__(self):
         pass
@@ -278,7 +282,9 @@ class NewznabProvider(generic.NZBProvider):
             server_node = xml_caps.find('.//server')
             if None is not server_node:
                 if NewznabConstants.server_types.get(NewznabConstants.SERVER_SPOTWEB) in \
-                        (server_node.get('type', '') or server_node.get('title', '')).lower():
+                        (server_node.get('type', '') or server_node.get('title', '')).lower() \
+                        or (md5_for_text(server_node.get('type', '')) in
+                            NewznabConstants.custom_server_types.get(NewznabConstants.SERVER_SPOTWEB)):
                     self.server_type = NewznabConstants.SERVER_SPOTWEB
                 elif 'nzbhydra 2' in server_node.get('title', '').lower() or \
                         'nzbhydra2' in server_node.get('url', '').lower():
@@ -786,7 +792,7 @@ class NewznabProvider(generic.NZBProvider):
 
     @staticmethod
     def _parse_pub_date(item, default=None):
-        # type: (etree.Element, Union[int, None]) -> Union[datetime.date, None]
+        # type: (etree.Element, Union[int, None]) -> Union[datetime.datetime, None]
         """
 
         :param item:
@@ -865,12 +871,12 @@ class NewznabProvider(generic.NZBProvider):
                                           if v in self.caps]),
                        'offset': 0}
 
-        uc_only = all([re.search('(?i)usenet_crawler', self.get_id())])
-        base_params_uc = {'num': self.limits, 'dl': '1', 'i': '64660'}
+        use_rss = self.get_id() in ('ninjacentral', )
+        base_params_rss = {'num': self.limits, 'dl': '1', 'i': '19'}
 
         if isinstance(api_key, string_types) and api_key not in ('0', ''):
             base_params['apikey'] = api_key
-            base_params_uc['r'] = api_key
+            base_params_rss['r'] = api_key
 
         results, n_spaces = [], {}
         total, cnt, search_url, exit_log = 0, len(results), '', True
@@ -916,7 +922,7 @@ class NewznabProvider(generic.NZBProvider):
 
                 if self.cat_ids or len(cat):
                     base_params['cat'] = ','.join(sorted(set((self.cat_ids.split(',') if self.cat_ids else []) + cat)))
-                    base_params_uc['t'] = base_params['cat']
+                    base_params_rss['t'] = base_params['cat']
 
                 request_params = base_params.copy()
                 # if ('Propers' == mode or 'nzbs_org' == self.get_id()) \
@@ -942,8 +948,8 @@ class NewznabProvider(generic.NZBProvider):
                 while (offset <= total) and (offset < max_items) and batch_count:
                     cnt = len(results)
 
-                    if 'Cache' == mode and uc_only:
-                        search_url = '%srss?%s' % (self.url, urlencode(base_params_uc))
+                    if 'Cache' == mode and use_rss:
+                        search_url = '%srss?%s' % (self.url, urlencode(base_params_rss))
                     else:
                         search_url = '%sapi?%s' % (self.url, urlencode(request_params))
                     i and time.sleep(2.1)
@@ -992,7 +998,7 @@ class NewznabProvider(generic.NZBProvider):
                         offset = helpers.try_int(parsed_xml.find('.//%sresponse'
                                                                  % n_spaces['newznab']).get('offset', 0))
                     except (AttributeError, KeyError):
-                        if not uc_only:
+                        if not use_rss:
                             break
                         total = len(items)
 
@@ -1007,7 +1013,7 @@ class NewznabProvider(generic.NZBProvider):
                                 first_date = self._parse_pub_date(items[0])
                             last_date = self._parse_pub_date(items[-1])
                         if not first_date or not last_date or not self.last_recent_search or \
-                                last_date <= self.last_recent_search or uc_only:
+                                last_date <= self.last_recent_search or use_rss:
                             break
 
                     if offset != request_params['offset']:
@@ -1030,7 +1036,7 @@ class NewznabProvider(generic.NZBProvider):
                     self.last_recent_search = first_date
 
                 if exit_log:
-                    self._log_search(mode, total, search_url)
+                    self._log_search(mode, len(results), search_url)
 
                 if not try_all_searches and any([x in request_params for x in [
                     v for c, v in iteritems(self.caps)
