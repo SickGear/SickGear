@@ -1,4 +1,10 @@
-﻿### 0.23.10 (2021-01-30 11:20:00 UTC)
+﻿### 0.23.11 (2021-02-04 23:30:00 UTC)
+                             
+* Fix report correct number of items found during nzb search
+* Change recognise custom spotweb providers
+  
+
+### 0.23.10 (2021-01-30 11:20:00 UTC)
                              
 * Fix change file date on non Windows
 
