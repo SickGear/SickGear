@@ -1421,7 +1421,7 @@ def init_stage_1(console_logging):
 
         for (attr, default) in [
             ('enable_backlog', True), ('enable_scheduled_backlog', True),
-            ('api_key', ''), ('username', ''),
+            ('api_key', ''), ('digest', ''), ('username', ''),
             ('scene_only', False), ('scene_or_contain', ''), ('scene_loose', False), ('scene_loose_active', False),
             ('scene_rej_nuked', False), ('scene_nuked_active', False),
             ('search_mode', 'eponly'), ('search_fallback', False), ('server_type', NewznabConstants.SERVER_DEFAULT)
@@ -2001,7 +2001,8 @@ def save_config():
         if int(src.enabled):
             new_config[src_id_uc][src_id] = int(src.enabled)
 
-        for attr in filter_iter(lambda _a: None is not getattr(src, _a, None), ('api_key', 'username', 'search_mode')):
+        for attr in filter_iter(lambda _a: None is not getattr(src, _a, None),
+                                ('api_key', 'digest', 'username', 'search_mode')):
             if 'search_mode' != attr or 'eponly' != getattr(src, attr):
                 new_config[src_id_uc]['%s_%s' % (src_id, attr)] = getattr(src, attr)
 

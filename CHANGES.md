@@ -4,6 +4,7 @@
 * Change simplify section config/General/Updates
 * Add check for package updates to menu item action "Check for Updates"
 * Add known failures are cleared for a fresh check when "Check for Updates" is used
+* Add FileSharingTalk nzb provider
 * Add tz version info to the about page
 * Change auto-install Cheetah dependency on first time installations (tested on Win)
 * Change add cryptography to recommended.txt

@@ -7900,8 +7900,7 @@ class ConfigProviders(Config):
                         sickbeard.GenericProvider.NZB == src.providerType]:
             src_id_prefix = nzb_src.get_id() + '_'
 
-            attr = 'api_key'
-            if hasattr(nzb_src, attr):
+            for attr in [x for x in ['api_key', 'digest'] if hasattr(nzb_src, x)]:
                 key = str(kwargs.get(src_id_prefix + attr, '')).strip()
                 if not starify(key, True):
                     setattr(nzb_src, attr, key)
