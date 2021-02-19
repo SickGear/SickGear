@@ -21,8 +21,8 @@ from collections import OrderedDict
 from .. import db
 
 MIN_DB_VERSION = 1
-MAX_DB_VERSION = 100001
-TEST_BASE_VERSION = 5  # the base production db version, only needed for TEST db versions (>=100000)
+MAX_DB_VERSION = 6
+TEST_BASE_VERSION = None  # the base production db version, only needed for TEST db versions (>=100000)
 
 
 # Add new migrations at the bottom of the list; subclass the previous migration.
@@ -130,4 +130,4 @@ class AddGenericFailureHandling(AddBacklogParts):
 
     def execute(self):
         self.do_query(self.queries['connection_fails'])
-        self.setDBVersion(100001, check_db_version=False)
+        self.finish()
