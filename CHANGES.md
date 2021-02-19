@@ -1,11 +1,16 @@
-﻿### 0.23.11 (2021-02-04 23:30:00 UTC)
-                             
+﻿### 0.23.12 (2021-02-19 17:00:00 UTC)
+
+* Change allow Python 3.8.8 and 3.9.2
+
+
+### 0.23.11 (2021-02-04 23:30:00 UTC)
+
 * Fix report correct number of items found during nzb search
 * Change recognise custom spotweb providers
   
 
 ### 0.23.10 (2021-01-30 11:20:00 UTC)
-                             
+
 * Fix change file date on non Windows
 
 
@@ -16,7 +21,7 @@
 
 
 ### 0.23.8 (2020-12-31 20:40:00 UTC)
-                     
+
 * Change update dateutil fallback zoneinfo to 2020f
 * Fix notifiers Pushover and Boxcar2 under py3
 * Fix need to restart SG for a change in TVChaosUK password to take effect
@@ -39,7 +44,7 @@
 ### 0.23.5 (2020-12-05 13:45:00 UTC)
 
 * Change improve dark theme text legibility with green/gold background under "Downloads" in view-shows/simple layout
-                                                           
+
 
 ### 0.23.4 (2020-12-02 11:30:00 UTC)
 
