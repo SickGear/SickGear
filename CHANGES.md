@@ -15,6 +15,7 @@
 * Update attr 20.2.0 (4f74fba) to 20.3.0 (f3762ba)
 * Update diskcache_py3 5.0.1 (9670fbb) to 5.1.0 (40ce0de)
 * Update diskcache_py2 4.1.0 (b0451e0) from 5.1.0 (40ce0de)
+* Update humanize 3.1.0 (aec9dc2) to 3.2.0 (a0f03c1)
 * Update Rarfile 3.1 (a4202ca) to 4.0 (55fe778)
 * Update Requests library 2.24.0 (2f70990) to 2.25.0 (589c454)
 * Update urllib3 1.25.11 (00f1769) to 1.26.2 (eae04d6)
