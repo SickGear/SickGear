@@ -392,6 +392,20 @@
 							</label>
 						</div>
     #end if
+    #if $hasattr($cur_nzb_provider, 'digest'):
+        #set $field_name = cur_nzb_provider.get_id() + '_digest'
+						<div class="field-pair">
+							<label for="$field_name">
+								<span class="component-title">Cookies:</span>
+								<span class="component-desc">
+									<input type="text" name="$field_name" id="$field_name" value="<%= starify(cur_nzb_provider.digest) %>" class="form-control input-sm input350">
+        #if callable(getattr(cur_nzb_provider, 'ui_string', None))
+									<div class="clear-left"><p>${cur_nzb_provider.ui_string($field_name)}</p></div>
+        #end if
+								</span>
+							</label>
+						</div>
+    #end if
 						<div class="field-pair">
 							<span class="component-title">$filter_title</span>
 							<span class="component-desc">
