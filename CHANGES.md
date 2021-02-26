@@ -1,4 +1,4 @@
-﻿### 0.24.0 (202x-xx-xx xx:xx:00 UTC)
+﻿### 0.24.0 (2021-xx-xx xx:xx:00 UTC)
 
 * Add to config/General, "Package updates" and list packages, check packages by default on Windows, others must enable
 * Change simplify section config/General/Updates
@@ -17,13 +17,14 @@
 * Update diskcache_py2 4.1.0 (b0451e0) from 5.1.0 (40ce0de)
 * Update humanize 3.1.0 (aec9dc2) to 3.2.0 (a0f03c1)
 * Update Rarfile 3.1 (a4202ca) to 4.0 (55fe778)
-* Update Requests library 2.24.0 (2f70990) to 2.25.0 (589c454)
+* Update Requests library 2.24.0 (2f70990) to 2.25.1 (bdc00eb)
 * Update urllib3 1.25.11 (00f1769) to 1.26.2 (eae04d6)
 
 
 [develop changelog]
 
 * Update Requests library 2.25.0 (03957eb) to 2.25.0 (589c454)
+* Update Requests library 2.25.0 (589c454) to 2.25.1 (bdc00eb)
 * Update urllib3 1.26.1 (7675532) to 1.26.2 (eae04d6)
 * Change don't remember folder used during auto processing
 * Fix update runner using shell that doesn't have env path to git binary in Linux (use `git pull` to get this fix)
