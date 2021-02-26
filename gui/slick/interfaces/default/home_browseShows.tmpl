@@ -221,13 +221,18 @@ $(document).ready(function(){
 
 	$('#showfilter').on('change', function(){
 		var filterValue = this.value;
-		if (-1 == filterValue.indexOf('trakt') && -1 == filterValue.indexOf('imdb') && -1 == filterValue.indexOf('mc_') && -1 == filterValue.indexOf('tvc_') && -1 == filterValue.indexOf('default')) {
+		if (-1 == filterValue.indexOf('trakt') && -1 == filterValue.indexOf('imdb') && -1 == filterValue.indexOf('mc_')
+		 && -1 == filterValue.indexOf('tvc_') && -1 == filterValue.indexOf('ne_') && -1 == filterValue.indexOf('_ne')
+		 && -1 == filterValue.indexOf('default')) {
 			var el$ = $('#container')
 			el$.on('layoutComplete', llUpdate);
 			el$.isotope({ filter: filterValue });
 		} else {
 			if (-1 !== filterValue.indexOf('more_imdb')){
 				filterValue = $('#showfilter').find('option:not([value="more_imdb"]).selected').val() + '&more=1';
+			}
+			else if (-1 !== filterValue.indexOf('more_ne')){
+				filterValue = $('#showfilter').find('option:not([value^="more_"]).selected').val() + '?more=1';
 			}
 #end raw
 			location = '$sg_root/add-shows/' + filterValue;
@@ -375,6 +380,14 @@ $(document).ready(function(){
 			<option value="$page[0]"#echo ('', selected)[$mode in $page[0] and ($kwargs and $kwargs.get('page', 'n/a') in $page[0] or $kwargs and not $kwargs.get('page') and 'this' in $page[1])]#>$page[1]</option>
             #end for
 			<option value="tvc_latest"#echo ('', selected)['latest' == $mode]#>Latest additions</option>
+		</optgroup>
+        #elif 'Nextepisode' == $browse_type
+		<optgroup label="Nextepisode">
+			<option value="ne_newpop"#echo ('', selected)['newpop' == $mode]#>Popular premiered</option>
+			<option value="ne_newtop"#echo ('', selected)['newtop' == $mode]#>Top rated premiered</option>
+			<option value="ne_upcoming"#echo ('', selected)['upcoming' == $mode]#>Upcoming</option>
+			<option value="ne_trending"#echo ('', selected)['trending' == $mode]#>Trending</option>
+			<option value="more_ne"#echo ('', selected + ' disabled')[mode.endswith('more')]#>... list more</option>
 		</optgroup>
         #end if
 	</select>

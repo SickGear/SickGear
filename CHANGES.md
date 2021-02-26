@@ -21,6 +21,7 @@
 * Update Rarfile 3.1 (a4202ca) to 4.0 (55fe778)
 * Update Requests library 2.24.0 (2f70990) to 2.25.1 (bdc00eb)
 * Update urllib3 1.25.11 (00f1769) to 1.26.2 (eae04d6)
+* Add menu Shows/"Next Episode Cards"
 
 
 [develop changelog]

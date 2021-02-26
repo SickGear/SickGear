@@ -611,6 +611,7 @@ else:
 
 MC_MRU = ''
 TVC_MRU = ''
+NE_MRU = ''
 
 COOKIE_SECRET = b64encodestring(uuid.uuid4().bytes + uuid.uuid4().bytes)
 
@@ -751,7 +752,7 @@ def init_stage_1(console_logging):
     global USE_TRAKT, TRAKT_CONNECTED_ACCOUNT, TRAKT_ACCOUNTS, TRAKT_MRU, TRAKT_VERIFY, \
         TRAKT_USE_WATCHLIST, TRAKT_REMOVE_WATCHLIST, TRAKT_TIMEOUT, TRAKT_METHOD_ADD, TRAKT_START_PAUSED, \
         TRAKT_SYNC, TRAKT_DEFAULT_INDEXER, TRAKT_REMOVE_SERIESLIST, TRAKT_UPDATE_COLLECTION, \
-        MC_MRU, TVC_MRU, \
+        MC_MRU, TVC_MRU, NE_MRU, \
         USE_SLACK, SLACK_NOTIFY_ONSNATCH, SLACK_NOTIFY_ONDOWNLOAD, SLACK_NOTIFY_ONSUBTITLEDOWNLOAD, \
         SLACK_CHANNEL, SLACK_AS_AUTHED, SLACK_BOT_NAME, SLACK_ICON_URL, SLACK_ACCESS_TOKEN, \
         USE_DISCORD, DISCORD_NOTIFY_ONSNATCH, DISCORD_NOTIFY_ONDOWNLOAD, \
@@ -1190,6 +1191,7 @@ def init_stage_1(console_logging):
 
     MC_MRU = check_setting_str(CFG, 'Metacritic', 'mc_mru', '')
     TVC_MRU = check_setting_str(CFG, 'TVCalendar', 'tvc_mru', '')
+    NE_MRU = check_setting_str(CFG, 'NextEpisode', 'ne_mru', '')
 
     USE_PYTIVO = bool(check_setting_int(CFG, 'pyTivo', 'use_pytivo', 0))
     PYTIVO_HOST = check_setting_str(CFG, 'pyTivo', 'pytivo_host', '')
@@ -1662,7 +1664,7 @@ def init_stage_2():
         run_delay=datetime.timedelta(minutes=5),
         threadName='PLEXWATCHEDSTATE')
 
-    MEMCACHE['history_tab_limit'] = 9
+    MEMCACHE['history_tab_limit'] = 10
     MEMCACHE['history_tab'] = History.menu_tab(MEMCACHE['history_tab_limit'])
 
     try:
@@ -2173,6 +2175,9 @@ def save_config():
         ]),
         ('TVCalendar', [
             ('mru', TVC_MRU)
+        ]),
+        ('NextEpisode', [
+            ('mru', NE_MRU)
         ]),
         ('Slack', [
             ('use_%s', int(USE_SLACK)),

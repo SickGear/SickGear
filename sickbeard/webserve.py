@@ -26,6 +26,7 @@ except ImportError:
 from mimetypes import MimeTypes
 
 import base64
+import copy
 import datetime
 import glob
 import hashlib
@@ -84,6 +85,7 @@ from ._legacy import LegacyBaseHandler
 
 from lib import subliminal
 from lib.dateutil import tz, zoneinfo
+from lib.dateutil.relativedelta import relativedelta
 from lib.fuzzywuzzy import fuzz
 from lib.libtrakt import TraktAPI
 from lib.libtrakt.exceptions import TraktException, TraktAuthException
@@ -4447,6 +4449,176 @@ class AddShows(Home):
         if not filter_list(lambda tvid_prodid: helpers.find_show_by_id(tvid_prodid), ids.split(' ')):
             return self.new_show('|'.join(['', '', '', ids or show_name]), use_show_name=True)
 
+    def ne_default(self):
+
+        return self.redirect('/add-shows/%s' % ('ne_newpop', sickbeard.NE_MRU)[any(sickbeard.NE_MRU)])
+
+    def ne_newpop(self, **kwargs):
+        return self.browse_ne(
+            'hotshowsfilter', 'Popular recent premiered shows at Next Episode', mode='newpop', **kwargs)
+
+    def ne_newtop(self, **kwargs):
+        return self.browse_ne(
+            'hotshowsfilter', 'Top rated recent premiered shows at Next Episode', mode='newtop', **kwargs)
+
+    def ne_upcoming(self, **kwargs):
+        return self.browse_ne(
+            'upcomingshowsfilter', 'Upcoming shows at Next Episode', mode='upcoming', **kwargs)
+
+    def ne_trending(self, **kwargs):
+        return self.browse_ne(
+            'trendingshowsfilter', 'Trending shows at Next Episode', mode='trending', **kwargs)
+
+    def browse_ne(self, url_path, browse_title, **kwargs):
+
+        browse_type = 'Nextepisode'
+
+        footnote = None
+
+        page = 1
+        if 'more' in kwargs:
+            page = 2
+            kwargs['mode'] += '-more'
+
+        filtered = []
+
+        import browser_ua
+
+        when_past = True
+        if 'upcoming' in url_path:
+            when_past = False
+            url = '%s.php?t=1&s=1&inwl=0&user_id=' % url_path
+        elif 'trending' in url_path:
+            url = '%s.php?t=1&a=1&b=1&uid=&status=0&c=1' % url_path
+        else:
+            url = '%s.php?a=1&b=1&uid=0&status=0&c=2&sortOrder=%s' % (url_path, (0, 1)['Top' in browse_title])
+        url = 'https://next-episode.net/PAGES/misc/%s&g=6&channel=0&actors=0&page=%s' % (url, page)
+
+        html = helpers.get_url(url, headers={'User-Agent': browser_ua.get_ua()})
+        if html:
+            try:
+                if re.findall(r'(?i)(<a[^>]+gopage\([^>]+)', html)[0]:
+                    kwargs.update(dict(more=1))
+            except (BaseException, Exception):
+                pass
+
+            with BS4Parser(html) as soup:
+                shows = [] if not soup else soup.find_all(class_='list_item')
+                oldest, newest, oldest_dt, newest_dt = None, None, 9999999, 0
+                rc = [(k, re.compile(r'(?i).*?(\d+)\s*%s.*' % v)) for (k, v) in iteritems({
+                    'months': 'month', 'days': 'day', 'hours': 'hour', 'minutes': 'min'})]
+                rc_show = re.compile(r'^namelink_(\d+)$')
+                rc_title_clean = re.compile(r'(?i)(?:\s*\((?:19|20)\d{2}\))?$')
+                for row in shows:
+                    try:
+                        info_tag = row.find('a', id=rc_show)
+                        if not info_tag:
+                            continue
+
+                        ids = dict(custom=rc_show.findall(info_tag['id'])[0], name='ne')
+                        url_path = info_tag['href'].strip()
+
+                        images = {}
+                        img_uri = None
+                        img_tag = info_tag.find('img')
+                        if img_tag and isinstance(img_tag.attrs, dict):
+                            img_src = img_tag.attrs.get('src').strip()
+                            img_uri = img_src.startswith('//') and ('https:' + img_src) or img_src
+                            images = dict(poster=dict(thumb='imagecache?path=browse/thumb/ne&source=%s' % img_uri))
+                            sickbeard.CACHE_IMAGE_URL_LIST.add_url(img_uri)
+
+                        title = info_tag.get_text('strip=True')
+                        title = rc_title_clean.sub('', title.strip())
+
+                        channel_tag = row.find('span', class_='channel_name')
+
+                        network, date_info, dt = None, None, None
+                        channel_tag_copy = copy.copy(channel_tag)
+                        if channel_tag_copy:
+                            network = channel_tag_copy.a.extract().get_text(strip=True)
+                            date_info = re.sub(r'^[^\d]+', '', channel_tag_copy.get_text(strip=True))
+                            if date_info:
+                                dt = dateutil.parser.parse((date_info, '%s.01.01' % date_info)[4 == len(date_info)])
+
+                        if not when_past and channel_tag:
+                            tag = [t for t in channel_tag.next_siblings if hasattr(t, 'attrs')
+                                   and 'printed' in ' '.join(t.get('class', ''))]
+                            if len(tag):
+                                age_args = {}
+                                future = re.sub(r'[^\d]+(.*)', r'\1', tag[0].get_text(strip=True))
+                                for (dim, rcx) in rc:
+                                    value = helpers.try_int(rcx.sub(r'\1', future), None)
+                                    if value:
+                                        age_args.update({dim: value})
+
+                                if age_args:
+                                    dt = datetime.datetime.utcnow()
+                                    if 'months' in age_args and 'days' in age_args:
+                                        age_args['days'] -= 1
+                                        dt += relativedelta(day=1)
+                                    dt += relativedelta(**age_args)
+                                    date_info = SGDatetime.sbfdate(dt)
+
+                        dt_ordinal = 0
+                        dt_string = ''
+                        if date_info:
+                            dt_ordinal = dt.toordinal()
+                            dt_string = date_info
+                            if dt_ordinal < oldest_dt:
+                                oldest_dt = dt_ordinal
+                                oldest = dt_string
+                            if dt_ordinal > newest_dt:
+                                newest_dt = dt_ordinal
+                                newest = dt_string
+
+                        genres = row.find(class_='genre')
+                        if genres:
+                            genres = re.sub(r',([^\s])', r', \1', genres.get_text(strip=True))
+                        overview = row.find(class_='summary')
+                        if overview:
+                            overview = overview.get_text(strip=True)
+
+                        rating = None
+                        rating_tag = row.find(class_='rating')
+                        if rating_tag:
+                            label_tag = rating_tag.find('label')
+                            if label_tag:
+                                rating = re.sub(r'.*?width:\s*(\d+).*', r'\1', label_tag.get('style', ''))
+
+                        filtered.append(dict(
+                            premiered=dt_ordinal,
+                            premiered_str=dt_string,
+                            when_past=when_past,  # dt_ordinal < datetime.datetime.now().toordinal(),
+                            genres=('No genre yet' if not genres else genres),
+                            network=network or None,
+                            ids=ids,
+                            images='' if not img_uri else images,
+                            overview='No overview yet' if not overview else helpers.xhtml_escape(overview[:250:]),
+                            rating=(rating, 'TBD')[None is rating],
+                            title=title,
+                            url_src_db='https://next-episode.net/%s/' % url_path.strip('/'),
+                            votes=None))
+
+                    except (AttributeError, IndexError, KeyError, TypeError):
+                        continue
+
+                kwargs.update(dict(oldest=oldest, newest=newest))
+
+        kwargs.update(dict(footnote=footnote, use_votes=False))
+
+        mode = kwargs.get('mode', '')
+        if mode:
+            func = 'ne_%s' % mode
+            if callable(getattr(self, func, None)):
+                sickbeard.NE_MRU = func
+                sickbeard.save_config()
+        return self.browse_shows(browse_type, browse_title, filtered, **kwargs)
+
+    # noinspection PyUnusedLocal
+    def info_nextepisode(self, ids, show_name):
+
+        return self.new_show('|'.join(['', '', '', show_name]), use_show_name=True)
+
     def tvc_default(self):
 
         return self.redirect('/add-shows/%s' % ('tvc_newshows', sickbeard.TVC_MRU)[any(sickbeard.TVC_MRU)])
@@ -4804,7 +4976,7 @@ class AddShows(Home):
     @staticmethod
     def browse_mru(browse_type, **kwargs):
         save_config = False
-        if browse_type in ('AniDB', 'IMDb', 'Metacritic', 'Trakt', 'TVCalendar'):
+        if browse_type in ('AniDB', 'IMDb', 'Metacritic', 'Trakt', 'TVCalendar', 'Nextepisode'):
             save_config = True
             sickbeard.BROWSELIST_MRU[browse_type] = dict(
                 showfilter=kwargs.get('showfilter', ''), showsort=kwargs.get('showsort', ''))
@@ -6364,6 +6536,7 @@ class History(MainHandler):
                 """
                 for identifier, result in (
                     (('fanart', 'fanart.png'), ('imdb', 'imdb16.png'), ('metac', 'metac16.png'),
+                     ('next-episode', 'nextepisode16.png'),
                      ('predb', 'predb16.png'), ('srrdb', 'srrdb16.png'),
                      ('thexem', 'xem.png'), ('tmdb', 'tmdb16.png'), ('trakt', 'trakt16.png'),
                      ('tvdb', 'thetvdb16.png'), ('tvmaze', 'tvmaze16.png')),
