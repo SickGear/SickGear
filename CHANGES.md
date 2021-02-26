@@ -35,6 +35,12 @@
 * Change prevent python-Levenshtein 0.12.1 on non Win due to membug
 
 
+### 0.23.13 (2021-02-26 19:05:00 UTC)
+
+* Add Newznab providers can use API only or API + RSS cache fallback. Tip added to Newznab config/Media Providers/API key
+* Add correct user entry mistakes for nzbs2go api url
+
+
 ### 0.23.12 (2021-02-19 17:00:00 UTC)
 
 * Change allow Python 3.8.8 and 3.9.2

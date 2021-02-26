@@ -7725,6 +7725,11 @@ class ConfigProviders(Config):
                 if starify(cur_key, True):
                     cur_key = ''
 
+                # correct user entry mistakes
+                test_url = cur_url.lower()
+                if 'nzbs2go' in test_url and test_url.endswith('.com/') or 'api/v1/api' in test_url:
+                    cur_url = 'https://nzbs2go.com/api/v1/'
+
                 new_provider = newznab.NewznabProvider(cur_name, cur_url, key=cur_key)
 
                 cur_id = new_provider.get_id()

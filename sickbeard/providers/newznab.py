@@ -870,13 +870,35 @@ class NewznabProvider(generic.NZBProvider):
                        'attrs': ','.join([k for k, v in iteritems(NewznabConstants.providerToIndexerMapping)
                                           if v in self.caps]),
                        'offset': 0}
-
-        use_rss = self.get_id() in ('ninjacentral', )
-        base_params_rss = {'num': self.limits, 'dl': '1', 'i': '19'}
+        base_params_rss = {'num': self.limits, 'dl': '1'}
+        rss_fallback = False
 
         if isinstance(api_key, string_types) and api_key not in ('0', ''):
             base_params['apikey'] = api_key
             base_params_rss['r'] = api_key
+            args = re.findall(r'.*?([ir])\s*=\s*([^\s&;]*)', api_key)
+            if 1 <= len(args):
+                for (cur_key, cur_value) in args:
+                    base_params_rss[cur_key] = cur_value
+                    if 'r' == cur_key:
+                        rss_fallback = True
+                        base_params['apikey'] = cur_value
+                if not rss_fallback:
+                    logger.warning('Invalid API key config for API to RSS fallback,'
+                                   ' not found: i=num&r=key or i=&r=key or &r=key')
+                    return results, n_spaces
+
+        for mode in search_params:
+            params = dict(needed=needed, max_items=max_items, try_all_searches=try_all_searches,
+                          base_params=base_params, base_params_rss=base_params_rss)
+            results, n_spaces = self._search_core(search_params, **params)
+            if not self.should_skip() and not results and rss_fallback and 'Cache' == mode:
+                results, n_spaces = self._search_core(search_params, use_rss=True, **params)
+            break
+        return results, n_spaces
+
+    def _search_core(self, search_params, needed=None, max_items=400, try_all_searches=False,
+                     use_rss=False, base_params=None, base_params_rss=None):
 
         results, n_spaces = [], {}
         total, cnt, search_url, exit_log = 0, len(results), '', True
