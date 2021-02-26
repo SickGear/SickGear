@@ -250,7 +250,7 @@
 								<span class="component-title">API key</span>
 								<span class="component-desc">
 									<input type="text" id="${cur_newznab_provider.get_id()}_hash" value="<%= starify(cur_newznab_provider.key) %>" newznab_name="${cur_newznab_provider.get_id()}_hash" class="newznab_key form-control input-sm input350" />
-									<div class="clear-left"><p>get API key from provider website</p></div>
+									<div class="clear-left"><p><code>apikey</code> for API only or <code>i=num&r=key</code> for API + RSS cache fallback</p></div>
 								</span>
 							</label>
 						</div>
@@ -835,7 +835,10 @@ name = '' if not client else get_client_instance(sickbeard.TORRENT_METHOD)().nam
 									<input type="text" id="newznab_key" class="form-control input-sm input350" />
 								</span>
 								<span class="component-desc">
-									<div class="clear-left"><p>note: enter 0 (zero) if not required</p></div>
+									<div class="clear-left">
+										<p><code>apikey</code> for API only or <code>i=num&r=key</code> for API + RSS cache fallback<br>
+										enter 0 (zero) if not required</p>
+									</div>
 								</span>
 							</label>
 						</div>
