@@ -38,7 +38,7 @@ import zlib
 
 # noinspection PyPep8Naming
 import encodingKludge as ek
-from . import classes, db, helpers, image_cache, indexermapper, logger, metadata, naming, providers, \
+from . import classes, db, helpers, image_cache, indexermapper, logger, metadata, naming, people_queue, providers, \
     scene_exceptions, scene_numbering, scheduler, search_backlog, search_propers, search_queue, search_recent, \
     show_queue, show_updater, subtitles, trakt_helpers, traktChecker, version_checker, watchedstate_queue
 from . import auto_post_processer, properFinder  # must come after the above imports
@@ -46,7 +46,7 @@ from .common import SD, SKIPPED, USER_AGENT
 from .config import check_section, check_setting_int, check_setting_str, ConfigMigrator, minimax
 from .databases import cache_db, failed_db, mainDB
 from .indexers.indexer_api import TVInfoAPI
-from .indexers.indexer_config import TVINFO_IMDB, TVINFO_TVDB
+from .indexers.indexer_config import TVINFO_IMDB, TVINFO_TVDB, TmdbIndexer
 from .providers.generic import GenericProvider
 from .providers.newznab import NewznabConstants
 from .tv import TVidProdid
@@ -69,6 +69,7 @@ if False:
     from adba import Connection
     from .event_queue import Events
     from .tv import TVShow
+    from lib.libtrakt.trakt import TraktAccount
 
 PID = None
 ENV = {}
@@ -95,6 +96,7 @@ events = None  # type: Events
 recent_search_scheduler = None
 backlog_search_scheduler = None
 show_update_scheduler = None
+people_queue_scheduler = None
 update_software_scheduler = None
 update_packages_scheduler = None
 show_queue_scheduler = None
@@ -113,6 +115,7 @@ provider_ping_thread_pool = {}
 
 showList = []  # type: List[TVShow]
 showDict = {}  # type: Dict[int, TVShow]
+switched_shows = {}  # type: Dict[AnyStr, AnyStr]
 UPDATE_SHOWS_ON_START = False
 SHOW_UPDATE_HOUR = 3
 
@@ -586,7 +589,7 @@ WANTEDLIST_CACHE = None
 
 CALENDAR_UNPROTECTED = False
 
-TMDB_API_KEY = 'edc5f123313769de83a71e157758030b'
+TMDB_API_KEY = TmdbIndexer.API_KEY
 FANART_API_KEY = '3728ca1a2a937ba0c93b6e63cc86cecb'
 
 # to switch between staging and production TRAKT environment
@@ -595,7 +598,7 @@ TRAKT_STAGING = False
 TRAKT_TIMEOUT = 60
 TRAKT_VERIFY = True
 TRAKT_CONNECTED_ACCOUNT = None
-TRAKT_ACCOUNTS = {}
+TRAKT_ACCOUNTS = {}  # type: Dict[int, TraktAccount]
 TRAKT_MRU = ''
 
 if TRAKT_STAGING:
@@ -622,7 +625,10 @@ CACHE_IMAGE_URL_LIST = classes.ImageUrlList()
 __INITIALIZED__ = False
 __INIT_STAGE__ = 0
 
+# don't reassign MEMCACHE var without reassigning sg_helpers.MEMCACHE
+# as long as the pointer is the same (dict only modified) all is fine
 MEMCACHE = {}
+sg_helpers.MEMCACHE = MEMCACHE
 MEMCACHE_FLAG_IMAGES = {}
 
 
@@ -651,7 +657,7 @@ def initialize(console_logging=True):
 def init_stage_1(console_logging):
 
     # Misc
-    global showList, showDict, providerList, newznabProviderList, torrentRssProviderList, \
+    global showList, showDict, switched_shows, providerList, newznabProviderList, torrentRssProviderList, \
         WEB_HOST, WEB_ROOT, ACTUAL_CACHE_DIR, CACHE_DIR, ZONEINFO_DIR, ADD_SHOWS_WO_DIR, ADD_SHOWS_METALANG, \
         CREATE_MISSING_SHOW_DIRS, SHOW_DIRS_WITH_DOTS, \
         RECENTSEARCH_STARTUP, NAMING_FORCE_FOLDERS, SOCKET_TIMEOUT, DEBUG, TVINFO_DEFAULT, \
@@ -1004,6 +1010,7 @@ def init_stage_1(console_logging):
     SEARCH_UNAIRED = bool(check_setting_int(CFG, 'General', 'search_unaired', 0))
     UNAIRED_RECENT_SEARCH_ONLY = bool(check_setting_int(CFG, 'General', 'unaired_recent_search_only', 1))
     FLARESOLVERR_HOST = check_setting_str(CFG, 'General', 'flaresolverr_host', '')
+    sg_helpers.FLARESOLVERR_HOST = FLARESOLVERR_HOST
 
     NZB_DIR = check_setting_str(CFG, 'Blackhole', 'nzb_dir', '')
     TORRENT_DIR = check_setting_str(CFG, 'Blackhole', 'torrent_dir', '')
@@ -1026,6 +1033,7 @@ def init_stage_1(console_logging):
     ADD_SHOWS_WO_DIR = bool(check_setting_int(CFG, 'General', 'add_shows_wo_dir', 0))
     ADD_SHOWS_METALANG = check_setting_str(CFG, 'General', 'add_shows_metalang', 'en')
     REMOVE_FILENAME_CHARS = check_setting_str(CFG, 'General', 'remove_filename_chars', '')
+    sg_helpers.REMOVE_FILENAME_CHARS = REMOVE_FILENAME_CHARS
     IMPORT_DEFAULT_CHECKED_SHOWS = bool(check_setting_int(CFG, 'General', 'import_default_checked_shows', 0))
 
     SAB_USERNAME = check_setting_str(CFG, 'SABnzbd', 'sab_username', '')
@@ -1493,6 +1501,9 @@ def init_stage_1(console_logging):
     showList = []
     showDict = {}
 
+    # dict of switched shows for web redirects
+    switched_shows = {}
+
 
 def init_stage_2():
 
@@ -1500,7 +1511,7 @@ def init_stage_2():
     global __INITIALIZED__, MEMCACHE, MEMCACHE_FLAG_IMAGES, RECENTSEARCH_STARTUP
     # Schedulers
     # global trakt_checker_scheduler
-    global recent_search_scheduler, backlog_search_scheduler, show_update_scheduler, \
+    global recent_search_scheduler, backlog_search_scheduler, people_queue_scheduler, show_update_scheduler, \
         update_software_scheduler, update_packages_scheduler, show_queue_scheduler, search_queue_scheduler, \
         proper_finder_scheduler, media_process_scheduler, subtitles_finder_scheduler, \
         background_mapping_task, \
@@ -1579,6 +1590,12 @@ def init_stage_2():
         threadName='SHOWUPDATER',
         prevent_cycle_run=show_queue_scheduler.action.isShowUpdateRunning)  # 3AM
 
+    people_queue_scheduler = scheduler.Scheduler(
+        people_queue.PeopleQueue(),
+        cycleTime=datetime.timedelta(seconds=3),
+        threadName='PEOPLEQUEUE'
+    )
+
     # searchers
     search_queue_scheduler = scheduler.Scheduler(
         search_queue.SearchQueue(),
@@ -1650,7 +1667,8 @@ def init_stage_2():
         threadName='FINDSUBTITLES',
         silent=not USE_SUBTITLES)
 
-    background_mapping_task = threading.Thread(name='MAPPINGSUPDATER', target=indexermapper.load_mapped_ids)
+    background_mapping_task = threading.Thread(name='MAPPINGSUPDATER', target=indexermapper.load_mapped_ids,
+                                               kwargs={'load_all': True})
 
     watched_state_queue_scheduler = scheduler.Scheduler(
         watchedstate_queue.WatchedStateQueue(),
@@ -1686,7 +1704,7 @@ def init_stage_2():
 def enabled_schedulers(is_init=False):
     # ([], [trakt_checker_scheduler])[USE_TRAKT] + \
     return ([], [events])[is_init] \
-           + ([], [recent_search_scheduler, backlog_search_scheduler, show_update_scheduler,
+           + ([], [recent_search_scheduler, backlog_search_scheduler, show_update_scheduler, people_queue_scheduler,
                    update_software_scheduler, update_packages_scheduler,
                    show_queue_scheduler, search_queue_scheduler, proper_finder_scheduler,
                    media_process_scheduler, subtitles_finder_scheduler,
@@ -1703,7 +1721,8 @@ def start():
             # Load all Indexer mappings in background
             indexermapper.defunct_indexer = [
                 i for i in TVInfoAPI().all_sources if TVInfoAPI(i).config.get('defunct')]
-            indexermapper.indexer_list = [i for i in TVInfoAPI().all_sources]
+            indexermapper.indexer_list = [i for i in TVInfoAPI().all_sources if TVInfoAPI(i).config.get('show_url')
+                                          and True is not TVInfoAPI(i).config.get('people_only')]
             background_mapping_task.start()
 
             for p in providers.sortedProviderList():
@@ -1779,6 +1798,11 @@ def halt():
             for thread in enabled_schedulers():  # type: scheduler.Scheduler
                 try:
                     thread.stopit()
+                    if getattr(thread, 'action', None) and getattr(thread.action, 'save_queue', None):
+                        try:
+                            thread.action.save_queue()
+                        except (BaseException, Exception):
+                            pass
                 except Exception as e:
                     logger.log('Thread %s stop failed with: %s' % (thread.name, e))
 

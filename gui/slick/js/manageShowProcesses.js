@@ -25,6 +25,38 @@ $(document).ready(function() {
 		$(this).nextAll('input:first').show();
 	});
 
+	$('input[id^="remove-btn-"]').click(function() {
+		var param = {'to_remove': $(this).data('uid'), 'force': $(this).data('force') !== undefined};
+		$.getJSON(sbRoot + '/manage/show-tasks/remove-from-show-queue', param)
+			.done(function(){
+				location.reload();
+			})
+	});
+
+	$('input[id^="remove-people-btn-"]').click(function() {
+		var param = {'to_remove': $(this).data('uid')};
+		$.getJSON(sbRoot + '/manage/show-tasks/remove-from-people-queue', param)
+			.done(function(){
+				location.reload();
+			})
+	});
+
+	$('input[id^="clear-btn-"]').click(function() {
+		var param = {'show_type': $(this).data('action')};
+		$.getJSON(sbRoot + '/manage/show-tasks/clear-show-queue', param)
+			.done(function(){
+				location.reload();
+		})
+	});
+
+		$('input[id^="clear-people-btn"]').click(function() {
+			var param = {'people_type': $(this).data('action')};
+			$.getJSON(sbRoot + '/manage/show-tasks/clear-people-queue', param)
+				.done(function(){
+					location.reload();
+		})
+	});
+
 	function disableSaveBtn(state){
 		$('#save-nowarnicon').prop('disabled', state)
 	}

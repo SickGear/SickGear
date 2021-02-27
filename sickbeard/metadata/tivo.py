@@ -25,7 +25,7 @@ import os
 from . import generic
 from .. import logger
 import sg_helpers
-from tvinfo_base.exceptions import *
+from lib.tvinfo_base.exceptions import *
 import sickbeard
 # noinspection PyPep8Naming
 import encodingKludge as ek

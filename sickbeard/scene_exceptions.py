@@ -238,7 +238,9 @@ def retrieve_exceptions():
         if should_refresh(sickbeard.TVInfoAPI(tvid).name):
             logger.log(u'Checking for scene exception updates for %s' % sickbeard.TVInfoAPI(tvid).name)
 
-            url = sickbeard.TVInfoAPI(tvid).config['scene_url']
+            url = sickbeard.TVInfoAPI(tvid).config.get('scene_url')
+            if not url:
+                continue
 
             url_data = helpers.get_url(url)
             if None is url_data:

@@ -352,6 +352,11 @@
     #end if
 	</div>
 #end if
+#if $tvinfo_switch_running
+	<div class="alert alert-danger" role="alert">
+		<span>Shows are in the process of being switched to a new tv info source. Expect Links and elements not to work temporally.</span>
+	</div>
+#end if
 #if $sg_str('NEWEST_VERSION_STRING')
 	<div class="alert alert-success upgrade-notification" role="alert">
 		<span>$sg_str('NEWEST_VERSION_STRING')</span>

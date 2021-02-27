@@ -34,4 +34,18 @@ $(function(){
 		$(this).hide();
 		$(this).nextAll('input:first').show();
 	});
+	$('input[id^="remove-btn-"]').click(function() {
+		var param = {'to_remove': $(this).data('uid')};
+		$.getJSON(sbRoot + '/manage/search-tasks/remove-from-search-queue', param)
+			.done(function(){
+				location.reload();
+		})
+	});
+	$('input[id^="clear-btn-"]').click(function() {
+		var param = {'search_type': $(this).data('action')};
+		$.getJSON(sbRoot + '/manage/search-tasks/clear-search-queue', param)
+			.done(function(){
+				location.reload();
+		})
+	});
 });

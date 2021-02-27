@@ -261,7 +261,8 @@ $(document).ready(function () {
 					/** @namespace data.switch */
 					/** @namespace data.switch.mtvid_prodid */
 					if (!isMaster && data.hasOwnProperty('switch') && data.switch.hasOwnProperty('Success')) {
-						window.location.replace(sbRoot + '/home/view-show?tvid_prodid=' + data.mtvid_prodid);
+						window.location.replace(sbRoot + '/home/view-show?tvid_prodid=' + $('#tvid_prodid').val());
+						// window.location.replace(sbRoot + '/home/view-show?tvid_prodid=' + data.mtvid_prodid);
 					} else if ((0 <  $('*[data-maybe-master=1]').length)
 						&& (((0 === $('[name^=set-master]').length) && (0 < $('*[data-maybe-master=1]').val()))
 						|| ((0 < $('[name^=set-master]').length) && (0 === $('*[data-maybe-master=1]').val())))) {

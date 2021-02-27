@@ -29,17 +29,17 @@
         #continue
     #end if
 
-    #set $show_id = $curDir['dir']
-    #if $curDir['existing_info'][1]
-        #set $show_id = $show_id + '|' + $str($curDir['existing_info'][1]) + '|' + $str($curDir['existing_info'][2])
-        #set $indexer = $curDir['existing_info'][0]
-    #end if
-
     #set $indexer = 0
     #if $curDir['existing_info'][1] and $sickbeard.TVInfoAPI($curDir['existing_info'][0]).config.get('active')
         #set $indexer = $curDir['existing_info'][0]
     #elif 0 < $sickbeard.TVINFO_DEFAULT
         #set $indexer = $sickbeard.TVINFO_DEFAULT
+    #end if
+
+    #set $show_id = $curDir['dir']
+    #if $curDir['existing_info'][1]
+        #set $show_id = $show_id + '|' + $str($indexer) + ':' + $str($curDir['existing_info'][1]) + '|' + $str($curDir['existing_info'][2])
+        #set $indexer = $curDir['existing_info'][0]
     #end if
 
 		<tr>

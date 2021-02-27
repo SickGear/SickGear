@@ -4,4 +4,4 @@
 # license:unlicense (http://unlicense.org/)
 
 # noinspection PyUnresolvedReferences
-from tvinfo_base.exceptions import *
+from lib.tvinfo_base.exceptions import *

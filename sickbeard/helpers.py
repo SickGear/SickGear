@@ -42,7 +42,7 @@ from . import db, logger, notifiers
 from .common import cpu_presets, mediaExtensions, Overview, Quality, statusStrings, subtitleExtensions, \
     ARCHIVED, DOWNLOADED, FAILED, IGNORED, SKIPPED, SNATCHED_ANY, SUBTITLED, UNAIRED, UNKNOWN, WANTED
 from .sgdatetime import timestamp_near
-from tvinfo_base.exceptions import *
+from lib.tvinfo_base.exceptions import *
 # noinspection PyPep8Naming
 import encodingKludge as ek
 from exceptions_helper import ex, MultipleShowObjectsException
@@ -60,9 +60,9 @@ from six.moves import zip
 # the following are imported from elsewhere,
 # therefore, they intentionally don't resolve and are unused in this particular file.
 # noinspection PyUnresolvedReferences
-from sg_helpers import chmod_as_parent, clean_data, copy_file, fix_set_group_id, get_system_temp_dir, \
+from sg_helpers import chmod_as_parent, clean_data, copy_file, download_file, fix_set_group_id, get_system_temp_dir, \
     get_url, indent_xml, make_dirs, maybe_plural, md5_for_text, move_file, proxy_setting, remove_file, \
-    remove_file_perm, replace_extension, scantree, try_int, try_ord, write_file
+    remove_file_perm, replace_extension, sanitize_filename, scantree, try_int, try_ord, write_file
 
 # noinspection PyUnreachableCode
 if False:
@@ -71,6 +71,7 @@ if False:
     from .tv import TVShow
     # the following workaround hack resolves a pyc resolution bug
     from .name_cache import retrieveNameFromCache
+    from six import integer_types
 
 RE_XML_ENCODING = re.compile(r'^(<\?xml[^>]+)\s+(encoding\s*=\s*[\"\'][^\"\']*[\"\'])(\s*\?>|)', re.U)
 RE_IMDB_ID = re.compile(r'(?i)(tt\d{4,})')
@@ -182,32 +183,12 @@ def is_first_rar_volume(filename):
     return None is not re.search(r'(?P<file>^(?P<base>(?:(?!\.part\d+\.rar$).)*)\.(?:(?:part0*1\.)?rar)$)', filename)
 
 
-def sanitize_filename(name):
-    """
-
-    :param name: filename
-    :type name: AnyStr
-    :return: sanitized filename
-    :rtype: AnyStr
-    """
-    # remove bad chars from the filename
-    name = re.sub(r'[\\/*]', '-', name)
-    name = re.sub(r'[:"<>|?]', '', name)
-
-    # remove leading/trailing periods and spaces
-    name = name.strip(' .')
-
-    for char in sickbeard.REMOVE_FILENAME_CHARS or []:
-        name = name.replace(char, '')
-
-    return name
-
-
 def find_show_by_id(
         show_id,  # type: Union[AnyStr, Dict[int, int], int]
         show_list=None,  # type: Optional[List[TVShow]]
         no_mapped_ids=True,  # type: bool
-        check_multishow=False  # type: bool
+        check_multishow=False,  # type: bool
+        no_exceptions=False  # type: bool
 ):
     # type: (...) -> Optional[TVShow]
     """
@@ -215,6 +196,7 @@ def find_show_by_id(
     :param show_list: (optional) TVShow objects list
     :param no_mapped_ids: don't check mapped ids
     :param check_multishow: check for multiple show matches
+    :param no_exceptions: suppress the MultipleShowObjectsException and return None instead
     """
     results = []
     if None is show_list:
@@ -235,16 +217,14 @@ def find_show_by_id(
 
             if isinstance(show_id, dict):
                 if no_mapped_ids:
-                    sid_int_list = [sickbeard.tv.TVShow.create_sid(sk, sv) for sk, sv in iteritems(show_id) if 0 < sv
-                                    and sickbeard.tv.tvid_bitmask >= sk]
+                    sid_int_list = [sickbeard.tv.TVShow.create_sid(sk, sv) for sk, sv in iteritems(show_id) if sv and
+                                    0 < sv and sickbeard.tv.tvid_bitmask >= sk]
                     if check_multishow:
                         results = [sickbeard.showDict.get(_show_sid_id) for _show_sid_id in sid_int_list
                                    if sickbeard.showDict.get(_show_sid_id)]
                     else:
-                        for _show_sid_id in sid_int_list:
-                            if _show_sid_id in sickbeard.showDict:
-                                return sickbeard.showDict.get(_show_sid_id)
-                        return None
+                        return next((sickbeard.showDict.get(_show_sid_id) for _show_sid_id in sid_int_list
+                                     if sickbeard.showDict.get(_show_sid_id)), None)
                 else:
                     show_id = {k: v for k, v in iteritems(show_id) if 0 < v}
                     results = [_show_obj for k, v in iteritems(show_id)
@@ -254,7 +234,8 @@ def find_show_by_id(
     if 1 == num_shows:
         return results[0]
     elif 1 < num_shows:
-        raise MultipleShowObjectsException()
+        if not no_exceptions:
+            raise MultipleShowObjectsException()
 
 
 def make_dir(path):
@@ -1070,29 +1051,6 @@ def _maybe_request_url(e, def_url=''):
     return hasattr(e, 'request') and hasattr(e.request, 'url') and ' ' + e.request.url or def_url
 
 
-def download_file(url, filename, session=None, **kwargs):
-    """
-    download given url to given filename
-
-    :param url: url to download
-    :type url: AnyStr
-    :param filename: filename to save the data to
-    :type filename: AnyStr
-    :param session: optional requests session object
-    :type session: requests.Session or None
-    :param kwargs:
-    :return: success of download
-    :rtype: bool
-    """
-    sickbeard.MEMCACHE.setdefault('cookies', {})
-    if None is get_url(url, session=session, savename=filename,
-                       url_solver=sickbeard.FLARESOLVERR_HOST, memcache_cookies=sickbeard.MEMCACHE['cookies'],
-                       **kwargs):
-        remove_file_perm(filename)
-        return False
-    return True
-
-
 def clear_cache(force=False):
     """
     clear sickgear cache folder
@@ -1394,7 +1352,8 @@ def cleanup_cache():
     Delete old cached files
     """
     delete_not_changed_in([ek.ek(os.path.join, sickbeard.CACHE_DIR, 'images', 'browse', 'thumb', x) for x in [
-        'anidb', 'imdb', 'trakt', 'tvdb']])
+        'anidb', 'imdb', 'trakt', 'tvdb']] + [ek.ek(os.path.join, sickbeard.CACHE_DIR, 'images', x) for x in [
+        'characters', 'person']] + [ek.ek(os.path.join, sickbeard.CACHE_DIR, 'tvinfo_cache')])
 
 
 def delete_not_changed_in(paths, days=30, minutes=0):
@@ -1564,18 +1523,15 @@ def path_mapper(search, replace, subject):
 
 
 def get_overview(ep_status, show_quality, upgrade_once, split_snatch=False):
+    # type: (integer_types, integer_types, Union[integer_types, bool]) -> integer_types
     """
 
     :param ep_status: episode status
-    :type ep_status: int
     :param show_quality: show quality
-    :type show_quality: int
     :param upgrade_once: upgrade once
-    :type upgrade_once: bool
     :param split_snatch:
     :type split_snatch: bool
     :return: constant from classes Overview
-    :rtype: int
     """
     status, quality = Quality.splitCompositeStatus(ep_status)
     if ARCHIVED == status:

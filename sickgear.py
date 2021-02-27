@@ -94,6 +94,7 @@ from exceptions_helper import ex
 import sickbeard
 from sickbeard import db, logger, name_cache, network_timezones
 from sickbeard.event_queue import Events
+from sickbeard.generic_queue import QueuePriorities
 from sickbeard.tv import TVShow
 from sickbeard.webserveInit import WebServer
 
@@ -503,6 +504,10 @@ class SickGear(object):
             else:
                 logger.log_error_and_exit(u'Restore FAILED!')
 
+        # refresh network timezones
+        sickbeard.classes.loading_msg.message = 'Checking network timezones'
+        network_timezones.update_network_dict()
+
         update_arg = '--update-restart'
         manual_update_arg = '--update-pkg'
         if update_arg not in sickbeard.MY_ARGS and sickbeard.UPDATES_TODO \
@@ -545,10 +550,6 @@ class SickGear(object):
         sickbeard.classes.loading_msg.message = 'Build name cache'
         name_cache.buildNameCache()
 
-        # refresh network timezones
-        sickbeard.classes.loading_msg.message = 'Checking network timezones'
-        network_timezones.update_network_dict()
-
         # load all ids from xem
         sickbeard.classes.loading_msg.message = 'Loading xem data'
         startup_background_tasks = threading.Thread(name='XEMUPDATER', target=sickbeard.scene_exceptions.get_xem_ids)
@@ -565,8 +566,65 @@ class SickGear(object):
         if not db.DBConnection().has_flag('kodi_nfo_default_removed'):
             sickbeard.metadata.kodi.remove_default_attr()
 
+        my_db = db.DBConnection()
+        sw = my_db.select('SELECT * FROM tv_src_switch WHERE status = 0')
+        if sw:
+            switching = True
+            l_msg = 'Adding Shows that switching tv source to queue'
+            s_count = len(sw)
+            sickbeard.classes.loading_msg.set_msg_progress(l_msg, '0/%s' % s_count)
+            for i, s in enumerate(sw, 1):
+                sickbeard.classes.loading_msg.set_msg_progress(l_msg, '%s/%s' % (i, s_count))
+                try:
+                    show_obj = sickbeard.helpers.find_show_by_id({s['old_indexer']: s['old_indexer_id']})
+                except (BaseException, Exception):
+                    if s['new_indexer_id']:
+                        try:
+                            show_obj = sickbeard.helpers.find_show_by_id({s['new_indexer']: s['new_indexer_id']})
+                        except (BaseException, Exception):
+                            continue
+                        if show_obj:
+                            # show id was already switched, but not finished updated, so queue as update
+                            try:
+                                sickbeard.show_queue_scheduler.action.switch_show(
+                                    show_obj=show_obj, new_tvid=s['new_indexer'], new_prodid=s['new_indexer_id'],
+                                    force_id=bool(s['force_id']), uid=s['uid'],
+                                    set_pause=bool(s['set_pause']), mark_wanted=bool(s['mark_wanted']), resume=True,
+                                    old_tvid=s['old_indexer'], old_prodid=s['old_indexer_id']
+                                )
+                            except (BaseException, Exception):
+                                continue
+                    continue
+                if show_obj:
+                    try:
+                        sickbeard.show_queue_scheduler.action.switch_show(
+                            show_obj=show_obj, new_tvid=s['new_indexer'], new_prodid=s['new_indexer_id'],
+                            force_id=bool(s['force_id']), uid=s['uid'],
+                            set_pause=bool(s['set_pause']), mark_wanted=bool(s['mark_wanted'])
+                        )
+                    except (BaseException, Exception):
+                        continue
+                elif s['new_indexer_id']:
+                    try:
+                        show_obj = sickbeard.helpers.find_show_by_id({s['new_indexer']: s['new_indexer_id']})
+                    except (BaseException, Exception):
+                        continue
+                    if show_obj:
+                        # show id was already switched, but not finished updated, so resume
+                        try:
+                            sickbeard.show_queue_scheduler.action.switch_show(
+                                show_obj=show_obj, new_tvid=s['new_indexer'], new_prodid=s['new_indexer_id'],
+                                force_id=bool(s['force_id']), uid=s['uid'],
+                                set_pause=bool(s['set_pause']), mark_wanted=bool(s['mark_wanted']), resume=True,
+                                old_tvid=s['old_indexer'], old_prodid=s['old_indexer_id']
+                            )
+                        except (BaseException, Exception):
+                            continue
+        else:
+            switching = False
+
         # Start an update if we're supposed to
-        if self.force_update or sickbeard.UPDATE_SHOWS_ON_START:
+        if not switching and (self.force_update or sickbeard.UPDATE_SHOWS_ON_START):
             sickbeard.classes.loading_msg.message = 'Starting a forced show update'
             sickbeard.show_update_scheduler.action.run()
 
@@ -575,7 +633,7 @@ class SickGear(object):
         self.webserver.switch_handlers()
 
         # main loop
-        while True:
+        while 1:
             time.sleep(1)
 
     def daemonize(self):
@@ -649,13 +707,31 @@ class SickGear(object):
         logger.log(u'Loading initial show list')
 
         my_db = db.DBConnection()
-        sql_result = my_db.select('SELECT indexer AS tv_id, indexer_id AS prod_id, location FROM tv_shows')
+        sql_result = my_db.select('SELECT indexer AS tv_id, indexer_id AS prod_id, * FROM tv_shows'
+                                  ' ORDER BY indexer, indexer_id')
+        imdb_info_sql_result = my_db.select('SELECT * FROM imdb_info'
+                                            ' ORDER BY indexer, indexer_id')
 
+        failed_results = my_db.select('SELECT * FROM tv_shows_not_found ORDER BY indexer, indexer_id')
         sickbeard.showList = []
         sickbeard.showDict = {}
         for cur_result in sql_result:
             try:
-                show_obj = TVShow(int(cur_result['tv_id']), int(cur_result['prod_id']))
+                tv_id = int(cur_result['tv_id'])
+                prod_id = int(cur_result['prod_id'])
+                if imdb_info_sql_result and prod_id == imdb_info_sql_result[0]['indexer_id'] \
+                        and tv_id == imdb_info_sql_result[0]['indexer']:
+                    imdb_info_sql = imdb_info_sql_result.pop(0)
+                else:
+                    imdb_info_sql = None
+                show_obj = TVShow(tv_id, prod_id, show_sql=cur_result, imdb_info_sql=imdb_info_sql)
+                failed_sql = None
+                for s in failed_results:
+                    if prod_id == s['indexer_id'] and tv_id == s['indexer']:
+                        failed_sql = s
+                        failed_results.remove(s)
+                        break
+                show_obj._helper_load_failed_db(sql=failed_sql)
                 sickbeard.showList.append(show_obj)
                 sickbeard.showDict[show_obj.sid_int] = show_obj
             except (BaseException, Exception) as err:

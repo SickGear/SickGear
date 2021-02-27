@@ -1,0 +1,65 @@
+#import sickbeard
+#from sickbeard import TVInfoAPI
+#from sickbeard.helpers import anon_url
+#from six import iteritems
+<% def sg_var(varname, default=False): return getattr(sickbeard, varname, default) %>#slurp#
+<% def sg_str(varname, default=''): return getattr(sickbeard, varname, default) %>#slurp#
+##
+#set global $title = 'Character'
+#set global $header = 'Character'
+#set global $sbPath = '../..'
+#set global $topmenu = 'Character'
+##
+#import os.path
+#include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_top.tmpl')
+
+#if $varExists('header')
+	<h1 class="header">$header</h1>
+#else
+	<h1 class="title">$title</h1>
+#end if
+
+##
+#set $html_selected = ' selected="selected"'
+#set $html_checked = ' checked="checked"'
+<div id="character">
+	<div id="character-content" class="linefix">
+		<a href="$sbRoot/imagecache/character?character_id=$character.id&amp;show=$show_obj.tvid_prodid&amp;thumb=0" rel="dialog"><img src="$sbRoot/imagecache/character?character_id=$character.id&amp;show=$show_obj.tvid_prodid&amp;thumb=1" style="height: 300px;"></a>
+		<div style="font-weight: bolder;font-size: x-large;">$character.name</div>
+#if $character.person
+		<div style="font-weight:lighter;font-size: large;">(
+		#set $p_count = len($character.person)
+		#for $p_nb, $person in enumerate($character.person, 1)
+		<a href="$sbRoot/home/person?person_id=$person.id" >$person.name</a>
+		#if $p_nb < $p_count
+			<span>, </span>
+		#end if
+		#end for
+		)</div>
+#end if
+		<br />
+		<div><span style="font-weight: bolder; font-size: larger;">Bio:</span><br />$character.biography</div>
+		<br />
+		<div><span style="font-weight: bolder; font-size: larger;">Links:</span><br />
+#for $src, $sid in sorted(iteritems($character.ids))
+#if $TVInfoAPI($src).config.get('character_url')
+		<a href="$anon_url($TVInfoAPI($src).config['character_url'] % $sid)" target="_blank">
+		#if $TVInfoAPI($src).config.get('icon')
+		<img  alt="$TVInfoAPI($src).name" height="16" width="16" src="$sbRoot/images/$TVInfoAPI($src).config['icon']">
+		#end if
+		$TVInfoAPI($src).name</a><br />
+#end if
+#end for
+		</div>
+		<br />
+		<div><span style="font-weight: bolder; font-size: x-large;">Shows featuring this Character in db:</span><br />
+#for $character in $characters
+			<div style="margin: 10px;font-size: x-large;"><span style="width: 210px;display: inline-block;"><a href="$sbRoot/imagecache/character?character_id=$character['character_id']&amp;show=$character['show_obj'].tvid_prodid&amp;thumb=0" rel="dialog"><img src="$sbRoot/imagecache/character?character_id=$character['character_id']&amp;show=$character['show_obj'].tvid_prodid&amp;thumb=1" style="height: 200px;"></a></span>$character['character_name'] <span style="font-weight: lighter;">(<a href="$sbRoot/home/view-show?tvid_prodid=$character['show_obj'].tvid_prodid">$character['show_obj'].name</a>)</span></div>
+#end for
+		</div>
+	</div>
+</div>
+
+<div></div>
+
+#include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_bottom.tmpl')

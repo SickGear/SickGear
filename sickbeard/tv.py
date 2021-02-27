@@ -16,7 +16,7 @@
 
 from __future__ import with_statement
 
-from collections import OrderedDict
+from collections import OrderedDict, Counter
 import datetime
 import glob
 import inspect
@@ -27,6 +27,9 @@ import stat
 import threading
 import traceback
 
+from functools import reduce
+from itertools import chain
+
 coreid_warnings = False
 if coreid_warnings:
     import warnings
@@ -36,6 +39,8 @@ from lxml_etree import etree
 from lib import imdbpie
 from imdbpie import ImdbAPIError
 from lib import subliminal
+from lib.dateutil import tz
+from lib.fuzzywuzzy import fuzz
 
 # noinspection PyPep8Naming
 import encodingKludge as ek
@@ -53,19 +58,54 @@ from .generic_queue import QueuePriorities
 from .name_parser.parser import NameParser, InvalidNameException, InvalidShowException
 from .helpers import try_int, try_float
 from .indexermapper import del_mapping, save_mapping, MapStatus
-from .indexers.indexer_config import TVINFO_IMDB, TVINFO_TVDB, TVINFO_TVRAGE
-from tvinfo_base.exceptions import *
+from .indexers.indexer_config import TVINFO_IMDB, TVINFO_TVDB, TVINFO_TVMAZE, TVINFO_TVRAGE, TVINFO_TRAKT, TVINFO_TMDB
+from lib.tvinfo_base.exceptions import *
+from lib.tvinfo_base import TVINFO_TWITTER, TVINFO_FACEBOOK, TVINFO_WIKIPEDIA, TVINFO_INSTAGRAM, TVINFO_SLUG
 from .sgdatetime import SGDatetime, timestamp_near
+from sg_helpers import calc_age, time_to_int, int_to_time, remove_file_perm
 from .tv_base import TVEpisodeBase, TVShowBase
+from lib.dateutil.parser import parser as du_parser
 
 from _23 import filter_list, filter_iter, list_keys
-from six import integer_types, iteritems, itervalues, string_types
+from six import integer_types, iteritems, itervalues, moves, string_types, PY2
 
 # noinspection PyUnreachableCode
 if False:
-    from typing import Any, AnyStr, Dict, List, Optional, Text
-    from tvinfo_base import TVInfoEpisode
+    from typing import Any, AnyStr, Dict, List, Optional, Set, Text, Union
+    from sqlite3 import Row
+    from lib.tvinfo_base import CastList, TVInfoShow, TVInfoEpisode, Character as TVINFO_Character, \
+        Person as TVINFO_Person
 
+tz_p = du_parser()
+
+# status codes for switching tv show source
+TVSWITCH_NORMAL = 0
+TVSWITCH_VERIFY_ERROR = 1
+TVSWITCH_NOT_FOUND_ERROR = 2
+TVSWITCH_DUPLICATE_SHOW = 3
+TVSWITCH_SOURCE_NOT_FOUND_ERROR = 4
+TVSWITCH_NO_NEW_ID = 5
+TVSWITCH_SAME_ID = 6
+TVSWITCH_ID_CONFLICT = 7
+
+tvswitch_names = {
+    TVSWITCH_NORMAL: 'Normal',
+    TVSWITCH_VERIFY_ERROR: 'Verification error',
+    TVSWITCH_NOT_FOUND_ERROR: 'Not found on new tv source',
+    TVSWITCH_DUPLICATE_SHOW: 'Duplicate Show',
+    TVSWITCH_SOURCE_NOT_FOUND_ERROR: 'source show not found',
+    TVSWITCH_NO_NEW_ID: 'no new id found',
+    TVSWITCH_SAME_ID: 'unchanged ids given',
+    TVSWITCH_ID_CONFLICT: 'new id conflicts with existing show'
+}
+
+TVSWITCH_EP_DELETED = 1
+TVSWITCH_EP_RENAMED = 2
+
+tvswitch_ep_names = {
+    TVSWITCH_EP_DELETED: 'deleted',
+    TVSWITCH_EP_RENAMED: 'renamed'
+}
 
 concurrent_show_not_found_days = 7
 show_not_found_retry_days = 7
@@ -205,13 +245,864 @@ class TVidProdid(object):
         return self._prodid
 
 
+class PersonGenders(object):
+    UNKNOWN = 0
+    male = 1
+    female = 2
+
+    possible_values = [0, 1, 2]
+    names = {UNKNOWN: 'Unknown', male: 'Male', female: 'Female'}
+    tmdb_map = {0: UNKNOWN, 1: female, 2: male}
+
+
+def _make_date(dt):
+    # type: (datetime.date) -> integer_types
+    if not dt:
+        return None
+    return dt.toordinal()
+
+
+class Person(object):
+    def __init__(
+            self,
+            name=None,  # type: AnyStr
+            gender=PersonGenders.UNKNOWN,  # type: int
+            birthday=None,  # type: datetime.date
+            deathday=None,  # type: datetime.date
+            bio=None,  # type: AnyStr
+            ids=None,  # type: Dict[int, integer_types]
+            sid=None,  # type: integer_types
+            birthplace=None,  # type: AnyStr
+            homepage=None,  # type: AnyStr
+            image_url=None,  # type: AnyStr
+            thumb_url=None,  # type: AnyStr
+            show_obj=None,  # type: TVShow
+            updated=1,  # type: integer_types
+            deathplace=None,  # type: AnyStr
+            height=None,  # type: Union[integer_types, float]
+            real_name=None,  # type: AnyStr
+            nicknames=None,  # type: Set[AnyStr]
+            akas=None,  # type: Set[AnyStr]
+            character_obj=None,  # type: Character
+            tmp_character_obj=None  # type: Character
+    ):  # type: (...) -> Person
+
+        self.updated = updated  # type: integer_types
+        self._data_failure = False  # type: bool
+        self._data_fetched = False  # type: bool
+        self.name = name  # type: AnyStr
+        self.character_obj = character_obj  # type: Optional[Character]
+        self._tmp_character_obj = tmp_character_obj  # type: Optional[Character]
+        self.gender = (PersonGenders.UNKNOWN, gender)[gender in PersonGenders.possible_values]  # type: int
+        self.birthday = birthday  # type: Optional[datetime.date]
+        self.deathday = deathday  # type: Optional[datetime.date]
+        self.biography = bio  # type: Optional[AnyStr]
+        self.birthplace = birthplace  # type: Optional[AnyStr]
+        self.homepage = homepage  # type: Optional[AnyStr]
+        self.image_url = image_url  # type: Optional[AnyStr]
+        self.thumb_url = thumb_url  # type: Optional[AnyStr]
+        self.deathplace = deathplace  # type: Optional[AnyStr]
+        self.height = height  # type: Optional[Union[integer_types, float]]
+        self.real_name = real_name  # type: Optional[AnyStr]
+        self.nicknames = nicknames or set()  # type: Set[AnyStr]
+        self.akas = akas or set()  # type: Set[AnyStr]
+        self.ids = ids or {}  # type: Dict[int, integer_types]
+        self.id = sid or self._get_sid(show_obj=show_obj)  # type: integer_types
+        new_dirty = not sid
+        self.dirty_main = new_dirty  # type: bool
+        self.dirty_ids = new_dirty  # type: bool
+        if not sid and self.id:
+            fetched = self._data_fetched
+            cur_data = self._remember_properties()
+            self.load_from_db()
+            cur_data['ids'] = dict(chain.from_iterable(iteritems(d) for d in (self.ids, ids or {})))
+            self.update_properties(**cur_data)
+            self._data_fetched = fetched
+        elif not self.name:
+            self.load_from_db()
+
+    def _remember_properties(self):
+        # type: (...) -> Dict
+        return {k: self.__dict__[k] for k in
+                ['name', 'gender', 'birthday', 'deathday', 'biography', 'birthplace', 'homepage', 'image_url',
+                 'thumb_url', 'deathplace', 'height', 'real_name', 'nicknames', 'akas', 'ids']}
+
+    def reset(self, person_obj=None):
+        # type: (TVINFO_Person) -> None
+        """
+        reset all properties with the exception of: name, id, ids
+
+        :param person_obj: TVInfo Person object to reset to
+        """
+        self.gender = person_obj.gender or PersonGenders.UNKNOWN
+        self.birthday = person_obj.birthdate or None
+        self.deathday = person_obj.deathdate or None
+        self.biography = person_obj.bio or None
+        self.birthplace = person_obj.birthplace or None
+        self.homepage = person_obj.homepage or None
+        self.image_url = person_obj.image or None
+        self.thumb_url = person_obj.thumb_url or None
+        self.deathplace = person_obj.deathplace or None
+        self.height = person_obj.height or None
+        self.real_name = person_obj.real_name or None
+        self.nicknames = person_obj.nicknames or set()
+        self.akas = person_obj.akas or set()
+        self.updated = 1
+        self.dirty_main = True
+        self._data_failure = False
+        self._data_fetched = False
+
+    def _get_sid(self, mass_action_result=None, show_obj=None):
+        # type: (List, TVShow) -> Optional[integer_types]
+        if getattr(self, 'id', None):
+            return self.id
+
+        def _get_from_ids():
+            my_db = db.DBConnection()
+            sr = my_db.select('SELECT person_id FROM person_ids WHERE %s' %
+                              ' OR '.join(['( src = ? AND src_id = ? )'] * len(self.ids)),
+                              list(reduce(lambda a, b: a + b, iteritems(self.ids))))
+            if sr:
+                return sr[0]['person_id']
+
+        if mass_action_result:
+            try:
+                return mass_action_result[-1:][0][0]['last_rowid']
+            except (BaseException, Exception):
+                return
+        elif self.ids:
+            i = _get_from_ids()
+            if i:
+                return i
+        self.get_missing_data(show_obj=show_obj)
+        if self.ids:
+            return _get_from_ids()
+
+    def _set_updated(self):
+        # type: (...) -> integer_types
+        """
+        set and return new update date
+        """
+        self.updated = datetime.date.today().toordinal() - (0, 120)[self._data_failure]
+        return self.updated
+
+    def remove_img(self):
+        """
+        removes image of person
+        """
+        try:
+            remove_file_perm(image_cache.ImageCache().person_path(self))
+        except (BaseException, Exception):
+            pass
+
+    def remove_thumb(self):
+        """
+        removes thumb image of person
+        """
+        try:
+            remove_file_perm(image_cache.ImageCache().person_thumb_path(self))
+        except (BaseException, Exception):
+            pass
+
+    def remove_all_img(self):
+        """
+        remove all images of person
+        """
+        try:
+            for r in image_cache.ImageCache().person_both_paths(self):
+                try:
+                    remove_file_perm(r)
+                except (BaseException, Exception):
+                    pass
+        except (BaseException, Exception):
+            pass
+
+    def update_properties(self, **kwargs):
+        """
+        updates properties of class, if changed sets dirty
+        :param kwargs: properties of class
+        """
+        if (not self.image_url and not self.thumb_url) or (not self.image_url and kwargs.get('image_url')):
+            if kwargs.get('image_url'):
+                self.dirty_main = True
+                self.remove_img()
+                self.image_url = kwargs.get('image_url')
+                # thumb changed, remove old image
+                if kwargs.get('thumb_url'):
+                    self.remove_thumb()
+                    self.thumb_url = kwargs.get('thumb_url')
+                else:
+                    self.remove_thumb()
+                    self.thumb_url = None
+            elif kwargs.get('thumb_url'):
+                self.dirty_main = True
+                self.thumb_url = kwargs.get('thumb_url')
+                # image changed remove old image
+                self.remove_img()
+                if kwargs.get('image_url'):
+                    self.remove_img()
+                    self.image_url = kwargs.get('image_url')
+                else:
+                    self.remove_img()
+                    self.image_url = None
+
+        for k, v in iteritems(kwargs):
+            if k in ('image_url', 'thumb_url'):
+                continue
+            if k not in self.__dict__:
+                raise Exception('Person has no property [%s]' % k)
+            if None is not v:
+                if 'akas' == k:
+                    v.update(self.akas)
+                elif 'nicknames' == k:
+                    v.update(self.nicknames)
+                if v != self.__dict__[k]:
+                    if 'biography' == k:
+                        if len(v) > len(self.biography or ''):
+                            self.biography = v
+                            self.dirty_main = True
+                    elif 'gender' == k and v not in (PersonGenders.male, PersonGenders.female):
+                        continue
+                    else:
+                        self.__dict__[k] = v
+                    if 'ids' == k:
+                        self.dirty_ids = True
+                    else:
+                        self.dirty_main = True
+
+    def load_from_db(self):
+        if self.id:
+            my_db = db.DBConnection()
+            pr = my_db.select('SELECT persons.*,'
+                              ' (SELECT group_concat(person_ids.src || ":" || person_ids.src_id, ";;;")'
+                              ' FROM person_ids WHERE person_ids.person_id = persons.id) as p_ids'
+                              ' FROM persons'
+                              ' LEFT JOIN person_ids pi on persons.id = pi.person_id'
+                              ' WHERE persons.id = ?', [self.id])
+            if pr:
+                p = pr[0]
+                birthdate = try_int(p['birthdate'], None)
+                birthdate = birthdate and datetime.date.fromordinal(p['birthdate'])
+                deathdate = try_int(p['deathdate'], None)
+                deathdate = deathdate and datetime.date.fromordinal(p['deathdate'])
+                p_ids = {}
+                for i in (p['p_ids'] and p['p_ids'].split(';;;')) or []:
+                    k, v = i.split(':')
+                    k = try_int(k, None)
+                    if v:
+                        if k in (TVINFO_INSTAGRAM, TVINFO_TWITTER, TVINFO_FACEBOOK, TVINFO_WIKIPEDIA):
+                            p_ids[k] = v
+                        else:
+                            p_ids[k] = try_int(v, None)
+                (self.name, self.gender, self.image_url, self.thumb_url, self.homepage, self.biography,
+                 self.birthplace, self.birthday, self.deathday, self.ids, self.updated, self.deathplace,
+                 self.real_name, self.height, self.nicknames, self.akas, self._data_fetched, self._data_failure) = \
+                    p['name'], p['gender'], p['image_url'], p['thumb_url'], p['homepage'], p['bio'], \
+                    p['birthplace'], birthdate, deathdate, p_ids, p['updated'], p['deathplace'], p['realname'], \
+                    p['height'], set((p['nicknames'] and p['nicknames'].split(';;;')) or []), \
+                    set((p['akas'] and p['akas'].split(';;;')) or []), False, False
+
+    def update_prop_from_tvinfo_person(self, person_obj):
+        # type: (TVINFO_Person) -> None
+        """
+        update person with tvinfo person object info
+        Note: doesn't change: name, id, image_url, thumb_url
+
+        :param person_obj: TVInfo Person object
+        """
+        if person_obj:
+            char_obj = self.character_obj or self._tmp_character_obj
+            if person_obj.characters and char_obj and char_obj.show_obj \
+                    and char_obj.show_obj.ids.get(TVINFO_IMDB, {}).get('id'):
+                p_char = [pc for pc in person_obj.characters
+                          if pc.show.ids.imdb == char_obj.show_obj.ids.get(TVINFO_IMDB, {}).get('id')]
+                p_count = len(p_char)
+                if 1 == p_count:
+                    if (p_char[0].start_year or p_char[0].end_year) and getattr(self, 'id', None):
+                        char_obj.combine_start_end_years(
+                            {self.id: {'start': p_char[0].start_year, 'end': p_char[0].end_year}})
+                elif 1 < p_count:
+                    start, end, found, p_p = None, None, False, None
+                    for c_p in p_char:
+                        if not start or start > (c_p.start_year or 3000):
+                            start = c_p.start_year
+                        if not end or end < (c_p.end_year or 0):
+                            end = c_p.end_year
+                        if c_p.name == char_obj.name:
+                            start = c_p.start_year
+                            end = c_p.end_year
+                            found = True
+                            break
+                    if not found:
+                        try:
+                            p_p = sorted([
+                                (fuzz.UWRatio(char_obj.name, p.name),
+                                 p.end_year and p.start_year and p.end_year - p.start_year, p) for p in p_char],
+                                key=lambda a: (a[0], a[1]), reverse=True)[0][2]
+                        except (BaseException, Exception):
+                            p_p = None
+                    if None is not p_p and (p_p.start_year or p_p.end_year):
+                        start = p_p.start_year
+                        end = p_p.end_year
+                    if (start or end) and getattr(self, 'id', None):
+                        char_obj.combine_start_end_years({self.id: {'start': start, 'end': end}})
+            self.update_properties(
+                gender=person_obj.gender, homepage=person_obj.homepage,
+                ids=dict(chain.from_iterable(
+                    iteritems(d) for d in (self.ids, {k: v for k, v in iteritems(person_obj.ids)
+                                                      if v and TVINFO_SLUG != k} or {}))),
+                birthday=person_obj.birthdate, deathday=person_obj.deathdate, biography=person_obj.bio,
+                birthplace=person_obj.birthplace, deathplace=person_obj.deathplace, height=person_obj.height,
+                real_name=person_obj.real_name, nicknames=person_obj.nicknames, akas=person_obj.akas
+            )
+
+    def get_missing_data(self, show_obj=None, character_obj=None, stop_event=None, force_id=False):
+        # type: (TVShow, Character, threading.Event, bool) -> None
+        """
+        load missing data for person from trakt + tmdb
+
+        :param show_obj:
+        :param character_obj:
+        :param stop_event:
+        :param force_id: refetch all external ids, normally only source ids and missing are fetched
+        """
+        if character_obj and not self.character_obj:
+            self.character_obj = character_obj
+        if self._data_failure:
+            self.dirty_main = True
+        self._data_failure = False
+        self._data_fetched = True
+        r, found_persons, found_on_src, search_sources, found_ids, ids_to_check, tv_loop, imdb_confirmed, \
+        confirmed_character, source_confirmed = \
+            None, {}, set(), [TVINFO_TRAKT, TVINFO_TMDB, TVINFO_IMDB], \
+            set([k for k, v in iteritems(self.ids) if v] + ['text']), {}, 0, False, False, {}
+        max_search_src = len(search_sources)
+        logger.debug('Getting extra data for: %s' % self.name)
+        for tv_loop in moves.xrange(0, max_search_src):
+            search_sources = [s for s in search_sources if s not in found_on_src]
+            for cur_tv_info_src in search_sources:
+                if stop_event and stop_event.is_set():
+                    return
+                rp, confirmed_on_src = None, False
+                tvinfo_config = sickbeard.TVInfoAPI(cur_tv_info_src).api_params.copy()
+                t = sickbeard.TVInfoAPI(cur_tv_info_src).setup(**tvinfo_config)
+                if 0 == tv_loop or cur_tv_info_src not in ids_to_check:
+                    ids_to_check[cur_tv_info_src] = t.supported_person_id_searches + ['text']
+                    found_persons[cur_tv_info_src] = set()
+                for tv_src in ids_to_check[cur_tv_info_src]:
+                    if 'text' != tv_src and not self.ids.get(tv_src):
+                        continue
+                    try:
+                        if 'text' != tv_src:
+                            kw = {'ids': {tv_src: self.ids[tv_src]}}
+                        else:
+                            kw = {'name': self.name}
+                        r = t.search_person(**kw)
+                    except (BaseException, Exception):
+                        self._data_failure = True
+                        continue
+                    if r:
+                        # verify we have the correct person
+                        for p in r:  # type: TVINFO_Person
+                            if None is not rp:
+                                break
+                            if not (imdb_confirmed and TVINFO_IMDB == tv_src) \
+                                    and p.id in found_persons[cur_tv_info_src]:
+                                continue
+                            found_persons[cur_tv_info_src].add(p.id)
+                            try:
+                                pd = t.get_person(p.ids.get(cur_tv_info_src), get_show_credits=True, get_images=True)
+                            except (BaseException, Exception) as e:
+                                self._data_failure = True
+                                logger.warning('Error searching extra info for person: %s - %s' % (self.name, ex(e)))
+                                continue
+                            if None is not pd and imdb_confirmed and TVINFO_IMDB == tv_src:
+                                rp = pd
+                                break
+                            if show_obj and None is not pd and pd.characters:
+                                clean_show_name = indexermapper.clean_show_name(show_obj.name.lower())
+                                for ch in pd.characters or []:  # type: TVINFO_Character
+                                    if clean_show_name == indexermapper.clean_show_name(ch.show.seriesname.lower()):
+                                        rp = pd
+                                        confirmed_character = confirmed_on_src = True
+                                        break
+                                    elif any(t_src == s_src and bool(t_id) and t_id == s_id['id']
+                                             for t_src, t_id in iteritems(ch.show.ids)
+                                             for s_src, s_id in iteritems(show_obj.ids)):
+                                        rp = pd
+                                        confirmed_character = confirmed_on_src = True
+                                        break
+                        if rp:
+                            if TVINFO_IMDB == cur_tv_info_src and confirmed_on_src:
+                                imdb_confirmed = True
+                            found_on_src.add(cur_tv_info_src)
+                            break
+
+                ids_to_check[cur_tv_info_src] = [i for i in ids_to_check[cur_tv_info_src] if i not in found_ids]
+
+                if None is not rp:
+                    if confirmed_on_src:
+                        for i in (TVINFO_TRAKT, TVINFO_IMDB, TVINFO_TMDB, TVINFO_TVMAZE, TVINFO_TVDB):
+                            # in case it's the current source use it's id and lock if from being changed
+                            if cur_tv_info_src == i and rp.ids.get(i):
+                                source_confirmed[i] = True
+                                if rp.ids.get(i) != self.ids.get(i):
+                                    self.ids[i] = rp.ids[i]
+                                    self.dirty_ids = True
+                            if not source_confirmed.get(i) and \
+                                    (rp.ids.get(i) and not self.ids.get(i) or
+                                     (force_id and rp.ids.get(i) and rp.ids.get(i) != self.ids.get(i))):
+                                self.ids[i] = rp.ids[i]
+                                found_ids.add(i)
+                                self.dirty_ids = True
+
+                        for i in (TVINFO_INSTAGRAM, TVINFO_TWITTER, TVINFO_FACEBOOK, TVINFO_WIKIPEDIA):
+                            if rp.social_ids.get(i) and not self.ids.get(i) or \
+                                    (rp.social_ids.get(i) and rp.social_ids.get(i) != self.ids.get(i)):
+                                self.ids[i] = rp.social_ids[i]
+                                found_ids.add(i)
+                                self.dirty_ids = True
+
+                    self.update_prop_from_tvinfo_person(rp)
+                    if not self.image_url and rp.image:
+                        self.image_url = rp.image
+                        if rp.thumb_url:
+                            self.thumb_url = rp.thumb_url
+                        else:
+                            self.remove_thumb()
+                            self.thumb_url = None
+                        self.dirty_main = True
+                    elif not self.thumb_url and rp.thumb_url:
+                        self.thumb_url = rp.thumb_url
+                        if not rp.image:
+                            self.remove_img()
+                            self.image_url = None
+                        self.dirty_main = True
+
+    def save_to_db(self, show_obj=None, character_obj=None, force=False, stop_event=None):
+        # type: (TVShow, Character, bool, threading.Event) -> None
+        if not self._data_fetched:
+            self.get_missing_data(show_obj=show_obj, character_obj=character_obj, force=force, stop_event=stop_event)
+        self._data_fetched = False
+        if not any(d for d in (self.dirty_main, self.dirty_ids)):
+            return
+        my_db = db.DBConnection()
+        if not self.id:
+            cl = [
+                ['INSERT INTO persons (name, gender, birthdate, deathdate, bio, birthplace, homepage,'
+                 ' image_url, thumb_url, updated, deathplace, height, realname, nicknames, akas)'
+                 ' VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?);',
+                 [self.name, self.gender, _make_date(self.birthday), _make_date(self.deathday), self.biography,
+                  self.birthplace, self.homepage, self.image_url, self.thumb_url, self._set_updated(), self.deathplace,
+                  self.height, self.real_name, ';;;'.join(self.nicknames or []), ';;;'.join(self.akas or [])]],
+            ]
+            c_ids = len(self.ids)
+            if c_ids:
+                f_d = next(iter(self.ids))
+                cl.extend([
+                    ['INSERT INTO person_ids (src, src_id, person_id) VALUES (?,?,last_insert_rowid())',
+                     [f_d, self.ids[f_d]]]
+                ])
+                if 1 < c_ids:
+                    cl.extend([
+                        ['INSERT INTO person_ids (src, src_id, person_id)'
+                         ' VALUES (?,?, (SELECT person_ids.person_id FROM person_ids'
+                         ' WHERE person_ids.id = last_insert_rowid()));',
+                         [s, self.ids[s]]] for s in list(self.ids)[1:]
+                    ])
+                cl.extend([
+                    ['SELECT person_ids.person_id as last_rowid FROM person_ids'
+                     ' WHERE person_ids.id = last_insert_rowid()']
+                ])
+            else:
+                cl.extend([['SELECT last_insert_rowid() as last_rowid;']])
+        else:
+            cl = []
+            if force or self.dirty_main:
+                cl = [
+                         ['UPDATE persons SET name = ?, gender = ?, birthdate = ?, deathdate = ?, bio = ?,'
+                          ' birthplace = ?, homepage = ?, image_url = ?, thumb_url = ?, updated = ?,'
+                          ' deathplace = ?, height = ?, realname = ?, nicknames = ?, akas = ? WHERE id = ?',
+                          [self.name, self.gender, _make_date(self.birthday), _make_date(self.deathday), self.biography,
+                           self.birthplace, self.homepage, self.image_url, self.thumb_url,
+                           self._set_updated(), self.deathplace, self.height, self.real_name,
+                           ';;;'.join(self.nicknames or []), ';;;'.join(self.akas or []), self.id]],
+                     ]
+            if force or self.dirty_ids:
+                for s, v in iteritems(self.ids):
+                    cl.extend([
+                        ['UPDATE person_ids SET src_id = ? WHERE person_id = ? AND src = ?', [v, self.id, s]],
+                        ['INSERT INTO person_ids (src, src_id, person_id) SELECT %s, "%s", %s WHERE changes() == 0'
+                         % (s, v, self.id)]
+                    ])
+        if cl:
+            r_id = my_db.mass_action(cl)
+            if r_id and r_id[-1:][0]:
+                self.id = self._get_sid(r_id)
+            self.dirty_main, self.dirty_ids = False, False
+
+    def calc_age(self, date=None):
+        # type: (Optional[datetime.date]) -> Optional[int]
+        """
+        returns age based on current date or given date
+        :param date:
+        """
+        return calc_age(self.birthday, self.deathday, date)
+
+    @property
+    def age(self):
+        # type: (...) -> Optional[int]
+        """
+        :return: age of person if birthdate is known, in case of deathdate is known return age of death
+        """
+        return self.calc_age()
+
+    def __bool__(self):
+        return bool(self.name)
+
+    def __eq__(self, other):
+        return (self.id not in [None, 0] and other.id == self.id) \
+               and any(self.ids[o] == v for o, v in iteritems(other.ids))
+
+    def __str__(self):
+        lived, id_str, id_list = '', '', []
+        if self.birthday:
+            lived += ' %s' % self.birthday
+        if self.deathday:
+            lived += ' - %s' % self.deathday
+        for i, d in iteritems(self.ids):
+            id_list.append('%s: %s' % (sickbeard.TVInfoAPI(i).name, d))
+        if id_list:
+            id_str = ' (%s)' % ', '.join(id_list)
+        return '<Person %s%s%s>' % (self.name, lived, id_str)
+
+    def __repr__(self):
+        return self.__str__()
+
+    __nonzero__ = __bool__
+
+
+class Character(object):
+    def __init__(
+            self,
+            name=None,  # type: AnyStr
+            person=None,  # type: List[Person]
+            ids=None,  # type: Dict[int, integer_types]
+            bio=None,  # type: AnyStr
+            sid=None,  # type: integer_types
+            image_url=None,  # type: AnyStr
+            thumb_url=None,  # type: AnyStr
+            show_obj=None,  # type: TVShow
+            updated=1,  # type: integer_types
+            persons_years=None,  # type: Dict[integer_types, Dict[AnyStr, int]]
+            tmp=False  # type:bool
+    ):  # type: (...) -> Character
+
+        self.updated = updated  # type: integer_types
+        self.name = name  # type: AnyStr
+        self.persons_years = persons_years or {}  # type: Dict[integer_types, Dict[AnyStr, int]]
+        self.person = person or []  # type: List[Person]
+        self.biography = bio  # type: Optional[AnyStr]
+        self.ids = ids or {}  # type: Dict[int, integer_types]
+        self.image_url = image_url  # type: Optional[AnyStr]
+        self.thumb_url = thumb_url  # type: Optional[AnyStr]
+        self.show_obj = show_obj  # type: TVShow
+        if not tmp:
+            self.id = sid or self._get_sid()  # type: integer_types
+            new_dirty = not sid
+            self.dirty_main = new_dirty  # type: bool
+            self.dirty_ids = new_dirty  # type: bool
+            self.dirty_person = new_dirty  # type: bool
+            self.dirty_years = new_dirty  # type: bool
+            if not sid and self.id:
+                self.load_from_db()
+                self.update_properties(name=name, person=person, biography=bio,
+                                       ids=dict(chain.from_iterable(iteritems(d) for d in (self.ids, ids or {}))),
+                                       image_url=image_url, thumb_url=thumb_url)
+            elif not self.name:
+                self.load_from_db()
+
+    def _get_sid(self, mass_action_result=None):
+        # type: (List) -> Optional[integer_types]
+        if getattr(self, 'id', None):
+            return self.id
+
+        if mass_action_result:
+            try:
+                return mass_action_result[-1:][0][0]['last_rowid']
+            except (BaseException, Exception):
+                return
+        elif self.ids:
+            my_db = db.DBConnection()
+            sr = my_db.select('SELECT character_id FROM character_ids WHERE %s' %
+                              ' OR '.join(['( src = ? AND src_id = ? )'] * len(self.ids)),
+                              list(reduce(lambda a, b: a+b, iteritems(self.ids))))
+            if sr:
+                return sr[0]['character_id']
+        elif self.person:
+            my_db = db.DBConnection()
+            sr = my_db.select('SELECT characters.id as c_id FROM characters'
+                              ' LEFT JOIN character_person_map cpm on characters.id = cpm.character_id '
+                              ' WHERE name = ? AND cpm.person_id IN (%s)' % ','.join(['?' * len(self.person)]),
+                              [self.name] + [p.id for p in self.person])
+            if sr:
+                return sr[0]['c_id']
+
+    def _set_updated(self):
+        # type: (...) -> integer_types
+        """
+        set and return new update date
+        """
+        self.updated = datetime.date.today().toordinal()
+        return self.updated
+
+    def remove_img(self):
+        """
+        removes image of person
+        """
+        try:
+            remove_file_perm(image_cache.ImageCache().character_path(self, self.show_obj))
+        except (BaseException, Exception):
+            pass
+
+    def remove_thumb(self):
+        """
+        removes thumb image of person
+        """
+        try:
+            remove_file_perm(image_cache.ImageCache().character_thumb_path(self, self.show_obj))
+        except (BaseException, Exception):
+            pass
+
+    def remove_all_img(self, include_person=False, tvid=None, proid=None):
+        # type: (bool, integer_types, integer_types) -> None
+        """
+        remove all images of person
+        """
+        try:
+            for r in image_cache.ImageCache().character_both_path(self, show_obj=self.show_obj, tvid=tvid, proid=proid):
+                try:
+                    remove_file_perm(r)
+                except (BaseException, Exception):
+                    pass
+        except (BaseException, Exception):
+            pass
+        if include_person:
+            for p in self.person or []:
+                try:
+                    p.remove_all_img()
+                except (BaseException, Exception):
+                    pass
+
+    def update_properties(self, **kwargs):
+        for k, v in iteritems(kwargs):
+            if k not in self.__dict__:
+                raise Exception('Character has no property [%s]' % k)
+            if None is not v and v != self.__dict__[k]:
+                if 'image_url' == k:
+                    self.dirty_main = True
+                    self.remove_img()
+                    if not kwargs.get('thumb_url'):
+                        self.remove_thumb()
+                        self.thumb_url = None
+                elif 'thumb_url' == k:
+                    self.dirty_main = True
+                    self.remove_thumb()
+                    if not kwargs.get('image_url'):
+                        self.remove_img()
+                        self.image_url = None
+                self.__dict__[k] = v
+                if 'ids' == k:
+                    self.dirty_ids = True
+                elif 'person' == k:
+                    self.dirty_person = True
+                else:
+                    self.dirty_main = True
+
+    def combine_start_end_years(self, new_years):
+        # type: (Dict[integer_types, Dict[AnyStr, int]]) -> None
+        new_dict = dict(chain.from_iterable(
+                    iteritems(d) for d in (self.persons_years, {k: v for k, v in iteritems(new_years) if v} or {})))
+        if new_dict != self.persons_years:
+            self.persons_years = new_dict
+            self.dirty_years = True
+
+    def load_from_db(self):
+        if self.id:
+            my_db = db.DBConnection()
+            r = my_db.select('SELECT characters.name as name, characters.bio as bio,'
+                             ' characters.thumb_url as thumb_url, characters.image_url as image_url,'
+                             ' characters.updated as c_updated,'
+                             ' (SELECT group_concat(character_ids.src || ":" || character_ids.src_id, ";;;")'
+                             ' FROM character_ids WHERE character_ids.character_id = characters.id) as c_ids,'
+                             ' (SELECT group_concat(character_person_map.person_id, ";;;")'
+                             ' FROM character_person_map'
+                             ' WHERE character_person_map.character_id = characters.id) as person_ids,'
+                             ' (SELECT group_concat(character_person_years.person_id || ":" ||'
+                             ' character_person_years.start_year || "-" || character_person_years.end_year, ";;;")'
+                             ' FROM character_person_years WHERE character_person_years.character_id = characters.id)'
+                             ' as p_years'
+                             ' FROM characters'
+                             ' LEFT JOIN character_ids ci on characters.id = ci.character_id'
+                             ' WHERE characters.id = ?',
+                             [self.id])
+            if r:
+                r = r[0]
+                c_ids = {}
+                for i in (r['c_ids'] and r['c_ids'].split(';;;')) or []:
+                    k, v = i.split(':')
+                    v = try_int(v, None)
+                    if v:
+                        c_ids[int(k)] = try_int(v, None)
+                p_years = {}
+                for p in (r['p_years'] and r['p_years'].split(';;;')) or []:
+                    p_id, py = p.split(':')
+                    start, end = py.split('-')
+                    p_years[int(p_id)] = {'start': try_int(start, None), 'end': try_int(end, None)}
+                self.name, self.ids, self.image_url, self.thumb_url, self.biography, self.person, self.updated, \
+                    self.persons_years = \
+                    r['name'], c_ids, r['image_url'], r['thumb_url'], r['bio'], \
+                    [Person(sid=int(p), character_obj=self)
+                     for p in (r['person_ids'] and r['person_ids'].split(';;;')) or []], \
+                    r['c_updated'], p_years
+
+                self.dirty_main, self.dirty_ids, self.dirty_person = False, False, False
+
+    def _get_start_end_year(self):
+        if self.person:
+            tvinfo_config = sickbeard.TVInfoAPI(TVINFO_IMDB).api_params.copy()
+            t = sickbeard.TVInfoAPI(TVINFO_IMDB).setup(**tvinfo_config)
+            for per in self.person:
+                if not per.id:
+                    continue
+                if per.ids.get(TVINFO_IMDB):
+                    try:
+                        res = t.get_person(per.ids.get(TVINFO_IMDB), get_show_credits=True)
+                    except (BaseException, Exception):
+                        continue
+                    if res.characters:
+                        per.character_obj = self
+                        per.update_prop_from_tvinfo_person(res)
+
+    def save_to_db(self, show_obj=None, force=False, stop_event=None):
+        # type: (TVShow, bool, threading.Event) -> None
+        if self.person:
+            for per in self.person:
+                if stop_event and stop_event.is_set():
+                    return
+                if force or self.dirty_person or not per.id or per.dirty_main or per.dirty_ids or \
+                        14 < (datetime.date.today().toordinal() - per.updated):
+                    per.save_to_db(show_obj=show_obj, character_obj=self, force=force, stop_event=stop_event)
+                    self.dirty_person = True
+
+        if ((None is self.id and not self.persons_years)
+                or self.dirty_main or 14 < datetime.date.today().toordinal() - self.updated) and self.person:
+            self._get_start_end_year()
+
+        my_db = db.DBConnection()
+        if not self.id:
+            cl = [
+                     ['INSERT INTO characters (name, bio, thumb_url, image_url, updated) VALUES (?,?,?,?,?)',
+                      [self.name, self.biography, self.thumb_url, self.image_url, self._set_updated()]],
+                 ]
+            c_ids = len(self.ids)
+            if c_ids:
+                f_d = next(iter(self.ids))
+                cl.extend([
+                    ['INSERT INTO character_ids (src, src_id, character_id) VALUES (?,?,last_insert_rowid())',
+                     [f_d, self.ids[f_d]]]
+                ])
+                if 1 < c_ids:
+                    cl.extend([
+                        ['INSERT INTO character_ids (src, src_id, character_id)'
+                         ' VALUES (?,?, (SELECT character_ids.character_id FROM character_ids'
+                         ' WHERE character_ids.id = last_insert_rowid()));',
+                         [s, self.ids[s]]] for s in list(self.ids)[1:]
+                    ])
+                cl.extend([
+                    ['SELECT character_ids.character_id as last_rowid FROM character_ids'
+                     ' WHERE character_ids.id = last_insert_rowid()']
+                ])
+            else:
+                cl.extend([['SELECT last_insert_rowid() as last_rowid;']])
+        else:
+            cl = []
+            if force or self.dirty_main:
+                cl = [
+                         ['UPDATE characters SET name = ?, bio = ?, thumb_url = ?, image_url = ?, updated = ?'
+                          ' WHERE id = ?',
+                          [self.name, self.biography, self.thumb_url, self.image_url, self._set_updated(), self.id]],
+                     ]
+            if force or self.dirty_ids:
+                for s, v in iteritems(self.ids):
+                    cl.extend([
+                        ['UPDATE character_ids SET src_id = ? WHERE character_id = ? AND src = ?', [v, self.id, s]],
+                        ['INSERT INTO character_ids (src, src_id, character_id) SELECT %s, %s, %s WHERE changes() == 0'
+                         % (s, v, self.id)]
+                    ])
+
+        # in case we don't have a character id yet, we need to fetch it for the next step
+        if not self.id and cl:
+            r_id = my_db.mass_action(cl)
+            cl = []
+            if r_id and r_id[-1:][0]:
+                # r_id = list(itertools.chain.from_iterable(r_id))
+                if r_id:
+                    self.id = self._get_sid(r_id)
+
+        if (force or self.dirty_person) and self.person:
+            cl.append(['DELETE FROM character_person_map WHERE character_id = ? AND person_id NOT IN (%s)' %
+                       ','.join(['?'] * len(self.person)), [self.id] + [p.id for p in self.person]])
+            for per in self.person:
+                cl.extend([
+                    ['INSERT OR IGNORE INTO character_person_map (character_id, person_id) VALUES (?,?)',
+                     [self.id, per.id]]
+                ])
+
+        if (force or self.dirty_years) and self.person:
+            cl.append(['DELETE FROM character_person_years WHERE character_id = ? AND person_id NOT IN (%s)' %
+                       ','.join(['?'] * len(self.person)), [self.id] + [p.id for p in self.person]])
+            for per in self.person:
+                if per.id and any(1 for v in itervalues(self.persons_years.get(per.id, {})) if v):
+                    p_years = self.persons_years.get(per.id, {})
+                    cl.append(
+                        ['REPLACE INTO character_person_years (character_id, person_id, start_year, end_year)'
+                         ' VALUES (?,?,?,?)', [self.id, per.id, p_years.get('start'), p_years.get('end')]]
+                    )
+
+        if cl:
+            my_db.mass_action(cl)
+            self.dirty_main, self.dirty_person, self.dirty_ids, self.dirty_years = False, False, False, False
+
+    def __bool__(self):
+        return bool(self.name) or bool(self.person) or bool(self.ids)
+
+    def __eq__(self, other):
+        return other.person == self.person and ((self.id not in [None, 0] and other.id == self.id)
+                                                or any(self.ids[o] == v for o, v in iteritems(other.ids))
+                                                or (not other.ids and other.name == self.name))
+
+    def __str__(self):
+        id_str, id_list = '', []
+        for i, d in iteritems(self.ids):
+            id_list.append('%s: %s' % (sickbeard.TVInfoAPI(i).name, d))
+        if id_list:
+            id_str = ' (%s)' % ', '.join(id_list)
+        return '<Character %s (%s)%s>' % (self.name, ', '.join(p.name for p in self.person), id_str)
+
+    def __repr__(self):
+        return self.__str__()
+
+    __nonzero__ = __bool__
+
+
 class TVShow(TVShowBase):
     __slots__ = (
         'path',
     )
 
-    def __init__(self, tvid, prodid, lang=''):
-        # type: (int, int, Text) -> None
+    def __init__(self, tvid, prodid, lang='', show_sql=None, imdb_info_sql=None):
+        # type: (int, int, Text, Optional[Row], Optional[Row]) -> None
         super(TVShow, self).__init__(tvid, prodid, lang)
 
         self._tvid = int(tvid)
@@ -221,12 +1112,21 @@ class TVShow(TVShowBase):
         self.internal_ids = {}  # type: Dict
         self._not_found_count = None  # type: None or int
         self._last_found_on_indexer = -1  # type: int
+        self._src_update_time = None  # type: Optional[integer_types]
 
         self._location = self.path = ''  # type: AnyStr
         # self._is_location_good = None
-        self.lock = threading.Lock()
+        self.lock = threading.RLock()
         self.sxe_ep_obj = {}   # type: Dict
         self.nextaired = ''  # type: AnyStr
+        self._network_id = None  # type: Optional[int]
+        self._network_country = None  # type: Optional[AnyStr]
+        self._network_country_code = None  # type: Optional[AnyStr]
+        self._network_is_stream = None  # type: Optional[bool]
+        self._airtime = None  # type: Optional[datetime.time]
+        self.internal_timezone = None  # type: Optional[AnyStr]
+
+        self._cast_list = None  # type: Optional[List[Character]]
 
         # noinspection added so that None _can_ be excluded from type annotation
         # so that this property evaluates directly to the class on ctrl+hover instead of "multiple implementations"
@@ -237,7 +1137,102 @@ class TVShow(TVShowBase):
         if None is not show_obj:
             raise exceptions_helper.MultipleShowObjectsException('Can\'t create a show if it already exists')
 
-        self.load_from_db()
+        self.load_from_db(show_sql=show_sql, imdb_info_sql=imdb_info_sql)
+
+    def _get_end_episode(self, last=False, exclude_specials=False):
+        # type: (bool, bool) -> Optional[TVEpisode]
+        eps = self.get_all_episodes()
+        if eps:
+            ed = datetime.date(1900, 1, 1)
+            return next(iter(sorted((ep for ep in eps if ep.airdate > ed and (not exclude_specials or ep.season != 0)),
+                                    key=lambda a: a.airdate, reverse=last)), None)
+
+    @property
+    def first_aired_episode(self):
+        # type: (...) -> Optional[TVEpisode]
+        """
+        returns first aired episode
+        """
+        return self._get_end_episode()
+
+    @property
+    def first_aired_regular_episode(self):
+        # type: (...) -> Optional[TVEpisode]
+        """
+        returns first aired regular episode
+        """
+        return self._get_end_episode(exclude_specials=True)
+
+    @property
+    def latest_aired_episode(self):
+        # type: (...) -> Optional[TVEpisode]
+        """
+        returns latest aired episode
+        """
+        return self._get_end_episode(last=True)
+
+    @property
+    def latest_aired_regular_episode(self):
+        # type: (...) -> Optional[TVEpisode]
+        """
+        returns latest aired regular episode
+        """
+        return self._get_end_episode(last=True, exclude_specials=True)
+
+    @property
+    def cast_list(self):
+        # type: (...) -> List[Character]
+        if None is self._cast_list:
+            self._load_cast_from_db()
+        return self._cast_list
+
+    @property
+    def network_id(self):
+        return self._network_id
+
+    @network_id.setter
+    def network_id(self, *args):
+        self.dirty_setter('_network_id')(self, *args)
+
+    @property
+    def network_country(self):
+        return self._network_country
+
+    @network_country.setter
+    def network_country(self, *args):
+        self.dirty_setter('_network_country')(self, *args)
+
+    @property
+    def network_country_code(self):
+        return self._network_country_code
+
+    @network_country_code.setter
+    def network_country_code(self, *args):
+        self.dirty_setter('_network_country_code')(self, *args)
+
+    @property
+    def network_is_stream(self):
+        return self._network_is_stream
+
+    @network_is_stream.setter
+    def network_is_stream(self, *args):
+        self.dirty_setter('_network_is_stream')(self, *args)
+
+    @property
+    def airtime(self):
+        return self._airtime
+
+    @airtime.setter
+    def airtime(self, *args):
+        self.dirty_setter('_airtime')(self, *args)
+
+    @property
+    def timezone(self):
+        return self.internal_timezone
+
+    @timezone.setter
+    def timezone(self, *args):
+        self.dirty_setter('internal_timezone')(self, *args)
 
     @staticmethod
     def create_sid(tvid, prodid):
@@ -284,13 +1279,17 @@ class TVShow(TVShowBase):
         if getattr(self, 'sid_int', None) != tvid_prodid_int:
             self.sid_int = tvid_prodid_int
 
-    def _helper_load_failed_db(self):
+    def _helper_load_failed_db(self, sql=None):
+        # type: (Row) -> None
         if None is self._not_found_count or self._last_found_on_indexer == -1:
-            my_db = db.DBConnection()
-            results = my_db.select('SELECT fail_count, last_success'
-                                   ' FROM tv_shows_not_found'
-                                   ' WHERE indexer = ? AND indexer_id = ?',
-                                   [self.tvid, self.prodid])
+            if sql and self._prodid == sql['indexer_id'] and self._tvid == sql['indexer']:
+                results = [sql]
+            else:
+                my_db = db.DBConnection()
+                results = my_db.select('SELECT fail_count, last_success'
+                                       ' FROM tv_shows_not_found'
+                                       ' WHERE indexer = ? AND indexer_id = ?',
+                                       [self._tvid, self._prodid])
             if results:
                 self._not_found_count = helpers.try_int(results[0]['fail_count'])
                 self._last_found_on_indexer = helpers.try_int(results[0]['last_success'])
@@ -315,12 +1314,12 @@ class TVShow(TVShowBase):
                 results = my_db.select('SELECT last_check'
                                        ' FROM tv_shows_not_found'
                                        ' WHERE indexer = ? AND indexer_id = ?',
-                                       [self.tvid, self.prodid])
+                                       [self._tvid, self._prodid])
                 if results:
                     last_check = helpers.try_int(results[0]['last_check'])
             my_db.upsert('tv_shows_not_found',
                          dict(fail_count=v, last_check=last_check, last_success=self._last_found_on_indexer),
-                         dict(indexer=self.tvid, indexer_id=self.prodid))
+                         dict(indexer=self._tvid, indexer_id=self._prodid))
             self._not_found_count = v
 
     @property
@@ -333,7 +1332,7 @@ class TVShow(TVShowBase):
         results = my_db.select('SELECT last_check'
                                ' FROM tv_shows_not_found'
                                ' WHERE indexer = ? AND indexer_id = ?',
-                               [self.tvid, self.prodid])
+                               [self._tvid, self._prodid])
         days = (show_not_found_retry_days - 1, 0)[abs(self.not_found_count) <= concurrent_show_not_found_days]
         if not results or datetime.datetime.fromtimestamp(helpers.try_int(results[0]['last_check'])) + \
                 datetime.timedelta(days=days, hours=18) < datetime.datetime.now():
@@ -346,7 +1345,7 @@ class TVShow(TVShowBase):
             my_db = db.DBConnection()
             my_db.action('DELETE FROM tv_shows_not_found'
                          ' WHERE indexer = ? AND indexer_id = ?',
-                         [self.tvid, self.prodid])
+                         [self._tvid, self._prodid])
 
     @property
     def paused(self):
@@ -380,7 +1379,7 @@ class TVShow(TVShowBase):
     def ids(self, value):
         if isinstance(value, dict):
             for k, v in iteritems(value):
-                if k not in sickbeard.indexermapper.indexer_list or \
+                if k not in indexermapper.indexer_list or \
                         not isinstance(v, dict) or \
                         not isinstance(v.get('id'), integer_types) or \
                         not isinstance(v.get('status'), integer_types) or \
@@ -391,26 +1390,21 @@ class TVShow(TVShowBase):
 
     @property
     def is_anime(self):
-        """
-        :rtype: bool
-        """
+        # type: (...) -> bool
         return 0 < int(self.anime)
 
     @property
     def is_sports(self):
-        """
-        :rtype: bool
-        """
+        # type: (...) -> bool
         return 0 < int(self.sports)
 
     @property
     def is_scene(self):
-        """
-        :rtype: bool
-        """
+        # type: (...) -> bool
         return 0 < int(self.scene)
 
     def _get_location(self):
+        # type: (...) -> AnyStr
         # no dir check needed if missing show dirs are created during post-processing
         if sickbeard.CREATE_MISSING_SHOW_DIRS:
             return self._location
@@ -421,6 +1415,7 @@ class TVShow(TVShowBase):
         raise exceptions_helper.ShowDirNotFoundException('Show folder does not exist: \'%s\'' % self._location)
 
     def _set_location(self, new_location):
+        # type: (AnyStr) -> None
         logger.log('Setter sets location to %s' % new_location, logger.DEBUG)
         # Don't validate dir if user wants to add shows without creating a dir
         if sickbeard.ADD_SHOWS_WO_DIR or ek.ek(os.path.isdir, new_location):
@@ -443,16 +1438,13 @@ class TVShow(TVShowBase):
                 del ep_obj
 
     def get_all_episodes(self, season=None, has_location=False, check_related_eps=True):
+        # type: (Optional[integer_types], bool, bool) -> List[TVEpisode]
         """
 
         :param season: None or season number
-        :type season: None or int
         :param has_location:  return only with location
-        :type has_location: bool
         :param check_related_eps: get related episodes
-        :type check_related_eps: bool
         :return: List of TVEpisode objects
-        :rtype: List[TVEpisode]
         """
         sql_selection = 'SELECT *'
 
@@ -463,7 +1455,7 @@ class TVShow(TVShowBase):
                              'location = tve.location AND episode != tve.episode) AS share_location '
 
         sql_selection += ' FROM tv_episodes tve WHERE indexer = ? AND showid = ?'
-        sql_parameter = [self.tvid, self.prodid]
+        sql_parameter = [self._tvid, self._prodid]
 
         if None is not season:
             sql_selection += ' AND season = ?'
@@ -492,7 +1484,7 @@ class TVShow(TVShowBase):
                             'SELECT * FROM tv_episodes'
                             ' WHERE indexer = ? AND showid = ?'
                             ' AND season = ? AND location = ? AND episode != ? ORDER BY episode ASC',
-                            [self.tvid, self.prodid,
+                            [self._tvid, self._prodid,
                              ep_obj.season, ep_obj.location, ep_obj.episode])
                         for cur_ep_result in related_ep_result:
                             related_ep_obj = self.get_episode(int(cur_ep_result['season']),
@@ -510,7 +1502,8 @@ class TVShow(TVShowBase):
                     path=None,  # type: Optional[AnyStr]
                     no_create=False,  # type: bool
                     absolute_number=None,  # type: Optional[int]
-                    ep_sql=None  # type: Optional
+                    ep_sql=None,  # type: Optional
+                    existing_only=False  # type: bool
                     ):  # type: (...) -> Optional[TVEpisode]
         """
         Initialise sxe_ep_obj with db fetched season keys, and then fill the TVShow episode property
@@ -522,6 +1515,7 @@ class TVShow(TVShowBase):
         :param no_create: return None instead of an instantiated TVEpisode object
         :param absolute_number: absolute number
         :param ep_sql:
+        :param existing_only: only return existing episodes
         :return: TVEpisode object
         """
         # if we get an anime get the real season and episode
@@ -532,7 +1526,7 @@ class TVShow(TVShowBase):
                 ' WHERE indexer = ? AND showid = ?'
                 ' AND absolute_number = ? AND season != 0'
                 ' LIMIT 2',
-                [self.tvid, self.prodid,
+                [self._tvid, self._prodid,
                  absolute_number])
 
             if 1 == len(sql_result):
@@ -542,11 +1536,11 @@ class TVShow(TVShowBase):
                            logger.DEBUG)
             elif 1 < len(sql_result):
                 logger.log('Multiple entries for absolute number: %s in show: %s  found.' %
-                           (absolute_number, self.name), logger.ERROR)
+                           (absolute_number, self._name), logger.ERROR)
                 return None
             else:
                 logger.log('No entries for absolute number: %s in show: %s found.'
-                           % (absolute_number, self.name), logger.DEBUG)
+                           % (absolute_number, self._name), logger.DEBUG)
                 return None
 
         if season not in self.sxe_ep_obj:
@@ -559,25 +1553,181 @@ class TVShow(TVShowBase):
             # logger.log('%s: An object for episode %sx%s did not exist in the cache, trying to create it' %
             #            (self.tvid_prodid, season, episode), logger.DEBUG)
 
-            if path:
+            if path and not existing_only:
                 ep_obj = TVEpisode(self, season, episode, path, show_sql=ep_sql)
             else:
-                ep_obj = TVEpisode(self, season, episode, show_sql=ep_sql)
+                ep_obj = TVEpisode(self, season, episode, show_sql=ep_sql, existing_only=existing_only)
 
             if None is not ep_obj:
                 self.sxe_ep_obj[season][episode] = ep_obj
 
         return self.sxe_ep_obj[season][episode]
 
-    def should_update(self, update_date=datetime.date.today()):
+    def _load_cast_from_db(self):
+        # cast_list = []
+        old_list = {c.id for c in self._cast_list or []}
+        my_db = db.DBConnection()
+        sql_result = my_db.select('SELECT castlist.sort_order as sort_order, characters.name as name,'
+                                  ' characters.bio as c_bio, characters.id as c_id,'
+                                  ' characters.image_url as image_url, characters.thumb_url as thumb_url,'
+                                  ' characters.updated as c_updated,'
+                                  ' persons.name as p_name, persons.gender as gender, persons.bio as p_bio,'
+                                  ' persons.birthdate as birthdate, persons.thumb_url as p_thumb,'
+                                  ' persons.image_url as p_image, persons.deathdate as deathdate, persons.id as p_id,'
+                                  ' persons.birthplace as birthplace, persons.updated as p_updated,'
+                                  ' persons.deathplace as deathplace, persons.height as height,'
+                                  ' persons.realname as realname, persons.nicknames as nicknames,'
+                                  ' persons.akas as akas,'
+                                  ' (SELECT group_concat(person_ids.src || ":" || person_ids.src_id, ";;;")'
+                                  ' FROM person_ids WHERE person_ids.person_id = persons.id) as p_ids,'
+                                  ' (SELECT group_concat(character_ids.src || ":" || character_ids.src_id, ";;;")'
+                                  ' FROM character_ids WHERE character_ids.character_id = characters.id) as c_ids,'
+                                  ' (SELECT group_concat(character_person_years.person_id || ":" ||'
+                                  ' character_person_years.start_year || "-" || character_person_years.end_year, ";;;")'
+                                  ' FROM character_person_years WHERE'
+                                  ' character_person_years.character_id = characters.id) as p_years'
+                                  ' FROM castlist'
+                                  ' LEFT JOIN character_person_map'
+                                  ' ON castlist.character_id = character_person_map.character_id'
+                                  ' LEFT JOIN characters ON character_person_map.character_id = characters.id'
+                                  ' LEFT JOIN persons ON character_person_map.person_id = persons.id'
+                                  ' WHERE castlist.indexer = ? AND castlist.indexer_id = ?'
+                                  ' ORDER BY castlist.sort_order',
+                                  [self._tvid, self._prodid])
+        self._cast_list = self._cast_list or []
+        for r in sql_result:
+            existing_character = next((c for c in self._cast_list or [] if None is not c.id and c.id == r['c_id']),
+                                      None)  # type: Optional[Character]
+            birthdate = try_int(r['birthdate'], None)
+            birthdate = birthdate and datetime.date.fromordinal(r['birthdate'])
+            deathdate = try_int(r['deathdate'], None)
+            deathdate = deathdate and datetime.date.fromordinal(r['deathdate'])
+            p_years = {}
+            for p in (r['p_years'] and r['p_years'].split(';;;')) or []:
+                p_id, py = p.split(':')
+                start, end = py.split('-')
+                p_years[int(p_id)] = {'start': try_int(start, None), 'end': try_int(end, None)}
+
+            p_ids, c_ids = {}, {}
+            for i in (r['p_ids'] and r['p_ids'].split(';;;')) or []:
+                k, v = i.split(':')
+                k = try_int(k, None)
+                if v:
+                    if k in (TVINFO_INSTAGRAM, TVINFO_TWITTER, TVINFO_FACEBOOK, TVINFO_WIKIPEDIA):
+                        p_ids[k] = v
+                    else:
+                        p_ids[k] = try_int(v, None)
+            for i in (r['c_ids'] and r['c_ids'].split(';;;')) or []:
+                k, v = i.split(':')
+                v = try_int(v, None)
+                if v:
+                    c_ids[int(k)] = try_int(v, None)
+            person = Person(r['p_name'], r['gender'], birthday=birthdate, deathday=deathdate, bio=r['p_bio'],
+                            sid=r['p_id'], birthplace=r['birthplace'], ids=p_ids, thumb_url=r['p_thumb'],
+                            image_url=r['p_image'], show_obj=self, updated=r['p_updated'], deathplace=r['deathplace'],
+                            height=r['height'], real_name=r['realname'],
+                            nicknames=set((r['nicknames'] and r['nicknames'].split(';;;')) or []),
+                            akas=set((r['akas'] and r['akas'].split(';;;')) or []))
+            if existing_character:
+                try:
+                    old_list.remove(existing_character.id)
+                except (BaseException, Exception):
+                    pass
+                existing_person = next((p for p in existing_character.person if (None is not p.id
+                                        and p.ids.get(self._tvid) == person.ids.get(self._tvid))
+                                        or p.name == person.name),
+                                       None)  # type: Optional[Person]
+                existing_character.combine_start_end_years(p_years)
+                if existing_person:
+                    existing_person.update_properties(
+                        name=person.name, gender=person.gender, birthday=person.birthday, deathday=person.deathday,
+                        biography=person.biography, birthplace=person.birthplace, thumb_url=person.thumb_url,
+                        image_url=person.image_url,
+                        ids=dict(chain.from_iterable(iteritems(d) for d in (existing_person.ids, person.ids or {}))),
+                        deathplace=r['deathplace'], height=r['height'], real_name=r['realname'],
+                        nicknames=set((r['nicknames'] and r['nicknames'].split(';;;')) or []),
+                        akas=set((r['akas'] and r['akas'].split(';;;')) or [])
+                    )
+                else:
+                    existing_character.person.append(person)
+            else:
+                self._cast_list.append(Character(r['name'], person=[person], ids=c_ids, bio=r['c_bio'], sid=r['c_id'],
+                                                 image_url=r['image_url'], thumb_url=r['thumb_url'], show_obj=self,
+                                                 updated=r['c_updated'], persons_years=p_years))
+        self._cast_list = [c for c in self._cast_list or [] if c.id not in old_list]
+
+    @staticmethod
+    def orphaned_cast_sql():
+        # type: (...) -> List
+        """
+        returns list of sql that removes all character and person entries that are not linked to any show
+        """
+        return [
+            ['DELETE FROM characters WHERE characters.id IN (SELECT c.id FROM characters c'
+             ' LEFT JOIN castlist on castlist.character_id = c.id WHERE castlist.id is NULL);'],
+            ['DELETE FROM character_ids WHERE character_ids.character_id IN'
+             ' (SELECT c.character_id FROM character_ids c'
+             ' LEFT JOIN characters ON c.character_id = characters.id WHERE characters.id is NULL);'],
+            ['DELETE FROM character_person_map WHERE character_id IN (SELECT c.character_id FROM character_person_map c'
+             ' LEFT JOIN characters ON c.character_id = characters.id WHERE characters.id is NULL)'],
+            ['DELETE FROM persons WHERE persons.id IN (SELECT p.id FROM persons p'
+             ' LEFT JOIN character_person_map c on p.id = c.person_id WHERE c.id is NULL);'],
+            ['DELETE FROM person_ids WHERE person_ids.person_id IN (SELECT p.person_id FROM person_ids p'
+             ' LEFT JOIN persons ON p.person_id = persons.id WHERE persons.id is NULL);'],
+            ['DELETE FROM castlist WHERE castlist.id IN (SELECT c.id FROM castlist c'
+             ' LEFT JOIN character_person_map cpm on c.character_id = cpm.character_id WHERE cpm.id IS NULL);'],
+            ['DELETE FROM character_person_years WHERE character_person_years.ROWID IN (SELECT c.ROWID FROM'
+             ' character_person_years c'
+             ' LEFT JOIN characters ch on c.character_id = ch.id WHERE ch.id IS NULL);'],
+            ['DELETE FROM character_person_years WHERE character_person_years.ROWID IN (SELECT c.ROWID FROM'
+             ' character_person_years c'
+             ' LEFT JOIN persons p on c.person_id = p.id WHERE p.id IS NULL);'],
+        ]
+
+    def _save_cast_list(self, removed_char_ids=None, force=False, stop_event=None):
+        # type: (Union[List[integer_types], Set[integer_types]], bool, threading.Event) -> None
+        if self._cast_list:
+            my_db = db.DBConnection()
+            cl = []
+            for r in removed_char_ids or []:
+                cl.extend([
+                    ['DELETE FROM castlist WHERE indexer = ? AND indexer_id = ? AND character_id = ?;',
+                     [self._tvid, self._prodid, r]]
+                ])
+            update_date = datetime.date.today().toordinal()
+            for o, c in enumerate(self._cast_list, 1):
+                if stop_event and stop_event.is_set():
+                    return
+                c.save_to_db(show_obj=self, force=force, stop_event=stop_event)
+                cl.extend([
+                    ['UPDATE castlist SET sort_order = ?, updated = ? WHERE indexer = ? AND indexer_id = ?'
+                     ' AND character_id = ?;', [o, update_date, self._tvid, self._prodid, c.id]],
+                    ['INSERT INTO castlist (indexer, indexer_id, character_id, sort_order, updated)'
+                     ' SELECT %s, %s, %s, %s, %s WHERE changes() == 0;' %
+                     (self._tvid, self._prodid, c.id, o, update_date)]
+                ])
+            if removed_char_ids:
+                # remove orphaned entries
+                cl.extend(self.orphaned_cast_sql())
+            if cl:
+                my_db.mass_action(cl)
+
+    def should_update(self, update_date=datetime.date.today(), last_indexer_change=None):
+        # type: (datetime.date, integer_types) -> bool
+        if last_indexer_change and self._src_update_time:
+            # update if show was updated or not updated within the last 30 days
+            if self._src_update_time < last_indexer_change or \
+                    (self._last_update_indexer and datetime.date.today().toordinal() - self._last_update_indexer > 30):
+                return True
+            return False
 
         # In some situations self.status = None.. need to figure out where that is!
-        if not self.status:
+        if not self._status:
             self.status = ''
             logger.log('Status missing for show: [%s] with status: [%s]' %
-                       (self.tvid_prodid, self.status), logger.DEBUG)
+                       (self.tvid_prodid, self._status), logger.DEBUG)
 
-        last_update_indexer = datetime.date.fromordinal(self.last_update_indexer)
+        last_update_indexer = datetime.date.fromordinal(self._last_update_indexer)
 
         # if show was not found for 1 week, only retry to update once a week
         if (concurrent_show_not_found_days < abs(self.not_found_count)) \
@@ -590,12 +1740,12 @@ class TVShow(TVShowBase):
               ' WHERE indexer = ? AND showid = ?' +
               ' AND season > 0'
               ' ORDER BY season DESC, episode DESC LIMIT 1',
-              [self.tvid, self.prodid]],
+              [self._tvid, self._prodid]],
              ['SELECT airdate FROM [tv_episodes]'
               + ' WHERE indexer = ? AND showid = ?'
               + ' AND season > 0 AND airdate > 1'
               + ' ORDER BY airdate DESC LIMIT 1',
-              [self.tvid, self.prodid]]])
+              [self._tvid, self._prodid]]])
 
         last_airdate_unknown = 1 >= int(sql_result[0][0]['airdate']) if sql_result and sql_result[0] else True
 
@@ -606,10 +1756,10 @@ class TVShow(TVShowBase):
         # or don't have an airdate for the last episode always update (status 'Continuing' or '')
         update_days_limit = 2013
         ended_limit = datetime.timedelta(days=update_days_limit)
-        if 'Ended' not in self.status and (last_airdate == datetime.date.fromordinal(1)
-                                           or last_airdate_unknown
-                                           or (update_date - last_airdate) <= ended_limit
-                                           or (update_date - last_update_indexer) > ended_limit):
+        if 'Ended' not in self._status and (last_airdate == datetime.date.fromordinal(1)
+                                            or last_airdate_unknown
+                                            or (update_date - last_airdate) <= ended_limit
+                                            or (update_date - last_update_indexer) > ended_limit):
             return True
 
         # in the first 460 days (last airdate), update regularly
@@ -626,6 +1776,7 @@ class TVShow(TVShowBase):
         return last_airdate_unknown and airdate_diff <= ended_limit and last_update_diff >= datetime.timedelta(days=7)
 
     def write_show_nfo(self, force=False):
+        # type: (bool) -> bool
 
         result = False
 
@@ -659,6 +1810,7 @@ class TVShow(TVShowBase):
             self.write_episode_nfo(force_nfo)
 
     def write_episode_nfo(self, force=False):
+        # type: (bool) -> None
 
         if not ek.ek(os.path.isdir, self._location):
             logger.log('%s: Show directory doesn\'t exist, skipping NFO generation' % self.tvid_prodid)
@@ -672,7 +1824,7 @@ class TVShow(TVShowBase):
             'SELECT * FROM tv_episodes'
             ' WHERE indexer = ? AND showid = ?'
             ' AND location != ""',
-            [self.tvid, self.prodid])
+            [self._tvid, self._prodid])
 
         processed = []
         for cur_result in sql_result:
@@ -785,40 +1937,41 @@ class TVShow(TVShowBase):
         :param update:
         :return:
         """
-        logger.log('Loading all episodes for [%s] from the DB' % self.name)
+        logger.log('Loading all episodes for [%s] from the DB' % self._name)
 
         my_db = db.DBConnection()
         sql_result = my_db.select(
             'SELECT * FROM tv_episodes'
             ' WHERE indexer = ? AND showid = ?',
-            [self.tvid, self.prodid])
+            [self._tvid, self._prodid])
 
         scannedEps = {}
 
-        tvinfo_config = sickbeard.TVInfoAPI(self.tvid).api_params.copy()
+        tvinfo_config = sickbeard.TVInfoAPI(self._tvid).api_params.copy()
 
-        if self.lang:
-            tvinfo_config['language'] = self.lang
+        if self._lang:
+            tvinfo_config['language'] = self._lang
 
-        if 0 != self.dvdorder:
+        if 0 != self._dvdorder:
             tvinfo_config['dvdorder'] = True
 
-        t = sickbeard.TVInfoAPI(self.tvid).setup(**tvinfo_config)
+        t = sickbeard.TVInfoAPI(self._tvid).setup(**tvinfo_config)
 
         cachedShow = None
         try:
-            cachedShow = t.get_show(self.prodid)
+            cachedShow = t.get_show(self._prodid)
         except BaseTVinfoError as e:
             logger.log('Unable to find cached seasons from %s: %s' % (
-                sickbeard.TVInfoAPI(self.tvid).name, ex(e)), logger.WARNING)
+                sickbeard.TVInfoAPI(self._tvid).name, ex(e)), logger.WARNING)
 
         if None is cachedShow:
             return scannedEps
 
         scene_sql = my_db.select('SELECT * FROM scene_numbering WHERE indexer == ? AND indexer_id = ? ',
-                                 [self.tvid, self.prodid])
+                                 [self._tvid, self._prodid])
 
         cachedSeasons = {}
+        cl = []
         for cur_result in sql_result:
 
             delete_ep = False
@@ -831,7 +1984,7 @@ class TVShow(TVShowBase):
                     cachedSeasons[season] = cachedShow[season]
                 except BaseTVinfoSeasonnotfound as e:
                     logger.log('Error when trying to load the episode for [%s] from %s: %s' %
-                               (self.name, sickbeard.TVInfoAPI(self.tvid).name, ex(e)), logger.WARNING)
+                               (self._name, sickbeard.TVInfoAPI(self._tvid).name, ex(e)), logger.WARNING)
                     delete_ep = True
 
             if season not in scannedEps:
@@ -844,48 +1997,67 @@ class TVShow(TVShowBase):
 
                 # if we found out that the ep is no longer on TVDB then delete it from our database too
                 if delete_ep and helpers.should_delete_episode(ep_obj.status):
-                    ep_obj.delete_episode()
+                    cl.extend(ep_obj.delete_episode(return_sql=True))
+                else:
 
-                ep_obj.load_from_db(season, episode, show_sql=[cur_result], scene_sql=scene_sql)
-                ep_obj.load_from_tvinfo(tvapi=t, update=update, cached_show=cachedShow)
+                    ep_obj.load_from_db(season, episode, show_sql=[cur_result], scene_sql=scene_sql)
+                    ep_obj.load_from_tvinfo(tvapi=t, update=update, cached_show=cachedShow)
                 scannedEps[season][episode] = True
             except exceptions_helper.EpisodeDeletedException:
                 logger.log('Tried loading an episode that should have been deleted from the DB [%s], skipping it'
-                           % self.name, logger.DEBUG)
+                           % self._name, logger.DEBUG)
                 continue
+
+        if cl:
+            my_db.mass_action(cl)
 
         return scannedEps
 
-    def load_episodes_from_tvinfo(self, cache=True, update=False):
-        # type: (bool, bool) -> Optional[Dict[int, Dict[int, TVEpisode]]]
+    def switch_ep_change_sql(self, old_tvid, old_prodid, season, episode, reason):
+        # type: (int, integer_types, int, int, int) -> List[AnyStr]
+        return ['REPLACE INTO switch_ep_errors'
+                ' (old_indexer, old_indexer_id, new_indexer, new_indexer_id, season, episode, reason)'
+                ' VALUES (?,?,?,?,?,?,?)', [old_tvid, old_prodid, self._tvid, self._prodid, season, episode, reason]]
+
+    def load_episodes_from_tvinfo(self, cache=True, update=False, tvinfo_data=None, switch=False, old_tvid=None,
+                                  old_prodid=None):
+        # type: (bool, bool, TVInfoShow, bool, int, integer_types) -> Optional[Dict[int, Dict[int, TVEpisode]]]
         """
 
         :param cache:
         :param update:
+        :param tvinfo_data:
+        :param switch:
+        :param old_tvid:
+        :param old_prodid:
         :return:
         """
-        tvinfo_config = sickbeard.TVInfoAPI(self.tvid).api_params.copy()
+        tvinfo_config = sickbeard.TVInfoAPI(self._tvid).api_params.copy()
 
         if not cache:
             tvinfo_config['cache'] = False
 
-        if self.lang:
-            tvinfo_config['language'] = self.lang
+        if self._lang:
+            tvinfo_config['language'] = self._lang
 
-        if 0 != self.dvdorder:
+        if 0 != self._dvdorder:
             tvinfo_config['dvdorder'] = True
 
         logger.log('%s: Loading all episodes for [%s] from %s..'
-                   % (self.tvid_prodid, self.name, sickbeard.TVInfoAPI(self.tvid).name))
+                   % (self.tvid_prodid, self._name, sickbeard.TVInfoAPI(self._tvid).name))
 
-        try:
-            t = sickbeard.TVInfoAPI(self.tvid).setup(**tvinfo_config)
-            show_obj = t.get_show(self.prodid)
-        except BaseTVinfoError as e:
-            logger.log('%s timed out, unable to update episodes for [%s] from %s' %
-                       (sickbeard.TVInfoAPI(self.tvid).name, self.name, sickbeard.TVInfoAPI(self.tvid).name),
-                       logger.ERROR)
-            return None
+        if getattr(tvinfo_data, 'id', None) == self._prodid:
+            show_obj = tvinfo_data
+            t = None
+        else:
+            try:
+                t = sickbeard.TVInfoAPI(self._tvid).setup(**tvinfo_config)
+                show_obj = t.get_show(self._prodid)
+            except BaseTVinfoError:
+                logger.log('%s timed out, unable to update episodes for [%s] from %s' %
+                           (sickbeard.TVInfoAPI(self._tvid).name, self._name, sickbeard.TVInfoAPI(self._tvid).name),
+                           logger.ERROR)
+                return None
 
         scannedEps = {}
 
@@ -903,20 +2075,23 @@ class TVShow(TVShowBase):
                     ep_obj = self.get_episode(season, episode, ep_sql=show_sql)  # type: TVEpisode
                 except exceptions_helper.EpisodeNotFoundException:
                     logger.log('%s: %s object for %sx%s from [%s] is incomplete, skipping this episode' %
-                               (self.tvid_prodid, sickbeard.TVInfoAPI(self.tvid).name, season, episode, self.name))
+                               (self.tvid_prodid, sickbeard.TVInfoAPI(self._tvid).name, season, episode, self._name))
                     continue
                 else:
                     try:
-                        ep_obj.load_from_tvinfo(tvapi=t, update=update, cached_show=show_obj)
+                        ep_obj.load_from_tvinfo(tvapi=t, update=update, cached_show=show_obj, switch=switch,
+                                                old_tvid=old_tvid, old_prodid=old_prodid, switch_list=sql_l)
                     except exceptions_helper.EpisodeDeletedException:
-                        logger.log('The episode from [%s] was deleted, skipping the rest of the load' % self.name)
+                        logger.log('The episode from [%s] was deleted, skipping the rest of the load' % self._name)
                         continue
 
                 with ep_obj.lock:
                     logger.log('%s: Loading info from %s for episode %sx%s from [%s]' %
-                               (self.tvid_prodid, sickbeard.TVInfoAPI(self.tvid).name, season, episode, self.name),
+                               (self.tvid_prodid, sickbeard.TVInfoAPI(self._tvid).name, season, episode, self._name),
                                logger.DEBUG)
-                    ep_obj.load_from_tvinfo(season, episode, tvapi=t, update=update, cached_show=show_obj)
+                    ep_obj.load_from_tvinfo(season, episode, tvapi=t, update=update, cached_show=show_obj,
+                                            switch=switch, old_tvid=old_tvid, old_prodid=old_prodid,
+                                            switch_list=sql_l)
 
                     result = ep_obj.get_sql()
                     if None is not result:
@@ -956,12 +2131,11 @@ class TVShow(TVShowBase):
 
     # make a TVEpisode object from a media file
     def ep_obj_from_file(self, path):
+        # type: (AnyStr) -> Optional[TVEpisode]
         """
 
         :param path:
-        :type path: AnyStr
         :return:
-        :rtype: TVEpisode or None
         """
         if not ek.ek(os.path.isfile, path):
             logger.log('%s: Not a real file... %s' % (self.tvid_prodid, path))
@@ -993,7 +2167,7 @@ class TVShow(TVShowBase):
         for cur_ep_num in episode_numbers:
             cur_ep_num = int(cur_ep_num)
 
-            logger.log('%s: %s parsed to %s %sx%s' % (self.tvid_prodid, path, self.name, season_number, cur_ep_num),
+            logger.log('%s: %s parsed to %s %sx%s' % (self.tvid_prodid, path, self._name, season_number, cur_ep_num),
                        logger.DEBUG)
 
             check_quality_again = False
@@ -1117,25 +2291,28 @@ class TVShow(TVShowBase):
 
         return root_ep_obj
 
-    def load_from_db(self):
+    def load_from_db(self, show_sql=None, imdb_info_sql=None):
+        # type: (Optional[Row], Optional[Row]) -> Optional[bool]
         """
 
         :return:
-        :rtype: bool or None
         """
-        my_db = db.DBConnection()
-        sql_result = my_db.select('SELECT * FROM tv_shows'
-                                  ' WHERE indexer = ? AND indexer_id = ?',
-                                  [self.tvid, self.prodid])
+        if not show_sql or self._tvid != show_sql['indexer'] or self._prodid != show_sql['indexer_id']:
+            my_db = db.DBConnection()
+            sql_result = my_db.select('SELECT * FROM tv_shows'
+                                      ' WHERE indexer = ? AND indexer_id = ?',
+                                      [self._tvid, self._prodid])
+        else:
+            sql_result = [show_sql]
 
         if 1 != len(sql_result):
             if 1 < len(sql_result):
-                tvinfo_config = sickbeard.TVInfoAPI(self.tvid).api_params.copy()
-                if self.lang:
-                    tvinfo_config['language'] = self.lang
-                t = sickbeard.TVInfoAPI(self.tvid).setup(**tvinfo_config)
-                cached_show = t.get_show(self.prodid, load_episodes=False)
-                vals = (self.prodid, '' if not cached_show else ' [%s]' % cached_show['seriesname'].strip())
+                tvinfo_config = sickbeard.TVInfoAPI(self._tvid).api_params.copy()
+                if self._lang:
+                    tvinfo_config['language'] = self._lang
+                t = sickbeard.TVInfoAPI(self._tvid).setup(**tvinfo_config)
+                cached_show = t.get_show(self._prodid, load_episodes=False)
+                vals = (self._prodid, '' if not cached_show else ' [%s]' % cached_show['seriesname'].strip())
                 if 0 != len(sql_result):
                     logger.log('%s: Loading show info%s from database' % vals)
                     raise exceptions_helper.MultipleDBShowsException()
@@ -1146,12 +2323,14 @@ class TVShow(TVShowBase):
                 self.tvid, self.prodid = int(sql_result[0]['indexer']), int(sql_result[0]['indexer_id'])
             if not self._name:
                 self._name = sql_result[0]['show_name']
-            if not self._network:
-                self._network = sql_result[0]['network']
+            if not self.internal_network:
+                self.internal_network = sql_result[0]['network']
             if not self._genre:
                 self._genre = sql_result[0]['genre']
             if None is self._classification:
                 self._classification = sql_result[0]['classification']
+
+            self._src_update_time = try_int(sql_result[0]['src_update_timestamp'], None)
 
             self._runtime = sql_result[0]['runtime']
 
@@ -1210,13 +2389,17 @@ class TVShow(TVShowBase):
 
             self._last_update_indexer = sql_result[0]['last_update_indexer']
 
-            self._rls_ignore_words, self._rls_ignore_words_regex = helpers.split_word_str(sql_result[0]['rls_ignore_words'])
+            self._rls_ignore_words, self._rls_ignore_words_regex = helpers.split_word_str(
+                sql_result[0]['rls_ignore_words'])
 
-            self._rls_require_words, self._rls_require_words_regex = helpers.split_word_str(sql_result[0]['rls_require_words'])
+            self._rls_require_words, self._rls_require_words_regex = helpers.split_word_str(
+                sql_result[0]['rls_require_words'])
 
-            self._rls_global_exclude_ignore = helpers.split_word_str(sql_result[0]['rls_global_exclude_ignore'])[0]
+            self._rls_global_exclude_ignore = helpers.split_word_str(
+                sql_result[0]['rls_global_exclude_ignore'])[0]
 
-            self._rls_global_exclude_require = helpers.split_word_str(sql_result[0]['rls_global_exclude_require'])[0]
+            self._rls_global_exclude_require = helpers.split_word_str(
+                sql_result[0]['rls_global_exclude_require'])[0]
 
             if not self._imdbid:
                 imdbid = sql_result[0]['imdb_id'] or ''
@@ -1236,15 +2419,28 @@ class TVShow(TVShowBase):
             if not self._tag:
                 self._tag = 'Show List'
 
+            self._network_id = sql_result[0]['network_id']
+            self._network_country = sql_result[0]['network_country']
+            self._network_country_code = sql_result[0]['network_country_code']
+            self._network_is_stream = bool(sql_result[0]['network_is_stream'])
+            self.internal_timezone = sql_result[0]['timezone']
+            if not self.internal_timezone and self.internal_network:
+                _, self.internal_timezone = network_timezones.get_network_timezone(self.internal_network,
+                                                                                   return_name=True)
+            self._airtime = self._make_airtime(sql_result[0]['airtime'])
+
         logger.log(u'Loaded.. {: <9} {: <8} {}'.format(
             sickbeard.TVInfoAPI(self.tvid).config.get('name') + ',', '%s,' % self.prodid, self.name))
 
         # Get IMDb_info from database
-        my_db = db.DBConnection()
-        sql_result = my_db.select('SELECT *'
-                                  ' FROM imdb_info'
-                                  ' WHERE indexer = ? AND indexer_id = ?',
-                                  [self.tvid, self.prodid])
+        if not imdb_info_sql or self._tvid != imdb_info_sql['indexer'] or self._prodid != imdb_info_sql['indexer_id']:
+            my_db = db.DBConnection()
+            sql_result = my_db.select('SELECT *'
+                                      ' FROM imdb_info'
+                                      ' WHERE indexer = ? AND indexer_id = ?',
+                                      [self.tvid, self.prodid])
+        else:
+            sql_result = [imdb_info_sql]
 
         if 0 < len(sql_result):
             # this keys() is not a dict
@@ -1257,60 +2453,84 @@ class TVShow(TVShowBase):
         self.dirty = False
         return True
 
-    def load_from_tvinfo(self, cache=True, tvapi=None):
+    def _get_tz_info(self):
+        if self.internal_timezone:
+            return tz.gettz(self.internal_timezone, zoneinfo_priority=True)
+        elif self.internal_network:
+            return network_timezones.get_network_timezone(self.internal_network)
+
+    def _make_airtime(self, airtime=None):
+        # type: (Optional[integer_types]) -> Optional[datetime.time]
+        if isinstance(airtime, integer_types):
+            return int_to_time(airtime)
+        if self._airs:
+            hour, minute = network_timezones.parse_time(self._airs)
+            return datetime.time(hour=hour, minute=minute)
+        return None
+
+    def load_from_tvinfo(self, cache=True, tvapi=None, tvinfo_data=None, scheduled_update=False, switch=False):
+        # type: (bool, bool, TVInfoShow, bool, bool) -> Optional[Union[bool, TVInfoShow]]
         """
 
         :param cache:
-        :type cache: bool
         :param tvapi:
-        :type tvapi:
+        :param tvinfo_data:
+        :param scheduled_update:
+        :param switch:
         """
         # There's gotta be a better way of doing this but we don't wanna
         # change the cache value elsewhere
         if None is tvapi:
-            tvinfo_config = sickbeard.TVInfoAPI(self.tvid).api_params.copy()
+            tvinfo_config = sickbeard.TVInfoAPI(self._tvid).api_params.copy()
 
             if not cache:
                 tvinfo_config['cache'] = False
 
-            if self.lang:
-                tvinfo_config['language'] = self.lang
+            if self._lang:
+                tvinfo_config['language'] = self._lang
 
-            if 0 != self.dvdorder:
+            if 0 != self._dvdorder:
                 tvinfo_config['dvdorder'] = True
 
-            t = sickbeard.TVInfoAPI(self.tvid).setup(**tvinfo_config)
+            t = sickbeard.TVInfoAPI(self._tvid).setup(**tvinfo_config)
 
         else:
             t = tvapi
 
-        ep_info = t.get_show(self.prodid, load_episodes=False)
-        if None is ep_info or getattr(t, 'show_not_found', False):
+        if getattr(tvinfo_data, 'id', None) == self._prodid:
+            show_info = tvinfo_data
+        else:
+            show_info = t.get_show(self._prodid, actors=True)  # type: Optional[TVInfoShow]
+        if None is show_info or getattr(t, 'show_not_found', False):
             if getattr(t, 'show_not_found', False):
                 self.inc_not_found_count()
-                logger.log('Show [%s] not found (maybe even removed?)' % self.name, logger.WARNING)
+                logger.log('Show [%s] not found (maybe even removed?)' % self._name, logger.WARNING)
             else:
-                logger.log('Show data [%s] not found' % self.name, logger.WARNING)
+                logger.log('Show data [%s] not found' % self._name, logger.WARNING)
             return False
         self.reset_not_found_count()
 
         try:
-            self.name = ep_info['seriesname'].strip()
+            self.name = show_info['seriesname'].strip()
         except AttributeError:
             raise BaseTVinfoAttributenotfound(
                 "Found %s, but attribute 'seriesname' was empty." % self.tvid_prodid)
 
-        if ep_info:
+        if show_info:
             logger.log('%s: Loading show info [%s] from %s' % (
-                self.tvid_prodid, self.name, sickbeard.TVInfoAPI(self.tvid).name))
+                self.tvid_prodid, self._name, sickbeard.TVInfoAPI(self._tvid).name))
 
-        self.classification = self.dict_prevent_nonetype(ep_info, 'classification', 'Scripted')
-        self.genre = self.dict_prevent_nonetype(ep_info, 'genre')
-        self.network = self.dict_prevent_nonetype(ep_info, 'network')
-        self.runtime = self.dict_prevent_nonetype(ep_info, 'runtime')
+        self.classification = self.dict_prevent_nonetype(show_info, 'classification', 'Scripted')
+        self.genre = self.dict_prevent_nonetype(show_info, 'genre')
+        self.network = self.dict_prevent_nonetype(show_info, 'network')
+        self.runtime = self.dict_prevent_nonetype(show_info, 'runtime')
+        self.dirty_setter('_src_update_time')(self, show_info.updated_timestamp)
 
         old_imdb = self.imdbid
-        self.imdbid = self.dict_prevent_nonetype(ep_info, 'imdb_id')
+        if show_info.ids.imdb:
+            self.imdbid = 'tt%07d' % show_info.ids.imdb
+        else:
+            self.imdbid = self.dict_prevent_nonetype(show_info, 'imdb_id')
         if old_imdb != self.imdbid:
             try:
                 imdb_id = try_int(self.imdbid.replace('tt', ''), None)
@@ -1320,21 +2540,190 @@ class TVShow(TVShowBase):
             except (BaseException, Exception):
                 pass
 
-        if None is not getattr(ep_info, 'airs_dayofweek', None) and None is not getattr(ep_info, 'airs_time', None):
-            self.airs = ('%s %s' % (ep_info['airs_dayofweek'], ep_info['airs_time'])).strip()
+        if None is not getattr(show_info, 'airs_dayofweek', None) and None is not getattr(show_info, 'airs_time', None):
+            self.airs = ('%s %s' % (show_info['airs_dayofweek'], show_info['airs_time'])).strip()
 
-        if None is not getattr(ep_info, 'firstaired', None):
-            self.startyear = int(str(ep_info["firstaired"]).split('-')[0])
+        if None is not getattr(show_info, 'firstaired', None):
+            self.startyear = int(str(show_info["firstaired"]).split('-')[0])
 
-        self.status = self.dict_prevent_nonetype(ep_info, 'status')
-        self.overview = self.dict_prevent_nonetype(ep_info, 'overview')
+        self.status = self.dict_prevent_nonetype(show_info, 'status')
+        self.overview = self.dict_prevent_nonetype(show_info, 'overview')
+        self.network_id = show_info.network_id
+        self.network_country = show_info.network_country
+        self.network_country_code = show_info.network_country_code
+        self.network_is_stream = show_info.network_is_stream
+        self.timezone = show_info.network_timezone
+        if not self.internal_timezone and self.internal_network:
+            _, self.timezone = network_timezones.get_network_timezone(self.internal_network, return_name=True)
+        self.airtime = self._make_airtime(show_info.time)
+
+        if show_info.cast:
+            sickbeard.people_queue_scheduler.action.add_cast_update(show_obj=self, show_info_cast=show_info.cast,
+                                                                    scheduled_update=scheduled_update, switch=switch)
+        return show_info
+
+    @staticmethod
+    def _update_person_properties_helper(person_obj, src_person, p_ids):
+        # type: (Person, TVINFO_Person, Dict) -> None
+        person_obj.update_properties(
+            name=src_person.name, gender=src_person.gender,
+            birthday=src_person.birthdate, deathday=src_person.deathdate,
+            biography=src_person.bio,
+            ids=dict(chain.from_iterable(iteritems(d) for d in
+                                         (person_obj.ids, p_ids))),
+            deathplace=src_person.deathplace, akas=src_person.akas,
+            nicknames=src_person.nicknames, real_name=src_person.real_name,
+            height=src_person.height)
+
+    def load_cast_from_tvinfo(self, show_info_cast, force=False, stop_event=None):
+        # type: (CastList, bool, threading.Event) -> None
+        """
+        add and fetch cast list info for show
+        Note: currently not multithread safe
+
+        :param show_info_cast: tvinfo castlist
+        :param force: force reload of cast info
+        :param stop_event:
+        """
+        if stop_event and stop_event.is_set():
+            return
+
+        if not show_info_cast:
+            tvinfo_config = sickbeard.TVInfoAPI(self._tvid).api_params.copy()
+            t = sickbeard.TVInfoAPI(self._tvid).setup(**tvinfo_config)
+            show_info = t.get_show(self._prodid, load_episodes=False, actors=True)  # type: Optional[TVInfoShow]
+            if None is show_info:
+                return
+            show_info_cast = show_info.cast
+
+        self._load_cast_from_db()
+        remove_char_ids = {c.id for c in self._cast_list or []}
+        cast_ordered = []
+        for ct, c_l in iteritems(show_info_cast):  # type: (integer_types, List[TVINFO_Character])
+            for c in c_l:
+                if stop_event and stop_event.is_set():
+                    return
+
+                unique_name = 1 == len([cu for cu in c_l if (None is not c.id and cu.id == c.id)
+                                        or cu.name == c.name])
+                mc = next((cl for cl in self._cast_list or []
+                           if (None is not c.id and cl.ids.get(self._tvid) == c.id)
+                           or (unique_name and c.name and cl.name == c.name)
+                           or any(cl.ids.get(src) == c.ids.get(src) for src in c.ids or {})),
+                          None)  # type: Optional[Character]
+                if not mc:
+                    unique_person = not any(1 for _cp in
+                                            Counter([_p.name for _cha in c_l for _p in _cha.person
+                                                     if any(_p.name == _pp.name for _pp in c.person)]).values()
+                                            if 1 != _cp)
+                    if unique_person:
+                        pc = [cl for cl in self._cast_list or [] if cl.person
+                              and any(1 for p in cl.person if c.person
+                                      and ((None is not p.ids.get(self._tvid) and any(p.ids.get(self._tvid) == cp.id
+                                                                                      for cp in c.person))
+                                           or any(p.name == cp.name for cp in c.person)))]
+                        if 1 == len(pc):
+                            mc = pc[0]
+                if mc:
+                    try:
+                        remove_char_ids.remove(mc.id)
+                    except KeyError:
+                        logger.log('%s - error character: %s (%s)' % (self.name, mc.id, mc.name), logger.ERROR)
+                        pass
+
+                    old_person_ids = {op.id for op in mc.person if None is not op.id}
+                    for src_person in c.person:
+                        if src_person.id:
+                            p_ids = {self._tvid: src_person.id}
+                        else:
+                            p_ids = {}
+                        existing_person = next((per for per in mc.person
+                                                if (None is not src_person.id
+                                                    and per.ids.get(self._tvid) == src_person.id)
+                                                or (per.name and per.name == src_person.name)),
+                                               None)  # type: Optional[Person]
+                        n_p = None
+                        if not existing_person:
+                            n_p = Person(src_person.name, src_person.gender, src_person.birthdate,
+                                         src_person.deathdate, src_person.bio, ids=p_ids,
+                                         image_url=src_person.image, thumb_url=src_person.thumb_url,
+                                         show_obj=self, deathplace=src_person.deathplace, akas=src_person.akas,
+                                         nicknames=src_person.nicknames, real_name=src_person.real_name,
+                                         height=src_person.height, character_obj=mc)
+                            if n_p and n_p.id and any(1 for pi in mc.person if pi.id == n_p.id):
+                                existing_person = next((pi for pi in mc.person if pi.id == n_p.id), None)
+
+                        if existing_person:
+                            try:
+                                old_person_ids.remove(existing_person.id)
+                            except KeyError:
+                                logger.log('%s - Person error: %s (%s)' %
+                                           (self.name, existing_person.name, existing_person.id), logger.ERROR)
+                                pass
+                            if force:
+                                existing_person.reset(src_person)
+                            self._update_person_properties_helper(existing_person, src_person, p_ids)
+                        elif None is not n_p:
+                            mc.person.append(n_p)
+
+                    if old_person_ids:
+                        mc.person = [cp for cp in mc.person if cp.id not in old_person_ids]
+
+                    mc.update_properties(name=c.name, image_url=c.image, thumb_url=c.thumb_url,
+                                         ids=dict(chain.from_iterable(iteritems(d)
+                                                                      for d in (mc.ids,
+                                                                                ({}, {self._tvid: c.id})[
+                                                                                    None is not c.id]))))
+                else:
+                    persons = []
+                    tmp_char = None
+                    for s_pers in c.person:
+                        existing_person = next((_p for _c in self._cast_list for _p in _c.person
+                                                if (s_pers.id and _p.ids.get(self._tvid) == s_pers.id)
+                                                or (not s_pers.id and s_pers.name == _p.name)),
+                                               None)  # type: Optional[Person]
+                        if s_pers.id:
+                            p_ids = {self._tvid: s_pers.id}
+                        else:
+                            p_ids = {}
+                        if existing_person:
+                            if force:
+                                existing_person.reset(s_pers)
+                            self._update_person_properties_helper(existing_person, s_pers, p_ids)
+                            persons.append(existing_person)
+                        else:
+                            tmp_char = Character(c.name, ids=({}, {self._tvid: c.id})[None is not c.id],
+                                                 image_url=c.image, thumb_url=c.thumb_url, show_obj=self, tmp=True)
+                            new_person = Person(
+                                s_pers.name, s_pers.gender, s_pers.birthdate, s_pers.deathdate, s_pers.bio,
+                                ids=({}, {self._tvid: s_pers.id})[None is not s_pers.id],
+                                image_url=s_pers.image, thumb_url=s_pers.thumb_url, show_obj=self,
+                                deathplace=s_pers.deathplace, akas=s_pers.akas, nicknames=s_pers.nicknames,
+                                real_name=s_pers.real_name, height=s_pers.height,
+                                tmp_character_obj=tmp_char
+                            )
+                            if force:
+                                new_person.reset(s_pers)
+                            self._update_person_properties_helper(new_person, s_pers, p_ids)
+                            persons.append(new_person)
+                    mc = Character(c.name, person=persons, ids=({}, {self._tvid: c.id})[None is not c.id],
+                                   image_url=c.image, thumb_url=c.thumb_url, show_obj=self)
+                    self._cast_list.append(mc)
+                cast_ordered.append(mc)
+
+        if stop_event and stop_event.is_set():
+            return
+        if remove_char_ids:
+            [c.remove_all_img(include_person=True) for c in self._cast_list or [] if c.id in remove_char_ids]
+        self._cast_list = cast_ordered
+        self._save_cast_list(removed_char_ids=remove_char_ids, force=force, stop_event=stop_event)
 
     def load_imdb_info(self):
 
         if not sickbeard.USE_IMDB_INFO:
             return
 
-        logger.log('Retrieving show info [%s] from IMDb' % self.name, logger.DEBUG)
+        logger.log('Retrieving show info [%s] from IMDb' % self._name, logger.DEBUG)
         try:
             self._get_imdb_info()
         except (BaseException, Exception) as e:
@@ -1343,10 +2732,10 @@ class TVShow(TVShowBase):
 
     @staticmethod
     def check_imdb_redirect(imdb_id):
+        # type: (Union[AnyStr, integer_types]) -> Optional[AnyStr]
         """
 
         :param imdb_id: imdb id
-        :type imdb_id: AnyStr or int or long
         """
         page_url = 'https://www.imdb.com/title/{0}/'.format(imdb_id)
         try:
@@ -1357,15 +2746,16 @@ class TVShow(TVShowBase):
             pass
 
     def _get_imdb_info(self, retry=False):
+        # type: (bool) -> None
 
-        if not self.imdbid and 0 >= self.ids.get(indexermapper.TVINFO_IMDB, {'id': 0}).get('id', 0):
+        if not self._imdbid and 0 >= self.ids.get(indexermapper.TVINFO_IMDB, {'id': 0}).get('id', 0):
             return
 
-        imdb_info = {'imdb_id': self.imdbid or 'tt%07d' % self.ids[indexermapper.TVINFO_IMDB]['id'],
+        imdb_info = {'imdb_id': self._imdbid or 'tt%07d' % self.ids[indexermapper.TVINFO_IMDB]['id'],
                      'title': '',
                      'year': '',
                      'akas': '',
-                     'runtimes': self.runtime,
+                     'runtimes': self._runtime,
                      'genres': '',
                      'countries': '',
                      'country_codes': '',
@@ -1377,7 +2767,7 @@ class TVShow(TVShowBase):
         imdb_id = None
         imdb_certificates = None
         try:
-            imdb_id = str(self.imdbid or 'tt%07d' % self.ids[indexermapper.TVINFO_IMDB]['id'])
+            imdb_id = str(self._imdbid or 'tt%07d' % self.ids[indexermapper.TVINFO_IMDB]['id'])
             redirect_check = self.check_imdb_redirect(imdb_id)
             if redirect_check:
                 self._imdbid = redirect_check
@@ -1385,7 +2775,7 @@ class TVShow(TVShowBase):
                 imdb_info['imdb_id'] = self.imdbid
             i = imdbpie.Imdb(exclude_episodes=True, cachedir=ek.ek(os.path.join, sickbeard.CACHE_DIR, 'imdb-pie'))
             if not helpers.parse_imdb_id(imdb_id):
-                logger.log('Not a valid imdbid: %s for show: %s' % (imdb_id, self.name), logger.WARNING)
+                logger.log('Not a valid imdbid: %s for show: %s' % (imdb_id, self._name), logger.WARNING)
                 return
             imdb_ratings = i.get_title_ratings(imdb_id=imdb_id)
             imdb_akas = i.get_title_versions(imdb_id=imdb_id)
@@ -1478,12 +2868,12 @@ class TVShow(TVShowBase):
         # Rename dict keys without spaces for DB upsert
         self.imdb_info = dict(
             [(k.replace(' ', '_'), k(v) if hasattr(v, 'keys') else v) for k, v in iteritems(imdb_info)])
-        logger.log('%s: Obtained info from IMDb -> %s' % (self.tvid_prodid, self.imdb_info), logger.DEBUG)
+        logger.log('%s: Obtained info from IMDb -> %s' % (self.tvid_prodid, self._imdb_info), logger.DEBUG)
 
-        logger.log('%s: Parsed latest IMDb show info for [%s]' % (self.tvid_prodid, self.name))
+        logger.log('%s: Parsed latest IMDb show info for [%s]' % (self.tvid_prodid, self._name))
 
     def next_episode(self):
-        logger.log('%s: Finding the episode which airs next for: %s' % (self.tvid_prodid, self.name), logger.DEBUG)
+        logger.log('%s: Finding the episode which airs next for: %s' % (self.tvid_prodid, self._name), logger.DEBUG)
 
         curDate = datetime.date.today().toordinal()
         if not self.nextaired or self.nextaired and curDate > self.nextaired:
@@ -1494,7 +2884,7 @@ class TVShow(TVShowBase):
                 + ' WHERE indexer = ? AND showid = ?'
                 + ' AND airdate >= ? AND status in (?,?,?)'
                 + ' ORDER BY airdate ASC LIMIT 1',
-                [self.tvid, self.prodid,
+                [self._tvid, self._prodid,
                  datetime.date.today().toordinal(), UNAIRED, WANTED, FAILED])
 
             if None is sql_result or 0 == len(sql_result):
@@ -1508,11 +2898,23 @@ class TVShow(TVShowBase):
         return self.nextaired
 
     def delete_show(self, full=False):
+        # type: (bool) -> None
         """
 
         :param full:
-        :type full: bool
         """
+        try:
+            sickbeard.people_queue_scheduler.action.abort_cast_update(show_obj=self)
+        except (BaseException, Exception):
+            pass
+        try:
+            sickbeard.show_queue_scheduler.action.abort_show(show_obj=self)
+        except (BaseException, Exception):
+            pass
+        try:
+            sickbeard.search_queue_scheduler.action.abort_show(show_obj=self)
+        except (BaseException, Exception):
+            pass
         sql_l = [["DELETE FROM tv_episodes WHERE indexer = ? AND showid = ?", [self.tvid, self.prodid]],
                  ["DELETE FROM tv_shows WHERE indexer = ? AND indexer_id = ?", [self.tvid, self.prodid]],
                  ["DELETE FROM imdb_info WHERE indexer = ? AND indexer_id = ?", [self.tvid, self.prodid]],
@@ -1521,10 +2923,13 @@ class TVShow(TVShowBase):
                  ["DELETE FROM allowlist WHERE indexer = ? AND show_id = ?", [self.tvid, self.prodid]],
                  ["DELETE FROM blocklist WHERE indexer = ? AND show_id = ?", [self.tvid, self.prodid]],
                  ["DELETE FROM indexer_mapping WHERE indexer = ? AND indexer_id = ?", [self.tvid, self.prodid]],
-                 ["DELETE FROM tv_shows_not_found WHERE indexer = ? AND indexer_id = ?", [self.tvid, self.prodid]]]
+                 ["DELETE FROM tv_shows_not_found WHERE indexer = ? AND indexer_id = ?", [self.tvid, self.prodid]],
+                 ["DELETE FROM castlist WHERE indexer = ? AND indexer_id = ?", [self._tvid, self._prodid]]
+                 ] + self.orphaned_cast_sql()
 
         my_db = db.DBConnection()
         my_db.mass_action(sql_l)
+        self.remove_character_images()
 
         name_cache.remove_from_namecache(self.tvid, self.prodid)
 
@@ -1534,6 +2939,15 @@ class TVShow(TVShowBase):
         sickbeard.showList = filter_list(lambda so: so.tvid_prodid != self.tvid_prodid, sickbeard.showList)
         try:
             del sickbeard.showDict[self.sid_int]
+        except (BaseException, Exception):
+            pass
+
+        try:
+            tvid_prodid = self.tvid_prodid
+            if tvid_prodid in sickbeard.switched_shows:
+                sickbeard.switched_shows.pop(tvid_prodid)
+            elif tvid_prodid in itervalues(sickbeard.switched_shows):
+                sickbeard.switched_shows = {k: v for k, v in iteritems(sickbeard.switched_shows) if tvid_prodid != v}
         except (BaseException, Exception):
             pass
 
@@ -1574,14 +2988,14 @@ class TVShow(TVShowBase):
                 logger.log('Unable to %s %s: %s / %s' % (action, self._location, repr(e), ex(e)), logger.WARNING)
 
     def populate_cache(self, force=False):
+        # type: (bool) -> None
         """
 
         :param force:
-        :type force: bool
         """
         cache_inst = image_cache.ImageCache()
 
-        logger.log('Checking & filling cache for show %s' % self.name)
+        logger.log('Checking & filling cache for show %s' % self._name)
         cache_inst.fill_cache(self, force)
 
     def refresh_dir(self):
@@ -1595,7 +3009,7 @@ class TVShow(TVShowBase):
 
         # run through all locations from DB, check that they exist
         logger.log('%s: Loading all episodes for [%s] with a location from the database'
-                   % (self.tvid_prodid, self.name))
+                   % (self.tvid_prodid, self._name))
 
         my_db = db.DBConnection()
         # noinspection SqlResolve
@@ -1604,7 +3018,7 @@ class TVShow(TVShowBase):
             ' FROM tv_episodes'
             ' WHERE indexer = ? AND showid = ? AND location != ""'
             ' ORDER BY season DESC , episode DESC',
-            [self.tvid, self.prodid])
+            [self._tvid, self._prodid])
 
         kept = 0
         deleted = 0
@@ -1619,7 +3033,7 @@ class TVShow(TVShowBase):
                 ep_obj = self.get_episode(season, episode, ep_sql=[cur_result])
             except exceptions_helper.EpisodeDeletedException:
                 logger.log('The episode from [%s] was deleted while we were refreshing it, moving on to the next one'
-                           % self.name, logger.DEBUG)
+                           % self._name, logger.DEBUG)
                 continue
 
             # if the path exist and if it's in our show dir
@@ -1683,10 +3097,10 @@ class TVShow(TVShowBase):
             my_db.mass_action(sql_l)
 
     def download_subtitles(self, force=False):
+        # type: (bool) -> None
         """
 
         :param force:
-        :type force: bool
         """
         # TODO: Add support for force option
         if not ek.ek(os.path.isdir, self._location):
@@ -1710,90 +3124,124 @@ class TVShow(TVShowBase):
             logger.log('Error occurred when downloading subtitles: %s' % traceback.format_exc(), logger.ERROR)
             return
 
-    def switch_infosrc(self, old_tvid, old_prodid, pausestatus_after=None):
+    def remove_character_images(self):
+        try:
+            img_obj = image_cache.ImageCache()
+            delete_list = []
+            for character in self._cast_list:
+                for p in character.person:
+                    person_img = img_obj.person_both_paths(p)
+                    for i in person_img:
+                        delete_list.append(i)
+                character_img = img_obj.character_both_path(character, self)
+                for i in character_img:
+                    delete_list.append(i)
+
+            for d in delete_list:
+                try:
+                    remove_file_perm(d)
+                except (BaseException, Exception):
+                    pass
+        except (BaseException, Exception):
+            pass
+
+    def switch_infosrc(self, old_tvid, old_prodid, pausestatus_after=None, update_show=True):
+        # type: (integer_types, integer_types, Optional[bool], bool) -> None
         """
 
         :param old_tvid: old tvid
-        :type old_tvid: int
         :param old_prodid: old prodid
-        :type old_prodid: int or long
         :param pausestatus_after: pause after switch
-        :type pausestatus_after: bool or None
+        :param update_show:
         """
-        my_db = db.DBConnection()
-        my_db.mass_action([
-            ['UPDATE tv_shows SET indexer = ?, indexer_id = ? WHERE indexer = ? AND indexer_id = ?',
-             [self.tvid, self.prodid, old_tvid, old_prodid]],
-            ['UPDATE tv_episodes SET indexer = ?, showid = ?, indexerid = 0 WHERE indexer = ? AND showid = ?',
-             [self.tvid, self.prodid, old_tvid, old_prodid]],
-            ['UPDATE blocklist SET indexer = ?, show_id = ? WHERE indexer = ? AND show_id = ?',
-             [self.tvid, self.prodid, old_tvid, old_prodid]],
-            ['UPDATE history SET indexer = ?, showid = ? WHERE indexer = ? AND showid = ?',
-             [self.tvid, self.prodid, old_tvid, old_prodid]],
-            ['UPDATE imdb_info SET indexer = ?, indexer_id = ? WHERE indexer = ? AND indexer_id = ?',
-             [self.tvid, self.prodid, old_tvid, old_prodid]],
-            ['UPDATE scene_exceptions SET indexer = ?, indexer_id = ? WHERE indexer = ? AND indexer_id = ?',
-             [self.tvid, self.prodid, old_tvid, old_prodid]],
-            ['UPDATE scene_numbering SET indexer = ?, indexer_id = ? WHERE indexer = ? AND indexer_id = ?',
-             [self.tvid, self.prodid, old_tvid, old_prodid]],
-            ['UPDATE allowlist SET indexer = ?, show_id = ? WHERE indexer = ? AND show_id = ?',
-             [self.tvid, self.prodid, old_tvid, old_prodid]],
-            ['UPDATE xem_refresh SET indexer = ?, indexer_id = ? WHERE indexer = ? AND indexer_id = ?',
-             [self.tvid, self.prodid, old_tvid, old_prodid]],
-            ['DELETE FROM tv_shows_not_found WHERE indexer = ? AND indexer_id = ?',
-             [old_tvid, old_prodid]]])
+        with self.lock:
+            my_db = db.DBConnection()
+            my_db.mass_action([
+                ['UPDATE tv_shows SET indexer = ?, indexer_id = ? WHERE indexer = ? AND indexer_id = ?',
+                 [self.tvid, self.prodid, old_tvid, old_prodid]],
+                ['UPDATE tv_episodes SET indexer = ?, showid = ?, indexerid = 0 WHERE indexer = ? AND showid = ?',
+                 [self.tvid, self.prodid, old_tvid, old_prodid]],
+                ['UPDATE blocklist SET indexer = ?, show_id = ? WHERE indexer = ? AND show_id = ?',
+                 [self.tvid, self.prodid, old_tvid, old_prodid]],
+                ['UPDATE history SET indexer = ?, showid = ? WHERE indexer = ? AND showid = ?',
+                 [self.tvid, self.prodid, old_tvid, old_prodid]],
+                ['UPDATE imdb_info SET indexer = ?, indexer_id = ? WHERE indexer = ? AND indexer_id = ?',
+                 [self.tvid, self.prodid, old_tvid, old_prodid]],
+                ['UPDATE scene_exceptions SET indexer = ?, indexer_id = ? WHERE indexer = ? AND indexer_id = ?',
+                 [self.tvid, self.prodid, old_tvid, old_prodid]],
+                ['UPDATE scene_numbering SET indexer = ?, indexer_id = ? WHERE indexer = ? AND indexer_id = ?',
+                 [self.tvid, self.prodid, old_tvid, old_prodid]],
+                ['UPDATE allowlist SET indexer = ?, show_id = ? WHERE indexer = ? AND show_id = ?',
+                 [self.tvid, self.prodid, old_tvid, old_prodid]],
+                ['UPDATE xem_refresh SET indexer = ?, indexer_id = ? WHERE indexer = ? AND indexer_id = ?',
+                 [self.tvid, self.prodid, old_tvid, old_prodid]],
+                ['DELETE FROM tv_shows_not_found WHERE indexer = ? AND indexer_id = ?',
+                 [old_tvid, old_prodid]],
+                ['UPDATE castlist SET indexer = ?, indexer_id = ? WHERE indexer = ? AND indexer_id = ?',
+                 [self.tvid, self.prodid, old_tvid, old_prodid]]
+            ])
 
-        myFailedDB = db.DBConnection('failed.db')
-        myFailedDB.action('UPDATE history SET indexer = ?, showid = ? WHERE indexer = ? AND showid = ?',
-                          [self.tvid, self.prodid, old_tvid, old_prodid])
-        del_mapping(old_tvid, old_prodid)
-        self.ids[old_tvid]['status'] = MapStatus.NONE
-        self.ids[self.tvid]['status'] = MapStatus.SOURCE
-        self.ids[self.tvid]['id'] = self.prodid
-        if isinstance(self.imdb_info, dict):
-            self.imdb_info['indexer'] = self.tvid
-            self.imdb_info['indexer_id'] = self.prodid
-        save_mapping(self)
-        name_cache.remove_from_namecache(old_tvid, old_prodid)
-
-        image_cache_dir = ek.ek(os.path.join, sickbeard.CACHE_DIR, 'images', 'shows')
-        old_dir = ek.ek(os.path.join, image_cache_dir, '%s-%s' % (old_tvid, old_prodid))
-        new_dir = ek.ek(os.path.join, image_cache_dir, '%s-%s' % (self.tvid, self.prodid))
-        try:
-            ek.ek(os.rename, old_dir, new_dir)
-        except (BaseException, Exception) as e:
-            logger.log('Unable to rename %s to %s: %s / %s' % (old_dir, new_dir, repr(e), ex(e)),
-                       logger.WARNING)
-
-        old_id = TVidProdid({old_tvid: old_prodid})()
-        rating = sickbeard.FANART_RATINGS.get(old_id)
-        if rating:
-            del sickbeard.FANART_RATINGS[old_id]
-            sickbeard.FANART_RATINGS[self.tvid_prodid] = rating
-            sickbeard.save_config()
-
-        name_cache.buildNameCache(self)
-        self.reset_not_found_count()
-        old_sid_int = self.create_sid(old_tvid, old_prodid)
-        if old_sid_int != self.sid_int:
+            myFailedDB = db.DBConnection('failed.db')
+            myFailedDB.action('UPDATE history SET indexer = ?, showid = ? WHERE indexer = ? AND showid = ?',
+                              [self.tvid, self.prodid, old_tvid, old_prodid])
+            del_mapping(old_tvid, old_prodid)
             try:
-                del sickbeard.showDict[old_sid_int]
+                for c in self._cast_list:  # type: Character
+                    c.remove_all_img(tvid=old_tvid, proid=old_prodid)
             except (BaseException, Exception):
                 pass
-            sickbeard.showDict[self.sid_int] = self
+            self._cast_list = None
+            self.sxe_ep_obj = {}
+            self.ids[old_tvid]['status'] = MapStatus.NONE
+            self.ids[self.tvid]['status'] = MapStatus.SOURCE
+            self.ids[self.tvid]['id'] = self.prodid
+            if isinstance(self.imdb_info, dict):
+                self.imdb_info['indexer'] = self.tvid
+                self.imdb_info['indexer_id'] = self.prodid
+            save_mapping(self)
+            name_cache.remove_from_namecache(old_tvid, old_prodid)
 
-        # force the update
-        try:
-            sickbeard.show_queue_scheduler.action.updateShow(
-                self, force=True, web=True, priority=QueuePriorities.VERYHIGH, pausestatus_after=pausestatus_after)
-        except exceptions_helper.CantUpdateException as e:
-            logger.log('Unable to update this show. %s' % ex(e), logger.ERROR)
+            image_cache_dir = ek.ek(os.path.join, sickbeard.CACHE_DIR, 'images', 'shows')
+            old_dir = ek.ek(os.path.join, image_cache_dir, '%s-%s' % (old_tvid, old_prodid))
+            new_dir = ek.ek(os.path.join, image_cache_dir, '%s-%s' % (self.tvid, self.prodid))
+            try:
+                ek.ek(os.rename, old_dir, new_dir)
+            except (BaseException, Exception) as e:
+                logger.log('Unable to rename %s to %s: %s / %s' % (old_dir, new_dir, repr(e), ex(e)),
+                           logger.WARNING)
+
+            old_id = TVidProdid({old_tvid: old_prodid})()
+            rating = sickbeard.FANART_RATINGS.get(old_id)
+            if rating:
+                del sickbeard.FANART_RATINGS[old_id]
+                sickbeard.FANART_RATINGS[self.tvid_prodid] = rating
+                sickbeard.save_config()
+
+            name_cache.buildNameCache(self)
+            self.reset_not_found_count()
+            old_sid_int = self.create_sid(old_tvid, old_prodid)
+            if old_sid_int != self.sid_int:
+                try:
+                    del sickbeard.showDict[old_sid_int]
+                except (BaseException, Exception):
+                    pass
+                sickbeard.showDict[self.sid_int] = self
+
+            self.save_to_db()
+            if update_show:
+                # force the update
+                try:
+                    sickbeard.show_queue_scheduler.action.updateShow(
+                        self, force=True, web=True, priority=QueuePriorities.VERYHIGH,
+                        pausestatus_after=pausestatus_after)
+                except exceptions_helper.CantUpdateException as e:
+                    logger.log('Unable to update this show. %s' % ex(e), logger.ERROR)
 
     def save_to_db(self, force_save=False):
+        # type: (bool) -> None
         """
 
         :param force_save:
-        :type force_save: bool
         """
         if not self.dirty and not force_save:
             logger.log('%s: Not saving show to db - record is not dirty' % self.tvid_prodid, logger.DEBUG)
@@ -1802,44 +3250,52 @@ class TVShow(TVShowBase):
         logger.log('%s: Saving show info to database' % self.tvid_prodid, logger.DEBUG)
 
         newValueDict = dict(
-            indexer=self.tvid,
-            show_name=self.name,
+            indexer=self._tvid,
+            show_name=self._name,
             location=self._location,
-            network=self.network,
-            genre=self.genre,
-            classification=self.classification,
-            runtime=self.runtime,
-            quality=self.quality,
-            airs=self.airs,
-            status=self.status,
-            flatten_folders=self.flatten_folders,
-            paused=self.paused,
-            air_by_date=self.air_by_date,
-            anime=self.anime,
-            scene=self.scene,
-            sports=self.sports,
-            subtitles=self.subtitles,
-            dvdorder=self.dvdorder,
-            archive_firstmatch=self.upgrade_once,
+            network=self.internal_network,
+            genre=self._genre,
+            classification=self._classification,
+            runtime=self._runtime,
+            quality=self._quality,
+            airs=self._airs,
+            status=self._status,
+            flatten_folders=self._flatten_folders,
+            paused=self._paused,
+            air_by_date=self._air_by_date,
+            anime=self._anime,
+            scene=self._scene,
+            sports=self._sports,
+            subtitles=self._subtitles,
+            dvdorder=self._dvdorder,
+            archive_firstmatch=self._upgrade_once,
             startyear=self.startyear,
-            lang=self.lang, imdb_id=self.imdbid,
-            last_update_indexer=self.last_update_indexer,
-            rls_ignore_words=helpers.generate_word_str(self.rls_ignore_words, self.rls_ignore_words_regex),
-            rls_require_words=helpers.generate_word_str(self.rls_require_words, self.rls_require_words_regex),
-            rls_global_exclude_ignore=','.join(self.rls_global_exclude_ignore),
-            rls_global_exclude_require=','.join(self.rls_global_exclude_require),
-            overview=self.overview,
-            prune=self.prune,
-            tag=self.tag)
+            lang=self._lang, imdb_id=self._imdbid,
+            last_update_indexer=self._last_update_indexer,
+            rls_ignore_words=helpers.generate_word_str(self._rls_ignore_words, self._rls_ignore_words_regex),
+            rls_require_words=helpers.generate_word_str(self._rls_require_words, self._rls_require_words_regex),
+            rls_global_exclude_ignore=','.join(self._rls_global_exclude_ignore),
+            rls_global_exclude_require=','.join(self._rls_global_exclude_require),
+            overview=self._overview,
+            prune=self._prune,
+            tag=self._tag,
+            network_id=self._network_id,
+            network_country=self._network_country,
+            network_country_code=self._network_country_code,
+            network_is_stream=self._network_is_stream,
+            airtime=time_to_int(self._airtime),
+            timezone=self.internal_timezone,
+            src_update_timestamp=self._src_update_time,
+        )
 
-        control_value_dict = dict(indexer=self.tvid, indexer_id=self.prodid)
+        control_value_dict = dict(indexer=self._tvid, indexer_id=self._prodid)
 
         my_db = db.DBConnection()
         my_db.upsert('tv_shows', newValueDict, control_value_dict)
         self.dirty = False
 
-        if sickbeard.USE_IMDB_INFO and len(self.imdb_info):
-            newValueDict = self.imdb_info
+        if sickbeard.USE_IMDB_INFO and len(self._imdb_info):
+            newValueDict = self._imdb_info
 
             my_db = db.DBConnection()
             my_db.upsert('imdb_info', newValueDict, control_value_dict)
@@ -1879,20 +3335,15 @@ class TVShow(TVShowBase):
                + 'prune: %s\n' % self.prune
 
     def want_episode(self, season, episode, quality, manual_search=False, multi_ep=False):
+        # type: (integer_types, integer_types, integer_types, bool, bool) -> bool
         """
 
         :param season: season number
-        :type season: int
         :param episode: episode number
-        :type episode: int
         :param quality: quality
-        :type quality: int
         :param manual_search: manual search
-        :type manual_search: bool
         :param multi_ep: multiple episodes
-        :type multi_ep: bool
         :return:
-        :rtype: bool
         """
         logger.log('Checking if found %sepisode %sx%s is wanted at quality %s' %
                    (('', 'multi-part ')[multi_ep], season, episode, Quality.qualityStrings[quality]), logger.DEBUG)
@@ -1922,7 +3373,7 @@ class TVShow(TVShowBase):
                 pass
 
         # if the quality isn't one we want under any circumstances then just say no
-        initial_qualities, archive_qualities = Quality.splitQuality(self.quality)
+        initial_qualities, archive_qualities = Quality.splitQuality(self._quality)
         all_qualities = list(set(initial_qualities + archive_qualities))
 
         initial = '= (%s)' % ','.join([Quality.qualityStrings[qual] for qual in initial_qualities])
@@ -1939,7 +3390,7 @@ class TVShow(TVShowBase):
         sql_result = my_db.select('SELECT status FROM tv_episodes'
                                   ' WHERE indexer = ? AND showid = ?'
                                   ' AND season = ? AND episode = ?',
-                                  [self.tvid, self.prodid, season, episode])
+                                  [self._tvid, self._prodid, season, episode])
 
         if not sql_result or not len(sql_result):
             logger.log('Unable to find a matching episode in database, ignoring found episode', logger.DEBUG)
@@ -1991,10 +3442,10 @@ class TVShow(TVShowBase):
         return False
 
     def get_overview(self, ep_status, split_snatch=False):
+        # type: (integer_types, bool) -> integer_types
         """
-
         :param ep_status: episode status
-        :type ep_status: int
+        :param split_snatch:
         :return:
         :rtype: int
         """
@@ -2006,13 +3457,19 @@ class TVShow(TVShowBase):
         return d
 
     def __setstate__(self, d):
-        d['lock'] = threading.Lock()
+        d['lock'] = threading.RLock()
         self.__dict__.update(d)
+
+    def __bool__(self):
+        return bool(self._tvid) and bool(self._prodid)
+
+    __nonzero__ = __bool__
 
 
 class TVEpisode(TVEpisodeBase):
 
-    def __init__(self, show_obj, season, episode, path='', show_sql=None):
+    def __init__(self, show_obj, season, episode, path='', show_sql=None, existing_only=False):
+        # type: (TVShow, integer_types, integer_types, AnyStr, List, bool) -> None
         super(TVEpisode, self).__init__(season, episode, int(show_obj.tvid))
 
         self._show_obj = show_obj  # type: TVShow
@@ -2025,16 +3482,99 @@ class TVEpisode(TVEpisodeBase):
 
         self._tvid = int(self.show_obj.tvid)  # type: int
         self._epid = 0  # type: int
+        self._network = None  # type: Optional[AnyStr]
+        self._network_id = None  # type: Optional[int]
+        self._network_country = None  # type: Optional[AnyStr]
+        self._network_country_code = None  # type: Optional[AnyStr]
+        self._network_is_stream = None  # type: Optional[bool]
+        self._airtime = None  # type: Optional[datetime.time]
+        self._runtime = 0  # type: integer_types
+        self._timezone = None  # type: Optional[AnyStr]
+        self._timestamp = None  # type: Optional[int]
 
-        self.lock = threading.Lock()
+        self.lock = threading.RLock()
 
-        self.specify_episode(self.season, self.episode, show_sql)
+        self.specify_episode(self._season, self._episode, show_sql, existing_only=existing_only)
 
         self.related_ep_obj = []  # type: List
 
         self.check_for_meta_files()
 
         self.wanted_quality = []  # type: List
+
+    @property
+    def network(self):
+        return self._network
+
+    @network.setter
+    def network(self, *args):
+        self.dirty_setter('_network')(self, *args)
+
+    @property
+    def network_id(self):
+        return self._network_id
+
+    @network_id.setter
+    def network_id(self, *args):
+        self.dirty_setter('_network_id')(self, *args)
+
+    @property
+    def network_country(self):
+        return self._network_country
+
+    @network_country.setter
+    def network_country(self, *args):
+        self.dirty_setter('_network_country')(self, *args)
+
+    @property
+    def network_country_code(self):
+        return self._network_country_code
+
+    @network_country_code.setter
+    def network_country_code(self, *args):
+        self.dirty_setter('_network_country_code')(self, *args)
+
+    @property
+    def network_is_stream(self):
+        return self._network_is_stream
+
+    @network_is_stream.setter
+    def network_is_stream(self, *args):
+        self.dirty_setter('_network_is_stream')(self, *args)
+
+    @property
+    def airtime(self):
+        # type: (...) -> Optional[datetime.time]
+        return self._airtime
+
+    @airtime.setter
+    def airtime(self, *args):
+        # type: (Optional[datetime.time]) -> None
+        self.dirty_setter('_airtime')(self, *args)
+
+    @property
+    def runtime(self):
+        return self._runtime
+
+    @runtime.setter
+    def runtime(self, *args):
+        self.dirty_setter('_runtime')(self, *args)
+
+    @property
+    def timezone(self):
+        return self._timezone
+
+    @timezone.setter
+    def timezone(self, *args):
+        self.dirty_setter('_timezone')(self, *args)
+
+    @property
+    def timestamp(self):
+        return self._timestamp
+
+    @timestamp.setter
+    def timestamp(self, *args):
+        self.dirty_setter('_timestamp')(self, *args)
 
     @property
     def show_obj(self):
@@ -2186,8 +3726,8 @@ class TVEpisode(TVEpisodeBase):
         :return:
         :rtype: bool
         """
-        oldhasnfo = self.hasnfo
-        oldhastbn = self.hastbn
+        oldhasnfo = self._hasnfo
+        oldhastbn = self._hastbn
 
         hasnfo = False
         hastbn = False
@@ -2211,9 +3751,9 @@ class TVEpisode(TVEpisodeBase):
         self.hastbn = hastbn
 
         # if either setting has changed return true, if not return false
-        return oldhasnfo != self.hasnfo or oldhastbn != self.hastbn
+        return oldhasnfo != self._hasnfo or oldhastbn != self._hastbn
 
-    def specify_episode(self, season, episode, show_sql=None):
+    def specify_episode(self, season, episode, show_sql=None, existing_only=False):
         """
 
         :param season: season number
@@ -2222,6 +3762,7 @@ class TVEpisode(TVEpisodeBase):
         :type episode: int
         :param show_sql:
         :type show_sql:
+        :param existing_only:
         """
         sqlResult = self.load_from_db(season, episode, show_sql)
 
@@ -2236,7 +3777,7 @@ class TVEpisode(TVEpisodeBase):
                     pass
 
                 # if we tried loading it from NFO and didn't find the NFO, try the Indexers
-                if not self.hasnfo:
+                if not self._hasnfo:
                     try:
                         result = self.load_from_tvinfo(season, episode)
                     except exceptions_helper.EpisodeDeletedException:
@@ -2246,6 +3787,9 @@ class TVEpisode(TVEpisodeBase):
                     if not result:
                         raise exceptions_helper.EpisodeNotFoundException(
                             'Couldn\'t find episode %sx%s' % (season, episode))
+            elif existing_only:
+                raise exceptions_helper.EpisodeNotFoundException(
+                    'Couldn\'t find episode %sx%s' % (season, episode))
 
     def load_from_db(self, season, episode, show_sql=None, scene_sql=None):
         """
@@ -2256,11 +3800,13 @@ class TVEpisode(TVEpisodeBase):
         :type episode: int
         :param show_sql:
         :type show_sql:
+        :param scene_sql:
+        :type scene_sql:
         :return:
         :rtype: bool
         """
         logger.log('%s: Loading episode details from DB for episode %sx%s'
-                   % (self.show_obj.tvid_prodid, season, episode), logger.DEBUG)
+                   % (self._show_obj.tvid_prodid, season, episode), logger.DEBUG)
 
         sql_result = None
         if show_sql:
@@ -2276,14 +3822,14 @@ class TVEpisode(TVEpisodeBase):
                                       ' WHERE indexer = ? AND showid = ?'
                                       ' AND season = ? AND episode = ?'
                                       ' LIMIT 2',
-                                      [self.show_obj.tvid, self.show_obj.prodid,
+                                      [self._show_obj.tvid, self._show_obj.prodid,
                                        season, episode])
 
         if 1 < len(sql_result):
             raise exceptions_helper.MultipleDBEpisodesException('Your DB has two records for the same show somehow.')
         elif 0 == len(sql_result):
             logger.log('%s: Episode %sx%s not found in the database'
-                       % (self.show_obj.tvid_prodid, self.season, self.episode), logger.DEBUG)
+                       % (self._show_obj.tvid_prodid, self._season, self._episode), logger.DEBUG)
             return False
         else:
             # NAMEIT logger.log(u'AAAAA from' + str(self.season)+'x'+str(self.episode)
@@ -2316,10 +3862,10 @@ class TVEpisode(TVEpisodeBase):
                 self._file_size = 0
 
             # todo: change to _tvid , _epid after removing indexer, indexerid
-            self.tvid = int(sql_result[0]['indexer'])
-            self.epid = int(sql_result[0]['indexerid'])
+            self._tvid = int(sql_result[0]['indexer'])
+            self._epid = int(sql_result[0]['indexerid'])
 
-            sickbeard.scene_numbering.xem_refresh(self.show_obj.tvid, self.show_obj.prodid)
+            sickbeard.scene_numbering.xem_refresh(self._show_obj.tvid, self._show_obj.prodid)
 
             try:
                 self.scene_season = int(sql_result[0]['scene_season'])
@@ -2338,14 +3884,15 @@ class TVEpisode(TVEpisodeBase):
 
             if 0 == self.scene_absolute_number:
                 self.scene_absolute_number = sickbeard.scene_numbering.get_scene_absolute_numbering(
-                    self.show_obj.tvid, self.show_obj.prodid,
-                    absolute_number=self.absolute_number,
-                    season=self.season, episode=episode, show_sql=show_sql, scene_sql=scene_sql, show_obj=self.show_obj)
+                    self._show_obj.tvid, self._show_obj.prodid,
+                    absolute_number=self._absolute_number,
+                    season=self._season, episode=episode, show_sql=show_sql, scene_sql=scene_sql,
+                    show_obj=self._show_obj)
 
             if 0 == self.scene_season or 0 == self.scene_episode:
                 self.scene_season, self.scene_episode = sickbeard.scene_numbering.get_scene_numbering(
-                    self.show_obj.tvid, self.show_obj.prodid, self.season, self.episode,
-                    show_sql=show_sql, scene_sql=scene_sql, show_obj=self.show_obj)
+                    self._show_obj.tvid, self._show_obj.prodid, self._season, self._episode,
+                    show_sql=show_sql, scene_sql=scene_sql, show_obj=self._show_obj)
 
             if None is not sql_result[0]['release_name']:
                 self._release_name = sql_result[0]['release_name']
@@ -2359,12 +3906,53 @@ class TVEpisode(TVEpisodeBase):
             if None is not sql_result[0]['release_group']:
                 self._release_group = sql_result[0]['release_group']
 
+            self._network = sql_result[0]['network']
+            if not self._network:
+                self._network = self._show_obj.internal_network
+            self._network_id = sql_result[0]['network_id']
+            self._network_country = sql_result[0]['network_country']
+            self._network_country_code = sql_result[0]['network_country_code']
+            self._network_is_stream = bool(sql_result[0]['network_is_stream'])
+            self._timezone = sql_result[0]['timezone']
+            if not self._timezone and (self._network or self._show_obj.internal_timezone):
+                if self._show_obj.internal_timezone:
+                    self._timezone = self._show_obj.internal_timezone
+                else:
+                    _, self.timezone = network_timezones.get_network_timezone(self._network, return_name=True)
+            self._airtime = int_to_time(try_int(sql_result[0]['airtime'], None))
+            self._runtime = sql_result[0]['runtime']
+            self._timestamp = sql_result[0]['timestamp'] or self._make_timestamp()
+
             self.dirty = False
             return True
 
+    # noinspection PyProtectedMember
+    def _make_timestamp(self):
+        # type: (...) -> Optional[integer_types]
+        if self.airdate:
+            if isinstance(self._airtime, datetime.time):
+                ep_time = self._airtime
+            elif isinstance(self._show_obj._airtime, datetime.time):
+                ep_time = self._show_obj._airtime
+            else:
+                ep_time = datetime.time(hour=0, minute=0)
+            tzinfo = None
+            if isinstance(self._timezone, string_types) and self._timezone:
+                tzinfo = tz.gettz(self._timezone, zoneinfo_priority=True)
+            elif isinstance(self._network, string_types) and self._network:
+                tzinfo = tz.gettz(self._network, zoneinfo_priority=True)
+            elif isinstance(self._show_obj.timezone, string_types) and self._show_obj.timezone:
+                tzinfo = self._show_obj.timezone
+            elif isinstance(self._show_obj.network, string_types) and self._show_obj.network:
+                tzinfo = network_timezones.get_network_timezone(self._show_obj.network)
+            if PY2:
+                return SGDatetime.combine(self.airdate, ep_time).replace(tzinfo=tzinfo).timestamp_far()
+            return SGDatetime.combine(self.airdate, ep_time, tzinfo=tzinfo).timestamp_far()
+        return None
+
     def load_from_tvinfo(self, season=None, episode=None, cache=True, tvapi=None, cached_season=None, update=False,
-                         cached_show=None):
-        # type: (integer_types, integer_types, bool, Any, Dict, bool, Dict) -> Optional[bool]
+                         cached_show=None, switch=False, old_tvid=None, old_prodid=None, switch_list=None):
+        # type: (integer_types, integer_types, bool, Any, Dict, bool, Dict, bool, int, integer_types, List) -> Optional[bool]
         """
 
         :param season: season number
@@ -2380,87 +3968,95 @@ class TVEpisode(TVEpisodeBase):
         :param update:
         :type update: bool
         :param cached_show:
+        :param switch:
+        :param old_tvid:
+        :param old_prodid:
+        :param switch_list:
         :return:
         :rtype: bool or None
         """
         if None is season:
-            season = self.season
+            season = self._season
         if None is episode:
-            episode = self.episode
+            episode = self._episode
 
         logger.log('%s: Loading episode details from %s for episode %sx%s' %
-                   (self.show_obj.tvid_prodid, sickbeard.TVInfoAPI(self.show_obj.tvid).name, season, episode),
+                   (self._show_obj.tvid_prodid, sickbeard.TVInfoAPI(self._show_obj.tvid).name, season, episode),
                    logger.DEBUG)
-
-        show_lang = self.show_obj.lang
 
         try:
             if cached_show:
                 ep_info = cached_show[season][episode]
             elif None is cached_season:
                 if None is tvapi:
-                    tvinfo_config = sickbeard.TVInfoAPI(self.tvid).api_params.copy()
+                    tvinfo_config = sickbeard.TVInfoAPI(self._tvid).api_params.copy()
 
                     if not cache:
                         tvinfo_config['cache'] = False
 
+                    show_lang = self._show_obj.lang
+
                     if show_lang:
                         tvinfo_config['language'] = show_lang
 
-                    if 0 != self.show_obj.dvdorder:
+                    if 0 != self._show_obj.dvdorder:
                         tvinfo_config['dvdorder'] = True
 
-                    t = sickbeard.TVInfoAPI(self.tvid).setup(**tvinfo_config)
+                    t = sickbeard.TVInfoAPI(self._tvid).setup(**tvinfo_config)
                 else:
                     t = tvapi
-                ep_info = t.get_show(self.show_obj.prodid)[season][episode]  # type: TVInfoEpisode
+                ep_info = t.get_show(self._show_obj.prodid)[season][episode]  # type: TVInfoEpisode
             else:
                 ep_info = cached_season[episode]  # type: TVInfoEpisode
 
         except (BaseTVinfoEpisodenotfound, BaseTVinfoSeasonnotfound):
             logger.log('Unable to find the episode on %s... has it been removed? Should I delete from db?' %
-                       sickbeard.TVInfoAPI(self.tvid).name, logger.DEBUG)
+                       sickbeard.TVInfoAPI(self._tvid).name, logger.DEBUG)
             # if I'm no longer on the Indexers but I once was then delete myself from the DB
-            if -1 != self.epid and helpers.should_delete_episode(self.status):
+            if -1 != self._epid and helpers.should_delete_episode(self._status):
                 self.delete_episode()
-            elif UNKNOWN == self.status:
+            elif UNKNOWN == self._status:
                 self.status = SKIPPED
             return
         except (BaseTVinfoError, IOError) as e:
-            logger.log('%s threw up an error: %s' % (sickbeard.TVInfoAPI(self.tvid).name, ex(e)), logger.DEBUG)
+            logger.log('%s threw up an error: %s' % (sickbeard.TVInfoAPI(self._tvid).name, ex(e)), logger.DEBUG)
             # if the episode is already valid just log it, if not throw it up
-            if UNKNOWN == self.status:
+            if UNKNOWN == self._status:
                 self.status = SKIPPED
-            if self.name:
+            if self._name:
                 logger.log('%s timed out but we have enough info from other sources, allowing the error' %
-                           sickbeard.TVInfoAPI(self.tvid).name, logger.DEBUG)
+                           sickbeard.TVInfoAPI(self._tvid).name, logger.DEBUG)
                 return
             else:
-                logger.log('%s timed out, unable to create the episode' % sickbeard.TVInfoAPI(self.tvid).name,
+                logger.log('%s timed out, unable to create the episode' % sickbeard.TVInfoAPI(self._tvid).name,
                            logger.ERROR)
                 return False
 
         if getattr(ep_info, 'absolute_number', None) in (None, ''):
             logger.log('This episode (%s - %sx%s) has no absolute number on %s' %
-                       (self.show_obj.name, season, episode, sickbeard.TVInfoAPI(self.tvid).name), logger.DEBUG)
+                       (self._show_obj.name, season, episode, sickbeard.TVInfoAPI(self._tvid).name), logger.DEBUG)
         else:
             logger.log('%s: The absolute_number for %sx%s is : %s' %
-                       (self.show_obj.tvid_prodid, season, episode, ep_info['absolute_number']), logger.DEBUG)
+                       (self._show_obj.tvid_prodid, season, episode, ep_info['absolute_number']), logger.DEBUG)
             self.absolute_number = int(ep_info['absolute_number'])
 
+        if switch and None is not switch_list:
+            if self._name != self.dict_prevent_nonetype(ep_info, 'episodename'):
+                switch_list.append(self.show_obj.switch_ep_change_sql(old_tvid, old_prodid, episode, season,
+                                                                      TVSWITCH_EP_RENAMED))
         self.name = self.dict_prevent_nonetype(ep_info, 'episodename')
         self.season = season
         self.episode = episode
 
-        sickbeard.scene_numbering.xem_refresh(self.show_obj.tvid, self.show_obj.prodid)
+        sickbeard.scene_numbering.xem_refresh(self._show_obj.tvid, self._show_obj.prodid)
 
         self.scene_absolute_number = sickbeard.scene_numbering.get_scene_absolute_numbering(
-            self.show_obj.tvid, self.show_obj.prodid,
-            absolute_number=self.absolute_number,
-            season=self.season, episode=self.episode, show_obj=self.show_obj)
+            self._show_obj.tvid, self._show_obj.prodid,
+            absolute_number=self._absolute_number,
+            season=self._season, episode=self._episode, show_obj=self._show_obj)
 
         self.scene_season, self.scene_episode = sickbeard.scene_numbering.get_scene_numbering(
-            self.show_obj.tvid, self.show_obj.prodid, self.season, self.episode, show_obj=self.show_obj)
+            self._show_obj.tvid, self._show_obj.prodid, self._season, self._episode, show_obj=self._show_obj)
 
         self.description = self.dict_prevent_nonetype(ep_info, 'overview')
 
@@ -2469,44 +4065,65 @@ class TVEpisode(TVEpisodeBase):
             firstaired = str(datetime.date.fromordinal(1))
         rawAirdate = [int(x) for x in firstaired.split('-')]
 
-        old_airdate_future = self.airdate == datetime.date.fromordinal(1) or self.airdate >= datetime.date.today()
+        old_airdate_future = self._airdate == datetime.date.fromordinal(1) or self._airdate >= datetime.date.today()
         try:
             self.airdate = datetime.date(rawAirdate[0], rawAirdate[1], rawAirdate[2])
         except (ValueError, IndexError):
             logger.log('Malformed air date retrieved from %s (%s - %sx%s)' %
-                       (sickbeard.TVInfoAPI(self.tvid).name, self.show_obj.name, season, episode), logger.ERROR)
+                       (sickbeard.TVInfoAPI(self._tvid).name, self._show_obj.name, season, episode), logger.ERROR)
             # if I'm incomplete on TVDB but I once was complete then just delete myself from the DB for now
-            if -1 != self.epid and helpers.should_delete_episode(self.status):
+            if -1 != self._epid and helpers.should_delete_episode(self._status):
                 self.delete_episode()
-            elif UNKNOWN == self.status:
+            elif UNKNOWN == self._status:
                 self.status = SKIPPED
             return False
 
+        self.network = ep_info.network
+        if not self._network:
+            self.network = self._show_obj.internal_network
+        self.network_id = ep_info.network_id
+        self.network_country = ep_info.network_country
+        self.network_country_code = ep_info.network_country_code
+        self.timezone = ep_info.network_timezone
+        if not self._timezone and (self._network or self._show_obj.internal_timezone):
+            if self._show_obj.internal_timezone:
+                self._timezone = self._show_obj.internal_timezone
+            else:
+                _, self.timezone = network_timezones.get_network_timezone(self._network, return_name=True)
+        self.network_is_stream = ep_info.network_is_stream
+        self.airtime = ep_info.airtime
+        self.runtime = ep_info.runtime
+        self.timestamp = ep_info.timestamp or self._make_timestamp()
+
         today = datetime.date.today()
         delta = datetime.timedelta(days=1)
-        show_time = network_timezones.parse_date_time(self.airdate.toordinal(),
-                                                      self.show_obj.airs,
-                                                      self.show_obj.network)
-        show_length = datetime.timedelta(minutes=helpers.try_int(self.show_obj.runtime, 60))
+        if self._timestamp and self._timezone:
+            show_time = SGDatetime.from_timestamp(self._timestamp, tz_aware=True, local_time=False,
+                                                  tzinfo=tz.gettz(self._timezone))
+        else:
+            show_time = network_timezones.parse_date_time(self._airdate.toordinal(),
+                                                          self._airtime or self._show_obj.airs,
+                                                          self._network or self._show_obj.network)
         tz_now = datetime.datetime.now(network_timezones.SG_TIMEZONE)
-        future_airtime = (self.airdate > (today + delta) or
-                          (not self.airdate < (today - delta) and ((show_time + show_length) > tz_now)))
+        show_length = datetime.timedelta(minutes=helpers.try_int(self._runtime or self._show_obj.runtime, 60))
+        future_airtime = (self._airdate > (today + delta) or
+                          (not self._airdate < (today - delta) and ((show_time + show_length) > tz_now)))
 
         # early conversion to int so that episode doesn't get marked dirty
         self.epid = getattr(ep_info, 'id', None)
-        if None is self.epid:
-            logger.log('Failed to retrieve ID from %s' % sickbeard.TVInfoAPI(self.tvid).name, logger.ERROR)
-            if helpers.should_delete_episode(self.status):
+        if None is self._epid:
+            logger.log('Failed to retrieve ID from %s' % sickbeard.TVInfoAPI(self._tvid).name, logger.ERROR)
+            if helpers.should_delete_episode(self._status):
                 self.delete_episode()
-            elif UNKNOWN == self.status:
+            elif UNKNOWN == self._status:
                 self.status = (SKIPPED, UNAIRED)[future_airtime]
             return False
 
         # don't update show status if show dir is missing, unless it's missing on purpose
         # noinspection PyProtectedMember
-        if not ek.ek(os.path.isdir, self.show_obj._location) \
+        if not ek.ek(os.path.isdir, self._show_obj._location) \
                 and not sickbeard.CREATE_MISSING_SHOW_DIRS and not sickbeard.ADD_SHOWS_WO_DIR:
-            if UNKNOWN == self.status:
+            if UNKNOWN == self._status:
                 self.status = (SKIPPED, UNAIRED)[future_airtime]
                 logger.log('The show directory is missing but an episode status found at Unknown is set Skipped')
             else:
@@ -2514,17 +4131,17 @@ class TVEpisode(TVEpisodeBase):
                            ' not bothering to change the episode statuses since it\'d probably be invalid')
             return
 
-        if self.location:
+        if self._location:
             logger.log('%s: Setting status for %sx%s based on status %s and existence of %s' %
-                       (self.show_obj.tvid_prodid, season, episode, statusStrings[self.status], self.location),
+                       (self._show_obj.tvid_prodid, season, episode, statusStrings[self._status], self._location),
                        logger.DEBUG)
 
         # if we don't have the file
-        if not ek.ek(os.path.isfile, self.location):
+        if not ek.ek(os.path.isfile, self._location):
 
-            if self.status in [SKIPPED, UNAIRED, UNKNOWN, WANTED]:
+            if self._status in [SKIPPED, UNAIRED, UNKNOWN, WANTED]:
                 very_old_delta = datetime.timedelta(days=90)
-                very_old_airdate = datetime.date.fromordinal(1) < self.airdate < (today - very_old_delta)
+                very_old_airdate = datetime.date.fromordinal(1) < self._airdate < (today - very_old_delta)
 
                 # if this episode hasn't aired yet set the status to UNAIRED
                 if future_airtime:
@@ -2532,28 +4149,28 @@ class TVEpisode(TVEpisodeBase):
                     self.status = UNAIRED
 
                 # if there's no airdate then set it to unaired (and respect ignored)
-                elif self.airdate == datetime.date.fromordinal(1):
-                    if IGNORED == self.status:
+                elif self._airdate == datetime.date.fromordinal(1):
+                    if IGNORED == self._status:
                         msg = 'Episode has no air date and marked %s, no change'
                     else:
                         msg = 'Episode has no air date, marking it %s'
                         self.status = UNAIRED
 
                 # if the airdate is in the past
-                elif UNAIRED == self.status:
+                elif UNAIRED == self._status:
                     msg = ('Episode status %s%s, with air date in the past, marking it ' % (
-                        statusStrings[self.status], ','.join([(' is a special', '')[0 < self.season],
-                                                              ('', ' is paused')[self.show_obj.paused]])) + '%s')
-                    self.status = (SKIPPED, WANTED)[0 < self.season
-                                                    and not self.show_obj.paused and not very_old_airdate]
+                        statusStrings[self._status], ','.join([(' is a special', '')[0 < self._season],
+                                                              ('', ' is paused')[self._show_obj.paused]])) + '%s')
+                    self.status = (SKIPPED, WANTED)[0 < self._season
+                                                    and not self._show_obj.paused and not very_old_airdate]
 
                 # if still UNKNOWN or SKIPPED with the deprecated future airdate method
-                elif UNKNOWN == self.status or (SKIPPED == self.status and old_airdate_future):
+                elif UNKNOWN == self._status or (SKIPPED == self._status and old_airdate_future):
                     msg = ('Episode status %s%s, with air date in the past, marking it ' % (
-                        statusStrings[self.status], ','.join([
-                            ('', ' has old future date format')[SKIPPED == self.status and old_airdate_future],
-                            ('', ' is being updated')[bool(update)], (' is a special', '')[0 < self.season]])) + '%s')
-                    self.status = (SKIPPED, WANTED)[update and not self.show_obj.paused and 0 < self.season
+                        statusStrings[self._status], ','.join([
+                            ('', ' has old future date format')[SKIPPED == self._status and old_airdate_future],
+                            ('', ' is being updated')[bool(update)], (' is a special', '')[0 < self._season]])) + '%s')
+                    self.status = (SKIPPED, WANTED)[update and not self._show_obj.paused and 0 < self._season
                                                     and not very_old_airdate]
 
                 else:
@@ -2562,24 +4179,24 @@ class TVEpisode(TVEpisodeBase):
             else:
                 msg = 'Not touching episode status %s, because there is no file'
 
-            logger.log(msg % statusStrings[self.status], logger.DEBUG)
+            logger.log(msg % statusStrings[self._status], logger.DEBUG)
 
         # if we have a media file then it's downloaded
-        elif sickbeard.helpers.has_media_ext(self.location):
-            if IGNORED == self.status:
+        elif sickbeard.helpers.has_media_ext(self._location):
+            if IGNORED == self._status:
                 logger.log('File exists for %sx%s, ignoring because of status %s' %
-                           (self.season, self.episode, statusStrings[self.status]), logger.DEBUG)
+                           (self._season, self._episode, statusStrings[self._status]), logger.DEBUG)
             # leave propers alone, you have to either post-process them or manually change them back
-            elif self.status not in Quality.SNATCHED_ANY + Quality.DOWNLOADED + Quality.ARCHIVED:
-                msg = '(1) Status changes from %s to ' % statusStrings[self.status]
-                self.status = Quality.statusFromNameOrFile(self.location, anime=self.show_obj.is_anime)
-                logger.log('%s%s' % (msg, statusStrings[self.status]), logger.DEBUG)
+            elif self._status not in Quality.SNATCHED_ANY + Quality.DOWNLOADED + Quality.ARCHIVED:
+                msg = '(1) Status changes from %s to ' % statusStrings[self._status]
+                self.status = Quality.statusFromNameOrFile(self._location, anime=self._show_obj.is_anime)
+                logger.log('%s%s' % (msg, statusStrings[self._status]), logger.DEBUG)
 
         # shouldn't get here probably
         else:
-            msg = '(2) Status changes from %s to ' % statusStrings[self.status]
+            msg = '(2) Status changes from %s to ' % statusStrings[self._status]
             self.status = UNKNOWN
-            logger.log('%s%s' % (msg, statusStrings[self.status]), logger.DEBUG)
+            logger.log('%s%s' % (msg, statusStrings[self._status]), logger.DEBUG)
 
     def load_from_nfo(self, location):
         """
@@ -2588,9 +4205,9 @@ class TVEpisode(TVEpisodeBase):
         :type location: AnyStr
         """
         # noinspection PyProtectedMember
-        if not ek.ek(os.path.isdir, self.show_obj._location):
+        if not ek.ek(os.path.isdir, self._show_obj._location):
             logger.log('%s: The show directory is missing, not bothering to try loading the episode NFO'
-                       % self.show_obj.tvid_prodid)
+                       % self._show_obj.tvid_prodid)
             return
 
         logger.log('%s: Loading episode details from the NFO file associated with %s'
@@ -2600,13 +4217,13 @@ class TVEpisode(TVEpisodeBase):
 
         if "" != self.location:
 
-            if UNKNOWN == self.status and sickbeard.helpers.has_media_ext(self.location):
-                status_quality = Quality.statusFromNameOrFile(self.location, anime=self.show_obj.is_anime)
-                logger.log('(3) Status changes from %s to %s' % (self.status, status_quality), logger.DEBUG)
+            if UNKNOWN == self._status and sickbeard.helpers.has_media_ext(self.location):
+                status_quality = Quality.statusFromNameOrFile(self.location, anime=self._show_obj.is_anime)
+                logger.log('(3) Status changes from %s to %s' % (self._status, status_quality), logger.DEBUG)
                 self.status = status_quality
 
             nfoFile = sickbeard.helpers.replace_extension(self.location, 'nfo')
-            logger.log('%s: Using NFO name %s' % (self.show_obj.tvid_prodid, nfoFile), logger.DEBUG)
+            logger.log('%s: Using NFO name %s' % (self._show_obj.tvid_prodid, nfoFile), logger.DEBUG)
 
             if ek.ek(os.path.isfile, nfoFile):
                 try:
@@ -2625,13 +4242,13 @@ class TVEpisode(TVEpisodeBase):
                 # TODO: deprecated function getiterator needs to be replaced
                 # for epDetails in showXML.getiterator('episodedetails'):
                 for epDetails in list(showXML.iter('episodedetails')):
-                    if None is epDetails.findtext('season') or int(epDetails.findtext('season')) != self.season or \
+                    if None is epDetails.findtext('season') or int(epDetails.findtext('season')) != self._season or \
                                     None is epDetails.findtext('episode') or int(
-                            epDetails.findtext('episode')) != self.episode:
+                            epDetails.findtext('episode')) != self._episode:
                         logger.log('%s: NFO has an <episodedetails> block for a different episode - wanted %sx%s'
                                    ' but got %sx%s' %
-                                   (self.show_obj.tvid_prodid, self.season, self.episode, epDetails.findtext('season'),
-                                    epDetails.findtext('episode')), logger.DEBUG)
+                                   (self._show_obj.tvid_prodid, self._season, self._episode,
+                                    epDetails.findtext('season'), epDetails.findtext('episode')), logger.DEBUG)
                         continue
 
                     if None is epDetails.findtext('title') or None is epDetails.findtext('aired'):
@@ -2641,18 +4258,19 @@ class TVEpisode(TVEpisodeBase):
                     self.episode = int(epDetails.findtext('episode'))
                     self.season = int(epDetails.findtext('season'))
 
-                    sickbeard.scene_numbering.xem_refresh(self.show_obj.tvid, self.show_obj.prodid)
+                    sickbeard.scene_numbering.xem_refresh(self._show_obj.tvid, self._show_obj.prodid)
 
                     self.scene_absolute_number = sickbeard.scene_numbering.get_scene_absolute_numbering(
-                        self.show_obj.tvid, self.show_obj.prodid,
-                        absolute_number=self.absolute_number,
-                        season=self.season, episode=self.episode, show_obj=self.show_obj)
+                        self._show_obj.tvid, self._show_obj.prodid,
+                        absolute_number=self._absolute_number,
+                        season=self._season, episode=self._episode, show_obj=self._show_obj)
 
                     self.scene_season, self.scene_episode = sickbeard.scene_numbering.get_scene_numbering(
-                        self.show_obj.tvid, self.show_obj.prodid, self.season, self.episode, show_obj=self.show_obj)
+                        self._show_obj.tvid, self._show_obj.prodid, self._season, self._episode,
+                        show_obj=self._show_obj)
 
                     self.description = epDetails.findtext('plot')
-                    if None is self.description:
+                    if None is self._description:
                         self.description = ''
 
                     if epDetails.findtext('aired'):
@@ -2739,24 +4357,31 @@ class TVEpisode(TVEpisodeBase):
 
         return result
 
-    def delete_episode(self):
+    def delete_episode(self, return_sql=False):
+        # type: (bool) -> Optional[List[List]]
+        """
+        deletes epsiode from db, alternatively returns sql to remove episode from db
 
-        logger.log('Deleting %s %sx%s from the DB' % (self.show_obj.name, self.season, self.episode), logger.DEBUG)
+        :param return_sql: only return sql to delete episode
+        """
+
+        logger.log('Deleting %s %sx%s from the DB' % (self._show_obj.name, self._season, self._episode), logger.DEBUG)
 
         # remove myself from the show dictionary
-        if self.show_obj.get_episode(self.season, self.episode, no_create=True) == self:
+        if self.show_obj.get_episode(self._season, self._episode, no_create=True) == self:
             logger.log('Removing myself from my show\'s list', logger.DEBUG)
-            del self.show_obj.sxe_ep_obj[self.season][self.episode]
+            del self.show_obj.sxe_ep_obj[self._season][self._episode]
 
         # delete myself from the DB
         logger.log('Deleting myself from the database', logger.DEBUG)
+
+        sql = [['DELETE FROM tv_episodes WHERE indexer = ? AND showid = ? AND season = ? AND episode = ?',
+               [self._show_obj.tvid, self._show_obj.prodid, self._season, self._episode]]]
+        if return_sql:
+            return sql
+
         my_db = db.DBConnection()
-        sql = 'DELETE FROM tv_episodes' \
-              ' WHERE indexer=%s AND showid=%s' \
-              ' AND season=%s AND episode=%s' % \
-              (self.show_obj.tvid, self.show_obj.prodid,
-               self.season, self.episode)
-        my_db.action(sql)
+        my_db.mass_action(sql)
 
         raise exceptions_helper.EpisodeDeletedException()
 
@@ -2770,7 +4395,7 @@ class TVEpisode(TVEpisodeBase):
         """
 
         if not self.dirty and not force_save:
-            logger.log('%s: Not creating SQL queue - record is not dirty' % self.show_obj.tvid_prodid, logger.DEBUG)
+            logger.log('%s: Not creating SQL queue - record is not dirty' % self._show_obj.tvid_prodid, logger.DEBUG)
             return
 
         self.dirty = False
@@ -2782,6 +4407,8 @@ class TVEpisode(TVEpisodeBase):
             ' airdate, hasnfo, hastbn, status, location, file_size,'
             ' release_name, is_proper, showid, season, episode, absolute_number,'
             ' version, release_group,'
+            ' network, network_id, network_country, network_country_code, network_is_stream,'
+            ' airtime, runtime, timestamp, timezone,'
             ' scene_absolute_number, scene_season, scene_episode)'
             ' VALUES'
             ' ((SELECT episode_id FROM tv_episodes'
@@ -2793,26 +4420,30 @@ class TVEpisode(TVEpisodeBase):
             ',?,?,?,?,?,?'
             ',?,?'
             ',?,?,?,?'
-            ',?,?,'
+            ',?,?'
+            ',?,?,?,?,?'
+            ',?,?,?,?,'
             '(SELECT scene_absolute_number FROM tv_episodes'
             ' WHERE indexer = ? AND showid = ? AND season = ? AND episode = ?),'
             '(SELECT scene_season FROM tv_episodes'
             ' WHERE indexer = ? AND showid = ? AND season = ? AND episode = ?),'
             '(SELECT scene_episode FROM tv_episodes'
             ' WHERE indexer = ? AND showid = ? AND season = ? AND episode = ?));',
-            [self.show_obj.tvid, self.show_obj.prodid,
-             self.season, self.episode,
-             self.epid, self.tvid,
-             self.name, self.description,
-             ','.join([isinstance(sub, string_types) and sub or sub.alpha2 for sub in self.subtitles]),
-             self.subtitles_searchcount, self.subtitles_lastsearch,
-             self.airdate.toordinal(), self.hasnfo, self.hastbn, self.status, self.location, self.file_size,
-             self.release_name, self.is_proper,
-             self.show_obj.prodid, self.season, self.episode, self.absolute_number,
-             self.version, self.release_group,
-             self.show_obj.tvid, self.show_obj.prodid, self.season, self.episode,
-             self.show_obj.tvid, self.show_obj.prodid, self.season, self.episode,
-             self.show_obj.tvid, self.show_obj.prodid, self.season, self.episode]]
+            [self._show_obj.tvid, self._show_obj.prodid,
+             self._season, self._episode,
+             self._epid, self._tvid,
+             self._name, self._description,
+             ','.join([sub for sub in self._subtitles]), self._subtitles_searchcount, self._subtitles_lastsearch,
+             self._airdate.toordinal(), self._hasnfo, self._hastbn, self._status, self._location, self._file_size,
+             self._release_name, self._is_proper,
+             self._show_obj.prodid, self._season, self._episode, self._absolute_number,
+             self._version, self._release_group,
+             self._network, self._network_id,
+             self._network_country, self._network_country_code, self._network_is_stream,
+             time_to_int(self._airtime), self._runtime, self._timestamp, self._timezone,
+             self._show_obj.tvid, self._show_obj.prodid, self._season, self._episode,
+             self._show_obj.tvid, self._show_obj.prodid, self._season, self._episode,
+             self._show_obj.tvid, self._show_obj.prodid, self._season, self._episode]]
 
     def save_to_db(self, force_save=False):
         """
@@ -2823,32 +4454,42 @@ class TVEpisode(TVEpisodeBase):
         """
 
         if not self.dirty and not force_save:
-            logger.log('%s: Not saving episode to db - record is not dirty' % self.show_obj.tvid_prodid, logger.DEBUG)
+            logger.log('%s: Not saving episode to db - record is not dirty' % self._show_obj.tvid_prodid, logger.DEBUG)
             return
 
-        logger.log('%s: Saving episode details to database' % self.show_obj.tvid_prodid, logger.DEBUG)
+        logger.log('%s: Saving episode details to database' % self._show_obj.tvid_prodid, logger.DEBUG)
 
-        logger.log('STATUS IS %s' % statusStrings[self.status], logger.DEBUG)
+        logger.log('STATUS IS %s' % statusStrings[self._status], logger.DEBUG)
 
         newValueDict = dict(
-            indexer=self.tvid,
-            indexerid=self.epid,
-            name=self.name,
-            description=self.description,
-            subtitles=','.join([sub for sub in self.subtitles]),
-            subtitles_searchcount=self.subtitles_searchcount,
-            subtitles_lastsearch=self.subtitles_lastsearch,
-            airdate=self.airdate.toordinal(),
-            hasnfo=self.hasnfo,
-            hastbn=self.hastbn,
-            status=self.status,
-            location=self.location,
-            file_size=self.file_size,
-            release_name=self.release_name,
-            is_proper=self.is_proper,
-            absolute_number=self.absolute_number,
-            version=self.version,
-            release_group=self.release_group)
+            indexer=self._tvid,
+            indexerid=self._epid,
+            name=self._name,
+            description=self._description,
+            subtitles=','.join([sub for sub in self._subtitles]),
+            subtitles_searchcount=self._subtitles_searchcount,
+            subtitles_lastsearch=self._subtitles_lastsearch,
+            airdate=self._airdate.toordinal(),
+            hasnfo=self._hasnfo,
+            hastbn=self._hastbn,
+            status=self._status,
+            location=self._location,
+            file_size=self._file_size,
+            release_name=self._release_name,
+            is_proper=self._is_proper,
+            absolute_number=self._absolute_number,
+            version=self._version,
+            release_group=self._release_group,
+            network=self._network,
+            network_id=self._network_id,
+            network_country=self._network_country,
+            network_country_code=self._network_country_code,
+            network_is_stream=self._network_is_stream,
+            timezone=self._timezone,
+            timestamp=self._timestamp,
+            airtime=time_to_int(self._airtime),
+            runtime=self._runtime,
+        )
 
         control_value_dict = dict(
             indexer=self.show_obj.tvid, showid=self.show_obj.prodid, season=self.season, episode=self.episode)
@@ -2893,9 +4534,9 @@ class TVEpisode(TVEpisodeBase):
         :rtype: AnyStr
         """
 
-        if self.show_obj.anime and not self.show_obj.scene:
+        if self._show_obj.anime and not self._show_obj.scene:
             return self._format_pattern('%SN - %AB - %EN')
-        elif self.show_obj.air_by_date:
+        elif self._show_obj.air_by_date:
             return self._format_pattern('%SN - %AD - %EN')
 
         return self._format_pattern('%SN - %Sx%0E - %EN')
@@ -2913,12 +4554,12 @@ class TVEpisode(TVEpisodeBase):
         self.related_ep_obj = sorted(self.related_ep_obj, key=lambda se: se.episode)
 
         if 0 == len(self.related_ep_obj):
-            goodName = self.name
+            goodName = self._name
         else:
             singleName = True
             curGoodName = None
 
-            for curName in [self.name] + [x.name for x in self.related_ep_obj]:
+            for curName in [self._name] + [x.name for x in self.related_ep_obj]:
                 match = re.match(multiNameRegex, curName)
                 if not match:
                     singleName = False
@@ -2933,7 +4574,7 @@ class TVEpisode(TVEpisodeBase):
             if singleName:
                 goodName = curGoodName
             else:
-                goodName = self.name
+                goodName = self._name
                 for ep_obj in self.related_ep_obj:
                     goodName += ' & ' + ep_obj.name
 
@@ -2977,12 +4618,12 @@ class TVEpisode(TVEpisodeBase):
                 return ''
             return parse_result.release_group
 
-        epStatus, epQual = Quality.splitCompositeStatus(self.status)
+        epStatus, epQual = Quality.splitCompositeStatus(self._status)
 
         if sickbeard.NAMING_STRIP_YEAR:
-            show_name = re.sub(r'\(\d+\)$', '', self.show_obj.name).rstrip()
+            show_name = re.sub(r'\(\d+\)$', '', self._show_obj.name).rstrip()
         else:
-            show_name = self.show_obj.name
+            show_name = self._show_obj.name
 
         return {
             '%SN': show_name,
@@ -2994,29 +4635,29 @@ class TVEpisode(TVEpisodeBase):
             '%QN': Quality.qualityStrings[epQual],
             '%Q.N': dot(Quality.qualityStrings[epQual]),
             '%Q_N': us(Quality.qualityStrings[epQual]),
-            '%S': str(self.season),
-            '%0S': '%02d' % self.season,
-            '%E': str(self.episode),
-            '%0E': '%02d' % self.episode,
+            '%S': str(self._season),
+            '%0S': '%02d' % self._season,
+            '%E': str(self._episode),
+            '%0E': '%02d' % self._episode,
             '%XS': str(self.scene_season),
             '%0XS': '%02d' % self.scene_season,
             '%XE': str(self.scene_episode),
             '%0XE': '%02d' % self.scene_episode,
-            '%AB': '%(#)03d' % {'#': self.absolute_number},
+            '%AB': '%(#)03d' % {'#': self._absolute_number},
             '%XAB': '%(#)03d' % {'#': self.scene_absolute_number},
-            '%RN': release_name(self.release_name, self.show_obj.is_anime),
-            '%RG': release_group(self.show_obj, self.release_name),
-            '%AD': str(self.airdate).replace('-', ' '),
-            '%A.D': str(self.airdate).replace('-', '.'),
-            '%A_D': us(str(self.airdate)),
-            '%A-D': str(self.airdate),
-            '%Y': str(self.airdate.year),
-            '%M': str(self.airdate.month),
-            '%D': str(self.airdate.day),
-            '%0M': '%02d' % self.airdate.month,
-            '%0D': '%02d' % self.airdate.day,
+            '%RN': release_name(self._release_name, self._show_obj.is_anime),
+            '%RG': release_group(self._show_obj, self._release_name),
+            '%AD': str(self._airdate).replace('-', ' '),
+            '%A.D': str(self._airdate).replace('-', '.'),
+            '%A_D': us(str(self._airdate)),
+            '%A-D': str(self._airdate),
+            '%Y': str(self._airdate.year),
+            '%M': str(self._airdate.month),
+            '%D': str(self._airdate.day),
+            '%0M': '%02d' % self._airdate.month,
+            '%0D': '%02d' % self._airdate.day,
             '%RT': "PROPER" if self.is_proper else "",
-            '%V': 'v%s' % self.version if self.show_obj.is_anime and 1 < self.version else '',
+            '%V': 'v%s' % self._version if self._show_obj.is_anime and 1 < self._version else '',
         }
 
     @staticmethod
@@ -3055,7 +4696,7 @@ class TVEpisode(TVEpisodeBase):
 
         # if there's no release group then replace it with a reasonable facsimile
         if not replace_map['%RN']:
-            if self.show_obj.air_by_date or self.show_obj.sports:
+            if self._show_obj.air_by_date or self._show_obj.sports:
                 result_name = result_name.replace('%RN', '%S.N.%A.D.%E.N-SickGear')
                 result_name = result_name.replace('%rn', '%s.n.%A.D.%e.n-SickGear')
             elif 3 != anime_type:
@@ -3149,9 +4790,9 @@ class TVEpisode(TVEpisodeBase):
                 ep_string += cur_ep_obj._format_string(ep_format.upper(), cur_ep_obj._replace_map())
 
             if 3 != anime_type:
-                curAbsolute_number = (self.absolute_number, self.episode)[0 == self.absolute_number]
+                curAbsolute_number = (self._absolute_number, self._episode)[0 == self._absolute_number]
 
-                if 0 != self.season:  # dont set absolute numbers if we are on specials !
+                if 0 != self._season:  # dont set absolute numbers if we are on specials !
                     if 1 == anime_type:  # this crazy person wants both ! (note: +=)
                         ep_string += sep + '%(#)03d' % {
                             '#': curAbsolute_number}
@@ -3195,13 +4836,13 @@ class TVEpisode(TVEpisodeBase):
         """
 
         anime_type = sickbeard.NAMING_ANIME
-        if not self.show_obj.is_anime:
+        if not self._show_obj.is_anime:
             anime_type = 3
 
         result = self.formatted_filename(anime_type=anime_type)
 
         # if they want us to flatten it and we're allowed to flatten it then we will
-        if self.show_obj.flatten_folders and not sickbeard.NAMING_FORCE_FOLDERS:
+        if self._show_obj.flatten_folders and not sickbeard.NAMING_FORCE_FOLDERS:
             return result
 
         # if not we append the folder on and use that
@@ -3217,11 +4858,11 @@ class TVEpisode(TVEpisodeBase):
 
         if None is pattern:
             # we only use ABD if it's enabled, this is an ABD show, AND this is not a multi-ep
-            if self.show_obj.air_by_date and sickbeard.NAMING_CUSTOM_ABD and not self.related_ep_obj:
+            if self._show_obj.air_by_date and sickbeard.NAMING_CUSTOM_ABD and not self.related_ep_obj:
                 pattern = sickbeard.NAMING_ABD_PATTERN
-            elif self.show_obj.sports and sickbeard.NAMING_CUSTOM_SPORTS and not self.related_ep_obj:
+            elif self._show_obj.sports and sickbeard.NAMING_CUSTOM_SPORTS and not self.related_ep_obj:
                 pattern = sickbeard.NAMING_SPORTS_PATTERN
-            elif self.show_obj.anime and sickbeard.NAMING_CUSTOM_ANIME:
+            elif self._show_obj.anime and sickbeard.NAMING_CUSTOM_ANIME:
                 pattern = sickbeard.NAMING_ANIME_PATTERN
             else:
                 pattern = sickbeard.NAMING_PATTERN
@@ -3240,11 +4881,11 @@ class TVEpisode(TVEpisodeBase):
 
         if None is pattern:
             # we only use ABD if it's enabled, this is an ABD show, AND this is not a multi-ep
-            if self.show_obj.air_by_date and sickbeard.NAMING_CUSTOM_ABD and not self.related_ep_obj:
+            if self._show_obj.air_by_date and sickbeard.NAMING_CUSTOM_ABD and not self.related_ep_obj:
                 pattern = sickbeard.NAMING_ABD_PATTERN
-            elif self.show_obj.sports and sickbeard.NAMING_CUSTOM_SPORTS and not self.related_ep_obj:
+            elif self._show_obj.sports and sickbeard.NAMING_CUSTOM_SPORTS and not self.related_ep_obj:
                 pattern = sickbeard.NAMING_SPORTS_PATTERN
-            elif self.show_obj.anime and sickbeard.NAMING_CUSTOM_ANIME:
+            elif self._show_obj.anime and sickbeard.NAMING_CUSTOM_ANIME:
                 pattern = sickbeard.NAMING_ANIME_PATTERN
             else:
                 pattern = sickbeard.NAMING_PATTERN
@@ -3265,7 +4906,7 @@ class TVEpisode(TVEpisodeBase):
             return
 
         proper_path = self.proper_path()
-        absolute_proper_path = ek.ek(os.path.join, self.show_obj.location, proper_path)
+        absolute_proper_path = ek.ek(os.path.join, self._show_obj.location, proper_path)
         absolute_current_path_no_ext, file_ext = ek.ek(os.path.splitext, self.location)
         absolute_current_path_no_ext_length = len(absolute_current_path_no_ext)
 
@@ -3273,15 +4914,15 @@ class TVEpisode(TVEpisodeBase):
 
         current_path = absolute_current_path_no_ext
 
-        if absolute_current_path_no_ext.startswith(self.show_obj.location):
-            current_path = absolute_current_path_no_ext[len(self.show_obj.location):]
+        if absolute_current_path_no_ext.startswith(self._show_obj.location):
+            current_path = absolute_current_path_no_ext[len(self._show_obj.location):]
 
         logger.log('Renaming/moving episode from the base path %s to %s' % (self.location, absolute_proper_path),
                    logger.DEBUG)
 
         # if it's already named correctly then don't do anything
         if proper_path == current_path:
-            logger.log('%s: File %s is already named correctly, skipping' % (self.epid, self.location),
+            logger.log('%s: File %s is already named correctly, skipping' % (self._epid, self.location),
                        logger.DEBUG)
             return
 
@@ -3303,14 +4944,14 @@ class TVEpisode(TVEpisodeBase):
             cur_result = helpers.rename_ep_file(cur_related_file, absolute_proper_path,
                                                 absolute_current_path_no_ext_length)
             if not cur_result:
-                logger.log('%s: Unable to rename file %s' % (self.epid, cur_related_file), logger.ERROR)
+                logger.log('%s: Unable to rename file %s' % (self._epid, cur_related_file), logger.ERROR)
 
         for cur_related_sub in related_subs:
             absolute_proper_subs_path = ek.ek(os.path.join, sickbeard.SUBTITLES_DIR, self.formatted_filename())
             cur_result = helpers.rename_ep_file(cur_related_sub, absolute_proper_subs_path,
                                                 absolute_current_path_no_ext_length)
             if not cur_result:
-                logger.log('%s: Unable to rename file %s' % (self.epid, cur_related_sub), logger.ERROR)
+                logger.log('%s: Unable to rename file %s' % (self._epid, cur_related_sub), logger.ERROR)
 
         # save the ep
         with self.lock:
@@ -3341,15 +4982,22 @@ class TVEpisode(TVEpisodeBase):
         Note: Also called from postProcessor
 
         """
-        if not datetime.date == type(self.airdate) or 1 == self.airdate.year:
+        has_timestamp = isinstance(self._timestamp, int) and 1 < self._timestamp
+        if not has_timestamp and (not isinstance(self._airdate, datetime.date) or 1 == self._airdate.year):
             logger.log('%s: Did not change modify date of %s because episode date is never aired or invalid'
-                       % (self.show_obj.tvid_prodid, ek.ek(os.path.basename, self.location)), logger.DEBUG)
+                       % (self._show_obj.tvid_prodid, ek.ek(os.path.basename, self.location)), logger.DEBUG)
             return
 
-        hr, m = network_timezones.parse_time(self.show_obj.airs)
-        airtime = datetime.time(hr, m)
+        aired_dt = None
+        if not has_timestamp:
+            if isinstance(self._airtime, datetime.time):
+                airtime = self._airtime
+            else:
+                hr, m = network_timezones.parse_time(self._show_obj.airs)
+                airtime = datetime.time(hr, m)
 
-        aired_dt = SGDatetime.combine(self.airdate, airtime)
+            aired_dt = SGDatetime.combine(self.airdate, airtime)
+
         try:
             aired_epoch = SGDatetime.to_file_timestamp(aired_dt)
             filemtime = int(ek.ek(os.path.getmtime, self.location))
@@ -3363,7 +5011,7 @@ class TVEpisode(TVEpisodeBase):
                 result, loglevel = 'Error changing', logger.WARNING
 
             logger.log('%s: %s modify date of %s to show air date %s'
-                       % (self.show_obj.tvid_prodid, result, ek.ek(os.path.basename, self.location),
+                       % (self._show_obj.tvid_prodid, result, ek.ek(os.path.basename, self.location),
                           aired_dt.strftime('%b %d,%Y (%H:%M)')), loglevel)
 
     def __getstate__(self):
@@ -3372,5 +5020,11 @@ class TVEpisode(TVEpisodeBase):
         return d
 
     def __setstate__(self, d):
-        d['lock'] = threading.Lock()
+        d['lock'] = threading.RLock()
         self.__dict__.update(d)
+
+    def __bool__(self):
+        return bool(self._tvid) and bool(self._epid)
+
+    __nonzero__ = __bool__
+

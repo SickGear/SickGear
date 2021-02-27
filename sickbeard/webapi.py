@@ -51,7 +51,7 @@ from .common import ARCHIVED, DOWNLOADED, IGNORED, SKIPPED, SNATCHED, SNATCHED_A
 from .helpers import remove_article
 from .indexers import indexer_api, indexer_config
 from .indexers.indexer_config import *
-from tvinfo_base.exceptions import *
+from lib.tvinfo_base.exceptions import *
 from .scene_numbering import set_scene_numbering_helper
 from .search_backlog import FORCED_BACKLOG
 from .show_updater import clean_ignore_require_words

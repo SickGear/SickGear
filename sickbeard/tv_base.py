@@ -61,7 +61,7 @@ class TVShowBase(LegacyTVShow, TVBase):
         
         self._name = ''
         self._imdbid = ''
-        self._network = ''
+        self.internal_network = ''
         self._genre = ''
         self._classification = ''
         self._runtime = 0
@@ -143,14 +143,14 @@ class TVShowBase(LegacyTVShow, TVBase):
     def imdbid(self, *arg):
         self.dirty_setter('_imdbid')(self, *arg)
 
-    # network = property(lambda self: self._network, dirty_setter('_network'))
+    # network = property(lambda self: self.internal_network, dirty_setter('internal_network'))
     @property
     def network(self):
-        return self._network
+        return self.internal_network
 
     @network.setter
     def network(self, *arg):
-        self.dirty_setter('_network')(self, *arg)
+        self.dirty_setter('internal_network')(self, *arg)
 
     # genre = property(lambda self: self._genre, dirty_setter('_genre'))
     @property

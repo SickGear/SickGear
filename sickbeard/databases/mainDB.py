@@ -28,8 +28,8 @@ import encodingKludge as ek
 from six import iteritems
 
 MIN_DB_VERSION = 9  # oldest db version we support migrating from
-MAX_DB_VERSION = 20014
-TEST_BASE_VERSION = None  # the base production db version, only needed for TEST db versions (>=100000)
+MAX_DB_VERSION = 100008
+TEST_BASE_VERSION = 20014  # the base production db version, only needed for TEST db versions (>=100000)
 
 
 class MainSanityCheck(db.DBSanityCheck):
@@ -1627,13 +1627,14 @@ class AddShowExludeGlobals(db.SchemaUpgrade):
     def execute(self):
 
         if not self.hasColumn('tv_shows', 'rls_global_exclude_ignore'):
-            logger.log('Adding rls_global_exclude_ignore, rls_global_exclude_require to tv_shows')
+            self.upgrade_log('Adding rls_global_exclude_ignore, rls_global_exclude_require to tv_shows')
 
             db.backup_database('sickbeard.db', self.checkDBVersion())
             self.addColumn('tv_shows', 'rls_global_exclude_ignore', data_type='TEXT', default='')
             self.addColumn('tv_shows', 'rls_global_exclude_require', data_type='TEXT', default='')
 
         if self.hasTable('tv_shows_exclude_backup'):
+            self.upgrade_log('Adding rls_global_exclude_ignore, rls_global_exclude_require from backup to tv_shows')
             self.connection.mass_action([['UPDATE tv_shows SET rls_global_exclude_ignore = '
                                           '(SELECT te.rls_global_exclude_ignore FROM tv_shows_exclude_backup te WHERE '
                                           'te.show_id = tv_shows.show_id AND te.indexer = tv_shows.indexer), '
@@ -1690,3 +1691,186 @@ class AddHistoryHideColumn(db.SchemaUpgrade):
                 ])
 
         return self.setDBVersion(20014)
+
+
+# 20014 -> 100008
+class ChangeShowData(db.SchemaUpgrade):
+    def execute(self):
+        self.upgrade_log('Adding new data columns to tv_shows')
+        self.addColumns('tv_shows', [('timezone', 'TEXT', ''), ('airtime', 'NUMERIC'),
+                                     ('network_country', 'TEXT', ''), ('network_country_code', 'TEXT', ''),
+                                     ('network_id', 'NUMERIC'), ('network_is_stream', 'INTEGER'),
+                                     ('src_update_timestamp', 'INTEGER')])
+
+        self.upgrade_log('Adding new data columns to tv_episodes')
+        self.addColumns('tv_episodes', [('timezone', 'TEXT', ''), ('airtime', 'NUMERIC'),
+                                        ('runtime', 'NUMERIC', 0), ('timestamp', 'NUMERIC'),
+                                        ('network', 'TEXT', ''), ('network_country', 'TEXT', ''),
+                                        ('network_country_code', 'TEXT', ''), ('network_id', 'NUMERIC'),
+                                        ('network_is_stream', 'INTEGER')])
+
+        self.upgrade_log('Adding Character and Persons tables')
+
+        table_create_sql = {
+            'castlist': [
+                ['CREATE TABLE castlist'
+                 ' ('
+                 ' id           INTEGER PRIMARY KEY AUTOINCREMENT,'
+                 ' indexer      NUMERIC NOT NULL,'
+                 ' indexer_id   NUMERIC NOT NULL,'
+                 ' character_id NUMERIC NOT NULL,'
+                 ' sort_order   NUMERIC DEFAULT 0 NOT NULL,'
+                 ' updated      NUMERIC'
+                 ' );'],
+            ],
+            'idx_castlist': [
+                ['CREATE INDEX idx_castlist ON castlist (indexer, indexer_Id);'],
+                ['CREATE UNIQUE INDEX idx_unique_castlist ON castlist (indexer, indexer_id, character_id);']
+            ],
+            'characters': [
+                ['CREATE TABLE characters'
+                 ' ('
+                 ' id         INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,'
+                 ' name       TEXT,'
+                 ' bio        TEXT,'
+                 ' thumb_url  TEXT,'
+                 ' image_url  TEXT,'
+                 ' updated    NUMERIC'
+                 ' );']
+            ],
+            'character_ids': [
+                ['CREATE TABLE character_ids'
+                 ' ('
+                 ' id           INTEGER PRIMARY KEY AUTOINCREMENT,'
+                 ' src          NUMERIC NOT NULL,'
+                 ' src_id       NUMERIC NOT NULL,'
+                 ' character_id NUMERIC NOT NULL'
+                 ' );'],
+            ],
+            'idx_character_ids': [
+                ['CREATE UNIQUE INDEX idx_unique_character_ids ON character_ids (src, character_id);'],
+                ['CREATE INDEX idx_character_ids ON character_ids (character_id);']
+            ],
+            'character_person_map': [
+                ['CREATE TABLE character_person_map'
+                 ' ('
+                 ' id           INTEGER PRIMARY KEY AUTOINCREMENT,'
+                 ' character_id NUMERIC NOT NULL,'
+                 ' person_id    NUMERIC NOT NULL'
+                 ' );'],
+            ],
+            'idx_character_person_map': [
+                ['CREATE INDEX idx_character_person_map_character ON character_person_map (character_id);'],
+                ['CREATE INDEX idx_character_person_map_person ON character_person_map (person_id);'],
+                ['CREATE UNIQUE INDEX idx_unique_character_person ON character_person_map (character_id, person_id);']
+            ],
+            'character_person_years': [
+                [
+                    """CREATE TABLE character_person_years
+                       (
+                       character_id NUMERIC NOT NULL,
+                       person_id    NUMERIC NOT NULL,
+                       start_year   NUMERIC,
+                       end_year     NUMERIC
+                       );
+                       """
+                 ],
+            ],
+            'idx_character_person_years': [
+                ['CREATE UNIQUE INDEX idx_unique_character_person_years '
+                 'ON character_person_years (character_id, person_id)'],
+                ['CREATE INDEX idx_character_person_years ON character_person_years (character_id)'],
+            ],
+            'persons': [
+                ['CREATE TABLE persons'
+                 ' ('
+                    ' id         INTEGER PRIMARY KEY AUTOINCREMENT,'
+                    ' name       TEXT,'
+                    ' gender     INTEGER,'
+                    ' birthdate  NUMERIC,'
+                    ' deathdate  NUMERIC,'
+                    ' birthplace TEXT,'
+                    ' deathplace TEXT,'
+                    ' height     NUMERIC,'
+                    ' realname   TEXT,'
+                    ' nicknames  TEXT,'
+                    ' akas       TEXT,'
+                    ' homepage   TEXT,'
+                    ' bio        TEXT,'
+                    ' thumb_url  TEXT,'
+                    ' image_url  TEXT,'
+                    ' updated    NUMERIC'
+                 ' );']
+            ],
+            'person_ids': [
+                ['CREATE TABLE person_ids'
+                 ' ('
+                    ' id        INTEGER PRIMARY KEY AUTOINCREMENT,'
+                    ' src       INTEGER NOT NULL,' 
+                    ' src_id    TEXT NOT NULL,'
+                    ' person_id NUMERIC NOT NULL'
+                 ' );'],
+            ],
+            'idx_person_ids': [
+                ['CREATE UNIQUE INDEX idx_unique_person_ids ON person_ids (src, person_id);'],
+                ['CREATE INDEX idx_person_ids ON person_ids (person_id);']
+            ],
+            'tv_src_switch': [
+                ['CREATE TABLE tv_src_switch'
+                 ' ('
+                 ' old_indexer    NUMERIC NOT NULL,'
+                 ' old_indexer_id NUMERIC NOT NULL,'
+                 ' new_indexer    NUMERIC NOT NULL,'
+                 ' new_indexer_id NUMERIC,'
+                 ' force_id       NUMERIC DEFAULT 0 NOT NULL,'
+                 ' set_pause      INTEGER DEFAULT 0 NOT NULL,'
+                 ' mark_wanted    INTEGER DEFAULT 0 NOT NULL,'
+                 ' status         NUMERIC DEFAULT 0 NOT NULL,'
+                 ' action_id      INTEGER NOT NULL,'
+                 ' uid            NUMERIC NOT NULL'
+                 ' );'
+                 ],
+            ],
+            'idx_tv_src_switch': [
+                ['CREATE UNIQUE INDEX idx_unique_tv_src_switch ON tv_src_switch (old_indexer, old_indexer_id);']
+            ],
+            'switch_ep_errors': [
+                ['CREATE TABLE switch_ep_errors'
+                 ' ('
+                 ' old_indexer    NUMERIC NOT NULL,'
+                 ' old_indexer_id NUMERIC NOT NULL,'
+                 ' new_indexer    NUMERIC NOT NULL,'
+                 ' new_indexer_id NUMERIC NOT NULL,'
+                 ' season         NUMERIC NOT NULL,'
+                 ' episode        NUMERIC NOT NULL,'
+                 ' reason         NUMERIC DEFAULT 0'
+                 ' );'
+                 ],
+            ],
+            'idx_switch_ep_errors': [
+                ['CREATE INDEX idx_switch_ep_errors ON switch_ep_errors (new_indexer, new_indexer_id)'],
+                ['CREATE INDEX idx_unique_switch_ep_errors'
+                 ' ON switch_ep_errors (new_indexer, new_indexer_id, season, episode, reason)'],
+                ['CREATE INDEX idx_switch_ep_errors_old ON switch_ep_errors (old_indexer, old_indexer_id)'],
+            ],
+        }
+
+        cl = []
+        tables = self.list_tables()
+        for t in ('castlist', 'characters', 'character_ids', 'persons', 'person_ids', 'character_person_map',
+                  'character_person_years', 'tv_src_switch', 'switch_ep_errors'):
+            if 'backup_%s' % t in tables:
+                cl.append(['ALTER TABLE backup_%s RENAME TO %s' % (t, t)])
+            elif t not in tables:
+                cl.extend(table_create_sql[t])
+            if 'idx_%s' % t in table_create_sql:
+                cl.extend(table_create_sql['idx_%s' % t])
+
+        cl.extend(sickbeard.tv.TVShow.orphaned_cast_sql())
+
+        if cl:
+            self.connection.mass_action(cl)
+            self.connection.action('VACUUM')
+
+        self.setDBVersion(100008)
+        return self.checkDBVersion()

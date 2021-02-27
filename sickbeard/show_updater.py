@@ -120,6 +120,22 @@ class ShowUpdater(object):
                 logger.log('image cache cleanup error', logger.ERROR)
                 logger.log(traceback.format_exc(), logger.ERROR)
 
+            # check tvinfo cache
+            try:
+                for i in sickbeard.TVInfoAPI().all_sources:
+                    sickbeard.TVInfoAPI(i).setup().check_cache()
+            except (BaseException, Exception):
+                logger.log('tvinfo cache check error', logger.ERROR)
+                logger.log(traceback.format_exc(), logger.ERROR)
+
+            # cleanup tvinfo cache
+            try:
+                for i in sickbeard.TVInfoAPI().all_sources:
+                    sickbeard.TVInfoAPI(i).setup().clean_cache()
+            except (BaseException, Exception):
+                logger.log('tvinfo cache cleanup error', logger.ERROR)
+                logger.log(traceback.format_exc(), logger.ERROR)
+
             # cleanup ignore and require lists
             try:
                 clean_ignore_require_words()
@@ -178,13 +194,21 @@ class ShowUpdater(object):
                     stale_should_update.append(cur_result['tvid_prodid'])
 
             # start update process
+            show_updates = {}
+            for src in sickbeard.TVInfoAPI().search_sources:
+                tvinfo_config = sickbeard.TVInfoAPI(src).api_params.copy()
+                t = sickbeard.TVInfoAPI(src).setup(**tvinfo_config)
+                show_updates.update({src: t.get_updated_shows()})
+
             pi_list = []
             for cur_show_obj in sickbeard.showList:  # type: sickbeard.tv.TVShow
 
                 try:
                     # if should_update returns True (not 'Ended') or show is selected stale 'Ended' then update,
                     # otherwise just refresh
-                    if cur_show_obj.should_update(update_date=update_date) \
+                    if cur_show_obj.should_update(update_date=update_date,
+                                                  last_indexer_change=show_updates.get(cur_show_obj.tvid, {}).
+                                                          get(cur_show_obj.prodid)) \
                             or cur_show_obj.tvid_prodid in stale_should_update:
                         cur_queue_item = sickbeard.show_queue_scheduler.action.updateShow(cur_show_obj,
                                                                                           scheduled_update=True)

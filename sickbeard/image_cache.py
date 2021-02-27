@@ -31,26 +31,34 @@ import sg_helpers
 from . import db, logger
 from .metadata.generic import GenericMetadata
 from .sgdatetime import timestamp_near
+from .indexers.indexer_config import TVINFO_TVDB, TVINFO_TVMAZE, TVINFO_TMDB
 
-from six import itervalues
+from six import itervalues, iteritems
 
 # noinspection PyUnreachableCode
 if False:
-    from typing import AnyStr, Optional, Union
-    from .tv import TVShow
+    from typing import AnyStr, Optional, Tuple, Union
+    from .tv import TVShow, Person, Character
+    from six import integer_types
 
 from lib.hachoir.parser import createParser
 from lib.hachoir.metadata import extractMetadata
+
+cache_img_base = {'tvmaze': TVINFO_TVMAZE, 'themoviedb': TVINFO_TMDB, 'thetvdb': TVINFO_TVDB}
 
 
 class ImageCache(object):
     base_dir = None  # type: AnyStr or None
     shows_dir = None  # type: AnyStr or None
+    persons_dir = None  # type: Optional[AnyStr]
+    characters_dir = None  # type: Optional[AnyStr]
 
     def __init__(self):
         if None is ImageCache.base_dir and ek.ek(os.path.exists, sickbeard.CACHE_DIR):
             ImageCache.base_dir = ek.ek(os.path.abspath, ek.ek(os.path.join, sickbeard.CACHE_DIR, 'images'))
             ImageCache.shows_dir = ek.ek(os.path.abspath, ek.ek(os.path.join, self.base_dir, 'shows'))
+            ImageCache.persons_dir = self._persons_dir()
+            ImageCache.characters_dir = self._characters_dir()
 
     def __del__(self):
         pass
@@ -61,6 +69,14 @@ class ImageCache(object):
     #     Builds up the full path to the image cache directory
     #     """
     #     return ek.ek(os.path.abspath, ek.ek(os.path.join, sickbeard.CACHE_DIR, 'images'))
+
+    def _persons_dir(self):
+        # type: (...) -> AnyStr
+        return ek.ek(os.path.join, sickbeard.CACHE_DIR, 'images', 'person')
+
+    def _characters_dir(self):
+        # type: (...) -> AnyStr
+        return ek.ek(os.path.join, sickbeard.CACHE_DIR, 'images', 'characters')
 
     def _fanart_dir(self, tvid=None, prodid=None):
         # type: (int, int) -> AnyStr
@@ -90,6 +106,87 @@ class ImageCache(object):
         :rtype: AnyStr
         """
         return ek.ek(os.path.abspath, ek.ek(os.path.join, self.shows_dir, '%s-%s' % (tvid, prodid), 'thumbnails'))
+
+    def _person_base_name(self, person_obj):
+        # type: (Person) -> AnyStr
+        base_id = next((v for k, v in iteritems(cache_img_base)
+                        if k in (person_obj.image_url or '') or person_obj.thumb_url), 0)
+        return '%s-%s' % (base_id, person_obj.ids.get(base_id) or sg_helpers.sanitize_filename(person_obj.name))
+
+    def _character_base_name(self, character_obj, show_obj, tvid=None, proid=None):
+        # type: (Character, TVShow, integer_types, integer_types) -> AnyStr
+        return '%s-%s' % (tvid or show_obj._tvid, character_obj.ids.get(tvid or show_obj._tvid)
+                          or sg_helpers.sanitize_filename(character_obj.name))
+
+    def person_path(self, person_obj, base_path=None):
+        # type: (Optional[Person], AnyStr) -> AnyStr
+        """
+        return image filename
+        :param person_obj:
+        :param base_path:
+        """
+        filename = '%s.jpg' % base_path or self._person_base_name(person_obj)
+        return ek.ek(os.path.join, self.persons_dir, filename)
+
+    def person_thumb_path(self, person_obj, base_path=None):
+        # type: (Optional[Person], AnyStr) -> AnyStr
+        """
+        return thumb image filename
+        :param person_obj:
+        :param base_path:
+        """
+        filename = '%s_thumb.jpg' % base_path or self._person_base_name(person_obj)
+        return ek.ek(os.path.join, self.persons_dir, filename)
+
+    def person_both_paths(self, person_obj):
+        # type: (Person) -> Tuple[AnyStr, AnyStr]
+        """
+        return tuple image, thumb filenames
+        :param person_obj:
+        """
+        base_path = self._person_base_name(person_obj)
+        return self.person_path(None, base_path=base_path), self.person_thumb_path(None, base_path=base_path)
+
+    def character_path(self, character_obj, show_obj, base_path=None):
+        # type: (Optional[Character], Optional[TVShow], AnyStr) -> AnyStr
+        """
+        return image filename
+        :param character_obj:
+        :param show_obj:
+        :param base_path:
+        """
+        filename = '%s.jpg' % base_path or self._character_base_name(character_obj, show_obj)
+        return ek.ek(os.path.join, self.characters_dir, filename)
+
+    def character_thumb_path(self, character_obj, show_obj, base_path=None):
+        # type: (Optional[Character], Optional[TVShow], AnyStr) -> AnyStr
+        """
+        return thumb image filename
+        :param character_obj:
+        :param show_obj:
+        :param base_path:
+        """
+        filename = '%s_thumb.jpg' % base_path or self._character_base_name(character_obj, show_obj)
+        return ek.ek(os.path.join, self.characters_dir, filename)
+
+    def character_both_path(self, character_obj, show_obj=None, tvid=None, proid=None, person_obj=None):
+        # type: (Character, TVShow, integer_types, integer_types, Person) -> Tuple[AnyStr, AnyStr]
+        """
+        returns tuple image, thumb image
+        :param character_obj:
+        :param show_obj:
+        :param tvid:
+        :param proid:
+        :param person_obj:
+        """
+        base_path = self._character_base_name(character_obj, show_obj=show_obj, tvid=tvid, proid=proid)
+        from .tv import Person
+        if isinstance(person_obj, Person):
+            person_base = self._person_base_name(person_obj)
+            if person_base:
+                base_path = '%s-%s' % (base_path, person_base)
+        return self.character_path(None, None, base_path=base_path), \
+            self.character_thumb_path(None, None, base_path=base_path)
 
     def poster_path(self, tvid, prodid):
         # type: (int, int) -> AnyStr

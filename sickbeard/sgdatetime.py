@@ -245,20 +245,23 @@ class SGDatetime(datetime.datetime):
         return SGDatetime.timestamp_far(obj)
 
     @staticmethod
-    def from_timestamp(ts, local_time=True, tz_aware=False):
-        # type: (Union[float, integer_types], bool, bool) -> datetime.datetime
+    def from_timestamp(ts, local_time=True, tz_aware=False, tzinfo=None):
+        # type: (Union[float, integer_types], bool, bool, datetime.tzinfo) -> datetime.datetime
         """
         convert timestamp to datetime.datetime obj
         :param ts: timestamp integer, float
         :param local_time: return as local timezone (SG_TIMEZONE)
         :param tz_aware: return tz aware datetime
+        :param tzinfo: tzinfo to be used
         """
         from .network_timezones import EPOCH_START, SG_TIMEZONE
         result = EPOCH_START + datetime.timedelta(seconds=ts)
         if local_time and SG_TIMEZONE:
             result = result.astimezone(SG_TIMEZONE)
+        if isinstance(tzinfo, datetime.tzinfo):
+            result = result.astimezone(tzinfo)
         if not tz_aware:
-            result = result.replace(tzinfo=None)
+            return result.replace(tzinfo=None)
         return result
 
     @static_or_instance

@@ -20,15 +20,16 @@ import copy
 import datetime
 import threading
 
-from . import logger
+from . import db, logger
 from exceptions_helper import ex
 from six import integer_types
 
 # noinspection PyUnreachableCode
 if False:
-    from typing import AnyStr, Callable, Dict, List, Tuple, Union
+    from typing import AnyStr, Callable, Dict, List, Optional, Tuple, Union
     from .search_queue import BaseSearchQueueItem
     from .show_queue import ShowQueueItem
+    from .people_queue import CastQueueItem
 
 
 class QueuePriorities(object):
@@ -39,7 +40,8 @@ class QueuePriorities(object):
 
 
 class GenericQueue(object):
-    def __init__(self):
+    def __init__(self, cache_db_tables=None, main_db_tables=None):
+        # type: (List[AnyStr], List[AnyStr]) -> None
 
         self.currentItem = None  # type: QueueItem or None
 
@@ -53,6 +55,163 @@ class GenericQueue(object):
 
         self.lock = threading.RLock()
 
+        self.cache_db_tables = cache_db_tables or []  # type: List[AnyStr]
+        self.main_db_tables = main_db_tables or []  # type: List[AnyStr]
+
+        self._id_counter = self._load_init_id()  # type: integer_types
+
+    def _load_init_id(self):
+        # type: (...) -> integer_types
+        """
+        fetch highest uid for queue type to initialize the class
+
+        """
+        my_db = db.DBConnection('cache.db')
+        cr = my_db.mass_action([['SELECT max(uid) as max_id FROM %s' % t] for t in self.cache_db_tables])
+        my_db = db.DBConnection()
+        mr = my_db.mass_action([['SELECT max(uid) as max_id FROM %s' % t] for t in self.main_db_tables])
+        return max([c[0]['max_id'] or 0 for c in cr] + [s[0]['max_id'] or 0 for s in mr] + [0])
+
+    def _get_new_id(self):
+        # type: (...) -> integer_types
+        self._id_counter += 1
+        return self._id_counter
+
+    def load_queue(self):
+        pass
+
+    def save_queue(self):
+        cl = self._clear_sql()
+        try:
+            with self.lock:
+                for item in (self.currentItem and [self.currentItem]) or [] + self.queue:
+                    cl.extend(self._get_item_sql(item))
+
+            if cl:
+                my_db = db.DBConnection('cache.db')
+                my_db.mass_action(cl)
+        except (BaseException, Exception) as e:
+            logger.log('Exception saving queue %s to db: %s' % (self.__class__.__name__, ex(e)), logger.ERROR)
+
+    def _clear_sql(self):
+        # type: (...) -> List[List]
+        return []
+
+    def save_item(self, item):
+        try:
+            if item:
+                item_sql = self._get_item_sql(item)
+                if item_sql:
+                    my_db = db.DBConnection('cache.db')
+                    my_db.mass_action(item_sql)
+        except (BaseException, Exception) as e:
+            logger.log('Exception saving item %s to db: %s' % (item, ex(e)), logger.ERROR)
+
+    def delete_item(self, item, finished_run=False):
+        # type: (Union[QueueItem, CastQueueItem], bool) -> None
+        """
+
+        :param item:
+        :param finished_run: set to True when queue item has run
+        """
+        if item:
+            try:
+                item_sql = self._delete_item_from_db_sql(item)
+                if item_sql:
+                    my_db = db.DBConnection('cache.db')
+                    my_db.mass_action(item_sql)
+            except (BaseException, Exception) as e:
+                logger.log('Exception deleting item %s from db: %s' % (item, ex(e)), logger.ERROR)
+
+    def _get_item_sql(self, item):
+        # type: (Union[QueueItem, CastQueueItem]) -> List[List]
+        return []
+
+    def _delete_item_from_db_sql(self, item):
+        # type: (Union[QueueItem, CastQueueItem]) -> List[List]
+        pass
+
+    def remove_from_queue(self, to_remove=None, force=False):
+        # type: (List[AnyStr], bool) -> None
+        """
+        remove given uid items from queue
+
+        :param to_remove: list of uids to remove from queue
+        :param force: force removal from db
+        """
+        self._remove_from_queue(to_remove=to_remove, excluded_types=[], force=force)
+
+    def _remove_from_queue(self, to_remove=None, excluded_types=None, force=False):
+        # type: (List[AnyStr], List, bool) -> None
+        """
+        remove given uid items from queue
+
+        :param to_remove: list of uids to remove from queue
+        :param force: force removal from db
+        """
+        if to_remove:
+            excluded_types = excluded_types or []
+            with self.lock:
+                if not force:
+                    to_remove = [r for r in to_remove for q in self.queue
+                                 if r == q.uid and (q.action_id not in excluded_types)]
+                del_sql = [
+                    ['DELETE FROM %s WHERE uid IN (%s)' % (t, ','.join(['?'] * len(to_remove))), to_remove]
+                    for t in self.cache_db_tables
+                ]
+                del_main_sql = [
+                    ['DELETE FROM %s WHERE uid IN (%s)' % (t, ','.join(['?'] * len(to_remove))), to_remove]
+                    for t in self.main_db_tables
+                ]
+
+                self.queue = [q for q in self.queue if q.uid not in to_remove]
+                if del_sql:
+                    my_db = db.DBConnection('cache.db')
+                    my_db.mass_action(del_sql)
+                if del_main_sql:
+                    my_db = db.DBConnection()
+                    my_db.mass_action(del_main_sql)
+
+    def clear_queue(self, action_types=None):
+        # type: (integer_types) -> None
+        """
+        clear queue excluding internal defined types
+
+        :param action_types: only clear all of given action type
+        """
+        if not isinstance(action_types, list):
+            action_types = [action_types]
+        return self._clear_queue(action_types=action_types)
+
+    def _clear_queue(self, action_types=None, excluded_types=None):
+        # type: (List[integer_types], List) -> None
+        excluded_types = excluded_types or []
+        with self.lock:
+            if action_types:
+                self.queue = [q for q in self.queue if q.action_id in excluded_types or q.action_id not in action_types]
+                del_sql = [
+                    ['DELETE FROM %s WHERE action_id IN (%s)' % (t, ','.join(['?'] * len(action_types))), action_types]
+                    for t in self.cache_db_tables
+                ]
+                del_main_sql = [
+                    ['DELETE FROM %s WHERE action_id IN (%s)' % (t, ','.join(['?'] * len(action_types))), action_types]
+                    for t in self.main_db_tables
+                ]
+            else:
+                self.queue = [q for q in self.queue if q.action_id in excluded_types]
+                del_sql = [
+                    ['DELETE FROM %s' % t] for t in self.cache_db_tables
+                ]
+                del_main_sql = [
+                    ['DELETE FROM %s' % t] for t in self.main_db_tables
+                ]
+            if del_sql:
+                my_db = db.DBConnection('cache.db')
+                my_db.mass_action(del_sql)
+            if del_main_sql:
+                my_db = db.DBConnection()
+                my_db.mass_action(del_main_sql)
+
     def pause(self):
         logger.log(u'Pausing queue')
         if self.lock:
@@ -63,17 +222,21 @@ class GenericQueue(object):
         with self.lock:
             self.min_priority = 0
 
-    def add_item(self, item):
+    def add_item(self, item, add_to_db=True):
         """
 
         :param item: Queue Item
         :type item: QueueItem
+        :param add_to_db: add to db
         :return: Queue Item
         :rtype: QueueItem
         """
         with self.lock:
             item.added = datetime.datetime.now()
+            item.uid = item.uid or self._get_new_id()
             self.queue.append(item)
+            if add_to_db:
+                self.save_item(item)
 
             return item
 
@@ -117,6 +280,10 @@ class GenericQueue(object):
                 # if the thread is dead then the current item should be finished
                 if self.currentItem:
                     self.currentItem.finish()
+                    try:
+                        self.delete_item(self.currentItem, finished_run=True)
+                    except (BaseException, Exception):
+                        pass
                     self.currentItem = None
 
                 # if there's something in the queue then run it in a thread and take it out of the queue
@@ -136,12 +303,13 @@ class GenericQueue(object):
 
 
 class QueueItem(threading.Thread):
-    def __init__(self, name, action_id=0):
-        # type: (AnyStr, int) -> None
+    def __init__(self, name, action_id=0, uid=None):
+        # type: (AnyStr, int, integer_types) -> None
         """
 
         :param name: name
         :param action_id:
+        :param uid:
         """
         super(QueueItem, self).__init__()
 
@@ -150,7 +318,8 @@ class QueueItem(threading.Thread):
         self.priority = QueuePriorities.NORMAL  # type: int
         self.action_id = action_id  # type: int
         self.stop = threading.Event()
-        self.added = None
+        self.added = None  # type: Optional[datetime.datetime]
+        self.uid = uid  # type: integer_types
 
     def copy(self, deepcopy_obj=None):
         """

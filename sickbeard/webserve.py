@@ -56,7 +56,8 @@ from .common import ARCHIVED, DOWNLOADED, FAILED, IGNORED, SKIPPED, SNATCHED, SN
      SD, HD720p, HD1080p, UHD2160p, Overview, Quality, qualityPresetStrings, statusStrings
 from .helpers import get_media_stats, has_image_ext, real_path, remove_article, remove_file_perm, starify
 from .indexermapper import MapStatus, map_indexers_to_show, save_mapping
-from .indexers.indexer_config import TVINFO_IMDB, TVINFO_TRAKT, TVINFO_TVDB
+from .indexers.indexer_config import TVINFO_IMDB, TVINFO_TRAKT, TVINFO_TVDB, TVINFO_TVMAZE, TVINFO_TMDB, \
+    TVINFO_TRAKT_SLUG, TVINFO_TVDB_SLUG
 from .name_parser.parser import InvalidNameException, InvalidShowException, NameParser
 from .providers import newznab, rsstorrent
 from .scene_numbering import get_scene_absolute_numbering_for_show, get_scene_numbering_for_show, \
@@ -67,7 +68,8 @@ from .show_name_helpers import abbr_showname
 
 from .show_updater import clean_ignore_require_words
 from .trakt_helpers import build_config, trakt_collection_remove_account
-from .tv import TVidProdid
+from .tv import TVidProdid, Person as TVPerson, Character as TVCharacter, TVSWITCH_NORMAL, tvswitch_names, \
+    TVSWITCH_EP_DELETED, tvswitch_ep_names
 
 from bs4_parser import BS4Parser
 from Cheetah.Template import Template
@@ -93,18 +95,19 @@ from lib.libtrakt.exceptions import TraktException, TraktAuthException
 from lib.libtrakt.indexerapiinterface import TraktSearchTypes
 # noinspection PyPep8Naming
 from lib import tmdbsimple as TMDB
-from tvinfo_base import BaseTVinfoException
+from lib.tvinfo_base import BaseTVinfoException
 
 import lib.rarfile.rarfile as rarfile
 
-from _23 import decode_bytes, decode_str, filter_list, filter_iter, getargspec, list_values, \
+from _23 import decode_bytes, decode_str, filter_list, filter_iter, getargspec, list_keys, list_values, \
     map_consume, map_iter, map_list, map_none, ordered_dict, quote_plus, unquote_plus, urlparse
-from six import binary_type, integer_types, iteritems, iterkeys, itervalues, PY2, string_types
+from six import binary_type, integer_types, iteritems, iterkeys, itervalues, moves, PY2, string_types
 
 # noinspection PyUnreachableCode
 if False:
-    from typing import AnyStr, List, Optional, Tuple
+    from typing import AnyStr, Dict, List, Optional, Set, Tuple
     from sickbeard.providers.generic import TorrentProvider
+    from lib.tvinfo_base import Person
 
 
 # noinspection PyAbstractClass
@@ -146,6 +149,7 @@ class PageTemplate(Template):
         self.addtab_limit = sickbeard.MEMCACHE.get('history_tab_limit', 0)
         if not web_handler.application.is_loading_handler:
             self.history_compact = sickbeard.MEMCACHE.get('history_tab')
+            self.tvinfo_switch_running = sickbeard.show_queue_scheduler.action.is_switch_running()
 
         super(PageTemplate, self).__init__(*args, **kwargs)
 
@@ -222,6 +226,14 @@ class RouteHandler(LegacyBaseHandler):
         else:
             request_kwargs = {k: self.decode_data(v if not (isinstance(v, list) and 1 == len(v)) else v[0])
                               for k, v in iteritems(self.request.arguments) if not xsrf_filter or ('_xsrf' != k)}
+            if 'tvid_prodid' in request_kwargs and request_kwargs['tvid_prodid'] in sickbeard.switched_shows:
+                # in case show has been switched, redirect to new id
+                url = self.request.uri.replace('tvid_prodid=%s' % request_kwargs['tvid_prodid'],
+                                               'tvid_prodid=%s' %
+                                               sickbeard.switched_shows[request_kwargs['tvid_prodid']])
+                self.redirect(url, permanent=True)
+                self.finish()
+                return
             # filter method specified arguments so *args and **kwargs are not required and unused vars safely dropped
             method_args = []
             # noinspection PyDeprecation
@@ -981,7 +993,9 @@ class MainHandler(WebHandler):
 
         my_db = db.DBConnection()
         sql_result = my_db.select(
-            'SELECT *, tv_shows.status AS show_status'
+            'SELECT *, tv_episodes.network as episode_network, tv_shows.status AS show_status,'
+            ' tv_shows.network as show_network, tv_shows.timezone as show_timezone, tv_shows.airtime as show_airtime,'
+            ' tv_episodes.timezone as ep_timezone, tv_episodes.airtime as ep_airtime'
             ' FROM tv_episodes, tv_shows'
             ' WHERE tv_shows.indexer = tv_episodes.indexer AND tv_shows.indexer_id = tv_episodes.showid'
             ' AND season != 0 AND airdate >= ? AND airdate <= ?'
@@ -993,7 +1007,9 @@ class MainHandler(WebHandler):
 
         # noinspection SqlRedundantOrderingDirection
         sql_result += my_db.select(
-            'SELECT *, tv_shows.status AS show_status'
+            'SELECT *, outer_eps.network as episode_network, tv_shows.status AS show_status,'
+            ' tv_shows.network as show_network, tv_shows.timezone as show_timezone, tv_shows.airtime as show_airtime,'
+            ' outer_eps.timezone as ep_timezone, outer_eps.airtime as ep_airtime'
             ' FROM tv_episodes outer_eps, tv_shows'
             ' WHERE season != 0'
             ' AND tv_shows.indexer || \'-\' || showid NOT IN (%s)' % ','.join(done_show_list)
@@ -1007,7 +1023,9 @@ class MainHandler(WebHandler):
             [next_week] + Quality.SNATCHED + Quality.DOWNLOADED)
 
         sql_result += my_db.select(
-            'SELECT *, tv_shows.status AS show_status'
+            'SELECT *, tv_episodes.network as episode_network, tv_shows.status AS show_status,'
+            ' tv_shows.network as show_network, tv_shows.timezone as show_timezone, tv_shows.airtime as show_airtime,'
+            ' tv_episodes.timezone as ep_timezone, tv_episodes.airtime as ep_airtime'
             ' FROM tv_episodes, tv_shows'
             ' WHERE season != 0'
             ' AND tv_shows.indexer = tv_episodes.indexer AND tv_shows.indexer_id = tv_episodes.showid'
@@ -1037,8 +1055,25 @@ class MainHandler(WebHandler):
         cache_obj = image_cache.ImageCache()
         t = PageTemplate(web_handler=self, file='episodeView.tmpl')
         t.fanart = {}
+        tzinfo = None
+        tz_name = None
+        cur_prodid = None
         for index, item in enumerate(sql_result):
-            val = network_timezones.parse_date_time(item['airdate'], item['airs'], item['network'])
+            tvid_prodid_obj = TVidProdid({item['indexer']: item['showid']})
+            tvid_prodid = str(tvid_prodid_obj)
+            sql_result[index]['tvid_prodid'] = tvid_prodid
+            if cur_prodid != tvid_prodid:
+                cur_prodid = tvid_prodid
+                tzinfo = None
+                tz_name = None
+
+            sql_result[index]['network'] = (item['show_network'], item['episode_network'])[
+                isinstance(item['episode_network'], string_types) and 0 != len(item['episode_network'].strip())]
+
+            val = network_timezones.get_episode_time(
+                item['airdate'], item['airs'], item['show_network'], item['show_airtime'], item['show_timezone'],
+                item['timestamp'], item['episode_network'], item['ep_airtime'], item['ep_timezone'])
+
             # noinspection PyCallByClass,PyTypeChecker
             sql_result[index]['localtime'] = SGDatetime.convert_to_setting(val)
             sql_result[index]['data_show_name'] = value_maybe_article(item['show_name'])
@@ -1058,10 +1093,6 @@ class MainHandler(WebHandler):
                                                      'show_url'] % imdb_id
             else:
                 sql_result[index]['imdb_url'] = ''
-
-            tvid_prodid_obj = TVidProdid({item['indexer']: item['showid']})
-            tvid_prodid = str(tvid_prodid_obj)
-            sql_result[index]['tvid_prodid'] = tvid_prodid
 
             if tvid_prodid in t.fanart:
                 continue
@@ -2027,6 +2058,17 @@ class Home(MainHandler):
         elif sickbeard.show_queue_scheduler.action.isInSubtitleQueue(show_obj):
             show_message = 'This show is queued and awaiting subtitles download.'
 
+        if sickbeard.show_queue_scheduler.action.is_show_being_switched(show_obj):
+            show_message = '%s%sThis shows tv info source is being switched and awaiting update' % \
+                           (show_message, ('<br/>', '')[0 == len(show_message)])
+        elif sickbeard.show_queue_scheduler.action.is_show_switch_queued(show_obj):
+            show_message = '%s%sThis shows tv info source is being queued to be switched and awaiting update' % \
+                           (show_message, ('<br/>', '')[0 == len(show_message)])
+
+        if sickbeard.people_queue_scheduler.action.show_in_queue(show_obj):
+            show_message = '%s%sThis shows Cast is being queued and awaiting update' % \
+                           (show_message, ('<br/>', '')[0 == len(show_message)])
+
         if 0 != show_obj.not_found_count:
             last_found = ('', ' since %s' % SGDatetime.fromordinal(
                 show_obj.last_found_on_indexer).sbfdate())[1 < show_obj.last_found_on_indexer]
@@ -2046,6 +2088,8 @@ class Home(MainHandler):
                     {'title': 'Re-scan files', 'path': 'home/refresh-show?tvid_prodid=%s' % tvid_prodid})
                 t.submenu.append(
                     {'title': 'Force Full Update', 'path': t.force_update})
+                t.submenu.append(
+                    {'title': 'Cast Update', 'path': 'home/update-cast?tvid_prodid=%s' % tvid_prodid})
                 t.submenu.append(
                     {'title': 'Update show in Emby',
                      'path': 'home/update-mb%s' % (
@@ -2095,6 +2139,14 @@ class Home(MainHandler):
         t.has_special = False
 
         my_db = db.DBConnection()
+
+        failed_check = my_db.select('SELECT status FROM tv_src_switch WHERE old_indexer = ? AND old_indexer_id = ?'
+                                    ' AND status != ?', [show_obj.tvid, show_obj.prodid, TVSWITCH_NORMAL])
+        if failed_check:
+            t.show_message = '%s%s%s' % \
+                             (t.show_message, ('<br/>', '')[0 == len(t.show_message)],
+                              'Failed to switch tv info source: %s' %
+                              tvswitch_names.get(failed_check[0]['status'], 'Unknown reason'))
 
         for row in my_db.select('SELECT season, count(*) AS cnt'
                                 ' FROM tv_episodes'
@@ -2349,31 +2401,13 @@ class Home(MainHandler):
         m_prodid = helpers.try_int(m_prodid)
         show_obj = helpers.find_show_by_id({tvid: prodid}, no_mapped_ids=True)
         try:
-            m_show_obj = helpers.find_show_by_id({m_tvid: m_prodid}, no_mapped_ids=False, check_multishow=True)
-        except exceptions_helper.MultipleShowObjectsException:
-            msg = 'Duplicate shows in DB'
-            ui.notifications.message('TV info source switch', 'Error: ' + msg)
-            return {'Error': msg}
-        if not show_obj or (m_show_obj and show_obj is not m_show_obj):
-            msg = 'Unable to find the specified show'
-            ui.notifications.message('TV info source switch', 'Error: ' + msg)
-            return {'Error': msg}
+            sickbeard.show_queue_scheduler.action.switch_show(show_obj=show_obj, new_tvid=m_tvid,
+                                                              new_prodid=m_prodid, force_id=True,
+                                                              set_pause=set_pause, mark_wanted=mark_wanted)
+        except (BaseException, Exception) as e:
+            logger.log('Could not add show %s to switch queue: %s' % (show_obj.tvid_prodid, ex(e)), logger.WARNING)
 
-        with show_obj.lock:
-            show_obj.tvid = m_tvid
-            show_obj.prodid = m_prodid
-            pausestatus_after = None
-            if not set_pause:
-                show_obj.paused = False
-                if not mark_wanted:
-                    show_obj.paused = True
-                    pausestatus_after = False
-            elif not show_obj.paused:
-                show_obj.paused = True
-
-        show_obj.switch_infosrc(tvid, prodid, pausestatus_after=pausestatus_after)
-
-        ui.notifications.message('TV info source switch', 'Finished after updating the show')
+        ui.notifications.message('TV info source switch', 'Queued switch of tv info source')
         return {'Success': 'Switched to new TV info source'}
 
     def save_mapping(self, tvid_prodid, **kwargs):
@@ -2421,7 +2455,7 @@ class Home(MainHandler):
             if len(save_map):
                 save_mapping(show_obj, save_map=save_map)
                 ui.notifications.message('Mappings saved')
-            else:
+            elif show_obj.tvid == m_tvid:
                 ui.notifications.message('Mappings unchanged, not saving.')
 
         master_ids = [show_obj.prodid, helpers.try_int(kwargs.get('tvid')), m_prodid, m_tvid]
@@ -2436,10 +2470,15 @@ class Home(MainHandler):
                     master_ids += [bool(helpers.try_int(kwargs.get(x))) for x in ('paused', 'markwanted')]
                     response = dict(switch=self.switch_infosrc(*master_ids), mtvid_prodid=mtvid_prodid)
                 else:
-                    ui.notifications.message('Master ID unchanged, because show from %s with ID: %s exists in DB.' %
-                                             (sickbeard.TVInfoAPI(m_tvid).name, mtvid_prodid))
+                    msg = 'Master ID unchanged, because show from %s with ID: %s exists in DB.' % \
+                          (sickbeard.TVInfoAPI(m_tvid).name, mtvid_prodid)
+                    logger.log(msg, logger.WARNING)
+                    ui.notifications.message(*[s.strip() for s in msg.split(',')])
             except MultipleShowObjectsException:
-                pass
+                msg = 'Master ID unchanged, because show from %s with ID: %s exists in DB.' % \
+                      (sickbeard.TVInfoAPI(m_tvid).name, m_prodid)
+                logger.log(msg, logger.WARNING)
+                ui.notifications.message(*[s.strip() for s in msg.split(',')])
 
         response.update({
             'map': {k: {r: w for r, w in iteritems(v) if 'date' != r} for k, v in iteritems(show_obj.ids)}
@@ -2796,6 +2835,25 @@ class Home(MainHandler):
                                                  ('media left untouched', 'all related media')[bool(full)]),
                                  '<b>%s</b>' % show_obj.name)
         self.redirect('/home/')
+
+    def update_cast(self, tvid_prodid=None):
+        if None is tvid_prodid:
+            return self._generic_message('Error', 'Invalid show ID')
+
+        show_obj = helpers.find_show_by_id(tvid_prodid)
+
+        if None is show_obj:
+            return self._generic_message('Error', 'Unable to find the specified show')
+
+        # force the update from the DB
+        try:
+            sickbeard.people_queue_scheduler.action.add_cast_update(show_obj=show_obj, show_info_cast=None)
+        except (BaseException, Exception) as e:
+            ui.notifications.error('Unable to refresh this show.', ex(e))
+
+        helpers.cpu_sleep()
+
+        self.redirect('/home/view-show?tvid_prodid=%s' % show_obj.tvid_prodid)
 
     def refresh_show(self, tvid_prodid=None):
 
@@ -3315,6 +3373,178 @@ class Home(MainHandler):
             result = dict(result='success', groups=result)
         return json.dumps(result)
 
+    def character(self, character_id, show):
+        t = PageTemplate(web_handler=self, file='character.tmpl')
+        character_id = sg_helpers.try_int(character_id, None)
+        if not character_id:
+            return self._generic_message('Error', 'Invalid character ID')
+        try:
+            t.show_obj = helpers.find_show_by_id(show)
+        except (BaseException, Exception):
+            return
+        c = TVCharacter(sid=character_id, show_obj=t.show_obj)
+        if not c:
+            return self._generic_message('Error', 'character ID not found')
+        if c:
+            t.character = c
+            my_db = db.DBConnection()
+            char_sql = my_db.select('SELECT DISTINCT characters.id as id, name, indexer, indexer_id FROM characters'
+                                    ' LEFT JOIN castlist c on characters.id = c.character_id'
+                                    ' WHERE characters.id = ?',
+                                    [c.id])
+            t.characters = []
+            if char_sql:
+                for char in char_sql:
+                    t.characters.append({'character_name': char['name'],
+                                         'character_id': char['id'],
+                                         'show_obj': helpers.find_show_by_id(
+                                             {char['indexer']: char['indexer_id']})})
+        return t.respond()
+
+    def person(self, person_id):
+        t = PageTemplate(web_handler=self, file='person.tmpl')
+        person_id = sg_helpers.try_int(person_id, None)
+        if not person_id:
+            return self._generic_message('Error', 'Invalid person ID')
+        p = TVPerson(sid=person_id)
+        if not p:
+            return self._generic_message('Error', 'person ID not found')
+        if p:
+            t.person = p
+            my_db = db.DBConnection()
+            char_sql = my_db.select('SELECT DISTINCT characters.id as id, name, indexer, indexer_id,'
+                                    ' cpy.start_year as start_year, cpy.end_year as end_year, c.indexer as c_tvid,'
+                                    ' c.indexer_id as c_prodid FROM characters'
+                                    ' LEFT JOIN castlist c on characters.id = c.character_id'
+                                    ' LEFT JOIN character_person_map cpm on characters.id = cpm.character_id'
+                                    ' LEFT JOIN character_person_years cpy on characters.id = cpy.character_id'
+                                    ' and cpy.person_id = ? WHERE cpm.person_id = ?',
+                                    [p.id, p.id])
+            t.characters = []
+            if char_sql:
+                for char in char_sql:
+                    t.characters.append({'character_name': char['name'],
+                                         'character_id': char['id'],
+                                        'show_obj': helpers.find_show_by_id({char['c_tvid']: char['c_prodid']}),
+                                         'start_year': char['start_year'], 'end_year': char['end_year']})
+        return t.respond()
+
+    @staticmethod
+    def _convert_person_data(person_dict):
+        b_d, d_d = None, None
+        if person_dict['birthdate']:
+            try:
+                b_d = datetime.date.fromordinal(person_dict['birthdate'])
+                person_dict['birthdate'] = b_d.strftime('%Y-%m-%d')
+                person_dict['birthdate_user'] = SGDatetime.sbfdate(b_d)
+            except (BaseException, Exception):
+                pass
+        if person_dict['deathdate']:
+            try:
+                d_d = datetime.date.fromordinal(person_dict['deathdate'])
+                person_dict['deathdate'] = d_d.strftime('%Y-%m-%d')
+                person_dict['deathdate_user'] = SGDatetime.sbfdate(d_d)
+            except (BaseException, Exception):
+                pass
+        person_dict['age'] = sg_helpers.calc_age(b_d, d_d)
+
+    def _select_person_by_date(self, date_str, column):
+        # type: (AnyStr, AnyStr) -> List[Dict]
+        if column not in ('birthdate', 'deathdate'):
+            return []
+
+        try:
+            b_dt = dateutil.parser.parse(date_str).date()
+        except (BaseException, Exception):
+            raise Exception('invalid date')
+
+        possible_dates = []
+        for y in moves.xrange((1850, 1920)['deathdate' == column], datetime.date.today().year + 1):
+            try:
+                possible_dates.append(datetime.date(year=y, month=b_dt.month, day=b_dt.day).toordinal())
+                if 2 == b_dt.month and 28 == b_dt.day:
+                    try:
+                        datetime.date(year=b_dt.year, month=b_dt.month, day=29)
+                    except (BaseException, Exception):
+                        possible_dates.append(datetime.date(year=y, month=b_dt.month, day=29).toordinal())
+            except (BaseException, Exception):
+                pass
+        my_db = db.DBConnection(row_type="dict")
+        result = my_db.select('SELECT * FROM persons WHERE %s IN (%s)' %
+                              (column, ','.join(['?'] * len(possible_dates))), possible_dates)
+        for r in result:
+            self._convert_person_data(r)
+        return result
+
+    def get_persons(self, birthday=None, deathday=None, names=None):
+        # type: (AnyStr, AnyStr, AnyStr) -> AnyStr
+        results = {}
+        if birthday:
+            try:
+                results['birthday'] = self._select_person_by_date(birthday, 'birthdate')
+            except (BaseException, Exception) as e:
+                return json.dumps({'result': 'error', 'error': ex(e)})
+
+        if deathday:
+            try:
+                results['deathday'] = self._select_person_by_date(deathday, 'deathdate')
+            except (BaseException, Exception) as e:
+                return json.dumps({'result': 'error', 'error': ex(e)})
+
+        names = names and names.split('|')
+        if names:
+            my_db = db.DBConnection(row_type='dict')
+            p_r = my_db.select('SELECT * FROM persons WHERE name IN (%s)' % ','.join(['?'] * len(names)), names)
+            for p in p_r:
+                self._convert_person_data(p)
+            results['names'] = p_r
+
+        return json.dumps({'result': 'success', 'person_list': results})
+
+    def get_switch_changed(self):
+        t = PageTemplate(web_handler=self, file='show_switch_errors.tmpl')
+        t.show_list = {}
+        my_db = db.DBConnection()
+        shows = my_db.select('SELECT DISTINCT new_indexer, new_indexer_id, COUNT(reason) AS count, reason'
+                             ' FROM switch_ep_errors GROUP BY new_indexer, new_indexer_id, reason')
+        for show in shows:
+            try:
+                show_obj = helpers.find_show_by_id({show['new_indexer']: show['new_indexer_id']})
+            except (BaseException, Exception):
+                # todo: what to do with unknown entires
+                continue
+            if not show_obj:
+                continue
+            t.show_list.setdefault(show_obj, {}).update(
+                {('changed', 'deleted')[TVSWITCH_EP_DELETED == show['reason']]: show['count']})
+
+        return t.respond()
+
+    def get_switch_changed_episodes(self, tvid_prodid):
+        t = PageTemplate(web_handler=self, file='show_switch_errors_episodes.tmpl')
+        try:
+            show_obj = helpers.find_show_by_id(tvid_prodid)
+        except (BaseException, Exception):
+            # todo: what to do with unknown entires
+            show_obj = None
+        if not show_obj:
+            return self.page_not_found()
+        t.show_obj = show_obj
+        t.ep_list = []
+        my_db = db.DBConnection()
+        episodes = my_db.select('SELECT * FROM switch_ep_errors WHERE new_indexer = ? AND new_indexer_id = ?'
+                                ' ORDER BY season, episode', TVidProdid(tvid_prodid).list)
+        for episode in episodes:
+            try:
+                ep_obj = show_obj.get_episode(season=episode['season'], episode=episode['episode'],
+                                              existing_only=True)
+            except (BaseException, Exception):
+                ep_obj = None
+            t.ep_list.append({'season': episode['season'], 'episode': episode['episode'],
+                              'reason': tvswitch_ep_names.get(episode['reason'], 'unknown'), 'ep_obj': ep_obj})
+
+        return t.respond()
+
 
 class HomeProcessMedia(Home):
 
@@ -3442,6 +3672,25 @@ class AddShows(Home):
     def generate_show_dir_name(show_name):
         return helpers.generate_show_dir_name(None, show_name)
 
+    @staticmethod
+    def _generate_search_text_list(search_term):
+        # type: (AnyStr) -> Set[AnyStr]
+        used_search_term = re.sub(r'\(?(19|20)\d{2}\)?', '', search_term).strip()
+        # fix for users that don't know the correct title
+        used_search_term = re.sub(r'(?i)(grown|mixed)(ish)', r'\1-\2', used_search_term)
+
+        b_term = decode_str(used_search_term).strip()
+        terms = []
+        try:
+            for cur_term in ([], [b_term.encode('utf-8')])[PY2] + [unidecode(b_term), b_term]:
+                if cur_term not in terms:
+                    terms += [cur_term]
+        except (BaseException, Exception):
+            text = used_search_term.strip()
+            terms = [text if not PY2 else text.encode('utf-8')]
+
+        return set(s for s in set([used_search_term] + terms) if s)
+
     # noinspection PyPep8Naming
     def search_tvinfo_for_showname(self, search_term, lang='en', search_tvid=None):
         if not lang or 'null' == lang:
@@ -3450,139 +3699,144 @@ class AddShows(Home):
             sickbeard.ADD_SHOWS_METALANG = lang
             sickbeard.save_config()
 
-        search_term = re.sub(r'^\d+%s' % TVidProdid.glue, '', search_term.strip())
-        try:
-            search_term = re.findall(r'(?i)thetvdb.*?seriesid=([\d]+)', search_term)[0]
-        except (BaseException, Exception):
-            pass
+        search_tvid = sg_helpers.try_int(search_tvid, None)
+        search_term = search_term and search_term.strip()
+        ids_to_search, id_srcs, searchable = {}, [], \
+            (list(iterkeys(sickbeard.TVInfoAPI().search_sources)), [search_tvid])[
+                search_tvid in sickbeard.TVInfoAPI().search_sources]
+        id_check = re.finditer(r'((\w+):\W*([t0-9]+))', search_term)
+        if id_check:
+            for im in id_check:
+                total, slug, id_str = im.groups()
+                for ti in sickbeard.TVInfoAPI().all_sources:
+                    if sickbeard.TVInfoAPI(ti).config.get('slug') \
+                            and sickbeard.TVInfoAPI(ti).config['slug'] == slug.lower():
+                        try:
+                            try:
+                                ids_to_search[ti] = int(id_str.strip().replace('tt', ''))
+                            except (BaseException, Exception):
+                                pass
+                            search_term = re.sub(r' *%s *' % re.escape(total), ' ', search_term).strip()
+                            if ti in searchable:
+                                id_srcs.append(ti)
+                            break
+                        except (BaseException, Exception):
+                            continue
+
+        id_check = re.finditer(
+            r'(?P<tvdb_full>[^ ]+thetvdb\.com/series/(?P<tvdb>[^ /]+)[^ ]*)|'
+            r'(?P<tvmaze_full>[^ ]+tvmaze\.com/shows/(?P<tvmaze>\d+)/[^ ]*)|'
+            r'(?P<tmdb_full>[^ ]+themoviedb\.org/tv/(?P<tmdb>\d+)[^ ]*)|'
+            r'(?P<imdb_full>[^ ]+imdb\.com/title/(?P<imdb>tt\d+)[^ ]*)|'
+            r'(?P<trakt_full>[^ ]+trakt\.tv/shows/(?P<trakt>[^ /]+)[^ ]*)|'
+            r'(?P<imdb_id_full>[^ ]*(?P<imdb_id>tt\d{7,9}))[^ ]*', search_term)
+        if id_check:
+            for im in id_check:
+                for s, st in [(TVINFO_TVDB_SLUG, 'tvdb'), (TVINFO_TVMAZE, 'tvmaze'), (TVINFO_TMDB, 'tmdb'),
+                              (TVINFO_IMDB, 'imdb'), (TVINFO_TRAKT_SLUG, 'trakt'), (TVINFO_IMDB, 'imdb_id')]:
+                    if im.group(st):
+                        try:
+                            gs = im.group(st).strip()
+                            if TVINFO_IMDB == s:
+                                gs = gs.replace('tt', '')
+                            if s not in (TVINFO_TVDB_SLUG, TVINFO_TRAKT_SLUG):
+                                gs = sg_helpers.try_int(gs, gs)
+                            ids_to_search[s] = gs
+                            search_term = re.sub(r' *%s *' % re.escape(im.group('%s_full' % st)), ' ',
+                                                 search_term).strip()
+                            if TVINFO_TVDB_SLUG == s:
+                                s = TVINFO_TVDB
+                            elif TVINFO_TRAKT_SLUG == s:
+                                s = TVINFO_TRAKT
+                            if s in searchable:
+                                id_srcs.append(s)
+                        except (BaseException, Exception):
+                            pass
+
+        # term is used for relevancy
         term = decode_str(search_term).strip()
-        terms = []
-        try:
-            for t in ([], [term.encode('utf-8')])[PY2] + [unidecode(term), term]:
-                if t not in terms:
-                    terms += [t]
-        except (BaseException, Exception):
-            t = search_term.strip()
-            terms = [t if not PY2 else t.encode('utf-8')]
+        used_search_term = self._generate_search_text_list(search_term)
+        text_search_used = bool(used_search_term)
+
+        exclude_results = []
+        if TVINFO_TVMAZE in ids_to_search:
+            id_srcs = [TVINFO_TVMAZE] + [i for i in id_srcs if TVINFO_TVMAZE != i]
+            if TVINFO_TVMAZE not in searchable:
+                exclude_results.append(TVINFO_TVMAZE)
 
         results = {}
         final_results = []
+        sources_to_search = id_srcs + [s for s in [TVINFO_TRAKT] + searchable if s not in id_srcs]
+        ids_search_used = ids_to_search.copy()
 
-        search_id, tvdb_prodid, trakt_prodid, tmdb_prodid, trakt_id = '', None, None, None, TVINFO_TRAKT
-        try:
-            search_id = helpers.parse_imdb_id(search_term) or re.search(r'(?m)(^\d{4,}$)', search_term).group(1)
-
-            tvinfo_config = sickbeard.TVInfoAPI(trakt_id).api_params.copy()
-            tvinfo_config['language'] = lang
-            tvinfo_config['custom_ui'] = classes.AllShowInfosNoFilterListUI
-            tvinfo_config['sleep_retry'] = 5
-            tvinfo_config['search_type'] = (TraktSearchTypes.tvdb_id, TraktSearchTypes.imdb_id)['tt' in search_id]
-            t = sickbeard.TVInfoAPI(trakt_id).setup(**tvinfo_config)
-
-            resp = t.search_show(search_id)[0]
-            search_term = resp['seriesname']
-            tvdb_prodid = resp['ids']['tvdb']
-            trakt_prodid = resp['ids'].get('trakt')
-            tmdb_prodid = resp['ids'].get('tmdb')
-
-        except (BaseException, Exception):
-            search_term = (search_term, '')['tt' in search_id]
-
-        # query Indexers for search term and build list of results
-        for cur_tvid in sickbeard.TVInfoAPI().search_sources \
-                if None is search_tvid or not int(search_tvid) else [int(search_tvid)]:
+        for cur_tvid in sources_to_search:
             tvinfo_config = sickbeard.TVInfoAPI(cur_tvid).api_params.copy()
             tvinfo_config['language'] = lang
             tvinfo_config['custom_ui'] = classes.AllShowInfosNoFilterListUI
             t = sickbeard.TVInfoAPI(cur_tvid).setup(**tvinfo_config)
-
+            results.setdefault(cur_tvid, {})
             try:
-                # add search results
-                if bool(tvdb_prodid):
-                    logger.log('Fetching show using id: %s (%s) from tv datasource %s' % (
-                        search_id, search_term, sickbeard.TVInfoAPI(cur_tvid).name), logger.DEBUG)
-                    r = t.get_show(tvdb_prodid, load_episodes=False)
-                    results.setdefault((cur_tvid, trakt_id)['tt' in search_id], {})[int(tvdb_prodid)] = {
-                        'id': tvdb_prodid, 'seriesname': r['seriesname'], 'firstaired': r['firstaired'],
-                        'network': r['network'], 'overview': r['overview'],
-                        'genres': '' if not r['genre'] else r['genre'].lower().strip('|').replace('|', ', '),
-                        'trakt_id': trakt_prodid, 'tmdb_id': tmdb_prodid
-                    }
-                    break
-                else:
-                    logger.log('Searching for shows using search term: %s from tv datasource %s' % (
-                        search_term, sickbeard.TVInfoAPI(cur_tvid).name), logger.DEBUG)
-                    results.setdefault(cur_tvid, {})
-                    for term in terms:
-                        try:
-                            for r in t.search_show(term):
-                                tvdb_prodid = int(r['id'])
-                                if tvdb_prodid not in results[cur_tvid]:
-                                    results.setdefault(cur_tvid, {})[tvdb_prodid] = r.copy()
-                                elif r['seriesname'] != results[cur_tvid][tvdb_prodid]['seriesname']:
-                                    results[cur_tvid][tvdb_prodid].setdefault('aliases', []).append(r['seriesname'])
-                        except BaseTVinfoException:
-                            pass
+                for cur_result in t.search_show(list(used_search_term), ids=ids_search_used):
+                    if TVINFO_TRAKT == cur_tvid and not cur_result['ids'].tvdb:
+                        continue
+                    tv_src_id = int(cur_result['id'])
+                    if cur_tvid in exclude_results:
+                        ids_search_used.update({k: v for k, v in iteritems(cur_result.get('ids', {}))
+                                                if v and k not in iterkeys(ids_to_search)})
+                    else:
+                        results[cur_tvid][tv_src_id] = cur_result.copy()
+                        results[cur_tvid][tv_src_id]['direct_id'] = \
+                            (cur_tvid in ids_to_search and tv_src_id == ids_to_search.get(cur_tvid)) or \
+                            (TVINFO_TVDB == cur_tvid and ids_to_search.get(TVINFO_TVDB_SLUG) == cur_result.get('slug'))
+                        if results[cur_tvid][tv_src_id]['direct_id'] or \
+                                any(ids_to_search[si] == cur_result.get('ids', {})[si] for si in ids_to_search):
+                            ids_search_used.update({k: v for k, v in iteritems(cur_result.get('ids', {}))
+                                                    if v and k not in iterkeys(ids_to_search)})
+                    if not text_search_used and cur_tvid in ids_to_search and tv_src_id == ids_to_search.get(cur_tvid):
+                        used_search_term.update(self._generate_search_text_list(cur_result['seriesname']))
+                        if not term:
+                            term = decode_str(cur_result['seriesname']).strip()
             except (BaseException, Exception):
                 pass
 
-        # query Trakt for TVDB ids
-        try:
-            logger.log('Searching for show using search term: %s from Trakt' % search_term, logger.DEBUG)
-            resp = []
-            tvinfo_config = sickbeard.TVInfoAPI(trakt_id).api_params.copy()
-            tvinfo_config['language'] = lang
-            tvinfo_config['custom_ui'] = classes.AllShowInfosNoFilterListUI
-            tvinfo_config['sleep_retry'] = 5
-            tvinfo_config['search_type'] = TraktSearchTypes.text
-            t = sickbeard.TVInfoAPI(trakt_id).setup(**tvinfo_config)
+        if TVINFO_TVDB not in searchable:
+            try:
+                results.pop(TVINFO_TRAKT)
+            except (BaseException, Exception):
+                pass
 
-            for term in terms:
-                result = t.search_show(term)
-                resp += result
-                match = False
-                for r in result:
-                    if isinstance(r.get('seriesname'), string_types) \
-                            and term.lower() == r.get('seriesname', '').lower():
-                        match = True
-                        break
-                if match:
-                    break
-            results_trakt = {}
-            for item in resp:
-                if 'tvdb' in item['ids'] and item['ids']['tvdb']:
-                    if item['ids']['tvdb'] not in results[TVINFO_TVDB]:
-                        results_trakt[int(item['ids']['tvdb'])] = {
-                            'id': item['ids']['tvdb'], 'seriesname': item['seriesname'],
-                            'genres': item['genres'].lower(), 'network': item['network'],
-                            'overview': item['overview'], 'firstaired': item['firstaired'],
-                            'trakt_id': item['ids']['trakt'], 'tmdb_id': item['ids']['tmdb']}
-                    elif item['seriesname'] != results[TVINFO_TVDB][int(item['ids']['tvdb'])]['seriesname']:
-                        results[TVINFO_TVDB][int(item['ids']['tvdb'])].setdefault(
-                            'aliases', []).append(item['seriesname'])
-            results.setdefault(trakt_id, {}).update(results_trakt)
-        except (BaseException, Exception):
-            pass
-
-        id_names = {tvid: (name, '%s via %s' % (sickbeard.TVInfoAPI(TVINFO_TVDB).name, name))[trakt_id == tvid]
+        id_names = {tvid: (name, '%s via %s' % (sickbeard.TVInfoAPI(TVINFO_TVDB).name, name))[TVINFO_TRAKT == tvid]
                     for tvid, name in iteritems(sickbeard.TVInfoAPI().all_sources)}
+
+        if TVINFO_TRAKT in results and TVINFO_TVDB in results:
+            tvdb_ids = list_keys(results[TVINFO_TVDB])
+            results[TVINFO_TRAKT] = {k: v for k, v in iteritems(results[TVINFO_TRAKT]) if v['ids'].tvdb not in tvdb_ids}
+
+        def in_db(tvid, prod_id):
+            show_obj = helpers.find_show_by_id({(tvid, TVINFO_TVDB)[TVINFO_TRAKT == tvid]: prod_id},
+                                               no_mapped_ids=False, no_exceptions=True)
+            return any([show_obj]) and '/home/view-show?tvid_prodid=%s' % show_obj.tvid_prodid
+
         # noinspection PyUnboundLocalVariable
         map_consume(final_results.extend,
-                    [[[id_names[tvid], any([
-                        helpers.find_show_by_id({(tvid, TVINFO_TVDB)[trakt_id == tvid]: int(show['id'])},
-                                                no_mapped_ids=False)])
-                       and '/home/view-show?tvid_prodid=%s'
-                       % TVidProdid({(tvid, TVINFO_TVDB)[trakt_id == tvid]: int(show['id'])})(),
-                       tvid, (tvid, TVINFO_TVDB)[trakt_id == tvid],
-                       sickbeard.TVInfoAPI((tvid, TVINFO_TVDB)[trakt_id == tvid]).config['show_url'] % int(show['id']),
+                    [[[id_names[tvid], in_db(*((tvid, int(show['id'])),
+                                               (TVINFO_TVDB, show['ids'][TVINFO_TVDB]))[TVINFO_TRAKT == tvid]),
+                       tvid, (tvid, TVINFO_TVDB)[TVINFO_TRAKT == tvid],
+                       sickbeard.TVInfoAPI((tvid, TVINFO_TVDB)[TVINFO_TRAKT == tvid]).config['slug'],
+                       (sickbeard.TVInfoAPI((tvid, TVINFO_TVDB)[TVINFO_TRAKT == tvid]).config['show_url'] %
+                        show['ids'][(tvid, TVINFO_TVDB)[TVINFO_TRAKT == tvid]])
+                       + ('', '&lid=%s' % sickbeard.TVInfoAPI().config['langabbv_to_id'][lang])[TVINFO_TVDB == tvid],
                        int(show['id']),
                        show['seriesname'], helpers.xhtml_escape(show['seriesname']), show['firstaired'],
                        show.get('network', '') or '', show.get('genres', '') or '',
                        re.sub(r'([,.!][^,.!]*?)$', '...',
                               re.sub(r'([.!?])(?=\w)', r'\1 ',
                                      helpers.xhtml_escape((show.get('overview', '') or '')[:250:].strip()))),
-                       self.get_uw_ratio(term, show['seriesname'], show.get('aliases', [])), None, None, None, None,
-                       self._make_search_image_url(tvid, show)
+                       self._make_search_image_url(tvid, show),  # 13
+                       (show['direct_id'] and 100)
+                        or self.get_uw_ratio(term, show['seriesname'], show.get('aliases', [])),
+                       None, None, None, None, None, None, None, None, None,  # 15 - 23
+                       show['direct_id']
                        ] for show in itervalues(shows)] for tvid, shows in iteritems(results)])
 
         def final_order(sortby_index, data, final_sort):
@@ -3652,10 +3906,14 @@ class AddShows(Home):
         img_url = ''
         if TVINFO_TRAKT == iid:
             img_url = 'imagecache?path=browse/thumb/trakt&filename=%s&trans=0&tmdbid=%s&tvdbid=%s' % \
-                      ('%s.jpg' % show_info['trakt_id'], show_info.get('tmdb_id'), show_info.get('id'))
+                      ('%s.jpg' % show_info['ids'].trakt, show_info.get('tmdb_id'), show_info['ids'].tvdb)
         elif TVINFO_TVDB == iid:
             img_url = 'imagecache?path=browse/thumb/tvdb&filename=%s&trans=0&tvdbid=%s' % \
                       ('%s.jpg' % show_info['id'], show_info['id'])
+        elif TVINFO_TVMAZE == iid and show_info.get('image'):
+            img_url = 'imagecache?path=browse/thumb/tvmaze&filename=%s&trans=0&source=%s' % \
+                      ('%s.jpg' % show_info['id'], show_info['image'])
+            sickbeard.CACHE_IMAGE_URL_LIST.add_url(show_info['image'])
         return img_url
 
     @classmethod
@@ -3698,18 +3956,23 @@ class AddShows(Home):
 
         dir_list = []
 
-        display_one_dir = file_list = None
+        root_dir_dict = {}
+        display_one_dir = None
         if hash_dir:
             try:
                 for root_dir in sickbeard.ROOT_DIRS.split('|')[1:]:
+                    root_dir_dict.setdefault(root_dir, {'filelist': [], 'path': [], 'file': [], 'sql': []})
                     try:
-                        file_list = [x for x in scantree(root_dir, filter_kind=True, recurse=False)]
+                        root_dir_dict[root_dir]['filelist'] = [
+                            x for x in scantree(root_dir, filter_kind=True, recurse=False)]
                     except (BaseException, Exception):
                         continue
 
-                    for cur_file in file_list:
+                    for cur_file in root_dir_dict[root_dir]['filelist']:
 
                         cur_path = ek.ek(os.path.normpath, cur_file.path)
+                        root_dir_dict[root_dir]['path'].append(cur_path)
+                        root_dir_dict[root_dir]['file'].append(cur_file)
 
                         display_one_dir = hash_dir == str(abs(hash(cur_path)))
                         if display_one_dir:
@@ -3717,28 +3980,35 @@ class AddShows(Home):
             except ValueError:
                 pass
 
-        my_db = db.DBConnection()
         for root_dir in root_dirs:
-            if not file_list:
+            root_dir_dict.setdefault(root_dir, {'filelist': [], 'path': [], 'file': [], 'sql': []})
+            if not root_dir_dict[root_dir]['filelist']:
                 try:
-                    file_list = [x for x in scantree(root_dir, filter_kind=True, recurse=False)]
+                    root_dir_dict[root_dir]['filelist'] = [
+                        x for x in scantree(root_dir, filter_kind=True, recurse=False)]
                 except (BaseException, Exception):
                     continue
 
-            for cur_file in file_list:
+            for cur_file in root_dir_dict[root_dir]['filelist']:
 
                 cur_path = ek.ek(os.path.normpath, cur_file.path)
+                root_dir_dict[root_dir]['path'].append(cur_path)
+                root_dir_dict[root_dir]['file'].append(cur_file)
 
+                root_dir_dict[root_dir]['sql'].append(['SELECT indexer FROM tv_shows WHERE location = ? LIMIT 1',
+                                                       [cur_path]])
+
+        my_db = db.DBConnection()
+        for root_dir, data in iteritems(root_dir_dict):
+            root_dir_dict[root_dir]['exists'] = my_db.mass_action(root_dir_dict[root_dir]['sql'])
+
+            for c_i, cur_path in enumerate(root_dir_dict[root_dir]['path']):
                 highlight = hash_dir == str(abs(hash(cur_path)))
                 if display_one_dir and not highlight:
                     continue
-                cur_dir = dict(dir=cur_path, highlight=highlight, name=cur_file.name,
+                cur_dir = dict(dir=cur_path, highlight=highlight, name=root_dir_dict[root_dir]['file'][c_i].name,
                                path='%s%s' % (ek.ek(os.path.dirname, cur_path), os.sep),
-                               added_already=any(my_db.select(
-                                   'SELECT indexer'
-                                   ' FROM tv_shows'
-                                   ' WHERE location = ? LIMIT 1',
-                                   [cur_path])))
+                               added_already=any(root_dir_dict[root_dir]['exists'][c_i]))
 
                 dir_list.append(cur_dir)
 
@@ -3767,8 +4037,6 @@ class AddShows(Home):
 
                 if prodid and helpers.find_show_by_id({tvid: prodid}):
                     cur_dir['added_already'] = True
-
-            file_list = None
 
         t.dirList = dir_list
 
@@ -3822,7 +4090,7 @@ class AddShows(Home):
         t.blocklist = []
         t.groups = []
 
-        t.show_scene_maps = list(*itervalues(sickbeard.scene_exceptions.xem_ids_list))
+        t.show_scene_maps = list(itervalues(sickbeard.scene_exceptions.xem_ids_list))
 
         return t.respond()
 
@@ -4365,6 +4633,8 @@ class AddShows(Home):
             error_msg = 'Unauthorized: Get another pin in the Notifications Trakt settings'
         except TraktException as e:
             logger.log(u'Could not connect to Trakt service: %s' % ex(e), logger.WARNING)
+        except exceptions_helper.ConnectionSkipException as e:
+            logger.log('Skipping Trakt because of previous failure: %s' % ex(e))
         except (IndexError, KeyError):
             pass
 
@@ -5088,7 +5358,7 @@ class AddShows(Home):
                     if 'custom' not in item['ids']:
                         tvid_prodid_list += ['%s%s%s' % (tvid, TVidProdid.glue, item['ids'][infosrc_slug])]
                         # tvid_prodid_list += ['%s' % item['ids'][infosrc_slug]]
-                        show_obj = helpers.find_show_by_id({tvid: item['ids'][infosrc_slug]})
+                        show_obj = helpers.find_show_by_id({tvid: item['ids'][infosrc_slug]}, no_mapped_ids=False)
                     else:
                         tvid_prodid_list += ['%s%s%s' % (item['ids']['name'], TVidProdid.glue, item['ids']['custom'])]
                         show_obj = None
@@ -5315,6 +5585,7 @@ class AddShows(Home):
         prompt_for_settings = config.checkbox_to_value(prompt_for_settings)
 
         prodid_given = []
+        prompt_list = []
         dirs_only = []
         # separate all the ones with production ids
         for cur_dir in shows_to_add:
@@ -5330,11 +5601,15 @@ class AddShows(Home):
                 if not show_dir or not prodid or not show_name:
                     continue
 
-                prodid_given.append((tvid, show_dir, int(prodid), show_name))
+                src_tvid, src_prodid = prodid.split(':')
+                src_tvid, src_prodid = helpers.try_int(src_tvid, None), helpers.try_int(src_prodid, None)
+                if tvid != src_tvid:
+                    prompt_list.append(cur_dir.replace(prodid, ''))
+                    continue
+                else:
+                    prodid = src_prodid
 
-        # if they want me to prompt for settings then I will just carry on to the new_show page
-        if prompt_for_settings and shows_to_add:
-            return self.new_show(shows_to_add[0], shows_to_add[1:])
+                prodid_given.append((tvid, show_dir, prodid, show_name))
 
         # if they don't want me to prompt for settings then I can just add all the nfo shows now
         num_added = 0
@@ -5356,6 +5631,13 @@ class AddShows(Home):
         if num_added:
             ui.notifications.message('Shows Added',
                                      'Automatically added ' + str(num_added) + ' from their existing metadata files')
+
+        if prompt_list:
+            shows_to_add = prompt_list
+            prompt_for_settings = True
+        # if they want me to prompt for settings then I will just carry on to the new_show page
+        if prompt_for_settings and shows_to_add:
+            return self.new_show(shows_to_add[0], shows_to_add[1:])
 
         # if we're done then go home
         if not dirs_only:
@@ -6184,6 +6466,75 @@ class Manage(MainHandler):
 
         return t.respond()
 
+    def mass_switch(self, to_switch=None):
+        """
+        switch multiple given shows to a new tvinfo source
+        shows are separated by |
+        value for show is: current_tvid:current_prodid-new_tvid:new_prodid-force_id
+        parts: new_prodid, force_id are optional
+        without new_prodid the mapped id will be used
+        with force set to '1' or 'true' the given new id will be used and NO verification for correct show will be done
+
+        to_switch examples:
+        to_switch=1:123-3|3:564-1|1:456-3:123|3:55-1:77-1|3:88-1-1
+
+        :param to_switch:
+        """
+        if not to_switch:
+            return json.dumps({'error': 'No list given'})
+
+        shows = to_switch.split('|')
+        sl, tv_sources, errors = [], sickbeard.TVInfoAPI().search_sources, []
+        for show in shows:
+            show_split = show.split('-')
+            if 2 == len(show_split):
+                old_show, new_show = show_split
+                force_id = False
+            else:
+                old_show, new_show, force_id = show_split
+                force_id = force_id in (1, True, '1', 'true', 'True')
+            old_show_id = old_show.split(':')
+            old_tvid, old_prodid = int(old_show_id[0]), int(old_show_id[1])
+            new_show_id = new_show.split(':')
+            new_tvid = int(new_show_id[0])
+            if new_tvid not in tv_sources:
+                logger.log('Skipping %s because target is not a valid source' % show, logger.WARNING)
+                errors.append('Skipping %s because target is not a valid source' % show)
+                continue
+            try:
+                show_obj = helpers.find_show_by_id({old_tvid: old_prodid})
+            except (BaseException, Exception):
+                show_obj = None
+            if not show_obj:
+                logger.log('Skipping %s because source is not a valid show' % show, logger.WARNING)
+                errors.append('Skipping %s because source is not a valid show' % show)
+                continue
+            if 2 == len(new_show_id):
+                new_prodid = int(new_show_id[1])
+                try:
+                    new_show_obj = helpers.find_show_by_id({new_tvid: new_prodid})
+                except (BaseException, Exception):
+                    new_show_obj = None
+                if new_show_obj:
+                    logger.log('Skipping %s because target show with that id already exists in db' % show,
+                               logger.WARNING)
+                    errors.append('Skipping %s because target show with that id already exists in db' % show)
+                    continue
+            else:
+                new_prodid = None
+            if show_obj._tvid == new_tvid and (not new_prodid or new_prodid == show_obj._prodid):
+                logger.log('Skipping %s because target same as source' % show, logger.WARNING)
+                errors.append('Skipping %s because target same as source' % show)
+                continue
+            try:
+                sickbeard.show_queue_scheduler.action.switch_show(show_obj=show_obj, new_tvid=new_tvid,
+                                                                  new_prodid=new_prodid, force_id=force_id)
+            except (BaseException, Exception) as e:
+                logger.log('Could not add show %s to switch queue: %s' % (show_obj.tvid_prodid, ex(e)), logger.WARNING)
+                errors.append('Could not add show %s to switch queue: %s' % (show_obj.tvid_prodid, ex(e)))
+
+        return json.dumps(({'result': 'success'}, {'errors': ', '.join(errors)})[0 < len(errors)])
+
 
 class ManageSearch(Manage):
 
@@ -6203,6 +6554,22 @@ class ManageSearch(Manage):
         t.submenu = self.manage_menu('Search')
 
         return t.respond()
+
+    @staticmethod
+    def remove_from_search_queue(to_remove=None):
+        if not to_remove:
+            return json.dumps({'error': 'nothing to do'})
+        to_remove = [int(r) for r in to_remove.split('|')]
+        sickbeard.search_queue_scheduler.action.remove_from_queue(to_remove=to_remove)
+        return json.dumps({'result': 'success'})
+
+    @staticmethod
+    def clear_search_queue(search_type=None):
+        search_type = helpers.try_int(search_type, None)
+        if not search_type:
+            return json.dumps({'error': 'nothing to do'})
+        sickbeard.search_queue_scheduler.action.clear_queue(action_types=search_type)
+        return json.dumps({'result': 'success'})
 
     @staticmethod
     def retry_provider(provider=None):
@@ -6263,6 +6630,7 @@ class ShowTasks(Manage):
     def index(self):
         t = PageTemplate(web_handler=self, file='manage_showProcesses.tmpl')
         t.queue_length = sickbeard.show_queue_scheduler.action.queue_length()
+        t.people_queue = sickbeard.people_queue_scheduler.action.queue_data()
         t.next_run = sickbeard.show_update_scheduler.lastRun.replace(
             hour=sickbeard.show_update_scheduler.start_time.hour)
         t.show_update_running = sickbeard.show_queue_scheduler.action.isShowUpdateRunning() \
@@ -6291,9 +6659,61 @@ class ShowTasks(Manage):
         t.defunct_indexer = defunct_sql_result
         t.not_found_shows = sql_result
 
+        failed_result = my_db.select('SELECT * FROM tv_src_switch WHERE status != 0')
+        t.failed_switch = []
+        for f in failed_result:
+            try:
+                show_obj = helpers.find_show_by_id({f['old_indexer']: f['old_indexer_id']})
+            except (BaseException, Exception):
+                show_obj = None
+            new_failed = {'tvid': f['old_indexer'], 'prodid': f['old_indexer_id'], 'new_tvid': f['new_indexer'],
+                          'new_prodid': f['new_indexer_id'],
+                          'status': tvswitch_names.get(f['status'], 'unknown %s' % f['status']), 'show_obj': show_obj,
+                          'uid': f['uid']}
+            t.failed_switch.append(new_failed)
+
         t.submenu = self.manage_menu('Show')
 
         return t.respond()
+
+    @staticmethod
+    def remove_from_show_queue(to_remove=None, force=False):
+        if not to_remove:
+            return json.dumps({'error': 'nothing to do'})
+        force = force in (1, '1', 'true', 'True', True)
+        to_remove = [int(r) for r in to_remove.split('|')]
+        sickbeard.show_queue_scheduler.action.remove_from_queue(to_remove=to_remove, force=force)
+        return json.dumps({'result': 'success'})
+
+    @staticmethod
+    def remove_from_people_queue(to_remove=None):
+        if not to_remove:
+            return json.dumps({'error': 'nothing to do'})
+        to_remove = [int(r) for r in to_remove.split('|')]
+        sickbeard.people_queue_scheduler.action.remove_from_queue(to_remove=to_remove)
+        return json.dumps({'result': 'success'})
+
+    @staticmethod
+    def clear_show_queue(show_type=None):
+        show_type = helpers.try_int(show_type, None)
+        if not show_type:
+            return json.dumps({'error': 'nothing to do'})
+        if show_type in [sickbeard.show_queue.ShowQueueActions.UPDATE,
+                         sickbeard.show_queue.ShowQueueActions.FORCEUPDATE,
+                         sickbeard.show_queue.ShowQueueActions.WEBFORCEUPDATE]:
+            show_type = [sickbeard.show_queue.ShowQueueActions.UPDATE,
+                         sickbeard.show_queue.ShowQueueActions.FORCEUPDATE,
+                         sickbeard.show_queue.ShowQueueActions.WEBFORCEUPDATE]
+        sickbeard.show_queue_scheduler.action.clear_queue(action_types=show_type)
+        return json.dumps({'result': 'success'})
+
+    @staticmethod
+    def clear_people_queue(people_type=None):
+        people_type = helpers.try_int(people_type, None)
+        if not people_type:
+            return json.dumps({'error': 'nothing to do'})
+        sickbeard.people_queue_scheduler.action.clear_queue(action_types=people_type)
+        return json.dumps({'result': 'success'})
 
     def force_show_update(self):
 
@@ -7213,7 +7633,7 @@ class ConfigGeneral(Config):
             results += ['Unable to create directory ' + os.path.normpath(log_dir) + ', log directory not changed.']
         if indexer_default:
             sickbeard.TVINFO_DEFAULT = config.to_int(indexer_default)
-            if not sickbeard.TVInfoAPI(sickbeard.TVINFO_DEFAULT).config['active']:
+            if 0 != sickbeard.TVINFO_DEFAULT and not sickbeard.TVInfoAPI(sickbeard.TVINFO_DEFAULT).config.get('active'):
                 sickbeard.TVINFO_DEFAULT = TVINFO_TVDB
         if indexer_timeout:
             sickbeard.TVINFO_TIMEOUT = config.to_int(indexer_timeout)
@@ -7446,6 +7866,7 @@ class ConfigSearch(Config):
                                                                              value_off=1, value_on=0))
 
         sickbeard.FLARESOLVERR_HOST = config.clean_url(flaresolverr_host)
+        sg_helpers.FLARESOLVERR_HOST = sickbeard.FLARESOLVERR_HOST
 
         sickbeard.ALLOW_HIGH_PRIORITY = config.checkbox_to_value(allow_high_priority)
 
@@ -8597,7 +9018,6 @@ class Cache(MainHandler):
 
 
 class CachedImages(MainHandler):
-
     def set_default_headers(self):
         super(CachedImages, self).set_default_headers()
         self.set_header('Cache-Control', 'no-cache, max-age=0')
@@ -8640,7 +9060,7 @@ class CachedImages(MainHandler):
 
     @staticmethod
     def delete_all_dummy_images(filename):
-        for f in ['tmdb', 'tvdb']:
+        for f in ['tmdb', 'tvdb', 'tvmaze']:
             CachedImages.delete_dummy_image('%s.%s.dummy' % (ek.ek(os.path.splitext, filename)[0], f))
 
     def index(self, path='', source=None, filename=None, tmdbid=None, tvdbid=None, trans=True):
@@ -8672,8 +9092,8 @@ class CachedImages(MainHandler):
                                            reverse=True)[0]['file_path']) if 0 < len(images['posters']) else ''
                 except (BaseException, Exception):
                     s = ''
-            if s and not helpers.download_file(s, static_image_path) and s.find('trakt.us'):
-                helpers.download_file(s.replace('trakt.us', 'trakt.tv'), static_image_path)
+            if s and not sg_helpers.download_file(s, static_image_path) and s.find('trakt.us'):
+                sg_helpers.download_file(s.replace('trakt.us', 'trakt.tv'), static_image_path)
             if tmdbimage and not ek.ek(os.path.isfile, static_image_path):
                 self.create_dummy_image(static_image_path, 'tmdb')
 
@@ -8689,7 +9109,7 @@ class CachedImages(MainHandler):
                 except (BaseException, Exception):
                     s = ''
                 if s:
-                    helpers.download_file(s, static_image_path)
+                    sg_helpers.download_file(s, static_image_path)
                 if not ek.ek(os.path.isfile, static_image_path):
                     self.create_dummy_image(static_image_path, 'tvdb')
 
@@ -8701,6 +9121,138 @@ class CachedImages(MainHandler):
                                       'images', ('image-light.png', 'trans.png')[bool(int(trans))])
         else:
             helpers.set_file_timestamp(static_image_path, min_age=3, new_time=None)
+
+        mime_type, encoding = MimeTypes().guess_type(static_image_path)
+        self.set_header('Content-Type', mime_type)
+        with open(static_image_path, 'rb') as img:
+            return img.read()
+
+    @staticmethod
+    def should_load_image(filename, days=7):
+        # type: (AnyStr, integer_types) -> bool
+        """
+        should image be (re-)loaded
+
+        :param filename: image file name with path
+        :param days: max age to trigger reload of image
+        """
+        if not ek.ek(os.path.isfile, filename) or \
+                ek.ek(os.stat, filename).st_mtime < \
+                (int(timestamp_near((datetime.datetime.now() - datetime.timedelta(days=days))))):
+            return True
+        return False
+
+    def character(self, character_id=None, tvid_prodid=None, thumb=True, person_id=None, prefer_person=False):
+        """
+
+        :param character_id:
+        :param tvid_prodid:
+        :param thumb: return thumb or normal as fallback
+        :param person_id: optional person_id
+        :param prefer_person: prefer person image if person_id is set and character has more then 1 person assigned
+        """
+        show_obj = tvid_prodid and helpers.find_show_by_id(tvid_prodid)
+        char_id = sg_helpers.try_int(character_id, None)
+        person_id = sg_helpers.try_int(person_id, None)
+        if not show_obj or not char_id:
+            return
+        char_obj = next((c for c in show_obj.cast_list if char_id == c.id), None)
+        if not char_obj:
+            return
+        if person_id:
+            person_obj = TVPerson(sid=person_id)
+            if not char_obj.person or person_obj not in char_obj.person:
+                person_obj = None
+        else:
+            person_obj = None
+        thumb = thumb in (True, '1', 'true', 'True')
+        prefer_person = prefer_person in (True, '1', 'true', 'True') and char_obj.person and 1 < len(char_obj.person) \
+            and bool(person_obj)
+
+        if not prefer_person and (char_obj.thumb_url or char_obj.image_url):
+            img_cache_obj = image_cache.ImageCache()
+            filename_image_path, thumb_image_path = img_cache_obj.character_both_path(char_obj, show_obj,
+                                                                                      person_obj=person_obj)
+            sg_helpers.make_dirs(img_cache_obj.characters_dir)
+            if self.should_load_image(filename_image_path) and char_obj.image_url:
+                sg_helpers.download_file(char_obj.image_url, filename_image_path)
+            if self.should_load_image(thumb_image_path) and char_obj.thumb_url:
+                sg_helpers.download_file(char_obj.thumb_url, thumb_image_path)
+            if thumb:
+                if ek.ek(os.path.isfile, thumb_image_path):
+                    static_image_path = thumb_image_path
+                elif ek.ek(os.path.isfile, filename_image_path):
+                    # use normal image as fallback for thumb
+                    static_image_path = filename_image_path
+                else:
+                    static_image_path = ek.ek(os.path.join, sickbeard.PROG_DIR, 'gui', 'slick', 'images',
+                                              'poster-person.jpg')
+            else:
+                if ek.ek(os.path.isfile, filename_image_path):
+                    static_image_path = filename_image_path
+                elif ek.ek(os.path.isfile, thumb_image_path):
+                    # use thumb image as fallback
+                    static_image_path = thumb_image_path
+                else:
+                    static_image_path = ek.ek(os.path.join, sickbeard.PROG_DIR, 'gui', 'slick', 'images',
+                                              'poster-person.jpg')
+        elif person_id:
+            return self.person(character_id=character_id, person_id=person_id, show_obj=show_obj, thumb=thumb)
+        elif char_obj.person and (char_obj.person[0].thumb_url or char_obj.person[0].image_url):
+            return self.person(character_id=character_id, person_id=char_obj.person[0].id, show_obj=show_obj,
+                               thumb=thumb)
+        else:
+            static_image_path = ek.ek(os.path.join, sickbeard.PROG_DIR, 'gui', 'slick', 'images', 'poster-person.jpg')
+
+        mime_type, encoding = MimeTypes().guess_type(static_image_path)
+        self.set_header('Content-Type', mime_type)
+        with open(static_image_path, 'rb') as img:
+            return img.read()
+
+    def person(self, character_id=None, person_id=None, show=None, show_obj=None, thumb=True):
+        show_obj = show_obj or show and helpers.find_show_by_id(show)
+        char_id = sg_helpers.try_int(character_id, None)
+        person_id = sg_helpers.try_int(person_id, None)
+        person_obj = None
+        if not person_id:
+            return
+        if person_id:
+            person_obj = TVPerson(sid=person_id)
+        if char_id and show_obj and not person_obj:
+            char_obj = next((c for c in show_obj.cast_list if char_id == c.id), None)
+            person_obj = char_obj.person and char_obj.person[0]
+        if not person_obj:
+            return
+        thumb = thumb in (True, '1', 'true', 'True')
+
+        if person_obj.thumb_url or person_obj.image_url:
+            img_cache_obj = image_cache.ImageCache()
+            filename_image_path, thumb_image_path = img_cache_obj.person_both_paths(person_obj)
+            sg_helpers.make_dirs(img_cache_obj.characters_dir)
+            if self.should_load_image(filename_image_path) and person_obj.image_url:
+                sg_helpers.download_file(person_obj.image_url, filename_image_path)
+            if self.should_load_image(thumb_image_path) and person_obj.thumb_url:
+                sg_helpers.download_file(person_obj.thumb_url, thumb_image_path)
+            if thumb:
+                if ek.ek(os.path.isfile, thumb_image_path):
+                    static_image_path = thumb_image_path
+                elif ek.ek(os.path.isfile, filename_image_path):
+                    # use normal image as fallback for thumb
+                    static_image_path = filename_image_path
+                else:
+                    static_image_path = ek.ek(os.path.join, sickbeard.PROG_DIR, 'gui', 'slick', 'images',
+                                              'poster-person.jpg')
+            else:
+                if ek.ek(os.path.isfile, filename_image_path):
+                    static_image_path = filename_image_path
+                elif ek.ek(os.path.isfile, thumb_image_path):
+                    # use thumb image as fallback
+                    static_image_path = thumb_image_path
+                else:
+                    static_image_path = ek.ek(os.path.join, sickbeard.PROG_DIR, 'gui', 'slick', 'images',
+                                              'poster-person.jpg')
+        else:
+            static_image_path = ek.ek(os.path.join, sickbeard.PROG_DIR, 'gui', 'slick', 'images', 'poster-person.jpg')
 
         mime_type, encoding = MimeTypes().guess_type(static_image_path)
         self.set_header('Content-Type', mime_type)

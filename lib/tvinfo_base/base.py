@@ -1,15 +1,43 @@
 import copy
 import datetime
+import diskcache
 import logging
 import threading
+import shutil
 import time
+from exceptions_helper import ex
 from six import integer_types, iteritems, iterkeys, string_types, text_type
 from _23 import list_items, list_values
-from .exceptions import *
+from lib.tvinfo_base.exceptions import *
+from sg_helpers import calc_age, make_dirs
 
 # noinspection PyUnreachableCode
 if False:
-    from typing import Any, AnyStr, Dict, List, Optional, Tuple, Union
+    from typing import Any, AnyStr, Dict, List, Optional, Set, Tuple, Union
+
+TVINFO_TVDB = 1
+TVINFO_TVRAGE = 2
+TVINFO_TVMAZE = 3
+
+# old tvdb api - version 1
+# TVINFO_TVDB_V1 = 10001
+
+# mapped only source
+TVINFO_IMDB = 100
+TVINFO_TRAKT = 101
+TVINFO_TMDB = 102
+# end mapped only source
+TVINFO_TVDB_SLUG = 1001
+TVINFO_TRAKT_SLUG = 1101
+
+# generic stuff
+TVINFO_SLUG = 100000
+
+# social media sources
+TVINFO_TWITTER = 250000
+TVINFO_FACEBOOK = 250001
+TVINFO_INSTAGRAM = 250002
+TVINFO_WIKIPEDIA = 250003
 
 log = logging.getLogger('TVInfo')
 log.addHandler(logging.NullHandler())
@@ -58,8 +86,82 @@ class ShowContainer(dict):
         nr_shows = len(self)
         return '<ShowContainer (containing %s Show%s)>' % (nr_shows, ('s', '')[1 == nr_shows])
 
-    def __repr__(self):
-        return self.__str__()
+    __repr__ = __str__
+
+
+class TVInfoIDs(object):
+    def __init__(self, tvdb=None, tmdb=None, tvmaze=None, imdb=None, trakt=None, rage=None, ids=None):
+        # type: (integer_types, integer_types, integer_types, integer_types, integer_types, integer_types, Dict[int, integer_types]) -> TVInfoIDs
+        ids = ids or {}
+        self.tvdb = tvdb or ids.get(TVINFO_TVDB)
+        self.tmdb = tmdb or ids.get(TVINFO_TMDB)
+        self.tvmaze = tvmaze or ids.get(TVINFO_TVMAZE)
+        self.imdb = imdb or ids.get(TVINFO_IMDB)
+        self.trakt = trakt or ids.get(TVINFO_TRAKT)
+        self.rage = rage or ids.get(TVINFO_TVRAGE)
+
+    def __getitem__(self, key):
+        return {TVINFO_TVDB: self.tvdb, TVINFO_TMDB: self.tmdb, TVINFO_TVMAZE: self.tvmaze,
+                TVINFO_IMDB: self.imdb, TVINFO_TRAKT: self.trakt, TVINFO_TVRAGE: self.rage}.get(key)
+
+    def __iter__(self):
+        for s, v in [(TVINFO_TVDB, self.tvdb), (TVINFO_TMDB, self.tmdb), (TVINFO_TVMAZE, self.tvmaze),
+                     (TVINFO_IMDB, self.imdb), (TVINFO_TRAKT, self.trakt), (TVINFO_TVRAGE, self.rage)]:
+            yield s, v
+
+    def __str__(self):
+        return ', '.join('%s:%s' % v for v in self.__iter__())
+
+    __repr__ = __str__
+    iteritems = __iter__
+    items = __iter__
+
+
+class TVInfoImageType(object):
+    poster = 1
+    banner = 2
+    # fanart/background
+    fanart = 3
+    typography = 4
+    other = 10
+
+    reverse_str = {
+        1: 'poster',
+        2: 'banner',
+        # fanart/background
+        3: 'fanart',
+        4: 'typography',
+        10: 'other'
+    }
+
+
+class TVInfoImageSize(object):
+    original = 1
+    medium = 2
+    small = 3
+
+    reverse_str = {
+        1: 'original',
+        2: 'medium',
+        3: 'small'
+    }
+
+
+class TVInfoImage(object):
+    def __init__(self, image_type, sizes, img_id=None, main_image=False, type_str='', rating=None, votes=None):
+        self.img_id = img_id  # type: Optional[integer_types]
+        self.image_type = image_type  # type: integer_types
+        self.sizes = sizes  # type: Dict[TVInfoImageSize, AnyStr]
+        self.type_str = type_str  # type: AnyStr
+        self.main_image = main_image  # type: bool
+        self.rating = rating  # type: Optional[Union[float, integer_types]]
+        self.votes = votes  # type: Optional[integer_types]
+
+    def __str__(self):
+        return '<TVInfoImage %s [%s]>' % (TVInfoImageType.reverse_str.get(self.image_type, 'unknown'),
+                                          ', '.join(TVInfoImageSize.reverse_str.get(s, 'unkown') for s in self.sizes))
+
+    __repr__ = __str__
 
 
 class TVInfoShow(dict):
@@ -79,7 +181,7 @@ class TVInfoShow(dict):
         self.actors_loaded = False  # type: bool
         self.show_not_found = False  # type: bool
         self.id = None  # type: integer_types
-        self.ids = {}  # type: Dict[AnyStr, Optional[integer_types, AnyStr]]
+        self.ids = TVInfoIDs()  # type: TVInfoIDs
         self.slug = None  # type: Optional[AnyStr]
         self.seriesid = None  # type: integer_types
         self.seriesname = None  # type: Optional[AnyStr]
@@ -89,7 +191,8 @@ class TVInfoShow(dict):
         self.genre = None  # type: Optional[AnyStr]
         self.genre_list = []  # type: List[AnyStr]
         self.actors = []  # type: List[Dict]
-        self.cast = CastList()  # type: Dict[integer_types, Character]
+        self.cast = CastList()  # type: CastList
+        self.crew = CrewList()  # type: CrewList
         self.show_type = []  # type: List[AnyStr]
         self.network = None  # type: Optional[AnyStr]
         self.network_id = None  # type: integer_types
@@ -104,11 +207,11 @@ class TVInfoShow(dict):
         self.zap2itid = None  # type: Optional[AnyStr]
         self.airs_dayofweek = None  # type: Optional[AnyStr]
         self.airs_time = None  # type: Optional[AnyStr]
+        self.time = None  # type: Optional[datetime.time]
         self.firstaired = None  # type: Optional[AnyStr]
         self.added = None  # type: Optional[AnyStr]
         self.addedby = None  # type: Union[integer_types, AnyStr]
         self.siteratingcount = None  # type: integer_types
-        self.slug = None  # type: Optional[AnyStr]
         self.lastupdated = None  # type: integer_types
         self.contentrating = None  # type: Optional[AnyStr]
         self.rating = None  # type: integer_types
@@ -120,13 +223,17 @@ class TVInfoShow(dict):
         self.banner_thumb = None  # type: Optional[AnyStr]
         self.fanart = None  # type: Optional[AnyStr]
         self.banners = {}  # type: Dict
+        self.images = {}  # type: Dict[TVInfoImageType, List[TVInfoImage]]
+        self.updated_timestamp = None  # type: Optional[integer_types]
+        # special properties for trending, popular, ...
+        self.popularity = None  # type: Optional[Union[integer_types, float]]
+        self.vote_count = None  # type: Optional[integer_types]
+        self.vote_average = None  # type: Optional[Union[integer_types, float]]
+        self.origin_countries = []  # type: List[AnyStr]
 
     def __str__(self):
         nr_seasons = len(self)
         return '<Show %r (containing %s season%s)>' % (self.seriesname, nr_seasons, ('s', '')[1 == nr_seasons])
-
-    def __repr__(self):
-        return self.__str__()
 
     def __getattr__(self, key):
         if key in self:
@@ -140,6 +247,9 @@ class TVInfoShow(dict):
         raise AttributeError
 
     def __getitem__(self, key):
+        if isinstance(key, string_types) and key in self.__dict__:
+            return self.__dict__[key]
+
         if key in self:
             # Key is an episode, return it
             return dict.__getitem__(self, key)
@@ -170,8 +280,9 @@ class TVInfoShow(dict):
                 setattr(result[k], 'show', result)
         return result
 
-    def __nonzero__(self):
-        return any(self.data.keys())
+    def __bool__(self):
+        # type: (...) -> bool
+        return bool(self.id) or any(iterkeys(self.data))
 
     def aired_on(self, date):
         ret = self.search(str(date), 'firstaired')
@@ -194,6 +305,9 @@ class TVInfoShow(dict):
                 results.extend(searchresult)
 
         return results
+
+    __repr__ = __str__
+    __nonzero__ = __bool__
 
 
 class TVInfoSeason(dict):
@@ -218,14 +332,12 @@ class TVInfoSeason(dict):
         self.end_date = None  # type: Optional[AnyStr]
         self.poster = None  # type: Optional[AnyStr]
         self.summery = None  # type: Optional[AnyStr]
+        self.episode_order = None  # type: Optional[integer_types]
 
     def __str__(self):
         nr_episodes = len(self)
         return '<Season %s instance (containing %s episode%s)>' % \
                (self.number, nr_episodes, ('s', '')[1 == nr_episodes])
-
-    def __repr__(self):
-        return self.__str__()
 
     def __getattr__(self, episode_number):
         if episode_number in self:
@@ -262,6 +374,8 @@ class TVInfoSeason(dict):
                 results.append(searchresult)
         return results
 
+    __repr__ = __str__
+
 
 class TVInfoEpisode(dict):
     def __init__(self, season=None, **kwargs):
@@ -282,7 +396,7 @@ class TVInfoEpisode(dict):
         self.directors = []  # type: List[AnyStr]
         self.writer = None  # type: Optional[AnyStr]
         self.writers = []  # type: List[AnyStr]
-        self.crew = CrewList()  # type: Dict[integer_types, Person]
+        self.crew = CrewList()  # type: CrewList
         self.episodename = None  # type: Optional[AnyStr]
         self.overview = None  # type: Optional[AnyStr]
         self.language = {'episodeName': None, 'overview': None}  # type: Dict[AnyStr, Optional[AnyStr]]
@@ -294,7 +408,9 @@ class TVInfoEpisode(dict):
         self.dvd_episodenumber = None  # type: integer_types
         self.dvdchapter = None  # type: integer_types
         self.firstaired = None  # type: Optional[AnyStr]
-        self.airtime = None  # type: Optional[AnyStr]
+        self.airtime = None  # type: Optional[datetime.time]
+        self.runtime = 0  # type: integer_types
+        self.timestamp = None  # type: Optional[integer_types]
         self.network = None  # type: Optional[AnyStr]
         self.network_id = None  # type: integer_types
         self.network_timezone = None  # type: Optional[AnyStr]
@@ -320,9 +436,6 @@ class TVInfoEpisode(dict):
         else:
             return '<Episode %02dx%02d>' % (seasno, epno)
 
-    def __repr__(self):
-        return self.__str__()
-
     def __getattr__(self, key):
         if key in self:
             return self[key]
@@ -345,6 +458,10 @@ class TVInfoEpisode(dict):
             result[k] = copy.deepcopy(v)
         return result
 
+    def __bool__(self):
+        # type: (...) -> bool
+        return bool(self.id) or bool(self.episodename)
+
     def search(self, term=None, key=None):
         """Search episode data for term, if it matches, return the Episode (self).
         The key parameter can be used to limit the search to a specific element,
@@ -362,6 +479,9 @@ class TVInfoEpisode(dict):
             if cur_value.find(text_type(term).lower()) > -1:
                 return self
 
+    __repr__ = __str__
+    __nonzero__ = __bool__
+
 
 class Persons(dict):
     """Holds all Persons instances for a show
@@ -370,8 +490,7 @@ class Persons(dict):
         persons_count = len(self)
         return '<Persons (containing %s Person%s)>' % (persons_count, ('', 's')[1 != persons_count])
 
-    def __repr__(self):
-        return self.__str__()
+    __repr__ = __str__
 
 
 class CastList(Persons):
@@ -391,8 +510,7 @@ class CastList(Persons):
         persons_text = ('0', '(%s)' % persons_text)['' != persons_text]
         return '<Cast (containing %s Person%s)>' % (persons_text, ('', 's')['' != persons_text])
 
-    def __repr__(self):
-        return self.__str__()
+    __repr__ = __str__
 
 
 class CrewList(Persons):
@@ -400,7 +518,7 @@ class CrewList(Persons):
         super(CrewList, self).__init__(**kwargs)
         for t in iterkeys(RoleTypes.reverse):
             if t >= RoleTypes.crew_limit:
-                self[t] = []  # type: List[Person]
+                self[t] = []  # type: List[Crew]
 
     def __str__(self):
         persons_count = []
@@ -412,8 +530,7 @@ class CrewList(Persons):
         persons_text = ('0', '(%s)' % persons_text)['' != persons_text]
         return '<Crew (containing %s Person%s)>' % (persons_text, ('', 's')['' != persons_text])
 
-    def __repr__(self):
-        return self.__str__()
+    __repr__ = __str__
 
 
 class PersonBase(dict):
@@ -425,13 +542,14 @@ class PersonBase(dict):
     role,
     sortorder
     """
-
     def __init__(self, p_id=None, name=None, image=None, gender=None, bio=None, birthdate=None, deathdate=None,
-                 country=None, country_code=None, country_timezone=None, **kwargs):
+                 country=None, country_code=None, country_timezone=None, ids=None, thumb_url=None, **kwargs):
+        # type: (integer_types, AnyStr, AnyStr, int, AnyStr, datetime.date, datetime.date, AnyStr, AnyStr, AnyStr, Dict, AnyStr, Dict) -> PersonBase
         super(PersonBase, self).__init__(**kwargs)
         self.id = p_id  # type: Optional[integer_types]
         self.name = name  # type: Optional[AnyStr]
         self.image = image  # type: Optional[AnyStr]
+        self.thumb_url = thumb_url  # type: Optional[AnyStr]
         self.gender = gender  # type: Optional[int]
         self.bio = bio  # type: Optional[AnyStr]
         self.birthdate = birthdate  # type: Optional[datetime.date]
@@ -439,25 +557,11 @@ class PersonBase(dict):
         self.country = country  # type: Optional[AnyStr]
         self.country_code = country_code  # type: Optional[AnyStr]
         self.country_timezone = country_timezone  # type: Optional[AnyStr]
+        self.ids = ids or {}  # type: Dict[int, integer_types]
 
     def calc_age(self, date=None):
         # type: (Optional[datetime.date]) -> Optional[int]
-        if isinstance(self.birthdate, datetime.date):
-            today = (datetime.date.today(), date)[isinstance(date, datetime.date)]
-            today = (today, self.deathdate)[isinstance(self.deathdate, datetime.date) and today > self.deathdate]
-            try:
-                birthday = self.birthdate.replace(year=today.year)
-
-            # raised when birth date is February 29
-            # and the current year is not a leap year
-            except ValueError:
-                birthday = self.birthdate.replace(year=today.year,
-                                                  month=self.birthdate.month + 1, day=1)
-
-            if birthday > today:
-                return today.year - birthday.year - 1
-            else:
-                return today.year - birthday.year
+        return calc_age(self.birthdate, self.deathdate, date)
 
     @property
     def age(self):
@@ -467,50 +571,90 @@ class PersonBase(dict):
         """
         return self.calc_age()
 
+    def __bool__(self):
+        # type: (...) -> bool
+        return bool(self.name)
+
     def __str__(self):
         return '<Person "%s">' % self.name
 
-    def __repr__(self):
-        return self.__str__()
+    __repr__ = __str__
+    __nonzero__ = __bool__
 
 
 class PersonGenders(object):
+    unknown = 0
     male = 1
     female = 2
 
-    reverse = {1: 'Male', 2: 'Female'}
+    named = {'unknown': 0, 'male': 1, 'female': 2}
+    reverse = {v: k for k, v in iteritems(named)}
+    tmdb_map = {0: unknown, 1: female, 2: male}
+    imdb_map = {'female': female, 'male': male}
+
+
+class Crew(PersonBase):
+
+    def __init__(self, crew_type_name=None, **kwargs):
+        super(Crew, self).__init__(**kwargs)
+        self.crew_type_name = crew_type_name
+
+    def __str__(self):
+        return '<Crew%s "%s)">' % (('', ('/%s' % self.crew_type_name))[isinstance(self.crew_type_name, string_types)],
+                                   self.name)
+
+    __repr__ = __str__
 
 
 class Person(PersonBase):
-    def __init__(self, p_id=None, name=None, image=None, gender=None, bio=None, birthdate=None, deathdate=None,
-                 country=None, country_code=None, country_timezone=None, **kwargs):
-        super(Person, self).__init__(p_id=p_id, name=name, image=image, gender=gender, bio=bio, birthdate=birthdate,
-                                     deathdate=deathdate, country=country, country_code=country_code,
-                                     country_timezone=country_timezone, **kwargs)
+    def __init__(self, p_id=None, name=None, image=None, thumb_url=None, gender=None, bio=None, birthdate=None, deathdate=None,
+                 country=None, country_code=None, country_timezone=None, ids=None, homepage=None, social_ids=None,
+                 birthplace=None, url=None, characters=None, height=None, deathplace=None, nicknames=None,
+                 real_name=None, akas=None, **kwargs):
+        # type: (integer_types, AnyStr, AnyStr, AnyStr, int, AnyStr, datetime.date, datetime.date, AnyStr, AnyStr, AnyStr, Dict, AnyStr, Dict, AnyStr, AnyStr, List[Character], Union[integer_types, float], AnyStr, Set[AnyStr], AnyStr, Set[AnyStr], Dict) -> Person
+        super(Person, self).__init__(p_id=p_id, name=name, image=image, thumb_url=thumb_url, gender=gender, bio=bio,
+                                     birthdate=birthdate, deathdate=deathdate, country=country,
+                                     country_code=country_code, country_timezone=country_timezone, ids=ids, **kwargs)
         self.credits = []  # type: List
+        self.homepage = homepage  # type: Optional[AnyStr]
+        self.social_ids = social_ids or {}  # type: Dict
+        self.birthplace = birthplace  # type: Optional[AnyStr]
+        self.deathplace = deathplace  # type: Optional[AnyStr]
+        self.nicknames = nicknames or set()  # type: Set[AnyStr]
+        self.real_name = real_name  # type: AnyStr
+        self.url = url  # type: Optional[AnyStr]
+        self.height = height  # type: Optional[Union[integer_types, float]]
+        self.akas = akas or set()  # type: Set[AnyStr]
+        self.characters = characters or []  # type: List[Character]
 
     def __str__(self):
         return '<Person "%s">' % self.name
 
-    def __repr__(self):
-        return self.__str__()
+    __repr__ = __str__
 
 
 class Character(PersonBase):
-    def __init__(self, person=None, voice=None, plays_self=None, **kwargs):
+    def __init__(self, person=None, voice=None, plays_self=None, regular=None, show=None, start_year=None,
+                 end_year=None, **kwargs):
+        # type: (List[Person], bool, bool, bool, TVInfoShow, int, int, Dict) -> Character
         super(Character, self).__init__(**kwargs)
-        self.person = person  # type: Optional[Person]
+        self.person = person  # type: List[Person]
         self.voice = voice  # type: Optional[bool]
         self.plays_self = plays_self  # type: Optional[bool]
+        self.regular = regular  # type: Optional[bool]
+        self.show = show  # type: Optional[TVInfoShow]
+        self.start_year = start_year  # type: Optional[integer_types]
+        self.end_year = end_year  # type: Optional[integer_types]
 
     def __str__(self):
-        pn = ''
-        if None is not self.person and getattr(self.person, 'name', None):
-            pn = ' - (%s)' % getattr(self.person, 'name', '')
-        return '<Character "%s%s">' % (self.name, pn)
+        pn = []
+        if None is not self.person:
+            for p in self.person:
+                if getattr(p, 'name', None):
+                    pn.append(p.name)
+        return '<Character "%s%s">' % (self.name, ('', ' - (%s)' % ', '.join(pn))[bool(pn)])
 
-    def __repr__(self):
-        return self.__str__()
+    __repr__ = __str__
 
 
 class RoleTypes(object):
@@ -523,22 +667,50 @@ class RoleTypes(object):
     CrewDirector = 50
     CrewWriter = 51
     CrewProducer = 52
+    CrewExecutiveProducer = 53
+    CrewCreator = 60
+    CrewEditor = 61
+    CrewCamera = 62
+    CrewMusic = 63
+    CrewStylist = 64
+    CrewMakeup = 65
+    CrewPhotography = 66
+    CrewSound = 67
+    CrewDesigner = 68
+    CrewDeveloper = 69
+    CrewAnimation = 70
+    CrewVisualEffects = 71
+    CrewOther = 100
 
-    reverse = {1: 'Main', 2: 'Recurring', 3: 'Guest', 4: 'Special Guest', 50: 'Director', 51: 'Writer', 52: 'Producer'}
+    reverse = {1: 'Main', 2: 'Recurring', 3: 'Guest', 4: 'Special Guest', 50: 'Director', 51: 'Writer', 52: 'Producer',
+               53: 'Executive Producer', 60: 'Creator', 61: 'Editor', 62: 'Camera', 63: 'Music', 64: 'Stylist',
+               65: 'Makeup', 66: 'Photography', 67: 'Sound', 68: 'Designer', 69: 'Developer', 70: 'Animation',
+               71: 'Visual Effects', 100: 'Other'}
     crew_limit = 50
 
 
+crew_type_names = {c.lower(): v for v, c in iteritems(RoleTypes.reverse) if v >= RoleTypes.crew_limit}
+
+
 class TVInfoBase(object):
-    def __init__(self, *args, **kwargs):
+    supported_id_searches = []
+    supported_person_id_searches = []
+
+    def __init__(self, banners=False, posters=False, seasons=False, seasonwides=False, fanart=False, actors=False,
+                 *args, **kwargs):
         global TVInfoShowContainer
         if self.__class__.__name__ not in TVInfoShowContainer:
             TVInfoShowContainer[self.__class__.__name__] = ShowContainer()
-        self.shows = TVInfoShowContainer[self.__class__.__name__]  # type: ShowContainer
+        self.shows = TVInfoShowContainer[self.__class__.__name__]  # type: ShowContainer[integer_types, TVInfoShow]
         self.shows.cleanup_old()
         self.lang = None  # type: Optional[AnyStr]
         self.corrections = {}  # type: Dict
         self.show_not_found = False  # type: bool
         self.not_found = False  # type: bool
+        self._old_config = None
+        self._cachedir = kwargs.get('diskcache_dir')  # type: AnyStr
+        self.diskcache = diskcache.Cache(directory=self._cachedir, disk_pickle_protocol=2)  # type: diskcache.Cache
+        self.cache_expire = 60 * 60 * 18  # type: integer_types
         self.config = {
             'apikey': '',
             'debug_enabled': False,
@@ -550,68 +722,190 @@ class TVInfoBase(object):
             'langabbv_to_id': {},
             'language': 'en',
             'base_url': '',
-            'banners_enabled': False,
-            'posters_enabled': False,
-            'seasons_enabled': False,
-            'seasonwides_enabled': False,
-            'fanart_enabled': False,
-            'actors_enabled': False,
+            'banners_enabled': banners,
+            'posters_enabled': posters,
+            'seasons_enabled': seasons,
+            'seasonwides_enabled': seasonwides,
+            'fanart_enabled': fanart,
+            'actors_enabled': actors,
         }  # type: Dict[AnyStr, Any]
 
-    def _must_load_data(self, sid, load_episodes):
-        # type: (integer_types, bool) -> bool
+    def _must_load_data(self, sid, load_episodes, banners, posters, seasons, seasonwides, fanart, actors):
+        # type: (integer_types, bool, bool, bool, bool, bool, bool, bool) -> bool
         """
         returns if show data has to be fetched for (extra) data (episodes, images, ...)
         or can taken from self.shows cache
         :param sid: show id
         :param load_episodes: should episodes be loaded
+        :param banners: should load banners
+        :param posters: should load posters
+        :param seasons: should load season images
+        :param seasonwides: should load season wide images
+        :param fanart: should load fanart
+        :param actors: should load actors
         """
         if sid not in self.shows or None is self.shows[sid].id or \
                 (load_episodes and not getattr(self.shows[sid], 'ep_loaded', False)):
             return True
-        for data_type, en_type in [(u'poster', 'posters_enabled'), (u'banner', 'banners_enabled'),
-                                   (u'fanart', 'fanart_enabled'), (u'season', 'seasons_enabled'),
-                                   (u'seasonwide', 'seasonwides_enabled'), (u'actors', 'actors_enabled')]:
-            if self.config.get(en_type, False) and not getattr(self.shows[sid], '%s_loaded' % data_type, False):
+        for data_type, en_type, p_type in [(u'poster', 'posters_enabled', posters),
+                                           (u'banner', 'banners_enabled', banners),
+                                           (u'fanart', 'fanart_enabled', fanart),
+                                           (u'season', 'seasons_enabled', seasons),
+                                           (u'seasonwide', 'seasonwides_enabled', seasonwides),
+                                           (u'actors', 'actors_enabled', actors)]:
+            if (p_type or self.config.get(en_type, False)) and \
+                    not getattr(self.shows[sid], '%s_loaded' % data_type, False):
                 return True
         return False
 
-    def get_person(self, p_id, **kwargs):
-        # type: (integer_types, Optional[Any]) -> Optional[Person]
+    def clear_cache(self):
         """
-        get person's data
+        Clear cache.
+        """
+        try:
+            with self.diskcache as dc:
+                dc.clear()
+        except (BaseException, Exception):
+            pass
+
+    def clean_cache(self):
+        """
+        Remove expired items from cache.
+        """
+        try:
+            with self.diskcache as dc:
+                dc.expire()
+        except (BaseException, Exception):
+            pass
+
+    def check_cache(self):
+        """
+        checks cache
+        """
+        try:
+            with self.diskcache as dc:
+                dc.check()
+        except (BaseException, Exception):
+            pass
+
+    def _get_cache_entry(self, key, retry=False):
+        # type: (Any, bool) -> Tuple[bool, Any]
+        """
+        returns tuple of is_None and value
+        :param key:
+        :param retry:
+        """
+        with self.diskcache as dc:
+            try:
+                v = dc.get(key)
+                return 'None' == v, (v, None)['None' == v]
+            except ValueError as e:
+                if not retry:
+                    dc.close()
+                    try:
+                        shutil.rmtree(self._cachedir)
+                    except (BaseException, Exception) as e:
+                        log.error(ex(e))
+                        pass
+                    try:
+                        make_dirs(self._cachedir)
+                    except (BaseException, Exception):
+                        pass
+                    return self._get_cache_entry(key, retry=True)
+                else:
+                    log.error('Error getting %s from cache: %s' % (key, ex(e)))
+            except (BaseException, Exception) as e:
+                log.error('Error getting %s from cache: %s' % (key, ex(e)))
+        return False, None
+
+    def _set_cache_entry(self, key, value, tag=None):
+        # type: (Any, Any, AnyStr) -> None
+        try:
+            with self.diskcache as dc:
+                dc.set(key, (value, 'None')[None is value], expire=self.cache_expire, tag=tag)
+        except (BaseException, Exception) as e:
+            log.error('Error setting %s to cache: %s' % (key, ex(e)))
+
+    def get_person(self, p_id, get_show_credits=False, get_images=False, **kwargs):
+        # type: (integer_types, bool, bool, Any) -> Optional[Person]
+        """
+        get person's data for id or list of matching persons for name
+
         :param p_id: persons id
+        :param get_show_credits: get show credits
+        :param get_images: get images for person
         :return: person object
         """
         pass
 
-    def search_person(self, name):
-        # type: (AnyStr) -> List[Person]
+    def _search_person(self, name=None, ids=None):
+        # type: (AnyStr, Dict[integer_types, integer_types]) -> List[Person]
         """
         search for person by name
         :param name: name to search for
+        :param ids: dict of ids to search
         :return: list of found person's
         """
-        pass
+        return []
 
-    def _get_show_data(self, sid, language, get_ep_info=False, **kwargs):
-        # type: (integer_types, AnyStr, bool, Optional[Any]) -> bool
+    def search_person(self, name=None, ids=None):
+        # type: (AnyStr, Dict[integer_types, integer_types]) -> List[Person]
+        """
+        search for person by name
+        :param name: name to search for
+        :param ids: dict of ids to search
+        :return: list of found person's
+        """
+        if not name and not ids:
+            log.debug('Nothing to search')
+            raise BaseTVinfoPersonNotFound('Nothing to search')
+        found_persons = []
+        if ids:
+            if not any(1 for i in ids if i in self.supported_person_id_searches) and not name:
+                log.debug('Id type not supported')
+                raise BaseTVinfoPersonNotFound('Id type not supported')
+            found_persons = self._search_person(name=name, ids=ids)
+        elif name:
+            found_persons = self._search_person(name=name, ids=ids)
+        return found_persons
+
+    def _get_show_data(self, sid, language, get_ep_info=False, banners=False, posters=False, seasons=False,
+                       seasonwides=False, fanart=False, actors=False, **kwargs):
+        # type: (integer_types, AnyStr, bool, bool, bool, bool, bool, bool, bool, Optional[Any]) -> bool
         """
         internal function that should be overwritten in class to get data for given show id
         :param sid: show id
         :param language: language
         :param get_ep_info: get episodes
+        :param banners: load banners
+        :param posters: load posters
+        :param seasons: load seasons
+        :param seasonwides: load seasonwides
+        :param fanart: load fanard
+        :param actors: load actors
         """
         pass
 
-    def get_show(self, show_id, load_episodes=True, **kwargs):
-        # type: (integer_types, bool, Optional[Any]) -> Optional[TVInfoShow]
+    def get_show(self, show_id, load_episodes=True, banners=False, posters=False, seasons=False,
+                       seasonwides=False, fanart=False, actors=False, old_call=False, **kwargs):
+        # type: (integer_types, bool, bool, bool, bool, bool, bool, bool, bool, Optional[Any]) -> Optional[TVInfoShow]
         """
         get data for show id
         :param show_id: id of show
         :param load_episodes: load episodes
+        :param banners: load banners
+        :param posters: load posters
+        :param seasons: load season images
+        :param seasonwides: load season wide images
+        :param fanart: load fanart
+        :param actors: load actors
+        :param old_call: load legacy call
         :return: show object
         """
+        if not old_call and None is self._old_config:
+            self._old_config = self.config.copy()
+            self.config.update({'banners_enabled': banners, 'posters_enabled': posters, 'seasons_enabled': seasons,
+                                'seasonwides_enabled': seasonwides, 'fanart_enabled': fanart, 'actors_enabled': actors})
         self.shows.lock.acquire()
         try:
             if show_id not in self.shows:
@@ -619,8 +913,10 @@ class TVInfoBase(object):
             with self.shows[show_id].lock:
                 self.shows.lock.release()
                 try:
-                    if self._must_load_data(show_id, load_episodes):
-                        self._get_show_data(show_id, self.config['language'], load_episodes)
+                    if self._must_load_data(show_id, load_episodes, banners, posters, seasons, seasonwides, fanart,
+                                            actors):
+                        self._get_show_data(show_id, self.config['language'], load_episodes, banners, posters, seasons,
+                                            seasonwides, fanart, actors)
                         if None is self.shows[show_id].id:
                             with self.shows.lock:
                                 del self.shows[show_id]
@@ -637,27 +933,51 @@ class TVInfoBase(object):
                 self.shows.lock.release()
             except RuntimeError:
                 pass
+            if not old_call and None is not self._old_config:
+                self.config = self._old_config
+                self._old_config = None
 
     # noinspection PyMethodMayBeStatic
-    def _search_show(self, name, **kwargs):
-        # type: (AnyStr, Optional[Any]) -> List[Dict]
+    def _search_show(self, name=None, ids=None, **kwargs):
+        # type: (Union[AnyStr, List[AnyStr]], Dict[integer_types, integer_types], Optional[Any]) -> List[Dict]
         """
         internal search function to find shows, should be overwritten in class
         :param name: name to search for
+        :param ids: dict of ids {tvid: prodid} to search for
         """
         return []
 
-    def search_show(self, name, **kwargs):
-        # type: (AnyStr, Optional[Any]) -> List[Dict]
+    @staticmethod
+    def _convert_search_names(name):
+        if name:
+            names = ([name], name)[isinstance(name, list)]
+            for i, n in enumerate(names):
+                if not isinstance(n, string_types):
+                    names[i] = text_type(n)
+                names[i] = names[i].lower()
+            return names
+        return name
+
+    def search_show(self, name=None, ids=None, **kwargs):
+        # type: (Union[AnyStr, List[AnyStr]], Dict[integer_types, integer_types], Optional[Any]) -> List[Dict]
         """
-        search for series with name
-        :param name: series name to search for
-        :return: list of series
+        search for series with name(s) or ids
+
+        :param name: series name or list of names to search for
+        :param ids: dict of ids {tvid: prodid} to search for
+        :return: combined list of series results
         """
-        if not isinstance(name, string_types):
-            name = text_type(name)
-        name = name.lower()
-        selected_series = self._search_show(name)
+        if not name and not ids:
+            log.debug('Nothing to search')
+            raise BaseTVinfoShownotfound('Nothing to search')
+        name, selected_series = self._convert_search_names(name), []
+        if ids:
+            if not name and not any(1 for i in ids if i in self.supported_id_searches):
+                log.debug('Id type not supported')
+                raise BaseTVinfoShownotfound('Id type not supported')
+            selected_series = self._search_show(name=name, ids=ids)
+        elif name:
+            selected_series = self._search_show(name)
         if isinstance(selected_series, dict):
             selected_series = [selected_series]
         if not isinstance(selected_series, list) or 0 == len(selected_series):
@@ -717,6 +1037,40 @@ class TVInfoBase(object):
             else:
                 self.shows[sid].__dict__[key] = value
 
+    def get_updated_shows(self):
+        # type: (...) -> Dict[integer_types, integer_types]
+        """
+        gets all ids and timestamp of updated shows
+        returns dict of id: timestamp
+        """
+        return {}
+
+    def get_trending(self, result_count=100, **kwargs):
+        # type: (...) -> List[TVInfoShow]
+        """
+        get trending shows
+        :param result_count:
+        """
+        return []
+
+    def get_popular(self, result_count=100, **kwargs):
+        # type: (...) -> List[TVInfoShow]
+        """
+        get all popular shows
+        """
+        return []
+
+    def get_top_rated(self, result_count=100, **kwargs):
+        # type: (...) -> List[TVInfoShow]
+        """
+        get all latest shows
+        """
+        return []
+
+    def discover(self, result_count=100, **kwargs):
+        # type: (...) -> List[TVInfoShow]
+        return []
+
     def __getitem__(self, item):
         # type: (Union[AnyStr, integer_types, Tuple[integer_types, bool]]) -> Union[TVInfoShow, List[Dict], None]
         """Legacy handler (use get_show or search_show instead)
@@ -731,7 +1085,7 @@ class TVInfoBase(object):
 
         if isinstance(item, integer_types):
             # Item is integer, treat as show id
-            return self.get_show(item, (True, arg)[None is not arg])
+            return self.get_show(item, (True, arg)[None is not arg], old_call=True)
 
         return self.search_show(item)
 
@@ -746,5 +1100,4 @@ class TVInfoBase(object):
     def __str__(self):
         return '<TVInfo(%s) (containing: %s)>' % (self.__class__.__name__, text_type(self.shows))
 
-    def __repr__(self):
-        return self.__str__()
+    __repr__ = __str__

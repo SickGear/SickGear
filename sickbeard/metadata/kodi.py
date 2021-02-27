@@ -24,7 +24,7 @@ from . import generic
 from .. import logger
 import sg_helpers
 from ..indexers.indexer_config import TVINFO_IMDB, TVINFO_TVDB
-from tvinfo_base.exceptions import *
+from lib.tvinfo_base.exceptions import *
 import sickbeard
 # noinspection PyPep8Naming
 import encodingKludge as ek

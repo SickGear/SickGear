@@ -1,9 +1,11 @@
 #import sickbeard
+#import os
 ##
 #set global $title = 'Search Tasks'
 #set global $header = 'Search Tasks'
 #set global $sbPath = '..'
 #set global $topmenu = 'manage'
+#set $dev_mode = os.environ.get('SG_DEV_MODE')
 ##
 #import os.path
 #include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_top.tmpl')
@@ -110,7 +112,7 @@
 
 
 		<div id="queue-backlog" class="section">
-			Backlog: <i>$len($queue_length['backlog']) item$sickbeard.helpers.maybe_plural($len($queue_length['backlog']))</i>
+			Backlog: <i>$len($queue_length['backlog']) item$sickbeard.helpers.maybe_plural($len($queue_length['backlog']))</i>#if $dev_mode #<input type="button" class="btn" id="clear-btn-backlog" value="Clear" data-action="$sickbeard.search_queue.BACKLOG_SEARCH">#end if#
 #if $queue_length['backlog']
 			<input type="button" class="shows-more btn" id="backlog-btn-more" value="Expand" #if not $queue_length['backlog']# style="display:none" #end if#><input type="button" class="shows-less btn" id="backlog-btn-less" value="Collapse" style="display:none"><br>
 			<table class="sickbeardTable manageTable" cellspacing="1" border="0" cellpadding="0" style="display:none">
@@ -138,7 +140,7 @@
 						<td style="width:80%;text-align:left;color:white">
 							<a class="whitelink" href="$sbRoot/home/view-show?tvid_prodid=$cur_item['tvid_prodid']">$cur_item['name']</a> - $sickbeard.helpers.make_search_segment_html_string($cur_item['segment'])
 						</td>
-						<td style="width:20%;text-align:center;color:white">$search_type</td>
+						<td style="width:20%;text-align:center;color:white">$search_type#if $dev_mode #<input type="button" class="btn" id="remove-btn-$cur_item['uid']" value="Remove" data-uid="$cur_item['uid']">#end if#</td>
 					</tr>
     #end for
 				</tbody>
@@ -148,7 +150,7 @@
 
 
 		<div id="queue-manual" class="section">
-			Manual: <i>$len($queue_length['manual']) item$sickbeard.helpers.maybe_plural($len($queue_length['manual']))</i>
+			Manual: <i>$len($queue_length['manual']) item$sickbeard.helpers.maybe_plural($len($queue_length['manual']))</i> #if $dev_mode #<input type="button" class="btn" id="clear-btn-manual" value="Clear" data-action="$sickbeard.search_queue.MANUAL_SEARCH">#end if#
 #if $queue_length['manual']
 			<input type="button" class="shows-more btn" id="manual-btn-more" value="Expand" #if not $queue_length['manual']# style="display:none" #end if#><input type="button" class="shows-less btn" id="manual-btn-less" value="Collapse" style="display:none"><br>
 			<table class="sickbeardTable manageTable" cellspacing="1" border="0" cellpadding="0" style="display:none">
@@ -159,6 +161,7 @@
 					<tr class="#echo ('odd', 'even')[$row % 2]##set $row+=1#">
 						<td style="width:100%;text-align:left;color:white">
 							<a class="whitelink" href="$sbRoot/home/view-show?tvid_prodid=$cur_item['tvid_prodid']">$cur_item['name']</a> - $sickbeard.helpers.make_search_segment_html_string($cur_item['segment'])
+							#if $dev_mode #<input type="button" class="btn" id="remove-btn-$cur_item['uid']" value="Remove" data-uid="$cur_item['uid']">#end if#
 						</td>
 					</tr>
     #end for
@@ -169,7 +172,7 @@
 
 
 		<div id="queue-failed" class="section">
-			Failed: <i>$len($queue_length['failed']) item$sickbeard.helpers.maybe_plural($len($queue_length['failed']))</i>
+			Failed: <i>$len($queue_length['failed']) item$sickbeard.helpers.maybe_plural($len($queue_length['failed']))</i> #if $dev_mode #<input type="button" class="btn" id="clear-btn-failed" value="Clear" data-action="$sickbeard.search_queue.FAILED_SEARCH">#end if#
 #if $queue_length['failed']
 			<input type="button" class="shows-more btn" id="failed-btn-more" value="Expand" #if not $queue_length['failed']# style="display:none" #end if#><input type="button" class="shows-less btn" id="failed-btn-less" value="Collapse" style="display:none"><br>
 			<table class="sickbeardTable manageTable" cellspacing="1" border="0" cellpadding="0" style="display:none">
@@ -180,6 +183,7 @@
 					<tr class="#echo ('odd', 'even')[$row % 2]##set $row+=1#">
 						<td style="width:100%;text-align:left;color:white">
 							<a class="whitelink" href="$sbRoot/home/view-show?tvid_prodid=$cur_item['tvid_prodid']">$cur_item['name']</a> - $sickbeard.helpers.make_search_segment_html_string($cur_item['segment'])
+							#if $dev_mode #<input type="button" class="btn" id="remove-btn-$cur_item['uid']" value="Remove" data-uid="$cur_item['uid']">#end if#
 						</td>
 					</tr>
     #end for

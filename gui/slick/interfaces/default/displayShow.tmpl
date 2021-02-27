@@ -330,6 +330,29 @@
 						No plot overview available
     #end if
 #end if
+#if $show_obj.cast_list
+<div>
+	<br />
+	<p><span style="font-weight: bolder;">Cast:</span></p>
+	<div style="white-space: nowrap;overflow-x: auto;overflow-y: hidden;">
+		#for $character in $show_obj.cast_list
+		<div style="top:0;width:200px;height:auto;position:relative;display: inline-block;text-align: center;background-color: rgba(255,255,255,0.2)">
+			<a href="$sbRoot/imagecache/character?character_id=$character.id&amp;show=$show_obj.tvid_prodid&amp;thumb=0" rel="dialog">
+			<img src="$sbRoot/imagecache/character?character_id=$character.id&amp;show=$show_obj.tvid_prodid" height="150" alt="$character.name" style="border: 2px solid #555;display: block;margin-left: auto;margin-right: auto;" >
+			</a><br /><span style="font-weight:bolder;"><a href="$sbRoot/home/character?character_id=$character.id&amp;show=$show_obj.tvid_prodid" >#if $character.name#$character.name#else#Unknown Name#end if#</a></span><br />
+			#set $p_count = len($character.person)
+			#for $p_nb, $person in enumerate($character.person, 1)
+			<span style="color: #000000"><a href="$sbRoot/home/person?person_id=$person.id" >$person.name</a>
+				#if $p_nb < $p_count
+				<span>, </span>
+				#end if
+			</span>
+			#end for
+		</div>
+		#end for
+	</div>
+</div>
+#end if
 					</div>
 
 					<div id="details-bottom">

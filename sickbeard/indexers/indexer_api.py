@@ -18,9 +18,10 @@
 import os
 
 from .indexer_config import init_config, tvinfo_config
-from sg_helpers import proxy_setting
+from sg_helpers import make_dirs, proxy_setting
 import sickbeard
-from tvinfo_base import TVInfoBase
+from lib.tvinfo_base import TVInfoBase
+import encodingKludge as ek
 
 from _23 import list_values
 
@@ -42,6 +43,9 @@ class TVInfoAPI(object):
             if tvinfo_config[self.tvid]['active'] or ('no_dummy' in kwargs and True is kwargs['no_dummy']):
                 if 'no_dummy' in kwargs:
                     kwargs.pop('no_dummy')
+                indexer_cache_dir = ek.ek(os.path.join, sickbeard.CACHE_DIR, 'tvinfo_cache',
+                                          tvinfo_config[self.tvid]['name'])
+                kwargs['diskcache_dir'] = indexer_cache_dir
                 return tvinfo_config[self.tvid]['module'](*args, **kwargs)
             else:
                 return TVInfoBase(*args, **kwargs)
@@ -84,13 +88,14 @@ class TVInfoAPI(object):
     def sources(self):
         # type: () -> Dict[int, AnyStr]
         return dict([(int(x['id']), x['name']) for x in list_values(tvinfo_config) if not x['mapped_only'] and
-                     True is not x.get('fallback')])
+                     True is not x.get('fallback') and True is not x.get('people_only')])
 
     @property
     def search_sources(self):
         # type: () -> Dict[int, AnyStr]
         return dict([(int(x['id']), x['name']) for x in list_values(tvinfo_config) if not x['mapped_only'] and
-                     x.get('active') and not x.get('defunct') and True is not x.get('fallback')])
+                     x.get('active') and not x.get('defunct') and True is not x.get('fallback')
+                     and True is not x.get('people_only')])
 
     @property
     def all_sources(self):
@@ -98,7 +103,8 @@ class TVInfoAPI(object):
         """
         :return: return all indexers including mapped only indexers excluding fallback indexers
         """
-        return dict([(int(x['id']), x['name']) for x in list_values(tvinfo_config) if True is not x.get('fallback')])
+        return dict([(int(x['id']), x['name']) for x in list_values(tvinfo_config) if True is not x.get('fallback')
+                     and True is not x.get('people_only')])
 
     @property
     def fallback_sources(self):

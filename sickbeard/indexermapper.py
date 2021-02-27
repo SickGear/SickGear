@@ -35,6 +35,7 @@ from lib.dateutil.parser import parse
 from lib.imdbpie import Imdb
 from libtrakt import TraktAPI
 from libtrakt.exceptions import TraktAuthException, TraktException
+from exceptions_helper import ConnectionSkipException
 
 from _23 import unidecode, urlencode
 from six import iteritems, iterkeys, string_types, PY2
@@ -164,7 +165,7 @@ def get_premieredate(show_obj):
     :rtype: datetime.date or None
     """
     try:
-        ep_obj = show_obj.get_episode(season=1, episode=1)
+        ep_obj = show_obj.first_aired_regular_episode
         if ep_obj and ep_obj.airdate:
             return ep_obj.airdate
     except (BaseException, Exception):
@@ -240,7 +241,7 @@ def get_trakt_ids(url_trakt):
                         break
                 if found:
                     break
-        except (TraktAuthException, TraktException, IndexError, KeyError):
+        except (ConnectionSkipException, TraktAuthException, TraktException, IndexError, KeyError):
             pass
     return {k: v for k, v in iteritems(ids) if v not in (None, '', 0)}
 
@@ -317,7 +318,7 @@ def check_missing_trakt_id(n_ids, show_obj, url_trakt):
     return n_ids
 
 
-def map_indexers_to_show(show_obj, update=False, force=False, recheck=False):
+def map_indexers_to_show(show_obj, update=False, force=False, recheck=False, sql=None):
     """
 
     :param show_obj: TVShow Object
@@ -339,11 +340,18 @@ def map_indexers_to_show(show_obj, update=False, force=False, recheck=False):
                         'status': (MapStatus.NONE, MapStatus.SOURCE)[int(tvid) == int(show_obj.tvid)],
                         'date': datetime.date.fromordinal(1)}
 
-    my_db = db.DBConnection()
-    sql_result = my_db.select('SELECT *'
-                              ' FROM indexer_mapping'
-                              ' WHERE indexer = ? AND indexer_id = ?',
-                              [show_obj.tvid, show_obj.prodid])
+    sql_result = []
+    if sql:
+        for s in sql:
+            if show_obj._prodid == s['indexer_id'] and show_obj._tvid == s['indexer']:
+                sql_result.append(s)
+
+    if not sql_result:
+        my_db = db.DBConnection()
+        sql_result = my_db.select('SELECT *'
+                                  ' FROM indexer_mapping'
+                                  ' WHERE indexer = ? AND indexer_id = ?',
+                                  [show_obj.tvid, show_obj.prodid])
 
     # for each mapped entry
     for cur_result in sql_result:
@@ -559,7 +567,7 @@ def should_recheck_update_ids(show_obj):
                            k not in defunct_indexer] or [datetime.date.fromtimestamp(1)])
         if today - ids_updated >= datetime.timedelta(days=365):
             return True
-        ep_obj = show_obj.get_episode(season=1, episode=1)
+        ep_obj = show_obj.first_aired_regular_episode
         if ep_obj and ep_obj.airdate and ep_obj.airdate > datetime.date.fromtimestamp(1):
             show_age = (today - ep_obj.airdate).days
             # noinspection PyTypeChecker
@@ -573,11 +581,19 @@ def should_recheck_update_ids(show_obj):
 
 def load_mapped_ids(**kwargs):
     logger.log('Start loading TV info mappings...')
+    if 'load_all' in kwargs:
+        del kwargs['load_all']
+        my_db = db.DBConnection()
+        sql_result = my_db.select('SELECT * FROM indexer_mapping ORDER BY indexer, indexer_id')
+    else:
+        sql_result = None
     for cur_show_obj in sickbeard.showList:
         with cur_show_obj.lock:
             n_kargs = kwargs.copy()
             if 'update' in kwargs and should_recheck_update_ids(cur_show_obj):
                 n_kargs['recheck'] = True
+            if sql_result:
+                n_kargs['sql'] = sql_result
             try:
                 cur_show_obj.ids = sickbeard.indexermapper.map_indexers_to_show(cur_show_obj, **n_kargs)
             except (BaseException, Exception):
