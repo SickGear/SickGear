@@ -1,6 +1,6 @@
 #import sickbeard
 #from sickbeard import clients
-#from sickbeard.helpers import starify, generate_word_str
+#from sickbeard.helpers import anon_url, starify, generate_word_str
 <% def sg_var(varname, default=False): return getattr(sickbeard, varname, default) %>#slurp#
 <% def sg_str(varname, default=''): return getattr(sickbeard, varname, default) %>#slurp#
 ##
@@ -237,7 +237,21 @@
 							</div>
 						</div>
 
-						<input type="submit" class="btn config_submitter" value="Save Changes">
+						<div class="field-pair">
+							<label for="flaresolverr">
+								<span class="component-title">Host running FlareSolverr</span>
+								<span class="component-desc">
+									<input type="text" name="flaresolverr_host" id="flaresolverr" value="$sickbeard.FLARESOLVERR_HOST" class="form-control input-sm input250"><p>IP:Port (default: http://localhost:8191)</p>
+									<p class="clear-left note">proxy software to handle Cloudflare connections (more info <a href="<%= anon_url('https://github.com/SickGear/SickGear/wiki/Install-SickGear-%5B82%5D-CF-Solve') %>" onclick="window.open(this.href, '_blank'); return false;">here</a>)</p>
+								</span>
+							</label>
+							<span class="component-title"></span>
+							<span class="component-desc">
+								<input class="btn" type="button" value="Test FlareSolverr" id="test-flaresolverr"><span class="test-notification" id="test-flaresolverr-result">connection result</span>
+							</span>
+						</div>
+
+						<input type="submit" class="btn config_submitter" value="Save Changes" style="display:block;margin-top:20px">
 
 					</fieldset>
 				</div><!-- /component-group1 //-->

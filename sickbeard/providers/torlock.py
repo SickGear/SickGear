@@ -77,14 +77,15 @@ class TorLockProvider(generic.TorrentProvider):
 
                 cnt = len(items[mode])
                 try:
-                    if not html or self._has_no_results(html):
+                    if not html or self._has_no_results(html) or re.search(r'<b>Error:\sNot\sFound</b>', html):
                         raise generic.HaltParseException
                     with BS4Parser(html.replace('thead', 'tr')) as soup:
 
-                        tbl = soup.find(
-                            'div', class_=('panel panel-default', 'table-responsive')['Cache' == mode])
+                        tbl = soup.find_all('div', class_='table-responsive')
                         if None is tbl:
                             raise generic.HaltParseException
+                        if len(tbl):
+                            tbl = tbl[-1]
                         tbl = tbl.find(
                             'table', class_='table table-striped table-bordered table-hover table-condensed')
                         tbl_rows = [] if not tbl else tbl.find_all('tr')
@@ -95,12 +96,16 @@ class TorLockProvider(generic.TorrentProvider):
                         head = None
                         for tr in tbl_rows[1:]:
                             cells = tr.find_all('td')
-                            if 5 > len(cells):
+                            if 5 > len(cells) or not tr.find('td', class_='tf'):
                                 continue
                             try:
                                 head = head if None is not head else self._header_row(tr)
                                 seeders, leechers, size = [try_int(n, n) for n in [
                                     cells[head[x]].get_text().strip() for x in ('seed', 'leech', 'size')]]
+                                if not len(tbl_rows[0].select('th a[href *="file"]')):
+                                    seeders, leechers, size = [try_int(n, n) for n in [
+                                        tr.find_all('td', class_=x)[0].get_text().strip()
+                                        for x in ('tul', 'tdl', 'ts')]]
                                 if self._reject_item(seeders, leechers, verified=self.confirmed and not (
                                         tr.find('img', src=rc['versrc']) or tr.find('img', title=rc['verified']))):
                                     continue

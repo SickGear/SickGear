@@ -9,6 +9,29 @@ $(document).ready(function(){
 				/^\s*scgi:\/\//.test($('#torrent_host').val()) ? opts$.hide() && $('#torrent_label').select() && ''
 					: opts$.show() && $('#torrent_username').select() && $(this).prop('defaultValue'));});};
 
+		$('#test-flaresolverr').click(function(){
+		var host$ = $('#flaresolverr'), host = $.trim(host$.val()), result$ = $('#test-flaresolverr-result'),
+			valid = !!host && -1 !== host.indexOf('http');
+		if (!valid) {
+			result$.html('Please correct the field above');
+			if (!valid) {
+				host$.addClass('warning');
+			} else {
+				host$.removeClass('warning');
+			}
+			return;
+		}
+		host$.removeClass('warning');
+		$(this).prop('disabled', !0);
+		result$.html(loading);
+		$.get(sbRoot + '/home/test-flaresolverr',
+			{host: host})
+			.done(function (data) {
+				$('#test-flaresolverr-result').html(data);
+				$('#test-flaresolverr').prop('disabled', !1);
+			});
+	});
+
 	function toggleTorrentTitle() {
 		var noTorrent$ = $('#no_torrents');
 		if ($('#use_torrents').prop('checked'))

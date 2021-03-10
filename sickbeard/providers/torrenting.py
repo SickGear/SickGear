@@ -47,7 +47,7 @@ class TorrentingProvider(generic.TorrentProvider):
         return super(TorrentingProvider, self)._authorised(
             logged_in=(lambda y='': all(
                 ['RSS link' in y, self.has_all_cookies()] +
-                [(self.session.cookies.get(x) or 'sg!no!pw') in self.digest for x in ('uid', 'pass', 'cf_clearance')])),
+                [(self.session.cookies.get(x) or 'sg!no!pw') in self.digest for x in ('uid', 'pass')])),
             failed_msg=(lambda y=None: u'Invalid cookie details for %s. Check settings'))
 
     @staticmethod
@@ -120,7 +120,7 @@ class TorrentingProvider(generic.TorrentProvider):
     @staticmethod
     def ui_string(key):
 
-        return 'torrenting_digest' == key and 'use... \'uid=xx; pass=yy; cf_clearance=zz\'' or ''
+        return 'torrenting_digest' == key and 'use... \'uid=xx; pass=yy\'' or ''
 
 
 provider = TorrentingProvider()

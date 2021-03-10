@@ -1,4 +1,15 @@
-﻿### 0.23.13 (2021-02-26 19:05:00 UTC)
+﻿### 0.23.14 (2021-03-10 01:40:00 UTC)
+
+* Add config/Search/Search Tasks/"Host running FlareSolverr" to handle CloudFlare providers
+* Change the cf_clearance cookie to an undocumented optional config instead of a requirement
+* Change where cf_clearance does not exist or expires, config/Search/Search Tasks/"Host running FlareSolverr" is required
+* Fix saving magnet from PAs as files under py3
+* Fix SkyTorrents provider
+* Fix Torlock provider
+* Fix TBP provider
+
+
+### 0.23.13 (2021-02-26 19:05:00 UTC)
 
 * Add Newznab providers can use API only or API + RSS cache fallback. Tip added to Newznab config/Media Providers/API key
 * Add correct user entry mistakes for nzbs2go api url

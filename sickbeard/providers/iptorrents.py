@@ -57,7 +57,7 @@ class IPTorrentsProvider(generic.TorrentProvider):
             logged_in=(lambda y='': all(
                 ['IPTorrents' in y, 'type="password"' not in y[0:2048], self.has_all_cookies()] +
                 [(self.session.cookies.get(c, domain='') or 'sg!no!pw') in self.digest
-                 for c in ('uid', 'pass', 'cf_clearance')])),
+                 for c in ('uid', 'pass')])),
             failed_msg=(lambda y=None: u'Invalid cookie details for %s. Check settings'))
 
     @staticmethod
@@ -168,7 +168,7 @@ class IPTorrentsProvider(generic.TorrentProvider):
 
     @staticmethod
     def ui_string(key):
-        return 'iptorrents_digest' == key and 'use... \'uid=xx; pass=yy; cf_clearance=zz\'' or ''
+        return 'iptorrents_digest' == key and 'use... \'uid=xx; pass=yy\'' or ''
 
 
 provider = IPTorrentsProvider()
