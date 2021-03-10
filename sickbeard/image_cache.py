@@ -450,8 +450,11 @@ class ImageCache(object):
             success = 0
             count_urls = len(image_urls)
             sources = []
+            sickbeard.MEMCACHE.setdefault('cookies', {})
             for image_url in image_urls or []:
-                img_data = sg_helpers.get_url(image_url, nocache=True, as_binary=True)
+                img_data = sg_helpers.get_url(image_url, nocache=True, as_binary=True,
+                                              url_solver=sickbeard.FLARESOLVERR_HOST,
+                                              memcache_cookies=sickbeard.MEMCACHE['cookies'])
                 if None is img_data:
                     continue
                 crc = '%05X' % (zlib.crc32(img_data) & 0xFFFFFFFF)

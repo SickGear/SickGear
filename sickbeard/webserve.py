@@ -84,6 +84,7 @@ from tornado.concurrent import run_on_executor
 from ._legacy import LegacyBaseHandler
 
 from lib import subliminal
+from lib.cfscrape import CloudflareScraper
 from lib.dateutil import tz, zoneinfo
 from lib.dateutil.relativedelta import relativedelta
 from lib.fuzzywuzzy import fuzz
@@ -1538,6 +1539,22 @@ class Home(MainHandler):
         connection, acces_msg = client(host, username, password).test_authentication()
 
         return acces_msg
+
+    def test_flaresolverr(self, host=None):
+        self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
+
+        hosts = config.clean_hosts(host, default_port=8191)
+        if not hosts:
+            return 'Fail: No valid host(s)'
+
+        try:
+            fs_ver = CloudflareScraper().test_flaresolverr(host)
+            result = 'Successful connection to FlareSolverr %s' % fs_ver
+        except(BaseException, Exception):
+            result = 'Failed host connection (is it running?)'
+
+        ui.notifications.message('Tested Flaresolverr:', unquote_plus(hosts))
+        return result
 
     @staticmethod
     def discover_emby():
@@ -7391,7 +7408,7 @@ class ConfigSearch(Config):
                     use_nzbs=None, use_torrents=None, nzb_method=None, torrent_method=None,
                     usenet_retention=None, ignore_words=None, require_words=None,
                     download_propers=None, propers_webdl_onegrp=None,
-                    search_unaired=None, unaired_recent_search_only=None,
+                    search_unaired=None, unaired_recent_search_only=None, flaresolverr_host=None,
                     allow_high_priority=None,
                     sab_username=None, sab_password=None, sab_apikey=None, sab_category=None, sab_host=None,
                     nzbget_username=None, nzbget_password=None, nzbget_category=None, nzbget_host=None,
@@ -7450,6 +7467,8 @@ class ConfigSearch(Config):
         sickbeard.SEARCH_UNAIRED = bool(config.checkbox_to_value(search_unaired))
         sickbeard.UNAIRED_RECENT_SEARCH_ONLY = bool(config.checkbox_to_value(unaired_recent_search_only,
                                                                              value_off=1, value_on=0))
+
+        sickbeard.FLARESOLVERR_HOST = config.clean_url(flaresolverr_host)
 
         sickbeard.ALLOW_HIGH_PRIORITY = config.checkbox_to_value(allow_high_priority)
 

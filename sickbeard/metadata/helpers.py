@@ -42,7 +42,10 @@ def getShowImage(url, img_num=None, show_name=None, supress_log=False):
 
     logger.log(u'Fetching image from ' + temp_url, logger.DEBUG)
 
-    image_data = sg_helpers.get_url(temp_url, as_binary=True)
+    from sickbeard import FLARESOLVERR_HOST, MEMCACHE
+    MEMCACHE.setdefault('cookies', {})
+    image_data = sg_helpers.get_url(temp_url, as_binary=True,
+                                    url_solver=FLARESOLVERR_HOST, memcache_cookies=MEMCACHE['cookies'])
     if None is image_data:
         if supress_log:
             return

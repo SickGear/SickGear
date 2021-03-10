@@ -1084,7 +1084,10 @@ def download_file(url, filename, session=None, **kwargs):
     :return: success of download
     :rtype: bool
     """
-    if None is get_url(url, session=session, savename=filename, **kwargs):
+    sickbeard.MEMCACHE.setdefault('cookies', {})
+    if None is get_url(url, session=session, savename=filename,
+                       url_solver=sickbeard.FLARESOLVERR_HOST, memcache_cookies=sickbeard.MEMCACHE['cookies'],
+                       **kwargs):
         remove_file_perm(filename)
         return False
     return True

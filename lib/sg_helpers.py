@@ -730,6 +730,7 @@ def get_url(url,  # type: AnyStr
             timeout=30,  # type: int
             session=None,  # type: Optional[requests.Session]
             parse_json=False,  # type: bool
+            memcache_cookies=None,  # type: dict
             raise_status_code=False,  # type: bool
             raise_exceptions=False,  # type: bool
             as_binary=False,  # type: bool
@@ -746,6 +747,8 @@ def get_url(url,  # type: AnyStr
     Return data from a URI with a possible check for authentication prior to the data fetch.
     Raised errors and no data in responses are tracked for making future logic decisions.
 
+    # param url_solver=sickbeard.FLARESOLVERR_HOST must be passed if url is behind CF for use in cf_scrape/__init__.py
+
     Returned data is either:
     1) a byte-string retrieved from the URL provider.
     2) a boolean if successfully used kwargs 'savefile' set to file pathname.
@@ -759,6 +762,7 @@ def get_url(url,  # type: AnyStr
     :param timeout: timeout
     :param session: optional session object
     :param parse_json: return JSON Dict
+    :param memcache_cookies: memory persistant store for cookies
     :param raise_status_code: raise exception for status codes
     :param raise_exceptions: raise exceptions
     :param as_binary: return bytes instead of text
@@ -795,6 +799,13 @@ def get_url(url,  # type: AnyStr
     if None is session:
         session = CloudflareScraper.create_scraper()
         session.headers.update({'User-Agent': USER_AGENT})
+
+    proxy_browser = kwargs.get('proxy_browser')
+    if isinstance(memcache_cookies, dict):
+        parsed_url = urlparse(url)
+        domain = parsed_url.netloc
+        if domain in memcache_cookies:
+            session.cookies.update(memcache_cookies[domain])
 
     # download and save file or simply fetch url
     savename = kwargs.pop('savename', None)
@@ -951,15 +962,24 @@ def get_url(url,  # type: AnyStr
             return
 
     if None is result and None is not response and response.ok:
-        if parse_json:
+        if isinstance(memcache_cookies, dict):
+            parsed_url = urlparse(url)
+            domain = parsed_url.netloc
+            memcache_cookies[domain] = session.cookies.copy()
+
+        if parse_json or proxy_browser:
             try:
                 data_json = response.json()
-                result = ({}, data_json)[isinstance(data_json, (dict, list))]
+                if proxy_browser:
+                    result = ({}, data_json.get('solution', {}).get('response', {}))[isinstance(data_json, dict)]
+                else:
+                    result = ({}, data_json)[isinstance(data_json, (dict, list))]
                 if resp_sess:
                     result = result, session
             except (TypeError, Exception) as e:
                 raised = e
-                logger.warning(u'JSON data issue from URL %s\r\nDetail... %s' % (url, ex(e)))
+                logger.warning(u'%s data issue from URL %s\r\nDetail... %s' % (
+                    ('Proxy browser', 'JSON')[parse_json], url, ex(e)))
 
         elif savename:
             try:

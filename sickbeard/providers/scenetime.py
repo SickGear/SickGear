@@ -50,7 +50,7 @@ class SceneTimeProvider(generic.TorrentProvider):
             logged_in=(lambda y='': all(
                 ['staff-support' in y, self.has_all_cookies()] +
                 [(self.session.cookies.get(x, domain='') or 'sg!no!pw') in self.digest
-                 for x in ('uid', 'pass', 'cf_clearance')])),
+                 for x in ('uid', 'pass')])),
             failed_msg=(lambda y=None: u'Invalid cookie details for %s. Check settings'))
 
     @staticmethod
@@ -179,7 +179,7 @@ class SceneTimeProvider(generic.TorrentProvider):
         return name
 
     def ui_string(self, key):
-        cookies = 'use... \'uid=xx; pass=yy; cf_clearance=zz\''
+        cookies = 'use... \'uid=xx; pass=yy\''
         if 'cookie_str_only' == key:
             return cookies
         if 'scenetime_digest' == key and self._valid_home():
