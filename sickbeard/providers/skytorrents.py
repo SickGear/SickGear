@@ -33,12 +33,16 @@ class SkytorrentsProvider(generic.TorrentProvider):
 
         generic.TorrentProvider.__init__(self, 'Skytorrents')
 
-        self.url_base = 'https://skytorrents.lol/'
+        self.url_home = ['https://skytorrents.%s/' % tld for tld in ('org', 'to', 'net')]
 
-        self.urls = {'config_provider_home_uri': self.url_base,
-                     'search': self.url_base + '?category=show&sort=created&query=%s&page=%s'}
+        self.url_vars = {'search': '?search=%s&sort=created&page=%s'}
+        self.url_tmpl = {'config_provider_home_uri': '%(home)s', 'search': '%(home)s%(vars)s'}
 
         self.minseed, self.minleech = 2 * [None]
+
+    @staticmethod
+    def _has_signature(data=None):
+        return data and re.search(r'Sky\sTorrents', data[23:1024:])
 
     def _search_provider(self, search_params, **kwargs):
         results = []

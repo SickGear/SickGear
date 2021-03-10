@@ -564,7 +564,10 @@ class GenericProvider(object):
         kwargs['raise_status_code'] = True
         kwargs['failure_monitor'] = False
         kwargs['exclude_no_data'] = False
-        for k, v in iteritems(dict(headers=self.headers, hooks=dict(response=self.cb_response))):
+        sickbeard.MEMCACHE.setdefault('cookies', {})
+        for k, v in iteritems(dict(
+                headers=self.headers, hooks=dict(response=self.cb_response),
+                url_solver=sickbeard.FLARESOLVERR_HOST, memcache_cookies=sickbeard.MEMCACHE['cookies'])):
             kwargs.setdefault(k, v)
         if 'nzbs.in' not in url:  # this provider returns 503's 3 out of 4 requests with the persistent session system
             kwargs.setdefault('session', self.session)
@@ -802,7 +805,7 @@ class GenericProvider(object):
             final_file = ek.ek(os.path.join, final_dir, '%s.%s' % (helpers.sanitize_filename(result.name), link_type))
             try:
                 with open(final_file, 'wb') as fp:
-                    fp.write(result.url)
+                    fp.write(decode_bytes(result.url))
                     fp.flush()
                     os.fsync(fp.fileno())
                 saved = True
@@ -908,7 +911,7 @@ class GenericProvider(object):
         return title, url
 
     def _link(self, url, url_tmpl=None, url_quote=None):
-
+        url = '%s' % url  # ensure string type
         if url and not re.match('(?i)magnet:', url):
             if PY2:
                 try:
