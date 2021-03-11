@@ -94,7 +94,6 @@ from exceptions_helper import ex
 import sickbeard
 from sickbeard import db, logger, name_cache, network_timezones
 from sickbeard.event_queue import Events
-from sickbeard.generic_queue import QueuePriorities
 from sickbeard.tv import TVShow
 from sickbeard.webserveInit import WebServer
 
@@ -565,6 +564,8 @@ class SickGear(object):
 
         if not db.DBConnection().has_flag('kodi_nfo_default_removed'):
             sickbeard.metadata.kodi.remove_default_attr()
+        if not db.DBConnection().has_flag('kodi_nfo_rebuild_uniqueid'):
+            sickbeard.metadata.kodi.rebuild_nfo()
 
         my_db = db.DBConnection()
         sw = my_db.select('SELECT * FROM tv_src_switch WHERE status = 0')
@@ -731,7 +732,7 @@ class SickGear(object):
                         failed_sql = s
                         failed_results.remove(s)
                         break
-                show_obj._helper_load_failed_db(sql=failed_sql)
+                show_obj.helper_load_failed_db(sql=failed_sql)
                 sickbeard.showList.append(show_obj)
                 sickbeard.showDict[show_obj.sid_int] = show_obj
             except (BaseException, Exception) as err:

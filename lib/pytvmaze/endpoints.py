@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-# TVMaze Free endpoints
+# TVmaze Free endpoints
 show_search = 'https://api.tvmaze.com/search/shows?q={0}'
 show_single_search = 'https://api.tvmaze.com/singlesearch/shows?q={0}'
 lookup_tvrage = 'https://api.tvmaze.com/lookup/shows?tvrage={0}'
@@ -26,7 +26,7 @@ season_by_id = 'https://api.tvmaze.com/seasons/{0}'
 episode_by_id = 'https://api.tvmaze.com/episodes/{0}'
 show_images = 'https://api.tvmaze.com/shows/{0}/images'
 
-# TVMaze Premium endpoints
+# TVmaze Premium endpoints
 followed_shows = 'https://api.tvmaze.com/v1/user/follows/shows{0}'
 followed_people = 'https://api.tvmaze.com/v1/user/follows/people{0}'
 followed_networks = 'https://api.tvmaze.com/v1/user/follows/networks{0}'

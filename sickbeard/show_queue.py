@@ -938,7 +938,7 @@ class QueueItemAdd(ShowQueueItem):
             logger.log(u'' + str(sickbeard.TVInfoAPI(self.tvid).name) + ': ' + repr(tvinfo_config))
 
             t = sickbeard.TVInfoAPI(self.tvid).setup(**tvinfo_config)
-            s = t[self.prodid, False]
+            s = t.get_show(self.prodid, load_episodes=False)
 
             if getattr(t, 'show_not_found', False):
                 logger.log('Show %s was not found on %s, maybe show was deleted' %

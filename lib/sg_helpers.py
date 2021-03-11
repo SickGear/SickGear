@@ -214,7 +214,7 @@ class ConnectionFailDict(object):
 DOMAIN_FAILURES = ConnectionFailDict()
 sp = 8
 trakt_fail_times = {(i * sp) + m: s for m in range(1, 1 + sp) for i, s in
-                    enumerate([(0, 15), (0, 30), (1, 0), (2, 0)])}
+                    enumerate([(0, 5), (0, 15), (0, 30), (1, 0), (2, 0)])}
 trakt_fail_times.update({i: s for i, s in enumerate([(3, 0), (6, 0), (12, 0), (24, 0)], len(trakt_fail_times))})
 domain_fail_times = {'api.trakt.tv': trakt_fail_times}
 default_fail_times = {1: (0, 15), 2: (0, 30), 3: (1, 0), 4: (2, 0), 5: (3, 0), 6: (6, 0), 7: (12, 0), 8: (24, 0)}
@@ -771,13 +771,13 @@ def get_url(url,  # type: AnyStr
     4) `Requests::response`, and `Requests::session` when kwargs 'resp_sess' is True.
 
     :param url: address to request fetch data from
-    :param post_data: post data
+    :param post_data: if this or `post_json` is set, then request POST method is used to send this data
     :param params:
     :param headers: headers to add
     :param timeout: timeout
     :param session: optional session object
     :param parse_json: return JSON Dict
-    :param memcache_cookies: memory persistant store for cookies
+    :param memcache_cookies: memory persistent store for cookies
     :param raise_status_code: raise exception for status codes
     :param raise_exceptions: raise exceptions
     :param as_binary: return bytes instead of text
@@ -859,10 +859,6 @@ def get_url(url,  # type: AnyStr
     # don't trust os environments (auth, proxies, ...)
     session.trust_env = False
 
-    method = None
-    if None is not use_method:
-        method = getattr(session, use_method.strip().lower())
-
     result = response = raised = connection_fail_params = log_failure_url = None
     try:
         # sanitise url
@@ -881,21 +877,24 @@ def get_url(url,  # type: AnyStr
                 logger.debug('Using %s' % msg)
                 session.proxies = {'http': proxy_address, 'https': proxy_address}
 
-        if not method:
-            # decide if we get or post data to server
-            if post_data or post_json:
-                if True is post_data:
-                    post_data = None
+        if None is not use_method:
 
-                if post_data:
-                    kwargs.setdefault('data', post_data)
+            method = getattr(session, use_method.strip().lower())
 
-                if post_json:
-                    kwargs.setdefault('json', post_json)
+        elif post_data or post_json:  # decide if to post data or send a get request to server
 
-                method = session.post
-            else:
-                method = session.get
+            if True is post_data:
+                post_data = None
+
+            if post_data:
+                kwargs.setdefault('data', post_data)
+
+            if post_json:
+                kwargs.setdefault('json', post_json)
+
+            method = session.post
+        else:
+            method = session.get
 
         for r in range(0, 5):
             response = method(url, timeout=timeout, **kwargs)
@@ -1684,3 +1683,13 @@ def convert_to_inch_faction_html(height):
     inches = str(inches).split('.')[0]
     return '%s\' %s%s%s' % (int(foot), (inches, '')['0' == inches], fraction,
                             ('', '"')['0' != inches or '' != fraction])
+
+
+def spoken_height(height):
+    # type: (float) -> AnyStr
+    """
+    return text for spoken words of height
+
+    :param height: height in cm
+    """
+    return convert_to_inch_faction_html(height).replace('\'', ' foot').replace('"', '')

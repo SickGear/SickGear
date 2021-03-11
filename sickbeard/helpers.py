@@ -74,7 +74,8 @@ if False:
     from six import integer_types
 
 RE_XML_ENCODING = re.compile(r'^(<\?xml[^>]+)\s+(encoding\s*=\s*[\"\'][^\"\']*[\"\'])(\s*\?>|)', re.U)
-RE_IMDB_ID = re.compile(r'(?i)(tt\d{4,})')
+RE_IMDB_ID = r'tt\d{7,10}'
+RC_IMDB_ID = re.compile(r'(?i)(%s)' % RE_IMDB_ID)
 
 
 def remove_extension(name):
@@ -207,7 +208,7 @@ def find_show_by_id(
 
         if tvid_prodid_obj and no_mapped_ids:
             if None is tvid_prodid_obj.prodid:
-                return None
+                return
             return sickbeard.showDict.get(int(tvid_prodid_obj))
         else:
             if tvid_prodid_obj:
@@ -217,25 +218,22 @@ def find_show_by_id(
 
             if isinstance(show_id, dict):
                 if no_mapped_ids:
-                    sid_int_list = [sickbeard.tv.TVShow.create_sid(sk, sv) for sk, sv in iteritems(show_id) if sv and
-                                    0 < sv and sickbeard.tv.tvid_bitmask >= sk]
-                    if check_multishow:
-                        results = [sickbeard.showDict.get(_show_sid_id) for _show_sid_id in sid_int_list
-                                   if sickbeard.showDict.get(_show_sid_id)]
-                    else:
+                    sid_int_list = [sickbeard.tv.TVShow.create_sid(k, v) for k, v in iteritems(show_id) if k and v and
+                                    0 < v and sickbeard.tv.tvid_bitmask >= k]
+                    if not check_multishow:
                         return next((sickbeard.showDict.get(_show_sid_id) for _show_sid_id in sid_int_list
                                      if sickbeard.showDict.get(_show_sid_id)), None)
+                    results = [sickbeard.showDict.get(_show_sid_id) for _show_sid_id in sid_int_list
+                               if sickbeard.showDict.get(_show_sid_id)]
                 else:
-                    show_id = {k: v for k, v in iteritems(show_id) if 0 < v}
-                    results = [_show_obj for k, v in iteritems(show_id)
+                    results = [_show_obj for k, v in iteritems(show_id) if k and v and 0 < v
                                for _show_obj in show_list if v == _show_obj.internal_ids.get(k, {'id': 0})['id']]
 
     num_shows = len(set(results))
     if 1 == num_shows:
         return results[0]
-    elif 1 < num_shows:
-        if not no_exceptions:
-            raise MultipleShowObjectsException()
+    if 1 < num_shows and not no_exceptions:
+        raise MultipleShowObjectsException()
 
 
 def make_dir(path):
@@ -1351,9 +1349,12 @@ def cleanup_cache():
     """
     Delete old cached files
     """
-    delete_not_changed_in([ek.ek(os.path.join, sickbeard.CACHE_DIR, 'images', 'browse', 'thumb', x) for x in [
-        'anidb', 'imdb', 'trakt', 'tvdb']] + [ek.ek(os.path.join, sickbeard.CACHE_DIR, 'images', x) for x in [
-        'characters', 'person']] + [ek.ek(os.path.join, sickbeard.CACHE_DIR, 'tvinfo_cache')])
+    delete_not_changed_in(
+        [ek.ek(os.path.join, sickbeard.CACHE_DIR, 'images', 'browse', 'thumb', x)
+         for x in ['anidb', 'imdb', 'trakt', 'tvdb']] +
+        [ek.ek(os.path.join, sickbeard.CACHE_DIR, 'images', x)
+         for x in ['characters', 'person']] +
+        [ek.ek(os.path.join, sickbeard.CACHE_DIR, 'tvinfo_cache')])
 
 
 def delete_not_changed_in(paths, days=30, minutes=0):
@@ -1523,7 +1524,7 @@ def path_mapper(search, replace, subject):
 
 
 def get_overview(ep_status, show_quality, upgrade_once, split_snatch=False):
-    # type: (integer_types, integer_types, Union[integer_types, bool]) -> integer_types
+    # type: (integer_types, integer_types, Union[integer_types, bool], bool) -> integer_types
     """
 
     :param ep_status: episode status
@@ -1766,7 +1767,7 @@ def parse_imdb_id(string):
     """
     result = None
     try:
-        result = RE_IMDB_ID.findall(string)[0]
+        result = RC_IMDB_ID.findall(string)[0]
     except(BaseException, Exception):
         pass
 

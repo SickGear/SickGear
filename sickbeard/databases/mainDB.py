@@ -1635,6 +1635,7 @@ class AddShowExludeGlobals(db.SchemaUpgrade):
 
         if self.hasTable('tv_shows_exclude_backup'):
             self.upgrade_log('Adding rls_global_exclude_ignore, rls_global_exclude_require from backup to tv_shows')
+            # noinspection SqlResolve
             self.connection.mass_action([['UPDATE tv_shows SET rls_global_exclude_ignore = '
                                           '(SELECT te.rls_global_exclude_ignore FROM tv_shows_exclude_backup te WHERE '
                                           'te.show_id = tv_shows.show_id AND te.indexer = tv_shows.indexer), '
@@ -1682,11 +1683,16 @@ class AddHistoryHideColumn(db.SchemaUpgrade):
 
             if self.hasTable('history_hide_backup'):
                 self.upgrade_log('Restoring hide status in history from backup')
+                # noinspection SqlResolve
                 self.connection.mass_action([
-                    ['UPDATE history SET hide = (SELECT hide FROM history_hide_backup as hh WHERE'
-                     ' hh.ROWID = history.ROWID AND hh.showid = history.showid AND hh.indexer = history.indexer AND'
-                     ' hh.season = history.season AND hh.episode = history.episode AND hh.action = history.action AND'
-                     ' hh.date = history.date)'],
+                    [
+                        """
+                        UPDATE history SET hide = (SELECT hide FROM history_hide_backup as hh WHERE
+                        hh.ROWID = history.ROWID AND hh.showid = history.showid AND hh.indexer = history.indexer AND
+                        hh.season = history.season AND hh.episode = history.episode AND hh.action = history.action AND
+                        hh.date = history.date)
+                        """
+                    ],
                     ['DROP TABLE history_hide_backup']
                 ])
 
@@ -1713,51 +1719,67 @@ class ChangeShowData(db.SchemaUpgrade):
 
         table_create_sql = {
             'castlist': [
-                ['CREATE TABLE castlist'
-                 ' ('
-                 ' id           INTEGER PRIMARY KEY AUTOINCREMENT,'
-                 ' indexer      NUMERIC NOT NULL,'
-                 ' indexer_id   NUMERIC NOT NULL,'
-                 ' character_id NUMERIC NOT NULL,'
-                 ' sort_order   NUMERIC DEFAULT 0 NOT NULL,'
-                 ' updated      NUMERIC'
-                 ' );'],
+                [
+                    """
+                    CREATE TABLE castlist
+                    (
+                    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+                    indexer      NUMERIC NOT NULL,
+                    indexer_id   NUMERIC NOT NULL,
+                    character_id NUMERIC NOT NULL,
+                    sort_order   NUMERIC DEFAULT 0 NOT NULL,
+                    updated      NUMERIC
+                    );
+                    """
+                ],
             ],
             'idx_castlist': [
                 ['CREATE INDEX idx_castlist ON castlist (indexer, indexer_Id);'],
                 ['CREATE UNIQUE INDEX idx_unique_castlist ON castlist (indexer, indexer_id, character_id);']
             ],
             'characters': [
-                ['CREATE TABLE characters'
-                 ' ('
-                 ' id         INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,'
-                 ' name       TEXT,'
-                 ' bio        TEXT,'
-                 ' thumb_url  TEXT,'
-                 ' image_url  TEXT,'
-                 ' updated    NUMERIC'
-                 ' );']
+                [
+                    """
+                    CREATE TABLE characters
+                    (
+                    id         INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+                    name       TEXT,
+                    bio        TEXT,
+                    thumb_url  TEXT,
+                    image_url  TEXT,
+                    updated    NUMERIC
+                    );
+                    """
+                ]
             ],
             'character_ids': [
-                ['CREATE TABLE character_ids'
-                 ' ('
-                 ' id           INTEGER PRIMARY KEY AUTOINCREMENT,'
-                 ' src          NUMERIC NOT NULL,'
-                 ' src_id       NUMERIC NOT NULL,'
-                 ' character_id NUMERIC NOT NULL'
-                 ' );'],
+                [
+                    """
+                    CREATE TABLE character_ids
+                    (
+                    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+                    src          NUMERIC NOT NULL,
+                    src_id       NUMERIC NOT NULL,
+                    character_id NUMERIC NOT NULL
+                    );
+                    """
+                ],
             ],
             'idx_character_ids': [
                 ['CREATE UNIQUE INDEX idx_unique_character_ids ON character_ids (src, character_id);'],
                 ['CREATE INDEX idx_character_ids ON character_ids (character_id);']
             ],
             'character_person_map': [
-                ['CREATE TABLE character_person_map'
-                 ' ('
-                 ' id           INTEGER PRIMARY KEY AUTOINCREMENT,'
-                 ' character_id NUMERIC NOT NULL,'
-                 ' person_id    NUMERIC NOT NULL'
-                 ' );'],
+                [
+                    """
+                    CREATE TABLE character_person_map
+                    (
+                    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+                    character_id NUMERIC NOT NULL,
+                    person_id    NUMERIC NOT NULL
+                    );
+                    """
+                ],
             ],
             'idx_character_person_map': [
                 ['CREATE INDEX idx_character_person_map_character ON character_person_map (character_id);'],
@@ -1782,84 +1804,99 @@ class ChangeShowData(db.SchemaUpgrade):
                 ['CREATE INDEX idx_character_person_years ON character_person_years (character_id)'],
             ],
             'persons': [
-                ['CREATE TABLE persons'
-                 ' ('
-                    ' id         INTEGER PRIMARY KEY AUTOINCREMENT,'
-                    ' name       TEXT,'
-                    ' gender     INTEGER,'
-                    ' birthdate  NUMERIC,'
-                    ' deathdate  NUMERIC,'
-                    ' birthplace TEXT,'
-                    ' deathplace TEXT,'
-                    ' height     NUMERIC,'
-                    ' realname   TEXT,'
-                    ' nicknames  TEXT,'
-                    ' akas       TEXT,'
-                    ' homepage   TEXT,'
-                    ' bio        TEXT,'
-                    ' thumb_url  TEXT,'
-                    ' image_url  TEXT,'
-                    ' updated    NUMERIC'
-                 ' );']
+                [
+                    """
+                    CREATE TABLE persons
+                    (
+                    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name       TEXT,
+                    gender     INTEGER,
+                    birthdate  NUMERIC,
+                    deathdate  NUMERIC,
+                    birthplace TEXT,
+                    deathplace TEXT,
+                    height     NUMERIC,
+                    realname   TEXT,
+                    nicknames  TEXT,
+                    akas       TEXT,
+                    homepage   TEXT,
+                    bio        TEXT,
+                    thumb_url  TEXT,
+                    image_url  TEXT,
+                    updated    NUMERIC
+                    );
+                    """
+                ]
             ],
             'person_ids': [
-                ['CREATE TABLE person_ids'
-                 ' ('
-                    ' id        INTEGER PRIMARY KEY AUTOINCREMENT,'
-                    ' src       INTEGER NOT NULL,' 
-                    ' src_id    TEXT NOT NULL,'
-                    ' person_id NUMERIC NOT NULL'
-                 ' );'],
+                [
+                    """
+                    CREATE TABLE person_ids
+                    (
+                    id        INTEGER PRIMARY KEY AUTOINCREMENT,
+                    src       INTEGER NOT NULL, 
+                    src_id    TEXT NOT NULL,
+                    person_id NUMERIC NOT NULL
+                    );
+                    """
+                ],
             ],
             'idx_person_ids': [
                 ['CREATE UNIQUE INDEX idx_unique_person_ids ON person_ids (src, person_id);'],
                 ['CREATE INDEX idx_person_ids ON person_ids (person_id);']
             ],
             'tv_src_switch': [
-                ['CREATE TABLE tv_src_switch'
-                 ' ('
-                 ' old_indexer    NUMERIC NOT NULL,'
-                 ' old_indexer_id NUMERIC NOT NULL,'
-                 ' new_indexer    NUMERIC NOT NULL,'
-                 ' new_indexer_id NUMERIC,'
-                 ' force_id       NUMERIC DEFAULT 0 NOT NULL,'
-                 ' set_pause      INTEGER DEFAULT 0 NOT NULL,'
-                 ' mark_wanted    INTEGER DEFAULT 0 NOT NULL,'
-                 ' status         NUMERIC DEFAULT 0 NOT NULL,'
-                 ' action_id      INTEGER NOT NULL,'
-                 ' uid            NUMERIC NOT NULL'
-                 ' );'
-                 ],
+                [
+                    """
+                    CREATE TABLE tv_src_switch
+                    (
+                    old_indexer    NUMERIC NOT NULL,
+                    old_indexer_id NUMERIC NOT NULL,
+                    new_indexer    NUMERIC NOT NULL,
+                    new_indexer_id NUMERIC,
+                    force_id       NUMERIC DEFAULT 0 NOT NULL,
+                    set_pause      INTEGER DEFAULT 0 NOT NULL,
+                    mark_wanted    INTEGER DEFAULT 0 NOT NULL,
+                    status         NUMERIC DEFAULT 0 NOT NULL,
+                    action_id      INTEGER NOT NULL,
+                    uid            NUMERIC NOT NULL
+                    );
+                    """
+                ],
             ],
             'idx_tv_src_switch': [
                 ['CREATE UNIQUE INDEX idx_unique_tv_src_switch ON tv_src_switch (old_indexer, old_indexer_id);']
             ],
-            'switch_ep_errors': [
-                ['CREATE TABLE switch_ep_errors'
-                 ' ('
-                 ' old_indexer    NUMERIC NOT NULL,'
-                 ' old_indexer_id NUMERIC NOT NULL,'
-                 ' new_indexer    NUMERIC NOT NULL,'
-                 ' new_indexer_id NUMERIC NOT NULL,'
-                 ' season         NUMERIC NOT NULL,'
-                 ' episode        NUMERIC NOT NULL,'
-                 ' reason         NUMERIC DEFAULT 0'
-                 ' );'
-                 ],
+            'switch_ep_result': [
+                [
+                    """
+                    CREATE TABLE switch_ep_result 
+                    (
+                    old_indexer    NUMERIC NOT NULL,
+                    old_indexer_id NUMERIC NOT NULL,
+                    new_indexer    NUMERIC NOT NULL,
+                    new_indexer_id NUMERIC NOT NULL,
+                    season         NUMERIC NOT NULL,
+                    episode        NUMERIC NOT NULL,
+                    reason         NUMERIC DEFAULT 0
+                    );
+                    """
+                ],
             ],
-            'idx_switch_ep_errors': [
-                ['CREATE INDEX idx_switch_ep_errors ON switch_ep_errors (new_indexer, new_indexer_id)'],
-                ['CREATE INDEX idx_unique_switch_ep_errors'
-                 ' ON switch_ep_errors (new_indexer, new_indexer_id, season, episode, reason)'],
-                ['CREATE INDEX idx_switch_ep_errors_old ON switch_ep_errors (old_indexer, old_indexer_id)'],
+            'idx_switch_ep_result': [
+                ['CREATE INDEX idx_switch_ep_result ON switch_ep_result (new_indexer, new_indexer_id);'],
+                ["""CREATE INDEX idx_unique_switch_ep_result
+                    ON switch_ep_result (new_indexer, new_indexer_id, season, episode, reason);"""],
+                ['CREATE INDEX idx_switch_ep_result_old ON switch_ep_result (old_indexer, old_indexer_id);'],
             ],
         }
 
         cl = []
         tables = self.list_tables()
         for t in ('castlist', 'characters', 'character_ids', 'persons', 'person_ids', 'character_person_map',
-                  'character_person_years', 'tv_src_switch', 'switch_ep_errors'):
+                  'character_person_years', 'tv_src_switch', 'switch_ep_result'):
             if 'backup_%s' % t in tables:
+                # noinspection SqlResolve
                 cl.append(['ALTER TABLE backup_%s RENAME TO %s' % (t, t)])
             elif t not in tables:
                 cl.extend(table_create_sql[t])

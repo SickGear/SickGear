@@ -21,6 +21,7 @@ function initActions() {
 	menu$.find('a:contains("Backlog Overview")').addClass('btn').html('<i class="sgicon-backlog"></i>Backlog Overview');
 	menu$.find('a[href$="/home/update-plex/"]').addClass('btn').html('<i class="sgicon-plex"></i>Update PLEX');
 	menu$.find('a:contains("Force")').addClass('btn').html('<i class="sgicon-fullupdate"></i>Full Update');
+	menu$.find('a:contains("Cast")').addClass('btn').html('<i class="sgicon-people" style="vertical-align:middle; font-size:13px"></i>Cast Update');
 	menu$.find('a:contains("Rename")').addClass('btn').html('<i class="sgicon-rename"></i>Media Rename');
 	menu$.find('a[href$="/config/subtitles/"]').addClass('btn').html('<i class="sgicon-subtitles"></i>Subtitles');
 	menu$.find('a[href*="/home/subtitle-show"]').addClass('btn').html('<i class="sgicon-subtitles"></i>Download Subtitles');

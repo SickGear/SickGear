@@ -35,6 +35,9 @@ $(document).ready(function() {
 			state = 1; on = 'poster-right';
 		}
 		liveStates$.removeClass('poster-right poster-off open-gear viewart').addClass(on);
+		if (state !== 4 && !!$('a[rel="glide"]').length) {
+			$.calcSlideCount(!1);
+		}
 		refreshTitles($(this).attr('id'));
 		send('viewart=' + state);
 
@@ -57,6 +60,9 @@ $(document).ready(function() {
 
 			liveStates$.toggleClass(elid);
 			refreshTitles(elid);
+			if ('back-art' === elid){
+				$.calcSlideCount(!1);
+			}
 			send(elid.replace('-', '') + '=' + String.prototype.toLowerCase.apply(+isSet(elid)));
 		}
 		return result;
@@ -297,7 +303,7 @@ $(document).ready(function() {
 				var change;
 				if (isSet('pro')) {
 					change = function() {
-						this.prepend('[ ! ] ');
+						$(this).prepend('[ ! ] ');
 					};
 				} else {
 					reg = new RegExp('^\\[\\s!\\s]\\s');

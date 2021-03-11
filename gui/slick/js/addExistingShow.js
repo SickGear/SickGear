@@ -17,9 +17,11 @@ $(document).ready(function(){
 
 		$('.dirCheck').each(function(){
 			if (true == this.checked){
-				var show = $(this).attr('id');
-				var indexer = $(this).closest('tr').find('select').val();
-				dirArr.push(encodeURIComponent(indexer + '|' + show));
+				var show = $(this).attr('id'),
+					indexer = $(this).closest('tr').find('select').val(),
+					folderEl$ = $(this).closest('tr').find('input.new-folder'),
+					newName = !folderEl$.length || folderEl$.attr('data-name') === folderEl$.val().trim() ? '' : '|folder=' + folderEl$.val().trim();
+				dirArr.push(encodeURIComponent(indexer + '|' + show + newName));
 			}
 		});
 
@@ -28,19 +30,23 @@ $(document).ready(function(){
 
 		window.location.href = sbRoot + '/add-shows/add-existing-shows'
 			+ '?prompt_for_settings=' + ($('#prompt-for-settings').prop('checked') ? 'on' : 'off')
-			+ (undefined !== $.sgSid && 0 < $.sgSid.length ? '&sid=' + $.sgSid : '')
+			+ (undefined !== $.sgSid && 0 < $.sgSid.length ? '&tvid_prodid=' + $.sgSid : '')
 			+ '&shows_to_add=' + dirArr.join('&shows_to_add=');
 	});
 
 
 	function loadContent(){
-		var url = '';
-		$('.dir_check').each(function(i, w){
-			if ($(w).is(':checked')){
-				url += (url.length ? '&' : '')
-					+ 'root_dir=' + encodeURIComponent($(w).attr('id'));
-			}
+		var params = {}, dirs = [];
+
+		if (undefined !== $.sgHashDir && !!$.sgHashDir.length){params['hash_dir'] = $.sgHashDir}
+		if (undefined !== $.sgRenameSuggest && !!$.sgRenameSuggest.length){params['rename_suggest'] = $.sgRenameSuggest}
+
+		$('.dir_check:checked').each(function(i, dirSelected){
+			dirs.push($(dirSelected).attr('id'));
 		});
+		if (dirs.length){
+			params['root_dir'] = dirs;
+		}
 
 		$('#tableDiv').html('<img id="searchingAnim"'
 			+ ' style="margin-right:10px"'
@@ -48,8 +54,7 @@ $(document).ready(function(){
 			+ ' height="32" width="32" />'
 			+ ' scanning parent folders...');
 
-		$.get(sbRoot + '/add-shows/mass-add-table' + (undefined !== $.sgHashDir && 0 < $.sgHashDir.length ? '?hash_dir=' + $.sgHashDir : ''),
-			url,
+		$.get(sbRoot + '/add-shows/mass-add-table', params,
 			function(data){
 				$('#tableDiv').html(data);
 				$.tablesorter.addParser({

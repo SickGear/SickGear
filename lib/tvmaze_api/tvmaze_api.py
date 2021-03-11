@@ -32,7 +32,7 @@ log = logging.getLogger('tvmaze.api')
 log.addHandler(logging.NullHandler())
 
 
-# Query TVMaze free endpoints
+# Query TVmaze free endpoints
 def tvmaze_endpoint_standard_get(url):
     s = requests.Session()
     retries = Retry(total=5,
@@ -43,8 +43,8 @@ def tvmaze_endpoint_standard_get(url):
     return get_url(url, json=True, session=s, hooks={'response': tvmaze._record_hook}, raise_skip_exception=True)
 
 
-tvmaze.TVMaze.endpoint_standard_get = staticmethod(tvmaze_endpoint_standard_get)
-tvm_obj = tvmaze.TVMaze()
+tvmaze.TVmaze.endpoint_standard_get = staticmethod(tvmaze_endpoint_standard_get)
+tvm_obj = tvmaze.TVmaze()
 empty_ep = TVInfoEpisode()
 empty_se = TVInfoSeason()
 tz_p = parser()

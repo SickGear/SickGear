@@ -51,6 +51,12 @@
 	<link rel="stylesheet" type="text/css" href="$sbRoot/css/lib/token-input.min.css?v=$sbPID" />
 	<link rel="stylesheet" type="text/css" href="$sbRoot/css/style.css?v=$sbPID"/>
 	<link rel="stylesheet" type="text/css" href="$sbRoot/css/${sg_str('THEME_NAME', 'dark')}.css?v=$sbPID" />
+#if $getVar('inc_top_glide', None)
+##	Required Core Stylesheet
+	<link rel="stylesheet" type="text/css" href="$sbRoot/css/lib/glide.core.min.css">
+##  Optional Theme Stylesheet
+	<link rel="stylesheet" type="text/css" href="$sbRoot/css/lib/glide.theme.min.css">
+#end if
 
 	<script type="text/javascript" src="$sbRoot/js/lib/jquery-2.2.4.min.js?v=$sbPID"></script>
 	<script type="text/javascript" src="$sbRoot/js/lib/bootstrap.min.js?v=$sbPID"></script>
@@ -73,6 +79,12 @@
 #if $sg_var('FUZZY_DATING')
 	<script type="text/javascript" src="$sbRoot/js/moment/moment.min.js?v=$sbPID"></script>
 	<script type="text/javascript" src="$sbRoot/js/fuzzyMoment.js?v=$sbPID"></script>
+#end if
+#if $getVar('inc_top_glide', None)
+	<script type="text/javascript" src="$sbRoot/js/glide/glide.min.js?v=$sbPID"></script>
+#end if
+#if $getVar('inc_ofi', None)
+	<script type="text/javascript" src="$sbRoot/js/ofi/ofi.min.js?v=$sbPID"></script>
 #end if
 	<script type="text/javascript" charset="utf-8">
 	<!--
@@ -336,7 +348,7 @@
 ##
 #set $py_ver = sys.version_info[:3]
 #if $py_ver in [(3, 9, 3), (3, 8, 1), (3, 7, 6)]:
-	<div class="alert alert-danger upgrade-notification upgrade-py" role="alert">
+	<div class="alert alert-danger topbar-notification upgrade-py" role="alert">
     #if (3, 9, 3) == $py_ver:
 		<p>Your installed Python 3.9.3 has been <a href="<%= anon_url('https://bugs.python.org/issue43710') %>" onclick="window.open(this.href);return !1;">recalled</a> due to breakage with C extensions<br>
 			Please replace with Python <b>3.9.4</b>: <a href="<%= anon_url('https://www.python.org/downloads/') %>" onclick="window.open(this.href);return !1;">download here</a>
@@ -353,17 +365,17 @@
 	</div>
 #end if
 #if $tvinfo_switch_running
-	<div class="alert alert-danger" role="alert">
-		<span>Shows are in the process of being switched to a new tv info source. Expect Links and elements not to work temporally.</span>
+	<div class="alert alert-danger topbar-notification" role="alert">
+		<span>Switching the TV info source of shows.<br>Expect links and elements to temporarily not work</span>
 	</div>
 #end if
 #if $sg_str('NEWEST_VERSION_STRING')
-	<div class="alert alert-success upgrade-notification" role="alert">
+	<div class="alert alert-success topbar-notification" role="alert">
 		<span>$sg_str('NEWEST_VERSION_STRING')</span>
 	</div>
 #end if
 #if $sg_str('MODULE_UPDATE_STRING')
-	<div class="alert alert-success upgrade-notification" role="alert">
+	<div class="alert alert-success topbar-notification" role="alert">
 		<span>$sg_str('MODULE_UPDATE_STRING')</span>
 	</div>
 #end if

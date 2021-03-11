@@ -167,8 +167,9 @@ class KODIMetadata(generic.GenericMetadata):
             if mid:
                 has_id = True
                 kwargs = dict(type=slug)
-                if TVINFO_TVDB == tvid:
+                if tvid == show_obj.tvid:
                     kwargs.update(dict(default='true'))
+                if TVINFO_TVDB == tvid == show_obj.tvid:
                     tvdb_id = str(mid)
                 uniqueid = etree.SubElement(tv_node, 'uniqueid', **kwargs)
                 uniqueid.text = '%s%s' % (('', 'tt')[TVINFO_IMDB == tvid], mid)
@@ -191,9 +192,9 @@ class KODIMetadata(generic.GenericMetadata):
         if None is not getattr(show_info, 'overview', None):
             plot.text = '%s' % show_info['overview']
 
-        episodeguide = etree.SubElement(tv_node, 'episodeguide')
-        episodeguideurl = etree.SubElement(episodeguide, 'url', post='yes', cache='auth.json')
         if tvdb_id:
+            episodeguide = etree.SubElement(tv_node, 'episodeguide')
+            episodeguideurl = etree.SubElement(episodeguide, 'url', post='yes', cache='auth.json')
             episodeguideurl.text = sickbeard.TVInfoAPI(TVINFO_TVDB).config['epg_url'].replace('{MID}', tvdb_id)
 
         mpaa = etree.SubElement(tv_node, 'mpaa')
@@ -227,7 +228,7 @@ class KODIMetadata(generic.GenericMetadata):
     def write_show_file(self, show_obj):
         # type: (sickbeard.tv.TVShow) -> bool
         """
-        This method ovverides handles _show_data as a string
+        This method overides handles _show_data as a string
         instead of default ElementTree.
         """
         data = self._show_data(show_obj)
@@ -520,6 +521,43 @@ def remove_default_attr(*args, **kwargs):
                 pass
 
         db.DBConnection().set_flag('kodi_nfo_default_removed')
+        sickbeard.classes.loading_msg.set_msg_progress(msg, '100%')
+
+    except(BaseException, Exception):
+        pass
+
+
+def rebuild_nfo(*args, **kwargs):
+    """
+    General meta .nfo rebuilder no matter the source of the .nfo
+
+    case 1, rebuild missing uniqueids and set default="true" to correct uid type
+    """
+    try:
+        from .. import db
+        msg = 'Changing Kodi Nfo'
+        sickbeard.classes.loading_msg.set_msg_progress(msg, '0%')
+
+        kodi = metadata_class()
+        num_shows = len(sickbeard.showList)
+        for n, cur_show_obj in enumerate(sickbeard.showList):
+            try:
+                with cur_show_obj.lock:
+                    # call for progress with value
+                    sickbeard.classes.loading_msg.set_msg_progress(msg, '{:6.2f}%'.format(float(n)/num_shows * 100))
+
+                    try:
+                        nfo_path = kodi.get_show_file_path(cur_show_obj)
+                        sg_helpers.remove_file_perm(nfo_path)
+                    except(BaseException, Exception):
+                        pass
+
+                    kodi.write_show_file(cur_show_obj)
+
+            except(BaseException, Exception):
+                pass
+
+        db.DBConnection().set_flag('kodi_nfo_rebuild_uniqueid')
         sickbeard.classes.loading_msg.set_msg_progress(msg, '100%')
 
     except(BaseException, Exception):

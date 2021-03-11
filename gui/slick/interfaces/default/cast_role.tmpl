@@ -1,0 +1,169 @@
+#import re
+#import sickbeard
+#from sickbeard import TVInfoAPI
+#from sickbeard.helpers import anon_url
+#from sickbeard.tv import PersonGenders
+#from six import iteritems
+<% def sg_var(varname, default=False): return getattr(sickbeard, varname, default) %>#slurp#
+<% def sg_str(varname, default=''): return getattr(sickbeard, varname, default) %>#slurp#
+##
+#set global $title = 'Character'
+#if $character.name
+    #set global $title = $character.name + ' (Character)'
+#end if
+#set global $header = 'Character'
+#set global $sbPath = '../..'
+#set global $topmenu = 'Character'
+##
+#import os.path
+#set global $inc_ofi = True
+#include $os.path.join($sg_str('PROG_DIR'), 'gui/slick/interfaces/default/inc_top.tmpl')
+<script type="text/javascript" src="$sbRoot/js/cast.js?v=$sbPID"></script>
+
+#if $varExists('header')
+	<h1 class="header">$header</h1>
+#else
+	<h1 class="title">$title</h1>
+#end if
+
+##
+#set $html_selected = ' selected="selected"'
+#set $html_checked = ' checked="checked"'
+<style>
+.main-image{float:left;margin:0 20px 20px 0}
+#character-content > .main-image{margin-bottom:19px}
+#character .name{margin-right:6px}
+#character-content .cast-bg{height:300px;width:215px;display:block; background-color:#181818 !important; border:1px solid #181818; object-fit: contain; font-family: 'object-fit: contain;'; -moz-border-radius:10px; -webkit-border-radius:10px; border-radius:10px}
+#character-content .thumb{display:block}
+#character-content > .cast .cast-bg{height:300px; margin:0 auto; background:url(/images/poster-person.jpg) center center no-repeat}
+</style>
+<%
+def param(visible=True, rid=None, cache_person=None, cache_char=None, person=None, role=None, tvid_prodid=None, thumb=None, oid=None, pid=None):
+    """
+    make the url param list
+    """
+    if cache_char or role:
+        oid = ('oid=%s' % oid, '')[not visible or None is oid or str(rid) == str(oid)]
+        return ('imagecache/character?', '')[not cache_char] + '&amp;'.join([kv for kv in ('rid=%s' % rid, 'tvid_prodid=%s' % (cache_char or role).tvid_prodid, ('', 'thumb=%s' % thumb)[not role and None is not thumb], ('person_id=%s' % pid, '')[not pid], ('prefer_person=1', '')[not pid], oid) if kv])
+    if cache_person:
+        oid = ('oid=%s' % oid, '')[not visible or None is oid or str(rid) == str(oid)]
+        return 'imagecache/person?' + '&amp;'.join([kv for kv in ('pid=%s' % rid, ('', 'thumb=%s' % thumb)[None is not thumb], oid) if kv])
+    if person:
+        oid = ('oid=%s' % person.id, '')[not visible or str(person.ref_id()) == str(person.id)]
+        return '&amp;'.join([kv for kv in ('rid=%s' % person.ref_id(), oid) if kv])
+    return 'param not implemented properly'
+%>
+	<div id="character">
+		<div id="character-content">
+			<div class="main-image cast">
+				<a class="thumb" href="$sbRoot/$param(rid=$character.ref_id(), cache_char=$show_obj, thumb=0, oid=$character.id)" rel="dialog"><img src="$sbRoot/$param(False, $character.id, cache_char=$show_obj)" class="cast-bg"></a>
+			</div>
+
+			<div class="intro">
+				<h2><span class="name">$character.name</span></h2>
+			</div>
+
+#if $character.person
+    #set $num_people = len($character.person)
+    #set $rc_clean = re.compile(r'(?i)[^a-z0-9]')
+			<div>
+				portrayed by
+    #for $cur_enum, $cur_person in enumerate($character.person, 1)
+        #set $gender = 'themself'
+        #if $PersonGenders.female == $cur_person.gender#
+            #set $gender = 'herself'
+        #elif $PersonGenders.male == $cur_person.gender#
+            #set $gender = 'himself'
+        #end if#
+        #set $name = ($cur_person.name, $gender)[$rc_clean.sub('', $cur_person.name.lower()) == $rc_clean.sub('', $character.name.lower())]
+				<a href="$sbRoot/home/person?$param(person=$cur_person)">$name</a>#if 2 <= $num_people and $cur_enum + 1 == $num_people# and #elif 2 < $num_people and $cur_enum < $num_people#<span>, </span>#end if#
+    #end for
+			</div>
+#end if
+
+<style>
+#if $character.person
+#show-content .about{margin:10px 0 7px}
+#else
+#show-content .about{margin:35px 0 12px}
+#end if
+#show-content .cast-bg{display:block; background-color:#181818; border:1px solid #181818; -moz-border-radius:10px; -webkit-border-radius:10px; border-radius:10px}
+#show-content .cast .cast-bg{height:200px; background:url(/images/poster-person.jpg) center center no-repeat}
+#show-content .role-panel{min-width:277px; float:left}
+#show-content .role-panel .main-image{margin-right:5px}
+#show-content .name{max-width:143px; float:left; margin-top:1.5em}
+#show-content:after{display:block; content:"."; height:0; clear:both; visibility:hidden}
+</style>
+
+			<div id="show-content">
+				<div class="about">is known in your show list as,</div>
+#for $cur_char in $roles
+				<div class="role-panel">
+					<div class="main-image cast">
+    #set $cid_param = ('', '&amp;cid=%s' % $cur_char['character_id'])[$cur_char['character_id'] != $cur_char['character_rid']]
+						<a class="thumb" href="$sbRoot/$param(rid=$cur_char['character_id'], cache_char=$cur_char['show_obj'], pid=$cur_char['person_id'], thumb=0)" rel="dialog"><img class="cast-bg" src="$sbRoot/$param(False, $cur_char['character_id'], cache_char=$cur_char['show_obj'], thumb=1, pid=$cur_char['person_id'])"></a>
+					</div>
+					<div class="name">
+	#if $character.show_obj.tvid_prodid != $cur_char['show_obj'].tvid_prodid
+						<p><a href="$sbRoot/home/role?$param(rid=$cur_char['character_id'], role=$cur_char['show_obj'])">$cur_char['character_name']</a>
+	#else
+						<p>$cur_char['character_name']
+	#end if
+						<span class="grey-text">in </span><a href="$sbRoot/home/view-show?tvid_prodid=$cur_char['show_obj'].tvid_prodid">$cur_char['show_obj'].name</a>
+						#if 1 < $len($character.person)#<span class="grey-text"> by </span>$cur_char.person_name#end if#</p>
+					</div>
+				</div>
+#end for
+			</div>
+
+<style>
+#vitals{clear:both}
+.details-info.akas{max-height:100px; overflow:auto; min-width:300px; word-break:normal}
+.details-info i{font-style:normal; font-size:smaller}
+.links{display:block; padding:0}
+.links li{display: inline-block; padding:0 10px 0 0}
+.links img{margin-bottom: -1px; vertical-align:initial}
+#character .details-title{width:auto}
+#character .details-info{margin-left:50px}
+</style>
+
+#set $section_links = False
+#for $cur_src, $cur_sid in sorted(iteritems($character.ids))
+    #if $TVInfoAPI($cur_src).config.get('character_url')
+        #if not $section_links
+            #set $section_links = True
+			<div>
+				<span class="details-title">Links</span>
+				<span class="details-info">
+					<ul class="links">
+        #end if
+						<li>
+        #if $TVInfoAPI($cur_src).config.get('icon')##slurp
+					<img alt="$TVInfoAPI($cur_src).name" height="16" width="16" src="$sbRoot/images/$TVInfoAPI($cur_src).config['icon']">#slurp
+        #end if#
+							<a href="$anon_url($TVInfoAPI($cur_src).config['character_url'] % $cur_sid)" target="_blank">$TVInfoAPI($cur_src).name</a>
+						</li>
+    #end if
+#end for
+#if $section_links
+					</ul>
+				</span>
+			</div>
+#end if
+
+
+#if $character.biography
+			<div>
+				<h3>Bio</h3>
+				<div style="max-height:250px; overflow:auto; word-break:normal">
+					<p>$character.biography.replace('\n', '<br>')</p>
+				</div>
+			</div>
+#end if
+
+		</div><!-- #character-content -->
+	</div><!-- #character -->
+
+	<div></div>
+
+#include $os.path.join($sg_str('PROG_DIR'), 'gui/slick/interfaces/default/inc_bottom.tmpl')

@@ -525,6 +525,8 @@ HOME_LAYOUT = None
 FOOTER_TIME_LAYOUT = 0
 POSTER_SORTBY = None
 POSTER_SORTDIR = None
+DISPLAY_SHOW_GLIDE = {}
+DISPLAY_SHOW_GLIDE_SLIDETIME = 3000
 DISPLAY_SHOW_VIEWMODE = 0
 DISPLAY_SHOW_BACKGROUND = False
 DISPLAY_SHOW_BACKGROUND_TRANSLUCENT = False
@@ -675,6 +677,7 @@ def init_stage_1(console_logging):
         EPISODE_VIEW_LAYOUT, EPISODE_VIEW_SORT, EPISODE_VIEW_DISPLAY_PAUSED, \
         EPISODE_VIEW_MISSED_RANGE, EPISODE_VIEW_POSTERS, FANART_PANEL, FANART_RATINGS, \
         EPISODE_VIEW_VIEWMODE, EPISODE_VIEW_BACKGROUND, EPISODE_VIEW_BACKGROUND_TRANSLUCENT, \
+        DISPLAY_SHOW_GLIDE, DISPLAY_SHOW_GLIDE_SLIDETIME, \
         DISPLAY_SHOW_VIEWMODE, DISPLAY_SHOW_BACKGROUND, DISPLAY_SHOW_BACKGROUND_TRANSLUCENT, \
         DISPLAY_SHOW_VIEWART, DISPLAY_SHOW_MINIMUM, DISPLAY_SHOW_SPECIALS, HISTORY_LAYOUT, \
         BROWSELIST_HIDDEN, BROWSELIST_MRU
@@ -1333,6 +1336,8 @@ def init_stage_1(console_logging):
     FOOTER_TIME_LAYOUT = check_setting_int(CFG, 'GUI', 'footer_time_layout', 0)
     POSTER_SORTBY = check_setting_str(CFG, 'GUI', 'poster_sortby', 'name')
     POSTER_SORTDIR = check_setting_int(CFG, 'GUI', 'poster_sortdir', 1)
+    DISPLAY_SHOW_GLIDE = sg_helpers.ast_eval(check_setting_str(CFG, 'GUI', 'display_show_glide', None), {})
+    DISPLAY_SHOW_GLIDE_SLIDETIME = check_setting_int(CFG, 'GUI', 'display_show_glide_slidetime', 3000)
     DISPLAY_SHOW_VIEWMODE = check_setting_int(CFG, 'GUI', 'display_show_viewmode', 2)
     DISPLAY_SHOW_BACKGROUND = bool(check_setting_int(CFG, 'GUI', 'display_show_background', 1))
     DISPLAY_SHOW_BACKGROUND_TRANSLUCENT = bool(check_setting_int(
@@ -2326,6 +2331,8 @@ def save_config():
     new_config['GUI']['poster_sortby'] = POSTER_SORTBY
     new_config['GUI']['poster_sortdir'] = POSTER_SORTDIR
 
+    new_config['GUI']['display_show_glide'] = '%s' % (DISPLAY_SHOW_GLIDE or {})
+    new_config['GUI']['display_show_glide_slidetime'] = int(DISPLAY_SHOW_GLIDE_SLIDETIME)
     new_config['GUI']['display_show_viewmode'] = int(DISPLAY_SHOW_VIEWMODE)
     new_config['GUI']['display_show_background'] = int(DISPLAY_SHOW_BACKGROUND)
     new_config['GUI']['display_show_background_translucent'] = int(DISPLAY_SHOW_BACKGROUND_TRANSLUCENT)

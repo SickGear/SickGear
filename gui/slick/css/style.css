@@ -129,11 +129,11 @@ fonts
 /* SickGear Icons */
 @font-face{
 	font-family:"sgicons";
-	src:url("fonts/sgicons.eot?v3");
-	src:url("fonts/sgicons.eot?v3#iefix") format("embedded-opentype"),
-		url("fonts/sgicons.woff?v3") format("woff"),
-		url("fonts/sgicons.ttf?v3") format("truetype"),
-		url("fonts/sgicons.svg?v3#sgicons") format("svg");
+	src:url("fonts/sgicons.eot?v4");
+	src:url("fonts/sgicons.eot?v4#iefix") format("embedded-opentype"),
+		url("fonts/sgicons.woff?v4") format("woff"),
+		url("fonts/sgicons.ttf?v4") format("truetype"),
+		url("fonts/sgicons.svg?v4#sgicons") format("svg");
 	font-weight:normal;
 	font-style:normal
 }
@@ -442,7 +442,7 @@ inc_top.tmpl
 	float:right
 }
 
-.upgrade-notification{
+.topbar-notification{
 	width:600px;
 	text-align:center;
 	margin-left:auto;
@@ -666,6 +666,18 @@ inc_top.tmpl
 	content:"\e634"
 }
 
+.sgicon-personlines:before{
+	content:"\e63f"
+}
+
+.sgicon-personsquare:before{
+	content:"\e640"
+}
+
+.sgicon-people:before{
+	content:"\e641"
+}
+
 .sgicon-watched:before{
 	content:"\e643"
 }
@@ -694,6 +706,10 @@ inc_top.tmpl
 	content:"\e899"
 }
 
+.sgicon-tvmaze:before{
+	content:"\e89a"
+}
+
 .sgicon-emby:before{
 	content:"\e900"
 }
@@ -710,6 +726,13 @@ inc_top.tmpl
 }
 .searchadd.icon-glyph{
 	background-position:-337px 0
+}
+
+.personage.icon-glyph{
+	background-position:-168px 0;
+	margin:1px 0 0 0;
+	height:14px;
+	opacity:0.75;filter:alpha(opacity=75);
 }
 
 #add-show-name:hover{
@@ -1242,6 +1265,30 @@ div.formpaginate{
 	vertical-align:-2px
 }
 
+.icon16,
+#search-results .results-item label{
+	padding:0;
+	margin:0
+}
+
+#search-results .results-item label i{
+	margin:0 6px 2px 0;
+}
+
+.icon16,
+#search-results .results-item label i{
+	display:inline-block;
+	vertical-align:middle;
+	width:16px;
+	height:16px;
+}
+
+.results-item.imdb label i, i.imdb{background-image:url(../images/imdb16.png)}
+.results-item.tmdb label i, i.tmdb{background-image:url(../images/tmdb16.png)}
+.results-item.trakt label i, i.trakt{background-image:url(../images/trakt16.png)}
+.results-item.tvdb label i, i.tvdb{background-image:url(../images/thetvdb16.png)}
+.results-item.tvmaze label i, i.tvmaze{background-image:url(../images/tvmaze16.png)}
+
 #addShowForm #promptForSettings,
 #addShowForm #rootDirStaticList input,
 #addShowForm div.field-pair input,
@@ -1261,7 +1308,7 @@ div.formpaginate{
 }
 
 #addShowForm #nameToSearch{
-	width:500px;
+	width:480px;
 	margin-top:0
 }
 #addShowForm #nameToSearch.wide{
@@ -1691,6 +1738,13 @@ body.back-art .footer{padding:20px 0}
 	margin-bottom:20px
 }
 
+#display-show #showCol{
+	padding:5px 10px
+}
+#display-show.back-art #showCol{
+	padding:5px 10px 4px
+}
+
 #edit-show.back-art .ui-tabs-nav .ui-state-default{
 	border-bottom:transparent !important;
 	margin-bottom:0;
@@ -1894,6 +1948,42 @@ a.addQTip{
 	color:#aaa
 }
 
+#display-show .cast-holder{display:block; margin:5px 0 0; padding:0; position:relative; width:100%; box-sizing:border-box}
+#display-show .cast-header{margin-bottom:3px; font-weight:bolder}
+#display-show .cast-panel{white-space:nowrap}
+#display-show .cast-panel ul{margin-bottom:0}
+#display-show .cast{display:inline-block; vertical-align:top; position:relative; top:0; width:100%;/*170px*/ height:auto; padding:6px 0; margin:0 0 10px; text-align:center}
+#display-show .cast,
+#display-show .cast .thumb .cast-bg,
+.glide-arrows button,
+#pin-glide{-moz-border-radius:3px; -webkit-border-radius:3px; border-radius:3px}
+#display-show .cast .thumb{display:block}
+#display-show .cast .thumb,
+#display-show .cast .thumb .cast-bg{height:150px}
+#display-show .cast .thumb .cast-bg{display:block; margin:0 auto; background:url(../images/poster-person150.jpg) center center no-repeat; border:1px solid #181818}
+#display-show .back-art.pro.ii .cast .thumb .cast-bg{opacity:0.85; filter:alpha(opacity=85)}
+#display-show .role,
+#display-show .person{width:auto; overflow:hidden; margin:0 5px; text-overflow:ellipsis; white-space:nowrap}
+.glide-arrows button{cursor:pointer; padding:1px 0 0; border:0; outline:0; position:absolute; top:110px; z-index:1; width:22px; height:21px; margin-top:-9px; -webkit-box-shadow:0 .5rem 4rem 0 rgba(0,0,0,.5); box-shadow:0 .5rem 4rem 0 rgba(0,0,0,.5)}
+.glide-arrows button{background-color:rgb(255,255,255)}
+.glide-arrows button svg{padding:1px}
+.glide-next{right:0.7rem}
+.glide-prev{left:0.7rem}
+#pin-glide,
+#pin-glide i{display:block; width:22px; height:21px; z-index:99}
+#pin-glide{position:absolute; top:135px; left:0.7rem; background-color:rgba(0,0,0,0.5); border:0; padding:0}
+.contain-glide #pin-glide{cursor:pointer}
+.glide-arrows button:hover,
+#pin-glide:hover{background-color:#ed145b; -webkit-transition:all .2s ease-in-out; transition:all .2s ease-in-out; opacity:0.5; filter:alpha(opacity=50)}
+#pin-glide:hover i{color:black !important; opacity:1 !important; filter:alpha(opacity=1) !important}
+#pin-glide i{margin:0; line-height:21px; color:rgb(255,255,255); opacity:0.7; filter:alpha(opacity=70)}
+.glide-arrows button,
+#pin-glide.one .one{opacity:0.3; filter:alpha(opacity=30)}
+#pin-glide.two .two, #pin-glide.three .three, #pin-glide.four .four{font-size:12px}
+#pin-glide.two .two{margin-left:-1px}
+#pin-glide.one .two, #pin-glide.one .three, #pin-glide.one .four, #pin-glide.two .one, #pin-glide.two .three, #pin-glide.two .four,
+#pin-glide.three .one, #pin-glide.three .two, #pin-glide.three .four, #pin-glide.four .one, #pin-glide.four .two, #pin-glide.four .three{display:none}
+
 span.imdbstars{
 	display:inline-block;
 	margin:0 3px 0 0;
@@ -1914,8 +2004,19 @@ span.imdbstars, span.imdbstars > *{
 	background:url("../images/rating.png") 0 -12px repeat-x
 }
 
-.moreless{
-	margin-top:0
+.details-plot [data-ctrl]{
+	display:inline-block;
+	float:right;
+	text-decoration:none;
+	margin-top:2px
+}
+
+.details-plot [data-ctrl] i{
+	margin-right:4px
+}
+
+.details-plot [data-ctrl] i.sgicon-arrowdown{
+	margin-right:-10px
 }
 
 .no-plot{
@@ -4824,6 +4925,10 @@ tablesorter.css
 	vertical-align:baseline
 }
 
+#addRootDirTable.tablesorter.existing-highlight td{
+	vertical-align:middle
+}
+
 /* remove extra border from left edge */
 .tablesorter th:first-child,
 .tablesorter td:first-child{
@@ -5088,3 +5193,20 @@ pnotify.css
 	margin-right:-10px
 }
 
+/* =======================================================================
+glide.core.css
+========================================================================== */
+.glide__slides{will-change: auto !important; -ms-touch-action: auto !important; touch-action: auto !important}
+
+/* =======================================================================
+fancybox.css Overrides
+========================================================================== */
+.fancybox-container .fancybox-bg{
+	background-color:rgba(0, 0, 0, 0.4)
+}
+.fancybox-image{
+	 -moz-border-radius:10px; -webkit-border-radius:10px; border-radius:10px
+}
+.fancybox-container .fancybox-progress{
+	background-color:#181818
+}

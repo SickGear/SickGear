@@ -34,6 +34,10 @@ def getShowImage(url, img_num=None, show_name=None, supress_log=False):
     :param supress_log:
     :type show_name: AnyStr or None
     """
+    # fix for undocumented type change from str to dict
+    if isinstance(url, dict):
+        url = url.get('original', url.get('medium'))
+
     if None is url:
         return None
 

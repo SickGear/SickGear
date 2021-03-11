@@ -68,24 +68,32 @@ function preventDefault() {
 }
 
 function initFancybox() {
-    if ($("a[rel=dialog]").length > 0) {
-        $.getScript(sbRoot + '/js/fancybox/jquery.fancybox.js', function () {
-            $("head").append("<link rel='stylesheet' href='" + sbRoot + "/js/fancybox/jquery.fancybox.css'>");
-            $("a[rel=dialog]").fancybox({
-                type: "image",
-				padding: 0,
-				helpers : {
-					title : null,
-					overlay : {
-						locked: false,
-						css : {
-							'background' : 'rgba(0, 0, 0, 0.4)'
-						}
-					}
-				}
-            });
-        });
-    }
+	if (!!$('a[rel="dialog"]').length) {
+		$.getScript(sbRoot + '/js/fancybox/jquery.fancybox.js', function () {
+			$('head').append('<link rel="stylesheet" href="' + sbRoot + '/js/fancybox/jquery.fancybox.css">');
+
+			$.sgFancyBoxOptions = {
+				loop: !0,
+				// gutter: 0,
+				// keyboard: !1,
+				smallBtn: !0,
+				toolbar: !0,
+				buttons: ['slideShow', 'thumbs', 'close'],
+				animationEffect: 'fade',
+				transitionEffect: 'slide',
+				caption : function( instance, item ) {
+					var caption = $(this).data('caption') || '';
+					return (caption.length ? caption + '<br>' : '')
+						+ 'Image <span data-fancybox-index></span> of <span data-fancybox-count></span>';
+				},
+			};
+
+			$().fancybox(jQuery.extend({
+				selector: 'a[rel=dialog]',
+				hideScrollbar: !1
+			}, $.sgFancyBoxOptions));
+		});
+	}
 }
 
 function initTabs() {
@@ -105,7 +113,7 @@ function initTabs() {
             }
 
             //Dont use the builtin fx effects. This will fade in/out both tabs, we dont want that
-            //Fadein the new tab yourself            
+            //Fadein the new tab yourself
             $(ui.newPanel).hide().fadeIn(0);
 
             if (lastOpenedPanel) {

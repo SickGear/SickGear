@@ -1,6 +1,8 @@
 /** @namespace $.SickGear.Root */
 /** @namespace config.sortArticle */
 /** @namespace config.resultsSortby */
+/** @namespace config.searchTests */
+/** @namespace config.folder */
 $(document).ready(function () {
 
 	function htmlFlag(lang) {
@@ -65,7 +67,7 @@ $(document).ready(function () {
 		var elTvDatabase = $('#provided-tvid'),
 			elInfosrcLang = $('#infosrc-lang-select'),
 			tvsrcName = elTvDatabase.find('option:selected').text(),
-			tvSearchSrc = 0 < tvsrcName.length ? ' on ' + tvsrcName : '';
+			tvSearchSrc = 0 < tvsrcName.length ? ' on <span class="boldest">' + elTvDatabase.find('option:selected').attr('data-name') + '</span>' : '';
 
 		$('#search-results').empty().html('<img id="searchingAnim" src="' + sbRoot + '/images/loading32' + themeSpinner + '.gif" height="32" width="32" />'
 			+ ' searching <span class="boldest">' + cleanseText(elNameToSearch.val(), !0) + '</span>'
@@ -86,19 +88,23 @@ $(document).ready(function () {
 			},
 			success: function (data) {
 				var resultStr = '', attrs = '', checked = !1, rowType, row = 0, srcState = '',
-					resultItem, resultStrBuffer = '', nBufferSize = 20, nBuffer = 0, nAll = 0;
+					resultItem, resultStrBuffer = '', nBufferSize = 9999, nBuffer = 0, nAll = 0;
 
 				if (null === data.results || 0 === data.results.length) {
 					resultStr += '<span class="boldest">Sorry, no results found. Try a different search.</span>';
 				} else {
-					var result = {
-						SrcName: 0, isInDB: 1, SrcId: 2, SrcDBId: 3, SrcUrl: 4, ShowID: 5, Title: 6, TitleHtml: 7,
-						Aired: 8, Network: 9, Genre: 10, Overview: 11, RelSort: 12, NewestAired: 13, OldestAired: 14, AzSort: 15 , ZaSort: 16, ImgUrl: 17
+					var n = 0, result = {
+						SrcName: n, isInDB: ++n, SrcId: ++n, SrcDBId: ++n, SrcSlug: ++n, SrcUrl: ++n, ShowID: ++n,
+						Title: ++n, TitleHtml: ++n, Aired: ++n, Network: ++n, Genre: ++n, Overview: ++n, ImgUrl: ++n,
+						RelSort: ++n, RelCombined : ++n, NewestAired: ++n, NewestCombined: ++n,
+						OldestAired: ++n, OldestCombined: ++n, AzSort: ++n, AzCombined : ++n, ZaSort: ++n, ZaCombined: ++n,
+						DirectIdMatch: ++n, RenameSuggest: ++n
 					};
 					$.each(data.results, function (index, item) {
-						attrs = (!1 !== item[result.isInDB] ? ' disabled="disabled"' : (!0 === checked ? '' : ' checked'));
-						checked = (' checked' === attrs) ? !0 : checked;
-						rowType = (0 == row % 2 ? '' : ' alt');
+						attrs = (!1 !== item[result.isInDB] ? ' disabled="disabled"' : (!0 === checked ? '' : ' checked'))
+							+ ' data-rename-suggest="' + item[result.RenameSuggest] + '"';
+						checked = (-1 === attrs.indexOf('checked')) ? checked : !0;
+						rowType = (0 === row % 2 ? '' : ' alt');
 						row++;
 
 						var displayShowName = cleanseText(item[result.Title], !0), showstartdate = '';
@@ -115,7 +121,13 @@ $(document).ready(function () {
 							null === item[result.SrcName] ? '' : item[result.SrcName],
 							!1 === item[result.isInDB] ? '' : '<span class="exists-db"><a href="' + sbRoot + item[result.isInDB] + '" target="_blank">exists in db</a></span>']
 							.join(' - ').replace(/(^[\s-]+|[\s-]+$)/, '');
-						resultItem = '<div class="results-item' + rowType + '" data-indb="' +  (!1 === item[result.isInDB] ? '' : '1') + '" data-sort-rel="' + item[result.RelSort] + '" data-sort-newest="' + item[result.NewestAired] + '" data-sort-oldest="' + item[result.OldestAired] + '" data-sort-az="' + item[result.AzSort] + '" data-sort-za="' + item[result.ZaSort] + '">'
+						resultItem = '<div class="results-item' + ' ' + item[result.SrcSlug] + rowType + '" data-indb="' + (!1 === item[result.isInDB] ? '' : '1')
+							+ '" data-sort-rel="' + item[result.RelSort] + '" data-sort-rel-combined="' + item[result.RelCombined]
+							+ '" data-sort-newest="' + item[result.NewestAired] + '" data-sort-newest-combined="' + item[result.NewestCombined]
+							+ '" data-sort-oldest="' + item[result.OldestAired] + '" data-sort-oldest-combined="' + item[result.OldestCombined]
+							+ '" data-sort-az="' + item[result.AzSort] + '" data-sort-az-combined="' + item[result.AzCombined]
+							+ '" data-sort-za="' + item[result.ZaSort] + '" data-sort-za-combined="' + item[result.ZaCombined] + '">'
+							+ '<label><i></i>'
 							+ '<input id="which_series" type="radio"'
 							+ ' class="stepone-result-radio"'
 							+ (!1 === item[result.isInDB]
@@ -124,7 +136,7 @@ $(document).ready(function () {
 							+ ' name="which_series"'
 							+ ' value="' + cleanseText([item[result.SrcDBId], item[result.SrcName], item[result.ShowID], item[result.Title]].join('|'), !0) + '"'
 							+ attrs
-							+ ' />'
+							+ '></label>'
 							+ '<a'
 							+ ' class="stepone-result-title"'
 							+ ' title="<div style=\'color: rgb(66, 139, 202)\'>' + cleanseText(item[result.TitleHtml], !0) + '</div>'
@@ -134,7 +146,7 @@ $(document).ready(function () {
 							+ (0 < item[result.Overview].length ? '<p style=\'margin:0 0 2px\'>' + item[result.Overview] + '</p>' : '')
 							+ '<span style=\'float:right;clear:both\'>Click for more</span>'
 							+ '"'
-							+ ' href="' + anonURL + item[result.SrcUrl] + ((data.langid && '' != data.langid) ? '&lid=' + data.langid : '') + '"'
+							+ ' href="' + anonURL + item[result.SrcUrl] + '"'
 							+ ' onclick="window.open(this.href, \'_blank\'); return !1;"'
 							+ '>' + (config.sortArticle ? displayShowName : displayShowName.replace(/^((?:A(?!\s+to)n?)|The)(\s)+(.*)/i, '$3$2<span class="article">($1)</span>')) + '</a>'
 							+ showstartdate
@@ -170,7 +182,9 @@ $(document).ready(function () {
 						+ '<option ' + defSortby + 'value="rel">Relevancy</option>'
 						+ '</optgroup><optgroup label="With...">'
 						+ '<option ' + (!/notop$/.test(config.resultsSortby) ? classAttrSel : '') + 'value="ontop">Exists on top</option>'
-						+ '<option ' + (/notop$/.test(config.resultsSortby) ? classAttrSel : '') + 'value="notop">Exists in mix</option>'
+						+ '<option ' + (/notop$/.test(config.resultsSortby) ? classAttrSel : '') + 'value="notop">Exists combined</option>'
+						+ '<option ' + (!/nogroup/.test(config.resultsSortby) ? classAttrSel : '') + 'value="ingroup">Source grouped</option>'
+						+ '<option ' + (/nogroup$/.test(config.resultsSortby) ? classAttrSel : '') + 'value="nogroup">Source combined</option>'
 						+ '</optgroup></select></span>'
 						+ '</legend>' + "\n"
 						+ '<div id="holder">'
@@ -188,7 +202,7 @@ $(document).ready(function () {
 						$('#search-results #count').text(nAll + ' search result' + (1 === nAll ? '' : 's') + '...');
 						$('#search-results-buffer .results-item').appendTo('#holder');
 						container$.isotope( 'reloadItems' ).isotope(
-							{sortBy: $('#results-sortby').find('option:not([value$="top"]).selected-text').val()});
+							{sortBy: $('#results-sortby').find('option:not([value$="top"],[value$="group"]).selected-text').val()});
 						myform.loadsection(0);
 					});
 					$('#search-results #count').text((nBuffer + ' / ' + nAll)
@@ -205,7 +219,8 @@ $(document).ready(function () {
 							? (1000 > value ? value + 1000 : value)
 							: (1000 > value ? value : value - 1000))}),
 					getData = (function(itemElem, sortby){
-						var position = parseInt($(itemElem).attr('data-sort-' + sortby));
+						var position = parseInt($(itemElem).attr('data-sort-' + sortby +
+							($('#results-sortby').find('option[value$="ingroup"]').hasClass(selClass) ? '' : '-combined')));
 						return (!$(itemElem).attr('data-indb')) ? position : reOrder(position);
 					});
 
@@ -215,7 +230,7 @@ $(document).ready(function () {
 
 				container$.isotope({
 					itemSelector: '.results-item',
-					sortBy: sortbySelect$.find('option:not([value$="top"]).' + selClass).val(),
+					sortBy: sortbySelect$.find('option:not([value$="top"],[value$="group"]).' + selClass).val(),
 					layoutMode: 'masonry',
 					getSortData: {
 						az: function(itemElem){ return getData(itemElem, 'az'); },
@@ -234,11 +249,11 @@ $(document).ready(function () {
 
 				sortbySelect$.on('change', function(){
 					var selectedSort = String($(this).val()), sortby = selectedSort, curSortby$, curSel$, newSel$;
-
-					curSortby$ = $(this).find('option:not([value$="top"])');
-					if (/top$/.test(selectedSort)){
+					curSortby$ = $(this).find('option:not([value$="top"],[value$="group"])');
+					if (/(top|group)$/.test(selectedSort)){
 						sortby = curSortby$.filter('.' + selClass).val();
-						curSortby$ = $(this).find('option[value$="top"]');
+						curSortby$ = $(this).find('option[value$="'
+							+ (-1 !== selectedSort.indexOf('top') ? 'top' : 'group') + '"]');
 					}
 					curSel$ = curSortby$.filter('.' + selClass);
 					curSel$.html(curSel$.html().replace(/(?:>|&gt;)\s/ , '')).removeClass(selClass);
@@ -252,7 +267,9 @@ $(document).ready(function () {
 					$('.results-item').removeClass('alt');
 					container$.isotope('updateSortData').isotope({sortBy: sortby});
 
-					config.resultsSortby = sortby + ($(this).find('option[value$="notop"]').hasClass(selClass) ? ' notop' : '');
+					config.resultsSortby = sortby +
+						($(this).find('option[value$="notop"]').hasClass(selClass) ? ' notop' : '') +
+						($(this).find('option[value$="nogroup"]').hasClass(selClass) ? ' nogroup' : '');
 					$.get(sbRoot + '/config/general/save-result-prefs', {ui_results_sortby: selectedSort});
 				});
 
@@ -262,6 +279,30 @@ $(document).ready(function () {
 			}
 		});
 	}
+
+	function submitSearch(searchFor){
+		$('#nameToSearch').val(searchFor);
+		!!searchFor && $('#searchName').click();
+		return !1;
+	}
+
+	$('#try-0').on('click', function(){return submitSearch('');});
+	$('#try-1').on('click', function(){return submitSearch(config.searchTests[1]);});
+	$('span[id^="try-"]').each(function(i, el){
+		var match = $(el).attr('id').match(/try-(\d+)(-.*)$/i);
+		if (!!match){
+			$('#' + match[0]).on('click', function(){
+				var match = $(this).attr('id').match(/try-(\d+)(-.*)$/i),
+					num = parseInt(match[1], 10),
+					kind = match[2],
+					nextEl$ = $('span[id$="'+ (num + 1) + kind + '"]');
+
+				$(this).closest('span[id^="try-"]').addClass('hide');
+				(nextEl$.length ? nextEl$ : $('span[id$="'+ kind + '"]:first')).removeClass('hide');
+				return submitSearch(config.searchTests[num]);
+			});
+		}
+	});
 
 	var elNameToSearch = $('#nameToSearch'),
 		elSearchName = $('#searchName');
@@ -342,8 +383,15 @@ $(document).ready(function () {
 			elFullShowPath = $('#fullShowPath'),
 			idxWhichShowID = 2, idxWhichTitle = 3;
 
+		if (!!elRadio.length) {
+			$('#rename-suggest').val(elRadio.attr('data-rename-suggest'));
+		}
+
+		if (!!config.folder.length) {
+			showName = config.folder;
+		}
 		// if they've picked a radio button then use that
-		if (elRadio.length) {
+		else if (elRadio.length) {
 			showName = elRadio.val().split('|')[idxWhichTitle];
 			elScene[0].checked = 0 <= showSceneMaps.indexOf(parseInt(elRadio.val().split('|')[idxWhichShowID], 10));
 			$('#scene-maps-found').css('display', elScene.is(':checked') ? 'block' : 'None');
@@ -354,7 +402,7 @@ $(document).ready(function () {
 		}
 		updateAniGrouplist(showName);
 		var sample_text = '<p>Adding show <span class="show-name">' + cleanseText(showName, !0) + '</span>'
-			+ ('' == showName ? 'into<br />' : '<br />into')
+			+ (!showName.length ? 'into<br />' : '<br />into' + (!config.folder.length ? '' : ' user location'))
 			+ ' <span class="show-dest">';
 
 		// if we have a root dir selected, figure out the path

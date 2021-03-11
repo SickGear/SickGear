@@ -3,9 +3,12 @@ from lib.libtrakt.indexerapiinterface import TraktIndexer
 from lib.tvmaze_api.tvmaze_api import TvMaze
 from lib.tmdb_api.tmdb_api import TmdbIndexer
 from lib.imdb_api.imdb_api import IMDbIndexer
-from lib.tvinfo_base import TVINFO_TWITTER, TVINFO_WIKIPEDIA, TVINFO_FACEBOOK, TVINFO_INSTAGRAM, \
-    TVINFO_TVDB, TVINFO_TVRAGE, TVINFO_TVMAZE, TVINFO_IMDB, TVINFO_TRAKT, TVINFO_TMDB, TVINFO_TRAKT_SLUG, \
-    TVINFO_TVDB_SLUG
+# noinspection PyUnresolvedReferences
+from lib.tvinfo_base import (
+    TVINFO_FACEBOOK, TVINFO_INSTAGRAM, TVINFO_TWITTER, TVINFO_WIKIPEDIA,
+    TVINFO_IMDB, TVINFO_TMDB, TVINFO_TRAKT, TVINFO_TVDB, TVINFO_TVMAZE, TVINFO_TVRAGE,
+    TVINFO_TRAKT_SLUG, TVINFO_TVDB_SLUG
+)
 
 init_config = {
     'valid_languages': ['da', 'fi', 'nl', 'de', 'it', 'es', 'fr', 'pl', 'hu', 'el', 'tr',
@@ -41,7 +44,7 @@ tvinfo_config = {
     TVINFO_TVMAZE: dict(
         main_url='https://www.tvmaze.com/',
         id=TVINFO_TVMAZE,
-        name='TVmaze', slug='tvmaze',
+        name='TVmaze', slug='tvmaze', kodi_slug='tvmaze',
         module=TvMaze,
         api_params={},
         active=True,
@@ -78,7 +81,7 @@ tvinfo_config = {
     TVINFO_TMDB: dict(
         main_url='https://www.themoviedb.org/',
         id=TVINFO_TMDB,
-        name='TMDb', slug='tmdb',  kodi_slug='tmdb',
+        name='TMDb', slug='tmdb', kodi_slug='tmdb',
         module=TmdbIndexer,
         api_params={},
         active=True,

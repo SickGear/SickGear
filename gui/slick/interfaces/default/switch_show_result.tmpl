@@ -17,7 +17,9 @@
 
 <h4>Shows with changed episodes</h4>
 #for $show_obj, $show_data in $iteritems($show_list)
+    #if $hasattr($show_obj, 'tvid_prodid')
 	<div><a href="$sbRoot/home/view-show?tvid_prodid=$show_obj.tvid_prodid">$show_obj.name</a> - <a href="$sbRoot/home/get-switch-changed-episodes?tvid_prodid=$show_obj.tvid_prodid">($show_data.get('changed', 0) changed, $show_data.get('deleted', 0) deleted episodes)</a></div>
+    #end if
 #end for
 
 #include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_bottom.tmpl')

@@ -887,7 +887,7 @@ class TVInfoBase(object):
         pass
 
     def get_show(self, show_id, load_episodes=True, banners=False, posters=False, seasons=False,
-                       seasonwides=False, fanart=False, actors=False, old_call=False, **kwargs):
+                 seasonwides=False, fanart=False, actors=False, old_call=False, **kwargs):
         # type: (integer_types, bool, bool, bool, bool, bool, bool, bool, bool, Optional[Any]) -> Optional[TVInfoShow]
         """
         get data for show id
@@ -1086,6 +1086,10 @@ class TVInfoBase(object):
         if isinstance(item, integer_types):
             # Item is integer, treat as show id
             return self.get_show(item, (True, arg)[None is not arg], old_call=True)
+
+        # maybe adding this to make callee use showname so that i can bring in the new endpoint
+        if isinstance(arg, string_types) and 'Tvdb' == self.__class__.__name__:
+            return self.search_show(item)
 
         return self.search_show(item)
 

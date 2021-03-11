@@ -53,7 +53,7 @@ class PeopleQueue(generic_queue.GenericQueue):
                     self.add_cast_update(show_obj=show_obj, show_info_cast=None, uid=q['uid'], force=bool(q['forced']),
                                          scheduled_update=bool(q['scheduled']), add_to_db=False)
         except (BaseException, Exception) as e:
-            logger.log('Exception loading queue %s: %s' % (self.__class__.__name__, ex(e)), logger.ERROR)
+            logger.error('Exception loading queue %s: %s' % (self.__class__.__name__, ex(e)))
 
     def _clear_sql(self):
         return [
@@ -88,11 +88,11 @@ class PeopleQueue(generic_queue.GenericQueue):
                     data['main_cast'].append(result_item)
             return data
 
-    def show_in_queue(self, show_obj):
-        # type: (TVShow) -> bool
+    def show_in_queue(self, show_obj, check_inprogress=False):
+        # type: (TVShow, Optional[bool]) -> bool
         with self.lock:
             return any(1 for q in ((self.currentItem and [self.currentItem]) or []) + self.queue
-                       if show_obj == q.show_obj)
+                       if show_obj == q.show_obj and (True, q.inProgress)[check_inprogress])
 
     def abort_cast_update(self, show_obj):
         # type: (TVShow) -> None
@@ -179,25 +179,25 @@ class CastQueueItem(PeopleQueueItem):
         PeopleQueueItem.run(self)
 
         if self.show_obj:
-            logger.log('Starting to update show cast for %s' % self.show_obj.name)
-            old_cast = set((c.name, c.image_url or '', c.thumb_url or '',
-                            hash(*(p.name for p in c.person or [] if p.name)))
-                           for c in self.show_obj.cast_list or [] if c.name)
+            logger.log('Starting cast update for show %s' % self.show_obj.name)
+            old_cast = self.show_obj.cast_list_id()
             if not self.scheduled_update and not self.switch:
-                ui.notifications.message('Starting to update show cast for %s' % self.show_obj.name)
+                ui.notifications.message('Starting cast update for show %s' % self.show_obj.name)
             try:
                 self.show_obj.load_cast_from_tvinfo(self.show_info_cast, force=self.force, stop_event=self.stop)
+                update_success = True
             except (BaseException, Exception) as e:
+                update_success = False
                 logger.error('Exception in cast update queue: %s' % ex(e))
                 logger.debug('Traceback: %s' % traceback.format_exc())
-            if old_cast != set((c.name, c.image_url or '', c.thumb_url or '',
-                                hash(*(p.name for p in c.person or [] if p.name)))
-                               for c in self.show_obj.cast_list or [] if c.name):
+
+            if update_success and (old_cast != self.show_obj.cast_list_id()):
                 logger.debug('Update show nfo with new cast data')
                 self.show_obj.write_show_nfo(force=True)
+
             logger.log('Finished cast update for show %s' % self.show_obj.name)
             if not self.scheduled_update and not self.switch:
-                ui.notifications.message('Finished to update show cast for %s' % self.show_obj.name)
+                ui.notifications.message('Finished cast update for show %s' % self.show_obj.name)
 
         self.finish()
 

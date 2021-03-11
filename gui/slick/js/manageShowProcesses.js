@@ -4,25 +4,41 @@ $(document).ready(function() {
 		$(this).addClass('disabled');
 	});
 	$('.show-all-less').click(function(){
-		$(this).nextAll('table').hide();
-		$(this).nextAll('input.shows-more').show();
-		$(this).nextAll('input.shows-less').hide();
+		var root$ = $(this).closest('.section-tasks');
+		root$.find('table').addClass('hide');
+		root$.find('input.shows-more').removeClass('hide');
+		root$.find('input.shows-less').addClass('hide');
+		$(this).addClass('hide');
+		$(this).prevAll('input:first').removeClass('hide');
+		root$.find('table').prevAll('.task').find('input[value="Clear"]').addClass('hide');
 	});
 	$('.show-all-more').click(function(){
-		$(this).nextAll('table').show();
-		$(this).nextAll('input.shows-more').hide();
-		$(this).nextAll('input.shows-less').show();
+		var root$ = $(this).closest('.section-tasks');
+		root$.find('table').removeClass('hide');
+		root$.find('input.shows-more').addClass('hide');
+		root$.find('input.shows-less').removeClass('hide');
+		$(this).addClass('hide');
+		$(this).nextAll('input:first').removeClass('hide');
+		root$.find('input[value="Clear"]').removeClass('hide');
 	});
 
 	$('.shows-less').click(function(){
-		$(this).nextAll('table:first').hide();
-		$(this).hide();
-		$(this).prevAll('input:first').show();
+		$(this).parent().nextAll('table:first').addClass('hide');
+		$(this).addClass('hide');
+		$(this).prevAll('input:first').removeClass('hide');
+		$(this).nextAll('input[value="Clear"]:first').addClass('hide');
+		// if last open table is collapsed, ensure collapse all is actually expand all
+		var root$ = $('.section-tasks');
+		if (0 === root$.find('table').not('.hide').length){
+			root$.find('.show-all-less.btn').addClass('hide');
+			root$.find('.show-all-more.btn').removeClass('hide');
+		}
 	});
 	$('.shows-more').click(function(){
-		$(this).nextAll('table:first').show();
-		$(this).hide();
-		$(this).nextAll('input:first').show();
+		$(this).parent().nextAll('table:first').removeClass('hide');
+		$(this).addClass('hide');
+		$(this).nextAll('input:first').removeClass('hide');
+		$(this).nextAll('input[value="Clear"]:first').removeClass('hide');
 	});
 
 	$('input[id^="remove-btn-"]').click(function() {
@@ -43,18 +59,48 @@ $(document).ready(function() {
 
 	$('input[id^="clear-btn-"]').click(function() {
 		var param = {'show_type': $(this).data('action')};
-		$.getJSON(sbRoot + '/manage/show-tasks/clear-show-queue', param)
-			.done(function(){
-				location.reload();
-		})
+		$.confirm({
+			'title': 'Confirm cancel',
+			'message': 'Cancel pending actions ?',
+			'buttons': {
+				'Yes': {
+					'class': 'green',
+					'action': function () {
+						$.getJSON(sbRoot + '/manage/show-tasks/clear-show-queue', param)
+							.done(function(){
+								location.reload();
+						});
+					}
+				},
+				'No': {
+					'class': 'red',
+					'action': function () {}
+				}
+			}
+		});
 	});
 
-		$('input[id^="clear-people-btn"]').click(function() {
-			var param = {'people_type': $(this).data('action')};
-			$.getJSON(sbRoot + '/manage/show-tasks/clear-people-queue', param)
-				.done(function(){
-					location.reload();
-		})
+	$('input[id^="clear-people-btn"]').click(function() {
+		var param = {'people_type': $(this).data('action')};
+		$.confirm({
+			'title': 'Confirm cancel',
+			'message': 'Cancel pending actions ?',
+			'buttons': {
+				'Yes': {
+					'class': 'green',
+					'action': function () {
+						$.getJSON(sbRoot + '/manage/show-tasks/clear-people-queue', param)
+							.done(function(){
+								location.reload();
+							});
+					}
+				},
+				'No': {
+					'class': 'red',
+					'action': function () {}
+				}
+			}
+		});
 	});
 
 	function disableSaveBtn(state){

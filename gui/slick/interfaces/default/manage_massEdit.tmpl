@@ -1,5 +1,6 @@
 #import sickbeard
 #from sickbeard.common import Quality, qualityPresets, qualityPresetStrings, SD
+#from sickbeard.indexers.indexer_config import TVINFO_TVMAZE, TVINFO_TVDB
 #from lib import exceptions_helper as exceptions
 #from _23 import filter_list
 <% def sg_var(varname, default=False): return getattr(sickbeard, varname, default) %>#slurp#
@@ -188,6 +189,18 @@
 #end for
 			</select>
 		</div><br />
+	</div>
+
+	<div class="optionWrapper">
+		<span class="selectTitle">TV info source</span>
+		<div class="selectChoices">
+			<select id="edit_tvid" name="tvid" class="form-control form-control-inline input-sm">
+				<option value="keep">&lt; keep &gt;</option>
+#for $tv_src in $sickbeard.TVInfoAPI().search_sources
+				<option value="$tv_src" #if $tv_src == $tvid_value then $selected else ''#>$sickbeard.TVInfoAPI($tv_src).config['name']</option>
+#end for
+			</select><span style="white-space:nowrap">follow progress at manage/Show Tasks</span>
+		</div><br>
 	</div>
 
 	<div class="optionWrapper" style="font-size:13px;margin-top:15px">

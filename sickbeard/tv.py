@@ -262,7 +262,98 @@ def _make_date(dt):
     return dt.toordinal()
 
 
-class Person(object):
+def usable_id(value):
+    # type: (Union[AnyStr, int]) -> Optional[AnyStr, int]
+    """
+    return value as int if value is numerical,
+    or value as string if value is valid id:format
+    otherwise None
+    """
+    value_id = try_int(value, None)
+    if None is not value_id:
+        return value_id
+    return usable_rid(value)
+
+
+def usable_rid(value):
+    # type: (Union[AnyStr]) -> Optional[AnyStr]
+    """
+    return value if is a id:format is valid
+    otherwise None if value fails basic id format validation
+    """
+    if isinstance(value, string_types) and ':' in value:
+        temp = value.split(':')
+        if 2 == len(temp) and None not in [try_int(_x, None) for _x in temp]:
+            return value
+
+
+class Referential(object):
+    """
+    This class superimposes handling for a string based ID named `ref_id`.
+
+    __init__ will pass back control untouched to the object deriving
+    from this one if an integer is passed so that integer ID can peform
+    """
+
+    def __init__(self, sid=None):
+        self.id = None  # type: integer_types
+        self.ids = None  # type: Dict[int, integer_types]
+        self._rid = usable_rid(sid)
+
+    def has_ref_id(self, item):
+        if isinstance(item, integer_types):
+            return self.id == item
+
+        tvid, src_id = self.ref_id(rid=item, string=False)
+        return self.ids.get(tvid) == src_id
+
+    def ref_id(self,
+               rid=None,  # type: Optional[AnyStr, int]
+               string=True  # type: Optional[bool]
+               ):  # type: (...) -> Union[tuple[Optional[AnyStr, int], Optional[AnyStr, int]], AnyStr]
+        """
+        return either,
+         1) a prefered external unique id for a consistent reliable `reference`, or the internal row id as fallback
+         2) convert a consistent `reference` to src and src_id to use for matching to an internal row id
+            uses param rid or self._rid as reference id to convert if either is not Nonetype
+
+        for example,
+         1) if string is False, prefered static tuple[tvid, id], or tuple[None, id] if ids not set
+         2)          otherwise, prefered static 'tvid:id', or 'id' if ids not set
+         3) if string is False and self._rid contains ':', list[src, src_id]
+         4)           otherwise if self._rid contains ':', list['src', 'src_id']
+
+        reason, a row id is highly volatile, but a prefered ID is more reliable.
+        use cases,
+         show removed and readded, or src switched, then refreshing any character/person views will be consistent.
+         can share/save a character/person link/bookmark as it will be consistent across instances.
+         cast glide startAt is unreliable using glide index or row id.
+         """
+        # if self._rid is a temporary type string containing ':' (use case during init)
+        # return it as a tuple[int, int] -> src, src_id
+        rid = rid or self._rid
+        if usable_rid(rid):
+            self._rid = None  # consume once
+            parts = [try_int(_x, None) for _x in rid.split(':')]
+
+            # if string: no usage for this case
+            #     ? return rid
+            #     ? return '%s' % parts[0], '%s' % parts[1]
+            return parts[0], parts[1]
+
+        # get an available id from an order of preferred ids for use
+        if self.ids:
+            for cur_tvid in [TVINFO_IMDB, TVINFO_TVMAZE, TVINFO_TMDB, TVINFO_TRAKT]:
+                if self.ids.get(cur_tvid):
+                    if string:
+                        return '%s:%s' % (cur_tvid, self.ids.get(cur_tvid))
+                    return cur_tvid, self.ids.get(cur_tvid)
+        if string:
+            return '%s' % self.id
+        return None, self.id  # default internal id has no slug
+
+
+class Person(Referential):
     def __init__(
             self,
             name=None,  # type: AnyStr
@@ -287,6 +378,8 @@ class Person(object):
             tmp_character_obj=None  # type: Character
     ):  # type: (...) -> Person
 
+        super(Person, self).__init__(sid)
+
         self.updated = updated  # type: integer_types
         self._data_failure = False  # type: bool
         self._data_fetched = False  # type: bool
@@ -307,7 +400,8 @@ class Person(object):
         self.nicknames = nicknames or set()  # type: Set[AnyStr]
         self.akas = akas or set()  # type: Set[AnyStr]
         self.ids = ids or {}  # type: Dict[int, integer_types]
-        self.id = sid or self._get_sid(show_obj=show_obj)  # type: integer_types
+        if not self._rid:
+            self.id = sid or self._get_sid(show_obj=show_obj)  # type: integer_types
         new_dirty = not sid
         self.dirty_main = new_dirty  # type: bool
         self.dirty_ids = new_dirty  # type: bool
@@ -471,14 +565,19 @@ class Person(object):
                         self.dirty_main = True
 
     def load_from_db(self):
-        if self.id:
+        if self.id or usable_rid(self._rid):
             my_db = db.DBConnection()
-            pr = my_db.select('SELECT persons.*,'
-                              ' (SELECT group_concat(person_ids.src || ":" || person_ids.src_id, ";;;")'
-                              ' FROM person_ids WHERE person_ids.person_id = persons.id) as p_ids'
-                              ' FROM persons'
-                              ' LEFT JOIN person_ids pi on persons.id = pi.person_id'
-                              ' WHERE persons.id = ?', [self.id])
+            src, src_id = self.ref_id(string=False)
+            pr = my_db.select(
+                """
+                SELECT persons.*,
+                (SELECT group_concat(person_ids.src || ':' || person_ids.src_id, ';;;')
+                FROM person_ids WHERE person_ids.person_id = persons.id) as p_ids
+                FROM persons
+                LEFT JOIN person_ids pi on persons.id = pi.person_id
+                WHERE %s
+                """ % ('pi.src = ? and pi.src_id = ?', 'persons.id = ?')[not src],
+                ([src, src_id], [self.id])[not src])
             if pr:
                 p = pr[0]
                 birthdate = try_int(p['birthdate'], None)
@@ -494,10 +593,10 @@ class Person(object):
                             p_ids[k] = v
                         else:
                             p_ids[k] = try_int(v, None)
-                (self.name, self.gender, self.image_url, self.thumb_url, self.homepage, self.biography,
+                (self.id, self.name, self.gender, self.image_url, self.thumb_url, self.homepage, self.biography,
                  self.birthplace, self.birthday, self.deathday, self.ids, self.updated, self.deathplace,
                  self.real_name, self.height, self.nicknames, self.akas, self._data_fetched, self._data_failure) = \
-                    p['name'], p['gender'], p['image_url'], p['thumb_url'], p['homepage'], p['bio'], \
+                    p['id'], p['name'], p['gender'], p['image_url'], p['thumb_url'], p['homepage'], p['bio'], \
                     p['birthplace'], birthdate, deathdate, p_ids, p['updated'], p['deathplace'], p['realname'], \
                     p['height'], set((p['nicknames'] and p['nicknames'].split(';;;')) or []), \
                     set((p['akas'] and p['akas'].split(';;;')) or []), False, False
@@ -682,7 +781,7 @@ class Person(object):
     def save_to_db(self, show_obj=None, character_obj=None, force=False, stop_event=None):
         # type: (TVShow, Character, bool, threading.Event) -> None
         if not self._data_fetched:
-            self.get_missing_data(show_obj=show_obj, character_obj=character_obj, force=force, stop_event=stop_event)
+            self.get_missing_data(show_obj=show_obj, character_obj=character_obj, stop_event=stop_event)
         self._data_fetched = False
         if not any(d for d in (self.dirty_main, self.dirty_ids)):
             return
@@ -732,7 +831,7 @@ class Person(object):
                 for s, v in iteritems(self.ids):
                     cl.extend([
                         ['UPDATE person_ids SET src_id = ? WHERE person_id = ? AND src = ?', [v, self.id, s]],
-                        ['INSERT INTO person_ids (src, src_id, person_id) SELECT %s, "%s", %s WHERE changes() == 0'
+                        ["INSERT INTO person_ids (src, src_id, person_id) SELECT %s, '%s', %s WHERE changes() == 0"
                          % (s, v, self.id)]
                     ])
         if cl:
@@ -782,7 +881,7 @@ class Person(object):
     __nonzero__ = __bool__
 
 
-class Character(object):
+class Character(Referential):
     def __init__(
             self,
             name=None,  # type: AnyStr
@@ -798,6 +897,8 @@ class Character(object):
             tmp=False  # type:bool
     ):  # type: (...) -> Character
 
+        super(Character, self).__init__(sid)
+
         self.updated = updated  # type: integer_types
         self.name = name  # type: AnyStr
         self.persons_years = persons_years or {}  # type: Dict[integer_types, Dict[AnyStr, int]]
@@ -808,7 +909,8 @@ class Character(object):
         self.thumb_url = thumb_url  # type: Optional[AnyStr]
         self.show_obj = show_obj  # type: TVShow
         if not tmp:
-            self.id = sid or self._get_sid()  # type: integer_types
+            if not self._rid:
+                self.id = sid or self._get_sid()  # type: integer_types
             new_dirty = not sid
             self.dirty_main = new_dirty  # type: bool
             self.dirty_ids = new_dirty  # type: bool
@@ -928,24 +1030,28 @@ class Character(object):
             self.dirty_years = True
 
     def load_from_db(self):
-        if self.id:
+        if self.id or usable_rid(self._rid):
             my_db = db.DBConnection()
-            r = my_db.select('SELECT characters.name as name, characters.bio as bio,'
-                             ' characters.thumb_url as thumb_url, characters.image_url as image_url,'
-                             ' characters.updated as c_updated,'
-                             ' (SELECT group_concat(character_ids.src || ":" || character_ids.src_id, ";;;")'
-                             ' FROM character_ids WHERE character_ids.character_id = characters.id) as c_ids,'
-                             ' (SELECT group_concat(character_person_map.person_id, ";;;")'
-                             ' FROM character_person_map'
-                             ' WHERE character_person_map.character_id = characters.id) as person_ids,'
-                             ' (SELECT group_concat(character_person_years.person_id || ":" ||'
-                             ' character_person_years.start_year || "-" || character_person_years.end_year, ";;;")'
-                             ' FROM character_person_years WHERE character_person_years.character_id = characters.id)'
-                             ' as p_years'
-                             ' FROM characters'
-                             ' LEFT JOIN character_ids ci on characters.id = ci.character_id'
-                             ' WHERE characters.id = ?',
-                             [self.id])
+            src, src_id = self.ref_id(string=False)
+            r = my_db.select(
+                """
+                SELECT characters.name as name, characters.bio as bio,
+                characters.thumb_url as thumb_url, characters.image_url as image_url,
+                characters.updated as c_updated, characters.id as c_id,
+                (SELECT group_concat(character_ids.src || ':' || character_ids.src_id, ';;;')
+                FROM character_ids WHERE character_ids.character_id = characters.id) as c_ids,
+                (SELECT group_concat(character_person_map.person_id, ';;;')
+                FROM character_person_map
+                WHERE character_person_map.character_id = characters.id) as person_ids,
+                (SELECT group_concat(character_person_years.person_id || ':' ||
+                character_person_years.start_year || '-' || character_person_years.end_year, ';;;')
+                FROM character_person_years WHERE character_person_years.character_id = characters.id)
+                as p_years
+                FROM characters
+                LEFT JOIN character_ids ci on characters.id = ci.character_id
+                WHERE %s
+                """ % ('ci.src = ? and ci.src_id = ?', 'characters.id = ?')[not src],
+                ([src, src_id], [self.id])[not src])
             if r:
                 r = r[0]
                 c_ids = {}
@@ -959,9 +1065,9 @@ class Character(object):
                     p_id, py = p.split(':')
                     start, end = py.split('-')
                     p_years[int(p_id)] = {'start': try_int(start, None), 'end': try_int(end, None)}
-                self.name, self.ids, self.image_url, self.thumb_url, self.biography, self.person, self.updated, \
-                    self.persons_years = \
-                    r['name'], c_ids, r['image_url'], r['thumb_url'], r['bio'], \
+                (self.id, self.name, self.ids, self.image_url, self.thumb_url, self.biography,
+                 self.person, self.updated, self.persons_years) = \
+                    r['c_id'], r['name'], c_ids, r['image_url'], r['thumb_url'], r['bio'], \
                     [Person(sid=int(p), character_obj=self)
                      for p in (r['person_ids'] and r['person_ids'].split(';;;')) or []], \
                     r['c_updated'], p_years
@@ -980,7 +1086,7 @@ class Character(object):
                         res = t.get_person(per.ids.get(TVINFO_IMDB), get_show_credits=True)
                     except (BaseException, Exception):
                         continue
-                    if res.characters:
+                    if res and res.characters:
                         per.character_obj = self
                         per.update_prop_from_tvinfo_person(res)
 
@@ -1279,7 +1385,7 @@ class TVShow(TVShowBase):
         if getattr(self, 'sid_int', None) != tvid_prodid_int:
             self.sid_int = tvid_prodid_int
 
-    def _helper_load_failed_db(self, sql=None):
+    def helper_load_failed_db(self, sql=None):
         # type: (Row) -> None
         if None is self._not_found_count or self._last_found_on_indexer == -1:
             if sql and self._prodid == sql['indexer_id'] and self._tvid == sql['indexer']:
@@ -1299,7 +1405,7 @@ class TVShow(TVShowBase):
 
     @property
     def not_found_count(self):
-        self._helper_load_failed_db()
+        self.helper_load_failed_db()
         return self._not_found_count
 
     @not_found_count.setter
@@ -1324,7 +1430,7 @@ class TVShow(TVShowBase):
 
     @property
     def last_found_on_indexer(self):
-        self._helper_load_failed_db()
+        self.helper_load_failed_db()
         return (self._last_found_on_indexer, self.last_update_indexer)[0 >= self._last_found_on_indexer]
 
     def inc_not_found_count(self):
@@ -1567,33 +1673,35 @@ class TVShow(TVShowBase):
         # cast_list = []
         old_list = {c.id for c in self._cast_list or []}
         my_db = db.DBConnection()
-        sql_result = my_db.select('SELECT castlist.sort_order as sort_order, characters.name as name,'
-                                  ' characters.bio as c_bio, characters.id as c_id,'
-                                  ' characters.image_url as image_url, characters.thumb_url as thumb_url,'
-                                  ' characters.updated as c_updated,'
-                                  ' persons.name as p_name, persons.gender as gender, persons.bio as p_bio,'
-                                  ' persons.birthdate as birthdate, persons.thumb_url as p_thumb,'
-                                  ' persons.image_url as p_image, persons.deathdate as deathdate, persons.id as p_id,'
-                                  ' persons.birthplace as birthplace, persons.updated as p_updated,'
-                                  ' persons.deathplace as deathplace, persons.height as height,'
-                                  ' persons.realname as realname, persons.nicknames as nicknames,'
-                                  ' persons.akas as akas,'
-                                  ' (SELECT group_concat(person_ids.src || ":" || person_ids.src_id, ";;;")'
-                                  ' FROM person_ids WHERE person_ids.person_id = persons.id) as p_ids,'
-                                  ' (SELECT group_concat(character_ids.src || ":" || character_ids.src_id, ";;;")'
-                                  ' FROM character_ids WHERE character_ids.character_id = characters.id) as c_ids,'
-                                  ' (SELECT group_concat(character_person_years.person_id || ":" ||'
-                                  ' character_person_years.start_year || "-" || character_person_years.end_year, ";;;")'
-                                  ' FROM character_person_years WHERE'
-                                  ' character_person_years.character_id = characters.id) as p_years'
-                                  ' FROM castlist'
-                                  ' LEFT JOIN character_person_map'
-                                  ' ON castlist.character_id = character_person_map.character_id'
-                                  ' LEFT JOIN characters ON character_person_map.character_id = characters.id'
-                                  ' LEFT JOIN persons ON character_person_map.person_id = persons.id'
-                                  ' WHERE castlist.indexer = ? AND castlist.indexer_id = ?'
-                                  ' ORDER BY castlist.sort_order',
-                                  [self._tvid, self._prodid])
+        sql_result = my_db.select(
+            """
+            SELECT castlist.sort_order as sort_order, characters.name as name,
+            characters.bio as c_bio, characters.id as c_id,
+            characters.image_url as image_url, characters.thumb_url as thumb_url,
+            characters.updated as c_updated,
+            persons.name as p_name, persons.gender as gender, persons.bio as p_bio,
+            persons.birthdate as birthdate, persons.thumb_url as p_thumb,
+            persons.image_url as p_image, persons.deathdate as deathdate, persons.id as p_id,
+            persons.birthplace as birthplace, persons.updated as p_updated,
+            persons.deathplace as deathplace, persons.height as height,
+            persons.realname as realname, persons.nicknames as nicknames,
+            persons.akas as akas,            
+            (SELECT group_concat(person_ids.src || ':' || person_ids.src_id, ';;;')
+            FROM person_ids WHERE person_ids.person_id = persons.id) as p_ids,
+            (SELECT group_concat(character_ids.src || ':' || character_ids.src_id, ';;;')
+            FROM character_ids WHERE character_ids.character_id = characters.id) as c_ids,
+            (SELECT group_concat(character_person_years.person_id || ':' ||
+            character_person_years.start_year || '-' || character_person_years.end_year, ';;;')
+            FROM character_person_years WHERE
+            character_person_years.character_id = characters.id) as p_years
+            FROM castlist
+            LEFT JOIN character_person_map
+            ON castlist.character_id = character_person_map.character_id
+            LEFT JOIN characters ON character_person_map.character_id = characters.id
+            LEFT JOIN persons ON character_person_map.person_id = persons.id
+            WHERE castlist.indexer = ? AND castlist.indexer_id = ?
+            ORDER BY castlist.sort_order       
+            """, [self._tvid, self._prodid])
         self._cast_list = self._cast_list or []
         for r in sql_result:
             existing_character = next((c for c in self._cast_list or [] if None is not c.id and c.id == r['c_id']),
@@ -1655,6 +1763,17 @@ class TVShow(TVShowBase):
                                                  image_url=r['image_url'], thumb_url=r['thumb_url'], show_obj=self,
                                                  updated=r['c_updated'], persons_years=p_years))
         self._cast_list = [c for c in self._cast_list or [] if c.id not in old_list]
+
+    def cast_list_id(self):
+        # type: (...) -> Set
+        """
+        return an identifier that represents the current state of the show cast list
+
+        used to tell if a change has occured in a cast list after time/process
+        """
+        return set((c.name, c.image_url or '', c.thumb_url or '',
+                    hash(*([', '.join(p.name for p in c.person or [] if p.name)])))
+                   for c in self.cast_list or [] if c.name)
 
     @staticmethod
     def orphaned_cast_sql():
@@ -2015,7 +2134,7 @@ class TVShow(TVShowBase):
 
     def switch_ep_change_sql(self, old_tvid, old_prodid, season, episode, reason):
         # type: (int, integer_types, int, int, int) -> List[AnyStr]
-        return ['REPLACE INTO switch_ep_errors'
+        return ['REPLACE INTO switch_ep_result'
                 ' (old_indexer, old_indexer_id, new_indexer, new_indexer_id, season, episode, reason)'
                 ' VALUES (?,?,?,?,?,?,?)', [old_tvid, old_prodid, self._tvid, self._prodid, season, episode, reason]]
 
@@ -2676,7 +2795,6 @@ class TVShow(TVShowBase):
                                                                                     None is not c.id]))))
                 else:
                     persons = []
-                    tmp_char = None
                     for s_pers in c.person:
                         existing_person = next((_p for _c in self._cast_list for _p in _c.person
                                                 if (s_pers.id and _p.ids.get(self._tvid) == s_pers.id)
@@ -3950,9 +4068,20 @@ class TVEpisode(TVEpisodeBase):
             return SGDatetime.combine(self.airdate, ep_time, tzinfo=tzinfo).timestamp_far()
         return None
 
-    def load_from_tvinfo(self, season=None, episode=None, cache=True, tvapi=None, cached_season=None, update=False,
-                         cached_show=None, switch=False, old_tvid=None, old_prodid=None, switch_list=None):
-        # type: (integer_types, integer_types, bool, Any, Dict, bool, Dict, bool, int, integer_types, List) -> Optional[bool]
+    def load_from_tvinfo(
+            self,
+            season=None,  # type: integer_types
+            episode=None,  # type: integer_types
+            cache=True,  # type: bool
+            tvapi=None,  # type: Any
+            cached_season=None,  # type: Dict
+            update=False,  # type: bool
+            cached_show=None,  # type: Dict
+            switch=False,  # type: bool
+            old_tvid=None,  # type: int
+            old_prodid=None,  # type: integer_types
+            switch_list=None  # type: List
+    ):  # type: (...) -> Optional[bool]
         """
 
         :param season: season number
@@ -5027,4 +5156,3 @@ class TVEpisode(TVEpisodeBase):
         return bool(self._tvid) and bool(self._epid)
 
     __nonzero__ = __bool__
-

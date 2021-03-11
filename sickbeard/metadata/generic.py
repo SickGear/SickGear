@@ -42,7 +42,7 @@ import lib.fanart as fanart
 from lxml_etree import etree
 
 from _23 import filter_iter
-from six import iteritems, itervalues
+from six import iteritems, itervalues, string_types
 
 # noinspection PyUnreachableCode
 if False:
@@ -1055,10 +1055,10 @@ class GenericMetadata(object):
                 showXML = etree.ElementTree(file=xmlFileObj)
 
             if None is showXML.findtext('title') \
-                    or (None is showXML.find('//uniqueid[@type="tvdb"]')
-                        and (None is showXML.findtext('tvdbid')
-                             and None is showXML.findtext('id'))
-                        and None is showXML.findtext('indexer')):
+                    or all(None is _f for _f in (showXML.find('//uniqueid[@type]'),
+                                                 showXML.findtext('tvdbid'),
+                                                 showXML.findtext('id'),
+                                                 showXML.findtext('indexer'))):
                 logger.log(u"Invalid info in tvshow.nfo (missing name or id):"
                            + str(showXML.findtext('title')) + ' '
                            + str(showXML.findtext('indexer')) + ' '
@@ -1072,6 +1072,17 @@ class GenericMetadata(object):
                 tvid = int(showXML.findtext('indexer'))
             except (BaseException, Exception):
                 tvid = None
+
+            # handle v2 format of .nfo file
+            default_source = showXML.find('//uniqueid[@default="true"]')
+            if None is not default_source:
+                use_tvid = default_source.attrib.get('type') or tvid
+                if isinstance(use_tvid, string_types):
+                    use_tvid = {sickbeard.TVInfoAPI(x).config['slug']: x
+                                for x, _ in iteritems(sickbeard.TVInfoAPI().all_sources)}.get(use_tvid)
+                prodid = sg_helpers.try_int(default_source.text, None)
+                if use_tvid and None is not prodid:
+                    return use_tvid, prodid, name
 
             prodid = showXML.find('//uniqueid[@type="tvdb"]')
             if None is not prodid:

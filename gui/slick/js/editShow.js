@@ -53,7 +53,17 @@ $(document).ready(function () {
 		return allExceptions
 	}
 
+	function okExit(action){
+		return ('the-master' === $('input[name="set-master"]:checked').attr('id')
+			|| confirm('A "set master" change is pending\n\n' + action + ' without saving changes?'))
+	}
+
+	$('a:contains("Cancel Edit")').on('click', function () {
+		if (!okExit('Cancel')) return !1;
+	});
+
 	$('#submit').on('click', function () {
+		if (!okExit('Update')) return !1;
 		$('#exceptions_list').val(getExceptions());
 		if (config.showIsAnime)
 			generateAniGroupList();
