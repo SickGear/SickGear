@@ -1,4 +1,9 @@
-﻿### 0.23.14 (2021-03-10 01:40:00 UTC)
+﻿### 0.23.15 (2021-04-03 10:05:00 UTC)
+
+* Change allow Python 3.8.9 and 3.9.3
+
+
+### 0.23.14 (2021-03-10 01:40:00 UTC)
 
 * Add config/Search/Search Tasks/"Host running FlareSolverr" to handle CloudFlare providers
 * Change the cf_clearance cookie to an undocumented optional config instead of a requirement
