@@ -1,4 +1,9 @@
-﻿### 0.24.0 (2021-xx-xx xx:xx:00 UTC)
+﻿### 0.23.15 (2021-04-03 10:05:00 UTC)
+
+* Change allow Python 3.8.9 and 3.9.3
+
+
+### 0.24.0 (2021-xx-xx xx:xx:00 UTC)
 
 * Add to config/General, "Package updates" and list packages, check packages by default on Windows, others must enable
 * Change simplify section config/General/Updates
