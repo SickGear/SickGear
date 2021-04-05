@@ -1,9 +1,4 @@
-﻿### 0.23.15 (2021-04-03 10:05:00 UTC)
-
-* Change allow Python 3.8.9 and 3.9.3
-
-
-### 0.24.0 (2021-xx-xx xx:xx:00 UTC)
+﻿### 0.24.0 (2021-xx-xx xx:xx:00 UTC)
 
 * Add to config/General, "Package updates" and list packages, check packages by default on Windows, others must enable
 * Change simplify section config/General/Updates
@@ -43,6 +38,17 @@
 * Change don't check direct reference specification updates if user mode
 * Update python-Levenshtein package from 0.12.0 to 0.12.2 for py3 Win
 * Change prevent python-Levenshtein 0.12.1 on non Win due to membug
+
+
+### 0.23.16 (2021-04-05 23:45:00 UTC)
+
+* Change allow Python 3.9.4
+* Change prevent use of Python 3.9.3 and alert users to upgrade to 3.9.4 due to a recall
+
+
+### 0.23.15 (2021-04-03 10:05:00 UTC)
+
+* Change allow Python 3.8.9 and 3.9.3
 
 
 ### 0.23.14 (2021-03-10 01:40:00 UTC)
