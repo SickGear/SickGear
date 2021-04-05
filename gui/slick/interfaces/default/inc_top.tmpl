@@ -336,9 +336,13 @@
 #end if
 ##
 #set $py_ver = sys.version_info[:3]
-#if $py_ver in [(3, 8, 1), (3, 7, 6)]:
+#if $py_ver in [(3, 9, 3), (3, 8, 1), (3, 7, 6)]:
 	<div class="alert alert-danger upgrade-notification upgrade-py" role="alert">
-    #if (3, 8, 1) == $py_ver:
+    #if (3, 9, 3) == $py_ver:
+		<p>Your installed Python 3.9.3 has been <a href="<%= anon_url('https://bugs.python.org/issue43710') %>" onclick="window.open(this.href);return !1;">recalled</a> due to breakage with C extensions<br>
+			Please replace with Python <b>3.9.4</b>: <a href="<%= anon_url('https://www.python.org/downloads/') %>" onclick="window.open(this.href);return !1;">download here</a>
+		</p>
+    #elif (3, 8, 1) == $py_ver:
 		<p>Your installed Python 3.8.1 has a <a href="<%= anon_url('https://github.com/python/cpython/commit/ea316fd21527dec53e704a5b04833ac462ce3863') %>" onclick="window.open(this.href);return !1;">critical issue</a> affecting the parsing of URLs<br>
 			Please replace with Python <b>3.8.2</b>, <b>3.8.0</b>, or older: <a href="<%= anon_url('https://www.python.org/downloads/') %>" onclick="window.open(this.href);return !1;">download here</a>
 		</p>

@@ -1,4 +1,10 @@
-﻿### 0.23.15 (2021-04-03 10:05:00 UTC)
+﻿### 0.23.16 (2021-04-05 23:45:00 UTC)
+
+* Change allow Python 3.9.4
+* Change prevent use of Python 3.9.3 and alert users to upgrade to 3.9.4 due to a recall
+
+
+### 0.23.15 (2021-04-03 10:05:00 UTC)
 
 * Change allow Python 3.8.9 and 3.9.3
 
