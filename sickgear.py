@@ -97,7 +97,7 @@ from sickbeard.event_queue import Events
 from sickbeard.tv import TVShow
 from sickbeard.webserveInit import WebServer
 
-from six import integer_types
+from six import integer_types, iteritems
 
 throwaway = datetime.datetime.strptime('20110101', '%Y%m%d')
 rollback_loaded = None
@@ -707,32 +707,36 @@ class SickGear(object):
 
         logger.log(u'Loading initial show list')
 
-        my_db = db.DBConnection()
-        sql_result = my_db.select('SELECT indexer AS tv_id, indexer_id AS prod_id, * FROM tv_shows'
-                                  ' ORDER BY indexer, indexer_id')
-        imdb_info_sql_result = my_db.select('SELECT * FROM imdb_info'
-                                            ' ORDER BY indexer, indexer_id')
-
-        failed_results = my_db.select('SELECT * FROM tv_shows_not_found ORDER BY indexer, indexer_id')
+        my_db = db.DBConnection(row_type='dict')
+        sql_result = my_db.select('SELECT tv_shows.indexer AS tv_id, tv_shows.indexer_id AS prod_id, *,'
+                                  ' ii.indexer as ii_indexer, ii.indexer_id as ii_indexer_id, ii.imdb_id as ii_imdb_id,'
+                                  ' ii.title as ii_title, ii.year as ii_year, ii.akas as ii_akas,'
+                                  ' ii.runtimes as ii_runtime, ii.genres as ii_genres, ii.countries as ii_countries,'
+                                  ' ii.country_codes as ii_country_codes, ii.certificates as ii_certificates,'
+                                  ' ii.rating as ii_rating, ii.votes as ii_votes, ii.last_update as ii_ii_last_update,'
+                                  ' tsnf.indexer as tsnf_indexer, tsnf.indexer_id as tsnf_indexer_id,'
+                                  ' tsnf.fail_count as tsnf_fail_count, tsnf.last_check as tsnf_last_check,'
+                                  ' tsnf.last_success as tsnf_last_success FROM tv_shows'
+                                  ' LEFT JOIN imdb_info ii on tv_shows.indexer = ii.indexer'
+                                  ' AND tv_shows.indexer_id = ii.indexer_id'
+                                  ' LEFT JOIN tv_shows_not_found tsnf on tv_shows.indexer = tsnf.indexer'
+                                  ' AND tv_shows.indexer_id = tsnf.indexer_id')
         sickbeard.showList = []
         sickbeard.showDict = {}
         for cur_result in sql_result:
             try:
                 tv_id = int(cur_result['tv_id'])
                 prod_id = int(cur_result['prod_id'])
-                if imdb_info_sql_result and prod_id == imdb_info_sql_result[0]['indexer_id'] \
-                        and tv_id == imdb_info_sql_result[0]['indexer']:
-                    imdb_info_sql = imdb_info_sql_result.pop(0)
+                if cur_result['ii_indexer_id']:
+                    imdb_info_sql = {_fk.replace('ii_', ''): _fv for _fk, _fv in iteritems(cur_result)
+                                     if _fk.startswith('ii_')}
                 else:
                     imdb_info_sql = None
                 show_obj = TVShow(tv_id, prod_id, show_sql=cur_result, imdb_info_sql=imdb_info_sql)
-                failed_sql = None
-                for s in failed_results:
-                    if prod_id == s['indexer_id'] and tv_id == s['indexer']:
-                        failed_sql = s
-                        failed_results.remove(s)
-                        break
-                show_obj.helper_load_failed_db(sql=failed_sql)
+                if cur_result['tsnf_indexer_id']:
+                    failed_sql = {_fk.replace('tsnf_', ''): _fv for _fk, _fv in iteritems(cur_result)
+                                  if _fk.startswith('tsnf_')}
+                    show_obj.helper_load_failed_db(sql=failed_sql)
                 sickbeard.showList.append(show_obj)
                 sickbeard.showDict[show_obj.sid_int] = show_obj
             except (BaseException, Exception) as err:

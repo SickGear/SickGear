@@ -22,6 +22,8 @@ import os.path
 import re
 import zlib
 
+from collections import OrderedDict
+
 # noinspection PyPep8Naming
 import encodingKludge as ek
 import exceptions_helper
@@ -32,17 +34,17 @@ from . import db, logger
 from .metadata.generic import GenericMetadata
 from .sgdatetime import timestamp_near
 from .indexers.indexer_config import TVINFO_TVDB, TVINFO_TVMAZE, TVINFO_TMDB
+from lib.tvinfo_base.exceptions import *
 
 from six import itervalues, iteritems
+from _23 import list_keys
 
 # noinspection PyUnreachableCode
 if False:
-    from typing import AnyStr, Optional, Tuple, Union
+    from typing import AnyStr, Dict, Optional, Tuple, Union
     from .tv import TVShow, Person, Character
     from six import integer_types
-
-from lib.hachoir.parser import createParser
-from lib.hachoir.metadata import extractMetadata
+    from lib.tvinfo_base import TVInfoShow
 
 cache_img_base = {'tvmaze': TVINFO_TVMAZE, 'themoviedb': TVINFO_TMDB, 'thetvdb': TVINFO_TVDB}
 
@@ -343,6 +345,14 @@ class ImageCache(object):
     POSTER_THUMB = 4
     FANART = 5
 
+    img_type_str = {
+        1: 'Banner',
+        2: 'Poster',
+        3: 'Banner thumb',
+        4: 'Poster thumb',
+        5: 'Fanart'
+    }
+
     def which_type(self, path):
         # type: (AnyStr) -> Optional[int]
         """
@@ -354,30 +364,11 @@ class ImageCache(object):
         :rtype: int
         """
 
-        if not ek.ek(os.path.isfile, path):
-            logger.log(u'File does not exist to determine image type of %s' % path, logger.WARNING)
+        result = sg_helpers.get_img_dimensions(path)
+        if not result:
             return None
 
-        # use hachoir to parse the image for us
-        try:
-            img_parser = createParser(path)
-            img_parser.parse_exif = False
-            img_parser.parse_photoshop_content = False
-            img_parser.parse_comments = False
-            img_metadata = extractMetadata(img_parser)
-        except (BaseException, Exception) as e:
-            logger.log('Unable to extract metadata from %s, not using existing image. Error: %s' % (path, ex(e)),
-                       logger.DEBUG)
-            return None
-
-        if not img_metadata:
-            logger.log(u'Unable to extract metadata from %s, not using existing image' % path, logger.DEBUG)
-            return None
-
-        img_ratio = float(img_metadata.get('width')) / float(img_metadata.get('height'))
-
-        # noinspection PyProtectedMember
-        img_parser.stream._input.close()
+        img_width, img_height, img_ratio = result
 
         msg_success = u'Treating image as %s' \
                       + u' with extracted aspect ratio from %s' % path.replace('%', '%%')
@@ -393,7 +384,7 @@ class ImageCache(object):
 
         # most fanart are around 1.7 width/height ratio (eg. 1280/720 or 1920/1080)
         elif 1.7 < img_ratio < 1.8:
-            if 500 < img_metadata.get('width'):
+            if 500 < img_width:
                 logger.log(msg_success % 'fanart', logger.DEBUG)
                 return self.FANART
 
@@ -490,33 +481,31 @@ class ImageCache(object):
 
         return ek.ek(os.path.isfile, dest_path) and dest_path or None
 
-    def _cache_info_source_images(self, show_obj, img_type, num_files=0, max_files=500, force=False):
-        # type: (TVShow, int, int, int, Optional[bool]) -> bool
+    def _cache_info_source_images(self, show_obj, img_type, num_files=0, max_files=500, force=False, show_infos=None):
+        # type: (TVShow, int, int, int, bool, Dict[int, TVInfoShow]) -> bool
         """
         Retrieves an image of the type specified from TV info source and saves it to the cache folder
 
         :param show_obj: TVShow object to cache an image for
-        :type show_obj: sickbeard.tv.TVShow
         :param img_type:  BANNER, POSTER, or FANART
-        :type img_type: int
         :param num_files:
-        :type num_files: int or long
         :param max_files:
-        :type max_files: int or long
         :param force:
-        :type force: bool
+        :param show_infos: dict of showinfo objects to use
         :return: bool representing success
-        :rtype: bool
         """
 
         # generate the path based on the type, tvid and prodid
         arg_tvid_prodid = (show_obj.tvid, show_obj.prodid)
+        dest_thumb_path = None
         if self.POSTER == img_type:
             img_type_name = 'poster'
             dest_path = self.poster_path(*arg_tvid_prodid)
+            dest_thumb_path = self.poster_thumb_path(*arg_tvid_prodid)
         elif self.BANNER == img_type:
             img_type_name = 'banner'
             dest_path = self.banner_path(*arg_tvid_prodid)
+            dest_thumb_path = self.banner_thumb_path(*arg_tvid_prodid)
         elif self.FANART == img_type:
             img_type_name = 'fanart_all'
             dest_path = self.fanart_path(*arg_tvid_prodid).replace('fanart.jpg', '*')
@@ -591,10 +580,36 @@ class ImageCache(object):
                               total, sickbeard.FANART_LIMIT, sg_helpers.maybe_plural(total)))
             return bool(count_urls) and not bool(count_urls - success)
 
-        img_data = metadata_generator.retrieve_show_image(img_type_name, show_obj)
-        if None is img_data:
+        image_urls = metadata_generator.retrieve_show_image(img_type_name, show_obj, return_links=True,
+                                                            show_infos=show_infos)
+        if None is image_urls:
             return False
-        result = metadata_generator.write_image(img_data, dest_path, force=force)
+
+        result = None
+        for image_url in image_urls or []:
+            if isinstance(image_url, tuple) and img_type in (self.BANNER, self.POSTER):
+                img_url, thumb_url = image_url
+            else:
+                img_url, thumb_url = image_url, None
+            img_data = sg_helpers.get_url(img_url, nocache=True, as_binary=True)
+            if None is img_data:
+                continue
+            result = metadata_generator.write_image(img_data, dest_path, force=force)
+            if result and img_type != self.which_type(dest_path):
+                try:
+                    sg_helpers.remove_file_perm(dest_path)
+                except OSError as e:
+                    logger.log(u'Unable to remove %s: %s / %s' % (dest_path, repr(e), ex(e)), logger.WARNING)
+                continue
+            if img_type in (self.BANNER, self.POSTER) and dest_thumb_path:
+                thumb_img_data = sg_helpers.get_url(img_url, nocache=True, as_binary=True)
+                thumb_result = None
+                if thumb_img_data:
+                    thumb_result = metadata_generator.write_image(thumb_img_data, dest_thumb_path, force=True)
+                if not thumb_result:
+                    thumb_result = metadata_generator.write_image(img_data, dest_thumb_path, force=True)
+            break
+
         if result:
             logger.log(u'Saved image type %s' % img_type_name)
         return result
@@ -625,6 +640,30 @@ class ImageCache(object):
         if not any(itervalues(need_images)):
             logger.log(u'%s: No new cache images needed. Done.' % show_obj.tvid_prodid)
             return
+
+        show_infos = OrderedDict()
+        for tv_src in list(OrderedDict.fromkeys([show_obj._tvid] + list_keys(sickbeard.TVInfoAPI().search_sources))):
+            if tv_src != show_obj._tvid and not show_obj.ids.get(tv_src, {}).get('id'):
+                continue
+            try:
+                show_lang = show_obj.lang
+                # There's gotta be a better way of doing this but we don't wanna
+                # change the language value elsewhere
+                tvinfo_config = sickbeard.TVInfoAPI(tv_src).api_params.copy()
+                tvinfo_config['fanart'] = True
+                tvinfo_config['posters'] = True
+                tvinfo_config['banners'] = True
+                tvinfo_config['dvdorder'] = 0 != show_obj.dvdorder
+
+                if show_lang and not 'en' == show_lang:
+                    tvinfo_config['language'] = show_lang
+
+                t = sickbeard.TVInfoAPI(tv_src).setup(**tvinfo_config)
+                show_infos[tv_src] = t.get_show((show_obj.ids[tv_src]['id'], show_obj.prodid)[tv_src == show_obj._tvid],
+                                                load_episodes=False, banners=False, posters=False, fanart=True)
+            except (BaseTVinfoError, IOError) as e:
+                logger.log(u"Unable to look up show on " + sickbeard.TVInfoAPI(
+                    tv_src).name + ", not downloading images: " + ex(e), logger.WARNING)
 
         void = False
         if not void and need_images[self.FANART]:
@@ -696,8 +735,7 @@ class ImageCache(object):
             logger.log(u'Unable to search for images in show directory because it doesn\'t exist', logger.WARNING)
 
         # download images from TV info sources
-        for image_type, name_type in [[self.POSTER, 'Poster'], [self.BANNER, 'Banner'], [self.FANART, 'Fanart'],
-                                      [self.POSTER_THUMB, 'Poster Thumb'], [self.BANNER_THUMB, 'Banner Thumb']]:
+        for image_type, name_type in [[self.POSTER, 'Poster'], [self.BANNER, 'Banner'], [self.FANART, 'Fanart']]:
             max_files = (500, sickbeard.FANART_LIMIT)[self.FANART == image_type]
             if not max_files or max_files < need_images[image_type]:
                 continue
@@ -707,6 +745,7 @@ class ImageCache(object):
             if need_images[image_type]:
                 file_num = (need_images[image_type] + 1, 1)[isinstance(need_images[image_type], bool)]
                 if file_num <= max_files:
-                    self._cache_info_source_images(show_obj, image_type, file_num, max_files, force=force)
+                    self._cache_info_source_images(show_obj, image_type, file_num, max_files, force=force,
+                                                   show_infos=show_infos)
 
         logger.log(u'Done cache check')

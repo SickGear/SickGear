@@ -54,6 +54,15 @@ class PeopleQueue(generic_queue.GenericQueue):
                                          scheduled_update=bool(q['scheduled']), add_to_db=False)
         except (BaseException, Exception) as e:
             logger.error('Exception loading queue %s: %s' % (self.__class__.__name__, ex(e)))
+        try:
+            my_db = db.DBConnection()
+            if not my_db.has_flag('cast_loaded'):
+                import sickbeard
+                [self.add_cast_update(s, show_info_cast=None, scheduled_update=True)
+                 for s in sickbeard.showList if not s.cast_list]
+                my_db.set_flag('cast_loaded')
+        except (BaseException, Exception):
+            pass
 
     def _clear_sql(self):
         return [

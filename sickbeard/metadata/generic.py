@@ -47,6 +47,7 @@ from six import iteritems, itervalues, string_types
 # noinspection PyUnreachableCode
 if False:
     from typing import AnyStr, Dict, List, Optional, Tuple, Union
+    from lib.tvinfo_base import TVInfoShow
 
 
 map_image_types = {
@@ -836,8 +837,8 @@ class GenericMetadata(object):
 
         return True
 
-    def _retrieve_show_image(self, image_type, show_obj, which=None):
-        # type: (AnyStr, sickbeard.tv.TVShow, bool) -> Optional[bytes, List[AnyStr]]
+    def _retrieve_show_image(self, image_type, show_obj, which=None, return_links=False, show_infos=None):
+        # type: (AnyStr, sickbeard.tv.TVShow, bool, bool, Dict[int, TVInfoShow]) -> Optional[bytes, List[AnyStr]]
         """
         Gets an image URL from theTVDB.com, fanart.tv and TMDB.com, downloads it and returns the data.
         If type is fanart, multiple image src urls are returned instead of a single data image.
@@ -848,34 +849,34 @@ class GenericMetadata(object):
 
         Returns: the binary image data if available, or else None
         """
+        tvid = show_obj._tvid
         show_lang = show_obj.lang
+        if not show_infos:
+            show_infos = OrderedDict()
 
-        try:
-            # There's gotta be a better way of doing this but we don't wanna
-            # change the language value elsewhere
-            tvinfo_config = sickbeard.TVInfoAPI(show_obj.tvid).api_params.copy()
-            if image_type.startswith('fanart'):
-                tvinfo_config['fanart'] = True
-            elif image_type.startswith('poster'):
-                tvinfo_config['posters'] = True
-            else:
-                tvinfo_config['banners'] = True
-            tvinfo_config['dvdorder'] = 0 != show_obj.dvdorder
+            try:
+                # There's gotta be a better way of doing this but we don't wanna
+                # change the language value elsewhere
+                tvinfo_config = sickbeard.TVInfoAPI(show_obj.tvid).api_params.copy()
+                if image_type.startswith('fanart'):
+                    tvinfo_config['fanart'] = True
+                elif image_type.startswith('poster'):
+                    tvinfo_config['posters'] = True
+                else:
+                    tvinfo_config['banners'] = True
+                tvinfo_config['dvdorder'] = 0 != show_obj.dvdorder
 
-            if show_lang and not 'en' == show_lang:
-                tvinfo_config['language'] = show_lang
+                if show_lang and not 'en' == show_lang:
+                    tvinfo_config['language'] = show_lang
 
-            t = sickbeard.TVInfoAPI(show_obj.tvid).setup(**tvinfo_config)
-            show_info = t[show_obj.prodid, False]
-        except (BaseTVinfoError, IOError) as e:
-            logger.log(u"Unable to look up show on " + sickbeard.TVInfoAPI(
-                show_obj.tvid).name + ", not downloading images: " + ex(e), logger.WARNING)
-            return None
+                t = sickbeard.TVInfoAPI(show_obj.tvid).setup(**tvinfo_config)
+                show_infos[tvid] = t[show_obj.prodid, False]
+            except (BaseTVinfoError, IOError) as e:
+                logger.log(u"Unable to look up show on " + sickbeard.TVInfoAPI(
+                    show_obj.tvid).name + ", not downloading images: " + ex(e), logger.WARNING)
+                return None
 
-        if not self._valid_show(show_info, show_obj):
-            return None
-
-        return_links = False
+        # return_links = False
         if 'fanart_all' == image_type:
             return_links = True
             image_type = 'fanart'
@@ -885,9 +886,7 @@ class GenericMetadata(object):
                 show_obj.tvid).name + " object", logger.ERROR)
             return None
 
-        image_urls = []
-        init_url = None
-        alt_tvdb_urls = []
+        image_urls, init_url, alt_tvdb_urls, fanart_fetched = [], None, [], False
 
         def build_url(s_o, image_mode):
             _urls = [[], []]
@@ -914,58 +913,79 @@ class GenericMetadata(object):
                         pass
             return _urls
 
-        if 'poster_thumb' == image_type:
-            if None is not getattr(show_info, image_type, None):
-                image_urls, alt_tvdb_urls = build_url(show_info, image_type)
-            elif None is not getattr(show_info, 'poster', None):
-                image_urls, alt_tvdb_urls = build_url(show_info, 'poster')
+        for tv_src in show_infos:
+            if not self._valid_show(show_infos[tv_src], show_obj):
+                continue
 
-            if return_links or not image_urls:
-                for item in self._fanart_urls_from_show(show_obj, image_type, show_lang, True) or []:
-                    image_urls.append(item[2])
-                if 0 == len(image_urls):
-                    for item in self._tmdb_image_url(show_obj, image_type) or []:
+            if 'poster_thumb' == image_type:
+                if None is not getattr(show_infos[tv_src], image_type, None):
+                    image_urls, alt_tvdb_urls = build_url(show_infos[tv_src], image_type)
+                elif None is not getattr(show_infos[tv_src], 'poster', None):
+                    image_urls, alt_tvdb_urls = build_url(show_infos[tv_src], 'poster')
+
+                if return_links or not image_urls:
+                    for item in self._fanart_urls_from_show(show_obj, image_type, show_lang, True) or []:
                         image_urls.append(item[2])
+                    if 0 == len(image_urls):
+                        for item in self._tmdb_image_url(show_obj, image_type) or []:
+                            image_urls.append(item[2])
 
-        elif 'banner_thumb' == image_type:
-            if None is not getattr(show_info, image_type, None):
-                image_urls, alt_tvdb_urls = build_url(show_info, image_type)
-            elif None is not getattr(show_info, 'banner', None):
-                image_urls, alt_tvdb_urls = build_url(show_info, 'banner')
-            if return_links or not image_urls:
-                for item in self._fanart_urls_from_show(show_obj, image_type, show_lang, True) or []:
-                    image_urls.append(item[2])
-        else:
-            if None is not getattr(show_info, image_type, None):
-                image_url = show_info[image_type]
-                if image_url:
-                    image_urls.append(image_url)
-                    if image_type in ('poster', 'banner', 'fanart'):
-                        init_url = image_url
+            elif 'banner_thumb' == image_type:
+                if None is not getattr(show_infos[tv_src], image_type, None):
+                    image_urls, alt_tvdb_urls = build_url(show_infos[tv_src], image_type)
+                elif None is not getattr(show_infos[tv_src], 'banner', None):
+                    image_urls, alt_tvdb_urls = build_url(show_infos[tv_src], 'banner')
+                if return_links or not image_urls:
+                    for item in self._fanart_urls_from_show(show_obj, image_type, show_lang, True) or []:
+                        image_urls.append(item[2])
+            else:
+                if None is not getattr(show_infos[tv_src], image_type, None):
+                    image_url = show_infos[tv_src][image_type]
+                    if image_type in ('poster', 'banner'):
+                        if None is not getattr(show_infos[tv_src], '%s_thumb' % image_type, None):
+                            thumb_url = show_infos[tv_src]['%s_thumb' % image_type]
+                        else:
+                            thumb_url = image_url
+                    else:
+                        thumb_url = None
+                    if image_url:
+                        image_urls.append(((image_url, thumb_url), image_url)[None is thumb_url])
+                        if not init_url and image_type in ('poster', 'banner', 'fanart'):
+                            init_url = ((image_url, thumb_url), image_url)[None is thumb_url]
 
-            if return_links or None is init_url:
-                for item in self._fanart_urls_from_show(show_obj, image_type, show_lang) or []:
-                    image_urls.append(item[2])
+                if not fanart_fetched and (return_links or not init_url):
+                    fanart_fetched = True
+                    for item in self._fanart_urls_from_show(show_obj, image_type, show_lang) or []:
+                        image_urls.append((item[2], (item[2], item[2]))[image_type in ('poster', 'banner')])
 
-            # check extra provided images in '_banners' key
-            if None is not getattr(show_info, '_banners', None) and \
-                    isinstance(show_info['_banners'].get(image_type, None), (list, dict)):
-                for res, value in iteritems(show_info['_banners'][image_type]):
-                    for item in itervalues(value):
-                        image_urls.append(item['bannerpath'])
+                # check extra provided images in '_banners' key
+                if None is not getattr(show_infos[tv_src], '_banners', None) and \
+                        isinstance(show_infos[tv_src]['_banners'].get(image_type, None), (list, dict)):
+                    for res, value in iteritems(show_infos[tv_src]['_banners'][image_type]):
+                        for item in itervalues(value):
+                            thumb = item['thumbnailpath']
+                            if not thumb:
+                                thumb = item['bannerpath']
+                            image_urls.append((item['bannerpath'], (item['bannerpath'], thumb))[
+                                                  image_type in ('poster', 'banner')])
 
-            # extra images via images property
-            tvinfo_type = map_image_types.get(image_type)
-            tvinfo_size = (TVInfoImageSize.original, TVInfoImageSize.medium)['_thumb' in image_type]
-            if tvinfo_type and getattr(show_info, 'images', None) and show_info.images.get(tvinfo_type):
-                for img in show_info.images[tvinfo_type]:  # type: TVInfoImage
-                    for img_size, img_url in iteritems(img.sizes):
-                        if tvinfo_size == img_size:
-                            image_urls.append(img_url)
+                # extra images via images property
+                tvinfo_type = map_image_types.get(image_type)
+                tvinfo_size = (TVInfoImageSize.original, TVInfoImageSize.medium)['_thumb' in image_type]
+                if tvinfo_type and getattr(show_infos[tv_src], 'images', None) and \
+                        show_infos[tv_src].images.get(tvinfo_type):
+                    for img in show_infos[tv_src].images[tvinfo_type]:  # type: TVInfoImage
+                        for img_size, img_url in iteritems(img.sizes):
+                            if tvinfo_size == img_size:
+                                if image_type in ('poster', 'banner'):
+                                    thumb_url = img.sizes.get(TVInfoImageSize.medium, img_url) or img_url
+                                    image_urls.append((img_url, thumb_url))
+                                else:
+                                    image_urls.append(img_url)
 
-            if 0 == len(image_urls) or 'fanart' == image_type:
-                for item in self._tmdb_image_url(show_obj, image_type) or []:
-                    image_urls.append('%s?%s' % (item[2], item[0]))
+                if 0 == len(image_urls) or 'fanart' == image_type:
+                    for item in self._tmdb_image_url(show_obj, image_type) or []:
+                        image_urls.append('%s?%s' % (item[2], item[0]))
 
         img_data = len(image_urls) or None
         if img_data:
@@ -974,6 +994,11 @@ class GenericMetadata(object):
             if return_links:
                 return image_urls
             else:
+                if image_type in ('poster', 'banner'):
+                    if isinstance(image_urls, tuple):
+                        image_urls = image_urls[0]
+                    if isinstance(init_url, tuple):
+                        init_url = init_url[0]
                 img_data = metadata_helpers.getShowImage(
                     (init_url, image_urls[0])[None is init_url], which, show_obj.name, bool(len(alt_tvdb_urls)))
                 if None is img_data and len(alt_tvdb_urls):
@@ -1218,9 +1243,10 @@ class GenericMetadata(object):
         except (BaseException, Exception):
             raise
 
-    def retrieve_show_image(self, image_type, show_obj, which=None):
-        # type: (AnyStr, sickbeard.tv.TVShow, bool) -> Optional[bytes]
-        return self._retrieve_show_image(image_type=image_type, show_obj=show_obj, which=which)
+    def retrieve_show_image(self, image_type, show_obj, which=None, return_links=False, show_infos=None):
+        # type: (AnyStr, sickbeard.tv.TVShow, bool, bool, Dict[int, TVInfoShow]) -> Optional[bytes]
+        return self._retrieve_show_image(image_type=image_type, show_obj=show_obj, which=which,
+                                         return_links=return_links, show_infos=show_infos)
 
     def write_image(self, image_data, image_path, force=False):
         # type: (bytes, AnyStr, bool) -> bool

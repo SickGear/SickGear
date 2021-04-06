@@ -1208,7 +1208,7 @@ class TVShow(TVShowBase):
     )
 
     def __init__(self, tvid, prodid, lang='', show_sql=None, imdb_info_sql=None):
-        # type: (int, int, Text, Optional[Row], Optional[Row]) -> None
+        # type: (int, int, Text, Optional[Row], Optional[Union[Row, Dict]]) -> None
         super(TVShow, self).__init__(tvid, prodid, lang)
 
         self._tvid = int(tvid)
@@ -1386,7 +1386,7 @@ class TVShow(TVShowBase):
             self.sid_int = tvid_prodid_int
 
     def helper_load_failed_db(self, sql=None):
-        # type: (Row) -> None
+        # type: (Union[Row, Dict]) -> None
         if None is self._not_found_count or self._last_found_on_indexer == -1:
             if sql and self._prodid == sql['indexer_id'] and self._tvid == sql['indexer']:
                 results = [sql]
@@ -2411,7 +2411,7 @@ class TVShow(TVShowBase):
         return root_ep_obj
 
     def load_from_db(self, show_sql=None, imdb_info_sql=None):
-        # type: (Optional[Row], Optional[Row]) -> Optional[bool]
+        # type: (Optional[Row], Optional[Union[Row, Dict]]) -> Optional[bool]
         """
 
         :return:
@@ -2563,7 +2563,10 @@ class TVShow(TVShowBase):
 
         if 0 < len(sql_result):
             # this keys() is not a dict
-            self._imdb_info = dict(zip(sql_result[0].keys(), [(r, '')[None is r] for r in sql_result[0]]))
+            if isinstance(sql_result[0], dict):
+                self._imdb_info = sql_result[0]
+            else:
+                self._imdb_info = dict(zip(sql_result[0].keys(), [(r, '')[None is r] for r in sql_result[0]]))
         elif sickbeard.USE_IMDB_INFO:
             logger.log('%s: The next show update will attempt to find IMDb info for [%s]' %
                        (self.tvid_prodid, self.name), logger.DEBUG)
