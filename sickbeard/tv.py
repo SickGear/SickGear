@@ -16,7 +16,9 @@
 
 from __future__ import with_statement
 
-from collections import OrderedDict, Counter
+from collections import Counter, OrderedDict
+from functools import reduce
+from itertools import chain
 import datetime
 import glob
 import inspect
@@ -27,20 +29,13 @@ import stat
 import threading
 import traceback
 
-from functools import reduce
-from itertools import chain
-
 coreid_warnings = False
 if coreid_warnings:
     import warnings
     warnings.simplefilter('always', DeprecationWarning)
 
-from lxml_etree import etree
-from lib import imdbpie
 from imdbpie import ImdbAPIError
-from lib import subliminal
-from lib.dateutil import tz
-from lib.fuzzywuzzy import fuzz
+from lxml_etree import etree
 
 # noinspection PyPep8Naming
 import encodingKludge as ek
@@ -52,51 +47,54 @@ from . import db, helpers, history, image_cache, indexermapper, logger, \
     name_cache, network_timezones, notifiers, postProcessor, subtitles
 from .anime import AniGroupList
 from .common import Quality, statusStrings, \
-    ARCHIVED, DOWNLOADED, FAILED, IGNORED, SNATCHED, SNATCHED_PROPER, SNATCHED_ANY, SKIPPED, UNAIRED, UNKNOWN, WANTED, \
+    ARCHIVED, DOWNLOADED, FAILED, IGNORED, SKIPPED, SNATCHED, SNATCHED_ANY, SNATCHED_PROPER, UNAIRED, UNKNOWN, WANTED, \
     NAMING_DUPLICATE, NAMING_EXTEND, NAMING_LIMITED_EXTEND, NAMING_LIMITED_EXTEND_E_PREFIXED, NAMING_SEPARATED_REPEAT
 from .generic_queue import QueuePriorities
-from .name_parser.parser import NameParser, InvalidNameException, InvalidShowException
-from .helpers import try_int, try_float
-from .indexermapper import del_mapping, save_mapping, MapStatus
-from .indexers.indexer_config import TVINFO_IMDB, TVINFO_TVDB, TVINFO_TVMAZE, TVINFO_TVRAGE, TVINFO_TRAKT, TVINFO_TMDB
-from lib.tvinfo_base.exceptions import *
-from lib.tvinfo_base import TVINFO_TWITTER, TVINFO_FACEBOOK, TVINFO_WIKIPEDIA, TVINFO_INSTAGRAM, TVINFO_SLUG
+from .helpers import try_float, try_int
+from .indexermapper import del_mapping, MapStatus, save_mapping
+from .indexers.indexer_config import TVINFO_IMDB, TVINFO_TMDB, TVINFO_TRAKT, TVINFO_TVDB, TVINFO_TVMAZE, TVINFO_TVRAGE
+from .name_parser.parser import InvalidNameException, InvalidShowException, NameParser
 from .sgdatetime import SGDatetime, timestamp_near
-from sg_helpers import calc_age, time_to_int, int_to_time, remove_file_perm
 from .tv_base import TVEpisodeBase, TVShowBase
+from lib import imdbpie, subliminal
+from lib.dateutil import tz
 from lib.dateutil.parser import parser as du_parser
+from lib.fuzzywuzzy import fuzz
+from lib.tvinfo_base import TVINFO_FACEBOOK, TVINFO_INSTAGRAM, TVINFO_SLUG, TVINFO_TWITTER, TVINFO_WIKIPEDIA
+from lib.tvinfo_base.exceptions import *
+from sg_helpers import calc_age, int_to_time, remove_file_perm, time_to_int
 
-from _23 import filter_list, filter_iter, list_keys
-from six import integer_types, iteritems, itervalues, moves, string_types, PY2
+from _23 import filter_iter, filter_list, list_keys
+from six import integer_types, iteritems, itervalues, moves, PY2, string_types
 
 # noinspection PyUnreachableCode
 if False:
     from typing import Any, AnyStr, Dict, List, Optional, Set, Text, Union
     from sqlite3 import Row
-    from lib.tvinfo_base import CastList, TVInfoShow, TVInfoEpisode, Character as TVINFO_Character, \
-        Person as TVINFO_Person
+    from lib.tvinfo_base import CastList, Character as TVINFO_Character, Person as TVINFO_Person, \
+        TVInfoEpisode, TVInfoShow
 
 tz_p = du_parser()
 
 # status codes for switching tv show source
-TVSWITCH_NORMAL = 0
-TVSWITCH_VERIFY_ERROR = 1
-TVSWITCH_NOT_FOUND_ERROR = 2
-TVSWITCH_DUPLICATE_SHOW = 3
-TVSWITCH_SOURCE_NOT_FOUND_ERROR = 4
-TVSWITCH_NO_NEW_ID = 5
-TVSWITCH_SAME_ID = 6
-TVSWITCH_ID_CONFLICT = 7
+TVSWITCH_DUPLICATE_SHOW = 0
+TVSWITCH_ID_CONFLICT = 1
+TVSWITCH_NO_NEW_ID = 2
+TVSWITCH_NORMAL = 3
+TVSWITCH_NOT_FOUND_ERROR = 4
+TVSWITCH_SAME_ID = 5
+TVSWITCH_SOURCE_NOT_FOUND_ERROR = 6
+TVSWITCH_VERIFY_ERROR = 7
 
 tvswitch_names = {
-    TVSWITCH_NORMAL: 'Normal',
-    TVSWITCH_VERIFY_ERROR: 'Verification error',
-    TVSWITCH_NOT_FOUND_ERROR: 'Not found on new tv source',
     TVSWITCH_DUPLICATE_SHOW: 'Duplicate Show',
-    TVSWITCH_SOURCE_NOT_FOUND_ERROR: 'source show not found',
+    TVSWITCH_ID_CONFLICT: 'new id conflicts with existing show',
     TVSWITCH_NO_NEW_ID: 'no new id found',
+    TVSWITCH_NORMAL: 'Normal',
+    TVSWITCH_NOT_FOUND_ERROR: 'Not found on new tv source',
     TVSWITCH_SAME_ID: 'unchanged ids given',
-    TVSWITCH_ID_CONFLICT: 'new id conflicts with existing show'
+    TVSWITCH_SOURCE_NOT_FOUND_ERROR: 'source show not found',
+    TVSWITCH_VERIFY_ERROR: 'Verification error',
 }
 
 TVSWITCH_EP_DELETED = 1
@@ -453,11 +451,15 @@ class Person(Referential):
 
         def _get_from_ids():
             my_db = db.DBConnection()
-            sr = my_db.select('SELECT person_id FROM person_ids WHERE %s' %
-                              ' OR '.join(['( src = ? AND src_id = ? )'] * len(self.ids)),
-                              list(reduce(lambda a, b: a + b, iteritems(self.ids))))
-            if sr:
-                return sr[0]['person_id']
+            sql_result = my_db.select(
+                """
+                SELECT person_id
+                FROM person_ids
+                WHERE %s
+                """ % ' OR '.join(['( src = ? AND src_id = ? )'] * len(self.ids)),
+                list(reduce(lambda a, b: a + b, iteritems(self.ids))))
+            for cur_id in sql_result or []:
+                return cur_id['person_id']
 
         if mass_action_result:
             try:
@@ -568,24 +570,24 @@ class Person(Referential):
         if self.id or usable_rid(self._rid):
             my_db = db.DBConnection()
             src, src_id = self.ref_id(string=False)
-            pr = my_db.select(
+            sql_result = my_db.select(
                 """
                 SELECT persons.*,
                 (SELECT group_concat(person_ids.src || ':' || person_ids.src_id, ';;;')
-                FROM person_ids WHERE person_ids.person_id = persons.id) as p_ids
+                 FROM person_ids 
+                 WHERE person_ids.person_id = persons.id) AS p_ids
                 FROM persons
-                LEFT JOIN person_ids pi on persons.id = pi.person_id
+                LEFT JOIN person_ids pi ON persons.id = pi.person_id
                 WHERE %s
                 """ % ('pi.src = ? and pi.src_id = ?', 'persons.id = ?')[not src],
                 ([src, src_id], [self.id])[not src])
-            if pr:
-                p = pr[0]
-                birthdate = try_int(p['birthdate'], None)
-                birthdate = birthdate and datetime.date.fromordinal(p['birthdate'])
-                deathdate = try_int(p['deathdate'], None)
-                deathdate = deathdate and datetime.date.fromordinal(p['deathdate'])
+            for cur_person in sql_result or []:
+                birthdate = try_int(cur_person['birthdate'], None)
+                birthdate = birthdate and datetime.date.fromordinal(cur_person['birthdate'])
+                deathdate = try_int(cur_person['deathdate'], None)
+                deathdate = deathdate and datetime.date.fromordinal(cur_person['deathdate'])
                 p_ids = {}
-                for i in (p['p_ids'] and p['p_ids'].split(';;;')) or []:
+                for i in (cur_person['p_ids'] and cur_person['p_ids'].split(';;;')) or []:
                     k, v = i.split(':')
                     k = try_int(k, None)
                     if v:
@@ -593,13 +595,21 @@ class Person(Referential):
                             p_ids[k] = v
                         else:
                             p_ids[k] = try_int(v, None)
-                (self.id, self.name, self.gender, self.image_url, self.thumb_url, self.homepage, self.biography,
-                 self.birthplace, self.birthday, self.deathday, self.ids, self.updated, self.deathplace,
-                 self.real_name, self.height, self.nicknames, self.akas, self._data_fetched, self._data_failure) = \
-                    p['id'], p['name'], p['gender'], p['image_url'], p['thumb_url'], p['homepage'], p['bio'], \
-                    p['birthplace'], birthdate, deathdate, p_ids, p['updated'], p['deathplace'], p['realname'], \
-                    p['height'], set((p['nicknames'] and p['nicknames'].split(';;;')) or []), \
-                    set((p['akas'] and p['akas'].split(';;;')) or []), False, False
+                (self._data_failure, self._data_fetched,
+                 self.akas, self.biography,
+                 self.birthday, self.birthplace, self.deathday, self.deathplace,
+                 self.gender, self.height, self.homepage,
+                 self.id, self.ids, self.image_url, self.name,
+                 self.nicknames,
+                 self.real_name, self.thumb_url, self.updated) = \
+                    (False, False,
+                     set((cur_person['akas'] and cur_person['akas'].split(';;;')) or []), cur_person['bio'],
+                     birthdate, cur_person['birthplace'], deathdate, cur_person['deathplace'],
+                     cur_person['gender'], cur_person['height'], cur_person['homepage'],
+                     cur_person['id'], p_ids, cur_person['image_url'], cur_person['name'],
+                     set((cur_person['nicknames'] and cur_person['nicknames'].split(';;;')) or []),
+                     cur_person['realname'], cur_person['thumb_url'], cur_person['updated'])
+                break
 
     def update_prop_from_tvinfo_person(self, person_obj):
         # type: (TVINFO_Person) -> None
@@ -671,10 +681,11 @@ class Person(Referential):
             self.dirty_main = True
         self._data_failure = False
         self._data_fetched = True
-        r, found_persons, found_on_src, search_sources, found_ids, ids_to_check, tv_loop, imdb_confirmed, \
-        confirmed_character, source_confirmed = \
+        tvsrc_result, found_persons, found_on_src, search_sources, found_ids, ids_to_check, tv_loop, imdb_confirmed, \
+            source_confirmed = \
             None, {}, set(), [TVINFO_TRAKT, TVINFO_TMDB, TVINFO_IMDB], \
-            set([k for k, v in iteritems(self.ids) if v] + ['text']), {}, 0, False, False, {}
+            set([k for k, v in iteritems(self.ids) if v] + ['text']), {}, 0, False, {}
+        # confirmed_character =  False
         max_search_src = len(search_sources)
         logger.debug('Getting extra data for: %s' % self.name)
         for tv_loop in moves.xrange(0, max_search_src):
@@ -696,21 +707,22 @@ class Person(Referential):
                             kw = {'ids': {tv_src: self.ids[tv_src]}}
                         else:
                             kw = {'name': self.name}
-                        r = t.search_person(**kw)
+                        tvsrc_result = t.search_person(**kw)
                     except (BaseException, Exception):
                         self._data_failure = True
                         continue
-                    if r:
+                    if tvsrc_result:
                         # verify we have the correct person
-                        for p in r:  # type: TVINFO_Person
+                        for cur_person in tvsrc_result:  # type: TVINFO_Person
                             if None is not rp:
                                 break
                             if not (imdb_confirmed and TVINFO_IMDB == tv_src) \
-                                    and p.id in found_persons[cur_tv_info_src]:
+                                    and cur_person.id in found_persons[cur_tv_info_src]:
                                 continue
-                            found_persons[cur_tv_info_src].add(p.id)
+                            found_persons[cur_tv_info_src].add(cur_person.id)
                             try:
-                                pd = t.get_person(p.ids.get(cur_tv_info_src), get_show_credits=True, get_images=True)
+                                pd = t.get_person(cur_person.ids.get(cur_tv_info_src),
+                                                  get_show_credits=True, get_images=True)
                             except (BaseException, Exception) as e:
                                 self._data_failure = True
                                 logger.warning('Error searching extra info for person: %s - %s' % (self.name, ex(e)))
@@ -718,18 +730,21 @@ class Person(Referential):
                             if None is not pd and imdb_confirmed and TVINFO_IMDB == tv_src:
                                 rp = pd
                                 break
+                            # noinspection PyUnresolvedReferences
                             if show_obj and None is not pd and pd.characters:
                                 clean_show_name = indexermapper.clean_show_name(show_obj.name.lower())
                                 for ch in pd.characters or []:  # type: TVINFO_Character
                                     if clean_show_name == indexermapper.clean_show_name(ch.show.seriesname.lower()):
                                         rp = pd
-                                        confirmed_character = confirmed_on_src = True
+                                        confirmed_on_src = True
+                                        # confirmed_character = True
                                         break
                                     elif any(t_src == s_src and bool(t_id) and t_id == s_id['id']
                                              for t_src, t_id in iteritems(ch.show.ids)
                                              for s_src, s_id in iteritems(show_obj.ids)):
                                         rp = pd
-                                        confirmed_character = confirmed_on_src = True
+                                        confirmed_on_src = True
+                                        # confirmed_character = True
                                         break
                         if rp:
                             if TVINFO_IMDB == cur_tv_info_src and confirmed_on_src:
@@ -787,46 +802,62 @@ class Person(Referential):
             return
         my_db = db.DBConnection()
         if not self.id:
-            cl = [
-                ['INSERT INTO persons (name, gender, birthdate, deathdate, bio, birthplace, homepage,'
-                 ' image_url, thumb_url, updated, deathplace, height, realname, nicknames, akas)'
-                 ' VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?);',
-                 [self.name, self.gender, _make_date(self.birthday), _make_date(self.deathday), self.biography,
-                  self.birthplace, self.homepage, self.image_url, self.thumb_url, self._set_updated(), self.deathplace,
-                  self.height, self.real_name, ';;;'.join(self.nicknames or []), ';;;'.join(self.akas or [])]],
-            ]
+            cl = [[
+                """
+                INSERT INTO persons (akas, bio, birthdate, birthplace,
+                deathdate, deathplace, gender, height, homepage,
+                image_url, name, nicknames, realname, thumb_url,
+                updated)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?);
+                """, [';;;'.join(self.akas or []), self.biography, _make_date(self.birthday), self.birthplace,
+                      _make_date(self.deathday), self.deathplace, self.gender, self.height, self.homepage,
+                      self.image_url, self.name, ';;;'.join(self.nicknames or []), self.real_name, self.thumb_url,
+                      self._set_updated()]
+            ]]
             c_ids = len(self.ids)
             if c_ids:
                 f_d = next(iter(self.ids))
-                cl.extend([
-                    ['INSERT INTO person_ids (src, src_id, person_id) VALUES (?,?,last_insert_rowid())',
-                     [f_d, self.ids[f_d]]]
+                cl.extend([[
+                    """
+                    INSERT INTO person_ids (src, src_id, person_id)
+                    VALUES (?,?,last_insert_rowid())
+                    """, [f_d, self.ids[f_d]]]
                 ])
                 if 1 < c_ids:
-                    cl.extend([
-                        ['INSERT INTO person_ids (src, src_id, person_id)'
-                         ' VALUES (?,?, (SELECT person_ids.person_id FROM person_ids'
-                         ' WHERE person_ids.id = last_insert_rowid()));',
-                         [s, self.ids[s]]] for s in list(self.ids)[1:]
+                    cl.extend([[
+                        """
+                        INSERT INTO person_ids (src, src_id, person_id)
+                        VALUES (?,?, 
+                         (SELECT person_ids.person_id FROM person_ids
+                          WHERE person_ids.id = last_insert_rowid())
+                        );
+                        """, [s, self.ids[s]]] for s in list(self.ids)[1:]
                     ])
-                cl.extend([
-                    ['SELECT person_ids.person_id as last_rowid FROM person_ids'
-                     ' WHERE person_ids.id = last_insert_rowid()']
+                cl.extend([[
+                    """
+                    SELECT person_ids.person_id AS last_rowid
+                    FROM person_ids
+                    WHERE person_ids.id = last_insert_rowid()
+                    """]
                 ])
             else:
                 cl.extend([['SELECT last_insert_rowid() as last_rowid;']])
         else:
             cl = []
             if force or self.dirty_main:
-                cl = [
-                         ['UPDATE persons SET name = ?, gender = ?, birthdate = ?, deathdate = ?, bio = ?,'
-                          ' birthplace = ?, homepage = ?, image_url = ?, thumb_url = ?, updated = ?,'
-                          ' deathplace = ?, height = ?, realname = ?, nicknames = ?, akas = ? WHERE id = ?',
-                          [self.name, self.gender, _make_date(self.birthday), _make_date(self.deathday), self.biography,
-                           self.birthplace, self.homepage, self.image_url, self.thumb_url,
-                           self._set_updated(), self.deathplace, self.height, self.real_name,
-                           ';;;'.join(self.nicknames or []), ';;;'.join(self.akas or []), self.id]],
-                     ]
+                cl = [[
+                    """
+                    UPDATE persons
+                     SET name = ?, gender = ?, birthdate = ?, deathdate = ?, bio = ?,
+                     birthplace = ?, homepage = ?, image_url = ?, thumb_url = ?, updated = ?,
+                     deathplace = ?, height = ?, realname = ?, nicknames = ?, akas = ?
+                    WHERE id = ?
+                    """,
+                    [self.name, self.gender, _make_date(self.birthday), _make_date(self.deathday), self.biography,
+                     self.birthplace, self.homepage, self.image_url, self.thumb_url,
+                     self._set_updated(), self.deathplace, self.height, self.real_name,
+                     ';;;'.join(self.nicknames or []), ';;;'.join(self.akas or []), self.id]],
+                ]
             if force or self.dirty_ids:
                 for s, v in iteritems(self.ids):
                     cl.extend([
@@ -936,19 +967,27 @@ class Character(Referential):
                 return
         elif self.ids:
             my_db = db.DBConnection()
-            sr = my_db.select('SELECT character_id FROM character_ids WHERE %s' %
-                              ' OR '.join(['( src = ? AND src_id = ? )'] * len(self.ids)),
-                              list(reduce(lambda a, b: a+b, iteritems(self.ids))))
-            if sr:
-                return sr[0]['character_id']
+            sql_result = my_db.select(
+                """
+                SELECT character_id 
+                FROM character_ids 
+                WHERE %s
+                """ % ' OR '.join(['( src = ? AND src_id = ? )'] * len(self.ids)),
+                list(reduce(lambda a, b: a+b, iteritems(self.ids))))
+            if sql_result:
+                return sql_result[0]['character_id']
         elif self.person:
             my_db = db.DBConnection()
-            sr = my_db.select('SELECT characters.id as c_id FROM characters'
-                              ' LEFT JOIN character_person_map cpm on characters.id = cpm.character_id '
-                              ' WHERE name = ? AND cpm.person_id IN (%s)' % ','.join(['?' * len(self.person)]),
-                              [self.name] + [p.id for p in self.person])
-            if sr:
-                return sr[0]['c_id']
+            sql_result = my_db.select(
+                """
+                SELECT characters.id AS c_id 
+                FROM characters
+                LEFT JOIN character_person_map cpm ON characters.id = cpm.character_id
+                WHERE name = ? AND cpm.person_id IN (%s)
+                """ % ','.join(['?' * len(self.person)]),
+                [self.name] + [p.id for p in self.person])
+            if sql_result:
+                return sql_result[0]['c_id']
 
     def _set_updated(self):
         # type: (...) -> integer_types
@@ -1033,44 +1072,45 @@ class Character(Referential):
         if self.id or usable_rid(self._rid):
             my_db = db.DBConnection()
             src, src_id = self.ref_id(string=False)
-            r = my_db.select(
+            sql_result = my_db.select(
                 """
-                SELECT characters.name as name, characters.bio as bio,
-                characters.thumb_url as thumb_url, characters.image_url as image_url,
-                characters.updated as c_updated, characters.id as c_id,
+                SELECT characters.name AS name, characters.bio AS bio,
+                characters.thumb_url AS thumb_url, characters.image_url AS image_url,
+                characters.updated AS c_updated, characters.id AS c_id,
                 (SELECT group_concat(character_ids.src || ':' || character_ids.src_id, ';;;')
-                FROM character_ids WHERE character_ids.character_id = characters.id) as c_ids,
+                FROM character_ids WHERE character_ids.character_id = characters.id) AS c_ids,
                 (SELECT group_concat(character_person_map.person_id, ';;;')
                 FROM character_person_map
-                WHERE character_person_map.character_id = characters.id) as person_ids,
+                WHERE character_person_map.character_id = characters.id) AS person_ids,
                 (SELECT group_concat(character_person_years.person_id || ':' ||
                 character_person_years.start_year || '-' || character_person_years.end_year, ';;;')
                 FROM character_person_years WHERE character_person_years.character_id = characters.id)
-                as p_years
+                AS p_years
                 FROM characters
-                LEFT JOIN character_ids ci on characters.id = ci.character_id
+                LEFT JOIN character_ids ci ON characters.id = ci.character_id
                 WHERE %s
                 """ % ('ci.src = ? and ci.src_id = ?', 'characters.id = ?')[not src],
                 ([src, src_id], [self.id])[not src])
-            if r:
-                r = r[0]
+            if sql_result:
+                sql_result = sql_result[0]
                 c_ids = {}
-                for i in (r['c_ids'] and r['c_ids'].split(';;;')) or []:
+                for i in (sql_result['c_ids'] and sql_result['c_ids'].split(';;;')) or []:
                     k, v = i.split(':')
                     v = try_int(v, None)
                     if v:
                         c_ids[int(k)] = try_int(v, None)
                 p_years = {}
-                for p in (r['p_years'] and r['p_years'].split(';;;')) or []:
+                for p in (sql_result['p_years'] and sql_result['p_years'].split(';;;')) or []:
                     p_id, py = p.split(':')
                     start, end = py.split('-')
                     p_years[int(p_id)] = {'start': try_int(start, None), 'end': try_int(end, None)}
-                (self.id, self.name, self.ids, self.image_url, self.thumb_url, self.biography,
-                 self.person, self.updated, self.persons_years) = \
-                    r['c_id'], r['name'], c_ids, r['image_url'], r['thumb_url'], r['bio'], \
-                    [Person(sid=int(p), character_obj=self)
-                     for p in (r['person_ids'] and r['person_ids'].split(';;;')) or []], \
-                    r['c_updated'], p_years
+                (self.biography, self.id, self.ids, self.image_url, self.name,
+                 self.person, self.persons_years, self.thumb_url,
+                 self.updated) = \
+                    (sql_result['bio'], sql_result['c_id'], c_ids, sql_result['image_url'], sql_result['name'],
+                     [Person(sid=int(p), character_obj=self)
+                      for p in (sql_result['person_ids'] and sql_result['person_ids'].split(';;;')) or []],
+                     p_years, sql_result['thumb_url'], sql_result['c_updated'])
 
                 self.dirty_main, self.dirty_ids, self.dirty_person = False, False, False
 
@@ -1078,27 +1118,27 @@ class Character(Referential):
         if self.person:
             tvinfo_config = sickbeard.TVInfoAPI(TVINFO_IMDB).api_params.copy()
             t = sickbeard.TVInfoAPI(TVINFO_IMDB).setup(**tvinfo_config)
-            for per in self.person:
-                if not per.id:
+            for cur_per in self.person:
+                if not cur_per.id:
                     continue
-                if per.ids.get(TVINFO_IMDB):
+                if cur_per.ids.get(TVINFO_IMDB):
                     try:
-                        res = t.get_person(per.ids.get(TVINFO_IMDB), get_show_credits=True)
+                        res = t.get_person(cur_per.ids.get(TVINFO_IMDB), get_show_credits=True)
                     except (BaseException, Exception):
                         continue
                     if res and res.characters:
-                        per.character_obj = self
-                        per.update_prop_from_tvinfo_person(res)
+                        cur_per.character_obj = self
+                        cur_per.update_prop_from_tvinfo_person(res)
 
     def save_to_db(self, show_obj=None, force=False, stop_event=None):
         # type: (TVShow, bool, threading.Event) -> None
         if self.person:
-            for per in self.person:
+            for cur_per in self.person:
                 if stop_event and stop_event.is_set():
                     return
-                if force or self.dirty_person or not per.id or per.dirty_main or per.dirty_ids or \
-                        14 < (datetime.date.today().toordinal() - per.updated):
-                    per.save_to_db(show_obj=show_obj, character_obj=self, force=force, stop_event=stop_event)
+                if force or self.dirty_person or not cur_per.id or cur_per.dirty_main or cur_per.dirty_ids or \
+                        14 < (datetime.date.today().toordinal() - cur_per.updated):
+                    cur_per.save_to_db(show_obj=show_obj, character_obj=self, force=force, stop_event=stop_event)
                     self.dirty_person = True
 
         if ((None is self.id and not self.persons_years)
@@ -1107,44 +1147,61 @@ class Character(Referential):
 
         my_db = db.DBConnection()
         if not self.id:
-            cl = [
-                     ['INSERT INTO characters (name, bio, thumb_url, image_url, updated) VALUES (?,?,?,?,?)',
-                      [self.name, self.biography, self.thumb_url, self.image_url, self._set_updated()]],
+            cl = [[
+                """
+                INSERT INTO characters (bio, image_url, name, thumb_url, updated)
+                VALUES (?,?,?,?,?)
+                """, [self.biography, self.image_url, self.name, self.thumb_url, self._set_updated()]],
                  ]
             c_ids = len(self.ids)
             if c_ids:
                 f_d = next(iter(self.ids))
-                cl.extend([
-                    ['INSERT INTO character_ids (src, src_id, character_id) VALUES (?,?,last_insert_rowid())',
-                     [f_d, self.ids[f_d]]]
+                cl.extend([[
+                    """
+                    INSERT INTO character_ids (src, src_id, character_id)
+                    VALUES (?,?,last_insert_rowid())
+                    """, [f_d, self.ids[f_d]]]
                 ])
                 if 1 < c_ids:
-                    cl.extend([
-                        ['INSERT INTO character_ids (src, src_id, character_id)'
-                         ' VALUES (?,?, (SELECT character_ids.character_id FROM character_ids'
-                         ' WHERE character_ids.id = last_insert_rowid()));',
-                         [s, self.ids[s]]] for s in list(self.ids)[1:]
+                    cl.extend([[
+                        """
+                        INSERT INTO character_ids (src, src_id, character_id)
+                        VALUES (?,?,
+                         (SELECT character_ids.character_id FROM character_ids
+                          WHERE character_ids.id = last_insert_rowid())
+                         );
+                        """, [s, self.ids[s]]] for s in list(self.ids)[1:]
                     ])
-                cl.extend([
-                    ['SELECT character_ids.character_id as last_rowid FROM character_ids'
-                     ' WHERE character_ids.id = last_insert_rowid()']
+                cl.extend([[
+                    """
+                    SELECT character_ids.character_id AS last_rowid
+                    FROM character_ids
+                    WHERE character_ids.id = last_insert_rowid()
+                    """]
                 ])
             else:
-                cl.extend([['SELECT last_insert_rowid() as last_rowid;']])
+                cl.extend([['SELECT last_insert_rowid() AS last_rowid;']])
         else:
             cl = []
             if force or self.dirty_main:
-                cl = [
-                         ['UPDATE characters SET name = ?, bio = ?, thumb_url = ?, image_url = ?, updated = ?'
-                          ' WHERE id = ?',
-                          [self.name, self.biography, self.thumb_url, self.image_url, self._set_updated(), self.id]],
-                     ]
+                cl = [[
+                    """
+                    UPDATE characters SET bio = ?, image_url = ?, name = ?, thumb_url = ?, updated = ?
+                    WHERE id = ?
+                    """, [self.biography, self.image_url, self.name, self.thumb_url, self._set_updated(), self.id]],
+                ]
             if force or self.dirty_ids:
-                for s, v in iteritems(self.ids):
-                    cl.extend([
-                        ['UPDATE character_ids SET src_id = ? WHERE character_id = ? AND src = ?', [v, self.id, s]],
-                        ['INSERT INTO character_ids (src, src_id, character_id) SELECT %s, %s, %s WHERE changes() == 0'
-                         % (s, v, self.id)]
+                for cur_tvid, cur_src_id in iteritems(self.ids):
+                    cl.extend([[
+                        """
+                        UPDATE character_ids SET src_id = ?
+                        WHERE src = ? AND character_id = ? 
+                        """, [cur_src_id, cur_tvid, self.id]
+                    ], [
+                        """
+                        INSERT INTO character_ids (src, src_id, character_id)
+                        SELECT %s, %s, %s WHERE changes() == 0
+                        """ % (cur_tvid, cur_src_id, self.id)]
                     ])
 
         # in case we don't have a character id yet, we need to fetch it for the next step
@@ -1157,28 +1214,40 @@ class Character(Referential):
                     self.id = self._get_sid(r_id)
 
         if (force or self.dirty_person) and self.person:
-            cl.append(['DELETE FROM character_person_map WHERE character_id = ? AND person_id NOT IN (%s)' %
-                       ','.join(['?'] * len(self.person)), [self.id] + [p.id for p in self.person]])
-            for per in self.person:
-                cl.extend([
-                    ['INSERT OR IGNORE INTO character_person_map (character_id, person_id) VALUES (?,?)',
-                     [self.id, per.id]]
+            cl.append([
+                """
+                DELETE FROM character_person_map
+                WHERE character_id = ? AND person_id NOT IN (%s)
+                """ % ','.join(['?'] * len(self.person)),
+                [self.id] + [p.id for p in self.person]])
+            for cur_per in self.person:
+                cl.extend([[
+                    """
+                    INSERT OR IGNORE INTO character_person_map (character_id, person_id)
+                    VALUES (?,?)
+                    """, [self.id, cur_per.id]]
                 ])
 
         if (force or self.dirty_years) and self.person:
-            cl.append(['DELETE FROM character_person_years WHERE character_id = ? AND person_id NOT IN (%s)' %
-                       ','.join(['?'] * len(self.person)), [self.id] + [p.id for p in self.person]])
-            for per in self.person:
-                if per.id and any(1 for v in itervalues(self.persons_years.get(per.id, {})) if v):
-                    p_years = self.persons_years.get(per.id, {})
-                    cl.append(
-                        ['REPLACE INTO character_person_years (character_id, person_id, start_year, end_year)'
-                         ' VALUES (?,?,?,?)', [self.id, per.id, p_years.get('start'), p_years.get('end')]]
+            cl.append([
+                """
+                DELETE FROM character_person_years
+                WHERE character_id = ? AND person_id NOT IN (%s)
+                """ % ','.join(['?'] * len(self.person)),
+                [self.id] + [p.id for p in self.person]])
+            for cur_per in self.person:
+                if cur_per.id and any(1 for v in itervalues(self.persons_years.get(cur_per.id, {})) if v):
+                    p_years = self.persons_years.get(cur_per.id, {})
+                    cl.append([
+                        """
+                        REPLACE INTO character_person_years (character_id, person_id, start_year, end_year)
+                        VALUES (?,?,?,?)
+                        """, [self.id, cur_per.id, p_years.get('start'), p_years.get('end')]]
                     )
 
         if cl:
             my_db.mass_action(cl)
-            self.dirty_main, self.dirty_person, self.dirty_ids, self.dirty_years = False, False, False, False
+            self.dirty_ids, self.dirty_main, self.dirty_person, self.dirty_years = False, False, False, False
 
     def __bool__(self):
         return bool(self.name) or bool(self.person) or bool(self.ids)
@@ -1385,20 +1454,22 @@ class TVShow(TVShowBase):
         if getattr(self, 'sid_int', None) != tvid_prodid_int:
             self.sid_int = tvid_prodid_int
 
-    def helper_load_failed_db(self, sql=None):
+    def helper_load_failed_db(self, sql_result=None):
         # type: (Union[Row, Dict]) -> None
-        if None is self._not_found_count or self._last_found_on_indexer == -1:
-            if sql and self._prodid == sql['indexer_id'] and self._tvid == sql['indexer']:
-                results = [sql]
+        if None is self._not_found_count or -1 == self._last_found_on_indexer:
+            if sql_result and self._prodid == sql_result['indexer_id'] and self._tvid == sql_result['indexer']:
+                sql_result = [sql_result]
             else:
                 my_db = db.DBConnection()
-                results = my_db.select('SELECT fail_count, last_success'
-                                       ' FROM tv_shows_not_found'
-                                       ' WHERE indexer = ? AND indexer_id = ?',
-                                       [self._tvid, self._prodid])
-            if results:
-                self._not_found_count = helpers.try_int(results[0]['fail_count'])
-                self._last_found_on_indexer = helpers.try_int(results[0]['last_success'])
+                sql_result = my_db.select(
+                    """
+                    SELECT fail_count, last_success
+                    FROM tv_shows_not_found
+                    WHERE indexer = ? AND indexer_id = ?
+                    """, [self._tvid, self._prodid])
+            if sql_result:
+                self._not_found_count = helpers.try_int(sql_result[0]['fail_count'])
+                self._last_found_on_indexer = helpers.try_int(sql_result[0]['last_success'])
             else:
                 self._not_found_count = 0
                 self._last_found_on_indexer = 0
@@ -1417,12 +1488,14 @@ class TVShow(TVShowBase):
             last_check = int(timestamp_near(datetime.datetime.now()))
             # in case of flag change (+/-) don't change last_check date
             if abs(v) == abs(self._not_found_count):
-                results = my_db.select('SELECT last_check'
-                                       ' FROM tv_shows_not_found'
-                                       ' WHERE indexer = ? AND indexer_id = ?',
-                                       [self._tvid, self._prodid])
-                if results:
-                    last_check = helpers.try_int(results[0]['last_check'])
+                sql_result = my_db.select(
+                    """
+                    SELECT last_check
+                    FROM tv_shows_not_found
+                    WHERE indexer = ? AND indexer_id = ?
+                    """, [self._tvid, self._prodid])
+                if sql_result:
+                    last_check = helpers.try_int(sql_result[0]['last_check'])
             my_db.upsert('tv_shows_not_found',
                          dict(fail_count=v, last_check=last_check, last_success=self._last_found_on_indexer),
                          dict(indexer=self._tvid, indexer_id=self._prodid))
@@ -1435,12 +1508,14 @@ class TVShow(TVShowBase):
 
     def inc_not_found_count(self):
         my_db = db.DBConnection()
-        results = my_db.select('SELECT last_check'
-                               ' FROM tv_shows_not_found'
-                               ' WHERE indexer = ? AND indexer_id = ?',
-                               [self._tvid, self._prodid])
+        sql_result = my_db.select(
+            """
+            SELECT last_check
+            FROM tv_shows_not_found
+            WHERE indexer = ? AND indexer_id = ?
+            """, [self._tvid, self._prodid])
         days = (show_not_found_retry_days - 1, 0)[abs(self.not_found_count) <= concurrent_show_not_found_days]
-        if not results or datetime.datetime.fromtimestamp(helpers.try_int(results[0]['last_check'])) + \
+        if not sql_result or datetime.datetime.fromtimestamp(helpers.try_int(sql_result[0]['last_check'])) + \
                 datetime.timedelta(days=days, hours=18) < datetime.datetime.now():
             self.not_found_count += (-1, 1)[0 <= self.not_found_count]
 
@@ -1449,9 +1524,11 @@ class TVShow(TVShowBase):
             self._not_found_count = 0
             self._last_found_on_indexer = 0
             my_db = db.DBConnection()
-            my_db.action('DELETE FROM tv_shows_not_found'
-                         ' WHERE indexer = ? AND indexer_id = ?',
-                         [self._tvid, self._prodid])
+            my_db.action(
+                """
+                DELETE FROM tv_shows_not_found
+                WHERE indexer = ? AND indexer_id = ?
+                """, [self._tvid, self._prodid])
 
     @property
     def paused(self):
@@ -1556,9 +1633,13 @@ class TVShow(TVShowBase):
 
         if check_related_eps:
             # subselection to detect multi-episodes early, share_location > 0
-            sql_selection += ' , (SELECT COUNT (*) FROM tv_episodes WHERE showid = tve.showid AND ' \
-                             'indexer = tve.indexer AND season = tve.season AND location != "" AND ' \
-                             'location = tve.location AND episode != tve.episode) AS share_location '
+            sql_selection += """
+            , (SELECT COUNT (*)
+               FROM tv_episodes
+               WHERE showid = tve.showid AND indexer = tve.indexer AND season = tve.season AND location != ''
+               AND location = tve.location AND episode != tve.episode
+            ) AS share_location
+            """
 
         sql_selection += ' FROM tv_episodes tve WHERE indexer = ? AND showid = ?'
         sql_parameter = [self._tvid, self._prodid]
@@ -1574,10 +1655,10 @@ class TVShow(TVShowBase):
         sql_selection += ' ORDER BY season ASC, episode ASC'
 
         my_db = db.DBConnection()
-        results = my_db.select(sql_selection, sql_parameter)
+        sql_result = my_db.select(sql_selection, sql_parameter)
 
         ep_obj_list = []
-        for cur_result in results:
+        for cur_result in sql_result:
             ep_obj = self.get_episode(int(cur_result['season']), int(cur_result['episode']), ep_sql=[cur_result])
             if ep_obj:
                 ep_obj.related_ep_obj = []
@@ -1586,13 +1667,14 @@ class TVShow(TVShowBase):
                     # and put into related_ep_obj
                     if cur_result['share_location'] > 0:
                         # noinspection SqlRedundantOrderingDirection
-                        related_ep_result = my_db.select(
-                            'SELECT * FROM tv_episodes'
-                            ' WHERE indexer = ? AND showid = ?'
-                            ' AND season = ? AND location = ? AND episode != ? ORDER BY episode ASC',
-                            [self._tvid, self._prodid,
-                             ep_obj.season, ep_obj.location, ep_obj.episode])
-                        for cur_ep_result in related_ep_result:
+                        related_ep_sql_result = my_db.select(
+                            """
+                            SELECT * 
+                            FROM tv_episodes
+                            WHERE indexer = ? AND showid = ? AND season = ? AND location = ? AND episode != ? 
+                            ORDER BY episode ASC
+                            """, [self._tvid, self._prodid, ep_obj.season, ep_obj.location, ep_obj.episode])
+                        for cur_ep_result in related_ep_sql_result:
                             related_ep_obj = self.get_episode(int(cur_ep_result['season']),
                                                               int(cur_ep_result['episode']),
                                                               ep_sql=[cur_ep_result])
@@ -1628,12 +1710,12 @@ class TVShow(TVShowBase):
         if self.is_anime and absolute_number and not season and not episode:
             my_db = db.DBConnection()
             sql_result = my_db.select(
-                'SELECT season, episode FROM tv_episodes' 
-                ' WHERE indexer = ? AND showid = ?'
-                ' AND absolute_number = ? AND season != 0'
-                ' LIMIT 2',
-                [self._tvid, self._prodid,
-                 absolute_number])
+                """
+                SELECT season, episode
+                FROM tv_episodes
+                WHERE indexer = ? AND showid = ? AND absolute_number = ? AND season != 0
+                LIMIT 2
+                """, [self._tvid, self._prodid, absolute_number])
 
             if 1 == len(sql_result):
                 season = int(sql_result[0]['season'])
@@ -1643,18 +1725,18 @@ class TVShow(TVShowBase):
             elif 1 < len(sql_result):
                 logger.log('Multiple entries for absolute number: %s in show: %s  found.' %
                            (absolute_number, self._name), logger.ERROR)
-                return None
+                return
             else:
                 logger.log('No entries for absolute number: %s in show: %s found.'
                            % (absolute_number, self._name), logger.DEBUG)
-                return None
+                return
 
         if season not in self.sxe_ep_obj:
             self.sxe_ep_obj[season] = {}
 
         if episode not in self.sxe_ep_obj[season] or None is self.sxe_ep_obj[season][episode]:
             if no_create:
-                return None
+                return
 
             # logger.log('%s: An object for episode %sx%s did not exist in the cache, trying to create it' %
             #            (self.tvid_prodid, season, episode), logger.DEBUG)
@@ -1675,25 +1757,25 @@ class TVShow(TVShowBase):
         my_db = db.DBConnection()
         sql_result = my_db.select(
             """
-            SELECT castlist.sort_order as sort_order, characters.name as name,
-            characters.bio as c_bio, characters.id as c_id,
-            characters.image_url as image_url, characters.thumb_url as thumb_url,
-            characters.updated as c_updated,
-            persons.name as p_name, persons.gender as gender, persons.bio as p_bio,
-            persons.birthdate as birthdate, persons.thumb_url as p_thumb,
-            persons.image_url as p_image, persons.deathdate as deathdate, persons.id as p_id,
-            persons.birthplace as birthplace, persons.updated as p_updated,
-            persons.deathplace as deathplace, persons.height as height,
-            persons.realname as realname, persons.nicknames as nicknames,
-            persons.akas as akas,            
+            SELECT castlist.sort_order AS sort_order, characters.name AS name,
+            characters.bio AS c_bio, characters.id AS c_id,
+            characters.image_url AS image_url, characters.thumb_url AS thumb_url,
+            characters.updated AS c_updated,
+            persons.name AS p_name, persons.gender AS gender, persons.bio AS p_bio,
+            persons.birthdate AS birthdate, persons.thumb_url AS p_thumb,
+            persons.image_url AS p_image, persons.deathdate AS deathdate, persons.id AS p_id,
+            persons.birthplace AS birthplace, persons.updated AS p_updated,
+            persons.deathplace AS deathplace, persons.height AS height,
+            persons.realname AS realname, persons.nicknames AS nicknames,
+            persons.akas AS akas,            
             (SELECT group_concat(person_ids.src || ':' || person_ids.src_id, ';;;')
-            FROM person_ids WHERE person_ids.person_id = persons.id) as p_ids,
+            FROM person_ids WHERE person_ids.person_id = persons.id) AS p_ids,
             (SELECT group_concat(character_ids.src || ':' || character_ids.src_id, ';;;')
-            FROM character_ids WHERE character_ids.character_id = characters.id) as c_ids,
+            FROM character_ids WHERE character_ids.character_id = characters.id) AS c_ids,
             (SELECT group_concat(character_person_years.person_id || ':' ||
             character_person_years.start_year || '-' || character_person_years.end_year, ';;;')
             FROM character_person_years WHERE
-            character_person_years.character_id = characters.id) as p_years
+            character_person_years.character_id = characters.id) AS p_years
             FROM castlist
             LEFT JOIN character_person_map
             ON castlist.character_id = character_person_map.character_id
@@ -1703,21 +1785,22 @@ class TVShow(TVShowBase):
             ORDER BY castlist.sort_order       
             """, [self._tvid, self._prodid])
         self._cast_list = self._cast_list or []
-        for r in sql_result:
-            existing_character = next((c for c in self._cast_list or [] if None is not c.id and c.id == r['c_id']),
-                                      None)  # type: Optional[Character]
-            birthdate = try_int(r['birthdate'], None)
-            birthdate = birthdate and datetime.date.fromordinal(r['birthdate'])
-            deathdate = try_int(r['deathdate'], None)
-            deathdate = deathdate and datetime.date.fromordinal(r['deathdate'])
+        for cur_result in sql_result:
+            existing_character = next(
+                (c for c in self._cast_list or [] if None is not c.id and c.id == cur_result['c_id']),
+                None)  # type: Optional[Character]
+            birthdate = try_int(cur_result['birthdate'], None)
+            birthdate = birthdate and datetime.date.fromordinal(cur_result['birthdate'])
+            deathdate = try_int(cur_result['deathdate'], None)
+            deathdate = deathdate and datetime.date.fromordinal(cur_result['deathdate'])
             p_years = {}
-            for p in (r['p_years'] and r['p_years'].split(';;;')) or []:
+            for p in (cur_result['p_years'] and cur_result['p_years'].split(';;;')) or []:
                 p_id, py = p.split(':')
                 start, end = py.split('-')
                 p_years[int(p_id)] = {'start': try_int(start, None), 'end': try_int(end, None)}
 
             p_ids, c_ids = {}, {}
-            for i in (r['p_ids'] and r['p_ids'].split(';;;')) or []:
+            for i in (cur_result['p_ids'] and cur_result['p_ids'].split(';;;')) or []:
                 k, v = i.split(':')
                 k = try_int(k, None)
                 if v:
@@ -1725,17 +1808,22 @@ class TVShow(TVShowBase):
                         p_ids[k] = v
                     else:
                         p_ids[k] = try_int(v, None)
-            for i in (r['c_ids'] and r['c_ids'].split(';;;')) or []:
+            for i in (cur_result['c_ids'] and cur_result['c_ids'].split(';;;')) or []:
                 k, v = i.split(':')
                 v = try_int(v, None)
                 if v:
                     c_ids[int(k)] = try_int(v, None)
-            person = Person(r['p_name'], r['gender'], birthday=birthdate, deathday=deathdate, bio=r['p_bio'],
-                            sid=r['p_id'], birthplace=r['birthplace'], ids=p_ids, thumb_url=r['p_thumb'],
-                            image_url=r['p_image'], show_obj=self, updated=r['p_updated'], deathplace=r['deathplace'],
-                            height=r['height'], real_name=r['realname'],
-                            nicknames=set((r['nicknames'] and r['nicknames'].split(';;;')) or []),
-                            akas=set((r['akas'] and r['akas'].split(';;;')) or []))
+            person = Person(cur_result['p_name'], cur_result['gender'],
+                            akas=set((cur_result['akas'] and cur_result['akas'].split(';;;')) or []),
+                            bio=cur_result['p_bio'],
+                            birthday=birthdate, birthplace=cur_result['birthplace'],
+                            deathday=deathdate, deathplace=cur_result['deathplace'],
+                            height=cur_result['height'],
+                            ids=p_ids,
+                            image_url=cur_result['p_image'],
+                            nicknames=set((cur_result['nicknames'] and cur_result['nicknames'].split(';;;')) or []),
+                            real_name=cur_result['realname'], show_obj=self, sid=cur_result['p_id'],
+                            thumb_url=cur_result['p_thumb'], updated=cur_result['p_updated'])
             if existing_character:
                 try:
                     old_list.remove(existing_character.id)
@@ -1748,20 +1836,24 @@ class TVShow(TVShowBase):
                 existing_character.combine_start_end_years(p_years)
                 if existing_person:
                     existing_person.update_properties(
-                        name=person.name, gender=person.gender, birthday=person.birthday, deathday=person.deathday,
-                        biography=person.biography, birthplace=person.birthplace, thumb_url=person.thumb_url,
-                        image_url=person.image_url,
+                        akas=set((cur_result['akas'] and cur_result['akas'].split(';;;')) or []),
+                        biography=person.biography,
+                        birthday=person.birthday, birthplace=person.birthplace,
+                        deathday=person.deathday, deathplace=cur_result['deathplace'],
+                        gender=person.gender, height=cur_result['height'],
                         ids=dict(chain.from_iterable(iteritems(d) for d in (existing_person.ids, person.ids or {}))),
-                        deathplace=r['deathplace'], height=r['height'], real_name=r['realname'],
-                        nicknames=set((r['nicknames'] and r['nicknames'].split(';;;')) or []),
-                        akas=set((r['akas'] and r['akas'].split(';;;')) or [])
+                        image_url=person.image_url, name=person.name,
+                        nicknames=set((cur_result['nicknames'] and cur_result['nicknames'].split(';;;')) or []),
+                        real_name=cur_result['realname'], thumb_url=person.thumb_url
                     )
                 else:
                     existing_character.person.append(person)
             else:
-                self._cast_list.append(Character(r['name'], person=[person], ids=c_ids, bio=r['c_bio'], sid=r['c_id'],
-                                                 image_url=r['image_url'], thumb_url=r['thumb_url'], show_obj=self,
-                                                 updated=r['c_updated'], persons_years=p_years))
+                self._cast_list.append(Character(
+                    cur_result['name'],
+                    bio=cur_result['c_bio'], ids=c_ids, image_url=cur_result['image_url'], person=[person],
+                    persons_years=p_years, show_obj=self, sid=cur_result['c_id'],
+                    thumb_url=cur_result['thumb_url'], updated=cur_result['c_updated']))
         self._cast_list = [c for c in self._cast_list or [] if c.id not in old_list]
 
     def cast_list_id(self):
@@ -1808,22 +1900,29 @@ class TVShow(TVShowBase):
         if self._cast_list:
             my_db = db.DBConnection()
             cl = []
-            for r in removed_char_ids or []:
-                cl.extend([
-                    ['DELETE FROM castlist WHERE indexer = ? AND indexer_id = ? AND character_id = ?;',
-                     [self._tvid, self._prodid, r]]
+            for cur_id in removed_char_ids or []:
+                cl.extend([[
+                    """
+                    DELETE FROM castlist
+                    WHERE indexer = ? AND indexer_id = ? AND character_id = ?;
+                    """, [self._tvid, self._prodid, cur_id]]
                 ])
             update_date = datetime.date.today().toordinal()
-            for o, c in enumerate(self._cast_list, 1):
+            for cur_enum, cur_cast in enumerate(self._cast_list, 1):
                 if stop_event and stop_event.is_set():
                     return
-                c.save_to_db(show_obj=self, force=force, stop_event=stop_event)
-                cl.extend([
-                    ['UPDATE castlist SET sort_order = ?, updated = ? WHERE indexer = ? AND indexer_id = ?'
-                     ' AND character_id = ?;', [o, update_date, self._tvid, self._prodid, c.id]],
-                    ['INSERT INTO castlist (indexer, indexer_id, character_id, sort_order, updated)'
-                     ' SELECT %s, %s, %s, %s, %s WHERE changes() == 0;' %
-                     (self._tvid, self._prodid, c.id, o, update_date)]
+                cur_cast.save_to_db(show_obj=self, force=force, stop_event=stop_event)
+                cl.extend([[
+                    """
+                    UPDATE castlist SET sort_order = ?, updated = ?
+                    WHERE indexer = ? AND indexer_id = ?
+                    AND character_id = ?;
+                    """, [cur_enum, update_date, self._tvid, self._prodid, cur_cast.id]
+                ], [
+                    """
+                    INSERT INTO castlist (indexer, indexer_id, character_id, sort_order, updated)
+                    SELECT %s, %s, %s, %s, %s WHERE changes() == 0;
+                    """ % (self._tvid, self._prodid, cur_cast.id, cur_enum, update_date)]
                 ])
             if removed_char_ids:
                 # remove orphaned entries
@@ -1854,17 +1953,22 @@ class TVShow(TVShowBase):
             return False
 
         my_db = db.DBConnection()
-        sql_result = my_db.mass_action(
-            [['SELECT airdate FROM [tv_episodes]' +
-              ' WHERE indexer = ? AND showid = ?' +
-              ' AND season > 0'
-              ' ORDER BY season DESC, episode DESC LIMIT 1',
-              [self._tvid, self._prodid]],
-             ['SELECT airdate FROM [tv_episodes]'
-              + ' WHERE indexer = ? AND showid = ?'
-              + ' AND season > 0 AND airdate > 1'
-              + ' ORDER BY airdate DESC LIMIT 1',
-              [self._tvid, self._prodid]]])
+        sql_result = my_db.mass_action([[
+            """
+            SELECT airdate
+            FROM [tv_episodes]
+            WHERE indexer = ? AND showid = ? AND season > 0
+            ORDER BY season DESC, episode DESC
+            LIMIT 1
+            """, [self._tvid, self._prodid]
+        ], [
+            """
+            SELECT airdate
+            FROM [tv_episodes]
+            WHERE indexer = ? AND showid = ? AND season > 0 AND airdate > 1
+            ORDER BY airdate DESC
+            LIMIT 1
+            """, [self._tvid, self._prodid]]])
 
         last_airdate_unknown = 1 >= int(sql_result[0][0]['airdate']) if sql_result and sql_result[0] else True
 
@@ -1940,10 +2044,11 @@ class TVShow(TVShowBase):
         my_db = db.DBConnection()
         # noinspection SqlResolve
         sql_result = my_db.select(
-            'SELECT * FROM tv_episodes'
-            ' WHERE indexer = ? AND showid = ?'
-            ' AND location != ""',
-            [self._tvid, self._prodid])
+            """
+            SELECT *
+            FROM tv_episodes
+            WHERE indexer = ? AND showid = ? AND location != ''
+            """, [self._tvid, self._prodid])
 
         processed = []
         for cur_result in sql_result:
@@ -2060,9 +2165,11 @@ class TVShow(TVShowBase):
 
         my_db = db.DBConnection()
         sql_result = my_db.select(
-            'SELECT * FROM tv_episodes'
-            ' WHERE indexer = ? AND showid = ?',
-            [self._tvid, self._prodid])
+            """
+            SELECT *
+            FROM tv_episodes
+            WHERE indexer = ? AND showid = ?
+            """, [self._tvid, self._prodid])
 
         scannedEps = {}
 
@@ -2086,8 +2193,12 @@ class TVShow(TVShowBase):
         if None is cachedShow:
             return scannedEps
 
-        scene_sql = my_db.select('SELECT * FROM scene_numbering WHERE indexer == ? AND indexer_id = ? ',
-                                 [self._tvid, self._prodid])
+        scene_sql_result = my_db.select(
+            """
+            SELECT * 
+            FROM scene_numbering 
+            WHERE indexer == ? AND indexer_id = ?
+            """, [self._tvid, self._prodid])
 
         cachedSeasons = {}
         cl = []
@@ -2119,7 +2230,7 @@ class TVShow(TVShowBase):
                     cl.extend(ep_obj.delete_episode(return_sql=True))
                 else:
 
-                    ep_obj.load_from_db(season, episode, show_sql=[cur_result], scene_sql=scene_sql)
+                    ep_obj.load_from_db(season, episode, show_sql=[cur_result], scene_sql=scene_sql_result)
                     ep_obj.load_from_tvinfo(tvapi=t, update=update, cached_show=cachedShow)
                 scannedEps[season][episode] = True
             except exceptions_helper.EpisodeDeletedException:
@@ -2134,9 +2245,12 @@ class TVShow(TVShowBase):
 
     def switch_ep_change_sql(self, old_tvid, old_prodid, season, episode, reason):
         # type: (int, integer_types, int, int, int) -> List[AnyStr]
-        return ['REPLACE INTO switch_ep_result'
-                ' (old_indexer, old_indexer_id, new_indexer, new_indexer_id, season, episode, reason)'
-                ' VALUES (?,?,?,?,?,?,?)', [old_tvid, old_prodid, self._tvid, self._prodid, season, episode, reason]]
+        return [
+            """
+            REPLACE INTO switch_ep_result
+            (old_indexer, old_indexer_id, new_indexer, new_indexer_id, season, episode, reason)
+            VALUES (?,?,?,?,?,?,?)
+            """, [old_tvid, old_prodid, self._tvid, self._prodid, season, episode, reason]]
 
     def load_episodes_from_tvinfo(self, cache=True, update=False, tvinfo_data=None, switch=False, old_tvid=None,
                                   old_prodid=None):
@@ -2181,8 +2295,12 @@ class TVShow(TVShowBase):
         scannedEps = {}
 
         my_db = db.DBConnection()
-        show_sql = my_db.select('SELECT * FROM tv_episodes WHERE indexer = ? AND showid = ?',
-                                [self._tvid, self._prodid])
+        sql_result = my_db.select(
+            """
+            SELECT * 
+            FROM tv_episodes 
+            WHERE indexer = ? AND showid = ?
+            """, [self._tvid, self._prodid])
         sql_l = []
         for season in show_obj:
             scannedEps[season] = {}
@@ -2191,7 +2309,7 @@ class TVShow(TVShowBase):
                 if 0 == episode:
                     continue
                 try:
-                    ep_obj = self.get_episode(season, episode, ep_sql=show_sql)  # type: TVEpisode
+                    ep_obj = self.get_episode(season, episode, ep_sql=sql_result)  # type: TVEpisode
                 except exceptions_helper.EpisodeNotFoundException:
                     logger.log('%s: %s object for %sx%s from [%s] is incomplete, skipping this episode' %
                                (self.tvid_prodid, sickbeard.TVInfoAPI(self._tvid).name, season, episode, self._name))
@@ -2418,9 +2536,12 @@ class TVShow(TVShowBase):
         """
         if not show_sql or self._tvid != show_sql['indexer'] or self._prodid != show_sql['indexer_id']:
             my_db = db.DBConnection()
-            sql_result = my_db.select('SELECT * FROM tv_shows'
-                                      ' WHERE indexer = ? AND indexer_id = ?',
-                                      [self._tvid, self._prodid])
+            sql_result = my_db.select(
+                """
+                SELECT * 
+                FROM tv_shows
+                WHERE indexer = ? AND indexer_id = ?
+                """, [self._tvid, self._prodid])
         else:
             sql_result = [show_sql]
 
@@ -2554,10 +2675,12 @@ class TVShow(TVShowBase):
         # Get IMDb_info from database
         if not imdb_info_sql or self._tvid != imdb_info_sql['indexer'] or self._prodid != imdb_info_sql['indexer_id']:
             my_db = db.DBConnection()
-            sql_result = my_db.select('SELECT *'
-                                      ' FROM imdb_info'
-                                      ' WHERE indexer = ? AND indexer_id = ?',
-                                      [self.tvid, self.prodid])
+            sql_result = my_db.select(
+                """
+                SELECT *
+                FROM imdb_info
+                WHERE indexer = ? AND indexer_id = ?
+                """, [self.tvid, self.prodid])
         else:
             sql_result = [imdb_info_sql]
 
@@ -3001,12 +3124,13 @@ class TVShow(TVShowBase):
             my_db = db.DBConnection()
             # noinspection SqlRedundantOrderingDirection
             sql_result = my_db.select(
-                'SELECT airdate, season, episode FROM tv_episodes'
-                + ' WHERE indexer = ? AND showid = ?'
-                + ' AND airdate >= ? AND status in (?,?,?)'
-                + ' ORDER BY airdate ASC LIMIT 1',
-                [self._tvid, self._prodid,
-                 datetime.date.today().toordinal(), UNAIRED, WANTED, FAILED])
+                """
+                SELECT airdate, season, episode 
+                FROM tv_episodes
+                WHERE indexer = ? AND showid = ? AND airdate >= ? AND status in (?,?,?)
+                ORDER BY airdate ASC
+                LIMIT 1
+                """, [self._tvid, self._prodid, datetime.date.today().toordinal(), UNAIRED, WANTED, FAILED])
 
             if None is sql_result or 0 == len(sql_result):
                 logger.log('%s: No episode found... need to implement a show status' % self.tvid_prodid, logger.DEBUG)
@@ -3036,16 +3160,16 @@ class TVShow(TVShowBase):
             sickbeard.search_queue_scheduler.action.abort_show(show_obj=self)
         except (BaseException, Exception):
             pass
-        sql_l = [["DELETE FROM tv_episodes WHERE indexer = ? AND showid = ?", [self.tvid, self.prodid]],
-                 ["DELETE FROM tv_shows WHERE indexer = ? AND indexer_id = ?", [self.tvid, self.prodid]],
-                 ["DELETE FROM imdb_info WHERE indexer = ? AND indexer_id = ?", [self.tvid, self.prodid]],
-                 ["DELETE FROM xem_refresh WHERE indexer = ? AND indexer_id = ?", [self.tvid, self.prodid]],
-                 ["DELETE FROM scene_numbering WHERE indexer = ? AND indexer_id = ?", [self.tvid, self.prodid]],
-                 ["DELETE FROM allowlist WHERE indexer = ? AND show_id = ?", [self.tvid, self.prodid]],
-                 ["DELETE FROM blocklist WHERE indexer = ? AND show_id = ?", [self.tvid, self.prodid]],
-                 ["DELETE FROM indexer_mapping WHERE indexer = ? AND indexer_id = ?", [self.tvid, self.prodid]],
-                 ["DELETE FROM tv_shows_not_found WHERE indexer = ? AND indexer_id = ?", [self.tvid, self.prodid]],
-                 ["DELETE FROM castlist WHERE indexer = ? AND indexer_id = ?", [self._tvid, self._prodid]]
+        sql_l = [['DELETE FROM tv_episodes WHERE indexer = ? AND showid = ?', [self.tvid, self.prodid]],
+                 ['DELETE FROM tv_shows WHERE indexer = ? AND indexer_id = ?', [self.tvid, self.prodid]],
+                 ['DELETE FROM imdb_info WHERE indexer = ? AND indexer_id = ?', [self.tvid, self.prodid]],
+                 ['DELETE FROM xem_refresh WHERE indexer = ? AND indexer_id = ?', [self.tvid, self.prodid]],
+                 ['DELETE FROM scene_numbering WHERE indexer = ? AND indexer_id = ?', [self.tvid, self.prodid]],
+                 ['DELETE FROM allowlist WHERE indexer = ? AND show_id = ?', [self.tvid, self.prodid]],
+                 ['DELETE FROM blocklist WHERE indexer = ? AND show_id = ?', [self.tvid, self.prodid]],
+                 ['DELETE FROM indexer_mapping WHERE indexer = ? AND indexer_id = ?', [self.tvid, self.prodid]],
+                 ['DELETE FROM tv_shows_not_found WHERE indexer = ? AND indexer_id = ?', [self.tvid, self.prodid]],
+                 ['DELETE FROM castlist WHERE indexer = ? AND indexer_id = ?', [self._tvid, self._prodid]]
                  ] + self.orphaned_cast_sql()
 
         my_db = db.DBConnection()
@@ -3135,11 +3259,12 @@ class TVShow(TVShowBase):
         my_db = db.DBConnection()
         # noinspection SqlResolve
         sql_result = my_db.select(
-            'SELECT *'
-            ' FROM tv_episodes'
-            ' WHERE indexer = ? AND showid = ? AND location != ""'
-            ' ORDER BY season DESC , episode DESC',
-            [self._tvid, self._prodid])
+            """
+            SELECT *
+            FROM tv_episodes
+            WHERE indexer = ? AND showid = ? AND location != ''
+            ORDER BY season DESC, episode DESC
+            """, [self._tvid, self._prodid])
 
         kept = 0
         deleted = 0
@@ -3232,11 +3357,12 @@ class TVShow(TVShowBase):
         try:
             my_db = db.DBConnection()
             sql_result = my_db.select(
-                'SELECT location FROM tv_episodes'
-                + ' WHERE indexer = ? AND showid = ?'
-                  ' AND LENGTH(location) != 0'
-                + ' ORDER BY season DESC, episode DESC',
-                [self.tvid, self.prodid])
+                """
+                SELECT location 
+                FROM tv_episodes 
+                WHERE indexer = ? AND showid = ? AND LENGTH(location) != 0 
+                ORDER BY season DESC, episode DESC
+                """, [self.tvid, self.prodid])
 
             for cur_result in sql_result:
                 ep_obj = self.ep_obj_from_file(cur_result['location'])
@@ -3371,42 +3497,41 @@ class TVShow(TVShowBase):
         logger.log('%s: Saving show info to database' % self.tvid_prodid, logger.DEBUG)
 
         newValueDict = dict(
-            indexer=self._tvid,
-            show_name=self._name,
-            location=self._location,
-            network=self.internal_network,
-            genre=self._genre,
-            classification=self._classification,
-            runtime=self._runtime,
-            quality=self._quality,
-            airs=self._airs,
-            status=self._status,
-            flatten_folders=self._flatten_folders,
-            paused=self._paused,
             air_by_date=self._air_by_date,
+            airs=self._airs,
+            airtime=time_to_int(self._airtime),
             anime=self._anime,
-            scene=self._scene,
-            sports=self._sports,
-            subtitles=self._subtitles,
-            dvdorder=self._dvdorder,
             archive_firstmatch=self._upgrade_once,
-            startyear=self.startyear,
+            classification=self._classification,
+            dvdorder=self._dvdorder,
+            flatten_folders=self._flatten_folders,
+            genre=self._genre,
+            indexer=self._tvid,
             lang=self._lang, imdb_id=self._imdbid,
             last_update_indexer=self._last_update_indexer,
-            rls_ignore_words=helpers.generate_word_str(self._rls_ignore_words, self._rls_ignore_words_regex),
-            rls_require_words=helpers.generate_word_str(self._rls_require_words, self._rls_require_words_regex),
-            rls_global_exclude_ignore=','.join(self._rls_global_exclude_ignore),
-            rls_global_exclude_require=','.join(self._rls_global_exclude_require),
-            overview=self._overview,
-            prune=self._prune,
-            tag=self._tag,
-            network_id=self._network_id,
+            location=self._location,
+            network=self.internal_network,
             network_country=self._network_country,
             network_country_code=self._network_country_code,
+            network_id=self._network_id,
             network_is_stream=self._network_is_stream,
-            airtime=time_to_int(self._airtime),
+            overview=self._overview,
+            paused=self._paused,
+            prune=self._prune,
+            quality=self._quality,
+            rls_global_exclude_ignore=','.join(self._rls_global_exclude_ignore),
+            rls_global_exclude_require=','.join(self._rls_global_exclude_require),
+            rls_ignore_words=helpers.generate_word_str(self._rls_ignore_words, self._rls_ignore_words_regex),
+            rls_require_words=helpers.generate_word_str(self._rls_require_words, self._rls_require_words_regex),
+            runtime=self._runtime,
+            scene=self._scene,
+            show_name=self._name,
+            sports=self._sports,
+            startyear=self.startyear,
+            status=self._status,
+            subtitles=self._subtitles,
+            tag=self._tag,
             timezone=self.internal_timezone,
-            src_update_timestamp=self._src_update_time,
         )
 
         control_value_dict = dict(indexer=self._tvid, indexer_id=self._prodid)
@@ -3508,10 +3633,12 @@ class TVShow(TVShowBase):
             return False
 
         my_db = db.DBConnection()
-        sql_result = my_db.select('SELECT status FROM tv_episodes'
-                                  ' WHERE indexer = ? AND showid = ?'
-                                  ' AND season = ? AND episode = ?',
-                                  [self._tvid, self._prodid, season, episode])
+        sql_result = my_db.select(
+            """
+            SELECT status
+            FROM tv_episodes
+            WHERE indexer = ? AND showid = ? AND season = ? AND episode = ?
+            """, [self._tvid, self._prodid, season, episode])
 
         if not sql_result or not len(sql_result):
             logger.log('Unable to find a matching episode in database, ignoring found episode', logger.DEBUG)
@@ -3938,17 +4065,18 @@ class TVEpisode(TVEpisodeBase):
 
         if not sql_result:
             my_db = db.DBConnection()
-            sql_result = my_db.select('SELECT *'
-                                      ' FROM tv_episodes'
-                                      ' WHERE indexer = ? AND showid = ?'
-                                      ' AND season = ? AND episode = ?'
-                                      ' LIMIT 2',
-                                      [self._show_obj.tvid, self._show_obj.prodid,
-                                       season, episode])
+            sql_result = my_db.select(
+                """
+                SELECT *
+                FROM tv_episodes
+                WHERE indexer = ? AND showid = ? AND season = ? AND episode = ?
+                LIMIT 2
+                """, [self._show_obj.tvid, self._show_obj.prodid, season, episode])
 
         if 1 < len(sql_result):
             raise exceptions_helper.MultipleDBEpisodesException('Your DB has two records for the same show somehow.')
-        elif 0 == len(sql_result):
+
+        if 0 == len(sql_result):
             logger.log('%s: Episode %sx%s not found in the database'
                        % (self._show_obj.tvid_prodid, self._season, self._episode), logger.DEBUG)
             return False
@@ -4594,33 +4722,33 @@ class TVEpisode(TVEpisodeBase):
         logger.log('STATUS IS %s' % statusStrings[self._status], logger.DEBUG)
 
         newValueDict = dict(
-            indexer=self._tvid,
-            indexerid=self._epid,
-            name=self._name,
-            description=self._description,
-            subtitles=','.join([sub for sub in self._subtitles]),
-            subtitles_searchcount=self._subtitles_searchcount,
-            subtitles_lastsearch=self._subtitles_lastsearch,
+            absolute_number=self._absolute_number,
             airdate=self._airdate.toordinal(),
+            airtime=time_to_int(self._airtime),
+            description=self._description,
+            file_size=self._file_size,
             hasnfo=self._hasnfo,
             hastbn=self._hastbn,
-            status=self._status,
-            location=self._location,
-            file_size=self._file_size,
-            release_name=self._release_name,
+            indexer=self._tvid,
+            indexerid=self._epid,
             is_proper=self._is_proper,
-            absolute_number=self._absolute_number,
-            version=self._version,
-            release_group=self._release_group,
+            location=self._location,
+            name=self._name,
             network=self._network,
-            network_id=self._network_id,
             network_country=self._network_country,
             network_country_code=self._network_country_code,
+            network_id=self._network_id,
             network_is_stream=self._network_is_stream,
-            timezone=self._timezone,
-            timestamp=self._timestamp,
-            airtime=time_to_int(self._airtime),
+            release_group=self._release_group,
+            release_name=self._release_name,
             runtime=self._runtime,
+            status=self._status,
+            subtitles=','.join([sub for sub in self._subtitles]),
+            subtitles_lastsearch=self._subtitles_lastsearch,
+            subtitles_searchcount=self._subtitles_searchcount,
+            timestamp=self._timestamp,
+            timezone=self._timezone,
+            version=self._version,
         )
 
         control_value_dict = dict(

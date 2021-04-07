@@ -46,6 +46,9 @@ if False:
     from six import integer_types
     from lib.tvinfo_base import TVInfoShow
 
+from lib.hachoir.parser import createParser
+from lib.hachoir.metadata import extractMetadata
+
 cache_img_base = {'tvmaze': TVINFO_TVMAZE, 'themoviedb': TVINFO_TMDB, 'thetvdb': TVINFO_TVDB}
 
 
@@ -345,13 +348,47 @@ class ImageCache(object):
     POSTER_THUMB = 4
     FANART = 5
 
-    img_type_str = {
-        1: 'Banner',
-        2: 'Poster',
-        3: 'Banner thumb',
-        4: 'Poster thumb',
-        5: 'Fanart'
-    }
+    # img_type_str = {
+    #     1: 'Banner',
+    #     2: 'Poster',
+    #     3: 'Banner thumb',
+    #     4: 'Poster thumb',
+    #     5: 'Fanart'
+    # }
+
+    @staticmethod
+    def get_img_dimensions(path):
+        # type: (AnyStr) -> Optional[Tuple[integer_types, integer_types, float]]
+        """
+        get image dimensions: width, height, ratio
+        :param path: image file
+        """
+        if not ek.ek(os.path.isfile, path):
+            logger.warning(u'File not found to determine image type of %s' % path)
+            return
+
+        try:
+            img_parser = createParser(path)
+            img_parser.parse_comments = False
+            img_parser.parse_exif = False
+            img_parser.parse_photoshop_content = False
+            img_metadata = extractMetadata(img_parser)
+        except (BaseException, Exception) as e:
+            logger.debug(u'Unable to extract metadata from %s, not using file. Error: %s' % (path, ex(e)))
+            return
+
+        if not img_metadata:
+            logger.debug(u'Unable to extract metadata from %s, not using file' % path)
+            return
+
+        width = img_metadata.get('width')
+        height = img_metadata.get('height')
+        img_ratio = float(width) / float(height)
+
+        # noinspection PyProtectedMember
+        img_parser.stream._input.close()
+
+        return width, height, img_ratio
 
     def which_type(self, path):
         # type: (AnyStr) -> Optional[int]
@@ -364,9 +401,9 @@ class ImageCache(object):
         :rtype: int
         """
 
-        result = sg_helpers.get_img_dimensions(path)
+        result = self.get_img_dimensions(path)
         if not result:
-            return None
+            return
 
         img_width, img_height, img_ratio = result
 
@@ -374,24 +411,23 @@ class ImageCache(object):
                       + u' with extracted aspect ratio from %s' % path.replace('%', '%%')
         # most posters are around 0.68 width/height ratio (eg. 680/1000)
         if 0.55 < img_ratio < 0.8:
-            logger.log(msg_success % 'poster', logger.DEBUG)
+            logger.debug(msg_success % 'poster')
             return self.POSTER
 
         # most banners are around 5.4 width/height ratio (eg. 758/140)
-        elif 5 < img_ratio < 6:
-            logger.log(msg_success % 'banner', logger.DEBUG)
+        if 5 < img_ratio < 6:
+            logger.debug(msg_success % 'banner')
             return self.BANNER
 
-        # most fanart are around 1.7 width/height ratio (eg. 1280/720 or 1920/1080)
-        elif 1.7 < img_ratio < 1.8:
+        # most fan art are around 1.7 width/height ratio (eg. 1280/720 or 1920/1080)
+        if 1.7 < img_ratio < 1.8:
             if 500 < img_width:
-                logger.log(msg_success % 'fanart', logger.DEBUG)
+                logger.debug(msg_success % 'fanart')
                 return self.FANART
 
-            logger.log(u'Image found with fanart aspect ratio but less than 500 pixels wide, skipped', logger.WARNING)
-            return None
-
-        logger.log(u'Image not useful with size ratio %s, skipping' % img_ratio, logger.WARNING)
+            logger.warning(u'Skipped image with fanart aspect ratio but less than 500 pixels wide')
+        else:
+            logger.warning(u'Skipped image with useless ratio %s' % img_ratio)
 
     def should_refresh(self, image_type=None, provider='local'):
         # type: (int, Optional[AnyStr]) -> bool

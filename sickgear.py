@@ -568,59 +568,50 @@ class SickGear(object):
             sickbeard.metadata.kodi.rebuild_nfo()
 
         my_db = db.DBConnection()
-        sw = my_db.select('SELECT * FROM tv_src_switch WHERE status = 0')
-        if sw:
+        sql_result = my_db.select('SELECT * FROM tv_src_switch WHERE status = 0')
+        if sql_result:
             switching = True
-            l_msg = 'Adding Shows that switching tv source to queue'
-            s_count = len(sw)
-            sickbeard.classes.loading_msg.set_msg_progress(l_msg, '0/%s' % s_count)
-            for i, s in enumerate(sw, 1):
-                sickbeard.classes.loading_msg.set_msg_progress(l_msg, '%s/%s' % (i, s_count))
+            l_msg = 'Adding shows that are switching tv source to queue'
+            total_result = len(sql_result)
+
+            def q_switch(switch):
                 try:
-                    show_obj = sickbeard.helpers.find_show_by_id({s['old_indexer']: s['old_indexer_id']})
+                    _show_obj = sickbeard.helpers.find_show_by_id({switch['new_indexer']: switch['new_indexer_id']})
+                    if _show_obj:
+                        sickbeard.show_queue_scheduler.action.switch_show(
+                            show_obj=_show_obj,
+                            new_tvid=switch['new_indexer'], new_prodid=switch['new_indexer_id'],
+                            force_id=bool(switch['force_id']), uid=switch['uid'],
+                            set_pause=bool(switch['set_pause']), mark_wanted=bool(switch['mark_wanted']), resume=True,
+                            old_tvid=switch['old_indexer'], old_prodid=switch['old_indexer_id']
+                        )
                 except (BaseException, Exception):
-                    if s['new_indexer_id']:
-                        try:
-                            show_obj = sickbeard.helpers.find_show_by_id({s['new_indexer']: s['new_indexer_id']})
-                        except (BaseException, Exception):
-                            continue
-                        if show_obj:
-                            # show id was already switched, but not finished updated, so queue as update
-                            try:
-                                sickbeard.show_queue_scheduler.action.switch_show(
-                                    show_obj=show_obj, new_tvid=s['new_indexer'], new_prodid=s['new_indexer_id'],
-                                    force_id=bool(s['force_id']), uid=s['uid'],
-                                    set_pause=bool(s['set_pause']), mark_wanted=bool(s['mark_wanted']), resume=True,
-                                    old_tvid=s['old_indexer'], old_prodid=s['old_indexer_id']
-                                )
-                            except (BaseException, Exception):
-                                continue
+                    pass
+
+            sickbeard.classes.loading_msg.set_msg_progress(l_msg, '0/%s' % total_result)
+            for i, cur_switch in enumerate(sql_result, 1):
+                sickbeard.classes.loading_msg.set_msg_progress(l_msg, '%s/%s' % (i, total_result))
+                try:
+                    show_obj = sickbeard.helpers.find_show_by_id(
+                        {cur_switch['old_indexer']: cur_switch['old_indexer_id']})
+                except (BaseException, Exception):
+                    if cur_switch['new_indexer_id']:
+                        # show id was already switched, but not finished updated, so queue as update
+                        q_switch(cur_switch)
                     continue
                 if show_obj:
                     try:
                         sickbeard.show_queue_scheduler.action.switch_show(
-                            show_obj=show_obj, new_tvid=s['new_indexer'], new_prodid=s['new_indexer_id'],
-                            force_id=bool(s['force_id']), uid=s['uid'],
-                            set_pause=bool(s['set_pause']), mark_wanted=bool(s['mark_wanted'])
+                            show_obj=show_obj,
+                            new_tvid=cur_switch['new_indexer'], new_prodid=cur_switch['new_indexer_id'],
+                            force_id=bool(cur_switch['force_id']), uid=cur_switch['uid'],
+                            set_pause=bool(cur_switch['set_pause']), mark_wanted=bool(cur_switch['mark_wanted'])
                         )
                     except (BaseException, Exception):
                         continue
-                elif s['new_indexer_id']:
-                    try:
-                        show_obj = sickbeard.helpers.find_show_by_id({s['new_indexer']: s['new_indexer_id']})
-                    except (BaseException, Exception):
-                        continue
-                    if show_obj:
-                        # show id was already switched, but not finished updated, so resume
-                        try:
-                            sickbeard.show_queue_scheduler.action.switch_show(
-                                show_obj=show_obj, new_tvid=s['new_indexer'], new_prodid=s['new_indexer_id'],
-                                force_id=bool(s['force_id']), uid=s['uid'],
-                                set_pause=bool(s['set_pause']), mark_wanted=bool(s['mark_wanted']), resume=True,
-                                old_tvid=s['old_indexer'], old_prodid=s['old_indexer_id']
-                            )
-                        except (BaseException, Exception):
-                            continue
+                elif cur_switch['new_indexer_id']:
+                    # show id was already switched, but not finished updated, so resume
+                    q_switch(cur_switch)
         else:
             switching = False
 
@@ -708,19 +699,26 @@ class SickGear(object):
         logger.log(u'Loading initial show list')
 
         my_db = db.DBConnection(row_type='dict')
-        sql_result = my_db.select('SELECT tv_shows.indexer AS tv_id, tv_shows.indexer_id AS prod_id, *,'
-                                  ' ii.indexer as ii_indexer, ii.indexer_id as ii_indexer_id, ii.imdb_id as ii_imdb_id,'
-                                  ' ii.title as ii_title, ii.year as ii_year, ii.akas as ii_akas,'
-                                  ' ii.runtimes as ii_runtime, ii.genres as ii_genres, ii.countries as ii_countries,'
-                                  ' ii.country_codes as ii_country_codes, ii.certificates as ii_certificates,'
-                                  ' ii.rating as ii_rating, ii.votes as ii_votes, ii.last_update as ii_ii_last_update,'
-                                  ' tsnf.indexer as tsnf_indexer, tsnf.indexer_id as tsnf_indexer_id,'
-                                  ' tsnf.fail_count as tsnf_fail_count, tsnf.last_check as tsnf_last_check,'
-                                  ' tsnf.last_success as tsnf_last_success FROM tv_shows'
-                                  ' LEFT JOIN imdb_info ii on tv_shows.indexer = ii.indexer'
-                                  ' AND tv_shows.indexer_id = ii.indexer_id'
-                                  ' LEFT JOIN tv_shows_not_found tsnf on tv_shows.indexer = tsnf.indexer'
-                                  ' AND tv_shows.indexer_id = tsnf.indexer_id')
+        sql_result = my_db.select(
+            """
+            SELECT tv_shows.indexer AS tv_id, tv_shows.indexer_id AS prod_id, *,
+             ii.akas AS ii_akas, 
+             ii.certificates AS ii_certificates,
+             ii.countries AS ii_countries, ii.country_codes AS ii_country_codes,
+             ii.genres AS ii_genres, ii.imdb_id AS ii_imdb_id,
+             ii.indexer AS ii_indexer, ii.indexer_id AS ii_indexer_id,
+             ii.last_update AS ii_ii_last_update,
+             ii.rating AS ii_rating, ii.runtimes AS ii_runtimes,
+             ii.title AS ii_title, ii.votes AS ii_votes, ii.year AS ii_year,
+             tsnf.fail_count AS tsnf_fail_count, tsnf.indexer AS tsnf_indexer,
+             tsnf.indexer_id AS tsnf_indexer_id, tsnf.last_check AS tsnf_last_check,
+             tsnf.last_success AS tsnf_last_success
+            FROM tv_shows
+            LEFT JOIN imdb_info ii
+             ON tv_shows.indexer = ii.indexer AND tv_shows.indexer_id = ii.indexer_id
+            LEFT JOIN tv_shows_not_found tsnf
+             ON tv_shows.indexer = tsnf.indexer AND tv_shows.indexer_id = tsnf.indexer_id
+            """)
         sickbeard.showList = []
         sickbeard.showDict = {}
         for cur_result in sql_result:
@@ -734,9 +732,9 @@ class SickGear(object):
                     imdb_info_sql = None
                 show_obj = TVShow(tv_id, prod_id, show_sql=cur_result, imdb_info_sql=imdb_info_sql)
                 if cur_result['tsnf_indexer_id']:
-                    failed_sql = {_fk.replace('tsnf_', ''): _fv for _fk, _fv in iteritems(cur_result)
-                                  if _fk.startswith('tsnf_')}
-                    show_obj.helper_load_failed_db(sql=failed_sql)
+                    failed_result = {_fk.replace('tsnf_', ''): _fv for _fk, _fv in iteritems(cur_result)
+                                     if _fk.startswith('tsnf_')}
+                    show_obj.helper_load_failed_db(sql_result=failed_result)
                 sickbeard.showList.append(show_obj)
                 sickbeard.showDict[show_obj.sid_int] = show_obj
             except (BaseException, Exception) as err:

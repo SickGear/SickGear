@@ -24,8 +24,6 @@ import traceback
 
 from exceptions_helper import ex, ConnectionSkipException
 from lib.cachecontrol import CacheControl, caches
-from lib.hachoir.parser import createParser
-from lib.hachoir.metadata import extractMetadata
 from lib.tmdbsimple.configuration import Configuration
 from lib.tmdbsimple.genres import Genres
 from cfscrape import CloudflareScraper
@@ -1695,38 +1693,3 @@ def spoken_height(height):
     :param height: height in cm
     """
     return convert_to_inch_faction_html(height).replace('\'', ' foot').replace('"', '')
-
-
-def get_img_dimensions(path):
-    # type: (AnyStr) -> Optional[Tuple[integer_types, integer_types, float]]
-    """
-    get image dimensions: width, height, ratio
-    :param path: image file
-    """
-    if not ek.ek(os.path.isfile, path):
-        logger.warning(u'File does not exist to determine image type of %s' % path)
-        return None
-
-    # use hachoir to parse the image for us
-    try:
-        img_parser = createParser(path)
-        img_parser.parse_exif = False
-        img_parser.parse_photoshop_content = False
-        img_parser.parse_comments = False
-        img_metadata = extractMetadata(img_parser)
-    except (BaseException, Exception) as e:
-        logger.debug('Unable to extract metadata from %s, not using existing image. Error: %s' % (path, ex(e)))
-        return None
-
-    if not img_metadata:
-        logger.debug(u'Unable to extract metadata from %s, not using existing image' % path)
-        return None
-
-    width = img_metadata.get('width')
-    height = img_metadata.get('height')
-    img_ratio = float(width) / float(height)
-
-    # noinspection PyProtectedMember
-    img_parser.stream._input.close()
-
-    return width, height, img_ratio

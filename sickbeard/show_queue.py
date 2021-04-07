@@ -22,6 +22,9 @@ import datetime
 import os
 import traceback
 
+from lib.dateutil.parser import parser
+from lib.tvinfo_base.exceptions import *
+
 # noinspection PyPep8Naming
 import encodingKludge as ek
 import exceptions_helper
@@ -34,12 +37,11 @@ from .common import SKIPPED, WANTED, UNAIRED, Quality, statusStrings
 from .helpers import should_delete_episode, find_show_by_id
 from .indexermapper import clean_show_name, map_indexers_to_show
 from .indexers.indexer_config import TVINFO_TVDB, TVINFO_TVRAGE
-from lib.tvinfo_base.exceptions import *
-from lib.dateutil.parser import parser
 from .name_parser.parser import NameParser
-from .tv import TVShow, TVSWITCH_NORMAL, TVSWITCH_VERIFY_ERROR, TVSWITCH_NOT_FOUND_ERROR, TVSWITCH_DUPLICATE_SHOW, \
-    TVSWITCH_SOURCE_NOT_FOUND_ERROR, TVSWITCH_NO_NEW_ID, TVSWITCH_SAME_ID, TVSWITCH_ID_CONFLICT, TVSWITCH_EP_DELETED, \
-    TVidProdid
+from .tv import TVidProdid, TVShow, TVSWITCH_DUPLICATE_SHOW, TVSWITCH_EP_DELETED, TVSWITCH_ID_CONFLICT, \
+    TVSWITCH_NO_NEW_ID, TVSWITCH_NORMAL, TVSWITCH_NOT_FOUND_ERROR, TVSWITCH_SAME_ID, TVSWITCH_SOURCE_NOT_FOUND_ERROR, \
+    TVSWITCH_VERIFY_ERROR
+
 from six import integer_types, iteritems, itervalues
 from sg_helpers import try_int
 
