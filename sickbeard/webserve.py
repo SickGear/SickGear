@@ -9299,12 +9299,11 @@ class CachedImages(MainHandler):
                     and self.should_try_image(static_image_path, 'tmdb'):
                 tmdbimage = True
                 try:
-                    TMDB.API_KEY = sickbeard.TMDB_API_KEY
-                    tmdbconfig = sg_helpers.get_tmdb_info()
-                    images = TMDB.TV(helpers.try_int(tmdbid)).images()
-                    s = '%s%s%s' % (tmdbconfig['images']['base_url'], tmdbconfig['images']['poster_sizes'][3],
-                                    sorted(images['posters'], key=lambda x: x['vote_average'],
-                                           reverse=True)[0]['file_path']) if 0 < len(images['posters']) else ''
+                    tvinfo_config = sickbeard.TVInfoAPI(TVINFO_TMDB).api_params.copy()
+                    t = sickbeard.TVInfoAPI(TVINFO_TMDB).setup(**tvinfo_config)
+                    tv_s = t.get_show(tmdbid, load_episodes=False, posters=True)
+                    if tv_s and tv_s.poster:
+                        s = tv_s.poster
                 except (BaseException, Exception):
                     s = ''
             if s and not sg_helpers.download_file(s, static_image_path) and s.find('trakt.us'):

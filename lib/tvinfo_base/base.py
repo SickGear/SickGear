@@ -14,6 +14,7 @@ from sg_helpers import calc_age, make_dirs
 # noinspection PyUnreachableCode
 if False:
     from typing import Any, AnyStr, Dict, List, Optional, Set, Tuple, Union
+    str_int = Union[AnyStr, integer_types]
 
 TVINFO_TVDB = 1
 TVINFO_TVRAGE = 2
@@ -38,6 +39,27 @@ TVINFO_TWITTER = 250000
 TVINFO_FACEBOOK = 250001
 TVINFO_INSTAGRAM = 250002
 TVINFO_WIKIPEDIA = 250003
+
+tv_src_names = {
+    TVINFO_TVDB: 'tvdb',
+    TVINFO_TVRAGE: 'tvrage',
+    TVINFO_TVMAZE: 'tvmaze',
+
+    10001: 'tvdb v1',
+    TVINFO_IMDB: 'imdb',
+    TVINFO_TRAKT: 'trakt',
+    TVINFO_TMDB: 'tmdb',
+    TVINFO_TVDB_SLUG : 'tvdb slug',
+    TVINFO_TRAKT_SLUG: 'trakt slug',
+
+    TVINFO_SLUG: 'generic slug',
+
+    TVINFO_TWITTER: 'twitter',
+    TVINFO_FACEBOOK: 'facebook',
+    TVINFO_INSTAGRAM: 'instagram',
+    TVINFO_WIKIPEDIA: 'wikipedia'
+
+}
 
 log = logging.getLogger('TVInfo')
 log.addHandler(logging.NullHandler())
@@ -110,7 +132,33 @@ class TVInfoIDs(object):
             yield s, v
 
     def __str__(self):
-        return ', '.join('%s:%s' % v for v in self.__iter__())
+        return ', '.join('%s: %s' % (tv_src_names.get(k, k), v) for k, v in self.__iter__())
+
+    __repr__ = __str__
+    iteritems = __iter__
+    items = __iter__
+
+
+class TVInfoSocialIDs(object):
+    def __init__(self, twitter=None, instagram=None, facebook=None, wikipedia=None, ids=None):
+        # type: (str_int, str_int, str_int, str_int, Dict[int, str_int]) -> TVInfoSocialIDs
+        ids = ids or {}
+        self.twitter = twitter or ids.get(TVINFO_TWITTER)
+        self.instagram = instagram or ids.get(TVINFO_INSTAGRAM)
+        self.facebook = facebook or ids.get(TVINFO_FACEBOOK)
+        self.wikipedia = wikipedia or ids.get(TVINFO_WIKIPEDIA)
+
+    def __getitem__(self, key):
+        return {TVINFO_TWITTER: self.twitter, TVINFO_INSTAGRAM: self.instagram, TVINFO_FACEBOOK: self.facebook,
+                TVINFO_WIKIPEDIA: self.wikipedia}.get(key)
+
+    def __iter__(self):
+        for s, v in [(TVINFO_TWITTER, self.twitter), (TVINFO_INSTAGRAM, self.instagram),
+                     (TVINFO_FACEBOOK, self.facebook), (TVINFO_WIKIPEDIA, self.wikipedia)]:
+            yield s, v
+
+    def __str__(self):
+        return ', '.join('%s: %s' % (tv_src_names.get(k, k), v) for k, v in self.__iter__())
 
     __repr__ = __str__
     iteritems = __iter__
@@ -124,14 +172,18 @@ class TVInfoImageType(object):
     fanart = 3
     typography = 4
     other = 10
+    # person
+    person_poster = 50
 
     reverse_str = {
-        1: 'poster',
-        2: 'banner',
+        poster: 'poster',
+        banner: 'banner',
         # fanart/background
-        3: 'fanart',
-        4: 'typography',
-        10: 'other'
+        fanart: 'fanart',
+        typography: 'typography',
+        other: 'other',
+        # person
+        person_poster: 'person poster'
     }
 
 
@@ -148,7 +200,8 @@ class TVInfoImageSize(object):
 
 
 class TVInfoImage(object):
-    def __init__(self, image_type, sizes, img_id=None, main_image=False, type_str='', rating=None, votes=None):
+    def __init__(self, image_type, sizes, img_id=None, main_image=False, type_str='', rating=None, votes=None,
+                 lang=None, height=None, width=None, aspect_ratio=None):
         self.img_id = img_id  # type: Optional[integer_types]
         self.image_type = image_type  # type: integer_types
         self.sizes = sizes  # type: Dict[TVInfoImageSize, AnyStr]
@@ -156,10 +209,30 @@ class TVInfoImage(object):
         self.main_image = main_image  # type: bool
         self.rating = rating  # type: Optional[Union[float, integer_types]]
         self.votes = votes  # type: Optional[integer_types]
+        self.lang = lang  # type: Optional[AnyStr]
+        self.height = height  # type: Optional[integer_types]
+        self.width = width  # type: Optional[integer_types]
+        self.aspect_ratio = aspect_ratio  # type: Optional[Union[float, integer_types]]
 
     def __str__(self):
         return '<TVInfoImage %s [%s]>' % (TVInfoImageType.reverse_str.get(self.image_type, 'unknown'),
                                           ', '.join(TVInfoImageSize.reverse_str.get(s, 'unkown') for s in self.sizes))
+
+    __repr__ = __str__
+
+
+class TVInfoNetwork(object):
+    def __init__(self, name, n_id=None, country=None, country_code=None, timezone=None, stream=None):
+        self.name = name  # type: AnyStr
+        self.id = n_id  # type: Optional[integer_types]
+        self.country = country  # type: Optional[AnyStr]
+        self.country_code = country_code  # type: Optional[AnyStr]
+        self.timezone = timezone  # type: Optional[AnyStr]
+        self.stream = stream  # type: Optional[bool]
+
+    def __str__(self):
+        return '<Network (%s)>' % ', '.join('%s' % s for s in [self.name, self.id, self.country, self.country_code,
+                                                               self.timezone] if s)
 
     __repr__ = __str__
 
@@ -182,6 +255,7 @@ class TVInfoShow(dict):
         self.show_not_found = False  # type: bool
         self.id = None  # type: integer_types
         self.ids = TVInfoIDs()  # type: TVInfoIDs
+        self.social_ids = TVInfoSocialIDs()  # type: TVInfoSocialIDs
         self.slug = None  # type: Optional[AnyStr]
         self.seriesid = None  # type: integer_types
         self.seriesname = None  # type: Optional[AnyStr]
@@ -194,6 +268,7 @@ class TVInfoShow(dict):
         self.cast = CastList()  # type: CastList
         self.crew = CrewList()  # type: CrewList
         self.show_type = []  # type: List[AnyStr]
+        self.networks = []  # type: List[TVInfoNetwork]
         self.network = None  # type: Optional[AnyStr]
         self.network_id = None  # type: integer_types
         self.network_timezone = None  # type: Optional[AnyStr]
@@ -542,13 +617,15 @@ class PersonBase(dict):
     role,
     sortorder
     """
-    def __init__(self, p_id=None, name=None, image=None, gender=None, bio=None, birthdate=None, deathdate=None,
-                 country=None, country_code=None, country_timezone=None, ids=None, thumb_url=None, **kwargs):
-        # type: (integer_types, AnyStr, AnyStr, int, AnyStr, datetime.date, datetime.date, AnyStr, AnyStr, AnyStr, Dict, AnyStr, Dict) -> PersonBase
+    def __init__(self, p_id=None, name=None, image=None, images=None, gender=None, bio=None, birthdate=None,
+                 deathdate=None, country=None, country_code=None, country_timezone=None, ids=None, thumb_url=None,
+                 **kwargs):
+        # type: (integer_types, AnyStr, AnyStr, List[TVInfoImage], int, AnyStr, datetime.date, datetime.date, AnyStr, AnyStr, AnyStr, Dict, AnyStr, Dict) -> PersonBase
         super(PersonBase, self).__init__(**kwargs)
         self.id = p_id  # type: Optional[integer_types]
         self.name = name  # type: Optional[AnyStr]
         self.image = image  # type: Optional[AnyStr]
+        self.images = images or []  # type: List[TVInfoImage]
         self.thumb_url = thumb_url  # type: Optional[AnyStr]
         self.gender = gender  # type: Optional[int]
         self.bio = bio  # type: Optional[AnyStr]
@@ -607,13 +684,13 @@ class Crew(PersonBase):
 
 
 class Person(PersonBase):
-    def __init__(self, p_id=None, name=None, image=None, thumb_url=None, gender=None, bio=None, birthdate=None, deathdate=None,
+    def __init__(self, p_id=None, name=None, image=None, images=None, thumb_url=None, gender=None, bio=None, birthdate=None, deathdate=None,
                  country=None, country_code=None, country_timezone=None, ids=None, homepage=None, social_ids=None,
                  birthplace=None, url=None, characters=None, height=None, deathplace=None, nicknames=None,
                  real_name=None, akas=None, **kwargs):
-        # type: (integer_types, AnyStr, AnyStr, AnyStr, int, AnyStr, datetime.date, datetime.date, AnyStr, AnyStr, AnyStr, Dict, AnyStr, Dict, AnyStr, AnyStr, List[Character], Union[integer_types, float], AnyStr, Set[AnyStr], AnyStr, Set[AnyStr], Dict) -> Person
+        # type: (integer_types, AnyStr, Optional[AnyStr], List[TVInfoImage], AnyStr, int, AnyStr, datetime.date, datetime.date, AnyStr, AnyStr, AnyStr, Dict, AnyStr, Dict, AnyStr, AnyStr, List[Character], Union[integer_types, float], AnyStr, Set[AnyStr], AnyStr, Set[AnyStr], Dict) -> Person
         super(Person, self).__init__(p_id=p_id, name=name, image=image, thumb_url=thumb_url, gender=gender, bio=bio,
-                                     birthdate=birthdate, deathdate=deathdate, country=country,
+                                     birthdate=birthdate, deathdate=deathdate, country=country, images=images,
                                      country_code=country_code, country_timezone=country_timezone, ids=ids, **kwargs)
         self.credits = []  # type: List
         self.homepage = homepage  # type: Optional[AnyStr]

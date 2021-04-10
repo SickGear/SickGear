@@ -61,9 +61,6 @@ if False:
     from typing import Any, AnyStr, Dict, Generator, NoReturn, integer_types, Iterable, Iterator, List, Optional, \
         Tuple, Union
 
-# global tmdb_info cache
-_TMDB_INFO_CACHE = {'date': datetime.datetime(2000, 1, 1), 'data': None}
-
 html_convert_fractions = {0: '', 25: '&frac14;', 50: '&frac12;', 75: '&frac34;', 100: 1}
 
 PROG_DIR = ek.ek(os.path.join, os.path.dirname(os.path.normpath(os.path.abspath(__file__))), '..')
@@ -1446,22 +1443,6 @@ def indent_xml(elem, level=0):
             elem.text = ('%s' % elem.text).replace('\n', ' ')
         if level and (not elem.tail or not elem.tail.strip()):
             elem.tail = i
-
-
-def get_tmdb_info(get_tv_genres=False):
-    # type: (bool) -> Dict
-    """return tmdbsimple Configuration().info() or cached copy"""
-    global _TMDB_INFO_CACHE
-    # only retrieve info data if older then 3 days
-    if 3 < (datetime.datetime.now() - _TMDB_INFO_CACHE['date']).days or not _TMDB_INFO_CACHE['data']:
-        try:
-            tv_genres = {g['id']: g['name'] for g in Genres().tv_list()['genres']}
-        except (BaseException, Exception):
-            tv_genres = {}
-        _TMDB_INFO_CACHE = {'date': datetime.datetime.now(), 'data': Configuration().info(), 'genres': tv_genres}
-    if get_tv_genres:
-        return _TMDB_INFO_CACHE['genres']
-    return _TMDB_INFO_CACHE['data']
 
 
 def compress_file(target, filename, prefer_7z=True, remove_source=True):

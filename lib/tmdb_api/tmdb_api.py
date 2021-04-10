@@ -11,14 +11,15 @@ import logging
 import datetime
 
 from six import iteritems
-from sg_helpers import get_tmdb_info, get_url, try_int
+from sg_helpers import get_url, try_int
 from lib.dateutil.parser import parser
 from lib.dateutil.tz.tz import _datetime_to_timestamp
 from lib.exceptions_helper import ConnectionSkipException, ex
 from .tmdb_exceptions import *
 from lib.tvinfo_base import TVInfoBase, TVInfoImage, TVInfoImageSize, TVInfoImageType, Character, Crew, \
     crew_type_names, Person, RoleTypes, TVInfoEpisode, TVInfoIDs, TVInfoSeason, PersonGenders, TVINFO_TVMAZE, \
-    TVINFO_TVDB, TVINFO_IMDB, TVINFO_TMDB, TVINFO_TWITTER, TVINFO_INSTAGRAM, TVINFO_FACEBOOK, TVInfoShow
+    TVINFO_TVDB, TVINFO_IMDB, TVINFO_TMDB, TVINFO_TWITTER, TVINFO_INSTAGRAM, TVINFO_FACEBOOK, TVInfoShow, \
+    TVInfoSocialIDs, TVInfoNetwork
 from lib import tmdbsimple
 
 # noinspection PyUnreachableCode
@@ -33,6 +34,9 @@ tmdbsimple.API_KEY = 'edc5f123313769de83a71e157758030b'
 
 id_map = {TVINFO_IMDB: 'imdb_id', TVINFO_TVDB: 'tvdb_id', TVINFO_FACEBOOK: 'facebook_id', TVINFO_TWITTER: 'twitter_id',
           TVINFO_INSTAGRAM: 'instagram_id'}
+
+tv_show_map = {'name': 'seriesname', 'id': 'id', 'first_air_date': 'firstaired', 'status': 'status',
+               'original_language': 'language'}
 
 
 def tmdb_GET(self, path, params=None):
@@ -51,6 +55,105 @@ def tmdb_POST(self, path, params=None, payload=None):
 tmdbsimple.base.TMDB._GET = tmdb_GET
 tmdbsimple.base.TMDB._POST = tmdb_POST
 
+_TMDB_CONSTANTS_CACHE = {'date': datetime.datetime(2000, 1, 1), 'data': {}}
+
+
+def get_tmdb_constants():
+    # type: (...) -> Dict
+    """return tmdbsimple Configuration().info() or cached copy"""
+    global _TMDB_CONSTANTS_CACHE
+    # only retrieve info data if older then 3 days
+    if 3 < (datetime.datetime.now() - _TMDB_CONSTANTS_CACHE['date']).days or not _TMDB_CONSTANTS_CACHE['data']:
+        try:
+            tv_genres = {g['id']: g['name'] for g in tmdbsimple.Genres().tv_list()['genres']}
+            response = tmdbsimple.Configuration().info()
+            sorted_poster_sizes = sorted((try_int(_p.replace('w', '')) for _p in response['images']['poster_sizes']
+                                          if 'original' != _p), reverse=True)
+            sorted_backdrop_sizes = sorted((try_int(_p.replace('w', '')) for _p in response['images']['backdrop_sizes']
+                                            if 'original' != _p), reverse=True)
+            sorted_profile_sizes = sorted((try_int(_p.replace('w', '')) for _p in response['images']['profile_sizes']
+                                           if 'original' != _p and not _p.startswith('h')), reverse=True)
+            _TMDB_CONSTANTS_CACHE = {
+                'date': datetime.datetime.now(),
+                'data': {
+                    'genres': tv_genres,
+                    'img_base_url': response['images']['secure_base_url'],
+                    'img_profile_sizes': response['images']['profile_sizes'],
+                    'poster_sizes': response['images']['poster_sizes'],
+                    'backdrop_sizes': response['images']['backdrop_sizes'],
+                    'logo_sizes': response['images']['logo_sizes'],
+                    'still_sizes': response['images']['still_sizes'],
+                    'change_keys': response['change_keys'],
+                    'size_map': {
+                        TVInfoImageType.poster: {
+                            TVInfoImageSize.original: 'original',
+                            TVInfoImageSize.medium: 'w%s' % next((s for s in sorted_poster_sizes if s < 400), 342),
+                            TVInfoImageSize.small: 'w%s' % next((s for s in sorted_poster_sizes if s < 200), 185)
+                        },
+                        TVInfoImageType.fanart: {
+                            TVInfoImageSize.original: 'original',
+                            TVInfoImageSize.medium: 'w%s' % next((s for s in sorted_backdrop_sizes if s < 1000), 780),
+                            TVInfoImageSize.small: 'w%s' % next((s for s in sorted_backdrop_sizes if s < 500), 300)
+                        },
+                        TVInfoImageType.person_poster: {
+                            TVInfoImageSize.original: 'original',
+                            TVInfoImageSize.medium: 'w%s' % next((s for s in sorted_profile_sizes if s < 400), 185),
+                            TVInfoImageSize.small: 'w%s' % next((s for s in sorted_profile_sizes if s < 150), 45)
+                        }
+                    }
+                }
+            }
+        except (BaseException, Exception):
+            poster_sizes = ['w92', 'w154', 'w185', 'w342', 'w500', 'w780', 'original']
+            sorted_poster_sizes = sorted((try_int(_p.replace('w', '')) for _p in poster_sizes
+                                          if 'original' != _p), reverse=True)
+            backdrop_sizes = ['w300', 'w780', 'w1280', 'original']
+            sorted_backdrop_sizes = sorted((try_int(_p.replace('w', '')) for _p in backdrop_sizes
+                                            if 'original' != _p), reverse=True)
+            profile_sizes = ['w45', 'w185', 'h632', 'original']
+            sorted_profile_sizes = sorted((try_int(_p.replace('w', '')) for _p in profile_sizes
+                                           if 'original' != _p and not _p.startswith('h')), reverse=True)
+            _TMDB_CONSTANTS_CACHE['data'] = {
+                'genres': {10759: 'Action & Adventure', 16: 'Animation', 35: 'Comedy', 80: 'Crime', 99: 'Documentary',
+                           18: 'Drama', 10751: 'Family', 10762: 'Kids', 9648: 'Mystery', 10763: 'News',
+                           10764: 'Reality', 10765: 'Sci-Fi & Fantasy', 10766: 'Soap', 10767: 'Talk',
+                           10768: 'War & Politics', 37: 'Western'},
+                'img_base_url': r'https://image.tmdb.org/t/p/',
+                'img_profile_sizes': ['w45', 'w185', 'h632', 'original'],
+                'poster_sizes': poster_sizes,
+                'backdrop_sizes': backdrop_sizes,
+                'logo_sizes': ['w45', 'w92', 'w154', 'w185', 'w300', 'w500', 'original'],
+                'still_sizes': ['w92', 'w185', 'w300', 'original'],
+                'change_keys': ['adult', 'air_date', 'also_known_as', 'alternative_titles', 'biography', 'birthday',
+                                'budget', 'cast', 'certifications', 'character_names', 'created_by', 'crew', 'deathday',
+                                'episode', 'episode_number', 'episode_run_time', 'freebase_id', 'freebase_mid',
+                                'general', 'genres', 'guest_stars', 'homepage', 'images', 'imdb_id', 'languages',
+                                'name', 'network', 'origin_country', 'original_name', 'original_title', 'overview',
+                                'parts', 'place_of_birth', 'plot_keywords', 'production_code', 'production_companies',
+                                'production_countries', 'releases', 'revenue', 'runtime', 'season', 'season_number',
+                                'season_regular', 'spoken_languages', 'status', 'tagline', 'title', 'translations',
+                                'tvdb_id', 'tvrage_id', 'type', 'video', 'videos'],
+                'size_map': {
+                    TVInfoImageType.poster: {
+                        TVInfoImageSize.original: 'original',
+                        TVInfoImageSize.medium: 'w%s' % next((s for s in sorted_poster_sizes if s < 400), 342),
+                        TVInfoImageSize.small: 'w%s' % next((s for s in sorted_poster_sizes if s < 200), 185)
+                    },
+                    TVInfoImageType.fanart: {
+                        TVInfoImageSize.original: 'original',
+                        TVInfoImageSize.medium: 'w%s' % next((s for s in sorted_backdrop_sizes if s < 1000), 780),
+                        TVInfoImageSize.small: 'w%s' % next((s for s in sorted_backdrop_sizes if s < 500), 300)
+                    },
+                    TVInfoImageType.person_poster: {
+                        TVInfoImageSize.original: 'original',
+                        TVInfoImageSize.medium: 'w%s' % next((s for s in sorted_profile_sizes if s < 400), 185),
+                        TVInfoImageSize.small: 'w%s' % next((s for s in sorted_profile_sizes if s < 150), 45)
+                    }
+                }
+            }
+            pass
+    return _TMDB_CONSTANTS_CACHE['data']
+
 
 class TmdbIndexer(TVInfoBase):
     API_KEY = tmdbsimple.API_KEY
@@ -61,10 +164,10 @@ class TmdbIndexer(TVInfoBase):
     # noinspection PyDefaultArgument
     def __init__(self, *args, **kwargs):
         super(TmdbIndexer, self).__init__(*args, **kwargs)
-        response = get_tmdb_info()
-        self.img_base_url = response['images']['base_url']
-        self.img_sizes = response['images']['profile_sizes']
-        self.tv_genres = get_tmdb_info(get_tv_genres=True)
+        response = get_tmdb_constants()
+        self.img_base_url = response.get('img_base_url')
+        self.size_map = response.get('size_map')
+        self.tv_genres = response.get('genres')
 
     def _convert_person_obj(self, person_obj):
         gender = PersonGenders.tmdb_map.get(person_obj.get('gender'), PersonGenders.unknown)
@@ -92,25 +195,42 @@ class TmdbIndexer(TVInfoBase):
             )
 
         pi = person_obj.get('images')
-        image_url, thumb_url = None, None
+        image_url, main_image, thumb_url, main_thumb, image_list = None, None, None, None, []
         if pi:
-            def size_str_to_int(x):
-                return float('inf') if 'original' == x else int(x[1:])
-
-            thumb_size = next(s for s in sorted(self.img_sizes, key=size_str_to_int)
-                              if 150 < size_str_to_int(s))
             for i in sorted(pi['profiles'], key=lambda a: a['vote_average'] or 0, reverse=True):
-                if 500 < i['height'] and not image_url:
-                    image_url = '%s%s%s' % (self.img_base_url, 'original', i['file_path'])
-                    thumb_url = '%s%s%s' % (self.img_base_url, thumb_size, i['file_path'])
-                elif not thumb_url:
-                    thumb_url = '%s%s%s' % (self.img_base_url, 'original', i['file_path'])
-                if image_url and thumb_url:
-                    break
+                if not any((main_image, main_thumb)):
+                    if 500 < i['height'] and not image_url:
+                        image_url = '%s%s%s' % \
+                            (self.img_base_url, self.size_map[TVInfoImageType.person_poster][TVInfoImageSize.original],
+                             i['file_path'])
+                        thumb_url = '%s%s%s' % \
+                            (self.img_base_url, self.size_map[TVInfoImageType.person_poster][TVInfoImageSize.medium],
+                             i['file_path'])
+                    elif not thumb_url:
+                        thumb_url = '%s%s%s' % \
+                            (self.img_base_url, self.size_map[TVInfoImageType.person_poster][TVInfoImageSize.original],
+                             i['file_path'])
+                    if image_url and thumb_url:
+                        main_image_url, main_thumb = image_url, thumb_url
+                image_list.append(
+                    TVInfoImage(
+                        image_type=TVInfoImageType.person_poster,
+                        sizes={_s: '%s%s%s' % (self.img_base_url,
+                                               self.size_map[TVInfoImageType.person_poster][_s], i['file_path'])
+                               for _s in (TVInfoImageSize.original, TVInfoImageSize.medium, TVInfoImageSize.small)},
+                        aspect_ratio=i['aspect_ratio'],
+                        height=i['height'],
+                        width=i['width'],
+                        lang=i['iso_639_1'],
+                        rating=i['vote_average'],
+                        votes=i['vote_count']
+                    )
+                )
 
         return Person(p_id=person_obj.get('id'), gender=gender, name=person_obj.get('name'), birthdate=birthdate,
                       deathdate=deathdate, bio=person_obj.get('biography'), birthplace=person_obj.get('place_of_birth'),
-                      homepage=person_obj.get('homepage'), characters=characters, image=image_url, thumb_url=thumb_url,
+                      homepage=person_obj.get('homepage'), characters=characters, image=main_image,
+                      thumb_url=main_thumb, images=image_list, akas=set(person_obj.get('also_known_as') or []),
                       ids={TVINFO_TMDB: person_obj.get('id'),
                            TVINFO_IMDB:
                                person_obj.get('imdb_id') and try_int(person_obj['imdb_id'].replace('nm', ''), None)})
@@ -220,11 +340,17 @@ class TmdbIndexer(TVInfoBase):
                 if g in self.tv_genres:
                     tv_s.genre_list.append(self.tv_genres.get(g))
             tv_s.genre = ', '.join(tv_s.genre_list)
-            image_url = show_dict.get('poster_path') and '%s%s%s' % (self.img_base_url, 'original',
-                                                                     show_dict.get('poster_path'))
-            backdrop_url = show_dict.get('backdrop_path') and '%s%s%s' % (self.img_base_url, 'original',
-                                                                          show_dict.get('backdrop_path'))
+            image_url = show_dict.get('poster_path') and '%s%s%s' % \
+                (self.img_base_url, self.size_map[TVInfoImageType.poster][TVInfoImageSize.original],
+                 show_dict.get('poster_path'))
+            thumb_image_url = show_dict.get('poster_path') and '%s%s%s' % \
+                (self.img_base_url, self.size_map[TVInfoImageType.poster][TVInfoImageSize.small],
+                 show_dict.get('poster_path'))
+            backdrop_url = show_dict.get('backdrop_path') and '%s%s%s' % \
+                (self.img_base_url, self.size_map[TVInfoImageType.fanart][TVInfoImageSize.original],
+                 show_dict.get('backdrop_path'))
             tv_s.poster = image_url
+            tv_s.poster_thumb = thumb_image_url
             tv_s.fanart = backdrop_url
             tv_s.ids = TVInfoIDs(tmdb=tv_s.id)
         return tv_s
@@ -346,3 +472,113 @@ class TmdbIndexer(TVInfoBase):
         :param result_count:
         """
         return self._get_show_list(tmdbsimple.Discover().tv, result_count, **kwargs)
+
+    def _get_show_data(self, sid, language, get_ep_info=False, banners=False, posters=False, seasons=False,
+                       seasonwides=False, fanart=False, actors=False, **kwargs):
+        # type: (integer_types, AnyStr, bool, bool, bool, bool, bool, bool, bool, Optional[Any]) -> bool
+        # note: this is only working for images fetching currently
+        self.show_not_found = False
+        to_append = ['external_ids', 'alternative_titles', 'content_ratings']
+        if any((banners, posters, seasons, seasonwides, fanart)):
+            to_append.append('images')
+        if actors:
+            to_append.append('aggregate_credits')
+        if get_ep_info:
+            to_append.append('episode_groups')
+        try:
+            tmdb = tmdbsimple.TV(sid)
+            show_data = tmdb.info(append_to_response=','.join(to_append))
+        except (BaseException, Exception):
+            self.show_not_found = True
+            return False
+
+        if not show_data:
+            self.show_not_found = True
+            return False
+
+        self._set_show_data(sid, 'seriesid', show_data['id'])
+
+        runtime = None
+        for r in sorted(show_data['episode_run_time'], reverse=True):
+            if 40 < r < 50:
+                runtime = r
+                break
+            if 20 < r < 40:
+                runtime = r
+                break
+        if not runtime and show_data['episode_run_time']:
+            runtime = max(show_data['episode_run_time'] or [0]) or None
+            self._set_show_data(sid, 'runtime', runtime)
+
+        image_url = show_data.get('poster_path') and '%s%s%s' % \
+            (self.img_base_url, self.size_map[TVInfoImageType.poster][TVInfoImageSize.original],
+             show_data.get('poster_path'))
+        if image_url:
+            self._set_show_data(sid, 'poster', image_url)
+            thumb_image_url = show_data.get('poster_path') and '%s%s%s' % \
+                (self.img_base_url, self.size_map[TVInfoImageType.poster][TVInfoImageSize.small],
+                 show_data.get('poster_path'))
+            self._set_show_data(sid, 'poster_thumb', thumb_image_url)
+
+        backdrop_url = show_data.get('backdrop_path') and '%s%s%s' % \
+            (self.img_base_url, self.size_map[TVInfoImageType.fanart][TVInfoImageSize.original],
+             show_data.get('backdrop_path'))
+        if backdrop_url:
+            self._set_show_data(sid, 'fanart', backdrop_url)
+
+        self.shows[sid].genre_list = []
+        for g in show_data.get('genre_ids') or []:
+            if g in self.tv_genres:
+                self.shows[sid].genre_list.append(self.tv_genres.get(g))
+        self._set_show_data(sid, 'genre', ', '.join(self.shows[sid].genre_list))
+
+        self.shows[sid].networks = [
+            TVInfoNetwork(name=n.get('name'), n_id=n.get('id'), country_code=n.get('origin_country'))
+            for n in show_data['networks'] or []
+        ]
+
+        if show_data['networks']:
+            self.shows[sid].network = show_data['networks'][0]['name']
+            self.shows[sid].network_id = show_data['networks'][0].get('id')
+            self.shows[sid].network_country_code = show_data['networks'][0].get('origin_country')
+
+        for k, v in iteritems(show_data):
+            if k in tv_show_map:
+                self._set_show_data(sid, tv_show_map.get(k, k), v)
+
+        self._set_show_data(sid, 'ids',
+                            TVInfoIDs(
+                                tvdb=show_data['external_ids'].get('tvdb_id'),
+                                tmdb=show_data['id'],
+                                rage=show_data['external_ids'].get('tvrage_id'),
+                                imdb=show_data['external_ids'].get('imdb_id')
+                                and try_int(show_data['external_ids'].get('imdb_id', '').replace('tt', ''), None)))
+        self._set_show_data(sid, 'social_ids',
+                            TVInfoSocialIDs(twitter=show_data['external_ids'].get('twitter_id'),
+                                            instagram=show_data['external_ids'].get('instagram_id'),
+                                            facebook=show_data['external_ids'].get('facebook_id')))
+        if 'images' in show_data:
+            show_obj = self.shows[sid]  # type: TVInfoShow
+            show_obj.poster_loaded = True
+            show_obj.banner_loaded = True
+            show_obj.fanart_loaded = True
+            for img_type, img_list in iteritems(show_data['images']):
+                img_type = {'backdrops': TVInfoImageType.fanart, 'posters': TVInfoImageType.poster}.get(img_type)
+                for img in img_list:
+                    show_obj.images.setdefault(img_type, []).append(
+                        TVInfoImage(
+                            image_type=img_type,
+                            sizes={
+                                t_s: '%s%s%s' % (self.img_base_url, self.size_map[img_type][t_s], img['file_path'])
+                                for t_s in [TVInfoImageSize.original, TVInfoImageSize.medium, TVInfoImageSize.small]
+                            },
+                            rating=img['vote_average'],
+                            votes=img['vote_count'],
+                            lang=img['iso_639_1'],
+                            height=img['height'],
+                            width=img['width'],
+                            aspect_ratio=img['aspect_ratio']
+                        )
+                    )
+
+        return True

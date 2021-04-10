@@ -22,8 +22,6 @@ import os.path
 import re
 import zlib
 
-from collections import OrderedDict
-
 # noinspection PyPep8Naming
 import encodingKludge as ek
 import exceptions_helper
@@ -37,17 +35,17 @@ from .indexers.indexer_config import TVINFO_TVDB, TVINFO_TVMAZE, TVINFO_TMDB
 from lib.tvinfo_base.exceptions import *
 
 from six import itervalues, iteritems
-from _23 import list_keys
 
 # noinspection PyUnreachableCode
 if False:
-    from typing import AnyStr, Dict, Optional, Tuple, Union
+    from typing import AnyStr, Optional, Tuple, Union
     from .tv import TVShow, Person, Character
     from six import integer_types
-    from lib.tvinfo_base import TVInfoShow
+    from .metadata.generic import ShowInfosDict
 
-from lib.hachoir.parser import createParser
+from lib.hachoir.parser import createParser, guessParser
 from lib.hachoir.metadata import extractMetadata
+from lib.hachoir.stream import StringInputStream
 
 cache_img_base = {'tvmaze': TVINFO_TVMAZE, 'themoviedb': TVINFO_TMDB, 'thetvdb': TVINFO_TVDB}
 
@@ -357,70 +355,86 @@ class ImageCache(object):
     # }
 
     @staticmethod
-    def get_img_dimensions(path):
-        # type: (AnyStr) -> Optional[Tuple[integer_types, integer_types, float]]
+    def get_img_dimensions(image, is_binary=False):
+        # type: (AnyStr, bool) -> Optional[Tuple[integer_types, integer_types, float]]
         """
         get image dimensions: width, height, ratio
-        :param path: image file
+        :param image: image file or data
+        :param is_binary: is data instead of path
         """
-        if not ek.ek(os.path.isfile, path):
-            logger.warning(u'File not found to determine image type of %s' % path)
+        if not is_binary and not ek.ek(os.path.isfile, image):
+            logger.warning(u'File not found to determine image type of %s' % image)
+            return
+        if not image:
+            logger.warning('No Image Data to determinate image type')
             return
 
         try:
-            img_parser = createParser(path)
+            if is_binary:
+                img_parser = guessParser(StringInputStream(image))
+            else:
+                img_parser = createParser(image)
             img_parser.parse_comments = False
             img_parser.parse_exif = False
             img_parser.parse_photoshop_content = False
             img_metadata = extractMetadata(img_parser)
         except (BaseException, Exception) as e:
-            logger.debug(u'Unable to extract metadata from %s, not using file. Error: %s' % (path, ex(e)))
+            logger.debug(u'Unable to extract metadata from %s, not using file. Error: %s' % (image, ex(e)))
             return
 
         if not img_metadata:
-            logger.debug(u'Unable to extract metadata from %s, not using file' % path)
+            if is_binary:
+                msg = 'Image Data'
+            else:
+                msg = image
+            logger.debug(u'Unable to extract metadata from %s, not using file' % msg)
             return
 
         width = img_metadata.get('width')
         height = img_metadata.get('height')
         img_ratio = float(width) / float(height)
 
-        # noinspection PyProtectedMember
-        img_parser.stream._input.close()
+        if not is_binary:
+            # noinspection PyProtectedMember
+            img_parser.stream._input.close()
 
         return width, height, img_ratio
 
-    def which_type(self, path):
-        # type: (AnyStr) -> Optional[int]
+    def which_type(self, image, is_binary=False):
+        # type: (AnyStr, bool) -> Optional[int]
         """
         Analyzes the image provided and attempts to determine whether it is a poster, banner or fanart.
 
-        :param path: full path to the image
-        :type path: AnyStr
+        :param image: full path to the image or image data
+        :param is_binary: is binary data instead path to image
         :return: BANNER, POSTER, FANART or None if image type is not detected or doesn't exist
         :rtype: int
         """
 
-        result = self.get_img_dimensions(path)
+        result = self.get_img_dimensions(image, is_binary)
         if not result:
             return
 
         img_width, img_height, img_ratio = result
 
-        msg_success = u'Treating image as %s' \
-                      + u' with extracted aspect ratio from %s' % path.replace('%', '%%')
+        if is_binary:
+            msg_data = '<Image Data>'
+        else:
+            msg_data = image.replace('%', '%%')
+        msg_success = 'Treating image as %s' \
+                      + ' with extracted aspect ratio from %s' % msg_data
         # most posters are around 0.68 width/height ratio (eg. 680/1000)
-        if 0.55 < img_ratio < 0.8:
+        if 0.55 <= img_ratio <= 0.8:
             logger.debug(msg_success % 'poster')
             return self.POSTER
 
         # most banners are around 5.4 width/height ratio (eg. 758/140)
-        if 5 < img_ratio < 6:
+        if 5 <= img_ratio <= 6:
             logger.debug(msg_success % 'banner')
             return self.BANNER
 
         # most fan art are around 1.7 width/height ratio (eg. 1280/720 or 1920/1080)
-        if 1.7 < img_ratio < 1.8:
+        if 1.7 <= img_ratio <= 1.8:
             if 500 < img_width:
                 logger.debug(msg_success % 'fanart')
                 return self.FANART
@@ -495,9 +509,12 @@ class ImageCache(object):
         id_args = (tvid, prodid)
         if self.POSTER == img_type:
             dest_path = self.poster_path(*id_args)
+            dest_thumb_path = self.poster_thumb_path(*id_args)
         elif self.BANNER == img_type:
             dest_path = self.banner_path(*id_args)
+            dest_thumb_path = self.banner_thumb_path(*id_args)
         elif self.FANART == img_type:
+            dest_thumb_path = None
             with open(image_path, mode='rb') as resource:
                 crc = '%05X' % (zlib.crc32(resource.read()) & 0xFFFFFFFF)
             dest_path = self.fanart_path(*id_args + (prefix,)).replace('.fanart.jpg', '.%s.fanart.jpg' % crc)
@@ -510,6 +527,9 @@ class ImageCache(object):
             sg_helpers.make_dirs(cache_dir)
 
         logger.log(u'%sing from %s to %s' % (('Copy', 'Mov')[move_file], image_path, dest_path))
+        # copy poster, banner as thumb, even if moved we need to duplicate the images
+        if img_type in (self.POSTER, self.BANNER) and dest_thumb_path:
+            sg_helpers.copy_file(image_path, dest_thumb_path)
         if move_file:
             sg_helpers.move_file(image_path, dest_path)
         else:
@@ -518,7 +538,7 @@ class ImageCache(object):
         return ek.ek(os.path.isfile, dest_path) and dest_path or None
 
     def _cache_info_source_images(self, show_obj, img_type, num_files=0, max_files=500, force=False, show_infos=None):
-        # type: (TVShow, int, int, int, bool, Dict[int, TVInfoShow]) -> bool
+        # type: (TVShow, int, int, int, bool, ShowInfosDict) -> bool
         """
         Retrieves an image of the type specified from TV info source and saves it to the cache folder
 
@@ -558,7 +578,7 @@ class ImageCache(object):
         # retrieve the image from TV info source using the generic metadata class
         metadata_generator = GenericMetadata()
         if self.FANART == img_type:
-            image_urls = metadata_generator.retrieve_show_image(img_type_name, show_obj)
+            image_urls = metadata_generator.retrieve_show_image(img_type_name, show_obj, show_infos=show_infos)
             if None is image_urls:
                 return False
 
@@ -570,24 +590,24 @@ class ImageCache(object):
                     crcs += [crc]
 
             success = 0
-            count_urls = len(image_urls)
             sources = []
             sickbeard.MEMCACHE.setdefault('cookies', {})
             for image_url in image_urls or []:
                 img_data = sg_helpers.get_url(image_url, nocache=True, as_binary=True,
                                               url_solver=sickbeard.FLARESOLVERR_HOST,
                                               memcache_cookies=sickbeard.MEMCACHE['cookies'])
-                if None is img_data:
+                if None is img_data or self.FANART != self.which_type(img_data, is_binary=True):
                     continue
+
                 crc = '%05X' % (zlib.crc32(img_data) & 0xFFFFFFFF)
                 if crc in crcs:
-                    count_urls -= 1
                     continue
                 crcs += [crc]
-                img_source = (((('', 'tvdb')['thetvdb.com' in image_url],
+                img_source = ((((('', 'tvdb')['thetvdb.com' in image_url],
                                 'tvrage')['tvrage.com' in image_url],
                                'fatv')['fanart.tv' in image_url],
-                              'tmdb')['tmdb' in image_url]
+                              'tmdb')['tmdb' in image_url],
+                              'tvmaze')['tvmaze.com' in image_url]
                 img_xtra = ''
                 if 'tmdb' == img_source:
                     match = re.search(r'(?:.*\?(\d+$))?', image_url, re.I | re.M)
@@ -596,25 +616,18 @@ class ImageCache(object):
                 file_desc = '%03d%s.%s.' % (num_files, ('.%s%s' % (img_source, img_xtra), '')['' == img_source], crc)
                 cur_file_path = self.fanart_path(show_obj.tvid, show_obj.prodid, file_desc)
                 result = metadata_generator.write_image(img_data, cur_file_path)
-                if result and self.FANART != self.which_type(cur_file_path):
-                    try:
-                        ek.ek(os.remove, cur_file_path)
-                    except OSError as e:
-                        logger.log(u'Unable to remove %s: %s / %s' % (cur_file_path, repr(e), ex(e)), logger.WARNING)
-                    continue
                 if img_source:
                     sources += [img_source]
                 num_files += (0, 1)[result]
                 success += (0, 1)[result]
                 if num_files > max_files:
                     break
-            if count_urls:
-                total = len(ek.ek(glob.glob, dest_path))
-                logger.log(u'Saved %s of %s fanart images%s. Cached %s of max %s fanart file%s'
-                           % (success, count_urls,
-                              ('', ' from ' + ', '.join([x for x in list(set(sources))]))[0 < len(sources)],
-                              total, sickbeard.FANART_LIMIT, sg_helpers.maybe_plural(total)))
-            return bool(count_urls) and not bool(count_urls - success)
+            total = len(ek.ek(glob.glob, dest_path))
+            logger.log(u'Saved %s fanart images%s. Cached %s of max %s fanart file%s'
+                       % (success,
+                          ('', ' from ' + ', '.join([x for x in list(set(sources))]))[0 < len(sources)],
+                          total, sickbeard.FANART_LIMIT, sg_helpers.maybe_plural(total)))
+            return bool(success)
 
         image_urls = metadata_generator.retrieve_show_image(img_type_name, show_obj, return_links=True,
                                                             show_infos=show_infos)
@@ -628,15 +641,9 @@ class ImageCache(object):
             else:
                 img_url, thumb_url = image_url, None
             img_data = sg_helpers.get_url(img_url, nocache=True, as_binary=True)
-            if None is img_data:
+            if None is img_data or img_type != self.which_type(img_data, is_binary=True):
                 continue
             result = metadata_generator.write_image(img_data, dest_path, force=force)
-            if result and img_type != self.which_type(dest_path):
-                try:
-                    sg_helpers.remove_file_perm(dest_path)
-                except OSError as e:
-                    logger.log(u'Unable to remove %s: %s / %s' % (dest_path, repr(e), ex(e)), logger.WARNING)
-                continue
             if img_type in (self.BANNER, self.POSTER) and dest_thumb_path:
                 thumb_img_data = sg_helpers.get_url(img_url, nocache=True, as_binary=True)
                 thumb_result = None
@@ -677,29 +684,7 @@ class ImageCache(object):
             logger.log(u'%s: No new cache images needed. Done.' % show_obj.tvid_prodid)
             return
 
-        show_infos = OrderedDict()
-        for tv_src in list(OrderedDict.fromkeys([show_obj._tvid] + list_keys(sickbeard.TVInfoAPI().search_sources))):
-            if tv_src != show_obj._tvid and not show_obj.ids.get(tv_src, {}).get('id'):
-                continue
-            try:
-                show_lang = show_obj.lang
-                # There's gotta be a better way of doing this but we don't wanna
-                # change the language value elsewhere
-                tvinfo_config = sickbeard.TVInfoAPI(tv_src).api_params.copy()
-                tvinfo_config['fanart'] = True
-                tvinfo_config['posters'] = True
-                tvinfo_config['banners'] = True
-                tvinfo_config['dvdorder'] = 0 != show_obj.dvdorder
-
-                if show_lang and not 'en' == show_lang:
-                    tvinfo_config['language'] = show_lang
-
-                t = sickbeard.TVInfoAPI(tv_src).setup(**tvinfo_config)
-                show_infos[tv_src] = t.get_show((show_obj.ids[tv_src]['id'], show_obj.prodid)[tv_src == show_obj._tvid],
-                                                load_episodes=False, banners=False, posters=False, fanart=True)
-            except (BaseTVinfoError, IOError) as e:
-                logger.log(u"Unable to look up show on " + sickbeard.TVInfoAPI(
-                    tv_src).name + ", not downloading images: " + ex(e), logger.WARNING)
+        show_infos = GenericMetadata.gen_show_infos_dict(show_obj)
 
         void = False
         if not void and need_images[self.FANART]:

@@ -701,7 +701,7 @@ class SickGear(object):
         my_db = db.DBConnection(row_type='dict')
         sql_result = my_db.select(
             """
-            SELECT tv_shows.indexer AS tv_id, tv_shows.indexer_id AS prod_id, *,
+            SELECT tv_shows.indexer AS tv_id, tv_shows.indexer_id AS prod_id, tv_shows.*,
              ii.akas AS ii_akas, 
              ii.certificates AS ii_certificates,
              ii.countries AS ii_countries, ii.country_codes AS ii_country_codes,

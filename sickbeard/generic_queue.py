@@ -84,7 +84,7 @@ class GenericQueue(object):
         cl = self._clear_sql()
         try:
             with self.lock:
-                for item in (self.currentItem and [self.currentItem]) or [] + self.queue:
+                for item in ((self.currentItem and [self.currentItem]) or []) + self.queue:
                     cl.extend(self._get_item_sql(item))
 
             if cl:
