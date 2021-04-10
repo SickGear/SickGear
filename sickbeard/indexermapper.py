@@ -21,21 +21,22 @@ import os
 import re
 import traceback
 
-# noinspection PyPep8Naming
-import encodingKludge as ek
-import sickbeard
 from . import db, logger
 from .helpers import get_url, try_int
-from .indexers.indexer_config import TVINFO_TVDB, TVINFO_IMDB, TVINFO_TVMAZE, TVINFO_TVRAGE, TVINFO_TMDB, TVINFO_TRAKT
+from .indexers.indexer_config import TVINFO_IMDB, TVINFO_TMDB, TVINFO_TRAKT, TVINFO_TVDB, TVINFO_TVMAZE, TVINFO_TVRAGE
 
+# noinspection PyPep8Naming
+import encodingKludge as ek
 import requests
+import sickbeard
+
+from exceptions_helper import ConnectionSkipException
 # noinspection PyPep8Naming
 from lib import tmdbsimple as TMDB
 from lib.dateutil.parser import parse
 from lib.imdbpie import Imdb
 from libtrakt import TraktAPI
 from libtrakt.exceptions import TraktAuthException, TraktException
-from exceptions_helper import ConnectionSkipException
 
 from _23 import unidecode, urlencode
 from six import iteritems, iterkeys, string_types, PY2
@@ -110,8 +111,10 @@ class TraktDict(OrderedDict):
 # noinspection PyUnusedLocal
 def tvmaze_record_hook(r, *args, **kwargs):
     r.hook_called = True
+    # noinspection HttpUrlsUsage
     if 301 == r.status_code and isinstance(r.headers.get('Location'), string_types) \
-            and r.headers.get('Location').startswith('http://api.tvmaze'):
+            and r.headers.get('Location').startswith('http''://api.tvmaze'):
+        # noinspection HttpUrlsUsage
         r.headers['Location'] = r.headers['Location'].replace('http://', 'https://')
     return r
 
@@ -146,10 +149,10 @@ def get_tvmaze_ids(url_tvmaze):
         try:
             res = get_tvmaze_data(url=url_tvmaze.get_url(url_key), parse_json=True, raise_status_code=True, timeout=120)
             if res and 'externals' in res:
-                ids[TVINFO_TVRAGE] = res['externals'].get('tvrage', 0)
-                ids[TVINFO_TVDB] = res['externals'].get('thetvdb', 0)
                 ids[TVINFO_IMDB] = try_int(str(res['externals'].get('imdb')).replace('tt', ''))
+                ids[TVINFO_TVDB] = res['externals'].get('thetvdb', 0)
                 ids[TVINFO_TVMAZE] = res.get('id', 0)
+                ids[TVINFO_TVRAGE] = res['externals'].get('tvrage', 0)
                 break
         except (BaseException, Exception):
             pass
@@ -206,10 +209,10 @@ def get_tvmaze_by_name(showname, premiere_date):
                 if 'show' in r and 'premiered' in r['show'] and 'externals' in r['show']:
                     premiered = parse(r['show']['premiered'], fuzzy=True)
                     if abs(premiere_date - premiered.date()) < datetime.timedelta(days=2):
-                        ids[TVINFO_TVRAGE] = r['show']['externals'].get('tvrage', 0)
-                        ids[TVINFO_TVDB] = r['show']['externals'].get('thetvdb', 0)
                         ids[TVINFO_IMDB] = try_int(str(r['show']['externals'].get('imdb')).replace('tt', ''))
+                        ids[TVINFO_TVDB] = r['show']['externals'].get('thetvdb', 0)
                         ids[TVINFO_TVMAZE] = r['show'].get('id', 0)
+                        ids[TVINFO_TVRAGE] = r['show']['externals'].get('tvrage', 0)
                         break
     except (BaseException, Exception):
         pass
@@ -232,11 +235,11 @@ def get_trakt_ids(url_trakt):
                 found = False
                 for r in res:
                     if 'show' == r.get('type', '') and 'show' in r and 'ids' in r['show']:
+                        ids[TVINFO_IMDB] = try_int(str(r['show']['ids'].get('imdb')).replace('tt', ''))
+                        ids[TVINFO_TMDB] = try_int(r['show']['ids'].get('tmdb', 0))
+                        ids[TVINFO_TRAKT] = try_int(r['show']['ids'].get('trakt', 0))
                         ids[TVINFO_TVDB] = try_int(r['show']['ids'].get('tvdb', 0))
                         ids[TVINFO_TVRAGE] = try_int(r['show']['ids'].get('tvrage', 0))
-                        ids[TVINFO_IMDB] = try_int(str(r['show']['ids'].get('imdb')).replace('tt', ''))
-                        ids[TVINFO_TRAKT] = try_int(r['show']['ids'].get('trakt', 0))
-                        ids[TVINFO_TMDB] = try_int(r['show']['ids'].get('tmdb', 0))
                         found = True
                         break
                 if found:
@@ -318,19 +321,16 @@ def check_missing_trakt_id(n_ids, show_obj, url_trakt):
     return n_ids
 
 
-def map_indexers_to_show(show_obj, update=False, force=False, recheck=False, sql=None):
+def map_indexers_to_show(show_obj, update=False, force=False, recheck=False, im_sql_result=None):
+    # type: (sickbeard.tv.TVShow, Optional[bool], Optional[bool], Optional[bool], Optional[list]) -> dict
     """
 
     :param show_obj: TVShow Object
-    :type show_obj: sickbeard.tv.TVShow
     :param update: add missing + previously not found ids
-    :type update: bool
     :param force: search for and replace all mapped/missing ids (excluding NO_AUTOMATIC_CHANGE flagged)
-    :type force: bool
     :param recheck: load all ids, don't remove existing
-    :type recheck: bool
+    :param im_sql_result:
     :return: mapped ids
-    :rtype: Dict
     """
     mapped = {}
 
@@ -341,24 +341,25 @@ def map_indexers_to_show(show_obj, update=False, force=False, recheck=False, sql
                         'date': datetime.date.fromordinal(1)}
 
     sql_result = []
-    if sql:
-        for s in sql:
-            if show_obj._prodid == s['indexer_id'] and show_obj._tvid == s['indexer']:
-                sql_result.append(s)
+    for cur_row in im_sql_result or []:
+        if show_obj.prodid == cur_row['indexer_id'] and show_obj.tvid == cur_row['indexer']:
+            sql_result.append(cur_row)
 
     if not sql_result:
         my_db = db.DBConnection()
-        sql_result = my_db.select('SELECT *'
-                                  ' FROM indexer_mapping'
-                                  ' WHERE indexer = ? AND indexer_id = ?',
-                                  [show_obj.tvid, show_obj.prodid])
+        sql_result = my_db.select(
+            """
+            SELECT *
+            FROM indexer_mapping
+            WHERE indexer = ? AND indexer_id = ?
+            """, [show_obj.tvid, show_obj.prodid])
 
     # for each mapped entry
-    for cur_result in sql_result:
-        date = try_int(cur_result['date'])
-        mapped[int(cur_result['mindexer'])] = {'status': int(cur_result['status']),
-                                               'id': int(cur_result['mindexer_id']),
-                                               'date': datetime.date.fromordinal(date if 0 < date else 1)}
+    for cur_row in sql_result:
+        date = try_int(cur_row['date'])
+        mapped[int(cur_row['mindexer'])] = {'status': int(cur_row['status']),
+                                            'id': int(cur_row['mindexer_id']),
+                                            'date': datetime.date.fromordinal(date if 0 < date else 1)}
 
     # get list of needed ids
     mis_map = [k for k, v in iteritems(mapped) if (v['status'] not in [
@@ -453,9 +454,9 @@ def map_indexers_to_show(show_obj, update=False, force=False, recheck=False, sql
                     TMDB.API_KEY = sickbeard.TMDB_API_KEY
                     tmdb_data = TMDB.Search().tv(**{'query': clean_show_name(show_obj.name),
                                                     'first_air_date_year': show_obj.startyear})
-                    for s in tmdb_data.get('results'):
-                        if clean_show_name(s['name']) == clean_show_name(show_obj.name):
-                            new_ids[TVINFO_TMDB] = try_int(s['id'])
+                    for cur_row in tmdb_data.get('results'):
+                        if clean_show_name(cur_row['name']) == clean_show_name(show_obj.name):
+                            new_ids[TVINFO_TMDB] = try_int(cur_row['id'])
                             break
                 except (BaseException, Exception):
                     pass
@@ -484,16 +485,17 @@ def map_indexers_to_show(show_obj, update=False, force=False, recheck=False, sql
                 if 0 != mapped[tvid]['id'] or MapStatus.NONE != mapped[tvid]['status']:
                     mapped[tvid]['date'] = today
                     sql_l.append([
-                        'INSERT OR REPLACE INTO indexer_mapping (' +
-                        'indexer_id, indexer, mindexer_id, mindexer, date, status) VALUES (?,?,?,?,?,?)',
-                        [show_obj.prodid, show_obj.tvid, mapped[tvid]['id'],
-                         tvid, date, mapped[tvid]['status']]])
+                        """
+                        INSERT OR REPLACE
+                        INTO indexer_mapping (indexer_id, indexer, mindexer_id, mindexer, date, status)
+                        VALUES (?,?,?,?,?,?)
+                        """, [show_obj.prodid, show_obj.tvid, mapped[tvid]['id'], tvid, date, mapped[tvid]['status']]])
                 else:
                     sql_l.append([
-                        'DELETE FROM indexer_mapping'
-                        ' WHERE indexer = ? AND indexer_id = ?'
-                        ' AND mindexer = ?',
-                        [show_obj.tvid, show_obj.prodid, tvid]])
+                        """
+                        DELETE FROM indexer_mapping
+                        WHERE indexer = ? AND indexer_id = ? AND mindexer = ?
+                        """, [show_obj.tvid, show_obj.prodid, tvid]])
 
             if 0 < len(sql_l):
                 logger.log('Adding TV info mapping to DB for show: %s' % show_obj.name, logger.DEBUG)
@@ -528,10 +530,10 @@ def save_mapping(show_obj, save_map=None):
                  tvid, date, show_obj.ids[tvid]['status']]])
         else:
             sql_l.append([
-                'DELETE FROM indexer_mapping'
-                ' WHERE indexer = ? AND indexer_id = ?'
-                ' AND mindexer = ?',
-                [show_obj.tvid, show_obj.prodid, tvid]])
+                """
+                DELETE FROM indexer_mapping
+                WHERE indexer = ? AND indexer_id = ? AND mindexer = ?
+                """, [show_obj.tvid, show_obj.prodid, tvid]])
 
     if 0 < len(sql_l):
         logger.log('Saving TV info mapping to DB for show: %s' % show_obj.name, logger.DEBUG)
@@ -548,9 +550,11 @@ def del_mapping(tvid, prodid):
     :type prodid: int or long
     """
     my_db = db.DBConnection()
-    my_db.action('DELETE FROM indexer_mapping'
-                 ' WHERE indexer = ? AND indexer_id = ?',
-                 [tvid, prodid])
+    my_db.action(
+        """
+        DELETE FROM indexer_mapping
+        WHERE indexer = ? AND indexer_id = ?
+        """, [tvid, prodid])
 
 
 def should_recheck_update_ids(show_obj):
@@ -593,7 +597,7 @@ def load_mapped_ids(**kwargs):
             if 'update' in kwargs and should_recheck_update_ids(cur_show_obj):
                 n_kargs['recheck'] = True
             if sql_result:
-                n_kargs['sql'] = sql_result
+                n_kargs['im_sql_result'] = sql_result
             try:
                 cur_show_obj.ids = sickbeard.indexermapper.map_indexers_to_show(cur_show_obj, **n_kargs)
             except (BaseException, Exception):

@@ -73,11 +73,13 @@ class ImageCache(object):
     #     """
     #     return ek.ek(os.path.abspath, ek.ek(os.path.join, sickbeard.CACHE_DIR, 'images'))
 
-    def _persons_dir(self):
+    @staticmethod
+    def _persons_dir():
         # type: (...) -> AnyStr
         return ek.ek(os.path.join, sickbeard.CACHE_DIR, 'images', 'person')
 
-    def _characters_dir(self):
+    @staticmethod
+    def _characters_dir():
         # type: (...) -> AnyStr
         return ek.ek(os.path.join, sickbeard.CACHE_DIR, 'images', 'characters')
 
@@ -110,15 +112,17 @@ class ImageCache(object):
         """
         return ek.ek(os.path.abspath, ek.ek(os.path.join, self.shows_dir, '%s-%s' % (tvid, prodid), 'thumbnails'))
 
-    def _person_base_name(self, person_obj):
+    @staticmethod
+    def _person_base_name(person_obj):
         # type: (Person) -> AnyStr
         base_id = next((v for k, v in iteritems(cache_img_base)
                         if k in (person_obj.image_url or '') or person_obj.thumb_url), 0)
         return '%s-%s' % (base_id, person_obj.ids.get(base_id) or sg_helpers.sanitize_filename(person_obj.name))
 
-    def _character_base_name(self, character_obj, show_obj, tvid=None, proid=None):
+    @staticmethod
+    def _character_base_name(character_obj, show_obj, tvid=None, proid=None):
         # type: (Character, TVShow, integer_types, integer_types) -> AnyStr
-        return '%s-%s' % (tvid or show_obj._tvid, character_obj.ids.get(tvid or show_obj._tvid)
+        return '%s-%s' % (tvid or show_obj.tvid, character_obj.ids.get(tvid or show_obj.tvid)
                           or sg_helpers.sanitize_filename(character_obj.name))
 
     def person_path(self, person_obj, base_path=None):

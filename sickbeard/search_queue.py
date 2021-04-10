@@ -102,7 +102,7 @@ class SearchQueue(generic_queue.GenericQueue):
             return [
                 ['INSERT OR IGNORE INTO search_queue (indexer, indexer_id, segment, standard_backlog, limited_backlog,'
                  ' forced, torrent_only, action_id, uid) VALUES (?,?,?,?,?,?,?,?,?)',
-                 [item.show_obj._tvid, item.show_obj._prodid,
+                 [item.show_obj.tvid, item.show_obj.prodid,
                   ','.join('%sx%s' % (i.season, i.episode) for i in item.segment), int(item.standard_backlog),
                   int(item.limited_backlog), int(item.forced), int(item.torrent_only), BACKLOG_SEARCH, item.uid]]
             ]
@@ -110,14 +110,14 @@ class SearchQueue(generic_queue.GenericQueue):
             return [
                 ['INSERT OR IGNORE INTO search_queue (indexer, indexer_id, segment, action_id, uid)'
                  ' VALUES (?,?,?,?,?)',
-                 [item.show_obj._tvid, item.show_obj._prodid,
+                 [item.show_obj.tvid, item.show_obj.prodid,
                   ','.join('%sx%s' % (i.season, i.episode) for i in item.segment), FAILED_SEARCH, item.uid]]
             ]
         elif isinstance(item, ManualSearchQueueItem):
             return [
                 ['INSERT OR IGNORE INTO search_queue (indexer, indexer_id, segment, action_id, uid)'
                  ' VALUES (?,?,?,?,?)',
-                 [item.show_obj._tvid, item.show_obj._prodid, '%sx%s' % (item.segment.season, item.segment.episode),
+                 [item.show_obj.tvid, item.show_obj.prodid, '%sx%s' % (item.segment.season, item.segment.episode),
                   MANUAL_SEARCH, item.uid]]
             ]
         return []

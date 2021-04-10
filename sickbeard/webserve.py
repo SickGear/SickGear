@@ -6735,7 +6735,7 @@ class Manage(MainHandler):
                     continue
             else:
                 new_prodid = None
-            if show_obj._tvid == new_tvid and (not new_prodid or new_prodid == show_obj._prodid):
+            if show_obj.tvid == new_tvid and (not new_prodid or new_prodid == show_obj.prodid):
                 logger.log('Skipping %s because target same as source' % show, logger.WARNING)
                 errors.append('Skipping %s because target same as source' % show)
                 continue

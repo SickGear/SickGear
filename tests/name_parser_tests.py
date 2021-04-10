@@ -711,9 +711,9 @@ class TVShowTest(tv.TVShow):
     def __init__(self, is_anime=False, name='', prodid=0, tvid=0):
         self._anime = is_anime
         self._name = name
-        self._tvid = tvid
-        self._prodid = prodid
-        self.sid_int = self.create_sid(self._tvid, self._prodid)
+        self.tvid = tvid
+        self.prodid = prodid
+        self.sid_int = self.create_sid(self.tvid, self.prodid)
         self.sxe_ep_obj = {}
 
 

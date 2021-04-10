@@ -730,7 +730,7 @@ class SickGear(object):
                                      if _fk.startswith('ii_')}
                 else:
                     imdb_info_sql = None
-                show_obj = TVShow(tv_id, prod_id, show_sql=cur_result, imdb_info_sql=imdb_info_sql)
+                show_obj = TVShow(tv_id, prod_id, show_result=cur_result, imdb_info_result=imdb_info_sql)
                 if cur_result['tsnf_indexer_id']:
                     failed_result = {_fk.replace('tsnf_', ''): _fv for _fk, _fv in iteritems(cur_result)
                                      if _fk.startswith('tsnf_')}

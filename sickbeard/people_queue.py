@@ -74,7 +74,7 @@ class PeopleQueue(generic_queue.GenericQueue):
         return [
             ['INSERT OR IGNORE INTO people_queue (indexer, indexer_id, action_id, forced, scheduled, uid)'
              ' VALUES (?,?,?,?,?,?)',
-             [item.show_obj._tvid, item.show_obj._prodid, item.action_id, int(item.force), int(item.scheduled_update),
+             [item.show_obj.tvid, item.show_obj.prodid, item.action_id, int(item.force), int(item.scheduled_update),
               item.uid]]
         ]
 

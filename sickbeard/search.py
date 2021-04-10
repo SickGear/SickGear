@@ -547,7 +547,7 @@ def wanted_episodes(show_obj,  # type: TVShow
         ep_sql_result = None
 
     for result in sql_result:
-        ep_obj = show_obj.get_episode(int(result['season']), int(result['episode']), ep_sql=ep_sql_result)
+        ep_obj = show_obj.get_episode(int(result['season']), int(result['episode']), ep_result=ep_sql_result)
         cur_status, cur_quality = common.Quality.splitCompositeStatus(ep_obj.status)
         ep_obj.wanted_quality = get_wanted_qualities(ep_obj, cur_status, cur_quality, unaired=unaired)
         if not ep_obj.wanted_quality:

@@ -81,39 +81,55 @@ class ShowQueue(generic_queue.GenericQueue):
     def load_queue(self):
         try:
             my_db = db.DBConnection('cache.db')
-            queue_sql = my_db.select('SELECT * FROM show_queue')
-            for q in queue_sql:
-                if ShowQueueActions.ADD != q['action_id']:
+            sql_result = my_db.select('SELECT * FROM show_queue')
+            for cur_row in sql_result:
+                show_obj = None
+                if ShowQueueActions.ADD != cur_row['action_id']:
                     try:
-                        show_obj = find_show_by_id({q['tvid']: q['prodid']})
+                        show_obj = find_show_by_id({cur_row['tvid']: cur_row['prodid']})
                     except (BaseException, Exception):
                         continue
                     if not show_obj:
                         continue
-                if q['action_id'] in (ShowQueueActions.UPDATE, ShowQueueActions.FORCEUPDATE,
-                                      ShowQueueActions.WEBFORCEUPDATE):
-                    self.updateShow(show_obj=show_obj, force=bool(q['force']),
-                                    web=ShowQueueActions.WEBFORCEUPDATE == q['action_id'],
-                                    scheduled_update=bool(q['scheduled_update']), skip_refresh=bool(q['skip_refresh']),
-                                    pausestatus_after=bool_none(q['pausestatus_after']), uid=q['uid'], add_to_db=False)
-                elif ShowQueueActions.REFRESH == q['action_id']:
-                    self.refreshShow(show_obj=show_obj, force=bool(q['force']),
-                                     scheduled_update=bool(q['scheduled_update']), priority=q['priority'],
-                                     force_image_cache=bool(q['force_image_cache']), uid=q['uid'], add_to_db=False)
-                elif ShowQueueActions.RENAME == q['action_id']:
-                    self.renameShowEpisodes(show_obj=show_obj, uid=q['uid'], add_to_db=False)
-                elif ShowQueueActions.SUBTITLE == q['action_id']:
-                    self.download_subtitles(show_obj=show_obj, uid=q['uid'], add_to_db=False)
-                elif ShowQueueActions.ADD == q['action_id']:
-                    self.addShow(tvid=q['tvid'], prodid=q['prodid'], show_dir=q['show_dir'],
-                                 default_status=q['default_status'], quality=q['quality'],
-                                 flatten_folders=bool_none(q['flatten_folders']), lang=q['lang'],
-                                 subtitles=q['subtitles'], anime=bool_none(q['anime']), scene=bool_none(q['scene']),
-                                 paused=bool_none(q['paused']), blocklist=q['blocklist'], allowlist=q['allowlist'],
-                                 wanted_begin=q['wanted_begin'], wanted_latest=q['wanted_latest'],
-                                 prune=q['prune'], tag=q['tag'], new_show=bool(q['new_show']),
-                                 show_name=q['show_name'], upgrade_once=bool(q['upgrade_once']), uid=q['uid'],
-                                 add_to_db=False)
+
+                if cur_row['action_id'] in (ShowQueueActions.UPDATE, ShowQueueActions.FORCEUPDATE,
+                                               ShowQueueActions.WEBFORCEUPDATE):
+                    self.updateShow(add_to_db=False, force=bool(cur_row['force']),
+                                    pausestatus_after=bool_none(cur_row['pausestatus_after']),
+                                    scheduled_update=bool(cur_row['scheduled_update']),
+                                    show_obj=show_obj, skip_refresh=bool(cur_row['skip_refresh']),
+                                    uid=cur_row['uid'],
+                                    web=ShowQueueActions.WEBFORCEUPDATE == cur_row['action_id'])
+
+                elif ShowQueueActions.REFRESH == cur_row['action_id']:
+                    self.refreshShow(add_to_db=False, force=bool(cur_row['force']),
+                                     force_image_cache=bool(cur_row['force_image_cache']),
+                                     priority=cur_row['priority'],
+                                     scheduled_update=bool(cur_row['scheduled_update']),
+                                     show_obj=show_obj,
+                                     uid=cur_row['uid'])
+
+                elif ShowQueueActions.RENAME == cur_row['action_id']:
+                    self.renameShowEpisodes(add_to_db=False, show_obj=show_obj, uid=cur_row['uid'])
+
+                elif ShowQueueActions.SUBTITLE == cur_row['action_id']:
+                    self.download_subtitles(add_to_db=False, show_obj=show_obj, uid=cur_row['uid'])
+
+                elif ShowQueueActions.ADD == cur_row['action_id']:
+                    self.addShow(tvid=cur_row['tvid'], prodid=cur_row['prodid'],
+                                 add_to_db=False, allowlist=cur_row['allowlist'],
+                                 anime=bool_none(cur_row['anime']),
+                                 blocklist=cur_row['blocklist'], default_status=cur_row['default_status'],
+                                 flatten_folders=bool_none(cur_row['flatten_folders']), lang=cur_row['lang'],
+                                 new_show=bool(cur_row['new_show']), paused=bool_none(cur_row['paused']),
+                                 prune=cur_row['prune'], quality=cur_row['quality'],
+                                 scene=bool_none(cur_row['scene']), show_dir=cur_row['show_dir'],
+                                 show_name=cur_row['show_name'], subtitles=cur_row['subtitles'],
+                                 tag=cur_row['tag'], uid=cur_row['uid'],
+                                 upgrade_once=bool(cur_row['upgrade_once']),
+                                 wanted_begin=cur_row['wanted_begin'],
+                                 wanted_latest=cur_row['wanted_latest'])
+
         except (BaseException, Exception) as e:
             logger.log('Exception loading queue %s: %s' % (self.__class__.__name__, ex(e)), logger.ERROR)
 
@@ -121,19 +137,20 @@ class ShowQueue(generic_queue.GenericQueue):
         # type: (ShowQueueItem) -> None
         if ShowQueueActions.SWITCH == item.action_id:
             my_db = db.DBConnection()
-            my_db.action('REPLACE INTO tv_src_switch (old_indexer, old_indexer_id, new_indexer,'
-                         ' new_indexer_id, action_id, status, uid, mark_wanted, set_pause, force_id)'
-                         ' VALUES (?,?,?,?,?,?,?,?,?,?)',
-                         [item.show_obj._tvid, item.show_obj._prodid, item.new_tvid, item.new_prodid,
-                          ShowQueueActions.SWITCH, 0, item.uid, int(item.mark_wanted), int(item.set_pause),
-                          int(item.force_id)])
+            my_db.action(
+                """
+                REPLACE INTO tv_src_switch (old_indexer, old_indexer_id, new_indexer, new_indexer_id,
+                 action_id, status, uid, mark_wanted, set_pause, force_id)
+                VALUES (?,?,?,?,?,?,?,?,?,?)
+                """, [item.show_obj.tvid, item.show_obj.prodid, item.new_tvid, item.new_prodid,
+                      ShowQueueActions.SWITCH, 0, item.uid, int(item.mark_wanted), int(item.set_pause),
+                      int(item.force_id)])
         else:
             generic_queue.GenericQueue.save_item(self, item)
 
     def _clear_sql(self):
-        return [
-            ['DELETE FROM show_queue']
-        ]
+        # noinspection SqlWithoutWhere
+        return [['DELETE FROM show_queue']]
 
     def _get_item_sql(self, item):
         # type: (ShowQueueItem) -> List[List]
@@ -143,53 +160,62 @@ class ShowQueue(generic_queue.GenericQueue):
             pause_status_after = item.kwargs.get('pausestatus_after')
             if None is not pause_status_after:
                 pause_status_after = int(pause_status_after)
-            return [
-                ['INSERT OR IGNORE INTO show_queue (tvid, prodid, priority, force, scheduled_update, skip_refresh,'
-                 ' pausestatus_after, action_id, uid) VALUES (?,?,?,?,?,?,?,?,?)',
-                 [item.show_obj._tvid, item.show_obj._prodid, item.priority, int(item.force),
-                  int(item.scheduled_update), int(item.kwargs.get('skip_refresh', False)), pause_status_after,
-                  item.action_id, item.uid]]
-            ]
+            return [[
+                """
+                INSERT OR IGNORE INTO show_queue (tvid, prodid, priority, force,
+                scheduled_update, skip_refresh, pausestatus_after,
+                action_id, uid) VALUES (?,?,?,?,?,?,?,?,?)
+                """, [item.show_obj.tvid, item.show_obj.prodid, item.priority, int(item.force),
+                      int(item.scheduled_update), int(item.kwargs.get('skip_refresh', False)), pause_status_after,
+                      item.action_id, item.uid]
+            ]]
         elif isinstance(item, QueueItemRefresh):
             if item.switch:
                 return []
             pause_status_after = item.kwargs.get('pausestatus_after')
             if None is not pause_status_after:
                 pause_status_after = int(pause_status_after)
-            return [
-                ['INSERT OR IGNORE INTO show_queue (tvid, prodid, priority, force, scheduled_update,'
-                 ' force_image_cache, pausestatus_after, action_id, uid) VALUES (?,?,?,?,?,?,?,?,?)',
-                 [item.show_obj._tvid, item.show_obj._prodid, item.priority, int(item.force),
-                  int(item.scheduled_update), int(item.force_image_cache), pause_status_after,
-                  item.action_id, item.uid]]
-            ]
+            return [[
+                """
+                INSERT OR IGNORE INTO show_queue (tvid, prodid, priority, force,
+                scheduled_update, force_image_cache, pausestatus_after,
+                action_id, uid) VALUES (?,?,?,?,?,?,?,?,?)
+                """, [item.show_obj.tvid, item.show_obj.prodid, item.priority, int(item.force),
+                      int(item.scheduled_update), int(item.force_image_cache), pause_status_after,
+                      item.action_id, item.uid]
+            ]]
         elif isinstance(item, QueueItemRename):
-            return [
-                ['INSERT OR IGNORE INTO show_queue (tvid, prodid, priority, scheduled_update, action_id, uid)'
-                 ' VALUES (?,?,?,?,?,?)',
-                 [item.show_obj._tvid, item.show_obj._prodid, item.priority, int(item.scheduled_update),
-                  item.action_id, item.uid]]
-            ]
+            return [[
+                """
+                INSERT OR IGNORE INTO show_queue (tvid, prodid, priority, scheduled_update, action_id, uid)
+                VALUES (?,?,?,?,?,?)
+                """, [item.show_obj.tvid, item.show_obj.prodid, item.priority, int(item.scheduled_update),
+                      item.action_id, item.uid]
+            ]]
         elif isinstance(item, QueueItemSubtitle):
-            return [
-                ['INSERT OR IGNORE INTO show_queue (tvid, prodid, priority, scheduled_update, action_id, uid)'
-                 ' VALUES (?,?,?,?,?,?)',
-                 [item.show_obj._tvid, item.show_obj._prodid, item.priority, int(item.scheduled_update),
-                  item.action_id, item.uid]]
-            ]
+            return [[
+                """
+                INSERT OR IGNORE INTO show_queue (tvid, prodid, priority, scheduled_update, action_id, uid)
+                VALUES (?,?,?,?,?,?)
+                """, [item.show_obj.tvid, item.show_obj.prodid, item.priority, int(item.scheduled_update),
+                      item.action_id, item.uid]
+            ]]
         elif isinstance(item, QueueItemAdd):
-            return [
-                ['INSERT OR IGNORE INTO show_queue (tvid, prodid, priority, scheduled_update, '
-                 ' show_dir, default_status, quality, flatten_folders, lang, subtitles, anime,'
-                 ' scene, paused, blocklist, allowlist, wanted_begin, wanted_latest, prune, tag, new_show, show_name,'
-                 ' upgrade_once, action_id, uid) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
-                 [item.tvid, item.prodid, item.priority, int(item.scheduled_update), item.showDir,
-                  item.default_status, item.quality, try_int(item.flatten_folders, None), item.lang, item.subtitles,
-                  try_int(item.anime, None), try_int(item.scene, None), try_int(item.paused, None),
-                  item.blocklist, item.allowlist, item.default_wanted_begin, item.default_wanted_latest,
-                  item.prune, item.tag, int(item.new_show), item.show_name, int(item.upgrade_once),
-                  item.action_id, item.uid]]
-            ]
+            return [[
+                """
+                INSERT OR IGNORE INTO show_queue (tvid, prodid, priority, scheduled_update,
+                show_dir, default_status, quality, flatten_folders, lang,
+                subtitles, anime, scene, paused,
+                blocklist, allowlist, wanted_begin, wanted_latest,
+                prune, tag, new_show, show_name, upgrade_once,
+                action_id, uid) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                """, [item.tvid, item.prodid, item.priority, int(item.scheduled_update),
+                      item.showDir, item.default_status, item.quality, try_int(item.flatten_folders, None), item.lang,
+                      item.subtitles, try_int(item.anime, None), try_int(item.scene, None), try_int(item.paused, None),
+                      item.blocklist, item.allowlist, item.default_wanted_begin, item.default_wanted_latest,
+                      item.prune, item.tag, int(item.new_show), item.show_name, int(item.upgrade_once),
+                      item.action_id, item.uid]
+            ]]
         return []
 
     def delete_item(self, item, finished_run=False):
@@ -407,10 +433,10 @@ class ShowQueue(generic_queue.GenericQueue):
                     length['add'].append(result_item)
                 else:
                     result_item.update({
-                        'tvid': cur_item.show_obj._tvid,
-                        'prodid': cur_item.show_obj._prodid, 'tvid_prodid': cur_item.show_obj.tvid_prodid,
+                        'tvid': cur_item.show_obj.tvid,
+                        'prodid': cur_item.show_obj.prodid, 'tvid_prodid': cur_item.show_obj.tvid_prodid,
                         # legacy keys for api responses
-                        'indexer': cur_item.show_obj._tvid, 'indexerid': cur_item.show_obj._prodid})
+                        'indexer': cur_item.show_obj.tvid, 'indexerid': cur_item.show_obj.prodid})
                     if isinstance(cur_item, QueueItemUpdate):
                         update_type = 'Normal'
                         if isinstance(cur_item, QueueItemForceUpdate):
@@ -433,9 +459,16 @@ class ShowQueue(generic_queue.GenericQueue):
 
     loadingShowList = property(_getLoadingShowList)
 
-    def updateShow(self, show_obj, force=False, web=False, scheduled_update=False,
-                   priority=generic_queue.QueuePriorities.NORMAL, uid=None, add_to_db=True, **kwargs):
-        # type: (TVShow, bool, bool, bool, integer_types, integer_types, bool, Any) -> Union[QueueItemUpdate, QueueItemForceUpdate, QueueItemForceUpdateWeb]
+    def updateShow(self,
+                   show_obj,  # type: TVShow
+                   force=False,  # type: bool
+                   web=False,  # type: bool
+                   scheduled_update=False,  # type: bool
+                   priority=generic_queue.QueuePriorities.NORMAL,  # type: integer_types
+                   uid=None,  # type: integer_types
+                   add_to_db=True,  # type: bool
+                   **kwargs  # type: Any
+                   ):  # type: (...) -> Union[QueueItemUpdate, QueueItemForceUpdate, QueueItemForceUpdateWeb]
         """
 
         :param show_obj: show object
@@ -512,7 +545,7 @@ class ShowQueue(generic_queue.GenericQueue):
         """
         with self.lock:
             if (self.isBeingRefreshed(show_obj) or self.isInRefreshQueue(show_obj)) and not force:
-                raise exceptions_helper.CantRefreshException('This show is already being refreshed, not refreshing again.')
+                raise exceptions_helper.CantRefreshException('This show is being refreshed, not refreshing again.')
 
             if ((not after_update and self.isBeingUpdated(show_obj)) or self.isInUpdateQueue(show_obj)) and not force:
                 logger.log('Skipping this refresh as there is already an update queued or'
@@ -548,11 +581,20 @@ class ShowQueue(generic_queue.GenericQueue):
 
         return queue_item_obj
 
-    def switch_show(self, show_obj, new_tvid, new_prodid, force_id=False, uid=None, set_pause=False, mark_wanted=False,
-                    resume=False, old_tvid=None, old_prodid=None, add_to_db=True):
-        # type: (TVShow, integer_types, integer_types, bool, AnyStr, bool, bool, bool, integer_types, integer_types, bool) -> QueueItemSwitchSource
+    def switch_show(self,
+                    show_obj,  # type: TVShow
+                    new_tvid,  # type: integer_types
+                    new_prodid,  # type: integer_types
+                    force_id=False,  # type: bool
+                    uid=None,  # type: AnyStr
+                    set_pause=False,  # type: bool
+                    mark_wanted=False,  # type: bool
+                    resume=False,  # type: bool
+                    old_tvid=None,  # type: integer_types
+                    old_prodid=None,  # type: integer_types
+                    add_to_db=True  # type: bool
+                    ):  # type: (...) -> QueueItemSwitchSource
         """
-
         :param show_obj:
         :param new_tvid:
         :param new_prodid:
@@ -800,26 +842,25 @@ class QueueItemAdd(ShowQueueItem):
         """
         self.tvid = tvid  # type: int
         self.prodid = prodid  # type: int
-        self.showDir = show_dir  # type: AnyStr
+        self.allowlist = allowlist
+        self.anime = anime
+        self.blocklist = blocklist
         self.default_status = default_status
         self.default_wanted_begin = (0, default_wanted_begin)[isinstance(default_wanted_begin, integer_types)]
         self.default_wanted_latest = (0, default_wanted_latest)[isinstance(default_wanted_latest, integer_types)]
-        self.quality = quality  # type: int
-        self.upgrade_once = upgrade_once
         self.flatten_folders = flatten_folders
         self.lang = lang
-        self.subtitles = subtitles
-        self.anime = anime
-        self.scene = scene
-        self.paused = paused
-        self.blocklist = blocklist
-        self.allowlist = allowlist
-        self.prune = prune
-        self.tag = tag
         self.new_show = new_show
-        self.showname = show_name  # type: AnyStr or None
-
+        self.paused = paused
+        self.prune = prune
+        self.quality = quality  # type: int
+        self.scene = scene
         self.show_obj = None
+        self.showDir = show_dir  # type: AnyStr
+        self.showname = show_name  # type: AnyStr or None
+        self.subtitles = subtitles
+        self.tag = tag
+        self.upgrade_once = upgrade_once
 
         # this will initialize self.show_obj to None
         ShowQueueItem.__init__(self, ShowQueueActions.ADD, self.show_obj, scheduled_update, uid=uid)
@@ -846,9 +887,7 @@ class QueueItemAdd(ShowQueueItem):
         if we still only know the folder name.
         :rtype: bool
         """
-        if None is self.show_obj:
-            return True
-        return False
+        return None is self.show_obj
 
     isLoading = property(_isLoading)
 
@@ -863,9 +902,12 @@ class QueueItemAdd(ShowQueueItem):
         wanted_updates = []
         if latest:
             # find season number with latest aired episode
-            latest_result = db_obj.select('SELECT MAX(season) AS latest_season FROM tv_episodes WHERE season > 0 '
-                                          'AND indexer = ? AND showid = ? AND status != ?',
-                                          [self.show_obj.tvid, self.show_obj.prodid, UNAIRED])
+            latest_result = db_obj.select(
+                """
+                SELECT MAX(season) AS latest_season
+                FROM tv_episodes
+                WHERE season > 0 AND indexer = ? AND showid = ? AND status != ?
+                """, [self.show_obj.tvid, self.show_obj.prodid, UNAIRED])
             if latest_result and None is not latest_result[0]['latest_season']:
                 latest_season = int(latest_result[0]['latest_season'])
             else:
@@ -876,11 +918,12 @@ class QueueItemAdd(ShowQueueItem):
                 compare_op = ''  # equal, we only want the specific season
             else:
                 compare_op = ('>', '<')[latest]  # less/more then equal season
-            base_sql = 'SELECT indexerid, season, episode, status FROM tv_episodes WHERE indexer = ?' \
-                       ' AND showid = ? AND season != 0 AND season %s= ? AND status != ?' \
-                       ' ORDER BY season%s, episode%s%s' % \
-                       (compare_op, ('', ' DESC')[latest], ('', ' DESC')[latest],
-                        (' LIMIT ?', '')[-1 == wanted_max])
+            base_sql = """
+            SELECT indexerid, season, episode, status 
+            FROM tv_episodes 
+            WHERE indexer = ? AND showid = ? AND season != 0 AND season %s= ? AND status != ?
+            ORDER BY season%s, episode%s%s
+            """ % (compare_op, ('', ' DESC')[latest], ('', ' DESC')[latest], (' LIMIT ?', '')[-1 == wanted_max])
 
             selected_res = db_obj.select(base_sql, [self.show_obj.tvid, self.show_obj.prodid,
                                                     (1, latest_season)[latest], UNAIRED] +
@@ -904,10 +947,10 @@ class QueueItemAdd(ShowQueueItem):
                 db_obj.action(update, [WANTED, self.show_obj.tvid] + selected_ids)
 
                 # noinspection SqlResolve
-                result = db_obj.select('SELECT changes() as last FROM [tv_episodes]')
+                sql_result = db_obj.select('SELECT changes() as last FROM [tv_episodes]')
 
-                for cur_result in result:
-                    actual = cur_result['last']
+                for cur_row in sql_result:
+                    actual = cur_row['last']
                     break
 
         action_log = 'didn\'t find any episodes that need to be set wanted'
@@ -1046,7 +1089,7 @@ class QueueItemAdd(ShowQueueItem):
 
         try:
             self.show_obj.load_episodes_from_tvinfo(tvinfo_data=(None, result)[
-                self.show_obj._prodid == getattr(result, 'id', None)])
+                self.show_obj.prodid == getattr(result, 'id', None)])
         except (BaseException, Exception) as e:
             logger.log(
                 'Error with %s, not creating episode list: %s' % (sickbeard.TVInfoAPI(self.show_obj.tvid).name, ex(e)),
@@ -1064,13 +1107,12 @@ class QueueItemAdd(ShowQueueItem):
         if self.default_status != SKIPPED:
             logger.log('Setting all episodes to the specified default status: %s'
                        % sickbeard.common.statusStrings[self.default_status])
-            my_db.action('UPDATE tv_episodes'
-                         ' SET status = ?'
-                         ' WHERE status = ?'
-                         ' AND indexer = ? AND showid = ?'
-                         ' AND season != 0',
-                         [self.default_status, SKIPPED,
-                          self.show_obj.tvid, self.show_obj.prodid])
+            my_db.action(
+                """
+                UPDATE tv_episodes
+                SET status = ?
+                WHERE status = ? AND indexer = ? AND showid = ? AND season != 0
+                """, [self.default_status, SKIPPED, self.show_obj.tvid, self.show_obj.prodid])
 
         items_wanted = self._get_wanted(my_db, self.default_wanted_begin, latest=False)
         items_wanted += self._get_wanted(my_db, self.default_wanted_latest, latest=True)
@@ -1348,7 +1390,7 @@ class QueueItemUpdate(ShowQueueItem):
                                                     scheduled_update=self.scheduled_update, switch=self.switch)
             if result in (None, False):
                 return
-            elif not self.show_obj._prodid == getattr(self.tvinfo_data, 'id', None):
+            elif not self.show_obj.prodid == getattr(self.tvinfo_data, 'id', None):
                 self.tvinfo_data = result
         except BaseTVinfoAttributenotfound as e:
             logger.log('Data retrieved from %s was incomplete, aborting: %s' %
@@ -1509,7 +1551,6 @@ class QueueItemSwitchSource(ShowQueueItem):
         :param old_prodid: old prodid if resume set
         :param kwargs:
         """
-        # type: (TVShow, int, integer_types, bool, AnyStr, bool, bool, bool, Dict) -> None
         ShowQueueItem.__init__(self, ShowQueueActions.SWITCH, show_obj, uid=uid)
         self.new_tvid = new_tvid  # type: int
         self.new_prodid = new_prodid  # type: integer_types
@@ -1635,7 +1676,7 @@ class QueueItemSwitchSource(ShowQueueItem):
             t = sickbeard.TVInfoAPI(self.new_tvid).setup(**tvinfo_config)
             try:
                 td = t.get_show(show_id=new_prodid, actors=True)
-            except (BaseException, Exception) as e:
+            except (BaseException, Exception):
                 td = None
                 if not self.force_id:
                     map_indexers_to_show(self.show_obj, recheck=True)
@@ -1710,8 +1751,8 @@ class QueueItemSwitchSource(ShowQueueItem):
                 self.progress = 'Switching to new source'
                 self._set_switch_id(new_prodid)
                 self.show_obj.remove_character_images()
-                self.show_obj.tvid = self.new_tvid
-                self.show_obj.prodid = new_prodid
+                self.show_obj._tvid = self.new_tvid
+                self.show_obj._prodid = new_prodid
                 new_tvid_prodid = TVidProdid({self.new_tvid: new_prodid})()
                 old_tvid_prodid = TVidProdid({self.old_tvid: self.old_prodid})()
                 for tp in (old_tvid_prodid, new_tvid_prodid):

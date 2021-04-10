@@ -273,27 +273,27 @@ def search_infosrc_for_show_id(reg_show_name, tvid=None, prodid=None, ui=None):
     show_names = [re.sub('[. -]', ' ', reg_show_name)]
 
     # Query Indexers for each search term and build the list of results
-    for _tvid in (sickbeard.TVInfoAPI().sources if not tvid else [int(tvid)]) or []:
+    for cur_tvid in (sickbeard.TVInfoAPI().sources if not tvid else [int(tvid)]) or []:
         # Query Indexers for each search term and build the list of results
-        tvinfo_config = sickbeard.TVInfoAPI(_tvid).api_params.copy()
+        tvinfo_config = sickbeard.TVInfoAPI(cur_tvid).api_params.copy()
         if ui is not None:
             tvinfo_config['custom_ui'] = ui
-        t = sickbeard.TVInfoAPI(_tvid).setup(**tvinfo_config)
+        t = sickbeard.TVInfoAPI(cur_tvid).setup(**tvinfo_config)
 
-        for name in show_names:
-            logger.log('Trying to find %s on %s' % (name, sickbeard.TVInfoAPI(_tvid).name), logger.DEBUG)
+        for cur_name in show_names:
+            logger.debug('Trying to find %s on %s' % (cur_name, sickbeard.TVInfoAPI(cur_tvid).name))
 
             try:
-                show_info_list = t[prodid] if prodid else t[name]
+                show_info_list = t[prodid] if prodid else t[cur_name]
                 show_info_list = show_info_list if isinstance(show_info_list, list) else [show_info_list]
             except (BaseException, Exception):
                 continue
 
             seriesname = _prodid = None
-            for show_info in show_info_list:  # type: dict
+            for cur_show_info in show_info_list:  # type: dict
                 try:
-                    seriesname = show_info['seriesname']
-                    _prodid = show_info['id']
+                    seriesname = cur_show_info['seriesname']
+                    _prodid = cur_show_info['id']
                 except (BaseException, Exception):
                     _prodid = seriesname = None
                     continue
@@ -303,10 +303,10 @@ def search_infosrc_for_show_id(reg_show_name, tvid=None, prodid=None, ui=None):
             if not (seriesname and _prodid):
                 continue
 
-            if None is prodid and str(name).lower() == str(seriesname).lower():
-                return seriesname, _tvid, int(_prodid)
+            if None is prodid and str(cur_name).lower() == str(seriesname).lower():
+                return seriesname, cur_tvid, int(_prodid)
             elif None is not prodid and int(prodid) == int(_prodid):
-                return seriesname, _tvid, int(prodid)
+                return seriesname, cur_tvid, int(prodid)
 
         if tvid:
             break
