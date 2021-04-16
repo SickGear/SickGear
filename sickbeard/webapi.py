@@ -124,6 +124,10 @@ class PythonObjectEncoder(json.JSONEncoder):
             return {'season': obj.season, 'episode': obj.episode}
         elif isinstance(obj, TVShow):
             return {'name': obj.name, 'indexer': obj.tvid, 'indexer_id': obj.prodid}
+        elif isinstance(obj, datetime.datetime):
+            return SGDatetime.sbfdatetime(obj, d_preset=dateFormat, t_preset='%H:%M %z')
+        elif isinstance(obj, datetime.date):
+            return SGDatetime.sbfdate(obj, d_preset=dateFormat)
         return json.JSONEncoder.default(self, obj)
 
 
@@ -965,94 +969,8 @@ class CMD_SickGearComingEpisodes(ApiCall):
 
     def run(self):
         """ get the daily schedule """
-        today_dt = datetime.date.today()
-        today = today_dt.toordinal()
-        yesterday_dt = today_dt - datetime.timedelta(days=1)
-        yesterday = yesterday_dt.toordinal()
-        tomorrow = (datetime.date.today() + datetime.timedelta(days=1)).toordinal()
-        next_week_dt = (datetime.date.today() + datetime.timedelta(days=7))
-        next_week = (next_week_dt + datetime.timedelta(days=1)).toordinal()
-        recently = (yesterday_dt - datetime.timedelta(days=sickbeard.EPISODE_VIEW_MISSED_RANGE)).toordinal()
-
-        done_show_list = []
-        qualList = Quality.SNATCHED + Quality.DOWNLOADED + Quality.ARCHIVED + [IGNORED]
-
-        my_db = db.DBConnection()
-        # noinspection SqlResolve
-        sql_result = my_db.select(
-            "SELECT airdate, airs, runtime, tv_shows.indexer AS 'tv_id', episode, name AS 'ep_name', "
-            "tv_episodes.status as 'status', description AS 'ep_plot', network, season, showid AS 'prod_id', "
-            "show_name, tv_shows.quality AS quality, tv_shows.status AS 'show_status', "
-            "tv_shows.paused AS 'paused' FROM tv_episodes, tv_shows WHERE " +
-            ("", "tv_shows.indexer = %s AND " % TVINFO_TVDB)[self.sickbeard_call] +
-            "season != 0 AND airdate >= ? AND " 
-            "airdate <= ? AND tv_shows.indexer_id = tv_episodes.showid AND tv_shows.indexer == tv_episodes.indexer AND "
-            "tv_episodes.status NOT IN (" + ','.join(['?'] * len(qualList)) + ")", [yesterday, next_week] + qualList)
-        for cur_result in sql_result:
-            done_show_list.append((int(cur_result['prod_id']), int(cur_result['tv_id'])))
-
-        # noinspection SqlResolve,SqlRedundantOrderingDirection
-        more_sql_result = [m for m in my_db.select(
-            "SELECT airdate, airs, runtime, tv_shows.indexer AS 'tv_id', episode, name AS 'ep_name', "
-            "outer_eps.status as 'status', description AS 'ep_plot', network, season, showid AS 'prod_id', "
-            "show_name, tv_shows.quality AS quality, tv_shows.status AS 'show_status', "
-            "tv_shows.paused AS 'paused' FROM tv_episodes outer_eps, tv_shows WHERE " +
-            ("", "tv_shows.indexer = %s AND " % TVINFO_TVDB)[self.sickbeard_call] +
-            "season != 0 AND "
-            "tv_shows.indexer_id = outer_eps.showid AND tv_shows.indexer == outer_eps.indexer AND "
-            "airdate = (SELECT airdate FROM tv_episodes inner_eps WHERE inner_eps.season != 0 AND "
-            "inner_eps.showid = outer_eps.showid AND inner_eps.indexer == outer_eps.indexer AND "
-            "inner_eps.airdate >= ? ORDER BY inner_eps.airdate ASC LIMIT 1) AND "
-            "outer_eps.status NOT IN (" + ','.join(['?'] * len(Quality.DOWNLOADED + Quality.SNATCHED)) + ")",
-            [next_week] + Quality.DOWNLOADED + Quality.SNATCHED) if (int(m['prod_id']), int(m['tv_id']))
-                            not in done_show_list]
-        sql_result += more_sql_result
-
-        # noinspection SqlResolve
-        more_sql_result = my_db.select(
-            "SELECT airdate, airs, runtime, tv_shows.indexer AS 'tv_id', episode, name AS 'ep_name', "
-            "tv_episodes.status as 'status', description AS 'ep_plot', network, season, showid AS 'prod_id', "
-            "show_name, tv_shows.quality AS quality, tv_shows.status AS 'show_status', "
-            "tv_shows.paused AS 'paused' FROM tv_episodes, tv_shows WHERE " +
-            ("", "tv_shows.indexer = %s AND " % TVINFO_TVDB)[self.sickbeard_call] +
-            "season != 0 AND tv_shows.indexer_id = tv_episodes.showid AND tv_shows.indexer == tv_episodes.indexer AND "
-            "airdate <= ? AND airdate >= ? AND "
-            "tv_episodes.status = ? AND tv_episodes.status NOT IN (" + ','.join(
-                ['?'] * len(qualList)) + ")", [tomorrow, recently, WANTED] + qualList)
-        sql_result += more_sql_result
-
-        sql_result = list(set(sql_result))
-
-        # make a dict out of the sql results
-        sql_result = [dict(cur_result) for cur_result in sql_result
-                      if Quality.splitCompositeStatus(helpers.try_int(cur_result['status']))[0] not in
-                      [DOWNLOADED, SNATCHED, SNATCHED_PROPER, SNATCHED_BEST, ARCHIVED, IGNORED, SKIPPED]]
-
-        # multi dimension sort
-        sorts = {
-            'network': lambda a: (a['data_network'], a['local_datetime'], a['data_show_name'], a['season'], a['episode']),
-            'show': lambda a: (a['data_show_name'], a['local_datetime'], a['season'], a['episode']),
-            'date': lambda a: (a['local_datetime'], a['data_show_name'], a['season'], a['episode'])
-        }
-
-        def value_maybe_article(value=None):
-            if None is value:
-                return ''
-            return (remove_article(value.lower()), value.lower())[sickbeard.SORT_ARTICLE]
-
-        # add parsed_datetime to the dict
-        for index, item in enumerate(sql_result):
-            timezone, sql_result[index]['timezone'] = network_timezones.get_network_timezone(item['network'],
-                                                                                             return_name=True)
-            p_t = network_timezones.parse_date_time(item['airdate'], item['airs'], timezone)
-            sql_result[index]['parsed_datetime'] = p_t
-            sql_result[index]['local_datetime'] = SGDatetime.sbstrftime(
-                SGDatetime.convert_to_setting(p_t, force_local=True), dateTimeFormat)
-            sql_result[index]['data_show_name'] = value_maybe_article(item['show_name'])
-            sql_result[index]['data_network'] = value_maybe_article(item['network'])
-            sql_result[index]['status_str'] = statusStrings[item['status']]
-
-        sql_result.sort(key=sorts[self.sort])
+        sql_result, fanart, sorts, next_week_dt, today, next_week = webserve.MainHandler.get_daily_schedule()
+        sql_result.sort(key=sorts[(self.sort, 'time')['date' == self.sort]])
 
         finalEpResults = {}
 
@@ -1096,6 +1014,24 @@ class CMD_SickGearComingEpisodes(ApiCall):
             ep['airs'] = str(ep['airs']).replace('am', ' AM').replace('pm', ' PM').replace('  ', ' ')
             # start day of the week on 1 (monday)
             ep['weekday'] = 1 + datetime.date.fromordinal(ep['airdate']).weekday()
+            ep['ep_name'] = ep['name']
+            ep['ep_plot'] = ep['description']
+            # add parsed_datetime to the dict
+            ep['local_datetime'] = SGDatetime.sbstrftime(
+                SGDatetime.convert_to_setting(ep['parsed_datetime'], force_local=True), dateTimeFormat)
+            ep['status_str'] = statusStrings[ep['status']]
+            ep['network'] = ep['episode_network'] or ep['network']
+            ep['timezone'] = ep['ep_timezone'] or ep['show_timezone'] or ep['timezone'] or (
+                    ep['network'] and network_timezones.get_network_timezone(ep['network'], return_name=True)[1])
+            # remove all field we don't want for api response
+            for f in ('localtime', 'ep_airtime', 'airtime', 'timestamp', 'show_airtime', 'network_id',
+                      'network_is_stream', 'notify_list', 'src_update_timestamp', 'subtitles_lastsearch', 'subtitles',
+                      'subtitles_searchcount', 'name', 'description', 'hasnfo', 'hastbn', 'last_update_indexer',
+                      'file_size', 'flatten_folders', 'is_proper', 'prune', 'episode_network', 'network_country',
+                      'network_country_code', 'show_timezone', 'release_group', 'release_name',
+                      'rls_global_exclude_ignore', 'rls_global_exclude_require', 'rls_ignore_words',
+                      'rls_require_words', 'location', 'ep_timezone', 'dvdorder', 'anime', 'sports'):
+                del ep[f]
             # Add tvdbid for backward compatibility
             try:
                 show_obj = helpers.find_show_by_id({ep['tv_id']: ep['prod_id']})
@@ -1108,7 +1044,7 @@ class CMD_SickGearComingEpisodes(ApiCall):
             ep['airdate'] = SGDatetime.sbfdate(
                 datetime.date.fromordinal(ep['airdate']), d_preset=dateFormat)
             ep['parsed_datetime'] = SGDatetime.sbfdatetime(ep['parsed_datetime'],
-                                                                      d_preset=dateFormat, t_preset='%H:%M %z')
+                                                           d_preset=dateFormat, t_preset='%H:%M %z')
 
             # TODO: check if this obsolete
             if status not in finalEpResults:

@@ -114,6 +114,11 @@ class InvalidEmbedValue(BaseError):
     pass
 
 
+class InvalidTimeFrame(BaseError):
+    """ used for show updates"""
+    pass
+
+
 class NetworkNotFollowed(BaseError):
     pass
 

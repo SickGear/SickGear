@@ -55,6 +55,11 @@ class TraktSearchTypes(object):
         pass
 
 
+map_id_search = {TVINFO_TVDB: TraktSearchTypes.tvdb_id, TVINFO_IMDB: TraktSearchTypes.imdb_id,
+                 TVINFO_TMDB: TraktSearchTypes.tmdb_id, TVINFO_TRAKT: TraktSearchTypes.trakt_id,
+                 TVINFO_TRAKT_SLUG: TraktSearchTypes.trakt_slug}
+
+
 class TraktResultTypes(object):
     show = 'show'
     episode = 'episode'
@@ -102,6 +107,7 @@ class TraktIndexer(TVInfoBase):
                         s['id'] = s['ids']['trakt']
                         s['ids'] = TVInfoIDs(
                             trakt=s['ids']['trakt'], tvdb=s['ids']['tvdb'], tmdb=s['ids']['tmdb'],
+                            rage=s['ids']['tvrage'],
                             imdb=s['ids']['imdb'] and try_int(s['ids']['imdb'].replace('tt', ''), None))
                         results.append(s)
             except (BaseException, Exception) as e:
@@ -117,31 +123,17 @@ class TraktIndexer(TVInfoBase):
         if ids:
             for t, p in iteritems(ids):
                 if t in self.supported_id_searches:
-                    if t == TVINFO_TVDB:
-                        try:
-                            show = self.search(p, search_type=TraktSearchTypes.tvdb_id)
-                        except (BaseException, Exception):
-                            continue
-                    elif t == TVINFO_IMDB:
-                        try:
-                            show = self.search(p, search_type=TraktSearchTypes.imdb_id)
-                        except (BaseException, Exception):
-                            continue
-                    elif t == TVINFO_TMDB:
-                        try:
-                            show = self.search(p, search_type=TraktSearchTypes.tmdb_id)
-                        except (BaseException, Exception):
-                            continue
-                    elif t == TVINFO_TRAKT:
-                        try:
-                            show = self.search(p, search_type=TraktSearchTypes.trakt_id)
-                        except (BaseException, Exception):
-                            continue
-                    elif t == TVINFO_TRAKT_SLUG:
-                        try:
-                            show = self.search(p, search_type=TraktSearchTypes.trakt_slug)
-                        except (BaseException, Exception):
-                            continue
+                    if t in (TVINFO_TVDB, TVINFO_IMDB, TVINFO_TMDB, TVINFO_TRAKT, TVINFO_TRAKT_SLUG):
+                        cache_id_key = 's-id-%s-%s' % (t, p)
+                        is_none, shows = self._get_cache_entry(cache_id_key)
+                        if not self.config.get('cache_search') or (None is shows and not is_none):
+                            try:
+                                show = self.search(p, search_type=map_id_search[t])
+                            except (BaseException, Exception):
+                                continue
+                            self._set_cache_entry(cache_id_key, show, expire=self.search_cache_expire)
+                        else:
+                            show = shows
                     else:
                         continue
                     self._make_result_obj(show, results)
@@ -149,7 +141,16 @@ class TraktIndexer(TVInfoBase):
             names = ([name], name)[isinstance(name, list)]
             len_names = len(names)
             for i, n in enumerate(names, 1):
-                all_series = self.search(n)
+                cache_name_key = 's-name-%s' % n
+                is_none, shows = self._get_cache_entry(cache_name_key)
+                if not self.config.get('cache_search') or (None is shows and not is_none):
+                    try:
+                        all_series = self.search(n)
+                        self._set_cache_entry(cache_name_key, all_series, expire=self.search_cache_expire)
+                    except (BaseException, Exception):
+                        all_series = []
+                else:
+                    all_series = shows
                 if not isinstance(all_series, list):
                     all_series = [all_series]
 
@@ -167,6 +168,8 @@ class TraktIndexer(TVInfoBase):
                     else:
                         self._make_result_obj(all_series, results)
 
+        seen = set()
+        results = [seen.add(r['id']) or r for r in results if r['id'] not in seen]
         return results
 
     @staticmethod

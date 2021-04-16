@@ -9,6 +9,7 @@ __api_version__ = '1.0.0'
 import json
 import logging
 import datetime
+import re
 
 from six import iteritems
 from sg_helpers import get_url, try_int
@@ -157,8 +158,8 @@ def get_tmdb_constants():
 
 class TmdbIndexer(TVInfoBase):
     API_KEY = tmdbsimple.API_KEY
-    # supported_id_searches = [TVINFO_TVDB, TVINFO_IMDB, TVINFO_TMDB, TVINFO_TRAKT]
     supported_person_id_searches = [TVINFO_TMDB, TVINFO_IMDB, TVINFO_TWITTER, TVINFO_INSTAGRAM, TVINFO_FACEBOOK]
+    supported_id_searches = [TVINFO_TMDB, TVINFO_IMDB, TVINFO_TVDB]
 
     # noinspection PyUnusedLocal
     # noinspection PyDefaultArgument
@@ -168,6 +169,76 @@ class TmdbIndexer(TVInfoBase):
         self.img_base_url = response.get('img_base_url')
         self.size_map = response.get('size_map')
         self.tv_genres = response.get('genres')
+
+    def _search_show(self, name=None, ids=None, **kwargs):
+        # type: (AnyStr, Dict[integer_types, integer_types], Optional[Any]) -> List[TVInfoShow]
+        """This searches TMDB for the series name,
+        """
+        def _make_result_dict(s):
+            tvs = TVInfoShow()
+            tvs.seriesname, tvs.id, tvs.firstaired, tvs.genre_list, tvs.overview, tvs.poster, tvs.ids = \
+                s['name'], s['id'], s.get('first_air_date'), \
+                [self.tv_genres.get(g) for g in s.get('genre_ids') or []], \
+                s.get('overview'), s.get('poster_path') and '%s%s%s' % (
+                    self.img_base_url, self.size_map[TVInfoImageType.poster][TVInfoImageSize.original],
+                    s.get('poster_path')), \
+                TVInfoIDs(tvdb=s.get('external_ids') and s['external_ids'].get('tvdb_id'),
+                          tmdb=s['id'], rage=s.get('external_ids') and s['external_ids'].get('tvrage_id'),
+                          imdb=s.get('external_ids') and s['external_ids'].get('imdb_id') and
+                            try_int(s['external_ids'].get('imdb_id', '').replace('tt', ''), None))
+            return tvs
+
+        results = []
+        if ids:
+            for t, p in iteritems(ids):
+                if t in self.supported_id_searches:
+                    if t == TVINFO_TMDB:
+                        cache_id_key = 's-id-%s-%s' % (TVINFO_TMDB, p)
+                        is_none, shows = self._get_cache_entry(cache_id_key)
+                        if not self.config.get('cache_search') or (None is shows and not is_none):
+                            try:
+                                show = tmdbsimple.TV(id=p).info(append_to_response='external_ids')
+                            except (BaseException, Exception):
+                                continue
+                            self._set_cache_entry(cache_id_key, show, expire=self.search_cache_expire)
+                        else:
+                            show = shows
+                        if show:
+                            results.extend([_make_result_dict(show)])
+                    elif t in (TVINFO_IMDB, TVINFO_TVDB):
+                        cache_id_key = 's-id-%s-%s' % (t, p)
+                        is_none, shows = self._get_cache_entry(cache_id_key)
+                        if not self.config.get('cache_search') or (None is shows and not is_none):
+                            try:
+                                show = tmdbsimple.Find(id=(p, 'tt%07d' % p)[t == TVINFO_IMDB]).info(
+                                    external_source=id_map[t])
+                                if show.get('tv_results') and 1 == len(show['tv_results']):
+                                    show = tmdbsimple.TV(id=show['tv_results'][0]['id']).info(
+                                        append_to_response='external_ids')
+                            except (BaseException, Exception):
+                                continue
+                            self._set_cache_entry(cache_id_key, show, expire=self.search_cache_expire)
+                        else:
+                            show = shows
+                        if show:
+                            results.extend([_make_result_dict(s)
+                                            for s in show.get('tv_results') or (show.get('id') and [show]) or []])
+        if name:
+            for n in ([name], name)[isinstance(name, list)]:
+                cache_name_key = 's-name-%s' % n
+                is_none, shows = self._get_cache_entry(cache_name_key)
+                if not self.config.get('cache_search') or (None is shows and not is_none):
+                    try:
+                        shows = tmdbsimple.Search().tv(query=n)
+                        self._set_cache_entry(cache_name_key, shows, expire=self.search_cache_expire)
+                        results.extend([_make_result_dict(s) for s in shows.get('results') or []])
+                    except (BaseException, Exception) as e:
+                        log.debug('Error searching for show: %s' % ex(e))
+                else:
+                    results.extend([_make_result_dict(s) for s in (shows and shows.get('results')) or []])
+        seen = set()
+        results = [seen.add(r.id) or r for r in results if r.id not in seen]
+        return results
 
     def _convert_person_obj(self, person_obj):
         gender = PersonGenders.tmdb_map.get(person_obj.get('gender'), PersonGenders.unknown)

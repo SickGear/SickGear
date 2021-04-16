@@ -37,6 +37,7 @@ class Show(object):
         else:
             self.web_channel = None
         self.runtime = data.get('runtime')  # type: Optional[integer_types]
+        self.average_runtime = data.get('averageRuntime')
         self.type = data.get('type')  # type: Optional[AnyStr]
         self.id = data.get('id')  # type: integer_types
         self.maze_id = self.id  # type: integer_types
@@ -177,11 +178,14 @@ class Show(object):
     def populate(self, data):
         embedded = data.get('_embedded')
         if embedded:
-            if embedded.get('episodes'):
+            episodes = embedded.get('episodeswithspecials') or embedded.get('episodes')
+            if episodes:
                 self.__episodes = []
-                for episode in embedded.get('episodes'):
+                for episode in episodes:
                     self.__episodes.append(Episode(episode, self))
                 self._set_season_numbers()
+                if 'episodeswithspecials' in embedded:
+                    self._specials_loaded = True
             if embedded.get('cast'):
                 self._cast = Cast(embedded.get('cast'))
 
@@ -901,7 +905,7 @@ class TVmaze(object):
             show_web_channel: Show Web Channel (like Netflix, Amazon, etc.)
             show_language: Show language
             show_country: Show country
-            embed: embed parameter to include additional data. Currently 'episodes' and 'cast' are supported
+            embed: embed parameter to include additional data. Currently 'episodes', 'cast', 'episodeswithspecials' are supported
         """
         errors = []
         if not (maze_id or tvdb_id or tvrage_id or imdb_id or show_name):
@@ -1332,7 +1336,7 @@ def get_full_schedule():
 
 def show_main_info(maze_id, embed=None):
     url = _embed_url(endpoints.show_main_info.format(maze_id), embed,
-                     [None, 'episodes', 'cast', 'previousepisode', 'nextepisode'], '?')
+                     [None, 'episodes', 'cast', 'previousepisode', 'nextepisode', 'episodeswithspecials'], '?')
     q = TVmaze.endpoint_standard_get(url)
     if q:
         return Show(q)
@@ -1464,9 +1468,16 @@ def get_show_images(maze_id, raise_error=True):
     return []
 
 
-def show_updates():
-    # type: (...) -> Updates
-    url = endpoints.show_updates
+def show_updates(since=None):
+    # type: (AnyStr) -> Updates
+    """
+    returns all or in given timeframe changed shows
+
+    :param since:  None, "day", "week", "month"
+    """
+    if since not in ('day', 'week', 'month', None):
+        raise InvalidTimeFrame('Only supported are: None, "day", "week", "month"')
+    url = '%s%s' % (endpoints.show_updates, ('', '?since=%s' % since)[None is not since])
     q = TVmaze.endpoint_standard_get(url)
     if q:
         return Updates(q)

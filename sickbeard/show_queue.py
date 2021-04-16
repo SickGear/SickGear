@@ -1013,7 +1013,8 @@ class QueueItemAdd(ShowQueueItem):
             return
 
         try:
-            new_show_obj = TVShow(self.tvid, self.prodid, self.lang)
+            show_exists = find_show_by_id({self.tvid: self.prodid}, no_exceptions=True)
+            new_show_obj = show_exists or TVShow(self.tvid, self.prodid, self.lang)
             result = new_show_obj.load_from_tvinfo()
 
             self.show_obj = new_show_obj
@@ -1083,9 +1084,10 @@ class QueueItemAdd(ShowQueueItem):
             self._finishEarly()
             raise
 
-        # add it to the show list
-        sickbeard.showList.append(self.show_obj)
-        sickbeard.showDict[self.show_obj.sid_int] = self.show_obj
+        if not show_exists:
+            # add it to the show list if not already in it
+            sickbeard.showList.append(self.show_obj)
+            sickbeard.showDict[self.show_obj.sid_int] = self.show_obj
 
         try:
             self.show_obj.load_episodes_from_tvinfo(tvinfo_data=(None, result)[
@@ -1182,7 +1184,7 @@ class QueueItemAdd(ShowQueueItem):
         # if started with WANTED eps then run the backlog
         if WANTED == self.default_status or items_wanted:
             logger.log('Launching backlog for this show since episodes are WANTED')
-            sickbeard.backlog_search_scheduler.action.search_backlog([self.show_obj])
+            sickbeard.backlog_search_scheduler.action.search_backlog([self.show_obj], prevent_same=True)
             ui.notifications.message('Show added/search', 'Adding and searching for episodes of' + msg)
         else:
             ui.notifications.message('Show added', 'Adding' + msg)

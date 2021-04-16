@@ -343,31 +343,51 @@ class Tvdb(TVInfoBase):
         results = []
         if ids:
             if ids.get(TVINFO_TVDB):
-                try:
-                    d_m = self._get_show_data(ids.get(TVINFO_TVDB), self.config['language'], direct_data=True)
-                    if d_m:
-                        results = map_list(map_data, [d_m['data']])
-                except (BaseException, Exception):
-                    pass
+                cache_id_key = 's-id-%s-%s' % (TVINFO_TVDB, ids[TVINFO_TVDB])
+                is_none, shows = self._get_cache_entry(cache_id_key)
+                if not self.config.get('cache_search') or (None is shows and not is_none):
+                    try:
+                        d_m = self._get_show_data(ids.get(TVINFO_TVDB), self.config['language'], direct_data=True)
+                        self._set_cache_entry(cache_id_key, d_m, expire=self.search_cache_expire)
+                    except (BaseException, Exception):
+                        d_m = None
+                else:
+                    d_m = shows
+                if d_m:
+                    results = map_list(map_data, [d_m['data']])
             if ids.get(TVINFO_TVDB_SLUG):
-                try:
-                    d_m = self.get_series(ids.get(TVINFO_TVDB_SLUG).replace('-', ' '))
-                    if d_m:
-                        for r in d_m:
-                            if ids.get(TVINFO_TVDB_SLUG) == r['slug']:
-                                results = map_list(map_data, [r])
-                                break
-                except (BaseException, Exception):
-                    pass
+                cache_id_key = 's-id-%s-%s' % (TVINFO_TVDB, ids[TVINFO_TVDB_SLUG])
+                is_none, shows = self._get_cache_entry(cache_id_key)
+                if not self.config.get('cache_search') or (None is shows and not is_none):
+                    try:
+                        d_m = self.get_series(ids.get(TVINFO_TVDB_SLUG).replace('-', ' '))
+                        self._set_cache_entry(cache_id_key, d_m, expire=self.search_cache_expire)
+                    except (BaseException, Exception):
+                        d_m = None
+                else:
+                    d_m = shows
+                if d_m:
+                    for r in d_m:
+                        if ids.get(TVINFO_TVDB_SLUG) == r['slug']:
+                            results = map_list(map_data, [r])
+                            break
         if name:
             for n in ([name], name)[isinstance(name, list)]:
-                try:
-                    r = self.get_series(n)
-                    if r:
-                        results.extend(map_list(map_data, r))
-                except (BaseException, Exception):
-                    pass
+                cache_name_key = 's-name-%s' % n
+                is_none, shows = self._get_cache_entry(cache_name_key)
+                if not self.config.get('cache_search') or (None is shows and not is_none):
+                    try:
+                        r = self.get_series(n)
+                        self._set_cache_entry(cache_name_key, r, expire=self.search_cache_expire)
+                    except (BaseException, Exception):
+                        r = None
+                else:
+                    r = shows
+                if r:
+                    results.extend(map_list(map_data, r))
 
+        seen = set()
+        results = [seen.add(r['id']) or r for r in results if r['id'] not in seen]
         return results
 
     def get_new_token(self):

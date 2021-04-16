@@ -81,7 +81,7 @@ show_map = {
     # 'network_country': '',
     # 'network_country_code': '',
     # 'network_is_stream': '',
-    'runtime': 'runtime',
+    # 'runtime': 'runtime',
     'language': 'language',
     'official_site': 'official_site',
     # 'imdb_id': '',
@@ -147,21 +147,35 @@ class TvMaze(TVInfoBase):
         if ids:
             for t, p in iteritems(ids):
                 if t in self.supported_id_searches:
+                    cache_id_key = 's-id-%s-%s' % (t, ids[t])
+                    is_none, shows = self._get_cache_entry(cache_id_key)
                     if t == TVINFO_TVDB:
-                        try:
-                            show = tvmaze.lookup_tvdb(p)
-                        except (BaseException, Exception):
-                            continue
+                        if not self.config.get('cache_search') or (None is shows and not is_none):
+                            try:
+                                show = tvmaze.lookup_tvdb(p)
+                                self._set_cache_entry(cache_id_key, show, expire=self.search_cache_expire)
+                            except (BaseException, Exception):
+                                continue
+                        else:
+                            show = shows
                     elif t == TVINFO_IMDB:
-                        try:
-                            show = tvmaze.lookup_imdb((p, 'tt%07d' % p)[not str(p).startswith('tt')])
-                        except (BaseException, Exception):
-                            continue
+                        if not self.config.get('cache_search') or (None is shows and not is_none):
+                            try:
+                                show = tvmaze.lookup_imdb((p, 'tt%07d' % p)[not str(p).startswith('tt')])
+                                self._set_cache_entry(cache_id_key, show, expire=self.search_cache_expire)
+                            except (BaseException, Exception):
+                                continue
+                        else:
+                            show = shows
                     elif t == TVINFO_TVMAZE:
-                        try:
-                            show = tvm_obj.get_show(maze_id=p)
-                        except (BaseException, Exception):
-                            continue
+                        if not self.config.get('cache_search') or (None is shows and not is_none):
+                            try:
+                                show = tvm_obj.get_show(maze_id=p)
+                                self._set_cache_entry(cache_id_key, show, expire=self.search_cache_expire)
+                            except (BaseException, Exception):
+                                continue
+                        else:
+                            show = shows
                     else:
                         continue
                     if show:
@@ -172,11 +186,18 @@ class TvMaze(TVInfoBase):
                             log.debug('Error creating result dict: %s' % ex(e))
         if name:
             for n in ([name], name)[isinstance(name, list)]:
-                try:
-                    shows = tvmaze.show_search(n)
-                    results = [_make_result_dict(s) for s in shows]
-                except (BaseException, Exception) as e:
-                    log.debug('Error searching for show: %s' % ex(e))
+                cache_name_key = 's-name-%s' % n
+                is_none, shows = self._get_cache_entry(cache_name_key)
+                if not self.config.get('cache_search') or (None is shows and not is_none):
+                    try:
+                        shows = tvmaze.show_search(n)
+                    except (BaseException, Exception) as e:
+                        log.debug('Error searching for show: %s' % ex(e))
+                        continue
+                results.extend([_make_result_dict(s) for s in shows or []])
+
+        seen = set()
+        results = [seen.add(r['id']) or r for r in results if r['id'] not in seen]
         return results
 
     def _set_episode(self, sid, ep_obj):
@@ -213,7 +234,7 @@ class TvMaze(TVInfoBase):
         log.debug('Getting all series data for %s' % sid)
         try:
             self.show_not_found = False
-            show_data = tvm_obj.get_show(maze_id=sid, embed='cast%s' % ('', ',episodes')[get_ep_info])
+            show_data = tvm_obj.get_show(maze_id=sid, embed='cast%s' % ('', ',episodeswithspecials')[get_ep_info])
         except tvmaze.ShowNotFound:
             self.show_not_found = True
             return False
@@ -225,7 +246,10 @@ class TvMaze(TVInfoBase):
         for k, v in iteritems(show_obj):
             if k not in ('cast', 'crew', 'images'):
                 show_obj[k] = getattr(show_data, show_map.get(k, k), show_obj[k])
+        show_obj['runtime'] = show_data.average_runtime or show_data.runtime
+        p_set = False
         if show_data.image:
+            p_set = True
             show_obj['poster'] = show_data.image.get('original')
             show_obj['poster_thumb'] = show_data.image.get('medium')
 
@@ -239,19 +263,36 @@ class TvMaze(TVInfoBase):
                 self.shows[sid].fanart_loaded = True
                 for img in show_data.images:
                     img_type = img_type_map.get(img.type, TVInfoImageType.other)
+                    img_width, img_height = img.resolutions['original'].get('width'), \
+                        img.resolutions['original'].get('height')
+                    img_ar = img_width and img_height and float(img_width) / float(img_height)
+                    img_ar_type = self._which_type(img_width, img_ar)
+                    if TVInfoImageType.poster == img_type and img_ar and img_ar_type != img_type and \
+                            show_obj['poster'] == img.resolutions.get('original')['url']:
+                        p_set = False
+                        show_obj['poster'] = None
+                        show_obj['poster_thumb'] = None
+                    img_type = (TVInfoImageType.other, img_type)[
+                        not img_ar or img_ar_type == img_type or
+                        img_type not in (TVInfoImageType.banner, TVInfoImageType.poster, TVInfoImageType.fanart)]
                     img_src = {}
                     for res, img_url in iteritems(img.resolutions):
                         img_size = img_size_map.get(res)
                         if img_size:
                             img_src[img_size] = img_url.get('url')
                     show_obj['images'].setdefault(img_type, []).append(
-                        TVInfoImage(image_type=img_type, sizes=img_src, img_id=img.id, main_image=img.main,
-                                    type_str=img.type))
-                    if not b_set and 'banner' == img.type:
+                        TVInfoImage(
+                            image_type=img_type, sizes=img_src, img_id=img.id, main_image=img.main,
+                            type_str=img.type, width=img_width, height=img_height, aspect_ratio=img_ar))
+                    if not p_set and TVInfoImageType.poster == img_type:
+                        p_set = True
+                        show_obj['poster'] = img.resolutions.get('original')['url']
+                        show_obj['poster_thumb'] = img.resolutions.get('original')['url']
+                    elif not b_set and 'banner' == img.type and TVInfoImageType.banner == img_type:
                         b_set = True
                         show_obj['banner'] = img.resolutions.get('original')['url']
                         show_obj['banner_thumb'] = img.resolutions.get('medium')['url']
-                    elif not f_set and 'background' == img.type:
+                    elif not f_set and 'background' == img.type and TVInfoImageType.fanart == img_type:
                         f_set = True
                         show_obj['fanart'] = img.resolutions.get('original')['url']
 
@@ -367,7 +408,8 @@ class TvMaze(TVInfoBase):
             if None is show_data:
                 try:
                     self.show_not_found = False
-                    show_data = tvm_obj.get_show(maze_id=sid, embed='cast%s' % ('', ',episodes')[get_ep_info])
+                    show_data = tvm_obj.get_show(maze_id=sid, embed='cast%s' % ('', ',episodeswithspecials')[
+                        get_ep_info])
                 except tvmaze.ShowNotFound:
                     self.show_not_found = True
                     return False

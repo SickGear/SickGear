@@ -788,6 +788,7 @@ class TVInfoBase(object):
         self._cachedir = kwargs.get('diskcache_dir')  # type: AnyStr
         self.diskcache = diskcache.Cache(directory=self._cachedir, disk_pickle_protocol=2)  # type: diskcache.Cache
         self.cache_expire = 60 * 60 * 18  # type: integer_types
+        self.search_cache_expire = 60 * 15  # type: integer_types
         self.config = {
             'apikey': '',
             'debug_enabled': False,
@@ -805,6 +806,7 @@ class TVInfoBase(object):
             'seasonwides_enabled': seasonwides,
             'fanart_enabled': fanart,
             'actors_enabled': actors,
+            'cache_search': kwargs.get('cache_search'),
         }  # type: Dict[AnyStr, Any]
 
     def _must_load_data(self, sid, load_episodes, banners, posters, seasons, seasonwides, fanart, actors):
@@ -895,11 +897,11 @@ class TVInfoBase(object):
                 log.error('Error getting %s from cache: %s' % (key, ex(e)))
         return False, None
 
-    def _set_cache_entry(self, key, value, tag=None):
-        # type: (Any, Any, AnyStr) -> None
+    def _set_cache_entry(self, key, value, tag=None, expire=None):
+        # type: (Any, Any, AnyStr, int) -> None
         try:
             with self.diskcache as dc:
-                dc.set(key, (value, 'None')[None is value], expire=self.cache_expire, tag=tag)
+                dc.set(key, (value, 'None')[None is value], expire=expire or self.cache_expire, tag=tag)
         except (BaseException, Exception) as e:
             log.error('Error setting %s to cache: %s' % (key, ex(e)))
 
@@ -1177,6 +1179,36 @@ class TVInfoBase(object):
         and returns the result list
         """
         return []
+
+    @staticmethod
+    def _which_type(img_width, img_ratio):
+        # type: (integer_types, Union[integer_types, float]) -> Optional[int]
+        """
+
+        :param img_width:
+        :param img_ratio:
+        """
+
+        msg_success = 'Treating image as %s with extracted aspect ratio'
+        # most posters are around 0.68 width/height ratio (eg. 680/1000)
+        if 0.55 <= img_ratio <= 0.8:
+            log.debug(msg_success % 'poster')
+            return TVInfoImageType.poster
+
+        # most banners are around 5.4 width/height ratio (eg. 758/140)
+        if 5 <= img_ratio <= 6:
+            log.debug(msg_success % 'banner')
+            return TVInfoImageType.banner
+
+        # most fan art are around 1.7 width/height ratio (eg. 1280/720 or 1920/1080)
+        if 1.7 <= img_ratio <= 1.8:
+            if 500 < img_width:
+                log.debug(msg_success % 'fanart')
+                return TVInfoImageType.fanart
+
+            log.warning(u'Skipped image with fanart aspect ratio but less than 500 pixels wide')
+        else:
+            log.warning(u'Skipped image with useless ratio %s' % img_ratio)
 
     def __str__(self):
         return '<TVInfo(%s) (containing: %s)>' % (self.__class__.__name__, text_type(self.shows))

@@ -15,7 +15,8 @@ from bs4_parser import BS4Parser
 from lib import imdbpie
 from lib.tvinfo_base.exceptions import BaseTVinfoShownotfound
 from lib.tvinfo_base import TVInfoBase, TVINFO_TRAKT, TVINFO_TMDB, TVINFO_TVDB, TVINFO_TVRAGE, TVINFO_IMDB, \
-    Person, PersonGenders, TVINFO_TWITTER, TVINFO_FACEBOOK, TVINFO_WIKIPEDIA, TVINFO_INSTAGRAM, Character, TVInfoShow
+    Person, PersonGenders, TVINFO_TWITTER, TVINFO_FACEBOOK, TVINFO_WIKIPEDIA, TVINFO_INSTAGRAM, Character, TVInfoShow, \
+    TVInfoIDs
 from sg_helpers import get_url, try_int
 from lib.dateutil.parser import parser
 
@@ -32,11 +33,71 @@ log.addHandler(logging.NullHandler())
 class IMDbIndexer(TVInfoBase):
     # supported_id_searches = [TVINFO_IMDB]
     supported_person_id_searches = [TVINFO_IMDB]
+    supported_id_searches = [TVINFO_IMDB]
 
     # noinspection PyUnusedLocal
     # noinspection PyDefaultArgument
     def __init__(self, *args, **kwargs):
         super(IMDbIndexer, self).__init__(*args, **kwargs)
+
+    def search(self, series):
+        # type: (AnyStr) -> List
+        """This searches for the series name
+        and returns the result list
+        """
+        result = []
+        cache_name_key = 's-title-%s' % series
+        is_none, shows = self._get_cache_entry(cache_name_key)
+        if not self.config.get('cache_search') or (None is shows and not is_none):
+            try:
+                result = imdbpie.Imdb().search_for_title(series)
+            except (BaseException, Exception):
+                pass
+            self._set_cache_entry(cache_name_key, result, expire=self.search_cache_expire)
+        else:
+            result = shows
+        return result
+
+    def _search_show(self, name=None, ids=None, **kwargs):
+        # type: (AnyStr, Dict[integer_types, integer_types], Optional[Any]) -> List[TVInfoShow]
+        """This searches IMDB for the series name,
+        """
+        def _make_result_dict(s):
+            imdb_id = try_int(re.search(r'tt(\d+)', s.get('id') or s.get('imdb_id')).group(1), None)
+            tvs = TVInfoShow()
+            tvs.seriesname, tvs.id, tvs.firstaired, tvs.genre_list, tvs.overview, tvs.poster, tvs.ids = \
+                s['title'], imdb_id, s.get('releaseDetails', {}).get('date') or s.get('year'), s.get('genres'), \
+                s.get('plot', {}).get('outline', {}).get('text'), s.get('image') and s['image'].get('url'), \
+                TVInfoIDs(imdb=imdb_id)
+            return tvs
+
+        results = []
+        if ids:
+            for t, p in iteritems(ids):
+                if t in self.supported_id_searches:
+                    if t == TVINFO_IMDB:
+                        cache_id_key = 's-id-%s-%s' % (TVINFO_IMDB, p)
+                        is_none, shows = self._get_cache_entry(cache_id_key)
+                        if not self.config.get('cache_search') or (None is shows and not is_none):
+                            try:
+                                show = imdbpie.Imdb().get_title_auxiliary('tt%07d' % p)
+                            except (BaseException, Exception):
+                                continue
+                            self._set_cache_entry(cache_id_key, show, expire=self.search_cache_expire)
+                        else:
+                            show = shows
+                        if show:
+                            results.extend([_make_result_dict(show)])
+        if name:
+            for n in ([name], name)[isinstance(name, list)]:
+                try:
+                    shows = self.search(n)
+                    results.extend([_make_result_dict(s) for s in shows])
+                except (BaseException, Exception) as e:
+                    log.debug('Error searching for show: %s' % ex(e))
+        seen = set()
+        results = [seen.add(r.id) or r for r in results if r.id not in seen]
+        return results
 
     @staticmethod
     def _convert_person(person_obj, filmography=None, bio=None):

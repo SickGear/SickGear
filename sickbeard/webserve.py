@@ -985,10 +985,12 @@ class MainHandler(WebHandler):
         if int(redir):
             self.redirect('/daily-schedule/')
 
-    def daily_schedule(self, layout='None'):
+    @staticmethod
+    def get_daily_schedule():
+        # type: (...) -> Tuple[List[Dict], Dict, Dict, datetime.date, integer_types, integer_types]
         """ display the episodes """
         today_dt = datetime.date.today()
-        # today = today_dt.toordinal()
+        today = today_dt.toordinal()
         yesterday_dt = today_dt - datetime.timedelta(days=1)
         yesterday = yesterday_dt.toordinal()
         tomorrow = (datetime.date.today() + datetime.timedelta(days=1)).toordinal()
@@ -1061,12 +1063,13 @@ class MainHandler(WebHandler):
 
         # add localtime to the dict
         cache_obj = image_cache.ImageCache()
-        t = PageTemplate(web_handler=self, file='episodeView.tmpl')
-        t.fanart = {}
+        fanarts = {}
         cur_prodid = None
         for index, item in enumerate(sql_result):
             tvid_prodid_obj = TVidProdid({item['indexer']: item['showid']})
             tvid_prodid = str(tvid_prodid_obj)
+            sql_result[index]['tv_id'] = item['indexer']
+            sql_result[index]['prod_id'] = item['showid']
             sql_result[index]['tvid_prodid'] = tvid_prodid
             if cur_prodid != tvid_prodid:
                 cur_prodid = tvid_prodid
@@ -1079,6 +1082,7 @@ class MainHandler(WebHandler):
                 item['timestamp'], item['episode_network'], item['ep_airtime'], item['ep_timezone'])
 
             # noinspection PyCallByClass,PyTypeChecker
+            sql_result[index]['parsed_datetime'] = val
             sql_result[index]['localtime'] = SGDatetime.convert_to_setting(val)
             sql_result[index]['data_show_name'] = value_maybe_article(item['show_name'])
             sql_result[index]['data_network'] = value_maybe_article(item['network'])
@@ -1098,7 +1102,7 @@ class MainHandler(WebHandler):
             else:
                 sql_result[index]['imdb_url'] = ''
 
-            if tvid_prodid in t.fanart:
+            if tvid_prodid in fanarts:
                 continue
 
             for img in ek.ek(glob.glob, cache_obj.fanart_path(*tvid_prodid_obj.tuple).replace('fanart.jpg', '*')) or []:
@@ -1106,23 +1110,29 @@ class MainHandler(WebHandler):
                 if not match:
                     continue
                 fanart = [(match.group(1), sickbeard.FANART_RATINGS.get(tvid_prodid, {}).get(match.group(1), ''))]
-                if tvid_prodid not in t.fanart:
-                    t.fanart[tvid_prodid] = fanart
+                if tvid_prodid not in fanarts:
+                    fanarts[tvid_prodid] = fanart
                 else:
-                    t.fanart[tvid_prodid] += fanart
+                    fanarts[tvid_prodid] += fanart
 
-        for tvid_prodid in t.fanart:
-            fanart_rating = [(n, v) for n, v in t.fanart[tvid_prodid] if 20 == v]
+        for tvid_prodid in fanarts:
+            fanart_rating = [(n, v) for n, v in fanarts[tvid_prodid] if 20 == v]
             if fanart_rating:
-                t.fanart[tvid_prodid] = fanart_rating
+                fanarts[tvid_prodid] = fanart_rating
             else:
-                rnd = [(n, v) for (n, v) in t.fanart[tvid_prodid] if 30 != v]
+                rnd = [(n, v) for (n, v) in fanarts[tvid_prodid] if 30 != v]
                 grouped = [(n, v) for (n, v) in rnd if 10 == v]
                 if grouped:
-                    t.fanart[tvid_prodid] = [grouped[random.randint(0, len(grouped) - 1)]]
+                    fanarts[tvid_prodid] = [grouped[random.randint(0, len(grouped) - 1)]]
                 elif rnd:
-                    t.fanart[tvid_prodid] = [rnd[random.randint(0, len(rnd) - 1)]]
+                    fanarts[tvid_prodid] = [rnd[random.randint(0, len(rnd) - 1)]]
 
+        return sql_result, fanarts, sorts, next_week_dt, today, next_week
+
+    def daily_schedule(self, layout='None'):
+        """ display the episodes """
+        t = PageTemplate(web_handler=self, file='episodeView.tmpl')
+        sql_result, t.fanart, sorts, next_week_dt, today, next_week = self.get_daily_schedule()
         # Allow local overriding of layout parameter
         if layout and layout in ('banner', 'daybyday', 'list', 'poster'):
             t.layout = layout

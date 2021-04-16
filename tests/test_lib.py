@@ -122,7 +122,7 @@ mainDB.sickbeard.save_config = _dummy_save_config
 
 # the real one tries to contact tvdb just stop it from getting more info on the ep
 # noinspection PyUnusedLocal
-def _fake_specify_ep(self, season, episode, show_sql=None):
+def _fake_specify_ep(self, season, episode, show_sql=None, existing_only=False, **kwargs):
     pass
 
 
