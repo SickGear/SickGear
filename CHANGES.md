@@ -2,6 +2,12 @@
 
 * Change allow Python 3.8.10 and 3.9.5
 * Remove PiSexy provider
+* Fix refreshShow, prevent another refresh of show if already in queue and not forced
+* Fix webapi set scene season
+* Fix set path in all_tests for py2
+* Fix webapi exception if no backlog was done before (CMD_SickGearCheckScheduler)
+* Change webapi don't allow setting of scene numbers when show hasn't activated scene numbering
+* Add webapi unit tests
 
 
 ### 0.23.17 (2020-04-12 12:40:00 UTC)
