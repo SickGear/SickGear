@@ -2084,7 +2084,7 @@ class CMD_SickGearCheckScheduler(ApiCall):
         nextBacklog = sickbeard.backlog_search_scheduler.next_run().strftime(dateFormat)
 
         data = {"backlog_is_paused": int(backlogPaused), "backlog_is_running": int(backlogRunning),
-                "last_backlog": _ordinal_to_dateForm(sql_result[0]["last_backlog"]),
+                "last_backlog": (0 < len(sql_result) and _ordinal_to_dateForm(sql_result[0]["last_backlog"])) or '',
                 "next_backlog": nextBacklog}
         return _responds(RESULT_SUCCESS, data)
 
@@ -2755,8 +2755,14 @@ class CMD_SickGearSetSceneNumber(ApiCall):
     def run(self):
         """ saving scene numbers """
 
+        show_obj = helpers.find_show_by_id({self.tvid: self.prodid})
+        if not show_obj:
+            return _responds(RESULT_FAILURE, msg="Can't find show")
+        if not show_obj.is_scene:
+            return _responds(RESULT_FAILURE, msg="Show scene numbering disabled")
+
         result = set_scene_numbering_helper(self.tvid, self.prodid, self.forSeason, self.forEpisode,
-                                            self.forAbsolute, self.sceneSeason, self.sceneEpisode, self.sceneEpisode)
+                                            self.forAbsolute, self.sceneSeason, self.sceneEpisode, self.sceneAbsolute)
 
         if not result['success']:
             return _responds(RESULT_FAILURE, result)
@@ -4488,11 +4494,24 @@ class CMD_SickGearShows(ApiCall):
             if None is not self.paused and bool(self.paused) != bool(cur_show_obj.paused):
                 continue
 
+            genreList = []
+            if cur_show_obj.genre:
+                genreListTmp = cur_show_obj.genre.split("|")
+                for genre in genreListTmp:
+                    if genre:
+                        genreList.append(genre)
+            anyQualities, bestQualities = _mapQuality(cur_show_obj.quality)
+
             showDict = {
                 "paused": cur_show_obj.paused,
                 "quality": _get_quality_string(cur_show_obj.quality),
                 "language": cur_show_obj.lang,
                 "air_by_date": cur_show_obj.air_by_date,
+                "airs": cur_show_obj.airs,
+                "flatten_folders": cur_show_obj.flatten_folders,
+                "genre": genreList,
+                "location": cur_show_obj._location,
+                "quality_details": {"initial": anyQualities, "archive": bestQualities},
                 "sports": cur_show_obj.sports,
                 "anime": cur_show_obj.anime,
                 "indexerid": cur_show_obj.prodid,

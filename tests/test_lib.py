@@ -69,6 +69,11 @@ def create_test_cache_folder():
         os.mkdir(sickbeard.CACHE_DIR)
 
 
+def remove_test_cache_folder():
+    if os.path.isdir(sickbeard.CACHE_DIR):
+        shutil.rmtree(sickbeard.CACHE_DIR, ignore_errors=True)
+
+
 # call env functions at appropriate time during sickbeard var setup
 
 # =================
@@ -100,6 +105,7 @@ sickbeard.logger.sb_log_instance.init_logging(False)
 sickbeard.CACHE_DIR = os.path.join(TESTDIR, 'cache')
 sickbeard.ZONEINFO_DIR = os.path.join(TESTDIR, 'cache', 'zoneinfo')
 create_test_cache_folder()
+sickbeard.GUI_NAME = 'slick'
 
 
 # =================
@@ -128,6 +134,7 @@ sickbeard.tv.TVEpisode.specify_episode = _fake_specify_ep
 # =================
 class SickbeardTestDBCase(unittest.TestCase):
     def setUp(self):
+        create_test_cache_folder()
         sickbeard.showList = []
         sickbeard.showDict = {}
         setup_test_db()
@@ -135,6 +142,7 @@ class SickbeardTestDBCase(unittest.TestCase):
         setup_test_show_dir()
 
     def tearDown(self):
+        remove_test_cache_folder()
         sickbeard.showList = []
         sickbeard.showDict = {}
         teardown_test_db()
@@ -144,9 +152,9 @@ class SickbeardTestDBCase(unittest.TestCase):
 
 class TestDBConnection(db.DBConnection, object):
 
-    def __init__(self, db_file_name=TESTDBNAME):
+    def __init__(self, db_file_name=TESTDBNAME, row_type=None):
         db_file_name = os.path.join(TESTDIR, db_file_name)
-        super(TestDBConnection, self).__init__(db_file_name)
+        super(TestDBConnection, self).__init__(db_file_name, row_type=row_type)
 
 
 class TestCacheDBConnection(TestDBConnection, object):
