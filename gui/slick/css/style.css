@@ -4806,7 +4806,8 @@ tablesorter.css
 }
 
 .tablesorter th,
-.tablesorter td{
+.tablesorter td,
+#tfoot{
 	padding:4px;
 	/*border-top:1px solid;*/
 	/*border-left:1px solid;*/
@@ -4836,6 +4837,7 @@ tablesorter.css
 	vertical-align:middle
 }
 
+.tablesorter thead .sort-size-type.tablesorter-headerSorted,
 #display-show .tablesorter .tablesorter-header,
 #display-show .tablesorter thead .tablesorter-headerDesc,
 #display-show .tablesorter thead .tablesorter-headerAsc{background-image:none}

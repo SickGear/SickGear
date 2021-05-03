@@ -206,6 +206,9 @@ class TVidProdid(object):
 
 
 class TVShow(TVShowBase):
+    __slots__ = (
+        'path',
+    )
 
     def __init__(self, tvid, prodid, lang=''):
         # type: (int, int, Text) -> None
@@ -219,7 +222,7 @@ class TVShow(TVShowBase):
         self._not_found_count = None  # type: None or int
         self._last_found_on_indexer = -1  # type: int
 
-        self._location = ''  # type: AnyStr
+        self._location = self.path = ''  # type: AnyStr
         # self._is_location_good = None
         self.lock = threading.Lock()
         self.sxe_ep_obj = {}   # type: Dict
@@ -422,6 +425,7 @@ class TVShow(TVShowBase):
         # Don't validate dir if user wants to add shows without creating a dir
         if sickbeard.ADD_SHOWS_WO_DIR or ek.ek(os.path.isdir, new_location):
             self.dirty_setter('_location')(self, new_location)
+            self.path = new_location
             # self._is_location_good = True
         else:
             raise exceptions_helper.NoNFOException('Invalid folder for the show!')

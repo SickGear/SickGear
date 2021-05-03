@@ -1,25 +1,23 @@
 #import sickbeard
 #from sickbeard.common import *
+#from sickbeard.helpers import get_size, human
 ##
 #set global $title = 'Bulk Change'
 #set global $header = 'Bulk Change'
 #set global $sbPath = '../..'
 #set global $topmenu = 'manage'
+<% def sg_var(varname, default=False): return getattr(sickbeard, varname, default) %>#slurp#
+<% def sg_str(varname, default=''): return getattr(sickbeard, varname, default) %>#slurp#
 ##
 #import os.path
 #include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_top.tmpl')
 ##
-#set $has_any_sports = False
-#set $has_any_anime = False
-#set $has_any_flat_folders = False
-#set $show_list = sorted($sickbeard.showList, key=lambda _x: _x.name)
-#for $cur_show_obj in $show_list
-    #set $has_any_sports |= bool($cur_show_obj.sports)
-    #set $has_any_anime |= bool($cur_show_obj.anime)
-    #set $has_any_flat_folders |= $bool(cur_show_obj.flatten_folders)
-#end for
 <script type="text/javascript" charset="utf-8">
 <!--
+## an arbitrary high number greater than a media file size
+#set $high = 1000000000000
+\$.SickGear.high = $high;
+
 \$.tablesorter.addParser({
 	id: 'showNames',
 	is: function(s) { return !1; },
@@ -38,40 +36,56 @@
 	type: 'numeric'
 });
 ##
-#set $columns_total = 15 - ((1, 0)[$has_any_sports] + (1, 0)[$has_any_anime] + (1, 0)[$has_any_flat_folders] + (1, 0)[$sickbeard.USE_SUBTITLES])
-#set $column_headers = [('false', False), ("'showNames'", False), ("'quality'", False),
-                        ((None, "'sports'")[$has_any_sports], True),
-                        ("'scene'", True), ((None, "'anime'")[$has_any_anime], True),
-                        ((None, "'flatfold'")[$has_any_flat_folders], True), ("'paused'", True),
-                        ("'status'", False), ('false', False), ('false', False), ('false', False),
-                        ((None, 'false')[$sickbeard.USE_SUBTITLES], False), ('false', False), ('false', False)]
+#set $enable_tvinfo = False
+#set $column_headers = [
+    ('!1', '!1', False),
+    ("'showNames'", '!0', False),
+    ("'size'", '!1', False), ('!1', '!1', False),
+    ((None, "'tvinfo'")[$enable_tvinfo], '!1', False),
+    ("'quality'", '!0', False),
+    ((None, "'sports'")[$has_any_sports], '!1', True),
+    ("'scene'", '!1', True),
+    ((None, "'anime'")[$has_any_anime], '!1', True),
+    ((None, "'flatfold'")[$has_any_flat_folders], '!1', True),
+    ("'paused'", '!1', True), ("'status'", '!0', False),
+    ('!1', '!1', False), ('!1', '!1', False), ('!1', '!1', False), ((None, '!1')[$sickbeard.USE_SUBTITLES], '!1', False), ('!1', '!1', False), ('!1', '!1', False)
+]
+#set $columns_total = $len($column_headers) - ((1, 0)[$has_any_sports] + (1, 0)[$has_any_anime] + (1, 0)[$has_any_flat_folders] + (1, 0)[$sickbeard.USE_SUBTITLES])
 #set $headers = []
 #set $text_extract = []
 #set $column = -1
-#for $k, ($c, $img_extract) in enumerate($column_headers)
-    #if None is $c
+#for $sort, $filter, $img_extract in $column_headers
+    #if None is $sort
         #continue
     #end if
     #set $column += 1
-    #set void = $headers.append('\t\t\t%s: { sorter: %s }' % ($column, $c))
+    #set void = $headers.append('\t\t\t%s: {sorter:%s, filter:%s}' % ($column, $sort, $filter))
     #if $img_extract
         #set void = $text_extract.append('\t\t\t%s%s' % ($column, ": function(node) {return $(node).find('img').attr('alt')}"))
     #end if
 #end for
 
-\$(document).ready(function()
+\$(function()
 {
-	\$('#bulkChangeTable:has(tbody tr)').tablesorter({
-		widgets: ['zebra'],
+	\$('#bulk-change-table:has(tbody tr)').tablesorter({
+		widgets: ['zebra','stickyHeaders', 'filter'],
 		sortList: [[1,0]],
 		headers: {
 #echo ',\n'.join($headers)#
 		},
 		textExtraction: {
-			2: function(node) {return \$(node).find('span').text().toLowerCase()},
+#raw
+			1: function(node) {return ((!!$(node).find('i.img-warning-16').length ? '1_' : '0_') + $(node).text().toLowerCase())},
+			2: function(node) {return parseInt($(node).closest('[data-tvid_prodid]').attr('data-size') || -100, 10)},
+#end raw
+#if $enable_tvinfo
+			4: function(node) {return \$(node).find('i').attr('data-tvid')},
+#end if
+			#echo ('5','4')[not $enable_tvinfo]#: function(node) {return \$(node).find('span').text().toLowerCase()},
 #echo ',\n'.join($text_extract)#
 		}
 	});
+
 });
 //-->
 </script>
@@ -81,129 +95,174 @@
 #else
 	<h1 class="title">$title</h1>
 #end if
+
+<style>
+.tvShow{text-align:left}
+.tvShow i{margin-right:6px; margin-bottom:1px}
+.rotate-body span{float:left}
+@supports (transform:translateX(16px) rotate(-45deg)) and (transform-origin:bottom left){
+.tablesorter.rotate th.tablesorter-header.sort-icon-left{background-position:center left; padding: 4px 4px 4px 18px}
+.tablesorter.rotate th.tablesorter-header.sort-icon-bottom{background-position:10px 54px /*28px 45px*/}
+.tablesorter.rotate th.tablesorter-header.sort-icon-status{background-position:30px 54px}
+.tablesorter.rotate th.tablesorter-header.sort-size{background-position:26px 54px; padding:4px 14px 4px 14px}
+.tablesorter.rotate th.tablesorter-header.sort-icon-quality{background-position:20px 54px}
+.rotate-holder{width:20px; margin-bottom:-16px}
+.rotate-holder2{width:20px; margin:22px 0 -22px}
+.rotate-body{width:25px; transform-origin:bottom left; transform:translateX(16px) rotate(-45deg)}
+.rotate-body2{width:25px; transform-origin:bottom left; transform:translateX(20px) rotate(-45deg)}
+.rotate-body span{float:none}
+.rotate th.col-legend, .rotate td.col-legend{width:40px}
+.rotate input[type="checkbox"].right-2px{margin:0 2px 0 0}
+.rotate .img-warning-16{cursor:help}
+}
+#bulk-change-table thead,
+#bulk-change-table-sticky thead,
+#tfoot{position:sticky}
+#bulk-change-table thead,
+#bulk-change-table-sticky thead{top:50px}
+#bulk-change-table-sticky,.tablesorter thead,.tablesorter thead tr,.tablesorter thead tr th, .tablesorter thead tr td{border-spacing:0}
+#tfoot{bottom:0; min-height:34px; line-height:26px}
+#tfoot input[disabled]{cursor:not-allowed}
+.tablesorter-sticky-wrapper{margin-top:50px}
+.tablesorter-filter-row input[disabled]{display:none}
+.tablesorter-filter-row input[type="search"]{background:rgba(255,255,255,0.2); padding:0 3px; border:0; border-radius:4px; color:inherit}
+.tablesorter .tablesorter-header.sort-size-type{padding:0; width:16px; cursor:pointer}
+th.sort-size-type{font-weight:normal}
+.average{border-top:1px solid white; width:9px; margin:0 auto}
+.average i{display:block; line-height:10px; margin-right:1px}
+
+#set $theme_suffix = ('', '-dark')['dark' == $sg_str('THEME_NAME', 'dark')]
+.tip,.tip-average{margin:0 2px}
+.tip-average{border-top:1px solid #echo ('#999', '#666')[not $theme_suffix]#}
+.tip-average,.tip-average i{display:inline-block; line-height:8px}
+.bfr{position:absolute;left:-999px;top:-999px}.bfr img,.spinner{display:inline-block;width:16px;height:16px}.spinner{background:url(${sbRoot}/images/loading16${theme_suffix}.gif) no-repeat 0 0}
+</style>
+<div class="bfr"><img src="$sbRoot/images/loading16${theme_suffix}.gif"></div>
+
 <form name="bulkChangeForm" method="post" action="bulk_change">
 $xsrf_form_html
 
-<table id="bulkChangeTable" class="sickbeardTable tablesorter" cellspacing="1" border="0" cellpadding="0">
+<table id="bulk-change-table" class="sickbeardTable tablesorter rotate" cellspacing="1" border="0" cellpadding="0">
 	<thead>
-		<tr>
-			<th class="col-checkbox">Edit<br /><input type="checkbox" class="bulkCheck" id="editCheck"></th>
-			<th class="nowrap narrow" style="text-align:left">Show Name</th>
-			<th class="col-legend narrow">Quality</th>
-#if $has_any_sports
-			<th class="col-legend narrow">Sports</th>
+		<tr style="height:70px">  <!-- must inline this css -->
+			<th class="col-checkbox"><div>Edit</div><input type="checkbox" class="bulk-check" id="edit-check"></th>
+			<th class="text-nowrap narrow sort-icon-left" style="text-align:left">Show Name</th>
+			<th class="sort-size col-legend narrow dir-none"><div class="rotate-holder"><div class="rotate-body">Size</div></div></th>
+			<th class="narrow sort-size-type" data-type="E" title="total"><div class="sort-size-type-body">&Sigma;</div><span class="sort-size-type-image" style="display:none; margin-top:8px"><i class="spinner"></i></span></th>
+#if $enable_tvinfo
+			<th class="col-legend narrow sort-icon-bottom"><div class="rotate-holder"><div class="rotate-body">TV Info</div></div></th>
 #end if
-			<th class="col-legend narrow">Scene</th>
+			<th class="col-legend narrow sort-icon-quality"><div class="rotate-holder"><div class="rotate-body">Quality</div></div></th>
+#if $has_any_sports
+			<th class="col-legend narrow sort-icon-bottom"><div class="rotate-holder"><div class="rotate-body">Sports</div></div></th>
+#end if
+			<th class="col-legend narrow sort-icon-bottom"><div class="rotate-holder"><div class="rotate-body2">Scene</div></div></th>
 #if $has_any_anime
-			<th class="col-legend narrow">Anime</th>
+			<th class="col-legend narrow sort-icon-bottom"><div class="rotate-holder"><div class="rotate-body2">Anime</div></div></th>
 #end if
 #if $has_any_flat_folders
-			<th class="col-legend narrow">Flat<br /> Folders</th>
+			<th class="col-legend narrow sort-icon-bottom"><div class="rotate-holder"><div class="rotate-body2">Flat Folders</div></div></th>
 #end if
-			<th class="col-legend narrow">Paused</th>
-			<th class="col-legend narrow">Status</th>
-			<th width="1%">Update<br /><input type="checkbox" class="bulkCheck" id="updateCheck"></th>
-			<th width="1%">Rescan<br /><input type="checkbox" class="bulkCheck" id="refreshCheck"></th>
-			<th width="1%">Rename<br /><input type="checkbox" class="bulkCheck" id="renameCheck"></th>
+			<th class="col-legend narrow sort-icon-bottom"><div class="rotate-holder"><div class="rotate-body2">Paused</div></div></th>
+			<th class="col-legend narrow sort-icon-status"><div class="rotate-holder"><div class="rotate-body2">Status</div></div></th>
+			<th width="1%"><div class="rotate-holder2"><div class="rotate-body"><label><input type="checkbox" class="bulk-check right-2px" id="update-check"><span>Update</span></label></div></div></th>
+			<th width="1%"><div class="rotate-holder2"><div class="rotate-body"><label><input type="checkbox" class="bulk-check right-2px" id="refresh-check"><span>Rescan</span></label></div></div></th>
+			<th width="1%"><div class="rotate-holder2"><div class="rotate-body"><label><input type="checkbox" class="bulk-check right-2px" id="rename-check"><span>Rename</span></label></div></div></th>
 #if $sickbeard.USE_SUBTITLES
-			<th width="1%">Search<br />Subtitle<br /><input type="checkbox" class="bulkCheck" id="subtitleCheck"></th>
+			<th width="1%"><div class="rotate-holder2"><div class="rotate-body"><label><input type="checkbox" class="bulk-check right-2px" id="subtitleCheck"><span>Subtitle</span></label></div></div></th>
 #end if
-##			<!-- <th>Force Metadata Regen <input type="checkbox" class="bulkCheck" id="metadataCheck"></th>//-->
-			<th width="1%">Delete<br /><input type="checkbox" class="bulkCheck" id="deleteCheck"></th>
-			<th width="1%">Remove<br /><input type="checkbox" class="bulkCheck" id="removeCheck"></th>
+			<th width="1%"><div class="rotate-holder2"><div class="rotate-body"><label><input type="checkbox" class="bulk-check right-2px" id="delete-check"><span>Delete</span></label></div></div></th>
+			<th width="1%"><div class="rotate-holder2" style="margin-right:40px;"><div class="rotate-body"><label><input type="checkbox" class="bulk-check right-2px" id="remove-check"><span>Remove</span></label></div></div></th>
 		</tr>
 	</thead>
 
-	<tfoot>
-		<tr>
-			<td rowspan="1" colspan="2" class="align-center alt"><input class="btn pull-left" type="button" value="Edit Selected" id="submitMassEdit"></td>
-			<td rowspan="1" colspan="#echo $columns_total-2#" class="align-right alt"><input class="btn pull-right" type="button" value="Submit" id="submitBulkChange"></td>
-		</tr>
-	</tfoot>
-
 	<tbody>
-
 #set $disabled = ' disabled="disabled"'
-#set $disabled_inprogress_tip = ' title="%s action is currently in progress for this show"'
+#set $disabled_inprogress_tip = ' action is currently in progress for this show'
 #set $disabled_subtitles_tip = ' title="Use edit to enable subtitle search for this show"'
 #set $no = 'no16.png" title="No" alt="No'
 #set $yes = 'yes16.png" title="Yes" alt="Yes'
-#for $cur_show_obj in $show_list
-    #set $option_state = '<input type="checkbox" class="%sCheck" id="%s-{0:s}"%s>'.format($cur_show_obj.tvid_prodid)
+#set $max = $high + 100
+#for $cur_show_obj in $shows + $shows_no_loc
+    #set $show_loc = $cur_show_obj.path
+    #set $show_size = $max if not $show_loc else $get_size($show_loc)
+    #set $option_state = '<input type="checkbox"%s class="%s-check"%s>'
     ##
     #set $curUpdate_disabled = $sickbeard.show_queue_scheduler.action.isBeingUpdated($cur_show_obj)\
                                or $sickbeard.show_queue_scheduler.action.isInUpdateQueue($cur_show_obj)
-    #set $reason = $disabled_inprogress_tip % 'Update'
-    #set $curUpdate = '%s>%s' % (('', $reason)[$curUpdate_disabled],
-                                 $option_state % ('update', 'update', ('', $disabled + $reason)[$curUpdate_disabled]))
+    #set $tip = ' title="Update%s"' % ('', $disabled_inprogress_tip)[$curUpdate_disabled]
+    #set $curUpdate = ($tip, $option_state % (('', $disabled)[$curUpdate_disabled], 'update', $tip))
     ##
     #set $curRefresh_disabled = $sickbeard.show_queue_scheduler.action.isBeingRefreshed($cur_show_obj)\
                                 or $sickbeard.show_queue_scheduler.action.isInRefreshQueue($cur_show_obj)
-    #set $reason = $disabled_inprogress_tip % 'Rescan'
-    #set $curRefresh = '%s>%s' % (('', $reason)[$curRefresh_disabled],
-                                  $option_state % ('refresh', 'refresh', ('', $disabled + $reason)[$curRefresh_disabled]))
+    #set $tip = ' title="Rescan%s"' % ('', $disabled_inprogress_tip)[$curRefresh_disabled]
+    #set $curRefresh = ($tip, $option_state % (('', $disabled)[$curRefresh_disabled], 'refresh', $tip))
     ##
     #set $curRename_disabled = $sickbeard.show_queue_scheduler.action.isBeingRenamed($cur_show_obj)\
                                or $sickbeard.show_queue_scheduler.action.isInRenameQueue($cur_show_obj)
-    #set $reason = $disabled_inprogress_tip % 'Rename'
-    #set $curRename = '%s>%s' % (('', $reason)[$curRename_disabled],
-                                 $option_state % ('rename', 'rename', ('', $disabled + $reason)[$curRename_disabled]))
+    #set $tip = ' title="Rename%s"' % ('', $disabled_inprogress_tip)[$curRename_disabled]
+    #set $curRename = ($tip, $option_state % (('', $disabled)[$curRename_disabled], 'rename', $tip))
     ##
     #set $subtitles_disabled = not $cur_show_obj.subtitles\
                                or $sickbeard.show_queue_scheduler.action.isBeingSubtitled($cur_show_obj)\
                                or $sickbeard.show_queue_scheduler.action.isInSubtitleQueue($cur_show_obj)
-    #set $reason = ($disabled_inprogress_tip % 'Search subtitle', $disabled_subtitles_tip)[not $cur_show_obj.subtitles]
-    #set $curSubtitle = '%s>%s' % (('', $reason)[$subtitles_disabled],
-                                   $option_state % ('subtitle', 'subtitle', ('', $disabled + $reason)[$subtitles_disabled]))
+    #set $tip = (' title="Search subtitle"', (' title="Search subtitle%s"' % $disabled_inprogress_tip,
+                                              $disabled_subtitles_tip)[not $cur_show_obj.subtitles])[$subtitles_disabled]
+    #set $curSubtitle = ($tip, $option_state % (('', $disabled)[$subtitles_disabled], 'subtitle', $tip))
     ##
     #set $curDelete_disabled = $sickbeard.show_queue_scheduler.action.isBeingRenamed($cur_show_obj)\
                                or $sickbeard.show_queue_scheduler.action.isInRenameQueue($cur_show_obj)\
                                or $sickbeard.show_queue_scheduler.action.isInRefreshQueue($cur_show_obj)
-    #set $reason = $disabled_inprogress_tip % 'Rename or rescan'
-    #set $curDelete = '%s>%s' % (('', $reason)[$curDelete_disabled],
-                                 $option_state % ('delete', 'delete', ('', $disabled + $reason)[$curDelete_disabled]))
+    #set $tip = ' title="Delete%s"' % ('', $disabled_inprogress_tip)[$curDelete_disabled]
+    #set $curDelete = ($tip, $option_state % (('', $disabled)[$curDelete_disabled], 'delete', $tip))
     ##
     #set $curRemove_disabled = $sickbeard.show_queue_scheduler.action.isBeingRenamed($cur_show_obj)\
                                or $sickbeard.show_queue_scheduler.action.isInRenameQueue($cur_show_obj)\
                                or $sickbeard.show_queue_scheduler.action.isInRefreshQueue($cur_show_obj)
-    ##set $reason = $disabled_inprogress_tip % 'Rename or rescan'
-    #set $curRemove = '%s>%s' % (('', $reason)[$curRemove_disabled],
-                                 $option_state % ('remove', 'remove', ('', $disabled + $reason)[$curRemove_disabled]))
-		<tr>
-			<td align="center"><input type="checkbox" class="editCheck" id="edit-$cur_show_obj.tvid_prodid"></td>
+    #set $tip = ' title="Remove%s"' % ('', $disabled_inprogress_tip)[$curRemove_disabled]
+    #set $curRemove = ($tip, $option_state % (('', $disabled)[$curRemove_disabled], 'remove', $tip))
+		<tr data-tvid_prodid="$cur_show_obj.tvid_prodid" data-size="$show_size">
+			<td><input type="checkbox" class="edit-check"></td>
     #set $display_name = (re.sub(r'^((?:A(?!\s+to)n?)|The)\s(\w)', r'<span class="article">\1</span> \2', $cur_show_obj.name), $cur_show_obj.name)[$sickbeard.SORT_ARTICLE]
-			<td class="tvShow"><a href="$sbRoot/home/view-show?tvid_prodid=${cur_show_obj.tvid_prodid}">$display_name</a></td>
+			<td class="tvShow">#if not $show_loc#<i class="img-warning-16" title="Location no longer exists"></i>#end if#<a href="$sbRoot/home/view-show?tvid_prodid=${cur_show_obj.tvid_prodid}">$display_name</a></td>
+			<td colspan=2>#if 0 <= $show_size < $max#<span class="text-nowrap ui-size">$human($show_size)</span>#end if#</td>
+    #if $enable_tvinfo
+			<td><i class="icon16 $sickbeard.TVInfoAPI($cur_show_obj.tvid).config['slug']" data-tvid="$cur_show_obj.tvid"></i></td>
+    #end if
     #if $cur_show_obj.quality in $qualityPresets
-			<td align="center"><span class="quality $qualityPresetStrings[$cur_show_obj.quality]">$qualityPresetStrings[$cur_show_obj.quality]</span></td>
+			<td><span class="quality $qualityPresetStrings[$cur_show_obj.quality]">$qualityPresetStrings[$cur_show_obj.quality]</span></td>
     #else
-			<td align="center"><span class="quality Custom">Custom</span></td>
+			<td><span class="quality Custom">Custom</span></td>
     #end if
     #if $has_any_sports
-			<td align="center"><img src="$sbRoot/images/#if 1 == int($cur_show_obj.is_sports) then $yes else $no#" width="16" height="16" /></td>
+			<td><img src="$sbRoot/images/#if 1 == int($cur_show_obj.is_sports) then $yes else $no#" width="16" height="16"></td>
     #end if
-			<td align="center"><img src="$sbRoot/images/#if 1 == int($cur_show_obj.is_scene) then $yes else $no#" width="16" height="16" /></td>
+			<td><img src="$sbRoot/images/#if 1 == int($cur_show_obj.is_scene) then $yes else $no#" width="16" height="16"></td>
     #if $has_any_anime
-			<td align="center"><img src="$sbRoot/images/#if 1 == int($cur_show_obj.is_anime) then $yes else $no#" width="16" height="16" /></td>
+			<td><img src="$sbRoot/images/#if 1 == int($cur_show_obj.is_anime) then $yes else $no#" width="16" height="16"></td>
     #end if
     #if $has_any_flat_folders
-			<td align="center"><img src="$sbRoot/images/#if 1 == int($cur_show_obj.flatten_folders) then $yes else $no#" width="16" height="16" /></td>
+			<td><img src="$sbRoot/images/#if 1 == int($cur_show_obj.flatten_folders) then $yes else $no#" width="16" height="16"></td>
     #end if
-			<td align="center"><img src="$sbRoot/images/#if 1 == int($cur_show_obj.paused) then $yes else $no#" width="16" height="16" /></td>
-			<td align="center">$cur_show_obj.status</td>
-			<td align="center"$curUpdate</td>
-			<td align="center"$curRefresh</td>
-			<td align="center"$curRename</td>
+			<td><img src="$sbRoot/images/#if 1 == int($cur_show_obj.paused) then $yes else $no#" width="16" height="16"></td>
+			<td>$cur_show_obj.status</td>
+			<td$curUpdate[0]>$curUpdate[1]</td>
+			<td$curRefresh[0]>$curRefresh[1]</td>
+			<td$curRename[0]>$curRename[1]</td>
     #if $sickbeard.USE_SUBTITLES
-			<td align="center"$curSubtitle</td>
+			<td$curSubtitle[0]>$curSubtitle[1]</td>
     #end if
-			<td align="center"$curDelete</td>
-			<td align="center"$curRemove</td>
+			<td$curDelete[0]>$curDelete[1]</td>
+			<td$curRemove[0]><span style="margin-right: 40px">$curRemove[1]</span></td>
 		</tr>
 #end for
 	</tbody>
-
 </table>
-
+<div id="tfoot">
+	<span style="width:20%" class="pull-left"><input class="btn pull-left" type="button" value="Edit Selected" id="bulk-change-edit"></span>
+	<span class="stats grey-text"></span>
+	<span style="width:20%" class="pull-right"><input class="btn pull-right" type="button" value="Submit" id="bulk-change-submit"></span>
+</div>
 </form>
 
 #include $os.path.join($sickbeard.PROG_DIR, 'gui/slick/interfaces/default/inc_bottom.tmpl')

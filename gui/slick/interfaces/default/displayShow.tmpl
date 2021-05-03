@@ -333,7 +333,7 @@
 					<div id="details-bottom">
 						<span class="label addQTip" title="Info language, $show_obj.lang"><img src="$sbRoot/images/flags/${show_obj.lang}.png" width="16" height="11" alt="" style="margin-top:-1px" /></span>
 						<span class="label addQTip" title="Location#echo (' no longer exists" style="background-color:#8f1515"', '"')[$showLoc[1]]#>$showLoc[0]</span>
-						<span class="label addQTip" title="Size">$human($get_size($showLoc[0]))</span>
+						<span id="data-size" class="label" style="cursor:help">$human($get_size($showLoc[0]))</span>
 #set $filecount = sum([$c for $k, $c in $ep_counts['videos'].items()])
 #set $to_prune = $show_obj.prune - $filecount
 #set $keep_or_prune = ('', ' (%s)' % ('%s to prune' % abs($to_prune), 'keep %s' % $show_obj.prune)[0 <= $to_prune])[bool($show_obj.prune)]
