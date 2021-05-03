@@ -1,5 +1,23 @@
 ﻿### 0.24.0 (2021-xx-xx xx:xx:00 UTC)
 
+* Change free up some screen real estate on manage/Bulk Change
+* Change rotate column headers on manage/Bulk Change for supported browsers to reduce screen estate waste
+* Add column to manage/Bulk Change to display the show folder location size
+* Add media stats to manage/Bulk Change and view-show when hovering over folder size
+* Add to manage/Bulk Change an icon where show location no longer exists and group the icon/non icon shows
+* Add a hover tip to the edit column on manage/Bulk Change to remind about using multi-select
+* Change add tooltips on manage/Bulk Change checkbox actions to display what each are used for
+* Add to manage/Bulk Change confirm dialog before removing or deleting a show
+* Change manage/Bulk Change add sort by size options to table, (Total, Largest, Smallest, Average)
+* Change manage/Bulk Change add busy spinner for processing when changing size sort type
+* Change manage/Bulk Change table make header stick when page is scrolled
+* Change manage/Bulk Change table make footer stick when page is scrolled
+* Change manage/Bulk Change add filter to table, showname, quality, and status
+* Change number of shows listed after a filter is displayed at the bottom of Bulk Change
+* Change edit and submit buttons are disabled when there is no selection on Bulk Change
+* Change edit and submit buttons display number of selected items on Bulk Change
+* Change tidy up html markup and JavaScript for manage/Bulk Change
+* Change refactor to simplify bulk_change logic
 * Add to config/General, "Package updates" and list packages, check packages by default on Windows, others must enable
 * Change simplify section config/General/Updates
 * Add check for package updates to menu item action "Check for Updates"

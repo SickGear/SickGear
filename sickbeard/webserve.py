@@ -54,7 +54,7 @@ from .anime import AniGroupList, pull_anidb_groups, short_group_names
 from .browser import folders_at_path
 from .common import ARCHIVED, DOWNLOADED, FAILED, IGNORED, SKIPPED, SNATCHED, SNATCHED_ANY, UNAIRED, UNKNOWN, WANTED, \
      SD, HD720p, HD1080p, UHD2160p, Overview, Quality, qualityPresetStrings, statusStrings
-from .helpers import has_image_ext, real_path, remove_article, remove_file_perm, starify
+from .helpers import get_media_stats, has_image_ext, real_path, remove_article, remove_file_perm, starify
 from .indexermapper import MapStatus, map_indexers_to_show, save_mapping
 from .indexers.indexer_config import TVINFO_IMDB, TVINFO_TRAKT, TVINFO_TVDB
 from .name_parser.parser import InvalidNameException, InvalidShowException, NameParser
@@ -2299,6 +2299,32 @@ class Home(MainHandler):
             ' AND season = ? AND episode = ?',
             TVidProdid(tvid_prodid).list + [int(season), int(episode)])
         return 'Episode not found.' if not sql_result else (sql_result[0]['description'] or '')[:250:]
+
+    @staticmethod
+    def media_stats(tvid_prodid=None):
+
+        if None is tvid_prodid:
+            shows = sickbeard.showList
+        else:
+            shows = [helpers.find_show_by_id(tvid_prodid)]
+
+        response = {}
+        for cur_show_obj in shows:
+            if cur_show_obj.path:
+                loc_size = helpers.get_size(cur_show_obj.path)
+                num_files, smallest, largest, average_size = get_media_stats(cur_show_obj.path)
+                response[cur_show_obj.tvid_prodid] = {'message': 'No media files'} if not num_files else \
+                    {
+                        'nFiles': num_files,
+                        'bSmallest': smallest, 'hSmallest': helpers.human(smallest),
+                        'bLargest': largest, 'hLargest': helpers.human(largest),
+                        'bAverageSize': average_size, 'hAverageSize': helpers.human(average_size)
+                    }
+
+                response[cur_show_obj.tvid_prodid].update({
+                    'path': cur_show_obj.path, 'bSize': loc_size, 'hSize': helpers.human(loc_size)})
+
+        return json.dumps(response)
 
     @staticmethod
     def scene_exceptions(tvid_prodid, wanted_season=None):
@@ -5354,6 +5380,21 @@ class Manage(MainHandler):
     def index(self):
         t = PageTemplate(web_handler=self, file='manage.tmpl')
         t.submenu = self.manage_menu('Bulk')
+
+        t.has_any_sports = False
+        t.has_any_anime = False
+        t.has_any_flat_folders = False
+        t.shows = []
+        t.shows_no_loc = []
+        for cur_show_obj in sorted(sickbeard.showList, key=lambda _x: _x.name.lower()):
+            t.has_any_sports |= bool(cur_show_obj.sports)
+            t.has_any_anime |= bool(cur_show_obj.anime)
+            t.has_any_flat_folders |= bool(cur_show_obj.flatten_folders)
+            if not cur_show_obj.path:
+                t.shows_no_loc += [cur_show_obj]
+            else:
+                t.shows += [cur_show_obj]
+
         return t.respond()
 
     def get_status_episodes(self, tvid_prodid, which_status):
@@ -6058,126 +6099,55 @@ class Manage(MainHandler):
 
         self.redirect('/manage/')
 
-    def bulk_change(self, to_update=None, to_refresh=None,
-                    to_rename=None, to_delete=None, to_remove=None,
-                    to_metadata=None, to_subtitle=None):
+    def bulk_change(self, to_update='', to_refresh='', to_rename='',
+                    to_subtitle='', to_delete='', to_remove='', **kwargs):
 
-        if None is not to_update:
-            to_update = to_update.split('|')
-        else:
-            to_update = []
+        to_change = dict({_tvid_prodid: helpers.find_show_by_id(_tvid_prodid)
+                          for _tvid_prodid in
+                          next(iter([_x.split('|') for _x in (to_update, to_refresh, to_rename, to_subtitle,
+                                                              to_delete, to_remove) if _x]), '')})
 
-        if None is not to_refresh:
-            to_refresh = to_refresh.split('|')
-        else:
-            to_refresh = []
-
-        if None is not to_rename:
-            to_rename = to_rename.split('|')
-        else:
-            to_rename = []
-
-        if None is not to_delete:
-            to_delete = to_delete.split('|')
-        else:
-            to_delete = []
-
-        if None is not to_remove:
-            to_remove = to_remove.split('|')
-        else:
-            to_remove = []
-
-        if None is not to_metadata:
-            to_metadata = to_metadata.split('|')
-        else:
-            to_metadata = []
-
-        if None is not to_subtitle:
-            to_subtitle = to_subtitle.split('|')
-        else:
-            to_subtitle = []
-
-        errors = []
-        updates = []
-        refreshes = []
-        renames = []
-        subs = []
-
-        for cur_tvid_prodid in set(to_update + to_refresh
-                                   + to_rename + to_delete + to_remove
-                                   + to_metadata + to_subtitle):
-
-            if '' == cur_tvid_prodid:
-                continue
-
-            show_obj = helpers.find_show_by_id(cur_tvid_prodid)
-
-            if None is show_obj:
-                continue
+        update, refresh, rename, subtitle, errors = [], [], [], [], []
+        for cur_tvid_prodid, cur_show_obj in iteritems(to_change):
 
             if cur_tvid_prodid in to_delete:
-                show_obj.delete_show(True)
-                # don't do anything else if it's being deleted
-                continue
+                cur_show_obj.delete_show(True)
 
-            if cur_tvid_prodid in to_remove:
-                show_obj.delete_show()
-                # don't do anything else if it's being remove
-                continue
+            elif cur_tvid_prodid in to_remove:
+                cur_show_obj.delete_show()
 
-            if cur_tvid_prodid in to_update:
-                try:
-                    sickbeard.show_queue_scheduler.action.updateShow(show_obj, True, True)
-                    updates.append(show_obj.name)
-                except exceptions_helper.CantUpdateException as e:
-                    errors.append('Unable to update show ' + show_obj.name + ': ' + ex(e))
+            else:
+                if cur_tvid_prodid in to_update:
+                    try:
+                        sickbeard.show_queue_scheduler.action.updateShow(cur_show_obj, True, True)
+                        update.append(cur_show_obj.name)
+                    except exceptions_helper.CantUpdateException as e:
+                        errors.append('Unable to update show %s: %s' % (cur_show_obj.name, ex(e)))
 
-            # don't bother refreshing shows that were updated anyway
-            if cur_tvid_prodid in to_refresh and cur_tvid_prodid not in to_update:
-                try:
-                    sickbeard.show_queue_scheduler.action.refreshShow(show_obj)
-                    refreshes.append(show_obj.name)
-                except exceptions_helper.CantRefreshException as e:
-                    errors.append('Unable to refresh show ' + show_obj.name + ': ' + ex(e))
+                elif cur_tvid_prodid in to_refresh:
+                    try:
+                        sickbeard.show_queue_scheduler.action.refreshShow(cur_show_obj)
+                        refresh.append(cur_show_obj.name)
+                    except exceptions_helper.CantRefreshException as e:
+                        errors.append('Unable to refresh show %s: %s' % (cur_show_obj.name, ex(e)))
 
-            if cur_tvid_prodid in to_rename:
-                sickbeard.show_queue_scheduler.action.renameShowEpisodes(show_obj)
-                renames.append(show_obj.name)
+                if cur_tvid_prodid in to_rename:
+                    sickbeard.show_queue_scheduler.action.renameShowEpisodes(cur_show_obj)
+                    rename.append(cur_show_obj.name)
 
-            if sickbeard.USE_SUBTITLES and cur_tvid_prodid in to_subtitle:
-                sickbeard.show_queue_scheduler.action.download_subtitles(show_obj)
-                subs.append(show_obj.name)
+                if sickbeard.USE_SUBTITLES and cur_tvid_prodid in to_subtitle:
+                    sickbeard.show_queue_scheduler.action.download_subtitles(cur_show_obj)
+                    subtitle.append(cur_show_obj.name)
 
-        if 0 < len(errors):
-            ui.notifications.error('Errors encountered',
-                                   '<br >\n'.join(errors))
+        if len(errors):
+            ui.notifications.error('Errors encountered', '<br>\n'.join(errors))
 
-        messageDetail = ''
-
-        if 0 < len(updates):
-            messageDetail += '<br /><b>Updates</b><br /><ul><li>'
-            messageDetail += '</li><li>'.join(updates)
-            messageDetail += '</li></ul>'
-
-        if 0 < len(refreshes):
-            messageDetail += '<br /><b>Refreshes</b><br /><ul><li>'
-            messageDetail += '</li><li>'.join(refreshes)
-            messageDetail += '</li></ul>'
-
-        if 0 < len(renames):
-            messageDetail += '<br /><b>Renames</b><br /><ul><li>'
-            messageDetail += '</li><li>'.join(renames)
-            messageDetail += '</li></ul>'
-
-        if 0 < len(subs):
-            messageDetail += '<br /><b>Subtitles</b><br /><ul><li>'
-            messageDetail += '</li><li>'.join(subs)
-            messageDetail += '</li></ul>'
-
-        if 0 < len(updates + refreshes + renames + subs):
-            ui.notifications.message('The following actions were queued:',
-                                     messageDetail)
-
+        if len(update + refresh + rename + subtitle):
+            ui.notifications.message(
+                'Queued the following actions:',
+                ''.join(['%s:<br>* %s<br>' % (_to_do, '<br>'.join(_shows))
+                         for (_to_do, _shows) in (('Updates', update), ('Refreshes', refresh),
+                                                  ('Renames', rename), ('Subtitles', subtitle)) if len(_shows)]))
         self.redirect('/manage/')
 
     def failed_downloads(self, limit=100, to_remove=None):
@@ -7341,7 +7311,7 @@ class ConfigGeneral(Config):
             for v in results:
                 logger.log(v, logger.ERROR)
             ui.notifications.error('Error(s) Saving Configuration',
-                                   '<br />\n'.join(results))
+                                   '<br>\n'.join(results))
         else:
             ui.notifications.message('Configuration Saved', ek.ek(os.path.join, sickbeard.CONFIG_FILE))
 
@@ -7511,7 +7481,7 @@ class ConfigSearch(Config):
             for x in results:
                 logger.log(x, logger.ERROR)
             ui.notifications.error('Error(s) Saving Configuration',
-                                   '<br />\n'.join(results))
+                                   '<br>\n'.join(results))
         else:
             ui.notifications.message('Configuration Saved', ek.ek(os.path.join, sickbeard.CONFIG_FILE))
 
@@ -7638,7 +7608,7 @@ class ConfigMediaProcess(Config):
             for x in results:
                 logger.log(x, logger.ERROR)
             ui.notifications.error('Error(s) Saving Configuration',
-                                   '<br />\n'.join(results))
+                                   '<br>\n'.join(results))
         else:
             ui.notifications.message('Configuration Saved', ek.ek(os.path.join, sickbeard.CONFIG_FILE))
 
@@ -8051,7 +8021,7 @@ class ConfigProviders(Config):
         if 0 < len(results):
             for x in results:
                 logger.log(x, logger.ERROR)
-            ui.notifications.error('Error(s) Saving Configuration', '<br />\n'.join(results))
+            ui.notifications.error('Error(s) Saving Configuration', '<br>\n'.join(results))
         else:
             ui.notifications.message('Configuration Saved', ek.ek(os.path.join, sickbeard.CONFIG_FILE))
 
@@ -8319,7 +8289,7 @@ class ConfigNotifications(Config):
             for x in results:
                 logger.log(x, logger.ERROR)
             ui.notifications.error('Error(s) Saving Configuration',
-                                   '<br />\n'.join(results))
+                                   '<br>\n'.join(results))
         else:
             ui.notifications.message('Configuration Saved', ek.ek(os.path.join, sickbeard.CONFIG_FILE))
 
@@ -8374,7 +8344,7 @@ class ConfigSubtitles(Config):
             for x in results:
                 logger.log(x, logger.ERROR)
             ui.notifications.error('Error(s) Saving Configuration',
-                                   '<br />\n'.join(results))
+                                   '<br>\n'.join(results))
         else:
             ui.notifications.message('Configuration Saved', ek.ek(os.path.join, sickbeard.CONFIG_FILE))
 
@@ -8407,7 +8377,7 @@ class ConfigAnime(Config):
             for x in results:
                 logger.log(x, logger.ERROR)
             ui.notifications.error('Error(s) Saving Configuration',
-                                   '<br />\n'.join(results))
+                                   '<br>\n'.join(results))
         else:
             ui.notifications.message('Configuration Saved', ek.ek(os.path.join, sickbeard.CONFIG_FILE))
 
@@ -8524,7 +8494,7 @@ class EventLogs(MainHandler):
                             final_data += ['<code><span class="prelight">'] + \
                                           ['<span class="prelight-num">%02s)</span> %s' % (n + 1, x)
                                            for n, x in enumerate(normal_data[::-1])] + \
-                                          ['</span></code><br />']
+                                          ['</span></code><br>']
                             num_lines += len(normal_data)
                             normal_data = []
 

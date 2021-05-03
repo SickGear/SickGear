@@ -1,3 +1,11 @@
+/** @namespace $.SickGear.Root */
+/** @namespace content.path */
+/** @namespace content.hSize */
+/** @namespace content.nFiles */
+/** @namespace content.hLargest */
+/** @namespace content.hSmallest */
+/** @namespace content.hAverageSize */
+
 function initActions() {
 	var menu$ = $('#SubMenu');
 	menu$.find('a[href*="/home/restart/"]').addClass('btn restart').html('<i class="sgicon-restart"></i>Restart');
@@ -99,4 +107,46 @@ $(function(){
 					});
 				});
 		})
+
+	$('[data-size] .ui-size, #data-size').each(function(){
+		$(this).qtip({
+			content:{
+				text: function(event, api){
+					// deferred object ensuring the request is only made once
+					var tvidProdid = $('#tvid-prodid').val(), tipText = '';
+					if (/undefined/i.test(tvidProdid)){
+						tvidProdid = $(event.currentTarget).closest('[data-tvid_prodid]').attr('data-tvid_prodid');
+					}
+					$.getJSON($.SickGear.Root + '/home/media_stats', {tvid_prodid: tvidProdid})
+						.then(function(content){
+							// on success...
+							if (/undefined/.test(content[tvidProdid].message)){
+								tipText = (1 === content[tvidProdid].nFiles
+									? '<span class="grey-text">One media file,</span> ' + content[tvidProdid].hAverageSize
+									: '' + content[tvidProdid].nFiles + ' <span class="grey-text">media files,</span>'
+										+ ((content[tvidProdid].hLargest === content[tvidProdid].hSmallest)
+											? (content[tvidProdid].hAverageSize + ' <span class="grey-text">each</span>')
+											: ('<br><span class="grey-text">largest</span> ' + content[tvidProdid].hLargest + ' <span class="grey-text">(<span class="tip">></span>)</span>'
+												+ '<br><span class="grey-text">smallest</span> ' + content[tvidProdid].hSmallest + ' <span class="grey-text">(<span class="tip"><</span>)</span>'
+												+ '<br><span class="grey-text">average size</span> ' + content[tvidProdid].hAverageSize + ' <span class="grey-text">(<span class="tip-average"><i>x</i></span>)</span>')));
+							} else {
+								tipText = '<span class="grey-text">' + content[tvidProdid].message + '</span>';
+							}
+							api.set('content.text',
+								tipText + '<div style="width:100%; border-top:1px dotted; margin-top:3px"></div>'
+										+ '<div style="margin-top:3px">' + '<span class="grey-text">location size</span> ' + content[tvidProdid].hSize + ' <span class="grey-text">(<span class="tip">&Sigma;</span>)</span>' + '</div>'
+										+ content[tvidProdid].path);
+						}, function(xhr, status, error){
+								// on fail...
+								api.set('content.text', status + ': ' + error);
+						});
+					return 'Loading...'; // set initial text
+				}
+			},
+			show: {solo: true},
+			position: {viewport: $(window), my: 'left center', adjust: {y: -10, x: 0}},
+			style: {classes: 'qtip-dark qtip-rounded qtip-shadow'}
+		});
+	});
+
 });

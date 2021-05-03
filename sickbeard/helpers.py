@@ -1168,6 +1168,28 @@ def get_size(start_path='.'):
         return 0
 
 
+def get_media_stats(start_path='.'):
+    # type: (AnyStr) -> Tuple[int, int, int, int]
+    """
+    return recognised media stats for a folder as...
+
+    number of media files, smallest size in bytes, largest size in bytes, average size in bytes
+
+    :param start_path: path to scan
+    """
+    if ek.ek(os.path.isdir, start_path):
+        sizes = sorted(map(lambda y: y.stat(follow_symlinks=False).st_size,
+                           filter(lambda x: has_media_ext(x.name), scantree(start_path))))
+        if sizes:
+            return len(sizes), sizes[0], sizes[-1], int(sum(sizes) / len(sizes))
+
+    elif ek.ek(os.path.isfile, start_path):
+        size = ek.ek(os.path.getsize, start_path)
+        return 1, size, size, size
+
+    return 0, 0, 0, 0
+
+
 def remove_article(text=''):
     """
     remove articles from text
