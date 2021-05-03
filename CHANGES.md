@@ -1,4 +1,10 @@
-﻿### 0.23.17 (2020-04-12 12:40:00 UTC)
+﻿### 0.23.18 (2020-05-03 23:10:00 UTC)
+
+* Change allow Python 3.8.10 and 3.9.5
+* Remove PiSexy provider
+
+
+### 0.23.17 (2020-04-12 12:40:00 UTC)
 
 * Update UnRar for Windows 6.00 to 6.01 x64
 
