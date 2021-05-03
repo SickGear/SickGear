@@ -299,7 +299,7 @@ class ShowQueue(generic_queue.GenericQueue):
         :return:
         :rtype: QueueItemRefresh
         """
-        if self.isBeingRefreshed(show_obj) and not force:
+        if (self.isBeingRefreshed(show_obj) or self.isInRefreshQueue(show_obj)) and not force:
             raise exceptions_helper.CantRefreshException('This show is already being refreshed, not refreshing again.')
 
         if ((not after_update and self.isBeingUpdated(show_obj)) or self.isInUpdateQueue(show_obj)) and not force:
