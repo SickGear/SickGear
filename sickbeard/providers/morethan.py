@@ -33,23 +33,27 @@ from six import iteritems
 class MoreThanProvider(generic.TorrentProvider):
 
     def __init__(self):
-        generic.TorrentProvider.__init__(self, 'MoreThan', cache_update_iv=15)
+        generic.TorrentProvider.__init__(self, 'MoreThan')
 
-        self.url_base = 'https://www.morethan.tv/'
+        self.url_base = 'https://www.morethantv.me/'
         self.urls = {'config_provider_home_uri': self.url_base,
-                     'login_action': self.url_base + 'login.php',
-                     'search': self.url_base + 'torrents.php?searchstr=%s&' + '&'.join([
-                         'tags_type=1', 'order_by=time', 'order_way=desc',
-                         'filter_cat[2]=1', 'action=basic', 'searchsubmit=1'])}
+                     'login_action': self.url_base + 'login',
+                     'search': self.url_base + 'torrents.php?searchtext=' + '&'.join([
+                         '%s', '%s', 'order_by=time', 'order_way=desc'])}
+
+        self.categories = {'Episode': [3, 4], 'Season': [5, 6]}
+        self.categories['Cache'] = self.categories['Episode'] + self.categories['Season']
 
         self.url = self.urls['config_provider_home_uri']
 
         self.username, self.password, self.minseed, self.minleech = 4 * [None]
+        self.confirmed = False
 
     def _authorised(self, **kwargs):
 
-        return super(MoreThanProvider, self)._authorised(logged_in=(lambda y=None: self.has_all_cookies('session')),
-                                                         post_params={'keeplogged': '1', 'form_tmpl': True})
+        return super(MoreThanProvider, self)._authorised(logged_in=(lambda y=None: self.has_all_cookies('sid')),
+                                                         post_params={'keeploggedin': '1', 'form_tmpl': True,
+                                                                      'cinfo': '1920|1200|24|0'})
 
     def _search_provider(self, search_params, **kwargs):
 
@@ -60,13 +64,14 @@ class MoreThanProvider(generic.TorrentProvider):
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
         rc = dict([(k, re.compile('(?i)' + v))
-                   for (k, v) in iteritems({'info': 'view', 'get': 'download', 'name': 'showname', 'nuked': 'nuked'})])
+                   for (k, v) in iteritems({'info': r'torrents.php\?id', 'get': 'download', 'nuked': 'nuked'})])
         for mode in search_params:
             for search_string in search_params[mode]:
                 search_string = unidecode(search_string)
-                search_url = self.urls['search'] % search_string
+                search_url = self.urls['search'] % (search_string,
+                                                    self._categories_string(mode, template='filter_cat[%s]=1'))
 
-                # fetches 15 results by default, and up to 100 if allowed in user profile
+                # fetches 50 results by default, and up to 100 if allowed in user profile
                 html = self.get_url(search_url)
                 if self.should_skip():
                     return results
@@ -89,16 +94,15 @@ class MoreThanProvider(generic.TorrentProvider):
                             if 5 > len(cells) or tr.find('img', alt=rc['nuked']):
                                 continue
                             try:
-                                head = head if None is not head else self._header_row(tr)
+                                head = head if None is not head else self._header_row(tr, {'size': r'by=size'})
                                 seeders, leechers, size = [try_int(n, n) for n in [
                                     cells[head[x]].get_text().strip() for x in ('seed', 'leech', 'size')]]
-                                if self._reject_item(seeders, leechers):
+                                if self._reject_item(seeders, leechers,
+                                                     verified=self.confirmed and not
+                                                     any(tr.select('.icon_torrent_okay'))):
                                     continue
 
-                                title = tr.find('a', title=rc['info']).get_text().strip()
-                                if title.lower().startswith('season '):
-                                    title = '%s %s' % (tr.find('div', class_=rc['name']).get_text().strip(), title)
-
+                                title = tr.find('a', href=rc['info']).get_text().strip()
                                 download_url = self._link(tr.find('a', href=rc['get'])['href'])
                             except (AttributeError, TypeError, ValueError):
                                 continue
