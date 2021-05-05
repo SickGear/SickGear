@@ -3,12 +3,14 @@
 
 """Humanizing functions for numbers."""
 
+import math
 import re
 from fractions import Fraction
 
 from . import compat
 from .i18n import gettext as _
-from .i18n import gettext_noop as N_
+from .i18n import ngettext
+from .i18n import ngettext_noop as NS_
 from .i18n import pgettext as P_
 from .i18n import thousands_separator
 
@@ -76,7 +78,7 @@ def intcomma(value, ndigits=None):
     compatibility with Django's `intcomma`, this function also accepts floats.
 
     Examples:
-        ``pycon
+        ```pycon
         >>> intcomma(100)
         '100'
         >>> intcomma("1000")
@@ -121,19 +123,20 @@ def intcomma(value, ndigits=None):
         return intcomma(new)
 
 
-powers = [10 ** x for x in (6, 9, 12, 15, 18, 21, 24, 27, 30, 33, 100)]
+powers = [10 ** x for x in (3, 6, 9, 12, 15, 18, 21, 24, 27, 30, 33, 100)]
 human_powers = (
-    N_("million"),
-    N_("billion"),
-    N_("trillion"),
-    N_("quadrillion"),
-    N_("quintillion"),
-    N_("sextillion"),
-    N_("septillion"),
-    N_("octillion"),
-    N_("nonillion"),
-    N_("decillion"),
-    N_("googol"),
+    NS_("thousand", "thousand"),
+    NS_("million", "million"),
+    NS_("billion", "billion"),
+    NS_("trillion", "trillion"),
+    NS_("quadrillion", "quadrillion"),
+    NS_("quintillion", "quintillion"),
+    NS_("sextillion", "sextillion"),
+    NS_("septillion", "septillion"),
+    NS_("octillion", "octillion"),
+    NS_("nonillion", "nonillion"),
+    NS_("decillion", "decillion"),
+    NS_("googol", "googol"),
 )
 
 
@@ -148,6 +151,8 @@ def intword(value, format="%.1f"):
         ```pycon
         >>> intword("100")
         '100'
+        >>> intword("12400")
+        '12.4 thousand'
         >>> intword("1000000")
         '1.0 million'
         >>> intword(1_200_000_000)
@@ -181,9 +186,15 @@ def intword(value, format="%.1f"):
             chopped = value / float(powers[ordinal - 1])
             if float(format % chopped) == float(10 ** 3):
                 chopped = value / float(powers[ordinal])
-                return (" ".join([format, _(human_powers[ordinal])])) % chopped
+                singular, plural = human_powers[ordinal]
+                return (
+                    " ".join([format, ngettext(singular, plural, math.ceil(chopped))])
+                ) % chopped
             else:
-                return (" ".join([format, _(human_powers[ordinal - 1])])) % chopped
+                singular, plural = human_powers[ordinal - 1]
+                return (
+                    " ".join([format, ngettext(singular, plural, math.ceil(chopped))])
+                ) % chopped
     return str(value)
 
 
@@ -339,7 +350,7 @@ def scientific(value, precision=2):
             value = str(value).replace("-", "")
             negative = True
 
-        if isinstance(value, str):
+        if isinstance(value, compat.string_types):
             value = float(value)
 
         fmt = "{:.%se}" % str(int(precision))
@@ -365,3 +376,66 @@ def scientific(value, precision=2):
     final_str = part1 + " x 10" + "".join(new_part2)
 
     return final_str
+
+
+def clamp(value, format="{:}", floor=None, ceil=None, floor_token="<", ceil_token=">"):
+    """Returns number with the specified format, clamped between floor and ceil.
+
+    If the number is larger than ceil or smaller than floor, then the respective limit
+    will be returned, formatted and prepended with a token specifying as such.
+
+    Examples:
+        ```pycon
+        >>> clamp(123.456)
+        '123.456'
+        >>> clamp(0.0001, floor=0.01)
+        '<0.01'
+        >>> clamp(0.99, format="{:.0%}", ceil=0.99)
+        '99%'
+        >>> clamp(0.999, format="{:.0%}", ceil=0.99)
+        '>99%'
+        >>> clamp(1, format=intword, floor=1e6, floor_token="under ")
+        'under 1.0 million'
+        >>> clamp(None) is None
+        True
+
+        ```
+
+    Args:
+        value (int, float): Input number.
+        format (str OR callable): Can either be a formatting string, or a callable
+        function than receives value and returns a string.
+        floor (int, float): Smallest value before clamping.
+        ceil (int, float): Largest value before clamping.
+        floor_token (str): If value is smaller than floor, token will be prepended
+        to output.
+        ceil_token (str): If value is larger than ceil, token will be prepended
+        to output.
+
+    Returns:
+        str: Formatted number. The output is clamped between the indicated floor and
+        ceil. If the number if larger than ceil or smaller than floor, the output will
+        be prepended with a token indicating as such.
+
+    """
+    if value is None:
+        return None
+
+    if floor is not None and value < floor:
+        value = floor
+        token = floor_token
+    elif ceil is not None and value > ceil:
+        value = ceil
+        token = ceil_token
+    else:
+        token = ""
+
+    if isinstance(format, compat.string_types):
+        return token + format.format(value)
+    elif callable(format):
+        return token + format(value)
+    else:
+        raise ValueError(
+            "Invalid format. Must be either a valid formatting string, or a function "
+            "that accepts value and returns a string."
+        )
