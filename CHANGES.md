@@ -60,6 +60,12 @@
 * Change prevent python-Levenshtein 0.12.1 on non Win due to membug
 
 
+### 0.23.19 (2020-05-05 21:40:00 UTC)
+
+* Fix MoreThan provider and add provider option only allow releases that are site trusted
+* Add Python 3.9 to Travis
+
+
 ### 0.23.18 (2020-05-03 23:10:00 UTC)
 
 * Change allow Python 3.8.10 and 3.9.5
