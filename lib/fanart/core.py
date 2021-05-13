@@ -1,9 +1,9 @@
-import requests
 import re
 import lib.fanart as fanart
 from bs4_parser import BS4Parser
 from exceptions_helper import ex
 from .errors import ResponseFanartError
+from sg_helpers import get_url
 
 
 class Request(object):
@@ -22,12 +22,11 @@ class Request(object):
     def response(self):
 
         try:
-            response = requests.get(str(self))
-            rjson = response.json()
+            rjson = get_url(str(self), parse_json=True)
             image_type = self._types or u'showbackground'
             rhtml = self.scrape_web(image_type)
             if not isinstance(rjson, dict) and 0 == len(rhtml[image_type]):
-                raise Exception(response.text)
+                raise Exception(rjson)
 
             if not isinstance(rjson, dict):
                 rjson = {image_type: []}
@@ -49,11 +48,11 @@ class Request(object):
 
     def scrape_web(self, image_type):
         try:
-            data = requests.get(self._web_url % self._tvdb_id)
+            data = get_url(self._web_url % self._tvdb_id)
             if not data:
                 return
 
-            with BS4Parser(data.text, parse_only=dict(ul={'class': 'artwork %s' % image_type})) as ul_item:
+            with BS4Parser(data, parse_only=dict(ul={'class': 'artwork %s' % image_type})) as ul_item:
                 li_items = ul_item('li')
                 if li_items:
                     image_urls = {image_type: []}

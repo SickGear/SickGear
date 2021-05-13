@@ -1,8 +1,8 @@
 import json
 import os
-import requests
 from .core import Request
 from .immutable import Immutable
+from sg_helpers import get_url
 
 
 class LeafItem(Immutable):
@@ -26,7 +26,7 @@ class LeafItem(Immutable):
     @Immutable.mutablemethod
     def content(self):
         if not self._content:
-            self._content = requests.get(self.url).content
+            self._content = get_url(self.url)
         return self._content
 
     def __str__(self):
