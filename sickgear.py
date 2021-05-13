@@ -719,7 +719,7 @@ class SickGear(object):
                     logger.close()
                     from _23 import Popen
                     with Popen(popen_list, cwd=os.getcwd()):
-                        pass
+                        self.exit(0)
 
         # system exit
         self.exit(0)
