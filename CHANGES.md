@@ -1,4 +1,10 @@
-﻿### 0.23.19 (2020-05-05 21:40:00 UTC)
+﻿### 0.23.20 (2020-05-13 18:35:00 UTC)
+
+* Fix restart to release and free resources from previous run process
+* Change fanart lib to get_url
+
+
+### 0.23.19 (2020-05-05 21:40:00 UTC)
 
 * Fix MoreThan provider and add provider option only allow releases that are site trusted
 * Add Python 3.9 to Travis
