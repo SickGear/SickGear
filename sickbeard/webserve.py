@@ -8432,15 +8432,14 @@ class EventLogs(MainHandler):
         self.set_header('Content-Length', ek.ek(os.path.getsize, logfile_name))
         self.set_header('Content-Disposition', 'attachment; filename=sickgear.log')
         with open(logfile_name, 'rb') as logfile:
-            try:
-                while True:
+            while True:
+                try:
                     data = logfile.read(4096)
                     if not data:
                         break
                     self.write(data)
-                self.finish()
-            except (BaseException, Exception):
-                return
+                except (BaseException, Exception):
+                    break
 
     def view_log(self, min_level=logger.MESSAGE, max_lines=500):
 

@@ -60,6 +60,12 @@
 * Change prevent python-Levenshtein 0.12.1 on non Win due to membug
 
 
+### 0.23.21 (2020-05-17 10:20:00 UTC)
+
+* Fix provider Nebulance
+* Fix provider MoreThan
+
+
 ### 0.23.20 (2020-05-13 18:35:00 UTC)
 
 * Fix restart to release and free resources from previous run process
