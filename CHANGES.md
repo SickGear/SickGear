@@ -60,6 +60,12 @@
 * Change prevent python-Levenshtein 0.12.1 on non Win due to membug
 
 
+### 0.23.22 (2020-05-27 00:10:00 UTC)
+
+* Change officially move chat support to irc.libera.chat
+* Change tweak NBL API tip
+
+
 ### 0.23.21 (2020-05-17 10:20:00 UTC)
 
 * Fix provider Nebulance

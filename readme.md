@@ -150,7 +150,7 @@ Finally, a massive thanks to all those that remain in the shadows, the quiet one
 
 ## Community
 * <a href="https://gitter.im/SickGear/"><img src="https://badges.gitter.im/sickgear.svg"></a> web based (most likely one on one with a dev)
-* <a name="freenode"><img src="https://img.shields.io/badge/style-join%20chat-blue.svg?style=flat.svg&label=freenode"></a>&nbsp;(`irc.freenode.net` channel `#SickGear`)
+* <a name="libera"><img src="https://img.shields.io/badge/style-join%20chat-blue.svg?style=flat.svg&label=irc.libera.chat"></a>&nbsp;(`irc.libera.chat` channel `#sickgear`)  Update:2021.05.19 followed freenode staff to new home at libera
 
 Although support is available, you should understand the basics of your OS.  If you can't understand locating a db file, not running as root, or setting file permissions, then SickGear might not be for you.
 

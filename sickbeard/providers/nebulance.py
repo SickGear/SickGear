@@ -225,7 +225,7 @@ class NebulanceProvider(generic.TorrentProvider):
         return ('%s_api_key' % self.get_id()) == key and 'API key' or \
             ('%s_api_key_tip' % self.get_id()) == key and \
             '\'API key\' is at %s %s with "Download" enabled<br>' \
-            '%s has no result or is not set' \
+            '%s has no result' \
             % (self.name, profile_page,
                ('and is used if Username/Password', 'Username/Password is used if API')[self.api_priority]) \
             or ''
