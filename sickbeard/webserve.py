@@ -5149,12 +5149,13 @@ class AddShows(Home):
 
         return t.respond()
 
-    def add_new_show(self, which_series=None, tvinfo_lang='en', root_dir=None, default_status=None,
+    def add_new_show(self, root_dir=None, full_show_path=None, which_series=None, provided_tvid=None, tvinfo_lang='en',
+                     other_shows=None, skip_show=None,
                      quality_preset=None, any_qualities=None, best_qualities=None, upgrade_once=None,
-                     flatten_folders=None, subs=None,
-                     full_show_path=None, other_shows=None, skip_show=None, provided_tvid=None, anime=None,
-                     scene=None, allowlist=None, blocklist=None, wanted_begin=None, wanted_latest=None,
-                     prune=None, tag=None, return_to=None, cancel_form=None, **kwargs):
+                     wanted_begin=None, wanted_latest=None, tag=None,
+                     pause=None, prune=None, default_status=None, scene=None, subs=None, flatten_folders=None,
+                     anime=None, allowlist=None, blocklist=None,
+                     return_to=None, cancel_form=None, **kwargs):
         """
         Receive tvdb id, dir, and other options and create a show from them. If extra show dirs are
         provided then it forwards back to new_show, if not it goes to /home.
@@ -5231,26 +5232,14 @@ class AddShows(Home):
         if sickbeard.ADD_SHOWS_WO_DIR:
             logger.log(u'Skipping initial creation due to config.ini setting (add_shows_wo_dir)')
         else:
-            dir_exists = helpers.make_dir(show_dir)
-            if not dir_exists:
+            if not helpers.make_dir(show_dir):
                 logger.log(u'Unable to add show because can\'t create folder: ' + show_dir, logger.ERROR)
                 ui.notifications.error('Unable to add show', u'Can\'t create folder: ' + show_dir)
                 return self.redirect('/home/')
 
-            else:
-                helpers.chmod_as_parent(show_dir)
+            helpers.chmod_as_parent(show_dir)
 
         # prepare the inputs for passing along
-        scene = config.checkbox_to_value(scene)
-        anime = config.checkbox_to_value(anime)
-        flatten_folders = config.checkbox_to_value(flatten_folders)
-        subs = config.checkbox_to_value(subs)
-
-        if allowlist:
-            allowlist = short_group_names(allowlist)
-        if blocklist:
-            blocklist = short_group_names(blocklist)
-
         if not any_qualities:
             any_qualities = []
         if not best_qualities or int(quality_preset):
@@ -5259,19 +5248,33 @@ class AddShows(Home):
             any_qualities = [any_qualities]
         if type(best_qualities) != list:
             best_qualities = [best_qualities]
-        newQuality = Quality.combineQualities(map_list(int, any_qualities), map_list(int, best_qualities))
+        new_quality = Quality.combineQualities(map_list(int, any_qualities), map_list(int, best_qualities))
         upgrade_once = config.checkbox_to_value(upgrade_once)
 
         wanted_begin = config.minimax(wanted_begin, 0, -1, 10)
         wanted_latest = config.minimax(wanted_latest, 0, -1, 10)
         prune = config.minimax(prune, 0, 0, 9999)
 
+        pause = config.checkbox_to_value(pause)
+        scene = config.checkbox_to_value(scene)
+        subs = config.checkbox_to_value(subs)
+        flatten_folders = config.checkbox_to_value(flatten_folders)
+
+        anime = config.checkbox_to_value(anime)
+        if allowlist:
+            allowlist = short_group_names(allowlist)
+        if blocklist:
+            blocklist = short_group_names(blocklist)
+
         # add the show
-        sickbeard.show_queue_scheduler.action.addShow(tvid, prodid, show_dir, int(default_status), newQuality,
-                                                      flatten_folders, tvinfo_lang, subs, anime,
-                                                      scene, None, allowlist, blocklist,
-                                                      wanted_begin, wanted_latest, prune, tag, new_show=new_show,
-                                                      show_name=show_name, upgrade_once=upgrade_once)
+        sickbeard.show_queue_scheduler.action.add_show(
+            tvid, prodid, show_dir,
+            quality=new_quality, upgrade_once=upgrade_once,
+            wanted_begin=wanted_begin, wanted_latest=wanted_latest, tag=tag,
+            paused=pause, prune=prune, default_status=int(default_status), scene=scene, subtitles=subs,
+            flatten_folders=flatten_folders, anime=anime, allowlist=allowlist, blocklist=blocklist,
+            show_name=show_name, new_show=new_show, lang=tvinfo_lang
+        )
         # ui.notifications.message('Show added', 'Adding the specified show into ' + show_dir)
 
         return finish_add_show()
@@ -5337,14 +5340,14 @@ class AddShows(Home):
 
             if None is not tvid and None is not prodid:
                 # add the show
-                sickbeard.show_queue_scheduler.action.addShow(tvid, prodid, show_dir,
-                                                              default_status=sickbeard.STATUS_DEFAULT,
-                                                              quality=sickbeard.QUALITY_DEFAULT,
-                                                              flatten_folders=sickbeard.FLATTEN_FOLDERS_DEFAULT,
-                                                              subtitles=sickbeard.SUBTITLES_DEFAULT,
-                                                              anime=sickbeard.ANIME_DEFAULT,
-                                                              scene=sickbeard.SCENE_DEFAULT,
-                                                              show_name=show_name)
+                sickbeard.show_queue_scheduler.action.add_show(
+                    tvid, prodid, show_dir,
+                    quality=sickbeard.QUALITY_DEFAULT,
+                    paused=sickbeard.PAUSE_DEFAULT, default_status=sickbeard.STATUS_DEFAULT,
+                    scene=sickbeard.SCENE_DEFAULT, subtitles=sickbeard.SUBTITLES_DEFAULT,
+                    flatten_folders=sickbeard.FLATTEN_FOLDERS_DEFAULT, anime=sickbeard.ANIME_DEFAULT,
+                    show_name=show_name
+                )
                 num_added += 1
 
         if num_added:
@@ -7079,21 +7082,22 @@ class ConfigGeneral(Config):
     @staticmethod
     def save_add_show_defaults(default_status, any_qualities='', best_qualities='', default_wanted_begin=None,
                                default_wanted_latest=None, default_flatten_folders=False, default_scene=False,
-                               default_subtitles=False, default_anime=False, default_tag=''):
+                               default_subs=False, default_anime=False, default_pause=False, default_tag=''):
 
         any_qualities = ([], any_qualities.split(','))[any(any_qualities)]
         best_qualities = ([], best_qualities.split(','))[any(best_qualities)]
 
-        sickbeard.STATUS_DEFAULT = int(default_status)
         sickbeard.QUALITY_DEFAULT = int(Quality.combineQualities(map_list(int, any_qualities),
                                                                  map_list(int, best_qualities)))
         sickbeard.WANTED_BEGIN_DEFAULT = config.minimax(default_wanted_begin, 0, -1, 10)
         sickbeard.WANTED_LATEST_DEFAULT = config.minimax(default_wanted_latest, 0, -1, 10)
-        sickbeard.FLATTEN_FOLDERS_DEFAULT = config.checkbox_to_value(default_flatten_folders)
-        sickbeard.SCENE_DEFAULT = config.checkbox_to_value(default_scene)
-        sickbeard.SUBTITLES_DEFAULT = config.checkbox_to_value(default_subtitles)
-        sickbeard.ANIME_DEFAULT = config.checkbox_to_value(default_anime)
         sickbeard.SHOW_TAG_DEFAULT = default_tag
+        sickbeard.PAUSE_DEFAULT = config.checkbox_to_value(default_pause)
+        sickbeard.STATUS_DEFAULT = int(default_status)
+        sickbeard.SCENE_DEFAULT = config.checkbox_to_value(default_scene)
+        sickbeard.SUBTITLES_DEFAULT = config.checkbox_to_value(default_subs)
+        sickbeard.FLATTEN_FOLDERS_DEFAULT = config.checkbox_to_value(default_flatten_folders)
+        sickbeard.ANIME_DEFAULT = config.checkbox_to_value(default_anime)
 
         sickbeard.save_config()
 

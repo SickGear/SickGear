@@ -212,15 +212,16 @@ METADATA_KODI = None
 
 RESULTS_SORTBY = None
 
-QUALITY_DEFAULT = SD
-STATUS_DEFAULT = SKIPPED
-WANTED_BEGIN_DEFAULT = 0
-WANTED_LATEST_DEFAULT = 0
-FLATTEN_FOLDERS_DEFAULT = False
-SUBTITLES_DEFAULT = False
 TVINFO_DEFAULT = 0
 TVINFO_TIMEOUT = 20
+QUALITY_DEFAULT = SD
+WANTED_BEGIN_DEFAULT = 0
+WANTED_LATEST_DEFAULT = 0
+PAUSE_DEFAULT = False
+STATUS_DEFAULT = SKIPPED
 SCENE_DEFAULT = False
+SUBTITLES_DEFAULT = False
+FLATTEN_FOLDERS_DEFAULT = False
 ANIME_DEFAULT = False
 USE_IMDB_INFO = True
 IMDB_ACCOUNTS = []
@@ -659,8 +660,8 @@ def init_stage_1(console_logging):
     # Add Show Search
     global RESULTS_SORTBY
     # Add Show Defaults
-    global STATUS_DEFAULT, QUALITY_DEFAULT, SHOW_TAG_DEFAULT, FLATTEN_FOLDERS_DEFAULT, SUBTITLES_DEFAULT, \
-        WANTED_BEGIN_DEFAULT, WANTED_LATEST_DEFAULT, SCENE_DEFAULT, ANIME_DEFAULT
+    global QUALITY_DEFAULT, WANTED_BEGIN_DEFAULT, WANTED_LATEST_DEFAULT, SHOW_TAG_DEFAULT, PAUSE_DEFAULT, \
+        STATUS_DEFAULT, SCENE_DEFAULT, SUBTITLES_DEFAULT, FLATTEN_FOLDERS_DEFAULT, ANIME_DEFAULT
     # Post processing
     global KEEP_PROCESSED_DIR, PROCESS_LAST_DIR, PROCESS_LAST_METHOD, PROCESS_LAST_CLEANUP
     # Views
@@ -936,13 +937,15 @@ def init_stage_1(console_logging):
         MIN_UPDATE_PACKAGES_INTERVAL,
         check_setting_int(CFG, 'General', 'update_packages_interval', DEFAULT_UPDATE_PACKAGES_INTERVAL))
 
-    FLATTEN_FOLDERS_DEFAULT = bool(check_setting_int(CFG, 'General', 'flatten_folders_default', 0))
     TVINFO_DEFAULT = check_setting_int(CFG, 'General', 'indexer_default', 0)
     if TVINFO_DEFAULT and not TVInfoAPI(TVINFO_DEFAULT).config['active']:
         TVINFO_DEFAULT = TVINFO_TVDB
     TVINFO_TIMEOUT = check_setting_int(CFG, 'General', 'indexer_timeout', 20)
-    ANIME_DEFAULT = bool(check_setting_int(CFG, 'General', 'anime_default', 0))
+
+    PAUSE_DEFAULT = bool(check_setting_int(CFG, 'General', 'pause default', 0))
     SCENE_DEFAULT = bool(check_setting_int(CFG, 'General', 'scene_default', 0))
+    FLATTEN_FOLDERS_DEFAULT = bool(check_setting_int(CFG, 'General', 'flatten_folders_default', 0))
+    ANIME_DEFAULT = bool(check_setting_int(CFG, 'General', 'anime_default', 0))
 
     PROVIDER_ORDER = check_setting_str(CFG, 'General', 'provider_order', '').split()
     PROVIDER_HOMES = sg_helpers.ast_eval(check_setting_str(CFG, 'General', 'provider_homes', None), {})
@@ -1864,15 +1867,16 @@ def save_config():
     new_config['General']['backlog_nofull'] = int(BACKLOG_NOFULL)
     new_config['General']['skip_removed_files'] = int(SKIP_REMOVED_FILES)
     new_config['General']['results_sortby'] = str(RESULTS_SORTBY)
-    new_config['General']['quality_default'] = int(QUALITY_DEFAULT)
-    new_config['General']['status_default'] = int(STATUS_DEFAULT)
-    new_config['General']['wanted_begin_default'] = int(WANTED_BEGIN_DEFAULT)
-    new_config['General']['wanted_latest_default'] = int(WANTED_LATEST_DEFAULT)
-    new_config['General']['flatten_folders_default'] = int(FLATTEN_FOLDERS_DEFAULT)
     new_config['General']['indexer_default'] = int(TVINFO_DEFAULT)
     new_config['General']['indexer_timeout'] = int(TVINFO_TIMEOUT)
-    new_config['General']['anime_default'] = int(ANIME_DEFAULT)
+    new_config['General']['quality_default'] = int(QUALITY_DEFAULT)
+    new_config['General']['wanted_begin_default'] = int(WANTED_BEGIN_DEFAULT)
+    new_config['General']['wanted_latest_default'] = int(WANTED_LATEST_DEFAULT)
+    new_config['General']['pause default'] = int(PAUSE_DEFAULT)
+    new_config['General']['status_default'] = int(STATUS_DEFAULT)
     new_config['General']['scene_default'] = int(SCENE_DEFAULT)
+    new_config['General']['flatten_folders_default'] = int(FLATTEN_FOLDERS_DEFAULT)
+    new_config['General']['anime_default'] = int(ANIME_DEFAULT)
     new_config['General']['provider_order'] = ' '.join(PROVIDER_ORDER)
     new_config['General']['provider_homes'] = '%s' % dict([(pid, v) for pid, v in list_items(PROVIDER_HOMES) if pid in [
         p.get_id() for p in [x for x in providers.sortedProviderList() if GenericProvider.TORRENT == x.providerType]]])

@@ -42,6 +42,7 @@
 * Update urllib3 1.25.11 (00f1769) to 1.26.2 (eae04d6)
 * Add menu Shows/"Next Episode Cards"
 * Change improve SQL performance
+* Add option "Add paused" to Options/"More Options" at the final step of adding a show
 
 
 [develop changelog]
