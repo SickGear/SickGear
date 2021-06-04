@@ -709,6 +709,7 @@ class SickGear(object):
              ii.indexer AS ii_indexer, ii.indexer_id AS ii_indexer_id,
              ii.last_update AS ii_ii_last_update,
              ii.rating AS ii_rating, ii.runtimes AS ii_runtimes,
+             ii.is_mini_series AS ii_is_mini_series, ii.episode_count AS ii_episode_count,
              ii.title AS ii_title, ii.votes AS ii_votes, ii.year AS ii_year,
              tsnf.fail_count AS tsnf_fail_count, tsnf.indexer AS tsnf_indexer,
              tsnf.indexer_id AS tsnf_indexer_id, tsnf.last_check AS tsnf_last_check,

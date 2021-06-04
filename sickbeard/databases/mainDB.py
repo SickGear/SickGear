@@ -1715,6 +1715,10 @@ class ChangeShowData(db.SchemaUpgrade):
                                         ('network_country_code', 'TEXT', ''), ('network_id', 'NUMERIC'),
                                         ('network_is_stream', 'INTEGER')])
 
+        if not self.hasColumn('imdb_info', 'is_mini_series'):
+            self.upgrade_log('Adding new data columns to imdb_info')
+            self.addColumns('imdb_info', [('is_mini_series', 'INTEGER', 0), ('episode_count', 'NUMERIC')])
+
         self.upgrade_log('Adding Character and Persons tables')
 
         table_create_sql = {

@@ -156,7 +156,8 @@ def param(visible=True, rid=None, cache_person=None, cache_char=None, person=Non
 			<div>
 				<h3>Bio</h3>
 				<div style="max-height:250px; overflow:auto; word-break:normal">
-					<p>$character.biography.replace('\n', '<br>')</p>
+## cleanup bio
+					<p>$re.sub(r'\s+.*?CC-BY-SA.*?$', '', $character.biography).replace('\n', '<br>')</p>
 				</div>
 			</div>
 #end if

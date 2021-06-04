@@ -116,19 +116,18 @@ class ShowQueue(generic_queue.GenericQueue):
                     self.download_subtitles(add_to_db=False, show_obj=show_obj, uid=cur_row['uid'])
 
                 elif ShowQueueActions.ADD == cur_row['action_id']:
-                    self.addShow(tvid=cur_row['tvid'], prodid=cur_row['prodid'],
-                                 add_to_db=False, allowlist=cur_row['allowlist'],
-                                 anime=bool_none(cur_row['anime']),
-                                 blocklist=cur_row['blocklist'], default_status=cur_row['default_status'],
-                                 flatten_folders=bool_none(cur_row['flatten_folders']), lang=cur_row['lang'],
-                                 new_show=bool(cur_row['new_show']), paused=bool_none(cur_row['paused']),
-                                 prune=cur_row['prune'], quality=cur_row['quality'],
-                                 scene=bool_none(cur_row['scene']), show_dir=cur_row['show_dir'],
-                                 show_name=cur_row['show_name'], subtitles=cur_row['subtitles'],
-                                 tag=cur_row['tag'], uid=cur_row['uid'],
-                                 upgrade_once=bool(cur_row['upgrade_once']),
-                                 wanted_begin=cur_row['wanted_begin'],
-                                 wanted_latest=cur_row['wanted_latest'])
+                    self.add_show(
+                        tvid=cur_row['tvid'], prodid=cur_row['prodid'], show_dir=cur_row['show_dir'],
+                        quality=cur_row['quality'], upgrade_once=bool(cur_row['upgrade_once']),
+                        wanted_begin=cur_row['wanted_begin'], wanted_latest=cur_row['wanted_latest'],
+                        tag=cur_row['tag'],
+                        paused=bool_none(cur_row['paused']), prune=cur_row['prune'],
+                        default_status=cur_row['default_status'], scene=bool_none(cur_row['scene']),
+                        subtitles=cur_row['subtitles'],
+                        flatten_folders=bool_none(cur_row['flatten_folders']), anime=bool_none(cur_row['anime']),
+                        blocklist=cur_row['blocklist'], allowlist=cur_row['allowlist'],
+                        show_name=cur_row['show_name'], new_show=bool(cur_row['new_show']),
+                        lang=cur_row['lang'], uid=cur_row['uid'], add_to_db=False)
 
         except (BaseException, Exception) as e:
             logger.log('Exception loading queue %s: %s' % (self.__class__.__name__, ex(e)), logger.ERROR)

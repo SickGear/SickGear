@@ -103,7 +103,7 @@ from six import binary_type, integer_types, iteritems, iterkeys, itervalues, mov
 
 # noinspection PyUnreachableCode
 if False:
-    from typing import AnyStr, Dict, List, Optional, Set, Tuple
+    from typing import Any, AnyStr, Dict, List, Optional, Set, Tuple
     from sickbeard.providers.generic import TorrentProvider
 
 
@@ -918,12 +918,13 @@ class MainHandler(WebHandler):
         self.redirect('/view-shows/')
 
     @staticmethod
-    def set_display_show_glide(slidetime, tvid_prodid=None, start_at=None):
+    def set_display_show_glide(slidetime=None, tvid_prodid=None, start_at=None):
 
         if tvid_prodid and start_at:
             sickbeard.DISPLAY_SHOW_GLIDE.setdefault(tvid_prodid, {}).update({'start_at': start_at})
 
-        sickbeard.DISPLAY_SHOW_GLIDE_SLIDETIME = sg_helpers.try_int(slidetime, 3000)
+        if slidetime:
+            sickbeard.DISPLAY_SHOW_GLIDE_SLIDETIME = sg_helpers.try_int(slidetime, 3000)
         sickbeard.save_config()
 
     @staticmethod
@@ -3842,7 +3843,8 @@ class AddShows(Home):
                 total, slug, id_str = cur_match.groups()
                 for cur_tvid in sickbeard.TVInfoAPI().all_sources:
                     if sickbeard.TVInfoAPI(cur_tvid).config.get('slug') \
-                            and sickbeard.TVInfoAPI(cur_tvid).config['slug'] == slug.lower():
+                            and (slug.lower() == sickbeard.TVInfoAPI(cur_tvid).config['slug']
+                                 or cur_tvid == sg_helpers.try_int(slug, None)):
                         try:
                             ids_to_search[cur_tvid] = int(id_str.strip().replace('tt', ''))
                         except (BaseException, Exception):
@@ -4271,7 +4273,8 @@ class AddShows(Home):
             slug = sickbeard.TVInfoAPI(cur_tvid).config['slug']
             try_id = has_shows and cur_try and sickbeard.showList[-1].ids[cur_tvid].get('id')
             if not cur_idx:
-                t.try_name = [{'showname': 'Game of Thrones' if not try_id else sickbeard.showList[-1].name}]
+                t.try_name = [{
+                    'showname': 'Game of Thrones' if not try_id else sickbeard.showList[-1].name.replace("'", "\\'")}]
 
             if cur_try:
                 id_key = '%s:id%s' % (slug, ('',  ' (GoT)')[not try_id])
@@ -9296,60 +9299,57 @@ class CachedImages(MainHandler):
             file_name = ek.ek(os.path.basename, source)
         elif filename not in [None, 0, '0']:
             file_name = filename
-        static_image_path = ek.ek(os.path.join, sickbeard.CACHE_DIR, 'images', path, file_name)
-        static_image_path = ek.ek(os.path.abspath, static_image_path.replace('\\', '/'))
-        if not ek.ek(os.path.isfile, static_image_path) and has_image_ext(file_name):
-            basepath = ek.ek(os.path.dirname, static_image_path)
+        image_file = ek.ek(os.path.join, sickbeard.CACHE_DIR, 'images', path, file_name)
+        image_file = ek.ek(os.path.abspath, image_file.replace('\\', '/'))
+        if not ek.ek(os.path.isfile, image_file) and has_image_ext(file_name):
+            basepath = ek.ek(os.path.dirname, image_file)
             helpers.make_dirs(basepath)
-            s = ''
-            tmdbimage = False
+            poster_url = ''
+            tmdb_image = False
             if None is not source and source in sickbeard.CACHE_IMAGE_URL_LIST:
-                s = source
+                poster_url = source
             if None is source and tmdbid not in [None, 'None', 0, '0'] \
-                    and self.should_try_image(static_image_path, 'tmdb'):
-                tmdbimage = True
+                    and self.should_try_image(image_file, 'tmdb'):
+                tmdb_image = True
                 try:
                     tvinfo_config = sickbeard.TVInfoAPI(TVINFO_TMDB).api_params.copy()
                     t = sickbeard.TVInfoAPI(TVINFO_TMDB).setup(**tvinfo_config)
-                    tv_s = t.get_show(tmdbid, load_episodes=False, posters=True)
-                    if tv_s and tv_s.poster:
-                        s = tv_s.poster
+                    show_obj = t.get_show(tmdbid, load_episodes=False, posters=True)
+                    if show_obj and show_obj.poster:
+                        poster_url = show_obj.poster
                 except (BaseException, Exception):
-                    s = ''
-            if s and not sg_helpers.download_file(s, static_image_path) and s.find('trakt.us'):
-                sg_helpers.download_file(s.replace('trakt.us', 'trakt.tv'), static_image_path)
-            if tmdbimage and not ek.ek(os.path.isfile, static_image_path):
-                self.create_dummy_image(static_image_path, 'tmdb')
+                    poster_url = ''
+            if poster_url and not sg_helpers.download_file(poster_url, image_file) and poster_url.find('trakt.us'):
+                sg_helpers.download_file(poster_url.replace('trakt.us', 'trakt.tv'), image_file)
+            if tmdb_image and not ek.ek(os.path.isfile, image_file):
+                self.create_dummy_image(image_file, 'tmdb')
 
             if None is source and tvdbid not in [None, 'None', 0, '0'] \
-                    and not ek.ek(os.path.isfile, static_image_path) \
-                    and self.should_try_image(static_image_path, 'tvdb'):
+                    and not ek.ek(os.path.isfile, image_file) \
+                    and self.should_try_image(image_file, 'tvdb'):
                 try:
                     tvinfo_config = sickbeard.TVInfoAPI(TVINFO_TVDB).api_params.copy()
                     tvinfo_config['posters'] = True
-                    r = sickbeard.TVInfoAPI(TVINFO_TVDB).setup(**tvinfo_config)[helpers.try_int(tvdbid), False]
-                    if hasattr(r, 'data') and 'poster' in r.data:
-                        s = r.data['poster']
+                    t = sickbeard.TVInfoAPI(TVINFO_TVDB).setup(**tvinfo_config)[helpers.try_int(tvdbid), False]
+                    if hasattr(t, 'data') and 'poster' in t.data:
+                        poster_url = t.data['poster']
                 except (BaseException, Exception):
-                    s = ''
-                if s:
-                    sg_helpers.download_file(s, static_image_path)
-                if not ek.ek(os.path.isfile, static_image_path):
-                    self.create_dummy_image(static_image_path, 'tvdb')
+                    poster_url = ''
+                if poster_url:
+                    sg_helpers.download_file(poster_url, image_file)
+                if not ek.ek(os.path.isfile, image_file):
+                    self.create_dummy_image(image_file, 'tvdb')
 
-            if ek.ek(os.path.isfile, static_image_path):
-                self.delete_all_dummy_images(static_image_path)
+            if ek.ek(os.path.isfile, image_file):
+                self.delete_all_dummy_images(image_file)
 
-        if not ek.ek(os.path.isfile, static_image_path):
-            static_image_path = ek.ek(os.path.join, sickbeard.PROG_DIR, 'gui', 'slick',
-                                      'images', ('image-light.png', 'trans.png')[bool(int(trans))])
+        if not ek.ek(os.path.isfile, image_file):
+            image_file = ek.ek(os.path.join, sickbeard.PROG_DIR, 'gui', 'slick',
+                               'images', ('image-light.png', 'trans.png')[bool(int(trans))])
         else:
-            helpers.set_file_timestamp(static_image_path, min_age=3, new_time=None)
+            helpers.set_file_timestamp(image_file, min_age=3, new_time=None)
 
-        mime_type, encoding = MimeTypes().guess_type(static_image_path)
-        self.set_header('Content-Type', mime_type)
-        with open(static_image_path, 'rb') as img:
-            return img.read()
+        return self.image_data(image_file)
 
     @staticmethod
     def should_load_image(filename, days=7):
@@ -9401,45 +9401,28 @@ class CachedImages(MainHandler):
         prefer_person = prefer_person in (True, '1', 'true', 'True') and char_obj.person and 1 < len(char_obj.person) \
             and bool(person_obj)
 
+        image_file = None
         if not prefer_person and (char_obj.thumb_url or char_obj.image_url):
-            img_cache_obj = image_cache.ImageCache()
-            filename_image_path, thumb_image_path = img_cache_obj.character_both_path(char_obj, show_obj,
-                                                                                      person_obj=person_obj)
-            sg_helpers.make_dirs(img_cache_obj.characters_dir)
-            if self.should_load_image(filename_image_path) and char_obj.image_url:
-                sg_helpers.download_file(char_obj.image_url, filename_image_path)
-            if self.should_load_image(thumb_image_path) and char_obj.thumb_url:
-                sg_helpers.download_file(char_obj.thumb_url, thumb_image_path)
-            if thumb:
-                if ek.ek(os.path.isfile, thumb_image_path):
-                    static_image_path = thumb_image_path
-                elif ek.ek(os.path.isfile, filename_image_path):
-                    # use normal image as fallback for thumb
-                    static_image_path = filename_image_path
-                else:
-                    static_image_path = ek.ek(os.path.join, sickbeard.PROG_DIR, 'gui', 'slick', 'images',
-                                              'poster-person.jpg')
-            else:
-                if ek.ek(os.path.isfile, filename_image_path):
-                    static_image_path = filename_image_path
-                elif ek.ek(os.path.isfile, thumb_image_path):
-                    # use thumb image as fallback
-                    static_image_path = thumb_image_path
-                else:
-                    static_image_path = ek.ek(os.path.join, sickbeard.PROG_DIR, 'gui', 'slick', 'images',
-                                              'poster-person.jpg')
+            image_cache_obj = image_cache.ImageCache()
+            image_normal, image_thumb = image_cache_obj.character_both_path(char_obj, show_obj, person_obj=person_obj)
+            sg_helpers.make_dirs(image_cache_obj.characters_dir)
+            if self.should_load_image(image_normal) and char_obj.image_url:
+                sg_helpers.download_file(char_obj.image_url, image_normal)
+            if self.should_load_image(image_thumb) and char_obj.thumb_url:
+                sg_helpers.download_file(char_obj.thumb_url, image_thumb)
+
+            primary, fallback = ((image_normal, image_thumb), (image_thumb, image_normal))[thumb]
+            if ek.ek(os.path.isfile, primary):
+                image_file = primary
+            elif ek.ek(os.path.isfile, fallback):
+                image_file = fallback
+
         elif person_id:
             return self.person(rid=char_id, pid=person_id, show_obj=show_obj, thumb=thumb)
         elif char_obj.person and (char_obj.person[0].thumb_url or char_obj.person[0].image_url):
-            return self.person(rid=char_id, pid=char_obj.person[0].id, show_obj=show_obj,
-                               thumb=thumb)
-        else:
-            static_image_path = ek.ek(os.path.join, sickbeard.PROG_DIR, 'gui', 'slick', 'images', 'poster-person.jpg')
+            return self.person(rid=char_id, pid=char_obj.person[0].id, show_obj=show_obj, thumb=thumb)
 
-        mime_type, encoding = MimeTypes().guess_type(static_image_path)
-        self.set_header('Content-Type', mime_type)
-        with open(static_image_path, 'rb') as img:
-            return img.read()
+        return self.image_data(image_file, cast_default=True)
 
     def person(self, rid=None, pid=None, tvid_prodid=None, show_obj=None, thumb=True, **kwargs):
         _ = kwargs.get('oid')  # suppress pyc non used var highlight, oid (original id) is a visual ui key
@@ -9456,36 +9439,37 @@ class CachedImages(MainHandler):
             return
         thumb = thumb in (True, '1', 'true', 'True')
 
+        image_file = None
         if person_obj.thumb_url or person_obj.image_url:
-            img_cache_obj = image_cache.ImageCache()
-            filename_image_path, thumb_image_path = img_cache_obj.person_both_paths(person_obj)
-            sg_helpers.make_dirs(img_cache_obj.characters_dir)
-            if self.should_load_image(filename_image_path) and person_obj.image_url:
-                sg_helpers.download_file(person_obj.image_url, filename_image_path)
-            if self.should_load_image(thumb_image_path) and person_obj.thumb_url:
-                sg_helpers.download_file(person_obj.thumb_url, thumb_image_path)
-            if thumb:
-                if ek.ek(os.path.isfile, thumb_image_path):
-                    static_image_path = thumb_image_path
-                elif ek.ek(os.path.isfile, filename_image_path):
-                    # use normal image as fallback for thumb
-                    static_image_path = filename_image_path
-                else:
-                    static_image_path = ek.ek(os.path.join, sickbeard.PROG_DIR, 'gui', 'slick', 'images',
-                                              'poster-person.jpg')
-            else:
-                if ek.ek(os.path.isfile, filename_image_path):
-                    static_image_path = filename_image_path
-                elif ek.ek(os.path.isfile, thumb_image_path):
-                    # use thumb image as fallback
-                    static_image_path = thumb_image_path
-                else:
-                    static_image_path = ek.ek(os.path.join, sickbeard.PROG_DIR, 'gui', 'slick', 'images',
-                                              'poster-person.jpg')
-        else:
-            static_image_path = ek.ek(os.path.join, sickbeard.PROG_DIR, 'gui', 'slick', 'images', 'poster-person.jpg')
+            image_cache_obj = image_cache.ImageCache()
+            image_normal, image_thumb = image_cache_obj.person_both_paths(person_obj)
+            sg_helpers.make_dirs(image_cache_obj.characters_dir)
+            if self.should_load_image(image_normal) and person_obj.image_url:
+                sg_helpers.download_file(person_obj.image_url, image_normal)
+            if self.should_load_image(image_thumb) and person_obj.thumb_url:
+                sg_helpers.download_file(person_obj.thumb_url, image_thumb)
 
-        mime_type, encoding = MimeTypes().guess_type(static_image_path)
+            primary, fallback = ((image_normal, image_thumb), (image_thumb, image_normal))[thumb]
+            if ek.ek(os.path.isfile, primary):
+                image_file = primary
+            elif ek.ek(os.path.isfile, fallback):
+                image_file = fallback
+
+        return self.image_data(image_file, cast_default=True)
+
+    def image_data(self, image_file, cast_default=False):
+        # type: (Optional[AnyStr], bool) -> Optional[Any]
+        """
+        return image file binary data
+
+        :param image_file: file path
+        :param cast_default: if required, use default cast file path if None is image_file
+        :return: binary image data or None
+        """
+        if cast_default and None is image_file:
+            image_file = ek.ek(os.path.join, sickbeard.PROG_DIR, 'gui', 'slick', 'images', 'poster-person.jpg')
+
+        mime_type, encoding = MimeTypes().guess_type(image_file)
         self.set_header('Content-Type', mime_type)
-        with open(static_image_path, 'rb') as img:
-            return img.read()
+        with open(image_file, 'rb') as io_stream:
+            return io_stream.read()

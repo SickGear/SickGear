@@ -152,15 +152,15 @@ def param(visible=True, rid=None, cache_person=None, cache_char=None, person=Non
 </style>
 
 			<div class="#vitals" data-birthdate="$person.birthday" data-deathdate="$person.deathday">
-#if $person.akas
-    #set $akas = ' <i>*</i> '.join(['<span%s>%s</span>' % (('', ' class="grey-text"')[bool(idx % 2)], $aka) for (idx, $aka) in $enumerate($person.akas)])
-				<div><span class="details-title">Akas</span><span class="details-info akas">$akas</span></div>
-#end if
 #if $person.real_name
 				<div><span class="details-title">Real name</span><span class="details-info">$person.real_name</span></div>
 #end if
+#if $person.akas
+    #set $akas = ' <i>*</i> '.join(['<span%s>%s</span>' % (('', ' class="grey-text"')[bool(idx % 2)], $aka) for (idx, $aka) in $enumerate($person.lang_ordered_akas)])
+				<div><span class="details-title">Akas</span><span class="details-info akas">$akas</span></div>
+#end if
 #if $person.nicknames
-				<div><span class="details-title">Nicknames</span><span class="details-info">#echo', '.join($person.nicknames)#</span></div>
+				<div><span class="details-title">Nicknames</span><span class="details-info">#echo', '.join($person.lang_ordered_nicknames)#</span></div>
 #end if
 #if $person.height
     #set $inches = str(round(($person.height / float(2.54)), 1)).rstrip('.0')
@@ -208,7 +208,8 @@ def param(visible=True, rid=None, cache_person=None, cache_char=None, person=Non
 			<div>
 				<h3>Bio</h3>
 				<div style="max-height:250px; overflow:auto; word-break:normal">
-					<p style="padding-right:5px">$person.biography.replace('\n', '<br>')</p>
+## cleanup bio
+					<p style="padding-right:5px">$re.sub(r'\s+.*?CC-BY-SA.*?$', '', $person.biography).replace('\n', '<br>')</p>
 				</div>
 			</div>
 #end if

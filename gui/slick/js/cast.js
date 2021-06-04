@@ -30,13 +30,19 @@ function removeImageBackground(oImage){
 				} else if (sizeImage.h < oImage.height){
 
 					var heightDiff = oImage.height - sizeImage.h,
-						margin = Math.floor(heightDiff / 2),
-						roundError = Math.floor(oImage.height - sizeImage.h - (margin * 2)),
-						marginTop = margin + ((0 < roundError) ? roundError : 0);
+						marginBottom = Math.floor(heightDiff / 2),
+						roundError = Math.floor(oImage.height - sizeImage.h - (marginBottom * 2)),
+						marginTop = marginBottom + ((0 < roundError) ? roundError : 0);
+
+					/* if img is lower than header name text, align it to top */
+					if(35 < marginTop){
+						marginBottom += marginTop;
+						marginTop = 0;
+					}
 
 					$(this).css('height', 'auto')
 						.css('marginTop', marginTop)
-						.css('marginBottom', margin);
+						.css('marginBottom', marginBottom);
 				}
 			}
 		}

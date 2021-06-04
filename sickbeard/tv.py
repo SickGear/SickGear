@@ -415,6 +415,31 @@ class Person(Referential):
         elif not self.name:
             self.load_from_db()
 
+    def _order_names(self, name_set):
+        # type: (Set[AnyStr]) -> List[AnyStr]
+        rc_aka = re.compile(r'[\x00-\x7f]+')
+
+        aka_all_ascii = []
+        aka_non_ascii = []
+
+        for cur_aka in name_set or []:
+            if rc_aka.match(cur_aka):
+                aka_all_ascii += [cur_aka]
+            else:
+                aka_non_ascii += [cur_aka]
+
+        return aka_all_ascii + aka_non_ascii
+
+    @property
+    def lang_ordered_akas(self):
+        # type: (...) -> List[AnyStr]
+        return self._order_names(self.akas)
+
+    @property
+    def lang_ordered_nicknames(self):
+        # type: (...) -> List[AnyStr]
+        return self._order_names(self.nicknames)
+
     def _remember_properties(self):
         # type: (...) -> Dict
         return {k: self.__dict__[k] for k in
@@ -2644,6 +2669,8 @@ class TVShow(TVShowBase):
                 self._imdb_info = sql_result[0]
             else:
                 self._imdb_info = dict(zip(sql_result[0].keys(), [(r, '')[None is r] for r in sql_result[0]]))
+            if 'is_mini_series' in self._imdb_info:
+                self._imdb_info['is_mini_series'] = bool(self._imdb_info['is_mini_series'])
         elif sickbeard.USE_IMDB_INFO:
             logger.log('%s: The next show update will attempt to find IMDb info for [%s]' %
                        (self.tvid_prodid, self.name), logger.DEBUG)
@@ -2952,6 +2979,8 @@ class TVShow(TVShowBase):
                      'year': '',
                      'akas': '',
                      'runtimes': self._runtime,
+                     'is_mini_series': False,
+                     'episode_count': None,
                      'genres': '',
                      'countries': '',
                      'country_codes': '',
@@ -3032,6 +3061,10 @@ class TVShow(TVShowBase):
             imdb_info['year'] = try_int(imdb_tv.get('year'), '')
         if isinstance(imdb_tv.get('runningTimeInMinutes'), (int, string_types)):
             imdb_info['runtimes'] = try_int(imdb_tv.get('runningTimeInMinutes'), '')
+        if isinstance(imdb_tv.get('titleType'), string_types):
+            imdb_info['is_mini_series'] = 'mini' in imdb_tv.get('titleType').lower()
+        if isinstance(imdb_tv.get('numberOfEpisodes'), (int, string_types)):
+            imdb_info['episode_count'] = try_int(imdb_tv.get('numberOfEpisodes'), 1)
         if isinstance(imdb_tv.get('genres'), (list, tuple)):
             imdb_info['genres'] = '|'.join(filter_iter(lambda _v: _v, imdb_tv.get('genres')))
         if isinstance(imdb_tv.get('origins'), list):

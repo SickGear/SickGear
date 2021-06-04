@@ -233,6 +233,9 @@
     #set $flags = 'country_codes' in $show_obj.imdb_info and '' != $show_obj.imdb_info['country_codes']
     #if 'runtimes' in $show_obj.imdb_info
         #set $runtime = $show_obj.imdb_info['runtimes']
+        #if $show_obj.imdb_info['is_mini_series'] and $runtime
+            #set $runtime = '%s (av) of %s' % (int($runtime/$show_obj.imdb_info['episode_count']), $runtime)
+        #end if
     #end if
 #end if
 #if None is $startyear and $show_obj.startyear
@@ -274,7 +277,7 @@
 #if None is not $runtime
 					<div>
 						<span class="details-title">Runtime</span>
-						<span class="details-info">$runtime minutes</span>
+						<span class="details-info">$runtime mins.</span>
 					</div>
 #end if
 #if $show_obj.status

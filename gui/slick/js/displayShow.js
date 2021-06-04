@@ -72,12 +72,16 @@ $(document).ready(function() {
 			gap: slideGap,
 			startAt: -1 === startAt ? 0 : startAt,
 			peek: 0,
+			perSwipe: '|',
 			perView: initGlideVars.perView,
 			autoplay: initGlideVars.isNotEnd && slideTime()
 		});
 
 		$.glide.on('resize', function(){
 			$.calcSlideCount(!1);
+			$('#display-show .cast-bg').each(function (i, oImage){
+				scaleImage(oImage);
+			});
 		});
 
 		$.glide.on('run.after', function(){
@@ -124,13 +128,16 @@ $(document).ready(function() {
 				$('li[data-rid="' + $(this).data('rid') + '"]:not(.glide__slide--clone) a[rel="glide"]')[0].click();
 				return !1;
 			});
+			$('#display-show .cast-bg').each(function (i, oImage){
+				scaleImage(oImage);
+			});
 		});
 
 		window.onload = function(){
 			$.glide.mount();
 		};
 
-		function saveGlide(){
+		function saveGlide(saveTime){
 			if (!$.SickGear.glideFancyBoxOpen){
 				var params = {};
 				if (!slideTime()){
@@ -139,7 +146,9 @@ $(document).ready(function() {
 						start_at: $('.cast.glide__slide--active').data('rid')
 					};
 				}
-				params.slidetime = $.SickGear.config.glideSlideTime;
+				if (saveTime){
+					params.slidetime = $.SickGear.config.glideSlideTime;
+				}
 				$.get($.SickGear.Root + '/home/set-display-show-glide', params);
 			}
 		}
@@ -176,7 +185,7 @@ $(document).ready(function() {
 			}
 			pinState($(this));
 			$.calcSlideCount(!1);
-			saveGlide();
+			saveGlide(!0);
 		});
 	}
 

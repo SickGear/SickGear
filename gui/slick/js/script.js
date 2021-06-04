@@ -69,8 +69,9 @@ function preventDefault() {
 
 function initFancybox() {
 	if (!!$('a[rel="dialog"]').length) {
-		$.getScript(sbRoot + '/js/fancybox/jquery.fancybox.js', function () {
-			$('head').append('<link rel="stylesheet" href="' + sbRoot + '/js/fancybox/jquery.fancybox.css">');
+		var fancy = sbRoot + '/js/fancybox/jquery.fancybox.min';
+		$.getScript(fancy + '.js', function () {
+			$('head').append('<link rel="stylesheet" href="' + fancy + '.css">');
 
 			$.sgFancyBoxOptions = {
 				loop: !0,

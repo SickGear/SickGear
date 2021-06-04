@@ -128,7 +128,7 @@ $(document).ready(function () {
 							+ '" data-sort-az="' + item[result.AzSort] + '" data-sort-az-combined="' + item[result.AzCombined]
 							+ '" data-sort-za="' + item[result.ZaSort] + '" data-sort-za-combined="' + item[result.ZaCombined] + '">'
 							+ '<label><i></i>'
-							+ '<input id="which_series" type="radio"'
+							+ '<input type="radio"'
 							+ ' class="stepone-result-radio"'
 							+ (!1 === item[result.isInDB]
 								? ' title="Add show <span style=\'color: rgb(66, 139, 202)\'>' + displayShowName + '</span>"'

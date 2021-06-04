@@ -59,7 +59,7 @@ from .sgdatetime import SGDatetime
 from .tv import TVEpisode, TVShow,  TVidProdid
 from .webserve import AddShows
 
-from _23 import decode_str, unquote_plus
+from _23 import decode_str, list_keys, unquote_plus
 from six import integer_types, iteritems, iterkeys, PY2, string_types, text_type
 
 # noinspection PyUnreachableCode
@@ -1023,15 +1023,22 @@ class CMD_SickGearComingEpisodes(ApiCall):
             ep['network'] = ep['episode_network'] or ep['network']
             ep['timezone'] = ep['ep_timezone'] or ep['show_timezone'] or ep['timezone'] or (
                     ep['network'] and network_timezones.get_network_timezone(ep['network'], return_name=True)[1])
+
             # remove all field we don't want for api response
-            for f in ('localtime', 'ep_airtime', 'airtime', 'timestamp', 'show_airtime', 'network_id',
-                      'network_is_stream', 'notify_list', 'src_update_timestamp', 'subtitles_lastsearch', 'subtitles',
-                      'subtitles_searchcount', 'name', 'description', 'hasnfo', 'hastbn', 'last_update_indexer',
-                      'file_size', 'flatten_folders', 'is_proper', 'prune', 'episode_network', 'network_country',
-                      'network_country_code', 'show_timezone', 'release_group', 'release_name',
-                      'rls_global_exclude_ignore', 'rls_global_exclude_require', 'rls_ignore_words',
-                      'rls_require_words', 'location', 'ep_timezone', 'dvdorder', 'anime', 'sports'):
-                del ep[f]
+            for cur_f in list_keys(ep):
+                if cur_f not in [  # fields to preserve
+                    'absolute_number', 'air_by_date', 'airdate', 'airs', 'archive_firstmatch',
+                    'classification', 'data_network', 'data_show_name',
+                    'ep_name', 'ep_plot', 'episode', 'episode_id', 'genre',
+                    'imdb_id', 'imdb_url', 'indexer', 'indexer_id', 'indexerid',
+                    'lang', 'local_datetime', 'network', 'overview', 'parsed_datetime', 'paused', 'prod_id',
+                    'quality', 'runtime', 'scene', 'scene_absolute_number', 'scene_episode', 'scene_season',
+                    'season', 'show_id', 'show_name', 'show_network', 'show_status', 'showid', 'startyear',
+                    'status', 'status_str', 'tag', 'timezone', 'trakt_watched', 'tv_id', 'tvid_prodid',
+                    'version', 'weekday'
+                ]:
+                    del ep[cur_f]
+
             # Add tvdbid for backward compatibility
             try:
                 show_obj = helpers.find_show_by_id({ep['tv_id']: ep['prod_id']})

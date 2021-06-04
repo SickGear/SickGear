@@ -1951,7 +1951,6 @@ a.addQTip{
 #display-show .cast-holder{display:block; margin:5px 0 0; padding:0; position:relative; width:100%; box-sizing:border-box}
 #display-show .cast-header{margin-bottom:3px; font-weight:bolder}
 #display-show .cast-panel{white-space:nowrap}
-#display-show .cast-panel ul{margin-bottom:0}
 #display-show .cast{display:inline-block; vertical-align:top; position:relative; top:0; width:100%;/*170px*/ height:auto; padding:6px 0; margin:0 0 10px; text-align:center}
 #display-show .cast,
 #display-show .cast .thumb .cast-bg,
@@ -1959,19 +1958,19 @@ a.addQTip{
 #pin-glide{-moz-border-radius:3px; -webkit-border-radius:3px; border-radius:3px}
 #display-show .cast .thumb{display:block}
 #display-show .cast .thumb,
-#display-show .cast .thumb .cast-bg{height:150px}
-#display-show .cast .thumb .cast-bg{display:block; margin:0 auto; background:url(../images/poster-person150.jpg) center center no-repeat; border:1px solid #181818}
+#display-show .cast .thumb .cast-bg{height:150px; min-width:102px}
+#display-show .cast .thumb .cast-bg{display:inline-block; margin:0 auto; background:url(../images/poster-person150.jpg) center center no-repeat; border:1px solid #181818}
 #display-show .back-art.pro.ii .cast .thumb .cast-bg{opacity:0.85; filter:alpha(opacity=85)}
 #display-show .role,
 #display-show .person{width:auto; overflow:hidden; margin:0 5px; text-overflow:ellipsis; white-space:nowrap}
-.glide-arrows button{cursor:pointer; padding:1px 0 0; border:0; outline:0; position:absolute; top:110px; z-index:1; width:22px; height:21px; margin-top:-9px; -webkit-box-shadow:0 .5rem 4rem 0 rgba(0,0,0,.5); box-shadow:0 .5rem 4rem 0 rgba(0,0,0,.5)}
+.glide-arrows button{cursor:pointer; padding:1px 0 0; border:0; outline:0; position:absolute; top:105px; z-index:1; width:22px; height:21px; margin-top:-9px; -webkit-box-shadow:0 .5rem 4rem 0 rgba(0,0,0,.5); box-shadow:0 .5rem 4rem 0 rgba(0,0,0,.5)}
 .glide-arrows button{background-color:rgb(255,255,255)}
 .glide-arrows button svg{padding:1px}
 .glide-next{right:0.7rem}
 .glide-prev{left:0.7rem}
 #pin-glide,
 #pin-glide i{display:block; width:22px; height:21px; z-index:99}
-#pin-glide{position:absolute; top:135px; left:0.7rem; background-color:rgba(0,0,0,0.5); border:0; padding:0}
+#pin-glide{position:absolute; top:130px; left:0.7rem; background-color:rgba(0,0,0,0.5); border:0; padding:0}
 .contain-glide #pin-glide{cursor:pointer}
 .glide-arrows button:hover,
 #pin-glide:hover{background-color:#ed145b; -webkit-transition:all .2s ease-in-out; transition:all .2s ease-in-out; opacity:0.5; filter:alpha(opacity=50)}
@@ -3334,6 +3333,7 @@ select .selected:before{
 	background-position:-104px 0
 }
 
+#api-keys > #qr-body{display:none}
 #api-keys > div{display:inline-block}
 #api-keys span{float:left}
 #api-keys span, #generate-result{line-height:22px}
@@ -3341,10 +3341,11 @@ select .selected:before{
 #api-keys .app-name{width:135px}
 .qr-btn{margin-right:6px}
 .qr-btn .glyphicon-qrcode{cursor:pointer;font-size:15px}
-.apikey-qr-dlg .qr-title{padding:0 25px 5px 25px;text-align:right}
+.apikey-qr-dlg .qr-title{text-align:right}
 .apikey-qr-dlg .qr-title em{color:#999;font-weight:bolder}
 .apikey-qr-dlg .qr-title span{color:#333}
-.apikey-qr-dlg .qr-body{padding:25px 25px 0}
+.apikey-qr-dlg #qr-body{padding:30px 25px 5px; overflow:hidden; min-width:350px; min-height:350px}
+.apikey-qr-dlg #qr-body .fancybox-close-small{top:-6px; right:-8px}
 
 /* =======================================================================
 config_postProcessing.tmpl

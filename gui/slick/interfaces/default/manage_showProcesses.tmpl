@@ -256,7 +256,8 @@
         #if $cur_show['show_obj']
 							<a class="whitelink" href="$sbRoot/home/view-show?tvid_prodid=$cur_show['show_obj'].tvid_prodid">$cur_show['show_obj'].name</a>
         #else
-							<span>Unknown Show: $cur_show['old_tvid']:$cur_show['old_prodid']</span>
+##							<span>Unknown Show: $cur_show['old_tvid']:$cur_show['old_prodid']</span>
+							<span>Unknown</span>
         #end if
 						</td>
 						<td class="text-center">$sickbeard.TVInfoAPI($cur_show['new_tvid']).name</td>
