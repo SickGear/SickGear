@@ -16,11 +16,12 @@ $(function(){
 			best_qualities: bestQualArray.join(','),
 			default_wanted_begin: $('#wanted_begin').val(),
 			default_wanted_latest: $('#wanted_latest').val(),
-			default_flatten_folders: $('#flatten_folders').prop('checked'),
+			default_tag: $('#tag').val(),
+			default_pause: $('#pause').prop('checked'),
 			default_scene: $('#scene').prop('checked'),
-			default_subtitles: $('#subtitles').prop('checked'),
-			default_anime: $('#anime').prop('checked'),
-			default_tag: $('#tag').val()
+			default_subtitles: $('#subs').prop('checked'),
+			default_flatten_folders: $('#flatten_folders').prop('checked'),
+			default_anime: $('#anime').prop('checked')
 		});
 
 		new PNotify({
@@ -32,8 +33,8 @@ $(function(){
 		$(this).attr('disabled', true);
 	});
 
-	$('#statusSelect, #quality-preset, #wanted-qualities, #upgrade-qualities, #wanted_begin, #wanted_latest,'
-		+ ' #flatten_folders, #scene, #subtitles, #anime, #tag').change(function() {
+	$('#statusSelect, #quality-preset, #wanted-qualities, #upgrade-qualities, #wanted_begin, #wanted_latest, #tag,'
+		+ ' #pause, #scene, #subs, #flatten_folders, #anime').change(function() {
 		$('#saveDefaultsButton').attr('disabled', false);
 	});
 
@@ -50,10 +51,12 @@ $(function(){
 		if ('none' === el$.css('display')){
 			el$.fadeIn('fast', 'linear', function(){
 				updateOptions(that$, 'More', 'Less');
+				el$.css('opacity', 1);
 			});
 		} else {
 			el$.fadeOut('fast', 'linear', function(){
 				updateOptions(that$, 'Less', 'More');
+				el$.css('opacity', 0);
 			});
 		}
 		return !1;

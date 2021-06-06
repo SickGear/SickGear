@@ -343,10 +343,11 @@ class ShowQueue(generic_queue.GenericQueue):
 
             return queue_item_obj
 
-    def addShow(self, tvid, prodid, show_dir, default_status=None, quality=None, flatten_folders=None,
-                lang='en', subtitles=None, anime=None, scene=None, paused=None, blocklist=None, allowlist=None,
-                wanted_begin=None, wanted_latest=None, prune=None, tag=None,
-                new_show=False, show_name=None, upgrade_once=False):
+    def add_show(self, tvid, prodid, show_dir,
+                 quality=None, upgrade_once=False, wanted_begin=None, wanted_latest=None, tag=None,
+                 paused=None, prune=None, default_status=None, scene=None, subtitles=None,
+                 flatten_folders=None, anime=None, blocklist=None, allowlist=None,
+                 show_name=None, new_show=False, lang='en'):
         """
 
         :param tvid: tvid
@@ -355,40 +356,40 @@ class ShowQueue(generic_queue.GenericQueue):
         :type prodid: int or long
         :param show_dir: show dir
         :type show_dir: AnyStr
-        :param default_status:
-        :type default_status: int or None
         :param quality:
         :type quality: None or int
-        :param flatten_folders:
-        :type flatten_folders: int or None
-        :param lang:
-        :type lang: AnyStr
-        :param subtitles:
-        :type subtitles: int or None
-        :param anime:
-        :type anime: int or None
-        :param scene:
-        :type scene: int or None
-        :param paused:
-        :type paused: None or int
-        :param blocklist:
-        :type blocklist: AnyStr or None
-        :param allowlist:
-        :type allowlist: AnyStr or None
+        :param upgrade_once:
+        :type upgrade_once: bool or None
         :param wanted_begin:
         :type wanted_begin: int or None
         :param wanted_latest:
         :type wanted_latest: int or None
-        :param prune:
-        :type prune: int or None
         :param tag:
         :type tag: AnyStr or None
-        :param new_show:
-        :type new_show: AnyStr or None
+        :param paused:
+        :type paused: None or int
+        :param prune:
+        :type prune: int or None
+        :param default_status:
+        :type default_status: int or None
+        :param scene:
+        :type scene: int or None
+        :param subtitles:
+        :type subtitles: int or None
+        :param flatten_folders:
+        :type flatten_folders: int or None
+        :param anime:
+        :type anime: int or None
+        :param blocklist:
+        :type blocklist: AnyStr or None
+        :param allowlist:
+        :type allowlist: AnyStr or None
         :param show_name:
         :type show_name: AnyStr or None
-        :param upgrade_once:
-        :type upgrade_once: bool or None
+        :param new_show:
+        :type new_show: AnyStr or None
+        :param lang:
+        :type lang: AnyStr
         :return:
         :rtype: QueueItemAdd
         """
@@ -695,16 +696,16 @@ class QueueItemAdd(ShowQueueItem):
 
             # set up initial values
             self.show_obj.location = self.showDir
-            self.show_obj.subtitles = self.subtitles if None is not self.subtitles else sickbeard.SUBTITLES_DEFAULT
             self.show_obj.quality = self.quality if self.quality else sickbeard.QUALITY_DEFAULT
             self.show_obj.upgrade_once = self.upgrade_once
+            self.show_obj.tag = self.tag if None is not self.tag else 'Show List'
+            self.show_obj.paused = self.paused if None is not self.paused else sickbeard.PAUSE_DEFAULT
+            self.show_obj.prune = self.prune if None is not self.prune else 0
+            self.show_obj.scene = self.scene if None is not self.scene else sickbeard.SCENE_DEFAULT
+            self.show_obj.subtitles = self.subtitles if None is not self.subtitles else sickbeard.SUBTITLES_DEFAULT
             self.show_obj.flatten_folders = self.flatten_folders if None is not self.flatten_folders \
                 else sickbeard.FLATTEN_FOLDERS_DEFAULT
             self.show_obj.anime = self.anime if None is not self.anime else sickbeard.ANIME_DEFAULT
-            self.show_obj.scene = self.scene if None is not self.scene else sickbeard.SCENE_DEFAULT
-            self.show_obj.paused = self.paused if None is not self.paused else False
-            self.show_obj.prune = self.prune if None is not self.prune else 0
-            self.show_obj.tag = self.tag if None is not self.tag else 'Show List'
 
             if self.show_obj.anime:
                 self.show_obj.release_groups = AniGroupList(self.show_obj.tvid,

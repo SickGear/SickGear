@@ -184,10 +184,12 @@ class TraktChecker(object):
                 else:
                     helpers.chmod_as_parent(showPath)
 
-                sickbeard.show_queue_scheduler.action.addShow(int(tvid), int(prod_id), showPath, status,
-                                                              int(sickbeard.QUALITY_DEFAULT),
-                                                              int(sickbeard.FLATTEN_FOLDERS_DEFAULT),
-                                                              paused=sickbeard.TRAKT_START_PAUSED)
+                sickbeard.show_queue_scheduler.action.add_show(
+                    int(tvid), int(prod_id), showPath,
+                    quality=int(sickbeard.QUALITY_DEFAULT),
+                    paused=sickbeard.TRAKT_START_PAUSED, default_status=status,
+                    flatten_folders=int(sickbeard.FLATTEN_FOLDERS_DEFAULT)
+                )
             else:
                 logger.log(u"There was an error creating the show, no root directory setting found", logger.ERROR)
                 return
