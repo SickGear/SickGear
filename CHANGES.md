@@ -41,6 +41,7 @@
 * Update Six compatibility library 1.15.0 (c0be881) to 1.16.0 (b620447)
 * Update urllib3 1.25.11 (00f1769) to 1.26.2 (eae04d6)
 * Add menu Shows/"Next Episode Cards"
+* Change improve SQL performance
 
 
 [develop changelog]

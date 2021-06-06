@@ -193,40 +193,59 @@ class DBConnection(object):
             return version
         return 0
 
-    def mass_action(self, querylist, log_transaction=False):
+    def mass_action(self, queries, log_transaction=False):
         # type: (List[Union[List[AnyStr], Tuple[AnyStr, List], Tuple[AnyStr]]], bool) -> Optional[List, sqlite3.Cursor]
 
         from . import helpers
         with db_lock:
 
-            if None is querylist:
+            if None is queries:
                 return
 
-            sqlResult = []
+            sql_result = []
+            if not queries:
+                return sql_result
+
             attempt = 0
 
             while 5 > attempt:
                 try:
                     affected = 0
-                    for qu in querylist:
-                        cursor = self.connection.cursor()
-                        if 1 == len(qu):
-                            if log_transaction:
-                                logger.log(qu[0], logger.DB)
+                    return_results = 'SELECT' == queries[0][0][0:6].upper()
+                    if not log_transaction:
+                        if not return_results:
+                            for cur_query in queries:
+                                cursor = self.connection.cursor()
+                                cursor.execute(*tuple(cur_query)).fetchall()
+                                affected += cursor.rowcount
+                        else:
+                            for cur_query in queries:
+                                cursor = self.connection.cursor()
+                                sql_result.append(cursor.execute(*tuple(cur_query)).fetchall())
+                                affected += cursor.rowcount
+                    else:
+                        if not return_results:
+                            for cur_query in queries:
+                                logger.log(cur_query[0] if 1 == len(cur_query)
+                                           else '%s with args %s' % tuple(cur_query), logger.DB)
+                                cursor = self.connection.cursor()
+                                cursor.execute(*tuple(cur_query)).fetchall()
+                                affected += cursor.rowcount
+                        else:
+                            for cur_query in queries:
+                                logger.log(cur_query[0] if 1 == len(cur_query)
+                                           else '%s with args %s' % tuple(cur_query), logger.DB)
+                                cursor = self.connection.cursor()
+                                sql_result.append(cursor.execute(*tuple(cur_query)).fetchall())
+                                affected += cursor.rowcount
 
-                            sqlResult.append(cursor.execute(qu[0]).fetchall())
-                        elif 1 < len(qu):
-                            if log_transaction:
-                                logger.log(qu[0] + ' with args ' + str(qu[1]), logger.DB)
-                            sqlResult.append(cursor.execute(qu[0], qu[1]).fetchall())
-                        affected += cursor.rowcount
                     self.connection.commit()
                     if 0 < affected:
                         logger.log(u'Transaction with %s queries executed affected %i row%s' % (
-                            len(querylist), affected, helpers.maybe_plural(affected)), logger.DEBUG)
-                    return sqlResult
+                            len(queries), affected, helpers.maybe_plural(affected)), logger.DEBUG)
+                    return sql_result
                 except sqlite3.OperationalError as e:
-                    sqlResult = []
+                    sql_result = []
                     if self.connection:
                         self.connection.rollback()
                     if not self.action_error(e):
@@ -238,7 +257,7 @@ class DBConnection(object):
                     logger.log(u'Fatal error executing query: ' + ex(e), logger.ERROR)
                     raise
 
-            return sqlResult
+            return sql_result
 
     @staticmethod
     def action_error(e):
@@ -257,17 +276,17 @@ class DBConnection(object):
             if None is query:
                 return
 
-            sqlResult = None
+            sql_result = None
             attempt = 0
 
             while 5 > attempt:
                 try:
                     if None is args:
-                        logger.log(self.filename + ': ' + query, logger.DB)
-                        sqlResult = self.connection.execute(query)
+                        logger.log('%s: %s' % (self.filename, query), logger.DB)
+                        sql_result = self.connection.execute(query)
                     else:
-                        logger.log(self.filename + ': ' + query + ' with args ' + str(args), logger.DB)
-                        sqlResult = self.connection.execute(query, args)
+                        logger.log('%s: %s with args %s' % (self.filename, query, str(args)), logger.DB)
+                        sql_result = self.connection.execute(query, args)
                     self.connection.commit()
                     # get out of the connection attempt loop since we were successful
                     break
@@ -279,17 +298,17 @@ class DBConnection(object):
                     logger.log(u'Fatal error executing query: ' + ex(e), logger.ERROR)
                     raise
 
-            return sqlResult
+            return sql_result
 
     def select(self, query, args=None):
         # type: (AnyStr, Optional[List, Tuple]) -> List
 
-        sqlResults = self.action(query, args).fetchall()
+        sql_results = self.action(query, args).fetchall()
 
-        if None is sqlResults:
+        if None is sql_results:
             return []
 
-        return sqlResults
+        return sql_results
 
     def upsert(self, table_name, value_dict, key_dict):
         # type: (AnyStr, Dict, Dict) -> None
@@ -315,10 +334,10 @@ class DBConnection(object):
         # type: (AnyStr) -> Dict[AnyStr, Dict[AnyStr, AnyStr]]
 
         # FIXME ? binding is not supported here, but I cannot find a way to escape a string manually
-        sqlResult = self.select('PRAGMA table_info([%s])' % table_name)
+        sql_result = self.select('PRAGMA table_info([%s])' % table_name)
         columns = {}
-        for column in sqlResult:
-            columns[column['name']] = {'type': column['type']}
+        for cur_column in sql_result:
+            columns[cur_column['name']] = {'type': cur_column['type']}
         return columns
 
     # http://stackoverflow.com/questions/3300464/how-can-i-get-dict-from-sqlite-query
