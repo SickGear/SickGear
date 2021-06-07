@@ -219,8 +219,11 @@ class NebulanceProvider(generic.TorrentProvider):
 
     def ui_string(self, key):
         profile_page = 'profile page'
-        if self._authorised():
-            profile_page = '<a href="%s">%s</a>' % (self.urls['api_key'] % self.uid, profile_page)
+        try:
+            if self._check_auth(True) and self._authorised():
+                profile_page = '<a href="%s">%s</a>' % (self.urls['api_key'] % self.uid, profile_page)
+        except (BaseException, Exception):
+            pass
 
         return ('%s_api_key' % self.get_id()) == key and 'API key' or \
             ('%s_api_key_tip' % self.get_id()) == key and \
