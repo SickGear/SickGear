@@ -202,50 +202,38 @@ class DBConnection(object):
             if None is queries:
                 return
 
-            sql_result = []
             if not queries:
-                return sql_result
+                return []
 
             attempt = 0
 
+            sql_result = {'affected': 0, 'data': []}
             while 5 > attempt:
                 try:
-                    affected = 0
-                    return_results = 'SELECT' == queries[0][0][0:6].upper()
+                    def sql_action(query, result):
+                        cursor = self.connection.cursor()
+                        if 'SELECT' == query[0][0:6].upper():
+                            result['data'].append(cursor.execute(*tuple(query)).fetchall())
+                        else:
+                            cursor.execute(*tuple(query)).fetchall()
+                        result['affected'] += abs(cursor.rowcount)
+
                     if not log_transaction:
-                        if not return_results:
-                            for cur_query in queries:
-                                cursor = self.connection.cursor()
-                                cursor.execute(*tuple(cur_query)).fetchall()
-                                affected += cursor.rowcount
-                        else:
-                            for cur_query in queries:
-                                cursor = self.connection.cursor()
-                                sql_result.append(cursor.execute(*tuple(cur_query)).fetchall())
-                                affected += cursor.rowcount
+                        for cur_query in queries:
+                            sql_action(cur_query, sql_result)
                     else:
-                        if not return_results:
-                            for cur_query in queries:
-                                logger.log(cur_query[0] if 1 == len(cur_query)
-                                           else '%s with args %s' % tuple(cur_query), logger.DB)
-                                cursor = self.connection.cursor()
-                                cursor.execute(*tuple(cur_query)).fetchall()
-                                affected += cursor.rowcount
-                        else:
-                            for cur_query in queries:
-                                logger.log(cur_query[0] if 1 == len(cur_query)
-                                           else '%s with args %s' % tuple(cur_query), logger.DB)
-                                cursor = self.connection.cursor()
-                                sql_result.append(cursor.execute(*tuple(cur_query)).fetchall())
-                                affected += cursor.rowcount
+                        for cur_query in queries:
+                            logger.log(cur_query[0] if 1 == len(cur_query)
+                                       else '%s with args %s' % tuple(cur_query), logger.DB)
+                            sql_action(cur_query, sql_result)
 
                     self.connection.commit()
-                    if 0 < affected:
-                        logger.log(u'Transaction with %s queries executed affected %i row%s' % (
-                            len(queries), affected, helpers.maybe_plural(affected)), logger.DEBUG)
-                    return sql_result
+                    if 0 < sql_result['affected']:
+                        logger.debug(u'Transaction with %s queries executed affected at least %i row%s' % (
+                            len(queries), sql_result['affected'], helpers.maybe_plural(sql_result['affected'])))
+                    return sql_result['data']
                 except sqlite3.OperationalError as e:
-                    sql_result = []
+                    sql_result['data'] = []
                     if self.connection:
                         self.connection.rollback()
                     if not self.action_error(e):
@@ -254,10 +242,10 @@ class DBConnection(object):
                 except sqlite3.DatabaseError as e:
                     if self.connection:
                         self.connection.rollback()
-                    logger.log(u'Fatal error executing query: ' + ex(e), logger.ERROR)
+                    logger.error(u'Fatal error executing query: ' + ex(e))
                     raise
 
-            return sql_result
+            return sql_result['data']
 
     @staticmethod
     def action_error(e):
@@ -383,9 +371,7 @@ class DBConnection(object):
     def has_flag(self, flag_name):
         # type: (AnyStr) -> bool
         sql_result = self.select('SELECT flag FROM flags WHERE flag = ?', [flag_name])
-        if 0 < len(sql_result):
-            return True
-        return False
+        return 0 < len(sql_result)
 
     def add_flag(self, flag_name):
         # type: (AnyStr) -> bool
@@ -789,8 +775,6 @@ def get_rollback_module():
 
     except (BaseException, Exception):
         pass
-
-    return None
 
 
 def delete_old_db_backups(target):
