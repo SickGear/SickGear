@@ -592,12 +592,12 @@ def search_for_needed_episodes(ep_obj_list):
 
     search_done = False
 
-    orig_thread_name = threading.currentThread().name
+    orig_thread_name = threading.current_thread().name
 
     providers = filter_list(lambda x: x.is_active() and x.enable_recentsearch, sickbeard.providers.sortedProviderList())
 
     for cur_provider in providers:
-        threading.currentThread().name = '%s :: [%s]' % (orig_thread_name, cur_provider.name)
+        threading.current_thread().name = '%s :: [%s]' % (orig_thread_name, cur_provider.name)
 
         ep_obj_search_result_list = cur_provider.search_rss(ep_obj_list)
 
@@ -641,7 +641,7 @@ def search_for_needed_episodes(ep_obj_list):
             except (BaseException, Exception):
                 pass
 
-    threading.currentThread().name = orig_thread_name
+    threading.current_thread().name = orig_thread_name
 
     if not len(providers):
         logger.log('No NZB/Torrent providers in Media Providers/Options are enabled to match recent episodes',
@@ -842,7 +842,7 @@ def search_providers(
     search_done = False
     search_threads = []
 
-    orig_thread_name = threading.currentThread().name
+    orig_thread_name = threading.current_thread().name
 
     provider_list = [x for x in sickbeard.providers.sortedProviderList() if x.is_active() and
                      getattr(x, 'enable_backlog', None) and

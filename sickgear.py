@@ -210,7 +210,7 @@ class SickGear(object):
         self.console_logging = (not hasattr(sys, 'frozen')) or (0 < sickbeard.MY_NAME.lower().find('-console'))
 
         # Rename the main thread
-        threading.currentThread().name = 'MAIN'
+        threading.current_thread().name = 'MAIN'
 
         try:
             opts, args = getopt.getopt(sys.argv[1:], 'hfqdsp::',

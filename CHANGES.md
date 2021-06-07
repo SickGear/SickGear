@@ -28,6 +28,9 @@
 * Change auto-install Cheetah dependency on first time installations (tested on Win)
 * Change add cryptography to recommended.txt
 * Change add prebuilt AMD64 python-Levenshtein to recommended.txt
+* Change add prebuilt Windows Python 3.10 lxml to recommended.txt
+* Change add prebuilt Windows Python 3.10 regex to recommended.txt
+* Change replace deprecated `currentThread` with `current_thread` calls
 * Change initialise Manage/Media Process folder and method from Config/Media Process when no previous values are stored
 * Change remember Manage/Media Process folder and method when button 'Process' is used
 * Change abbreviate long titles under menu tab
