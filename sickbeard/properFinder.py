@@ -251,7 +251,7 @@ def _get_proper_list(aired_since_shows,  # type: datetime.datetime
 
     my_db = db.DBConnection()
     # for each provider get a list of arbitrary Propers
-    orig_thread_name = threading.currentThread().name
+    orig_thread_name = threading.current_thread().name
     # filter provider list for:
     # 1. from recent search: recent search enabled providers
     # 2. native proper search: active search enabled providers

@@ -1,6 +1,8 @@
 cryptography; '3.7' <= python_version
 cryptography <= 3.2.1; '3.0' > python_version
 lxml >= 4.6.1
+lxml@https://raw.githubusercontent.com/wiki/SickGear/SickGear/packages/lxml-4.6.3-cp310-cp310-win_amd64.whl ; '3.10' <= python_version and 'Windows' == platform_system and ('AMD64' == platform_machine or 'x86_64' == platform_machine)
+lxml@https://raw.githubusercontent.com/wiki/SickGear/SickGear/packages/lxml-4.6.3-cp310-cp310-win32.whl ; '3.10' <= python_version and 'Windows' == platform_system and ('AMD64' != platform_machine and 'x86_64' != platform_machine)
 pip >= 20.0.0; '3.7' <= python_version
 pip <= 19.3.1; '3.0' > python_version
 python-Levenshtein >= 0.12.2; '3.7' <= python_version and 'Windows' == platform_system
@@ -16,6 +18,8 @@ python-Levenshtein@https://raw.githubusercontent.com/wiki/SickGear/SickGear/pack
 python-Levenshtein@https://raw.githubusercontent.com/wiki/SickGear/SickGear/packages/python_Levenshtein-0.12.0-cp27-cp27m-win32.whl ; '2.7' == python_version and 'Windows' == platform_system and ('AMD64' != platform_machine and 'x86_64' != platform_machine)
 regex >= 2020.11.1; '3.7' <= python_version
 regex <= 2020.10.28; '3.0' > python_version
+regex@https://raw.githubusercontent.com/wiki/SickGear/SickGear/packages/regex-2021.4.4-cp310-cp310-win_amd64.whl ; '3.10' <= python_version and 'Windows' == platform_system and ('AMD64' == platform_machine or 'x86_64' == platform_machine)
+regex@https://raw.githubusercontent.com/wiki/SickGear/SickGear/packages/regex-2021.4.4-cp310-cp310-win32.whl ; '3.10' <= python_version and 'Windows' == platform_system and ('AMD64' != platform_machine and 'x86_64' != platform_machine)
 scandir >= 1.10.0; '3.0' > python_version
 setuptools >= 50.0.0; '3.7' <= python_version
 setuptools <= 44.1.1; '3.0' > python_version

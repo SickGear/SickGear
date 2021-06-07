@@ -505,7 +505,7 @@ class GenericProvider(object):
             if time_left > datetime.timedelta(seconds=0):
                 if log_warning:
                     # Ensure provider name output (e.g. when displaying config/provs) instead of e.g. thread "Tornado"
-                    prepend = ('[%s] :: ' % self.name, '')[any([x.name in threading.currentThread().getName()
+                    prepend = ('[%s] :: ' % self.name, '')[any([x.name in threading.current_thread().getName()
                                                                 for x in sickbeard.providers.sortedProviderList()])]
                     logger.log('%sToo many requests reached at %s, waiting for %s' % (
                         prepend, self.fmt_delta(self.tmr_limit_time), self.fmt_delta(time_left)), logger.WARNING)
@@ -1398,7 +1398,7 @@ class GenericProvider(object):
     @staticmethod
     def _should_stop():
         # type: (...) -> bool
-        if getattr(threading.currentThread(), 'stop', False):
+        if getattr(threading.current_thread(), 'stop', False):
             return True
         return False
 
