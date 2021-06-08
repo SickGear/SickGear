@@ -2,6 +2,7 @@
 # ---------------
 # functions are placed here to remove cyclic import issues from placement in helpers
 #
+import ast
 import codecs
 import datetime
 import getpass
@@ -14,6 +15,7 @@ import shutil
 import socket
 import stat
 import subprocess
+import sys
 import tempfile
 import threading
 import time
@@ -29,26 +31,38 @@ from send2trash import send2trash
 import encodingKludge as ek
 import requests
 
-from _23 import decode_bytes, filter_list, html_unescape, list_range, scandir, urlparse, urlsplit, urlunparse
+from _23 import decode_bytes, filter_list, html_unescape, list_range, \
+    ordered_dict, Popen, scandir, urlparse, urlsplit, urlunparse
 from six import integer_types, iteritems, iterkeys, itervalues, PY2, string_types, text_type
 
 import zipfile
-try:
-    import py7zr
-except ImportError:
-    py7zr = None
+# py7z hardwired removed, see comment below
+py7zr = None
 
 # noinspection PyUnreachableCode
 if False:
+    from _23 import DirEntry
+    from lxml_etree import etree
+    try:
+        # py7z hardwired removed because Python 3.9 interpretor crashes with a process kill signal 9 when memory is
+        # low/exhausted during a native 7z compress action on Linux. Therefore, the native functions cannot be trusted.
+        # `import` moved to this non-runtime scope to preserve code resolution in case reinstated at a later PY release
+        # noinspection PyUnresolvedReferences,PyPackageRequirements
+        import py7zr
+    except ImportError:
+        py7zr = None
+    # sickbeard is strictly used here for resolution, this is only possible because
+    # this section is not used at runtime which would create circular reference issues
+    # noinspection PyPep8Naming
+    from sickbeard import db, notifiers as NOTIFIERS
     # noinspection PyUnresolvedReferences
     from typing import Any, AnyStr, Dict, Generator, NoReturn, integer_types, Iterable, Iterator, List, Optional, \
         Tuple, Union
-    from lxml_etree import etree
-    from _23 import DirEntry
 
 # global tmdb_info cache
 _TMDB_INFO_CACHE = {'date': datetime.datetime(2000, 1, 1), 'data': None}
 
+PROG_DIR = ek.ek(os.path.join, os.path.dirname(os.path.normpath(os.path.abspath(__file__))), '..')
 
 # Mapping error status codes to official W3C names
 http_error_code = {
@@ -97,10 +111,12 @@ USER_AGENT = ''
 CACHE_DIR = None
 DATA_DIR = None
 PROXY_SETTING = None
-NOTIFIERS = None
 TRASH_REMOVE_SHOW = False
 
+# noinspection PyRedeclaration
 db = None
+# noinspection PyRedeclaration
+NOTIFIERS = None
 
 
 class ConnectionFailTypes(object):
@@ -1140,7 +1156,7 @@ def fix_set_group_id(child_path):
             logger.debug(u'Respecting the set-group-ID bit on the parent directory for %s' % child_path)
         except OSError:
             logger.error(u'Failed to respect the set-group-id bit on the parent directory for %s (setting group id %i)'
-                       % (child_path, parent_gid))
+                         % (child_path, parent_gid))
 
 
 def copy_file(src_file, dest_file):
@@ -1392,9 +1408,6 @@ def compress_file(target, filename, prefer_7z=True, remove_source=True):
     :return: success of compression
     """
     try:
-        # py7z is hardwired removed because Python 3.9 interpretor crashes with a process kill signal 9 when memory is
-        # low/exhausted during a native 7z compress action on Linux. Therefore, the native functions cannot be trusted
-        prefer_7z = False and prefer_7z
         if prefer_7z and None is not py7zr:
             z_name = '%s.7z' % target.rpartition('.')[0]
             with py7zr.SevenZipFile(z_name, 'w') as z_file:
@@ -1444,3 +1457,66 @@ def scantree(path,  # type: AnyStr
                         yield subentry
                 if no_filter:
                     yield entry
+
+
+def cmdline_runner(cmd, shell=False, suppress_stderr=False):
+    # type: (Union[AnyStr, List[AnyStr]], bool, bool) -> Tuple[AnyStr, Optional[AnyStr], int]
+    """ Execute a child program in a new process.
+
+    Can raise an exception to be caught in callee
+
+    :param cmd: A string, or a sequence of program arguments
+    :param shell: If true, the command will be executed through the shell.
+    :param suppress_stderr: Suppress stderr output if True
+    """
+    # noinspection PyUnresolvedReferences
+    kw = dict(cwd=PROG_DIR, shell=shell, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+              stderr=(open(os.devnull, 'w') if PY2 else subprocess.DEVNULL, subprocess.STDOUT)[not suppress_stderr])
+
+    if not PY2:
+        kw.update(dict(encoding=ek.SYS_ENCODING, text=True, bufsize=0))
+
+    if 'win32' == sys.platform:
+        kw['creationflags'] = 0x08000000   # CREATE_NO_WINDOW (needed for py2exe)
+
+    with Popen(cmd, **kw) as p:
+        out, err = p.communicate()
+        if out:
+            out = out.strip()
+
+        return out, err, p.returncode
+
+
+def ast_eval(value, default=None):
+    # type: (AnyStr, Any) -> Any
+    """Convert string typed value into actual Python type and value
+
+    :param value: string value to convert
+    :param default: value to return if cannot convert
+    :return: converted type and value or default
+    """
+    if not isinstance(value, string_types):
+        return default
+
+    if 'OrderedDict()' == value:
+        value = ordered_dict()
+
+    elif 'OrderedDict([(' == value[0:14]:
+        try:
+            list_of_tuples = ast.literal_eval(value[12:-1])
+            value = ordered_dict()
+            for cur_tuple in list_of_tuples:
+                value[cur_tuple[0]] = cur_tuple[1]
+        except (BaseException, Exception):
+            value = default
+
+    elif '{' == value[0:1] and '}' == value[-1]:  # this way avoids index out of range with (value = '' and [-1])
+        try:
+            value = ast.literal_eval(value)
+        except (BaseException, Exception):
+            value = default
+
+    else:
+        value = default
+
+    return value

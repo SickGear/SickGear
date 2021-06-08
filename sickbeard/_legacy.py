@@ -407,14 +407,6 @@ class LegacyBaseHandler(LegacyBase):
         # abstract method
         pass
 
-    def sanitizeFileName(self, *args):
-        # todo: find where this is called in JS or tmpl, the old name must still be used as refactor didnt find it
-        return self.sanitize_file_name(*args)
-
-    def sanitize_file_name(self, *args):
-        # abstract method
-        pass
-
     def searchIndexersForShowName(self, *args, **kwargs):
         return self.search_tvinfo_for_showname(*args, **kwargs)
 
@@ -508,15 +500,6 @@ class LegacyBaseHandler(LegacyBase):
         # abstract method
         pass
 
-    def saveNewznabProvider(self, *args, **kwargs):
-        # todo: find where this is called in JS or tmpl, the old name must still be used as refactor didnt find it
-        return self.save_newznab_provider(*args, **kwargs)
-
-    @staticmethod
-    def save_newznab_provider(*args, **kwargs):
-        # abstract method
-        pass
-
     def getNewznabCategories(self, *args):
         return self.get_newznab_categories(*args)
 
@@ -525,38 +508,11 @@ class LegacyBaseHandler(LegacyBase):
         # abstract method
         pass
 
-    def deleteNewznabProvider(self, *args):
-        # todo: find where this is called in JS or tmpl, the old name must still be used as refactor didnt find it
-        return self.delete_newznab_provider(*args)
-
-    @staticmethod
-    def delete_newznab_provider(*args):
-        # abstract method
-        pass
-
     def canAddTorrentRssProvider(self, *args):
         return self.can_add_torrent_rss_provider(*args)
 
     @staticmethod
     def can_add_torrent_rss_provider(*args):
-        # abstract method
-        pass
-
-    def saveTorrentRssProvider(self, *args):
-        # todo: find where this is called in JS or tmpl, the old name must still be used as refactor didnt find it
-        return self.save_torrent_rss_provider(*args)
-
-    @staticmethod
-    def save_torrent_rss_provider(*args):
-        # abstract method
-        pass
-
-    def deleteTorrentRssProvider(self, **kwargs):
-        # todo: find where this is called in JS or tmpl, the old name must still be used as refactor didnt find it
-        return self.delete_torrent_rss_provider(kwargs.get('id'))
-
-    @staticmethod
-    def delete_torrent_rss_provider(*args):
         # abstract method
         pass
 

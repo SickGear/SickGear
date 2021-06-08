@@ -458,3 +458,15 @@ def determineReleaseName(dir_name=None, nzb_name=None):
         return folder
 
     return None
+
+
+def abbr_showname(name):
+    # type: (AnyStr) -> AnyStr
+    result = name
+    for cur_from, cur_to in (
+            (r'^Star Trek\s*:\s*', r'ST: '), (r'^The Walking Dead\s*:\s*', r'TWD: '),
+    ):
+        result = re.sub('(?i)%s' % cur_from, cur_to, result)
+        if name != result:
+            break
+    return result

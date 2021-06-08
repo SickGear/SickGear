@@ -30,7 +30,6 @@ import socket
 import webbrowser
 
 # apparently py2exe won't build these unless they're imported somewhere
-import ast
 import os.path
 import sys
 import threading
@@ -96,7 +95,8 @@ events = None  # type: Events
 recent_search_scheduler = None
 backlog_search_scheduler = None
 show_update_scheduler = None
-version_check_scheduler = None
+update_software_scheduler = None
+update_packages_scheduler = None
 show_queue_scheduler = None
 search_queue_scheduler = None
 proper_finder_scheduler = None
@@ -128,9 +128,22 @@ metadata_provider_dict = {}
 
 MODULE_UPDATE_STRING = None
 NEWEST_VERSION_STRING = None
-VERSION_NOTIFY = False
-AUTO_UPDATE = False
+
+MIN_UPDATE_INTERVAL = 1
+DEFAULT_UPDATE_INTERVAL = 12
+UPDATE_NOTIFY = False
+UPDATE_AUTO = False
+UPDATE_INTERVAL = DEFAULT_UPDATE_INTERVAL
 NOTIFY_ON_UPDATE = False
+
+MIN_UPDATE_PACKAGES_INTERVAL = 1
+MAX_UPDATE_PACKAGES_INTERVAL = 9999
+DEFAULT_UPDATE_PACKAGES_INTERVAL = 24
+UPDATE_PACKAGES_NOTIFY = False
+UPDATE_PACKAGES_AUTO = False
+UPDATE_PACKAGES_MENU = False
+UPDATE_PACKAGES_INTERVAL = DEFAULT_UPDATE_PACKAGES_INTERVAL
+
 CUR_COMMIT_HASH = None
 EXT_UPDATES = False
 BRANCH = ''
@@ -199,15 +212,16 @@ METADATA_KODI = None
 
 RESULTS_SORTBY = None
 
-QUALITY_DEFAULT = SD
-STATUS_DEFAULT = SKIPPED
-WANTED_BEGIN_DEFAULT = 0
-WANTED_LATEST_DEFAULT = 0
-FLATTEN_FOLDERS_DEFAULT = False
-SUBTITLES_DEFAULT = False
 TVINFO_DEFAULT = 0
 TVINFO_TIMEOUT = 20
+QUALITY_DEFAULT = SD
+WANTED_BEGIN_DEFAULT = 0
+WANTED_LATEST_DEFAULT = 0
+PAUSE_DEFAULT = False
+STATUS_DEFAULT = SKIPPED
 SCENE_DEFAULT = False
+SUBTITLES_DEFAULT = False
+FLATTEN_FOLDERS_DEFAULT = False
 ANIME_DEFAULT = False
 USE_IMDB_INFO = True
 IMDB_ACCOUNTS = []
@@ -246,14 +260,12 @@ NEWZNAB_DATA = ''
 DEFAULT_MEDIAPROCESS_INTERVAL = 10
 DEFAULT_BACKLOG_PERIOD = 21
 DEFAULT_RECENTSEARCH_INTERVAL = 40
-DEFAULT_UPDATE_INTERVAL = 1
 DEFAULT_WATCHEDSTATE_INTERVAL = 10
 
 MEDIAPROCESS_INTERVAL = DEFAULT_MEDIAPROCESS_INTERVAL
 BACKLOG_PERIOD = DEFAULT_BACKLOG_PERIOD
 BACKLOG_LIMITED_PERIOD = 7
 RECENTSEARCH_INTERVAL = DEFAULT_RECENTSEARCH_INTERVAL
-UPDATE_INTERVAL = DEFAULT_UPDATE_INTERVAL
 
 RECENTSEARCH_STARTUP = False
 BACKLOG_NOFULL = False
@@ -262,7 +274,6 @@ MIN_MEDIAPROCESS_INTERVAL = 1
 MIN_RECENTSEARCH_INTERVAL = 10
 MIN_BACKLOG_PERIOD = 7
 MAX_BACKLOG_PERIOD = 42
-MIN_UPDATE_INTERVAL = 1
 MIN_WATCHEDSTATE_INTERVAL = 10
 MAX_WATCHEDSTATE_INTERVAL = 60
 
@@ -278,6 +289,9 @@ RENAME_EPISODES = False
 AIRDATE_EPISODES = False
 PROCESS_AUTOMATICALLY = False
 KEEP_PROCESSED_DIR = False
+PROCESS_LAST_DIR = None
+PROCESS_LAST_METHOD = None
+PROCESS_LAST_CLEANUP = False
 PROCESS_METHOD = None
 MOVE_ASSOCIATED_FILES = False
 POSTPONE_IF_SYNC_FILES = True
@@ -552,6 +566,8 @@ BACKUP_DB_ONEDAY = False  # type: bool
 BACKUP_DB_MAX_COUNT = 14  # type: int
 BACKUP_DB_DEFAULT_COUNT = 14  # type: int
 
+UPDATES_TODO = {}
+
 EXTRA_SCRIPTS = []
 SG_EXTRA_SCRIPTS = []
 
@@ -597,6 +613,7 @@ else:
 
 MC_MRU = ''
 TVC_MRU = ''
+NE_MRU = ''
 
 COOKIE_SECRET = b64encodestring(uuid.uuid4().bytes + uuid.uuid4().bytes)
 
@@ -643,10 +660,10 @@ def init_stage_1(console_logging):
     # Add Show Search
     global RESULTS_SORTBY
     # Add Show Defaults
-    global STATUS_DEFAULT, QUALITY_DEFAULT, SHOW_TAG_DEFAULT, FLATTEN_FOLDERS_DEFAULT, SUBTITLES_DEFAULT, \
-        WANTED_BEGIN_DEFAULT, WANTED_LATEST_DEFAULT, SCENE_DEFAULT, ANIME_DEFAULT
+    global QUALITY_DEFAULT, WANTED_BEGIN_DEFAULT, WANTED_LATEST_DEFAULT, SHOW_TAG_DEFAULT, PAUSE_DEFAULT, \
+        STATUS_DEFAULT, SCENE_DEFAULT, SUBTITLES_DEFAULT, FLATTEN_FOLDERS_DEFAULT, ANIME_DEFAULT
     # Post processing
-    global KEEP_PROCESSED_DIR
+    global KEEP_PROCESSED_DIR, PROCESS_LAST_DIR, PROCESS_LAST_METHOD, PROCESS_LAST_CLEANUP
     # Views
     global GUI_NAME, HOME_LAYOUT, FOOTER_TIME_LAYOUT, POSTER_SORTBY, POSTER_SORTDIR, DISPLAY_SHOW_SPECIALS, \
         EPISODE_VIEW_LAYOUT, EPISODE_VIEW_SORT, EPISODE_VIEW_DISPLAY_PAUSED, \
@@ -658,7 +675,8 @@ def init_stage_1(console_logging):
     # Gen Config/Misc
     global LAUNCH_BROWSER, UPDATE_SHOWS_ON_START, SHOW_UPDATE_HOUR, \
         TRASH_REMOVE_SHOW, TRASH_ROTATE_LOGS, ACTUAL_LOG_DIR, LOG_DIR, TVINFO_TIMEOUT, ROOT_DIRS, \
-        VERSION_NOTIFY, AUTO_UPDATE, UPDATE_INTERVAL, NOTIFY_ON_UPDATE
+        UPDATE_NOTIFY, UPDATE_AUTO, UPDATE_INTERVAL, NOTIFY_ON_UPDATE,\
+        UPDATE_PACKAGES_NOTIFY, UPDATE_PACKAGES_AUTO, UPDATE_PACKAGES_MENU, UPDATE_PACKAGES_INTERVAL
     # Gen Config/Interface
     global THEME_NAME, DEFAULT_HOME, FANART_LIMIT, SHOWLIST_TAGVIEW, SHOW_TAGS, \
         HOME_SEARCH_FOCUS, USE_IMDB_INFO, IMDB_ACCOUNTS, DISPLAY_FREESPACE, SORT_ARTICLE, FUZZY_DATING, TRIM_ZERO, \
@@ -736,7 +754,7 @@ def init_stage_1(console_logging):
     global USE_TRAKT, TRAKT_CONNECTED_ACCOUNT, TRAKT_ACCOUNTS, TRAKT_MRU, TRAKT_VERIFY, \
         TRAKT_USE_WATCHLIST, TRAKT_REMOVE_WATCHLIST, TRAKT_TIMEOUT, TRAKT_METHOD_ADD, TRAKT_START_PAUSED, \
         TRAKT_SYNC, TRAKT_DEFAULT_INDEXER, TRAKT_REMOVE_SERIESLIST, TRAKT_UPDATE_COLLECTION, \
-        MC_MRU, TVC_MRU, \
+        MC_MRU, TVC_MRU, NE_MRU, \
         USE_SLACK, SLACK_NOTIFY_ONSNATCH, SLACK_NOTIFY_ONDOWNLOAD, SLACK_NOTIFY_ONSUBTITLEDOWNLOAD, \
         SLACK_CHANNEL, SLACK_AS_AUTHED, SLACK_BOT_NAME, SLACK_ICON_URL, SLACK_ACCESS_TOKEN, \
         USE_DISCORD, DISCORD_NOTIFY_ONSNATCH, DISCORD_NOTIFY_ONDOWNLOAD, \
@@ -752,6 +770,8 @@ def init_stage_1(console_logging):
     global ANIME_TREAT_AS_HDTV, USE_ANIDB, ANIDB_USERNAME, ANIDB_PASSWORD, ANIDB_USE_MYLIST
     # db backup settings
     global BACKUP_DB_PATH, BACKUP_DB_ONEDAY, BACKUP_DB_MAX_COUNT, BACKUP_DB_DEFAULT_COUNT
+    # pip update states
+    global UPDATES_TODO
 
     for stanza in ('General', 'Blackhole', 'SABnzbd', 'NZBGet', 'Emby', 'Kodi', 'XBMC', 'PLEX',
                    'Growl', 'Prowl', 'Slack', 'Discord', 'Boxcar2', 'NMJ', 'NMJv2',
@@ -803,11 +823,7 @@ def init_stage_1(console_logging):
     DEFAULT_HOME = check_setting_str(CFG, 'GUI', 'default_home', 'episodes')
     FANART_LIMIT = check_setting_int(CFG, 'GUI', 'fanart_limit', 3)
     FANART_PANEL = check_setting_str(CFG, 'GUI', 'fanart_panel', 'highlight2')
-    FANART_RATINGS = check_setting_str(CFG, 'GUI', 'fanart_ratings', None)
-    if None is not FANART_RATINGS:
-        FANART_RATINGS = ast.literal_eval(FANART_RATINGS or '{}')
-    if not isinstance(FANART_RATINGS, dict):
-        FANART_RATINGS = {}
+    FANART_RATINGS = sg_helpers.ast_eval(check_setting_str(CFG, 'GUI', 'fanart_ratings', None), {})
     USE_IMDB_INFO = bool(check_setting_int(CFG, 'GUI', 'use_imdb_info', 1))
     IMDB_ACCOUNTS = CFG.get('GUI', []).get('imdb_accounts', [IMDB_DEFAULT_LIST_ID, IMDB_DEFAULT_LIST_NAME])
     HOME_SEARCH_FOCUS = bool(check_setting_int(CFG, 'General', 'home_search_focus', HOME_SEARCH_FOCUS))
@@ -901,19 +917,38 @@ def init_stage_1(console_logging):
     STATUS_DEFAULT = check_setting_int(CFG, 'General', 'status_default', SKIPPED)
     WANTED_BEGIN_DEFAULT = check_setting_int(CFG, 'General', 'wanted_begin_default', 0)
     WANTED_LATEST_DEFAULT = check_setting_int(CFG, 'General', 'wanted_latest_default', 0)
-    VERSION_NOTIFY = bool(check_setting_int(CFG, 'General', 'version_notify', 1))
-    AUTO_UPDATE = bool(check_setting_int(CFG, 'General', 'auto_update', 0))
+
+    UPDATE_NOTIFY = bool(check_setting_int(CFG, 'General', 'update_notify', None))
+    if None is UPDATE_NOTIFY:
+        UPDATE_NOTIFY = check_setting_int(CFG, 'General', 'version_notify', 1)  # deprecated 2020.11.21 no config update
+    UPDATE_AUTO = bool(check_setting_int(CFG, 'General', 'update_auto', None))
+    if None is UPDATE_AUTO:
+        UPDATE_AUTO = check_setting_int(CFG, 'General', 'auto_update', 0)  # deprecated 2020.11.21 no config update
+    UPDATE_INTERVAL = max(
+        MIN_UPDATE_INTERVAL,
+        check_setting_int(CFG, 'General', 'update_interval', DEFAULT_UPDATE_INTERVAL))
     NOTIFY_ON_UPDATE = bool(check_setting_int(CFG, 'General', 'notify_on_update', 1))
-    FLATTEN_FOLDERS_DEFAULT = bool(check_setting_int(CFG, 'General', 'flatten_folders_default', 0))
+
+    UPDATE_PACKAGES_NOTIFY = bool(
+        check_setting_int(CFG, 'General', 'update_packages_notify', 'win' == sys.platform[0:3]))
+    UPDATE_PACKAGES_AUTO = bool(check_setting_int(CFG, 'General', 'update_packages_auto', 0))
+    UPDATE_PACKAGES_MENU = bool(check_setting_int(CFG, 'General', 'update_packages_menu', 0))
+    UPDATE_PACKAGES_INTERVAL = max(
+        MIN_UPDATE_PACKAGES_INTERVAL,
+        check_setting_int(CFG, 'General', 'update_packages_interval', DEFAULT_UPDATE_PACKAGES_INTERVAL))
+
     TVINFO_DEFAULT = check_setting_int(CFG, 'General', 'indexer_default', 0)
     if TVINFO_DEFAULT and not TVInfoAPI(TVINFO_DEFAULT).config['active']:
         TVINFO_DEFAULT = TVINFO_TVDB
     TVINFO_TIMEOUT = check_setting_int(CFG, 'General', 'indexer_timeout', 20)
-    ANIME_DEFAULT = bool(check_setting_int(CFG, 'General', 'anime_default', 0))
+
+    PAUSE_DEFAULT = bool(check_setting_int(CFG, 'General', 'pause default', 0))
     SCENE_DEFAULT = bool(check_setting_int(CFG, 'General', 'scene_default', 0))
+    FLATTEN_FOLDERS_DEFAULT = bool(check_setting_int(CFG, 'General', 'flatten_folders_default', 0))
+    ANIME_DEFAULT = bool(check_setting_int(CFG, 'General', 'anime_default', 0))
 
     PROVIDER_ORDER = check_setting_str(CFG, 'General', 'provider_order', '').split()
-    PROVIDER_HOMES = ast.literal_eval(check_setting_str(CFG, 'General', 'provider_homes', None) or '{}')
+    PROVIDER_HOMES = sg_helpers.ast_eval(check_setting_str(CFG, 'General', 'provider_homes', None), {})
 
     NAMING_PATTERN = check_setting_str(CFG, 'General', 'naming_pattern', 'Season %0S/%SN - S%0SE%0E - %EN')
     NAMING_ABD_PATTERN = check_setting_str(CFG, 'General', 'naming_abd_pattern', '%SN - %A.D - %EN')
@@ -966,10 +1001,6 @@ def init_stage_1(console_logging):
     BACKLOG_PERIOD = minimax(BACKLOG_PERIOD, DEFAULT_BACKLOG_PERIOD, MIN_BACKLOG_PERIOD, MAX_BACKLOG_PERIOD)
     BACKLOG_LIMITED_PERIOD = check_setting_int(CFG, 'General', 'backlog_limited_period', 7)
 
-    UPDATE_INTERVAL = check_setting_int(CFG, 'General', 'update_interval', DEFAULT_UPDATE_INTERVAL)
-    if UPDATE_INTERVAL < MIN_UPDATE_INTERVAL:
-        UPDATE_INTERVAL = MIN_UPDATE_INTERVAL
-
     SEARCH_UNAIRED = bool(check_setting_int(CFG, 'General', 'search_unaired', 0))
     UNAIRED_RECENT_SEARCH_ONLY = bool(check_setting_int(CFG, 'General', 'unaired_recent_search_only', 1))
     FLARESOLVERR_HOST = check_setting_str(CFG, 'General', 'flaresolverr_host', '')
@@ -984,6 +1015,9 @@ def init_stage_1(console_logging):
     AIRDATE_EPISODES = bool(check_setting_int(CFG, 'General', 'airdate_episodes', 0))
     KEEP_PROCESSED_DIR = bool(check_setting_int(CFG, 'General', 'keep_processed_dir', 1))
     PROCESS_METHOD = check_setting_str(CFG, 'General', 'process_method', 'copy' if KEEP_PROCESSED_DIR else 'move')
+    PROCESS_LAST_DIR = check_setting_str(CFG, 'General', 'process_last_dir', TV_DOWNLOAD_DIR)
+    PROCESS_LAST_METHOD = check_setting_str(CFG, 'General', 'process_last_method', PROCESS_METHOD)
+    PROCESS_LAST_CLEANUP = bool(check_setting_int(CFG, 'General', 'process_last_cleanup', 0))
     MOVE_ASSOCIATED_FILES = bool(check_setting_int(CFG, 'General', 'move_associated_files', 0))
     POSTPONE_IF_SYNC_FILES = bool(check_setting_int(CFG, 'General', 'postpone_if_sync_files', 1))
     NFO_RENAME = bool(check_setting_int(CFG, 'General', 'nfo_rename', 1))
@@ -1162,6 +1196,7 @@ def init_stage_1(console_logging):
 
     MC_MRU = check_setting_str(CFG, 'Metacritic', 'mc_mru', '')
     TVC_MRU = check_setting_str(CFG, 'TVCalendar', 'tvc_mru', '')
+    NE_MRU = check_setting_str(CFG, 'NextEpisode', 'ne_mru', '')
 
     USE_PYTIVO = bool(check_setting_int(CFG, 'pyTivo', 'use_pytivo', 0))
     PYTIVO_HOST = check_setting_str(CFG, 'pyTivo', 'pytivo_host', '')
@@ -1313,16 +1348,14 @@ def init_stage_1(console_logging):
         lambda y: TVidProdid.glue in y and y or '%s%s%s' % (
             (TVINFO_TVDB, TVINFO_IMDB)[bool(helpers.parse_imdb_id(y))], TVidProdid.glue, y),
         [x.strip() for x in check_setting_str(CFG, 'GUI', 'browselist_hidden', '').split('|~|') if x.strip()])
-    BROWSELIST_MRU = check_setting_str(CFG, 'GUI', 'browselist_prefs', None)
-    if None is not BROWSELIST_MRU:
-        BROWSELIST_MRU = ast.literal_eval(BROWSELIST_MRU or '{}')
-    if not isinstance(BROWSELIST_MRU, dict):
-        BROWSELIST_MRU = {}
+    BROWSELIST_MRU = sg_helpers.ast_eval(check_setting_str(CFG, 'GUI', 'browselist_prefs', None), {})
 
     BACKUP_DB_PATH = check_setting_str(CFG, 'Backup', 'backup_db_path', '')
     BACKUP_DB_ONEDAY = bool(check_setting_int(CFG, 'Backup', 'backup_db_oneday', 0))
     BACKUP_DB_MAX_COUNT = minimax(check_setting_int(CFG, 'Backup', 'backup_db_max_count', BACKUP_DB_DEFAULT_COUNT),
                                   BACKUP_DB_DEFAULT_COUNT, 0, 90)
+
+    UPDATES_TODO = sg_helpers.ast_eval(check_setting_str(CFG, 'Updates', 'updates_todo', None), {})
 
     sg_helpers.db = db
     sg_helpers.DOMAIN_FAILURES.load_from_db()
@@ -1395,7 +1428,7 @@ def init_stage_1(console_logging):
 
         for (attr, default) in [
             ('enable_backlog', True), ('enable_scheduled_backlog', True),
-            ('api_key', ''), ('username', ''),
+            ('api_key', ''), ('digest', ''), ('username', ''),
             ('scene_only', False), ('scene_or_contain', ''), ('scene_loose', False), ('scene_loose_active', False),
             ('scene_rej_nuked', False), ('scene_nuked_active', False),
             ('search_mode', 'eponly'), ('search_fallback', False), ('server_type', NewznabConstants.SERVER_DEFAULT)
@@ -1468,12 +1501,12 @@ def init_stage_2():
     # Schedulers
     # global trakt_checker_scheduler
     global recent_search_scheduler, backlog_search_scheduler, show_update_scheduler, \
-        version_check_scheduler, show_queue_scheduler, search_queue_scheduler, \
+        update_software_scheduler, update_packages_scheduler, show_queue_scheduler, search_queue_scheduler, \
         proper_finder_scheduler, media_process_scheduler, subtitles_finder_scheduler, \
         background_mapping_task, \
         watched_state_queue_scheduler, emby_watched_state_scheduler, plex_watched_state_scheduler
     # Gen Config/Misc
-    global SHOW_UPDATE_HOUR, UPDATE_INTERVAL
+    global SHOW_UPDATE_HOUR, UPDATE_INTERVAL, UPDATE_PACKAGES_INTERVAL
     # Search Settings/Episode
     global RECENTSEARCH_INTERVAL
     # Subtitles
@@ -1521,10 +1554,17 @@ def init_stage_2():
     # initialize schedulers
     # updaters
     update_now = datetime.timedelta(minutes=0)
-    version_check_scheduler = scheduler.Scheduler(
-        version_checker.CheckVersion(),
+    update_software_scheduler = scheduler.Scheduler(
+        version_checker.SoftwareUpdater(),
         cycleTime=datetime.timedelta(hours=UPDATE_INTERVAL),
-        threadName='CHECKVERSION',
+        threadName='SOFTWAREUPDATER',
+        silent=False)
+
+    update_packages_scheduler = scheduler.Scheduler(
+        version_checker.PackagesUpdater(),
+        cycleTime=datetime.timedelta(hours=UPDATE_PACKAGES_INTERVAL),
+        # run_delay=datetime.timedelta(minutes=2),
+        threadName='PACKAGESUPDATER',
         silent=False)
 
     show_queue_scheduler = scheduler.Scheduler(
@@ -1610,7 +1650,7 @@ def init_stage_2():
         threadName='FINDSUBTITLES',
         silent=not USE_SUBTITLES)
 
-    background_mapping_task = threading.Thread(name='LOAD-MAPPINGS', target=indexermapper.load_mapped_ids)
+    background_mapping_task = threading.Thread(name='MAPPINGSUPDATER', target=indexermapper.load_mapped_ids)
 
     watched_state_queue_scheduler = scheduler.Scheduler(
         watchedstate_queue.WatchedStateQueue(),
@@ -1629,7 +1669,7 @@ def init_stage_2():
         run_delay=datetime.timedelta(minutes=5),
         threadName='PLEXWATCHEDSTATE')
 
-    MEMCACHE['history_tab_limit'] = 9
+    MEMCACHE['history_tab_limit'] = 10
     MEMCACHE['history_tab'] = History.menu_tab(MEMCACHE['history_tab_limit'])
 
     try:
@@ -1646,10 +1686,12 @@ def init_stage_2():
 def enabled_schedulers(is_init=False):
     # ([], [trakt_checker_scheduler])[USE_TRAKT] + \
     return ([], [events])[is_init] \
-           + [recent_search_scheduler, backlog_search_scheduler, show_update_scheduler,
-              version_check_scheduler, show_queue_scheduler, search_queue_scheduler, proper_finder_scheduler,
-              media_process_scheduler, subtitles_finder_scheduler,
-              emby_watched_state_scheduler, plex_watched_state_scheduler, watched_state_queue_scheduler]\
+           + ([], [recent_search_scheduler, backlog_search_scheduler, show_update_scheduler,
+                   update_software_scheduler, update_packages_scheduler,
+                   show_queue_scheduler, search_queue_scheduler, proper_finder_scheduler,
+                   media_process_scheduler, subtitles_finder_scheduler,
+                   emby_watched_state_scheduler, plex_watched_state_scheduler, watched_state_queue_scheduler]
+              )[not MEMCACHE.get('update_restart')] \
            + ([events], [])[is_init]
 
 
@@ -1677,14 +1719,19 @@ def start():
             started = True
 
 
-def restart(soft=True):
-    if soft:
+def restart(soft=True, update_pkg=None):
+
+    if not soft:
+        if update_pkg:
+            MY_ARGS.append('--update-pkg')
+
+        events.put(events.SystemEvent.RESTART)
+
+    else:
         halt()
         save_all()
         logger.log(u'Re-initializing all data')
         initialize()
-    else:
-        events.put(events.SystemEvent.RESTART)
 
 
 def sig_handler(signum=None, _=None):
@@ -1750,12 +1797,13 @@ def halt():
 
 
 def save_all():
-    global showList
+    if not MEMCACHE.get('update_restart'):
+        global showList
 
-    # write all shows
-    logger.log(u'Saving all shows to the database')
-    for show_obj in showList:  # type: tv.TVShow
-        show_obj.save_to_db()
+        # write all shows
+        logger.log(u'Saving all shows to the database')
+        for show_obj in showList:  # type: tv.TVShow
+            show_obj.save_to_db()
 
     # save config
     logger.log(u'Saving config file to disk')
@@ -1812,7 +1860,6 @@ def save_config():
     new_config['General']['recentsearch_interval'] = int(RECENTSEARCH_INTERVAL)
     new_config['General']['backlog_period'] = int(BACKLOG_PERIOD)
     new_config['General']['backlog_limited_period'] = int(BACKLOG_LIMITED_PERIOD)
-    new_config['General']['update_interval'] = int(UPDATE_INTERVAL)
     new_config['General']['download_propers'] = int(DOWNLOAD_PROPERS)
     new_config['General']['propers_webdl_onegrp'] = int(PROPERS_WEBDL_ONEGRP)
     new_config['General']['allow_high_priority'] = int(ALLOW_HIGH_PRIORITY)
@@ -1820,21 +1867,27 @@ def save_config():
     new_config['General']['backlog_nofull'] = int(BACKLOG_NOFULL)
     new_config['General']['skip_removed_files'] = int(SKIP_REMOVED_FILES)
     new_config['General']['results_sortby'] = str(RESULTS_SORTBY)
-    new_config['General']['quality_default'] = int(QUALITY_DEFAULT)
-    new_config['General']['status_default'] = int(STATUS_DEFAULT)
-    new_config['General']['wanted_begin_default'] = int(WANTED_BEGIN_DEFAULT)
-    new_config['General']['wanted_latest_default'] = int(WANTED_LATEST_DEFAULT)
-    new_config['General']['flatten_folders_default'] = int(FLATTEN_FOLDERS_DEFAULT)
     new_config['General']['indexer_default'] = int(TVINFO_DEFAULT)
     new_config['General']['indexer_timeout'] = int(TVINFO_TIMEOUT)
-    new_config['General']['anime_default'] = int(ANIME_DEFAULT)
+    new_config['General']['quality_default'] = int(QUALITY_DEFAULT)
+    new_config['General']['wanted_begin_default'] = int(WANTED_BEGIN_DEFAULT)
+    new_config['General']['wanted_latest_default'] = int(WANTED_LATEST_DEFAULT)
+    new_config['General']['pause default'] = int(PAUSE_DEFAULT)
+    new_config['General']['status_default'] = int(STATUS_DEFAULT)
     new_config['General']['scene_default'] = int(SCENE_DEFAULT)
+    new_config['General']['flatten_folders_default'] = int(FLATTEN_FOLDERS_DEFAULT)
+    new_config['General']['anime_default'] = int(ANIME_DEFAULT)
     new_config['General']['provider_order'] = ' '.join(PROVIDER_ORDER)
     new_config['General']['provider_homes'] = '%s' % dict([(pid, v) for pid, v in list_items(PROVIDER_HOMES) if pid in [
         p.get_id() for p in [x for x in providers.sortedProviderList() if GenericProvider.TORRENT == x.providerType]]])
-    new_config['General']['version_notify'] = int(VERSION_NOTIFY)
-    new_config['General']['auto_update'] = int(AUTO_UPDATE)
+    new_config['General']['update_notify'] = int(UPDATE_NOTIFY)
+    new_config['General']['update_auto'] = int(UPDATE_AUTO)
+    new_config['General']['update_interval'] = int(UPDATE_INTERVAL)
     new_config['General']['notify_on_update'] = int(NOTIFY_ON_UPDATE)
+    new_config['General']['update_packages_notify'] = int(UPDATE_PACKAGES_NOTIFY)
+    new_config['General']['update_packages_auto'] = int(UPDATE_PACKAGES_AUTO)
+    new_config['General']['update_packages_menu'] = int(UPDATE_PACKAGES_MENU)
+    new_config['General']['update_packages_interval'] = int(UPDATE_PACKAGES_INTERVAL)
     new_config['General']['naming_strip_year'] = int(NAMING_STRIP_YEAR)
     new_config['General']['naming_pattern'] = NAMING_PATTERN
     new_config['General']['naming_custom_abd'] = int(NAMING_CUSTOM_ABD)
@@ -1878,6 +1931,9 @@ def save_config():
     new_config['General']['tv_download_dir'] = TV_DOWNLOAD_DIR
     new_config['General']['keep_processed_dir'] = int(KEEP_PROCESSED_DIR)
     new_config['General']['process_method'] = PROCESS_METHOD
+    new_config['General']['process_last_dir'] = PROCESS_LAST_DIR
+    new_config['General']['process_last_method'] = PROCESS_LAST_METHOD
+    new_config['General']['process_last_cleanup'] = int(PROCESS_LAST_CLEANUP)
     new_config['General']['move_associated_files'] = int(MOVE_ASSOCIATED_FILES)
     new_config['General']['postpone_if_sync_files'] = int(POSTPONE_IF_SYNC_FILES)
     new_config['General']['nfo_rename'] = int(NFO_RENAME)
@@ -1898,6 +1954,9 @@ def save_config():
     new_config['General']['ignore_words'] = helpers.generate_word_str(IGNORE_WORDS, IGNORE_WORDS_REGEX)
     new_config['General']['require_words'] = helpers.generate_word_str(REQUIRE_WORDS, REQUIRE_WORDS_REGEX)
     new_config['General']['calendar_unprotected'] = int(CALENDAR_UNPROTECTED)
+
+    new_config['Updates'] = {}
+    new_config['Updates']['updates_todo'] = '%s' % (UPDATES_TODO or {})
 
     new_config['Backup'] = {}
     if BACKUP_DB_PATH:
@@ -1951,7 +2010,8 @@ def save_config():
         if int(src.enabled):
             new_config[src_id_uc][src_id] = int(src.enabled)
 
-        for attr in filter_iter(lambda _a: None is not getattr(src, _a, None), ('api_key', 'username', 'search_mode')):
+        for attr in filter_iter(lambda _a: None is not getattr(src, _a, None),
+                                ('api_key', 'digest', 'username', 'search_mode')):
             if 'search_mode' != attr or 'eponly' != getattr(src, attr):
                 new_config[src_id_uc]['%s_%s' % (src_id, attr)] = getattr(src, attr)
 
@@ -2123,6 +2183,9 @@ def save_config():
         ('TVCalendar', [
             ('mru', TVC_MRU)
         ]),
+        ('NextEpisode', [
+            ('mru', NE_MRU)
+        ]),
         ('Slack', [
             ('use_%s', int(USE_SLACK)),
             ('channel', SLACK_CHANNEL),
@@ -2222,7 +2285,7 @@ def save_config():
     new_config['GUI']['default_home'] = DEFAULT_HOME
     new_config['GUI']['fanart_limit'] = FANART_LIMIT
     new_config['GUI']['fanart_panel'] = FANART_PANEL
-    new_config['GUI']['fanart_ratings'] = '%s' % FANART_RATINGS
+    new_config['GUI']['fanart_ratings'] = '%s' % (FANART_RATINGS or {})
     new_config['GUI']['use_imdb_info'] = int(USE_IMDB_INFO)
     new_config['GUI']['imdb_accounts'] = IMDB_ACCOUNTS
     new_config['GUI']['fuzzy_dating'] = int(FUZZY_DATING)
@@ -2261,7 +2324,7 @@ def save_config():
     new_config['GUI']['show_tag_default'] = SHOW_TAG_DEFAULT
     new_config['GUI']['history_layout'] = HISTORY_LAYOUT
     new_config['GUI']['browselist_hidden'] = '|~|'.join(BROWSELIST_HIDDEN)
-    new_config['GUI']['browselist_prefs'] = '%s' % BROWSELIST_MRU
+    new_config['GUI']['browselist_prefs'] = '%s' % (BROWSELIST_MRU or {})
 
     new_config['Subtitles'] = {}
     new_config['Subtitles']['use_subtitles'] = int(USE_SUBTITLES)

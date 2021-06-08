@@ -193,40 +193,47 @@ class DBConnection(object):
             return version
         return 0
 
-    def mass_action(self, querylist, log_transaction=False):
+    def mass_action(self, queries, log_transaction=False):
         # type: (List[Union[List[AnyStr], Tuple[AnyStr, List], Tuple[AnyStr]]], bool) -> Optional[List, sqlite3.Cursor]
 
         from . import helpers
         with db_lock:
 
-            if None is querylist:
+            if None is queries:
                 return
 
-            sqlResult = []
+            if not queries:
+                return []
+
             attempt = 0
 
+            sql_result = {'affected': 0, 'data': []}
             while 5 > attempt:
                 try:
-                    affected = 0
-                    for qu in querylist:
+                    def sql_action(query, result):
                         cursor = self.connection.cursor()
-                        if 1 == len(qu):
-                            if log_transaction:
-                                logger.log(qu[0], logger.DB)
+                        if 'SELECT' == query[0][0:6].upper():
+                            result['data'].append(cursor.execute(*tuple(query)).fetchall())
+                        else:
+                            cursor.execute(*tuple(query)).fetchall()
+                        result['affected'] += abs(cursor.rowcount)
 
-                            sqlResult.append(cursor.execute(qu[0]).fetchall())
-                        elif 1 < len(qu):
-                            if log_transaction:
-                                logger.log(qu[0] + ' with args ' + str(qu[1]), logger.DB)
-                            sqlResult.append(cursor.execute(qu[0], qu[1]).fetchall())
-                        affected += cursor.rowcount
+                    if not log_transaction:
+                        for cur_query in queries:
+                            sql_action(cur_query, sql_result)
+                    else:
+                        for cur_query in queries:
+                            logger.log(cur_query[0] if 1 == len(cur_query)
+                                       else '%s with args %s' % tuple(cur_query), logger.DB)
+                            sql_action(cur_query, sql_result)
+
                     self.connection.commit()
-                    if 0 < affected:
-                        logger.log(u'Transaction with %s queries executed affected %i row%s' % (
-                            len(querylist), affected, helpers.maybe_plural(affected)), logger.DEBUG)
-                    return sqlResult
+                    if 0 < sql_result['affected']:
+                        logger.debug(u'Transaction with %s queries executed affected at least %i row%s' % (
+                            len(queries), sql_result['affected'], helpers.maybe_plural(sql_result['affected'])))
+                    return sql_result['data']
                 except sqlite3.OperationalError as e:
-                    sqlResult = []
+                    sql_result['data'] = []
                     if self.connection:
                         self.connection.rollback()
                     if not self.action_error(e):
@@ -235,10 +242,10 @@ class DBConnection(object):
                 except sqlite3.DatabaseError as e:
                     if self.connection:
                         self.connection.rollback()
-                    logger.log(u'Fatal error executing query: ' + ex(e), logger.ERROR)
+                    logger.error(u'Fatal error executing query: ' + ex(e))
                     raise
 
-            return sqlResult
+            return sql_result['data']
 
     @staticmethod
     def action_error(e):
@@ -257,17 +264,17 @@ class DBConnection(object):
             if None is query:
                 return
 
-            sqlResult = None
+            sql_result = None
             attempt = 0
 
             while 5 > attempt:
                 try:
                     if None is args:
-                        logger.log(self.filename + ': ' + query, logger.DB)
-                        sqlResult = self.connection.execute(query)
+                        logger.log('%s: %s' % (self.filename, query), logger.DB)
+                        sql_result = self.connection.execute(query)
                     else:
-                        logger.log(self.filename + ': ' + query + ' with args ' + str(args), logger.DB)
-                        sqlResult = self.connection.execute(query, args)
+                        logger.log('%s: %s with args %s' % (self.filename, query, str(args)), logger.DB)
+                        sql_result = self.connection.execute(query, args)
                     self.connection.commit()
                     # get out of the connection attempt loop since we were successful
                     break
@@ -279,17 +286,17 @@ class DBConnection(object):
                     logger.log(u'Fatal error executing query: ' + ex(e), logger.ERROR)
                     raise
 
-            return sqlResult
+            return sql_result
 
     def select(self, query, args=None):
         # type: (AnyStr, Optional[List, Tuple]) -> List
 
-        sqlResults = self.action(query, args).fetchall()
+        sql_results = self.action(query, args).fetchall()
 
-        if None is sqlResults:
+        if None is sql_results:
             return []
 
-        return sqlResults
+        return sql_results
 
     def upsert(self, table_name, value_dict, key_dict):
         # type: (AnyStr, Dict, Dict) -> None
@@ -315,10 +322,10 @@ class DBConnection(object):
         # type: (AnyStr) -> Dict[AnyStr, Dict[AnyStr, AnyStr]]
 
         # FIXME ? binding is not supported here, but I cannot find a way to escape a string manually
-        sqlResult = self.select('PRAGMA table_info([%s])' % table_name)
+        sql_result = self.select('PRAGMA table_info([%s])' % table_name)
         columns = {}
-        for column in sqlResult:
-            columns[column['name']] = {'type': column['type']}
+        for cur_column in sql_result:
+            columns[cur_column['name']] = {'type': cur_column['type']}
         return columns
 
     # http://stackoverflow.com/questions/3300464/how-can-i-get-dict-from-sqlite-query
@@ -364,9 +371,7 @@ class DBConnection(object):
     def has_flag(self, flag_name):
         # type: (AnyStr) -> bool
         sql_result = self.select('SELECT flag FROM flags WHERE flag = ?', [flag_name])
-        if 0 < len(sql_result):
-            return True
-        return False
+        return 0 < len(sql_result)
 
     def add_flag(self, flag_name):
         # type: (AnyStr) -> bool
@@ -771,8 +776,6 @@ def get_rollback_module():
     except (BaseException, Exception):
         pass
 
-    return None
-
 
 def delete_old_db_backups(target):
     # type: (AnyStr) -> None
@@ -818,15 +821,15 @@ def backup_all_dbs(target, compress=True, prefer_7z=True):
     d = sgdatetime.SGDatetime.sbfdate(now, d_preset='%Y-%m-%d')
     t = sgdatetime.SGDatetime.sbftime(now, t_preset='%H-%M')
     ds = '%s_%s' % (d, t)
-    for c in ['sickbeard', 'cache', 'failed']:
-        cur_db = DBConnection('%s.db' % c)
-        b_name = '%s_%s.db' % (c, ds)
-        success, msg = cur_db.backup_db(target=target, backup_filename=b_name)
+    for cur_db in ['sickbeard', 'cache', 'failed']:
+        db_conn = DBConnection('%s.db' % cur_db)
+        name = '%s_%s.db' % (cur_db, ds)
+        success, msg = db_conn.backup_db(target=target, backup_filename=name)
         if not success:
             return False, msg
         if compress:
-            full_path = ek.ek(os.path.join, target, b_name)
-            if not compress_file(full_path, '%s.db' % c, prefer_7z=prefer_7z):
+            full_path = ek.ek(os.path.join, target, name)
+            if not compress_file(full_path, '%s.db' % cur_db, prefer_7z=prefer_7z):
                 return False, 'Failure to compress backup'
     delete_old_db_backups(target)
     my_db.upsert('lastUpdate',

@@ -23,7 +23,6 @@ import codecs
 import datetime
 import errno
 import getopt
-import locale
 import os
 import signal
 import sys
@@ -48,6 +47,9 @@ if not any(list(map(lambda v: v[0] <= sys.version_info[:3] <= v[1], versions))) 
         lambda r: '%s - %s' % tuple(map(lambda v: str(v).replace(',', '.')[1:-1], r)), versions)))
     sys.exit(1)
 
+sys.path.insert(1, os.path.abspath(os.path.join(os.path.dirname(__file__), 'lib')))
+is_win = 'win' == sys.platform[0:3]
+
 try:
     try:
         py_cache_path = os.path.normpath(os.path.join(os.path.dirname(__file__), '__pycache__'))
@@ -60,31 +62,34 @@ try:
     except (BaseException, Exception):
         pass
     import _cleaner
+    from sickbeard import piper
 except (BaseException, Exception):
     pass
 
 try:
     import Cheetah
-
-    if Cheetah.Version[0] < '2':
-        raise ValueError
-except ValueError:
-    print('Sorry, requires Python module Cheetah 2.1.0 or newer.')
-    sys.exit(1)
 except (BaseException, Exception):
     print('The Python module Cheetah is required')
+    if is_win:
+        print('(1) However, this first run may have just installed it, so try to simply rerun sickgear.py again')
+        print('(2) If this output is a rerun of (1) then open a command line prompt and manually install using...')
+    else:
+        print('Manually install using...')
+    print('cd <sickgear_installed_folder>')
+    print('python -m pip install --user -r requirements.txt')
+    print('python sickgear.py')
     sys.exit(1)
 
 # Compatibility fixes for Windows
-if 'win32' == sys.platform:
+if is_win:
     codecs.register(lambda name: codecs.lookup('utf-8') if name == 'cp65001' else None)
 
 # We only need this for compiling an EXE
 from multiprocessing import freeze_support
 
-sys.path.insert(1, os.path.abspath(os.path.join(os.path.dirname(__file__), 'lib')))
-
 from configobj import ConfigObj
+# noinspection PyPep8Naming
+from encodingKludge import EXIT_BAD_ENCODING, SYS_ENCODING
 from exceptions_helper import ex
 import sickbeard
 from sickbeard import db, logger, name_cache, network_timezones
@@ -92,12 +97,12 @@ from sickbeard.event_queue import Events
 from sickbeard.tv import TVShow
 from sickbeard.webserveInit import WebServer
 
-from six import integer_types, moves, PY2
+from six import integer_types
 
 throwaway = datetime.datetime.strptime('20110101', '%Y%m%d')
 rollback_loaded = None
 
-for signal_type in [signal.SIGTERM, signal.SIGINT] + ([] if 'win32' != sys.platform else [signal.SIGBREAK]):
+for signal_type in [signal.SIGTERM, signal.SIGINT] + ([] if not is_win else [signal.SIGBREAK]):
     signal.signal(signal_type, lambda signum, void: sickbeard.sig_handler(signum=signum, _=void))
 
 
@@ -130,6 +135,7 @@ class SickGear(object):
         """
         print help message for commandline options
         """
+        global is_win
         help_msg = ['']
         help_msg += ['Usage: %s <option> <another option>\n' % sickbeard.MY_FULLNAME]
         help_msg += ['Options:\n']
@@ -143,7 +149,7 @@ class SickGear(object):
         ]:
             help_msg += [help_tmpl % ln]
 
-        if 'win32' == sys.platform:
+        if is_win:
             for ln in [
                 ('-d', '--daemon', 'Running as daemon is not supported on Windows'),
                 ('', '', 'On Windows, --daemon is substituted with: --quiet --nolaunch')
@@ -187,51 +193,29 @@ class SickGear(object):
             pass
 
     def start(self):
+        global is_win
         # do some preliminary stuff
         sickbeard.MY_FULLNAME = os.path.normpath(os.path.abspath(__file__))
         sickbeard.MY_NAME = os.path.basename(sickbeard.MY_FULLNAME)
         sickbeard.PROG_DIR = os.path.dirname(sickbeard.MY_FULLNAME)
         sickbeard.DATA_DIR = sickbeard.PROG_DIR
         sickbeard.MY_ARGS = sys.argv[1:]
-        sickbeard.SYS_ENCODING = None
-
-        try:
-            locale.setlocale(locale.LC_ALL, '')
-        except (locale.Error, IOError):
-            pass
-        try:
-            sickbeard.SYS_ENCODING = locale.getpreferredencoding()
-        except (locale.Error, IOError):
-            pass
-
-        # For OSes that are poorly configured I'll just randomly force UTF-8
-        if not sickbeard.SYS_ENCODING or sickbeard.SYS_ENCODING in ('ANSI_X3.4-1968', 'US-ASCII', 'ASCII'):
-            sickbeard.SYS_ENCODING = 'UTF-8'
-
-        if not hasattr(sys, 'setdefaultencoding'):
-            moves.reload_module(sys)
-
-        if PY2:
-            try:
-                # On non-unicode builds this raises an AttributeError,
-                # if encoding type is not valid it throws a LookupError
-                # noinspection PyUnresolvedReferences
-                sys.setdefaultencoding(sickbeard.SYS_ENCODING)
-            except (BaseException, Exception):
-                print('Sorry, you MUST add the SickGear folder to the PYTHONPATH environment variable')
-                print('or find another way to force Python to use %s for string encoding.' % sickbeard.SYS_ENCODING)
-                sys.exit(1)
+        if EXIT_BAD_ENCODING:
+            print('Sorry, you MUST add the SickGear folder to the PYTHONPATH environment variable')
+            print('or find another way to force Python to use %s for string encoding.' % SYS_ENCODING)
+            sys.exit(1)
+        sickbeard.SYS_ENCODING = SYS_ENCODING
 
         # Need console logging for sickgear.py and SickBeard-console.exe
         self.console_logging = (not hasattr(sys, 'frozen')) or (0 < sickbeard.MY_NAME.lower().find('-console'))
 
         # Rename the main thread
-        threading.currentThread().name = 'MAIN'
+        threading.current_thread().name = 'MAIN'
 
         try:
             opts, args = getopt.getopt(sys.argv[1:], 'hfqdsp::',
                                        ['help', 'forceupdate', 'quiet', 'nolaunch', 'daemon', 'systemd', 'pidfile=',
-                                        'port=', 'datadir=', 'config=', 'noresize'])
+                                        'port=', 'datadir=', 'config=', 'noresize', 'update-restart', 'update-pkg'])
         except getopt.GetoptError:
             sys.exit(self.help_message())
 
@@ -268,11 +252,11 @@ class SickGear(object):
                 self.console_logging = False
                 self.no_launch = True
 
-                if 'win32' == sys.platform:
+                if is_win:
                     self.run_as_daemon = False
 
             # Run as a systemd service
-            if o in ('-s', '--systemd') and 'win32' != sys.platform:
+            if o in ('-s', '--systemd') and not is_win:
                 self.run_as_systemd = True
                 self.run_as_daemon = False
                 self.console_logging = False
@@ -430,6 +414,9 @@ class SickGear(object):
         if sickbeard.LAUNCH_BROWSER and not self.no_launch:
             sickbeard.launch_browser(self.start_port)
 
+        # send pid of sg instance to ui
+        sickbeard.classes.loading_msg.set_msg_progress('Process-id', sickbeard.PID)
+
         # check all db versions
         for d, min_v, max_v, base_v, mo in [
             ('failed.db', sickbeard.failed_db.MIN_DB_VERSION, sickbeard.failed_db.MAX_DB_VERSION,
@@ -516,18 +503,43 @@ class SickGear(object):
             else:
                 logger.log_error_and_exit(u'Restore FAILED!')
 
-        # Build from the DB to start with
-        sickbeard.classes.loading_msg.message = 'Loading shows from db'
-        self.load_shows_from_db()
-        if not db.DBConnection().has_flag('ignore_require_cleaned'):
-            from sickbeard.show_updater import clean_ignore_require_words
-            sickbeard.classes.loading_msg.message = 'Cleaning ignore/require words lists'
-            clean_ignore_require_words()
-            db.DBConnection().set_flag('ignore_require_cleaned')
+        update_arg = '--update-restart'
+        manual_update_arg = '--update-pkg'
+        if update_arg not in sickbeard.MY_ARGS and sickbeard.UPDATES_TODO \
+                and (manual_update_arg in sickbeard.MY_ARGS or sickbeard.UPDATE_PACKAGES_AUTO):
+            sickbeard.MEMCACHE['update_restart'] = piper.pip_update(
+                sickbeard.classes.loading_msg, sickbeard.UPDATES_TODO, sickbeard.DATA_DIR)
+            sickbeard.UPDATES_TODO = dict()
+            sickbeard.save_config()
 
-        # Fire up all our threads
+        if manual_update_arg in sickbeard.MY_ARGS:
+            sickbeard.MY_ARGS.remove(manual_update_arg)
+
+        if not sickbeard.MEMCACHE.get('update_restart'):
+            # Build from the DB to start with
+            sickbeard.classes.loading_msg.message = 'Loading shows from db'
+            self.load_shows_from_db()
+            if not db.DBConnection().has_flag('ignore_require_cleaned'):
+                from sickbeard.show_updater import clean_ignore_require_words
+                sickbeard.classes.loading_msg.message = 'Cleaning ignore/require words lists'
+                clean_ignore_require_words()
+                db.DBConnection().set_flag('ignore_require_cleaned')
+
+        # Fire up threads
         sickbeard.classes.loading_msg.message = 'Starting threads'
         sickbeard.start()
+
+        if sickbeard.MEMCACHE.get('update_restart'):
+            sickbeard.MY_ARGS.append(update_arg)
+            sickbeard.classes.loading_msg.message = 'Restarting SickGear after update'
+            time.sleep(3)
+            sickbeard.restart(soft=False)
+            # restart wait loop
+            while True:
+                time.sleep(1)
+
+        if update_arg in sickbeard.MY_ARGS:
+            sickbeard.MY_ARGS.remove(update_arg)
 
         # Build internal name cache
         sickbeard.classes.loading_msg.message = 'Build name cache'
@@ -539,7 +551,7 @@ class SickGear(object):
 
         # load all ids from xem
         sickbeard.classes.loading_msg.message = 'Loading xem data'
-        startup_background_tasks = threading.Thread(name='FETCH-XEMDATA', target=sickbeard.scene_exceptions.get_xem_ids)
+        startup_background_tasks = threading.Thread(name='XEMUPDATER', target=sickbeard.scene_exceptions.get_xem_ids)
         startup_background_tasks.start()
 
         sickbeard.classes.loading_msg.message = 'Checking history'
@@ -688,11 +700,9 @@ class SickGear(object):
 
             if sickbeard.events.SystemEvent.RESTART == ev_type:
 
-                install_type = sickbeard.version_check_scheduler.action.install_type
-
                 popen_list = []
 
-                if install_type in ('git', 'source'):
+                if sickbeard.update_software_scheduler.action.install_type in ('git', 'source'):
                     popen_list = [sys.executable, sickbeard.MY_FULLNAME]
 
                 if popen_list:

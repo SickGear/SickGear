@@ -1,28 +1,79 @@
-﻿### 0.23.22 (2020-05-27 00:10:00 UTC)
+﻿### 0.24.0 (2021-06-08 12:50:00 UTC)
+
+* Change free up some screen real estate on manage/Bulk Change
+* Change rotate column headers on manage/Bulk Change for supported browsers to reduce screen estate waste
+* Add column to manage/Bulk Change to display the show folder location size
+* Add media stats to manage/Bulk Change and view-show when hovering over folder size
+* Add to manage/Bulk Change an icon where show location no longer exists and group the icon/non icon shows
+* Add a hover tip to the edit column on manage/Bulk Change to remind about using multi-select
+* Change add tooltips on manage/Bulk Change checkbox actions to display what each are used for
+* Add to manage/Bulk Change confirm dialog before removing or deleting a show
+* Change manage/Bulk Change add sort by size options to table, (Total, Largest, Smallest, Average)
+* Change manage/Bulk Change add busy spinner for processing when changing size sort type
+* Change manage/Bulk Change table make header stick when page is scrolled
+* Change manage/Bulk Change table make footer stick when page is scrolled
+* Change manage/Bulk Change add filter to table, showname, quality, and status
+* Change number of shows listed after a filter is displayed at the bottom of Bulk Change
+* Change edit and submit buttons are disabled when there is no selection on Bulk Change
+* Change edit and submit buttons display number of selected items on Bulk Change
+* Change tidy up html markup and JavaScript for manage/Bulk Change
+* Change refactor to simplify bulk_change logic
+* Add to config/General, "Package updates" and list packages, check packages by default on Windows, others must enable
+* Change simplify section config/General/Updates
+* Add check for package updates to menu item action "Check for Updates"
+* Add known failures are cleared for a fresh check when "Check for Updates" is used
+* Add FileSharingTalk nzb provider
+* Change optimize .png images to improve file/transfer size
+* Add tz version info to the about page
+* Change auto-install Cheetah dependency on first time installations (tested on Win)
+* Change add cryptography to recommended.txt
+* Change add prebuilt AMD64 python-Levenshtein to recommended.txt
+* Change add prebuilt Windows Python 3.10 lxml to recommended.txt
+* Change add prebuilt Windows Python 3.10 regex to recommended.txt
+* Change replace deprecated `currentThread` with `current_thread` calls
+* Change initialise Manage/Media Process folder and method from Config/Media Process when no previous values are stored
+* Change remember Manage/Media Process folder and method when button 'Process' is used
+* Change abbreviate long titles under menu tab
+* Change add fallback to unar if unrar binary is unavailable on Linux
+* Update attr 20.2.0 (4f74fba) to 20.3.0 (f3762ba)
+* Update diskcache_py3 5.0.1 (9670fbb) to 5.1.0 (40ce0de)
+* Update diskcache_py2 4.1.0 (b0451e0) from 5.1.0 (40ce0de)
+* Update humanize 3.1.0 (aec9dc2) to 3.5.0 (b6b0ea5)
+* Update Rarfile 3.1 (a4202ca) to 4.0 (55fe778)
+* Update Requests library 2.24.0 (2f70990) to 2.25.1 (bdc00eb)
+* Update Six compatibility library 1.15.0 (c0be881) to 1.16.0 (b620447)
+* Update urllib3 1.25.11 (00f1769) to 1.26.2 (eae04d6)
+* Add menu Shows/"Next Episode Cards"
+* Change improve SQL performance
+* Add option "Add paused" to Options/"More Options" at the final step of adding a show
+* Update certifi 2020.11.08 to 2021.05.30
+
+
+### 0.23.22 (2021-05-27 00:10:00 UTC)
 
 * Change officially move chat support to irc.libera.chat
 * Change tweak NBL API tip
 
 
-### 0.23.21 (2020-05-17 10:20:00 UTC)
+### 0.23.21 (2021-05-17 10:20:00 UTC)
 
 * Fix provider Nebulance
 * Fix provider MoreThan
 
 
-### 0.23.20 (2020-05-13 18:35:00 UTC)
+### 0.23.20 (2021-05-13 18:35:00 UTC)
 
 * Fix restart to release and free resources from previous run process
 * Change fanart lib to get_url
 
 
-### 0.23.19 (2020-05-05 21:40:00 UTC)
+### 0.23.19 (2021-05-05 21:40:00 UTC)
 
 * Fix MoreThan provider and add provider option only allow releases that are site trusted
 * Add Python 3.9 to Travis
 
 
-### 0.23.18 (2020-05-03 23:10:00 UTC)
+### 0.23.18 (2021-05-03 23:10:00 UTC)
 
 * Change allow Python 3.8.10 and 3.9.5
 * Remove PiSexy provider
@@ -34,7 +85,7 @@
 * Add webapi unit tests
 
 
-### 0.23.17 (2020-04-12 12:40:00 UTC)
+### 0.23.17 (2021-04-12 12:40:00 UTC)
 
 * Update UnRar for Windows 6.00 to 6.01 x64
 

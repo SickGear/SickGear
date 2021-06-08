@@ -22,6 +22,7 @@ from .generic import BaseNotifier
 # noinspection PyPep8Naming
 import encodingKludge as ek
 from exceptions_helper import ex
+from sg_helpers import cmdline_runner
 
 
 # noinspection PyPep8Naming
@@ -37,7 +38,6 @@ class SynoIndexNotifier(BaseNotifier):
         self._log_debug(u'Executing command ' + str(synoindex_cmd))
         self._log_debug(u'Absolute path to command: ' + ek.ek(os.path.abspath, synoindex_cmd[0]))
         try:
-            from sickbeard.helpers import cmdline_runner
             output, err, exit_status = cmdline_runner(synoindex_cmd)
             self._log_debug(u'Script result: %s' % output)
         except (BaseException, Exception) as e:

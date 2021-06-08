@@ -682,6 +682,10 @@ inc_top.tmpl
 	content:"\e891"
 }
 
+.sgicon-ne:before{
+	content:"\e892"
+}
+
 .sgicon-imdb:before{
 	content:"\e898"
 }
@@ -1429,6 +1433,10 @@ home_browseShows.tmpl
 	background-image:url("../images/poster-dark.jpg")
 }
 
+#browse-list.tvcalendar a.browse-image{
+	background-size:145px;
+	background-position:50% 46%
+}
 #browse-list.tvcalendar .browse-image{
 	height:104px /* 62% of image height */
 }
@@ -1447,6 +1455,21 @@ home_browseShows.tmpl
 
 #browse-list.tvcalendar .show-card-inner .heart.icon-glyph{
 	margin-left:0
+}
+
+#browse-list.nextepisode a.browse-image{
+	background-position-y:45%
+}
+#browse-list.nextepisode .browse-image{
+	height:140px /* 65% of image height */
+}
+
+#browse-list.nextepisode .show-toggle-hide{
+	top:141px
+}
+
+#browse-list.nextepisode.no-votes .show-card{
+	height:209px
 }
 /* =======================================================================
 home_postprocess.tmpl
@@ -4783,7 +4806,8 @@ tablesorter.css
 }
 
 .tablesorter th,
-.tablesorter td{
+.tablesorter td,
+#tfoot{
 	padding:4px;
 	/*border-top:1px solid;*/
 	/*border-left:1px solid;*/
@@ -4813,6 +4837,7 @@ tablesorter.css
 	vertical-align:middle
 }
 
+.tablesorter thead .sort-size-type.tablesorter-headerSorted,
 #display-show .tablesorter .tablesorter-header,
 #display-show .tablesorter thead .tablesorter-headerDesc,
 #display-show .tablesorter thead .tablesorter-headerAsc{background-image:none}

@@ -65,6 +65,16 @@
 			<div id="options-addshow" style="display:none">
 
 				<div class="field-pair alt" style="margin-top:10px">
+					<label for="pause">
+						<span class="component-title">Add paused</span>
+						<span class="component-desc">
+							<input class="cb" type="checkbox" name="pause" id="pause"#if $sg_var('PAUSE_DEFAULT') then $checked else ''#>
+							<p>pause search tasks to allow edits</p>
+						</span>
+					</label>
+				</div>
+
+				<div class="field-pair alt">
 					<label for="prune">
 						<span class="component-title">Keep up to</span>
 						<span class="component-desc">
@@ -99,10 +109,10 @@
 
 #if $sg_var('USE_SUBTITLES'):
 				<div class="field-pair alt">
-					<label for="subtitles">
+					<label for="subs">
 						<span class="component-title">Subtitles</span>
 						<span class="component-desc">
-							<input type="checkbox" name="subtitles" id="subtitles"#if $sg_var('SUBTITLES_DEFAULT') then $checked else ''# />
+							<input type="checkbox" name="subs" id="subs"#if $sg_var('SUBTITLES_DEFAULT') then $checked else ''# />
 							<p>download subtitles for this show</p>
 						</span>
 					</label>

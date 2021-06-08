@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2020-09-29 21:07+0300\n"
+"POT-Creation-Date: 2021-04-30 22:34+0200\n"
 "PO-Revision-Date: \n"
 "Last-Translator: TL\n"
 "Language-Team: uk_UA\n"
@@ -15,141 +15,181 @@ msgstr ""
 "Generated-By:\n"
 "X-Generator: \n"
 
-#: src/humanize/number.py:31
+#: src/humanize/number.py:56
 msgctxt "0"
 msgid "th"
 msgstr "ий"
 
-#: src/humanize/number.py:32
+#: src/humanize/number.py:57
 msgctxt "1"
 msgid "st"
 msgstr "ий"
 
-#: src/humanize/number.py:33
+#: src/humanize/number.py:58
 msgctxt "2"
 msgid "nd"
 msgstr "ий"
 
-#: src/humanize/number.py:34
+#: src/humanize/number.py:59
 msgctxt "3"
 msgid "rd"
 msgstr "ій"
 
-#: src/humanize/number.py:35
+#: src/humanize/number.py:60
 msgctxt "4"
 msgid "th"
 msgstr "ий"
 
-#: src/humanize/number.py:36
+#: src/humanize/number.py:61
 msgctxt "5"
 msgid "th"
 msgstr "ий"
 
-#: src/humanize/number.py:37
+#: src/humanize/number.py:62
 msgctxt "6"
 msgid "th"
 msgstr "ий"
 
-#: src/humanize/number.py:38
+#: src/humanize/number.py:63
 msgctxt "7"
 msgid "th"
 msgstr "ий"
 
-#: src/humanize/number.py:39
+#: src/humanize/number.py:64
 msgctxt "8"
 msgid "th"
 msgstr "ий"
 
-#: src/humanize/number.py:40
+#: src/humanize/number.py:65
 msgctxt "9"
 msgid "th"
 msgstr "ий"
 
-#: src/humanize/number.py:82
+#: src/humanize/number.py:126
+msgid "thousand"
+msgid_plural "thousand"
+msgstr[0] ""
+msgstr[1] ""
+msgstr[2] ""
+
+#: src/humanize/number.py:127
 msgid "million"
-msgstr "мільйонів"
+msgid_plural "million"
+msgstr[0] "мільйонів"
+msgstr[1] "мільйонів"
+msgstr[2] "мільйонів"
 
-#: src/humanize/number.py:83
+#: src/humanize/number.py:128
 msgid "billion"
-msgstr "мільярдів"
+msgid_plural "billion"
+msgstr[0] "мільярдів"
+msgstr[1] "мільярдів"
+msgstr[2] "мільярдів"
 
-#: src/humanize/number.py:84
+#: src/humanize/number.py:129
 msgid "trillion"
-msgstr "трильйонів"
+msgid_plural "trillion"
+msgstr[0] "трильйонів"
+msgstr[1] "трильйонів"
+msgstr[2] "трильйонів"
 
-#: src/humanize/number.py:85
+#: src/humanize/number.py:130
 msgid "quadrillion"
-msgstr "квадрильйонів"
+msgid_plural "quadrillion"
+msgstr[0] "квадрильйонів"
+msgstr[1] "квадрильйонів"
+msgstr[2] "квадрильйонів"
 
-#: src/humanize/number.py:86
+#: src/humanize/number.py:131
 msgid "quintillion"
-msgstr "квинтиліонів"
+msgid_plural "quintillion"
+msgstr[0] "квинтиліонів"
+msgstr[1] "квинтиліонів"
+msgstr[2] "квинтиліонів"
 
-#: src/humanize/number.py:87
+#: src/humanize/number.py:132
 msgid "sextillion"
-msgstr "сикстильйонів"
+msgid_plural "sextillion"
+msgstr[0] "сикстильйонів"
+msgstr[1] "сикстильйонів"
+msgstr[2] "сикстильйонів"
 
-#: src/humanize/number.py:88
+#: src/humanize/number.py:133
 msgid "septillion"
-msgstr "септильйонів"
+msgid_plural "septillion"
+msgstr[0] "септильйонів"
+msgstr[1] "септильйонів"
+msgstr[2] "септильйонів"
 
-#: src/humanize/number.py:89
+#: src/humanize/number.py:134
 msgid "octillion"
-msgstr "октильйонів"
+msgid_plural "octillion"
+msgstr[0] "октильйонів"
+msgstr[1] "октильйонів"
+msgstr[2] "октильйонів"
 
-#: src/humanize/number.py:90
+#: src/humanize/number.py:135
 msgid "nonillion"
-msgstr "нонильйонів"
+msgid_plural "nonillion"
+msgstr[0] "нонильйонів"
+msgstr[1] "нонильйонів"
+msgstr[2] "нонильйонів"
 
-#: src/humanize/number.py:91
+#: src/humanize/number.py:136
 msgid "decillion"
-msgstr "децильйонів"
+msgid_plural "decillion"
+msgstr[0] "децильйонів"
+msgstr[1] "децильйонів"
+msgstr[2] "децильйонів"
 
-#: src/humanize/number.py:92
+#: src/humanize/number.py:137
 msgid "googol"
-msgstr "гугола"
+msgid_plural "googol"
+msgstr[0] "гугола"
+msgstr[1] "гугола"
+msgstr[2] "гугола"
 
-#: src/humanize/number.py:147
+#: src/humanize/number.py:228
 msgid "zero"
 msgstr "нуль"
 
-#: src/humanize/number.py:148
+#: src/humanize/number.py:229
 msgid "one"
 msgstr "один"
 
-#: src/humanize/number.py:149
+#: src/humanize/number.py:230
 msgid "two"
 msgstr "два"
 
-#: src/humanize/number.py:150
+#: src/humanize/number.py:231
 msgid "three"
 msgstr "три"
 
-#: src/humanize/number.py:151
+#: src/humanize/number.py:232
 msgid "four"
 msgstr "чотири"
 
-#: src/humanize/number.py:152
+#: src/humanize/number.py:233
 msgid "five"
 msgstr "п'ять"
 
-#: src/humanize/number.py:153
+#: src/humanize/number.py:234
 msgid "six"
 msgstr "шість"
 
-#: src/humanize/number.py:154
+#: src/humanize/number.py:235
 msgid "seven"
 msgstr "сім"
 
-#: src/humanize/number.py:155
+#: src/humanize/number.py:236
 msgid "eight"
 msgstr "вісім"
 
-#: src/humanize/number.py:156
+#: src/humanize/number.py:237
 msgid "nine"
 msgstr "дев'ять"
 
-#: src/humanize/time.py:119
+#: src/humanize/time.py:133
 #, fuzzy, python-format
 msgid "%d microsecond"
 msgid_plural "%d microseconds"
@@ -157,7 +197,7 @@ msgstr[0] "%d мікросекунда"
 msgstr[1] "%d мікросекунд"
 msgstr[2] "%d мікросекунди"
 
-#: src/humanize/time.py:128
+#: src/humanize/time.py:142
 #, fuzzy, python-format
 msgid "%d millisecond"
 msgid_plural "%d milliseconds"
@@ -165,15 +205,15 @@ msgstr[0] "%d мілісекунда"
 msgstr[1] "%d мілісекунди"
 msgstr[2] "%d мілісекунди"
 
-#: src/humanize/time.py:131 src/humanize/time.py:204
+#: src/humanize/time.py:145 src/humanize/time.py:220
 msgid "a moment"
 msgstr "у цей момент"
 
-#: src/humanize/time.py:133
+#: src/humanize/time.py:147
 msgid "a second"
 msgstr "секунду"
 
-#: src/humanize/time.py:135
+#: src/humanize/time.py:149
 #, python-format
 msgid "%d second"
 msgid_plural "%d seconds"
@@ -181,11 +221,11 @@ msgstr[0] "%d секунда"
 msgstr[1] "%d секунд"
 msgstr[2] "%d секунд"
 
-#: src/humanize/time.py:137
+#: src/humanize/time.py:151
 msgid "a minute"
 msgstr "хвилина"
 
-#: src/humanize/time.py:140
+#: src/humanize/time.py:154
 #, python-format
 msgid "%d minute"
 msgid_plural "%d minutes"
@@ -193,11 +233,11 @@ msgstr[0] "%d хвилина"
 msgstr[1] "%d хвилини"
 msgstr[2] "%d хвилин"
 
-#: src/humanize/time.py:142
+#: src/humanize/time.py:156
 msgid "an hour"
 msgstr "година"
 
-#: src/humanize/time.py:145
+#: src/humanize/time.py:159
 #, python-format
 msgid "%d hour"
 msgid_plural "%d hours"
@@ -205,11 +245,11 @@ msgstr[0] "%d година"
 msgstr[1] "%d годин"
 msgstr[2] "%d годин"
 
-#: src/humanize/time.py:148
+#: src/humanize/time.py:162
 msgid "a day"
 msgstr "день"
 
-#: src/humanize/time.py:150 src/humanize/time.py:153
+#: src/humanize/time.py:164 src/humanize/time.py:167
 #, python-format
 msgid "%d day"
 msgid_plural "%d days"
@@ -217,11 +257,11 @@ msgstr[0] "%d день"
 msgstr[1] "%d дня"
 msgstr[2] "%d дні"
 
-#: src/humanize/time.py:155
+#: src/humanize/time.py:169
 msgid "a month"
 msgstr "місяць"
 
-#: src/humanize/time.py:157
+#: src/humanize/time.py:171
 #, python-format
 msgid "%d month"
 msgid_plural "%d months"
@@ -229,11 +269,11 @@ msgstr[0] "%d місяць"
 msgstr[1] "%d місяця"
 msgstr[2] "%d місяців"
 
-#: src/humanize/time.py:160
+#: src/humanize/time.py:174
 msgid "a year"
 msgstr "рік"
 
-#: src/humanize/time.py:162 src/humanize/time.py:171
+#: src/humanize/time.py:176 src/humanize/time.py:185
 #, python-format
 msgid "1 year, %d day"
 msgid_plural "1 year, %d days"
@@ -241,11 +281,11 @@ msgstr[0] "1 рік, %d день"
 msgstr[1] "1 рік, %d дня"
 msgstr[2] "1 рік, %d днів"
 
-#: src/humanize/time.py:165
+#: src/humanize/time.py:179
 msgid "1 year, 1 month"
 msgstr "1 рік, 1 місяць"
 
-#: src/humanize/time.py:168
+#: src/humanize/time.py:182
 #, python-format
 msgid "1 year, %d month"
 msgid_plural "1 year, %d months"
@@ -253,7 +293,7 @@ msgstr[0] "1 рік, %d місяць"
 msgstr[1] "1 рік, %d місяця"
 msgstr[2] "1 рік, %d місяців"
 
-#: src/humanize/time.py:173
+#: src/humanize/time.py:187
 #, python-format
 msgid "%d year"
 msgid_plural "%d years"
@@ -261,33 +301,33 @@ msgstr[0] "%d рік"
 msgstr[1] "%d роки"
 msgstr[2] "%d років"
 
-#: src/humanize/time.py:201
+#: src/humanize/time.py:217
 #, python-format
 msgid "%s from now"
 msgstr "через %s"
 
-#: src/humanize/time.py:201
+#: src/humanize/time.py:217
 #, python-format
 msgid "%s ago"
 msgstr "%s назад"
 
-#: src/humanize/time.py:205
+#: src/humanize/time.py:221
 msgid "now"
 msgstr "зараз"
 
-#: src/humanize/time.py:227
+#: src/humanize/time.py:244
 msgid "today"
 msgstr "сьогодні"
 
-#: src/humanize/time.py:229
+#: src/humanize/time.py:246
 msgid "tomorrow"
 msgstr "завтра"
 
-#: src/humanize/time.py:231
+#: src/humanize/time.py:248
 msgid "yesterday"
 msgstr "вчора"
 
-#: src/humanize/time.py:498
+#: src/humanize/time.py:534
 #, python-format
 msgid "%s and %s"
 msgstr ""

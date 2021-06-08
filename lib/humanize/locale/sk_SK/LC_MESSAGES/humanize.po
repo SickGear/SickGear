@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: humanize\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2020-09-29 21:07+0300\n"
+"POT-Creation-Date: 2021-04-30 22:34+0200\n"
 "PO-Revision-Date: 2020-09-29 22:43+0300\n"
 "Last-Translator: Jose Riha <jose1711 gmail com>\n"
 "Language-Team: sk <LL@li.org>\n"
@@ -18,141 +18,181 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=3; plural=(n==1) ? 0 : (n>=2 && n<=4) ? 1 : 2;\n"
 
-#: src/humanize/number.py:31
+#: src/humanize/number.py:56
 msgctxt "0"
 msgid "th"
 msgstr "."
 
-#: src/humanize/number.py:32
+#: src/humanize/number.py:57
 msgctxt "1"
 msgid "st"
 msgstr "."
 
-#: src/humanize/number.py:33
+#: src/humanize/number.py:58
 msgctxt "2"
 msgid "nd"
 msgstr "."
 
-#: src/humanize/number.py:34
+#: src/humanize/number.py:59
 msgctxt "3"
 msgid "rd"
 msgstr "."
 
-#: src/humanize/number.py:35
+#: src/humanize/number.py:60
 msgctxt "4"
 msgid "th"
 msgstr "."
 
-#: src/humanize/number.py:36
+#: src/humanize/number.py:61
 msgctxt "5"
 msgid "th"
 msgstr "."
 
-#: src/humanize/number.py:37
+#: src/humanize/number.py:62
 msgctxt "6"
 msgid "th"
 msgstr "."
 
-#: src/humanize/number.py:38
+#: src/humanize/number.py:63
 msgctxt "7"
 msgid "th"
 msgstr "."
 
-#: src/humanize/number.py:39
+#: src/humanize/number.py:64
 msgctxt "8"
 msgid "th"
 msgstr "."
 
-#: src/humanize/number.py:40
+#: src/humanize/number.py:65
 msgctxt "9"
 msgid "th"
 msgstr "."
 
-#: src/humanize/number.py:82
+#: src/humanize/number.py:126
+msgid "thousand"
+msgid_plural "thousand"
+msgstr[0] ""
+msgstr[1] ""
+msgstr[2] ""
+
+#: src/humanize/number.py:127
 msgid "million"
-msgstr "milióna/ov"
+msgid_plural "million"
+msgstr[0] "milióna/ov"
+msgstr[1] "milióna/ov"
+msgstr[2] "milióna/ov"
 
-#: src/humanize/number.py:83
+#: src/humanize/number.py:128
 msgid "billion"
-msgstr "miliardy/árd"
+msgid_plural "billion"
+msgstr[0] "miliardy/árd"
+msgstr[1] "miliardy/árd"
+msgstr[2] "miliardy/árd"
 
-#: src/humanize/number.py:84
+#: src/humanize/number.py:129
 msgid "trillion"
-msgstr "bilióna/ov"
+msgid_plural "trillion"
+msgstr[0] "bilióna/ov"
+msgstr[1] "bilióna/ov"
+msgstr[2] "bilióna/ov"
 
-#: src/humanize/number.py:85
+#: src/humanize/number.py:130
 msgid "quadrillion"
-msgstr "biliardy/árd"
+msgid_plural "quadrillion"
+msgstr[0] "biliardy/árd"
+msgstr[1] "biliardy/árd"
+msgstr[2] "biliardy/árd"
 
-#: src/humanize/number.py:86
+#: src/humanize/number.py:131
 msgid "quintillion"
-msgstr "trilióna/árd"
+msgid_plural "quintillion"
+msgstr[0] "trilióna/árd"
+msgstr[1] "trilióna/árd"
+msgstr[2] "trilióna/árd"
 
-#: src/humanize/number.py:87
+#: src/humanize/number.py:132
 msgid "sextillion"
-msgstr "triliardy/árd"
+msgid_plural "sextillion"
+msgstr[0] "triliardy/árd"
+msgstr[1] "triliardy/árd"
+msgstr[2] "triliardy/árd"
 
-#: src/humanize/number.py:88
+#: src/humanize/number.py:133
 msgid "septillion"
-msgstr "kvadrilióna/ov"
+msgid_plural "septillion"
+msgstr[0] "kvadrilióna/ov"
+msgstr[1] "kvadrilióna/ov"
+msgstr[2] "kvadrilióna/ov"
 
-#: src/humanize/number.py:89
+#: src/humanize/number.py:134
 msgid "octillion"
-msgstr "kvadriliardy/árd"
+msgid_plural "octillion"
+msgstr[0] "kvadriliardy/árd"
+msgstr[1] "kvadriliardy/árd"
+msgstr[2] "kvadriliardy/árd"
 
-#: src/humanize/number.py:90
+#: src/humanize/number.py:135
 msgid "nonillion"
-msgstr "kvintilióna/ov"
+msgid_plural "nonillion"
+msgstr[0] "kvintilióna/ov"
+msgstr[1] "kvintilióna/ov"
+msgstr[2] "kvintilióna/ov"
 
-#: src/humanize/number.py:91
+#: src/humanize/number.py:136
 msgid "decillion"
-msgstr "kvintiliardy/árd"
+msgid_plural "decillion"
+msgstr[0] "kvintiliardy/árd"
+msgstr[1] "kvintiliardy/árd"
+msgstr[2] "kvintiliardy/árd"
 
-#: src/humanize/number.py:92
+#: src/humanize/number.py:137
 msgid "googol"
-msgstr "googola/ov"
+msgid_plural "googol"
+msgstr[0] "googola/ov"
+msgstr[1] "googola/ov"
+msgstr[2] "googola/ov"
 
-#: src/humanize/number.py:147
+#: src/humanize/number.py:228
 msgid "zero"
 msgstr "nula"
 
-#: src/humanize/number.py:148
+#: src/humanize/number.py:229
 msgid "one"
 msgstr "jedna"
 
-#: src/humanize/number.py:149
+#: src/humanize/number.py:230
 msgid "two"
 msgstr "dve"
 
-#: src/humanize/number.py:150
+#: src/humanize/number.py:231
 msgid "three"
 msgstr "tri"
 
-#: src/humanize/number.py:151
+#: src/humanize/number.py:232
 msgid "four"
 msgstr "štyri"
 
-#: src/humanize/number.py:152
+#: src/humanize/number.py:233
 msgid "five"
 msgstr "päť"
 
-#: src/humanize/number.py:153
+#: src/humanize/number.py:234
 msgid "six"
 msgstr "šesť"
 
-#: src/humanize/number.py:154
+#: src/humanize/number.py:235
 msgid "seven"
 msgstr "sedem"
 
-#: src/humanize/number.py:155
+#: src/humanize/number.py:236
 msgid "eight"
 msgstr "osem"
 
-#: src/humanize/number.py:156
+#: src/humanize/number.py:237
 msgid "nine"
 msgstr "deväť"
 
-#: src/humanize/time.py:119
+#: src/humanize/time.py:133
 #, fuzzy, python-format
 msgid "%d microsecond"
 msgid_plural "%d microseconds"
@@ -160,7 +200,7 @@ msgstr[0] "%d mikrosekundu"
 msgstr[1] "%d mikrosekundy"
 msgstr[2] "%d mikrosekúnd"
 
-#: src/humanize/time.py:128
+#: src/humanize/time.py:142
 #, fuzzy, python-format
 msgid "%d millisecond"
 msgid_plural "%d milliseconds"
@@ -168,15 +208,15 @@ msgstr[0] "%d milisekundu"
 msgstr[1] "%d milisekundy"
 msgstr[2] "%d milisekúnd"
 
-#: src/humanize/time.py:131 src/humanize/time.py:204
+#: src/humanize/time.py:145 src/humanize/time.py:220
 msgid "a moment"
 msgstr "chvíľku"
 
-#: src/humanize/time.py:133
+#: src/humanize/time.py:147
 msgid "a second"
 msgstr "sekundu"
 
-#: src/humanize/time.py:135
+#: src/humanize/time.py:149
 #, python-format
 msgid "%d second"
 msgid_plural "%d seconds"
@@ -184,11 +224,11 @@ msgstr[0] "%d sekundu"
 msgstr[1] "%d sekundy"
 msgstr[2] "%d sekúnd"
 
-#: src/humanize/time.py:137
+#: src/humanize/time.py:151
 msgid "a minute"
 msgstr "minútu"
 
-#: src/humanize/time.py:140
+#: src/humanize/time.py:154
 #, python-format
 msgid "%d minute"
 msgid_plural "%d minutes"
@@ -196,11 +236,11 @@ msgstr[0] "%d minútu"
 msgstr[1] "%d minúty"
 msgstr[2] "%d minút"
 
-#: src/humanize/time.py:142
+#: src/humanize/time.py:156
 msgid "an hour"
 msgstr "hodinu"
 
-#: src/humanize/time.py:145
+#: src/humanize/time.py:159
 #, python-format
 msgid "%d hour"
 msgid_plural "%d hours"
@@ -208,11 +248,11 @@ msgstr[0] "%d hodina"
 msgstr[1] "%d hodiny"
 msgstr[2] "%d hodín"
 
-#: src/humanize/time.py:148
+#: src/humanize/time.py:162
 msgid "a day"
 msgstr "deň"
 
-#: src/humanize/time.py:150 src/humanize/time.py:153
+#: src/humanize/time.py:164 src/humanize/time.py:167
 #, python-format
 msgid "%d day"
 msgid_plural "%d days"
@@ -220,11 +260,11 @@ msgstr[0] "%d deň"
 msgstr[1] "%d dni"
 msgstr[2] "%d dní"
 
-#: src/humanize/time.py:155
+#: src/humanize/time.py:169
 msgid "a month"
 msgstr "mesiac"
 
-#: src/humanize/time.py:157
+#: src/humanize/time.py:171
 #, python-format
 msgid "%d month"
 msgid_plural "%d months"
@@ -232,11 +272,11 @@ msgstr[0] "%d mesiac"
 msgstr[1] "%d mesiace"
 msgstr[2] "%d mesiacov"
 
-#: src/humanize/time.py:160
+#: src/humanize/time.py:174
 msgid "a year"
 msgstr "rok"
 
-#: src/humanize/time.py:162 src/humanize/time.py:171
+#: src/humanize/time.py:176 src/humanize/time.py:185
 #, python-format
 msgid "1 year, %d day"
 msgid_plural "1 year, %d days"
@@ -244,11 +284,11 @@ msgstr[0] "1 rok, %d deň"
 msgstr[1] "1 rok, %d dni"
 msgstr[2] "1 rok, %d dní"
 
-#: src/humanize/time.py:165
+#: src/humanize/time.py:179
 msgid "1 year, 1 month"
 msgstr "1 rok, 1 mesiac"
 
-#: src/humanize/time.py:168
+#: src/humanize/time.py:182
 #, python-format
 msgid "1 year, %d month"
 msgid_plural "1 year, %d months"
@@ -256,7 +296,7 @@ msgstr[0] "1 rok, %d mesiac"
 msgstr[1] "1 rok, %d mesiace"
 msgstr[2] "1 rok, %d mesiacov"
 
-#: src/humanize/time.py:173
+#: src/humanize/time.py:187
 #, python-format
 msgid "%d year"
 msgid_plural "%d years"
@@ -264,33 +304,33 @@ msgstr[0] "%d rok"
 msgstr[1] "%d roky"
 msgstr[2] "%d rokov"
 
-#: src/humanize/time.py:201
+#: src/humanize/time.py:217
 #, python-format
 msgid "%s from now"
 msgstr "o %s"
 
-#: src/humanize/time.py:201
+#: src/humanize/time.py:217
 #, python-format
 msgid "%s ago"
 msgstr "%s naspäť"
 
-#: src/humanize/time.py:205
+#: src/humanize/time.py:221
 msgid "now"
 msgstr "teraz"
 
-#: src/humanize/time.py:227
+#: src/humanize/time.py:244
 msgid "today"
 msgstr "dnes"
 
-#: src/humanize/time.py:229
+#: src/humanize/time.py:246
 msgid "tomorrow"
 msgstr "zajtra"
 
-#: src/humanize/time.py:231
+#: src/humanize/time.py:248
 msgid "yesterday"
 msgstr "včera"
 
-#: src/humanize/time.py:498
+#: src/humanize/time.py:534
 #, python-format
 msgid "%s and %s"
 msgstr ""

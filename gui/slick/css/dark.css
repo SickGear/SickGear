@@ -1545,6 +1545,10 @@ thead.tablesorter-stickyHeader{
 	background-color:#2e2e2e
 }
 
+.sort-size-type.tablesorter-headerSorted{
+	background-color:#2c6590
+}
+
 .tablesorter tr.tablesorter-filter-row,
 .tablesorter tr.tablesorter-filter-row td{
 	text-align:center;
@@ -1552,16 +1556,36 @@ thead.tablesorter-stickyHeader{
 	border-bottom:1px solid #111
 }
 
+.tablesorter-filter-row input[type="search"]{
+	box-shadow:inset rgba(255, 255, 255, 0.2) 0 1px 0
+}
+
+#tfoot{
+	text-shadow:-1px -1px 0 rgba(0, 0, 0, 0.3)
+}
+
+#tfoot,
 .tablesorter tfoot tr{
 	color:#ddd;
 	text-align:center;
-	text-shadow:-1px -1px 0 rgba(0, 0, 0, 0.3);
-	background-color:#333;
+	background-color:#333
+}
+
+.tablesorter tfoot tr{
 	border-collapse:collapse
 }
 
 .tablesorter tfoot a{
 	color:#ddd
+}
+
+#bulk-change-table .tablesorter-filter-row,
+#bulk-change-table .tablesorter-filter-row td,
+#bulk-change-table-sticky .tablesorter-filter-row,
+#bulk-change-table-sticky .tablesorter-filter-row td,
+#tfoot{
+	background:#282828;
+	border-bottom:0
 }
 
 #showListTable tbody{

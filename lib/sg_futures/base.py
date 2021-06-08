@@ -16,7 +16,7 @@ class GenericWorkItem(_WorkItem):
 
     def _set_thread_name(self):
         try:
-            ct = threading.currentThread()
+            ct = threading.current_thread()
             ct.name = '%s^WEB%s' % (self.args[0].__class__.__name__.upper(), self.number_regex.search(ct.name).group(1))
         except (BaseException, Exception):
             pass

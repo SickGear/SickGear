@@ -30,7 +30,6 @@ import shutil
 import socket
 import time
 import uuid
-import subprocess
 import sys
 
 try:
@@ -53,8 +52,8 @@ import requests.exceptions
 import subliminal
 from lxml_etree import etree, is_lxml
 
-from _23 import b64decodebytes, b64encodebytes, decode_bytes, decode_str, filter_iter, Popen, scandir
-from six import iteritems, PY2, string_types, text_type
+from _23 import b64decodebytes, b64encodebytes, decode_bytes, decode_str, filter_iter, scandir
+from six import iteritems, string_types, text_type
 # noinspection PyUnresolvedReferences
 from six.moves import zip
 
@@ -270,7 +269,7 @@ def make_dir(path):
     if not ek.ek(os.path.isdir, path):
         try:
             ek.ek(os.makedirs, path)
-            # do the library update for synoindex
+            # do a Synology library update
             notifiers.NotifierFactory().get('SYNOINDEX').addFolder(path)
         except OSError:
             return False
@@ -543,7 +542,7 @@ def delete_empty_folders(check_empty_dir, keep_dir=None):
                 logger.log(u"Deleting empty folder: " + check_empty_dir)
                 # need shutil.rmtree when ignore_items is really implemented
                 ek.ek(os.rmdir, check_empty_dir)
-                # do the library update for synoindex
+                # do a Synology library update
                 notifiers.NotifierFactory().get('SYNOINDEX').deleteFolder(check_empty_dir)
             except OSError as e:
                 logger.log(u"Unable to delete " + check_empty_dir + ": " + repr(e) + " / " + ex(e), logger.WARNING)
@@ -1169,6 +1168,28 @@ def get_size(start_path='.'):
         return 0
 
 
+def get_media_stats(start_path='.'):
+    # type: (AnyStr) -> Tuple[int, int, int, int]
+    """
+    return recognised media stats for a folder as...
+
+    number of media files, smallest size in bytes, largest size in bytes, average size in bytes
+
+    :param start_path: path to scan
+    """
+    if ek.ek(os.path.isdir, start_path):
+        sizes = sorted(map(lambda y: y.stat(follow_symlinks=False).st_size,
+                           filter(lambda x: has_media_ext(x.name), scantree(start_path))))
+        if sizes:
+            return len(sizes), sizes[0], sizes[-1], int(sum(sizes) / len(sizes))
+
+    elif ek.ek(os.path.isfile, start_path):
+        size = ek.ek(os.path.getsize, start_path)
+        return 1, size, size, size
+
+    return 0, 0, 0, 0
+
+
 def remove_article(text=''):
     """
     remove articles from text
@@ -1313,8 +1334,7 @@ def check_port(host, port, timeout=1.0):
         s = None
         try:
             s = socket.socket(af, socktype, proto)
-            # See http://groups.google.com/group/cherrypy-users/
-            #        browse_frm/thread/bbfe5eb39c904fe0
+            # See http://groups.google.com/group/cherrypy-users/browse_frm/thread/bbfe5eb39c904fe0
             s.settimeout(timeout)
             s.connect((host, port))
             s.close()
@@ -1587,15 +1607,13 @@ def get_overview(ep_status, show_quality, upgrade_once, split_snatch=False):
 
 
 def generate_show_dir_name(root_dir, show_name):
+    # type: (Optional[AnyStr], AnyStr) -> AnyStr
     """
     generate show dir name
 
     :param root_dir: root dir
-    :type root_dir: Optional[AnyStr]
     :param show_name: show name
-    :type show_name: AnyStr
     :return: show dir name
-    :rtype: AnyStr
     """
     san_show_name = sanitize_filename(show_name)
     if sickbeard.SHOW_DIRS_WITH_DOTS:
@@ -1781,32 +1799,6 @@ def xhtml_escape(text, br=True):
     if br:
         text = re.sub(r'\r?\n', '<br>', text)
     return escape.xhtml_escape(text)
-
-
-def cmdline_runner(cmd, shell=False):
-    # type: (Union[AnyStr, List[AnyStr]], bool) -> Tuple[AnyStr, Optional[AnyStr], int]
-    """ Execute a child program in a new process.
-
-    Can raise an exception to be caught in callee
-
-    :param cmd: A string, or a sequence of program arguments
-    :param shell: If true, the command will be executed through the shell.
-    """
-    kw = dict(cwd=sickbeard.PROG_DIR, shell=shell,
-              stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-
-    if not PY2:
-        kw.update(dict(encoding=sickbeard.SYS_ENCODING, text=True, bufsize=0))
-
-    if 'win32' == sys.platform:
-        kw['creationflags'] = 0x08000000   # CREATE_NO_WINDOW (needed for py2exe)
-
-    with Popen(cmd, **kw) as p:
-        out, err = p.communicate()
-        if out:
-            out = out.strip()
-
-        return out, err, p.returncode
 
 
 def parse_imdb_id(string):

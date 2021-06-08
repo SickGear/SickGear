@@ -3,6 +3,7 @@
 #import urllib
 #from sickbeard.common import Quality, SNATCHED_ANY, DOWNLOADED, ARCHIVED, FAILED
 #from sickbeard.helpers import anon_url
+#from sickbeard.show_name_helpers import abbr_showname
 <% def sg_var(varname, default=False): return getattr(sickbeard, varname, default) %>#slurp#
 <% def sg_str(varname, default=''): return getattr(sickbeard, varname, default) %>#slurp#
 #slurp
@@ -167,20 +168,18 @@
 									<div class="menu-item-desc opacity60">trends, tailored suggestions...</div></a></li>
 								<li><a href="$sbRoot/add-shows/imdb-default/" tabindex="$tab#set $tab += 1#"><i class="sgicon-imdb"></i>IMDb Cards
 									<div class="menu-item-desc opacity60">popular decades, watchlists...</div></a></li>
-#set $mc_mode = 'new seasons'
 #set $mc_modes = dict(mc_90days='last 90 days', mc_year='by year', mc_discussed='most discussed', mc_shared='most shared')
-#if $sg_var('MC_MRU') in $mc_modes
-    #set $mc_mode = $mc_modes[$sg_var('MC_MRU')]
-#end if
+#set $mc_mode = $mc_modes.get($sg_var('MC_MRU'), 'new seasons')
 								<li><a href="$sbRoot/add-shows/mc-default/" tabindex="$tab#set $tab += 1#"><i class="sgicon-metac"></i>Metacritic Cards
 									<div class="menu-item-desc opacity60">$mc_mode...</div></a></li>
-#set $tvc_mode = 'new shows'
 #set $tvc_modes = dict(tvc_newshows='new shows', tvc_returning='returning', tvc_latest='latest')
-#if $sg_var('TVC_MRU') in $tvc_modes
-    #set $tvc_mode = $tvc_modes[$sg_var('TVC_MRU')]
-#end if
+#set $tvc_mode = $tvc_modes.get($sg_var('TVC_MRU'), 'new shows')
 								<li><a href="$sbRoot/add-shows/tvc-default/" tabindex="$tab#set $tab += 1#"><i class="sgicon-tvc"></i>TV Calendar Cards
 									<div class="menu-item-desc opacity60">$tvc_mode...</div></a></li>
+#set $ne_modes = dict(ne_newpop='new popular', ne_newtop='new top rated', ne_upcoming='upcoming', ne_trending='trending')
+#set $ne_mode = $ne_modes.get($sg_var('NE_MRU'), 'new popular')
+								<li><a href="$sbRoot/add-shows/ne-default/" tabindex="$tab#set $tab += 1#"><i class="sgicon-ne"></i>Next Episode Cards
+									<div class="menu-item-desc opacity60">$ne_mode...</div></a></li>
 #if $sg_var('USE_ANIDB')
 								<li><a href="$sbRoot/add-shows/anime-default/" tabindex="$tab#set $tab += 1#"><div class="img-anime-16 square-16"></div>Anime Cards
 									<div class="menu-item-desc opacity60">browse anime to add</div></a></li>
@@ -196,7 +195,7 @@
 #else
     #for item in $added_last
         #if $hasattr($item, 'tvid_prodid')
-									<li><a href="$sbRoot/home/view-show?tvid_prodid=$item.tvid_prodid" tabindex="$tab#set $tab += 1#"><i class="sgicon-addshow"></i><span class="truncate">$item.name</span></a></li>
+									<li><a href="$sbRoot/home/view-show?tvid_prodid=$item.tvid_prodid" tabindex="$tab#set $tab += 1#"><i class="sgicon-addshow"></i><span class="truncate">$abbr_showname($item.name)</span></a></li>
         #end if
     #end for
 #end if

@@ -2497,7 +2497,7 @@ class CMD_SickGearRestart(ApiCall):
 
     def run(self):
         """ restart sickgear """
-        sickbeard.events.put(sickbeard.events.SystemEvent.RESTART)
+        sickbeard.restart(soft=False)
         return _responds(RESULT_SUCCESS, msg="SickGear is restarting...")
 
 
@@ -3306,8 +3306,9 @@ class CMD_SickGearShowAddExisting(ApiCall):
              "optionalParameters": {"initial": {"desc": "initial quality for the show"},
                                     "archive": {"desc": "archive quality for the show"},
                                     "upgrade_once": {"desc": "upgrade only once"},
-                                    "flatten_folders": {"desc": "flatten subfolders for the show"},
-                                    "subtitles": {"desc": "allow search episode subtitle"}
+                                    "pause": {"desc": "pause show search tasks to allow edits"},
+                                    "subtitles": {"desc": "allow search episode subtitle"},
+                                    "flatten_folders": {"desc": "flatten subfolders for the show"}
                                     }
              }
 
@@ -3322,6 +3323,7 @@ class CMD_SickGearShowAddExisting(ApiCall):
         self.archive, args = self.check_params(args, kwargs, "archive", None, False, "list", [q for q in quality_map])
         self.upgradeonce, args = self.check_params(args, kwargs, "upgrade_once", False, False, "bool", [])
 
+        self.pause, args = self.check_params(args, kwargs, "pause", int(sickbeard.PAUSE_DEFAULT), False, "int", [])
         self.flatten_folders, args = self.check_params(args, kwargs, "flatten_folders",
                                                        str(sickbeard.FLATTEN_FOLDERS_DEFAULT), False, "bool", [])
         self.subtitles, args = self.check_params(args, kwargs, "subtitles", int(sickbeard.USE_SUBTITLES), False, "int",
@@ -3379,9 +3381,11 @@ class CMD_SickGearShowAddExisting(ApiCall):
         if iqualityID or aqualityID:
             newQuality = Quality.combineQualities(iqualityID, aqualityID)
 
-        sickbeard.show_queue_scheduler.action.addShow(int(self.tvid), int(self.prodid), self.location, SKIPPED,
-                                                      newQuality, int(self.flatten_folders),
-                                                      upgrade_once=self.upgradeonce)
+        sickbeard.show_queue_scheduler.action.add_show(
+            int(self.tvid), int(self.prodid), self.location,
+            quality=newQuality, upgrade_once=self.upgradeonce,
+            paused=self.pause, default_status=SKIPPED, flatten_folders=int(self.flatten_folders)
+        )
 
         return _responds(RESULT_SUCCESS, {"name": indexerName}, indexerName + " has been queued to be added")
 
@@ -3436,14 +3440,15 @@ class CMD_SickGearShowAddNew(ApiCall):
         self.initial, args = self.check_params(args, kwargs, "initial", None, False, "list", [q for q in quality_map])
         self.archive, args = self.check_params(args, kwargs, "archive", None, False, "list", [q for q in quality_map])
         self.upgradeonce, args = self.check_params(args, kwargs, "upgrade_once", False, False, "bool", [])
-        self.flatten_folders, args = self.check_params(args, kwargs, "flatten_folders",
-                                                       str(sickbeard.FLATTEN_FOLDERS_DEFAULT), False, "bool", [])
+        self.pause, args = self.check_params(args, kwargs, "pause", int(sickbeard.PAUSE_DEFAULT), False, "int", [])
         self.status, args = self.check_params(args, kwargs, "status", None, False, "string",
                                               ["wanted", "skipped", "archived", "ignored"])
+        self.scene, args = self.check_params(args, kwargs, "scene", int(sickbeard.SCENE_DEFAULT), False, "int", [])
         self.subtitles, args = self.check_params(
             args, kwargs, "subtitles", int(sickbeard.USE_SUBTITLES), False, "int", [])
+        self.flatten_folders, args = self.check_params(args, kwargs, "flatten_folders",
+                                                       str(sickbeard.FLATTEN_FOLDERS_DEFAULT), False, "bool", [])
         self.anime, args = self.check_params(args, kwargs, "anime", int(sickbeard.ANIME_DEFAULT), False, "int", [])
-        self.scene, args = self.check_params(args, kwargs, "scene", int(sickbeard.SCENE_DEFAULT), False, "int", [])
         self.lang = 'en'
 
         # super, missing, help
@@ -3539,10 +3544,13 @@ class CMD_SickGearShowAddNew(ApiCall):
             else:
                 helpers.chmod_as_parent(showPath)
 
-        sickbeard.show_queue_scheduler.action.addShow(int(self.tvid), int(self.prodid), showPath, newStatus,
-                                                      newQuality,
-                                                      int(self.flatten_folders), self.lang, self.subtitles, self.anime,
-                                                      self.scene, new_show=True, upgrade_once=self.upgradeonce)
+        sickbeard.show_queue_scheduler.action.add_show(
+            int(self.tvid), int(self.prodid), showPath,
+            quality=newQuality, upgrade_once=self.upgradeonce,
+            paused=self.pause, default_status=newStatus, scene=self.scene, subtitles=self.subtitles,
+            flatten_folders=int(self.flatten_folders), anime=self.anime,
+            new_show=True, lang=self.lang
+        )
 
         return _responds(RESULT_SUCCESS, {"name": indexerName}, indexerName + " has been queued to be added")
 
@@ -3551,15 +3559,16 @@ class CMD_ShowAddNew(CMD_SickGearShowAddNew):
     _help = {"desc": "add a new show to sickgear",
              "requiredParameters": {"tvdbid": {"desc": "thetvdb.com id"}
                                     },
-             "optionalParameters": {"initial": {"desc": "initial quality for the show"},
-                                    "location": {"desc": "base path for where the show folder is to be created"},
+             "optionalParameters": {"location": {"desc": "base path for where the show folder is to be created"},
+                                    "initial": {"desc": "initial quality for the show"},
                                     "archive": {"desc": "archive quality for the show"},
-                                    "flatten_folders": {"desc": "flatten subfolders for the show"},
+                                    "pause": {"desc": "pause show search tasks to allow edits"},
                                     "status": {"desc": "status of missing episodes"},
-                                    "lang": {"desc": "the 2 letter lang abbreviation id"},
+                                    "scene": {"desc": "show searches episodes by scene numbering"},
                                     "subtitles": {"desc": "allow search episode subtitle"},
+                                    "flatten_folders": {"desc": "flatten subfolders for the show"},
                                     "anime": {"desc": "set show to anime"},
-                                    "scene": {"desc": "show searches episodes by scene numbering"}
+                                    "lang": {"desc": "the 2 letter lang abbreviation id"}
                                     },
              "SickGearCommand": "sg.show.addnew",
              }

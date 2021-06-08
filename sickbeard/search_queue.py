@@ -418,7 +418,7 @@ class RecentSearchQueueItem(generic_queue.QueueItem):
         :param needed: needed class
         :type needed: common.NeededQualities
         """
-        orig_thread_name = threading.currentThread().name
+        orig_thread_name = threading.current_thread().name
         threads = []
 
         providers = filter_list(lambda x: x.is_active() and x.enable_recentsearch,

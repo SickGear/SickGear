@@ -713,7 +713,7 @@ class ProcessTVShow(object):
                     # Skip extraction if any file in archive has previously been extracted
                     skip_file = False
                     for file_in_archive in [ek.ek(os.path.basename, x.filename)
-                                            for x in rar_handle.infolist() if not x.isdir()]:
+                                            for x in rar_handle.infolist() if not x.is_dir()]:
                         if self._already_postprocessed(path, file_in_archive, force):
                             self._log_helper(
                                 u'Archive file already processed, extraction skipped: ' + file_in_archive)
@@ -727,7 +727,7 @@ class ProcessTVShow(object):
 
                         rar_handle.extractall(path=path)
                         rar_content = [ek.ek(os.path.normpath, x.filename)
-                                       for x in rar_handle.infolist() if not x.isdir()]
+                                       for x in rar_handle.infolist() if not x.is_dir()]
                         renamed = self.cleanup_names(path, rar_content)
                         cur_unpacked = rar_content if not renamed else \
                             (list(set(rar_content) - set(iterkeys(renamed))) + list_values(renamed))

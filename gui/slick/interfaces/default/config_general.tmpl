@@ -1,13 +1,15 @@
-#import sickbeard
+#from sys import version_info
 #import datetime
 #import locale
 #import operator
+#import sickbeard
 #from sickbeard import config,  metadata
 #from sickbeard.metadata.generic import GenericMetadata
 #from sickbeard.common import *
 #from sickbeard.db import db_supports_backup
 #from sickbeard.helpers import anon_url, maybe_plural
 #from sickbeard.logger import reverseNames as file_logging_presets
+#from sickbeard.piper import check_pip_env
 #from sickbeard.sgdatetime import *
 <% def sg_var(varname, default=False): return getattr(sickbeard, varname, default) %>#slurp#
 <% def sg_str(varname, default=''): return getattr(sickbeard, varname, default) %>#slurp#
@@ -168,50 +170,100 @@
 
 					<div class="component-group-desc">
 						<h3>Updates</h3>
-						<p>Options for software updates.</p>
+						<p>Options for software, package and alternative shownames/numbers.</p>
 					</div>
 					<fieldset class="component-group-list">
 #if not $sg_var('EXT_UPDATES')
 						<div class="field-pair">
-							<label for="version_notify">
-								<span class="component-title">Check software updates</span>
-								<span class="component-desc">
-									<input type="checkbox" name="version_notify" id="version_notify"#echo ('', $checked)[$sg_var('VERSION_NOTIFY', True)]#>
-									<p>and display notifications when updates are available.
-									Checks are run on startup and at the interval set below*</p>
-								</span>
-							</label>
+							<span class="component-title">Software updates</span>
+							<span class="component-desc">
+								<label class="nextline-block">
+									<input type="checkbox" class="views-if-interval1" name="update_notify"#echo ('', $checked)[$sg_var('UPDATE_NOTIFY', True)]#>
+									<p>display message for outdated software, run checks at startup and at interval<sup>1</sup></p>
+								</label>
+
+								<label class="nextline-block">
+									<input type="checkbox" class="views-if-interval1" name="update_auto"#echo ('', $checked)[$sg_var('UPDATE_AUTO')]#>
+									<p>update software automatically at startup and at interval<sup>1</sup></p>
+								</label>
+
+    #set $hide_interval1 = not ($sg_var('UPDATE_NOTIFY') or $sg_var('UPDATE_AUTO'))
+								<label class="nextline-block show-if-interval1" style="#if $hide_interval1#display:none;#end if#padding:6px 0">
+									<input type="text" name="update_interval" value="$sg_var('UPDATE_INTERVAL', 12)" class="form-control input-sm input75">
+									<p>hours interval<sup>1</sup> (default:$sg_var('DEFAULT_UPDATE_INTERVAL', 'n/a'))</p>
+								</label>
+
+								<label class="nextline-block show-if-interval1"#if $hide_interval1# style="display:none"#end if#>
+									<input type="checkbox" name="notify_on_update"#echo ('', $checked)[$sg_var('NOTIFY_ON_UPDATE')]#>
+									<p>send a message to all enabled notifiers when SickGear is updated</p>
+								</label>
+							</span>
 						</div>
 
 						<div class="field-pair">
-							<label for="auto_update">
-								<span class="component-title">Automatically update</span>
-								<span class="component-desc">
-									<input type="checkbox" name="auto_update" id="auto_update"#echo ('', $checked)[$sg_var('AUTO_UPDATE')]#>
-									<p>fetch and install software updates.
-									Updates are run on startup and in the background at the interval set below<sup>1</sup></p>
-								</span>
-							</label>
-						</div>
+							<span class="component-title">Package updates</span>
+							<span class="component-desc">
+								<label class="nextline-block">
+									<input type="checkbox" class="views-if-package-table views-if-interval2" name="update_packages_notify" #echo ('', $checked)[$sg_var('UPDATE_PACKAGES_NOTIFY')]#>
+									<p>display message for outdated packages, run checks at startup and at interval<sup>2</sup></p>
+								</label>
 
-						<div class="field-pair">
-							<label>
-								<span class="component-title">Check the server every<sup>1</sup></span>
-								<span class="component-desc">
-									<input type="text" name="update_interval" id="update_interval" value="$sg_var('UPDATE_INTERVAL', 12)" class="form-control input-sm input75">
-									<p>hours for software updates (default:12)</p>
-								</span>
-							</label>
-						</div>
+								<label class="nextline-block">
+									<input type="checkbox" class="views-if-package-table views-if-interval2" name="update_packages_auto"#echo ('', $checked)[$sg_var('UPDATE_PACKAGES_AUTO')]#>
+									<p>update packages automatically at startup and at interval<sup>2</sup></p>
+								</label>
 
-						<div class="field-pair">
-							<label for="notify_on_update">
-								<span class="component-title">Notify on software update</span>
-								<span class="component-desc">
-									<input type="checkbox" name="notify_on_update" id="notify_on_update"#echo ('', $checked)[$sg_var('NOTIFY_ON_UPDATE')]#>
-									<p>send a message to all enabled notifiers when SickGear has been updated</p>
-								</span>
-							</label>
+    #set $hide_interval2 = not ($sg_var('UPDATE_PACKAGES_NOTIFY') or $sg_var('UPDATE_PACKAGES_AUTO'))
+								<label class="nextline-block show-if-interval2" style="#if $hide_interval2#display:none;#end if#padding:6px 0">
+									<input type="text" name="update_packages_interval" value="$sg_var('UPDATE_PACKAGES_INTERVAL', 24)" class="form-control input-sm input75">
+									<p>hours interval<sup>2</sup> (default:$sg_var('DEFAULT_UPDATE_PACKAGES_INTERVAL', 'n/a'))</p>
+								</label>
+
+								<label class="nextline-block">
+									<input type="checkbox" class="views-if-package-table" name="update_packages_menu"#echo ('', $checked)[$sg_var('UPDATE_PACKAGES_MENU')]#>
+									<p>include in 'Check for Updates' menu action</p>
+								</label>
+    #set $hide_package_tbl = not ($sg_var('UPDATE_PACKAGES_NOTIFY') or $sg_var('UPDATE_PACKAGES_AUTO') or $sg_var('UPDATE_PACKAGES_MENU'))
+								<div class="show-if-package-table">
+    #try
+        #set $installed, $extra_info, $known_failed = $check_pip_env()
+    #except
+        #set $installed, $extra_info, $known_failed = ([], None, [])
+    #end try
+
+<style>
+.extras{padding-top:10px}
+.extras p{margin-bottom:3px}
+.extras th{padding:0 2px}
+.extras td{white-space:nowrap}
+.extras .center{text-align:center}
+.extras .package-col{width:135px;padding-left:0}
+.extras .info-col{min-width:135px;padding-left:30px}
+</style>
+									<div class="extras">
+										<table cellspacing="0" border="0" cellpadding="0">
+											<thead>
+												<tr class="grey-text">
+													<th class="package-col">package (py #echo '.'.join('%s' % n for n in sys.version_info[0:3])#)</th>
+													<th class="center">version in use</th>
+													<th class="info-col">extra info</th>
+												</tr>
+											</thead>
+											<tbody>
+    #for $item in $installed
+												<tr><td class="package-col">$item[0].lower()</td><td class="center">#echo $item[1] or '-'#</td><td class="info-col">#echo $sg_var('UPDATES_TODO', {}).get($item[0]) and 'update ready' or $extra_info.get($item[0], 'filled optional')#</td></tr>
+    #end for
+    #set $update_link = '<a href="%s/home/check-update">check update (clear failed)</a>' % $sbRoot
+    #for $item in $known_failed
+												<tr class="grey-text"><td>$item.lower()</td><td class="center">failed</td><td class="info-col">$update_link</td></tr>
+        #set $update_link = ''
+    #end for
+											</tbody>
+										</table>
+										<p class="extras">the above info may help with packages that don't update internally<br>manual installation tip: <code>python -m pip install -U --user package</code></p>
+									</div>
+								</div>
+							</span>
 						</div>
 #else
 						<div class="field-pair">

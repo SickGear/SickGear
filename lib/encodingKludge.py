@@ -19,27 +19,60 @@
 import os
 import logging
 import locale
+import sys
 
-from six import iteritems, PY2, text_type, string_types
+from six import iteritems, moves, PY2, text_type, string_types
 
 logger = logging.getLogger('encodingKludge')
 logger.addHandler(logging.NullHandler())
 
+# noinspection PyUnreachableCode
+if False:
+    # noinspection PyUnresolvedReferences
+    from typing import AnyStr
 
 SYS_ENCODING = None
-try:
-    locale.setlocale(locale.LC_ALL, '')
-except (locale.Error, IOError):
-    pass
-try:
-    SYS_ENCODING = locale.getpreferredencoding()
-except (locale.Error, IOError):
-    pass
+EXIT_BAD_ENCODING = None
 
-# For OSes that are poorly configured I'll just randomly force UTF-8
-if not SYS_ENCODING or SYS_ENCODING in ('ANSI_X3.4-1968', 'US-ASCII', 'ASCII'):
-    SYS_ENCODING = 'UTF-8'
 
+def set_sys_encoding():
+    # type: (...) -> (bool, AnyStr)
+    """Set system encoding
+
+    :return: The encoding that is set
+    """
+    sys_encoding = None
+    should_exit = False
+    try:
+        locale.setlocale(locale.LC_ALL, '')
+    except (locale.Error, IOError):
+        pass
+    try:
+        sys_encoding = locale.getpreferredencoding()
+    except (locale.Error, IOError):
+        pass
+
+    # For OSes that are poorly configured I'll just randomly force UTF-8
+    if not sys_encoding or sys_encoding in ('ANSI_X3.4-1968', 'US-ASCII', 'ASCII'):
+        sys_encoding = 'UTF-8'
+
+    if not hasattr(sys, 'setdefaultencoding'):
+        moves.reload_module(sys)
+
+    if PY2:
+        try:
+            # On non-unicode builds this raises an AttributeError,
+            # if encoding type is not valid it throws a LookupError
+            # noinspection PyUnresolvedReferences
+            sys.setdefaultencoding(sys_encoding)
+        except (BaseException, Exception):
+            should_exit = True
+
+    return should_exit, sys_encoding
+
+
+if None is EXIT_BAD_ENCODING:
+    EXIT_BAD_ENCODING, SYS_ENCODING = set_sys_encoding()
 
 # This module tries to deal with the apparently random behavior of python when dealing with unicode <-> utf-8
 # encodings. It tries to just use unicode, but if that fails then it tries forcing it to utf-8. Any functions
