@@ -1,4 +1,4 @@
-﻿### 0.24.0 (2021-xx-xx xx:xx:00 UTC)
+﻿### 0.24.0 (2021-06-08 12:50:00 UTC)
 
 * Change free up some screen real estate on manage/Bulk Change
 * Change rotate column headers on manage/Bulk Change for supported browsers to reduce screen estate waste
@@ -49,48 +49,31 @@
 * Update certifi 2020.11.08 to 2021.05.30
 
 
-[develop changelog]
-
-* Update humanize 3.1.0 (aec9dc2) to 3.2.0 (a0f03c1)
-* Update Requests library 2.25.0 (03957eb) to 2.25.0 (589c454)
-* Update Requests library 2.25.0 (589c454) to 2.25.1 (bdc00eb)
-* Update urllib3 1.26.1 (7675532) to 1.26.2 (eae04d6)
-* Change don't remember folder used during auto processing
-* Fix update runner using shell that doesn't have env path to git binary in Linux (use `git pull` to get this fix)
-* Fix under py2, a hachoir config value, without 'readline' sys.module, using the `--daemon` SG startup option, fails
-* Change remove pycryptodome from recommended.txt as only used for removed py7z
-* Add to config/General, "Package updates" > include in 'Check for Updates' menu action
-* Change startup to update packages only if package auto update is enabled or via notification
-* Change don't check direct reference specification updates if user mode
-* Update python-Levenshtein package from 0.12.0 to 0.12.2 for py3 Win
-* Change prevent python-Levenshtein 0.12.1 on non Win due to membug
-
-
-### 0.23.22 (2020-05-27 00:10:00 UTC)
+### 0.23.22 (2021-05-27 00:10:00 UTC)
 
 * Change officially move chat support to irc.libera.chat
 * Change tweak NBL API tip
 
 
-### 0.23.21 (2020-05-17 10:20:00 UTC)
+### 0.23.21 (2021-05-17 10:20:00 UTC)
 
 * Fix provider Nebulance
 * Fix provider MoreThan
 
 
-### 0.23.20 (2020-05-13 18:35:00 UTC)
+### 0.23.20 (2021-05-13 18:35:00 UTC)
 
 * Fix restart to release and free resources from previous run process
 * Change fanart lib to get_url
 
 
-### 0.23.19 (2020-05-05 21:40:00 UTC)
+### 0.23.19 (2021-05-05 21:40:00 UTC)
 
 * Fix MoreThan provider and add provider option only allow releases that are site trusted
 * Add Python 3.9 to Travis
 
 
-### 0.23.18 (2020-05-03 23:10:00 UTC)
+### 0.23.18 (2021-05-03 23:10:00 UTC)
 
 * Change allow Python 3.8.10 and 3.9.5
 * Remove PiSexy provider
@@ -102,7 +85,7 @@
 * Add webapi unit tests
 
 
-### 0.23.17 (2020-04-12 12:40:00 UTC)
+### 0.23.17 (2021-04-12 12:40:00 UTC)
 
 * Update UnRar for Windows 6.00 to 6.01 x64
 
