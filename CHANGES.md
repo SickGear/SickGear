@@ -46,6 +46,7 @@
 * Add menu Shows/"Next Episode Cards"
 * Change improve SQL performance
 * Add option "Add paused" to Options/"More Options" at the final step of adding a show
+* Update certifi 2020.11.08 to 2021.05.30
 
 
 [develop changelog]
