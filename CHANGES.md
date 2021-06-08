@@ -1,4 +1,12 @@
-﻿### 0.24.0 (2021-06-08 12:50:00 UTC)
+﻿### 0.25.0 (2021-xx-xx xx:xx:xx UTC)
+
+
+
+[develop changelog]
+
+
+
+### 0.24.0 (2021-06-08 12:50:00 UTC)
 
 * Change free up some screen real estate on manage/Bulk Change
 * Change rotate column headers on manage/Bulk Change for supported browsers to reduce screen estate waste
