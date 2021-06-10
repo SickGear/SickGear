@@ -212,7 +212,7 @@ class DBConnection(object):
                 try:
                     def sql_action(query, result):
                         cursor = self.connection.cursor()
-                        if 'SELECT' == query[0][0:6].upper():
+                        if 'SELECT' == query[0].strip()[0:6].upper():
                             result['data'].append(cursor.execute(*tuple(query)).fetchall())
                         else:
                             cursor.execute(*tuple(query)).fetchall()
