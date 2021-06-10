@@ -1,4 +1,9 @@
-﻿### 0.24.0 (2021-06-08 12:50:00 UTC)
+﻿### 0.24.1 (2021-06-10 11:30:00 UTC)
+
+* Fix handle whitespaced queries
+
+
+### 0.24.0 (2021-06-08 12:50:00 UTC)
 
 * Change free up some screen real estate on manage/Bulk Change
 * Change rotate column headers on manage/Bulk Change for supported browsers to reduce screen estate waste
