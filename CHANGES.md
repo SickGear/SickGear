@@ -6,6 +6,11 @@
 
 
 
+### 0.24.2 (2021-06-14 13:50:00 UTC)
+
+* Update UnRar x64 for Windows 6.01 to 6.02
+
+
 ### 0.24.1 (2021-06-10 11:30:00 UTC)
 
 * Fix handle whitespaced queries
