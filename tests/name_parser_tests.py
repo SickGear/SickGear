@@ -403,6 +403,13 @@ extra_info_no_name_tests = [('The Show Name', [('Episode 302', 3, 2)],
                              'REPACK.720p.AMZN.WEBRip.DDP5.1.x264'),
                             ]
 
+dupe_shows = [('The Show Name', (2, 1), 1990, [('Episode 302', 3, 2)],
+               'The.Show.Name.S03E02.REPACK.Episode.302.720p.AMZN.WEBRip.DDP5.1.x264-GROUP'),
+              ('The Show Name', (2, 2), 1995, [('Episode 302', 3, 2)],
+               'The.Show.Name.S03E02.REPACK.Episode.302.720p.AMZN.WEBRip.DDP5.1.x264-GROUP'),
+]
+
+dupe_shows_test = [('The.Show.Name.S03E02.REPACK.Episode.302.720p.AMZN.WEBRip.DDP5.1.x264-GROUP', (2, 1), 1990)]
 
 class InvalidCases(unittest.TestCase):
 
@@ -708,19 +715,70 @@ class BasicTests(unittest.TestCase):
 
 class TVShowTest(tv.TVShow):
     # noinspection PyMissingConstructor
-    def __init__(self, is_anime=False, name='', prodid=0, tvid=0):
+    def __init__(self, is_anime=False, name='', prodid=1, tvid=1, year=1990):
         self._anime = is_anime
         self._name = name
+        self._startyear = year
+        self.unique_name = name
         self.tvid = tvid
         self.prodid = prodid
         self.sid_int = self.create_sid(self.tvid, self.prodid)
         self.sxe_ep_obj = {}
+
+    def __str__(self):
+        return '%s (%s)' % (self._name, self.startyear)
 
 
 class TVEpisodeTest(tv.TVEpisode):
     # noinspection PyMissingConstructor
     def __init__(self, name=''):
         self._name = name
+        self._tvid = 1
+        self._indexer = 1
+        self.tvid = 1
+        self._epid = 1
+        self._indexerid = 1
+        self.epid = 1
+
+
+class DupeNameTests(test.SickbeardTestDBCase):
+
+    def tearDown(self):
+        super(DupeNameTests, self).tearDown()
+        sickbeard.showList = []
+        sickbeard.showDict = {}
+        name_cache.nameCache = {}
+
+    def test_dupe_names(self):
+        sickbeard.showList = []
+        sickbeard.showDict = {}
+        name_cache.nameCache = {}
+        for case in dupe_shows:
+            tvs = TVShowTest(False, case[0], case[1][1], case[1][0], case[2])
+            for e in case[3]:
+                tvs.sxe_ep_obj.setdefault(e[1], {}).update({e[2]: TVEpisodeTest(e[0])})
+
+            sickbeard.showList.append(tvs)
+            sickbeard.showDict[tvs.sid_int] = tvs
+        sickbeard.webserve.Home.make_showlist_unique_names()
+
+        for case in dupe_shows_test:
+            for cache_check in range(6):
+                should_get_show = cache_check in (1, 3, 4)
+                should_find = cache_check in (1, 3, 4)
+                show_obj = should_get_show and sickbeard.helpers.find_show_by_id({case[1][0]: case[1][1]})
+                if 3 == cache_check:
+                    show_obj = [so for so in sickbeard.showList if so != show_obj][0]
+                np = parser.NameParser(show_obj=show_obj)
+                try:
+                    result = np.parse(case[0])
+                except sickbeard.name_parser.parser.InvalidShowException:
+                    if not should_find:
+                        continue
+                    self.assertTrue(False, msg='Failed to find show')
+                if not should_find:
+                    self.assertTrue(False, msg='Found show, when it should fail')
+                self.assertEqual((show_obj.tvid, show_obj.prodid), (result.show_obj.tvid, result.show_obj.prodid))
 
 
 class ExtraInfoNoNameTests(test.SickbeardTestDBCase):

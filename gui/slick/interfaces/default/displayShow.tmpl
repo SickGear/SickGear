@@ -85,7 +85,7 @@
     #end if
     #for $cur_show_obj in $cur_showlist
         #set $show_ended = '' != $cur_show_obj.status and $cur_show_obj.status in ['ended', 'Ended', 'Canceled']
-        #set void = $displayshowlist.append('\t\t\t<option %svalue="%s"%s>%s</option>' % (('', 'class="ended" ')[$show_ended], $cur_show_obj.tvid_prodid, ('', ' selected="selected"')[$cur_show_obj == $show_obj], $cur_show_obj.name))
+        #set void = $displayshowlist.append('\t\t\t<option %svalue="%s"%s>%s</option>' % (('', 'class="ended" ')[$show_ended], $cur_show_obj.tvid_prodid, ('', ' selected="selected"')[$cur_show_obj == $show_obj], getattr($cur_show_obj, 'unique_name', $cur_show_obj.name)))
     #end for
     #if 1 < len($sortedShowLists)
         #set void = $displayshowlist.append('\t\t\t</optgroup>')

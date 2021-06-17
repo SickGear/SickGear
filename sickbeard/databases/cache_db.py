@@ -21,8 +21,8 @@ from collections import OrderedDict
 from .. import db
 
 MIN_DB_VERSION = 1
-MAX_DB_VERSION = 100002
-TEST_BASE_VERSION = 6  # the base production db version, only needed for TEST db versions (>=100000)
+MAX_DB_VERSION = 7
+TEST_BASE_VERSION = None  # the base production db version, only needed for TEST db versions (>=100000)
 
 
 # Add new migrations at the bottom of the list; subclass the previous migration.
@@ -164,4 +164,4 @@ class AddSaveQueues(AddGenericFailureHandling):
 
     def execute(self):
         self.do_query(self.queries['save_queues'])
-        self.setDBVersion(100002, check_db_version=False)
+        self.finish()

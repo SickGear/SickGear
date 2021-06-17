@@ -128,7 +128,7 @@
             #set $cur_total = 0
             #set $download_stat_tip = ''
             #set $display_status = $cur_show_obj.status
-            #set $display_name = (re.sub(r'^((?:A(?!\s+to)n?)|The)\s(\w)', r'<span class="article">\1</span> \2', $cur_show_obj.name), $cur_show_obj.name)[$sg_var('SORT_ARTICLE')]
+            #set $display_name = (re.sub(r'^((?:A(?!\s+to)n?)|The)\s(\w)', r'<span class="article">\1</span> \2', getattr($cur_show_obj, 'unique_name', $cur_show_obj.name)), getattr($cur_show_obj, 'unique_name', $cur_show_obj.name))[$sg_var('SORT_ARTICLE')]
             #set $poster_id += 1
             #if None is not $display_status
                 #if re.search(r'(?i)(?:(?:new|returning)\s*series|upcoming)', $cur_show_obj.status)
@@ -324,7 +324,7 @@
             #set $cur_downloaded = 0
             #set $cur_total = 0
             #set $download_stat_tip = ''
-            #set $display_name = (re.sub(r'^((?:A(?!\s+to)n?)|The)\s(\w)', r'<span class="article">\1</span> \2', $cur_show_obj.name), $cur_show_obj.name)[$sg_var('SORT_ARTICLE')]
+            #set $display_name = (re.sub(r'^((?:A(?!\s+to)n?)|The)\s(\w)', r'<span class="article">\1</span> \2', getattr($cur_show_obj, 'unique_name', $cur_show_obj.name)), getattr($cur_show_obj, 'unique_name', $cur_show_obj.name))[$sg_var('SORT_ARTICLE')]
             #set $poster_id += 1
             ##
             #if $cur_show_obj.tvid_prodid in $show_stat

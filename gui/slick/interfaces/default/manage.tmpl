@@ -223,7 +223,7 @@ $xsrf_form_html
     #set $curRemove = ($tip, $option_state % (('', $disabled)[$curRemove_disabled], 'remove', $tip))
 		<tr data-tvid_prodid="$cur_show_obj.tvid_prodid" data-size="$show_size">
 			<td><input type="checkbox" class="edit-check"></td>
-    #set $display_name = (re.sub(r'^((?:A(?!\s+to)n?)|The)\s(\w)', r'<span class="article">\1</span> \2', $cur_show_obj.name), $cur_show_obj.name)[$sickbeard.SORT_ARTICLE]
+    #set $display_name = (re.sub(r'^((?:A(?!\s+to)n?)|The)\s(\w)', r'<span class="article">\1</span> \2', getattr($cur_show_obj, 'unique_name', $cur_show_obj.name)), getattr($cur_show_obj, 'unique_name', $cur_show_obj.name))[$sickbeard.SORT_ARTICLE]
 			<td class="tvShow">#if not $show_loc#<i class="img-warning-16" title="Location no longer exists"></i>#end if#<a href="$sbRoot/home/view-show?tvid_prodid=${cur_show_obj.tvid_prodid}">$display_name</a></td>
 			<td colspan=2>#if 0 <= $show_size < $max#<span class="text-nowrap ui-size">$human($show_size)</span>#end if#</td>
     #if $enable_tvinfo

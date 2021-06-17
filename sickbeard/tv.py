@@ -1305,12 +1305,14 @@ class Character(Referential):
 class TVShow(TVShowBase):
     __slots__ = (
         'path',
+        'unique_name',
     )
 
     def __init__(self, tvid, prodid, lang='', show_result=None, imdb_info_result=None):
         # type: (int, int, Text, Optional[Row], Optional[Union[Row, Dict]]) -> None
         super(TVShow, self).__init__(tvid, prodid, lang)
 
+        self.unique_name = ''
         self.tvid = int(tvid)
         self.prodid = int(prodid)
         self.sid_int = self.create_sid(self.tvid, self.prodid)
@@ -3162,6 +3164,10 @@ class TVShow(TVShowBase):
         self.remove_character_images()
 
         name_cache.remove_from_namecache(self.tvid, self.prodid)
+        try:
+            sickbeard.name_parser.parser.name_parser_cache.flush(self)
+        except (BaseException, Exception):
+            pass
 
         action = ('delete', 'trash')[sickbeard.TRASH_REMOVE_SHOW]
 
@@ -3171,6 +3177,8 @@ class TVShow(TVShowBase):
             del sickbeard.showDict[self.sid_int]
         except (BaseException, Exception):
             pass
+        sickbeard.webserve.Home.make_showlist_unique_names()
+        sickbeard.MEMCACHE['history_tab'] = sickbeard.webserve.History.menu_tab(sickbeard.MEMCACHE['history_tab_limit'])
 
         try:
             tvid_prodid = self.tvid_prodid
@@ -3465,7 +3473,7 @@ class TVShow(TVShowBase):
                 try:
                     sickbeard.show_queue_scheduler.action.updateShow(
                         self, force=True, web=True, priority=QueuePriorities.VERYHIGH,
-                        pausestatus_after=pausestatus_after)
+                        pausestatus_after=pausestatus_after, switch_src=True)
                 except exceptions_helper.CantUpdateException as e:
                     logger.log('Unable to update this show. %s' % ex(e), logger.ERROR)
 

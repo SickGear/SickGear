@@ -106,6 +106,7 @@ sickbeard.CACHE_DIR = os.path.join(TESTDIR, 'cache')
 sickbeard.ZONEINFO_DIR = os.path.join(TESTDIR, 'cache', 'zoneinfo')
 create_test_cache_folder()
 sickbeard.GUI_NAME = 'slick'
+sickbeard.MEMCACHE = {'history_tab_limit': 10, 'history_tab': []}
 
 
 # =================
@@ -223,11 +224,20 @@ def teardown_test_db():
         pass
 
     for filename in glob.glob(os.path.join(TESTDIR, TESTDBNAME) + '*'):
-        os.remove(filename)
+        try:
+            os.remove(filename)
+        except (BaseException, Exception):
+            pass
     for filename in glob.glob(os.path.join(TESTDIR, TESTCACHEDBNAME) + '*'):
-        os.remove(filename)
+        try:
+            os.remove(filename)
+        except (BaseException, Exception):
+            pass
     for filename in glob.glob(os.path.join(TESTDIR, TESTFAILEDDBNAME) + '*'):
-        os.remove(filename)
+        try:
+            os.remove(filename)
+        except (BaseException, Exception):
+            pass
 
 
 def setup_test_episode_file():

@@ -48,7 +48,7 @@ import sg_helpers
 from sg_helpers import scantree
 
 import sickbeard
-from . import classes, clients, config, db, helpers, history, image_cache, logger, naming, \
+from . import classes, clients, config, db, helpers, history, image_cache, logger, name_cache, naming, \
     network_timezones, notifiers, nzbget, processTV, sab, scene_exceptions, search_queue, subtitles, ui
 from .anime import AniGroupList, pull_anidb_groups, short_group_names
 from .browser import folders_at_path
@@ -69,7 +69,7 @@ from .show_name_helpers import abbr_showname
 from .show_updater import clean_ignore_require_words
 from .trakt_helpers import build_config, trakt_collection_remove_account
 from .tv import TVidProdid, Person as TVPerson, Character as TVCharacter, TVSWITCH_NORMAL, tvswitch_names, \
-    TVSWITCH_EP_DELETED, tvswitch_ep_names, usable_id
+    TVSWITCH_EP_DELETED, tvswitch_ep_names, TVSWITCH_NORMAL, usable_id
 
 from bs4_parser import BS4Parser
 from Cheetah.Template import Template
@@ -2306,8 +2306,45 @@ class Home(MainHandler):
         return t.respond()
 
     @staticmethod
-    def sorted_show_lists():
+    def make_showlist_unique_names():
+        def titler(x):
+            return (remove_article(x), x)[not x or sickbeard.SORT_ARTICLE].lower()
 
+        sorted_show_list = sorted(sickbeard.showList, key=lambda x: titler(x.name))
+        year_check = re.compile(r' \(\d{4}\)$')
+        dups = {}
+
+        for i, val in enumerate(sorted_show_list):
+            if val.name not in dups:
+                # Store index of first occurrence and occurrence value
+                dups[val.name] = i
+                val.unique_name = val.name
+            else:
+                # remove cached parsed result
+                sickbeard.name_parser.parser.name_parser_cache.flush(val)
+                if not year_check.search(sorted_show_list[dups[val.name]].name):
+                    # add year to first show
+                    first_ep = sorted_show_list[dups[val.name]].first_aired_regular_episode
+                    start_year = (first_ep and first_ep.airdate and first_ep.airdate.year) or \
+                                 sorted_show_list[dups[val.name]].startyear
+                    if start_year:
+                        sorted_show_list[dups[val.name]].unique_name = '%s (%s)' % (
+                        sorted_show_list[dups[val.name]].name,
+                        start_year)
+                        dups[sorted_show_list[dups[val.name]].unique_name] = i
+                if not year_check.search(sorted_show_list[i].name):
+                    # add year to duplicate
+                    first_ep = sorted_show_list[i].first_aired_regular_episode
+                    start_year = (first_ep and first_ep.airdate and first_ep.airdate.year) or sorted_show_list[
+                        i].startyear
+                    if start_year:
+                        sorted_show_list[i].unique_name = '%s (%s)' % (sorted_show_list[i].name, start_year)
+                        dups[sorted_show_list[i].unique_name] = i
+
+        name_cache.buildNameCache()
+
+    @staticmethod
+    def sorted_show_lists():
         def titler(x):
             return (remove_article(x), x)[not x or sickbeard.SORT_ARTICLE].lower()
 
@@ -2316,7 +2353,7 @@ class Home(MainHandler):
             for tag in sickbeard.SHOW_TAGS:
                 results = filter_list(lambda _so: _so.tag == tag, sickbeard.showList)
                 if results:
-                    sorted_show_lists.append([tag, sorted(results, key=lambda x: titler(x.name))])
+                    sorted_show_lists.append([tag, sorted(results, key=lambda x: titler(x.unique_name))])
             # handle orphaned shows
             if len(sickbeard.showList) != sum([len(so[1]) for so in sorted_show_lists]):
                 used_ids = set()
@@ -2348,12 +2385,12 @@ class Home(MainHandler):
                     anime.append(cur_show_obj)
                 else:
                     shows.append(cur_show_obj)
-            sorted_show_lists = [['Shows', sorted(shows, key=lambda x: titler(x.name))],
-                                 ['Anime', sorted(anime, key=lambda x: titler(x.name))]]
+            sorted_show_lists = [['Shows', sorted(shows, key=lambda x: titler(x.unique_name))],
+                                 ['Anime', sorted(anime, key=lambda x: titler(x.unique_name))]]
 
         else:
             sorted_show_lists = [
-                ['Show List', sorted(sickbeard.showList, key=lambda x: titler(x.name))]]
+                ['Show List', sorted(sickbeard.showList, key=lambda x: titler(x.unique_name))]]
 
         return sorted_show_lists
 
@@ -6885,7 +6922,7 @@ class ShowTasks(Manage):
         t.defunct_indexer = defunct_sql_result
         t.not_found_shows = sql_result
 
-        failed_result = my_db.select('SELECT * FROM tv_src_switch WHERE status != 0')
+        failed_result = my_db.select('SELECT * FROM tv_src_switch WHERE status != ?', [TVSWITCH_NORMAL])
         t.failed_switch = []
         for f in failed_result:
             try:
@@ -7022,10 +7059,12 @@ class History(MainHandler):
                          and record['season'] == cur_result['season']
                          and record['episode'] == cur_result['episode']
                          and record['quality'] == cur_result['quality']) for record in compact]):
-
+                show_obj = helpers.find_show_by_id({cur_result['indexer']: cur_result['showid']}, no_mapped_ids=False,
+                                                   no_exceptions=True)
                 cur_res = dict(show_id=cur_result['showid'], indexer=cur_result['indexer'],
                                tvid_prodid=cur_result['tvid_prodid'],
-                               show_name=cur_result['show_name'],
+                               show_name=(show_obj and getattr(show_obj, 'unique_name', show_obj.name)) or
+                                    cur_result['show_name'],
                                season=cur_result['season'], episode=cur_result['episode'],
                                quality=cur_result['quality'], resource=cur_result['resource'], actions=[])
 

@@ -28,8 +28,8 @@ import encodingKludge as ek
 from six import iteritems
 
 MIN_DB_VERSION = 9  # oldest db version we support migrating from
-MAX_DB_VERSION = 100008
-TEST_BASE_VERSION = 20014  # the base production db version, only needed for TEST db versions (>=100000)
+MAX_DB_VERSION = 20015
+TEST_BASE_VERSION = None  # the base production db version, only needed for TEST db versions (>=100000)
 
 
 class MainSanityCheck(db.DBSanityCheck):
@@ -1699,9 +1699,11 @@ class AddHistoryHideColumn(db.SchemaUpgrade):
         return self.setDBVersion(20014)
 
 
-# 20014 -> 100008
+# 20014 -> 20015
 class ChangeShowData(db.SchemaUpgrade):
     def execute(self):
+        db.backup_database('sickbeard.db', self.checkDBVersion())
+
         self.upgrade_log('Adding new data columns to tv_shows')
         self.addColumns('tv_shows', [('timezone', 'TEXT', ''), ('airtime', 'NUMERIC'),
                                      ('network_country', 'TEXT', ''), ('network_country_code', 'TEXT', ''),
@@ -1913,5 +1915,4 @@ class ChangeShowData(db.SchemaUpgrade):
             self.connection.mass_action(cl)
             self.connection.action('VACUUM')
 
-        self.setDBVersion(100008)
-        return self.checkDBVersion()
+        return self.setDBVersion(20015)

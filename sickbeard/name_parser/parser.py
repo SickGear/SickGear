@@ -564,7 +564,9 @@ class NameParser(object):
             cache_result = False
 
         cached = name_parser_cache.get(name)
-        if cached:
+        show_obj_given = bool(self.show_obj)
+        if cached and ((not show_obj_given and not cached.show_obj_match)
+                       or (show_obj_given and self.show_obj == cached.show_obj)):
             return cached
 
         # break it into parts if there are any (dirname, file name, extension)
@@ -576,7 +578,8 @@ class NameParser(object):
             base_file_name = file_name
 
         # set up a result to use
-        final_result = ParseResult(name)
+        # set if parsed with given show_obj set
+        final_result = ParseResult(name, show_obj_match=show_obj_given)
 
         # try parsing the file name
         file_name_result = self._parse_string(base_file_name)
@@ -660,6 +663,7 @@ class ParseResult(LegacyParseResult):
                  score=None,
                  quality=None,
                  version=None,
+                 show_obj_match=False,
                  **kwargs):
 
         self.original_name = original_name  # type: AnyStr
@@ -694,6 +698,8 @@ class ParseResult(LegacyParseResult):
         self.score = score  # type: Optional[int]
 
         self.version = version  # type: Optional[int]
+
+        self.show_obj_match = show_obj_match  # type: bool
 
         super(ParseResult, self).__init__(**kwargs)
 

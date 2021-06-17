@@ -207,7 +207,7 @@
 #else
     #for item in $added_last
         #if $hasattr($item, 'tvid_prodid')
-									<li><a href="$sbRoot/home/view-show?tvid_prodid=$item.tvid_prodid" tabindex="$tab#set $tab += 1#"><i class="sgicon-addshow"></i><span class="truncate">$abbr_showname($item.name)</span></a></li>
+									<li><a href="$sbRoot/home/view-show?tvid_prodid=$item.tvid_prodid" tabindex="$tab#set $tab += 1#"><i class="sgicon-addshow"></i><span class="truncate">$abbr_showname(getattr($item, 'unique_name',$item.name))</span></a></li>
         #end if
     #end for
 #end if

@@ -142,7 +142,7 @@ class ShowQueue(generic_queue.GenericQueue):
                  action_id, status, uid, mark_wanted, set_pause, force_id)
                 VALUES (?,?,?,?,?,?,?,?,?,?)
                 """, [item.show_obj.tvid, item.show_obj.prodid, item.new_tvid, item.new_prodid,
-                      ShowQueueActions.SWITCH, 0, item.uid, int(item.mark_wanted), int(item.set_pause),
+                      ShowQueueActions.SWITCH, TVSWITCH_NORMAL, item.uid, int(item.mark_wanted), int(item.set_pause),
                       int(item.force_id)])
         else:
             generic_queue.GenericQueue.save_item(self, item)
@@ -1087,6 +1087,9 @@ class QueueItemAdd(ShowQueueItem):
             # add it to the show list if not already in it
             sickbeard.showList.append(self.show_obj)
             sickbeard.showDict[self.show_obj.sid_int] = self.show_obj
+            sickbeard.webserve.Home.make_showlist_unique_names()
+            sickbeard.MEMCACHE['history_tab'] = sickbeard.webserve.History.menu_tab(
+                sickbeard.MEMCACHE['history_tab_limit'])
 
         try:
             self.show_obj.load_episodes_from_tvinfo(tvinfo_data=(None, result)[
@@ -1375,6 +1378,7 @@ class QueueItemUpdate(ShowQueueItem):
 
         ShowQueueItem.run(self)
         last_update = datetime.date.fromordinal(self.show_obj.last_update_indexer)
+        old_name = self.show_obj.name
 
         if not sickbeard.TVInfoAPI(self.show_obj.tvid).config['active']:
             logger.log('TV info source %s is marked inactive, aborting update for show %s and continue with refresh.'
@@ -1478,6 +1482,10 @@ class QueueItemUpdate(ShowQueueItem):
 
         if self.priority != generic_queue.QueuePriorities.NORMAL:
             self.kwargs['priority'] = self.priority
+        if self.kwargs.get('switch_src', False) or old_name != self.show_obj.name:
+            sickbeard.webserve.Home.make_showlist_unique_names()
+            sickbeard.MEMCACHE['history_tab'] = sickbeard.webserve.History.menu_tab(
+                sickbeard.MEMCACHE['history_tab_limit'])
         if not getattr(self, 'skip_refresh', False):
             sickbeard.show_queue_scheduler.action.refreshShow(self.show_obj, self.force, self.scheduled_update,
                                                               after_update=True, force_image_cache=self.force_web,
@@ -1783,7 +1791,8 @@ class QueueItemSwitchSource(ShowQueueItem):
         # we directly update and refresh the show without queue as part of the switch
         self.progress = 'Updating from new source'
         update_show = QueueItemUpdate(show_obj=self.show_obj, skip_refresh=True, pausestatus_after=pausestatus_after,
-                                      switch=True, tvinfo_data=td, old_tvid=self.old_tvid, old_prodid=self.old_prodid)
+                                      switch=True, tvinfo_data=td, old_tvid=self.old_tvid, old_prodid=self.old_prodid,
+                                      switch_src=True)
         update_show.run()
         self.progress = 'Refreshing from disk'
         refresh_show = QueueItemRefresh(show_obj=self.show_obj, force_image_cache=True,

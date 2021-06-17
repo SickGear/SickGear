@@ -522,7 +522,12 @@ class SickGear(object):
         if not sickbeard.MEMCACHE.get('update_restart'):
             # Build from the DB to start with
             sickbeard.classes.loading_msg.message = 'Loading shows from db'
+            sickbeard.indexermapper.indexer_list = [i for i in sickbeard.TVInfoAPI().all_sources
+                                                    if sickbeard.TVInfoAPI(i).config.get('show_url')
+                                                    and True is not sickbeard.TVInfoAPI(i).config.get('people_only')]
             self.load_shows_from_db()
+            sickbeard.MEMCACHE['history_tab'] = sickbeard.webserve.History.menu_tab(
+                sickbeard.MEMCACHE['history_tab_limit'])
             if not db.DBConnection().has_flag('ignore_require_cleaned'):
                 from sickbeard.show_updater import clean_ignore_require_words
                 sickbeard.classes.loading_msg.message = 'Cleaning ignore/require words lists'
@@ -738,9 +743,11 @@ class SickGear(object):
                     show_obj.helper_load_failed_db(sql_result=failed_result)
                 sickbeard.showList.append(show_obj)
                 sickbeard.showDict[show_obj.sid_int] = show_obj
+                _ = show_obj.ids
             except (BaseException, Exception) as err:
                 logger.log('There was an error creating the show in %s: %s' % (
                     cur_result['location'], ex(err)), logger.ERROR)
+        sickbeard.webserve.Home.make_showlist_unique_names()
 
     @staticmethod
     def restore(src_dir, dst_dir):

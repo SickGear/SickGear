@@ -69,6 +69,7 @@ class SceneExceptionTestCase(test.SickbeardTestDBCase):
         for s in [TVShow(TVINFO_TVDB, 79604), TVShow(TVINFO_TVDB, 251085), TVShow(TVINFO_TVDB, 78744)]:
             sickbeard.showList.append(s)
             sickbeard.showDict[s.sid_int] = s
+        sickbeard.webserve.Home.make_showlist_unique_names()
         scene_exceptions.retrieve_exceptions()
         name_cache.buildNameCache()
 
