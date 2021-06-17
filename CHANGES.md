@@ -6,6 +6,12 @@
 
 
 
+### 0.24.3 (2021-06-17 23:00:00 UTC)
+
+* Fix view-show poster click zoom area is only accessible from top of poster image
+* Move view-show paused "II" indicator as it wasn't in a good spot anyway
+
+
 ### 0.24.2 (2021-06-14 13:50:00 UTC)
 
 * Update UnRar x64 for Windows 6.01 to 6.02
