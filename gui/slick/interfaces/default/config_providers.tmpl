@@ -745,7 +745,9 @@ name = '' if not client else get_client_instance(sickbeard.TORRENT_METHOD)().nam
 										<span>$cur_fname</span>
 									</label>
         #end for
+        #if $cur_torrent_provider.may_filter
 									<span>(see $cur_torrent_provider.name)</span>
+        #end if
 								</div>
     #end if
     #if $hasattr($cur_torrent_provider, 'reject_m2ts'):
