@@ -54,7 +54,7 @@ import requests
 import requests.cookies
 
 from _23 import decode_bytes, filter_list, filter_iter, make_btih, map_list, quote, quote_plus, urlparse
-from six import iteritems, iterkeys, itervalues, PY2
+from six import iteritems, iterkeys, itervalues, PY2, string_types
 from sg_helpers import try_int
 
 # noinspection PyUnreachableCode
@@ -1927,7 +1927,7 @@ class TorrentProvider(GenericProvider):
 
     def _authorised(self, logged_in=None, post_params=None, failed_msg=None, url=None, timeout=30, **kwargs):
 
-        maxed_out = (lambda y: re.search(
+        maxed_out = (lambda y: isinstance(y, string_types) and re.search(
             r'(?i)([1-3]((<[^>]+>)|\W)*(attempts|tries|remain)[\W\w]{,40}?(remain|left|attempt)|last[^<]+?attempt)', y))
         logged_in, failed_msg = [None is not a and a or b for (a, b) in (
             (logged_in, (lambda y=None: self.has_all_cookies())),
