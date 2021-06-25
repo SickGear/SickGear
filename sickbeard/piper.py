@@ -34,16 +34,15 @@ def is_pip_ok():
     """
     pip_ok = '/' != ek.ek(os.path.expanduser, '~')
     if pip_ok:
-        try:
-            # noinspection PyPackageRequirements,PyProtectedMember
-            import pip
-        except ImportError:
-            try:
-                import ensurepip
-                ensurepip.bootstrap()
-            except (BaseException, Exception):
-                pip_ok = False
+        pip_version, _, _ = _get_pip_version()
+        if not pip_version:
+            pip_ok = False
+            cmdline_runner([sys.executable, '-c', '"import ensurepip;ensurepip.bootstrap()"'], suppress_stderr=True)
     return pip_ok
+
+
+def _get_pip_version():
+    return cmdline_runner([sys.executable, '-c', '"from pip import __version__ as v; print(v)"'], suppress_stderr=True)
 
 
 def run_pip(pip_cmd, suppress_stderr=False):
@@ -61,8 +60,7 @@ def run_pip(pip_cmd, suppress_stderr=False):
 
     new_pip_arg = ['--no-python-version-warning']
     if PY2:
-        # noinspection PyCompatibility, PyPackageRequirements
-        from pip import __version__ as pip_version
+        pip_version, _, _ = _get_pip_version()
         if pip_version and 20 > int(pip_version.split('.')[0]):
             new_pip_arg = []
 

@@ -6,6 +6,12 @@
 
 
 
+### 0.24.4 (2021-06-25 03:00:00 UTC)
+
+* Fix issue on certain py2 setups that created mishandling of 404's
+* Add SpeedApp torrent provider
+
+
 ### 0.24.3 (2021-06-17 23:00:00 UTC)
 
 * Fix view-show poster click zoom area is only accessible from top of poster image
