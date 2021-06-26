@@ -188,10 +188,10 @@ class CastQueueItem(PeopleQueueItem):
         PeopleQueueItem.run(self)
 
         if self.show_obj:
-            logger.log('Starting cast update for show %s' % self.show_obj.name)
+            logger.log('Starting cast update for show %s' % self.show_obj.unique_name)
             old_cast = self.show_obj.cast_list_id()
             if not self.scheduled_update and not self.switch:
-                ui.notifications.message('Starting cast update for show %s' % self.show_obj.name)
+                ui.notifications.message('Starting cast update for show %s' % self.show_obj.unique_name)
             try:
                 self.show_obj.load_cast_from_tvinfo(self.show_info_cast, force=self.force, stop_event=self.stop)
                 update_success = True
@@ -204,14 +204,14 @@ class CastQueueItem(PeopleQueueItem):
                 logger.debug('Update show nfo with new cast data')
                 self.show_obj.write_show_nfo(force=True)
 
-            logger.log('Finished cast update for show %s' % self.show_obj.name)
+            logger.log('Finished cast update for show %s' % self.show_obj.unique_name)
             if not self.scheduled_update and not self.switch:
-                ui.notifications.message('Finished cast update for show %s' % self.show_obj.name)
+                ui.notifications.message('Finished cast update for show %s' % self.show_obj.unique_name)
 
         self.finish()
 
     def __str__(self):
-        return '<Cast Queue Item (%s)%s>' % (self.show_obj.name, ('', ' - forced')[self.force])
+        return '<Cast Queue Item (%s)%s>' % (self.show_obj.unique_name, ('', ' - forced')[self.force])
 
     def __repr__(self):
         return self.__str__()

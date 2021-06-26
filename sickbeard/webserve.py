@@ -69,9 +69,10 @@ from .show_name_helpers import abbr_showname
 from .show_updater import clean_ignore_require_words
 from .trakt_helpers import build_config, trakt_collection_remove_account
 from .tv import TVidProdid, Person as TVPerson, Character as TVCharacter, TVSWITCH_NORMAL, tvswitch_names, \
-    TVSWITCH_EP_DELETED, tvswitch_ep_names, TVSWITCH_NORMAL, usable_id
+    TVSWITCH_EP_DELETED, tvswitch_ep_names, usable_id
 
 from bs4_parser import BS4Parser
+# noinspection PyPackageRequirements
 from Cheetah.Template import Template
 from unidecode import unidecode
 import dateutil.parser
@@ -92,8 +93,6 @@ from lib.dateutil.relativedelta import relativedelta
 from lib.fuzzywuzzy import fuzz
 from lib.libtrakt import TraktAPI
 from lib.libtrakt.exceptions import TraktException, TraktAuthException
-# noinspection PyPep8Naming
-from lib import tmdbsimple as TMDB
 
 import lib.rarfile.rarfile as rarfile
 
@@ -116,8 +115,8 @@ class PageTemplate(Template):
         self.xsrf_form_html = re.sub(r'\s*/>$', '>', web_handler.xsrf_form_html())
         self.sbHost = headers.get('X-Forwarded-Host')
         if None is self.sbHost:
-            sbHost = headers.get('Host') or 'localhost'
-            self.sbHost = re.match('(?msx)^' + (('[^:]+', r'\[.*\]')['[' == sbHost[0]]), sbHost).group(0)
+            sb_host = headers.get('Host') or 'localhost'
+            self.sbHost = re.match('(?msx)^' + (('[^:]+', r'\[.*\]')['[' == sb_host[0]]), sb_host).group(0)
         self.sbHttpPort = sickbeard.WEB_PORT
         self.sbHttpsPort = headers.get('X-Forwarded-Port') or self.sbHttpPort
         self.sbRoot = sickbeard.WEB_ROOT
@@ -313,7 +312,7 @@ class BaseHandler(RouteHandler):
             elif 'fanart' == which[0:6]:
                 image_file_name = [cache_obj.fanart_path(
                     *tvid_prodid_obj.tuple +
-                    ('%s' % (re.sub(r'.*?fanart_(\d+(?:\.\w{1,20})?\.(?:\w{5,8})).*', r'\1.', which, 0, re.I)),))]
+                    ('%s' % (re.sub(r'.*?fanart_(\d+(?:\.\w{1,20})?\.\w{5,8}).*', r'\1.', which, 0, re.I)),))]
 
             for cur_name in image_file_name:
                 if ek.ek(os.path.isfile, cur_name):
@@ -385,7 +384,7 @@ class CalendarHandler(BaseHandler):
             self.write('User authentication required')
 
     def calendar(self):
-        """ iCalendar (iCal) - Standard RFC 5545 <http://tools.ietf.org/html/rfc5546>
+        """ iCalendar (iCal) - Standard RFC 5546 <https://datatracker.ietf.org/doc/html/rfc5546>
         Works with iCloud, Google Calendar and Outlook.
         Provides a subscribeable URL for iCal subscriptions """
 
@@ -1107,7 +1106,7 @@ class MainHandler(WebHandler):
                 continue
 
             for img in ek.ek(glob.glob, cache_obj.fanart_path(*tvid_prodid_obj.tuple).replace('fanart.jpg', '*')) or []:
-                match = re.search(r'(\d+(?:\.\w*)?\.(?:\w{5,8}))\.fanart\.', img, re.I)
+                match = re.search(r'(\d+(?:\.\w*)?\.\w{5,8})\.fanart\.', img, re.I)
                 if not match:
                     continue
                 fanart = [(match.group(1), sickbeard.FANART_RATINGS.get(tvid_prodid, {}).get(match.group(1), ''))]
@@ -2268,7 +2267,7 @@ class Home(MainHandler):
         cache_obj = image_cache.ImageCache()
         for img in ek.ek(glob.glob,
                          cache_obj.fanart_path(show_obj.tvid, show_obj.prodid).replace('fanart.jpg', '*')) or []:
-            match = re.search(r'(\d+(?:\.(\w*?(\d*)))?\.(?:\w{5,8}))\.fanart\.', img, re.I)
+            match = re.search(r'(\d+(?:\.(\w*?(\d*)))?\.\w{5,8})\.fanart\.', img, re.I)
             if match and match.group(1):
                 t.fanart += [(match.group(1),
                               sickbeard.FANART_RATINGS.get(tvid_prodid, {}).get(match.group(1), ''))]
@@ -2326,11 +2325,10 @@ class Home(MainHandler):
                     # add year to first show
                     first_ep = sorted_show_list[dups[val.name]].first_aired_regular_episode
                     start_year = (first_ep and first_ep.airdate and first_ep.airdate.year) or \
-                                 sorted_show_list[dups[val.name]].startyear
+                        sorted_show_list[dups[val.name]].startyear
                     if start_year:
                         sorted_show_list[dups[val.name]].unique_name = '%s (%s)' % (
-                        sorted_show_list[dups[val.name]].name,
-                        start_year)
+                            sorted_show_list[dups[val.name]].name, start_year)
                         dups[sorted_show_list[dups[val.name]].unique_name] = i
                 if not year_check.search(sorted_show_list[i].name):
                     # add year to duplicate
@@ -2435,14 +2433,14 @@ class Home(MainHandler):
     @staticmethod
     def scene_exceptions(tvid_prodid, wanted_season=None):
 
-        exceptionsList = sickbeard.scene_exceptions.get_all_scene_exceptions(tvid_prodid)
+        exceptions_list = sickbeard.scene_exceptions.get_all_scene_exceptions(tvid_prodid)
         wanted_season = helpers.try_int(wanted_season, None)
-        wanted_not_found = None is not wanted_season and wanted_season not in exceptionsList
-        if not exceptionsList or wanted_not_found:
+        wanted_not_found = None is not wanted_season and wanted_season not in exceptions_list
+        if not exceptions_list or wanted_not_found:
             return ('No scene exceptions', 'No season exceptions')[wanted_not_found]
 
         out = []
-        for season, names in iter(sorted(iteritems(exceptionsList))):
+        for season, names in iter(sorted(iteritems(exceptions_list))):
             if None is wanted_season or wanted_season == season:
                 out.append('S%s: %s' % (('%02d' % season, '*')[-1 == season], ',<br>\n'.join(names)))
         return '\n<hr class="exception-divider">\n'.join(out)
@@ -2580,7 +2578,7 @@ class Home(MainHandler):
         show_obj = getattr(t, 'show_obj', None) or getattr(t, 'show', None)
         for img in ek.ek(glob.glob, cache_obj.fanart_path(
                 show_obj.tvid, show_obj.prodid).replace('fanart.jpg', '*')) or []:
-            match = re.search(r'(\d+(?:\.(\w*?(\d*)))?\.(?:\w{5,8}))\.fanart\.', img, re.I)
+            match = re.search(r'(\d+(?:\.(\w*?(\d*)))?\.\w{5,8})\.fanart\.', img, re.I)
             if match and match.group(1):
                 t.fanart += [(match.group(1),
                               sickbeard.FANART_RATINGS.get(show_obj.tvid_prodid, {}).get(match.group(1), ''))]
@@ -2615,17 +2613,17 @@ class Home(MainHandler):
         exceptions_list = exceptions_list if None is not exceptions_list else []
 
         if None is tvid_prodid:
-            errString = 'Invalid show ID: ' + str(tvid_prodid)
+            err_string = 'Invalid show ID: ' + str(tvid_prodid)
             if direct_call:
-                return [errString]
-            return self._generic_message('Error', errString)
+                return [err_string]
+            return self._generic_message('Error', err_string)
 
         show_obj = helpers.find_show_by_id(tvid_prodid)
         if not show_obj:
-            errString = 'Unable to find the specified show: %s' % tvid_prodid
+            err_string = 'Unable to find the specified show: %s' % tvid_prodid
             if direct_call:
-                return [errString]
-            return self._generic_message('Error', errString)
+                return [err_string]
+            return self._generic_message('Error', err_string)
 
         show_obj.exceptions = scene_exceptions.get_all_scene_exceptions(tvid_prodid)
 
@@ -2754,8 +2752,7 @@ class Home(MainHandler):
 
         errors = []
         with show_obj.lock:
-            newQuality = Quality.combineQualities(map_list(int, any_qualities), map_list(int, best_qualities))
-            show_obj.quality = newQuality
+            show_obj.quality = Quality.combineQualities(map_list(int, any_qualities), map_list(int, best_qualities))
             show_obj.upgrade_once = upgrade_once
 
             # reversed for now
@@ -2887,7 +2884,7 @@ class Home(MainHandler):
 
         ui.notifications.message('%s with %s' % (('Deleting', 'Trashing')[sickbeard.TRASH_REMOVE_SHOW],
                                                  ('media left untouched', 'all related media')[bool(full)]),
-                                 '<b>%s</b>' % show_obj.name)
+                                 '<b>%s</b>' % show_obj.unique_name)
         self.redirect('/home/')
 
     def update_cast(self, tvid_prodid=None):
@@ -3107,7 +3104,7 @@ class Home(MainHandler):
                         season_list += u'<li>Season %s</li>' % season
                         logger.log((u'Not adding wanted eps to backlog search for %s season %s because show is paused',
                                     u'Starting backlog search for %s season %s because eps were set to wanted')[
-                                       not show_obj.paused] % (show_obj.name, season))
+                                       not show_obj.paused] % (show_obj.unique_name, season))
 
                 (title, msg) = (('Not starting backlog', u'Paused show prevented backlog search'),
                                 ('Backlog started', u'Backlog search started'))[not show_obj.paused]
@@ -3115,12 +3112,12 @@ class Home(MainHandler):
                 if segments:
                     ui.notifications.message(title,
                                              u'%s for the following seasons of <b>%s</b>:<br /><ul>%s</ul>'
-                                             % (msg, show_obj.name, season_list))
+                                             % (msg, show_obj.unique_name, season_list))
             else:
                 ui.notifications.message('Not starting backlog', 'No provider has active searching enabled')
 
         elif FAILED == status:
-            msg = u'Retrying search automatically for the following season of <b>%s</b>:<br><ul>' % show_obj.name
+            msg = u'Retrying search automatically for the following season of <b>%s</b>:<br><ul>' % show_obj.unique_name
 
             for season, segment in iteritems(segments):  # type: int, List[sickbeard.tv.TVEpisode]
                 cur_failed_queue_item = search_queue.FailedQueueItem(show_obj, segment)
@@ -3128,7 +3125,7 @@ class Home(MainHandler):
 
                 msg += '<li>Season %s</li>' % season
                 logger.log(u'Retrying search for %s season %s because some eps were set to failed' %
-                           (show_obj.name, season))
+                           (show_obj.unique_name, season))
 
             msg += '</ul>'
 
@@ -3193,14 +3190,14 @@ class Home(MainHandler):
     def do_rename(self, tvid_prodid=None, eps=None):
 
         if None is tvid_prodid or None is eps:
-            errMsg = 'You must specify a show and at least one episode'
-            return self._generic_message('Error', errMsg)
+            err_msg = 'You must specify a show and at least one episode'
+            return self._generic_message('Error', err_msg)
 
         show_obj = helpers.find_show_by_id(tvid_prodid)
 
         if None is show_obj:
-            errMsg = 'Error', 'Show not in show list'
-            return self._generic_message('Error', errMsg)
+            err_msg = 'Error', 'Show not in show list'
+            return self._generic_message('Error', err_msg)
 
         try:
             _ = show_obj.location
@@ -3497,7 +3494,7 @@ class Home(MainHandler):
                         (False, name_parts[-1] in char_name)[1 < len(name_parts)],
                         # inclusion exceptions
                         re.search('(?i)^(?:Host|Presenter)[0-9]*$', char_name),
-                        re.search('(?i)^(?:Host|Prese)', lower_name) and re.search('(?i)(?:JeremyClarkson)', char_name),
+                        re.search('(?i)^(?:Host|Prese)', lower_name) and re.search('(?i)JeremyClarkson', char_name),
                         re.search('(?i)(?:AnnaBaker|BelleStone)', char_name),
                         re.search('(?i)(?:JimmyMcgill|SaulGoodman)', char_name)
                     ]):
@@ -3740,14 +3737,14 @@ class HomeProcessMedia(Home):
         if not dir_name and ('0' == failed or not nzb_name):
             self.redirect('/home/process-media/')
         else:
-            showIdRegex = re.compile(r'^SickGear-([A-Za-z]*)(\d+)-')
+            show_id_regex = re.compile(r'^SickGear-([A-Za-z]*)(\d+)-')
             tvid = 0
             show_obj = None
             nzbget_call = isinstance(client, string_types) and 'nzbget' == client
             nzbget_dupekey = nzbget_call and isinstance(dupekey, string_types) and \
-                None is not showIdRegex.search(dupekey)
+                None is not show_id_regex.search(dupekey)
             if nzbget_dupekey:
-                m = showIdRegex.match(dupekey)
+                m = show_id_regex.match(dupekey)
                 istr = m.group(1)
                 for i in sickbeard.TVInfoAPI().sources:
                     if istr == sickbeard.TVInfoAPI(i).config.get('dupekey'):
@@ -3793,13 +3790,14 @@ class HomeProcessMedia(Home):
                                               skip_failure_processing=skip_failure_processing, client=client)
 
                 if '0' == stream:
-                    regexp = re.compile(r'(?i)<br(?:[\s/]+)>', flags=re.UNICODE)
+                    regexp = re.compile(r'(?i)<br[\s/]+>', flags=re.UNICODE)
                     result = regexp.sub('\n', result)
                     if None is not quiet and 1 == int(quiet):
                         regexp = re.compile(u'(?i)<a[^>]+>([^<]+)<[/]a>', flags=re.UNICODE)
                         return u'%s' % regexp.sub(r'\1', result)
                     return self._generic_message('Postprocessing results', u'<pre>%s</pre>' % result)
 
+    # noinspection PyPep8Naming
     def processEpisode(self, dir_name=None, nzb_name=None, process_type=None, **kwargs):
         """ legacy function name, stubbed but can _not_ be removed as this
          is potentially used in pp scripts located outside of SG path (need to verify this)
@@ -4338,6 +4336,7 @@ class AddShows(Home):
         if None is not xref_root and not len(xref_root):
             xref_root = None
 
+        # noinspection HttpUrlsUsage
         url = 'http://api.anidb.net:9001/httpapi?client=sickgear&clientver=1&protover=1&request=main'
         response = helpers.get_url(url)
         if response and None is not xref_root:
@@ -4385,6 +4384,7 @@ class AddShows(Home):
                             rated = float(counts.text)
                             rating = 100 < rated and rated / 10 or 10 > rated and 10 * rated or rated
 
+                        # noinspection HttpUrlsUsage
                         filtered.append(dict(
                             type=list_type,
                             ids=ids,
@@ -6367,12 +6367,12 @@ class Manage(MainHandler):
         if not to_edit:
             return self.redirect('/manage/')
 
-        showIDs = to_edit.split('|')
-        showList = []
-        for cur_tvid_prodid in showIDs:
+        show_ids = to_edit.split('|')
+        show_list = []
+        for cur_tvid_prodid in show_ids:
             show_obj = helpers.find_show_by_id(cur_tvid_prodid)
             if show_obj:
-                showList.append(show_obj)
+                show_list.append(show_obj)
 
         upgrade_once_all_same = True
         last_upgrade_once = None
@@ -6412,7 +6412,7 @@ class Manage(MainHandler):
 
         root_dir_list = []
 
-        for cur_show_obj in showList:
+        for cur_show_obj in show_list:
 
             # noinspection PyProtectedMember
             cur_root_dir = ek.ek(os.path.dirname, cur_show_obj._location)
@@ -6532,10 +6532,10 @@ class Manage(MainHandler):
         switch_tvid = []
         tvid = sg_helpers.try_int(tvid, tvid)
 
-        showIDs = to_edit.split('|')
+        show_ids = to_edit.split('|')
         errors = []
-        for cur_tvid_prodid in showIDs:
-            curErrors = []
+        for cur_tvid_prodid in show_ids:
+            cur_errors = []
             show_obj = helpers.find_show_by_id(cur_tvid_prodid)
             if not show_obj:
                 continue
@@ -6555,8 +6555,8 @@ class Manage(MainHandler):
                         base_dir = dir_map[cur_root_dir]
                     new_show_dir = ek.ek(os.path.join, base_dir, cur_show_dir)
                 # noinspection PyProtectedMember
-                logger.log(
-                    u'For show ' + show_obj.name + ' changing dir from ' + show_obj._location + ' to ' + new_show_dir)
+                logger.log(u'For show %s changing dir from %s to %s' %
+                           (show_obj.unique_name, show_obj._location, new_show_dir))
             else:
                 # noinspection PyProtectedMember
                 new_show_dir = show_obj._location
@@ -6627,17 +6627,17 @@ class Manage(MainHandler):
 
             exceptions_list = []
 
-            curErrors += Home(self.application, self.request).edit_show(
+            cur_errors += Home(self.application, self.request).edit_show(
                 tvid_prodid=cur_tvid_prodid, location=new_show_dir,
                 any_qualities=any_qualities, best_qualities=best_qualities, exceptions_list=exceptions_list,
                 upgrade_once=new_upgrade_once, flatten_folders=new_flatten_folders, paused=new_paused,
                 sports=new_sports, subs=new_subtitles, anime=new_anime, scene=new_scene, air_by_date=new_air_by_date,
                 prune=new_prune, tag=new_tag, direct_call=True)
 
-            if curErrors:
-                logger.log(u'Errors: ' + str(curErrors), logger.ERROR)
-                errors.append('<b>%s:</b>\n<ul>' % show_obj.name + ' '.join(
-                    ['<li>%s</li>' % error for error in curErrors]) + '</ul>')
+            if cur_errors:
+                logger.log(u'Errors: ' + str(cur_errors), logger.ERROR)
+                errors.append('<b>%s:</b>\n<ul>' % show_obj.unique_name + ' '.join(
+                    ['<li>%s</li>' % error for error in cur_errors]) + '</ul>')
 
         if 0 < len(errors):
             ui.notifications.error('%d error%s while saving changes:' % (len(errors), '' if 1 == len(errors) else 's'),
@@ -6672,14 +6672,14 @@ class Manage(MainHandler):
                         sickbeard.show_queue_scheduler.action.updateShow(cur_show_obj, True, True)
                         update.append(cur_show_obj.name)
                     except exceptions_helper.CantUpdateException as e:
-                        errors.append('Unable to update show %s: %s' % (cur_show_obj.name, ex(e)))
+                        errors.append('Unable to update show %s: %s' % (cur_show_obj.unique_name, ex(e)))
 
                 elif cur_tvid_prodid in to_refresh:
                     try:
                         sickbeard.show_queue_scheduler.action.refreshShow(cur_show_obj)
                         refresh.append(cur_show_obj.name)
                     except exceptions_helper.CantRefreshException as e:
-                        errors.append('Unable to refresh show %s: %s' % (cur_show_obj.name, ex(e)))
+                        errors.append('Unable to refresh show %s: %s' % (cur_show_obj.unique_name, ex(e)))
 
                 if cur_tvid_prodid in to_rename:
                     sickbeard.show_queue_scheduler.action.renameShowEpisodes(cur_show_obj)
@@ -7063,8 +7063,7 @@ class History(MainHandler):
                                                    no_exceptions=True)
                 cur_res = dict(show_id=cur_result['showid'], indexer=cur_result['indexer'],
                                tvid_prodid=cur_result['tvid_prodid'],
-                               show_name=(show_obj and getattr(show_obj, 'unique_name', show_obj.name)) or
-                                    cur_result['show_name'],
+                               show_name=(show_obj and show_obj.unique_name) or cur_result['show_name'],
                                season=cur_result['season'], episode=cur_result['episode'],
                                quality=cur_result['quality'], resource=cur_result['resource'], actions=[])
 
@@ -7279,9 +7278,9 @@ class History(MainHandler):
             resp = helpers.get_url('%s://%s/check.php?domain=%s' % (proto, down_url, site_url))
             if resp:
                 check = resp.lower()
-                day = re.findall(r'(\d+)\s*(?:day)', check)
-                hr = re.findall(r'(\d+)\s*(?:hour)', check)
-                mn = re.findall(r'(\d+)\s*(?:min)', check)
+                day = re.findall(r'(\d+)\s*day', check)
+                hr = re.findall(r'(\d+)\s*hour', check)
+                mn = re.findall(r'(\d+)\s*min', check)
                 if any([day, hr, mn]):
                     period = ', '.join(
                         (day and ['%sd' % day[0]] or day)
@@ -7349,6 +7348,7 @@ class History(MainHandler):
             maps = [x.split('=') for x in sickbeard.EMBY_PARENT_MAPS.split(',') if any(x)]
             args = dict(params=dict(format='json'), timeout=10, parse_json=True, failure_monitor=False)
             for i, cur_host in enumerate(hosts):
+                # noinspection HttpUrlsUsage
                 base_url = 'http://%s/emby' % cur_host
                 headers.update({'X-MediaBrowser-Token': keys[i]})
 
@@ -7458,6 +7458,7 @@ class History(MainHandler):
             mapping = None
             maps = [x.split('=') for x in sickbeard.PLEX_PARENT_MAPS.split(',') if any(x)]
             for cur_host in hosts:
+                # noinspection HttpUrlsUsage
                 parts = re.search(r'(.*):(\d+)$', urlparse('http://' + re.sub(r'^\w+://', '', cur_host)).netloc)
                 if not parts:
                     logger.log('Skipping host not in min. host:port format : %s' % cur_host, logger.WARNING)
@@ -8411,7 +8412,7 @@ class ConfigProviders(Config):
         """
         Retrieves a list of possible categories with category id's
         Using the default url/api?cat
-        http://yournewznaburl.com/api?t=caps&apikey=yourapikey
+        https://yournewznaburl.com/api?t=caps&apikey=yourapikey
         """
         error = not name and 'Name' or not url and 'Url' or not key and 'Apikey' or ''
         if error:
@@ -8438,17 +8439,17 @@ class ConfigProviders(Config):
         if not name:
             return json.dumps({'error': 'Invalid name specified'})
 
-        providerDict = dict(
+        provider_dict = dict(
             zip([x.get_id() for x in sickbeard.torrentRssProviderList], sickbeard.torrentRssProviderList))
 
-        tempProvider = rsstorrent.TorrentRssProvider(name, url, cookies)
+        temp_provider = rsstorrent.TorrentRssProvider(name, url, cookies)
 
-        if tempProvider.get_id() in providerDict:
-            return json.dumps({'error': 'A provider exists as [%s]' % providerDict[tempProvider.get_id()].name})
+        if temp_provider.get_id() in provider_dict:
+            return json.dumps({'error': 'A provider exists as [%s]' % provider_dict[temp_provider.get_id()].name})
         else:
-            (succ, errMsg) = tempProvider.validate_feed()
+            (succ, errMsg) = temp_provider.validate_feed()
             if succ:
-                return json.dumps({'success': tempProvider.get_id()})
+                return json.dumps({'success': temp_provider.get_id()})
 
             return json.dumps({'error': errMsg})
 
@@ -9024,10 +9025,10 @@ class ConfigSubtitles(Config):
         services_str_list = service_order.split()
         subtitles_services_list = []
         subtitles_services_enabled = []
-        for curServiceStr in services_str_list:
-            curService, curEnabled = curServiceStr.split(':')
-            subtitles_services_list.append(curService)
-            subtitles_services_enabled.append(int(curEnabled))
+        for cur_service in services_str_list:
+            service, enabled = cur_service.split(':')
+            subtitles_services_list.append(service)
+            subtitles_services_enabled.append(int(enabled))
 
         sickbeard.SUBTITLES_SERVICES_LIST = subtitles_services_list
         sickbeard.SUBTITLES_SERVICES_ENABLED = subtitles_services_enabled
@@ -9143,7 +9144,7 @@ class EventLogs(MainHandler):
 
         min_level = int(min_level)
 
-        regex = re.compile(r'^(?:\d{4}-\d{2}-\d{2}\s*\d{2}:\d{2}:\d{2})\s*([A-Z]+)\s*([^\s]+)\s+:{2}\s*(.*\r?\n)$')
+        regex = re.compile(r'^\d{4}-\d{2}-\d{2}\s*\d{2}:\d{2}:\d{2}\s*([A-Z]+)\s*([^\s]+)\s+:{2}\s*(.*\r?\n)$')
 
         final_data = []
         normal_data = []

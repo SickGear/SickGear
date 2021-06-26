@@ -9,7 +9,7 @@
 <% def sg_var(varname, default=False): return getattr(sickbeard, varname, default) %>#slurp#
 <% def sg_str(varname, default=''): return getattr(sickbeard, varname, default) %>#slurp#
 ##
-#set global $title = $show_obj.name
+#set global $title = getattr($show_obj, 'unique_name', $show_obj.name)
 #set global $topmenu = 'home'
 #set $exceptions_string = ', '.join($show_obj.exceptions)
 #set $css = $getVar('css', 'reg')

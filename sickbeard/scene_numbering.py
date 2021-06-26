@@ -996,14 +996,14 @@ def set_scene_numbering_helper(tvid, prodid, for_season=None, for_episode=None, 
         scene_season = None if scene_season in [None, 'null', ''] else int(scene_season)
         scene_episode = None if scene_episode in [None, 'null', ''] else int(scene_episode)
         action_log = u'Set episode scene numbering to %sx%s for episode %sx%s of "%s"' \
-                     % (scene_season, scene_episode, for_season, for_episode, show_obj.name)
+                     % (scene_season, scene_episode, for_season, for_episode, show_obj.unique_name)
         scene_args.update({'scene_season': scene_season, 'scene_episode': scene_episode})
         result = {'forSeason': for_season, 'forEpisode': for_episode, 'sceneSeason': None, 'sceneEpisode': None}
     else:
         for_absolute = None if for_absolute in [None, 'null', ''] else int(for_absolute)
         scene_absolute = None if scene_absolute in [None, 'null', ''] else int(scene_absolute)
         action_log = u'Set absolute scene numbering to %s for episode %sx%s of "%s"' \
-                     % (scene_absolute, for_season, for_episode, show_obj.name)
+                     % (scene_absolute, for_season, for_episode, show_obj.unique_name)
         ep_args.update({'absolute': for_absolute})
         scene_args.update({'absolute_number': for_absolute, 'scene_absolute': scene_absolute, 'anime': True})
         result = {'forAbsolute': for_absolute, 'sceneAbsolute': None}

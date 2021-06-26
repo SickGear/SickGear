@@ -1,5 +1,83 @@
 ﻿### 0.25.0 (2021-xx-xx xx:xx:xx UTC)
 
+* Add ability to switch a TV info source for a show, initial support is for TheTVDb and TVMaze
+* Add column on manage/Bulk Change for TV info source so that shows can be sorted to isolate by source for switching
+* Add TV info source selection to manage/Bulk Change/Edit
+* Add auto redirect from manage/Bulk Change/Edit/Submit to manage/show-tasks if a TV info source is tasked for change
+* Add after a restart, auto resume switching shows that didn't finish the switch TV info source process
+* Change improve loading speed of shows at startup
+* Change improve main execution loop speed
+* Add new sort option "Combine source" to add show search show results
+* Add support list of names to search for in add show search
+* Add support for more URLs in add show search
+* Add ability to search tvid:prodid as found in URLs and at other UI places
+* Add dynamic search examples to add show search
+* Add placeholder syntax hints to add show search
+* Add source provider images to add show search result items
+* Fix add show search box width now that the other select is reinstated
+* Fix add show search TVDb links only to contain lang arg, not all
+* Change "exists in db" link on search results page to support any info source
+* Change browse cards interface to new add show search
+* Change assist user search terms when the actual title of a show is unknown
+* Change remove problematic buffering of 20 items on search results
+* Change remove year from add show search term ... year is still used for relevancy order
+* Change "Import" title to "Path conflict" for clarity
+* Add when a path conflict occurs during add show, users may enter a new show folder name
+* Add parsing Kodi show.nfo so import existing page selects any known info source
+* Change improve speed getting list in the import page
+* Change refactor mass_add_table to improve performance, and code clarity
+* Change improve find_show_by_id performance
+* Add glide.js 3.4.0 (f7ff0dd)
+* Add object fit image 3.2.4 (f951d2a)
+* Update fancyBox 2.1.6 to 3.5.7 (c4fd903)
+* Update jQ collapser 2.0 to 3.0.1 (c3f95ba)
+* Add person/character glide slider to view-show
+* Change replace swipe with move event to act on any input type event (e.g. keyboard) for glide on view-show
+* Add a vertical dotted line indication to the final cast glide slide on view-show
+* Add glide arrows to view-show
+* Add click the glide number button on view-show to change slide times or pause the glider
+* Add cast displayed on view-show is saved whenever the glide is paused
+* Add restore view-show glide to the left-most image shown while ever the glide slider is in the pause state
+* Fix layout of multiline genre labels on view-show
+* Change view-show, during adding of a show, cast links will only become active when ready to be linked, otherwise, display as text
+* Add third-person singular pronoun on view-show to a character who is portrayed by themselves
+* Add force cast update to view-show
+* Add person view link to view-show glider
+* Add character view link to view-show glider
+* Add to view-show a notification message if a show fails to switch master TV info source
+* Add visual cue of master TV info source to view-show
+* Add imdb miniseries average runtime to view-show
+* Change improve ui glide panel generally and also on startup
+* Add prevent user error on edit-show where "set master" is pending but Update or Cancel Edit is used instead of "Save Changes"
+* Change add character relationship "Presenter" to "Host"
+* Add where a character is in multiple shows to the character view
+* Change display on ui when update cast is in progress and not just queued
+* Rename from TVMaze to TVmaze in line with their branding
+* Add 5 mins to Trakt failure retries times
+* Change improve speed reading for many processes
+* Change correct log messages grammar
+* Change improve manage/Show Tasks template
+* Change use proper section dividers on manage/Show Tasks
+* Change replace inline styles with CSS classes to improve readability and load perf
+* Add characters, person to clean-up cache (30 days)
+* Add reload person, character images every 7 days
+* Add suppress UI notification for scheduled people updates during show updates and during switching TV info source
+* Add failed TV info source switches to manage/Show Tasks
+* Add remove item from queue and clear queue test buttons to manage/Show Tasks and manage/Search Tasks
+* Change improve show update logic
+* Add check for existing show with new id pair before switching
+* Change prioritize first episode start year over the start year set at the TV info source
+* Change delete non existing episodes when switching TV info source
+* Add TMDB person pics as fallback
+* Add use person fallback for character images
+* Add logic to add start, end year in case of multiple characters per person
+* Add spoken height to person view
+* Add abort people cast update when show is deleted, also remove show from any queued show item or search item
+* Add updating show.nfo when a cast changes
+* Change use longest biography available for output
+* Add UI requests of details for feb 28 will also return feb 29 in years without feb 29
+* Add fetch extra data fallback from TMDB for persons
+* Change fanart icon
 * Add provider TorrentDB
 
 

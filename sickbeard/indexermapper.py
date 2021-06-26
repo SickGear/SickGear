@@ -313,7 +313,7 @@ def map_indexers_to_show(show_obj, update=False, force=False, recheck=False, im_
                         [show_obj.tvid, show_obj.prodid, tvid]])
 
             if 0 < len(sql_l):
-                logger.log('Adding TV info mapping to DB for show: %s' % show_obj.name, logger.DEBUG)
+                logger.debug('Adding TV info mapping to DB for show: %s' % show_obj.unique_name)
                 my_db = db.DBConnection()
                 my_db.mass_action(sql_l)
 
@@ -349,7 +349,7 @@ def save_mapping(show_obj, save_map=None):
                 [show_obj.tvid, show_obj.prodid, tvid]])
 
     if 0 < len(sql_l):
-        logger.log('Saving TV info mapping to DB for show: %s' % show_obj.name, logger.DEBUG)
+        logger.debug('Saving TV info mapping to DB for show: %s' % show_obj.unique_name)
         my_db = db.DBConnection()
         my_db.mass_action(sql_l)
 
@@ -410,7 +410,7 @@ def load_mapped_ids(**kwargs):
             try:
                 cur_show_obj.ids = sickbeard.indexermapper.map_indexers_to_show(cur_show_obj, **n_kargs)
             except (BaseException, Exception):
-                logger.log('Error loading mapped id\'s for show: %s' % cur_show_obj.name, logger.ERROR)
+                logger.debug('Error loading mapped id\'s for show: %s' % cur_show_obj.unique_name)
                 logger.log('Traceback: %s' % traceback.format_exc(), logger.ERROR)
     logger.log('TV info mappings loaded')
 

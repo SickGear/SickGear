@@ -128,7 +128,8 @@
             #set $cur_total = 0
             #set $download_stat_tip = ''
             #set $display_status = $cur_show_obj.status
-            #set $display_name = (re.sub(r'^((?:A(?!\s+to)n?)|The)\s(\w)', r'<span class="article">\1</span> \2', getattr($cur_show_obj, 'unique_name', $cur_show_obj.name)), getattr($cur_show_obj, 'unique_name', $cur_show_obj.name))[$sg_var('SORT_ARTICLE')]
+            #set $show_name = getattr($cur_show_obj, 'unique_name', $cur_show_obj.name)
+            #set $display_name = (re.sub(r'^((?:A(?!\s+to)n?)|The)\s(\w)', r'<span class="article">\1</span> \2', $show_name), $show_name)[$sg_var('SORT_ARTICLE')]
             #set $poster_id += 1
             #if None is not $display_status
                 #if re.search(r'(?i)(?:(?:new|returning)\s*series|upcoming)', $cur_show_obj.status)
@@ -192,7 +193,7 @@
                 #end if
             #end if
             ##
-			<div id="show$cur_show_obj.tvid_prodid" class="show-card" data-name="$cur_show_obj.name" data-date="$data_date" data-network="$cur_show_obj.network">
+			<div id="show$cur_show_obj.tvid_prodid" class="show-card" data-name="$show_name" data-date="$data_date" data-network="$cur_show_obj.network">
 				<div class="show-card-top">
 					<div class="show-image">
 						<a href="$sg_root/home/view-show?tvid_prodid=$cur_show_obj.tvid_prodid">
@@ -302,7 +303,7 @@
             #if None is $curLoadingShow.show_obj
 					Loading... ($curLoadingShow.show_name)
             #else
-					<a href="$sg_root/home/view-show?tvid_prodid=$curLoadingShow.show_obj.tvid_prodid">$curLoadingShow.show_obj.name</a>
+					<a href="$sg_root/home/view-show?tvid_prodid=$curLoadingShow.show_obj.tvid_prodid">getattr($curLoadingShow.show_obj, 'unique_name', $curLoadingShow.show_obj.name)</a>
             #end if
 				</td>
 				<td></td>
@@ -324,7 +325,8 @@
             #set $cur_downloaded = 0
             #set $cur_total = 0
             #set $download_stat_tip = ''
-            #set $display_name = (re.sub(r'^((?:A(?!\s+to)n?)|The)\s(\w)', r'<span class="article">\1</span> \2', getattr($cur_show_obj, 'unique_name', $cur_show_obj.name)), getattr($cur_show_obj, 'unique_name', $cur_show_obj.name))[$sg_var('SORT_ARTICLE')]
+            #set $show_name = getattr($cur_show_obj, 'unique_name', $cur_show_obj.name)
+            #set $display_name = (re.sub(r'^((?:A(?!\s+to)n?)|The)\s(\w)', r'<span class="article">\1</span> \2', $show_name), $show_name)[$sg_var('SORT_ARTICLE')]
             #set $poster_id += 1
             ##
             #if $cur_show_obj.tvid_prodid in $show_stat
@@ -382,7 +384,7 @@
 
 				<td class="tvShow text-left">
 					<div class="imgsmallposter $layout">
-						<a href="$sg_root/show-poster/?tvid_prodid=$cur_show_obj.tvid_prodid&amp;which=poster" rel="dialog" title="$cur_show_obj.name">
+						<a href="$sg_root/show-poster/?tvid_prodid=$cur_show_obj.tvid_prodid&amp;which=poster" rel="dialog" title="$show_name">
             #if $load_normal > $poster_id
 							<img src="$sg_root/show-poster/?tvid_prodid=$cur_show_obj.tvid_prodid&amp;which=poster_thumb" class="$layout" alt="$cur_show_obj.tvid_prodid" />
             #else
@@ -399,9 +401,9 @@
 					<div class="imgbanner $layout">
 						<a href="$sg_root/home/view-show?tvid_prodid=$cur_show_obj.tvid_prodid">
                 #if $load_normal > $poster_id
-							<img src="$sg_root/show-poster/?tvid_prodid=$cur_show_obj.tvid_prodid&amp;which=banner" class="$layout" alt="$cur_show_obj.tvid_prodid" title="$cur_show_obj.name" />
+							<img src="$sg_root/show-poster/?tvid_prodid=$cur_show_obj.tvid_prodid&amp;which=banner" class="$layout" alt="$cur_show_obj.tvid_prodid" title="$show_name" />
                 #else
-							<img id="poster-$poster_id" data-original="$sg_root/show-poster/?tvid_prodid=$cur_show_obj.tvid_prodid&amp;which=banner" class="$layout" alt="$cur_show_obj.tvid_prodid" title="$cur_show_obj.name" />
+							<img id="poster-$poster_id" data-original="$sg_root/show-poster/?tvid_prodid=$cur_show_obj.tvid_prodid&amp;which=banner" class="$layout" alt="$cur_show_obj.tvid_prodid" title="$show_name" />
 							<span id="loading-poster-$poster_id" class="lazy-loading-image"><i class="spinner"></i></span>
                 #end if
                         </a>

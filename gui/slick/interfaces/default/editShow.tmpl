@@ -7,7 +7,7 @@
 <% def sg_var(varname, default=False): return getattr(sickbeard, varname, default) %>#slurp#
 <% def sg_str(varname, default=''): return getattr(sickbeard, varname, default) %>#slurp#
 ##
-#set global $title = 'Edit ' + $show_obj.name
+#set global $title = 'Edit ' + getattr($show_obj, 'unique_name', $show_obj.name)
 #set global $header = $show_obj.name
 #set global $sbPath = '..'
 #set global $topmenu = 'home'

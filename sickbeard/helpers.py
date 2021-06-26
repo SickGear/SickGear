@@ -558,10 +558,8 @@ def get_absolute_number_from_season_and_episode(show_obj, season, episode):
                 "Found absolute_number:" + str(absolute_number) + " by " + str(season) + "x" + str(episode),
                 logger.DEBUG)
         else:
-            logger.log(
-                "No entries for absolute number in show: " + show_obj.name + " found using " + str(season) + "x" + str(
-                    episode),
-                logger.DEBUG)
+            logger.debug('No entries for absolute number in show: %s found using %sx%s' %
+                       (show_obj.unique_name, str(season), str(episode)))
 
     return absolute_number
 

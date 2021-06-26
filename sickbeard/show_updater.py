@@ -213,8 +213,8 @@ class ShowUpdater(object):
                         cur_queue_item = sickbeard.show_queue_scheduler.action.updateShow(cur_show_obj,
                                                                                           scheduled_update=True)
                     else:
-                        logger.log(u'Not updating episodes for show %s because it\'s marked as ended and last/next'
-                                   u' episode is not within the grace period.' % cur_show_obj.name, logger.DEBUG)
+                        logger.debug(u'Not updating episodes for show %s because it\'s marked as ended and last/next'
+                                     u' episode is not within the grace period.' % cur_show_obj.unique_name)
                         cur_queue_item = sickbeard.show_queue_scheduler.action.refreshShow(cur_show_obj, True, True)
 
                     pi_list.append(cur_queue_item)

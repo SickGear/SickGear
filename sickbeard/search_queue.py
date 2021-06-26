@@ -735,7 +735,7 @@ class BacklogQueueItem(BaseSearchQueueItem):
                 for ep_obj in self.segment:  # type: sickbeard.tv.TVEpisode
                     set_wanted_aired(ep_obj, True, ep_count, ep_count_scene)
 
-            logger.log(u'Beginning backlog search for: [%s]' % self.show_obj.name)
+            logger.log(u'Beginning backlog search for: [%s]' % self.show_obj.unique_name)
             search_result = search.search_providers(
                 self.show_obj, self.segment, False,
                 try_other_searches=(not self.standard_backlog or not self.limited_backlog),
@@ -756,14 +756,14 @@ class BacklogQueueItem(BaseSearchQueueItem):
 
                     helpers.cpu_sleep()
             else:
-                logger.log(u'No needed episodes found during backlog search for: [%s]' % self.show_obj.name)
+                logger.log(u'No needed episodes found during backlog search for: [%s]' % self.show_obj.unique_name)
         except (BaseException, Exception):
             is_error = True
             logger.log(traceback.format_exc(), logger.ERROR)
 
         finally:
             logger.log('Completed backlog search %sfor: [%s]'
-                       % (('', 'with a debug error ')[is_error], self.show_obj.name))
+                       % (('', 'with a debug error ')[is_error], self.show_obj.unique_name))
             self.finish()
 
 

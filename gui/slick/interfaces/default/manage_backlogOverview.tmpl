@@ -67,7 +67,7 @@
 		<select id="pickShow" class="form-control form-control-inline input-sm">
     #for $cur_show_obj in sorted($sickbeard.showList, key = operator.attrgetter('name'))
         #if 0 != $show_counts[$cur_show_obj.tvid_prodid][$Overview.QUAL] + $show_counts[$cur_show_obj.tvid_prodid][$Overview.WANTED]
-			<option value="$cur_show_obj.tvid_prodid">$cur_show_obj.name</option>
+			<option value="$cur_show_obj.tvid_prodid">getattr($cur_show_obj, 'unique_name', $cur_show_obj.name)</option>
         #end if
     #end for
 		</select>
@@ -84,7 +84,7 @@
 		<tr class="seasonheader" id="show-$cur_show_obj.tvid_prodid">
 			<td colspan="3" class="text-left">
 				<br/>
-				<h2><a href="$sbRoot/home/view-show?tvid_prodid=$cur_show_obj.tvid_prodid">$cur_show_obj.name</a></h2>
+				<h2><a href="$sbRoot/home/view-show?tvid_prodid=$cur_show_obj.tvid_prodid">getattr($cur_show_obj, 'unique_name', $cur_show_obj.name)</a></h2>
         #if not $cur_show_obj.paused and not $backlog_active_providers
             #set $text = 'Enable allow active searching for one or more providers at config media providers'
             #for ($tag_class, $sub) in (

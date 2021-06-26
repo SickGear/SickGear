@@ -365,7 +365,7 @@ class GenericMetadata(object):
         # type: (sickbeard.tv.TVShow, bool) -> bool
         result = False
         if self.show_metadata and show_obj and (not self._has_show_metadata(show_obj) or force):
-            logger.log('Metadata provider %s creating show metadata for %s' % (self.name, show_obj.name), logger.DEBUG)
+            logger.debug('Metadata provider %s creating show metadata for %s' % (self.name, show_obj.unique_name))
             try:
                 result = self.write_show_file(show_obj)
             except BaseTVinfoError as e:
@@ -391,8 +391,8 @@ class GenericMetadata(object):
     def update_show_indexer_metadata(self, show_obj):
         # type: (sickbeard.tv.TVShow) -> bool
         if self.show_metadata and show_obj and self._has_show_metadata(show_obj):
-            logger.log(u'Metadata provider %s updating show indexer metadata file for %s' % (self.name, show_obj.name),
-                       logger.DEBUG)
+            logger.debug(u'Metadata provider %s updating show indexer metadata file for %s' % (
+                self.name, show_obj.unique_name))
 
             nfo_file_path = self.get_show_file_path(show_obj)
             with ek.ek(io.open, nfo_file_path, 'r', encoding='utf8') as xmlFileObj:
@@ -424,21 +424,21 @@ class GenericMetadata(object):
     def create_fanart(self, show_obj):
         # type: (sickbeard.tv.TVShow) -> bool
         if self.fanart and show_obj and not self._has_fanart(show_obj):
-            logger.log(u"Metadata provider " + self.name + " creating fanart for " + show_obj.name, logger.DEBUG)
+            logger.debug(u'Metadata provider %s creating fanart for %s' % (self.name, show_obj.unique_name))
             return self.save_fanart(show_obj)
         return False
 
     def create_poster(self, show_obj):
         # type: (sickbeard.tv.TVShow) -> bool
         if self.poster and show_obj and not self._has_poster(show_obj):
-            logger.log(u"Metadata provider " + self.name + " creating poster for " + show_obj.name, logger.DEBUG)
+            logger.debug(u'Metadata provider %s creating poster for %s' % (self.name, show_obj.unique_name))
             return self.save_poster(show_obj)
         return False
 
     def create_banner(self, show_obj):
         # type: (sickbeard.tv.TVShow) -> bool
         if self.banner and show_obj and not self._has_banner(show_obj):
-            logger.log(u"Metadata provider " + self.name + " creating banner for " + show_obj.name, logger.DEBUG)
+            logger.debug(u'Metadata provider %s creating banner for %s' % (self.name, show_obj.unique_name))
             return self.save_banner(show_obj)
         return False
 
@@ -456,8 +456,8 @@ class GenericMetadata(object):
             result = []
             for season, _ in iteritems(show_obj.sxe_ep_obj):
                 if not self._has_season_poster(show_obj, season):
-                    logger.log(u"Metadata provider " + self.name + " creating season posters for " + show_obj.name,
-                               logger.DEBUG)
+                    logger.debug(u'Metadata provider %s creating season posters for %s' % (
+                        self.name, show_obj.unique_name))
                     result = result + [self.save_season_posters(show_obj, season)]
             return all(result)
         return False
@@ -468,8 +468,8 @@ class GenericMetadata(object):
             result = []
             for season, _ in iteritems(show_obj.sxe_ep_obj):
                 if not self._has_season_banner(show_obj, season):
-                    logger.log(u"Metadata provider " + self.name + " creating season banners for " + show_obj.name,
-                               logger.DEBUG)
+                    logger.debug(u'Metadata provider %s creating season banners for %s' % (
+                        self.name, show_obj.unique_name))
                     result = result + [self.save_season_banners(show_obj, season)]
             return all(result)
         return False
@@ -477,16 +477,16 @@ class GenericMetadata(object):
     def create_season_all_poster(self, show_obj):
         # type: (sickbeard.tv.TVShow) -> bool
         if self.season_all_poster and show_obj and not self._has_season_all_poster(show_obj):
-            logger.log(u"Metadata provider " + self.name + " creating season all poster for " + show_obj.name,
-                       logger.DEBUG)
+            logger.debug(u'Metadata provider %s creating season all posters for %s' % (
+                        self.name, show_obj.unique_name))
             return self.save_season_all_poster(show_obj)
         return False
 
     def create_season_all_banner(self, show_obj):
         # type: (sickbeard.tv.TVShow) -> bool
         if self.season_all_banner and show_obj and not self._has_season_all_banner(show_obj):
-            logger.log(u"Metadata provider " + self.name + " creating season all banner for " + show_obj.name,
-                       logger.DEBUG)
+            logger.debug(u'Metadata provider %s creating season all banner for %s' % (
+                        self.name, show_obj.unique_name))
             return self.save_season_all_banner(show_obj)
         return False
 

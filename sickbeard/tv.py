@@ -415,7 +415,8 @@ class Person(Referential):
         elif not self.name:
             self.load_from_db()
 
-    def _order_names(self, name_set):
+    @staticmethod
+    def _order_names(name_set):
         # type: (Set[AnyStr]) -> List[AnyStr]
         rc_aka = re.compile(r'[\x00-\x7f]+')
 
@@ -3783,7 +3784,7 @@ class TVEpisode(TVEpisodeBase):
 
     @airtime.setter
     def airtime(self, *args):
-        # type: (Optional[datetime.time]) -> None
+        # type: (Optional[datetime.time, AnyStr]) -> None
         self.dirty_setter('_airtime')(self, *args)
 
     @property
@@ -4223,8 +4224,8 @@ class TVEpisode(TVEpisodeBase):
             return False
 
         if getattr(ep_info, 'absolute_number', None) in (None, ''):
-            logger.log('This episode (%s - %sx%s) has no absolute number on %s' %
-                       (self._show_obj.name, season, episode, sickbeard.TVInfoAPI(self.tvid).name), logger.DEBUG)
+            logger.debug('This episode (%s - %sx%s) has no absolute number on %s' %
+                         (self.show_obj.unique_name, season, episode, sickbeard.TVInfoAPI(self.tvid).name))
         else:
             logger.log('%s: The absolute_number for %sx%s is : %s' %
                        (self._show_obj.tvid_prodid, season, episode, ep_info['absolute_number']), logger.DEBUG)
@@ -4259,8 +4260,8 @@ class TVEpisode(TVEpisodeBase):
         try:
             self.airdate = datetime.date(raw_airdate[0], raw_airdate[1], raw_airdate[2])
         except (ValueError, IndexError):
-            logger.log('Malformed air date retrieved from %s (%s - %sx%s)' %
-                       (sickbeard.TVInfoAPI(self.tvid).name, self._show_obj.name, season, episode), logger.ERROR)
+            logger.error('Malformed air date retrieved from %s (%s - %sx%s)' %
+                         (sickbeard.TVInfoAPI(self.tvid).name, self.show_obj.unique_name, season, episode))
             # if I'm incomplete on TVDB but I once was complete then just delete myself from the DB for now
             if -1 != self._epid and helpers.should_delete_episode(self._status):
                 self.delete_episode()
@@ -4496,7 +4497,7 @@ class TVEpisode(TVEpisodeBase):
 
     def __str__(self):
 
-        return '%s - %sx%s - %s\n' % (self.show_obj.name, self.season, self.episode, self.name) \
+        return '%s - %sx%s - %s\n' % (self.show_obj.unique_name, self.season, self.episode, self.name) \
                + 'location: %s\n' % self.location \
                + 'description: %s\n' % self.description \
                + 'subtitles: %s\n' % ','.join(self.subtitles) \
@@ -4555,7 +4556,7 @@ class TVEpisode(TVEpisodeBase):
         :param return_sql: only return sql to delete episode
         """
 
-        logger.log('Deleting %s %sx%s from the DB' % (self._show_obj.name, self._season, self._episode), logger.DEBUG)
+        logger.debug('Deleting %s %sx%s from the DB' % (self._show_obj.unique_name, self._season, self._episode))
 
         # remove myself from the show dictionary
         if self.show_obj.get_episode(self._season, self._episode, no_create=True) == self:

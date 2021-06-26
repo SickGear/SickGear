@@ -1353,8 +1353,8 @@ class CMD_SickGearEpisodeSetStatus(ApiCall):
                 backlog_queue_item = search_queue.BacklogQueueItem(show_obj, segment)
                 sickbeard.search_queue_scheduler.action.add_item(backlog_queue_item)
 
-                self.log(u"Starting backlog for " + show_obj.name + " season " + str(
-                    season) + " because some episodes were set to WANTED")
+                self.log(u'Starting backlog for %s season %s because some episodes were set to WANTED' %
+                         (show_obj.unique_name, season))
 
             extra_msg = " Backlog started"
 
@@ -3620,7 +3620,7 @@ class CMD_SickGearShowDelete(ApiCall):
             return _responds(RESULT_FAILURE, msg="Show can not be deleted while being added or updated")
 
         show_obj.delete_show(full=self.full_delete)
-        return _responds(RESULT_SUCCESS, msg=str(show_obj.name) + " has been deleted")
+        return _responds(RESULT_SUCCESS, msg='%s has been deleted' % show_obj.unique_name)
 
 
 class CMD_ShowDelete(CMD_SickGearShowDelete):
@@ -3924,11 +3924,11 @@ class CMD_SickGearShowPause(ApiCall):
         if self.pause:
             show_obj.paused = True
             show_obj.save_to_db()
-            return _responds(RESULT_SUCCESS, msg=str(show_obj.name) + " has been paused")
+            return _responds(RESULT_SUCCESS, msg='%s has been paused' % show_obj.unique_name)
         else:
             show_obj.paused = False
             show_obj.save_to_db()
-            return _responds(RESULT_SUCCESS, msg=str(show_obj.name) + " has been unpaused")
+            return _responds(RESULT_SUCCESS, msg='%s has been unpaused' % show_obj.unique_name)
 
         # return _responds(RESULT_FAILURE, msg=str(show_obj.name) + " was unable to be paused")
 
@@ -3974,10 +3974,10 @@ class CMD_SickGearShowRefresh(ApiCall):
 
         try:
             sickbeard.show_queue_scheduler.action.refreshShow(show_obj)
-            return _responds(RESULT_SUCCESS, msg="%s has queued to be refreshed" % show_obj.name)
+            return _responds(RESULT_SUCCESS, msg='%s has queued to be refreshed' % show_obj.unique_name)
         except exceptions_helper.CantRefreshException as e:
             # TODO: log the exception
-            return _responds(RESULT_FAILURE, msg="Unable to refresh %s. %s" % (show_obj.name, ex(e)))
+            return _responds(RESULT_FAILURE, msg='Unable to refresh %s. %s' % (show_obj.unique_name, ex(e)))
 
 
 class CMD_ShowRefresh(CMD_SickGearShowRefresh):
@@ -4228,7 +4228,8 @@ class CMD_SickGearShowSetQuality(ApiCall):
         show_obj.save_to_db()
 
         return _responds(RESULT_SUCCESS,
-                         msg=show_obj.name + " quality has been changed to " + _get_quality_string(show_obj.quality))
+                         msg='%s quality has been changed to %s' % (show_obj.unique_name,
+                                                                    _get_quality_string(show_obj.quality)))
 
 
 class CMD_ShowSetQuality(CMD_SickGearShowSetQuality):
@@ -4395,10 +4396,10 @@ class CMD_SickGearShowUpdate(ApiCall):
 
         try:
             sickbeard.show_queue_scheduler.action.updateShow(show_obj, True)
-            return _responds(RESULT_SUCCESS, msg="%s has queued to be updated" % show_obj.name)
+            return _responds(RESULT_SUCCESS, msg='%s has queued to be updated' % show_obj.unique_name)
         except exceptions_helper.CantUpdateException as e:
-            self.log(u"Unable to update %s. %s" % (show_obj.name, ex(e)), logger.ERROR)
-            return _responds(RESULT_FAILURE, msg="Unable to update %s. %s" % (show_obj.name, ex(e)))
+            self.log(u'Unable to update %s. %s' % (show_obj.unique_name, ex(e)), logger.ERROR)
+            return _responds(RESULT_FAILURE, msg='Unable to update %s. %s' % (show_obj.unique_name, ex(e)))
 
 
 class CMD_ShowUpdate(CMD_SickGearShowUpdate):

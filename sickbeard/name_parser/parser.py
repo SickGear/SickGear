@@ -384,8 +384,8 @@ class NameParser(object):
                             season_number = int(ep_obj['seasonnumber'])
                             episode_numbers = [int(ep_obj['episodenumber'])]
                         except BaseTVinfoEpisodenotfound as e:
-                            logger.log(u'Unable to find episode with date ' + str(best_result.air_date)
-                                       + ' for show ' + show_obj.name + ', skipping', logger.WARNING)
+                            logger.warning(u'Unable to find episode with date %s for show %s, skipping' %
+                                           (best_result.air_date, show_obj.unique_name))
                             episode_numbers = []
                         except BaseTVinfoError as e:
                             logger.log(u'Unable to contact ' + sickbeard.TVInfoAPI(show_obj.tvid).name
