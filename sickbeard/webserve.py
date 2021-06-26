@@ -1903,7 +1903,7 @@ class Home(MainHandler):
 
         return t.respond()
 
-    def restart(self, update_pkg=None, pid=None):
+    def restart(self, pid=None, update_pkg=None):
 
         if str(pid) != str(sickbeard.PID):
             return self.redirect('/home/')
