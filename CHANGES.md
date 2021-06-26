@@ -6,6 +6,11 @@
 
 
 
+### 0.24.5 (2021-06-26 16:45:00 UTC)
+
+* Fix restart after "Update Now" is clicked on UI, must manually restart from 0.24.0 until this release
+
+
 ### 0.24.4 (2021-06-25 03:00:00 UTC)
 
 * Fix issue on certain py2 setups that created mishandling of 404's
