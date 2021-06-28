@@ -1,4 +1,9 @@
-﻿### 0.24.5 (2021-06-26 16:45:00 UTC)
+﻿### 0.24.6 (2021-06-28 23:59:00 UTC)
+
+* Change allow Python 3.7.11, 3.8.11, and 3.9.6
+
+
+### 0.24.5 (2021-06-26 16:45:00 UTC)
 
 * Fix restart after "Update Now" is clicked on UI, must manually restart from 0.24.0 until this release
 
