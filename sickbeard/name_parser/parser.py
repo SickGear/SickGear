@@ -633,7 +633,7 @@ class NameParser(object):
                 and not final_result.release_group and None is not release_group:
             final_result.release_group = release_group  # use provider ID otherwise pick_best_result fails
 
-        if cache_result \
+        if cache_result and final_result.show_obj \
                 and any('anime' in wr for wr in final_result.which_regex) == bool(final_result.show_obj.is_anime):
             name_parser_cache.add(name, final_result)
 
