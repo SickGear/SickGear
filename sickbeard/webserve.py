@@ -2673,6 +2673,9 @@ class Home(MainHandler):
                 except exceptions_helper.CantRefreshException as e:
                     errors.append('Unable to refresh this show: ' + ex(e))
 
+            if bool(anime) != show_obj.is_anime:
+                sickbeard.name_parser.parser.name_parser_cache.flush(show_obj)
+
             show_obj.paused = paused
             show_obj.scene = scene
             show_obj.anime = anime

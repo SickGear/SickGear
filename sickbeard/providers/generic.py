@@ -1131,8 +1131,7 @@ class GenericProvider(object):
             parser = NameParser(False, show_obj=self.get_show(item, **kwargs), convert=True, indexer_lookup=False)
             # parse the file name
             try:
-                cache_result = not (show_obj and show_obj.is_anime)
-                parse_result = parser.parse(title, cache_result=cache_result, release_group=self.get_id())
+                parse_result = parser.parse(title, release_group=self.get_id())
             except InvalidNameException:
                 logger.log(u'Unable to parse the filename %s into a valid episode' % title, logger.DEBUG)
                 continue
