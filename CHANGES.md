@@ -6,6 +6,11 @@
 
 
 
+### 0.24.7 (2021-06-30 22:10:00 UTC)
+
+* Fix parse correct animes during recent and backlog search
+
+
 ### 0.24.6 (2021-06-28 23:59:00 UTC)
 
 * Change allow Python 3.7.11, 3.8.11, and 3.9.6

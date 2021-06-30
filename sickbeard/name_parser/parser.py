@@ -44,12 +44,13 @@ from ..classes import OrderedDefaultdict
 
 from .._legacy_classes import LegacyParseResult
 from _23 import decode_str, list_keys, list_range
-from six import iterkeys, itervalues, PY2, string_types, text_type
+from six import iteritems, iterkeys, itervalues, PY2, string_types, text_type
 
 # noinspection PyUnreachableCode
 if False:
     # noinspection PyUnresolvedReferences
     from typing import Any, AnyStr, Dict, List, Optional
+    from ..tv import TVShow
 
 
 class NameParser(object):
@@ -632,7 +633,8 @@ class NameParser(object):
                 and not final_result.release_group and None is not release_group:
             final_result.release_group = release_group  # use provider ID otherwise pick_best_result fails
 
-        if cache_result:
+        if cache_result \
+                and any('anime' in wr for wr in final_result.which_regex) == bool(final_result.show_obj.is_anime):
             name_parser_cache.add(name, final_result)
 
         logger.log(u'Parsed %s into %s' % (name, final_result), logger.DEBUG)
@@ -828,7 +830,7 @@ class ParseResult(LegacyParseResult):
 class NameParserCache(object):
     def __init__(self):
         super(NameParserCache, self).__init__()
-        self._previous_parsed = OrderedDefaultdict()
+        self._previous_parsed = OrderedDefaultdict()  # type: Dict[AnyStr, ParseResult]
         self._cache_size = 1000
         self.lock = threading.Lock()
 
@@ -867,6 +869,17 @@ class NameParserCache(object):
                 logger.log('Using cached parse result for: ' + name, logger.DEBUG)
                 self._previous_parsed.move_to_end(name)
                 return self._previous_parsed[name]
+
+    def flush(self, show_obj):
+        # type: (TVShow) -> None
+        """
+        removes all entries corresponding to the given show_obj
+
+        :param show_obj: TVShow object
+        """
+        with self.lock:
+            self._previous_parsed = OrderedDefaultdict(None, [(k, v) for k, v in iteritems(self._previous_parsed)
+                                                       if v.show_obj != show_obj])
 
 
 name_parser_cache = NameParserCache()
