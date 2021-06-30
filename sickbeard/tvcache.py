@@ -292,8 +292,8 @@ class TVCache(object):
                     return
 
             try:
-                np = NameParser(show_obj=show_obj, convert=True, indexer_lookup=False)
-                parse_result = np.parse(name)
+                parser = NameParser(show_obj=show_obj, convert=True, indexer_lookup=False)
+                parse_result = parser.parse(name)
             except InvalidNameException:
                 logger.log('Unable to parse the filename %s into a valid episode' % name, logger.DEBUG)
                 return
@@ -302,6 +302,14 @@ class TVCache(object):
 
             if not parse_result or not parse_result.series_name:
                 return
+
+            if None is show_obj and parse_result.show_obj.is_anime:
+                t_show_obj = helpers.get_show(parse_result.show_obj.name, True)
+                post_parser = NameParser(False, show_obj=t_show_obj, convert=True, indexer_lookup=False)
+                try:
+                    parse_result = post_parser.parse(name, release_group=self.get_id())
+                except(BaseException, Exception):
+                    return
 
         # if we made it this far then lets add the parsed result to cache for usage later on
         season_number = parse_result.season_number if parse_result.season_number else 1

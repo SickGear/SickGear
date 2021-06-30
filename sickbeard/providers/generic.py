@@ -1131,13 +1131,22 @@ class GenericProvider(object):
             parser = NameParser(False, show_obj=self.get_show(item, **kwargs), convert=True, indexer_lookup=False)
             # parse the file name
             try:
-                parse_result = parser.parse(title, release_group=self.get_id())
+                cache_result = not (show_obj and show_obj.is_anime)
+                parse_result = parser.parse(title, cache_result=cache_result, release_group=self.get_id())
             except InvalidNameException:
                 logger.log(u'Unable to parse the filename %s into a valid episode' % title, logger.DEBUG)
                 continue
             except InvalidShowException:
                 logger.log(u'No match for search criteria in the parsed filename ' + title, logger.DEBUG)
                 continue
+
+            if parse_result.show_obj.is_anime:
+                t_show_obj = helpers.get_show(parse_result.show_obj.name, True)
+                post_parser = NameParser(False, show_obj=t_show_obj, convert=True, indexer_lookup=False)
+                try:
+                    parse_result = post_parser.parse(title, release_group=self.get_id())
+                except(BaseException, Exception):
+                    continue
 
             if not (parse_result.show_obj.tvid == show_obj.tvid and parse_result.show_obj.prodid == show_obj.prodid):
                 logger.log(u'Parsed show [%s] is not show [%s] we are searching for' %
