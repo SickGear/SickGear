@@ -1,4 +1,9 @@
-﻿### 0.24.7 (2021-06-30 22:10:00 UTC)
+﻿### 0.24.8 (2021-06-30 23:05:00 UTC)
+
+* Fix nameparser unit tests
+
+
+### 0.24.7 (2021-06-30 22:10:00 UTC)
 
 * Fix parse correct animes during recent and backlog search
 
