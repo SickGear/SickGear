@@ -2310,7 +2310,7 @@ class Home(MainHandler):
 
         response = {}
         for cur_show_obj in shows:
-            if cur_show_obj.path:
+            if cur_show_obj and cur_show_obj.path:
                 loc_size = helpers.get_size(cur_show_obj.path)
                 num_files, smallest, largest, average_size = get_media_stats(cur_show_obj.path)
                 response[cur_show_obj.tvid_prodid] = {'message': 'No media files'} if not num_files else \

@@ -1,4 +1,10 @@
-﻿### 0.24.8 (2021-06-30 23:05:00 UTC)
+﻿### 0.24.9 (2021-07-05 10:25:00 UTC)
+
+* Change add Synology DSM 7 compatibility
+* Fix exception when removing a show
+
+
+### 0.24.8 (2021-06-30 23:05:00 UTC)
 
 * Fix nameparser unit tests
 

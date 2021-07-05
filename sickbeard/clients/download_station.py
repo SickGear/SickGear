@@ -56,7 +56,7 @@ class DownloadStationAPI(GenericClient):
         102: 'The requested API does not exist', 103: 'The requested method does not exist',
         104: 'The requested version does not support the functionality',
         105: 'The logged in session does not have permission', 106: 'Session timeout',
-        107: 'Session interrupted by duplicate login',
+        107: 'Session interrupted by duplicate login', 119: 'SID not found', 120: 'Wrong parameter',
     }
 
     def _error(self, msg):
@@ -107,7 +107,7 @@ class DownloadStationAPI(GenericClient):
         return result
 
     def _tinf(self, ids=None, err=False):
-        # type: (Optional[list], bool) -> list
+        # type: (Optional[AnyStr, list], bool) -> list
         """
         Fetch client task information
         :param ids: Optional id(s) to get task info for. None to get all task info
@@ -385,7 +385,8 @@ class DownloadStationAPI(GenericClient):
 
         response = {}
         try:
-            params = dict(method='login', api='SYNO.API.Auth', version=(1, 2)[1 < self._auth_version],
+            params = dict(method='login', api='SYNO.API.Auth',
+                          version=(1, (2, self._auth_version)[7 <= self._auth_version])[1 < self._auth_version],
                           account=self.username, passwd=self.password, session='DownloadStation')
             params.update(({}, dict(format='sid'))[1 < self._auth_version])
 
