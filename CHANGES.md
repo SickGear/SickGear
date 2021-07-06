@@ -6,6 +6,12 @@
 
 
 
+### 0.24.10 (2021-07-06 20:00:00 UTC)
+
+* Fix package update detection
+* Change add DSM 7 error messages
+
+
 ### 0.24.9 (2021-07-05 10:25:00 UTC)
 
 * Change add Synology DSM 7 compatibility

@@ -37,12 +37,12 @@ def is_pip_ok():
         pip_version, _, _ = _get_pip_version()
         if not pip_version:
             pip_ok = False
-            cmdline_runner([sys.executable, '-c', '"import ensurepip;ensurepip.bootstrap()"'], suppress_stderr=True)
+            cmdline_runner([sys.executable, '-c', 'import ensurepip;ensurepip.bootstrap()'], suppress_stderr=True)
     return pip_ok
 
 
 def _get_pip_version():
-    return cmdline_runner([sys.executable, '-c', '"from pip import __version__ as v; print(v)"'], suppress_stderr=True)
+    return cmdline_runner([sys.executable, '-c', 'from pip import __version__ as v; print(v)'], suppress_stderr=True)
 
 
 def run_pip(pip_cmd, suppress_stderr=False):

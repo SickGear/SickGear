@@ -56,7 +56,15 @@ class DownloadStationAPI(GenericClient):
         102: 'The requested API does not exist', 103: 'The requested method does not exist',
         104: 'The requested version does not support the functionality',
         105: 'The logged in session does not have permission', 106: 'Session timeout',
-        107: 'Session interrupted by duplicate login', 119: 'SID not found', 120: 'Wrong parameter',
+        107: 'Session interrupted by duplicate login', 108: 'Failed to upload the file',
+        109: 'The network connection is unstable or the system is busy',
+        110: 'The network connection is unstable or the system is busy',
+        111: 'The network connection is unstable or the system is busy',
+        114: 'Lost parameters for this API', 115: 'Not allowed to upload a file',
+        116: 'Not allowed to perform for a demo site',
+        117: 'The network connection is unstable or the system is busy',
+        118: 'The network connection is unstable or the system is busy',
+        119: 'Invalid session', 150: 'Request source IP does not match the login IP'
     }
 
     def _error(self, msg):
@@ -399,7 +407,9 @@ class DownloadStationAPI(GenericClient):
             err_code = response.get('error', {}).get('code', -1)
             return self._error(self.common_errors.get(err_code) or {
                 400: 'No such account or incorrect password', 401: 'Account disabled', 402: 'Permission denied',
-                403: '2-step verification code required', 404: 'Failed to authenticate 2-step verification code'
+                403: '2-step verification code required', 404: 'Failed to authenticate 2-step verification code',
+                406: 'Enforce to authenticate with 2-factor authentication code', 407: 'Blocked IP source',
+                408: 'Expired password cannot change', 409: 'Expired password', 410: 'Password must be changed'
             }.get(err_code, 'No known API.Auth response'))
 
         return self.auth
