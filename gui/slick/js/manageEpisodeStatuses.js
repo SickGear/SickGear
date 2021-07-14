@@ -52,13 +52,14 @@ $(document).ready(function() {
 		if (null == match)
 			return false;
 
-		var tvid_prodid = match[1], action = match[2], checked = $(document.getElementById('allCheck-' + tvid_prodid)).prop('checked'),
+		var tvid_prodid = match[1], expand = 'more' === match[2], btnExpand$ = $('input[id="' + match[0] + '"]'),
+			checked = $(document.getElementById('allCheck-' + tvid_prodid)).prop('checked'),
 			showHeader = $('tr[id="' + tvid_prodid + '"]'), episodeRows = $('tr[id*="ep-' + tvid_prodid + '"]'),
-			void_var = 'more' == action && episodeRows.show() ||  episodeRows.hide();
+			void_var = episodeRows.css({'visibility': expand ? 'visible' : 'collapse'});
 
-		$('input[id="' + match[0] + '"]').val('more' == action ? 'Expanding...' : 'Collapsing...');
+		btnExpand$.val(expand ? 'Expanding...' : 'Collapsing...');
 
-		if (0 == episodeRows.length) {
+		if (0 === episodeRows.length) {
 			$.getJSON(sbRoot + '/manage/get-status-episodes',
 				{
 					tvid_prodid: tvid_prodid,
@@ -82,26 +83,36 @@ $(document).ready(function() {
 						setStatus$.find('option').last().after('<optgroup class="recommended" label="whatever is"><option value="recommended">suggested</option></optgroup>');
 						selectRecommended();
 					}
-					$('input[id="' + match[0] + '"]').val('more' == action ? 'Expand' : 'Collapse');
+					btnExpand$.val(expand ? 'Expand' : 'Collapse');
 					btnElement.hide();
-					$('input[id="' + tvid_prodid + '-' + ('more' == action ? 'less' : 'more') + '"]').show();
+					$('input[id="' + tvid_prodid + '-' + (expand ? 'less' : 'more') + '"]').show();
 				});
 		} else {
-			$('input[id="' + match[0] + '"]').val('more' == action ? 'Expand' : 'Collapse');
+			btnExpand$.val(expand ? 'Expand' : 'Collapse');
 			btnElement.hide();
-			$('input[id="' + tvid_prodid + '-' + ('more' == action ? 'less' : 'more') + '"]').show();
+			$('input[id="' + tvid_prodid + '-' + (expand ? 'less' : 'more') + '"]').show();
 		}
 
 	}
 
 	$('.get_more_eps,.get_less_eps').on('click', function(){
 		show_episodes($(this));
-		($('.get_more_eps:visible').length == 0 ? $('.expandAll').hide() : '');
+		var btnExpandAll$ = $('.expand-all');
+		(0 === $('.get_more_eps:visible').length ? btnExpandAll$.hide() : btnExpandAll$.show());
 	});
 
-	$('.expandAll').on('click', function(){
+	$('.expand-all').on('click', function(){
 		$(this).hide();
+		$('.collapse-all').show();
 		$('.get_more_eps').each(function() {
+			show_episodes($(this));
+		});
+	});
+
+	$('.collapse-all').on('click', function(){
+		$(this).hide();
+		$('.expand-all').show();
+		$('.get_less_eps').each(function() {
 			show_episodes($(this));
 		});
 	});

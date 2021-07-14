@@ -79,13 +79,14 @@ class MilkieProvider(generic.TorrentProvider):
                     search_url = getattr(Request(
                         'GET', self.urls['search'] % cur_param,
                         params={'query': search_string}).prepare(), 'url', None)
-                    data_json, sess = self.get_url(search_url, headers=dict(Authorization='Bearer %s' % self._token),
-                                                   resp_sess=True, parse_json=True)
-                    if isinstance(data_json, dict):
-                        break
-
-                if self.should_skip():
-                    return results
+                    try:
+                        data_json, sess = self.get_url(search_url, resp_sess=True, parse_json=True,
+                                                       headers=dict(Authorization='Bearer %s' % self._token))
+                        if isinstance(data_json, dict):
+                            break
+                    except(BaseException, Exception):
+                        if self.should_skip():
+                            return results
 
                 cnt = len(items[mode])
                 if isinstance(data_json, dict):
