@@ -20,7 +20,7 @@
 <div id="config-content">
 	<table class="infoTable" cellspacing="1" border="0" cellpadding="0" width="100%">
 		<tr>
-			<td class="infoTableHeader">Version: </td>
+			<td class="infoTableHeader" style="min-width:180px">Version: </td>
 			<td class="infoTableCell">
 				BRANCH: #echo $sg_str('BRANCH') or 'UNKNOWN'# @ py#echo '.'.join(['%s' % x for x in sys.version_info[0:3]])# / COMMIT: #echo ($sg_str('CUR_COMMIT_HASH')[0:7] or 'UNKNOWN') + ('', ' @ ')[bool($version)]#$version<br />
 				<em class="red-text">This is BETA software</em><br />

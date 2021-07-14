@@ -6,6 +6,13 @@
 
 
 
+### 0.24.11 (2021-07-14 10:30:00 UTC)
+
+* Fix handle a provider response when in error case
+* Change use wider min width for left column on About page
+* Fix misaligned columns when expanding/collapsing a show on Episode Overview
+
+
 ### 0.24.10 (2021-07-06 20:00:00 UTC)
 
 * Fix package update detection
