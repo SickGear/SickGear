@@ -13,6 +13,7 @@ icon: gui/slick/images/sickgear.png
 confinement: strict
 grade: stable
 adopt-info: sickgear
+base: core18
 
 apps:
   sickgear:
@@ -28,8 +29,8 @@ parts:
     source: .
     python-version: python2
     python-packages: [cheetah3, cryptography, lxml, regex, scandir, python-levenshtein]
-    build-attributes: [no-system-libraries]
 
+    stage-packages: [libpython2.7]
     build-packages:
       - to i386: ["libffi-dev:i386", "libssl-dev:i386",  "libxml2-dev:i386", "libxslt1-dev:i386",
                    "python-dev:i386", "python-levenshtein:i386", "python-lxml:i386", "python-regex:i386"]

@@ -6,6 +6,11 @@
 
 
 
+### 0.24.12 (2021-07-17 08:10:00 UTC)
+
+* Fix snap build
+
+
 ### 0.24.11 (2021-07-14 10:30:00 UTC)
 
 * Fix handle a provider response when in error case
