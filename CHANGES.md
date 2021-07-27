@@ -1,4 +1,9 @@
-﻿### 0.24.12 (2021-07-17 08:10:00 UTC)
+﻿### 0.24.13 (2021-07-27 02:20:00 UTC)
+
+* Fix incorrect reporting of missing provider detail
+  
+
+### 0.24.12 (2021-07-17 08:10:00 UTC)
 
 * Fix snap build
 

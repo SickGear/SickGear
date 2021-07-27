@@ -41,7 +41,7 @@ class SpeedAppProvider(generic.TorrentProvider):
         )
 
         self.perms_needed = self.perms = ('torrent.read', 'torrent.download', 'snatch.read')
-        self.api_key, self._authd, self.minseed, self.minleech, self.cats = 5 * [None]
+        self.api_key, self._authd, self.raise_auth_exception, self.minseed, self.minleech, self.cats = 6 * [None]
 
     def _authorised(self, **kwargs):
 
@@ -102,9 +102,14 @@ class SpeedAppProvider(generic.TorrentProvider):
         return results
 
     def ui_string(self, key):
+        try:
+            not_authd = not self._authd and self._check_auth(True) and self._authorised()
+        except (BaseException, Exception):
+            not_authd = True
+
         return ('%s_api_key' % self.get_id()) == key and 'API Token' or \
                ('%s_api_key_tip' % self.get_id()) == key and \
-               ((not self._authd and not self._authorised() or self.perms_needed)
+               ((not_authd or self.perms_needed)
                 and ('create token at <a href="%sprofile/api-tokens">%s site</a><br>'
                      'with perms %s' % (self.url_base, self.name, map_list(
                            lambda p: 't.read' in p and 'Read torrents'
@@ -112,7 +117,7 @@ class SpeedAppProvider(generic.TorrentProvider):
                                      or 'ch.read' in p and 'Read snatches', self.perms_needed)))
                 .replace('[', '').replace(']', '')
                 or 'token is valid and required permissions are enabled') \
-               or ''
+            or ''
 
 
 provider = SpeedAppProvider()
