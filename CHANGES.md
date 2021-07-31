@@ -6,6 +6,13 @@
 
 
 
+### 0.24.14 (2021-07-31 08:50:00 UTC)
+
+* Change add compatibility for Transmission 3.00 client with label support
+* Change ensure cookies are split only into 2 parts at the lhs of multiple occurrences of '='
+* Remove provider Skytorrents
+
+
 ### 0.24.13 (2021-07-27 02:20:00 UTC)
 
 * Fix incorrect reporting of missing provider detail

@@ -118,7 +118,7 @@ $(document).ready(function(){
 					$([hostDescDeluge, verifyCertOption, labelWarningDeluge].join(',')).show();
 					break;
 				case 'transmission':
-					client = 'Transmission'; hideLabelOption = !0; hidePathBlank = !0;
+					client = 'Transmission'; hideLabelOption = !1; hidePathBlank = !0;
 					$([transmission, highBandwidthOption].join(',')).show();
 					break;
 				case 'qbittorrent':

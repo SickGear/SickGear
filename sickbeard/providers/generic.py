@@ -1357,7 +1357,7 @@ class GenericProvider(object):
                                dict(p=self.name, r='\'%s\'' % reqd)
 
             cj = requests.utils.add_dict_to_cookiejar(self.session.cookies,
-                                                      dict([x.strip().split('=') for x in cookies.split(';')
+                                                      dict([x.strip().split('=', 1) for x in cookies.split(';')
                                                             if '' != x])),
             for item in cj:
                 if not isinstance(item, requests.cookies.RequestsCookieJar):
