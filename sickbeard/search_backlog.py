@@ -116,7 +116,8 @@ class BacklogSearcher(object):
                          standard_backlog,  # type: bool
                          limited_backlog,  # type: bool
                          forced,  # type: bool
-                         torrent_only  # type: bool
+                         torrent_only,  # type: bool
+                         prevent_same=False  # type: bool
                          ):
         """
         add given list of show items to search backlog queue
@@ -126,10 +127,15 @@ class BacklogSearcher(object):
         :param limited_backlog: limited search
         :param forced: forced search
         :param torrent_only: only torrents
+        :param prevent_same: prevent same search
         """
         for segments in items:
             if len(segments):
                 for season, segment in iteritems(segments):  # type: int, List[TVEpisode]
+                    if prevent_same and \
+                            sickbeard.search_queue_scheduler.action.is_in_queue(segment[0].show_obj, segment):
+                        continue
+
                     self.currentSearchInfo = {'title': segment[0].show_obj.name + ' Season ' + str(season)}
 
                     backlog_queue_item = search_queue.BacklogQueueItem(
@@ -180,7 +186,8 @@ class BacklogSearcher(object):
     def search_backlog(self,
                        which_shows=None,  # type: Optional[List[TVShow]]
                        force_type=NORMAL_BACKLOG,  # type: int
-                       force=False  # type: bool
+                       force=False,  # type: bool
+                       prevent_same=False  # type: bool
                        ):
         """
         start backlog for given list of shows or start next scheduled backlog
@@ -188,6 +195,7 @@ class BacklogSearcher(object):
         :param which_shows: optional list of shows to backlog search
         :param force_type: type of backlog
         :param force: force backlog
+        :param prevent_same: don't start same search again
         :return: nothing
         :rtype: None
         """
@@ -297,7 +305,8 @@ class BacklogSearcher(object):
                     if w:
                         limited_wanted_list.append(w)
 
-        self.add_backlog_item(wanted_list, standard_backlog, limited_backlog, forced, any_torrent_enabled)
+        self.add_backlog_item(wanted_list, standard_backlog, limited_backlog, forced, any_torrent_enabled,
+                              prevent_same=prevent_same)
         if standard_backlog and not any_torrent_enabled and limited_wanted_list:
             self.add_backlog_item(limited_wanted_list, standard_backlog, True, forced, any_torrent_enabled)
 

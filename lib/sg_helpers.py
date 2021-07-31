@@ -2,6 +2,7 @@
 # ---------------
 # functions are placed here to remove cyclic import issues from placement in helpers
 #
+from __future__ import division
 import ast
 import codecs
 import datetime
@@ -24,6 +25,7 @@ import traceback
 from exceptions_helper import ex, ConnectionSkipException
 from lib.cachecontrol import CacheControl, caches
 from lib.tmdbsimple.configuration import Configuration
+from lib.tmdbsimple.genres import Genres
 from cfscrape import CloudflareScraper
 from send2trash import send2trash
 
@@ -33,7 +35,7 @@ import requests
 
 from _23 import decode_bytes, filter_list, html_unescape, list_range, \
     ordered_dict, Popen, scandir, urlparse, urlsplit, urlunparse
-from six import integer_types, iteritems, iterkeys, itervalues, PY2, string_types, text_type
+from six import integer_types, iteritems, iterkeys, itervalues, moves, PY2, string_types, text_type
 
 import zipfile
 # py7z hardwired removed, see comment below
@@ -59,8 +61,7 @@ if False:
     from typing import Any, AnyStr, Dict, Generator, NoReturn, integer_types, Iterable, Iterator, List, Optional, \
         Tuple, Union
 
-# global tmdb_info cache
-_TMDB_INFO_CACHE = {'date': datetime.datetime(2000, 1, 1), 'data': None}
+html_convert_fractions = {0: '', 25: '&frac14;', 50: '&frac12;', 75: '&frac34;', 100: 1}
 
 PROG_DIR = ek.ek(os.path.join, os.path.dirname(os.path.normpath(os.path.abspath(__file__))), '..')
 
@@ -112,6 +113,9 @@ CACHE_DIR = None
 DATA_DIR = None
 PROXY_SETTING = None
 TRASH_REMOVE_SHOW = False
+REMOVE_FILENAME_CHARS = None
+MEMCACHE = {}
+FLARESOLVERR_HOST = None
 
 # noinspection PyRedeclaration
 db = None
@@ -205,6 +209,12 @@ class ConnectionFailDict(object):
 
 
 DOMAIN_FAILURES = ConnectionFailDict()
+sp = 8
+trakt_fail_times = {(i * sp) + m: s for m in range(1, 1 + sp) for i, s in
+                    enumerate([(0, 5), (0, 15), (0, 30), (1, 0), (2, 0)])}
+trakt_fail_times.update({i: s for i, s in enumerate([(3, 0), (6, 0), (12, 0), (24, 0)], len(trakt_fail_times))})
+domain_fail_times = {'api.trakt.tv': trakt_fail_times}
+default_fail_times = {1: (0, 15), 2: (0, 30), 3: (1, 0), 4: (2, 0), 5: (3, 0), 6: (6, 0), 7: (12, 0), 8: (24, 0)}
 
 
 class ConnectionFailList(object):
@@ -223,7 +233,7 @@ class ConnectionFailList(object):
         self._tmr_limit_wait = None  # type: Optional[datetime.timedelta]
         self._last_fail_type = None  # type: Optional[ConnectionFail]
         self.has_limit = False  # type: bool
-        self.fail_times = {1: (0, 15), 2: (0, 30), 3: (1, 0), 4: (2, 0), 5: (3, 0), 6: (6, 0), 7: (12, 0), 8: (24, 0)}
+        self.fail_times = domain_fail_times.get(url, default_fail_times)  # type: Dict[integer_types, Tuple[int, int]]
         self._load_fail_values()
         self.dirty = False  # type: bool
 
@@ -741,8 +751,10 @@ def get_url(url,  # type: AnyStr
             exclude_client_http_codes=True,  # type: bool
             exclude_http_codes=(404, 429),  # type: Tuple[integer_types]
             exclude_no_data=True,  # type: bool
+            use_method=None,  # type: Optional[AnyStr]
+            return_response=False,  # type: bool
             **kwargs):
-    # type: (...) -> Optional[Union[AnyStr, bool, bytes, Dict, Tuple[Union[Dict, List], requests.Session]]]
+    # type: (...) -> Optional[Union[AnyStr, bool, bytes, Dict, Tuple[Union[Dict, List], requests.Session], requests.Response]]
     """
     Return data from a URI with a possible check for authentication prior to the data fetch.
     Raised errors and no data in responses are tracked for making future logic decisions.
@@ -756,13 +768,13 @@ def get_url(url,  # type: AnyStr
     4) `Requests::response`, and `Requests::session` when kwargs 'resp_sess' is True.
 
     :param url: address to request fetch data from
-    :param post_data: post data
+    :param post_data: if this or `post_json` is set, then request POST method is used to send this data
     :param params:
     :param headers: headers to add
     :param timeout: timeout
     :param session: optional session object
     :param parse_json: return JSON Dict
-    :param memcache_cookies: memory persistant store for cookies
+    :param memcache_cookies: memory persistent store for cookies
     :param raise_status_code: raise exception for status codes
     :param raise_exceptions: raise exceptions
     :param as_binary: return bytes instead of text
@@ -773,6 +785,8 @@ def get_url(url,  # type: AnyStr
     :param exclude_client_http_codes: if True, exclude client http codes 4XX from failure monitor
     :param exclude_http_codes: http codes to exclude from failure monitor, default: (404, 429)
     :param exclude_no_data: exclude no data as failure
+    :param use_method: force any supported method by Session(): get, put, post, delete
+    :param return_response: return response object
     :param kwargs: keyword params to passthru to Requests
     :return: None or data fetched from address
     """
@@ -860,8 +874,12 @@ def get_url(url,  # type: AnyStr
                 logger.debug('Using %s' % msg)
                 session.proxies = {'http': proxy_address, 'https': proxy_address}
 
-        # decide if we get or post data to server
-        if post_data or post_json:
+        if None is not use_method:
+
+            method = getattr(session, use_method.strip().lower())
+
+        elif post_data or post_json:  # decide if to post data or send a get request to server
+
             if True is post_data:
                 post_data = None
 
@@ -958,10 +976,17 @@ def get_url(url,  # type: AnyStr
 
         if isinstance(raised, Exception):
             if raise_exceptions or raise_status_code:
+                try:
+                    if not hasattr(raised, 'text') and hasattr(response, 'text'):
+                        raised.text = response.text
+                except (BaseException, Exception):
+                    pass
                 raise raised
             return
 
-    if None is result and None is not response and response.ok:
+    if return_response:
+        result = response
+    elif None is result and None is not response and response.ok:
         if isinstance(memcache_cookies, dict):
             parsed_url = urlparse(url)
             domain = parsed_url.netloc
@@ -997,8 +1022,8 @@ def get_url(url,  # type: AnyStr
             raise raised
 
     if failure_monitor:
-        if result and not isinstance(result, tuple) \
-                or isinstance(result, tuple) and result[0]:
+        if return_response or (result and not isinstance(result, tuple)
+                               or isinstance(result, tuple) and result[0]):
             domain = DOMAIN_FAILURES.get_domain(url)
             if 0 != DOMAIN_FAILURES.domain_list[domain].failure_count:
                 logger.info('Unblocking: %s' % domain)
@@ -1364,6 +1389,40 @@ def maybe_plural(subject=1):
     return ('s', '')[1 == number]
 
 
+def time_to_int(dt):
+    # type: (Union[datetime.time, None]) -> Optional[integer_types]
+    """
+    converts datetime.time to integer (hour + minute only)
+
+    :param dt: datetime.time obj
+    :return: integer of hour + min
+    """
+    if None is dt:
+        return None
+    try:
+        return dt.hour * 100 + dt.minute
+    except (BaseException, Exception):
+        return 0
+
+
+def int_to_time(d_int):
+    # type: (Union[integer_types, None]) -> Optional[datetime.time]
+    """
+    convert integer from dt_to_int back to datetime.time
+
+    :param d_int: integer
+    :return: datetime.time
+    """
+    if None is d_int:
+        return None
+    if isinstance(d_int, integer_types):
+        try:
+            return datetime.time(*divmod(d_int, 100))
+        except (BaseException, Exception):
+            pass
+    return datetime.time(hour=0, minute=0)
+
+
 def indent_xml(elem, level=0):
     """
     Does our pretty printing, makes Matt very happy
@@ -1384,16 +1443,6 @@ def indent_xml(elem, level=0):
             elem.text = ('%s' % elem.text).replace('\n', ' ')
         if level and (not elem.tail or not elem.tail.strip()):
             elem.tail = i
-
-
-def get_tmdb_info():
-    # type: (...) -> Dict
-    """return tmdbsimple Configuration().info() or cached copy"""
-    global _TMDB_INFO_CACHE
-    # only retrieve info data if older then 3 days
-    if 3 < (datetime.datetime.now() - _TMDB_INFO_CACHE['date']).days or not _TMDB_INFO_CACHE['data']:
-        _TMDB_INFO_CACHE = {'date': datetime.datetime.now(), 'data': Configuration().info()}
-    return _TMDB_INFO_CACHE['data']
 
 
 def compress_file(target, filename, prefer_7z=True, remove_source=True):
@@ -1520,3 +1569,108 @@ def ast_eval(value, default=None):
         value = default
 
     return value
+
+
+def sanitize_filename(name):
+    """
+
+    :param name: filename
+    :type name: AnyStr
+    :return: sanitized filename
+    :rtype: AnyStr
+    """
+    # remove bad chars from the filename
+    name = re.sub(r'[\\/*]', '-', name)
+    name = re.sub(r'[:"<>|?]', '', name)
+
+    # remove leading/trailing periods and spaces
+    name = name.strip(' .')
+
+    for char in REMOVE_FILENAME_CHARS or []:
+        name = name.replace(char, '')
+
+    return name
+
+
+def download_file(url, filename, session=None, **kwargs):
+    """
+    download given url to given filename
+
+    :param url: url to download
+    :type url: AnyStr
+    :param filename: filename to save the data to
+    :type filename: AnyStr
+    :param session: optional requests session object
+    :type session: requests.Session or None
+    :param kwargs:
+    :return: success of download
+    :rtype: bool
+    """
+    MEMCACHE.setdefault('cookies', {})
+    if None is get_url(url, session=session, savename=filename,
+                       url_solver=FLARESOLVERR_HOST, memcache_cookies=MEMCACHE['cookies'],
+                       **kwargs):
+        remove_file_perm(filename)
+        return False
+    return True
+
+
+def calc_age(birthday, deathday=None, date=None):
+    # type: (datetime.date, datetime.date, Optional[datetime.date]) -> Optional[int]
+    """
+    returns age based on current date or given date
+    :param birthday: birth date
+    :param deathday: death date
+    :param date:
+    """
+    if isinstance(birthday, datetime.date):
+        today = (datetime.date.today(), date)[isinstance(date, datetime.date)]
+        today = (today, deathday)[isinstance(deathday, datetime.date) and today > deathday]
+        try:
+            b_d = birthday.replace(year=today.year)
+
+        # raised when birth date is February 29
+        # and the current year is not a leap year
+        except ValueError:
+            b_d = birthday.replace(year=today.year, month=birthday.month + 1, day=1)
+
+        if b_d > today:
+            return today.year - birthday.year - 1
+        else:
+            return today.year - birthday.year
+
+
+def convert_to_inch_faction_html(height):
+    # type: (float) -> AnyStr
+    """
+    returns html string in foot and inches including fractions
+    :param height: height in cm
+    """
+    total_inches = round(height / float(2.54), 2)
+    foot, inches = divmod(total_inches, 12)
+    _, fraction = '{0:.2f}'.format(total_inches).split('.')
+    fraction = int(fraction)
+    # fix rounding errors
+    fraction = next((html_convert_fractions.get(fraction + round_error)
+                    or html_convert_fractions.get(fraction - round_error)
+                    for round_error in moves.xrange(0, 25) if fraction + round_error in html_convert_fractions
+                    or fraction - round_error in html_convert_fractions), '')
+    if 1 == fraction:
+        inches += 1
+        fraction = ''
+    if 12 <= inches:
+        foot += 1
+        inches = 0
+    inches = str(inches).split('.')[0]
+    return '%s\' %s%s%s' % (int(foot), (inches, '')['0' == inches], fraction,
+                            ('', '"')['0' != inches or '' != fraction])
+
+
+def spoken_height(height):
+    # type: (float) -> AnyStr
+    """
+    return text for spoken words of height
+
+    :param height: height in cm
+    """
+    return convert_to_inch_faction_html(height).replace('\'', ' foot').replace('"', '')

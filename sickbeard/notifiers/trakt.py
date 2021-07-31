@@ -21,6 +21,7 @@ import os
 from .generic import BaseNotifier
 import sickbeard
 from lib.libtrakt import TraktAPI, exceptions
+from exceptions_helper import ConnectionSkipException
 
 from _23 import list_keys
 from six import iteritems
@@ -108,7 +109,7 @@ class TraktNotifier(BaseNotifier):
                             msg = 'Episode not found on Trakt, not adding to'
                         else:
                             warn, msg = True, 'Could not add episode to'
-                    except (exceptions.TraktAuthException, exceptions.TraktException):
+                    except (ConnectionSkipException, exceptions.TraktAuthException, exceptions.TraktException):
                         warn, msg = True, 'Error adding episode to'
                     msg = 'Trakt: %s your %s collection' % (msg, sickbeard.TRAKT_ACCOUNTS[tid].name)
                     if not warn:

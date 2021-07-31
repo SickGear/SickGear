@@ -43,3 +43,7 @@ class TraktServerError(TraktException):
 
 class TraktLockedUserAccount(TraktException):
     pass
+
+
+class TraktInvalidGrant(TraktException):
+    pass

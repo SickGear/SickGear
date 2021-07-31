@@ -58,37 +58,37 @@ class TVShowBase(LegacyTVShow, TVBase):
     def __init__(self, tvid, prodid, lang=''):
         # type: (int, int, Text) -> None
         super(TVShowBase, self).__init__(tvid, prodid)
-        
-        self._name = ''
-        self._imdbid = ''
-        self._network = ''
-        self._genre = ''
-        self._classification = ''
-        self._runtime = 0
-        self._imdb_info = {}
-        self._quality = int(sickbeard.QUALITY_DEFAULT)
-        self._flatten_folders = int(sickbeard.FLATTEN_FOLDERS_DEFAULT)
-        self._status = ''
-        self._airs = ''
-        self._startyear = 0
+
         self._air_by_date = 0
-        self._subtitles = int(sickbeard.SUBTITLES_DEFAULT) if sickbeard.SUBTITLES_DEFAULT else 0
+        self._airs = ''
+        self._anime = 0
+        self._classification = ''
         self._dvdorder = 0
-        self._upgrade_once = 0
+        self._flatten_folders = int(sickbeard.FLATTEN_FOLDERS_DEFAULT)
+        self._genre = ''
+        self._imdb_info = {}
+        self._imdbid = ''
         self._lang = lang
         self._last_update_indexer = 1
-        self._sports = 0
-        self._anime = 0
-        self._scene = 0
-        self._rls_ignore_words = set()
-        self._rls_require_words = set()
+        self._name = ''
         self._overview = ''
         self._prune = 0
-        self._tag = ''
-        self._rls_ignore_words_regex = False
-        self._rls_require_words_regex = False
+        self._quality = int(sickbeard.QUALITY_DEFAULT)
         self._rls_global_exclude_ignore = set()
         self._rls_global_exclude_require = set()
+        self._rls_ignore_words = set()
+        self._rls_ignore_words_regex = False
+        self._rls_require_words = set()
+        self._rls_require_words_regex = False
+        self._runtime = 0
+        self._scene = 0
+        self._sports = 0
+        self._startyear = 0
+        self._status = ''
+        self._subtitles = int(sickbeard.SUBTITLES_DEFAULT) if sickbeard.SUBTITLES_DEFAULT else 0
+        self._tag = ''
+        self._upgrade_once = 0
+        self.internal_network = ''
 
     # name = property(lambda self: self._name, dirty_setter('_name'))
     @property
@@ -133,7 +133,7 @@ class TVShowBase(LegacyTVShow, TVBase):
         self.dirty_setter('_name')(self, *arg)
         if _current_name != self._name:
             buildNameCache(self)
-    
+
     # imdbid = property(lambda self: self._imdbid, dirty_setter('_imdbid'))
     @property
     def imdbid(self):
@@ -143,14 +143,14 @@ class TVShowBase(LegacyTVShow, TVBase):
     def imdbid(self, *arg):
         self.dirty_setter('_imdbid')(self, *arg)
 
-    # network = property(lambda self: self._network, dirty_setter('_network'))
+    # network = property(lambda self: self.internal_network, dirty_setter('internal_network'))
     @property
     def network(self):
-        return self._network
+        return self.internal_network
 
     @network.setter
     def network(self, *arg):
-        self.dirty_setter('_network')(self, *arg)
+        self.dirty_setter('internal_network')(self, *arg)
 
     # genre = property(lambda self: self._genre, dirty_setter('_genre'))
     @property
@@ -366,23 +366,23 @@ class TVEpisodeBase(LegacyTVEpisode, TVBase):
     def __init__(self, season, episode, tvid):
         super(TVEpisodeBase, self).__init__(tvid)
 
-        self._name = ''
-        self._season = season
-        self._episode = episode
         self._absolute_number = 0
-        self._description = ''
-        self._subtitles = list()
-        self._subtitles_searchcount = 0
-        self._subtitles_lastsearch = str(datetime.datetime.min)
         self._airdate = datetime.date.fromordinal(1)
+        self._description = ''
+        self._episode = episode
+        self._file_size = 0
         self._hasnfo = False
         self._hastbn = False
-        self._status = UNKNOWN
-        self._file_size = 0
-        self._release_name = ''
         self._is_proper = False
-        self._version = 0
+        self._name = ''
         self._release_group = ''
+        self._release_name = ''
+        self._season = season
+        self._status = UNKNOWN
+        self._subtitles = list()
+        self._subtitles_lastsearch = str(datetime.datetime.min)
+        self._subtitles_searchcount = 0
+        self._version = 0
 
     # name = property(lambda self: self._name, dirty_setter('_name', string_types))
     @property

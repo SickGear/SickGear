@@ -13,7 +13,7 @@ __version__ = '1.9'
 __all__ = ['TvdbException', 'TvdbError', 'TvdbUserabort', 'TvdbShownotfound',
            'TvdbSeasonnotfound', 'TvdbEpisodenotfound', 'TvdbAttributenotfound', 'TvdbTokenexpired']
 
-from tvinfo_base.exceptions import *
+from lib.tvinfo_base.exceptions import *
 
 
 class TvdbException(BaseTVinfoException):

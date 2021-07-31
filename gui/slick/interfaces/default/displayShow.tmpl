@@ -1,3 +1,4 @@
+#import re
 #import sickbeard
 #from sickbeard import TVInfoAPI, indexermapper, network_timezones
 #from sickbeard.common import Overview, qualityPresets, qualityPresetStrings, \
@@ -8,7 +9,7 @@
 <% def sg_var(varname, default=False): return getattr(sickbeard, varname, default) %>#slurp#
 <% def sg_str(varname, default=''): return getattr(sickbeard, varname, default) %>#slurp#
 ##
-#set global $title = $show_obj.name
+#set global $title = getattr($show_obj, 'unique_name', $show_obj.name)
 #set global $topmenu = 'home'
 #set $exceptions_string = ', '.join($show_obj.exceptions)
 #set $css = $getVar('css', 'reg')
@@ -19,7 +20,11 @@
 #set theme_suffix = ('', '-dark')['dark' == $sg_str('THEME_NAME', 'dark')]
 ##
 #import os.path, os, re
+#set global $inc_top_glide = True
+#set global $inc_ofi = True
 #include $os.path.join($sg_str('PROG_DIR'), 'gui/slick/interfaces/default/inc_top.tmpl')
+<script type="text/javascript" src="$sbRoot/js/cast.js?v=$sbPID"></script>
+
 <input type="hidden" id="sbRoot" value="$sbRoot">
 <script>
 <!--
@@ -33,7 +38,9 @@
 		useFuzzy: #echo ('!1', '!0')[$sg_var('FUZZY_DATING')]##if $sg_var('FUZZY_DATING')#,
 		dateFormat: '$sg_str('DATE_PRESET', '%x')',
 		timeFormat: '$sg_str('TIME_PRESET', '%I:%M %p')',
-		fuzzyTrimZero: #echo ('!1', '!0')[$sg_var('TRIM_ZERO')]##end if#
+		fuzzyTrimZero: #echo ('!1', '!0')[$sg_var('TRIM_ZERO')]##end if#,
+		glideStartAt: '#echo $sg_var('DISPLAY_SHOW_GLIDE', {}).get($show_obj.tvid_prodid, {}).get('start_at', '')#',
+		glideSlideTime: #echo $sg_var('DISPLAY_SHOW_GLIDE_SLIDETIME')#
 	}
 //-->
 </script>
@@ -78,7 +85,7 @@
     #end if
     #for $cur_show_obj in $cur_showlist
         #set $show_ended = '' != $cur_show_obj.status and $cur_show_obj.status in ['ended', 'Ended', 'Canceled']
-        #set void = $displayshowlist.append('\t\t\t<option %svalue="%s"%s>%s</option>' % (('', 'class="ended" ')[$show_ended], $cur_show_obj.tvid_prodid, ('', ' selected="selected"')[$cur_show_obj == $show_obj], $cur_show_obj.name))
+        #set void = $displayshowlist.append('\t\t\t<option %svalue="%s"%s>%s</option>' % (('', 'class="ended" ')[$show_ended], $cur_show_obj.tvid_prodid, ('', ' selected="selected"')[$cur_show_obj == $show_obj], getattr($cur_show_obj, 'unique_name', $cur_show_obj.name)))
     #end for
     #if 1 < len($sortedShowLists)
         #set void = $displayshowlist.append('\t\t\t</optgroup>')
@@ -144,6 +151,10 @@
 #end if
 				</div>
 
+<style>
+#showtitle .label{float: left; margin:0 4px 3px 0; padding:6px 4px 5px}
+#showtitle:after{display:block; content:"."; height:0; clear:both; visibility:hidden}
+</style>
 				<div id="details-top">
 					<div id="showtitle" data-showname="$show_obj.name">
 						<h2 class="title" id="scene_exception_$show_obj.tvid_prodid"><span>$show_obj.name</span>#echo ('', '<em id="title-status"> (ended)</em>')[$show_ended]#</h2>
@@ -179,6 +190,9 @@
 					<div>
 						<span class="details-title">Links</span>
 						<span class="details-info">
+<style>
+.master span{border-bottom:1px solid #0a0}
+</style>
 #set $tvdb_id = None
 #for $src_id, $src_name in iteritems($TVInfoAPI().all_sources)
     #if $TVInfoAPI($src_id).config.get('defunct') and $src_id != $show_obj.tvid
@@ -192,11 +206,11 @@
             #continue
         #end if
         #if not $TVInfoAPI($src_id).config.get('defunct')
-							<a class="service addQTip" href="$anon_url($TVInfoAPI($src_id).config['show_url'] % $show_obj.ids[$src_id]['id'])" rel="noreferrer" onclick="window.open(this.href, '_blank'); return !1;" title="View $src_name info in new tab">
+							<a class="service addQTip#if $show_obj.tvid == $src_id# master#end if#" href="$anon_url($TVInfoAPI($src_id).config['show_url'] % $show_obj.ids[$src_id]['id'])" rel="noreferrer" onclick="window.open(this.href, '_blank'); return !1;" title="View $src_name info in new tab">
         #else#
 							<a class="service addQTip" href="$sbRoot/home/edit-show?tvid_prodid=$show_obj.tvid_prodid#core-component-group3" title="Edit related show IDs">
         #end if#
-								<img alt="$src_name" height="16" width="16" src="$sbRoot/images/$TVInfoAPI($src_id).config['icon']" />
+								<span><img alt="$src_name" height="16" width="16" src="$sbRoot/images/$TVInfoAPI($src_id).config['icon']" /></span>
 							</a>
     #end if
 #end for
@@ -219,6 +233,9 @@
     #set $flags = 'country_codes' in $show_obj.imdb_info and '' != $show_obj.imdb_info['country_codes']
     #if 'runtimes' in $show_obj.imdb_info
         #set $runtime = $show_obj.imdb_info['runtimes']
+        #if $show_obj.imdb_info['is_mini_series'] and $runtime
+            #set $runtime = '%s (av) of %s' % (int($runtime/$show_obj.imdb_info['episode_count']), $runtime)
+        #end if
     #end if
 #end if
 #if None is $startyear and $show_obj.startyear
@@ -242,8 +259,9 @@
 #end if
 
 #if $show_obj.airs
-    #set $showairs = '%s%s' % ($show_obj.airs.replace('y', 'y,'),
+    #set $showairs = '%s%s' % ($re.sub(r'(?:s|nes|rs|ur)?day', '', $re.sub(r'(y)[^\w]+', r'\1, ', $show_obj.airs)),
                                ('', ' <span class="red-text" style="font-weight:bold">(invalid timeformat)</span>')[not $network_timezones.test_timeformat($show_obj.airs)])
+    #set $showairs = $showairs.replace('Sat, Sun', 'Sat - Sun').replace('Mon, Tue, Wed, Thu, Fri', 'Mon - Fri').replace('Mon, Tue, Wed, Thu', 'Mon - Thu').replace('Tue, Wed, Thu', 'Tue - Thu')
 					<div>
 						<span class="details-title">Air#echo ('s', 'ed')[$show_ended]#</span>
 						<span class="details-info">$showairs</span>
@@ -259,7 +277,7 @@
 #if None is not $runtime
 					<div>
 						<span class="details-title">Runtime</span>
-						<span class="details-info">$runtime minutes</span>
+						<span class="details-info">$runtime mins.</span>
 					</div>
 #end if
 #if $show_obj.status
@@ -315,21 +333,82 @@
 #set $has_overview = '' != $show_obj.overview
 #set $ep_tally = ('', '(<span class="hint">%s episodes</span>)' % $ep_counts['eps_all'])[0 < $ep_counts['eps_all']]
 					<div class="#echo ('no', 'details')[$has_overview]#-plot">
-						$ep_tally
-#if $has_overview
-						$show_obj.overview
+#if $show_obj.cast_list
+<%
+def param(visible=True, rid=None, cache_person=None, cache_char=None, person=None, role=None, tvid_prodid=None, thumb=None, oid=None, pid=None):
+    """
+    make the url param list
+    """
+    if cache_char or role:
+        oid = ('oid=%s' % oid, '')[not visible or None is oid or str(rid) == str(oid)]
+        return ('imagecache/character?', '')[not cache_char] + '&amp;'.join([kv for kv in ('rid=%s' % rid, 'tvid_prodid=%s' % (cache_char or role).tvid_prodid, ('', 'thumb=%s' % thumb)[not role and None is not thumb], ('person_id=%s' % pid, '')[not pid], ('prefer_person=1', '')[not pid], oid) if kv])
+    if cache_person:
+        oid = ('oid=%s' % oid, '')[not visible or None is oid or str(rid) == str(oid)]
+        return 'imagecache/person?' + '&amp;'.join([kv for kv in ('pid=%s' % rid, ('', 'thumb=%s' % thumb)[None is not thumb], oid) if kv])
+    if person:
+        oid = ('oid=%s' % person.id, '')[not visible or str(person.ref_id()) == str(person.id)]
+        return '&amp;'.join([kv for kv in ('rid=%s' % person.ref_id(), oid) if kv])
+    return 'param not implemented properly'
+%>
+    #set $cast = {'1st': [], '2nd': []}
+    #for $cur_cast in $show_obj.cast_list
+        #set $cast[('1st', '2nd')[not $cur_cast.name]] += [$cur_cast]
+    #end for
+						<div class="contain-glide">
+							<span class="cast-holder glide--swipeable">
+								<div class="cast-panel glide__track" data-glide-el="track">
+									<ul class="glide__slides">
+    #for $cur_cast in $cast['1st'] + $cast['2nd']
+        #set $by_people = [] if not $cur_cast.person else [$cur_person.name for $cur_person in $cur_cast.person]
+        #set $by_people = ', '.join($by_people if 2 > len($by_people) else $by_people[0:-1] + ['and ' + $by_people[-1]])
+        #set $caption = ' '.join(([] if not $cur_cast.name else [$cur_cast.name]) + ([] if not $by_people else ['by', $by_people])).replace('"', '&quot;')
+										<li class="cast body glide__slide" data-rid="$next($iter($cur_cast.person)).ref_id()">
+											<a class="thumb" href="$sbRoot/$param(rid=$cur_cast.ref_id(), cache_char=$show_obj, thumb=0, oid=$cur_cast.id)"#if $caption# data-caption="$caption"#end if# rel="glide"><img class="cast-bg" style="display:none" height="150" src="$sbRoot/$param(False, rid=$cur_cast.id, cache_char=$show_obj)"#if $cur_cast.name# alt=""#end if#></a>
+											<div class="links" style="display:none">
+        #if $cur_cast.name
+            #set $name = ($cur_cast.name, 'themself')[$cur_cast.name == (('', $cur_cast.person[0].name)[1 == len($cur_cast.person)])]
+												<div class="role">#if not $cur_cast.id#$cur_cast.name#else#<a href="$sbRoot/home/role?$param(rid=$cur_cast.ref_id(), role=$show_obj, oid=$cur_cast.id)">$name</a>#end if#</div>
+        #else
+												<div class="role">unknown name</div>
+        #end if
+        #set $p_count = len($cur_cast.person)
+        #for $p_num, $cur_person in enumerate($cur_cast.person, 1)
+												<div class="person">#if not $cur_cast.id#$cur_person.name#else#<a href="$sbRoot/home/person?$param(person=$cur_person)">$cur_person.name</a>#end if##if $p_num < $p_count#<span>, </span>#end if#</div>
+        #end for
+											</div>
+										</li>
+    #end for
+									</ul>
+								</div>
+								<div class="glide-arrows" data-glide-el="controls" style="display:none">
+									<button class="glide-prev" data-glide-dir="<"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><path d="M0 12l10.975 11 2.848-2.828-6.176-6.176H24v-3.992H7.646l6.176-6.176L10.975 1 0 12z" /></svg></button>
+									<button class="glide-next" data-glide-dir=">"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><path d="M13.025 1l-2.847 2.828 6.176 6.176h-16.354v3.992h16.354l-6.176 6.176 2.847 2.828 10.975-11z" /></svg></button>
+								</div>
+								<button id="pin-glide" class="one addQTip boldest" style="display:none" title="10s, 6s, 3s, then II to save position"><i class="sgicon-pause one"></i><i class="two">10</i><i class="three">6</i><i class="four">3</i></button>
+							</span>
+						</div><!-- contain-glide -->
+
+						<span id="about-hide"><br><br></span>
+						<span id="about-show" class="hide">
 #else
-                        #echo ('', '<br /><br />')[any($ep_tally)]
+						<span id="about-show">
+#end if
+							$ep_tally
+#if $has_overview
+							$show_obj.overview
+#else
+							#echo ('', '<br><br>')[any($ep_tally)]
     #if $show_ended
         #if $varExists('force_update')
-						A <a href="$sbRoot/$force_update" title="Trigger force full update">force full update</a> may return a plot overview for this ended show
+							A <a href="$sbRoot/$force_update" title="Trigger force full update">force full update</a> may return a plot overview for this ended show
         #else
-						Restart SickGear to get a new link here for this ended show
+							Restart SickGear to get a new link here for this ended show
         #end if
     #else
-						No plot overview available
+							No plot overview available
     #end if
 #end if
+						</span>
 					</div>
 
 					<div id="details-bottom">

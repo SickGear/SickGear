@@ -3,43 +3,50 @@
 # author:dbr/Ben
 # project:tvdb_api
 # repository:http://github.com/dbr/tvdb_api
-# license:unlicense (http://unlicense.org/)
+# license:un license (http://unlicense.org/)
 
+from __future__ import absolute_import
 from functools import wraps
 
 __author__ = 'dbr/Ben'
 __version__ = '2.0'
 __api_version__ = '3.0.0'
 
-import os
-import time
+import copy
+import datetime
 import getpass
-import tempfile
-import warnings
 import logging
+import os
+import random
+import re
 import requests
 import requests.exceptions
-import datetime
-import re
+import tempfile
+import time
+import warnings
 
-from six import integer_types, string_types, iteritems, PY2
-from _23 import list_values, map_list
-from sg_helpers import clean_data, try_int, get_url
+from bs4_parser import BS4Parser
 from collections import OrderedDict
-from tvinfo_base import TVInfoBase, CastList, Character, CrewList, Person, RoleTypes
+from sg_helpers import clean_data, get_url, try_int
+from sickbeard import ENV
 
-from lib.dateutil.parser import parse
 from lib.cachecontrol import CacheControl, caches
+from lib.dateutil.parser import parse
 from lib.exceptions_helper import ConnectionSkipException
+from lib.tvinfo_base import CastList, Character, CrewList, Person, RoleTypes, \
+    TVINFO_TVDB, TVINFO_TVDB_SLUG, TVInfoBase, TVInfoIDs
 
-from .tvdb_ui import BaseUI, ConsoleUI
 from .tvdb_exceptions import TvdbError, TvdbShownotfound, TvdbTokenexpired
+from .tvdb_ui import BaseUI, ConsoleUI
+
+from _23 import filter_list, list_keys, list_values, map_list
+from six import integer_types, iteritems, PY2, string_types
 
 # noinspection PyUnreachableCode
 if False:
     # noinspection PyUnresolvedReferences
-    from typing import Any, AnyStr, Dict, List, Optional
-    from tvinfo_base import TVInfoShow
+    from typing import Any, AnyStr, Dict, List, Optional, Union
+    from lib.tvinfo_base import TVInfoShow
 
 
 THETVDB_V2_API_TOKEN = {'token': None, 'datetime': datetime.datetime.fromordinal(1)}
@@ -134,6 +141,7 @@ class Tvdb(TVInfoBase):
     >> t['Scrubs'][1][24]['episodename']
     u'My Last Day'
     """
+    supported_id_searches = [TVINFO_TVDB, TVINFO_TVDB_SLUG]
 
     # noinspection PyUnusedLocal
     def __init__(self,
@@ -265,21 +273,32 @@ class Tvdb(TVInfoBase):
             logging.basicConfig(level=logging.DEBUG)
 
         # List of language from http://thetvdb.com/api/0629B785CE550C8D/languages.xml
-        # Hard-coded here as it is realtively static, and saves another HTTP request, as
+        # Hard-coded here as it is relatively static, and saves another HTTP request, as
         # recommended on http://thetvdb.com/wiki/index.php/API:languages.xml
         self.config['valid_languages'] = [
-            'da', 'fi', 'nl', 'de', 'it', 'es', 'fr', 'pl', 'hu', 'el', 'tr',
-            'ru', 'he', 'ja', 'pt', 'zh', 'cs', 'sl', 'hr', 'ko', 'en', 'sv', 'no'
+            'cs', 'da', 'de', 'el', 'en', 'es', 'fi', 'fr',
+            'he', 'hr', 'hu', 'it', 'ja', 'ko', 'nl', 'no',
+            'pl', 'pt', 'ru', 'sl', 'sv', 'tr', 'zh'
         ]
 
-        # thetvdb.com should be based around numeric language codes,
+        # not mapped: el, sl, tr. added as guess: fin, pol. unknown: _1
+        self.config['langabbv_23'] = {
+            'cs': 'ces', 'da': 'dan', 'de': 'deu', 'en': 'eng', 'es': 'spa', 'fi': 'fin', 'fr': 'fra',
+            'he': 'heb', 'hr': 'hrv', 'hu': 'hun', 'it': 'ita', 'ja': 'jpn', 'ko': 'kor', 'nb': 'nor',
+            'nl': 'nld', 'no': 'nor',
+            'pl': 'pol', 'pt': 'pot', 'ru': 'rus', 'sk': 'slv', 'sv': 'swe', 'zh': 'zho', '_1': 'srp',
+        }
+        self.config['valid_languages_3'] = list_values(self.config['langabbv_23'])
+
+        # TheTvdb.com should be based around numeric language codes,
         # but to link to a series like http://thetvdb.com/?tab=series&id=79349&lid=16
         # requires the language ID, thus this mapping is required (mainly
         # for usage in tvdb_ui - internally tvdb_api will use the language abbreviations)
-        self.config['langabbv_to_id'] = {'el': 20, 'en': 7, 'zh': 27,
-                                         'it': 15, 'cs': 28, 'es': 16, 'ru': 22, 'nl': 13, 'pt': 26, 'no': 9,
-                                         'tr': 21, 'pl': 18, 'fr': 17, 'hr': 31, 'de': 14, 'da': 10, 'fi': 11,
-                                         'hu': 19, 'ja': 25, 'he': 24, 'ko': 32, 'sv': 8, 'sl': 30}
+        self.config['langabbv_to_id'] = {
+            'cs': 28, 'da': 10, 'de': 14, 'el': 20, 'en':  7, 'es': 16, 'fi': 11, 'fr': 17,
+            'he': 24, 'hr': 31, 'hu': 19, 'it': 15, 'ja': 25, 'ko': 32, 'nl': 13, 'no':  9,
+            'pl': 18, 'pt': 26, 'ru': 22, 'sl': 30, 'sv':  8, 'tr': 21, 'zh': 27
+        }
 
         if not language:
             self.config['language'] = 'en'
@@ -291,33 +310,91 @@ class Tvdb(TVInfoBase):
 
         # The following url_ configs are based of the
         # http://thetvdb.com/wiki/index.php/Programmers_API
-        self.config['base_url'] = 'https://api.thetvdb.com/'
+        self.config['base_url'] = 'https://thetvdb.com/'
+        self.config['api3_url'] = 'https://api.thetvdb.com/'
 
-        self.config['url_search_series'] = '%(base_url)s/search/series' % self.config
+        self.config['url_search_series'] = '%(api3_url)ssearch/series' % self.config
         self.config['params_search_series'] = {'name': ''}
 
-        self.config['url_series_episodes_info'] = '%(base_url)sseries/%%s/episodes?page=%%s' % self.config
+        self.config['url_series_episodes_info'] = '%(api3_url)sseries/%%s/episodes?page=%%s' % self.config
 
-        self.config['url_series_info'] = '%(base_url)sseries/%%s' % self.config
-        self.config['url_episodes_info'] = '%(base_url)sepisodes/%%s' % self.config
-        self.config['url_actors_info'] = '%(base_url)sseries/%%s/actors' % self.config
+        self.config['url_series_info'] = '%(api3_url)sseries/%%s' % self.config
+        self.config['url_episodes_info'] = '%(api3_url)sepisodes/%%s' % self.config
+        self.config['url_actors_info'] = '%(api3_url)sseries/%%s/actors' % self.config
 
-        self.config['url_series_images'] = '%(base_url)sseries/%%s/images/query?keyType=%%s' % self.config
+        self.config['url_series_images'] = '%(api3_url)sseries/%%s/images/query?keyType=%%s' % self.config
         self.config['url_artworks'] = 'https://artworks.thetvdb.com/banners/%s'
 
-    def _search_show(self, name, **kwargs):
-        # type: (AnyStr, Optional[Any]) -> List[TVInfoShow]
+        self.config['url_people'] = '%(base_url)speople/%%s' % self.config
+        self.config['url_series_people'] = '%(base_url)sseries/%%s/people' % self.config
+        self.config['url_series_all'] = '%(base_url)sseries/%%s/allseasons/official' % self.config
+        self.config['url_series_dvd'] = '%(base_url)sseries/%%s/allseasons/dvd' % self.config
+        self.config['url_series_abs'] = '%(base_url)sseries/%%s/seasons/absolute/1' % self.config
+
+    def _search_show(self, name=None, ids=None, **kwargs):
+        # type: (AnyStr, Dict[integer_types, integer_types], Optional[Any]) -> List[TVInfoShow]
         def map_data(data):
             data['poster'] = data.get('image')
+            data['ids'] = TVInfoIDs(
+                tvdb=data.get('id'),
+                imdb=data.get('imdb_id') and try_int(data.get('imdb_id', '').replace('tt', ''), None))
             return data
 
-        return map_list(map_data, self.get_series(name))
+        results = []
+        if ids:
+            if ids.get(TVINFO_TVDB):
+                cache_id_key = 's-id-%s-%s' % (TVINFO_TVDB, ids[TVINFO_TVDB])
+                is_none, shows = self._get_cache_entry(cache_id_key)
+                if not self.config.get('cache_search') or (None is shows and not is_none):
+                    try:
+                        d_m = self._get_show_data(ids.get(TVINFO_TVDB), self.config['language'], direct_data=True)
+                        self._set_cache_entry(cache_id_key, d_m, expire=self.search_cache_expire)
+                    except (BaseException, Exception):
+                        d_m = None
+                else:
+                    d_m = shows
+                if d_m:
+                    results = map_list(map_data, [d_m['data']])
+            if ids.get(TVINFO_TVDB_SLUG):
+                cache_id_key = 's-id-%s-%s' % (TVINFO_TVDB, ids[TVINFO_TVDB_SLUG])
+                is_none, shows = self._get_cache_entry(cache_id_key)
+                if not self.config.get('cache_search') or (None is shows and not is_none):
+                    try:
+                        d_m = self.get_series(ids.get(TVINFO_TVDB_SLUG).replace('-', ' '))
+                        self._set_cache_entry(cache_id_key, d_m, expire=self.search_cache_expire)
+                    except (BaseException, Exception):
+                        d_m = None
+                else:
+                    d_m = shows
+                if d_m:
+                    for r in d_m:
+                        if ids.get(TVINFO_TVDB_SLUG) == r['slug']:
+                            results = map_list(map_data, [r])
+                            break
+        if name:
+            for n in ([name], name)[isinstance(name, list)]:
+                cache_name_key = 's-name-%s' % n
+                is_none, shows = self._get_cache_entry(cache_name_key)
+                if not self.config.get('cache_search') or (None is shows and not is_none):
+                    try:
+                        r = self.get_series(n)
+                        self._set_cache_entry(cache_name_key, r, expire=self.search_cache_expire)
+                    except (BaseException, Exception):
+                        r = None
+                else:
+                    r = shows
+                if r:
+                    results.extend(map_list(map_data, r))
+
+        seen = set()
+        results = [seen.add(r['id']) or r for r in results if r['id'] not in seen]
+        return results
 
     def get_new_token(self):
         global THETVDB_V2_API_TOKEN
         token = THETVDB_V2_API_TOKEN.get('token', None)
         dt = THETVDB_V2_API_TOKEN.get('datetime', datetime.datetime.fromordinal(1))
-        url = '%s%s' % (self.config['base_url'], 'login')
+        url = '%s%s' % (self.config['api3_url'], 'login')
         params = {'apikey': self.config['apikey']}
         resp = get_url(url.strip(), post_json=params, parse_json=True, raise_skip_exception=True)
         if resp:
@@ -364,10 +441,14 @@ class Tvdb(TVInfoBase):
                 pass
         return False
 
+    def is_apikey(self, check_url=None):
+        return bool(self.config['apikey']) and (None is check_url or '://api' in check_url)
+
     @retry((TvdbError, TvdbTokenexpired))
-    def _load_url(self, url, params=None, language=None):
+    def _load_url(self, url, params=None, language=None, parse_json=False, **kwargs):
         log.debug('Retrieving URL %s' % url)
 
+        parse_json = parse_json or self.is_apikey(url)
         session = requests.session()
 
         if self.config['cache_enabled']:
@@ -377,8 +458,10 @@ class Tvdb(TVInfoBase):
             log.debug('Using proxy for URL: %s' % url)
             session.proxies = {'http': self.config['proxy'], 'https': self.config['proxy']}
 
-        headers = {'Accept-Encoding': 'gzip,deflate', 'Authorization': 'Bearer %s' % self.get_token(),
-                   'Accept': 'application/vnd.thetvdb.v%s' % __api_version__}
+        headers = {'Accept-Encoding': 'gzip,deflate'}
+        if self.is_apikey(url):
+            headers.update({'Authorization': 'Bearer %s' % self.get_token(),
+                            'Accept': 'application/vnd.thetvdb.v%s' % __api_version__})
 
         if None is not language and language in self.config['valid_languages']:
             headers.update({'Accept-Language': language})
@@ -389,16 +472,17 @@ class Tvdb(TVInfoBase):
             self.show_not_found = False
         self.not_found = False
         try:
-            resp = get_url(url.strip(), params=params, session=session, headers=headers, parse_json=True,
-                           raise_status_code=True, raise_exceptions=True, raise_skip_exception=True)
+            resp = get_url(url.strip(), params=params, session=session, headers=headers, parse_json=parse_json,
+                           raise_status_code=True, raise_exceptions=True, raise_skip_exception=True, **kwargs)
         except ConnectionSkipException as e:
             raise e
         except requests.exceptions.HTTPError as e:
             if 401 == e.response.status_code:
-                # token expired, get new token, raise error to retry
-                global THETVDB_V2_API_TOKEN
-                THETVDB_V2_API_TOKEN = self.get_new_token()
-                raise TvdbTokenexpired
+                if self.is_apikey(url):
+                    # token expired, get new token, raise error to retry
+                    global THETVDB_V2_API_TOKEN
+                    THETVDB_V2_API_TOKEN = self.get_new_token()
+                    raise TvdbTokenexpired
             elif 404 == e.response.status_code:
                 if is_series_info:
                     self.show_not_found = True
@@ -478,10 +562,10 @@ class Tvdb(TVInfoBase):
                 data.update(keep_data)
             return data
 
-        if resp:
-            if isinstance(resp['data'], dict):
+        if resp and isinstance(resp, dict):
+            if isinstance(resp.get('data'), dict):
                 resp['data'] = map_show_keys(resp['data'])
-            elif isinstance(resp['data'], list):
+            elif isinstance(resp.get('data'), list):
                 data_list = []
                 for idx, row in enumerate(resp['data']):
                     if isinstance(row, dict):
@@ -490,13 +574,13 @@ class Tvdb(TVInfoBase):
                             data_list.append(cr)
                 resp['data'] = data_list
             return resp
-        return dict([(u'data', None)])
+        return dict([(u'data', (None, resp)[isinstance(resp, string_types)])])
 
-    def _getetsrc(self, url, params=None, language=None):
+    def _getetsrc(self, url, params=None, language=None, parse_json=False):
         """Loads a URL using caching
         """
         try:
-            src = self._load_url(url, params=params, language=language)
+            src = self._load_url(url, params=params, language=language, parse_json=parse_json)
             if isinstance(src, dict):
                 if None is not src['data']:
                     data = src['data']
@@ -510,6 +594,176 @@ class Tvdb(TVInfoBase):
                 if None is data or (isinstance(data, dict) and 1 > len(data.keys())):
                     raise ValueError
                 return src
+        except (KeyError, IndexError, Exception):
+            pass
+
+    @staticmethod
+    def clean_overview(text):
+        """replace newlines with period and space, remove multiple spaces"""
+        return ' '.join(['%s.' % re.sub(r'[\s][\s]+', r' ', x).strip().rstrip('.') for x in text.split('\r\n')])
+
+    def get_show_info(self, sid, language=None):
+        # type: (int, Optional[str]) -> Optional[dict]
+        results = self.search_tvs(sid, language=language)
+        for cur_result in (isinstance(results, dict) and results.get('results') or []):
+            result = filter_list(lambda r: 'series' == r['type'] and sid == r['id'],
+                                 cur_result.get('nbHits') and cur_result.get('hits') or [])
+            if 1 == len(result):
+                result[0]['overview'] = self.clean_overview(
+                    result[0]['overviews'][self.config['langabbv_23'].get(language) or 'eng'])
+                # remap
+                for from_key, to_key in iteritems({
+                    'name': 'seriesname', 'first_air_date': 'firstaired'
+                }):
+                    result[0][to_key] = result[0][from_key]
+                    del result[0][from_key]  # delete also prevents false +ve with the following new key notifier
+
+                # notify of new keys
+                if ENV.get('SG_DEV_MODE'):
+                    new_keys = set(list_keys(result[0])).difference({
+                        '_highlightResult', 'aliases', 'banner',
+                        'fanart', 'firstaired', 'follower_count',
+                        'id', 'image', 'is_tvdb_searchable', 'is_tvt_searchable',
+                        'seriesname', 'network',
+                        'objectID', 'overviews', 'poster', 'release_year',
+                        'slug', 'status',
+                        'translations', 'type',
+                        'url', 'uuid'
+                    })
+                    if new_keys:
+                        log.warning('DEV_MODE: New get_show_info tvdb attrs for %s %r' % (sid, new_keys))
+
+                return result[0]
+
+        # fallback : e.g. https://thetvdb.com/?tab=series&id=349309&lid=7
+        response = self._load_url(self.config['base_url'], params={
+            'tab': 'series', 'id': sid, 'lid': self.config['langabbv_to_id'].get(language, 7)})
+        series = {}
+
+        def get_value(tag, contains):
+            try:
+                rc_contains = re.compile(r'(?i)%s' % contains)
+                parent = copy.copy(tag.find(string=rc_contains, recursive=True).find_parent(class_=re.compile('item')))
+                return ', '.join(re.sub(r'(?i)(\s)([\s]+)', r'\1', i.get_text(strip=True))
+                                 for i in parent.find_all('span'))
+            except(BaseException, Exception):
+                pass
+
+        with BS4Parser(response.get('data', '')) as soup:
+            basic_info = soup.find(id='series_basic_info')
+            series_id = try_int(get_value(basic_info, r'series\sid'), None)
+            if None is not series_id:
+                series['id'] = series_id
+                series['firstaired'] = None  # fill from ep listings page
+                series['genrelist'] = get_value(basic_info, 'genres').split(', ')  # extra field
+                series['genre'] = '|%s|' % '|'.join(series['genrelist'])
+                series['language'] = language
+                series['seriesname'] = soup.find(id='series_title').get_text(strip=True)
+                series['networklist'] = get_value(basic_info, 'network').split(', ')  # extra field
+                series['network'] = '|%s|' % '|'.join(series['networklist'])  # e.g. '|network|network n|network 10|'
+                series['status'] = get_value(basic_info, 'status')
+                series['type'] = 'series'  # extra field
+
+                airs_at = get_value(basic_info, 'airs')
+                airs = airs_at and airs_at.split(', ') or []
+                if 0 < len(airs):
+                    series['airs_time'] = 'at ' in airs[-1] \
+                                          and re.sub(r'(?i)\s+([ap]m)', r'\1', airs[-1]).split()[-1] or ''
+                    series['airs_dayofweek'] = ', '.join(airs[0:-1])
+                else:
+                    series['airs_time'] = airs_at
+                    series['airs_dayofweek'] = ''
+
+                # alias list
+                series['aliases'] = []
+                try:
+                    lang_tag = soup.find(id='translations').select('.change_translation_text[data-language="%s"]' % (
+                            self.config['langabbv_23'].get(language) or 'eng'))[0]
+                    series['aliases'] = [t.get_text(strip=True) for t in lang_tag
+                                         .find(string=re.compile('(?i)alias'), recursive=True).find_parent()
+                                         .find_next_sibling('ul').find_all('li')]
+                except(BaseException, Exception):
+                    pass
+
+                # images
+                series['image'] = series['poster'] = (soup.find(rel=re.compile('artwork_posters')) or {}).get('href')
+                series['banner'] = (soup.find(rel=re.compile('artwork_banners')) or {}).get('href')
+                series['fanart'] = (soup.find(rel=re.compile('artwork_backgrounds')) or {}).get('href')
+
+                series['imdb_id'] = re.sub(r'.*(tt\d+)', r'\1',
+                                           (soup.find(href=re.compile(r'imdb\.com')) or {}).get('href', ''))
+
+                # {lang: overview}
+                series.setdefault('overviews', {})
+                for cur_tag in soup.find_all(class_='change_translation_text'):
+                    try:
+                        lang = cur_tag.attrs.get('data-language')
+                        if None is not lang:
+                            text = cur_tag.p.get_text(strip=True)
+                            if text:
+                                text = self.clean_overview(text)
+                                series['overviews'].setdefault(lang, text)  # extra field
+                                if lang == self.config['langabbv_23'].get(language):
+                                    series['overview'] = text
+                    except(BaseException, Exception):
+                        pass
+
+                runtime = get_value(basic_info, 'runtime')
+                runtime_often = None
+                if ', ' in runtime:
+                    try:
+                        # sort runtimes by most number of episodes (e.g. '25 minutes (700 episodes)')
+                        runtime_often = sorted([re.findall(r'([^(]+)\((\d+).*', i)[0] for i in runtime.split(', ')],
+                                               key=lambda x: try_int(x[1]), reverse=True)
+                        runtime_often = next(iter(runtime_often))[0].strip()  # first item is most frequent runtime
+                    except(BaseException, Exception):
+                        runtime_often = None
+                series['runtime'] = runtime_often and re.sub('^([0-9]+).*', r'\1', runtime_often) or runtime
+
+                series['season'] = None
+                try:
+                    last_season = sorted([x.get('href')
+                                          for x in soup.find_all(href=re.compile(r'/seasons/official/(\d+)'))])[-1]
+                    series['season'] = re.findall(r'(\d+)$', last_season)[0]
+                except(BaseException, Exception):
+                    pass
+
+                series['slug'] = series['url'] = ''
+                try:
+                    rc_slug = re.compile('(?i)/series/(?P<slug>[^/]+)/(?:episode|season)')
+                    series['slug'] = rc_slug.search(soup.find(href=rc_slug).get('href')).group('slug')
+                    series['url'] = '%sseries/%s' % (self.config['base_url'], series['slug'])  # extra field
+                except(BaseException, Exception):
+                    pass
+
+                # {lang: show title in lang}  # extra field
+                series['translations'] = {t.attrs.get('data-language'): t.attrs.get('data-title')
+                                          for t in soup.find_all(class_='change_translation_text')
+                                          if all(t.attrs.get(a) for a in ('data-title', 'data-language'))}
+
+        return series
+
+    def search_tvs(self, terms, language=None):
+        # type: (Union[int, str], Optional[str]) -> Optional[dict]
+        try:
+            src = self._load_url(
+                'https://tvshow''time-%s.algo''lia.net/1/'
+                'indexes/*/queries' % random.choice([1, 2, 3, 'dsn']),
+                params={'x-algo''lia-agent': 'Alg''olia for vani''lla JavaScript (lite) 3.3''2.0;'
+                                             'instant''search.js (3.5''.3);JS Helper (2.2''8.0)',
+                        'x-algo''lia''-app''lication-id': 'tvshow''time',
+                        'x-algo''lia''-ap''i-key': '3d''978dd96c457390f21cec6131ce5d''9c'[::-1]},
+                post_json={'requests': [
+                    {'indexName': 'TVDB',
+                     'params': '&'.join(
+                         ['query=%s' % terms, 'maxValuesPerFacet=10', 'page=0',
+                          'facetFilters=[["type:series", "type:person"]]',
+                          'tagFilters=', 'analytics=false', 'advancedSyntax=true',
+                          'highlightPreTag=__ais-highlight__', 'highlightPostTag=__/ais-highlight__'
+                          ])
+                     }]},
+                language=language, parse_json=True, failure_monitor=False)
+            return src
         except (KeyError, IndexError, Exception):
             pass
 
@@ -594,24 +848,107 @@ class Tvdb(TVInfoBase):
 
         self._set_show_data(sid, '_banners', banners, add=True)
 
-    def _parse_actors(self, sid, actor_list):
+    def _parse_actors(self, sid, actor_list, actor_list_alt):
 
         a = []
         cast = CastList()
         try:
-            for n in sorted(actor_list, key=lambda x: x['sortorder']):
-                role_image = (None, self.config['url_artworks'] % n.get('image'))[any([n.get('image')])]
-                character_name = n.get('role', '').strip()
-                person_name = n.get('name', '').strip()
-                character_id = n.get('id', None)
+            alts = {}
+            if actor_list_alt:
+                with BS4Parser(actor_list_alt) as soup:
+                    rc_role = re.compile(r'/series/(?P<show_slug>[^/]+)/people/(?P<role_id>\d+)/?$')
+                    rc_img = re.compile(r'/(?P<url>person/(?P<person_id>[0-9]+)/(?P<img_id>[^/]+)\..*)')
+                    rc_img_v3 = re.compile(r'/(?P<url>actors/(?P<img_id>[^/]+)\..*)')
+                    max_people = 5
+                    rc_clean = re.compile(r'[^a-z0-9]')
+                    for cur_enum, cur_role in enumerate(soup.find_all('a', href=rc_role) or []):
+                        try:
+                            image = person_id = None
+                            for cur_rc in (rc_img, rc_img_v3):
+                                img_tag = cur_role.find('img', src=cur_rc)
+                                if img_tag:
+                                    img_parsed = cur_rc.search(img_tag.get('src'))
+                                    image, person_id = [x in img_parsed.groupdict() and img_parsed.group(x)
+                                                        for x in ('url', 'person_id')]
+                                    break
+                            lines = [x.strip() for x in cur_role.get_text().split('\n') if x.strip()][0:2]
+                            name = role = ''
+                            if len(lines):
+                                name = lines[0]
+                                for line in lines[1:]:
+                                    if line.lower().startswith('as '):
+                                        role = line[3:]
+                                        break
+                            if not person_id and max_people:
+                                max_people -= 1
+                                results = self.search_tvs(name)
+                                try:
+                                    for cur_result in (isinstance(results, dict) and results.get('results') or []):
+                                        # sorts 'banners/images/missing/' to last before filter
+                                        people = filter_list(
+                                            lambda r: 'person' == r['type']
+                                                      and rc_clean.sub(name, '') == rc_clean.sub(r['name'], ''),
+                                            cur_result.get('nbHits')
+                                            and sorted(cur_result.get('hits'),
+                                                       key=lambda x: len(x['image']), reverse=True) or [])
+                                        if ENV.get('SG_DEV_MODE'):
+                                            for person in people:
+                                                new_keys = set(list_keys(person)).difference({
+                                                    '_highlightResult', 'banner', 'id', 'image',
+                                                    'is_tvdb_searchable', 'is_tvt_searchable', 'name',
+                                                    'objectID', 'people_birthdate', 'people_died',
+                                                    'poster', 'type', 'url'
+                                                })
+                                                if new_keys:
+                                                    log.warning('DEV_MODE: New _parse_actors tvdb attrs for %s %r'
+                                                                % (person['id'], new_keys))
+
+                                        person_ok = False
+                                        for person in people:
+                                            if image:
+                                                people_data = self._load_url(person['url'])['data']
+                                                person_ok = re.search(re.escape(image), people_data)
+                                            if not image or person_ok:
+                                                person_id = person['id']
+                                                raise ValueError('value okay, id found')
+                                except (BaseException, Exception):
+                                    pass
+
+                            rid = int(rc_role.search(cur_role.get('href')).group('role_id'))
+                            alts.setdefault(rid, {'id': rid, 'person_id': person_id or None, 'name': name, 'role': role,
+                                                  'image': image, 'sortorder': cur_enum, 'lastupdated': 0})
+                        except(BaseException, Exception):
+                            pass
+                    if not self.is_apikey():  # for the future when apikey == ''
+                        actor_list = sorted([d for _, d in iteritems(alts)], key=lambda x: x.get('sortorder'))
+
+            unique_c_p, c_p_list, new_actor_list = set(), [], []
+            for actor in sorted(actor_list, key=lambda x: x.get('lastupdated'), reverse=True):
+                c_p_list.append((actor['name'], actor['role']))
+                if (actor['name'], actor['role']) not in unique_c_p:
+                    unique_c_p.add((actor['name'], actor['role']))
+                    new_actor_list.append(actor)
+            for n in sorted(new_actor_list, key=lambda x: x['sortorder']):
+                role_image = (alts.get(n['id'], {}).get('image'), n.get('image'))[
+                    any([n.get('image')]) and 1 == c_p_list.count((n['name'], n['role']))]
+                if role_image:
+                    role_image = self.config['url_artworks'] % role_image
+                character_name = n.get('role', '').strip() or alts.get(n['id'], {}).get('role', '')
+                person_name = n.get('name', '').strip() or alts.get(n['id'], {}).get('name', '')
+                try:
+                    person_id = try_int(re.search(r'^person/(\d+)/', n.get('image', '')).group(1), None)
+                except (BaseException, Exception):
+                    person_id = None
+                person_id = person_id or alts.get(n['id'], {}).get('person_id')
+                character_id = n.get('id', None) or alts.get(n['id'], {}).get('rid')
                 a.append({'character': {'id': character_id,
                                         'name': character_name,
                                         'url': None,  # not supported by tvdb
                                         'image': role_image,
                                         },
-                          'person': {'id': None,
+                          'person': {'id': person_id,
                                      'name': person_name,
-                                     'url': None,  # not supported by tvdb
+                                     'url': person_id and (self.config['url_people'] % person_id) or None,
                                      'image': None,  # not supported by tvdb
                                      'birthday': None,  # not supported by tvdb
                                      'deathday': None,  # not supported by tvdb
@@ -621,7 +958,7 @@ class Tvdb(TVInfoBase):
                           })
                 cast[RoleTypes.ActorMain].append(
                     Character(p_id=character_id, name=character_name,
-                              person=Person(name=person_name), image=role_image))
+                              person=[Person(p_id=person_id, name=person_name)], image=role_image))
         except (BaseException, Exception):
             pass
         self._set_show_data(sid, 'actors', a)
@@ -650,11 +987,11 @@ class Tvdb(TVInfoBase):
 
         return data
 
-    def _parse_images(self, sid, language, show_data, image_type, enabled_type):
+    def _parse_images(self, sid, language, show_data, image_type, enabled_type, type_bool):
         mapped_img_types = {'banner': 'series'}
         excluded_main_data = enabled_type in ['seasons_enabled', 'seasonwides_enabled']
         loaded_name = '%s_loaded' % image_type
-        if self.config[enabled_type] and not getattr(self.shows.get(sid), loaded_name, False):
+        if (type_bool or self.config[enabled_type]) and not getattr(self.shows.get(sid), loaded_name, False):
             image_data = self._getetsrc(self.config['url_series_images'] %
                                         (sid, mapped_img_types.get(image_type, image_type)), language=language)
             if image_data and 0 < len(image_data.get('data', '') or ''):
@@ -674,8 +1011,19 @@ class Tvdb(TVInfoBase):
             self._set_show_data(sid, u'%s_thumb' % image_type,
                                 re.sub(r'\.jpg$', '_t.jpg', show_data['data'][image_type], flags=re.I))
 
-    def _get_show_data(self, sid, language, get_ep_info=False, **kwargs):
-        # type: (integer_types, AnyStr, bool, Optional[Any]) -> bool
+    def _get_show_data(self,
+                       sid,  # type: integer_types
+                       language,  # type: AnyStr
+                       get_ep_info=False,  # type: bool
+                       banners=False,  # type: bool
+                       posters=False,  # type: bool
+                       seasons=False,  # type: bool
+                       seasonwides=False,  # type: bool
+                       fanart=False,  # type: bool
+                       actors=False,  # type: bool
+                       direct_data=False,  # type: bool
+                       **kwargs  # type: Optional[Any]
+                       ):  # type: (...) -> Optional[bool, dict]
         """Takes a series ID, gets the epInfo URL and parses the TVDB
         XML file into the shows dict in layout:
         shows[series_id][season_number][episode_number]
@@ -683,9 +1031,13 @@ class Tvdb(TVInfoBase):
 
         # Parse show information
         url = self.config['url_series_info'] % sid
-        if sid not in self.shows or None is self.shows[sid].id:
+        if direct_data or sid not in self.shows or None is self.shows[sid].id:
             log.debug('Getting all series data for %s' % sid)
             show_data = self._getetsrc(url, language=language)
+            if not show_data or not show_data.get('data'):
+                show_data = {'data': self.get_show_info(sid, language=language)}
+            if direct_data:
+                return show_data
 
             # check and make sure we have data to process and that it contains a series name
             if not (show_data and 'seriesname' in show_data.get('data', {}) or {}):
@@ -693,18 +1045,26 @@ class Tvdb(TVInfoBase):
 
             for k, v in iteritems(show_data['data']):
                 self._set_show_data(sid, k, v)
+            self._set_show_data(sid, 'ids',
+                                TVInfoIDs(
+                                    tvdb=show_data['data'].get('id'),
+                                    imdb=show_data['data'].get('imdb_id')
+                                    and try_int(show_data['data'].get('imdb_id', '').replace('tt', ''), None)))
         else:
             show_data = {'data': {}}
 
-        for img_type, en_type in [(u'poster', 'posters_enabled'), (u'banner', 'banners_enabled'),
-                                  (u'fanart', 'fanart_enabled'), (u'season', 'seasons_enabled'),
-                                  (u'seasonwide', 'seasonwides_enabled')]:
-            self._parse_images(sid, language, show_data, img_type, en_type)
+        for img_type, en_type, p_type in [(u'poster', 'posters_enabled', posters),
+                                          (u'banner', 'banners_enabled', banners),
+                                          (u'fanart', 'fanart_enabled', fanart),
+                                          (u'season', 'seasons_enabled', seasons),
+                                          (u'seasonwide', 'seasonwides_enabled', seasonwides)]:
+            self._parse_images(sid, language, show_data, img_type, en_type, p_type)
 
-        if self.config['actors_enabled'] and not getattr(self.shows.get(sid), 'actors_loaded', False):
+        if (actors or self.config['actors_enabled']) and not getattr(self.shows.get(sid), 'actors_loaded', False):
             actor_data = self._getetsrc(self.config['url_actors_info'] % sid, language=language)
-            if actor_data and 0 < len(actor_data.get('data', '') or ''):
-                self._parse_actors(sid, actor_data['data'])
+            actor_data_alt = self._getetsrc(self.config['url_series_people'] % sid, language=language)
+            if actor_data and 0 < len(actor_data.get('data', '') or '') or actor_data_alt and actor_data_alt['data']:
+                self._parse_actors(sid, actor_data['data'], actor_data_alt and actor_data_alt['data'])
 
         if get_ep_info and not getattr(self.shows.get(sid), 'ep_loaded', False):
             # Parse episode data
@@ -713,7 +1073,73 @@ class Tvdb(TVInfoBase):
             page = 1
             episodes = []
             while page <= 400:
-                episode_data = self._getetsrc(self.config['url_series_episodes_info'] % (sid, page), language=language)
+                episode_data = {}
+                if self.is_apikey():
+                    episode_data = self._getetsrc(
+                        self.config['url_series_episodes_info'] % (sid, page), language=language)
+
+                if not episode_data:
+                    response = {'data': None}
+                    items_found = False
+                    # fallback to page 'all' if dvd is enabled and response has no items
+                    for page_type in ('url_series_dvd', 'url_series_all'):
+                        if 'dvd' not in page_type or self.config['dvdorder']:
+                            response = self._load_url(self.config[page_type] % show_data.get('data').get('slug'))
+                            with BS4Parser(response.get('data') or '') as soup:
+                                items_found = bool(soup.find_all(class_='list-group-item'))
+                                if items_found:
+                                    break
+                    if not items_found:
+                        break
+
+                    episode_data = {'data': []}
+                    with BS4Parser(response.get('data')) as soup:
+                        items = soup.find_all(class_='list-group-item')
+                        rc_sxe = re.compile(r'(?i)s(?:pecial\s*)?(\d+)\s*[xe]\s*(\d+)')  # Special nxn or SnnEnn
+                        rc_episode = re.compile(r'(?i)/series/%s/episodes?/(?P<ep_id>\d+)' % show_data['data']['slug'])
+                        rc_date = re.compile(r'\s\d{4}\s*$')
+                        season_type, episode_type = ['%s%s' % (('aired', 'dvd')['dvd' in page_type], x)
+                                                     for x in ('season', 'episodenumber')]
+                        for cur_item in items:
+                            try:
+                                heading_tag = cur_item.find(class_='list-group-item-heading')
+                                sxe = heading_tag.find(class_='episode-label').get_text(strip=True)
+                                ep_season, ep_episode = [try_int(x) for x in rc_sxe.findall(sxe)[0]]
+                                link_ep_tag = heading_tag.find(href=rc_episode) or {}
+                                link_match = rc_episode.search(link_ep_tag.get('href', ''))
+                                ep_id = link_match and try_int(link_match.group('ep_id'), None)
+                                ep_name = link_ep_tag.get_text(strip=True)
+                                # ep_network = None  # extra field
+                                ep_aired = None
+                                for cur_tag in cur_item.find('ul').find_all('li'):
+                                    text = cur_tag.get_text(strip=True)
+                                    if rc_date.search(text):
+                                        ep_aired = parse(text).strftime('%Y-%m-%d')
+                                    # elif text in show_data['data']['network']:  # unreliable data
+                                    #     ep_network = text
+                                ep_overview = None
+                                item_tag = cur_item.find(class_='list-group-item-text')
+                                if item_tag:
+                                    ep_overview = self.clean_overview(item_tag.get_text() or '')
+                                ep_filename = None
+                                link_ep_tag = item_tag.find(href=rc_episode) or None
+                                if link_ep_tag:
+                                    ep_filename = (link_ep_tag.find('img') or {}).get('src', '')
+
+                                episode_data['data'].append({
+                                    'id': ep_id, season_type: ep_season, episode_type: ep_episode,
+                                    'episodename': ep_name, 'firstaired': ep_aired, 'overview': ep_overview,
+                                    'filename': ep_filename,  # 'network': ep_network
+                                })
+
+                                if not show_data['data']['firstaired'] and ep_aired \
+                                        and (1, 1) == (ep_season, ep_episode):
+                                    show_data['data']['firstaired'] = ep_aired
+
+                                episode_data['fallback'] = True
+                            except (BaseException, Exception):
+                                continue
+
                 if None is episode_data:
                     raise TvdbError('Exception retrieving episodes for show')
                 if isinstance(episode_data, dict) and not episode_data.get('data', []):
@@ -727,7 +1153,8 @@ class Tvdb(TVInfoBase):
                 if not isinstance(next_link, integer_types) or next_link <= page:
                     next_link = None
                 if not next_link and isinstance(episode_data, dict) \
-                        and isinstance(episode_data.get('data', []), list) and 100 > len(episode_data.get('data', [])):
+                        and isinstance(episode_data.get('data', []), list) and \
+                        (100 > len(episode_data.get('data', [])) or episode_data.get('fallback')):
                     break
                 if next_link:
                     page = next_link
@@ -759,12 +1186,15 @@ class Tvdb(TVInfoBase):
                 seas_no = int(float(elem_seasnum))
                 ep_no = int(float(elem_epno))
 
+                if not cur_ep.get('network'):
+                    cur_ep['network'] = self.shows[sid].network
                 for k, v in iteritems(cur_ep):
                     k = k.lower()
 
                     if None is not v:
                         if 'filename' == k and v:
-                            v = self.config['url_artworks'] % v
+                            if '://' not in v:
+                                v = self.config['url_artworks'] % v
                         else:
                             v = clean_data(v)
 
@@ -781,7 +1211,7 @@ class Tvdb(TVInfoBase):
                     pass
                 try:
                     for guest in cur_ep.get('gueststars_list', []):
-                        cast[RoleTypes.ActorGuest].append(Character(person=Person(name=guest)))
+                        cast[RoleTypes.ActorGuest].append(Character(person=[Person(name=guest)]))
                 except (BaseException, Exception):
                     pass
                 try:
@@ -824,8 +1254,8 @@ def main():
     logging.basicConfig(level=logging.DEBUG)
 
     tvdb_instance = Tvdb(interactive=True, cache=False)
-    print (tvdb_instance['Lost']['seriesname'])
-    print (tvdb_instance['Lost'][1][4]['episodename'])
+    print(tvdb_instance['Lost']['seriesname'])
+    print(tvdb_instance['Lost'][1][4]['episodename'])
 
 
 if '__main__' == __name__:

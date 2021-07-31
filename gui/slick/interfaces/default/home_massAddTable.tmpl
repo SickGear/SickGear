@@ -1,21 +1,23 @@
 #import re
 #import sickbeard
 #from sickbeard.helpers import anon_url
+#from sickbeard.tv import TVidProdid
 <% def sg_var(varname, default=False): return getattr(sickbeard, varname, default) %>#slurp#
 <% def sg_str(varname, default=''): return getattr(sickbeard, varname, default) %>#slurp#
 #set $state_checked = ('', ' checked=checked')[any([sg_var('IMPORT_DEFAULT_CHECKED_SHOWS')])]
 
-<table id="addRootDirTable" class="sickbeardTable tablesorter">
+<table id="addRootDirTable" class="sickbeardTable tablesorter#if $kwargs.get('hash_dir')# existing-highlight#end if#">
 	<thead>
 		<tr>
 			<th class="col-checkbox">
 				<input type="checkbox" id="checkAll"$state_checked>
 			</th>
 			<th>Parent\show folder</th>
-			<th width="20%">Show name<br />(tvshow.nfo)</th>
+			<th width="20%">Show name<br>(tvshow.nfo)</th>
 			<th width="15%">TV info source</th>
 		</tr>
 	</thead>
+#if not $kwargs.get('hash_dir')
 	<tfoot>
 		<tr>
 			<th rowspan="1" colspan="4" align="left">
@@ -23,44 +25,55 @@
 			</th>
 		</tr>
 	</tfoot>
+#end if
 	<tbody>
-#for $curDir in $dirList
-    #if $curDir['added_already'] and (None is $curDir.get('highlight') or not $kwargs.get('hash_dir'))
-        #continue
+#for $cur_item, $cur_tvid, $cur_prodid, $cur_show_name in [
+    (_i, _i['existing_info'][0], _i['existing_info'][1], _i['existing_info'][2])
+    for _i in $dir_list if not (_i['added_already'] and not $kwargs.get('hash_dir'))]
+
+    #set $tvid = (0, $sickbeard.TVINFO_DEFAULT)[0 < $sickbeard.TVINFO_DEFAULT]
+    #if $cur_prodid and $sickbeard.TVInfoAPI($cur_tvid).config.get('active')
+        #set $tvid = $cur_tvid
     #end if
 
-    #set $show_id = $curDir['dir']
-    #if $curDir['existing_info'][1]
-        #set $show_id = $show_id + '|' + $str($curDir['existing_info'][1]) + '|' + $str($curDir['existing_info'][2])
-        #set $indexer = $curDir['existing_info'][0]
-    #end if
-
-    #set $indexer = 0
-    #if $curDir['existing_info'][1] and $sickbeard.TVInfoAPI($curDir['existing_info'][0]).config.get('active')
-        #set $indexer = $curDir['existing_info'][0]
-    #elif 0 < $sickbeard.TVINFO_DEFAULT
-        #set $indexer = $sickbeard.TVINFO_DEFAULT
+    #set $item_id = $cur_item['normpath']
+    #if $cur_prodid
+        #set $item_id = '|'.join([$item_id, '%s%s%s' % ($tvid, $TVidProdid.glue, str($cur_prodid)), $cur_show_name])
+        #set $tvid = $cur_tvid
     #end if
 
 		<tr>
 			<td class="col-checkbox">
-				<input type="checkbox" id="$show_id" class="dirCheck"$state_checked>
+				<input type="checkbox" id="$item_id" class="dirCheck"$state_checked>
 			</td>
 			<td>
-				<label for="$show_id">
-    #set $display_name = (re.sub(r'^((?:A(?!\s+to)n?)|The)\s(\w)', r'<span class="article">\1</span> \2', $curDir['name']), $curDir['name'])[$sickbeard.SORT_ARTICLE]
-					<span class="filepath#if $curDir['highlight']# red-text#end if#">$curDir['path']</span>$display_name
-    #if $curDir['highlight']
-					<br />^ <span class="red-text">... (cannot add, this location is in use)</span>
+				<label for="$item_id">
+    #set $display_name = (re.sub(r'^((?:A(?!\s+to)n?)|The)\s(\w)', r'<span class="article">\1</span> \2', $cur_item['name']), $cur_item['name'])[$sickbeard.SORT_ARTICLE]
+					<span class="filepath#if $cur_item['highlight']# red-text#end if#">$cur_item['rootpath']</span>#if not $kwargs.get('hash_dir')#$display_name#else#<input value="$cur_item['name']" data-name="$cur_item['name']" class="new-folder form-control form-control-inline input-sm" type="text" placeholder="New name for folder" style="margin:0 0 0 4px; height:20px; padding:2px 3px">#end if#
+    #if $cur_item.get('rename_suggest')
+<script>
+#raw
+$(function(){
+	$('#suggest').on('click', function(){
+		var el$ = $('#suggest').closest('td').find('input[type="text"]');
+		el$.val(el$.attr('data-name') + $('#suggest').attr('data-suggest'));
+	});
+});
+#end raw
+</script>
+					<span style="margin-left:3px"><input id="suggest" type="button" data-suggest="$cur_item.get('rename_suggest')" class="btn btn-inline" value="Suggest"></span>
     #end if
 				</label>
+    #if $cur_item['highlight']
+				<p style="margin:0"><span class="red-text">path in use prevents add. </span>^--<span class="red-text"> rename here or<br>check path content to maybe use menu `Import`</span></p>
+    #end if
 			</td>
-    #if $curDir['existing_info'][2] and $indexer > 0
+    #if $cur_show_name and $tvid > 0
 			<td>
-        #if curDir['existing_info'][1]
-				<a href="<%= anon_url(sickbeard.TVInfoAPI(indexer).config['show_url'] % curDir['existing_info'][1]) %>" target="_new">$curDir['existing_info'][2]</a>
+        #if $cur_prodid
+				<a href="$anon_url($sickbeard.TVInfoAPI($tvid).config['show_url'] % $cur_prodid)" target="_new">$cur_show_name</a>
         #else
-				$curDir['existing_info'][2]
+				$cur_show_name
         #end if
 			</td>
     #else
@@ -68,9 +81,9 @@
     #end if
 			<td align="center">
 				<select name="indexer">
-    #for $curIndexer in $sickbeard.TVInfoAPI().sources.items()
-        #if $sickbeard.TVInfoAPI($curIndexer[0]).config.get('active')
-					<option value="$curIndexer[0]" #if $curIndexer[0] == $indexer then 'selected="selected"' else ''#>$curIndexer[1]</option>
+    #for ($cur_source_id, $cur_source_name) in $sickbeard.TVInfoAPI().sources.items()
+        #if $sickbeard.TVInfoAPI($cur_source_id).config.get('active')
+					<option value="$cur_source_id" #if $cur_source_id == $tvid then 'selected="selected"' else ''#>$cur_source_name</option>
         #end if
     #end for
 				</select>

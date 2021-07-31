@@ -28,24 +28,44 @@ from . import helpers as metadata_helpers
 from .. import logger
 import sg_helpers
 from ..indexers import indexer_config
-from ..indexers.indexer_config import TVINFO_TVDB
-from tvinfo_base.exceptions import *
+from ..indexers.indexer_config import TVINFO_TVDB, TVINFO_TMDB
+from lib.tvinfo_base import TVInfoImage, TVInfoImageType, TVInfoImageSize
+from lib.tvinfo_base.exceptions import *
 import sickbeard
 # noinspection PyPep8Naming
 import encodingKludge as ek
 from exceptions_helper import ex
-# noinspection PyPep8Naming
-from lib import tmdbsimple as TMDB
 from lib.fanart.core import Request as fanartRequest
 import lib.fanart as fanart
 from lxml_etree import etree
 
-from _23 import filter_iter
-from six import iteritems, itervalues
+from _23 import filter_iter, list_keys
+from six import iteritems, itervalues, string_types
 
 # noinspection PyUnreachableCode
 if False:
-    from typing import AnyStr, Dict, List, Optional, Tuple, Union
+    from typing import AnyStr, Dict, Generator, List, Optional, Tuple, Union
+    from lib.tvinfo_base import TVInfoShow
+    from ..tv import TVShow
+
+
+map_image_types = {
+    'poster': TVInfoImageType.poster,
+    'banner': TVInfoImageType.banner,
+    'fanart': TVInfoImageType.fanart,
+    'poster_thumb': TVInfoImageType.poster,
+    'banner_thumb': TVInfoImageType.banner,
+}
+
+
+class ShowInfosDict(OrderedDict):
+
+    def __getitem__(self, k):
+        v = OrderedDict.__getitem__(self, k)
+        if callable(v):
+            v = v(k)
+            OrderedDict.__setitem__(self, k, v)
+        return v
 
 
 class GenericMetadata(object):
@@ -217,7 +237,10 @@ class GenericMetadata(object):
                 return '%s' % show_obj.startyear
             if not show_obj.sxe_ep_obj.get(1, {}).get(1, None):
                 show_obj.get_all_episodes()
-            first_ep_obj = show_obj.get_episode(1, 1, no_create=True)
+            try:
+                first_ep_obj = show_obj.first_aired_regular_episode
+            except (BaseException, Exception):
+                first_ep_obj = None
             if isinstance(first_ep_obj, sickbeard.tv.TVEpisode) \
                     and isinstance(first_ep_obj.airdate, datetime.date) and 1900 < first_ep_obj.airdate.year:
                 return '%s' % (first_ep_obj.airdate.year, first_ep_obj.airdate)[not year_only]
@@ -323,7 +346,8 @@ class GenericMetadata(object):
         """
         if not (isinstance(fetched_show_info, dict) and
                 isinstance(getattr(fetched_show_info, 'data', None), (list, dict)) and
-                'seriesname' in getattr(fetched_show_info, 'data', [])):
+                'seriesname' in getattr(fetched_show_info, 'data', [])) and \
+                not hasattr(fetched_show_info, 'seriesname'):
             logger.log(u'Show %s not found on %s ' %
                        (show_obj.name, sickbeard.TVInfoAPI(show_obj.tvid).name), logger.WARNING)
             return False
@@ -341,7 +365,7 @@ class GenericMetadata(object):
         # type: (sickbeard.tv.TVShow, bool) -> bool
         result = False
         if self.show_metadata and show_obj and (not self._has_show_metadata(show_obj) or force):
-            logger.log('Metadata provider %s creating show metadata for %s' % (self.name, show_obj.name), logger.DEBUG)
+            logger.debug('Metadata provider %s creating show metadata for %s' % (self.name, show_obj.unique_name))
             try:
                 result = self.write_show_file(show_obj)
             except BaseTVinfoError as e:
@@ -367,8 +391,8 @@ class GenericMetadata(object):
     def update_show_indexer_metadata(self, show_obj):
         # type: (sickbeard.tv.TVShow) -> bool
         if self.show_metadata and show_obj and self._has_show_metadata(show_obj):
-            logger.log(u'Metadata provider %s updating show indexer metadata file for %s' % (self.name, show_obj.name),
-                       logger.DEBUG)
+            logger.debug(u'Metadata provider %s updating show indexer metadata file for %s' % (
+                self.name, show_obj.unique_name))
 
             nfo_file_path = self.get_show_file_path(show_obj)
             with ek.ek(io.open, nfo_file_path, 'r', encoding='utf8') as xmlFileObj:
@@ -400,21 +424,21 @@ class GenericMetadata(object):
     def create_fanart(self, show_obj):
         # type: (sickbeard.tv.TVShow) -> bool
         if self.fanart and show_obj and not self._has_fanart(show_obj):
-            logger.log(u"Metadata provider " + self.name + " creating fanart for " + show_obj.name, logger.DEBUG)
+            logger.debug(u'Metadata provider %s creating fanart for %s' % (self.name, show_obj.unique_name))
             return self.save_fanart(show_obj)
         return False
 
     def create_poster(self, show_obj):
         # type: (sickbeard.tv.TVShow) -> bool
         if self.poster and show_obj and not self._has_poster(show_obj):
-            logger.log(u"Metadata provider " + self.name + " creating poster for " + show_obj.name, logger.DEBUG)
+            logger.debug(u'Metadata provider %s creating poster for %s' % (self.name, show_obj.unique_name))
             return self.save_poster(show_obj)
         return False
 
     def create_banner(self, show_obj):
         # type: (sickbeard.tv.TVShow) -> bool
         if self.banner and show_obj and not self._has_banner(show_obj):
-            logger.log(u"Metadata provider " + self.name + " creating banner for " + show_obj.name, logger.DEBUG)
+            logger.debug(u'Metadata provider %s creating banner for %s' % (self.name, show_obj.unique_name))
             return self.save_banner(show_obj)
         return False
 
@@ -432,8 +456,8 @@ class GenericMetadata(object):
             result = []
             for season, _ in iteritems(show_obj.sxe_ep_obj):
                 if not self._has_season_poster(show_obj, season):
-                    logger.log(u"Metadata provider " + self.name + " creating season posters for " + show_obj.name,
-                               logger.DEBUG)
+                    logger.debug(u'Metadata provider %s creating season posters for %s' % (
+                        self.name, show_obj.unique_name))
                     result = result + [self.save_season_posters(show_obj, season)]
             return all(result)
         return False
@@ -444,8 +468,8 @@ class GenericMetadata(object):
             result = []
             for season, _ in iteritems(show_obj.sxe_ep_obj):
                 if not self._has_season_banner(show_obj, season):
-                    logger.log(u"Metadata provider " + self.name + " creating season banners for " + show_obj.name,
-                               logger.DEBUG)
+                    logger.debug(u'Metadata provider %s creating season banners for %s' % (
+                        self.name, show_obj.unique_name))
                     result = result + [self.save_season_banners(show_obj, season)]
             return all(result)
         return False
@@ -453,16 +477,16 @@ class GenericMetadata(object):
     def create_season_all_poster(self, show_obj):
         # type: (sickbeard.tv.TVShow) -> bool
         if self.season_all_poster and show_obj and not self._has_season_all_poster(show_obj):
-            logger.log(u"Metadata provider " + self.name + " creating season all poster for " + show_obj.name,
-                       logger.DEBUG)
+            logger.debug(u'Metadata provider %s creating season all posters for %s' % (
+                        self.name, show_obj.unique_name))
             return self.save_season_all_poster(show_obj)
         return False
 
     def create_season_all_banner(self, show_obj):
         # type: (sickbeard.tv.TVShow) -> bool
         if self.season_all_banner and show_obj and not self._has_season_all_banner(show_obj):
-            logger.log(u"Metadata provider " + self.name + " creating season all banner for " + show_obj.name,
-                       logger.DEBUG)
+            logger.debug(u'Metadata provider %s creating season all banner for %s' % (
+                        self.name, show_obj.unique_name))
             return self.save_season_all_banner(show_obj)
         return False
 
@@ -618,7 +642,8 @@ class GenericMetadata(object):
         # use the default fanart name
         fanart_path = self.get_fanart_path(show_obj)
 
-        fanart_data = self._retrieve_show_image('fanart', show_obj, which)
+        fanart_data = self._retrieve_show_image('fanart', show_obj, which,
+                                                img_cache_type=sickbeard.image_cache.ImageCache.FANART)
 
         if not fanart_data:
             logger.log(u"No fanart image was retrieved, unable to write fanart", logger.DEBUG)
@@ -638,7 +663,8 @@ class GenericMetadata(object):
         # use the default poster name
         poster_path = self.get_poster_path(show_obj)
 
-        poster_data = self._retrieve_show_image('poster', show_obj, which)
+        poster_data = self._retrieve_show_image('poster', show_obj, which,
+                                                img_cache_type=sickbeard.image_cache.ImageCache.POSTER)
 
         if not poster_data:
             logger.log(u"No show poster image was retrieved, unable to write poster", logger.DEBUG)
@@ -658,7 +684,8 @@ class GenericMetadata(object):
         # use the default banner name
         banner_path = self.get_banner_path(show_obj)
 
-        banner_data = self._retrieve_show_image('banner', show_obj, which)
+        banner_data = self._retrieve_show_image('banner', show_obj, which,
+                                                img_cache_type=sickbeard.image_cache.ImageCache.BANNER)
 
         if not banner_data:
             logger.log(u"No show banner image was retrieved, unable to write banner", logger.DEBUG)
@@ -761,7 +788,8 @@ class GenericMetadata(object):
         # use the default season all poster name
         poster_path = self.get_season_all_poster_path(show_obj)
 
-        poster_data = self._retrieve_show_image('poster', show_obj, which)
+        poster_data = self._retrieve_show_image('poster', show_obj, which,
+                                                img_cache_type=sickbeard.image_cache.ImageCache.POSTER)
 
         if not poster_data:
             logger.log(u"No show poster image was retrieved, unable to write season all poster", logger.DEBUG)
@@ -774,7 +802,8 @@ class GenericMetadata(object):
         # use the default season all banner name
         banner_path = self.get_season_all_banner_path(show_obj)
 
-        banner_data = self._retrieve_show_image('banner', show_obj, which)
+        banner_data = self._retrieve_show_image('banner', show_obj, which,
+                                                img_cache_type=sickbeard.image_cache.ImageCache.BANNER)
 
         if not banner_data:
             logger.log(u"No show banner image was retrieved, unable to write season all banner", logger.DEBUG)
@@ -822,58 +851,47 @@ class GenericMetadata(object):
 
         return True
 
-    def _retrieve_show_image(self, image_type, show_obj, which=None):
-        # type: (AnyStr, sickbeard.tv.TVShow, bool) -> Optional[bytes, List[AnyStr]]
-        """
-        Gets an image URL from theTVDB.com, fanart.tv and TMDB.com, downloads it and returns the data.
-        If type is fanart, multiple image src urls are returned instead of a single data image.
+    @staticmethod
+    def gen_show_infos_dict(show_obj):
+        # type: (TVShow) -> ShowInfosDict
+        show_infos = ShowInfosDict()
 
-        image_type: type of image to retrieve (currently supported: fanart, poster, banner, poster_thumb, banner_thumb)
-        show_obj: a TVShow object to use when searching for the image
-        which: optional, a specific numbered poster to look for
-
-        Returns: the binary image data if available, or else None
-        """
-        show_lang = show_obj.lang
-
-        try:
-            # There's gotta be a better way of doing this but we don't wanna
-            # change the language value elsewhere
-            tvinfo_config = sickbeard.TVInfoAPI(show_obj.tvid).api_params.copy()
-            if image_type.startswith('fanart'):
+        def _get_show_info(tv_id):
+            try:
+                show_lang = show_obj.lang
+                # There's gotta be a better way of doing this but we don't wanna
+                # change the language value elsewhere
+                tvinfo_config = sickbeard.TVInfoAPI(tv_id).api_params.copy()
                 tvinfo_config['fanart'] = True
-            elif image_type.startswith('poster'):
                 tvinfo_config['posters'] = True
-            else:
                 tvinfo_config['banners'] = True
-            tvinfo_config['dvdorder'] = 0 != show_obj.dvdorder
+                tvinfo_config['dvdorder'] = 0 != show_obj.dvdorder
 
-            if show_lang and not 'en' == show_lang:
-                tvinfo_config['language'] = show_lang
+                if show_lang and not 'en' == show_lang:
+                    tvinfo_config['language'] = show_lang
 
-            t = sickbeard.TVInfoAPI(show_obj.tvid).setup(**tvinfo_config)
-            show_info = t[show_obj.prodid, False]
-        except (BaseTVinfoError, IOError) as e:
-            logger.log(u"Unable to look up show on " + sickbeard.TVInfoAPI(
-                show_obj.tvid).name + ", not downloading images: " + ex(e), logger.WARNING)
-            return None
+                t = sickbeard.TVInfoAPI(tv_id).setup(**tvinfo_config)
+                return t.get_show((show_obj.ids[tv_id]['id'], show_obj.prodid)[tv_src == show_obj._tvid],
+                                  load_episodes=False, banners=False, posters=False, fanart=True)
+            except (BaseTVinfoError, IOError) as e:
+                logger.log(u"Unable to look up show on " + sickbeard.TVInfoAPI(
+                    tv_id).name + ", not downloading images: " + ex(e), logger.WARNING)
 
-        if not self._valid_show(show_info, show_obj):
-            return None
+        # todo: when tmdb is added as tv source remove the hardcoded TVINFO_TMDB
+        for tv_src in list(OrderedDict.fromkeys([show_obj._tvid] + list_keys(sickbeard.TVInfoAPI().search_sources) +
+                                                [TVINFO_TMDB])):
+            if tv_src != show_obj._tvid and not show_obj.ids.get(tv_src, {}).get('id'):
+                continue
+            if tv_src == show_obj._tvid:
+                show_infos[tv_src] = _get_show_info(tv_src)
+            else:
+                show_infos[tv_src] = _get_show_info
 
-        return_links = False
-        if 'fanart_all' == image_type:
-            return_links = True
-            image_type = 'fanart'
+        return show_infos
 
-        if image_type not in ('poster', 'banner', 'fanart', 'poster_thumb', 'banner_thumb'):
-            logger.log(u"Invalid image type " + str(image_type) + ", couldn't find it in the " + sickbeard.TVInfoAPI(
-                show_obj.tvid).name + " object", logger.ERROR)
-            return None
-
-        image_urls = []
-        init_url = None
-        alt_tvdb_urls = []
+    def _retrieve_image_urls(self, show_obj, image_type, show_infos):
+        # type: (TVShow, AnyStr, TVInfoShow) -> Generator
+        image_urls, alt_tvdb_urls, fanart_fetched, de_dupe, show_lang = [], [], False, set(), show_obj.lang
 
         def build_url(s_o, image_mode):
             _urls = [[], []]
@@ -900,68 +918,160 @@ class GenericMetadata(object):
                         pass
             return _urls
 
-        if 'poster_thumb' == image_type:
-            if None is not getattr(show_info, image_type, None):
-                image_urls, alt_tvdb_urls = build_url(show_info, image_type)
-            elif None is not getattr(show_info, 'poster', None):
-                image_urls, alt_tvdb_urls = build_url(show_info, 'poster')
+        def _get_fanart_tv():
+            return [_de_dupe((f_item[2], (f_item[2], f_item[2]))[image_type in ('poster', 'banner')])
+                    for f_item in self._fanart_urls_from_show(show_obj, image_type, show_lang) or []]
 
-            for item in self._fanart_urls_from_show(show_obj, image_type, show_lang, True) or []:
-                image_urls.append(item[2])
-            if 0 == len(image_urls):
-                for item in self._tmdb_image_url(show_obj, image_type) or []:
-                    image_urls.append(item[2])
+        def _de_dupe(images_list):
+            # type:(Union[List[AnyStr], AnyStr]) -> Optional[Union[List[AnyStr], AnyStr]]
+            if not isinstance(images_list, list):
+                return_list = False
+                temp_list = [images_list]
+            else:
+                return_list = True
+                temp_list = images_list
+            images_list = [i for i in temp_list if i not in de_dupe]
+            [de_dupe.add(_i) for _i in images_list]
+            if not return_list:
+                if images_list:
+                    return images_list[0]
+                return None
+            return images_list
 
-        elif 'banner_thumb' == image_type:
-            if None is not getattr(show_info, image_type, None):
-                image_urls, alt_tvdb_urls = build_url(show_info, image_type)
-            elif None is not getattr(show_info, 'banner', None):
-                image_urls, alt_tvdb_urls = build_url(show_info, 'banner')
-            for item in self._fanart_urls_from_show(show_obj, image_type, show_lang, True) or []:
-                image_urls.append(item[2])
-        else:
-            for item in self._fanart_urls_from_show(show_obj, image_type, show_lang) or []:
-                image_urls.append(item[2])
+        if image_type.startswith('fanart'):
+            for r in _get_fanart_tv():
+                yield r
 
-            if None is not getattr(show_info, image_type, None):
-                image_url = show_info[image_type]
-                if image_url:
-                    image_urls.append(image_url)
-                    if 'poster' == image_type:
-                        init_url = image_url
+        for tv_src in show_infos:
+            if not self._valid_show(show_infos[tv_src], show_obj):
+                continue
 
-            # check extra provided images in '_banners' key
-            if None is not getattr(show_info, '_banners', None) and \
-                    isinstance(show_info['_banners'].get(image_type, None), (list, dict)):
-                for res, value in iteritems(show_info['_banners'][image_type]):
-                    for item in itervalues(value):
-                        image_urls.append(item['bannerpath'])
+            if 'poster_thumb' == image_type:
+                if None is not getattr(show_infos[tv_src], image_type, None):
+                    image_urls, alt_tvdb_urls = build_url(show_infos[tv_src], image_type)
+                elif None is not getattr(show_infos[tv_src], 'poster', None):
+                    image_urls, alt_tvdb_urls = build_url(show_infos[tv_src], 'poster')
 
-            if 0 == len(image_urls) or 'fanart' == image_type:
-                for item in self._tmdb_image_url(show_obj, image_type) or []:
-                    image_urls.append('%s?%s' % (item[2], item[0]))
+                image_urls, alt_tvdb_urls = _de_dupe(image_urls), _de_dupe(alt_tvdb_urls)
+                for item in image_urls + alt_tvdb_urls:
+                    yield item
 
-        img_data = len(image_urls) or None
-        if img_data:
-            # remove duplicates, keeping order
-            image_urls = list(OrderedDict.fromkeys(image_urls))
+            elif 'banner_thumb' == image_type:
+                if None is not getattr(show_infos[tv_src], image_type, None):
+                    image_urls, alt_tvdb_urls = build_url(show_infos[tv_src], image_type)
+                elif None is not getattr(show_infos[tv_src], 'banner', None):
+                    image_urls, alt_tvdb_urls = build_url(show_infos[tv_src], 'banner')
+
+                image_urls, alt_tvdb_urls = _de_dupe(image_urls), _de_dupe(alt_tvdb_urls)
+                for item in image_urls + alt_tvdb_urls:
+                    yield item
+
+            else:
+                if None is not getattr(show_infos[tv_src], image_type, None):
+                    image_url = show_infos[tv_src][image_type]
+                    if image_type in ('poster', 'banner'):
+                        if None is not getattr(show_infos[tv_src], '%s_thumb' % image_type, None):
+                            thumb_url = show_infos[tv_src]['%s_thumb' % image_type]
+                        else:
+                            thumb_url = image_url
+                    else:
+                        thumb_url = None
+                    if image_url:
+                        r = _de_dupe(((image_url, thumb_url), image_url)[None is thumb_url])
+                        if r:
+                            yield r
+
+                # check extra provided images in '_banners' key
+                if None is not getattr(show_infos[tv_src], '_banners', None) and \
+                        isinstance(show_infos[tv_src]['_banners'].get(image_type, None), (list, dict)):
+                    for res, value in iteritems(show_infos[tv_src]['_banners'][image_type]):
+                        for item in itervalues(value):
+                            thumb = item['thumbnailpath']
+                            if not thumb:
+                                thumb = item['bannerpath']
+
+                            r = _de_dupe((item['bannerpath'], (item['bannerpath'], thumb))[
+                                             image_type in ('poster', 'banner')])
+                            if r:
+                                yield r
+
+                # extra images via images property
+                tvinfo_type = map_image_types.get(image_type)
+                tvinfo_size = (TVInfoImageSize.original, TVInfoImageSize.medium)['_thumb' in image_type]
+                if tvinfo_type and getattr(show_infos[tv_src], 'images', None) and \
+                        show_infos[tv_src].images.get(tvinfo_type):
+                    for img in show_infos[tv_src].images[tvinfo_type]:  # type: TVInfoImage
+                        for img_size, img_url in iteritems(img.sizes):
+                            if tvinfo_size == img_size:
+                                img_url = _de_dupe(img_url)
+                                if not img_url:
+                                    continue
+                                if image_type in ('poster', 'banner'):
+                                    thumb_url = img.sizes.get(TVInfoImageSize.medium, img_url)
+                                    if thumb_url:
+                                        thumb_url = _de_dupe(thumb_url)
+                                    if not thumb_url:
+                                        thumb_url = img_url
+                                    yield (img_url, thumb_url)
+                                elif img_url:
+                                    yield img_url
+
+        if not image_type.startswith('fanart'):
+            for r in _get_fanart_tv():
+                yield r
+
+    def _retrieve_show_image(self,
+                             image_type,  # type: AnyStr
+                             show_obj,  # type: sickbeard.tv.TVShow
+                             which=None,  # type: int
+                             return_links=False,  # type: bool
+                             show_infos=None,  # type: ShowInfosDict
+                             img_cache_type=None  # type: int
+                             ):
+        # type: (...) -> Optional[bytes, List[AnyStr]]
+        """
+        Gets an image URL from theTVDB.com, fanart.tv and TMDB.com, downloads it and returns the data.
+        If type is fanart, multiple image src urls are returned instead of a single data image.
+
+        image_type: type of image to retrieve (currently supported: fanart, poster, banner, poster_thumb, banner_thumb)
+        show_obj: a TVShow object to use when searching for the image
+        which: optional, a specific numbered poster to look for
+
+        Returns: the binary image data if available, or else None
+        """
+        if not show_infos:
+            show_infos = self.gen_show_infos_dict(show_obj)
+
+        if 'fanart_all' == image_type:
+            return_links = True
+            image_type = 'fanart'
+
+        if image_type not in ('poster', 'banner', 'fanart', 'poster_thumb', 'banner_thumb'):
+            logger.log(u"Invalid image type " + str(image_type) + ", couldn't find it in the " + sickbeard.TVInfoAPI(
+                show_obj.tvid).name + " object", logger.ERROR)
+            return
+
+        image_urls = self._retrieve_image_urls(show_obj, image_type, show_infos)
+
+        if image_urls:
             if return_links:
                 return image_urls
             else:
-                img_data = metadata_helpers.getShowImage(
-                    (init_url, image_urls[0])[None is init_url], which, show_obj.name, bool(len(alt_tvdb_urls)))
-                if None is img_data and len(alt_tvdb_urls):
-                    for url in alt_tvdb_urls:
-                        image_data = metadata_helpers.getShowImage(
-                            (init_url, url)[None is init_url], which, show_obj.name)
-                        if None is not image_data:
-                            break
+                img_data = None
+                image_cache = sickbeard.image_cache.ImageCache()
+                for image_url in image_urls or []:
+                    if image_type in ('poster', 'banner'):
+                        if isinstance(image_url, tuple):
+                            image_url = image_url[0]
+                    img_data = metadata_helpers.getShowImage(image_url, which, show_obj.name)
+                    if img_cache_type and img_cache_type != image_cache.which_type(img_data, is_binary=True):
+                        img_data = None
+                        continue
+                    if None is not img_data:
+                        break
 
-        if None is not img_data:
-            return img_data
-
-        if None is not img_data:
-            return img_data
+                if None is not img_data:
+                    return img_data
 
     def _season_image_dict(self, show_obj, season, image_type):
         # type: (sickbeard.tv.TVShow, int, AnyStr) -> Dict[int, Dict[int, AnyStr]]
@@ -1029,10 +1139,10 @@ class GenericMetadata(object):
                 showXML = etree.ElementTree(file=xmlFileObj)
 
             if None is showXML.findtext('title') \
-                    or (None is showXML.find('//uniqueid[@type="tvdb"]')
-                        and (None is showXML.findtext('tvdbid')
-                             and None is showXML.findtext('id'))
-                        and None is showXML.findtext('indexer')):
+                    or all(None is _f for _f in (showXML.find('//uniqueid[@type]'),
+                                                 showXML.findtext('tvdbid'),
+                                                 showXML.findtext('id'),
+                                                 showXML.findtext('indexer'))):
                 logger.log(u"Invalid info in tvshow.nfo (missing name or id):"
                            + str(showXML.findtext('title')) + ' '
                            + str(showXML.findtext('indexer')) + ' '
@@ -1046,6 +1156,17 @@ class GenericMetadata(object):
                 tvid = int(showXML.findtext('indexer'))
             except (BaseException, Exception):
                 tvid = None
+
+            # handle v2 format of .nfo file
+            default_source = showXML.find('//uniqueid[@default="true"]')
+            if None is not default_source:
+                use_tvid = default_source.attrib.get('type') or tvid
+                if isinstance(use_tvid, string_types):
+                    use_tvid = {sickbeard.TVInfoAPI(x).config['slug']: x
+                                for x, _ in iteritems(sickbeard.TVInfoAPI().all_sources)}.get(use_tvid)
+                prodid = sg_helpers.try_int(default_source.text, None)
+                if use_tvid and None is not prodid:
+                    return use_tvid, prodid, name
 
             prodid = showXML.find('//uniqueid[@type="tvdb"]')
             if None is not prodid:
@@ -1076,65 +1197,6 @@ class GenericMetadata(object):
             return empty_return
 
         return tvid, prodid, name
-
-    @staticmethod
-    def _tmdb_image_url(show_obj, image_type):
-        # type: (sickbeard.tv.TVShow, AnyStr) -> Optional[List[List[int, int, AnyStr]]]
-        types = {'poster': 'poster_path',
-                 'banner': None,
-                 'fanart': 'backdrop_path',
-                 'fanart_all': 'backdrops',
-                 'poster_thumb': 'poster_path',
-                 'banner_thumb': None}
-
-        # get TMDB configuration info
-        TMDB.API_KEY = sickbeard.TMDB_API_KEY
-        response = sg_helpers.get_tmdb_info()
-        base_url = response['images']['base_url']
-        sizes = response['images']['poster_sizes']
-
-        def size_str_to_int(x):
-            return float('inf') if 'original' == x else int(x[1:])
-
-        max_size = max(sizes, key=size_str_to_int)
-
-        try:
-            itemlist = []
-            for (src, name) in [(indexer_config.TVINFO_TVDB, 'tvdb'), (indexer_config.TVINFO_IMDB, 'imdb'),
-                                (indexer_config.TVINFO_TVRAGE, 'tvrage')]:
-                is_id = show_obj.ids.get(src, {}).get('id', None)
-                if not is_id:
-                    continue
-
-                result = TMDB.Find(is_id).info(**{'external_source': '%s_id' % name})
-                if 'tv_results' not in result or not len(result['tv_results']):
-                    continue
-
-                tmdb_show = result['tv_results'][0]
-
-                if 'fanart' == image_type:
-                    tv_obj = TMDB.TV(tmdb_show['id'])
-                    rjson_info = tv_obj.info(**{'append_to_response': 'images', 'include_image_language': 'en,null'})
-                    rjson_img = rjson_info['images']
-                    for art in rjson_img[types['fanart_all']] or []:
-                        if 'vote_average' not in art or 'file_path' not in art:
-                            continue
-                        art_likes = art['vote_average']
-                        url = u'%s%s%s' % (base_url, max_size, art['file_path'])
-                        itemlist += [[tmdb_show['id'], art_likes, url]]
-
-                    itemlist.sort(key=lambda a: (a[1]), reverse=True)
-                    return itemlist
-
-                elif tmdb_show[types[image_type]]:
-                    return [[tmdb_show['id'],
-                             tmdb_show['vote_average'],
-                             '%s%s%s' % (base_url, max_size, tmdb_show[types[image_type]])]]
-
-        except (BaseException, Exception):
-            pass
-
-        logger.log(u'Could not find any %s images on TMDB for %s' % (image_type, show_obj.name), logger.DEBUG)
 
     def _fanart_urls_from_show(self, show_obj, image_type='banner', lang='en', thumb=False):
         # type: (sickbeard.tv.TVShow, AnyStr, AnyStr, bool) -> Optional[List[int, int, AnyStr]]
@@ -1181,9 +1243,10 @@ class GenericMetadata(object):
         except (BaseException, Exception):
             raise
 
-    def retrieve_show_image(self, image_type, show_obj, which=None):
-        # type: (AnyStr, sickbeard.tv.TVShow, bool) -> Optional[bytes]
-        return self._retrieve_show_image(image_type=image_type, show_obj=show_obj, which=which)
+    def retrieve_show_image(self, image_type, show_obj, which=None, return_links=False, show_infos=None):
+        # type: (AnyStr, sickbeard.tv.TVShow, bool, bool, ShowInfosDict) -> Optional[bytes]
+        return self._retrieve_show_image(image_type=image_type, show_obj=show_obj, which=which,
+                                         return_links=return_links, show_infos=show_infos)
 
     def write_image(self, image_data, image_path, force=False):
         # type: (bytes, AnyStr, bool) -> bool

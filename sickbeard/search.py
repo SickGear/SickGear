@@ -547,7 +547,7 @@ def wanted_episodes(show_obj,  # type: TVShow
         ep_sql_result = None
 
     for result in sql_result:
-        ep_obj = show_obj.get_episode(int(result['season']), int(result['episode']), ep_sql=ep_sql_result)
+        ep_obj = show_obj.get_episode(int(result['season']), int(result['episode']), ep_result=ep_sql_result)
         cur_status, cur_quality = common.Quality.splitCompositeStatus(ep_obj.status)
         ep_obj.wanted_quality = get_wanted_qualities(ep_obj, cur_status, cur_quality, unaired=unaired)
         if not ep_obj.wanted_quality:
@@ -575,7 +575,7 @@ def wanted_episodes(show_obj,  # type: TVShow
                           ['%d unaired episode%s', total_unaired]:
             if 0 < total:
                 actions.append(msg % (total, helpers.maybe_plural(total)))
-        logger.log(u'We want %s for %s' % (' and '.join(actions), show_obj.name))
+        logger.log(u'We want %s for %s' % (' and '.join(actions), show_obj.unique_name))
 
     return wanted
 
@@ -607,8 +607,8 @@ def search_for_needed_episodes(ep_obj_list):
         for cur_ep_obj in ep_obj_search_result_list:
 
             if cur_ep_obj.show_obj.paused:
-                logger.log(u'Show %s is paused, ignoring all RSS items for %s' %
-                           (cur_ep_obj.show_obj.name, cur_ep_obj.pretty_name()), logger.DEBUG)
+                logger.debug(u'Show %s is paused, ignoring all RSS items for %s' %
+                             (cur_ep_obj.show_obj.unique_name, cur_ep_obj.pretty_name()))
                 continue
 
             # find the best result for the current episode
@@ -717,9 +717,9 @@ def _search_provider_thread(provider, provider_results, show_obj, ep_obj_list, m
         search_count += 1
 
         if 'eponly' == search_mode:
-            logger.log(u'Performing episode search for %s' % show_obj.name)
+            logger.log(u'Performing episode search for %s' % show_obj.unique_name)
         else:
-            logger.log(u'Performing season pack search for %s' % show_obj.name)
+            logger.log(u'Performing season pack search for %s' % show_obj.unique_name)
 
         try:
             provider.cache._clearCache()
@@ -852,7 +852,7 @@ def search_providers(
     # create a thread for each provider to search
     for cur_provider in provider_list:
         if cur_provider.anime_only and not show_obj.is_anime:
-            logger.log(u'%s is not an anime, skipping' % show_obj.name, logger.DEBUG)
+            logger.debug(u'%s is not an anime, skipping' % show_obj.unique_name)
             continue
 
         provider_id = cur_provider.get_id()

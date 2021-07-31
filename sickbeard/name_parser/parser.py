@@ -39,7 +39,7 @@ import encodingKludge as ek
 from exceptions_helper import ex
 import sickbeard
 from .. import common, db, helpers, logger, scene_exceptions, scene_numbering
-from tvinfo_base.exceptions import *
+from lib.tvinfo_base.exceptions import *
 from ..classes import OrderedDefaultdict
 
 from .._legacy_classes import LegacyParseResult
@@ -384,8 +384,8 @@ class NameParser(object):
                             season_number = int(ep_obj['seasonnumber'])
                             episode_numbers = [int(ep_obj['episodenumber'])]
                         except BaseTVinfoEpisodenotfound as e:
-                            logger.log(u'Unable to find episode with date ' + str(best_result.air_date)
-                                       + ' for show ' + show_obj.name + ', skipping', logger.WARNING)
+                            logger.warning(u'Unable to find episode with date %s for show %s, skipping' %
+                                           (best_result.air_date, show_obj.unique_name))
                             episode_numbers = []
                         except BaseTVinfoError as e:
                             logger.log(u'Unable to contact ' + sickbeard.TVInfoAPI(show_obj.tvid).name
@@ -564,7 +564,9 @@ class NameParser(object):
             cache_result = False
 
         cached = name_parser_cache.get(name)
-        if cached:
+        show_obj_given = bool(self.show_obj)
+        if cached and ((not show_obj_given and not cached.show_obj_match)
+                       or (show_obj_given and self.show_obj == cached.show_obj)):
             return cached
 
         # break it into parts if there are any (dirname, file name, extension)
@@ -576,7 +578,8 @@ class NameParser(object):
             base_file_name = file_name
 
         # set up a result to use
-        final_result = ParseResult(name)
+        # set if parsed with given show_obj set
+        final_result = ParseResult(name, show_obj_match=show_obj_given)
 
         # try parsing the file name
         file_name_result = self._parse_string(base_file_name)
@@ -660,6 +663,7 @@ class ParseResult(LegacyParseResult):
                  score=None,
                  quality=None,
                  version=None,
+                 show_obj_match=False,
                  **kwargs):
 
         self.original_name = original_name  # type: AnyStr
@@ -694,6 +698,8 @@ class ParseResult(LegacyParseResult):
         self.score = score  # type: Optional[int]
 
         self.version = version  # type: Optional[int]
+
+        self.show_obj_match = show_obj_match  # type: bool
 
         super(ParseResult, self).__init__(**kwargs)
 

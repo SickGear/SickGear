@@ -36,7 +36,7 @@ from .sgdatetime import timestamp_near
 
 from sg_helpers import make_dirs, compress_file, remove_file_perm, scantree
 
-from _23 import filter_iter, list_values, scandir
+from _23 import filter_iter, filter_list, list_values, scandir
 from six import iterkeys, iteritems, itervalues
 
 # noinspection PyUnreachableCode
@@ -45,7 +45,9 @@ if False:
 
 
 db_lock = threading.Lock()
+db_support_multiple_insert = (3, 7, 11) <= sqlite3.sqlite_version_info  # type: bool
 db_support_column_rename = (3, 25, 0) <= sqlite3.sqlite_version_info  # type: bool
+db_support_upsert = (3, 25, 0) <= sqlite3.sqlite_version_info  # type: bool
 db_supports_backup = hasattr(sqlite3.Connection, 'backup') and (3, 6, 11) <= sqlite3.sqlite_version_info  # type: bool
 
 
@@ -207,33 +209,29 @@ class DBConnection(object):
 
             attempt = 0
 
-            sql_result = {'affected': 0, 'data': []}
+            sql_result = []
+            affected = 0
             while 5 > attempt:
                 try:
-                    def sql_action(query, result):
-                        cursor = self.connection.cursor()
-                        if 'SELECT' == query[0].strip()[0:6].upper():
-                            result['data'].append(cursor.execute(*tuple(query)).fetchall())
-                        else:
-                            cursor.execute(*tuple(query)).fetchall()
-                        result['affected'] += abs(cursor.rowcount)
-
+                    cursor = self.connection.cursor()
                     if not log_transaction:
                         for cur_query in queries:
-                            sql_action(cur_query, sql_result)
+                            sql_result.append(cursor.execute(*tuple(cur_query)).fetchall())
+                            affected += abs(cursor.rowcount)
                     else:
                         for cur_query in queries:
                             logger.log(cur_query[0] if 1 == len(cur_query)
                                        else '%s with args %s' % tuple(cur_query), logger.DB)
-                            sql_action(cur_query, sql_result)
+                            sql_result.append(cursor.execute(*tuple(cur_query)).fetchall())
+                            affected += abs(cursor.rowcount)
 
                     self.connection.commit()
-                    if 0 < sql_result['affected']:
+                    if 0 < affected:
                         logger.debug(u'Transaction with %s queries executed affected at least %i row%s' % (
-                            len(queries), sql_result['affected'], helpers.maybe_plural(sql_result['affected'])))
-                    return sql_result['data']
+                            len(queries), affected, helpers.maybe_plural(affected)))
+                    return sql_result
                 except sqlite3.OperationalError as e:
-                    sql_result['data'] = []
+                    sql_result = []
                     if self.connection:
                         self.connection.rollback()
                     if not self.action_error(e):
@@ -245,7 +243,7 @@ class DBConnection(object):
                     logger.error(u'Fatal error executing query: ' + ex(e))
                     raise
 
-            return sql_result['data']
+            return sql_result
 
     @staticmethod
     def action_error(e):
@@ -498,16 +496,57 @@ class SchemaUpgrade(object):
     def hasColumn(self, table_name, column):
         return column in self.connection.tableInfo(table_name)
 
+    def list_tables(self):
+        # type: (...) -> List[AnyStr]
+        """
+        returns list of all table names in db
+        """
+        return [s['name'] for s in self.connection.select('SELECT name FROM main.sqlite_master WHERE type = ?;',
+                                                          ['table'])]
+
+    def list_indexes(self):
+        # type: (...) -> List[AnyStr]
+        """
+        returns list of all index names in db
+        """
+        return [s['name'] for s in self.connection.select('SELECT name FROM main.sqlite_master WHERE type = ?;',
+                                                          ['index'])]
+
     # noinspection SqlResolve
     def addColumn(self, table, column, data_type='NUMERIC', default=0, set_default=False):
         self.connection.action('ALTER TABLE [%s] ADD %s %s%s' %
                                (table, column, data_type, ('', ' DEFAULT "%s"' % default)[set_default]))
         self.connection.action('UPDATE [%s] SET %s = ?' % (table, column), (default,))
 
-    def dropColumn(self, table, column):
+    # noinspection SqlResolve
+    def addColumns(self, table, column_list=None):
+        # type: (AnyStr, List) -> None
+        if isinstance(column_list, list):
+            sql = []
+            for col in column_list:
+                is_list = isinstance(col, (list, tuple))
+                list_len = 0 if not is_list else len(col)
+                column = col if not is_list else col[0]
+                data_type = 'NUMERIC' if not is_list or 2 > list_len else col[1]
+                default = 0 if not is_list or 3 > list_len else col[2]
+                sql.append(['ALTER TABLE [%s] ADD %s %s%s' %
+                            (table, column, data_type, '' if list_len < 3 else
+                                ' DEFAULT %s' % ('""' if 'TEXT' == data_type and '' == default else default))])
+                if 2 < list_len:
+                    sql.append(['UPDATE [%s] SET %s = ?' % (table, column), (default,)])
+            if sql:
+                self.connection.mass_action(sql)
+
+    def dropColumn(self, table, columns):
+        # type: (AnyStr, AnyStr) -> None
+        self.drop_columns(table, columns)
+
+    def drop_columns(self, table, column):
+        # type: (AnyStr, Union[AnyStr, List[AnyStr]]) -> None
         # get old table columns and store the ones we want to keep
         result = self.connection.select('pragma table_info([%s])' % table)
-        keptColumns = [c for c in result if c['name'] != column]
+        columns_list = ([column], column)[isinstance(column, list)]
+        keptColumns = filter_list(lambda col: col['name'] not in columns_list, result)
 
         keptColumnsNames = []
         final = []
@@ -583,12 +622,7 @@ class SchemaUpgrade(object):
         return check_db_version and self.checkDBVersion()
 
     def listTables(self):
-        tables = []
-        # noinspection SqlResolve
-        sql_result = self.connection.select('SELECT name FROM [sqlite_master] WHERE type = "table"')
-        for table in sql_result:
-            tables.append(table[0])
-        return tables
+        return self.list_tables()
 
     def do_query(self, queries):
         if not isinstance(queries, list):
@@ -682,6 +716,7 @@ def MigrationCode(my_db):
         20011: sickbeard.mainDB.AddShowExludeGlobals,
         20012: sickbeard.mainDB.RenameAllowBlockListTables,
         20013: sickbeard.mainDB.AddHistoryHideColumn,
+        20014: sickbeard.mainDB.ChangeShowData,
         # 20002: sickbeard.mainDB.AddCoolSickGearFeature3,
     }
 

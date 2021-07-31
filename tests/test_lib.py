@@ -106,6 +106,7 @@ sickbeard.CACHE_DIR = os.path.join(TESTDIR, 'cache')
 sickbeard.ZONEINFO_DIR = os.path.join(TESTDIR, 'cache', 'zoneinfo')
 create_test_cache_folder()
 sickbeard.GUI_NAME = 'slick'
+sickbeard.MEMCACHE = {'history_tab_limit': 10, 'history_tab': []}
 
 
 # =================
@@ -122,7 +123,7 @@ mainDB.sickbeard.save_config = _dummy_save_config
 
 # the real one tries to contact tvdb just stop it from getting more info on the ep
 # noinspection PyUnusedLocal
-def _fake_specify_ep(self, season, episode, show_sql=None):
+def _fake_specify_ep(self, season, episode, show_sql=None, existing_only=False, **kwargs):
     pass
 
 
@@ -223,11 +224,20 @@ def teardown_test_db():
         pass
 
     for filename in glob.glob(os.path.join(TESTDIR, TESTDBNAME) + '*'):
-        os.remove(filename)
+        try:
+            os.remove(filename)
+        except (BaseException, Exception):
+            pass
     for filename in glob.glob(os.path.join(TESTDIR, TESTCACHEDBNAME) + '*'):
-        os.remove(filename)
+        try:
+            os.remove(filename)
+        except (BaseException, Exception):
+            pass
     for filename in glob.glob(os.path.join(TESTDIR, TESTFAILEDDBNAME) + '*'):
-        os.remove(filename)
+        try:
+            os.remove(filename)
+        except (BaseException, Exception):
+            pass
 
 
 def setup_test_episode_file():

@@ -48,7 +48,7 @@ import sg_helpers
 from sg_helpers import scantree
 
 import sickbeard
-from . import classes, clients, config, db, helpers, history, image_cache, logger, naming, \
+from . import classes, clients, config, db, helpers, history, image_cache, logger, name_cache, naming, \
     network_timezones, notifiers, nzbget, processTV, sab, scene_exceptions, search_queue, subtitles, ui
 from .anime import AniGroupList, pull_anidb_groups, short_group_names
 from .browser import folders_at_path
@@ -56,7 +56,8 @@ from .common import ARCHIVED, DOWNLOADED, FAILED, IGNORED, SKIPPED, SNATCHED, SN
      SD, HD720p, HD1080p, UHD2160p, Overview, Quality, qualityPresetStrings, statusStrings
 from .helpers import get_media_stats, has_image_ext, real_path, remove_article, remove_file_perm, starify
 from .indexermapper import MapStatus, map_indexers_to_show, save_mapping
-from .indexers.indexer_config import TVINFO_IMDB, TVINFO_TRAKT, TVINFO_TVDB
+from .indexers.indexer_config import TVINFO_IMDB, TVINFO_TMDB, TVINFO_TRAKT, TVINFO_TVDB, TVINFO_TVMAZE, \
+    TVINFO_TRAKT_SLUG, TVINFO_TVDB_SLUG
 from .name_parser.parser import InvalidNameException, InvalidShowException, NameParser
 from .providers import newznab, rsstorrent
 from .scene_numbering import get_scene_absolute_numbering_for_show, get_scene_numbering_for_show, \
@@ -67,9 +68,11 @@ from .show_name_helpers import abbr_showname
 
 from .show_updater import clean_ignore_require_words
 from .trakt_helpers import build_config, trakt_collection_remove_account
-from .tv import TVidProdid
+from .tv import TVidProdid, Person as TVPerson, Character as TVCharacter, TVSWITCH_NORMAL, tvswitch_names, \
+    TVSWITCH_EP_DELETED, tvswitch_ep_names, usable_id
 
 from bs4_parser import BS4Parser
+# noinspection PyPackageRequirements
 from Cheetah.Template import Template
 from unidecode import unidecode
 import dateutil.parser
@@ -90,20 +93,16 @@ from lib.dateutil.relativedelta import relativedelta
 from lib.fuzzywuzzy import fuzz
 from lib.libtrakt import TraktAPI
 from lib.libtrakt.exceptions import TraktException, TraktAuthException
-from lib.libtrakt.indexerapiinterface import TraktSearchTypes
-# noinspection PyPep8Naming
-from lib import tmdbsimple as TMDB
-from tvinfo_base import BaseTVinfoException
 
 import lib.rarfile.rarfile as rarfile
 
-from _23 import decode_bytes, decode_str, filter_list, filter_iter, getargspec, list_values, \
+from _23 import decode_bytes, decode_str, filter_list, filter_iter, getargspec, list_keys, list_values, \
     map_consume, map_iter, map_list, map_none, ordered_dict, quote_plus, unquote_plus, urlparse
-from six import binary_type, integer_types, iteritems, iterkeys, itervalues, PY2, string_types
+from six import binary_type, integer_types, iteritems, iterkeys, itervalues, moves, PY2, string_types
 
 # noinspection PyUnreachableCode
 if False:
-    from typing import AnyStr, List, Optional, Tuple
+    from typing import Any, AnyStr, Dict, List, Optional, Set, Tuple
     from sickbeard.providers.generic import TorrentProvider
 
 
@@ -116,8 +115,8 @@ class PageTemplate(Template):
         self.xsrf_form_html = re.sub(r'\s*/>$', '>', web_handler.xsrf_form_html())
         self.sbHost = headers.get('X-Forwarded-Host')
         if None is self.sbHost:
-            sbHost = headers.get('Host') or 'localhost'
-            self.sbHost = re.match('(?msx)^' + (('[^:]+', r'\[.*\]')['[' == sbHost[0]]), sbHost).group(0)
+            sb_host = headers.get('Host') or 'localhost'
+            self.sbHost = re.match('(?msx)^' + (('[^:]+', r'\[.*\]')['[' == sb_host[0]]), sb_host).group(0)
         self.sbHttpPort = sickbeard.WEB_PORT
         self.sbHttpsPort = headers.get('X-Forwarded-Port') or self.sbHttpPort
         self.sbRoot = sickbeard.WEB_ROOT
@@ -146,6 +145,7 @@ class PageTemplate(Template):
         self.addtab_limit = sickbeard.MEMCACHE.get('history_tab_limit', 0)
         if not web_handler.application.is_loading_handler:
             self.history_compact = sickbeard.MEMCACHE.get('history_tab')
+            self.tvinfo_switch_running = sickbeard.show_queue_scheduler.action.is_switch_running()
 
         super(PageTemplate, self).__init__(*args, **kwargs)
 
@@ -222,6 +222,14 @@ class RouteHandler(LegacyBaseHandler):
         else:
             request_kwargs = {k: self.decode_data(v if not (isinstance(v, list) and 1 == len(v)) else v[0])
                               for k, v in iteritems(self.request.arguments) if not xsrf_filter or ('_xsrf' != k)}
+            if 'tvid_prodid' in request_kwargs and request_kwargs['tvid_prodid'] in sickbeard.switched_shows:
+                # in case show has been switched, redirect to new id
+                url = self.request.uri.replace('tvid_prodid=%s' % request_kwargs['tvid_prodid'],
+                                               'tvid_prodid=%s' %
+                                               sickbeard.switched_shows[request_kwargs['tvid_prodid']])
+                self.redirect(url, permanent=True)
+                self.finish()
+                return
             # filter method specified arguments so *args and **kwargs are not required and unused vars safely dropped
             method_args = []
             # noinspection PyDeprecation
@@ -292,22 +300,24 @@ class BaseHandler(RouteHandler):
             cache_obj = image_cache.ImageCache()
             tvid_prodid_obj = tvid_prodid and TVidProdid(tvid_prodid)
 
-            image_file_name = None
-            if 'poster' == which:
-                image_file_name = cache_obj.poster_path(*tvid_prodid_obj.tuple)
-            elif 'poster_thumb' == which:
-                image_file_name = cache_obj.poster_thumb_path(*tvid_prodid_obj.tuple)
-            elif 'banner' == which:
-                image_file_name = cache_obj.banner_path(*tvid_prodid_obj.tuple)
-            elif 'banner_thumb' == which:
-                image_file_name = cache_obj.banner_thumb_path(*tvid_prodid_obj.tuple)
+            image_file_name = []
+            if 'poster' == which[0:6]:
+                if '_thumb' == which[6:]:
+                    image_file_name = [cache_obj.poster_thumb_path(*tvid_prodid_obj.tuple)]
+                image_file_name += [cache_obj.poster_path(*tvid_prodid_obj.tuple)]
+            elif 'banner' == which[0:6]:
+                if '_thumb' == which[6:]:
+                    image_file_name = [cache_obj.banner_thumb_path(*tvid_prodid_obj.tuple)]
+                image_file_name += [cache_obj.banner_path(*tvid_prodid_obj.tuple)]
             elif 'fanart' == which[0:6]:
-                image_file_name = cache_obj.fanart_path(
+                image_file_name = [cache_obj.fanart_path(
                     *tvid_prodid_obj.tuple +
-                    ('%s' % (re.sub(r'.*?fanart_(\d+(?:\.\w{1,20})?\.(?:\w{5,8})).*', r'\1.', which, 0, re.I)),))
+                    ('%s' % (re.sub(r'.*?fanart_(\d+(?:\.\w{1,20})?\.\w{5,8}).*', r'\1.', which, 0, re.I)),))]
 
-            if ek.ek(os.path.isfile, image_file_name):
-                static_image_path = image_file_name
+            for cur_name in image_file_name:
+                if ek.ek(os.path.isfile, cur_name):
+                    static_image_path = cur_name
+                    break
 
         if api:
             used_file = ek.ek(os.path.basename, static_image_path)
@@ -374,7 +384,7 @@ class CalendarHandler(BaseHandler):
             self.write('User authentication required')
 
     def calendar(self):
-        """ iCalendar (iCal) - Standard RFC 5545 <http://tools.ietf.org/html/rfc5546>
+        """ iCalendar (iCal) - Standard RFC 5546 <https://datatracker.ietf.org/doc/html/rfc5546>
         Works with iCloud, Google Calendar and Outlook.
         Provides a subscribeable URL for iCal subscriptions """
 
@@ -907,6 +917,16 @@ class MainHandler(WebHandler):
         self.redirect('/view-shows/')
 
     @staticmethod
+    def set_display_show_glide(slidetime=None, tvid_prodid=None, start_at=None):
+
+        if tvid_prodid and start_at:
+            sickbeard.DISPLAY_SHOW_GLIDE.setdefault(tvid_prodid, {}).update({'start_at': start_at})
+
+        if slidetime:
+            sickbeard.DISPLAY_SHOW_GLIDE_SLIDETIME = sg_helpers.try_int(slidetime, 3000)
+        sickbeard.save_config()
+
+    @staticmethod
     def set_poster_sortby(sort):
 
         if sort not in ('name', 'date', 'network', 'progress', 'quality'):
@@ -965,10 +985,12 @@ class MainHandler(WebHandler):
         if int(redir):
             self.redirect('/daily-schedule/')
 
-    def daily_schedule(self, layout='None'):
+    @staticmethod
+    def get_daily_schedule():
+        # type: (...) -> Tuple[List[Dict], Dict, Dict, datetime.date, integer_types, integer_types]
         """ display the episodes """
         today_dt = datetime.date.today()
-        # today = today_dt.toordinal()
+        today = today_dt.toordinal()
         yesterday_dt = today_dt - datetime.timedelta(days=1)
         yesterday = yesterday_dt.toordinal()
         tomorrow = (datetime.date.today() + datetime.timedelta(days=1)).toordinal()
@@ -981,7 +1003,9 @@ class MainHandler(WebHandler):
 
         my_db = db.DBConnection()
         sql_result = my_db.select(
-            'SELECT *, tv_shows.status AS show_status'
+            'SELECT *, tv_episodes.network as episode_network, tv_shows.status AS show_status,'
+            ' tv_shows.network as show_network, tv_shows.timezone as show_timezone, tv_shows.airtime as show_airtime,'
+            ' tv_episodes.timezone as ep_timezone, tv_episodes.airtime as ep_airtime'
             ' FROM tv_episodes, tv_shows'
             ' WHERE tv_shows.indexer = tv_episodes.indexer AND tv_shows.indexer_id = tv_episodes.showid'
             ' AND season != 0 AND airdate >= ? AND airdate <= ?'
@@ -993,7 +1017,9 @@ class MainHandler(WebHandler):
 
         # noinspection SqlRedundantOrderingDirection
         sql_result += my_db.select(
-            'SELECT *, tv_shows.status AS show_status'
+            'SELECT *, outer_eps.network as episode_network, tv_shows.status AS show_status,'
+            ' tv_shows.network as show_network, tv_shows.timezone as show_timezone, tv_shows.airtime as show_airtime,'
+            ' outer_eps.timezone as ep_timezone, outer_eps.airtime as ep_airtime'
             ' FROM tv_episodes outer_eps, tv_shows'
             ' WHERE season != 0'
             ' AND tv_shows.indexer || \'-\' || showid NOT IN (%s)' % ','.join(done_show_list)
@@ -1007,7 +1033,9 @@ class MainHandler(WebHandler):
             [next_week] + Quality.SNATCHED + Quality.DOWNLOADED)
 
         sql_result += my_db.select(
-            'SELECT *, tv_shows.status AS show_status'
+            'SELECT *, tv_episodes.network as episode_network, tv_shows.status AS show_status,'
+            ' tv_shows.network as show_network, tv_shows.timezone as show_timezone, tv_shows.airtime as show_airtime,'
+            ' tv_episodes.timezone as ep_timezone, tv_episodes.airtime as ep_airtime'
             ' FROM tv_episodes, tv_shows'
             ' WHERE season != 0'
             ' AND tv_shows.indexer = tv_episodes.indexer AND tv_shows.indexer_id = tv_episodes.showid'
@@ -1035,11 +1063,26 @@ class MainHandler(WebHandler):
 
         # add localtime to the dict
         cache_obj = image_cache.ImageCache()
-        t = PageTemplate(web_handler=self, file='episodeView.tmpl')
-        t.fanart = {}
+        fanarts = {}
+        cur_prodid = None
         for index, item in enumerate(sql_result):
-            val = network_timezones.parse_date_time(item['airdate'], item['airs'], item['network'])
+            tvid_prodid_obj = TVidProdid({item['indexer']: item['showid']})
+            tvid_prodid = str(tvid_prodid_obj)
+            sql_result[index]['tv_id'] = item['indexer']
+            sql_result[index]['prod_id'] = item['showid']
+            sql_result[index]['tvid_prodid'] = tvid_prodid
+            if cur_prodid != tvid_prodid:
+                cur_prodid = tvid_prodid
+
+            sql_result[index]['network'] = (item['show_network'], item['episode_network'])[
+                isinstance(item['episode_network'], string_types) and 0 != len(item['episode_network'].strip())]
+
+            val = network_timezones.get_episode_time(
+                item['airdate'], item['airs'], item['show_network'], item['show_airtime'], item['show_timezone'],
+                item['timestamp'], item['episode_network'], item['ep_airtime'], item['ep_timezone'])
+
             # noinspection PyCallByClass,PyTypeChecker
+            sql_result[index]['parsed_datetime'] = val
             sql_result[index]['localtime'] = SGDatetime.convert_to_setting(val)
             sql_result[index]['data_show_name'] = value_maybe_article(item['show_name'])
             sql_result[index]['data_network'] = value_maybe_article(item['network'])
@@ -1059,35 +1102,37 @@ class MainHandler(WebHandler):
             else:
                 sql_result[index]['imdb_url'] = ''
 
-            tvid_prodid_obj = TVidProdid({item['indexer']: item['showid']})
-            tvid_prodid = str(tvid_prodid_obj)
-            sql_result[index]['tvid_prodid'] = tvid_prodid
-
-            if tvid_prodid in t.fanart:
+            if tvid_prodid in fanarts:
                 continue
 
             for img in ek.ek(glob.glob, cache_obj.fanart_path(*tvid_prodid_obj.tuple).replace('fanart.jpg', '*')) or []:
-                match = re.search(r'(\d+(?:\.\w*)?\.(?:\w{5,8}))\.fanart\.', img, re.I)
+                match = re.search(r'(\d+(?:\.\w*)?\.\w{5,8})\.fanart\.', img, re.I)
                 if not match:
                     continue
                 fanart = [(match.group(1), sickbeard.FANART_RATINGS.get(tvid_prodid, {}).get(match.group(1), ''))]
-                if tvid_prodid not in t.fanart:
-                    t.fanart[tvid_prodid] = fanart
+                if tvid_prodid not in fanarts:
+                    fanarts[tvid_prodid] = fanart
                 else:
-                    t.fanart[tvid_prodid] += fanart
+                    fanarts[tvid_prodid] += fanart
 
-        for tvid_prodid in t.fanart:
-            fanart_rating = [(n, v) for n, v in t.fanart[tvid_prodid] if 20 == v]
+        for tvid_prodid in fanarts:
+            fanart_rating = [(n, v) for n, v in fanarts[tvid_prodid] if 20 == v]
             if fanart_rating:
-                t.fanart[tvid_prodid] = fanart_rating
+                fanarts[tvid_prodid] = fanart_rating
             else:
-                rnd = [(n, v) for (n, v) in t.fanart[tvid_prodid] if 30 != v]
+                rnd = [(n, v) for (n, v) in fanarts[tvid_prodid] if 30 != v]
                 grouped = [(n, v) for (n, v) in rnd if 10 == v]
                 if grouped:
-                    t.fanart[tvid_prodid] = [grouped[random.randint(0, len(grouped) - 1)]]
+                    fanarts[tvid_prodid] = [grouped[random.randint(0, len(grouped) - 1)]]
                 elif rnd:
-                    t.fanart[tvid_prodid] = [rnd[random.randint(0, len(rnd) - 1)]]
+                    fanarts[tvid_prodid] = [rnd[random.randint(0, len(rnd) - 1)]]
 
+        return sql_result, fanarts, sorts, next_week_dt, today, next_week
+
+    def daily_schedule(self, layout='None'):
+        """ display the episodes """
+        t = PageTemplate(web_handler=self, file='episodeView.tmpl')
+        sql_result, t.fanart, sorts, next_week_dt, today, next_week = self.get_daily_schedule()
         # Allow local overriding of layout parameter
         if layout and layout in ('banner', 'daybyday', 'list', 'poster'):
             t.layout = layout
@@ -2004,38 +2049,51 @@ class Home(MainHandler):
             # noinspection PyProtectedMember
             t.showLoc = (show_obj._location, False)
 
-        show_message = ''
+        show_message = []
 
         if sickbeard.show_queue_scheduler.action.isBeingAdded(show_obj):
-            show_message = 'This show is in the process of being downloaded - the info below is incomplete.'
+            show_message = ['Downloading this show, the information below is incomplete']
 
         elif sickbeard.show_queue_scheduler.action.isBeingUpdated(show_obj):
-            show_message = 'The information on this page is in the process of being updated.'
+            show_message = ['Updating information for this show']
 
         elif sickbeard.show_queue_scheduler.action.isBeingRefreshed(show_obj):
-            show_message = 'The episodes below are currently being refreshed from disk'
+            show_message = ['Refreshing episodes from disk for this show']
 
         elif sickbeard.show_queue_scheduler.action.isBeingSubtitled(show_obj):
-            show_message = 'Currently downloading subtitles for this show'
+            show_message = ['Downloading subtitles for this show']
 
         elif sickbeard.show_queue_scheduler.action.isInRefreshQueue(show_obj):
-            show_message = 'This show is queued to be refreshed.'
+            show_message = ['Refresh queued for this show']
 
         elif sickbeard.show_queue_scheduler.action.isInUpdateQueue(show_obj):
-            show_message = 'This show is queued and awaiting an update.'
+            show_message = ['Update queued for this show']
 
         elif sickbeard.show_queue_scheduler.action.isInSubtitleQueue(show_obj):
-            show_message = 'This show is queued and awaiting subtitles download.'
+            show_message = ['Subtitle download queued for this show']
+
+        if sickbeard.show_queue_scheduler.action.is_show_being_switched(show_obj):
+            show_message += ['Switching TV info source and awaiting update for this show']
+
+        elif sickbeard.show_queue_scheduler.action.is_show_switch_queued(show_obj):
+            show_message += ['Queuing a switch of TV info source for this show']
+
+        if sickbeard.people_queue_scheduler.action.show_in_queue(show_obj, check_inprogress=True):
+            show_message += ['Updating cast for this show']
+        elif sickbeard.people_queue_scheduler.action.show_in_queue(show_obj):
+            show_message += ['Cast update queued for this show']
 
         if 0 != show_obj.not_found_count:
             last_found = ('', ' since %s' % SGDatetime.fromordinal(
                 show_obj.last_found_on_indexer).sbfdate())[1 < show_obj.last_found_on_indexer]
-            show_message = (
+            show_message += [
                 'The master ID of this show has been <span class="addQTip" title="many reasons exist, including: ' +
                 '<br>show flagged as a duplicate, removed completely... etc">abandoned</span>%s, ' % last_found +
                 '<a href="%s/home/edit-show?tvid_prodid=%s&tvsrc=0&srcid=%s#core-component-group3">replace it here</a>'
-                % (sickbeard.WEB_ROOT, tvid_prodid, show_obj.prodid)
-                + ('', '<br>%s' % show_message)[0 < len(show_message)])
+                % (sickbeard.WEB_ROOT, tvid_prodid, show_obj.prodid)]
+
+        show_message = '.<br>'.join(show_message)
+
         t.force_update = 'home/update-show?tvid_prodid=%s&amp;force=1&amp;web=1' % tvid_prodid
         if not sickbeard.show_queue_scheduler.action.isBeingAdded(show_obj):
             if not sickbeard.show_queue_scheduler.action.isBeingUpdated(show_obj):
@@ -2046,6 +2104,8 @@ class Home(MainHandler):
                     {'title': 'Re-scan files', 'path': 'home/refresh-show?tvid_prodid=%s' % tvid_prodid})
                 t.submenu.append(
                     {'title': 'Force Full Update', 'path': t.force_update})
+                t.submenu.append(
+                    {'title': 'Cast Update', 'path': 'home/update-cast?tvid_prodid=%s' % tvid_prodid})
                 t.submenu.append(
                     {'title': 'Update show in Emby',
                      'path': 'home/update-mb%s' % (
@@ -2095,6 +2155,14 @@ class Home(MainHandler):
         t.has_special = False
 
         my_db = db.DBConnection()
+
+        failed_check = my_db.select('SELECT status FROM tv_src_switch WHERE old_indexer = ? AND old_indexer_id = ?'
+                                    ' AND status != ?', [show_obj.tvid, show_obj.prodid, TVSWITCH_NORMAL])
+        if failed_check:
+            t.show_message = '%s%s%s' % \
+                             (t.show_message, ('<br>', '')[0 == len(t.show_message)],
+                              'Failed to switch tv info source: %s' %
+                              tvswitch_names.get(failed_check[0]['status'], 'Unknown reason'))
 
         for row in my_db.select('SELECT season, count(*) AS cnt'
                                 ' FROM tv_episodes'
@@ -2199,7 +2267,7 @@ class Home(MainHandler):
         cache_obj = image_cache.ImageCache()
         for img in ek.ek(glob.glob,
                          cache_obj.fanart_path(show_obj.tvid, show_obj.prodid).replace('fanart.jpg', '*')) or []:
-            match = re.search(r'(\d+(?:\.(\w*?(\d*)))?\.(?:\w{5,8}))\.fanart\.', img, re.I)
+            match = re.search(r'(\d+(?:\.(\w*?(\d*)))?\.\w{5,8})\.fanart\.', img, re.I)
             if match and match.group(1):
                 t.fanart += [(match.group(1),
                               sickbeard.FANART_RATINGS.get(tvid_prodid, {}).get(match.group(1), ''))]
@@ -2237,8 +2305,44 @@ class Home(MainHandler):
         return t.respond()
 
     @staticmethod
-    def sorted_show_lists():
+    def make_showlist_unique_names():
+        def titler(x):
+            return (remove_article(x), x)[not x or sickbeard.SORT_ARTICLE].lower()
 
+        sorted_show_list = sorted(sickbeard.showList, key=lambda x: titler(x.name))
+        year_check = re.compile(r' \(\d{4}\)$')
+        dups = {}
+
+        for i, val in enumerate(sorted_show_list):
+            if val.name not in dups:
+                # Store index of first occurrence and occurrence value
+                dups[val.name] = i
+                val.unique_name = val.name
+            else:
+                # remove cached parsed result
+                sickbeard.name_parser.parser.name_parser_cache.flush(val)
+                if not year_check.search(sorted_show_list[dups[val.name]].name):
+                    # add year to first show
+                    first_ep = sorted_show_list[dups[val.name]].first_aired_regular_episode
+                    start_year = (first_ep and first_ep.airdate and first_ep.airdate.year) or \
+                        sorted_show_list[dups[val.name]].startyear
+                    if start_year:
+                        sorted_show_list[dups[val.name]].unique_name = '%s (%s)' % (
+                            sorted_show_list[dups[val.name]].name, start_year)
+                        dups[sorted_show_list[dups[val.name]].unique_name] = i
+                if not year_check.search(sorted_show_list[i].name):
+                    # add year to duplicate
+                    first_ep = sorted_show_list[i].first_aired_regular_episode
+                    start_year = (first_ep and first_ep.airdate and first_ep.airdate.year) or sorted_show_list[
+                        i].startyear
+                    if start_year:
+                        sorted_show_list[i].unique_name = '%s (%s)' % (sorted_show_list[i].name, start_year)
+                        dups[sorted_show_list[i].unique_name] = i
+
+        name_cache.buildNameCache()
+
+    @staticmethod
+    def sorted_show_lists():
         def titler(x):
             return (remove_article(x), x)[not x or sickbeard.SORT_ARTICLE].lower()
 
@@ -2247,7 +2351,7 @@ class Home(MainHandler):
             for tag in sickbeard.SHOW_TAGS:
                 results = filter_list(lambda _so: _so.tag == tag, sickbeard.showList)
                 if results:
-                    sorted_show_lists.append([tag, sorted(results, key=lambda x: titler(x.name))])
+                    sorted_show_lists.append([tag, sorted(results, key=lambda x: titler(x.unique_name))])
             # handle orphaned shows
             if len(sickbeard.showList) != sum([len(so[1]) for so in sorted_show_lists]):
                 used_ids = set()
@@ -2279,12 +2383,12 @@ class Home(MainHandler):
                     anime.append(cur_show_obj)
                 else:
                     shows.append(cur_show_obj)
-            sorted_show_lists = [['Shows', sorted(shows, key=lambda x: titler(x.name))],
-                                 ['Anime', sorted(anime, key=lambda x: titler(x.name))]]
+            sorted_show_lists = [['Shows', sorted(shows, key=lambda x: titler(x.unique_name))],
+                                 ['Anime', sorted(anime, key=lambda x: titler(x.unique_name))]]
 
         else:
             sorted_show_lists = [
-                ['Show List', sorted(sickbeard.showList, key=lambda x: titler(x.name))]]
+                ['Show List', sorted(sickbeard.showList, key=lambda x: titler(x.unique_name))]]
 
         return sorted_show_lists
 
@@ -2329,14 +2433,14 @@ class Home(MainHandler):
     @staticmethod
     def scene_exceptions(tvid_prodid, wanted_season=None):
 
-        exceptionsList = sickbeard.scene_exceptions.get_all_scene_exceptions(tvid_prodid)
+        exceptions_list = sickbeard.scene_exceptions.get_all_scene_exceptions(tvid_prodid)
         wanted_season = helpers.try_int(wanted_season, None)
-        wanted_not_found = None is not wanted_season and wanted_season not in exceptionsList
-        if not exceptionsList or wanted_not_found:
+        wanted_not_found = None is not wanted_season and wanted_season not in exceptions_list
+        if not exceptions_list or wanted_not_found:
             return ('No scene exceptions', 'No season exceptions')[wanted_not_found]
 
         out = []
-        for season, names in iter(sorted(iteritems(exceptionsList))):
+        for season, names in iter(sorted(iteritems(exceptions_list))):
             if None is wanted_season or wanted_season == season:
                 out.append('S%s: %s' % (('%02d' % season, '*')[-1 == season], ',<br>\n'.join(names)))
         return '\n<hr class="exception-divider">\n'.join(out)
@@ -2349,31 +2453,13 @@ class Home(MainHandler):
         m_prodid = helpers.try_int(m_prodid)
         show_obj = helpers.find_show_by_id({tvid: prodid}, no_mapped_ids=True)
         try:
-            m_show_obj = helpers.find_show_by_id({m_tvid: m_prodid}, no_mapped_ids=False, check_multishow=True)
-        except exceptions_helper.MultipleShowObjectsException:
-            msg = 'Duplicate shows in DB'
-            ui.notifications.message('TV info source switch', 'Error: ' + msg)
-            return {'Error': msg}
-        if not show_obj or (m_show_obj and show_obj is not m_show_obj):
-            msg = 'Unable to find the specified show'
-            ui.notifications.message('TV info source switch', 'Error: ' + msg)
-            return {'Error': msg}
+            sickbeard.show_queue_scheduler.action.switch_show(show_obj=show_obj, new_tvid=m_tvid,
+                                                              new_prodid=m_prodid, force_id=True,
+                                                              set_pause=set_pause, mark_wanted=mark_wanted)
+        except (BaseException, Exception) as e:
+            logger.log('Could not add show %s to switch queue: %s' % (show_obj.tvid_prodid, ex(e)), logger.WARNING)
 
-        with show_obj.lock:
-            show_obj.tvid = m_tvid
-            show_obj.prodid = m_prodid
-            pausestatus_after = None
-            if not set_pause:
-                show_obj.paused = False
-                if not mark_wanted:
-                    show_obj.paused = True
-                    pausestatus_after = False
-            elif not show_obj.paused:
-                show_obj.paused = True
-
-        show_obj.switch_infosrc(tvid, prodid, pausestatus_after=pausestatus_after)
-
-        ui.notifications.message('TV info source switch', 'Finished after updating the show')
+        ui.notifications.message('TV info source switch', 'Queued switch of tv info source')
         return {'Success': 'Switched to new TV info source'}
 
     def save_mapping(self, tvid_prodid, **kwargs):
@@ -2421,7 +2507,7 @@ class Home(MainHandler):
             if len(save_map):
                 save_mapping(show_obj, save_map=save_map)
                 ui.notifications.message('Mappings saved')
-            else:
+            elif show_obj.tvid == m_tvid:
                 ui.notifications.message('Mappings unchanged, not saving.')
 
         master_ids = [show_obj.prodid, helpers.try_int(kwargs.get('tvid')), m_prodid, m_tvid]
@@ -2436,10 +2522,15 @@ class Home(MainHandler):
                     master_ids += [bool(helpers.try_int(kwargs.get(x))) for x in ('paused', 'markwanted')]
                     response = dict(switch=self.switch_infosrc(*master_ids), mtvid_prodid=mtvid_prodid)
                 else:
-                    ui.notifications.message('Master ID unchanged, because show from %s with ID: %s exists in DB.' %
-                                             (sickbeard.TVInfoAPI(m_tvid).name, mtvid_prodid))
+                    msg = 'Master ID unchanged, because show from %s with ID: %s exists in DB.' % \
+                          (sickbeard.TVInfoAPI(m_tvid).name, mtvid_prodid)
+                    logger.log(msg, logger.WARNING)
+                    ui.notifications.message(*[s.strip() for s in msg.split(',')])
             except MultipleShowObjectsException:
-                pass
+                msg = 'Master ID unchanged, because show from %s with ID: %s exists in DB.' % \
+                      (sickbeard.TVInfoAPI(m_tvid).name, m_prodid)
+                logger.log(msg, logger.WARNING)
+                ui.notifications.message(*[s.strip() for s in msg.split(',')])
 
         response.update({
             'map': {k: {r: w for r, w in iteritems(v) if 'date' != r} for k, v in iteritems(show_obj.ids)}
@@ -2487,7 +2578,7 @@ class Home(MainHandler):
         show_obj = getattr(t, 'show_obj', None) or getattr(t, 'show', None)
         for img in ek.ek(glob.glob, cache_obj.fanart_path(
                 show_obj.tvid, show_obj.prodid).replace('fanart.jpg', '*')) or []:
-            match = re.search(r'(\d+(?:\.(\w*?(\d*)))?\.(?:\w{5,8}))\.fanart\.', img, re.I)
+            match = re.search(r'(\d+(?:\.(\w*?(\d*)))?\.\w{5,8})\.fanart\.', img, re.I)
             if match and match.group(1):
                 t.fanart += [(match.group(1),
                               sickbeard.FANART_RATINGS.get(show_obj.tvid_prodid, {}).get(match.group(1), ''))]
@@ -2522,17 +2613,17 @@ class Home(MainHandler):
         exceptions_list = exceptions_list if None is not exceptions_list else []
 
         if None is tvid_prodid:
-            errString = 'Invalid show ID: ' + str(tvid_prodid)
+            err_string = 'Invalid show ID: ' + str(tvid_prodid)
             if direct_call:
-                return [errString]
-            return self._generic_message('Error', errString)
+                return [err_string]
+            return self._generic_message('Error', err_string)
 
         show_obj = helpers.find_show_by_id(tvid_prodid)
         if not show_obj:
-            errString = 'Unable to find the specified show: %s' % tvid_prodid
+            err_string = 'Unable to find the specified show: %s' % tvid_prodid
             if direct_call:
-                return [errString]
-            return self._generic_message('Error', errString)
+                return [err_string]
+            return self._generic_message('Error', err_string)
 
         show_obj.exceptions = scene_exceptions.get_all_scene_exceptions(tvid_prodid)
 
@@ -2661,8 +2752,7 @@ class Home(MainHandler):
 
         errors = []
         with show_obj.lock:
-            newQuality = Quality.combineQualities(map_list(int, any_qualities), map_list(int, best_qualities))
-            show_obj.quality = newQuality
+            show_obj.quality = Quality.combineQualities(map_list(int, any_qualities), map_list(int, best_qualities))
             show_obj.upgrade_once = upgrade_once
 
             # reversed for now
@@ -2794,8 +2884,27 @@ class Home(MainHandler):
 
         ui.notifications.message('%s with %s' % (('Deleting', 'Trashing')[sickbeard.TRASH_REMOVE_SHOW],
                                                  ('media left untouched', 'all related media')[bool(full)]),
-                                 '<b>%s</b>' % show_obj.name)
+                                 '<b>%s</b>' % show_obj.unique_name)
         self.redirect('/home/')
+
+    def update_cast(self, tvid_prodid=None):
+        if None is tvid_prodid:
+            return self._generic_message('Error', 'Invalid show ID')
+
+        show_obj = helpers.find_show_by_id(tvid_prodid)
+
+        if None is show_obj:
+            return self._generic_message('Error', 'Unable to find the specified show')
+
+        # force the update from the DB
+        try:
+            sickbeard.people_queue_scheduler.action.add_cast_update(show_obj=show_obj, show_info_cast=None)
+        except (BaseException, Exception) as e:
+            ui.notifications.error('Unable to refresh this show.', ex(e))
+
+        helpers.cpu_sleep()
+
+        self.redirect('/home/view-show?tvid_prodid=%s' % show_obj.tvid_prodid)
 
     def refresh_show(self, tvid_prodid=None):
 
@@ -2995,7 +3104,7 @@ class Home(MainHandler):
                         season_list += u'<li>Season %s</li>' % season
                         logger.log((u'Not adding wanted eps to backlog search for %s season %s because show is paused',
                                     u'Starting backlog search for %s season %s because eps were set to wanted')[
-                                       not show_obj.paused] % (show_obj.name, season))
+                                       not show_obj.paused] % (show_obj.unique_name, season))
 
                 (title, msg) = (('Not starting backlog', u'Paused show prevented backlog search'),
                                 ('Backlog started', u'Backlog search started'))[not show_obj.paused]
@@ -3003,12 +3112,12 @@ class Home(MainHandler):
                 if segments:
                     ui.notifications.message(title,
                                              u'%s for the following seasons of <b>%s</b>:<br /><ul>%s</ul>'
-                                             % (msg, show_obj.name, season_list))
+                                             % (msg, show_obj.unique_name, season_list))
             else:
                 ui.notifications.message('Not starting backlog', 'No provider has active searching enabled')
 
         elif FAILED == status:
-            msg = u'Retrying search automatically for the following season of <b>%s</b>:<br><ul>' % show_obj.name
+            msg = u'Retrying search automatically for the following season of <b>%s</b>:<br><ul>' % show_obj.unique_name
 
             for season, segment in iteritems(segments):  # type: int, List[sickbeard.tv.TVEpisode]
                 cur_failed_queue_item = search_queue.FailedQueueItem(show_obj, segment)
@@ -3016,7 +3125,7 @@ class Home(MainHandler):
 
                 msg += '<li>Season %s</li>' % season
                 logger.log(u'Retrying search for %s season %s because some eps were set to failed' %
-                           (show_obj.name, season))
+                           (show_obj.unique_name, season))
 
             msg += '</ul>'
 
@@ -3081,14 +3190,14 @@ class Home(MainHandler):
     def do_rename(self, tvid_prodid=None, eps=None):
 
         if None is tvid_prodid or None is eps:
-            errMsg = 'You must specify a show and at least one episode'
-            return self._generic_message('Error', errMsg)
+            err_msg = 'You must specify a show and at least one episode'
+            return self._generic_message('Error', err_msg)
 
         show_obj = helpers.find_show_by_id(tvid_prodid)
 
         if None is show_obj:
-            errMsg = 'Error', 'Show not in show list'
-            return self._generic_message('Error', errMsg)
+            err_msg = 'Error', 'Show not in show list'
+            return self._generic_message('Error', err_msg)
 
         try:
             _ = show_obj.location
@@ -3315,6 +3424,294 @@ class Home(MainHandler):
             result = dict(result='success', groups=result)
         return json.dumps(result)
 
+    @staticmethod
+    def csv_items(text):
+        # type: (AnyStr) -> AnyStr
+        """Return a text list of items seperated by comma instead of '/' """
+
+        return re.sub(r'\b\s?/\s?\b', ', ', text)
+
+    def role(self, rid, tvid_prodid, **kwargs):
+        _ = kwargs.get('oid')  # suppress pyc non used var highlight, oid (original id) is a visual ui key
+        t = PageTemplate(web_handler=self, file='cast_role.tmpl')
+
+        character_id = usable_id(rid)
+        if not character_id:
+            return self._generic_message('Error', 'Invalid character ID')
+
+        try:
+            t.show_obj = helpers.find_show_by_id(tvid_prodid)
+        except (BaseException, Exception):
+            return
+
+        # after this point, only use character.id
+        character = TVCharacter(sid=character_id, show_obj=t.show_obj)
+        if not character:
+            return self._generic_message('Error', 'character ID not found')
+
+        t.character = character
+        t.roles = []
+
+        # this basic relate logic uses the link from a character to a person to find the same character name being known
+        # across multiple shows. The character name is more likely to be static compared to an actor name.
+        # A hardcoded exclusion may be needed if used actor plays a same named character in an _unrelated_ universe,
+        # but the chance of this is negligible, therefore, it's worth it to give this a try than not to :)
+        known = {}
+        main_role_known = False
+        rc_clean = re.compile(r'[^a-z0-9]')
+        char_name = rc_clean.sub('', character.name.lower())
+        for cur_person in (character.person or []):
+            person, roles, msg = self.cast(cur_person.id)
+            if not msg:
+                for cur_role in roles:
+                    if known.get(person.id, {}).get(cur_role['character_id']) == cur_role['show_obj'].tvid_prodid:
+                        continue
+                    # 1 person plays 1-n roles across 1-n shows
+                    known.setdefault(person.id, {}).setdefault(
+                        cur_role['character_id'], cur_role['show_obj'].tvid_prodid)
+
+                    # mark names that are a subset as the same character
+                    # case1 Detective Lt. Louie Provenza became Louie Provenza
+                    # case2 Commander Russell Taylor became Commander Taylor
+                    # case3 Micheal Tao became Mike Tao (surname is static except for women post marriage)
+                    lower_name = cur_role['character_name'].lower()
+                    name_parts = lower_name.split()
+
+                    is_main = character.id == cur_role['character_id'] \
+                        and character.show_obj.tvid_prodid == cur_role['show_obj'].tvid_prodid
+
+                    # exclusion exceptions, ignoring main role
+                    if not is_main and any([
+                        # 1 person playing multiple same role surname but each are distinct characters
+                        rc_clean.sub('', lower_name).endswith('griffin')
+                    ]):
+                        continue
+
+                    if any([
+                        char_name in rc_clean.sub('', lower_name),
+                        char_name in ('', '%s%s' % (name_parts[0], name_parts[-1]))[2 < len(name_parts)],
+                        # case3 surname only, provided more than one name part exist
+                        (False, name_parts[-1] in char_name)[1 < len(name_parts)],
+                        # inclusion exceptions
+                        re.search('(?i)^(?:Host|Presenter)[0-9]*$', char_name),
+                        re.search('(?i)^(?:Host|Prese)', lower_name) and re.search('(?i)JeremyClarkson', char_name),
+                        re.search('(?i)(?:AnnaBaker|BelleStone)', char_name),
+                        re.search('(?i)(?:JimmyMcgill|SaulGoodman)', char_name)
+                    ]):
+
+                        t.roles.append({
+                            'character_name': cur_role['character_name'],
+                            'character_id': cur_role['character_id'],
+                            'character_rid': cur_role['character_rid'],
+                            'show_obj': cur_role['show_obj'],
+                            'person_name': person.name,
+                            'person_id': person.id
+                        })
+
+                        # ensure main role is first
+                        if not main_role_known and is_main:
+                            main_role_known = True
+                            t.roles.insert(0, t.roles.pop(-1))
+
+        return t.respond()
+
+    def cast(self, rid):
+        person = roles = None
+        msg = None
+
+        person_id = usable_id(rid)
+        if person_id:
+            person = TVPerson(sid=person_id)
+            if person:
+                my_db = db.DBConnection()
+                sql_result = my_db.select(
+                    """
+                    SELECT DISTINCT characters.id AS id, name, indexer, indexer_id, 
+                    cpy.start_year AS start_year, cpy.end_year AS end_year, 
+                    c.indexer AS c_tvid, c.indexer_id AS c_prodid,
+                    (SELECT group_concat(character_ids.src || ':' || character_ids.src_id, ';;;')
+                    FROM character_ids WHERE character_ids.character_id = characters.id) as c_ids
+                    FROM characters
+                    LEFT JOIN castlist c ON characters.id = c.character_id
+                    LEFT JOIN character_person_map cpm ON characters.id = cpm.character_id
+                    LEFT JOIN character_person_years cpy ON characters.id = cpy.character_id
+                    AND cpy.person_id = ?
+                    WHERE cpm.person_id = ?
+                    """, [person.id, person.id])
+
+                pref = [TVINFO_IMDB, TVINFO_TVMAZE, TVINFO_TMDB, TVINFO_TRAKT]
+                roles = []
+                for cur_char in sql_result or []:
+                    ref_id = None
+                    pri = 9999
+                    for cur_ref_id in (cur_char['c_ids'] and cur_char['c_ids'].split(';;;')) or []:
+                        k, v = [helpers.try_int(_v, None) for _v in cur_ref_id.split(':')]
+                        if None is not k and None is not v:
+                            if k in pref:
+                                test_pri = pref.index(k)
+                                if test_pri < pri:
+                                    pri = test_pri
+                                    ref_id = cur_ref_id
+
+                    roles.append({
+                        'character_name': self.csv_items(cur_char['name']),
+                        'character_id': cur_char['id'],
+                        'character_rid': ref_id,
+                        'show_obj': helpers.find_show_by_id({cur_char['c_tvid']: cur_char['c_prodid']}),
+                        'start_year': cur_char['start_year'], 'end_year': cur_char['end_year']
+                    })
+            else:
+                msg = 'Person ID not found'
+        else:
+            msg = 'Invalid person ID'
+
+        return person, roles, msg
+
+    def person(self, rid, **kwargs):
+        _ = kwargs.get('oid')  # suppress pyc non used var highlight, oid (original id) is a visual ui key
+        t = PageTemplate(web_handler=self, file='cast_person.tmpl')
+        person, roles, msg = self.cast(rid)
+        if msg:
+            return self._generic_message('Error', msg)
+
+        t.person = person
+        t.roles = roles
+
+        return t.respond()
+
+    @staticmethod
+    def _convert_person_data(person_dict):
+        event = {}
+
+        for cur_date_kind in ('birthdate', 'deathdate'):
+            if person_dict[cur_date_kind]:
+                try:
+                    doe = datetime.date.fromordinal(person_dict[cur_date_kind])
+                    event[cur_date_kind] = doe
+                    person_dict[cur_date_kind] = doe.strftime('%Y-%m-%d')
+                    person_dict['%s_user' % cur_date_kind] = SGDatetime.sbfdate(doe)
+                except (BaseException, Exception):
+                    pass
+
+        person_dict['age'] = sg_helpers.calc_age(event['birthdate'], event['deathdate'])
+
+    def _select_person_by_date(self, date_str, date_kind):
+        # type: (AnyStr, AnyStr) -> List[Dict]
+
+        if date_kind not in ('birthdate', 'deathdate'):
+            return []
+
+        try:
+            dt = dateutil.parser.parse(date_str).date()
+        except (BaseException, Exception):
+            raise Exception('invalid date')
+
+        possible_dates = []
+        for cur_year in moves.xrange((1850, 1920)['deathdate' == date_kind], datetime.date.today().year + 1):
+            try:
+                possible_dates.append(datetime.date(year=cur_year, month=dt.month, day=dt.day).toordinal())
+                if 2 == dt.month and 28 == dt.day:
+                    try:
+                        datetime.date(year=dt.year, month=dt.month, day=29)
+                    except (BaseException, Exception):
+                        possible_dates.append(datetime.date(year=cur_year, month=dt.month, day=29).toordinal())
+            except (BaseException, Exception):
+                pass
+
+        my_db = db.DBConnection(row_type='dict')
+        sql_result = my_db.select(
+            """
+            SELECT * FROM persons
+            WHERE %s IN (%s)
+            """ % (date_kind, ','.join(['?'] * len(possible_dates))), possible_dates)
+        for cur_person in sql_result:
+            self._convert_person_data(cur_person)
+
+        return sql_result
+
+    def get_persons(self, names=None, **kwargs):
+        # type: (AnyStr, dict) -> AnyStr
+        """
+        :param names:
+        :param kwargs: optional `birthday`, optional `deathday`
+        :return:
+        """
+        results = {}
+        for cur_date_kind in ('birthdate', 'deathdate'):
+            date_arg = kwargs.get(cur_date_kind)
+            if date_arg:
+                try:
+                    results[cur_date_kind] = self._select_person_by_date(date_arg, cur_date_kind)
+                except (BaseException, Exception) as e:
+                    return json.dumps({'result': 'error', 'error': ex(e)})
+
+        names = names and names.split('|')
+        if names:
+            my_db = db.DBConnection(row_type='dict')
+            sql_result = my_db.select(
+                """
+                SELECT * FROM persons
+                WHERE name IN (%s)
+                """ % ','.join(['?'] * len(names)), names)
+            for cur_person in sql_result:
+                self._convert_person_data(cur_person)
+            results['names'] = sql_result
+
+        return json.dumps({'result': 'success', 'person_list': results})
+
+    def get_switch_changed(self):
+        t = PageTemplate(web_handler=self, file='switch_show_result.tmpl')
+        t.show_list = {}
+        my_db = db.DBConnection()
+        sql_result = my_db.select(
+            """
+            SELECT DISTINCT new_indexer, new_indexer_id, COUNT(reason) AS count, reason
+            FROM switch_ep_result
+            GROUP BY new_indexer, new_indexer_id, reason
+            """)
+        for cur_show in sql_result:
+            try:
+                show_obj = helpers.find_show_by_id({cur_show['new_indexer']: cur_show['new_indexer_id']})
+            except (BaseException, Exception):
+                # todo: what to do with unknown entries
+                continue
+            if not show_obj:
+                continue
+            t.show_list.setdefault(show_obj, {}).update(
+                {('changed', 'deleted')[TVSWITCH_EP_DELETED == cur_show['reason']]: cur_show['count']})
+
+        return t.respond()
+
+    def get_switch_changed_episodes(self, tvid_prodid):
+        t = PageTemplate(web_handler=self, file='switch_episode_result.tmpl')
+        try:
+            show_obj = helpers.find_show_by_id(tvid_prodid)
+        except (BaseException, Exception):
+            # todo: what to do with unknown entries
+            show_obj = None
+        if not show_obj:
+            return self.page_not_found()
+
+        t.show_obj = show_obj
+        t.ep_list = []
+        my_db = db.DBConnection()
+        sql_result = my_db.select(
+            """
+            SELECT * FROM switch_ep_result
+            WHERE new_indexer = ? AND new_indexer_id = ?
+            ORDER BY season, episode
+            """, TVidProdid(tvid_prodid).list)
+        for cur_episode in sql_result:
+            try:
+                ep_obj = show_obj.get_episode(season=cur_episode['season'], episode=cur_episode['episode'],
+                                              existing_only=True)
+            except (BaseException, Exception):
+                ep_obj = None
+            t.ep_list.append({'season': cur_episode['season'], 'episode': cur_episode['episode'],
+                              'reason': tvswitch_ep_names.get(cur_episode['reason'], 'unknown'), 'ep_obj': ep_obj})
+
+        return t.respond()
+
 
 class HomeProcessMedia(Home):
 
@@ -3340,14 +3737,14 @@ class HomeProcessMedia(Home):
         if not dir_name and ('0' == failed or not nzb_name):
             self.redirect('/home/process-media/')
         else:
-            showIdRegex = re.compile(r'^SickGear-([A-Za-z]*)(\d+)-')
+            show_id_regex = re.compile(r'^SickGear-([A-Za-z]*)(\d+)-')
             tvid = 0
             show_obj = None
             nzbget_call = isinstance(client, string_types) and 'nzbget' == client
             nzbget_dupekey = nzbget_call and isinstance(dupekey, string_types) and \
-                None is not showIdRegex.search(dupekey)
+                None is not show_id_regex.search(dupekey)
             if nzbget_dupekey:
-                m = showIdRegex.match(dupekey)
+                m = show_id_regex.match(dupekey)
                 istr = m.group(1)
                 for i in sickbeard.TVInfoAPI().sources:
                     if istr == sickbeard.TVInfoAPI(i).config.get('dupekey'):
@@ -3393,13 +3790,14 @@ class HomeProcessMedia(Home):
                                               skip_failure_processing=skip_failure_processing, client=client)
 
                 if '0' == stream:
-                    regexp = re.compile(r'(?i)<br(?:[\s/]+)>', flags=re.UNICODE)
+                    regexp = re.compile(r'(?i)<br[\s/]+>', flags=re.UNICODE)
                     result = regexp.sub('\n', result)
                     if None is not quiet and 1 == int(quiet):
                         regexp = re.compile(u'(?i)<a[^>]+>([^<]+)<[/]a>', flags=re.UNICODE)
                         return u'%s' % regexp.sub(r'\1', result)
                     return self._generic_message('Postprocessing results', u'<pre>%s</pre>' % result)
 
+    # noinspection PyPep8Naming
     def processEpisode(self, dir_name=None, nzb_name=None, process_type=None, **kwargs):
         """ legacy function name, stubbed but can _not_ be removed as this
          is potentially used in pp scripts located outside of SG path (need to verify this)
@@ -3442,6 +3840,25 @@ class AddShows(Home):
     def generate_show_dir_name(show_name):
         return helpers.generate_show_dir_name(None, show_name)
 
+    @staticmethod
+    def _generate_search_text_list(search_term):
+        # type: (AnyStr) -> Set[AnyStr]
+        used_search_term = re.sub(r'\(?(19|20)\d{2}\)?', '', search_term).strip()
+        # fix for users that don't know the correct title
+        used_search_term = re.sub(r'(?i)(grown|mixed)(ish)', r'\1-\2', used_search_term)
+
+        b_term = decode_str(used_search_term).strip()
+        terms = []
+        try:
+            for cur_term in ([], [b_term.encode('utf-8')])[PY2] + [unidecode(b_term), b_term]:
+                if cur_term not in terms:
+                    terms += [cur_term]
+        except (BaseException, Exception):
+            text = used_search_term.strip()
+            terms = [text if not PY2 else text.encode('utf-8')]
+
+        return set(s for s in set([used_search_term] + terms) if s)
+
     # noinspection PyPep8Naming
     def search_tvinfo_for_showname(self, search_term, lang='en', search_tvid=None):
         if not lang or 'null' == lang:
@@ -3450,139 +3867,151 @@ class AddShows(Home):
             sickbeard.ADD_SHOWS_METALANG = lang
             sickbeard.save_config()
 
-        search_term = re.sub(r'^\d+%s' % TVidProdid.glue, '', search_term.strip())
-        try:
-            search_term = re.findall(r'(?i)thetvdb.*?seriesid=([\d]+)', search_term)[0]
-        except (BaseException, Exception):
-            pass
+        search_tvid = sg_helpers.try_int(search_tvid, None)
+        search_term = search_term and search_term.strip()
+        ids_to_search, id_srcs, searchable = {}, [], \
+            (list(iterkeys(sickbeard.TVInfoAPI().search_sources)), [search_tvid])[
+                search_tvid in sickbeard.TVInfoAPI().search_sources]
+        id_check = re.finditer(r'((\w+):\W*([t0-9]+))', search_term)
+        if id_check:
+            for cur_match in id_check:
+                total, slug, id_str = cur_match.groups()
+                for cur_tvid in sickbeard.TVInfoAPI().all_sources:
+                    if sickbeard.TVInfoAPI(cur_tvid).config.get('slug') \
+                            and (slug.lower() == sickbeard.TVInfoAPI(cur_tvid).config['slug']
+                                 or cur_tvid == sg_helpers.try_int(slug, None)):
+                        try:
+                            ids_to_search[cur_tvid] = int(id_str.strip().replace('tt', ''))
+                        except (BaseException, Exception):
+                            pass
+                        try:
+                            search_term = re.sub(r' *%s *' % re.escape(total), ' ', search_term).strip()
+                            if cur_tvid in searchable:
+                                id_srcs.append(cur_tvid)
+                            break
+                        except (BaseException, Exception):
+                            continue
+
+        id_check = re.finditer(
+            r'(?P<imdb_full>[^ ]+imdb\.com/title/(?P<imdb>tt\d+)[^ ]*)|'
+            r'(?P<imdb_id_full>[^ ]*(?P<imdb_id>' + helpers.RE_IMDB_ID + '))[^ ]*|'
+            r'(?P<tmdb_full>[^ ]+themoviedb\.org/tv/(?P<tmdb>\d+)[^ ]*)|'
+            r'(?P<trakt_full>[^ ]+trakt\.tv/shows/(?P<trakt>[^ /]+)[^ ]*)|'
+            r'(?P<tvdb_full>[^ ]+thetvdb\.com/series/(?P<tvdb>[^ /]+)[^ ]*)|'
+            r'(?P<tvdb_id_full>[^ ]+thetvdb\.com/[^\d]+(?P<tvdb_id>[^ /]+)[^ ]*)|'
+            r'(?P<tvmaze_full>[^ ]+tvmaze\.com/shows/(?P<tvmaze>\d+)/?[^ ]*)', search_term)
+        if id_check:
+            for cur_match in id_check:
+                for cur_tvid, cur_slug in [
+                    (TVINFO_IMDB, 'imdb'), (TVINFO_IMDB, 'imdb_id'), (TVINFO_TMDB, 'tmdb'),
+                    (TVINFO_TRAKT_SLUG, 'trakt'), (TVINFO_TVDB_SLUG, 'tvdb'), (TVINFO_TVDB, 'tvdb_id'),
+                        (TVINFO_TVMAZE, 'tvmaze')]:
+                    if cur_match.group(cur_slug):
+                        try:
+                            slug_match = cur_match.group(cur_slug).strip()
+                            if TVINFO_IMDB == cur_tvid:
+                                slug_match = slug_match.replace('tt', '')
+                            if cur_tvid not in (TVINFO_TVDB_SLUG, TVINFO_TRAKT_SLUG):
+                                slug_match = sg_helpers.try_int(slug_match, slug_match)
+                            ids_to_search[cur_tvid] = slug_match
+                            search_term = re.sub(r' *%s *' % re.escape(cur_match.group('%s_full' % cur_slug)), ' ',
+                                                 search_term).strip()
+                            if TVINFO_TVDB_SLUG == cur_tvid:
+                                cur_tvid = TVINFO_TVDB
+                            elif TVINFO_TRAKT_SLUG == cur_tvid:
+                                cur_tvid = TVINFO_TRAKT
+                            if cur_tvid in searchable:
+                                id_srcs.append(cur_tvid)
+                        except (BaseException, Exception):
+                            pass
+
+        # term is used for relevancy
         term = decode_str(search_term).strip()
-        terms = []
-        try:
-            for t in ([], [term.encode('utf-8')])[PY2] + [unidecode(term), term]:
-                if t not in terms:
-                    terms += [t]
-        except (BaseException, Exception):
-            t = search_term.strip()
-            terms = [t if not PY2 else t.encode('utf-8')]
+        used_search_term = self._generate_search_text_list(search_term)
+        text_search_used = bool(used_search_term)
+
+        exclude_results = []
+        if TVINFO_TVMAZE in ids_to_search:
+            id_srcs = [TVINFO_TVMAZE] + [i for i in id_srcs if TVINFO_TVMAZE != i]
+            if TVINFO_TVMAZE not in searchable:
+                exclude_results.append(TVINFO_TVMAZE)
 
         results = {}
         final_results = []
+        sources_to_search = id_srcs + [s for s in [TVINFO_TRAKT] + searchable if s not in id_srcs]
+        ids_search_used = ids_to_search.copy()
 
-        search_id, tvdb_prodid, trakt_prodid, tmdb_prodid, trakt_id = '', None, None, None, TVINFO_TRAKT
-        try:
-            search_id = helpers.parse_imdb_id(search_term) or re.search(r'(?m)(^\d{4,}$)', search_term).group(1)
-
-            tvinfo_config = sickbeard.TVInfoAPI(trakt_id).api_params.copy()
-            tvinfo_config['language'] = lang
-            tvinfo_config['custom_ui'] = classes.AllShowInfosNoFilterListUI
-            tvinfo_config['sleep_retry'] = 5
-            tvinfo_config['search_type'] = (TraktSearchTypes.tvdb_id, TraktSearchTypes.imdb_id)['tt' in search_id]
-            t = sickbeard.TVInfoAPI(trakt_id).setup(**tvinfo_config)
-
-            resp = t.search_show(search_id)[0]
-            search_term = resp['seriesname']
-            tvdb_prodid = resp['ids']['tvdb']
-            trakt_prodid = resp['ids'].get('trakt')
-            tmdb_prodid = resp['ids'].get('tmdb')
-
-        except (BaseException, Exception):
-            search_term = (search_term, '')['tt' in search_id]
-
-        # query Indexers for search term and build list of results
-        for cur_tvid in sickbeard.TVInfoAPI().search_sources \
-                if None is search_tvid or not int(search_tvid) else [int(search_tvid)]:
+        for cur_tvid in sources_to_search:
             tvinfo_config = sickbeard.TVInfoAPI(cur_tvid).api_params.copy()
             tvinfo_config['language'] = lang
             tvinfo_config['custom_ui'] = classes.AllShowInfosNoFilterListUI
             t = sickbeard.TVInfoAPI(cur_tvid).setup(**tvinfo_config)
-
+            results.setdefault(cur_tvid, {})
             try:
-                # add search results
-                if bool(tvdb_prodid):
-                    logger.log('Fetching show using id: %s (%s) from tv datasource %s' % (
-                        search_id, search_term, sickbeard.TVInfoAPI(cur_tvid).name), logger.DEBUG)
-                    r = t.get_show(tvdb_prodid, load_episodes=False)
-                    results.setdefault((cur_tvid, trakt_id)['tt' in search_id], {})[int(tvdb_prodid)] = {
-                        'id': tvdb_prodid, 'seriesname': r['seriesname'], 'firstaired': r['firstaired'],
-                        'network': r['network'], 'overview': r['overview'],
-                        'genres': '' if not r['genre'] else r['genre'].lower().strip('|').replace('|', ', '),
-                        'trakt_id': trakt_prodid, 'tmdb_id': tmdb_prodid
-                    }
-                    break
-                else:
-                    logger.log('Searching for shows using search term: %s from tv datasource %s' % (
-                        search_term, sickbeard.TVInfoAPI(cur_tvid).name), logger.DEBUG)
-                    results.setdefault(cur_tvid, {})
-                    for term in terms:
-                        try:
-                            for r in t.search_show(term):
-                                tvdb_prodid = int(r['id'])
-                                if tvdb_prodid not in results[cur_tvid]:
-                                    results.setdefault(cur_tvid, {})[tvdb_prodid] = r.copy()
-                                elif r['seriesname'] != results[cur_tvid][tvdb_prodid]['seriesname']:
-                                    results[cur_tvid][tvdb_prodid].setdefault('aliases', []).append(r['seriesname'])
-                        except BaseTVinfoException:
-                            pass
+                for cur_result in t.search_show(list(used_search_term), ids=ids_search_used):
+                    if TVINFO_TRAKT == cur_tvid and not cur_result['ids'].tvdb:
+                        continue
+                    tv_src_id = int(cur_result['id'])
+                    if cur_tvid in exclude_results:
+                        ids_search_used.update({k: v for k, v in iteritems(cur_result.get('ids', {}))
+                                                if v and k not in iterkeys(ids_to_search)})
+                    else:
+                        results[cur_tvid][tv_src_id] = cur_result.copy()
+                        results[cur_tvid][tv_src_id]['direct_id'] = \
+                            (cur_tvid in ids_to_search and tv_src_id == ids_to_search.get(cur_tvid)) or \
+                            (TVINFO_TVDB == cur_tvid and ids_to_search.get(TVINFO_TVDB_SLUG) == cur_result.get('slug'))
+                        if results[cur_tvid][tv_src_id]['direct_id'] or \
+                                any(ids_to_search[si] == cur_result.get('ids', {})[si] for si in ids_to_search):
+                            ids_search_used.update({k: v for k, v in iteritems(cur_result.get('ids', {}))
+                                                    if v and k not in iterkeys(ids_to_search)})
+                        results[cur_tvid][tv_src_id]['rename_suggest'] = '' \
+                            if not results[cur_tvid][tv_src_id]['firstaired'] \
+                            else dateutil.parser.parse(results[cur_tvid][tv_src_id]['firstaired']).year
+                    if not text_search_used and cur_tvid in ids_to_search and tv_src_id == ids_to_search.get(cur_tvid):
+                        used_search_term.update(self._generate_search_text_list(cur_result['seriesname']))
+                        if not term:
+                            term = decode_str(cur_result['seriesname']).strip()
             except (BaseException, Exception):
                 pass
 
-        # query Trakt for TVDB ids
-        try:
-            logger.log('Searching for show using search term: %s from Trakt' % search_term, logger.DEBUG)
-            resp = []
-            tvinfo_config = sickbeard.TVInfoAPI(trakt_id).api_params.copy()
-            tvinfo_config['language'] = lang
-            tvinfo_config['custom_ui'] = classes.AllShowInfosNoFilterListUI
-            tvinfo_config['sleep_retry'] = 5
-            tvinfo_config['search_type'] = TraktSearchTypes.text
-            t = sickbeard.TVInfoAPI(trakt_id).setup(**tvinfo_config)
+        if TVINFO_TVDB not in searchable:
+            try:
+                results.pop(TVINFO_TRAKT)
+            except (BaseException, Exception):
+                pass
 
-            for term in terms:
-                result = t.search_show(term)
-                resp += result
-                match = False
-                for r in result:
-                    if isinstance(r.get('seriesname'), string_types) \
-                            and term.lower() == r.get('seriesname', '').lower():
-                        match = True
-                        break
-                if match:
-                    break
-            results_trakt = {}
-            for item in resp:
-                if 'tvdb' in item['ids'] and item['ids']['tvdb']:
-                    if item['ids']['tvdb'] not in results[TVINFO_TVDB]:
-                        results_trakt[int(item['ids']['tvdb'])] = {
-                            'id': item['ids']['tvdb'], 'seriesname': item['seriesname'],
-                            'genres': item['genres'].lower(), 'network': item['network'],
-                            'overview': item['overview'], 'firstaired': item['firstaired'],
-                            'trakt_id': item['ids']['trakt'], 'tmdb_id': item['ids']['tmdb']}
-                    elif item['seriesname'] != results[TVINFO_TVDB][int(item['ids']['tvdb'])]['seriesname']:
-                        results[TVINFO_TVDB][int(item['ids']['tvdb'])].setdefault(
-                            'aliases', []).append(item['seriesname'])
-            results.setdefault(trakt_id, {}).update(results_trakt)
-        except (BaseException, Exception):
-            pass
-
-        id_names = {tvid: (name, '%s via %s' % (sickbeard.TVInfoAPI(TVINFO_TVDB).name, name))[trakt_id == tvid]
+        id_names = {tvid: (name, '%s via %s' % (sickbeard.TVInfoAPI(TVINFO_TVDB).name, name))[TVINFO_TRAKT == tvid]
                     for tvid, name in iteritems(sickbeard.TVInfoAPI().all_sources)}
+
+        if TVINFO_TRAKT in results and TVINFO_TVDB in results:
+            tvdb_ids = list_keys(results[TVINFO_TVDB])
+            results[TVINFO_TRAKT] = {k: v for k, v in iteritems(results[TVINFO_TRAKT]) if v['ids'].tvdb not in tvdb_ids}
+
+        def in_db(tvid, prod_id):
+            show_obj = helpers.find_show_by_id({(tvid, TVINFO_TVDB)[TVINFO_TRAKT == tvid]: prod_id},
+                                               no_mapped_ids=False, no_exceptions=True)
+            return any([show_obj]) and '/home/view-show?tvid_prodid=%s' % show_obj.tvid_prodid
+
         # noinspection PyUnboundLocalVariable
         map_consume(final_results.extend,
-                    [[[id_names[tvid], any([
-                        helpers.find_show_by_id({(tvid, TVINFO_TVDB)[trakt_id == tvid]: int(show['id'])},
-                                                no_mapped_ids=False)])
-                       and '/home/view-show?tvid_prodid=%s'
-                       % TVidProdid({(tvid, TVINFO_TVDB)[trakt_id == tvid]: int(show['id'])})(),
-                       tvid, (tvid, TVINFO_TVDB)[trakt_id == tvid],
-                       sickbeard.TVInfoAPI((tvid, TVINFO_TVDB)[trakt_id == tvid]).config['show_url'] % int(show['id']),
+                    [[[id_names[tvid], in_db(*((tvid, int(show['id'])),
+                                               (TVINFO_TVDB, show['ids'][TVINFO_TVDB]))[TVINFO_TRAKT == tvid]),
+                       tvid, (tvid, TVINFO_TVDB)[TVINFO_TRAKT == tvid],
+                       sickbeard.TVInfoAPI((tvid, TVINFO_TVDB)[TVINFO_TRAKT == tvid]).config['slug'],
+                       (sickbeard.TVInfoAPI((tvid, TVINFO_TVDB)[TVINFO_TRAKT == tvid]).config['show_url'] %
+                        show['ids'][(tvid, TVINFO_TVDB)[TVINFO_TRAKT == tvid]])
+                       + ('', '&lid=%s' % sickbeard.TVInfoAPI().config['langabbv_to_id'][lang])[TVINFO_TVDB == tvid],
                        int(show['id']),
                        show['seriesname'], helpers.xhtml_escape(show['seriesname']), show['firstaired'],
                        show.get('network', '') or '', show.get('genres', '') or '',
                        re.sub(r'([,.!][^,.!]*?)$', '...',
                               re.sub(r'([.!?])(?=\w)', r'\1 ',
                                      helpers.xhtml_escape((show.get('overview', '') or '')[:250:].strip()))),
-                       self.get_uw_ratio(term, show['seriesname'], show.get('aliases', [])), None, None, None, None,
-                       self._make_search_image_url(tvid, show)
+                       self._make_search_image_url(tvid, show),  # 13
+                       (show['direct_id'] and 100)
+                        or self.get_uw_ratio(term, show['seriesname'], show.get('aliases', [])),
+                       None, None, None, None, None, None, None, None, None,  # 15 - 23
+                       show['direct_id'], show.get('rename_suggest')
                        ] for show in itervalues(shows)] for tvid, shows in iteritems(results)])
 
         def final_order(sortby_index, data, final_sort):
@@ -3591,45 +4020,70 @@ class AddShows(Home):
                 x[sortby_index] = _n + (1000, 0)[x[idx_is_indb] and 'notop' not in sickbeard.RESULTS_SORTBY]
             return data if not final_sort else sorted(data, reverse=False, key=lambda _x: _x[sortby_index])
 
-        def sort_newest(data_result, is_last_sort):
-            return sort_date(data_result, is_last_sort, 13)
+        def sort_newest(data_result, is_last_sort, combine):
+            return sort_date(data_result, is_last_sort, 16, as_combined=combine)
 
-        def sort_oldest(data_result, is_last_sort):
-            return sort_date(data_result, is_last_sort, 14, False)
+        def sort_oldest(data_result, is_last_sort, combine):
+            return sort_date(data_result, is_last_sort, 18, False, combine)
 
-        def sort_date(data_result, is_last_sort, idx_sort, reverse=True):
-            idx_src, idx_aired = 2, 8
-            return final_order(
+        def sort_date(data_result, is_last_sort, idx_sort, reverse=True, as_combined=False):
+            idx_aired = 9
+            combined = final_order(
+                idx_sort + 1,
+                sorted(data_result, reverse=reverse, key=lambda x: (dateutil.parser.parse(
+                    re.match(r'^(?:19|20)\d\d$', str(x[idx_aired])) and ('%s-12-31' % str(x[idx_aired]))
+                    or (x[idx_aired] and str(x[idx_aired])) or '1900'))), is_last_sort)
+
+            idx_src = 2
+            grouped = final_order(
                 idx_sort,
                 sorted(
-                    sorted(data_result, reverse=reverse, key=lambda x: (dateutil.parser.parse(
+                    sorted(combined, reverse=reverse, key=lambda x: (dateutil.parser.parse(
                         re.match(r'^(?:19|20)\d\d$', str(x[idx_aired])) and ('%s-12-31' % str(x[idx_aired]))
                         or (x[idx_aired] and str(x[idx_aired])) or '1900'))),
                     reverse=False, key=lambda x: x[idx_src]), is_last_sort)
 
-        def sort_az(data_result, is_last_sort):
-            return sort_zaaz(data_result, is_last_sort, 15)
+            return (grouped, combined)[as_combined]
 
-        def sort_za(data_result, is_last_sort):
-            return sort_zaaz(data_result, is_last_sort, 16, True)
+        def sort_az(data_result, is_last_sort, combine):
+            return sort_zaaz(data_result, is_last_sort, 20, as_combined=combine)
 
-        def sort_zaaz(data_result, is_last_sort, idx_sort, reverse=False):
-            idx_src, idx_title = 2, 6
-            return final_order(
-                idx_sort,
+        def sort_za(data_result, is_last_sort, combine):
+            return sort_zaaz(data_result, is_last_sort, 22, True, combine)
+
+        def sort_zaaz(data_result, is_last_sort, idx_sort, reverse=False, as_combined=False):
+            idx_title = 7
+            combined = final_order(
+                idx_sort + 1,
                 sorted(
                     data_result, reverse=reverse, key=lambda x: (
+                        (remove_article(x[idx_title].lower()), x[idx_title].lower())[sickbeard.SORT_ARTICLE])),
+                is_last_sort)
+
+            idx_src = 2
+            grouped = final_order(
+                idx_sort,
+                sorted(
+                    combined, reverse=reverse, key=lambda x: (
                         x[idx_src],
                         (remove_article(x[idx_title].lower()), x[idx_title].lower())[sickbeard.SORT_ARTICLE])),
                 is_last_sort)
 
-        def sort_rel(data_result, is_last_sort):
-            idx_rel_sort, idx_src, idx_rel = 12, 2, 12
-            return final_order(
+            return (grouped, combined)[as_combined]
+
+        def sort_rel(data_result, is_last_sort, as_combined):
+            idx_rel_sort, idx_rel = 14, 14
+            idx_title = 7
+            combined = final_order(
+                idx_rel_sort + 1,
+                sorted(data_result, reverse=True, key=lambda x: (x[idx_rel], x[idx_title])), is_last_sort)
+
+            idx_src = 2
+            grouped = final_order(  # grouped
                 idx_rel_sort,
-                sorted(
-                    sorted(data_result, reverse=True, key=lambda x: x[idx_rel]),
-                    reverse=False, key=lambda x: x[idx_src]), is_last_sort)
+                sorted(combined, reverse=True, key=lambda x: (x[idx_src], x[idx_rel], x[idx_title])), is_last_sort)
+
+            return (grouped, combined)[as_combined]
 
         if 'az' == sickbeard.RESULTS_SORTBY[:2]:
             sort_results = [sort_oldest, sort_newest, sort_rel, sort_za, sort_az]
@@ -3643,19 +4097,23 @@ class AddShows(Home):
             sort_results = [sort_za, sort_az, sort_oldest, sort_newest, sort_rel]
 
         for n, func in enumerate(sort_results):
-            final_results = func(final_results, n == len(sort_results) - 1)
+            final_results = func(final_results, n == len(sort_results) - 1, 'nogroup' == sickbeard.RESULTS_SORTBY[-7:])
 
-        return json.dumps({'results': final_results, 'langid': sickbeard.TVInfoAPI().config['langabbv_to_id'][lang]})
+        return json.dumps({'results': final_results})
 
     @staticmethod
     def _make_search_image_url(iid, show_info):
         img_url = ''
         if TVINFO_TRAKT == iid:
             img_url = 'imagecache?path=browse/thumb/trakt&filename=%s&trans=0&tmdbid=%s&tvdbid=%s' % \
-                      ('%s.jpg' % show_info['trakt_id'], show_info.get('tmdb_id'), show_info.get('id'))
+                      ('%s.jpg' % show_info['ids'].trakt, show_info.get('tmdb_id'), show_info['ids'].tvdb)
         elif TVINFO_TVDB == iid:
             img_url = 'imagecache?path=browse/thumb/tvdb&filename=%s&trans=0&tvdbid=%s' % \
                       ('%s.jpg' % show_info['id'], show_info['id'])
+        elif TVINFO_TVMAZE == iid and show_info.get('image'):
+            img_url = 'imagecache?path=browse/thumb/tvmaze&filename=%s&trans=0&source=%s' % \
+                      ('%s.jpg' % show_info['id'], show_info['image'])
+            sickbeard.CACHE_IMAGE_URL_LIST.add_url(show_info['image'])
         return img_url
 
     @classmethod
@@ -3672,82 +4130,90 @@ class AddShows(Home):
 
     def mass_add_table(self, root_dir=None, hash_dir=None, **kwargs):
 
-        t = PageTemplate(web_handler=self, file='home_massAddTable.tmpl')
-        t.submenu = self.home_menu()
-        t.kwargs = kwargs
-
+        root_dir = root_dir or kwargs.get('root_dir[]')
         if not root_dir:
             return 'No folders selected.'
-        elif type(root_dir) != list:
-            root_dirs = [root_dir]
-        else:
-            root_dirs = root_dir
 
-        root_dirs = [unquote_plus(x) for x in root_dirs]
+        t = PageTemplate(web_handler=self, file='home_massAddTable.tmpl')
+        t.submenu = self.home_menu()
+        t.kwargs = {'hash_dir': hash_dir}
+        t.dir_list = []
 
-        if sickbeard.ROOT_DIRS:
-            default_index = int(sickbeard.ROOT_DIRS.split('|')[0])
-        else:
-            default_index = 0
-
-        if len(root_dirs) > default_index:
-            tmp = root_dirs[default_index]
-            if tmp in root_dirs:
-                root_dirs.remove(tmp)
-                root_dirs = [tmp] + root_dirs
-
-        dir_list = []
-
-        display_one_dir = file_list = None
+        root_d = sickbeard.ROOT_DIRS.split('|')
         if hash_dir:
+            root_dirs = root_d[1:]
+        else:
+            default_i = 0 if not sickbeard.ROOT_DIRS else int(root_d[0])
+
+            root_dirs = [unquote_plus(x) for x in ([root_dir], root_dir)[type(root_dir) == list]]
+            if len(root_dirs) > default_i:
+                tmp = root_dirs[default_i]
+                root_dirs.remove(tmp)
+                root_dirs.insert(0, tmp)
+
+        dir_data = {}
+        display_one_dir = None
+
+        for cur_root_dir in root_dirs:
             try:
-                for root_dir in sickbeard.ROOT_DIRS.split('|')[1:]:
-                    try:
-                        file_list = [x for x in scantree(root_dir, filter_kind=True, recurse=False)]
-                    except (BaseException, Exception):
-                        continue
+                for cur_dir in scantree(cur_root_dir, filter_kind=True, recurse=False):
 
-                    for cur_file in file_list:
+                    normpath = ek.ek(os.path.normpath, cur_dir.path)
+                    highlight = hash_dir == re.sub('[^a-z]', '', sg_helpers.md5_for_text(normpath))
+                    if hash_dir:
+                        display_one_dir = highlight
+                    if not hash_dir or display_one_dir:
+                        dir_data.setdefault(cur_root_dir, {
+                            'highlight': [], 'rename_suggest': [], 'normpath': [], 'name': [], 'sql': []})
 
-                        cur_path = ek.ek(os.path.normpath, cur_file.path)
-
-                        display_one_dir = hash_dir == str(abs(hash(cur_path)))
+                        dir_data[cur_root_dir]['highlight'].append(highlight)
+                        dir_data[cur_root_dir]['normpath'].append(normpath)
+                        suggest = None
                         if display_one_dir:
-                            raise ValueError('hash matched')
-            except ValueError:
+                            rename_suggest = ' '
+                            if kwargs.get('rename_suggest'):
+                                rename_suggest = ' %s ' % kwargs.get('rename_suggest')
+                            suggestions = ([], [rename_suggest.rstrip()])[bool(rename_suggest.strip())] + \
+                                ['%s(%s)' % (rename_suggest, x) for x in range(10) if 1 < x]
+                            for cur_suggestion in suggestions:
+                                if not os.path.exists('%s%s' % (normpath, cur_suggestion)):
+                                    suggest = cur_suggestion
+                                    break
+                        dir_data[cur_root_dir]['rename_suggest'].append(suggest)
+                        dir_data[cur_root_dir]['name'].append(cur_dir.name)
+                        dir_data[cur_root_dir]['sql'].append([
+                            """
+                            SELECT indexer FROM tv_shows WHERE location = ? LIMIT 1
+                            """, [normpath]])
+                        if display_one_dir:
+                            break
+            except (BaseException, Exception):
                 pass
 
+            if display_one_dir:
+                break
+
         my_db = db.DBConnection()
-        for root_dir in root_dirs:
-            if not file_list:
-                try:
-                    file_list = [x for x in scantree(root_dir, filter_kind=True, recurse=False)]
-                except (BaseException, Exception):
+        for _, cur_data in iteritems(dir_data):
+            cur_data['exists'] = my_db.mass_action(cur_data['sql'])
+
+            for cur_enum, cur_normpath in enumerate(cur_data['normpath']):
+                if display_one_dir and not cur_data['highlight'][cur_enum]:
                     continue
 
-            for cur_file in file_list:
+                dir_item = dict(normpath=cur_normpath, rootpath='%s%s' % (ek.ek(os.path.dirname, cur_normpath), os.sep),
+                                name=cur_data['name'][cur_enum], added_already=any(cur_data['exists'][cur_enum]),
+                                highlight=cur_data['highlight'][cur_enum])
 
-                cur_path = ek.ek(os.path.normpath, cur_file.path)
+                if display_one_dir and cur_data['rename_suggest'][cur_enum]:
+                    dir_item['rename_suggest'] = cur_data['rename_suggest'][cur_enum]
 
-                highlight = hash_dir == str(abs(hash(cur_path)))
-                if display_one_dir and not highlight:
-                    continue
-                cur_dir = dict(dir=cur_path, highlight=highlight, name=cur_file.name,
-                               path='%s%s' % (ek.ek(os.path.dirname, cur_path), os.sep),
-                               added_already=any(my_db.select(
-                                   'SELECT indexer'
-                                   ' FROM tv_shows'
-                                   ' WHERE location = ? LIMIT 1',
-                                   [cur_path])))
-
-                dir_list.append(cur_dir)
-
-                prodid = show_name = tvid = None
+                tvid = prodid = show_name = None
                 for cur_provider in itervalues(sickbeard.metadata_provider_dict):
                     if prodid and show_name:
                         break
 
-                    (tvid, prodid, show_name) = cur_provider.retrieveShowMetadata(cur_path)
+                    (tvid, prodid, show_name) = cur_provider.retrieveShowMetadata(cur_normpath)
 
                     # default to TVDB if TV info src was not detected
                     if show_name and (not tvid or not prodid):
@@ -3755,22 +4221,18 @@ class AddShows(Home):
 
                         # set TV info vars from found info
                         if idx and pid:
-                            tvid = idx
-                            prodid = pid
-                            show_name = sn
+                            (tvid, prodid, show_name) = (idx, pid, sn)
 
                 # in case we don't have both requirements, set both to None
                 if not tvid or not prodid:
                     tvid = prodid = None
 
-                cur_dir['existing_info'] = (tvid, prodid, show_name)
+                dir_item['existing_info'] = (tvid, prodid, show_name)
 
-                if prodid and helpers.find_show_by_id({tvid: prodid}):
-                    cur_dir['added_already'] = True
+                if helpers.find_show_by_id({tvid: prodid}):
+                    dir_item['added_already'] = True
 
-            file_list = None
-
-        t.dirList = dir_list
+                t.dir_list.append(dir_item)
 
         return t.respond()
 
@@ -3815,14 +4277,51 @@ class AddShows(Home):
 
         t.provided_show_dir = show_dir
         t.other_shows = other_shows
-        t.provided_tvid = int(tvid or sickbeard.TVINFO_DEFAULT)
+        search_tvid = None
+        if use_show_name and 1 == show_name.count(':'):  # if colon is found once
+            search_tvid = filter_list(lambda x: bool(x),
+                                      [('%s:' % sickbeard.TVInfoAPI(_tvid).config['slug']) in show_name and _tvid
+                                       for _tvid, _ in iteritems(sickbeard.TVInfoAPI().search_sources)])
+            search_tvid = 1 == len(search_tvid) and search_tvid[0]
+        t.provided_tvid = search_tvid or int(tvid or sickbeard.TVINFO_DEFAULT)
         t.infosrc = sickbeard.TVInfoAPI().search_sources
         t.meta_lang = sickbeard.ADD_SHOWS_METALANG
         t.allowlist = []
         t.blocklist = []
         t.groups = []
 
-        t.show_scene_maps = list(*itervalues(sickbeard.scene_exceptions.xem_ids_list))
+        t.show_scene_maps = list(itervalues(sickbeard.scene_exceptions.xem_ids_list))
+
+        has_shows = len(sickbeard.showList)
+        t.try_id = []  # [dict try_tip: try_term]
+        t.try_id_name = []  # [dict try_tip: try_term]
+        t.try_url = []  # [dict try_tip: try_term]
+        url_num = 0
+        for cur_idx, (cur_tvid, cur_try, cur_id_def, cur_url_def) in enumerate([
+                (TVINFO_IMDB, '%s:tt%s', '0944947', 'https://www.imdb.com/title/tt0944947'),
+                (TVINFO_TMDB, '%s:%s', '1399', 'https://www.themoviedb.org/tv/1399'),
+                (TVINFO_TRAKT, None, None, 'https://trakt.tv/shows/game-of-thrones'),
+                (TVINFO_TVDB, None, None, 'https://thetvdb.com/series/game-of-thrones'),
+                (TVINFO_TVDB, '%s:%s', '121361', 'https://thetvdb.com/?tab=series&id=121361&lid=7'),
+                (TVINFO_TVMAZE, '%s:%s', '82', None)]
+        ):
+            slug = sickbeard.TVInfoAPI(cur_tvid).config['slug']
+            try_id = has_shows and cur_try and sickbeard.showList[-1].ids[cur_tvid].get('id')
+            if not cur_idx:
+                t.try_name = [{
+                    'showname': 'Game of Thrones' if not try_id else sickbeard.showList[-1].name.replace("'", "\\'")}]
+
+            if cur_try:
+                id_key = '%s:id%s' % (slug, ('',  ' (GoT)')[not try_id])
+                id_val = cur_try % (slug, try_id or cur_id_def)
+                t.try_id += [{id_key: id_val}]
+                t.try_id_name += [{'%s show name' % id_key: '%s %s' % (id_val, t.try_name[0]['showname'])}]
+
+            if cur_url_def:
+                url_num += 1
+                t.try_url += [{
+                    'url .. %s%s' % (url_num, ('', ' (GoT)')[not cur_try]):
+                        cur_url_def if not try_id else sickbeard.TVInfoAPI(cur_tvid).config['show_url'] % try_id}]
 
         return t.respond()
 
@@ -3837,6 +4336,7 @@ class AddShows(Home):
         if None is not xref_root and not len(xref_root):
             xref_root = None
 
+        # noinspection HttpUrlsUsage
         url = 'http://api.anidb.net:9001/httpapi?client=sickgear&clientver=1&protover=1&request=main'
         response = helpers.get_url(url)
         if response and None is not xref_root:
@@ -3884,6 +4384,7 @@ class AddShows(Home):
                             rated = float(counts.text)
                             rating = 100 < rated and rated / 10 or 10 > rated and 10 * rated or rated
 
+                        # noinspection HttpUrlsUsage
                         filtered.append(dict(
                             type=list_type,
                             ids=ids,
@@ -3911,7 +4412,7 @@ class AddShows(Home):
     def info_anidb(self, ids, show_name):
 
         if not filter_list(lambda tvid_prodid: helpers.find_show_by_id(tvid_prodid), ids.split(' ')):
-            return self.new_show('|'.join(['', '', '', ids or show_name]), use_show_name=True, is_anime=True)
+            return self.new_show('|'.join(['', '', '', ' '.join([ids, show_name])]), use_show_name=True, is_anime=True)
 
     @staticmethod
     def watchlist_config(**kwargs):
@@ -4243,7 +4744,7 @@ class AddShows(Home):
 
     def info_imdb(self, ids, show_name):
 
-        return self.new_show('|'.join(['', '', '', helpers.parse_imdb_id(ids) and ids or show_name]),
+        return self.new_show('|'.join(['', '', '', helpers.parse_imdb_id(ids) and ' '.join([ids, show_name])]),
                              use_show_name=True)
 
     def trakt_anticipated(self):
@@ -4365,6 +4866,8 @@ class AddShows(Home):
             error_msg = 'Unauthorized: Get another pin in the Notifications Trakt settings'
         except TraktException as e:
             logger.log(u'Could not connect to Trakt service: %s' % ex(e), logger.WARNING)
+        except exceptions_helper.ConnectionSkipException as e:
+            logger.log('Skipping Trakt because of previous failure: %s' % ex(e))
         except (IndexError, KeyError):
             pass
 
@@ -4493,7 +4996,7 @@ class AddShows(Home):
     def info_trakt(self, ids, show_name):
 
         if not filter_list(lambda tvid_prodid: helpers.find_show_by_id(tvid_prodid), ids.split(' ')):
-            return self.new_show('|'.join(['', '', '', ids or show_name]), use_show_name=True)
+            return self.new_show('|'.join(['', '', '', ' '.join([ids, show_name])]), use_show_name=True)
 
     def ne_default(self):
 
@@ -5049,7 +5552,7 @@ class AddShows(Home):
         t.saved_showsort_view = 1 <= len(showsort) and showsort[0] or '*'
         t.all_shows = []
         t.kwargs = kwargs
-        dedupe = []
+        known = []
 
         t.num_inlibrary = 0
         t.num_hidden = 0
@@ -5060,7 +5563,27 @@ class AddShows(Home):
         for order, item in enumerate(shows):
             item['order'] = order
             tvid_prodid_list = []
-            titles = []
+
+            # first, process known ids
+            for tvid, infosrc_slug in filter_iter(
+                    lambda tvid_slug: item['ids'].get(tvid_slug[1])
+                    and not sickbeard.TVInfoAPI(tvid_slug[0]).config.get('defunct'),
+                    map_iter(lambda _tvid: (_tvid, sickbeard.TVInfoAPI(_tvid).config['slug']),
+                             iterkeys(sickbeard.TVInfoAPI().all_sources))):
+                try:
+                    src_id = item['ids'][infosrc_slug]
+                    tvid_prodid_list += ['%s:%s' % (infosrc_slug, src_id)]
+                    imdb = helpers.parse_imdb_id(src_id)
+                    if imdb:
+                        src_id = sg_helpers.try_int(imdb.replace('tt', ''))
+                    show_obj = helpers.find_show_by_id({tvid: src_id}, no_mapped_ids=False, no_exceptions=True)
+                except (BaseException, Exception):
+                    continue
+                if not item.get('indb') and show_obj:
+                    item['indb'] = sickbeard.TVInfoAPI(tvid).config.get('name')
+                    t.num_inlibrary += 1
+
+            # then, process custom ids
             if 'custom' in item['ids']:
                 base_title = rc_base.sub('', item['title'])
                 nopost_title = rc_nopost.sub('', item['title'])
@@ -5076,47 +5599,29 @@ class AddShows(Home):
                 titles += ([], [nopre_base_title])[nopre_base_title not in titles]
                 titles += ([], [nopost_nopre_base_title])[nopost_nopre_base_title not in titles]
                 if 'premiered' in item and 1 == item.get('season', -1):
-                    with_year = []
-                    for title in titles:
-                        with_year += ['%s.%s' % (title, datetime.date.fromordinal(item['premiered']).year)]
-                    titles += with_year
-            for tvid, infosrc_slug in map_iter(
-                    lambda _tvid: (_tvid, sickbeard.TVInfoAPI(_tvid).config['slug']),
-                    list(sickbeard.TVInfoAPI().search_sources) + [sickbeard.indexers.indexer_config.TVINFO_IMDB]):
-                try:
-                    # TODO: use this to pass tvid when it is known what info sources will become
-                    if 'custom' not in item['ids']:
-                        tvid_prodid_list += ['%s%s%s' % (tvid, TVidProdid.glue, item['ids'][infosrc_slug])]
-                        # tvid_prodid_list += ['%s' % item['ids'][infosrc_slug]]
-                        show_obj = helpers.find_show_by_id({tvid: item['ids'][infosrc_slug]})
-                    else:
-                        tvid_prodid_list += ['%s%s%s' % (item['ids']['name'], TVidProdid.glue, item['ids']['custom'])]
-                        show_obj = None
-                        for cur_title in titles:
-                            try:
-                                show_obj = n_p.parse('%s.s01e01.mp4' % cur_title)
-                                break
-                            except (InvalidNameException, InvalidShowException):
-                                pass
-                except (BaseException, Exception):
-                    continue
-                if not item.get('indb') and show_obj:
-                    item['indb'] = sickbeard.TVInfoAPI(tvid).config.get('name')
-                    t.num_inlibrary += 1
+                    titles += ['%s.%s' % (_t, datetime.date.fromordinal(item['premiered']).year) for _t in titles]
 
-                # TODO: can remove this to use all available sources when 'TV info sources' fully replace 'indexers'
-                break
+                tvid_prodid_list += ['%s:%s' % (item['ids']['name'], item['ids']['custom'])]
+                for cur_title in titles:
+                    try:
+                        _ = n_p.parse('%s.s01e01.mp4' % cur_title)
+                        item['indb'] = item['ids']['name']
+                        t.num_inlibrary += 1
+                        break
+                    except (InvalidNameException, InvalidShowException):
+                        pass
 
             item['show_id'] = '%s' % ' '.join(tvid_prodid_list)
 
-            if not item['show_id'] and 'tt' in item['ids'].get('imdb', ''):
-                item['show_id'] = item['ids']['imdb']
+            if not item['show_id']:
+                if 'tt' in item['ids'].get('imdb', ''):
+                    item['show_id'] = item['ids']['imdb']
 
-            if not item['show_id'] and item['ids'].get('custom'):
-                item['show_id'] = item['ids']['custom']
+                if item['ids'].get('custom'):
+                    item['show_id'] = item['ids']['custom']
 
-            if item['show_id'] not in dedupe:
-                dedupe.append(item['show_id'])
+            if item['show_id'] not in known:
+                known.append(item['show_id'])
                 t.all_shows.append(item)
 
                 if any(filter_iter(lambda tp: tp in sickbeard.BROWSELIST_HIDDEN, tvid_prodid_list)):
@@ -5158,7 +5663,7 @@ class AddShows(Home):
                      wanted_begin=None, wanted_latest=None, tag=None,
                      pause=None, prune=None, default_status=None, scene=None, subs=None, flatten_folders=None,
                      anime=None, allowlist=None, blocklist=None,
-                     return_to=None, cancel_form=None, **kwargs):
+                     return_to=None, cancel_form=None, rename_suggest=None, **kwargs):
         """
         Receive tvdb id, dir, and other options and create a show from them. If extra show dirs are
         provided then it forwards back to new_show, if not it goes to /home.
@@ -5208,7 +5713,7 @@ class AddShows(Home):
 
             tvid = int(series_pieces[0])
             prodid = int(series_pieces[2])
-            show_name = series_pieces[3]
+            show_name = kwargs.get('folder') or series_pieces[3]
         else:
             # if no TV info source was provided use the default one set in General settings
             if not provided_tvid:
@@ -5226,10 +5731,13 @@ class AddShows(Home):
             show_dir = helpers.generate_show_dir_name(root_dir, show_name)
             new_show = True
 
-        # blanket policy - if the dir exists you should have used 'add existing show' numbnuts
+        # if the dir exists, do 'add existing show'
         if ek.ek(os.path.isdir, show_dir) and not full_show_path:
             ui.notifications.error('Unable to add show', u'Found existing folder: ' + show_dir)
-            return self.redirect('/add-shows/import?sid=%s&hash_dir=%s' % (prodid, abs(hash(show_dir))))
+            return self.redirect(
+                '/add-shows/import?tvid_prodid=%s%s%s&hash_dir=%s%s' %
+                (tvid, TVidProdid.glue, prodid, re.sub('[^a-z]', '', sg_helpers.md5_for_text(show_dir)),
+                 rename_suggest and ('&rename_suggest=%s' % rename_suggest) or ''))
 
         # don't create show dir if config says not to
         if sickbeard.ADD_SHOWS_WO_DIR:
@@ -5288,7 +5796,7 @@ class AddShows(Home):
             return 4 * [None]
         extra_show = decode_str(extra_show, errors='replace')
         split_vals = extra_show.split('|')
-        tvid = helpers.try_int(split_vals[0], TVINFO_TVDB)
+        tvid = helpers.try_int(split_vals[0], sickbeard.TVINFO_DEFAULT)
         show_dir = split_vals[1]
         if 4 > len(split_vals):
             return tvid, show_dir, None, None
@@ -5302,9 +5810,16 @@ class AddShows(Home):
         Receives a dir list and add them. Adds the ones with given TVDB IDs first, then forwards
         along to the new_show page.
         """
-        if kwargs.get('sid'):
-            return self.redirect('/add-shows/find/?show_to_add=%s&use_show_name=True' %
-                                 '|'.join(['', '', '', kwargs.get('sid', '')]))
+        if kwargs.get('tvid_prodid'):
+            try:
+                search = '%s:%s' % [(sickbeard.TVInfoAPI(c_tvid).config['slug'], c_prodid)
+                                    for c_tvid, c_prodid in [tuple(kwargs.get('tvid_prodid').split(':'))]][0]
+            except (BaseException, Exception):
+                search = kwargs.get('tvid_prodid', '')
+            return self.redirect(
+                '/add-shows/find/?show_to_add=%s&use_show_name=True%s' %
+                ('|'.join(['', '', '', search]),
+                 '|folder=' in shows_to_add and ('&folder=%s' % shows_to_add.split('|folder=')[-1]) or ''))
 
         # grab a list of other shows to add, if provided
         if not shows_to_add:
@@ -5315,6 +5830,7 @@ class AddShows(Home):
         prompt_for_settings = config.checkbox_to_value(prompt_for_settings)
 
         prodid_given = []
+        prompt_list = []
         dirs_only = []
         # separate all the ones with production ids
         for cur_dir in shows_to_add:
@@ -5330,11 +5846,12 @@ class AddShows(Home):
                 if not show_dir or not prodid or not show_name:
                     continue
 
-                prodid_given.append((tvid, show_dir, int(prodid), show_name))
+                src_tvid, src_prodid = [helpers.try_int(x, None) for x in prodid.split(':')]
+                if tvid != src_tvid:
+                    prompt_list.append(cur_dir.replace(prodid, ''))
+                    continue
 
-        # if they want me to prompt for settings then I will just carry on to the new_show page
-        if prompt_for_settings and shows_to_add:
-            return self.new_show(shows_to_add[0], shows_to_add[1:])
+                prodid_given.append((tvid, show_dir, src_prodid, show_name))
 
         # if they don't want me to prompt for settings then I can just add all the nfo shows now
         num_added = 0
@@ -5356,6 +5873,13 @@ class AddShows(Home):
         if num_added:
             ui.notifications.message('Shows Added',
                                      'Automatically added ' + str(num_added) + ' from their existing metadata files')
+
+        if prompt_list:
+            shows_to_add = prompt_list
+            prompt_for_settings = True
+        # if they want me to prompt for settings then I will just carry on to the new_show page
+        if prompt_for_settings and shows_to_add:
+            return self.new_show(shows_to_add[0], shows_to_add[1:])
 
         # if we're done then go home
         if not dirs_only:
@@ -5843,12 +6367,12 @@ class Manage(MainHandler):
         if not to_edit:
             return self.redirect('/manage/')
 
-        showIDs = to_edit.split('|')
-        showList = []
-        for cur_tvid_prodid in showIDs:
+        show_ids = to_edit.split('|')
+        show_list = []
+        for cur_tvid_prodid in show_ids:
             show_obj = helpers.find_show_by_id(cur_tvid_prodid)
             if show_obj:
-                showList.append(show_obj)
+                show_list.append(show_obj)
 
         upgrade_once_all_same = True
         last_upgrade_once = None
@@ -5883,9 +6407,12 @@ class Manage(MainHandler):
         air_by_date_all_same = True
         last_air_by_date = None
 
+        tvid_all_same = True
+        last_tvid = None
+
         root_dir_list = []
 
-        for cur_show_obj in showList:
+        for cur_show_obj in show_list:
 
             # noinspection PyProtectedMember
             cur_root_dir = ek.ek(os.path.dirname, cur_show_obj._location)
@@ -5964,6 +6491,12 @@ class Manage(MainHandler):
                 else:
                     last_air_by_date = cur_show_obj.air_by_date
 
+            if tvid_all_same:
+                if last_tvid not in (None, cur_show_obj.tvid):
+                    tvid_all_same = False
+                else:
+                    last_tvid = cur_show_obj.tvid
+
         t.showList = to_edit
         t.upgrade_once_value = last_upgrade_once if upgrade_once_all_same else None
         t.paused_value = last_paused if paused_all_same else None
@@ -5976,13 +6509,14 @@ class Manage(MainHandler):
         t.scene_value = last_scene if scene_all_same else None
         t.sports_value = last_sports if sports_all_same else None
         t.air_by_date_value = last_air_by_date if air_by_date_all_same else None
+        t.tvid_value = last_tvid if tvid_all_same else None
         t.root_dir_list = root_dir_list
 
         return t.respond()
 
     def mass_edit_submit(self, to_edit=None, upgrade_once=None, paused=None, anime=None, sports=None, scene=None,
                          flatten_folders=None, quality_preset=False, subs=None, air_by_date=None, any_qualities=None,
-                         best_qualities=None, prune=None, tag=None, **kwargs):
+                         best_qualities=None, prune=None, tag=None, tvid=None, **kwargs):
 
         any_qualities = any_qualities if None is not any_qualities else []
         best_qualities = best_qualities if None is not best_qualities else []
@@ -5995,10 +6529,13 @@ class Manage(MainHandler):
             end_dir = kwargs['new_root_dir_' + which_index]
             dir_map[kwargs[cur_arg]] = end_dir
 
-        showIDs = to_edit.split('|')
+        switch_tvid = []
+        tvid = sg_helpers.try_int(tvid, tvid)
+
+        show_ids = to_edit.split('|')
         errors = []
-        for cur_tvid_prodid in showIDs:
-            curErrors = []
+        for cur_tvid_prodid in show_ids:
+            cur_errors = []
             show_obj = helpers.find_show_by_id(cur_tvid_prodid)
             if not show_obj:
                 continue
@@ -6018,8 +6555,8 @@ class Manage(MainHandler):
                         base_dir = dir_map[cur_root_dir]
                     new_show_dir = ek.ek(os.path.join, base_dir, cur_show_dir)
                 # noinspection PyProtectedMember
-                logger.log(
-                    u'For show ' + show_obj.name + ' changing dir from ' + show_obj._location + ' to ' + new_show_dir)
+                logger.log(u'For show %s changing dir from %s to %s' %
+                           (show_obj.unique_name, show_obj._location, new_show_dir))
             else:
                 # noinspection PyProtectedMember
                 new_show_dir = show_obj._location
@@ -6042,6 +6579,9 @@ class Manage(MainHandler):
                 new_tag = show_obj.tag
             else:
                 new_tag = tag
+
+            if 'keep' != tvid and tvid != show_obj.tvid:
+                switch_tvid += ['%s-%s' % (cur_tvid_prodid, tvid)]
 
             if 'keep' == anime:
                 new_anime = show_obj.anime
@@ -6087,21 +6627,25 @@ class Manage(MainHandler):
 
             exceptions_list = []
 
-            curErrors += Home(self.application, self.request).edit_show(
+            cur_errors += Home(self.application, self.request).edit_show(
                 tvid_prodid=cur_tvid_prodid, location=new_show_dir,
                 any_qualities=any_qualities, best_qualities=best_qualities, exceptions_list=exceptions_list,
                 upgrade_once=new_upgrade_once, flatten_folders=new_flatten_folders, paused=new_paused,
                 sports=new_sports, subs=new_subtitles, anime=new_anime, scene=new_scene, air_by_date=new_air_by_date,
                 prune=new_prune, tag=new_tag, direct_call=True)
 
-            if curErrors:
-                logger.log(u'Errors: ' + str(curErrors), logger.ERROR)
-                errors.append('<b>%s:</b>\n<ul>' % show_obj.name + ' '.join(
-                    ['<li>%s</li>' % error for error in curErrors]) + '</ul>')
+            if cur_errors:
+                logger.log(u'Errors: ' + str(cur_errors), logger.ERROR)
+                errors.append('<b>%s:</b>\n<ul>' % show_obj.unique_name + ' '.join(
+                    ['<li>%s</li>' % error for error in cur_errors]) + '</ul>')
 
         if 0 < len(errors):
             ui.notifications.error('%d error%s while saving changes:' % (len(errors), '' if 1 == len(errors) else 's'),
                                    ' '.join(errors))
+
+        if switch_tvid:
+            self.mass_switch(to_switch='|'.join(switch_tvid))
+            return self.redirect('/manage/show-tasks/')
 
         self.redirect('/manage/')
 
@@ -6128,14 +6672,14 @@ class Manage(MainHandler):
                         sickbeard.show_queue_scheduler.action.updateShow(cur_show_obj, True, True)
                         update.append(cur_show_obj.name)
                     except exceptions_helper.CantUpdateException as e:
-                        errors.append('Unable to update show %s: %s' % (cur_show_obj.name, ex(e)))
+                        errors.append('Unable to update show %s: %s' % (cur_show_obj.unique_name, ex(e)))
 
                 elif cur_tvid_prodid in to_refresh:
                     try:
                         sickbeard.show_queue_scheduler.action.refreshShow(cur_show_obj)
                         refresh.append(cur_show_obj.name)
                     except exceptions_helper.CantRefreshException as e:
-                        errors.append('Unable to refresh show %s: %s' % (cur_show_obj.name, ex(e)))
+                        errors.append('Unable to refresh show %s: %s' % (cur_show_obj.unique_name, ex(e)))
 
                 if cur_tvid_prodid in to_rename:
                     sickbeard.show_queue_scheduler.action.renameShowEpisodes(cur_show_obj)
@@ -6184,6 +6728,76 @@ class Manage(MainHandler):
 
         return t.respond()
 
+    @staticmethod
+    def mass_switch(to_switch=None):
+        """
+        switch multiple given shows to a new tvinfo source
+        shows are separated by |
+        value for show is: current_tvid:current_prodid-new_tvid:new_prodid-force_id
+        parts: new_prodid, force_id are optional
+        without new_prodid the mapped id will be used
+        with force set to '1' or 'true' the given new id will be used and NO verification for correct show will be done
+
+        to_switch examples:
+        to_switch=1:123-3|3:564-1|1:456-3:123|3:55-1:77-1|3:88-1-1
+
+        :param to_switch:
+        """
+        if not to_switch:
+            return json.dumps({'error': 'No list given'})
+
+        shows = to_switch.split('|')
+        sl, tv_sources, errors = [], sickbeard.TVInfoAPI().search_sources, []
+        for show in shows:
+            show_split = show.split('-')
+            if 2 == len(show_split):
+                old_show, new_show = show_split
+                force_id = False
+            else:
+                old_show, new_show, force_id = show_split
+                force_id = force_id in (1, True, '1', 'true', 'True')
+            old_show_id = old_show.split(':')
+            old_tvid, old_prodid = int(old_show_id[0]), int(old_show_id[1])
+            new_show_id = new_show.split(':')
+            new_tvid = int(new_show_id[0])
+            if new_tvid not in tv_sources:
+                logger.log('Skipping %s because target is not a valid source' % show, logger.WARNING)
+                errors.append('Skipping %s because target is not a valid source' % show)
+                continue
+            try:
+                show_obj = helpers.find_show_by_id({old_tvid: old_prodid})
+            except (BaseException, Exception):
+                show_obj = None
+            if not show_obj:
+                logger.log('Skipping %s because source is not a valid show' % show, logger.WARNING)
+                errors.append('Skipping %s because source is not a valid show' % show)
+                continue
+            if 2 == len(new_show_id):
+                new_prodid = int(new_show_id[1])
+                try:
+                    new_show_obj = helpers.find_show_by_id({new_tvid: new_prodid})
+                except (BaseException, Exception):
+                    new_show_obj = None
+                if new_show_obj:
+                    logger.log('Skipping %s because target show with that id already exists in db' % show,
+                               logger.WARNING)
+                    errors.append('Skipping %s because target show with that id already exists in db' % show)
+                    continue
+            else:
+                new_prodid = None
+            if show_obj.tvid == new_tvid and (not new_prodid or new_prodid == show_obj.prodid):
+                logger.log('Skipping %s because target same as source' % show, logger.WARNING)
+                errors.append('Skipping %s because target same as source' % show)
+                continue
+            try:
+                sickbeard.show_queue_scheduler.action.switch_show(show_obj=show_obj, new_tvid=new_tvid,
+                                                                  new_prodid=new_prodid, force_id=force_id)
+            except (BaseException, Exception) as e:
+                logger.log('Could not add show %s to switch queue: %s' % (show_obj.tvid_prodid, ex(e)), logger.WARNING)
+                errors.append('Could not add show %s to switch queue: %s' % (show_obj.tvid_prodid, ex(e)))
+
+        return json.dumps(({'result': 'success'}, {'errors': ', '.join(errors)})[0 < len(errors)])
+
 
 class ManageSearch(Manage):
 
@@ -6203,6 +6817,22 @@ class ManageSearch(Manage):
         t.submenu = self.manage_menu('Search')
 
         return t.respond()
+
+    @staticmethod
+    def remove_from_search_queue(to_remove=None):
+        if not to_remove:
+            return json.dumps({'error': 'nothing to do'})
+        to_remove = [int(r) for r in to_remove.split('|')]
+        sickbeard.search_queue_scheduler.action.remove_from_queue(to_remove=to_remove)
+        return json.dumps({'result': 'success'})
+
+    @staticmethod
+    def clear_search_queue(search_type=None):
+        search_type = helpers.try_int(search_type, None)
+        if not search_type:
+            return json.dumps({'error': 'nothing to do'})
+        sickbeard.search_queue_scheduler.action.clear_queue(action_types=search_type)
+        return json.dumps({'result': 'success'})
 
     @staticmethod
     def retry_provider(provider=None):
@@ -6263,6 +6893,7 @@ class ShowTasks(Manage):
     def index(self):
         t = PageTemplate(web_handler=self, file='manage_showProcesses.tmpl')
         t.queue_length = sickbeard.show_queue_scheduler.action.queue_length()
+        t.people_queue = sickbeard.people_queue_scheduler.action.queue_data()
         t.next_run = sickbeard.show_update_scheduler.lastRun.replace(
             hour=sickbeard.show_update_scheduler.start_time.hour)
         t.show_update_running = sickbeard.show_queue_scheduler.action.isShowUpdateRunning() \
@@ -6291,9 +6922,61 @@ class ShowTasks(Manage):
         t.defunct_indexer = defunct_sql_result
         t.not_found_shows = sql_result
 
+        failed_result = my_db.select('SELECT * FROM tv_src_switch WHERE status != ?', [TVSWITCH_NORMAL])
+        t.failed_switch = []
+        for f in failed_result:
+            try:
+                show_obj = helpers.find_show_by_id({f['old_indexer']: f['old_indexer_id']})
+            except (BaseException, Exception):
+                show_obj = None
+            new_failed = {'tvid': f['old_indexer'], 'prodid': f['old_indexer_id'], 'new_tvid': f['new_indexer'],
+                          'new_prodid': f['new_indexer_id'],
+                          'status': tvswitch_names.get(f['status'], 'unknown %s' % f['status']), 'show_obj': show_obj,
+                          'uid': f['uid']}
+            t.failed_switch.append(new_failed)
+
         t.submenu = self.manage_menu('Show')
 
         return t.respond()
+
+    @staticmethod
+    def remove_from_show_queue(to_remove=None, force=False):
+        if not to_remove:
+            return json.dumps({'error': 'nothing to do'})
+        force = force in (1, '1', 'true', 'True', True)
+        to_remove = [int(r) for r in to_remove.split('|')]
+        sickbeard.show_queue_scheduler.action.remove_from_queue(to_remove=to_remove, force=force)
+        return json.dumps({'result': 'success'})
+
+    @staticmethod
+    def remove_from_people_queue(to_remove=None):
+        if not to_remove:
+            return json.dumps({'error': 'nothing to do'})
+        to_remove = [int(r) for r in to_remove.split('|')]
+        sickbeard.people_queue_scheduler.action.remove_from_queue(to_remove=to_remove)
+        return json.dumps({'result': 'success'})
+
+    @staticmethod
+    def clear_show_queue(show_type=None):
+        show_type = helpers.try_int(show_type, None)
+        if not show_type:
+            return json.dumps({'error': 'nothing to do'})
+        if show_type in [sickbeard.show_queue.ShowQueueActions.UPDATE,
+                         sickbeard.show_queue.ShowQueueActions.FORCEUPDATE,
+                         sickbeard.show_queue.ShowQueueActions.WEBFORCEUPDATE]:
+            show_type = [sickbeard.show_queue.ShowQueueActions.UPDATE,
+                         sickbeard.show_queue.ShowQueueActions.FORCEUPDATE,
+                         sickbeard.show_queue.ShowQueueActions.WEBFORCEUPDATE]
+        sickbeard.show_queue_scheduler.action.clear_queue(action_types=show_type)
+        return json.dumps({'result': 'success'})
+
+    @staticmethod
+    def clear_people_queue(people_type=None):
+        people_type = helpers.try_int(people_type, None)
+        if not people_type:
+            return json.dumps({'error': 'nothing to do'})
+        sickbeard.people_queue_scheduler.action.clear_queue(action_types=people_type)
+        return json.dumps({'result': 'success'})
 
     def force_show_update(self):
 
@@ -6376,10 +7059,11 @@ class History(MainHandler):
                          and record['season'] == cur_result['season']
                          and record['episode'] == cur_result['episode']
                          and record['quality'] == cur_result['quality']) for record in compact]):
-
+                show_obj = helpers.find_show_by_id({cur_result['indexer']: cur_result['showid']}, no_mapped_ids=False,
+                                                   no_exceptions=True)
                 cur_res = dict(show_id=cur_result['showid'], indexer=cur_result['indexer'],
                                tvid_prodid=cur_result['tvid_prodid'],
-                               show_name=cur_result['show_name'],
+                               show_name=(show_obj and show_obj.unique_name) or cur_result['show_name'],
                                season=cur_result['season'], episode=cur_result['episode'],
                                quality=cur_result['quality'], resource=cur_result['resource'], actions=[])
 
@@ -6594,9 +7278,9 @@ class History(MainHandler):
             resp = helpers.get_url('%s://%s/check.php?domain=%s' % (proto, down_url, site_url))
             if resp:
                 check = resp.lower()
-                day = re.findall(r'(\d+)\s*(?:day)', check)
-                hr = re.findall(r'(\d+)\s*(?:hour)', check)
-                mn = re.findall(r'(\d+)\s*(?:min)', check)
+                day = re.findall(r'(\d+)\s*day', check)
+                hr = re.findall(r'(\d+)\s*hour', check)
+                mn = re.findall(r'(\d+)\s*min', check)
                 if any([day, hr, mn]):
                     period = ', '.join(
                         (day and ['%sd' % day[0]] or day)
@@ -6664,6 +7348,7 @@ class History(MainHandler):
             maps = [x.split('=') for x in sickbeard.EMBY_PARENT_MAPS.split(',') if any(x)]
             args = dict(params=dict(format='json'), timeout=10, parse_json=True, failure_monitor=False)
             for i, cur_host in enumerate(hosts):
+                # noinspection HttpUrlsUsage
                 base_url = 'http://%s/emby' % cur_host
                 headers.update({'X-MediaBrowser-Token': keys[i]})
 
@@ -6773,6 +7458,7 @@ class History(MainHandler):
             mapping = None
             maps = [x.split('=') for x in sickbeard.PLEX_PARENT_MAPS.split(',') if any(x)]
             for cur_host in hosts:
+                # noinspection HttpUrlsUsage
                 parts = re.search(r'(.*):(\d+)$', urlparse('http://' + re.sub(r'^\w+://', '', cur_host)).netloc)
                 if not parts:
                     logger.log('Skipping host not in min. host:port format : %s' % cur_host, logger.WARNING)
@@ -7071,14 +7757,16 @@ class ConfigGeneral(Config):
     @staticmethod
     def save_result_prefs(ui_results_sortby=None):
 
-        if ui_results_sortby in ('az', 'za', 'newest', 'oldest', 'rel', 'notop', 'ontop'):
-            was_ontop = 'notop' not in sickbeard.RESULTS_SORTBY
-            if 'top' == ui_results_sortby[-3:]:
-                maybe_ontop = ('', ' notop')[was_ontop]
-                sortby = sickbeard.RESULTS_SORTBY.replace(' notop', '')
-                sickbeard.RESULTS_SORTBY = '%s%s' % (('rel', sortby)[any([sortby])], maybe_ontop)
+        if ui_results_sortby in ('az', 'za', 'newest', 'oldest', 'rel', 'notop', 'ontop', 'nogroup', 'ingroup'):
+            is_notop = ('', ' notop')['notop' in sickbeard.RESULTS_SORTBY]
+            is_nogrp = ('', ' nogroup')['nogroup' in sickbeard.RESULTS_SORTBY]
+            if 'top' == ui_results_sortby[-3:] or 'group' == ui_results_sortby[-5:]:
+                maybe_ontop = (is_notop, ('', ' notop')[not is_notop])['top' == ui_results_sortby[-3:]]
+                maybe_ingroup = (is_nogrp, ('', ' nogroup')[not is_nogrp])['group' == ui_results_sortby[-5:]]
+                sortby = sickbeard.RESULTS_SORTBY.replace(' notop', '').replace(' nogroup', '')
+                sickbeard.RESULTS_SORTBY = '%s%s%s' % (('rel', sortby)[any([sortby])], maybe_ontop, maybe_ingroup)
             else:
-                sickbeard.RESULTS_SORTBY = '%s%s' % (ui_results_sortby, (' notop', '')[was_ontop])
+                sickbeard.RESULTS_SORTBY = '%s%s%s' % (ui_results_sortby, is_notop, is_nogrp)
 
             sickbeard.save_config()
 
@@ -7213,7 +7901,7 @@ class ConfigGeneral(Config):
             results += ['Unable to create directory ' + os.path.normpath(log_dir) + ', log directory not changed.']
         if indexer_default:
             sickbeard.TVINFO_DEFAULT = config.to_int(indexer_default)
-            if not sickbeard.TVInfoAPI(sickbeard.TVINFO_DEFAULT).config['active']:
+            if 0 != sickbeard.TVINFO_DEFAULT and not sickbeard.TVInfoAPI(sickbeard.TVINFO_DEFAULT).config.get('active'):
                 sickbeard.TVINFO_DEFAULT = TVINFO_TVDB
         if indexer_timeout:
             sickbeard.TVINFO_TIMEOUT = config.to_int(indexer_timeout)
@@ -7446,6 +8134,7 @@ class ConfigSearch(Config):
                                                                              value_off=1, value_on=0))
 
         sickbeard.FLARESOLVERR_HOST = config.clean_url(flaresolverr_host)
+        sg_helpers.FLARESOLVERR_HOST = sickbeard.FLARESOLVERR_HOST
 
         sickbeard.ALLOW_HIGH_PRIORITY = config.checkbox_to_value(allow_high_priority)
 
@@ -7723,7 +8412,7 @@ class ConfigProviders(Config):
         """
         Retrieves a list of possible categories with category id's
         Using the default url/api?cat
-        http://yournewznaburl.com/api?t=caps&apikey=yourapikey
+        https://yournewznaburl.com/api?t=caps&apikey=yourapikey
         """
         error = not name and 'Name' or not url and 'Url' or not key and 'Apikey' or ''
         if error:
@@ -7750,17 +8439,17 @@ class ConfigProviders(Config):
         if not name:
             return json.dumps({'error': 'Invalid name specified'})
 
-        providerDict = dict(
+        provider_dict = dict(
             zip([x.get_id() for x in sickbeard.torrentRssProviderList], sickbeard.torrentRssProviderList))
 
-        tempProvider = rsstorrent.TorrentRssProvider(name, url, cookies)
+        temp_provider = rsstorrent.TorrentRssProvider(name, url, cookies)
 
-        if tempProvider.get_id() in providerDict:
-            return json.dumps({'error': 'A provider exists as [%s]' % providerDict[tempProvider.get_id()].name})
+        if temp_provider.get_id() in provider_dict:
+            return json.dumps({'error': 'A provider exists as [%s]' % provider_dict[temp_provider.get_id()].name})
         else:
-            (succ, errMsg) = tempProvider.validate_feed()
+            (succ, errMsg) = temp_provider.validate_feed()
             if succ:
-                return json.dumps({'success': tempProvider.get_id()})
+                return json.dumps({'success': temp_provider.get_id()})
 
             return json.dumps({'error': errMsg})
 
@@ -8336,10 +9025,10 @@ class ConfigSubtitles(Config):
         services_str_list = service_order.split()
         subtitles_services_list = []
         subtitles_services_enabled = []
-        for curServiceStr in services_str_list:
-            curService, curEnabled = curServiceStr.split(':')
-            subtitles_services_list.append(curService)
-            subtitles_services_enabled.append(int(curEnabled))
+        for cur_service in services_str_list:
+            service, enabled = cur_service.split(':')
+            subtitles_services_list.append(service)
+            subtitles_services_enabled.append(int(enabled))
 
         sickbeard.SUBTITLES_SERVICES_LIST = subtitles_services_list
         sickbeard.SUBTITLES_SERVICES_ENABLED = subtitles_services_enabled
@@ -8455,7 +9144,7 @@ class EventLogs(MainHandler):
 
         min_level = int(min_level)
 
-        regex = re.compile(r'^(?:\d{4}-\d{2}-\d{2}\s*\d{2}:\d{2}:\d{2})\s*([A-Z]+)\s*([^\s]+)\s+:{2}\s*(.*\r?\n)$')
+        regex = re.compile(r'^\d{4}-\d{2}-\d{2}\s*\d{2}:\d{2}:\d{2}\s*([A-Z]+)\s*([^\s]+)\s+:{2}\s*(.*\r?\n)$')
 
         final_data = []
         normal_data = []
@@ -8597,7 +9286,6 @@ class Cache(MainHandler):
 
 
 class CachedImages(MainHandler):
-
     def set_default_headers(self):
         super(CachedImages, self).set_default_headers()
         self.set_header('Cache-Control', 'no-cache, max-age=0')
@@ -8640,7 +9328,7 @@ class CachedImages(MainHandler):
 
     @staticmethod
     def delete_all_dummy_images(filename):
-        for f in ['tmdb', 'tvdb']:
+        for f in ['tmdb', 'tvdb', 'tvmaze']:
             CachedImages.delete_dummy_image('%s.%s.dummy' % (ek.ek(os.path.splitext, filename)[0], f))
 
     def index(self, path='', source=None, filename=None, tmdbid=None, tvdbid=None, trans=True):
@@ -8651,58 +9339,177 @@ class CachedImages(MainHandler):
             file_name = ek.ek(os.path.basename, source)
         elif filename not in [None, 0, '0']:
             file_name = filename
-        static_image_path = ek.ek(os.path.join, sickbeard.CACHE_DIR, 'images', path, file_name)
-        static_image_path = ek.ek(os.path.abspath, static_image_path.replace('\\', '/'))
-        if not ek.ek(os.path.isfile, static_image_path) and has_image_ext(file_name):
-            basepath = ek.ek(os.path.dirname, static_image_path)
+        image_file = ek.ek(os.path.join, sickbeard.CACHE_DIR, 'images', path, file_name)
+        image_file = ek.ek(os.path.abspath, image_file.replace('\\', '/'))
+        if not ek.ek(os.path.isfile, image_file) and has_image_ext(file_name):
+            basepath = ek.ek(os.path.dirname, image_file)
             helpers.make_dirs(basepath)
-            s = ''
-            tmdbimage = False
+            poster_url = ''
+            tmdb_image = False
             if None is not source and source in sickbeard.CACHE_IMAGE_URL_LIST:
-                s = source
+                poster_url = source
             if None is source and tmdbid not in [None, 'None', 0, '0'] \
-                    and self.should_try_image(static_image_path, 'tmdb'):
-                tmdbimage = True
+                    and self.should_try_image(image_file, 'tmdb'):
+                tmdb_image = True
                 try:
-                    TMDB.API_KEY = sickbeard.TMDB_API_KEY
-                    tmdbconfig = sg_helpers.get_tmdb_info()
-                    images = TMDB.TV(helpers.try_int(tmdbid)).images()
-                    s = '%s%s%s' % (tmdbconfig['images']['base_url'], tmdbconfig['images']['poster_sizes'][3],
-                                    sorted(images['posters'], key=lambda x: x['vote_average'],
-                                           reverse=True)[0]['file_path']) if 0 < len(images['posters']) else ''
+                    tvinfo_config = sickbeard.TVInfoAPI(TVINFO_TMDB).api_params.copy()
+                    t = sickbeard.TVInfoAPI(TVINFO_TMDB).setup(**tvinfo_config)
+                    show_obj = t.get_show(tmdbid, load_episodes=False, posters=True)
+                    if show_obj and show_obj.poster:
+                        poster_url = show_obj.poster
                 except (BaseException, Exception):
-                    s = ''
-            if s and not helpers.download_file(s, static_image_path) and s.find('trakt.us'):
-                helpers.download_file(s.replace('trakt.us', 'trakt.tv'), static_image_path)
-            if tmdbimage and not ek.ek(os.path.isfile, static_image_path):
-                self.create_dummy_image(static_image_path, 'tmdb')
+                    poster_url = ''
+            if poster_url and not sg_helpers.download_file(poster_url, image_file) and poster_url.find('trakt.us'):
+                sg_helpers.download_file(poster_url.replace('trakt.us', 'trakt.tv'), image_file)
+            if tmdb_image and not ek.ek(os.path.isfile, image_file):
+                self.create_dummy_image(image_file, 'tmdb')
 
             if None is source and tvdbid not in [None, 'None', 0, '0'] \
-                    and not ek.ek(os.path.isfile, static_image_path) \
-                    and self.should_try_image(static_image_path, 'tvdb'):
+                    and not ek.ek(os.path.isfile, image_file) \
+                    and self.should_try_image(image_file, 'tvdb'):
                 try:
                     tvinfo_config = sickbeard.TVInfoAPI(TVINFO_TVDB).api_params.copy()
                     tvinfo_config['posters'] = True
-                    r = sickbeard.TVInfoAPI(TVINFO_TVDB).setup(**tvinfo_config)[helpers.try_int(tvdbid), False]
-                    if hasattr(r, 'data') and 'poster' in r.data:
-                        s = r.data['poster']
+                    t = sickbeard.TVInfoAPI(TVINFO_TVDB).setup(**tvinfo_config)[helpers.try_int(tvdbid), False]
+                    if hasattr(t, 'data') and 'poster' in t.data:
+                        poster_url = t.data['poster']
                 except (BaseException, Exception):
-                    s = ''
-                if s:
-                    helpers.download_file(s, static_image_path)
-                if not ek.ek(os.path.isfile, static_image_path):
-                    self.create_dummy_image(static_image_path, 'tvdb')
+                    poster_url = ''
+                if poster_url:
+                    sg_helpers.download_file(poster_url, image_file)
+                if not ek.ek(os.path.isfile, image_file):
+                    self.create_dummy_image(image_file, 'tvdb')
 
-            if ek.ek(os.path.isfile, static_image_path):
-                self.delete_all_dummy_images(static_image_path)
+            if ek.ek(os.path.isfile, image_file):
+                self.delete_all_dummy_images(image_file)
 
-        if not ek.ek(os.path.isfile, static_image_path):
-            static_image_path = ek.ek(os.path.join, sickbeard.PROG_DIR, 'gui', 'slick',
-                                      'images', ('image-light.png', 'trans.png')[bool(int(trans))])
+        if not ek.ek(os.path.isfile, image_file):
+            image_file = ek.ek(os.path.join, sickbeard.PROG_DIR, 'gui', 'slick',
+                               'images', ('image-light.png', 'trans.png')[bool(int(trans))])
         else:
-            helpers.set_file_timestamp(static_image_path, min_age=3, new_time=None)
+            helpers.set_file_timestamp(image_file, min_age=3, new_time=None)
 
-        mime_type, encoding = MimeTypes().guess_type(static_image_path)
+        return self.image_data(image_file)
+
+    @staticmethod
+    def should_load_image(filename, days=7):
+        # type: (AnyStr, integer_types) -> bool
+        """
+        should image be (re-)loaded
+
+        :param filename: image file name with path
+        :param days: max age to trigger reload of image
+        """
+        if not ek.ek(os.path.isfile, filename) or \
+                ek.ek(os.stat, filename).st_mtime < \
+                (int(timestamp_near((datetime.datetime.now() - datetime.timedelta(days=days))))):
+            return True
+        return False
+
+    @staticmethod
+    def find_cast_by_id(ref_id, cast_list):
+        for cur_item in cast_list:
+            if cur_item.has_ref_id(ref_id):
+                return cur_item
+
+    def character(self, rid=None, tvid_prodid=None, thumb=True, pid=None, prefer_person=False, **kwargs):
+        """
+
+        :param rid:
+        :param tvid_prodid:
+        :param thumb: return thumb or normal as fallback
+        :param pid: optional person_id
+        :param prefer_person: prefer person image if person_id is set and character has more then 1 person assigned
+        """
+        _ = kwargs.get('oid')  # suppress pyc non used var highlight, oid (original id) is a visual ui key
+        show_obj = tvid_prodid and helpers.find_show_by_id(tvid_prodid)
+        char_id = usable_id(rid)
+        person_id = usable_id(pid)
+        if not show_obj or not char_id:
+            return
+        char_obj = self.find_cast_by_id(char_id, show_obj.cast_list)
+        if not char_obj:
+            return
+        if person_id:
+            person_obj = TVPerson(sid=person_id)
+            person_id = person_obj.id  # a reference could be passed in, replace it with id for later use
+            if not char_obj.person or person_obj not in char_obj.person:
+                person_obj = None
+        else:
+            person_obj = None
+        thumb = thumb in (True, '1', 'true', 'True')
+        prefer_person = prefer_person in (True, '1', 'true', 'True') and char_obj.person and 1 < len(char_obj.person) \
+            and bool(person_obj)
+
+        image_file = None
+        if not prefer_person and (char_obj.thumb_url or char_obj.image_url):
+            image_cache_obj = image_cache.ImageCache()
+            image_normal, image_thumb = image_cache_obj.character_both_path(char_obj, show_obj, person_obj=person_obj)
+            sg_helpers.make_dirs(image_cache_obj.characters_dir)
+            if self.should_load_image(image_normal) and char_obj.image_url:
+                sg_helpers.download_file(char_obj.image_url, image_normal)
+            if self.should_load_image(image_thumb) and char_obj.thumb_url:
+                sg_helpers.download_file(char_obj.thumb_url, image_thumb)
+
+            primary, fallback = ((image_normal, image_thumb), (image_thumb, image_normal))[thumb]
+            if ek.ek(os.path.isfile, primary):
+                image_file = primary
+            elif ek.ek(os.path.isfile, fallback):
+                image_file = fallback
+
+        elif person_id:
+            return self.person(rid=char_id, pid=person_id, show_obj=show_obj, thumb=thumb)
+        elif char_obj.person and (char_obj.person[0].thumb_url or char_obj.person[0].image_url):
+            return self.person(rid=char_id, pid=char_obj.person[0].id, show_obj=show_obj, thumb=thumb)
+
+        return self.image_data(image_file, cast_default=True)
+
+    def person(self, rid=None, pid=None, tvid_prodid=None, show_obj=None, thumb=True, **kwargs):
+        _ = kwargs.get('oid')  # suppress pyc non used var highlight, oid (original id) is a visual ui key
+        show_obj = show_obj or tvid_prodid and helpers.find_show_by_id(tvid_prodid)
+        char_id = usable_id(rid)
+        person_id = usable_id(pid)
+        if not person_id:
+            return
+        person_obj = TVPerson(sid=person_id)
+        if char_id and show_obj and not person_obj:
+            char_obj = self.find_cast_by_id(char_id, show_obj.cast_list)
+            person_obj = char_obj.person and char_obj.person[0]
+        if not person_obj:
+            return
+        thumb = thumb in (True, '1', 'true', 'True')
+
+        image_file = None
+        if person_obj.thumb_url or person_obj.image_url:
+            image_cache_obj = image_cache.ImageCache()
+            image_normal, image_thumb = image_cache_obj.person_both_paths(person_obj)
+            sg_helpers.make_dirs(image_cache_obj.characters_dir)
+            if self.should_load_image(image_normal) and person_obj.image_url:
+                sg_helpers.download_file(person_obj.image_url, image_normal)
+            if self.should_load_image(image_thumb) and person_obj.thumb_url:
+                sg_helpers.download_file(person_obj.thumb_url, image_thumb)
+
+            primary, fallback = ((image_normal, image_thumb), (image_thumb, image_normal))[thumb]
+            if ek.ek(os.path.isfile, primary):
+                image_file = primary
+            elif ek.ek(os.path.isfile, fallback):
+                image_file = fallback
+
+        return self.image_data(image_file, cast_default=True)
+
+    def image_data(self, image_file, cast_default=False):
+        # type: (Optional[AnyStr], bool) -> Optional[Any]
+        """
+        return image file binary data
+
+        :param image_file: file path
+        :param cast_default: if required, use default cast file path if None is image_file
+        :return: binary image data or None
+        """
+        if cast_default and None is image_file:
+            image_file = ek.ek(os.path.join, sickbeard.PROG_DIR, 'gui', 'slick', 'images', 'poster-person.jpg')
+
+        mime_type, encoding = MimeTypes().guess_type(image_file)
         self.set_header('Content-Type', mime_type)
-        with open(static_image_path, 'rb') as img:
-            return img.read()
+        with open(image_file, 'rb') as io_stream:
+            return io_stream.read()

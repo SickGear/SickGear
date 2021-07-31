@@ -301,7 +301,7 @@ def find_release(ep_obj):
         provider = None
 
         # Release not found
-        logger.log('No found failed.db history release for %sx%s: [%s]' % (
-            ep_obj.season, ep_obj.episode, ep_obj.show_obj.name), logger.DEBUG)
+        logger.debug('No found failed.db history release for %sx%s: [%s]' % (
+            ep_obj.season, ep_obj.episode, ep_obj.show_obj.unique_name))
 
     return release, provider

@@ -428,7 +428,7 @@ class TVCache(object):
 
             # skip if provider is anime only and show is not anime
             if self.provider.anime_only and not show_obj.is_anime:
-                logger.log(u'' + str(show_obj.name) + ' is not an anime, skipping', logger.DEBUG)
+                logger.debug(u'%s is not an anime, skipping' % show_obj.unique_name)
                 continue
 
             # get season and ep data (ignoring multi-eps for now)

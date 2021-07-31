@@ -1,18 +1,14 @@
 from lib.tvdb_api.tvdb_api import Tvdb
 from lib.libtrakt.indexerapiinterface import TraktIndexer
-
-TVINFO_TVDB = 1
-TVINFO_TVRAGE = 2
-TVINFO_TVMAZE = 3
-
-# old tvdb api - version 1
-# TVINFO_TVDB_V1 = 10001
-
-# mapped only source
-TVINFO_IMDB = 100
-TVINFO_TRAKT = 101
-TVINFO_TMDB = 102
-# end mapped only source
+from lib.tvmaze_api.tvmaze_api import TvMaze
+from lib.tmdb_api.tmdb_api import TmdbIndexer
+from lib.imdb_api.imdb_api import IMDbIndexer
+# noinspection PyUnresolvedReferences
+from lib.tvinfo_base import (
+    TVINFO_FACEBOOK, TVINFO_INSTAGRAM, TVINFO_TWITTER, TVINFO_WIKIPEDIA,
+    TVINFO_IMDB, TVINFO_TMDB, TVINFO_TRAKT, TVINFO_TVDB, TVINFO_TVMAZE, TVINFO_TVRAGE,
+    TVINFO_TRAKT_SLUG, TVINFO_TVDB_SLUG
+)
 
 init_config = {
     'valid_languages': ['da', 'fi', 'nl', 'de', 'it', 'es', 'fr', 'pl', 'hu', 'el', 'tr',
@@ -32,6 +28,7 @@ tvinfo_config = {
         dupekey='',
         mapped_only=False,
         icon='thetvdb16.png',
+        people_url='https://thetvdb.com/people/%s',
     ),
     TVINFO_TVRAGE: dict(
         main_url='http://tvrage.com/',
@@ -47,24 +44,27 @@ tvinfo_config = {
     TVINFO_TVMAZE: dict(
         main_url='https://www.tvmaze.com/',
         id=TVINFO_TVMAZE,
-        name='TVmaze', slug='tvmaze',
-        module=None,
+        name='TVmaze', slug='tvmaze', kodi_slug='tvmaze',
+        module=TvMaze,
         api_params={},
-        active=False,
+        active=True,
         dupekey='tvm',
-        mapped_only=True,
+        mapped_only=False,
         icon='tvmaze16.png',
+        people_url='https://www.tvmaze.com/person/view?id=%s',
+        character_url='https://www.tvmaze.com/character/view?id=%s',
     ),
     TVINFO_IMDB: dict(
         main_url='https://www.imdb.com/',
         id=TVINFO_IMDB,
         name='IMDb', slug='imdb', kodi_slug='imdb',
-        module=None,
+        module=IMDbIndexer,
         api_params={},
-        active=False,
+        active=True,
         dupekey='imdb',
         mapped_only=True,
         icon='imdb16.png',
+        people_url='https://www.imdb.com/name/nm%07d',
     ),
     TVINFO_TRAKT: dict(
         main_url='https://www.trakt.tv/',
@@ -76,17 +76,64 @@ tvinfo_config = {
         dupekey='trakt',
         mapped_only=True,
         icon='trakt16.png',
+        people_url='https://trakt.tv/people/%s',
     ),
     TVINFO_TMDB: dict(
         main_url='https://www.themoviedb.org/',
         id=TVINFO_TMDB,
-        name='TMDb', slug='tmdb',  kodi_slug='tmdb',
-        module=None,
+        name='TMDb', slug='tmdb', kodi_slug='tmdb',
+        module=TmdbIndexer,
         api_params={},
-        active=False,
+        active=True,
         dupekey='tmdb',
         mapped_only=True,
         icon='tmdb16.png',
+        people_url='https://www.themoviedb.org/person/%s',
+    ),
+    # social media sources for people
+    TVINFO_INSTAGRAM: dict(
+        id=TVINFO_INSTAGRAM,
+        name='Instagram',
+        module=None,
+        active=False,
+        mapped_only=True,
+        people_url='https://www.instagram.com/%s',
+        show_url=None,
+        people_only=True,
+        icon='instagram16.png'
+    ),
+    TVINFO_TWITTER: dict(
+        id=TVINFO_TWITTER,
+        name='Twitter',
+        module=None,
+        active=False,
+        mapped_only=True,
+        people_url='https://twitter.com/%s',
+        show_url=None,
+        people_only=True,
+        icon='twitter16.png'
+    ),
+    TVINFO_FACEBOOK: dict(
+        id=TVINFO_FACEBOOK,
+        name='Facebook',
+        module=None,
+        active=False,
+        mapped_only=True,
+        people_url='https://www.facebook.com/%s',
+        show_url=None,
+        people_only=True,
+        icon='facebook16.png'
+    ),
+    TVINFO_WIKIPEDIA: dict(
+        id=TVINFO_WIKIPEDIA,
+        name='Wikipedia',
+        module=None,
+        active=False,
+        mapped_only=True,
+        people_url='https://en.wikipedia.org/wiki/%s',
+        show_url=None,
+        people_only=True,
+        icon='wikipedia16.png'
     )
 }
 

@@ -129,6 +129,10 @@ class CantUpdateException(SickBeardException):
     """The show can't be updated right now"""
 
 
+class CantSwitchException(SickBeardException):
+    """The show can't be switched right now"""
+
+
 class PostProcessingFailed(SickBeardException):
     """Post-processing the episode failed"""
 

@@ -14,50 +14,46 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
-from collections import OrderedDict
-from time import sleep
 import datetime
-import os
 import re
 import traceback
 
-# noinspection PyPep8Naming
-import encodingKludge as ek
+from . import classes, db, logger
+from .helpers import try_int
+from .indexers.indexer_config import TVINFO_IMDB, TVINFO_TMDB, TVINFO_TRAKT, TVINFO_TVDB, TVINFO_TVMAZE
+
 import sickbeard
-from . import db, logger
-from .helpers import get_url, try_int
-from .indexers.indexer_config import TVINFO_TVDB, TVINFO_IMDB, TVINFO_TVMAZE, TVINFO_TVRAGE, TVINFO_TMDB, TVINFO_TRAKT
 
-import requests
-# noinspection PyPep8Naming
-from lib import tmdbsimple as TMDB
 from lib.dateutil.parser import parse
-from lib.imdbpie import Imdb
-from libtrakt import TraktAPI
-from libtrakt.exceptions import TraktAuthException, TraktException
 
-from _23 import unidecode, urlencode
-from six import iteritems, iterkeys, string_types, PY2
+from _23 import unidecode
+from six import iteritems, moves, string_types, PY2
 
 # noinspection PyUnreachableCode
 if False:
     # noinspection PyUnresolvedReferences
-    from typing import AnyStr, Dict, List, Optional
+    from typing import Any, AnyStr, Dict, List, Optional, Tuple, Union
+    from six import integer_types
+    from sickbeard.tv import TVShow
 
 tv_maze_retry_wait = 10
 defunct_indexer = []
 indexer_list = []
-tmdb_ids = {TVINFO_TVDB: 'tvdb_id', TVINFO_IMDB: 'imdb_id', TVINFO_TVRAGE: 'tvrage_id'}
 
 
 class NewIdDict(dict):
     def __init__(self, *args, **kwargs):
+        tv_src = kwargs.pop('tv_src')
         super(NewIdDict, self).__init__(*args, **kwargs)
+        self.verified = {s: (False, True)[s == tv_src] for s in indexer_list}
 
-    @staticmethod
-    def set_value(value, old_value=None):
-        if old_value is MapStatus.MISMATCH or (0 < value and old_value not in [None, value] and 0 < old_value):
+    def set_value(self, value, old_value=None, tv_src=None, key=None):
+        # type: (Any, Any, int, int) -> Any
+        if (None is tv_src or tv_src != key) and old_value is MapStatus.MISMATCH or (
+                0 < value and old_value not in [None, value] and 0 < old_value):
             return MapStatus.MISMATCH
+        if value and tv_src and tv_src == key:
+            self.verified[tv_src] = True
         return value
 
     @staticmethod
@@ -75,84 +71,86 @@ class NewIdDict(dict):
     def __setitem__(self, key, value):
         super(NewIdDict, self).__setitem__(key, self.set_value(value, self.get(key)))
 
-    def update(self, other=None, **kwargs):
+    def update(self, other=None, tv_src=None, **kwargs):
+        # type: (Dict[int, Any], int, Any) -> None
+        """
+        updates dict with new ids
+        set MapStatus.MISMATCH if values mismatch, except if it's tv_src (this will be treated as verified source id)
+
+        :param other: new data dict
+        :param tv_src: verified tv src id
+        :param kwargs:
+        """
         if isinstance(other, dict):
-            other = {o: self.set_value(v, self.get(o)) for o, v in iteritems(other)}
+            other = {o: self.set_value(v, self.get(o), tv_src, o) for o, v in iteritems(other)}
         super(NewIdDict, self).update(other, **kwargs)
 
 
-class TvmazeDict(OrderedDict):
-    tvmaze_ids = {TVINFO_TVDB: 'thetvdb', TVINFO_IMDB: 'imdb', TVINFO_TVRAGE: 'tvrage'}
-
-    def __init__(self, *args, **kwds):
-        super(TvmazeDict, self).__init__(*args, **kwds)
-
-    def get_url(self, key):
-        if TVINFO_TVMAZE == key:
-            return '%sshows/%s' % (sickbeard.TVInfoAPI(TVINFO_TVMAZE).config['base_url'], self.tvmaze_ids[key])
-        return '%slookup/shows?%s=%s%s' % (sickbeard.TVInfoAPI(TVINFO_TVMAZE).config['base_url'],
-                                           self.tvmaze_ids[key], ('', 'tt')[key == TVINFO_IMDB],
-                                           (self[key], '%07d' % self[key])[key == TVINFO_IMDB])
-
-
-class TraktDict(OrderedDict):
-    trakt_ids = {TVINFO_TVDB: 'tvdb', TVINFO_IMDB: 'imdb', TVINFO_TVRAGE: 'tvrage'}
-
-    def __init__(self, *args, **kwds):
-        super(TraktDict, self).__init__(*args, **kwds)
-
-    def get_url(self, key):
-        return 'search/%s/%s%s?type=show' % (self.trakt_ids[key], ('', 'tt')[key == TVINFO_IMDB],
-                                             (self[key], '%07d' % self[key])[key == TVINFO_IMDB])
-
-
-# noinspection PyUnusedLocal
-def tvmaze_record_hook(r, *args, **kwargs):
-    r.hook_called = True
-    if 301 == r.status_code and isinstance(r.headers.get('Location'), string_types) \
-            and r.headers.get('Location').startswith('http://api.tvmaze'):
-        r.headers['Location'] = r.headers['Location'].replace('http://', 'https://')
-    return r
-
-
-def get_tvmaze_data(count=0, *args, **kwargs):
-    res = None
-    count += 1
-    kwargs['hooks'] = {'response': tvmaze_record_hook}
-    if 3 >= count:
-        try:
-            res = get_url(*args, **kwargs)
-        except requests.HTTPError as e:
-            # rate limit
-            if 429 == e.response.status_code:
-                sleep(tv_maze_retry_wait)
-                return get_tvmaze_data(*args, count=count, **kwargs)
-        except (BaseException, Exception):
-            pass
-    return res
-
-
-def get_tvmaze_ids(url_tvmaze):
+def get_missing_ids(show_ids, show_obj, tv_src):
+    # type: (Dict[int, integer_types], TVShow, int) -> Dict[int, integer_types]
     """
 
-    :param url_tvmaze: tvmaze url
-    :type url_tvmaze: TvmazeDict
+    :param show_ids:
+    :param show_obj:
+    :param tv_src:
     :return:
-    :rtype: Dict
     """
-    ids = {}
-    for url_key in iterkeys(url_tvmaze):
+    try:
+        tvinfo_config = sickbeard.TVInfoAPI(tv_src).api_params.copy()
+        tvinfo_config['cache_search'] = True
+        tvinfo_config['custom_ui'] = classes.AllShowInfosNoFilterListUI
+        t = sickbeard.TVInfoAPI(tv_src).setup(**tvinfo_config)
+        show_name, f_date = None, None
+        if any(1 for k, v in iteritems(show_ids) if v and k in t.supported_id_searches):
+            try:
+                found_shows = t.search_show(ids=show_ids)
+                res_count = len(found_shows or [])
+                if 1 < res_count:
+                    show_name, f_date = get_show_name_date(show_obj)
+                for show in found_shows or []:
+                    if 1 == res_count or confirm_show(f_date, show['firstaired'], show_name,
+                                                      clean_show_name(show['seriesname'])):
+                        return combine_new_ids(show_ids, show['ids'], tv_src)
+            except (BaseException, Exception):
+                pass
+        found_shows = t.search_show(name=clean_show_name(show_obj.name))
+        if not show_name:
+            show_name, f_date = get_show_name_date(show_obj)
+        for show in found_shows or []:
+            if confirm_show(f_date, show['firstaired'], show_name, clean_show_name(show['seriesname'])):
+                if any(v for k, v in iteritems(show['ids']) if tv_src != k and v):
+                    f_show = [show]
+                else:
+                    f_show = t.search_show(ids={tv_src: show['id']})
+                if f_show and 1 == len(f_show):
+                    return combine_new_ids(show_ids, f_show[0]['ids'], tv_src)
+    except (BaseException, Exception):
+        pass
+    return {}
+
+
+def confirm_show(premiere_date, shows_premiere, expected_name, show_name):
+    # type: (Optional[datetime.date], Optional[Union[AnyStr, datetime.date]], AnyStr, AnyStr) -> bool
+    """
+    confirm show possible confirmations:
+    1. premiere dates are less then 2 days apart
+    2. show name is the same and premiere year is 1 year or less apart
+
+    :param premiere_date: expected show premiere date
+    :param shows_premiere: compare date
+    :param expected_name:
+    :param show_name:
+    """
+    if any(t is None for t in (premiere_date, shows_premiere)):
+        return False
+    if isinstance(shows_premiere, string_types):
         try:
-            res = get_tvmaze_data(url=url_tvmaze.get_url(url_key), parse_json=True, raise_status_code=True, timeout=120)
-            if res and 'externals' in res:
-                ids[TVINFO_TVRAGE] = res['externals'].get('tvrage', 0)
-                ids[TVINFO_TVDB] = res['externals'].get('thetvdb', 0)
-                ids[TVINFO_IMDB] = try_int(str(res['externals'].get('imdb')).replace('tt', ''))
-                ids[TVINFO_TVMAZE] = res.get('id', 0)
-                break
+            shows_premiere = parse(shows_premiere).date()
         except (BaseException, Exception):
-            pass
-    return {k: v for k, v in iteritems(ids) if v not in (None, '', 0)}
+            return False
+    start_year = (shows_premiere and shows_premiere.year) or 0
+    return abs(premiere_date - shows_premiere) < datetime.timedelta(days=2) or (
+            expected_name == show_name and abs(premiere_date.year - start_year) <= 1)
 
 
 def get_premieredate(show_obj):
@@ -164,7 +162,7 @@ def get_premieredate(show_obj):
     :rtype: datetime.date or None
     """
     try:
-        ep_obj = show_obj.get_episode(season=1, episode=1)
+        ep_obj = show_obj.first_aired_regular_episode
         if ep_obj and ep_obj.airdate:
             return ep_obj.airdate
     except (BaseException, Exception):
@@ -185,151 +183,39 @@ def clean_show_name(showname):
     return re.sub(r'[(\s]*(?:19|20)\d\d[)\s]*$', '', unidecode(showname))
 
 
-def get_tvmaze_by_name(showname, premiere_date):
+def get_show_name_date(show_obj):
+    # type: (TVShow) -> Tuple[Optional[AnyStr], Optional[datetime.date]]
+    return clean_show_name(show_obj.name), get_premieredate(show_obj)
+
+
+def combine_mapped_new_dict(mapped, new_ids):
+    # type: (Dict[int, Dict], Dict[int, integer_types]) -> Dict[int, integer_types]
+    return {n: m for d in ({k: v['id'] for k, v in iteritems(mapped) if v['id']}, new_ids) for n, m in iteritems(d)}
+
+
+def combine_new_ids(cur_ids, new_ids, src_id):
+    # type: (Dict[int, integer_types], Dict[int, integer_types], int) -> Dict[int, integer_types]
     """
+    combine cur_ids with new_ids, priority has cur_ids with exception of src_id key
 
-    :param showname: show name
-    :type showname: AnyStr
-    :param premiere_date: premiere date
-    :type premiere_date: datetime.date
-    :return:
-    :rtype: Dict
+    :param cur_ids:
+    :param new_ids:
+    :param src_id:
     """
-    ids = {}
-    try:
-        url = '%ssearch/shows?%s' % (sickbeard.TVInfoAPI(TVINFO_TVMAZE).config['base_url'],
-                                     urlencode({'q': clean_show_name(showname)}))
-        res = get_tvmaze_data(url=url, parse_json=True, raise_status_code=True, timeout=120)
-        if res:
-            for r in res:
-                if 'show' in r and 'premiered' in r['show'] and 'externals' in r['show']:
-                    premiered = parse(r['show']['premiered'], fuzzy=True)
-                    if abs(premiere_date - premiered.date()) < datetime.timedelta(days=2):
-                        ids[TVINFO_TVRAGE] = r['show']['externals'].get('tvrage', 0)
-                        ids[TVINFO_TVDB] = r['show']['externals'].get('thetvdb', 0)
-                        ids[TVINFO_IMDB] = try_int(str(r['show']['externals'].get('imdb')).replace('tt', ''))
-                        ids[TVINFO_TVMAZE] = r['show'].get('id', 0)
-                        break
-    except (BaseException, Exception):
-        pass
-    return {k: v for k, v in iteritems(ids) if v not in (None, '', 0)}
+    return {k: v for d in (cur_ids, new_ids) for k, v in iteritems(d)
+            if v and (k == src_id or not cur_ids.get(k) or v == cur_ids.get(k, ''))}
 
 
-def get_trakt_ids(url_trakt):
-    """
-
-    :param url_trakt: trakt url
-    :type url_trakt: TraktDict
-    :return:
-    :rtype: Dict
-    """
-    ids = {}
-    for url_key in iterkeys(url_trakt):
-        try:
-            res = TraktAPI().trakt_request(url_trakt.get_url(url_key))
-            if res:
-                found = False
-                for r in res:
-                    if 'show' == r.get('type', '') and 'show' in r and 'ids' in r['show']:
-                        ids[TVINFO_TVDB] = try_int(r['show']['ids'].get('tvdb', 0))
-                        ids[TVINFO_TVRAGE] = try_int(r['show']['ids'].get('tvrage', 0))
-                        ids[TVINFO_IMDB] = try_int(str(r['show']['ids'].get('imdb')).replace('tt', ''))
-                        ids[TVINFO_TRAKT] = try_int(r['show']['ids'].get('trakt', 0))
-                        ids[TVINFO_TMDB] = try_int(r['show']['ids'].get('tmdb', 0))
-                        found = True
-                        break
-                if found:
-                    break
-        except (TraktAuthException, TraktException, IndexError, KeyError):
-            pass
-    return {k: v for k, v in iteritems(ids) if v not in (None, '', 0)}
-
-
-def get_imdbid_by_name(name, startyear):
-    """
-
-    :param name: name
-    :type name: AnyStr
-    :param startyear: start year
-    :type startyear: int or AnyStr
-    :return:
-    :rtype: Dict
-    """
-    ids = {}
-    try:
-        res = Imdb(exclude_episodes=True,
-                   cachedir=ek.ek(os.path.join, sickbeard.CACHE_DIR, 'imdb-pie')).search_for_title(title=name)
-        for r in res:
-            if isinstance(r.get('type'), string_types) and 'tv series' == r.get('type').lower() \
-                    and str(startyear) == str(r.get('year')):
-                ids[TVINFO_IMDB] = try_int(re.sub(r'[^0-9]*', '', r.get('imdb_id')))
-                break
-    except (BaseException, Exception):
-        pass
-    return {k: v for k, v in iteritems(ids) if v not in (None, '', 0)}
-
-
-def check_imdbid_by_id(name, startyear, imdb_id):
-    # type: (AnyStr, int, int) -> bool
-    """
-    check if the name and start year match the imdb id
-
-    :param name: name
-    :param startyear: start year
-    :param imdb_id: imdb id
-    :return: match bool
-    """
-    try:
-        res = Imdb(exclude_episodes=True,
-                   cachedir=ek.ek(os.path.join, sickbeard.CACHE_DIR, 'imdb-pie')).get_title_auxiliary(
-            imdb_id='tt%07d' % imdb_id)
-        name = clean_show_name(name)
-        if (str(startyear) == str(res.get('year')) or abs(try_int(startyear, 10) - try_int(res.get('year'), 1)) <= 1
-                or 1930 > try_int(startyear, 0)) and clean_show_name(res.get('title')).lower() == name.lower():
-            return True
-    except (BaseException, Exception):
-        pass
-    return False
-
-
-def check_missing_trakt_id(n_ids, show_obj, url_trakt):
-    """
-
-    :param n_ids:
-    :type n_ids: NewIdDict
-    :param show_obj: show objects
-    :type show_obj: sickbeard.tv.TVShow
-    :param url_trakt: trakt url
-    :type url_trakt: TraktDict
-    :return:
-    :rtype: NewIdDict
-    """
-    if TVINFO_TRAKT not in n_ids:
-        new_url_trakt = TraktDict()
-        for k, v in iteritems(n_ids):
-            if k != show_obj.tvid and k in [TVINFO_TVDB, TVINFO_TVRAGE, TVINFO_IMDB] and 0 < v \
-                    and k not in url_trakt:
-                new_url_trakt[k] = v
-
-        if 0 < len(new_url_trakt):
-            n_ids.update(get_trakt_ids(new_url_trakt))
-
-    return n_ids
-
-
-def map_indexers_to_show(show_obj, update=False, force=False, recheck=False):
+def map_indexers_to_show(show_obj, update=False, force=False, recheck=False, im_sql_result=None):
+    # type: (sickbeard.tv.TVShow, Optional[bool], Optional[bool], Optional[bool], Optional[list]) -> dict
     """
 
     :param show_obj: TVShow Object
-    :type show_obj: sickbeard.tv.TVShow
     :param update: add missing + previously not found ids
-    :type update: bool
     :param force: search for and replace all mapped/missing ids (excluding NO_AUTOMATIC_CHANGE flagged)
-    :type force: bool
     :param recheck: load all ids, don't remove existing
-    :type recheck: bool
+    :param im_sql_result:
     :return: mapped ids
-    :rtype: Dict
     """
     mapped = {}
 
@@ -339,18 +225,22 @@ def map_indexers_to_show(show_obj, update=False, force=False, recheck=False):
                         'status': (MapStatus.NONE, MapStatus.SOURCE)[int(tvid) == int(show_obj.tvid)],
                         'date': datetime.date.fromordinal(1)}
 
-    my_db = db.DBConnection()
-    sql_result = my_db.select('SELECT *'
-                              ' FROM indexer_mapping'
-                              ' WHERE indexer = ? AND indexer_id = ?',
-                              [show_obj.tvid, show_obj.prodid])
+    sql_result = []
+    for cur_row in im_sql_result or []:
+        if show_obj.prodid == cur_row['indexer_id'] and show_obj.tvid == cur_row['indexer']:
+            sql_result.append(cur_row)
+
+    if not sql_result:
+        my_db = db.DBConnection()
+        sql_result = my_db.select(
+            'SELECT * FROM indexer_mapping WHERE indexer = ? AND indexer_id = ?', [show_obj.tvid, show_obj.prodid])
 
     # for each mapped entry
-    for cur_result in sql_result:
-        date = try_int(cur_result['date'])
-        mapped[int(cur_result['mindexer'])] = {'status': int(cur_result['status']),
-                                               'id': int(cur_result['mindexer_id']),
-                                               'date': datetime.date.fromordinal(date if 0 < date else 1)}
+    for cur_row in sql_result or []:
+        date = try_int(cur_row['date'])
+        mapped[int(cur_row['mindexer'])] = {'status': int(cur_row['status']),
+                                            'id': int(cur_row['mindexer_id']),
+                                            'date': datetime.date.fromordinal(date if 0 < date else 1)}
 
     # get list of needed ids
     mis_map = [k for k, v in iteritems(mapped) if (v['status'] not in [
@@ -358,105 +248,42 @@ def map_indexers_to_show(show_obj, update=False, force=False, recheck=False):
                and ((0 == v['id'] and MapStatus.NONE == v['status'])
                     or force or recheck or (update and 0 == v['id'] and k not in defunct_indexer))]
     if mis_map:
-        url_tvmaze = TvmazeDict()
-        url_trakt = TraktDict()
-        if show_obj.tvid in (TVINFO_TVDB, TVINFO_TVRAGE):
-            url_tvmaze[show_obj.tvid] = show_obj.prodid
-            url_trakt[show_obj.tvid] = show_obj.prodid
-        elif show_obj.tvid == TVINFO_TVMAZE:
-            url_tvmaze[TVINFO_TVMAZE] = show_obj.tvid
+        src_tv_id = show_obj._tvid
+        new_ids = NewIdDict(tv_src=src_tv_id)  # type: NewIdDict
         if show_obj.imdbid and re.search(r'\d+$', show_obj.imdbid):
-            url_tvmaze[TVINFO_IMDB] = try_int(re.search(r'(?:tt)?(\d+)', show_obj.imdbid).group(1))
-            url_trakt[TVINFO_IMDB] = try_int(re.search(r'(?:tt)?(\d+)', show_obj.imdbid).group(1))
-        for m, v in iteritems(mapped):
-            if m != show_obj.tvid and m in [TVINFO_TVDB, TVINFO_TVRAGE, TVINFO_TVRAGE, TVINFO_IMDB] and \
-                            0 < v.get('id', 0):
-                url_tvmaze[m] = v['id']
-
-        new_ids = NewIdDict()  # type: NewIdDict
-        src_imdb_id = None
-
-        if isinstance(show_obj.imdbid, string_types) and re.search(r'\d+$', show_obj.imdbid):
-            try:
-                new_ids[TVINFO_IMDB] = try_int(re.search(r'(?:tt)?(\d+)', show_obj.imdbid).group(1))
-                src_imdb_id = new_ids[TVINFO_IMDB]
-            except (BaseException, Exception):
-                pass
-
-        if 0 < len(url_tvmaze):
-            new_ids.update(get_tvmaze_ids(url_tvmaze))
-
-        for m, v in iteritems(new_ids):
-            if m != show_obj.tvid and m in [TVINFO_TVDB, TVINFO_TVRAGE, TVINFO_TVRAGE, TVINFO_IMDB] and 0 < v:
-                url_trakt[m] = v
-
-        if url_trakt:
-            new_ids.update(get_trakt_ids(url_trakt))
-
-        if TVINFO_TVMAZE not in new_ids:
-            new_url_tvmaze = TvmazeDict()
-            for k, v in iteritems(new_ids):
-                if k != show_obj.tvid and k in [TVINFO_TVDB, TVINFO_TVRAGE, TVINFO_TVRAGE, TVINFO_IMDB] \
-                        and 0 < v and k not in url_tvmaze:
-                    new_url_tvmaze[k] = v
-
-            if 0 < len(new_url_tvmaze):
-                new_ids.update(get_tvmaze_ids(new_url_tvmaze))
-
-        if TVINFO_TVMAZE not in new_ids:
-            f_date = get_premieredate(show_obj)
-            if f_date and f_date != datetime.date.fromordinal(1):
-                tvids = {k: v for k, v in iteritems(get_tvmaze_by_name(show_obj.name, f_date)) if k == TVINFO_TVMAZE
-                         or k not in new_ids or new_ids.get(k) in (None, 0, '', MapStatus.NOT_FOUND)}
-                new_ids.update(tvids)
-
-        new_ids = check_missing_trakt_id(new_ids, show_obj, url_trakt)
-
-        if TVINFO_IMDB not in new_ids:
-            new_ids.update(get_imdbid_by_name(show_obj.name, show_obj.startyear))
-            new_ids = check_missing_trakt_id(new_ids, show_obj, url_trakt)
-
-        if TVINFO_TMDB in mis_map \
-                and (None is new_ids.get(TVINFO_TMDB) or MapStatus.NOT_FOUND == new_ids.get(TVINFO_TMDB)) \
-                and (0 < mapped.get(TVINFO_TVDB, {'id': 0}).get('id', 0) or 0 < new_ids.get(TVINFO_TVDB, 0)
-                     or 0 < mapped.get(TVINFO_IMDB, {'id': 0}).get('id', 0) or 0 < new_ids.get(TVINFO_TMDB, 0)
-                     or 0 < mapped.get(TVINFO_TVRAGE, {'id': 0}).get('id', 0) or 0 < new_ids.get(TVINFO_TVRAGE, 0)):
-            try:
-                TMDB.API_KEY = sickbeard.TMDB_API_KEY
-                for d in [TVINFO_TVDB, TVINFO_IMDB, TVINFO_TVRAGE]:
-                    c = (new_ids.get(d), mapped.get(d, {'id': 0}).get('id'))[0 < mapped.get(d, {'id': 0}).get('id', 0)]
-                    if 0 >= c:
-                        continue
-                    if None is not c and 0 < c:
-                        if TVINFO_IMDB == d:
-                            c = 'tt%07d' % c
-                        tmdb_data = TMDB.Find(c).info(**{'external_source': tmdb_ids[d]})
-                        if isinstance(tmdb_data, dict) \
-                                and 'tv_results' in tmdb_data and 0 < len(tmdb_data['tv_results']) \
-                                and 'id' in tmdb_data['tv_results'][0] \
-                                and 0 < try_int(tmdb_data['tv_results'][0]['id']):
-                            new_ids[TVINFO_TMDB] = try_int(tmdb_data['tv_results'][0]['id'])
-                            break
-            except (BaseException, Exception):
-                pass
-
-            if TVINFO_TMDB not in new_ids:
-                try:
-                    TMDB.API_KEY = sickbeard.TMDB_API_KEY
-                    tmdb_data = TMDB.Search().tv(**{'query': clean_show_name(show_obj.name),
-                                                    'first_air_date_year': show_obj.startyear})
-                    for s in tmdb_data.get('results'):
-                        if clean_show_name(s['name']) == clean_show_name(show_obj.name):
-                            new_ids[TVINFO_TMDB] = try_int(s['id'])
-                            break
-                except (BaseException, Exception):
-                    pass
+            new_ids[TVINFO_IMDB] = try_int(re.search(r'(?:tt)?(\d+)', show_obj.imdbid).group(1))
+        all_ids_srcs = [src_tv_id] + [s for s in (TVINFO_TRAKT, TVINFO_TMDB, TVINFO_TVMAZE, TVINFO_TVDB, TVINFO_IMDB)
+                                      if s != src_tv_id]
+        searched, confirmed = {}, False
+        for r in moves.range(len(all_ids_srcs)):
+            search_done = False
+            for i in all_ids_srcs:
+                if new_ids.verified.get(i):
+                    continue
+                search_ids = {k: v for k, v in iteritems(combine_mapped_new_dict(mapped, new_ids))
+                              if k not in searched.setdefault(i, {})}
+                if search_ids:
+                    search_done = True
+                    searched[i].update(search_ids)
+                    new_ids.update(get_missing_ids(search_ids, show_obj, tv_src=i), tv_src=i)
+                    if new_ids.get(i) and 0 < new_ids.get(i):
+                        searched[i].update({i: new_ids[i]})
+                confirmed = all(v for k, v in iteritems(new_ids.verified) if k not in defunct_indexer)
+                if confirmed:
+                    break
+            if confirmed or not search_done:
+                break
 
         for i in indexer_list:
-            if i != show_obj.tvid and i in mis_map and 0 != new_ids.get(i, 0):
-                if TVINFO_IMDB == i and 0 > new_ids[i] and src_imdb_id and \
-                        check_imdbid_by_id(show_obj.name, startyear=show_obj.startyear, imdb_id=src_imdb_id):
-                    mapped[i] = {'status': MapStatus.NONE, 'id': src_imdb_id}
+            if i != show_obj.tvid and ((i in mis_map and 0 != new_ids.get(i, 0)) or
+                                       (new_ids.verified.get(i) and 0 < new_ids.get(i, 0))):
+                if i not in new_ids:
+                    mapped[i] = {'status': MapStatus.NOT_FOUND, 'id': 0}
+                    continue
+                if new_ids.verified.get(i) and 0 < new_ids[i] and mapped.get(i, {'id': 0})['id'] != new_ids[i]:
+                    if i not in mis_map:
+                        mis_map.append(i)
+                    mapped[i] = {'status': MapStatus.NONE, 'id': new_ids[i]}
                     continue
                 if 0 > new_ids[i]:
                     mapped[i] = {'status': new_ids[i], 'id': 0}
@@ -476,19 +303,17 @@ def map_indexers_to_show(show_obj, update=False, force=False, recheck=False):
                 if 0 != mapped[tvid]['id'] or MapStatus.NONE != mapped[tvid]['status']:
                     mapped[tvid]['date'] = today
                     sql_l.append([
-                        'INSERT OR REPLACE INTO indexer_mapping (' +
-                        'indexer_id, indexer, mindexer_id, mindexer, date, status) VALUES (?,?,?,?,?,?)',
-                        [show_obj.prodid, show_obj.tvid, mapped[tvid]['id'],
-                         tvid, date, mapped[tvid]['status']]])
+                        'REPLACE INTO indexer_mapping (indexer_id, indexer, mindexer_id, mindexer, date, status)'
+                        ' VALUES (?,?,?,?,?,?)',
+                        [show_obj.prodid, show_obj.tvid, mapped[tvid]['id'], tvid, date, mapped[tvid]['status']]])
                 else:
                     sql_l.append([
                         'DELETE FROM indexer_mapping'
-                        ' WHERE indexer = ? AND indexer_id = ?'
-                        ' AND mindexer = ?',
+                        ' WHERE indexer = ? AND indexer_id = ? AND mindexer = ?',
                         [show_obj.tvid, show_obj.prodid, tvid]])
 
             if 0 < len(sql_l):
-                logger.log('Adding TV info mapping to DB for show: %s' % show_obj.name, logger.DEBUG)
+                logger.debug('Adding TV info mapping to DB for show: %s' % show_obj.unique_name)
                 my_db = db.DBConnection()
                 my_db.mass_action(sql_l)
 
@@ -514,19 +339,17 @@ def save_mapping(show_obj, save_map=None):
         if 0 != show_obj.ids[tvid]['id'] or MapStatus.NONE != show_obj.ids[tvid]['status']:
             show_obj.ids[tvid]['date'] = today
             sql_l.append([
-                'INSERT OR REPLACE INTO indexer_mapping'
+                'REPLACE INTO indexer_mapping'
                 ' (indexer_id, indexer, mindexer_id, mindexer, date, status) VALUES (?,?,?,?,?,?)',
                 [show_obj.prodid, show_obj.tvid, show_obj.ids[tvid]['id'],
                  tvid, date, show_obj.ids[tvid]['status']]])
         else:
             sql_l.append([
-                'DELETE FROM indexer_mapping'
-                ' WHERE indexer = ? AND indexer_id = ?'
-                ' AND mindexer = ?',
+                'DELETE FROM indexer_mapping WHERE indexer = ? AND indexer_id = ? AND mindexer = ?',
                 [show_obj.tvid, show_obj.prodid, tvid]])
 
     if 0 < len(sql_l):
-        logger.log('Saving TV info mapping to DB for show: %s' % show_obj.name, logger.DEBUG)
+        logger.debug('Saving TV info mapping to DB for show: %s' % show_obj.unique_name)
         my_db = db.DBConnection()
         my_db.mass_action(sql_l)
 
@@ -540,9 +363,7 @@ def del_mapping(tvid, prodid):
     :type prodid: int or long
     """
     my_db = db.DBConnection()
-    my_db.action('DELETE FROM indexer_mapping'
-                 ' WHERE indexer = ? AND indexer_id = ?',
-                 [tvid, prodid])
+    my_db.action('DELETE FROM indexer_mapping WHERE indexer = ? AND indexer_id = ?', [tvid, prodid])
 
 
 def should_recheck_update_ids(show_obj):
@@ -559,7 +380,7 @@ def should_recheck_update_ids(show_obj):
                            k not in defunct_indexer] or [datetime.date.fromtimestamp(1)])
         if today - ids_updated >= datetime.timedelta(days=365):
             return True
-        ep_obj = show_obj.get_episode(season=1, episode=1)
+        ep_obj = show_obj.first_aired_regular_episode
         if ep_obj and ep_obj.airdate and ep_obj.airdate > datetime.date.fromtimestamp(1):
             show_age = (today - ep_obj.airdate).days
             # noinspection PyTypeChecker
@@ -573,15 +394,23 @@ def should_recheck_update_ids(show_obj):
 
 def load_mapped_ids(**kwargs):
     logger.log('Start loading TV info mappings...')
+    if 'load_all' in kwargs:
+        del kwargs['load_all']
+        my_db = db.DBConnection()
+        sql_result = my_db.select('SELECT * FROM indexer_mapping ORDER BY indexer, indexer_id')
+    else:
+        sql_result = None
     for cur_show_obj in sickbeard.showList:
         with cur_show_obj.lock:
             n_kargs = kwargs.copy()
             if 'update' in kwargs and should_recheck_update_ids(cur_show_obj):
                 n_kargs['recheck'] = True
+            if sql_result:
+                n_kargs['im_sql_result'] = sql_result
             try:
                 cur_show_obj.ids = sickbeard.indexermapper.map_indexers_to_show(cur_show_obj, **n_kargs)
             except (BaseException, Exception):
-                logger.log('Error loading mapped id\'s for show: %s' % cur_show_obj.name, logger.ERROR)
+                logger.debug('Error loading mapped id\'s for show: %s' % cur_show_obj.unique_name)
                 logger.log('Traceback: %s' % traceback.format_exc(), logger.ERROR)
     logger.log('TV info mappings loaded')
 
