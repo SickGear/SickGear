@@ -1,5 +1,6 @@
 ﻿### 0.25.0 (2021-xx-xx xx:xx:xx UTC)
 
+* Add provider TorrentDB
 
 
 [develop changelog]
