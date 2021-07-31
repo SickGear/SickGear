@@ -26,35 +26,54 @@ from _23 import b64encodestring
 
 
 class TransmissionAPI(GenericClient):
+    # RPC spec; https://github.com/transmission/transmission/blob/master/extras/rpc-spec.txt
+
     def __init__(self, host=None, username=None, password=None):
 
         super(TransmissionAPI, self).__init__('Transmission', host, username, password)
 
         self.url = self.host + 'transmission/rpc'
         self.blankable, self.download_dir = None, None
+        self.rpc_version = 0
 
     def _get_auth(self):
 
+        auth = None
         try:
             response = self.session.post(self.url, json={'method': 'session-get'},
                                          timeout=120, verify=sickbeard.TORRENT_VERIFY_CERT)
-            self.auth = re.search(r'(?i)X-Transmission-Session-Id:\s*(\w+)', response.text).group(1)
+            auth = re.search(r'(?i)X-Transmission-Session-Id:\s*(\w+)', response.text).group(1)
         except (BaseException, Exception):
-            return None
+            try:
+                # noinspection PyUnboundLocalVariable
+                auth = response.headers.get('X-Transmission-Session-Id')
+                if not auth:
+                    resp = response.json()
+                    auth = resp['arguments']['session-id']
+            except (BaseException, Exception):
+                pass
+
+        if not self.auth:
+            if not auth:
+                return False
+            self.auth = auth
 
         self.session.headers.update({'x-transmission-session-id': self.auth})
 
         # Validating Transmission authorization
         response = self._request(method='post', json={'method': 'session-get', 'arguments': {}})
 
+        resp = {}
         try:
             resp = response.json()
             self.blankable = 14386 >= int(re.findall(r'.*[(](\d+)', resp.get('arguments', {}).get('version', '(0)'))[0])
-            self.download_dir = resp.get('arguments', {}).get('download-dir', '')
         except (BaseException, Exception):
             pass
 
-        return self.auth
+        self.rpc_version = resp.get('arguments', {}).get('rpc-version', 0)
+        self.download_dir = resp.get('arguments', {}).get('download-dir', '')
+        client_text = '%s %s' % (self.name, resp.get('arguments', {}).get('version', '0').split()[0] or '')
+        return True, 'Success: Connected and authenticated to %s' % client_text
 
     def _add_torrent_uri(self, result):
 
@@ -65,6 +84,11 @@ class TransmissionAPI(GenericClient):
         return self._add_torrent({'metainfo': b64encodestring(result.content)})
 
     def _add_torrent(self, t_object):
+
+        # populate blankable and download_dir
+        if not self._get_auth():
+            logger.log('%s: Authentication failed' % self.name, logger.ERROR)
+            return False
 
         download_dir = None
         if sickbeard.TORRENT_PATH or self.blankable:
@@ -82,6 +106,13 @@ class TransmissionAPI(GenericClient):
 
         return 'success' == response.json().get('result', '')
 
+    def _rpc_torrent_set(self, arguments):
+        try:
+            response = self._request(method='post', json={'method': 'torrent-set', 'arguments': arguments})
+            return 'success' == response.json().get('result', '')
+        except(BaseException, Exception):
+            return False
+
     def _set_torrent_ratio(self, result):
 
         ratio, mode = (result.ratio, None)[not result.ratio], 0
@@ -91,43 +122,44 @@ class TransmissionAPI(GenericClient):
             elif 0 <= float(ratio):
                 ratio, mode = float(ratio), 1  # Stop seeding at seedRatioLimit
 
-        response = self._request(method='post', json={
-            'method': 'torrent-set',
-            'arguments': {'ids': [result.hash], 'seedRatioLimit': ratio, 'seedRatioMode': mode}})
-
-        return 'success' == response.json().get('result', '')
+        return self._rpc_torrent_set(dict(ids=[result.hash], seedRatioLimit=ratio, seedRatioMode=mode))
 
     def _set_torrent_seed_time(self, result):
 
         if result.provider.seed_time or (sickbeard.TORRENT_SEED_TIME and -1 != sickbeard.TORRENT_SEED_TIME):
             seed_time = result.provider.seed_time or sickbeard.TORRENT_SEED_TIME
 
-            response = self._request(method='post', json={
-                'method': 'torrent-set',
-                'arguments': {'ids': [result.hash], 'seedIdleLimit': int(seed_time) * 60, 'seedIdleMode': 1}})
+            return self._rpc_torrent_set(dict(ids=[result.hash], seedIdleLimit=int(seed_time) * 60, seedIdleMode=1))
 
-            return 'success' == response.json().get('result', '')
         return True
 
     def _set_torrent_priority(self, result):
 
-        arguments = {'ids': [result.hash]}
+        arguments = dict(ids=[result.hash])
 
+        level = 'priority-normal'
         if -1 == result.priority:
-            arguments['priority-low'] = []
+            level = 'priority-low'
         elif 1 == result.priority:
             # set high priority for all files in torrent
-            arguments['priority-high'] = []
+            level = 'priority-high'
             # move torrent to the top if the queue
             arguments['queuePosition'] = 0
             if sickbeard.TORRENT_HIGH_BANDWIDTH:
                 arguments['bandwidthPriority'] = 1
-        else:
-            arguments['priority-normal'] = []
 
-        response = self._request(method='post', json={'method': 'torrent-set', 'arguments': arguments})
+        arguments[level] = []
 
-        return 'success' == response.json().get('result', '')
+        return self._rpc_torrent_set(arguments)
+
+    def _set_torrent_label(self, search_result):
+
+        label = sickbeard.TORRENT_LABEL
+
+        if 16 > self.rpc_version or not label:
+            return super(TransmissionAPI, self)._set_torrent_label(search_result)
+
+        return self._rpc_torrent_set(dict(ids=[search_result.hash], labels=label.split(',')))
 
 
 api = TransmissionAPI()
