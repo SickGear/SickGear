@@ -6,18 +6,21 @@ __author__ = 'Prinz23'
 __version__ = '1.0'
 __api_version__ = '1.0.0'
 
-import logging
 import datetime
+import logging
+import re
+
 import requests
-from requests.packages.urllib3.util.retry import Retry
+from urllib3.util.retry import Retry
 from requests.adapters import HTTPAdapter
 
 from six import iteritems
 from sg_helpers import get_url, try_int
 from lib.dateutil.parser import parser
+# noinspection PyProtectedMember
 from lib.dateutil.tz.tz import _datetime_to_timestamp
 from lib.exceptions_helper import ConnectionSkipException, ex
-from .tvmaze_exceptions import *
+# from .tvmaze_exceptions import *
 from lib.tvinfo_base import TVInfoBase, TVInfoImage, TVInfoImageSize, TVInfoImageType, Character, Crew, \
     crew_type_names, Person, RoleTypes, TVInfoShow, TVInfoEpisode, TVInfoIDs, TVInfoSeason, PersonGenders, \
     TVINFO_TVMAZE, TVINFO_TVDB, TVINFO_IMDB
@@ -25,7 +28,7 @@ from lib.pytvmaze import tvmaze
 
 # noinspection PyUnreachableCode
 if False:
-    from typing import Any, AnyStr, Dict, List, Optional, Union
+    from typing import Any, AnyStr, Dict, List, Optional
     from six import integer_types
 
 log = logging.getLogger('tvmaze.api')
@@ -38,8 +41,10 @@ def tvmaze_endpoint_standard_get(url):
     retries = Retry(total=5,
                     backoff_factor=0.1,
                     status_forcelist=[429])
+    # noinspection HttpUrlsUsage
     s.mount('http://', HTTPAdapter(max_retries=retries))
     s.mount('https://', HTTPAdapter(max_retries=retries))
+    # noinspection PyProtectedMember
     return get_url(url, json=True, session=s, hooks={'response': tvmaze._record_hook}, raise_skip_exception=True)
 
 
@@ -139,10 +144,10 @@ class TvMaze(TVInfoBase):
             return {'seriesname': s.name, 'id': s.id, 'firstaired': s.premiered,
                     'network': s.network and s.network.name,
                     'genres': s.genres, 'overview': s.summary,
-                    'aliases': [a.name for a in s.akas], 'image': s.image and s.image.get('original'), 
-                    'ids': TVInfoIDs(tvdb=s.externals.get('thetvdb'), rage=s.externals.get('tvrage'), tvmaze=s.id,
-                                     imdb=s.externals.get('imdb') and try_int(s.externals.get('imdb').replace('tt', ''),
-                                                                              None))}
+                    'aliases': [a.name for a in s.akas], 'image': s.image and s.image.get('original'),
+                    'ids': TVInfoIDs(
+                        tvdb=s.externals.get('thetvdb'), rage=s.externals.get('tvrage'), tvmaze=s.id,
+                        imdb=s.externals.get('imdb') and try_int(s.externals.get('imdb').replace('tt', ''), None))}
         results = []
         if ids:
             for t, p in iteritems(ids):
@@ -201,11 +206,11 @@ class TvMaze(TVInfoBase):
         return results
 
     def _set_episode(self, sid, ep_obj):
-        for _k, _s in [('seasonnumber', 'season_number'), ('episodenumber', 'episode_number'),
-                       ('episodename', 'title'), ('overview', 'summary'), ('firstaired', 'airdate'),
-                       ('airtime', 'airtime'), ('runtime', 'runtime'),
-                       ('seriesid', 'maze_id'), ('id', 'maze_id'), ('is_special', 'special'),
-                       ('filename', 'image')]:
+        for _k, _s in (
+                ('seasonnumber', 'season_number'), ('episodenumber', 'episode_number'),
+                ('episodename', 'title'), ('overview', 'summary'), ('firstaired', 'airdate'),
+                ('airtime', 'airtime'), ('runtime', 'runtime'),
+                ('seriesid', 'maze_id'), ('id', 'maze_id'), ('is_special', 'special'), ('filename', 'image')):
             if 'filename' == _k:
                 image = getattr(ep_obj, _s, {}) or {}
                 image = image.get('original') or image.get('medium')
@@ -221,7 +226,8 @@ class TvMaze(TVInfoBase):
             except (BaseException, Exception):
                 pass
 
-    def _set_network(self, show_obj, network, is_stream):
+    @staticmethod
+    def _set_network(show_obj, network, is_stream):
         show_obj['network'] = network.name
         show_obj['network_timezone'] = network.timezone
         show_obj['network_country'] = network.country
@@ -229,17 +235,21 @@ class TvMaze(TVInfoBase):
         show_obj['network_id'] = network.maze_id
         show_obj['network_is_stream'] = is_stream
 
+    def _get_tvm_show(self, show_id, get_ep_info):
+        try:
+            self.show_not_found = False
+            return tvm_obj.get_show(maze_id=show_id, embed='cast%s' % ('', ',episodeswithspecials')[get_ep_info])
+        except tvmaze.ShowNotFound:
+            self.show_not_found = True
+        except (BaseException, Exception):
+            log.debug('Error getting data for tvmaze show id: %s' % show_id)
+
     def _get_show_data(self, sid, language, get_ep_info=False, banners=False, posters=False, seasons=False,
                        seasonwides=False, fanart=False, actors=False, **kwargs):
         log.debug('Getting all series data for %s' % sid)
-        try:
-            self.show_not_found = False
-            show_data = tvm_obj.get_show(maze_id=sid, embed='cast%s' % ('', ',episodeswithspecials')[get_ep_info])
-        except tvmaze.ShowNotFound:
-            self.show_not_found = True
-            return False
-        except (BaseException, Exception) as e:
-            log.debug('Error getting data for tvmaze show id: %s' % sid)
+
+        show_data = self._get_tvm_show(sid, get_ep_info)
+        if not show_data:
             return False
 
         show_obj = self.shows[sid].__dict__
@@ -330,19 +340,20 @@ class TvMaze(TVInfoBase):
                             except (BaseException, Exception):
                                 print('error')
                                 pass
-                            existing_person.p_id, existing_person.name, existing_person.image, existing_person.gender, \
-                            existing_person.birthdate, existing_person.deathdate, existing_person.country, \
-                            existing_person.country_code, existing_person.country_timezone, existing_person.thumb_url, \
-                            existing_person.url, existing_person.ids = \
-                                ch.person.id, ch.person.name, ch.person.image and ch.person.image.get('original'), \
-                                PersonGenders.named.get(ch.person.gender and ch.person.gender.lower(),
-                                                        PersonGenders.unknown),\
-                                person.birthdate, person.deathdate,\
-                                ch.person.country and ch.person.country.get('name'),\
-                                ch.person.country and ch.person.country.get('code'),\
-                                ch.person.country and ch.person.country.get('timezone'),\
-                                ch.person.image and ch.person.image.get('medium'),\
-                                ch.person.url, {TVINFO_TVMAZE: ch.person.id}
+                            (existing_person.p_id, existing_person.name, existing_person.image, existing_person.gender,
+                             existing_person.birthdate, existing_person.deathdate, existing_person.country,
+                             existing_person.country_code, existing_person.country_timezone, existing_person.thumb_url,
+                             existing_person.url, existing_person.ids) = \
+                                (ch.person.id, ch.person.name,
+                                 ch.person.image and ch.person.image.get('original'),
+                                 PersonGenders.named.get(
+                                     ch.person.gender and ch.person.gender.lower(), PersonGenders.unknown),
+                                 person.birthdate, person.deathdate,
+                                 ch.person.country and ch.person.country.get('name'),
+                                 ch.person.country and ch.person.country.get('code'),
+                                 ch.person.country and ch.person.country.get('timezone'),
+                                 ch.person.image and ch.person.image.get('medium'),
+                                 ch.person.url, {TVINFO_TVMAZE: ch.person.id})
                         else:
                             existing_character.person.append(person)
                     else:
@@ -396,7 +407,7 @@ class TvMaze(TVInfoBase):
             show_obj['ids'] = TVInfoIDs(tvdb=show_data.externals.get('thetvdb'),
                                         rage=show_data.externals.get('tvrage'),
                                         imdb=show_data.externals.get('imdb') and
-                                             try_int(show_data.externals.get('imdb').replace('tt', ''), None))
+                                        try_int(show_data.externals.get('imdb').replace('tt', ''), None))
 
         if show_data.network:
             self._set_network(show_obj, show_data.network, False)
@@ -406,15 +417,8 @@ class TvMaze(TVInfoBase):
         if get_ep_info and not getattr(self.shows.get(sid), 'ep_loaded', False):
             log.debug('Getting all episodes of %s' % sid)
             if None is show_data:
-                try:
-                    self.show_not_found = False
-                    show_data = tvm_obj.get_show(maze_id=sid, embed='cast%s' % ('', ',episodeswithspecials')[
-                        get_ep_info])
-                except tvmaze.ShowNotFound:
-                    self.show_not_found = True
-                    return False
-                except (BaseException, Exception) as e:
-                    log.debug('Error getting data for tvmaze show id: %s' % sid)
+                show_data = self._get_tvm_show(sid, get_ep_info)
+                if not show_data:
                     return False
 
             if show_data.episodes:
@@ -543,3 +547,21 @@ class TvMaze(TVInfoBase):
             p = None
         if p:
             return self._convert_person(p)
+
+    def get_premieres(self):
+        # type: (...) -> List[tvmaze.Episode]
+        return self.filtered_schedule(lambda e: all([1 == e.season_number, 1 == e.episode_number]))
+
+    def get_returning(self):
+        # type: (...) -> List[tvmaze.Episode]
+        return self.filtered_schedule(lambda e: all([1 != e.season_number, 1 == e.episode_number]))
+
+    @staticmethod
+    def filtered_schedule(condition):
+        try:
+            return sorted([
+                e for e in tvmaze.get_full_schedule()
+                if condition(e) and (None is e.show.language or re.search('(?i)eng|jap', e.show.language))],
+                key=lambda x: x.show.premiered or x.airstamp)
+        except(BaseException, Exception):
+            return []

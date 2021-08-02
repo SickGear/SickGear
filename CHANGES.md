@@ -79,6 +79,9 @@
 * Add fetch extra data fallback from TMDB for persons
 * Change fanart icon
 * Add provider TorrentDB
+* Add menu Shows/"TVmaze Cards"
+* Add show name/networks card user input filter
+* Change only auto refresh card view if a recoverable error occurs
 
 
 [develop changelog]
