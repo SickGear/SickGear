@@ -93,7 +93,6 @@ from lib.dateutil.relativedelta import relativedelta
 from lib.fuzzywuzzy import fuzz
 from lib.libtrakt import TraktAPI
 from lib.libtrakt.exceptions import TraktException, TraktAuthException
-from lib.tvmaze_api.tvmaze_api import TvMaze
 
 import lib.rarfile.rarfile as rarfile
 
@@ -5195,10 +5194,13 @@ class AddShows(Home):
             if (int(_datetime_to_timestamp(datetime.datetime.now()))
                     < sickbeard.MEMCACHE.get(mem_key, {}).get('last_update', 0)):
                 return sickbeard.MEMCACHE.get(mem_key).get('data')
+
+            tvinfo_config = sickbeard.TVInfoAPI(TVINFO_TVMAZE).api_params.copy()
+            t = sickbeard.TVInfoAPI(TVINFO_TVMAZE).setup(**tvinfo_config)
             if 'prem' in mem_key:
-                data = TvMaze().get_premieres()
+                data = t.get_premieres()
             else:
-                data = TvMaze().get_returning()
+                data = t.get_returning()
             sickbeard.MEMCACHE[mem_key] = dict(
                 last_update=(30*60) + int(_datetime_to_timestamp(datetime.datetime.now())), data=data)
             return data
@@ -5211,21 +5213,23 @@ class AddShows(Home):
         oldest, newest, oldest_dt, newest_dt, use_networks = None, None, 9999999, 0, False
         dedupe = []
         parseinfo = dateutil.parser.parserinfo(dayfirst=False, yearfirst=True)
+        base_url = sickbeard.TVInfoAPI(TVINFO_TVMAZE).config['show_url']
         for cur_episode_info in episodes:
-            if cur_episode_info.show.maze_id in dedupe:
+            if cur_episode_info.show.id in dedupe:
                 continue
-            dedupe += [cur_episode_info.show.maze_id]
+            dedupe += [cur_episode_info.show.id]
 
             try:
                 if cur_episode_info.airtime:
                     airtime = dateutil.parser.parse(cur_episode_info.airtime).time()
                 else:
-                    airtime = cur_episode_info.airstamp and dateutil.parser.parse(cur_episode_info.airstamp).time()
+                    airtime = cur_episode_info.timestamp \
+                              and SGDatetime.from_timestamp(cur_episode_info.timestamp).time()
                 if (0, 0) == (airtime.hour, airtime.minute):
                     airtime = dateutil.parser.parse('23:59').time()
                 dt = datetime.datetime.combine(
                     dateutil.parser.parse(
-                        (cur_episode_info.show.premiered or cur_episode_info.airdate), parseinfo).date(), airtime)
+                        (cur_episode_info.show.firstaired or cur_episode_info.firstaired), parseinfo).date(), airtime)
                 dt_ordinal = dt.toordinal()
                 now_ordinal = datetime.datetime.now().toordinal()
                 when_past = dt_ordinal < now_ordinal
@@ -5242,36 +5246,36 @@ class AddShows(Home):
                 if 'Return' in browse_title:
                     returning = '9'
                     returning_str = 'TBC'
-                    if cur_episode_info.airdate:
-                        returning = cur_episode_info.airdate
+                    if cur_episode_info.firstaired:
+                        returning = cur_episode_info.firstaired
                         dt_returning = datetime.datetime.combine(
                             dateutil.parser.parse(returning, parseinfo).date(), airtime)
                         when_past = dt_returning.toordinal() < now_ordinal
                         returning_str = SGDatetime.sbfdate(dt_returning)
 
                 try:
-                    img_uri = next(i for i in cur_episode_info.show.images
-                                   if i.main and 'poster' == i.type).resolutions['original']['url']
+                    img_uri = cur_episode_info.show.poster
                     images = dict(poster=dict(thumb='imagecache?path=browse/thumb/tvmaze&source=%s' % img_uri))
                     sickbeard.CACHE_IMAGE_URL_LIST.add_url(img_uri)
                 except(BaseException, Exception):
                     images = {}
 
-                ids = dict(tvmaze=cur_episode_info.maze_id)
-                imdb_id = cur_episode_info.show.externals.get('imdb')
+                ids = dict(tvmaze=cur_episode_info.id)
+                imdb_id = cur_episode_info.show.imdb_id
                 if imdb_id:
-                    ids.update(dict(imdb=imdb_id))
-                tvdb_id = cur_episode_info.show.externals.get('thetvdb')
+                    if isinstance(imdb_id, string_types) and 'tt' in imdb_id:
+                        ids.update(dict(imdb=imdb_id))
+                    elif isinstance(imdb_id, integer_types):
+                        ids.update(dict(imdb='tt%08d' % imdb_id))
+                tvdb_id = cur_episode_info.show.ids.get(TVINFO_TVDB)
                 if tvdb_id:
                     ids.update(dict(tvdb=tvdb_id))
 
-                network_name = (getattr(cur_episode_info.show.network, 'name', None)
-                                or getattr(cur_episode_info.show.web_channel, 'name', None) or '')
+                network_name = cur_episode_info.show.network
                 cc = 'US'
                 if network_name:
                     use_networks = True
-                    cc = (getattr(cur_episode_info.show.network, 'code', None)
-                          or getattr(cur_episode_info.show.web_channel, 'code', None) or 'US')
+                    cc = cur_episode_info.show.network_country_code or cc
 
                 language = ((cur_episode_info.show.language and 'jap' in cur_episode_info.show.language.lower())
                             and 'jp' or 'en')
@@ -5282,23 +5286,23 @@ class AddShows(Home):
                     returning=returning,
                     returning_str=returning_str,
                     when_past=when_past,
-                    episode_number=cur_episode_info.episode_number,
-                    episode_season=cur_episode_info.season_number,
-                    episode_overview='' if not cur_episode_info.summary else cur_episode_info.summary.strip(),
-                    genres=(', '.join(['%s' % v for v in cur_episode_info.show.genres])
-                            or cur_episode_info.show.type or ''),
+                    episode_number=cur_episode_info.episodenumber,
+                    episode_season=cur_episode_info.seasonnumber,
+                    episode_overview='' if not cur_episode_info.overview else cur_episode_info.overview.strip(),
+                    genres=(', '.join(['%s' % v for v in cur_episode_info.show.genre_list])
+                            or cur_episode_info.show.show_type or ''),
                     images=images,
-                    overview=('No overview yet' if not cur_episode_info.show.summary
-                              else helpers.xhtml_escape(cur_episode_info.show.summary.strip()[:250:])
+                    overview=('No overview yet' if not cur_episode_info.show.overview
+                              else helpers.xhtml_escape(cur_episode_info.show.overview.strip()[:250:])
                               .strip('*').strip()),
-                    title=cur_episode_info.show.name,
+                    title=cur_episode_info.show.seriesname,
                     language=language,
                     language_img=sickbeard.MEMCACHE_FLAG_IMAGES.get(language, False),
                     country=cc,
                     country_img=sickbeard.MEMCACHE_FLAG_IMAGES.get(cc.lower(), False),
                     network=network_name,
-                    rating=cur_episode_info.show.weight or 0,
-                    url_src_db=cur_episode_info.show.url,
+                    rating=cur_episode_info.show.rating or cur_episode_info.show.popularity or 0,
+                    url_src_db=base_url % cur_episode_info.show.id,
                 ))
             except (BaseException, Exception):
                 pass

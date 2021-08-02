@@ -30,6 +30,7 @@ from lib.pytvmaze import tvmaze
 if False:
     from typing import Any, AnyStr, Dict, List, Optional
     from six import integer_types
+    from lib.pytvmaze.tvmaze import Episode as TVMazeEpisode, Show as TVMazeShow
 
 log = logging.getLogger('tvmaze.api')
 log.addHandler(logging.NullHandler())
@@ -548,20 +549,116 @@ class TvMaze(TVInfoBase):
         if p:
             return self._convert_person(p)
 
-    def get_premieres(self):
-        # type: (...) -> List[tvmaze.Episode]
-        return self.filtered_schedule(lambda e: all([1 == e.season_number, 1 == e.episode_number]))
+    def get_premieres(self, result_count=100, get_extra_images=False, **kwargs):
+        # type: (...) -> List[TVInfoEpisode]
+        return self._filtered_schedule(lambda e: all([1 == e.season_number, 1 == e.episode_number]),
+                                       get_images=get_extra_images)
 
-    def get_returning(self):
-        # type: (...) -> List[tvmaze.Episode]
-        return self.filtered_schedule(lambda e: all([1 != e.season_number, 1 == e.episode_number]))
+    def get_returning(self, result_count=100, get_extra_images=False, **kwargs):
+        # type: (...) -> List[TVInfoEpisode]
+        return self._filtered_schedule(lambda e: all([1 != e.season_number, 1 == e.episode_number]),
+                                       get_images=get_extra_images)
 
-    @staticmethod
-    def filtered_schedule(condition):
+    def _make_episode(self, episode_data, show_data=None, get_images=False):
+        # type: (TVMazeEpisode, TVMazeShow, bool) -> TVInfoEpisode
+        """
+        make out of TVMazeEpisode object and optionally TVMazeShow a TVInfoEpisode
+        """
+        tv_s = TVInfoShow()
+        tv_s.seriesname = show_data.name
+        tv_s.id = show_data.maze_id
+        tv_s.seriesid = tv_s.id
+        tv_s.language = show_data.language
+        tv_s.overview = show_data.summary
+        tv_s.firstaired = show_data.premiered
+        tv_s.runtime = show_data.average_runtime or show_data.runtime
+        tv_s.vote_average = show_data.rating and show_data.rating.get('average')
+        tv_s.popularity = show_data.weight
+        tv_s.genre_list = show_data.genres or []
+        tv_s.genre = ', '.join(tv_s.genre_list)
+        tv_s.official_site = show_data.official_site
+        tv_s.status = show_data.status
+        tv_s.show_type = show_data.type
+        tv_s.lastupdated = show_data.updated
+        tv_s.poster = show_data.image and show_data.image.get('original')
+        tv_s.aliases = [a.name for a in show_data.akas]
+        if 'days' in show_data.schedule:
+            tv_s.airs_dayofweek = ', '.join(show_data.schedule['days'])
+        network = show_data.network or show_data.web_channel
+        if network:
+            tv_s.network_is_stream = None is not show_data.web_channel
+            tv_s.network = network.name
+            tv_s.network_id = network.maze_id
+            tv_s.network_country = network.country
+            tv_s.network_country_code = network.code
+            tv_s.network_timezone = network.timezone
+        if get_images and show_data.images:
+            b_set, f_set, p_set = False, False, False
+            for img in show_data.images:
+                img_type = img_type_map.get(img.type, TVInfoImageType.other)
+                img_width, img_height = img.resolutions['original'].get('width'), \
+                                        img.resolutions['original'].get('height')
+                img_ar = img_width and img_height and float(img_width) / float(img_height)
+                img_ar_type = self._which_type(img_width, img_ar)
+                if TVInfoImageType.poster == img_type and img_ar and img_ar_type != img_type and \
+                        tv_s.poster == img.resolutions.get('original')['url']:
+                    p_set = False
+                    tv_s.poster = None
+                    tv_s.poster_thumb = None
+                img_type = (TVInfoImageType.other, img_type)[
+                    not img_ar or img_ar_type == img_type or
+                    img_type not in (TVInfoImageType.banner, TVInfoImageType.poster, TVInfoImageType.fanart)]
+                img_src = {}
+                for res, img_url in iteritems(img.resolutions):
+                    img_size = img_size_map.get(res)
+                    if img_size:
+                        img_src[img_size] = img_url.get('url')
+                tv_s.images.setdefault(img_type, []).append(
+                    TVInfoImage(
+                        image_type=img_type, sizes=img_src, img_id=img.id, main_image=img.main,
+                        type_str=img.type, width=img_width, height=img_height, aspect_ratio=img_ar))
+                if not p_set and TVInfoImageType.poster == img_type:
+                    p_set = True
+                    tv_s.poster = img.resolutions.get('original')['url']
+                    tv_s.poster_thumb = img.resolutions.get('original')['url']
+                elif not b_set and 'banner' == img.type and TVInfoImageType.banner == img_type:
+                    b_set = True
+                    tv_s.banner = img.resolutions.get('original')['url']
+                    tv_s.banner_thumb = img.resolutions.get('medium')['url']
+                elif not f_set and 'background' == img.type and TVInfoImageType.fanart == img_type:
+                    f_set = True
+                    tv_s.fanart = img.resolutions.get('original')['url']
+        tv_s.ids = TVInfoIDs(
+            tvdb=show_data.externals.get('thetvdb'), rage=show_data.externals.get('tvrage'), tvmaze=show_data.id,
+            imdb=show_data.externals.get('imdb') and try_int(show_data.externals.get('imdb').replace('tt', ''), None))
+        tv_s.imdb_id = show_data.externals.get('imdb') and try_int(show_data.externals.get('imdb').replace('tt', ''))
+        ep_obj = TVInfoEpisode()
+        ep_obj.id = episode_data.maze_id
+        ep_obj.seasonnumber = episode_data.season_number
+        ep_obj.episodenumber = episode_data.episode_number
+        ep_obj.episodename = episode_data.title
+        ep_obj.airtime = episode_data.airtime
+        ep_obj.firstaired = episode_data.airdate
+        if episode_data.airstamp:
+            try:
+                at = _datetime_to_timestamp(tz_p.parse(episode_data.airstamp))
+                ep_obj.timestamp = at
+            except (BaseException, Exception):
+                pass
+        ep_obj.filename = episode_data.image and (episode_data.image.get('original') or
+                                                  episode_data.image.get('medium'))
+        ep_obj.is_special = episode_data.is_special()
+        ep_obj.overview = episode_data.summary
+        ep_obj.runtime = episode_data.runtime
+        ep_obj.show = tv_s
+        return ep_obj
+
+    def _filtered_schedule(self, condition, get_images=False):
         try:
-            return sorted([
+            result = sorted([
                 e for e in tvmaze.get_full_schedule()
                 if condition(e) and (None is e.show.language or re.search('(?i)eng|jap', e.show.language))],
                 key=lambda x: x.show.premiered or x.airstamp)
-        except(BaseException, Exception):
+            return [self._make_episode(r, r.show, get_images) for r in result]
+        except(BaseException, Exception) as e:
             return []
