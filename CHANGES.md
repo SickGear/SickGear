@@ -86,6 +86,8 @@
 
 [develop changelog]
 
+* Fix use show id when adding from TVmaze card
+* Change revert all IMDb ids to 7 chars
 
 
 ### 0.24.14 (2021-07-31 08:50:00 UTC)

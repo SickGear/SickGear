@@ -185,7 +185,7 @@ class TraktIndexer(TVInfoBase):
         if TraktSearchTypes.trakt_slug == search_type:
             url = '/shows/%s?extended=full' % series
         elif TraktSearchTypes.text != search_type:
-            url = '/search/%s/%s?type=%s&extended=full&limit=100' % (search_type, (series, 'tt%08d' % series)[
+            url = '/search/%s/%s?type=%s&extended=full&limit=100' % (search_type, (series, 'tt%07d' % series)[
                 TraktSearchTypes.imdb_id == search_type and not str(series).startswith('tt')],
                                                                      ','.join(self.config['result_types']))
         else:
