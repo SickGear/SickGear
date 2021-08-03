@@ -176,7 +176,7 @@ tvinfo_config[src].update(dict(
 src = TVINFO_IMDB
 tvinfo_config[src].update(dict(
     base_url=tvinfo_config[src]['main_url'],
-    show_url='%stitle/tt%%08d' % tvinfo_config[src]['main_url'],
+    show_url='%stitle/tt%%07d' % tvinfo_config[src]['main_url'],
     finder='%sfind?q=%s&s=tt&ttype=tv&ref_=fn_tv' % (tvinfo_config[src]['main_url'], '%s'),
 ))
 

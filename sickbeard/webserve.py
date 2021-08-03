@@ -5260,7 +5260,7 @@ class AddShows(Home):
                 except(BaseException, Exception):
                     images = {}
 
-                ids = dict(tvmaze=cur_episode_info.id)
+                ids = dict(tvmaze=cur_episode_info.show.id)
                 imdb_id = cur_episode_info.show.imdb_id
                 if imdb_id:
                     ids['imdb'] = imdb_id

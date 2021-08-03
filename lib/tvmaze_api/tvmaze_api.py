@@ -166,7 +166,7 @@ class TvMaze(TVInfoBase):
                     elif t == TVINFO_IMDB:
                         if not self.config.get('cache_search') or (None is shows and not is_none):
                             try:
-                                show = tvmaze.lookup_imdb((p, 'tt%08d' % p)[not str(p).startswith('tt')])
+                                show = tvmaze.lookup_imdb((p, 'tt%07d' % p)[not str(p).startswith('tt')])
                                 self._set_cache_entry(cache_id_key, show, expire=self.search_cache_expire)
                             except (BaseException, Exception):
                                 continue
@@ -632,7 +632,7 @@ class TvMaze(TVInfoBase):
             imdb=show_data.externals.get('imdb') and try_int(show_data.externals.get('imdb').replace('tt', ''), None))
         ti_show.imdb_id = show_data.externals.get('imdb')
         if isinstance(ti_show.imdb_id, integer_types):
-            ti_show.imdb_id = 'tt%08d' % ti_show.imdb_id
+            ti_show.imdb_id = 'tt%07d' % ti_show.imdb_id
 
         ti_episode = TVInfoEpisode()
         ti_episode.id = episode_data.maze_id
