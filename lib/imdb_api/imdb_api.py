@@ -80,7 +80,7 @@ class IMDbIndexer(TVInfoBase):
                         is_none, shows = self._get_cache_entry(cache_id_key)
                         if not self.config.get('cache_search') or (None is shows and not is_none):
                             try:
-                                show = imdbpie.Imdb().get_title_auxiliary('tt%07d' % p)
+                                show = imdbpie.Imdb().get_title_auxiliary('tt%08d' % p)
                             except (BaseException, Exception):
                                 continue
                             self._set_cache_entry(cache_id_key, show, expire=self.search_cache_expire)

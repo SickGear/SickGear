@@ -126,6 +126,9 @@ class TVInfoIDs(object):
         return {TVINFO_TVDB: self.tvdb, TVINFO_TMDB: self.tmdb, TVINFO_TVMAZE: self.tvmaze,
                 TVINFO_IMDB: self.imdb, TVINFO_TRAKT: self.trakt, TVINFO_TVRAGE: self.rage}.get(key)
 
+    def get(self, key):
+        return self.__getitem__(key)
+
     def __iter__(self):
         for s, v in [(TVINFO_TVDB, self.tvdb), (TVINFO_TMDB, self.tmdb), (TVINFO_TVMAZE, self.tvmaze),
                      (TVINFO_IMDB, self.imdb), (TVINFO_TRAKT, self.trakt), (TVINFO_TVRAGE, self.rage)]:
@@ -502,14 +505,16 @@ class TVInfoEpisode(dict):
         self.thumbadded = None  # type: Optional[AnyStr]
         self.rating = None  # type: Union[integer_types, float]
         self.siteratingcount = None  # type: integer_types
+        self.show = None  # type: Optional[TVInfoShow]
 
     def __str__(self):
+        show_name = self.show and self.show.seriesname and '<Show  %s> - ' % self.show.seriesname
         seasno, epno = int(getattr(self, 'seasonnumber', 0)), int(getattr(self, 'episodenumber', 0))
         epname = getattr(self, 'episodename', '')
         if None is not epname:
-            return '<Episode %02dx%02d - %r>' % (seasno, epno, epname)
+            return '%s<Episode %02dx%02d - %r>' % (show_name, seasno, epno, epname)
         else:
-            return '<Episode %02dx%02d>' % (seasno, epno)
+            return '%s<Episode %02dx%02d>' % (show_name, seasno, epno)
 
     def __getattr__(self, key):
         if key in self:
@@ -554,6 +559,7 @@ class TVInfoEpisode(dict):
             if cur_value.find(text_type(term).lower()) > -1:
                 return self
 
+    __unicode__ = __str__
     __repr__ = __str__
     __nonzero__ = __bool__
 
@@ -1146,8 +1152,22 @@ class TVInfoBase(object):
         """
         return []
 
-    def discover(self, result_count=100, **kwargs):
+    def discover(self, result_count=100, get_extra_images=False, **kwargs):
+        # type: (...) -> List[TVInfoEpisode]
+        return []
+
+    def get_premieres(self, result_count=100, **kwargs):
+        # type: (...) -> List[TVInfoEpisode]
+        """
+        get all premiering shows
+        """
+        return []
+
+    def get_returning(self, result_count=100, get_extra_images=False, **kwargs):
         # type: (...) -> List[TVInfoShow]
+        """
+        get all returning shows
+        """
         return []
 
     def __getitem__(self, item):

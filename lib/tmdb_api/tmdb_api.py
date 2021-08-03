@@ -210,7 +210,7 @@ class TmdbIndexer(TVInfoBase):
                         is_none, shows = self._get_cache_entry(cache_id_key)
                         if not self.config.get('cache_search') or (None is shows and not is_none):
                             try:
-                                show = tmdbsimple.Find(id=(p, 'tt%07d' % p)[t == TVINFO_IMDB]).info(
+                                show = tmdbsimple.Find(id=(p, 'tt%08d' % p)[t == TVINFO_IMDB]).info(
                                     external_source=id_map[t])
                                 if show.get('tv_results') and 1 == len(show['tv_results']):
                                     show = tmdbsimple.TV(id=show['tv_results'][0]['id']).info(

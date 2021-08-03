@@ -5168,6 +5168,159 @@ class AddShows(Home):
 
         return self.new_show('|'.join(['', '', '', show_name]), use_show_name=True)
 
+    def tvm_default(self):
+
+        return self.redirect('/add-shows/%s' % ('tvm_premieres', sickbeard.TVM_MRU)[any(sickbeard.TVM_MRU)])
+
+    def tvm_premieres(self, **kwargs):
+        return self.browse_tvm(
+            'New Shows at TVmaze', mode='premieres', **kwargs)
+
+    def tvm_returning(self, **kwargs):
+        return self.browse_tvm(
+            'Returning Shows at TVmaze', mode='returning', **kwargs)
+
+    def browse_tvm(self, browse_title, **kwargs):
+
+        browse_type = 'TVmaze'
+
+        footnote = None
+        filtered = []
+
+        def card_cache(mem_key):
+            # noinspection PyProtectedMember
+            from lib.dateutil.tz.tz import _datetime_to_timestamp
+
+            now = int(_datetime_to_timestamp(datetime.datetime.now()))
+            if (sickbeard.MEMCACHE.get(mem_key, {}).get('data')
+                    and (now < sickbeard.MEMCACHE.get(mem_key, {}).get('expire', 0))):
+                return sickbeard.MEMCACHE.get(mem_key).get('data')
+
+            tvinfo_config = sickbeard.TVInfoAPI(TVINFO_TVMAZE).api_params.copy()
+            t = sickbeard.TVInfoAPI(TVINFO_TVMAZE).setup(**tvinfo_config)
+            if 'prem' in mem_key:
+                data = t.get_premieres()
+            else:
+                data = t.get_returning()
+            sickbeard.MEMCACHE[mem_key] = dict(expire=(30*60) + now, data=data)
+            return data
+
+        if 'New' in browse_title:
+            episodes = card_cache('tvmaze_premiere')
+        else:
+            episodes = card_cache('tvmaze_returning')
+
+        oldest, newest, oldest_dt, newest_dt, use_networks = None, None, 9999999, 0, False
+        dedupe = []
+        parseinfo = dateutil.parser.parserinfo(dayfirst=False, yearfirst=True)
+        base_url = sickbeard.TVInfoAPI(TVINFO_TVMAZE).config['show_url']
+        for cur_episode_info in episodes:
+            if cur_episode_info.show.id in dedupe:
+                continue
+            dedupe += [cur_episode_info.show.id]
+
+            try:
+                if cur_episode_info.airtime:
+                    airtime = dateutil.parser.parse(cur_episode_info.airtime).time()
+                else:
+                    airtime = cur_episode_info.timestamp \
+                              and SGDatetime.from_timestamp(cur_episode_info.timestamp).time()
+                if (0, 0) == (airtime.hour, airtime.minute):
+                    airtime = dateutil.parser.parse('23:59').time()
+                dt = datetime.datetime.combine(
+                    dateutil.parser.parse(
+                        (cur_episode_info.show.firstaired or cur_episode_info.firstaired), parseinfo).date(), airtime)
+                dt_ordinal = dt.toordinal()
+                now_ordinal = datetime.datetime.now().toordinal()
+                when_past = dt_ordinal < now_ordinal
+                dt_string = SGDatetime.sbfdate(dt)
+
+                if dt_ordinal < oldest_dt:
+                    oldest_dt = dt_ordinal
+                    oldest = dt_string
+                if dt_ordinal > newest_dt:
+                    newest_dt = dt_ordinal
+                    newest = dt_string
+
+                returning = returning_str = None
+                if 'Return' in browse_title:
+                    returning = '9'
+                    returning_str = 'TBC'
+                    if cur_episode_info.firstaired:
+                        returning = cur_episode_info.firstaired
+                        dt_returning = datetime.datetime.combine(
+                            dateutil.parser.parse(returning, parseinfo).date(), airtime)
+                        when_past = dt_returning.toordinal() < now_ordinal
+                        returning_str = SGDatetime.sbfdate(dt_returning)
+
+                try:
+                    img_uri = cur_episode_info.show.poster
+                    images = dict(poster=dict(thumb='imagecache?path=browse/thumb/tvmaze&source=%s' % img_uri))
+                    sickbeard.CACHE_IMAGE_URL_LIST.add_url(img_uri)
+                except(BaseException, Exception):
+                    images = {}
+
+                ids = dict(tvmaze=cur_episode_info.id)
+                imdb_id = cur_episode_info.show.imdb_id
+                if imdb_id:
+                    ids['imdb'] = imdb_id
+                tvdb_id = cur_episode_info.show.ids.get(TVINFO_TVDB)
+                if tvdb_id:
+                    ids['tvdb'] = tvdb_id
+
+                network_name = cur_episode_info.show.network
+                cc = 'US'
+                if network_name:
+                    use_networks = True
+                    cc = cur_episode_info.show.network_country_code or cc
+
+                language = ((cur_episode_info.show.language and 'jap' in cur_episode_info.show.language.lower())
+                            and 'jp' or 'en')
+                filtered.append(dict(
+                    ids=ids,
+                    premiered=dt_ordinal,
+                    premiered_str=dt_string,
+                    returning=returning,
+                    returning_str=returning_str,
+                    when_past=when_past,
+                    episode_number=cur_episode_info.episodenumber,
+                    episode_season=cur_episode_info.seasonnumber,
+                    episode_overview='' if not cur_episode_info.overview else cur_episode_info.overview.strip(),
+                    genres=(', '.join(['%s' % v for v in cur_episode_info.show.genre_list])
+                            or cur_episode_info.show.show_type or ''),
+                    images=images,
+                    overview=('No overview yet' if not cur_episode_info.show.overview
+                              else helpers.xhtml_escape(cur_episode_info.show.overview.strip()[:250:])
+                              .strip('*').strip()),
+                    title=cur_episode_info.show.seriesname,
+                    language=language,
+                    language_img=sickbeard.MEMCACHE_FLAG_IMAGES.get(language, False),
+                    country=cc,
+                    country_img=sickbeard.MEMCACHE_FLAG_IMAGES.get(cc.lower(), False),
+                    network=network_name,
+                    rating=cur_episode_info.show.rating or cur_episode_info.show.popularity or 0,
+                    url_src_db=base_url % cur_episode_info.show.id,
+                ))
+            except (BaseException, Exception):
+                pass
+            kwargs.update(dict(oldest=oldest, newest=newest))
+
+        kwargs.update(dict(footnote=footnote, use_votes=False, use_networks=use_networks))
+
+        mode = kwargs.get('mode', '')
+        if mode:
+            func = 'tvm_%s' % mode
+            if callable(getattr(self, func, None)):
+                sickbeard.TVM_MRU = func
+                sickbeard.save_config()
+        return self.browse_shows(browse_type, browse_title, filtered, **kwargs)
+
+    # noinspection PyUnusedLocal
+    def info_tvmaze(self, ids, show_name):
+
+        if not filter_list(lambda tvid_prodid: helpers.find_show_by_id(tvid_prodid), ids.split(' ')):
+            return self.new_show('|'.join(['', '', '', ' '.join([ids, show_name])]), use_show_name=True)
+
     def tvc_default(self):
 
         return self.redirect('/add-shows/%s' % ('tvc_newshows', sickbeard.TVC_MRU)[any(sickbeard.TVC_MRU)])
@@ -5525,7 +5678,7 @@ class AddShows(Home):
     @staticmethod
     def browse_mru(browse_type, **kwargs):
         save_config = False
-        if browse_type in ('AniDB', 'IMDb', 'Metacritic', 'Trakt', 'TVCalendar', 'Nextepisode'):
+        if browse_type in ('AniDB', 'IMDb', 'Metacritic', 'Trakt', 'TVCalendar', 'TVmaze', 'Nextepisode'):
             save_config = True
             sickbeard.BROWSELIST_MRU[browse_type] = dict(
                 showfilter=kwargs.get('showfilter', ''), showsort=kwargs.get('showsort', ''))
@@ -5547,7 +5700,8 @@ class AddShows(Home):
         showsort = t.saved_showsort.split(',')
         t.saved_showsort_sortby = 3 == len(showsort) and showsort[2] or 'by_order'
         t.reset_showsort_sortby = ('votes' in t.saved_showsort_sortby and not kwargs.get('use_votes', True)
-                                   or 'rating' in t.saved_showsort_sortby and not kwargs.get('use_ratings', True))
+                                   or 'rating' in t.saved_showsort_sortby and not kwargs.get('use_ratings', True)
+                                   or 'returning' in t.saved_showsort_sortby and 'Returning' not in browse_title)
         t.is_showsort_desc = ('desc' == (2 <= len(showsort) and showsort[1] or 'asc')) and not t.reset_showsort_sortby
         t.saved_showsort_view = 1 <= len(showsort) and showsort[0] or '*'
         t.all_shows = []
@@ -5635,6 +5789,7 @@ class AddShows(Home):
                     ('order', lambda _x: _x['order']),
                     ('name', lambda _x: _title(_x['title'])),
                     ('premiered', lambda _x: (_x['premiered'], _title(_x['title']))),
+                    ('returning', lambda _x: (_x['returning'], _title(_x['title']))),
                     ('votes', lambda _x: (helpers.try_int(_x['votes']), _title(_x['title']))),
                     ('rating', lambda _x: (helpers.try_float(_x['rating']), _title(_x['title']))),
                     ('rating_votes', lambda _x: (helpers.try_float(_x['rating']), helpers.try_int(_x['votes']),

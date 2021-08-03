@@ -707,7 +707,8 @@ inc_top.tmpl
 }
 
 .sgicon-tvmaze:before{
-	content:"\e89a"
+	content:"\e89a";
+	margin-right:14px
 }
 
 .sgicon-emby:before{
