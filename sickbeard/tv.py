@@ -2757,7 +2757,7 @@ class TVShow(TVShowBase):
 
         old_imdb = self.imdbid
         if show_info.ids.imdb:
-            self.imdbid = 'tt%07d' % show_info.ids.imdb
+            self.imdbid = 'tt%08d' % show_info.ids.imdb
         else:
             self.imdbid = self.dict_prevent_nonetype(show_info, 'imdb_id')
         if old_imdb != self.imdbid:
@@ -2977,7 +2977,7 @@ class TVShow(TVShowBase):
         if not self._imdbid and 0 >= self.ids.get(indexermapper.TVINFO_IMDB, {'id': 0}).get('id', 0):
             return
 
-        imdb_info = {'imdb_id': self._imdbid or 'tt%07d' % self.ids[indexermapper.TVINFO_IMDB]['id'],
+        imdb_info = {'imdb_id': self._imdbid or 'tt%08d' % self.ids[indexermapper.TVINFO_IMDB]['id'],
                      'title': '',
                      'year': '',
                      'akas': '',
@@ -2995,7 +2995,7 @@ class TVShow(TVShowBase):
         imdb_id = None
         imdb_certificates = None
         try:
-            imdb_id = str(self._imdbid or 'tt%07d' % self.ids[indexermapper.TVINFO_IMDB]['id'])
+            imdb_id = str(self._imdbid or 'tt%08d' % self.ids[indexermapper.TVINFO_IMDB]['id'])
             redirect_check = self.check_imdb_redirect(imdb_id)
             if redirect_check:
                 self._imdbid = redirect_check
@@ -3016,15 +3016,15 @@ class TVShow(TVShowBase):
                 })
                 imdb_certificates = i.get_title_certificates(imdb_id=imdb_id)
         except LookupError as e:
-            if 'Title was an episode' in ex(e) and imdb_id == 'tt%07d' % self.ids[indexermapper.TVINFO_IMDB]['id']:
+            if 'Title was an episode' in ex(e) and imdb_id == 'tt%08d' % self.ids[indexermapper.TVINFO_IMDB]['id']:
                 self.ids[indexermapper.TVINFO_IMDB]['id'] = 0
                 self.ids[indexermapper.TVINFO_IMDB]['status'] = MapStatus.NOT_FOUND
                 if datetime.date.today() != self.ids[indexermapper.TVINFO_IMDB]['date']:
                     indexermapper.map_indexers_to_show(self, force=True)
-                    if not retry and imdb_id != 'tt%07d' % self.ids[indexermapper.TVINFO_IMDB]['id']:
+                    if not retry and imdb_id != 'tt%08d' % self.ids[indexermapper.TVINFO_IMDB]['id']:
                         # add retry arg to prevent endless loops
                         logger.log('imdbid: %s not found. retrying with newly found id: %s' %
-                                   (imdb_id, 'tt%07d' % self.ids[indexermapper.TVINFO_IMDB]['id']), logger.DEBUG)
+                                   (imdb_id, 'tt%08d' % self.ids[indexermapper.TVINFO_IMDB]['id']), logger.DEBUG)
                         self._get_imdb_info(retry=True)
                         return
             logger.log('imdbid: %s not found. Error: %s' % (imdb_id, ex(e)), logger.WARNING)

@@ -5191,8 +5191,9 @@ class AddShows(Home):
             # noinspection PyProtectedMember
             from lib.dateutil.tz.tz import _datetime_to_timestamp
 
-            if (int(_datetime_to_timestamp(datetime.datetime.now()))
-                    < sickbeard.MEMCACHE.get(mem_key, {}).get('last_update', 0)):
+            now = int(_datetime_to_timestamp(datetime.datetime.now()))
+            if (sickbeard.MEMCACHE.get(mem_key, {}).get('data')
+                    and (now < sickbeard.MEMCACHE.get(mem_key, {}).get('expire', 0))):
                 return sickbeard.MEMCACHE.get(mem_key).get('data')
 
             tvinfo_config = sickbeard.TVInfoAPI(TVINFO_TVMAZE).api_params.copy()
@@ -5201,8 +5202,7 @@ class AddShows(Home):
                 data = t.get_premieres()
             else:
                 data = t.get_returning()
-            sickbeard.MEMCACHE[mem_key] = dict(
-                last_update=(30*60) + int(_datetime_to_timestamp(datetime.datetime.now())), data=data)
+            sickbeard.MEMCACHE[mem_key] = dict(expire=(30*60) + now, data=data)
             return data
 
         if 'New' in browse_title:
@@ -5263,13 +5263,10 @@ class AddShows(Home):
                 ids = dict(tvmaze=cur_episode_info.id)
                 imdb_id = cur_episode_info.show.imdb_id
                 if imdb_id:
-                    if isinstance(imdb_id, string_types) and 'tt' in imdb_id:
-                        ids.update(dict(imdb=imdb_id))
-                    elif isinstance(imdb_id, integer_types):
-                        ids.update(dict(imdb='tt%08d' % imdb_id))
+                    ids['imdb'] = imdb_id
                 tvdb_id = cur_episode_info.show.ids.get(TVINFO_TVDB)
                 if tvdb_id:
-                    ids.update(dict(tvdb=tvdb_id))
+                    ids['tvdb'] = tvdb_id
 
                 network_name = cur_episode_info.show.network
                 cc = 'US'
