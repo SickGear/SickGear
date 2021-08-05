@@ -1196,13 +1196,17 @@ def copy_file(src_file, dest_file):
         pass
 
 
-def move_file(src_file, dest_file):
+def move_file(src_file, dest_file, raise_exceptions=False):
     try:
         ek.ek(shutil.move, src_file, dest_file)
         fix_set_group_id(dest_file)
     except OSError:
         copy_file(src_file, dest_file)
-        ek.ek(os.unlink, src_file)
+        if ek.ek(os.path.exists, dest_file):
+            fix_set_group_id(dest_file)
+            ek.ek(os.unlink, src_file)
+        elif raise_exceptions:
+            raise OSError('Destination file could not be created: %s' % dest_file)
 
 
 def remove_file_perm(filepath, log_err=True):

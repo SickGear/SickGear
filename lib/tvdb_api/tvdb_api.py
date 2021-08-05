@@ -540,13 +540,13 @@ class Tvdb(TVInfoBase):
                                 v = ''
                     else:
                         v = clean_data(v)
-                else:
-                    if 'seriesname' == k:
-                        if isinstance(data.get('aliases'), list) and 0 < len(data.get('aliases')):
-                            v = data['aliases'].pop(0)
-                        # this is a invalid show, it has no Name
-                        if None is v:
-                            return None
+
+                if not v and 'seriesname' == k:
+                    if isinstance(data.get('aliases'), list) and 0 < len(data.get('aliases')):
+                        v = data['aliases'].pop(0)
+                    # this is a invalid show, it has no Name
+                    if not v:
+                        return None
 
                 if k in map_show:
                     k = map_show[k]

@@ -353,7 +353,7 @@ class PostProcessor(object):
         def _int_move(cur_file_path, new_file_path, success_tmpl=u' %s to %s'):
 
             try:
-                helpers.move_file(cur_file_path, new_file_path)
+                helpers.move_file(cur_file_path, new_file_path, raise_exceptions=True)
                 helpers.chmod_as_parent(new_file_path)
                 self._log(u'Moved file from' + (success_tmpl % (cur_file_path, new_file_path)), logger.DEBUG)
             except (IOError, OSError) as e:

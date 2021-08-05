@@ -90,6 +90,12 @@
 * Change revert all IMDb ids to 7 chars
 
 
+### 0.24.15 (2021-08-05 11:45:00 UTC)
+
+* Change media process move process method for *nix systems that don't support native move
+* Fix do not display empty show name results returned from TVDb
+
+
 ### 0.24.14 (2021-07-31 08:50:00 UTC)
 
 * Change add compatibility for Transmission 3.00 client with label support
