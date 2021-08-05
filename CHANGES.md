@@ -89,6 +89,7 @@
 * Fix use show id when adding from TVmaze card
 * Change revert all IMDb ids to 7 chars
 * Fix new unique_name in templates 
+* Fix genre field in tvmaze_api
 
 
 ### 0.24.15 (2021-08-05 11:45:00 UTC)

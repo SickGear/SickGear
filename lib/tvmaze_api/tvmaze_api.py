@@ -319,7 +319,7 @@ class TvMaze(TVInfoBase):
             if 'days' in show_data.schedule:
                 show_obj['airs_dayofweek'] = ', '.join(show_data.schedule['days'])
         if show_data.genres:
-            show_obj['genre'] = ','.join(show_data.genres)
+            show_obj['genre'] = '|%s|' % '|'.join(show_data.genres)
 
         if (actors or self.config['actors_enabled']) and not getattr(self.shows.get(sid), 'actors_loaded', False):
             if show_data.cast:
@@ -574,7 +574,7 @@ class TvMaze(TVInfoBase):
         ti_show.vote_average = show_data.rating and show_data.rating.get('average')
         ti_show.popularity = show_data.weight
         ti_show.genre_list = show_data.genres or []
-        ti_show.genre = ', '.join(ti_show.genre_list)
+        ti_show.genre = '|%s|' % '|'.join(ti_show.genre_list)
         ti_show.official_site = show_data.official_site
         ti_show.status = show_data.status
         ti_show.show_type = show_data.type
