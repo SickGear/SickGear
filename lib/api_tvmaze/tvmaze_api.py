@@ -14,7 +14,7 @@ import requests
 from urllib3.util.retry import Retry
 from requests.adapters import HTTPAdapter
 
-from six import integer_types, iteritems
+from six import integer_types, iteritems, string_types
 from sg_helpers import get_url, try_int
 from lib.dateutil.parser import parser
 # noinspection PyProtectedMember
@@ -143,7 +143,8 @@ class TvMaze(TVInfoBase):
         def _make_result_dict(s):
             return {'seriesname': s.name, 'id': s.id, 'firstaired': s.premiered,
                     'network': s.network and s.network.name,
-                    'genres': s.genres, 'overview': s.summary,
+                    'genres': isinstance(s.genres, list) and ', '.join(g.lower() for g in s.genres) or s.genres,
+                    'overview': s.summary,
                     'aliases': [a.name for a in s.akas], 'image': s.image and s.image.get('original'),
                     'ids': TVInfoIDs(
                         tvdb=s.externals.get('thetvdb'), rage=s.externals.get('tvrage'), tvmaze=s.id,
@@ -319,7 +320,7 @@ class TvMaze(TVInfoBase):
             if 'days' in show_data.schedule:
                 show_obj['airs_dayofweek'] = ', '.join(show_data.schedule['days'])
         if show_data.genres:
-            show_obj['genre'] = '|%s|' % '|'.join(show_data.genres)
+            show_obj['genre'] = '|%s|' % '|'.join(show_data.genres).lower()
 
         if (actors or self.config['actors_enabled']) and not getattr(self.shows.get(sid), 'actors_loaded', False):
             if show_data.cast:
@@ -574,7 +575,7 @@ class TvMaze(TVInfoBase):
         ti_show.vote_average = show_data.rating and show_data.rating.get('average')
         ti_show.popularity = show_data.weight
         ti_show.genre_list = show_data.genres or []
-        ti_show.genre = '|%s|' % '|'.join(ti_show.genre_list)
+        ti_show.genre = '|%s|' % '|'.join(ti_show.genre_list).lower()
         ti_show.official_site = show_data.official_site
         ti_show.status = show_data.status
         ti_show.show_type = show_data.type
