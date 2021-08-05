@@ -303,7 +303,7 @@
             #if None is $curLoadingShow.show_obj
 					Loading... ($curLoadingShow.show_name)
             #else
-					<a href="$sg_root/home/view-show?tvid_prodid=$curLoadingShow.show_obj.tvid_prodid">getattr($curLoadingShow.show_obj, 'unique_name', $curLoadingShow.show_obj.name)</a>
+					<a href="$sg_root/home/view-show?tvid_prodid=$curLoadingShow.show_obj.tvid_prodid">$getattr($curLoadingShow.show_obj, 'unique_name', $curLoadingShow.show_obj.name)</a>
             #end if
 				</td>
 				<td></td>
