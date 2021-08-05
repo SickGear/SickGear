@@ -1,8 +1,8 @@
-from lib.tvdb_api.tvdb_api import Tvdb
-from lib.libtrakt.indexerapiinterface import TraktIndexer
-from lib.tvmaze_api.tvmaze_api import TvMaze
-from lib.tmdb_api.tmdb_api import TmdbIndexer
-from lib.imdb_api.imdb_api import IMDbIndexer
+from lib.api_tvdb.tvdb_api import Tvdb
+from lib.api_trakt.indexerapiinterface import TraktIndexer
+from lib.api_tvmaze.tvmaze_api import TvMaze
+from lib.api_tmdb.tmdb_api import TmdbIndexer
+from lib.api_imdb.imdb_api import IMDbIndexer
 # noinspection PyUnresolvedReferences
 from lib.tvinfo_base import (
     TVINFO_FACEBOOK, TVINFO_INSTAGRAM, TVINFO_TWITTER, TVINFO_WIKIPEDIA,

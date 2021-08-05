@@ -90,6 +90,7 @@
 * Change revert all IMDb ids to 7 chars
 * Fix new unique_name in templates 
 * Fix genre field in tvmaze_api
+* Change api interface folders to api_* to fix legacy tmdb_api folder cleanup on new installs
 
 
 ### 0.24.15 (2021-08-05 11:45:00 UTC)

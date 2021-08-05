@@ -57,7 +57,7 @@ from adba.aniDBerrors import AniDBError
 # noinspection PyProtectedMember
 from browser_ua import get_ua
 from configobj import ConfigObj
-from libtrakt import TraktAPI
+from api_trakt import TraktAPI
 
 from _23 import b64encodestring, decode_bytes, filter_iter, list_items, map_list, ordered_dict, scandir
 from six import iteritems, PY2, string_types
@@ -69,7 +69,7 @@ if False:
     from adba import Connection
     from .event_queue import Events
     from .tv import TVShow
-    from lib.libtrakt.trakt import TraktAccount
+    from lib.api_trakt.trakt import TraktAccount
 
 PID = None
 ENV = {}
