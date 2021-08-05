@@ -20,7 +20,7 @@ import os
 import re
 
 # import pushalot
-# from lib import libtrakt
+# from lib import api_trakt
 from . import emby, kodi, plex, xbmc, \
     boxcar2, nmj, nmjv2, pushbullet, pushover, pytivo, synoindex, synologynotifier, \
     discord, emailnotify, gitter, libnotify, growl, prowl, slack, telegram, trakt

@@ -26,7 +26,7 @@ import encodingKludge as ek
 import sickbeard
 import sickbeard.providers
 from . import db, helpers, logger, naming
-from lib.libtrakt import TraktAPI
+from lib.api_trakt import TraktAPI
 
 from _23 import filter_list, urlsplit, urlunsplit
 from six import string_types

@@ -91,8 +91,8 @@ from lib.cfscrape import CloudflareScraper
 from lib.dateutil import tz, zoneinfo
 from lib.dateutil.relativedelta import relativedelta
 from lib.fuzzywuzzy import fuzz
-from lib.libtrakt import TraktAPI
-from lib.libtrakt.exceptions import TraktException, TraktAuthException
+from lib.api_trakt import TraktAPI
+from lib.api_trakt.exceptions import TraktException, TraktAuthException
 
 import lib.rarfile.rarfile as rarfile
 

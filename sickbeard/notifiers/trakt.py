@@ -20,7 +20,7 @@ import os
 
 from .generic import BaseNotifier
 import sickbeard
-from lib.libtrakt import TraktAPI, exceptions
+from lib.api_trakt import TraktAPI, exceptions
 from exceptions_helper import ConnectionSkipException
 
 from _23 import list_keys

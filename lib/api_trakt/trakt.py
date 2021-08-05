@@ -14,7 +14,7 @@ from .exceptions import *
 if False:
     from typing import Any, AnyStr, Dict
 
-log = logging.getLogger('libtrakt')
+log = logging.getLogger('api_trakt')
 log.addHandler(logging.NullHandler())
 
 
