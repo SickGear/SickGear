@@ -91,6 +91,7 @@
 * Fix new unique_name in templates 
 * Fix genre field in tvmaze_api
 * Change api interface folders to api_* to fix legacy tmdb_api folder cleanup on new installs
+* Fix TVmaze genres property to be lowercase string
 
 
 ### 0.24.15 (2021-08-05 11:45:00 UTC)
