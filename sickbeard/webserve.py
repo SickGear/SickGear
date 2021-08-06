@@ -5187,28 +5187,19 @@ class AddShows(Home):
         footnote = None
         filtered = []
 
-        def card_cache(mem_key):
-            # noinspection PyProtectedMember
-            from lib.dateutil.tz.tz import _datetime_to_timestamp
-
-            now = int(_datetime_to_timestamp(datetime.datetime.now()))
-            if (sickbeard.MEMCACHE.get(mem_key, {}).get('data')
-                    and (now < sickbeard.MEMCACHE.get(mem_key, {}).get('expire', 0))):
-                return sickbeard.MEMCACHE.get(mem_key).get('data')
-
-            tvinfo_config = sickbeard.TVInfoAPI(TVINFO_TVMAZE).api_params.copy()
-            t = sickbeard.TVInfoAPI(TVINFO_TVMAZE).setup(**tvinfo_config)
-            if 'prem' in mem_key:
-                data = t.get_premieres()
-            else:
-                data = t.get_returning()
-            sickbeard.MEMCACHE[mem_key] = dict(expire=(30*60) + now, data=data)
-            return data
-
+        tvinfo_config = sickbeard.TVInfoAPI(TVINFO_TVMAZE).api_params.copy()
+        t = sickbeard.TVInfoAPI(TVINFO_TVMAZE).setup(**tvinfo_config)
         if 'New' in browse_title:
-            episodes = card_cache('tvmaze_premiere')
+            episodes = t.get_premieres()
         else:
-            episodes = card_cache('tvmaze_returning')
+            episodes = t.get_returning()
+
+        # handle switching between returning and premieres
+        sickbeard.BROWSELIST_MRU.setdefault(browse_type, dict())
+        showfilter = ('by_returning', 'by_premiered')['New' in browse_title]
+        saved_showsort = sickbeard.BROWSELIST_MRU[browse_type].get('tvm_%s' % kwargs['mode']) or '*,asc'
+        showsort = saved_showsort + (',%s' % showfilter, '')[3 == len(saved_showsort.split(','))]
+        sickbeard.BROWSELIST_MRU[browse_type].update(dict(showfilter=showfilter, showsort=showsort))
 
         oldest, newest, oldest_dt, newest_dt, use_networks = None, None, 9999999, 0, False
         dedupe = []
@@ -5680,8 +5671,12 @@ class AddShows(Home):
         save_config = False
         if browse_type in ('AniDB', 'IMDb', 'Metacritic', 'Trakt', 'TVCalendar', 'TVmaze', 'Nextepisode'):
             save_config = True
-            sickbeard.BROWSELIST_MRU[browse_type] = dict(
-                showfilter=kwargs.get('showfilter', ''), showsort=kwargs.get('showsort', ''))
+            if browse_type in ('TVmaze',) and kwargs.get('showfilter') and kwargs.get('showsort'):
+                sickbeard.BROWSELIST_MRU.setdefault(browse_type, dict()) \
+                    .update({kwargs.get('showfilter'): kwargs.get('showsort')})
+            else:
+                sickbeard.BROWSELIST_MRU[browse_type] = dict(
+                    showfilter=kwargs.get('showfilter', ''), showsort=kwargs.get('showsort', ''))
         if save_config:
             sickbeard.save_config()
         return json.dumps({'success': save_config})
@@ -5700,8 +5695,7 @@ class AddShows(Home):
         showsort = t.saved_showsort.split(',')
         t.saved_showsort_sortby = 3 == len(showsort) and showsort[2] or 'by_order'
         t.reset_showsort_sortby = ('votes' in t.saved_showsort_sortby and not kwargs.get('use_votes', True)
-                                   or 'rating' in t.saved_showsort_sortby and not kwargs.get('use_ratings', True)
-                                   or 'returning' in t.saved_showsort_sortby and 'Returning' not in browse_title)
+                                   or 'rating' in t.saved_showsort_sortby and not kwargs.get('use_ratings', True))
         t.is_showsort_desc = ('desc' == (2 <= len(showsort) and showsort[1] or 'asc')) and not t.reset_showsort_sortby
         t.saved_showsort_view = 1 <= len(showsort) and showsort[0] or '*'
         t.all_shows = []

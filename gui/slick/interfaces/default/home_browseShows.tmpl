@@ -102,7 +102,7 @@ $(document).ready(function(){
 	});
 #raw
 	$('#showsort').on('change', function(){
-		var sortCriteria = this.value.replace('by_', ''), el$ = $('#container'), shuffle = !1;
+		var elValue = this.value, sortCriteria = elValue.replace('by_', ''), el$ = $('#container'), shuffle = !1;
 		switch (sortCriteria) {
 			case 'asc':
 			case 'desc':
@@ -119,15 +119,13 @@ $(document).ready(function(){
 #end if
 				break;
 #if $use_ratings
-			case 'rating':
-				shuffle = !0;
-				break;
     #if $use_votes
 			case 'rating_votes':
 				sortCriteria = ['rating', 'votes'];
+    #end if
+			case 'rating':
 				shuffle = !0;
 				break;
-    #end if
 #end if
 			default:
 				sortCriteria = 'name'
@@ -140,21 +138,21 @@ $(document).ready(function(){
 			option$ = showSort.filter('option[value="asc"].selected, option[value="desc"].selected');
 			option$.removeClass('selected').removeAttr('selected').html(option$.text().replace(/^>\s/i, ''));
 
-			option$ = showSort.filter($('option[value="' + this.value + '"]'));
+			option$ = showSort.filter($('option[value="' + elValue + '"]'));
 			option$.addClass('selected').attr('selected', !0).html('>&nbsp;' + option$.text());
 
 			savePrefs();
 
 			el$.one('layoutComplete', llUpdate);
 			el$.isotope({
-				sortAscending: 'asc' === this.value,
+				sortAscending: 'asc' === elValue,
 				sortBy: showSort.filter($('option[value^="by_"][class*="selected"]')).val().replace('by_', '')
 			});
-		} else if(0 == this.value.indexOf('by_')){
+		} else if(0 == elValue.indexOf('by_')){
 			option$ = showSort.filter($('option[value^="by_"][class*="selected"]'));
 			option$.removeClass('selected').removeAttr('selected').html(option$.text().replace(/^>\s/i, ''));
 
-			option$ = showSort.filter($('option[value="' + this.value + '"]'));
+			option$ = showSort.filter($('option[value="' + elValue + '"]'));
 			option$.addClass('selected').attr('selected', !0).html('>&nbsp;' + option$.text());
 
 			savePrefs();
@@ -184,12 +182,12 @@ $(document).ready(function(){
 			option$ = showSort.filter($('option[value^="*"].selected, #showsort option[value^="."].selected'));
 			option$.removeClass('selected').removeAttr('selected').html(option$.text().replace(/^>\s/i, ''));
 
-			option$ = showSort.filter($('option[value="' + this.value + '"]'));
+			option$ = showSort.filter($('option[value="' + elValue + '"]'));
 			option$.addClass('selected').attr('selected', !0).html('>&nbsp;' + option$.text());
 
 			savePrefs();
 
-			var showCards = $('.show-card'), filter = this.value;
+			var showCards = $('.show-card'), filter = elValue;
 			if('.hide' === filter){
 				showCards.filter($('.hide')).removeClass('hide').addClass('to-hide');
 				filter = '.to-hide';
@@ -278,7 +276,7 @@ $(document).ready(function(){
 			}
 		});
 	});
-    $('.resetshows').click(function() {
+	$('.resetshows').click(function() {
 		var input = $('#search_show_name');
 		if ('' !== input.val()){
 			input.val('').trigger('input').change();
@@ -324,7 +322,7 @@ $(document).ready(function(){
 		</optgroup>
 		<optgroup label="Sort by">
 			<option value="by_name"#if 'by_name' in $saved_showsort_sortby and not $reset_showsort_sortby#$selected>>&nbsp;#else#>#end if#Name</option>
-# omit for TVMaze as Original == First Aired
+## omit for TVMaze as original order == First Aired
 #if 'TVmaze' not in $browse_type
 			<option value="by_order"#if 'by_order' in $saved_showsort_sortby or $reset_showsort_sortby#$selected>>&nbsp;#else#>#end if#Original</option>
 #end if
