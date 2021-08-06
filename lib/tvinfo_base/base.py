@@ -384,6 +384,18 @@ class TVInfoShow(dict):
 
         return results
 
+    def __getstate__(self):
+        d = dict(self.__dict__)
+        try:
+            del d['lock']
+        except (BaseException, Exception):
+            pass
+        return d
+
+    def __setstate__(self, d):
+        self.__dict__ = d
+        self.lock = threading.RLock()
+
     __repr__ = __str__
     __nonzero__ = __bool__
 
