@@ -82,6 +82,7 @@
 * Add menu Shows/"TVmaze Cards"
 * Add show name/networks card user input filter
 * Change only auto refresh card view if a recoverable error occurs
+* Update Requests library 2.25.1 (bdc00eb) to 2.26.0 (b0e025a)
 
 
 [develop changelog]
