@@ -95,6 +95,9 @@
 * Change api interface folders to api_* to fix legacy tmdb_api folder cleanup on new installs
 * Fix TVmaze genres property to be lowercase string
 * Change use diskcache instead of memcache for TVmaze cards
+* Change make card genre case consistent for TVmaze cards
+* Fix use correct vartype as list for TVmaze tvinfo show_type property
+* Fix mapping show images in tmdb_api
 
 
 ### 0.24.15 (2021-08-05 11:45:00 UTC)

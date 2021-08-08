@@ -5277,8 +5277,8 @@ class AddShows(Home):
                     episode_number=cur_episode_info.episodenumber,
                     episode_season=cur_episode_info.seasonnumber,
                     episode_overview='' if not cur_episode_info.overview else cur_episode_info.overview.strip(),
-                    genres=(', '.join(['%s' % v for v in cur_episode_info.show.genre_list])
-                            or cur_episode_info.show.show_type or ''),
+                    genres=(cur_episode_info.show.genre.strip('|').replace('|', ', ')
+                            or ', '.join(cur_episode_info.show.show_type) or ''),
                     images=images,
                     overview=('No overview yet' if not cur_episode_info.show.overview
                               else helpers.xhtml_escape(cur_episode_info.show.overview.strip()[:250:])
