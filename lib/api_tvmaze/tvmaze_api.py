@@ -577,7 +577,8 @@ class TvMaze(TVInfoBase):
         ti_show.genre = '|%s|' % '|'.join(ti_show.genre_list).lower()
         ti_show.official_site = show_data.official_site
         ti_show.status = show_data.status
-        ti_show.show_type = show_data.type
+        ti_show.show_type = (isinstance(show_data.type, string_types) and [show_data.type.lower()] or
+                             isinstance(show_data.type, list) and [x.lower() for x in show_data.type] or [])
         ti_show.lastupdated = show_data.updated
         ti_show.poster = show_data.image and show_data.image.get('original')
         if get_akas:

@@ -634,22 +634,24 @@ class TmdbIndexer(TVInfoBase):
             show_obj.banner_loaded = True
             show_obj.fanart_loaded = True
             for img_type, img_list in iteritems(show_data['images']):
-                img_type = {'backdrops': TVInfoImageType.fanart, 'posters': TVInfoImageType.poster}.get(img_type)
-                for img in img_list:
-                    show_obj.images.setdefault(img_type, []).append(
-                        TVInfoImage(
-                            image_type=img_type,
-                            sizes={
-                                t_s: '%s%s%s' % (self.img_base_url, self.size_map[img_type][t_s], img['file_path'])
-                                for t_s in [TVInfoImageSize.original, TVInfoImageSize.medium, TVInfoImageSize.small]
-                            },
-                            rating=img['vote_average'],
-                            votes=img['vote_count'],
-                            lang=img['iso_639_1'],
-                            height=img['height'],
-                            width=img['width'],
-                            aspect_ratio=img['aspect_ratio']
+                map_img_type = {'backdrops': TVInfoImageType.fanart, 'posters': TVInfoImageType.poster}.get(img_type)
+                if None is not map_img_type:
+                    for img in img_list:
+                        show_obj.images.setdefault(map_img_type, []).append(
+                            TVInfoImage(
+                                image_type=map_img_type,
+                                sizes={
+                                    t_s: '%s%s%s' % (self.img_base_url, self.size_map[map_img_type][t_s],
+                                                     img['file_path'])
+                                    for t_s in [TVInfoImageSize.original, TVInfoImageSize.medium, TVInfoImageSize.small]
+                                },
+                                rating=img['vote_average'],
+                                votes=img['vote_count'],
+                                lang=img['iso_639_1'],
+                                height=img['height'],
+                                width=img['width'],
+                                aspect_ratio=img['aspect_ratio']
+                            )
                         )
-                    )
 
         return True
