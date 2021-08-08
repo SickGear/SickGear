@@ -384,6 +384,18 @@ class TVInfoShow(dict):
 
         return results
 
+    def __getstate__(self):
+        d = dict(self.__dict__)
+        try:
+            del d['lock']
+        except (BaseException, Exception):
+            pass
+        return d
+
+    def __setstate__(self, d):
+        self.__dict__ = d
+        self.lock = threading.RLock()
+
     __repr__ = __str__
     __nonzero__ = __bool__
 
@@ -795,6 +807,7 @@ class TVInfoBase(object):
         self.diskcache = diskcache.Cache(directory=self._cachedir, disk_pickle_protocol=2)  # type: diskcache.Cache
         self.cache_expire = 60 * 60 * 18  # type: integer_types
         self.search_cache_expire = 60 * 15  # type: integer_types
+        self.schedule_cache_expire = 60 * 30  # type: integer_types
         self.config = {
             'apikey': '',
             'debug_enabled': False,
@@ -1156,14 +1169,14 @@ class TVInfoBase(object):
         # type: (...) -> List[TVInfoEpisode]
         return []
 
-    def get_premieres(self, result_count=100, **kwargs):
+    def get_premieres(self, **kwargs):
         # type: (...) -> List[TVInfoEpisode]
         """
         get all premiering shows
         """
         return []
 
-    def get_returning(self, result_count=100, get_extra_images=False, **kwargs):
+    def get_returning(self, **kwargs):
         # type: (...) -> List[TVInfoShow]
         """
         get all returning shows

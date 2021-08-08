@@ -83,6 +83,7 @@
 * Add show name/networks card user input filter
 * Change only auto refresh card view if a recoverable error occurs
 * Update Requests library 2.25.1 (bdc00eb) to 2.26.0 (b0e025a)
+* Fix handling of card filters and sort states
 
 
 [develop changelog]
@@ -93,6 +94,7 @@
 * Fix genre field in tvmaze_api
 * Change api interface folders to api_* to fix legacy tmdb_api folder cleanup on new installs
 * Fix TVmaze genres property to be lowercase string
+* Change use diskcache instead of memcache for TVmaze cards
 
 
 ### 0.24.15 (2021-08-05 11:45:00 UTC)

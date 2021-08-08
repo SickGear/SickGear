@@ -14,6 +14,7 @@ import requests
 from urllib3.util.retry import Retry
 from requests.adapters import HTTPAdapter
 
+from _23 import filter_iter
 from six import integer_types, iteritems, string_types
 from sg_helpers import get_url, try_int
 from lib.dateutil.parser import parser
@@ -549,18 +550,16 @@ class TvMaze(TVInfoBase):
         if p:
             return self._convert_person(p)
 
-    def get_premieres(self, result_count=100, get_extra_images=False, **kwargs):
+    def get_premieres(self, **kwargs):
         # type: (...) -> List[TVInfoEpisode]
-        return self._filtered_schedule(lambda e: all([1 == e.season_number, 1 == e.episode_number]),
-                                       get_images=get_extra_images)
+        return self._filtered_schedule(**kwargs).get('premieres')
 
-    def get_returning(self, result_count=100, get_extra_images=False, **kwargs):
+    def get_returning(self, **kwargs):
         # type: (...) -> List[TVInfoEpisode]
-        return self._filtered_schedule(lambda e: all([1 != e.season_number, 1 == e.episode_number]),
-                                       get_images=get_extra_images)
+        return self._filtered_schedule(**kwargs).get('returning')
 
-    def _make_episode(self, episode_data, show_data=None, get_images=False):
-        # type: (TVMazeEpisode, TVMazeShow, bool) -> TVInfoEpisode
+    def _make_episode(self, episode_data, show_data=None, get_images=False, get_akas=False):
+        # type: (TVMazeEpisode, TVMazeShow, bool, bool) -> TVInfoEpisode
         """
         make out of TVMazeEpisode object and optionally TVMazeShow a TVInfoEpisode
         """
@@ -581,7 +580,8 @@ class TvMaze(TVInfoBase):
         ti_show.show_type = show_data.type
         ti_show.lastupdated = show_data.updated
         ti_show.poster = show_data.image and show_data.image.get('original')
-        ti_show.aliases = [a.name for a in show_data.akas]
+        if get_akas:
+            ti_show.aliases = [a.name for a in show_data.akas]
         if 'days' in show_data.schedule:
             ti_show.airs_dayofweek = ', '.join(show_data.schedule['days'])
         network = show_data.network or show_data.web_channel
@@ -656,12 +656,32 @@ class TvMaze(TVInfoBase):
         ti_episode.show = ti_show
         return ti_episode
 
-    def _filtered_schedule(self, condition, get_images=False):
-        try:
-            result = sorted([
-                e for e in tvmaze.get_full_schedule()
-                if condition(e) and (None is e.show.language or re.search('(?i)eng|jap', e.show.language))],
-                key=lambda x: x.show.premiered or x.airstamp)
-            return [self._make_episode(r, r.show, get_images) for r in result]
-        except(BaseException, Exception):
-            return []
+    def _filtered_schedule(self, **kwargs):
+        cache_name_key = 'tvmaze_schedule'
+        is_none, schedule = self._get_cache_entry(cache_name_key)
+        if None is schedule and not is_none:
+            schedule = []
+            try:
+                schedule = tvmaze.get_full_schedule()
+            except(BaseException, Exception):
+                pass
+
+            premieres = []
+            returning = []
+            rc_lang = re.compile('(?i)eng|jap')
+            for cur_show in filter_iter(lambda s: 1 == s.episode_number and (
+                    None is s.show.language or rc_lang.search(s.show.language)), schedule):
+                if 1 == cur_show.season_number:
+                    premieres += [cur_show]
+                else:
+                    returning += [cur_show]
+
+            premieres = [self._make_episode(r, r.show, **kwargs)
+                         for r in sorted(premieres, key=lambda e: e.show.premiered)]
+            returning = [self._make_episode(r, r.show, **kwargs)
+                         for r in sorted(returning, key=lambda e: e.airstamp)]
+
+            schedule = dict(premieres=premieres, returning=returning)
+            self._set_cache_entry(cache_name_key, schedule, expire=self.schedule_cache_expire)
+
+        return schedule
