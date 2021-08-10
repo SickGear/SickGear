@@ -104,6 +104,9 @@
 * Change check if average mini-series runtime is reasonable before displaying it
 * Fix use meta lang to filter TMDB images
 * Fix glide cursor left and right key collisions with ctrl + alt/meta with left and right
+* Change add language field to TVMaze search results
+* Change set TVMaze network to webchannel if no network is found
+* Change add TVMaze runtime, type, schedule, status, official site
 
 
 ### 0.24.16 (2021-08-28 16:05:00 UTC)

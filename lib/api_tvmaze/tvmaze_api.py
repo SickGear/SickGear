@@ -143,9 +143,10 @@ class TvMaze(TVInfoBase):
     def _search_show(self, name=None, ids=None, **kwargs):
         def _make_result_dict(s):
             return {'seriesname': s.name, 'id': s.id, 'firstaired': s.premiered,
-                    'network': s.network and s.network.name,
+                    'network': (s.network and s.network.name) or (s.web_channel and s.web_channel.name),
                     'genres': isinstance(s.genres, list) and ', '.join(g.lower() for g in s.genres) or s.genres,
-                    'overview': s.summary,
+                    'overview': s.summary, 'language': s.language, 'runtime': s.average_runtime or s.runtime,
+                    'type': s.type, 'schedule': s.schedule, 'status': s.status, 'official_site': s.official_site,
                     'aliases': [a.name for a in s.akas], 'image': s.image and s.image.get('original'),
                     'ids': TVInfoIDs(
                         tvdb=s.externals.get('thetvdb'), rage=s.externals.get('tvrage'), tvmaze=s.id,
