@@ -2981,7 +2981,7 @@ class TVShow(TVShowBase):
                      'title': '',
                      'year': '',
                      'akas': '',
-                     'runtimes': self._runtime,
+                     'runtimes': try_int(self._runtime, None),
                      'is_mini_series': False,
                      'episode_count': None,
                      'genres': '',
