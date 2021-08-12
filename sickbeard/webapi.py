@@ -987,7 +987,7 @@ class CMD_SickGearComingEpisodes(ApiCall):
                 Later:    later than next week
             """
 
-            if ep["paused"] and not self.paused:
+            if not ((int(ep['paused']) and self.paused) or (not int(ep['paused']) and 2 != self.paused)):
                 continue
 
             ep['airdate'] = int(ep["airdate"])
