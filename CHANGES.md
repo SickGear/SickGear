@@ -85,6 +85,7 @@
 * Update Requests library 2.25.1 (bdc00eb) to 2.26.0 (b0e025a)
 * Fix handling of card filters and sort states
 * Add view paused "Only" to Daily Schedule
+* Add return paused "Only" to API
 
 
 [develop changelog]
