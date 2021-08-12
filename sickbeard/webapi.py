@@ -952,7 +952,8 @@ class CMD_SickGearComingEpisodes(ApiCall):
              "optionalParameters":
                  {"sort": {"desc": "change the sort order"},
                   "type": {"desc": "one or more of allowed values separated by |"},
-                  "paused": {"desc": "0 to exclude paused shows, 1 to include them, or omitted to use the SG default"},
+                  "paused": {"desc": "0 to exclude paused shows, 1 to include them, "
+                                     "2 to only view paused, or omitted to use the SG default"},
                   }
              }
 
@@ -963,7 +964,7 @@ class CMD_SickGearComingEpisodes(ApiCall):
         self.type, args = self.check_params(args, kwargs, "type", "today|missed|soon|later", False, "list",
                                             ["missed", "later", "today", "soon"])
         self.paused, args = self.check_params(args, kwargs, "paused", sickbeard.EPISODE_VIEW_DISPLAY_PAUSED,
-                                              False, "int", [0, 1])
+                                              False, "int", [0, 1, 2])
         # super, missing, help
         ApiCall.__init__(self, handler, args, kwargs)
 

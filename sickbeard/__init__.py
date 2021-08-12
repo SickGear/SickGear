@@ -538,7 +538,7 @@ EPISODE_VIEW_BACKGROUND = False
 EPISODE_VIEW_BACKGROUND_TRANSLUCENT = False
 EPISODE_VIEW_LAYOUT = None
 EPISODE_VIEW_SORT = None
-EPISODE_VIEW_DISPLAY_PAUSED = False
+EPISODE_VIEW_DISPLAY_PAUSED = 0
 EPISODE_VIEW_POSTERS = True
 EPISODE_VIEW_MISSED_RANGE = 7
 HISTORY_LAYOUT = None
@@ -1354,7 +1354,7 @@ def init_stage_1(console_logging):
         CFG, 'GUI', 'episode_view_background_translucent', 1))
     EPISODE_VIEW_LAYOUT = check_setting_str(CFG, 'GUI', 'episode_view_layout', 'daybyday')
     EPISODE_VIEW_SORT = check_setting_str(CFG, 'GUI', 'episode_view_sort', 'time')
-    EPISODE_VIEW_DISPLAY_PAUSED = bool(check_setting_int(CFG, 'GUI', 'episode_view_display_paused', 1))
+    EPISODE_VIEW_DISPLAY_PAUSED = check_setting_int(CFG, 'GUI', 'episode_view_display_paused', 1)
     EPISODE_VIEW_POSTERS = bool(check_setting_int(CFG, 'GUI', 'episode_view_posters', 1))
     EPISODE_VIEW_MISSED_RANGE = check_setting_int(CFG, 'GUI', 'episode_view_missed_range', 7)
 
