@@ -161,7 +161,16 @@ class LegacyBaseHandler(LegacyBase):
     def toggleEpisodeViewDisplayPaused(self):
         return self.toggle_display_paused_daily_schedule()
 
+    # completely deprecated for the three way state set_ function
+    # def toggle_display_paused_daily_schedule(self):
+    #     # abstract method
+    #     pass
+
     def toggle_display_paused_daily_schedule(self):
+
+        return self.set_display_paused_daily_schedule(not sickbeard.EPISODE_VIEW_DISPLAY_PAUSED)
+
+    def set_display_paused_daily_schedule(self, *args, **kwargs):
         # abstract method
         pass
 

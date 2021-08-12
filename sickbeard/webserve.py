@@ -957,9 +957,9 @@ class MainHandler(WebHandler):
 
         self.redirect('/daily-schedule/')
 
-    def toggle_display_paused_daily_schedule(self):
+    def set_display_paused_daily_schedule(self, state=True):
 
-        sickbeard.EPISODE_VIEW_DISPLAY_PAUSED = not sickbeard.EPISODE_VIEW_DISPLAY_PAUSED
+        sickbeard.EPISODE_VIEW_DISPLAY_PAUSED = sg_helpers.try_int(state, 1)
 
         sickbeard.save_config()
 
