@@ -238,7 +238,7 @@
         #if $show_obj.imdb_info['is_mini_series'] and 1 < $show_obj.imdb_info['episode_count'] \
                 and $runtime and 90 < $show_obj.imdb_info['runtimes']:
             #set $average_runtime = $show_obj.imdb_info['runtimes']/$show_obj.imdb_info['episode_count']
-            if 9 < $average_runtime:
+            #if 9 < $average_runtime:
                 #set $runtime = '%s (av %s?)' % ($runtime, int($average_runtime))
         #end if
     #end if
