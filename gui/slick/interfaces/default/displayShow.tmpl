@@ -240,6 +240,7 @@
             #set $average_runtime = $show_obj.imdb_info['runtimes']/$show_obj.imdb_info['episode_count']
             #if 9 < $average_runtime:
                 #set $runtime = '%s (av %s?)' % ($runtime, int($average_runtime))
+            #end if
         #end if
     #end if
 #end if
