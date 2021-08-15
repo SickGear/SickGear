@@ -1,4 +1,6 @@
 from lib.api_tvdb.tvdb_api import Tvdb
+from lib.api_tvdb.tvdb_api_v4 import Tvdb_API_V4
+import lib.api_tvdb.tvdb_api_v4
 from lib.api_trakt.indexerapiinterface import TraktIndexer
 from lib.api_tvmaze.tvmaze_api import TvMaze
 from lib.api_tmdb.tmdb_api import TmdbIndexer
@@ -23,8 +25,9 @@ tvinfo_config = {
         api_url='https://api.thetvdb.com/',
         id=TVINFO_TVDB,
         name='TheTVDB', slug='tvdb', kodi_slug='tvdb',
-        module=Tvdb,
-        api_params=dict(apikey='6cfd6399fd2bee018a8793da976f6522', language='en'),
+        module=Tvdb_API_V4,
+        api_params=dict(apikey='6cfd6399fd2bee018a8793da976f6522',
+                        apikey_v4=b'm5uaxWhrm56TlWTGm5Jkk5uYZW-ea5uOnmqcmWmXZmVtxp2a', language='en'),
         active=True,
         dupekey='',
         mapped_only=False,
@@ -260,3 +263,5 @@ tvinfo_config[src].update(dict(
     show_url='%stv/%%d' % tvinfo_config[src]['main_url'],
     finder='%ssearch/tv?query=%s' % (tvinfo_config[src]['main_url'], '%s'),
 ))
+
+lib.api_tvdb.tvdb_api_v4.TVDB_API_CONFIG = tvinfo_config[TVINFO_TVDB]
