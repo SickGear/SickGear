@@ -3973,13 +3973,23 @@ class AddShows(Home):
 
     @staticmethod
     def get_infosrc_languages():
-        result = sickgear.TVInfoAPI().config['valid_languages']
+        result = sickgear.TVInfoAPI().config['valid_languages'].copy()
 
         # sort list alphabetically with sickgear.ADD_SHOWS_METALANG as the first item
         if sickgear.ADD_SHOWS_METALANG in result:
             del result[result.index(sickgear.ADD_SHOWS_METALANG)]
         result.sort()
         result.insert(0, sickgear.ADD_SHOWS_METALANG)
+
+        for src in sickgear.TVInfoAPI().search_sources:
+            tvinfo_config = sickgear.TVInfoAPI(src).api_params.copy()
+            t = sickgear.TVInfoAPI(src).setup(**tvinfo_config)
+            try:
+                all_langs = t.get_languages()
+            except (BaseException, Exception):
+                continue
+            if all_langs:
+                result.extend([lang['sg_lang'] for lang in all_langs if lang['sg_lang'] not in result])
 
         return json_dumps({'results': result})
 
@@ -4160,7 +4170,7 @@ class AddShows(Home):
                        sickgear.TVInfoAPI((tvid, TVINFO_TVDB)[TVINFO_TRAKT == tvid]).config['slug'],
                        (sickgear.TVInfoAPI((tvid, TVINFO_TVDB)[TVINFO_TRAKT == tvid]).config['show_url'] %
                         show['ids'][(tvid, TVINFO_TVDB)[TVINFO_TRAKT == tvid]])
-                       + ('', '&lid=%s' % sickgear.TVInfoAPI().config['langabbv_to_id'][lang])[TVINFO_TVDB == tvid],
+                       + ('', '&lid=%s' % sickgear.TVInfoAPI().config.get('langabbv_to_id', {}).get(lang, lang))[TVINFO_TVDB == tvid],
                        int(show['id']),
                        show['seriesname'], helpers.xhtml_escape(show['seriesname']), show['firstaired'],
                        (isinstance(show['firstaired'], string_types)
@@ -4253,7 +4263,7 @@ class AddShows(Home):
         if TVINFO_TRAKT == iid:
             img_url = 'imagecache?path=browse/thumb/trakt&filename=%s&trans=0&tmdbid=%s&tvdbid=%s' % \
                       ('%s.jpg' % show_info['ids'].trakt, show_info.get('tmdb_id'), show_info['ids'].tvdb)
-        elif TVINFO_TVDB == iid:
+        elif TVINFO_TVDB == iid and 'poster' in show_info and show_info['poster']:
             img_url = 'imagecache?path=browse/thumb/tvdb&filename=%s&trans=0&source=%s' % \
                       ('%s.jpg' % show_info['id'], show_info['poster'])
             sickgear.CACHE_IMAGE_URL_LIST.add_url(show_info['poster'])

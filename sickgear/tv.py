@@ -2134,7 +2134,10 @@ class TVShow(TVShowBase):
 
         logger.log('%s: Updating NFOs for show with new TV info' % self.tvid_prodid)
         for cur_provider in itervalues(sickgear.metadata_provider_dict):
-            result = cur_provider.update_show_indexer_metadata(self) or result
+            try:
+                result = cur_provider.update_show_indexer_metadata(self) or result
+            except (BaseException, Exception) as e:
+                logger.warning('Error creating show nfo: %s' % ex(e))
 
         return result
 
@@ -2397,14 +2400,40 @@ class TVShow(TVShowBase):
             # FIXME: Needs to not show this message if the option is not enabled?
             logger.debug('Running metadata routines for %s' % cur_provider.name)
 
-            fanart_result = cur_provider.create_fanart(self) or fanart_result
-            poster_result = cur_provider.create_poster(self) or poster_result
-            banner_result = cur_provider.create_banner(self) or banner_result
+            try:
+                fanart_result = cur_provider.create_fanart(self) or fanart_result
+            except (BaseException, Exception) as e:
+                logger.warning('Error creating show fanart: %s' % ex(e))
 
-            season_posters_result = cur_provider.create_season_posters(self) or season_posters_result
-            season_banners_result = cur_provider.create_season_banners(self) or season_banners_result
-            season_all_poster_result = cur_provider.create_season_all_poster(self) or season_all_poster_result
-            season_all_banner_result = cur_provider.create_season_all_banner(self) or season_all_banner_result
+            try:
+                poster_result = cur_provider.create_poster(self) or poster_result
+            except (BaseException, Exception) as e:
+                logger.warning('Error creating show poster: %s' % ex(e))
+
+            try:
+                banner_result = cur_provider.create_banner(self) or banner_result
+            except (BaseException, Exception) as e:
+                logger.warning('Error creating show banner: %s' % ex(e))
+
+            try:
+                season_posters_result = cur_provider.create_season_posters(self) or season_posters_result
+            except (BaseException, Exception) as e:
+                logger.warning('Error creating show season poster: %s' % ex(e))
+
+            try:
+                season_banners_result = cur_provider.create_season_banners(self) or season_banners_result
+            except (BaseException, Exception) as e:
+                logger.warning('Error creating show season banner: %s' % ex(e))
+
+            try:
+                season_all_poster_result = cur_provider.create_season_all_poster(self) or season_all_poster_result
+            except (BaseException, Exception) as e:
+                logger.warning('Error creating show season poster: %s' % ex(e))
+
+            try:
+                season_all_banner_result = cur_provider.create_season_all_banner(self) or season_all_banner_result
+            except (BaseException, Exception) as e:
+                logger.warning('Error creating show season banner: %s' % ex(e))
 
         return fanart_result or poster_result or banner_result or season_posters_result or season_banners_result \
             or season_all_poster_result or season_all_banner_result
@@ -4630,7 +4659,10 @@ class TVEpisode(TVEpisodeBase):
         result = False
 
         for cur_provider in itervalues(sickgear.metadata_provider_dict):
-            result = cur_provider.create_episode_metadata(self, force) or result
+            try:
+                result = cur_provider.create_episode_metadata(self, force) or result
+            except (BaseException, Exception) as e:
+                logger.warning('Error creating episode nfo: %s' % ex(e))
 
         return result
 
@@ -4643,7 +4675,10 @@ class TVEpisode(TVEpisodeBase):
         result = False
 
         for cur_provider in itervalues(sickgear.metadata_provider_dict):
-            result = cur_provider.create_episode_thumb(self) or result
+            try:
+                result = cur_provider.create_episode_thumb(self) or result
+            except (BaseException, Exception) as e:
+                logger.warning('Error creating episode thumb: %s' % ex(e))
 
         return result
 

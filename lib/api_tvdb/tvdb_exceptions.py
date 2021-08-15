@@ -11,7 +11,7 @@ __author__ = 'dbr/Ben'
 __version__ = '1.9'
 
 __all__ = ['TvdbException', 'TvdbError', 'TvdbUserabort', 'TvdbShownotfound',
-           'TvdbSeasonnotfound', 'TvdbEpisodenotfound', 'TvdbAttributenotfound', 'TvdbTokenexpired']
+           'TvdbSeasonnotfound', 'TvdbEpisodenotfound', 'TvdbAttributenotfound', 'TvdbTokenexpired', 'TvdbTokenFailre']
 
 from lib.tvinfo_base.exceptions import *
 
@@ -64,3 +64,10 @@ class TvdbTokenexpired(BaseTVinfoAuthenticationerror, TvdbError):
     """token expired or missing thetvdb.com
     """
     pass
+
+
+class TvdbTokenFailre(BaseTVinfoAuthenticationerror, TvdbError):
+    """getting token failed
+    """
+    pass
+

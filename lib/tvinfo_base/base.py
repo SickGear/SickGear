@@ -42,6 +42,8 @@ TVINFO_TWITTER = 250000
 TVINFO_FACEBOOK = 250001
 TVINFO_INSTAGRAM = 250002
 TVINFO_WIKIPEDIA = 250003
+TVINFO_REDDIT = 250004
+TVINFO_YOUTUBE = 250005
 
 tv_src_names = {
     TVINFO_TVDB: 'tvdb',
@@ -60,7 +62,9 @@ tv_src_names = {
     TVINFO_TWITTER: 'twitter',
     TVINFO_FACEBOOK: 'facebook',
     TVINFO_INSTAGRAM: 'instagram',
-    TVINFO_WIKIPEDIA: 'wikipedia'
+    TVINFO_WIKIPEDIA: 'wikipedia',
+    TVINFO_REDDIT: 'reddit',
+    TVINFO_YOUTUBE: 'youtube'
 
 }
 
@@ -154,21 +158,25 @@ class TVInfoIDs(object):
 
 
 class TVInfoSocialIDs(object):
-    def __init__(self, twitter=None, instagram=None, facebook=None, wikipedia=None, ids=None):
-        # type: (str_int, str_int, str_int, str_int, Dict[int, str_int]) -> None
+    def __init__(self, twitter=None, instagram=None, facebook=None, wikipedia=None, ids=None, reddit=None,
+                 youtube=None):
+        # type: (str_int, str_int, str_int, str_int, Dict[int, str_int], str_int, str) -> None
         ids = ids or {}
         self.twitter = twitter or ids.get(TVINFO_TWITTER)
         self.instagram = instagram or ids.get(TVINFO_INSTAGRAM)
         self.facebook = facebook or ids.get(TVINFO_FACEBOOK)
         self.wikipedia = wikipedia or ids.get(TVINFO_WIKIPEDIA)
+        self.reddit = reddit or ids.get(TVINFO_REDDIT)
+        self.youtube = youtube or ids.get(TVINFO_YOUTUBE)
 
     def __getitem__(self, key):
         return {TVINFO_TWITTER: self.twitter, TVINFO_INSTAGRAM: self.instagram, TVINFO_FACEBOOK: self.facebook,
-                TVINFO_WIKIPEDIA: self.wikipedia}.get(key)
+                TVINFO_WIKIPEDIA: self.wikipedia, TVINFO_REDDIT: self.reddit, TVINFO_TWITTER: self.youtube}.get(key)
 
     def __iter__(self):
         for s, v in [(TVINFO_TWITTER, self.twitter), (TVINFO_INSTAGRAM, self.instagram),
-                     (TVINFO_FACEBOOK, self.facebook), (TVINFO_WIKIPEDIA, self.wikipedia)]:
+                     (TVINFO_FACEBOOK, self.facebook), (TVINFO_WIKIPEDIA, self.wikipedia),
+                     (TVINFO_REDDIT, self.reddit), (TVINFO_YOUTUBE, self.youtube)]:
             yield s, v
 
     def __str__(self):
@@ -726,6 +734,7 @@ class PersonGenders(object):
     reverse = {v: k for k, v in iteritems(named)}
     tmdb_map = {0: unknown, 1: female, 2: male}
     imdb_map = {'female': female, 'male': male}
+    tvdb_map = {0: unknown, 1: male, 2: female, 3: unknown}  # 3 is technically: other
 
 
 class Crew(PersonBase):
