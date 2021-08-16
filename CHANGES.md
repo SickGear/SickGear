@@ -103,6 +103,7 @@
 * Fix view-show average runtime for IMDb miniseries
 * Change check if average mini-series runtime is reasonable before displaying it
 * Fix use meta lang to filter TMDB images
+* Fix glide cursor left and right key collisions with ctrl + alt/meta with left and right
 
 
 ### 0.24.15 (2021-08-05 11:45:00 UTC)
