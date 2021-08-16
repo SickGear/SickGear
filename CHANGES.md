@@ -102,6 +102,7 @@
 * Fix mapping show images in tmdb_api
 * Fix view-show average runtime for IMDb miniseries
 * Change check if average mini-series runtime is reasonable before displaying it
+* Fix use meta lang to filter TMDB images
 
 
 ### 0.24.15 (2021-08-05 11:45:00 UTC)

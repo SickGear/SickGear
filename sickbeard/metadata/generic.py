@@ -871,18 +871,18 @@ class GenericMetadata(object):
                     tvinfo_config['language'] = show_lang
 
                 t = sickbeard.TVInfoAPI(tv_id).setup(**tvinfo_config)
-                return t.get_show((show_obj.ids[tv_id]['id'], show_obj.prodid)[tv_src == show_obj._tvid],
+                return t.get_show((show_obj.ids[tv_id]['id'], show_obj.prodid)[tv_src == show_obj.tvid],
                                   load_episodes=False, banners=False, posters=False, fanart=True)
             except (BaseTVinfoError, IOError) as e:
                 logger.log(u"Unable to look up show on " + sickbeard.TVInfoAPI(
                     tv_id).name + ", not downloading images: " + ex(e), logger.WARNING)
 
         # todo: when tmdb is added as tv source remove the hardcoded TVINFO_TMDB
-        for tv_src in list(OrderedDict.fromkeys([show_obj._tvid] + list_keys(sickbeard.TVInfoAPI().search_sources) +
+        for tv_src in list(OrderedDict.fromkeys([show_obj.tvid] + list_keys(sickbeard.TVInfoAPI().search_sources) +
                                                 [TVINFO_TMDB])):
-            if tv_src != show_obj._tvid and not show_obj.ids.get(tv_src, {}).get('id'):
+            if tv_src != show_obj.tvid and not show_obj.ids.get(tv_src, {}).get('id'):
                 continue
-            if tv_src == show_obj._tvid:
+            if tv_src == show_obj.tvid:
                 show_infos[tv_src] = _get_show_info(tv_src)
             else:
                 show_infos[tv_src] = _get_show_info
