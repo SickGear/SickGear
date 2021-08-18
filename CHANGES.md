@@ -86,6 +86,8 @@
 * Fix handling of card filters and sort states
 * Add view paused "Only" to Daily Schedule
 * Add return paused "Only" to API
+* Change Add shows/Search results first aired dates to UI date format setting
+* Change improve the search progress text
 
 
 [develop changelog]
@@ -107,6 +109,9 @@
 * Change add language field to TVMaze search results
 * Change set TVMaze network to webchannel if no network is found
 * Change add TVMaze runtime, type, schedule, status, official site
+* Fix search results sorting
+* Add language flag to TVmaze search result items
+* Change reinstate "expand results" and display more prominently
 
 
 ### 0.24.16 (2021-08-28 16:05:00 UTC)

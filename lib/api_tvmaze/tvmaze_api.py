@@ -11,8 +11,10 @@ import logging
 import re
 
 import requests
-from urllib3.util.retry import Retry
 from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
+# noinspection PyProtectedMember
+from tornado._locale_data import LOCALE_NAMES
 
 from _23 import filter_iter
 from six import integer_types, iteritems, string_types
@@ -142,10 +144,17 @@ class TvMaze(TVInfoBase):
 
     def _search_show(self, name=None, ids=None, **kwargs):
         def _make_result_dict(s):
+            language = s.language.lower()
+            language_country_code = None
+            for cur_locale in iteritems(LOCALE_NAMES):
+                if language in cur_locale[1]['name_en'].lower():
+                    language_country_code = cur_locale[0].split('_')[1].lower()
+                    break
             return {'seriesname': s.name, 'id': s.id, 'firstaired': s.premiered,
                     'network': (s.network and s.network.name) or (s.web_channel and s.web_channel.name),
                     'genres': isinstance(s.genres, list) and ', '.join(g.lower() for g in s.genres) or s.genres,
-                    'overview': s.summary, 'language': s.language, 'runtime': s.average_runtime or s.runtime,
+                    'overview': s.summary, 'language': s.language, 'language_country_code': language_country_code,
+                    'runtime': s.average_runtime or s.runtime,
                     'type': s.type, 'schedule': s.schedule, 'status': s.status, 'official_site': s.official_site,
                     'aliases': [a.name for a in s.akas], 'image': s.image and s.image.get('original'),
                     'ids': TVInfoIDs(
