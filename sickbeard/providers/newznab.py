@@ -430,6 +430,11 @@ class NewznabProvider(generic.NZBProvider):
                     '%s %s, please check with provider.' %
                     (self.name, ('currently has their API disabled', description)[description not in (None, '')]),
                     logger.WARNING)
+            elif '401' == code:
+                logger.log('Error code 401 (Unauthorized) from provider%s' %
+                           ('.', ': %s' % description)[description not in ('', None)], logger.WARNING)
+                raise AuthException('Your Account has been disabled (Error Code 401) by the provider%s' %
+                                    ('.', ': %s' % description)[description not in ('', None)])
             else:
                 logger.log('Unknown error given from %s: %s' % (self.name, data.get('description', '')),
                            logger.WARNING)

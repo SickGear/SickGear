@@ -574,7 +574,7 @@ SG_EXTRA_SCRIPTS = []
 GIT_PATH = None
 
 IGNORE_WORDS = {
-    '^(?=.*?\bspanish\b)((?!spanish.?princess).)*$',
+    '^(?=.*?\\bspanish\\b)((?!spanish.?princess).)*$',
     'core2hd', 'hevc', 'MrLss', 'reenc', 'x265', 'danish', 'deutsch', 'dutch', 'flemish', 'french',
     'german', 'italian', 'nordic', 'norwegian', 'portuguese', 'spanish', 'swedish', 'turkish'
 }
@@ -1293,9 +1293,10 @@ def init_stage_1(console_logging):
     GIT_PATH = check_setting_str(CFG, 'General', 'git_path', '')
 
     IGNORE_WORDS, IGNORE_WORDS_REGEX = helpers.split_word_str(
-        check_setting_str(CFG, 'General', 'ignore_words', IGNORE_WORDS))
+        check_setting_str(CFG, 'General', 'ignore_words', helpers.generate_word_str(IGNORE_WORDS, IGNORE_WORDS_REGEX)))
     REQUIRE_WORDS, REQUIRE_WORDS_REGEX = helpers.split_word_str(
-        check_setting_str(CFG, 'General', 'require_words', REQUIRE_WORDS))
+        check_setting_str(CFG, 'General', 'require_words',
+                          helpers.generate_word_str(REQUIRE_WORDS, REQUIRE_WORDS_REGEX)))
 
     CALENDAR_UNPROTECTED = bool(check_setting_int(CFG, 'General', 'calendar_unprotected', 0))
 
