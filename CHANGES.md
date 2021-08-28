@@ -106,6 +106,12 @@
 * Fix glide cursor left and right key collisions with ctrl + alt/meta with left and right
 
 
+### 0.24.16 (2021-08-28 16:05:00 UTC)
+
+* Update Windows recommended modules lxml, pip, regex, setuptools, and add cffi, python-Levenshtein
+* Change newznab provider add handler for http response code 401
+
+
 ### 0.24.15 (2021-08-05 11:45:00 UTC)
 
 * Change media process move process method for *nix systems that don't support native move
