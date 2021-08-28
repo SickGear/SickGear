@@ -1,4 +1,9 @@
-﻿### 0.24.15 (2021-08-05 11:45:00 UTC)
+﻿### 0.24.16 (2021-08-28 11:00:00 UTC)
+
+* Update Windows recommended modules lxml, pip, regex, setuptools, and add cffi, python-Levenshtein
+
+
+### 0.24.15 (2021-08-05 11:45:00 UTC)
 
 * Change media process move process method for *nix systems that don't support native move
 * Fix do not display empty show name results returned from TVDb
