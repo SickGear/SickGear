@@ -574,7 +574,7 @@ SG_EXTRA_SCRIPTS = []
 GIT_PATH = None
 
 IGNORE_WORDS = {
-    '^(?=.*?\\bspanish\\b)((?!spanish.?princess).)*$',
+    r'^(?=.*?\bspanish\b)((?!spanish.?princess).)*$',
     'core2hd', 'hevc', 'MrLss', 'reenc', 'x265', 'danish', 'deutsch', 'dutch', 'flemish', 'french',
     'german', 'italian', 'nordic', 'norwegian', 'portuguese', 'spanish', 'swedish', 'turkish'
 }
@@ -603,7 +603,7 @@ if TRAKT_STAGING:
     TRAKT_CLIENT_ID = '2aae3052f90b14235d184cc8f709b12b4fd8ae35f339a060a890c70db92be87a'
     TRAKT_CLIENT_SECRET = '900e03471220503843d4a856bfbef17080cddb630f2b7df6a825e96e3ff3c39e'
     TRAKT_PIN_URL = 'https://staging.trakt.tv/pin/638'
-    TRAKT_BASE_URL = 'http://api.staging.trakt.tv/'
+    TRAKT_BASE_URL = 'http' + '://api.staging.trakt.tv/'
 else:
     # production trakt values:
     TRAKT_CLIENT_ID = 'f1c453c67d81f1307f9118172c408a883eb186b094d5ea33080d59ddedb7fc7c'

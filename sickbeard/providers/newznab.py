@@ -30,7 +30,7 @@ from . import generic
 from .. import classes, db, helpers, logger, tvcache
 from ..classes import SearchResult
 from ..common import NeededQualities, Quality
-from ..helpers import remove_non_release_groups, try_int
+from ..helpers import remove_non_release_groups
 from ..indexers.indexer_config import *
 from ..network_timezones import SG_TIMEZONE
 from ..sgdatetime import SGDatetime, timestamp_near
@@ -40,7 +40,7 @@ from ..scene_exceptions import has_season_exceptions
 from ..tv import TVEpisode, TVShow
 
 from lib.dateutil import parser
-from lib.sg_helpers import md5_for_text
+from lib.sg_helpers import md5_for_text, try_int
 from exceptions_helper import AuthException, ex, MultipleShowObjectsException
 from lxml_etree import etree
 
@@ -308,7 +308,7 @@ class NewznabProvider(generic.NZBProvider):
 
             limit = xml_caps.find('.//limits')
             if None is not limit:
-                lim = helpers.try_int(limit.get('max'), 100)
+                lim = try_int(limit.get('max'), 100)
                 self._limits = (100, lim)[100 <= lim]
 
             try:
@@ -399,45 +399,38 @@ class NewznabProvider(generic.NZBProvider):
             return False
 
         if 'error' == data.tag:
-            code = data.get('code', '')
-            description = data.get('description', '')
+            code = try_int(data.get('code'))
+            description = data.get('description') or ''
+            msg = ('', ': %s' % description)[bool(description)]
 
-            if '100' == code:
-                raise AuthException('Your API key for %s is incorrect, check your config.' % self.name)
-            elif '101' == code:
-                raise AuthException('Your account on %s has been suspended, contact the admin.' % self.name)
-            elif '102' == code:
-                try:
-                    retry_time, unit = re.findall(r'Try again in (\d+)\W+([a-z]+)', description, flags=re.I)[0]
-                except IndexError:
-                    retry_time, unit = None, None
-                if (description and 'limit' in description.lower()) or (retry_time and unit):
-                    self.tmr_limit_update(retry_time, unit, description)
-                    self.log_failure_url(url)
-                else:
-                    raise AuthException('Your account isn\'t allowed to use the API on %s, contact the admin.%s' %
-                                        (self.name, ('', ' Provider message: %s' % description)[
-                                            description not in ('', None)]))
-            elif code in ['429', '500']:
-                try:
-                    retry_time, unit = re.findall(r'Retry in (\d+)\W+([a-z]+)', description, flags=re.I)[0]
-                except IndexError:
-                    retry_time, unit = None, None
-                self.tmr_limit_update(retry_time, unit, description)
-                self.log_failure_url(url)
-            elif '910' == code:
-                logger.log(
-                    '%s %s, please check with provider.' %
-                    (self.name, ('currently has their API disabled', description)[description not in (None, '')]),
-                    logger.WARNING)
-            elif '401' == code:
-                logger.log('Error code 401 (Unauthorized) from provider%s' %
-                           ('.', ': %s' % description)[description not in ('', None)], logger.WARNING)
-                raise AuthException('Your Account has been disabled (Error Code 401) by the provider%s' %
-                                    ('.', ': %s' % description)[description not in ('', None)])
+            if code not in (100, 101, 102, 401, 429, 500, 910):
+                logger.warning('Unknown error given from %s%s' % (self.name, msg))
             else:
-                logger.log('Unknown error given from %s: %s' % (self.name, data.get('description', '')),
-                           logger.WARNING)
+                if 100 == code:
+                    raise AuthException('API key for %s is incorrect, check your config' % self.name)
+                elif 101 == code:
+                    raise AuthException('Account suspended on %s, contact the admin' % self.name)
+                elif 401 == code:
+                    logger.warning('Error code 401 (Unauthorized) from provider%s' % msg)
+                    raise AuthException('Account disabled on %s (code 401), contact the admin%s' % (self.name, msg))
+                elif code in (102, 429, 500):
+                    try:
+                        retry_time, unit = re.findall(r'(?i)(?:Try again|Retry) in (\d+)\W+([a-z]+)', description)[0]
+                    except IndexError:
+                        retry_time, unit = None, None
+                    handle_fail = True
+                    if 102 == code:
+                        handle_fail = ('limit' in description.lower()) or (retry_time and unit)
+                        if not handle_fail:
+                            raise AuthException(
+                                'Your account isn\'t allowed to use the %s API, contact the admin%s' %
+                                (self.name, ('', '. Provider message: %s' % description)[bool(description)]))
+                    if handle_fail:
+                        self.tmr_limit_update(retry_time, unit, description)
+                        self.log_failure_url(url)
+                elif 910 == code:
+                    logger.warning('%s %s, please check with provider' %
+                                   (self.name, ('currently has their API disabled', description)[bool(description)]))
             return False
 
         self.tmr_limit_count = 0
@@ -474,7 +467,7 @@ class NewznabProvider(generic.NZBProvider):
             base_params['season'] = '%d' % ep_obj.scene_absolute_number
         else:
             base_params['season'] = str((ep_obj.season, ep_obj.scene_season)[bool(ep_obj.show_obj.is_scene)])
-            ep_detail = 'S%02d' % helpers.try_int(base_params['season'], 1)
+            ep_detail = 'S%02d' % try_int(base_params['season'], 1)
 
         # id search
         params = base_params.copy()
@@ -526,15 +519,13 @@ class NewznabProvider(generic.NZBProvider):
                 base_params['ep'] = '/'.join(airdate[1:])
                 ep_detail = '+"%s.%s"' % (base_params['season'], '.'.join(airdate[1:]))
         elif ep_obj.show_obj.is_anime:
-            base_params['ep'] = '%i' % (helpers.try_int(ep_obj.scene_absolute_number) or
-                                        helpers.try_int(ep_obj.scene_episode))
-            ep_detail = '%02d' % helpers.try_int(base_params['ep'])
+            base_params['ep'] = '%i' % (try_int(ep_obj.scene_absolute_number) or try_int(ep_obj.scene_episode))
+            ep_detail = '%02d' % try_int(base_params['ep'])
         else:
             base_params['season'], base_params['ep'] = (
                 (ep_obj.season, ep_obj.episode), (ep_obj.scene_season, ep_obj.scene_episode))[ep_obj.show_obj.is_scene]
             ep_detail = sickbeard.config.naming_ep_type[2] % {
-                'seasonnumber': helpers.try_int(base_params['season'], 1),
-                'episodenumber': helpers.try_int(base_params['ep'], 1)}
+                'seasonnumber': try_int(base_params['season'], 1), 'episodenumber': try_int(base_params['ep'], 1)}
 
         # id search
         params = base_params.copy()
@@ -838,7 +829,7 @@ class NewznabProvider(generic.NZBProvider):
             if ns and 'newznab' in ns:
                 for attr in item.findall('%sattr' % ns['newznab']):
                     if 'size' == attr.get('name', ''):
-                        parsed_size = helpers.try_int(attr.get('value'), -1)
+                        parsed_size = try_int(attr.get('value'), -1)
                     elif 'guid' == attr.get('name', ''):
                         uid = attr.get('value')
         except (BaseException, Exception):
@@ -1018,12 +1009,11 @@ class NewznabProvider(generic.NZBProvider):
                     # get total and offset attributes
                     try:
                         if 0 == total:
-                            total = (helpers.try_int(parsed_xml.find(
+                            total = (try_int(parsed_xml.find(
                                 './/%sresponse' % n_spaces['newznab']).get('total', 0)), 1000)['Cache' == mode]
                             hits = (total // self.limits + int(0 < (total % self.limits)))
                             hits += int(0 == hits)
-                        offset = helpers.try_int(parsed_xml.find('.//%sresponse'
-                                                                 % n_spaces['newznab']).get('offset', 0))
+                        offset = try_int(parsed_xml.find('.//%sresponse' % n_spaces['newznab']).get('offset', 0))
                     except (AttributeError, KeyError):
                         if not use_rss:
                             break
@@ -1251,7 +1241,7 @@ class NewznabCache(tvcache.TVCache):
         if 'newznab' in ns:
             for attr in item.findall('%sattr' % ns['newznab']):
                 if attr.get('name', '') in NewznabConstants.providerToIndexerMapping:
-                    v = helpers.try_int(attr.get('value'))
+                    v = try_int(attr.get('value'))
                     if 0 < v:
                         ids[NewznabConstants.providerToIndexerMapping[attr.get('name')]] = v
         return ids

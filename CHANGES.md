@@ -1,6 +1,7 @@
-﻿### 0.24.16 (2021-08-28 11:00:00 UTC)
+﻿### 0.24.16 (2021-08-28 16:05:00 UTC)
 
 * Update Windows recommended modules lxml, pip, regex, setuptools, and add cffi, python-Levenshtein
+* Change newznab provider add handler for http response code 401
 
 
 ### 0.24.15 (2021-08-05 11:45:00 UTC)
