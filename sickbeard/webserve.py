@@ -3958,8 +3958,10 @@ class AddShows(Home):
                     else:
                         results[cur_tvid][tv_src_id] = cur_result.copy()
                         results[cur_tvid][tv_src_id]['direct_id'] = \
-                            (cur_tvid in ids_to_search and tv_src_id == ids_to_search.get(cur_tvid)) or \
-                            (TVINFO_TVDB == cur_tvid and ids_to_search.get(TVINFO_TVDB_SLUG) == cur_result.get('slug'))
+                            (cur_tvid in ids_to_search and ids_to_search.get(cur_tvid)
+                             and tv_src_id == ids_to_search.get(cur_tvid)) or \
+                            (TVINFO_TVDB == cur_tvid and cur_result.get('slug') and
+                             ids_to_search.get(TVINFO_TVDB_SLUG) == cur_result.get('slug')) or False
                         if results[cur_tvid][tv_src_id]['direct_id'] or \
                                 any(ids_to_search[si] == cur_result.get('ids', {})[si] for si in ids_to_search):
                             ids_search_used.update({k: v for k, v in iteritems(cur_result.get('ids', {}))
@@ -4003,14 +4005,18 @@ class AddShows(Home):
                        + ('', '&lid=%s' % sickbeard.TVInfoAPI().config['langabbv_to_id'][lang])[TVINFO_TVDB == tvid],
                        int(show['id']),
                        show['seriesname'], helpers.xhtml_escape(show['seriesname']), show['firstaired'],
-                       show.get('network', '') or '', show.get('genres', '') or '',
+                       (isinstance(show['firstaired'], string_types)
+                        and SGDatetime.sbfdate(dateutil.parser.parse(show['firstaired'])) or ''),
+                       show.get('network', '') or '', show.get('genres', '') or '',  # 11 - 12
+                       show.get('language', ''), show.get('language_country_code') or '',  # 13 - 14
                        re.sub(r'([,.!][^,.!]*?)$', '...',
                               re.sub(r'([.!?])(?=\w)', r'\1 ',
-                                     helpers.xhtml_escape((show.get('overview', '') or '')[:250:].strip()))),
-                       self._make_search_image_url(tvid, show),  # 13
-                       (show['direct_id'] and 100)
-                        or self.get_uw_ratio(term, show['seriesname'], show.get('aliases', [])),
-                       None, None, None, None, None, None, None, None, None,  # 15 - 23
+                                     helpers.xhtml_escape((show.get('overview', '') or '')[:250:].strip()))),  # 15
+                       self._make_search_image_url(tvid, show),  # 16
+                       100 - ((show['direct_id'] and 100)
+                              or self.get_uw_ratio(term, show['seriesname'], show.get('aliases') or [],
+                                                   show.get('language_country_code') or '')),
+                       None, None, None, None, None, None, None, None, None,  # 18 - 26
                        show['direct_id'], show.get('rename_suggest')
                        ] for show in itervalues(shows)] for tvid, shows in iteritems(results)])
 
@@ -4021,67 +4027,48 @@ class AddShows(Home):
             return data if not final_sort else sorted(data, reverse=False, key=lambda _x: _x[sortby_index])
 
         def sort_newest(data_result, is_last_sort, combine):
-            return sort_date(data_result, is_last_sort, 16, as_combined=combine)
+            return sort_date(data_result, is_last_sort, 19, as_combined=combine)
 
         def sort_oldest(data_result, is_last_sort, combine):
-            return sort_date(data_result, is_last_sort, 18, False, combine)
+            return sort_date(data_result, is_last_sort, 21, False, combine)
 
         def sort_date(data_result, is_last_sort, idx_sort, reverse=True, as_combined=False):
             idx_aired = 9
-            combined = final_order(
-                idx_sort + 1,
-                sorted(data_result, reverse=reverse, key=lambda x: (dateutil.parser.parse(
+            date_sorted = sorted(data_result, reverse=reverse, key=lambda x: (dateutil.parser.parse(
                     re.match(r'^(?:19|20)\d\d$', str(x[idx_aired])) and ('%s-12-31' % str(x[idx_aired]))
-                    or (x[idx_aired] and str(x[idx_aired])) or '1900'))), is_last_sort)
+                    or (x[idx_aired] and str(x[idx_aired])) or '1900')))
+            combined = final_order(idx_sort + 1, date_sorted, is_last_sort)
 
             idx_src = 2
-            grouped = final_order(
-                idx_sort,
-                sorted(
-                    sorted(combined, reverse=reverse, key=lambda x: (dateutil.parser.parse(
-                        re.match(r'^(?:19|20)\d\d$', str(x[idx_aired])) and ('%s-12-31' % str(x[idx_aired]))
-                        or (x[idx_aired] and str(x[idx_aired])) or '1900'))),
-                    reverse=False, key=lambda x: x[idx_src]), is_last_sort)
+            grouped = final_order(idx_sort, sorted(date_sorted, key=lambda x: x[idx_src]), is_last_sort)
 
             return (grouped, combined)[as_combined]
 
         def sort_az(data_result, is_last_sort, combine):
-            return sort_zaaz(data_result, is_last_sort, 20, as_combined=combine)
+            return sort_zaaz(data_result, is_last_sort, 23, as_combined=combine)
 
         def sort_za(data_result, is_last_sort, combine):
-            return sort_zaaz(data_result, is_last_sort, 22, True, combine)
+            return sort_zaaz(data_result, is_last_sort, 25, True, combine)
 
         def sort_zaaz(data_result, is_last_sort, idx_sort, reverse=False, as_combined=False):
             idx_title = 7
-            combined = final_order(
-                idx_sort + 1,
-                sorted(
-                    data_result, reverse=reverse, key=lambda x: (
-                        (remove_article(x[idx_title].lower()), x[idx_title].lower())[sickbeard.SORT_ARTICLE])),
-                is_last_sort)
+            zaaz_sorted = sorted(data_result, reverse=reverse, key=lambda x: (
+                (remove_article(x[idx_title].lower()), x[idx_title].lower())[sickbeard.SORT_ARTICLE]))
+            combined = final_order(idx_sort + 1, zaaz_sorted, is_last_sort)
 
             idx_src = 2
-            grouped = final_order(
-                idx_sort,
-                sorted(
-                    combined, reverse=reverse, key=lambda x: (
-                        x[idx_src],
-                        (remove_article(x[idx_title].lower()), x[idx_title].lower())[sickbeard.SORT_ARTICLE])),
-                is_last_sort)
+            grouped = final_order(idx_sort, sorted(zaaz_sorted, key=lambda x: x[idx_src]), is_last_sort)
 
             return (grouped, combined)[as_combined]
 
         def sort_rel(data_result, is_last_sort, as_combined):
-            idx_rel_sort, idx_rel = 14, 14
+            idx_rel_sort, idx_rel = 17, 17
             idx_title = 7
-            combined = final_order(
-                idx_rel_sort + 1,
-                sorted(data_result, reverse=True, key=lambda x: (x[idx_rel], x[idx_title])), is_last_sort)
-
             idx_src = 2
-            grouped = final_order(  # grouped
-                idx_rel_sort,
-                sorted(combined, reverse=True, key=lambda x: (x[idx_src], x[idx_rel], x[idx_title])), is_last_sort)
+            rel_sorted = sorted(data_result, key=lambda x: (x[idx_rel], x[idx_title], x[idx_src]))
+            combined = final_order(idx_rel_sort + 1, rel_sorted, is_last_sort)
+
+            grouped = final_order(idx_rel_sort, sorted(rel_sorted, key=lambda x: (x[idx_src])), is_last_sort)
 
             return (grouped, combined)[as_combined]
 
@@ -4117,16 +4104,31 @@ class AddShows(Home):
         return img_url
 
     @classmethod
-    def get_uw_ratio(cls, search_term, showname, aliases):
+    def get_uw_ratio(cls, search_term, showname, aliases, lang=None):
         search_term = decode_str(search_term, errors='replace')
         showname = decode_str(showname, errors='replace')
         s = fuzz.UWRatio(search_term, showname)
         # check aliases and give them a little lower score
-        for a in aliases:
-            ns = fuzz.UWRatio(search_term, a) - 1
-            if ns > s:
+        lower_alias = 0
+        for cur_alias in aliases or []:
+            ns = fuzz.UWRatio(search_term, cur_alias)
+            if (ns - 1) > s:
                 s = ns
-        return s
+                lower_alias = 1
+
+        # if lang param is supplied, add scale in order to reorder elements 1) en:lang 2) other:lang 3) alias
+        # this spacer behaviour may improve the original logic, but currently isn't due to lang used as off switch
+        # scale = 3 will enable spacing for all use cases
+        scale = (1, 3)[None is not lang]
+
+        score_scale = (s * scale)
+        if score_scale:
+            score_scale -= lower_alias
+
+            # if lang param is supplied, and does not specify English, then lower final score
+            score_scale -= (1, 0)[None is lang or lang in ('gb',) or not score_scale]
+
+        return score_scale
 
     def mass_add_table(self, root_dir=None, hash_dir=None, **kwargs):
 
@@ -4277,14 +4279,15 @@ class AddShows(Home):
 
         t.provided_show_dir = show_dir
         t.other_shows = other_shows
+        t.infosrc = sickbeard.TVInfoAPI().search_sources
         search_tvid = None
         if use_show_name and 1 == show_name.count(':'):  # if colon is found once
             search_tvid = filter_list(lambda x: bool(x),
                                       [('%s:' % sickbeard.TVInfoAPI(_tvid).config['slug']) in show_name and _tvid
-                                       for _tvid, _ in iteritems(sickbeard.TVInfoAPI().search_sources)])
+                                       for _tvid, _ in iteritems(t.infosrc)])
             search_tvid = 1 == len(search_tvid) and search_tvid[0]
         t.provided_tvid = search_tvid or int(tvid or sickbeard.TVINFO_DEFAULT)
-        t.infosrc = sickbeard.TVInfoAPI().search_sources
+        t.infosrc_icons = [sickbeard.TVInfoAPI(cur_tvid).config.get('icon') for cur_tvid in t.infosrc]
         t.meta_lang = sickbeard.ADD_SHOWS_METALANG
         t.allowlist = []
         t.blocklist = []

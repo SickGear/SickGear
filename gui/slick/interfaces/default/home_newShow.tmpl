@@ -42,7 +42,7 @@
 	<h1 class="title">$title</h1>
 #end if
 
-<span class="preload-image" style="position:absolute;top:-999px" src="$sbRoot/images/loading32#echo ('', '-dark')['dark' == $sg_str('THEME_NAME', 'dark')]#.gif" width="32" height="32" border="0"></span>
+<span class="bfr" style="position:absolute;top:-999px"><img src="$sbRoot/images/loading32#echo ('', '-dark')['dark' == $sg_str('THEME_NAME', 'dark')]#.gif">#for $cur_icon in $infosrc_icons#<img src="$sbRoot/images/$cur_icon">#end for#</span>
 
 <div id="newShowPortal">
 
@@ -117,9 +117,7 @@
 					<span class="pull-right grey-text" style="font-size:smaller"><b>*</b>SickGear is en, language is used for show/episode lists</span>
 				</p>
 
-				<div id="search-results" style="height: 100%"></div>
-				<div id="more-results" style="display:none"><a href="#">More results...</a></div>
-				<div id="search-results-buffer" style="display:none"></div>
+				<div id="search-results" class="collapsed" style="height: 100%"></div>
 #end if
 
 			</div>

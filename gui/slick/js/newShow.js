@@ -67,11 +67,15 @@ $(document).ready(function () {
 		var elTvDatabase = $('#provided-tvid'),
 			elInfosrcLang = $('#infosrc-lang-select'),
 			tvsrcName = elTvDatabase.find('option:selected').text(),
-			tvSearchSrc = 0 < tvsrcName.length ? ' on <span class="boldest">' + elTvDatabase.find('option:selected').attr('data-name') + '</span>' : '';
+			tvSearchSrc = 0 < tvsrcName.length
+				? ' <span class="boldest">' + elTvDatabase.find('option:selected').attr('data-name') + '</span>'
+				: '';
 
-		$('#search-results').empty().html('<img id="searchingAnim" src="' + sbRoot + '/images/loading32' + themeSpinner + '.gif" height="32" width="32" />'
-			+ ' searching <span class="boldest">' + cleanseText(elNameToSearch.val(), !0) + '</span>'
-			+ tvSearchSrc + ' in ' + elInfosrcLang.val()
+		$('#search-results').empty().html('<img id="searchingAnim" src="' + sbRoot + '/images/loading32' + themeSpinner + '.gif" height="32" width="32">'
+			+ ' searching '
+			+ tvSearchSrc
+			+ ' in <em>lang:' + elInfosrcLang.val() + '</em> <span' + htmlFlag(elInfosrcLang.val()).replace('.png)"', '.png);display:inline-block;width:16px;height:11px;margin:-2px 3px 0 0;vertical-align:middle"') + '></span>'
+			+ ' for <span class="boldest">' + cleanseText(elNameToSearch.val(), !0) + '</span>'
 			+ '...');
 
 		searchRequestXhr = $.ajax({
@@ -88,14 +92,15 @@ $(document).ready(function () {
 			},
 			success: function (data) {
 				var resultStr = '', attrs = '', checked = !1, rowType, row = 0, srcState = '',
-					resultItem, resultStrBuffer = '', nBufferSize = 9999, nBuffer = 0, nAll = 0;
+					resultItem, nBuffer = 0, nBufferSize = 20, nAll = 0;
 
 				if (null === data.results || 0 === data.results.length) {
 					resultStr += '<span class="boldest">Sorry, no results found. Try a different search.</span>';
 				} else {
 					var n = 0, result = {
 						SrcName: n, isInDB: ++n, SrcId: ++n, SrcDBId: ++n, SrcSlug: ++n, SrcUrl: ++n, ShowID: ++n,
-						Title: ++n, TitleHtml: ++n, Aired: ++n, Network: ++n, Genre: ++n, Overview: ++n, ImgUrl: ++n,
+						Title: ++n, TitleHtml: ++n, Aired: ++n, AiredStr: ++n, Network: ++n, Genre: ++n,
+						Language: ++n, LanguageCC: ++n, Overview: ++n, ImgUrl: ++n,
 						RelSort: ++n, RelCombined : ++n, NewestAired: ++n, NewestCombined: ++n,
 						OldestAired: ++n, OldestCombined: ++n, AzSort: ++n, AzCombined : ++n, ZaSort: ++n, ZaCombined: ++n,
 						DirectIdMatch: ++n, RenameSuggest: ++n
@@ -114,7 +119,7 @@ $(document).ready(function () {
 							var today = new Date();
 							showstartdate = '&nbsp;<span class="stepone-result-date">('
 								+ (startDate > today ? 'will debut' : 'started')
-								+ ': ' + item[result.Aired] + ')</span>';
+								+ ': ' + item[result.AiredStr] + ')</span>';
 						}
 
 						srcState = [
@@ -140,9 +145,12 @@ $(document).ready(function () {
 							+ '<a'
 							+ ' class="stepone-result-title"'
 							+ ' title="<div style=\'color: rgb(66, 139, 202)\'>' + cleanseText(item[result.TitleHtml], !0) + '</div>'
+							+ (0 < item[result.LanguageCC].length && 'gb' !== item[result.LanguageCC]
+								? '<div style=\'font-weight:bold;font-size:0.9em;color:#888\'><em>Language: <span' + htmlFlag(item[result.LanguageCC]).replace('.png)"', '.png);display:inline-block;width:16px;height:11px;margin:-2px 3px 0 0;vertical-align:middle"').replace(/"/g, "'") + '></span>'
+								+ item[result.Language] + '</em></div>' : '')
 							+ (0 < item[result.Genre].length ? '<div style=\'font-weight:bold\'>(<em>' + item[result.Genre] + '</em>)</div>' : '')
 							+ (0 < item[result.Network].length ? '<div style=\'font-weight:bold;font-size:0.9em;color:#888\'><em>' + item[result.Network] + '</em></div>' : '')
-							+ '<img style=\'max-height:150px;float:right;margin-left:3px\' src=\'/' + item[result.ImgUrl] + '\'>'
+							+ (item[result.ImgUrl] && '<img style=\'max-height:150px;float:right;margin-left:3px\' src=\'/' + item[result.ImgUrl] + '\'>' || '')
 							+ (0 < item[result.Overview].length ? '<p style=\'margin:0 0 2px\'>' + item[result.Overview] + '</p>' : '')
 							+ '<span style=\'float:right;clear:both\'>Click for more</span>'
 							+ '"'
@@ -153,26 +161,23 @@ $(document).ready(function () {
 							+ ('' === srcState ? ''
 								: '&nbsp;<span class="stepone-result-db grey-text">' + '[' + srcState + ']' + '</span>')
 							+ '</div>' + "\n";
-						if (nBuffer < nBufferSize || item[result.isInDB]) {
-							resultStr += resultItem;
-							if (!1 === item[result.isInDB])
-								nBuffer++;
-						} else {
-							resultStrBuffer += resultItem;
-						}
+						resultStr += resultItem;
+						if(item[result.isInDB])
+							nBufferSize++;
+						if ((nBuffer < nBufferSize) || item[result.isInDB])
+							nBuffer++;
 						nAll++;
 					});
 				}
 				var selAttr = 'selected="selected" ',
 					selClass = 'selected-text',
 					classAttrSel = 'class="' + selClass + '" ',
-					useBuffer = nBufferSize < nAll,
 					defSortby = /^az/.test(config.resultsSortby) || /^za/.test(config.resultsSortby) || /^newest/.test(config.resultsSortby) || /^oldest/.test(config.resultsSortby) ? '': classAttrSel + selAttr;
 
-				$('#search-results').html(
+				$('#search-results').addClass('collapsed').html(
 					'<fieldset>' + "\n" + '<legend class="legendStep" style="margin-bottom: 15px">'
 						+ '<span id="count"></span>'
-						+ '<span style="float:right;height:32px;line-height:1">'
+						+ '<span style="float:right;height:32px;line-height:1"><span id="results-expander" style="margin-right:10px"></span>'
 						+ '<select id="results-sortby" class="form-control form-control-inline input-sm">'
 						+ '<optgroup label="Sort by">'
 						+ '<option ' + (/^az/.test(config.resultsSortby) ? classAttrSel + selAttr : '') + 'value="az">A to Z</option>'
@@ -192,25 +197,32 @@ $(document).ready(function () {
 						+ '</div>'
 						+ '</fieldset>'
 					);
-
-				if (useBuffer) {
-					$('#search-results-buffer').html(resultStrBuffer);
-					$('#more-results').show();
-					$('#more-results a').on('click', function(e, d) {
-						e.preventDefault();
-						$('#more-results').hide();
-						$('#search-results #count').text(nAll + ' search result' + (1 === nAll ? '' : 's') + '...');
-						$('#search-results-buffer .results-item').appendTo('#holder');
-						container$.isotope( 'reloadItems' ).isotope(
-							{sortBy: $('#results-sortby').find('option:not([value$="top"],[value$="group"]).selected-text').val()});
-						myform.loadsection(0);
-					});
-					$('#search-results #count').text((nBuffer + ' / ' + nAll)
-						+ ' search result' + (1 === nBuffer ? '' : 's') + '...');
-				} else {
-					$('#search-results #count').text((0 < nBuffer ? nBuffer + (useBuffer ? ' / ' + nAll : '') : 'No')
-						+ ' search result' + (1 === nAll ? '' : 's') + '...');
+				function displayCount(){
+					$('#count').html((nAll > nBufferSize ? nBuffer + ' of ' + nAll : (0 < nAll ? nAll : 'No'))
+						+ ' result' + (1 === nAll ? '' : 's') + '...');
 				}
+				displayCount();
+				var defaultExpander = '<i class="sgicon-arrowdown" style="margin-right:-8px; font-size:12px"></i>expand list'
+				$('#results-expander').html((nAll > nBufferSize ? ' <span id="more-results" style="display:none;font-size: 0.7em">[<a href="#" style="text-decoration:none">' + defaultExpander + '</a>]</span>' : ''));
+				$('#more-results').show();
+				$('#more-results a').on('click', function(e, d) {
+					e.preventDefault();
+					var results$ = $('#search-results'), displayAction = '';
+					if (results$.hasClass('collapsed')){
+						displayAction = '<i class="sgicon-arrowup" style="margin-right:4px; font-size:12px"></i>collapse list';
+						results$.removeClass('collapsed');
+						$('#count').html('All ' + nAll + ' result' + (1 === nAll ? '' : 's'));
+					} else {
+						displayAction = defaultExpander;
+						results$.addClass('collapsed');
+						displayCount();
+					}
+					$('#more-results').find('a').html(displayAction);
+
+					container$.isotope('updateSortData');
+					updateResults();
+					myform.loadsection(0);
+				});
 
 				var container$ = $('#holder'),
 					sortbySelect$ = $('#results-sortby'),
@@ -218,34 +230,53 @@ $(document).ready(function () {
 						return ($('#results-sortby').find('option[value$="notop"]').hasClass(selClass)
 							? (1000 > value ? value + 1000 : value)
 							: (1000 > value ? value : value - 1000))}),
+					fx = {filterData: function(){
+						var results$ = $('#search-results');
+						if (results$.hasClass('collapsed')){
+							var itemElem = this, number = getAttr(itemElem, 'sort-' + results$.find('option:not([value$="top"],[value$="group"]).' + selClass).val());
+							number -= number >= 1000 ? 1000 : 0;
+							return (number < nBufferSize ) || !!getAttr(itemElem, 'indb');
+						}
+						return !0;
+					}},
+					getAttr = (function(itemElem, attr){
+						var number = $(itemElem).attr('data-' + attr);
+						return ('undefined' !== typeof(number)) && parseInt(number, 10) || 0;
+					}),
 					getData = (function(itemElem, sortby){
-						var position = parseInt($(itemElem).attr('data-sort-' + sortby +
-							($('#results-sortby').find('option[value$="ingroup"]').hasClass(selClass) ? '' : '-combined')));
-						return (!$(itemElem).attr('data-indb')) ? position : reOrder(position);
+						var position = getAttr(itemElem, 'sort-' + sortby +
+							($('#results-sortby').find('option[value$="ingroup"]').hasClass(selClass) ? '' : '-combined'));
+						return (!!getAttr(itemElem, 'indb') ? reOrder(position) : position);
 					});
 
 				sortbySelect$.find('.' + selClass).each(function(){
 					$(this).html('> ' + $(this).html());
 				});
 
-				container$.isotope({
-					itemSelector: '.results-item',
-					sortBy: sortbySelect$.find('option:not([value$="top"],[value$="group"]).' + selClass).val(),
-					layoutMode: 'masonry',
-					getSortData: {
-						az: function(itemElem){ return getData(itemElem, 'az'); },
-						za: function(itemElem){ return getData(itemElem, 'za'); },
-						newest: function(itemElem){ return getData(itemElem, 'newest'); },
-						oldest: function(itemElem){ return getData(itemElem, 'oldest'); },
-						rel: function(itemElem){ return getData(itemElem, 'rel'); }
-					}
-				}).on('arrangeComplete', function(event, items){
-					$(items).each(function(i, item){
-						if (1 === i % 2){
-							$(item.element).addClass('alt');
+				function updateResults(){
+					$('.results-item').removeClass('alt');
+					container$.isotope({
+						itemSelector: '.results-item',
+						sortBy: sortbySelect$.find('option:not([value$="top"],[value$="group"]).' + selClass).val(),
+						layoutMode: 'masonry',
+						filter: fx['filterData'],
+						getSortData: {
+							az: function(itemElem){ return getData(itemElem, 'az'); },
+							za: function(itemElem){ return getData(itemElem, 'za'); },
+							newest: function(itemElem){ return getData(itemElem, 'newest'); },
+							oldest: function(itemElem){ return getData(itemElem, 'oldest'); },
+							rel: function(itemElem){ return getData(itemElem, 'rel'); }
 						}
+					}).on('arrangeComplete', function(event, items){
+						$(items).each(function(i, item){
+							if (1 === i % 2){
+								$(item.element).addClass('alt');
+							}
+						});
 					});
-				});
+				}
+				container$.isotope();  // must init first
+				updateResults();
 
 				sortbySelect$.on('change', function(){
 					var selectedSort = String($(this).val()), sortby = selectedSort, curSortby$, curSel$, newSel$;
@@ -264,8 +295,8 @@ $(document).ready(function () {
 					$('.results-item[data-indb="1"]').each(function(){
 						$(this).attr(sortby, reOrder(parseInt($(this).attr(sortby), 10)));
 					});
-					$('.results-item').removeClass('alt');
-					container$.isotope('updateSortData').isotope({sortBy: sortby});
+					container$.isotope('updateSortData');
+					updateResults();
 
 					config.resultsSortby = sortby +
 						($(this).find('option[value$="notop"]').hasClass(selClass) ? ' notop' : '') +
@@ -402,7 +433,7 @@ $(document).ready(function () {
 		}
 		updateAniGrouplist(showName);
 		var sample_text = '<p>Adding show <span class="show-name">' + cleanseText(showName, !0) + '</span>'
-			+ (!showName.length ? 'into<br />' : '<br />into' + (!config.folder.length ? '' : ' user location'))
+			+ (!showName.length ? 'into<br>' : '<br>into' + (!config.folder.length ? '' : ' user location'))
 			+ ' <span class="show-dest">';
 
 		// if we have a root dir selected, figure out the path
