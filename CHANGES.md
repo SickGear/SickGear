@@ -114,6 +114,11 @@
 * Change reinstate "expand results" and display more prominently
 
 
+### 0.24.17 (2021-08-31 01:00:00 UTC)
+
+* Change allow Python 3.8.12, 3.9.7, and 3.10.0
+
+
 ### 0.24.16 (2021-08-28 16:05:00 UTC)
 
 * Update Windows recommended modules lxml, pip, regex, setuptools, and add cffi, python-Levenshtein
