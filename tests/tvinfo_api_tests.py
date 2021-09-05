@@ -20,7 +20,7 @@ sys.path.insert(1, os.path.abspath('..'))
 
 import sickgear
 from sickgear.indexers.indexer_config import TVINFO_TVDB, TVINFO_TMDB, TVINFO_TVMAZE, TVINFO_TRAKT, TVINFO_IMDB, \
-    TVINFO_TRAKT_SLUG
+    TVINFO_TVDB_SLUG, TVINFO_TRAKT_SLUG
 from lib.tvinfo_base import TVInfoPerson as TVInfoPerson_lib, TVInfoImage as TVInfoImage_lib, \
     TVInfoSocialIDs as TVInfoSocialIDs_lib, TVInfoCharacter as TVInfoCharacter_lib, TVInfoShow as TVInfoShow_lib, \
     TVInfoIDs as TVInfoIDs_lib, CastList as CastList_lib, CrewList as CrewList_lib, \
@@ -29,7 +29,6 @@ from lib.tvinfo_base import TVInfoPerson as TVInfoPerson_lib, TVInfoImage as TVI
 from tvinfo_base import TVInfoPerson, TVInfoImage, TVInfoSocialIDs, TVInfoCharacter, TVInfoShow, TVInfoIDs, CastList, \
     CrewList, RoleTypes, TVInfoEpisode, TVInfoSeason, TVInfoNetwork
 import requests
-from lib.api_tvdb.tvdb_api import Tvdb
 
 # noinspection PyUnreachableCode
 if False:
@@ -100,13 +99,7 @@ def _mock_post(*args, **kwargs):
     resp = requests.Response()
     resp.status_code = 200
     resp._content = ''
-    resp.encoding = 'UTF-8'
-    resp.headers['Content-Type'] = 'text/html; charset=utf-8'
     return resp
-
-
-def _mock_get_new_token(*args, **kwargs):
-    return {'token': 'testtoken', 'datetime': datetime.datetime.now()}
 
 
 browse_start_date_filename = os.path.join(mock_data_dir, 'browse_start_date.data')
@@ -213,7 +206,7 @@ def _property_type_checker(obj, checked_objs=None):
                 ('social_ids', (TVInfoSocialIDs, TVInfoSocialIDs_lib), None),
                 ('characters', list, (TVInfoCharacter, TVInfoCharacter_lib)),
                 ('name', str, None),
-                ('id', (int, NoneType), None),
+                ('id', int, None),
                 ('image', (str, NoneType), None),
                 ('thumb_url', (str, NoneType), None),
                 ('gender', (int, NoneType), None),
@@ -434,7 +427,7 @@ def _property_type_checker(obj, checked_objs=None):
                 ('lastupdatedby', (int, str, NoneType), None),
                 ('airsafterseason', (int, NoneType), None),
                 ('airsbeforeseason', (int, NoneType), None),
-                ('airsbeforeepisode', (int, NoneType), None),
+                ('airsbeforeepisode', (bool, NoneType), None),
                 ('imdb_id', (str, NoneType), None),
                 ('contentrating', (str, NoneType), None),
                 ('thumbadded', (str, NoneType), None),
@@ -483,7 +476,7 @@ def _compare_helper(obj_a, obj_b):
 
 
 person_tests = [
-    # {'p_id': 346941, 'tvid': TVINFO_TVDB},  # Katherine McNamara
+    {'p_id': 346941, 'tvid': TVINFO_TVDB},  # Katherine McNamara
     {'p_id': 968006, 'tvid': TVINFO_TMDB},  # Katherine McNamara
     {'p_id': 15776, 'tvid': TVINFO_TVMAZE},  # Katherine McNamara
     {'p_id': 260345, 'tvid': TVINFO_TRAKT},  # Katherine McNamara
@@ -501,9 +494,10 @@ search_tests = [
     {'kwargs': {'name': 'Shadowhunters'}, 'search_tvid': TVINFO_TVDB},  # Shadowhunters
     {'kwargs': {'name': 'Wednesday'}, 'search_tvid': TVINFO_TVDB},  # Shadowhunters
     {'kwargs': {'ids': {TVINFO_TVDB: 295837}}, 'search_tvid': TVINFO_TVDB},  # Shadowhunters
-    # {'kwargs': {'ids': {TVINFO_IMDB: 4145054}}, 'search_tvid': TVINFO_TVDB},  # Shadowhunters
-    # {'kwargs': {'ids': {TVINFO_TMDB: 119051}}, 'search_tvid': TVINFO_TVDB},  # Wednesday
-    # {'kwargs': {'ids': {TVINFO_TVMAZE: 53647}}, 'search_tvid': TVINFO_TVDB},  # Wednesday
+    {'kwargs': {'ids': {TVINFO_IMDB: 4145054}}, 'search_tvid': TVINFO_TVDB},  # Shadowhunters
+    {'kwargs': {'ids': {TVINFO_TMDB: 119051}}, 'search_tvid': TVINFO_TVDB},  # Wednesday
+    {'kwargs': {'ids': {TVINFO_TVMAZE: 53647}}, 'search_tvid': TVINFO_TVDB},  # Wednesday
+    {'kwargs': {'ids': {TVINFO_TVDB_SLUG: 'walker-independence'}}, 'search_tvid': TVINFO_TVDB},  # Walker: Independence
     # trakt tests
     {'kwargs': {'name': 'Shadowhunters'}, 'search_tvid': TVINFO_TRAKT},  # Shadowhunters
     {'kwargs': {'name': 'Wednesday'}, 'search_tvid': TVINFO_TRAKT},  # Shadowhunters
@@ -530,10 +524,10 @@ search_tests = [
 person_search_tests = [
     # tvdb tests
     {'kwargs': {'name': 'Katherine McNamara'}, 'search_tvid': TVINFO_TVDB},  # Katherine McNamara
-    # {'kwargs': {'ids': {TVINFO_TVDB: 346941}}, 'search_tvid': TVINFO_TVDB},  # Katherine McNamara
-    # {'kwargs': {'ids': {TVINFO_IMDB: 3031063}}, 'search_tvid': TVINFO_TVDB},  # Katherine McNamara
-    # {'kwargs': {'ids': {TVINFO_TMDB: 968006}}, 'search_tvid': TVINFO_TVDB},  # Katherine McNamara
-    # {'kwargs': {'ids': {TVINFO_TVMAZE: 15776}}, 'search_tvid': TVINFO_TVDB},  # Katherine McNamara
+    {'kwargs': {'ids': {TVINFO_TVDB: 346941}}, 'search_tvid': TVINFO_TVDB},  # Katherine McNamara
+    {'kwargs': {'ids': {TVINFO_IMDB: 3031063}}, 'search_tvid': TVINFO_TVDB},  # Katherine McNamara
+    {'kwargs': {'ids': {TVINFO_TMDB: 968006}}, 'search_tvid': TVINFO_TVDB},  # Katherine McNamara
+    {'kwargs': {'ids': {TVINFO_TVMAZE: 15776}}, 'search_tvid': TVINFO_TVDB},  # Katherine McNamara
     # trakt tests
     {'kwargs': {'name': 'Katherine McNamara'}, 'search_tvid': TVINFO_TRAKT},  # Katherine McNamara
     # {'kwargs': {'ids': {TVINFO_TVDB: 346941}}, 'search_tvid': TVINFO_TRAKT},  # Katherine McNamara
@@ -586,7 +580,6 @@ class TVInfoTests(test.SickbeardTestDBCase):
         datetime.datetime = _FakeDateTime
         requests.sessions.Session.get = _mock_get
         if disable_content_creation:
-            Tvdb.get_new_token = _mock_get_new_token
             requests.sessions.Session.post = _mock_post
 
     @classmethod

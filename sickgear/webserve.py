@@ -112,6 +112,7 @@ if False:
     # from api_imdb.imdb_api import IMDbIndexer
     from api_tmdb.tmdb_api import TmdbIndexer
     from api_trakt.indexerapiinterface import TraktIndexer
+    from api_tvdb.tvdb_api_v4 import TvdbAPIv4 as TvdbIndexer
     from api_tvmaze.tvmaze_api import TvMaze as TvmazeIndexer
 
 
@@ -6036,6 +6037,120 @@ class AddShows(Home):
 
         return self.new_show('|'.join(['', '', '', show_name]), use_show_name=True)
 
+    def tvdb_default(self):
+        method = getattr(self, sickgear.TVDB_MRU, None)
+        if not callable(method):
+            return self.tvdb_upcoming()
+        return method()
+
+    def tvdb_upcoming(self, **kwargs):
+        return self.browse_tvdb(
+            'Upcoming at TVDb', mode='upcoming', **kwargs)
+
+    def tvdb_toprated(self, **kwargs):
+        return self.browse_tvdb(
+            'Top rated at TVDb', mode='toprated', **kwargs)
+
+    def browse_tvdb(self, browse_title, **kwargs):
+
+        browse_type = 'TVDb'
+        mode = kwargs.get('mode', '')
+
+        footnote = None
+        filtered = []
+
+        tvid = TVINFO_TVDB
+        tvinfo_config = sickgear.TVInfoAPI(tvid).api_params.copy()
+        t = sickgear.TVInfoAPI(tvid).setup(**tvinfo_config)  # type: Union[TvdbIndexer, TVInfoBase]
+
+        top_year = helpers.try_int(kwargs.get('year'), None)
+        if 'upcoming' == mode:
+            items = t.discover()
+        else:
+            items = t.get_top_rated(year=top_year,
+                                    in_last_year=1 == datetime.date.today().month and 7 > datetime.date.today().day)
+
+        oldest, newest, oldest_dt, newest_dt, dedupe = None, None, 9999999, 0, []
+        use_networks = False
+        parseinfo = dateutil.parser.parserinfo(dayfirst=False, yearfirst=True)
+        base_url = sickgear.TVInfoAPI(TVINFO_TVDB).config['show_url']
+        for cur_show_info in items:
+            if cur_show_info.id in dedupe or not cur_show_info.seriesname:
+                continue
+            dedupe += [cur_show_info.id]
+
+            try:
+                airtime = cur_show_info.airs_time
+                if not airtime or (0, 0) == (airtime.hour, airtime.minute):
+                    airtime = dateutil.parser.parse('23:59').time()
+                dt = datetime.datetime.combine(
+                    dateutil.parser.parse(cur_show_info.firstaired, parseinfo).date(), airtime)
+                ord_premiered, str_premiered, started_past, oldest_dt, newest_dt, oldest, newest, _, _, _, _ \
+                    = self.sanitise_dates(dt, oldest_dt, newest_dt, oldest, newest)
+
+                image = self._make_cache_image_url(tvid, cur_show_info)
+                images = {} if not image else dict(poster=dict(thumb=image))
+
+                ids = dict(tvdb=cur_show_info.id)
+                if cur_show_info.ids.imdb:
+                    ids['imdb'] = cur_show_info.ids.imdb
+
+                network_name = cur_show_info.network
+                cc = 'US'
+                if network_name:
+                    use_networks = True
+                    cc = cur_show_info.network_country_code or cc
+
+                language = ((cur_show_info.language and 'jap' in cur_show_info.language.lower())
+                            and 'jp' or 'en')
+
+                filtered.append(dict(
+                    ord_premiered=ord_premiered,
+                    str_premiered=str_premiered,
+                    started_past=started_past,
+                    episode_overview=helpers.xhtml_escape(cur_show_info.overview[:250:]).strip('*').strip(),
+                    episode_season=cur_show_info.season,
+                    genres=', '.join(cur_show_info.genre_list)
+                           or (cur_show_info.genre and (cur_show_info.genre.strip('|').replace('|', ', ')) or ''),
+                    ids=ids,
+                    images=images,
+                    overview=(helpers.xhtml_escape(cur_show_info.overview[:250:]).strip('*').strip()
+                              or 'No overview yet'),
+                    title=cur_show_info.seriesname,
+                    language=language,
+                    language_img=sickgear.MEMCACHE_FLAG_IMAGES.get(language, False),
+                    country=cc,
+                    country_img=sickgear.MEMCACHE_FLAG_IMAGES.get(cc.lower(), False),
+                    network=network_name,
+                    rating=False,
+                    url_src_db=base_url % cur_show_info.id,
+                    votes=cur_show_info.rating or 0,
+                ))
+            except (BaseException, Exception):
+                pass
+            kwargs.update(dict(oldest=oldest, newest=newest, use_ratings=False, term_vote='Score'))
+
+        this_year = datetime.date.today().year
+        years = [
+            (this_year - cur_y,
+             'tvdb_toprated?year=%s' % (this_year - cur_y),
+             'Top %s releases' % (this_year - cur_y))
+            for cur_y in range(0, 10)]
+        kwargs.update(dict(footnote=footnote, use_networks=use_networks, year=top_year or '', rate_years=years))
+
+        if mode:
+            func = 'tvdb_%s' % mode
+            if callable(getattr(self, func, None)):
+                sickgear.TVDB_MRU = func
+                sickgear.save_config()
+        return self.browse_shows(browse_type, browse_title, filtered, **kwargs)
+
+    # noinspection PyUnusedLocal
+    def info_tvdb(self, ids, show_name):
+
+        if not list(filter(lambda tvid_prodid: helpers.find_show_by_id(tvid_prodid), ids.split(' '))):
+            return self.new_show('|'.join(['', '', '', ' '.join([ids, show_name])]), use_show_name=True)
+
     def tvm_default(self):
         method = getattr(self, sickgear.TVM_MRU, None)
         if not callable(method) or not self.allow_browse_mru(sickgear.TMDB_MRU):
@@ -6283,7 +6398,7 @@ class AddShows(Home):
     def browse_mru(browse_type, **kwargs):
         save_config = False
         if browse_type in ('AniDB', 'IMDb', 'Metacritic', 'Trakt', 'TVCalendar',
-                           'TMDB', 'TVmaze', 'Nextepisode'):
+                           'TMDB', 'TVDb', 'TVmaze', 'Nextepisode'):
             save_config = True
             if browse_type in ('TVmaze',) and kwargs.get('showfilter') and kwargs.get('showsort'):
                 sickgear.BROWSELIST_MRU.setdefault(browse_type, dict()) \

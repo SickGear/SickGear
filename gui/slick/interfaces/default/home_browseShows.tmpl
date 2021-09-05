@@ -301,7 +301,7 @@ $(function() {
 		var filterValue = this.value;
 		if (-1 == filterValue.indexOf('trakt') && -1 == filterValue.indexOf('imdb') && -1 == filterValue.indexOf('mc_')
 		 && -1 == filterValue.indexOf('tmdb_') && -1 == filterValue.indexOf('tvc_')
-		 && -1 == filterValue.indexOf('tvm_')
+		 && -1 == filterValue.indexOf('tvdb_') && -1 == filterValue.indexOf('tvm_')
 		 && -1 == filterValue.indexOf('ne_') && -1 == filterValue.indexOf('_ne')
 		 && -1 == filterValue.indexOf('default')) {
 			var el$ = $('#container')
@@ -506,6 +506,14 @@ $(function() {
 			<option value="tmdb_toprated"#echo ('', selected)['toprated' == $mode]#>Top rated</option>
 			<option value="tmdb_trending_today"#echo ('', selected)['trending_today' == $mode]#>Trending today</option>
 			<option value="tmdb_trending_week"#echo ('', selected)['trending_week' == $mode]#>Trending this week</option>
+		</optgroup>
+        #elif 'TVDb' == $browse_type
+		<optgroup label="TVDb">
+			<option value="tvdb_upcoming"#echo ('', selected)['upcoming' == $mode]#>Upcoming</option>
+			<option value="tvdb_toprated"#echo ('', selected)['toprated' == $mode and not $kwargs.get('year')]#>Top rated all time</option>
+            #for $cur_y in $kwargs.get('rate_years') or []
+			<option value="$cur_y[1]"#echo ('', selected)[$cur_y[0] == $kwargs.get('year')]#>$cur_y[2]</option>
+            #end for
 		</optgroup>
         #elif 'TVCalendar' == $browse_type
 		<optgroup label="TVCalendar">
