@@ -16,7 +16,7 @@ from requests.adapters import HTTPAdapter
 from tornado._locale_data import LOCALE_NAMES
 from urllib3.util.retry import Retry
 
-from sg_helpers import clean_data, get_url, try_int
+from sg_helpers import clean_data, enforce_type, get_url, try_int
 from lib.dateutil.parser import parser
 # noinspection PyProtectedMember
 from lib.dateutil.tz.tz import _datetime_to_timestamp
@@ -317,7 +317,7 @@ class TvMaze(TVInfoBase):
         if not show_data:
             return False
 
-        ti_show = self.shows[sid]  # type: TVInfoShow
+        ti_show = self.ti_shows[sid]  # type: TVInfoShow
         show_obj = ti_show.__dict__
         for k, v in iteritems(show_obj):
             if k not in ('cast', 'crew', 'images', 'aliases'):
@@ -354,7 +354,7 @@ class TvMaze(TVInfoBase):
         if show_data.genres:
             ti_show.genre = '|'.join(show_data.genres).lower()
 
-        if (actors or self.config['actors_enabled']) and not getattr(self.shows.get(sid), 'actors_loaded', False):
+        if (actors or self.config['actors_enabled']) and not getattr(self.ti_shows.get(sid), 'actors_loaded', False):
             if show_data.cast:
                 character_person_ids = {}
                 for cur_ch in ti_show.cast[RoleTypes.ActorMain]:
@@ -450,7 +450,7 @@ class TvMaze(TVInfoBase):
         elif show_data.web_channel:
             self._set_network(ti_show, show_data.web_channel, True)
 
-        if get_ep_info and not getattr(self.shows.get(sid), 'ep_loaded', False):
+        if get_ep_info and not getattr(self.ti_shows.get(sid), 'ep_loaded', False):
             log.debug('Getting all episodes of %s' % sid)
             if None is show_data:
                 show_data = self._get_tvm_show(sid, get_ep_info)
@@ -513,23 +513,23 @@ class TvMaze(TVInfoBase):
     def _convert_person(person_obj):
         # type: (tvmaze.Person) -> TVInfoPerson
         ch = []
-        for c in person_obj.castcredits or []:
-            show = TVInfoShow()
-            show.seriesname = clean_data(c.show.name)
-            show.id = c.show.id
-            show.firstaired = clean_data(c.show.premiered)
-            show.ids = TVInfoIDs(ids={TVINFO_TVMAZE: show.id})
-            show.overview = clean_data(c.show.summary)
-            show.status = clean_data(c.show.status)
+        for c in tvmaze_person_obj.castcredits or []:
+            ti_show = TVInfoShow()
+            ti_show.seriesname = clean_data(c.show.name)
+            ti_show.id = c.show.id
+            ti_show.firstaired = clean_data(c.show.premiered)
+            ti_show.ids = TVInfoIDs(ids={TVINFO_TVMAZE: ti_show.id})
+            ti_show.overview = clean_data(c.show.summary)
+            ti_show.status = clean_data(c.show.status)
             net = c.show.network or c.show.web_channel
             if net:
-                show.network = clean_data(net.name)
-                show.network_id = net.maze_id
-                show.network_country = clean_data(net.country)
-                show.network_timezone = clean_data(net.timezone)
-                show.network_country_code = clean_data(net.code)
-                show.network_is_stream = None is not c.show.web_channel
-            ch.append(TVInfoCharacter(name=clean_data(c.character.name), show=show))
+                ti_show.network = clean_data(net.name)
+                ti_show.network_id = net.maze_id
+                ti_show.network_country = clean_data(net.country)
+                ti_show.network_country_code = clean_data(net.code)
+                ti_show.network_timezone = clean_data(net.timezone)
+                ti_show.network_is_stream = None is not c.show.web_channel
+            ch.append(TVInfoCharacter(name=clean_data(c.character.name), ti_show=ti_show, episode_count=1))
         try:
             birthdate = person_obj.birthday and tz_p.parse(person_obj.birthday).date()
         except (BaseException, Exception):

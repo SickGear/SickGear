@@ -52,7 +52,7 @@ log = logging.getLogger('tvdb.api')
 log.addHandler(logging.NullHandler())
 
 
-# noinspection PyUnusedLocal
+# noinspection HttpUrlsUsage,PyUnusedLocal
 def _record_hook(r, *args, **kwargs):
     r.hook_called = True
     if 301 == r.status_code and isinstance(r.headers.get('Location'), string_types) \
@@ -64,8 +64,8 @@ def _record_hook(r, *args, **kwargs):
 def retry(exception_to_check, tries=4, delay=3, backoff=2):
     """Retry calling the decorated function using an exponential backoff.
 
-    http://www.saltycrane.com/blog/2009/11/trying-out-retry-decorator-python/
-    original from: http://wiki.python.org/moin/PythonDecoratorLibrary#Retry
+    www.saltycrane.com/blog/2009/11/trying-out-retry-decorator-python/
+    original from: wiki.python.org/moin/PythonDecoratorLibrary#Retry
 
     :param exception_to_check: the exception to check. may be a tuple of
         exceptions to check
@@ -222,7 +222,7 @@ class Tvdb(TVInfoBase):
             tvdb_api's own key (fine for small scripts), but you can use your
             own key if desired - this is recommended if you are embedding
             tvdb_api in a larger application)
-            See http://thetvdb.com/?tab=apiregister to get your own key
+            See thetvdb.com/?tab=apiregister to get your own key
 
         """
 
@@ -976,7 +976,7 @@ class Tvdb(TVInfoBase):
             pass
         self._set_show_data(sid, 'actors', a)
         self._set_show_data(sid, 'cast', cast)
-        self.shows[sid].actors_loaded = True
+        self.ti_shows[sid].actors_loaded = True
 
     def get_episode_data(self, epid):
         # Parse episode information
@@ -1004,7 +1004,7 @@ class Tvdb(TVInfoBase):
         mapped_img_types = {'banner': 'series'}
         excluded_main_data = enabled_type in ['seasons_enabled', 'seasonwides_enabled']
         loaded_name = '%s_loaded' % image_type
-        if (type_bool or self.config[enabled_type]) and not getattr(self.shows.get(sid), loaded_name, False):
+        if (type_bool or self.config[enabled_type]) and not getattr(self.ti_shows.get(sid), loaded_name, False):
             image_data = self._getetsrc(self.config['url_series_images'] %
                                         (sid, mapped_img_types.get(image_type, image_type)), language=language)
             if image_data and 0 < len(image_data.get('data', '') or ''):
@@ -1017,7 +1017,7 @@ class Tvdb(TVInfoBase):
                     self._set_show_data(sid, f'{image_type}_thumb', url_thumb)
                     excluded_main_data = True  # artwork found so prevent fallback
                 self._parse_banners(sid, image_data['data'])
-                self.shows[sid].__dict__[loaded_name] = True
+                self.ti_shows[sid].__dict__[loaded_name] = True
 
         # fallback image thumbnail for none excluded_main_data if artwork is not found
         if not excluded_main_data and show_data['data'].get(image_type):
@@ -1073,13 +1073,13 @@ class Tvdb(TVInfoBase):
                                           ('seasonwide', 'seasonwides_enabled', seasonwides)]:
             self._parse_images(sid, language, show_data, img_type, en_type, p_type)
 
-        if (actors or self.config['actors_enabled']) and not getattr(self.shows.get(sid), 'actors_loaded', False):
+        if (actors or self.config['actors_enabled']) and not getattr(self.ti_shows.get(sid), 'actors_loaded', False):
             actor_data = self._getetsrc(self.config['url_actors_info'] % sid, language=language)
             actor_data_alt = self._getetsrc(self.config['url_series_people'] % sid, language=language)
             if actor_data and 0 < len(actor_data.get('data', '') or '') or actor_data_alt and actor_data_alt['data']:
                 self._parse_actors(sid, actor_data and actor_data.get('data', ''), actor_data_alt and actor_data_alt['data'])
 
-        if get_ep_info and not getattr(self.shows.get(sid), 'ep_loaded', False):
+        if get_ep_info and not getattr(self.ti_shows.get(sid), 'ep_loaded', False):
             # Parse episode data
             log.debug('Getting all episodes of %s' % sid)
 
@@ -1200,7 +1200,7 @@ class Tvdb(TVInfoBase):
                 ep_no = int(float(elem_epno))
 
                 if not cur_ep.get('network'):
-                    cur_ep['network'] = self.shows[sid].network
+                    cur_ep['network'] = self.ti_shows[sid].network
                 for k, v in iteritems(cur_ep):
                     k = k.lower()
 
@@ -1236,7 +1236,7 @@ class Tvdb(TVInfoBase):
                 self._set_item(sid, seas_no, ep_no, 'crew', crew)
                 self._set_item(sid, seas_no, ep_no, 'cast', cast)
 
-            self.shows[sid].ep_loaded = True
+            self.ti_shows[sid].ep_loaded = True
 
         return True
 

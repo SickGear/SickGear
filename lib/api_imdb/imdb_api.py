@@ -13,12 +13,13 @@ import re
 from bs4_parser import BS4Parser
 from exceptions_helper import ex
 from lib import imdbpie
-# from lib.tvinfo_base.exceptions import BaseTVinfoShownotfound
-from lib.tvinfo_base import PersonGenders, TVInfoBase, TVInfoIDs, TVInfoCharacter, TVInfoPerson, TVInfoShow, \
-    TVINFO_IMDB
-# , TVINFO_TMDB, TVINFO_TRAKT, TVINFO_TVDB, TVINFO_TVRAGE, \
-# TVINFO_FACEBOOK, TVINFO_INSTAGRAM, TVINFO_TWITTER, TVINFO_WIKIPEDIA
 from lib.dateutil.parser import parser
+# from lib.tvinfo_base.exceptions import BaseTVinfoShownotfound
+from lib.tvinfo_base import (
+    TVInfoCharacter, TVInfoPerson, PersonGenders, TVINFO_IMDB,
+    # TVINFO_FACEBOOK, TVINFO_INSTAGRAM, TVINFO_TMDB, TVINFO_TRAKT,
+    # TVINFO_TVDB, TVINFO_TVRAGE, TVINFO_TWITTER, TVINFO_WIKIPEDIA,
+    TVInfoBase, TVInfoIDs, TVInfoShow)
 from sg_helpers import get_url, try_int
 
 from six import iteritems
@@ -67,12 +68,13 @@ class IMDbIndexer(TVInfoBase):
         """
         def _make_result_dict(s):
             imdb_id = try_int(re.search(r'tt(\d+)', s.get('id') or s.get('imdb_id')).group(1), None)
-            tvs = TVInfoShow()
-            tvs.seriesname, tvs.id, tvs.firstaired, tvs.genre_list, tvs.overview, tvs.poster, tvs.ids = \
+            ti_show = TVInfoShow()
+            ti_show.seriesname, ti_show.id, ti_show.firstaired, ti_show.genre_list, ti_show.overview, \
+                ti_show.poster, ti_show.ids = \
                 s['title'], imdb_id, s.get('releaseDetails', {}).get('date') or s.get('year'), s.get('genres'), \
                 s.get('plot', {}).get('outline', {}).get('text'), s.get('image') and s['image'].get('url'), \
                 TVInfoIDs(imdb=imdb_id)
-            return tvs
+            return ti_show
 
         results = []
         if ids:
@@ -112,14 +114,14 @@ class IMDbIndexer(TVInfoBase):
             if known_for['titleType'] not in ('tvSeries', 'tvMiniSeries'):
                 continue
             for character in known_for.get('characters') or []:
-                show = TVInfoShow()
-                show.id = try_int(re.search(r'(\d+)', known_for.get('id')).group(1))
-                show.ids.imdb = show.id
-                show.seriesname = known_for.get('title')
-                show.firstaired = known_for.get('year')
+                ti_show = TVInfoShow()
+                ti_show.id = try_int(re.search(r'(\d+)', known_for.get('id')).group(1))
+                ti_show.ids.imdb = ti_show.id
+                ti_show.seriesname = known_for.get('title')
+                ti_show.firstaired = known_for.get('year')
                 characters.append(
-                    TVInfoCharacter(name=character, show=show,
-                                    start_year=known_for.get('startYear'), end_year=known_for.get('endYear'))
+                    TVInfoCharacter(name=character, ti_show=ti_show, start_year=known_for.get('startYear'),
+                                    end_year=known_for.get('endYear'))
                 )
         try:
             birthdate = person_obj['base']['birthDate'] and tz_p.parse(person_obj['base']['birthDate']).date()
@@ -175,7 +177,8 @@ class IMDbIndexer(TVInfoBase):
                         results.append(self._convert_person(cp))
         return results
 
-    def _get_bio(self, p_id):
+    @staticmethod
+    def _get_bio(p_id):
         try:
             bio = get_url('https://www.imdb.com/name/nm%07d/bio' % p_id, headers={'Accept-Language': 'en'})
             if not bio:
@@ -217,4 +220,3 @@ class IMDbIndexer(TVInfoBase):
                 self._set_cache_entry(cache_credits_key, fg)
         if p:
             return self._convert_person(p, filmography=fg, bio=bio)
-

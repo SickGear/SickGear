@@ -292,24 +292,21 @@ class TraktIndexer(TVInfoBase):
                     if show_credits:
                         pc = []
                         for c in resp.get('cast') or []:
-                            show = TVInfoShow()
-                            show.id = c['show']['ids'].get('trakt')
-                            show.seriesname = c['show']['title']
-                            show.ids = TVInfoIDs(ids={id_map[src]: _convert_imdb_id(id_map[src], sid)
+                            ti_show = TVInfoShow()
+                            ti_show.id = c['show']['ids'].get('trakt')
+                            ti_show.seriesname = c['show']['title']
+                            ti_show.ids = TVInfoIDs(ids={id_map[src]: _convert_imdb_id(id_map[src], sid)
                                                       for src, sid in iteritems(c['show']['ids']) if src in id_map})
-                            show.network = c['show']['network']
-                            show.firstaired = c['show']['first_aired']
-                            show.overview = c['show']['overview']
-                            show.status = c['show']['status']
-                            show.imdb_id = c['show']['ids'].get('imdb')
-                            show.runtime = c['show']['runtime']
-                            show.genre_list = c['show']['genres']
+                            ti_show.network = c['show']['network']
+                            ti_show.firstaired = c['show']['first_aired']
+                            ti_show.overview = c['show']['overview']
+                            ti_show.status = c['show']['status']
+                            ti_show.imdb_id = c['show']['ids'].get('imdb')
+                            ti_show.runtime = c['show']['runtime']
+                            ti_show.genre_list = c['show']['genres']
                             for ch in c.get('characters') or []:
                                 pc.append(
-                                    TVInfoCharacter(
-                                        name=ch, regular=c.get('series_regular'),
-                                        show=show
-                                    )
+                                    TVInfoCharacter(name=ch, regular=c.get('series_regular'), ti_show=ti_show)
                                 )
                         result.characters = pc
                     else:
