@@ -21,7 +21,7 @@ from collections import OrderedDict
 from .. import db
 
 MIN_DB_VERSION = 1
-MAX_DB_VERSION = 6
+MAX_DB_VERSION = 7
 TEST_BASE_VERSION = None  # the base production db version, only needed for TEST db versions (>=100000)
 
 
@@ -70,6 +70,31 @@ class InitialSchema(db.SchemaUpgrade):
                 ' failure_count NUMERIC, failure_time NUMERIC,'
                 ' tmr_limit_count NUMERIC, tmr_limit_time NUMERIC, tmr_limit_wait NUMERIC)'
             ]),
+            ('save_queues', [
+                'CREATE TABLE people_queue(indexer NUMERIC NOT NULL, indexer_id NUMERIC NOT NULL,'
+                ' action_id NUMERIC NOT NULL, forced INTEGER DEFAULT 0, scheduled INTEGER DEFAULT 0,'
+                ' uid NUMERIC NOT NULL)',
+                'CREATE UNIQUE INDEX idx_people_queue ON people_queue (indexer,indexer_id,action_id)',
+                'CREATE UNIQUE INDEX idx_people_queue_uid ON people_queue (uid)',
+                'CREATE TABLE search_queue(indexer NUMERIC NOT NULL, indexer_id NUMERIC NOT NULL,'
+                ' segment TEXT NOT NULL, standard_backlog INTEGER DEFAULT 0, limited_backlog INTEGER DEFAULT 0,'
+                ' forced INTEGER DEFAULT 0, torrent_only INTEGER DEFAULT 0, action_id INTEGER NOT NULL,'
+                ' uid NUMERIC NOT NULL )',
+                'CREATE UNIQUE INDEX idx_search_queue ON search_queue'
+                ' (indexer, indexer_id, segment, standard_backlog, limited_backlog, forced, torrent_only, action_id)',
+                'CREATE UNIQUE INDEX idx_search_queue_uid ON search_queue (uid)',
+                'CREATE TABLE show_queue(tvid NUMERIC NOT NULL, prodid NUMERIC NOT NULL, priority INTEGER DEFAULT 20,'
+                ' force INTEGER DEFAULT 0, scheduled_update INTEGER DEFAULT 0, after_update INTEGER DEFAULT 0,'
+                ' force_image_cache INTEGER DEFAULT 0, show_dir TEXT, default_status NUMERIC, quality NUMERIC,'
+                ' flatten_folders INTEGER, lang TEXT, subtitles INTEGER DEFAULT 0, anime INTEGER,'
+                ' scene INTEGER, paused INTEGER, blocklist TEXT, allowlist TEXT,'
+                ' wanted_begin NUMERIC, wanted_latest NUMERIC, prune NUMERIC DEFAULT 0, tag TEXT,'
+                ' new_show INTEGER DEFAULT 0, show_name TEXT, upgrade_once INTEGER DEFAULT 0,'
+                ' pausestatus_after INTEGER, skip_refresh INTEGER DEFAULT 0, action_id INTEGER NOT NULL,'
+                ' uid NUMERIC NOT NULL)',
+                'CREATE UNIQUE INDEX idx_show_queue_uid ON show_queue(uid)',
+                'CREATE UNIQUE INDEX idx_show_queue ON show_queue(tvid, prodid, action_id)'
+            ])
         ])
 
     def test(self):
@@ -130,4 +155,13 @@ class AddGenericFailureHandling(AddBacklogParts):
 
     def execute(self):
         self.do_query(self.queries['connection_fails'])
+        self.finish()
+
+
+class AddSaveQueues(AddGenericFailureHandling):
+    def test(self):
+        return 6 < self.checkDBVersion()
+
+    def execute(self):
+        self.do_query(self.queries['save_queues'])
         self.finish()

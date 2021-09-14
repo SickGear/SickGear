@@ -5,8 +5,8 @@ import sickbeard
 import time
 import datetime
 import logging
-from exceptions_helper import ex
-from sg_helpers import try_int
+from exceptions_helper import ex, ConnectionSkipException
+from sg_helpers import get_url, try_int
 
 from .exceptions import *
 
@@ -14,7 +14,7 @@ from .exceptions import *
 if False:
     from typing import Any, AnyStr, Dict
 
-log = logging.getLogger('libtrakt')
+log = logging.getLogger('api_trakt')
 log.addHandler(logging.NullHandler())
 
 
@@ -194,6 +194,13 @@ class TraktAPI(object):
             now = datetime.datetime.now()
             resp = self.trakt_request('oauth/token', data=data, headers=headers, url=self.auth_url,
                                       count=count, sleep_retry=0)
+        except TraktInvalidGrant:
+            if None is not account and account in sickbeard.TRAKT_ACCOUNTS:
+                sickbeard.TRAKT_ACCOUNTS[account].token = ''
+                sickbeard.TRAKT_ACCOUNTS[account].refresh_token = ''
+                sickbeard.TRAKT_ACCOUNTS[account].token_valid_date = None
+                sickbeard.save_config()
+            return False
         except (TraktAuthException, TraktException):
             return False
 
@@ -207,8 +214,8 @@ class TraktAPI(object):
         return False
 
     def trakt_request(self, path, data=None, headers=None, url=None, count=0, sleep_retry=60,
-                      send_oauth=None, method=None, **kwargs):
-        # type: (AnyStr, Dict, Dict, AnyStr, int, int, AnyStr, AnyStr, Any) -> Dict
+                      send_oauth=None, method=None, raise_skip_exception=True, failure_monitor=True, **kwargs):
+        # type: (AnyStr, Dict, Dict, AnyStr, int, int, AnyStr, AnyStr, bool, bool, Any) -> Dict
 
         if method not in ['GET', 'POST', 'PUT', 'DELETE', None]:
             return {}
@@ -230,7 +237,8 @@ class TraktAPI(object):
             if sickbeard.TRAKT_ACCOUNTS[send_oauth].active:
                 if sickbeard.TRAKT_ACCOUNTS[send_oauth].needs_refresh:
                     self.trakt_token(refresh=True, count=0, account=send_oauth)
-                if sickbeard.TRAKT_ACCOUNTS[send_oauth].token_expired:
+                if sickbeard.TRAKT_ACCOUNTS[send_oauth].token_expired or \
+                        not sickbeard.TRAKT_ACCOUNTS[send_oauth].active:
                     return {}
                 headers['Authorization'] = 'Bearer %s' % sickbeard.TRAKT_ACCOUNTS[send_oauth].token
             else:
@@ -242,7 +250,10 @@ class TraktAPI(object):
 
         url = url or self.api_url
         try:
-            resp = self.session.request(method, '%s%s' % (url, path), **kwargs)
+            resp = get_url('%s%s' % (url, path), session=self.session, use_method=method, return_response=True,
+                           raise_exceptions=True, raise_status_code=True, raise_skip_exception=raise_skip_exception,
+                           failure_monitor=failure_monitor, **kwargs)
+            # resp = self.session.request(method, '%s%s' % (url, path), **kwargs)
 
             if 'DELETE' == method:
                 result = None
@@ -340,9 +351,16 @@ class TraktAPI(object):
                           ' that triggers a Trakt access lock.'
                           ' SickGear may only send a notification on a media process completion if set up for it.')
                 raise TraktLockedUserAccount()
+            elif 400 == code and 'invalid_grant' in getattr(e, 'text', ''):
+                raise TraktInvalidGrant('Error: invalid_grant. The provided authorization grant is invalid, expired, '
+                                        'revoked, does not match the redirection URI used in the authorization request,'
+                                        ' or was issued to another client.')
             else:
                 log.error(u'Could not connect to Trakt. Code error: {0}'.format(code))
                 raise TraktException('Could not connect to Trakt. Code error: %s' % code)
+        except ConnectionSkipException as e:
+            log.error('Failure handling error')
+            raise e
         except ValueError as e:
             log.error(u'Value Error: %s' % ex(e))
             raise TraktValueError(u'Value Error: %s' % ex(e))

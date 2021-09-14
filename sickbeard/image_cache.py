@@ -31,26 +31,37 @@ import sg_helpers
 from . import db, logger
 from .metadata.generic import GenericMetadata
 from .sgdatetime import timestamp_near
+from .indexers.indexer_config import TVINFO_TVDB, TVINFO_TVMAZE, TVINFO_TMDB
+from lib.tvinfo_base.exceptions import *
 
-from six import itervalues
+from six import itervalues, iteritems
 
 # noinspection PyUnreachableCode
 if False:
-    from typing import AnyStr, Optional, Union
-    from .tv import TVShow
+    from typing import AnyStr, Optional, Tuple, Union
+    from .tv import TVShow, Person, Character
+    from six import integer_types
+    from .metadata.generic import ShowInfosDict
 
-from lib.hachoir.parser import createParser
+from lib.hachoir.parser import createParser, guessParser
 from lib.hachoir.metadata import extractMetadata
+from lib.hachoir.stream import StringInputStream
+
+cache_img_base = {'tvmaze': TVINFO_TVMAZE, 'themoviedb': TVINFO_TMDB, 'thetvdb': TVINFO_TVDB}
 
 
 class ImageCache(object):
     base_dir = None  # type: AnyStr or None
     shows_dir = None  # type: AnyStr or None
+    persons_dir = None  # type: Optional[AnyStr]
+    characters_dir = None  # type: Optional[AnyStr]
 
     def __init__(self):
         if None is ImageCache.base_dir and ek.ek(os.path.exists, sickbeard.CACHE_DIR):
             ImageCache.base_dir = ek.ek(os.path.abspath, ek.ek(os.path.join, sickbeard.CACHE_DIR, 'images'))
             ImageCache.shows_dir = ek.ek(os.path.abspath, ek.ek(os.path.join, self.base_dir, 'shows'))
+            ImageCache.persons_dir = self._persons_dir()
+            ImageCache.characters_dir = self._characters_dir()
 
     def __del__(self):
         pass
@@ -61,6 +72,16 @@ class ImageCache(object):
     #     Builds up the full path to the image cache directory
     #     """
     #     return ek.ek(os.path.abspath, ek.ek(os.path.join, sickbeard.CACHE_DIR, 'images'))
+
+    @staticmethod
+    def _persons_dir():
+        # type: (...) -> AnyStr
+        return ek.ek(os.path.join, sickbeard.CACHE_DIR, 'images', 'person')
+
+    @staticmethod
+    def _characters_dir():
+        # type: (...) -> AnyStr
+        return ek.ek(os.path.join, sickbeard.CACHE_DIR, 'images', 'characters')
 
     def _fanart_dir(self, tvid=None, prodid=None):
         # type: (int, int) -> AnyStr
@@ -90,6 +111,89 @@ class ImageCache(object):
         :rtype: AnyStr
         """
         return ek.ek(os.path.abspath, ek.ek(os.path.join, self.shows_dir, '%s-%s' % (tvid, prodid), 'thumbnails'))
+
+    @staticmethod
+    def _person_base_name(person_obj):
+        # type: (Person) -> AnyStr
+        base_id = next((v for k, v in iteritems(cache_img_base)
+                        if k in (person_obj.image_url or '') or person_obj.thumb_url), 0)
+        return '%s-%s' % (base_id, person_obj.ids.get(base_id) or sg_helpers.sanitize_filename(person_obj.name))
+
+    @staticmethod
+    def _character_base_name(character_obj, show_obj, tvid=None, proid=None):
+        # type: (Character, TVShow, integer_types, integer_types) -> AnyStr
+        return '%s-%s' % (tvid or show_obj.tvid, character_obj.ids.get(tvid or show_obj.tvid)
+                          or sg_helpers.sanitize_filename(character_obj.name))
+
+    def person_path(self, person_obj, base_path=None):
+        # type: (Optional[Person], AnyStr) -> AnyStr
+        """
+        return image filename
+        :param person_obj:
+        :param base_path:
+        """
+        filename = '%s.jpg' % base_path or self._person_base_name(person_obj)
+        return ek.ek(os.path.join, self.persons_dir, filename)
+
+    def person_thumb_path(self, person_obj, base_path=None):
+        # type: (Optional[Person], AnyStr) -> AnyStr
+        """
+        return thumb image filename
+        :param person_obj:
+        :param base_path:
+        """
+        filename = '%s_thumb.jpg' % base_path or self._person_base_name(person_obj)
+        return ek.ek(os.path.join, self.persons_dir, filename)
+
+    def person_both_paths(self, person_obj):
+        # type: (Person) -> Tuple[AnyStr, AnyStr]
+        """
+        return tuple image, thumb filenames
+        :param person_obj:
+        """
+        base_path = self._person_base_name(person_obj)
+        return self.person_path(None, base_path=base_path), self.person_thumb_path(None, base_path=base_path)
+
+    def character_path(self, character_obj, show_obj, base_path=None):
+        # type: (Optional[Character], Optional[TVShow], AnyStr) -> AnyStr
+        """
+        return image filename
+        :param character_obj:
+        :param show_obj:
+        :param base_path:
+        """
+        filename = '%s.jpg' % base_path or self._character_base_name(character_obj, show_obj)
+        return ek.ek(os.path.join, self.characters_dir, filename)
+
+    def character_thumb_path(self, character_obj, show_obj, base_path=None):
+        # type: (Optional[Character], Optional[TVShow], AnyStr) -> AnyStr
+        """
+        return thumb image filename
+        :param character_obj:
+        :param show_obj:
+        :param base_path:
+        """
+        filename = '%s_thumb.jpg' % base_path or self._character_base_name(character_obj, show_obj)
+        return ek.ek(os.path.join, self.characters_dir, filename)
+
+    def character_both_path(self, character_obj, show_obj=None, tvid=None, proid=None, person_obj=None):
+        # type: (Character, TVShow, integer_types, integer_types, Person) -> Tuple[AnyStr, AnyStr]
+        """
+        returns tuple image, thumb image
+        :param character_obj:
+        :param show_obj:
+        :param tvid:
+        :param proid:
+        :param person_obj:
+        """
+        base_path = self._character_base_name(character_obj, show_obj=show_obj, tvid=tvid, proid=proid)
+        from .tv import Person
+        if isinstance(person_obj, Person):
+            person_base = self._person_base_name(person_obj)
+            if person_base:
+                base_path = '%s-%s' % (base_path, person_base)
+        return self.character_path(None, None, base_path=base_path), \
+            self.character_thumb_path(None, None, base_path=base_path)
 
     def poster_path(self, tvid, prodid):
         # type: (int, int) -> AnyStr
@@ -246,64 +350,102 @@ class ImageCache(object):
     POSTER_THUMB = 4
     FANART = 5
 
-    def which_type(self, path):
-        # type: (AnyStr) -> Optional[int]
+    # img_type_str = {
+    #     1: 'Banner',
+    #     2: 'Poster',
+    #     3: 'Banner thumb',
+    #     4: 'Poster thumb',
+    #     5: 'Fanart'
+    # }
+
+    @staticmethod
+    def get_img_dimensions(image, is_binary=False):
+        # type: (AnyStr, bool) -> Optional[Tuple[integer_types, integer_types, float]]
+        """
+        get image dimensions: width, height, ratio
+        :param image: image file or data
+        :param is_binary: is data instead of path
+        """
+        if not is_binary and not ek.ek(os.path.isfile, image):
+            logger.warning(u'File not found to determine image type of %s' % image)
+            return
+        if not image:
+            logger.warning('No Image Data to determinate image type')
+            return
+
+        try:
+            if is_binary:
+                img_parser = guessParser(StringInputStream(image))
+            else:
+                img_parser = createParser(image)
+            img_parser.parse_comments = False
+            img_parser.parse_exif = False
+            img_parser.parse_photoshop_content = False
+            img_metadata = extractMetadata(img_parser)
+        except (BaseException, Exception) as e:
+            logger.debug(u'Unable to extract metadata from %s, not using file. Error: %s' % (image, ex(e)))
+            return
+
+        if not img_metadata:
+            if is_binary:
+                msg = 'Image Data'
+            else:
+                msg = image
+            logger.debug(u'Unable to extract metadata from %s, not using file' % msg)
+            return
+
+        width = img_metadata.get('width')
+        height = img_metadata.get('height')
+        img_ratio = float(width) / float(height)
+
+        if not is_binary:
+            # noinspection PyProtectedMember
+            img_parser.stream._input.close()
+
+        return width, height, img_ratio
+
+    def which_type(self, image, is_binary=False):
+        # type: (AnyStr, bool) -> Optional[int]
         """
         Analyzes the image provided and attempts to determine whether it is a poster, banner or fanart.
 
-        :param path: full path to the image
-        :type path: AnyStr
+        :param image: full path to the image or image data
+        :param is_binary: is binary data instead path to image
         :return: BANNER, POSTER, FANART or None if image type is not detected or doesn't exist
         :rtype: int
         """
 
-        if not ek.ek(os.path.isfile, path):
-            logger.log(u'File does not exist to determine image type of %s' % path, logger.WARNING)
-            return None
+        result = self.get_img_dimensions(image, is_binary)
+        if not result:
+            return
 
-        # use hachoir to parse the image for us
-        try:
-            img_parser = createParser(path)
-            img_parser.parse_exif = False
-            img_parser.parse_photoshop_content = False
-            img_parser.parse_comments = False
-            img_metadata = extractMetadata(img_parser)
-        except (BaseException, Exception) as e:
-            logger.log('Unable to extract metadata from %s, not using existing image. Error: %s' % (path, ex(e)),
-                       logger.DEBUG)
-            return None
+        img_width, img_height, img_ratio = result
 
-        if not img_metadata:
-            logger.log(u'Unable to extract metadata from %s, not using existing image' % path, logger.DEBUG)
-            return None
-
-        img_ratio = float(img_metadata.get('width')) / float(img_metadata.get('height'))
-
-        # noinspection PyProtectedMember
-        img_parser.stream._input.close()
-
-        msg_success = u'Treating image as %s' \
-                      + u' with extracted aspect ratio from %s' % path.replace('%', '%%')
+        if is_binary:
+            msg_data = '<Image Data>'
+        else:
+            msg_data = image.replace('%', '%%')
+        msg_success = 'Treating image as %s' \
+                      + ' with extracted aspect ratio from %s' % msg_data
         # most posters are around 0.68 width/height ratio (eg. 680/1000)
-        if 0.55 < img_ratio < 0.8:
-            logger.log(msg_success % 'poster', logger.DEBUG)
+        if 0.55 <= img_ratio <= 0.8:
+            logger.debug(msg_success % 'poster')
             return self.POSTER
 
         # most banners are around 5.4 width/height ratio (eg. 758/140)
-        elif 5 < img_ratio < 6:
-            logger.log(msg_success % 'banner', logger.DEBUG)
+        if 5 <= img_ratio <= 6:
+            logger.debug(msg_success % 'banner')
             return self.BANNER
 
-        # most fanart are around 1.7 width/height ratio (eg. 1280/720 or 1920/1080)
-        elif 1.7 < img_ratio < 1.8:
-            if 500 < img_metadata.get('width'):
-                logger.log(msg_success % 'fanart', logger.DEBUG)
+        # most fan art are around 1.7 width/height ratio (eg. 1280/720 or 1920/1080)
+        if 1.7 <= img_ratio <= 1.8:
+            if 500 < img_width:
+                logger.debug(msg_success % 'fanart')
                 return self.FANART
 
-            logger.log(u'Image found with fanart aspect ratio but less than 500 pixels wide, skipped', logger.WARNING)
-            return None
-
-        logger.log(u'Image not useful with size ratio %s, skipping' % img_ratio, logger.WARNING)
+            logger.warning(u'Skipped image with fanart aspect ratio but less than 500 pixels wide')
+        else:
+            logger.warning(u'Skipped image with useless ratio %s' % img_ratio)
 
     def should_refresh(self, image_type=None, provider='local'):
         # type: (int, Optional[AnyStr]) -> bool
@@ -371,9 +513,12 @@ class ImageCache(object):
         id_args = (tvid, prodid)
         if self.POSTER == img_type:
             dest_path = self.poster_path(*id_args)
+            dest_thumb_path = self.poster_thumb_path(*id_args)
         elif self.BANNER == img_type:
             dest_path = self.banner_path(*id_args)
+            dest_thumb_path = self.banner_thumb_path(*id_args)
         elif self.FANART == img_type:
+            dest_thumb_path = None
             with open(image_path, mode='rb') as resource:
                 crc = '%05X' % (zlib.crc32(resource.read()) & 0xFFFFFFFF)
             dest_path = self.fanart_path(*id_args + (prefix,)).replace('.fanart.jpg', '.%s.fanart.jpg' % crc)
@@ -386,6 +531,9 @@ class ImageCache(object):
             sg_helpers.make_dirs(cache_dir)
 
         logger.log(u'%sing from %s to %s' % (('Copy', 'Mov')[move_file], image_path, dest_path))
+        # copy poster, banner as thumb, even if moved we need to duplicate the images
+        if img_type in (self.POSTER, self.BANNER) and dest_thumb_path:
+            sg_helpers.copy_file(image_path, dest_thumb_path)
         if move_file:
             sg_helpers.move_file(image_path, dest_path)
         else:
@@ -393,33 +541,31 @@ class ImageCache(object):
 
         return ek.ek(os.path.isfile, dest_path) and dest_path or None
 
-    def _cache_info_source_images(self, show_obj, img_type, num_files=0, max_files=500, force=False):
-        # type: (TVShow, int, int, int, Optional[bool]) -> bool
+    def _cache_info_source_images(self, show_obj, img_type, num_files=0, max_files=500, force=False, show_infos=None):
+        # type: (TVShow, int, int, int, bool, ShowInfosDict) -> bool
         """
         Retrieves an image of the type specified from TV info source and saves it to the cache folder
 
         :param show_obj: TVShow object to cache an image for
-        :type show_obj: sickbeard.tv.TVShow
         :param img_type:  BANNER, POSTER, or FANART
-        :type img_type: int
         :param num_files:
-        :type num_files: int or long
         :param max_files:
-        :type max_files: int or long
         :param force:
-        :type force: bool
+        :param show_infos: dict of showinfo objects to use
         :return: bool representing success
-        :rtype: bool
         """
 
         # generate the path based on the type, tvid and prodid
         arg_tvid_prodid = (show_obj.tvid, show_obj.prodid)
+        dest_thumb_path = None
         if self.POSTER == img_type:
             img_type_name = 'poster'
             dest_path = self.poster_path(*arg_tvid_prodid)
+            dest_thumb_path = self.poster_thumb_path(*arg_tvid_prodid)
         elif self.BANNER == img_type:
             img_type_name = 'banner'
             dest_path = self.banner_path(*arg_tvid_prodid)
+            dest_thumb_path = self.banner_thumb_path(*arg_tvid_prodid)
         elif self.FANART == img_type:
             img_type_name = 'fanart_all'
             dest_path = self.fanart_path(*arg_tvid_prodid).replace('fanart.jpg', '*')
@@ -436,7 +582,7 @@ class ImageCache(object):
         # retrieve the image from TV info source using the generic metadata class
         metadata_generator = GenericMetadata()
         if self.FANART == img_type:
-            image_urls = metadata_generator.retrieve_show_image(img_type_name, show_obj)
+            image_urls = metadata_generator.retrieve_show_image(img_type_name, show_obj, show_infos=show_infos)
             if None is image_urls:
                 return False
 
@@ -448,24 +594,24 @@ class ImageCache(object):
                     crcs += [crc]
 
             success = 0
-            count_urls = len(image_urls)
             sources = []
             sickbeard.MEMCACHE.setdefault('cookies', {})
             for image_url in image_urls or []:
                 img_data = sg_helpers.get_url(image_url, nocache=True, as_binary=True,
                                               url_solver=sickbeard.FLARESOLVERR_HOST,
                                               memcache_cookies=sickbeard.MEMCACHE['cookies'])
-                if None is img_data:
+                if None is img_data or self.FANART != self.which_type(img_data, is_binary=True):
                     continue
+
                 crc = '%05X' % (zlib.crc32(img_data) & 0xFFFFFFFF)
                 if crc in crcs:
-                    count_urls -= 1
                     continue
                 crcs += [crc]
-                img_source = (((('', 'tvdb')['thetvdb.com' in image_url],
+                img_source = ((((('', 'tvdb')['thetvdb.com' in image_url],
                                 'tvrage')['tvrage.com' in image_url],
                                'fatv')['fanart.tv' in image_url],
-                              'tmdb')['tmdb' in image_url]
+                              'tmdb')['tmdb' in image_url],
+                              'tvmaze')['tvmaze.com' in image_url]
                 img_xtra = ''
                 if 'tmdb' == img_source:
                     match = re.search(r'(?:.*\?(\d+$))?', image_url, re.I | re.M)
@@ -474,30 +620,43 @@ class ImageCache(object):
                 file_desc = '%03d%s.%s.' % (num_files, ('.%s%s' % (img_source, img_xtra), '')['' == img_source], crc)
                 cur_file_path = self.fanart_path(show_obj.tvid, show_obj.prodid, file_desc)
                 result = metadata_generator.write_image(img_data, cur_file_path)
-                if result and self.FANART != self.which_type(cur_file_path):
-                    try:
-                        ek.ek(os.remove, cur_file_path)
-                    except OSError as e:
-                        logger.log(u'Unable to remove %s: %s / %s' % (cur_file_path, repr(e), ex(e)), logger.WARNING)
-                    continue
                 if img_source:
                     sources += [img_source]
                 num_files += (0, 1)[result]
                 success += (0, 1)[result]
                 if num_files > max_files:
                     break
-            if count_urls:
-                total = len(ek.ek(glob.glob, dest_path))
-                logger.log(u'Saved %s of %s fanart images%s. Cached %s of max %s fanart file%s'
-                           % (success, count_urls,
-                              ('', ' from ' + ', '.join([x for x in list(set(sources))]))[0 < len(sources)],
-                              total, sickbeard.FANART_LIMIT, sg_helpers.maybe_plural(total)))
-            return bool(count_urls) and not bool(count_urls - success)
+            total = len(ek.ek(glob.glob, dest_path))
+            logger.log(u'Saved %s fanart images%s. Cached %s of max %s fanart file%s'
+                       % (success,
+                          ('', ' from ' + ', '.join([x for x in list(set(sources))]))[0 < len(sources)],
+                          total, sickbeard.FANART_LIMIT, sg_helpers.maybe_plural(total)))
+            return bool(success)
 
-        img_data = metadata_generator.retrieve_show_image(img_type_name, show_obj)
-        if None is img_data:
+        image_urls = metadata_generator.retrieve_show_image(img_type_name, show_obj, return_links=True,
+                                                            show_infos=show_infos)
+        if None is image_urls:
             return False
-        result = metadata_generator.write_image(img_data, dest_path, force=force)
+
+        result = None
+        for image_url in image_urls or []:
+            if isinstance(image_url, tuple) and img_type in (self.BANNER, self.POSTER):
+                img_url, thumb_url = image_url
+            else:
+                img_url, thumb_url = image_url, None
+            img_data = sg_helpers.get_url(img_url, nocache=True, as_binary=True)
+            if None is img_data or img_type != self.which_type(img_data, is_binary=True):
+                continue
+            result = metadata_generator.write_image(img_data, dest_path, force=force)
+            if img_type in (self.BANNER, self.POSTER) and dest_thumb_path:
+                thumb_img_data = sg_helpers.get_url(img_url, nocache=True, as_binary=True)
+                thumb_result = None
+                if thumb_img_data:
+                    thumb_result = metadata_generator.write_image(thumb_img_data, dest_thumb_path, force=True)
+                if not thumb_result:
+                    thumb_result = metadata_generator.write_image(img_data, dest_thumb_path, force=True)
+            break
+
         if result:
             logger.log(u'Saved image type %s' % img_type_name)
         return result
@@ -528,6 +687,8 @@ class ImageCache(object):
         if not any(itervalues(need_images)):
             logger.log(u'%s: No new cache images needed. Done.' % show_obj.tvid_prodid)
             return
+
+        show_infos = GenericMetadata.gen_show_infos_dict(show_obj)
 
         void = False
         if not void and need_images[self.FANART]:
@@ -599,8 +760,7 @@ class ImageCache(object):
             logger.log(u'Unable to search for images in show directory because it doesn\'t exist', logger.WARNING)
 
         # download images from TV info sources
-        for image_type, name_type in [[self.POSTER, 'Poster'], [self.BANNER, 'Banner'], [self.FANART, 'Fanart'],
-                                      [self.POSTER_THUMB, 'Poster Thumb'], [self.BANNER_THUMB, 'Banner Thumb']]:
+        for image_type, name_type in [[self.POSTER, 'Poster'], [self.BANNER, 'Banner'], [self.FANART, 'Fanart']]:
             max_files = (500, sickbeard.FANART_LIMIT)[self.FANART == image_type]
             if not max_files or max_files < need_images[image_type]:
                 continue
@@ -610,6 +770,7 @@ class ImageCache(object):
             if need_images[image_type]:
                 file_num = (need_images[image_type] + 1, 1)[isinstance(need_images[image_type], bool)]
                 if file_num <= max_files:
-                    self._cache_info_source_images(show_obj, image_type, file_num, max_files, force=force)
+                    self._cache_info_source_images(show_obj, image_type, file_num, max_files, force=force,
+                                                   show_infos=show_infos)
 
         logger.log(u'Done cache check')

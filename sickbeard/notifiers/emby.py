@@ -75,7 +75,7 @@ class EmbyNotifier(Notifier):
             pass
         args = (dict(post_json={'TvdbId': '%s' % tvdb_id}), dict(data=None))[not any([tvdb_id])]
 
-        mode_to_log = show_obj and 'show "%s"' % show_obj.name or 'all shows'
+        mode_to_log = show_obj and 'show "%s"' % show_obj.unique_name or 'all shows'
         total_success = True
         for i, cur_host in enumerate(hosts):
             endpoint = 'Series'

@@ -3,12 +3,12 @@
 <% def sg_var(varname, default=False): return getattr(sickbeard, varname, default) %>#slurp#
 <% def sg_str(varname, default=''): return getattr(sickbeard, varname, default) %>#slurp#
 ##
-#set global $title = 'Import'
+#set global $title = 'Import' if not $kwargs.get('hash_dir') else 'Path conflict'
 #set global $header = $title
 #set global $sbPath = '../..'
 #set global $statpath = '../..'
 #set global $topmenu = 'home'
-#set global $page_body_attr = 'import-shows"'
+#set global $page_body_attr = 'import-shows" class="'
 ##
 #import os.path
 #include $os.path.join($sg_str('PROG_DIR'), 'gui/slick/interfaces/default/inc_top.tmpl')
@@ -16,8 +16,9 @@
 <script type="text/javascript" charset="utf-8">
 <!--
 var config = { sortArticle: #echo ['!1','!0'][$sg_var('SORT_ARTICLE')]# }
-\$.sgSid = '$kwargs.get('sid', '')';
+\$.sgSid = '$kwargs.get('tvid_prodid', '')';
 \$.sgHashDir = '$kwargs.get('hash_dir', '')';
+\$.sgRenameSuggest = '$kwargs.get('rename_suggest', '')';
 \$(document).ready(function(){
 	\$('#tabs').tabs({ collapsible: !0, selected: #echo ('0', '-1')[any($sg_str('ROOT_DIRS'))]# });
 });
@@ -34,7 +35,7 @@ var config = { sortArticle: #echo ['!1','!0'][$sg_var('SORT_ARTICLE')]# }
 	<h1 class="title">$title</h1>
 #end if
 
-<image class="preload-image" style="position:absolute;top:-999px" src="$sbRoot/images/loading32#echo ('', '-dark')['dark' == $sg_str('THEME_NAME', 'dark')]#.gif" width="32" height="32" border="0">
+<img class="preload-image" style="position:absolute;top:-999px" src="$sbRoot/images/loading32#echo ('', '-dark')['dark' == $sg_str('THEME_NAME', 'dark')]#.gif" width="32" height="32" border="0">
 
 <h3>Existing show folders</h3>
 <form id="addShowForm" method="post" action="$sbRoot/add-shows/add-new-show" accept-charset="utf-8">

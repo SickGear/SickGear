@@ -64,19 +64,19 @@ class LegacyTVShow(object):
     @property
     @deprecated('(TVShow) Use tvid_prodid or tvid __getter__ instead')
     def indexer(self):
-        return self.tvid
+        return self._tvid
 
     @property
-    def tvid(self):
+    def _tvid(self):
         raise NotImplementedError
 
     @indexer.setter
     @deprecated('(TVShow) Use tvid_prodid or tvid __setter__ instead')
     def indexer(self, val):
-        self.tvid = val
+        self._tvid = val
 
-    @tvid.setter
-    def tvid(self, val):
+    @_tvid.setter
+    def _tvid(self, val):
         raise NotImplementedError
 
     # TODO: deprecating TVShow.indexerid
@@ -84,19 +84,19 @@ class LegacyTVShow(object):
     @property
     @deprecated('(TVShow) Use tvid_prodid or prodid __getter__ instead')
     def indexerid(self):
-        return self.prodid
+        return self._prodid
 
     @property
-    def prodid(self):
+    def _prodid(self):
         raise NotImplementedError
 
     @indexerid.setter
     @deprecated('(TVShow) Use tvid_prodid or prodid __setter__ instead')
     def indexerid(self, val):
-        self.prodid = val
+        self._prodid = val
 
-    @prodid.setter
-    def prodid(self, val):
+    @_prodid.setter
+    def _prodid(self, val):
         raise NotImplementedError
 
 

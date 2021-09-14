@@ -1,6 +1,8 @@
 /** @namespace $.SickGear.Root */
 /** @namespace config.sortArticle */
 /** @namespace config.resultsSortby */
+/** @namespace config.searchTests */
+/** @namespace config.folder */
 $(document).ready(function () {
 
 	function htmlFlag(lang) {
@@ -65,11 +67,15 @@ $(document).ready(function () {
 		var elTvDatabase = $('#provided-tvid'),
 			elInfosrcLang = $('#infosrc-lang-select'),
 			tvsrcName = elTvDatabase.find('option:selected').text(),
-			tvSearchSrc = 0 < tvsrcName.length ? ' on ' + tvsrcName : '';
+			tvSearchSrc = 0 < tvsrcName.length
+				? ' <span class="boldest">' + elTvDatabase.find('option:selected').attr('data-name') + '</span>'
+				: '';
 
-		$('#search-results').empty().html('<img id="searchingAnim" src="' + sbRoot + '/images/loading32' + themeSpinner + '.gif" height="32" width="32" />'
-			+ ' searching <span class="boldest">' + cleanseText(elNameToSearch.val(), !0) + '</span>'
-			+ tvSearchSrc + ' in ' + elInfosrcLang.val()
+		$('#search-results').empty().html('<img id="searchingAnim" src="' + sbRoot + '/images/loading32' + themeSpinner + '.gif" height="32" width="32">'
+			+ ' searching '
+			+ tvSearchSrc
+			+ ' in <em>lang:' + elInfosrcLang.val() + '</em> <span' + htmlFlag(elInfosrcLang.val()).replace('.png)"', '.png);display:inline-block;width:16px;height:11px;margin:-2px 3px 0 0;vertical-align:middle"') + '></span>'
+			+ ' for <span class="boldest">' + cleanseText(elNameToSearch.val(), !0) + '</span>'
 			+ '...');
 
 		searchRequestXhr = $.ajax({
@@ -86,19 +92,24 @@ $(document).ready(function () {
 			},
 			success: function (data) {
 				var resultStr = '', attrs = '', checked = !1, rowType, row = 0, srcState = '',
-					resultItem, resultStrBuffer = '', nBufferSize = 20, nBuffer = 0, nAll = 0;
+					resultItem, nBuffer = 0, nBufferSize = 20, nAll = 0;
 
 				if (null === data.results || 0 === data.results.length) {
 					resultStr += '<span class="boldest">Sorry, no results found. Try a different search.</span>';
 				} else {
-					var result = {
-						SrcName: 0, isInDB: 1, SrcId: 2, SrcDBId: 3, SrcUrl: 4, ShowID: 5, Title: 6, TitleHtml: 7,
-						Aired: 8, Network: 9, Genre: 10, Overview: 11, RelSort: 12, NewestAired: 13, OldestAired: 14, AzSort: 15 , ZaSort: 16, ImgUrl: 17
+					var n = 0, result = {
+						SrcName: n, isInDB: ++n, SrcId: ++n, SrcDBId: ++n, SrcSlug: ++n, SrcUrl: ++n, ShowID: ++n,
+						Title: ++n, TitleHtml: ++n, Aired: ++n, AiredStr: ++n, Network: ++n, Genre: ++n,
+						Language: ++n, LanguageCC: ++n, Overview: ++n, ImgUrl: ++n,
+						RelSort: ++n, RelCombined : ++n, NewestAired: ++n, NewestCombined: ++n,
+						OldestAired: ++n, OldestCombined: ++n, AzSort: ++n, AzCombined : ++n, ZaSort: ++n, ZaCombined: ++n,
+						DirectIdMatch: ++n, RenameSuggest: ++n
 					};
 					$.each(data.results, function (index, item) {
-						attrs = (!1 !== item[result.isInDB] ? ' disabled="disabled"' : (!0 === checked ? '' : ' checked'));
-						checked = (' checked' === attrs) ? !0 : checked;
-						rowType = (0 == row % 2 ? '' : ' alt');
+						attrs = (!1 !== item[result.isInDB] ? ' disabled="disabled"' : (!0 === checked ? '' : ' checked'))
+							+ ' data-rename-suggest="' + item[result.RenameSuggest] + '"';
+						checked = (-1 === attrs.indexOf('checked')) ? checked : !0;
+						rowType = (0 === row % 2 ? '' : ' alt');
 						row++;
 
 						var displayShowName = cleanseText(item[result.Title], !0), showstartdate = '';
@@ -108,15 +119,21 @@ $(document).ready(function () {
 							var today = new Date();
 							showstartdate = '&nbsp;<span class="stepone-result-date">('
 								+ (startDate > today ? 'will debut' : 'started')
-								+ ': ' + item[result.Aired] + ')</span>';
+								+ ': ' + item[result.AiredStr] + ')</span>';
 						}
 
 						srcState = [
 							null === item[result.SrcName] ? '' : item[result.SrcName],
 							!1 === item[result.isInDB] ? '' : '<span class="exists-db"><a href="' + sbRoot + item[result.isInDB] + '" target="_blank">exists in db</a></span>']
 							.join(' - ').replace(/(^[\s-]+|[\s-]+$)/, '');
-						resultItem = '<div class="results-item' + rowType + '" data-indb="' +  (!1 === item[result.isInDB] ? '' : '1') + '" data-sort-rel="' + item[result.RelSort] + '" data-sort-newest="' + item[result.NewestAired] + '" data-sort-oldest="' + item[result.OldestAired] + '" data-sort-az="' + item[result.AzSort] + '" data-sort-za="' + item[result.ZaSort] + '">'
-							+ '<input id="which_series" type="radio"'
+						resultItem = '<div class="results-item' + ' ' + item[result.SrcSlug] + rowType + '" data-indb="' + (!1 === item[result.isInDB] ? '' : '1')
+							+ '" data-sort-rel="' + item[result.RelSort] + '" data-sort-rel-combined="' + item[result.RelCombined]
+							+ '" data-sort-newest="' + item[result.NewestAired] + '" data-sort-newest-combined="' + item[result.NewestCombined]
+							+ '" data-sort-oldest="' + item[result.OldestAired] + '" data-sort-oldest-combined="' + item[result.OldestCombined]
+							+ '" data-sort-az="' + item[result.AzSort] + '" data-sort-az-combined="' + item[result.AzCombined]
+							+ '" data-sort-za="' + item[result.ZaSort] + '" data-sort-za-combined="' + item[result.ZaCombined] + '">'
+							+ '<label><i></i>'
+							+ '<input type="radio"'
 							+ ' class="stepone-result-radio"'
 							+ (!1 === item[result.isInDB]
 								? ' title="Add show <span style=\'color: rgb(66, 139, 202)\'>' + displayShowName + '</span>"'
@@ -124,43 +141,43 @@ $(document).ready(function () {
 							+ ' name="which_series"'
 							+ ' value="' + cleanseText([item[result.SrcDBId], item[result.SrcName], item[result.ShowID], item[result.Title]].join('|'), !0) + '"'
 							+ attrs
-							+ ' />'
+							+ '></label>'
 							+ '<a'
 							+ ' class="stepone-result-title"'
 							+ ' title="<div style=\'color: rgb(66, 139, 202)\'>' + cleanseText(item[result.TitleHtml], !0) + '</div>'
+							+ (0 < item[result.LanguageCC].length && 'gb' !== item[result.LanguageCC]
+								? '<div style=\'font-weight:bold;font-size:0.9em;color:#888\'><em>Language: <span' + htmlFlag(item[result.LanguageCC]).replace('.png)"', '.png);display:inline-block;width:16px;height:11px;margin:-2px 3px 0 0;vertical-align:middle"').replace(/"/g, "'") + '></span>'
+								+ item[result.Language] + '</em></div>' : '')
 							+ (0 < item[result.Genre].length ? '<div style=\'font-weight:bold\'>(<em>' + item[result.Genre] + '</em>)</div>' : '')
 							+ (0 < item[result.Network].length ? '<div style=\'font-weight:bold;font-size:0.9em;color:#888\'><em>' + item[result.Network] + '</em></div>' : '')
-							+ '<img style=\'max-height:150px;float:right;margin-left:3px\' src=\'/' + item[result.ImgUrl] + '\'>'
+							+ (item[result.ImgUrl] && '<img style=\'max-height:150px;float:right;margin-left:3px\' src=\'/' + item[result.ImgUrl] + '\'>' || '')
 							+ (0 < item[result.Overview].length ? '<p style=\'margin:0 0 2px\'>' + item[result.Overview] + '</p>' : '')
 							+ '<span style=\'float:right;clear:both\'>Click for more</span>'
 							+ '"'
-							+ ' href="' + anonURL + item[result.SrcUrl] + ((data.langid && '' != data.langid) ? '&lid=' + data.langid : '') + '"'
+							+ ' href="' + anonURL + item[result.SrcUrl] + '"'
 							+ ' onclick="window.open(this.href, \'_blank\'); return !1;"'
 							+ '>' + (config.sortArticle ? displayShowName : displayShowName.replace(/^((?:A(?!\s+to)n?)|The)(\s)+(.*)/i, '$3$2<span class="article">($1)</span>')) + '</a>'
 							+ showstartdate
 							+ ('' === srcState ? ''
 								: '&nbsp;<span class="stepone-result-db grey-text">' + '[' + srcState + ']' + '</span>')
 							+ '</div>' + "\n";
-						if (nBuffer < nBufferSize || item[result.isInDB]) {
-							resultStr += resultItem;
-							if (!1 === item[result.isInDB])
-								nBuffer++;
-						} else {
-							resultStrBuffer += resultItem;
-						}
+						resultStr += resultItem;
+						if(item[result.isInDB])
+							nBufferSize++;
+						if ((nBuffer < nBufferSize) || item[result.isInDB])
+							nBuffer++;
 						nAll++;
 					});
 				}
 				var selAttr = 'selected="selected" ',
 					selClass = 'selected-text',
 					classAttrSel = 'class="' + selClass + '" ',
-					useBuffer = nBufferSize < nAll,
 					defSortby = /^az/.test(config.resultsSortby) || /^za/.test(config.resultsSortby) || /^newest/.test(config.resultsSortby) || /^oldest/.test(config.resultsSortby) ? '': classAttrSel + selAttr;
 
-				$('#search-results').html(
+				$('#search-results').addClass('collapsed').html(
 					'<fieldset>' + "\n" + '<legend class="legendStep" style="margin-bottom: 15px">'
 						+ '<span id="count"></span>'
-						+ '<span style="float:right;height:32px;line-height:1">'
+						+ '<span style="float:right;height:32px;line-height:1"><span id="results-expander" style="margin-right:10px"></span>'
 						+ '<select id="results-sortby" class="form-control form-control-inline input-sm">'
 						+ '<optgroup label="Sort by">'
 						+ '<option ' + (/^az/.test(config.resultsSortby) ? classAttrSel + selAttr : '') + 'value="az">A to Z</option>'
@@ -170,7 +187,9 @@ $(document).ready(function () {
 						+ '<option ' + defSortby + 'value="rel">Relevancy</option>'
 						+ '</optgroup><optgroup label="With...">'
 						+ '<option ' + (!/notop$/.test(config.resultsSortby) ? classAttrSel : '') + 'value="ontop">Exists on top</option>'
-						+ '<option ' + (/notop$/.test(config.resultsSortby) ? classAttrSel : '') + 'value="notop">Exists in mix</option>'
+						+ '<option ' + (/notop$/.test(config.resultsSortby) ? classAttrSel : '') + 'value="notop">Exists combined</option>'
+						+ '<option ' + (!/nogroup/.test(config.resultsSortby) ? classAttrSel : '') + 'value="ingroup">Source grouped</option>'
+						+ '<option ' + (/nogroup$/.test(config.resultsSortby) ? classAttrSel : '') + 'value="nogroup">Source combined</option>'
 						+ '</optgroup></select></span>'
 						+ '</legend>' + "\n"
 						+ '<div id="holder">'
@@ -178,25 +197,32 @@ $(document).ready(function () {
 						+ '</div>'
 						+ '</fieldset>'
 					);
-
-				if (useBuffer) {
-					$('#search-results-buffer').html(resultStrBuffer);
-					$('#more-results').show();
-					$('#more-results a').on('click', function(e, d) {
-						e.preventDefault();
-						$('#more-results').hide();
-						$('#search-results #count').text(nAll + ' search result' + (1 === nAll ? '' : 's') + '...');
-						$('#search-results-buffer .results-item').appendTo('#holder');
-						container$.isotope( 'reloadItems' ).isotope(
-							{sortBy: $('#results-sortby').find('option:not([value$="top"]).selected-text').val()});
-						myform.loadsection(0);
-					});
-					$('#search-results #count').text((nBuffer + ' / ' + nAll)
-						+ ' search result' + (1 === nBuffer ? '' : 's') + '...');
-				} else {
-					$('#search-results #count').text((0 < nBuffer ? nBuffer + (useBuffer ? ' / ' + nAll : '') : 'No')
-						+ ' search result' + (1 === nAll ? '' : 's') + '...');
+				function displayCount(){
+					$('#count').html((nAll > nBufferSize ? nBuffer + ' of ' + nAll : (0 < nAll ? nAll : 'No'))
+						+ ' result' + (1 === nAll ? '' : 's') + '...');
 				}
+				displayCount();
+				var defaultExpander = '<i class="sgicon-arrowdown" style="margin-right:-8px; font-size:12px"></i>expand list'
+				$('#results-expander').html((nAll > nBufferSize ? ' <span id="more-results" style="display:none;font-size: 0.7em">[<a href="#" style="text-decoration:none">' + defaultExpander + '</a>]</span>' : ''));
+				$('#more-results').show();
+				$('#more-results a').on('click', function(e, d) {
+					e.preventDefault();
+					var results$ = $('#search-results'), displayAction = '';
+					if (results$.hasClass('collapsed')){
+						displayAction = '<i class="sgicon-arrowup" style="margin-right:4px; font-size:12px"></i>collapse list';
+						results$.removeClass('collapsed');
+						$('#count').html('All ' + nAll + ' result' + (1 === nAll ? '' : 's'));
+					} else {
+						displayAction = defaultExpander;
+						results$.addClass('collapsed');
+						displayCount();
+					}
+					$('#more-results').find('a').html(displayAction);
+
+					container$.isotope('updateSortData');
+					updateResults();
+					myform.loadsection(0);
+				});
 
 				var container$ = $('#holder'),
 					sortbySelect$ = $('#results-sortby'),
@@ -204,41 +230,61 @@ $(document).ready(function () {
 						return ($('#results-sortby').find('option[value$="notop"]').hasClass(selClass)
 							? (1000 > value ? value + 1000 : value)
 							: (1000 > value ? value : value - 1000))}),
+					fx = {filterData: function(){
+						var results$ = $('#search-results');
+						if (results$.hasClass('collapsed')){
+							var itemElem = this, number = getAttr(itemElem, 'sort-' + results$.find('option:not([value$="top"],[value$="group"]).' + selClass).val());
+							number -= number >= 1000 ? 1000 : 0;
+							return (number < nBufferSize ) || !!getAttr(itemElem, 'indb');
+						}
+						return !0;
+					}},
+					getAttr = (function(itemElem, attr){
+						var number = $(itemElem).attr('data-' + attr);
+						return ('undefined' !== typeof(number)) && parseInt(number, 10) || 0;
+					}),
 					getData = (function(itemElem, sortby){
-						var position = parseInt($(itemElem).attr('data-sort-' + sortby));
-						return (!$(itemElem).attr('data-indb')) ? position : reOrder(position);
+						var position = getAttr(itemElem, 'sort-' + sortby +
+							($('#results-sortby').find('option[value$="ingroup"]').hasClass(selClass) ? '' : '-combined'));
+						return (!!getAttr(itemElem, 'indb') ? reOrder(position) : position);
 					});
 
 				sortbySelect$.find('.' + selClass).each(function(){
 					$(this).html('> ' + $(this).html());
 				});
 
-				container$.isotope({
-					itemSelector: '.results-item',
-					sortBy: sortbySelect$.find('option:not([value$="top"]).' + selClass).val(),
-					layoutMode: 'masonry',
-					getSortData: {
-						az: function(itemElem){ return getData(itemElem, 'az'); },
-						za: function(itemElem){ return getData(itemElem, 'za'); },
-						newest: function(itemElem){ return getData(itemElem, 'newest'); },
-						oldest: function(itemElem){ return getData(itemElem, 'oldest'); },
-						rel: function(itemElem){ return getData(itemElem, 'rel'); }
-					}
-				}).on('arrangeComplete', function(event, items){
-					$(items).each(function(i, item){
-						if (1 === i % 2){
-							$(item.element).addClass('alt');
+				function updateResults(){
+					$('.results-item').removeClass('alt');
+					container$.isotope({
+						itemSelector: '.results-item',
+						sortBy: sortbySelect$.find('option:not([value$="top"],[value$="group"]).' + selClass).val(),
+						layoutMode: 'masonry',
+						filter: fx['filterData'],
+						getSortData: {
+							az: function(itemElem){ return getData(itemElem, 'az'); },
+							za: function(itemElem){ return getData(itemElem, 'za'); },
+							newest: function(itemElem){ return getData(itemElem, 'newest'); },
+							oldest: function(itemElem){ return getData(itemElem, 'oldest'); },
+							rel: function(itemElem){ return getData(itemElem, 'rel'); }
 						}
+					}).on('arrangeComplete', function(event, items){
+						$(items).each(function(i, item){
+							if (1 === i % 2){
+								$(item.element).addClass('alt');
+							}
+						});
 					});
-				});
+				}
+				container$.isotope();  // must init first
+				updateResults();
 
 				sortbySelect$.on('change', function(){
 					var selectedSort = String($(this).val()), sortby = selectedSort, curSortby$, curSel$, newSel$;
-
-					curSortby$ = $(this).find('option:not([value$="top"])');
-					if (/top$/.test(selectedSort)){
+					curSortby$ = $(this).find('option:not([value$="top"],[value$="group"])');
+					if (/(top|group)$/.test(selectedSort)){
 						sortby = curSortby$.filter('.' + selClass).val();
-						curSortby$ = $(this).find('option[value$="top"]');
+						curSortby$ = $(this).find('option[value$="'
+							+ (-1 !== selectedSort.indexOf('top') ? 'top' : 'group') + '"]');
 					}
 					curSel$ = curSortby$.filter('.' + selClass);
 					curSel$.html(curSel$.html().replace(/(?:>|&gt;)\s/ , '')).removeClass(selClass);
@@ -249,10 +295,12 @@ $(document).ready(function () {
 					$('.results-item[data-indb="1"]').each(function(){
 						$(this).attr(sortby, reOrder(parseInt($(this).attr(sortby), 10)));
 					});
-					$('.results-item').removeClass('alt');
-					container$.isotope('updateSortData').isotope({sortBy: sortby});
+					container$.isotope('updateSortData');
+					updateResults();
 
-					config.resultsSortby = sortby + ($(this).find('option[value$="notop"]').hasClass(selClass) ? ' notop' : '');
+					config.resultsSortby = sortby +
+						($(this).find('option[value$="notop"]').hasClass(selClass) ? ' notop' : '') +
+						($(this).find('option[value$="nogroup"]').hasClass(selClass) ? ' nogroup' : '');
 					$.get(sbRoot + '/config/general/save-result-prefs', {ui_results_sortby: selectedSort});
 				});
 
@@ -262,6 +310,30 @@ $(document).ready(function () {
 			}
 		});
 	}
+
+	function submitSearch(searchFor){
+		$('#nameToSearch').val(searchFor);
+		!!searchFor && $('#searchName').click();
+		return !1;
+	}
+
+	$('#try-0').on('click', function(){return submitSearch('');});
+	$('#try-1').on('click', function(){return submitSearch(config.searchTests[1]);});
+	$('span[id^="try-"]').each(function(i, el){
+		var match = $(el).attr('id').match(/try-(\d+)(-.*)$/i);
+		if (!!match){
+			$('#' + match[0]).on('click', function(){
+				var match = $(this).attr('id').match(/try-(\d+)(-.*)$/i),
+					num = parseInt(match[1], 10),
+					kind = match[2],
+					nextEl$ = $('span[id$="'+ (num + 1) + kind + '"]');
+
+				$(this).closest('span[id^="try-"]').addClass('hide');
+				(nextEl$.length ? nextEl$ : $('span[id$="'+ kind + '"]:first')).removeClass('hide');
+				return submitSearch(config.searchTests[num]);
+			});
+		}
+	});
 
 	var elNameToSearch = $('#nameToSearch'),
 		elSearchName = $('#searchName');
@@ -342,8 +414,15 @@ $(document).ready(function () {
 			elFullShowPath = $('#fullShowPath'),
 			idxWhichShowID = 2, idxWhichTitle = 3;
 
+		if (!!elRadio.length) {
+			$('#rename-suggest').val(elRadio.attr('data-rename-suggest'));
+		}
+
+		if (!!config.folder.length) {
+			showName = config.folder;
+		}
 		// if they've picked a radio button then use that
-		if (elRadio.length) {
+		else if (elRadio.length) {
 			showName = elRadio.val().split('|')[idxWhichTitle];
 			elScene[0].checked = 0 <= showSceneMaps.indexOf(parseInt(elRadio.val().split('|')[idxWhichShowID], 10));
 			$('#scene-maps-found').css('display', elScene.is(':checked') ? 'block' : 'None');
@@ -354,7 +433,7 @@ $(document).ready(function () {
 		}
 		updateAniGrouplist(showName);
 		var sample_text = '<p>Adding show <span class="show-name">' + cleanseText(showName, !0) + '</span>'
-			+ ('' == showName ? 'into<br />' : '<br />into')
+			+ (!showName.length ? 'into<br>' : '<br>into' + (!config.folder.length ? '' : ' user location'))
 			+ ' <span class="show-dest">';
 
 		// if we have a root dir selected, figure out the path

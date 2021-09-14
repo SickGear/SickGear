@@ -227,6 +227,8 @@ class WebAPICase(test.SickbeardTestDBCase):
                                 history.log_download(ep_obj, '%s.S%sE%s.group.mkv' % (
                                     show_obj.name, ep_obj.season, ep_obj.episode), quality, 'group')
 
+            sickbeard.webserve.Home.make_showlist_unique_names()
+
     def tearDown(self):
         if None is not self.org_mass_action:
             db.DBConnection.mass_action = self.org_mass_action

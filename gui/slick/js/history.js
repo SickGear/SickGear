@@ -64,11 +64,12 @@ $(document).ready(function() {
 	} else if (-1 !== layoutName.indexOf('watched')) {
 
 		jQuery.extend(extraction, {
-			3: function(node) {
+			2: function(node) {
 				return $(node).find('span[data-sort]').attr('data-sort');
 			},
 			5: function(node) {
-				return $(node).find('span[data-sort]').attr('data-sort');
+				var value = parseInt($(node).find('span[data-sort]').attr('data-sort'), 10);
+				return !!$(node).siblings('.tvShow').eq(0).find('.strike-deleted').length ? 0 - value : value;
 			},
 			6: function (node) {
 				return $(node).find('input:checked').length;

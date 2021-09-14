@@ -1148,8 +1148,8 @@ class GenericProvider(object):
                     continue
 
             if not (parse_result.show_obj.tvid == show_obj.tvid and parse_result.show_obj.prodid == show_obj.prodid):
-                logger.log(u'Parsed show [%s] is not show [%s] we are searching for' %
-                           (parse_result.show_obj.name, show_obj.name), logger.DEBUG)
+                logger.debug(u'Parsed show [%s] is not show [%s] we are searching for' % (
+                    parse_result.show_obj.unique_name, show_obj.unique_name))
                 continue
 
             parsed_show_obj = parse_result.show_obj

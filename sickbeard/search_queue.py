@@ -25,8 +25,11 @@ import threading
 import traceback
 
 import exceptions_helper
+# noinspection PyPep8Naming
+from exceptions_helper import ex
 
 import sickbeard
+from lib.dateutil import tz
 from . import common, db, failed_history, generic_queue, helpers, \
     history, logger, network_timezones, properFinder, search, ui
 from .classes import Proper, SimpleNamespace
@@ -38,6 +41,7 @@ from _23 import filter_list
 # noinspection PyUnreachableCode
 if False:
     from typing import Any, AnyStr, Dict, List, Optional, Union
+    from .tv import TVShow
 
 
 search_queue_lock = threading.Lock()
@@ -54,35 +58,105 @@ MANUAL_SEARCH_HISTORY_SIZE = 100
 
 class SearchQueue(generic_queue.GenericQueue):
     def __init__(self):
-        generic_queue.GenericQueue.__init__(self)
+        generic_queue.GenericQueue.__init__(self, cache_db_tables=['search_queue'])
         self.queue_name = 'SEARCHQUEUE'  # type: AnyStr
+
+    def load_queue(self):
+        try:
+            my_db = db.DBConnection('cache.db')
+            queue_sql = my_db.select('SELECT * FROM search_queue')
+            for q in queue_sql:
+                if q['action_id'] in (BACKLOG_SEARCH, FAILED_SEARCH, MANUAL_SEARCH):
+                    show_obj = helpers.find_show_by_id({q['indexer']: q['indexer_id']})
+                    if not show_obj:
+                        continue
+                if BACKLOG_SEARCH == q['action_id']:
+                    segments = [show_obj.get_episode(*tuple([int(x) for x in cur_ep.split('x')]))
+                                for cur_ep in q['segment'].split(',')]
+                    item = BacklogQueueItem(show_obj=show_obj, segment=segments,
+                                            standard_backlog=bool(q['standard_backlog']),
+                                            limited_backlog=bool(q['limited_backlog']),
+                                            forced=bool(q['forced']), torrent_only=bool(q['torrent_only']),
+                                            uid=q['uid'])
+                elif FAILED_SEARCH == q['action_id']:
+                    segments = [show_obj.get_episode(*tuple([int(x) for x in cur_ep.split('x')]))
+                                for cur_ep in q['segment'].split(',')]
+                    item = FailedQueueItem(show_obj=show_obj, segment=segments, uid=q['uid'])
+                elif MANUAL_SEARCH == q['action_id']:
+                    segment = show_obj.get_episode(*tuple([int(x) for x in q['segment'].split('x')]))
+                    item = ManualSearchQueueItem(show_obj=show_obj, segment=segment, uid=q['uid'])
+                else:
+                    continue
+                self.add_item(item, add_to_db=False)
+        except (BaseException, Exception) as e:
+            logger.log('Exception loading queue %s: %s' % (self.__class__.__name__, ex(e)), logger.ERROR)
+
+    def _clear_sql(self):
+        return [
+            ['DELETE FROM search_queue']
+        ]
+
+    def _get_item_sql(self, item):
+        # type: (BaseSearchQueueItem) -> List[List]
+        if isinstance(item, BacklogQueueItem):
+            return [
+                ['INSERT OR IGNORE INTO search_queue (indexer, indexer_id, segment, standard_backlog, limited_backlog,'
+                 ' forced, torrent_only, action_id, uid) VALUES (?,?,?,?,?,?,?,?,?)',
+                 [item.show_obj.tvid, item.show_obj.prodid,
+                  ','.join('%sx%s' % (i.season, i.episode) for i in item.segment), int(item.standard_backlog),
+                  int(item.limited_backlog), int(item.forced), int(item.torrent_only), BACKLOG_SEARCH, item.uid]]
+            ]
+        elif isinstance(item, FailedQueueItem):
+            return [
+                ['INSERT OR IGNORE INTO search_queue (indexer, indexer_id, segment, action_id, uid)'
+                 ' VALUES (?,?,?,?,?)',
+                 [item.show_obj.tvid, item.show_obj.prodid,
+                  ','.join('%sx%s' % (i.season, i.episode) for i in item.segment), FAILED_SEARCH, item.uid]]
+            ]
+        elif isinstance(item, ManualSearchQueueItem):
+            return [
+                ['INSERT OR IGNORE INTO search_queue (indexer, indexer_id, segment, action_id, uid)'
+                 ' VALUES (?,?,?,?,?)',
+                 [item.show_obj.tvid, item.show_obj.prodid, '%sx%s' % (item.segment.season, item.segment.episode),
+                  MANUAL_SEARCH, item.uid]]
+            ]
+        return []
+
+    def _delete_item_from_db_sql(self, item):
+        # type: (BaseSearchQueueItem) -> List[List]
+        if isinstance(item, (BacklogQueueItem, FailedQueueItem, ManualSearchQueueItem)):
+            return [
+                ['DELETE FROM search_queue WHERE uid = ?', [item.uid]]
+            ]
+
+    def _clear_queue(self, action_types=None, excluded_types=None):
+        generic_queue.GenericQueue._clear_queue(self, action_types=action_types,
+                                                excluded_types=[RECENT_SEARCH, PROPER_SEARCH])
+
+    def remove_from_queue(self, to_remove=None, force=False):
+        generic_queue.GenericQueue._remove_from_queue(self, to_remove=to_remove,
+                                                      excluded_types=[RECENT_SEARCH, PROPER_SEARCH], force=force)
 
     def is_in_queue(self, show_obj, segment):
         # type: (sickbeard.tv.TVShow, List[sickbeard.tv.TVEpisode]) -> bool
         with self.lock:
-            for cur_item in self.queue:
-                if isinstance(cur_item, BacklogQueueItem) \
-                        and show_obj == cur_item.show_obj \
-                        and segment == cur_item.segment:
-                    return True
-            return False
+            return any(1 for cur_item in self.queue
+                       if isinstance(cur_item, BacklogQueueItem) and show_obj == cur_item.show_obj
+                       and segment == cur_item.segment)
 
     def is_ep_in_queue(self, segment):
         # type: (List[sickbeard.tv.TVEpisode]) -> bool
         with self.lock:
-            for cur_item in self.queue:
-                if isinstance(cur_item, (ManualSearchQueueItem, FailedQueueItem)) and cur_item.segment == segment:
-                    return True
-            return False
+            return any(1 for cur_item in self.queue
+                       if isinstance(cur_item, (ManualSearchQueueItem, FailedQueueItem))
+                       and cur_item.segment == segment)
 
     def is_show_in_queue(self, tvid_prodid):
         # type: (AnyStr) -> bool
         with self.lock:
-            for cur_item in self.queue:
-                if isinstance(cur_item, (ManualSearchQueueItem, FailedQueueItem)) and \
-                        tvid_prodid == cur_item.show_obj.tvid_prodid:
-                    return True
-            return False
+            return any(1 for cur_item in self.queue
+                       if isinstance(cur_item, (ManualSearchQueueItem, FailedQueueItem))
+                       and tvid_prodid == cur_item.show_obj.tvid_prodid)
 
     def pause_backlog(self):
         # type: (...) -> None
@@ -104,10 +178,7 @@ class SearchQueue(generic_queue.GenericQueue):
     def _is_in_progress(self, item_type):
         # type: (Any) -> bool
         with self.lock:
-            for cur_item in self.queue + [self.currentItem]:
-                if isinstance(cur_item, item_type):
-                    return True
-            return False
+            return any(1 for cur_item in self.queue + [self.currentItem] if isinstance(cur_item, item_type))
 
     def get_queued_manual(self, tvid_prodid):
         # type: (Optional[AnyStr]) -> List[BaseSearchQueueItem]
@@ -149,18 +220,14 @@ class SearchQueue(generic_queue.GenericQueue):
     def is_propersearch_in_progress(self):
         # type: (...) -> bool
         with self.lock:
-            for cur_item in self.queue + [self.currentItem]:
-                if isinstance(cur_item, ProperSearchQueueItem) and None is cur_item.propers:
-                    return True
-            return False
+            return any(1 for cur_item in self.queue + [self.currentItem]
+                       if isinstance(cur_item, ProperSearchQueueItem) and None is cur_item.propers)
 
     def is_standard_backlog_in_progress(self):
         # type: (...) -> bool
         with self.lock:
-            for cur_item in self.queue + [self.currentItem]:
-                if isinstance(cur_item, BacklogQueueItem) and cur_item.standard_backlog:
-                    return True
-            return False
+            return any(1 for cur_item in self.queue + [self.currentItem]
+                       if isinstance(cur_item, BacklogQueueItem) and cur_item.standard_backlog)
 
     def type_of_backlog_in_progress(self):
         # type: (...) -> AnyStr
@@ -202,7 +269,8 @@ class SearchQueue(generic_queue.GenericQueue):
                         tvid=cur_item.show_obj.tvid, prodid=cur_item.show_obj.prodid,
                         tvid_prodid=cur_item.show_obj.tvid_prodid,
                         # legacy keys for api responses
-                        indexer=cur_item.show_obj.tvid, indexerid=cur_item.show_obj.prodid
+                        indexer=cur_item.show_obj.tvid, indexerid=cur_item.show_obj.prodid,
+                        uid=cur_item.uid
                     )
                     if isinstance(cur_item, BacklogQueueItem):
                         result_item.update(dict(
@@ -215,26 +283,50 @@ class SearchQueue(generic_queue.GenericQueue):
                         length['manual'] += [result_item]
             return length
 
+    def abort_show(self, show_obj):
+        # type: (TVShow) -> None
+        if show_obj:
+            with self.lock:
+                to_remove = []
+                for c in ((self.currentItem and [self.currentItem]) or []) + self.queue:
+                    if show_obj == getattr(c, 'show_obj', None):
+                        try:
+                            to_remove.append(c.uid)
+                        except (BaseException, Exception):
+                            pass
+                        try:
+                            c.stop.set()
+                        except (BaseException, Exception):
+                            pass
+
+                if to_remove:
+                    try:
+                        self.remove_from_queue(to_remove)
+                    except (BaseException, Exception):
+                        pass
+
     def add_item(
             self,
-            item  # type: Union[RecentSearchQueueItem, ProperSearchQueueItem, BacklogQueueItem, ManualSearchQueueItem, FailedQueueItem]
+            item,  # type: Union[RecentSearchQueueItem, ProperSearchQueueItem, BacklogQueueItem, ManualSearchQueueItem, FailedQueueItem]
+            add_to_db=True  # type: bool
     ):
         # type: (...) -> None
         """
 
         :param item:
+        :param add_to_db:
         :type item: RecentSearchQueueItem or ProperSearchQueueItem or BacklogQueueItem or ManualSearchQueueItem or
         FailedQueueItem
         """
         if isinstance(item, (RecentSearchQueueItem, ProperSearchQueueItem)):
             # recent and proper searches
-            generic_queue.GenericQueue.add_item(self, item)
+            generic_queue.GenericQueue.add_item(self, item, add_to_db=add_to_db)
         elif isinstance(item, BacklogQueueItem) and not self.is_in_queue(item.show_obj, item.segment):
             # backlog searches
-            generic_queue.GenericQueue.add_item(self, item)
+            generic_queue.GenericQueue.add_item(self, item, add_to_db=add_to_db)
         elif isinstance(item, (ManualSearchQueueItem, FailedQueueItem)) and not self.is_ep_in_queue(item.segment):
             # manual and failed searches
-            generic_queue.GenericQueue.add_item(self, item)
+            generic_queue.GenericQueue.add_item(self, item, add_to_db=add_to_db)
         else:
             logger.log(u'Not adding item, it\'s already in the queue', logger.DEBUG)
 
@@ -364,7 +456,8 @@ class RecentSearchQueueItem(generic_queue.QueueItem):
 
         my_db = db.DBConnection()
         sql_result = my_db.select(
-            'SELECT indexer AS tvid, showid AS prodid, airdate, season, episode'
+            'SELECT indexer AS tvid, showid AS prodid, airdate, season, episode, timestamp,'
+            ' timezone, network, airtime, runtime'
             ' FROM tv_episodes'
             ' WHERE status = ? AND season > 0 AND airdate <= ? AND airdate > 1'
             ' ORDER BY indexer, showid', [common.UNAIRED, cur_date])
@@ -383,8 +476,16 @@ class RecentSearchQueueItem(generic_queue.QueueItem):
                 continue
 
             try:
-                end_time = (network_timezones.parse_date_time(cur_result['airdate'], show_obj.airs, show_obj.network) +
-                            datetime.timedelta(minutes=helpers.try_int(show_obj.runtime, 60)))
+                end_time = network_timezones.get_episode_time(cur_result['airdate'],
+                                                              cur_result['airtime'] or show_obj.airs,
+                                                              show_obj.network,
+                                                              show_obj.timezone,
+                                                              cur_result['timestamp'],
+                                                              cur_result['network'],
+                                                              cur_result['timezone']
+                                                              )
+
+                end_time += datetime.timedelta(minutes=helpers.try_int(cur_result['runtime'] or show_obj.runtime, 60))
                 # filter out any episodes that haven't aired yet
                 if end_time > cur_time:
                     continue
@@ -466,18 +567,25 @@ class ProperSearchQueueItem(generic_queue.QueueItem):
         finally:
             self.finish()
 
+    def __str__(self):
+        return '<%s - %s>' % (self.__class__.__name__, ('recent', 'native')[None is self.propers])
+
+    def __repr__(self):
+        return self.__str__()
+
 
 class BaseSearchQueueItem(generic_queue.QueueItem):
-    def __init__(self, show_obj, segment, name, action_id=0):
-        # type: (sickbeard.tv.TVShow, Union[TVEpisode, List[TVEpisode]], AnyStr, int) -> None
+    def __init__(self, show_obj, segment, name, action_id=0, uid=None):
+        # type: (sickbeard.tv.TVShow, Union[TVEpisode, List[TVEpisode]], AnyStr, int, AnyStr) -> None
         """
 
         :param show_obj: show object
         :param segment: segment
         :param name: name
         :param action_id:
+        :param uid:
         """
-        super(BaseSearchQueueItem, self).__init__(name, action_id)
+        super(BaseSearchQueueItem, self).__init__(name, action_id, uid=uid)
         self.segment = segment  # type: Union[TVEpisode, List[TVEpisode]]
         self.show_obj = show_obj
         self.added_dt = None
@@ -499,16 +607,34 @@ class BaseSearchQueueItem(generic_queue.QueueItem):
                     quality=s.show_obj.quality, upgrade_once=s.show_obj.upgrade_once
                 )) for s in ([self.segment], self.segment)[isinstance(self.segment, list)]])
 
+    def __str__(self):
+        if self.segment:
+            if isinstance(self.segment, list):
+                show_name = self.segment[0].show_obj and self.segment[0].show_obj.name
+            else:
+                show_name = self.segment.show_obj and self.segment.show_obj.name
+            segment_str = ' - %s (%s)' % \
+                          (show_name,
+                           ','.join(['%sx%s' % (s.season, s.episode)
+                                     for s in ([self.segment], self.segment)[isinstance(self.segment, list)]]))
+        else:
+            segment_str = ''
+        return '<%s%s>' % (self.__class__.__name__, segment_str)
+
+    def __repr__(self):
+        return self.__str__()
+
 
 class ManualSearchQueueItem(BaseSearchQueueItem):
-    def __init__(self, show_obj, segment):
-        # type: (sickbeard.tv.TVShow, sickbeard.tv.TVEpisode) -> None
+    def __init__(self, show_obj, segment, uid=None):
+        # type: (sickbeard.tv.TVShow, sickbeard.tv.TVEpisode, AnyStr) -> None
         """
 
         :param show_obj: show object
         :param segment: segment
+        :param uid:
         """
-        super(ManualSearchQueueItem, self).__init__(show_obj, segment, 'Manual Search', MANUAL_SEARCH)
+        super(ManualSearchQueueItem, self).__init__(show_obj, segment, 'Manual Search', MANUAL_SEARCH, uid=uid)
         self.priority = generic_queue.QueuePriorities.HIGH  # type: int
         self.name = 'MANUAL-%s' % show_obj.tvid_prodid  # type: AnyStr
         self.started = None
@@ -578,7 +704,8 @@ class BacklogQueueItem(BaseSearchQueueItem):
             standard_backlog=False,  # type: bool
             limited_backlog=False,  # type: bool
             forced=False,  # type: bool
-            torrent_only=False  # type: bool
+            torrent_only=False,  # type: bool
+            uid=None  # type: AnyStr
     ):
         """
 
@@ -588,8 +715,9 @@ class BacklogQueueItem(BaseSearchQueueItem):
         :param limited_backlog: is limited backlog
         :param forced: forced
         :param torrent_only: torrent only
+        :param uid:
         """
-        super(BacklogQueueItem, self).__init__(show_obj, segment, 'Backlog', BACKLOG_SEARCH)
+        super(BacklogQueueItem, self).__init__(show_obj, segment, 'Backlog', BACKLOG_SEARCH, uid=uid)
         self.priority = generic_queue.QueuePriorities.LOW  # type: int
         self.name = 'BACKLOG-%s' % show_obj.tvid_prodid  # type: AnyStr
         self.standard_backlog = standard_backlog  # type: bool
@@ -607,7 +735,7 @@ class BacklogQueueItem(BaseSearchQueueItem):
                 for ep_obj in self.segment:  # type: sickbeard.tv.TVEpisode
                     set_wanted_aired(ep_obj, True, ep_count, ep_count_scene)
 
-            logger.log(u'Beginning backlog search for: [%s]' % self.show_obj.name)
+            logger.log(u'Beginning backlog search for: [%s]' % self.show_obj.unique_name)
             search_result = search.search_providers(
                 self.show_obj, self.segment, False,
                 try_other_searches=(not self.standard_backlog or not self.limited_backlog),
@@ -628,26 +756,27 @@ class BacklogQueueItem(BaseSearchQueueItem):
 
                     helpers.cpu_sleep()
             else:
-                logger.log(u'No needed episodes found during backlog search for: [%s]' % self.show_obj.name)
+                logger.log(u'No needed episodes found during backlog search for: [%s]' % self.show_obj.unique_name)
         except (BaseException, Exception):
             is_error = True
             logger.log(traceback.format_exc(), logger.ERROR)
 
         finally:
             logger.log('Completed backlog search %sfor: [%s]'
-                       % (('', 'with a debug error ')[is_error], self.show_obj.name))
+                       % (('', 'with a debug error ')[is_error], self.show_obj.unique_name))
             self.finish()
 
 
 class FailedQueueItem(BaseSearchQueueItem):
-    def __init__(self, show_obj, segment):
-        # type: (sickbeard.tv.TVShow, List[sickbeard.tv.TVEpisode]) -> None
+    def __init__(self, show_obj, segment, uid=None):
+        # type: (sickbeard.tv.TVShow, List[sickbeard.tv.TVEpisode], AnyStr) -> None
         """
 
         :param show_obj: show object
         :param segment: segment
+        :param uid:
         """
-        super(FailedQueueItem, self).__init__(show_obj, segment, 'Retry', FAILED_SEARCH)
+        super(FailedQueueItem, self).__init__(show_obj, segment, 'Retry', FAILED_SEARCH, uid=uid)
         self.priority = generic_queue.QueuePriorities.HIGH  # type: int
         self.name = 'RETRY-%s' % show_obj.tvid_prodid  # type: AnyStr
         self.started = None

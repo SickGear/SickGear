@@ -1,10 +1,13 @@
 /** @namespace $.SickGear.Root */
+/** @namespace $.SickGear.glideFancyBoxOpen */
 /** @namespace config.TVShowList */
 /** @namespace config.useIMDbInfo */
 /** @namespace $.SickGear.config.useFuzzy */
 /** @namespace $.SickGear.config.dateFormat */
 /** @namespace $.SickGear.config.timeFormat */
 /** @namespace $.SickGear.config.fuzzyTrimZero */
+/** @namespace $.SickGear.config.glideStartAt */
+/** @namespace $.SickGear.config.glideSlideTime */
 $(document).ready(function() {
 
 	// handle the show selection dropbox
@@ -34,11 +37,163 @@ $(document).ready(function() {
 		$(this).val('jump');
 	});
 
+	var slideGap = 5,
+	slideCount = $('.cast').length;
+
+	if (0 < slideCount) {
+
+		function slideTime(){
+			return 0 < $.SickGear.config.glideSlideTime && !$.SickGear.glideFancyBoxOpen
+				? $.SickGear.config.glideSlideTime : !1;
+		}
+
+		$.calcSlideCount = function(initSet){
+			var maxCount = Math.floor($('.glide__track').width() / (170 + slideGap)),
+				perView = maxCount < slideCount ? maxCount : slideCount;
+			if (initSet)
+				return {perView: perView, isNotEnd: maxCount < slideCount};
+
+			if (maxCount < slideCount) {
+				$.glide.update({perView: perView, autoplay: slideTime()});
+				if (slideTime()){
+					$.glide.play();
+				}
+			} else {
+				$.glide.pause();
+				$.glide.update({perView: perView, autoplay: !1});
+				$.glide.go('=0');
+			}
+		}
+
+		var initGlideVars = $.calcSlideCount(!0),
+			startAt = $('.cast[data-rid="' + $.SickGear.config.glideStartAt + '"]').index();
+		$.glide = new Glide('.cast-holder', {
+			type: 'carousel',
+			gap: slideGap,
+			startAt: -1 === startAt ? 0 : startAt,
+			peek: 0,
+			perSwipe: '|',
+			perView: initGlideVars.perView,
+			autoplay: initGlideVars.isNotEnd && slideTime()
+		});
+
+		$.glide.on('resize', function(){
+			$.calcSlideCount(!1);
+			$('#display-show .cast-bg').each(function (i, oImage){
+				scaleImage(oImage);
+			});
+		});
+
+		$.glide.on('run.after', function(){
+			saveGlide();
+		});
+
+		function initFancybox(){
+			if (!!$('a[rel="glide"]').length){
+				$().fancybox(jQuery.extend({
+					selector: 'li:not(.glide__slide--clone) a[rel="glide"]',
+					slideShow: {
+						speed: Math.abs($.SickGear.config.glideSlideTime)
+					},
+					afterShow: function(instance, slide){
+						$.SickGear.glideFancyBoxOpen = !0;
+						$.glide.go('=' + slide.index);
+					},
+					beforeShow: function(instance, slide){
+						if (!$.SickGear.glideFancyBoxOpen && 0 < $.SickGear.config.glideSlideTime){
+							$.glide.pause();
+							$.glide.update({autoplay: !1});
+						}
+					},
+					afterClose: function(instance, slide){
+						if (!!$.SickGear.glideFancyBoxOpen){
+							$.SickGear.glideFancyBoxOpen = !1;
+							if (0 < $.SickGear.config.glideSlideTime){
+								$.calcSlideCount(!1);
+							}
+						}
+					},
+				}, $.sgFancyBoxOptions));
+			}
+		}
+
+		$.glide.on('build.after', function(){
+			initFancybox();
+			$('.cast.glide__slide').removeClass('last');
+			$('.cast.glide__slide:not(.glide__slide--clone):last').addClass('last');
+			$('.cast.body .cast-bg, #pin-glide, .glide-arrows, .cast.body .links').fadeIn('slow', 'linear');
+			$('#about-hide').addClass('hide');
+			$('#about-show').removeClass('hide');
+			$('.glide__slide--clone').click(function(){
+				$('li[data-rid="' + $(this).data('rid') + '"]:not(.glide__slide--clone) a[rel="glide"]')[0].click();
+				return !1;
+			});
+			$('#display-show .cast-bg').each(function (i, oImage){
+				scaleImage(oImage);
+			});
+		});
+
+		window.onload = function(){
+			$.glide.mount();
+		};
+
+		function saveGlide(saveTime){
+			if (!$.SickGear.glideFancyBoxOpen){
+				var params = {};
+				if (!slideTime()){
+					params = {
+						tvid_prodid: $('#tvid-prodid').val(),
+						start_at: $('.cast.glide__slide--active').data('rid')
+					};
+				}
+				if (saveTime){
+					params.slidetime = $.SickGear.config.glideSlideTime;
+				}
+				$.get($.SickGear.Root + '/home/set-display-show-glide', params);
+			}
+		}
+
+		var ivTimes = [10000, 6000, 3000];
+		function pinState(el$){
+			var ivTime = slideTime();
+
+			el$.removeClass('one two three four');
+			if (!ivTime) {
+				el$.addClass('one');
+			} else if (ivTimes[0] === ivTime) {
+				el$.addClass('two');
+			} else if (ivTimes[1] === ivTime) {
+				el$.addClass('three');
+			} else {
+				el$.addClass('four');
+			}
+		}
+
+		var pinGlide$ = $('#pin-glide');
+		pinState(pinGlide$);
+		pinGlide$.on('click', function (){
+			var ivTime = slideTime();
+
+			if (!ivTime) { // unpause as was paused when clicked
+				$.SickGear.config.glideSlideTime *= -1;
+			} else if (ivTimes[0] === ivTime) {
+				$.SickGear.config.glideSlideTime = ivTimes[1];
+			} else if (ivTimes[1] === ivTime) {
+				$.SickGear.config.glideSlideTime = ivTimes[2];
+			} else {
+				$.SickGear.config.glideSlideTime = -1 * ivTimes[0];
+			}
+			pinState($(this));
+			$.calcSlideCount(!1);
+			saveGlide(!0);
+		});
+	}
+
 	$('.details-plot').collapser({
 		mode: 'lines',
 		truncate: 10,
-		showText: '<span class="pull-right moreless"><i class="sgicon-arrowdown" style="margin-right:2px"></i>more</span>',
-		hideText: '<span class="pull-right moreless"><i class="sgicon-arrowup" style="margin-right:2px"></i>less</span>',
+		showText: '<i class="sgicon-arrowdown"></i>more',
+		hideText: '<i class="sgicon-arrowup"></i>less',
 		showClass: 'show-class'
 	});
 
@@ -170,7 +325,7 @@ $(document).ready(function() {
 	}
 	qTips($('.addQTip'));
 
-	function table_init(table$) {
+	function tableInit(table$) {
 		$('#sbRoot').ajaxEpSearch();
 		$('#sbRoot').ajaxEpSubtitlesSearch();
 
@@ -262,7 +417,7 @@ $(document).ready(function() {
 			});
 		});
 	}
-	table_init($('.sickbeardTable'));
+	tableInit($('.sickbeardTable'));
 
 	$.SickGear.season = [];
 	$.SickGear.run = !1;
@@ -286,7 +441,7 @@ $(document).ready(function() {
 							alert('Season listing failed.');
 						} else {
 							table$.find('tbody').html(data.success);
-							table_init(table$);
+							tableInit(table$);
 						}
 						table$.toggleClass('open');
 						this$.toggleClass('hide');
@@ -312,7 +467,7 @@ $(document).ready(function() {
 		});
 
 		var liveStates = $('#display-show');
-		return liveStates.toggleClass('min'), $.get($.SickGear.Root + '/live_panel/?allseasons='
+		return liveStates.toggleClass('min'), $.get($.SickGear.Root + '/live-panel/?allseasons='
 			+ String.prototype.toLowerCase.apply(+liveStates.hasClass('min'))), !1;
 	});
 

@@ -577,14 +577,14 @@
 										<span id="generate-result">&nbsp;</span>
 										<p class="clear-left">apps using SickGear API calls gain full access, legacy SickBeard endpoints are limited to thetvdb.com shows</p>
 										<div id="api-keys" class="clear-left">
-											<div class="new-key highlight-text" style="display:none"><span class="qr-btn"><a rel="" name="qr" title="API key QR code"><span class="glyphicon glyphicon-qrcode"></span></a></span><span class="api-key"></span><span class="app-name"></span><input value="Revoke" type="button" class="revoke btn btn-inline"></div>
+											<div class="new-key highlight-text" style="display:none"><span class="qr-btn"><a data-src="#qr-body" rel="" name="qr" title="API key QR code"><span class="glyphicon glyphicon-qrcode"></span></a></span><span class="api-key"></span><span class="app-name"></span><input value="Revoke" type="button" class="revoke btn btn-inline"></div>
+											<div id="qr-body"></div>
 #set $tip_addkeys = ''
 #for $appname, $uid in $api_keys
-    #if not ($appname and $uid)
-        #continue
+    #if $appname and $uid
+											<div class="grey-text"><span class="qr-btn"><a data-src="#qr-body" data-api-name="$appname" data-api-key="$uid" rel="qr" name="qr" title="API key QR code"><span class="glyphicon glyphicon-qrcode"></span></a></span><span class="api-key">$uid</span><span class="app-name">$appname</span><input value="Revoke" type="button" class="revoke btn btn-inline"></div>
+        #set $tip_addkeys = ' style="display:none"'
     #end if
-											<div class="grey-text"><span class="qr-btn"><a rel="qr" name="qr" title="API key QR code"><span class="glyphicon glyphicon-qrcode"></span></a></span><span class="api-key">$uid</span><span class="app-name">$appname</span><input value="Revoke" type="button" class="revoke btn btn-inline"></div>
-    #set $tip_addkeys = ' style="display:none"'
 #end for
 											<div id="tip-addkeys"$tip_addkeys>Keys used by 3rd party programs to access SickGear will list here when generated</div>
 										</div>

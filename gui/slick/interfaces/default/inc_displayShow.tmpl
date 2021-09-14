@@ -80,8 +80,9 @@
 				#if not $ep['name'] or 'TBA' == $ep['name']#<em${cls}>TBA</em>#else#$ep['name']#end if#
 			</td>
 
+    #set $ep_dt = $network_timezones.get_episode_time($ep['airdate'], $network_time, $show_obj.network, $show_obj.airtime, $network_timezone, $ep['timestamp'], $ep['network'], $ep['airtime'], $ep['timezone'])
 			<td class="col-airdate">
-				<span class="$fuzzydate" data-airdate="$ep['airdate']"#if $sg_var('FUZZY_DATING')# data-fulldate="$SGDatetime.sbfdate(dt=$datetime.date.fromordinal($ep['airdate']), d_preset='%A, %B %d, %Y')"#end if#>#if 1 == int($ep['airdate']) then 'never' else $SGDatetime.sbfdate($SGDatetime.convert_to_setting($network_timezones.parse_date_time($ep['airdate'], $network_time, $network_timezone)))#</span>
+				<span class="$fuzzydate addQTip" title="$SGDatetime.sbfdatetime($SGDatetime.convert_to_setting($ep_dt))" data-airdate="$ep['airdate']"#if $sg_var('FUZZY_DATING')# data-fulldate="$SGDatetime.sbfdate(dt=$ep_dt, d_preset='%A, %B %d, %Y')"#end if#>#if 1 == int($ep['airdate']) then 'never' else $SGDatetime.sbfdate($SGDatetime.convert_to_setting($ep_dt))#</span>
 			</td>
 
     #if $sg_var('USE_SUBTITLES') and $show_obj.subtitles

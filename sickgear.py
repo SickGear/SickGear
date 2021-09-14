@@ -98,7 +98,7 @@ from sickbeard.event_queue import Events
 from sickbeard.tv import TVShow
 from sickbeard.webserveInit import WebServer
 
-from six import integer_types
+from six import integer_types, iteritems
 
 throwaway = datetime.datetime.strptime('20110101', '%Y%m%d')
 rollback_loaded = None
@@ -504,6 +504,10 @@ class SickGear(object):
             else:
                 logger.log_error_and_exit(u'Restore FAILED!')
 
+        # refresh network timezones
+        sickbeard.classes.loading_msg.message = 'Checking network timezones'
+        network_timezones.update_network_dict()
+
         update_arg = '--update-restart'
         manual_update_arg = '--update-pkg'
         if update_arg not in sickbeard.MY_ARGS and sickbeard.UPDATES_TODO \
@@ -519,7 +523,12 @@ class SickGear(object):
         if not sickbeard.MEMCACHE.get('update_restart'):
             # Build from the DB to start with
             sickbeard.classes.loading_msg.message = 'Loading shows from db'
+            sickbeard.indexermapper.indexer_list = [i for i in sickbeard.TVInfoAPI().all_sources
+                                                    if sickbeard.TVInfoAPI(i).config.get('show_url')
+                                                    and True is not sickbeard.TVInfoAPI(i).config.get('people_only')]
             self.load_shows_from_db()
+            sickbeard.MEMCACHE['history_tab'] = sickbeard.webserve.History.menu_tab(
+                sickbeard.MEMCACHE['history_tab_limit'])
             if not db.DBConnection().has_flag('ignore_require_cleaned'):
                 from sickbeard.show_updater import clean_ignore_require_words
                 sickbeard.classes.loading_msg.message = 'Cleaning ignore/require words lists'
@@ -546,10 +555,6 @@ class SickGear(object):
         sickbeard.classes.loading_msg.message = 'Build name cache'
         name_cache.buildNameCache()
 
-        # refresh network timezones
-        sickbeard.classes.loading_msg.message = 'Checking network timezones'
-        network_timezones.update_network_dict()
-
         # load all ids from xem
         sickbeard.classes.loading_msg.message = 'Loading xem data'
         startup_background_tasks = threading.Thread(name='XEMUPDATER', target=sickbeard.scene_exceptions.get_xem_ids)
@@ -565,9 +570,59 @@ class SickGear(object):
 
         if not db.DBConnection().has_flag('kodi_nfo_default_removed'):
             sickbeard.metadata.kodi.remove_default_attr()
+        if not db.DBConnection().has_flag('kodi_nfo_rebuild_uniqueid'):
+            sickbeard.metadata.kodi.rebuild_nfo()
+
+        my_db = db.DBConnection()
+        sql_result = my_db.select('SELECT * FROM tv_src_switch WHERE status = 0')
+        if sql_result:
+            switching = True
+            l_msg = 'Adding shows that are switching tv source to queue'
+            total_result = len(sql_result)
+
+            def q_switch(switch):
+                try:
+                    _show_obj = sickbeard.helpers.find_show_by_id({switch['new_indexer']: switch['new_indexer_id']})
+                    if _show_obj:
+                        sickbeard.show_queue_scheduler.action.switch_show(
+                            show_obj=_show_obj,
+                            new_tvid=switch['new_indexer'], new_prodid=switch['new_indexer_id'],
+                            force_id=bool(switch['force_id']), uid=switch['uid'],
+                            set_pause=bool(switch['set_pause']), mark_wanted=bool(switch['mark_wanted']), resume=True,
+                            old_tvid=switch['old_indexer'], old_prodid=switch['old_indexer_id']
+                        )
+                except (BaseException, Exception):
+                    pass
+
+            sickbeard.classes.loading_msg.set_msg_progress(l_msg, '0/%s' % total_result)
+            for i, cur_switch in enumerate(sql_result, 1):
+                sickbeard.classes.loading_msg.set_msg_progress(l_msg, '%s/%s' % (i, total_result))
+                try:
+                    show_obj = sickbeard.helpers.find_show_by_id(
+                        {cur_switch['old_indexer']: cur_switch['old_indexer_id']})
+                except (BaseException, Exception):
+                    if cur_switch['new_indexer_id']:
+                        # show id was already switched, but not finished updated, so queue as update
+                        q_switch(cur_switch)
+                    continue
+                if show_obj:
+                    try:
+                        sickbeard.show_queue_scheduler.action.switch_show(
+                            show_obj=show_obj,
+                            new_tvid=cur_switch['new_indexer'], new_prodid=cur_switch['new_indexer_id'],
+                            force_id=bool(cur_switch['force_id']), uid=cur_switch['uid'],
+                            set_pause=bool(cur_switch['set_pause']), mark_wanted=bool(cur_switch['mark_wanted'])
+                        )
+                    except (BaseException, Exception):
+                        continue
+                elif cur_switch['new_indexer_id']:
+                    # show id was already switched, but not finished updated, so resume
+                    q_switch(cur_switch)
+        else:
+            switching = False
 
         # Start an update if we're supposed to
-        if self.force_update or sickbeard.UPDATE_SHOWS_ON_START:
+        if not switching and (self.force_update or sickbeard.UPDATE_SHOWS_ON_START):
             sickbeard.classes.loading_msg.message = 'Starting a forced show update'
             sickbeard.show_update_scheduler.action.run()
 
@@ -576,7 +631,7 @@ class SickGear(object):
         self.webserver.switch_handlers()
 
         # main loop
-        while True:
+        while 1:
             time.sleep(1)
 
     def daemonize(self):
@@ -649,19 +704,51 @@ class SickGear(object):
 
         logger.log(u'Loading initial show list')
 
-        my_db = db.DBConnection()
-        sql_result = my_db.select('SELECT indexer AS tv_id, indexer_id AS prod_id, location FROM tv_shows')
-
+        my_db = db.DBConnection(row_type='dict')
+        sql_result = my_db.select(
+            """
+            SELECT tv_shows.indexer AS tv_id, tv_shows.indexer_id AS prod_id, tv_shows.*,
+             ii.akas AS ii_akas, 
+             ii.certificates AS ii_certificates,
+             ii.countries AS ii_countries, ii.country_codes AS ii_country_codes,
+             ii.genres AS ii_genres, ii.imdb_id AS ii_imdb_id,
+             ii.indexer AS ii_indexer, ii.indexer_id AS ii_indexer_id,
+             ii.last_update AS ii_ii_last_update,
+             ii.rating AS ii_rating, ii.runtimes AS ii_runtimes,
+             ii.is_mini_series AS ii_is_mini_series, ii.episode_count AS ii_episode_count,
+             ii.title AS ii_title, ii.votes AS ii_votes, ii.year AS ii_year,
+             tsnf.fail_count AS tsnf_fail_count, tsnf.indexer AS tsnf_indexer,
+             tsnf.indexer_id AS tsnf_indexer_id, tsnf.last_check AS tsnf_last_check,
+             tsnf.last_success AS tsnf_last_success
+            FROM tv_shows
+            LEFT JOIN imdb_info ii
+             ON tv_shows.indexer = ii.indexer AND tv_shows.indexer_id = ii.indexer_id
+            LEFT JOIN tv_shows_not_found tsnf
+             ON tv_shows.indexer = tsnf.indexer AND tv_shows.indexer_id = tsnf.indexer_id
+            """)
         sickbeard.showList = []
         sickbeard.showDict = {}
         for cur_result in sql_result:
             try:
-                show_obj = TVShow(int(cur_result['tv_id']), int(cur_result['prod_id']))
+                tv_id = int(cur_result['tv_id'])
+                prod_id = int(cur_result['prod_id'])
+                if cur_result['ii_indexer_id']:
+                    imdb_info_sql = {_fk.replace('ii_', ''): _fv for _fk, _fv in iteritems(cur_result)
+                                     if _fk.startswith('ii_')}
+                else:
+                    imdb_info_sql = None
+                show_obj = TVShow(tv_id, prod_id, show_result=cur_result, imdb_info_result=imdb_info_sql)
+                if cur_result['tsnf_indexer_id']:
+                    failed_result = {_fk.replace('tsnf_', ''): _fv for _fk, _fv in iteritems(cur_result)
+                                     if _fk.startswith('tsnf_')}
+                    show_obj.helper_load_failed_db(sql_result=failed_result)
                 sickbeard.showList.append(show_obj)
                 sickbeard.showDict[show_obj.sid_int] = show_obj
+                _ = show_obj.ids
             except (BaseException, Exception) as err:
                 logger.log('There was an error creating the show in %s: %s' % (
                     cur_result['location'], ex(err)), logger.ERROR)
+        sickbeard.webserve.Home.make_showlist_unique_names()
 
     @staticmethod
     def restore(src_dir, dst_dir):

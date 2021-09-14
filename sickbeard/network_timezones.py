@@ -25,6 +25,7 @@ import threading
 
 import sickbeard
 from . import db, helpers, logger
+from sg_helpers import int_to_time
 
 # noinspection PyPep8Naming
 import encodingKludge as ek
@@ -32,9 +33,8 @@ from lib.dateutil import tz, zoneinfo
 from lib.tzlocal import get_localzone
 
 from sg_helpers import remove_file_perm, scantree
-
+from six import integer_types, iteritems, string_types, PY2
 from _23 import list_keys
-from six import iteritems
 
 # noinspection PyUnreachableCode
 if False:
@@ -437,7 +437,7 @@ def parse_time(time_of_day):
 
 
 def parse_date_time(date_stamp, time_of_day, network):
-    # type: (int, Union[AnyStr or Tuple[int, int]], AnyStr) -> datetime.datetime
+    # type: (int, Union[AnyStr or Tuple[int, int]], Union[AnyStr, datetime.tzinfo]) -> datetime.datetime
     """
     parse date and time string into local time
 
@@ -445,8 +445,12 @@ def parse_date_time(date_stamp, time_of_day, network):
     :param time_of_day: time as a string or as a tuple(hr, m)
     :param network: network names
     """
-    if isinstance(time_of_day, tuple) and 2 == len(time_of_day) \
-            and isinstance(time_of_day[0], int) and isinstance(time_of_day[1], int):
+    dt_t = None
+    hour = mins = 0
+    if isinstance(time_of_day, integer_types):
+        dt_t = int_to_time(time_of_day)
+    elif isinstance(time_of_day, tuple) and 2 == len(time_of_day) and isinstance(time_of_day[0], int) \
+            and isinstance(time_of_day[1], int):
         (hour, mins) = time_of_day
     else:
         (hour, mins) = parse_time(time_of_day)
@@ -457,10 +461,18 @@ def parse_date_time(date_stamp, time_of_day, network):
             foreign_timezone = network
         else:
             foreign_timezone = get_network_timezone(network)
-        foreign_naive = datetime.datetime(dt.year, dt.month, dt.day, hour, mins, tzinfo=foreign_timezone)
+        if None is not dt_t:
+            foreign_naive = datetime.datetime.combine(datetime.date(dt.year, dt.month, dt.day),
+                                                      dt_t).replace(tzinfo=foreign_timezone)
+        else:
+            foreign_naive = datetime.datetime(dt.year, dt.month, dt.day, hour, mins, tzinfo=foreign_timezone)
         return foreign_naive
     except (BaseException, Exception):
-        return datetime.datetime(dt.year, dt.month, dt.day, hour, mins, tzinfo=SG_TIMEZONE)
+        if None is dt_t:
+            return datetime.datetime(dt.year, dt.month, dt.day, hour, mins, tzinfo=SG_TIMEZONE)
+        else:
+            return datetime.datetime.combine(datetime.datetime(dt.year, dt.month, dt.day),
+                                             dt_t).replace(tzinfo=SG_TIMEZONE)
 
 
 def test_timeformat(t):
@@ -544,3 +556,83 @@ def _load_network_conversions():
     # change all network conversion info at once (much faster)
     if 0 < len(cl):
         my_db.mass_action(cl)
+
+
+def get_episode_time(d,  # type: int
+                     t,  # type: Union[AnyStr or Tuple[int, int]]
+                     show_network,  # type: Optional[AnyStr]
+                     show_airtime=None,  # type: Optional[integer_types, datetime.time]
+                     show_timezone=None,  # type: Union[AnyStr, datetime.tzinfo]
+                     ep_timestamp=None,  # type: Union[integer_types, float]
+                     ep_network=None,  # type: Optional[AnyStr]
+                     ep_airtime=None,  # type: Optional[integer_types, datetime.time]
+                     ep_timezone=None  # type: Union[AnyStr, datetime.tzinfo]
+                     ):
+    # type: (...) -> datetime.datetime
+    """
+    parse data and time data into datetime
+
+    :param d: ordinal datetime
+    :param t: time as a string or as a tuple(hr, m)
+    :param show_network: network names of show
+    :param show_airtime: airtime of show as integer or time
+    :param show_timezone: timezone of show as string or tzinfo
+    :param ep_timestamp: timestamp of episode
+    :param ep_network: network name of episode as string
+    :param ep_airtime: airtime as integer or time
+    :param ep_timezone: timezone of episode as string or tzinfo
+    """
+    tzinfo = None
+    if ep_timezone:
+        if isinstance(ep_timezone, datetime.tzinfo):
+            tzinfo = ep_timezone
+        elif isinstance(ep_timezone, string_types):
+            tzinfo = tz.gettz(ep_timezone, zoneinfo_priority=True)
+    if not tzinfo:
+        if ep_network and isinstance(ep_network, string_types):
+            tzinfo = get_network_timezone(ep_network)
+
+        if not tzinfo:
+            if show_timezone:
+                if isinstance(show_timezone, datetime.tzinfo):
+                    tzinfo = show_timezone
+                elif isinstance(show_timezone, string_types):
+                    tzinfo = tz.gettz(show_timezone, zoneinfo_priority=True)
+
+            if not tzinfo:
+                if show_network and isinstance(show_network, string_types):
+                    tzinfo = get_network_timezone(show_network)
+
+                if not isinstance(tzinfo, datetime.tzinfo):
+                    tzinfo = SG_TIMEZONE
+
+    if isinstance(ep_timestamp, (integer_types, float)):
+        from .sgdatetime import SGDatetime
+        return SGDatetime.from_timestamp(ep_timestamp, tzinfo=tzinfo, tz_aware=True, local_time=False)
+
+    ep_time = None
+    if isinstance(ep_airtime, integer_types):
+        ep_time = int_to_time(ep_airtime)
+    elif isinstance(ep_airtime, datetime.time):
+        ep_time = ep_airtime
+
+    if None is ep_time and show_airtime:
+        if isinstance(show_airtime, integer_types):
+            ep_time = int_to_time(show_airtime)
+        elif isinstance(show_airtime, datetime.time):
+            ep_time = show_airtime
+
+    if None is ep_time:
+        if isinstance(t, string_types):
+            ep_hr, ep_min = parse_time(t)
+            ep_time = datetime.time(ep_hr, ep_min)
+        else:
+            ep_time = datetime.time(0, 0)
+
+    if d and None is not ep_time and None is not tzinfo:
+        ep_date = datetime.date.fromordinal(helpers.try_int(d))
+        if PY2:
+            return datetime.datetime.combine(ep_date, ep_time).replace(tzinfo=tzinfo)
+        return datetime.datetime.combine(ep_date, ep_time, tzinfo)
+
+    return parse_date_time(d, t, tzinfo)

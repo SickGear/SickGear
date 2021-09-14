@@ -42,7 +42,7 @@ from . import db, logger, notifiers
 from .common import cpu_presets, mediaExtensions, Overview, Quality, statusStrings, subtitleExtensions, \
     ARCHIVED, DOWNLOADED, FAILED, IGNORED, SKIPPED, SNATCHED_ANY, SUBTITLED, UNAIRED, UNKNOWN, WANTED
 from .sgdatetime import timestamp_near
-from tvinfo_base.exceptions import *
+from lib.tvinfo_base.exceptions import *
 # noinspection PyPep8Naming
 import encodingKludge as ek
 from exceptions_helper import ex, MultipleShowObjectsException
@@ -60,9 +60,9 @@ from six.moves import zip
 # the following are imported from elsewhere,
 # therefore, they intentionally don't resolve and are unused in this particular file.
 # noinspection PyUnresolvedReferences
-from sg_helpers import chmod_as_parent, clean_data, copy_file, fix_set_group_id, get_system_temp_dir, \
+from sg_helpers import chmod_as_parent, clean_data, copy_file, download_file, fix_set_group_id, get_system_temp_dir, \
     get_url, indent_xml, make_dirs, maybe_plural, md5_for_text, move_file, proxy_setting, remove_file, \
-    remove_file_perm, replace_extension, scantree, try_int, try_ord, write_file
+    remove_file_perm, replace_extension, sanitize_filename, scantree, try_int, try_ord, write_file
 
 # noinspection PyUnreachableCode
 if False:
@@ -71,9 +71,11 @@ if False:
     from .tv import TVShow
     # the following workaround hack resolves a pyc resolution bug
     from .name_cache import retrieveNameFromCache
+    from six import integer_types
 
 RE_XML_ENCODING = re.compile(r'^(<\?xml[^>]+)\s+(encoding\s*=\s*[\"\'][^\"\']*[\"\'])(\s*\?>|)', re.U)
-RE_IMDB_ID = re.compile(r'(?i)(tt\d{4,})')
+RE_IMDB_ID = r'tt\d{7,10}'
+RC_IMDB_ID = re.compile(r'(?i)(%s)' % RE_IMDB_ID)
 
 
 def remove_extension(name):
@@ -182,32 +184,12 @@ def is_first_rar_volume(filename):
     return None is not re.search(r'(?P<file>^(?P<base>(?:(?!\.part\d+\.rar$).)*)\.(?:(?:part0*1\.)?rar)$)', filename)
 
 
-def sanitize_filename(name):
-    """
-
-    :param name: filename
-    :type name: AnyStr
-    :return: sanitized filename
-    :rtype: AnyStr
-    """
-    # remove bad chars from the filename
-    name = re.sub(r'[\\/*]', '-', name)
-    name = re.sub(r'[:"<>|?]', '', name)
-
-    # remove leading/trailing periods and spaces
-    name = name.strip(' .')
-
-    for char in sickbeard.REMOVE_FILENAME_CHARS or []:
-        name = name.replace(char, '')
-
-    return name
-
-
 def find_show_by_id(
         show_id,  # type: Union[AnyStr, Dict[int, int], int]
         show_list=None,  # type: Optional[List[TVShow]]
         no_mapped_ids=True,  # type: bool
-        check_multishow=False  # type: bool
+        check_multishow=False,  # type: bool
+        no_exceptions=False  # type: bool
 ):
     # type: (...) -> Optional[TVShow]
     """
@@ -215,6 +197,7 @@ def find_show_by_id(
     :param show_list: (optional) TVShow objects list
     :param no_mapped_ids: don't check mapped ids
     :param check_multishow: check for multiple show matches
+    :param no_exceptions: suppress the MultipleShowObjectsException and return None instead
     """
     results = []
     if None is show_list:
@@ -225,7 +208,7 @@ def find_show_by_id(
 
         if tvid_prodid_obj and no_mapped_ids:
             if None is tvid_prodid_obj.prodid:
-                return None
+                return
             return sickbeard.showDict.get(int(tvid_prodid_obj))
         else:
             if tvid_prodid_obj:
@@ -235,25 +218,21 @@ def find_show_by_id(
 
             if isinstance(show_id, dict):
                 if no_mapped_ids:
-                    sid_int_list = [sickbeard.tv.TVShow.create_sid(sk, sv) for sk, sv in iteritems(show_id) if 0 < sv
-                                    and sickbeard.tv.tvid_bitmask >= sk]
-                    if check_multishow:
-                        results = [sickbeard.showDict.get(_show_sid_id) for _show_sid_id in sid_int_list
-                                   if sickbeard.showDict.get(_show_sid_id)]
-                    else:
-                        for _show_sid_id in sid_int_list:
-                            if _show_sid_id in sickbeard.showDict:
-                                return sickbeard.showDict.get(_show_sid_id)
-                        return None
+                    sid_int_list = [sickbeard.tv.TVShow.create_sid(k, v) for k, v in iteritems(show_id) if k and v and
+                                    0 < v and sickbeard.tv.tvid_bitmask >= k]
+                    if not check_multishow:
+                        return next((sickbeard.showDict.get(_show_sid_id) for _show_sid_id in sid_int_list
+                                     if sickbeard.showDict.get(_show_sid_id)), None)
+                    results = [sickbeard.showDict.get(_show_sid_id) for _show_sid_id in sid_int_list
+                               if sickbeard.showDict.get(_show_sid_id)]
                 else:
-                    show_id = {k: v for k, v in iteritems(show_id) if 0 < v}
-                    results = [_show_obj for k, v in iteritems(show_id)
+                    results = [_show_obj for k, v in iteritems(show_id) if k and v and 0 < v
                                for _show_obj in show_list if v == _show_obj.internal_ids.get(k, {'id': 0})['id']]
 
     num_shows = len(set(results))
     if 1 == num_shows:
         return results[0]
-    elif 1 < num_shows:
+    if 1 < num_shows and not no_exceptions:
         raise MultipleShowObjectsException()
 
 
@@ -294,27 +273,27 @@ def search_infosrc_for_show_id(reg_show_name, tvid=None, prodid=None, ui=None):
     show_names = [re.sub('[. -]', ' ', reg_show_name)]
 
     # Query Indexers for each search term and build the list of results
-    for _tvid in (sickbeard.TVInfoAPI().sources if not tvid else [int(tvid)]) or []:
+    for cur_tvid in (sickbeard.TVInfoAPI().sources if not tvid else [int(tvid)]) or []:
         # Query Indexers for each search term and build the list of results
-        tvinfo_config = sickbeard.TVInfoAPI(_tvid).api_params.copy()
+        tvinfo_config = sickbeard.TVInfoAPI(cur_tvid).api_params.copy()
         if ui is not None:
             tvinfo_config['custom_ui'] = ui
-        t = sickbeard.TVInfoAPI(_tvid).setup(**tvinfo_config)
+        t = sickbeard.TVInfoAPI(cur_tvid).setup(**tvinfo_config)
 
-        for name in show_names:
-            logger.log('Trying to find %s on %s' % (name, sickbeard.TVInfoAPI(_tvid).name), logger.DEBUG)
+        for cur_name in show_names:
+            logger.debug('Trying to find %s on %s' % (cur_name, sickbeard.TVInfoAPI(cur_tvid).name))
 
             try:
-                show_info_list = t[prodid] if prodid else t[name]
+                show_info_list = t[prodid] if prodid else t[cur_name]
                 show_info_list = show_info_list if isinstance(show_info_list, list) else [show_info_list]
             except (BaseException, Exception):
                 continue
 
             seriesname = _prodid = None
-            for show_info in show_info_list:  # type: dict
+            for cur_show_info in show_info_list:  # type: dict
                 try:
-                    seriesname = show_info['seriesname']
-                    _prodid = show_info['id']
+                    seriesname = cur_show_info['seriesname']
+                    _prodid = cur_show_info['id']
                 except (BaseException, Exception):
                     _prodid = seriesname = None
                     continue
@@ -324,10 +303,10 @@ def search_infosrc_for_show_id(reg_show_name, tvid=None, prodid=None, ui=None):
             if not (seriesname and _prodid):
                 continue
 
-            if None is prodid and str(name).lower() == str(seriesname).lower():
-                return seriesname, _tvid, int(_prodid)
+            if None is prodid and str(cur_name).lower() == str(seriesname).lower():
+                return seriesname, cur_tvid, int(_prodid)
             elif None is not prodid and int(prodid) == int(_prodid):
-                return seriesname, _tvid, int(prodid)
+                return seriesname, cur_tvid, int(prodid)
 
         if tvid:
             break
@@ -579,10 +558,8 @@ def get_absolute_number_from_season_and_episode(show_obj, season, episode):
                 "Found absolute_number:" + str(absolute_number) + " by " + str(season) + "x" + str(episode),
                 logger.DEBUG)
         else:
-            logger.log(
-                "No entries for absolute number in show: " + show_obj.name + " found using " + str(season) + "x" + str(
-                    episode),
-                logger.DEBUG)
+            logger.debug('No entries for absolute number in show: %s found using %sx%s' %
+                       (show_obj.unique_name, str(season), str(episode)))
 
     return absolute_number
 
@@ -1070,29 +1047,6 @@ def _maybe_request_url(e, def_url=''):
     return hasattr(e, 'request') and hasattr(e.request, 'url') and ' ' + e.request.url or def_url
 
 
-def download_file(url, filename, session=None, **kwargs):
-    """
-    download given url to given filename
-
-    :param url: url to download
-    :type url: AnyStr
-    :param filename: filename to save the data to
-    :type filename: AnyStr
-    :param session: optional requests session object
-    :type session: requests.Session or None
-    :param kwargs:
-    :return: success of download
-    :rtype: bool
-    """
-    sickbeard.MEMCACHE.setdefault('cookies', {})
-    if None is get_url(url, session=session, savename=filename,
-                       url_solver=sickbeard.FLARESOLVERR_HOST, memcache_cookies=sickbeard.MEMCACHE['cookies'],
-                       **kwargs):
-        remove_file_perm(filename)
-        return False
-    return True
-
-
 def clear_cache(force=False):
     """
     clear sickgear cache folder
@@ -1393,8 +1347,12 @@ def cleanup_cache():
     """
     Delete old cached files
     """
-    delete_not_changed_in([ek.ek(os.path.join, sickbeard.CACHE_DIR, 'images', 'browse', 'thumb', x) for x in [
-        'anidb', 'imdb', 'trakt', 'tvdb']])
+    delete_not_changed_in(
+        [ek.ek(os.path.join, sickbeard.CACHE_DIR, 'images', 'browse', 'thumb', x)
+         for x in ['anidb', 'imdb', 'trakt', 'tvdb']] +
+        [ek.ek(os.path.join, sickbeard.CACHE_DIR, 'images', x)
+         for x in ['characters', 'person']] +
+        [ek.ek(os.path.join, sickbeard.CACHE_DIR, 'tvinfo_cache')])
 
 
 def delete_not_changed_in(paths, days=30, minutes=0):
@@ -1564,18 +1522,15 @@ def path_mapper(search, replace, subject):
 
 
 def get_overview(ep_status, show_quality, upgrade_once, split_snatch=False):
+    # type: (integer_types, integer_types, Union[integer_types, bool], bool) -> integer_types
     """
 
     :param ep_status: episode status
-    :type ep_status: int
     :param show_quality: show quality
-    :type show_quality: int
     :param upgrade_once: upgrade once
-    :type upgrade_once: bool
     :param split_snatch:
     :type split_snatch: bool
     :return: constant from classes Overview
-    :rtype: int
     """
     status, quality = Quality.splitCompositeStatus(ep_status)
     if ARCHIVED == status:
@@ -1810,7 +1765,7 @@ def parse_imdb_id(string):
     """
     result = None
     try:
-        result = RE_IMDB_ID.findall(string)[0]
+        result = RC_IMDB_ID.findall(string)[0]
     except(BaseException, Exception):
         pass
 

@@ -10,7 +10,7 @@
 <% def sg_str(varname, default=''): return getattr(sickbeard, varname, default) %>#slurp#
 ##########
 ## legacy
-#set $provided_tvid = $getVar('provided_tvid', None) or $getVar('provided_indexer', 1)
+#set $provided_tvid = $getVar('provided_tvid', $getVar('provided_indexer', 1))
 #set $provided_prodid = $getVar('provided_prodid', None) or $getVar('provided_indexer_id', 0)
 #set $provided_show_name = $getVar('provided_show_name', None) or $getVar('provided_indexer_name', '')
 ##
@@ -23,7 +23,11 @@
 	var showSceneMaps = ${show_scene_maps},
 		config = {
 			sortArticle: #echo ['!1','!0'][$sg_var('SORT_ARTICLE')]#,
-			resultsSortby: '#echo $sg_str('RESULTS_SORTBY', 'rel')#'
+			resultsSortby: '#echo $sg_str('RESULTS_SORTBY', 'rel')#',
+	#set $try_num = 1
+	#set $tries = $len($try_name + $try_id + $try_id_name + $try_url)
+			searchTests: {#for $cur_tip in $try_name + $try_id + $try_id_name + $try_url#$try_num:'$cur_tip[next(iter($cur_tip))]'#if $try_num < $tries#, #end if##set $try_num += 1##end for#},
+            folder: '$kwargs.get('folder', '')'
 		}
 </script>
 
@@ -38,7 +42,7 @@
 	<h1 class="title">$title</h1>
 #end if
 
-<span class="preload-image" style="position:absolute;top:-999px" src="$sbRoot/images/loading32#echo ('', '-dark')['dark' == $sg_str('THEME_NAME', 'dark')]#.gif" width="32" height="32" border="0"></span>
+<span class="bfr" style="position:absolute;top:-999px"><img src="$sbRoot/images/loading32#echo ('', '-dark')['dark' == $sg_str('THEME_NAME', 'dark')]#.gif">#for $cur_icon in $infosrc_icons#<img src="$sbRoot/images/$cur_icon">#end for#</span>
 
 <div id="newShowPortal">
 
@@ -56,6 +60,10 @@
 			<div class="stepDiv">
 				<input type="hidden" id="indexer_timeout" value="$sg_var('TVINFO_TIMEOUT', 20)">
 				<input type="hidden" id="indexer_count" value="$indexer_count">
+				<input type="hidden" id="rename-suggest" name="rename_suggest" value="">
+#if $kwargs.get('folder')
+				<input type="hidden" name="folder" value="$kwargs.get('folder')">
+#end if
 #if $kwargs.get('action')
 				<input type="hidden" name="provided-tvid" value="$provided_tvid">
 				<input type="hidden" name="return_to" value="$kwargs.get('return_to')">
@@ -78,7 +86,7 @@
     #if not $multi_infosrc
 				<input type="hidden" id="provided-tvid" value="$provided_tvid">
     #end if
-				<input type="text" id="nameToSearch" value="$default_show_name" placeholder="Enter a show name, TVDB ID/Url, IMDb ID/Url" class="form-control form-control-inline input-sm#if not $multi_infosrc# wide#end if#">
+				<input type="text" id="nameToSearch" value="$default_show_name" placeholder="Search text and/or ([imdb, tmdb, trakt, tvdb, tvmaze]: + id) or URL" class="form-control form-control-inline input-sm#if not $multi_infosrc# wide#end if#">
 				&nbsp;
 				<span style="float:right">
 					<select name="tvinfo_lang" id="infosrc-lang-select" class="form-control form-control-inline input-sm">
@@ -87,9 +95,9 @@
 
     #if $multi_infosrc
 					<select name="provided-tvid" id="provided-tvid" class="form-control form-control-inline input-sm">
-						<option value="0" #if $provided_tvid == 0 then "selected=\"selected\"" else ""#>All Sources</option>
+						<option value="0" #if $provided_tvid == 0 then "selected=\"selected\"" else ""# data-name="all sources">All Sources</option>
         #for $cur_isrc in $infosrc
-						<option value="$cur_isrc" #if $provided_tvid == $cur_isrc then "selected=\"selected\"" else ""#>$infosrc[$cur_isrc]</option>
+						<option value="$cur_isrc" #if $provided_tvid == $cur_isrc then "selected=\"selected\"" else ""# data-name="$infosrc[$cur_isrc]">$infosrc[$cur_isrc]</option>
         #end for
 					</select>
     #end if
@@ -97,11 +105,19 @@
 					<input class="btn btn-inline" type="button" id="searchName" value="Search">
 				</span>
 				<br>
-				<p style="margin:5px 0 15px"><span class="add-tip">Enter show name, TVDB ID, IMDb Url, or IMDb ID.&nbsp;&nbsp;</span><b>*</b>SickGear supports english, language is used for show/episode data</p>
+##				<p style="margin:5px 0 15px"><span class="add-tip">Show name and/or ([imdb, tmdb, trakt, tvdb, tvmaze]: + id) or URL.&nbsp;&nbsp;</span><b>*</b>SickGear supports english, language is used for show/episode data</p>
+<style>.divy{margin:0 5px; font-style:normal}</style>
+				<p style="margin:5px 0 15px;font-size:smaller">
+	#set $try_num = 2
+					<span><a id="try-0" href="click to clear">clear</a> or try : <a id="try-1" href="click to try me!">show name</a>#slurp#
+## no indent
+#for $cur_idx, $cur_tip in enumerate($try_id)#<span id="try-$try_num-id"#if $cur_idx# class="hide"#end if#>#set $try_num += 1#<i class="divy">|</i><a id="try-$try_num" href="click to try me!">$next(iter($cur_tip))</a></span>#end for##slurp
+#for $cur_idx, $cur_tip in enumerate($try_id_name)#<span id="try-$try_num-id-name"#if $cur_idx# class="hide"#end if#>#set $try_num += 1#<i class="divy">|</i><a id="try-$try_num" href="click to try me!">$next(iter($cur_tip))</a></span>#end for##slurp
+#for $cur_idx, $cur_tip in enumerate($try_url)#<span id="try-$try_num-url"#if $cur_idx# class="hide"#end if#>#set $try_num += 1#<i class="divy">|</i><a id="try-$try_num" href="click to try me!">$next(iter($cur_tip))</a></span>#end for#</span>
+					<span class="pull-right grey-text" style="font-size:smaller"><b>*</b>SickGear is en, language is used for show/episode lists</span>
+				</p>
 
-				<div id="search-results" style="height: 100%"></div>
-				<div id="more-results" style="display:none"><a href="#">More results...</a></div>
-				<div id="search-results-buffer" style="display:none"></div>
+				<div id="search-results" class="collapsed" style="height: 100%"></div>
 #end if
 
 			</div>

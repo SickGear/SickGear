@@ -93,7 +93,7 @@ def buildNameCache(show_obj=None, update_only_scene=False):
                                        if not (v[0] == show_obj.tvid and v[1] == show_obj.prodid)])
 
                 # add standard indexer name to namecache
-                nameCache[full_sanitize_scene_name(show_obj.name)] = [show_obj.tvid, show_obj.prodid, -1]
+                nameCache[full_sanitize_scene_name(show_obj.unique_name or show_obj.name)] = [show_obj.tvid, show_obj.prodid, -1]
             else:
                 # generate list of production ids to look up in cache.db
                 show_ids = {}
@@ -102,7 +102,7 @@ def buildNameCache(show_obj=None, update_only_scene=False):
 
                 # add all standard show indexer names to namecache
                 nameCache = dict(
-                    [(full_sanitize_scene_name(cur_so.name), [cur_so.tvid, cur_so.prodid, -1])
+                    [(full_sanitize_scene_name(cur_so.unique_name or cur_so.name), [cur_so.tvid, cur_so.prodid, -1])
                      for cur_so in sickbeard.showList if cur_so])
                 sceneNameCache = {}
 

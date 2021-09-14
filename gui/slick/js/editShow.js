@@ -53,7 +53,17 @@ $(document).ready(function () {
 		return allExceptions
 	}
 
+	function okExit(action){
+		return ('the-master' === $('input[name="set-master"]:checked').attr('id')
+			|| confirm('A "set master" change is pending\n\n' + action + ' without saving changes?'))
+	}
+
+	$('a:contains("Cancel Edit")').on('click', function () {
+		if (!okExit('Cancel')) return !1;
+	});
+
 	$('#submit').on('click', function () {
+		if (!okExit('Update')) return !1;
 		$('#exceptions_list').val(getExceptions());
 		if (config.showIsAnime)
 			generateAniGroupList();
@@ -261,7 +271,8 @@ $(document).ready(function () {
 					/** @namespace data.switch */
 					/** @namespace data.switch.mtvid_prodid */
 					if (!isMaster && data.hasOwnProperty('switch') && data.switch.hasOwnProperty('Success')) {
-						window.location.replace(sbRoot + '/home/view-show?tvid_prodid=' + data.mtvid_prodid);
+						window.location.replace(sbRoot + '/home/view-show?tvid_prodid=' + $('#tvid_prodid').val());
+						// window.location.replace(sbRoot + '/home/view-show?tvid_prodid=' + data.mtvid_prodid);
 					} else if ((0 <  $('*[data-maybe-master=1]').length)
 						&& (((0 === $('[name^=set-master]').length) && (0 < $('*[data-maybe-master=1]').val()))
 						|| ((0 < $('[name^=set-master]').length) && (0 === $('*[data-maybe-master=1]').val())))) {

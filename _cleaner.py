@@ -46,6 +46,11 @@ if old_magic != magic_number:
 
 # skip cleaned005 as used during dev by testers
 cleanups = [
+    ['.cleaned007.tmp', ('lib', 'tvmaze_api'), [
+        ('lib', 'imdb_api', '__pycache__'), ('lib', 'imdb_api'),
+        ('lib', 'libtrakt', '__pycache__'), ('lib', 'libtrakt'),
+        ('lib', 'tvdb_api', '__pycache__'), ('lib', 'tvdb_api'),
+        ('lib', 'tvmaze_api', '__pycache__'), ('lib', 'tvmaze_api')]],
     ['.cleaned006.tmp', ('lib', 'boto'), [
         ('lib', 'boto'), ('lib', 'growl'),
         ('lib', 'hachoir', 'core'), ('lib', 'hachoir', 'field'), ('lib', 'hachoir', 'metadata'),

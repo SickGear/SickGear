@@ -228,7 +228,7 @@ pre .prelight-num{
 	border-top-right-radius:5px
 }
 
-.upgrade-notification{
+.topbar-notification{
 	width:600px;
 	text-align:center;
 	margin-left:auto;
@@ -358,6 +358,7 @@ home_newShow.tmpl
 	color:#707070
 }
 
+.cast .person span, .cast .person a,
 .btn-inverse.dark-bg,
 #addRootDirTable td label .filepath,
 .grey-text{color:#999}
@@ -423,6 +424,9 @@ displayShow.tmpl
 body#display-show.back-art{
 	color:#ddd
 }
+
+.cast.last{border-right:2px dashed #444}
+.back-art.pro.ii .cast.last{border-right:2px dashed rgba(50, 50, 50, 0.8)}
 
 tr.seasonheader{
 	text-align:left;
@@ -868,9 +872,14 @@ span.path{
 /* =======================================================================
 bootstrap Overrides
 ========================================================================== */
-
+.body,
 body{
 	background-color:#222
+}
+
+.back-art.pro.ii .body,
+.translucent.pro.ii .body{
+	background-color:rgba(2, 2, 2, 0.7)
 }
 
 body,

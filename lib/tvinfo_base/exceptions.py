@@ -60,3 +60,15 @@ class BaseTVinfoAuthenticationerror(BaseTVinfoError):
 
 class BaseTVinfoIndexerInitError(BaseTVinfoError):
     pass
+
+
+class BaseTVinfoPersonError(BaseTVinfoError):
+    """
+    """
+    pass
+
+
+class BaseTVinfoPersonNotFound(BaseTVinfoPersonError):
+    """Raised when Person is not found
+    """
+    pass

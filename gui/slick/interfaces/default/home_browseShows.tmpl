@@ -8,6 +8,8 @@
 <% def sg_str(varname, default=''): return getattr(sickbeard, varname, default) %>#slurp#
 ##
 #set $mode = $kwargs and $kwargs.get('mode', '')
+#set $use_network = $kwargs.get('use_networks', False)
+#set $use_returning = 'returning' == mode
 #set $use_votes = $kwargs and $kwargs.get('use_votes', True)
 #set $use_ratings = $kwargs and $kwargs.get('use_ratings', True)
 ##
@@ -20,7 +22,11 @@
 ##
 #import os.path
 #include $os.path.join($sg_str('PROG_DIR'), 'gui/slick/interfaces/default/inc_top.tmpl')
-
+<script>
+	var config = {
+		homeSearchFocus: #echo ['!1','!0'][$sg_var('HOME_SEARCH_FOCUS', True)]#,
+		};
+</script>
 <script type="text/javascript" src="$sg_root/js/plotTooltip.js?v=$sbPID"></script>
 
 <script type="text/javascript" charset="utf-8">
@@ -78,6 +84,13 @@ $(document).ready(function(){
 #end if
 				return name.toLowerCase();
 			},
+#if $use_returning
+#raw
+			returning: function( itemElem ) {
+				return $( itemElem ).attr('data-returning') || '';
+			},
+#end raw
+#end if
 #if $use_ratings
 			rating: '[data-rating] parseFloat',
 #end if
@@ -89,7 +102,7 @@ $(document).ready(function(){
 	});
 #raw
 	$('#showsort').on('change', function(){
-		var sortCriteria = this.value.replace('by_', ''), el$ = $('#container'), shuffle = !1;
+		var elValue = this.value, sortCriteria = elValue.replace('by_', ''), el$ = $('#container'), shuffle = !1;
 		switch (sortCriteria) {
 			case 'asc':
 			case 'desc':
@@ -98,20 +111,21 @@ $(document).ready(function(){
 #end raw
 			case 'order':
 			case 'premiered':
+#if $use_returning
+			case 'returning':
+#end if
 #if $use_votes
 			case 'votes':
 #end if
 				break;
 #if $use_ratings
-			case 'rating':
-				shuffle = !0;
-				break;
     #if $use_votes
 			case 'rating_votes':
 				sortCriteria = ['rating', 'votes'];
+    #end if
+			case 'rating':
 				shuffle = !0;
 				break;
-    #end if
 #end if
 			default:
 				sortCriteria = 'name'
@@ -124,21 +138,21 @@ $(document).ready(function(){
 			option$ = showSort.filter('option[value="asc"].selected, option[value="desc"].selected');
 			option$.removeClass('selected').removeAttr('selected').html(option$.text().replace(/^>\s/i, ''));
 
-			option$ = showSort.filter($('option[value="' + this.value + '"]'));
+			option$ = showSort.filter($('option[value="' + elValue + '"]'));
 			option$.addClass('selected').attr('selected', !0).html('>&nbsp;' + option$.text());
 
 			savePrefs();
 
 			el$.one('layoutComplete', llUpdate);
 			el$.isotope({
-				sortAscending: 'asc' === this.value,
+				sortAscending: 'asc' === elValue,
 				sortBy: showSort.filter($('option[value^="by_"][class*="selected"]')).val().replace('by_', '')
 			});
-		} else if(0 == this.value.indexOf('by_')){
+		} else if(0 == elValue.indexOf('by_')){
 			option$ = showSort.filter($('option[value^="by_"][class*="selected"]'));
 			option$.removeClass('selected').removeAttr('selected').html(option$.text().replace(/^>\s/i, ''));
 
-			option$ = showSort.filter($('option[value="' + this.value + '"]'));
+			option$ = showSort.filter($('option[value="' + elValue + '"]'));
 			option$.addClass('selected').attr('selected', !0).html('>&nbsp;' + option$.text());
 
 			savePrefs();
@@ -168,12 +182,12 @@ $(document).ready(function(){
 			option$ = showSort.filter($('option[value^="*"].selected, #showsort option[value^="."].selected'));
 			option$.removeClass('selected').removeAttr('selected').html(option$.text().replace(/^>\s/i, ''));
 
-			option$ = showSort.filter($('option[value="' + this.value + '"]'));
+			option$ = showSort.filter($('option[value="' + elValue + '"]'));
 			option$.addClass('selected').attr('selected', !0).html('>&nbsp;' + option$.text());
 
 			savePrefs();
 
-			var showCards = $('.show-card'), filter = this.value;
+			var showCards = $('.show-card'), filter = elValue;
 			if('.hide' === filter){
 				showCards.filter($('.hide')).removeClass('hide').addClass('to-hide');
 				filter = '.to-hide';
@@ -222,7 +236,8 @@ $(document).ready(function(){
 	$('#showfilter').on('change', function(){
 		var filterValue = this.value;
 		if (-1 == filterValue.indexOf('trakt') && -1 == filterValue.indexOf('imdb') && -1 == filterValue.indexOf('mc_')
-		 && -1 == filterValue.indexOf('tvc_') && -1 == filterValue.indexOf('ne_') && -1 == filterValue.indexOf('_ne')
+		 && -1 == filterValue.indexOf('tvc_') && -1 == filterValue.indexOf('tvm_')
+		 && -1 == filterValue.indexOf('ne_') && -1 == filterValue.indexOf('_ne')
 		 && -1 == filterValue.indexOf('default')) {
 			var el$ = $('#container')
 			el$.on('layoutComplete', llUpdate);
@@ -241,6 +256,34 @@ $(document).ready(function(){
 	});
 
 	$('.service, .browse-image').each(addQTip);
+
+	if (config.homeSearchFocus) {
+		$('#search_show_name').focus();
+	}
+	llUpdate = (function(){
+		$.ll.handleScroll();
+	});
+	$('#search_show_name').on('input', function() {
+		var obj = $('#container');
+		obj.one('layoutComplete', llUpdate);
+		obj.isotope({
+			filter: function () {
+				var reSearch = RegExp($('#search_show_name').val(), 'i');
+				return reSearch.test($(this).attr('data-name'))#end raw##slurp#
+#if $use_network#
+					|| reSearch.test(\$(this).attr('data-network'))#end if#;
+#raw
+			}
+		});
+	});
+	$('.resetshows').click(function() {
+		var input = $('#search_show_name');
+		if ('' !== input.val()){
+			input.val('').trigger('input').change();
+			if (config.homeSearchFocus)
+				input.focus();
+		}
+	});
 });
 
 #end raw
@@ -279,8 +322,14 @@ $(document).ready(function(){
 		</optgroup>
 		<optgroup label="Sort by">
 			<option value="by_name"#if 'by_name' in $saved_showsort_sortby and not $reset_showsort_sortby#$selected>>&nbsp;#else#>#end if#Name</option>
+## omit for TVMaze as original order == First Aired
+#if 'TVmaze' not in $browse_type
 			<option value="by_order"#if 'by_order' in $saved_showsort_sortby or $reset_showsort_sortby#$selected>>&nbsp;#else#>#end if#Original</option>
+#end if
 			<option value="by_premiered"#if 'by_premiered' in $saved_showsort_sortby and not $reset_showsort_sortby#$selected>>&nbsp;#else#>#end if#First aired</option>
+	#if $use_returning
+			<option value="by_returning"#if 'by_returning' in $saved_showsort_sortby and not $reset_showsort_sortby#$selected>>&nbsp;#else#>#end if#Returning</option>
+	#end if
     #if $use_votes
 			<option value="by_votes"#if 'by_votes' in $saved_showsort_sortby#$selected>>&nbsp;#else#>#end if#Votes</option>
     #end if
@@ -381,6 +430,11 @@ $(document).ready(function(){
             #end for
 			<option value="tvc_latest"#echo ('', selected)['latest' == $mode]#>Latest additions</option>
 		</optgroup>
+        #elif 'TVmaze' == $browse_type
+		<optgroup label="TVmaze">
+			<option value="tvm_premieres"#echo ('', selected)['premieres' == $mode]#>Premieres</option>
+			<option value="tvm_returning"#echo ('', selected)['returning' == $mode]#>Returning</option>
+		</optgroup>
         #elif 'Nextepisode' == $browse_type
 		<optgroup label="Nextepisode">
 			<option value="ne_newpop"#echo ('', selected)['newpop' == $mode]#>Popular premiered</option>
@@ -393,9 +447,13 @@ $(document).ready(function(){
 	</select>
     #end if
 </div>
+		<div class="pull-right" style="clear:right">
+			<input id="search_show_name" class="search form-control form-control-inline input-sm input200" type="search" placeholder="Filter Show Name#if $use_network#/Network#end if#">
+			&nbsp;<button type="button" class="resetshows btn btn-inline">Reset Filter</button>
+		</div>
 <h4 style="float:left;margin:0 0 0 2px">$browse_title</h4>
     #if $kwargs and $kwargs.get('oldest')
-<div class="grey-text" style="clear:both;margin-left:2px;font-size:0.85em">
+<div class="grey-text" style="clear:left;margin-left:2px;font-size:0.85em">
 	First aired from $kwargs['oldest'] until $kwargs['newest']
 </div>
     #end if
@@ -421,11 +479,14 @@ $(document).ready(function(){
         #set $hide = ('', '%shide ' % ('', 'to-')['.hide' in $saved_showsort_view])[bool($this_show.get('hide'))]
         #set $data_rating = $try_float($this_show['rating'])
 
-	<div class="show-card ${hide}${known}inlibrary" data-name="#echo re.sub(r'([\'\"])', r'', $this_show['title'])#" data_id="$show_id"#if $use_ratings# data-rating="$data_rating"#end if##if $use_votes# data-votes="$this_show['votes']"#end if# data-premiered="$this_show['premiered']" data-order="$this_show['order']">
+	<div class="show-card ${hide}${known}inlibrary" data-name="#echo re.sub(r'([\'\"])', r'', $this_show['title'])#" data_id="$show_id"#if $use_ratings# data-rating="$data_rating"#end if##if $use_votes# data-votes="$this_show['votes']"#end if# data-premiered="$this_show['premiered']"#if $use_returning# data-returning="$this_show['returning']"#end if# data-order="$this_show['order']"#if $use_network# data-network="$this_show['network']"#end if#>
 		<div class="show-card-inner">
 			<div class="browse-image">
 				<a class="browse-image" href="<%= anon_url(this_show['url_src_db']) %>" target="_blank"
-					title="<span style='color: rgb(66, 139, 202)'>$re.sub(r'(?m)\s+\((?:19|20)\d\d\)\s*$', '', $title_html)</span>#if $this_show['genres']#<br /><div style='font-weight:bold'>(<em>$this_show['genres']</em>)</div>#end if#
+					title="<span style='color: rgb(66, 139, 202)'>$re.sub(r'(?m)\s+\((?:19|20)\d\d\)\s*$', '', $title_html)</span>
+
+					#if $this_show['genres']#<br><div style='font-weight:bold'>(<em>$this_show['genres']</em>)</div>#end if#
+					#if $kwargs and $use_returning#<span style='font-weight:bold;font-size:0.9em;color:#888'><em>Season $this_show['episode_season'] returns $this_show['returning_str']</em></span>#end if#
         #if $this_show.get('country') or $this_show.get('language')
 					 <p style='line-height:15px;margin-bottom:2px'>
             #if $this_show.get('country')
@@ -496,18 +557,18 @@ $(document).ready(function(){
 			$kwargs['error_msg']
 	#else
 			$browse_type did not return results, this can happen from time to time.
-			<br /><br />This view should auto refresh every 10 mins.
-	#end if
-		</p>
-	</div>
-</div>
-#end if
+			<br><br>This view should auto refresh every 10 mins.
 
 <script type="text/javascript" charset="utf-8">
 <!--
 window.setInterval('location.reload(true)', 600000); // Refresh every 10 minutes
 //-->
 </script>
+	#end if
+		</p>
+	</div>
+</div>
+#end if
 
 <script type="text/javascript" src="$sg_root/js/lazyload/lazyload.min.js?v=$sbPID"></script>
 <script type="text/javascript" src="$sg_root/js/inc_bottom.js?v=$sbPID"></script>

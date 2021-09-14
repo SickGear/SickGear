@@ -238,7 +238,9 @@ def retrieve_exceptions():
         if should_refresh(sickbeard.TVInfoAPI(tvid).name):
             logger.log(u'Checking for scene exception updates for %s' % sickbeard.TVInfoAPI(tvid).name)
 
-            url = sickbeard.TVInfoAPI(tvid).config['scene_url']
+            url = sickbeard.TVInfoAPI(tvid).config.get('scene_url')
+            if not url:
+                continue
 
             url_data = helpers.get_url(url)
             if None is url_data:
@@ -469,7 +471,8 @@ def _custom_exceptions_fetcher():
                                 and (for_season, for_episode) not in used:
                             logger.log(
                                 u'Skipped setting "%s" episode %sx%s to target a release %sx%s because set to %sx%s'
-                                % (show_obj.name, for_season, for_episode, target_season, target_episode, sn[0], sn[1]),
+                                % (show_obj.unique_name, for_season, for_episode,
+                                   target_season, target_episode, sn[0], sn[1]),
                                 logger.DEBUG)
                         else:
                             used.add((for_season, for_episode))

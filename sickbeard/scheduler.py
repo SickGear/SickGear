@@ -79,6 +79,13 @@ class Scheduler(threading.Thread):
     def run(self):
         self.set_paused_state()
 
+        # load previously saved queue
+        try:
+            if getattr(self.action, 'load_queue', None):
+                self.action.load_queue()
+        except (BaseException, Exception):
+            pass
+
         # if self._unpause Event() is NOT set the loop pauses
         while self._unpause.wait() and not self._stopper.is_set():
 

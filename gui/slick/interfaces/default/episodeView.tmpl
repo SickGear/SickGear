@@ -8,6 +8,9 @@
 #from _23 import decode_str
 <% def sg_var(varname, default=False): return getattr(sickbeard, varname, default) %>#slurp#
 <% def sg_str(varname, default=''): return getattr(sickbeard, varname, default) %>#slurp#
+<% def view_paused(result): return ((int(result['paused']) and sg_var('EPISODE_VIEW_DISPLAY_PAUSED'))
+                                    or (not int(result['paused']) and 2 != sg_var('EPISODE_VIEW_DISPLAY_PAUSED'))) %>
+#slurp#
 ##
 #set global $title = 'Daily Schedule'
 #set global $header = 'Daily Schedule'
@@ -227,8 +230,9 @@
 			&nbsp;
 			<span class="no-marginr">View Paused
 				<select name="viewpaused" class="form-control form-control-inline input-sm" onchange="location = this.options[this.selectedIndex].value;" style="margin-bottom:10px">
-					<option value="$sbRoot/toggle-display-paused-daily-schedule"#if not $sg_var('EPISODE_VIEW_DISPLAY_PAUSED')#$selected#end if#>Hidden</option>
-					<option value="$sbRoot/toggle-display-paused-daily-schedule"#if $sg_var('EPISODE_VIEW_DISPLAY_PAUSED')#$selected#end if#>Shown</option>
+					<option value="$sbRoot/set-display-paused-daily-schedule?state=0"#if 0 == $sg_var('EPISODE_VIEW_DISPLAY_PAUSED')#$selected#end if#>Hidden</option>
+					<option value="$sbRoot/set-display-paused-daily-schedule?state=1"#if 1 == $sg_var('EPISODE_VIEW_DISPLAY_PAUSED')#$selected#end if#>Shown</option>
+					<option value="$sbRoot/set-display-paused-daily-schedule?state=2"#if 2 == $sg_var('EPISODE_VIEW_DISPLAY_PAUSED')#$selected#end if#>Only</option>
 				</select>
 			</span>
 		</div>
@@ -364,7 +368,7 @@
         #set $runtime = $cur_result['runtime']
         #set $display_name = (re.sub(r'^((?:A(?!\s+to)n?)|The)\s(\w)', r'<span class="article">\1</span> \2', $cur_result['show_name']), $cur_result['show_name'])[$sg_var('SORT_ARTICLE')]
 
-        #if int($cur_result['paused']) and not $sg_var('EPISODE_VIEW_DISPLAY_PAUSED')
+        #if not view_paused($cur_result)
             #continue
         #end if
 
@@ -499,7 +503,7 @@
         #set $tvid = int($cur_result['indexer'])
         #set $display_name = (re.sub(r'^((?:A(?!\s+to)n?)|The)\s(\w)', r'<span class="article">\1</span> \2', $cur_result['show_name']), $cur_result['show_name'])[$sg_var('SORT_ARTICLE')]
         ##
-        #if int($cur_result['paused']) and not $sg_var('EPISODE_VIEW_DISPLAY_PAUSED')
+        #if not view_paused($cur_result)
             #continue
         #end if
         ##
@@ -676,7 +680,7 @@
     #set $state_future = 'listing-default'
 
     #for $cur_result in $sql_results
-        #if int($cur_result['paused']) and not $sg_var('EPISODE_VIEW_DISPLAY_PAUSED')
+        #if not view_paused($cur_result)
             #continue
         #end if
         #if $cur_result['runtime']
@@ -897,6 +901,7 @@ $('#Carousel').carousel({interval: 0});
 
 $(document).bind('keyup', function(e) {
 	return (/undefined/i.test($.SickGear.PauseCarousel) &&
+		(!('ctrlKey' in e && !!e.ctrlKey) && !('shiftKey' in e && !!e.shiftKey) && !(('altKey' in e && !!e.altKey) || ('metaKey' in e && !!e.metaKey))) && (
 		(!(e.hasOwnProperty('ctrlKey') && e.ctrlKey) && !(e.hasOwnProperty('altKey') && e.altKey)) && (
 		(39 == e.which && $('.carousel').carousel('next')) ||
 		(37 == e.which && $('.carousel').carousel('prev'))) || !0);
