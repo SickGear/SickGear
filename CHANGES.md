@@ -1,4 +1,4 @@
-﻿### 0.25.0 (2021-xx-xx xx:xx:xx UTC)
+﻿### 0.25.0 (2021-09-15 00:05:00 UTC)
 
 * Add ability to switch a TV info source for a show, initial support is for TheTVDb and TVMaze
 * Add column on manage/Bulk Change for TV info source so that shows can be sorted to isolate by source for switching
@@ -90,30 +90,6 @@
 * Change improve the search progress text
 * Add "Size" filter '<0' in history view to filter already deleted media
 * Change swap `Episode` and `Label` columns in history view
-
-
-[develop changelog]
-
-* Fix use show id when adding from TVmaze card
-* Change revert all IMDb ids to 7 chars
-* Fix new unique_name in templates 
-* Fix genre field in tvmaze_api
-* Change api interface folders to api_* to fix legacy tmdb_api folder cleanup on new installs
-* Fix TVmaze genres property to be lowercase string
-* Change use diskcache instead of memcache for TVmaze cards
-* Change make card genre case consistent for TVmaze cards
-* Fix use correct vartype as list for TVmaze tvinfo show_type property
-* Fix mapping show images in tmdb_api
-* Fix view-show average runtime for IMDb miniseries
-* Change check if average mini-series runtime is reasonable before displaying it
-* Fix use meta lang to filter TMDB images
-* Fix glide cursor left and right key collisions with ctrl + alt/meta with left and right
-* Change add language field to TVMaze search results
-* Change set TVMaze network to webchannel if no network is found
-* Change add TVMaze runtime, type, schedule, status, official site
-* Fix search results sorting
-* Add language flag to TVmaze search result items
-* Change reinstate "expand results" and display more prominently
 
 
 ### 0.24.17 (2021-08-31 01:00:00 UTC)
