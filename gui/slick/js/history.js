@@ -64,7 +64,7 @@ $(document).ready(function() {
 	} else if (-1 !== layoutName.indexOf('watched')) {
 
 		jQuery.extend(extraction, {
-			3: function(node) {
+			2: function(node) {
 				return $(node).find('span[data-sort]').attr('data-sort');
 			},
 			5: function(node) {

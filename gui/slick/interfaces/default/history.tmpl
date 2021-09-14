@@ -284,8 +284,8 @@
 			<tr>
 				<th><span class="date">Event Date</span><span class="age">Event Age</span></th>
 				<th width="8%">Played</th>
-				<th class="text-nowrap">Episode</th>
 				<th class="text-nowrap" width="15%">Label (Profile)</th>
+				<th class="text-nowrap">Episode</th>
 				<th class="text-nowrap" width="10%">Quality</th>
 				<th class="text-nowrap" width="10%">Size</th>
 				<th width="10%">Delete</th>
@@ -339,11 +339,6 @@
             #set $value = ($float_played, int($float_played))[int($float_played) == $float_played]
 					<span#if not $bool($int($value))# class="add-qtip" title="Marked Unwatched"#end if#>$value</span>
 				</td>
-				<td class="tvShow text-nowrap">
-					<span class="add-qtip#if not $hItem.get('deleted')#"#else# strike-deleted" title="file no longer exists"#end if#>
-						<a href="$sbRoot/home/view-show?tvid_prodid=$hItem['tvid_prodid']#season-$hItem.get('season')">$display_name</a>
-					</span>
-				</td>
 				<td>
             #set $label = re.sub(r'\{[^}]+\}$', '', $hItem.get('label'))
             #set $client = ''
@@ -355,6 +350,11 @@
 					<span data-sort="${label}">$label</span>
                 #pass
             #end try
+				</td>
+				<td class="tvShow text-nowrap">
+					<span class="add-qtip#if not $hItem.get('deleted')#"#else# strike-deleted" title="file no longer exists"#end if#>
+						<a href="$sbRoot/home/view-show?tvid_prodid=$hItem['tvid_prodid']#season-$hItem.get('season')">$display_name</a>
+					</span>
 				</td>
 				<td quality="$hItem.get('quality')" class="text-nowrap">
 					<span class="quality $Quality.get_quality_css($hItem.get('quality')) add-qtip" title="#if $hItem.get('deleted')#file no longer exists#else#$hItem['location']#end if#">$Quality.qualityStrings[$hItem.get('quality')].replace('SD DVD', 'SD DVD/BR/BD')</span>
