@@ -88,6 +88,7 @@
 * Add return paused "Only" to API
 * Change Add shows/Search results first aired dates to UI date format setting
 * Change improve the search progress text
+* Add "Size" filter '=0' in history view to filter already deleted media
 
 
 [develop changelog]
