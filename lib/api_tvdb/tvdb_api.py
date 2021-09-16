@@ -33,7 +33,7 @@ from lib.cachecontrol import CacheControl, caches
 from lib.dateutil.parser import parse
 from lib.exceptions_helper import ConnectionSkipException
 from lib.tvinfo_base import CastList, TVInfoCharacter, CrewList, TVInfoPerson, RoleTypes, \
-    TVINFO_TVDB, TVINFO_TVDB_SLUG, TVInfoBase, TVInfoIDs
+    TVINFO_TVDB, TVINFO_TVDB_SLUG, TVInfoBase, TVInfoIDs, TVInfoNetwork, TVInfoShow
 
 from .tvdb_exceptions import TvdbError, TvdbShownotfound, TvdbTokenexpired
 from .tvdb_ui import BaseUI, ConsoleUI
@@ -44,7 +44,6 @@ from six import integer_types, iteritems, PY2, string_types
 if False:
     # noinspection PyUnresolvedReferences
     from typing import Any, AnyStr, Dict, List, Optional, Union
-    from lib.tvinfo_base import TVInfoShow
 
 
 THETVDB_V2_API_TOKEN = {'token': None, 'datetime': datetime.datetime.fromordinal(1)}
@@ -334,13 +333,15 @@ class Tvdb(TVInfoBase):
 
     def _search_show(self, name=None, ids=None, **kwargs):
         # type: (AnyStr, Dict[integer_types, integer_types], Optional[Any]) -> List[TVInfoShow]
-        def map_data(data):
-            if not data.get('poster'):
-                data['poster'] = data.get('image')
-            data['ids'] = TVInfoIDs(
-                tvdb=data.get('id'),
-                imdb=data.get('imdb_id') and try_int(data.get('imdb_id', '').replace('tt', ''), None))
-            return data
+        def make_tvinfoshow(data):
+            _ti_show = TVInfoShow()
+            _ti_show.id, _ti_show.banner, _ti_show.firstaired, _ti_show.poster, _ti_show.network, _ti_show.overview, \
+                _ti_show.seriesname, _ti_show.slug, _ti_show.status, _ti_show.aliases, _ti_show.ids = \
+                clean_data(data['id']), clean_data(data.get('banner')), clean_data(data.get('firstaired')), \
+                clean_data(data.get('poster')), clean_data(data.get('network')), clean_data(data.get('overview')), \
+                clean_data(data.get('seriesname')), clean_data(data.get('slug')), clean_data(data.get('status')), \
+                clean_data((data.get('aliases'))), TVInfoIDs(tvdb=try_int(clean_data(data['id'])))
+            return _ti_show
 
         results = []
         if ids:
@@ -356,7 +357,7 @@ class Tvdb(TVInfoBase):
                 else:
                     d_m = shows
                 if d_m:
-                    results = list(map(map_data, [d_m['data']]))
+                    results.append(make_tvinfoshow(d_m['data']))
             if ids.get(TVINFO_TVDB_SLUG):
                 cache_id_key = 's-id-%s-%s' % (TVINFO_TVDB, ids[TVINFO_TVDB_SLUG])
                 is_none, shows = self._get_cache_entry(cache_id_key)
@@ -371,7 +372,7 @@ class Tvdb(TVInfoBase):
                 if d_m:
                     for r in d_m:
                         if ids.get(TVINFO_TVDB_SLUG) == r['slug']:
-                            results = list(map(map_data, [r]))
+                            results.append(make_tvinfoshow(r))
                             break
         if name:
             for n in ([name], name)[isinstance(name, list)]:
@@ -388,7 +389,7 @@ class Tvdb(TVInfoBase):
                 if r:
                     if not isinstance(r, list):
                         r = [r]
-                    results.extend(list(map(map_data, r)))
+                    results.extend([make_tvinfoshow(_s) for _s in r])
 
         seen = set()
         results = [seen.add(r['id']) or r for r in results if r['id'] not in seen]
@@ -947,10 +948,7 @@ class Tvdb(TVInfoBase):
                     role_image = self._make_image(self.config['url_artworks'], role_image)
                 character_name = n.get('role', '').strip() or alts.get(n['id'], {}).get('role', '')
                 person_name = n.get('name', '').strip() or alts.get(n['id'], {}).get('name', '')
-                try:
-                    person_id = try_int(re.search(r'^person/(\d+)/', n.get('image', '')).group(1), None)
-                except (BaseException, Exception):
-                    person_id = None
+                person_id = None
                 person_id = person_id or alts.get(n['id'], {}).get('person_id')
                 character_id = n.get('id', None) or alts.get(n['id'], {}).get('rid')
                 a.append({'character': {'id': character_id,
@@ -971,7 +969,7 @@ class Tvdb(TVInfoBase):
                 cast[RoleTypes.ActorMain].append(
                     TVInfoCharacter(
                         p_id=character_id, name=character_name, person=[TVInfoPerson(p_id=person_id, name=person_name)],
-                        image=role_image, show=self.shows[sid]))
+                        image=role_image, show=self.ti_shows[sid]))
         except (BaseException, Exception):
             pass
         self._set_show_data(sid, 'actors', a)
@@ -1020,9 +1018,9 @@ class Tvdb(TVInfoBase):
                 self.ti_shows[sid].__dict__[loaded_name] = True
 
         # fallback image thumbnail for none excluded_main_data if artwork is not found
-        if not excluded_main_data and show_data['data'].get(image_type):
+        if not excluded_main_data and show_data.get(image_type):
             self._set_show_data(sid, f'{image_type}_thumb',
-                                re.sub(r'\.jpg$', '_t.jpg', show_data['data'][image_type], flags=re.I))
+                                re.sub(r'\.jpg$', '_t.jpg', show_data[image_type], flags=re.I))
 
     def _get_show_data(self,
                        sid,  # type: integer_types
@@ -1044,7 +1042,8 @@ class Tvdb(TVInfoBase):
 
         # Parse show information
         url = self.config['url_series_info'] % sid
-        if direct_data or sid not in self.shows or None is self.shows[sid].id or language != self.shows[sid].language:
+        if direct_data or sid not in self.ti_shows or None is self.ti_shows[sid].id or \
+                language != self.ti_shows[sid].language:
             log.debug('Getting all series data for %s' % sid)
             show_data = self._getetsrc(url, language=language)
             if not show_data or not show_data.get('data'):
@@ -1056,13 +1055,34 @@ class Tvdb(TVInfoBase):
             if not (show_data and 'seriesname' in show_data.get('data', {}) or {}):
                 return False
 
-            for k, v in iteritems(show_data['data']):
-                self._set_show_data(sid, k, v)
-            self._set_show_data(sid, 'ids',
-                                TVInfoIDs(
-                                    tvdb=show_data['data'].get('id'),
-                                    imdb=show_data['data'].get('imdb_id')
-                                    and try_int(show_data['data'].get('imdb_id', '').replace('tt', ''), None)))
+            show_data = show_data['data']
+            ti_show = self.ti_shows[sid]  # type: TVInfoShow
+            ti_show.banner_loaded = ti_show.poster_loaded = ti_show.fanart_loaded = True
+            ti_show.id = show_data['id']
+            ti_show.seriesname = clean_data(show_data.get('seriesname'))
+            ti_show.slug = clean_data(show_data.get('slug'))
+            ti_show.poster = clean_data(show_data.get('poster'))
+            ti_show.banner = clean_data(show_data.get('banner'))
+            ti_show.fanart = clean_data(show_data.get('fanart'))
+            ti_show.firstaired = clean_data(show_data.get('firstAired'))
+            ti_show.rating = show_data.get('rating')
+            ti_show.contentrating = clean_data(show_data.get('contentRatings'))
+            ti_show.aliases = show_data.get('aliases') or []
+            ti_show.status = clean_data(show_data['status'])
+            if clean_data(show_data.get('network')):
+                ti_show.network = clean_data(show_data['network'])
+                ti_show.networks = [TVInfoNetwork(clean_data(show_data['network']),
+                                                  n_id=clean_data(show_data.get('networkid')))]
+            ti_show.runtime = try_int(show_data.get('runtime'), 0)
+            ti_show.language = clean_data(show_data.get('language'))
+            ti_show.genre = clean_data(show_data.get('genre'))
+            ti_show.genre_list = clean_data(show_data.get('genre_list')) or []
+            ti_show.overview = clean_data(show_data.get('overview'))
+            ti_show.imdb_id = clean_data(show_data.get('imdb_id')) or None
+            ti_show.airs_time = clean_data(show_data.get('airs_time'))
+            ti_show.airs_dayofweek = clean_data(show_data.get('airs_dayofweek'))
+            ti_show.ids = TVInfoIDs(tvdb=ti_show.id, imdb=try_int(ti_show.imdb_id.replace('tt', ''), None))
+
         else:
             show_data = {'data': {}}
 
@@ -1225,7 +1245,7 @@ class Tvdb(TVInfoBase):
                 try:
                     for guest in cur_ep.get('gueststars_list', []):
                         cast[RoleTypes.ActorGuest].append(TVInfoCharacter(person=[TVInfoPerson(name=guest)],
-                                                                          show=self.shows[sid]))
+                                                                          show=self.ti_shows[sid]))
                 except (BaseException, Exception):
                     pass
                 try:
@@ -1257,6 +1277,11 @@ class Tvdb(TVInfoBase):
                     self._get_show_data(int(x['id']), self.config['language'])]
             self.corrections.update(dict([(x['seriesname'], int(x['id'])) for x in selected_series]))
             return sids
+
+    def _get_languages(self):
+        if not Tvdb._supported_languages:
+            Tvdb._supported_languages = [{'id': _l, 'name': None, 'nativeName': None, 'sg_lang': _l}
+                                         for _l in self.config['valid_languages']]
 
 
 def main():

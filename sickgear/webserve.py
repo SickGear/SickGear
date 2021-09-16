@@ -2177,6 +2177,17 @@ class Home(MainHandler):
 
         return json_dumps({'success': t.respond()})
 
+    @staticmethod
+    def fix_show_obj_db_data(show_obj):
+        # adjust show_obj db data
+        if 'genres' not in show_obj.imdb_info or None is show_obj.imdb_info.get('genres'):
+            show_obj.imdb_info['genres'] = ''
+        if show_obj.genre and not show_obj.genre[1:-1]:
+            show_obj.genre = ''
+        if 'country_codes' not in show_obj.imdb_info or None is show_obj.imdb_info.get('country_codes'):
+            show_obj.imdb_info['country_codes'] = ''
+        return show_obj
+
     def view_show(self, tvid_prodid=None):
 
         if None is tvid_prodid:
@@ -2185,6 +2196,8 @@ class Home(MainHandler):
         show_obj = helpers.find_show_by_id(tvid_prodid)
         if None is show_obj:
             return self._generic_message('Error', 'Show not in show list')
+
+        show_obj = self.fix_show_obj_db_data(show_obj)
 
         t = PageTemplate(web_handler=self, file='displayShow.tmpl')
         t.submenu = [{'title': 'Edit', 'path': 'home/edit-show?tvid_prodid=%s' % tvid_prodid}]
@@ -3579,7 +3592,7 @@ class Home(MainHandler):
         # type: (AnyStr) -> AnyStr
         """Return a text list of items separated by comma instead of '/' """
 
-        return re.sub(r'\b\s?/\s?\b', ', ', text)
+        return (isinstance(text, string_types) and re.sub(r'\b\s?/\s?\b', ', ', text)) or text
 
     def role(self, rid, tvid_prodid, **kwargs):
         _ = kwargs.get('oid')  # suppress pyc non used var highlight, oid (original id) is a visual ui key
@@ -3609,7 +3622,7 @@ class Home(MainHandler):
         known = {}
         main_role_known = False
         rc_clean = re.compile(r'[^a-z0-9]')
-        char_name = rc_clean.sub('', character.name.lower())
+        char_name = rc_clean.sub('', (character.name or 'unknown name').lower())
         for cur_person in (character.person or []):
             person, roles, msg = self.cast(cur_person.id)
             if not msg:
@@ -3704,7 +3717,7 @@ class Home(MainHandler):
                                     ref_id = cur_ref_id
 
                     roles.append({
-                        'character_name': self.csv_items(cur_char['name']),
+                        'character_name': self.csv_items(cur_char['name']) or 'unknown name',
                         'character_id': cur_char['id'],
                         'character_rid': ref_id,
                         'show_obj': helpers.find_show_by_id({cur_char['c_tvid']: cur_char['c_prodid']}),
@@ -4105,7 +4118,8 @@ class AddShows(Home):
             t = sickgear.TVInfoAPI(cur_tvid).setup(**tvinfo_config)
             results.setdefault(cur_tvid, {})
             try:
-                for cur_result in t.search_show(list(used_search_term), ids=ids_search_used):  # type: TVInfoShow
+                for cur_result in t.search_show(list(used_search_term), ids=ids_search_used,
+                                                lang=lang):  # type: TVInfoShow
                     if TVINFO_TRAKT == cur_tvid and not cur_result['ids'].tvdb:
                         continue
                     tv_src_id = int(cur_result['id'])
@@ -4262,18 +4276,11 @@ class AddShows(Home):
         img_url = ''
         if TVINFO_TRAKT == iid:
             img_url = 'imagecache?path=browse/thumb/trakt&filename=%s&trans=0&tmdbid=%s&tvdbid=%s' % \
-                      ('%s.jpg' % show_info['ids'].trakt, show_info.get('tmdb_id'), show_info['ids'].tvdb)
-        elif TVINFO_TVDB == iid and 'poster' in show_info and show_info['poster']:
-            img_url = 'imagecache?path=browse/thumb/tvdb&filename=%s&trans=0&source=%s' % \
-                      ('%s.jpg' % show_info['id'], show_info['poster'])
-            sickgear.CACHE_IMAGE_URL_LIST.add_url(show_info['poster'])
-        elif TVINFO_TVMAZE == iid and show_info.get('image'):
-            img_url = 'imagecache?path=browse/thumb/tvmaze&filename=%s&trans=0&source=%s' % \
-                      ('%s.jpg' % show_info['id'], show_info['image'])
-            sickgear.CACHE_IMAGE_URL_LIST.add_url(show_info['image'])
-        elif TVINFO_TMDB == iid and 'poster' in show_info and show_info['poster']:
-            img_url = 'imagecache?path=browse/thumb/tmdb&filename=%s&trans=0&source=%s' % \
-                      ('%s.jpg' % show_info['id'], show_info['poster'])
+                      ('%s.jpg' % show_info['ids'].trakt, show_info['ids'].tmdb, show_info['ids'].tvdb)
+        elif iid in (TVINFO_TVDB, TVINFO_TVMAZE, TVINFO_TMDB) and 'poster' in show_info and show_info['poster']:
+            img_url = 'imagecache?path=browse/thumb/%s&filename=%s&trans=0&source=%s' % \
+                      ({TVINFO_TVDB: 'tvdb', TVINFO_TVMAZE: 'tvmaze', TVINFO_TMDB: 'tmdb'}[iid],
+                       '%s.jpg' % show_info['id'], show_info['poster'])
             sickgear.CACHE_IMAGE_URL_LIST.add_url(show_info['poster'])
         return img_url
 

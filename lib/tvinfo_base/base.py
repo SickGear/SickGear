@@ -1,13 +1,19 @@
 import copy
 import datetime
 import diskcache
+import itertools
 import logging
 import threading
 import shutil
 import time
+from collections import deque
 from exceptions_helper import ex
 
 from six import integer_types, iteritems, iterkeys, string_types, text_type
+from six import PY2  # deprecate after rebase ?
+from _23 import list_keys, list_items, list_values, izip  # deprecate after rebase ?
+from typing import Callable
+
 
 from lib.tvinfo_base.exceptions import *
 from sg_helpers import calc_age, make_path
@@ -44,6 +50,11 @@ TVINFO_INSTAGRAM = 250002
 TVINFO_WIKIPEDIA = 250003
 TVINFO_REDDIT = 250004
 TVINFO_YOUTUBE = 250005
+TVINFO_WIKIDATA = 250006
+TVINFO_TIKTOK = 250007
+TVINFO_LINKEDIN = 25008
+TVINFO_OFFICIALSITE = 250009
+TVINFO_FANSITE = 250010
 
 tv_src_names = {
     TVINFO_TVDB: 'tvdb',
@@ -64,8 +75,23 @@ tv_src_names = {
     TVINFO_INSTAGRAM: 'instagram',
     TVINFO_WIKIPEDIA: 'wikipedia',
     TVINFO_REDDIT: 'reddit',
-    TVINFO_YOUTUBE: 'youtube'
+    TVINFO_YOUTUBE: 'youtube',
+    TVINFO_WIKIDATA: 'wikidata',
+    TVINFO_TIKTOK: 'tiktok',
+    TVINFO_LINKEDIN: 'linkedin',
+    TVINFO_OFFICIALSITE: 'officialsite',
+    TVINFO_FANSITE: 'fansite'
 
+}
+
+TVINFO_MID_SEASON_FINALE = 1
+TVINFO_SEASON_FINALE = 2
+TVINFO_SERIES_FINALE = 3
+
+final_types = {
+    TVINFO_MID_SEASON_FINALE: 'mid-season',
+    TVINFO_SEASON_FINALE: 'season',
+    TVINFO_SERIES_FINALE: 'series'
 }
 
 log = logging.getLogger('TVInfo')
@@ -141,20 +167,42 @@ class TVInfoIDs(object):
         return {TVINFO_TVDB: self.tvdb, TVINFO_TMDB: self.tmdb, TVINFO_TVMAZE: self.tvmaze,
                 TVINFO_IMDB: self.imdb, TVINFO_TRAKT: self.trakt, TVINFO_TVRAGE: self.rage}.get(key)
 
+    def __setitem__(self, key, value):
+        self.__dict__[{
+            TVINFO_TVDB: 'tvdb', TVINFO_TMDB: 'tmdb', TVINFO_TVMAZE: 'tvmaze',
+            TVINFO_IMDB: 'imdb', TVINFO_TRAKT: 'trakt', TVINFO_TVRAGE: 'rage'
+        }[key]] = value
+
     def get(self, key):
         return self.__getitem__(key)
 
+    def keys(self):
+        for k, v in iter(((TVINFO_TVDB, self.tvdb), (TVINFO_TMDB, self.tmdb), (TVINFO_TVMAZE, self.tvmaze),
+                          (TVINFO_IMDB, self.imdb), (TVINFO_TRAKT, self.trakt), (TVINFO_TVRAGE, self.rage))):
+            if None is not v:
+                yield k
+
     def __iter__(self):
-        for s, v in [(TVINFO_TVDB, self.tvdb), (TVINFO_TMDB, self.tmdb), (TVINFO_TVMAZE, self.tvmaze),
-                     (TVINFO_IMDB, self.imdb), (TVINFO_TRAKT, self.trakt), (TVINFO_TVRAGE, self.rage)]:
-            yield s, v
+        for s, v in iter(((TVINFO_TVDB, self.tvdb), (TVINFO_TMDB, self.tmdb), (TVINFO_TVMAZE, self.tvmaze),
+                          (TVINFO_IMDB, self.imdb), (TVINFO_TRAKT, self.trakt), (TVINFO_TVRAGE, self.rage))):
+            if None is not v:
+                yield s, v
+
+    def __len__(self):
+        counter = itertools.count()
+        deque(izip(self.__iter__(), counter), maxlen=0)  # (consume at C speed)
+        return next(counter)
 
     def __str__(self):
         return ', '.join('%s: %s' % (tv_src_names.get(k, k), v) for k, v in self.__iter__())
 
+    def __eq__(self, other):
+        return self.__dict__ == other.__dict__
+
     __repr__ = __str__
     iteritems = __iter__
     items = __iter__
+    iterkeys = keys
 
 
 class TVInfoSocialIDs(object):
@@ -166,7 +214,11 @@ class TVInfoSocialIDs(object):
             wikipedia=None,  # type: str_int
             ids=None,  # type: Dict[int, str_int]
             reddit=None,  # type: str_int
-            youtube=None  # type: AnyStr
+            youtube=None,  # type: AnyStr
+            wikidata=None,  # type: AnyStr
+            tiktok=None,  # type: AnyStr
+            linkedin=None,  # type: AnyStr
+            fansite=None  # type: AnyStr
     ):
         ids = ids or {}
         self.twitter = twitter or ids.get(TVINFO_TWITTER)
@@ -175,23 +227,60 @@ class TVInfoSocialIDs(object):
         self.wikipedia = wikipedia or ids.get(TVINFO_WIKIPEDIA)
         self.reddit = reddit or ids.get(TVINFO_REDDIT)
         self.youtube = youtube or ids.get(TVINFO_YOUTUBE)
+        self.wikidata = wikidata or ids.get(TVINFO_WIKIDATA)
+        self.tiktok = tiktok or ids.get(TVINFO_TIKTOK)
+        self.linkedin = linkedin or ids.get(TVINFO_LINKEDIN)
+        self.fansite = fansite or ids.get(TVINFO_FANSITE)
 
     def __getitem__(self, key):
         return {TVINFO_TWITTER: self.twitter, TVINFO_INSTAGRAM: self.instagram, TVINFO_FACEBOOK: self.facebook,
-                TVINFO_WIKIPEDIA: self.wikipedia, TVINFO_REDDIT: self.reddit, TVINFO_YOUTUBE: self.youtube}.get(key)
+                TVINFO_WIKIDATA: self.wikidata, TVINFO_WIKIPEDIA: self.wikipedia, TVINFO_REDDIT: self.reddit,
+                TVINFO_TIKTOK: self.tiktok, TVINFO_LINKEDIN: self.linkedin, TVINFO_FANSITE: self.fansite,
+                TVINFO_YOUTUBE: self.youtube}.get(key)
+
+    def __setitem__(self, key, value):
+        self.__dict__[{
+            TVINFO_TWITTER: 'twitter', TVINFO_INSTAGRAM: 'instagram', TVINFO_FACEBOOK: 'facebook',
+            TVINFO_WIKIPEDIA: 'wikipedia', TVINFO_REDDIT: 'reddit', TVINFO_YOUTUBE: 'youtube',
+            TVINFO_WIKIDATA: 'wikidata', TVINFO_TIKTOK: 'tiktok', TVINFO_LINKEDIN: 'linkedin', TVINFO_FANSITE: 'fansite'
+        }[key]] = value
+
+    def get(self, key):
+        return self.__getitem__(key)
+
+    def keys(self):
+        for k, v in iter(((TVINFO_TWITTER, self.twitter), (TVINFO_INSTAGRAM, self.instagram),
+                          (TVINFO_FACEBOOK, self.facebook), (TVINFO_TIKTOK, self.tiktok),
+                          (TVINFO_WIKIPEDIA, self.wikipedia), (TVINFO_WIKIDATA, self.wikidata),
+                          (TVINFO_REDDIT, self.reddit), (TVINFO_YOUTUBE, self.youtube),
+                          (TVINFO_LINKEDIN, self.linkedin), (TVINFO_FANSITE, self.fansite))):
+            if None is not v:
+                yield k
 
     def __iter__(self):
-        for s, v in [(TVINFO_TWITTER, self.twitter), (TVINFO_INSTAGRAM, self.instagram),
-                     (TVINFO_FACEBOOK, self.facebook), (TVINFO_WIKIPEDIA, self.wikipedia),
-                     (TVINFO_REDDIT, self.reddit), (TVINFO_YOUTUBE, self.youtube)]:
-            yield s, v
+        for s, v in iter(((TVINFO_TWITTER, self.twitter), (TVINFO_INSTAGRAM, self.instagram),
+                          (TVINFO_FACEBOOK, self.facebook), (TVINFO_TIKTOK, self.tiktok),
+                          (TVINFO_WIKIPEDIA, self.wikipedia), (TVINFO_WIKIDATA, self.wikidata),
+                          (TVINFO_REDDIT, self.reddit), (TVINFO_YOUTUBE, self.youtube),
+                          (TVINFO_LINKEDIN, self.linkedin), (TVINFO_FANSITE, self.fansite))):
+            if None is not v:
+                yield s, v
+
+    def __len__(self):
+        counter = itertools.count()
+        deque(izip(self.__iter__(), counter), maxlen=0)  # (consume at C speed)
+        return next(counter)
 
     def __str__(self):
         return ', '.join('%s: %s' % (tv_src_names.get(k, k), v) for k, v in self.__iter__())
 
+    def __eq__(self, other):
+        return self.__dict__ == other.__dict__
+
     __repr__ = __str__
     iteritems = __iter__
     items = __iter__
+    iterkeys = keys
 
 
 class TVInfoImageType(object):
@@ -242,7 +331,7 @@ class TVInfoImageSize(object):
 
 class TVInfoImage(object):
     def __init__(self, image_type, sizes, img_id=None, main_image=False, type_str='', rating=None, votes=None,
-                 lang=None, height=None, width=None, aspect_ratio=None):
+                 lang=None, height=None, width=None, aspect_ratio=None, updated_at=None):
         self.img_id = img_id  # type: Optional[integer_types]
         self.image_type = image_type  # type: integer_types
         self.sizes = sizes  # type: Union[TVInfoImageSize, Dict]
@@ -254,6 +343,10 @@ class TVInfoImage(object):
         self.height = height  # type: Optional[integer_types]
         self.width = width  # type: Optional[integer_types]
         self.aspect_ratio = aspect_ratio  # type: Optional[Union[float, integer_types]]
+        self.updated_at = updated_at  # type: Optional[integer_types]
+
+    def __eq__(self, other):
+        return self.__dict__ == other.__dict__
 
     def __str__(self):
         return '<TVInfoImage %s [%s]>' % (TVInfoImageType.reverse_str.get(self.image_type, 'unknown'),
@@ -263,13 +356,20 @@ class TVInfoImage(object):
 
 
 class TVInfoNetwork(object):
-    def __init__(self, name, n_id=None, country=None, country_code=None, timezone=None, stream=None):
+    def __init__(self, name, n_id=None, country=None, country_code=None, timezone=None, stream=None, active_date=None,
+                 inactive_date=None):
+        # type: (AnyStr, integer_types, AnyStr, AnyStr, AnyStr, bool, AnyStr, AnyStr) -> None
         self.name = name  # type: AnyStr
         self.id = n_id  # type: Optional[integer_types]
         self.country = country  # type: Optional[AnyStr]
         self.country_code = country_code  # type: Optional[AnyStr]
         self.timezone = timezone  # type: Optional[AnyStr]
         self.stream = stream  # type: Optional[bool]
+        self.active_date = active_date  # type: Optional[AnyStr]
+        self.inactive_date = inactive_date  # type: Optional[AnyStr]
+
+    def __eq__(self, other):
+        return self.__dict__ == other.__dict__
 
     def __str__(self):
         return '<Network (%s)>' % ', '.join('%s' % s for s in [self.name, self.id, self.country, self.country_code,
@@ -282,7 +382,7 @@ class TVInfoShow(dict):
     """Holds a dict of seasons, and show data.
     """
 
-    def __init__(self):
+    def __init__(self, show_loaded=True):
         dict.__init__(self)
         self.lock = threading.RLock()
         self.data = {}  # type: Dict
@@ -298,7 +398,6 @@ class TVInfoShow(dict):
         self.ids = TVInfoIDs()  # type: TVInfoIDs
         self.social_ids = TVInfoSocialIDs()  # type: TVInfoSocialIDs
         self.slug = None  # type: Optional[AnyStr]
-        self.seriesid = None  # type: integer_types
         self.seriesname = None  # type: Optional[AnyStr]
         self.aliases = []  # type: List[AnyStr]
         self.season = None  # type: integer_types
@@ -318,6 +417,7 @@ class TVInfoShow(dict):
         self.network_is_stream = None  # type: Optional[bool]
         self.runtime = None  # type: integer_types
         self.language = None  # type: Optional[AnyStr]
+        self.spoken_languages = []  # type: List[string_types]
         self.official_site = None  # type: Optional[AnyStr]
         self.imdb_id = None  # type: Optional[AnyStr]
         self.zap2itid = None  # type: Optional[AnyStr]
@@ -332,7 +432,7 @@ class TVInfoShow(dict):
         self.contentrating = None  # type: Optional[AnyStr]
         self.rating = None  # type: Union[integer_types, float]
         self.status = None  # type: Optional[AnyStr]
-        self.overview = None  # type: Optional[AnyStr]
+        self.overview = ''  # type: AnyStr
         self.poster = None  # type: Optional[AnyStr]
         self.poster_thumb = None  # type: Optional[AnyStr]
         self.banner = None  # type: Optional[AnyStr]
@@ -347,6 +447,33 @@ class TVInfoShow(dict):
         self.vote_average = None  # type: Optional[Union[integer_types, float]]
         self.origin_countries = []  # type: List[AnyStr]
         self.requested_language = ''  # type: AnyStr
+        self.alt_ep_numbering = {}  # type: Dict[Any, Dict[integer_types, Dict[integer_types, TVInfoEpisode]]]
+        self.watcher_count = None  # type: integer_types
+        self.play_count = None  # type: integer_types
+        self.collected_count = None  # type: integer_types
+        self.collector_count = None  # type: integer_types
+        self.next_season_airdate = None  # type: Optional[string_types]
+        # trailers dict containing: {language: trailer url} , 'any' for unknown langauge
+        self.trailers = {}  # type: Dict[string_types, string_types]
+        self.show_loaded = show_loaded  # type: bool
+        self.load_method = None  # type: Optional[Callable]
+
+    def load_data(self):
+        if not self.show_loaded and self.id and isinstance(self.load_method, Callable):
+            _new_show_data = self.load_method(self.id, load_actors=False)
+            if isinstance(_new_show_data, TVInfoShow):
+                self.__dict__.update(_new_show_data.__dict__)
+                self.show_loaded = True
+
+    @property
+    def seriesid(self):
+        # type: (...) -> integer_types
+        return self.id
+
+    @seriesid.setter
+    def seriesid(self, val):
+        # type: (integer_types) -> None
+        self.id = val
 
     def __str__(self):
         nr_seasons = len(self)
@@ -363,7 +490,7 @@ class TVInfoShow(dict):
 
         raise AttributeError
 
-    def __getitem__(self, key, raise_error=True):
+    def __getitem__(self, key):
         if isinstance(key, string_types) and key in self.__dict__:
             return self.__dict__[key]
 
@@ -375,18 +502,21 @@ class TVInfoShow(dict):
             # Non-numeric request is for show-data
             return dict.__getitem__(self.data, key)
 
-        if raise_error:
-            # Data wasn't found, raise appropriate error
-            if isinstance(key, integer_types) or isinstance(key, string_types) and key.isdigit():
-                # Episode number x was not found
-                raise BaseTVinfoSeasonnotfound('Could not find season %s' % (repr(key)))
-            else:
-                # If it's not numeric, it must be an attribute name, which
-                # doesn't exist, so attribute error.
-                raise BaseTVinfoAttributenotfound('Cannot find attribute %s' % (repr(key)))
+        # Data wasn't found, raise appropriate error
+        if isinstance(key, integer_types) or isinstance(key, string_types) and key.isdigit():
+            # Episode number x was not found
+            raise BaseTVinfoSeasonnotfound('Could not find season %s' % (repr(key)))
+        else:
+            # If it's not numeric, it must be an attribute name, which
+            # doesn't exist, so attribute error.
+            raise BaseTVinfoAttributenotfound('Cannot find attribute %s' % (repr(key)))
 
-    def get(self, __key, __default=None):
-        return self.__getitem__(__key, raise_error=None is __default) or __default
+    def get(self, __key, *args):
+        try:
+            return self.__getitem__(__key)
+        except (BaseException, Exception):
+            if 0 != len(args):
+                return args[0]
 
     def __deepcopy__(self, memo):
         cls = self.__class__
@@ -395,6 +525,8 @@ class TVInfoShow(dict):
         for k, v in self.__dict__.items():
             if 'lock' == k:
                 setattr(result, k, threading.RLock())
+            elif 'load_method' == k:
+                setattr(result, k, None)
             else:
                 setattr(result, k, copy.deepcopy(v, memo))
         for k, v in self.items():
@@ -434,33 +566,35 @@ class TVInfoShow(dict):
 
     def __getstate__(self):
         d = dict(self.__dict__)
-        try:
-            del d['lock']
-        except (BaseException, Exception):
-            pass
+        for d_a in ('lock', 'load_method'):
+            try:
+                del d[d_a]
+            except (BaseException, Exception):
+                pass
         return d
 
     def __setstate__(self, d):
         self.__dict__ = d
         self.lock = threading.RLock()
+        self.load_method = None
 
     __repr__ = __str__
     __nonzero__ = __bool__
 
 
 class TVInfoSeason(dict):
-    def __init__(self, show=None, **kwargs):
+    def __init__(self, show=None, number=None, **kwargs):
         """The show attribute points to the parent show
         """
         super(TVInfoSeason, self).__init__(**kwargs)
         self.show = show  # type: TVInfoShow
         self.id = None  # type: integer_types
-        self.number = None  # type: integer_types
+        self.number = number  # type: integer_types
         self.name = None  # type: Optional[AnyStr]
         self.actors = []  # type: List[Dict]
         self.cast = CastList()  # type: Dict[integer_types, TVInfoCharacter]
         self.network = None  # type: Optional[AnyStr]
-        self.network_id = None  # type: integer_types
+        self.network_id = None  # type: Optional[integer_types]
         self.network_timezone = None  # type: Optional[AnyStr]
         self.network_country = None  # type: Optional[AnyStr]
         self.network_country_code = None  # type: Optional[AnyStr]
@@ -536,7 +670,7 @@ class TVInfoEpisode(dict):
         self.writers = []  # type: List[AnyStr]
         self.crew = CrewList()  # type: CrewList
         self.episodename = None  # type: Optional[AnyStr]
-        self.overview = None  # type: Optional[AnyStr]
+        self.overview = ''  # type: AnyStr
         self.language = {'episodeName': None, 'overview': None}  # type: Dict[AnyStr, Optional[AnyStr]]
         self.productioncode = None  # type: Optional[AnyStr]
         self.showurl = None  # type: Optional[AnyStr]
@@ -564,17 +698,21 @@ class TVInfoEpisode(dict):
         self.contentrating = None  # type: Optional[AnyStr]
         self.thumbadded = None  # type: Optional[AnyStr]
         self.rating = None  # type: Union[integer_types, float]
+        self.vote_count = None  # type: integer_types
         self.siteratingcount = None  # type: integer_types
         self.show = show  # type: Optional[TVInfoShow]
+        self.alt_nums = {}  # type: Dict[AnyStr, Dict[integer_types, integer_types]]
+        self.finale_type = None  # type: Optional[integer_types]
 
     def __str__(self):
         show_name = (self.show and self.show.seriesname and '<Show  %s> - ' % self.show.seriesname) or ''
-        seasno, epno = int(getattr(self, 'seasonnumber', 0)), int(getattr(self, 'episodenumber', 0))
+        seasno, epno = int(getattr(self, 'seasonnumber', 0) or 0), int(getattr(self, 'episodenumber', 0) or 0)
         epname = getattr(self, 'episodename', '')
+        finale_str = (self.finale_type and ' (%s finale)' % final_types.get(self.finale_type).capitalize()) or ''
         if None is not epname:
-            return '%s<Episode %02dx%02d - %r>' % (show_name, seasno, epno, epname)
+            return '%s<Episode %02dx%02d - %r%s>' % (show_name, seasno, epno, epname, finale_str)
         else:
-            return '%s<Episode %02dx%02d>' % (show_name, seasno, epno)
+            return '%s<Episode %02dx%02d%s>' % (show_name, seasno, epno, finale_str)
 
     def __getattr__(self, key):
         if key in self:
@@ -696,7 +834,7 @@ class PersonBase(dict):
             country=None,  # type: AnyStr
             country_code=None,  # type: AnyStr
             country_timezone=None,  # type: AnyStr
-            ids=None,  # type: Dict
+            ids=None,  # type: TVInfoIDs
             thumb_url=None,  # type: AnyStr
             **kwargs  # type: Dict
     ):
@@ -713,7 +851,7 @@ class PersonBase(dict):
         self.country = country  # type: Optional[AnyStr]
         self.country_code = country_code  # type: Optional[AnyStr]
         self.country_timezone = country_timezone  # type: Optional[AnyStr]
-        self.ids = ids or {}  # type: Dict[int, integer_types]
+        self.ids = ids or TVInfoIDs()  # type: TVInfoIDs
 
     def calc_age(self, date=None):
         # type: (Optional[datetime.date]) -> Optional[int]
@@ -778,9 +916,9 @@ class TVInfoPerson(PersonBase):
             country=None,  # type: AnyStr
             country_code=None,  # type: AnyStr
             country_timezone=None,  # type: AnyStr
-            ids=None,  # type: Dict
+            ids=None,  # type: TVInfoIDs
             homepage=None,  # type: Optional[AnyStr]
-            social_ids=None,  # type: Dict
+            social_ids=None,  # type: TVInfoSocialIDs
             birthplace=None,  # type: AnyStr
             deathplace=None,  # type: AnyStr
             url=None,  # type: AnyStr
@@ -797,7 +935,7 @@ class TVInfoPerson(PersonBase):
             country_code=country_code, country_timezone=country_timezone, ids=ids, **kwargs)
         self.credits = []  # type: List
         self.homepage = homepage  # type: Optional[AnyStr]
-        self.social_ids = social_ids or {}  # type: Dict
+        self.social_ids = social_ids or TVInfoSocialIDs()  # type: TVInfoSocialIDs
         self.birthplace = birthplace  # type: Optional[AnyStr]
         self.deathplace = deathplace  # type: Optional[AnyStr]
         self.nicknames = nicknames or set()  # type: Set[AnyStr]
@@ -815,9 +953,9 @@ class TVInfoPerson(PersonBase):
 
 class TVInfoCharacter(PersonBase):
     def __init__(self, person=None, voice=None, plays_self=None, regular=None, ti_show=None, start_year=None,
-                 end_year=None, **kwargs):
-        # type: (List[TVInfoPerson], bool, bool, bool, TVInfoShow, int, int, Dict) -> None
-        super(TVInfoCharacter, self).__init__(**kwargs)
+                 end_year=None, ids=None, name=None, episode_count=None, guest_episodes_numbers=None, **kwargs):
+        # type: (List[TVInfoPerson], bool, bool, bool, TVInfoShow, int, int, TVInfoIDs, AnyStr, int, Dict[int, List[int]], ...) -> None
+        super(TVInfoCharacter, self).__init__(ids=ids, **kwargs)
         self.person = person  # type: List[TVInfoPerson]
         self.voice = voice  # type: Optional[bool]
         self.plays_self = plays_self  # type: Optional[bool]
@@ -825,14 +963,19 @@ class TVInfoCharacter(PersonBase):
         self.ti_show = ti_show  # type: Optional[TVInfoShow]
         self.start_year = start_year  # type: Optional[integer_types]
         self.end_year = end_year  # type: Optional[integer_types]
+        self.name = name  # type: Optional[AnyStr]
+        self.episode_count = episode_count  # type: Optional[int]
+        self.guest_episodes_numbers = guest_episodes_numbers or {}  # type: Dict[int, List[int]]
 
     def __str__(self):
         pn = []
+        char_type = ('', ' [Guest]')[False is self.regular]
+        char_show = None is not self.ti_show and ' [%s]' % self.ti_show.seriesname
         if None is not self.person:
             for p in self.person:
                 if getattr(p, 'name', None):
                     pn.append(p.name)
-        return '<Character "%s%s">' % (self.name, ('', ' - (%s)' % ', '.join(pn))[bool(pn)])
+        return '<Character%s "%s%s%s">' % (char_type, self.name, ('', ' - (%s)' % ', '.join(pn))[bool(pn)], char_show)
 
     __repr__ = __str__
 
@@ -889,6 +1032,12 @@ class RoleTypes(object):
 crew_type_names = {c.lower(): v for v, c in iteritems(RoleTypes.reverse) if v >= RoleTypes.crew_limit}
 
 
+class TVInfoSeasonTypes(object):
+    default = 'default'
+    official = 'official'
+    dvd = 'dvd'
+
+
 class TVInfoBase(object):
     supported_id_searches = []
     supported_person_id_searches = []
@@ -900,7 +1049,7 @@ class TVInfoBase(object):
     reverse_map_languages = {v: k for k, v in iteritems(map_languages)}
 
     def __init__(self, banners=False, posters=False, seasons=False, seasonwides=False, fanart=False, actors=False,
-                 *args, **kwargs):
+                 dvdorder=False, *args, **kwargs):
         global TVInfoShowContainer
         if self.__class__.__name__ not in TVInfoShowContainer:
             TVInfoShowContainer[self.__class__.__name__] = ShowContainer()
@@ -934,6 +1083,7 @@ class TVInfoBase(object):
             'fanart_enabled': fanart,
             'actors_enabled': actors,
             'cache_search': kwargs.get('cache_search'),
+            'dvdorder': dvdorder,
         }  # type: Dict[AnyStr, Any]
 
     def _must_load_data(self, sid, load_episodes, banners, posters, seasons, seasonwides, fanart, actors, lang):
@@ -1148,7 +1298,22 @@ class TVInfoBase(object):
                         if None is self.ti_shows[show_id].id:
                             with self.ti_shows.lock:
                                 del self.ti_shows[show_id]
-                    return None if show_id not in self.ti_shows else copy.deepcopy(self.ti_shows[show_id])
+                    if show_id not in self.ti_shows:
+                        return None
+                    else:
+                        show_copy = copy.deepcopy(self.ti_shows[show_id])  # type: TVInfoShow
+                        # provide old call compatibility for dvd order
+                        if self.config.get('dvdorder') and TVInfoSeasonTypes.dvd in show_copy.alt_ep_numbering:
+                            org_seasons, dvd_seasons = list_keys(show_copy), \
+                                                       list_keys(show_copy.alt_ep_numbering[TVInfoSeasonTypes.dvd])
+                            for r_season in set(org_seasons) - set(dvd_seasons):
+                                try:
+                                    del show_copy[r_season]
+                                except (BaseException, Exception):
+                                    continue
+                            for ti_season in dvd_seasons:
+                                show_copy[ti_season] = show_copy.alt_ep_numbering[TVInfoSeasonTypes.dvd][ti_season]
+                        return show_copy
                 finally:
                     try:
                         if None is self.ti_shows[show_id].id:
@@ -1166,12 +1331,13 @@ class TVInfoBase(object):
                 self._old_config = None
 
     # noinspection PyMethodMayBeStatic
-    def _search_show(self, name=None, ids=None, **kwargs):
-        # type: (Union[AnyStr, List[AnyStr]], Dict[integer_types, integer_types], Optional[Any]) -> List[Dict]
+    def _search_show(self, name=None, ids=None, lang=None, **kwargs):
+        # type: (Union[AnyStr, List[AnyStr]], Dict[integer_types, integer_types], Optional[string_types], Optional[Any]) -> List[Dict]
         """
         internal search function to find shows, should be overwritten in class
         :param name: name to search for
         :param ids: dict of ids {tvid: prodid} to search for
+        :param lang: language code
         """
         return []
 
@@ -1190,6 +1356,7 @@ class TVInfoBase(object):
             self,
             name=None,  # type: Union[AnyStr, List[AnyStr]]
             ids=None,  # type: Dict[integer_types, integer_types]
+            lang=None,  # type: Optional[string_types]
             # **kwargs  # type: Optional[Any]
     ):
         # type: (...) -> List[Dict]
@@ -1198,8 +1365,13 @@ class TVInfoBase(object):
 
         :param name: series name or list of names to search for
         :param ids: dict of ids {tvid: prodid} to search for
+        :param lang: language code
         :return: combined list of series results
         """
+        if None is lang:
+            if self.config.get('language'):
+                lang = self.config['language']
+            lang = self.map_languages.get(lang, lang)
         if not name and not ids:
             log.debug('Nothing to search')
             raise BaseTVinfoShownotfound('Nothing to search')
@@ -1208,14 +1380,15 @@ class TVInfoBase(object):
             if not name and not any(1 for i in ids if i in self.supported_id_searches):
                 log.debug('Id type not supported')
                 raise BaseTVinfoShownotfound('Id type not supported')
-            selected_series = self._search_show(name=name, ids=ids)
+            selected_series = self._search_show(name=name, ids=ids, lang=lang)
         elif name:
-            selected_series = self._search_show(name)
+            selected_series = self._search_show(name, lang=lang)
         if isinstance(selected_series, dict):
             selected_series = [selected_series]
         if not isinstance(selected_series, list) or 0 == len(selected_series):
             log.debug('Series result returned zero')
-            raise BaseTVinfoShownotfound('Show-name search returned zero results (cannot find show on TVDB)')
+            raise BaseTVinfoShownotfound('Show-name search returned zero results (cannot find show on %s)' %
+                                         self.__class__.__name__)
         return selected_series
 
     def _set_item(self, sid, seas, ep, attrib, value):
@@ -1278,6 +1451,24 @@ class TVInfoBase(object):
         """
         return {}
 
+    def get_similar(self, tvid, result_count=100, **kwargs):
+        # type: (integer_types, int, Any) -> List[TVInfoShow]
+        """
+        return list of similar shows to given id
+        :param tvid: id to give similar shows for
+        :param result_count: count of results requested
+        """
+        return []
+
+    def get_recommended_for_show(self, tvid, result_count=100, **kwargs):
+        # type: (integer_types, int, Any) -> List[TVInfoShow]
+        """
+        list of recommended shows to the provided tv id
+        :param tvid: id to find recommended shows for
+        :param result_count: result count to returned
+        """
+        return []
+
     def get_trending(self, result_count=100, **kwargs):
         # type: (...) -> List[TVInfoShow]
         """
@@ -1296,16 +1487,30 @@ class TVInfoBase(object):
     def get_top_rated(self, result_count=100, **kwargs):
         # type: (...) -> List[TVInfoShow]
         """
-        get all latest shows
+        get top rated shows
+        """
+        return []
+
+    def get_new_shows(self, result_count=100, **kwargs):
+        # type: (...) -> List[TVInfoShow]
+        """
+        get new shows
+        """
+        return []
+
+    def get_new_seasons(self, result_count=100, **kwargs):
+        # type: (...) -> List[TVInfoShow]
+        """
+        get new seasons
         """
         return []
 
     def discover(self, result_count=100, get_extra_images=False, **kwargs):
-        # type: (...) -> List[TVInfoEpisode]
+        # type: (...) -> List[TVInfoShow]
         return []
 
     def get_premieres(self, **kwargs):
-        # type: (...) -> List[TVInfoEpisode]
+        # type: (...) -> List[TVInfoShow]
         """
         get all premiering shows
         """
@@ -1315,6 +1520,93 @@ class TVInfoBase(object):
         # type: (...) -> List[TVInfoShow]
         """
         get all returning shows
+        """
+        return []
+
+    def get_most_played(self, result_count=100, **kwargs):
+        # type: (...) -> List[TVInfoShow]
+        """
+        get most played shows
+        :param result_count: how many results are suppose to be returned
+        """
+        return []
+
+    def get_most_watched(self, result_count=100, **kwargs):
+        # type: (...) -> List[TVInfoShow]
+        """
+        get most watched shows
+        :param result_count: how many results are suppose to be returned
+        """
+        return []
+
+    def get_most_collected(self, result_count=100, **kwargs):
+        # type: (...) -> List[TVInfoShow]
+        """
+        get most collected shows
+        :param result_count: how many results are suppose to be returned
+        """
+        return []
+
+    def get_recommended(self, result_count=100, **kwargs):
+        # type: (...) -> List[TVInfoShow]
+        """
+        get most recommended shows
+        :param result_count: how many results are suppose to be returned
+        """
+        return []
+
+    def get_recommended_for_account(self, account, result_count=100, **kwargs):
+        # type: (...) -> List[TVInfoShow]
+        """
+        get recommended shows for account
+        :param account: account to get recommendations for
+        :param result_count: how many results are suppose to be returned
+        """
+        return []
+
+    def hide_recommended_for_account(self, account, show_ids, **kwargs):
+        # type: (integer_types, List[integer_types], Any) -> List[integer_types]
+        """
+        hide recommended show for account
+        :param account: account to get recommendations for
+        :param show_ids: list of show_ids to no longer recommend for account
+        :return: list of added ids
+        """
+        return []
+
+    def unhide_recommended_for_account(self, account, show_ids, **kwargs):
+        # type: (integer_types, List[integer_types], Any) -> List[integer_types]
+        """
+        unhide recommended show for account
+        :param account: account to get recommendations for
+        :param show_ids: list of show_ids to be included in possible recommend for account
+        :return: list of removed ids
+        """
+        return []
+
+    def list_hidden_recommended_for_account(self, account, **kwargs):
+        # type: (integer_types, Any) -> List[TVInfoShow]
+        """
+        list hidden recommended show for account
+        :param account: account to get recommendations for
+        :return: list of hidden shows
+        """
+        return []
+
+    def get_watchlisted_for_account(self, account, result_count=100, **kwargs):
+        # type: (...) -> List[TVInfoShow]
+        """
+        get most watchlisted shows for account
+        :param account: account to get recommendations for
+        :param result_count: how many results are suppose to be returned
+        """
+        return []
+
+    def get_anticipated(self, result_count=100, **kwargs):
+        # type: (...) -> List[TVInfoShow]
+        """
+        get anticipated shows
+        :param result_count: how many results are suppose to be returned
         """
         return []
 

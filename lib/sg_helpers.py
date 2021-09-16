@@ -62,7 +62,7 @@ if False:
     from sickgear import db, notifiers as NOTIFIERS
     # noinspection PyUnresolvedReferences
     from typing import Any, AnyStr, Dict, Generator, NoReturn, integer_types, Iterable, Iterator, List, Optional, \
-        Tuple, Union
+        Tuple, Type, Union
 
 html_convert_fractions = {0: '', 25: '&frac14;', 50: '&frac12;', 75: '&frac34;', 100: 1}
 
@@ -1758,3 +1758,16 @@ def is_virtualenv():
     """Get base/real prefix, or `sys.prefix` if there is none."""
     get_base_prefix_compat = getattr(sys, 'base_prefix', None) or getattr(sys, 'real_prefix', None) or sys.prefix
     return get_base_prefix_compat != sys.prefix
+
+
+def enforce_type(value, allowed_types, default):
+    # type: (Any, Union[Type, Tuple[Type]], Any) -> Any
+    """
+    enforces that value is given type(s)
+    :param value: value to check
+    :param allowed_types: type or tuple of types allowed
+    :param default: value to return if other type
+    """
+    if not isinstance(value, allowed_types):
+        return default
+    return value

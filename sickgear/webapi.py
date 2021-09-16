@@ -3365,7 +3365,7 @@ class CMD_SickGearShowAddExisting(ApiCall):
         t = sickgear.TVInfoAPI(self.tvid).setup(**lINDEXER_API_PARMS)
 
         try:
-            myShow = t[int(self.prodid), False]
+            myShow = t.get_show(self.prodid, load_episodes=False)
         except BaseTVinfoError as e:
             self.log(f'Unable to find show with id {self.tvid}', logger.WARNING)
             return _responds(RESULT_FAILURE, msg="Unable to retrieve information from indexer")
@@ -3528,7 +3528,7 @@ class CMD_SickGearShowAddNew(ApiCall):
         t = sickgear.TVInfoAPI(self.tvid).setup(**lINDEXER_API_PARMS)
 
         try:
-            myShow = t[int(self.prodid), False]
+            myShow = t.get_show(self.prodid, load_episodes=False)
         except BaseTVinfoError as e:
             self.log(f'Unable to find show with id {self.tvid}', logger.WARNING)
             return _responds(RESULT_FAILURE, msg="Unable to retrieve information from indexer")

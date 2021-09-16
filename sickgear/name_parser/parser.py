@@ -375,7 +375,8 @@ class NameParser(object):
 
                             t = sickgear.TVInfoAPI(show_obj.tvid).setup(**tvinfo_config)
 
-                            ep_obj = t[show_obj.prodid].aired_on(best_result.air_date)[0]
+                            ep_obj = t.get_show(show_obj.prodid, language=show_obj.lang).aired_on(
+                                best_result.air_date)[0]
 
                             season_number = int(ep_obj['seasonnumber'])
                             episode_numbers = [int(ep_obj['episodenumber'])]

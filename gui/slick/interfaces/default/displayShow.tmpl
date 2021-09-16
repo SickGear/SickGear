@@ -168,7 +168,7 @@
 						<h2 class="title" id="scene_exception_$show_obj.tvid_prodid"><span>$show_obj.name</span>#echo ('', '<em id="title-status"> (ended)</em>')[$show_ended]#</h2>
 #set $genres_done = False
 #if $sg_var('USE_IMDB_INFO') and 'genres' in $show_obj.imdb_info and '' != $show_obj.imdb_info['genres']
-    #for $imdbgenre in $show_obj.imdb_info['genres'].split('|')
+    #for $imdbgenre in [$g for $g in $show_obj.imdb_info['genres'].split('|') if $g]
         #set $genres_done = True
 						<span class="label"><a href="<%= anon_url('http://www.imdb.com/search/title?at=0&genres=', imdbgenre.lower().replace('-','_'),'&amp;sort=moviemeter,asc&amp;title_type=tv_series') %>" target="_blank" title="View other popular $imdbgenre shows on imdb.com" class="addQTip">$imdbgenre.replace('Sci-Fi','Science-Fiction')</a></span>
     #end for
@@ -176,7 +176,13 @@
 #if not $genres_done and $show_obj.genre
     #for $genre in $show_obj.genre.split('|')
         #set $genres_done = True
-						<span class="label">$genre</span>
+						<span class="label">
+						#if $TVINFO_TVDB == $show_obj.tvid
+							<a href="https://thetvdb.com/genres/$genre" target="_blank" title="View other popular $genre shows on thetvdb.com" class="addQTip">$genre</a>
+						#else
+							$genre
+						#end if
+						</span>
     #end for#
 #end if
 #if not $genres_done

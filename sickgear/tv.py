@@ -57,11 +57,12 @@ from lib import imdbpie, subliminal
 from lib.dateutil import tz
 from lib.dateutil.parser import parser as du_parser
 from lib.fuzzywuzzy import fuzz
-from lib.tvinfo_base import RoleTypes, TVINFO_FACEBOOK, TVINFO_INSTAGRAM, TVINFO_SLUG, TVINFO_TWITTER, TVINFO_WIKIPEDIA
+from lib.tvinfo_base import RoleTypes, TVINFO_FACEBOOK, TVINFO_INSTAGRAM, TVINFO_SLUG, TVINFO_TWITTER, \
+    TVINFO_WIKIPEDIA, TVINFO_TIKTOK, TVINFO_FANSITE, TVINFO_YOUTUBE, TVINFO_REDDIT, TVINFO_LINKEDIN, TVINFO_WIKIDATA
 from lib.tvinfo_base.exceptions import *
 from sg_helpers import calc_age, int_to_time, remove_file_perm, time_to_int
 
-from six import integer_types, iteritems, itervalues, moves, string_types
+from six import integer_types, iteritems, iterkeys, itervalues, moves, string_types
 
 # noinspection PyUnreachableCode
 if False:
@@ -622,10 +623,12 @@ class Person(Referential):
 
                 p_ids = {}
                 for cur_ids in (cur_person['p_ids'] and cur_person['p_ids'].split(';;;')) or []:
-                    k, v = cur_ids.split(':')
+                    k, v = cur_ids.split(':', 1)
                     k = try_int(k, None)
                     if v and None is not k:
-                        p_ids[k] = v if k in (TVINFO_FACEBOOK, TVINFO_INSTAGRAM, TVINFO_TWITTER, TVINFO_WIKIPEDIA) \
+                        p_ids[k] = v if k in (TVINFO_FACEBOOK, TVINFO_INSTAGRAM, TVINFO_TWITTER, TVINFO_WIKIPEDIA,
+                                              TVINFO_TIKTOK, TVINFO_FANSITE, TVINFO_YOUTUBE, TVINFO_REDDIT,
+                                              TVINFO_LINKEDIN, TVINFO_WIKIDATA) \
                             else try_int(v, None)
 
                 (self._data_failure, self._data_fetched,
@@ -657,7 +660,8 @@ class Person(Referential):
             if person_obj.characters and char_obj and char_obj.show_obj \
                     and char_obj.show_obj.ids.get(TVINFO_IMDB, {}).get('id'):
                 p_char = [_pc for _pc in person_obj.characters
-                          if _pc.ti_show.ids.imdb == char_obj.show_obj.ids.get(TVINFO_IMDB, {}).get('id')]
+                          if _pc.ti_show and
+                          _pc.ti_show.ids.imdb == char_obj.show_obj.ids.get(TVINFO_IMDB, {}).get('id')]
                 p_count = len(p_char)
                 if 1 == p_count:
                     if (p_char[0].start_year or p_char[0].end_year) and getattr(self, 'id', None):
@@ -717,7 +721,7 @@ class Person(Referential):
         self._data_fetched = True
         tvsrc_result, found_persons, found_on_src, search_sources, \
             found_ids, ids_to_check, imdb_confirmed, source_confirmed = \
-            None, {}, set(), [TVINFO_TRAKT, TVINFO_TMDB, TVINFO_IMDB], \
+            None, {}, set(), [TVINFO_TRAKT, TVINFO_TMDB, TVINFO_IMDB, TVINFO_TVDB], \
             set([_k for _k, _v in iteritems(self.ids) if _v] + ['text']), {}, False, {}
         # confirmed_character =  False
         max_search_src = len(search_sources)
@@ -768,8 +772,10 @@ class Person(Referential):
                             if show_obj and None is not pd and pd.characters:
                                 clean_show_name = indexermapper.clean_show_name(show_obj.name.lower())
                                 for cur_ch in pd.characters or []:  # type: TVInfoCharacter
-                                    if clean_show_name == indexermapper.clean_show_name(
-                                            cur_ch.ti_show.seriesname.lower()):
+                                    if not cur_ch.ti_show:
+                                        continue
+                                    if cur_ch.ti_show.seriesname and clean_show_name == indexermapper.clean_show_name(
+                                            cur_ch.ti_show.seriesname and cur_ch.ti_show.seriesname.lower()):
                                         rp = pd
                                         confirmed_on_src = True
                                         # confirmed_character = True
@@ -807,7 +813,9 @@ class Person(Referential):
                                 found_ids.add(cur_i)
                                 self.dirty_ids = True
 
-                        for cur_i in (TVINFO_INSTAGRAM, TVINFO_TWITTER, TVINFO_FACEBOOK, TVINFO_WIKIPEDIA):
+                        for cur_i in (TVINFO_INSTAGRAM, TVINFO_TWITTER, TVINFO_FACEBOOK, TVINFO_WIKIPEDIA,
+                                      TVINFO_TIKTOK, TVINFO_FANSITE, TVINFO_YOUTUBE, TVINFO_REDDIT, TVINFO_LINKEDIN,
+                                      TVINFO_WIKIDATA):
                             if not rp.social_ids.get(cur_i):
                                 continue
                             if rp.social_ids.get(cur_i) and not self.ids.get(cur_i) or \
@@ -1137,7 +1145,7 @@ class Character(Referential):
             for cur_row in (sql_result or []):
                 c_ids = {}
                 for cur_ids in (cur_row['c_ids'] and cur_row['c_ids'].split(';;;')) or []:
-                    k, v = cur_ids.split(':')
+                    k, v = cur_ids.split(':', 1)
                     v = try_int(v, None)
                     if v:
                         c_ids[int(k)] = try_int(v, None)
@@ -1846,21 +1854,22 @@ class TVShow(TVShowBase):
             deathdate = deathdate and datetime.date.fromordinal(cur_row['deathdate'])
             p_years = {}
             for cur_p in (cur_row['p_years'] and cur_row['p_years'].split(';;;')) or []:
-                p_id, py = cur_p.split(':')
-                start, end = py.split('-')
+                p_id, py = cur_p.split(':', 1)
+                start, end = py.split('-', 1)
                 p_years[int(p_id)] = {'start': try_int(start, None), 'end': try_int(end, None)}
 
             p_ids, c_ids = {}, {}
             for cur_i in (cur_row['p_ids'] and cur_row['p_ids'].split(';;;')) or []:
-                k, v = cur_i.split(':')
+                k, v = cur_i.split(':', 1)
                 k = try_int(k, None)
                 if v:
-                    if k in (TVINFO_INSTAGRAM, TVINFO_TWITTER, TVINFO_FACEBOOK, TVINFO_WIKIPEDIA):
+                    if k in (TVINFO_INSTAGRAM, TVINFO_TWITTER, TVINFO_FACEBOOK, TVINFO_WIKIPEDIA, TVINFO_TIKTOK,
+                             TVINFO_FANSITE, TVINFO_YOUTUBE, TVINFO_REDDIT, TVINFO_LINKEDIN, TVINFO_WIKIDATA):
                         p_ids[k] = v
                     else:
                         p_ids[k] = try_int(v, None)
             for cur_i in (cur_row['c_ids'] and cur_row['c_ids'].split(';;;')) or []:
-                k, v = cur_i.split(':')
+                k, v = cur_i.split(':', 1)
                 v = try_int(v, None)
                 if v:
                     c_ids[int(k)] = try_int(v, None)
@@ -2735,6 +2744,8 @@ class TVShow(TVShowBase):
 
     def _make_airtime(self, airtime=None):
         # type: (Optional[integer_types]) -> Optional[datetime.time]
+        if isinstance(airtime, datetime.time):
+            return airtime
         if isinstance(airtime, integer_types):
             return int_to_time(airtime)
         if self._airs:
@@ -2935,7 +2946,7 @@ class TVShow(TVShowBase):
                 mc = next((_c for _c in cast_list or []
                            if (None is not cur_cast.id and _c.ids.get(self.tvid) == cur_cast.id)
                            or (unique_name and cur_cast.name and _c.name == cur_cast.name)
-                           or any(_c.ids.get(_src) == cur_cast.ids.get(_src) for _src in cur_cast.ids or {})),
+                           or any(_c.ids.get(_src) == cur_cast.ids.get(_src) for _src in iterkeys(cur_cast.ids) or {})),
                           None)  # type: Optional[Character]
                 if not mc:
                     unique_person = not any(1 for _cp in

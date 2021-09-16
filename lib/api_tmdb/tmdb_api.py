@@ -18,13 +18,13 @@ from lib.tvinfo_base import CastList, PersonGenders, RoleTypes, \
     TVINFO_IMDB, TVINFO_TMDB, TVINFO_TVDB, \
     TVINFO_FACEBOOK, TVINFO_INSTAGRAM, TVINFO_TWITTER
 from json_helper import json_dumps
-from sg_helpers import clean_data, get_url, iterate_chunk, try_int
+from sg_helpers import clean_data, enforce_type, get_url, iterate_chunk, try_int
 
 from six import iteritems
 
 # noinspection PyUnreachableCode
 if False:
-    from typing import Any, AnyStr, Dict, List, Optional
+    from typing import Any, AnyStr, Dict, List, Optional, Union
     from six import integer_types
 
 log = logging.getLogger('tmdb.api')
@@ -179,17 +179,19 @@ class TmdbIndexer(TVInfoBase):
         self.size_map = response.get('size_map')
         self.tv_genres = response.get('genres')
 
-    def _search_show(self, name=None, ids=None, **kwargs):
-        # type: (AnyStr, Dict[integer_types, integer_types], Optional[Any]) -> List[TVInfoShow]
+    def _search_show(self, name=None, ids=None, lang=None, **kwargs):
+        # type: (Union[AnyStr, List[AnyStr]], Dict[integer_types, integer_types], Optional[string_types], Optional[Any]) -> List[Dict]
         """This searches TMDB for the series name,
         """
+        tmdb_lang = ('en-US', lang)[lang in self._tmdb_supported_lang_list]
+
         def _make_result_dict(s):
             ti_show = TVInfoShow()
             ti_show.seriesname, ti_show.id, ti_show.seriesid, ti_show.firstaired, ti_show.genre_list, \
                 ti_show.overview, ti_show.poster, ti_show.ids, ti_show.language, ti_show.popularity, ti_show.rating = \
                 clean_data(s['name']), s['id'], s['id'], clean_data(s.get('first_air_date')) or None, \
                 clean_data([self.tv_genres.get(g) for g in s.get('genre_ids') or []]), \
-                clean_data(s.get('overview')), s.get('poster_path') and '%s%s%s' % (
+                enforce_type(clean_data(s.get('overview')), str, ''), s.get('poster_path') and '%s%s%s' % (
                     self.img_base_url, self.size_map[TVInfoImageType.poster][TVInfoImageSize.original],
                     s.get('poster_path')), \
                 TVInfoIDs(tvdb=s.get('external_ids') and s['external_ids'].get('tvdb_id'),
@@ -209,7 +211,7 @@ class TmdbIndexer(TVInfoBase):
                         is_none, shows = self._get_cache_entry(cache_id_key)
                         if not self.config.get('cache_search') or (None is shows and not is_none):
                             try:
-                                show = tmdbsimple.TV(id=p).info(append_to_response='external_ids')
+                                show = tmdbsimple.TV(id=p).info(append_to_response='external_ids', language=tmdb_lang)
                             except (BaseException, Exception):
                                 continue
                             self._set_cache_entry(cache_id_key, show, expire=self.search_cache_expire)
@@ -223,10 +225,10 @@ class TmdbIndexer(TVInfoBase):
                         if not self.config.get('cache_search') or (None is shows and not is_none):
                             try:
                                 show = tmdbsimple.Find(id=(p, 'tt%07d' % p)[t == TVINFO_IMDB]).info(
-                                    external_source=id_map[t])
+                                    external_source=id_map[t], language=tmdb_lang)
                                 if show.get('tv_results') and 1 == len(show['tv_results']):
                                     show = tmdbsimple.TV(id=show['tv_results'][0]['id']).info(
-                                        append_to_response='external_ids')
+                                        append_to_response='external_ids', language=tmdb_lang)
                             except (BaseException, Exception):
                                 continue
                             self._set_cache_entry(cache_id_key, show, expire=self.search_cache_expire)
@@ -241,7 +243,7 @@ class TmdbIndexer(TVInfoBase):
                 is_none, shows = self._get_cache_entry(cache_name_key)
                 if not self.config.get('cache_search') or (None is shows and not is_none):
                     try:
-                        shows = tmdbsimple.Search().tv(query=n)
+                        shows = tmdbsimple.Search().tv(query=n, language=tmdb_lang)
                         self._set_cache_entry(cache_name_key, shows, expire=self.search_cache_expire)
                         results.extend([_make_result_dict(s) for s in shows.get('results') or []])
                     except (BaseException, Exception) as e:
@@ -252,32 +254,23 @@ class TmdbIndexer(TVInfoBase):
         results = [seen.add(r.id) or r for r in results if r.id not in seen]
         return results
 
-    def _convert_person_obj(self, person_obj):
-        gender = PersonGenders.tmdb_map.get(person_obj.get('gender'), PersonGenders.unknown)
+    def _convert_person_obj(self, tmdb_person_obj):
+        gender = PersonGenders.tmdb_map.get(tmdb_person_obj.get('gender'), PersonGenders.unknown)
         try:
-            birthdate = person_obj.get('birthday') and tz_p.parse(person_obj.get('birthday')).date()
+            birthdate = tmdb_person_obj.get('birthday') and tz_p.parse(tmdb_person_obj.get('birthday')).date()
         except (BaseException, Exception):
             birthdate = None
         try:
-            deathdate = person_obj.get('deathday') and tz_p.parse(person_obj.get('deathday')).date()
+            deathdate = tmdb_person_obj.get('deathday') and tz_p.parse(tmdb_person_obj.get('deathday')).date()
         except (BaseException, Exception):
             deathdate = None
 
-        cast = person_obj.get('cast') or person_obj.get('tv_credits', {}).get('cast')
+        person_imdb_id = tmdb_person_obj.get('imdb_id') and try_int(tmdb_person_obj['imdb_id'].replace('nm', ''), None)
+        person_ids = {TVINFO_TMDB: tmdb_person_obj.get('id')}
+        if person_imdb_id:
+            person_ids.update({TVINFO_IMDB: person_imdb_id})
 
-        characters = []
-        for character in cast or []:
-            ti_show = TVInfoShow()
-            ti_show.id = character.get('id')
-            ti_show.ids = TVInfoIDs(ids={TVINFO_TMDB: ti_show.id})
-            ti_show.seriesname = clean_data(character.get('original_name'))
-            ti_show.overview = clean_data(character.get('overview'))
-            ti_show.firstaired = clean_data(character.get('first_air_date'))
-            characters.append(
-                TVInfoCharacter(name=clean_data(character.get('character')), show=ti_show)
-            )
-
-        pi = person_obj.get('images')
+        pi = tmdb_person_obj.get('images')
         image_url, main_image, thumb_url, main_thumb, image_list = None, None, None, None, []
         if pi:
             for i in sorted(pi['profiles'], key=lambda a: a['vote_average'] or 0, reverse=True):
@@ -308,19 +301,61 @@ class TmdbIndexer(TVInfoBase):
                         rating=i['vote_average'],
                         votes=i['vote_count']
                     ))
+        elif tmdb_person_obj.get('profile_path'):
+            main_image = '%s%s%s' % (
+                self.img_base_url, self.size_map[TVInfoImageType.person_poster][TVInfoImageSize.original],
+                tmdb_person_obj['profile_path'])
+            main_thumb = '%s%s%s' % (
+                self.img_base_url, self.size_map[TVInfoImageType.person_poster][TVInfoImageSize.medium],
+                tmdb_person_obj['profile_path'])
 
-        person_imdb_id = person_obj.get('imdb_id') and try_int(person_obj['imdb_id'].replace('nm', ''), None)
-        person_ids = {TVINFO_TMDB: person_obj.get('id')}
-        if person_imdb_id:
-            person_ids.update({TVINFO_IMDB: person_imdb_id})
-        return TVInfoPerson(
-            p_id=person_obj.get('id'), ids=person_ids, characters=characters,
-            name=clean_data(person_obj.get('name')), akas=clean_data(set(person_obj.get('also_known_as') or [])),
-            bio=clean_data(person_obj.get('biography')), gender=gender,
+        _it_person_obj = TVInfoPerson(
+            p_id=tmdb_person_obj.get('id'), ids=TVInfoIDs(ids=person_ids), name=clean_data(tmdb_person_obj.get('name')),
+            akas=clean_data(set(tmdb_person_obj.get('also_known_as') or [])),
+            bio=clean_data(tmdb_person_obj.get('biography')), gender=gender,
             image=main_image, images=image_list, thumb_url=main_thumb,
-            birthdate=birthdate, birthplace=clean_data(person_obj.get('place_of_birth')),
-            deathdate=deathdate, homepage=person_obj.get('homepage')
+            birthdate=birthdate, birthplace=clean_data(tmdb_person_obj.get('place_of_birth')),
+            deathdate=deathdate, homepage=tmdb_person_obj.get('homepage')
         )
+
+        cast = tmdb_person_obj.get('cast') or tmdb_person_obj.get('tv_credits', {}).get('cast') or \
+            tmdb_person_obj.get('known_for')
+
+        characters = []
+        for character in cast or []:
+            ti_show = TVInfoShow()
+            ti_show.id = character.get('id')
+            ti_show.ids = TVInfoIDs(ids={TVINFO_TMDB: ti_show.id})
+            ti_show.seriesname = enforce_type(clean_data(character.get('original_name')), str, '')
+            ti_show.overview = enforce_type(clean_data(character.get('overview')), str, '')
+            ti_show.firstaired = clean_data(character.get('first_air_date'))
+            ti_show.language = clean_data(character.get('original_language'))
+            ti_show.genre_list = []
+            for g in character.get('genre_ids') or []:
+                if g in self.tv_genres:
+                    ti_show.genre_list.append(self.tv_genres.get(g))
+            ti_show.genre = '|'.join(ti_show.genre_list)
+            if character.get('poster_path'):
+                ti_show.poster = '%s%s%s' % \
+                                 (self.img_base_url,
+                                  self.size_map[TVInfoImageType.person_poster][TVInfoImageSize.original],
+                                  character['poster_path'])
+                ti_show.poster_thumb = '%s%s%s' % \
+                                       (self.img_base_url,
+                                        self.size_map[TVInfoImageType.person_poster][TVInfoImageSize.medium],
+                                        character['poster_path'])
+            if character.get('backdrop_path'):
+                ti_show.fanart = '%s%s%s' % \
+                                 (self.img_base_url,
+                                  self.size_map[TVInfoImageType.person_poster][TVInfoImageSize.original],
+                                  character['backdrop_path'])
+            characters.append(
+                TVInfoCharacter(name=clean_data(character.get('character')), ti_show=ti_show, person=[_it_person_obj],
+                                episode_count=character.get('episode_count'))
+            )
+
+        _it_person_obj.characters = characters
+        return _it_person_obj
 
     def _search_person(self, name=None, ids=None):
         # type: (AnyStr, Dict[integer_types, integer_types]) -> List[TVInfoPerson]
@@ -420,7 +455,8 @@ class TmdbIndexer(TVInfoBase):
             ti_show.id = show_dict.get('id')
             ti_show.seriesid = ti_show.id
             ti_show.language = clean_data(show_dict.get('original_language'))
-            ti_show.overview = clean_data(show_dict.get('overview'))
+            ti_show.spoken_languages = [_l['iso_639_1'] for _l in show_dict.get('spoken_languages') or []]
+            ti_show.overview = enforce_type(clean_data(show_dict.get('overview')), str, '')
             ti_show.status = clean_data(show_dict.get('status', ''))
             ti_show.show_type = clean_data((show_dict.get('type') and [show_dict['type']]) or [])
             ti_show.firstaired = clean_data(show_dict.get('first_air_date'))
@@ -467,13 +503,14 @@ class TmdbIndexer(TVInfoBase):
                 (self.img_base_url, self.size_map[TVInfoImageType.fanart][TVInfoImageSize.original],
                  show_dict.get('backdrop_path'))
             ti_show.ids = TVInfoIDs(tvdb=show_dict.get('external_ids', {}).get('tvdb_id'),
-                                 tmdb=show_dict['id'],
-                                 rage=show_dict.get('external_ids', {}).get('tvrage_id'),
-                                 imdb=show_dict.get('external_ids', {}).get('imdb_id') and
-                                 try_int(show_dict.get('external_ids', {}).get('imdb_id', '').replace('tt', ''), None))
+                                    tmdb=show_dict['id'],
+                                    rage=show_dict.get('external_ids', {}).get('tvrage_id'),
+                                    imdb=show_dict.get('external_ids', {}).get('imdb_id')
+                                    and try_int(
+                                        show_dict.get('external_ids', {}).get('imdb_id', '').replace('tt', ''), None))
             ti_show.social_ids = TVInfoSocialIDs(twitter=show_dict.get('external_ids', {}).get('twitter_id'),
-                                              instagram=show_dict.get('external_ids', {}).get('instagram_id'),
-                                              facebook=show_dict.get('external_ids', {}).get('facebook_id'))
+                                                 instagram=show_dict.get('external_ids', {}).get('instagram_id'),
+                                                 facebook=show_dict.get('external_ids', {}).get('facebook_id'))
 
             ti_show.poster = image_url
             ti_show.poster_thumb = thumb_image_url
@@ -498,7 +535,26 @@ class TmdbIndexer(TVInfoBase):
             pass
         return result[:result_count]
 
+    def get_similar(self, tvid, result_count=100, **kwargs):
+        # type: (integer_types, int, Any) -> List[TVInfoShow]
+        """
+        list of similar shows to the provided tv id
+        :param tvid: id to find similar shows for
+        :param result_count: result count to returned
+        """
+        return self._get_show_list(tmdbsimple.TV(id=tvid).similar, result_count)
+
+    def get_recommended_for_show(self, tvid, result_count=100, **kwargs):
+        # type: (integer_types, int, Any) -> List[TVInfoShow]
+        """
+        list of recommended shows to the provided tv id
+        :param tvid: id to find recommended shows for
+        :param result_count: result count to returned
+        """
+        return self._get_show_list(tmdbsimple.TV(id=tvid).recommendations, result_count)
+
     def get_trending(self, result_count=100, time_window='day', **kwargs):
+        # type: (int, str, Any) -> List[TVInfoShow]
         """
         list of trending tv shows for day or week
         :param result_count:
@@ -508,12 +564,15 @@ class TmdbIndexer(TVInfoBase):
         return self._get_show_list(tmdbsimple.Trending(media_type='tv', time_window=t_windows).info, result_count)
 
     def get_popular(self, result_count=100, **kwargs):
+        # type: (int, Any) -> List[TVInfoShow]
         return self._get_show_list(tmdbsimple.TV().popular, result_count)
 
     def get_top_rated(self, result_count=100, **kwargs):
+        # type: (int, Any) -> List[TVInfoShow]
         return self._get_show_list(tmdbsimple.TV().top_rated, result_count)
 
     def discover(self, result_count=100, **kwargs):
+        # type: (int, Any) -> List[TVInfoShow]
         """
         Discover TV shows by different types of data like average rating,
         number of votes, genres, the network they aired on and air dates.
@@ -596,6 +655,12 @@ class TmdbIndexer(TVInfoBase):
 
         :param result_count:
         """
+        if not kwargs:
+            # use default if now kwargs are set = return all future airdate shows with language set to 'en'
+            kwargs.update({'sort_by': 'first_air_date.asc',
+                           'first_air_date.gte': datetime.date.today().strftime('%Y-%m-%d'),
+                           'with_original_language': 'en',
+                           })
         return self._get_show_list(tmdbsimple.Discover().tv, result_count, **kwargs)
 
     def _get_show_data(self, sid, language, get_ep_info=False, banners=False, posters=False, seasons=False,
@@ -693,6 +758,7 @@ class TmdbIndexer(TVInfoBase):
                             person=[
                                 TVInfoPerson(
                                     p_id=person_obj['id'], name=clean_data(person_obj['name']),
+                                    ids=TVInfoIDs(ids={TVINFO_TMDB: person_obj['id']}),
                                     image='%s%s%s' % (
                                         self.img_base_url,
                                         self.size_map[TVInfoImageType.person_poster][

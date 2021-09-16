@@ -20,9 +20,13 @@ from lib.tvinfo_base import (
     # TVINFO_FACEBOOK, TVINFO_INSTAGRAM, TVINFO_TMDB, TVINFO_TRAKT,
     # TVINFO_TVDB, TVINFO_TVRAGE, TVINFO_TWITTER, TVINFO_WIKIPEDIA,
     TVInfoBase, TVInfoIDs, TVInfoShow)
-from sg_helpers import get_url, try_int
+from sg_helpers import clean_data, enforce_type, get_url, try_int
+from json_helper import json_loads
 
 from six import iteritems
+from six.moves import http_client as httplib
+from six.moves.urllib.parse import urlencode, urljoin, quote, unquote
+
 
 # noinspection PyUnreachableCode
 if False:
@@ -32,6 +36,37 @@ if False:
 tz_p = parser()
 log = logging.getLogger('imdb.api')
 log.addHandler(logging.NullHandler())
+
+
+def _get_imdb(self, url, query=None, params=None):
+    headers = {'Accept-Language': self.locale}
+    if params:
+        full_url = '{0}?{1}'.format(url, urlencode(params))
+    else:
+        full_url = url
+    headers.update(self.get_auth_headers(full_url))
+    resp = get_url(url, headers=headers, params=params, return_response=True)
+
+    if not resp.ok:
+        if resp.status_code == httplib.NOT_FOUND:
+            raise LookupError('Resource {0} not found'.format(url))
+        else:
+            msg = '{0} {1}'.format(resp.status_code, resp.text)
+            raise imdbpie.ImdbAPIError(msg)
+    resp_data = resp.content.decode('utf-8')
+    try:
+        resp_dict = json_loads(resp_data)
+    except ValueError:
+        resp_dict = self._parse_dirty_json(
+            data=resp_data, query=query
+        )
+
+    if resp_dict.get('error'):
+        return None
+    return resp_dict
+
+
+imdbpie.Imdb._get = _get_imdb
 
 
 class IMDbIndexer(TVInfoBase):
@@ -71,9 +106,9 @@ class IMDbIndexer(TVInfoBase):
             ti_show = TVInfoShow()
             ti_show.seriesname, ti_show.id, ti_show.firstaired, ti_show.genre_list, ti_show.overview, \
                 ti_show.poster, ti_show.ids = \
-                s['title'], imdb_id, s.get('releaseDetails', {}).get('date') or s.get('year'), s.get('genres'), \
-                s.get('plot', {}).get('outline', {}).get('text'), s.get('image') and s['image'].get('url'), \
-                TVInfoIDs(imdb=imdb_id)
+                clean_data(s['title']), imdb_id, s.get('releaseDetails', {}).get('date') or s.get('year'), \
+                s.get('genres'), enforce_type(clean_data(s.get('plot', {}).get('outline', {}).get('text')), str, ''), \
+                s.get('image') and s['image'].get('url'), TVInfoIDs(imdb=imdb_id)
             return ti_show
 
         results = []
@@ -108,12 +143,12 @@ class IMDbIndexer(TVInfoBase):
     def _convert_person(person_obj, filmography=None, bio=None):
         if isinstance(person_obj, dict) and 'imdb_id' in person_obj:
             imdb_id = try_int(re.search(r'(\d+)', person_obj['imdb_id']).group(1))
-            return TVInfoPerson(p_id=imdb_id, name=person_obj['name'], ids={TVINFO_IMDB: imdb_id})
+            return TVInfoPerson(p_id=imdb_id, name=person_obj['name'], ids=TVInfoIDs(ids={TVINFO_IMDB: imdb_id}))
         characters = []
         for known_for in (filmography and filmography['filmography']) or []:
             if known_for['titleType'] not in ('tvSeries', 'tvMiniSeries'):
                 continue
-            for character in known_for.get('characters') or []:
+            for character in known_for.get('characters') or ['unknown name']:
                 ti_show = TVInfoShow()
                 ti_show.id = try_int(re.search(r'(\d+)', known_for.get('id')).group(1))
                 ti_show.ids.imdb = ti_show.id
@@ -133,7 +168,7 @@ class IMDbIndexer(TVInfoBase):
             deathdate = None
         imdb_id = try_int(re.search(r'(\d+)', person_obj['id']).group(1))
         return TVInfoPerson(
-            p_id=imdb_id, ids={TVINFO_IMDB: imdb_id}, characters=characters,
+            p_id=imdb_id, ids=TVInfoIDs(ids={TVINFO_IMDB: imdb_id}), characters=characters,
             name=person_obj['base'].get('name'), real_name=person_obj['base'].get('realName'),
             nicknames=set((person_obj['base'].get('nicknames') and person_obj['base'].get('nicknames')) or []),
             akas=set((person_obj['base'].get('akas') and person_obj['base'].get('akas')) or []),

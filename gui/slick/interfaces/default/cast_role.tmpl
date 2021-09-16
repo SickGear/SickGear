@@ -77,7 +77,7 @@ def param(visible=True, rid=None, cache_person=None, cache_char=None, person=Non
         #elif $PersonGenders.male == $cur_person.gender#
             #set $gender = 'himself'
         #end if#
-        #set $name = ($cur_person.name, $gender)[$rc_clean.sub('', $cur_person.name.lower()) == $rc_clean.sub('', $character.name.lower())]
+        #set $name = ($cur_person.name, $gender)[$rc_clean.sub('', $cur_person.name.lower()) == $rc_clean.sub('', ($character.name or 'unknown name').lower())]
 				<a href="$sbRoot/home/person?$param(person=$cur_person)">$name</a>#if 2 <= $num_people and $cur_enum + 1 == $num_people# and #elif 2 < $num_people and $cur_enum < $num_people#<span>, </span>#end if#
     #end for
 			</div>

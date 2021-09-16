@@ -7,7 +7,8 @@ from lib.api_imdb.imdb_api import IMDbIndexer
 from lib.tvinfo_base import (
     TVINFO_FACEBOOK, TVINFO_INSTAGRAM, TVINFO_TWITTER, TVINFO_WIKIPEDIA,
     TVINFO_IMDB, TVINFO_TMDB, TVINFO_TRAKT, TVINFO_TVDB, TVINFO_TVMAZE, TVINFO_TVRAGE,
-    TVINFO_TRAKT_SLUG, TVINFO_TVDB_SLUG
+    TVINFO_TRAKT_SLUG, TVINFO_TVDB_SLUG, TVINFO_TIKTOK, TVINFO_WIKIDATA, TVINFO_LINKEDIN, TVINFO_FANSITE,
+    TVINFO_REDDIT, TVINFO_YOUTUBE
 )
 
 init_config = {
@@ -134,6 +135,72 @@ tvinfo_config = {
         show_url=None,
         people_only=True,
         icon='wikipedia16.png'
+    ),
+    TVINFO_TIKTOK: dict(
+        id=TVINFO_TIKTOK,
+        name='TikTok',
+        module=None,
+        active=False,
+        mapped_only=True,
+        people_url='https://www.tiktok.com/@%s',
+        show_url=None,
+        people_only=True,
+        icon='tiktok16.png'
+    ),
+    TVINFO_WIKIDATA: dict(
+        id=TVINFO_WIKIDATA,
+        name='Wikidata',
+        module=None,
+        active=False,
+        mapped_only=True,
+        people_url='https://www.wikidata.org/wiki/%s',
+        show_url=None,
+        people_only=True,
+        icon='wikidata16.png'
+    ),
+    TVINFO_REDDIT: dict(
+        id=TVINFO_REDDIT,
+        name='Reddit',
+        module=None,
+        active=False,
+        mapped_only=True,
+        people_url='http://www.reddit.com/r/%s',
+        show_url=None,
+        people_only=True,
+        icon='reddit16.png'
+    ),
+    TVINFO_YOUTUBE: dict(
+        id=TVINFO_YOUTUBE,
+        name='Reddit',
+        module=None,
+        active=False,
+        mapped_only=True,
+        people_url='https://www.youtube.com/c/%s',
+        show_url=None,
+        people_only=True,
+        icon='youtube16.png'
+    ),
+    TVINFO_FANSITE: dict(
+        id=TVINFO_FANSITE,
+        name='Fansite',
+        module=None,
+        active=False,
+        mapped_only=True,
+        people_url='%s',
+        show_url=None,
+        people_only=True,
+        icon='fansite16.png'
+    ),
+    TVINFO_LINKEDIN: dict(
+        id=TVINFO_LINKEDIN,
+        name='Linkedin',
+        module=None,
+        active=False,
+        mapped_only=True,
+        people_url='https://www.linkedin.com/in/%s',
+        show_url=None,
+        people_only=True,
+        icon='linkedin16.png'
     )
 }
 

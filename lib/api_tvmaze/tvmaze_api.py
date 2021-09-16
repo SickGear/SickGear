@@ -103,7 +103,7 @@ show_map = {
     # 'siteratingcount': '',
     # 'lastupdated': '',
     # 'contentrating': '',
-    'rating': 'rating',
+    # 'rating': 'rating',
     'status': 'status',
     'overview': 'summary',
     # 'poster': 'image',
@@ -152,21 +152,28 @@ class TvMaze(TVInfoBase):
                     if language in cur_locale[1]['name_en'].lower():
                         language_country_code = cur_locale[0].split('_')[1].lower()
                         break
-            return {'seriesname': clean_data(s.name), 'id': s.id, 'firstaired': clean_data(s.premiered),
-                    'network': clean_data((s.network and s.network.name) or (s.web_channel and s.web_channel.name)),
-                    'genres': clean_data(isinstance(s.genres, list) and '|'.join(g.lower() for g in s.genres) or
-                                         s.genres),
-                    'overview': clean_data(s.summary), 'language': clean_data(s.language),
-                    'language_country_code': clean_data(language_country_code),
-                    'runtime': s.average_runtime or s.runtime,
-                    'type': clean_data(s.type), 'schedule': s.schedule, 'status': clean_data(s.status),
-                    'official_site': clean_data(s.official_site),
-                    'aliases': [clean_data(a.name) for a in s.akas], 'image': s.image and s.image.get('original'),
-                    'poster': s.image and s.image.get('original'),
-                    'ids': TVInfoIDs(
-                        tvdb=s.externals.get('thetvdb'), rage=s.externals.get('tvrage'), tvmaze=s.id,
-                        imdb=clean_data(s.externals.get('imdb') and try_int(s.externals.get('imdb').replace('tt', ''),
-                                                                            None)))}
+            ti_show = TVInfoShow()
+            show_type = clean_data(s.type)
+            if show_type:
+                show_type = [show_type]
+            else:
+                show_type = []
+            ti_show.seriesname, ti_show.id, ti_show.firstaired, ti_show.network, ti_show.genre_list, ti_show.overview, \
+                ti_show.language, ti_show.runtime, ti_show.show_type, ti_show.airs_dayofweek, ti_show. status, \
+                ti_show.official_site, ti_show.aliases, ti_show.poster, ti_show.ids = clean_data(s.name), s.id, \
+                clean_data(s.premiered), \
+                clean_data((s.network and s.network.name) or (s.web_channel and s.web_channel.name)), \
+                isinstance(s.genres, list) and [clean_data(g.lower()) for g in s.genres], \
+                enforce_type(clean_data(s.summary), str, ''), clean_data(s.language), \
+                s.average_runtime or s.runtime, show_type, ', '.join(s.schedule['days'] or []), clean_data(s.status), \
+                clean_data(s.official_site), [clean_data(a.name) for a in s.akas], \
+                s.image and s.image.get('original'), \
+                TVInfoIDs(tvdb=s.externals.get('thetvdb'), rage=s.externals.get('tvrage'), tvmaze=s.id,
+                          imdb=clean_data(s.externals.get('imdb') and
+                                          try_int(s.externals.get('imdb').replace('tt', ''), None)))
+            ti_show.genre = '|'.join(ti_show.genre_list or [])
+            return ti_show
+
         results = []
         if ids:
             for t, p in iteritems(ids):
@@ -230,18 +237,24 @@ class TvMaze(TVInfoBase):
                 ('episodename', 'title'), ('overview', 'summary'), ('firstaired', 'airdate'),
                 ('airtime', 'airtime'), ('runtime', 'runtime'),
                 ('seriesid', 'maze_id'), ('id', 'maze_id'), ('is_special', 'special'), ('filename', 'image')):
-            if 'filename' == _k:
+            if 'airtime' == _k:
+                try:
+                    airtime = datetime.time.fromisoformat(clean_data(getattr(ep_obj, _s, getattr(empty_ep, _k))))
+                except (BaseException, Exception):
+                    airtime = None
+                self._set_item(sid, ep_obj.season_number, ep_obj.episode_number or 0, _k, airtime)
+            elif 'filename' == _k:
                 image = getattr(ep_obj, _s, {}) or {}
                 image = image.get('original') or image.get('medium')
-                self._set_item(sid, ep_obj.season_number, ep_obj.episode_number, _k, image)
+                self._set_item(sid, ep_obj.season_number, ep_obj.episode_number or 0, _k, image)
             else:
-                self._set_item(sid, ep_obj.season_number, ep_obj.episode_number, _k,
+                self._set_item(sid, ep_obj.season_number, ep_obj.episode_number or 0, _k,
                                clean_data(getattr(ep_obj, _s, getattr(empty_ep, _k))))
 
         if ep_obj.airstamp:
             try:
                 at = _datetime_to_timestamp(tz_p.parse(ep_obj.airstamp))
-                self._set_item(sid, ep_obj.season_number, ep_obj.episode_number, 'timestamp', at)
+                self._set_item(sid, ep_obj.season_number, ep_obj.episode_number or 0, 'timestamp', at)
             except (BaseException, Exception):
                 pass
 
@@ -318,137 +331,12 @@ class TvMaze(TVInfoBase):
             return False
 
         ti_show = self.ti_shows[sid]  # type: TVInfoShow
-        show_obj = ti_show.__dict__
-        for k, v in iteritems(show_obj):
-            if k not in ('cast', 'crew', 'images', 'aliases'):
-                show_obj[k] = getattr(show_data, show_map.get(k, k), clean_data(show_obj[k]))
-        ti_show.aliases = [clean_data(a.name) for a in show_data.akas]
-        ti_show.runtime = show_data.average_runtime or show_data.runtime
-        p_set = False
-        if show_data.image:
-            p_set = True
-            ti_show.poster = show_data.image.get('original')
-            ti_show.poster_thumb = show_data.image.get('medium')
-
-        if (banners or posters or fanart or
-                any(self.config.get('%s_enabled' % t, False) for t in ('banners', 'posters', 'fanart'))) and \
-                not all(getattr(ti_show, '%s_loaded' % t, False) for t in ('poster', 'banner', 'fanart')):
-            if show_data.images:
-                ti_show.poster_loaded = True
-                ti_show.banner_loaded = True
-                ti_show.fanart_loaded = True
-                self._set_images(ti_show, show_data, p_set)
-
-        if show_data.schedule:
-            if 'time' in show_data.schedule:
-                ti_show.airs_time = show_data.schedule['time']
-                try:
-                    h, m = show_data.schedule['time'].split(':')
-                    h, m = try_int(h, None), try_int(m, None)
-                    if None is not h and None is not m:
-                        ti_show.time = datetime.time(hour=h, minute=m)
-                except (BaseException, Exception):
-                    pass
-            if 'days' in show_data.schedule:
-                ti_show.airs_dayofweek = ', '.join(show_data.schedule['days'])
-        if show_data.genres:
-            ti_show.genre = '|'.join(show_data.genres).lower()
-
-        if (actors or self.config['actors_enabled']) and not getattr(self.ti_shows.get(sid), 'actors_loaded', False):
-            if show_data.cast:
-                character_person_ids = {}
-                for cur_ch in ti_show.cast[RoleTypes.ActorMain]:
-                    character_person_ids.setdefault(cur_ch.id, []).extend([p.id for p in cur_ch.person])
-                for cur_ch in show_data.cast.characters:
-                    existing_character = next((c for c in ti_show.cast[RoleTypes.ActorMain] if c.id == cur_ch.id),
-                                              None)  # type: Optional[TVInfoCharacter]
-                    person = self._convert_person(cur_ch.person)
-                    if existing_character:
-                        existing_person = next((p for p in existing_character.person
-                                                if person.id == p.ids.get(TVINFO_TVMAZE)),
-                                               None)  # type: TVInfoPerson
-                        if existing_person:
-                            try:
-                                character_person_ids[cur_ch.id].remove(existing_person.id)
-                            except (BaseException, Exception):
-                                print('error')
-                                pass
-                            (existing_person.p_id, existing_person.name, existing_person.image, existing_person.gender,
-                             existing_person.birthdate, existing_person.deathdate, existing_person.country,
-                             existing_person.country_code, existing_person.country_timezone, existing_person.thumb_url,
-                             existing_person.url, existing_person.ids) = \
-                                (cur_ch.person.id, clean_data(cur_ch.person.name),
-                                 cur_ch.person.image and cur_ch.person.image.get('original'),
-                                 PersonGenders.named.get(
-                                     cur_ch.person.gender and cur_ch.person.gender.lower(), PersonGenders.unknown),
-                                 person.birthdate, person.deathdate,
-                                 cur_ch.person.country and clean_data(cur_ch.person.country.get('name')),
-                                 cur_ch.person.country and clean_data(cur_ch.person.country.get('code')),
-                                 cur_ch.person.country and clean_data(cur_ch.person.country.get('timezone')),
-                                 cur_ch.person.image and cur_ch.person.image.get('medium'),
-                                 cur_ch.person.url, {TVINFO_TVMAZE: cur_ch.person.id})
-                        else:
-                            existing_character.person.append(person)
-                    else:
-                        ti_show.cast[RoleTypes.ActorMain].append(
-                            TVInfoCharacter(image=cur_ch.image and cur_ch.image.get('original'), name=clean_data(cur_ch.name),
-                                            p_id=cur_ch.id, person=[person], plays_self=cur_ch.plays_self,
-                                            thumb_url=cur_ch.image and cur_ch.image.get('medium')
-                                            ))
-
-                if character_person_ids:
-                    for cur_ch, cur_p_ids in iteritems(character_person_ids):
-                        if cur_p_ids:
-                            char = next((mc for mc in ti_show.cast[RoleTypes.ActorMain] if mc.id == cur_ch),
-                                        None)  # type: Optional[TVInfoCharacter]
-                            if char:
-                                char.person = [p for p in char.person if p.id not in cur_p_ids]
-
-                if show_data.cast:
-                    ti_show.actors = [
-                        {'character': {'id': ch.id,
-                                       'name': clean_data(ch.name),
-                                       'url': 'https://www.tvmaze.com/character/view?id=%s' % ch.id,
-                                       'image': ch.image and ch.image.get('original'),
-                                       },
-                         'person': {'id': ch.person and ch.person.id,
-                                    'name': ch.person and clean_data(ch.person.name),
-                                    'url': ch.person and 'https://www.tvmaze.com/person/view?id=%s' % ch.person.id,
-                                    'image': ch.person and ch.person.image and ch.person.image.get('original'),
-                                    'birthday': None,  # not sure about format
-                                    'deathday': None,  # not sure about format
-                                    'gender': ch.person and ch.person.gender and ch.person.gender,
-                                    'country': ch.person and ch.person.country and
-                                    clean_data(ch.person.country.get('name')),
-                                    },
-                         } for ch in show_data.cast.characters]
-
-            if show_data.crew:
-                for cur_cw in show_data.crew:
-                    rt = crew_type_names.get(cur_cw.type.lower(), RoleTypes.CrewOther)
-                    ti_show.crew[rt].append(
-                        Crew(p_id=cur_cw.person.id, name=clean_data(cur_cw.person.name),
-                             image=cur_cw.person.image and cur_cw.person.image.get('original'),
-                             gender=cur_cw.person.gender,
-                             birthdate=cur_cw.person.birthday, deathdate=cur_cw.person.death_day,
-                             country=cur_cw.person.country and cur_cw.person.country.get('name'),
-                             country_code=cur_cw.person.country and clean_data(cur_cw.person.country.get('code')),
-                             country_timezone=cur_cw.person.country
-                             and clean_data(cur_cw.person.country.get('timezone')),
-                             crew_type_name=cur_cw.type,
-                             )
-                    )
-
-        if show_data.externals:
-            ti_show.ids = TVInfoIDs(tvdb=show_data.externals.get('thetvdb'),
-                                    rage=show_data.externals.get('tvrage'),
-                                    imdb=clean_data(show_data.externals.get('imdb') and
-                                    try_int(show_data.externals.get('imdb').replace('tt', ''), None)))
-
-        if show_data.network:
-            self._set_network(ti_show, show_data.network, False)
-        elif show_data.web_channel:
-            self._set_network(ti_show, show_data.web_channel, True)
+        self._show_info_loader(
+            sid, show_data, ti_show,
+            load_images=banners or posters or fanart or
+            any(self.config.get('%s_enabled' % t, False) for t in ('banners', 'posters', 'fanart')),
+            load_actors=(actors or self.config['actors_enabled'])
+        )
 
         if get_ep_info and not getattr(self.ti_shows.get(sid), 'ep_loaded', False):
             log.debug('Getting all episodes of %s' % sid)
@@ -509,10 +397,10 @@ class TvMaze(TVInfoBase):
         # type: (...) -> Dict[integer_types, integer_types]
         return {sid: v.seconds_since_epoch for sid, v in iteritems(tvmaze.show_updates().updates)}
 
-    @staticmethod
-    def _convert_person(person_obj):
+    def _convert_person(self, tvmaze_person_obj):
         # type: (tvmaze.Person) -> TVInfoPerson
         ch = []
+        _dupes = []
         for c in tvmaze_person_obj.castcredits or []:
             ti_show = TVInfoShow()
             ti_show.seriesname = clean_data(c.show.name)
@@ -531,24 +419,239 @@ class TvMaze(TVInfoBase):
                 ti_show.network_is_stream = None is not c.show.web_channel
             ch.append(TVInfoCharacter(name=clean_data(c.character.name), ti_show=ti_show, episode_count=1))
         try:
-            birthdate = person_obj.birthday and tz_p.parse(person_obj.birthday).date()
+            birthdate = tvmaze_person_obj.birthday and tz_p.parse(tvmaze_person_obj.birthday).date()
         except (BaseException, Exception):
             birthdate = None
         try:
-            deathdate = person_obj.death_day and tz_p.parse(person_obj.death_day).date()
+            deathdate = tvmaze_person_obj.death_day and tz_p.parse(tvmaze_person_obj.death_day).date()
         except (BaseException, Exception):
             deathdate = None
-        return TVInfoPerson(p_id=person_obj.id, name=clean_data(person_obj.name),
-                            image=person_obj.image and person_obj.image.get('original'),
-                            gender=PersonGenders.named.get(person_obj.gender and person_obj.gender.lower(),
-                                                     PersonGenders.unknown),
-                            birthdate=birthdate, deathdate=deathdate,
-                            country=person_obj.country and clean_data(person_obj.country.get('name')),
-                            country_code=person_obj.country and clean_data(person_obj.country.get('code')),
-                            country_timezone=person_obj.country and clean_data(person_obj.country.get('timezone')),
-                            thumb_url=person_obj.image and person_obj.image.get('medium'),
-                            url=person_obj.url, ids={TVINFO_TVMAZE: person_obj.id}, characters=ch
+
+        _ti_person_obj = TVInfoPerson(
+            p_id=tvmaze_person_obj.id, name=clean_data(tvmaze_person_obj.name),
+            image=tvmaze_person_obj.image and tvmaze_person_obj.image.get('original'),
+            gender=PersonGenders.named.get(tvmaze_person_obj.gender and tvmaze_person_obj.gender.lower(),
+                                           PersonGenders.unknown),
+            birthdate=birthdate, deathdate=deathdate,
+            country=tvmaze_person_obj.country and clean_data(tvmaze_person_obj.country.get('name')),
+            country_code=tvmaze_person_obj.country and clean_data(tvmaze_person_obj.country.get('code')),
+            country_timezone=tvmaze_person_obj.country and clean_data(tvmaze_person_obj.country.get('timezone')),
+            thumb_url=tvmaze_person_obj.image and tvmaze_person_obj.image.get('medium'),
+            url=tvmaze_person_obj.url, ids=TVInfoIDs(ids={TVINFO_TVMAZE: tvmaze_person_obj.id})
+        )
+
+        for (c_t, regular) in [(tvmaze_person_obj.castcredits or [], True),
+                               (tvmaze_person_obj.guestcastcredits or [], False)]:
+            for c in c_t:  # type: tvmaze.CastCredit
+                _show = c.show or c.episode.show
+                _clean_char_name = clean_data(c.character.name)
+                ti_show = TVInfoShow()
+                if None is not _show:
+                    _clean_show_name = clean_data(_show.name)
+                    _clean_show_id = clean_data(_show.id)
+                    _cur_dup = (_clean_char_name, _clean_show_id)
+                    if _cur_dup in _dupes:
+                        _co = next((_c for _c in ch if _clean_show_id == _c.ti_show.id
+                                    and _c.name == _clean_char_name), None)
+                        if None is not _co:
+                            ti_show = _co.ti_show
+                            _co.episode_count += 1
+                            if not regular:
+                                ep_no = c.episode.episode_number or 0
+                                _co.guest_episodes_numbers.setdefault(c.episode.season_number, []).append(ep_no)
+                                if c.episode.season_number not in ti_show:
+                                    season = TVInfoSeason(show=ti_show, number=c.episode.season_number)
+                                    ti_show[c.episode.season_number] = season
+                                else:
+                                    season = ti_show[c.episode.season_number]
+                                episode = self._make_episode(c.episode, show_obj=ti_show)
+                                episode.season = season
+                                ti_show[c.episode.season_number][ep_no] = episode
+                        continue
+                    else:
+                        _dupes.append(_cur_dup)
+                    ti_show.seriesname = clean_data(_show.name)
+                    ti_show.id = _show.id
+                    ti_show.firstaired = clean_data(_show.premiered)
+                    ti_show.ids = TVInfoIDs(ids={TVINFO_TVMAZE: ti_show.id})
+                    ti_show.overview = enforce_type(clean_data(_show.summary), str, '')
+                    ti_show.status = clean_data(_show.status)
+                    net = _show.network or _show.web_channel
+                    if net:
+                        ti_show.network = clean_data(net.name)
+                        ti_show.network_id = net.maze_id
+                        ti_show.network_country = clean_data(net.country)
+                        ti_show.network_timezone = clean_data(net.timezone)
+                        ti_show.network_country_code = clean_data(net.code)
+                    ti_show.network_is_stream = None is not _show.web_channel
+                    if c.episode:
+
+                        ti_show.show_loaded = False
+                        ti_show.load_method = self._show_info_loader
+                        season = TVInfoSeason(show=ti_show, number=c.episode.season_number)
+                        ti_show[c.episode.season_number] = season
+                        episode = self._make_episode(c.episode, show_obj=ti_show)
+                        episode.season = season
+                        ti_show[c.episode.season_number][c.episode.episode_number or 0] = episode
+                if not regular:
+                    _g_kw = {'guest_episodes_numbers': {c.episode.season_number: [c.episode.episode_number or 0]}}
+                else:
+                    _g_kw = {}
+                ch.append(TVInfoCharacter(name=_clean_char_name, ti_show=ti_show, regular=regular, episode_count=1,
+                                          person=[_ti_person_obj], **_g_kw))
+        _ti_person_obj.characters = ch
+        return _ti_person_obj
+
+    def _show_info_loader(self, show_id, show_data=None, show_obj=None, load_images=True, load_actors=True):
+        # type: (int, TVMazeShow, TVInfoShow, bool, bool) -> TVInfoShow
+        try:
+            _s_d = show_data or tvmaze.show_main_info(show_id, embed='cast')
+            if _s_d:
+                if None is not show_obj:
+                    _s_o = show_obj
+                else:
+                    _s_o = TVInfoShow()
+                show_dict = _s_o.__dict__
+                for k, v in iteritems(show_dict):
+                    if k not in ('cast', 'crew', 'images', 'aliases', 'rating'):
+                        show_dict[k] = getattr(_s_d, show_map.get(k, k), clean_data(show_dict[k]))
+                _s_o.aliases = [clean_data(a.name) for a in _s_d.akas]
+                _s_o.runtime = _s_d.average_runtime or _s_d.runtime
+                p_set = False
+                if _s_d.image:
+                    p_set = True
+                    _s_o.poster = _s_d.image.get('original')
+                    _s_o.poster_thumb = _s_d.image.get('medium')
+
+                if load_images and \
+                        not all(getattr(_s_o, '%s_loaded' % t, False) for t in ('poster', 'banner', 'fanart')):
+                    if _s_d.images:
+                        _s_o.poster_loaded = True
+                        _s_o.banner_loaded = True
+                        _s_o.fanart_loaded = True
+                        self._set_images(_s_o, _s_d, p_set)
+
+                if _s_d.schedule:
+                    if 'time' in _s_d.schedule:
+                        _s_o.airs_time = _s_d.schedule['time']
+                        try:
+                            h, m = _s_d.schedule['time'].split(':')
+                            h, m = try_int(h, None), try_int(m, None)
+                            if None is not h and None is not m:
+                                _s_o.time = datetime.time(hour=h, minute=m)
+                        except (BaseException, Exception):
+                            pass
+                    if 'days' in _s_d.schedule:
+                        _s_o.airs_dayofweek = ', '.join(_s_d.schedule['days'])
+
+                if load_actors and not _s_o.actors_loaded:
+                    if _s_d.cast:
+                        character_person_ids = {}
+                        for cur_ch in _s_o.cast[RoleTypes.ActorMain]:
+                            character_person_ids.setdefault(cur_ch.id, []).extend([p.id for p in cur_ch.person])
+                        for cur_ch in _s_d.cast.characters:
+                            existing_character = next(
+                                (c for c in _s_o.cast[RoleTypes.ActorMain] if c.id == cur_ch.id),
+                                None)  # type: Optional[TVInfoCharacter]
+                            person = self._convert_person(cur_ch.person)
+                            if existing_character:
+                                existing_person = next((p for p in existing_character.person
+                                                        if person.id == p.ids.get(TVINFO_TVMAZE)),
+                                                       None)  # type: TVInfoPerson
+                                if existing_person:
+                                    try:
+                                        character_person_ids[cur_ch.id].remove(existing_person.id)
+                                    except (BaseException, Exception):
+                                        print('error')
+                                        pass
+                                    (existing_person.p_id, existing_person.name, existing_person.image,
+                                     existing_person.gender,
+                                     existing_person.birthdate, existing_person.deathdate, existing_person.country,
+                                     existing_person.country_code, existing_person.country_timezone,
+                                     existing_person.thumb_url,
+                                     existing_person.url, existing_person.ids) = \
+                                        (cur_ch.person.id, clean_data(cur_ch.person.name),
+                                         cur_ch.person.image and cur_ch.person.image.get('original'),
+                                         PersonGenders.named.get(
+                                             cur_ch.person.gender and cur_ch.person.gender.lower(),
+                                             PersonGenders.unknown),
+                                         person.birthdate, person.deathdate,
+                                         cur_ch.person.country and clean_data(cur_ch.person.country.get('name')),
+                                         cur_ch.person.country and clean_data(cur_ch.person.country.get('code')),
+                                         cur_ch.person.country and clean_data(cur_ch.person.country.get('timezone')),
+                                         cur_ch.person.image and cur_ch.person.image.get('medium'),
+                                         cur_ch.person.url, {TVINFO_TVMAZE: cur_ch.person.id})
+                                else:
+                                    existing_character.person.append(person)
+                            else:
+                                _s_o.cast[RoleTypes.ActorMain].append(
+                                    TVInfoCharacter(image=cur_ch.image and cur_ch.image.get('original'),
+                                                    name=clean_data(cur_ch.name),
+                                                    ids=TVInfoIDs({TVINFO_TVMAZE: cur_ch.id}),
+                                                    p_id=cur_ch.id, person=[person], plays_self=cur_ch.plays_self,
+                                                    thumb_url=cur_ch.image and cur_ch.image.get('medium'),
+                                                    ti_show=_s_o
+                                                    ))
+
+                        if character_person_ids:
+                            for cur_ch, cur_p_ids in iteritems(character_person_ids):
+                                if cur_p_ids:
+                                    char = next((mc for mc in _s_o.cast[RoleTypes.ActorMain] if mc.id == cur_ch),
+                                                None)  # type: Optional[TVInfoCharacter]
+                                    if char:
+                                        char.person = [p for p in char.person if p.id not in cur_p_ids]
+
+                        if _s_d.cast:
+                            _s_o.actors = [
+                                {'character': {'id': ch.id,
+                                               'name': clean_data(ch.name),
+                                               'url': 'https://www.tvmaze.com/character/view?id=%s' % ch.id,
+                                               'image': ch.image and ch.image.get('original'),
+                                               },
+                                 'person': {'id': ch.person and ch.person.id,
+                                            'name': ch.person and clean_data(ch.person.name),
+                                            'url': ch.person and 'https://www.tvmaze.com/person/view?id=%s' % ch.person.id,
+                                            'image': ch.person and ch.person.image and ch.person.image.get('original'),
+                                            'birthday': None,  # not sure about format
+                                            'deathday': None,  # not sure about format
+                                            'gender': ch.person and ch.person.gender and ch.person.gender,
+                                            'country': ch.person and ch.person.country and
+                                                       clean_data(ch.person.country.get('name')),
+                                            },
+                                 } for ch in _s_d.cast.characters]
+
+                    if _s_d.crew:
+                        for cur_cw in _s_d.crew:
+                            rt = crew_type_names.get(cur_cw.type.lower(), RoleTypes.CrewOther)
+                            _s_o.crew[rt].append(
+                                Crew(p_id=cur_cw.person.id, name=clean_data(cur_cw.person.name),
+                                     image=cur_cw.person.image and cur_cw.person.image.get('original'),
+                                     gender=cur_cw.person.gender,
+                                     birthdate=cur_cw.person.birthday, deathdate=cur_cw.person.death_day,
+                                     country=cur_cw.person.country and cur_cw.person.country.get('name'),
+                                     country_code=cur_cw.person.country and clean_data(
+                                         cur_cw.person.country.get('code')),
+                                     country_timezone=cur_cw.person.country
+                                                      and clean_data(cur_cw.person.country.get('timezone')),
+                                     crew_type_name=cur_cw.type,
+                                     )
                             )
+
+                if _s_d.externals:
+                    _s_o.ids = TVInfoIDs(tvdb=_s_d.externals.get('thetvdb'),
+                                         rage=_s_d.externals.get('tvrage'),
+                                         imdb=clean_data(_s_d.externals.get('imdb') and
+                                                         try_int(_s_d.externals.get('imdb').replace('tt', ''),
+                                                                 None)))
+
+                if _s_d.network:
+                    self._set_network(_s_o, _s_d.network, False)
+                elif _s_d.web_channel:
+                    self._set_network(_s_o, _s_d.web_channel, True)
+
+                return _s_o
+        except (BaseException, Exception):
+            pass
 
     def _search_person(self, name=None, ids=None):
         # type: (AnyStr, Dict[integer_types, integer_types]) -> List[TVInfoPerson]
@@ -597,64 +700,71 @@ class TvMaze(TVInfoBase):
             return self._convert_person(p)
 
     def get_premieres(self, **kwargs):
-        # type: (...) -> List[TVInfoEpisode]
-        return self._filtered_schedule(**kwargs).get('premieres')
+        # type: (...) -> List[TVInfoShow]
+        return [_e.show for _e in self._filtered_schedule(**kwargs).get('premieres')]
 
     def get_returning(self, **kwargs):
-        # type: (...) -> List[TVInfoEpisode]
-        return self._filtered_schedule(**kwargs).get('returning')
+        # type: (...) -> List[TVInfoShow]
+        return [_e.show for _e in self._filtered_schedule(**kwargs).get('returning')]
 
-    def _make_episode(self, episode_data, show_data=None, get_images=False, get_akas=False):
-        # type: (TVMazeEpisode, TVMazeShow, bool, bool) -> TVInfoEpisode
+    def _make_episode(self, episode_data, show_data=None, get_images=False, get_akas=False, show_obj=None):
+        # type: (TVMazeEpisode, TVMazeShow, bool, bool, TVInfoShow) -> TVInfoEpisode
         """
         make out of TVMazeEpisode object and optionally TVMazeShow a TVInfoEpisode
         """
-        ti_show = TVInfoShow()
-        ti_show.seriesname = clean_data(show_data.name)
-        ti_show.id = show_data.maze_id
-        ti_show.seriesid = ti_show.id
-        ti_show.language = clean_data(show_data.language)
-        ti_show.overview = clean_data(show_data.summary)
-        ti_show.firstaired = clean_data(show_data.premiered)
-        ti_show.runtime = show_data.average_runtime or show_data.runtime
-        ti_show.vote_average = show_data.rating and show_data.rating.get('average')
-        ti_show.popularity = show_data.weight
-        ti_show.genre_list = clean_data(show_data.genres or [])
-        ti_show.genre = '|'.join(ti_show.genre_list).lower()
-        ti_show.official_site = clean_data(show_data.official_site)
-        ti_show.status = clean_data(show_data.status)
-        ti_show.show_type = clean_data((isinstance(show_data.type, string_types) and [show_data.type.lower()] or
-                                        isinstance(show_data.type, list) and [x.lower() for x in show_data.type] or []))
-        ti_show.lastupdated = show_data.updated
-        ti_show.poster = show_data.image and show_data.image.get('original')
-        if get_akas:
-            ti_show.aliases = [clean_data(a.name) for a in show_data.akas]
-        if 'days' in show_data.schedule:
-            ti_show.airs_dayofweek = ', '.join(clean_data(show_data.schedule['days']))
-        network = show_data.network or show_data.web_channel
-        if network:
-            ti_show.network_is_stream = None is not show_data.web_channel
-            ti_show.network = clean_data(network.name)
-            ti_show.network_id = network.maze_id
-            ti_show.network_country = clean_data(network.country)
-            ti_show.network_country_code = clean_data(network.code)
-            ti_show.network_timezone = clean_data(network.timezone)
-        if get_images and show_data.images:
-            self._set_images(ti_show, show_data, False)
-        ti_show.ids = TVInfoIDs(
-            tvdb=show_data.externals.get('thetvdb'), rage=show_data.externals.get('tvrage'), tvmaze=show_data.id,
-            imdb=clean_data(show_data.externals.get('imdb') and
-                            try_int(show_data.externals.get('imdb').replace('tt', ''), None)))
-        ti_show.imdb_id = clean_data(show_data.externals.get('imdb'))
-        if isinstance(ti_show.imdb_id, integer_types):
-            ti_show.imdb_id = 'tt%07d' % ti_show.imdb_id
+        if None is not show_obj:
+            ti_show = show_obj
+        else:
+            ti_show = TVInfoShow()
+            ti_show.seriesname = clean_data(show_data.name)
+            ti_show.id = show_data.maze_id
+            ti_show.seriesid = ti_show.id
+            ti_show.language = clean_data(show_data.language)
+            ti_show.overview = enforce_type(clean_data(show_data.summary), str, '')
+            ti_show.firstaired = clean_data(show_data.premiered)
+            ti_show.runtime = show_data.average_runtime or show_data.runtime
+            ti_show.vote_average = show_data.rating and show_data.rating.get('average')
+            ti_show.rating = ti_show.vote_average
+            ti_show.popularity = show_data.weight
+            ti_show.genre_list = clean_data(show_data.genres or [])
+            ti_show.genre = '|'.join(ti_show.genre_list).lower()
+            ti_show.official_site = clean_data(show_data.official_site)
+            ti_show.status = clean_data(show_data.status)
+            ti_show.show_type = clean_data((isinstance(show_data.type, string_types) and [show_data.type.lower()] or
+                                            isinstance(show_data.type, list) and [x.lower() for x in show_data.type] or []))
+            ti_show.lastupdated = show_data.updated
+            ti_show.poster = show_data.image and show_data.image.get('original')
+            if get_akas:
+                ti_show.aliases = [clean_data(a.name) for a in show_data.akas]
+            if show_data.schedule and 'days' in show_data.schedule:
+                ti_show.airs_dayofweek = ', '.join(clean_data(show_data.schedule['days']))
+            network = show_data.network or show_data.web_channel
+            if network:
+                ti_show.network_is_stream = None is not show_data.web_channel
+                ti_show.network = clean_data(network.name)
+                ti_show.network_id = network.maze_id
+                ti_show.network_country = clean_data(network.country)
+                ti_show.network_country_code = clean_data(network.code)
+                ti_show.network_timezone = clean_data(network.timezone)
+            if get_images and show_data.images:
+                self._set_images(ti_show, show_data, False)
+            ti_show.ids = TVInfoIDs(
+                tvdb=show_data.externals.get('thetvdb'), rage=show_data.externals.get('tvrage'), tvmaze=show_data.id,
+                imdb=clean_data(show_data.externals.get('imdb') and
+                                try_int(show_data.externals.get('imdb').replace('tt', ''), None)))
+            ti_show.imdb_id = clean_data(show_data.externals.get('imdb'))
+            if isinstance(ti_show.imdb_id, integer_types):
+                ti_show.imdb_id = 'tt%07d' % ti_show.imdb_id
 
         ti_episode = TVInfoEpisode(show=ti_show)
         ti_episode.id = episode_data.maze_id
         ti_episode.seasonnumber = episode_data.season_number
-        ti_episode.episodenumber = episode_data.episode_number
+        ti_episode.episodenumber = episode_data.episode_number or 0
         ti_episode.episodename = clean_data(episode_data.title)
-        ti_episode.airtime = clean_data(episode_data.airtime)
+        try:
+            ti_episode.airtime = datetime.time.fromisoformat(clean_data(episode_data.airtime))
+        except (BaseException, Exception):
+            ti_episode.airtime = None
         ti_episode.firstaired = clean_data(episode_data.airdate)
         if episode_data.airstamp:
             try:
@@ -665,8 +775,13 @@ class TvMaze(TVInfoBase):
         ti_episode.filename = episode_data.image and (episode_data.image.get('original') or
                                                       episode_data.image.get('medium'))
         ti_episode.is_special = episode_data.is_special()
-        ti_episode.overview = clean_data(episode_data.summary)
+        ti_episode.overview = enforce_type(clean_data(episode_data.summary), str, '')
         ti_episode.runtime = episode_data.runtime
+        if ti_episode.seasonnumber not in ti_show:
+            season = TVInfoSeason(show=ti_show, number=ti_episode.seasonnumber)
+            ti_show[ti_episode.seasonnumber] = season
+            ti_episode.season = season
+        ti_show[ti_episode.seasonnumber][ti_episode.episodenumber] = ti_episode
         return ti_episode
 
     def _filtered_schedule(self, **kwargs):
