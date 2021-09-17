@@ -1633,13 +1633,15 @@ class CMD_SickGearHistory(ApiCall):
         if 0 == ulimit:
             # noinspection SqlResolve
             sql_result = my_db.select(
-                "SELECT h.*, show_name, s.indexer FROM history h, tv_shows s WHERE h.showid=s.indexer_id" +
+                "SELECT h.*, show_name, s.indexer FROM history h, tv_shows s WHERE h.hide = 0" +
+                " AND h.showid=s.indexer_id" +
                 ("", " AND s.indexer=%s" % TVINFO_TVDB)[self.sickbeard_call] +
                 " AND action in (" + ','.join(['?'] * len(typeCodes)) + ") ORDER BY date DESC", typeCodes)
         else:
             # noinspection SqlResolve
             sql_result = my_db.select(
-                "SELECT h.*, show_name, s.indexer FROM history h, tv_shows s WHERE h.showid=s.indexer_id" +
+                "SELECT h.*, show_name, s.indexer FROM history h, tv_shows s WHERE h.hide = 0" +
+                " AND h.showid=s.indexer_id" +
                 ("", " AND s.indexer=%s" % TVINFO_TVDB)[self.sickbeard_call] +
                 " AND action in (" + ','.join(['?'] * len(typeCodes)) + ") ORDER BY date DESC LIMIT ?",
                 typeCodes + [ulimit])
