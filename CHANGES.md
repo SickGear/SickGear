@@ -1,4 +1,9 @@
-﻿### 0.25.0 (2021-09-15 00:05:00 UTC)
+﻿### 0.25.1 (2021-09-18 00:06:00 UTC)
+
+* Fix history API endpoint to respect clear history
+
+
+### 0.25.0 (2021-09-15 00:05:00 UTC)
 
 * Add ability to switch a TV info source for a show, initial support is for TheTVDb and TVMaze
 * Add column on manage/Bulk Change for TV info source so that shows can be sorted to isolate by source for switching
