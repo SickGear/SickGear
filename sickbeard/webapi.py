@@ -1620,12 +1620,12 @@ class CMD_SickGearHistory(ApiCall):
         # typeCodes = []
         if "downloaded" == self.type:
             self.type = "Downloaded"
-            typeCodes = Quality.DOWNLOADED
+            typeCodes = Quality.DOWNLOADED + Quality.ARCHIVED + Quality.FAILED
         elif "snatched" == self.type:
             self.type = "Snatched"
-            typeCodes = Quality.SNATCHED
+            typeCodes = Quality.SNATCHED_ANY
         else:
-            typeCodes = Quality.SNATCHED + Quality.DOWNLOADED
+            typeCodes = Quality.SNATCHED_ANY + Quality.DOWNLOADED + Quality.ARCHIVED + Quality.FAILED
 
         my_db = db.DBConnection(row_type="dict")
 
