@@ -1,4 +1,9 @@
-﻿### 0.25.1 (2021-09-18 00:06:00 UTC)
+﻿### 0.25.2 (2021-09-20 20:00:00 UTC)
+
+* Fix history API endpoint for all snatch and download statuses (including archived, failed)
+
+
+### 0.25.1 (2021-09-18 00:06:00 UTC)
 
 * Fix history API endpoint to respect clear history
 
