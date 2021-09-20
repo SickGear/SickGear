@@ -1,4 +1,9 @@
-﻿### 0.25.2 (2021-09-20 20:00:00 UTC)
+﻿### 0.25.3 (2021-09-21 22:00:00 UTC)
+
+* Fix filter in history API endpoint
+
+
+### 0.25.2 (2021-09-20 20:00:00 UTC)
 
 * Fix history API endpoint for all snatch and download statuses (including archived, failed)
 

@@ -46,8 +46,8 @@ from lib import subliminal
 
 import sickbeard
 from . import classes, db, helpers, history, image_cache, logger, network_timezones, processTV, search_queue, ui
-from .common import ARCHIVED, DOWNLOADED, IGNORED, SKIPPED, SNATCHED, SNATCHED_ANY, SNATCHED_BEST, SNATCHED_PROPER, \
-    UNAIRED, UNKNOWN, WANTED, Quality, qualityPresetStrings, statusStrings
+from .common import ARCHIVED, DOWNLOADED, FAILED, IGNORED, SKIPPED, SNATCHED, SNATCHED_ANY, SNATCHED_BEST, \
+    SNATCHED_PROPER, UNAIRED, UNKNOWN, WANTED, Quality, qualityPresetStrings, statusStrings
 from .helpers import remove_article
 from .indexers import indexer_api, indexer_config
 from .indexers.indexer_config import *
@@ -1618,10 +1618,13 @@ class CMD_SickGearHistory(ApiCall):
         """ get the sickgear downloaded/snatched history """
 
         # typeCodes = []
+        type_filter = []
         if "downloaded" == self.type:
+            type_filter = [DOWNLOADED, ARCHIVED, FAILED]
             self.type = "Downloaded"
             typeCodes = Quality.DOWNLOADED + Quality.ARCHIVED + Quality.FAILED
         elif "snatched" == self.type:
+            type_filter = SNATCHED_ANY
             self.type = "Snatched"
             typeCodes = Quality.SNATCHED_ANY
         else:
@@ -1649,9 +1652,9 @@ class CMD_SickGearHistory(ApiCall):
         results = []
         for cur_result in sql_result:
             status, quality = Quality.splitCompositeStatus(int(cur_result["action"]))
-            status = _get_status_Strings(status)
-            if self.type and not status == self.type:
+            if type_filter and status not in type_filter:
                 continue
+            status = _get_status_Strings(status)
             cur_result["status"] = status
             cur_result["quality"] = _get_quality_string(quality)
             cur_result["date"] = _historyDate_to_dateTimeForm(str(cur_result["date"]))
