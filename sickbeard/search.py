@@ -970,8 +970,9 @@ def search_providers(
                         ep_obj_list.append(show_obj.get_episode(ep_num[0], ep_num[1]))
                     best_season_result.ep_obj_list = ep_obj_list
 
-                    best_season_result = cache_torrent_file(
-                        best_season_result, show_obj=show_obj, filter_rls=orig_thread_name)
+                    if not best_season_result.url.startswith('magnet'):
+                        best_season_result = cache_torrent_file(
+                            best_season_result, show_obj=show_obj, filter_rls=orig_thread_name)
 
                     if best_season_result:
                         ep_num = MULTI_EP_RESULT
