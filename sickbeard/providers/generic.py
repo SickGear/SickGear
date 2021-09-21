@@ -750,8 +750,7 @@ class GenericProvider(object):
                     return False
 
                 urls = ['http%s://%s/torrent/%s.torrent' % (u + (btih.upper(),))
-                        for u in (('s', 'itorrents.org'), ('s', 'torrage.info'), ('', 'reflektor.karmorra.info'),
-                                  ('', 'thetorrent.org'))]
+                        for u in (('s', 'itorrents.org'), ('s', 'torrage.info'))]
             except (BaseException, Exception):
                 link_type = 'torrent'
                 urls = [result.url]
