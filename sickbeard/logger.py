@@ -205,7 +205,7 @@ class SBRotatingLogHandler(object):
             if not expired:
                 continue
 
-            out_line = '%s :: %s' % (threading.current_thread().getName(), to_log)
+            out_line = '%s :: %s' % (threading.current_thread().name, to_log)
 
             sb_logger = logging.getLogger('sickbeard')
             setattr(sb_logger, 'db', lambda *args: sb_logger.log(DB, *args))

@@ -58,7 +58,7 @@ class Connection(threading.Thread):
 
         # thread keep alive stuff
         self.keepAlive = keepAlive
-        self.setDaemon(True)
+        self.daemon = True
         self.lastKeepAliveCheck = 0
         self.lastAuth = 0
         self._username = password
