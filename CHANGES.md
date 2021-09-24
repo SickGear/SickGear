@@ -1,4 +1,9 @@
-﻿### 0.25.3 (2021-09-21 22:00:00 UTC)
+﻿### 0.25.4 (2021-09-24 10:30:00 UTC)
+
+* Fix logging during media process where setting airdate is unavailable
+
+
+### 0.25.3 (2021-09-21 22:00:00 UTC)
 
 * Fix filter in history API endpoint
 * Fix multiep magnets are not downloadable

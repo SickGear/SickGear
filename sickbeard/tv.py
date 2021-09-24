@@ -5201,7 +5201,7 @@ class TVEpisode(TVEpisodeBase):
 
             logger.log('%s: %s modify date of %s to show air date %s'
                        % (self._show_obj.tvid_prodid, result, ek.ek(os.path.basename, self.location),
-                          aired_dt.strftime('%b %d,%Y (%H:%M)')), loglevel)
+                          'n/a' if not aired_dt else aired_dt.strftime('%b %d,%Y (%H:%M)')), loglevel)
 
     def __getstate__(self):
         d = dict(self.__dict__)

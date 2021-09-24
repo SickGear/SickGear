@@ -56,7 +56,7 @@ class AniDBLink(threading.Thread):
 
         self.QuitProcessed = False
 
-        self.setDaemon(True)
+        self.daemon = True
         self.start()
 
     def connectSocket(self, myport, timeout):
