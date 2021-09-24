@@ -1,4 +1,10 @@
-﻿### 0.25.4 (2021-09-24 10:30:00 UTC)
+﻿### 0.25.5 (2021-09-24 14:55:00 UTC)
+
+* Change upgrade Snap unrar 5.6.8 to 6.0.2
+* Fix workaround snap certificate failure to access rarlab server
+
+
+### 0.25.4 (2021-09-24 10:30:00 UTC)
 
 * Fix logging during media process where setting airdate is unavailable
 

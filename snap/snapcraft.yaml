@@ -90,7 +90,7 @@ parts:
 
   unrar:
     plugin: make
-    source: https://www.rarlab.com/rar/unrarsrc-5.6.8.tar.gz
+    source: https://raw.githubusercontent.com/wiki/SickGear/SickGear/packages/www.rarlab.com/rar/unrarsrc-6.0.2.tar.gz
     source-type: tar
 
     build-packages:
