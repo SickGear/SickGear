@@ -2,6 +2,7 @@
 
 * Fix view-show on new browsers
 * Fix remove box in footer on certain setups
+* Update zoneinfo fallback to 2021b
 
 
 ### 0.25.5 (2021-09-24 14:55:00 UTC)
