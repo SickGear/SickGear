@@ -89,6 +89,18 @@ $(document).ready(function() {
 		});
 
 		function initFancybox(){
+			try {
+				setupFancyBox();
+			} catch {
+				var fancy = $.SickGear.Root + '/js/fancybox/jquery.fancybox.min';
+				$.getScript(fancy + '.js', function() {
+					$('head').append('<link rel="stylesheet" href="' + fancy + '.css">');
+					setupFancyBox();
+				});
+			}
+		}
+
+		function setupFancyBox(){
 			if (!!$('a[rel="glide"]').length){
 				$().fancybox(jQuery.extend({
 					selector: 'li:not(.glide__slide--clone) a[rel="glide"]',

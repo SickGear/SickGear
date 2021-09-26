@@ -1,4 +1,11 @@
-﻿### 0.25.5 (2021-09-24 14:55:00 UTC)
+﻿### 0.25.6 (2021-09-26 17:45:00 UTC)
+
+* Fix view-show on new browsers
+* Fix remove box in footer on certain setups
+* Update zoneinfo fallback to 2021b
+
+
+### 0.25.5 (2021-09-24 14:55:00 UTC)
 
 * Change upgrade Snap unrar 5.6.8 to 6.0.2
 * Fix workaround snap certificate failure to access rarlab server
