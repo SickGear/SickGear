@@ -775,7 +775,7 @@ def xem_refresh(tvid, prodid, force=False):
 
     # XEM API URL
     # noinspection HttpUrlsUsage
-    url = 'http://thexem.de/map/all?id=%s&origin=%s&destination=scene' % (prodid, xem_origin)
+    url = 'http://thexem.info/map/all?id=%s&origin=%s&destination=scene' % (prodid, xem_origin)
 
     max_refresh_age_secs = 86400  # 1 day
 

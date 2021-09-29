@@ -518,7 +518,7 @@ def _xem_exceptions_fetcher():
         for tvid in [i for i in sickbeard.TVInfoAPI().sources if 'xem_origin' in sickbeard.TVInfoAPI(i).config]:
             logger.log(u'Checking for XEM scene exception updates for %s' % sickbeard.TVInfoAPI(tvid).name)
 
-            url = 'http://thexem.de/map/allNames?origin=%s%s&seasonNumbers=1'\
+            url = 'http://thexem.info/map/allNames?origin=%s%s&seasonNumbers=1'\
                   % (sickbeard.TVInfoAPI(tvid).config['xem_origin'], ('&language=us', '')['xem' == xem_list])
 
             parsed_json = helpers.get_url(url, parse_json=True, timeout=90)
@@ -553,7 +553,7 @@ def _xem_get_ids(infosrc_name, xem_origin):
     """
     xem_ids = []
 
-    url = 'http://thexem.de/map/havemap?origin=%s' % xem_origin
+    url = 'http://thexem.info/map/havemap?origin=%s' % xem_origin
 
     task = 'Fetching show ids with%s xem scene mapping%s for origin'
     logger.log(u'%s %s' % (task % ('', 's'), infosrc_name))

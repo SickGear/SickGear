@@ -1,4 +1,11 @@
-﻿### 0.25.6 (2021-09-26 17:45:00 UTC)
+﻿### 0.25.7 (2021-09-29 18:40:00 UTC)
+
+* Fix ignore entire show runtimes when getting runtimes from IMDb
+* Change enable failure monitor for search_tvs
+* Change thexem server
+
+
+### 0.25.6 (2021-09-26 17:45:00 UTC)
 
 * Fix view-show on new browsers
 * Fix remove box in footer on certain setups
