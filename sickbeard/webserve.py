@@ -7409,7 +7409,7 @@ class History(MainHandler):
     def check_site(site_name=''):
 
         site_url = dict(
-            tvdb='api.thetvdb.com', thexem='thexem.de', github='github.com'
+            tvdb='api.thetvdb.com', thexem='thexem.info', github='github.com'
         ).get(site_name.replace('check_', ''))
 
         result = {}

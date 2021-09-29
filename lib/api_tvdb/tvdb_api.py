@@ -762,7 +762,7 @@ class Tvdb(TVInfoBase):
                           'highlightPreTag=__ais-highlight__', 'highlightPostTag=__/ais-highlight__'
                           ])
                      }]},
-                language=language, parse_json=True, failure_monitor=False)
+                language=language, parse_json=True)
             return src
         except (KeyError, IndexError, Exception):
             pass
