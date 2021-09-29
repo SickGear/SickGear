@@ -3062,8 +3062,19 @@ class TVShow(TVShowBase):
             imdb_info['title'] = imdb_tv.get('title')
         if isinstance(imdb_tv.get('year'), (int, string_types)):
             imdb_info['year'] = try_int(imdb_tv.get('year'), '')
-        if isinstance(imdb_tv.get('runningTimeInMinutes'), (int, string_types)):
-            imdb_info['runtimes'] = try_int(imdb_tv.get('runningTimeInMinutes'), '')
+        if isinstance(imdb_tv.get('runningTimes'), list):
+            try:
+                for _t in imdb_tv.get('runningTimes'):
+                    try:
+                        if isinstance(_t.get('attributes'), list) and \
+                                any(1 for _a in _t.get('attributes') if 'entire' in _a):
+                            continue
+                    except (BaseException, Exception):
+                        continue
+                    imdb_info['runtimes'] = try_int(_t.get('timeMinutes'), '')
+                    break
+            except (BaseException, Exception):
+                pass
         if isinstance(imdb_tv.get('titleType'), string_types):
             imdb_info['is_mini_series'] = 'mini' in imdb_tv.get('titleType').lower()
         if isinstance(imdb_tv.get('numberOfEpisodes'), (int, string_types)):
