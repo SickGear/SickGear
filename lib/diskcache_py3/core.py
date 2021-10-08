@@ -617,8 +617,7 @@ class Cache(object):
         if con is None:
             con = self._local.con = sqlite3.connect(
                 op.join(self._directory, DBNAME),
-                timeout=self._timeout,
-                isolation_level=None,
+                timeout=self._timeout
             )
 
             # Some SQLite pragmas work on a per-connection basis so
@@ -639,9 +638,18 @@ class Cache(object):
         return con
 
 
+    def _execute(self, *args, **kwargs):
+        result = self._con.execute(*args, **kwargs)
+        try:
+            self._con.commit()
+        except (BaseException, Exception):
+            pass
+        return result
+
+
     @property
     def _sql(self):
-        return self._con.execute
+        return self._execute
 
 
     @property
@@ -667,7 +675,7 @@ class Cache(object):
                     diff = time.time() - start
                     if diff > 60:
                         raise
-                    time.sleep(0.001)
+                    time.sleep(1)
 
         return _execute_with_retry
 
@@ -717,7 +725,7 @@ class Cache(object):
         else:
             while True:
                 try:
-                    sql('BEGIN IMMEDIATE')
+                    # sql('BEGIN IMMEDIATE', no_commit_call=True)
                     begin = True
                     self._txn_id = tid
                     break
@@ -734,13 +742,15 @@ class Cache(object):
             if begin:
                 assert self._txn_id == tid
                 self._txn_id = None
-                sql('ROLLBACK')
+                # sql('ROLLBACK')
+                self._con.rollback()
             raise
         else:
             if begin:
                 assert self._txn_id == tid
                 self._txn_id = None
-                sql('COMMIT')
+                # sql('COMMIT')
+                self._con.commit()
             for name in filenames:
                 if name is not None:
                     _disk_remove(name)
@@ -2338,6 +2348,10 @@ class Cache(object):
         if con is None:
             return
 
+        try:
+            con.commit()
+        except (BaseException, Exception):
+            pass
         con.close()
 
         try:
