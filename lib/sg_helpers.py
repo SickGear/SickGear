@@ -1678,3 +1678,34 @@ def spoken_height(height):
     :param height: height in cm
     """
     return convert_to_inch_faction_html(height).replace('\'', ' foot').replace('"', '')
+
+
+def touch_file(fname, atime=None, dir_name=None):
+    """
+    set access time of given file
+
+    :param fname: filename
+    :type fname: AnyStr
+    :param atime: access time as epoch
+    :type atime: int
+    :param: dir_name: directory name
+    :type dir_name: AnyStr
+    :return: success
+    :rtype: bool
+    """
+    if None is not dir_name:
+        fname = ek.ek(os.path.join, dir_name, fname)
+        if make_dirs(dir_name):
+            if not ek.ek(os.path.exists, fname):
+                with io.open(fname, 'w') as fh:
+                    fh.flush()
+
+    if None is not atime:
+        try:
+            with open(fname, 'a'):
+                ek.ek(os.utime, fname, (atime, atime))
+            return True
+        except (BaseException, Exception):
+            logger.debug('File air date stamping not available on your OS')
+
+    return False
