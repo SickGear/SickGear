@@ -20,6 +20,7 @@ import time
 import warnings
 import zlib
 
+from sg_helpers import touch_file
 
 def full_name(func):
     "Return full name of `func` by adding the module and function name."
@@ -615,6 +616,7 @@ class Cache(object):
         con = getattr(self._local, 'con', None)
 
         if con is None:
+            touch_file(DBNAME, dir_name=self._directory)
             con = self._local.con = sqlite3.connect(
                 op.join(self._directory, DBNAME),
                 timeout=self._timeout
@@ -2458,7 +2460,7 @@ class Cache(object):
                     diff = time.time() - start
                     if diff > 60:
                         raise
-                    time.sleep(0.001)
+                    time.sleep(1)
         elif key.startswith('disk_'):
             attr = key[5:]
             setattr(self._disk, attr, value)

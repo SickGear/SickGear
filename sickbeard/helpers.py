@@ -62,7 +62,7 @@ from six.moves import zip
 # noinspection PyUnresolvedReferences
 from sg_helpers import chmod_as_parent, clean_data, copy_file, download_file, fix_set_group_id, get_system_temp_dir, \
     get_url, indent_xml, make_dirs, maybe_plural, md5_for_text, move_file, proxy_setting, remove_file, \
-    remove_file_perm, replace_extension, sanitize_filename, scantree, try_int, try_ord, write_file
+    remove_file_perm, replace_extension, sanitize_filename, scantree, touch_file, try_int, try_ord, write_file
 
 # noinspection PyUnreachableCode
 if False:
@@ -1019,28 +1019,6 @@ def validate_show(show_obj, season=None, episode=None):
         return t[show_obj.prodid][season][episode]
     except (BaseTVinfoEpisodenotfound, BaseTVinfoSeasonnotfound, TypeError):
         pass
-
-
-def touch_file(fname, atime=None):
-    """
-    set access time of given file
-
-    :param fname: filename
-    :type fname: AnyStr
-    :param atime: access time as epoch
-    :type atime: int
-    :return: success
-    :rtype: bool
-    """
-    if None is not atime:
-        try:
-            with open(fname, 'a'):
-                ek.ek(os.utime, fname, (atime, atime))
-            return True
-        except (BaseException, Exception):
-            logger.log('File air date stamping not available on your OS', logger.DEBUG)
-
-    return False
 
 
 def _maybe_request_url(e, def_url=''):

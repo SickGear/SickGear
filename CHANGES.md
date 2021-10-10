@@ -1,4 +1,9 @@
-﻿### 0.25.7 (2021-09-29 18:40:00 UTC)
+﻿### 0.25.8 (2021-10-10 21:00:00 UTC)
+
+* Fix add show and browse TVmaze cards on Solaris Hipster
+
+
+### 0.25.7 (2021-09-29 18:40:00 UTC)
 
 * Fix ignore entire show runtimes when getting runtimes from IMDb
 * Change enable failure monitor for search_tvs
