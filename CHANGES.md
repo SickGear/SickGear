@@ -1,4 +1,9 @@
-﻿### 0.25.8 (2021-10-10 21:00:00 UTC)
+﻿### 0.25.9 (2021-10-10 21:00:00 UTC)
+
+* Update zoneinfo fallback to 2021c
+
+
+### 0.25.8 (2021-10-10 21:00:00 UTC)
 
 * Fix add show and browse TVmaze cards on Solaris Hipster
 
