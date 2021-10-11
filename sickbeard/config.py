@@ -503,6 +503,7 @@ class ConfigMigrator(object):
                                 19: 'Change (mis)use of Anonymous redirect dereferer.org service to nullrefer.com',
                                 20: 'Change Growl',
                                 21: 'Rename vars misusing frequency',
+                                22: 'Change Anonymous redirect',
                                 }
 
     def migrate_config(self):
@@ -539,6 +540,14 @@ class ConfigMigrator(object):
             sickbeard.CONFIG_VERSION = self.config_version
             logger.log(u'Saving config file to disk')
             sickbeard.save_config()
+
+    @staticmethod
+    def deprecate_anon_service():
+        """
+        Change deprecated anon redirect service URLs
+        """
+        if re.search(r'https?://(?:nullrefer.com|dereferer.org)', sickbeard.ANON_REDIRECT):
+            sickbeard.ANON_REDIRECT = r'https://anonymz.com/?'
 
     # Migration v1: Custom naming
     def _migrate_v1(self):
@@ -818,11 +827,8 @@ class ConfigMigrator(object):
                         'nordic', 'norwegian', 'portuguese', 'spanish', 'turkish']
         self.add_ignore_words(words_to_add)
 
-    @staticmethod
-    def _migrate_v13():
-        # change dereferrer.org urls to blank, but leave any other url untouched
-        if 'http://dereferer.org/?' == sickbeard.ANON_REDIRECT:
-            sickbeard.ANON_REDIRECT = ''
+    def _migrate_v13(self):
+        self.deprecate_anon_service()
 
     def _migrate_v14(self):
         old_token = check_setting_str(self.config_obj, 'Trakt', 'trakt_token', '')
@@ -903,17 +909,14 @@ class ConfigMigrator(object):
 
         self.add_ignore_words([r'regex:^(?=.*?\bspanish\b)((?!spanish.?princess).)*$'], ['spanish'])
 
-    @staticmethod
-    def _migrate_v19():
-        # change misuse of dereferrer.org to the nullrefer.com service, but leave any other url untouched
-        if re.search(r'https?://dereferer.org', sickbeard.ANON_REDIRECT):
-            sickbeard.ANON_REDIRECT = 'https://nullrefer.com/?'
+    def _migrate_v19(self):
+        self.deprecate_anon_service()
 
     def _migrate_v20(self):
-        GROWL_HOST = check_setting_str(self.config_obj, 'Growl', 'growl_host', '')
-        GROWL_PASSWORD = check_setting_str(self.config_obj, 'Growl', 'growl_password', '')
-        if GROWL_PASSWORD:
-            sickbeard.GROWL_HOST = '%s@%s' % (GROWL_PASSWORD, GROWL_HOST)
+        growl_host = check_setting_str(self.config_obj, 'Growl', 'growl_host', '')
+        growl_password = check_setting_str(self.config_obj, 'Growl', 'growl_password', '')
+        if growl_password:
+            sickbeard.GROWL_HOST = '%s@%s' % (growl_password, growl_host)
 
     def _migrate_v21(self):
         sickbeard.MEDIAPROCESS_INTERVAL = check_setting_int(
@@ -937,3 +940,6 @@ class ConfigMigrator(object):
 
         sickbeard.SUBTITLES_FINDER_INTERVAL = check_setting_int(
             self.config_obj, 'Subtitles', 'subtitles_finder_frequency', 1)
+
+    def _migrate_v22(self):
+        self.deprecate_anon_service()
