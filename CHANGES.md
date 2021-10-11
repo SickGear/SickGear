@@ -1,4 +1,11 @@
-﻿### 0.25.8 (2021-10-10 21:00:00 UTC)
+﻿### 0.25.9 (2021-10-11 13:45:00 UTC)
+
+* Update zoneinfo fallback to 2021c
+* Update regex for Python 3.10 on Windows
+* Change deprecated anon redirect service
+
+
+### 0.25.8 (2021-10-10 21:00:00 UTC)
 
 * Fix add show and browse TVmaze cards on Solaris Hipster
 
