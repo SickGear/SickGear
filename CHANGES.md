@@ -1,4 +1,9 @@
-﻿### 0.25.9 (2021-10-11 13:45:00 UTC)
+﻿### 0.25.10 (2021-10-12 11:55:00 UTC)
+                             
+* Update certifi 2021.05.30 to 2021.10.08
+
+
+### 0.25.9 (2021-10-11 13:45:00 UTC)
 
 * Update zoneinfo fallback to 2021c
 * Update regex for Python 3.10 on Windows
