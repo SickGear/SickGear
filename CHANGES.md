@@ -1,4 +1,9 @@
-﻿### 0.25.10 (2021-10-12 11:55:00 UTC)
+﻿### 0.25.11 (2021-10-12 17:00:00 UTC)
+
+* Fix edit-show alert "set master" malfunction on shows with no master to edit
+
+
+### 0.25.10 (2021-10-12 11:55:00 UTC)
                              
 * Update certifi 2021.05.30 to 2021.10.08
 

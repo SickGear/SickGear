@@ -54,7 +54,7 @@ $(document).ready(function () {
 	}
 
 	function okExit(action){
-		return ('the-master' === $('input[name="set-master"]:checked').attr('id')
+		return ('the-master' === ($('input[name="set-master"]:checked').attr('id')  || 'the-master')
 			|| confirm('A "set master" change is pending\n\n' + action + ' without saving changes?'))
 	}
 
