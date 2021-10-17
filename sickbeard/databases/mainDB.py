@@ -56,7 +56,17 @@ class MainSanityCheck(db.DBSanityCheck):
                 ' FROM tv_episodes'
                 ' WHERE subtitles LIKE "%,%"')
 
-            for cur_ep in ep_result:
+            ep_len, cur_p = len(ep_result), 0
+            ep_step = ep_len / 100.0
+            fix_msg = 'Fixing subtitles: %s'
+
+            if ep_len:
+                self.connection.upgrade_log(fix_msg % ('%s%%' % 0))
+
+            for _cur_count, cur_ep in enumerate(ep_result):
+                if cur_p < int(_cur_count / ep_step):
+                    cur_p = int(_cur_count / ep_step)
+                    self.connection.upgrade_log(fix_msg % ('%s%%' % cur_p))
                 if not cleaned:
                     logger.log('Removing duplicate subtitles data in TV Episodes table, this WILL take some time')
                     cleaned = True
@@ -76,7 +86,9 @@ class MainSanityCheck(db.DBSanityCheck):
                 self.connection.mass_action(cl)
 
                 logger.log(u'Performing a vacuum on the database.', logger.DEBUG)
+                self.connection.upgrade_log(fix_msg % 'VACUUM')
                 self.connection.action('VACUUM')
+                self.connection.upgrade_log(fix_msg % 'finished')
 
             self.connection.set_flag('fix_episode_subtitles')
 
