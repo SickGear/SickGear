@@ -1295,6 +1295,12 @@ def init_stage_1(console_logging):
     SUBTITLES_SERVICES_AUTH = [k.split(':::') for k in
                                check_setting_str(CFG, 'Subtitles', 'subtitles_services_auth', ':::').split('|||')
                                if k]
+    try:
+        # unlikely to happen, but did happen once, so added here as defensive
+        dct_cfg = sg_helpers.ast_eval(check_setting_str(CFG, 'Subtitles', 'subtitles_services_auth', ':::'), {})
+        SUBTITLES_SERVICES_AUTH = [[dct_cfg['os_user'], dct_cfg['os_pass']]]
+    except (BaseException, Exception):
+        pass
     SUBTITLES_DEFAULT = bool(check_setting_int(CFG, 'Subtitles', 'subtitles_default', 0))
     SUBTITLES_HISTORY = bool(check_setting_int(CFG, 'Subtitles', 'subtitles_history', 0))
     SUBTITLES_FINDER_INTERVAL = check_setting_int(CFG, 'Subtitles', 'subtitles_finder_interval', 1)

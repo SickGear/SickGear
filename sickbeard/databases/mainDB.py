@@ -18,6 +18,7 @@
 
 import datetime
 import os.path
+import re
 
 from .. import db, common, logger
 from ..name_parser.parser import NameParser, InvalidNameException, InvalidShowException
@@ -43,6 +44,53 @@ class MainSanityCheck(db.DBSanityCheck):
         self.fix_orphan_not_found_show()
         self.fix_fallback_mapping()
         self.fix_indexer_mapping_tvdb()
+        self.fix_episode_subtitles()
+
+    def fix_episode_subtitles(self):
+        if not self.connection.has_flag('fix_episode_subtitles'):
+            cleaned = False
+            cl = []
+
+            ep_result = self.connection.select(
+                'SELECT episode_id'
+                ' FROM tv_episodes'
+                ' WHERE subtitles LIKE "%,%"')
+
+            ep_len, cur_p = len(ep_result), 0
+            ep_step = ep_len / 100.0
+            fix_msg = 'Fixing subtitles: %s'
+
+            if ep_len:
+                self.connection.upgrade_log(fix_msg % ('%s%%' % 0))
+
+            for _cur_count, cur_ep in enumerate(ep_result):
+                if cur_p < int(_cur_count / ep_step):
+                    cur_p = int(_cur_count / ep_step)
+                    self.connection.upgrade_log(fix_msg % ('%s%%' % cur_p))
+                if not cleaned:
+                    logger.log('Removing duplicate subtitles data in TV Episodes table, this WILL take some time')
+                    cleaned = True
+
+                sql_result = self.connection.select(
+                    'SELECT SUBSTR(REPLACE(subtitles, ",,", ""), -2000) AS truncated_langs'
+                    ' FROM tv_episodes'
+                    ' WHERE episode_id = ? LIMIT 1', [cur_ep['episode_id']])
+
+                for cur_result in sql_result:
+                    raw_langs = re.sub(r',+', '', cur_result['truncated_langs'])
+                    subt_value = ','.join(re.findall('[a-z]{2}', raw_langs))
+                    cl.append(['UPDATE tv_episodes SET subtitles = ? WHERE episode_id = ?',
+                               [(subt_value, '')[bool(len(raw_langs) % 2)], cur_ep['episode_id']]])
+
+            if 0 < len(cl):
+                self.connection.mass_action(cl)
+
+                logger.log(u'Performing a vacuum on the database.', logger.DEBUG)
+                self.connection.upgrade_log(fix_msg % 'VACUUM')
+                self.connection.action('VACUUM')
+                self.connection.upgrade_log(fix_msg % 'finished')
+
+            self.connection.set_flag('fix_episode_subtitles')
 
     def fix_indexer_mapping_tvdb(self):
         if not self.connection.has_flag('fix_indexer_mapping_tvdb'):

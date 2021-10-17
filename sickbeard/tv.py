@@ -4086,7 +4086,11 @@ class TVEpisode(TVEpisodeBase):
         self._runtime = show_result['runtime']
         self._season = season
         self._status = self._status if None is show_result['status'] else int(show_result['status'])
-        self._subtitles = show_result['subtitles'] and show_result['subtitles'] or show_result['subtitles'].split(',')
+        subt_value = show_result['subtitles']
+        if ',,' in subt_value:  # a defensive fix for a data issue
+            subt_value = re.sub(r',+', '', subt_value)
+            subt_value = ('', subt_value)[2 == len(subt_value)]
+        self._subtitles = subt_value and subt_value.split(',') or []
         self._subtitles_lastsearch = show_result['subtitles_lastsearch']
         self._subtitles_searchcount = show_result['subtitles_searchcount']
         self._timestamp = show_result['timestamp'] or self._make_timestamp()
