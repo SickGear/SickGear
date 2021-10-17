@@ -1,4 +1,9 @@
-﻿### 0.25.11 (2021-10-12 17:00:00 UTC)
+﻿### 0.25.12 (2021-10-17 20:30:00 UTC)
+
+* Fix large sickbeard db's that occured from using subtitle settings
+
+
+### 0.25.11 (2021-10-12 17:00:00 UTC)
 
 * Fix edit-show alert "set master" malfunction on shows with no master to edit
 
