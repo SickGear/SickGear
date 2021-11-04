@@ -1,4 +1,12 @@
-﻿### 0.25.12 (2021-10-17 23:00:00 UTC)
+﻿### 0.25.13 (2021-11-04 18:20:00 UTC)
+
+* Update zoneinfo fallback to 2021e
+* Add episode number in api history results
+* Change prevent backups when creating a new db
+* Fix config/search "Test fs" button
+* Add additional cleanup for cast
+
+### 0.25.12 (2021-10-17 23:00:00 UTC)
 
 * Fix large sickbeard db's that occured from using subtitle settings
 * Update zoneinfo fallback to 2021d

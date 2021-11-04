@@ -48,6 +48,7 @@ import sickbeard
 from . import classes, db, helpers, history, image_cache, logger, network_timezones, processTV, search_queue, ui
 from .common import ARCHIVED, DOWNLOADED, FAILED, IGNORED, SKIPPED, SNATCHED, SNATCHED_ANY, SNATCHED_BEST, \
     SNATCHED_PROPER, UNAIRED, UNKNOWN, WANTED, Quality, qualityPresetStrings, statusStrings
+from .name_parser.parser import NameParser
 from .helpers import remove_article
 from .indexers import indexer_api, indexer_config
 from .indexers.indexer_config import *
@@ -1650,6 +1651,7 @@ class CMD_SickGearHistory(ApiCall):
                 typeCodes + [ulimit])
 
         results = []
+        np = NameParser(True, testing=True, indexer_lookup=False, try_scene_exceptions=False)
         for cur_result in sql_result:
             status, quality = Quality.splitCompositeStatus(int(cur_result["action"]))
             if type_filter and status not in type_filter:
@@ -1662,6 +1664,12 @@ class CMD_SickGearHistory(ApiCall):
             _rename_element(cur_result, "showid", "indexerid")
             cur_result["resource_path"] = os.path.dirname(cur_result["resource"])
             cur_result["resource"] = os.path.basename(cur_result["resource"])
+            try:
+                p_r = np.parse(cur_result["resource"], cache_result=False)
+            except (BaseException, Exception):
+                p_r = None
+            cur_result['episode_numbers'] = (p_r and p_r.episode_numbers) or \
+                                            (cur_result['episode'] and [cur_result['episode']]) or []
             # Add tvdbid for backward compatibility
             cur_result['tvdbid'] = (None, cur_result['indexerid'])[TVINFO_TVDB == cur_result['indexer']]
             results.append(cur_result)
