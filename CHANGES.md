@@ -1,4 +1,14 @@
-﻿### 0.25.12 (2021-10-17 23:00:00 UTC)
+﻿### 0.25.13 (2021-11-05 12:25:00 UTC)
+
+* Update zoneinfo fallback to 2021e
+* Add episode number in api history results
+* Change prevent backups when creating a new db
+* Fix update only existing Kodi .nfo files during SG update
+* Fix config/search "Test fs" button
+* Add additional cleanup for cast
+
+
+### 0.25.12 (2021-10-17 23:00:00 UTC)
 
 * Fix large sickbeard db's that occured from using subtitle settings
 * Update zoneinfo fallback to 2021d
@@ -10,7 +20,7 @@
 
 
 ### 0.25.10 (2021-10-12 11:55:00 UTC)
-                             
+
 * Update certifi 2021.05.30 to 2021.10.08
 
 
@@ -189,7 +199,7 @@
 ### 0.24.13 (2021-07-27 02:20:00 UTC)
 
 * Fix incorrect reporting of missing provider detail
-  
+
 
 ### 0.24.12 (2021-07-17 08:10:00 UTC)
 

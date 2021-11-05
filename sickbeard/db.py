@@ -107,6 +107,7 @@ class DBConnection(object):
         # type: (AnyStr, Optional[AnyStr], Dict) -> None
 
         from . import helpers
+        self.new_db = False
         db_src = dbFilename(filename)
         if not os.path.isfile(db_src):
             db_alt = dbFilename('sickrage.db')
@@ -433,6 +434,7 @@ class DBSanityCheck(object):
 def upgradeDatabase(connection, schema):
     logger.log(u'Checking database structure...', logger.MESSAGE)
     connection.is_upgrading = False
+    connection.new_db = 0 == connection.checkDBVersion()
     _processUpgrade(connection, schema)
     if connection.is_upgrading:
         connection.upgrade_log('Finished')
@@ -461,7 +463,7 @@ def _processUpgrade(connection, upgrade_class):
         db_version = connection.checkDBVersion()
         try:
             # only do backup if it's not a new db
-            0 < db_version and backup_database(connection.filename, db_version)
+            0 < db_version and backup_database(connection, connection.filename, db_version)
             instance.execute()
             cleanup_old_db_backups(connection.filename)
         except (BaseException, Exception):
@@ -721,6 +723,7 @@ def MigrationCode(my_db):
     }
 
     db_version = my_db.checkDBVersion()
+    my_db.new_db = 0 == db_version
     logger.log(u'Detected database version: v%s' % db_version, logger.DEBUG)
 
     if not (db_version in schema):
@@ -770,7 +773,12 @@ def cleanup_old_db_backups(filename):
         pass
 
 
-def backup_database(filename, version):
+def backup_database(db_connection, filename, version):
+
+    if db_connection.new_db:
+        logger.debug('new db, no backup required')
+        return
+
     logger.log(u'Backing up database before upgrade')
     if not sickbeard.helpers.backup_versioned_file(dbFilename(filename), version):
         logger.log_error_and_exit(u'Database backup failed, abort upgrading database')

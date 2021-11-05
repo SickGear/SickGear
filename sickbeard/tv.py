@@ -1903,6 +1903,9 @@ class TVShow(TVShowBase):
         returns list of sql that removes all character and person entries that are not linked to any show
         """
         return [
+            ['DELETE FROM castlist WHERE castlist.id IN (SELECT c.id FROM castlist c'
+             ' LEFT JOIN tv_shows ON tv_shows.indexer = c.indexer AND tv_shows.indexer_id = c.indexer_id'
+             ' WHERE tv_shows.indexer_id is NULL);'],
             ['DELETE FROM characters WHERE characters.id IN (SELECT c.id FROM characters c'
              ' LEFT JOIN castlist on castlist.character_id = c.id WHERE castlist.id is NULL);'],
             ['DELETE FROM character_ids WHERE character_ids.character_id IN'

@@ -90,7 +90,7 @@ class CloudflareScraper(Session):
         fs_ver = None
         if 200 == response_test.status_code and response_test.ok:
             json_data = response_test.json()
-            if 'ok' == json_data.get('status'):
+            if any([json_data.get('version')]):
                 fs_ver = json_data.get('version')
         if None is fs_ver:
             raise ValueError('FlareSolverr software not found (is it running?)')
@@ -103,10 +103,12 @@ class CloudflareScraper(Session):
             raise ValueError('No FlareSolverr software running %sat %s' % (('to solve Cloudflare challenge ',
                                                                             '')[proxy_browser], url_solver))
         try:
-            response = super(CloudflareScraper, self).request('POST', '%s/v1' % url_solver, json=dict(
-                cmd='request.%s' % method.lower(), userAgent=user_agent, url=url,
+            params = {} if 'v1' not in self.test_flaresolverr(url_solver) else dict(userAgent=user_agent)
+            params.update(dict(
+                cmd='request.%s' % method.lower(), url=url,
                 cookies=[{'name': cur_ckee.name, 'value': cur_ckee.value,
                           'domain': cur_ckee.domain, 'path': cur_ckee.path} for cur_ckee in self.cookies]))
+            response = super(CloudflareScraper, self).request('POST', '%s/v1' % url_solver, json=params)
         except(BaseException, Exception) as e:
             raise ValueError('FlareSolverr software unable to %s: %r' % (('solve Cloudflare anti-bot IUAM challenge',
                                                                           'fetch content')[proxy_browser], e))
@@ -139,18 +141,12 @@ class CloudflareScraper(Session):
                 'Cloudflare captcha presented for %s, safe to ignore as this shouldn\'t happen every time, ua: %s' %
                 (domain, self.cf_ua), response=resp)
 
-        if None is self.get_content(
+        final_response = self.get_content(
                 'GET', (resp.request.url, '%s://%s/' % (parsed_url.scheme, domain))['POST' == resp.request.method],
-                url_solver, user_agent=resp.request.headers.get('User-Agent')):
+                url_solver, user_agent=resp.request.headers.get('User-Agent'))
+        if None is final_response:
             raise ValueError('Failed to validate Cloudflare anti-bot IUAM challenge')
 
-        time.sleep(1.2)
-
-        final_response = super(CloudflareScraper, self).request(resp.request.method, resp.request.url, headers={
-            'User-Agent': resp.request.headers.get('User-Agent')}, **original_kwargs)
-
-        # if final_response and 200 == getattr(final_response, 'status_code'):
-        #     return final_response
         return final_response
 
     @classmethod
