@@ -428,7 +428,7 @@ def set_nfo_uid_updated(*args, **kwargs):
 def remove_default_attr(*args, **kwargs):
     try:
         from .. import db
-        msg = 'Changing Kodi Nfo'
+        msg = 'Updating Kodi Nfo'
         sickbeard.classes.loading_msg.set_msg_progress(msg, '0%')
 
         kodi = metadata_class()
@@ -535,7 +535,7 @@ def rebuild_nfo(*args, **kwargs):
     """
     try:
         from .. import db
-        msg = 'Changing Kodi Nfo'
+        msg = 'Rebuilding Kodi Nfo'
         sickbeard.classes.loading_msg.set_msg_progress(msg, '0%')
 
         kodi = metadata_class()
@@ -548,11 +548,18 @@ def rebuild_nfo(*args, **kwargs):
 
                     try:
                         nfo_path = kodi.get_show_file_path(cur_show_obj)
-                        sg_helpers.remove_file_perm(nfo_path)
+                        if nfo_path and ek.ek(os.path.isfile, nfo_path):
+                            with ek.ek(io.open, nfo_path, 'r', encoding='utf8') as xml_file_obj:
+                                xmltree = etree.ElementTree(file=xml_file_obj)
+
+                            # check xml keys exist to validate file as type Kodi episode or tvshow .nfo
+                            if ((('show' in xmltree.getroot().tag) and bool(xmltree.findall('title')))
+                                    or ((bool(xmltree.findall('showtitle')) or bool(xmltree.findall('title')))
+                                        and bool(xmltree.findall('season')))) \
+                                    and sg_helpers.remove_file_perm(nfo_path):
+                                kodi.write_show_file(cur_show_obj)
                     except(BaseException, Exception):
                         pass
-
-                    kodi.write_show_file(cur_show_obj)
 
             except(BaseException, Exception):
                 pass
