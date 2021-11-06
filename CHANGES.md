@@ -1,4 +1,10 @@
-﻿### 0.25.13 (2021-11-05 12:25:00 UTC)
+﻿### 0.25.14 (2021-11-06 04:30:00 UTC)
+
+* Change allow Python 3.9.8
+* Update recommended modules cffi, lxml, and regex
+
+
+### 0.25.13 (2021-11-05 12:25:00 UTC)
 
 * Update zoneinfo fallback to 2021e
 * Add episode number in api history results
