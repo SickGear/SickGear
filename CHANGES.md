@@ -1,4 +1,9 @@
-﻿### 0.25.14 (2021-11-06 04:30:00 UTC)
+﻿### 0.25.15 (2021-11-09 12:00:00 UTC)
+
+* Fix tvc cards returning view
+
+
+### 0.25.14 (2021-11-06 04:30:00 UTC)
 
 * Change allow Python 3.9.8
 * Update recommended modules cffi, lxml, and regex

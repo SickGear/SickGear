@@ -486,7 +486,7 @@ $(document).ready(function(){
 					title="<span style='color: rgb(66, 139, 202)'>$re.sub(r'(?m)\s+\((?:19|20)\d\d\)\s*$', '', $title_html)</span>
 
 					#if $this_show['genres']#<br><div style='font-weight:bold'>(<em>$this_show['genres']</em>)</div>#end if#
-					#if $kwargs and $use_returning#<span style='font-weight:bold;font-size:0.9em;color:#888'><em>Season $this_show['episode_season'] returns $this_show['returning_str']</em></span>#end if#
+					#if $kwargs and $use_returning#<span style='display:block;clear:both;font-weight:bold;font-size:0.9em;color:#888'><em>Season $this_show['episode_season'] returns $this_show['returning_str']</em></span>#end if#
         #if $this_show.get('country') or $this_show.get('language')
 					 <p style='line-height:15px;margin-bottom:2px'>
             #if $this_show.get('country')
@@ -498,9 +498,9 @@ $(document).ready(function(){
 					</p>
         #end if
 					<p style='margin:0 0 2px'>#echo re.sub(r'([,\.!][^,\.!]*?)$', '...', re.sub(r'([!\?\.])(?=\w)', r'\1 ', $overview)).replace('.....', '...')#</p>
-					<p><span style='font-weight:bold;font-size:0.9em;color:#888'><em>#if $kwargs and 'newseasons' == $mode#Air#else#First air#end if##echo ('s', 'ed')[$this_show['when_past']]#: $this_show['premiered_str']</em></span>
+					<p>#if $this_show['premiered_str']#<span style='font-weight:bold;font-size:0.9em;color:#888'><em>#if $kwargs and 'newseasons' == $mode#Air#else#First air#end if##echo ('s', 'ed')[$this_show['when_past']]#: $this_show['premiered_str']</em></span>#end if#
 					#if $this_show.get('ended_str')# - <span style='font-weight:bold;font-size:0.9em;color:#888'><em>Ended: $this_show['ended_str']</em></span>#end if#
-					#if $this_show.get('network')#<br><span style='font-weight:bold;font-size:0.9em;color:#888'><em>On: $this_show['network']</em></span>#end if#
+					#if $this_show.get('network')#<span style='display:block;clear:both;font-weight:bold;font-size:0.9em;color:#888'><em>On: $this_show['network']</em></span>#end if#
 					</p>
 					<span style='float:right'>Click for more at <span class='boldest'>$browse_type</span></span>">
         #if 'poster' in $this_show['images']
