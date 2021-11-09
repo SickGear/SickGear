@@ -5452,6 +5452,8 @@ class AddShows(Home):
 
                         dt_ordinal = 0
                         dt_string = ''
+                        dt_ordinal_returning = 0
+                        dt_string_returning = ''
                         date = genre = network = ''
                         date_tag = row.find('span', class_='startz')
                         if date_tag:
@@ -5479,6 +5481,9 @@ class AddShows(Home):
                             if dt_ordinal > newest_dt:
                                 newest_dt = dt_ordinal
                                 newest = dt_string
+                            if kwargs.get('mode', '') in ('returning',):
+                                dt_ordinal_returning, dt_string_returning = dt_ordinal, dt_string
+                                dt_ordinal, dt_string = 0, ''
 
                         overview = row.find('span', class_='shwtxt')
                         if overview:
@@ -5498,6 +5503,9 @@ class AddShows(Home):
                         filtered.append(dict(
                             premiered=dt_ordinal,
                             premiered_str=dt_string,
+                            returning=dt_ordinal_returning,
+                            returning_str=dt_string_returning,
+                            episode_season='',
                             when_past=dt_ordinal < datetime.datetime.now().toordinal(),
                             genres=genre,
                             network=network or None,
