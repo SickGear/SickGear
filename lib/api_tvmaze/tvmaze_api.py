@@ -145,12 +145,14 @@ class TvMaze(TVInfoBase):
 
     def _search_show(self, name=None, ids=None, **kwargs):
         def _make_result_dict(s):
-            language = clean_data(s.language.lower())
+            # type: (tvmaze.Show) -> Dict
+            language = s.language and clean_data(s.language.lower())
             language_country_code = None
-            for cur_locale in iteritems(LOCALE_NAMES):
-                if language in cur_locale[1]['name_en'].lower():
-                    language_country_code = cur_locale[0].split('_')[1].lower()
-                    break
+            if language:
+                for cur_locale in iteritems(LOCALE_NAMES):
+                    if language in cur_locale[1]['name_en'].lower():
+                        language_country_code = cur_locale[0].split('_')[1].lower()
+                        break
             return {'seriesname': clean_data(s.name), 'id': s.id, 'firstaired': clean_data(s.premiered),
                     'network': clean_data((s.network and s.network.name) or (s.web_channel and s.web_channel.name)),
                     'genres': clean_data(isinstance(s.genres, list) and ', '.join(g.lower() for g in s.genres) or

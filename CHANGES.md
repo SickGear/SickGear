@@ -1,4 +1,11 @@
-﻿### 0.25.15 (2021-11-09 12:00:00 UTC)
+﻿### 0.25.16 (2021-11-10 19:00:00 UTC)
+
+* Fix TVmaze search
+* Fix comparison of episode name with numbers during parsing of multi episode releases
+* Add name_parser unittest multi episode with episode name comparison
+
+
+### 0.25.15 (2021-11-09 12:00:00 UTC)
 
 * Fix tvc cards returning view
 

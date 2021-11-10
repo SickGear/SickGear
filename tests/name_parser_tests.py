@@ -411,6 +411,46 @@ dupe_shows = [('The Show Name', (2, 1), 1990, [('Episode 302', 3, 2)],
 
 dupe_shows_test = [('The.Show.Name.S03E02.REPACK.Episode.302.720p.AMZN.WEBRip.DDP5.1.x264-GROUP', (2, 1), 1990)]
 
+ep_name_test = [
+    {'parse_name': 'Show.Name.S01E15-11001001',
+     'parse_result': parser.ParseResult(None, 'Show Name', 1, [15], None),
+     'show_obj': {'name': 'Show Name', 'prodid': 223, 'tvid': 1,
+                  'episodes': [{'season': 1, 'number': 15, 'name': '11001001'}]
+                  }
+     },
+    {'parse_name': 'Show Name - s07e42e43e44 720p WEB-DL',
+     'parse_result': parser.ParseResult(None, 'Show Name', 7, [42, 43, 44], '720p WEB-DL'),
+     'show_obj': {'name': 'Show Name', 'prodid': 12, 'tvid': 1,
+                  'episodes': [{'season': 7, 'number': 42, 'name': '80\'s Episode'}]
+                  }
+     },
+]
+
+
+class EpisodeNameCases(unittest.TestCase):
+    def test_ep_numbering(self):
+        for e_t in ep_name_test:
+            sickbeard.showList = []
+            sickbeard.showDict = {}
+            name_cache.nameCache = {}
+            for s in [TVShowTest(name=e_t['show_obj']['name'], prodid=e_t['show_obj']['prodid'],
+                                 tvid=e_t['show_obj']['tvid'])]:
+                sickbeard.showList.append(s)
+                sickbeard.showDict[s.sid_int] = s
+                for e_o in e_t['show_obj']['episodes']:
+                    e_obj = TVEpisodeTest(e_o['name'])
+                    e_obj.season = e_o['season']
+                    e_obj.episode = e_o['number']
+                    s.sxe_ep_obj.setdefault(e_obj.season, {})[e_obj.episode] = e_obj
+            name_cache.addNameToCache(e_t['show_obj']['name'], tvid=e_t['show_obj']['tvid'],
+                                      prodid=e_t['show_obj']['prodid'])
+            try:
+                res = parser.NameParser(True).parse(e_t['parse_name'])
+            except (BaseException, Exception):
+                res = None
+            self.assertEqual(res, e_t['parse_result'])
+
+
 class InvalidCases(unittest.TestCase):
 
     def _test_invalid(self, rls_name, show_name, prodid, tvid, is_anime):
@@ -738,6 +778,8 @@ class TVEpisodeTest(tv.TVEpisode):
         self.tvid = 1
         self._epid = 1
         self._indexerid = 1
+        self._season = -1
+        self._episode = -1
         self.epid = 1
 
 
@@ -853,4 +895,7 @@ if '__main__' == __name__:
     unittest.TextTestRunner(verbosity=2).run(suite)
 
     suite = unittest.TestLoader().loadTestsFromTestCase(ExtraInfoNoNameTests)
+    unittest.TextTestRunner(verbosity=2).run(suite)
+
+    suite = unittest.TestLoader().loadTestsFromTestCase(EpisodeNameCases)
     unittest.TextTestRunner(verbosity=2).run(suite)
