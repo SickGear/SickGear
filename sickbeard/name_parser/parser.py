@@ -225,8 +225,8 @@ class NameParser(object):
                         es = en and en.group(1) or None
 
                         extra_ep_num = self._convert_number(captures.group(extra_grp_name))
-                        parse_result.__dict__[ep_numbers] = list_range(ep_num, extra_ep_num + 1) if not (
-                            _ep_obj and es and es != captures.group(extra_grp_name)) and (
+                        parse_result.__dict__[ep_numbers] = list_range(ep_num, extra_ep_num + 1) if (
+                            not _ep_obj or not es or (_ep_obj and es and es != captures.group(extra_grp_name))) and (
                             0 < extra_ep_num - ep_num < 10) else [ep_num]
                         parse_result.score += 1
                     else:
