@@ -1,4 +1,9 @@
-﻿### 0.25.17 (2021-11-12 00:15:00 UTC)
+﻿### 0.25.18 (2021-11-12 15:00:00 UTC)
+
+* Change filter irrelevant Trakt API results
+
+
+### 0.25.17 (2021-11-12 00:15:00 UTC)
 
 * Fix daily schedule JavaScript error
 

@@ -168,9 +168,19 @@ class TraktIndexer(TVInfoBase):
                     else:
                         self._make_result_obj(all_series, results)
 
+        final_result = []
         seen = set()
-        results = [seen.add(r['id']) or r for r in results if r['id'] not in seen]
-        return results
+        film_type = re.compile(r'(?i)films?\)$')
+        for r in results:
+            if r['id'] not in seen:
+                seen.add(r['id'])
+                title = r.get('title') or ''
+                if not film_type.search(title):
+                    final_result.append(r)
+                else:
+                    log.debug('Search result ignored: %s ' % title)
+
+        return final_result
 
     @staticmethod
     def _dict_prevent_none(d, key, default):
