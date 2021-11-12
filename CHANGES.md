@@ -1,4 +1,9 @@
-﻿### 0.25.16 (2021-11-10 19:00:00 UTC)
+﻿### 0.25.17 (2021-11-12 00:15:00 UTC)
+
+* Fix daily schedule JavaScript error
+
+
+### 0.25.16 (2021-11-10 19:00:00 UTC)
 
 * Fix TVmaze search
 * Fix comparison of episode name with numbers during parsing of multi episode releases
