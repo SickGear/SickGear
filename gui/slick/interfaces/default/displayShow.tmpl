@@ -232,12 +232,13 @@
     #end if
     #set $flags = 'country_codes' in $show_obj.imdb_info and '' != $show_obj.imdb_info['country_codes']
     #if 'runtimes' in $show_obj.imdb_info
-        #set $runtime = $show_obj.imdb_info['runtimes']
+        #set $runtime = $show_obj.imdb_info['runtimes'] or 0
+        #set $episode_count = $show_obj.imdb_info['episode_count'] or 0
         ## test if average mini-series runtime is reasonable before using it,
         ## apply only to a runtime > 60 minutes, and assume 9.x minutes is the minimum (e.g. robot chicken)
-        #if $show_obj.imdb_info['is_mini_series'] and 1 < $show_obj.imdb_info['episode_count'] \
-                and $runtime and 90 < $show_obj.imdb_info['runtimes']:
-            #set $average_runtime = $show_obj.imdb_info['runtimes']/$show_obj.imdb_info['episode_count']
+        #if $show_obj.imdb_info['is_mini_series'] and 1 < $episode_count \
+                and $runtime and 90 < $runtime:
+            #set $average_runtime = $runtime/$episode_count
             #if 9 < $average_runtime:
                 #set $runtime = '%s (av %s?)' % ($runtime, int($average_runtime))
             #end if
