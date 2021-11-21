@@ -1,4 +1,9 @@
-﻿### 0.25.19 (2021-11-15 23:00:00 UTC)
+﻿### 0.25.20 (2021-11-21 16:25:00 UTC)
+
+* Fix display show when IMDb returns no episodes or runtimes
+
+
+### 0.25.19 (2021-11-15 23:00:00 UTC)
 
 * Change allow Python 3.9.9
 
