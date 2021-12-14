@@ -407,7 +407,7 @@ class Quality(object):
                     parser.stream._input.close()
 
                     tolerance = (lambda value, percent: int(round(value - (value * percent / 100.0))))
-                    if height >= tolerance(352, 5):
+                    if None is not height and height >= tolerance(352, 5):
                         if height <= tolerance(720, 2):
                             return Quality.SDTV
                         return (Quality.HDTV, Quality.FULLHDTV)[height >= tolerance(1080, 1)]
