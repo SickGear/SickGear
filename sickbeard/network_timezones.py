@@ -380,7 +380,8 @@ def get_network_timezone(network, return_name=False):
                 load_network_dict()
             try:
                 timezone_name = network_dupes.get(network) or network_dict.get(network.replace(' ', '').lower())
-                timezone = tz.gettz(timezone_name, zoneinfo_priority=True)
+                if isinstance(timezone_name, string_types):
+                    timezone = tz.gettz(timezone_name, zoneinfo_priority=True)
             except (BaseException, Exception):
                 pass
 
@@ -388,7 +389,8 @@ def get_network_timezone(network, return_name=False):
                 cc = re.search(r'\(([a-z]+)\)$', network, flags=re.I)
                 try:
                     timezone_name = country_timezones.get(cc.group(1).upper())
-                    timezone = tz.gettz(timezone_name, zoneinfo_priority=True)
+                    if isinstance(timezone_name, string_types):
+                        timezone = tz.gettz(timezone_name, zoneinfo_priority=True)
                 except (BaseException, Exception):
                     pass
     except (BaseException, Exception):
