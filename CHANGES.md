@@ -1,4 +1,9 @@
-﻿### 0.25.23 (2021-12-18 19:45:00 UTC)
+﻿### 0.25.24 (2021-12-22 22:05:00 UTC)
+
+* Fix person text spacing in regular layout
+
+
+### 0.25.23 (2021-12-18 19:45:00 UTC)
 
 * Fix handle bad data fetched from tvinfo source and passed to get_network_timezone
 
