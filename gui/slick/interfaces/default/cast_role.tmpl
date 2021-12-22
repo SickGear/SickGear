@@ -14,6 +14,8 @@
 #set global $header = 'Character'
 #set global $sbPath = '../..'
 #set global $topmenu = 'Character'
+#set $css = $getVar('css', 'reg')
+#set global $page_body_attr = 'cast-role" class="' + $css
 ##
 #import os.path
 #set global $inc_ofi = True
@@ -124,7 +126,7 @@ def param(visible=True, rid=None, cache_person=None, cache_char=None, person=Non
 .links li{display: inline-block; padding:0 10px 0 0}
 .links img{margin-bottom: -1px; vertical-align:initial}
 #character .details-title{width:auto}
-#character .details-info{margin-left:50px}
+.pro #character .details-info{margin-left:50px}
 </style>
 
 #set $section_links = False
