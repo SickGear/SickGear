@@ -1,6 +1,7 @@
 ﻿### 0.25.26 (2022-02-01 13:00:00 UTC)
 
 * Remove ETTV provider
+* Change add logging message when no season folder is set for path creation
 
 
 ### 0.25.25 (2022-01-18 14:55:00 UTC)
