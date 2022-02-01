@@ -5078,6 +5078,7 @@ class TVEpisode(TVEpisodeBase):
         name_groups = re.split(r'[\\/]', pattern)
 
         if 1 == len(name_groups):
+            logger.debug('No Season Folder set in Naming pattern: %s' % pattern)
             return ''
         return self._format_pattern(ek.ek(os.sep.join, name_groups[:-1]), multi)
 
