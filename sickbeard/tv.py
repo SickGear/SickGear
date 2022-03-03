@@ -77,6 +77,7 @@ if coreid_warnings:
     warnings.simplefilter('always', DeprecationWarning)
 
 tz_p = du_parser()
+invalid_date_limit = datetime.date(1900, 1, 1)
 
 # status codes for switching tv show source
 TVSWITCH_DUPLICATE_SHOW = 0
@@ -4302,11 +4303,18 @@ class TVEpisode(TVEpisodeBase):
         self.network_is_stream = ep_info.network_is_stream
         self.airtime = ep_info.airtime
         self.runtime = ep_info.runtime
-        self.timestamp = ep_info.timestamp or self._make_timestamp()
+        invalid_date = False
+        if not (self._airdate and self._airdate < invalid_date_limit):
+            self.timestamp = ep_info.timestamp or self._make_timestamp()
+        else:
+            self.timestamp = None
+            invalid_date = True
 
         today = datetime.date.today()
         delta = datetime.timedelta(days=1)
-        if self._timestamp and self._timezone:
+        if invalid_date:
+            show_time = None
+        elif self._timestamp and self._timezone:
             show_time = SGDatetime.from_timestamp(self._timestamp, tz_aware=True, local_time=False,
                                                   tzinfo=tz.gettz(self._timezone))
         else:
@@ -4315,8 +4323,9 @@ class TVEpisode(TVEpisodeBase):
                                                           self._network or self._show_obj.network)
         tz_now = datetime.datetime.now(network_timezones.SG_TIMEZONE)
         show_length = datetime.timedelta(minutes=helpers.try_int(self._runtime or self._show_obj.runtime, 60))
-        future_airtime = (self._airdate > (today + delta) or
-                          (not self._airdate < (today - delta) and ((show_time + show_length) > tz_now)))
+        future_airtime = not invalid_date and (
+            (self._airdate > (today + delta) or
+             (not self._airdate < (today - delta) and ((show_time + show_length) > tz_now))))
 
         # early conversion to int so that episode doesn't get marked dirty
         self.epid = getattr(ep_info, 'id', None)

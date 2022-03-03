@@ -1,4 +1,10 @@
-﻿### 0.25.26 (2022-02-01 13:00:00 UTC)
+﻿### 0.25.27 (2022-03-03 11:50:00 UTC)
+
+* Fix don't use invalid timestamps for episodes
+* Update recommended modules
+
+
+### 0.25.26 (2022-02-01 13:00:00 UTC)
 
 * Remove ETTV provider
 * Change add logging message when no season folder is set for path creation
