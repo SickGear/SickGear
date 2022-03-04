@@ -1,4 +1,9 @@
-﻿### 0.25.27 (2022-03-03 11:50:00 UTC)
+﻿### 0.25.28 (2022-03-04 23:55:00 UTC)
+
+* Update UnRar x64 for Windows 6.02 to 6.11
+
+
+### 0.25.27 (2022-03-03 11:50:00 UTC)
 
 * Fix don't use invalid timestamps for episodes
 * Update recommended modules
