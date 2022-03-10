@@ -1,4 +1,10 @@
-﻿### 0.25.28 (2022-03-04 23:55:00 UTC)
+﻿### 0.25.29 (2022-03-10 20:30:00 UTC)
+
+* Fix onTxComplete Linux port omissions from the Windows original
+* Change bump onTxComplete Linux version 1.1 to 1.2
+
+
+### 0.25.28 (2022-03-04 23:55:00 UTC)
 
 * Update UnRar x64 for Windows 6.02 to 6.11
 
