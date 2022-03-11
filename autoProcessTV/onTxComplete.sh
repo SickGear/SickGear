@@ -2,7 +2,7 @@
 : <<'main'
 *******************************************************************************
 
-onTxComplete.sh v1.2 for SickGear
+onTxComplete.sh v1.3 for SickGear
 
   Script to copy select files to a location for SickGear to post process.
 
@@ -245,8 +245,7 @@ log "  param4 = \"$content_path\""
 log "syncfile = \"$syncfile\""
 
 
-if [[ ! -z "$client_label" ]] \
-   && [[ "${client_label}" = "${sg_label}"* ]]; then
+case "${client_label}" in "${sg_label}"*)
 
   [ ! -d "$sg_path" ] && mkdir -p "$sg_path"
 
@@ -311,6 +310,6 @@ if [[ ! -z "$client_label" ]] \
       fi
     fi
   fi
-fi
+esac
 
 exit

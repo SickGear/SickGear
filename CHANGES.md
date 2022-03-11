@@ -1,4 +1,10 @@
-﻿### 0.25.29 (2022-03-10 20:30:00 UTC)
+﻿### 0.25.30 (2022-03-11 14:55:00 UTC)
+
+* Change improve onTxComplete shell compatibility
+* Change bump onTxComplete Linux version 1.2 to 1.3
+
+
+### 0.25.29 (2022-03-10 20:30:00 UTC)
 
 * Fix onTxComplete Linux port omissions from the Windows original
 * Change bump onTxComplete Linux version 1.1 to 1.2
