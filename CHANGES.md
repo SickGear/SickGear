@@ -1,6 +1,9 @@
-﻿### 0.25.31 (2022-03-28 14:55:00 UTC)
+﻿### 0.25.31 (2022-03-28 15:10:00 UTC)
 
 * Change allow Python 3.10.4, 3.9.12, 3.8.13, and 3.7.13
+* Update zoneinfo fallback to 2022a
+* Change enable cryptography wheels on Windows amd64, Linux x86_64 or aarch64, and Darwin x86_64
+* Change use cryptography <= 3.3.2 on systems that don't have prebuild wheels to avoid rust requirement
 
 
 ### 0.25.30 (2022-03-11 14:55:00 UTC)
