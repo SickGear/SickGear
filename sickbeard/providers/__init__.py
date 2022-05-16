@@ -37,7 +37,7 @@ __all__ = [
     'filesharingtalk',
     'omgwtfnzbs',
     # torrent
-    'alpharatio', 'bb', 'bithdtv', 'blutopia', 'btn',
+    'alpharatio', 'bithdtv', 'blutopia', 'btn',
     'custom01', 'custom11', 'eztv', 'fano', 'filelist', 'funfile', 'grabtheinfo',
     'hdbits', 'hdme', 'hdspace', 'hdtorrents',
     'immortalseed', 'iptorrents', 'limetorrents', 'magnetdl', 'milkie', 'morethan', 'nebulance', 'ncore', 'nyaa',
