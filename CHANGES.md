@@ -1,4 +1,9 @@
-﻿### 0.25.34 (2022-06-06 23:00:00 UTC)
+﻿### 0.25.35 (2022-06-08 00:28:00 UTC)
+
+* Fix catch ShowDirNotFoundException during prostprocessing
+
+
+### 0.25.34 (2022-06-06 23:00:00 UTC)
 
 * Change allow Python 3.10.5
 

@@ -884,7 +884,11 @@ class PostProcessor(object):
         :rtype: bool
         """
 
-        existing_show_path = ek.ek(os.path.isdir, ep_obj.show.location)
+        try:
+            existing_show_path = ek.ek(os.path.isdir, ep_obj.show.location)
+        except exceptions_helper.ShowDirNotFoundException:
+            existing_show_path = False
+
         if not existing_show_path and not sickbeard.CREATE_MISSING_SHOW_DIRS:
             # Show location does not exist, and cannot be created, marking it unsafe to proceed
             self._log(u'.. marking it unsafe to proceed because show location does not exist', logger.DEBUG)
