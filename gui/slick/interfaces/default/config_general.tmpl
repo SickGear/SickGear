@@ -173,7 +173,18 @@
 						<p>Options for software, package and alternative shownames/numbers.</p>
 					</div>
 					<fieldset class="component-group-list">
+#set $git_unsafe = 'git' == $sickbeard.update_software_scheduler.action.install_type and $sickbeard.update_software_scheduler.action.updater.unsafe
+#if $git_unsafe
+						<div class="field-pair">
+							<span class="component-title">Built-in updates disabled</span>
+							<span class="component-desc"><p>SickGear directory is not marked as safe in git settings.
+								Tip: Use 'install-path' <code>$sg_str('PROG_DIR').replace('\\', '/')</code> to enable git updates in...</p>
+								<code>git config --global --add safe.directory install-path</code>
+							</span>
+						</div>
+#end if
 #if not $sg_var('EXT_UPDATES')
+    #if not $git_unsafe
 						<div class="field-pair">
 							<span class="component-title">Software updates</span>
 							<span class="component-desc">
@@ -187,7 +198,7 @@
 									<p>update software automatically at startup and at interval<sup>1</sup></p>
 								</label>
 
-    #set $hide_interval1 = not ($sg_var('UPDATE_NOTIFY') or $sg_var('UPDATE_AUTO'))
+        #set $hide_interval1 = not ($sg_var('UPDATE_NOTIFY') or $sg_var('UPDATE_AUTO'))
 								<label class="nextline-block show-if-interval1" style="#if $hide_interval1#display:none;#end if#padding:6px 0">
 									<input type="text" name="update_interval" value="$sg_var('UPDATE_INTERVAL', 12)" class="form-control input-sm input75">
 									<p>hours interval<sup>1</sup> (default:$sg_var('DEFAULT_UPDATE_INTERVAL', 'n/a'))</p>
@@ -199,6 +210,7 @@
 								</label>
 							</span>
 						</div>
+    #end if
 
 						<div class="field-pair">
 							<span class="component-title">Package updates</span>

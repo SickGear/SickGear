@@ -7821,6 +7821,9 @@ class ConfigGeneral(Config):
         t.request_host = helpers.xhtml_escape(self.request.host_name, False)
         api_keys = '|||'.join([':::'.join(a) for a in sickbeard.API_KEYS])
         t.api_keys = api_keys and sickbeard.API_KEYS or []
+        if 'git' == sickbeard.update_software_scheduler.action.install_type:
+            # noinspection PyProtectedMember
+            sickbeard.update_software_scheduler.action.updater._find_installed_version()
         return t.respond()
 
     @staticmethod

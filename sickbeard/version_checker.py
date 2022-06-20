@@ -204,6 +204,7 @@ class UpdateManager(object):
 
 class GitUpdateManager(UpdateManager):
     def __init__(self):
+        self.unsafe = False
         self._git_path = self._find_working_git()
         self.github_repo_user = self.get_github_repo_user()
         self.github_repo = self.get_github_repo()
@@ -273,7 +274,7 @@ class GitUpdateManager(UpdateManager):
 
         return self._run_git(['version'], git_path)
 
-    def _run_git(self, arg_list, git_path=None):
+    def _run_git(self, arg_list, git_path=None, repeat=False):
 
         output = err = None
         exit_status = 1
@@ -289,7 +290,7 @@ class GitUpdateManager(UpdateManager):
 
         try:
             logger.debug(u'Executing %s with your shell in %s' % (cmd, sickbeard.PROG_DIR))
-            output, err, exit_status = cmdline_runner([git_path] + arg_list)
+            output, err, exit_status = cmdline_runner([git_path] + arg_list, env={'LANG': 'en_US.UTF-8'})
             logger.debug(u'git output: %s' % output)
 
         except OSError:
@@ -301,11 +302,30 @@ class GitUpdateManager(UpdateManager):
         if 0 == exit_status:
             logger.debug(u'Successful return: %s' % cmd)
             exit_status = 0
+            self.unsafe = False
 
         elif 1 == exit_status:
             logger.error(u'Failed: %s returned: %s' % (cmd, output))
 
         elif 128 == exit_status or 'fatal:' in output or err:
+            if 'unsafe repository' not in output and 'fatal:' in output:
+                try:
+                    outp, err, exit_status = cmdline_runner([git_path] + ['rev-parse', 'HEAD'], env={'LANG': 'en_US.UTF-8'})
+                    if 'unsafe repository' in outp:
+                        self.unsafe = True
+                except (BaseException, Exception):
+                    pass
+            if 'unsafe repository' in output:
+                self.unsafe = True
+            if self.unsafe and not repeat:
+                try:
+                    outp, err, exit_status = cmdline_runner(
+                        [git_path] + ['config', '--global', '--add',  'safe.directory',
+                                      sickbeard.PROG_DIR.replace('\\', '/')], env={'LANG': 'en_US.UTF-8'})
+                    if 0 == exit_status:
+                        return self._run_git(arg_list, git_path, repeat=True)
+                except (BaseException, Exception):
+                    pass
             exit_status = 128
             msg = u'Fatal: %s returned: %s' % (cmd, output)
             if 'develop' in output.lower() or 'master' in output.lower():
