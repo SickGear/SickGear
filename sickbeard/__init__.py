@@ -799,14 +799,6 @@ def init_stage_1(console_logging):
     # git_remote
     GIT_REMOTE = check_setting_str(CFG, 'General', 'git_remote', 'origin')
 
-    # current commit hash
-    CUR_COMMIT_HASH = check_setting_str(CFG, 'General', 'cur_commit_hash', '')
-    EXT_UPDATES = (35 > len(CUR_COMMIT_HASH) or not bool(re.match('^[a-z0-9]+$', CUR_COMMIT_HASH))) and \
-        ('docker/other', 'snap')['snap' in CUR_COMMIT_HASH]
-
-    # current commit branch
-    CUR_COMMIT_BRANCH = check_setting_str(CFG, 'General', 'cur_commit_branch', '')
-
     ACTUAL_CACHE_DIR = check_setting_str(CFG, 'General', 'cache_dir', 'cache')
 
     # unless they specify, put the cache dir inside the data dir
@@ -1475,6 +1467,30 @@ def init_stage_1(console_logging):
             header = callable(getattr(cur_provider, '_init_api', False)) and False is cur_provider._init_api() \
                 and header or {}
         cur_provider.headers.update(header)
+
+    # current commit hash
+    CUR_COMMIT_HASH = check_setting_str(CFG, 'General', 'cur_commit_hash', '')
+
+    # current commit branch
+    CUR_COMMIT_BRANCH = check_setting_str(CFG, 'General', 'cur_commit_branch', '')
+
+    if not CUR_COMMIT_HASH or '00000000000000000000000000000000000' == CUR_COMMIT_HASH:
+        tmp_v = version_checker.SoftwareUpdater()
+        if 'git' == tmp_v.install_type:
+            # noinspection PyProtectedMember
+            tmp_v.updater._find_installed_version()
+            if not CUR_COMMIT_HASH:
+                # in case git fails for some reason, set dummy hash to enable update for next start
+                CUR_COMMIT_HASH = '00000000000000000000000000000000000'
+            if not CUR_COMMIT_BRANCH:
+                # noinspection PyProtectedMember
+                tmp_branch = tmp_v.updater._find_installed_branch()
+                if tmp_branch:
+                    CUR_COMMIT_BRANCH = tmp_branch
+            update_config = True
+
+    EXT_UPDATES = (35 > len(CUR_COMMIT_HASH) or not bool(re.match('^[a-z0-9]+$', CUR_COMMIT_HASH))) and \
+        ('docker/other', 'snap')['snap' in CUR_COMMIT_HASH]
 
     if not os.path.isfile(CONFIG_FILE):
         logger.log(u'Unable to find \'%s\', all settings will be default!' % CONFIG_FILE, logger.DEBUG)
