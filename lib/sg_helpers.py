@@ -1512,8 +1512,8 @@ def scantree(path,  # type: AnyStr
                     yield entry
 
 
-def cmdline_runner(cmd, shell=False, suppress_stderr=False):
-    # type: (Union[AnyStr, List[AnyStr]], bool, bool) -> Tuple[AnyStr, Optional[AnyStr], int]
+def cmdline_runner(cmd, shell=False, suppress_stderr=False, env=None):
+    # type: (Union[AnyStr, List[AnyStr]], bool, bool, Dict) -> Tuple[AnyStr, Optional[AnyStr], int]
     """ Execute a child program in a new process.
 
     Can raise an exception to be caught in callee
@@ -1521,10 +1521,14 @@ def cmdline_runner(cmd, shell=False, suppress_stderr=False):
     :param cmd: A string, or a sequence of program arguments
     :param shell: If true, the command will be executed through the shell.
     :param suppress_stderr: Suppress stderr output if True
+    :param env: added env vars
     """
     # noinspection PyUnresolvedReferences
     kw = dict(cwd=PROG_DIR, shell=shell, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
               stderr=(open(os.devnull, 'w') if PY2 else subprocess.DEVNULL, subprocess.STDOUT)[not suppress_stderr])
+
+    if isinstance(env, dict):
+        kw.update(env=dict(os.environ, **env))
 
     if not PY2:
         kw.update(dict(encoding=ek.SYS_ENCODING, text=True, bufsize=0))

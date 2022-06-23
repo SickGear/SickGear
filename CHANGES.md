@@ -1,4 +1,12 @@
-﻿### 0.25.36 (2022-06-22 14:45:00 UTC)
+﻿### 0.25.37 (2022-06-23 13:40:00 UTC)
+
+* Change try to auto add repo path to git `safe.directory` setting
+* Change if auto adding git setting fails, post message to update section that SickGear path must be marked safe in git
+* Change force English output for git runner
+* Change about page, add more credits and a support link for TheTVDb
+
+
+### 0.25.36 (2022-06-22 14:45:00 UTC)
  
 * Fix if config file doesn't exist and git is installed try to find current hash or set dummy
 
