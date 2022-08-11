@@ -895,7 +895,7 @@ def get_url(url,  # type: AnyStr
 
         for r in range(0, 5):
             response = method(url, timeout=timeout, **kwargs)
-            if response.ok and not response.content:
+            if not savename and response.ok and not response.content:
                 if 'url=' in response.headers.get('Refresh', '').lower():
                     url = response.headers.get('Refresh').lower().split('url=')[1].strip('/')
                     if not url.startswith('http'):
@@ -1315,12 +1315,17 @@ def write_file(filepath,  # type: AnyStr
     if make_dirs(ek.ek(os.path.dirname, filepath)):
         try:
             if raw:
+                empty_file = True
                 with ek.ek(io.FileIO, filepath, 'wb') as fh:
                     for chunk in data.iter_content(chunk_size=1024):
                         if chunk:
+                            empty_file = False
                             fh.write(chunk)
                             fh.flush()
                     ek.ek(os.fsync, fh.fileno())
+                if empty_file:
+                    remove_file_perm(filepath, log_err=False)
+                    return result
             else:
                 w_mode = 'w'
                 if utf8:
