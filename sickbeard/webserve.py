@@ -3474,7 +3474,7 @@ class Home(MainHandler):
                     # case1 Detective Lt. Louie Provenza became Louie Provenza
                     # case2 Commander Russell Taylor became Commander Taylor
                     # case3 Micheal Tao became Mike Tao (surname is static except for women post marriage)
-                    lower_name = cur_role['character_name'].lower()
+                    lower_name = cur_role['character_name'].lower().strip() or 'unknown name'
                     name_parts = lower_name.split()
 
                     is_main = character.id == cur_role['character_id'] \
@@ -3994,6 +3994,12 @@ class AddShows(Home):
                                                no_mapped_ids=False, no_exceptions=True)
             return any([show_obj]) and '/home/view-show?tvid_prodid=%s' % show_obj.tvid_prodid
 
+        def _parse_date(dt_str):
+            try:
+                return dateutil.parser.parse(dt_str)
+            except (BaseException, Exception):
+                return ''
+
         # noinspection PyUnboundLocalVariable
         map_consume(final_results.extend,
                     [[[id_names[tvid], in_db(*((tvid, int(show['id'])),
@@ -4006,7 +4012,7 @@ class AddShows(Home):
                        int(show['id']),
                        show['seriesname'], helpers.xhtml_escape(show['seriesname']), show['firstaired'],
                        (isinstance(show['firstaired'], string_types)
-                        and SGDatetime.sbfdate(dateutil.parser.parse(show['firstaired'])) or ''),
+                        and SGDatetime.sbfdate(_parse_date(show['firstaired'])) or ''),
                        show.get('network', '') or '', show.get('genres', '') or '',  # 11 - 12
                        show.get('language', ''), show.get('language_country_code') or '',  # 13 - 14
                        re.sub(r'([,.!][^,.!]*?)$', '...',
@@ -9522,8 +9528,8 @@ class CachedImages(MainHandler):
                         poster_url = show_obj.poster
                 except (BaseException, Exception):
                     poster_url = ''
-            if poster_url and not sg_helpers.download_file(poster_url, image_file) and poster_url.find('trakt.us'):
-                sg_helpers.download_file(poster_url.replace('trakt.us', 'trakt.tv'), image_file)
+            if poster_url and not sg_helpers.download_file(poster_url, image_file, nocache=True) and poster_url.find('trakt.us'):
+                sg_helpers.download_file(poster_url.replace('trakt.us', 'trakt.tv'), image_file, nocache=True)
             if tmdb_image and not ek.ek(os.path.isfile, image_file):
                 self.create_dummy_image(image_file, 'tmdb')
 
@@ -9539,7 +9545,7 @@ class CachedImages(MainHandler):
                 except (BaseException, Exception):
                     poster_url = ''
                 if poster_url:
-                    sg_helpers.download_file(poster_url, image_file)
+                    sg_helpers.download_file(poster_url, image_file, nocache=True)
                 if not ek.ek(os.path.isfile, image_file):
                     self.create_dummy_image(image_file, 'tvdb')
 
@@ -9610,9 +9616,9 @@ class CachedImages(MainHandler):
             image_normal, image_thumb = image_cache_obj.character_both_path(char_obj, show_obj, person_obj=person_obj)
             sg_helpers.make_dirs(image_cache_obj.characters_dir)
             if self.should_load_image(image_normal) and char_obj.image_url:
-                sg_helpers.download_file(char_obj.image_url, image_normal)
+                sg_helpers.download_file(char_obj.image_url, image_normal, nocache=True)
             if self.should_load_image(image_thumb) and char_obj.thumb_url:
-                sg_helpers.download_file(char_obj.thumb_url, image_thumb)
+                sg_helpers.download_file(char_obj.thumb_url, image_thumb, nocache=True)
 
             primary, fallback = ((image_normal, image_thumb), (image_thumb, image_normal))[thumb]
             if ek.ek(os.path.isfile, primary):
@@ -9648,9 +9654,9 @@ class CachedImages(MainHandler):
             image_normal, image_thumb = image_cache_obj.person_both_paths(person_obj)
             sg_helpers.make_dirs(image_cache_obj.characters_dir)
             if self.should_load_image(image_normal) and person_obj.image_url:
-                sg_helpers.download_file(person_obj.image_url, image_normal)
+                sg_helpers.download_file(person_obj.image_url, image_normal, nocache=True)
             if self.should_load_image(image_thumb) and person_obj.thumb_url:
-                sg_helpers.download_file(person_obj.thumb_url, image_thumb)
+                sg_helpers.download_file(person_obj.thumb_url, image_thumb, nocache=True)
 
             primary, fallback = ((image_normal, image_thumb), (image_thumb, image_normal))[thumb]
             if ek.ek(os.path.isfile, primary):
