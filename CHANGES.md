@@ -1,4 +1,9 @@
-﻿### 0.25.39 (2022-08-25 08:50:00 UTC)
+﻿### 0.25.40 (2022-09-09 11:20:00 UTC)
+
+* Change allow Python 3.10.7, 3.9.14, 3.8.14, and 3.7.14
+
+
+### 0.25.39 (2022-08-25 08:50:00 UTC)
 
 * Fix recommended.txt for package updates
 
