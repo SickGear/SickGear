@@ -1,4 +1,9 @@
-﻿### 0.25.40 (2022-09-09 11:20:00 UTC)
+﻿### 0.25.41 (2022-09-23 01:25:00 UTC)
+
+* Fix a particular date handling that resulted in an UI issue
+
+
+### 0.25.40 (2022-09-09 11:20:00 UTC)
 
 * Change allow Python 3.10.7, 3.9.14, 3.8.14, and 3.7.14
 

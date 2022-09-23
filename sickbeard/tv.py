@@ -4315,8 +4315,14 @@ class TVEpisode(TVEpisodeBase):
         if invalid_date:
             show_time = None
         elif self._timestamp and self._timezone:
-            show_time = SGDatetime.from_timestamp(self._timestamp, tz_aware=True, local_time=False,
-                                                  tzinfo=tz.gettz(self._timezone))
+            try:
+                show_time = SGDatetime.from_timestamp(self._timestamp, tz_aware=True, local_time=False,
+                                                      tzinfo=tz.gettz(self._timezone))
+            except OverflowError:
+                logger.debug('Invalid timestamp: %s, using fallback' % self._timestamp)
+                show_time = network_timezones.parse_date_time(self._airdate.toordinal(),
+                                                              self._airtime or self._show_obj.airs,
+                                                              self._network or self._show_obj.network)
         else:
             show_time = network_timezones.parse_date_time(self._airdate.toordinal(),
                                                           self._airtime or self._show_obj.airs,
