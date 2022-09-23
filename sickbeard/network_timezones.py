@@ -610,7 +610,11 @@ def get_episode_time(d,  # type: int
 
     if isinstance(ep_timestamp, (integer_types, float)):
         from .sgdatetime import SGDatetime
-        return SGDatetime.from_timestamp(ep_timestamp, tzinfo=tzinfo, tz_aware=True, local_time=False)
+        try:
+            return SGDatetime.from_timestamp(ep_timestamp, tzinfo=tzinfo, tz_aware=True, local_time=False)
+        except OverflowError:
+            logger.debug('Invalid timestamp: %s, using fallback' % ep_timestamp)
+            ep_timestamp = None
 
     ep_time = None
     if isinstance(ep_airtime, integer_types):
