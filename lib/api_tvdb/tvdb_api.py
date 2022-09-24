@@ -515,7 +515,7 @@ class Tvdb(TVInfoBase):
                         v = self.config['url_artworks'] % v
                     elif 'genre' == k:
                         keep_data['genre_list'] = v
-                        v = '|%s|' % '|'.join([clean_data(c) for c in v if isinstance(c, string_types)])
+                        v = '|'.join([clean_data(c) for c in v if isinstance(c, string_types)])
                     elif 'gueststars' == k:
                         keep_data['gueststars_list'] = v
                         v = '|%s|' % '|'.join([clean_data(c) for c in v if isinstance(c, string_types)])
@@ -656,7 +656,7 @@ class Tvdb(TVInfoBase):
                 series['id'] = series_id
                 series['firstaired'] = None  # fill from ep listings page
                 series['genrelist'] = get_value(basic_info, 'genres').split(', ')  # extra field
-                series['genre'] = '|%s|' % '|'.join(series['genrelist'])
+                series['genre'] = '|'.join(series['genrelist'])
                 series['language'] = language
                 series['seriesname'] = soup.find(id='series_title').get_text(strip=True)
                 series['networklist'] = get_value(basic_info, 'network').split(', ')  # extra field
