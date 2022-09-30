@@ -520,23 +520,6 @@ class SickGear(object):
         if manual_update_arg in sickbeard.MY_ARGS:
             sickbeard.MY_ARGS.remove(manual_update_arg)
 
-        if not db.DBConnection().has_flag('fix_genre_sep'):
-            sickbeard.classes.loading_msg.message = 'Fixing genres'
-            try:
-                db_con = db.DBConnection()
-                s_l = db_con.select('SELECT indexer, indexer_id, genre FROM tv_shows')
-                c_l = []
-                for _s in s_l:
-                    genres = '|'.join([_g for _g in (_s['genre'] or '').split('|') if _g])
-                    c_l.append(['UPDATE tv_shows SET genre = ? WHERE indexer = ? AND indexer_id = ?',
-                                [genres, _s['indexer'], _s['indexer_id']]])
-                if c_l:
-                    db_con.mass_action(c_l)
-                db_con.set_flag('fix_genre_sep')
-            except (BaseException, Exception) as er:
-                logger.error('Error fixing genres')
-                logger.debug('%s' % traceback.format_exc())
-
         if not sickbeard.MEMCACHE.get('update_restart'):
             # Build from the DB to start with
             sickbeard.classes.loading_msg.message = 'Loading shows from db'

@@ -45,6 +45,7 @@ class MainSanityCheck(db.DBSanityCheck):
         self.fix_fallback_mapping()
         self.fix_indexer_mapping_tvdb()
         self.fix_episode_subtitles()
+        self.fix_genre_separator()
 
     def fix_episode_subtitles(self):
         if not self.connection.has_flag('fix_episode_subtitles'):
@@ -279,6 +280,26 @@ class MainSanityCheck(db.DBSanityCheck):
                 fallback_indexer + fallback_indexer)
             if sql_result.rowcount:
                 logger.log('Fixed fallback indexer mappings')
+
+    def fix_genre_separator(self):
+        try:
+            sql_result = self.connection.select('SELECT indexer, indexer_id, genre FROM tv_shows')
+            c_l = []
+            sep_chk = re.compile('(^[|]|[|]$)')
+            for cur_show in sql_result:
+                if sep_chk.search(cur_show['genre']):
+                    genres = '|'.join([_g for _g in (cur_show['genre'] or '').split('|') if _g])
+                    c_l.append(['UPDATE tv_shows SET genre = ? WHERE indexer = ? AND indexer_id = ?',
+                                [genres, cur_show['indexer'], cur_show['indexer_id']]])
+            if c_l:
+                progress_msg = 'Fixing genres separator'
+                logger.log(progress_msg)
+                sickbeard.classes.loading_msg.message = progress_msg
+                self.connection.mass_action(c_l)
+        except(BaseException, Exception):
+            import traceback
+            logger.error('Error fixing genres separator')
+            logger.debug('%s' % traceback.format_exc())
 
 
 class InitialSchema(db.SchemaUpgrade):
