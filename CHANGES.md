@@ -1,4 +1,10 @@
-﻿### 0.25.41 (2022-09-23 01:25:00 UTC)
+﻿### 0.25.42 (2022-09-30 14:40:00 UTC)
+
+* Change update dateutil zoneinfo fallback to 2022d
+* Fix genre strings when converted to list to not contain leading/trailing empty items
+
+
+### 0.25.41 (2022-09-23 01:25:00 UTC)
 
 * Fix a particular date handling that resulted in an UI issue
 

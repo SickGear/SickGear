@@ -2602,7 +2602,7 @@ class TVShow(TVShowBase):
         self._classification = None is self._classification and show_result['classification'] or ''
         self._dvdorder = show_result['dvdorder'] or 0
         self._flatten_folders = int(show_result['flatten_folders'])
-        self._genre = self._genre or show_result['genre'] or ''
+        self._genre = '|'.join([_g for _g in (self._genre or show_result['genre'] or '').split('|') if _g])
         self._lang = self._lang or show_result['lang'] or ''
         self._last_update_indexer = show_result['last_update_indexer']
         self._name = self._name or show_result['show_name'] or ''
@@ -2754,7 +2754,7 @@ class TVShow(TVShowBase):
                 self.tvid_prodid, self._name, sickbeard.TVInfoAPI(self.tvid).name))
 
         self.classification = self.dict_prevent_nonetype(show_info, 'classification', 'Scripted')
-        self.genre = self.dict_prevent_nonetype(show_info, 'genre')
+        self.genre = '|'.join([_g for _g in (self.dict_prevent_nonetype(show_info, 'genre') or '').split('|') if _g])
         self.network = self.dict_prevent_nonetype(show_info, 'network')
         self.runtime = self.dict_prevent_nonetype(show_info, 'runtime')
         self.dirty_setter('_src_update_time')(self, show_info.updated_timestamp)

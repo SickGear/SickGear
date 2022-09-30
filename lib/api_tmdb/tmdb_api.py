@@ -391,7 +391,7 @@ class TmdbIndexer(TVInfoBase):
             for g in show_dict.get('genre_ids') or []:
                 if g in self.tv_genres:
                     tv_s.genre_list.append(self.tv_genres.get(g))
-            tv_s.genre = ', '.join(tv_s.genre_list)
+            tv_s.genre = '|'.join(tv_s.genre_list)
             image_url = show_dict.get('poster_path') and '%s%s%s' % \
                 (self.img_base_url, self.size_map[TVInfoImageType.poster][TVInfoImageSize.original],
                  show_dict.get('poster_path'))

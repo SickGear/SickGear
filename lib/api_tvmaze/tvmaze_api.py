@@ -155,7 +155,7 @@ class TvMaze(TVInfoBase):
                         break
             return {'seriesname': clean_data(s.name), 'id': s.id, 'firstaired': clean_data(s.premiered),
                     'network': clean_data((s.network and s.network.name) or (s.web_channel and s.web_channel.name)),
-                    'genres': clean_data(isinstance(s.genres, list) and ', '.join(g.lower() for g in s.genres) or
+                    'genres': clean_data(isinstance(s.genres, list) and '|'.join(g.lower() for g in s.genres) or
                                          s.genres),
                     'overview': clean_data(s.summary), 'language': clean_data(s.language),
                     'language_country_code': clean_data(language_country_code),
@@ -352,7 +352,7 @@ class TvMaze(TVInfoBase):
             if 'days' in show_data.schedule:
                 ti_show.airs_dayofweek = ', '.join(show_data.schedule['days'])
         if show_data.genres:
-            ti_show.genre = '|%s|' % '|'.join(show_data.genres).lower()
+            ti_show.genre = '|'.join(show_data.genres).lower()
 
         if (actors or self.config['actors_enabled']) and not getattr(self.shows.get(sid), 'actors_loaded', False):
             if show_data.cast:
@@ -608,7 +608,7 @@ class TvMaze(TVInfoBase):
         ti_show.vote_average = show_data.rating and show_data.rating.get('average')
         ti_show.popularity = show_data.weight
         ti_show.genre_list = clean_data(show_data.genres or [])
-        ti_show.genre = '|%s|' % '|'.join(ti_show.genre_list).lower()
+        ti_show.genre = '|'.join(ti_show.genre_list).lower()
         ti_show.official_site = clean_data(show_data.official_site)
         ti_show.status = clean_data(show_data.status)
         ti_show.show_type = clean_data((isinstance(show_data.type, string_types) and [show_data.type.lower()] or
