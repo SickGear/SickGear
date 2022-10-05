@@ -10,22 +10,15 @@ lxml@https://raw.githubusercontent.com/wiki/SickGear/SickGear/packages/lxml-4.9.
 lxml >= 4.9.1; '3.10' >= python_version
 pip >= 22.2.2; '3.7' <= python_version
 pip <= 19.3.1; '3.0' > python_version
-python-Levenshtein >= 0.12.2; '3.7' <= python_version and '3.10' >= python_version and 'Windows' == platform_system
-python-Levenshtein >= 0.12.0, != 0.12.1; '3.7' <= python_version and 'Windows' != platform_system
-python-Levenshtein@https://raw.githubusercontent.com/wiki/SickGear/SickGear/packages/python_Levenshtein-0.12.2-cp310-cp310-win_amd64.whl  ; '3.10' == python_version and 'Windows' == platform_system and ('AMD64' == platform_machine or 'x86_64' == platform_machine)
-python-Levenshtein@https://raw.githubusercontent.com/wiki/SickGear/SickGear/packages/python_Levenshtein-0.12.2-cp39-cp39-win_amd64.whl  ; '3.9' == python_version and 'Windows' == platform_system and ('AMD64' == platform_machine or 'x86_64' == platform_machine)
-python-Levenshtein@https://raw.githubusercontent.com/wiki/SickGear/SickGear/packages/python_Levenshtein-0.12.2-cp38-cp38-win_amd64.whl  ; '3.8' == python_version and 'Windows' == platform_system and ('AMD64' == platform_machine or 'x86_64' == platform_machine)
-python-Levenshtein@https://raw.githubusercontent.com/wiki/SickGear/SickGear/packages/python_Levenshtein-0.12.2-cp37-cp37m-win_amd64.whl ; '3.7' == python_version and 'Windows' == platform_system and ('AMD64' == platform_machine or 'x86_64' == platform_machine)
-python-Levenshtein@https://raw.githubusercontent.com/wiki/SickGear/SickGear/packages/python_Levenshtein-0.12.2-cp310-cp310-win32.whl  ; '3.10' == python_version and 'Windows' == platform_system and ('AMD64' != platform_machine and 'x86_64' != platform_machine)
-python-Levenshtein@https://raw.githubusercontent.com/wiki/SickGear/SickGear/packages/python_Levenshtein-0.12.2-cp39-cp39-win32.whl  ; '3.9' == python_version and 'Windows' == platform_system and ('AMD64' != platform_machine and 'x86_64' != platform_machine)
-python-Levenshtein@https://raw.githubusercontent.com/wiki/SickGear/SickGear/packages/python_Levenshtein-0.12.2-cp38-cp38-win32.whl  ; '3.8' == python_version and 'Windows' == platform_system and ('AMD64' != platform_machine and 'x86_64' != platform_machine)
-python-Levenshtein@https://raw.githubusercontent.com/wiki/SickGear/SickGear/packages/python_Levenshtein-0.12.2-cp37-cp37m-win32.whl ; '3.7' == python_version and 'Windows' == platform_system and ('AMD64' != platform_machine and 'x86_64' != platform_machine)
+Levenshtein >= 0.20.5; '3.11' >= python_version and '3.7' <= python_version
+python-Levenshtein@https://raw.githubusercontent.com/wiki/SickGear/SickGear/packages/python_Levenshtein-0.12.2-cp310-cp310-win32.whl ; '3.10' == python_version and 'Windows' == platform_system and ('AMD64' != platform_machine and 'x86_64' != platform_machine)
+python-Levenshtein@https://raw.githubusercontent.com/wiki/SickGear/SickGear/packages/python_Levenshtein-0.12.2-cp39-cp39-win32.whl   ; '3.9' == python_version and 'Windows' == platform_system and ('AMD64' != platform_machine and 'x86_64' != platform_machine)
+python-Levenshtein@https://raw.githubusercontent.com/wiki/SickGear/SickGear/packages/python_Levenshtein-0.12.2-cp38-cp38-win32.whl   ; '3.8' == python_version and 'Windows' == platform_system and ('AMD64' != platform_machine and 'x86_64' != platform_machine)
+python-Levenshtein@https://raw.githubusercontent.com/wiki/SickGear/SickGear/packages/python_Levenshtein-0.12.2-cp37-cp37m-win32.whl  ; '3.7' == python_version and 'Windows' == platform_system and ('AMD64' != platform_machine and 'x86_64' != platform_machine)
 python-Levenshtein == 0.12.0; '3.0' > python_version
 python-Levenshtein@https://raw.githubusercontent.com/wiki/SickGear/SickGear/packages/python_Levenshtein-0.12.0-cp27-cp27m-win_amd64.whl ; '2.7' == python_version and 'Windows' == platform_system and ('AMD64' == platform_machine or 'x86_64' == platform_machine)
 python-Levenshtein@https://raw.githubusercontent.com/wiki/SickGear/SickGear/packages/python_Levenshtein-0.12.0-cp27-cp27m-win32.whl ; '2.7' == python_version and 'Windows' == platform_system and ('AMD64' != platform_machine and 'x86_64' != platform_machine)
-regex@https://raw.githubusercontent.com/wiki/SickGear/SickGear/packages/regex-2022.6.2-cp311-cp311-win_amd64.whl ; '3.11' <= python_version and 'Windows' == platform_system and ('AMD64' == platform_machine or 'x86_64' == platform_machine)
-regex@https://raw.githubusercontent.com/wiki/SickGear/SickGear/packages/regex-2022.6.2-cp311-cp311-win32.whl ; '3.11' <= python_version and 'Windows' == platform_system and ('AMD64' != platform_machine and 'x86_64' != platform_machine)
-regex >= 2022.8.17; '3.10' >= python_version and '3.7' <= python_version
+regex >= 2022.9.13; '3.11' >= python_version and '3.7' <= python_version
 regex <= 2020.10.28; '3.0' > python_version
 scandir >= 1.10.0; '3.0' > python_version
 setuptools >= 65.2.0; '3.7' <= python_version

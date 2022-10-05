@@ -4013,7 +4013,7 @@ class AddShows(Home):
                        show['seriesname'], helpers.xhtml_escape(show['seriesname']), show['firstaired'],
                        (isinstance(show['firstaired'], string_types)
                         and SGDatetime.sbfdate(_parse_date(show['firstaired'])) or ''),
-                       show.get('network', '') or '', show.get('genres', '') or '',  # 11 - 12
+                       show.get('network', '') or '', show.get('genres', '').replace('|', ', ') or '',  # 11 - 12
                        show.get('language', ''), show.get('language_country_code') or '',  # 13 - 14
                        re.sub(r'([,.!][^,.!]*?)$', '...',
                               re.sub(r'([.!?])(?=\w)', r'\1 ',
