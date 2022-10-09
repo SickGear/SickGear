@@ -1,4 +1,9 @@
-﻿### 0.25.43 (2022-10-05 11:30:00 UTC)
+﻿### 0.25.44 (2022-10-09 10:45:00 UTC)
+
+* Change add 4 digit episode name parsing
+
+
+### 0.25.43 (2022-10-05 11:30:00 UTC)
 
 * Change python-Levenshtein to Levenshtein for py3.7-py3.11
 * Change allow regex for py3.11

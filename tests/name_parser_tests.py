@@ -221,6 +221,8 @@ simple_test_cases = {
         '[Ayako]_Minami-ke_Okaeri_-_01v2_[1024x576 H264+AAC][B1912CD8]':
             parser.ParseResult(None, 'Minami-ke Okaeri', None, [], '1024x576 H264+AAC', 'Ayako', None, [1]),
         'Show.Name.123-11001001': parser.ParseResult(None, 'Show Name', None, [], None, None, None, [123]),
+        '[ShowSubs].Show.Name.-.1023.[1080p][12345678]':
+            parser.ParseResult(None, 'Show Name', None, [], '1080p', 'ShowSubs', None, [1023]),
     },
 
     'anime_ep_quality': {
@@ -228,6 +230,10 @@ simple_test_cases = {
         'Show Name 09 SD': parser.ParseResult(None, 'Show Name', None, [], 'SD', None, None, [9]),
         'Show Name 09 HD720': parser.ParseResult(None, 'Show Name', None, [], 'HD720', None, None, [9]),
         'Show Name HD1080 09': parser.ParseResult(None, 'Show Name', None, [], 'HD1080', None, None, [9]),
+        '[ShowSubs].Show.Name.-.1001.(720p).[12345678]':
+            parser.ParseResult(None, 'Show Name', None, [], '720p', 'ShowSubs', None, [1001]),
+        '[ShowSubs].Show.Name.-.1016.[720p][Multiple.Subtitle][12345678]':
+            parser.ParseResult(None, 'Show Name', None, [], '720p', 'ShowSubs', None, [1016]),
     },
 
     'anime_quality_ep': {
@@ -249,6 +255,7 @@ simple_test_cases = {
     'anime_standard_round': {
         '[SGKK] Bleach - 312v2 (1280x720 h264 AAC) [F501C9BE]':
             parser.ParseResult(None, 'Bleach', None, [], '1280x720 h264 AAC', 'SGKK', None, [312]),
+        'Show.Name.-.1023': parser.ParseResult(None, 'Show Name', None, [], None, None, None, [1023]),
     },
 
     'anime_slash': {
