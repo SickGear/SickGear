@@ -251,8 +251,8 @@ anime_regexes = [
      r'''
      ^(?:\[(?P<release_group>.+?)\][ ._-]*)
      (?P<series_name>.+?)[ ._-]+
-     (?P<ep_ab_num>\d{1,3})
-     (-(?P<extra_ab_ep_num>\d{1,3}))?[ ._-]+?
+     (?P<ep_ab_num>\d{1,4})
+     (-(?P<extra_ab_ep_num>\d{1,4}))?[ ._-]+?
      (?:v(?P<version>[0-9]))?
      (?:[\w\.]*)
      (?:(?:(?:[\[\(])(?P<extra_info>\d{3,4}[xp]?\d{0,4}[\.\w\s-]*)(?:[\]\)]))|(?:\d{3,4}[xp]))
@@ -271,8 +271,8 @@ anime_regexes = [
      r'''
      ^(\[(?P<release_group>.+?)\][ ._-]*)?         (?# Release Group and separator)
      (?P<series_name>.+?)[ ._-]+                   (?# Show_Name and separator)
-     (?P<ep_ab_num>\d{1,3})                        (?# E01)
-     (-(?P<extra_ab_ep_num>\d{1,3}))?              (?# E02)
+     (?P<ep_ab_num>\d{1,4})                        (?# E01)
+     (-(?P<extra_ab_ep_num>\d{1,4}))?              (?# E02)
      (v(?P<version>[0-9]))?                        (?# version)
      [ ._-]+\[(?P<extra_info>\d{3,4}[xp]?\d{0,4}.+?)\] (?# Source_Quality_Etc-)
      (\[(?P<crc>\w{8})\])?                         (?# CRC)
@@ -286,8 +286,8 @@ anime_regexes = [
      r'''
      ^(\[(?P<release_group>.+?)\][ ._-]*)?         (?# Release Group and separator)
      (?P<series_name>.+?)[ ._-]+                   (?# Show_Name and separator)
-     (?P<ep_ab_num>\d{1,3})                        (?# E01)
-     (-(?P<extra_ab_ep_num>\d{1,3}))?              (?# E02)
+     (?P<ep_ab_num>\d{1,4})                        (?# E01)
+     (-(?P<extra_ab_ep_num>\d{1,4}))?              (?# E02)
      (v(?P<version>[0-9]))?                        (?# version)
      [ ._-]+\((?P<extra_info>(CX[ ._-]?)?\d{3,4}[xp]?\d{0,4}[\.\w\s-]*)\) (?# Source_Quality_Etc-)
      (\[(?P<crc>\w{8})\])?                         (?# CRC)
@@ -302,8 +302,8 @@ anime_regexes = [
      r'''
      ^(\[(?P<release_group>.+?)\][ ._-]*)?         (?# Release Group and separator)
      (?P<series_name>.+?)[ ._-]+                   (?# Show_Name and separator)
-     (?P<ep_ab_num>\d{1,3})                        (?# E01)
-     (-(?P<extra_ab_ep_num>\d{1,3}))?              (?# E02)
+     (?P<ep_ab_num>\d{1,4})                        (?# E01)
+     (-(?P<extra_ab_ep_num>\d{1,4}))?              (?# E02)
      .*
      (v(?P<version>[0-9]))?                        (?# version)
      [ ._-]+(?P<extra_info>[sh]d\d{0,4}.*?)        (?# Source_Quality_Etc-)
@@ -321,8 +321,8 @@ anime_regexes = [
      (?P<series_name>.+?)[ ._-]+                   (?# Show_Name and separator)
      (?P<extra_info>[sh]d\d{0,4}.*?)[ ._-]+        (?# Source_Quality_Etc-)
      (\[(?P<crc>\w{8})\])?                         (?# CRC)
-     (?P<ep_ab_num>\d{1,3})                        (?# E01)
-     (-(?P<extra_ab_ep_num>\d{1,3}))?              (?# E02)
+     (?P<ep_ab_num>\d{1,4})                        (?# E01)
+     (-(?P<extra_ab_ep_num>\d{1,4}))?              (?# E02)
      .*
      (v(?P<version>[0-9]))?                        (?# version)
      .*?                                           (?# Separator and EOL)
@@ -334,8 +334,8 @@ anime_regexes = [
      r'''
      ^(\[(?P<release_group>.+?)\][ ._-]*)?         (?# Release Group and separator)
      (?P<series_name>.+?)[ ._-]+                   (?# Show_Name and separator)
-     (?P<ep_ab_num>\d{1,3})                        (?# E01)
-     (-(?P<extra_ab_ep_num>\d{1,3}))?              (?# E02)
+     (?P<ep_ab_num>\d{1,4})                        (?# E01)
+     (-(?P<extra_ab_ep_num>\d{1,4}))?              (?# E02)
      (v(?P<version>[0-9]))?                        (?# version)
      [ ._-]+\[(?P<extra_info>\d{3,4}p)             (?# Source_Quality_Etc-)
      (\[(?P<crc>\w{8})\])?                         (?# CRC)
@@ -351,8 +351,8 @@ anime_regexes = [
      ^(\[(?P<release_group>.+?)\][ ._-]*)?         (?# Release Group and separator)
      (?P<series_name>.+?)[ ._]*                    (?# Show_Name and separator)
      ([ ._-]+-[ ._-]+[A-Z]+[ ._-]+)?[ ._-]+        (?# this will kick me in the butt one day)
-     (?P<ep_ab_num>\d{1,3})                        (?# E01)
-     (-(?P<extra_ab_ep_num>\d{1,3}))?              (?# E02)
+     (?P<ep_ab_num>\d{1,4})                        (?# E01)
+     (-(?P<extra_ab_ep_num>\d{1,4}))?              (?# E02)
      (v(?P<version>[0-9]))?                        (?# version)
      ([ ._-](\[\w{1,2}\])?\[[a-z][.]?\w{2,4}\])?   (?# codec)
      [ ._-]*\[(?P<extra_info>(\d{3,4}[xp]?\d{0,4})?[\.\w\s-]*)\] (?# Source_Quality_Etc-)
@@ -374,8 +374,8 @@ anime_regexes = [
      (?P<extra_ep_num>\d+))*                       (?# additional E03/etc)
      ([ ._-]{2,}|[ ._]+)                           (?# if "-" is used to separate at least something else has to be)
                                                    (?# there ->{2,}  "s16e03-04-313-314" wouldn't make sense any way)
-     (?<!H.)(?P<ep_ab_num>\d{1,3})(?!0p)           (?# absolute number)
-     (-(?P<extra_ab_ep_num>\d{1,3}))*              (?# "-" as separator and additional absolute number, all optional)
+     (?<!H.)(?P<ep_ab_num>\d{1,4})(?!0p)           (?# absolute number)
+     (-(?P<extra_ab_ep_num>\d{1,4}))*              (?# "-" as separator and additional absolute number, all optional)
      (v(?P<version>[0-9]))?                        (?# the version e.g. "v2")
      .*?
      '''
@@ -393,8 +393,8 @@ anime_regexes = [
      (?P<extra_ep_num>\d+))*                       (?# additional E03/etc)
      ([ ._-]{2,}|[ ._]+)                           (?# if "-" is used to separate at least something else has to be)
                                                    (?# there ->{2,} "s16e03-04-313-314" wouldn't make sense any way)
-     (?<!H.)(?P<ep_ab_num>\d{1,3})(?!0p)           (?# absolute number)
-     (-(?P<extra_ab_ep_num>\d{1,3}))*              (?# "-" as separator and additional absolute number, all optional)
+     (?<!H.)(?P<ep_ab_num>\d{1,4})(?!0p)           (?# absolute number)
+     (-(?P<extra_ab_ep_num>\d{1,4}))*              (?# "-" as separator and additional absolute number, all optional)
      (v(?P<version>[0-9]))?                        (?# the version e.g. "v2")
      .*?
      '''
@@ -404,8 +404,8 @@ anime_regexes = [
      # Bleach - 313-314 - s16e03-04
      r'''
      ^(?P<series_name>.+?)[ ._-]+                  (?# start of string and series name and non optional separator)
-     (?<!H.)(?P<ep_ab_num>\d{1,3})(?!0p)           (?# absolute number)
-     (-(?P<extra_ab_ep_num>\d{1,3}))*              (?# "-" as separator and additional absolute number, all optional)
+     (?<!H.)(?P<ep_ab_num>\d{1,4})(?!0p)           (?# absolute number)
+     (-(?P<extra_ab_ep_num>\d{1,4}))*              (?# "-" as separator and additional absolute number, all optional)
      (v(?P<version>[0-9]))?                        (?# the version e.g. "v2")
      ([ ._-]{2,}|[ ._]+)                           (?# if "-" is used to separate at least something else has to be)
                                                    (?# there ->{2,} "s16e03-04-313-314" wouldn't make sense any way)
@@ -420,8 +420,8 @@ anime_regexes = [
     ('anime_and_normal_front',
      # 165.Naruto Shippuuden.s08e014
      r'''
-     ^(?<!H.)(?P<ep_ab_num>\d{1,3})(?!0p)          (?# start of string and absolute number)
-     (-(?P<extra_ab_ep_num>\d{1,3}))*              (?# "-" as separator and additional absolute number, all optional)
+     ^(?<!H.)(?P<ep_ab_num>\d{1,4})(?!0p)          (?# start of string and absolute number)
+     (-(?P<extra_ab_ep_num>\d{1,4}))*              (?# "-" as separator and additional absolute number, all optional)
      (v(?P<version>[0-9]))?[ ._-]+                 (?# the version e.g. "v2")
      (?P<series_name>.+?)[ ._-]+
      [sS](?P<season_num>\d+)[. _-]*                (?# S01 and optional separator)
@@ -436,8 +436,8 @@ anime_regexes = [
      r'''
      ^(?:\[(?P<release_group>.+?)\][ ._-]*)
      (?P<series_name>.+?)[ ._-]+
-     (?<!H.)(?P<ep_ab_num>\d{1,3})(?!0p)
-     (-(?P<extra_ab_ep_num>\d{1,3}))*[ ._-]*?
+     (?<!H.)(?P<ep_ab_num>\d{1,4})(?!0p)
+     (-(?P<extra_ab_ep_num>\d{1,4}))*[ ._-]*?
      (?:v(?P<version>[0-9])[ ._-]+?)?
      (?:.+?[ ._-]+?)?
      \[(?P<extra_info>\w+)\][ ._-]?
@@ -452,8 +452,8 @@ anime_regexes = [
      r'''
      ^(?:\[(?P<release_group>.+?)\][ ._-]*)?
      (?P<series_name>.+?)[ ._-]+[ ._-]{2,}         (?# Show_Name and min 2 char separator)
-     (?<!H.)(?P<ep_ab_num>\d{1,3})(?!0p)           (?# 1/001, while avoiding H.264 and 1080p from being matched)
-     (-(?P<extra_ab_ep_num>\d{1,3}))*[ ._-]*       (?# 2/002)
+     (?<!H.)(?P<ep_ab_num>\d{1,4})(?!0p)           (?# 1/001, while avoiding H.264 and 1080p from being matched)
+     (-(?P<extra_ab_ep_num>\d{1,4}))*[ ._-]*       (?# 2/002)
      (?:v(?P<version>[0-9]))?                      (?# v2)
      '''
      ),
