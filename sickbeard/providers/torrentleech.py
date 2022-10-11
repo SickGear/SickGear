@@ -19,7 +19,7 @@ from datetime import datetime
 import re
 
 from . import generic
-from ..helpers import try_int
+from ..helpers import anon_url, try_int
 
 from _23 import unidecode
 from six import iteritems, PY2
@@ -29,7 +29,7 @@ class TorrentLeechProvider(generic.TorrentProvider):
     def __init__(self):
         generic.TorrentProvider.__init__(self, 'TorrentLeech')
 
-        self.url_base = 'https://torrentleech.org/'
+        self.url_base = 'https://tlgetin.cc/'
         self.urls = {'config_provider_home_uri': self.url_base,
                      'login': self.url_base,
                      'browse': self.url_base + 'torrents/browse/list/categories/%(cats)s/%(x)s',
@@ -153,7 +153,11 @@ class TorrentLeechProvider(generic.TorrentProvider):
         cookies = 'use... \'tluid=xx; tlpass=yy\''
         if 'cookie_str_only' == key:
             return cookies
-        return 'torrentleech_digest' == key and self._valid_home() and cookies or ''
+        if 'torrentleech_digest' == key and self._valid_home():
+            current_url = getattr(self, 'urls', {}).get('config_provider_home_uri')
+            return (cookies + (current_url and ('<br>from a session logged in at <a target="_blank" href="%s">%s</a>' %
+                                                (anon_url(current_url), current_url.strip('/'))) or ''))
+        return ''
 
 
 provider = TorrentLeechProvider()
