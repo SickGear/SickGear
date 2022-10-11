@@ -1,4 +1,11 @@
-﻿### 0.25.44 (2022-10-09 10:45:00 UTC)
+﻿### 0.25.45 (2022-10-11 16:20:00 UTC)
+
+* Fix timeout on "Add from TV info source" 
+* Update certifi 2021.10.08 to 2022.09.24
+* Fix Torrentleech, a new session is required using the URL under the TL provider options/Cookies
+
+
+### 0.25.44 (2022-10-09 10:45:00 UTC)
 
 * Change add 4 digit episode name parsing
 
