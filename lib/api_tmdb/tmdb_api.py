@@ -167,6 +167,7 @@ class TmdbIndexer(TVInfoBase):
                           tmdb=s['id'], rage=s.get('external_ids') and s['external_ids'].get('tvrage_id'),
                           imdb=s.get('external_ids') and s['external_ids'].get('imdb_id') and
                           try_int(s['external_ids'].get('imdb_id', '').replace('tt', ''), None))
+            tvs.genre = '|'.join(tvs.genre_list or [])
             return tvs
 
         results = []
