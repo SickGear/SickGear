@@ -1,7 +1,12 @@
-﻿### 0.25.46 (2022-10-12 17:10:00 UTC)
+﻿### 0.25.46 (2022-10-15 01:05:00 UTC)
+
+* Change improve clarity of Telegram notification chat id field
+
+
+### 0.25.46 (2022-10-12 17:10:00 UTC)
 
 * Change allow Python 3.10.8, 3.9.15, 3.8.15, and 3.7.15
-* Change update dateutil zoneinfo fallback to 2022d
+* Change update dateutil zoneinfo fallback to 2022e
 
 
 ### 0.25.45 (2022-10-11 16:20:00 UTC)
