@@ -1,4 +1,11 @@
-﻿### 0.25.46 (2022-10-15 01:05:00 UTC)
+﻿### 0.25.48 (2022-10-18 01:40:00 UTC)
+
+* Change allow Python 3.11
+* Remove provider Grabtheinfo
+* Fix TVChaosUK and Nebulance on py3.11
+
+
+### 0.25.47 (2022-10-15 01:05:00 UTC)
 
 * Change improve clarity of Telegram notification chat id field
 

@@ -111,9 +111,10 @@ class NebulanceProvider(generic.TorrentProvider):
                                 maybe_ext = re.findall('(?i)(%s)' % '|'.join(common.mediaExtensions), title_parts[1])
                                 detail = title_parts[1].split('/')
                                 detail[1] = detail[1].strip().lower().replace('mkv', 'x264')
-                                title = '%s.%s' % (BS4Parser(title_parts[0].strip()).soup.string, '.'.join(
-                                    (maybe_res and [maybe_res[0]] or []) +
-                                    [detail[0].strip(), detail[1], maybe_ext and maybe_ext[0].lower() or 'mkv']))
+                                with BS4Parser(title_parts[0].strip()).soup as soup:
+                                    title = '%s.%s' % (soup.string, '.'.join(
+                                        (maybe_res and [maybe_res[0]] or []) +
+                                        [detail[0].strip(), detail[1], maybe_ext and maybe_ext[0].lower() or 'mkv']))
                             except (IndexError, KeyError):
                                 title = self.regulate_title(item, group_name)
                         download_url = self.urls['get'] % (self.user_authkey, self.user_passkey, torrent_id)
@@ -138,7 +139,7 @@ class NebulanceProvider(generic.TorrentProvider):
         t = ['']
         bl = r'[*\[({]+\s*'
         br = r'\s*[})\]*]+'
-        title = re.sub('(.*?)((?i)%sproper%s)(.*)' % (bl, br), r'\1\3\2', item['groupName'])
+        title = re.sub('(?i)(.*?)(%sproper%s)(.*)' % (bl, br), r'\1\3\2', item['groupName'])
         for r in (r'\s+-\s+', r'(?:19|20)\d\d(?:\-\d\d\-\d\d)?', r'S\d\d+(?:E\d\d+)?'):
             m = re.findall('(.*%s)(.*)' % r, title)
             if any(m) and len(m[0][0]) > len(t[0]):
