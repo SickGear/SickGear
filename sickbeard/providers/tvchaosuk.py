@@ -214,7 +214,7 @@ class TVChaosUKProvider(generic.TorrentProvider):
         t = ['']
         bl = r'[*\[({]+\s*'
         br = r'\s*[})\]*]+'
-        title = re.sub('(.*?)((?i)%sproper%s)(.*)' % (bl, br), r'\1\3\2', title)
+        title = re.sub('(?i)(.*?)(%sproper%s)(.*)' % (bl, br), r'\1\3\2', title)
         for r in (r'\s+-\s+', r'(?:19|20)\d\d(?:\-\d\d\-\d\d)?', r'S\d\d+(?:E\d\d+)?'):
             m = re.findall('(.*%s)(.*)' % r, title)
             if any(m) and len(m[0][0]) > len(t[0]):
