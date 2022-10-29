@@ -1,5 +1,6 @@
 ﻿### 0.25.49 (2022-10-30 17:30:00 UTC)
 
+* Change update dateutil zoneinfo fallback to 2022f
 * Change improve performance when fetching logs
 * Change Cheetah3 min version to 3.3.0 on py3
 * Fix Cryptography yanked module
