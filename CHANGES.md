@@ -1,4 +1,17 @@
-﻿### 0.25.48 (2022-10-18 01:40:00 UTC)
+﻿### 0.25.49 (2022-10-30 17:30:00 UTC)
+
+* Change update dateutil zoneinfo fallback to 2022f
+* Change improve performance when fetching logs
+* Change Cheetah3 min version to 3.3.0 on py3
+* Fix Cryptography yanked module
+* Change providers config page, add warning if duplicate api/pass keys exist at different providers
+* Fix issue where apikey field can be invisible on /api/builder/
+* Change view-log page, Logs command of /api/builder/ and starify auth data
+* Fix log typo in NZBGet Mark Good/Success postprocess action
+* Remove providers HDME, Torrentsdb, and Zooqle
+
+
+### 0.25.48 (2022-10-18 01:40:00 UTC)
 
 * Change allow Python 3.11
 * Remove provider Grabtheinfo

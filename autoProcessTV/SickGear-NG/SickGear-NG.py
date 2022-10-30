@@ -544,7 +544,7 @@ def start_check():
         sys.exit(0)
 
     if 'NZB_MARKED' == env_var.get('NZBNA_EVENT') and 'BAD' != env_var.get('NZBNA_MARKSTATUS'):
-        Logger.log('Marked as [%s], nothing to do, existing' % env_var.get('NZBNA_MARKSTATUS', ''))
+        Logger.log('Marked as [%s], nothing to do, exiting' % env_var.get('NZBNA_MARKSTATUS', ''))
         sys.exit(0)
 
     old_exit_status = get_old_status()

@@ -39,12 +39,12 @@ __all__ = [
     # torrent
     'alpharatio', 'bithdtv', 'blutopia', 'btn',
     'custom01', 'custom11', 'eztv', 'fano', 'filelist', 'funfile',
-    'hdbits', 'hdme', 'hdspace', 'hdtorrents',
+    'hdbits', 'hdspace', 'hdtorrents',
     'immortalseed', 'iptorrents', 'limetorrents', 'magnetdl', 'milkie', 'morethan', 'nebulance', 'ncore', 'nyaa',
     'pretome', 'privatehd', 'ptf',
     'rarbg', 'revtt', 'scenehd', 'scenetime', 'shazbat', 'showrss', 'snowfl', 'speedapp', 'speedcd',
-    'thepiratebay', 'torlock', 'torrentday', 'torrentdb', 'torrenting', 'torrentleech',  'tvchaosuk',
-    'xspeeds', 'zooqle',
+    'thepiratebay', 'torlock', 'torrentday', 'torrenting', 'torrentleech',  'tvchaosuk',
+    'xspeeds',
     # anime
     'tokyotoshokan',
     ]

@@ -3,7 +3,7 @@
 #from sickbeard.providers.generic import GenericProvider
 #from sickbeard.providers import thepiratebay
 #from sickbeard.providers.newznab import NewznabConstants
-#from sickbeard.helpers import anon_url, starify
+#from sickbeard.helpers import anon_url, maybe_plural, starify
 #from six import iteritems
 ##
 #set global $title = 'Config - Providers'
@@ -77,6 +77,16 @@
 
 				<div id="core-component-group1" class="component-group">
 					<fieldset class="component-group-list">
+#set $dupe_keys = $GenericProvider.dedupe_auths()
+#if $dupe_keys
+						<div style="background-color:#a00; margin-bottom:10px">
+							<p style="padding:5px">$len($dupe_keys) duplicate api/pass key$maybe_plural($len($dupe_keys)) found at providers:
+    #for $dupe in $dupe_keys
+		($dupe[0] = $dupe[1])
+    #end for
+						<br>Best security practice is to have unique keys for every provider</p>
+						</div>
+#end if
 						<div class="component-group-desc">
 							<h3>Priorities</h3>
 							<p>Allows searching recent and past releases.</p>
