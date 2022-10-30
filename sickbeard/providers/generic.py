@@ -669,6 +669,21 @@ class GenericProvider(object):
         # type: (Optional[bool]) -> bool
         return True
 
+    @staticmethod
+    def dedupe_auths(keys=False):
+        dedupe = {}
+        dupe = []
+        for cur_p in sickbeard.providers.sortedProviderList():
+            pid = cur_p.get_id()
+            for _cur_kt in ['password', 'passkey', 'api_key', 'key', 'digest', 'cookies', 'hash']:
+                k = getattr(cur_p, _cur_kt, '')
+                if k and '0' != k:
+                    if k not in dedupe.keys():
+                        dedupe.update({k: pid})
+                    elif pid not in dedupe.values():   # is detail at another provider
+                        dupe += [(dedupe.get(k), cur_p.name)]
+        return (dupe, dedupe.keys())[keys]
+
     def is_public_access(self):
         # type: (...) -> bool
         try:

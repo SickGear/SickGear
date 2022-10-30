@@ -1,1 +1,2 @@
-Cheetah3>=3.2.5
+Cheetah3 <= 3.2.6, != 3.2.6.post2; '3.0' > python_version
+CT3; '3.7' <= python_version

@@ -1,8 +1,8 @@
 cffi >= 1.15.1
-cryptography; '3.7' <= python_version and 'Windows' == platform_system
-cryptography; '3.7' <= python_version and 'Linux' == platform_system and ('x86_64' == platform_machine or 'aarch64' == platform_machine)
+cryptography != 38.0.2; '3.7' <= python_version and 'Windows' == platform_system
+cryptography != 38.0.2; '3.7' <= python_version and 'Linux' == platform_system and ('x86_64' == platform_machine or 'aarch64' == platform_machine)
 cryptography <= 3.3.2; '3.7' <= python_version and 'Linux' == platform_system and 'x86_64' != platform_machine and 'aarch64' != platform_machine
-cryptography; '3.7' <= python_version and 'Darwin' == platform_system and 'x86_64' == platform_machine
+cryptography != 38.0.2; '3.7' <= python_version and 'Darwin' == platform_system and 'x86_64' == platform_machine
 cryptography <= 3.3.2; '3.7' <= python_version and 'Darwin' == platform_system and 'x86_64' != platform_machine
 cryptography <= 3.3.2; '3.0' > python_version
 lxml@https://raw.githubusercontent.com/wiki/SickGear/SickGear/packages/lxml-4.9.0-cp311-cp311-win_amd64.whl ; '3.11' <= python_version and 'Windows' == platform_system and ('AMD64' == platform_machine or 'x86_64' == platform_machine)

@@ -49,7 +49,7 @@ from . import classes, db, helpers, history, image_cache, logger, network_timezo
 from .common import ARCHIVED, DOWNLOADED, FAILED, IGNORED, SKIPPED, SNATCHED, SNATCHED_ANY, SNATCHED_BEST, \
     SNATCHED_PROPER, UNAIRED, UNKNOWN, WANTED, Quality, qualityPresetStrings, statusStrings
 from .name_parser.parser import NameParser
-from .helpers import remove_article
+from .helpers import starify
 from .indexers import indexer_api, indexer_config
 from .indexers.indexer_config import *
 from lib.tvinfo_base.exceptions import *
@@ -189,6 +189,7 @@ class Api(webserve.BaseHandler):
         # default json
         outputCallbackDict = {'default': self._out_as_json,
                               'image': lambda x: x['image'],
+                              'raw': lambda x: x['raw']
                               }
 
         # do we have access ?
@@ -896,7 +897,7 @@ class CMD_ListCommands(ApiCall):
                         table += "<tr><td><span>%s <span class='paraopt'>optional</span></span></td>" \
                                  "<td><p>%s</p></td></tr>" % (p, des)
                 if table:
-                    out += "<table class='sickbeardTable' cellspacing='1' border='1' cellpadding='0'><thead>" \
+                    out += "<table class='sickbeardTable' cellspacing='0' border='1' cellpadding='0'><thead>" \
                            "<tr><th style='width: 25%'>Parameter</th><th>Description</th></tr>" \
                            "</thead><tbody>"
                     out += table
@@ -914,18 +915,18 @@ class CMD_ListCommands(ApiCall):
 
         if table_sickbeard_commands:
             out = "<h1>SickBeard Commands (compatibility):</h1>" \
-                  "<table class='sickbeardTable' cellspacing='1' border='1' cellpadding='0'><thead>" \
+                  "<table class='sickbeardTable' cellspacing='0' border='1' cellpadding='0'><thead>" \
                   "<tr><th style='width: 25%'>Command</th><th>Description</th>" \
                   "<th style='width: 25%'>Replacement SickGear Command</th></tr>" \
                   "</thead><tbody>" + table_sickbeard_commands + '</tbody></table>' + out
 
         if table_sickgear_commands:
             out = "<h1>SickGear Commands:</h1>" \
-                  "<table class='sickbeardTable' cellspacing='1' border='1' cellpadding='0'><thead>" \
+                  "<table class='sickbeardTable' cellspacing='0' border='1' cellpadding='0'><thead>" \
                   "<tr><th style='width: 25%'>Command</th><th>Description</th></tr>" \
                   "</thead><tbody>" + table_sickgear_commands + '</tbody></table>' + out
 
-        return out
+        return {'outputType': 'raw', 'raw': out}
 
 
 class CMD_Help(ApiCall):
@@ -1782,10 +1783,13 @@ class CMD_SickGearLogs(ApiCall):
         num_lines = 0
 
         if os.path.isfile(logger.sb_log_instance.log_file_path):
-            for x in logger.sb_log_instance.reverse_readline(logger.sb_log_instance.log_file_path):
+            auths = sickbeard.GenericProvider.dedupe_auths(True)
+            rxc_auths = re.compile('(?i)%s' % '|'.join([(re.escape(_a)) for _a in auths]))
+            replacements = dict([(_a, starify(_a)) for _a in auths])
+            for cur_line in logger.sb_log_instance.reverse_readline(logger.sb_log_instance.log_file_path):
 
-                x = decode_str(x)
-                match = re.match(regex, x)
+                cur_line = decode_str(cur_line)
+                match = re.match(regex, cur_line)
 
                 if match:
                     level = match.group(7)
@@ -1796,15 +1800,26 @@ class CMD_SickGearLogs(ApiCall):
                     if logger.reverseNames[level] >= min_level:
                         if truncate and not normal_data and truncate[0] == match.group(8) + match.group(9):
                             truncate += [match.group(8) + match.group(9)]
-                            repeated = x
+                            repeated = cur_line
                             continue
 
                         if 1 < len(truncate):
-                            final_data[-1] = repeated.strip() + ' (... %s repeat lines)\n' % len(truncate)
+                            data = repeated.strip() + ' (... %s repeat lines)\n' % len(truncate)
+                            if not final_data:
+                                final_data = [data]
+                            else:
+                                final_data[-1] = data
 
                         truncate = [match.group(8) + match.group(9)]
 
-                        final_data.append(x)
+                        # noinspection HttpUrlsUsage
+                        if 'https://' in cur_line or 'http://' in cur_line:
+                            for cur_change in rxc_auths.finditer(cur_line):
+                                cur_line = '%s%s%s' % (cur_line[:cur_change.start()],
+                                                       replacements[cur_line[cur_change.start():cur_change.end()]],
+                                                       cur_line[cur_change.end():])
+
+                        final_data.append(cur_line)
                         if any(normal_data):
                             final_data += ['%02s) %s' % (n + 1, x) for n, x in enumerate(normal_data[::-1])] + \
                                           ['<br />']
@@ -1815,10 +1830,10 @@ class CMD_SickGearLogs(ApiCall):
                         continue
 
                 else:
-                    if not any(normal_data) and not any([x.strip()]):
+                    if not any(normal_data) and not any([cur_line.strip()]):
                         continue
 
-                    normal_data.append(re.sub(r'\r?\n', '<br />', x.replace('<', '&lt;').replace('>', '&gt;')))
+                    normal_data.append(re.sub(r'\r?\n', '<br />', cur_line.replace('<', '&lt;').replace('>', '&gt;')))
 
                 num_lines += 1
 

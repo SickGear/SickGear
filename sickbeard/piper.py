@@ -76,13 +76,35 @@ def initial_requirements():
     """
     if is_pip_ok():
         try:
-            # noinspection PyUnresolvedReferences
-            import Cheetah
-            # noinspection PyUnresolvedReferences
-            if 3 > try_int(Cheetah.Version[0]):
+            # noinspection PyUnresolvedReferences,PyPackageRequirements
+            from Cheetah import VersionTuple
+
+            is_cheetah2 = (3, 0, 0) > VersionTuple[0:3]
+            is_cheetah3py3 = not PY2 and (3, 3, 0) > VersionTuple[0:3]
+            if not (is_cheetah2 or is_cheetah3py3):
+                return
+
+            for cur_mod in [_m for _m in set(sys.modules.keys()) if 'heetah' in _m]:
+                del sys.modules[cur_mod]
+                try:
+                    del globals()[cur_mod]
+                except KeyError:
+                    pass
+                try:
+                    del locals()[cur_mod]
+                except KeyError:
+                    pass
+
+            from gc import collect
+            collect()
+
+            if is_cheetah2:
                 run_pip(['uninstall', 'cheetah', 'markdown'])
                 raise ValueError
-        except (BaseException, Exception):
+            elif is_cheetah3py3:
+                run_pip(['uninstall', '-r', 'recommended-remove.txt'])
+                raise ValueError
+        except (BaseException, ImportError):
             run_pip(['install', '-U', '--user', '-r', 'requirements.txt'])
             module = 'Cheetah'
             try:
@@ -146,7 +168,8 @@ def check_pip_env():
 
     py2_last = 'final py2 release'
     boost = 'performance boost'
-    extra_info = dict({'Cheetah3': 'filled requirement', 'lxml': boost, 'python-Levenshtein': boost})
+    extra_info = dict({'Cheetah3': 'filled requirement', 'CT3': 'filled requirement',
+                       'lxml': boost, 'python-Levenshtein': boost})
     extra_info.update((dict(cryptography=py2_last, pip='stable py2 release', regex=py2_last,
                             scandir=boost, setuptools=py2_last),
                        dict(regex=boost))[not PY2])

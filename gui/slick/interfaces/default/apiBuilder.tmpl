@@ -15,13 +15,29 @@ sbRoot = "$sbRoot";
 
 <style type="text/css">
 <!--
-#apibuilder select { padding: 2px 2px 2px 6px; display: block; float: left; margin: auto 8px 4px auto;
-}
-#apibuilder select option { padding: 1px 6px; line-height: 1.2em; }
-#apibuilder .disabled { color: #ccc; }
-#apibuilder .action { background-color: #efefef; }
+#apibuilder select {padding: 2px 2px 2px 6px; display: block; float: left; margin: auto 8px 4px auto}
+#apibuilder select option {padding: 1px 6px; line-height: 1.2em}
+#apibuilder .disabled {color: #ccc}
+#apibuilder .action {background-color: #efefef}
 .parareq {display: block; color: red; font-weight: bolder; font-size: 80%;}
 .paraopt {display: block; color: gray; font-size: 80%;}
+pre{
+	white-space: pre-wrap;       /* Since CSS 2.1 */
+	white-space: -moz-pre-wrap;  /* Mozilla, since 1999 */
+	white-space: -pre-wrap;      /* Opera 4-6 */
+	white-space: -o-pre-wrap;    /* Opera 7 */
+	word-wrap: break-word;       /* Internet Explorer 5.5+ */
+	padding: 5px
+}
+.grey-text{color: #a00 !important}
+body{margin: 20px !important}
+h1{font-size: 25px !important}
+table.sickbeardTable, table.sickbeardTable td{border: 1px solid !important;border-collapse: collapse !important;border-spacing:  0 0;margin-top: 5px;}
+li{padding-bottom: 10px !important}
+table.sickbeardTable th{padding-top: 6px !important;padding-bottom: 6px !important;white-space: nowrap !important;background-color: #000}
+table.sickbeardTable td, table.sickbeardTable th{text-align: left !important}
+table.sickbeardTable td ul{padding-left: 15px !important}
+hr{margin: 40px 0 20px}
 -->
 </style>
 
@@ -615,7 +631,7 @@ addOption("show.pause-opt", "Pause", "&pause=1");
 <table align="center">
     <tr>
         <td>
-            <input type="text" size="40" id="apikey" name="apikey" value="$apikey">
+            <input type="text" size="40" id="apikey" name="apikey" value="$apikey" placeholder="Enter apikey" style="border:1px solid black; padding:3px 8px; margin-right:3px">
             <input type="checkbox" id="debug" class="global"><label for="debug"> Debug?</label>
             <input type="checkbox" id="profile" class="global"><label for="profile"> Profile?</label>
             <input type="checkbox" id="jsonp" class="global"><label for="jsonp"> JSONP?</label>

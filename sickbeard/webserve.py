@@ -77,7 +77,7 @@ from Cheetah.Template import Template
 from unidecode import unidecode
 import dateutil.parser
 
-from tornado import gen
+from tornado import gen, iostream
 # noinspection PyUnresolvedReferences
 from tornado.web import RequestHandler, StaticFileHandler, authenticated
 from tornado.concurrent import run_on_executor
@@ -835,6 +835,55 @@ class LoadingWebHandler(BaseHandler):
             lambda _route: not re.search('get[_-]message', _route) and 'loading-page' or _route))
 
     post = get
+
+
+class LogfileHandler(BaseHandler):
+
+    def __init__(self, application, request, **kwargs):
+        super(LogfileHandler, self).__init__(application, request, **kwargs)
+        self.lock = threading.Lock()
+
+    @authenticated
+    @gen.coroutine
+    def get(self, path, *args, **kwargs):
+        logfile_name = logger.current_log_file()
+
+        try:
+            self.set_header('Content-Type', 'text/html; charset=utf-8')
+            self.set_header('Content-Description', 'Logfile Download')
+            self.set_header('Content-Disposition', 'attachment; filename=sickgear.log')
+            # self.set_header('Content-Length', ek.ek(os.path.getsize, logfile_name))
+            auths = sickbeard.GenericProvider.dedupe_auths(True)
+            rxc_auths = re.compile('(?i)%s' % '|'.join([(re.escape(_a)) for _a in auths]))
+            replacements = dict([(_a, starify(_a)) for _a in auths])
+            data_to_write = ''
+            with io.open(logfile_name, 'rt', encoding='utf8') as logfile:
+                while 1:
+                    # read 1M bytes of line + up to next line
+                    data_lines = logfile.readlines(1000000)
+                    if not data_lines:
+                        return
+                    line_count = len(data_lines)
+                    for l_n, cur_line in enumerate(data_lines, 1):
+                        # noinspection HttpUrlsUsage
+                        if 'https://' in cur_line or 'http://' in cur_line:
+                            for cur_change in rxc_auths.finditer(cur_line):
+                                cur_line = '%s%s%s' % (cur_line[:cur_change.start()],
+                                                       replacements[cur_line[cur_change.start():cur_change.end()]],
+                                                       cur_line[cur_change.end():])
+                        data_to_write += cur_line
+                        if 10000 < len(data_to_write) or l_n == line_count:
+                            try:
+                                self.write(data_to_write)
+                                data_to_write = ''
+                                yield self.flush()
+                            except iostream.StreamClosedError:
+                                return
+                            finally:
+                                # pause the coroutine so other handlers can run
+                                yield gen.sleep(0.000000001)
+        except (BaseException, Exception):
+            pass
 
 
 class WebHandler(BaseHandler):
@@ -9291,20 +9340,7 @@ class EventLogs(MainHandler):
         self.redirect('/events/')
 
     def download_log(self):
-        logfile_name = logger.current_log_file()
-        self.set_header('Content-Type', 'application/octet-stream')
-        self.set_header('Content-Description', 'Logfile Download')
-        self.set_header('Content-Length', ek.ek(os.path.getsize, logfile_name))
-        self.set_header('Content-Disposition', 'attachment; filename=sickgear.log')
-        with open(logfile_name, 'rb') as logfile:
-            while True:
-                try:
-                    data = logfile.read(4096)
-                    if not data:
-                        break
-                    self.write(data)
-                except (BaseException, Exception):
-                    break
+        self.redirect('/logfile/sickgear.log')
 
     def view_log(self, min_level=logger.MESSAGE, max_lines=500):
 
@@ -9321,16 +9357,19 @@ class EventLogs(MainHandler):
         repeated = None
         num_lines = 0
         if os.path.isfile(logger.sb_log_instance.log_file_path):
-            for x in logger.sb_log_instance.reverse_readline(logger.sb_log_instance.log_file_path):
+            auths = sickbeard.GenericProvider.dedupe_auths(True)
+            rxc_auths = re.compile('(?i)%s' % '|'.join([(re.escape(_a)) for _a in auths]))
+            replacements = dict([(_a, starify(_a)) for _a in auths])
+            for cur_line in logger.sb_log_instance.reverse_readline(logger.sb_log_instance.log_file_path):
 
-                x = helpers.xhtml_escape(decode_str(x, errors='replace'), False)
+                cur_line = helpers.xhtml_escape(decode_str(cur_line, errors='replace'), False)
                 try:
-                    match = regex.findall(x)[0]
+                    match = regex.findall(cur_line)[0]
                 except(BaseException, Exception):
-                    if not any(normal_data) and not any([x.strip()]):
+                    if not any(normal_data) and not any([cur_line.strip()]):
                         continue
 
-                    normal_data.append(re.sub(r'\r?\n', '<br>', x))
+                    normal_data.append(re.sub(r'\r?\n', '<br>', cur_line))
                 else:
                     level, log = match[0], ' '.join(match[1:])
                     if level not in logger.reverseNames:
@@ -9343,17 +9382,30 @@ class EventLogs(MainHandler):
                     else:
                         if truncate and not normal_data and truncate[0] == log:
                             truncate += [log]
-                            repeated = x
+                            repeated = cur_line
                             continue
 
                         if 1 < len(truncate):
-                            final_data[-1] = repeated.strip() + \
-                                             ' <span class="grey-text">(...%s repeat lines)</span>\n' % len(truncate)
+                            data = repeated.strip() + \
+                                   ' <span class="grey-text">(...%s repeat lines)</span>\n' % len(truncate)
+                            if not final_data:
+                                final_data = [data]
+                            else:
+                                final_data[-1] = data
 
                         truncate = [log]
 
-                        final_data.append(x.replace(
-                            ' Starting SickGear', ' <span class="prelight2">Starting SickGear</span>'))
+                        # noinspection HttpUrlsUsage
+                        if 'https://' in cur_line or 'http://' in cur_line:
+                            for cur_change in rxc_auths.finditer(cur_line):
+                                cur_line = '%s%s%s' % (cur_line[:cur_change.start()],
+                                                       replacements[cur_line[cur_change.start():cur_change.end()]],
+                                                       cur_line[cur_change.end():])
+
+                        final_data.append(cur_line)
+                        if 'Starting SickGear' in cur_line:
+                            final_data[-1].replace(' Starting SickGear',
+                                                   ' <span class="prelight2">Starting SickGear</span>')
                         if any(normal_data):
                             final_data += ['<code><span class="prelight">'] + \
                                           ['<span class="prelight-num">%02s)</span> %s' % (n + 1, x)
