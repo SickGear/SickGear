@@ -673,15 +673,71 @@ class GenericProvider(object):
     def dedupe_auths(keys=False):
         dedupe = {}
         dupe = []
+        rxc_cookie = re.compile(r'(?i)[\s\']+|cook[ie]e\s*:\s*')
+        rxc_delim = re.compile(r'[&;]')
+        rxc_skip_key = re.compile(r'clearance')
+
         for cur_p in sickbeard.providers.sortedProviderList():
             pid = cur_p.get_id()
-            for _cur_kt in ['password', 'passkey', 'api_key', 'key', 'digest', 'cookies', 'hash']:
-                k = getattr(cur_p, _cur_kt, '')
-                if k and '0' != k:
-                    if k not in dedupe.keys():
-                        dedupe.update({k: pid})
-                    elif pid not in dedupe.values():   # is detail at another provider
-                        dupe += [(dedupe.get(k), cur_p.name)]
+            auths = set([])
+            for cur_kt in ['password', 'passkey', 'api_key', 'key', 'digest', 'cookies', 'hash']:
+                auth = (getattr(cur_p, cur_kt, '') or '').strip()
+                if auth and '0' != auth and 'sg=0' != auth:
+                    auth = rxc_cookie.sub('', auth)
+                    if '=' not in auth:
+                        auths.add(auth)
+                    else:
+                        for cur_kv in [_kv for _kv in rxc_delim.split(auth)]:
+                            if '=' in cur_kv:
+                                cur_kv = cur_kv.split('=')
+                                if rxc_skip_key.search(cur_kv[0]):
+                                    continue
+                                cur_kv = cur_kv.pop()
+                            cur_kv = cur_kv.strip()
+                            if 5 < len(cur_kv):
+                                auths.add(cur_kv)
+
+            for cur_auth in sorted(auths, key=len, reverse=True):
+                if cur_auth not in dedupe.keys():
+                    dedupe.update({cur_auth: pid})
+                elif pid not in dedupe.values():   # is detail at another provider
+                    dupe += [(dedupe.get(cur_auth), cur_p.name)]
+
+        # non provider auths
+        for cur_auth in [
+            (sickbeard.WEB_PASSWORD, 'sickgear_login'),
+            (sickbeard.SAB_APIKEY, 'sab_apikey'), (sickbeard.SAB_PASSWORD, 'sab_password'),
+            (sickbeard.NZBGET_PASSWORD, 'nzbget_password'), (sickbeard.TORRENT_PASSWORD, 'torrent_client'),
+            (sickbeard.EMBY_APIKEY, 'emby_apikey'), (sickbeard.KODI_PASSWORD, 'kodi_password'),
+            (sickbeard.PLEX_PASSWORD, 'plex_password'), (sickbeard.XBMC_PASSWORD, 'xbmc_password'),
+            (sickbeard.EMAIL_PASSWORD, 'email_password'), (sickbeard.ANIDB_PASSWORD, 'anidb_password'),
+            (sickbeard.BOXCAR2_ACCESSTOKEN, 'boxcar2_accesstoken'),
+            (sickbeard.DISCORD_ACCESS_TOKEN, 'discord_access_token'),
+            (sickbeard.GITTER_ACCESS_TOKEN, 'gitter_access_token'),
+            (('', sickbeard.GROWL_HOST[:sickbeard.GROWL_HOST.find('@')])['@' in sickbeard.GROWL_HOST], 'growl_host'),
+            (sickbeard.PUSHBULLET_ACCESS_TOKEN, 'pushbullet_access_token'),
+            (sickbeard.PUSHOVER_APIKEY, 'pushover_apikey'),
+            (sickbeard.PROWL_API, 'prowl_api'),
+            (sickbeard.PUSHALOT_AUTHORIZATIONTOKEN, 'pushalot_authorizationtoken'),
+            (sickbeard.SLACK_ACCESS_TOKEN, 'slack_access_token'),
+            (sickbeard.TELEGRAM_ACCESS_TOKEN, 'telegram_access_token'),
+        ] + [(_k[1], 'sg_apikey_%s' % _k[0]) for _k in sickbeard.API_KEYS if _k[1]] +\
+            ([], [(sickbeard.SUBTITLES_SERVICES_AUTH[0][1],
+                   'opensubs_%s' % sickbeard.SUBTITLES_SERVICES_AUTH[0][0])])[any(sickbeard.SUBTITLES_SERVICES_AUTH)] +\
+            [(sickbeard.TRAKT_CLIENT_SECRET, 'trakt_client_secret')] +\
+            [(_t, 'trakt_tk_%s' % _n) for (_t, _n) in [
+                (getattr(x, 'token', ''), getattr(x, 'name', ''))
+                for x in sickbeard.TRAKT_ACCOUNTS.values()] if _t] +\
+            [(_t, 'trakt_rt_%s' % _n) for (_t, _n) in [
+                (getattr(x, 'refresh_token', ''), getattr(x, 'name', ''))
+                for x in sickbeard.TRAKT_ACCOUNTS.values()] if _t]:
+            if not cur_auth[0] or 4 > len(cur_auth[0]):
+                continue
+            if cur_auth[0] not in dedupe.keys():
+                dedupe.update(dict([cur_auth]))
+            elif cur_auth[1] not in dedupe.values():  # is detail at another provider
+                dupe += [(dedupe.get(cur_auth[0]), cur_auth[1])]
+
         return (dupe, dedupe.keys())[keys]
 
     def is_public_access(self):
