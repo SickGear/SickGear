@@ -1,4 +1,9 @@
-﻿### 0.25.49 (2022-10-30 17:30:00 UTC)
+﻿### 0.25.50 (2022-10-31 14:30:00 UTC)
+
+* Change improve the scope of auth dupe checker
+
+
+### 0.25.49 (2022-10-30 17:30:00 UTC)
 
 * Change update dateutil zoneinfo fallback to 2022f
 * Change improve performance when fetching logs
