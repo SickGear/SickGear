@@ -47,6 +47,7 @@ from lib.tvinfo_base.exceptions import *
 import encodingKludge as ek
 from exceptions_helper import ex, MultipleShowObjectsException
 
+import dateutil.parser
 import requests
 import requests.exceptions
 import subliminal
@@ -96,6 +97,14 @@ def remove_extension(name):
     return name
 
 
+def is_parsable_date(text):
+    try:
+        result = isinstance(dateutil.parser.parse(text), datetime.datetime)
+    except (BaseException, Exception):
+        result = False
+    return result
+
+
 def remove_non_release_groups(name, is_anime=False):
     """
     Remove non release groups from name
@@ -119,7 +128,9 @@ def remove_non_release_groups(name, is_anime=False):
         rename = name = remove_extension(name)
         while rename:
             for regex in rc:
-                name = regex.sub('', name)
+                result = regex.findall(name)
+                if result and not is_parsable_date(result[0].strip(' ()')):
+                    name = regex.sub('', name)
             rename = (name, False)[name == rename]
 
     return name

@@ -206,6 +206,11 @@ class SickGear(object):
             print('or find another way to force Python to use %s for string encoding.' % SYS_ENCODING)
             sys.exit(1)
         sickbeard.SYS_ENCODING = SYS_ENCODING
+        legacy_runner = globals().get('_legacy_sickbeard_runner')
+        if not legacy_runner:
+            import __main__
+            legacy_runner = 'bear' in (getattr(__main__, '__file__', False) or '').split(os.sep)[-1].lower()
+        sickbeard.MEMCACHE['DEPRECATE_SB_RUNNER'] = legacy_runner
 
         # Need console logging for sickgear.py and SickBeard-console.exe
         self.console_logging = (not hasattr(sys, 'frozen')) or (0 < sickbeard.MY_NAME.lower().find('-console'))
