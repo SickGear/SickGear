@@ -16,15 +16,26 @@
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import print_function
-print(
-    '------------------------------------------------------------------------------------------------------------------'
-)
-print(
-    '2019 Jan: You can now run sickgear.py directly'
-    ' (SickBeard.py now serves as a legacy convenience which prints this message on every startup)'
-)
-print(
-    '------------------------------------------------------------------------------------------------------------------'
-)
+from time import sleep
 import runpy
+print(
+    '--------------------------------------------------------------------------------------------------------------'
+)
+for _ in range(30, 0, -1):
+    print(
+        '2019 Jan: You can now run sickgear.py directly\n'
+        '          (SickBeard.py now serves as a legacy convenience which prints this message on every startup)'
+    )
+    print(
+        '--------------------------------------------------------------------------------------------------------------'
+    )
+    print(
+        '2022 Nov: Nearly four years have passed, enough time for this `SickBeard.py` file to be deleted.\n'
+        '          Starting SickGear with this `SickBeard.py` file is slower than using `sickgear.py`,\n'
+        '(%02ds)     please change whatever starts SickGear to use the `sickgear.py` file instead.' % (_ * 2)
+    )
+    print(
+        '--------------------------------------------------------------------------------------------------------------'
+    )
+    sleep(2)
 runpy.run_module('sickgear', {'_legacy_sickbeard_runner': True}, '__main__')

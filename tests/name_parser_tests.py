@@ -167,6 +167,8 @@ simple_test_cases = {
         '23-11-2010 - Ep Name': parser.ParseResult(None, extra_info='Ep Name', air_date=datetime.date(2010, 11, 23)),
         'Show.Name.23.11.2010.WEB-DL':
             parser.ParseResult(None, 'Show Name', None, [], 'WEB-DL', None, datetime.date(2010, 11, 23)),
+        'ShowName (10 Nov 2022)':
+            parser.ParseResult(None, 'ShowName', None, [], None, None, datetime.date(2022, 11, 10)),
     },
 
     'folder_filename': {

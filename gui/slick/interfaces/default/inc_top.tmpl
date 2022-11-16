@@ -384,6 +384,17 @@
 	</div>
 #end if
 ##
+#if $sickbeard.MEMCACHE.get('DEPRECATE_SB_RUNNER')
+	<div style="background-color:#a00; margin-top:35px; padding:5px 5px 1px 5px">
+		<p>Since Jan 2019, installations like this one have displayed a
+		message on every startup to run `<em><span style="color:#fff">sickgear.py</em></span>` instead of `SickBeard.py`.<br>
+		But some runners (e.g. Linux service files) hide the message.</p>
+		<p>Nov 2022:
+		To remove this red box, and to prevent a future startup failure when the outdated `<span style="color:#fff">SickBeard.py</span>` is removed,
+		<br>please change whatever starts SickGear to run `<em><span style="color:#fff">sickgear.py</em></span>`.</p>
+	</div>
+#end if
+##
 #set $items = []
 #try
     #set void = $items.append($topmenu)
