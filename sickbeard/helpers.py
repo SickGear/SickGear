@@ -129,8 +129,10 @@ def remove_non_release_groups(name, is_anime=False):
         while rename:
             for regex in rc:
                 result = regex.findall(name)
-                if result and not is_parsable_date(result[0].strip(' ()')):
-                    name = regex.sub('', name)
+                if result:
+                    for cur_match in isinstance(result[0], tuple) and result[0] or result:
+                        if not is_parsable_date(cur_match.strip(' ()')):
+                            name = regex.sub('', name)
             rename = (name, False)[name == rename]
 
     return name

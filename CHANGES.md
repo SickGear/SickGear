@@ -1,4 +1,9 @@
-﻿### 0.25.51 (2022-11-16 14:30:00 UTC)
+﻿### 0.25.52 (2022-11-17 03:30:00 UTC)
+
+* Fix process media
+
+
+### 0.25.51 (2022-11-16 14:30:00 UTC)
 
 * Fix process media with a date in parentheses
 * Add rapid fuzz dependency
