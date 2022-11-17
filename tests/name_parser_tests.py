@@ -19,6 +19,8 @@ DEBUG = VERBOSE = False
 
 simple_test_cases = {
     'standard': {
+        'Showname - s01e01 no-rar':
+            parser.ParseResult(None, 'Showname', 1, [1]),
         'Mr.Show.Name.S01E02.Source.Quality.Etc-Group':
             parser.ParseResult(None, 'Mr Show Name', 1, [2], 'Source.Quality.Etc', 'Group'),
         'Show.Name.S01E02': parser.ParseResult(None, 'Show Name', 1, [2]),
