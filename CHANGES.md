@@ -1,4 +1,9 @@
-﻿### 0.25.53 (2022-12-17 15:50:00 UTC)
+﻿### 0.25.54 (2022-12-17 17:40:00 UTC)
+
+* Fix Trakt API server error handler
+
+
+### 0.25.53 (2022-12-17 15:50:00 UTC)
 
 * Change update dateutil zoneinfo fallback to 2022g
 * Change allow Python 3.11.1, 3.10.9, 3.9.16, 3.8.16, and 3.7.16
