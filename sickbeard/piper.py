@@ -16,7 +16,7 @@ import json
 import os
 import re
 
-from sg_helpers import cmdline_runner, try_int
+from sg_helpers import cmdline_runner
 
 from _23 import filter_list, ordered_dict
 from six import iteritems, PY2
@@ -170,7 +170,7 @@ def check_pip_env():
     boost = 'performance boost'
     extra_info = dict({'Cheetah3': 'filled requirement', 'CT3': 'filled requirement',
                        'lxml': boost, 'python-Levenshtein': boost})
-    extra_info.update((dict(cryptography=py2_last, pip='stable py2 release', regex=py2_last,
+    extra_info.update((dict(cryptography=py2_last, pip=py2_last, regex=py2_last,
                             scandir=boost, setuptools=py2_last),
                        dict(regex=boost))[not PY2])
     return installed, extra_info, failed_names
@@ -222,7 +222,8 @@ def _check_pip_env(pip_outdated=False, reset_fails=False):
         try:
             requirement = next(parse_requirements(cur_line))  # https://packaging.pypa.io/en/latest/requirements.html
         except ValueError as e:
-            logger.error('Error [%s] with line: %s' % (e, cur_line))  # name@url ; whitespace/newline must follow url
+            if not cur_line.startswith('--'):
+                logger.error('Error [%s] with line: %s' % (e, cur_line))  # name@url ; whitespace/LF must follow url
             continue
         project_name = getattr(requirement, 'project_name', None)
         if cur_line in known_failed and project_name not in environment:
@@ -255,9 +256,13 @@ def _check_pip_env(pip_outdated=False, reset_fails=False):
     to_update = set()
     names_outdated = dict()
     if pip_outdated and not fresh_install:
-        output, err, exit_status = run_pip(['list', '--outdated', '--format', 'json'], suppress_stderr=True)
+        output, err, exit_status = run_pip([
+            'list', '--outdated', '--format', 'json', '--extra-index-url',
+            'https://gitlab+deploy-token-1599941:UNupqjtDab_zxNzvP2gA@gitlab.com/api/v4/projects/279215/packages/'
+            'pypi/simple'], suppress_stderr=True)
         try:
-            names_outdated = dict({cur_item.get('name'): {k: cur_item.get(k) for k in ('version', 'latest_version')}
+            names_outdated = dict({cur_item.get('name'): {k: cur_item.get(k) for k in ('version', 'latest_version',
+                                                                                       'latest_filetype')}
                                    for cur_item in json.loads(output)})
             to_update = set(filter_list(
                 lambda name: name in specifiers and names_outdated[name]['latest_version'] in specifiers[name],
@@ -267,7 +272,8 @@ def _check_pip_env(pip_outdated=False, reset_fails=False):
             if not int(os.environ.get('CHK_URL_SPECIFIERS', 0)):
                 to_remove = set()
                 for cur_name in to_update:
-                    if '@' in output_reco[cur_name] and cur_name in specifiers:
+                    if '@' in output_reco[cur_name] and cur_name in specifiers \
+                            and 'wheel' != names_outdated[cur_name]['latest_filetype']:
                         # direct reference spec update, is for a package met in the env, so remove update
                         to_remove.add(cur_name)
                 to_update = to_update.difference(to_remove)
@@ -321,15 +327,17 @@ def pip_update(loading_msg, updates_todo, data_dir):
         # exclude Cheetah3 to prevent `No matching distro found` and fallback to its legacy setup.py installer
         output, err, exit_status = run_pip(['install', '-U']
                                            + ([], ['--only-binary=:all:'])[cur_project_name not in ('Cheetah3', )]
-                                           + ['--user', '-r', piper_path])
+                                           + ['--user', '-r', piper_path, '--extra-index-url',
+                                              'https://gitlab+deploy-token-1599941:UNupqjtDab_zxNzvP2gA@gitlab.com/api/'
+                                              'v4/projects/279215/packages/pypi/simple'])
         pip_version = None
         try:
             # ensure '-' in a project name is not escaped in order to convert the '-' into a `[_-]` regex
             find_name = re.escape(cur_project_name.replace(r'-', r'44894489')).replace(r'44894489', r'[_-]')
-            parsed_name = re.findall(r'(?sim).*(%s[^\s]+)\.whl.*' % find_name, output) or \
-                re.findall(r'(?sim).*Successfully installed.*?(%s[^\s]+)' % find_name, output)
+            parsed_name = re.findall(r'(?sim).*(%s\S+)\.whl.*' % find_name, output) or \
+                re.findall(r'(?sim).*Successfully installed.*?(%s\S+)' % find_name, output)
             if not parsed_name:
-                parsed_name = re.findall(r'(?sim)up-to-date[^\s]+\s*(%s).*?\s\(([^)]+)\)$' % find_name, output)
+                parsed_name = re.findall(r'(?sim)up-to-date\S+\s*(%s).*?\s\(([^)]+)\)$' % find_name, output)
                 parsed_name = ['' if not parsed_name else '-'.join(parsed_name[0])]
             pip_version = re.findall(r'%s-([\d.]+).*?' % find_name, ek.ek(os.path.basename, parsed_name[0]), re.I)[0]
         except (BaseException, Exception):

@@ -2861,8 +2861,8 @@ class TVShow(TVShowBase):
                     try:
                         remove_char_ids.remove(mc.id)
                     except KeyError:
-                        logger.log('%s - error character: %s (%s)' % (self.name, mc.id, mc.name), logger.ERROR)
-                        pass
+                        # can happen with duplicate characters on source
+                        logger.debug('%s - error character: %s (%s)' % (self.name, mc.id, mc.name))
 
                     old_person_ids = {op.id for op in mc.person if None is not op.id}
                     for src_person in c.person:
