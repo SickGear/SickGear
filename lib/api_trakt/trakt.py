@@ -358,9 +358,9 @@ class TraktAPI(object):
             else:
                 log.error(u'Could not connect to Trakt. Code error: {0}'.format(code))
                 raise TraktException('Could not connect to Trakt. Code error: %s' % code)
-        except ConnectionSkipException as e:
+        except ConnectionSkipException:
             log.error('Failure handling error')
-            raise e
+            raise TraktException
         except ValueError as e:
             log.error(u'Value Error: %s' % ex(e))
             raise TraktValueError(u'Value Error: %s' % ex(e))
