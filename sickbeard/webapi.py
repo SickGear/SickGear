@@ -861,17 +861,17 @@ class CMD_ListCommands(ApiCall):
                 table_sickbeard_commands += '<tr><td>%s</td>' % f
             else:
                 table_sickgear_commands += '<tr><td>%s</td>' % f
-            color = ("", " style='color: grey !important;'")[is_old_command]
-            out += '<hr><h1 class="command"%s>%s%s</h1>' \
+            color = ("", " sb")[is_old_command]
+            out += '<hr><h1 class="command%s">%s%s</h1>' \
                    % (color, f, ("",
-                                 " <span style='font-size: 50%;color: black;'>(Sickbeard compatibility command)</span>"
+                                 " <span>(Sickbeard compatibility command)</span>"
                                  )[is_old_command])
             if isinstance(help, dict):
                 sg_cmd_new = self._get_old_command(command_class=v)
                 sg_cmd = ''
                 if sg_cmd_new:
                     sg_cmd = '<td>%s</td>' % sg_cmd_new
-                    out += "<p style='color: darkgreen !important;'>for all features use SickGear API Command: <b>%s</b></p>" % sg_cmd_new
+                    out += "<p class='use-sg-api'>for all features use SickGear API Command: <b>%s</b></p>" % sg_cmd_new
                 if "desc" in help:
                     if is_old_command:
                         table_sickbeard_commands += '<td>%s</td>%s' % (help['desc'], sg_cmd)
@@ -2490,7 +2490,7 @@ class CMD_SickGearSearchIndexers(ApiCall):
              "optionalParameters": {"name": {"desc": "name of the show you want to search for"},
                                     "indexerid": {"desc": "thetvdb.com or tvrage.com unique id of a show"},
                                     "lang": {"desc": "the 2 letter abbreviation lang id"},
-                                    "indexer": {"desc": "indexer to search, use -1 to search all indexers"}
+                                    "indexers": {"desc": "indexer to search, use -1 to search all indexers"}
                                     }
              }
 
@@ -2508,6 +2508,8 @@ class CMD_SickGearSearchIndexers(ApiCall):
         # self.lang, args = self.check_params(args, kwargs, "lang", "en", False, "string", self.valid_languages.keys())
         self.indexers, args = self.check_params(args, kwargs, "indexers", -1, False, "list",
                                                 [-1] + [i for i in indexer_api.TVInfoAPI().search_sources], int)
+        self.tvid, args = self.check_params(args, kwargs, "indexer", None, False, "int",
+                                            [i for i in indexer_api.TVInfoAPI().sources])
 
         # super, missing, help
         ApiCall.__init__(self, handler, args, kwargs)
@@ -2520,12 +2522,21 @@ class CMD_SickGearSearchIndexers(ApiCall):
         all_indexer = 1 == len(self.indexers) and -1 == self.indexers[0]
         lang_id = self.valid_languages['en']
 
-        if self.name and not self.prodid:  # only name was given
+        if (self.name and not self.prodid) or (self.prodid and self.tvid):
             results = []
             indexertosearch = (self.indexers, [i for i in indexer_api.TVInfoAPI().sources if
                                                indexer_api.TVInfoAPI(i).config.get('active') and
                                                not indexer_api.TVInfoAPI(i).config.get('mapped_only') and
                                                not indexer_api.TVInfoAPI(i).config.get('defunct')])[all_indexer]
+            search_kw = {}
+            search_name = None
+            if self.name:
+                search_kw['name'] = decode_str(self.name)
+            if self.prodid and self.tvid:
+                search_kw.update({'ids': {self.tvid: self.prodid}})
+                if self.tvid in indexertosearch:
+                    indexertosearch = [self.tvid] + [i for i in indexertosearch if i != self.tvid]
+
             for i in indexertosearch:
                 tvinfo_config = sickbeard.TVInfoAPI(i).api_params.copy()
                 tvinfo_config['language'] = 'en'
@@ -2533,18 +2544,38 @@ class CMD_SickGearSearchIndexers(ApiCall):
                 t = sickbeard.TVInfoAPI(i).setup(**tvinfo_config)
 
                 try:
-                    apiData = t[decode_str(self.name), False]
+                    apiData = t.search_show(**search_kw)
                 except (BaseException, Exception) as e:
                     continue
 
+                if not apiData:
+                    continue
+
                 for curSeries in (apiData or []):
+                    if (int(curSeries['id']) == self.prodid and i == self.tvid) or \
+                            any({self.tvid: self.prodid} == {k: v} for k, v in iteritems(curSeries['ids'])):
+                        if not self.name and curSeries['ids'].get(self.tvid) == int(curSeries['id']):
+                            search_kw['name'] = curSeries['seriesname']
+                            search_name = curSeries['seriesname']
+                        new_ids = {k: v for k, v in iteritems(curSeries['ids']) if v and k != self.tvid}
+                        if new_ids:
+                            if 'ids' not in search_kw:
+                                search_kw['ids'] = {}
+                            search_kw['ids'].update(new_ids)
+
                     s = {"indexerid": int(curSeries['id']),
                          "name": curSeries['seriesname'],
                          "first_aired": curSeries['firstaired'],
                          "indexer": i,
                          "aliases": curSeries.get('aliases', None),
-                         "relevance": AddShows.get_uw_ratio(self.name, curSeries['seriesname'],
-                                                            curSeries.get('aliases', None))}
+                         "network": curSeries.get('network'),
+                         "overview": curSeries.get('overview'),
+                         "language": curSeries.get('language'),
+                         "genres": curSeries.get('genre'),
+                         "genre_list": curSeries.get('genre_list'),
+                         "relevance": (curSeries['ids'].get(self.tvid) == int(curSeries['id']) and 100)
+                         or AddShows.get_uw_ratio(self.name or search_name or '', curSeries['seriesname'],
+                                                  curSeries.get('aliases', None))}
                     if TVINFO_TVDB == i:
                         s["tvdbid"] = int(curSeries['id'])
                     else:
@@ -2597,7 +2628,7 @@ class CMD_SickGearSearchIndexers(ApiCall):
             showOut = sorted(showOut, key=lambda x: x['relevance'], reverse=True)
             return _responds(RESULT_SUCCESS, {"results": showOut, "langid": lang_id, "lang": 'en'})
         else:
-            return _responds(RESULT_FAILURE, msg="Either indexer + indexerid or name is required")
+            return _responds(RESULT_FAILURE, msg="Either indexerid or name is required")
 
 
 class CMD_SickBeardSearchIndexers(CMD_SickGearSearchIndexers):
@@ -2611,6 +2642,7 @@ class CMD_SickBeardSearchIndexers(CMD_SickGearSearchIndexers):
 
     def __init__(self, handler, args, kwargs):
         kwargs['indexers'] = TVINFO_TVDB
+        kwargs['indexer'] = TVINFO_TVDB
         # super, missing, help
         self.sickbeard_call = True
         CMD_SickGearSearchIndexers.__init__(self, handler, args, kwargs)

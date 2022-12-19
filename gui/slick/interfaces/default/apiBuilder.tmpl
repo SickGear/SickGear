@@ -2,23 +2,34 @@
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
+<meta charset="utf-8">
 <title>API Builder</title>
 <link rel="stylesheet" type="text/css" href="$sbRoot/css/style.css?v=$sbPID">
 <link rel="stylesheet" type="text/css" href="$sbRoot/css/light.css?v=$sbPID">
-    <script type="text/javascript" charset="utf-8">
+<script>
 <!--
 sbRoot = "$sbRoot";
 //-->
 </script>
-<script type="text/javascript" src="$sbRoot/js/lib/jquery-2.2.4.min.js?v=$sbPID"></script>
-<script type="text/javascript" src="$sbRoot/js/apibuilder.js?v=$sbPID"></script>
+<script src="$sbRoot/js/lib/jquery-2.2.4.min.js?v=$sbPID"></script>
+<script src="$sbRoot/js/apibuilder.js?v=$sbPID"></script>
 
 <style type="text/css">
 <!--
 #apibuilder select {padding: 2px 2px 2px 6px; display: block; float: left; margin: auto 8px 4px auto}
 #apibuilder select option {padding: 1px 6px; line-height: 1.2em}
 #apibuilder .disabled {color: #ccc}
-#apibuilder .action {background-color: #efefef}
+#apibuilder select[name="firstlevel"] option.default{background-color:white; color: black}
+#apibuilder select[name="firstlevel"] option[value*="sg"],
+#apibuilder select[name="secondlevel"] option.sg
+{
+    background-color: #333;color:#fefefe
+}
+#apibuilder select[name="firstlevel"] option,
+#apibuilder select[name="secondlevel"] option.sb
+{
+    background-color:#600; color:#999
+}
 .parareq {display: block; color: red; font-weight: bolder; font-size: 80%;}
 .paraopt {display: block; color: gray; font-size: 80%;}
 pre{
@@ -32,6 +43,9 @@ pre{
 .grey-text{color: #a00 !important}
 body{margin: 20px !important}
 h1{font-size: 25px !important}
+h1.command.sb{color:grey}
+h1.command.sb span{font-size: 50%; color: black}
+.use-sg-api{color: darkgreen}
 table.sickbeardTable, table.sickbeardTable td{border: 1px solid !important;border-collapse: collapse !important;border-spacing:  0 0;margin-top: 5px;}
 li{padding-bottom: 10px !important}
 table.sickbeardTable th{padding-top: 6px !important;padding-bottom: 6px !important;white-space: nowrap !important;background-color: #000}
@@ -41,7 +55,7 @@ hr{margin: 40px 0 20px}
 -->
 </style>
 
-<script type="text/javascript">
+<script>
 var hide_empty_list=true;
 var disable_empty_list=true;
 
@@ -49,113 +63,113 @@ addListGroup("api", "Command");
 
 addOption("Command", "SickGear", "?cmd=sg", 1); //make default
 addOption("Command", "SickBeard", "?cmd=sb");
-addOption("Command", "List Commands", "?cmd=listcommands");
-addList("Command", "Help", "?cmd=help", "sg.functions-list", "","", "action");
+addOption("Command", "List Commands", "?cmd=listcommands", "","", "default");
+addList("Command", "Help", "?cmd=help", "sg.functions-list", "","", "default");
 #from sickbeard.webapi import _functionMaper
 #from six import iterkeys
 #for $k in sorted(iterkeys(_functionMaper), key=lambda x: x.replace('sg.', '').replace('sb.', ''))
-addOption("sg.functions-list", "$k", "&subject=$k")
+addOption("sg.functions-list", "$k", "&subject=$k", "", "", "#echo ('sb', 'sg')['sg' in $k]#")
 #end for
-addList("Command", "SickBeard.AddRootDir", "?cmd=sb.addrootdir", "sb.addrootdir", "", "", "action");
-addList("Command", "SickGear.AddRootDir", "?cmd=sg.addrootdir", "sb.addrootdir", "", "", "action");
-addOption("Command", "SickBeard.CheckScheduler", "?cmd=sb.checkscheduler", "", "", "action");
-addOption("Command", "SickGear.CheckScheduler", "?cmd=sg.checkscheduler", "", "", "action");
-addList("Command", "SickBeard.DeleteRootDir", "?cmd=sb.deleterootdir", "sb.deleterootdir", "", "", "action");
-addList("Command", "SickGear.DeleteRootDir", "?cmd=sg.deleterootdir", "sb.deleterootdir", "", "", "action");
-addOption("Command", "SickBeard.ForceSearch", "?cmd=sb.forcesearch", "", "", "action");
-addList("Command", "SickGear.ForceSearch", "?cmd=sg.forcesearch", "sg.forcesearch", "", "", "action");
-addOption("Command", "SickGear.SearchQueue", "?cmd=sg.searchqueue", "", "", "action");
-addOption("Command", "SickBeard.GetDefaults", "?cmd=sb.getdefaults", "", "", "action");
-addOption("Command", "SickGear.GetDefaults", "?cmd=sg.getdefaults", "", "", "action");
-addOption("Command", "SickBeard.GetMessages", "?cmd=sb.getmessages", "", "", "action");
-addOption("Command", "SickGear.GetMessages", "?cmd=sg.getmessages", "", "", "action");
-addOption("Command", "SickGear.GetQualities", "?cmd=sg.getqualities", "", "", "action");
-addOption("Command", "SickGear.GetQualityStrings", "?cmd=sg.getqualitystrings", "", "", "action");
-addList("Command", "SickGear.GetIndexers", "?cmd=sg.getindexers", "listindexers", "", "", "action");
-addList("Command", "SickGear.GetIndexerIcon", "?cmd=sg.getindexericon", "getindexericon", "", "", "action");
-addList("Command", "SickGear.GetNetworkIcon", "?cmd=sg.getnetworkicon", "getnetworkicon", "", "", "action");
-addOption("Command", "SickBeard.GetRootDirs", "?cmd=sb.getrootdirs", "", "", "action");
-addOption("Command", "SickGear.GetRootDirs", "?cmd=sg.getrootdirs", "", "", "action");
-addList("Command", "SickBeard.PauseBacklog", "?cmd=sb.pausebacklog", "sb.pausebacklog", "", "", "action");
-addList("Command", "SickGear.PauseBacklog", "?cmd=sg.pausebacklog", "sb.pausebacklog", "", "", "action");
-addOption("Command", "SickBeard.Ping", "?cmd=sb.ping", "", "", "action");
-addOption("Command", "SickGear.Ping", "?cmd=sg.ping", "", "", "action");
-addOption("Command", "SickBeard.Restart", "?cmd=sb.restart", "", "", "action");
-addOption("Command", "SickGear.Restart", "?cmd=sg.restart", "", "", "action");
-addList("Command", "SickBeard.SearchTVDB", "?cmd=sb.searchtvdb", "sb.searchtvdb", "", "", "action");
-addList("Command", "SickGear.SearchTV", "?cmd=sg.searchtv", "sg.searchtv", "", "", "action");
-addList("Command", "SickBeard.SetDefaults", "?cmd=sb.setdefaults", "sb.setdefaults", "", "", "action");
-addList("Command", "SickGear.SetDefaults", "?cmd=sg.setdefaults", "sb.setdefaults", "", "", "action");
-addOption("Command", "SickBeard.Shutdown", "?cmd=sb.shutdown", "", "", "action");
-addOption("Command", "SickGear.Shutdown", "?cmd=sg.shutdown", "", "", "action");
-addList("Command", "SickGear.ListIgnoreWords", "?cmd=sg.listignorewords", "listignorewords", "", "", "action");
-addList("Command", "SickGear.SetIgnoreWords", "?cmd=sg.setignorewords", "setwords", "", "", "action");
-addList("Command", "SickGear.ListRequireWords", "?cmd=sg.listrequirewords", "listrequirewords", "", "", "action");
-addList("Command", "SickGear.SetRequireWords", "?cmd=sg.setrequirewords", "setwords", "", "", "action");
+addList("Command", "SickBeard.AddRootDir", "?cmd=sb.addrootdir", "sb.addrootdir");
+addList("Command", "SickGear.AddRootDir", "?cmd=sg.addrootdir", "sb.addrootdir");
+addOption("Command", "SickBeard.CheckScheduler", "?cmd=sb.checkscheduler");
+addOption("Command", "SickGear.CheckScheduler", "?cmd=sg.checkscheduler");
+addList("Command", "SickBeard.DeleteRootDir", "?cmd=sb.deleterootdir", "sb.deleterootdir");
+addList("Command", "SickGear.DeleteRootDir", "?cmd=sg.deleterootdir", "sb.deleterootdir");
+addOption("Command", "SickBeard.ForceSearch", "?cmd=sb.forcesearch");
+addList("Command", "SickGear.ForceSearch", "?cmd=sg.forcesearch", "sg.forcesearch");
+addOption("Command", "SickGear.SearchQueue", "?cmd=sg.searchqueue");
+addOption("Command", "SickBeard.GetDefaults", "?cmd=sb.getdefaults");
+addOption("Command", "SickGear.GetDefaults", "?cmd=sg.getdefaults");
+addOption("Command", "SickBeard.GetMessages", "?cmd=sb.getmessages");
+addOption("Command", "SickGear.GetMessages", "?cmd=sg.getmessages");
+addOption("Command", "SickGear.GetQualities", "?cmd=sg.getqualities");
+addOption("Command", "SickGear.GetQualityStrings", "?cmd=sg.getqualitystrings");
+addList("Command", "SickGear.GetIndexers", "?cmd=sg.getindexers", "listindexers");
+addList("Command", "SickGear.GetIndexerIcon", "?cmd=sg.getindexericon", "getindexericon");
+addList("Command", "SickGear.GetNetworkIcon", "?cmd=sg.getnetworkicon", "getnetworkicon");
+addOption("Command", "SickBeard.GetRootDirs", "?cmd=sb.getrootdirs");
+addOption("Command", "SickGear.GetRootDirs", "?cmd=sg.getrootdirs");
+addList("Command", "SickBeard.PauseBacklog", "?cmd=sb.pausebacklog", "sb.pausebacklog");
+addList("Command", "SickGear.PauseBacklog", "?cmd=sg.pausebacklog", "sb.pausebacklog");
+addOption("Command", "SickBeard.Ping", "?cmd=sb.ping");
+addOption("Command", "SickGear.Ping", "?cmd=sg.ping");
+addOption("Command", "SickBeard.Restart", "?cmd=sb.restart");
+addOption("Command", "SickGear.Restart", "?cmd=sg.restart");
+addList("Command", "SickBeard.SearchTVDB", "?cmd=sb.searchtvdb", "sb.searchtvdb");
+addList("Command", "SickGear.SearchTV", "?cmd=sg.searchtv", "sg.searchtv");
+addList("Command", "SickBeard.SetDefaults", "?cmd=sb.setdefaults", "sb.setdefaults");
+addList("Command", "SickGear.SetDefaults", "?cmd=sg.setdefaults", "sb.setdefaults");
+addOption("Command", "SickBeard.Shutdown", "?cmd=sb.shutdown");
+addOption("Command", "SickGear.Shutdown", "?cmd=sg.shutdown");
+addList("Command", "SickGear.ListIgnoreWords", "?cmd=sg.listignorewords", "listignorewords");
+addList("Command", "SickGear.SetIgnoreWords", "?cmd=sg.setignorewords", "setwords");
+addList("Command", "SickGear.ListRequireWords", "?cmd=sg.listrequirewords", "listrequirewords");
+addList("Command", "SickGear.SetRequireWords", "?cmd=sg.setrequirewords", "setwords");
 addList("Command", "Coming Episodes", "?cmd=future", "future");
-addList("Command", "SickGear - Coming Episodes", "?cmd=sg.future", "future");
+addList("Command", "SickGear.Coming.Episodes", "?cmd=sg.future", "future");
 addList("Command", "Episode", "?cmd=episode", "episode");
 addList("Command", "SickGear.Episode", "?cmd=sg.episode", "sg.episode");
-addList("Command", "Episode.Search", "?cmd=episode.search", "episode.search", "", "", "action");
-addList("Command", "SickGear.Episode.Search", "?cmd=sg.episode.search", "sg.episode.search", "", "", "action");
-addList("Command", "Episode.SetStatus", "?cmd=episode.setstatus", "episode.setstatus", "", "", "action");
-addList("Command", "SickGear.Episode.SetStatus", "?cmd=sg.episode.setstatus", "sg.episode.setstatus", "", "", "action");
-addList("Command", "Scene Exceptions", "?cmd=exceptions", "exceptions");
-addList("Command", "SickGear Scene Exceptions", "?cmd=sg.exceptions", "sg.exceptions");
-addList("Command", "Set Scene Exceptions", "?cmd=sg.setexceptions", "changeexceptions", "", "", "action");
-addList("Command", "Set Scene Number", "?cmd=sg.setscenenumber", "setscenenumber", "", "", "action");
-addList("Command", "Activate Scene Numbering", "?cmd=sg.activatescenenumbering", "activatescenenumber", "", "", "action");
+addList("Command", "Episode.Search", "?cmd=episode.search", "episode.search");
+addList("Command", "SickGear.Episode.Search", "?cmd=sg.episode.search", "sg.episode.search");
+addList("Command", "Episode.SetStatus", "?cmd=episode.setstatus", "episode.setstatus");
+addList("Command", "SickGear.Episode.SetStatus", "?cmd=sg.episode.setstatus", "sg.episode.setstatus");
+addList("Command", "Scene.Exceptions", "?cmd=exceptions", "exceptions");
+addList("Command", "SickGear.Scene.Exceptions", "?cmd=sg.exceptions", "sg.exceptions");
+addList("Command", "SickGear.Set.Scene.Exceptions", "?cmd=sg.setexceptions", "changeexceptions");
+addList("Command", "SickGear.Set.Scene.Number", "?cmd=sg.setscenenumber", "setscenenumber");
+addList("Command", "SickGear.Activate.Scene.Numbering", "?cmd=sg.activatescenenumbering", "activatescenenumber");
 addList("Command", "History", "?cmd=history", "history");
-addList("Command", "SickGear History", "?cmd=sg.history", "history");
-addOption("Command", "History.Clear", "?cmd=history.clear", "", "", "action");
-addOption("Command", "SickGear.History.Clear", "?cmd=sg.history.clear", "", "", "action");
-addOption("Command", "History.Trim", "?cmd=history.trim", "", "", "action");
-addOption("Command", "SickGear.History.Trim", "?cmd=sg.history.trim", "", "", "action");
-addList("Command", "PostProcess", "?cmd=postprocess", "postprocess", "", "","action");
-addList("Command", "SickGear PostProcess", "?cmd=sg.postprocess", "sg.postprocess", "", "","action");
+addList("Command", "SickGear.History", "?cmd=sg.history", "history");
+addOption("Command", "History.Clear", "?cmd=history.clear");
+addOption("Command", "SickGear.History.Clear", "?cmd=sg.history.clear");
+addOption("Command", "History.Trim", "?cmd=history.trim");
+addOption("Command", "SickGear.History.Trim", "?cmd=sg.history.trim");
+addList("Command", "PostProcess", "?cmd=postprocess", "postprocess");
+addList("Command", "SickGear.PostProcess", "?cmd=sg.postprocess", "sg.postprocess");
 
 addList("Command", "Logs", "?cmd=logs", "logs");
-addList("Command", "SickGear Logs", "?cmd=sg.logs", "logs");
+addList("Command", "SickGear.Logs", "?cmd=sg.logs", "logs");
 addList("Command", "Show", "?cmd=show", "indexerid");
 addList("Command", "SickGear.Show", "?cmd=sg.show", "sg.indexerid");
-addList("Command", "Show.AddExisting", "?cmd=show.addexisting", "show.addexisting", "", "", "action");
-addList("Command", "SickGear.Show.AddExisting", "?cmd=sg.show.addexisting", "sg.show.addexisting", "", "", "action");
-addList("Command", "Show.AddNew", "?cmd=show.addnew", "show.addnew", "", "", "action");
-addList("Command", "SickGear.Show.AddNew", "?cmd=sg.show.addnew", "sg.show.addnew", "", "", "action");
-addList("Command", "Show.Cache", "?cmd=show.cache", "indexerid", "", "", "action");
-addList("Command", "SickGear.Show.Cache", "?cmd=sg.show.cache", "sg.indexerid", "", "", "action");
-addList("Command", "Show.Delete", "?cmd=show.delete", "indexerid", "", "", "action");
-addList("Command", "SickGear.Show.Delete", "?cmd=sg.show.delete", "show-delete", "", "", "action");
-addList("Command", "Show.GetBanner", "?cmd=show.getbanner", "indexerid", "", "", "action");
-addList("Command", "SickGear.Show.GetBanner", "?cmd=sg.show.getbanner", "sg.indexerid", "", "", "action");
-addList("Command", "SickGear.Show.ListFanart", "?cmd=sg.show.listfanart", "sg.indexerid", "", "", "action");
-addList("Command", "SickGear.Show.GetFanart", "?cmd=sg.show.getfanart", "sg.indexerid", "", "", "action");
-addList("Command", "Show.GetPoster", "?cmd=show.getposter", "indexerid", "", "", "action");
-addList("Command", "SickGear.Show.GetPoster", "?cmd=sg.show.getposter", "sg.indexerid", "", "", "action");
-addList("Command", "Show.GetQuality", "?cmd=show.getquality", "indexerid", "", "", "action");
-addList("Command", "SickGear.Show.GetQuality", "?cmd=sg.show.getquality", "sg.indexerid", "", "", "action");
-addList("Command", "Show.Pause", "?cmd=show.pause", "show.pause", "", "", "action");
-addList("Command", "SickGear.Show.Pause", "?cmd=sg.show.pause", "sg.show.pause", "", "", "action");
-addList("Command", "Show.Refresh", "?cmd=show.refresh", "indexerid", "", "", "action");
-addList("Command", "SickGear.Show.Refresh", "?cmd=sg.show.refresh", "sg.indexerid", "", "", "action");
-addList("Command", "Show.SeasonList", "?cmd=show.seasonlist", "show.seasonlist", "", "", "action");
-addList("Command", "SickGear.Show.SeasonList", "?cmd=sg.show.seasonlist", "sg.show.seasonlist", "", "", "action");
-addList("Command", "Show.Seasons", "?cmd=show.seasons", "seasons", "", "", "action");
-addList("Command", "SickGear.Show.Seasons", "?cmd=sg.show.seasons", "sg.seasons", "", "", "action");
-addList("Command", "Show.SetQuality", "?cmd=show.setquality", "show.setquality", "", "", "action");
-addList("Command", "SickGear.Show.SetQuality", "?cmd=sg.show.setquality", "sg.show.setquality", "", "", "action");
-addList("Command", "Show.Stats", "?cmd=show.stats", "indexerid", "", "", "action");
-addList("Command", "SickGear.Show.Stats", "?cmd=sg.show.stats", "sg.indexerid", "", "", "action");
-addList("Command", "Show.Update", "?cmd=show.update", "indexerid", "", "", "action");
-addList("Command", "SickGear.Show.Update", "?cmd=sg.show.update", "sg.indexerid", "", "", "action");
+addList("Command", "Show.AddExisting", "?cmd=show.addexisting", "show.addexisting");
+addList("Command", "SickGear.Show.AddExisting", "?cmd=sg.show.addexisting", "sg.show.addexisting");
+addList("Command", "Show.AddNew", "?cmd=show.addnew", "show.addnew");
+addList("Command", "SickGear.Show.AddNew", "?cmd=sg.show.addnew", "sg.show.addnew");
+addList("Command", "Show.Cache", "?cmd=show.cache", "indexerid");
+addList("Command", "SickGear.Show.Cache", "?cmd=sg.show.cache", "sg.indexerid");
+addList("Command", "Show.Delete", "?cmd=show.delete", "indexerid");
+addList("Command", "SickGear.Show.Delete", "?cmd=sg.show.delete", "show-delete");
+addList("Command", "Show.GetBanner", "?cmd=show.getbanner", "indexerid");
+addList("Command", "SickGear.Show.GetBanner", "?cmd=sg.show.getbanner", "sg.indexerid");
+addList("Command", "SickGear.Show.ListFanart", "?cmd=sg.show.listfanart", "sg.indexerid");
+addList("Command", "SickGear.Show.GetFanart", "?cmd=sg.show.getfanart", "sg.indexerid");
+addList("Command", "Show.GetPoster", "?cmd=show.getposter", "indexerid");
+addList("Command", "SickGear.Show.GetPoster", "?cmd=sg.show.getposter", "sg.indexerid");
+addList("Command", "Show.GetQuality", "?cmd=show.getquality", "indexerid");
+addList("Command", "SickGear.Show.GetQuality", "?cmd=sg.show.getquality", "sg.indexerid");
+addList("Command", "Show.Pause", "?cmd=show.pause", "show.pause");
+addList("Command", "SickGear.Show.Pause", "?cmd=sg.show.pause", "sg.show.pause");
+addList("Command", "Show.Refresh", "?cmd=show.refresh", "indexerid");
+addList("Command", "SickGear.Show.Refresh", "?cmd=sg.show.refresh", "sg.indexerid");
+addList("Command", "Show.SeasonList", "?cmd=show.seasonlist", "show.seasonlist");
+addList("Command", "SickGear.Show.SeasonList", "?cmd=sg.show.seasonlist", "sg.show.seasonlist");
+addList("Command", "Show.Seasons", "?cmd=show.seasons", "seasons");
+addList("Command", "SickGear.Show.Seasons", "?cmd=sg.show.seasons", "sg.seasons");
+addList("Command", "Show.SetQuality", "?cmd=show.setquality", "show.setquality");
+addList("Command", "SickGear.Show.SetQuality", "?cmd=sg.show.setquality", "sg.show.setquality");
+addList("Command", "Show.Stats", "?cmd=show.stats", "indexerid");
+addList("Command", "SickGear.Show.Stats", "?cmd=sg.show.stats", "sg.indexerid");
+addList("Command", "Show.Update", "?cmd=show.update", "indexerid");
+addList("Command", "SickGear.Show.Update", "?cmd=sg.show.update", "sg.indexerid");
 addList("Command", "Shows", "?cmd=shows", "shows");
 addList("Command", "SickGear.Shows", "?cmd=sg.shows", "shows");
 addList("Command", "SickGear.Shows.BrowseTrakt", "?cmd=sg.shows.browsetrakt", "sg.shows.browsetrakt");
-addOption("Command", "Shows.ListTraktAccounts", "?cmd=sg.listtraktaccounts", "", "", "action");
-addOption("Command", "Shows.Stats", "?cmd=shows.stats", "", "", "action");
-addOption("Command", "SickGear.Shows.Stats", "?cmd=sg.shows.stats", "", "", "action");
-addOption("Command", "SickGear.Shows.ForceUpdate", "?cmd=sg.shows.forceupdate", "", "", "action");
-addOption("Command", "SickGear.Shows.Queue", "?cmd=sg.shows.queue", "", "", "action");
+addOption("Command", "SickGear.ListTraktAccounts", "?cmd=sg.listtraktaccounts");
+addOption("Command", "Shows.Stats", "?cmd=shows.stats");
+addOption("Command", "SickGear.Shows.Stats", "?cmd=sg.shows.stats");
+addOption("Command", "SickGear.Shows.ForceUpdate", "?cmd=sg.shows.forceupdate");
+addOption("Command", "SickGear.Shows.Queue", "?cmd=sg.shows.queue");
 
 addOption("sg.shows.browsetrakt", "Anticipated", "&type=anticipated");
 addOption("sg.shows.browsetrakt", "New Shows", "&type=newshows");
@@ -362,10 +376,10 @@ addList("sg.searchtv", "Leno", "&name=leno", "indexertosearch");
 addList("sg.searchtv", "Top Gear", "&name=Top Gear", "indexertosearch");
 endOptGroup("sg.searchtv");
 addOptGroup("sg.searchtv", "Search by indexerid");
-addList("sg.searchtv", "73739", "&indexerid=73739", "indexertosearch");
-addList("sg.searchtv", "74608", "&indexerid=74608", "indexertosearch");
-addList("sg.searchtv", "199051", "&indexerid=199051", "indexertosearch");
-addList("sg.searchtv", "123456 (invalid show)", "&indexerid=123456", "indexertosearch");
+addList("sg.searchtv", "73739", "&indexerid=73739&indexer=1", "indexertosearch");
+addList("sg.searchtv", "74608", "&indexerid=74608&indexer=1", "indexertosearch");
+addList("sg.searchtv", "199051", "&indexerid=199051&indexer=1", "indexertosearch");
+addList("sg.searchtv", "123456 (invalid show)", "&indexerid=123456&indexer=1", "indexertosearch");
 endOptGroup("sg.searchtv");
 
 addOption("indexertosearch", "Optional Param", "", 1);

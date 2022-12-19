@@ -1,4 +1,11 @@
-﻿### 0.25.54 (2022-12-17 17:40:00 UTC)
+﻿### 0.25.55 (2022-12-19 11:30:00 UTC)
+
+* Fix Trakt account error handling
+* Change enable failure monitor for tv show search (Trakt)
+* Change improve api/builder drop down colour to indicate sg vs sb endpoints
+
+
+### 0.25.54 (2022-12-17 17:40:00 UTC)
 
 * Fix Trakt API server error handler
 
