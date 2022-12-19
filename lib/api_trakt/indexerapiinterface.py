@@ -206,7 +206,7 @@ class TraktIndexer(TVInfoBase):
             kwargs['sleep_retry'] = self.config['sleep_retry']
         try:
             from sickbeard.helpers import clean_data
-            resp = TraktAPI().trakt_request(url, failure_monitor=False, raise_skip_exception=False, **kwargs)
+            resp = TraktAPI().trakt_request(url, **kwargs)
             if len(resp):
                 if isinstance(resp, dict):
                     resp = [{'type': 'show', 'score': 1, 'show': resp}]

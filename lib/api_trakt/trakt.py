@@ -41,7 +41,7 @@ class TraktAccount(object):
         except TraktAuthException:
             self.inc_auth_failure()
             self._name = ''
-        except TraktException:
+        except (TraktException, ConnectionSkipException, BaseException, Exception):
             pass
 
     @property
@@ -159,8 +159,9 @@ class TraktAPI(object):
         if account in sickbeard.TRAKT_ACCOUNTS:
             try:
                 TraktAPI().trakt_request('/oauth/revoke', send_oauth=account, method='POST')
-            except TraktException:
-                log.info('Failed to remove account from trakt.tv')
+            except (TraktException, BaseException, Exception) as e:
+                log.info('Failed to remove account from trakt.tv: %s' % e)
+                return False
             sickbeard.TRAKT_ACCOUNTS.pop(account)
             sickbeard.save_config()
             return True
@@ -253,7 +254,6 @@ class TraktAPI(object):
             resp = get_url('%s%s' % (url, path), session=self.session, use_method=method, return_response=True,
                            raise_exceptions=True, raise_status_code=True, raise_skip_exception=raise_skip_exception,
                            failure_monitor=failure_monitor, **kwargs)
-            # resp = self.session.request(method, '%s%s' % (url, path), **kwargs)
 
             if 'DELETE' == method:
                 result = None
@@ -358,9 +358,9 @@ class TraktAPI(object):
             else:
                 log.error(u'Could not connect to Trakt. Code error: {0}'.format(code))
                 raise TraktException('Could not connect to Trakt. Code error: %s' % code)
-        except ConnectionSkipException:
-            log.error('Failure handling error')
-            raise TraktException
+        except ConnectionSkipException as e:
+            log.warning('Connection is skipped')
+            raise e
         except ValueError as e:
             log.error(u'Value Error: %s' % ex(e))
             raise TraktValueError(u'Value Error: %s' % ex(e))
