@@ -1732,7 +1732,7 @@ def upgrade_new_naming():
 
 def xhtml_escape(text, br=True):
     """
-    Escapes a string so it is valid within HTML or XML using the function from Tornado.
+    Escapes a string, so it is valid within HTML or XML using the function from Tornado.
 
     :param text: Text to convert entities from for example '"' to '&quot;'
     :type text: AnyStr
@@ -1746,7 +1746,31 @@ def xhtml_escape(text, br=True):
     from tornado import escape
     if br:
         text = re.sub(r'\r?\n', '<br>', text)
-    return escape.xhtml_escape(text)
+
+    return escape.xhtml_escape(normalise_chars(text))
+
+
+def normalise_chars(text):
+    # noinspection GrazieInspection
+    """
+    Normalise characters to maintain a consistent output from different sources, and to prevent issues when sorting
+
+    e.g.
+    curved apostrophe ’ with standard ' apostrophe
+    wide dash with standard hyphen
+
+    :param text: Text to convert entities from for example '"' to '&quot;'
+    :type text: AnyStr
+    :return: Text with entities replaced
+    :rtype: AnyStr
+    """
+    result = text.replace(u'\u2010', u'-').replace(u'\u2011', u'-').replace(u'\u2012', u'-') \
+        .replace(u'\u2013', u'-').replace(u'\u2014', u'-').replace(u'\u2015', u'-') \
+        .replace(u'\u2018', u"'").replace(u'\u2019', u"'") \
+        .replace(u'\u201c', u'\"').replace(u'\u201d', u'\"') \
+        .replace(u'\u0020', u' ').replace(u'\u00a0', u' ')
+
+    return result
 
 
 def parse_imdb_id(string):

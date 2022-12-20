@@ -4150,8 +4150,9 @@ class AddShows(Home):
             img_url = 'imagecache?path=browse/thumb/trakt&filename=%s&trans=0&tmdbid=%s&tvdbid=%s' % \
                       ('%s.jpg' % show_info['ids'].trakt, show_info.get('tmdb_id'), show_info['ids'].tvdb)
         elif TVINFO_TVDB == iid:
-            img_url = 'imagecache?path=browse/thumb/tvdb&filename=%s&trans=0&tvdbid=%s' % \
-                      ('%s.jpg' % show_info['id'], show_info['id'])
+            img_url = 'imagecache?path=browse/thumb/tvdb&filename=%s&trans=0&source=%s' % \
+                      ('%s.jpg' % show_info['id'], show_info['poster'])
+            sickbeard.CACHE_IMAGE_URL_LIST.add_url(show_info['poster'])
         elif TVINFO_TVMAZE == iid and show_info.get('image'):
             img_url = 'imagecache?path=browse/thumb/tvmaze&filename=%s&trans=0&source=%s' % \
                       ('%s.jpg' % show_info['id'], show_info['image'])
@@ -4162,14 +4163,21 @@ class AddShows(Home):
     def get_uw_ratio(cls, search_term, showname, aliases, lang=None):
         search_term = decode_str(search_term, errors='replace')
         showname = decode_str(showname, errors='replace')
-        s = fuzz.UWRatio(search_term, showname)
-        # check aliases and give them a little lower score
-        lower_alias = 0
-        for cur_alias in aliases or []:
-            ns = fuzz.UWRatio(search_term, cur_alias)
-            if (ns - 1) > s:
-                s = ns
-                lower_alias = 1
+        try:
+            s = fuzz.UWRatio(search_term, showname)
+            # check aliases and give them a little lower score
+            lower_alias = 0
+            for cur_alias in aliases or []:
+                ns = fuzz.UWRatio(search_term, cur_alias)
+                if (ns - 1) > s:
+                    s = ns
+                    lower_alias = 1
+        except (BaseException, Exception) as e:
+            if getattr(cls, 'levenshtein_error', None) != datetime.date.today():
+                cls.levenshtein_error = datetime.date.today()
+                logger.error('Error generating relevance rating: %s' % ex(e))
+                logger.debug('Traceback: %s' % traceback.format_exc())
+            return 0
 
         # if lang param is supplied, add scale in order to reorder elements 1) en:lang 2) other:lang 3) alias
         # this spacer behaviour may improve the original logic, but currently isn't due to lang used as off switch
@@ -9591,7 +9599,8 @@ class CachedImages(MainHandler):
                 try:
                     tvinfo_config = sickbeard.TVInfoAPI(TVINFO_TVDB).api_params.copy()
                     tvinfo_config['posters'] = True
-                    t = sickbeard.TVInfoAPI(TVINFO_TVDB).setup(**tvinfo_config)[helpers.try_int(tvdbid), False]
+                    t = sickbeard.TVInfoAPI(TVINFO_TVDB).setup(**tvinfo_config).get_show(
+                        helpers.try_int(tvdbid), load_episodes=False, posters=True)
                     if hasattr(t, 'data') and 'poster' in t.data:
                         poster_url = t.data['poster']
                 except (BaseException, Exception):

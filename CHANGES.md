@@ -1,4 +1,10 @@
-﻿### 0.25.55 (2022-12-19 11:30:00 UTC)
+﻿### 0.25.56 (2022-12-20 19:00:00 UTC)
+
+* Fix webapi search
+* Change add poster to webapi search results
+
+
+### 0.25.55 (2022-12-19 11:30:00 UTC)
 
 * Fix Trakt account error handling
 * Change enable failure monitor for tv show search (Trakt)
