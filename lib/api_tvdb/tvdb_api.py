@@ -324,6 +324,7 @@ class Tvdb(TVInfoBase):
 
         self.config['url_series_images'] = '%(api3_url)sseries/%%s/images/query?keyType=%%s' % self.config
         self.config['url_artworks'] = 'https://artworks.thetvdb.com/banners/%s'
+        self.config['url_artworks_search'] = 'https://artworks.thetvdb.com/%s'
 
         self.config['url_people'] = '%(base_url)speople/%%s' % self.config
         self.config['url_series_people'] = '%(base_url)sseries/%%s/people' % self.config
@@ -334,7 +335,8 @@ class Tvdb(TVInfoBase):
     def _search_show(self, name=None, ids=None, **kwargs):
         # type: (AnyStr, Dict[integer_types, integer_types], Optional[Any]) -> List[TVInfoShow]
         def map_data(data):
-            data['poster'] = data.get('image')
+            if not data.get('poster'):
+                data['poster'] = data.get('image')
             data['ids'] = TVInfoIDs(
                 tvdb=data.get('id'),
                 imdb=data.get('imdb_id') and try_int(data.get('imdb_id', '').replace('tt', ''), None))
@@ -384,6 +386,8 @@ class Tvdb(TVInfoBase):
                 else:
                     r = shows
                 if r:
+                    if not isinstance(r, list):
+                        r = [r]
                     results.extend(map_list(map_data, r))
 
         seen = set()
@@ -511,8 +515,9 @@ class Tvdb(TVInfoBase):
                 k_org = k
                 k = k.lower()
                 if None is not v:
-                    if k in ['banner', 'fanart', 'poster'] and v:
-                        v = self.config['url_artworks'] % v
+                    if k in ['banner', 'fanart', 'poster', 'image'] and v:
+                        v = (self.config['url_artworks'],
+                             self.config['url_artworks_search'])['banners/' in v] % v.lstrip('/')
                     elif 'genre' == k:
                         keep_data['genre_list'] = v
                         v = '|'.join([clean_data(c) for c in v if isinstance(c, string_types)])

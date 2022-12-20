@@ -163,6 +163,7 @@ class TvMaze(TVInfoBase):
                     'type': clean_data(s.type), 'schedule': s.schedule, 'status': clean_data(s.status),
                     'official_site': clean_data(s.official_site),
                     'aliases': [clean_data(a.name) for a in s.akas], 'image': s.image and s.image.get('original'),
+                    'poster': s.image and s.image.get('original'),
                     'ids': TVInfoIDs(
                         tvdb=s.externals.get('thetvdb'), rage=s.externals.get('tvrage'), tvmaze=s.id,
                         imdb=clean_data(s.externals.get('imdb') and try_int(s.externals.get('imdb').replace('tt', ''),

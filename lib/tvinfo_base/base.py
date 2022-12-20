@@ -345,6 +345,9 @@ class TVInfoShow(dict):
             # doesn't exist, so attribute error.
             raise BaseTVinfoAttributenotfound('Cannot find attribute %s' % (repr(key)))
 
+    def get(self, __key, __default=None):
+        return self.__getitem__(__key) or __default
+
     def __deepcopy__(self, memo):
         cls = self.__class__
         result = cls.__new__(cls)

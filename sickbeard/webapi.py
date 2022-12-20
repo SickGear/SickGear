@@ -59,6 +59,7 @@ from .show_updater import clean_ignore_require_words
 from .sgdatetime import SGDatetime
 from .tv import TVEpisode, TVShow,  TVidProdid
 from .webserve import AddShows
+import dateutil.parser
 
 from _23 import decode_str, list_keys, unquote_plus
 from six import integer_types, iteritems, iterkeys, PY2, string_types, text_type
@@ -2522,6 +2523,12 @@ class CMD_SickGearSearchIndexers(ApiCall):
         all_indexer = 1 == len(self.indexers) and -1 == self.indexers[0]
         lang_id = self.valid_languages['en']
 
+        def _parse_date(dt_str):
+            try:
+                return dateutil.parser.parse(dt_str)
+            except (BaseException, Exception):
+                return ''
+
         if (self.name and not self.prodid) or (self.prodid and self.tvid):
             results = []
             indexertosearch = (self.indexers, [i for i in indexer_api.TVInfoAPI().sources if
@@ -2564,22 +2571,24 @@ class CMD_SickGearSearchIndexers(ApiCall):
                             search_kw['ids'].update(new_ids)
 
                     s = {"indexerid": int(curSeries['id']),
-                         "name": curSeries['seriesname'],
-                         "first_aired": curSeries['firstaired'],
+                         "name": helpers.normalise_chars(curSeries['seriesname']),
+                         "first_aired": isinstance(curSeries['firstaired'], string_types)
+                         and SGDatetime.sbfdate(_parse_date(curSeries['firstaired']), d_preset=dateFormat) or '',
                          "indexer": i,
-                         "aliases": curSeries.get('aliases', None),
-                         "network": curSeries.get('network'),
-                         "overview": curSeries.get('overview'),
-                         "language": curSeries.get('language'),
-                         "genres": curSeries.get('genre'),
-                         "genre_list": curSeries.get('genre_list'),
+                         "aliases": curSeries.get('aliases') or [],
+                         "network": curSeries.get('network') or '',
+                         "overview": helpers.normalise_chars(curSeries.get('overview') or ''),
+                         "language": curSeries.get('language') or '',
+                         "genres": (curSeries.get('genres', '') or curSeries.get('genre', '') or '').replace('|', ', '),
+                         "genre_list": curSeries.get('genre_list') or [],
+                         "poster": curSeries.get('poster') or '',
                          "relevance": (curSeries['ids'].get(self.tvid) == int(curSeries['id']) and 100)
                          or AddShows.get_uw_ratio(self.name or search_name or '', curSeries['seriesname'],
-                                                  curSeries.get('aliases', None))}
+                                                  curSeries.get('aliases') or [])}
                     if TVINFO_TVDB == i:
                         s["tvdbid"] = int(curSeries['id'])
                     else:
-                        s["tvdbid"] = None
+                        s["tvdbid"] = ''
                     results.append(s)
 
             if not results:
@@ -2590,45 +2599,7 @@ class CMD_SickGearSearchIndexers(ApiCall):
 
             return _responds(RESULT_SUCCESS, {"results": results, "langid": lang_id, "lang": 'en'})
 
-        elif self.prodid and not all_indexer and 1 == len(self.indexers):
-            tvinfo_config = sickbeard.TVInfoAPI(self.indexers[0]).api_params.copy()
-
-            tvinfo_config['language'] = 'en'
-            tvinfo_config['custom_ui'] = classes.AllShowInfosNoFilterListUI
-
-            tvinfo_config['actors'] = False
-
-            t = sickbeard.TVInfoAPI(self.indexers[0]).setup(**tvinfo_config)
-
-            try:
-                show_info = t[int(self.prodid), False]
-            except BaseTVinfoError as e:
-                self.log(u"Unable to find show with id " + str(self.prodid), logger.WARNING)
-                return _responds(RESULT_SUCCESS, {"results": [], "langid": lang_id, "lang": 'en'})
-
-            if not show_info.data['seriesname']:
-                self.log(
-                    u"Found show with indexerid " + str(self.prodid) + ", however it contained no show name",
-                    logger.DEBUG)
-                return _responds(RESULT_FAILURE, msg="Show contains no name, invalid result")
-
-            showOut = [{"indexerid": self.prodid,
-                        "indexer": self.indexers[0],
-                        "name": text_type(show_info.data['seriesname']),
-                        "first_aired": show_info.data['firstaired'],
-                        "aliases": show_info.data.get('aliases', None),
-                        "relevance": AddShows.get_uw_ratio(self.name, show_info.data['seriesname'],
-                                                           show_info.data.get('aliases', None))}]
-
-            if TVINFO_TVDB == self.indexers[0]:
-                showOut[0]["tvdbid"] = int(show_info.data['id'])
-            else:
-                showOut[0]["tvdbid"] = None
-
-            showOut = sorted(showOut, key=lambda x: x['relevance'], reverse=True)
-            return _responds(RESULT_SUCCESS, {"results": showOut, "langid": lang_id, "lang": 'en'})
-        else:
-            return _responds(RESULT_FAILURE, msg="Either indexerid or name is required")
+        return _responds(RESULT_FAILURE, msg="Either indexerid or name is required")
 
 
 class CMD_SickBeardSearchIndexers(CMD_SickGearSearchIndexers):
