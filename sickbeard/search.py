@@ -676,20 +676,21 @@ def can_reject(release_name):
         rej_urls += ([], ['\'%s\'' % srrdb_url])[srrdb_rej]
 
     sane_name = helpers.full_sanitize_scene_name(release_name)
-    predb_url = 'https://predb.ovh/api/v1/?q=@name "%s"' % sane_name
+    # predb_url = 'https://predb.ovh/api/v1/?q=@name "%s"' % sane_name
+    predb_url = 'https://predb.de/api/?q=%s' % release_name
     resp = helpers.get_url(predb_url, parse_json=True)
     predb_rej = True
     if not resp:
         rej_urls += ['Failed contact \'%s\'' % predb_url]
     elif 'success' == resp.get('status', '').lower():
-        rows = resp and (resp.get('data') or {}).get('rows') or []
+        rows = resp and resp.get('data') or []
         for data in rows:
-            if sane_name == helpers.full_sanitize_scene_name((data.get('name', '') or '').strip()):
-                nuke_type = (data.get('nuke') or {}).get('type')
+            if sane_name == helpers.full_sanitize_scene_name((data.get('release') or '').strip()):
+                nuke_type = helpers.try_int(data.get('status'))
                 if not nuke_type:
-                    predb_rej = not helpers.try_int(data.get('preAt'))
+                    predb_rej = not helpers.try_int(data.get('pretime'))
                 else:
-                    predb_rej = 'un' not in nuke_type and data.get('nuke', {}).get('reason', 'Reason not set')
+                    predb_rej = nuke_type not in (2, 4) and (data.get('reason') or 'Reason not set')
                 break
         rej_urls += ([], ['\'%s\'' % predb_url])[bool(predb_rej)]
 
