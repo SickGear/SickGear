@@ -1,4 +1,9 @@
-﻿### 0.25.56 (2022-12-20 19:00:00 UTC)
+﻿### 0.25.57 (2022-12-21 13:00:00 UTC)
+
+* Fix replace dead predb.ovh with predb.de for provider scene filter
+
+
+### 0.25.56 (2022-12-20 19:00:00 UTC)
 
 * Fix webapi search
 * Change add poster to webapi search results
