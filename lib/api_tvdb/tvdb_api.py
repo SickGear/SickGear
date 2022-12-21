@@ -1069,7 +1069,7 @@ class Tvdb(TVInfoBase):
             actor_data = self._getetsrc(self.config['url_actors_info'] % sid, language=language)
             actor_data_alt = self._getetsrc(self.config['url_series_people'] % sid, language=language)
             if actor_data and 0 < len(actor_data.get('data', '') or '') or actor_data_alt and actor_data_alt['data']:
-                self._parse_actors(sid, actor_data['data'], actor_data_alt and actor_data_alt['data'])
+                self._parse_actors(sid, actor_data and actor_data.get('data', ''), actor_data_alt and actor_data_alt['data'])
 
         if get_ep_info and not getattr(self.shows.get(sid), 'ep_loaded', False):
             # Parse episode data
