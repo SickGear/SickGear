@@ -690,9 +690,6 @@ class ConfigMigrator(object):
                                logger.ERROR)
                     continue
 
-                if 'Sick Beard Index' == name:
-                    key = '0'
-
                 cat_ids = '5030,5040,5060'
                 # if name == 'NZBs.org':
                 #     cat_ids = '5030,5040,5060,5070,5090'

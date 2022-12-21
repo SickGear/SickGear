@@ -197,7 +197,6 @@ class SickGear(object):
         global is_win
         # do some preliminary stuff
         sickbeard.MY_FULLNAME = os.path.normpath(os.path.abspath(__file__))
-        sickbeard.MY_NAME = os.path.basename(sickbeard.MY_FULLNAME)
         sickbeard.PROG_DIR = os.path.dirname(sickbeard.MY_FULLNAME)
         sickbeard.DATA_DIR = sickbeard.PROG_DIR
         sickbeard.MY_ARGS = sys.argv[1:]
@@ -212,8 +211,8 @@ class SickGear(object):
             legacy_runner = 'bear' in (getattr(__main__, '__file__', False) or '').split(os.sep)[-1].lower()
         sickbeard.MEMCACHE['DEPRECATE_SB_RUNNER'] = legacy_runner
 
-        # Need console logging for sickgear.py and SickBeard-console.exe
-        self.console_logging = (not hasattr(sys, 'frozen')) or (0 < sickbeard.MY_NAME.lower().find('-console'))
+        # Need console logging for sickgear.py
+        self.console_logging = not hasattr(sys, 'frozen')
 
         # Rename the main thread
         threading.current_thread().name = 'MAIN'

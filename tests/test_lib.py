@@ -90,9 +90,8 @@ sickbeard.NAMING_ABD_PATTERN = ''
 sickbeard.NAMING_SPORTS_PATTERN = ''
 sickbeard.NAMING_MULTI_EP = 1
 
-sickbeard.PROVIDER_ORDER = ['sick_beard_index']
-sickbeard.newznabProviderList = providers.getNewznabProviderList(
-    "'Sick Beard Index|http://lolo.sickbeard.com/|0|5030,5040,5060|0|eponly|0'")
+sickbeard.PROVIDER_ORDER = []
+sickbeard.newznabProviderList = providers.getNewznabProviderList('')
 sickbeard.providerList = providers.makeProviderList()
 
 sickbeard.PROG_DIR = os.path.abspath('..')

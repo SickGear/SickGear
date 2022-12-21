@@ -343,13 +343,13 @@ class NewznabProvider(generic.NZBProvider):
             self._caps_last_updated = datetime.datetime.now()
 
         if not old_api and (self.url and 'nzbplanet.net' not in self.url.lower()):
-            if not caps and self.get_id() not in ['sick_beard_index']:
+            if not caps:
                 caps[TVINFO_TVDB] = 'tvdbid'
             if NewznabConstants.SEARCH_SEASON not in caps or not caps.get(NewznabConstants.SEARCH_SEASON):
                 caps[NewznabConstants.SEARCH_SEASON] = 'season'
             if NewznabConstants.SEARCH_EPISODE not in caps or not caps.get(NewznabConstants.SEARCH_EPISODE):
                 caps[NewznabConstants.SEARCH_TEXT] = 'ep'
-            if (TVINFO_TVRAGE not in caps or not caps.get(TVINFO_TVRAGE)) and self.get_id() not in ['sick_beard_index']:
+            if (TVINFO_TVRAGE not in caps or not caps.get(TVINFO_TVRAGE)):
                 caps[TVINFO_TVRAGE] = 'rid'
         if NewznabConstants.SEARCH_TEXT not in caps or not caps.get(NewznabConstants.SEARCH_TEXT):
             caps[NewznabConstants.SEARCH_TEXT] = 'q'
@@ -555,10 +555,6 @@ class NewznabProvider(generic.NZBProvider):
                 search_params.append(params)
 
         return [{'Episode': search_params}]
-
-    def supports_tvdbid(self):
-        # type: (...) -> bool
-        return self.get_id() not in ['sick_beard_index']
 
     def _title_and_url(self,
                        item  # type: etree.Element
@@ -919,8 +915,7 @@ class NewznabProvider(generic.NZBProvider):
                 if 'Episode' == mode or 'Season' == mode:
                     if not (any([x in params for x in
                                  [v for c, v in iteritems(self.caps)
-                                  if c not in [NewznabConstants.SEARCH_EPISODE, NewznabConstants.SEARCH_SEASON]]])
-                            or not self.supports_tvdbid()):
+                                  if c not in [NewznabConstants.SEARCH_EPISODE, NewznabConstants.SEARCH_SEASON]]])):
                         logger.log('Show is missing either an id or search term for search')
                         continue
 
