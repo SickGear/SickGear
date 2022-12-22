@@ -121,6 +121,7 @@ def make_unique_list(p_list, d_list=None):
 
     default_names = [d.name for d in d_list or []]
 
+    p_list = filter_iter(lambda _x: _x.get_id() not in ['sick_beard_index'], p_list)
     for cur_p in p_list:
         g_name = generic_provider_name(cur_p.name)
         g_url = generic_provider_url(cur_p.url)
@@ -231,8 +232,7 @@ def makeTorrentRssProvider(config_string):
 
 
 def getDefaultNewznabProviders():
-    return '!!!'.join(['Sick Beard Index|https://lolo.sickbeard.com/|0|5030,5040|0|eponly|0|0|0',
-                       'NZBgeek|https://api.nzbgeek.info/||5030,5040|0|eponly|0|0|0',
+    return '!!!'.join(['NZBgeek|https://api.nzbgeek.info/||5030,5040|0|eponly|0|0|0',
                        'DrunkenSlug|https://api.drunkenslug.com/||5030,5040|0|eponly|0|0|0',
                        'NinjaCentral|https://ninjacentral.co.za/||5030,5040|0|eponly|0|0|0',
                        ])

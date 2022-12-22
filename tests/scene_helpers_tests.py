@@ -77,7 +77,8 @@ class SceneExceptionTestCase(test.SickbeardTestDBCase):
         self.assertEqual(scene_exceptions.get_scene_exceptions(0, 0), [])
 
     def test_sceneExceptionsBlack_Lagoon(self):
-        self.assertEqual(sorted(scene_exceptions.get_scene_exceptions(1, 79604)), ['Black-Lagoon'])
+        self.assertEqual(sorted(scene_exceptions.get_scene_exceptions(1, 79604)),
+                         ['Black-Lagoon', 'Burakku Ragūn', 'ブラック・ラグーン'])
 
     def test_sceneExceptionByName(self):
         self.assertEqual(scene_exceptions.get_scene_exception_by_name('Black-Lagoon'), [1, 79604, -1])

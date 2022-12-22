@@ -1,4 +1,12 @@
-﻿### 0.25.57 (2022-12-21 13:00:00 UTC)
+﻿### 0.25.58 (2022-12-21 20:30:00 UTC)
+
+* Fix improve data cleanse from TV info source
+* Fix issue where actor data is None
+* Fix update Black Lagoon scene helper test
+* Remove Sick Beard Index, inactive for 16 months since Aug 2021
+
+
+### 0.25.57 (2022-12-21 13:00:00 UTC)
 
 * Fix replace dead predb.ovh with predb.de for provider scene filter
 
