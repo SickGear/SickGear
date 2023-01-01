@@ -2,10 +2,10 @@ import os.path
 import sys
 import unittest
 
+sys.path.insert(1, os.path.abspath('..'))
+
 import sickbeard
 from sickbeard import helpers, show_name_helpers
-
-sys.path.insert(1, os.path.abspath('..'))
 
 
 class TVShow(object):

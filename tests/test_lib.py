@@ -20,6 +20,7 @@
 from __future__ import print_function
 from __future__ import with_statement
 
+import gc
 import glob
 import os.path
 import shutil
@@ -219,6 +220,12 @@ def teardown_test_db():
         pass
     try:
         sickbeard.tvcache.CacheDBConnection().close()
+    except (BaseException, Exception):
+        pass
+
+    # force python to garbage collect all db connections, so that the file can be deleted
+    try:
+        gc.collect(2)
     except (BaseException, Exception):
         pass
 
