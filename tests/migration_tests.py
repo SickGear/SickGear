@@ -1,4 +1,6 @@
 from __future__ import print_function
+
+import gc
 import sys
 import os.path
 import glob
@@ -48,6 +50,13 @@ class MigrationBasicTests(test.SickbeardTestDBCase):
 
             db.MigrationCode(my_db)
             my_db.close()
+
+            # force python to garbage collect all db connections, so that the file can be deleted
+            try:
+                gc.collect(2)
+            except (BaseException, Exception):
+                pass
+
             for filename in glob.glob(os.path.join(test.TESTDIR, test.TESTDBNAME) + '*'):
                 os.remove(filename)
 

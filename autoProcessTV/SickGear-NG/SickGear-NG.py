@@ -51,7 +51,7 @@
 
 # Send "Process Media" requests to SickGear
 #
-# Process Media extension version: 2.6.
+# Process Media extension version: 2.7.
 # <!--
 # For more info and updates please visit forum topic at
 # -->
@@ -700,6 +700,8 @@ def check_for_failure(directory):
             # check for min dir size
             if get_size(directory) > min_dir_size:
                 failure = False
+            else:
+                Logger.log('MARK=BAD', Logger.NZB)
     else:
         nzb_id = nzbget_var('NZBID')
         if (not markbad and find_dupekey_queue(dupekey, nzb_id)) or find_dupekey_history(dupekey, nzb_id):

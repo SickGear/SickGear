@@ -1,0 +1,32 @@
+name: Python Unit Tests
+on:
+  push:
+    branches:
+      - master
+      - develop
+  pull_request:
+    branches:
+      - master
+      - develop
+jobs:
+  build:
+    runs-on: '${{ matrix.os }}'
+    strategy:
+      matrix:
+        os:
+          - ubuntu-latest
+        python-version: ['2.7', '3.7', '3.8', '3.9', '3.10', '3.11']
+    steps:
+      - name: 'Set up Python ${{ matrix.python-version }}'
+        uses: actions/setup-python@v3
+        with:
+          python-version: '${{ matrix.python-version }}'
+      - uses: actions/checkout@v3
+      - run: export BOTO_CONFIG=/dev/null
+      - run: 'export PYTHONPATH=$PYTHONPATH:$(pwd)'
+      - run: pip install responses
+      - run: pip install -r requirements.txt
+      - run: pip install coveralls
+      - name: 'Unit tests...'
+        working-directory: ./tests
+        run: coverage run --source=.. --omit=../lib/* ./all_tests.py

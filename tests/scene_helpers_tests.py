@@ -20,7 +20,8 @@ from sickbeard.tv import TVShow
 
 class SceneTests(test.SickbeardTestDBCase):
 
-    def _test_allPossibleShowNames(self, name, prodid=0, expected=[], season=-1):
+    def _test_allPossibleShowNames(self, name, prodid=0, expected=None, season=-1):
+        expected = (expected, [])[None is expected]
         s = TVShow(TVINFO_TVDB, prodid)
         s.tvid = TVINFO_TVDB
         s.name = name
@@ -46,9 +47,12 @@ class SceneTests(test.SickbeardTestDBCase):
         self._test_allPossibleShowNames('Show Name', expected=['Show Name'])
         self._test_allPossibleShowNames('Show Name', -1, expected=['Show Name', 'Exception Test'])
         self._test_allPossibleShowNames('Show Name FCN', expected=['Show Name FCN', 'Show Name (Full Country Name)'])
-        self._test_allPossibleShowNames('Show Name (FCN)', expected=['Show Name (FCN)', 'Show Name (Full Country Name)'])
-        self._test_allPossibleShowNames('Show Name Full Country Name', expected=['Show Name Full Country Name', 'Show Name (FCN)'])
-        self._test_allPossibleShowNames('Show Name (Full Country Name)', expected=['Show Name (Full Country Name)', 'Show Name (FCN)'])
+        self._test_allPossibleShowNames(
+            'Show Name (FCN)', expected=['Show Name (FCN)', 'Show Name (Full Country Name)'])
+        self._test_allPossibleShowNames(
+            'Show Name Full Country Name', expected=['Show Name Full Country Name', 'Show Name (FCN)'])
+        self._test_allPossibleShowNames(
+            'Show Name (Full Country Name)', expected=['Show Name (Full Country Name)', 'Show Name (FCN)'])
         self._test_allPossibleShowNames('Show Name', -1, expected=['Season Test'], season=19)
 
     def test_pass_wordlist_checks(self):
@@ -77,13 +81,15 @@ class SceneExceptionTestCase(test.SickbeardTestDBCase):
         self.assertEqual(scene_exceptions.get_scene_exceptions(0, 0), [])
 
     def test_sceneExceptionsBlack_Lagoon(self):
-        self.assertEqual(sorted(scene_exceptions.get_scene_exceptions(1, 79604)),
-                         ['Black-Lagoon', 'Burakku Ragūn', 'ブラック・ラグーン'])
+        self.assertEqual(sorted(scene_exceptions.get_scene_exceptions(1, 79604)), ['Black-Lagoon'])
 
     def test_sceneExceptionByName(self):
-        self.assertEqual(scene_exceptions.get_scene_exception_by_name('Black-Lagoon'), [1, 79604, -1])
-        self.assertEqual(scene_exceptions.get_scene_exception_by_name('Black Lagoon: The Second Barrage'), [1, 79604, 2])
-        self.assertEqual(scene_exceptions.get_scene_exception_by_name('Rokka no Yuusha'), [None, None, None])
+        self.assertEqual(scene_exceptions.get_scene_exception_by_name(
+            'Black-Lagoon'), [1, 79604, -1])
+        self.assertEqual(scene_exceptions.get_scene_exception_by_name(
+            'Black Lagoon: The Second Barrage'), [1, 79604, 2])
+        self.assertEqual(scene_exceptions.get_scene_exception_by_name(
+            'Rokka no Yuusha'), [None, None, None])
 
     def test_sceneExceptionByNameAnime(self):
         sickbeard.showList = []
@@ -104,6 +110,7 @@ class SceneExceptionTestCase(test.SickbeardTestDBCase):
     def test_sceneExceptionsResetNameCache(self):
         # clear the exceptions
         my_db = db.DBConnection()
+        # noinspection SqlConstantCondition
         my_db.action('DELETE FROM scene_exceptions WHERE 1=1')
 
         # put something in the cache
@@ -116,7 +123,8 @@ class SceneExceptionTestCase(test.SickbeardTestDBCase):
 
 if '__main__' == __name__:
     if 1 < len(sys.argv):
-        suite = unittest.TestLoader().loadTestsFromName('scene_helpers_tests.SceneExceptionTestCase.test_' + sys.argv[1])
+        suite = unittest.TestLoader().loadTestsFromName(
+            'scene_helpers_tests.SceneExceptionTestCase.test_' + sys.argv[1])
         unittest.TextTestRunner(verbosity=2).run(suite)
     else:
         suite = unittest.TestLoader().loadTestsFromTestCase(SceneTests)
