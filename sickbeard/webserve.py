@@ -4117,10 +4117,10 @@ class AddShows(Home):
             return (grouped, combined)[as_combined]
 
         def sort_rel(data_result, is_last_sort, as_combined):
-            idx_rel_sort, idx_rel = 17, 17
+            idx_rel_sort, idx_rel, idx_direct_id = 17, 17, 27
             idx_title = 7
             idx_src = 2
-            rel_sorted = sorted(data_result, key=lambda x: (x[idx_rel], x[idx_title], x[idx_src]))
+            rel_sorted = sorted(data_result, key=lambda x: (not x[idx_direct_id], x[idx_rel], x[idx_title], x[idx_src]))
             combined = final_order(idx_rel_sort + 1, rel_sorted, is_last_sort)
 
             grouped = final_order(idx_rel_sort, sorted(rel_sorted, key=lambda x: (x[idx_src])), is_last_sort)

@@ -9,7 +9,26 @@ on:
       - master
       - develop
 jobs:
-  build:
+  windows:
+    runs-on: '${{ matrix.os }}'
+    strategy:
+      matrix:
+        os:
+          - windows-latest
+        python-version: ['2.7', '3.7', '3.8', '3.9', '3.10', '3.11']
+    steps:
+      - name: 'Set up Python ${{ matrix.python-version }}'
+        uses: actions/setup-python@v4
+        with:
+          python-version: '${{ matrix.python-version }}'
+      - uses: actions/checkout@v3
+      - run: pip install responses
+      - run: pip install -r requirements.txt
+      - run: pip install coveralls
+      - name: 'Unit tests...'
+        working-directory: ./tests
+        run: coverage run --source=.. --omit=../lib/* ./all_tests.py
+  linux:
     runs-on: '${{ matrix.os }}'
     strategy:
       matrix:
@@ -18,7 +37,28 @@ jobs:
         python-version: ['2.7', '3.7', '3.8', '3.9', '3.10', '3.11']
     steps:
       - name: 'Set up Python ${{ matrix.python-version }}'
-        uses: actions/setup-python@v3
+        uses: actions/setup-python@v4
+        with:
+          python-version: '${{ matrix.python-version }}'
+      - uses: actions/checkout@v3
+      - run: export BOTO_CONFIG=/dev/null
+      - run: 'export PYTHONPATH=$PYTHONPATH:$(pwd)'
+      - run: pip install responses
+      - run: pip install -r requirements.txt
+      - run: pip install coveralls
+      - name: 'Unit tests...'
+        working-directory: ./tests
+        run: coverage run --source=.. --omit=../lib/* ./all_tests.py
+  macos:
+    runs-on: '${{ matrix.os }}'
+    strategy:
+      matrix:
+        os:
+          - macos-latest
+        python-version: ['2.7', '3.7', '3.8', '3.9', '3.10', '3.11']
+    steps:
+      - name: 'Set up Python ${{ matrix.python-version }}'
+        uses: actions/setup-python@v4
         with:
           python-version: '${{ matrix.python-version }}'
       - uses: actions/checkout@v3

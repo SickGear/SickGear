@@ -639,7 +639,7 @@ name = '' if not client else get_client_instance(sickbeard.TORRENT_METHOD)().nam
 						</div>
     #end if
     #if ($hasattr($cur_torrent_provider, 'seed_time') and '_set_torrent_seed_time' in $client)
-        #set $use_default = 'to use the %s min <a href="%s/config/search/#core-component-group3">torrent search setting minumum default</a>' % ($sickbeard.TORRENT_SEED_TIME, $sbRoot) if $sickbeard.TORRENT_SEED_TIME else 'for the %s setting' % $name
+        #set $use_default = 'to use the %s min <a href="%s/config/search/#core-component-group3">torrent search setting minimum default</a>' % ($sickbeard.TORRENT_SEED_TIME, $sbRoot) if $sickbeard.TORRENT_SEED_TIME else 'for the %s setting' % $name
 						<div class="field-pair">
 							<label for="${cur_torrent_provider.get_id()}_seed_time">
 								<span class="component-title" id="${cur_torrent_provider.get_id()}_seed_time_desc">Seed time (provider default)</span>
