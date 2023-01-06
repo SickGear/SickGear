@@ -25,7 +25,7 @@ import unicodedata
 
 from exceptions_helper import ex, ConnectionSkipException
 from json_helper import json_loads
-from lib.cachecontrol import CacheControl, caches
+from cachecontrol import CacheControl, caches
 # from lib.tmdbsimple.configuration import Configuration
 # from lib.tmdbsimple.genres import Genres
 from cfscrape import CloudflareScraper
