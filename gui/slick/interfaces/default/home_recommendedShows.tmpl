@@ -1,0 +1,71 @@
+#import os.path
+#import sickgear
+##
+#set global $header = "Recommended Shows"
+#set global $title = "Recommended Shows"
+#set global $sbPath = "../.."
+#set global $statpath = "../.."
+#set global $topmenu = "home"
+##
+#include $os.path.join($sickgear.PROG_DIR, "gui/slick/interfaces/default/inc_top.tmpl")
+
+<script type="text/javascript" src="$sbRoot/js/formwizard.js?v=$sbPID"></script>
+<script type="text/javascript" src="$sbRoot/js/qualityChooser.js?v=$sbPID"></script>
+<script type="text/javascript" src="$sbRoot/js/recommendedShows.js?v=$sbPID"></script>
+<script type="text/javascript" src="$sbRoot/js/addShowOptions.js?v=$sbPID"></script>
+
+#if $varExists('header')
+<h1 class="header">$header</h1>
+#else
+<h1 class="title">$title</h1>
+#end if
+
+<image class="preload-image" style="position:absolute;top:-999px" src="$sbRoot/images/loading32<%= '-dark' if 'dark' == sickgear.THEME_NAME else '' %>.gif" width="32" height="32" border="0">
+
+<div id="newShowPortal">
+
+	<div id="displayText"></div>
+	<br />
+
+	<form id="addShowForm" method="post" action="$sbRoot/add-shows/addRecommendedShow" accept-charset="utf-8">
+		$xsrf_form_html
+
+		<fieldset class="sectionwrap step-one">
+			<legend class="legendStep"><p>Select a recommended show</p></legend>
+
+			<div class="stepDiv">
+				<div id="searchResults" style="height: 100%;"><br/></div>
+			</div>
+			<div style="clear:both">&nbsp;</div>
+		</fieldset>
+
+		<fieldset class="sectionwrap step-two">
+			<legend class="legendStep"><p>Pick parent folder</p></legend>
+
+			<div class="stepDiv parent-folder">
+				#include $os.path.join($sickgear.PROG_DIR, "gui/slick/interfaces/default/inc_rootDirs.tmpl")
+			</div>
+			<div style="clear:both">&nbsp;</div>
+		</fieldset>
+
+		<fieldset class="sectionwrap step-three">
+			<legend class="legendStep"><p>Set custom options</p></legend>
+
+			<div class="stepDiv">
+				#include $os.path.join($sickgear.PROG_DIR, "gui/slick/interfaces/default/inc_addShowOptions.tmpl")
+			</div>
+			<div style="clear:both">&nbsp;</div>
+		</fieldset>
+	</form>
+
+<br />
+
+<div style="width: 100%; text-align: center;">
+<input class="btn" type="button" id="addShowButton" value="Add Show" disabled="disabled" />
+</div>
+
+<script type="text/javascript" src="$sbRoot/js/rootDirs.js?v=$sbPID"></script>
+
+</div>
+
+#include $os.path.join($sickgear.PROG_DIR,"gui/slick/interfaces/default/inc_bottom.tmpl")

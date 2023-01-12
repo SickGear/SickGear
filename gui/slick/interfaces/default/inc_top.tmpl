@@ -1,0 +1,411 @@
+#import sickgear
+#import datetime
+#import urllib
+#from sickgear.common import Quality, SNATCHED_ANY, DOWNLOADED, ARCHIVED, FAILED
+#from sickgear.helpers import anon_url
+#from sickgear.show_name_helpers import abbr_showname
+<% def sg_var(varname, default=False): return getattr(sickgear, varname, default) %>#slurp#
+<% def sg_str(varname, default=''): return getattr(sickgear, varname, default) %>#slurp#
+#slurp
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="robots" content="noindex, nofollow, noarchive, nocache, noodp, noydir, noimageindex, nosnippet">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+	<title>SickGear - $title</title>
+
+	<!--[if lt IE 9]>
+	<script src="https://oss.maxcdn.com/html5shiv/3.7.2/html5shiv.min.js"></script>
+	<script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+	<![endif]-->
+
+	<link rel="shortcut icon" href="$sbRoot/images/ico/favicon.ico">
+	<link rel="apple-touch-icon" sizes="180x180" href="$sbRoot/images/ico/apple-touch-icon-180x180.png">
+	<link rel="apple-touch-icon" sizes="152x152" href="$sbRoot/images/ico/apple-touch-icon-152x152.png">
+	<link rel="apple-touch-icon" sizes="144x144" href="$sbRoot/images/ico/apple-touch-icon-144x144.png">
+	<link rel="apple-touch-icon" sizes="120x120" href="$sbRoot/images/ico/apple-touch-icon-120x120.png">
+	<link rel="apple-touch-icon" sizes="114x114" href="$sbRoot/images/ico/apple-touch-icon-114x114.png">
+	<link rel="apple-touch-icon" sizes="76x76" href="$sbRoot/images/ico/apple-touch-icon-76x76.png">
+	<link rel="apple-touch-icon" sizes="72x72" href="$sbRoot/images/ico/apple-touch-icon-72x72.png">
+	<link rel="apple-touch-icon" sizes="60x60" href="$sbRoot/images/ico/apple-touch-icon-60x60.png">
+	<link rel="apple-touch-icon" sizes="57x57" href="$sbRoot/images/ico/apple-touch-icon-57x57.png">
+	<link rel="icon" type="image/png" href="$sbRoot/images/ico/favicon-192x192.png" sizes="192x192">
+	<link rel="icon" type="image/png" href="$sbRoot/images/ico/favicon-160x160.png" sizes="160x160">
+	<link rel="icon" type="image/png" href="$sbRoot/images/ico/favicon-96x96.png" sizes="96x96">
+	<link rel="icon" type="image/png" href="$sbRoot/images/ico/favicon-32x32.png" sizes="32x32">
+	<link rel="icon" type="image/png" href="$sbRoot/images/ico/favicon-16x16.png" sizes="16x16">
+	<meta name="msapplication-TileColor" content="#2b5797">
+	<meta name="msapplication-TileImage" content="$sbRoot/images/ico/mstile-144x144.png">
+	<meta name="msapplication-config" content="$sbRoot/css/browserconfig.xml">
+	<meta name="theme-color" content="#echo '#%s' % ('333', '15528F')['dark' == $sg_str('THEME_NAME', 'dark')]#">
+
+	<link rel="stylesheet" type="text/css" href="$sbRoot/css/lib/bootstrap.min.css?v=$sbPID"/>
+	<link rel="stylesheet" type="text/css" href="$sbRoot/css/lib/bootstrap-theme.min.css?v=$sbPID"/>
+	<link rel="stylesheet" type="text/css" href="$sbRoot/css/browser.css?v=$sbPID" />
+	<link rel="stylesheet" type="text/css" href="$sbRoot/css/lib/jquery-ui.min.css?v=$sbPID" />
+	<link rel="stylesheet" type="text/css" href="$sbRoot/css/lib/jquery.qtip.min.css?v=$sbPID"/>
+	<link rel="stylesheet" type="text/css" href="$sbRoot/css/lib/pnotify.custom.min.css?v=$sbPID" />
+	<link rel="stylesheet" type="text/css" href="$sbRoot/css/lib/token-input.min.css?v=$sbPID" />
+	<link rel="stylesheet" type="text/css" href="$sbRoot/css/style.css?v=$sbPID"/>
+	<link rel="stylesheet" type="text/css" href="$sbRoot/css/${sg_str('THEME_NAME', 'dark')}.css?v=$sbPID" />
+#if $getVar('inc_top_glide', None)
+##	Required Core Stylesheet
+	<link rel="stylesheet" type="text/css" href="$sbRoot/css/lib/glide.core.min.css">
+##  Optional Theme Stylesheet
+	<link rel="stylesheet" type="text/css" href="$sbRoot/css/lib/glide.theme.min.css">
+#end if
+
+	<script type="text/javascript" src="$sbRoot/js/lib/jquery-2.2.4.min.js?v=$sbPID"></script>
+	<script type="text/javascript" src="$sbRoot/js/lib/bootstrap.min.js?v=$sbPID"></script>
+	<script type="text/javascript" src="$sbRoot/js/lib/bootstrap-hover-dropdown.min.js?v=$sbPID"></script>
+	<script type="text/javascript" src="$sbRoot/js/lib/jquery-ui.min.js?v=$sbPID"></script>
+	<script type="text/javascript" src="$sbRoot/js/lib/jquery.json.min.js?v=$sbPID"></script>
+	<script type="text/javascript" src="$sbRoot/js/lib/js.cookie.min.js?v=$sbPID"></script>
+	<script type="text/javascript" src="$sbRoot/js/lib/jquery.cookiejar.min.js?v=$sbPID"></script>
+	<script type="text/javascript" src="$sbRoot/js/lib/jquery.selectboxes.min.js?v=$sbPID"></script>
+	<script type="text/javascript" src="$sbRoot/js/lib/jquery.tablesorter.combined.min.js?v=$sbPID"></script>
+	<script type="text/javascript" src="$sbRoot/js/lib/jquery.qtip.min.js?v=$sbPID"></script>
+	<script type="text/javascript" src="$sbRoot/js/lib/pnotify.custom.min.js?v=$sbPID"></script>
+	<script type="text/javascript" src="$sbRoot/js/lib/jquery.form.min.js?v=$sbPID"></script>
+	<script type="text/javascript" src="$sbRoot/js/lib/jquery.ui.touch-punch.min.js?v=$sbPID"></script>
+	<script type="text/javascript" src="$sbRoot/js/lib/isotope.pkgd.min.js?v=$sbPID"></script>
+	<script type="text/javascript" src="$sbRoot/js/lib/imagesloaded.pkgd.min.js?v=$sbPID"></script>
+	<script type="text/javascript" src="$sbRoot/js/lib/jquery.confirm.js?v=$sbPID"></script>
+	<script type="text/javascript" src="$sbRoot/js/script.js?v=$sbPID"></script>
+	<script type="text/javascript" src="$sbRoot/js/inc_top.js?v=$sbPID"></script>
+#if $sg_var('FUZZY_DATING')
+	<script type="text/javascript" src="$sbRoot/js/moment/moment.min.js?v=$sbPID"></script>
+	<script type="text/javascript" src="$sbRoot/js/fuzzyMoment.js?v=$sbPID"></script>
+#end if
+#if $getVar('inc_top_glide', None)
+	<script type="text/javascript" src="$sbRoot/js/glide/glide.min.js?v=$sbPID"></script>
+#end if
+#if $getVar('inc_ofi', None)
+	<script type="text/javascript" src="$sbRoot/js/ofi/ofi.min.js?v=$sbPID"></script>
+#end if
+	<script type="text/javascript" charset="utf-8">
+	<!--
+		var sbRoot = '$sbRoot', anonURL = '$sg_str('ANON_REDIRECT')', themeSpinner = '#echo ('', '-dark')['dark' == $sg_str('THEME_NAME', 'dark')]#',
+			top_image_html = '<img src="$sbRoot/images/top.gif" width="31" height="11" alt="Jump to top" />', topmenu = '$topmenu';
+		\$.SickGear = {Root: '${sbRoot}', PID: '${sbPID}', anonURL: '$sg_str('ANON_REDIRECT')'};
+	//-->
+	</script>
+	<script type="text/javascript" src="$sbRoot/js/lib/jquery.scrolltopcontrol-1.1.js"></script>
+	<script type="text/javascript" src="$sbRoot/js/browser.js"></script>
+	<script type="text/javascript" src="$sbRoot/js/ajaxNotifications.js"></script>
+	<script type="text/javascript" src="$sbRoot/js/confirmations.js?v=$sbPID"></script>
+</head>
+#set $tab = 4
+#set global $body_attr = ''
+#try
+    #set global $body_attr += ' id="%s"' % $page_body_attr
+#except
+    #pass
+#end try
+#if not any([x in $body_attr for x in ['back-art', 'pro', 'ii']])
+    #set $parts = $body_attr.split('class="')
+    #set $body_attr = ('class="%s '.join($parts), $parts[0] + ' class="%s"')[1 == len($parts)] % {0: '', 1: 'pro', 2: 'pro ii'}.get(getattr($sickgear, 'DISPLAY_SHOW_VIEWMODE', 0))
+#end if
+
+#set $classes = ' '.join(([], ['shows-not-found'])[any([$getVar('log_num_not_found_shows_all', 0)])] \
+    + ([], [($getVar('log_num_not_found_shows', 0) * 'n')[0:4]])[any([$getVar('log_num_not_found_shows', 0)])])
+#if any($classes)
+    #set $body_attr = $body_attr.rstrip('"') + (' class="%s"', ' %s"')['class=' in $body_attr] % $classes
+#end if
+
+<body$body_attr>
+	<nav class="navbar navbar-default navbar-fixed-top" role="navigation">
+		<div class="container-fluid">
+
+			<div class="navbar-header">
+				<button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1">
+					<span class="sr-only">Toggle navigation</span>
+					<span class="icon-bar"></span>
+					<span class="icon-bar"></span>
+					<span class="icon-bar"></span>
+				</button>
+#set date = $datetime.datetime.today().timetuple()
+#set logo = ('', '-xmas')[(12 <= $date.tm_mon) or (3 > $date.tm_yday) or (3 == $date.tm_yday and 5 > $date.tm_hour)]
+				<a href="$sbRoot/home/" class="navbar-brand" tabindex="-1" title="SickGear"><img alt="SickGear" src="$sbRoot/images/sickgear${logo}.png" style="height: 50px;" class="img-responsive pull-left" /></a>
+			</div>
+#set $hover_dropdown='data-hover="dropdown" data-hover-delay="400" data-delay="500"'
+			<div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+				<ul class="nav navbar-nav navbar-right">
+					<li id="NAVhome" class="dropdown">
+						<a href="$sbRoot/home/" class="dropdown-toggle" data-toggle="dropdown" $hover_dropdown tabindex="$tab#set $tab += 1#">Shows <b class="caret"></b></a>
+#set $showlist_home, $episode_home, $history_home = 3 * ['(<i class="sgicon-home tight"></i>)']
+#if 'shows' == $sickgear.DEFAULT_HOME
+    #set $episode_home, $history_home = 2 * ['']
+#elif 'episodes' == $sickgear.DEFAULT_HOME
+    #set $showlist_home, $history_home = 2 * ['']
+#else
+    #set $showlist_home, $episode_home = 2 * ['']
+#end if
+						<ul class="dropdown-menu" style="min-width:204px">
+							<li><a href="$sbRoot/view-shows/" tabindex="$tab#set $tab += 1#"><i class="sgicon-list" style="font-size:12px"></i>Show List $showlist_home</a></li>
+							<li><a href="$sbRoot/daily-schedule/" tabindex="$tab#set $tab += 1#"><i class="sgicon-cal"></i>Daily Schedule $episode_home</a></li>
+							<li>
+#set $layout = $sg_var('HISTORY_LAYOUT', 'compact') or 'compact'
+#if $layout in ('compact', 'detailed')
+	#set $default_layout = 'downloaded'
+#elif 'watched' in $layout
+	#set $default_layout = 'watched'
+#else
+	#set $default_layout = 'failures'
+#end if
+								<a href="$sbRoot/history/" class="history" tabindex="$tab#set $tab += 1#"><i class="sgicon-mediafile"></i>History $history_home (<i class="sgicon-$default_layout"></i>)</a>
+## switch tab order around using pop() due to float right
+#set $tab_list = [$tab, $tab + 1]
+#set $tab += 2
+#if 'failures' != $default_layout
+								<a href="$sbRoot/history/?layout=connect_failures" class="history-sub" title="Stats" tabindex="$tab_list.pop()"><i class="sgicon-failures"></i></a>
+#end if
+#if 'watched' != $default_layout
+								<a href="$sbRoot/history/?layout=compact_watched" class="history-sub" title="Watched" tabindex="$tab_list.pop()"><i class="sgicon-watched"></i></a>
+#end if
+#if 'downloaded' != $default_layout
+								<a href="$sbRoot/history/?layout=compact" class="history-sub" title="Activity" tabindex="$tab_list.pop()"><i class="sgicon-downloaded"></i></a>
+#end if
+							</li>
+							<li class="divider"></li>
+							<li class="menu-item-noicon"><span class="add-tab1 opacity60">Add show...</span><span class="add-tab2 opacity60 default-off">Added last...</span><span class="add-tab3 opacity60 default-off">History new...</span><a id="add-view" data-view="add-tab1" href="#" tabindex="$tab#set $tab += 1#">[<span class="add-tab1">1</span><span class="add-tab2 default-off">2</span><span class="add-tab3 default-off">3</span><span class="paginate">/3</span>]</a></li>
+							<li><ul class="nav add-tab1">
+								<li><a id="add-show-name" data-href="$sbRoot/add-shows/find/" tabindex="$tab#set $tab += 1#"><i class="sgicon-addshow"></i>
+									<input  class="form-control form-control-inline input-sm" type="text" placeholder="Search" tabindex="$tab#set $tab += 1#">
+									<div class="menu-item-desc opacity60">find show at TV info source</div></a></li>
+								<li><a href="$sbRoot/add-shows/trakt-default/" tabindex="$tab#set $tab += 1#"><i class="sgicon-trakt"></i>Trakt Cards
+									<div class="menu-item-desc opacity60">trends, tailored suggestions...</div></a></li>
+								<li><a href="$sbRoot/add-shows/imdb-default/" tabindex="$tab#set $tab += 1#"><i class="sgicon-imdb"></i>IMDb Cards
+									<div class="menu-item-desc opacity60">popular decades, watchlists...</div></a></li>
+#set $mc_modes = dict(mc_90days='last 90 days', mc_year='by year', mc_discussed='most discussed', mc_shared='most shared')
+#set $mc_mode = $mc_modes.get($sg_var('MC_MRU'), 'new seasons')
+								<li><a href="$sbRoot/add-shows/mc-default/" tabindex="$tab#set $tab += 1#"><i class="sgicon-metac"></i>Metacritic Cards
+									<div class="menu-item-desc opacity60">$mc_mode...</div></a></li>
+#set $tvc_modes = dict(tvc_newshows='new shows', tvc_returning='returning', tvc_latest='latest')
+#set $tvc_mode = $tvc_modes.get($sg_var('TVC_MRU'), 'new shows')
+								<li><a href="$sbRoot/add-shows/tvc-default/" tabindex="$tab#set $tab += 1#"><i class="sgicon-tvc"></i>TV Calendar Cards
+									<div class="menu-item-desc opacity60">$tvc_mode...</div></a></li>
+#set $tvm_modes = dict(tvm_premieres='new shows', tvm_returning='returning')
+#set $tvm_mode = $tvm_modes.get($sg_var('TVM_MRU'), 'new shows')
+								<li><a href="$sbRoot/add-shows/tvm-default/" tabindex="$tab#set $tab += 1#"><i class="sgicon-tvmaze"></i>TVmaze Cards
+									<div class="menu-item-desc opacity60">$tvm_mode...</div></a></li>
+#set $ne_modes = dict(ne_newpop='new popular', ne_newtop='new top rated', ne_upcoming='upcoming', ne_trending='trending')
+#set $ne_mode = $ne_modes.get($sg_var('NE_MRU'), 'new popular')
+								<li><a href="$sbRoot/add-shows/ne-default/" tabindex="$tab#set $tab += 1#"><i class="sgicon-ne"></i>Next Episode Cards
+									<div class="menu-item-desc opacity60">$ne_mode...</div></a></li>
+#if $sg_var('USE_ANIDB')
+								<li><a href="$sbRoot/add-shows/anime-default/" tabindex="$tab#set $tab += 1#"><div class="img-anime-16 square-16"></div>Anime Cards
+									<div class="menu-item-desc opacity60">browse anime to add</div></a></li>
+#else
+								<li><a href="$sbRoot/config/anime/" class="opacity60" tabindex="$tab#set $tab += 1#"><div class="img-anime-16 square-16"></div>Anime Cards
+									<div class="menu-item-desc">to use, first enable AniDB here</div></a></li>
+#end if
+								</ul>
+								<ul class="nav add-tab2 default-off">
+#set $added_last = ($sg_var('showList', []) or [])[-$addtab_limit:][::-1]
+#if not $added_last:
+									<li><span style="padding-left:20px">This will list added shows</span></li>
+#else
+    #for item in $added_last
+        #if $hasattr($item, 'tvid_prodid')
+									<li><a href="$sbRoot/home/view-show?tvid_prodid=$item.tvid_prodid" tabindex="$tab#set $tab += 1#"><i class="sgicon-addshow"></i><span class="truncate">$abbr_showname(getattr($item, 'unique_name',$item.name))</span></a></li>
+        #end if
+    #end for
+#end if
+								</ul>
+								<ul class="nav add-tab3 default-off">
+#set $history_count = 0
+#if $history_compact:
+    #for item in $history_compact
+        #if 'tvid_prodid' in $item
+            #set $action = $item['actions'][0]
+            #set $curStatus, $curQuality = $Quality.splitCompositeStatus(int($action['action']))
+            #set $status = None
+            #if $curStatus in $SNATCHED_ANY + [$FAILED]
+                #set $status = 'snatched'
+            #elif $curStatus in [$DOWNLOADED, $ARCHIVED]
+                #set $status = 'good'
+            #end if
+            #if None is not $status
+                #set $history_count += 1
+									<li><a href="$sbRoot/home/view-show?tvid_prodid=$item['tvid_prodid']" tabindex="$tab#set $tab += 1#"><span class="$status"><i class="sgicon-addshow"></i></span><span class="truncate">$item['show_name']</span></a></li>
+            #end if
+        #end if
+    #end for
+#end if
+#if not $history_compact or not $history_count:
+									<li><span style="padding-left:20px">This will list latest history</span></li>
+#end if
+								</ul>
+							</li>
+						</ul>
+					</li>
+
+					<li id="NAVmanage" class="dropdown">
+						<a href="$sbRoot/manage/" class="dropdown-toggle" data-toggle="dropdown" $hover_dropdown tabindex="$tab#set $tab += 1#">Manage <b class="caret"></b><span class="snf bar"><i class="sgicon-warning"><em class="pulse"></em></i></span></a>
+						<ul class="dropdown-menu">
+							<li><a href="$sbRoot/home/process-media/" tabindex="$tab#set $tab += 1#"><i class="sgicon-postprocess"></i>Process Media</a></li>
+							<li class="divider"></li>
+							<li><a href="$sbRoot/manage/" tabindex="$tab#set $tab += 1#"><i class="sgicon-bulk-change"></i>Bulk Change</a></li>
+							<li><a href="$sbRoot/manage/backlog-overview/" tabindex="$tab#set $tab += 1#"><i class="sgicon-backlog"></i>Backlog Overview</a></li>
+							<li><a href="$sbRoot/manage/search-tasks/" tabindex="$tab#set $tab += 1#"><i class="sgicon-search"></i>Search Tasks</a></li>
+							<li><a href="$sbRoot/manage/show-tasks/" tabindex="$tab#set $tab += 1#"><span class="snf item"><i class="sgicon-warning"><em class="pulse"></em></i><i class="sgicon-showqueue"></i></span>Show Tasks</a></li>
+							<li><a href="$sbRoot/manage/episode-overview/" tabindex="$tab#set $tab += 1#"><i class="sgicon-episodestatus"></i>Episode Overview</a></li>
+#if hasattr($sickgear, 'USE_EMBY') and $sg_var('USE_EMBY') and $sg_str('EMBY_HOST') != '' and $sg_str('EMBY_APIKEY') != ''
+							<li><a href="$sbRoot/home/update-mb/" tabindex="$tab#set $tab += 1#"><i class="sgicon-emby"></i>Update Emby</a></li>
+#end if
+#if hasattr($sickgear, 'USE_KODI') and $sg_var('USE_KODI') and $sg_str('KODI_HOST') != ''
+							<li><a href="$sbRoot/home/update-kodi/" tabindex="$tab#set $tab += 1#"><i class="sgicon-kodi"></i>Update Kodi</a></li>
+#end if
+#if hasattr($sickgear, 'USE_PLEX') and $sg_var('USE_PLEX') and $sg_str('PLEX_SERVER_HOST') != ''
+							<li><a href="$sbRoot/home/update-plex/" tabindex="$tab#set $tab += 1#"><i class="sgicon-plex"></i>Update PLEX</a></li>
+#end if
+## #if hasattr($sickgear, 'USE_XBMC') and $sg_var('USE_XBMC') and $sg_str('XBMC_HOST') != ''
+##							<li><a href="$sbRoot/home/update-xbmc/" tabindex="$tab#set $tab += 1#"><i class="sgicon-xbmc"></i>Update XBMC</a></li>
+## #end if
+#if hasattr($sickgear, 'USE_FAILED_DOWNLOADS') and $sg_var('USE_FAILED_DOWNLOADS')
+							<li><a href="$sbRoot/manage/failed-downloads/" tabindex="$tab#set $tab += 1#"><i class="sgicon-failed"></i>Failed Downloads</a></li>
+#end if
+#if hasattr($sickgear, 'USE_SUBTITLES') and $sg_var('USE_SUBTITLES')
+							<li><a href="$sbRoot/manage/subtitle-missed/" tabindex="$tab#set $tab += 1#"><i class="sgicon-subtitles"></i>Subtitles Missed</a></li>
+#end if
+						</ul>
+					</li>
+
+					<li id="NAVconfig" class="dropdown">
+						<a href="$sbRoot/config/" class="dropdown-toggle" data-toggle="dropdown" $hover_dropdown tabindex="$tab#set $tab += 1#"><img src="$sbRoot/images/menu/system18.png" class="navbaricon hidden-xs" /><b class="caret hidden-xs"></b><span class="visible-xs">Config <b class="caret"></b></span></a>
+						<ul class="dropdown-menu">
+							<li><a href="$sbRoot/config/" tabindex="$tab#set $tab += 1#"><i class="sgicon-info"></i>About</a></li>
+							<li class="divider"></li>
+							<li class="menu-item-noicon opacity60">Settings...</li>
+							<li><a href="$sbRoot/config/general/" tabindex="$tab#set $tab += 1#"><i class="sgicon-config"></i>General</a></li>
+							<li><a href="$sbRoot/config/providers/" tabindex="$tab#set $tab += 1#"><i class="sgicon-book"></i>Media Providers</a></li>
+							<li><a href="$sbRoot/config/search/" tabindex="$tab#set $tab += 1#"><i class="sgicon-search"></i>Search</a></li>
+							<li><a href="$sbRoot/config/subtitles/" tabindex="$tab#set $tab += 1#"><i class="sgicon-subtitles"></i>Subtitles</a></li>
+							<li><a href="$sbRoot/config/media-process/" tabindex="$tab#set $tab += 1#"><i class="sgicon-postprocess"></i>Media Process</a></li>
+							<li><a href="$sbRoot/config/notifications/" tabindex="$tab#set $tab += 1#"><i class="sgicon-notification"></i>Notifications</a></li>
+							<li><a href="$sbRoot/config/anime/" tabindex="$tab#set $tab += 1#"><i class="sgicon-anime"></i>Anime</a></li>
+						</ul>
+					</li>
+
+					<li id="NAVtools" class="dropdown">
+#set num_errors = $getVar('$log_num_errors', None)
+#set $err_class = ('', ' errors ' + (len('%s' % $num_errors ) * 'n')[0:4])[any([$num_errors])]
+						<a href="$sbRoot/manage/" class="dropdown-toggle" data-toggle="dropdown" $hover_dropdown tabindex="$tab#set $tab += 1#"><img src="$sbRoot/images/menu/system18-2.png" class="navbaricon hidden-xs" /><b class="caret hidden-xs"></b><span class="visible-xs">System <b class="caret"></b></span><span class="logger bar$err_class"><i class="sgicon-warning"><em class="pulse"></em></i></span></a>
+						<ul class="dropdown-menu">
+#if not $sg_var('EXT_UPDATES')
+							<li><a href="$sbRoot/home/check-update" tabindex="$tab#set $tab += 1#"><i class="sgicon-updatecheck"></i>Check for Updates</a></li>
+#end if
+							<li><a href="$sbRoot/home/view-changes" tabindex="$tab#set $tab += 1#"><i class="sgicon-changes"></i>View Changes</a></li>
+							<li class="divider"></li>
+#if $err_class
+							<li><a href="$sbRoot/errors/" tabindex="$tab#set $tab += 1#"><span class="logger item$err_class"><i class="sgicon-warning"><em class="pulse"></em></i></span></i>View Errors</a></li>
+#end if
+							<li><a href="$sbRoot/events/view-log/" tabindex="$tab#set $tab += 1#"><i class="sgicon-log"></i>View Log File</a></li>
+							<li class="divider"></li>
+							<li><a href="$sbRoot/add-shows/import/" tabindex="$tab#set $tab += 1#"><i class="sgicon-import"></i>Import
+								<div class="menu-item-desc opacity60">existing shows</div></a></li>
+							<li class="divider"></li>
+#if $sg_str('WEB_USERNAME') or $sg_str('WEB_PASSWORD')
+							<li><a href="$sbRoot/logout" class="confirm logout" tabindex="$tab#set $tab += 1#"><i class="sgicon-logout"></i>Logout</a></li>
+#end if
+							<li><a href="$sbRoot/home/restart/?pid=$sbPID" class="confirm restart" tabindex="$tab#set $tab += 1#"><i class="sgicon-restart"></i>Restart</a></li>
+							<li><a href="$sbRoot/home/shutdown/?pid=$sbPID" class="confirm shutdown" tabindex="$tab#set $tab += 1#"><i class="sgicon-shutdown"></i>Shutdown</a></li>
+						</ul>
+					</li>
+				</ul>
+			</div><!-- /.navbar-collapse -->
+
+		</div><!-- /.container-fluid -->
+	</nav>
+
+#if $varExists('submenu')
+	<div id="SubMenu">
+		<span>
+    #set $first = True
+    #for $menuItem in $submenu
+        #if 'requires' not in $menuItem or $menuItem.requires()
+            #if type($menuItem.path) == dict
+                #if $first then '' else '</span><span>'#<b>$menuItem.title</b>
+                #set $first = False
+                #set $inner_first = True
+                #for $cur_link in $menuItem.path
+                    #if $inner_first then '' else '&middot; '
+                    ##
+			<a class="inner" href="$sbRoot/$menuItem.path[$cur_link]">$cur_link</a>
+                    #set $inner_first = False
+                #end for
+            #else
+                ##
+			<a href="$sbRoot/$menuItem.path"#if 'confirm' in $menuItem then ' class="confirm"' else ''# tabindex="$tab#set $tab += 1#">$menuItem.title</a>
+                #set $first = False
+            #end if
+        #end if
+    #end for
+		</span>
+	</div><!-- /SubMenu -->
+
+#end if
+##
+#set $py_ver = sys.version_info[:3]
+#if $py_ver in [(3, 9, 3), (3, 8, 1), (3, 7, 6)]:
+	<div class="alert alert-danger topbar-notification upgrade-py" role="alert">
+    #if (3, 9, 3) == $py_ver:
+		<p>Your installed Python 3.9.3 has been <a href="<%= anon_url('https://bugs.python.org/issue43710') %>" onclick="window.open(this.href);return !1;">recalled</a> due to breakage with C extensions<br>
+			Please replace with Python <b>3.9.4</b>: <a href="<%= anon_url('https://www.python.org/downloads/') %>" onclick="window.open(this.href);return !1;">download here</a>
+		</p>
+    #elif (3, 8, 1) == $py_ver:
+		<p>Your installed Python 3.8.1 has a <a href="<%= anon_url('https://github.com/python/cpython/commit/ea316fd21527dec53e704a5b04833ac462ce3863') %>" onclick="window.open(this.href);return !1;">critical issue</a> affecting the parsing of URLs<br>
+			Please replace with Python <b>3.8.2</b>, <b>3.8.0</b>, or older: <a href="<%= anon_url('https://www.python.org/downloads/') %>" onclick="window.open(this.href);return !1;">download here</a>
+		</p>
+    #else if (3, 7, 6) == $py_ver:
+		<p>Your installed Python 3.7.6 has a <a href="<%= anon_url('https://github.com/python/cpython/commit/505b6015a1579fc50d9697e4a285ecc64976397a') %>" onclick="window.open(this.href);return !1;">critical issue</a> affecting the parsing of URLs<br>
+			Please replace with Python <b>3.7.7</b>, <b>3.7.5</b>, or older: <a href="<%= anon_url('https://www.python.org/downloads/') %>" onclick="window.open(this.href);return !1;">download here</a>
+		</p>
+    #end if
+	</div>
+#end if
+#if $tvinfo_switch_running
+	<div class="alert alert-danger topbar-notification" role="alert">
+		<span>Switching the TV info source of shows.<br>Expect links and elements to temporarily not work</span>
+	</div>
+#end if
+#if $sg_str('NEWEST_VERSION_STRING')
+	<div class="alert alert-success topbar-notification" role="alert">
+		<span>$sg_str('NEWEST_VERSION_STRING')</span>
+	</div>
+#end if
+#if $sg_str('MODULE_UPDATE_STRING')
+	<div class="alert alert-success topbar-notification" role="alert">
+		<span>$sg_str('MODULE_UPDATE_STRING')</span>
+	</div>
+#end if
+##
+#if $sickgear.MEMCACHE.get('DEPRECATE_SB_RUNNER')
+	<div style="background-color:#a00; margin-top:35px; padding:5px 5px 1px 5px">
+		<p>Since Jan 2019, installations like this one have displayed a
+		message on every startup to run `<em><span style="color:#fff">sickgear.py</em></span>` instead of `SickBeard.py`.<br>
+		But some runners (e.g. Linux service files) hide the message.</p>
+		<p>Nov 2022:
+		To remove this red box, and to prevent a future startup failure when the outdated `<span style="color:#fff">SickBeard.py</span>` is removed,
+		<br>please change whatever starts SickGear to run `<em><span style="color:#fff">sickgear.py</em></span>`.</p>
+	</div>
+#end if
+##
+#set $items = []
+#try
+    #set void = $items.append($topmenu)
+#except (NameError, NotFound)
+    #pass
+#end try
+#try
+    #set void = $items.append($layout)
+#except (NameError, NotFound)
+    #pass
+#end try
+#set $page_class = ('', ' class="%s"' % '_'.join($items).lower().replace(' ', '-').replace('_', '-'))[0 < len($items)]
+	<div id="contentWrapper">
+		<div id="content"$page_class>

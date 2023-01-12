@@ -1,0 +1,143 @@
+##
+#from sickgear import WEB_PORT, WEB_ROOT, PID, ENABLE_HTTPS, THEME_NAME
+##set $sg_host = $getVar('sbHost', 'localhost')
+#set $sg_port = str($getVar('sbHttpPort', WEB_PORT))
+#set $sg_root = $getVar('sbRoot', WEB_ROOT)
+#set $sg_pid = $getVar('sbPID', str(PID))
+##set $sg_use_https = $getVar('sbHttpsEnabled', ENABLE_HTTPS)
+#set $theme_suffix = ('', '-dark')['dark' == $getVar('sbThemeName', THEME_NAME)]
+##
+<!DOCTYPE html>
+<html>
+	<head><title>Index of $basepath</title></head>
+	<meta charset="utf-8">
+	<meta name="robots" content="noindex, nofollow, noarchive, nocache, noodp, noydir, noimageindex, nosnippet">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+	<link rel="shortcut icon" href="$sg_root/images/ico/favicon.ico">
+	<link rel="apple-touch-icon" sizes="180x180" href="$sg_root/images/ico/apple-touch-icon-180x180.png">
+	<link rel="apple-touch-icon" sizes="152x152" href="$sg_root/images/ico/apple-touch-icon-152x152.png">
+	<link rel="apple-touch-icon" sizes="144x144" href="$sg_root/images/ico/apple-touch-icon-144x144.png">
+	<link rel="apple-touch-icon" sizes="120x120" href="$sg_root/images/ico/apple-touch-icon-120x120.png">
+	<link rel="apple-touch-icon" sizes="114x114" href="$sg_root/images/ico/apple-touch-icon-114x114.png">
+	<link rel="apple-touch-icon" sizes="76x76" href="$sg_root/images/ico/apple-touch-icon-76x76.png">
+	<link rel="apple-touch-icon" sizes="72x72" href="$sg_root/images/ico/apple-touch-icon-72x72.png">
+	<link rel="apple-touch-icon" sizes="60x60" href="$sg_root/images/ico/apple-touch-icon-60x60.png">
+	<link rel="apple-touch-icon" sizes="57x57" href="$sg_root/images/ico/apple-touch-icon-57x57.png">
+	<link rel="icon" type="image/png" href="$sg_root/images/ico/favicon-192x192.png" sizes="192x192">
+	<link rel="icon" type="image/png" href="$sg_root/images/ico/favicon-160x160.png" sizes="160x160">
+	<link rel="icon" type="image/png" href="$sg_root/images/ico/favicon-96x96.png" sizes="96x96">
+	<link rel="icon" type="image/png" href="$sg_root/images/ico/favicon-32x32.png" sizes="32x32">
+	<link rel="icon" type="image/png" href="$sg_root/images/ico/favicon-16x16.png" sizes="16x16">
+
+	<link rel="stylesheet" type="text/css" href="$sbRoot/css/lib/bootstrap.min.css?v=$sbPID">
+	<link rel="stylesheet" type="text/css" href="$sg_root/css/#echo ('dark', 'light')['' == $theme_suffix]#.css?v=$sg_pid">
+	<style>
+		.highlight-text{color:#a00}
+		body{margin:20px}
+		h1{font-size:25px}
+		table, td{border:1px solid;border-collapse:collapse}
+		li{padding-bottom:10px}
+		th{padding-top:6px;padding-bottom:6px;background-color:#000;color:white;white-space:nowrap}
+		td, th{text-align:left;padding:10px}
+		td ul{padding-left:15px}
+		.sglogo{position:absolute;top:20px;right:20px;display:block;width:138px;height:74px;background:url(${sg_root}/images/sickgear.png) no-repeat 0 0}
+	</style>
+	<body style="font-family:Romboto,Arial,sans-serif">
+		<h1>Index of $basepath</h1>
+		<table border="1" cellpadding="5" cellspacing="0">
+			<tr>
+				<th>Name</th>
+			</tr>
+#for $file in $filelist
+			<tr>
+				<td><a href="$file">$file</a></td>
+			</tr>
+#end for
+		</table>
+	</body>
+#set $lt = '&lt;'
+#set $gt = '&gt;'
+#set $ip = '%ssickgear ip address%s' % ($lt, $gt)
+#set $port = '%sport%s' % ($lt, $gt)
+#set $ip_port = '%sip address:port%s' % ($lt, $gt)
+#set $endpoint = 'kodi%s/' % ('', '-legacy')[$kodi_is_legacy]
+#set $endpoint_alt = '/kodi%s/' % ('', '-legacy')[not $kodi_is_legacy]
+#set $release = ('Matrix', 'Leia, Krypton, Jarvis, and Isangard')[$kodi_is_legacy]
+#set $release_alt = ('Matrix', 'Leia, Krypton, Jarvis, and Isangard')[not $kodi_is_legacy]
+	<html>
+	<body>
+		<span class="sglogo"></span>
+
+		<h2 style="margin-top:40px">Add-ons for Kodi <span class="grey-text">$release</span></h2>
+		<p>SickGear add-on allows integration with Kodi.</p>
+
+
+		<h2>Installing</h2>
+		<p>Installing takes two steps, continue reading for Kodi <strong>$release</strong>, otherwise see <a href="$endpoint_alt"><em class="highlight-text">$endpoint_alt</em></a> for Kodi release#echo ('', 's')[not $kodi_is_legacy]# <strong>$release_alt</strong></p>
+		<ul>
+			<li>Step One: Download and install the add-ons project repository</li>
+			<li>Step Two: Install the add-on from the repository</li>
+		</ul>
+
+
+		<h2>Step One: Install SickGear Add-on Repository</h2>
+		<p>There are two options for installing the repository. Option two can be done entirely inside Kodi
+		and is best suited for situations where Kodi is installed on a device with no access to download or copy files.</p>
+
+		<h4>Option One - Direct download and install for Kodi <strong>$release</strong> (<a href="$endpoint_alt"><em class="highlight-text">continue here</em></a> for $release_alt)</h4>
+		<ul>
+			<li>Download the <a href="/${endpoint}repository.sickgear/${repo}"><em class="highlight-text">$repo</em></a> repository file to a local hard drive</li>
+			<li>Save the downloaded repo zip file to somewhere Kodi has access</li>
+			<li>In Kodi navigate to "<em>Add-ons</em>" and select "<em>Install from zip file</em>"</li>
+			<li>If prompted with a security warning about unknown add-ons select the settings button and then enable "<em>Unknown sources</em>"</li>
+			<li>Using the file selector select the downloaded repo zip</li>
+		</ul>
+
+		<h4>Option Two - Sideload from a source</h4>
+		<p>This is the best and sometimes the only option for standalone devices. This approach requires adding a source
+		that points to the address where SickGear is running and then using that source to install the repo.</p>
+
+		<p>First, set up the source</p>
+		<ul>
+			<li>In Kodi, navigate to the File Manager and select "<em>Add source</em>"</li>
+			<li>On the "Add file source" dialog select the "<em>Browse</em>" button then select "Add network location..."</li>
+			<li>On the "Add network location" dialog enter:
+				<table border="0" style="margin-top:10px">
+				<tr><th>Setting</th><th>Value</th><th>Description</th></tr>
+					<tr><th>Protocol</th><td style="white-space:nowrap">Web server directory (<em>type</em>)</td><td><p><em>type</em> is typically HTTP.</p><p>Can use HTTPS if SSL is enabled in SickGear config. <a href="https://github.com/SickGear/SickGear/wiki/Install-SickGear-%5B81%5D-Media-Apps">See SSL guide</a>.</p></td></tr>
+					<tr><th>Server address</th><td>$ip</td><td>ip address of the machine running SickGear (e.g. 192.168.0.10)</td></tr>
+					<tr><th>Remote path</th><td>/$endpoint</td><td><p>for Kodi <strong>$release</strong>.</p><p>(for Kodi <strong>$release_alt</strong>, <a href="$endpoint_alt"><em class="highlight-text">continue here</em></a>)</p></td></tr>
+					<tr><th>Port</th><td>$port</td><td>For example, $sg_port</td></tr>
+				</table>
+			</li>
+			<li>Leave everything else and hit the "Ok" button, then change or accept the media source name, and go back to the home screen</li>
+		</ul>
+		<p>Then, install the repo from the source</p>
+		<ul>
+			<li>In Kodi, navigate to "<em>Add-ons</em>" and select "Install from zip file"</li>
+			<li>If prompted with a security warning about unknown add-ons, enable the "Unknown sources" setting</li>
+			<li>Select the created source from the available sources to install from</li>
+			<li>The repo and service add-ons will display, select the repo to install it</li>
+		</ul>
+
+
+		<h2>Step Two: Install Add-on</h2>
+		<p>Install the add-on from the project repository</p>
+		<ul>
+			<li>In Kodi, open the settings and select "<em>Add-ons</em>"</li>
+			<li>Select "<em>Install from repository</em>"</li>
+			<li>Select "<em>SickGear Add-on repository</em>"</li>
+			<li>Select "<em>Services</em>"</li>
+			<li>Select the "<em>$addon</em>" and then "<em>Install</em>"</li>
+		</ul>
+
+		<p>After a brief pause, a popup will confirm the add-on is running. Edit the add-on settings.</p>
+
+		<hr>
+		<em>Tornado Server for SickGear $version</em>
+	</body>
+	</html>
+</body>
+</html>

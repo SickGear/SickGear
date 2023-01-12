@@ -1,0 +1,55 @@
+#import sickgear
+#from sickgear import classes
+#from sickgear.common import *
+#from sickgear.logger import reverseNames
+#from sickgear.helpers import maybe_plural
+#from _23 import list_keys
+##
+#set global $header = 'Log File'
+#set global $title = 'Logs'
+#set global $sbPath = '..'
+#set global $topmenu = 'errorlogs'
+#set $log_level_var = None is $getVar('min_level', None) and 'minLevel' or 'min_level'
+#set $log_level = $getVar($log_level_var, 20)
+##
+#import os.path
+#include $os.path.join($sickgear.PROG_DIR, 'gui/slick/interfaces/default/inc_top.tmpl')
+
+#if $varExists('header')
+	<h1 class="header">$header</h1>
+#else
+	<h1 class="title">$title</h1>
+#end if
+
+<div class="h2footer pull-right">
+	<select name="minLevel" id="minLevel" class="form-control form-control-inline input-sm pull-right">
+#set $levels = $list_keys($reverseNames)
+#set void = $levels.sort(key=lambda x: $reverseNames[$x])
+#set $level_count = len($levels)
+#for $level in $levels
+    #set $level_count -= 1
+    #set $level_text = '%s%s' % ($level.title(), (('', ' only')[0 == $level_count], ' and the next%s level%s' % ((' ' + str($level_count), '')[1 == $level_count], maybe_plural($level_count)))[0 < $level_count])
+		<option value="$reverseNames[$level]"#if $log_level == $reverseNames[$level]# selected="selected" class="selected"#end if#>$level_text</option>
+#end for
+
+	</select>
+    <div style="clear:right">FAQ: <a href="https://github.com/SickGear/SickGear/wiki/FAQ-Why-Not-Found" title="a common question for people here">Episode not found / Snatch failed</a></div>
+</div>
+
+<div class="align-left" style="margin:30px 0"><pre>
+#echo $logLines
+</pre></div>
+
+<script type="text/javascript" charset="utf-8">
+<!--
+\$(document).ready(function(){
+	\$('#minLevel').change(function(){
+		window.location.href = '$sbRoot/events/view-log/?$log_level_var=' + \$(this).val()
+	});
+
+    window.setInterval('location.reload(true)', 600000); // Refresh every 10 minutes
+});
+//-->
+</script>
+
+#include $os.path.join($sickgear.PROG_DIR, 'gui/slick/interfaces/default/inc_bottom.tmpl')

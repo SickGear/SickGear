@@ -1,0 +1,25 @@
+#import datetime
+#import sickgear
+#from sickgear import TVInfoAPI
+#from sickgear.helpers import anon_url
+#from sickgear.tv import PersonGenders
+#from six import iteritems
+<% def sg_var(varname, default=False): return getattr(sickgear, varname, default) %>#slurp#
+<% def sg_str(varname, default=''): return getattr(sickgear, varname, default) %>#slurp#
+##
+#set global $title = 'Show Switch Errors'
+#set global $header = 'Show Switch Errors'
+#set global $sbPath = '../..'
+#set global $topmenu = 'show'
+##
+#import os.path
+#include $os.path.join($sickgear.PROG_DIR, 'gui/slick/interfaces/default/inc_top.tmpl')
+
+<h4>Shows with changed episodes</h4>
+#for $show_obj, $show_data in $iteritems($show_list)
+    #if $hasattr($show_obj, 'tvid_prodid')
+	<div><a href="$sbRoot/home/view-show?tvid_prodid=$show_obj.tvid_prodid">$show_obj.name</a> - <a href="$sbRoot/home/get-switch-changed-episodes?tvid_prodid=$show_obj.tvid_prodid">($show_data.get('changed', 0) changed, $show_data.get('deleted', 0) deleted episodes)</a></div>
+    #end if
+#end for
+
+#include $os.path.join($sickgear.PROG_DIR, 'gui/slick/interfaces/default/inc_bottom.tmpl')

@@ -1,0 +1,26 @@
+dist: xenial
+
+language: python
+
+#python:
+#  - "2.7"
+jobs:
+  include:
+    - python: '2.7'
+    - python: '3.7'
+    - python: '3.8'
+    - python: '3.9'
+
+before_install:
+  - export BOTO_CONFIG=/dev/null # Workaround for https://github.com/travis-ci/travis-ci/issues/7940
+  - export PYTHONPATH=$PYTHONPATH:$(pwd)
+  - pip install responses # Used only in tests with dep pkg_resources
+
+install:
+  - pip install -r requirements.txt
+  - pip install coveralls
+
+before_script:
+  - cd ./tests
+script: coverage run --source=.. --omit=../lib/* ./all_tests.py
+after_success: coveralls

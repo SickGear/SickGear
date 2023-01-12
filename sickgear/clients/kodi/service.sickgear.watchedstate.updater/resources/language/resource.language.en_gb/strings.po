@@ -1,0 +1,65 @@
+# Addon Name: SickGear Watched State Updater
+# Addon id: service.sickgear.watchedstate.updater
+# Addon Provider: SickGear
+msgid ""
+msgstr ""
+
+msgctxt "#32000"
+msgid "General"
+msgstr ""
+
+msgctxt "#32011"
+msgid "Action Notifications"
+msgstr ""
+
+msgctxt "#32012"
+msgid "Error Notifications"
+msgstr ""
+
+msgctxt "#32021"
+msgid "Verbose Logs"
+msgstr ""
+
+msgctxt "#32100"
+msgid "Servers"
+msgstr ""
+
+msgctxt "#32111"
+msgid "SickGear IP"
+msgstr ""
+
+msgctxt "#32112"
+msgid "SickGear Port"
+msgstr ""
+
+msgctxt "#32121"
+msgid "Kodi IP"
+msgstr ""
+
+msgctxt "#32122"
+msgid "Kodi JSON RPC Port"
+msgstr ""
+
+msgctxt "#32500"
+msgid "The following required Kodi settings should already be enabled:"
+msgstr ""
+
+msgctxt "#32511"
+msgid "At \"System / Service(s) settings / Control (aka Remote control)\""
+msgstr ""
+
+msgctxt "#32512"
+msgid "* Allow remote control from/by applications/programs on this system"
+msgstr ""
+
+msgctxt "#32513"
+msgid "* Allow remote control from/by applications/programs on other systems"
+msgstr ""
+
+msgctxt "#32600"
+msgid "The following required Kodi settings should already be enabled:\nAt \"System / Service(s) settings / Control (aka Remote control)\""
+msgstr ""
+
+msgctxt "#32612"
+msgid "* Allow remote control from/by applications/programs on this system\n* Allow remote control from/by applications/programs on other systems"
+msgstr ""

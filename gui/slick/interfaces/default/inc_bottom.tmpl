@@ -1,0 +1,140 @@
+#import datetime
+#import re
+#import sickgear
+#from sickgear import db
+#from sickgear.common import Quality, SKIPPED, WANTED
+#from sickgear.helpers import df
+#from sickgear.webserve import MainHandler
+<% def sg_var(varname, default=False): return getattr(sickgear, varname, default) %>#slurp#
+<% def sg_str(varname, default=''): return getattr(sickgear, varname, default) %>#slurp#
+##
+		</div><!-- /content -->
+	</div><!-- /contentWrapper -->
+
+	<footer>
+		<div class="footer clearfix">
+#set $my_db = $db.DBConnection()
+#set $today = str($datetime.date.today().toordinal())
+#set status_quality = '(%s)' % ','.join([str(quality) for quality in $Quality.SNATCHED_ANY])
+#set status_download = '(%s)' % ','.join([str(quality) for quality in $Quality.DOWNLOADED + $Quality.ARCHIVED])
+#set $sql_statement = 'SELECT '\
+    + '(SELECT COUNT(*) FROM tv_episodes WHERE season > 0 AND episode > 0 AND airdate > 1 AND status IN %s) AS ep_snatched, '\
+    % $status_quality\
+    + '(SELECT COUNT(*) FROM tv_episodes WHERE season > 0 AND episode > 0 AND airdate > 1 AND status IN %s) AS ep_downloaded, '\
+    % $status_download\
+    + '(SELECT COUNT(*) FROM tv_episodes WHERE season > 0 AND episode > 0 AND airdate > 1 '\
+    + ' AND ((airdate <= %s AND (status = %s OR status = %s)) '\
+    % ($today, str($SKIPPED), str($WANTED))\
+    + ' OR (status IN %s) OR (status IN %s))) AS ep_total FROM tv_episodes tv_eps LIMIT 1'\
+    % ($status_quality, $status_download)
+##
+#set $sql_result = $my_db.select($sql_statement)
+##
+#set $shows_total = len($sg_str('showList'))
+#set $shows_active = len([show for show in $sg_str('showList') if 0 == show.paused and 'Ended' != show.status])
+##
+#if $sql_result:
+    #set $ep_snatched = $sql_result[0]['ep_snatched']
+    #set $ep_downloaded = $sql_result[0]['ep_downloaded']
+    #set $ep_total = $sql_result[0]['ep_total']
+#else
+    #set $ep_snatched = 0
+    #set $ep_downloaded = 0
+    #set $ep_total = 0
+#end if
+#set $ep_percentage = '' if $ep_total == 0 else '(<span class="footerhighlight">%s%%</span>)' % re.sub(r'(\d+)(\.\d)\d+', r'\1\2', str((float($ep_downloaded)/float($ep_total))*100))
+##
+#try
+    #set $localRoot = $sbRoot
+#except NotFound
+    #set $localRoot = ''
+#end try
+#try
+    #set $localheader = $header
+#except NotFound
+    #set $localheader = ''
+#end try
+<%
+diskfree, min_output = df()
+if min_output:
+    avail = ', '.join(['%s <span class="footerhighlight">%s</span>' % (drive, free) for (drive, free) in diskfree])
+%>#slurp#
+##
+			<span class="footerhighlight">$shows_total</span> shows (<span class="footerhighlight">$shows_active</span> active)
+			| <span class="footerhighlight">$ep_downloaded</span><%=
+(
+'',
+' (<span class="footerhighlight">+%s</span> snatched)'\
+% '<a href="%s/manage/episode-overview?which_status=2" title="View overview of snatched episodes">%s</a>'
+    % (localRoot, str(ep_snatched))
+)[0 < ep_snatched]
+%>&nbsp;/&nbsp;<span class="footerhighlight">$ep_total</span> episodes downloaded $ep_percentage
+#for i, event in enumerate($MainHandler.get_footer_time(change_layout=False, json_dump=False))
+    #for k, v in event.items()
+            #set info = re.findall('(.*)_(timeleft|time)', k)[0]
+            #if not i
+			<br>next connect <i class="icon-glyph layout $info[1]" title="Change time layout"></i> for...
+            #end if
+			<span id="next-connect-$info[0]">| $info[0].replace('-', ' '): <span class="footerhighlight $info[0]">$v</span></span>
+    #end for
+#end for
+#if diskfree
+    #if min_output
+			<br>free space&nbsp;&nbsp;$avail
+    #else
+			<div class="table-responsive" style="border:0">
+<style>
+.stat-table{margin:0 auto}
+.stat-table > tbody > tr > td{padding:0 5px}
+</style>
+				<table class="stat-table" cellspacing="5" cellpadding="5">
+					<caption style="display:none">Free space stats for volume/path</caption>
+					<tbody>
+        #for i, drive in enumerate(diskfree)
+						<tr>
+							<td>#if not i#free space#end if#</td>
+							<td><span class="footerhighlight">$drive[1]</span></td>
+							<td style="text-align:left">$drive[0]</td>
+						</tr>
+        #end for
+					</tobdy>
+				</table>
+			</div>
+    #end if
+#end if
+		</div>
+<script>
+var footerTimeUrl = '$localRoot/get-footer-time';
+#raw
+function getFooterTime(params){
+	params = /undefined/.test(params) && {} || params;
+	$.getJSON(footerTimeUrl, params, function(data){
+		var info, footerIcon$ = $('.footer').find('.icon-glyph.layout'), enabledPropers = !1;
+		$.each(data, function(i, eventItems){
+			$.each(eventItems, function(k, v){
+				info = k.match(/(.*)_(timeleft|time)/);
+				$('.footer').find('.' + info[1]).html(v);
+				footerIcon$.removeClass('time').removeClass('timeleft').addClass(info[2]);
+				enabledPropers |= /propers/.test(info[1]); // enable only if key is found in response
+			});
+		});
+
+		var propers$ = $('#next-connect-propers');
+		if(enabledPropers){
+			propers$.show();
+		} else {
+			propers$.hide();
+		}
+	});
+}
+
+$(function(){
+	$('.footer').find('.layout').click(function(){
+		getFooterTime();
+	});
+});
+#end raw
+</script>
+	</footer>
+</body>
+</html>

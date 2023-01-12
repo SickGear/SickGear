@@ -1,0 +1,176 @@
+#import sickgear
+#from sickgear.helpers import anon_url
+##
+#set global $header = ('Add from TV info source', '<span class="grey-text">%s::</span>%s' % ($kwargs.get('action'), $default_show_name))[any([$kwargs.get('action')])]
+#set global $title = ('Add from TV info source', '%s::%s' % ($kwargs.get('action'), $default_show_name))[any([$kwargs.get('action')])]
+#set global $sbPath = '../..'
+#set global $statpath = '../..'
+#set global $topmenu = 'home'
+<% def sg_var(varname, default=False): return getattr(sickgear, varname, default) %>#slurp#
+<% def sg_str(varname, default=''): return getattr(sickgear, varname, default) %>#slurp#
+##########
+## legacy
+#set $provided_tvid = $getVar('provided_tvid', $getVar('provided_indexer', 1))
+#set $provided_prodid = $getVar('provided_prodid', None) or $getVar('provided_indexer_id', 0)
+#set $provided_show_name = $getVar('provided_show_name', None) or $getVar('provided_indexer_name', '')
+##
+#import os.path
+#include $os.path.join($sg_str('PROG_DIR'), 'gui/slick/interfaces/default/inc_top.tmpl')
+
+#set indexer_count = len([$i for $i in $sickgear.TVInfoAPI().sources if $sickgear.TVInfoAPI(i).config.get('active', False) and not $sickgear.TVInfoAPI(i).config.get('defunct', False)]) + 1
+
+<script>
+	var showSceneMaps = ${show_scene_maps},
+		config = {
+			sortArticle: #echo ['!1','!0'][$sg_var('SORT_ARTICLE')]#,
+			resultsSortby: '#echo $sg_str('RESULTS_SORTBY', 'rel')#',
+	#set $try_num = 1
+	#set $tries = $len($try_name + $try_id + $try_id_name + $try_url)
+			searchTests: {#for $cur_tip in $try_name + $try_id + $try_id_name + $try_url#$try_num:'$cur_tip[next(iter($cur_tip))]'#if $try_num < $tries#, #end if##set $try_num += 1##end for#},
+            folder: '$kwargs.get('folder', '')'
+		}
+</script>
+
+<script type="text/javascript" src="$sbRoot/js/formwizard.js?v=$sbPID"></script>
+<script type="text/javascript" src="$sbRoot/js/qualityChooser.js?v=$sbPID"></script>
+<script type="text/javascript" src="$sbRoot/js/newShow.js?v=$sbPID"></script>
+<script type="text/javascript" src="$sbRoot/js/addShowOptions.js?v=$sbPID"></script>
+
+#if $varExists('header')
+	<h1 class="header">$header</h1>
+#else
+	<h1 class="title">$title</h1>
+#end if
+
+<span class="bfr" style="position:absolute;top:-999px"><img src="$sbRoot/images/loading32#echo ('', '-dark')['dark' == $sg_str('THEME_NAME', 'dark')]#.gif">#for $cur_icon in $infosrc_icons#<img src="$sbRoot/images/$cur_icon">#end for#</span>
+
+<div id="newShowPortal">
+
+#if not $kwargs.get('action')
+	<div id="displayText">aoeu</div>
+	<br>
+#end if
+
+	<form id="addShowForm"#if $kwargs.get('action')# class="fullwidth"#end if# method="post" action="$sbRoot/add-shows/add-new-show" accept-charset="utf-8">
+		$xsrf_form_html
+
+		<fieldset class="sectionwrap step-one">
+			<legend class="legendStep"><p>#if $use_provided_info#Using known show information#else#Find show at TV info source#end if#</p></legend>
+
+			<div class="stepDiv">
+				<input type="hidden" id="indexer_timeout" value="$sg_var('TVINFO_TIMEOUT', 20)">
+				<input type="hidden" id="indexer_count" value="$indexer_count">
+				<input type="hidden" id="rename-suggest" name="rename_suggest" value="">
+#if $kwargs.get('folder')
+				<input type="hidden" name="folder" value="$kwargs.get('folder')">
+#end if
+#if $kwargs.get('action')
+				<input type="hidden" name="provided-tvid" value="$provided_tvid">
+				<input type="hidden" name="return_to" value="$kwargs.get('return_to')">
+				<input type="hidden" name="cancel_form" value="0">
+<style>
+	.formpaginate .next{visibility:hidden !important}
+</style>
+#end if
+#if $use_provided_info
+    #set $provided_tvid_local = $provided_tvid
+    #set $provided_prodid_local = $provided_prodid
+				Show: <a href="<%= anon_url(sickgear.TVInfoAPI(provided_tvid_local).config['show_url'] % provided_prodid_local) %>">$provided_show_name</a>
+				<input type="hidden" name="tvinfo_lang" value="en">
+				<input type="hidden" name="which_series" value="#echo '|'.join([str($provided_tvid), '', str($provided_prodid), $provided_show_name])#">
+				<input type="hidden" id="provided-tvid" value="$provided_tvid">
+				<input type="hidden" id="provided-show-name" value="$provided_show_name">
+#else
+    #set $multi_infosrc = $getVar('infosrc', None) and 1 < $len($infosrc)
+
+    #if not $multi_infosrc
+				<input type="hidden" id="provided-tvid" value="$provided_tvid">
+    #end if
+				<input type="text" id="nameToSearch" value="$default_show_name" placeholder="Search text and/or ([imdb, tmdb, trakt, tvdb, tvmaze]: + id) or URL" class="form-control form-control-inline input-sm#if not $multi_infosrc# wide#end if#">
+				&nbsp;
+				<span style="float:right">
+					<select name="tvinfo_lang" id="infosrc-lang-select" class="form-control form-control-inline input-sm">
+						<option value="$meta_lang" class="selected-text" selected="selected">&gt; $meta_lang</option>
+					</select><b>&nbsp;*</b>
+
+    #if $multi_infosrc
+					<select name="provided-tvid" id="provided-tvid" class="form-control form-control-inline input-sm">
+						<option value="0" #if $provided_tvid == 0 then "selected=\"selected\"" else ""# data-name="all sources">All Sources</option>
+        #for $cur_isrc in $infosrc
+						<option value="$cur_isrc" #if $provided_tvid == $cur_isrc then "selected=\"selected\"" else ""# data-name="$infosrc[$cur_isrc]">$infosrc[$cur_isrc]</option>
+        #end for
+					</select>
+    #end if
+					&nbsp;
+					<input class="btn btn-inline" type="button" id="searchName" value="Search">
+				</span>
+				<br>
+##				<p style="margin:5px 0 15px"><span class="add-tip">Show name and/or ([imdb, tmdb, trakt, tvdb, tvmaze]: + id) or URL.&nbsp;&nbsp;</span><b>*</b>SickGear supports english, language is used for show/episode data</p>
+<style>.divy{margin:0 5px; font-style:normal}</style>
+				<p style="margin:5px 0 15px;font-size:smaller">
+	#set $try_num = 2
+					<span><a id="try-0" href="click to clear">clear</a> or try : <a id="try-1" href="click to try me!">show name</a>#slurp#
+## no indent
+#for $cur_idx, $cur_tip in enumerate($try_id)#<span id="try-$try_num-id"#if $cur_idx# class="hide"#end if#>#set $try_num += 1#<i class="divy">|</i><a id="try-$try_num" href="click to try me!">$next(iter($cur_tip))</a></span>#end for##slurp
+#for $cur_idx, $cur_tip in enumerate($try_id_name)#<span id="try-$try_num-id-name"#if $cur_idx# class="hide"#end if#>#set $try_num += 1#<i class="divy">|</i><a id="try-$try_num" href="click to try me!">$next(iter($cur_tip))</a></span>#end for##slurp
+#for $cur_idx, $cur_tip in enumerate($try_url)#<span id="try-$try_num-url"#if $cur_idx# class="hide"#end if#>#set $try_num += 1#<i class="divy">|</i><a id="try-$try_num" href="click to try me!">$next(iter($cur_tip))</a></span>#end for#</span>
+					<span class="pull-right grey-text" style="font-size:smaller"><b>*</b>SickGear is en, language is used for show/episode lists</span>
+				</p>
+
+				<div id="search-results" class="collapsed" style="height: 100%"></div>
+#end if
+
+			</div>
+			<div style="clear:both">&nbsp;</div>
+		</fieldset>
+
+#if not $kwargs.get('action')
+		<fieldset class="sectionwrap step-two" style="visibility:hidden">
+			<legend class="legendStep"><p>Pick parent folder</p></legend>
+
+			<div class="stepDiv parent-folder">
+    #if $provided_show_dir
+				Pre-chosen Destination Folder: <b>$provided_show_dir</b> <br>
+				<input type="hidden" id="fullShowPath" name="full_show_path" value="$provided_show_dir"><br>
+    #else
+    #include $os.path.join($sg_str('PROG_DIR'), 'gui/slick/interfaces/default/inc_rootDirs.tmpl')
+    #end if
+			</div>
+			<div style="clear:both">&nbsp;</div>
+		</fieldset>
+
+		<fieldset class="sectionwrap step-three" style="visibility:hidden">
+			<legend class="legendStep"><p>Set custom options</p></legend>
+				<div class="stepDiv">
+#include $os.path.join($sg_str('PROG_DIR'), 'gui/slick/interfaces/default/inc_addShowOptions.tmpl')
+				</div>
+				<div style="clear:both">&nbsp;</div>
+		</fieldset>
+
+    #for $curNextDir in $other_shows
+		<input type="hidden" name="other_shows" value="$curNextDir">
+    #end for
+		<input type="hidden" name="skip_show" id="skipShow" value="">
+#end if
+	</form>
+
+	<br>
+
+	<div style="width: 100%; text-align: center;">
+#if not $kwargs.get('action')
+		<input class="btn" type="button" id="addShowButton" value="Add Show" disabled="disabled">
+#else
+		<input class="btn" type="button" id="addShowButton" value="Select Show" disabled="disabled">
+		<input class="btn btn-danger" type="button" id="cancelShowButton" value="Cancel Select" style="margin-left:10px" disabled="disabled">
+#end if
+#if $provided_show_dir
+		<input class="btn" type="button" id="skipShowButton" value="Skip Show">
+#end if
+	</div>
+
+<script type="text/javascript" src="$sbRoot/js/rootDirs.js?v=$sbPID"></script>
+<script type="text/javascript" src="$sbRoot/js/anigrouplists.js?v=$sbPID"></script>
+
+</div>
+
+#include $os.path.join($sg_str('PROG_DIR'), 'gui/slick/interfaces/default/inc_bottom.tmpl')

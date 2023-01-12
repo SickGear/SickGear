@@ -1,0 +1,223 @@
+#import sickgear
+#from sickgear.common import Quality, qualityPresets, qualityPresetStrings, SD
+#from sickgear.indexers.indexer_config import TVINFO_TVMAZE, TVINFO_TVDB
+#from lib import exceptions_helper as exceptions
+#from _23 import filter_list
+<% def sg_var(varname, default=False): return getattr(sickgear, varname, default) %>#slurp#
+<% def sg_str(varname, default=''): return getattr(sickgear, varname, default) %>#slurp#
+##
+#set global $title = 'Mass Edit'
+#set global $header = 'Mass Edit'
+#set global $sbPath = '..'
+#set global $topmenu = 'manage'
+##
+#import os.path
+#include $os.path.join($sg_str('PROG_DIR'), 'gui/slick/interfaces/default/inc_top.tmpl')
+
+#if None is not $quality_value:
+    #set $initial_quality = int($quality_value)
+#else:
+    #set $initial_quality = $SD
+#end if
+#set $anyQualities, $bestQualities = $Quality.splitQuality($sg_var('QUALITY_DEFAULT', $initial_quality))
+<script type="text/javascript" src="$sbRoot/js/qualityChooser.js?v=$sbPID"></script>
+<script type="text/javascript" src="$sbRoot/js/massEdit.js?v=$sbPID"></script>
+
+<form action="mass_edit_submit" method="post">
+	$xsrf_form_html
+
+	<input type="hidden" name="to_edit" value="$showList">
+
+	<div class="optionWrapper">
+		<span class="selectTitle">Parent folder <span class="separator">*</span></span><br />
+#set $selected = 'selected="selected"'
+#for $cur_dir in $root_dir_list:
+    #set $cur_index = $root_dir_list.index($cur_dir)
+		<div>
+			<input class="btn edit_root_dir" type="button" class="edit_root_dir" id="edit_root_dir_$cur_index" value="Edit">
+			<input class="btn delete_root_dir" type="button" class="delete_root_dir" id="delete_root_dir_$cur_index" value="Delete">
+			$cur_dir => <span id="display_new_root_dir_$cur_index">$cur_dir</span>
+		</div>
+		<input type="hidden" name="orig_root_dir_$cur_index" value="$cur_dir">
+		<input type="text" style="display:none" name="new_root_dir_$cur_index" id="new_root_dir_$cur_index" class="new_root_dir" value="$cur_dir">
+#end for
+	</div>
+
+	<div class="optionWrapper">
+		<span class="selectTitle">Paused</span>
+		<div class="selectChoices">
+			<select id="edit_paused" name="paused" class="form-control form-control-inline input-sm">
+				<option value="keep">&lt; keep &gt;</option>
+				<option value="enable" #if $paused_value then $selected else ''#>enable</option>
+				<option value="disable" #if $paused_value == False then $selected else ''#>disable</option>
+			</select>
+		</div><br />
+	</div>
+
+	<div class="optionWrapper">
+		<span class="selectTitle">Quality</span>
+		<div class="selectChoices">
+			<select id="quality-preset" name="quality_preset" class="form-control form-control-inline input-sm">
+				<option value="keep">&lt; keep &gt;</option>
+				<option value="0"  #if None is not $quality_value and $quality_value not in $qualityPresets then $selected else ''#>Custom</option>
+#for $curPreset in $qualityPresets:
+				<option value="$curPreset" #if $quality_value == $curPreset then $selected else ''##echo ('>', '>... ')[$qualityPresetStrings[$curPreset].endswith('0p') and 'UHD' not in $qualityPresetStrings[$curPreset]]#$qualityPresetStrings[$curPreset]</option>
+#end for
+			</select>
+		</div><br />
+
+		<div id="custom-quality" class="show-if-quality-custom">
+			<div class="manageCustom pull-left">
+				<h4 style="font-size:14px">Initial</h4>
+#set $anyQualityList = filter_list(lambda x: x > $Quality.NONE, $Quality.qualityStrings)
+				<select id="wanted-qualities" name="any_qualities" multiple="multiple" size="$len($anyQualityList)">
+#for $curQuality in sorted($anyQualityList):
+					<option value="$curQuality" #if $curQuality in $anyQualities then $selected else ''#>$Quality.get_quality_ui($curQuality)</option>
+#end for
+				</select>
+			</div>
+			<div class="manageCustom pull-left">
+				<h4 style="font-size:14px">Upgrade to</h4>
+#set $bestQualityList = filter_list(lambda x: x > $Quality.SDTV, $Quality.qualityStrings)
+				<select id="upgrade-qualities" name="best_qualities" multiple="multiple" size="$len($bestQualityList)">
+#for $curQuality in sorted($bestQualityList):
+					<option value="$curQuality" #if $curQuality in $bestQualities then $selected else ''#>$Quality.get_quality_ui($curQuality)</option>
+#end for
+				</select>
+			</div><br />
+		</div>
+	</div>
+
+#if $anyQualities + $bestQualities:
+	#set $isSelected = ' selected="selected"'
+	#set $isEnabled = $isSelected
+	#set $isDisabled = $isSelected
+	#if $upgrade_once_value##set $isDisabled = ''##else##set $isEnabled = ''##end if#
+	<div class="optionWrapper clearfix">
+		<span class="selectTitle">Upgrade once</span>
+		<div class="selectChoices">
+			<select id="edit_upgrade-once" name="upgrade_once" class="form-control form-control-inline input-sm">
+				<option value="keep">&lt; keep &gt;</option>
+				<option value="enable"${isEnabled}>enable</option>
+				<option value="disable"${isDisabled}>disable</option>
+			</select>
+		</div>
+	</div>
+#end if
+
+	<div class="optionWrapper clearfix">
+		<span class="selectTitle">Flat folder structure <span class="separator">*</span></span>
+		<div class="selectChoices">
+			<select id="edit_flatten_folders" name="flatten_folders" class="form-control form-control-inline input-sm">
+				<option value="keep">&lt; keep &gt;</option>
+				<option value="enable" #if $flatten_folders_value then $selected else ''#>enable</option>
+				<option value="disable" #if $flatten_folders_value == False then $selected else ''#>disable</option>
+			</select>
+		</div>
+	</div>
+
+	<div class="optionWrapper">
+		<span class="selectTitle">Air by date episode names</span>
+		<div class="selectChoices">
+			<select id="edit_air_by_date" name="air_by_date" class="form-control form-control-inline input-sm">
+				<option value="keep">&lt; keep &gt;</option>
+				<option value="enable" #if $air_by_date_value then $selected else ''#>enable</option>
+				<option value="disable" #if $air_by_date_value == False then $selected else ''#>disable</option>
+			</select>
+		</div><br />
+	</div>
+
+	<div class="optionWrapper">
+		<span class="selectTitle">Scene numbering</span>
+		<div class="selectChoices">
+			<select id="edit_scene" name="scene" class="form-control form-control-inline input-sm">
+				<option value="keep">&lt; keep &gt;</option>
+				<option value="enable" #if $scene_value then $selected else ''#>enable</option>
+				<option value="disable" #if $scene_value == False then $selected else ''#>disable</option>
+			</select>
+		</div><br />
+	</div>
+
+	<div class="optionWrapper">
+	<span class="selectTitle">Subtitles<span class="separator"></span></span>
+		<div class="selectChoices">
+			<select id="edit_subtitles" name="subs" class="form-control form-control-inline input-sm">
+				<option value="keep">&lt; keep &gt;</option>
+				<option value="enable" #if $subtitles_value then $selected else ''#>enable</option>
+				<option value="disable" #if $subtitles_value == False then $selected else ''#>disable</option>
+			</select>
+		</div><br />
+	</div>
+
+	<div class="optionWrapper">
+		<span class="selectTitle">Show is sports</span>
+		<div class="selectChoices">
+			<select id="edit_sports" name="sports" class="form-control form-control-inline input-sm">
+				<option value="keep">&lt; keep &gt;</option>
+				<option value="enable" #if $sports_value then $selected else ''#>enable</option>
+				<option value="disable" #if $sports_value == False then $selected else ''#>disable</option>
+			</select>
+		</div><br />
+	</div>
+
+	<div class="optionWrapper">
+		<span class="selectTitle">Show is anime</span>
+		<div class="selectChoices">
+			<select id="edit_anime" name="anime" class="form-control form-control-inline input-sm">
+				<option value="keep">&lt; keep &gt;</option>
+				<option value="enable" #if $anime_value then $selected else ''#>enable</option>
+				<option value="disable" #if $anime_value == False then $selected else ''#>disable</option>
+			</select>
+		</div><br />
+	</div>
+
+	<div class="optionWrapper" >
+		<span class="selectTitle">Keep up to <span class="grey-text">(0 = no prune)</span></span>
+		<div class="selectChoices">
+			<input type="text" name="prune" id="prune" value="#if None is not $prune_value then $prune_value else ''#" class="form-control form-control-inline input-sm input75" style="width:50px;margin-top:0">
+			<span>blank = no change</span>
+		</div><br />
+	</div>
+
+	<div class="optionWrapper #if $sg_str('SHOWLIST_TAGVIEW') != 'custom' then 'hidden' else ''#">
+		<span class="selectTitle">Place show in group</span>
+		<div class="selectChoices">
+			<select id="edit_tag" name="tag" class="form-control form-control-inline input-sm">
+				<option value="keep">&lt; keep &gt;</option>
+#for $tag in $sg_var('SHOW_TAGS', []):
+				<option value="$tag" #if $tag_value == $tag then $selected else ''#>$tag#echo ('', ' (default)')['Show List' == $tag]#</option>
+#end for
+			</select>
+		</div><br />
+	</div>
+
+	<div class="optionWrapper">
+		<span class="selectTitle">TV info source</span>
+		<div class="selectChoices">
+			<select id="edit_tvid" name="tvid" class="form-control form-control-inline input-sm">
+				<option value="keep">&lt; keep &gt;</option>
+#for $tv_src in $sickgear.TVInfoAPI().search_sources
+				<option value="$tv_src" #if $tv_src == $tvid_value then $selected else ''#>$sickgear.TVInfoAPI($tv_src).config['name']</option>
+#end for
+			</select><span style="white-space:nowrap">follow progress at manage/Show Tasks</span>
+		</div><br>
+	</div>
+
+	<div class="optionWrapper" style="font-size:13px;margin-top:15px">
+		<span class="separator" style="font-size:1.2em; font-weight:700">*</span>
+		Changing these settings will cause selected shows to be refreshed
+	</div>
+
+	<div class="optionWrapper" style="text-align:center">
+		<input type="submit" value="Submit" class="btn"><br />
+	</div>
+</form>
+<br />
+
+<script type="text/javascript" charset="utf-8">
+<!--
+	jQuery('#location').fileBrowser({ title:'Select Show Location' });
+//-->
+</script>
+
+#include $os.path.join($sg_str('PROG_DIR'), 'gui/slick/interfaces/default/inc_bottom.tmpl')

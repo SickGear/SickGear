@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<strings>
+	<string id="32000">General</string>
+	<string id="32011">Action Notifications</string>
+	<string id="32012">Error Notifications</string>
+	<string id="32021">Verbose Logs</string>
+
+	<string id="32100">Servers</string>
+	<string id="32111">SickGear IP</string>
+	<string id="32112">SickGear Port</string>
+	<string id="32121">Kodi IP</string>
+	<string id="32122">Kodi JSON RPC Port</string>
+
+	<string id="32500">The following required Kodi settings should already be enabled:</string>
+	<string id="32511">At "System / Service(s) settings / Control (aka Remote control)"</string>
+	<string id="32512">* Allow remote control from/by applications/programs on this system</string>
+	<string id="32513">* Allow remote control from/by applications/programs on other systems</string>
+</strings>

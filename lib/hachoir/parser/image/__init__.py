@@ -1,0 +1,12 @@
+from hachoir.parser.image.bmp import BmpFile  # noqa
+from hachoir.parser.image.gif import GifFile  # noqa
+from hachoir.parser.image.ico import IcoFile  # noqa
+from hachoir.parser.image.jpeg import JpegFile  # noqa
+from hachoir.parser.image.pcx import PcxFile  # noqa
+from hachoir.parser.image.psd import PsdFile  # noqa
+from hachoir.parser.image.png import PngFile  # noqa
+from hachoir.parser.image.tga import TargaFile  # noqa
+from hachoir.parser.image.tiff import TiffFile  # noqa
+from hachoir.parser.image.wmf import WMF_File  # noqa
+from hachoir.parser.image.xcf import XcfFile  # noqa
+from hachoir.parser.image.cr2 import CR2File  # noqa

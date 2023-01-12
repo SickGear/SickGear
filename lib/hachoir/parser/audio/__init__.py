@@ -1,0 +1,11 @@
+from hachoir.parser.audio.aiff import AiffFile  # noqa
+from hachoir.parser.audio.au import AuFile  # noqa
+from hachoir.parser.audio.itunesdb import ITunesDBFile  # noqa
+from hachoir.parser.audio.midi import MidiFile  # noqa
+from hachoir.parser.audio.mpeg_audio import MpegAudioFile  # noqa
+from hachoir.parser.audio.real_audio import RealAudioFile  # noqa
+from hachoir.parser.audio.xm import XMModule  # noqa
+from hachoir.parser.audio.s3m import S3MModule  # noqa
+from hachoir.parser.audio.s3m import PTMModule  # noqa
+from hachoir.parser.audio.mod import AmigaModule  # noqa
+from hachoir.parser.audio.flac import FlacParser  # noqa

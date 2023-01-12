@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>API Builder</title>
+<link rel="stylesheet" type="text/css" href="$sbRoot/css/style.css?v=$sbPID">
+<link rel="stylesheet" type="text/css" href="$sbRoot/css/light.css?v=$sbPID">
+<script>
+<!--
+sbRoot = "$sbRoot";
+//-->
+</script>
+<script src="$sbRoot/js/lib/jquery-2.2.4.min.js?v=$sbPID"></script>
+<script src="$sbRoot/js/apibuilder.js?v=$sbPID"></script>
+
+<style type="text/css">
+<!--
+#apibuilder select {padding: 2px 2px 2px 6px; display: block; float: left; margin: auto 8px 4px auto}
+#apibuilder select option {padding: 1px 6px; line-height: 1.2em}
+#apibuilder .disabled {color: #ccc}
+#apibuilder select[name="firstlevel"] option.default{background-color:white; color: black}
+#apibuilder select[name="firstlevel"] option[value*="sg"],
+#apibuilder select[name="secondlevel"] option.sg
+{
+    background-color: #333;color:#fefefe
+}
+#apibuilder select[name="firstlevel"] option,
+#apibuilder select[name="secondlevel"] option.sb
+{
+    background-color:#600; color:#999
+}
+.parareq {display: block; color: red; font-weight: bolder; font-size: 80%;}
+.paraopt {display: block; color: gray; font-size: 80%;}
+pre{
+	white-space: pre-wrap;       /* Since CSS 2.1 */
+	white-space: -moz-pre-wrap;  /* Mozilla, since 1999 */
+	white-space: -pre-wrap;      /* Opera 4-6 */
+	white-space: -o-pre-wrap;    /* Opera 7 */
+	word-wrap: break-word;       /* Internet Explorer 5.5+ */
+	padding: 5px
+}
+.grey-text{color: #a00 !important}
+body{margin: 20px !important}
+h1{font-size: 25px !important}
+h1.command.sb{color:grey}
+h1.command.sb span{font-size: 50%; color: black}
+.use-sg-api{color: darkgreen}
+table.sickbeardTable, table.sickbeardTable td{border: 1px solid !important;border-collapse: collapse !important;border-spacing:  0 0;margin-top: 5px;}
+li{padding-bottom: 10px !important}
+table.sickbeardTable th{padding-top: 6px !important;padding-bottom: 6px !important;white-space: nowrap !important;background-color: #000}
+table.sickbeardTable td, table.sickbeardTable th{text-align: left !important}
+table.sickbeardTable td ul{padding-left: 15px !important}
+hr{margin: 40px 0 20px}
+-->
+</style>
+
+<script>
+var hide_empty_list=true;
+var disable_empty_list=true;
+
+addListGroup("api", "Command");
+
+addOption("Command", "SickGear", "?cmd=sg", 1); //make default
+addOption("Command", "SickBeard", "?cmd=sb");
+addOption("Command", "List Commands", "?cmd=listcommands", "","", "default");
+addList("Command", "Help", "?cmd=help", "sg.functions-list", "","", "default");
+#from sickgear.webapi import _functionMaper
+#from six import iterkeys
+#for $k in sorted(iterkeys(_functionMaper), key=lambda x: x.replace('sg.', '').replace('sb.', ''))
+addOption("sg.functions-list", "$k", "&subject=$k", "", "", "#echo ('sb', 'sg')['sg' in $k]#")
+#end for
+addList("Command", "SickBeard.AddRootDir", "?cmd=sb.addrootdir", "sb.addrootdir");
+addList("Command", "SickGear.AddRootDir", "?cmd=sg.addrootdir", "sb.addrootdir");
+addOption("Command", "SickBeard.CheckScheduler", "?cmd=sb.checkscheduler");
+addOption("Command", "SickGear.CheckScheduler", "?cmd=sg.checkscheduler");
+addList("Command", "SickBeard.DeleteRootDir", "?cmd=sb.deleterootdir", "sb.deleterootdir");
+addList("Command", "SickGear.DeleteRootDir", "?cmd=sg.deleterootdir", "sb.deleterootdir");
+addOption("Command", "SickBeard.ForceSearch", "?cmd=sb.forcesearch");
+addList("Command", "SickGear.ForceSearch", "?cmd=sg.forcesearch", "sg.forcesearch");
+addOption("Command", "SickGear.SearchQueue", "?cmd=sg.searchqueue");
+addOption("Command", "SickBeard.GetDefaults", "?cmd=sb.getdefaults");
+addOption("Command", "SickGear.GetDefaults", "?cmd=sg.getdefaults");
+addOption("Command", "SickBeard.GetMessages", "?cmd=sb.getmessages");
+addOption("Command", "SickGear.GetMessages", "?cmd=sg.getmessages");
+addOption("Command", "SickGear.GetQualities", "?cmd=sg.getqualities");
+addOption("Command", "SickGear.GetQualityStrings", "?cmd=sg.getqualitystrings");
+addList("Command", "SickGear.GetIndexers", "?cmd=sg.getindexers", "listindexers");
+addList("Command", "SickGear.GetIndexerIcon", "?cmd=sg.getindexericon", "getindexericon");
+addList("Command", "SickGear.GetNetworkIcon", "?cmd=sg.getnetworkicon", "getnetworkicon");
+addOption("Command", "SickBeard.GetRootDirs", "?cmd=sb.getrootdirs");
+addOption("Command", "SickGear.GetRootDirs", "?cmd=sg.getrootdirs");
+addList("Command", "SickBeard.PauseBacklog", "?cmd=sb.pausebacklog", "sb.pausebacklog");
+addList("Command", "SickGear.PauseBacklog", "?cmd=sg.pausebacklog", "sb.pausebacklog");
+addOption("Command", "SickBeard.Ping", "?cmd=sb.ping");
+addOption("Command", "SickGear.Ping", "?cmd=sg.ping");
+addOption("Command", "SickBeard.Restart", "?cmd=sb.restart");
+addOption("Command", "SickGear.Restart", "?cmd=sg.restart");
+addList("Command", "SickBeard.SearchTVDB", "?cmd=sb.searchtvdb", "sb.searchtvdb");
+addList("Command", "SickGear.SearchTV", "?cmd=sg.searchtv", "sg.searchtv");
+addList("Command", "SickBeard.SetDefaults", "?cmd=sb.setdefaults", "sb.setdefaults");
+addList("Command", "SickGear.SetDefaults", "?cmd=sg.setdefaults", "sb.setdefaults");
+addOption("Command", "SickBeard.Shutdown", "?cmd=sb.shutdown");
+addOption("Command", "SickGear.Shutdown", "?cmd=sg.shutdown");
+addList("Command", "SickGear.ListIgnoreWords", "?cmd=sg.listignorewords", "listignorewords");
+addList("Command", "SickGear.SetIgnoreWords", "?cmd=sg.setignorewords", "setwords");
+addList("Command", "SickGear.ListRequireWords", "?cmd=sg.listrequirewords", "listrequirewords");
+addList("Command", "SickGear.SetRequireWords", "?cmd=sg.setrequirewords", "setwords");
+addList("Command", "Coming Episodes", "?cmd=future", "future");
+addList("Command", "SickGear.Coming.Episodes", "?cmd=sg.future", "future");
+addList("Command", "Episode", "?cmd=episode", "episode");
+addList("Command", "SickGear.Episode", "?cmd=sg.episode", "sg.episode");
+addList("Command", "Episode.Search", "?cmd=episode.search", "episode.search");
+addList("Command", "SickGear.Episode.Search", "?cmd=sg.episode.search", "sg.episode.search");
+addList("Command", "Episode.SetStatus", "?cmd=episode.setstatus", "episode.setstatus");
+addList("Command", "SickGear.Episode.SetStatus", "?cmd=sg.episode.setstatus", "sg.episode.setstatus");
+addList("Command", "Scene.Exceptions", "?cmd=exceptions", "exceptions");
+addList("Command", "SickGear.Scene.Exceptions", "?cmd=sg.exceptions", "sg.exceptions");
+addList("Command", "SickGear.Set.Scene.Exceptions", "?cmd=sg.setexceptions", "changeexceptions");
+addList("Command", "SickGear.Set.Scene.Number", "?cmd=sg.setscenenumber", "setscenenumber");
+addList("Command", "SickGear.Activate.Scene.Numbering", "?cmd=sg.activatescenenumbering", "activatescenenumber");
+addList("Command", "History", "?cmd=history", "history");
+addList("Command", "SickGear.History", "?cmd=sg.history", "history");
+addOption("Command", "History.Clear", "?cmd=history.clear");
+addOption("Command", "SickGear.History.Clear", "?cmd=sg.history.clear");
+addOption("Command", "History.Trim", "?cmd=history.trim");
+addOption("Command", "SickGear.History.Trim", "?cmd=sg.history.trim");
+addList("Command", "PostProcess", "?cmd=postprocess", "postprocess");
+addList("Command", "SickGear.PostProcess", "?cmd=sg.postprocess", "sg.postprocess");
+
+addList("Command", "Logs", "?cmd=logs", "logs");
+addList("Command", "SickGear.Logs", "?cmd=sg.logs", "logs");
+addList("Command", "Show", "?cmd=show", "indexerid");
+addList("Command", "SickGear.Show", "?cmd=sg.show", "sg.indexerid");
+addList("Command", "Show.AddExisting", "?cmd=show.addexisting", "show.addexisting");
+addList("Command", "SickGear.Show.AddExisting", "?cmd=sg.show.addexisting", "sg.show.addexisting");
+addList("Command", "Show.AddNew", "?cmd=show.addnew", "show.addnew");
+addList("Command", "SickGear.Show.AddNew", "?cmd=sg.show.addnew", "sg.show.addnew");
+addList("Command", "Show.Cache", "?cmd=show.cache", "indexerid");
+addList("Command", "SickGear.Show.Cache", "?cmd=sg.show.cache", "sg.indexerid");
+addList("Command", "Show.Delete", "?cmd=show.delete", "indexerid");
+addList("Command", "SickGear.Show.Delete", "?cmd=sg.show.delete", "show-delete");
+addList("Command", "Show.GetBanner", "?cmd=show.getbanner", "indexerid");
+addList("Command", "SickGear.Show.GetBanner", "?cmd=sg.show.getbanner", "sg.indexerid");
+addList("Command", "SickGear.Show.ListFanart", "?cmd=sg.show.listfanart", "sg.indexerid");
+addList("Command", "SickGear.Show.GetFanart", "?cmd=sg.show.getfanart", "sg.indexerid");
+addList("Command", "Show.GetPoster", "?cmd=show.getposter", "indexerid");
+addList("Command", "SickGear.Show.GetPoster", "?cmd=sg.show.getposter", "sg.indexerid");
+addList("Command", "Show.GetQuality", "?cmd=show.getquality", "indexerid");
+addList("Command", "SickGear.Show.GetQuality", "?cmd=sg.show.getquality", "sg.indexerid");
+addList("Command", "Show.Pause", "?cmd=show.pause", "show.pause");
+addList("Command", "SickGear.Show.Pause", "?cmd=sg.show.pause", "sg.show.pause");
+addList("Command", "Show.Refresh", "?cmd=show.refresh", "indexerid");
+addList("Command", "SickGear.Show.Refresh", "?cmd=sg.show.refresh", "sg.indexerid");
+addList("Command", "Show.SeasonList", "?cmd=show.seasonlist", "show.seasonlist");
+addList("Command", "SickGear.Show.SeasonList", "?cmd=sg.show.seasonlist", "sg.show.seasonlist");
+addList("Command", "Show.Seasons", "?cmd=show.seasons", "seasons");
+addList("Command", "SickGear.Show.Seasons", "?cmd=sg.show.seasons", "sg.seasons");
+addList("Command", "Show.SetQuality", "?cmd=show.setquality", "show.setquality");
+addList("Command", "SickGear.Show.SetQuality", "?cmd=sg.show.setquality", "sg.show.setquality");
+addList("Command", "Show.Stats", "?cmd=show.stats", "indexerid");
+addList("Command", "SickGear.Show.Stats", "?cmd=sg.show.stats", "sg.indexerid");
+addList("Command", "Show.Update", "?cmd=show.update", "indexerid");
+addList("Command", "SickGear.Show.Update", "?cmd=sg.show.update", "sg.indexerid");
+addList("Command", "Shows", "?cmd=shows", "shows");
+addList("Command", "SickGear.Shows", "?cmd=sg.shows", "shows");
+addList("Command", "SickGear.Shows.BrowseTrakt", "?cmd=sg.shows.browsetrakt", "sg.shows.browsetrakt");
+addOption("Command", "SickGear.ListTraktAccounts", "?cmd=sg.listtraktaccounts");
+addOption("Command", "Shows.Stats", "?cmd=shows.stats");
+addOption("Command", "SickGear.Shows.Stats", "?cmd=sg.shows.stats");
+addOption("Command", "SickGear.Shows.ForceUpdate", "?cmd=sg.shows.forceupdate");
+addOption("Command", "SickGear.Shows.Queue", "?cmd=sg.shows.queue");
+
+addOption("sg.shows.browsetrakt", "Anticipated", "&type=anticipated");
+addOption("sg.shows.browsetrakt", "New Shows", "&type=newshows");
+addOption("sg.shows.browsetrakt", "New Seasons", "&type=newseasons");
+addOption("sg.shows.browsetrakt", "Popular", "&type=popular");
+addOption("sg.shows.browsetrakt", "Trending", "&type=trending");
+addList("sg.shows.browsetrakt", "Recommended", "&type=recommended", "sg.traktaccounts");
+addList("sg.shows.browsetrakt", "Watchlist", "&type=watchlist", "sg.traktaccounts");
+
+#from sickgear import TRAKT_ACCOUNTS
+#for $a in $TRAKT_ACCOUNTS
+addOption("sg.traktaccounts", "$TRAKT_ACCOUNTS[$a].name", "&account_id=$a");
+#end for
+
+addOption("sg.forcesearch", "Recent Search", "&searchtype=recent", 1);
+addOption("sg.forcesearch", "Backlog Search", "&searchtype=backlog");
+addOption("sg.forcesearch", "Proper Search", "&searchtype=proper");
+
+addOption("listindexers", "Optional Param", "", 1);
+addOption("listindexers", "Searchable only", "&searchable-only=1");
+
+addOption("getnetworkicon", "CBS", "&network=cbs");
+addOption("getnetworkicon", "NBC", "&network=nbc");
+addOption("getnetworkicon", "Youtube", "&network=youtube");
+addOption("getnetworkicon", "The CW", "&network=the%20cw");
+addOption("getnetworkicon", "Crime & Investigation Network", "&network=crime%20%26%20investigation%20network");
+
+#for $i in $indexers
+addList("getindexericon", "$indexers[$i]", "&indexer=$i", "");
+#end for
+
+#for $cur_show_obj in $sortedShowList:
+addList("activatescenenumber", "$cur_show_obj.name", "&indexerid=$cur_show_obj.prodid&indexer=$cur_show_obj.tvid", "scenenumber-active");
+#end for
+addOption("scenenumber-active", "Activate", "&activate=1");
+addOption("scenenumber-active", "Deactivate", "&activate=0");
+
+#for $cur_show_obj in $sortedShowList:
+addList("setscenenumber", "$cur_show_obj.name", "&indexerid=$cur_show_obj.prodid&indexer=$cur_show_obj.tvid", "setscene-fseason");
+#end for
+
+addOption("listignorewords", "Optional Param", "", 1);
+#for $cur_show_obj in $sortedShowList:
+addOption("listignorewords", "$cur_show_obj.name", "&indexerid=$cur_show_obj.prodid&indexer=$cur_show_obj.tvid");
+#end for
+
+addList("setwords", "Optional Param", "", "addwords");
+#for $cur_show_obj in $sortedShowList:
+addList("setwords", "$cur_show_obj.name", "&indexerid=$cur_show_obj.prodid&indexer=$cur_show_obj.tvid", "addwords");
+#end for
+
+addList("addwords", "Add (Optional)", "", "removewords");
+addList("addwords", "word1", "&add=word1", "removewords");
+addList("addwords", "word2, word3", "&add=word2|word3", "removewords");
+
+addList("removewords", "Remove (Optional)", "", "useregex");
+addList("removewords", "word1", "&remove=word1", "useregex");
+addList("removewords", "word2", "&remove=word2", "useregex");
+addList("removewords", "word2, word3", "&remove=word2|word3", "useregex");
+
+addList("useregex", "Optional Param", "", "excludeadd");
+addList("useregex", "as Regex", "&regex=1", "excludeadd");
+addList("useregex", "as Words", "&regex=0", "excludeadd");
+
+addList("excludeadd", "Add Exclude (Optional)", "", "excluderemove");
+addList("excludeadd", "word1", "&add_exclude=word1", "excluderemove");
+addList("excludeadd", "word2", "&add_exclude=word2", "excluderemove");
+addList("excludeadd", "word2, word3", "&add_exclude=word2|word3", "excluderemove");
+
+addList("excluderemove", "Remove Exclude (Optional)", "", "");
+addList("excluderemove", "word1", "&remove_exclude=word1", "");
+addList("excluderemove", "word2", "&remove_exclude=word2", "");
+addList("excluderemove", "word2, word3", "&remove_exclude=word2|word3", "");
+
+addOption("listrequirewords", "Optional Param", "", 1);
+#for $cur_show_obj in $sortedShowList:
+addOption("listrequirewords", "$cur_show_obj.name", "&indexerid=$cur_show_obj.prodid&indexer=$cur_show_obj.tvid");
+#end for
+
+addList("setscene-fseason", "forSeason", "", "setscene-fepisode", 1);
+addList("setscene-fepisode", "forEpisode", "", "setscene-fabsolute", 1);
+addList("setscene-fabsolute", "forAbsolute", "", "setscene-season");
+addList("setscene-season", "sceneSeason", "", "setscene-episode", 1);
+addList("setscene-episode", "sceneEpisode", "", "setscene-absolute", 1);
+addList("setscene-absolute", "sceneAbsolute", "", "");
+
+#for $c in range(1, 11):
+addList("setscene-fseason", "$c", "&forSeason=$c", "setscene-fepisode");
+addList("setscene-fepisode", "$c", "&forEpisode=$c", "setscene-fabsolute");
+addList("setscene-fabsolute", "$c", "&forAbsolute=$c", "setscene-season");
+addList("setscene-season", "$c", "&sceneSeason=$c", "setscene-episode");
+addList("setscene-episode", "$c", "&sceneEpisode=$c", "setscene-absolute");
+addList("setscene-absolute", "$c", "&sceneAbsolute=$c", "");
+#end for
+
+// addOption("indexerid", "Optional Param", "", 1);
+#for $cur_show_obj in $sortedShowList:
+addOption("indexerid", "$cur_show_obj.name", "&indexerid=$cur_show_obj.prodid");
+#end for
+
+#for $cur_show_obj in $sortedShowList:
+addOption("sg.indexerid", "$cur_show_obj.name", "&indexer=$cur_show_obj.tvid&indexerid=$cur_show_obj.prodid");
+#end for
+
+addOption("logs", "Optional Param", "", 1);
+addOption("logs", "Debug", "&min_level=debug");
+addOption("logs", "Info", "&min_level=info");
+addOption("logs", "Warning", "&min_level=warning");
+addOption("logs", "Error", "&min_level=error");
+
+addOption("postprocess", "Optional Param", "", 1);
+addOption("postprocess", "C:\\PATH\\TO\\DIR", "&path=C:\\Temp");
+addOption("postprocess", "return_data", "&return_data=1");
+addOption("postprocess", "force_replace", "&force_replace=1");
+addOption("postprocess", "is_priority", "&is_priority=1");
+addOption("postprocess", "process_method", "&process_method=copy");
+addOption("postprocess", "type", "&type=manual")
+
+addOption("sg.postprocess", "Optional Param", "", 1);
+addOption("sg.postprocess", "C:\\PATH\\TO\\DIR", "&path=C:\\Temp");
+addOption("sg.postprocess", "return_data", "&return_data=1");
+addOption("sg.postprocess", "force_replace", "&force_replace=1");
+addOption("sg.postprocess", "is_priority", "&is_priority=1");
+addOption("sg.postprocess", "process_method", "&process_method=copy");
+addOption("sg.postprocess", "type", "&type=manual")
+addOption("sg.postprocess", "failed", "&failed=1")
+
+addOption("sb.setdefaults", "Optional Param", "", 1);
+addList("sb.setdefaults", "Exclude Paused Shows on Daily Schedule", "&future_show_paused=0", "sb.setdefaults-status");
+addList("sb.setdefaults", "Include Paused Shows on Daily Schedule", "&future_show_paused=1", "sb.setdefaults-status");
+
+addOption("sb.setdefaults-status", "Optional Param", "", 1);
+addList("sb.setdefaults-status", "Wanted", "&status=wanted", "sb.setdefaults-opt");
+addList("sb.setdefaults-status", "Skipped", "&status=skipped", "sb.setdefaults-opt");
+addList("sb.setdefaults-status", "Archived", "&status=archived", "sb.setdefaults-opt");
+addList("sb.setdefaults-status", "Ignored", "&status=ignored", "sb.setdefaults-opt");
+
+addOption("sb.setdefaults-opt", "Optional Param", "", 1);
+addList("sb.setdefaults-opt", "No Season Folder", "&season_folder=0", "quality");
+addList("sb.setdefaults-opt", "Use Season Folder", "&season_folder=1", "quality");
+
+addOption("shows", "Optional Param", "", 1);
+addOption("shows", "Show Only Paused", "&paused=1");
+addOption("shows", "Show Only Not Paused", "&paused=0");
+addOption("shows", "Sort by Show Name", "&sort=name");
+addOption("shows", "Sort by TVDB ID", "&sort=id");
+
+addList("sg.show.addexisting", "101501 (Ancient Aliens)", "&indexer=1&indexerid=101501", "show.addexisting-loc");
+addList("sg.show.addexisting", "80348 (Chuck)", "&indexer=1&indexerid=80348", "show.addexisting-loc");
+
+addList("show.addexisting", "101501 (Ancient Aliens)", "&tvdbid=101501", "show.addexisting-loc");
+addList("show.addexisting", "80348 (Chuck)", "&tvdbid=80348", "show.addexisting-loc");
+
+addList("show.addexisting-loc", "C:\\temp\\show1", "&location=C:\\temp\\show1", "show.addexisting-opt");
+addList("show.addexisting-loc", "D:\\Temp\\show2", "&location=D:\\Temp\\show2", "show.addexisting-opt");
+addList("show.addexisting-loc", "S:\\TV\\Ancient Aliens", "&location=S:\\TV\\Ancient Aliens", "show.addexisting-opt");
+addList("show.addexisting-loc", "S:\\TV\\Chuck", "&location=S:\\TV\\Chuck", "show.addexisting-opt");
+
+addOption("show.addexisting-opt", "Optional Param", "", 1);
+addList("show.addexisting-opt", "No Season Folder", "&season_folder=0", "quality");
+addList("show.addexisting-opt", "Use Season Folder", "&season_folder=1", "quality");
+
+addList("show.addnew", "101501 (Ancient Aliens)", "&tvdbid=101501", "show.addnew-loc");
+addList("show.addnew", "80348 (Chuck)", "&tvdbid=80348", "show.addnew-loc");
+
+addList("sg.show.addnew", "101501 (Ancient Aliens)", "&indexer=1&indexerid=101501", "show.addnew-loc");
+addList("sg.show.addnew", "80348 (Chuck)", "&indexer=1&indexerid=80348", "show.addnew-loc");
+
+addOption("show.addnew-loc", "Optional Param", "", 1);
+addList("show.addnew-loc", "C:\\Temp", "&location=C:\\temp", "show.addnew-status");
+addList("show.addnew-loc", "D:\\Temp", "&location=D:\\Temp", "show.addnew-status");
+addList("show.addnew-loc", "S:\\TV", "&location=S:\\TV", "show.addnew-status");
+addList("show.addnew-loc", "/usr/bin", "&location=/usr/bin", "show.addnew-status");
+
+addOption("show.addnew-status", "Optional Param", "", 1);
+addList("show.addnew-status", "Wanted", "&status=wanted", "show.addnew-opt");
+addList("show.addnew-status", "Skipped", "&status=skipped", "show.addnew-opt");
+addList("show.addnew-status", "Archived", "&status=archived", "show.addnew-opt");
+addList("show.addnew-status", "Ignored", "&status=ignored", "show.addnew-opt");
+
+addOption("show.addnew-opt", "Optional Param", "", 1);
+addList("show.addnew-opt", "No Season Folder", "&season_folder=0", "quality");
+addList("show.addnew-opt", "Use Season Folder", "&season_folder=1", "quality");
+
+addOptGroup("sb.searchtvdb", "Search by Name");
+addList("sb.searchtvdb", "Lost", "&name=Lost", "");
+addList("sb.searchtvdb", "office", "&name=office", "");
+addList("sb.searchtvdb", "OffiCE", "&name=OffiCE", "");
+addList("sb.searchtvdb", "Leno", "&name=leno", "");
+addList("sb.searchtvdb", "Top Gear", "&name=Top Gear", "");
+endOptGroup("sb.searchtvdb");
+addOptGroup("sb.searchtvdb", "Search by indexerid");
+addList("sb.searchtvdb", "73739", "&indexerid=73739", "");
+addList("sb.searchtvdb", "74608", "&indexerid=74608", "");
+addList("sb.searchtvdb", "199051", "&indexerid=199051", "");
+addList("sb.searchtvdb", "123456 (invalid show)", "&indexerid=123456", "");
+endOptGroup("sb.searchtvdb");
+
+addOptGroup("sg.searchtv", "Search by Name");
+addList("sg.searchtv", "Lost", "&name=Lost", "indexertosearch");
+addList("sg.searchtv", "office", "&name=office", "indexertosearch");
+addList("sg.searchtv", "OffiCE", "&name=OffiCE", "indexertosearch");
+addList("sg.searchtv", "Leno", "&name=leno", "indexertosearch");
+addList("sg.searchtv", "Top Gear", "&name=Top Gear", "indexertosearch");
+endOptGroup("sg.searchtv");
+addOptGroup("sg.searchtv", "Search by indexerid");
+addList("sg.searchtv", "73739", "&indexerid=73739&indexer=1", "indexertosearch");
+addList("sg.searchtv", "74608", "&indexerid=74608&indexer=1", "indexertosearch");
+addList("sg.searchtv", "199051", "&indexerid=199051&indexer=1", "indexertosearch");
+addList("sg.searchtv", "123456 (invalid show)", "&indexerid=123456&indexer=1", "indexertosearch");
+endOptGroup("sg.searchtv");
+
+addOption("indexertosearch", "Optional Param", "", 1);
+addOption("indexertosearch", "All Indexers", "&indexers=-1");
+
+#for $i in $searchindexers
+addOption("indexertosearch", "$searchindexers[$i]", "&indexers=$i");
+#end for
+
+#for $cur_show_obj in $sortedShowList:
+addList("seasons", "$cur_show_obj.name", "&indexerid=$cur_show_obj.prodid", "seasons-$cur_show_obj.tvid_prodid");
+#end for
+
+#for $cur_show_obj in $sortedShowList:
+addList("sg.seasons", "$cur_show_obj.name", "&indexer=$cur_show_obj.tvid&indexerid=$cur_show_obj.prodid", "seasons-$cur_show_obj.tvid_prodid");
+#end for
+
+#for $cur_show_obj in $sortedShowList:
+addList("show.seasonlist", "$cur_show_obj.name", "&indexerid=$cur_show_obj.prodid", "show.seasonlist-sort");
+#end for
+
+#for $cur_show_obj in $sortedShowList:
+addList("sg.show.seasonlist", "$cur_show_obj.name", "&indexer=$cur_show_obj.tvid&indexerid=$cur_show_obj.prodid", "show.seasonlist-sort");
+#end for
+
+addOption("show.seasonlist-sort", "Optional Param", "", 1);
+addOption("show.seasonlist-sort", "Sort by Ascending", "&sort=asc");
+
+#for $cur_show_obj in $sortedShowList:
+addList("show.setquality", "$cur_show_obj.name", "&indexerid=$cur_show_obj.prodid", "quality");
+#end for
+
+#for $cur_show_obj in $sortedShowList:
+addList("sg.show.setquality", "$cur_show_obj.name", "&indexer=$cur_show_obj.tvid&indexerid=$cur_show_obj.prodid", "quality");
+#end for
+
+//build out generic quality options
+addOptGroup("quality", "Quality Templates");
+addOption("quality", "SD", "&initial=sdtv|sddvd");
+addOption("quality", "HD", "&initial=hdtv|fullhdtv|hdwebdl|fullhdwebdl|hdbluray|fullhdbluray");
+addOption("quality", "HD720p", "&initial=hdtv|hdwebdl|hdbluray");
+addOption("quality", "HD1080p", "&initial=fullhdtv|fullhdwebdl|fullhdbluray");
+addOption("quality", "ANY", "&initial=sdtv|sddvd|hdtv|fullhdtv|hdwebdl|fullhdwebdl|hdbluray|fullhdbluray|unknown");
+endOptGroup("quality");
+addOptGroup("quality", "Initial (Custom)");
+addList("quality", "SD TV", "&initial=sdtv", "quality-archive");
+addList("quality", "SD DVD", "&initial=sddvd", "quality-archive");
+addList("quality", "HD TV", "&initial=hdtv", "quality-archive");
+addList("quality", "RawHD TV", "&initial=rawhdtv", "quality-archive");
+addList("quality", "1080p HD TV", "&initial=fullhdtv", "quality-archive");
+addList("quality", "720p Web-DL", "&initial=hdwebdl", "quality-archive");
+addList("quality", "1080p Web-DL", "&initial=fullhdwebdl", "quality-archive");
+addList("quality", "720p BluRay", "&initial=hdbluray", "quality-archive");
+addList("quality", "1080p BluRay", "&initial=fullhdbluray", "quality-archive");
+addList("quality", "Unknown", "&initial=unknown", "quality-archive");
+endOptGroup("quality");
+addOptGroup("quality", "Random (Custom)");
+addList("quality", "SD DVD/720p Web-DL", "&initial=sddvd|hdwebdl", "quality-archive");
+addList("quality", "SD TV/HD TV", "&initial=sdtv|hdtv", "quality-archive");
+endOptGroup("quality");
+
+addOption("quality-archive", "Optional Param", "", 1);
+addOptGroup("quality-archive", "Archive (Custom)");
+addList("quality-archive", "SD DVD", "&archive=sddvd");
+addList("quality-archive", "HD TV", "&archive=hdtv");
+addList("quality-archive", "RawHD TV", "&archive=rawhdtv");
+addList("quality-archive", "1080p HD TV", "&archive=fullhdtv");
+addList("quality-archive", "720p Web-DL", "&archive=hdwebdl");
+addList("quality-archive", "1080p Web-DL", "&archive=fullhdwebdl");
+addList("quality-archive", "720p BluRay", "&archive=hdbluray");
+addList("quality-archive", "1080p BluRay", "&archive=fullhdbluray");
+endOptGroup("quality-archive");
+addOptGroup("quality-archive", "Random (Custom)");
+addList("quality-archive", "HD TV/1080p BluRay", "&archive=hdtv|fullhdbluray");
+addList("quality-archive", "720p Web-DL/720p BluRay", "&archive=hdwebdl|hdbluray");
+endOptGroup("quality-archive");
+
+// build out each show's season list for season cmd
+#for $tvid_prodid in $seasonSQLResults:
+addOption("seasons-$tvid_prodid", "Optional Param", "", 1);
+    #for $sql_result in $seasonSQLResults[$tvid_prodid]:
+addOption("seasons-$tvid_prodid", "$sql_result.season", "&season=$sql_result.season");
+    #end for
+#end for
+
+#for $cur_show_obj in $sortedShowList:
+addList("sg.episode", "$cur_show_obj.name", "&indexer=$cur_show_obj.tvid&indexerid=$cur_show_obj.prodid", "episode-$cur_show_obj.tvid_prodid");
+#end for
+
+#for $cur_show_obj in $sortedShowList:
+addList("episode", "$cur_show_obj.name", "&indexerid=$cur_show_obj.prodid", "episode-$cur_show_obj.tvid_prodid");
+#end for
+
+// build out each show's season+episode list for episode cmd
+#for $tvid_prodid in $episodeSQLResults:
+    #for $sql_result in $episodeSQLResults[$tvid_prodid]:
+addList("episode-$tvid_prodid", "$sql_result.season x $sql_result.episode", "&season=$sql_result.season&episode=$sql_result.episode", "episode-full");
+    #end for
+#end for
+addOption("episode-full", "Optional Param", "", 1);
+addOption("episode-full", "Show Full Path", "&full_path=1");
+
+// build out tvshow list for sg.episode.search
+#for $cur_show_obj in $sortedShowList:
+addList("sg.episode.search", "$cur_show_obj.name", "&indexer=$cur_show_obj.tvid&indexerid=$cur_show_obj.prodid", "episode.search-$cur_show_obj.tvid_prodid");
+#end for
+
+// build out tvshow list for episode.search
+#for $cur_show_obj in $sortedShowList:
+addList("episode.search", "$cur_show_obj.name", "&indexerid=$cur_show_obj.prodid", "episode.search-$cur_show_obj.tvid_prodid");
+#end for
+
+// build out each show's season+episode list for episode.search cmd
+#for $tvid_prodid in $episodeSQLResults:
+    #for $sql_result in $episodeSQLResults[$tvid_prodid]:
+addOption("episode.search-$tvid_prodid", "$sql_result.season x $sql_result.episode", "&season=$sql_result.season&episode=$sql_result.episode");
+    #end for
+#end for
+
+// build out tvshow list for sg.episode.setstatus
+#for $cur_show_obj in $sortedShowList:
+addList("sg.episode.setstatus", "$cur_show_obj.name", "&indexer=$cur_show_obj.tvid&indexerid=$cur_show_obj.prodid", "sg.episode.setstatus-$cur_show_obj.tvid_prodid");
+#end for
+
+#for $tvid_prodid in $episodeSQLResults:
+    #for $sql_result in $episodeSQLResults[$tvid_prodid]:
+addList("sg.episode.setstatus-$tvid_prodid", "$sql_result.season x $sql_result.episode", "&season=$sql_result.season&episode=$sql_result.episode", "sg.episode-status");
+    #end for
+#end for
+
+addList("sg.episode-status", "Wanted", "&status=wanted", "sg.episode.quality");
+addList("sg.episode-status", "Skipped", "&status=skipped", "sg.episode.quality");
+addList("sg.episode-status", "Archived", "&status=archived", "sg.episode.quality");
+addList("sg.episode-status", "Ignored", "&status=ignored", "sg.episode.quality");
+addList("sg.episode-status", "Snatched", "&status=snatched", "sg.episode.quality");
+addList("sg.episode-status", "Downloaded", "&status=downloaded", "sg.episode.quality");
+
+#from sickgear.webapi import quality_map
+
+addOption("sg.episode.quality", "Opt Param", "", 1);
+#for $q in $quality_map:
+addOption("sg.episode.quality", "$q", "&quality=$q");
+#end for
+
+// build out tvshow list for episode.setstatus
+#for $cur_show_obj in $sortedShowList:
+addList("episode.setstatus", "$cur_show_obj.name", "&indexerid=$cur_show_obj.prodid", "episode.setstatus-$cur_show_obj.tvid_prodid");
+#end for
+
+// build out each show's season+episode list for episode.setstatus cmd
+#for $tvid_prodid in $episodeSQLResults:
+    #for $sql_result in $episodeSQLResults[$tvid_prodid]:
+addList("episode.setstatus-$tvid_prodid", "$sql_result.season x $sql_result.episode", "&season=$sql_result.season&episode=$sql_result.episode", "episode-status");
+    #end for
+#end for
+addOption("episode-status", "Wanted", "&status=wanted");
+addOption("episode-status", "Skipped", "&status=skipped");
+addOption("episode-status", "Archived", "&status=archived");
+addOption("episode-status", "Ignored", "&status=ignored");
+
+#for $curShow in $sortedShowList:
+addList("show-delete", "$curShow.name", "&indexer=$curShow.tvid&indexerid=$curShow.prodid", "delete-options");
+#end for
+
+addOption("delete-options", "Optional Param", "", 1)
+addList("delete-options", "Keep Files/Folders", "&full=0")
+addList("delete-options", "Delete Files/Folders", "&full=1")
+
+addOption("future", "Optional Param", "", 1);
+addList("future", "Sort by Date", "&sort=date", "future-type");
+addList("future", "Sort by Network", "&sort=network", "future-type");
+addList("future", "Sort by Show Name", "&sort=show", "future-type");
+
+addOption("future-type", "Optional Param", "", 1);
+addList("future-type", "Show All Types", "&type=today|missed|soon|later", "future-paused");
+addList("future-type", "Show Today", "&type=today", "future-paused");
+addList("future-type", "Show Missed", "&type=missed", "future-paused");
+addList("future-type", "Show Soon", "&type=soon", "future-paused");
+addList("future-type", "Show Later", "&type=later", "future-paused");
+addList("future-type", "Show Today & Missed", "&type=today|missed", "future-paused");
+
+addOption("future-paused", "Optional Param", "", 1);
+addOption("future-paused", "Include Paused Shows", "&paused=1");
+addOption("future-paused", "Exclude Paused Shows", "&paused=0");
+
+addOption("history", "Optional Param", "", 1);
+addList("history", "Show Only Downloaded", "&type=downloaded", "history-type");
+addList("history", "Show Only Snatched", "&type=snatched", "history-type");
+//addOptGroup("history", "Limit Results");
+addList("history", "Limit Results (2)", "&limit=2", "history-limit");
+addList("history", "Limit Results (25)", "&limit=25", "history-limit");
+addList("history", "Limit Results (50)", "&limit=50", "history-limit");
+//endOptGroup("history");
+
+addOption("history-type", "Optional Param", "", 1);
+addOption("history-type", "Limit Results (2)", "&limit=2");
+addOption("history-type", "Limit Results (25)", "&limit=25");
+addOption("history-type", "Limit Results (50)", "&limit=50");
+
+addOption("history-limit", "Optional Param", "", 1);
+addOption("history-limit", "Show Only Downloaded", "&type=downloaded");
+addOption("history-limit", "Show Only Snatched", "&type=snatched");
+
+addOption("exceptions", "Optional Param", "", 1);
+#for $cur_show_obj in $sortedShowList:
+addOption("exceptions", "$cur_show_obj.name", "&indexerid=$cur_show_obj.prodid");
+#end for
+
+addOption("sg.exceptions", "Optional Param", "", 1);
+#for $cur_show_obj in $sortedShowList:
+addOption("sg.exceptions", "$cur_show_obj.name", "&indexer=$cur_show_obj.tvid&indexerid=$cur_show_obj.prodid");
+#end for
+
+#for $cur_show_obj in $sortedShowList:
+addList("changeexceptions", "$cur_show_obj.name", "&indexerid=$cur_show_obj.prodid&indexer=$cur_show_obj.tvid", "exceptionforseason");
+#end for
+
+addList("exceptionforseason", "All Seasons", "&forseason=-1", "addexceptions");
+#for $c in range(1, 11):
+addList("exceptionforseason", "All Seasons", "&forseason=$c", "addexceptions");
+#end for
+
+addList("addexceptions", "Optional Param", "", "removeexceptions");
+addList("addexceptions", "Test Name 1", "&add=Test Name 1", "removeexceptions");
+addList("addexceptions", "Test Name 1, Name 2", "&add=Test Name 1|Name 2", "removeexceptions");
+
+addOption("removeexceptions", "Optional Param", "", 1);
+addOption("removeexceptions", "Test Name 1", "&remove=Test Name 1");
+addOption("removeexceptions", "Test Name 1, Name 2", "&remove=Test Name 1|Name 2");
+
+addOption("sb.pausebacklog", "Optional Param", "", 1);
+addOption("sb.pausebacklog", "Pause", "&pause=1");
+addOption("sb.pausebacklog", "Unpause", "&pause=0");
+
+addList("sb.addrootdir", "C:\\Temp", "&location=C:\\Temp", "sb.addrootdir-opt");
+addList("sb.addrootdir", "/usr/bin", "&location=/usr/bin/", "sb.addrootdir-opt");
+addList("sb.addrootdir", "S:\\Invalid_Location", "&location=S:\\Invalid_Location", "sb.addrootdir-opt");
+
+addOption("sb.addrootdir-opt", "Optional Param", "", 1);
+addOption("sb.addrootdir-opt", "Default", "&default=1");
+addOption("sb.addrootdir-opt", "Not Default", "&default=0");
+
+addOption("sb.deleterootdir", "C:\\Temp", "&location=C:\\Temp", "", 1);
+addOption("sb.deleterootdir", "/usr/bin", "&location=/usr/bin/");
+addOption("sb.deleterootdir", "S:\\Invalid_Location", "&location=S:\\Invalid_Location");
+
+#for $cur_show_obj in $sortedShowList:
+addList("show.pause", "$cur_show_obj.name", "&indexerid=$cur_show_obj.prodid", "show.pause-opt");
+#end for
+#for $cur_show_obj in $sortedShowList:
+addList("sg.show.pause", "$cur_show_obj.name", "&indexer=$cur_show_obj.tvid&indexerid=$cur_show_obj.prodid", "show.pause-opt");
+#end for
+addOption("show.pause-opt", "Optional Param", "", 1);
+addOption("show.pause-opt", "Unpause", "&pause=0");
+addOption("show.pause-opt", "Pause", "&pause=1");
+
+</script>
+</head>
+
+<body style="padding-top: 0 !important;" onload="initListGroup('api', document.apibuilder.firstlevel, document.apibuilder.secondlevel, document.apibuilder.thirdlevel, document.apibuilder.forthlevel, document.apibuilder.fifthlevel, document.apibuilder.sixthlevel, document.apibuilder.seventhlevel, document.apibuilder.eigthlevel)">
+
+<form name="apibuilder" id="apibuilder" action="">
+<table align="center">
+    <tr>
+        <td>
+            <input type="text" size="40" id="apikey" name="apikey" value="$apikey" placeholder="Enter apikey" style="border:1px solid black; padding:3px 8px; margin-right:3px">
+            <input type="checkbox" id="debug" class="global"><label for="debug"> Debug?</label>
+            <input type="checkbox" id="profile" class="global"><label for="profile"> Profile?</label>
+            <input type="checkbox" id="jsonp" class="global"><label for="jsonp"> JSONP?</label>
+            <input type="checkbox" id="help" class="global"><label for="help"> Help?</label>
+        </td>
+    </tr>
+    <tr>
+        <td>
+            <select name="firstlevel"><option></option></select>
+            <select name="secondlevel"><option></option></select>
+            <select name="thirdlevel"><option></option></select>
+            <select name="forthlevel"><option></option></select>
+            <select name="fifthlevel"><option></option></select>
+            <select name="sixthlevel"><option></option></select>
+            <select name="seventhlevel"><option></option></select>
+            <select name="eigthlevel"><option></option></select>
+            <div style="float: left; ">
+                <input class="btn" type="button" value="Reset" onclick="resetListGroup('api',1)">
+                <input class="btn" type="button" value="Go" onclick="goListGroup(this.form['apikey'].value, this.form['eigthlevel'].value, this.form['seventhlevel'].value, this.form['sixthlevel'].value, this.form['fifthlevel'].value, this.form['forthlevel'].value, this.form['thirdlevel'].value, this.form['secondlevel'].value, this.form['firstlevel'].value)">
+            </div>
+        </td>
+    </tr>
+</table>
+</form>
+
+<div id="apiResponse"></div>
+
+</body>
+
+</html>

@@ -1,0 +1,102 @@
+name: sickgear
+summary: SickGear
+description: |
+  SickGear has proven the most reliable stable TV fork of the great Sick-Beard to fully automate TV enjoyment with innovation.
+
+  Typically used with a download client e.g. nzbget, sabnzbd, qBittorrent, transmission, deluge, rtorrent and others.
+
+  Home: https://github.com/SickGear/SickGear
+  Wiki: https://github.com/SickGear/SickGear/wiki
+  Issues: https://github.com/SickGear/SickGear/issues
+
+icon: gui/slick/images/sickgear.png
+confinement: strict
+grade: stable
+adopt-info: sickgear
+base: core18
+
+apps:
+  sickgear:
+    environment:
+      LC_CTYPE: C.UTF-8
+    command: python "$SNAP/sickgear/sickgear.py" --datadir="$SNAP_COMMON/data"
+    # daemon: simple
+    plugs: [network, network-bind, removable-media]
+
+parts:
+  sickgear:
+    plugin: python
+    source: .
+    python-version: python2
+    python-packages: [cheetah3, cryptography, lxml, regex, scandir, python-levenshtein]
+
+    stage-packages: [libpython2.7]
+    build-packages:
+      - to i386: ["libffi-dev:i386", "libssl-dev:i386",  "libxml2-dev:i386", "libxslt1-dev:i386",
+                   "python-dev:i386", "python-levenshtein:i386", "python-lxml:i386", "python-regex:i386"]
+      - to amd64: ["libffi-dev:amd64", "libssl-dev:amd64",  "libxml2-dev:amd64", "libxslt1-dev:amd64",
+                   "python-dev:amd64", "python-levenshtein:amd64", "python-lxml:amd64", "python-regex:amd64"]
+      - to arm64: ["libffi-dev:arm64", "libssl-dev:arm64",  "libxml2-dev:arm64", "libxslt1-dev:arm64",
+                   "python-dev:arm64", "python-levenshtein:arm64", "python-lxml:arm64", "python-regex:arm64"]
+      - to armhf: ["libffi-dev:armhf", "libssl-dev:armhf",  "libxml2-dev:armhf", "libxslt1-dev:armhf",
+                   "python-dev:armhf", "python-levenshtein:armhf", "python-lxml:armhf", "python-regex:armhf"]
+      - to s390x: ["libffi-dev:s390x", "libssl-dev:s390x",  "libxml2-dev:s390x", "libxslt1-dev:s390x",
+                   "python-dev:s390x", "python-levenshtein:s390x", "python-lxml:s390x", "python-regex:s390x"]
+      - to ppc64el: ["libffi-dev:ppc64el", "libssl-dev:ppc64el",  "libxml2-dev:ppc64el", "libxslt1-dev:ppc64el",
+                   "python-dev:ppc64el", "python-levenshtein:ppc64el", "python-lxml:ppc64el", "python-regex:ppc64el"]
+
+    override-pull: |
+      snapcraftctl pull
+
+      [ -z $(grep -o "xx:xx:xx" CHANGES.md) ] && grade=stable || grade=devel
+      snapcraftctl set-grade "$grade"
+
+      version="$(sed -n '1 s/###[^0-9]\{1,\}\([0-9]\{1,\}\.[0-9]\{1,\}\.[0-9]\{1,\}\).*/\1/p' CHANGES.md)"
+      # removes unicode before assignment
+      snapcraftctl set-version "$(echo ${version} | sed 's/[^0-9\.]//g')"
+
+    override-build: |
+      snapcraftctl build
+
+      snap_install="$SNAPCRAFT_PART_INSTALL/sickgear"
+      mkdir -p "$snap_install"
+      cp -R "$SNAPCRAFT_PART_BUILD"/* "$snap_install"
+      # unrequired on r/o systems
+      rm -rf "$snap_install/tests" \
+             "$snap_install/_cleaner.py" \
+             "$snap_install/HACKS.txt" \
+             "$snap_install/requirements.txt" \
+             "$snap_install/tox.ini"
+
+    override-prime: |
+      snapcraftctl prime
+
+      snap_current=$(printf "${SNAP_COMMON}" | sed -e "s/common/current/" -e "s/snapcraft/sickgear/")
+      cat > "$SNAPCRAFT_PRIME/sickgear/_SNAP_README.txt" <<EOT
+      For ease of use, autoProcessTV scripts for use in third party applications are
+      placed in the writable path $snap_current/ so that editable config
+      files are copied into latest revision folders created by the snap update system.
+
+      Examples, create config file from templates;
+      for Sabnzbd, create autoProcessTV.cfg from autoProcessTV.cfg.sample
+      for Deluge or Transmission, create onTxComplete.cfg from onTxComplete.sample.cfg
+
+      In clients, when specifying a download completed script location;
+      for Sabnzbd, $snap_current/autoProcessTV/sabToSickBeard.py
+      for NzbGet, $snap_current/autoProcessTV/SickGear-NG/SickGear-NG.py
+      for Torrent (*nix), $snap_current/autoProcessTV/onTxComplete.sh
+      for Torrent (Win), $snap_current/autoProcessTV/onTxComplete.bat
+      EOT
+
+  unrar:
+    plugin: make
+    source: https://raw.githubusercontent.com/wiki/SickGear/SickGear/packages/www.rarlab.com/rar/unrarsrc-6.0.2.tar.gz
+    source-type: tar
+
+    build-packages:
+      - to i386: ["g++:i386"]
+      - to amd64: ["g++:amd64"]
+      - to arm64: ["g++:arm64"]
+      - to armhf: ["g++:armhf"]
+      - to s390x: ["g++:s390x"]
+      - to ppc64el: ["g++:ppc64el"]

@@ -1,0 +1,224 @@
+#import datetime
+#import re
+#import sickgear
+#from sickgear import TVInfoAPI
+#from sickgear.helpers import anon_url
+#from sickgear.tv import PersonGenders
+#from sg_helpers import spoken_height
+#from six import iteritems
+<% def sg_var(varname, default=False): return getattr(sickgear, varname, default) %>#slurp#
+<% def sg_str(varname, default=''): return getattr(sickgear, varname, default) %>#slurp#
+##
+#if $person.name
+#set global $title = $person.name + ' (Person)'
+#else
+#set global $title = 'Person'
+#end if
+#set global $header = 'Person'
+#set global $sbPath = '../..'
+#set global $topmenu = 'person'
+#set $css = $getVar('css', 'reg')
+#set global $page_body_attr = 'cast-person" class="' + $css
+##
+#import os.path
+#set global $inc_ofi = True
+#include $os.path.join($sg_str('PROG_DIR'), 'gui/slick/interfaces/default/inc_top.tmpl')
+<script type="text/javascript" src="$sbRoot/js/cast.js?v=$sbPID"></script>
+
+#if $varExists('header')
+	<h1 class="header">$header</h1>
+#else
+	<h1 class="title">$title</h1>
+#end if
+
+##
+#set $html_selected = ' selected="selected"'
+#set $html_checked = ' checked="checked"'
+#set $age = $person.age
+<style>
+.main-image{float:left;margin:0 20px 20px 0}
+#person .name,
+#person .age,
+#person .gender{margin-right:6px}
+#person-content .cast-bg{height:300px;width:215px;display:block; background-color:#181818 !important; border:1px solid #181818; object-fit: contain; font-family: 'object-fit: contain;'; -moz-border-radius:10px; -webkit-border-radius:10px; border-radius:10px}
+#person-content .thumb{display:block}
+#person-content > .main-image{margin-bottom:19px}
+#person-content > .cast .cast-bg{height:300px; margin:0 auto; background:url(/images/poster-person.jpg) center center no-repeat}
+</style>
+<%
+def param(visible=True, rid=None, cache_person=None, cache_char=None, person=None, role=None, tvid_prodid=None, thumb=None, oid=None, pid=None):
+    """
+    make the url param list
+    """
+    if cache_char or role:
+        oid = ('oid=%s' % oid, '')[not visible or None is oid or str(rid) == str(oid)]
+        return ('imagecache/character?', '')[not cache_char] + '&amp;'.join([kv for kv in ('rid=%s' % rid, 'tvid_prodid=%s' % (cache_char or role).tvid_prodid, ('', 'thumb=%s' % thumb)[not role and None is not thumb], ('person_id=%s' % pid, '')[not pid], ('prefer_person=1', '')[not pid], oid) if kv])
+    if cache_person:
+        oid = ('oid=%s' % oid, '')[not visible or None is oid or str(rid) == str(oid)]
+        return 'imagecache/person?' + '&amp;'.join([kv for kv in ('pid=%s' % rid, ('', 'thumb=%s' % thumb)[None is not thumb], oid) if kv])
+    if person:
+        oid = ('oid=%s' % person.id, '')[not visible or str(person.ref_id()) == str(person.id)]
+        return '&amp;'.join([kv for kv in ('rid=%s' % person.ref_id(), oid) if kv])
+    return 'param not implemented properly'
+%>
+	<div id="person">
+		<div id="person-content">
+			<div class="main-image cast">
+				<a class="thumb" href="$sbRoot/$param(rid=$person.ref_id(), cache_person=True, thumb=0, oid=$person.id)" rel="dialog"><img src="$sbRoot/$param(False, rid=$person.id, cache_person=True)" class="cast-bg"></a>
+			</div>
+
+			<div class="intro">#slurp
+#set $gender = ''
+#if $PersonGenders.female == $person.gender#
+    #set $gender = '&female;'
+#elif $PersonGenders.male == $person.gender#
+    #set $gender = '&male;'
+#end if##slurp
+				<h2><span class="name">$person.name</span>#if $age #<span class="age">($age)</span>#end if##if $gender #<span class="gender" title="Biological gender">$gender</span>#end if##if $person.deathday # &dagger;#end if#</h2>
+			</div>
+
+<style>
+#character-content .cast-bg{display:block; background-color:#181818; border:1px solid #181818; -moz-border-radius:10px; -webkit-border-radius:10px; border-radius:10px}
+#character-content .cast .cast-bg{height:200px; background:url(/images/poster-person.jpg) center center no-repeat}
+#character-content .role-panel{min-width:277px; float:left}
+#character-content .role-panel .main-image{margin-right:5px}
+#character-content .name{margin-top:1.5em; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+#character-content .name.max-width{max-width:123px}
+#character-content h3{margin-bottom:3px}
+#character-content:after{display:block; content:"."; height:0; clear:both; visibility:hidden}
+</style>
+
+#set $section_header = False
+#set $current_date = $datetime.date.today()
+#set $rc_clean = re.compile(r'(?i)[^a-z0-9]')
+#set $max_width = ('', ' max-width')[2 < len($roles)]
+#for $cur_char in $roles
+    #if $cur_char.get('show_obj')
+        #if not $section_header
+            #set $section_header = True
+			<div id="character-content">
+				<div style="margin:40px 0 7px">is known in your show list as,</div>
+		#end if
+
+				<div class="role-panel">
+					<div class="main-image cast">
+						<a class="thumb" href="$sbRoot/$param(rid=$cur_char['character_id'], cache_char=$cur_char['show_obj'], thumb=0, oid=$cur_char['character_id'])" rel="dialog"><img class="cast-bg" src="$sbRoot/$param(False, $cur_char['character_id'], cache_char=$cur_char['show_obj'])"></a>
+					</div>
+					<div class="name$max_width">
+        #set $gender = 'themself'
+        #if $PersonGenders.female == $person.gender#
+            #set $gender = 'Herself'
+        #elif $PersonGenders.male == $person.gender#
+            #set $gender = 'Himself'
+        #end if#
+        #set $name = ($cur_char['character_name'], $gender)[$rc_clean.sub('', $cur_char['character_name'].lower()) == $rc_clean.sub('', $person.name.lower())]
+						<a href="$sbRoot/home/role?$param(rid=$cur_char['character_rid'] or $cur_char['character_id'], role=$cur_char['show_obj'], oid=$cur_char['character_id'])" title="$name" class="addQTip">$name</a>
+					</div>
+					<div class="show-name">
+						(<a href="$sbRoot/home/view-show?tvid_prodid=$cur_char['show_obj'].tvid_prodid">$cur_char['show_obj'].name</a>)
+					</div>
+        #set $from_age = None if not $cur_char["start_year"] else $person.calc_age($datetime.date($cur_char["start_year"], 1, 1))
+        #set $to_age = None if not $cur_char["end_year"] else $person.calc_age($datetime.date($cur_char["end_year"], *((12, 31), ($current_date.month, $current_date.day))[$cur_char["end_year"] >= $current_date.year]))
+        #if $from_age or $to_age
+					<div>assumed age in role</div>
+					<div class="age-role">
+        #end if
+        #if $from_age
+						$from_age
+        #end if
+        #if $to_age
+            #if $from_age
+						 -
+            #end if
+						$to_age
+        #end if
+        #if $from_age or $to_age
+						years
+					</div>
+        #end if
+				</div>
+    #end if
+#end for
+#if $section_header
+##			<div style="font-size:12px; margin-bottom:20px; clear:both">note: images differ for animated or multiple people cast into roles</div>
+			</div><!-- #character-content -->
+#end if
+
+<style>
+#vitals{clear:both}
+.details-info.akas{max-height:100px; overflow:auto; min-width:300px; word-break:normal}
+.details-info i{font-style:normal; font-size:smaller}
+.links{display:block; padding:0}
+.links li{display: inline-block; padding:0 10px 0 0}
+.links img{margin-bottom: -1px; vertical-align:initial}
+</style>
+
+			<div class="#vitals" data-birthdate="$person.birthday" data-deathdate="$person.deathday">
+#if $person.real_name
+				<div><span class="details-title">Real name</span><span class="details-info">$person.real_name</span></div>
+#end if
+#if $person.akas
+    #set $akas = ' <i>*</i> '.join(['<span%s>%s</span>' % (('', ' class="grey-text"')[bool(idx % 2)], $aka) for (idx, $aka) in $enumerate($person.lang_ordered_akas)])
+				<div><span class="details-title">Akas</span><span class="details-info akas">$akas</span></div>
+#end if
+#if $person.nicknames
+				<div><span class="details-title">Nicknames</span><span class="details-info">#echo', '.join($person.lang_ordered_nicknames)#</span></div>
+#end if
+#if $person.height
+    #set $inches = str(round(($person.height / float(2.54)), 1)).rstrip('.0')
+				<div><span class="details-title">Height</span><span class="details-info">$spoken_height($person.height) ... ($round($person.height, 1) cm, $inches inches)</span></div>
+#end if
+#if $person.birthday
+				<div><span class="details-title">Birthdate</span><span class="details-info">$sickgear.sgdatetime.SGDatetime.sbfdate($person.birthday)</span></div>
+#end if
+#if $person.birthplace
+				<div><span class="details-title">Birthplace</span><span class="details-info">$person.birthplace</span></div>
+#end if
+#if $person.deathday
+				<div><span class="details-title">Deathdate</span><span class="details-info">$sickgear.sgdatetime.SGDatetime.sbfdate($person.deathday)</span></div>
+#end if
+#if $person.deathplace
+				<div><span class="details-title">Deathplace</span><span class="details-info">$person.deathplace</span></div>
+#end if
+
+#set $section_links = False
+#for $cur_src, $cur_sid in sorted(iteritems($person.ids))
+    #if $TVInfoAPI($cur_src).config.get('people_url')
+        #if not $section_links
+            #set $section_links = True
+				<div>
+					<span class="details-title">Links</span>
+					<span class="details-info">
+						<ul class="links">
+        #end if
+							<li>
+        #if $TVInfoAPI($cur_src).config.get('icon')##slurp
+						<img alt="$TVInfoAPI($cur_src).name" height="16" width="16" src="$sbRoot/images/$TVInfoAPI($cur_src).config['icon']">#slurp
+        #end if#
+								<a href="$anon_url($TVInfoAPI($cur_src).config['people_url'] % $cur_sid)" target="_blank">$TVInfoAPI($cur_src).name</a>
+							</li>
+    #end if
+#end for
+#if $section_links
+						</ul>
+					</span>
+				</div>
+#end if
+			</div>
+
+#if $person.biography
+			<div>
+				<h3>Bio</h3>
+				<div style="max-height:250px; overflow:auto; word-break:normal">
+## cleanup bio
+					<p style="padding-right:5px">$re.sub(r'\s+.*?CC-BY-SA.*?$', '', $person.biography).replace('\n', '<br>')</p>
+				</div>
+			</div>
+#end if
+
+		</div><!-- #person-content -->
+	</div><!-- #person -->
+
+	<div></div>
+
+#include $os.path.join($sg_str('PROG_DIR'), 'gui/slick/interfaces/default/inc_bottom.tmpl')

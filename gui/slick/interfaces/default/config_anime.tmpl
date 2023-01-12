@@ -1,0 +1,117 @@
+#import sickgear
+#from sickgear.helpers import anon_url
+##
+#set global $title = 'Config - Anime'
+#set global $header = 'Anime'
+#set global $sbPath = '../..'
+#set global $topmenu = 'config'
+##
+#include $os.path.join($sickgear.PROG_DIR, 'gui/slick/interfaces/default/inc_top.tmpl')
+
+<script type="text/javascript" src="$sbRoot/js/config.js?v=$sbPID"></script>
+
+#if $varExists('header')
+	<h1 class="header">$header</h1>
+#else
+	<h1 class="title">$title</h1>
+#end if
+
+<div id="config">
+	<div id="config-content">
+
+		<form id="configForm" action="save_anime" method="post">
+			$xsrf_form_html
+
+			<div id="config-components">
+
+				<ul>
+					<li><a href="#core-component-group1">Anime Settings</a></li>
+				</ul>
+
+				<div id="core-component-group1">
+				<div class="component-group">
+
+					<div class="component-group-desc">
+						<h3>Misc</h3>
+						<p>User interface and general configuration.</p>
+					</div>
+
+					<fieldset class="component-group-list">
+						<div class="field-pair">
+							<label for="anime_treat_as_hdtv">
+								<span class="component-title">Quality control</span>
+								<span class="component-desc">
+									<input type="checkbox" class="enabler" name="anime_treat_as_hdtv" id="anime_treat_as_hdtv" #if $sickgear.ANIME_TREAT_AS_HDTV then 'checked="checked"' else ""# />
+									<p>treat anime releases that lack a quality tag as HDTV instead of "unknown".&nbsp;This may improve snatch success</p>
+								</span>
+							</label>
+						</div>
+
+						<input type="submit" class="btn config_submitter" value="Save Changes" />
+					</fieldset>
+				</div><!-- /component-group //-->
+
+				<div class="component-group">
+
+					<div class="component-group-desc">
+						<img class="notifier-icon" src="$sbRoot/images/providers/anidb.gif" alt="AniDB" title="AniDB" width="24" height="24" />
+						<h3><a href="<%= anon_url('http://anidb.info') %>" onclick="window.open(this.href, '_blank'); return false;">AniDB</a></h3>
+						<p>Manage anime releases with AniDB.</p>
+					</div>
+
+					<fieldset class="component-group-list">
+						<div class="field-pair">
+							<label for="use_anidb">
+								<span class="component-title">Enable</span>
+								<span class="component-desc">
+									<input type="checkbox" class="enabler" name="use_anidb" id="use_anidb" #if $sickgear.USE_ANIDB then 'checked="checked"' else ""# />
+									<p>fetch data for scene exceptions (alternative release names) and available 'release groups' per show</p>
+								</span>
+							</label>
+						</div>
+
+						<div id="content_use_anidb">
+							<div class="field-pair">
+								<label for="anidb_username">
+									<span class="component-title">AniDB username</span>
+									<span class="component-desc">
+										<input type="text" name="anidb_username" id="anidb_username" value="$sickgear.ANIDB_USERNAME" class="form-control input-sm input350" />
+									</span>
+								</label>
+							</div>
+
+							<div class="field-pair">
+								<label for="anidb_password">
+									<span class="component-title">AniDB password</span>
+									<span class="component-desc">
+										<input type="password" autocomplete="nope" name="anidb_password" id="anidb_password" value="#echo '*' * len($sickgear.ANIDB_PASSWORD)#" class="form-control input-sm input350">
+									</span>
+								</label>
+							</div>
+
+							<div class="field-pair">
+								<label>
+									<span class="component-title">Sync AniDB</span>
+									<span class="component-desc">
+										<input type="checkbox" name="anidb_use_mylist" id="anidb_use_mylist" #if $sickgear.ANIDB_USE_MYLIST then 'checked="checked"' else ""# />
+										<p>add post-processed anime episodes to your "AniDB Mylist"</p>
+									</span>
+								</label>
+							</div>
+						</div>
+
+						<input type="submit" class="btn config_submitter" value="Save Changes" />
+					</fieldset>
+				</div><!-- /component-group //-->
+
+				</div><!-- /component-group1 //-->
+
+				<br/><input type="submit" class="btn config_submitter" value="Save Changes" /><br/>
+
+			</div><!-- /config-components //-->
+
+		</form>
+	</div>
+</div>
+
+#include $os.path.join($sickgear.PROG_DIR, 'gui/slick/interfaces/default/inc_bottom.tmpl')

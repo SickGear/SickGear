@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<caps>
+	<server title="NZBHydra 2" email="theotherp@gmx.de" url="https://github.com/theotherp/nzbhydra2" image="https://raw.githubusercontent.com/theotherp/nzbhydra2/master/core/ui-src/img/banner-bright.png" />
+	<limits max="100" default="100" />
+	<retention days="3000" />
+	<searching>
+		<search available="yes" supportedParams="q,cat,limit,offset,minage,maxage,minsize,maxsize" />
+		<tv-search available="yes" supportedParams="q,rid,tvdbid,tvmazeid,traktid,season,ep,cat,limit,offset,minage,maxage,minsize,maxsize" />
+		<movie-search available="yes" supportedParams="q,imdbid,tmdbid,cat,limit,offset,minage,maxage,minsize,maxsize" />
+		<audio-search available="no" supportedParams="" />
+		<book-search available="yes" supportedParams="q,author,title,cat,limit,offset,minage,maxage,minsize,maxsize" />
+	</searching>
+	<categories>
+		<category id="1000" name="Console" />
+		<category id="2000" name="Movies">
+			<subcat id="2040" name="Movies HD" />
+			<subcat id="2030" name="Movies SD" />
+		</category>
+		<category id="3000" name="Audio">
+			<subcat id="3030" name="Audiobook" />
+			<subcat id="3040" name="FLAC" />
+			<subcat id="3010" name="MP3" />
+		</category>
+		<category id="4000" name="PC" />
+		<category id="5000" name="TV">
+			<subcat id="5070" name="Anime" />
+			<subcat id="5040" name="TV HD" />
+			<subcat id="5030" name="TV SD" />
+		</category>
+		<category id="6000" name="XXX" />
+		<category id="7020" name="Ebook" />
+		<category id="7030" name="Comic" />
+	</categories>
+</caps>

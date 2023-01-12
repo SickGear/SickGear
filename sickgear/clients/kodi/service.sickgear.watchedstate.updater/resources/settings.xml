@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8"?>
+<settings version="1">
+	<section id="service.sickgear.watchedstate.updater">
+		<category id="general" label="32000" help="">
+			<group id="general_grp_1" label="">
+				<setting id="action_notification" type="boolean" label="32011" help="">
+					<level>0</level>
+					<default>true</default>
+					<control type="toggle" />
+				</setting>
+				<setting id="error_notification" type="boolean" label="32012" help="">
+					<level>0</level>
+					<default>true</default>
+					<control type="toggle" />
+				</setting>
+				<setting id="verbose_log" type="boolean" label="32021" help="">
+					<level>0</level>
+					<default>true</default>
+					<control type="toggle" />
+				</setting>
+			</group>
+
+			<group id="general_grp_2" label="32600">
+				<setting id="noop_1" type="boolean" label="" help="">
+					<visible>false</visible>
+					<level>0</level>
+					<default>false</default>
+					<control type="toggle" />
+				</setting>
+			</group>
+			<group id="general_grp_3" label="32612">
+				<setting id="noop_2" type="boolean" label="" help="">
+					<visible>false</visible>
+					<level>0</level>
+					<default>false</default>
+					<control type="toggle" />
+				</setting>
+			</group>
+		</category>
+
+
+		<category id="network" label="32100" help="">
+			<group id="network_grp" label="">
+				<setting id="sickgear_ip" type="string" label="32111" help="">
+					<level>0</level>
+					<default>127.0.0.1</default>
+					<constraints>
+						<allowempty>true</allowempty>
+					</constraints>
+					<control type="edit" format="ip">
+						<heading>32111</heading>
+					</control>
+				</setting>
+				<setting id="sickgear_port" type="integer" label="32112" help="">
+					<level>0</level>
+					<default>8081</default>
+					<control type="edit" format="integer">
+						<heading>32112</heading>
+					</control>
+				</setting>
+				<setting id="kodi_ip" type="string" label="32121" help="">
+					<level>0</level>
+					<default>127.0.0.1</default>
+					<constraints>
+						<allowempty>true</allowempty>
+					</constraints>
+					<control type="edit" format="ip">
+						<heading>32121</heading>
+					</control>
+				</setting>
+				<setting id="kodi_port" type="integer" label="32122" help="">
+					<level>0</level>
+					<default>9090</default>
+					<control type="edit" format="integer">
+						<heading>32122</heading>
+					</control>
+				</setting>
+			</group>
+		</category>
+	</section>
+</settings>

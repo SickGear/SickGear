@@ -1,0 +1,54 @@
+#import sickgear
+#from sickgear import db
+#from sickgear.helpers import anon_url
+#import os.path
+<% def sg_var(varname, default=False): return getattr(sickgear, varname, default) %>#slurp#
+<% def sg_str(varname, default=''): return getattr(sickgear, varname, default) %>#slurp#
+##
+#set global $title = 'Configuration'
+#set global $header = 'Configuration'
+#set global $sbPath = '..'
+#set global $topmenu = 'config'
+#include $os.path.join($sg_str('PROG_DIR'), 'gui/slick/interfaces/default/inc_top.tmpl')
+##
+#if $varExists('header')
+	<h1 class='header'>$header</h1>
+#else
+	<h1 class='title'>$title</h1>
+#end if
+##
+<div id="config-content">
+	<table class="infoTable" cellspacing="1" border="0" cellpadding="0" width="100%">
+		<tr>
+			<td class="infoTableHeader" style="min-width:180px">Version: </td>
+			<td class="infoTableCell">
+				BRANCH: #echo $sg_str('BRANCH') or 'UNKNOWN'# @ py#echo '.'.join(['%s' % x for x in sys.version_info[0:3]])# / COMMIT: #echo ($sg_str('CUR_COMMIT_HASH')[0:7] or 'UNKNOWN') + ('', ' @ ')[bool($version)]#$version<br />
+#if not $sg_var('UPDATE_NOTIFY') and not $sg_var('EXT_UPDATES'):
+				No checks are run for outdated software, see "Software updates" in Config > General.
+#end if
+			</td>
+		</tr>
+		<tr><td class="infoTableHeader">Config file:</td><td class="infoTableCell">$sg_str('CONFIG_FILE')</td></tr>
+		<tr><td class="infoTableHeader">Database file:</td><td class="infoTableCell">$db.dbFilename()</td></tr>
+#if $db.db_supports_backup
+		<tr><td class="infoTableHeader">Database backups:</td><td class="infoTableCell">$backup_db_path</td></tr>
+#end if
+		<tr><td class="infoTableHeader">Cache dir:</td><td class="infoTableCell">$sg_str('CACHE_DIR')</td></tr>
+		<tr><td class="infoTableHeader">Arguments:</td><td class="infoTableCell">#echo $sg_var('MY_ARGS') or 'None used'#</td></tr>
+		<tr><td class="infoTableHeader">Web root:</td><td class="infoTableCell">#echo $sg_str('WEB_ROOT') or '/'#</td></tr>
+		<tr><td class="infoTableHeader">Python version:</td><td class="infoTableCell">$sys.version[:120]</td></tr>
+#if $tz_version
+		<tr><td class="infoTableHeader">Timezone version:</td><td class="infoTableCell">$tz_version#if $tz_fallback# (fallback)#end if#</td></tr>
+#end if
+		<tr class="infoTableSeperator"><td class="infoTableHeader"><i class="icon16-sg"></i> Homepage</td><td class="infoTableCell"><a href="<%= anon_url('https://github.com/SickGear/SickGear/wiki') %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;">https://github.com/SickGear/SickGear/wiki</a></td></tr>
+		<tr><td class="infoTableHeader"><i class="icon16-github"></i> Source</td><td class="infoTableCell"><a href="<%= anon_url('https://github.com/SickGear/SickGear/') %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;">https://github.com/SickGear/SickGear/</a></td></tr>
+		<tr><td class="infoTableHeader"><i class="icon16-mirc"></i> Internet Relay Chat</td><td class="infoTableCell">web: <a href="<%= anon_url('https://libera.chat/') %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;">Libera.chat</a> irc: <a href="irc://irc.libera.chat/#sickgear" rel="noreferrer"><i>#SickGear</i> on <i>irc.libera.chat</i></a></td></tr>
+		<tr class="infoTableSeperator"><td class="infoTableHeader">Powered by</td><td class="infoTableCell">Python, HTML5, jQuery, SQLite, Regex, CSS, Javascript, Tornado webserver</td></tr>
+		<tr><td class="infoTableHeader">&nbsp;</td><td class="infoTableHeader">Huge thanks to Jetbrains for PyCharm IDE, trust them with your development project</td></tr>
+		<tr><td class="infoTableHeader">Credits to</td><td class="infoTableHeader">Trakt.tv, TVmaze, Fanart.tv, IMDb, TheXem, Metacritic, TV Calendar, Next Episode, srrDB, Predb, and GitHub</td></tr>
+		<tr><td class="infoTableHeader">&nbsp;</td><td class="infoTableHeader">This project also uses the TMDb API but is not endorsed or certified by TMDb</td></tr>
+		<tr><td class="infoTableHeader">&nbsp;</td><td class="infoTableHeader">Finally, this project uses information from TheTVDB.com, please consider <a href="<%= anon_url('https://thetvdb.com/subscribe') %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;">supporting</a> them</td></tr>
+	</table>
+</div>
+
+#include $os.path.join($sg_str('PROG_DIR'),'gui/slick/interfaces/default/inc_bottom.tmpl')

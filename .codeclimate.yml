@@ -1,0 +1,17 @@
+engines:
+  eslint:
+    enabled: true
+  csslint:
+    enabled: true
+  pep8:
+    enabled: true
+ratings:
+   paths:
+   - "**.py"
+   - "**.js"
+   - "**.css"
+exclude_paths:
+- lib/**/*
+- tornado/**/*
+- gui/slick/css/lib/**/*
+- gui/slick/js/lib/**/*

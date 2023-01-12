@@ -1,0 +1,27 @@
+#import datetime
+#import sickgear
+#from sickgear import TVInfoAPI
+#from sickgear.helpers import anon_url
+#from sickgear.tv import PersonGenders
+#from six import iteritems
+<% def sg_var(varname, default=False): return getattr(sickgear, varname, default) %>#slurp#
+<% def sg_str(varname, default=''): return getattr(sickgear, varname, default) %>#slurp#
+##
+#set global $title = 'Show Switch Changes'
+#set global $header = 'Show Switch Changes'
+#set global $sbPath = '../..'
+#set global $topmenu = 'show'
+##
+#import os.path
+#include $os.path.join($sickgear.PROG_DIR, 'gui/slick/interfaces/default/inc_top.tmpl')
+
+<h4>$show_obj.name - Changes</h4>
+#for $episode in $ep_list
+    #if $hasattr($show_obj, 'tvid_prodid')
+	#set $ep_obj = $episode['ep_obj']
+	#set $ep_name = ($ep_obj and $ep_obj.name) or ''
+	<div>$episode['reason'] <a href="$sbRoot/home/view-show?tvid_prodid=$show_obj.tvid_prodid#season-$episode['season']">$ep_name #echo '%sx%s' % ($episode['season'], $episode['episode'])#</a></div>
+    #end if
+#end for
+
+#include $os.path.join($sickgear.PROG_DIR, 'gui/slick/interfaces/default/inc_bottom.tmpl')

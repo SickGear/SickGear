@@ -1,0 +1,123 @@
+#import datetime
+#import sickgear
+#from sickgear import network_timezones, subtitles
+#from sickgear.common import Overview, Quality, statusStrings, ARCHIVED, UNAIRED, SUBTITLED, SNATCHED_ANY, DOWNLOADED
+#from sickgear.sgdatetime import SGDatetime
+#from lib import subliminal
+<% def sg_var(varname, default=False): return getattr(sickgear, varname, default) %>#slurp#
+<% def sg_str(varname, default=''): return getattr(sickgear, varname, default) %>#slurp#
+#######
+#set $network_timezone = $network_timezones.get_network_timezone($show_obj.network)
+#set $network_time = $network_timezones.parse_time($show_obj.airs)
+#set $odd = 0
+#set $fuzzydate = 'airdate'
+#set $scene, $scene_anime = (False, False)
+#if not $show_obj.air_by_date and not $show_obj.is_sports and not $show_obj.is_anime and $show_obj.is_scene
+    #set $scene = True
+#elif not $show_obj.air_by_date and not $show_obj.is_sports and $show_obj.is_anime and $show_obj.is_scene
+    #set $scene_anime = True
+#end if
+#set $attr_title_ep = ('', ' (Anime #)')[$show_obj.is_anime]
+##
+#set $eps = $getVar('episodes', None) or [$episode]
+#for $ep in $eps
+    #set $ep_key = ($ep['season'], $ep['episode'])
+    #set $ep_str = '%sx%s' % $ep_key
+    #set $epLoc = $ep['location']
+    #set never_aired = 0 < int($ep['season']) and 1 == int($ep['airdate'])
+		<tr class="#echo ' '.join([$Overview.overviewStrings[$ep_cats[$ep_str]], ('', 'airdate-never')[$never_aired], ('', 'archived')[$ARCHIVED == $Quality.splitCompositeStatus(int($ep['status']))[0]]])#">
+			<td class="col-checkbox">
+				<input type="checkbox" class="epCheck #echo 'hide' if $UNAIRED == int($ep['status']) else ''#" id="$ep_str" name="$ep_str">
+			</td>
+
+    #set $nfo, $nfo_img = (('No', '-no'), ('Yes', ''))[int($ep['hasnfo'])]
+    #set $tbn, $tbn_img = (('No', '-no'), ('Yes', ''))[int($ep['hastbn'])]
+			<td align="center" class="meta"><img src="$sbRoot/images/nfo${nfo_img}.gif" alt="$nfo" title="$nfo" width="23" height="11"><br />
+			<img src="$sbRoot/images/tbn${tbn_img}.gif" alt="$tbn" title="$tbn" width="23" height="11"></td>
+
+    #if $epLoc and $show_obj._location and $epLoc.lower().startswith($show_obj._location.lower())
+        #set $epLoc = $epLoc[len($show_obj._location)+1:]
+    #elif $epLoc and (not $epLoc.lower().startswith($show_obj._location.lower()) or not $show_obj._location)
+        #set $epLoc = $epLoc
+    #end if
+
+    #set $episode = str($ep['episode']) + ('', ' (%s)' % $ep['absolute_number'])[$show_obj.is_anime]
+    #set $downloaded = ('', '<strong>file</strong> %s<br /><strong>size</strong> %s' % ($epLoc, $sickgear.helpers.human($ep['file_size'])))['' != $epLoc and None != $epLoc]
+    #set $attr=(('', 'Ep # %s' % $attr_title_ep)[bool($attr_title_ep)], $downloaded)[any($downloaded)]
+			<td align="center">
+				<span style="white-space:nowrap"#if $attr# class="addQTip" title="$attr"#end if#>$episode</span>
+			</td>
+
+    #slurp
+    #if $scene
+        #set $dfltSeas, $dfltEpis = $xem_numbering.get($ep_key, (0, 0))
+			<td align="center">
+				<input type="text" placeholder="#echo '%sx%s' % ($dfltSeas, $dfltEpis)#" size="6" maxlength="8"
+					class="sceneSeasonXEpisode form-control input-scene" data-for-season="$ep['season']" data-for-episode="$ep['episode']"
+					id="sceneSeasonXEpisode_#echo '%s_%s_%s' % (($show_obj.tvid_prodid,) + $ep_key)#"
+					title="Enter a new SSxEE if different at the provider (e.g. 20x5). Remove content for default"
+        #set $value = '%sx%s' % $scene_numbering.get($ep_key, ('', ''))
+        #set $value = ($value, '')['x' == $value]
+					value="$value"
+					style="padding:0; text-align:center; max-width:60px">
+			</td>
+    #elif $scene_anime
+        #set $dfltAbsolute = $xem_absolute_numbering.get($ep_key, 0)
+			<td align="center">
+				<input type="text" placeholder="$dfltAbsolute" size="6" maxlength="8"
+					class="sceneAbsolute form-control input-scene" data-for-season="$ep['season']" data-for-episode="$ep['episode']"
+					id="sceneAbsolute_#echo '%s_%s_%s' % (($show_obj.tvid_prodid,) + $ep_key)#"
+					title="Enter a new absolute number if different at the provider (e.g. 22). Remove content for default"
+					value="$scene_absolute_numbering.get($ep_key, '')"
+					style="padding:0; text-align:center; max-width:60px">
+			</td>
+    #end if
+    #slurp
+			<td class="col-name">
+				<img src="$sbRoot/images/info32.png" width="16" height="16" alt="" class="plotInfo#echo '%s' %\
+                    ('None opacity40', ('" id="plot_info_%s_%s_%s' % (($show_obj.tvid_prodid,) + $ep_key)))[None is not $ep['description'] and '' != $ep['description']]#">
+    #set $cls = (' class="tba grey-text"', '')['good' == $Overview.overviewStrings[$ep_cats[$ep_str]]]
+				#if not $ep['name'] or 'TBA' == $ep['name']#<em${cls}>TBA</em>#else#$ep['name']#end if#
+			</td>
+
+    #set $ep_dt = $network_timezones.get_episode_time($ep['airdate'], $network_time, $show_obj.network, $show_obj.airtime, $network_timezone, $ep['timestamp'], $ep['network'], $ep['airtime'], $ep['timezone'])
+			<td class="col-airdate">
+				<span class="$fuzzydate addQTip" title="$SGDatetime.sbfdatetime($SGDatetime.convert_to_setting($ep_dt))" data-airdate="$ep['airdate']"#if $sg_var('FUZZY_DATING')# data-fulldate="$SGDatetime.sbfdate(dt=$ep_dt, d_preset='%A, %B %d, %Y')"#end if#>#if 1 == int($ep['airdate']) then 'never' else $SGDatetime.sbfdate($SGDatetime.convert_to_setting($ep_dt))#</span>
+			</td>
+
+    #if $sg_var('USE_SUBTITLES') and $show_obj.subtitles
+			<td class="col-subtitles" align="center">
+        #if $ep['subtitles']
+            #for $sub_lang in subliminal.language.language_list($ep['subtitles'].split(','), strict=False)
+                #if '' != sub_lang.alpha2
+				<img src="$sbRoot/images/flags/${sub_lang.alpha2}.png" width="16" height="11" alt="${sub_lang}">
+                #elif 'und' == sub_lang.alpha3
+				<img src="$sbRoot/images/flags/unknown.png" width="16" height="11" alt="undetermined">
+                #end if
+            #end for
+        #end if
+			</td>
+    #end if
+    #slurp
+    #set $curStatus, $curQuality = $Quality.splitCompositeStatus(int($ep['status']))
+    #if Quality.NONE != $curQuality
+			<td class="col-status">#if $SUBTITLED == $curStatus#<span class="addQTip" title="$statusStrings[$curStatus]"><i class="sgicon-subtitles" style="vertical-align:middle"></i></span>#else#$statusStrings[$curStatus].replace('Downloaded', '')#end if# #if 'Unknown' != $statusStrings[$curStatus]#<span class="quality $Quality.get_quality_css($curQuality)#if $downloaded# addQTip" title="$downloaded#end if#">$Quality.get_quality_ui($curQuality)</span>#end if#</td>
+    #else
+			<td class="col-status">$statusStrings[$curStatus].replace('SD DVD', 'SD DVD/BR/BD')</td>
+    #end if
+			<td class="col-search">
+    #if 0 != int($ep['season'])
+        #set $status = $Quality.splitCompositeStatus(int($ep['status']))[0]
+        #if ($status in $SNATCHED_ANY + [$DOWNLOADED, $ARCHIVED]) and $sg_var('USE_FAILED_DOWNLOADS')
+				<a class="ep-retry" href="$sbRoot/home/episode-retry?tvid_prodid=$show_obj.tvid_prodid&amp;season=$ep['season']&amp;episode=$ep['episode']"><img src="$sbRoot/images/search16.png" height="16" alt="retry" title="Retry download"></a>
+        #else
+				<a class="ep-search" href="$sbRoot/home/search-episode?tvid_prodid=$show_obj.tvid_prodid&amp;season=$ep['season']&amp;episode=$ep['episode']"><img src="$sbRoot/images/search16.png" width="16" height="16" alt="search" title="Manual search"></a>
+        #end if
+    #end if
+    #slurp
+    #if $sg_var('USE_SUBTITLES') and $show_obj.subtitles and len(set(str($ep['subtitles']).split(',')).intersection(set($subtitles.wanted_languages()))) < len($subtitles.wanted_languages()) and $ep['location']
+				<a class="epSubtitlesSearch" href="$sbRoot/home/search-episode-subtitles?tvid_prodid=$show_obj.tvid_prodid&amp;season=$ep['season']&amp;episode=$ep['episode']"><img src="$sbRoot/images/closed_captioning.png" height="16" alt="search subtitles" title="Search subtitles"></a>
+    #end if
+			</td>
+		</tr>
+#end for

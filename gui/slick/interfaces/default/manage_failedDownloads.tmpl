@@ -1,0 +1,79 @@
+#import sickgear
+#import datetime
+#import re
+#from sickgear import providers
+#from sickgear.providers import generic
+#from sickgear.common import *
+##
+#set global $header = 'Failed Downloads'
+#set global $title = 'Failed Downloads'
+#set global $sbPath = '..'
+#set global $topmenu = 'manage'
+#set global $page_body_attr = 'failed'
+##
+#import os.path
+#include $os.path.join($sickgear.PROG_DIR, 'gui/slick/interfaces/default/inc_top.tmpl')
+
+<script type="text/javascript" src="$sbRoot/js/failedDownloads.js?v=$sbPID"></script>
+<style>
+.tablesorter .tablesorter-header{padding: 4px 18px 4px 5px}
+</style>
+
+#if $varExists('header')
+	<h1 class="header">$header</h1>
+#else
+	<h1 class="title">$title</h1>
+#end if
+#set selected = ' selected="selected"'
+	<div class="h2footer pull-right"><b>Limit:</b>
+		<select id="limit" name="limit" class="form-control form-control-inline input-sm">
+			<option value="0"#if '0' == $limit then $selected else ''#>All</option>
+			<option value="100"#if '100' == $limit then $selected else ''#>100</option>
+			<option value="250"#if '250' == $limit then $selected else ''#>250</option>
+			<option value="500"#if '500' == $limit then $selected else ''#>500</option>
+		</select>
+	</div>
+
+	<table id="failedTable" class="sickbeardTable tablesorter" border="0">
+		<thead>
+			<tr>
+				<th style="width:1%">Order</th>
+				<th class="text-nowrap text-left" style="width:74%">Release</th>
+				<th style="width:10%">Size</th>
+				<th style="width:14%">Provider</th>
+				<th style="width:1%;padding: 4px 18px">Remove<br />
+					<input id="removeCheck" type="checkbox" class="bulkCheck">
+				</th>
+			</tr>
+		</thead>
+
+#set $oldest = $len($failed_results)
+		<tfoot>
+			<tr>
+				<td colspan="4" class="text-left">
+					$oldest items shown#if $getVar('over_limit', False)#, more are available by changing the limit#end if#
+				</td>
+				<td>
+					<input id="submitMassRemove" type="button" class="btn" value="Submit">
+				</td>
+			</tr>
+		</tfoot>
+
+		<tbody>
+#set $order = $oldest
+#for $hItem in $failed_results[::-1]
+    #set $provider = $providers.getProviderClass($generic.GenericProvider.make_id($hItem['provider']))
+    #set $provider_name = None is not $provider and $provider.name or 'missing provider'
+    #set $provider_image = None is not $provider and $provider.image_name() or 'missing.png'
+			<tr>
+				<td data-order="$order">#echo 1 == $order and 'Newest' or $oldest == $order and 'Oldest' or '-'##set $order -= 1#</td>
+				<td class="text-nowrap text-left">#echo re.sub('"', '', $hItem['release'])#</td>
+				<td>#echo ($hItem['size'], '?')[-1 == $hItem['size']]#</td>
+				<td><img src="$sbRoot/images/providers/$provider_image" width="16" height="16" alt="$provider_name" title="$provider_name"></td>
+				<td data-order="0"><input type="checkbox" class="removeCheck" id="remove-#echo re.sub('"', '___', $hItem['release'])#"></td>
+			</tr>
+#end for
+		</tbody>
+	</table>
+
+#include $os.path.join($sickgear.PROG_DIR, 'gui/slick/interfaces/default/inc_bottom.tmpl')

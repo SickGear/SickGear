@@ -1,0 +1,292 @@
+# Indonesian translations for PACKAGE package.
+# Copyright (C) 2017 THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+#  <adie.rebel@gmail.com>, 2017.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: \n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2021-04-30 22:34+0200\n"
+"PO-Revision-Date: 2017-03-18 15:41+0700\n"
+"Last-Translator: adie.rebel@gmail.com\n"
+"Language-Team: Indonesian\n"
+"Language: id\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=ASCII\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"X-Generator: Poedit 1.8.11\n"
+
+#: src/humanize/number.py:56
+msgctxt "0"
+msgid "th"
+msgstr "."
+
+#: src/humanize/number.py:57
+msgctxt "1"
+msgid "st"
+msgstr "."
+
+#: src/humanize/number.py:58
+msgctxt "2"
+msgid "nd"
+msgstr "."
+
+#: src/humanize/number.py:59
+msgctxt "3"
+msgid "rd"
+msgstr "."
+
+#: src/humanize/number.py:60
+msgctxt "4"
+msgid "th"
+msgstr "."
+
+#: src/humanize/number.py:61
+msgctxt "5"
+msgid "th"
+msgstr "."
+
+#: src/humanize/number.py:62
+msgctxt "6"
+msgid "th"
+msgstr "."
+
+#: src/humanize/number.py:63
+msgctxt "7"
+msgid "th"
+msgstr "."
+
+#: src/humanize/number.py:64
+msgctxt "8"
+msgid "th"
+msgstr "."
+
+#: src/humanize/number.py:65
+msgctxt "9"
+msgid "th"
+msgstr "."
+
+#: src/humanize/number.py:126
+msgid "thousand"
+msgid_plural "thousand"
+msgstr[0] ""
+
+#: src/humanize/number.py:127
+msgid "million"
+msgid_plural "million"
+msgstr[0] "juta"
+
+#: src/humanize/number.py:128
+msgid "billion"
+msgid_plural "billion"
+msgstr[0] "miliar"
+
+#: src/humanize/number.py:129
+msgid "trillion"
+msgid_plural "trillion"
+msgstr[0] "triliun"
+
+#: src/humanize/number.py:130
+msgid "quadrillion"
+msgid_plural "quadrillion"
+msgstr[0] "kuadriliun"
+
+#: src/humanize/number.py:131
+msgid "quintillion"
+msgid_plural "quintillion"
+msgstr[0] "quintillion"
+
+#: src/humanize/number.py:132
+msgid "sextillion"
+msgid_plural "sextillion"
+msgstr[0] "sextillion"
+
+#: src/humanize/number.py:133
+msgid "septillion"
+msgid_plural "septillion"
+msgstr[0] "septillion"
+
+#: src/humanize/number.py:134
+msgid "octillion"
+msgid_plural "octillion"
+msgstr[0] "octillion"
+
+#: src/humanize/number.py:135
+msgid "nonillion"
+msgid_plural "nonillion"
+msgstr[0] "nonillion"
+
+#: src/humanize/number.py:136
+msgid "decillion"
+msgid_plural "decillion"
+msgstr[0] "decillion"
+
+#: src/humanize/number.py:137
+msgid "googol"
+msgid_plural "googol"
+msgstr[0] "googol"
+
+#: src/humanize/number.py:228
+msgid "zero"
+msgstr "nol"
+
+#: src/humanize/number.py:229
+msgid "one"
+msgstr "satu"
+
+#: src/humanize/number.py:230
+msgid "two"
+msgstr "dua"
+
+#: src/humanize/number.py:231
+msgid "three"
+msgstr "tiga"
+
+#: src/humanize/number.py:232
+msgid "four"
+msgstr "empat"
+
+#: src/humanize/number.py:233
+msgid "five"
+msgstr "lima"
+
+#: src/humanize/number.py:234
+msgid "six"
+msgstr "enam"
+
+#: src/humanize/number.py:235
+msgid "seven"
+msgstr "tujuh"
+
+#: src/humanize/number.py:236
+msgid "eight"
+msgstr "delapan"
+
+#: src/humanize/number.py:237
+msgid "nine"
+msgstr "sembilan"
+
+#: src/humanize/time.py:133
+#, fuzzy, python-format
+msgid "%d microsecond"
+msgid_plural "%d microseconds"
+msgstr[0] "%d mikro detik"
+
+#: src/humanize/time.py:142
+#, fuzzy, python-format
+msgid "%d millisecond"
+msgid_plural "%d milliseconds"
+msgstr[0] "%d mili detik"
+
+#: src/humanize/time.py:145 src/humanize/time.py:220
+msgid "a moment"
+msgstr "beberapa saat"
+
+#: src/humanize/time.py:147
+msgid "a second"
+msgstr "sedetik"
+
+#: src/humanize/time.py:149
+#, python-format
+msgid "%d second"
+msgid_plural "%d seconds"
+msgstr[0] "%d detik"
+
+#: src/humanize/time.py:151
+msgid "a minute"
+msgstr "semenit"
+
+#: src/humanize/time.py:154
+#, python-format
+msgid "%d minute"
+msgid_plural "%d minutes"
+msgstr[0] "%d menit"
+
+#: src/humanize/time.py:156
+msgid "an hour"
+msgstr "sejam"
+
+#: src/humanize/time.py:159
+#, python-format
+msgid "%d hour"
+msgid_plural "%d hours"
+msgstr[0] "%d jam"
+
+#: src/humanize/time.py:162
+msgid "a day"
+msgstr "sehari"
+
+#: src/humanize/time.py:164 src/humanize/time.py:167
+#, python-format
+msgid "%d day"
+msgid_plural "%d days"
+msgstr[0] "%d hari"
+
+#: src/humanize/time.py:169
+msgid "a month"
+msgstr "sebulan"
+
+#: src/humanize/time.py:171
+#, python-format
+msgid "%d month"
+msgid_plural "%d months"
+msgstr[0] "%d bulan"
+
+#: src/humanize/time.py:174
+msgid "a year"
+msgstr "setahun"
+
+#: src/humanize/time.py:176 src/humanize/time.py:185
+#, python-format
+msgid "1 year, %d day"
+msgid_plural "1 year, %d days"
+msgstr[0] "1 tahun, %d hari"
+
+#: src/humanize/time.py:179
+msgid "1 year, 1 month"
+msgstr "1 tahun, 1 bulan"
+
+#: src/humanize/time.py:182
+#, python-format
+msgid "1 year, %d month"
+msgid_plural "1 year, %d months"
+msgstr[0] "1 tahun, %d bulan"
+
+#: src/humanize/time.py:187
+#, python-format
+msgid "%d year"
+msgid_plural "%d years"
+msgstr[0] "%d tahun"
+
+#: src/humanize/time.py:217
+#, python-format
+msgid "%s from now"
+msgstr "%s dari sekarang"
+
+#: src/humanize/time.py:217
+#, python-format
+msgid "%s ago"
+msgstr "%s yang lalu"
+
+#: src/humanize/time.py:221
+msgid "now"
+msgstr "sekarang"
+
+#: src/humanize/time.py:244
+msgid "today"
+msgstr "hari ini"
+
+#: src/humanize/time.py:246
+msgid "tomorrow"
+msgstr "besok"
+
+#: src/humanize/time.py:248
+msgid "yesterday"
+msgstr "kemarin"
+
+#: src/humanize/time.py:534
+#, python-format
+msgid "%s and %s"
+msgstr "%s dan %s"

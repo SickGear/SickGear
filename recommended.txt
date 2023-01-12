@@ -1,0 +1,22 @@
+--extra-index-url https://gitlab+deploy-token-1599941:UNupqjtDab_zxNzvP2gA@gitlab.com/api/v4/projects/279215/packages/pypi/simple
+cffi >= 1.15.1
+cryptography != 38.0.2; '3.7' <= python_version and 'Windows' == platform_system
+cryptography != 38.0.2; '3.7' <= python_version and 'Linux' == platform_system and ('x86_64' == platform_machine or 'aarch64' == platform_machine)
+cryptography <= 3.3.2; '3.7' <= python_version and 'Linux' == platform_system and 'x86_64' != platform_machine and 'aarch64' != platform_machine
+cryptography != 38.0.2; '3.7' <= python_version and 'Darwin' == platform_system and 'x86_64' == platform_machine
+cryptography <= 3.3.2; '3.7' <= python_version and 'Darwin' == platform_system and 'x86_64' != platform_machine
+cryptography <= 3.3.2; '3.0' > python_version
+lxml >= 4.9.2; 'Windows' == platform_system
+lxml; 'Windows' != platform_system
+orjson; '3.7' <= python_version and 'Windows' == platform_system
+orjson; '3.7' <= python_version and 'Linux' == platform_system and ('x86_64' == platform_machine or 'aarch64' == platform_machine or 'armv7l' == platform_machine)
+pip >= 22.2.2; '3.7' <= python_version
+pip <= 20.3.4; '3.0' > python_version
+Levenshtein >= 0.20.5; '3.11' >= python_version and '3.7' <= python_version
+rapidfuzz < 3.0.0; '3.7' <= python_version
+python-Levenshtein == 0.12.0; '3.0' > python_version
+regex >= 2022.9.13; '3.11' >= python_version and '3.7' <= python_version
+regex <= 2020.10.28; '3.0' > python_version
+scandir >= 1.10.0; '3.0' > python_version
+setuptools >= 65.2.0; '3.7' <= python_version
+setuptools <= 44.1.1; '3.0' > python_version

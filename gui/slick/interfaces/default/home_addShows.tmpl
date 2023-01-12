@@ -1,0 +1,77 @@
+#import sickgear
+#import urllib
+##
+#set global $title = 'Add Show'
+#set global $header = 'Add Show'
+#set global $sbPath = '../..'
+#set global $statpath = '../..'
+#set global $topmenu = 'home'
+##
+#import os.path
+#include $os.path.join($sickgear.PROG_DIR, 'gui/slick/interfaces/default/inc_top.tmpl')
+
+#if $varExists('header')
+	<h1 class="header">$header</h1>
+#else
+	<h1 class="title">$title</h1>
+#end if
+
+	<div id="addShowPortal">
+		<a class="btn btn-large" href="$sbRoot/add-shows/find/">
+			<div class="button"><span style="font-size:32px"><i class="sgicon-addshow"></i></span></div>
+			<div class="buttontext">
+				<h3>Search</h3>
+				<p>find show at TV info source</p>
+			</div>
+		</a>
+
+		<a class="btn btn-large" href="$sbRoot/add-shows/trakt-default/">
+			<div class="button"><span style="font-size:32px"><i class="sgicon-trakt"></i></span></div>
+			<div class="buttontext">
+				<h3>Trakt cards</h3>
+				<p>trends, tailored suggestions...</p>
+			</div>
+		</a>
+
+		<div style="clear:both;font-size:2px">&nbsp;</div>
+
+		<a class="btn btn-large" href="$sbRoot/add-shows/import/">
+			<div class="button"><div class="icon-addexistingshow square-32"></div></div>
+			<div class="buttontext">
+				<h3>Import</h3>
+				<p>existing shows</p>
+			</div>
+		</a>
+
+		<a class="btn btn-large" href="$sbRoot/add-shows/imdb-default/">
+			<div class="button"><span style="font-size:32px"><i class="sgicon-imdb"></i></span></div>
+			<div class="buttontext">
+				<h3>IMDb cards</h3>
+				<p>popular decades, watchlists...</p>
+			</div>
+		</a>
+
+		<div style="clear:both;font-size:2px">&nbsp;</div>
+
+#if $sickgear.USE_ANIDB
+		<a class="btn btn-large" href="$sbRoot/add-shows/anime-default/">
+			<div class="button"><div class="img-anime square-32"></div></div>
+			<div class="buttontext">
+				<h3>Anime cards</h3>
+				<p>browse anime to add</p>
+			</div>
+		</a>
+#else
+		<div class="buttontext" style="margin:0px 7px 14px;padding:0 5px 0 25px">
+			<div class="button"><div class="img-anime square-32"></div></div>
+			<div class="buttontext">
+				<h3>Anime cards</h3>
+				<p>to use, enable AniDB <a href="$sbRoot/config/anime/">here</a></p>
+			</div>
+		</div>
+#end if
+
+	</div>
+
+
+#include $os.path.join($sickgear.PROG_DIR, 'gui/slick/interfaces/default/inc_bottom.tmpl')

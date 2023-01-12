@@ -1,0 +1,19 @@
+[B]1.0.9[/B] (2022-10-30)
+- Migrate to Kodi (Matrix) for compatibility
+- This is likely the final release for Kodi (Leia) and older (by using SickGear url /kodi-legacy)
+[B]1.0.8[/B] (2020-12-08)
+- Auto-negotiate http/s when connecting
+[B]1.0.7[/B] (2020-01-21)
+- Public release
+[B]1.0.6[/B] (2020-01-18)
+- Public test release
+[B]1.0.5[/B] (2020-01-16)
+- Fix service code for py3
+[B]1.0.4[/B] (2019-08-13)
+- Service code cleanup
+[B]1.0.3[/B] (2018-02-28)
+- Add episodeid to payload
+[B]1.0.2[/B] (2017-11-15)
+- Devel release for an SG API change
+[B]1.0.0[/B] (2017-10-04)
+- Initial release

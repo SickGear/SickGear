@@ -1,0 +1,371 @@
+#import sickgear
+#from sickgear.helpers import find_show_by_id, maybe_plural
+#from sickgear.sgdatetime import SGDatetime
+##
+#set global $title = 'Show Tasks'
+#set global $header = 'Show Tasks'
+#set global $sbPath = '..'
+#set global $topmenu = 'manage'
+##
+#import os.path
+#include $os.path.join($sickgear.PROG_DIR, 'gui/slick/interfaces/default/inc_top.tmpl')
+
+<script type="text/javascript" src="$sbRoot/js/manageShowProcesses.js?v=$sbPID" xmlns="http://www.w3.org/1999/html"></script>
+<div id="content800">
+#if $varExists('header')
+	<h1 class="header">$header</h1>
+#else
+	<h1 class="title">$title</h1>
+#end if
+
+<style>
+.section{margin-top:15px}
+.section-tasks{margin-top:5px}
+.task{margin-top:10px}
+.left-6px{margin-left:6px}
+.right-6px{margin-right:6px}
+.text-left,.tablesorter .text-left{text-align:left}
+.tablesorter td,.sickbeardTable td{color:white}
+.col-10{width:10%}
+.col-20{width:20%}
+.col-10, .col-20{white-space:nowrap}
+</style>
+
+	<div class="section">
+		<h3>Daily show update:</h3>
+		<a id="showupdatebutton" class="btn right-6px#if $show_update_running# disabled#end if#" href="$sbRoot/manage/show-tasks/force-show-update"><i class="sgicon-play"></i> Force</a>
+#if not $show_update_running#Not in progress (Next run: $SGDatetime.sbftime($next_run))#else#Currently running#end if#
+	</div>
+
+
+#if $not_found_shows
+    #set $num_errors = $len($not_found_shows)
+    #set $err_class = ('', ' errors ' + ($num_errors * 'n')[0:4])[any([$num_errors])]
+	<div class="section">
+		<h3>$num_errors Show$maybe_plural($num_errors) with abandoned main ID$maybe_plural($num_errors):</h3>
+		<p>List of show(s) with changed ID at the TV info source. Click show name to get new ID, so that episode info updates may continue</p>
+		<div><input type="button" class="hide shows-more btn" id="notfound-btn-more" value="Expand"><input type="button" class="shows-less btn" id="notfound-btn-less" value="Collapse"></div>
+		<table class="sickbeardTable tablesorter manageTable" cellspacing="1" border="0" cellpadding="0">
+			<thead>
+				<tr>
+					<th class="text-left">Show name</th>
+					<th class="col-20">Last found</th>
+					<th class="col-10">Ignore Warn</th>
+				</tr>
+			</thead>
+			<tbody>
+    #set $row = 0
+    #for $cur_show in $not_found_shows:
+				<tr class="#echo ('odd', 'even')[$row % 2]##set $row+=1#">
+					<td class="text-left">
+						<span style="padding-right:5px" class="logger item snf"><i class="sgicon-warning"></i></span><a class="whitelink" href="$sbRoot/home/edit-show?tvid_prodid=$cur_show['tvid_prodid']&tvsrc=0&srcid=$cur_show['prodid']#core-component-group3">$cur_show['show_name']</a>
+					</td>
+					<td class="text-center">$cur_show['last_success']</td>
+					<td><input class="nowarnicon" type="checkbox" #if $cur_show['ignore_warning'] then 'checked="checked"' else ''# data-tvid-prodid="$cur_show['tvid_prodid']"></td>
+				</tr>
+    #end for
+			</tbody>
+			<tfoot>
+				<tr>
+					<td colspan="2" style="text-align:right"><span>Note: Ignored shows will still not get updates unless edited</span></td>
+					<td>
+						<input id="save-nowarnicon" type="button" class="btn" value="Save">
+					</td>
+				</tr>
+			</tfoot>
+		</table>
+	</div>
+#end if
+
+
+#if $defunct_indexer
+	<div class="section">
+		<h3>Shows from defunct TV info sources:</h3>
+		<div><input type="button" class="hide shows-more btn" id="defunct-btn-more" value="Expand"><input type="button" class="shows-less btn" id="defunct-btn-less" value="Collapse"></div>
+		<table class="sickbeardTable manageTable" cellspacing="1" border="0" cellpadding="0">
+			<thead>
+				<tr>
+					<th class="text-left">Show name</th>
+				</tr>
+			</thead>
+			<tbody>
+    #set $row = 0
+    #for $cur_show in $defunct_indexer:
+				<tr class="#echo ('odd', 'even')[$row % 2]##set $row+=1#">
+					<td class="text-left">
+						<a class="whitelink" href="$sbRoot/home/view-show?tvid_prodid=$cur_show['tvid_prodid']">$cur_show['show_name']</a>
+					</td>
+				</tr>
+    #end for
+			</tbody>
+		</table>
+	</div>
+#end if
+
+	<div class="section">
+		<h3>Show queue:</h3>
+		<div class="section-tasks">
+#if $queue_length['add'] or $queue_length['update'] or $queue_length['refresh'] or $queue_length['switch'] or $people_queue['main_cast'] or $queue_length['rename'] or $queue_length['subtitle']
+			<div><input type="button" class="show-all-more btn" value="Expand All"><input type="button" class="hide show-all-less btn" value="Collapse All"></div>
+#end if
+			<div class="task">
+				Add: <i>$len($queue_length['add']) show$sickgear.helpers.maybe_plural($len($queue_length['add']))</i>
+#if $queue_length['add']
+				<input type="button" class="#if not $queue_length['add']#hide #end if#shows-more btn left-6px" id="add-btn-more" value="Expand">
+				<input type="button" class="hide shows-less btn left-6px" id="add-btn-less" value="Collapse">
+				<input type="button" class="hide btn left-6px" id="clear-btn-add" value="Clear" data-action="$sickgear.show_queue.ShowQueueActions.ADD">
+			</div>
+			<table class="hide sickbeardTable manageTable" cellspacing="1" border="0" cellpadding="0">
+				<thead>
+					<tr>
+						<th class="text-left">Show name</th>
+						<th class="col-20">&nbsp;</th>
+					</tr>
+				</thead>
+				<tbody>
+    #set $row = 0
+    #for $cur_show in $queue_length['add']:
+        #set $show_name = str($cur_show['name'])
+					<tr class="#echo ('odd', 'even')[$row % 2]##set $row+=1#">
+						<td class="text-left">$show_name</td>
+						<td class="text-center">#if $cur_show['scheduled_update']#Scheduled#end if#<input type="button" class="btn left-6px" id="remove-btn-$cur_show['uid']" value="Remove" data-uid="$cur_show['uid']"></td>
+					</tr>
+    #end for
+				</tbody>
+			</table>
+#else
+			</div><!-- /task -->
+#end if
+
+			<div class="task">
+				Update <span class="grey-text">(Forced / Forced Web)</span>: <i>$len($queue_length['update']) <span class="grey-text">($len($queue_length['forceupdate']) / $len($queue_length['forceupdateweb']))</span> show$sickgear.helpers.maybe_plural($len($queue_length['update']))</i>
+#if $queue_length['update']
+				<input type="button" class="#if not $queue_length['update']#hide #end if#shows-more btn" id="update-btn-more" value="Expand">
+				<input type="button" class="hide shows-less btn" id="update-btn-less" value="Collapse">
+				<input type="button" class="hide btn left-6px" id="clear-btn-update" value="Clear" data-action="$sickgear.show_queue.ShowQueueActions.UPDATE">
+			</div>
+			<table class="hide sickbeardTable manageTable" cellspacing="1" border="0" cellpadding="0">
+				<thead>
+					<tr>
+						<th class="text-left">Show name</th>
+						<th class="col-20">Schedule type</th>
+					</tr>
+				</thead>
+				<tbody>
+    #set $row = 0
+    #for $cur_show in $queue_length['update']:
+        #set $show_name = $cur_show['name']
+        #if not $cur_show['name']
+            #set $show_obj = $find_show_by_id({$cur_show['tvid']: $cur_show['prodid']})
+            #if $show_obj
+                #set $show_name = getattr($show_obj, 'unique_name', $show_obj.name)
+            #end if
+        #end if
+					<tr class="#echo ('odd', 'even')[$row % 2]##set $row+=1#">
+						<td class="text-left">
+							<a class="whitelink" href="$sbRoot/home/view-show?tvid_prodid=$cur_show['tvid_prodid']">$show_name</a>
+						</td>
+						<td class="text-center">#if $cur_show['scheduled_update']#Scheduled, #end if#$cur_show['update_type']<input type="button" class="btn left-6px" id="remove-btn-$cur_show['uid']" value="Remove" data-uid="$cur_show['uid']"></td>
+					</tr>
+    #end for
+				</tbody>
+			</table>
+#else
+			</div><!-- /task -->
+#end if
+
+			<div class="task">
+				Refresh: <i>$len($queue_length['refresh']) show$sickgear.helpers.maybe_plural($len($queue_length['refresh']))</i>
+#if $queue_length['refresh']
+				<input type="button" class="#if not $queue_length['refresh']#hide #end if#shows-more btn" id="refresh-btn-more" value="Expand">
+				<input type="button" class="hide shows-less btn" id="refresh-btn-less" value="Collapse">
+				<input type="button" class="hide btn left-6px" id="clear-btn-refreah" value="Clear" data-action="$sickgear.show_queue.ShowQueueActions.REFRESH">
+			</div>
+			<table class="hide sickbeardTable manageTable" cellspacing="1" border="0" cellpadding="0">
+				<thead>
+					<tr>
+						<th class="text-left">Show name</th>
+						<th class="col-20">Schedule type</th>
+					</tr>
+				</thead>
+				<tbody>
+    #set $row = 0
+    #for $cur_show in $queue_length['refresh']:
+					<tr class="#echo ('odd', 'even')[$row % 2]##set $row+=1#">
+						<td class="text-left">
+							<a class="whitelink" href="$sbRoot/home/view-show?tvid_prodid=$cur_show['tvid_prodid']">$cur_show['name']</a>
+						</td>
+						<td class="text-center">#if $cur_show['scheduled_update']#Scheduled#end if#<input type="button" class="btn left-6px" id="remove-btn-$cur_show['uid']" value="Remove" data-uid="$cur_show['uid']"></td>
+					</tr>
+    #end for
+				</tbody>
+			</table>
+#else
+			</div><!-- /task -->
+#end if
+
+			<div class="task">
+				Switch Source: <i>$len($queue_length['switch']) show$sickgear.helpers.maybe_plural($len($queue_length['switch']))</i>
+#if $queue_length['switch']
+				<input type="button" class="#if not $queue_length['switch']#hide #end if#shows-more btn left-6px" id="switch-btn-more" value="Expand">
+				<input type="button" class="hide shows-less btn left-6px" id="switch-btn-less" value="Collapse">
+				<input type="button" class="hide btn left-6px" id="clear-btn-switch" value="Clear" data-action="$sickgear.show_queue.ShowQueueActions.SWITCH">
+			</div>
+			<table class="hide sickbeardTable manageTable" cellspacing="1" border="0" cellpadding="0">
+				<thead>
+					<tr>
+						<th class="text-left">Show name</th>
+						<th class="col-20">New TV Source</th>
+					</tr>
+				</thead>
+				<tbody>
+    #set $row = 0
+    #for $cur_show in $queue_length['switch']:
+					<tr class="#echo ('odd', 'even')[$row % 2]##set $row+=1#">
+						<td class="text-left">
+							<a class="whitelink" href="$sbRoot/home/view-show?tvid_prodid=$cur_show['tvid_prodid']">$cur_show['name']</a>
+						</td>
+						<td class="text-center"><span>$sickgear.TVInfoAPI($cur_show['new_tvid']).name</span><input type="button" class="btn left-6px" id="remove-btn-$cur_show['uid']" value="Remove" data-uid="$cur_show['uid']"></td>
+					</tr>
+    #end for
+				</tbody>
+			</table>
+#else
+			</div><!-- /task -->
+#end if
+
+			<div class="task">
+				Switch Failed: <i>$len($failed_switch) show$sickgear.helpers.maybe_plural($len($failed_switch))</i>
+#if $failed_switch
+				<input type="button" class="#if not $failed_switch#hide #end if#shows-more btn" id="switch-failed-btn-more" value="Expand">
+				<input type="button" class="hide shows-less btn" id="switch-failed-btn-less" value="Collapse">
+			</div>
+			<table class="hide sickbeardTable manageTable" cellspacing="1" border="0" cellpadding="0">
+				<thead>
+					<tr>
+						<th class="text-left">Show name</th>
+						<th class="col-20">New TV Source</th>
+						<th class="col-20">Fail Reason</th>
+					</tr>
+				</thead>
+				<tbody>
+    #set $row = 0
+    #for $cur_show in $failed_switch:
+					<tr class="#echo ('odd', 'even')[$row % 2]##set $row+=1#">
+						<td class="text-left">
+        #if $cur_show['show_obj']
+							<a class="whitelink" href="$sbRoot/home/view-show?tvid_prodid=$cur_show['show_obj'].tvid_prodid">$cur_show['show_obj'].name</a>
+        #else
+##							<span>Unknown Show: $cur_show['old_tvid']:$cur_show['old_prodid']</span>
+							<span>Unknown</span>
+        #end if
+						</td>
+						<td class="text-center">$sickgear.TVInfoAPI($cur_show['new_tvid']).name</td>
+						<td class="text-center">
+							$cur_show['status']<input type="button" class="btn" id="remove-btn-$cur_show['uid']" value="Remove" data-uid="$cur_show['uid']" data-force="1">
+						</td>
+					</tr>
+    #end for
+				</tbody>
+			</table>
+#else
+			</div><!-- /task -->
+#end if
+
+			<div class="task">
+				People: <i>$len($people_queue['main_cast']) show$sickgear.helpers.maybe_plural($len($people_queue['main_cast']))</i>
+#if $people_queue['main_cast']
+				<input type="button" class="#if not $people_queue['main_cast']#hide #end if#shows-more btn" id="main_cast-btn-more" value="Expand">
+				<input type="button" class="hide shows-less btn" id="main_cast-btn-less" value="Collapse">
+				<input type="button" class="hide btn left-6px" id="clear-people-btn" value="Clear" data-action="$sickgear.people_queue.PeopleQueueActions.SHOWCAST">
+			</div>
+			<table class="hide sickbeardTable manageTable" cellspacing="1" border="0" cellpadding="0">
+				<thead>
+					<tr>
+						<th class="text-left">Show name</th>
+						<th class="col-20">People type</th>
+					</tr>
+				</thead>
+				<tbody>
+    #set $row = 0
+    #for $cur_show in $people_queue['main_cast']:
+					<tr class="#echo ('odd', 'even')[$row % 2]##set $row+=1#">
+						<td class="text-left">
+							<a class="whitelink" href="$sbRoot/home/view-show?tvid_prodid=$cur_show['tvid_prodid']">$cur_show['name']</a>
+						</td>
+						<td class="text-center">Main Cast<input type="button" class="btn left-6px" id="remove-people-btn-$cur_show['uid']" value="Remove" data-uid="$cur_show['uid']"></td>
+					</tr>
+    #end for
+				</tbody>
+			</table>
+#else
+			</div><!-- /task -->
+#end if
+
+			<div class="task">
+				Rename: <i>$len($queue_length['rename']) show$sickgear.helpers.maybe_plural($len($queue_length['rename']))</i>
+#if $queue_length['rename']
+				<input type="button" class="#if not $queue_length['rename']#hide #end if#shows-more btn" id="rename-btn-more" value="Expand">
+				<input type="button" class="hide shows-less btn" id="rename-btn-less" value="Collapse">
+				<input type="button" class="hide btn left-6px" id="clear-btn-rename" value="Clear" data-action="$sickgear.show_queue.ShowQueueActions.RENAME">
+			</div>
+			<table class="hide sickbeardTable manageTable" cellspacing="1" border="0" cellpadding="0">
+				<thead>
+					<tr>
+						<th class="text-left">Show name</th>
+						<th class="col-20">Schedule type</th>
+					</tr>
+				</thead>
+				<tbody>
+    #set $row = 0
+    #for $cur_show in $queue_length['rename']:
+					<tr class="#echo ('odd', 'even')[$row % 2]##set $row+=1#">
+						<td class="text-left">
+							<a class="whitelink" href="$sbRoot/home/view-show?tvid_prodid=$cur_show['tvid_prodid']">$cur_show['name']</a>
+						</td>
+						<td class="text-center">#if $cur_show['scheduled_update']#Scheduled#end if#<input type="button" class="btn left-6px" id="remove-btn-$cur_show['uid']" value="Remove" data-uid="$cur_show['uid']"></td>
+					</tr>
+    #end for
+				</tbody>
+			</table>
+#else
+			</div><!-- /task -->
+#end if
+
+#if $sickgear.USE_SUBTITLES
+			<div class="task">
+				Subtitle: <i>$len($queue_length['subtitle']) show$sickgear.helpers.maybe_plural($len($queue_length['subtitle']))</i>
+    #if $queue_length['subtitle']
+				<input type="button" class="#if not $queue_length['subtitle']#hide #end if#shows-more btn" id="subtitle-btn-more" value="Expand">
+				<input type="button" class="hide shows-less btn" id="subtitle-btn-less" value="Collapse">
+				<input type="button" class="btn left-6px" id="hide clear-btn-subtitles" value="Clear" data-action="$sickgear.show_queue.ShowQueueActions.SUBTITLE">
+			</div>
+			<table class="hide sickbeardTable manageTable" cellspacing="1" border="0" cellpadding="0">
+				<thead>
+					<tr>
+						<th class="text-left">Show name</th>
+						<th class="col-20">Schedule type</th>
+					</tr>
+				</thead>
+				<tbody>
+        #set $row = 0
+        #for $cur_show in $queue_length['subtitle']:
+					<tr class="#echo ('odd', 'even')[$row % 2]##set $row+=1#">
+						<td class="text-left">
+							<a class="whitelink" href="$sbRoot/home/view-show?tvid_prodid=$cur_show['tvid_prodid']">$cur_show['name']</a>
+						</td>
+						<td class="text-center">#if $cur_show['scheduled_update']#Scheduled#end if#<input type="button" class="btn left-6px" id="remove-btn-$cur_show['uid']" value="Remove" data-uid="$cur_show['uid']"></td>
+					</tr>
+        #end for
+				</tbody>
+			</table>
+#else
+			</div><!-- /task -->
+    #end if
+#end if
+		</div><!-- /section-tasks -->
+	</div><!-- /section -->
+
+</div><!-- /content800 -->
+
+#include $os.path.join($sickgear.PROG_DIR, 'gui/slick/interfaces/default/inc_bottom.tmpl')

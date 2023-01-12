@@ -1,0 +1,22 @@
+SickGear Process Media extension for NZBGet
+===========================================
+
+If NZBGet v17+ is installed on the same system as SickGear then as a local install,
+
+1) Add the location of this script file to NZBGet Settings/PATHS/ScriptDir
+
+2) Navigate to any named TV category at Settings/Categories, click "Choose" Category.Extensions then Apply SickGear-NG
+
+This is the best set up to automatically get script updates from SickGear
+
+#############
+
+NZBGet version 16 and earlier are no longer supported, please upgrade.
+
+#############
+
+Notes:
+Debian doesn't have pip, _if_ requests is needed, try "apt install python-requests"
+
+-----
+Enjoy

@@ -1,0 +1,477 @@
+#import sickgear
+#import datetime
+#from sickgear import network_timezones, WEB_ROOT, THEME_NAME
+#from sickgear.common import *
+#from sickgear.sgdatetime import SGDatetime
+<% def sg_var(varname, default=False): return getattr(sickgear, varname, default) %>#slurp#
+<% def sg_str(varname, default=''): return getattr(sickgear, varname, default) %>#slurp#
+##
+#set global $title = 'Home'
+#set global $header = 'Show List'
+#set global $sbPath = '..'
+#set global $topmenu = 'home'
+#set global $page_body_attr = 'show-list'
+#set fuzzydate = 'airdate'
+#set sg_root = $getVar('sbRoot', WEB_ROOT)
+##
+#import os.path
+#include $os.path.join($sg_str('PROG_DIR'), 'gui/slick/interfaces/default/inc_top.tmpl')
+	<script>
+		var config = {
+			isPoster: #echo ['!1','!0']['poster' == $sg_var('HOME_LAYOUT')]#,
+			sortArticle: #echo ['!1','!0'][$sg_var('SORT_ARTICLE')]#,
+			homeSearchFocus: #echo ['!1','!0'][$sg_var('HOME_SEARCH_FOCUS', True)]#,
+			fuzzyDating: #echo ['!1','!0'][$sg_var('FUZZY_DATING')]#,
+			timeZero: #echo ['!1','!0'][$sg_var('TRIM_ZERO')]#,
+			datePreset: "$sg_str('DATE_PRESET', '%x')",
+			timePreset: "$sg_str('TIME_PRESET', '%I:%M %p')",
+			posterSortby: "$sg_var('POSTER_SORTBY')",
+			posterSortdir: #echo ['!1','!0'][$sg_var('POSTER_SORTDIR', True)]#,
+			fuzzydate: ".$fuzzydate",
+			};
+	</script>
+
+	<style>
+#set theme_suffix = ('', '-dark')['dark' == $getVar('sbThemeName', THEME_NAME)]
+		.bfr{position:absolute;left:-999px;top:-999px}.bfr img{width:16px;height:16px}.spinner{display:inline-block;width:16px;height:16px;background:url(${sg_root}/images/loading16${theme_suffix}.gif) no-repeat 0 0}
+	</style>
+	<div class="bfr"><img src="$sg_root/images/loading16${theme_suffix}.gif" /></div>
+
+	<h1 class="header" style="margin-bottom:0">$showlists[0][1]</h1>
+
+	<div id="HomeLayout" class="pull-right">
+#set $tab = 1
+#set $selected = ' selected="selected"'
+#if 'poster' == $layout
+		<div id="top-row">
+			<span>Sort By:
+				<select id="postersort" class="form-control form-control-inline input-sm" tabindex="$tab#set $tab += 1#">
+					<option value="name" data-sort="$sg_root/set_poster_sortby/?sort=name"#echo $selected if 'name' == $sg_str('POSTER_SORTBY', 'name') else ''#>Name</option>
+					<option value="date" data-sort="$sg_root/set_poster_sortby/?sort=date"#echo $selected if 'date' == $sg_str('POSTER_SORTBY') else ''#>Next Episode</option>
+					<option value="network" data-sort="$sg_root/set_poster_sortby/?sort=network"#echo $selected if 'network' == $sg_str('POSTER_SORTBY') else ''#>Network</option>
+					<option value="progress" data-sort="$sg_root/set_poster_sortby/?sort=progress"#echo $selected if 'progress' == $sg_str('POSTER_SORTBY') else ''#>Progress</option>
+					<option value="quality" data-sort="$sg_root/set_poster_sortby/?sort=quality"#echo $selected if 'quality' == $sg_str('POSTER_SORTBY') else ''#>Quality</option>
+				</select>
+			</span>
+
+			<span style="margin-left:5px">Sort Order:
+				<select id="postersortdirection" class="form-control form-control-inline input-sm" tabindex="$tab#set $tab += 1#">
+					<option value="true" data-sort="$sg_root/set_poster_sortdir/?direction=1"#echo $selected if 1 == $sg_var('POSTER_SORTDIR', 1) else ''#>Asc</option>
+					<option value="false" data-sort="$sg_root/set_poster_sortdir/?direction=0"#echo $selected if 0 == $sg_var('POSTER_SORTDIR') else ''#>Desc</option>
+				</select>
+			</span>
+
+			<span style="margin-left:5px" class="no-marginr">Layout:
+#else
+			<span id="top-row" class="pull-right no-marginr">Layout:
+#end if
+				<select style="margin-bottom:10px" name="layout" class="form-control form-control-inline input-sm" onchange="location = this.options[this.selectedIndex].value;" tabindex="$tab#set $tab += 1#">
+					<option value="$sg_root/set_layout_view_shows/?layout=poster"#echo $selected if 'poster' == $sg_str('HOME_LAYOUT', 'poster') else ''#>Poster</option>
+					<option value="$sg_root/set_layout_view_shows/?layout=small"#echo $selected if 'small' == $sg_str('HOME_LAYOUT') else ''#>Small Poster</option>
+					<option value="$sg_root/set_layout_view_shows/?layout=banner"#echo $selected if 'banner' == $sg_str('HOME_LAYOUT') else ''#>Banner</option>
+					<option value="$sg_root/set_layout_view_shows/?layout=simple"#echo $selected if 'simple' == $sg_str('HOME_LAYOUT') else ''#>Simple</option>
+				</select>
+			</span>
+
+#if 'poster' == $layout
+		</div>
+#end if
+		<div class="pull-right" style="clear:right">
+			<input id="search_show_name" class="search form-control form-control-inline input-sm input200" type="search" data-column="1" placeholder="Filter Show Name" tabindex="$tab#set $tab += 1#">
+			&nbsp;<button type="button" class="resetshows btn btn-inline" tabindex="$tab#set $tab += 1#">Reset Filter</button>
+		</div>
+	</div><!-- /HomeLayout -->
+##
+#set $poster_id = 0
+#set $load_normal = 0
+#for $cur_showlist in $showlists
+    #set $cur_list_id = $cur_showlist[0]
+    #set $cur_list_name = $cur_showlist[1]
+    #set $showlist = $list($cur_showlist[2])
+    #if $cur_showlist != $showlists[0]
+    ##
+	<h1 class="header">$cur_list_name</h1>
+
+    #end if
+    ##
+    #if 'poster' == $layout
+    ##
+	<div id="$cur_list_id" class="clearfix container" style="clear:both#if 'poster' == $layout#;padding:0#end if#">
+		<div class="posterview">
+        ##
+        #for $curLoadingShow in $sickgear.show_queue_scheduler.action.loadingShowList
+            ##
+            #if $curLoadingShow.show_obj != None and $curLoadingShow.show_obj in $sg_str('showList')
+                #continue
+            #end if
+            ##
+            #if None is $curLoadingShow.show_obj
+            ##
+			<div class="show-card" data-name="0" data-date="010101" data-network="0">
+				<img alt="" title="$curLoadingShow.show_name" class="show-image" style="border-bottom:1px solid #111" src="$sg_root/images/poster.png" />
+				<div class="show-details">
+					<div class="show-add">Loading... ($curLoadingShow.show_name)</div>
+				</div>
+				<span class="sort-data" data-progress="101"></span>
+			</div>
+            ##
+            #end if
+            ##
+        #end for
+        ##
+        $showlist.sort(key=lambda _x: _x.name)
+        #for $cur_show_obj in $showlist
+            ##
+            #set $cur_airs_next = ''
+            #set $cur_snatched = 0
+            #set $cur_downloaded = 0
+            #set $cur_total = 0
+            #set $download_stat_tip = ''
+            #set $display_status = $cur_show_obj.status
+            #set $show_name = getattr($cur_show_obj, 'unique_name', $cur_show_obj.name)
+            #set $display_name = (re.sub(r'^((?:A(?!\s+to)n?)|The)\s(\w)', r'<span class="article">\1</span> \2', $show_name), $show_name)[$sg_var('SORT_ARTICLE')]
+            #set $poster_id += 1
+            #if None is not $display_status
+                #if re.search(r'(?i)(?:(?:new|returning)\s*series|upcoming)', $cur_show_obj.status)
+                    #set $display_status = 'Continuing'
+                #else if re.search(r'(?i)(?:nded)', $cur_show_obj.status)
+                    #set $display_status = 'Ended'
+                #end if
+            #end if
+            ##
+            #if $cur_show_obj.tvid_prodid in $show_stat
+                #set $cur_airs_next = $show_stat[$cur_show_obj.tvid_prodid]['ep_airs_next']
+                ##
+                #set $cur_snatched = $show_stat[$cur_show_obj.tvid_prodid]['ep_snatched']
+                #if not $cur_snatched
+                    #set $cur_snatched = 0
+                #end if
+                ##
+                #set $cur_downloaded = $show_stat[$cur_show_obj.tvid_prodid]['ep_downloaded']
+                #if not $cur_downloaded
+                    #set $cur_downloaded = 0
+                #end if
+                ##
+                #set $cur_total = $show_stat[$cur_show_obj.tvid_prodid]['ep_total']
+                #if not $cur_total
+                    #set $cur_total = 0
+                #end if
+            #end if
+            ##
+            #if $cur_total != 0
+                #set $download_stat = str($cur_downloaded)
+                #set $download_stat_tip = 'Downloaded: ' + str($cur_downloaded)
+                #if $cur_snatched > 0
+                    #set $download_stat = '%s<a class="ui-font" href="%s/manage/episode-overview?which_status=2" title="View overview of snatched episodes">+%s</a>' % ($download_stat, $sg_root, $cur_snatched)
+                    #set $download_stat_tip = download_stat_tip + '&#013;' + 'Snatched: ' + str($cur_snatched)
+                #end if
+                #set $download_stat = download_stat + ' / ' + str($cur_total)
+                #set $download_stat_tip = download_stat_tip + '&#013;' + 'Total: ' + str($cur_total)
+            #else
+                #set $download_stat = '?'
+                #set $download_stat_tip = 'no data'
+            #end if
+            ##
+            #set $nom = $cur_downloaded
+            #set $den = $cur_total
+            #if $den == 0
+                #set $den = 1
+            #end if
+            ##
+            #set $progressbar_percent = $nom * 100 / $den
+            ##
+            #set $data_date = '600000000000'
+            #if $cur_airs_next
+                #set $data_date = $SGDatetime.convert_to_setting($network_timezones.parse_date_time($cur_airs_next, $cur_show_obj.airs, $cur_show_obj.network)).strftime('%Y%m%d%H%M')
+            #else if None is not $display_status
+                #if 'nded' not in $display_status and 1 == int($cur_show_obj.paused)
+                    #set $data_date = '500000000500'
+                #else if 'ontinu' in $display_status
+                    #set $data_date = '500000000000'
+                #else if 'nded' in $display_status
+                    #set $data_date = '500000000100'
+                #end if
+            #end if
+            ##
+			<div id="show$cur_show_obj.tvid_prodid" class="show-card" data-name="$show_name" data-date="$data_date" data-network="$cur_show_obj.network">
+				<div class="show-card-top">
+					<div class="show-image">
+						<a href="$sg_root/home/view-show?tvid_prodid=$cur_show_obj.tvid_prodid">
+            #if $load_normal > $poster_id
+							<img alt="" class="show-image" src="$sg_root/show-poster/?tvid_prodid=$cur_show_obj.tvid_prodid&amp;which=poster_thumb" />
+            #else
+							<img id="poster-$poster_id" alt="" class="show-image" data-original="$sg_root/show-poster/?tvid_prodid=$cur_show_obj.tvid_prodid&amp;which=poster_thumb" />
+							<span id="loading-poster-$poster_id" class="lazy-loading-image"><i class="spinner"></i></span>
+            #end if
+						</a>
+					</div>
+
+					<div style="border-top:1px solid black;height:1px"></div>
+
+					<div class="show-title">
+						$display_name
+					</div>
+
+					<div class="show-date">
+            #if $cur_airs_next
+                #set $ldatetime = $SGDatetime.convert_to_setting($network_timezones.parse_date_time($cur_airs_next,$cur_show_obj.airs,$cur_show_obj.network))
+					<span class="$fuzzydate">$SGDatetime.sbfdate($ldatetime)</span>
+            #else
+                #set $output_html = '?'
+                #if None is not $display_status
+                    #if 'nded' not in $display_status and 1 == int($cur_show_obj.paused)
+                        #set $output_html = 'Paused'
+                    #else if $display_status
+                        #set $output_html = $display_status
+                    #end if
+                #end if
+						$output_html
+            #end if
+					</div><!-- /show-date -->
+
+					<table width="100%" border="0">
+						<tr>
+							<td class="show-table">
+								<span class="show-dlstats" title="$download_stat_tip">$download_stat</span>
+							</td>
+
+							<td class="show-table show-network">
+            #if 'simple' == $layout
+								$cur_show_obj.network
+            #else
+                #set $img_text = ($cur_show_obj.network, 'No Network')[None is $cur_show_obj.network]
+                #if 'No Network' != $img_text and 'nonetwork' in $network_images[$cur_show_obj.tvid_prodid]
+								$cur_show_obj.network
+                #else
+								<img class="show-network-image" src="$sg_root/images/network/$network_images[$cur_show_obj.tvid_prodid]" alt="$img_text" title="$img_text" />
+                #end if
+            #end if
+							</td>
+
+							<td class="show-table">
+            #if $cur_show_obj.quality in $qualityPresets
+								<span class="show-quality">$qualityPresetStrings[$cur_show_obj.quality]</span>
+            #else
+								<span class="show-quality">Custom</span>
+            #end if
+							</td>
+						</tr>
+					</table>
+				</div>
+				<div id="progressbar$cur_show_obj.tvid_prodid"></div>
+				<span class="sort-data" data-progress="$progressbar_percent"></span>
+			</div><!-- /show$cur_show_obj.tvid_prodid -->
+
+        #end for
+		</div>
+	</div><!-- /$cur_list_id -->
+
+########################
+## end of poster layout
+########################
+    #else
+
+	<table id="$cur_list_id" class="tablesorter">
+		<thead>
+			<tr>
+				<th>Next Ep</th>
+				<th>Show</th>
+				<th>Network</th>
+				<th>Quality</th>
+				<th>Downloads</th>
+				<th>Active</th>
+				<th>Status</th>
+			</tr>
+		</thead>
+
+		<tfoot>
+			<tr>
+				<th><a href="$sg_root/add-shows/">Add Show</a></th>
+				<th colspan="6"></th>
+			</tr>
+		</tfoot>
+
+		<tbody>
+        #for $curLoadingShow in $sickgear.show_queue_scheduler.action.loadingShowList
+            #if $curLoadingShow.show_obj != None and $curLoadingShow.show_obj in $sg_str('showList')
+                #continue
+            #end if
+            ##
+			<tr>
+				<td>(loading)</td>
+				<td class="text-left">
+            #if None is $curLoadingShow.show_obj
+					Loading... ($curLoadingShow.show_name)
+            #else
+					<a href="$sg_root/home/view-show?tvid_prodid=$curLoadingShow.show_obj.tvid_prodid">$getattr($curLoadingShow.show_obj, 'unique_name', $curLoadingShow.show_obj.name)</a>
+            #end if
+				</td>
+				<td></td>
+				<td></td>
+				<td></td>
+				<td></td>
+				<td></td>
+			</tr>
+        #end for
+        ##
+        #set void = $showlist.sort(key=lambda _x: _x.name)
+        ##
+        #set $poster_id = 0
+        #set $load_normal = 0
+        #for $cur_show_obj in $showlist
+            ##
+            #set $cur_airs_next = ''
+            #set $cur_snatched = 0
+            #set $cur_downloaded = 0
+            #set $cur_total = 0
+            #set $download_stat_tip = ''
+            #set $show_name = getattr($cur_show_obj, 'unique_name', $cur_show_obj.name)
+            #set $display_name = (re.sub(r'^((?:A(?!\s+to)n?)|The)\s(\w)', r'<span class="article">\1</span> \2', $show_name), $show_name)[$sg_var('SORT_ARTICLE')]
+            #set $poster_id += 1
+            ##
+            #if $cur_show_obj.tvid_prodid in $show_stat
+                #set $cur_airs_next = $show_stat[$cur_show_obj.tvid_prodid]['ep_airs_next']
+                ##
+                #set $cur_snatched = $show_stat[$cur_show_obj.tvid_prodid]['ep_snatched']
+                #if not $cur_snatched
+                    #set $cur_snatched = 0
+                #end if
+                ##
+                #set $cur_downloaded = $show_stat[$cur_show_obj.tvid_prodid]['ep_downloaded']
+                #if not $cur_downloaded
+                    #set $cur_downloaded = 0
+                #end if
+                ##
+                #set $cur_total = $show_stat[$cur_show_obj.tvid_prodid]['ep_total']
+                #if not $cur_total
+                    #set $cur_total = 0
+                #end if
+            #end if
+            ##
+            #if $cur_total != 0
+                #set $download_stat = str($cur_downloaded)
+                #set $download_stat_tip = 'Downloaded: ' + str($cur_downloaded)
+                #if $cur_snatched > 0
+                    #set $download_stat = '%s<a class="ui-font" href="%s/manage/episode-overview?which_status=2" title="View overview of snatched episodes">+%s</a>' % ($download_stat, $sg_root, $cur_snatched)
+                    #set $download_stat_tip = download_stat_tip + '&#013;' + 'Snatched: ' + str($cur_snatched)
+                #end if
+                #set $download_stat = download_stat + ' / ' + str($cur_total)
+                #set $download_stat_tip = download_stat_tip + '&#013;' + 'Total: ' + str($cur_total)
+            #else
+                #set $download_stat = '?'
+                #set $download_stat_tip = 'no data'
+            #end if
+            ##
+            #set $nom = $cur_downloaded
+            #set $den = $cur_total
+            #if $den == 0
+                #set $den = 1
+            #end if
+            ##
+            #set $progressbar_percent = $nom * 100 / $den
+            #if not $progressbar_percent
+                #set $progressbar_percent = (0, -1)['?' == $download_stat]
+            #end if
+            ##
+			<tr>
+            #if $cur_airs_next
+                #set $ldatetime = $SGDatetime.convert_to_setting($network_timezones.parse_date_time($cur_airs_next, $cur_show_obj.airs, $cur_show_obj.network))
+				<td class="text-nowrap"><div class="$fuzzydate">$SGDatetime.sbfdate($ldatetime)</div><span class="sort-data">$ldatetime.strftime('%Y%m%d%H%M')</span></td>
+            #else
+				<td></td>
+            #end if
+            #if 'small' == $layout
+
+				<td class="tvShow text-left">
+					<div class="imgsmallposter $layout">
+						<a href="$sg_root/show-poster/?tvid_prodid=$cur_show_obj.tvid_prodid&amp;which=poster" rel="dialog" title="$show_name">
+            #if $load_normal > $poster_id
+							<img src="$sg_root/show-poster/?tvid_prodid=$cur_show_obj.tvid_prodid&amp;which=poster_thumb" class="$layout" alt="$cur_show_obj.tvid_prodid" />
+            #else
+							<img id="poster-$poster_id" data-original="$sg_root/show-poster/?tvid_prodid=$cur_show_obj.tvid_prodid&amp;which=poster_thumb" class="$layout" alt="$cur_show_obj.tvid_prodid" />
+							<span id="loading-poster-$poster_id" class="lazy-loading-image"><i class="spinner"></i></span>
+            #end if
+						</a>
+						<a href="$sg_root/home/view-show?tvid_prodid=$cur_show_obj.tvid_prodid" style="vertical-align:middle">$display_name</a>
+					</div>
+				</td>
+            #else if 'banner' == $layout
+
+				<td class="text-left">
+					<div class="imgbanner $layout">
+						<a href="$sg_root/home/view-show?tvid_prodid=$cur_show_obj.tvid_prodid">
+                #if $load_normal > $poster_id
+							<img src="$sg_root/show-poster/?tvid_prodid=$cur_show_obj.tvid_prodid&amp;which=banner" class="$layout" alt="$cur_show_obj.tvid_prodid" title="$show_name" />
+                #else
+							<img id="poster-$poster_id" data-original="$sg_root/show-poster/?tvid_prodid=$cur_show_obj.tvid_prodid&amp;which=banner" class="$layout" alt="$cur_show_obj.tvid_prodid" title="$show_name" />
+							<span id="loading-poster-$poster_id" class="lazy-loading-image"><i class="spinner"></i></span>
+                #end if
+                        </a>
+					</div>
+					<span class="sort-data">$display_name</span>
+				</td>
+            #else if 'simple' == $layout
+
+				<td class="tvShow text-left"><a href="$sg_root/home/view-show?tvid_prodid=$cur_show_obj.tvid_prodid">$display_name</a></td>
+            #end if
+            #if 'simple' != $layout
+                #set $img_text = ($cur_show_obj.network, 'No Network')[None is $cur_show_obj.network]
+
+				<td>
+                #if 'No Network' != $img_text and 'nonetwork' in $network_images[$cur_show_obj.tvid_prodid]
+					$cur_show_obj.network
+                #else
+					<img width="54" height="27" src="$sg_root/images/network/$network_images[$cur_show_obj.tvid_prodid]" alt="#echo '%s" title="%s' % ($img_text, $img_text)#" />
+					<span class="sort-data">$cur_show_obj.network</span>
+                #end if
+				</td>
+            #else
+
+				<td class="text-left">
+					<span>$cur_show_obj.network</span>
+					<span class="sort-data">$cur_show_obj.network</span>
+				</td>
+            #end if
+            #if $cur_show_obj.quality in $qualityPresets
+
+				<td><span class="quality $qualityPresetStrings[$cur_show_obj.quality]">$qualityPresetStrings[$cur_show_obj.quality]</span></td>
+            #else
+
+				<td><span class="quality Custom">Custom</span></td>
+            #end if
+
+				<td>
+					<div id="progressbar$cur_show_obj.tvid_prodid" style="position:relative">
+						<div class="progressbarText ui-font" title="$download_stat_tip">$download_stat</div>
+					</div>
+					<span class="sort-data" data-progress="$progressbar_percent"></span>
+				</td>
+
+				<td>
+					<i class=#echo '"%s" alt="%s"' % (('no', 'N'),('yes', 'Y'))[0 == int($cur_show_obj.paused) and 'Ended' != $cur_show_obj.status]#></i>
+				</td>
+
+				<td>
+            #set $display_status = $cur_show_obj.status
+            #if None is not $display_status
+                #if re.search(r'(?i)(?:(?:new|returning)\s*series|upcoming)', $cur_show_obj.status)
+                    #set $display_status = 'Continuing'
+                #else if re.search(r'(?i)(?:nded)', $cur_show_obj.status)
+                    #set $display_status = 'Ended'
+                #end if
+            #end if
+					$display_status
+				</td>
+			</tr>
+        #end for
+		</tbody>
+	</table>
+
+    #end if
+#end for
+##
+
+<script type="text/javascript" src="$sg_root/js/lazyload/lazyload.min.js?v=$sbPID"></script>
+<script type="text/javascript" src="$sg_root/js/inc_bottom.js?v=$sbPID"></script>
+<script type="text/javascript" src="$sg_root/js/home.js?v=$sbPID"></script>
+#include $os.path.join($sg_str('PROG_DIR'), 'gui/slick/interfaces/default/inc_bottom.tmpl')

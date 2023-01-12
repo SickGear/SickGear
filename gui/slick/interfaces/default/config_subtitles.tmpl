@@ -1,0 +1,185 @@
+#import sickgear
+#from sickgear import subtitles
+#from sickgear.helpers import anon_url
+<% def sg_var(varname, default=False): return getattr(sickgear, varname, default) %>#slurp#
+##
+#set global $title = 'Config - Subtitles'
+#set global $header = 'Subtitles'
+#set global $sbPath = '../..'
+#set global $topmenu = 'config'
+##
+#import os.path
+#include $os.path.join($sickgear.PROG_DIR, 'gui/slick/interfaces/default/inc_top.tmpl')
+
+<script type="text/javascript" src="$sbRoot/js/configSubtitles.js?v=$sbPID"></script>
+<script type="text/javascript" src="$sbRoot/js/config.js"></script>
+<script type="text/javascript" src="$sbRoot/js/lib/jquery.tokeninput.min.js"></script>
+
+<script type="text/javascript">
+	\$(document).ready(function() {
+		\$('#subtitles_languages').tokenInput(
+			[
+				<%=',\r\n'.join('{id: "' + lang[2] + '", name: "' + lang[3] + '"}' for lang in subtitles.subtitle_language_filter()) %>
+			],
+			{
+				method: 'POST',
+				hintText: 'Write to search a language and select it',
+				preventDuplicates: true,
+				prePopulate:
+					[
+						<%=
+							',\r\n'.join('{id: "' + lang + '", name: "' + subtitles.get_language_name(lang) + '"}' for lang in sickgear.SUBTITLES_LANGUAGES) if sickgear.SUBTITLES_LANGUAGES != '' else ''
+						%>
+					],
+					resultsFormatter: function(item){ return '<li><img src="$sbRoot/images/flags/' + item['id'] + '.png"> ' + item[this.propertyToSearch] + '</li>' },
+					tokenFormatter: function(item) { return '<li><img src="$sbRoot/images/flags/' + item['id'] + '.png"> <p>' + item[this.propertyToSearch] + '</p></li>' },
+					flag: 'flag',
+
+				}
+			);
+	});
+</script>
+
+#if $varExists('header')
+	<h1 class="header">$header</h1>
+#else
+	<h1 class="title">$title</h1>
+#end if
+
+##
+#set $html_checked = ' checked="checked"'
+<div id="config">
+	<div id="config-content">
+
+		<form id="configForm" action="save_subtitles" method="post">
+			$xsrf_form_html
+
+			<div id="config-components">
+				<ul>
+					<li><a href="#core-component-group4">Subtitles Search</a></li>
+					<li><a href="#core-component-group2">Subtitles Plugin</a></li>
+				</ul>
+
+				<div id="core-component-group4" class="component-group">
+
+					<div class="component-group-desc">
+						<h3>Subtitles Search</h3>
+						<p>Settings that dictate how SickGear handles subtitles search results.</p>
+					</div>
+
+					<fieldset class="component-group-list">
+						<div class="field-pair">
+							<input type="checkbox" class="enabler" #if $sickgear.USE_SUBTITLES then ' checked="checked"' else ''# id="use_subtitles" name="use_subtitles">
+							<label for="use_subtitles" class="clearfix">
+								<span class="component-title">Search Subtitles</span>
+							</label>
+						</div>
+						<div id="content_use_subtitles">
+								<div class="field-pair">
+									<label class="nocheck">
+										<span class="component-title">Subtitle Languages</span>
+										<span class="component-desc"><input type="text" id="subtitles_languages" name="subtitles_languages"></span>
+									</label>
+								</div>
+								<div class="field-pair">
+									<label class="nocheck">
+										<span class="component-title">Subtitle Directory</span>
+										<input type="text" value="$sickgear.SUBTITLES_DIR" id="subtitles_dir" name="subtitles_dir" class="form-control input-sm input350">
+									</label>
+									<label class="nocheck">
+										<span class="component-title">&nbsp;</span>
+										<span class="component-desc">The directory where SickGear should store your <i>Subtitles</i> files.</span>
+									</label>
+									<label class="nocheck">
+										<span class="component-title">&nbsp;</span>
+										<span class="component-desc"><b>NOTE:</b> Leave empty if you want store subtitle in episode path.</span>
+									</label>
+								</div>
+								<div class="field-pair">
+									<label class="nocheck">
+										<span class="component-title">Subtitle Find Interval</span>
+										<input type="number" name="subtitles_finder_interval" value="$sickgear.SUBTITLES_FINDER_INTERVAL" hours="1" class="form-control input-sm input75">
+									</label>
+									<label class="nocheck">
+										<span class="component-title">&nbsp;</span>
+										<span class="component-desc">Time in hours between scans (hours. 1)</span>
+									</label>
+								</div>
+								<div class="field-pair">
+									<input type="checkbox" name="subtitles_history" id="subtitles_history" #if $sickgear.SUBTITLES_HISTORY then ' checked="checked"' else ''#>
+									<label class="clearfix" for="subtitles_history">
+										<span class="component-title">Subtitles History</span>
+										<span class="component-desc">Log downloaded Subtitle on History page?</span>
+									</label>
+								</div>
+						<br /><input type="submit" class="btn config_submitter" value="Save Changes"><br />
+						</div>
+					</fieldset>
+				</div><!-- /component-group1 //-->
+
+				<div id="core-component-group2" class="component-group">
+
+					<div class="component-group-desc">
+						<h3>Subtitle Plugins</h3>
+						<p>Check off and drag the plugins into the order you want them to be used.</p>
+						<p class="note">At least one plugin is required.</p>
+						##<p class="note"><span style="font-size:16px">*</span> Web-scraping plugin</p>
+					</div>
+
+					<fieldset class="component-group-list" style="margin-left:50px;margin-top:36px">
+						<ul id="service_order_list">
+#for $curService in $sickgear.subtitles.sorted_service_list():
+    #set $curName = $curService.id
+							<li class="ui-state-default" id="$curName">
+								<span class="pull-left">
+									<input type="checkbox" id="enable_$curName" class="service_enabler"#if $curService.enabled# checked="checked"#end if#>
+    #set $provider_url = $curService.url
+									<a href="<%= anon_url(provider_url) %>" class="imgLink" target="_new">
+										<img src="$sbRoot/images/subtitles/$curService.image" alt="$curService.name" title="$curService.name" width="16" height="16" style="vertical-align:middle">
+									</a>
+								</span>
+								<span style="display:inline-block;margin-left:6px">
+									<span class="pull-left" style="vertical-align:middle">$curService.name.capitalize()</span>
+									##if not $curService.api_based#*#end if#
+    #if 'open' == $curService.name[0:4]
+									<span class="pull-left" style="clear:left;margin:3px 0">
+										Enforce media hash match
+										<input name="os_hash" type="checkbox" style="margin:0 0 0 3px" class="form-control-inline"#echo ('', $html_checked)[$sg_var('SUBTITLES_OS_HASH', True)]#>
+									</span>
+									<span class="pull-left" style="clear:left">
+										Username
+										<br>Password
+									</span>
+									<span class="pull-right" style="margin-left:6px">
+										<input name="os_user" value="$sickgear.SUBTITLES_SERVICES_AUTH[0][0]" type="text" placeholder="optional" class="form-control form-control-inline input-sm">
+										<br><input name="os_pass" value="$sickgear.SUBTITLES_SERVICES_AUTH[0][1]" type="text" placeholder="optional" class="form-control form-control-inline input-sm">
+									</span>
+    #end if
+								</span>
+								<span class="ui-icon ui-icon-arrowthick-2-n-s pull-right" style="vertical-align:middle"></span>
+							</li>
+#end for
+						</ul>
+						<input type="hidden" name="service_order" id="service_order" value="<%=" ".join([x.get('id')+':'+str(int(x.get('enabled'))) for x in sickgear.subtitles.sorted_service_list()])%>">
+
+						<br /><input type="submit" class="btn config_submitter" value="Save Changes"><br />
+					</fieldset>
+				</div><!-- /component-group2 //-->
+
+				<br /><input type="submit" class="btn config_submitter" value="Save Changes"><br />
+
+			</div><!-- /config-components //-->
+
+		</form>
+	</div>
+</div>
+
+<div class="clearfix"></div>
+<script type="text/javascript" charset="utf-8">
+<!--
+jQuery('#config-components').tabs();
+jQuery('#subtitles_dir').fileBrowser({title:'Select Subtitles Download Directory'});
+//-->
+</script>
+
+#include $os.path.join($sickgear.PROG_DIR, 'gui/slick/interfaces/default/inc_bottom.tmpl')

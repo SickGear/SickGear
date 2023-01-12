@@ -1,0 +1,685 @@
+#import sickgear
+#from sickgear import clients
+#from sickgear.helpers import anon_url, starify, generate_word_str
+<% def sg_var(varname, default=False): return getattr(sickgear, varname, default) %>#slurp#
+<% def sg_str(varname, default=''): return getattr(sickgear, varname, default) %>#slurp#
+##
+#set global $title = 'Config - Search Tasks'
+#set global $header = 'Search Settings'
+#set global $sbPath = '../..'
+#set global $topmenu = 'config'
+##
+#import os.path
+#include $os.path.join($sickgear.PROG_DIR, 'gui/slick/interfaces/default/inc_top.tmpl')
+<script>
+<!--
+	var config = {defaultHost: $clients.default_host}
+//-->
+</script>
+<script type="text/javascript" src="$sbRoot/js/configSearch.js?v=$sbPID"></script>
+<script type="text/javascript" src="$sbRoot/js/config.js?v=$sbPID"></script>
+
+#if $varExists('header')
+	<h1 class="header">$header</h1>
+#else
+	<h1 class="title">$title</h1>
+#end if
+
+##
+#set $html_selected = ' selected="selected"'
+#set $html_checked = ' checked="checked"'
+<div id="config">
+	<div id="config-content" class="linefix">
+
+		<form id="configForm" action="save_search" method="post">
+			$xsrf_form_html
+
+			<div id="config-components">
+				<ul>
+					<li><a href="#core-component-group1">Search Tasks</a></li>
+					<li><a href="#core-component-group2">NZB Results</a></li>
+					<li><a href="#core-component-group3">Torrent Results</a></li>
+				</ul>
+
+
+				<div id="core-component-group1" class="component-group">
+
+					<div class="component-group-desc">
+						<h3>Search Tasks</h3>
+						<p>How to manage searching with <a href="$sbRoot/config/providers/">providers</a>.</p>
+					</div>
+
+					<fieldset class="component-group-list">
+						<div class="field-pair" style="padding-bottom:0">
+							<label for="download_propers">
+								<span class="component-title">Download propers</span>
+								<span class="component-desc">
+									<input type="checkbox" name="download_propers" id="download_propers" class="enabler"<%= html_checked if sickgear.DOWNLOAD_PROPERS == True else '' %>>
+									<p>replace original download with 'Proper' or 'Repack' if nuked</p>
+								</span>
+							</label>
+						</div>
+						<div id="content_download_propers">
+							<span class="component-desc">
+#if $getVar('using_regex', False)
+                                <p>Optional <a href="https://pypi.python.org/pypi/regex" target="_blank">regex python library</a> is being used</p>
+#else
+                                <p>Optional: to improve matching, install the OS dependent <a href="https://pypi.python.org/pypi/regex" target="_blank">regex python library</a></p>
+                                <p>at a command line, simply enter ... <code>python -m pip install regex</code></p>
+#end if
+                            </span>
+							<div class="field-pair">
+								<label>
+									<span class="component-title">Limit WebDL propers</span>
+									<span class="component-desc">
+										<input type="checkbox" name="propers_webdl_onegrp"#echo ('', $html_checked)[$sickgear.PROPERS_WEBDL_ONEGRP]#>
+										<p>Only allow WebDL 'Propers' from the original release group</p>
+									</span>
+								</label>
+							</div>
+						</div>
+
+						<div class="field-pair">
+							<label>
+								<span class="component-title">Recent search interval</span>
+								<span class="component-desc">
+									<input type="text" name="recentsearch_interval" value="$sickgear.RECENTSEARCH_INTERVAL" class="form-control input-sm input75">
+									<p>minutes between checking recent updated shows (minimum $sickgear.MIN_RECENTSEARCH_INTERVAL)</p>
+								</span>
+							</label>
+						</div>
+
+						<div class="field-pair">
+							<label>
+								<span class="component-title">Limited backlog search</span>
+								<span class="component-desc">
+									<input type="text" name="backlog_limited_period" value="$sickgear.BACKLOG_LIMITED_PERIOD" class="form-control input-sm input75">
+									<p>day(s) that the limited search will cover (e.g. 7)</p>
+								</span>
+							</label>
+						</div>
+
+						<div class="field-pair">
+							<label for="backlog-nofull">
+								<span class="component-title">Disable auto full backlog</span>
+								<span class="component-desc">
+									<input type="checkbox" name="backlog_nofull" id="backlog-nofull" class="enabler view-if"<%= html_checked if sickgear.BACKLOG_NOFULL == True else '' %>>
+									<p>backlog search manually by setting episodes 'Wanted' or via 'Backlog overview'</p>
+								</span>
+							</label>
+						</div>
+
+						<div class="field-pair" id="content_backlog-nofull">
+							<label>
+								<span class="component-title"><em class="grey-text">Backlog search spread</em></span>
+								<span class="component-desc">
+									<p><em class="grey-text">to access this setting, unselect "<span class="boldest">Disable auto full backlog</span>" search above</em></p>
+								</span>
+							</label>
+						</div>
+						<div class="field-pair hide-if-backlog-nofull">
+							<label>
+								<span class="component-title">Backlog search spread</span>
+								<span class="component-desc">
+									<input type="text" name="backlog_period" value="$sickgear.BACKLOG_PERIOD" class="form-control input-sm input75">
+									<p>days to spread full backlog searches over (min $sickgear.MIN_BACKLOG_PERIOD, default $sickgear.DEFAULT_BACKLOG_PERIOD, max $sickgear.MAX_BACKLOG_PERIOD)</p>
+								</span>
+							</label>
+						</div>
+#if $sickgear.USE_NZBS
+						<div class="field-pair">
+							<label>
+								<span class="component-title">Usenet retention</span>
+								<span class="component-desc">
+									<input type="text" name="usenet_retention" value="$sickgear.USENET_RETENTION" class="form-control input-sm input75">
+									<p>age limit in days for usenet articles to be used (e.g. 500)</p>
+								</span>
+							</label>
+						</div>
+#else
+						<input type="hidden" name="usenet_retention" value="$sickgear.USENET_RETENTION" class="form-control input-sm input75">
+#end if
+						<div class="field-pair">
+							<label>
+								<span class="component-title">Ignore result with any word</span>
+								<span class="component-desc">
+									<input type="text" name="ignore_words" value="$generate_word_str($sickgear.IGNORE_WORDS, $sickgear.IGNORE_WORDS_REGEX)" class="form-control input-sm input350"><p>(opt: start 'regex:')</p>
+									<p class="clear-left note">ignore search result <em class="grey-text">if its title contains any</em> of these comma separated words</p>
+								</span>
+								<span class="component-title">Shows with custom ignores</span>
+								<span class="component-desc">
+#set $shows = []
+#for $show in $using_rls_ignore_words
+    #set void = $shows.append('<a href="%s/home/edit-show?tvid_prodid=%s" style="vertical-align:middle">%s</a>' % ($sbRoot, $show[0], $show[1]))
+#end for
+#if len($using_rls_ignore_words)
+									<p style="line-height:1.2em;margin-top:6px">#echo ', '.join($shows)#</p>
+#else
+									<p style="line-height:1.2em;margin-top:7px">...will list here when in use</p>
+#end if
+								</span>
+								<span class="component-title" style="clear:both">Shows with exclude ignores</span>
+								<span class="component-desc">
+#set $shows = []
+#for $show in $using_exclude_ignore_words
+    #set void = $shows.append('<a href="%s/home/edit-show?tvid_prodid=%s" style="vertical-align:middle">%s</a>' % ($sbRoot, $show[0], $show[1]))
+#end for
+#if len($using_exclude_ignore_words)
+									<p style="margin-top:6px">#echo ', '.join($shows)#</p>
+#else
+									<p style="margin-top:7px">...will list here when in use</p>
+#end if
+								</span>
+							</label>
+						</div>
+
+						<div class="field-pair">
+							<label>
+								<span class="component-title">Require all these words</span>
+								<span class="component-desc">
+									<input type="text" name="require_words" value="$generate_word_str($sickgear.REQUIRE_WORDS, $sickgear.REQUIRE_WORDS_REGEX)" class="form-control input-sm input350"><p>(opt: start 'regex:')</p>
+									<p class="clear-left note">ignore search result <em class="grey-text">unless its title contains all</em> of these comma separated words</p>
+								</span>
+								<span class="component-title">Shows with custom requires</span>
+								<span class="component-desc">
+#set $shows = []
+#for $show in $using_rls_require_words
+    #set void = $shows.append('<a href="%s/home/edit-show?tvid_prodid=%s" style="vertical-align:middle">%s</a>' % ($sbRoot, $show[0], $show[1]))
+#end for
+#if len($using_rls_require_words)
+									<p style="line-height:1.2em;margin-top:6px">#echo ', '.join($shows)#</p>
+#else
+									<p style="line-height:1.2em;margin-top:7px">...will list here when in use</p>
+#end if
+								</span>
+								<span class="component-title" style="clear:both">Shows with exclude requires</span>
+								<span class="component-desc">
+#set $shows = []
+#for $show in $using_exclude_require_words
+    #set void = $shows.append('<a href="%s/home/edit-show?tvid_prodid=%s" style="vertical-align:middle">%s</a>' % ($sbRoot, $show[0], $show[1]))
+#end for
+#if len($using_exclude_require_words)
+									<p style="margin-top:6px">#echo ', '.join($shows)#</p>
+#else
+									<p style="margin-top:7px">...will list here when in use</p>
+#end if
+								</span>
+							</label>
+						</div>
+
+						<div class="field-pair">
+							<label for="allow_high_priority">
+								<span class="component-title">Allow high priority</span>
+								<span class="component-desc">
+									<input type="checkbox" name="allow_high_priority" id="allow_high_priority"<%= html_checked if sickgear.ALLOW_HIGH_PRIORITY == True else '' %>>
+									<p>set downloads of recently aired episodes to high priority</p>
+								</span>
+							</label>
+						</div>
+
+						<div class="field-pair">
+							<label for="search_unaired">
+								<span class="component-title">Unaired episodes</span>
+								<span class="component-desc">
+									<input type="checkbox" name="search_unaired" id="search_unaired" class="enabler"<%= html_checked if sickgear.SEARCH_UNAIRED == True else '' %>>
+									<p>allow episodes that are released early (disable if getting fakes)</p>
+								</span>
+							</label>
+						</div>
+						<div id="content_search_unaired">
+							<div class="field-pair" style="margin-top:-24px">
+								<label for="unaired_recent_search_only">
+									<span class="component-desc">
+										<input type="checkbox" name="unaired_recent_search_only" id="unaired_recent_search_only" class="enabler"<%= html_checked if sickgear.UNAIRED_RECENT_SEARCH_ONLY == False else '' %>>
+										<p>use specific server api requests to search for early episode releases</p>
+									</span>
+								</label>
+							</div>
+						</div>
+
+						<div class="field-pair">
+							<label for="flaresolverr">
+								<span class="component-title">Host running FlareSolverr</span>
+								<span class="component-desc">
+									<input type="text" name="flaresolverr_host" id="flaresolverr" value="$sickgear.FLARESOLVERR_HOST" class="form-control input-sm input250"><p>IP:Port (default: http://localhost:8191)</p>
+									<p class="clear-left note">proxy software to handle Cloudflare connections (more info <a href="<%= anon_url('https://github.com/SickGear/SickGear/wiki/Install-SickGear-%5B82%5D-CF-Solve') %>" onclick="window.open(this.href, '_blank'); return false;">here</a>)</p>
+								</span>
+							</label>
+							<span class="component-title"></span>
+							<span class="component-desc">
+								<input class="btn" type="button" value="Test FlareSolverr" id="test-flaresolverr"><span class="test-notification" id="test-flaresolverr-result">connection result</span>
+							</span>
+						</div>
+
+						<input type="submit" class="btn config_submitter" value="Save Changes" style="display:block;margin-top:20px">
+
+					</fieldset>
+				</div><!-- /component-group1 //-->
+
+				<div id="core-component-group2" class="component-group">
+
+					<div class="component-group-desc">
+						<h3>NZB Results</h3>
+						<p>How to handle NZB search results.</p>
+					</div>
+
+					<fieldset class="component-group-list">
+
+						<div class="field-pair">
+							<label for="use_nzbs">
+								<span class="component-title">Search NZBs</span>
+								<span class="component-desc">
+									<input type="checkbox" name="use_nzbs" class="enabler" id="use_nzbs"<%= html_checked if sickgear.USE_NZBS else '' %>>
+									<p>enable NZB media providers</p></span>
+							</label>
+						</div>
+
+						<div id="content_use_nzbs">
+						<div class="field-pair">
+							<label for="nzb_method">
+								<span class="component-title">Send .nzb files to:</span>
+								<span class="component-desc">
+									<select name="nzb_method" id="nzb_method" class="form-control input-sm">
+#set $nzb_method_text = {'blackhole': "Black hole", 'sabnzbd': "SABnzbd", 'nzbget': "NZBGet"}
+#for $curAction in ('sabnzbd', 'blackhole', 'nzbget'):
+    #set $selected = $html_selected if $sickgear.NZB_METHOD == $curAction else ''
+									<option value="$curAction"$selected>$nzb_method_text[$curAction]</option>
+#end for
+									</select>
+								</span>
+							</label>
+						</div>
+
+						<div id="blackhole-settings">
+							<div class="field-pair">
+								<label>
+									<span class="component-title">Black hole folder location</span>
+									<span class="component-desc">
+										<input type="text" name="nzb_dir" id="nzb_dir" value="$sickgear.NZB_DIR" class="form-control input-sm input350">
+										<p class="clear-left note"><b>.nzb</b> files are stored at this location for external software to find and use</p>
+									</span>
+								</label>
+							</div>
+						</div>
+
+						<div id="sabnzbd-settings">
+							<div class="field-pair">
+								<span class="component-desc" style="margin:0;width:100%">
+									<div class="clear-left"><p><span class="grey-text"><span class="red-text">Important!</span> To set up SABnzbd to communicate with SickGear, follow the guide <a href="https://github.com/SickGear/SickGear/wiki/Install-SickGear-%5B80%5D-Extras">here</a></span></p></div>
+								</span>
+							</div>
+							<div class="field-pair">
+								<label>
+									<span class="component-title">SABnzbd server URL</span>
+									<span class="component-desc">
+										<input type="text" id="sab_host" name="sab_host" value="$sickgear.SAB_HOST" class="form-control input-sm input350">
+										<p class="clear-left note">URL to your SABnzbd server (e.g. http://localhost:8080/)</p>
+									</span>
+								</label>
+							</div>
+
+							<div class="field-pair">
+								<label>
+									<span class="component-title">SABnzbd username</span>
+									<span class="component-desc">
+										<input type="text" name="sab_username" id="sab_username" value="$sickgear.SAB_USERNAME" class="form-control input-sm input200">
+										<p>(blank for none)</p>
+									</span>
+								</label>
+							</div>
+
+							<div class="field-pair">
+								<label>
+									<span class="component-title">SABnzbd password</span>
+									<span class="component-desc">
+										<input type="password" autocomplete="nope" name="sab_password" id="sab_password" value="#echo '*' * len($sickgear.SAB_PASSWORD)#" class="form-control input-sm input200">
+										<p>(blank for none)</p>
+									</span>
+								</label>
+							</div>
+
+							<div class="field-pair">
+								<label>
+									<span class="component-title">SABnzbd API key</span>
+									<span class="component-desc">
+										<input type="text" name="sab_apikey" id="sab_apikey" value="<%= starify(sickgear.SAB_APIKEY) %>" class="form-control input-sm input350">
+										<p class="clear-left note">locate at... SABnzbd Config -> General -> API Key</p>
+									</span>
+								</label>
+							</div>
+
+							<div class="field-pair">
+								<label>
+									<span class="component-title">Use SABnzbd category</span>
+									<span class="component-desc">
+										<input type="text" name="sab_category" id="sab_category" value="$sickgear.SAB_CATEGORY" class="form-control input-sm input200">
+										<p>add downloads to this category (e.g. TV)</p>
+									</span>
+								</label>
+							</div>
+						</div>
+
+						<div id="nzbget-settings">
+							<div class="field-pair">
+								<span class="component-desc" style="margin:0;width:100%">
+									<div class="clear-left"><p><span class="grey-text"><span class="red-text">Important!</span> To set up NZBGet to communicate with SickGear, follow the guide <a href="https://github.com/SickGear/SickGear/wiki/Install-SickGear-%5B80%5D-Extras">here</a></span></p></div>
+								</span>
+#if not $sickgear.NZBGET_SKIP_PM
+								<span class="component-desc" style="margin:0;width:100%">
+									<div class="clear-left"><p><span class="grey-text"><span class="red-text">Important!</span> NZBGet script calls will not process media. Set</span> nzbget_skip_process_media = 0 <span class="grey-text">in <code>config.ini</code> for full process</span></p></div>
+								</span>
+#end if
+							</div>
+							<div class="field-pair">
+								<label for="nzbget_use_https">
+									<span class="component-title">Connect using HTTPS</span>
+									<span class="component-desc">
+										<input id="nzbget_use_https" type="checkbox" class="enabler" name="nzbget_use_https"<%= html_checked if sickgear.NZBGET_USE_HTTPS == True else '' %>>
+										<p><b>note:</b> enable Secure control in NZBGet and set the correct Secure Port here</p>
+									</span>
+								</label>
+
+							</div>
+
+							<div class="field-pair">
+								<label>
+									<span class="component-title">NZBGet host:port</span>
+									<span class="component-desc">
+										<input type="text" name="nzbget_host" id="nzbget_host" value="$sickgear.NZBGET_HOST" class="form-control input-sm input350">
+										<p>(e.g. localhost:6789)</p>
+										<p class="clear-left note">NZBGet RPC host name and port number (not NZBGetweb!)</p>
+									</span>
+								</label>
+							</div>
+
+							<div class="field-pair">
+								<label>
+									<span class="component-title">NZBGet username</span>
+									<span class="component-desc">
+										<input type="text" name="nzbget_username" id="nzbget_username" value="$sickgear.NZBGET_USERNAME" class="form-control input-sm input200">
+										<p>locate in nzbget.conf (default:nzbget)</p>
+									</span>
+								</label>
+							</div>
+
+							<div class="field-pair">
+								<label>
+									<span class="component-title">NZBGet password</span>
+									<span class="component-desc">
+										<input type="password" autocomplete="nope" name="nzbget_password" id="nzbget_password" value="#echo '*' * len($sickgear.NZBGET_PASSWORD)#" class="form-control input-sm input200">
+										<p>locate in nzbget.conf (default:tegbzn6789)</p>
+									</span>
+								</label>
+							</div>
+
+							<div class="field-pair">
+								<label>
+									<span class="component-title">Use NZBGet category</span>
+									<span class="component-desc">
+										<input type="text" name="nzbget_category" id="nzbget_category" value="$sickgear.NZBGET_CATEGORY" class="form-control input-sm input200">
+										<p>send downloads marked this category (e.g. TV)</p>
+									</span>
+								</label>
+							</div>
+
+#set $prio_verylow = ''
+#set $prio_low = ''
+#set $prio_normal = ''
+#set $prio_high = ''
+#set $prio_veryhigh = ''
+#set $prio_force = ''
+#if -100 == $sickgear.NZBGET_PRIORITY:
+    #set $prio_verylow = $html_selected
+#elif -50 == $sickgear.NZBGET_PRIORITY:
+    #set $prio_low = $html_selected
+#elif 0 == $sickgear.NZBGET_PRIORITY:
+    #set $prio_normal = $html_selected
+#elif 50 == $sickgear.NZBGET_PRIORITY:
+    #set $prio_high = $html_selected
+#elif 100 == $sickgear.NZBGET_PRIORITY:
+    #set $prio_veryhigh = $html_selected
+#elif 900 == $sickgear.NZBGET_PRIORITY:
+    #set $prio_force = $html_selected
+#else:
+    #set $prio_normal = $html_selected
+#end if
+							<div class="field-pair">
+								<label>
+									<span class="component-title">NZBGet priority</span>
+									<span class="component-desc">
+										<select name="nzbget_priority" id="nzbget_priority" class="form-control input-sm">
+											<option value="-100"${prio_verylow}>Very low</option>
+											<option value="-50"${prio_low}>Low</option>
+											<option value="0"${prio_normal}>Normal</option>
+											<option value="50"${prio_high}>High</option>
+											<option value="100"${prio_veryhigh}>Very high</option>
+											<option value="900"${prio_force}>Force</option>
+										</select>
+										<span>applies to releases from last 7 days</span>
+									</span>
+								</label>
+							</div>
+
+							<div class="field-pair">
+								<label>
+									<span class="component-title">Map an NZBGet "DestDir"</span>
+									<span class="component-desc">
+										<input type="text" name="nzbget_parent_map" value="$sickgear.NZBGET_MAP" placeholder="DestDir=path known locally as" class="form-control input-sm input250">
+										<p>link a remote path to a local path</p>
+										<div class="clear-left" style="line-height:initial"><p>optional: where SG is not installed on the NZBGet system (used by process media)<br>
+										(e.g. d:\tvstuff = c:\tv, /mnt/tv = /tv, /remote/nzbget/DestDir = /locally/known/as/dir)</p></div>
+									</span>
+								</label>
+							</div>
+
+						</div>
+
+						<div class="test-notification" id="test-nzb-result">Click below to test</div>
+						<input type="button" value="Test SABnzbd" id="test_sabnzbd" class="btn test-button sabnzbd">
+						<input type="button" value="Test NZBGet" id="test_nzbget" class="btn test-button nzbget">
+						<input type="submit" class="btn config_submitter" value="Save Changes"><br />
+
+						</div><!-- /content_use_nzbs //-->
+
+					</fieldset>
+				</div><!-- /component-group2 //-->
+
+				<div id="core-component-group3" class="component-group">
+
+					<div class="component-group-desc">
+						<h3>Torrent Results</h3>
+						<p>How to handle Torrent search results.</p>
+					</div>
+
+					<fieldset class="component-group-list">
+
+						<div class="field-pair">
+
+							<label for="use_torrents">
+								<span class="component-title">Search torrents</span>
+								<span class="component-desc">
+									<input type="checkbox" name="use_torrents" class="enabler" id="use_torrents"<%= html_checked if sickgear.USE_TORRENTS == True else '' %>>
+									<p>enable torrent media providers</p>
+								</span>
+							</label>
+						</div>
+
+					<div id="content_use_torrents">
+						<div class="field-pair">
+							<label for="torrent_method">
+								<span class="component-title">Send .torrent files to:</span>
+								<span class="component-desc">
+									<select name="torrent_method" id="torrent_method" class="form-control input-sm">
+#set $torrent_method_text = {'blackhole': "Black hole", 'utorrent': "uTorrent", 'transmission': "Transmission", 'qbittorrent': "qBittorrent", 'deluge': "Deluge", 'download_station': "Synology DS", 'rtorrent': "rTorrent"}
+#for $curAction in ('blackhole', 'deluge', 'qbittorrent', 'rtorrent', 'download_station', 'transmission', 'utorrent'):
+    #set $selected = $html_selected if $sickgear.TORRENT_METHOD == $curAction else ''
+										<option value="$curAction"$selected>$torrent_method_text[$curAction]</option>
+#end for
+									</select>
+								</span>
+							</label>
+						</div>
+
+						<div id="options-torrent-blackhole">
+							<div class="field-pair">
+								<label>
+									<span class="component-title">Black hole folder location</span>
+									<span class="component-desc">
+										<input type="text" name="torrent_dir" id="torrent_dir" value="$sickgear.TORRENT_DIR" class="form-control input-sm input350">
+										<p class="clear-left note"><b>.torrent</b> files are stored at this location for external software to find and use</p>
+									</span>
+								</label>
+							</div>
+
+							<div></div>
+							<input type="submit" class="btn config_submitter" value="Save Changes"><br />
+							</div>
+						</div>
+
+						<div id="options-torrent-clients">
+							<div class="field-pair">
+								<label>
+									<span class="component-title" id="host-title">Torrent host:port</span>
+									<span class="component-desc">
+										<input type="text" name="torrent_host" id="torrent_host" value="$sickgear.TORRENT_HOST" class="form-control input-sm input350">
+										<p class="clear-left note">
+											<span id="host-desc-torrent">URL to your torrent client (e.g. <span class="default-host">http://localhost:8000</span>/)</span>
+											<span id="host-desc-deluge" style="display:none">URL to your Deluge WebUI (e.g. <span class="default-host">http://localhost:8112</span>/)</span>
+											<span id="host-desc-rtorrent" style="display:none"><b>Note:</b> <i>rTorrent</i> client URLs use e.g. <span class="default-host">scgi://localhost:5000</span>/</span>
+										</p>
+									</span>
+								</label>
+							</div>
+
+							<div class="field-pair" id="torrent-verify-cert-option">
+								<label for="torrent_verify_cert">
+									<span class="component-title">Verify certificate</span>
+									<span class="component-desc">
+										<input type="checkbox" name="torrent_verify_cert" class="enabler" id="torrent_verify_cert"<%= html_checked if sickgear.TORRENT_VERIFY_CERT == True else '' %>>
+										<p>disable if you get "Deluge: Authentication Error" in your log</p>
+									</span>
+								</label>
+							</div>
+
+							<div class="field-pair" id="torrent-username-option">
+								<label>
+									<span class="component-title" id="username-title">Client username</span>
+									<span class="component-desc">
+										<input type="text" name="torrent_username" id="torrent_username" value="$sickgear.TORRENT_USERNAME" class="form-control input-sm input200">
+										<p>(blank for none)</p>
+									</span>
+								</label>
+							</div>
+
+							<div class="field-pair" id="torrent-password-option">
+								<label>
+									<span class="component-title" id="password-title">Client password</span>
+									<span class="component-desc">
+										<input type="password" autocomplete="nope" name="torrent_password" id="torrent_password" value="#echo '*' * len($sickgear.TORRENT_PASSWORD)#" class="form-control input-sm input200">
+										<p>(blank for none)</p>
+									</span>
+								</label>
+							</div>
+
+							<div class="field-pair" id="torrent-label-option">
+								<label>
+									<span class="component-title">Set torrent label<span class="qbittorrent">/category</span></span>
+									<span class="component-desc">
+										<input type="text" name="torrent_label" id="torrent_label" value="$sickgear.TORRENT_LABEL" class="form-control input-sm input200">
+										<span class="rtorrent" style="display:none">
+											<p style="float:left;margin-right:6px">as custom#</p>
+											<input class="rtorrent form-control input-sm" style="width:40px" type="text" name="torrent_label_var" id="torrent_label_var" value="$sg_str('TORRENT_LABEL_VAR', '1')">
+										</span>
+										<span id="label-warning-deluge" style="display:none"><p>(blank spaces are not allowed)</p>
+											<p class="clear-left note">note: label plugin must be enabled in Deluge clients</p>
+										</span>
+										<span class="rtorrent" style="display:none">
+											<p class="clear-left note">note: do not use space char in label</p>
+										</span>
+										<span class="qbittorrent" style="display:none"><p>(qB 3.3.1 and newer clients)</p></span>
+									</span>
+								</label>
+							</div>
+
+							<div class="field-pair" id="torrent-path-option">
+								<label>
+									<span class="component-title">Downloaded files location</span>
+									<span class="component-desc">
+										<input type="text" name="torrent_path" id="torrent_path" value="$sickgear.TORRENT_PATH" class="form-control input-sm input350" autocomplete="nope">
+										<p class="clear-left note">
+											where <span id="torrent-client">the torrent client</span> will save files
+											<span class="qbittorrent">(blank otherwise set will ignore label/category)</span>
+											<span id="path-blank">(blank for client default)</span>
+											<span class="synology"> <b>note:</b> this destination path starts with a shared folder, not "volumexx". e.g. <span class="grey-text">Video/Downloads</span></span>
+											<span class="transmission grey-text"> (v2.92 and newer should <em>not</em> be blank)</span>
+										</p>
+									</span>
+								</label>
+							</div>
+
+							<div class="field-pair" id="torrent-seed-time-option">
+								<label>
+									<span class="component-title">Seed time (minimum default)</span>
+									<span class="component-desc"><input type="number" step="0.1" name="torrent_seed_time" id="torrent_seed_time" value="$sickgear.TORRENT_SEED_TIME" class="form-control input-sm input100">
+									<p>1 or more minutes. (0 or blank to use the client setting)</p></span>
+								</label>
+							</div>
+
+							<div class="field-pair" id="torrent-paused-option">
+								<label>
+									<span class="component-title">Start torrent paused</span>
+									<span class="component-desc">
+										<input type="checkbox" name="torrent_paused" class="enabler" id="torrent_paused"<%= html_checked if sickgear.TORRENT_PAUSED == True else '' %>>
+										<p>pause item in client as soon as it allows (note: a small transfer can occur)</p>
+									</span>
+								</label>
+							</div>
+
+							<div class="field-pair" id="torrent-high-bandwidth-option">
+								<label class="transmission">
+									<span class="component-title">Allow high bandwidth</span>
+									<span class="component-desc">
+										<input type="checkbox" name="torrent_high_bandwidth" class="enabler" id="torrent_high_bandwidth"<%= html_checked if sickgear.TORRENT_HIGH_BANDWIDTH == True else '' %>>
+										<p>use high bandwidth allocation if priority is high</p>
+									</span>
+								</label>
+								<label class="qbittorrent">
+									<span class="component-title">Add release at top priority</span>
+									<span class="component-desc">
+										<input type="checkbox" name="torrent_high_bandwidth" class="enabler" id="torrent_high_bandwidth"<%= html_checked if sickgear.TORRENT_HIGH_BANDWIDTH == True else '' %>>
+										<p>applies to releases from last 7 days</p>
+									</span>
+								</label>
+							</div>
+
+							<div class="test-notification" id="test-torrent-result">Click below to test</div>
+							<input type="button" value="Test Connection" id="test_torrent" class="btn test-button">
+							<input type="submit" class="btn config_submitter" value="Save Changes"><br />
+						</div>
+					</div><!-- /content_use_torrents //-->
+					</fieldset>
+				</div><!-- /component-group3 //-->
+
+				<br />
+				<h6 class="pull-right"><b>All non-absolute folder locations are relative to <span class="path">$sickgear.DATA_DIR</span></b> </h6>
+				<input type="submit" class="btn pull-left config_submitter button" value="Save Changes">
+
+			</div><!-- /config-components //-->
+
+		</form>
+	</div>
+</div>
+
+<div></div>
+
+<script type="text/javascript" charset="utf-8">
+<!--
+	jQuery('#config-components').tabs();
+	jQuery('#nzb_dir').fileBrowser({ title: 'Select .nzb black hole/watch location' });
+	jQuery('#torrent_dir').fileBrowser({ title: 'Select .torrent black hole/watch location' });
+	jQuery('#torrent_path').fileBrowser({ title: 'Select .torrent download location' });
+	jQuery('#tv_download_dir').fileBrowser({ title: 'Select TV download location' });
+//-->
+</script>
+
+#include $os.path.join($sickgear.PROG_DIR, 'gui/slick/interfaces/default/inc_bottom.tmpl')
