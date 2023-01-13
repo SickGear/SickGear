@@ -10,6 +10,7 @@
 * Update feedparser 6.0.1 (98d189fa) to 6.0.10 (5fcb3ae)
 * Update humanize 3.5.0 (b6b0ea5) to 4.0.0 (a1514eb)
 * Update Js2Py 0.70 (92250a4) to 0.74 (2e017b8)
+* Update pyjsparser 2.7.1 (5465d03) to 2.7.1 (cbd1e05)
 * Update profilehooks module 1.12.0 (3ee1f60) to 1.12.1 (c3fc078)
 * Update Rarfile 4.0 (55fe778) to 4.1a1 (8a72967)
 * Update UnRar x64 for Windows 6.11 to 6.20
