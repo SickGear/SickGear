@@ -1,5 +1,5 @@
 # Character encoding routines
-# Copyright 2010-2020 Kurt McKee <contactme@kurtmckee.org>
+# Copyright 2010-2022 Kurt McKee <contactme@kurtmckee.org>
 # Copyright 2002-2008 Mark Pilgrim
 # All rights reserved.
 #
@@ -26,17 +26,16 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-import cgi
 import codecs
 import re
+import typing as t
 
 try:
     try:
-        import cchardet as chardet
+        import cchardet as chardet # type: ignore[import]
     except ImportError:
-        import chardet
+        import chardet # type: ignore[no-redef]
 except ImportError:
-    chardet = None
     lazy_chardet_encoding = None
 else:
     def lazy_chardet_encoding(data):
@@ -66,6 +65,30 @@ RE_XML_DECLARATION = re.compile(r'^<\?xml[^>]*?>')
 # Capture the value of the XML processing instruction's encoding attribute.
 # Example: <?xml version="1.0" encoding="utf-8"?>
 RE_XML_PI_ENCODING = re.compile(br'^<\?.*encoding=[\'"](.*?)[\'"].*\?>')
+
+
+def parse_content_type(line: str) -> t.Tuple[str, str]:
+    """Parse an HTTP Content-Type header.
+
+    The return value will be a tuple of strings:
+    the MIME type, and the value of the "charset" (if any).
+
+    This is a custom replacement for Python's cgi.parse_header().
+    The cgi module will be removed in Python 3.13.
+    """
+
+    chunks = line.split(";")
+    if not chunks:
+        return "", ""
+
+    mime_type = chunks[0].strip()
+    charset_value = ""
+    for chunk in chunks[1:]:
+        key, _, value = chunk.partition("=")
+        if key.strip().lower() == "charset":
+            charset_value = value.strip().strip("\"'")
+
+    return mime_type, charset_value
 
 
 def convert_to_utf8(http_headers, data, result):
@@ -156,10 +179,7 @@ def convert_to_utf8(http_headers, data, result):
     try:
         if bom_encoding:
             tempdata = data.decode(bom_encoding).encode('utf-8')
-    except (UnicodeDecodeError, LookupError):
-        # feedparser recognizes UTF-32 encodings that aren't
-        # available in Python 2.4 and 2.5, so it's possible to
-        # encounter a LookupError during decoding.
+    except UnicodeDecodeError:
         xml_encoding_match = None
     else:
         xml_encoding_match = RE_XML_PI_ENCODING.match(tempdata)
@@ -181,15 +201,14 @@ def convert_to_utf8(http_headers, data, result):
     # XML declaration encoding, and HTTP encoding, following the
     # heuristic defined in RFC 3023.
     http_content_type = http_headers.get('content-type') or ''
-    http_content_type, params = cgi.parse_header(http_content_type)
-    http_encoding = params.get('charset', '').replace("'", "")
-    if isinstance(http_encoding, bytes):
-        http_encoding = http_encoding.decode('utf-8', 'ignore')
+    http_content_type, http_encoding = parse_content_type(http_content_type)
 
     acceptable_content_type = 0
     application_content_types = ('application/xml', 'application/xml-dtd',
                                  'application/xml-external-parsed-entity')
     text_content_types = ('text/xml', 'text/xml-external-parsed-entity')
+    json_content_types = ('application/feed+json', 'application/json')
+    json = False
     if (
             http_content_type in application_content_types
             or (
@@ -208,6 +227,17 @@ def convert_to_utf8(http_headers, data, result):
     ):
         acceptable_content_type = 1
         rfc3023_encoding = http_encoding or 'us-ascii'
+    elif (
+            http_content_type in json_content_types
+            or (
+                    not http_content_type
+                    and data and data.lstrip()[0] == '{'
+            )
+    ):
+        http_content_type = json_content_types[0]
+        acceptable_content_type = 1
+        json = True
+        rfc3023_encoding = http_encoding or 'utf-8'  # RFC 7159, 8.1.
     elif http_content_type.startswith('text/'):
         rfc3023_encoding = http_encoding or 'us-ascii'
     elif http_headers and 'content-type' not in http_headers:
@@ -230,7 +260,7 @@ def convert_to_utf8(http_headers, data, result):
 
     if http_headers and (not acceptable_content_type):
         if 'content-type' in http_headers:
-            msg = '%s is not an XML media type' % http_headers['content-type']
+            msg = '%s is not an accepted media type' % http_headers['content-type']
         else:
             msg = 'no Content-type specified'
         error = NonXMLContentType(msg)
@@ -254,12 +284,13 @@ def convert_to_utf8(http_headers, data, result):
             pass
         else:
             known_encoding = 1
-            # Update the encoding in the opening XML processing instruction.
-            new_declaration = '''<?xml version='1.0' encoding='utf-8'?>'''
-            if RE_XML_DECLARATION.search(data):
-                data = RE_XML_DECLARATION.sub(new_declaration, data)
-            else:
-                data = new_declaration + '\n' + data
+            if not json:
+                # Update the encoding in the opening XML processing instruction.
+                new_declaration = '''<?xml version='1.0' encoding='utf-8'?>'''
+                if RE_XML_DECLARATION.search(data):
+                    data = RE_XML_DECLARATION.sub(new_declaration, data)
+                else:
+                    data = new_declaration + '\n' + data
             data = data.encode('utf-8')
             break
     # if still no luck, give up
@@ -275,6 +306,7 @@ def convert_to_utf8(http_headers, data, result):
             (rfc3023_encoding, proposed_encoding))
         rfc3023_encoding = proposed_encoding
 
+    result['content-type'] = http_content_type  # for selecting the parser
     result['encoding'] = rfc3023_encoding
     if error:
         result['bozo'] = True

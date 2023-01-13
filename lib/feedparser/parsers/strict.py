@@ -1,5 +1,5 @@
 # The strict feed parser that interfaces with an XML parsing library
-# Copyright 2010-2020 Kurt McKee <contactme@kurtmckee.org>
+# Copyright 2010-2022 Kurt McKee <contactme@kurtmckee.org>
 # Copyright 2002-2008 Mark Pilgrim
 # All rights reserved.
 #
@@ -29,7 +29,7 @@
 from ..exceptions import UndeclaredNamespace
 
 
-class _StrictFeedParser(object):
+class StrictXMLParser:
     def __init__(self, baseuri, baselang, encoding):
         self.bozo = 0
         self.exc = None
@@ -37,7 +37,7 @@ class _StrictFeedParser(object):
         self.baseuri = baseuri or ''
         self.lang = baselang
         self.encoding = encoding
-        super(_StrictFeedParser, self).__init__()
+        super(StrictXMLParser, self).__init__()
 
     @staticmethod
     def _normalize_attributes(kv):

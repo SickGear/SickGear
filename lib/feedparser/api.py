@@ -1,5 +1,5 @@
 # The public API for feedparser
-# Copyright 2010-2020 Kurt McKee <contactme@kurtmckee.org>
+# Copyright 2010-2022 Kurt McKee <contactme@kurtmckee.org>
 # Copyright 2002-2008 Mark Pilgrim
 # All rights reserved.
 #
@@ -26,7 +26,11 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
+import datetime
 import io
+import time
+from typing import Dict, List, Union
+import urllib.error
 import urllib.parse
 import xml.sax
 
@@ -34,13 +38,12 @@ import sgmllib3k as sgmllib
 
 from .datetimes import registerDateHandler, _parse_date
 from .encodings import convert_to_utf8
-from .exceptions import *
-from .html import _BaseHTMLProcessor
+from .html import BaseHTMLProcessor
 from . import http
-from . import mixin
-from .mixin import _FeedParserMixin
-from .parsers.loose import _LooseFeedParser
-from .parsers.strict import _StrictFeedParser
+from .mixin import XMLParserMixin
+from .parsers.loose import LooseXMLParser
+from .parsers.strict import StrictXMLParser
+from .parsers.json import JSONParser
 from .sanitizer import replace_doctype
 from .urls import convert_to_idn, make_safe_absolute_uri
 from .util import FeedParserDict
@@ -70,6 +73,7 @@ SUPPORTED_VERSIONS = {
     'atom10': 'Atom 1.0',
     'atom': 'Atom (unknown version)',
     'cdf': 'CDF',
+    'json1': 'JSON feed 1',
 }
 
 
@@ -136,20 +140,25 @@ def _open_resource(url_file_stream_or_string, etag, modified, agent, referrer, h
     return url_file_stream_or_string
 
 
-LooseFeedParser = type(
-    'LooseFeedParser',
-    (_LooseFeedParser, _FeedParserMixin, _BaseHTMLProcessor, object),
-    {},
-)
+class LooseFeedParser(LooseXMLParser, XMLParserMixin, BaseHTMLProcessor):
+    pass
 
-StrictFeedParser = type(
-    'StrictFeedParser',
-    (_StrictFeedParser, _FeedParserMixin, xml.sax.handler.ContentHandler, object),
-    {},
-)
+class StrictFeedParser(StrictXMLParser, XMLParserMixin, xml.sax.handler.ContentHandler):
+    pass
 
 
-def parse(url_file_stream_or_string, etag=None, modified=None, agent=None, referrer=None, handlers=None, request_headers=None, response_headers=None, resolve_relative_uris=None, sanitize_html=None):
+def parse(
+        url_file_stream_or_string,
+        etag: str = None,
+        modified: Union[str, datetime.datetime, time.struct_time] = None,
+        agent: str = None,
+        referrer: str = None,
+        handlers: List = None,
+        request_headers: Dict[str, str] = None,
+        response_headers: Dict[str, str] = None,
+        resolve_relative_uris: bool = None,
+        sanitize_html: bool = None,
+) -> FeedParserDict:
     """Parse a feed from a URL, file, stream, or string.
 
     :param url_file_stream_or_string:
@@ -165,45 +174,46 @@ def parse(url_file_stream_or_string, etag=None, modified=None, agent=None, refer
         When a URL is not passed the feed location to use in relative URL
         resolution should be passed in the ``Content-Location`` response header
         (see ``response_headers`` below).
-
-    :param str etag: HTTP ``ETag`` request header.
-    :param modified: HTTP ``Last-Modified`` request header.
-    :type modified: :class:`str`, :class:`time.struct_time` 9-tuple, or
-        :class:`datetime.datetime`
-    :param str agent: HTTP ``User-Agent`` request header, which defaults to
+    :param etag:
+        HTTP ``ETag`` request header.
+    :param modified:
+        HTTP ``Last-Modified`` request header.
+    :param agent:
+        HTTP ``User-Agent`` request header, which defaults to
         the value of :data:`feedparser.USER_AGENT`.
-    :param referrer: HTTP ``Referer`` [sic] request header.
+    :param referrer:
+        HTTP ``Referer`` [sic] request header.
+    :param handlers:
+        A list of handlers that will be passed to urllib2.
     :param request_headers:
         A mapping of HTTP header name to HTTP header value to add to the
         request, overriding internally generated values.
-    :type request_headers: :class:`dict` mapping :class:`str` to :class:`str`
     :param response_headers:
         A mapping of HTTP header name to HTTP header value. Multiple values may
         be joined with a comma. If a HTTP request was made, these headers
         override any matching headers in the response. Otherwise this specifies
         the entirety of the response headers.
-    :type response_headers: :class:`dict` mapping :class:`str` to :class:`str`
-
-    :param bool resolve_relative_uris:
+    :param resolve_relative_uris:
         Should feedparser attempt to resolve relative URIs absolute ones within
         HTML content?  Defaults to the value of
         :data:`feedparser.RESOLVE_RELATIVE_URIS`, which is ``True``.
-    :param bool sanitize_html:
+    :param sanitize_html:
         Should feedparser skip HTML sanitization? Only disable this if you know
         what you are doing!  Defaults to the value of
         :data:`feedparser.SANITIZE_HTML`, which is ``True``.
 
-    :return: A :class:`FeedParserDict`.
     """
 
-    if not agent or sanitize_html is None or resolve_relative_uris is None:
-        import feedparser
+    # Avoid a cyclic import.
     if not agent:
+        import feedparser
         agent = feedparser.USER_AGENT
     if sanitize_html is None:
-        sanitize_html = feedparser.SANITIZE_HTML
+        import feedparser
+        sanitize_html = bool(feedparser.SANITIZE_HTML)
     if resolve_relative_uris is None:
-        resolve_relative_uris = feedparser.RESOLVE_RELATIVE_URIS
+        import feedparser
+        resolve_relative_uris = bool(feedparser.RESOLVE_RELATIVE_URIS)
 
     result = FeedParserDict(
         bozo=False,
@@ -212,7 +222,14 @@ def parse(url_file_stream_or_string, etag=None, modified=None, agent=None, refer
         headers={},
     )
 
-    data = _open_resource(url_file_stream_or_string, etag, modified, agent, referrer, handlers, request_headers, result)
+    try:
+        data = _open_resource(url_file_stream_or_string, etag, modified, agent, referrer, handlers, request_headers, result)
+    except urllib.error.URLError as error:
+        result.update({
+            'bozo': True,
+            'bozo_exception': error,
+        })
+        return result
 
     if not data:
         return result
@@ -221,9 +238,11 @@ def parse(url_file_stream_or_string, etag=None, modified=None, agent=None, refer
     result['headers'].update(response_headers or {})
 
     data = convert_to_utf8(result['headers'], data, result)
+    use_json_parser = result['content-type'] == 'application/json'
     use_strict_parser = result['encoding'] and True or False
 
-    result['version'], data, entities = replace_doctype(data)
+    if not use_json_parser:
+        result['version'], data, entities = replace_doctype(data)
 
     # Ensure that baseuri is an absolute URI using an acceptable URI scheme.
     contentloc = result['headers'].get('content-location', '')
@@ -235,36 +254,52 @@ def parse(url_file_stream_or_string, etag=None, modified=None, agent=None, refer
         baselang = baselang.decode('utf-8', 'ignore')
 
     if not _XML_AVAILABLE:
-        use_strict_parser = 0
-    if use_strict_parser:
-        # initialize the SAX parser
-        feedparser = StrictFeedParser(baseuri, baselang, 'utf-8')
-        feedparser.resolve_relative_uris = resolve_relative_uris
-        feedparser.sanitize_html = sanitize_html
+        use_strict_parser = False
+    feed_parser: Union[JSONParser, StrictFeedParser, LooseFeedParser]
+    if use_json_parser:
+        result['version'] = None
+        feed_parser = JSONParser(baseuri, baselang, 'utf-8')
+        try:
+            feed_parser.feed(data)
+        except Exception as e:
+            result['bozo'] = 1
+            result['bozo_exception'] = e
+    elif use_strict_parser:
+        # Initialize the SAX parser.
+        feed_parser = StrictFeedParser(baseuri, baselang, 'utf-8')
+        feed_parser.resolve_relative_uris = resolve_relative_uris
+        feed_parser.sanitize_html = sanitize_html
         saxparser = xml.sax.make_parser(PREFERRED_XML_PARSERS)
         saxparser.setFeature(xml.sax.handler.feature_namespaces, 1)
         try:
-            # disable downloading external doctype references, if possible
+            # Disable downloading external doctype references, if possible.
             saxparser.setFeature(xml.sax.handler.feature_external_ges, 0)
         except xml.sax.SAXNotSupportedException:
             pass
-        saxparser.setContentHandler(feedparser)
-        saxparser.setErrorHandler(feedparser)
+        saxparser.setContentHandler(feed_parser)
+        saxparser.setErrorHandler(feed_parser)
         source = xml.sax.xmlreader.InputSource()
         source.setByteStream(io.BytesIO(data))
         try:
             saxparser.parse(source)
         except xml.sax.SAXException as e:
             result['bozo'] = 1
-            result['bozo_exception'] = feedparser.exc or e
-            use_strict_parser = 0
-    if not use_strict_parser:
-        feedparser = LooseFeedParser(baseuri, baselang, 'utf-8', entities)
-        feedparser.resolve_relative_uris = resolve_relative_uris
-        feedparser.sanitize_html = sanitize_html
-        feedparser.feed(data.decode('utf-8', 'replace'))
-    result['feed'] = feedparser.feeddata
-    result['entries'] = feedparser.entries
-    result['version'] = result['version'] or feedparser.version
-    result['namespaces'] = feedparser.namespaces_in_use
+            result['bozo_exception'] = feed_parser.exc or e
+            use_strict_parser = False
+
+    # The loose XML parser will be tried if the JSON parser was not used,
+    # and if the strict XML parser was not used (or if it failed).
+    if not use_json_parser and not use_strict_parser:
+        feed_parser = LooseFeedParser(baseuri, baselang, 'utf-8', entities)
+        feed_parser.resolve_relative_uris = resolve_relative_uris
+        feed_parser.sanitize_html = sanitize_html
+        feed_parser.feed(data.decode('utf-8', 'replace'))
+
+    result['feed'] = feed_parser.feeddata
+    result['entries'] = feed_parser.entries
+    result['version'] = result['version'] or feed_parser.version
+    if isinstance(feed_parser, JSONParser):
+        result['namespaces'] = {}
+    else:    
+        result['namespaces'] = feed_parser.namespaces_in_use
     return result
