@@ -23,17 +23,25 @@ import os.path
 import sys
 import warnings
 
-sickgearPath = os.path.split(os.path.split(sys.argv[0])[0])[0]
-sys.path.insert(1, os.path.join(sickgearPath, 'lib'))
-sys.path.insert(1, sickgearPath)
-
 warnings.filterwarnings('ignore', module=r'.*connectionpool.*', message='.*certificate verification.*')
 warnings.filterwarnings('ignore', module=r'.*ssl_.*', message='.*SSLContext object.*')
 
+PY2 = 2 == sys.version_info[0]
+if not PY2:
+    sg_path = os.path.split(os.path.split(sys.argv[0])[0])[0]
+    sys.path.insert(1, os.path.join(sg_path, 'lib'))
+    sys.path.insert(1, sg_path)
+
+py_msg = 'Python 3 %s be set to run python files instead of the current Python 2.'
 try:
     import requests
+    if PY2:
+        print(py_msg % 'should')
 except ImportError:
-    print('You need to install python requests library')
+    if PY2:
+        print(py_msg % 'must')
+        sys.exit(1)
+    print('You must install python requests library')
     sys.exit(1)
 
 try:  # Try importing Python 3 modules
@@ -56,9 +64,10 @@ def process_files(dir_to_process, org_nzb_name=None, status=None):
     # Default values
     host = 'localhost'
     port = '8081'
-    default_url = 'http://%s:%s/' % (host, port)
-    ssl = username = password = ''
-    web_root = '/'
+    username = password = ''
+    use_ssl = ''  # or 's'
+    web_root = ''  # e.g. "/path"
+    url = 'http%s://%s:%s%s' % (use_ssl, host, port, web_root)
 
     # Get values from config_file
     config = configparser.RawConfigParser()
@@ -66,8 +75,8 @@ def process_files(dir_to_process, org_nzb_name=None, status=None):
 
     if not os.path.isfile(config_filename):
         print('ERROR: %s doesn\'t exist' % config_filename)
-        print('copy /rename %s.sample and edit\n' % config_filename)
-        print('Trying default url: %s\n' % default_url)
+        print('copy/rename %s.sample and edit\n' % config_filename)
+        print('Trying default url: %s\n' % url)
 
     else:
         try:
@@ -83,24 +92,29 @@ def process_files(dir_to_process, org_nzb_name=None, status=None):
                     # noinspection PyDeprecation
                     config.readfp(fp)
 
+            def cfg_get(cfg, option):
+                try:
+                    return cfg.get('SickGear', option)
+                except configparser.NoOptionError:
+                    return cfg.get('SickBeard', option)
+
             # Replace default values with config_file values
-            host = config.get('SickBeard', 'host')
-            port = config.get('SickBeard', 'port')
-            username = config.get('SickBeard', 'username')
-            password = config.get('SickBeard', 'password')
+            host, port, username, password = [cfg_get(config, _option)
+                                              for _option in ('host', 'port', 'username', 'password')]
 
             try:
-                ssl = int(config.get('SickBeard', 'ssl')) and 's' or ''
-
-            except (configparser.NoOptionError, ValueError):
+                use_ssl = int(cfg_get(config, 'ssl')) and 's' or ''
+            except (configparser.NoOptionError, ValueError, TypeError):
                 pass
 
             try:
-                web_root = config.get('SickBeard', 'web_root')
-                web_root = ('/%s/' % web_root.strip('/')).replace('//', '/')
-
+                web_root = cfg_get(config, 'web_root')
+                web_root = web_root.strip('/').strip()
+                web_root = any(web_root) and ('/%s' % web_root) or ''
             except configparser.NoOptionError:
                 pass
+
+            url = 'http%s://%s:%s%s' % (use_ssl, host, port, web_root)
 
         except EnvironmentError:
             e = sys.exc_info()[1]
@@ -116,9 +130,8 @@ def process_files(dir_to_process, org_nzb_name=None, status=None):
     if None is not status:
         params['failed'] = status
 
-    url = 'http%s://%s:%s%s' % (ssl, host, port, web_root)
-    login_url = url + 'login'
-    url = url + 'home/process-media/files'
+    login_url = '%s/login' % url
+    url = '%s/home/process-media/files' % url
 
     print('Opening URL: ' + url)
 
@@ -146,5 +159,5 @@ def process_files(dir_to_process, org_nzb_name=None, status=None):
 
 if '__main__' == __name__:
     print('This module is supposed to be used as import in other scripts and not run standalone.')
-    print('Use sabToSickBeard instead.')
+    print('Use sabToSickGear instead.')
     sys.exit(1)
