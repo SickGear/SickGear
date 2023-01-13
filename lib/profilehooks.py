@@ -88,43 +88,32 @@ Released under the MIT licence since December 2006:
 """
 from __future__ import print_function
 
-__author__ = "Marius Gedminas <marius@gedmin.as>"
-__copyright__ = "Copyright 2004-2020 Marius Gedminas and contributors"
-__license__ = "MIT"
-__version__ = '1.12.0'
-__date__ = "2020-08-20"
-
 import atexit
-
+import dis
 import functools
 import inspect
 import logging
 import os
+import pstats
 import re
 import sys
-
-# For profiling
-from profile import Profile
-import pstats
-
-# For timecall
 import timeit
+import token
+import tokenize
+import trace
+from profile import Profile
+
 
 # For hotshot profiling (inaccurate!)
-try:
+try:  # pragma: PY2
     import hotshot
     import hotshot.stats
 except ImportError:
     hotshot = None
 
-# For trace.py coverage
-import trace
-import dis
-import token
-import tokenize
 
 # For hotshot coverage (inaccurate!; uses undocumented APIs; might break)
-if hotshot is not None:
+if hotshot is not None:  # pragma: PY2
     import _hotshot
     import hotshot.log
 
@@ -133,6 +122,14 @@ try:
     import cProfile
 except ImportError:
     cProfile = None
+
+
+__author__ = "Marius Gedminas <marius@gedmin.as>"
+__copyright__ = "Copyright 2004-2020 Marius Gedminas and contributors"
+__license__ = "MIT"
+__version__ = '1.12.1.dev0'
+__date__ = "2020-08-20"
+
 
 # registry of available profilers
 AVAILABLE_PROFILERS = {}
@@ -144,14 +141,20 @@ __all__ = ['coverage', 'coverage_with_hotshot', 'profile', 'timecall']
 tokenize_open = getattr(tokenize, 'open', open)
 
 
-def _unwrap(fn):
+try:
+    from inspect import unwrap as _unwrap
+except ImportError:  # pragma: PY2
     # inspect.unwrap() doesn't exist on Python 2
-    if not hasattr(fn, '__wrapped__'):
-        return fn
-    else:
-        # intentionally using recursion here instead of a while loop to
-        # make cycles fail with a recursion error instead of looping forever.
-        return _unwrap(fn.__wrapped__)
+    def _unwrap(fn):
+        if not hasattr(fn, '__wrapped__'):
+            return fn
+        else:  # pragma: nocover
+            # functools.wraps() doesn't set __wrapped__ on Python 2 either,
+            # so this branch will only get reached if somebody
+            # manually sets __wrapped__, hence the pragma: nocover.
+            # NB: intentionally using recursion here instead of a while loop to
+            # make cycles fail with a recursion error instead of looping forever.
+            return _unwrap(fn.__wrapped__)
 
 
 def _identify(fn):
@@ -289,7 +292,7 @@ def coverage(fn):
     return new_fn
 
 
-def coverage_with_hotshot(fn):
+def coverage_with_hotshot(fn):  # pragma: PY2
     """Mark `fn` for line coverage analysis.
 
     Uses the 'hotshot' module for fast coverage analysis.
@@ -424,7 +427,7 @@ if cProfile is not None:
     AVAILABLE_PROFILERS['cProfile'] = CProfileFuncProfile
 
 
-if hotshot is not None:
+if hotshot is not None:  # pragma: PY2
 
     class HotShotFuncProfile(FuncProfile):
         """Profiler for a function (uses hotshot)."""
@@ -646,13 +649,19 @@ class FuncSource:
 
     def find_source_lines(self):
         """Mark all executable source lines in fn as executed 0 times."""
-        if self.filename is None:
+        if self.filename is None:  # pragma: nocover
+            # I don't know how to make inspect.getsourcefile() return None in
+            # our test suite, but I've looked at its source and I know that it
+            # can do so.
             return
         strs = self._find_docstrings(self.filename)
         lines = {
             ln
             for off, ln in dis.findlinestarts(_unwrap(self.fn).__code__)
-            if ln not in strs
+            # skipping firstlineno because Python 3.11 adds a 'RESUME' opcode
+            # attributed to the `def` line, but then trace.py never sees it
+            # getting executed
+            if ln not in strs and ln != self.firstlineno
         }
         for lineno in lines:
             self.sourcelines.setdefault(lineno, 0)
