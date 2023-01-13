@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 
 """Humanizing functions for numbers."""
 
@@ -7,15 +6,14 @@ import math
 import re
 from fractions import Fraction
 
-from . import compat
-from .i18n import gettext as _
-from .i18n import ngettext
-from .i18n import ngettext_noop as NS_
-from .i18n import pgettext as P_
+from .i18n import _gettext as _
+from .i18n import _ngettext
+from .i18n import _ngettext_noop as NS_
+from .i18n import _pgettext as P_
 from .i18n import thousands_separator
 
 
-def ordinal(value):
+def ordinal(value, gender="male"):
     """Converts an integer to its ordinal as a string.
 
     For example, 1 is "1st", 2 is "2nd", 3 is "3rd", etc. Works for any integer or
@@ -46,6 +44,7 @@ def ordinal(value):
         ```
     Args:
         value (int, str, float): Integer to convert.
+        gender (str): Gender for translations. Accepts either "male" or "female".
 
     Returns:
         str: Ordinal string.
@@ -54,21 +53,35 @@ def ordinal(value):
         value = int(value)
     except (TypeError, ValueError):
         return value
-    t = (
-        P_("0", "th"),
-        P_("1", "st"),
-        P_("2", "nd"),
-        P_("3", "rd"),
-        P_("4", "th"),
-        P_("5", "th"),
-        P_("6", "th"),
-        P_("7", "th"),
-        P_("8", "th"),
-        P_("9", "th"),
-    )
+    if gender == "male":
+        t = (
+            P_("0 (male)", "th"),
+            P_("1 (male)", "st"),
+            P_("2 (male)", "nd"),
+            P_("3 (male)", "rd"),
+            P_("4 (male)", "th"),
+            P_("5 (male)", "th"),
+            P_("6 (male)", "th"),
+            P_("7 (male)", "th"),
+            P_("8 (male)", "th"),
+            P_("9 (male)", "th"),
+        )
+    else:
+        t = (
+            P_("0 (female)", "th"),
+            P_("1 (female)", "st"),
+            P_("2 (female)", "nd"),
+            P_("3 (female)", "rd"),
+            P_("4 (female)", "th"),
+            P_("5 (female)", "th"),
+            P_("6 (female)", "th"),
+            P_("7 (female)", "th"),
+            P_("8 (female)", "th"),
+            P_("9 (female)", "th"),
+        )
     if value % 100 in (11, 12, 13):  # special case
-        return "%d%s" % (value, t[0])
-    return "%d%s" % (value, t[value % 10])
+        return f"{value}{t[0]}"
+    return f"{value}{t[value % 10]}"
 
 
 def intcomma(value, ndigits=None):
@@ -104,7 +117,7 @@ def intcomma(value, ndigits=None):
     """
     sep = thousands_separator()
     try:
-        if isinstance(value, compat.string_types):
+        if isinstance(value, str):
             float(value.replace(sep, ""))
         else:
             float(value)
@@ -116,14 +129,14 @@ def intcomma(value, ndigits=None):
     else:
         orig = str(value)
 
-    new = re.sub(r"^(-?\d+)(\d{3})", r"\g<1>%s\g<2>" % sep, orig)
+    new = re.sub(r"^(-?\d+)(\d{3})", rf"\g<1>{sep}\g<2>", orig)
     if orig == new:
         return new
     else:
         return intcomma(new)
 
 
-powers = [10 ** x for x in (3, 6, 9, 12, 15, 18, 21, 24, 27, 30, 33, 100)]
+powers = [10**x for x in (3, 6, 9, 12, 15, 18, 21, 24, 27, 30, 33, 100)]
 human_powers = (
     NS_("thousand", "thousand"),
     NS_("million", "million"),
@@ -184,16 +197,16 @@ def intword(value, format="%.1f"):
     for ordinal, power in enumerate(powers[1:], 1):
         if value < power:
             chopped = value / float(powers[ordinal - 1])
-            if float(format % chopped) == float(10 ** 3):
+            if float(format % chopped) == float(10**3):
                 chopped = value / float(powers[ordinal])
                 singular, plural = human_powers[ordinal]
                 return (
-                    " ".join([format, ngettext(singular, plural, math.ceil(chopped))])
+                    " ".join([format, _ngettext(singular, plural, math.ceil(chopped))])
                 ) % chopped
             else:
                 singular, plural = human_powers[ordinal - 1]
                 return (
-                    " ".join([format, ngettext(singular, plural, math.ceil(chopped))])
+                    " ".join([format, _ngettext(singular, plural, math.ceil(chopped))])
                 ) % chopped
     return str(value)
 
@@ -292,11 +305,11 @@ def fractional(value):
     if whole_number and not numerator and denominator == 1:
         # this means that an integer was passed in
         # (or variants of that integer like 1.0000)
-        return "%.0f" % whole_number
+        return f"{whole_number:.0f}"
     elif not whole_number:
-        return "{:.0f}/{:.0f}".format(numerator, denominator)
+        return f"{numerator:.0f}/{denominator:.0f}"
     else:
-        return "{:.0f} {:.0f}/{:.0f}".format(whole_number, numerator, denominator)
+        return f"{whole_number:.0f} {numerator:.0f}/{denominator:.0f}"
 
 
 def scientific(value, precision=2):
@@ -350,7 +363,7 @@ def scientific(value, precision=2):
             value = str(value).replace("-", "")
             negative = True
 
-        if isinstance(value, compat.string_types):
+        if isinstance(value, str):
             value = float(value)
 
         fmt = "{:.%se}" % str(int(precision))
@@ -430,7 +443,7 @@ def clamp(value, format="{:}", floor=None, ceil=None, floor_token="<", ceil_toke
     else:
         token = ""
 
-    if isinstance(format, compat.string_types):
+    if isinstance(format, str):
         return token + format.format(value)
     elif callable(format):
         return token + format(value)
