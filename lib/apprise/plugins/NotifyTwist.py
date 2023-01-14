@@ -36,7 +36,7 @@ from ..URLBase import PrivacyMode
 from ..common import NotifyFormat
 from ..common import NotifyType
 from ..utils import parse_list
-from ..utils import GET_EMAIL_RE
+from ..utils import is_email
 from ..AppriseLocale import gettext_lazy as _
 
 
@@ -131,7 +131,7 @@ class NotifyTwist(NotifyBase):
         """
         Initialize Notify Twist Object
         """
-        super(NotifyTwist, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
         # Initialize channels list
         self.channels = set()
@@ -139,12 +139,6 @@ class NotifyTwist(NotifyBase):
         # Initialize Channel ID which are stored as:
         #   <workspace_id>:<channel_id>
         self.channel_ids = set()
-
-        # Initialize our Email Object
-        self.email = email if email else '{}@{}'.format(
-            self.user,
-            self.host,
-        )
 
         # The token is None if we're not logged in and False if we
         # failed to log in.  Otherwise it is set to the actual token
@@ -171,25 +165,30 @@ class NotifyTwist(NotifyBase):
         #  }
         self._cached_channels = dict()
 
-        try:
-            result = GET_EMAIL_RE.match(self.email)
-            if not result:
-                # let outer exception handle this
-                raise TypeError
+        # Initialize our Email Object
+        self.email = email if email else '{}@{}'.format(
+            self.user,
+            self.host,
+        )
 
-            if email:
-                # Force user/host to be that of the defined email for
-                # consistency. This is very important for those initializing
-                # this object with the the email object would could potentially
-                # cause inconsistency to contents in the NotifyBase() object
-                self.user = result.group('fulluser')
-                self.host = result.group('domain')
-
-        except (TypeError, AttributeError):
+        # Check if it is valid
+        result = is_email(self.email)
+        if not result:
+            # let outer exception handle this
             msg = 'The Twist Auth email specified ({}) is invalid.'\
                 .format(self.email)
             self.logger.warning(msg)
             raise TypeError(msg)
+
+        # Re-assign email based on what was parsed
+        self.email = result['full_email']
+        if email:
+            # Force user/host to be that of the defined email for
+            # consistency. This is very important for those initializing
+            # this object with the the email object would could potentially
+            # cause inconsistency to contents in the NotifyBase() object
+            self.user = result['user']
+            self.host = result['domain']
 
         if not self.password:
             msg = 'No Twist password was specified with account: {}'\
@@ -229,28 +228,25 @@ class NotifyTwist(NotifyBase):
         Returns the URL built dynamically based on specified arguments.
         """
 
-        # Define any arguments set
-        args = {
-            'format': self.notify_format,
-            'overflow': self.overflow_mode,
-            'verify': 'yes' if self.verify_certificate else 'no',
-        }
+        # Our URL parameters
+        params = self.url_parameters(privacy=privacy, *args, **kwargs)
 
-        return '{schema}://{password}:{user}@{host}/{targets}/?{args}'.format(
-            schema=self.secure_protocol,
-            password=self.pprint(
-                self.password, privacy, mode=PrivacyMode.Secret, safe=''),
-            user=self.quote(self.user, safe=''),
-            host=self.host,
-            targets='/'.join(
-                [NotifyTwist.quote(x, safe='') for x in chain(
-                    # Channels are prefixed with a pound/hashtag symbol
-                    ['#{}'.format(x) for x in self.channels],
-                    # Channel IDs
-                    self.channel_ids,
-                )]),
-            args=NotifyTwist.urlencode(args),
-        )
+        return '{schema}://{password}:{user}@{host}/{targets}/' \
+            '?{params}'.format(
+                schema=self.secure_protocol,
+                password=self.pprint(
+                    self.password, privacy, mode=PrivacyMode.Secret, safe=''),
+                user=self.quote(self.user, safe=''),
+                host=self.host,
+                targets='/'.join(
+                    [NotifyTwist.quote(x, safe='') for x in chain(
+                        # Channels are prefixed with a pound/hashtag symbol
+                        ['#{}'.format(x) for x in self.channels],
+                        # Channel IDs
+                        self.channel_ids,
+                    )]),
+                params=NotifyTwist.urlencode(params),
+            )
 
     def login(self):
         """
@@ -566,6 +562,7 @@ class NotifyTwist(NotifyBase):
 
         if not len(self.channel_ids):
             # We have nothing to notify
+            self.logger.warning('There are no Twist targets to notify')
             return False
 
         # Notify all of our identified channels
@@ -640,7 +637,9 @@ class NotifyTwist(NotifyBase):
                 api_url,
                 data=payload,
                 headers=headers,
-                verify=self.verify_certificate)
+                verify=self.verify_certificate,
+                timeout=self.request_timeout,
+            )
 
             # Get our JSON content if it's possible
             try:
@@ -679,7 +678,9 @@ class NotifyTwist(NotifyBase):
                         api_url,
                         data=payload,
                         headers=headers,
-                        verify=self.verify_certificate)
+                        verify=self.verify_certificate,
+                        timeout=self.request_timeout
+                    )
 
                     # Get our JSON content if it's possible
                     try:
@@ -725,11 +726,10 @@ class NotifyTwist(NotifyBase):
     def parse_url(url):
         """
         Parses the URL and returns enough arguments that can allow
-        us to substantiate this object.
+        us to re-instantiate this object.
 
         """
         results = NotifyBase.parse_url(url)
-
         if not results:
             # We're done early as we couldn't load the results
             return results
@@ -785,12 +785,12 @@ class NotifyTwist(NotifyBase):
 
     def __del__(self):
         """
-        Deconstructor
+        Destructor
         """
         try:
             self.logout()
 
-        except LookupError:
+        except LookupError:  # pragma: no cover
             # Python v3.5 call to requests can sometimes throw the exception
             #   "/usr/lib64/python3.7/socket.py", line 748, in getaddrinfo
             #   LookupError: unknown encoding: idna
@@ -804,4 +804,29 @@ class NotifyTwist(NotifyBase):
             # A ~similar~ issue can be identified here in the requests
             # ticket system as unresolved and has provided work-arounds
             #   - https://github.com/kennethreitz/requests/issues/3578
+            pass
+
+        except ImportError:  # pragma: no cover
+            # The actual exception is `ModuleNotFoundError` however ImportError
+            # grants us backwards compatibility with versions of Python older
+            # than v3.6
+
+            # Python code that makes early calls to sys.exit() can cause
+            # the __del__() code to run. However, in some newer versions of
+            # Python, this causes the `sys` library to no longer be
+            # available. The stack overflow also goes on to suggest that
+            # it's not wise to use the __del__() as a destructor
+            # which is the case here.
+
+            # https://stackoverflow.com/questions/67218341/\
+            #       modulenotfounderror-import-of-time-halted-none-in-sys-\
+            #           modules-occured-when-obj?noredirect=1&lq=1
+            #
+            #
+            # Also see: https://stackoverflow.com/questions\
+            #       /1481488/what-is-the-del-method-and-how-do-i-call-it
+
+            # At this time it seems clean to try to log out (if we can)
+            # but not throw any unnecessary exceptions (like this one) to
+            # the end user if we don't have to.
             pass

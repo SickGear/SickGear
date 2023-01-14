@@ -26,6 +26,7 @@
 import re
 import os
 from .AttachBase import AttachBase
+from ..common import ContentLocation
 from ..AppriseLocale import gettext_lazy as _
 
 
@@ -40,12 +41,16 @@ class AttachFile(AttachBase):
     # The default protocol
     protocol = 'file'
 
+    # Content is local to the same location as the apprise instance
+    # being called (server-side)
+    location = ContentLocation.LOCAL
+
     def __init__(self, path, **kwargs):
         """
         Initialize Local File Attachment Object
 
         """
-        super(AttachFile, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
         # Store path but mark it dirty since we have not performed any
         # verification at this point.
@@ -57,20 +62,20 @@ class AttachFile(AttachBase):
         Returns the URL built dynamically based on specified arguments.
         """
 
-        # Define any arguments set
-        args = {}
+        # Define any URL parameters
+        params = {}
 
         if self._mimetype:
             # A mime-type was enforced
-            args['mime'] = self._mimetype
+            params['mime'] = self._mimetype
 
         if self._name:
             # A name was enforced
-            args['name'] = self._name
+            params['name'] = self._name
 
-        return 'file://{path}{args}'.format(
+        return 'file://{path}{params}'.format(
             path=self.quote(self.dirty_path),
-            args='?{}'.format(self.urlencode(args)) if args else '',
+            params='?{}'.format(self.urlencode(params)) if params else '',
         )
 
     def download(self, **kwargs):
@@ -80,6 +85,10 @@ class AttachFile(AttachBase):
         For file base attachments, our data already exists, so we only need to
         validate it.
         """
+
+        if self.location == ContentLocation.INACCESSIBLE:
+            # our content is inaccessible
+            return False
 
         # Ensure any existing content set has been invalidated
         self.invalidate()

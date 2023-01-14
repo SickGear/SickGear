@@ -28,17 +28,17 @@
 # here you'll be able to access the Webhooks menu and create a new one.
 #
 #  When you've completed, you'll get a URL that looks a little like this:
-#  https://discordapp.com/api/webhooks/417429632418316298/\
+#  https://discord.com/api/webhooks/417429632418316298/\
 #         JHZ7lQml277CDHmQKMHI8qBe7bk2ZwO5UKjCiOAF7711o33MyqU344Qpgv7YTpadV_js
 #
 #  Simplified, it looks like this:
-#     https://discordapp.com/api/webhooks/WEBHOOK_ID/WEBHOOK_TOKEN
+#     https://discord.com/api/webhooks/WEBHOOK_ID/WEBHOOK_TOKEN
 #
 #  This plugin will simply work using the url of:
 #     discord://WEBHOOK_ID/WEBHOOK_TOKEN
 #
 # API Documentation on Webhooks:
-#    - https://discordapp.com/developers/docs/resources/webhook
+#    - https://discord.com/developers/docs/resources/webhook
 #
 import re
 import requests
@@ -63,7 +63,7 @@ class NotifyDiscord(NotifyBase):
     service_name = 'Discord'
 
     # The services URL
-    service_url = 'https://discordapp.com/'
+    service_url = 'https://discord.com/'
 
     # The default secure protocol
     secure_protocol = 'discord'
@@ -72,13 +72,18 @@ class NotifyDiscord(NotifyBase):
     setup_url = 'https://github.com/caronc/apprise/wiki/Notify_discord'
 
     # Discord Webhook
-    notify_url = 'https://discordapp.com/api/webhooks'
+    notify_url = 'https://discord.com/api/webhooks'
 
     # Allows the user to specify the NotifyImageSize object
     image_size = NotifyImageSize.XY_256
 
     # The maximum allowable characters allowed in the body per message
     body_maxlen = 2000
+
+    # Discord has a limit of the number of fields you can include in an
+    # embeds message. This value allows the discord message to safely
+    # break into multiple messages to handle these cases.
+    discord_max_fields = 10
 
     # Define object templates
     templates = (
@@ -119,6 +124,16 @@ class NotifyDiscord(NotifyBase):
             'type': 'bool',
             'default': True,
         },
+        'avatar_url': {
+            'name': _('Avatar URL'),
+            'type': 'string',
+        },
+        # Send a message to the specified thread within a webhook's channel.
+        # The thread will automatically be unarchived.
+        'thread': {
+            'name': _('Thread ID'),
+            'type': 'string',
+        },
         'footer': {
             'name': _('Display Footer'),
             'type': 'bool',
@@ -126,6 +141,11 @@ class NotifyDiscord(NotifyBase):
         },
         'footer_logo': {
             'name': _('Footer Logo'),
+            'type': 'bool',
+            'default': True,
+        },
+        'fields': {
+            'name': _('Use Fields'),
             'type': 'bool',
             'default': True,
         },
@@ -139,12 +159,12 @@ class NotifyDiscord(NotifyBase):
 
     def __init__(self, webhook_id, webhook_token, tts=False, avatar=True,
                  footer=False, footer_logo=True, include_image=False,
-                 **kwargs):
+                 fields=True, avatar_url=None, thread=None, **kwargs):
         """
         Initialize Discord Object
 
         """
-        super(NotifyDiscord, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
         # Webhook ID (associated with project)
         self.webhook_id = validate_regex(webhook_id)
@@ -177,6 +197,17 @@ class NotifyDiscord(NotifyBase):
         # Place a thumbnail image inline with the message body
         self.include_image = include_image
 
+        # Use Fields
+        self.fields = fields
+
+        # Specified Thread ID
+        self.thread_id = thread
+
+        # Avatar URL
+        # This allows a user to provide an over-ride to the otherwise
+        # dynamically generated avatar url images
+        self.avatar_url = avatar_url
+
         return
 
     def send(self, body, title='', notify_type=NotifyType.INFO, attach=None,
@@ -197,31 +228,22 @@ class NotifyDiscord(NotifyBase):
         # Acquire image_url
         image_url = self.image_url(notify_type)
 
+        # our fields variable
+        fields = []
+
         if self.notify_format == NotifyFormat.MARKDOWN:
             # Use embeds for payload
             payload['embeds'] = [{
-                'provider': {
+                'author': {
                     'name': self.app_id,
                     'url': self.app_url,
                 },
                 'title': title,
-                'type': 'rich',
                 'description': body,
 
                 # Our color associated with our notification
                 'color': self.color(notify_type, int),
             }]
-
-            # Break titles out so that we can sort them in embeds
-            fields = self.extract_markdown_sections(body)
-
-            if len(fields) > 0:
-                # Apply our additional parsing for a better presentation
-
-                # Swap first entry for description
-                payload['embeds'][0]['description'] = \
-                    fields[0].get('name') + fields[0].get('value')
-                payload['embeds'][0]['fields'] = fields[1:]
 
             if self.footer:
                 # Acquire logo URL
@@ -242,13 +264,31 @@ class NotifyDiscord(NotifyBase):
                     'width': 256,
                 }
 
+            if self.fields:
+                # Break titles out so that we can sort them in embeds
+                description, fields = self.extract_markdown_sections(body)
+
+                # Swap first entry for description
+                payload['embeds'][0]['description'] = description
+                if fields:
+                    # Apply our additional parsing for a better presentation
+                    payload['embeds'][0]['fields'] = \
+                        fields[:self.discord_max_fields]
+
+                    # Remove entry from head of fields
+                    fields = fields[self.discord_max_fields:]
+
         else:
             # not markdown
             payload['content'] = \
                 body if not title else "{}\r\n{}".format(title, body)
 
-        if self.avatar and image_url:
-            payload['avatar_url'] = image_url
+        if self.thread_id:
+            payload['thread_id'] = self.thread_id
+
+        if self.avatar and (image_url or self.avatar_url):
+            payload['avatar_url'] = \
+                self.avatar_url if self.avatar_url else image_url
 
         if self.user:
             # Optionally override the default username of the webhook
@@ -257,6 +297,16 @@ class NotifyDiscord(NotifyBase):
         if not self._send(payload):
             # We failed to post our message
             return False
+
+        # Process any remaining fields IF set
+        if fields:
+            payload['embeds'][0]['description'] = ''
+            for i in range(0, len(fields), self.discord_max_fields):
+                payload['embeds'][0]['fields'] = \
+                    fields[i:i + self.discord_max_fields]
+                if not self._send(payload):
+                    # We failed to post our message
+                    return False
 
         if attach:
             # Update our payload; the idea is to preserve it's other detected
@@ -343,6 +393,7 @@ class NotifyDiscord(NotifyBase):
                 headers=headers,
                 files=files,
                 verify=self.verify_certificate,
+                timeout=self.request_timeout,
             )
             if r.status_code not in (
                     requests.codes.ok, requests.codes.no_content):
@@ -370,14 +421,14 @@ class NotifyDiscord(NotifyBase):
 
         except requests.RequestException as e:
             self.logger.warning(
-                'A Connection error occured posting {}to Discord.'.format(
+                'A Connection error occurred posting {}to Discord.'.format(
                     attach.name if attach else ''))
             self.logger.debug('Socket Exception: %s' % str(e))
             return False
 
         except (OSError, IOError) as e:
             self.logger.warning(
-                'An I/O error occured while reading {}.'.format(
+                'An I/O error occurred while reading {}.'.format(
                     attach.name if attach else 'attachment'))
             self.logger.debug('I/O Exception: %s' % str(e))
             return False
@@ -395,37 +446,43 @@ class NotifyDiscord(NotifyBase):
         Returns the URL built dynamically based on specified arguments.
         """
 
-        # Define any arguments set
-        args = {
-            'format': self.notify_format,
-            'overflow': self.overflow_mode,
+        # Define any URL parameters
+        params = {
             'tts': 'yes' if self.tts else 'no',
             'avatar': 'yes' if self.avatar else 'no',
             'footer': 'yes' if self.footer else 'no',
             'footer_logo': 'yes' if self.footer_logo else 'no',
             'image': 'yes' if self.include_image else 'no',
-            'verify': 'yes' if self.verify_certificate else 'no',
+            'fields': 'yes' if self.fields else 'no',
         }
 
-        return '{schema}://{webhook_id}/{webhook_token}/?{args}'.format(
+        if self.avatar_url:
+            params['avatar_url'] = self.avatar_url
+
+        if self.thread_id:
+            params['thread'] = self.thread_id
+
+        # Extend our parameters
+        params.update(self.url_parameters(privacy=privacy, *args, **kwargs))
+
+        return '{schema}://{webhook_id}/{webhook_token}/?{params}'.format(
             schema=self.secure_protocol,
             webhook_id=self.pprint(self.webhook_id, privacy, safe=''),
             webhook_token=self.pprint(self.webhook_token, privacy, safe=''),
-            args=NotifyDiscord.urlencode(args),
+            params=NotifyDiscord.urlencode(params),
         )
 
     @staticmethod
     def parse_url(url):
         """
         Parses the URL and returns enough arguments that can allow
-        us to substantiate this object.
+        us to re-instantiate this object.
 
         Syntax:
           discord://webhook_id/webhook_token
 
         """
-        results = NotifyBase.parse_url(url)
-
+        results = NotifyBase.parse_url(url, verify_host=False)
         if not results:
             # We're done early as we couldn't load the results
             return results
@@ -449,6 +506,11 @@ class NotifyDiscord(NotifyBase):
         # Text To Speech
         results['tts'] = parse_bool(results['qsd'].get('tts', False))
 
+        # Use sections
+        # effectively detect multiple fields and break them off
+        # into sections
+        results['fields'] = parse_bool(results['qsd'].get('fields', True))
+
         # Use Footer
         results['footer'] = parse_bool(results['qsd'].get('footer', False))
 
@@ -459,43 +521,44 @@ class NotifyDiscord(NotifyBase):
         # Update Avatar Icon
         results['avatar'] = parse_bool(results['qsd'].get('avatar', True))
 
-        # Use Thumbnail
-        if 'thumbnail' in results['qsd']:
-            # Deprication Notice issued for v0.7.5
-            NotifyDiscord.logger.deprecate(
-                'The Discord URL contains the parameter '
-                '"thumbnail=" which will be deprecated in an upcoming '
-                'release. Please use "image=" instead.'
-            )
+        # Boolean to include an image or not
+        results['include_image'] = parse_bool(results['qsd'].get(
+            'image', NotifyDiscord.template_args['image']['default']))
 
-        # use image= for consistency with the other plugins but we also
-        # support thumbnail= for backwards compatibility.
-        results['include_image'] = \
-            parse_bool(results['qsd'].get(
-                'image', results['qsd'].get('thumbnail', False)))
+        # Extract avatar url if it was specified
+        if 'avatar_url' in results['qsd']:
+            results['avatar_url'] = \
+                NotifyDiscord.unquote(results['qsd']['avatar_url'])
+
+        # Extract thread id if it was specified
+        if 'thread' in results['qsd']:
+            results['thread'] = \
+                NotifyDiscord.unquote(results['qsd']['thread'])
 
         return results
 
     @staticmethod
     def parse_native_url(url):
         """
-        Support https://discordapp.com/api/webhooks/WEBHOOK_ID/WEBHOOK_TOKEN
+        Support https://discord.com/api/webhooks/WEBHOOK_ID/WEBHOOK_TOKEN
+        Support Legacy URL as well:
+            https://discordapp.com/api/webhooks/WEBHOOK_ID/WEBHOOK_TOKEN
         """
 
         result = re.match(
-            r'^https?://discordapp\.com/api/webhooks/'
+            r'^https?://discord(app)?\.com/api/webhooks/'
             r'(?P<webhook_id>[0-9]+)/'
             r'(?P<webhook_token>[A-Z0-9_-]+)/?'
-            r'(?P<args>\?.+)?$', url, re.I)
+            r'(?P<params>\?.+)?$', url, re.I)
 
         if result:
             return NotifyDiscord.parse_url(
-                '{schema}://{webhook_id}/{webhook_token}/{args}'.format(
+                '{schema}://{webhook_id}/{webhook_token}/{params}'.format(
                     schema=NotifyDiscord.secure_protocol,
                     webhook_id=result.group('webhook_id'),
                     webhook_token=result.group('webhook_token'),
-                    args='' if not result.group('args')
-                    else result.group('args')))
+                    params='' if not result.group('params')
+                    else result.group('params')))
 
         return None
 
@@ -507,6 +570,18 @@ class NotifyDiscord(NotifyBase):
         fields that get passed as an embed entry to Discord.
 
         """
+        # Search for any header information found without it's own section
+        # identifier
+        match = re.match(
+            r'^\s*(?P<desc>[^\s#]+.*?)(?=\s*$|[\r\n]+\s*#)',
+            markdown, flags=re.S)
+
+        description = match.group('desc').strip() if match else ''
+        if description:
+            # Strip description from our string since it has been handled
+            # now.
+            markdown = re.sub(re.escape(description), '', markdown, count=1)
+
         regex = re.compile(
             r'\s*#[# \t\v]*(?P<name>[^\n]+)(\n|\s*$)'
             r'\s*((?P<value>[^#].+?)(?=\s*$|[\r\n]+\s*#))?', flags=re.S)
@@ -517,9 +592,11 @@ class NotifyDiscord(NotifyBase):
             d = el.groupdict()
 
             fields.append({
-                'name': d.get('name', '').strip('# \r\n\t\v'),
-                'value': '```md\n' +
-                (d.get('value').strip() if d.get('value') else '') + '\n```'
+                'name': d.get('name', '').strip('#`* \r\n\t\v'),
+                'value': '```{}\n{}```'.format(
+                    'md' if d.get('value') else '',
+                    d.get('value').strip() + '\n' if d.get('value') else '',
+                ),
             })
 
-        return fields
+        return description, fields

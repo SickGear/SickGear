@@ -24,20 +24,25 @@
 # THE SOFTWARE.
 
 import re
-
+from uuid import uuid4
 from os.path import join
 from os.path import dirname
 from os.path import isfile
 from os.path import abspath
 from .common import NotifyType
+from .utils import module_detection
 
 
-class AppriseAsset(object):
+class AppriseAsset:
     """
     Provides a supplimentary class that can be used to provide extra
     information and details that can be used by Apprise such as providing
     an alternate location to where images/icons can be found and the
     URL masks.
+
+    Any variable that starts with an underscore (_) can only be initialized
+    by this class manually and will/can not be parsed from a configuration
+    file.
 
     """
     # Application Identifier
@@ -56,6 +61,14 @@ class AppriseAsset(object):
         NotifyType.SUCCESS: '#3AA337',
         NotifyType.FAILURE: '#A32037',
         NotifyType.WARNING: '#CACF29',
+    }
+
+    # Ascii Notification
+    ascii_notify_map = {
+        NotifyType.INFO: '[i]',
+        NotifyType.SUCCESS: '[+]',
+        NotifyType.FAILURE: '[!]',
+        NotifyType.WARNING: '[~]',
     }
 
     # The default color to return if a mapping isn't found in our table above
@@ -94,12 +107,55 @@ class AppriseAsset(object):
     # - NotifyFormat.HTML
     # - None
     #
-    # If no format is specified (hence None), then no special pre-formating
-    # actions will take place during a notificaton. This has been and always
+    # If no format is specified (hence None), then no special pre-formatting
+    # actions will take place during a notification. This has been and always
     # will be the default.
     body_format = None
 
-    def __init__(self, **kwargs):
+    # Always attempt to send notifications asynchronous (as the same time
+    # if possible)
+    # This is a Python 3 supported option only. If set to False, then
+    # notifications are sent sequentially (one after another)
+    async_mode = True
+
+    # Whether or not to interpret escapes found within the input text prior
+    # to passing it upstream. Such as converting \t to an actual tab and \n
+    # to a new line.
+    interpret_escapes = False
+
+    # Defines the encoding of the content passed into Apprise
+    encoding = 'utf-8'
+
+    # For more detail see CWE-312 @
+    #    https://cwe.mitre.org/data/definitions/312.html
+    #
+    # By enabling this, the logging output has additional overhead applied to
+    # it preventing secure password and secret information from being
+    # displayed in the logging. Since there is overhead involved in performing
+    # this cleanup; system owners who run in a very isolated environment may
+    # choose to disable this for a slight performance bump. It is recommended
+    # that you leave this option as is otherwise.
+    secure_logging = True
+
+    # Optionally specify one or more path to attempt to scan for Python modules
+    # By default, no paths are scanned.
+    __plugin_paths = []
+
+    # All internal/system flags are prefixed with an underscore (_)
+    # These can only be initialized using Python libraries and are not picked
+    # up from (yaml) configuration files (if set)
+
+    # An internal counter that is used by AppriseAPI
+    # (https://github.com/caronc/apprise-api). The idea is to allow one
+    # instance of AppriseAPI to call another, but to track how many times
+    # this occurs. It's intent is to prevent a loop where an AppriseAPI
+    # Server calls itself (or loops indefinitely)
+    _recursion = 0
+
+    # A unique identifer we can use to associate our calling source
+    _uid = str(uuid4())
+
+    def __init__(self, plugin_paths=None, **kwargs):
         """
         Asset Initialization
 
@@ -112,6 +168,10 @@ class AppriseAsset(object):
                     'An invalid key {} was specified.'.format(key))
 
             setattr(self, key, value)
+
+        if plugin_paths:
+            # Load any decorated modules if defined
+            module_detection(plugin_paths)
 
     def color(self, notify_type, color_type=None):
         """
@@ -144,6 +204,15 @@ class AppriseAsset(object):
         # Unsupported type
         raise ValueError(
             'AppriseAsset html_color(): An invalid color_type was specified.')
+
+    def ascii(self, notify_type):
+        """
+        Returns an ascii representation based on passed in notify type
+
+        """
+
+        # look our response up
+        return self.ascii_notify_map.get(notify_type, self.default_html_color)
 
     def image_url(self, notify_type, image_size, logo=False, extension=None):
         """

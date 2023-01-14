@@ -24,7 +24,6 @@
 # THE SOFTWARE.
 
 import re
-import six
 import requests
 from json import loads
 from json import dumps
@@ -49,12 +48,8 @@ RC_HTTP_ERROR_MAP = {
     401: 'Authentication tokens provided is invalid or missing.',
 }
 
-# Used to break apart list of potential tags by their delimiter
-# into a usable list.
-LIST_DELIM = re.compile(r'[ \t\r\n,\\/]+')
 
-
-class RocketChatAuthMode(object):
+class RocketChatAuthMode:
     """
     The Chat Authentication mode is detected
     """
@@ -174,19 +169,22 @@ class NotifyRocketChat(NotifyBase):
         'avatar': {
             'name': _('Use Avatar'),
             'type': 'bool',
-            'default': True,
+            'default': False,
+        },
+        'webhook': {
+            'alias_of': 'webhook',
         },
         'to': {
             'alias_of': 'targets',
         },
     })
 
-    def __init__(self, webhook=None, targets=None, mode=None, avatar=True,
+    def __init__(self, webhook=None, targets=None, mode=None, avatar=None,
                  **kwargs):
         """
         Initialize Notify Rocket.Chat Object
         """
-        super(NotifyRocketChat, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
         # Set our schema
         self.schema = 'https' if self.secure else 'http'
@@ -209,16 +207,13 @@ class NotifyRocketChat(NotifyBase):
         # Assign our webhook (if defined)
         self.webhook = webhook
 
-        # Place an avatar image to associate with our content
-        self.avatar = avatar
-
         # Used to track token headers upon authentication (if successful)
         # This is only used if not on webhook mode
         self.headers = {}
 
         # Authentication mode
         self.mode = None \
-            if not isinstance(mode, six.string_types) \
+            if not isinstance(mode, str) \
             else mode.lower()
 
         if self.mode and self.mode not in ROCKETCHAT_AUTH_MODES:
@@ -278,6 +273,22 @@ class NotifyRocketChat(NotifyBase):
             self.logger.warning(msg)
             raise TypeError(msg)
 
+        # Prepare our avatar setting
+        # - if specified; that trumps all
+        # - if not specified and we're dealing with a basic setup, the Avatar
+        #   is disabled by default. This is because if the account doesn't
+        #   have the bot flag set on it it won't work as documented here:
+        #       https://developer.rocket.chat/api/rest-api/endpoints\
+        #             /team-collaboration-endpoints/chat/postmessage
+        # - Otherwise if we're a webhook, we enable the avatar by default
+        #   (if not otherwise specified) since it will work nicely.
+        # Place an avatar image to associate with our content
+        if self.mode == RocketChatAuthMode.BASIC:
+            self.avatar = False if avatar is None else avatar
+
+        else:  # self.mode == RocketChatAuthMode.WEBHOOK:
+            self.avatar = True if avatar is None else avatar
+
         return
 
     def url(self, privacy=False, *args, **kwargs):
@@ -285,14 +296,14 @@ class NotifyRocketChat(NotifyBase):
         Returns the URL built dynamically based on specified arguments.
         """
 
-        # Define any arguments set
-        args = {
-            'format': self.notify_format,
-            'overflow': self.overflow_mode,
-            'verify': 'yes' if self.verify_certificate else 'no',
+        # Define any URL parameters
+        params = {
             'avatar': 'yes' if self.avatar else 'no',
             'mode': self.mode,
         }
+
+        # Extend our parameters
+        params.update(self.url_parameters(privacy=privacy, *args, **kwargs))
 
         # Determine Authentication
         if self.mode == RocketChatAuthMode.BASIC:
@@ -305,19 +316,21 @@ class NotifyRocketChat(NotifyBase):
             auth = '{user}{webhook}@'.format(
                 user='{}:'.format(NotifyRocketChat.quote(self.user, safe=''))
                 if self.user else '',
-                webhook=self.pprint(self.webhook, privacy, safe=''),
+                webhook=self.pprint(self.webhook, privacy,
+                                    mode=PrivacyMode.Secret, safe=''),
             )
 
         default_port = 443 if self.secure else 80
 
-        return '{schema}://{auth}{hostname}{port}/{targets}/?{args}'.format(
+        return '{schema}://{auth}{hostname}{port}/{targets}/?{params}'.format(
             schema=self.secure_protocol if self.secure else self.protocol,
             auth=auth,
-            hostname=NotifyRocketChat.quote(self.host, safe=''),
+            # never encode hostname since we're expecting it to be a valid one
+            hostname=self.host,
             port='' if self.port is None or self.port == default_port
                  else ':{}'.format(self.port),
             targets='/'.join(
-                [NotifyRocketChat.quote(x, safe='') for x in chain(
+                [NotifyRocketChat.quote(x, safe='@#') for x in chain(
                     # Channels are prefixed with a pound/hashtag symbol
                     ['#{}'.format(x) for x in self.channels],
                     # Rooms are as is
@@ -325,7 +338,7 @@ class NotifyRocketChat(NotifyBase):
                     # Users
                     ['@{}'.format(x) for x in self.users],
                 )]),
-            args=NotifyRocketChat.urlencode(args),
+            params=NotifyRocketChat.urlencode(params),
         )
 
     def send(self, body, title='', notify_type=NotifyType.INFO, **kwargs):
@@ -366,11 +379,6 @@ class NotifyRocketChat(NotifyBase):
         # Initiaize our error tracking
         has_error = False
 
-        headers = {
-            'User-Agent': self.app_id,
-            'Content-Type': 'application/json',
-        }
-
         while len(targets):
             # Retrieve our target
             target = targets.pop(0)
@@ -379,8 +387,7 @@ class NotifyRocketChat(NotifyBase):
             payload['channel'] = target
 
             if not self._send(
-                    dumps(payload), notify_type=notify_type, path=path,
-                    headers=headers, **kwargs):
+                    payload, notify_type=notify_type, path=path, **kwargs):
 
                 # toggle flag
                 has_error = True
@@ -399,21 +406,24 @@ class NotifyRocketChat(NotifyBase):
             return False
 
         # prepare JSON Object
-        payload = self._payload(body, title, notify_type)
+        _payload = self._payload(body, title, notify_type)
 
         # Initiaize our error tracking
         has_error = False
 
+        # Build our list of channels/rooms/users (if any identified)
+        channels = ['@{}'.format(u) for u in self.users]
+        channels.extend(['#{}'.format(c) for c in self.channels])
+
         # Create a copy of our channels to notify against
-        channels = list(self.channels)
-        _payload = payload.copy()
+        payload = _payload.copy()
         while len(channels) > 0:
             # Get Channel
             channel = channels.pop(0)
-            _payload['channel'] = channel
+            payload['channel'] = channel
 
             if not self._send(
-                    _payload, notify_type=notify_type, headers=self.headers,
+                    payload, notify_type=notify_type, headers=self.headers,
                     **kwargs):
 
                 # toggle flag
@@ -421,11 +431,11 @@ class NotifyRocketChat(NotifyBase):
 
         # Create a copy of our room id's to notify against
         rooms = list(self.rooms)
-        _payload = payload.copy()
+        payload = _payload.copy()
         while len(rooms):
             # Get Room
             room = rooms.pop(0)
-            _payload['roomId'] = room
+            payload['roomId'] = room
 
             if not self._send(
                     payload, notify_type=notify_type, headers=self.headers,
@@ -450,13 +460,13 @@ class NotifyRocketChat(NotifyBase):
 
         # apply our images if they're set to be displayed
         image_url = self.image_url(notify_type)
-        if self.avatar:
+        if self.avatar and image_url:
             payload['avatar'] = image_url
 
         return payload
 
     def _send(self, payload, notify_type, path='api/v1/chat.postMessage',
-              headers=None, **kwargs):
+              headers={}, **kwargs):
         """
         Perform Notify Rocket.Chat Notification
         """
@@ -467,15 +477,22 @@ class NotifyRocketChat(NotifyBase):
             api_url, self.verify_certificate))
         self.logger.debug('Rocket.Chat Payload: %s' % str(payload))
 
+        # Apply minimum headers
+        headers.update({
+            'User-Agent': self.app_id,
+            'Content-Type': 'application/json',
+        })
+
         # Always call throttle before any remote server i/o is made
         self.throttle()
 
         try:
             r = requests.post(
                 api_url,
-                data=payload,
+                data=dumps(payload),
                 headers=headers,
                 verify=self.verify_certificate,
+                timeout=self.request_timeout,
             )
             if r.status_code != requests.codes.ok:
                 # We had a problem
@@ -502,7 +519,7 @@ class NotifyRocketChat(NotifyBase):
 
         except requests.RequestException as e:
             self.logger.warning(
-                'A Connection error occured sending Rocket.Chat '
+                'A Connection error occurred sending Rocket.Chat '
                 '{}:notification.'.format(self.mode))
             self.logger.debug('Socket Exception: %s' % str(e))
 
@@ -529,6 +546,7 @@ class NotifyRocketChat(NotifyBase):
                 api_url,
                 data=payload,
                 verify=self.verify_certificate,
+                timeout=self.request_timeout,
             )
             if r.status_code != requests.codes.ok:
                 # We had a problem
@@ -570,13 +588,13 @@ class NotifyRocketChat(NotifyBase):
             # - TypeError = r.content is None
             # - AttributeError = r is None
             self.logger.warning(
-                'A commuication error occured authenticating {} on '
+                'A commuication error occurred authenticating {} on '
                 'Rocket.Chat.'.format(self.user))
             return False
 
         except requests.RequestException as e:
             self.logger.warning(
-                'A connection error occured authenticating {} on '
+                'A connection error occurred authenticating {} on '
                 'Rocket.Chat.'.format(self.user))
             self.logger.debug('Socket Exception: %s' % str(e))
             return False
@@ -595,6 +613,7 @@ class NotifyRocketChat(NotifyBase):
                 api_url,
                 headers=self.headers,
                 verify=self.verify_certificate,
+                timeout=self.request_timeout,
             )
             if r.status_code != requests.codes.ok:
                 # We had a problem
@@ -622,7 +641,7 @@ class NotifyRocketChat(NotifyBase):
 
         except requests.RequestException as e:
             self.logger.warning(
-                'A Connection error occured logging off the '
+                'A Connection error occurred logging off the '
                 'Rocket.Chat server')
             self.logger.debug('Socket Exception: %s' % str(e))
             return False
@@ -633,7 +652,7 @@ class NotifyRocketChat(NotifyBase):
     def parse_url(url):
         """
         Parses the URL and returns enough arguments that can allow
-        us to substantiate this object.
+        us to re-instantiate this object.
 
         """
 
@@ -665,7 +684,6 @@ class NotifyRocketChat(NotifyBase):
             )
 
         results = NotifyBase.parse_url(url)
-
         if not results:
             # We're done early as we couldn't load the results
             return results
@@ -688,8 +706,8 @@ class NotifyRocketChat(NotifyBase):
                 NotifyRocketChat.unquote(results['qsd']['mode'])
 
         # avatar icon
-        results['avatar'] = \
-            parse_bool(results['qsd'].get('avatar', True))
+        if 'avatar' in results['qsd'] and len(results['qsd']['avatar']):
+            results['avatar'] = parse_bool(results['qsd'].get('avatar', True))
 
         # The 'to' makes it easier to use yaml configuration
         if 'to' in results['qsd'] and len(results['qsd']['to']):

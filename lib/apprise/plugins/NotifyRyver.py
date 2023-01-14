@@ -32,7 +32,6 @@
 #  These are important <---^----------------------------------------^
 #
 import re
-import six
 import requests
 from json import dumps
 
@@ -44,7 +43,7 @@ from ..utils import validate_regex
 from ..AppriseLocale import gettext_lazy as _
 
 
-class RyverWebhookMode(object):
+class RyverWebhookMode:
     """
     Ryver supports to webhook modes
     """
@@ -130,7 +129,7 @@ class NotifyRyver(NotifyBase):
         """
         Initialize Ryver Object
         """
-        super(NotifyRyver, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
         # API Token (associated with project)
         self.token = validate_regex(
@@ -152,7 +151,7 @@ class NotifyRyver(NotifyBase):
 
         # Store our webhook mode
         self.mode = None \
-            if not isinstance(mode, six.string_types) else mode.lower()
+            if not isinstance(mode, str) else mode.lower()
 
         if self.mode not in RYVER_WEBHOOK_MODES:
             msg = 'The Ryver webhook mode specified ({}) is invalid.' \
@@ -236,6 +235,7 @@ class NotifyRyver(NotifyBase):
                 data=dumps(payload),
                 headers=headers,
                 verify=self.verify_certificate,
+                timeout=self.request_timeout,
             )
 
             if r.status_code != requests.codes.ok:
@@ -260,7 +260,7 @@ class NotifyRyver(NotifyBase):
 
         except requests.RequestException as e:
             self.logger.warning(
-                'A Connection error occured sending Ryver:%s ' % (
+                'A Connection error occurred sending Ryver:%s ' % (
                     self.organization) + 'notification.'
             )
             self.logger.debug('Socket Exception: %s' % str(e))
@@ -273,14 +273,14 @@ class NotifyRyver(NotifyBase):
         Returns the URL built dynamically based on specified arguments.
         """
 
-        # Define any arguments set
-        args = {
-            'format': self.notify_format,
-            'overflow': self.overflow_mode,
+        # Define any URL parameters
+        params = {
             'image': 'yes' if self.include_image else 'no',
             'mode': self.mode,
-            'verify': 'yes' if self.verify_certificate else 'no',
         }
+
+        # Extend our parameters
+        params.update(self.url_parameters(privacy=privacy, *args, **kwargs))
 
         # Determine if there is a botname present
         botname = ''
@@ -289,24 +289,23 @@ class NotifyRyver(NotifyBase):
                 botname=NotifyRyver.quote(self.user, safe=''),
             )
 
-        return '{schema}://{botname}{organization}/{token}/?{args}'.format(
+        return '{schema}://{botname}{organization}/{token}/?{params}'.format(
             schema=self.secure_protocol,
             botname=botname,
             organization=NotifyRyver.quote(self.organization, safe=''),
             token=self.pprint(self.token, privacy, safe=''),
-            args=NotifyRyver.urlencode(args),
+            params=NotifyRyver.urlencode(params),
         )
 
     @staticmethod
     def parse_url(url):
         """
         Parses the URL and returns enough arguments that can allow
-        us to substantiate this object.
+        us to re-instantiate this object.
 
         """
 
-        results = NotifyBase.parse_url(url)
-
+        results = NotifyBase.parse_url(url, verify_host=False)
         if not results:
             # We're done early as we couldn't load the results
             return results
@@ -323,19 +322,8 @@ class NotifyRyver(NotifyBase):
             # no token
             results['token'] = None
 
-        if 'webhook' in results['qsd']:
-            # Deprication Notice issued for v0.7.5
-            NotifyRyver.logger.deprecate(
-                'The Ryver URL contains the parameter '
-                '"webhook=" which will be deprecated in an upcoming '
-                'release. Please use "mode=" instead.'
-            )
-
-        # use mode= for consistency with the other plugins but we also
-        # support webhook= for backwards compatibility.
-        results['mode'] = results['qsd'].get(
-            'mode', results['qsd'].get(
-                'webhook', RyverWebhookMode.RYVER))
+        # Retrieve the mode
+        results['mode'] = results['qsd'].get('mode', RyverWebhookMode.RYVER)
 
         # use image= for consistency with the other plugins
         results['include_image'] = \
@@ -352,15 +340,15 @@ class NotifyRyver(NotifyBase):
         result = re.match(
             r'^https?://(?P<org>[A-Z0-9_-]+)\.ryver\.com/application/webhook/'
             r'(?P<webhook_token>[A-Z0-9]+)/?'
-            r'(?P<args>\?.+)?$', url, re.I)
+            r'(?P<params>\?.+)?$', url, re.I)
 
         if result:
             return NotifyRyver.parse_url(
-                '{schema}://{org}/{webhook_token}/{args}'.format(
+                '{schema}://{org}/{webhook_token}/{params}'.format(
                     schema=NotifyRyver.secure_protocol,
                     org=result.group('org'),
                     webhook_token=result.group('webhook_token'),
-                    args='' if not result.group('args')
-                    else result.group('args')))
+                    params='' if not result.group('params')
+                    else result.group('params')))
 
         return None

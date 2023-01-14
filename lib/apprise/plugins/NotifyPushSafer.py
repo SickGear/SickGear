@@ -23,8 +23,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-# We use io because it allows us to test the open() call
-import io
 import base64
 import requests
 from json import loads
@@ -36,7 +34,7 @@ from ..utils import validate_regex
 from ..AppriseLocale import gettext_lazy as _
 
 
-class PushSaferSound(object):
+class PushSaferSound:
     """
     Defines all of the supported PushSafe sounds
     """
@@ -248,7 +246,7 @@ PUSHSAFER_SOUND_MAP = {
 
 
 # Priorities
-class PushSaferPriority(object):
+class PushSaferPriority:
     LOW = -2
     MODERATE = -1
     NORMAL = 0
@@ -282,7 +280,7 @@ DEFAULT_PRIORITY = "normal"
 
 
 # Vibrations
-class PushSaferVibration(object):
+class PushSaferVibration:
     """
     Defines the acceptable vibration settings for notification
     """
@@ -402,7 +400,7 @@ class NotifyPushSafer(NotifyBase):
         """
         Initialize PushSafer Object
         """
-        super(NotifyPushSafer, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
         #
         # Priority
@@ -565,7 +563,7 @@ class NotifyPushSafer(NotifyBase):
                         attachment.url(privacy=True)))
 
                 try:
-                    with io.open(attachment.path, 'rb') as f:
+                    with open(attachment.path, 'rb') as f:
                         # Output must be in a DataURL format (that's what
                         # PushSafer calls it):
                         attachment = (
@@ -576,7 +574,7 @@ class NotifyPushSafer(NotifyBase):
 
                 except (OSError, IOError) as e:
                     self.logger.warning(
-                        'An I/O error occured while reading {}.'.format(
+                        'An I/O error occurred while reading {}.'.format(
                             attachment.name if attachment else 'attachment'))
                     self.logger.debug('I/O Exception: %s' % str(e))
                     return False
@@ -693,6 +691,7 @@ class NotifyPushSafer(NotifyBase):
                 data=payload,
                 headers=headers,
                 verify=self.verify_certificate,
+                timeout=self.request_timeout,
             )
 
             try:
@@ -746,7 +745,7 @@ class NotifyPushSafer(NotifyBase):
 
         except requests.RequestException as e:
             self.logger.warning(
-                'A Connection error occured communicating with PushSafer.')
+                'A Connection error occurred communicating with PushSafer.')
             self.logger.debug('Socket Exception: %s' % str(e))
 
             return False, response
@@ -756,29 +755,25 @@ class NotifyPushSafer(NotifyBase):
         Returns the URL built dynamically based on specified arguments.
         """
 
-        # Define any arguments set
-        args = {
-            'format': self.notify_format,
-            'overflow': self.overflow_mode,
-            'verify': 'yes' if self.verify_certificate else 'no',
-        }
+        # Our URL parameters
+        params = self.url_parameters(privacy=privacy, *args, **kwargs)
 
         if self.priority is not None:
             # Store our priority; but only if it was specified
-            args['priority'] = \
+            params['priority'] = \
                 next((key for key, value in PUSHSAFER_PRIORITY_MAP.items()
                       if value == self.priority),
                      DEFAULT_PRIORITY)  # pragma: no cover
 
         if self.sound is not None:
             # Store our sound; but only if it was specified
-            args['sound'] = \
+            params['sound'] = \
                 next((key for key, value in PUSHSAFER_SOUND_MAP.items()
                       if value == self.sound), '')  # pragma: no cover
 
         if self.vibration is not None:
             # Store our vibration; but only if it was specified
-            args['vibration'] = str(self.vibration)
+            params['vibration'] = str(self.vibration)
 
         targets = '/'.join([NotifyPushSafer.quote(x) for x in self.targets])
         if targets == PUSHSAFER_SEND_TO_ALL:
@@ -786,20 +781,20 @@ class NotifyPushSafer(NotifyBase):
             # it from the recipients list
             targets = ''
 
-        return '{schema}://{privatekey}/{targets}?{args}'.format(
+        return '{schema}://{privatekey}/{targets}?{params}'.format(
             schema=self.secure_protocol if self.secure else self.protocol,
             privatekey=self.pprint(self.privatekey, privacy, safe=''),
             targets=targets,
-            args=NotifyPushSafer.urlencode(args))
+            params=NotifyPushSafer.urlencode(params))
 
     @staticmethod
     def parse_url(url):
         """
         Parses the URL and returns enough arguments that can allow
-        us to substantiate this object.
+        us to re-instantiate this object.
 
         """
-        results = NotifyBase.parse_url(url)
+        results = NotifyBase.parse_url(url, verify_host=False)
         if not results:
             # We're done early as we couldn't load the results
             return results

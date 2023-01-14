@@ -23,18 +23,15 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-import re
 import os
-import six
 from itertools import chain
-from .common import NotifyType
-from .common import NotifyFormat
-from .common import MATCH_ALL_TAG
+from . import common
+from .conversion import convert_between
 from .utils import is_exclusive_match
 from .utils import parse_list
-from .utils import split_urls
+from .utils import parse_urls
+from .utils import cwe312_url
 from .logger import logger
-
 from .AppriseAsset import AppriseAsset
 from .AppriseConfig import AppriseConfig
 from .AppriseAttachment import AppriseAttachment
@@ -42,22 +39,31 @@ from .AppriseLocale import AppriseLocale
 from .config.ConfigBase import ConfigBase
 from .plugins.NotifyBase import NotifyBase
 
+
 from . import plugins
 from . import __version__
 
+# Python v3+ support code made importable, so it can remain backwards
+# compatible with Python v2
+# TODO: Review after dropping support for Python 2.
+from . import py3compat
 
-class Apprise(object):
+
+class Apprise:
     """
     Our Notification Manager
 
     """
-    def __init__(self, servers=None, asset=None):
+
+    def __init__(self, servers=None, asset=None, location=None, debug=False):
         """
         Loads a set of server urls while applying the Asset() module to each
         if specified.
 
         If no asset is provided, then the default asset is used.
 
+        Optionally specify a global ContentLocation for a more strict means
+        of handling Attachments.
         """
 
         # Initialize a server list of URLs
@@ -76,6 +82,14 @@ class Apprise(object):
 
         # Initialize our locale object
         self.locale = AppriseLocale()
+
+        # Set our debug flag
+        self.debug = debug
+
+        # Store our hosting location for optional strict rule handling
+        # of Attachments.  Setting this to None removes any attachment
+        # restrictions.
+        self.location = location
 
     @staticmethod
     def instantiate(url, asset=None, tag=None, suppress_exceptions=True):
@@ -106,64 +120,110 @@ class Apprise(object):
         # Initialize our result set
         results = None
 
-        if isinstance(url, six.string_types):
-            # Acquire our url tokens
-            results = plugins.url_to_dict(url)
-            if results is None:
-                # Failed to parse the server URL
-                logger.error('Unparseable URL {}.'.format(url))
-                return None
+        # Prepare our Asset Object
+        asset = asset if isinstance(asset, AppriseAsset) else AppriseAsset()
 
-            logger.trace('URL {} unpacked as:{}{}'.format(
-                url, os.linesep, os.linesep.join(
-                    ['{}="{}"'.format(k, v) for k, v in results.items()])))
+        if isinstance(url, str):
+            # Acquire our url tokens
+            results = plugins.url_to_dict(
+                url, secure_logging=asset.secure_logging)
+
+            if results is None:
+                # Failed to parse the server URL; detailed logging handled
+                # inside url_to_dict - nothing to report here.
+                return None
 
         elif isinstance(url, dict):
             # We already have our result set
             results = url
 
-            if results.get('schema') not in plugins.SCHEMA_MAP:
+            if results.get('schema') not in common.NOTIFY_SCHEMA_MAP:
                 # schema is a mandatory dictionary item as it is the only way
                 # we can index into our loaded plugins
                 logger.error('Dictionary does not include a "schema" entry.')
-                logger.trace('Invalid dictionary unpacked as:{}{}'.format(
-                    os.linesep, os.linesep.join(
-                        ['{}="{}"'.format(k, v) for k, v in results.items()])))
+                logger.trace(
+                    'Invalid dictionary unpacked as:{}{}'.format(
+                        os.linesep, os.linesep.join(
+                            ['{}="{}"'.format(k, v)
+                             for k, v in results.items()])))
                 return None
 
-            logger.trace('Dictionary unpacked as:{}{}'.format(
-                os.linesep, os.linesep.join(
-                    ['{}="{}"'.format(k, v) for k, v in results.items()])))
+            logger.trace(
+                'Dictionary unpacked as:{}{}'.format(
+                    os.linesep, os.linesep.join(
+                        ['{}="{}"'.format(k, v) for k, v in results.items()])))
 
+        # Otherwise we handle the invalid input specified
         else:
-            logger.error('Invalid URL specified: {}'.format(url))
+            logger.error(
+                'An invalid URL type (%s) was specified for instantiation',
+                type(url))
+            return None
+
+        if not common.NOTIFY_SCHEMA_MAP[results['schema']].enabled:
+            #
+            # First Plugin Enable Check (Pre Initialization)
+            #
+
+            # Plugin has been disabled at a global level
+            logger.error(
+                '%s:// is disabled on this system.', results['schema'])
             return None
 
         # Build a list of tags to associate with the newly added notifications
         results['tag'] = set(parse_list(tag))
 
-        # Prepare our Asset Object
-        results['asset'] = \
-            asset if isinstance(asset, AppriseAsset) else AppriseAsset()
+        # Set our Asset Object
+        results['asset'] = asset
 
         if suppress_exceptions:
             try:
                 # Attempt to create an instance of our plugin using the parsed
                 # URL information
-                plugin = plugins.SCHEMA_MAP[results['schema']](**results)
+                plugin = common.NOTIFY_SCHEMA_MAP[results['schema']](**results)
 
                 # Create log entry of loaded URL
-                logger.debug('Loaded URL: {}'.format(plugin.url()))
+                logger.debug(
+                    'Loaded {} URL: {}'.format(
+                        common.
+                        NOTIFY_SCHEMA_MAP[results['schema']].service_name,
+                        plugin.url(privacy=asset.secure_logging)))
 
             except Exception:
+                # CWE-312 (Secure Logging) Handling
+                loggable_url = url if not asset.secure_logging \
+                    else cwe312_url(url)
+
                 # the arguments are invalid or can not be used.
-                logger.error('Could not load URL: %s' % url)
+                logger.error(
+                    'Could not load {} URL: {}'.format(
+                        common.
+                        NOTIFY_SCHEMA_MAP[results['schema']].service_name,
+                        loggable_url))
                 return None
 
         else:
             # Attempt to create an instance of our plugin using the parsed
             # URL information but don't wrap it in a try catch
-            plugin = plugins.SCHEMA_MAP[results['schema']](**results)
+            plugin = common.NOTIFY_SCHEMA_MAP[results['schema']](**results)
+
+        if not plugin.enabled:
+            #
+            # Second Plugin Enable Check (Post Initialization)
+            #
+
+            # Service/Plugin is disabled (on a more local level).  This is a
+            # case where the plugin was initially enabled but then after the
+            # __init__() was called under the hood something pre-determined
+            # that it could no longer be used.
+
+            # The only downside to doing it this way is services are
+            # initialized prior to returning the details() if 3rd party tools
+            # are polling what is available. These services that become
+            # disabled thereafter are shown initially that they can be used.
+            logger.error(
+                '%s:// has become disabled on this system.', results['schema'])
+            return None
 
         return plugin
 
@@ -186,9 +246,9 @@ class Apprise(object):
             # prepare default asset
             asset = self.asset
 
-        if isinstance(servers, six.string_types):
+        if isinstance(servers, str):
             # build our server list
-            servers = split_urls(servers)
+            servers = parse_urls(servers)
             if len(servers) == 0:
                 return False
 
@@ -214,7 +274,7 @@ class Apprise(object):
                 self.servers.append(_server)
                 continue
 
-            elif not isinstance(_server, (six.string_types, dict)):
+            elif not isinstance(_server, (str, dict)):
                 logger.error(
                     "An invalid notification (type={}) was specified.".format(
                         type(_server)))
@@ -225,7 +285,7 @@ class Apprise(object):
             # returns None if it fails
             instance = Apprise.instantiate(_server, asset=asset, tag=tag)
             if not isinstance(instance, NotifyBase):
-                # No logging is requird as instantiate() handles failure
+                # No logging is required as instantiate() handles failure
                 # and/or success reasons for us
                 return_status = False
                 continue
@@ -243,9 +303,9 @@ class Apprise(object):
         """
         self.servers[:] = []
 
-    def find(self, tag=MATCH_ALL_TAG):
+    def find(self, tag=common.MATCH_ALL_TAG, match_always=True):
         """
-        Returns an list of all servers matching against the tag specified.
+        Returns a list of all servers matching against the tag specified.
 
         """
 
@@ -258,6 +318,10 @@ class Apprise(object):
         #     tag=['tagA', 'tagB']            = tagA or tagB
         #     tag=[('tagA', 'tagC'), 'tagB']  = (tagA and tagC) or tagB
         #     tag=[('tagB', 'tagC')]          = tagB and tagC
+
+        # A match_always flag allows us to pick up on our 'any' keyword
+        # and notify these services under all circumstances
+        match_always = common.MATCH_ALWAYS_TAG if match_always else None
 
         # Iterate over our loaded plugins
         for entry in self.servers:
@@ -272,21 +336,24 @@ class Apprise(object):
             for server in servers:
                 # Apply our tag matching based on our defined logic
                 if is_exclusive_match(
-                        logic=tag, data=server.tags, match_all=MATCH_ALL_TAG):
+                        logic=tag, data=server.tags,
+                        match_all=common.MATCH_ALL_TAG,
+                        match_always=match_always):
                     yield server
         return
 
-    def notify(self, body, title='', notify_type=NotifyType.INFO,
-               body_format=None, tag=MATCH_ALL_TAG, attach=None):
+    def notify(self, body, title='', notify_type=common.NotifyType.INFO,
+               body_format=None, tag=common.MATCH_ALL_TAG, match_always=True,
+               attach=None, interpret_escapes=None):
         """
-        Send a notification to all of the plugins previously loaded.
+        Send a notification to all the plugins previously loaded.
 
         If the body_format specified is NotifyFormat.MARKDOWN, it will
         be converted to HTML if the Notification type expects this.
 
         if the tag is specified (either a string or a set/list/tuple
         of strings), then only the notifications flagged with that
-        tagged value are notified.  By default all added services
+        tagged value are notified.  By default, all added services
         are notified (tag=MATCH_ALL_TAG)
 
         This function returns True if all notifications were successfully
@@ -295,112 +362,200 @@ class Apprise(object):
         simply having empty configuration files that were read.
 
         Attach can contain a list of attachment URLs.  attach can also be
-        represented by a an AttachBase() (or list of) object(s). This
+        represented by an AttachBase() (or list of) object(s). This
         identifies the products you wish to notify
+
+        Set interpret_escapes to True if you want to pre-escape a string
+        such as turning a \n into an actual new line, etc.
+        """
+
+        return py3compat.asyncio.tosync(
+            self.async_notify(
+                body, title,
+                notify_type=notify_type, body_format=body_format,
+                tag=tag, match_always=match_always, attach=attach,
+                interpret_escapes=interpret_escapes,
+            ),
+            debug=self.debug
+        )
+
+    def async_notify(self, *args, **kwargs):
+        """
+        Send a notification to all the plugins previously loaded, for
+        asynchronous callers. This method is an async method that should be
+        awaited on, even if it is missing the async keyword in its signature.
+        (This is omitted to preserve syntax compatibility with Python 2.)
+
+        The arguments are identical to those of Apprise.notify().
+
+        """
+        try:
+            coroutines = list(
+                self._notifyall(
+                    Apprise._notifyhandlerasync, *args, **kwargs))
+
+        except TypeError:
+            # No notifications sent, and there was an internal error.
+            return py3compat.asyncio.toasyncwrapvalue(False)
+
+        else:
+            if len(coroutines) > 0:
+                # All notifications sent, return False if any failed.
+                return py3compat.asyncio.notify(coroutines)
+
+            else:
+                # No notifications sent.
+                return py3compat.asyncio.toasyncwrapvalue(None)
+
+    @staticmethod
+    def _notifyhandler(server, **kwargs):
+        """
+        The synchronous notification sender. Returns True if the notification
+        sent successfully.
+        """
+
+        try:
+            # Send notification
+            return server.notify(**kwargs)
+
+        except TypeError:
+            # These our our internally thrown notifications
+            return False
+
+        except Exception:
+            # A catch all so we don't have to abort early
+            # just because one of our plugins has a bug in it.
+            logger.exception("Unhandled Notification Exception")
+            return False
+
+    @staticmethod
+    def _notifyhandlerasync(server, **kwargs):
+        """
+        The asynchronous notification sender. Returns a coroutine that yields
+        True if the notification sent successfully.
+        """
+
+        if server.asset.async_mode:
+            return server.async_notify(**kwargs)
+
+        else:
+            # Send the notification immediately, and wrap the result in a
+            # coroutine.
+            status = Apprise._notifyhandler(server, **kwargs)
+            return py3compat.asyncio.toasyncwrapvalue(status)
+
+    def _notifyall(self, handler, body, title='',
+                   notify_type=common.NotifyType.INFO, body_format=None,
+                   tag=common.MATCH_ALL_TAG, match_always=True, attach=None,
+                   interpret_escapes=None):
+        """
+        Creates notifications for all the plugins loaded.
+
+        Returns a generator that calls handler for each notification. The first
+        and only argument supplied to handler is the server, and the keyword
+        arguments are exactly as they would be passed to server.notify().
         """
 
         if len(self) == 0:
             # Nothing to notify
-            return False
-
-        # Initialize our return result which only turns to True if we send
-        # at least one valid notification
-        status = None
+            msg = "There are no service(s) to notify"
+            logger.error(msg)
+            raise TypeError(msg)
 
         if not (title or body):
-            return False
+            msg = "No message content specified to deliver"
+            logger.error(msg)
+            raise TypeError(msg)
+
+        try:
+            if title and isinstance(title, bytes):
+                title = title.decode(self.asset.encoding)
+
+            if body and isinstance(body, bytes):
+                body = body.decode(self.asset.encoding)
+
+        except UnicodeDecodeError:
+            msg = 'The content passed into Apprise was not of encoding ' \
+                  'type: {}'.format(self.asset.encoding)
+            logger.error(msg)
+            raise TypeError(msg)
 
         # Tracks conversions
-        conversion_map = dict()
+        conversion_body_map = dict()
+        conversion_title_map = dict()
 
         # Prepare attachments if required
         if attach is not None and not isinstance(attach, AppriseAttachment):
-            try:
-                attach = AppriseAttachment(attach, asset=self.asset)
-
-            except TypeError:
-                # bad attachments
-                return False
+            attach = AppriseAttachment(
+                attach, asset=self.asset, location=self.location)
 
         # Allow Asset default value
         body_format = self.asset.body_format \
             if body_format is None else body_format
 
-        # Iterate over our loaded plugins
-        for server in self.find(tag):
-            if status is None:
-                # We have at least one server to notify; change status
-                # to be a default value of True from now (purely an
-                # initialiation at this point)
-                status = True
+        # Allow Asset default value
+        interpret_escapes = self.asset.interpret_escapes \
+            if interpret_escapes is None else interpret_escapes
 
+        # Iterate over our loaded plugins
+        for server in self.find(tag, match_always=match_always):
             # If our code reaches here, we either did not define a tag (it
             # was set to None), or we did define a tag and the logic above
             # determined we need to notify the service it's associated with
-            if server.notify_format not in conversion_map:
-                if body_format == NotifyFormat.TEXT and \
-                        server.notify_format == NotifyFormat.HTML:
+            if server.notify_format not in conversion_body_map:
+                # Perform Conversion
+                conversion_body_map[server.notify_format] = \
+                    convert_between(
+                        body_format, server.notify_format, content=body)
 
-                    # Basic TEXT to HTML format map; supports keys only
-                    re_map = {
-                        # Support Ampersand
-                        r'&': '&amp;',
+                # Prepare our title
+                conversion_title_map[server.notify_format] = \
+                    '' if not title else title
 
-                        # Spaces to &nbsp; for formatting purposes since
-                        # multiple spaces are treated as one an this may
-                        # not be the callers intention
-                        r' ': '&nbsp;',
+                # Tidy Title IF required (hence it will become part of the
+                # body)
+                if server.title_maxlen <= 0 and \
+                        conversion_title_map[server.notify_format]:
 
-                        # Tab support
-                        r'\t': '&nbsp;&nbsp;&nbsp;',
+                    conversion_title_map[server.notify_format] = \
+                        convert_between(
+                            body_format, server.notify_format,
+                            content=conversion_title_map[server.notify_format])
 
-                        # Greater than and Less than Characters
-                        r'>': '&gt;',
-                        r'<': '&lt;',
-                    }
+                if interpret_escapes:
+                    #
+                    # Escape our content
+                    #
 
-                    # Compile our map
-                    re_table = re.compile(
-                        r'(' + '|'.join(
-                            map(re.escape, re_map.keys())) + r')',
-                        re.IGNORECASE,
-                    )
+                    try:
+                        # Added overhead required due to Python 3 Encoding Bug
+                        # identified here: https://bugs.python.org/issue21331
+                        conversion_body_map[server.notify_format] = \
+                            conversion_body_map[server.notify_format]\
+                            .encode('ascii', 'backslashreplace')\
+                            .decode('unicode-escape')
 
-                    # Execute our map against our body in addition to
-                    # swapping out new lines and replacing them with <br/>
-                    conversion_map[server.notify_format] = \
-                        re.sub(r'\r*\n', '<br/>\r\n',
-                               re_table.sub(
-                                   lambda x: re_map[x.group()], body))
+                        conversion_title_map[server.notify_format] = \
+                            conversion_title_map[server.notify_format]\
+                            .encode('ascii', 'backslashreplace')\
+                            .decode('unicode-escape')
 
-                else:
-                    # Store entry directly
-                    conversion_map[server.notify_format] = body
+                    except AttributeError:
+                        # Must be of string type
+                        msg = 'Failed to escape message body'
+                        logger.error(msg)
+                        raise TypeError(msg)
 
-            try:
-                # Send notification
-                if not server.notify(
-                        body=conversion_map[server.notify_format],
-                        title=title,
-                        notify_type=notify_type,
-                        attach=attach):
+            yield handler(
+                server,
+                body=conversion_body_map[server.notify_format],
+                title=conversion_title_map[server.notify_format],
+                notify_type=notify_type,
+                attach=attach,
+                body_format=body_format,
+            )
 
-                    # Toggle our return status flag
-                    status = False
-
-            except TypeError:
-                # These our our internally thrown notifications
-                status = False
-
-            except Exception:
-                # A catch all so we don't have to abort early
-                # just because one of our plugins has a bug in it.
-                logger.exception("Notification Exception")
-                status = False
-
-        return status
-
-    def details(self, lang=None):
+    def details(self, lang=None, show_requirements=False, show_disabled=False):
         """
         Returns the details associated with the Apprise object
 
@@ -416,44 +571,70 @@ class Apprise(object):
             'asset': self.asset.details(),
         }
 
-        # to add it's mapping to our hash table
-        for plugin in set(plugins.SCHEMA_MAP.values()):
+        for plugin in set(common.NOTIFY_SCHEMA_MAP.values()):
+            # Iterate over our hashed plugins and dynamically build details on
+            # their status:
+
+            content = {
+                'service_name': getattr(plugin, 'service_name', None),
+                'service_url': getattr(plugin, 'service_url', None),
+                'setup_url': getattr(plugin, 'setup_url', None),
+                # Placeholder - populated below
+                'details': None,
+                # Differentiat between what is a custom loaded plugin and
+                # which is native.
+                'category': getattr(plugin, 'category', None)
+            }
+
+            # Standard protocol(s) should be None or a tuple
+            enabled = getattr(plugin, 'enabled', True)
+            if not show_disabled and not enabled:
+                # Do not show inactive plugins
+                continue
+
+            elif show_disabled:
+                # Add current state to response
+                content['enabled'] = enabled
 
             # Standard protocol(s) should be None or a tuple
             protocols = getattr(plugin, 'protocol', None)
-            if isinstance(protocols, six.string_types):
+            if isinstance(protocols, str):
                 protocols = (protocols, )
 
             # Secure protocol(s) should be None or a tuple
             secure_protocols = getattr(plugin, 'secure_protocol', None)
-            if isinstance(secure_protocols, six.string_types):
+            if isinstance(secure_protocols, str):
                 secure_protocols = (secure_protocols, )
+
+            # Add our protocol details to our content
+            content.update({
+                'protocols': protocols,
+                'secure_protocols': secure_protocols,
+            })
 
             if not lang:
                 # Simply return our results
-                details = plugins.details(plugin)
+                content['details'] = plugins.details(plugin)
+                if show_requirements:
+                    content['requirements'] = plugins.requirements(plugin)
+
             else:
                 # Emulate the specified language when returning our results
                 with self.locale.lang_at(lang):
-                    details = plugins.details(plugin)
+                    content['details'] = plugins.details(plugin)
+                    if show_requirements:
+                        content['requirements'] = plugins.requirements(plugin)
 
             # Build our response object
-            response['schemas'].append({
-                'service_name': getattr(plugin, 'service_name', None),
-                'service_url': getattr(plugin, 'service_url', None),
-                'setup_url': getattr(plugin, 'setup_url', None),
-                'protocols': protocols,
-                'secure_protocols': secure_protocols,
-                'details': details,
-            })
+            response['schemas'].append(content)
 
         return response
 
-    def urls(self):
+    def urls(self, privacy=False):
         """
         Returns all of the loaded URLs defined in this apprise object.
         """
-        return [x.url() for x in self.servers]
+        return [x.url(privacy=privacy) for x in self.servers]
 
     def pop(self, index):
         """
@@ -527,15 +708,8 @@ class Apprise(object):
 
     def __bool__(self):
         """
-        Allows the Apprise object to be wrapped in an Python 3.x based 'if
-        statement'.  True is returned if at least one service has been loaded.
-        """
-        return len(self) > 0
-
-    def __nonzero__(self):
-        """
-        Allows the Apprise object to be wrapped in an Python 2.x based 'if
-        statement'.  True is returned if at least one service has been loaded.
+        Allows the Apprise object to be wrapped in an 'if statement'.
+        True is returned if at least one service has been loaded.
         """
         return len(self) > 0
 

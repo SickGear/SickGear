@@ -25,10 +25,10 @@
 
 import re
 import os
-import six
 import requests
 from tempfile import NamedTemporaryFile
 from .AttachBase import AttachBase
+from ..common import ContentLocation
 from ..URLBase import PrivacyMode
 from ..AppriseLocale import gettext_lazy as _
 
@@ -47,12 +47,11 @@ class AttachHTTP(AttachBase):
     # The default secure protocol
     secure_protocol = 'https'
 
-    # The maximum number of seconds to wait for a connection to be established
-    # before out-right just giving up
-    connection_timeout_sec = 5.0
-
     # The number of bytes in memory to read from the remote source at a time
     chunk_size = 8192
+
+    # Web based requests are remote/external to our current location
+    location = ContentLocation.HOSTED
 
     def __init__(self, headers=None, **kwargs):
         """
@@ -62,12 +61,12 @@ class AttachHTTP(AttachBase):
         additionally include as part of the server headers to post with
 
         """
-        super(AttachHTTP, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
         self.schema = 'https' if self.secure else 'http'
 
         self.fullpath = kwargs.get('fullpath')
-        if not isinstance(self.fullpath, six.string_types):
+        if not isinstance(self.fullpath, str):
             self.fullpath = '/'
 
         self.headers = {}
@@ -89,6 +88,10 @@ class AttachHTTP(AttachBase):
         """
         Perform retrieval of the configuration based on the specified request
         """
+
+        if self.location == ContentLocation.INACCESSIBLE:
+            # our content is inaccessible
+            return False
 
         # Ensure any existing content set has been invalidated
         self.invalidate()
@@ -129,7 +132,7 @@ class AttachHTTP(AttachBase):
                     auth=auth,
                     params=self.qsd,
                     verify=self.verify_certificate,
-                    timeout=self.connection_timeout_sec,
+                    timeout=self.request_timeout,
                     stream=True) as r:
 
                 # Handle Errors
@@ -215,7 +218,7 @@ class AttachHTTP(AttachBase):
 
         except requests.RequestException as e:
             self.logger.error(
-                'A Connection error occured retrieving HTTP '
+                'A Connection error occurred retrieving HTTP '
                 'configuration from %s.' % self.host)
             self.logger.debug('Socket Exception: %s' % str(e))
 
@@ -251,17 +254,15 @@ class AttachHTTP(AttachBase):
             self._temp_file.close()
             self._temp_file = None
 
-        super(AttachHTTP, self).invalidate()
+        super().invalidate()
 
     def url(self, privacy=False, *args, **kwargs):
         """
         Returns the URL built dynamically based on specified arguments.
         """
 
-        # Define any arguments set
-        args = {
-            'verify': 'yes' if self.verify_certificate else 'no',
-        }
+        # Our URL parameters
+        params = self.url_parameters(privacy=privacy, *args, **kwargs)
 
         # Prepare our cache value
         if self.cache is not None:
@@ -271,21 +272,21 @@ class AttachHTTP(AttachBase):
                 cache = int(self.cache)
 
             # Set our cache value
-            args['cache'] = cache
+            params['cache'] = cache
 
         if self._mimetype:
             # A format was enforced
-            args['mime'] = self._mimetype
+            params['mime'] = self._mimetype
 
         if self._name:
             # A name was enforced
-            args['name'] = self._name
+            params['name'] = self._name
 
-        # Append our headers into our args
-        args.update({'+{}'.format(k): v for k, v in self.headers.items()})
+        # Append our headers into our parameters
+        params.update({'+{}'.format(k): v for k, v in self.headers.items()})
 
         # Apply any remaining entries to our URL
-        args.update(self.qsd)
+        params.update(self.qsd)
 
         # Determine Authentication
         auth = ''
@@ -302,21 +303,21 @@ class AttachHTTP(AttachBase):
 
         default_port = 443 if self.secure else 80
 
-        return '{schema}://{auth}{hostname}{port}{fullpath}?{args}'.format(
+        return '{schema}://{auth}{hostname}{port}{fullpath}?{params}'.format(
             schema=self.secure_protocol if self.secure else self.protocol,
             auth=auth,
             hostname=self.quote(self.host, safe=''),
             port='' if self.port is None or self.port == default_port
                  else ':{}'.format(self.port),
             fullpath=self.quote(self.fullpath, safe='/'),
-            args=self.urlencode(args),
+            params=self.urlencode(params),
         )
 
     @staticmethod
     def parse_url(url):
         """
         Parses the URL and returns enough arguments that can allow
-        us to substantiate this object.
+        us to re-instantiate this object.
 
         """
         results = AttachBase.parse_url(url)

@@ -36,10 +36,72 @@ from ..AppriseLocale import gettext_lazy as _
 from ..AppriseAttachment import AppriseAttachment
 
 
-class NotifyBase(URLBase):
+# Wrap our base with the asyncio wrapper
+from ..py3compat.asyncio import AsyncNotifyBase
+BASE_OBJECT = AsyncNotifyBase
+
+
+class NotifyBase(BASE_OBJECT):
     """
     This is the base class for all notification services
     """
+
+    # An internal flag used to test the state of the plugin. If set to
+    # False, then the plugin is not used.  Plugins can disable themselves
+    # due to enviroment issues (such as missing libraries, or platform
+    # dependencies that are not present).  By default all plugins are
+    # enabled.
+    enabled = True
+
+    # The category allows for parent inheritance of this object to alter
+    # this when it's function/use is intended to behave differently. The
+    # following category types exist:
+    #
+    #  native: Is a native plugin written/stored in `apprise/plugins/Notify*`
+    #  custom: Is a custom plugin written/stored in a users plugin directory
+    #          that they loaded at execution time.
+    category = 'native'
+
+    # Some plugins may require additional packages above what is provided
+    # already by Apprise.
+    #
+    # Use this section to relay this information to the users of the script to
+    # help guide them with what they need to know if they plan on using your
+    # plugin.   The below configuration should otherwise accomodate all normal
+    # situations and will not requrie any updating:
+    requirements = {
+        # Use the description to provide a human interpretable description of
+        # what is required to make the plugin work. This is only nessisary
+        # if there are package dependencies.  Setting this to default will
+        # cause a general response to be returned.  Only set this if you plan
+        # on over-riding the default.  Always consider language support here.
+        # So before providing a value do the following in your code base:
+        #
+        #  from apprise.AppriseLocale import gettext_lazy as _
+        #
+        # 'details': _('My detailed requirements')
+        'details': None,
+
+        # Define any required packages needed for the plugin to run.  This is
+        # an array of strings that simply look like lines residing in a
+        # `requirements.txt` file...
+        #
+        # As an example, an entry may look like:
+        # 'packages_required': [
+        #   'cryptography < 3.4`,
+        # ]
+        'packages_required': [],
+
+        # Recommended packages identify packages that are not required to make
+        # your plugin work, but would improve it's use or grant it access to
+        # full functionality (that might otherwise be limited).
+
+        # Similar to `packages_required`, you would identify each entry in
+        # the array as you would in a `requirements.txt` file.
+        #
+        #   - Do not re-provide entries already in the `packages_required`
+        'packages_recommended': [],
+    }
 
     # The services URL
     service_url = None
@@ -80,21 +142,11 @@ class NotifyBase(URLBase):
     # use a <b> tag.  The below causes the <b>title</b> to get generated:
     default_html_tag_id = 'b'
 
-    # Define a default set of template arguments used for dynamically building
-    # details about our individual plugins for developers.
-
-    # Define object templates
-    templates = ()
-
-    # Provides a mapping of tokens, certain entries are fixed and automatically
-    # configured if found (such as schema, host, user, pass, and port)
-    template_tokens = {}
-
     # Here is where we define all of the arguments we accept on the url
     # such as: schema://whatever/?overflow=upstream&format=text
     # These act the same way as tokens except they are optional and/or
     # have default values set if mandatory. This rule must be followed
-    template_args = {
+    template_args = dict(URLBase.template_args, **{
         'overflow': {
             'name': _('Overflow Mode'),
             'type': 'choice:string',
@@ -119,34 +171,7 @@ class NotifyBase(URLBase):
             # runtime.
             '_lookup_default': 'notify_format',
         },
-        'verify': {
-            'name': _('Verify SSL'),
-            # SSL Certificate Authority Verification
-            'type': 'bool',
-            # Provide a default
-            'default': URLBase.verify_certificate,
-            # look up default using the following parent class value at
-            # runtime.
-            '_lookup_default': 'verify_certificate',
-        },
-    }
-
-    # kwargs are dynamically built because a prefix causes us to parse the
-    # content slightly differently. The prefix is required and can be either
-    # a (+ or -). Below would handle the +key=value:
-    #    {
-    #        'headers': {
-    #           'name': _('HTTP Header'),
-    #           'prefix': '+',
-    #           'type': 'string',
-    #        },
-    #    },
-    #
-    # In a kwarg situation, the 'key' is always presumed to be treated as
-    # a string.  When the 'type' is defined, it is being defined to respect
-    # the 'value'.
-
-    template_kwargs = {}
+    })
 
     def __init__(self, **kwargs):
         """
@@ -155,13 +180,13 @@ class NotifyBase(URLBase):
 
         """
 
-        super(NotifyBase, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
         if 'format' in kwargs:
             # Store the specified format if specified
             notify_format = kwargs.get('format', '')
             if notify_format.lower() not in NOTIFY_FORMATS:
-                msg = 'Invalid notification format %s'.format(notify_format)
+                msg = 'Invalid notification format {}'.format(notify_format)
                 self.logger.error(msg)
                 raise TypeError(msg)
 
@@ -179,7 +204,8 @@ class NotifyBase(URLBase):
             # Provide override
             self.overflow_mode = overflow
 
-    def image_url(self, notify_type, logo=False, extension=None):
+    def image_url(self, notify_type, logo=False, extension=None,
+                  image_size=None):
         """
         Returns Image URL if possible
         """
@@ -192,7 +218,7 @@ class NotifyBase(URLBase):
 
         return self.asset.image_url(
             notify_type=notify_type,
-            image_size=self.image_size,
+            image_size=self.image_size if image_size is None else image_size,
             logo=logo,
             extension=extension,
         )
@@ -242,11 +268,18 @@ class NotifyBase(URLBase):
         )
 
     def notify(self, body, title=None, notify_type=NotifyType.INFO,
-               overflow=None, attach=None, **kwargs):
+               overflow=None, attach=None, body_format=None, **kwargs):
         """
         Performs notification
 
         """
+
+        if not self.enabled:
+            # Deny notifications issued to services that are disabled
+            self.logger.warning(
+                "{} is currently disabled on this system.".format(
+                    self.service_name))
+            return False
 
         # Prepare attachments if required
         if attach is not None and not isinstance(attach, AppriseAttachment):
@@ -261,18 +294,22 @@ class NotifyBase(URLBase):
         title = '' if not title else title
 
         # Apply our overflow (if defined)
-        for chunk in self._apply_overflow(body=body, title=title,
-                                          overflow=overflow):
+        for chunk in self._apply_overflow(
+                body=body, title=title, overflow=overflow,
+                body_format=body_format):
+
             # Send notification
             if not self.send(body=chunk['body'], title=chunk['title'],
-                             notify_type=notify_type, attach=attach):
+                             notify_type=notify_type, attach=attach,
+                             body_format=body_format):
 
                 # Toggle our return status flag
                 return False
 
         return True
 
-    def _apply_overflow(self, body, title=None, overflow=None):
+    def _apply_overflow(self, body, title=None, overflow=None,
+                        body_format=None):
         """
         Takes the message body and title as input.  This function then
         applies any defined overflow restrictions associated with the
@@ -304,18 +341,24 @@ class NotifyBase(URLBase):
             overflow = self.overflow_mode
 
         if self.title_maxlen <= 0 and len(title) > 0:
-            if self.notify_format == NotifyFormat.MARKDOWN:
-                # Content is appended to body as markdown
-                body = '**{}**\r\n{}'.format(title, body)
 
-            elif self.notify_format == NotifyFormat.HTML:
+            if self.notify_format == NotifyFormat.HTML:
                 # Content is appended to body as html
                 body = '<{open_tag}>{title}</{close_tag}>' \
                     '<br />\r\n{body}'.format(
                         open_tag=self.default_html_tag_id,
-                        title=self.escape_html(title),
+                        title=title,
                         close_tag=self.default_html_tag_id,
                         body=body)
+
+            elif self.notify_format == NotifyFormat.MARKDOWN and \
+                    body_format == NotifyFormat.TEXT:
+                # Content is appended to body as markdown
+                title = title.lstrip('\r\n \t\v\f#-')
+                if title:
+                    # Content is appended to body as text
+                    body = '# {}\r\n{}'.format(title, body)
+
             else:
                 # Content is appended to body as text
                 body = '{}\r\n{}'.format(title, body)
@@ -368,8 +411,25 @@ class NotifyBase(URLBase):
         raise NotImplementedError(
             "send() is not implimented by the child class.")
 
+    def url_parameters(self, *args, **kwargs):
+        """
+        Provides a default set of parameters to work with. This can greatly
+        simplify URL construction in the acommpanied url() function in all
+        defined plugin services.
+        """
+
+        params = {
+            'format': self.notify_format,
+            'overflow': self.overflow_mode,
+        }
+
+        params.update(super().url_parameters(*args, **kwargs))
+
+        # return default parameters
+        return params
+
     @staticmethod
-    def parse_url(url, verify_host=True):
+    def parse_url(url, verify_host=True, plus_to_space=False):
         """Parses the URL and returns it broken apart into a dictionary.
 
         This is very specific and customized for Apprise.
@@ -387,7 +447,8 @@ class NotifyBase(URLBase):
             A dictionary is returned containing the URL fully parsed if
             successful, otherwise None is returned.
         """
-        results = URLBase.parse_url(url, verify_host=verify_host)
+        results = URLBase.parse_url(
+            url, verify_host=verify_host, plus_to_space=plus_to_space)
 
         if not results:
             # We're done; we failed to parse our url

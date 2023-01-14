@@ -32,7 +32,7 @@ from ..AppriseLocale import gettext_lazy as _
 
 
 # Priorities
-class ProwlPriority(object):
+class ProwlPriority:
     LOW = -2
     MODERATE = -1
     NORMAL = 0
@@ -40,13 +40,34 @@ class ProwlPriority(object):
     EMERGENCY = 2
 
 
-PROWL_PRIORITIES = (
-    ProwlPriority.LOW,
-    ProwlPriority.MODERATE,
-    ProwlPriority.NORMAL,
-    ProwlPriority.HIGH,
-    ProwlPriority.EMERGENCY,
-)
+PROWL_PRIORITIES = {
+    # Note: This also acts as a reverse lookup mapping
+    ProwlPriority.LOW: 'low',
+    ProwlPriority.MODERATE: 'moderate',
+    ProwlPriority.NORMAL: 'normal',
+    ProwlPriority.HIGH: 'high',
+    ProwlPriority.EMERGENCY: 'emergency',
+}
+
+PROWL_PRIORITY_MAP = {
+    # Maps against string 'low'
+    'l': ProwlPriority.LOW,
+    # Maps against string 'moderate'
+    'm': ProwlPriority.MODERATE,
+    # Maps against string 'normal'
+    'n': ProwlPriority.NORMAL,
+    # Maps against string 'high'
+    'h': ProwlPriority.HIGH,
+    # Maps against string 'emergency'
+    'e': ProwlPriority.EMERGENCY,
+
+    # Entries to additionally support (so more like Prowl's API)
+    '-2': ProwlPriority.LOW,
+    '-1': ProwlPriority.MODERATE,
+    '0': ProwlPriority.NORMAL,
+    '1': ProwlPriority.HIGH,
+    '2': ProwlPriority.EMERGENCY,
+}
 
 # Provide some known codes Prowl uses and what they translate to:
 PROWL_HTTP_ERROR_MAP = {
@@ -122,13 +143,15 @@ class NotifyProwl(NotifyBase):
         """
         Initialize Prowl Object
         """
-        super(NotifyProwl, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
-        if priority not in PROWL_PRIORITIES:
-            self.priority = self.template_args['priority']['default']
-
-        else:
-            self.priority = priority
+        # The Priority of the message
+        self.priority = NotifyProwl.template_args['priority']['default'] \
+            if not priority else \
+            next((
+                v for k, v in PROWL_PRIORITY_MAP.items()
+                if str(priority).lower().startswith(k)),
+                NotifyProwl.template_args['priority']['default'])
 
         # API Key (associated with project)
         self.apikey = validate_regex(
@@ -191,6 +214,7 @@ class NotifyProwl(NotifyBase):
                 data=payload,
                 headers=headers,
                 verify=self.verify_certificate,
+                timeout=self.request_timeout,
             )
             if r.status_code != requests.codes.ok:
                 # We had a problem
@@ -215,7 +239,7 @@ class NotifyProwl(NotifyBase):
 
         except requests.RequestException as e:
             self.logger.warning(
-                'A Connection error occured sending Prowl notification.')
+                'A Connection error occurred sending Prowl notification.')
             self.logger.debug('Socket Exception: %s' % str(e))
 
             # Return; we're done
@@ -228,39 +252,32 @@ class NotifyProwl(NotifyBase):
         Returns the URL built dynamically based on specified arguments.
         """
 
-        _map = {
-            ProwlPriority.LOW: 'low',
-            ProwlPriority.MODERATE: 'moderate',
-            ProwlPriority.NORMAL: 'normal',
-            ProwlPriority.HIGH: 'high',
-            ProwlPriority.EMERGENCY: 'emergency',
+        # Define any URL parameters
+        params = {
+            'priority':
+                PROWL_PRIORITIES[self.template_args['priority']['default']]
+                if self.priority not in PROWL_PRIORITIES
+                else PROWL_PRIORITIES[self.priority],
         }
 
-        # Define any arguments set
-        args = {
-            'format': self.notify_format,
-            'overflow': self.overflow_mode,
-            'priority': 'normal' if self.priority not in _map
-                        else _map[self.priority],
-            'verify': 'yes' if self.verify_certificate else 'no',
-        }
+        # Extend our parameters
+        params.update(self.url_parameters(privacy=privacy, *args, **kwargs))
 
-        return '{schema}://{apikey}/{providerkey}/?{args}'.format(
+        return '{schema}://{apikey}/{providerkey}/?{params}'.format(
             schema=self.secure_protocol,
             apikey=self.pprint(self.apikey, privacy, safe=''),
             providerkey=self.pprint(self.providerkey, privacy, safe=''),
-            args=NotifyProwl.urlencode(args),
+            params=NotifyProwl.urlencode(params),
         )
 
     @staticmethod
     def parse_url(url):
         """
         Parses the URL and returns enough arguments that can allow
-        us to substantiate this object.
+        us to re-instantiate this object.
 
         """
-        results = NotifyBase.parse_url(url)
-
+        results = NotifyBase.parse_url(url, verify_host=False)
         if not results:
             # We're done early as we couldn't load the results
             return results
@@ -276,20 +293,9 @@ class NotifyProwl(NotifyBase):
         except IndexError:
             pass
 
+        # Set our priority
         if 'priority' in results['qsd'] and len(results['qsd']['priority']):
-            _map = {
-                'l': ProwlPriority.LOW,
-                'm': ProwlPriority.MODERATE,
-                'n': ProwlPriority.NORMAL,
-                'h': ProwlPriority.HIGH,
-                'e': ProwlPriority.EMERGENCY,
-            }
-            try:
-                results['priority'] = \
-                    _map[results['qsd']['priority'][0].lower()]
-
-            except KeyError:
-                # No priority was set
-                pass
+            results['priority'] = \
+                NotifyProwl.unquote(results['qsd']['priority'])
 
         return results

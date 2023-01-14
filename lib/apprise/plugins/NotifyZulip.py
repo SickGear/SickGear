@@ -62,11 +62,12 @@ from .NotifyBase import NotifyBase
 from ..common import NotifyType
 from ..utils import parse_list
 from ..utils import validate_regex
-from ..utils import GET_EMAIL_RE
+from ..utils import is_email
+from ..utils import remove_suffix
 from ..AppriseLocale import gettext_lazy as _
 
 # A Valid Bot Name
-VALIDATE_BOTNAME = re.compile(r'(?P<name>[A-Z0-9_]{1,32})(-bot)?', re.I)
+VALIDATE_BOTNAME = re.compile(r'(?P<name>[A-Z0-9_-]{1,32})', re.I)
 
 # Organization required as part of the API request
 VALIDATE_ORG = re.compile(
@@ -77,12 +78,12 @@ ZULIP_HTTP_ERROR_MAP = {
     401: 'Unauthorized - Invalid Token.',
 }
 
-# Used to break path apart into list of channels
+# Used to break path apart into list of streams
 TARGET_LIST_DELIM = re.compile(r'[ \t\r\n,#\\/]+')
 
-# Used to detect a channel
+# Used to detect a streams
 IS_VALID_TARGET_RE = re.compile(
-    r'#?(?P<channel>[A-Z0-9_]{1,32})', re.I)
+    r'#?(?P<stream>[A-Z0-9_]{1,32})', re.I)
 
 
 class NotifyZulip(NotifyBase):
@@ -122,7 +123,7 @@ class NotifyZulip(NotifyBase):
         'botname': {
             'name': _('Bot Name'),
             'type': 'string',
-            'regex': (r'^[A-Z0-9_]{1,32}(-bot)?$', 'i'),
+            'regex': (r'^[A-Z0-9_-]{1,32}$', 'i'),
         },
         'organization': {
             'name': _('Organization'),
@@ -142,8 +143,8 @@ class NotifyZulip(NotifyBase):
             'type': 'string',
             'map_to': 'targets',
         },
-        'target_channel': {
-            'name': _('Target Channel'),
+        'target_stream': {
+            'name': _('Target Stream'),
             'type': 'string',
             'map_to': 'targets',
         },
@@ -164,14 +165,14 @@ class NotifyZulip(NotifyBase):
     # if one isn't defined in the apprise url
     default_hostname = 'zulipchat.com'
 
-    # The default channel to notify if no targets are specified
-    default_notification_channel = 'general'
+    # The default stream to notify if no targets are specified
+    default_notification_stream = 'general'
 
     def __init__(self, botname, organization, token, targets=None, **kwargs):
         """
         Initialize Zulip Object
         """
-        super(NotifyZulip, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
         # our default hostname
         self.hostname = self.default_hostname
@@ -183,7 +184,9 @@ class NotifyZulip(NotifyBase):
                 raise TypeError
 
             # The botname
-            self.botname = match.group('name')
+            botname = match.group('name')
+            botname = remove_suffix(botname, '-bot')
+            self.botname = botname
 
         except (TypeError, AttributeError):
             msg = 'The Zulip botname specified ({}) is invalid.'\
@@ -218,8 +221,8 @@ class NotifyZulip(NotifyBase):
 
         self.targets = parse_list(targets)
         if len(self.targets) == 0:
-            # No channels identified, use default
-            self.targets.append(self.default_notification_channel)
+            # No streams identified, use default
+            self.targets.append(self.default_notification_stream)
 
     def send(self, body, title='', notify_type=NotifyType.INFO, **kwargs):
         """
@@ -260,7 +263,8 @@ class NotifyZulip(NotifyBase):
         targets = list(self.targets)
         while len(targets):
             target = targets.pop(0)
-            if GET_EMAIL_RE.match(target):
+            result = is_email(target)
+            if result:
                 # Send a private message
                 payload['type'] = 'private'
             else:
@@ -268,7 +272,7 @@ class NotifyZulip(NotifyBase):
                 payload['type'] = 'stream'
 
             # Set our target
-            payload['to'] = target
+            payload['to'] = target if not result else result['full_email']
 
             self.logger.debug('Zulip POST URL: %s (cert_verify=%r)' % (
                 url, self.verify_certificate,
@@ -284,6 +288,7 @@ class NotifyZulip(NotifyBase):
                     headers=headers,
                     auth=auth,
                     verify=self.verify_certificate,
+                    timeout=self.request_timeout,
                 )
                 if r.status_code != requests.codes.ok:
                     # We had a problem
@@ -312,7 +317,7 @@ class NotifyZulip(NotifyBase):
 
             except requests.RequestException as e:
                 self.logger.warning(
-                    'A Connection error occured sending Zulip '
+                    'A Connection error occurred sending Zulip '
                     'notification to {}.'.format(target))
                 self.logger.debug('Socket Exception: %s' % str(e))
 
@@ -327,12 +332,8 @@ class NotifyZulip(NotifyBase):
         Returns the URL built dynamically based on specified arguments.
         """
 
-        # Define any arguments set
-        args = {
-            'format': self.notify_format,
-            'overflow': self.overflow_mode,
-            'verify': 'yes' if self.verify_certificate else 'no',
-        }
+        # Our URL parameters
+        params = self.url_parameters(privacy=privacy, *args, **kwargs)
 
         # simplify our organization in our URL if we can
         organization = '{}{}'.format(
@@ -341,25 +342,24 @@ class NotifyZulip(NotifyBase):
             if self.hostname != self.default_hostname else '')
 
         return '{schema}://{botname}@{org}/{token}/' \
-            '{targets}?{args}'.format(
+            '{targets}?{params}'.format(
                 schema=self.secure_protocol,
                 botname=NotifyZulip.quote(self.botname, safe=''),
                 org=NotifyZulip.quote(organization, safe=''),
                 token=self.pprint(self.token, privacy, safe=''),
                 targets='/'.join(
                     [NotifyZulip.quote(x, safe='') for x in self.targets]),
-                args=NotifyZulip.urlencode(args),
+                params=NotifyZulip.urlencode(params),
             )
 
     @staticmethod
     def parse_url(url):
         """
         Parses the URL and returns enough arguments that can allow
-        us to substantiate this object.
+        us to re-instantiate this object.
 
         """
-        results = NotifyBase.parse_url(url)
-
+        results = NotifyBase.parse_url(url, verify_host=False)
         if not results:
             # We're done early as we couldn't load the results
             return results

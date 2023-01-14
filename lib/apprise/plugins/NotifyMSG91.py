@@ -31,20 +31,17 @@
 # Get details on the API used in this plugin here:
 #   - https://world.msg91.com/apidoc/textsms/send-sms.php
 
-import re
 import requests
 
 from .NotifyBase import NotifyBase
 from ..common import NotifyType
-from ..utils import parse_list
+from ..utils import is_phone_no
+from ..utils import parse_phone_no
 from ..utils import validate_regex
 from ..AppriseLocale import gettext_lazy as _
 
-# Some Phone Number Detection
-IS_PHONE_NO = re.compile(r'^\+?(?P<phone>[0-9\s)(+-]+)\s*$')
 
-
-class MSG91Route(object):
+class MSG91Route:
     """
     Transactional SMS Routes
     route=1 for promotional, route=4 for transactional SMS.
@@ -60,7 +57,7 @@ MSG91_ROUTES = (
 )
 
 
-class MSG91Country(object):
+class MSG91Country:
     """
     Optional value that can be specified on the MSG91 api
     """
@@ -159,7 +156,7 @@ class NotifyMSG91(NotifyBase):
         """
         Initialize MSG91 Object
         """
-        super(NotifyMSG91, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
         # Authentication Key (associated with project)
         self.authkey = validate_regex(
@@ -207,33 +204,18 @@ class NotifyMSG91(NotifyBase):
         # Parse our targets
         self.targets = list()
 
-        for target in parse_list(targets):
+        for target in parse_phone_no(targets):
             # Validate targets and drop bad ones:
-            result = IS_PHONE_NO.match(target)
-            if result:
-                # Further check our phone # for it's digit count
-                result = ''.join(re.findall(r'\d+', result.group('phone')))
-                if len(result) < 11 or len(result) > 14:
-                    self.logger.warning(
-                        'Dropped invalid phone # '
-                        '({}) specified.'.format(target),
-                    )
-                    continue
-
-                # store valid phone number
-                self.targets.append(result)
+            result = is_phone_no(target)
+            if not result:
+                self.logger.warning(
+                    'Dropped invalid phone # '
+                    '({}) specified.'.format(target),
+                )
                 continue
 
-            self.logger.warning(
-                'Dropped invalid phone # '
-                '({}) specified.'.format(target),
-            )
-
-        if not self.targets:
-            # We have a bot token and no target(s) to message
-            msg = 'No MSG91 targets to notify.'
-            self.logger.warning(msg)
-            raise TypeError(msg)
+            # store valid phone number
+            self.targets.append(result['full'])
 
         return
 
@@ -241,6 +223,11 @@ class NotifyMSG91(NotifyBase):
         """
         Perform MSG91 Notification
         """
+
+        if len(self.targets) == 0:
+            # There were no services to notify
+            self.logger.warning('There were no MSG91 targets to notify.')
+            return False
 
         # Prepare our headers
         headers = {
@@ -276,6 +263,7 @@ class NotifyMSG91(NotifyBase):
                 data=payload,
                 headers=headers,
                 verify=self.verify_certificate,
+                timeout=self.request_timeout,
             )
 
             if r.status_code != requests.codes.ok:
@@ -302,7 +290,7 @@ class NotifyMSG91(NotifyBase):
 
         except requests.RequestException as e:
             self.logger.warning(
-                'A Connection error occured sending MSG91:%s '
+                'A Connection error occurred sending MSG91:%s '
                 'notification.' % ','.join(self.targets)
             )
             self.logger.debug('Socket Exception: %s' % str(e))
@@ -316,34 +304,33 @@ class NotifyMSG91(NotifyBase):
         Returns the URL built dynamically based on specified arguments.
         """
 
-        # Define any arguments set
-        args = {
-            'format': self.notify_format,
-            'overflow': self.overflow_mode,
-            'verify': 'yes' if self.verify_certificate else 'no',
+        # Define any URL parameters
+        params = {
             'route': str(self.route),
         }
 
-        if self.country:
-            args['country'] = str(self.country)
+        # Extend our parameters
+        params.update(self.url_parameters(privacy=privacy, *args, **kwargs))
 
-        return '{schema}://{authkey}/{targets}/?{args}'.format(
+        if self.country:
+            params['country'] = str(self.country)
+
+        return '{schema}://{authkey}/{targets}/?{params}'.format(
             schema=self.secure_protocol,
             authkey=self.pprint(self.authkey, privacy, safe=''),
             targets='/'.join(
                 [NotifyMSG91.quote(x, safe='') for x in self.targets]),
-            args=NotifyMSG91.urlencode(args))
+            params=NotifyMSG91.urlencode(params))
 
     @staticmethod
     def parse_url(url):
         """
         Parses the URL and returns enough arguments that can allow
-        us to substantiate this object.
+        us to re-instantiate this object.
 
         """
 
-        results = NotifyBase.parse_url(url)
-
+        results = NotifyBase.parse_url(url, verify_host=False)
         if not results:
             # We're done early as we couldn't load the results
             return results
@@ -365,6 +352,6 @@ class NotifyMSG91(NotifyBase):
         # The 'to' makes it easier to use yaml configuration
         if 'to' in results['qsd'] and len(results['qsd']['to']):
             results['targets'] += \
-                NotifyMSG91.parse_list(results['qsd']['to'])
+                NotifyMSG91.parse_phone_no(results['qsd']['to'])
 
         return results

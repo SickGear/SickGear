@@ -24,7 +24,6 @@
 # THE SOFTWARE.
 
 import re
-import six
 import requests
 import hmac
 from json import dumps
@@ -151,7 +150,7 @@ class NotifyBoxcar(NotifyBase):
         """
         Initialize Boxcar Object
         """
-        super(NotifyBoxcar, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
         # Initialize tag list
         self.tags = list()
@@ -181,7 +180,7 @@ class NotifyBoxcar(NotifyBase):
             self.tags.append(DEFAULT_TAG)
             targets = []
 
-        elif isinstance(targets, six.string_types):
+        elif isinstance(targets, str):
             targets = [x for x in filter(bool, TAGS_LIST_DELIM.split(
                 targets,
             ))]
@@ -279,6 +278,7 @@ class NotifyBoxcar(NotifyBase):
                 data=dumps(payload),
                 headers=headers,
                 verify=self.verify_certificate,
+                timeout=self.request_timeout,
             )
 
             # Boxcar returns 201 (Created) when successful
@@ -304,7 +304,7 @@ class NotifyBoxcar(NotifyBase):
 
         except requests.RequestException as e:
             self.logger.warning(
-                'A Connection error occured sending Boxcar '
+                'A Connection error occurred sending Boxcar '
                 'notification to %s.' % (host))
 
             self.logger.debug('Socket Exception: %s' % str(e))
@@ -319,15 +319,15 @@ class NotifyBoxcar(NotifyBase):
         Returns the URL built dynamically based on specified arguments.
         """
 
-        # Define any arguments set
-        args = {
-            'format': self.notify_format,
-            'overflow': self.overflow_mode,
+        # Define any URL parameters
+        params = {
             'image': 'yes' if self.include_image else 'no',
-            'verify': 'yes' if self.verify_certificate else 'no',
         }
 
-        return '{schema}://{access}/{secret}/{targets}?{args}'.format(
+        # Extend our parameters
+        params.update(self.url_parameters(privacy=privacy, *args, **kwargs))
+
+        return '{schema}://{access}/{secret}/{targets}?{params}'.format(
             schema=self.secure_protocol,
             access=self.pprint(self.access, privacy, safe=''),
             secret=self.pprint(
@@ -335,7 +335,7 @@ class NotifyBoxcar(NotifyBase):
             targets='/'.join([
                 NotifyBoxcar.quote(x, safe='') for x in chain(
                     self.tags, self.device_tokens) if x != DEFAULT_TAG]),
-            args=NotifyBoxcar.urlencode(args),
+            params=NotifyBoxcar.urlencode(params),
         )
 
     @staticmethod
@@ -345,7 +345,6 @@ class NotifyBoxcar(NotifyBase):
 
         """
         results = NotifyBase.parse_url(url, verify_host=False)
-
         if not results:
             # We're done early
             return None
@@ -357,13 +356,8 @@ class NotifyBoxcar(NotifyBase):
         # by default
         entries = NotifyBoxcar.split_path(results['fullpath'])
 
-        try:
-            # Now fetch the remaining tokens
-            results['secret'] = entries.pop(0)
-
-        except IndexError:
-            # secret wasn't specified
-            results['secret'] = None
+        # Now fetch the remaining tokens
+        results['secret'] = entries.pop(0) if entries else None
 
         # Our recipients make up the remaining entries of our array
         results['targets'] = entries

@@ -24,11 +24,12 @@
 # THE SOFTWARE.
 
 import re
-import six
 import requests
 
 from .NotifyBase import NotifyBase
 from ..common import NotifyType
+from ..common import NotifyFormat
+from ..conversion import convert_between
 from ..utils import parse_list
 from ..utils import validate_regex
 from ..AppriseLocale import gettext_lazy as _
@@ -42,7 +43,7 @@ VALIDATE_DEVICE = re.compile(r'^[a-z0-9_]{1,25}$', re.I)
 
 
 # Priorities
-class PushoverPriority(object):
+class PushoverPriority:
     LOW = -2
     MODERATE = -1
     NORMAL = 0
@@ -51,7 +52,7 @@ class PushoverPriority(object):
 
 
 # Sounds
-class PushoverSound(object):
+class PushoverSound:
     PUSHOVER = 'pushover'
     BIKE = 'bike'
     BUGLE = 'bugle'
@@ -101,13 +102,34 @@ PUSHOVER_SOUNDS = (
     PushoverSound.NONE,
 )
 
-PUSHOVER_PRIORITIES = (
-    PushoverPriority.LOW,
-    PushoverPriority.MODERATE,
-    PushoverPriority.NORMAL,
-    PushoverPriority.HIGH,
-    PushoverPriority.EMERGENCY,
-)
+PUSHOVER_PRIORITIES = {
+    # Note: This also acts as a reverse lookup mapping
+    PushoverPriority.LOW: 'low',
+    PushoverPriority.MODERATE: 'moderate',
+    PushoverPriority.NORMAL: 'normal',
+    PushoverPriority.HIGH: 'high',
+    PushoverPriority.EMERGENCY: 'emergency',
+}
+
+PUSHOVER_PRIORITY_MAP = {
+    # Maps against string 'low'
+    'l': PushoverPriority.LOW,
+    # Maps against string 'moderate'
+    'm': PushoverPriority.MODERATE,
+    # Maps against string 'normal'
+    'n': PushoverPriority.NORMAL,
+    # Maps against string 'high'
+    'h': PushoverPriority.HIGH,
+    # Maps against string 'emergency'
+    'e': PushoverPriority.EMERGENCY,
+
+    # Entries to additionally support (so more like Pushover's API)
+    '-2': PushoverPriority.LOW,
+    '-1': PushoverPriority.MODERATE,
+    '0': PushoverPriority.NORMAL,
+    '1': PushoverPriority.HIGH,
+    '2': PushoverPriority.EMERGENCY,
+}
 
 # Extend HTTP Error Messages
 PUSHOVER_HTTP_ERROR_MAP = {
@@ -162,14 +184,12 @@ class NotifyPushover(NotifyBase):
             'type': 'string',
             'private': True,
             'required': True,
-            'regex': (r'^[a-z0-9]{30}$', 'i'),
         },
         'token': {
             'name': _('Access Token'),
             'type': 'string',
             'private': True,
             'required': True,
-            'regex': (r'^[a-z0-9]{30}$', 'i'),
         },
         'target_device': {
             'name': _('Target Device'),
@@ -197,6 +217,16 @@ class NotifyPushover(NotifyBase):
             'regex': (r'^[a-z]{1,12}$', 'i'),
             'default': PushoverSound.PUSHOVER,
         },
+        'url': {
+            'name': _('URL'),
+            'map_to': 'supplemental_url',
+            'type': 'string',
+        },
+        'url_title': {
+            'name': _('URL Title'),
+            'map_to': 'supplemental_url_title',
+            'type': 'string'
+        },
         'retry': {
             'name': _('Retry'),
             'type': 'int',
@@ -216,15 +246,15 @@ class NotifyPushover(NotifyBase):
     })
 
     def __init__(self, user_key, token, targets=None, priority=None,
-                 sound=None, retry=None, expire=None, **kwargs):
+                 sound=None, retry=None, expire=None, supplemental_url=None,
+                 supplemental_url_title=None, **kwargs):
         """
         Initialize Pushover Object
         """
-        super(NotifyPushover, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
         # Access Token (associated with project)
-        self.token = validate_regex(
-            token, *self.template_tokens['token']['regex'])
+        self.token = validate_regex(token)
         if not self.token:
             msg = 'An invalid Pushover Access Token ' \
                   '({}) was specified.'.format(token)
@@ -232,8 +262,7 @@ class NotifyPushover(NotifyBase):
             raise TypeError(msg)
 
         # User Key (associated with project)
-        self.user_key = validate_regex(
-            user_key, *self.template_tokens['user_key']['regex'])
+        self.user_key = validate_regex(user_key)
         if not self.user_key:
             msg = 'An invalid Pushover User Key ' \
                   '({}) was specified.'.format(user_key)
@@ -244,20 +273,26 @@ class NotifyPushover(NotifyBase):
         if len(self.targets) == 0:
             self.targets = (PUSHOVER_SEND_TO_ALL, )
 
+        # Setup supplemental url
+        self.supplemental_url = supplemental_url
+        self.supplemental_url_title = supplemental_url_title
+
         # Setup our sound
         self.sound = NotifyPushover.default_pushover_sound \
-            if not isinstance(sound, six.string_types) else sound.lower()
+            if not isinstance(sound, str) else sound.lower()
         if self.sound and self.sound not in PUSHOVER_SOUNDS:
             msg = 'The sound specified ({}) is invalid.'.format(sound)
             self.logger.warning(msg)
             raise TypeError(msg)
 
         # The Priority of the message
-        if priority not in PUSHOVER_PRIORITIES:
-            self.priority = self.template_args['priority']['default']
-
-        else:
-            self.priority = priority
+        self.priority = int(
+            NotifyPushover.template_args['priority']['default']
+            if priority is None else
+            next((
+                v for k, v in PUSHOVER_PRIORITY_MAP.items()
+                if str(priority).lower().startswith(k)),
+                NotifyPushover.template_args['priority']['default']))
 
         # The following are for emergency alerts
         if self.priority == PushoverPriority.EMERGENCY:
@@ -324,6 +359,19 @@ class NotifyPushover(NotifyBase):
                 'sound': self.sound,
             }
 
+            if self.supplemental_url:
+                payload['url'] = self.supplemental_url
+            if self.supplemental_url_title:
+                payload['url_title'] = self.supplemental_url_title
+
+            if self.notify_format == NotifyFormat.HTML:
+                # https://pushover.net/api#html
+                payload['html'] = 1
+            elif self.notify_format == NotifyFormat.MARKDOWN:
+                payload['message'] = convert_between(
+                    NotifyFormat.MARKDOWN, NotifyFormat.HTML, body)
+                payload['html'] = 1
+
             if self.priority == PushoverPriority.EMERGENCY:
                 payload.update({'retry': self.retry, 'expire': self.expire})
 
@@ -383,24 +431,25 @@ class NotifyPushover(NotifyBase):
                         attach.mimetype,
                         attach.url(privacy=True)))
 
-                return True
+                attach = None
 
-            # If we get here, we're dealing with a supported image.
-            # Verify that the filesize is okay though.
-            file_size = len(attach)
-            if not (file_size > 0
-                    and file_size <= self.attach_max_size_bytes):
+            else:
+                # If we get here, we're dealing with a supported image.
+                # Verify that the filesize is okay though.
+                file_size = len(attach)
+                if not (file_size > 0
+                        and file_size <= self.attach_max_size_bytes):
 
-                # File size is no good
-                self.logger.warning(
-                    'Pushover attachment size ({}B) exceeds limit: {}'
-                    .format(file_size, attach.url(privacy=True)))
+                    # File size is no good
+                    self.logger.warning(
+                        'Pushover attachment size ({}B) exceeds limit: {}'
+                        .format(file_size, attach.url(privacy=True)))
 
-                return False
+                    return False
 
-            self.logger.debug(
-                'Posting Pushover attachment {}'.format(
-                    attach.url(privacy=True)))
+                self.logger.debug(
+                    'Posting Pushover attachment {}'.format(
+                        attach.url(privacy=True)))
 
         # Default Header
         headers = {
@@ -434,6 +483,7 @@ class NotifyPushover(NotifyBase):
                 files=files,
                 auth=auth,
                 verify=self.verify_certificate,
+                timeout=self.request_timeout,
             )
 
             if r.status_code != requests.codes.ok:
@@ -461,7 +511,7 @@ class NotifyPushover(NotifyBase):
 
         except requests.RequestException as e:
             self.logger.warning(
-                'A Connection error occured sending Pushover:%s ' % (
+                'A Connection error occurred sending Pushover:%s ' % (
                     payload['device']) + 'notification.'
             )
             self.logger.debug('Socket Exception: %s' % str(e))
@@ -470,7 +520,7 @@ class NotifyPushover(NotifyBase):
 
         except (OSError, IOError) as e:
             self.logger.warning(
-                'An I/O error occured while reading {}.'.format(
+                'An I/O error occurred while reading {}.'.format(
                     attach.name if attach else 'attachment'))
             self.logger.debug('I/O Exception: %s' % str(e))
             return False
@@ -488,27 +538,21 @@ class NotifyPushover(NotifyBase):
         Returns the URL built dynamically based on specified arguments.
         """
 
-        _map = {
-            PushoverPriority.LOW: 'low',
-            PushoverPriority.MODERATE: 'moderate',
-            PushoverPriority.NORMAL: 'normal',
-            PushoverPriority.HIGH: 'high',
-            PushoverPriority.EMERGENCY: 'emergency',
+        # Define any URL parameters
+        params = {
+            'priority':
+                PUSHOVER_PRIORITIES[self.template_args['priority']['default']]
+                if self.priority not in PUSHOVER_PRIORITIES
+                else PUSHOVER_PRIORITIES[self.priority],
         }
 
-        # Define any arguments set
-        args = {
-            'format': self.notify_format,
-            'overflow': self.overflow_mode,
-            'priority':
-                _map[self.template_args['priority']['default']]
-                if self.priority not in _map else _map[self.priority],
-            'verify': 'yes' if self.verify_certificate else 'no',
-        }
         # Only add expire and retry for emergency messages,
         # pushover ignores for all other priorities
         if self.priority == PushoverPriority.EMERGENCY:
-            args.update({'expire': self.expire, 'retry': self.retry})
+            params.update({'expire': self.expire, 'retry': self.retry})
+
+        # Extend our parameters
+        params.update(self.url_parameters(privacy=privacy, *args, **kwargs))
 
         # Escape our devices
         devices = '/'.join([NotifyPushover.quote(x, safe='')
@@ -519,42 +563,29 @@ class NotifyPushover(NotifyBase):
             # it from the devices list
             devices = ''
 
-        return '{schema}://{user_key}@{token}/{devices}/?{args}'.format(
+        return '{schema}://{user_key}@{token}/{devices}/?{params}'.format(
             schema=self.secure_protocol,
             user_key=self.pprint(self.user_key, privacy, safe=''),
             token=self.pprint(self.token, privacy, safe=''),
             devices=devices,
-            args=NotifyPushover.urlencode(args))
+            params=NotifyPushover.urlencode(params))
 
     @staticmethod
     def parse_url(url):
         """
         Parses the URL and returns enough arguments that can allow
-        us to substantiate this object.
+        us to re-instantiate this object.
 
         """
-        results = NotifyBase.parse_url(url)
-
+        results = NotifyBase.parse_url(url, verify_host=False)
         if not results:
             # We're done early as we couldn't load the results
             return results
 
         # Set our priority
         if 'priority' in results['qsd'] and len(results['qsd']['priority']):
-            _map = {
-                'l': PushoverPriority.LOW,
-                'm': PushoverPriority.MODERATE,
-                'n': PushoverPriority.NORMAL,
-                'h': PushoverPriority.HIGH,
-                'e': PushoverPriority.EMERGENCY,
-            }
-            try:
-                results['priority'] = \
-                    _map[results['qsd']['priority'][0].lower()]
-
-            except KeyError:
-                # No priority was set
-                pass
+            results['priority'] = \
+                NotifyPushover.unquote(results['qsd']['priority'])
 
         # Retrieve all of our targets
         results['targets'] = NotifyPushover.split_path(results['fullpath'])
@@ -566,6 +597,14 @@ class NotifyPushover(NotifyBase):
         if 'sound' in results['qsd'] and len(results['qsd']['sound']):
             results['sound'] = \
                 NotifyPushover.unquote(results['qsd']['sound'])
+
+        # Get the supplementary url
+        if 'url' in results['qsd'] and len(results['qsd']['url']):
+            results['supplemental_url'] = NotifyPushover.unquote(
+                results['qsd']['url']
+            )
+        if 'url_title' in results['qsd'] and len(results['qsd']['url_title']):
+            results['supplemental_url_title'] = results['qsd']['url_title']
 
         # Get expire and retry
         if 'expire' in results['qsd'] and len(results['qsd']['expire']):

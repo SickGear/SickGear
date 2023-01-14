@@ -26,10 +26,10 @@
 from __future__ import absolute_import
 from __future__ import print_function
 
+import sys
 from .NotifyBase import NotifyBase
 from ..common import NotifyImageSize
 from ..common import NotifyType
-from ..utils import GET_SCHEMA_RE
 from ..utils import parse_bool
 from ..AppriseLocale import gettext_lazy as _
 
@@ -38,10 +38,6 @@ NOTIFY_DBUS_SUPPORT_ENABLED = False
 
 # Image support is dependant on the GdkPixbuf library being available
 NOTIFY_DBUS_IMAGE_SUPPORT = False
-
-# The following are required to hook into the notifications:
-NOTIFY_DBUS_INTERFACE = 'org.freedesktop.Notifications'
-NOTIFY_DBUS_SETTING_LOCATION = '/org/freedesktop/Notifications'
 
 # Initialize our mainloops
 LOOP_GLIB = None
@@ -65,7 +61,7 @@ try:
         from dbus.mainloop.glib import DBusGMainLoop
         LOOP_GLIB = DBusGMainLoop()
 
-    except ImportError:
+    except ImportError:  # pragma: no cover
         # No problem
         pass
 
@@ -81,6 +77,13 @@ try:
     # We're good as long as at least one
     NOTIFY_DBUS_SUPPORT_ENABLED = (
         LOOP_GLIB is not None or LOOP_QT is not None)
+
+    # ImportError: When using gi.repository you must not import static modules
+    # like "gobject". Please change all occurrences of "import gobject" to
+    # "from gi.repository import GObject".
+    # See: https://bugzilla.gnome.org/show_bug.cgi?id=709183
+    if "gobject" in sys.modules:  # pragma: no cover
+        del sys.modules["gobject"]
 
     try:
         # The following is required for Image/Icon loading only
@@ -115,18 +118,36 @@ MAINLOOP_MAP = {
 
 
 # Urgencies
-class DBusUrgency(object):
+class DBusUrgency:
     LOW = 0
     NORMAL = 1
     HIGH = 2
 
 
-# Define our urgency levels
-DBUS_URGENCIES = (
-    DBusUrgency.LOW,
-    DBusUrgency.NORMAL,
-    DBusUrgency.HIGH,
-)
+DBUS_URGENCIES = {
+    # Note: This also acts as a reverse lookup mapping
+    DBusUrgency.LOW: 'low',
+    DBusUrgency.NORMAL: 'normal',
+    DBusUrgency.HIGH: 'high',
+}
+
+DBUS_URGENCY_MAP = {
+    # Maps against string 'low'
+    'l': DBusUrgency.LOW,
+    # Maps against string 'moderate'
+    'm': DBusUrgency.LOW,
+    # Maps against string 'normal'
+    'n': DBusUrgency.NORMAL,
+    # Maps against string 'high'
+    'h': DBusUrgency.HIGH,
+    # Maps against string 'emergency'
+    'e': DBusUrgency.HIGH,
+
+    # Entries to additionally support (so more like DBus's API)
+    '0': DBusUrgency.LOW,
+    '1': DBusUrgency.NORMAL,
+    '2': DBusUrgency.HIGH,
+}
 
 
 class NotifyDBus(NotifyBase):
@@ -134,15 +155,26 @@ class NotifyDBus(NotifyBase):
     A wrapper for local DBus/Qt Notifications
     """
 
+    # Set our global enabled flag
+    enabled = NOTIFY_DBUS_SUPPORT_ENABLED
+
+    requirements = {
+        # Define our required packaging in order to work
+        'details': _('libdbus-1.so.x must be installed.')
+    }
+
     # The default descriptive name associated with the Notification
-    service_name = 'DBus Notification'
+    service_name = _('DBus Notification')
+
+    # The services URL
+    service_url = 'http://www.freedesktop.org/Software/dbus/'
 
     # The default protocols
-    # Python 3 keys() does not return a list object, it's it's own dict_keys()
+    # Python 3 keys() does not return a list object, it is its own dict_keys()
     # object if we were to reference, we wouldn't be backwards compatible with
     # Python v2.  So converting the result set back into a list makes us
     # compatible
-
+    # TODO: Review after dropping support for Python 2.
     protocol = list(MAINLOOP_MAP.keys())
 
     # A URL that takes you to the setup/help of the specific protocol
@@ -154,25 +186,20 @@ class NotifyDBus(NotifyBase):
     # Allows the user to specify the NotifyImageSize object
     image_size = NotifyImageSize.XY_128
 
-    # The number of seconds to keep the message present for
+    # The number of milliseconds to keep the message present for
     message_timeout_ms = 13000
 
     # Limit results to just the first 10 line otherwise there is just to much
     # content to display
     body_max_line_count = 10
 
-    # This entry is a bit hacky, but it allows us to unit-test this library
-    # in an environment that simply doesn't have the gnome packages
-    # available to us.  It also allows us to handle situations where the
-    # packages actually are present but we need to test that they aren't.
-    # If anyone is seeing this had knows a better way of testing this
-    # outside of what is defined in test/test_glib_plugin.py, please
-    # let me know! :)
-    _enabled = NOTIFY_DBUS_SUPPORT_ENABLED
+    # The following are required to hook into the notifications:
+    dbus_interface = 'org.freedesktop.Notifications'
+    dbus_setting_location = '/org/freedesktop/Notifications'
 
     # Define object templates
     templates = (
-        '{schema}://_/',
+        '{schema}://',
     )
 
     # Define our template arguments
@@ -182,6 +209,12 @@ class NotifyDBus(NotifyBase):
             'type': 'choice:int',
             'values': DBUS_URGENCIES,
             'default': DBusUrgency.NORMAL,
+        },
+        'priority': {
+            # Apprise uses 'priority' everywhere; it's just a nice consistent
+            # feel to be able to use it here as well. Just map the
+            # value back to 'priority'
+            'alias_of': 'urgency',
         },
         'x': {
             'name': _('X-Axis'),
@@ -209,7 +242,7 @@ class NotifyDBus(NotifyBase):
         Initialize DBus Object
         """
 
-        super(NotifyDBus, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
         # Track our notifications
         self.registry = {}
@@ -224,40 +257,45 @@ class NotifyDBus(NotifyBase):
             raise TypeError(msg)
 
         # The urgency of the message
-        if urgency not in DBUS_URGENCIES:
-            self.urgency = DBusUrgency.NORMAL
-
-        else:
-            self.urgency = urgency
+        self.urgency = int(
+            NotifyDBus.template_args['urgency']['default']
+            if urgency is None else
+            next((
+                v for k, v in DBUS_URGENCY_MAP.items()
+                if str(urgency).lower().startswith(k)),
+                NotifyDBus.template_args['urgency']['default']))
 
         # Our x/y axis settings
-        self.x_axis = x_axis if isinstance(x_axis, int) else None
-        self.y_axis = y_axis if isinstance(y_axis, int) else None
+        if x_axis or y_axis:
+            try:
+                self.x_axis = int(x_axis)
+                self.y_axis = int(y_axis)
 
-        # Track whether or not we want to send an image with our notification
-        # or not.
+            except (TypeError, ValueError):
+                # Invalid x/y values specified
+                msg = 'The x,y coordinates specified ({},{}) are invalid.'\
+                    .format(x_axis, y_axis)
+                self.logger.warning(msg)
+                raise TypeError(msg)
+        else:
+            self.x_axis = None
+            self.y_axis = None
+
+        # Track whether we want to add an image to the notification.
         self.include_image = include_image
-
-        return
 
     def send(self, body, title='', notify_type=NotifyType.INFO, **kwargs):
         """
         Perform DBus Notification
         """
-
-        if not self._enabled or MAINLOOP_MAP[self.schema] is None:
-            self.logger.warning(
-                "{} notifications could not be loaded.".format(self.schema))
-            return False
-
         # Acquire our session
         try:
             session = SessionBus(mainloop=MAINLOOP_MAP[self.schema])
 
-        except DBusException:
+        except DBusException as e:
             # Handle exception
             self.logger.warning('Failed to send DBus notification.')
-            self.logger.exception('DBus Exception')
+            self.logger.debug(f'DBus Exception: {e}')
             return False
 
         # If there is no title, but there is a body, swap the two to get rid
@@ -268,14 +306,14 @@ class NotifyDBus(NotifyBase):
 
         # acquire our dbus object
         dbus_obj = session.get_object(
-            NOTIFY_DBUS_INTERFACE,
-            NOTIFY_DBUS_SETTING_LOCATION,
+            self.dbus_interface,
+            self.dbus_setting_location,
         )
 
         # Acquire our dbus interface
         dbus_iface = Interface(
             dbus_obj,
-            dbus_interface=NOTIFY_DBUS_INTERFACE,
+            dbus_interface=self.dbus_interface,
         )
 
         # image path
@@ -310,8 +348,8 @@ class NotifyDBus(NotifyBase):
 
             except Exception as e:
                 self.logger.warning(
-                    "Could not load Gnome notification icon ({}): {}"
-                    .format(icon_path, e))
+                    "Could not load notification icon (%s).", icon_path)
+                self.logger.debug(f'DBus Exception: {e}')
 
         try:
             # Always call throttle() before any remote execution is made
@@ -338,9 +376,9 @@ class NotifyDBus(NotifyBase):
 
             self.logger.info('Sent DBus notification.')
 
-        except Exception:
+        except Exception as e:
             self.logger.warning('Failed to send DBus notification.')
-            self.logger.exception('DBus Exception')
+            self.logger.debug(f'DBus Exception: {e}')
             return False
 
         return True
@@ -350,33 +388,29 @@ class NotifyDBus(NotifyBase):
         Returns the URL built dynamically based on specified arguments.
         """
 
-        _map = {
-            DBusUrgency.LOW: 'low',
-            DBusUrgency.NORMAL: 'normal',
-            DBusUrgency.HIGH: 'high',
+        # Define any URL parameters
+        params = {
+            'image': 'yes' if self.include_image else 'no',
+            'urgency':
+                DBUS_URGENCIES[self.template_args['urgency']['default']]
+                if self.urgency not in DBUS_URGENCIES
+                else DBUS_URGENCIES[self.urgency],
         }
 
-        # Define any arguments set
-        args = {
-            'format': self.notify_format,
-            'overflow': self.overflow_mode,
-            'image': 'yes' if self.include_image else 'no',
-            'urgency': 'normal' if self.urgency not in _map
-                       else _map[self.urgency],
-            'verify': 'yes' if self.verify_certificate else 'no',
-        }
+        # Extend our parameters
+        params.update(self.url_parameters(privacy=privacy, *args, **kwargs))
 
         # x in (x,y) screen coordinates
         if self.x_axis:
-            args['x'] = str(self.x_axis)
+            params['x'] = str(self.x_axis)
 
         # y in (x,y) screen coordinates
         if self.y_axis:
-            args['y'] = str(self.y_axis)
+            params['y'] = str(self.y_axis)
 
-        return '{schema}://_/?{args}'.format(
+        return '{schema}://_/?{params}'.format(
             schema=self.schema,
-            args=NotifyDBus.urlencode(args),
+            params=NotifyDBus.urlencode(params),
         )
 
     @staticmethod
@@ -387,24 +421,8 @@ class NotifyDBus(NotifyBase):
         is in place.
 
         """
-        schema = GET_SCHEMA_RE.match(url)
-        if schema is None:
-            # Content is simply not parseable
-            return None
 
-        results = NotifyBase.parse_url(url)
-        if not results:
-            results = {
-                'schema': schema.group('schema').lower(),
-                'user': None,
-                'password': None,
-                'port': None,
-                'host': '_',
-                'fullpath': None,
-                'path': None,
-                'url': url,
-                'qsd': {},
-            }
+        results = NotifyBase.parse_url(url, verify_host=False)
 
         # Include images with our message
         results['include_image'] = \
@@ -412,38 +430,20 @@ class NotifyDBus(NotifyBase):
 
         # DBus supports urgency, but we we also support the keyword priority
         # so that it is consistent with some of the other plugins
-        urgency = results['qsd'].get('urgency', results['qsd'].get('priority'))
-        if urgency and len(urgency):
-            _map = {
-                '0': DBusUrgency.LOW,
-                'l': DBusUrgency.LOW,
-                'n': DBusUrgency.NORMAL,
-                '1': DBusUrgency.NORMAL,
-                'h': DBusUrgency.HIGH,
-                '2': DBusUrgency.HIGH,
-            }
+        if 'priority' in results['qsd'] and len(results['qsd']['priority']):
+            # We intentionally store the priority in the urgency section
+            results['urgency'] = \
+                NotifyDBus.unquote(results['qsd']['priority'])
 
-            try:
-                # Attempt to index/retrieve our urgency
-                results['urgency'] = _map[urgency[0].lower()]
-
-            except KeyError:
-                # No priority was set
-                pass
+        if 'urgency' in results['qsd'] and len(results['qsd']['urgency']):
+            results['urgency'] = \
+                NotifyDBus.unquote(results['qsd']['urgency'])
 
         # handle x,y coordinates
-        try:
-            results['x_axis'] = int(results['qsd'].get('x'))
+        if 'x' in results['qsd'] and len(results['qsd']['x']):
+            results['x_axis'] = NotifyDBus.unquote(results['qsd'].get('x'))
 
-        except (TypeError, ValueError):
-            # No x was set
-            pass
-
-        try:
-            results['y_axis'] = int(results['qsd'].get('y'))
-
-        except (TypeError, ValueError):
-            # No y was set
-            pass
+        if 'y' in results['qsd'] and len(results['qsd']['y']):
+            results['y_axis'] = NotifyDBus.unquote(results['qsd'].get('y'))
 
         return results

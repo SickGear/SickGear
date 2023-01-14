@@ -24,26 +24,71 @@
 # THE SOFTWARE.
 
 
-class NotifyType(object):
+# we mirror our base purely for the ability to reset everything; this
+# is generally only used in testing and should not be used by developers
+# It is also used as a means of preventing a module from being reloaded
+# in the event it already exists
+NOTIFY_MODULE_MAP = {}
+
+# Maintains a mapping of all of the Notification services
+NOTIFY_SCHEMA_MAP = {}
+
+# This contains a mapping of all plugins dynamicaly loaded at runtime from
+# external modules such as the @notify decorator
+#
+# The elements here will be additionally added to the NOTIFY_SCHEMA_MAP if
+# there is no conflict otherwise.
+# The structure looks like the following:
+# Module path, e.g. /usr/share/apprise/plugins/my_notify_hook.py
+# {
+#   'path': path,
+#
+#   'notify': {
+#     'schema': {
+#       'name': 'Custom schema name',
+#       'fn_name': 'name_of_function_decorator_was_found_on',
+#       'url': 'schema://any/additional/info/found/on/url'
+#       'plugin': <CustomNotifyWrapperPlugin>
+#    },
+#     'schema2': {
+#       'name': 'Custom schema name',
+#       'fn_name': 'name_of_function_decorator_was_found_on',
+#       'url': 'schema://any/additional/info/found/on/url'
+#       'plugin': <CustomNotifyWrapperPlugin>
+#    }
+#  }
+#
+# Note: that the <CustomNotifyWrapperPlugin> inherits from
+#       NotifyBase
+NOTIFY_CUSTOM_MODULE_MAP = {}
+
+# Maintains a mapping of all configuration schema's supported
+CONFIG_SCHEMA_MAP = {}
+
+# Maintains a mapping of all attachment schema's supported
+ATTACHMENT_SCHEMA_MAP = {}
+
+
+class NotifyType:
     """
     A simple mapping of notification types most commonly used with
     all types of logging and notification services.
     """
     INFO = 'info'
     SUCCESS = 'success'
-    FAILURE = 'failure'
     WARNING = 'warning'
+    FAILURE = 'failure'
 
 
 NOTIFY_TYPES = (
     NotifyType.INFO,
     NotifyType.SUCCESS,
-    NotifyType.FAILURE,
     NotifyType.WARNING,
+    NotifyType.FAILURE,
 )
 
 
-class NotifyImageSize(object):
+class NotifyImageSize:
     """
     A list of pre-defined image sizes to make it easier to work with defined
     plugins.
@@ -62,7 +107,7 @@ NOTIFY_IMAGE_SIZES = (
 )
 
 
-class NotifyFormat(object):
+class NotifyFormat:
     """
     A list of pre-defined text message formats that can be passed via the
     apprise library.
@@ -79,7 +124,7 @@ NOTIFY_FORMATS = (
 )
 
 
-class OverflowMode(object):
+class OverflowMode:
     """
     A list of pre-defined modes of how to handle the text when it exceeds the
     defined maximum message size.
@@ -107,7 +152,7 @@ OVERFLOW_MODES = (
 )
 
 
-class ConfigFormat(object):
+class ConfigFormat:
     """
     A list of pre-defined config formats that can be passed via the
     apprise library.
@@ -118,15 +163,71 @@ class ConfigFormat(object):
     # characters.
     TEXT = 'text'
 
-    # YAML files allow a more rich of an experience when settig up your
-    # apprise configuration files.
-
 
 # Define our configuration formats mostly used for verification
 CONFIG_FORMATS = (
     ConfigFormat.TEXT,
 )
 
+
+class ContentIncludeMode:
+    """
+    The different Content inclusion modes.  All content based plugins will
+    have one of these associated with it.
+    """
+    # - Content inclusion of same type only; hence a file:// can include
+    #   a file://
+    # - Cross file inclusion is not allowed unless insecure_includes (a flag)
+    #   is set to True. In these cases STRICT acts as type ALWAYS
+    STRICT = 'strict'
+
+    # This content type can never be included
+    NEVER = 'never'
+
+    # This content can always be included
+    ALWAYS = 'always'
+
+
+CONTENT_INCLUDE_MODES = (
+    ContentIncludeMode.STRICT,
+    ContentIncludeMode.NEVER,
+    ContentIncludeMode.ALWAYS,
+)
+
+
+class ContentLocation:
+    """
+    This is primarily used for handling file attachments.  The idea is
+    to track the source of the attachment itself.  We don't want
+    remote calls to a server to access local attachments for example.
+
+    By knowing the attachment type and cross-associating it with how
+    we plan on accessing the content, we can make a judgement call
+    (for security reasons) if we will allow it.
+
+    Obviously local uses of apprise can access both local and remote
+    type files.
+    """
+    # Content is located locally (on the same server as apprise)
+    LOCAL = 'local'
+
+    # Content is located in a remote location
+    HOSTED = 'hosted'
+
+    # Content is inaccessible
+    INACCESSIBLE = 'n/a'
+
+
+CONTENT_LOCATIONS = (
+    ContentLocation.LOCAL,
+    ContentLocation.HOSTED,
+    ContentLocation.INACCESSIBLE,
+)
+
 # This is a reserved tag that is automatically assigned to every
 # Notification Plugin
 MATCH_ALL_TAG = 'all'
+
+# Will cause notification to trigger under any circumstance even if an
+# exclusive tagging was provided.
+MATCH_ALWAYS_TAG = 'always'

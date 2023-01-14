@@ -87,13 +87,14 @@ class NotifyTelegram(NotifyBase):
     # The services URL
     service_url = 'https://telegram.org/'
 
-    icon_path = None
-
     # The default secure protocol
     secure_protocol = 'tgram'
 
     # A URL that takes you to the setup/help of the specific protocol
     setup_url = 'https://github.com/caronc/apprise/wiki/Notify_telegram'
+
+    # Default Notify Format
+    notify_format = NotifyFormat.HTML
 
     # Telegram uses the http protocol with JSON requests
     notify_url = 'https://api.telegram.org/bot'
@@ -103,6 +104,9 @@ class NotifyTelegram(NotifyBase):
 
     # The maximum allowable characters allowed in the body per message
     body_maxlen = 4096
+
+    # Title is to be part of body
+    title_maxlen = 0
 
     # Telegram is limited to sending a maximum of 100 requests per second.
     request_rate_per_sec = 0.001
@@ -169,6 +173,90 @@ class NotifyTelegram(NotifyBase):
         },
     )
 
+    # Telegram's HTML support doesn't like having HTML escaped
+    # characters passed into it.  to handle this situation, we need to
+    # search the body for these sequences and convert them to the
+    # output the user expected
+    __telegram_escape_html_entries = (
+        # Comments
+        (re.compile(
+            r'\s*<!.+?-->\s*',
+            (re.I | re.M | re.S)), '', {}),
+
+        # the following tags are not supported
+        (re.compile(
+            r'\s*<\s*(!?DOCTYPE|p|div|span|body|script|link|'
+            r'meta|html|font|head|label|form|input|textarea|select|iframe|'
+            r'source|script)([^a-z0-9>][^>]*)?>\s*',
+            (re.I | re.M | re.S)), '', {}),
+
+        # All closing tags to be removed are put here
+        (re.compile(
+            r'\s*<\s*/(span|body|script|meta|html|font|head|'
+            r'label|form|input|textarea|select|ol|ul|link|'
+            r'iframe|source|script)([^a-z0-9>][^>]*)?>\s*',
+            (re.I | re.M | re.S)), '', {}),
+
+        # Bold
+        (re.compile(
+            r'<\s*(strong)([^a-z0-9>][^>]*)?>',
+            (re.I | re.M | re.S)), '<b>', {}),
+        (re.compile(
+            r'<\s*/\s*(strong)([^a-z0-9>][^>]*)?>',
+            (re.I | re.M | re.S)), '</b>', {}),
+        (re.compile(
+            r'\s*<\s*(h[1-6]|title)([^a-z0-9>][^>]*)?>\s*',
+            (re.I | re.M | re.S)), '{}<b>', {'html': '\r\n'}),
+        (re.compile(
+            r'\s*<\s*/\s*(h[1-6]|title)([^a-z0-9>][^>]*)?>\s*',
+            (re.I | re.M | re.S)),
+            '</b>{}', {'html': '<br/>'}),
+
+        # Italic
+        (re.compile(
+            r'<\s*(caption|em)([^a-z0-9>][^>]*)?>',
+            (re.I | re.M | re.S)), '<i>', {}),
+        (re.compile(
+            r'<\s*/\s*(caption|em)([^a-z0-9>][^>]*)?>',
+            (re.I | re.M | re.S)), '</i>', {}),
+
+        # Bullet Lists
+        (re.compile(
+            r'<\s*li([^a-z0-9>][^>]*)?>\s*',
+            (re.I | re.M | re.S)), ' -', {}),
+
+        # convert pre tags to code (supported by Telegram)
+        (re.compile(
+            r'<\s*pre([^a-z0-9>][^>]*)?>',
+            (re.I | re.M | re.S)), '{}<code>', {'html': '\r\n'}),
+        (re.compile(
+            r'<\s*/\s*pre([^a-z0-9>][^>]*)?>',
+            (re.I | re.M | re.S)), '</code>{}', {'html': '\r\n'}),
+
+        # New Lines
+        (re.compile(
+            r'\s*<\s*/?\s*(ol|ul|br|hr)\s*/?>\s*',
+            (re.I | re.M | re.S)), '\r\n', {}),
+        (re.compile(
+            r'\s*<\s*/\s*(br|p|hr|li|div)([^a-z0-9>][^>]*)?>\s*',
+            (re.I | re.M | re.S)), '\r\n', {}),
+
+        # HTML Spaces (&nbsp;) and tabs (&emsp;) aren't supported
+        # See https://core.telegram.org/bots/api#html-style
+        (re.compile(r'\&nbsp;?', re.I), ' ', {}),
+
+        # Tabs become 3 spaces
+        (re.compile(r'\&emsp;?', re.I), '   ', {}),
+
+        # Some characters get re-escaped by the Telegram upstream
+        # service so we need to convert these back,
+        (re.compile(r'\&apos;?', re.I), '\'', {}),
+        (re.compile(r'\&quot;?', re.I), '"', {}),
+
+        # New line cleanup
+        (re.compile(r'\r*\n[\r\n]+', re.I), '\r\n', {}),
+    )
+
     # Define our template tokens
     template_tokens = dict(NotifyBase.template_tokens, **{
         'bot_token': {
@@ -206,17 +294,27 @@ class NotifyTelegram(NotifyBase):
             'default': True,
             'map_to': 'detect_owner',
         },
+        'silent': {
+            'name': _('Silent Notification'),
+            'type': 'bool',
+            'default': False,
+        },
+        'preview': {
+            'name': _('Web Page Preview'),
+            'type': 'bool',
+            'default': False,
+        },
         'to': {
             'alias_of': 'targets',
         },
     })
 
     def __init__(self, bot_token, targets, detect_owner=True,
-                 include_image=False, **kwargs):
+                 include_image=False, silent=None, preview=None, **kwargs):
         """
         Initialize Telegram Object
         """
-        super(NotifyTelegram, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
         self.bot_token = validate_regex(
             bot_token, *self.template_tokens['bot_token']['regex'],
@@ -230,22 +328,26 @@ class NotifyTelegram(NotifyBase):
         # Parse our list
         self.targets = parse_list(targets)
 
+        # Define whether or not we should make audible alarms
+        self.silent = self.template_args['silent']['default'] \
+            if silent is None else bool(silent)
+
+        # Define whether or not we should display a web page preview
+        self.preview = self.template_args['preview']['default'] \
+            if preview is None else bool(preview)
+
+        # if detect_owner is set to True, we will attempt to determine who
+        # the bot owner is based on the first person who messaged it.  This
+        # is not a fool proof way of doing things as over time Telegram removes
+        # the message history for the bot.  So what appears (later on) to be
+        # the first message to it, maybe another user who sent it a message
+        # much later.  Users who set this flag should update their Apprise
+        # URL later to directly include the user that we should message.
         self.detect_owner = detect_owner
 
         if self.user:
             # Treat this as a channel too
             self.targets.append(self.user)
-
-        if len(self.targets) == 0 and self.detect_owner:
-            _id = self.detect_bot_owner()
-            if _id:
-                # Store our id
-                self.targets.append(str(_id))
-
-        if len(self.targets) == 0:
-            err = 'No chat_id(s) were specified.'
-            self.logger.warning(err)
-            raise TypeError(err)
 
         # Track whether or not we want to send an image with our notification
         # or not.
@@ -326,6 +428,7 @@ class NotifyTelegram(NotifyBase):
                     files=files,
                     data=payload,
                     verify=self.verify_certificate,
+                    timeout=self.request_timeout,
                 )
 
                 if r.status_code != requests.codes.ok:
@@ -350,7 +453,7 @@ class NotifyTelegram(NotifyBase):
 
         except requests.RequestException as e:
             self.logger.warning(
-                'A connection error occured posting Telegram '
+                'A connection error occurred posting Telegram '
                 'attachment.')
             self.logger.debug('Socket Exception: %s' % str(e))
 
@@ -391,6 +494,7 @@ class NotifyTelegram(NotifyBase):
                 url,
                 headers=headers,
                 verify=self.verify_certificate,
+                timeout=self.request_timeout,
             )
 
             if r.status_code != requests.codes.ok:
@@ -435,12 +539,12 @@ class NotifyTelegram(NotifyBase):
             # - TypeError = r.content is None
             # - AttributeError = r is None
             self.logger.warning(
-                'A communication error occured detecting the Telegram User.')
+                'A communication error occurred detecting the Telegram User.')
             return 0
 
         except requests.RequestException as e:
             self.logger.warning(
-                'A connection error occured detecting the Telegram User.')
+                'A connection error occurred detecting the Telegram User.')
             self.logger.debug('Socket Exception: %s' % str(e))
             return 0
 
@@ -466,15 +570,15 @@ class NotifyTelegram(NotifyBase):
         #      "text":"/start",
         #      "entities":[{"offset":0,"length":6,"type":"bot_command"}]}}]
 
-        if 'ok' in response and response['ok'] is True \
-                and 'result' in response and len(response['result']):
-            entry = response['result'][0]
-            _id = entry['message']['from'].get('id', 0)
-            _user = entry['message']['from'].get('first_name')
-            self.logger.info('Detected telegram user %s (userid=%d)' % (
-                _user, _id))
-            # Return our detected userid
-            return _id
+        if response.get('ok', False):
+            for entry in response.get('result', []):
+                if 'message' in entry and 'from' in entry['message']:
+                    _id = entry['message']['from'].get('id', 0)
+                    _user = entry['message']['from'].get('first_name')
+                    self.logger.info(
+                        'Detected Telegram user %s (userid=%d)' % (_user, _id))
+                    # Return our detected userid
+                    return _id
 
         self.logger.warning(
             'Failed to detect a Telegram user; '
@@ -482,10 +586,23 @@ class NotifyTelegram(NotifyBase):
         return 0
 
     def send(self, body, title='', notify_type=NotifyType.INFO, attach=None,
-             **kwargs):
+             body_format=None, **kwargs):
         """
         Perform Telegram Notification
         """
+
+        if len(self.targets) == 0 and self.detect_owner:
+            _id = self.detect_bot_owner()
+            if _id:
+                # Permanently store our id in our target list for next time
+                self.targets.append(str(_id))
+                self.logger.info(
+                    'Update your Telegram Apprise URL to read: '
+                    '{}'.format(self.url(privacy=True)))
+
+        if len(self.targets) == 0:
+            self.logger.warning('There were not Telegram chat_ids to notify.')
+            return False
 
         headers = {
             'User-Agent': self.app_id,
@@ -501,51 +618,35 @@ class NotifyTelegram(NotifyBase):
             'sendMessage'
         )
 
-        payload = {}
+        payload = {
+            # Notification Audible Control
+            'disable_notification': self.silent,
+            # Display Web Page Preview (if possible)
+            'disable_web_page_preview': not self.preview,
+        }
 
-        # Prepare Email Message
+        # Prepare Message Body
         if self.notify_format == NotifyFormat.MARKDOWN:
             payload['parse_mode'] = 'MARKDOWN'
 
-            payload['text'] = '{}{}'.format(
-                '{}\r\n'.format(title) if title else '',
-                body,
-            )
+            payload['text'] = body
 
-        elif self.notify_format == NotifyFormat.HTML:
+        else:  # HTML
+
+            # Use Telegram's HTML mode
             payload['parse_mode'] = 'HTML'
+            for r, v, m in self.__telegram_escape_html_entries:
 
-            # HTML Spaces (&nbsp;) and tabs (&emsp;) aren't supported
-            # See https://core.telegram.org/bots/api#html-style
-            body = re.sub('&nbsp;?', ' ', body, re.I)
+                if 'html' in m:
+                    # Handle special cases where we need to alter new lines
+                    # for presentation purposes
+                    v = v.format(m['html'] if body_format in (
+                        NotifyFormat.HTML, NotifyFormat.MARKDOWN) else '')
 
-            # Tabs become 3 spaces
-            body = re.sub('&emsp;?', '   ', body, re.I)
+                body = r.sub(v, body)
 
-            if title:
-                # HTML Spaces (&nbsp;) and tabs (&emsp;) aren't supported
-                # See https://core.telegram.org/bots/api#html-style
-                title = re.sub('&nbsp;?', ' ', title, re.I)
-
-                # Tabs become 3 spaces
-                title = re.sub('&emsp;?', '   ', title, re.I)
-
-            payload['text'] = '{}{}'.format(
-                '<b>{}</b>\r\n'.format(title) if title else '',
-                body,
-            )
-
-        else:  # TEXT
-            payload['parse_mode'] = 'HTML'
-
-            # Escape content
-            title = NotifyTelegram.escape_html(title, whitespace=False)
-            body = NotifyTelegram.escape_html(body, whitespace=False)
-
-            payload['text'] = '{}{}'.format(
-                '<b>{}</b>\r\n'.format(title) if title else '',
-                body,
-            )
+            # Prepare our payload based on HTML or TEXT
+            payload['text'] = body
 
         # Create a copy of the chat_ids list
         targets = list(self.targets)
@@ -596,6 +697,7 @@ class NotifyTelegram(NotifyBase):
                     data=dumps(payload),
                     headers=headers,
                     verify=self.verify_certificate,
+                    timeout=self.request_timeout,
                 )
 
                 if r.status_code != requests.codes.ok:
@@ -630,7 +732,7 @@ class NotifyTelegram(NotifyBase):
 
             except requests.RequestException as e:
                 self.logger.warning(
-                    'A connection error occured sending Telegram:%s ' % (
+                    'A connection error occurred sending Telegram:%s ' % (
                         payload['chat_id']) + 'notification.'
                 )
                 self.logger.debug('Socket Exception: %s' % str(e))
@@ -662,29 +764,31 @@ class NotifyTelegram(NotifyBase):
         Returns the URL built dynamically based on specified arguments.
         """
 
-        # Define any arguments set
-        args = {
-            'format': self.notify_format,
-            'overflow': self.overflow_mode,
+        # Define any URL parameters
+        params = {
             'image': self.include_image,
-            'verify': 'yes' if self.verify_certificate else 'no',
             'detect': 'yes' if self.detect_owner else 'no',
+            'silent': 'yes' if self.silent else 'no',
+            'preview': 'yes' if self.preview else 'no',
         }
+
+        # Extend our parameters
+        params.update(self.url_parameters(privacy=privacy, *args, **kwargs))
 
         # No need to check the user token because the user automatically gets
         # appended into the list of chat ids
-        return '{schema}://{bot_token}/{targets}/?{args}'.format(
+        return '{schema}://{bot_token}/{targets}/?{params}'.format(
             schema=self.secure_protocol,
             bot_token=self.pprint(self.bot_token, privacy, safe=''),
             targets='/'.join(
                 [NotifyTelegram.quote('@{}'.format(x)) for x in self.targets]),
-            args=NotifyTelegram.urlencode(args))
+            params=NotifyTelegram.urlencode(params))
 
     @staticmethod
     def parse_url(url, **kwargs):
         """
         Parses the URL and returns enough arguments that can allow
-        us to substantiate this object.
+        us to re-instantiate this object.
 
         """
         # This is a dirty hack; but it's the only work around to tgram://
@@ -717,17 +821,14 @@ class NotifyTelegram(NotifyBase):
                 tgram.group('protocol'),
                 tgram.group('prefix'),
                 tgram.group('btoken_a'),
-                tgram.group('remaining')))
+                tgram.group('remaining')), verify_host=False)
 
         else:
             # Try again
-            results = NotifyBase.parse_url(
-                '%s%s/%s' % (
-                    tgram.group('protocol'),
-                    tgram.group('btoken_a'),
-                    tgram.group('remaining'),
-                ),
-            )
+            results = NotifyBase.parse_url('%s%s/%s' % (
+                tgram.group('protocol'),
+                tgram.group('btoken_a'),
+                tgram.group('remaining')), verify_host=False)
 
         # The first token is stored in the hostname
         bot_token_a = NotifyTelegram.unquote(results['host'])
@@ -751,6 +852,15 @@ class NotifyTelegram(NotifyBase):
 
         # Store our bot token
         results['bot_token'] = bot_token
+
+        # Silent (Sends the message Silently); users will receive
+        # notification with no sound.
+        results['silent'] = \
+            parse_bool(results['qsd'].get('silent', False))
+
+        # Show Web Page Preview
+        results['preview'] = \
+            parse_bool(results['qsd'].get('preview', False))
 
         # Include images with our message
         results['include_image'] = \

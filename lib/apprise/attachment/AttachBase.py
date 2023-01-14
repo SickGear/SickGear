@@ -28,6 +28,7 @@ import time
 import mimetypes
 from ..URLBase import URLBase
 from ..utils import parse_bool
+from ..common import ContentLocation
 from ..AppriseLocale import gettext_lazy as _
 
 
@@ -61,6 +62,11 @@ class AttachBase(URLBase):
     # 1 MB = 1048576 bytes
     # 5 MB = 5242880 bytes
     max_file_size = 5242880
+
+    # By default all attachments types are inaccessible.
+    # Developers of items identified in the attachment plugin directory
+    # are requried to set a location
+    location = ContentLocation.INACCESSIBLE
 
     # Here is where we define all of the arguments we accept on the url
     # such as: schema://whatever/?overflow=upstream&format=text
@@ -114,7 +120,7 @@ class AttachBase(URLBase):
         should be considered expired.
         """
 
-        super(AttachBase, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
         if not mimetypes.inited:
             # Ensure mimetypes has been initialized
@@ -361,14 +367,7 @@ class AttachBase(URLBase):
 
     def __bool__(self):
         """
-        Allows the Apprise object to be wrapped in an Python 3.x based 'if
-        statement'.  True is returned if our content was downloaded correctly.
-        """
-        return True if self.path else False
-
-    def __nonzero__(self):
-        """
-        Allows the Apprise object to be wrapped in an Python 2.x based 'if
-        statement'.  True is returned if our content was downloaded correctly.
+        Allows the Apprise object to be wrapped in an based 'if statement'.
+        True is returned if our content was downloaded correctly.
         """
         return True if self.path else False
