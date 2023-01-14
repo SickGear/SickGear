@@ -19,6 +19,7 @@
 * Update UnRar x64 for Windows 6.11 to 6.20
 * Update Send2Trash 1.5.0 (66afce7) to 1.8.1b0 (0ef9b32)
 * Update SimpleJSON 3.16.1 (ce75e60) to 3.18.1 (c891b95)
+* Update soupsieve 2.0.2.dev (05086ef) to 2.3.2.post1 (792d566)
 * Update tmdbsimple 2.6.6 (679e343) to 2.9.1 (9da400a)
 * Update torrent_parser 0.3.0 (2a4eecb) to 0.4.0 (23b9e11)
 * Update unidecode module 1.1.1 (632af82) to 1.3.6 (4141992)
