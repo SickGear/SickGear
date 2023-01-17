@@ -628,7 +628,9 @@ class SickGear(object):
         # Start an update if we're supposed to
         if not switching and (self.force_update or sickgear.UPDATE_SHOWS_ON_START):
             sickgear.classes.loading_msg.message = 'Starting a forced show update'
-            sickgear.show_update_scheduler.action.run()
+            background_start_forced_show_update = threading.Thread(name='STARTUP-FORCE-SHOW-UPDATE',
+                                                                   target=sickgear.show_update_scheduler.action.run)
+            background_start_forced_show_update.start()
 
         sickgear.classes.loading_msg.message = 'Switching to default web server'
         time.sleep(2)

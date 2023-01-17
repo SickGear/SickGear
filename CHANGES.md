@@ -1,4 +1,9 @@
-﻿### 3.26.0 (2023-01-12 02:00:00 UTC)
+﻿### 3.26.1 (2023-01-25 01:45:00 UTC)
+
+* Change forced show updates process during startup to prevent webUI blocking
+
+
+### 3.26.0 (2023-01-12 02:00:00 UTC)
 
 * Change bump to major version 3.xx to signal that this branch supports Python3+ only
 * Update Tornado Web Server 6.1.0 (2047e7a) to 6.2.0 (a4f08a3)
