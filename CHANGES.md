@@ -5,6 +5,7 @@
 * Remove Lockfile no longer used by Cachecontrol
 * Update Msgpack 1.0.0 (fa7d744) to 1.0.4 (b5acfd5)
 * Update Rarfile 4.0 (55fe778) to 4.1a1 (8a72967)
+* Update UnRar x64 for Windows 6.11 to 6.20
 * Update Send2Trash 1.5.0 (66afce7) to 1.8.1b0 (0ef9b32)
 * Update SimpleJSON 3.16.1 (ce75e60) to 3.18.1 (c891b95)
 * Update tmdbsimple 2.6.6 (679e343) to 2.9.1 (9da400a)
