@@ -1312,6 +1312,9 @@ div.formpaginate{
 	width:480px;
 	margin-top:0
 }
+#addShowForm #nameToSearch.select2{
+	width:428px;
+}
 #addShowForm #nameToSearch.wide{
 	width:591px;
 }
@@ -3788,6 +3791,13 @@ option.flag{
 	padding-left:35px;
 	background-repeat:no-repeat;
 	background-position:10px 50%
+}
+
+#select2-infosrc-lang-select-container .flag,
+#select2-infosrc-lang-select-results .flag{
+	padding-left:25px;
+	background-repeat:no-repeat;
+	background-position:0 50%
 }
 
 /* Anime section for editShow */

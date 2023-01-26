@@ -4009,7 +4009,42 @@ class AddShows(Home):
             if all_langs:
                 result.extend([lang['sg_lang'] for lang in all_langs if lang['sg_lang'] not in result])
 
-        return json_dumps({'results': result})
+        try:
+            # noinspection PyPep8Naming
+            from langcodes import Language as lang_obj, LanguageTagError, standardize_tag
+        except ImportError:
+            lang_obj = None
+        result_ext = []
+        if None is not lang_obj:
+            prio_abbr = ''
+            prio_lang = []
+            try:
+                lang = lang_obj.get(sickgear.ADD_SHOWS_METALANG)
+                prio_abbr = lang.to_alpha3()
+                prio_lang = [dict(orig_abbr=sickgear.ADD_SHOWS_METALANG, std_abbr=sickgear.ADD_SHOWS_METALANG,
+                                  abbr=prio_abbr, en=lang.display_name(), native=lang.autonym())]
+            except (BaseException, Exception) as _:
+                pass
+            dedupe = []
+            for cur_lang in result:
+                try:
+                    lang = lang_obj.get(cur_lang)
+                    abbr = lang.to_alpha3()
+                except (BaseException, Exception) as _:
+                    continue
+
+                try:
+                    std_abbr = standardize_tag(cur_lang, macro=True)
+                except (BaseException, Exception) as _:
+                    std_abbr = None
+
+                if abbr not in dedupe and abbr != prio_abbr:
+                    dedupe += [abbr]
+                    result_ext += [dict(orig_abbr=cur_lang, std_abbr=std_abbr, abbr=abbr, en=lang.display_name(), native=lang.autonym())]
+
+            result_ext = prio_lang + sorted(result_ext, key=lambda x: x['en'])
+
+        return json_dumps({'results': [] if result_ext else result, 'results_ext': result_ext})
 
     @staticmethod
     def generate_show_dir_name(show_name):

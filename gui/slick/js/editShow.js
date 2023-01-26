@@ -16,31 +16,73 @@ $(document).ready(function () {
 		return ' class="flag" style="background-image:url(' + $.SickGear.Root + '/images/flags/' + lang + '.png)"'
 	}
 
-	$.getJSON($.SickGear.Root + '/add-shows/get-infosrc-languages', {}, function (data) {
-		var result = '', currentLangAdded = '', selected = ' selected="selected"';
+	function uriFlag(lang) {
+		return $.SickGear.Root + '/images/flags/' + lang + '.png'
+	}
 
-		if (!data.results.length) {
-			result = '<option value="' + config.showLang + '"' + selected + htmlFlag(config.showLang) + '>'
+	$.getJSON($.SickGear.Root + '/add-shows/get-infosrc-languages', {}, function (data) {
+		var htmlText = '', currentLangAdded = '',
+			selected = ' selected="selected"', htmlSelected = '',
+			elInfosrcLang = $('#infosrc-lang-select'),
+			useSelect2 = 0 < data.results_ext.length, populateItem;
+
+		if (!data.results.length && !data.results_ext.length) {
+			htmlText = '<option value="' + config.showLang + '"' + selected + htmlFlag(config.showLang) + '>'
 				+ config.showLang + '</option>';
 		} else {
 			currentLangAdded = !1;
-			$.each(data.results, function (index, strLang) {
+			if (useSelect2){
+				// 3 letter abbr object
+				$.each(data.results_ext, function (index, obj) {
 
-				var htmlSelected = '';
-				if (strLang === config.showLang) {
-					currentLangAdded = !0;
-					htmlSelected = selected;
-				}
+					htmlSelected = '';
+					if (obj.std_abbr === config.showLang) {
+						currentLangAdded = !0;
+						htmlSelected = selected;
+					}
 
-				result += '<option value="' + strLang + '"' + htmlSelected + htmlFlag(strLang) + '>'
-					+ strLang + '</option>';
-			});
+					htmlText += '<option style="padding-left:25px" value="' + obj.std_abbr + '"'
+								+ ' data-abbr="' + obj.abbr + '"'
+								+ ' data-img="' + uriFlag(obj.std_abbr) + '"'
+								+ ' data-title="' + obj.en + ' (' + obj.orig_abbr + '/' + obj.std_abbr + '/' + obj.abbr + ')' +  '"'
+								+ (!!htmlSelected
+									? htmlSelected + '>&gt; '
+									: '>')
+								+ obj.native
+								+ '</option>';
+				});
+			} else {
+				// legacy 2 letter abbr list
+				$.each(data.results, function (index, strLang) {
 
+					htmlSelected = '';
+					if (strLang === config.showLang) {
+						currentLangAdded = !0;
+						htmlSelected = selected;
+					}
+
+					htmlText += '<option value="' + strLang + '"' + htmlSelected + htmlFlag(strLang) + '>'
+						+ strLang + '</option>';
+				});
+			}
 			if (!currentLangAdded)
-				result += '<option value="' + config.showLang + '" ' + selected + '>' + config.showLang + '</option>';
+				htmlText += '<option value="' + config.showLang + '" ' + selected + '>' + config.showLang + '</option>';
 		}
 
-		$('#infosrc-lang-select-edit').html(result);
+		elInfosrcLang.html(htmlText);
+
+		if (useSelect2) {
+			populateItem = function (data) {
+				if (!!data.element)
+					return $('<span class="flag"'
+						+ ' style="background-image:url(' + $(data.element).data('img') + ')"'
+						+ ' title="' + $(data.element).data('title') + '">'
+						+ data.text
+						+ '</span>');
+				return data.text;
+			}
+			elInfosrcLang.select2({templateResult: populateItem, templateSelection: populateItem, width: 162});
+		}
 	});
 
 	function getExceptions() {
