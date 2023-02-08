@@ -1,6 +1,7 @@
-﻿### 3.26.1 (2023-01-25 01:45:00 UTC)
+﻿### 3.26.1 (2023-02-08 20:50:00 UTC)
 
 * Change forced show updates process during startup to prevent webUI blocking
+* Change allow Python 3.11.2, 3.10.10
 
 
 ### 3.26.0 (2023-01-12 02:00:00 UTC)

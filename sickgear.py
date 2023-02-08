@@ -41,7 +41,7 @@ warnings.filterwarnings('ignore', message='.*deprecated in cryptography.*')
 
 versions = [((3, 7, 1), (3, 8, 16)),
             ((3, 9, 0), (3, 9, 2)), ((3, 9, 4), (3, 9, 16)),
-            ((3, 10, 0), (3, 11, 1))]  # inclusive version ranges
+            ((3, 10, 0), (3, 11, 2))]  # inclusive version ranges
 if not any(list(map(lambda v: v[0] <= sys.version_info[:3] <= v[1], versions))) and not int(os.environ.get('PYT', 0)):
     print('Python %s.%s.%s detected.' % sys.version_info[:3])
     print('Sorry, SickGear requires a Python version %s' % ', '.join(map(
@@ -528,8 +528,8 @@ class SickGear(object):
             # Build from the DB to start with
             sickgear.classes.loading_msg.message = 'Loading shows from db'
             sickgear.indexermapper.indexer_list = [i for i in sickgear.TVInfoAPI().all_sources
-                                                    if sickgear.TVInfoAPI(i).config.get('show_url')
-                                                    and True is not sickgear.TVInfoAPI(i).config.get('people_only')]
+                                                   if sickgear.TVInfoAPI(i).config.get('show_url')
+                                                   and True is not sickgear.TVInfoAPI(i).config.get('people_only')]
             self.load_shows_from_db()
             sickgear.MEMCACHE['history_tab'] = sickgear.webserve.History.menu_tab(
                 sickgear.MEMCACHE['history_tab_limit'])
