@@ -29,6 +29,7 @@
 * Update unidecode module 1.1.1 (632af82) to 1.3.6 (4141992)
 * Change prevent included py3 requests module failure on NZBGet systems that by default, run py2 with py2 requests
 * Change prevent included py3 requests module failure on SABnzbd systems that by default, run py2 with py2 requests
+* Change re-enable fetching metadata banners and posters
 
 
 [develop changelog]
