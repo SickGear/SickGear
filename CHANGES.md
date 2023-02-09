@@ -6,6 +6,7 @@
 * Remove lockfile no longer used by cachecontrol
 * Update Msgpack 1.0.0 (fa7d744) to 1.0.4 (b5acfd5)
 * Update certifi 2022.09.24 to 2022.12.07
+* Update chardet packages 4.0.0 (b3d867a) to 5.1.0 (8087f00)
 * Update diskcache 5.1.0 (40ce0de) to 5.4.0 (1cb1425)
 * Update feedparser 6.0.1 (98d189fa) to 6.0.10 (5fcb3ae)
 * Update humanize 3.5.0 (b6b0ea5) to 4.0.0 (a1514eb)
