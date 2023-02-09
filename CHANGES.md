@@ -4,6 +4,7 @@
 * Add Filelock 3.9.0 (ce3e891)
 * Remove Lockfile no longer used by Cachecontrol
 * Update Msgpack 1.0.0 (fa7d744) to 1.0.4 (b5acfd5)
+* Update unidecode module 1.1.1 (632af82) to 1.3.6 (4141992)
 
 
 [develop changelog]
