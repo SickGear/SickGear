@@ -1,4 +1,4 @@
-# Copyright 2010-2020 Kurt McKee <contactme@kurtmckee.org>
+# Copyright 2010-2022 Kurt McKee <contactme@kurtmckee.org>
 # Copyright 2002-2008 Mark Pilgrim
 # All rights reserved.
 #
@@ -27,7 +27,7 @@
 
 import re
 
-import sgmllib
+import sgmllib # type: ignore[import]
 
 __all__ = [
     'sgmllib',
@@ -82,7 +82,7 @@ class _EndBracketRegEx:
         match = self.endbracket.match(target, index)
         if match is not None:
             # Returning a new object in the calling thread's context
-            # resolves a thread-safety.
+            # resolves a thread-safety issue.
             return EndBracketMatch(match)
         return None
 

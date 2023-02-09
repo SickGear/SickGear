@@ -7,6 +7,7 @@
 * Update Msgpack 1.0.0 (fa7d744) to 1.0.4 (b5acfd5)
 * Update certifi 2022.09.24 to 2022.12.07
 * Update diskcache 5.1.0 (40ce0de) to 5.4.0 (1cb1425)
+* Update feedparser 6.0.1 (98d189fa) to 6.0.10 (5fcb3ae)
 * Update humanize 3.5.0 (b6b0ea5) to 4.0.0 (a1514eb)
 * Update profilehooks module 1.12.0 (3ee1f60) to 1.12.1 (c3fc078)
 * Update Rarfile 4.0 (55fe778) to 4.1a1 (8a72967)
