@@ -32,8 +32,8 @@ from ..common import NotifyType
 from ..utils import validate_regex
 from ..AppriseLocale import gettext_lazy as _
 
-# Default our global support flag
-CRYPTOGRAPHY_AVAILABLE = False
+from base64 import urlsafe_b64encode
+import hashlib
 
 try:
     from cryptography.hazmat.primitives import padding
@@ -41,21 +41,27 @@ try:
     from cryptography.hazmat.primitives.ciphers import algorithms
     from cryptography.hazmat.primitives.ciphers import modes
     from cryptography.hazmat.backends import default_backend
-    from base64 import urlsafe_b64encode
-    import hashlib
 
-    CRYPTOGRAPHY_AVAILABLE = True
+    # We're good to go!
+    NOTIFY_SIMPLEPUSH_ENABLED = True
 
 except ImportError:
-    # no problem; this just means the added encryption functionality isn't
-    # available. You can still send a SimplePush message
-    pass
+    # cryptography is required in order for this package to work
+    NOTIFY_SIMPLEPUSH_ENABLED = False
 
 
 class NotifySimplePush(NotifyBase):
     """
     A wrapper for SimplePush Notifications
     """
+
+    # Set our global enabled flag
+    enabled = NOTIFY_SIMPLEPUSH_ENABLED
+
+    requirements = {
+        # Define our required packaging in order to work
+        'packages_required': 'cryptography'
+    }
 
     # The default descriptive name associated with the Notification
     service_name = 'SimplePush'
@@ -119,7 +125,7 @@ class NotifySimplePush(NotifyBase):
         """
         Initialize SimplePush Object
         """
-        super(NotifySimplePush, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
         # API Key (associated with project)
         self.apikey = validate_regex(apikey)
@@ -141,14 +147,6 @@ class NotifySimplePush(NotifyBase):
         else:
             # Default Event Name
             self.event = None
-
-        # Encrypt Message (providing support is available)
-        if self.password and self.user and not CRYPTOGRAPHY_AVAILABLE:
-            # Provide the end user at least some notification that they're
-            # not getting what they asked for
-            self.logger.warning(
-                'SimplePush extended encryption is not supported by this '
-                'system.')
 
         # Used/cached in _encrypt() function
         self._iv = None
@@ -199,7 +197,7 @@ class NotifySimplePush(NotifyBase):
             'key': self.apikey,
         }
 
-        if self.password and self.user and CRYPTOGRAPHY_AVAILABLE:
+        if self.password and self.user:
             body = self._encrypt(body)
             title = self._encrypt(title)
             payload.update({
@@ -236,6 +234,7 @@ class NotifySimplePush(NotifyBase):
                 data=payload,
                 headers=headers,
                 verify=self.verify_certificate,
+                timeout=self.request_timeout,
             )
 
             # Get our SimplePush response (if it's possible)
@@ -272,7 +271,7 @@ class NotifySimplePush(NotifyBase):
 
         except requests.RequestException as e:
             self.logger.warning(
-                'A Connection error occured sending SimplePush notification.')
+                'A Connection error occurred sending SimplePush notification.')
             self.logger.debug('Socket Exception: %s' % str(e))
 
             # Return; we're done
@@ -285,15 +284,11 @@ class NotifySimplePush(NotifyBase):
         Returns the URL built dynamically based on specified arguments.
         """
 
-        # Define any arguments set
-        args = {
-            'format': self.notify_format,
-            'overflow': self.overflow_mode,
-            'verify': 'yes' if self.verify_certificate else 'no',
-        }
+        # Our URL parameters
+        params = self.url_parameters(privacy=privacy, *args, **kwargs)
 
         if self.event:
-            args['event'] = self.event
+            params['event'] = self.event
 
         # Determine Authentication
         auth = ''
@@ -305,21 +300,21 @@ class NotifySimplePush(NotifyBase):
                     self.password, privacy, mode=PrivacyMode.Secret, safe=''),
             )
 
-        return '{schema}://{auth}{apikey}/?{args}'.format(
+        return '{schema}://{auth}{apikey}/?{params}'.format(
             schema=self.secure_protocol,
             auth=auth,
             apikey=self.pprint(self.apikey, privacy, safe=''),
-            args=NotifySimplePush.urlencode(args),
+            params=NotifySimplePush.urlencode(params),
         )
 
     @staticmethod
     def parse_url(url):
         """
         Parses the URL and returns enough arguments that can allow
-        us to substantiate this object.
+        us to re-instantiate this object.
 
         """
-        results = NotifyBase.parse_url(url)
+        results = NotifyBase.parse_url(url, verify_host=False)
         if not results:
             # We're done early as we couldn't load the results
             return results

@@ -23,15 +23,12 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-import six
 import re
-
 from os import listdir
 from os.path import dirname
 from os.path import abspath
-
-# Maintains a mapping of all of the configuration services
-SCHEMA_MAP = {}
+from ..logger import logger
+from ..common import CONFIG_SCHEMA_MAP
 
 __all__ = []
 
@@ -88,31 +85,21 @@ def __load_matrix(path=abspath(dirname(__file__)), name='apprise.config'):
         # not the module:
         globals()[plugin_name] = plugin
 
-        # Load protocol(s) if defined
-        proto = getattr(plugin, 'protocol', None)
-        if isinstance(proto, six.string_types):
-            if proto not in SCHEMA_MAP:
-                SCHEMA_MAP[proto] = plugin
+        fn = getattr(plugin, 'schemas', None)
+        schemas = set([]) if not callable(fn) else fn(plugin)
 
-        elif isinstance(proto, (set, list, tuple)):
-            # Support iterables list types
-            for p in proto:
-                if p not in SCHEMA_MAP:
-                    SCHEMA_MAP[p] = plugin
+        # map our schema to our plugin
+        for schema in schemas:
+            if schema in CONFIG_SCHEMA_MAP:
+                logger.error(
+                    "Config schema ({}) mismatch detected - {} to {}"
+                    .format(schema, CONFIG_SCHEMA_MAP[schema], plugin))
+                continue
 
-        # Load secure protocol(s) if defined
-        protos = getattr(plugin, 'secure_protocol', None)
-        if isinstance(protos, six.string_types):
-            if protos not in SCHEMA_MAP:
-                SCHEMA_MAP[protos] = plugin
+            # Assign plugin
+            CONFIG_SCHEMA_MAP[schema] = plugin
 
-        if isinstance(protos, (set, list, tuple)):
-            # Support iterables list types
-            for p in protos:
-                if p not in SCHEMA_MAP:
-                    SCHEMA_MAP[p] = plugin
-
-    return SCHEMA_MAP
+    return CONFIG_SCHEMA_MAP
 
 
 # Dynamically build our schema base

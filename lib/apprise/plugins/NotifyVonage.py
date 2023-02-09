@@ -28,39 +28,35 @@
 # Get your (api) key and secret here:
 #   - https://dashboard.nexmo.com/getting-started-guide
 #
-
-import re
 import requests
 
 from .NotifyBase import NotifyBase
 from ..URLBase import PrivacyMode
 from ..common import NotifyType
-from ..utils import parse_list
+from ..utils import is_phone_no
+from ..utils import parse_phone_no
 from ..utils import validate_regex
 from ..AppriseLocale import gettext_lazy as _
 
-# Some Phone Number Detection
-IS_PHONE_NO = re.compile(r'^\+?(?P<phone>[0-9\s)(+-]+)\s*$')
 
-
-class NotifyNexmo(NotifyBase):
+class NotifyVonage(NotifyBase):
     """
-    A wrapper for Nexmo Notifications
+    A wrapper for Vonage Notifications
     """
 
     # The default descriptive name associated with the Notification
-    service_name = 'Nexmo'
+    service_name = 'Vonage'
 
     # The services URL
     service_url = 'https://dashboard.nexmo.com/'
 
-    # The default protocol
-    secure_protocol = 'nexmo'
+    # The default protocol (nexmo kept for backwards compatibility)
+    secure_protocol = ('vonage', 'nexmo')
 
     # A URL that takes you to the setup/help of the specific protocol
     setup_url = 'https://github.com/caronc/apprise/wiki/Notify_nexmo'
 
-    # Nexmo uses the http protocol with JSON requests
+    # Vonage uses the http protocol with JSON requests
     notify_url = 'https://rest.nexmo.com/sms/json'
 
     # The maximum length of the body
@@ -82,7 +78,7 @@ class NotifyNexmo(NotifyBase):
             'name': _('API Key'),
             'type': 'string',
             'required': True,
-            'regex': (r'^AC[a-z0-9]{8}$', 'i'),
+            'regex': (r'^[a-z0-9]+$', 'i'),
             'private': True,
         },
         'secret': {
@@ -90,7 +86,7 @@ class NotifyNexmo(NotifyBase):
             'type': 'string',
             'private': True,
             'required': True,
-            'regex': (r'^[a-z0-9]{16}$', 'i'),
+            'regex': (r'^[a-z0-9]+$', 'i'),
         },
         'from_phone': {
             'name': _('From Phone No'),
@@ -128,7 +124,7 @@ class NotifyNexmo(NotifyBase):
         },
 
         # Default Time To Live
-        # By default Nexmo attempt delivery for 72 hours, however the maximum
+        # By default Vonage attempt delivery for 72 hours, however the maximum
         # effective value depends on the operator and is typically 24 - 48
         # hours. We recommend this value should be kept at its default or at
         # least 30 minutes.
@@ -144,15 +140,15 @@ class NotifyNexmo(NotifyBase):
     def __init__(self, apikey, secret, source, targets=None, ttl=None,
                  **kwargs):
         """
-        Initialize Nexmo Object
+        Initialize Vonage Object
         """
-        super(NotifyNexmo, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
         # API Key (associated with project)
         self.apikey = validate_regex(
             apikey, *self.template_tokens['apikey']['regex'])
         if not self.apikey:
-            msg = 'An invalid Nexmo API Key ' \
+            msg = 'An invalid Vonage API Key ' \
                   '({}) was specified.'.format(apikey)
             self.logger.warning(msg)
             raise TypeError(msg)
@@ -161,7 +157,7 @@ class NotifyNexmo(NotifyBase):
         self.secret = validate_regex(
             secret, *self.template_tokens['secret']['regex'])
         if not self.secret:
-            msg = 'An invalid Nexmo API Secret ' \
+            msg = 'An invalid Vonage API Secret ' \
                   '({}) was specified.'.format(secret)
             self.logger.warning(msg)
             raise TypeError(msg)
@@ -177,7 +173,7 @@ class NotifyNexmo(NotifyBase):
 
         if self.ttl < self.template_args['ttl']['min'] or \
                 self.ttl > self.template_args['ttl']['max']:
-            msg = 'The Nexmo TTL specified ({}) is out of range.'\
+            msg = 'The Vonage TTL specified ({}) is out of range.'\
                 .format(self.ttl)
             self.logger.warning(msg)
             raise TypeError(msg)
@@ -185,50 +181,37 @@ class NotifyNexmo(NotifyBase):
         # The Source Phone #
         self.source = source
 
-        if not IS_PHONE_NO.match(self.source):
+        result = is_phone_no(source)
+        if not result:
             msg = 'The Account (From) Phone # specified ' \
                   '({}) is invalid.'.format(source)
             self.logger.warning(msg)
             raise TypeError(msg)
 
-        # Tidy source
-        self.source = re.sub(r'[^\d]+', '', self.source)
-        if len(self.source) < 11 or len(self.source) > 14:
-            msg = 'The Account (From) Phone # specified ' \
-                  '({}) contains an invalid digit count.'.format(source)
-            self.logger.warning(msg)
-            raise TypeError(msg)
+        # Store our parsed value
+        self.source = result['full']
 
         # Parse our targets
         self.targets = list()
 
-        for target in parse_list(targets):
+        for target in parse_phone_no(targets):
             # Validate targets and drop bad ones:
-            result = IS_PHONE_NO.match(target)
-            if result:
-                # Further check our phone # for it's digit count
-                result = ''.join(re.findall(r'\d+', result.group('phone')))
-                if len(result) < 11 or len(result) > 14:
-                    self.logger.warning(
-                        'Dropped invalid phone # '
-                        '({}) specified.'.format(target),
-                    )
-                    continue
-
-                # store valid phone number
-                self.targets.append(result)
+            result = is_phone_no(target)
+            if not result:
+                self.logger.warning(
+                    'Dropped invalid phone # '
+                    '({}) specified.'.format(target),
+                )
                 continue
 
-            self.logger.warning(
-                'Dropped invalid phone # '
-                '({}) specified.'.format(target),
-            )
+            # store valid phone number
+            self.targets.append(result['full'])
 
         return
 
     def send(self, body, title='', notify_type=NotifyType.INFO, **kwargs):
         """
-        Perform Nexmo Notification
+        Perform Vonage Notification
         """
 
         # error tracking (used for function return)
@@ -267,9 +250,9 @@ class NotifyNexmo(NotifyBase):
             payload['to'] = target
 
             # Some Debug Logging
-            self.logger.debug('Nexmo POST URL: {} (cert_verify={})'.format(
+            self.logger.debug('Vonage POST URL: {} (cert_verify={})'.format(
                 self.notify_url, self.verify_certificate))
-            self.logger.debug('Nexmo Payload: {}' .format(payload))
+            self.logger.debug('Vonage Payload: {}' .format(payload))
 
             # Always call throttle before any remote server i/o is made
             self.throttle()
@@ -280,16 +263,17 @@ class NotifyNexmo(NotifyBase):
                     data=payload,
                     headers=headers,
                     verify=self.verify_certificate,
+                    timeout=self.request_timeout,
                 )
 
                 if r.status_code != requests.codes.ok:
                     # We had a problem
                     status_str = \
-                        NotifyNexmo.http_response_code_lookup(
+                        NotifyVonage.http_response_code_lookup(
                             r.status_code)
 
                     self.logger.warning(
-                        'Failed to send Nexmo notification to {}: '
+                        'Failed to send Vonage notification to {}: '
                         '{}{}error={}.'.format(
                             target,
                             status_str,
@@ -304,11 +288,12 @@ class NotifyNexmo(NotifyBase):
                     continue
 
                 else:
-                    self.logger.info('Sent Nexmo notification to %s.' % target)
+                    self.logger.info(
+                        'Sent Vonage notification to %s.' % target)
 
             except requests.RequestException as e:
                 self.logger.warning(
-                    'A Connection error occured sending Nexmo:%s '
+                    'A Connection error occurred sending Vonage:%s '
                     'notification.' % target
                 )
                 self.logger.debug('Socket Exception: %s' % str(e))
@@ -324,79 +309,78 @@ class NotifyNexmo(NotifyBase):
         Returns the URL built dynamically based on specified arguments.
         """
 
-        # Define any arguments set
-        args = {
-            'format': self.notify_format,
-            'overflow': self.overflow_mode,
-            'verify': 'yes' if self.verify_certificate else 'no',
+        # Define any URL parameters
+        params = {
             'ttl': str(self.ttl),
         }
 
-        return '{schema}://{key}:{secret}@{source}/{targets}/?{args}'.format(
-            schema=self.secure_protocol,
+        # Extend our parameters
+        params.update(self.url_parameters(privacy=privacy, *args, **kwargs))
+
+        return '{schema}://{key}:{secret}@{source}/{targets}/?{params}'.format(
+            schema=self.secure_protocol[0],
             key=self.pprint(self.apikey, privacy, safe=''),
             secret=self.pprint(
                 self.secret, privacy, mode=PrivacyMode.Secret, safe=''),
-            source=NotifyNexmo.quote(self.source, safe=''),
+            source=NotifyVonage.quote(self.source, safe=''),
             targets='/'.join(
-                [NotifyNexmo.quote(x, safe='') for x in self.targets]),
-            args=NotifyNexmo.urlencode(args))
+                [NotifyVonage.quote(x, safe='') for x in self.targets]),
+            params=NotifyVonage.urlencode(params))
 
     @staticmethod
     def parse_url(url):
         """
         Parses the URL and returns enough arguments that can allow
-        us to substantiate this object.
+        us to re-instantiate this object.
 
         """
         results = NotifyBase.parse_url(url, verify_host=False)
-
         if not results:
             # We're done early as we couldn't load the results
             return results
 
         # Get our entries; split_path() looks after unquoting content for us
         # by default
-        results['targets'] = NotifyNexmo.split_path(results['fullpath'])
+        results['targets'] = NotifyVonage.split_path(results['fullpath'])
 
         # The hostname is our source number
-        results['source'] = NotifyNexmo.unquote(results['host'])
+        results['source'] = NotifyVonage.unquote(results['host'])
 
         # Get our account_side and auth_token from the user/pass config
-        results['apikey'] = NotifyNexmo.unquote(results['user'])
-        results['secret'] = NotifyNexmo.unquote(results['password'])
+        results['apikey'] = NotifyVonage.unquote(results['user'])
+        results['secret'] = NotifyVonage.unquote(results['password'])
 
         # API Key
         if 'key' in results['qsd'] and len(results['qsd']['key']):
             # Extract the API Key from an argument
             results['apikey'] = \
-                NotifyNexmo.unquote(results['qsd']['key'])
+                NotifyVonage.unquote(results['qsd']['key'])
 
         # API Secret
         if 'secret' in results['qsd'] and len(results['qsd']['secret']):
             # Extract the API Secret from an argument
             results['secret'] = \
-                NotifyNexmo.unquote(results['qsd']['secret'])
+                NotifyVonage.unquote(results['qsd']['secret'])
 
         # Support the 'from'  and 'source' variable so that we can support
         # targets this way too.
         # The 'from' makes it easier to use yaml configuration
         if 'from' in results['qsd'] and len(results['qsd']['from']):
             results['source'] = \
-                NotifyNexmo.unquote(results['qsd']['from'])
+                NotifyVonage.unquote(results['qsd']['from'])
         if 'source' in results['qsd'] and len(results['qsd']['source']):
             results['source'] = \
-                NotifyNexmo.unquote(results['qsd']['source'])
+                NotifyVonage.unquote(results['qsd']['source'])
 
         # Support the 'ttl' variable
         if 'ttl' in results['qsd'] and len(results['qsd']['ttl']):
             results['ttl'] = \
-                NotifyNexmo.unquote(results['qsd']['ttl'])
+                NotifyVonage.unquote(results['qsd']['ttl'])
 
-        # Support the 'to' variable so that we can support targets this way too
+        # Support the 'to' variable so that we can support rooms this way too
         # The 'to' makes it easier to use yaml configuration
         if 'to' in results['qsd'] and len(results['qsd']['to']):
             results['targets'] += \
-                NotifyNexmo.parse_list(results['qsd']['to'])
+                NotifyVonage.parse_phone_no(results['qsd']['to'])
 
         return results

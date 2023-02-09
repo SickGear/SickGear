@@ -48,7 +48,7 @@ try:
 
 except ImportError:
     # No problem; we just simply can't support this plugin because we're
-    # either using Linux, or simply do not have pypiwin32 installed.
+    # either using Linux, or simply do not have pywin32 installed.
     pass
 
 
@@ -56,6 +56,13 @@ class NotifyWindows(NotifyBase):
     """
     A wrapper for local Windows Notifications
     """
+    # Set our global enabled flag
+    enabled = NOTIFY_WINDOWS_SUPPORT_ENABLED
+
+    requirements = {
+        # Define our required packaging in order to work
+        'details': _('A local Microsoft Windows environment is required.')
+    }
 
     # The default descriptive name associated with the Notification
     service_name = 'Windows Notification'
@@ -80,18 +87,9 @@ class NotifyWindows(NotifyBase):
     # The number of seconds to display the popup for
     default_popup_duration_sec = 12
 
-    # This entry is a bit hacky, but it allows us to unit-test this library
-    # in an environment that simply doesn't have the windows packages
-    # available to us.  It also allows us to handle situations where the
-    # packages actually are present but we need to test that they aren't.
-    # If anyone is seeing this had knows a better way of testing this
-    # outside of what is defined in test/test_windows_plugin.py, please
-    # let me know! :)
-    _enabled = NOTIFY_WINDOWS_SUPPORT_ENABLED
-
     # Define object templates
     templates = (
-        '{schema}://_/',
+        '{schema}://',
     )
 
     # Define our template arguments
@@ -115,7 +113,7 @@ class NotifyWindows(NotifyBase):
         Initialize Windows Object
         """
 
-        super(NotifyWindows, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
         # Number of seconds to display notification for
         self.duration = self.default_popup_duration_sec \
@@ -143,11 +141,6 @@ class NotifyWindows(NotifyBase):
         """
         Perform Windows Notification
         """
-
-        if not self._enabled:
-            self.logger.warning(
-                "Windows Notifications are not supported by this system.")
-            return False
 
         # Always call throttle before any remote server i/o is made
         self.throttle()
@@ -210,9 +203,9 @@ class NotifyWindows(NotifyBase):
 
             self.logger.info('Sent Windows notification.')
 
-        except Exception:
+        except Exception as e:
             self.logger.warning('Failed to send Windows notification.')
-            self.logger.exception('Windows Exception')
+            self.logger.debug('Windows Exception: {}', str(e))
             return False
 
         return True
@@ -222,18 +215,18 @@ class NotifyWindows(NotifyBase):
         Returns the URL built dynamically based on specified arguments.
         """
 
-        # Define any arguments set
-        args = {
-            'format': self.notify_format,
-            'overflow': self.overflow_mode,
+        # Define any URL parameters
+        params = {
             'image': 'yes' if self.include_image else 'no',
             'duration': str(self.duration),
-            'verify': 'yes' if self.verify_certificate else 'no',
         }
 
-        return '{schema}://_/?{args}'.format(
+        # Extend our parameters
+        params.update(self.url_parameters(privacy=privacy, *args, **kwargs))
+
+        return '{schema}://?{params}'.format(
             schema=self.protocol,
-            args=NotifyWindows.urlencode(args),
+            params=NotifyWindows.urlencode(params),
         )
 
     @staticmethod
@@ -245,19 +238,7 @@ class NotifyWindows(NotifyBase):
 
         """
 
-        results = NotifyBase.parse_url(url)
-        if not results:
-            results = {
-                'schema': NotifyWindows.protocol,
-                'user': None,
-                'password': None,
-                'port': None,
-                'host': '_',
-                'fullpath': None,
-                'path': None,
-                'url': url,
-                'qsd': {},
-            }
+        results = NotifyBase.parse_url(url, verify_host=False)
 
         # Include images with our message
         results['include_image'] = \

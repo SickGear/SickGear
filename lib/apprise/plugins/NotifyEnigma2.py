@@ -31,7 +31,6 @@
 # - https://github.com/E2OpenPlugins/e2openplugin-OpenWebif/wiki/\
 #       OpenWebif-API-documentation#message
 
-import six
 import requests
 from json import loads
 
@@ -41,7 +40,7 @@ from ..common import NotifyType
 from ..AppriseLocale import gettext_lazy as _
 
 
-class Enigma2MessageType(object):
+class Enigma2MessageType:
     # Defines the Enigma2 notification types Apprise can map to
     INFO = 1
     WARNING = 2
@@ -156,7 +155,7 @@ class NotifyEnigma2(NotifyBase):
         headers can be a dictionary of key/value pairs that you want to
         additionally include as part of the server headers to post with
         """
-        super(NotifyEnigma2, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
         try:
             self.timeout = int(timeout)
@@ -169,7 +168,7 @@ class NotifyEnigma2(NotifyBase):
             self.timeout = self.template_args['timeout']['default']
 
         self.fullpath = kwargs.get('fullpath')
-        if not isinstance(self.fullpath, six.string_types):
+        if not isinstance(self.fullpath, str):
             self.fullpath = '/'
 
         self.headers = {}
@@ -184,16 +183,16 @@ class NotifyEnigma2(NotifyBase):
         Returns the URL built dynamically based on specified arguments.
         """
 
-        # Define any arguments set
-        args = {
-            'format': self.notify_format,
-            'overflow': self.overflow_mode,
-            'verify': 'yes' if self.verify_certificate else 'no',
+        # Define any URL parameters
+        params = {
             'timeout': str(self.timeout),
         }
 
-        # Append our headers into our args
-        args.update({'+{}'.format(k): v for k, v in self.headers.items()})
+        # Append our headers into our parameters
+        params.update({'+{}'.format(k): v for k, v in self.headers.items()})
+
+        # Extend our parameters
+        params.update(self.url_parameters(privacy=privacy, *args, **kwargs))
 
         # Determine Authentication
         auth = ''
@@ -210,14 +209,15 @@ class NotifyEnigma2(NotifyBase):
 
         default_port = 443 if self.secure else 80
 
-        return '{schema}://{auth}{hostname}{port}{fullpath}?{args}'.format(
+        return '{schema}://{auth}{hostname}{port}{fullpath}?{params}'.format(
             schema=self.secure_protocol if self.secure else self.protocol,
             auth=auth,
-            hostname=NotifyEnigma2.quote(self.host, safe=''),
+            # never encode hostname since we're expecting it to be a valid one
+            hostname=self.host,
             port='' if self.port is None or self.port == default_port
                  else ':{}'.format(self.port),
             fullpath=NotifyEnigma2.quote(self.fullpath, safe='/'),
-            args=NotifyEnigma2.urlencode(args),
+            params=NotifyEnigma2.urlencode(params),
         )
 
     def send(self, body, title='', notify_type=NotifyType.INFO, **kwargs):
@@ -269,6 +269,7 @@ class NotifyEnigma2(NotifyBase):
                 headers=headers,
                 auth=auth,
                 verify=self.verify_certificate,
+                timeout=self.request_timeout,
             )
 
             if r.status_code != requests.codes.ok:
@@ -313,7 +314,7 @@ class NotifyEnigma2(NotifyBase):
 
         except requests.RequestException as e:
             self.logger.warning(
-                'A Connection error occured sending Enigma2 '
+                'A Connection error occurred sending Enigma2 '
                 'notification to %s.' % self.host)
             self.logger.debug('Socket Exception: %s' % str(e))
 
@@ -326,24 +327,19 @@ class NotifyEnigma2(NotifyBase):
     def parse_url(url):
         """
         Parses the URL and returns enough arguments that can allow
-        us to substantiate this object.
+        us to re-instantiate this object.
 
         """
         results = NotifyBase.parse_url(url)
-
         if not results:
             # We're done early as we couldn't load the results
             return results
 
         # Add our headers that the user can potentially over-ride if they wish
-        # to to our returned result set
-        results['headers'] = results['qsd-']
-        results['headers'].update(results['qsd+'])
-
-        # Tidy our header entries by unquoting them
+        # to to our returned result set and tidy entries by unquoting them
         results['headers'] = {
             NotifyEnigma2.unquote(x): NotifyEnigma2.unquote(y)
-            for x, y in results['headers'].items()}
+            for x, y in results['qsd+'].items()}
 
         # Save timeout value (if specified)
         if 'timeout' in results['qsd'] and len(results['qsd']['timeout']):

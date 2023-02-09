@@ -35,13 +35,13 @@ import requests
 from json import dumps
 
 from .NotifyBase import NotifyBase
-from ..common import NotifyType
+from ..common import NotifyType, NotifyFormat
 from ..utils import validate_regex
 from ..AppriseLocale import gettext_lazy as _
 
 
 # Priorities
-class GotifyPriority(object):
+class GotifyPriority:
     LOW = 0
     MODERATE = 3
     NORMAL = 5
@@ -49,13 +49,37 @@ class GotifyPriority(object):
     EMERGENCY = 10
 
 
-GOTIFY_PRIORITIES = (
-    GotifyPriority.LOW,
-    GotifyPriority.MODERATE,
-    GotifyPriority.NORMAL,
-    GotifyPriority.HIGH,
-    GotifyPriority.EMERGENCY,
-)
+GOTIFY_PRIORITIES = {
+    # Note: This also acts as a reverse lookup mapping
+    GotifyPriority.LOW: 'low',
+    GotifyPriority.MODERATE: 'moderate',
+    GotifyPriority.NORMAL: 'normal',
+    GotifyPriority.HIGH: 'high',
+    GotifyPriority.EMERGENCY: 'emergency',
+}
+
+GOTIFY_PRIORITY_MAP = {
+    # Maps against string 'low'
+    'l': GotifyPriority.LOW,
+    # Maps against string 'moderate'
+    'm': GotifyPriority.MODERATE,
+    # Maps against string 'normal'
+    'n': GotifyPriority.NORMAL,
+    # Maps against string 'high'
+    'h': GotifyPriority.HIGH,
+    # Maps against string 'emergency'
+    'e': GotifyPriority.EMERGENCY,
+
+    # Entries to additionally support (so more like Gotify's API)
+    '10': GotifyPriority.EMERGENCY,
+    # ^ 10 needs to be checked before '1' below or it will match the wrong
+    # priority
+    '0': GotifyPriority.LOW, '1': GotifyPriority.LOW, '2': GotifyPriority.LOW,
+    '3': GotifyPriority.MODERATE, '4': GotifyPriority.MODERATE,
+    '5': GotifyPriority.NORMAL, '6': GotifyPriority.NORMAL,
+    '7': GotifyPriority.NORMAL,
+    '8': GotifyPriority.HIGH, '9': GotifyPriority.HIGH,
+}
 
 
 class NotifyGotify(NotifyBase):
@@ -77,10 +101,15 @@ class NotifyGotify(NotifyBase):
     # A URL that takes you to the setup/help of the specific protocol
     setup_url = 'https://github.com/caronc/apprise/wiki/Notify_gotify'
 
+    # Disable throttle rate
+    request_rate_per_sec = 0
+
     # Define object templates
     templates = (
         '{schema}://{host}/{token}',
         '{schema}://{host}:{port}/{token}',
+        '{schema}://{host}{path}{token}',
+        '{schema}://{host}:{port}{path}{token}',
     )
 
     # Define our template tokens
@@ -94,6 +123,13 @@ class NotifyGotify(NotifyBase):
         'host': {
             'name': _('Hostname'),
             'type': 'string',
+            'required': True,
+        },
+        'path': {
+            'name': _('Path'),
+            'type': 'string',
+            'map_to': 'fullpath',
+            'default': '/',
             'required': True,
         },
         'port': {
@@ -119,7 +155,7 @@ class NotifyGotify(NotifyBase):
         Initialize Gotify Object
 
         """
-        super(NotifyGotify, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
         # Token (associated with project)
         self.token = validate_regex(token)
@@ -129,11 +165,17 @@ class NotifyGotify(NotifyBase):
             self.logger.warning(msg)
             raise TypeError(msg)
 
-        if priority not in GOTIFY_PRIORITIES:
-            self.priority = GotifyPriority.NORMAL
+        # prepare our fullpath
+        self.fullpath = kwargs.get('fullpath', '/')
 
-        else:
-            self.priority = priority
+        # The Priority of the message
+        self.priority = int(
+            NotifyGotify.template_args['priority']['default']
+            if priority is None else
+            next((
+                v for k, v in GOTIFY_PRIORITY_MAP.items()
+                if str(priority).lower().startswith(k)),
+                NotifyGotify.template_args['priority']['default']))
 
         if self.secure:
             self.schema = 'https'
@@ -153,12 +195,7 @@ class NotifyGotify(NotifyBase):
             url += ':%d' % self.port
 
         # Append our remaining path
-        url += '/message'
-
-        # Define our parameteers
-        params = {
-            'token': self.token,
-        }
+        url += '{fullpath}message'.format(fullpath=self.fullpath)
 
         # Prepare Gotify Object
         payload = {
@@ -167,10 +204,18 @@ class NotifyGotify(NotifyBase):
             'message': body,
         }
 
+        if self.notify_format == NotifyFormat.MARKDOWN:
+            payload["extras"] = {
+                "client::display": {
+                    "contentType": "text/markdown"
+                }
+            }
+
         # Our headers
         headers = {
             'User-Agent': self.app_id,
             'Content-Type': 'application/json',
+            'X-Gotify-Key': self.token,
         }
 
         self.logger.debug('Gotify POST URL: %s (cert_verify=%r)' % (
@@ -184,10 +229,10 @@ class NotifyGotify(NotifyBase):
         try:
             r = requests.post(
                 url,
-                params=params,
                 data=dumps(payload),
                 headers=headers,
                 verify=self.verify_certificate,
+                timeout=self.request_timeout,
             )
             if r.status_code != requests.codes.ok:
                 # We had a problem
@@ -212,7 +257,7 @@ class NotifyGotify(NotifyBase):
 
         except requests.RequestException as e:
             self.logger.warning(
-                'A Connection error occured sending Gotify '
+                'A Connection error occurred sending Gotify '
                 'notification to %s.' % self.host)
             self.logger.debug('Socket Exception: %s' % str(e))
 
@@ -226,30 +271,36 @@ class NotifyGotify(NotifyBase):
         Returns the URL built dynamically based on specified arguments.
         """
 
-        # Define any arguments set
-        args = {
-            'format': self.notify_format,
-            'overflow': self.overflow_mode,
-            'priority': self.priority,
-            'verify': 'yes' if self.verify_certificate else 'no',
+        # Define any URL parameters
+        params = {
+            'priority':
+                GOTIFY_PRIORITIES[self.template_args['priority']['default']]
+                if self.priority not in GOTIFY_PRIORITIES
+                else GOTIFY_PRIORITIES[self.priority],
         }
 
+        # Extend our parameters
+        params.update(self.url_parameters(privacy=privacy, *args, **kwargs))
+
+        # Our default port
         default_port = 443 if self.secure else 80
 
-        return '{schema}://{hostname}{port}/{token}/?{args}'.format(
+        return '{schema}://{hostname}{port}{fullpath}{token}/?{params}'.format(
             schema=self.secure_protocol if self.secure else self.protocol,
-            hostname=NotifyGotify.quote(self.host, safe=''),
+            # never encode hostname since we're expecting it to be a valid one
+            hostname=self.host,
             port='' if self.port is None or self.port == default_port
                  else ':{}'.format(self.port),
+            fullpath=NotifyGotify.quote(self.fullpath, safe='/'),
             token=self.pprint(self.token, privacy, safe=''),
-            args=NotifyGotify.urlencode(args),
+            params=NotifyGotify.urlencode(params),
         )
 
     @staticmethod
     def parse_url(url):
         """
         Parses the URL and returns enough arguments that can allow
-        us to substantiate this object.
+        us to re-instantiate this object.
 
         """
         results = NotifyBase.parse_url(url)
@@ -262,27 +313,20 @@ class NotifyGotify(NotifyBase):
 
         # optionally find the provider key
         try:
-            # The first entry is our token
-            results['token'] = entries.pop(0)
+            # The last entry is our token
+            results['token'] = entries.pop()
 
         except IndexError:
             # No token was set
             results['token'] = None
 
-        if 'priority' in results['qsd'] and len(results['qsd']['priority']):
-            _map = {
-                'l': GotifyPriority.LOW,
-                'm': GotifyPriority.MODERATE,
-                'n': GotifyPriority.NORMAL,
-                'h': GotifyPriority.HIGH,
-                'e': GotifyPriority.EMERGENCY,
-            }
-            try:
-                results['priority'] = \
-                    _map[results['qsd']['priority'][0].lower()]
+        # Re-assemble our full path
+        results['fullpath'] = \
+            '/' if not entries else '/{}/'.format('/'.join(entries))
 
-            except KeyError:
-                # No priority was set
-                pass
+        # Set our priority
+        if 'priority' in results['qsd'] and len(results['qsd']['priority']):
+            results['priority'] = \
+                NotifyGotify.unquote(results['qsd']['priority'])
 
         return results
