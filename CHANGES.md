@@ -1,4 +1,4 @@
-﻿### 3.27.0 (202x-xx-xx xx:xx:00 UTC)
+﻿### 3.27.0 (2023-02-09 15:00:00 UTC)
 
 * Update Apprise 0.8.5 (55a2edc) to 1.2.1 (3d07004)
 * Update attr 20.3.0 (f3762ba) to 22.2.0 (a9960de)
@@ -31,10 +31,6 @@
 * Change prevent included py3 requests module failure on SABnzbd systems that by default, run py2 with py2 requests
 * Change re-enable fetching metadata banners and posters
 * Change add some missing network icons
-
-
-[develop changelog]
-
 
 
 ### 3.26.1 (2023-02-08 20:50:00 UTC)
