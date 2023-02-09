@@ -1,6 +1,7 @@
 ﻿### 3.28.0 (2023-xx-xx xx:xx:00 UTC)
 
 * Change remove calls to legacy py2 fix encoding function
+* Change requirements for pure py3
 
 
 ### 3.27.2 (2023-02-10 19:25:00 UTC)
