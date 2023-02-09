@@ -27,6 +27,7 @@
 * Update tmdbsimple 2.6.6 (679e343) to 2.9.1 (9da400a)
 * Update torrent_parser 0.3.0 (2a4eecb) to 0.4.0 (23b9e11)
 * Update unidecode module 1.1.1 (632af82) to 1.3.6 (4141992)
+* Change prevent included py3 requests module failure on SABnzbd systems that by default, run py2 with py2 requests
 
 
 [develop changelog]
