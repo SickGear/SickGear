@@ -1,6 +1,7 @@
 ﻿### 3.27.0 (202x-xx-xx xx:xx:00 UTC)
 
 * Update attr 20.3.0 (f3762ba) to 22.2.0 (a9960de)
+* Update Beautiful Soup 4.9.3 (r593) to 4.11.1 (r642)
 * Update cachecontrol 0.12.6 (167a605) to 0.12.11 (c05ef9e)
 * Add filelock 3.9.0 (ce3e891)
 * Remove lockfile no longer used by cachecontrol
