@@ -30,6 +30,7 @@
 * Change prevent included py3 requests module failure on NZBGet systems that by default, run py2 with py2 requests
 * Change prevent included py3 requests module failure on SABnzbd systems that by default, run py2 with py2 requests
 * Change re-enable fetching metadata banners and posters
+* Change add some missing network icons
 
 
 [develop changelog]
