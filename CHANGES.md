@@ -1,4 +1,39 @@
-﻿### 3.26.1 (2023-02-08 20:50:00 UTC)
+﻿### 3.27.0 (2023-02-09 15:00:00 UTC)
+
+* Update Apprise 0.8.5 (55a2edc) to 1.2.1 (3d07004)
+* Update attr 20.3.0 (f3762ba) to 22.2.0 (a9960de)
+* Update Beautiful Soup 4.9.3 (r593) to 4.11.1 (r642)
+* Update cachecontrol 0.12.6 (167a605) to 0.12.11 (c05ef9e)
+* Add filelock 3.9.0 (ce3e891)
+* Remove lockfile no longer used by cachecontrol
+* Update Msgpack 1.0.0 (fa7d744) to 1.0.4 (b5acfd5)
+* Update certifi 2022.09.24 to 2022.12.07
+* Update chardet packages 4.0.0 (b3d867a) to 5.1.0 (8087f00)
+* Update dateutil 2.8.1 (c496b4f) to 2.8.2 (28da62d)
+* Update diskcache 5.1.0 (40ce0de) to 5.4.0 (1cb1425)
+* Update feedparser 6.0.1 (98d189fa) to 6.0.10 (5fcb3ae)
+* Update functools_lru_cache 1.6.1 (2dc65b5) to 1.6.2 (2405ed1)
+* Update humanize 3.5.0 (b6b0ea5) to 4.0.0 (a1514eb)
+* Update Js2Py 0.70 (92250a4) to 0.74 (2e017b8)
+* Update package resource API 49.6.0 (3d404fd) to 63.2.0 (3ae44cd)
+* Update pyjsparser 2.7.1 (5465d03) to 2.7.1 (cbd1e05)
+* Update profilehooks module 1.12.0 (3ee1f60) to 1.12.1 (c3fc078)
+* Update pytz 2016.6.1/2016f to 2022.7.1/2022g (d38ff47)
+* Update Rarfile 4.0 (55fe778) to 4.1a1 (8a72967)
+* Update UnRar x64 for Windows 6.11 to 6.20
+* Update Send2Trash 1.5.0 (66afce7) to 1.8.1b0 (0ef9b32)
+* Update SimpleJSON 3.16.1 (ce75e60) to 3.18.1 (c891b95)
+* Update soupsieve 2.0.2.dev (05086ef) to 2.3.2.post1 (792d566)
+* Update tmdbsimple 2.6.6 (679e343) to 2.9.1 (9da400a)
+* Update torrent_parser 0.3.0 (2a4eecb) to 0.4.0 (23b9e11)
+* Update unidecode module 1.1.1 (632af82) to 1.3.6 (4141992)
+* Change prevent included py3 requests module failure on NZBGet systems that by default, run py2 with py2 requests
+* Change prevent included py3 requests module failure on SABnzbd systems that by default, run py2 with py2 requests
+* Change re-enable fetching metadata banners and posters
+* Change add some missing network icons
+
+
+### 3.26.1 (2023-02-08 20:50:00 UTC)
 
 * Change forced show updates process during startup to prevent webUI blocking
 * Change allow Python 3.11.2, 3.10.10

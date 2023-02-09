@@ -1,4 +1,4 @@
-# Copyright 2010-2020 Kurt McKee <contactme@kurtmckee.org>
+# Copyright 2010-2022 Kurt McKee <contactme@kurtmckee.org>
 # Copyright 2002-2008 Mark Pilgrim
 # All rights reserved.
 #
@@ -48,7 +48,7 @@ class FeedParserDict(dict):
         'tagline_detail': 'subtitle_detail',
     }
 
-    def __getitem__(self, key):
+    def __getitem__(self, key, _stacklevel=2):
         """
         :return: A :class:`FeedParserDict`.
         """
@@ -59,9 +59,8 @@ class FeedParserDict(dict):
             except IndexError:
                 raise KeyError("object doesn't have key 'category'")
         elif key == 'enclosures':
-            norel = lambda link: FeedParserDict([(name, value) for (name, value) in link.items() if name != 'rel'])
             return [
-                norel(link)
+                FeedParserDict([(name, value) for (name, value) in link.items() if name != 'rel'])
                 for link in dict.__getitem__(self, 'links')
                 if link['rel'] == 'enclosure'
             ]
@@ -84,6 +83,7 @@ class FeedParserDict(dict):
                     "exist. This fallback will be removed in a future version "
                     "of feedparser.",
                     DeprecationWarning,
+                    stacklevel=_stacklevel,
                 )
                 return dict.__getitem__(self, 'published')
             return dict.__getitem__(self, 'updated')
@@ -99,6 +99,7 @@ class FeedParserDict(dict):
                     "`updated_parsed` doesn't exist. This fallback will be "
                     "removed in a future version of feedparser.",
                     DeprecationWarning,
+                    stacklevel=_stacklevel,
                 )
                 return dict.__getitem__(self, 'published_parsed')
             return dict.__getitem__(self, 'updated_parsed')
@@ -119,7 +120,7 @@ class FeedParserDict(dict):
             # This fix was proposed in issue 328.
             return dict.__contains__(self, key)
         try:
-            self.__getitem__(key)
+            self.__getitem__(key, _stacklevel=3)
         except KeyError:
             return False
         else:
@@ -133,7 +134,7 @@ class FeedParserDict(dict):
         """
 
         try:
-            return self.__getitem__(key)
+            return self.__getitem__(key, _stacklevel=3)
         except KeyError:
             return default
 
@@ -143,17 +144,11 @@ class FeedParserDict(dict):
             key = key[0]
         return dict.__setitem__(self, key, value)
 
-    def setdefault(self, k, default):
-        if k not in self:
-            self[k] = default
-            return default
-        return self[k]
-
     def __getattr__(self, key):
         # __getattribute__() is called first; this will be called
         # only if an attribute was not already found
         try:
-            return self.__getitem__(key)
+            return self.__getitem__(key, _stacklevel=3)
         except KeyError:
             raise AttributeError("object has no attribute '%s'" % key)
 

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2020 Chris Caron <lead2gold@gmail.com>
+# Copyright (C) 2022 Chris Caron <lead2gold@gmail.com>
 # All rights reserved.
 #
 # This code is licensed under the MIT License.
@@ -23,11 +23,11 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-__title__ = 'apprise'
-__version__ = '0.8.5'
+__title__ = 'Apprise'
+__version__ = '1.2.1'
 __author__ = 'Chris Caron'
 __license__ = 'MIT'
-__copywrite__ = 'Copyright (C) 2020 Chris Caron <lead2gold@gmail.com>'
+__copywrite__ = 'Copyright (C) 2022 Chris Caron <lead2gold@gmail.com>'
 __email__ = 'lead2gold@gmail.com'
 __status__ = 'Production'
 
@@ -41,6 +41,10 @@ from .common import OverflowMode
 from .common import OVERFLOW_MODES
 from .common import ConfigFormat
 from .common import CONFIG_FORMATS
+from .common import ContentIncludeMode
+from .common import CONTENT_INCLUDE_MODES
+from .common import ContentLocation
+from .common import CONTENT_LOCATIONS
 
 from .URLBase import URLBase
 from .URLBase import PrivacyMode
@@ -53,10 +57,15 @@ from .AppriseAsset import AppriseAsset
 from .AppriseConfig import AppriseConfig
 from .AppriseAttachment import AppriseAttachment
 
+from . import decorators
+
+# Inherit our logging with our additional entries added to it
+from .logger import logging
+from .logger import logger
+from .logger import LogCapture
+
 # Set default logging handler to avoid "No handler found" warnings.
-import logging
-from logging import NullHandler
-logging.getLogger(__name__).addHandler(NullHandler())
+logging.getLogger(__name__).addHandler(logging.NullHandler())
 
 __all__ = [
     # Core
@@ -66,5 +75,14 @@ __all__ = [
     # Reference
     'NotifyType', 'NotifyImageSize', 'NotifyFormat', 'OverflowMode',
     'NOTIFY_TYPES', 'NOTIFY_IMAGE_SIZES', 'NOTIFY_FORMATS', 'OVERFLOW_MODES',
-    'ConfigFormat', 'CONFIG_FORMATS', 'PrivacyMode',
+    'ConfigFormat', 'CONFIG_FORMATS',
+    'ContentIncludeMode', 'CONTENT_INCLUDE_MODES',
+    'ContentLocation', 'CONTENT_LOCATIONS',
+    'PrivacyMode',
+
+    # Decorator
+    'decorators',
+
+    # Logging
+    'logging', 'logger', 'LogCapture',
 ]

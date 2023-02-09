@@ -51,7 +51,7 @@
 
 # Send "Process Media" requests to SickGear
 #
-# Process Media extension version: 2.7.
+# Process Media extension version: 2.8.
 # <!--
 # For more info and updates please visit forum topic at
 # -->
@@ -444,13 +444,19 @@ if not sg_path or not Ek.ek(os.path.isdir, sg_path):
         sg_path = Ek.ek(os.path.dirname, Ek.ek(os.path.dirname, script_path))
     except (BaseException, Exception):
         pass
-if sg_path and Ek.ek(os.path.isdir, Ek.ek(os.path.join, sg_path, 'lib')):
+if not PY2 and sg_path and Ek.ek(os.path.isdir, Ek.ek(os.path.join, sg_path, 'lib')):
     sys.path.insert(1, Ek.ek(os.path.join, sg_path, 'lib'))
 
 
+py_msg = 'Python 3 %s be set to run python files instead of the current Python 2.'
 try:
     import requests
+    if PY2:
+        Logger.log(py_msg % 'should', Logger.WARNING)
 except ImportError:
+    if PY2:
+        Logger.log(py_msg % 'must', Logger.ERROR)
+        sys.exit(1)
     # Logger.log('You must set SickGear sg_base_path in script config or install python requests library', Logger.ERROR)
     Logger.log('You must install python requests library', Logger.ERROR)
     sys.exit(1)

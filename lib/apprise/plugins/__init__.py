@@ -23,55 +23,36 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-import six
+import os
 import re
 import copy
 
-from os import listdir
 from os.path import dirname
 from os.path import abspath
 
 # Used for testing
-from . import NotifyEmail as NotifyEmailBase
-from .NotifyGrowl import gntp
-from .NotifyXMPP import SleekXmppAdapter
-
-# NotifyBase object is passed in as a module not class
-from . import NotifyBase
+from .NotifyBase import NotifyBase
 
 from ..common import NotifyImageSize
 from ..common import NOTIFY_IMAGE_SIZES
 from ..common import NotifyType
 from ..common import NOTIFY_TYPES
+from .. import common
 from ..utils import parse_list
+from ..utils import cwe312_url
 from ..utils import GET_SCHEMA_RE
+from ..logger import logger
 from ..AppriseLocale import gettext_lazy as _
 from ..AppriseLocale import LazyTranslation
-
-# Maintains a mapping of all of the Notification services
-SCHEMA_MAP = {}
 
 __all__ = [
     # Reference
     'NotifyImageSize', 'NOTIFY_IMAGE_SIZES', 'NotifyType', 'NOTIFY_TYPES',
     'NotifyBase',
 
-    # NotifyEmail Base Module (used for NotifyEmail testing)
-    'NotifyEmailBase',
-
     # Tokenizer
     'url_to_dict',
-
-    # gntp (used for NotifyGrowl Testing)
-    'gntp',
-
-    # sleekxmpp access points (used for NotifyXMPP Testing)
-    'SleekXmppAdapter',
 ]
-
-# we mirror our base purely for the ability to reset everything; this
-# is generally only used in testing and should not be used by developers
-MODULE_MAP = {}
 
 
 # Load our Lookup Matrix
@@ -85,7 +66,7 @@ def __load_matrix(path=abspath(dirname(__file__)), name='apprise.plugins'):
     # The .py extension is optional as we support loading directories too
     module_re = re.compile(r'^(?P<name>Notify[a-z0-9]+)(\.py)?$', re.I)
 
-    for f in listdir(path):
+    for f in os.listdir(path):
         match = module_re.match(f)
         if not match:
             # keep going
@@ -115,12 +96,12 @@ def __load_matrix(path=abspath(dirname(__file__)), name='apprise.plugins'):
             # Filter out non-notification modules
             continue
 
-        elif plugin_name in MODULE_MAP:
+        elif plugin_name in common.NOTIFY_MODULE_MAP:
             # we're already handling this object
             continue
 
         # Add our plugin name to our module map
-        MODULE_MAP[plugin_name] = {
+        common.NOTIFY_MODULE_MAP[plugin_name] = {
             'plugin': plugin,
             'module': module,
         }
@@ -128,34 +109,21 @@ def __load_matrix(path=abspath(dirname(__file__)), name='apprise.plugins'):
         # Add our module name to our __all__
         __all__.append(plugin_name)
 
-        # Load our module into memory so it's accessible to all
-        globals()[plugin_name] = plugin
+        fn = getattr(plugin, 'schemas', None)
+        schemas = set([]) if not callable(fn) else fn(plugin)
 
-        # Load protocol(s) if defined
-        proto = getattr(plugin, 'protocol', None)
-        if isinstance(proto, six.string_types):
-            if proto not in SCHEMA_MAP:
-                SCHEMA_MAP[proto] = plugin
+        # map our schema to our plugin
+        for schema in schemas:
+            if schema in common.NOTIFY_SCHEMA_MAP:
+                logger.error(
+                    "Notification schema ({}) mismatch detected - {} to {}"
+                    .format(schema, common.NOTIFY_SCHEMA_MAP[schema], plugin))
+                continue
 
-        elif isinstance(proto, (set, list, tuple)):
-            # Support iterables list types
-            for p in proto:
-                if p not in SCHEMA_MAP:
-                    SCHEMA_MAP[p] = plugin
+            # Assign plugin
+            common.NOTIFY_SCHEMA_MAP[schema] = plugin
 
-        # Load secure protocol(s) if defined
-        protos = getattr(plugin, 'secure_protocol', None)
-        if isinstance(protos, six.string_types):
-            if protos not in SCHEMA_MAP:
-                SCHEMA_MAP[protos] = plugin
-
-        if isinstance(protos, (set, list, tuple)):
-            # Support iterables list types
-            for p in protos:
-                if p not in SCHEMA_MAP:
-                    SCHEMA_MAP[p] = plugin
-
-    return SCHEMA_MAP
+    return common.NOTIFY_SCHEMA_MAP
 
 
 # Reset our Lookup Matrix
@@ -166,18 +134,16 @@ def __reset_matrix():
     """
 
     # Reset our schema map
-    SCHEMA_MAP.clear()
+    common.NOTIFY_SCHEMA_MAP.clear()
 
     # Iterate over our module map so we can clear out our __all__ and globals
-    for plugin_name in MODULE_MAP.keys():
-        # Clear out globals
-        del globals()[plugin_name]
+    for plugin_name in common.NOTIFY_MODULE_MAP.keys():
 
         # Remove element from plugins
         __all__.remove(plugin_name)
 
     # Clear out our module map
-    MODULE_MAP.clear()
+    common.NOTIFY_MODULE_MAP.clear()
 
 
 # Dynamically build our schema base
@@ -234,7 +200,7 @@ def _sanitize_token(tokens, default_delimiter):
 
         if 'regex' in tokens[key]:
             # Verify that we are a tuple; convert strings to tuples
-            if isinstance(tokens[key]['regex'], six.string_types):
+            if isinstance(tokens[key]['regex'], str):
                 # Default tuple setup
                 tokens[key]['regex'] = \
                     (tokens[key]['regex'], None)
@@ -431,7 +397,93 @@ def details(plugin):
     }
 
 
-def url_to_dict(url):
+def requirements(plugin):
+    """
+    Provides a list of packages and its requirement details
+
+    """
+    requirements = {
+        # Use the description to provide a human interpretable description of
+        # what is required to make the plugin work. This is only nessisary
+        # if there are package dependencies
+        'details': '',
+
+        # Define any required packages needed for the plugin to run.  This is
+        # an array of strings that simply look like lines in the
+        # `requirements.txt` file...
+        #
+        # A single string is perfectly acceptable:
+        # 'packages_required' = 'cryptography'
+        #
+        # Multiple entries should look like the following
+        # 'packages_required' = [
+        #   'cryptography < 3.4`,
+        # ]
+        #
+        'packages_required': [],
+
+        # Recommended packages identify packages that are not required to make
+        # your plugin work, but would improve it's use or grant it access to
+        # full functionality (that might otherwise be limited).
+
+        # Similar to `packages_required`, you would identify each entry in
+        # the array as you would in a `requirements.txt` file.
+        #
+        #   - Do not re-provide entries already in the `packages_required`
+        'packages_recommended': [],
+    }
+
+    # Populate our template differently if we don't find anything above
+    if not (hasattr(plugin, 'requirements')
+            and isinstance(plugin.requirements, dict)):
+        # We're done early
+        return requirements
+
+    # Get our required packages
+    _req_packages = plugin.requirements.get('packages_required')
+    if isinstance(_req_packages, str):
+        # Convert to list
+        _req_packages = [_req_packages]
+
+    elif not isinstance(_req_packages, (set, list, tuple)):
+        # Allow one to set the required packages to None (as an example)
+        _req_packages = []
+
+    requirements['packages_required'] = [str(p) for p in _req_packages]
+
+    # Get our recommended packages
+    _opt_packages = plugin.requirements.get('packages_recommended')
+    if isinstance(_opt_packages, str):
+        # Convert to list
+        _opt_packages = [_opt_packages]
+
+    elif not isinstance(_opt_packages, (set, list, tuple)):
+        # Allow one to set the recommended packages to None (as an example)
+        _opt_packages = []
+
+    requirements['packages_recommended'] = [str(p) for p in _opt_packages]
+
+    # Get our package details
+    _req_details = plugin.requirements.get('details')
+    if not _req_details:
+        if not (_req_packages or _opt_packages):
+            _req_details = _('No dependencies.')
+
+        elif _req_packages:
+            _req_details = _('Packages are required to function.')
+
+        else:  # opt_packages
+            _req_details = \
+                _('Packages are recommended to improve functionality.')
+    else:
+        # Store our details if defined
+        requirements['details'] = _req_details
+
+    # Return our compiled package requirements
+    return requirements
+
+
+def url_to_dict(url, secure_logging=True):
     """
     Takes an apprise URL and returns the tokens associated with it
     if they can be acquired based on the plugins available.
@@ -446,30 +498,52 @@ def url_to_dict(url):
     # swap hash (#) tag values with their html version
     _url = url.replace('/#', '/%23')
 
+    # CWE-312 (Secure Logging) Handling
+    loggable_url = url if not secure_logging else cwe312_url(url)
+
     # Attempt to acquire the schema at the very least to allow our plugins to
     # determine if they can make a better interpretation of a URL geared for
     # them.
     schema = GET_SCHEMA_RE.match(_url)
     if schema is None:
         # Not a valid URL; take an early exit
+        logger.error('Unsupported URL: {}'.format(loggable_url))
         return None
 
     # Ensure our schema is always in lower case
     schema = schema.group('schema').lower()
-    if schema not in SCHEMA_MAP:
+    if schema not in common.NOTIFY_SCHEMA_MAP:
         # Give the user the benefit of the doubt that the user may be using
         # one of the URLs provided to them by their notification service.
         # Before we fail for good, just scan all the plugins that support the
         # native_url() parse function
         results = \
             next((r['plugin'].parse_native_url(_url)
-                  for r in MODULE_MAP.values()
+                  for r in common.NOTIFY_MODULE_MAP.values()
                   if r['plugin'].parse_native_url(_url) is not None),
                  None)
+
+        if not results:
+            logger.error('Unparseable URL {}'.format(loggable_url))
+            return None
+
+        logger.trace('URL {} unpacked as:{}{}'.format(
+            url, os.linesep, os.linesep.join(
+                ['{}="{}"'.format(k, v) for k, v in results.items()])))
+
     else:
         # Parse our url details of the server object as dictionary
         # containing all of the information parsed from our URL
-        results = SCHEMA_MAP[schema].parse_url(_url)
+        results = common.NOTIFY_SCHEMA_MAP[schema].parse_url(_url)
+        if not results:
+            logger.error('Unparseable {} URL {}'.format(
+                common.NOTIFY_SCHEMA_MAP[schema].service_name, loggable_url))
+            return None
+
+        logger.trace('{} URL {} unpacked as:{}{}'.format(
+            common.NOTIFY_SCHEMA_MAP[schema].service_name, url,
+            os.linesep, os.linesep.join(
+                ['{}="{}"'.format(k, v) for k, v in results.items()])))
 
     # Return our results
     return results

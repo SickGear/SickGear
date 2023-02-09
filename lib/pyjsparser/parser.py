@@ -1524,14 +1524,18 @@ class PyJsParser:
         self.expect('(')
 
         if (self.match(')')):
-            raise Ecma51NotSupported('ArrowFunction')
+            #raise Ecma51NotSupported('ArrowFunction')
             self.lex()
             if (not self.match('=>')):
                 self.expect('=>')
-            return {
-                'type': PlaceHolders.ArrowParameterPlaceHolder,
-                'params': []
-            }
+            #return {
+            #    'type': PlaceHolders.ArrowParameterPlaceHolder,
+            #    'params': []
+            #}
+            nexpr = Node()
+            nexpr.type = PlaceHolders.ArrowParameterPlaceHolder
+            nexpr.params = []
+            return nexpr
 
         startToken = self.lookahead
         if (self.match('...')):
@@ -1539,10 +1543,14 @@ class PyJsParser:
             self.expect(')')
             if (not self.match('=>')):
                 self.expect('=>')
-            return {
-                'type': PlaceHolders.ArrowParameterPlaceHolder,
-                'params': [expr]
-            }
+            #return {
+            #    'type': PlaceHolders.ArrowParameterPlaceHolder,
+            #    'params': [expr]
+            #}
+            nexpr = Node()
+            nexpr.type = PlaceHolders.ArrowParameterPlaceHolder
+            nexpr.params = [expr]
+            return nexpr
 
         self.isBindingElement = true
         expr = self.inheritCoverGrammar(self.parseAssignmentExpression)
@@ -1567,10 +1575,14 @@ class PyJsParser:
                     self.isBindingElement = false
                     for i in xrange(len(expressions)):
                         self.reinterpretExpressionAsPattern(expressions[i])
-                    return {
-                        'type': PlaceHolders.ArrowParameterPlaceHolder,
-                        'params': expressions
-                    }
+                    #return {
+                    #    'type': PlaceHolders.ArrowParameterPlaceHolder,
+                    #    'params': expressions
+                    #}
+                    nexpr = Node()
+                    nexpr.type = PlaceHolders.ArrowParameterPlaceHolder
+                    nexpr.params = expressions
+                    return nexpr
                 expressions.append(
                     self.inheritCoverGrammar(self.parseAssignmentExpression))
             expr = WrappingNode(startToken).finishSequenceExpression(
@@ -1578,7 +1590,7 @@ class PyJsParser:
         self.expect(')')
 
         if (self.match('=>')):
-            raise Ecma51NotSupported('ArrowFunction')
+            #raise Ecma51NotSupported('ArrowFunction')
             if (not self.isBindingElement):
                 self.throwUnexpectedToken(self.lookahead)
             if (expr['type'] == Syntax.SequenceExpression):
@@ -1586,13 +1598,17 @@ class PyJsParser:
                     self.reinterpretExpressionAsPattern(expr['expressions'][i])
             else:
                 self.reinterpretExpressionAsPattern(expr)
-            expr = {
-                'type':
-                PlaceHolders.ArrowParameterPlaceHolder,
-                'params':
-                expr['expressions']
-                if expr['type'] == Syntax.SequenceExpression else [expr]
-            }
+            #expr = {
+            #    'type':
+            #    PlaceHolders.ArrowParameterPlaceHolder,
+            #    'params':
+            #    expr['expressions']
+            #    if expr['type'] == Syntax.SequenceExpression else [expr]
+            #}
+            nexpr = Node()
+            nexpr.type = PlaceHolders.ArrowParameterPlaceHolder
+            nexpr.params = expr['expressions'] if expr['type'] == Syntax.SequenceExpression else [expr]
+            expr = nexpr
         self.isBindingElement = false
         return expr
 
@@ -2002,13 +2018,15 @@ class PyJsParser:
         return {
             'params': params,
             'defaults': defaults,
-            'stricted': options['stricted'],
-            'firstRestricted': options['firstRestricted'],
+            #'stricted': options['stricted'],
+            'stricted': options['stricted'] if 'stricted' in options else null,
+            #'firstRestricted': options['firstRestricted'],
+            'firstRestricted': options['firstRestricted'] if 'firstRestricted' in options else null,
             'message': options.get('message')
         }
 
     def parseArrowFunctionExpression(self, options, node):
-        raise Ecma51NotSupported('ArrowFunctionExpression')
+        #raise Ecma51NotSupported('ArrowFunctionExpression')
         if (self.hasLineTerminator):
             self.tolerateUnexpectedToken(self.lookahead)
         self.expect('=>')
@@ -2039,7 +2057,7 @@ class PyJsParser:
 
         if (expr.type == PlaceHolders.ArrowParameterPlaceHolder
                 or self.match('=>')):
-            raise Ecma51NotSupported('ArrowFunctionExpression')
+            #raise Ecma51NotSupported('ArrowFunctionExpression')
             self.isAssignmentTarget = self.isBindingElement = false
             lis = self.reinterpretAsCoverFormalsList(expr)
 
@@ -2782,7 +2800,8 @@ class PyJsParser:
             if key in options['paramSet']:
                 options['stricted'] = param
                 options['message'] = Messages.StrictParamDupe
-        elif (not options['firstRestricted']):
+        #elif (not options['firstRestricted']):
+        elif (not 'firstRestricted' in options):
             if (isRestrictedWord(name)):
                 options['firstRestricted'] = param
                 options['message'] = Messages.StrictParamName

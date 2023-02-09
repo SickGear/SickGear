@@ -1,9 +1,9 @@
-from __future__ import absolute_import, division, print_function
+# SPDX-License-Identifier: MIT
 
 
 class FrozenError(AttributeError):
     """
-    A frozen/immutable instance or attribute haave been attempted to be
+    A frozen/immutable instance or attribute have been attempted to be
     modified.
 
     It mirrors the behavior of ``namedtuples`` by using the same error message

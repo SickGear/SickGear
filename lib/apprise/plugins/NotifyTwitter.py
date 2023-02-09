@@ -26,8 +26,8 @@
 # See https://developer.twitter.com/en/docs/direct-messages/\
 #           sending-and-receiving/api-reference/new-event.html
 import re
-import six
 import requests
+from copy import deepcopy
 from datetime import datetime
 from requests_oauthlib import OAuth1
 from json import dumps
@@ -39,11 +39,12 @@ from ..utils import parse_list
 from ..utils import parse_bool
 from ..utils import validate_regex
 from ..AppriseLocale import gettext_lazy as _
+from ..attachment.AttachBase import AttachBase
 
 IS_USER = re.compile(r'^\s*@?(?P<user>[A-Z0-9_]+)$', re.I)
 
 
-class TwitterMessageMode(object):
+class TwitterMessageMode:
     """
     Twitter Message Mode
     """
@@ -73,8 +74,7 @@ class NotifyTwitter(NotifyBase):
     # The services URL
     service_url = 'https://twitter.com/'
 
-    # The default secure protocol is twitter.  'tweet' is left behind
-    # for backwards compatibility of older apprise usage
+    # The default secure protocol is twitter.
     secure_protocol = ('twitter', 'tweet')
 
     # A URL that takes you to the setup/help of the specific protocol
@@ -88,9 +88,6 @@ class NotifyTwitter(NotifyBase):
     # Twitter does have titles when creating a message
     title_maxlen = 0
 
-    # Twitter API
-    twitter_api = 'api.twitter.com'
-
     # Twitter API Reference To Acquire Someone's Twitter ID
     twitter_lookup = 'https://api.twitter.com/1.1/users/lookup.json'
 
@@ -103,6 +100,13 @@ class NotifyTwitter(NotifyBase):
 
     # Twitter API Reference To Send A Public Tweet
     twitter_tweet = 'https://api.twitter.com/1.1/statuses/update.json'
+
+    # it is documented on the site that the maximum images per tweet
+    # is 4 (unless it's a GIF, then it's only 1)
+    __tweet_non_gif_images_batch = 4
+
+    # Twitter Media (Attachment) Upload Location
+    twitter_media = 'https://upload.twitter.com/1.1/media/upload.json'
 
     # Twitter is kind enough to return how many more requests we're allowed to
     # continue to make within it's header response as:
@@ -177,15 +181,20 @@ class NotifyTwitter(NotifyBase):
         'to': {
             'alias_of': 'targets',
         },
+        'batch': {
+            'name': _('Batch Mode'),
+            'type': 'bool',
+            'default': True,
+        },
     })
 
     def __init__(self, ckey, csecret, akey, asecret, targets=None,
-                 mode=TwitterMessageMode.DM, cache=True, **kwargs):
+                 mode=TwitterMessageMode.DM, cache=True, batch=True, **kwargs):
         """
         Initialize Twitter Object
 
         """
-        super(NotifyTwitter, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
         self.ckey = validate_regex(ckey)
         if not self.ckey:
@@ -212,17 +221,20 @@ class NotifyTwitter(NotifyBase):
             raise TypeError(msg)
 
         # Store our webhook mode
-        self.mode = None \
-            if not isinstance(mode, six.string_types) else mode.lower()
-
-        # Set Cache Flag
-        self.cache = cache
+        self.mode = self.template_args['mode']['default'] \
+            if not isinstance(mode, str) else mode.lower()
 
         if self.mode not in TWITTER_MESSAGE_MODES:
             msg = 'The Twitter message mode specified ({}) is invalid.' \
                 .format(mode)
             self.logger.warning(msg)
             raise TypeError(msg)
+
+        # Set Cache Flag
+        self.cache = cache
+
+        # Prepare Image Batch Mode Flag
+        self.batch = batch
 
         # Track any errors
         has_error = False
@@ -237,7 +249,7 @@ class NotifyTwitter(NotifyBase):
 
             has_error = True
             self.logger.warning(
-                'Dropped invalid user ({}) specified.'.format(target),
+                'Dropped invalid Twitter user ({}) specified.'.format(target),
             )
 
         if has_error and not self.targets:
@@ -249,44 +261,202 @@ class NotifyTwitter(NotifyBase):
             self.logger.warning(msg)
             raise TypeError(msg)
 
+        # Initialize our cache values
+        self._whoami_cache = None
+        self._user_cache = {}
+
         return
 
-    def send(self, body, title='', notify_type=NotifyType.INFO, **kwargs):
+    def send(self, body, title='', notify_type=NotifyType.INFO, attach=None,
+             **kwargs):
         """
         Perform Twitter Notification
         """
 
-        # Call the _send_ function applicable to whatever mode we're in
+        # Build a list of our attachments
+        attachments = []
+
+        if attach:
+            # We need to upload our payload first so that we can source it
+            # in remaining messages
+            for attachment in attach:
+
+                # Perform some simple error checking
+                if not attachment:
+                    # We could not access the attachment
+                    self.logger.error(
+                        'Could not access attachment {}.'.format(
+                            attachment.url(privacy=True)))
+                    return False
+
+                if not re.match(r'^image/.*', attachment.mimetype, re.I):
+                    # Only support images at this time
+                    self.logger.warning(
+                        'Ignoring unsupported Twitter attachment {}.'.format(
+                            attachment.url(privacy=True)))
+                    continue
+
+                self.logger.debug(
+                    'Preparing Twitter attachment {}'.format(
+                        attachment.url(privacy=True)))
+
+                # Upload our image and get our id associated with it
+                # see: https://developer.twitter.com/en/docs/twitter-api/v1/\
+                #         media/upload-media/api-reference/post-media-upload
+                postokay, response = self._fetch(
+                    self.twitter_media,
+                    payload=attachment,
+                )
+
+                if not postokay:
+                    # We can't post our attachment
+                    return False
+
+                if not (isinstance(response, dict)
+                        and response.get('media_id')):
+                    self.logger.debug(
+                        'Could not attach the file to Twitter: %s (mime=%s)',
+                        attachment.name, attachment.mimetype)
+                    continue
+
+                # If we get here, our output will look something like this:
+                # {
+                #   "media_id": 710511363345354753,
+                #   "media_id_string": "710511363345354753",
+                #   "media_key": "3_710511363345354753",
+                #   "size": 11065,
+                #   "expires_after_secs": 86400,
+                #   "image": {
+                #     "image_type": "image/jpeg",
+                #     "w": 800,
+                #     "h": 320
+                #   }
+                # }
+
+                response.update({
+                    # Update our response to additionally include the
+                    # attachment details
+                    'file_name': attachment.name,
+                    'file_mime': attachment.mimetype,
+                    'file_path': attachment.path,
+                })
+
+                # Save our pre-prepared payload for attachment posting
+                attachments.append(response)
+
         # - calls _send_tweet if the mode is set so
         # - calls _send_dm (direct message) otherwise
         return getattr(self, '_send_{}'.format(self.mode))(
-            body=body, title=title, notify_type=notify_type, **kwargs)
+            body=body, title=title, notify_type=notify_type,
+            attachments=attachments, **kwargs)
 
     def _send_tweet(self, body, title='', notify_type=NotifyType.INFO,
-                    **kwargs):
+                    attachments=None, **kwargs):
         """
         Twitter Public Tweet
         """
+
+        # Error Tracking
+        has_error = False
 
         payload = {
             'status': body,
         }
 
-        # Send Tweet
-        postokay, response = self._fetch(
-            self.twitter_tweet,
-            payload=payload,
-            json=False,
-        )
+        payloads = []
+        if not attachments:
+            payloads.append(payload)
 
-        if postokay:
+        else:
+            # Group our images if batch is set to do so
+            batch_size = 1 if not self.batch \
+                else self.__tweet_non_gif_images_batch
+
+            # Track our batch control in our message generation
+            batches = []
+            batch = []
+            for attachment in attachments:
+                batch.append(str(attachment['media_id']))
+
+                # Twitter supports batching images together.  This allows
+                # the batching of multiple images together.  Twitter also
+                # makes it clear that you can't batch `gif` files; they need
+                # to be separate.  So the below preserves the ordering that
+                # a user passed their attachments in.  if 4-non-gif images
+                # are passed, they are all part of a single message.
+                #
+                # however, if they pass in image, gif, image, gif.  The
+                # gif's inbetween break apart the batches so this would
+                # produce 4 separate tweets.
+                #
+                # If you passed in, image, image, gif, image. <- This would
+                # produce 3 images (as the first 2 images could be lumped
+                # together as a batch)
+                if not re.match(
+                        r'^image/(png|jpe?g)', attachment['file_mime'], re.I) \
+                        or len(batch) >= batch_size:
+                    batches.append(','.join(batch))
+                    batch = []
+
+            if batch:
+                batches.append(','.join(batch))
+
+            for no, media_ids in enumerate(batches):
+                _payload = deepcopy(payload)
+                _payload['media_ids'] = media_ids
+
+                if no:
+                    # strip text and replace it with the image representation
+                    _payload['status'] = \
+                        '{:02d}/{:02d}'.format(no + 1, len(batches))
+                payloads.append(_payload)
+
+        for no, payload in enumerate(payloads, start=1):
+            # Send Tweet
+            postokay, response = self._fetch(
+                self.twitter_tweet,
+                payload=payload,
+                json=False,
+            )
+
+            if not postokay:
+                # Track our error
+                has_error = True
+
+                errors = []
+                try:
+                    errors = ['Error Code {}: {}'.format(
+                        e.get('code', 'unk'), e.get('message'))
+                        for e in response['errors']]
+
+                except (KeyError, TypeError):
+                    pass
+
+                for error in errors:
+                    self.logger.debug(
+                        'Tweet [%.2d/%.2d] Details: %s',
+                        no, len(payloads), error)
+                continue
+
+            try:
+                url = 'https://twitter.com/{}/status/{}'.format(
+                    response['user']['screen_name'],
+                    response['id_str'])
+
+            except (KeyError, TypeError):
+                url = 'unknown'
+
+            self.logger.debug(
+                'Tweet [%.2d/%.2d] Details: %s', no, len(payloads), url)
+
             self.logger.info(
-                'Sent Twitter notification as public tweet.')
+                'Sent [%.2d/%.2d] Twitter notification as public tweet.',
+                no, len(payloads))
 
-        return postokay
+        return not has_error
 
     def _send_dm(self, body, title='', notify_type=NotifyType.INFO,
-                 **kwargs):
+                 attachments=None, **kwargs):
         """
         Twitter Direct Message
         """
@@ -319,24 +489,48 @@ class NotifyTwitter(NotifyBase):
                 'Failed to acquire user(s) to Direct Message via Twitter')
             return False
 
-        for screen_name, user_id in targets.items():
-            # Assign our user
-            payload['event']['message_create']['target']['recipient_id'] = \
-                user_id
+        payloads = []
+        if not attachments:
+            payloads.append(payload)
 
-            # Send Twitter DM
-            postokay, response = self._fetch(
-                self.twitter_dm,
-                payload=payload,
-            )
+        else:
+            for no, attachment in enumerate(attachments):
+                _payload = deepcopy(payload)
+                _data = _payload['event']['message_create']['message_data']
+                _data['attachment'] = {
+                    'type': 'media',
+                    'media': {
+                        'id': attachment['media_id']
+                    },
+                    'additional_owners':
+                    ','.join([str(x) for x in targets.values()])
+                }
+                if no:
+                    # strip text and replace it with the image representation
+                    _data['text'] = \
+                        '{:02d}/{:02d}'.format(no + 1, len(attachments))
+                payloads.append(_payload)
 
-            if not postokay:
-                # Track our error
-                has_error = True
-                continue
+        for no, payload in enumerate(payloads, start=1):
+            for screen_name, user_id in targets.items():
+                # Assign our user
+                target = payload['event']['message_create']['target']
+                target['recipient_id'] = user_id
 
-            self.logger.info(
-                'Sent Twitter DM notification to @{}.'.format(screen_name))
+                # Send Twitter DM
+                postokay, response = self._fetch(
+                    self.twitter_dm,
+                    payload=payload,
+                )
+
+                if not postokay:
+                    # Track our error
+                    has_error = True
+                    continue
+
+                self.logger.info(
+                    'Sent [{:02d}/{:02d}] Twitter DM notification to @{}.'
+                    .format(no, len(payloads), screen_name))
 
         return not has_error
 
@@ -346,16 +540,9 @@ class NotifyTwitter(NotifyBase):
 
         """
 
-        # Prepare a whoami key; this is to prevent conflict with other
-        # NotifyTwitter declarations that may or may not use a different
-        # set of authentication keys
-        whoami_key = '{}{}{}{}'.format(
-            self.ckey, self.csecret, self.akey, self.asecret)
-
-        if lazy and hasattr(NotifyTwitter, '_whoami_cache') \
-                and whoami_key in getattr(NotifyTwitter, '_whoami_cache'):
+        if lazy and self._whoami_cache is not None:
             # Use cached response
-            return getattr(NotifyTwitter, '_whoami_cache')[whoami_key]
+            return self._whoami_cache
 
         # Contains a mapping of screen_name to id
         results = {}
@@ -370,22 +557,11 @@ class NotifyTwitter(NotifyBase):
         if postokay:
             try:
                 results[response['screen_name']] = response['id']
+                self._whoami_cache = {
+                    response['screen_name']: response['id'],
+                }
 
-                if lazy:
-                    # Cache our response for future references
-                    if not hasattr(NotifyTwitter, '_whoami_cache'):
-                        setattr(
-                            NotifyTwitter, '_whoami_cache',
-                            {whoami_key: results})
-                    else:
-                        getattr(NotifyTwitter, '_whoami_cache')\
-                            .update({whoami_key: results})
-
-                    # Update our user cache as well
-                    if not hasattr(NotifyTwitter, '_user_cache'):
-                        setattr(NotifyTwitter, '_user_cache', results)
-                    else:
-                        getattr(NotifyTwitter, '_user_cache').update(results)
+                self._user_cache.update(results)
 
             except (TypeError, KeyError):
                 pass
@@ -405,10 +581,10 @@ class NotifyTwitter(NotifyBase):
         # Build a unique set of names
         names = parse_list(screen_name)
 
-        if lazy and hasattr(NotifyTwitter, '_user_cache'):
+        if lazy and self._user_cache:
             # Use cached response
-            results = {k: v for k, v in getattr(
-                NotifyTwitter, '_user_cache').items() if k in names}
+            results = {
+                k: v for k, v in self._user_cache.items() if k in names}
 
             # limit our names if they already exist in our cache
             names = [name for name in names if name not in results]
@@ -422,7 +598,7 @@ class NotifyTwitter(NotifyBase):
         # https://developer.twitter.com/en/docs/accounts-and-users/\
         #     follow-search-get-users/api-reference/get-users-lookup
         for i in range(0, len(names), 100):
-            # Send Twitter DM
+            # Look up our names by their screen_name
             postokay, response = self._fetch(
                 self.twitter_lookup,
                 payload={
@@ -445,11 +621,7 @@ class NotifyTwitter(NotifyBase):
 
         # Cache our response for future use; this saves on un-nessisary extra
         # hits against the Twitter API when we already know the answer
-        if lazy:
-            if not hasattr(NotifyTwitter, '_user_cache'):
-                setattr(NotifyTwitter, '_user_cache', results)
-            else:
-                getattr(NotifyTwitter, '_user_cache').update(results)
+        self._user_cache.update(results)
 
         return results
 
@@ -459,13 +631,23 @@ class NotifyTwitter(NotifyBase):
         """
 
         headers = {
-            'Host': self.twitter_api,
             'User-Agent': self.app_id,
         }
 
-        if json:
+        data = None
+        files = None
+
+        # Open our attachment path if required:
+        if isinstance(payload, AttachBase):
+            # prepare payload
+            files = {'media': (payload.name, open(payload.path, 'rb'))}
+
+        elif json:
             headers['Content-Type'] = 'application/json'
-            payload = dumps(payload)
+            data = dumps(payload)
+
+        else:
+            data = payload
 
         auth = OAuth1(
             self.ckey,
@@ -486,7 +668,7 @@ class NotifyTwitter(NotifyBase):
             # Determine how long we should wait for or if we should wait at
             # all. This isn't fool-proof because we can't be sure the client
             # time (calling this script) is completely synced up with the
-            # Gitter server.  One would hope we're on NTP and our clocks are
+            # Twitter server.  One would hope we're on NTP and our clocks are
             # the same allowing this to role smoothly:
 
             now = datetime.utcnow()
@@ -507,10 +689,22 @@ class NotifyTwitter(NotifyBase):
         try:
             r = fn(
                 url,
-                data=payload,
+                data=data,
+                files=files,
                 headers=headers,
                 auth=auth,
-                verify=self.verify_certificate)
+                verify=self.verify_certificate,
+                timeout=self.request_timeout,
+            )
+
+            try:
+                content = loads(r.content)
+
+            except (AttributeError, TypeError, ValueError):
+                # ValueError = r.content is Unparsable
+                # TypeError = r.content is None
+                # AttributeError = r is None
+                content = {}
 
             if r.status_code != requests.codes.ok:
                 # We had a problem
@@ -530,15 +724,6 @@ class NotifyTwitter(NotifyBase):
 
                 # Mark our failure
                 return (False, content)
-
-            try:
-                content = loads(r.content)
-
-            except (AttributeError, TypeError, ValueError):
-                # ValueError = r.content is Unparsable
-                # TypeError = r.content is None
-                # AttributeError = r is None
-                content = {}
 
             try:
                 # Capture rate limiting if possible
@@ -561,6 +746,20 @@ class NotifyTwitter(NotifyBase):
             # Mark our failure
             return (False, content)
 
+        except (OSError, IOError) as e:
+            self.logger.warning(
+                'An I/O error occurred while handling {}.'.format(
+                    payload.name if isinstance(payload, AttachBase)
+                    else payload))
+            self.logger.debug('I/O Exception: %s' % str(e))
+            return (False, content)
+
+        finally:
+            # Close our file (if it's open) stored in the second element
+            # of our files tuple (index 1)
+            if files:
+                files['media'][1].close()
+
         return (True, content)
 
     @property
@@ -577,20 +776,22 @@ class NotifyTwitter(NotifyBase):
         Returns the URL built dynamically based on specified arguments.
         """
 
-        # Define any arguments set
-        args = {
-            'format': self.notify_format,
-            'overflow': self.overflow_mode,
+        # Define any URL parameters
+        params = {
             'mode': self.mode,
-            'verify': 'yes' if self.verify_certificate else 'no',
+            'batch': 'yes' if self.batch else 'no',
+            'cache': 'yes' if self.cache else 'no',
         }
 
+        # Extend our parameters
+        params.update(self.url_parameters(privacy=privacy, *args, **kwargs))
+
         if len(self.targets) > 0:
-            args['to'] = ','.join([NotifyTwitter.quote(x, safe='')
-                                   for x in self.targets])
+            params['to'] = ','.join(
+                [NotifyTwitter.quote(x, safe='') for x in self.targets])
 
         return '{schema}://{ckey}/{csecret}/{akey}/{asecret}' \
-            '/{targets}/?{args}'.format(
+            '/{targets}/?{params}'.format(
                 schema=self.secure_protocol[0],
                 ckey=self.pprint(self.ckey, privacy, safe=''),
                 csecret=self.pprint(
@@ -599,19 +800,18 @@ class NotifyTwitter(NotifyBase):
                 asecret=self.pprint(
                     self.asecret, privacy, mode=PrivacyMode.Secret, safe=''),
                 targets='/'.join(
-                    [NotifyTwitter.quote('@{}'.format(target), safe='')
+                    [NotifyTwitter.quote('@{}'.format(target), safe='@')
                      for target in self.targets]),
-                args=NotifyTwitter.urlencode(args))
+                params=NotifyTwitter.urlencode(params))
 
     @staticmethod
     def parse_url(url):
         """
         Parses the URL and returns enough arguments that can allow
-        us to substantiate this object.
+        us to re-instantiate this object.
 
         """
         results = NotifyBase.parse_url(url, verify_host=False)
-
         if not results:
             # We're done early as we couldn't load the results
             return results
@@ -644,6 +844,9 @@ class NotifyTwitter(NotifyBase):
             results['mode'] = \
                 NotifyTwitter.unquote(results['qsd']['mode'])
 
+        elif results['schema'].startswith('tweet'):
+            results['mode'] = TwitterMessageMode.TWEET
+
         results['targets'] = []
 
         # if a user has been defined, add it to the list of targets
@@ -653,18 +856,19 @@ class NotifyTwitter(NotifyBase):
         # Store any remaining items as potential targets
         results['targets'].extend(tokens[3:])
 
+        # Get Cache Flag (reduces lookup hits)
         if 'cache' in results['qsd'] and len(results['qsd']['cache']):
             results['cache'] = \
                 parse_bool(results['qsd']['cache'], True)
+
+        # Get Batch Mode Flag
+        results['batch'] = \
+            parse_bool(results['qsd'].get(
+                'batch', NotifyTwitter.template_args['batch']['default']))
 
         # The 'to' makes it easier to use yaml configuration
         if 'to' in results['qsd'] and len(results['qsd']['to']):
             results['targets'] += \
                 NotifyTwitter.parse_list(results['qsd']['to'])
-
-        if results.get('schema', 'twitter').lower() == 'tweet':
-            # Deprication Notice issued for v0.7.9
-            NotifyTwitter.logger.deprecate(
-                'tweet:// has been replaced by twitter://')
 
         return results

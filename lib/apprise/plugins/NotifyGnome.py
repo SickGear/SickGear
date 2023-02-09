@@ -56,23 +56,42 @@ except (ImportError, ValueError, AttributeError):
     # be in microsoft windows, or we just don't have the python-gobject
     # library available to us (or maybe one we don't support)?
 
-    # Alternativey A ValueError will get thrown upon calling
-    # gi.require_version() if the requested Notify namespace isn't available
+    # Alternatively, a `ValueError` will get raised upon calling
+    # gi.require_version() if the requested Notify namespace isn't available.
     pass
 
 
 # Urgencies
-class GnomeUrgency(object):
+class GnomeUrgency:
     LOW = 0
     NORMAL = 1
     HIGH = 2
 
 
-GNOME_URGENCIES = (
-    GnomeUrgency.LOW,
-    GnomeUrgency.NORMAL,
-    GnomeUrgency.HIGH,
-)
+GNOME_URGENCIES = {
+    GnomeUrgency.LOW: 'low',
+    GnomeUrgency.NORMAL: 'normal',
+    GnomeUrgency.HIGH: 'high',
+}
+
+
+GNOME_URGENCY_MAP = {
+    # Maps against string 'low'
+    'l': GnomeUrgency.LOW,
+    # Maps against string 'moderate'
+    'm': GnomeUrgency.LOW,
+    # Maps against string 'normal'
+    'n': GnomeUrgency.NORMAL,
+    # Maps against string 'high'
+    'h': GnomeUrgency.HIGH,
+    # Maps against string 'emergency'
+    'e': GnomeUrgency.HIGH,
+
+    # Entries to additionally support (so more like Gnome's API)
+    '0': GnomeUrgency.LOW,
+    '1': GnomeUrgency.NORMAL,
+    '2': GnomeUrgency.HIGH,
+}
 
 
 class NotifyGnome(NotifyBase):
@@ -80,8 +99,19 @@ class NotifyGnome(NotifyBase):
     A wrapper for local Gnome Notifications
     """
 
+    # Set our global enabled flag
+    enabled = NOTIFY_GNOME_SUPPORT_ENABLED
+
+    requirements = {
+        # Define our required packaging in order to work
+        'details': _('A local Gnome environment is required.')
+    }
+
     # The default descriptive name associated with the Notification
-    service_name = 'Gnome Notification'
+    service_name = _('Gnome Notification')
+
+    # The service URL
+    service_url = 'https://www.gnome.org/'
 
     # The default protocol
     protocol = 'gnome'
@@ -104,18 +134,9 @@ class NotifyGnome(NotifyBase):
     # cause any title (if defined) to get placed into the message body.
     title_maxlen = 0
 
-    # This entry is a bit hacky, but it allows us to unit-test this library
-    # in an environment that simply doesn't have the gnome packages
-    # available to us.  It also allows us to handle situations where the
-    # packages actually are present but we need to test that they aren't.
-    # If anyone is seeing this had knows a better way of testing this
-    # outside of what is defined in test/test_gnome_plugin.py, please
-    # let me know! :)
-    _enabled = NOTIFY_GNOME_SUPPORT_ENABLED
-
     # Define object templates
     templates = (
-        '{schema}://_/',
+        '{schema}://',
     )
 
     # Define our template arguments
@@ -125,6 +146,12 @@ class NotifyGnome(NotifyBase):
             'type': 'choice:int',
             'values': GNOME_URGENCIES,
             'default': GnomeUrgency.NORMAL,
+        },
+        'priority': {
+            # Apprise uses 'priority' everywhere; it's just a nice consistent
+            # feel to be able to use it here as well. Just map the
+            # value back to 'priority'
+            'alias_of': 'urgency',
         },
         'image': {
             'name': _('Include Image'),
@@ -139,30 +166,24 @@ class NotifyGnome(NotifyBase):
         Initialize Gnome Object
         """
 
-        super(NotifyGnome, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
         # The urgency of the message
-        if urgency not in GNOME_URGENCIES:
-            self.urgency = GnomeUrgency.NORMAL
+        self.urgency = int(
+            NotifyGnome.template_args['urgency']['default']
+            if urgency is None else
+            next((
+                v for k, v in GNOME_URGENCY_MAP.items()
+                if str(urgency).lower().startswith(k)),
+                NotifyGnome.template_args['urgency']['default']))
 
-        else:
-            self.urgency = urgency
-
-        # Track whether or not we want to send an image with our notification
-        # or not.
+        # Track whether we want to add an image to the notification.
         self.include_image = include_image
-
-        return
 
     def send(self, body, title='', notify_type=NotifyType.INFO, **kwargs):
         """
         Perform Gnome Notification
         """
-
-        if not self._enabled:
-            self.logger.warning(
-                "Gnome Notifications are not supported by this system.")
-            return False
 
         try:
             # App initialization
@@ -192,15 +213,15 @@ class NotifyGnome(NotifyBase):
 
                 except Exception as e:
                     self.logger.warning(
-                        "Could not load Gnome notification icon ({}): {}"
-                        .format(icon_path, e))
+                        "Could not load notification icon (%s).", icon_path)
+                    self.logger.debug(f'Gnome Exception: {e}')
 
             notification.show()
             self.logger.info('Sent Gnome notification.')
 
-        except Exception:
+        except Exception as e:
             self.logger.warning('Failed to send Gnome notification.')
-            self.logger.exception('Gnome Exception')
+            self.logger.debug(f'Gnome Exception: {e}')
             return False
 
         return True
@@ -210,25 +231,21 @@ class NotifyGnome(NotifyBase):
         Returns the URL built dynamically based on specified arguments.
         """
 
-        _map = {
-            GnomeUrgency.LOW: 'low',
-            GnomeUrgency.NORMAL: 'normal',
-            GnomeUrgency.HIGH: 'high',
-        }
-
-        # Define any arguments set
-        args = {
-            'format': self.notify_format,
-            'overflow': self.overflow_mode,
+        # Define any URL parameters
+        params = {
             'image': 'yes' if self.include_image else 'no',
-            'urgency': 'normal' if self.urgency not in _map
-                       else _map[self.urgency],
-            'verify': 'yes' if self.verify_certificate else 'no',
+            'urgency':
+                GNOME_URGENCIES[self.template_args['urgency']['default']]
+                if self.urgency not in GNOME_URGENCIES
+                else GNOME_URGENCIES[self.urgency],
         }
 
-        return '{schema}://_/?{args}'.format(
+        # Extend our parameters
+        params.update(self.url_parameters(privacy=privacy, *args, **kwargs))
+
+        return '{schema}://?{params}'.format(
             schema=self.protocol,
-            args=NotifyGnome.urlencode(args),
+            params=NotifyGnome.urlencode(params),
         )
 
     @staticmethod
@@ -240,19 +257,7 @@ class NotifyGnome(NotifyBase):
 
         """
 
-        results = NotifyBase.parse_url(url)
-        if not results:
-            results = {
-                'schema': NotifyGnome.protocol,
-                'user': None,
-                'password': None,
-                'port': None,
-                'host': '_',
-                'fullpath': None,
-                'path': None,
-                'url': url,
-                'qsd': {},
-            }
+        results = NotifyBase.parse_url(url, verify_host=False)
 
         # Include images with our message
         results['include_image'] = \
@@ -260,23 +265,13 @@ class NotifyGnome(NotifyBase):
 
         # Gnome supports urgency, but we we also support the keyword priority
         # so that it is consistent with some of the other plugins
-        urgency = results['qsd'].get('urgency', results['qsd'].get('priority'))
-        if urgency and len(urgency):
-            _map = {
-                '0': GnomeUrgency.LOW,
-                'l': GnomeUrgency.LOW,
-                'n': GnomeUrgency.NORMAL,
-                '1': GnomeUrgency.NORMAL,
-                'h': GnomeUrgency.HIGH,
-                '2': GnomeUrgency.HIGH,
-            }
+        if 'priority' in results['qsd'] and len(results['qsd']['priority']):
+            # We intentionally store the priority in the urgency section
+            results['urgency'] = \
+                NotifyGnome.unquote(results['qsd']['priority'])
 
-            try:
-                # Attempt to index/retrieve our urgency
-                results['urgency'] = _map[urgency[0].lower()]
-
-            except KeyError:
-                # No priority was set
-                pass
+        if 'urgency' in results['qsd'] and len(results['qsd']['urgency']):
+            results['urgency'] = \
+                NotifyGnome.unquote(results['qsd']['urgency'])
 
         return results

@@ -23,21 +23,19 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-import six
-
 from . import config
 from . import ConfigBase
+from . import CONFIG_FORMATS
 from . import URLBase
 from .AppriseAsset import AppriseAsset
-
-from .common import MATCH_ALL_TAG
+from . import common
 from .utils import GET_SCHEMA_RE
 from .utils import parse_list
 from .utils import is_exclusive_match
 from .logger import logger
 
 
-class AppriseConfig(object):
+class AppriseConfig:
     """
     Our Apprise Configuration File Manager
 
@@ -46,7 +44,8 @@ class AppriseConfig(object):
 
     """
 
-    def __init__(self, paths=None, asset=None, cache=True, **kwargs):
+    def __init__(self, paths=None, asset=None, cache=True, recursion=0,
+                 insecure_includes=False, **kwargs):
         """
         Loads all of the paths specified (if any).
 
@@ -69,6 +68,29 @@ class AppriseConfig(object):
 
         It's also worth nothing that the cache value is only set to elements
         that are not already of subclass ConfigBase()
+
+        recursion defines how deep we recursively handle entries that use the
+        `import` keyword. This keyword requires us to fetch more configuration
+        from another source and add it to our existing compilation. If the
+        file we remotely retrieve also has an `import` reference, we will only
+        advance through it if recursion is set to 2 deep.  If set to zero
+        it is off.  There is no limit to how high you set this value. It would
+        be recommended to keep it low if you do intend to use it.
+
+        insecure includes by default are disabled. When set to True, all
+        Apprise Config files marked to be in STRICT mode are treated as being
+        in ALWAYS mode.
+
+        Take a file:// based configuration for example, only a file:// based
+        configuration can import another file:// based one. because it is set
+        to STRICT mode. If an http:// based configuration file attempted to
+        import a file:// one it woul fail. However this import would be
+        possible if insecure_includes is set to True.
+
+        There are cases where a self hosting apprise developer may wish to load
+        configuration from memory (in a string format) that contains import
+        entries (even file:// based ones).  In these circumstances if you want
+        these includes to be honored, this value must be set to True.
         """
 
         # Initialize a server list of URLs
@@ -81,13 +103,20 @@ class AppriseConfig(object):
         # Set our cache flag
         self.cache = cache
 
+        # Initialize our recursion value
+        self.recursion = recursion
+
+        # Initialize our insecure_includes flag
+        self.insecure_includes = insecure_includes
+
         if paths is not None:
             # Store our path(s)
             self.add(paths)
 
         return
 
-    def add(self, configs, asset=None, tag=None, cache=True):
+    def add(self, configs, asset=None, tag=None, cache=True, recursion=None,
+            insecure_includes=None):
         """
         Adds one or more config URLs into our list.
 
@@ -107,6 +136,12 @@ class AppriseConfig(object):
 
         It's also worth nothing that the cache value is only set to elements
         that are not already of subclass ConfigBase()
+
+        Optionally override the default recursion value.
+
+        Optionally override the insecure_includes flag.
+        if insecure_includes is set to True then all plugins that are
+        set to a STRICT mode will be a treated as ALWAYS.
         """
 
         # Initialize our return status
@@ -114,6 +149,14 @@ class AppriseConfig(object):
 
         # Initialize our default cache value
         cache = cache if cache is not None else self.cache
+
+        # Initialize our default recursion value
+        recursion = recursion if recursion is not None else self.recursion
+
+        # Initialize our default insecure_includes value
+        insecure_includes = \
+            insecure_includes if insecure_includes is not None \
+            else self.insecure_includes
 
         if asset is None:
             # prepare default asset
@@ -124,7 +167,7 @@ class AppriseConfig(object):
             self.configs.append(configs)
             return True
 
-        elif isinstance(configs, six.string_types):
+        elif isinstance(configs, str):
             # Save our path
             configs = (configs, )
 
@@ -142,7 +185,7 @@ class AppriseConfig(object):
                 self.configs.append(_config)
                 continue
 
-            elif not isinstance(_config, six.string_types):
+            elif not isinstance(_config, str):
                 logger.warning(
                     "An invalid configuration (type={}) was specified.".format(
                         type(_config)))
@@ -154,7 +197,8 @@ class AppriseConfig(object):
             # Instantiate ourselves an object, this function throws or
             # returns None if it fails
             instance = AppriseConfig.instantiate(
-                _config, asset=asset, tag=tag, cache=cache)
+                _config, asset=asset, tag=tag, cache=cache,
+                recursion=recursion, insecure_includes=insecure_includes)
             if not isinstance(instance, ConfigBase):
                 return_status = False
                 continue
@@ -165,7 +209,8 @@ class AppriseConfig(object):
         # Return our status
         return return_status
 
-    def add_config(self, content, asset=None, tag=None, format=None):
+    def add_config(self, content, asset=None, tag=None, format=None,
+                   recursion=None, insecure_includes=None):
         """
         Adds one configuration file in it's raw format. Content gets loaded as
         a memory based object and only exists for the life of this
@@ -174,13 +219,27 @@ class AppriseConfig(object):
         If you know the format ('yaml' or 'text') you can specify
         it for slightly less overhead during this call.  Otherwise the
         configuration is auto-detected.
+
+        Optionally override the default recursion value.
+
+        Optionally override the insecure_includes flag.
+        if insecure_includes is set to True then all plugins that are
+        set to a STRICT mode will be a treated as ALWAYS.
         """
+
+        # Initialize our default recursion value
+        recursion = recursion if recursion is not None else self.recursion
+
+        # Initialize our default insecure_includes value
+        insecure_includes = \
+            insecure_includes if insecure_includes is not None \
+            else self.insecure_includes
 
         if asset is None:
             # prepare default asset
             asset = self.asset
 
-        if not isinstance(content, six.string_types):
+        if not isinstance(content, str):
             logger.warning(
                 "An invalid configuration (type={}) was specified.".format(
                     type(content)))
@@ -190,7 +249,13 @@ class AppriseConfig(object):
 
         # Create ourselves a ConfigMemory Object to store our configuration
         instance = config.ConfigMemory(
-            content=content, format=format, asset=asset, tag=tag)
+            content=content, format=format, asset=asset, tag=tag,
+            recursion=recursion, insecure_includes=insecure_includes)
+
+        if instance.config_format not in CONFIG_FORMATS:
+            logger.warning(
+                "The format of the configuration could not be deteced.")
+            return False
 
         # Add our initialized plugin to our server listings
         self.configs.append(instance)
@@ -198,7 +263,8 @@ class AppriseConfig(object):
         # Return our status
         return True
 
-    def servers(self, tag=MATCH_ALL_TAG, *args, **kwargs):
+    def servers(self, tag=common.MATCH_ALL_TAG, match_always=True, *args,
+                **kwargs):
         """
         Returns all of our servers dynamically build based on parsed
         configuration.
@@ -209,7 +275,15 @@ class AppriseConfig(object):
         This is for filtering the configuration files polled for
         results.
 
+        If the anytag is set, then any notification that is found
+        set with that tag are included in the response.
+
         """
+
+        # A match_always flag allows us to pick up on our 'any' keyword
+        # and notify these services under all circumstances
+        match_always = common.MATCH_ALWAYS_TAG if match_always else None
+
         # Build our tag setup
         #   - top level entries are treated as an 'or'
         #   - second level (or more) entries are treated as 'and'
@@ -226,7 +300,8 @@ class AppriseConfig(object):
 
             # Apply our tag matching based on our defined logic
             if is_exclusive_match(
-                    logic=tag, data=entry.tags, match_all=MATCH_ALL_TAG):
+                    logic=tag, data=entry.tags, match_all=common.MATCH_ALL_TAG,
+                    match_always=match_always):
                 # Build ourselves a list of services dynamically and return the
                 # as a list
                 response.extend(entry.servers())
@@ -235,6 +310,7 @@ class AppriseConfig(object):
 
     @staticmethod
     def instantiate(url, asset=None, tag=None, cache=None,
+                    recursion=0, insecure_includes=False,
                     suppress_exceptions=True):
         """
         Returns the instance of a instantiated configuration plugin based on
@@ -255,13 +331,13 @@ class AppriseConfig(object):
             schema = schema.group('schema').lower()
 
             # Some basic validation
-            if schema not in config.SCHEMA_MAP:
+            if schema not in common.CONFIG_SCHEMA_MAP:
                 logger.warning('Unsupported schema {}.'.format(schema))
                 return None
 
         # Parse our url details of the server object as dictionary containing
         # all of the information parsed from our URL
-        results = config.SCHEMA_MAP[schema].parse_url(url)
+        results = common.CONFIG_SCHEMA_MAP[schema].parse_url(url)
 
         if not results:
             # Failed to parse the server URL
@@ -279,11 +355,18 @@ class AppriseConfig(object):
             # Force an over-ride of the cache value to what we have specified
             results['cache'] = cache
 
+        # Recursion can never be parsed from the URL
+        results['recursion'] = recursion
+
+        # Insecure includes flag can never be parsed from the URL
+        results['insecure_includes'] = insecure_includes
+
         if suppress_exceptions:
             try:
                 # Attempt to create an instance of our plugin using the parsed
                 # URL information
-                cfg_plugin = config.SCHEMA_MAP[results['schema']](**results)
+                cfg_plugin = \
+                    common.CONFIG_SCHEMA_MAP[results['schema']](**results)
 
             except Exception:
                 # the arguments are invalid or can not be used.
@@ -293,7 +376,7 @@ class AppriseConfig(object):
         else:
             # Attempt to create an instance of our plugin using the parsed
             # URL information but don't wrap it in a try catch
-            cfg_plugin = config.SCHEMA_MAP[results['schema']](**results)
+            cfg_plugin = common.CONFIG_SCHEMA_MAP[results['schema']](**results)
 
         return cfg_plugin
 
@@ -347,15 +430,8 @@ class AppriseConfig(object):
 
     def __bool__(self):
         """
-        Allows the Apprise object to be wrapped in an Python 3.x based 'if
-        statement'.  True is returned if at least one service has been loaded.
-        """
-        return True if self.configs else False
-
-    def __nonzero__(self):
-        """
-        Allows the Apprise object to be wrapped in an Python 2.x based 'if
-        statement'.  True is returned if at least one service has been loaded.
+        Allows the Apprise object to be wrapped in an 'if statement'.
+        True is returned if at least one service has been loaded.
         """
         return True if self.configs else False
 

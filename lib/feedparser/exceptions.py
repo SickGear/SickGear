@@ -1,5 +1,5 @@
 # Exceptions used throughout feedparser
-# Copyright 2010-2020 Kurt McKee <contactme@kurtmckee.org>
+# Copyright 2010-2022 Kurt McKee <contactme@kurtmckee.org>
 # Copyright 2002-2008 Mark Pilgrim
 # All rights reserved.
 #
@@ -27,7 +27,7 @@
 # POSSIBILITY OF SUCH DAMAGE.
 
 __all__ = [
-    'ThingsNobodyCaresAboutButMe',
+    'FeedparserError',
     'CharacterEncodingOverride',
     'CharacterEncodingUnknown',
     'NonXMLContentType',
@@ -35,19 +35,19 @@ __all__ = [
 ]
 
 
-class ThingsNobodyCaresAboutButMe(Exception):
+class FeedparserError(Exception):
     pass
 
 
-class CharacterEncodingOverride(ThingsNobodyCaresAboutButMe):
+class CharacterEncodingOverride(FeedparserError):
     pass
 
 
-class CharacterEncodingUnknown(ThingsNobodyCaresAboutButMe):
+class CharacterEncodingUnknown(FeedparserError):
     pass
 
 
-class NonXMLContentType(ThingsNobodyCaresAboutButMe):
+class NonXMLContentType(FeedparserError):
     pass
 
 
