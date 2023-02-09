@@ -1,4 +1,15 @@
-﻿### 3.26.1 (2023-02-08 20:50:00 UTC)
+﻿### 3.27.0 (202x-xx-xx xx:xx:00 UTC)
+
+* Update Cachecontrol 0.12.6 (167a605) to 0.12.11 (c05ef9e)
+* Add Filelock 3.9.0 (ce3e891)
+* Remove Lockfile no longer used by Cachecontrol
+
+
+[develop changelog]
+
+
+
+### 3.26.1 (2023-02-08 20:50:00 UTC)
 
 * Change forced show updates process during startup to prevent webUI blocking
 * Change allow Python 3.11.2, 3.10.10
