@@ -10,6 +10,7 @@
 * Update chardet packages 4.0.0 (b3d867a) to 5.1.0 (8087f00)
 * Update diskcache 5.1.0 (40ce0de) to 5.4.0 (1cb1425)
 * Update feedparser 6.0.1 (98d189fa) to 6.0.10 (5fcb3ae)
+* Update functools_lru_cache 1.6.1 (2dc65b5) to 1.6.2 (2405ed1)
 * Update humanize 3.5.0 (b6b0ea5) to 4.0.0 (a1514eb)
 * Update Js2Py 0.70 (92250a4) to 0.74 (2e017b8)
 * Update pyjsparser 2.7.1 (5465d03) to 2.7.1 (cbd1e05)
