@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 
 """Time humanizing functions.
 
@@ -8,11 +7,12 @@ These are largely borrowed from Django's `contrib.humanize`.
 
 import datetime as dt
 import math
+from enum import Enum
+from functools import total_ordering
 
-from _23 import Enum
-
-from .i18n import gettext as _
-from .i18n import ngettext
+from .i18n import _gettext as _
+from .i18n import _ngettext
+from .number import intcomma
 
 __all__ = [
     "naturaldelta",
@@ -23,6 +23,7 @@ __all__ = [
 ]
 
 
+@total_ordering
 class Unit(Enum):
     MICROSECONDS = 0
     MILLISECONDS = 1
@@ -38,40 +39,12 @@ class Unit(Enum):
             return self.value < other.value
         return NotImplemented
 
-    def __gt__(self, other):
-        if self.__class__ is other.__class__:
-            return self.value > other.value
-        return NotImplemented
-
-    def __eq__(self, other):
-        if self.__class__ is other.__class__:
-            return self.value == other.value
-        return NotImplemented
-
-    def __le__(self, other):
-        if self.__class__ is other.__class__:
-            return self.value <= other.value
-        return NotImplemented
-
-    def __ge__(self, other):
-        if self.__class__ is other.__class__:
-            return self.value >= other.value
-        return NotImplemented
-
-    def __ne__(self, other):
-        if self.__class__ is other.__class__:
-            return self.value != other.value
-        return NotImplemented
-
-    def __hash__(self):
-        return hash(self.value)
-
 
 def _now():
     return dt.datetime.now()
 
 
-def abs_timedelta(delta):
+def _abs_timedelta(delta):
     """Return an "absolute" value for a timedelta, always representing a time distance.
 
     Args:
@@ -86,7 +59,7 @@ def abs_timedelta(delta):
     return delta
 
 
-def date_and_delta(value, now=None):
+def _date_and_delta(value, *, now=None):
     """Turn a value into a date and a timedelta which represents how long ago it was.
 
     If that's not possible, return `(None, value)`.
@@ -106,24 +79,33 @@ def date_and_delta(value, now=None):
             date = now - delta
         except (ValueError, TypeError):
             return None, value
-    return date, abs_timedelta(delta)
+    return date, _abs_timedelta(delta)
 
 
-def naturaldelta(value, months=True, minimum_unit="seconds", when=None):
+def naturaldelta(
+    value,
+    months=True,
+    minimum_unit="seconds",
+) -> str:
     """Return a natural representation of a timedelta or number of seconds.
 
     This is similar to `naturaltime`, but does not add tense to the result.
 
     Args:
-        value (datetime.timedelta): A timedelta or a number of seconds.
+        value (datetime.timedelta or int): A timedelta or a number of seconds.
         months (bool): If `True`, then a number of months (based on 30.5 days) will be
             used for fuzziness between years.
         minimum_unit (str): The lowest unit that can be used.
-        when (datetime.timedelta): Point in time relative to which _value_ is
-            interpreted.  Defaults to the current time in the local timezone.
+        when (datetime.datetime): Removed in version 4.0; If you need to
+            construct a timedelta, do it inline as the first argument.
 
     Returns:
-        str: A natural representation of the amount of time elapsed.
+        str (str or `value`): A natural representation of the amount of time
+            elapsed unless `value` is not datetime.timedelta or cannot be
+            converted to int. In that case, a `value` is returned unchanged.
+
+    Raises:
+        OverflowError: If `value` is too large to convert to datetime.timedelta.
 
     Examples
         Compare two timestamps in a custom local timezone::
@@ -135,16 +117,21 @@ def naturaldelta(value, months=True, minimum_unit="seconds", when=None):
         now = dt.datetime.now(tz=berlin)
         later = now + dt.timedelta(minutes=30)
 
-        assert naturaldelta(later, when=now) == "30 minutes"
+        assert naturaldelta(later - now) == "30 minutes"
     """
     tmp = Unit[minimum_unit.upper()]
     if tmp not in (Unit.SECONDS, Unit.MILLISECONDS, Unit.MICROSECONDS):
-        raise ValueError("Minimum unit '%s' not supported" % minimum_unit)
+        raise ValueError(f"Minimum unit '{minimum_unit}' not supported")
     minimum_unit = tmp
 
-    date, delta = date_and_delta(value, now=when)
-    if date is None:
-        return value
+    if isinstance(value, dt.timedelta):
+        delta = value
+    else:
+        try:
+            value = int(value)
+            delta = dt.timedelta(seconds=value)
+        except (ValueError, TypeError):
+            return value
 
     use_months = months
 
@@ -158,65 +145,70 @@ def naturaldelta(value, months=True, minimum_unit="seconds", when=None):
         if seconds == 0:
             if minimum_unit == Unit.MICROSECONDS and delta.microseconds < 1000:
                 return (
-                    ngettext("%d microsecond", "%d microseconds", delta.microseconds)
+                    _ngettext("%d microsecond", "%d microseconds", delta.microseconds)
                     % delta.microseconds
                 )
             elif minimum_unit == Unit.MILLISECONDS or (
                 minimum_unit == Unit.MICROSECONDS
-                # and 1000 <= delta.microseconds < 1_000_000    # using _ is PY3 only
-                and 1000 <= delta.microseconds < 1000000
+                and 1000 <= delta.microseconds < 1_000_000
             ):
                 milliseconds = delta.microseconds / 1000
                 return (
-                    ngettext("%d millisecond", "%d milliseconds", milliseconds)
+                    _ngettext("%d millisecond", "%d milliseconds", milliseconds)
                     % milliseconds
                 )
             return _("a moment")
         elif seconds == 1:
             return _("a second")
         elif seconds < 60:
-            return ngettext("%d second", "%d seconds", seconds) % seconds
+            return _ngettext("%d second", "%d seconds", seconds) % seconds
         elif 60 <= seconds < 120:
             return _("a minute")
         elif 120 <= seconds < 3600:
             minutes = seconds // 60
-            return ngettext("%d minute", "%d minutes", minutes) % minutes
+            return _ngettext("%d minute", "%d minutes", minutes) % minutes
         elif 3600 <= seconds < 3600 * 2:
             return _("an hour")
         elif 3600 < seconds:
             hours = seconds // 3600
-            return ngettext("%d hour", "%d hours", hours) % hours
+            return _ngettext("%d hour", "%d hours", hours) % hours
     elif years == 0:
         if days == 1:
             return _("a day")
         if not use_months:
-            return ngettext("%d day", "%d days", days) % days
+            return _ngettext("%d day", "%d days", days) % days
         else:
             if not months:
-                return ngettext("%d day", "%d days", days) % days
+                return _ngettext("%d day", "%d days", days) % days
             elif months == 1:
                 return _("a month")
             else:
-                return ngettext("%d month", "%d months", months) % months
+                return _ngettext("%d month", "%d months", months) % months
     elif years == 1:
         if not months and not days:
             return _("a year")
         elif not months:
-            return ngettext("1 year, %d day", "1 year, %d days", days) % days
+            return _ngettext("1 year, %d day", "1 year, %d days", days) % days
         elif use_months:
             if months == 1:
                 return _("1 year, 1 month")
             else:
                 return (
-                    ngettext("1 year, %d month", "1 year, %d months", months) % months
+                    _ngettext("1 year, %d month", "1 year, %d months", months) % months
                 )
         else:
-            return ngettext("1 year, %d day", "1 year, %d days", days) % days
+            return _ngettext("1 year, %d day", "1 year, %d days", days) % days
     else:
-        return ngettext("%d year", "%d years", years) % years
+        return _ngettext("%s year", "%s years", years) % intcomma(years)
 
 
-def naturaltime(value, future=False, months=True, minimum_unit="seconds", when=None):
+def naturaltime(
+    value,
+    future=False,
+    months=True,
+    minimum_unit="seconds",
+    when=None,
+) -> str:
     """Return a natural representation of a time in a resolution that makes sense.
 
     This is more or less compatible with Django's `naturaltime` filter.
@@ -236,7 +228,7 @@ def naturaltime(value, future=False, months=True, minimum_unit="seconds", when=N
         str: A natural representation of the input in a resolution that makes sense.
     """
     now = when or _now()
-    date, delta = date_and_delta(value, now=now)
+    date, delta = _date_and_delta(value, now=now)
     if date is None:
         return value
     # determine tense by value only if datetime/timedelta were passed
@@ -244,7 +236,7 @@ def naturaltime(value, future=False, months=True, minimum_unit="seconds", when=N
         future = date > now
 
     ago = _("%s from now") if future else _("%s ago")
-    delta = naturaldelta(delta, months, minimum_unit, when=when)
+    delta = naturaldelta(delta, months, minimum_unit)
 
     if delta == _("a moment"):
         return _("now")
@@ -252,7 +244,7 @@ def naturaltime(value, future=False, months=True, minimum_unit="seconds", when=N
     return ago % delta
 
 
-def naturalday(value, format="%b %d", locale=True):
+def naturalday(value, format="%b %d") -> str:
     """Return a natural day.
 
     For date values that are tomorrow, today or yesterday compared to
@@ -270,8 +262,6 @@ def naturalday(value, format="%b %d", locale=True):
         return value
     delta = value - dt.date.today()
     if delta.days == 0:
-        if not locale:
-            return "today"
         return _("today")
     elif delta.days == 1:
         return _("tomorrow")
@@ -280,7 +270,7 @@ def naturalday(value, format="%b %d", locale=True):
     return value.strftime(format)
 
 
-def naturaldate(value):
+def naturaldate(value) -> str:
     """Like `naturalday`, but append a year for dates more than ~five months away."""
     try:
         value = dt.date(value.year, value.month, value.day)
@@ -290,7 +280,7 @@ def naturaldate(value):
     except (OverflowError, ValueError):
         # Date arguments out of range
         return value
-    delta = abs_timedelta(value - dt.date.today())
+    delta = _abs_timedelta(value - dt.date.today())
     if delta.days >= 5 * 365 / 12:
         return naturalday(value, "%b %d %Y")
     return naturalday(value)
@@ -406,7 +396,7 @@ def _suppress_lower_units(min_unit, suppress):
     return suppress
 
 
-def precisedelta(value, minimum_unit="seconds", suppress=(), format="%0.2f"):
+def precisedelta(value, minimum_unit="seconds", suppress=(), format="%0.2f") -> str:
     """Return a precise representation of a timedelta.
 
     ```pycon
@@ -473,7 +463,7 @@ def precisedelta(value, minimum_unit="seconds", suppress=(), format="%0.2f"):
 
     ```
     """
-    date, delta = date_and_delta(value)
+    date, delta = _date_and_delta(value)
     if date is None:
         return value
 
@@ -547,9 +537,13 @@ def precisedelta(value, minimum_unit="seconds", suppress=(), format="%0.2f"):
     for unit, fmt in zip(reversed(Unit), fmts):
         singular_txt, plural_txt, value = fmt
         if value > 0 or (not texts and unit == min_unit):
-            fmt_txt = ngettext(singular_txt, plural_txt, value)
+            fmt_txt = _ngettext(singular_txt, plural_txt, value)
             if unit == min_unit and math.modf(value)[0] > 0:
                 fmt_txt = fmt_txt.replace("%d", format)
+            elif unit == YEARS:
+                fmt_txt = fmt_txt.replace("%d", "%s")
+                texts.append(fmt_txt % intcomma(value))
+                continue
 
             texts.append(fmt_txt % value)
 

@@ -19,7 +19,7 @@ from humanize.time import (
     precisedelta,
 )
 
-__version__ = VERSION = '3.5.0'
+__version__ = VERSION = '4.0.0'
 
 
 __all__ = [

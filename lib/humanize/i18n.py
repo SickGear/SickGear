@@ -1,10 +1,9 @@
-# -*- coding: utf-8 -*-
 """Activate, get and deactivate translations."""
 import gettext as gettext_module
 import os.path
 from threading import local
 
-__all__ = ["activate", "deactivate", "gettext", "ngettext", "thousands_separator"]
+__all__ = ["activate", "deactivate", "thousands_separator"]
 
 _TRANSLATIONS = {None: gettext_module.NullTranslations()}
 _CURRENT = local()
@@ -67,7 +66,7 @@ def deactivate():
     _CURRENT.locale = None
 
 
-def gettext(message):
+def _gettext(message):
     """Get translation.
 
     Args:
@@ -79,7 +78,7 @@ def gettext(message):
     return get_translation().gettext(message)
 
 
-def pgettext(msgctxt, message):
+def _pgettext(msgctxt, message):
     """Fetches a particular translation.
 
     It works with `msgctxt` .po modifiers and allows duplicate keys with different
@@ -104,8 +103,8 @@ def pgettext(msgctxt, message):
         return message if translation == key else translation
 
 
-def ngettext(message, plural, num):
-    """Plural version of gettext.
+def _ngettext(message, plural, num):
+    """Plural version of _gettext.
 
     Args:
         message (str): Singular text to translate.
@@ -119,14 +118,14 @@ def ngettext(message, plural, num):
     return get_translation().ngettext(message, plural, num)
 
 
-def gettext_noop(message):
+def _gettext_noop(message):
     """Mark a string as a translation string without translating it.
 
     Example usage:
     ```python
-    CONSTANTS = [gettext_noop('first'), gettext_noop('second')]
+    CONSTANTS = [_gettext_noop('first'), _gettext_noop('second')]
     def num_name(n):
-        return gettext(CONSTANTS[n])
+        return _gettext(CONSTANTS[n])
     ```
 
     Args:
@@ -138,14 +137,14 @@ def gettext_noop(message):
     return message
 
 
-def ngettext_noop(singular, plural):
+def _ngettext_noop(singular, plural):
     """Mark two strings as pluralized translations without translating them.
 
     Example usage:
     ```python
     CONSTANTS = [ngettext_noop('first', 'firsts'), ngettext_noop('second', 'seconds')]
     def num_name(n):
-        return ngettext(*CONSTANTS[n])
+        return _ngettext(*CONSTANTS[n])
     ```
 
     Args:
@@ -158,7 +157,7 @@ def ngettext_noop(singular, plural):
     return (singular, plural)
 
 
-def thousands_separator():
+def thousands_separator() -> str:
     """Return the thousands separator for a locale, default to comma.
 
     Returns:
