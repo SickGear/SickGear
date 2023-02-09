@@ -3,6 +3,7 @@
 * Update Cachecontrol 0.12.6 (167a605) to 0.12.11 (c05ef9e)
 * Add Filelock 3.9.0 (ce3e891)
 * Remove Lockfile no longer used by Cachecontrol
+* Update Msgpack 1.0.0 (fa7d744) to 1.0.4 (b5acfd5)
 
 
 [develop changelog]
