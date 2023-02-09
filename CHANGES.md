@@ -1,8 +1,9 @@
 ﻿### 3.27.0 (202x-xx-xx xx:xx:00 UTC)
 
-* Update Cachecontrol 0.12.6 (167a605) to 0.12.11 (c05ef9e)
-* Add Filelock 3.9.0 (ce3e891)
-* Remove Lockfile no longer used by Cachecontrol
+* Update attr 20.3.0 (f3762ba) to 22.2.0 (a9960de)
+* Update cachecontrol 0.12.6 (167a605) to 0.12.11 (c05ef9e)
+* Add filelock 3.9.0 (ce3e891)
+* Remove lockfile no longer used by cachecontrol
 * Update Msgpack 1.0.0 (fa7d744) to 1.0.4 (b5acfd5)
 * Update diskcache 5.1.0 (40ce0de) to 5.4.0 (1cb1425)
 * Update Rarfile 4.0 (55fe778) to 4.1a1 (8a72967)
