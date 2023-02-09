@@ -27,6 +27,18 @@ class BaseNode:
         self.finish()
         return self
 
+    def finishArrowFunctionExpression(self, params, defaults, body, expression):
+        self.type = Syntax.ArrowFunctionExpression
+        self.id = None
+        self.params = params
+        self.defaults = defaults
+        self.body = body
+        #self.rest = None
+        self.generator = False
+        self.expression = expression
+        self.finish()
+        return self
+
     def finishAssignmentExpression(self, operator, left, right):
         self.type = Syntax.AssignmentExpression
         self.operator = operator
