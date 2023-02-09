@@ -65,6 +65,8 @@ from struct import Struct, pack, unpack
 from subprocess import DEVNULL, PIPE, STDOUT, Popen
 from tempfile import mkstemp
 
+AES = None
+
 # only needed for encrypted headers
 try:
     try:
@@ -3119,7 +3121,7 @@ class nsdatetime(datetime):
     __slots__ = ("nanosecond",)
     nanosecond: int     #: Number of nanoseconds, 0 <= nanosecond < 999999999
 
-    def __new__(cls, year, month, day, hour=0, minute=0, second=0,
+    def __new__(cls, year, month=None, day=None, hour=0, minute=0, second=0,
                 microsecond=0, tzinfo=None, *, fold=0, nanosecond=0):
         usec, mod = divmod(nanosecond, 1000) if nanosecond else (microsecond, 0)
         if mod == 0:
@@ -3303,7 +3305,10 @@ class ToolSetup:
             if not isinstance(pwd, str):
                 pwd = pwd.decode("utf8")
             args = self.setup["password"]
-            if isinstance(args, str):
+            if args is None:
+                tool = self.setup["open_cmd"][0]
+                raise RarCannotExec(f"{tool} does not support passwords")
+            elif isinstance(args, str):
                 cmdline.append(args + pwd)
             else:
                 cmdline.extend(args)
