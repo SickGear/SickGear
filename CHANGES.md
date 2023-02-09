@@ -4,6 +4,7 @@
 * Add Filelock 3.9.0 (ce3e891)
 * Remove Lockfile no longer used by Cachecontrol
 * Update Msgpack 1.0.0 (fa7d744) to 1.0.4 (b5acfd5)
+* Update SimpleJSON 3.16.1 (ce75e60) to 3.18.1 (c891b95)
 * Update tmdbsimple 2.6.6 (679e343) to 2.9.1 (9da400a)
 * Update torrent_parser 0.3.0 (2a4eecb) to 0.4.0 (23b9e11)
 * Update unidecode module 1.1.1 (632af82) to 1.3.6 (4141992)
