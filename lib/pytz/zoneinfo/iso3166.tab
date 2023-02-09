@@ -3,14 +3,14 @@
 # This file is in the public domain, so clarified as of
 # 2009-05-17 by Arthur David Olson.
 #
-# From Paul Eggert (2015-05-02):
+# From Paul Eggert (2022-11-18):
 # This file contains a table of two-letter country codes.  Columns are
 # separated by a single tab.  Lines beginning with '#' are comments.
 # All text uses UTF-8 encoding.  The columns of the table are as follows:
 #
 # 1.  ISO 3166-1 alpha-2 country code, current as of
-#     ISO 3166-1 Newsletter VI-16 (2013-07-11).  See: Updates on ISO 3166
-#   http://www.iso.org/iso/home/standards/country_codes/updates_on_iso_3166.htm
+#     ISO 3166-1 N1087 (2022-09-02).  See: Updates on ISO 3166-1
+#     https://isotc.iso.org/livelink/livelink/Open/16944257
 # 2.  The usual English name for the coded region,
 #     chosen so that alphabetic sorting of subsets produces helpful lists.
 #     This is not the same as the English name in the ISO 3166 tables.
@@ -75,7 +75,7 @@ CO	Colombia
 CR	Costa Rica
 CU	Cuba
 CV	Cape Verde
-CW	Curacao
+CW	Curaçao
 CX	Christmas Island
 CY	Cyprus
 CZ	Czech Republic
@@ -166,7 +166,7 @@ ME	Montenegro
 MF	St Martin (French)
 MG	Madagascar
 MH	Marshall Islands
-MK	Macedonia
+MK	North Macedonia
 ML	Mali
 MM	Myanmar (Burma)
 MN	Mongolia
@@ -235,10 +235,10 @@ ST	Sao Tome & Principe
 SV	El Salvador
 SX	St Maarten (Dutch)
 SY	Syria
-SZ	Swaziland
+SZ	Eswatini (Swaziland)
 TC	Turks & Caicos Is
 TD	Chad
-TF	French Southern & Antarctic Lands
+TF	French Southern Territories
 TG	Togo
 TH	Thailand
 TJ	Tajikistan

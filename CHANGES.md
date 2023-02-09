@@ -17,6 +17,7 @@
 * Update package resource API 49.6.0 (3d404fd) to 63.2.0 (3ae44cd)
 * Update pyjsparser 2.7.1 (5465d03) to 2.7.1 (cbd1e05)
 * Update profilehooks module 1.12.0 (3ee1f60) to 1.12.1 (c3fc078)
+* Update pytz 2016.6.1/2016f to 2022.7.1/2022g (d38ff47)
 * Update Rarfile 4.0 (55fe778) to 4.1a1 (8a72967)
 * Update UnRar x64 for Windows 6.11 to 6.20
 * Update Send2Trash 1.5.0 (66afce7) to 1.8.1b0 (0ef9b32)
