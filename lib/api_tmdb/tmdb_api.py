@@ -76,7 +76,7 @@ def get_tmdb_constants():
     # type: (...) -> Dict
     """return tmdbsimple Configuration().info() or cached copy"""
     global _TMDB_CONSTANTS_CACHE
-    # only retrieve info data if older then 3 days
+    # only retrieve info data if older than 3 days
     if 3 < (datetime.datetime.now() - _TMDB_CONSTANTS_CACHE['date']).days or not _TMDB_CONSTANTS_CACHE['data']:
         try:
             tv_genres = {g['id']: g['name'] for g in tmdbsimple.Genres().tv_list()['genres']}
@@ -520,10 +520,10 @@ class TmdbIndexer(TVInfoBase):
         number of votes, genres, the network they aired on and air dates.
 
         Discover also supports a nice list of sort options. See below for all
-        of the available options.
+        the available options.
 
         Also note that a number of filters support being comma (,) or pipe (|)
-        separated. Comma's are treated like an AND and query while pipe's are
+        separated. Commas are treated like an AND query while pipe's are
         an OR.
 
         Some examples of what can be done with discover can be found at
@@ -539,23 +539,23 @@ class TmdbIndexer(TVInfoBase):
                 popularity.desc, popularity.asc
                 Default: popularity.desc
             air_date.gte: (optional) Filter and only include TV shows that have
-                a air date (by looking at all episodes) that is greater or
+                an air date (by looking at all episodes) that is greater or
                 equal to the specified value.
             air_date.lte: (optional) Filter and only include TV shows that have
-                a air date (by looking at all episodes) that is less than or
+                an air date (by looking at all episodes) that is less than or
                 equal to the specified value.
             first_air_date.gte: (optional) Filter and only include TV shows
-                that have a original air date that is greater or equal to the
+                that have an original air date that is greater or equal to the
                 specified value. Can be used in conjunction with the
                 "include_null_first_air_dates" filter if you want to include
                 items with no air date.
             first_air_date.lte: (optional) Filter and only include TV shows
-                that have a original air date that is less than or equal to the
+                that have an original air date that is less than or equal to the
                 specified value. Can be used in conjunction with the
                 "include_null_first_air_dates" filter if you want to include
                 items with no air date.
             first_air_date_year: (optional) Filter and only include TV shows
-                that have a original air date year that equal to the specified
+                that have an original air date year that equal to the specified
                 value. Can be used in conjunction with the
                 "include_null_first_air_dates" filter if you want to include
                 items with no air date.
@@ -760,9 +760,9 @@ class TmdbIndexer(TVInfoBase):
 
     @property
     def _tmdb_supported_lang_list(self):
-        if None is self._tmdb_lang_list:
+        if not TmdbIndexer._tmdb_lang_list:
             self._get_languages()
-        return self._tmdb_lang_list
+        return TmdbIndexer._tmdb_lang_list
 
     def _get_languages(self):
         # type: (...) -> None
@@ -772,10 +772,11 @@ class TmdbIndexer(TVInfoBase):
         except (BaseException, Exception):
             lang_data = None
         if lang_data:
-            self._supported_languages = [{'id': clean_data(a['iso_639_1']), 'name': clean_data(a['english_name']),
-                                          'nativeName': clean_data(a['name']),
-                                          'shortCode': None, 'sg_lang': clean_data(a['iso_639_1'])}
-                                         for a in sorted(lang_data, key=lambda b: b['iso_639_1'])]
-            self._tmdb_lang_list = [a['id'] for a in self._supported_languages]
+            TmdbIndexer._supported_languages = [{
+                'id': clean_data(a['iso_639_1']), 'name': clean_data(a['english_name']),
+                'nativeName': clean_data(a['name']), 'shortCode': None, 'sg_lang': clean_data(a['iso_639_1'])
+            } for a in sorted(lang_data, key=lambda b: b['iso_639_1'])]
+            TmdbIndexer._tmdb_lang_list = [a['id'] for a in self._supported_languages]
         else:
-            self._supported_languages = []
+            TmdbIndexer._supported_languages = []
+            TmdbIndexer._tmdb_lang_list = []

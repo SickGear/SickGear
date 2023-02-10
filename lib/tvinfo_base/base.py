@@ -1347,9 +1347,9 @@ class TVInfoBase(object):
         get all supported languages as list of dicts
         [{'id': 'lang code', 'name': 'english name', 'nativeName': 'native name', 'sg_lang': 'sg lang code'}]
         """
-        if None is self._supported_languages:
+        if not self._supported_languages:
             self._get_languages()
-        return self._supported_languages
+        return self._supported_languages or []
 
     def __str__(self):
         return '<TVInfo(%s) (containing: %s)>' % (self.__class__.__name__, text_type(self.shows))
