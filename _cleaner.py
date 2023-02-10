@@ -91,12 +91,6 @@ cleanups = [
         r'lib\tvmaze_api\__pycache__', r'lib\tvmaze_api']],
     ['.cleaned006.tmp', r'lib\boto', [
         r'lib\boto', r'lib\growl',
-        r'lib\hachoir\core', r'lib\hachoir\field', r'lib\hachoir\metadata',
-        r'lib\hachoir\parser\archive', r'lib\hachoir\parser\audio',
-        r'lib\hachoir\parser\common', r'lib\hachoir\parser\container',
-        r'lib\hachoir\parser\image', r'lib\hachoir\parser\misc',
-        r'lib\hachoir\parser\network', r'lib\hachoir\parser\program',
-        r'lib\hachoir\parser\video', r'lib\hachoir\parser', r'lib\hachoir\stream',
         r'lib\httplib2\lib\oauth2\lib\pythontwitter\lib\tmdb_api']],
     ['.cleaned004.tmp', r'lib\requests\packages', [
         r'lib\requests\packages', r'lib\pynma']],
