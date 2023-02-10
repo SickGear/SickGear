@@ -11,20 +11,19 @@
 $(document).ready(function() {
 
 	// handle the show selection dropbox
-	var select$ = $('#pickShow');
+	var select$ = $('#pickShow'), populateItem;
 	select$.change(function() {
 		var val = $(this).val();
 		if (0 !== val)
 			window.location.href = $.SickGear.Root + '/home/view-show?tvid_prodid=' + val;
 	});
-	select$.select2({
-		templateResult: function(data){
-			if (!data.element || !$(data.element).hasClass('ended')) {
-				return data.text;
-			}
-			return $('<span class="ended"><span class="label" title="">ended</span> <i>' + data.text + '</i></span>');
+	populateItem = function(data) {
+		if (!data.element || !$(data.element).hasClass('ended')) {
+			return data.text;
 		}
-	});
+		return $('<span class="ended"><span class="label" title="">ended</span> <i>' + data.text + '</i></span>');
+	}
+	select$.select2({templateResult: populateItem, templateSelection:populateItem});
 
 	$('#prevShow, #nextShow').on('click', function() {
 		var select$ = $('#pickShow'),

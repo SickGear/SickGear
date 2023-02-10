@@ -1,4 +1,10 @@
-﻿### 3.27.0 (2023-02-09 15:00:00 UTC)
+﻿### 3.27.1 (2023-02-10 15:25:00 UTC)
+
+* Change display show status in Change show header
+* Fix TMDB language caching
+
+
+### 3.27.0 (2023-02-09 15:00:00 UTC)
 
 * Update Apprise 0.8.5 (55a2edc) to 1.2.1 (3d07004)
 * Update attr 20.3.0 (f3762ba) to 22.2.0 (a9960de)
