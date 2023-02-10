@@ -566,8 +566,11 @@ class GitUpdateManager(UpdateManager):
                                                        '%s/%s' % (sickgear.GIT_REMOTE, self._old_branch)])
                     if 0 != exit_status:
                         return exit_status
-            _, _, exit_status = self._run_git(['reset', '--hard', '"%s"' % self._old_commit_hash])
+            _, _, exit_status = self._run_git(['reset', '--hard', '%s' % self._old_commit_hash])
             if 0 == exit_status:
+                self.branch = self._old_branch
+                sickgear.BRANCH = self.branch
+                self._cur_commit_hash = self._old_commit_hash
                 self._old_commit_hash = None
                 self._old_branch = None
             return exit_status
@@ -578,6 +581,9 @@ class GitUpdateManager(UpdateManager):
         Calls git pull origin <branch> in order to update SickGear. Returns a bool depending
         on the call's success.
         """
+
+        self._old_branch = self._find_installed_branch()
+        self._old_commit_hash = self._cur_commit_hash
 
         if self.branch == self._find_installed_branch():
             if not self._cur_pr_number:

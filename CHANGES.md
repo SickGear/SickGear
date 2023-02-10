@@ -1,4 +1,9 @@
-﻿### 3.27.1 (2023-02-10 15:25:00 UTC)
+﻿### 3.27.2 (2023-02-10 19:25:00 UTC)
+
+* Fix revert update
+
+
+### 3.27.1 (2023-02-10 15:25:00 UTC)
 
 * Change display show status in Change show header
 * Fix TMDB language caching
