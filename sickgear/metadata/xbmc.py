@@ -20,8 +20,6 @@ import os
 from . import generic, xbmc_12plus
 import sg_helpers
 import sickgear
-# noinspection PyPep8Naming
-import encodingKludge as ek
 
 # noinspection PyUnreachableCode
 if False:
@@ -104,7 +102,7 @@ class XBMCMetadata(xbmc_12plus.XBMC12PlusMetadata):
 
         ep_obj: a TVEpisode instance for which to create the thumbnail
         """
-        if ek.ek(os.path.isfile, ep_obj.location):
+        if os.path.isfile(ep_obj.location):
             tbn_filename = sg_helpers.replace_extension(ep_obj.location, 'tbn')
         else:
             return None
@@ -127,7 +125,7 @@ class XBMCMetadata(xbmc_12plus.XBMC12PlusMetadata):
         else:
             season_poster_filename = 'season' + str(season).zfill(2)
 
-        return ek.ek(os.path.join, show_obj.location, season_poster_filename + '.tbn')
+        return os.path.join(show_obj.location, season_poster_filename + '.tbn')
 
 
 # present a standard "interface" from the module

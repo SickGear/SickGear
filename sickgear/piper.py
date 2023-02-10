@@ -1,13 +1,5 @@
 import sys
 
-# noinspection PyPep8Naming
-import encodingKludge as ek
-
-if ek.EXIT_BAD_ENCODING:
-    print('Sorry, you MUST add the SickGear folder to the PYTHONPATH environment variable')
-    print('or find another way to force Python to use %s for string encoding.' % ek.SYS_ENCODING)
-    sys.exit(1)
-
 # #################################
 # Sanity check passed, can continue
 # #################################
@@ -32,7 +24,7 @@ def is_pip_ok():
 
     :return: True if pip is ok
     """
-    pip_ok = '/' != ek.ek(os.path.expanduser, '~')
+    pip_ok = '/' != os.path.expanduser('~')
     if pip_ok:
         pip_version, _, _ = _get_pip_version()
         if not pip_version:
@@ -115,7 +107,7 @@ def initial_requirements():
 
 
 def extras_failed_filepath(data_dir):
-    return ek.ek(os.path.join, data_dir, '.pip_req_spec_failed.txt')
+    return os.path.join(data_dir, '.pip_req_spec_failed.txt')
 
 
 def load_ignorables(data_dir):
@@ -124,7 +116,7 @@ def load_ignorables(data_dir):
     data = []
 
     filepath = extras_failed_filepath(data_dir)
-    if ek.ek(os.path.isfile, filepath):
+    if os.path.isfile(filepath):
         try:
             with io.open(filepath, 'r', encoding='UTF8') as fp:
                 data = fp.readlines()
@@ -194,7 +186,7 @@ def _check_pip_env(pip_outdated=False, reset_fails=False):
     from sickgear import logger, PROG_DIR, DATA_DIR
     for cur_reco_file in ['requirements.txt', 'recommended.txt']:
         try:
-            with io.open(ek.ek(os.path.join, PROG_DIR, cur_reco_file)) as fh:
+            with io.open(os.path.join(PROG_DIR, cur_reco_file)) as fh:
                 input_reco += ['%s\n' % line.strip() for line in fh]  # must ensure EOL marker
         except (BaseException, Exception):
             pass
@@ -302,7 +294,7 @@ def pip_update(loading_msg, updates_todo, data_dir):
     failed_lines = []
     input_reco = None
 
-    piper_path = ek.ek(os.path.join, data_dir, '.pip_req_spec_temp.txt')
+    piper_path = os.path.join(data_dir, '.pip_req_spec_temp.txt')
     for cur_project_name, cur_data in iteritems(updates_todo):
         msg = 'Installing package "%s"' % cur_project_name
         if cur_data.get('info'):
@@ -339,7 +331,7 @@ def pip_update(loading_msg, updates_todo, data_dir):
             if not parsed_name:
                 parsed_name = re.findall(r'(?sim)up-to-date\S+\s*(%s).*?\s\(([^)]+)\)$' % find_name, output)
                 parsed_name = ['' if not parsed_name else '-'.join(parsed_name[0])]
-            pip_version = re.findall(r'%s-([\d.]+).*?' % find_name, ek.ek(os.path.basename, parsed_name[0]), re.I)[0]
+            pip_version = re.findall(r'%s-([\d.]+).*?' % find_name, os.path.basename(parsed_name[0]), re.I)[0]
         except (BaseException, Exception):
             pass
 

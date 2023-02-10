@@ -18,9 +18,6 @@ import datetime
 import os.path
 import re
 
-# noinspection PyPep8Naming
-import encodingKludge as ek
-
 import sickgear
 import sickgear.providers
 from . import db, helpers, logger, naming
@@ -360,7 +357,7 @@ def clean_url(url, add_slash=True):
         scheme, netloc, path, query, fragment = urlsplit(url, 'http')
 
         if not path.endswith('/'):
-            basename, ext = ek.ek(os.path.splitext, ek.ek(os.path.basename, path))
+            basename, ext = os.path.splitext(os.path.basename(path))
             if not ext and add_slash:
                 path += '/'
 
@@ -857,14 +854,14 @@ class ConfigMigrator(object):
     # Migration v16: Purge old cache image folder name
     @staticmethod
     def _migrate_v16():
-        if sickgear.CACHE_DIR and ek.ek(os.path.isdir, sickgear.CACHE_DIR):
+        if sickgear.CACHE_DIR and os.path.isdir(sickgear.CACHE_DIR):
             cache_default = sickgear.CACHE_DIR
             dead_paths = ['anidb', 'imdb', 'trakt']
             for path in dead_paths:
                 sickgear.CACHE_DIR = '%s/images/%s' % (cache_default, path)
                 helpers.clear_cache(True)
                 try:
-                    ek.ek(os.rmdir, sickgear.CACHE_DIR)
+                    os.rmdir(sickgear.CACHE_DIR)
                 except OSError:
                     pass
             sickgear.CACHE_DIR = cache_default

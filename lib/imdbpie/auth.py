@@ -265,9 +265,8 @@ class Auth(object):
             except ValueError as e:
                 if not retry:
                     cache.close()
-                    import encodingKludge as ek
                     import os
-                    ek.ek(os.remove, ek.ek(os.path.join, self._cachedir, diskcache.core.DBNAME))
+                    os.remove(os.path.join(self._cachedir, diskcache.core.DBNAME))
                     return self._get_creds(retry=True)
                 else:
                     raise e

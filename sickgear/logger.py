@@ -337,9 +337,8 @@ class TimedCompressedRotatingFileHandler(TimedRotatingFileHandler):
         except AttributeError:
             pass
 
-        import encodingKludge
         try:
-            encodingKludge.ek(os.rename, self.baseFilename, dfn)
+            os.rename(self.baseFilename, dfn)
         except (BaseException, Exception):
             pass
 
@@ -360,9 +359,8 @@ class TimedCompressedRotatingFileHandler(TimedRotatingFileHandler):
         if 0 < self.backupCount:
             # find the oldest log file and delete it
             # phase out files named sickgear.log in favour of sickgear.logs over backup_count days
-            all_names = encodingKludge.ek(glob.glob, file_name + '_*') + \
-                        encodingKludge.ek(glob.glob, encodingKludge.ek(os.path.join, encodingKludge.ek(
-                            os.path.dirname, file_name), 'sickbeard_*'))
+            all_names = glob.glob(file_name + '_*') \
+                        + glob.glob(os.path.join(os.path.dirname(file_name), 'sickbeard_*'))
             if len(all_names) > self.backupCount:
                 all_names.sort()
                 self.delete_logfile(all_names[0])

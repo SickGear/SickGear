@@ -19,8 +19,6 @@ import os
 import copy
 import re
 
-# noinspection PyPep8Naming
-import encodingKludge as ek
 from exceptions_helper import ex
 
 import sickgear
@@ -233,19 +231,21 @@ def get_show_names_all_possible(show_obj, season=-1, scenify=True, spacer='.', f
     :param season: season
     :param scenify:
     :param spacer: spacer
+    :param force_anime:
     :return:
     """
-    show_names = list(set(allPossibleShowNames(show_obj, season=season, force_anime=force_anime)))  # type: List[AnyStr]
+    show_names = list(set(
+        all_possible_show_names(show_obj, season=season, force_anime=force_anime)))  # type: List[AnyStr]
     if scenify:
         show_names = map_list(sanitize_scene_name, show_names)
     return url_encode(show_names, spacer)
 
 
-def makeSceneSeasonSearchString(show_obj,  # type: sickgear.tv.TVShow
-                                ep_obj,  # type: sickgear.tv.TVEpisode
-                                ignore_allowlist=False,  # type: bool
-                                extra_search_type=None
-                                ):  # type: (...) -> List[AnyStr]
+def make_scene_season_search_string(show_obj,  # type: sickgear.tv.TVShow
+                                    ep_obj,  # type: sickgear.tv.TVEpisode
+                                    ignore_allowlist=False,  # type: bool
+                                    extra_search_type=None
+                                    ):  # type: (...) -> List[AnyStr]
     """
 
     :param show_obj: show object
@@ -258,34 +258,34 @@ def makeSceneSeasonSearchString(show_obj,  # type: sickgear.tv.TVShow
         numseasons = 0
 
         # the search string for air by date shows is just
-        seasonStrings = [str(ep_obj.airdate).split('-')[0]]
+        season_strings = [str(ep_obj.airdate).split('-')[0]]
     elif show_obj.is_anime:
         numseasons = 0
         ep_obj_list = show_obj.get_all_episodes(ep_obj.season)
 
         # get show qualities
-        anyQualities, bestQualities = common.Quality.splitQuality(show_obj.quality)
+        any_qualities, best_qualities = common.Quality.splitQuality(show_obj.quality)
 
         # compile a list of all the episode numbers we need in this 'season'
-        seasonStrings = []
+        season_strings = []
         for episode in ep_obj_list:
 
             # get quality of the episode
-            curCompositeStatus = episode.status
-            curStatus, curQuality = common.Quality.splitCompositeStatus(curCompositeStatus)
+            cur_composite_status = episode.status
+            cur_status, cur_quality = common.Quality.splitCompositeStatus(cur_composite_status)
 
-            if bestQualities:
-                highestBestQuality = max(bestQualities)
+            if best_qualities:
+                highest_best_quality = max(best_qualities)
             else:
-                highestBestQuality = 0
+                highest_best_quality = 0
 
             # if we need a better one then add it to the list of episodes to fetch
-            if (curStatus in (
+            if (cur_status in (
                     common.DOWNLOADED,
-                    common.SNATCHED) and curQuality < highestBestQuality) or curStatus == common.WANTED:
+                    common.SNATCHED) and cur_quality < highest_best_quality) or cur_status == common.WANTED:
                 ab_number = episode.scene_absolute_number
                 if 0 < ab_number:
-                    seasonStrings.append("%02d" % ab_number)
+                    season_strings.append("%02d" % ab_number)
 
     else:
         my_db = db.DBConnection()
@@ -297,7 +297,7 @@ def makeSceneSeasonSearchString(show_obj,  # type: sickgear.tv.TVShow
             [show_obj.tvid, show_obj.prodid])
 
         numseasons = int(sql_result[0][0])
-        seasonStrings = ["S%02d" % int(ep_obj.scene_season)]
+        season_strings = ["S%02d" % int(ep_obj.scene_season)]
 
     show_names = get_show_names_all_possible(show_obj, ep_obj.scene_season)
 
@@ -312,7 +312,7 @@ def makeSceneSeasonSearchString(show_obj,  # type: sickgear.tv.TVShow
                 to_return.append(cur_name)
             # for providers that don't allow multiple searches in one request we only search for Sxx style stuff
             else:
-                for cur_season in seasonStrings:
+                for cur_season in season_strings:
                     if not ignore_allowlist and show_obj.is_anime \
                             and None is not show_obj.release_groups and show_obj.release_groups.allowlist:
                         for keyword in show_obj.release_groups.allowlist:
@@ -324,10 +324,10 @@ def makeSceneSeasonSearchString(show_obj,  # type: sickgear.tv.TVShow
     return to_return
 
 
-def makeSceneSearchString(show_obj,  # type: sickgear.tv.TVShow
-                          ep_obj,  # type: sickgear.tv.TVEpisode
-                          ignore_allowlist=False  # type: bool
-                          ):  # type: (...) -> List[AnyStr]
+def make_scene_search_string(show_obj,  # type: sickgear.tv.TVShow
+                             ep_obj,  # type: sickgear.tv.TVEpisode
+                             ignore_allowlist=False  # type: bool
+                             ):  # type: (...) -> List[AnyStr]
     """
 
     :param show_obj: show object
@@ -374,7 +374,7 @@ def makeSceneSearchString(show_obj,  # type: sickgear.tv.TVShow
     return to_return
 
 
-def allPossibleShowNames(show_obj, season=-1, force_anime=False):
+def all_possible_show_names(show_obj, season=-1, force_anime=False):
     # type: (sickgear.tv.TVShow, int, bool) -> List[AnyStr]
     """
     Figures out every possible variation of the name for a particular show. Includes TVDB name, TVRage name,
@@ -382,45 +382,48 @@ def allPossibleShowNames(show_obj, season=-1, force_anime=False):
 
     :param show_obj: a TVShow object that we should get the names of
     :param season: season
+    :param force_anime:
     :return: a list of all the possible show names
     """
 
-    showNames = get_scene_exceptions(show_obj.tvid, show_obj.prodid, season=season)[:]
-    if not showNames:  # if we dont have any season specific exceptions fallback to generic exceptions
+    show_names = get_scene_exceptions(show_obj.tvid, show_obj.prodid, season=season)[:]
+    if not show_names:  # if we dont have any season specific exceptions fallback to generic exceptions
         season = -1
-        showNames = get_scene_exceptions(show_obj.tvid, show_obj.prodid, season=season)[:]
+        show_names = get_scene_exceptions(show_obj.tvid, show_obj.prodid, season=season)[:]
 
     if -1 == season:
-        showNames.append(show_obj.name)
+        show_names.append(show_obj.name)
 
     if not show_obj.is_anime and not force_anime:
-        newShowNames = []
+        new_show_names = []
         country_list = common.countryList
         country_list.update(dict(zip(itervalues(common.countryList), iterkeys(common.countryList))))
-        for curName in set(showNames):
-            if not curName:
+        for cur_name in set(show_names):
+            if not cur_name:
                 continue
 
             # if we have "Show Name Australia" or "Show Name (Australia)" this will add "Show Name (AU)" for
             # any countries defined in common.countryList
             # (and vice versa)
-            for curCountry in country_list:
-                if curName.endswith(' ' + curCountry):
-                    newShowNames.append(curName.replace(' ' + curCountry, ' (' + country_list[curCountry] + ')'))
-                elif curName.endswith(' (' + curCountry + ')'):
-                    newShowNames.append(curName.replace(' (' + curCountry + ')', ' (' + country_list[curCountry] + ')'))
+            for cur_country in country_list:
+                if cur_name.endswith(' ' + cur_country):
+                    new_show_names.append(cur_name.replace(' ' + cur_country,
+                                                           ' (' + country_list[cur_country] + ')'))
+                elif cur_name.endswith(' (' + cur_country + ')'):
+                    new_show_names.append(cur_name.replace(' (' + cur_country + ')',
+                                                           ' (' + country_list[cur_country] + ')'))
 
             # if we have "Show Name (2013)" this will strip the (2013) show year from the show name
             # newShowNames.append(re.sub('\(\d{4}\)','',curName))
 
-        showNames += newShowNames
+        show_names += new_show_names
 
-    return showNames
+    return show_names
 
 
-def determineReleaseName(dir_name=None, nzb_name=None):
+def determine_release_name(dir_name=None, nzb_name=None):
     # type: (AnyStr, AnyStr) -> Union[AnyStr, None]
-    """Determine a release name from an nzb and/or folder name
+    """Determine a release name from a nzb and/or folder name
     :param dir_name: dir name
     :param nzb_name: nzb name
     :return: None or release name
@@ -430,7 +433,7 @@ def determineReleaseName(dir_name=None, nzb_name=None):
         logger.log(u'Using nzb name for release name.')
         return nzb_name.rpartition('.')[0]
 
-    if not dir_name or not ek.ek(os.path.isdir, dir_name):
+    if not dir_name or not os.path.isdir(dir_name):
         return None
 
     # try to get the release name from nzb/nfo
@@ -447,7 +450,7 @@ def determineReleaseName(dir_name=None, nzb_name=None):
                 return found_file.rpartition('.')[0]
 
     # If that fails, we try the folder
-    folder = ek.ek(os.path.basename, dir_name)
+    folder = os.path.basename(dir_name)
     if pass_wordlist_checks(folder):
         # NOTE: Multiple failed downloads will change the folder name.
         # (e.g., appending #s)

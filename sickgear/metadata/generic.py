@@ -30,8 +30,6 @@ from ..indexers.indexer_config import TVINFO_TVDB, TVINFO_TMDB
 from lib.tvinfo_base import TVInfoImage, TVInfoImageType, TVInfoImageSize
 from lib.tvinfo_base.exceptions import *
 import sickgear
-# noinspection PyPep8Naming
-import encodingKludge as ek
 from exceptions_helper import ex
 from lib.fanart.core import Request as fanartRequest
 import lib.fanart as fanart
@@ -127,13 +125,13 @@ class GenericMetadata(object):
 
     def get_id(self):
         # type: (...) -> AnyStr
-        return GenericMetadata.makeID(self.name)
+        return GenericMetadata.make_id(self.name)
 
     @staticmethod
-    def makeID(name):
+    def make_id(name):
         # type: (AnyStr) -> AnyStr
         name_id = re.sub("[+]", "plus", name)
-        name_id = re.sub(r"[^\w\d_]", "_", name_id).lower()
+        name_id = re.sub(r"[^\w_]", "_", name_id).lower()
         return name_id
 
     def set_config(self, string):
@@ -151,69 +149,69 @@ class GenericMetadata(object):
         self.season_all_banner = config_list[9]
 
     def _has_show_metadata(self, show_obj):
-        # type: (sickgear.tv.TVShow) -> AnyStr
-        result = ek.ek(os.path.isfile, self.get_show_file_path(show_obj))
+        # type: (sickgear.tv.TVShow) -> bool
+        result = os.path.isfile(self.get_show_file_path(show_obj))
         logger.log(u"Checking if " + self.get_show_file_path(show_obj) + " exists: " + str(result), logger.DEBUG)
         return result
 
     def has_episode_metadata(self, ep_obj):
-        # type: (sickgear.tv.TVEpisode) -> AnyStr
-        result = ek.ek(os.path.isfile, self.get_episode_file_path(ep_obj))
+        # type: (sickgear.tv.TVEpisode) -> bool
+        result = os.path.isfile(self.get_episode_file_path(ep_obj))
         logger.log(u"Checking if " + self.get_episode_file_path(ep_obj) + " exists: " + str(result), logger.DEBUG)
         return result
 
     def _has_fanart(self, show_obj):
-        # type: (sickgear.tv.TVShow) -> AnyStr
-        result = ek.ek(os.path.isfile, self.get_fanart_path(show_obj))
+        # type: (sickgear.tv.TVShow) -> bool
+        result = os.path.isfile(self.get_fanart_path(show_obj))
         logger.log(u"Checking if " + self.get_fanart_path(show_obj) + " exists: " + str(result), logger.DEBUG)
         return result
 
     def _has_poster(self, show_obj):
-        # type: (sickgear.tv.TVShow) -> AnyStr
-        result = ek.ek(os.path.isfile, self.get_poster_path(show_obj))
+        # type: (sickgear.tv.TVShow) -> bool
+        result = os.path.isfile(self.get_poster_path(show_obj))
         logger.log(u"Checking if " + self.get_poster_path(show_obj) + " exists: " + str(result), logger.DEBUG)
         return result
 
     def _has_banner(self, show_obj):
-        # type: (sickgear.tv.TVShow) -> AnyStr
-        result = ek.ek(os.path.isfile, self.get_banner_path(show_obj))
+        # type: (sickgear.tv.TVShow) -> bool
+        result = os.path.isfile(self.get_banner_path(show_obj))
         logger.log(u"Checking if " + self.get_banner_path(show_obj) + " exists: " + str(result), logger.DEBUG)
         return result
 
     def has_episode_thumb(self, ep_obj):
-        # type: (sickgear.tv.TVEpisode) -> AnyStr
+        # type: (sickgear.tv.TVEpisode) -> bool
         location = self.get_episode_thumb_path(ep_obj)
-        result = None is not location and ek.ek(os.path.isfile, location)
+        result = None is not location and os.path.isfile(location)
         if location:
             logger.log(u"Checking if " + location + " exists: " + str(result), logger.DEBUG)
         return result
 
     def _has_season_poster(self, show_obj, season):
-        # type: (sickgear.tv.TVShow,int) -> AnyStr
+        # type: (sickgear.tv.TVShow,int) -> bool
         location = self.get_season_poster_path(show_obj, season)
-        result = None is not location and ek.ek(os.path.isfile, location)
+        result = None is not location and os.path.isfile(location)
         if location:
             logger.log(u"Checking if " + location + " exists: " + str(result), logger.DEBUG)
         return result
 
     def _has_season_banner(self, show_obj, season):
-        # type: (sickgear.tv.TVShow,int) -> AnyStr
+        # type: (sickgear.tv.TVShow,int) -> bool
         location = self.get_season_banner_path(show_obj, season)
-        result = None is not location and ek.ek(os.path.isfile, location)
+        result = None is not location and os.path.isfile(location)
         if location:
             logger.log(u"Checking if " + location + " exists: " + str(result), logger.DEBUG)
         return result
 
     def _has_season_all_poster(self, show_obj):
-        # type: (sickgear.tv.TVShow) -> AnyStr
-        result = ek.ek(os.path.isfile, self.get_season_all_poster_path(show_obj))
+        # type: (sickgear.tv.TVShow) -> bool
+        result = os.path.isfile(self.get_season_all_poster_path(show_obj))
         logger.log(u"Checking if " + self.get_season_all_poster_path(show_obj) + " exists: " + str(result),
                    logger.DEBUG)
         return result
 
     def _has_season_all_banner(self, show_obj):
-        # type: (sickgear.tv.TVShow) -> AnyStr
-        result = ek.ek(os.path.isfile, self.get_season_all_banner_path(show_obj))
+        # type: (sickgear.tv.TVShow) -> bool
+        result = os.path.isfile(self.get_season_all_banner_path(show_obj))
         logger.log(u"Checking if " + self.get_season_all_banner_path(show_obj) + " exists: " + str(result),
                    logger.DEBUG)
         return result
@@ -245,7 +243,7 @@ class GenericMetadata(object):
 
     def get_show_file_path(self, show_obj):
         # type: (sickgear.tv.TVShow) -> AnyStr
-        return ek.ek(os.path.join, show_obj.location, self._show_metadata_filename)
+        return os.path.join(show_obj.location, self._show_metadata_filename)
 
     def get_episode_file_path(self, ep_obj):
         # type: (sickgear.tv.TVEpisode) -> AnyStr
@@ -253,15 +251,15 @@ class GenericMetadata(object):
 
     def get_fanart_path(self, show_obj):
         # type: (sickgear.tv.TVShow) -> AnyStr
-        return ek.ek(os.path.join, show_obj.location, self.fanart_name)
+        return os.path.join(show_obj.location, self.fanart_name)
 
     def get_poster_path(self, show_obj):
         # type: (sickgear.tv.TVShow) -> AnyStr
-        return ek.ek(os.path.join, show_obj.location, self.poster_name)
+        return os.path.join(show_obj.location, self.poster_name)
 
     def get_banner_path(self, show_obj):
         # type: (sickgear.tv.TVShow) -> AnyStr
-        return ek.ek(os.path.join, show_obj.location, self.banner_name)
+        return os.path.join(show_obj.location, self.banner_name)
 
     def get_episode_thumb_path(self, ep_obj):
         # type: (sickgear.tv.TVEpisode) -> Optional[AnyStr]
@@ -269,7 +267,7 @@ class GenericMetadata(object):
         Returns the path where the episode thumbnail should be stored.
         ep_obj: a TVEpisode instance for which to create the thumbnail
         """
-        if ek.ek(os.path.isfile, ep_obj.location):
+        if os.path.isfile(ep_obj.location):
 
             tbn_filename = ep_obj.location.rpartition('.')
 
@@ -296,7 +294,7 @@ class GenericMetadata(object):
         else:
             season_poster_filename = 'season' + str(season).zfill(2)
 
-        return ek.ek(os.path.join, show_obj.location, season_poster_filename + '-poster.jpg')
+        return os.path.join(show_obj.location, season_poster_filename + '-poster.jpg')
 
     def get_season_banner_path(self, show_obj, season):
         # type: (sickgear.tv.TVShow, int) -> AnyStr
@@ -314,15 +312,15 @@ class GenericMetadata(object):
         else:
             season_banner_filename = 'season' + str(season).zfill(2)
 
-        return ek.ek(os.path.join, show_obj.location, season_banner_filename + '-banner.jpg')
+        return os.path.join(show_obj.location, season_banner_filename + '-banner.jpg')
 
     def get_season_all_poster_path(self, show_obj):
         # type: (sickgear.tv.TVShow) -> AnyStr
-        return ek.ek(os.path.join, show_obj.location, self.season_all_poster_name)
+        return os.path.join(show_obj.location, self.season_all_poster_name)
 
     def get_season_all_banner_path(self, show_obj):
         # type: (sickgear.tv.TVShow) -> AnyStr
-        return ek.ek(os.path.join, show_obj.location, self.season_all_banner_name)
+        return os.path.join(show_obj.location, self.season_all_banner_name)
 
     def _show_data(self, show_obj):
         # type: (sickgear.tv.TVShow) -> Optional[Union[bool, etree.Element]]
@@ -393,7 +391,7 @@ class GenericMetadata(object):
                 self.name, show_obj.unique_name))
 
             nfo_file_path = self.get_show_file_path(show_obj)
-            with ek.ek(io.open, nfo_file_path, 'r', encoding='utf8') as xmlFileObj:
+            with io.open(nfo_file_path, 'r', encoding='utf8') as xmlFileObj:
                 show_xml = etree.ElementTree(file=xmlFileObj)
 
             tvid = show_xml.find('indexer')
@@ -821,7 +819,7 @@ class GenericMetadata(object):
         """
 
         # don't bother overwriting it
-        if not force and ek.ek(os.path.isfile, image_path):
+        if not force and os.path.isfile(image_path):
             logger.log(u"Image already exists, not downloading", logger.DEBUG)
             return False
 
@@ -829,17 +827,17 @@ class GenericMetadata(object):
             logger.log(u"Unable to retrieve image, skipping", logger.WARNING)
             return False
 
-        image_dir = ek.ek(os.path.dirname, image_path)
+        image_dir = os.path.dirname(image_path)
 
         try:
-            if not ek.ek(os.path.isdir, image_dir):
+            if not os.path.isdir(image_dir):
                 logger.log(u"Metadata dir didn't exist, creating it at " + image_dir, logger.DEBUG)
-                ek.ek(os.makedirs, image_dir)
+                os.makedirs(image_dir)
                 sg_helpers.chmod_as_parent(image_dir)
 
-            outFile = ek.ek(open, image_path, 'wb')
-            outFile.write(image_data)
-            outFile.close()
+            out_file = open(image_path, 'wb')
+            out_file.write(image_data)
+            out_file.close()
             sg_helpers.chmod_as_parent(image_path)
         except IOError as e:
             logger.log(
@@ -903,13 +901,13 @@ class GenericMetadata(object):
 
                 try:
                     alt_url = '%swww.%s%s' % re.findall(
-                        r'(https?://)(?:artworks\.)?(thetvdb\.[^/]+/banners/[^\d]+[^.]+)(?:_t)(.*)', _url)[0][0:3]
+                        r'(https?://)(?:artworks\.)?(thetvdb\.[^/]+/banners/\D+[^.]+)_t(.*)', _url)[0][0:3]
                     if alt_url not in _urls[0]:
                         _urls[1].append(alt_url)
                 except (IndexError, Exception):
                     try:
                         alt_url = '%sartworks.%s_t%s' % re.findall(
-                            r'(https?://)(?:www\.)?(thetvdb\.[^/]+/banners/[^\d]+[^.]+)(.*)', _url)[0][0:3]
+                            r'(https?://)(?:www\.)?(thetvdb\.[^/]+/banners/\D+[^.]+)(.*)', _url)[0][0:3]
                         if alt_url not in _urls[0]:
                             _urls[1].append(alt_url)
                     except (IndexError, Exception):
@@ -1010,7 +1008,7 @@ class GenericMetadata(object):
                                         thumb_url = _de_dupe(thumb_url)
                                     if not thumb_url:
                                         thumb_url = img_url
-                                    yield (img_url, thumb_url)
+                                    yield img_url, thumb_url
                                 elif img_url:
                                     yield img_url
 
@@ -1113,7 +1111,7 @@ class GenericMetadata(object):
 
         return result
 
-    def retrieveShowMetadata(self, folder):
+    def retrieve_show_metadata(self, folder):
         # type: (AnyStr) -> Union[Tuple[int, int, AnyStr], Tuple[None, None, None]]
         """
         Used only when mass adding Existing Shows,
@@ -1124,39 +1122,39 @@ class GenericMetadata(object):
 
         empty_return = (None, None, None)
 
-        metadata_path = ek.ek(os.path.join, folder, self._show_metadata_filename)
+        metadata_path = os.path.join(folder, self._show_metadata_filename)
 
-        if not ek.ek(os.path.isdir, folder) or not ek.ek(os.path.isfile, metadata_path):
+        if not os.path.isdir(folder) or not os.path.isfile(metadata_path):
             logger.log(u"Can't load the metadata file from " + repr(metadata_path) + ", it doesn't exist", logger.DEBUG)
             return empty_return
 
         logger.log(u"Loading show info from metadata file in " + folder, logger.DEBUG)
 
         try:
-            with ek.ek(io.open, metadata_path, 'r', encoding='utf8') as xmlFileObj:
-                showXML = etree.ElementTree(file=xmlFileObj)
+            with io.open(metadata_path, 'r', encoding='utf8') as xmlFileObj:
+                show_xml = etree.ElementTree(file=xmlFileObj)
 
-            if None is showXML.findtext('title') \
-                    or all(None is _f for _f in (showXML.find('//uniqueid[@type]'),
-                                                 showXML.findtext('tvdbid'),
-                                                 showXML.findtext('id'),
-                                                 showXML.findtext('indexer'))):
+            if None is show_xml.findtext('title') \
+                    or all(None is _f for _f in (show_xml.find('//uniqueid[@type]'),
+                                                 show_xml.findtext('tvdbid'),
+                                                 show_xml.findtext('id'),
+                                                 show_xml.findtext('indexer'))):
                 logger.log(u"Invalid info in tvshow.nfo (missing name or id):"
-                           + str(showXML.findtext('title')) + ' '
-                           + str(showXML.findtext('indexer')) + ' '
-                           + str(showXML.findtext('tvdbid')) + ' '
-                           + str(showXML.findtext('id')))
+                           + str(show_xml.findtext('title')) + ' '
+                           + str(show_xml.findtext('indexer')) + ' '
+                           + str(show_xml.findtext('tvdbid')) + ' '
+                           + str(show_xml.findtext('id')))
                 return empty_return
 
-            name = showXML.findtext('title')
+            name = show_xml.findtext('title')
 
             try:
-                tvid = int(showXML.findtext('indexer'))
+                tvid = int(show_xml.findtext('indexer'))
             except (BaseException, Exception):
                 tvid = None
 
             # handle v2 format of .nfo file
-            default_source = showXML.find('//uniqueid[@default="true"]')
+            default_source = show_xml.find('//uniqueid[@default="true"]')
             if None is not default_source:
                 use_tvid = default_source.attrib.get('type') or tvid
                 if isinstance(use_tvid, string_types):
@@ -1166,17 +1164,17 @@ class GenericMetadata(object):
                 if use_tvid and None is not prodid:
                     return use_tvid, prodid, name
 
-            prodid = showXML.find('//uniqueid[@type="tvdb"]')
+            prodid = show_xml.find('//uniqueid[@type="tvdb"]')
             if None is not prodid:
                 prodid = int(prodid.text)
                 tvid = TVINFO_TVDB
-            elif None is not showXML.findtext('tvdbid'):
-                prodid = int(showXML.findtext('tvdbid'))
+            elif None is not show_xml.findtext('tvdbid'):
+                prodid = int(show_xml.findtext('tvdbid'))
                 tvid = TVINFO_TVDB
-            elif None is not showXML.findtext('id'):
-                prodid = int(showXML.findtext('id'))
+            elif None is not show_xml.findtext('id'):
+                prodid = int(show_xml.findtext('id'))
                 try:
-                    tvid = TVINFO_TVDB if [s for s in showXML.findall('.//*')
+                    tvid = TVINFO_TVDB if [s for s in show_xml.findall('.//*')
                                            if s.text and -1 != s.text.find('thetvdb.com')] else tvid
                 except (BaseException, Exception):
                     pass

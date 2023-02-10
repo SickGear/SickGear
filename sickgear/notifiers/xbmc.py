@@ -20,7 +20,6 @@ import time
 from .generic import Notifier
 import sickgear
 from exceptions_helper import ex
-from encodingKludge import fixStupidEncodings
 from json_helper import json_dumps, json_load
 
 from _23 import b64encodestring, decode_str, etree, quote, unquote, unquote_plus, urlencode
@@ -163,9 +162,9 @@ class XBMCNotifier(Notifier):
             # if we have a password, use authentication
             if password:
                 req.add_header('Authorization', 'Basic %s' % b64encodestring('%s:%s' % (username, password)))
-                self._log_debug(u'Contacting (with auth header) via url: ' + fixStupidEncodings(url))
+                self._log_debug(u'Contacting (with auth header) via url: ' + url)
             else:
-                self._log_debug(u'Contacting via url: ' + fixStupidEncodings(url))
+                self._log_debug(u'Contacting via url: ' + url)
 
             http_response_obj = urllib.request.urlopen(req)  # PY2 http_response_obj has no `with` context manager
             result = decode_str(http_response_obj.read(), sickgear.SYS_ENCODING)
@@ -175,7 +174,7 @@ class XBMCNotifier(Notifier):
             return result
 
         except (urllib.error.URLError, IOError) as e:
-            self._log_warning(u'Couldn\'t contact HTTP at %s %s' % (fixStupidEncodings(url), ex(e)))
+            self._log_warning(u'Couldn\'t contact HTTP at %s %s' % (url, ex(e)))
             return False
 
     def _update_library_http(self, host=None, show_name=None):
@@ -303,9 +302,9 @@ class XBMCNotifier(Notifier):
             # if we have a password, use authentication
             if password:
                 req.add_header('Authorization', 'Basic %s' % b64encodestring('%s:%s' % (username, password)))
-                self._log_debug(u'Contacting (with auth header) via url: ' + fixStupidEncodings(url))
+                self._log_debug(u'Contacting (with auth header) via url: ' + url)
             else:
-                self._log_debug(u'Contacting via url: ' + fixStupidEncodings(url))
+                self._log_debug(u'Contacting via url: ' + url)
 
             try:
                 http_response_obj = urllib.request.urlopen(req)  # PY2 http_response_obj has no `with` context manager
@@ -324,7 +323,7 @@ class XBMCNotifier(Notifier):
                 return False
 
         except IOError as e:
-            self._log_warning(u'Couldn\'t contact JSON API at ' + fixStupidEncodings(url) + ' ' + ex(e))
+            self._log_warning(u'Couldn\'t contact JSON API at ' + url + ' ' + ex(e))
             return False
 
     def _update_library_json(self, host=None, show_name=None):

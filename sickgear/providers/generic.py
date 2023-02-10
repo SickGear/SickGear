@@ -29,9 +29,7 @@ import threading
 import socket
 import zlib
 
-# noinspection PyPep8Naming
-import encodingKludge as ek
-from exceptions_helper import SickBeardException, AuthException, ex
+from exceptions_helper import SickGearException, AuthException, ex
 
 import sickgear
 from .. import classes, db, helpers, logger, tvcache
@@ -60,7 +58,7 @@ if False:
     from typing import Any, AnyStr, Callable, Dict, List, Match, Optional, Tuple, Union
 
 
-class HaltParseException(SickBeardException):
+class HaltParseException(SickGearException):
     """Something requires the current processing to abort"""
 
 
@@ -653,8 +651,7 @@ class GenericProvider(object):
         :return:
         """
         for name in ['%s.%s' % (self.get_id(), image_ext) for image_ext in ['png', 'gif', 'jpg']]:
-            if ek.ek(os.path.isfile,
-                     ek.ek(os.path.join, sickgear.PROG_DIR, 'gui', sickgear.GUI_NAME, 'images', 'providers', name)):
+            if os.path.isfile(os.path.join(sickgear.PROG_DIR, 'gui', sickgear.GUI_NAME, 'images', 'providers', name)):
                 return name
 
         return '%s.png' % ('newznab', default_name[0])[any(default_name)]
@@ -838,11 +835,11 @@ class GenericProvider(object):
             cache_dir = sickgear.CACHE_DIR or helpers.get_system_temp_dir()
             base_name = '%s.%s' % (re.sub('.%s$' % self.providerType, '', helpers.sanitize_filename(result.name)),
                                    self.providerType)
-            final_file = ek.ek(os.path.join, final_dir, base_name)
+            final_file = os.path.join(final_dir, base_name)
             cached = result.cache_filepath
-            if cached and ek.ek(os.path.isfile, cached):
-                base_name = ek.ek(os.path.basename, cached)
-            cache_file = ek.ek(os.path.join, cache_dir, base_name)
+            if cached and os.path.isfile(cached):
+                base_name = os.path.basename(cached)
+            cache_file = os.path.join(cache_dir, base_name)
 
             self.session.headers['Referer'] = url
             if cached or helpers.download_file(url, cache_file, session=self.session, allow_redirects='/it' not in url,
@@ -870,7 +867,7 @@ class GenericProvider(object):
 
         if not saved and 'magnet' == link_type:
             logger.log(u'All torrent cache servers failed to return a downloadable result', logger.DEBUG)
-            final_file = ek.ek(os.path.join, final_dir, '%s.%s' % (helpers.sanitize_filename(result.name), link_type))
+            final_file = os.path.join(final_dir, '%s.%s' % (helpers.sanitize_filename(result.name), link_type))
             try:
                 with open(final_file, 'wb') as fp:
                     fp.write(decode_bytes(result.url))
@@ -1880,7 +1877,7 @@ class TorrentProvider(GenericProvider):
         seen_attr = 'PROVIDER_SEEN'
         if obf and self.__module__ not in getattr(sickgear, seen_attr, []):
             file_path = '%s.py' % os.path.join(sickgear.PROG_DIR, *self.__module__.split('.'))
-            if ek.ek(os.path.isfile, file_path):
+            if os.path.isfile(file_path):
                 with open(file_path, 'rb') as file_hd:
                     c = bytearray(codecs.encode(decode_bytes(str(zlib.crc32(file_hd.read()))), 'hex_codec'))
 
@@ -1996,7 +1993,7 @@ class TorrentProvider(GenericProvider):
         if 2012691328 == s + zlib.crc32(decode_bytes(('.%s' % parsed.netloc).split('.')[-2])):
             is_valid = False
             file_name = '%s.py' % os.path.join(sickgear.PROG_DIR, *self.__module__.split('.'))
-            if ek.ek(os.path.isfile, file_name):
+            if os.path.isfile(file_name):
                 with open(file_name, 'rb') as file_hd:
                     is_valid = s + zlib.crc32(file_hd.read()) in (1661931498, 472149389)
         return is_valid

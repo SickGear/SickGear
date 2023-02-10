@@ -18,8 +18,6 @@ import os
 
 from .generic import BaseNotifier
 import sickgear
-# noinspection PyPep8Naming
-import encodingKludge as ek
 from exceptions_helper import ex
 
 from _23 import urlencode
@@ -51,7 +49,7 @@ class PyTivoNotifier(BaseNotifier):
 
         show_path = ep_obj.show_obj.location
         show_name = ep_obj.show_obj.name
-        root_show_and_season = ek.ek(os.path.dirname, ep_obj.location)
+        root_show_and_season = os.path.dirname(ep_obj.location)
         abs_path = ep_obj.location
 
         # Some show names have colons in them which are illegal in a path location, so strip them out.

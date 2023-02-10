@@ -22,9 +22,6 @@ from . import common, logger, tv
 from .common import Quality, DOWNLOADED
 from .name_parser.parser import NameParser
 
-# noinspection PyPep8Naming
-import encodingKludge as ek
-
 # noinspection PyUnreachableCode
 if False:
     from typing import AnyStr, Dict, List
@@ -239,7 +236,7 @@ def validate_name(pattern, multi=None, anime_type=None, file_only=False, abd=Fal
     new_name = u'%s.ext' % sample_ep_obj.formatted_filename(pattern, multi, anime_type)
     new_path = sample_ep_obj.formatted_dir(pattern, multi)
     if not file_only:
-        new_name = ek.ek(os.path.join, new_path, new_name)
+        new_name = os.path.join(new_path, new_name)
 
     if not new_name:
         logger.log(u'Unable to create a name out of %s' % pattern, logger.DEBUG)

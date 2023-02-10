@@ -90,7 +90,7 @@ from multiprocessing import freeze_support
 
 from configobj import ConfigObj
 # noinspection PyPep8Naming
-from encodingKludge import EXIT_BAD_ENCODING, SYS_ENCODING
+from encodingKludge import SYS_ENCODING
 from exceptions_helper import ex
 import sickgear
 from sickgear import db, logger, name_cache, network_timezones
@@ -200,10 +200,6 @@ class SickGear(object):
         sickgear.PROG_DIR = os.path.dirname(sickgear.MY_FULLNAME)
         sickgear.DATA_DIR = sickgear.PROG_DIR
         sickgear.MY_ARGS = sys.argv[1:]
-        if EXIT_BAD_ENCODING:
-            print('Sorry, you MUST add the SickGear folder to the PYTHONPATH environment variable')
-            print('or find another way to force Python to use %s for string encoding.' % SYS_ENCODING)
-            sys.exit(1)
         sickgear.SYS_ENCODING = SYS_ENCODING
         legacy_runner = globals().get('_legacy_sickgear_runner')
         if not legacy_runner:

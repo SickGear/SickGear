@@ -22,8 +22,6 @@ import re
 import threading
 import traceback
 
-# noinspection PyPep8Naming
-import encodingKludge as ek
 import exceptions_helper
 from exceptions_helper import ex
 from sg_helpers import write_file
@@ -65,7 +63,7 @@ def _download_result(result):
     elif 'nzbdata' == result.resultType:
 
         # get the final file path to the nzb
-        file_name = ek.ek(os.path.join, sickgear.NZB_DIR, u'%s.nzb' % result.name)
+        file_name = os.path.join(sickgear.NZB_DIR, u'%s.nzb' % result.name)
 
         logger.log(u'Saving NZB to %s' % file_name)
 
@@ -768,7 +766,7 @@ def cache_torrent_file(
 ):
     # type: (...) -> Optional[TorrentSearchResult]
 
-    cache_file = ek.ek(os.path.join, sickgear.CACHE_DIR or helpers.get_system_temp_dir(),
+    cache_file = os.path.join(sickgear.CACHE_DIR or helpers.get_system_temp_dir(),
                        '%s.torrent' % (helpers.sanitize_filename(search_result.name)))
 
     if not helpers.download_file(

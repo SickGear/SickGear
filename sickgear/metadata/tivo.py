@@ -25,8 +25,6 @@ from .. import logger
 import sg_helpers
 from lib.tvinfo_base.exceptions import *
 import sickgear
-# noinspection PyPep8Naming
-import encodingKludge as ek
 import exceptions_helper
 from exceptions_helper import ex
 
@@ -89,7 +87,7 @@ class TIVOMetadata(generic.GenericMetadata):
         self.eg_season_all_banner = "<i>not supported</i>"  # type: AnyStr
 
     # Override with empty methods for unsupported features
-    def retrieveShowMetadata(self, folder):
+    def retrieve_show_metadata(self, folder):
         # type: (AnyStr) -> Tuple[None, None, None]
         # no show metadata generated, we abort this lookup function
         return None, None, None
@@ -155,10 +153,10 @@ class TIVOMetadata(generic.GenericMetadata):
 
         ep_obj: a TVEpisode object to get the path for
         """
-        if ek.ek(os.path.isfile, ep_obj.location):
-            metadata_file_name = ek.ek(os.path.basename, ep_obj.location) + "." + self._ep_nfo_extension
-            metadata_dir_name = ek.ek(os.path.join, ek.ek(os.path.dirname, ep_obj.location), '.meta')
-            metadata_file_path = ek.ek(os.path.join, metadata_dir_name, metadata_file_name)
+        if os.path.isfile(ep_obj.location):
+            metadata_file_name = os.path.basename(ep_obj.location) + "." + self._ep_nfo_extension
+            metadata_dir_name = os.path.join(os.path.dirname(ep_obj.location), '.meta')
+            metadata_file_path = os.path.join(metadata_dir_name, metadata_file_name)
         else:
             logger.log(u"Episode location doesn't exist: " + str(ep_obj.location), logger.DEBUG)
             return ''
@@ -335,17 +333,17 @@ class TIVOMetadata(generic.GenericMetadata):
             return False
 
         nfo_file_path = self.get_episode_file_path(ep_obj)
-        nfo_file_dir = ek.ek(os.path.dirname, nfo_file_path)
+        nfo_file_dir = os.path.dirname(nfo_file_path)
 
         try:
-            if not ek.ek(os.path.isdir, nfo_file_dir):
+            if not os.path.isdir(nfo_file_dir):
                 logger.log(u"Metadata dir didn't exist, creating it at " + nfo_file_dir, logger.DEBUG)
-                ek.ek(os.makedirs, nfo_file_dir)
+                os.makedirs(nfo_file_dir)
                 sg_helpers.chmod_as_parent(nfo_file_dir)
 
             logger.log(u"Writing episode nfo file to " + nfo_file_path, logger.DEBUG)
 
-            with ek.ek(open, nfo_file_path, 'w') as nfo_file:
+            with open(nfo_file_path, 'w') as nfo_file:
                 # Calling encode directly, b/c often descriptions have wonky characters.
                 nfo_file.write(data.encode("utf-8"))
 

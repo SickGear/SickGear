@@ -22,8 +22,6 @@ import re
 from ..common import USER_AGENT
 from .generic import Notifier
 
-# noinspection PyPep8Naming
-import encodingKludge as ek
 from exceptions_helper import ex
 import sickgear
 from sickgear.image_cache import ImageCache
@@ -51,11 +49,11 @@ class TelegramNotifier(Notifier):
             msg = re.sub('(?i)&emsp;?', '   ', msg)
 
             if use_icon:
-                image_path = ek.ek(os.path.join, sickgear.PROG_DIR, 'gui', 'slick', 'images', 'banner_thumb.jpg')
+                image_path = os.path.join(sickgear.PROG_DIR, 'gui', 'slick', 'images', 'banner_thumb.jpg')
                 if not self._testing:
                     show_obj = ep_obj.show_obj
                     banner_path = ImageCache().banner_thumb_path(show_obj.tvid, show_obj.prodid)
-                    if ek.ek(os.path.isfile, banner_path):
+                    if os.path.isfile(banner_path):
                         image_path = banner_path
 
                 with open(image_path, 'rb') as f:

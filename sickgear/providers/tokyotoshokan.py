@@ -98,10 +98,10 @@ class TokyoToshokanProvider(generic.TorrentProvider):
         return results
 
     def _season_strings(self, *args, **kwargs):
-        return [{'Season': show_name_helpers.makeSceneSeasonSearchString(self.show_obj, *args)}]
+        return [{'Season': show_name_helpers.make_scene_season_search_string(self.show_obj, *args)}]
 
     def _episode_strings(self, *args, **kwargs):
-        return [{'Episode': show_name_helpers.makeSceneSearchString(self.show_obj, *args)}]
+        return [{'Episode': show_name_helpers.make_scene_search_string(self.show_obj, *args)}]
 
 
 class TokyoToshokanCache(tvcache.TVCache):

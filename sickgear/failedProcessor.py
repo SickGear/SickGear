@@ -69,7 +69,7 @@ class FailedProcessor(LegacyFailedProcessor):
         """
         self._log(u'Failed download detected: (%s, %s)' % (self.nzb_name, self.dir_name))
 
-        releaseName = show_name_helpers.determineReleaseName(self.dir_name, self.nzb_name)
+        releaseName = show_name_helpers.determine_release_name(self.dir_name, self.nzb_name)
         if None is releaseName:
             self._log(u'Warning: unable to find a valid release name.', logger.WARNING)
             raise exceptions_helper.FailedProcessingFailed()

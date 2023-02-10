@@ -25,8 +25,6 @@ import time
 import traceback
 from . import gh_api as github
 
-# noinspection PyPep8Naming
-import encodingKludge as ek
 from exceptions_helper import ex
 
 import sickgear
@@ -176,7 +174,7 @@ class SoftwareUpdater(object):
             'git': running from source using git
             'source': running from source without git
         """
-        return ('source', 'git')[os.path.isdir(ek.ek(os.path.join, sickgear.PROG_DIR, '.git'))]
+        return ('source', 'git')[os.path.isdir(os.path.join(sickgear.PROG_DIR, '.git'))]
 
     def check_for_new_version(self, force=False):
         """
@@ -754,7 +752,7 @@ class SourceUpdateManager(UpdateManager):
 
         try:
             # prepare the update dir
-            sg_update_dir = ek.ek(os.path.join, sickgear.PROG_DIR, u'sg-update')
+            sg_update_dir = os.path.join(sickgear.PROG_DIR, u'sg-update')
 
             if os.path.isdir(sg_update_dir):
                 logger.log(u'Clearing out update folder %s before extracting' % sg_update_dir)
@@ -768,11 +766,11 @@ class SourceUpdateManager(UpdateManager):
             tar_download_path = os.path.join(sg_update_dir, u'sg-update.tar')
             urllib.request.urlretrieve(tar_download_url, tar_download_path)
 
-            if not ek.ek(os.path.isfile, tar_download_path):
+            if not os.path.isfile(tar_download_path):
                 logger.error(u'Unable to retrieve new version from %s, can\'t update' % tar_download_url)
                 return False
 
-            if not ek.ek(tarfile.is_tarfile, tar_download_path):
+            if not tarfile.is_tarfile(tar_download_path):
                 logger.error(u'Retrieved version from %s is corrupt, can\'t update' % tar_download_url)
                 return False
 

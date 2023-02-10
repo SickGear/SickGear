@@ -23,8 +23,6 @@ import traceback
 from lib.dateutil.parser import parser
 from lib.tvinfo_base.exceptions import *
 
-# noinspection PyPep8Naming
-import encodingKludge as ek
 import exceptions_helper
 from exceptions_helper import ex
 
@@ -49,7 +47,7 @@ if False:
     from lib.tvinfo_base import TVInfoShow
     from .tv import TVEpisode
 
-# Define special priority of tv source switch tasks, higher then anything else except newly added shows
+# Define special priority of tv source switch tasks, higher than anything else except newly added shows
 SWITCH_PRIO = generic_queue.QueuePriorities.HIGH + 5
 
 DAILY_SHOW_UPDATE_FINISHED_EVENT = 1
@@ -72,7 +70,7 @@ class ShowQueue(generic_queue.GenericQueue):
 
     def check_events(self):
         if self.daily_update_running and \
-                not (self.isShowUpdateRunning() or sickgear.show_update_scheduler.action.amActive):
+                not (self.is_show_update_running() or sickgear.show_update_scheduler.action.amActive):
             self.execute_events(DAILY_SHOW_UPDATE_FINISHED_EVENT)
             self.daily_update_running = False
 
@@ -91,24 +89,24 @@ class ShowQueue(generic_queue.GenericQueue):
                         continue
 
                 if cur_row['action_id'] in (ShowQueueActions.UPDATE, ShowQueueActions.FORCEUPDATE,
-                                               ShowQueueActions.WEBFORCEUPDATE):
-                    self.updateShow(add_to_db=False, force=bool(cur_row['force']),
-                                    pausestatus_after=bool_none(cur_row['pausestatus_after']),
-                                    scheduled_update=bool(cur_row['scheduled_update']),
-                                    show_obj=show_obj, skip_refresh=bool(cur_row['skip_refresh']),
-                                    uid=cur_row['uid'],
-                                    web=ShowQueueActions.WEBFORCEUPDATE == cur_row['action_id'])
+                                            ShowQueueActions.WEBFORCEUPDATE):
+                    self.update_show(add_to_db=False, force=bool(cur_row['force']),
+                                     pausestatus_after=bool_none(cur_row['pausestatus_after']),
+                                     scheduled_update=bool(cur_row['scheduled_update']),
+                                     show_obj=show_obj, skip_refresh=bool(cur_row['skip_refresh']),
+                                     uid=cur_row['uid'],
+                                     web=ShowQueueActions.WEBFORCEUPDATE == cur_row['action_id'])
 
                 elif ShowQueueActions.REFRESH == cur_row['action_id']:
-                    self.refreshShow(add_to_db=False, force=bool(cur_row['force']),
-                                     force_image_cache=bool(cur_row['force_image_cache']),
-                                     priority=cur_row['priority'],
-                                     scheduled_update=bool(cur_row['scheduled_update']),
-                                     show_obj=show_obj,
-                                     uid=cur_row['uid'])
+                    self.refresh_show(add_to_db=False, force=bool(cur_row['force']),
+                                      force_image_cache=bool(cur_row['force_image_cache']),
+                                      priority=cur_row['priority'],
+                                      scheduled_update=bool(cur_row['scheduled_update']),
+                                      show_obj=show_obj,
+                                      uid=cur_row['uid'])
 
                 elif ShowQueueActions.RENAME == cur_row['action_id']:
-                    self.renameShowEpisodes(add_to_db=False, show_obj=show_obj, uid=cur_row['uid'])
+                    self.rename_show_episodes(add_to_db=False, show_obj=show_obj, uid=cur_row['uid'])
 
                 elif ShowQueueActions.SUBTITLE == cur_row['action_id']:
                     self.download_subtitles(add_to_db=False, show_obj=show_obj, uid=cur_row['uid'])
@@ -243,7 +241,7 @@ class ShowQueue(generic_queue.GenericQueue):
         # type: (List[integer_types], bool) -> None
         generic_queue.GenericQueue._remove_from_queue(self, to_remove=to_remove, force=force)
 
-    def _isInQueue(self, show_obj, actions):
+    def _is_in_queue(self, show_obj, actions):
         # type: (TVShow, Tuple[integer_types, ...]) -> bool
         """
 
@@ -254,7 +252,7 @@ class ShowQueue(generic_queue.GenericQueue):
         with self.lock:
             return any(1 for x in self.queue if x.action_id in actions and show_obj == x.show_obj)
 
-    def _isBeingSomethinged(self, show_obj, actions):
+    def _is_being_somethinged(self, show_obj, actions):
         # type: (TVShow, Tuple[integer_types, ...]) -> bool
         """
 
@@ -269,7 +267,7 @@ class ShowQueue(generic_queue.GenericQueue):
                    and show_obj == self.currentItem.show_obj \
                    and self.currentItem.action_id in actions
 
-    def isInUpdateQueue(self, show_obj):
+    def is_in_update_queue(self, show_obj):
         # type: (TVShow) -> bool
         """
 
@@ -278,10 +276,10 @@ class ShowQueue(generic_queue.GenericQueue):
         :return:
         :rtype: bool
         """
-        return self._isInQueue(show_obj, (ShowQueueActions.UPDATE, ShowQueueActions.FORCEUPDATE,
-                                          ShowQueueActions.WEBFORCEUPDATE))
+        return self._is_in_queue(show_obj, (ShowQueueActions.UPDATE, ShowQueueActions.FORCEUPDATE,
+                                            ShowQueueActions.WEBFORCEUPDATE))
 
-    def isInRefreshQueue(self, show_obj):
+    def is_in_refresh_queue(self, show_obj):
         # type: (TVShow) -> bool
         """
 
@@ -290,9 +288,9 @@ class ShowQueue(generic_queue.GenericQueue):
         :return:
         :rtype: bool
         """
-        return self._isInQueue(show_obj, (ShowQueueActions.REFRESH,))
+        return self._is_in_queue(show_obj, (ShowQueueActions.REFRESH,))
 
-    def isInRenameQueue(self, show_obj):
+    def is_in_rename_queue(self, show_obj):
         # type: (TVShow) -> bool
         """
 
@@ -301,9 +299,9 @@ class ShowQueue(generic_queue.GenericQueue):
         :return:
         :rtype: bool
         """
-        return self._isInQueue(show_obj, (ShowQueueActions.RENAME,))
+        return self._is_in_queue(show_obj, (ShowQueueActions.RENAME,))
 
-    def isInSubtitleQueue(self, show_obj):
+    def is_in_subtitle_queue(self, show_obj):
         # type: (TVShow) -> bool
         """
 
@@ -312,9 +310,9 @@ class ShowQueue(generic_queue.GenericQueue):
         :return:
         :rtype: bool
         """
-        return self._isInQueue(show_obj, (ShowQueueActions.SUBTITLE,))
+        return self._is_in_queue(show_obj, (ShowQueueActions.SUBTITLE,))
 
-    def isBeingAdded(self, show_obj):
+    def is_being_added(self, show_obj):
         # type: (TVShow) -> bool
         """
 
@@ -323,9 +321,9 @@ class ShowQueue(generic_queue.GenericQueue):
         :return:
         :rtype: bool
         """
-        return self._isBeingSomethinged(show_obj, (ShowQueueActions.ADD,))
+        return self._is_being_somethinged(show_obj, (ShowQueueActions.ADD,))
 
-    def isBeingUpdated(self, show_obj):
+    def is_being_updated(self, show_obj):
         # type: (TVShow) -> bool
         """
 
@@ -334,10 +332,10 @@ class ShowQueue(generic_queue.GenericQueue):
         :return:
         :rtype: bool
         """
-        return self._isBeingSomethinged(show_obj, (ShowQueueActions.UPDATE, ShowQueueActions.FORCEUPDATE,
-                                                   ShowQueueActions.WEBFORCEUPDATE))
+        return self._is_being_somethinged(show_obj, (ShowQueueActions.UPDATE, ShowQueueActions.FORCEUPDATE,
+                                                     ShowQueueActions.WEBFORCEUPDATE))
 
-    def isBeingRefreshed(self, show_obj):
+    def is_being_refreshed(self, show_obj):
         # type: (TVShow) -> bool
         """
 
@@ -346,9 +344,9 @@ class ShowQueue(generic_queue.GenericQueue):
         :return:
         :rtype: bool
         """
-        return self._isBeingSomethinged(show_obj, (ShowQueueActions.REFRESH,))
+        return self._is_being_somethinged(show_obj, (ShowQueueActions.REFRESH,))
 
-    def isBeingRenamed(self, show_obj):
+    def is_being_renamed(self, show_obj):
         # type: (TVShow) -> bool
         """
 
@@ -357,9 +355,9 @@ class ShowQueue(generic_queue.GenericQueue):
         :return:
         :rtype: bool
         """
-        return self._isBeingSomethinged(show_obj, (ShowQueueActions.RENAME,))
+        return self._is_being_somethinged(show_obj, (ShowQueueActions.RENAME,))
 
-    def isBeingSubtitled(self, show_obj):
+    def is_being_subtitled(self, show_obj):
         # type: (TVShow) -> bool
         """
 
@@ -368,9 +366,9 @@ class ShowQueue(generic_queue.GenericQueue):
         :return:
         :rtype: bool
         """
-        return self._isBeingSomethinged(show_obj, (ShowQueueActions.SUBTITLE,))
+        return self._is_being_somethinged(show_obj, (ShowQueueActions.SUBTITLE,))
 
-    def isShowUpdateRunning(self):
+    def is_show_update_running(self):
         """
 
         :return:
@@ -387,7 +385,7 @@ class ShowQueue(generic_queue.GenericQueue):
 
         :param show_obj: show object
         """
-        return self._isBeingSomethinged(show_obj, (ShowQueueActions.SWITCH,))
+        return self._is_being_somethinged(show_obj, (ShowQueueActions.SWITCH,))
 
     def is_show_switch_queued(self, show_obj):
         # type: (TVShow) -> bool
@@ -396,21 +394,21 @@ class ShowQueue(generic_queue.GenericQueue):
 
         :param show_obj: show object
         """
-        return self._isInQueue(show_obj, (ShowQueueActions.SWITCH,))
+        return self._is_in_queue(show_obj, (ShowQueueActions.SWITCH,))
 
     def is_switch_running(self):
         # type: (...) -> bool
         with self.lock:
             return any(1 for x in self.queue + [self.currentItem] if isinstance(x, QueueItemSwitchSource))
 
-    def _getLoadingShowList(self):
+    def _get_loading_showlist(self):
         """
 
         :return:
         :rtype: List
         """
         with self.lock:
-            return [x for x in self.queue + [self.currentItem] if None is not x and x.isLoading]
+            return [x for x in self.queue + [self.currentItem] if None is not x and x.is_loading]
 
     def queue_length(self):
         # type: (...) -> Dict[AnyStr, List[AnyStr, Dict]]
@@ -454,18 +452,18 @@ class ShowQueue(generic_queue.GenericQueue):
                         length['switch'].append(result_item)
             return length
 
-    loadingShowList = property(_getLoadingShowList)
+    loading_showlist = property(_get_loading_showlist)
 
-    def updateShow(self,
-                   show_obj,  # type: TVShow
-                   force=False,  # type: bool
-                   web=False,  # type: bool
-                   scheduled_update=False,  # type: bool
-                   priority=generic_queue.QueuePriorities.NORMAL,  # type: integer_types
-                   uid=None,  # type: integer_types
-                   add_to_db=True,  # type: bool
-                   **kwargs  # type: Any
-                   ):  # type: (...) -> Union[QueueItemUpdate, QueueItemForceUpdate, QueueItemForceUpdateWeb]
+    def update_show(self,
+                    show_obj,  # type: TVShow
+                    force=False,  # type: bool
+                    web=False,  # type: bool
+                    scheduled_update=False,  # type: bool
+                    priority=generic_queue.QueuePriorities.NORMAL,  # type: integer_types
+                    uid=None,  # type: integer_types
+                    add_to_db=True,  # type: bool
+                    **kwargs  # type: Any
+                    ):  # type: (...) -> Union[QueueItemUpdate, QueueItemForceUpdate, QueueItemForceUpdateWeb]
         """
 
         :param show_obj: show object
@@ -485,15 +483,15 @@ class ShowQueue(generic_queue.GenericQueue):
         :rtype: QueueItemUpdate or QueueItemForceUpdateWeb or QueueItemForceUpdate
         """
         with self.lock:
-            if self.isBeingAdded(show_obj):
+            if self.is_being_added(show_obj):
                 raise exceptions_helper.CantUpdateException(
                     'Show is still being added, wait until it is finished before you update.')
 
-            if self.isBeingUpdated(show_obj):
+            if self.is_being_updated(show_obj):
                 raise exceptions_helper.CantUpdateException(
                     'This show is already being updated, can\'t update again until it\'s done.')
 
-            if self.isInUpdateQueue(show_obj):
+            if self.is_in_update_queue(show_obj):
                 raise exceptions_helper.CantUpdateException(
                     'This show is already being updated, can\'t update again until it\'s done.')
 
@@ -516,9 +514,9 @@ class ShowQueue(generic_queue.GenericQueue):
 
             return queue_item_obj
 
-    def refreshShow(self, show_obj, force=False, scheduled_update=False, after_update=False,
-                    priority=generic_queue.QueuePriorities.HIGH, force_image_cache=False, uid=None, add_to_db=True,
-                    **kwargs):
+    def refresh_show(self, show_obj, force=False, scheduled_update=False, after_update=False,
+                     priority=generic_queue.QueuePriorities.HIGH, force_image_cache=False, uid=None, add_to_db=True,
+                     **kwargs):
         # type: (TVShow, bool, bool, bool, integer_types, bool, integer_types, bool, Any) -> Optional[QueueItemRefresh]
         """
 
@@ -541,10 +539,11 @@ class ShowQueue(generic_queue.GenericQueue):
         :rtype: QueueItemRefresh
         """
         with self.lock:
-            if (self.isBeingRefreshed(show_obj) or self.isInRefreshQueue(show_obj)) and not force:
+            if (self.is_being_refreshed(show_obj) or self.is_in_refresh_queue(show_obj)) and not force:
                 raise exceptions_helper.CantRefreshException('This show is being refreshed, not refreshing again.')
 
-            if ((not after_update and self.isBeingUpdated(show_obj)) or self.isInUpdateQueue(show_obj)) and not force:
+            if ((not after_update and self.is_being_updated(show_obj))
+                    or self.is_in_update_queue(show_obj)) and not force:
                 logger.log('Skipping this refresh as there is already an update queued or'
                            ' in progress and a refresh is done at the end of an update anyway.', logger.DEBUG)
                 return
@@ -561,7 +560,7 @@ class ShowQueue(generic_queue.GenericQueue):
 
             return queue_item_obj
 
-    def renameShowEpisodes(self, show_obj, uid=None, add_to_db=True):
+    def rename_show_episodes(self, show_obj, uid=None, add_to_db=True):
         # type: (TVShow, integer_types, bool) -> QueueItemRename
         """
 
@@ -758,14 +757,14 @@ class ShowQueueItem(generic_queue.QueueItem):
         self.show_obj = show_obj  # type: sickgear.tv.TVShow
         self.scheduled_update = scheduled_update  # type: bool
 
-    def isInQueue(self):
+    def is_in_queue(self):
         """
         :rtype: bool
         """
         return self in sickgear.show_queue_scheduler.action.queue + [
             sickgear.show_queue_scheduler.action.currentItem]
 
-    def _getName(self):
+    def _get_name(self):
         """
         :rtype: AnyStr
         """
@@ -773,7 +772,7 @@ class ShowQueueItem(generic_queue.QueueItem):
             return self.show_obj.name
         return ''
 
-    def _isLoading(self):
+    def _is_loading(self):
         return False
 
     def __str__(self):
@@ -782,9 +781,9 @@ class ShowQueueItem(generic_queue.QueueItem):
     def __repr__(self):
         return self.__str__()
 
-    show_name = property(_getName)
+    show_name = property(_get_name)
 
-    isLoading = property(_isLoading)
+    is_loading = property(_is_loading)
 
 
 class QueueItemAdd(ShowQueueItem):
@@ -864,7 +863,7 @@ class QueueItemAdd(ShowQueueItem):
 
         self.priority = generic_queue.QueuePriorities.VERYHIGH
 
-    def _getName(self):
+    def _get_name(self):
         """
         :return: the show name if there is a show object created, if not returns
         the dir that the show is being added to.
@@ -876,9 +875,9 @@ class QueueItemAdd(ShowQueueItem):
             return self.showDir
         return self.show_obj.name
 
-    show_name = property(_getName)
+    show_name = property(_get_name)
 
-    def _isLoading(self):
+    def _is_loading(self):
         """
         :return: True if we've gotten far enough to have a show object, or False
         if we still only know the folder name.
@@ -886,7 +885,7 @@ class QueueItemAdd(ShowQueueItem):
         """
         return None is self.show_obj
 
-    isLoading = property(_isLoading)
+    is_loading = property(_is_loading)
 
     # if they gave a number to start or number to end as wanted, then change those eps to it
     def _get_wanted(self, db_obj, wanted_max, latest):
@@ -985,7 +984,7 @@ class QueueItemAdd(ShowQueueItem):
             if getattr(t, 'show_not_found', False):
                 logger.log('Show %s was not found on %s, maybe show was deleted' %
                            (self.show_name, sickgear.TVInfoAPI(self.tvid).name), logger.ERROR)
-                self._finishEarly()
+                self._finish_early()
                 return
 
             # this usually only happens if they have an NFO in their show dir
@@ -997,7 +996,7 @@ class QueueItemAdd(ShowQueueItem):
                                        'Show in %s has no name on %s, probably the wrong language.'
                                        ' Delete .nfo and add manually in the correct language.' %
                                        (self.showDir, sickgear.TVInfoAPI(self.tvid).name))
-                self._finishEarly()
+                self._finish_early()
                 return
         except (BaseException, Exception):
             logger.log('Unable to find show ID:%s on TV info: %s' % (self.prodid, sickgear.TVInfoAPI(self.tvid).name),
@@ -1006,7 +1005,7 @@ class QueueItemAdd(ShowQueueItem):
                                    'Unable to look up the show in %s on %s using ID %s, not using the NFO.'
                                    ' Delete .nfo and try adding manually again.' %
                                    (self.showDir, sickgear.TVInfoAPI(self.tvid).name, self.prodid))
-            self._finishEarly()
+            self._finish_early()
             return
 
         try:
@@ -1056,19 +1055,19 @@ class QueueItemAdd(ShowQueueItem):
             else:
                 ui.notifications.error(
                     'Unable to add show due to an error with %s' % sickgear.TVInfoAPI(self.tvid).name)
-            self._finishEarly()
+            self._finish_early()
             return
 
         except exceptions_helper.MultipleShowObjectsException:
             logger.log('The show in %s is already in your show list, skipping' % self.showDir, logger.ERROR)
             ui.notifications.error('Show skipped', 'The show in %s is already in your show list' % self.showDir)
-            self._finishEarly()
+            self._finish_early()
             return
 
         except (BaseException, Exception) as e:
             logger.log('Error trying to add show: %s' % ex(e), logger.ERROR)
             logger.log(traceback.format_exc(), logger.ERROR)
-            self._finishEarly()
+            self._finish_early()
             raise
 
         self.show_obj.load_imdb_info()
@@ -1078,7 +1077,7 @@ class QueueItemAdd(ShowQueueItem):
         except (BaseException, Exception) as e:
             logger.log('Error saving the show to the database: %s' % ex(e), logger.ERROR)
             logger.log(traceback.format_exc(), logger.ERROR)
-            self._finishEarly()
+            self._finish_early()
             raise
 
         if not show_exists:
@@ -1152,7 +1151,7 @@ class QueueItemAdd(ShowQueueItem):
         except (BaseException, Exception) as e:
             logger.log('Error saving the show to the database: %s' % ex(e), logger.ERROR)
             logger.log(traceback.format_exc(), logger.ERROR)
-            self._finishEarly()
+            self._finish_early()
             raise
 
         # update internal name cache
@@ -1191,14 +1190,14 @@ class QueueItemAdd(ShowQueueItem):
 
         self.finish()
 
-    def _finishEarly(self):
+    def _finish_early(self):
         if None is not self.show_obj:
             self.show_obj.delete_show()
 
         if self.new_show:
-            # if we adding a new show, delete the empty folder that was already created
+            # if adding a new show, delete the empty folder that was already created
             try:
-                ek.ek(os.rmdir, self.showDir)
+                os.rmdir(self.showDir)
             except (BaseException, Exception):
                 pass
 
@@ -1381,7 +1380,7 @@ class QueueItemUpdate(ShowQueueItem):
         if not sickgear.TVInfoAPI(self.show_obj.tvid).config['active']:
             logger.log('TV info source %s is marked inactive, aborting update for show %s and continue with refresh.'
                        % (sickgear.TVInfoAPI(self.show_obj.tvid).config['name'], self.show_obj.name))
-            sickgear.show_queue_scheduler.action.refreshShow(self.show_obj, self.force, self.scheduled_update,
+            sickgear.show_queue_scheduler.action.refresh_show(self.show_obj, self.force, self.scheduled_update,
                                                               after_update=True)
             return
 
@@ -1485,7 +1484,7 @@ class QueueItemUpdate(ShowQueueItem):
             sickgear.MEMCACHE['history_tab'] = sickgear.webserve.History.menu_tab(
                 sickgear.MEMCACHE['history_tab_limit'])
         if not getattr(self, 'skip_refresh', False):
-            sickgear.show_queue_scheduler.action.refreshShow(self.show_obj, self.force, self.scheduled_update,
+            sickgear.show_queue_scheduler.action.refresh_show(self.show_obj, self.force, self.scheduled_update,
                                                               after_update=True, force_image_cache=self.force_web,
                                                               **self.kwargs)
 

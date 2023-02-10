@@ -25,8 +25,6 @@ import threading
 import traceback
 
 import sickgear
-# noinspection PyPep8Naming
-import encodingKludge as ek
 from exceptions_helper import ex
 from json_helper import json_load
 from . import db, helpers, logger, name_cache
@@ -387,22 +385,22 @@ def _custom_exceptions_fetcher():
     src_id = 'GHSG'
     logger.log(u'Checking to update custom alternatives from %s' % src_id)
 
-    dirpath = ek.ek(os.path.join, sickgear.CACHE_DIR, 'alts')
-    tmppath = ek.ek(os.path.join, dirpath, 'tmp')
-    file_rar = ek.ek(os.path.join, tmppath, 'alt.rar')
-    file_cache = ek.ek(os.path.join, dirpath, 'alt.json')
+    dirpath = os.path.join(sickgear.CACHE_DIR, 'alts')
+    tmppath = os.path.join(dirpath, 'tmp')
+    file_rar = os.path.join(tmppath, 'alt.rar')
+    file_cache = os.path.join(dirpath, 'alt.json')
     iv = 30 * 60  # min interval to fetch updates
     refresh = should_refresh(src_id, iv)
-    fetch_data = not ek.ek(os.path.isfile, file_cache) or (not int(os.environ.get('NO_ALT_GET', 0)) and refresh)
+    fetch_data = not os.path.isfile(file_cache) or (not int(os.environ.get('NO_ALT_GET', 0)) and refresh)
     if fetch_data:
-        if ek.ek(os.path.exists, tmppath):
+        if os.path.exists(tmppath):
             helpers.remove_file(tmppath, tree=True)
         helpers.make_path(tmppath)
         helpers.download_file(r'https://github.com/SickGear/sickgear.altdata/raw/main/alt.rar', file_rar)
 
         rar_handle = None
         if 'win32' == sys.platform:
-            rarfile.UNRAR_TOOL = ek.ek(os.path.join, sickgear.PROG_DIR, 'lib', 'rarfile', 'UnRAR.exe')
+            rarfile.UNRAR_TOOL = os.path.join(sickgear.PROG_DIR, 'lib', 'rarfile', 'UnRAR.exe')
         try:
             rar_handle = rarfile.RarFile(file_rar)
             rar_handle.extractall(path=dirpath, pwd='sickgear_alt')
@@ -418,7 +416,7 @@ def _custom_exceptions_fetcher():
     if refresh:
         set_last_refresh(src_id)
 
-    if not fetch_data and not ek.ek(os.path.isfile, file_cache):
+    if not fetch_data and not os.path.isfile(file_cache):
         logger.debug(u'Unable to fetch custom exceptions, skipped: %s' % file_rar)
         return custom_exception_dict, cnt_updated_numbers, should_refresh(src_id, iv, remaining=True)
 
@@ -516,7 +514,7 @@ def _xem_exceptions_fetcher():
         for tvid in [i for i in sickgear.TVInfoAPI().sources if 'xem_origin' in sickgear.TVInfoAPI(i).config]:
             logger.log(u'Checking for XEM scene exception updates for %s' % sickgear.TVInfoAPI(tvid).name)
 
-            url = 'http://thexem.info/map/allNames?origin=%s%s&seasonNumbers=1'\
+            url = 'https://thexem.info/map/allNames?origin=%s%s&seasonNumbers=1'\
                   % (sickgear.TVInfoAPI(tvid).config['xem_origin'], ('&language=us', '')['xem' == xem_list])
 
             parsed_json = helpers.get_url(url, parse_json=True, timeout=90)
@@ -551,7 +549,7 @@ def _xem_get_ids(infosrc_name, xem_origin):
     """
     xem_ids = []
 
-    url = 'http://thexem.info/map/havemap?origin=%s' % xem_origin
+    url = 'https://thexem.info/map/havemap?origin=%s' % xem_origin
 
     task = 'Fetching show ids with%s xem scene mapping%s for origin'
     logger.log(u'%s %s' % (task % ('', 's'), infosrc_name))
