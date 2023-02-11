@@ -35,7 +35,6 @@ from lib.fanart.core import Request as fanartRequest
 import lib.fanart as fanart
 from lxml_etree import etree
 
-from _23 import filter_iter, list_keys
 from six import iteritems, itervalues, string_types
 
 # noinspection PyUnreachableCode
@@ -874,7 +873,7 @@ class GenericMetadata(object):
                     tv_id).name + ", not downloading images: " + ex(e), logger.WARNING)
 
         # todo: when tmdb is added as tv source remove the hardcoded TVINFO_TMDB
-        for tv_src in list(OrderedDict.fromkeys([show_obj.tvid] + list_keys(sickgear.TVInfoAPI().search_sources) +
+        for tv_src in list(OrderedDict.fromkeys([show_obj.tvid] + list(sickgear.TVInfoAPI().search_sources) +
                                                 [TVINFO_TMDB])):
             if tv_src != show_obj.tvid and not show_obj.ids.get(tv_src, {}).get('id'):
                 continue
@@ -1220,9 +1219,9 @@ class GenericMetadata(object):
                 resp = request.response()
                 itemlist = []
                 dedupe = []
-                for art in filter_iter(lambda i: 10 < len(i.get('url', '')) and (lang == i.get('lang', '')[0:2]),
-                                       # remove "[0:2]" ... to strictly use only data where "en" is at source
-                                       resp[types[image_type]]):  # type: dict
+                for art in filter(lambda i: 10 < len(i.get('url', '')) and (lang == i.get('lang', '')[0:2]),
+                                  # remove "[0:2]" ... to strictly use only data where "en" is at source
+                                  resp[types[image_type]]):  # type: dict
                     try:
                         url = (art['url'], art['url'].replace('/fanart/', '/preview/'))[thumb]
                         if url not in dedupe:

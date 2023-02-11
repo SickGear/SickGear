@@ -28,7 +28,6 @@ from .search import wanted_episodes
 from .sgdatetime import SGDatetime, timestamp_near
 from .tv import TVidProdid, TVEpisode, TVShow
 
-from _23 import filter_list, map_iter, map_list
 from six import iteritems, itervalues, moves
 
 # noinspection PyUnreachableCode
@@ -212,7 +211,7 @@ class BacklogSearcher(object):
         any_torrent_enabled = continued_backlog = False
         if not force and standard_backlog and (datetime.datetime.now() - datetime.datetime.fromtimestamp(
                 self._get_last_runtime())) < datetime.timedelta(hours=23):
-            any_torrent_enabled = any(map_iter(
+            any_torrent_enabled = any(map(
                 lambda x: x.is_active() and getattr(x, 'enable_backlog', None)
                 and GenericProvider.TORRENT == x.providerType,
                 sickgear.providers.sortedProviderList()))
@@ -291,8 +290,8 @@ class BacklogSearcher(object):
 
         if not runparts and parts:
             runparts = parts[0]
-            wanted_list = filter_list(
-                lambda wi: wi and next(itervalues(wi))[0].show_obj.tvid_prodid in runparts, wanted_list)
+            wanted_list = list(filter(
+                lambda wi: wi and next(itervalues(wi))[0].show_obj.tvid_prodid in runparts, wanted_list))
 
         limited_wanted_list = []
         if standard_backlog and not any_torrent_enabled and runparts:
@@ -314,8 +313,8 @@ class BacklogSearcher(object):
             for i, l in enumerate(parts):
                 if 0 == i:
                     continue
-                cl += map_list(lambda m: ['INSERT INTO backlogparts (part, indexer, indexerid) VALUES (?,?,?)',
-                                          [i + 1] + TVidProdid(m).list], l)
+                cl += list(map(lambda m: ['INSERT INTO backlogparts (part, indexer, indexerid) VALUES (?,?,?)',
+                                          [i + 1] + TVidProdid(m).list], l))
 
             if 0 < len(cl):
                 my_db.mass_action(cl)

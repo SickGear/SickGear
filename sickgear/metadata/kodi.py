@@ -29,7 +29,7 @@ import exceptions_helper
 from exceptions_helper import ex
 from lxml_etree import etree
 
-from _23 import decode_str, map_iter
+from _23 import decode_str
 from six import string_types
 
 # noinspection PyUnreachableCode
@@ -157,7 +157,7 @@ class KODIMetadata(generic.GenericMetadata):
 
         has_id = False
         tvdb_id = None
-        for tvid, slug in map_iter(
+        for tvid, slug in map(
                 lambda _tvid: (_tvid, sickgear.TVInfoAPI(_tvid).config.get('kodi_slug')),
                 list(sickgear.TVInfoAPI().all_sources)):
             mid = slug and show_obj.ids[tvid].get('id')

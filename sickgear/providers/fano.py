@@ -25,7 +25,6 @@ from .. import logger
 from ..helpers import try_int
 from bs4_parser import BS4Parser
 
-from _23 import unidecode
 from six import iteritems
 
 FLTAG = r'</a>\s+<img[^>]+%s[^<]+<br'
@@ -78,7 +77,6 @@ class FanoProvider(generic.TorrentProvider):
         for mode in search_params:
             rc['cats'] = re.compile('(?i)cat=(?:%s)' % self._categories_string(mode, template='', delimiter='|'))
             for search_string in search_params[mode]:
-                search_string = unidecode(search_string)
                 search_string = '+'.join(rc['abd'].sub(r'%22\1%22', search_string).split())
                 search_url = self.urls['search'] % (search_string, self._categories_string(mode))
 

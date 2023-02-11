@@ -23,7 +23,6 @@ from .. import logger
 from ..helpers import try_int
 from bs4_parser import BS4Parser
 
-from _23 import unidecode
 from six import iteritems
 
 
@@ -67,7 +66,6 @@ class TorrentingProvider(generic.TorrentProvider):
             'get': 'download'})])
         for mode in search_params:
             for search_string in search_params[mode]:
-                search_string = unidecode(search_string)
                 search_url = self.urls['search'] % (self._categories_string(), search_string)
 
                 html = self.get_url(search_url)

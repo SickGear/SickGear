@@ -23,7 +23,6 @@ from exceptions_helper import ex
 from json_helper import json_dumps, json_load
 
 from _23 import b64encodestring, decode_str, etree, quote, unquote, unquote_plus, urlencode
-from six import PY2, text_type
 # noinspection PyUnresolvedReferences
 from six.moves import urllib
 
@@ -150,8 +149,7 @@ class XBMCNotifier(Notifier):
         password = self._choose(password, sickgear.XBMC_PASSWORD)
 
         for key in command:
-            if not PY2 or type(command[key]) == text_type:
-                command[key] = command[key].encode('utf-8')
+            command[key] = command[key].encode('utf-8')
 
         enc_command = urlencode(command)
         self._log_debug(u'Encoded API command: ' + enc_command)

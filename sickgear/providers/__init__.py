@@ -22,7 +22,6 @@ from .newznab import NewznabConstants
 from .. import logger
 import sickgear
 
-from _23 import filter_list, filter_iter
 from six import iteritems, itervalues
 
 # noinspection PyUnreachableCode
@@ -50,7 +49,7 @@ for module in __all__:
     try:
         m = importlib.import_module('.' + module, 'sickgear.providers')
         globals().update({n: getattr(m, n) for n in m.__all__} if hasattr(m, '__all__')
-                         else dict(filter_iter(lambda t: '_' != t[0][0], iteritems(m.__dict__))))
+                         else dict(filter(lambda t: '_' != t[0][0], iteritems(m.__dict__))))
     except ImportError as e:
         if 'custom' != module[0:6]:
             raise e
@@ -74,12 +73,12 @@ def sortedProviderList():
             newList.append(providerDict[curModule])
 
     if not sickgear.PROVIDER_ORDER:
-        nzb = filter_list(lambda p: p.providerType == generic.GenericProvider.NZB, itervalues(providerDict))
-        tor = filter_list(lambda p: p.providerType != generic.GenericProvider.NZB, itervalues(providerDict))
-        newList = sorted(filter_iter(lambda p: not p.anime_only, nzb), key=lambda v: v.get_id()) + \
-            sorted(filter_iter(lambda p: not p.anime_only, tor), key=lambda v: v.get_id()) + \
-            sorted(filter_iter(lambda p: p.anime_only, nzb), key=lambda v: v.get_id()) + \
-            sorted(filter_iter(lambda p: p.anime_only, tor), key=lambda v: v.get_id())
+        nzb = list(filter(lambda p: p.providerType == generic.GenericProvider.NZB, itervalues(providerDict)))
+        tor = list(filter(lambda p: p.providerType != generic.GenericProvider.NZB, itervalues(providerDict)))
+        newList = sorted(filter(lambda p: not p.anime_only, nzb), key=lambda v: v.get_id()) + \
+            sorted(filter(lambda p: not p.anime_only, tor), key=lambda v: v.get_id()) + \
+            sorted(filter(lambda p: p.anime_only, nzb), key=lambda v: v.get_id()) + \
+            sorted(filter(lambda p: p.anime_only, tor), key=lambda v: v.get_id())
 
     # add any modules that are missing from that list
     for curModule in providerDict:
@@ -119,7 +118,7 @@ def make_unique_list(p_list, d_list=None):
 
     default_names = [d.name for d in d_list or []]
 
-    p_list = filter_iter(lambda _x: _x.get_id() not in ['sick_beard_index'], p_list)
+    p_list = filter(lambda _x: _x.get_id() not in ['sick_beard_index'], p_list)
     for cur_p in p_list:
         g_name = generic_provider_name(cur_p.name)
         g_url = generic_provider_url(cur_p.url)
@@ -139,7 +138,7 @@ def make_unique_list(p_list, d_list=None):
 def getNewznabProviderList(data):
     # type: (AnyStr) -> List
     defaultList = [makeNewznabProvider(x) for x in getDefaultNewznabProviders().split('!!!')]
-    providerList = make_unique_list(filter_list(lambda _x: _x, [makeNewznabProvider(x) for x in data.split('!!!')]),
+    providerList = make_unique_list(list(filter(lambda _x: _x, [makeNewznabProvider(x) for x in data.split('!!!')])),
                                     defaultList)
 
     providerDict = dict(zip([x.name for x in providerList], providerList))
@@ -158,7 +157,7 @@ def getNewznabProviderList(data):
                       'server_type'):
                 setattr(providerDict[curDefault.name], k, getattr(curDefault, k))
 
-    return filter_list(lambda _x: _x, providerList)
+    return list(filter(lambda _x: _x, providerList))
 
 
 def makeNewznabProvider(config_string):
@@ -189,9 +188,9 @@ def makeNewznabProvider(config_string):
 
 
 def getTorrentRssProviderList(data):
-    providerList = filter_list(lambda _x: _x, [makeTorrentRssProvider(x) for x in data.split('!!!')])
+    providerList = list(filter(lambda _x: _x, [makeTorrentRssProvider(x) for x in data.split('!!!')]))
 
-    return filter_list(lambda _x: _x, providerList)
+    return list(filter(lambda _x: _x, providerList))
 
 
 def makeTorrentRssProvider(config_string):

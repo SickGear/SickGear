@@ -34,8 +34,6 @@ from .classes import Proper, SimpleNamespace
 from .search import wanted_episodes, get_aired_in_season, set_wanted_aired
 from .tv import TVEpisode
 
-from _23 import filter_list
-
 # noinspection PyUnreachableCode
 if False:
     from typing import Any, AnyStr, Dict, List, Optional, Union
@@ -520,8 +518,8 @@ class RecentSearchQueueItem(generic_queue.QueueItem):
         orig_thread_name = threading.current_thread().name
         threads = []
 
-        providers = filter_list(lambda x: x.is_active() and x.enable_recentsearch,
-                                sickgear.providers.sortedProviderList())
+        providers = list(filter(lambda x: x.is_active() and x.enable_recentsearch,
+                                sickgear.providers.sortedProviderList()))
         for cur_provider in providers:
             if not cur_provider.cache.should_update():
                 continue

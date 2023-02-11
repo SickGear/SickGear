@@ -30,9 +30,6 @@ from .rssfeeds import RSSFeeds
 from .sgdatetime import timestamp_near
 from .tv import TVEpisode
 
-from _23 import filter_list, map_iter
-from six import PY2, text_type
-
 # noinspection PyUnreachableCode
 if False:
     from typing import Any, AnyStr, Dict, List, Tuple, Union
@@ -315,16 +312,13 @@ class TVCache(object):
 
         if season_number and episode_numbers:
             # store episodes as a separated string
-            episode_text = '|%s|' % '|'.join(map_iter(str, episode_numbers))
+            episode_text = '|%s|' % '|'.join(map(str, episode_numbers))
 
             # get the current timestamp
             cur_timestamp = int(timestamp_near(datetime.datetime.now()))
 
             # get quality of release
             quality = parse_result.quality
-
-            if PY2 and not isinstance(name, text_type):
-                name = text_type(name, 'utf-8', 'replace')
 
             # get release group
             release_group = parse_result.release_group
@@ -376,7 +370,7 @@ class TVCache(object):
         if date:
             sql += ' AND time >= ' + str(int(time.mktime(date.timetuple())))
 
-        return filter_list(lambda x: x['indexerid'] != 0, my_db.select(sql, [self.providerID]))
+        return list(filter(lambda x: x['indexerid'] != 0, my_db.select(sql, [self.providerID])))
 
     def findNeededEpisodes(self, ep_obj_list, manual_search=False):
         # type: (Union[TVEpisode, List[TVEpisode]], bool) -> Dict[TVEpisode, SearchResult]

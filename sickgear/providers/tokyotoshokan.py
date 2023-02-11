@@ -22,7 +22,7 @@ from .. import show_name_helpers, tvcache
 from ..helpers import try_int
 from bs4_parser import BS4Parser
 
-from _23 import filter_list, map_list, urlencode
+from _23 import urlencode
 from six import iteritems
 
 
@@ -78,10 +78,10 @@ class TokyoToshokanProvider(generic.TorrentProvider):
 
                                     info = top.find('td', class_='desc-top')
                                     title = info and re.sub(r'[ .]{2,}', '.', info.get_text().strip())
-                                    links = info and map_list(lambda l: l.get('href', ''), info.find_all('a')) or None
+                                    links = info and list(map(lambda l: l.get('href', ''), info.find_all('a'))) or None
                                     download_url = self._link(
-                                        (filter_list(lambda l: 'magnet:' in l, links)
-                                         or filter_list(lambda l: not re.search(r'(magnet:|\.se).+', l), links))[0])
+                                        (list(filter(lambda l: 'magnet:' in l, links))
+                                         or list(filter(lambda l: not re.search(r'(magnet:|\.se).+', l), links)))[0])
                                 except (AttributeError, TypeError, ValueError, IndexError):
                                     continue
 

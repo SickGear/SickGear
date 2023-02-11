@@ -23,7 +23,7 @@ import sickgear.providers
 from . import db, helpers, logger, naming
 from lib.api_trakt import TraktAPI
 
-from _23 import filter_list, urlsplit, urlunsplit
+from _23 import urlsplit, urlunsplit
 from six import string_types
 
 
@@ -831,7 +831,7 @@ class ConfigMigrator(object):
     # Migration v15: Transmithe.net variables
     def _migrate_v15(self):
         try:
-            neb = filter_list(lambda p: 'Nebulance' in p.name, sickgear.providers.sortedProviderList())[0]
+            neb = list(filter(lambda p: 'Nebulance' in p.name, sickgear.providers.sortedProviderList()))[0]
         except (BaseException, Exception):
             return
         # get the old settings from the file and store them in the new variable names

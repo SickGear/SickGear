@@ -55,8 +55,8 @@ from browser_ua import get_ua
 from configobj import ConfigObj
 from api_trakt import TraktAPI
 
-from _23 import b64encodestring, decode_bytes, filter_iter, list_items, map_list, ordered_dict, scandir
-from six import iteritems, PY2, string_types
+from _23 import b64encodestring, decode_bytes, scandir
+from six import iteritems, string_types
 import sg_helpers
 
 # noinspection PyUnreachableCode
@@ -1353,10 +1353,10 @@ def init_stage_1(console_logging):
     EPISODE_VIEW_MISSED_RANGE = check_setting_int(CFG, 'GUI', 'episode_view_missed_range', 7)
 
     HISTORY_LAYOUT = check_setting_str(CFG, 'GUI', 'history_layout', 'detailed')
-    BROWSELIST_HIDDEN = map_list(
+    BROWSELIST_HIDDEN = list(map(
         lambda y: TVidProdid.glue in y and y or '%s%s%s' % (
             (TVINFO_TVDB, TVINFO_IMDB)[bool(helpers.parse_imdb_id(y))], TVidProdid.glue, y),
-        [x.strip() for x in check_setting_str(CFG, 'GUI', 'browselist_hidden', '').split('|~|') if x.strip()])
+        [x.strip() for x in check_setting_str(CFG, 'GUI', 'browselist_hidden', '').split('|~|') if x.strip()]))
     BROWSELIST_MRU = sg_helpers.ast_eval(check_setting_str(CFG, 'GUI', 'browselist_prefs', None), {})
 
     BACKUP_DB_PATH = check_setting_str(CFG, 'Backup', 'backup_db_path', '')
@@ -1450,7 +1450,7 @@ def init_stage_1(console_logging):
                     setattr(nzb_prov, attr, check_setting_str(CFG, prov_id_uc, attr_check, default))
                 elif isinstance(default, int):
                     setattr(nzb_prov, attr, check_setting_int(CFG, prov_id_uc, attr_check, default))
-    for cur_provider in filter_iter(lambda p: abs(zlib.crc32(decode_bytes(p.name))) + 40000400 in (
+    for cur_provider in filter(lambda p: abs(zlib.crc32(decode_bytes(p.name))) + 40000400 in (
             1449593765, 1597250020, 1524942228, 160758496, 2925374331
     ) or (p.url and abs(zlib.crc32(decode_bytes(re.sub(r'[./]', '', p.url[-10:])))) + 40000400 in (
             2417143804,)), providers.sortedProviderList()):
@@ -1504,24 +1504,6 @@ def init_stage_1(console_logging):
         except (BaseException, Exception):
             pass
     logger.sb_log_instance.init_logging(console_logging=console_logging)
-
-    if PY2:
-        try:
-            import _scandir
-        except ImportError:
-            _scandir = None
-
-        try:
-            import ctypes
-        except ImportError:
-            ctypes = None
-
-        if None is not _scandir and None is not ctypes and not getattr(_scandir, 'DirEntry', None):
-            MODULE_UPDATE_STRING = \
-                'Your scandir binary module is outdated, using the slow but newer Python module.' \
-                '<br>Upgrade the binary at a command prompt with' \
-                ' # <span class="boldest">python -m pip install -U scandir</span>' \
-                '<br>Important: You <span class="boldest">must</span> Shutdown SickGear before upgrading'
 
     showList = []
     showDict = {}
@@ -1865,7 +1847,7 @@ def save_config():
 
     # For passwords you must include the word `password` in the item_name and
     # add `helpers.encrypt(ITEM_NAME, ENCRYPTION_VERSION)` in save_config()
-    new_config['General'] = ordered_dict()
+    new_config['General'] = dict()
     s_z = check_setting_int(CFG, 'General', 'stack_size', 0)
     if s_z:
         new_config['General']['stack_size'] = s_z
@@ -1927,7 +1909,8 @@ def save_config():
     new_config['General']['flatten_folders_default'] = int(FLATTEN_FOLDERS_DEFAULT)
     new_config['General']['anime_default'] = int(ANIME_DEFAULT)
     new_config['General']['provider_order'] = ' '.join(PROVIDER_ORDER)
-    new_config['General']['provider_homes'] = '%s' % dict([(pid, v) for pid, v in list_items(PROVIDER_HOMES) if pid in [
+    new_config['General']['provider_homes'] = '%s' % dict([(pid, v) for pid, v in list(PROVIDER_HOMES.items())
+                                                           if pid in [
         p.get_id() for p in [x for x in providers.sortedProviderList() if GenericProvider.TORRENT == x.providerType]]])
     new_config['General']['update_notify'] = int(UPDATE_NOTIFY)
     new_config['General']['update_auto'] = int(UPDATE_AUTO)
@@ -2014,7 +1997,7 @@ def save_config():
     new_config['Backup']['backup_db_max_count'] = BACKUP_DB_MAX_COUNT
 
     default_not_zero = ('enable_recentsearch', 'enable_backlog', 'enable_scheduled_backlog', 'use_after_get_data')
-    for src in filter_iter(lambda px: GenericProvider.TORRENT == px.providerType, providers.sortedProviderList()):
+    for src in filter(lambda px: GenericProvider.TORRENT == px.providerType, providers.sortedProviderList()):
         src_id = src.get_id()
         src_id_uc = src_id.upper()
         new_config[src_id_uc] = {}
@@ -2052,19 +2035,19 @@ def save_config():
             del new_config[src_id_uc]
 
     default_not_zero = ('enable_recentsearch', 'enable_backlog', 'enable_scheduled_backlog')
-    for src in filter_iter(lambda px: GenericProvider.NZB == px.providerType, providers.sortedProviderList()):
+    for src in filter(lambda px: GenericProvider.NZB == px.providerType, providers.sortedProviderList()):
         src_id = src.get_id()
         src_id_uc = src.get_id().upper()
         new_config[src_id_uc] = {}
         if int(src.enabled):
             new_config[src_id_uc][src_id] = int(src.enabled)
 
-        for attr in filter_iter(lambda _a: None is not getattr(src, _a, None),
+        for attr in filter(lambda _a: None is not getattr(src, _a, None),
                                 ('api_key', 'digest', 'username', 'search_mode')):
             if 'search_mode' != attr or 'eponly' != getattr(src, attr):
                 new_config[src_id_uc]['%s_%s' % (src_id, attr)] = getattr(src, attr)
 
-        for attr in filter_iter(lambda _a: None is not getattr(src, _a, None), (
+        for attr in filter(lambda _a: None is not getattr(src, _a, None), (
                 'enable_recentsearch', 'enable_backlog', 'enable_scheduled_backlog',
                 'scene_only', 'scene_loose', 'scene_loose_active',
                 'scene_rej_nuked', 'scene_nuked_active',
@@ -2280,7 +2263,7 @@ def save_config():
         cfg_lc = cfg.lower()
         cfg_keys += [cfg]
         new_config[cfg] = {}
-        for (k, v) in filter_iter(lambda arg: any([arg[1]]) or (
+        for (k, v) in filter(lambda arg: any([arg[1]]) or (
                 # allow saving where item value default is non-zero but 0 is a required setting value
                 cfg_lc in ('kodi', 'xbmc', 'synoindex', 'nzbget', 'torrent', 'telegram')
                 and arg[0] in ('always_on', 'priority', 'send_image'))
@@ -2320,7 +2303,7 @@ def save_config():
                 new_config[notifier]['%s_notify_onsubtitledownload' % notifier.lower()] = int(onsubtitledownload)
 
     # remove empty stanzas
-    for k in filter_iter(lambda c: not new_config[c], cfg_keys):
+    for k in filter(lambda c: not new_config[c], cfg_keys):
         del new_config[k]
 
     new_config['Newznab'] = {}

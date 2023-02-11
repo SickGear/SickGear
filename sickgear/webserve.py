@@ -90,9 +90,9 @@ from lib.api_trakt.exceptions import TraktException, TraktAuthException
 
 import lib.rarfile.rarfile as rarfile
 
-from _23 import decode_bytes, decode_str, filter_list, filter_iter, getargspec, list_keys, list_values, \
-    map_consume, map_iter, map_list, map_none, ordered_dict, quote_plus, unquote_plus, urlparse
-from six import binary_type, integer_types, iteritems, iterkeys, itervalues, moves, PY2, string_types
+from _23 import decode_bytes, decode_str, getargspec, \
+    map_consume, map_none, quote_plus, unquote_plus, urlparse
+from six import binary_type, integer_types, iteritems, iterkeys, itervalues, moves, string_types
 
 # noinspection PyUnreachableCode
 if False:
@@ -198,9 +198,7 @@ class RouteHandler(LegacyBaseHandler):
             return [self.decode_data(d) for d in data]
         if not isinstance(data, string_types):
             return data
-        if not PY2:
-            return data.encode('latin1').decode('utf-8')
-        return data.decode('utf-8')
+        return data.encode('latin1').decode('utf-8')
 
     @gen.coroutine
     def route_method(self, route, use_404=False, limit_route=None, xsrf_filter=True):
@@ -240,7 +238,7 @@ class RouteHandler(LegacyBaseHandler):
                 # no filtering for legacy and routes that depend on *args and **kwargs
                 result = yield self.async_call(method, request_kwargs)  # method(**request_kwargs)
             else:
-                filter_kwargs = dict(filter_iter(lambda kv: kv[0] in method_args, iteritems(request_kwargs)))
+                filter_kwargs = dict(filter(lambda kv: kv[0] in method_args, iteritems(request_kwargs)))
                 result = yield self.async_call(method, filter_kwargs)  # method(**filter_kwargs)
             self.finish(result)
 
@@ -249,8 +247,6 @@ class RouteHandler(LegacyBaseHandler):
         try:
             return function(**kw)
         except (BaseException, Exception) as e:
-            if PY2:
-                raise Exception(traceback.format_exc().replace('\n', '<br>'))
             raise e
 
     def page_not_found(self):
@@ -1393,7 +1389,7 @@ r.close()
         if data:
             my_db = db.DBConnection(row_type='dict')
 
-            media_paths = map_list(lambda arg: os.path.basename(arg[1]['path_file']), iteritems(data))
+            media_paths = list(map(lambda arg: os.path.basename(arg[1]['path_file']), iteritems(data)))
 
             def chunks(lines, n):
                 for c in range(0, len(lines), n):
@@ -1553,13 +1549,13 @@ class Home(MainHandler):
         index = 0
         if 'custom' == sickgear.SHOWLIST_TAGVIEW:
             for name in sickgear.SHOW_TAGS:
-                results = filter_list(lambda so: so.tag == name, sickgear.showList)
+                results = list(filter(lambda so: so.tag == name, sickgear.showList))
                 if results:
                     t.showlists.append(['container%s' % index, name, results])
                 index += 1
         elif 'anime' == sickgear.SHOWLIST_TAGVIEW:
-            show_results = filter_list(lambda so: not so.anime, sickgear.showList)
-            anime_results = filter_list(lambda so: so.anime, sickgear.showList)
+            show_results = list(filter(lambda so: not so.anime, sickgear.showList))
+            anime_results = list(filter(lambda so: so.anime, sickgear.showList))
             if show_results:
                 t.showlists.append(['container%s' % index, 'Show List', show_results])
                 index += 1
@@ -1904,7 +1900,7 @@ class Home(MainHandler):
             ' AND notify_list != ""',
             [TVidProdid.glue])
         notify_lists = {}
-        for r in filter_iter(lambda x: x['notify_list'].strip(), rows):
+        for r in filter(lambda x: x['notify_list'].strip(), rows):
             # noinspection PyTypeChecker
             notify_lists[r['tvid_prodid']] = r['notify_list']
 
@@ -2265,7 +2261,7 @@ class Home(MainHandler):
                 del (ep_counts['totals'][0])
 
         ep_counts['eps_all'] = sum(itervalues(ep_counts['totals']))
-        ep_counts['eps_most'] = max(list_values(ep_counts['totals']) + [0])
+        ep_counts['eps_most'] = max(list(ep_counts['totals'].values()) + [0])
         all_seasons = sorted(iterkeys(ep_counts['totals']), reverse=True)
         t.lowest_season, t.highest_season = all_seasons and (all_seasons[-1], all_seasons[0]) or (0, 0)
 
@@ -2436,7 +2432,7 @@ class Home(MainHandler):
         if 'custom' == sickgear.SHOWLIST_TAGVIEW:
             sorted_show_lists = []
             for tag in sickgear.SHOW_TAGS:
-                results = filter_list(lambda _so: _so.tag == tag, sickgear.showList)
+                results = list(filter(lambda _so: _so.tag == tag, sickgear.showList))
                 if results:
                     sorted_show_lists.append([tag, sorted(results, key=lambda x: titler(x.unique_name))])
             # handle orphaned shows
@@ -2841,7 +2837,7 @@ class Home(MainHandler):
 
         errors = []
         with show_obj.lock:
-            show_obj.quality = Quality.combineQualities(map_list(int, any_qualities), map_list(int, best_qualities))
+            show_obj.quality = Quality.combineQualities(list(map(int, any_qualities)), list(map(int, best_qualities)))
             show_obj.upgrade_once = upgrade_once
 
             # reversed for now
@@ -3371,7 +3367,7 @@ class Home(MainHandler):
         sickgear.search_queue.remove_old_fifo(sickgear.search_queue.MANUAL_SEARCH_HISTORY)
         results = sickgear.search_queue.MANUAL_SEARCH_HISTORY
 
-        for item in filter_iter(lambda q: hasattr(q, 'segment_ns'), queued):
+        for item in filter(lambda q: hasattr(q, 'segment_ns'), queued):
             for ep_ns in item.segment_ns:
                 ep_data, uniq_sxe = self.prepare_episode(ep_ns, 'queued')
                 ep_data_list.append(ep_data)
@@ -3387,9 +3383,9 @@ class Home(MainHandler):
                 seen_eps.add(uniq_sxe)
 
         episode_params = dict(searchstate='finished', retrystate=True, statusoverview=True)
-        for item in filter_iter(lambda r: hasattr(r, 'segment_ns') and (
+        for item in filter(lambda r: hasattr(r, 'segment_ns') and (
                 not tvid_prodid or tvid_prodid == str(r.show_ns.tvid_prodid)), results):
-            for ep_ns in filter_iter(
+            for ep_ns in filter(
                     lambda e: (e.show_ns.tvid, e.show_ns.prodid, e.season, e.episode) not in seen_eps, item.segment_ns):
                 ep_obj = getattr(ep_ns, 'ep_obj', None)
                 if not ep_obj:
@@ -3403,7 +3399,7 @@ class Home(MainHandler):
                 ep_data_list.append(ep_data)
                 seen_eps.add(uniq_sxe)
 
-            for snatched in filter_iter(lambda s: ((s.tvid, s.prodid, s.season, s.episode) not in seen_eps),
+            for snatched in filter(lambda s: ((s.tvid, s.prodid, s.season, s.episode) not in seen_eps),
                                         item.snatched_eps):
                 ep_obj = getattr(snatched, 'ep_obj', None)
                 if not ep_obj:
@@ -3941,12 +3937,12 @@ class AddShows(Home):
         b_term = decode_str(used_search_term).strip()
         terms = []
         try:
-            for cur_term in ([], [b_term.encode('utf-8')])[PY2] + [unidecode(b_term), b_term]:
+            for cur_term in [unidecode(b_term), b_term]:
                 if cur_term not in terms:
                     terms += [cur_term]
         except (BaseException, Exception):
             text = used_search_term.strip()
-            terms = [text if not PY2 else text.encode('utf-8')]
+            terms = text
 
         return set(s for s in set([used_search_term] + terms) if s)
 
@@ -4082,7 +4078,7 @@ class AddShows(Home):
                     for tvid, name in iteritems(sickgear.TVInfoAPI().all_sources)}
 
         if TVINFO_TRAKT in results and TVINFO_TVDB in results:
-            tvdb_ids = list_keys(results[TVINFO_TVDB])
+            tvdb_ids = list(results[TVINFO_TVDB])
             results[TVINFO_TRAKT] = {k: v for k, v in iteritems(results[TVINFO_TRAKT]) if v['ids'].tvdb not in tvdb_ids}
 
         def in_db(tvid, prod_id):
@@ -4397,9 +4393,9 @@ class AddShows(Home):
         t.infosrc = sickgear.TVInfoAPI().search_sources
         search_tvid = None
         if use_show_name and 1 == show_name.count(':'):  # if colon is found once
-            search_tvid = filter_list(lambda x: bool(x),
+            search_tvid = list(filter(lambda x: bool(x),
                                       [('%s:' % sickgear.TVInfoAPI(_tvid).config['slug']) in show_name and _tvid
-                                       for _tvid, _ in iteritems(t.infosrc)])
+                                       for _tvid, _ in iteritems(t.infosrc)]))
             search_tvid = 1 == len(search_tvid) and search_tvid[0]
         t.provided_tvid = search_tvid or int(tvid or sickgear.TVINFO_DEFAULT)
         t.infosrc_icons = [sickgear.TVInfoAPI(cur_tvid).config.get('icon') for cur_tvid in t.infosrc]
@@ -4530,7 +4526,7 @@ class AddShows(Home):
 
     def info_anidb(self, ids, show_name):
 
-        if not filter_list(lambda tvid_prodid: helpers.find_show_by_id(tvid_prodid), ids.split(' ')):
+        if not list(filter(lambda tvid_prodid: helpers.find_show_by_id(tvid_prodid), ids.split(' '))):
             return self.new_show('|'.join(['', '', '', ' '.join([ids, show_name])]), use_show_name=True, is_anime=True)
 
     @staticmethod
@@ -4617,8 +4613,8 @@ class AddShows(Home):
 
         oldest, newest, oldest_dt, newest_dt = None, None, 9999999, 0
         show_list = (data or {}).get('list', {}).get('items', {})
-        idx_ids = dict(map_iter(lambda so: (so.imdbid, (so.tvid, so.prodid)),
-                                filter_iter(lambda _so: getattr(_so, 'imdbid', None), sickgear.showList)))
+        idx_ids = dict(map(lambda so: (so.imdbid, (so.tvid, so.prodid)),
+                           filter(lambda _so: getattr(_so, 'imdbid', None), sickgear.showList)))
 
         # list_id = (data or {}).get('list', {}).get('id', {})
         for row in show_list:
@@ -4753,7 +4749,7 @@ class AddShows(Home):
 
                     show_obj = helpers.find_show_by_id({TVINFO_IMDB: int(ids['imdb'].replace('tt', ''))},
                                                        no_mapped_ids=False)
-                    for tvid in filter_iter(lambda _tvid: _tvid == show_obj.tvid, sickgear.TVInfoAPI().search_sources):
+                    for tvid in filter(lambda _tvid: _tvid == show_obj.tvid, sickgear.TVInfoAPI().search_sources):
                         infosrc_slug, infosrc_url = (sickgear.TVInfoAPI(tvid).config[x] for x in
                                                      ('slug', 'show_url'))
                         filtered[-1]['ids'][infosrc_slug] = show_obj.prodid
@@ -5114,7 +5110,7 @@ class AddShows(Home):
 
     def info_trakt(self, ids, show_name):
 
-        if not filter_list(lambda tvid_prodid: helpers.find_show_by_id(tvid_prodid), ids.split(' ')):
+        if not list(filter(lambda tvid_prodid: helpers.find_show_by_id(tvid_prodid), ids.split(' '))):
             return self.new_show('|'.join(['', '', '', ' '.join([ids, show_name])]), use_show_name=True)
 
     def ne_default(self):
@@ -5428,7 +5424,7 @@ class AddShows(Home):
     # noinspection PyUnusedLocal
     def info_tvmaze(self, ids, show_name):
 
-        if not filter_list(lambda tvid_prodid: helpers.find_show_by_id(tvid_prodid), ids.split(' ')):
+        if not list(filter(lambda tvid_prodid: helpers.find_show_by_id(tvid_prodid), ids.split(' '))):
             return self.new_show('|'.join(['', '', '', ' '.join([ids, show_name])]), use_show_name=True)
 
     def tvc_default(self):
@@ -5727,7 +5723,7 @@ class AddShows(Home):
 
                         dt_ordinal = 0
                         dt_string = ''
-                        date_tags = filter_list(lambda t: t.find('span'), row.find_all('div', class_='clamp-details'))
+                        date_tags = list(filter(lambda t: t.find('span'), row.find_all('div', class_='clamp-details')))
                         if date_tags:
                             dt = dateutil.parser.parse(date_tags[0].get_text().strip())
                             dt_ordinal = dt.toordinal()
@@ -5840,11 +5836,11 @@ class AddShows(Home):
             tvid_prodid_list = []
 
             # first, process known ids
-            for tvid, infosrc_slug in filter_iter(
+            for tvid, infosrc_slug in filter(
                     lambda tvid_slug: item['ids'].get(tvid_slug[1])
                     and not sickgear.TVInfoAPI(tvid_slug[0]).config.get('defunct'),
-                    map_iter(lambda _tvid: (_tvid, sickgear.TVInfoAPI(_tvid).config['slug']),
-                             iterkeys(sickgear.TVInfoAPI().all_sources))):
+                    map(lambda _tvid: (_tvid, sickgear.TVInfoAPI(_tvid).config['slug']),
+                        iterkeys(sickgear.TVInfoAPI().all_sources))):
                 try:
                     src_id = item['ids'][infosrc_slug]
                     tvid_prodid_list += ['%s:%s' % (infosrc_slug, src_id)]
@@ -5899,7 +5895,7 @@ class AddShows(Home):
                 known.append(item['show_id'])
                 t.all_shows.append(item)
 
-                if any(filter_iter(lambda tp: tp in sickgear.BROWSELIST_HIDDEN, tvid_prodid_list)):
+                if any(filter(lambda tp: tp in sickgear.BROWSELIST_HIDDEN, tvid_prodid_list)):
                     item['hide'] = True
                     t.num_hidden += 1
 
@@ -6035,7 +6031,7 @@ class AddShows(Home):
             any_qualities = [any_qualities]
         if type(best_qualities) != list:
             best_qualities = [best_qualities]
-        new_quality = Quality.combineQualities(map_list(int, any_qualities), map_list(int, best_qualities))
+        new_quality = Quality.combineQualities(list(map(int, any_qualities)), list(map(int, best_qualities)))
         upgrade_once = config.checkbox_to_value(upgrade_once)
 
         wanted_begin = config.minimax(wanted_begin, 0, -1, 10)
@@ -6403,8 +6399,7 @@ class Manage(MainHandler):
                         ' AND season != 0'
                         ' AND indexer = ? AND showid = ?',
                         status_list + tvid_prodid_list)
-                    what = (sql_result and '|'.join(map_iter(lambda r: '%sx%s' % (r['season'], r['episode']),
-                                                             sql_result))
+                    what = (sql_result and '|'.join(map(lambda r: '%sx%s' % (r['season'], r['episode']), sql_result))
                             or None)
                     to = new_status
 
@@ -6562,7 +6557,8 @@ class Manage(MainHandler):
                         ' WHERE indexer = ? AND showid = ?'
                         ' AND season != 0 AND status LIKE \'%4\'',
                         TVidProdid(cur_tvid_prodid).list)
-                    to_download[cur_tvid_prodid] = map_list(lambda x: '%sx%s' % (x['season'], x['episode']), sql_result)
+                    to_download[cur_tvid_prodid] = list(map(lambda x: '%sx%s' % (x['season'], x['episode']),
+                                                            sql_result))
 
                 for epResult in to_download[cur_tvid_prodid]:
                     season, episode = epResult.split('x')
@@ -7461,12 +7457,12 @@ class History(MainHandler):
 
         elif 'failures' in sickgear.HISTORY_LAYOUT:
 
-            t.provider_fail_stats = filter_list(lambda stat: len(stat['fails']), [
+            t.provider_fail_stats = list(filter(lambda stat: len(stat['fails']), [
                 dict(name=p.name, id=p.get_id(), active=p.is_active(), prov_img=p.image_name(),
                      prov_id=p.get_id(),  # 2020.03.17 legacy var, remove at future date
                      fails=p.fails.fails_sorted, next_try=p.get_next_try_time,
                      has_limit=getattr(p, 'has_limit', False), tmr_limit_time=p.tmr_limit_time)
-                for p in sickgear.providerList + sickgear.newznabProviderList])
+                for p in sickgear.providerList + sickgear.newznabProviderList]))
 
             t.provider_fail_cnt = len([p for p in t.provider_fail_stats if len(p['fails'])])
             t.provider_fails = t.provider_fail_cnt  # 2020.03.17 legacy var, remove at future date
@@ -7500,11 +7496,11 @@ class History(MainHandler):
                         return result
 
             with sg_helpers.DOMAIN_FAILURES.lock:
-                t.domain_fail_stats = filter_list(lambda stat: len(stat['fails']), [
+                t.domain_fail_stats = list(filter(lambda stat: len(stat['fails']), [
                     dict(name=k, id=sickgear.GenericProvider.make_id(k), img=img(k), cls=img(k, True),
                          fails=v.fails_sorted, next_try=v.get_next_try_time,
                          has_limit=getattr(v, 'has_limit', False), tmr_limit_time=v.tmr_limit_time)
-                    for k, v in iteritems(sg_helpers.DOMAIN_FAILURES.domain_list)])
+                    for k, v in iteritems(sg_helpers.DOMAIN_FAILURES.domain_list)]))
 
                 t.domain_fail_cnt = len([d for d in t.domain_fail_stats if len(d['fails'])])
 
@@ -7658,7 +7654,7 @@ class History(MainHandler):
                                                             ParentId=folder_id,
                                                             Filters='IsPlayed',
                                                             format='json'), timeout=10, parse_json=True) or {}
-                        for d in filter_iter(lambda item: 'Episode' == item.get('Type', ''), items.get('Items')):
+                        for d in filter(lambda item: 'Episode' == item.get('Type', ''), items.get('Items')):
                             try:
                                 root_dir_found = False
                                 path_file = d.get('Path')
@@ -7700,11 +7696,11 @@ class History(MainHandler):
 
             if states:
                 # Prune user removed items that are no longer being returned by API
-                media_paths = map_list(lambda arg: os.path.basename(arg[1]['path_file']), iteritems(states))
+                media_paths = list(map(lambda arg: os.path.basename(arg[1]['path_file']), iteritems(states)))
                 sql = 'FROM tv_episodes_watched WHERE hide=1 AND label LIKE "%%{Emby}"'
                 my_db = db.DBConnection(row_type='dict')
                 files = my_db.select('SELECT location %s' % sql)
-                for i in filter_iter(lambda f: os.path.basename(f['location']) not in media_paths, files):
+                for i in filter(lambda f: os.path.basename(f['location']) not in media_paths, files):
                     loc = i.get('location')
                     if loc:
                         my_db.select('DELETE %s AND location="%s"' % (sql, loc))
@@ -7769,11 +7765,11 @@ class History(MainHandler):
 
             if states:
                 # Prune user removed items that are no longer being returned by API
-                media_paths = map_list(lambda arg: os.path.basename(arg[1]['path_file']), iteritems(states))
+                media_paths = list(map(lambda arg: os.path.basename(arg[1]['path_file']), iteritems(states)))
                 sql = 'FROM tv_episodes_watched WHERE hide=1 AND label LIKE "%%{Plex}"'
                 my_db = db.DBConnection(row_type='dict')
                 files = my_db.select('SELECT location %s' % sql)
-                for i in filter_iter(lambda f: os.path.basename(f['location']) not in media_paths, files):
+                for i in filter(lambda f: os.path.basename(f['location']) not in media_paths, files):
                     loc = i.get('location')
                     if loc:
                         my_db.select('DELETE %s AND location="%s"' % (sql, loc))
@@ -7844,7 +7840,7 @@ class History(MainHandler):
             for cur_result in sql_result:
                 show_obj = helpers.find_show_by_id(tvid_prodid_dict)
                 ep_obj = show_obj.get_episode(cur_result['season'], cur_result['episode'])
-                for n in filter_iter(lambda x: x.name.lower() in ('emby', 'kodi', 'plex'),
+                for n in filter(lambda x: x.name.lower() in ('emby', 'kodi', 'plex'),
                                      notifiers.NotifierFactory().get_enabled()):
                     if 'PLEX' == n.name:
                         if updating:
@@ -7966,7 +7962,7 @@ class ConfigGeneral(Config):
                 seasons = [-1] + seasons[0:-1]  # bubble -1
 
             # prepare a seasonal ordered dict for output
-            alts = ordered_dict([(season, {}) for season in seasons])
+            alts = dict([(season, {}) for season in seasons])
 
             # add original show name
             show_obj = sickgear.helpers.find_show_by_id(tvid_prodid, no_mapped_ids=True)
@@ -8057,8 +8053,8 @@ class ConfigGeneral(Config):
         any_qualities = ([], any_qualities.split(','))[any(any_qualities)]
         best_qualities = ([], best_qualities.split(','))[any(best_qualities)]
 
-        sickgear.QUALITY_DEFAULT = int(Quality.combineQualities(map_list(int, any_qualities),
-                                                                map_list(int, best_qualities)))
+        sickgear.QUALITY_DEFAULT = int(Quality.combineQualities(list(map(int, any_qualities)),
+                                                                list(map(int, best_qualities))))
         sickgear.WANTED_BEGIN_DEFAULT = config.minimax(default_wanted_begin, 0, -1, 10)
         sickgear.WANTED_LATEST_DEFAULT = config.minimax(default_wanted_latest, 0, -1, 10)
         sickgear.SHOW_TAG_DEFAULT = default_tag
@@ -8258,7 +8254,7 @@ class ConfigGeneral(Config):
         sickgear.WEB_IPV64 = config.checkbox_to_value(web_ipv64)
         sickgear.HANDLE_REVERSE_PROXY = config.checkbox_to_value(handle_reverse_proxy)
         sickgear.SEND_SECURITY_HEADERS = config.checkbox_to_value(send_security_headers)
-        hosts = ','.join(filter_iter(lambda name: not helpers.re_valid_hostname(with_allowed=False).match(name),
+        hosts = ','.join(filter(lambda name: not helpers.re_valid_hostname(with_allowed=False).match(name),
                                      config.clean_hosts(allowed_hosts).split(',')))
         if not hosts or self.request.host_name in hosts:
             sickgear.ALLOWED_HOSTS = hosts
@@ -8811,7 +8807,7 @@ class ConfigProviders(Config):
                                 [k for k in nzb_src.may_filter
                                  if config.checkbox_to_value(kwargs.get('%s_filter_%s' % (cur_id, k)))])
 
-                    for attr in filter_iter(lambda a: hasattr(nzb_src, a), [
+                    for attr in filter(lambda a: hasattr(nzb_src, a), [
                         'search_fallback', 'enable_recentsearch', 'enable_backlog', 'enable_scheduled_backlog',
                         'scene_only', 'scene_loose', 'scene_loose_active', 'scene_rej_nuked', 'scene_nuked_active'
                     ]):
@@ -8925,12 +8921,12 @@ class ConfigProviders(Config):
                 elif not starify(key, True):
                     setattr(torrent_src, attr, key)
 
-            for attr in filter_iter(lambda a: hasattr(torrent_src, a), [
+            for attr in filter(lambda a: hasattr(torrent_src, a), [
                 'username', 'uid', '_seed_ratio', 'scene_or_contain'
             ]):
                 setattr(torrent_src, attr, str(kwargs.get(src_id_prefix + attr.replace('_seed_', ''), '')).strip())
 
-            for attr in filter_iter(lambda a: hasattr(torrent_src, a), [
+            for attr in filter(lambda a: hasattr(torrent_src, a), [
                 'minseed', 'minleech', 'seed_time'
             ]):
                 setattr(torrent_src, attr, config.to_int(str(kwargs.get(src_id_prefix + attr, '')).strip()))
@@ -8941,7 +8937,7 @@ class ConfigProviders(Config):
                         [k for k in getattr(torrent_src, 'may_filter', 'nop')
                          if config.checkbox_to_value(kwargs.get('%sfilter_%s' % (src_id_prefix, k)))])
 
-            for attr in filter_iter(lambda a: hasattr(torrent_src, a), [
+            for attr in filter(lambda a: hasattr(torrent_src, a), [
                 'confirmed', 'freeleech', 'reject_m2ts', 'use_after_get_data', 'enable_recentsearch',
                 'enable_backlog', 'search_fallback', 'enable_scheduled_backlog',
                 'scene_only', 'scene_loose', 'scene_loose_active',
@@ -8949,7 +8945,7 @@ class ConfigProviders(Config):
             ]):
                 setattr(torrent_src, attr, config.checkbox_to_value(kwargs.get(src_id_prefix + attr)))
 
-            for attr, default in filter_iter(lambda arg: hasattr(torrent_src, arg[0]), [
+            for attr, default in filter(lambda arg: hasattr(torrent_src, arg[0]), [
                 ('search_mode', 'eponly'),
             ]):
                 setattr(torrent_src, attr, str(kwargs.get(src_id_prefix + attr) or default).strip())
@@ -8973,10 +8969,10 @@ class ConfigProviders(Config):
                 setattr(nzb_src, attr, config.checkbox_to_value(kwargs.get(src_id_prefix + attr)) or
                         not getattr(nzb_src, 'supports_backlog', True))
 
-            for attr in filter_iter(lambda a: hasattr(nzb_src, a),
-                                    ['search_fallback', 'enable_backlog', 'enable_scheduled_backlog',
-                                     'scene_only', 'scene_loose', 'scene_loose_active',
-                                     'scene_rej_nuked', 'scene_nuked_active']):
+            for attr in filter(lambda a: hasattr(nzb_src, a),
+                               ['search_fallback', 'enable_backlog', 'enable_scheduled_backlog',
+                                'scene_only', 'scene_loose', 'scene_loose_active',
+                                'scene_rej_nuked', 'scene_nuked_active']):
                 setattr(nzb_src, attr, config.checkbox_to_value(kwargs.get(src_id_prefix + attr)))
 
             for (attr, default) in [('scene_or_contain', ''), ('search_mode', 'eponly')]:

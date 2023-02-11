@@ -25,7 +25,7 @@ from .. import logger
 from ..helpers import sanitize_scene_name
 from bs4_parser import BS4Parser
 
-from _23 import decode_str, filter_list, html_unescape, list_keys, list_values, unidecode
+from _23 import decode_str, html_unescape
 from six import iteritems, iterkeys
 
 
@@ -51,11 +51,11 @@ class ShowRSSProvider(generic.TorrentProvider):
 
     def logged_in(self, y):
         if all([None is y or 'logout' in y,
-                bool(filter_list(lambda c: 'remember_web_' in c, iterkeys(self.session.cookies)))]):
+                bool(list(filter(lambda c: 'remember_web_' in c, iterkeys(self.session.cookies))))]):
             if None is not y:
                 self.shows = dict(re.findall(r'<option value="(\d+)">(.*?)</option>', y))
                 for k, v in iteritems(self.shows):
-                    self.shows[k] = sanitize_scene_name(html_unescape(unidecode(decode_str(v))))
+                    self.shows[k] = sanitize_scene_name(html_unescape(decode_str(v)))
             return True
         return False
 
@@ -74,13 +74,12 @@ class ShowRSSProvider(generic.TorrentProvider):
                 if 'Cache' == mode:
                     search_url = self.urls['browse']
                 else:
-                    search_string = unidecode(search_string)
-                    show_name = filter_list(lambda x: x.lower() == re.sub(r'\s.*', '', search_string.lower()),
-                                            list_values(self.shows))
+                    show_name = list(filter(lambda x: x.lower() == re.sub(r'\s.*', '', search_string.lower()),
+                                            list(self.shows.values())))
                     if not show_name:
                         continue
-                    search_url = self.urls['search'] % list_keys(self.shows)[
-                        list_values(self.shows).index(show_name[0])]
+                    search_url = self.urls['search'] % list(self.shows)[
+                        list(self.shows.values()).index(show_name[0])]
 
                 if search_url in urls:
                     continue

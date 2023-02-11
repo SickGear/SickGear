@@ -1,13 +1,8 @@
 import re
-import sys
 import threading
 
-if 2 == sys.version_info[0]:
-    # noinspection PyProtectedMember
-    from .futures.thread import _WorkItem
-else:
-    # noinspection PyCompatibility,PyProtectedMember
-    from concurrent.futures.thread import _WorkItem
+# noinspection PyProtectedMember,PyUnresolvedReferences
+from concurrent.futures.thread import _WorkItem
 
 
 class GenericWorkItem(_WorkItem):

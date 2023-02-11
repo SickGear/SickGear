@@ -25,7 +25,6 @@ import uuid
 
 import sickgear
 
-from _23 import map_list
 from six import integer_types, iterkeys, string_types
 
 # noinspection PyUnresolvedReferences
@@ -563,8 +562,8 @@ for (attr_name, qual_val) in [
     ('SNATCHED', SNATCHED), ('SNATCHED_PROPER', SNATCHED_PROPER), ('SNATCHED_BEST', SNATCHED_BEST),
     ('DOWNLOADED', DOWNLOADED), ('ARCHIVED', ARCHIVED), ('FAILED', FAILED),
 ]:
-    setattr(Quality, attr_name, map_list(lambda qk: Quality.compositeStatus(qual_val, qk),
-                                         iterkeys(Quality.qualityStrings)))
+    setattr(Quality, attr_name, list(map(lambda qk: Quality.compositeStatus(qual_val, qk),
+                                         iterkeys(Quality.qualityStrings))))
 Quality.SNATCHED_ANY = Quality.SNATCHED + Quality.SNATCHED_PROPER + Quality.SNATCHED_BEST
 
 SD = Quality.combineQualities([Quality.SDTV, Quality.SDDVD], [])

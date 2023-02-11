@@ -33,7 +33,7 @@ from .indexers.indexer_config import TVINFO_TVDB
 from .name_parser.parser import InvalidNameException, InvalidShowException, NameParser
 
 from _23 import decode_str
-from six import iteritems, PY2, string_types
+from six import iteritems, string_types
 from sg_helpers import long_path, cmdline_runner
 
 # noinspection PyUnreachableCode
@@ -824,12 +824,7 @@ class PostProcessor(object):
             script_cmd[0] = os.path.abspath(script_cmd[0])
             self._log(u'Absolute path to script: ' + script_cmd[0], logger.DEBUG)
 
-            if PY2:
-                script_cmd += [ep_obj.location.encode(sickgear.SYS_ENCODING),
-                               self.file_path.encode(sickgear.SYS_ENCODING)
-                               ]
-            else:
-                script_cmd += [ep_obj.location, self.file_path]
+            script_cmd += [ep_obj.location, self.file_path]
 
             script_cmd += ([], [str(ep_obj.show_obj.tvid)])[new_call] + [
                 str(ep_obj.show_obj.prodid),
@@ -1174,9 +1169,8 @@ class PostProcessor(object):
         keepalive = keepalive_stop = None
         if self.webhandler:
             def keep_alive(webh, stop_event):
-                if not PY2:
-                    import asyncio
-                    asyncio.set_event_loop(asyncio.new_event_loop())
+                import asyncio
+                asyncio.set_event_loop(asyncio.new_event_loop())
                 while not stop_event.is_set():
                     stop_event.wait(60)
                     webh('.')

@@ -21,7 +21,6 @@ from . import generic
 from ..helpers import try_int
 
 from six import string_types
-from _23 import filter_list, map_list, unidecode
 
 
 class SpeedAppProvider(generic.TorrentProvider):
@@ -55,14 +54,15 @@ class SpeedAppProvider(generic.TorrentProvider):
         self.perms_needed = self.perms
         if isinstance(resp, dict) and isinstance(resp.get('scopes'), list):
             self._authd = True
-            self.perms_needed = filter_list(lambda x: True is not x, [p in resp.get('scopes') or p for p in self.perms])
+            self.perms_needed = list(filter(lambda x: True is not x,
+                                            [p in resp.get('scopes') or p for p in self.perms]))
             if not self.perms_needed:
                 self.categories = None
                 resp = self.get_url(self.urls['cats'], skip_auth=True, parse_json=True, headers=self.auth_header())
                 if isinstance(resp, list):
-                    categories = [category['id'] for category in filter_list(
+                    categories = [category['id'] for category in list(filter(
                         lambda c: isinstance(c.get('id'), int) and isinstance(c.get('name'), string_types)
-                        and c.get('name').upper() in ('TV PACKS', 'TV HD', 'TV SD'), resp)]
+                        and c.get('name').upper() in ('TV PACKS', 'TV HD', 'TV SD'), resp))]
                     self.categories = {'Cache': categories, 'Episode': categories, 'Season': categories}
 
         return not any(self.perms_needed)
@@ -81,7 +81,7 @@ class SpeedAppProvider(generic.TorrentProvider):
         for mode in search_params:
             for search_string in search_params[mode]:
                 search_url = self.urls['search'] % (
-                    unidecode(search_string), self._categories_string(mode, template='categories[]=%s'))
+                    search_string, self._categories_string(mode, template='categories[]=%s'))
 
                 data_json = self.get_url(search_url, skip_auth=True, parse_json=True, headers=self.auth_header())
                 if self.should_skip():
@@ -111,10 +111,10 @@ class SpeedAppProvider(generic.TorrentProvider):
                ('%s_api_key_tip' % self.get_id()) == key and \
                ((not_authd or self.perms_needed)
                 and ('create token at <a href="%sprofile/api-tokens">%s site</a><br>'
-                     'with perms %s' % (self.url_base, self.name, map_list(
+                     'with perms %s' % (self.url_base, self.name, list(map(
                            lambda p: 't.read' in p and 'Read torrents'
                                      or 't.down' in p and 'Download torrents'
-                                     or 'ch.read' in p and 'Read snatches', self.perms_needed)))
+                                     or 'ch.read' in p and 'Read snatches', self.perms_needed))))
                 .replace('[', '').replace(']', '')
                 or 'token is valid and required permissions are enabled') \
             or ''

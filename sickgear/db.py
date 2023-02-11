@@ -32,7 +32,7 @@ from .sgdatetime import timestamp_near
 
 from sg_helpers import make_path, compress_file, remove_file_perm, scantree
 
-from _23 import filter_iter, filter_list, list_values, scandir
+from _23 import scandir
 from six import iterkeys, iteritems, itervalues
 
 # noinspection PyUnreachableCode
@@ -80,12 +80,12 @@ def mass_upsert_sql(table_name, value_dict, key_dict, sanitise=True):
 
     # sanity: remove k, v pairs in keyDict from valueDict
     if sanitise:
-        value_dict = dict(filter_iter(lambda k: k[0] not in key_dict, iteritems(value_dict)))
+        value_dict = dict(filter(lambda k: k[0] not in key_dict, iteritems(value_dict)))
 
     # noinspection SqlResolve
     cl.append(['UPDATE [%s] SET %s WHERE %s' %
                (table_name, ', '.join(gen_params(value_dict)), ' AND '.join(gen_params(key_dict))),
-               list_values(value_dict) + list_values(key_dict)])
+               list(value_dict.values()) + list(key_dict.values())])
 
     # noinspection SqlResolve
     cl.append(['INSERT INTO [' + table_name + '] (' +
@@ -304,14 +304,14 @@ class DBConnection(object):
         query = 'UPDATE [%s] SET %s WHERE %s' % (
             table_name, ', '.join(gen_params(value_dict)), ' AND '.join(gen_params(key_dict)))
 
-        self.action(query, list_values(value_dict) + list_values(key_dict))
+        self.action(query, list(value_dict.values()) + list(key_dict.values()))
 
         if self.connection.total_changes == changes_before:
             # noinspection SqlResolve
             query = 'INSERT INTO [' + table_name + ']' \
                     + ' (%s)' % ', '.join(itertools.chain(iterkeys(value_dict), iterkeys(key_dict))) \
                     + ' VALUES (%s)' % ', '.join(['?'] * (len(value_dict) + len(key_dict)))
-            self.action(query, list_values(value_dict) + list_values(key_dict))
+            self.action(query, list(value_dict.values()) + list(key_dict.values()))
 
     def tableInfo(self, table_name):
         # type: (AnyStr) -> Dict[AnyStr, Dict[AnyStr, AnyStr]]
@@ -544,7 +544,7 @@ class SchemaUpgrade(object):
         # get old table columns and store the ones we want to keep
         result = self.connection.select('pragma table_info([%s])' % table)
         columns_list = ([column], column)[isinstance(column, list)]
-        keptColumns = filter_list(lambda col: col['name'] not in columns_list, result)
+        keptColumns = list(filter(lambda col: col['name'] not in columns_list, result))
 
         keptColumnsNames = []
         final = []
@@ -759,9 +759,9 @@ def cleanup_old_db_backups(filename):
         d, filename = os.path.split(filename)
         if not d:
             d = sickgear.DATA_DIR
-        for f in filter_iter(lambda fn: fn.is_file() and filename in fn.name and
-                             re.search(r'\.db(\.v\d+)?\.r\d+$', fn.name),
-                             scandir(d)):
+        for f in filter(lambda fn: fn.is_file() and filename in fn.name and
+                        re.search(r'\.db(\.v\d+)?\.r\d+$', fn.name),
+                        scandir(d)):
             try:
                 os.unlink(f.path)
             except (BaseException, Exception):

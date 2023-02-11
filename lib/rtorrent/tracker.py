@@ -22,8 +22,6 @@ from . import rpc
 from .common import safe_repr
 from .rpc import Method
 
-from _23 import filter_iter
-
 
 class Tracker(object):
     """Represents an individual tracker within a L{Torrent} instance."""
@@ -64,7 +62,7 @@ class Tracker(object):
         """
         mc = rpc.Multicall(self)
 
-        for method in filter_iter(lambda fx: fx.is_retriever() and fx.is_available(self._rt_obj), methods):
+        for method in filter(lambda fx: fx.is_retriever() and fx.is_available(self._rt_obj), methods):
             mc.add(method, self.rpc_id)
 
         mc.call()

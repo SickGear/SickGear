@@ -49,8 +49,8 @@ from lxml_etree import etree
 import requests
 import requests.cookies
 
-from _23 import decode_bytes, filter_list, filter_iter, make_btih, map_list, quote, quote_plus, urlparse
-from six import iteritems, iterkeys, itervalues, PY2, string_types
+from _23 import decode_bytes, make_btih, quote, quote_plus, urlparse
+from six import iteritems, iterkeys, itervalues, string_types
 from sg_helpers import try_int
 
 # noinspection PyUnreachableCode
@@ -978,11 +978,6 @@ class GenericProvider(object):
     def _link(self, url, url_tmpl=None, url_quote=None):
         url = '%s' % url  # ensure string type
         if url and not re.match('(?i)magnet:', url):
-            if PY2:
-                try:
-                    url = url.encode('utf-8')
-                except (BaseException, Exception):
-                    pass
             url = url.strip().replace('&amp;', '&')
         if not url:
             url = ''
@@ -1017,8 +1012,8 @@ class GenericProvider(object):
             ((any([cell.get_text()]) and any([rc[x].search(cell.get_text()) for x in iterkeys(rc)]) and cell.get_text())
              or (cell.attrs.get('id') and any([rc[x].search(cell['id']) for x in iterkeys(rc)]) and cell['id'])
              or (cell.attrs.get('title') and any([rc[x].search(cell['title']) for x in iterkeys(rc)]) and cell['title'])
-             or next(iter(set(filter_iter(lambda rz: any([rz]), [
-                next(iter(set(filter_iter(lambda ry: any([ry]), [
+             or next(iter(set(filter(lambda rz: any([rz]), [
+                next(iter(set(filter(lambda ry: any([ry]), [
                     cell.find(tag, **p) for p in [{attr: rc[x]} for x in iterkeys(rc)]]))), {}).get(attr)
                 for (tag, attr) in [
                     ('img', 'title'), ('img', 'src'), ('i', 'title'), ('i', 'class'),
@@ -1035,7 +1030,7 @@ class GenericProvider(object):
 
         for k, r in iteritems(rc):
             if k not in results:
-                for name in filter_iter(lambda v: any([v]) and r.search(v), all_headers[::-1]):
+                for name in filter(lambda v: any([v]) and r.search(v), all_headers[::-1]):
                     results[k] = all_headers.index(name) - len(all_headers)
                     break
 
@@ -1384,11 +1379,11 @@ class GenericProvider(object):
         :param count: count of successfully processed items
         :param url: source url of item(s)
         """
-        stats = map_list(lambda arg: ('_reject_%s' % arg[0], arg[1]),
-                         filter_iter(lambda _arg: all([getattr(self, '_reject_%s' % _arg[0], None)]),
-                                     (('seed', '%s <min seeders'), ('leech', '%s <min leechers'),
-                                      ('notfree', '%s not freeleech'), ('unverified', '%s unverified'),
-                                      ('container', '%s unwanted containers'))))
+        stats = list(map(lambda arg: ('_reject_%s' % arg[0], arg[1]),
+                         filter(lambda _arg: all([getattr(self, '_reject_%s' % _arg[0], None)]),
+                                (('seed', '%s <min seeders'), ('leech', '%s <min leechers'),
+                                ('notfree', '%s not freeleech'), ('unverified', '%s unverified'),
+                                ('container', '%s unwanted containers')))))
         rejects = ', '.join([(text % getattr(self, attr, '')).strip() for attr, text in stats])
         for (attr, _) in stats:
             setattr(self, attr, None)
@@ -1684,7 +1679,7 @@ class TorrentProvider(GenericProvider):
 
     def _reject_item(self, seeders=0, leechers=0, freeleech=None, verified=None, container=None):
         reject = False
-        for condition, attr in filter_iter(lambda arg: all([arg[0]]), (
+        for condition, attr in filter(lambda arg: all([arg[0]]), (
                 (seeders < getattr(self, 'minseed', 0), 'seed'),
                 (leechers < getattr(self, 'minleech', 0), 'leech'),
                 (all([freeleech]), 'notfree'),
@@ -1889,13 +1884,13 @@ class TorrentProvider(GenericProvider):
                         url_exclude = url_exclude or []
                         if url_exclude:
                             urls = urls[1:]
-                        urls = filter_list(lambda u: u not in url_exclude, urls)
+                        urls = list(filter(lambda u: u not in url_exclude, urls))
                         break
                 if not urls:
                     setattr(sickgear, seen_attr, list(set(getattr(sickgear, seen_attr, []) + [self.__module__])))
 
         if not urls:
-            urls = filter_list(lambda uh: 'http' in uh, getattr(self, 'url_home', []))
+            urls = list(filter(lambda uh: 'http' in uh, getattr(self, 'url_home', [])))
 
         return urls
 
@@ -1903,8 +1898,7 @@ class TorrentProvider(GenericProvider):
     @staticmethod
     def _decode(data, c):
         try:
-            fx = (lambda x: x, lambda x: str(x))[PY2]
-            result = ''.join(chr(int(fx(bytearray([(8 * c)[i] ^ x for i, x in enumerate(data)])[i:i + 2]), 16))
+            result = ''.join(chr(int(bytearray([(8 * c)[i] ^ x for i, x in enumerate(data)])[i:i + 2], 16))
                              for i in range(0, len(data), 2))
         except (BaseException, Exception):
             result = '|'
@@ -1932,10 +1926,10 @@ class TorrentProvider(GenericProvider):
             return url_base
 
         url_list = self._decode_urls(url_exclude)
-        if not url_list and getattr(self, 'url_edit', None) or not any(filter_iter(lambda u: 10 < len(u), url_list)):
+        if not url_list and getattr(self, 'url_edit', None) or not any(filter(lambda u: 10 < len(u), url_list)):
             return None
 
-        url_list = map_list(lambda u: '%s/' % u.rstrip('/'), url_list)
+        url_list = list(map(lambda u: '%s/' % u.rstrip('/'), url_list))
         last_url, expire = sickgear.PROVIDER_HOMES.get(self.get_id(), ('', None))
         url_drop = (url_exclude or []) + getattr(self, 'url_drop', [])
         if url_drop and any([url in last_url for url in url_drop]):  # deprecate url
@@ -1970,8 +1964,8 @@ class TorrentProvider(GenericProvider):
                 return cur_url
 
         seen_attr = 'PROVIDER_SEEN'
-        setattr(sickgear, seen_attr, filter_list(lambda u: self.__module__ not in u,
-                                                  getattr(sickgear, seen_attr, [])))
+        setattr(sickgear, seen_attr, list(filter(lambda u: self.__module__ not in u,
+                                                  getattr(sickgear, seen_attr, []))))
 
         self.failure_count = 3 * bool(failure_count)
         if self.should_skip():

@@ -23,8 +23,6 @@ from . import generic
 from .. import logger
 from ..helpers import try_int
 
-from _23 import unidecode
-
 
 class MilkieProvider(generic.TorrentProvider):
 
@@ -71,7 +69,6 @@ class MilkieProvider(generic.TorrentProvider):
 
         for mode in search_params:
             for search_string in search_params[mode]:
-                search_string = unidecode(search_string)
 
                 search_url = ''
                 data_json, sess = None, None

@@ -32,7 +32,6 @@ from bs4_parser import BS4Parser
 from exceptions_helper import AuthException
 from json_helper import json_dumps
 
-from _23 import unidecode
 from six import iteritems
 
 
@@ -201,7 +200,6 @@ class BTNProvider(generic.TorrentProvider):
                 del (self.session.headers['Referer'])
             self.auth_html = True
 
-            search_string = unidecode(search_string)
             search_url = self.urls['search'] % (search_string, self._categories_string(mode, 'filter_cat[%s]=1'))
 
             html = self.get_url(search_url, use_tmr_limit=False)

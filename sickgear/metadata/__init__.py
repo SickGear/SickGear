@@ -19,11 +19,10 @@ __all__ = ['generic', 'helpers', 'kodi', 'mede8er', 'mediabrowser', 'ps3', 'tivo
 import sys
 
 from . import kodi, mede8er, mediabrowser, ps3, tivo, wdtv, xbmc, xbmc_12plus
-from _23 import filter_list
 
 
 def available_generators():
-    return filter_list(lambda x: x not in ('generic', 'helpers'), __all__)
+    return list(filter(lambda x: x not in ('generic', 'helpers'), __all__))
 
 
 def _getMetadataModule(name):

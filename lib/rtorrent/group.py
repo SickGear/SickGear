@@ -21,8 +21,6 @@
 from . import rpc
 from .rpc import Method
 
-from _23 import filter_iter
-
 
 class Group(object):
     __name__ = 'Group'
@@ -72,7 +70,7 @@ class Group(object):
 
     def _get_method(self, *choices):
         try:
-            return next(filter_iter(lambda method: self._rt_obj.method_exists(method), choices))
+            return next(filter(lambda method: self._rt_obj.method_exists(method), choices))
         except (BaseException, Exception):
             pass
 

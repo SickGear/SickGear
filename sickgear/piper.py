@@ -10,8 +10,7 @@ import re
 from json_helper import json_loads
 from sg_helpers import cmdline_runner, is_virtualenv
 
-from _23 import filter_list, ordered_dict
-from six import iteritems, PY2
+from six import iteritems
 
 # noinspection PyUnreachableCode
 if False:
@@ -51,10 +50,6 @@ def run_pip(pip_cmd, suppress_stderr=False):
         pip_cmd += ['--progress-bar', 'off']
 
     new_pip_arg = ['--no-python-version-warning']
-    if PY2:
-        pip_version, _, _ = _get_pip_version()
-        if pip_version and 20 > int(pip_version.split('.')[0]):
-            new_pip_arg = []
 
     return cmdline_runner(
         [sys.executable, '-m', 'pip'] + new_pip_arg + ['--disable-pip-version-check'] + pip_cmd,
@@ -72,7 +67,7 @@ def initial_requirements():
             from Cheetah import VersionTuple
 
             is_cheetah2 = (3, 0, 0) > VersionTuple[0:3]
-            is_cheetah3py3 = not PY2 and (3, 3, 0) > VersionTuple[0:3]
+            is_cheetah3py3 = (3, 3, 0) > VersionTuple[0:3]
             if not (is_cheetah2 or is_cheetah3py3):
                 return
 
@@ -158,13 +153,10 @@ def check_pip_env():
 
     _, _, installed, failed_names = _check_pip_env()
 
-    py2_last = 'final py2 release'
     boost = 'performance boost'
     extra_info = dict({'Cheetah3': 'filled requirement', 'CT3': 'filled requirement',
                        'lxml': boost, 'python-Levenshtein': boost})
-    extra_info.update((dict(cryptography=py2_last, pip=py2_last, regex=py2_last,
-                            scandir=boost, setuptools=py2_last),
-                       dict(regex=boost))[not PY2])
+    extra_info.update(dict(regex=boost))
     return installed, extra_info, failed_names
 
 
@@ -256,9 +248,9 @@ def _check_pip_env(pip_outdated=False, reset_fails=False):
             names_outdated = dict({cur_item.get('name'): {k: cur_item.get(k) for k in ('version', 'latest_version',
                                                                                        'latest_filetype')}
                                    for cur_item in json_loads(output)})
-            to_update = set(filter_list(
+            to_update = set(list(filter(
                 lambda name: name in specifiers and names_outdated[name]['latest_version'] in specifiers[name],
-                set(names_reco).intersection(set(names_outdated))))
+                set(names_reco).intersection(set(names_outdated)))))
 
             # check whether to ignore direct reference specification updates if not dev mode
             if not int(os.environ.get('CHK_URL_SPECIFIERS', 0)):
@@ -272,7 +264,7 @@ def _check_pip_env(pip_outdated=False, reset_fails=False):
         except (BaseException, Exception):
             pass
 
-    updates_todo = ordered_dict()
+    updates_todo = dict()
     todo = to_install.union(to_update, requirement_update)
     for cur_name in [cur_n for cur_n in names_reco if cur_n in todo]:
         updates_todo[cur_name] = dict({

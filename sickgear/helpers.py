@@ -43,8 +43,9 @@ import requests
 import requests.exceptions
 import subliminal
 from lxml_etree import etree, is_lxml
+from base64 import decodebytes as b64decodebytes, encodebytes as b64encodebytes
 
-from _23 import b64decodebytes, b64encodebytes, decode_bytes, decode_str, filter_iter, scandir
+from _23 import decode_bytes, decode_str, scandir
 from six import iteritems, string_types, text_type
 # noinspection PyUnresolvedReferences
 from six.moves import zip
@@ -1317,7 +1318,7 @@ def has_anime():
     :rtype: bool
     """
     # noinspection PyTypeChecker
-    return False if not sickgear.showList else any(filter_iter(lambda show: show.is_anime, sickgear.showList))
+    return False if not sickgear.showList else any(filter(lambda show: show.is_anime, sickgear.showList))
 
 
 def cpu_sleep():
@@ -1682,7 +1683,7 @@ def upgrade_new_naming():
                                                        (d_entry.path, new_dir_name, repr(e), ex(e)), logger.WARNING)
                                         if os.path.isdir(new_dir_name):
                                             try:
-                                                f_n = filter_iter(lambda fn: fn.is_file(), scandir(new_dir_name))
+                                                f_n = filter(lambda fn: fn.is_file(), scandir(new_dir_name))
                                             except OSError as e:
                                                 logger.log('Unable to rename %s / %s' % (repr(e), ex(e)),
                                                            logger.WARNING)

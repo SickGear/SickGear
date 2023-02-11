@@ -24,7 +24,7 @@ from ..helpers import try_int
 
 from bs4_parser import BS4Parser
 
-from _23 import b64decodestring, unidecode
+from _23 import b64decodestring
 from six import iteritems
 
 
@@ -77,7 +77,6 @@ class IPTorrentsProvider(generic.TorrentProvider):
             urls = []
             for search_string in search_params[mode]:
                 urls += [[]]
-                search_string = unidecode(search_string) or search_string
                 for page in range((3, 5)['Cache' == mode])[1:]:
                     # URL with 50 tv-show results, or max 150 if adjusted in IPTorrents profile
                     urls[-1] += [self.urls['search'] % (

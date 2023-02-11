@@ -26,8 +26,7 @@ import sickgear
 
 from lib.dateutil.parser import parse
 
-from _23 import unidecode
-from six import iteritems, moves, string_types, PY2
+from six import iteritems, moves, string_types
 
 # noinspection PyUnreachableCode
 if False:
@@ -178,9 +177,7 @@ def clean_show_name(showname):
     :return:
     :rtype: AnyStr
     """
-    if not PY2:
-        return re.sub(r'[(\s]*(?:19|20)\d\d[)\s]*$', '', showname)
-    return re.sub(r'[(\s]*(?:19|20)\d\d[)\s]*$', '', unidecode(showname))
+    return re.sub(r'[(\s]*(?:19|20)\d\d[)\s]*$', '', showname)
 
 
 def get_show_name_date(show_obj):

@@ -21,7 +21,6 @@ from lib.tvinfo_base import CastList, PersonGenders, RoleTypes, \
 from json_helper import json_dumps
 from sg_helpers import clean_data, get_url, iterate_chunk, try_int
 
-from _23 import filter_list
 from six import iteritems
 
 # noinspection PyUnreachableCode
@@ -682,12 +681,12 @@ class TmdbIndexer(TVInfoBase):
                                 season_cast_obj['id'] for season_cast_obj in
                                 season_data[season_obj[0]].get('cast') or []])
 
-                for person_obj in sorted(filter_list(lambda a: a['id'] in main_cast_ids,
-                                                     show_data['aggregate_credits']['cast'] or [])[:50],
+                for person_obj in sorted(list(filter(lambda a: a['id'] in main_cast_ids,
+                                                     show_data['aggregate_credits']['cast'] or []))[:50],
                                          key=lambda c: (main_cast_ids.get(c['id'], 0) or 0,
                                                         c['total_episode_count'], c['order'] * -1), reverse=True):
-                    for character in sorted(filter_list(lambda b: b['credit_id'] in main_cast_credit_ids,
-                                                        person_obj.get('roles', []) or []),
+                    for character in sorted(list(filter(lambda b: b['credit_id'] in main_cast_credit_ids,
+                                                        person_obj.get('roles', []) or [])),
                                             key=lambda c: c['episode_count'], reverse=True):
                         character_obj = TVInfoCharacter(
                             name=clean_data(character['character']),

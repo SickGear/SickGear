@@ -20,8 +20,6 @@ from sg_helpers import proxy_setting
 import sickgear
 from lib.tvinfo_base import TVInfoBase
 
-from _23 import list_values
-
 # noinspection PyUnreachableCode
 if False:
     from typing import AnyStr, Dict
@@ -83,13 +81,13 @@ class TVInfoAPI(object):
     @property
     def sources(self):
         # type: () -> Dict[int, AnyStr]
-        return dict([(int(x['id']), x['name']) for x in list_values(tvinfo_config) if not x['mapped_only'] and
+        return dict([(int(x['id']), x['name']) for x in list(tvinfo_config.values()) if not x['mapped_only'] and
                      True is not x.get('fallback') and True is not x.get('people_only')])
 
     @property
     def search_sources(self):
         # type: () -> Dict[int, AnyStr]
-        return dict([(int(x['id']), x['name']) for x in list_values(tvinfo_config) if not x['mapped_only'] and
+        return dict([(int(x['id']), x['name']) for x in list(tvinfo_config.values()) if not x['mapped_only'] and
                      x.get('active') and not x.get('defunct') and True is not x.get('fallback')
                      and True is not x.get('people_only')])
 
@@ -99,7 +97,7 @@ class TVInfoAPI(object):
         """
         :return: return all indexers including mapped only indexers excluding fallback indexers
         """
-        return dict([(int(x['id']), x['name']) for x in list_values(tvinfo_config) if True is not x.get('fallback')
+        return dict([(int(x['id']), x['name']) for x in list(tvinfo_config.values()) if True is not x.get('fallback')
                      and True is not x.get('people_only')])
 
     @property
@@ -108,9 +106,9 @@ class TVInfoAPI(object):
         """
         :return: return all fallback indexers
         """
-        return dict([(int(x['id']), x['name']) for x in list_values(tvinfo_config) if True is x.get('fallback')])
+        return dict([(int(x['id']), x['name']) for x in list(tvinfo_config.values()) if True is x.get('fallback')])
 
     @property
     def xem_supported_sources(self):
         # type: () -> Dict[int, AnyStr]
-        return dict([(int(x['id']), x['name']) for x in list_values(tvinfo_config) if x.get('xem_origin')])
+        return dict([(int(x['id']), x['name']) for x in list(tvinfo_config.values()) if x.get('xem_origin')])

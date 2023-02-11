@@ -27,7 +27,7 @@ from ..helpers import try_int
 from bs4_parser import BS4Parser
 from dateutil.parser import parse
 
-from _23 import unidecode, unquote_plus
+from _23 import unquote_plus
 from six import iteritems
 
 
@@ -80,7 +80,7 @@ class TVChaosUKProvider(generic.TorrentProvider):
             'info': r'/torrents?/(?P<tid>(?P<tid_num>\d{2,})[^"]*)', 'get': 'download'})])
         for mode in search_params:
             for search_string in search_params[mode]:
-                search_string = unidecode(unquote_plus(search_string))
+                search_string = unquote_plus(search_string)
 
                 vals = [i for i in range(5, 16)]
                 random.SystemRandom().shuffle(vals)

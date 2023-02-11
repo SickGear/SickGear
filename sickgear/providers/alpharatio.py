@@ -25,7 +25,6 @@ from .. import logger
 from ..helpers import try_int
 from bs4_parser import BS4Parser
 
-from _23 import unidecode
 from six import iteritems
 
 
@@ -63,7 +62,6 @@ class AlphaRatioProvider(generic.TorrentProvider):
         rc = dict([(k, re.compile('(?i)' + v)) for (k, v) in iteritems({'info': 'view', 'get': 'download'})])
         for mode in search_params:
             for search_string in search_params[mode]:
-                search_string = unidecode(search_string)
                 search_url = self.urls['search'] % (search_string, ('&freetorrent=1', '')[not self.freeleech])
 
                 html = self.get_url(search_url)

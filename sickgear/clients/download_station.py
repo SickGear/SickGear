@@ -26,7 +26,7 @@ from .. import logger
 from ..sgdatetime import timestamp_near
 import sickgear
 
-from _23 import filter_iter, filter_list, map_list, unquote_plus
+from _23 import unquote_plus
 from six import string_types
 
 # noinspection PyUnreachableCode
@@ -96,21 +96,21 @@ class DownloadStationAPI(GenericClient):
             id=t['id'], title=t['title'], total_size=t.get('size') or 0,
             added_ts=d.get('create_time'), last_completed_ts=d.get('completed_time'),
             last_started_ts=d.get('started_time'), seed_elapsed_secs=d.get('seedelapsed'),
-            wanted_size=sum(map_list(lambda tf: wanted(tf) and tf.get('size') or 0, f)) or None,
-            wanted_down=sum(map_list(lambda tf: wanted(tf) and downloaded(tf) or 0, f)) or None,
+            wanted_size=sum(list(map(lambda tf: wanted(tf) and tf.get('size') or 0, f))) or None,
+            wanted_down=sum(list(map(lambda tf: wanted(tf) and downloaded(tf) or 0, f))) or None,
             tally_down=downloaded(tx),
             tally_up=tx.get('size_uploaded'),
-            state='done' if re.search('finish', t['status']) else ('seed', 'down')[any(filter_list(
-                lambda tf: wanted(tf) and (downloaded(tf, -1) < tf.get('size', 0)), f))]
+            state='done' if re.search('finish', t['status']) else ('seed', 'down')[any(list(filter(
+                lambda tf: wanted(tf) and (downloaded(tf, -1) < tf.get('size', 0)), f)))]
         ))
         # only available during "download" and "seeding"
         file_list = (lambda t: t.get('additional', {}).get('file', {}))
         valid_stat = (lambda ti: not ti.get('error') and isinstance(ti.get('status'), string_types)
-                      and sum(map_list(lambda tf: wanted(tf) and downloaded(tf) or 0, file_list(ti))))
-        result = map_list(lambda t: base_state(
+                      and sum(list(map(lambda tf: wanted(tf) and downloaded(tf) or 0, file_list(ti)))))
+        result = list(map(lambda t: base_state(
             t, t.get('additional', {}).get('detail', {}), t.get('additional', {}).get('transfer', {}), file_list(t)),
-                     filter_list(lambda t: t['status'] in ('downloading', 'seeding', 'finished') and valid_stat(t),
-                                 tasks))
+                     list(filter(lambda t: t['status'] in ('downloading', 'seeding', 'finished') and valid_stat(t),
+                                 tasks))))
 
         return result
 
@@ -133,13 +133,13 @@ class DownloadStationAPI(GenericClient):
                                                  t_params=dict(additional='detail,file,transfer'))['data']['tasks']
                 else:
                     # noinspection PyUnresolvedReferences
-                    tasks = (filter_list(lambda d: d.get('id') == rid, self._testdata), self._testdata)[not rid]
+                    tasks = (list(filter(lambda d: d.get('id') == rid, self._testdata)), self._testdata)[not rid]
                 result += tasks and (isinstance(tasks, list) and tasks or (isinstance(tasks, dict) and [tasks])) \
                     or ([], [{'error': True, 'id': rid}])[err]
             except (BaseException, Exception):
                 if getinfo:
                     result += [dict(error=True, id=rid)]
-        for t in filter_iter(lambda d: isinstance(d.get('title'), string_types) and d.get('title'), result):
+        for t in filter(lambda d: isinstance(d.get('title'), string_types) and d.get('title'), result):
             t['title'] = unquote_plus(t.get('title'))
 
         return result
@@ -211,7 +211,7 @@ class DownloadStationAPI(GenericClient):
         :return: True if success, Id(s) that could not be acted upon, else Falsy if failure
         """
         if isinstance(ids, (string_types, list)):
-            rids = ids if isinstance(ids, list) else map_list(lambda x: x.strip(), ids.split(','))
+            rids = ids if isinstance(ids, list) else list(map(lambda x: x.strip(), ids.split(',')))
 
             result = pause_first and self._pause_torrent(rids)  # get items not paused
             result = (isinstance(result, list) and result or [])
@@ -225,7 +225,7 @@ class DownloadStationAPI(GenericClient):
 
         if isinstance(ids, (string_types, list)):
             item = dict(fail=[], ignore=[])
-            for task in filter_iter(filter_func, self._tinf(ids, err=True)):
+            for task in filter(filter_func, self._tinf(ids, err=True)):
                 item[('fail', 'ignore')[self._ignore_state(task)]] += [task.get('id')]
 
             # retry items not acted on
@@ -237,7 +237,7 @@ class DownloadStationAPI(GenericClient):
                     logger.log('%s: retry %s %s item(s) in %ss' % (self.name, act, len(item['fail']), i), logger.DEBUG)
                     time.sleep(i)
                     item['fail'] = []
-                    for task in filter_iter(filter_func, self._tinf(retry_ids, err=True)):
+                    for task in filter(filter_func, self._tinf(retry_ids, err=True)):
                         item[('fail', 'ignore')[self._ignore_state(task)]] += [task.get('id')]
 
                     if not item['fail']:
@@ -303,7 +303,7 @@ class DownloadStationAPI(GenericClient):
         # noinspection PyUnresolvedReferences
         if response and response.get('success'):
             for s in (1, 3, 5, 10, 15, 30, 60):
-                tasks = filter_list(lambda t: task_stamp <= t['additional']['detail']['create_time'], self._tinf())
+                tasks = list(filter(lambda t: task_stamp <= t['additional']['detail']['create_time'], self._tinf()))
                 try:
                     return str(self._client_has(tasks, uri, files)[0].get('id'))
                 except IndexError:
@@ -324,8 +324,8 @@ class DownloadStationAPI(GenericClient):
         if uri or files:
             u = isinstance(uri, dict) and (uri.get('uri', '') or '').lower() or None
             f = isinstance(files, dict) and (files.get('file', [''])[0]).lower() or None
-            result = filter_list(lambda t: u and t['additional']['detail']['uri'].lower() == u
-                                           or f and t['additional']['detail']['uri'].lower() in f, tasks)
+            result = list(filter(lambda t: u and t['additional']['detail']['uri'].lower() == u
+                                           or f and t['additional']['detail']['uri'].lower() in f, tasks))
         return result
 
     def _client_request(self, method, t_id=None, t_params=None, files=None):
@@ -360,7 +360,7 @@ class DownloadStationAPI(GenericClient):
             return self._error_task(response)
 
         if None is not t_id and None is t_params and 'create' != method:
-            return filter_list(lambda r: r.get('error'), response.get('data', {})) or True
+            return list(filter(lambda r: r.get('error'), response.get('data', {}))) or True
 
         return response
 

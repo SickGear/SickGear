@@ -63,8 +63,7 @@ from lib.tvinfo_base import RoleTypes, TVINFO_FACEBOOK, TVINFO_INSTAGRAM, TVINFO
 from lib.tvinfo_base.exceptions import *
 from sg_helpers import calc_age, int_to_time, remove_file_perm, time_to_int
 
-from _23 import filter_iter, filter_list, list_keys
-from six import integer_types, iteritems, itervalues, moves, PY2, string_types
+from six import integer_types, iteritems, itervalues, moves, string_types
 
 # noinspection PyUnreachableCode
 if False:
@@ -172,9 +171,9 @@ class TVidProdid(object):
                     if coreid_warnings:
                         logger.log('%s\n' % pre_msg +
                                    '|>%s^-- Note: Bootstrap & Tornado startup functions stripped from traceback log.' %
-                                   '|>'.join(filter_iter(lambda text: not re.search(r'(?i)bootstrap|traceback\.'
-                                                                                    r'format_stack|pydevd|tornado'
-                                                                                    r'|webserveinit', text),
+                                   '|>'.join(filter(lambda text: not re.search(r'(?i)bootstrap|traceback\.'
+                                                                               r'format_stack|pydevd|tornado'
+                                                                               r'|webserveinit', text),
                                                          traceback.format_stack(inspect.currentframe()))))
                 except IndexError:
                     pass
@@ -379,7 +378,7 @@ class Person(Referential):
             akas=None,  # type: Set[AnyStr]
             character_obj=None,  # type: Character
             tmp_character_obj=None  # type: Character
-    ):  # type: (...) -> Person
+    ):
 
         super(Person, self).__init__(sid)
 
@@ -789,6 +788,8 @@ class Person(Referential):
                 if None is not rp:
                     if confirmed_on_src:
                         for i in (TVINFO_TRAKT, TVINFO_IMDB, TVINFO_TMDB, TVINFO_TVMAZE, TVINFO_TVDB):
+                            if not rp.ids.get(i):
+                                continue
                             # in case it's the current source use it's id and lock if from being changed
                             if cur_tv_info_src == i and rp.ids.get(i):
                                 source_confirmed[i] = True
@@ -803,6 +804,8 @@ class Person(Referential):
                                 self.dirty_ids = True
 
                         for i in (TVINFO_INSTAGRAM, TVINFO_TWITTER, TVINFO_FACEBOOK, TVINFO_WIKIPEDIA):
+                            if not rp.social_ids.get(i):
+                                continue
                             if rp.social_ids.get(i) and not self.ids.get(i) or \
                                     (rp.social_ids.get(i) and rp.social_ids.get(i) != self.ids.get(i)):
                                 self.ids[i] = rp.social_ids[i]
@@ -892,11 +895,12 @@ class Person(Referential):
                 ]
             if force or self.dirty_ids:
                 for s, v in iteritems(self.ids):
-                    cl.extend([
-                        ['UPDATE person_ids SET src_id = ? WHERE person_id = ? AND src = ?', [v, self.id, s]],
-                        ["INSERT INTO person_ids (src, src_id, person_id) SELECT %s, '%s', %s WHERE changes() == 0"
-                         % (s, v, self.id)]
-                    ])
+                    if v:
+                        cl.extend([
+                            ['UPDATE person_ids SET src_id = ? WHERE person_id = ? AND src = ?', [v, self.id, s]],
+                            ["INSERT INTO person_ids (src, src_id, person_id) SELECT %s, '%s', %s WHERE changes() == 0"
+                             % (s, v, self.id)]
+                        ])
         if cl:
             r_id = my_db.mass_action(cl)
             if r_id and r_id[-1:][0]:
@@ -3152,9 +3156,9 @@ class TVShow(TVShowBase):
         if isinstance(imdb_tv.get('numberOfEpisodes'), (int, string_types)):
             imdb_info['episode_count'] = try_int(imdb_tv.get('numberOfEpisodes'), 1)
         if isinstance(imdb_tv.get('genres'), (list, tuple)):
-            imdb_info['genres'] = '|'.join(filter_iter(lambda _v: _v, imdb_tv.get('genres')))
+            imdb_info['genres'] = '|'.join(filter(lambda _v: _v, imdb_tv.get('genres')))
         if isinstance(imdb_tv.get('origins'), list):
-            imdb_info['country_codes'] = '|'.join(filter_iter(lambda _v: _v, imdb_tv.get('origins')))
+            imdb_info['country_codes'] = '|'.join(filter(lambda _v: _v, imdb_tv.get('origins')))
 
         # certificate
         if isinstance(imdb_certificates.get('certificates'), dict):
@@ -3256,7 +3260,7 @@ class TVShow(TVShowBase):
         action = ('delete', 'trash')[sickgear.TRASH_REMOVE_SHOW]
 
         # remove self from show list
-        sickgear.showList = filter_list(lambda so: so.tvid_prodid != self.tvid_prodid, sickgear.showList)
+        sickgear.showList = list(filter(lambda so: so.tvid_prodid != self.tvid_prodid, sickgear.showList))
         try:
             del sickgear.showDict[self.sid_int]
         except (BaseException, Exception):
@@ -4220,8 +4224,6 @@ class TVEpisode(TVEpisodeBase):
                 tzinfo = self._show_obj.timezone
             elif isinstance(self._show_obj.network, string_types) and self._show_obj.network:
                 tzinfo = network_timezones.get_network_timezone(self._show_obj.network)
-            if PY2:
-                return SGDatetime.combine(self.airdate, ep_time).replace(tzinfo=tzinfo).timestamp_far()
             return SGDatetime.combine(self.airdate, ep_time, tzinfo=tzinfo).timestamp_far()
         return None
 
@@ -4964,7 +4966,7 @@ class TVEpisode(TVEpisodeBase):
         result_name = pattern
 
         # do the replacements
-        for cur_replacement in sorted(list_keys(replace_map), reverse=True):
+        for cur_replacement in sorted(list(replace_map), reverse=True):
             result_name = result_name.replace(cur_replacement, helpers.sanitize_filename(replace_map[cur_replacement]))
             result_name = result_name.replace(cur_replacement.lower(),
                                               helpers.sanitize_filename(replace_map[cur_replacement].lower()))

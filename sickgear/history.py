@@ -22,8 +22,6 @@ from .common import FAILED, SNATCHED, SNATCHED_PROPER, SUBTITLED, Quality
 from .name_parser.parser import NameParser
 import sickgear
 
-from six import PY2, text_type
-
 # noinspection PyUnreachableCode
 if False:
     from typing import Any, AnyStr
@@ -46,9 +44,6 @@ def _log_history_item(action, tvid, prodid, season, episode, quality, resource, 
     :param version: version
     """
     log_date = datetime.datetime.now().strftime(dateFormat)
-
-    if PY2 and not isinstance(resource, text_type):
-        resource = text_type(resource, 'utf-8', 'replace')
 
     my_db = db.DBConnection()
     my_db.action(

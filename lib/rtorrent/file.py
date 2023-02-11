@@ -22,8 +22,6 @@ from . import rpc
 from .common import safe_repr
 from .rpc import Method
 
-from _23 import filter_iter
-
 
 class File(object):
     """Represents an individual file within a L{Torrent} instance."""
@@ -48,7 +46,7 @@ class File(object):
         """
         mc = rpc.Multicall(self)
 
-        for method in filter_iter(lambda m: m.is_retriever() and m.is_available(self._rt_obj), methods):
+        for method in filter(lambda m: m.is_retriever() and m.is_available(self._rt_obj), methods):
             mc.add(method, self.rpc_id)
 
         mc.call()

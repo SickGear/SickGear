@@ -23,7 +23,7 @@ from .. import logger
 from ..helpers import try_int
 from bs4_parser import BS4Parser
 
-from _23 import b64decodestring, quote_plus, unidecode
+from _23 import b64decodestring, quote_plus
 from six import iteritems
 
 
@@ -65,8 +65,6 @@ class TorLockProvider(generic.TorrentProvider):
 
         for mode in search_params:
             for search_string in search_params[mode]:
-
-                search_string = unidecode(search_string)
 
                 search_url = self.urls['browse'] if 'Cache' == mode \
                     else self.urls['search'] % (quote_plus(search_string).replace('+', '-'))

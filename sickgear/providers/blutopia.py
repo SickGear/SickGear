@@ -25,7 +25,6 @@ from .. import logger
 from ..helpers import try_int
 from bs4_parser import BS4Parser
 
-from _23 import filter_iter, unidecode
 from six import iteritems
 
 
@@ -107,7 +106,6 @@ class BlutopiaProvider(generic.TorrentProvider):
                     return results
 
             for search_string in search_params[mode]:
-                search_string = unidecode(search_string)
                 search_url = self.urls['search'] % (
                     self._token, search_string.replace('.', ' '), self._categories_string(template=''), '', '', '')
 
@@ -136,7 +134,7 @@ class BlutopiaProvider(generic.TorrentProvider):
                                 marked = ','.join([x.attrs.get('data-original-title', '').lower() for x in tr.find_all(
                                     'i', attrs={'class': ['text-gold', 'fa-diamond', 'fa-certificate']})])
                                 # noinspection PyTypeChecker
-                                munged = ''.join(filter_iter(marked.__contains__, ['free', 'double', 'feat']))
+                                munged = ''.join(filter(marked.__contains__, ['free', 'double', 'feat']))
                                 # noinspection PyUnboundLocalVariable
                                 if ((non_marked and rc['filter'].search(munged)) or
                                         (not non_marked and not rc['filter'].search(munged))):

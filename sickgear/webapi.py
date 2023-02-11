@@ -55,8 +55,8 @@ from .tv import TVEpisode, TVShow,  TVidProdid
 from .webserve import AddShows
 import dateutil.parser
 
-from _23 import decode_str, list_keys, unquote_plus
-from six import integer_types, iteritems, iterkeys, PY2, string_types, text_type
+from _23 import decode_str, unquote_plus
+from six import integer_types, iteritems, iterkeys, string_types, text_type
 
 # noinspection PyUnreachableCode
 if False:
@@ -253,8 +253,6 @@ class Api(webserve.BaseHandler):
             result = function(*ag)
             return result
         except Exception as e:
-            if PY2:
-                logger.log('traceback: %s' % traceback.format_exc(), logger.ERROR)
             logger.log(ex(e), logger.ERROR)
             raise e
 
@@ -1043,7 +1041,7 @@ class CMD_SickGearComingEpisodes(ApiCall):
                     ep['network'] and network_timezones.get_network_timezone(ep['network'], return_name=True)[1])
 
             # remove all field we don't want for api response
-            for cur_f in list_keys(ep):
+            for cur_f in list(ep):
                 if cur_f not in [  # fields to preserve
                     'absolute_number', 'air_by_date', 'airdate', 'airs', 'archive_firstmatch',
                     'classification', 'data_network', 'data_show_name',

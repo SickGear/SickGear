@@ -29,8 +29,7 @@ from lib.dateutil import tz, zoneinfo
 from lib.tzlocal import get_localzone
 
 from sg_helpers import remove_file_perm, scantree
-from six import integer_types, iteritems, string_types, PY2
-from _23 import list_keys
+from six import integer_types, iteritems, string_types
 
 # noinspection PyUnreachableCode
 if False:
@@ -547,7 +546,7 @@ def _load_network_conversions():
 
     # remove deleted records
     if 0 < len(conversions_db):
-        network_name = list_keys(conversions_db)
+        network_name = list(conversions_db)
         cl.append(['DELETE FROM network_conversions WHERE tvdb_network'
                    ' IN (%s)' % ','.join(['?'] * len(network_name)), network_name])
 
@@ -632,8 +631,6 @@ def get_episode_time(d,  # type: int
 
     if d and None is not ep_time and None is not tzinfo:
         ep_date = datetime.date.fromordinal(helpers.try_int(d))
-        if PY2:
-            return datetime.datetime.combine(ep_date, ep_time).replace(tzinfo=tzinfo)
         return datetime.datetime.combine(ep_date, ep_time, tzinfo)
 
     return parse_date_time(d, t, tzinfo)

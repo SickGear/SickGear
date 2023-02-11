@@ -34,7 +34,6 @@ from .common import DOWNLOADED, SNATCHED, SNATCHED_BEST, SNATCHED_PROPER, MULTI_
 from .providers.generic import GenericProvider
 from .tv import TVEpisode, TVShow
 
-from _23 import filter_list, filter_iter, list_values
 from six import iteritems, itervalues, string_types
 
 # noinspection PyUnreachableCode
@@ -590,7 +589,7 @@ def search_for_needed_episodes(ep_obj_list):
 
     orig_thread_name = threading.current_thread().name
 
-    providers = filter_list(lambda x: x.is_active() and x.enable_recentsearch, sickgear.providers.sortedProviderList())
+    providers = list(filter(lambda x: x.is_active() and x.enable_recentsearch, sickgear.providers.sortedProviderList()))
 
     for cur_provider in providers:
         threading.current_thread().name = '%s :: [%s]' % (orig_thread_name, cur_provider.name)
@@ -646,7 +645,7 @@ def search_for_needed_episodes(ep_obj_list):
         logger.log('Failed recent search of %s enabled provider%s. More info in debug log.' % (
             len(providers), helpers.maybe_plural(providers)), logger.ERROR)
 
-    return list_values(found_results)
+    return list(found_results.values())
 
 
 def can_reject(release_name):
@@ -738,10 +737,10 @@ def _search_provider_thread(provider, provider_results, show_obj, ep_obj_list, m
             # make a list of all the results for this provider
             for cur_search_result in search_result_list:
                 # skip non-tv crap
-                search_result_list[cur_search_result] = filter_list(
+                search_result_list[cur_search_result] = list(filter(
                     lambda ep_item: ep_item.show_obj == show_obj and show_name_helpers.pass_wordlist_checks(
                         ep_item.name, parse=False, indexer_lookup=False, show_obj=ep_item.show_obj),
-                    search_result_list[cur_search_result])
+                    search_result_list[cur_search_result]))
 
                 if cur_search_result in provider_results:
                     provider_results[cur_search_result] += search_result_list[cur_search_result]
@@ -941,7 +940,7 @@ def search_providers(
                     # if not, break it apart and add them as the lowest priority results
                     individual_results = nzbSplitter.splitResult(best_season_result)
 
-                    for cur_result in filter_iter(
+                    for cur_result in filter(
                         lambda r: r.show_obj == show_obj and show_name_helpers.pass_wordlist_checks(
                             r.name, parse=False, indexer_lookup=False, show_obj=r.show_obj), individual_results):
                         ep_num = None

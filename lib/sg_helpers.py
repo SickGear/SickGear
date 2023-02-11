@@ -35,8 +35,8 @@ from send2trash import send2trash
 from encodingKludge import SYS_ENCODING
 import requests
 
-from _23 import decode_bytes, filter_list, html_unescape, list_range, \
-    ordered_dict, Popen, scandir, urlparse, urlsplit, urlunparse
+from _23 import decode_bytes, html_unescape, list_range, \
+    Popen, scandir, urlparse, urlsplit, urlunparse
 from six import integer_types, iteritems, iterkeys, itervalues, moves, PY2, string_types, text_type
 
 import zipfile
@@ -810,8 +810,8 @@ def get_url(url,  # type: AnyStr
     response_attr = ('text', 'content')[as_binary]
 
     # selectively mute some errors
-    mute = filter_list(lambda x: kwargs.pop(x, False), [
-        'mute_connect_err', 'mute_read_timeout', 'mute_connect_timeout', 'mute_http_error'])
+    mute = list(filter(lambda x: kwargs.pop(x, False), [
+        'mute_connect_err', 'mute_read_timeout', 'mute_connect_timeout', 'mute_http_error']))
 
     # reuse or instantiate request session
     resp_sess = kwargs.pop('resp_sess', None)
@@ -1617,12 +1617,12 @@ def ast_eval(value, default=None):
         return default
 
     if 'OrderedDict()' == value:
-        value = ordered_dict()
+        value = dict()
 
     elif 'OrderedDict([(' == value[0:14]:
         try:
             list_of_tuples = ast.literal_eval(value[12:-1])
-            value = ordered_dict()
+            value = dict()
             for cur_tuple in list_of_tuples:
                 value[cur_tuple[0]] = cur_tuple[1]
         except (BaseException, Exception):

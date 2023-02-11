@@ -20,8 +20,8 @@ from .generic import Notifier
 import sickgear
 from exceptions_helper import ex
 
-from _23 import b64encodestring, decode_str, etree, filter_iter, list_values, unquote_plus, urlencode
-from six import iteritems, text_type, PY2
+from _23 import b64encodestring, decode_str, etree, unquote_plus, urlencode
+from six import iteritems
 # noinspection PyUnresolvedReferences
 from six.moves import urllib
 
@@ -49,8 +49,7 @@ class PLEXNotifier(Notifier):
             return False
 
         for key in command:
-            if not PY2 or type(command[key]) == text_type:
-                command[key] = command[key].encode('utf-8')
+            command[key] = command[key].encode('utf-8')
 
         enc_command = urlencode(command)
         self._log_debug(u'Encoded API command: ' + enc_command)
@@ -203,7 +202,7 @@ class PLEXNotifier(Notifier):
                 hosts_failed.append(cur_host)
                 continue
 
-            for section in filter_iter(lambda x: 'show' == x.attrib['type'], sections):
+            for section in filter(lambda x: 'show' == x.attrib['type'], sections):
                 if str(section.attrib['key']) in hosts_all:
                     continue
                 keyed_host = [(str(section.attrib['key']), cur_host)]
@@ -247,18 +246,14 @@ class PLEXNotifier(Notifier):
                 return ''
 
         hosts = [
-            host.replace('http://', '') for host in filter_iter(lambda x: x.startswith('http:'),
-                                                                list_values(hosts_all))]
+            host.replace('http://', '') for host in filter(lambda x: x.startswith('http:'), list(hosts_all.values()))]
         secured = [
-            host.replace('https://', '') for host in filter_iter(lambda x: x.startswith('https:'),
-                                                                 list_values(hosts_all))]
+            host.replace('https://', '') for host in filter(lambda x: x.startswith('https:'), list(hosts_all.values()))]
         failed = ', '.join([
-            host.replace('http://', '') for host in filter_iter(lambda x: x.startswith('http:'),
-                                                                hosts_failed)])
-        failed_secured = ', '.join(filter_iter(
+            host.replace('http://', '') for host in filter(lambda x: x.startswith('http:'), hosts_failed)])
+        failed_secured = ', '.join(filter(
             lambda x: x not in hosts,
-            [host.replace('https://', '') for host in filter_iter(lambda x: x.startswith('https:'),
-                                                                  hosts_failed)]))
+            [host.replace('https://', '') for host in filter(lambda x: x.startswith('https:'), hosts_failed)]))
 
         return '<br>' + '<br>'.join([result for result in [
             ('', 'Fail: username/password when fetching credentials from plex.tv')[False is token_arg],

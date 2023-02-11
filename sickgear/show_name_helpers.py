@@ -28,7 +28,7 @@ from .name_parser.parser import InvalidNameException, InvalidShowException, Name
 from .scene_exceptions import get_scene_exceptions
 from sg_helpers import scantree
 
-from _23 import map_list, quote_plus
+from _23 import quote_plus
 from six import iterkeys, itervalues
 
 # noinspection PyUnreachableCode
@@ -237,7 +237,7 @@ def get_show_names_all_possible(show_obj, season=-1, scenify=True, spacer='.', f
     show_names = list(set(
         all_possible_show_names(show_obj, season=season, force_anime=force_anime)))  # type: List[AnyStr]
     if scenify:
-        show_names = map_list(sanitize_scene_name, show_names)
+        show_names = list(map(sanitize_scene_name, show_names))
     return url_encode(show_names, spacer)
 
 

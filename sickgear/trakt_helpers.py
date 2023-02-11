@@ -5,7 +5,7 @@ import re
 import sickgear
 from .helpers import try_int
 
-from _23 import decode_bytes, decode_str, list_items
+from _23 import decode_bytes, decode_str
 from six import iteritems, text_type
 
 
@@ -51,7 +51,7 @@ def build_config_string(config):
     :param config: dicts of Trakt account id, parent location
     :return: string csv of parsed config kwargs for config file
     """
-    return text_type(list_items(config))
+    return text_type(list(config.items()))
 
 
 def trakt_collection_remove_account(account_id):

@@ -39,8 +39,8 @@ from lib.tvinfo_base.exceptions import *
 from ..classes import OrderedDefaultdict
 
 from .._legacy_classes import LegacyParseResult
-from _23 import decode_str, list_keys, list_range
-from six import iteritems, iterkeys, itervalues, PY2, string_types, text_type
+from _23 import decode_str, list_range
+from six import iteritems, iterkeys, itervalues, string_types, text_type
 
 # noinspection PyUnreachableCode
 if False:
@@ -166,7 +166,7 @@ class NameParser(object):
                 result.which_regex = [cur_regex_name]
                 result.score = 0 - cur_regex_num
 
-                named_groups = list_keys(match.groupdict())
+                named_groups = list(match.groupdict())
 
                 if 'series_name' in named_groups:
                     result.series_name = match.group('series_name')
@@ -511,10 +511,7 @@ class NameParser(object):
 
     @staticmethod
     def _unicodify(obj, encoding='utf-8'):
-        if PY2 and isinstance(obj, string_types):
-            if not isinstance(obj, text_type):
-                obj = text_type(obj, encoding, 'replace')
-        if not PY2 and isinstance(obj, text_type):
+        if isinstance(obj, text_type):
             try:
                 return obj.encode('latin1').decode('utf8')
             except (BaseException, Exception):
@@ -751,9 +748,7 @@ class ParseResult(LegacyParseResult):
                      self.release_group, self.air_date, tuple(self.ab_episode_numbers)))
 
     def __str__(self):
-        if not PY2:
-            return self.__unicode__()
-        return self.__unicode__().encode('utf-8', errors='ignore')
+        return self.__unicode__()
 
     def __unicode__(self):
         if None is not self.series_name:

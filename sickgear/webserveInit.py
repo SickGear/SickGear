@@ -14,7 +14,6 @@ from .helpers import create_https_certificates, re_valid_hostname
 import sickgear
 
 from _23 import PY38
-from six import PY2
 
 # noinspection PyUnreachableCode
 if False:
@@ -255,14 +254,13 @@ class WebServer(threading.Thread):
         logger.log(u'Starting SickGear on %s://%s:%s/' % (protocol, self.options['host'],  self.options['port']))
 
         # python 3 needs to start event loop first
-        if not PY2:
-            import asyncio
-            if 'win32' == platform and PY38:
-                # noinspection PyUnresolvedReferences
-                asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
-            asyncio.set_event_loop(asyncio.new_event_loop())
-            from tornado.platform.asyncio import AnyThreadEventLoopPolicy
-            asyncio.set_event_loop_policy(AnyThreadEventLoopPolicy())
+        import asyncio
+        if 'win32' == platform and PY38:
+            # noinspection PyUnresolvedReferences
+            asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+        asyncio.set_event_loop(asyncio.new_event_loop())
+        from tornado.platform.asyncio import AnyThreadEventLoopPolicy
+        asyncio.set_event_loop_policy(AnyThreadEventLoopPolicy())
 
         try:
             self.server = self.app.listen(self.options['port'], self.options['host'], ssl_options=ssl_options,

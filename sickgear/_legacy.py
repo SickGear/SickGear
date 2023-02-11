@@ -32,7 +32,7 @@ from tornado import gen
 from tornado.escape import utf8
 from tornado.web import RequestHandler
 
-from _23 import decode_str, filter_iter
+from _23 import decode_str
 from six import iteritems
 from sg_futures import SgThreadPoolExecutor
 try:
@@ -103,7 +103,7 @@ class LegacyBaseHandler(LegacyBase):
 
     def redirect_args(self, new_url, exclude=(None,), **kwargs):
         args = '&'.join(['%s=%s' % (k, v) for (k, v) in
-                         filter_iter(lambda arg: arg[1] not in exclude, iteritems(kwargs))])
+                         filter(lambda arg: arg[1] not in exclude, iteritems(kwargs))])
         self.redirect('%s%s' % (new_url, ('', '?' + args)[bool(args)]), permanent=True)
 
     """ deprecated from BaseHandler ------------------------------------------------------------------------------------

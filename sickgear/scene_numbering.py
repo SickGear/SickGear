@@ -32,8 +32,6 @@ from .helpers import try_int
 from .scene_exceptions import xem_ids_list
 from .sgdatetime import timestamp_near
 
-from _23 import filter_iter, map_list
-
 # noinspection PyUnreachableCode
 if False:
     from typing import Dict, List, Optional, Tuple, Union
@@ -718,8 +716,8 @@ def _get_absolute_numbering_for_show(tbl, tvid, prodid):
             """ % (tbl, ('indexer_id', 'showid')['tv_episodes' == tbl]), [int(tvid), int(prodid)])
 
         for cur_row in sql_result:
-            season, episode, abs_num = map_list(lambda x: try_int(cur_row[x], None),
-                                                ('season', 'episode', 'absolute_number'))
+            season, episode, abs_num = list(map(lambda x: try_int(cur_row[x], None),
+                                                ('season', 'episode', 'absolute_number')))
             if None is season and None is episode and None is not abs_num:
                 season, episode, _ = _get_sea(tvid, prodid, absolute_number=abs_num)
 
@@ -815,7 +813,7 @@ def xem_refresh(tvid, prodid, force=False):
                 return
 
             if 'success' in parsed_json['result']:
-                cl = map_list(lambda entry: [
+                cl = list(map(lambda entry: [
                         """
                         UPDATE tv_episodes
                         SET scene_season = ?, scene_episode = ?, scene_absolute_number = ?
@@ -824,7 +822,7 @@ def xem_refresh(tvid, prodid, force=False):
                               for v in ('season', 'episode', 'absolute')]
                         + [tvid, prodid]
                         + [entry.get(xem_origin).get(v) for v in ('season', 'episode')]
-                ], filter_iter(lambda x: 'scene' in x, parsed_json['data']))
+                ], filter(lambda x: 'scene' in x, parsed_json['data'])))
 
                 if 0 < len(cl):
                     my_db = db.DBConnection()

@@ -32,7 +32,7 @@ from .history import dateFormat
 from .name_parser.parser import InvalidNameException, InvalidShowException, NameParser
 from .sgdatetime import timestamp_near
 
-from _23 import filter_iter, filter_list, list_values, map_consume, map_list
+from _23 import map_consume
 from six import string_types
 
 # noinspection PyUnreachableCode
@@ -251,9 +251,9 @@ def _get_proper_list(aired_since_shows,  # type: datetime.datetime
     # filter provider list for:
     # 1. from recent search: recent search enabled providers
     # 2. native proper search: active search enabled providers
-    provider_list = filter_list(
+    provider_list = list(filter(
         lambda p: p.is_active() and (p.enable_recentsearch, p.enable_backlog)[None is proper_dict],
-        sickgear.providers.sortedProviderList())
+        sickgear.providers.sortedProviderList()))
     search_threads = []
 
     if None is proper_dict:
@@ -487,7 +487,7 @@ def _get_proper_list(aired_since_shows,  # type: datetime.datetime
 
         cur_provider.log_result('Propers', len(propers), '%s' % cur_provider.name)
 
-    return list_values(propers)
+    return list(propers.values())
 
 
 def _download_propers(proper_list):
@@ -507,24 +507,24 @@ def _download_propers(proper_list):
 
         # get verified list; sort the list of unique Propers for highest proper_level, newest first
         for cur_proper in sorted(
-                filter_iter(lambda p: p not in consumed_proper,
-                            # allows Proper to fail or be rejected and another to be tried (with a different name)
-                            filter_iter(lambda p: _epid(p) not in downloaded_epid, proper_list)),
+                filter(lambda p: p not in consumed_proper,
+                       # allows Proper to fail or be rejected and another to be tried (with a different name)
+                       filter(lambda p: _epid(p) not in downloaded_epid, proper_list)),
                 key=operator.attrgetter('properlevel', 'date'), reverse=True):  # type: Proper
 
             epid = _epid(cur_proper)
 
             # if the show is in our list and there hasn't been a Proper already added for that particular episode
             # then add it to our list of Propers
-            if epid not in map_list(_epid, verified_propers):
+            if epid not in list(map(_epid, verified_propers)):
                 logger.log('Proper may be useful [%s]' % cur_proper.name)
                 verified_propers.add(cur_proper)
             else:
                 # use Proper with the highest level
                 remove_propers = set()
                 map_consume(lambda vp: remove_propers.add(vp),
-                            filter_iter(lambda p: (epid == _epid(p) and cur_proper.proper_level > p.proper_level),
-                                        verified_propers))
+                            filter(lambda p: (epid == _epid(p) and cur_proper.proper_level > p.proper_level),
+                                   verified_propers))
 
                 if remove_propers:
                     verified_propers -= remove_propers
