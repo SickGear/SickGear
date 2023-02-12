@@ -24,8 +24,6 @@ from .. import logger
 import sg_helpers
 from lib.tvinfo_base.exceptions import *
 import sickgear
-# noinspection PyPep8Naming
-import encodingKludge as ek
 import exceptions_helper
 from exceptions_helper import ex
 from lxml_etree import etree
@@ -92,7 +90,7 @@ class WDTVMetadata(generic.GenericMetadata):
         self.eg_season_all_banner = "<i>not supported</i>"  # type: AnyStr
 
     # Override with empty methods for unsupported features
-    def retrieveShowMetadata(self, folder):
+    def retrieve_show_metadata(self, folder):
         # type: (AnyStr) -> Tuple[None, None, None]
         # no show metadata generated, we abort this lookup function
         return None, None, None
@@ -137,7 +135,7 @@ class WDTVMetadata(generic.GenericMetadata):
 
         ep_obj: a TVEpisode instance for which to create the thumbnail
         """
-        if ek.ek(os.path.isfile, ep_obj.location):
+        if os.path.isfile(ep_obj.location):
             return sg_helpers.replace_extension(ep_obj.location, 'metathumb')
 
     def get_season_poster_path(self, show_obj, season):
@@ -148,8 +146,7 @@ class WDTVMetadata(generic.GenericMetadata):
         If no season folder exists, None is returned
         """
 
-        dir_list = [x for x in ek.ek(os.listdir, show_obj.location) if
-                    ek.ek(os.path.isdir, ek.ek(os.path.join, show_obj.location, x))]
+        dir_list = [x for x in os.listdir(show_obj.location) if os.path.isdir(os.path.join(show_obj.location, x))]
 
         season_dir_regex = r'^Season\s+(\d+)$'
 
@@ -176,7 +173,7 @@ class WDTVMetadata(generic.GenericMetadata):
 
         logger.log(u"Using " + str(season_dir) + "/folder.jpg as season dir for season " + str(season), logger.DEBUG)
 
-        return ek.ek(os.path.join, show_obj.location, season_dir, 'folder.jpg')
+        return os.path.join(show_obj.location, season_dir, 'folder.jpg')
 
     def _ep_data(self, ep_obj):
         # type: (sickgear.tv.TVEpisode) -> Optional[Union[bool, etree.Element]]

@@ -1,4 +1,9 @@
-﻿### 3.27.2 (2023-02-10 19:25:00 UTC)
+﻿### 3.28.0 (2023-xx-xx xx:xx:00 UTC)
+
+* Change remove calls to legacy py2 fix encoding function
+
+
+### 3.27.2 (2023-02-10 19:25:00 UTC)
 
 * Fix revert update
 * Fix installations that don't have previously saved cleanup lock files 
@@ -710,7 +715,7 @@
 
 * Change allow Python 3.8.10 and 3.9.5
 * Remove PiSexy provider
-* Fix refreshShow, prevent another refresh of show if already in queue and not forced
+* Fix refresh_show, prevent another refresh of show if already in queue and not forced
 * Fix webapi set scene season
 * Fix set path in all_tests for py2
 * Fix webapi exception if no backlog was done before (CMD_SickGearCheckScheduler)

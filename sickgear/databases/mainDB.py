@@ -21,8 +21,6 @@ import re
 from .. import db, common, logger
 from ..name_parser.parser import NameParser, InvalidNameException, InvalidShowException
 import sickgear
-# noinspection PyPep8Naming
-import encodingKludge as ek
 
 from six import iteritems
 
@@ -432,8 +430,8 @@ class AddSizeAndSceneNameFields(db.SchemaUpgrade):
 
             # if there is no size yet then populate it for us
             if (not cur_result['file_size'] or not int(cur_result['file_size'])) \
-                    and ek.ek(os.path.isfile, cur_result['location']):
-                cur_size = ek.ek(os.path.getsize, cur_result['location'])
+                    and os.path.isfile(cur_result['location']):
+                cur_size = os.path.getsize(cur_result['location'])
                 self.connection.action('UPDATE tv_episodes SET file_size = ? WHERE episode_id = ?',
                                        [cur_size, int(cur_result['episode_id'])])
 
@@ -456,7 +454,7 @@ class AddSizeAndSceneNameFields(db.SchemaUpgrade):
                 continue
 
             nzb_name = cur_result['resource']
-            file_name = ek.ek(os.path.basename, download_sql_result[0]['resource'])
+            file_name = os.path.basename(download_sql_result[0]['resource'])
 
             # take the extension off the filename, it's not needed
             if '.' in file_name:
@@ -508,7 +506,7 @@ class AddSizeAndSceneNameFields(db.SchemaUpgrade):
         self.upgrade_log(u'Adding release name to all episodes with obvious scene filenames')
         for cur_result in empty_sql_result:
 
-            ep_file_name = ek.ek(os.path.basename, cur_result['location'])
+            ep_file_name = os.path.basename(cur_result['location'])
             ep_file_name = os.path.splitext(ep_file_name)[0]
 
             # only want to find real scene names here so anything with a space in it is out
@@ -1999,7 +1997,7 @@ class ChangeTmdbID(db.SchemaUpgrade):
         self.upgrade_log('Renaming tmdb images')
         # noinspection PyProtectedMember
         for _dir in (ImageCache._persons_dir(), ImageCache._characters_dir()):
-            for _f in ek.ek(scantree, _dir):  # type: DirEntry
+            for _f in scantree(_dir):  # type: DirEntry
                 if not _f.is_file(follow_symlinks=False):
                     continue
                 try:
@@ -2010,7 +2008,7 @@ class ChangeTmdbID(db.SchemaUpgrade):
                     continue
                 try:
                     move_file(_f.path,
-                              ek.ek(os.path.join, ek.ek(os.path.dirname, _f.path),
+                              os.path.join(os.path.dirname(_f.path),
                                     re.sub('^%s-' % img_src, '%s-' %
                                            cache_img_src[(img_src, TVINFO_TMDB)[TVINFO_TMDB_OLD == img_src]], _f.name)))
                 except (BaseException, Exception):

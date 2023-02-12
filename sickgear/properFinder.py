@@ -21,8 +21,6 @@ import re
 import threading
 import traceback
 
-# noinspection PyPep8Naming
-import encodingKludge as ek
 from exceptions_helper import ex, MultipleShowObjectsException, AuthException
 
 import sickgear
@@ -466,7 +464,7 @@ def _get_proper_list(aired_since_shows,  # type: datetime.datetime
             for hitem in history_results:
                 # if the result exists in history already we need to skip it
                 if clean_proper_name == _generic_name(helpers.remove_non_release_groups(
-                        ek.ek(os.path.basename, hitem['resource']))):
+                        os.path.basename(hitem['resource']))):
                     is_same = True
                     break
             if is_same:

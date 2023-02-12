@@ -24,8 +24,6 @@ import shutil
 import stat
 import sys
 
-# noinspection PyPep8Naming
-import encodingKludge as ek
 import exceptions_helper
 from exceptions_helper import ex, MultipleShowObjectsException
 from json_helper import json_dumps, json_loads
@@ -79,8 +77,8 @@ class ProcessTVShow(object):
         if None is not text:
             self._output.append(text)
             if self.webhandler:
-                logger_msg = re.sub(r'(?i)<br(?:[\s/]+)>', '\n', text)
-                logger_msg = re.sub('(?i)<a[^>]+>([^<]+)<[/]a>', r'\1', logger_msg)
+                logger_msg = re.sub(r'(?i)<br[\s/]+>', '\n', text)
+                logger_msg = re.sub('(?i)<a[^>]+>([^<]+)</a>', r'\1', logger_msg)
                 self.webhandler('%s%s' % (logger_msg, u'\n'))
 
     def _log_helper(self, message, log_level=logger.DEBUG):
@@ -91,8 +89,8 @@ class ProcessTVShow(object):
         :param log_level: log level
         :type log_level: int
         """
-        logger_msg = re.sub(r'(?i)<br(?:[\s/]+)>\.*', '', message)
-        logger_msg = re.sub('(?i)<a[^>]+>([^<]+)<[/]a>', r'\1', logger_msg)
+        logger_msg = re.sub(r'(?i)<br[\s/]+>\.*', '', message)
+        logger_msg = re.sub('(?i)<a[^>]+>([^<]+)</a>', r'\1', logger_msg)
         logger.log(u'%s' % logger_msg, log_level)
         self._buffer(message)
         return
@@ -124,7 +122,7 @@ class ProcessTVShow(object):
         :rtype: bool
         """
         # check if it's a folder
-        if not ek.ek(os.path.isdir, folder):
+        if not os.path.isdir(folder):
             return False
 
         # make sure it isn't TV_DOWNLOAD_DIR
@@ -142,7 +140,7 @@ class ProcessTVShow(object):
             logger.log(u'Warning: unable to delete folder: %s: %s' % (folder, ex(e)), logger.WARNING)
             return False
 
-        if ek.ek(os.path.isdir, folder):
+        if os.path.isdir(folder):
             logger.log(u'Warning: unable to delete folder: %s' % folder, logger.WARNING)
             return False
 
@@ -164,24 +162,24 @@ class ProcessTVShow(object):
         # Delete all file not needed
         for cur_file in notwanted_files:
 
-            cur_file_path = ek.ek(os.path.join, process_path, cur_file)
+            cur_file_path = os.path.join(process_path, cur_file)
 
-            if not ek.ek(os.path.isfile, cur_file_path):
+            if not os.path.isfile(cur_file_path):
                 continue  # Prevent error when a notwantedfiles is an associated files
 
             # check first the read-only attribute
-            file_attribute = ek.ek(os.stat, cur_file_path)[0]
+            file_attribute = os.stat(cur_file_path)[0]
             if not file_attribute & stat.S_IWRITE:
                 # File is read-only, so make it writeable
                 self._log_helper(u'Changing ReadOnly flag for file ' + cur_file)
                 try:
-                    ek.ek(os.chmod, cur_file_path, stat.S_IWRITE)
+                    os.chmod(cur_file_path, stat.S_IWRITE)
                 except OSError as e:
                     self._log_helper(u'Cannot change permissions of %s: %s' % (cur_file_path, ex(e)))
 
             removal_type = helpers.remove_file(cur_file_path)
 
-            if ek.ek(os.path.isfile, cur_file_path):
+            if os.path.isfile(cur_file_path):
                 result = False
             else:
                 self._log_helper(u'%s file %s' % (removal_type, cur_file))
@@ -254,7 +252,7 @@ class ProcessTVShow(object):
         video_size = 0
         for cur_video_file in videofiles:
             try:
-                cur_video_size = ek.ek(os.path.getsize, ek.ek(os.path.join, path, cur_video_file))
+                cur_video_size = os.path.getsize(os.path.join(path, cur_video_file))
             except (BaseException, Exception):
                 continue
 
@@ -263,7 +261,7 @@ class ProcessTVShow(object):
                 video_pick = cur_video_file
 
         if video_pick:
-            vid_filename = ek.ek(os.path.splitext, video_pick)[0]
+            vid_filename = os.path.splitext(video_pick)[0]
             # check if filename is garbage, disregard it
             if re.search(r'^[a-zA-Z0-9]+$', vid_filename):
                 return
@@ -315,21 +313,20 @@ class ProcessTVShow(object):
         """
 
         # if they passed us a real directory then assume it's the one we want
-        if dir_name and ek.ek(os.path.isdir, long_path(dir_name)):
-            dir_name = long_path(ek.ek(os.path.realpath, long_path(dir_name)))
+        if dir_name and os.path.isdir(long_path(dir_name)):
+            dir_name = long_path(os.path.realpath(long_path(dir_name)))
 
         # if the client and SickGear are not on the same machine translate the directory in a network directory
-        elif dir_name and sickgear.TV_DOWNLOAD_DIR and ek.ek(os.path.isdir, sickgear.TV_DOWNLOAD_DIR)\
-                and ek.ek(os.path.normpath, dir_name) != ek.ek(os.path.normpath, sickgear.TV_DOWNLOAD_DIR):
-            dir_name = ek.ek(os.path.join, sickgear.TV_DOWNLOAD_DIR,
-                             ek.ek(os.path.abspath, dir_name).split(os.path.sep)[-1])
+        elif dir_name and sickgear.TV_DOWNLOAD_DIR and os.path.isdir(sickgear.TV_DOWNLOAD_DIR)\
+                and os.path.normpath(dir_name) != os.path.normpath(sickgear.TV_DOWNLOAD_DIR):
+            dir_name = os.path.join(sickgear.TV_DOWNLOAD_DIR, os.path.abspath(dir_name).split(os.path.sep)[-1])
             self._log_helper(u'SickGear PP Config, completed TV downloads folder: ' + sickgear.TV_DOWNLOAD_DIR)
 
         if dir_name:
             self._log_helper(u'Checking folder... ' + dir_name)
 
         # if we didn't find a real directory then process "failed" or just quit
-        if not dir_name or not ek.ek(os.path.isdir, dir_name):
+        if not dir_name or not os.path.isdir(dir_name):
             if nzb_name and failed:
                 self._process_failed(dir_name, nzb_name, show_obj=show_obj)
             else:
@@ -351,7 +348,7 @@ class ProcessTVShow(object):
                 show_obj = self.check_name(re.sub(r'\.(nzb|torrent)$', '', nzb_name, flags=re.I))
 
             if None is show_obj and dir_name:
-                show_obj = self.check_name(ek.ek(os.path.basename, dir_name))
+                show_obj = self.check_name(os.path.basename(dir_name))
 
         path, dirs, files = self._get_path_dir_files(dir_name, nzb_name, pp_type)
 
@@ -376,12 +373,12 @@ class ProcessTVShow(object):
             self._process_failed(dir_name, nzb_name, show_obj=show_obj)
             self.update_history_tab()
             return self.result
-        rar_content = [x for x in rar_content if not helpers.is_link(ek.ek(os.path.join, path, x))]
+        rar_content = [x for x in rar_content if not helpers.is_link(os.path.join(path, x))]
         path, dirs, files = self._get_path_dir_files(dir_name, nzb_name, pp_type)
-        files = [x for x in files if not helpers.is_link(ek.ek(os.path.join, path, x))]
+        files = [x for x in files if not helpers.is_link(os.path.join(path, x))]
         video_files = filter_list(helpers.has_media_ext, files)
         video_in_rar = filter_list(helpers.has_media_ext, rar_content)
-        work_files += [ek.ek(os.path.join, path, item) for item in rar_content]
+        work_files += [os.path.join(path, item) for item in rar_content]
 
         if 0 < len(files):
             self._log_helper(u'Process file%s: %s' % (helpers.maybe_plural(files), str(files)))
@@ -408,7 +405,7 @@ class ProcessTVShow(object):
             if None is show_obj:
                 soh = self.check_video_filenames(path, video_in_rar)
             self._process_media(path, video_in_rar, nzb_name, 'move', force, force_replace, show_obj=soh)
-            self._delete_files(path, [ek.ek(os.path.relpath, item, path) for item in work_files], force=True)
+            self._delete_files(path, [os.path.relpath(item, path) for item in work_files], force=True)
             video_batch = set(video_files) - set(video_in_rar)
         else:
             video_batch = video_files
@@ -418,7 +415,7 @@ class ProcessTVShow(object):
                 video_pick = ['']
                 video_size = 0
                 for cur_video_file in video_batch:
-                    cur_video_size = ek.ek(os.path.getsize, ek.ek(os.path.join, path, cur_video_file))
+                    cur_video_size = os.path.getsize(os.path.join(path, cur_video_file))
                     if 0 == video_size or cur_video_size > video_size:
                         video_size = cur_video_size
                         video_pick = [cur_video_file]
@@ -439,7 +436,7 @@ class ProcessTVShow(object):
 
             # self._set_process_success(reset=True)
 
-            for walk_path, walk_dir, files in ek.ek(os.walk, ek.ek(os.path.join, path, directory), topdown=False):
+            for walk_path, walk_dir, files in os.walk(os.path.join(path, directory), topdown=False):
 
                 if sickgear.POSTPONE_IF_SYNC_FILES and any(filter_iter(helpers.is_sync_file, files)):
                     self._log_helper(u'Found temporary sync files, skipping post process', logger.ERROR)
@@ -452,17 +449,17 @@ class ProcessTVShow(object):
                     continue
 
                 # Ignore any symlinks at this stage to avoid the potential for unraring a symlinked archive
-                files = [x for x in files if not helpers.is_link(ek.ek(os.path.join, walk_path, x))]
+                files = [x for x in files if not helpers.is_link(os.path.join(walk_path, x))]
 
                 rar_files, rarfile_history = self.unused_archives(
                     walk_path, filter_list(helpers.is_first_rar_volume, files), pp_type, process_method,
                     rarfile_history)
                 rar_content = self._unrar(walk_path, rar_files, force)
-                work_files += [ek.ek(os.path.join, walk_path, item) for item in rar_content]
+                work_files += [os.path.join(walk_path, item) for item in rar_content]
                 if self.fail_detected:
                     self._process_failed(dir_name, nzb_name, show_obj=self.show_obj_helper(show_obj, directory))
                     continue
-                rar_content = [x for x in rar_content if not helpers.is_link(ek.ek(os.path.join, walk_path, x))]
+                rar_content = [x for x in rar_content if not helpers.is_link(os.path.join(walk_path, x))]
                 files = list(set(files + rar_content))
                 video_files = filter_list(helpers.has_media_ext, files)
                 video_in_rar = filter_list(helpers.has_media_ext, rar_content)
@@ -483,7 +480,7 @@ class ProcessTVShow(object):
                         video_pick = ['']
                         video_size = 0
                         for cur_video_file in video_batch:
-                            cur_video_size = ek.ek(os.path.getsize, ek.ek(os.path.join, walk_path, cur_video_file))
+                            cur_video_size = os.path.getsize(os.path.join(walk_path, cur_video_file))
 
                             if 0 == video_size or cur_video_size > video_size:
                                 video_size = cur_video_size
@@ -512,14 +509,12 @@ class ProcessTVShow(object):
                     self._delete_files(walk_path, notwanted_files)
 
                     if 'move' == process_method \
-                            and ek.ek(os.path.normpath, sickgear.TV_DOWNLOAD_DIR) != ek.ek(os.path.normpath,
-                                                                                            walk_path):
+                            and os.path.normpath(sickgear.TV_DOWNLOAD_DIR) != os.path.normpath(walk_path):
                         self._delete_folder(walk_path, check_empty=False)
 
         if 'copy' == process_method and work_files:
-            self._delete_files(path, [ek.ek(os.path.relpath, item, path) for item in work_files], force=True)
-            for f in sorted(list(set([ek.ek(os.path.dirname, item) for item in work_files]) - {path}),
-                            key=len, reverse=True):
+            self._delete_files(path, [os.path.relpath(item, path) for item in work_files], force=True)
+            for f in sorted(list(set([os.path.dirname(item) for item in work_files]) - {path}), key=len, reverse=True):
                 self._delete_folder(f)
 
         def _bottom_line(text, log_level=logger.DEBUG):
@@ -561,7 +556,7 @@ class ProcessTVShow(object):
         if ('auto' == pp_type and sickgear.PROCESS_AUTOMATICALLY
                 and 'copy' == process_method and sickgear.UNPACK):
 
-            archive_history_file = ek.ek(os.path.join, sickgear.DATA_DIR, 'archive_history.txt')
+            archive_history_file = os.path.join(sickgear.DATA_DIR, 'archive_history.txt')
 
             if not archive_history:
                 try:
@@ -572,10 +567,10 @@ class ProcessTVShow(object):
 
             init_history_cnt = len(archive_history)
 
-            archive_history = {k_arc: v for k_arc, v in iteritems(archive_history) if ek.ek(os.path.isfile, k_arc)}
+            archive_history = {k_arc: v for k_arc, v in iteritems(archive_history) if os.path.isfile(k_arc)}
 
-            unused_files = list(set([ek.ek(os.path.join, path, x) for x in archives]) - set(iterkeys(archive_history)))
-            archives = [ek.ek(os.path.basename, x) for x in unused_files]
+            unused_files = list(set([os.path.join(path, x) for x in archives]) - set(iterkeys(archive_history)))
+            archives = [os.path.basename(x) for x in unused_files]
             if unused_files:
                 for f in unused_files:
                     archive_history.setdefault(f, int(timestamp_near(datetime.datetime.utcnow())))
@@ -607,18 +602,18 @@ class ProcessTVShow(object):
         """
         self._log_helper(u'Processing sub dir: ' + dir_name)
 
-        if ek.ek(os.path.basename, dir_name).startswith('_FAILED_'):
+        if os.path.basename(dir_name).startswith('_FAILED_'):
             self._log_helper(u'The directory name indicates it failed to extract.')
             failed = True
-        elif ek.ek(os.path.basename, dir_name).startswith('_UNDERSIZED_'):
+        elif os.path.basename(dir_name).startswith('_UNDERSIZED_'):
             self._log_helper(u'The directory name indicates that it was previously rejected for being undersized.')
             failed = True
-        elif ek.ek(os.path.basename, dir_name).upper().startswith('_UNPACK'):
+        elif os.path.basename(dir_name).upper().startswith('_UNPACK'):
             self._log_helper(u'The directory name indicates that this release is in the process of being unpacked.')
             return False
 
         if failed:
-            self._process_failed(ek.ek(os.path.join, path, dir_name), nzb_name_original, show_obj=show_obj)
+            self._process_failed(os.path.join(path, dir_name), nzb_name_original, show_obj=show_obj)
             return False
 
         if helpers.is_hidden_folder(dir_name):
@@ -630,8 +625,8 @@ class ProcessTVShow(object):
         sql_result = my_db.select('SELECT * FROM tv_shows')
 
         for cur_result in sql_result:
-            if dir_name.lower().startswith(ek.ek(os.path.realpath, cur_result['location']).lower() + os.sep)\
-                    or dir_name.lower() == ek.ek(os.path.realpath, cur_result['location']).lower():
+            if dir_name.lower().startswith(os.path.realpath(cur_result['location']).lower() + os.sep) \
+                    or dir_name.lower() == os.path.realpath(cur_result['location']).lower():
                 self._log_helper(
                     u'Found an episode that has already been moved to its show dir, skipping',
                     logger.ERROR)
@@ -641,7 +636,7 @@ class ProcessTVShow(object):
         all_files = []
         all_dirs = []
         process_path = None
-        for process_path, process_dir, fileList in ek.ek(os.walk, ek.ek(os.path.join, path, dir_name), topdown=False):
+        for process_path, process_dir, fileList in os.walk(os.path.join(path, dir_name), topdown=False):
             all_dirs += process_dir
             all_files += fileList
 
@@ -688,7 +683,7 @@ class ProcessTVShow(object):
         unpacked_files = []
 
         if 'win32' == sys.platform:
-            rarfile.UNRAR_TOOL = ek.ek(os.path.join, sickgear.PROG_DIR, 'lib', 'rarfile', 'UnRAR.exe')
+            rarfile.UNRAR_TOOL = os.path.join(sickgear.PROG_DIR, 'lib', 'rarfile', 'UnRAR.exe')
 
         if sickgear.UNPACK and rar_files:
 
@@ -699,7 +694,7 @@ class ProcessTVShow(object):
                 self._log_helper(u'Unpacking archive: ' + archive)
 
                 try:
-                    rar_handle = rarfile.RarFile(ek.ek(os.path.join, path, archive))
+                    rar_handle = rarfile.RarFile(os.path.join(path, archive))
                 except (BaseException, Exception):
                     self._log_helper(u'Failed to open archive: %s' % archive, logger.ERROR)
                     self._set_process_success(False)
@@ -707,7 +702,7 @@ class ProcessTVShow(object):
                 try:
                     # Skip extraction if any file in archive has previously been extracted
                     skip_file = False
-                    for file_in_archive in [ek.ek(os.path.basename, x.filename)
+                    for file_in_archive in [os.path.basename(x.filename)
                                             for x in rar_handle.infolist() if not x.is_dir()]:
                         if self._already_postprocessed(path, file_in_archive, force):
                             self._log_helper(
@@ -721,8 +716,7 @@ class ProcessTVShow(object):
                             raise rarfile.PasswordRequired
 
                         rar_handle.extractall(path=path)
-                        rar_content = [ek.ek(os.path.normpath, x.filename)
-                                       for x in rar_handle.infolist() if not x.is_dir()]
+                        rar_content = [os.path.normpath(x.filename) for x in rar_handle.infolist() if not x.is_dir()]
                         renamed = self.cleanup_names(path, rar_content)
                         cur_unpacked = rar_content if not renamed else \
                             (list(set(rar_content) - set(iterkeys(renamed))) + list_values(renamed))
@@ -744,7 +738,7 @@ class ProcessTVShow(object):
             # check for passworded rar's
             for archive in rar_files:
                 try:
-                    rar_handle = rarfile.RarFile(ek.ek(os.path.join, path, archive))
+                    rar_handle = rarfile.RarFile(os.path.join(path, archive))
                 except (BaseException, Exception):
                     self._log_helper(u'Failed to open archive: %s' % archive, logger.ERROR)
                     continue
@@ -773,7 +767,7 @@ class ProcessTVShow(object):
         old_name = None
         new_name = None
         params = {
-            'base_name': ek.ek(os.path.basename, directory),
+            'base_name': os.path.basename(directory),
             'reverse_pattern': re.compile('|'.join([
                 r'\.\d{2}e\d{2}s\.', r'\.p0(?:63|27|612)\.', r'\.[pi](?:084|675|0801)\.', r'\b[45]62[xh]\.',
                 r'\.yarulb\.', r'\.vtd[hp]\.', r'\.(?:ld[.-]?)?bew\.', r'\.pir.?(?:shv|dov|dvd|bew|db|rb)\.',
@@ -797,9 +791,9 @@ class ProcessTVShow(object):
 
             for cur_filename in _filenames:
 
-                file_name, file_extension = ek.ek(os.path.splitext, cur_filename)
-                file_path = ek.ek(os.path.join, _dirpath, cur_filename)
-                dir_name = ek.ek(os.path.dirname, file_path)
+                file_name, file_extension = os.path.splitext(cur_filename)
+                file_path = os.path.join(_dirpath, cur_filename)
+                dir_name = os.path.dirname(file_path)
 
                 if None is not reverse_pattern.search(file_name):
                     na_parts = season_pattern.search(file_name)
@@ -817,32 +811,32 @@ class ProcessTVShow(object):
                         new_filename = file_name[::-1]
                     logger.log('Reversing base filename "%s" to "%s"' % (file_name, new_filename))
                     try:
-                        ek.ek(os.rename, file_path, ek.ek(os.path.join, _dirpath, new_filename + file_extension))
-                        is_renamed[ek.ek(os.path.relpath, file_path, directory)] = ek.ek(
-                            os.path.relpath, new_filename + file_extension, directory)
+                        os.rename(file_path, os.path.join(_dirpath, new_filename + file_extension))
+                        is_renamed[os.path.relpath(file_path, directory)] = \
+                            os.path.relpath(new_filename + file_extension, directory)
                     except OSError as _e:
                         logger.log('Error unable to rename file "%s" because %s' % (cur_filename, ex(_e)), logger.ERROR)
                 elif helpers.has_media_ext(cur_filename) and \
                         None is not garbage_name.search(file_name) and None is not media_pattern.search(base_name):
                     _num_videos += 1
                     _old_name = file_path
-                    _new_name = ek.ek(os.path.join, dir_name, '%s%s' % (base_name, file_extension))
+                    _new_name = os.path.join(dir_name, '%s%s' % (base_name, file_extension))
             return is_renamed, _num_videos, _old_name, _new_name
 
         if files:
             is_renamed, num_videos, old_name, new_name = renamer(
                 directory, files, num_videos, old_name, new_name, **params)
         else:
-            for cur_dirpath, void, cur_filenames in ek.ek(os.walk, directory):
+            for cur_dirpath, void, cur_filenames in os.walk(directory):
                 is_renamed, num_videos, old_name, new_name = renamer(
                     cur_dirpath, cur_filenames, num_videos, old_name, new_name, **params)
 
         if all([not is_renamed, 1 == num_videos, old_name, new_name]):
-            try_name = ek.ek(os.path.basename, new_name)
-            logger.log('Renaming file "%s" using dirname as "%s"' % (ek.ek(os.path.basename, old_name), try_name))
+            try_name = os.path.basename(new_name)
+            logger.log('Renaming file "%s" using dirname as "%s"' % (os.path.basename(old_name), try_name))
             try:
-                ek.ek(os.rename, old_name, new_name)
-                is_renamed[ek.ek(os.path.relpath, old_name, directory)] = ek.ek(os.path.relpath, new_name, directory)
+                os.rename(old_name, new_name)
+                is_renamed[os.path.relpath(old_name, directory)] = os.path.relpath(new_name, directory)
             except OSError as e:
                 logger.log('Error unable to rename file "%s" because %s' % (old_name, ex(e)), logger.ERROR)
 
@@ -859,11 +853,11 @@ class ProcessTVShow(object):
         result = False
         chunks = {}
         matcher = re.compile(r'\.[0-9]+$')
-        for dirpath, void, filenames in ek.ek(os.walk, directory):
+        for dirpath, void, filenames in os.walk(directory):
             for filename in filenames:
                 if None is not matcher.search(filename):
-                    maybe_chunk = ek.ek(os.path.join, dirpath, filename)
-                    base_filepath, ext = ek.ek(os.path.splitext, maybe_chunk)
+                    maybe_chunk = os.path.join(dirpath, filename)
+                    base_filepath, ext = os.path.splitext(maybe_chunk)
                     if base_filepath not in chunks:
                         chunks[base_filepath] = []
                     chunks[base_filepath].append(maybe_chunk)
@@ -874,22 +868,22 @@ class ProcessTVShow(object):
         for base_filepath in chunks:
             chunks[base_filepath].sort()
             chunk_set = chunks[base_filepath]
-            if ek.ek(os.path.isfile, base_filepath):
-                base_filesize = ek.ek(os.path.getsize, base_filepath)
-                chunk_sizes = [ek.ek(os.path.getsize, x) for x in chunk_set]
+            if os.path.isfile(base_filepath):
+                base_filesize = os.path.getsize(base_filepath)
+                chunk_sizes = [os.path.getsize(x) for x in chunk_set]
                 largest_chunk = max(chunk_sizes)
                 if largest_chunk >= base_filesize:
                     outfile = '%s.001' % base_filepath
                     if outfile not in chunk_set:
                         try:
-                            ek.ek(os.rename, base_filepath, outfile)
+                            os.rename(base_filepath, outfile)
                         except OSError:
                             logger.log('Error unable to rename file %s' % base_filepath, logger.ERROR)
                             return result
                         chunk_set.append(outfile)
                         chunk_set.sort()
                     else:
-                        del_dir, del_file = ek.ek(os.path.split, base_filepath)
+                        del_dir, del_file = os.path.split(base_filepath)
                         if not self._delete_files(del_dir, [del_file], force=True):
                             return result
                 else:
@@ -1048,7 +1042,7 @@ class ProcessTVShow(object):
                 self._set_process_success(False)
                 continue
 
-            cur_video_file_path = ek.ek(os.path.join, process_path, cur_video_file)
+            cur_video_file_path = os.path.join(process_path, cur_video_file)
 
             parent = self.find_parent(cur_video_file_path)
             if parent:
@@ -1097,16 +1091,16 @@ class ProcessTVShow(object):
         if dir_name == sickgear.TV_DOWNLOAD_DIR and not nzb_name or 'manual' == pp_type:
             # Scheduled Media Process Active
             # Get at first all the subdir in the dir_name
-            for path, dirs, files in ek.ek(os.walk, dir_name):
-                files = [x for x in files if not helpers.is_link(ek.ek(os.path.join, path, x))]
+            for path, dirs, files in os.walk(dir_name):
+                files = [x for x in files if not helpers.is_link(os.path.join(path, x))]
                 break
         else:
-            path, dirs = ek.ek(os.path.split, dir_name)  # Script Media Process
+            path, dirs = os.path.split(dir_name)  # Script Media Process
             if None is not nzb_name and not nzb_name.endswith('.nzb') and \
-                    ek.ek(os.path.isfile, ek.ek(os.path.join, dir_name, nzb_name)):
+                    os.path.isfile(os.path.join(dir_name, nzb_name)):
                 # For single torrent file without directory
                 dirs = []
-                files = [ek.ek(os.path.join, dir_name, nzb_name)]
+                files = [os.path.join(dir_name, nzb_name)]
             else:
                 dirs = [dirs]
                 files = []

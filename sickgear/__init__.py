@@ -34,8 +34,6 @@ import threading
 import uuid
 import zlib
 
-# noinspection PyPep8Naming
-import encodingKludge as ek
 from . import classes, db, helpers, image_cache, indexermapper, logger, metadata, naming, people_queue, providers, \
     scene_exceptions, scene_numbering, scheduler, search_backlog, search_propers, search_queue, search_recent, \
     show_queue, show_updater, subtitles, trakt_helpers, traktChecker, version_checker, watchedstate_queue
@@ -513,7 +511,7 @@ ANIDB_USE_MYLIST = False
 ADBA_CONNECTION = None  # type: Connection
 ANIME_TREAT_AS_HDTV = False
 
-GUI_NAME = None
+GUI_NAME = ''
 DEFAULT_HOME = None
 FANART_LIMIT = None
 FANART_PANEL = None
@@ -811,8 +809,8 @@ def init_stage_1(console_logging):
     # clean cache folders
     if CACHE_DIR:
         helpers.clear_cache()
-        ZONEINFO_DIR = ek.ek(os.path.join, CACHE_DIR, 'zoneinfo')
-        if not ek.ek(os.path.isdir, ZONEINFO_DIR) and not helpers.make_path(ZONEINFO_DIR):
+        ZONEINFO_DIR = os.path.join(CACHE_DIR, 'zoneinfo')
+        if not os.path.isdir(ZONEINFO_DIR) and not helpers.make_path(ZONEINFO_DIR):
             logger.log(u'!!! Creating local zoneinfo dir failed', logger.ERROR)
     sg_helpers.CACHE_DIR = CACHE_DIR
     sg_helpers.DATA_DIR = DATA_DIR
@@ -1054,8 +1052,8 @@ def init_stage_1(console_logging):
     NZBGET_SKIP_PM = bool(check_setting_int(CFG, 'NZBGet', 'nzbget_skip_process_media', 0))
 
     try:
-        ng_script_file = ek.ek(os.path.join, ek.ek(os.path.dirname, ek.ek(os.path.dirname, __file__)),
-                               'autoProcessTV', 'SickGear-NG', 'SickGear-NG.py')
+        ng_script_file = os.path.join(os.path.dirname(os.path.dirname(__file__)),
+                                      'autoProcessTV', 'SickGear-NG', 'SickGear-NG.py')
         with io.open(ng_script_file, 'r', encoding='utf8') as ng:
             text = ng.read()
         NZBGET_SCRIPT_VERSION = re.search(r""".*version: (\d+\.\d+)""", text, flags=re.M).group(1)
@@ -1615,7 +1613,7 @@ def init_stage_2():
         cycleTime=datetime.timedelta(hours=1),
         start_time=datetime.time(hour=SHOW_UPDATE_HOUR),
         threadName='SHOWUPDATER',
-        prevent_cycle_run=show_queue_scheduler.action.isShowUpdateRunning)  # 3AM
+        prevent_cycle_run=show_queue_scheduler.action.is_show_update_running)  # 3AM
 
     people_queue_scheduler = scheduler.Scheduler(
         people_queue.PeopleQueue(),
@@ -1718,9 +1716,9 @@ def init_stage_2():
     MEMCACHE['history_tab'] = History.menu_tab(MEMCACHE['history_tab_limit'])
 
     try:
-        for f in ek.ek(scandir, ek.ek(os.path.join, PROG_DIR, 'gui', GUI_NAME, 'images', 'flags')):
+        for f in scandir(os.path.join(PROG_DIR, 'gui', GUI_NAME, 'images', 'flags')):
             if f.is_file():
-                MEMCACHE_FLAG_IMAGES[ek.ek(os.path.splitext, f.name)[0].lower()] = True
+                MEMCACHE_FLAG_IMAGES[os.path.splitext(f.name)[0].lower()] = True
     except (BaseException, Exception):
         pass
 

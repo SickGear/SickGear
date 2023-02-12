@@ -22,8 +22,6 @@ import re
 import stat
 import threading
 
-# noinspection PyPep8Naming
-import encodingKludge as ek
 import exceptions_helper
 from exceptions_helper import ex
 
@@ -64,17 +62,16 @@ class PostProcessor(object):
         nzb_name: The name of the NZB which resulted in this file being downloaded (optional)
         """
         # absolute path to the folder that is being processed
-        self.folder_path = long_path(ek.ek(os.path.dirname, long_path(
-            ek.ek(os.path.abspath, long_path(file_path)))))  # type: AnyStr
+        self.folder_path = long_path(os.path.dirname(long_path(os.path.abspath(long_path(file_path)))))  # type: AnyStr
 
         # full path to file
         self.file_path = long_path(file_path)  # type: AnyStr
 
         # file name only
-        self.file_name = ek.ek(os.path.basename, long_path(file_path))  # type: AnyStr
+        self.file_name = os.path.basename(long_path(file_path))  # type: AnyStr
 
         # the name of the folder only
-        self.folder_name = ek.ek(os.path.basename, self.folder_path)  # type: AnyStr
+        self.folder_name = os.path.basename(self.folder_path)  # type: AnyStr
 
         # name of the NZB that resulted in this folder
         self.nzb_name = nzb_name  # type: AnyStr or None
@@ -112,8 +109,8 @@ class PostProcessor(object):
         :param level: The log level to use (optional)
         :type level: int
         """
-        logger_msg = re.sub(r'(?i)<br(?:[\s/]+)>\.*', '', message)
-        logger_msg = re.sub('(?i)<a[^>]+>([^<]+)<[/]a>', r'\1', logger_msg)
+        logger_msg = re.sub(r'(?i)<br[\s/]+>\.*', '', message)
+        logger_msg = re.sub('(?i)<a[^>]+>([^<]+)</a>', r'\1', logger_msg)
         logger.log(u'%s' % logger_msg, level)
         self.log += message + '\n'
 
@@ -136,12 +133,12 @@ class PostProcessor(object):
             return PostProcessor.DOESNT_EXIST
 
         # if the new file exists, return the appropriate code depending on the size
-        if ek.ek(os.path.isfile, existing_file):
+        if os.path.isfile(existing_file):
             new_file = u'New file %s<br />.. is ' % self.file_path
-            if ek.ek(os.path.getsize, self.file_path) == ek.ek(os.path.getsize, existing_file):
+            if os.path.getsize(self.file_path) == os.path.getsize(existing_file):
                 self._log(u'%sthe same size as %s' % (new_file, existing_file), logger.DEBUG)
                 return PostProcessor.EXISTS_SAME
-            elif ek.ek(os.path.getsize, self.file_path) < ek.ek(os.path.getsize, existing_file):
+            elif os.path.getsize(self.file_path) < os.path.getsize(existing_file):
                 self._log(u'%ssmaller than %s' % (new_file, existing_file), logger.DEBUG)
                 return PostProcessor.EXISTS_LARGER
             else:
@@ -188,7 +185,7 @@ class PostProcessor(object):
         base_name = re.sub(r'[\[\]*?]', r'[\g<0>]', base_name)
 
         for meta_ext in ['', '-thumb', '.ext', '.ext.cover', '.metathumb']:
-            for associated_file_path in ek.ek(glob.glob, '%s%s.*' % (base_name, meta_ext)):
+            for associated_file_path in glob.glob('%s%s.*' % (base_name, meta_ext)):
                 # only add associated to list
                 if associated_file_path == file_path:
                     continue
@@ -201,7 +198,7 @@ class PostProcessor(object):
                 if re.search(r'(^.+\.(rar|r\d+)$)', associated_file_path):
                     continue
 
-                if ek.ek(os.path.isfile, associated_file_path):
+                if os.path.isfile(associated_file_path):
                     file_path_list.append(associated_file_path)
 
         return file_path_list
@@ -230,13 +227,13 @@ class PostProcessor(object):
 
         # delete the file and any other files which we want to delete
         for cur_file in file_list:
-            if ek.ek(os.path.isfile, cur_file):
+            if os.path.isfile(cur_file):
                 # check first the read-only attribute
-                file_attribute = ek.ek(os.stat, cur_file)[0]
+                file_attribute = os.stat(cur_file)[0]
                 if not file_attribute & stat.S_IWRITE:
                     # File is read-only, so make it writeable
                     try:
-                        ek.ek(os.chmod, cur_file, stat.S_IWRITE)
+                        os.chmod(cur_file, stat.S_IWRITE)
                         self._log(u'Changed read only permissions to writeable to delete file %s'
                                   % cur_file, logger.DEBUG)
                     except (BaseException, Exception):
@@ -245,7 +242,7 @@ class PostProcessor(object):
 
                 removal_type = helpers.remove_file(cur_file, log_level=logger.DEBUG)
 
-                if True is not ek.ek(os.path.isfile, cur_file):
+                if True is not os.path.isfile(cur_file):
                     self._log(u'%s file %s' % (removal_type, cur_file), logger.DEBUG)
 
                 # do the library update for synoindex
@@ -294,7 +291,7 @@ class PostProcessor(object):
         # deal with all files
         for cur_file_path in file_list:
 
-            cur_file_name = ek.ek(os.path.basename, cur_file_path)
+            cur_file_name = os.path.basename(cur_file_path)
 
             # get the extension without .
             cur_extension = cur_file_path[old_base_name_length + 1:]
@@ -304,10 +301,10 @@ class PostProcessor(object):
                 cur_extension = 'nfo-orig'
 
             # check if file have subtitles language
-            if ek.ek(os.path.splitext, cur_extension)[1][1:] in common.subtitleExtensions:
-                cur_lang = ek.ek(os.path.splitext, cur_extension)[0]
+            if os.path.splitext(cur_extension)[1][1:] in common.subtitleExtensions:
+                cur_lang = os.path.splitext(cur_extension)[0]
                 if cur_lang in sickgear.SUBTITLES_LANGUAGES:
-                    cur_extension = cur_lang + ek.ek(os.path.splitext, cur_extension)[1]
+                    cur_extension = cur_lang + os.path.splitext(cur_extension)[1]
 
             # If new base name then convert name
             if new_base_name:
@@ -317,15 +314,15 @@ class PostProcessor(object):
                 new_file_name = helpers.replace_extension(cur_file_name, cur_extension)
 
             if sickgear.SUBTITLES_DIR and cur_extension in common.subtitleExtensions:
-                subs_new_path = ek.ek(os.path.join, new_path, sickgear.SUBTITLES_DIR)
+                subs_new_path = os.path.join(new_path, sickgear.SUBTITLES_DIR)
                 dir_exists = helpers.make_dir(subs_new_path)
                 if not dir_exists:
                     logger.log(u'Unable to create subtitles folder ' + subs_new_path, logger.ERROR)
                 else:
                     helpers.chmod_as_parent(subs_new_path)
-                new_file_path = ek.ek(os.path.join, subs_new_path, new_file_name)
+                new_file_path = os.path.join(subs_new_path, new_file_name)
             else:
-                new_file_path = ek.ek(os.path.join, new_path, new_file_name)
+                new_file_path = os.path.join(new_path, new_file_name)
 
             if None is action_tmpl:
                 action(cur_file_path, new_file_path)
@@ -598,7 +595,7 @@ class PostProcessor(object):
                 and parse_result.release_group:
 
             if not self.release_name:
-                self.release_name = helpers.remove_extension(ek.ek(os.path.basename, parse_result.original_name))
+                self.release_name = helpers.remove_extension(os.path.basename(parse_result.original_name))
 
         else:
             logger.log(u'Parse result not sufficient (all following have to be set). will not save release name',
@@ -824,7 +821,7 @@ class PostProcessor(object):
 
         try:
             script_cmd = [piece for piece in re.split("( |\\\".*?\\\"|'.*?')", script_name) if piece.strip()]
-            script_cmd[0] = ek.ek(os.path.abspath, script_cmd[0])
+            script_cmd[0] = os.path.abspath(script_cmd[0])
             self._log(u'Absolute path to script: ' + script_cmd[0], logger.DEBUG)
 
             if PY2:
@@ -883,7 +880,7 @@ class PostProcessor(object):
         """
 
         try:
-            existing_show_path = ek.ek(os.path.isdir, ep_obj.show.location)
+            existing_show_path = os.path.isdir(ep_obj.show.location)
         except exceptions_helper.ShowDirNotFoundException:
             existing_show_path = False
 
@@ -1062,10 +1059,10 @@ class PostProcessor(object):
         :rtype: bool
         """
 
-        self._log(u'Processing... %s%s' % (ek.ek(os.path.relpath, self.file_path, self.folder_path),
+        self._log(u'Processing... %s%s' % (os.path.relpath(self.file_path, self.folder_path),
                                            (u'<br />.. from nzb %s' % self.nzb_name, u'')[None is self.nzb_name]))
 
-        if ek.ek(os.path.isdir, self.file_path):
+        if os.path.isdir(self.file_path):
             self._log(u'Expecting file %s<br />.. is actually a directory, skipping' % self.file_path)
             return False
 
@@ -1110,9 +1107,9 @@ class PostProcessor(object):
             try:
                 self._delete(cur_ep_obj.location, associated_files=True)
 
-                # clean up any left over folders
+                # clean up any leftover folders
                 if cur_ep_obj.location:
-                    helpers.delete_empty_folders(ek.ek(os.path.dirname, cur_ep_obj.location),
+                    helpers.delete_empty_folders(os.path.dirname(cur_ep_obj.location),
                                                  keep_dir=ep_obj.show_obj.location)
             except (OSError, IOError):
                 raise exceptions_helper.PostProcessingFailed(u'Unable to delete existing files')
@@ -1122,10 +1119,10 @@ class PostProcessor(object):
             #    cur_ep_obj.status = common.Quality.compositeStatus(common.SNATCHED, new_ep_quality)
 
         # if the show directory doesn't exist then make it if allowed
-        if not ek.ek(os.path.isdir, ep_obj.show_obj.location) and sickgear.CREATE_MISSING_SHOW_DIRS:
+        if not os.path.isdir(ep_obj.show_obj.location) and sickgear.CREATE_MISSING_SHOW_DIRS:
             self._log(u'Show directory does not exist, creating it', logger.DEBUG)
             try:
-                ek.ek(os.mkdir, ep_obj.show_obj.location)
+                os.mkdir(ep_obj.show_obj.location)
                 # do the library update for synoindex
                 notifiers.NotifierFactory().get('SYNOINDEX').addFolder(ep_obj.show_obj.location)
             except (OSError, IOError):
@@ -1138,7 +1135,7 @@ class PostProcessor(object):
         self._change_ep_objs(show_obj, season_number, episode_numbers, new_ep_quality)
 
         # Just want to keep this consistent for failed handling right now
-        release_name = show_name_helpers.determineReleaseName(self.folder_path, self.nzb_name)
+        release_name = show_name_helpers.determine_release_name(self.folder_path, self.nzb_name)
         if None is release_name:
             self._log(u'No snatched release found in history', logger.WARNING)
         elif sickgear.USE_FAILED_DOWNLOADS:
@@ -1147,8 +1144,8 @@ class PostProcessor(object):
         # find the destination folder
         try:
             proper_path = ep_obj.proper_path()
-            proper_absolute_path = ek.ek(os.path.join, ep_obj.show_obj.location, proper_path)
-            dest_path = ek.ek(os.path.dirname, proper_absolute_path)
+            proper_absolute_path = os.path.join(ep_obj.show_obj.location, proper_path)
+            dest_path = os.path.dirname(proper_absolute_path)
 
         except exceptions_helper.ShowDirNotFoundException:
             raise exceptions_helper.PostProcessingFailed(
@@ -1162,7 +1159,7 @@ class PostProcessor(object):
 
         # figure out the base name of the resulting episode file
         if sickgear.RENAME_EPISODES:
-            new_base_name = ek.ek(os.path.basename, proper_path)
+            new_base_name = os.path.basename(proper_path)
             new_file_name = new_base_name + '.' + self.file_name.rpartition('.')[-1]
 
         else:
@@ -1224,7 +1221,7 @@ class PostProcessor(object):
         sql_l = []
         for cur_ep_obj in [ep_obj] + ep_obj.related_ep_obj:
             with cur_ep_obj.lock:
-                cur_ep_obj.location = ek.ek(os.path.join, dest_path, new_file_name)
+                cur_ep_obj.location = os.path.join(dest_path, new_file_name)
                 if dosubs:
                     cur_ep_obj.download_subtitles(force=True)
                 # set file modify stamp to show airdate

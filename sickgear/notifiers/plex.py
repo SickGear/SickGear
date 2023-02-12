@@ -18,7 +18,6 @@ import re
 
 from .generic import Notifier
 import sickgear
-from encodingKludge import fixStupidEncodings
 from exceptions_helper import ex
 
 from _23 import b64encodestring, decode_str, etree, filter_iter, list_values, unquote_plus, urlencode
@@ -73,7 +72,7 @@ class PLEXNotifier(Notifier):
             return True
 
         except (urllib.error.URLError, IOError) as e:
-            self._log_warning(u'Couldn\'t contact Plex at ' + fixStupidEncodings(url) + ' ' + ex(e))
+            self._log_warning(u'Couldn\'t contact Plex at ' + url + ' ' + ex(e))
             return False
 
     @staticmethod

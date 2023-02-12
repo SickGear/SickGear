@@ -24,8 +24,6 @@ from . import emby, kodi, plex, xbmc, \
     discord, emailnotify, gitter, libnotify, growl, prowl, slack, telegram, trakt
 
 import sickgear
-# noinspection PyPep8Naming
-import encodingKludge as ek
 
 from _23 import filter_iter, list_values
 
@@ -159,7 +157,7 @@ def notify_update_library(ep_obj, flush_q=False):
                                 continue
                             shows.add(show_name)
                         else:
-                            parent_dir = re.sub(r'[/\\]+%s.*' % show_name, '', ek.ek(os.path.dirname, location))
+                            parent_dir = re.sub(r'[/\\]+%s.*' % show_name, '', os.path.dirname(location))
                             parent_dir = re.sub(r'^(.{,2})[/\\]', '', parent_dir)
                             if parent_dir in locations:
                                 continue

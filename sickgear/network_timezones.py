@@ -25,8 +25,6 @@ import sickgear
 from . import db, helpers, logger
 from sg_helpers import int_to_time
 
-# noinspection PyPep8Naming
-import encodingKludge as ek
 from lib.dateutil import tz, zoneinfo
 from lib.tzlocal import get_localzone
 
@@ -126,8 +124,8 @@ def get_utc():
             pass
         if isinstance(utc, datetime.tzinfo):
             return utc
-    tz_utc_file = ek.ek(os.path.join, ek.ek(os.path.dirname, zoneinfo.__file__), 'Greenwich')
-    if ek.ek(os.path.isfile, tz_utc_file):
+    tz_utc_file = os.path.join(os.path.dirname(zoneinfo.__file__), 'Greenwich')
+    if os.path.isfile(tz_utc_file):
         return tz.tzfile(tz_utc_file)
 
 
@@ -154,7 +152,7 @@ def _remove_old_zoneinfo():
     """
     if None is not zoneinfo.ZONEFILENAME:
         current_file = helpers.real_path(
-            ek.ek(os.path.join, sickgear.ZONEINFO_DIR, ek.ek(os.path.basename, zoneinfo.ZONEFILENAME)))
+            os.path.join(sickgear.ZONEINFO_DIR, os.path.basename(zoneinfo.ZONEFILENAME)))
         for entry in chain.from_iterable([scantree(helpers.real_path(_dir), include=r'\.tar\.gz$', filter_kind=False)
                                           for _dir in (sickgear.ZONEINFO_DIR, )]):  # type: DirEntry
             if current_file != entry.path:
@@ -192,9 +190,9 @@ def _update_zoneinfo():
 
     current_file = zoneinfo.ZONEFILENAME
     if None is not current_file:
-        current_file = ek.ek(os.path.basename, current_file)
-    zonefile = helpers.real_path(ek.ek(os.path.join, sickgear.ZONEINFO_DIR, current_file))
-    zonemetadata = None if not ek.ek(os.path.isfile, zonefile) else \
+        current_file = os.path.basename(current_file)
+    zonefile = helpers.real_path(os.path.join(sickgear.ZONEINFO_DIR, current_file))
+    zonemetadata = None if not os.path.isfile(zonefile) else \
         zoneinfo.ZoneInfoFile(zoneinfo.getzoneinfofile_stream()).metadata
 
     newtz_regex = re.search(r'(\d{4}[^.]+)', new_zoneinfo)
@@ -220,7 +218,7 @@ def _update_zoneinfo():
     if not helpers.download_file(url_tar, zonefile_tmp):
         return
 
-    if not ek.ek(os.path.exists, zonefile_tmp):
+    if not os.path.exists(zonefile_tmp):
         logger.log(u'Download of %s failed.' % zonefile_tmp, logger.ERROR)
         return
 
@@ -233,7 +231,7 @@ def _update_zoneinfo():
             if None is not current_file:
                 remove_file_perm(zonefile)
             # rename downloaded file
-            ek.ek(os.rename, zonefile_tmp, zonefile)
+            os.rename(zonefile_tmp, zonefile)
             setattr(zoneinfo, '_CLASS_ZONE_INSTANCE', list())
             tz.gettz.cache_clear()
             from dateutil.zoneinfo import get_zonefile_instance
@@ -612,7 +610,6 @@ def get_episode_time(d,  # type: int
             return SGDatetime.from_timestamp(ep_timestamp, tzinfo=tzinfo, tz_aware=True, local_time=False)
         except OverflowError:
             logger.debug('Invalid timestamp: %s, using fallback' % ep_timestamp)
-            ep_timestamp = None
 
     ep_time = None
     if isinstance(ep_airtime, integer_types):

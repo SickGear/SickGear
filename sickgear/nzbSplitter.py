@@ -21,8 +21,6 @@ import re
 
 from lxml_etree import etree
 
-# noinspection PyPep8Naming
-import encodingKludge as ek
 from exceptions_helper import ex
 
 import sickgear
@@ -112,9 +110,9 @@ def getSeasonNZBs(name, url_data, season):
         cur_ep = match.group(1)
         fn = name_extractor(cur_file.get('subject', ''))
         if cur_ep == re.sub(r'\+\d+\.par2$', '', fn, flags=re.I):
-            bn, ext = ek.ek(os.path.splitext, fn)
+            bn, ext = os.path.splitext(fn)
             cur_ep = re.sub(r'\.(part\d+|vol\d+(\+\d+)?)$', '', bn, flags=re.I)
-        bn, ext = ek.ek(os.path.splitext, cur_ep)
+        bn, ext = os.path.splitext(cur_ep)
         if isinstance(ext, string_types) \
                 and re.search(r'^\.(nzb|r\d{2}|rar|7z|zip|par2|vol\d+|nfo|srt|txt|bat|sh|mkv|mp4|avi|wmv)$', ext,
                               flags=re.I):
@@ -155,7 +153,7 @@ def saveNZB(nzb_name, nzb_string):
     :type nzb_string: AnyStr
     """
     try:
-        with ek.ek(open, nzb_name + '.nzb', 'w') as nzb_fh:
+        with open(nzb_name + '.nzb', 'w') as nzb_fh:
             nzb_fh.write(nzb_string)
 
     except EnvironmentError as e:

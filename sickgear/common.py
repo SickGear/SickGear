@@ -240,9 +240,7 @@ class Quality(object):
         :rtype: int
         """
 
-        # noinspection PyPep8Naming
-        import encodingKludge as ek
-        name = ek.ek(os.path.basename, name)
+        name = os.path.basename(name)
 
         # if we have our exact text then assume we put it there
         for _x in sorted(iterkeys(Quality.qualityStrings), reverse=True):
@@ -268,10 +266,8 @@ class Quality(object):
         :return:
         :rtype: int
         """
-        # noinspection PyPep8Naming
-        import encodingKludge as ek
         from sickgear import logger
-        name = ek.ek(os.path.basename, name)
+        name = os.path.basename(name)
 
         name_has = (lambda quality_list, func=all: func([re.search(q, name, re.I) for q in quality_list]))
 
@@ -359,11 +355,9 @@ class Quality(object):
         :return:
         :rtype: int
         """
-        # noinspection PyPep8Naming
-        import encodingKludge as ek
         from exceptions_helper import ex
         from sickgear import logger
-        if ek.ek(os.path.isfile, filename):
+        if os.path.isfile(filename):
 
             from hachoir.parser import createParser
             from hachoir.metadata import extractMetadata
@@ -372,7 +366,7 @@ class Quality(object):
             parser = height = None
             msg = 'Hachoir can\'t parse file "%s" content quality because it found error: %s'
             try:
-                parser = ek.ek(createParser, filename)
+                parser = createParser(filename)
             except InputStreamError as e:
                 logger.log(msg % (filename, ex(e)), logger.WARNING)
             except (BaseException, Exception) as e:

@@ -39,7 +39,6 @@ def set_sys_encoding():
 
     :return: The encoding that is set
     """
-    sys_encoding = None
     should_exit = False
     try:
         locale.setlocale(locale.LC_ALL, '')
@@ -48,7 +47,7 @@ def set_sys_encoding():
     try:
         sys_encoding = locale.getpreferredencoding()
     except (locale.Error, IOError):
-        pass
+        sys_encoding = None
 
     # For OSes that are poorly configured I'll just randomly force UTF-8
     if not sys_encoding or sys_encoding in ('ANSI_X3.4-1968', 'US-ASCII', 'ASCII'):

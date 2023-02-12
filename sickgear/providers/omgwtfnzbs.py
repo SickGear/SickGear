@@ -109,7 +109,7 @@ class OmgwtfnzbsProvider(generic.NZBProvider):
         :return: list of search strings
         :rtype: List[AnyStr]
         """
-        return [x for x in show_name_helpers.makeSceneSeasonSearchString(self.show_obj, ep_obj)]
+        return [x for x in show_name_helpers.make_scene_season_search_string(self.show_obj, ep_obj)]
 
     def _episode_strings(self, ep_obj):
         """
@@ -119,7 +119,7 @@ class OmgwtfnzbsProvider(generic.NZBProvider):
         :return: list of search strings
         :rtype: List[AnyStr]
         """
-        return [x for x in show_name_helpers.makeSceneSearchString(self.show_obj, ep_obj)]
+        return [x for x in show_name_helpers.make_scene_search_string(self.show_obj, ep_obj)]
 
     def _title_and_url(self, item):
         """

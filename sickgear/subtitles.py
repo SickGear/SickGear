@@ -17,9 +17,6 @@
 
 import datetime
 
-# noinspection PyPep8Naming
-import encodingKludge as ek
-
 from . import db, helpers, logger
 from .common import *
 
@@ -31,41 +28,41 @@ SINGLE = 'und'
 
 
 def sorted_service_list():
-    servicesMapping = dict([(x.lower(), x) for x in subliminal.core.SERVICES])
+    services_mapping = dict([(x.lower(), x) for x in subliminal.core.SERVICES])
 
-    newList = []
+    new_list = []
 
     # add all services in the priority list, in order
-    curIndex = 0
-    for curService in sickgear.SUBTITLES_SERVICES_LIST:
-        if curService in servicesMapping:
-            curServiceDict = dict(
-                id=curService,
-                image=curService + '.png',
-                name=servicesMapping[curService],
-                enabled=1 == sickgear.SUBTITLES_SERVICES_ENABLED[curIndex],
-                api_based=__import__('lib.subliminal.services.' + curService, globals=globals(),
+    cur_index = 0
+    for cur_service in sickgear.SUBTITLES_SERVICES_LIST:
+        if cur_service in services_mapping:
+            cur_service_dict = dict(
+                id=cur_service,
+                image=cur_service + '.png',
+                name=services_mapping[cur_service],
+                enabled=1 == sickgear.SUBTITLES_SERVICES_ENABLED[cur_index],
+                api_based=__import__('lib.subliminal.services.' + cur_service, globals=globals(),
                                      locals=locals(), fromlist=['Service']).Service.api_based,
-                url=__import__('lib.subliminal.services.' + curService, globals=globals(),
+                url=__import__('lib.subliminal.services.' + cur_service, globals=globals(),
                                locals=locals(), fromlist=['Service']).Service.site_url)
-            newList.append(curServiceDict)
-        curIndex += 1
+            new_list.append(cur_service_dict)
+        cur_index += 1
 
     # add any services that are missing from that list
-    for curService in servicesMapping:
-        if curService not in [x['id'] for x in newList]:
-            curServiceDict = dict(
-                id=curService,
-                image=curService + '.png',
-                name=servicesMapping[curService],
+    for cur_service in services_mapping:
+        if cur_service not in [x['id'] for x in new_list]:
+            cur_service_dict = dict(
+                id=cur_service,
+                image=cur_service + '.png',
+                name=services_mapping[cur_service],
                 enabled=False,
-                api_based=__import__('lib.subliminal.services.' + curService, globals=globals(),
+                api_based=__import__('lib.subliminal.services.' + cur_service, globals=globals(),
                                      locals=locals(), fromlist=['Service']).Service.api_based,
-                url=__import__('lib.subliminal.services.' + curService, globals=globals(),
+                url=__import__('lib.subliminal.services.' + cur_service, globals=globals(),
                                locals=locals(), fromlist=['Service']).Service.site_url)
-            newList.append(curServiceDict)
+            new_list.append(cur_service_dict)
 
-    return newList
+    return new_list
 
 
 def get_enabled_service_list():
@@ -81,10 +78,10 @@ def get_language_name(select_lang):
 
 
 def wanted_languages(sql_like=False):
-    wantedLanguages = sorted(sickgear.SUBTITLES_LANGUAGES)
+    wanted_langs = sorted(sickgear.SUBTITLES_LANGUAGES)
     if sql_like:
-        return '%' + ','.join(wantedLanguages) + '%'
-    return wantedLanguages
+        return '%' + ','.join(wanted_langs) + '%'
+    return wanted_langs
 
 
 def subtitles_languages(video_path):
@@ -166,7 +163,7 @@ class SubtitlesFinder(object):
         now = datetime.datetime.now()
         for cur_result in sql_result:
 
-            if not ek.ek(os.path.isfile, cur_result['location']):
+            if not os.path.isfile(cur_result['location']):
                 logger.log('Episode file does not exist, cannot download subtitles for episode %dx%d of show %s'
                            % (cur_result['season'], cur_result['episode'], cur_result['show_name']), logger.DEBUG)
                 continue

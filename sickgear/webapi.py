@@ -31,8 +31,6 @@ import time
 import traceback
 from . import webserve
 
-# noinspection PyPep8Naming
-import encodingKludge as ek
 import exceptions_helper
 from exceptions_helper import ex
 from json_helper import is_orjson, json_dumps, JSON_INDENT, json_loads, JSONEncoder, ORJSON_OPTIONS
@@ -833,7 +831,7 @@ def _getRootDirs():
     for root_dir in root_dirs:
         valid = 1
         try:
-            ek.ek(os.listdir, root_dir)
+            os.listdir(root_dir)
         except (BaseException, Exception):
             valid = 0
         default = 0
@@ -2003,7 +2001,7 @@ class CMD_SickGearAddRootDir(ApiCall):
         index = 0
 
         # disallow adding/setting an invalid dir
-        if not ek.ek(os.path.isdir, self.location):
+        if not os.path.isdir(self.location):
             return _responds(RESULT_FAILURE, msg="Location is invalid")
 
         root_dirs = []
@@ -2340,8 +2338,8 @@ class CMD_SickGearGetIndexerIcon(ApiCall):
             self.handler.set_status(404)
             return _responds(RESULT_FAILURE, 'Icon not found')
         img = i['icon']
-        image = ek.ek(os.path.join, sickgear.PROG_DIR, 'gui', 'slick', 'images', img)
-        if not ek.ek(os.path.isfile, image):
+        image = os.path.join(sickgear.PROG_DIR, 'gui', 'slick', 'images', img)
+        if not os.path.isfile(image):
             self.handler.set_status(404)
             return _responds(RESULT_FAILURE, 'Icon not found')
         return {'outputType': 'image', 'image': self.handler.get_image(image)}
@@ -2361,9 +2359,8 @@ class CMD_SickGearGetNetworkIcon(ApiCall):
         ApiCall.__init__(self, handler, args, kwargs)
 
     def run(self):
-        image = ek.ek(os.path.join, sickgear.PROG_DIR, 'gui', 'slick', 'images', 'network',
-                      '%s.png' % self.network.lower())
-        if not ek.ek(os.path.isfile, image):
+        image = os.path.join(sickgear.PROG_DIR, 'gui', 'slick', 'images', 'network', '%s.png' % self.network.lower())
+        if not os.path.isfile(image):
             self.handler.set_status(404)
             return _responds(RESULT_FAILURE, 'Icon not found')
         return {'outputType': 'image', 'image': self.handler.get_image(image)}
@@ -3328,7 +3325,7 @@ class CMD_SickGearShowAddExisting(ApiCall):
         if show_obj:
             return _responds(RESULT_FAILURE, msg="An existing indexerid already exists in the database")
 
-        if not ek.ek(os.path.isdir, self.location):
+        if not os.path.isdir(self.location):
             return _responds(RESULT_FAILURE, msg='Not a valid location')
 
         lINDEXER_API_PARMS = sickgear.TVInfoAPI(self.tvid).api_params.copy()
@@ -3460,7 +3457,7 @@ class CMD_SickGearShowAddNew(ApiCall):
             else:
                 return _responds(RESULT_FAILURE, msg="Root directory is not set, please provide a location")
 
-        if not ek.ek(os.path.isdir, self.location):
+        if not os.path.isdir(self.location):
             return _responds(RESULT_FAILURE, msg="'" + self.location + "' is not a valid location")
 
         # use default quality as a failsafe
@@ -3611,9 +3608,9 @@ class CMD_SickGearShowCache(ApiCall):
         has_poster = 0
         has_banner = 0
 
-        if ek.ek(os.path.isfile, cache_obj.poster_path(show_obj.tvid, show_obj.prodid)):
+        if os.path.isfile(cache_obj.poster_path(show_obj.tvid, show_obj.prodid)):
             has_poster = 1
-        if ek.ek(os.path.isfile, cache_obj.banner_path(show_obj.tvid, show_obj.prodid)):
+        if os.path.isfile(cache_obj.banner_path(show_obj.tvid, show_obj.prodid)):
             has_banner = 1
 
         return _responds(RESULT_SUCCESS, {"poster": has_poster, "banner": has_banner})
@@ -3663,8 +3660,8 @@ class CMD_SickGearShowDelete(ApiCall):
         if not show_obj:
             return _responds(RESULT_FAILURE, msg="Show not found")
 
-        if sickgear.show_queue_scheduler.action.isBeingAdded(
-                show_obj) or sickgear.show_queue_scheduler.action.isBeingUpdated(show_obj):
+        if sickgear.show_queue_scheduler.action.is_being_added(
+                show_obj) or sickgear.show_queue_scheduler.action.is_being_updated(show_obj):
             return _responds(RESULT_FAILURE, msg="Show can not be deleted while being added or updated")
 
         show_obj.delete_show(full=self.full_delete)
@@ -3834,8 +3831,7 @@ class CMD_SickGearShowListFanart(ApiCall):
         fanart = []
         rating_names = {10: 'group', 20: 'favorite', 30: 'avoid'}
         cache_obj = image_cache.ImageCache()
-        for img in ek.ek(glob.glob, cache_obj.fanart_path(
-                show_obj.tvid, show_obj.prodid).replace('fanart.jpg', '*')) or []:
+        for img in glob.glob(cache_obj.fanart_path(show_obj.tvid, show_obj.prodid).replace('fanart.jpg', '*')) or []:
             match = re.search(r'(\d+(?:\.(\w*?(\d*)))?\.(?:\w{5,8}))\.fanart\.', img, re.I)
             if match and match.group(1):
                 fanart += [(match.group(1), rating_names.get(sickgear.FANART_RATINGS.get(
@@ -3870,7 +3866,7 @@ class CMD_SickGearShowRateFanart(ApiCall):
         cache_obj = image_cache.ImageCache()
         fanartfile = cache_obj.fanart_path(self.tvid, self.prodid).replace('fanart.jpg',
                                                                            '%s.fanart.jpg' % self.fanartname)
-        if not ek.ek(os.path.isfile, fanartfile):
+        if not os.path.isfile(fanartfile):
             return _responds(RESULT_FAILURE, msg='Unknown Fanart')
         fan_ratings = {'unrate': 0, 'group': 10, 'favorite': 20, 'avoid': 30}
         show_id = TVidProdid({self.tvid: self.prodid})()
@@ -3906,19 +3902,19 @@ class CMD_SickGearShowGetFanart(ApiCall):
     def run(self):
         """ get the fanart stored for a show """
         cache_obj = image_cache.ImageCache()
-        default_fanartfile = ek.ek(os.path.join, sickgear.PROG_DIR, 'gui', 'slick', 'images', 'trans.png')
+        default_fanartfile = os.path.join(sickgear.PROG_DIR, 'gui', 'slick', 'images', 'trans.png')
         fanartfile = default_fanartfile
         used_fanart = 'default'
         if self.fanartname:
             fanartfile = cache_obj.fanart_path(self.tvid, self.prodid).replace('fanart.jpg',
                                                                                '%s.fanart.jpg' % self.fanartname)
-            if not ek.ek(os.path.isfile, fanartfile):
+            if not os.path.isfile(fanartfile):
                 fanartfile = default_fanartfile
                 used_fanart = self.fanartname
         else:
             fanart = []
-            for img in ek.ek(glob.glob, cache_obj.fanart_path(self.tvid, self.prodid).replace('fanart.jpg', '*')) or []:
-                if not ek.ek(os.path.isfile, img):
+            for img in glob.glob(cache_obj.fanart_path(self.tvid, self.prodid).replace('fanart.jpg', '*')) or []:
+                if not os.path.isfile(img):
                     continue
                 match = re.search(r'(\d+(?:\.(\w*?(\d*)))?\.(?:\w{5,8}))\.fanart\.', img, re.I)
                 if match and match.group(1):
@@ -3933,8 +3929,8 @@ class CMD_SickGearShowGetFanart(ApiCall):
                     fanartfile = fanartsorted[random_fanart][0]
                     used_fanart = fanartsorted[random_fanart][1]
 
-        if fanartfile and ek.ek(os.path.isfile, fanartfile):
-            with ek.ek(open, fanartfile, 'rb') as f:
+        if fanartfile and os.path.isfile(fanartfile):
+            with open(fanartfile, 'rb') as f:
                 mime_type, encoding = MimeTypes().guess_type(fanartfile)
                 self.handler.set_header('X-Fanartname', used_fanart)
                 self.handler.set_header('Content-Type', mime_type)
@@ -4021,7 +4017,7 @@ class CMD_SickGearShowRefresh(ApiCall):
             return _responds(RESULT_FAILURE, msg="Show not found")
 
         try:
-            sickgear.show_queue_scheduler.action.refreshShow(show_obj)
+            sickgear.show_queue_scheduler.action.refresh_show(show_obj)
             return _responds(RESULT_SUCCESS, msg='%s has queued to be refreshed' % show_obj.unique_name)
         except exceptions_helper.CantRefreshException as e:
             # TODO: log the exception
@@ -4443,7 +4439,7 @@ class CMD_SickGearShowUpdate(ApiCall):
             return _responds(RESULT_FAILURE, msg="Show not found")
 
         try:
-            sickgear.show_queue_scheduler.action.updateShow(show_obj, True)
+            sickgear.show_queue_scheduler.action.update_show(show_obj, True)
             return _responds(RESULT_SUCCESS, msg='%s has queued to be updated' % show_obj.unique_name)
         except exceptions_helper.CantUpdateException as e:
             self.log(u'Unable to update %s. %s' % (show_obj.unique_name, ex(e)), logger.ERROR)
@@ -4655,7 +4651,7 @@ class CMD_SickGearShowsForceUpdate(ApiCall):
 
     def run(self):
         """ force the daily show update now """
-        if sickgear.show_queue_scheduler.action.isShowUpdateRunning() \
+        if sickgear.show_queue_scheduler.action.is_show_update_running() \
                 or sickgear.show_update_scheduler.action.amActive:
             return _responds(RESULT_FAILURE, msg="show update already running.")
 

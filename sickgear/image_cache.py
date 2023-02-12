@@ -20,8 +20,6 @@ import os.path
 import re
 import zlib
 
-# noinspection PyPep8Naming
-import encodingKludge as ek
 import exceptions_helper
 from exceptions_helper import ex
 import sickgear
@@ -30,7 +28,6 @@ from . import db, logger
 from .metadata.generic import GenericMetadata
 from .sgdatetime import timestamp_near
 from .indexers.indexer_config import TVINFO_TVDB, TVINFO_TVMAZE, TVINFO_TMDB, TVINFO_IMDB
-from lib.tvinfo_base.exceptions import *
 
 from six import itervalues, iteritems
 
@@ -56,9 +53,9 @@ class ImageCache(object):
     characters_dir = None  # type: Optional[AnyStr]
 
     def __init__(self):
-        if None is ImageCache.base_dir and ek.ek(os.path.exists, sickgear.CACHE_DIR):
-            ImageCache.base_dir = ek.ek(os.path.abspath, ek.ek(os.path.join, sickgear.CACHE_DIR, 'images'))
-            ImageCache.shows_dir = ek.ek(os.path.abspath, ek.ek(os.path.join, self.base_dir, 'shows'))
+        if None is ImageCache.base_dir and os.path.exists(sickgear.CACHE_DIR):
+            ImageCache.base_dir = os.path.abspath(os.path.join(sickgear.CACHE_DIR, 'images'))
+            ImageCache.shows_dir = os.path.abspath(os.path.join(self.base_dir, 'shows'))
             ImageCache.persons_dir = self._persons_dir()
             ImageCache.characters_dir = self._characters_dir()
 
@@ -70,17 +67,17 @@ class ImageCache(object):
     #     """
     #     Builds up the full path to the image cache directory
     #     """
-    #     return ek.ek(os.path.abspath, ek.ek(os.path.join, sickgear.CACHE_DIR, 'images'))
+    #     return os.path.abspath(os.path.join(sickgear.CACHE_DIR, 'images'))
 
     @staticmethod
     def _persons_dir():
         # type: (...) -> AnyStr
-        return ek.ek(os.path.join, sickgear.CACHE_DIR, 'images', 'person')
+        return os.path.join(sickgear.CACHE_DIR, 'images', 'person')
 
     @staticmethod
     def _characters_dir():
         # type: (...) -> AnyStr
-        return ek.ek(os.path.join, sickgear.CACHE_DIR, 'images', 'characters')
+        return os.path.join(sickgear.CACHE_DIR, 'images', 'characters')
 
     def _fanart_dir(self, tvid=None, prodid=None):
         # type: (int, int) -> AnyStr
@@ -95,7 +92,7 @@ class ImageCache(object):
         :rtype: AnyStr or None
         """
         if None not in (tvid, prodid):
-            return ek.ek(os.path.abspath, ek.ek(os.path.join, self.shows_dir, '%s-%s' % (tvid, prodid), 'fanart'))
+            return os.path.abspath(os.path.join(self.shows_dir, '%s-%s' % (tvid, prodid), 'fanart'))
 
     def _thumbnails_dir(self, tvid, prodid):
         # type: (int, int) -> AnyStr
@@ -109,7 +106,7 @@ class ImageCache(object):
         :return: path
         :rtype: AnyStr
         """
-        return ek.ek(os.path.abspath, ek.ek(os.path.join, self.shows_dir, '%s-%s' % (tvid, prodid), 'thumbnails'))
+        return os.path.abspath(os.path.join(self.shows_dir, '%s-%s' % (tvid, prodid), 'thumbnails'))
 
     @staticmethod
     def _person_base_name(person_obj):
@@ -134,7 +131,7 @@ class ImageCache(object):
         :param base_path:
         """
         filename = '%s.jpg' % base_path or self._person_base_name(person_obj)
-        return ek.ek(os.path.join, self.persons_dir, filename)
+        return os.path.join(self.persons_dir, filename)
 
     def person_thumb_path(self, person_obj, base_path=None):
         # type: (Optional[Person], AnyStr) -> AnyStr
@@ -144,7 +141,7 @@ class ImageCache(object):
         :param base_path:
         """
         filename = '%s_thumb.jpg' % base_path or self._person_base_name(person_obj)
-        return ek.ek(os.path.join, self.persons_dir, filename)
+        return os.path.join(self.persons_dir, filename)
 
     def person_both_paths(self, person_obj):
         # type: (Person) -> Tuple[AnyStr, AnyStr]
@@ -164,7 +161,7 @@ class ImageCache(object):
         :param base_path:
         """
         filename = '%s.jpg' % base_path or self._character_base_name(character_obj, show_obj)
-        return ek.ek(os.path.join, self.characters_dir, filename)
+        return os.path.join(self.characters_dir, filename)
 
     def character_thumb_path(self, character_obj, show_obj, base_path=None):
         # type: (Optional[Character], Optional[TVShow], AnyStr) -> AnyStr
@@ -175,7 +172,7 @@ class ImageCache(object):
         :param base_path:
         """
         filename = '%s_thumb.jpg' % base_path or self._character_base_name(character_obj, show_obj)
-        return ek.ek(os.path.join, self.characters_dir, filename)
+        return os.path.join(self.characters_dir, filename)
 
     def character_both_path(self, character_obj, show_obj=None, tvid=None, proid=None, person_obj=None):
         # type: (Character, TVShow, integer_types, integer_types, Person) -> Tuple[AnyStr, AnyStr]
@@ -208,7 +205,7 @@ class ImageCache(object):
         :return: a full path to the cached poster file for the given tvid prodid
         :rtype: AnyStr
         """
-        return ek.ek(os.path.join, self.shows_dir, '%s-%s' % (tvid, prodid), 'poster.jpg')
+        return os.path.join(self.shows_dir, '%s-%s' % (tvid, prodid), 'poster.jpg')
 
     def banner_path(self, tvid, prodid):
         # type: (int, int) -> AnyStr
@@ -222,7 +219,7 @@ class ImageCache(object):
         :return: a full path to the cached banner file for the given tvid prodid
         :rtype: AnyStr
         """
-        return ek.ek(os.path.join, self.shows_dir, '%s-%s' % (tvid, prodid), 'banner.jpg')
+        return os.path.join(self.shows_dir, '%s-%s' % (tvid, prodid), 'banner.jpg')
 
     def fanart_path(self, tvid, prodid, prefix=''):
         # type: (int, int, Optional[AnyStr]) -> AnyStr
@@ -238,7 +235,7 @@ class ImageCache(object):
         :return: a full path to the cached fanart file for the given tvid prodid
         :rtype: AnyStr
         """
-        return ek.ek(os.path.join, self._fanart_dir(tvid, prodid), '%s%s' % (prefix, 'fanart.jpg'))
+        return os.path.join(self._fanart_dir(tvid, prodid), '%s%s' % (prefix, 'fanart.jpg'))
 
     def poster_thumb_path(self, tvid, prodid):
         # type: (int, int) -> AnyStr
@@ -252,7 +249,7 @@ class ImageCache(object):
         :return: a full path to the cached poster file for the given tvid prodid
         :rtype: AnyStr
         """
-        return ek.ek(os.path.join, self._thumbnails_dir(tvid, prodid), 'poster.jpg')
+        return os.path.join(self._thumbnails_dir(tvid, prodid), 'poster.jpg')
 
     def banner_thumb_path(self, tvid, prodid):
         # type: (int, int) -> AnyStr
@@ -266,7 +263,7 @@ class ImageCache(object):
         :return: a full path to the cached poster file for the given tvid prodid
         :rtype: AnyStr
         """
-        return ek.ek(os.path.join, self._thumbnails_dir(tvid, prodid), 'banner.jpg')
+        return os.path.join(self._thumbnails_dir(tvid, prodid), 'banner.jpg')
 
     @staticmethod
     def has_file(image_file):
@@ -278,8 +275,8 @@ class ImageCache(object):
         :rtype: bool
         """
         result = []
-        for filename in ek.ek(glob.glob, image_file):
-            result.append(ek.ek(os.path.isfile, filename) and filename)
+        for filename in glob.glob(image_file):
+            result.append(os.path.isfile(filename) and filename)
             logger.log(u'Found cached %s' % filename, logger.DEBUG)
 
         not any(result) and logger.log(u'No cache for %s' % image_file, logger.DEBUG)
@@ -367,7 +364,7 @@ class ImageCache(object):
         :param image: image file or data
         :param is_binary: is data instead of path
         """
-        if not is_binary and not ek.ek(os.path.isfile, image):
+        if not is_binary and not os.path.isfile(image):
             logger.warning(u'File not found to determine image type of %s' % image)
             return
         if not image:
@@ -540,7 +537,7 @@ class ImageCache(object):
         else:
             sg_helpers.copy_file(image_path, dest_path)
 
-        return ek.ek(os.path.isfile, dest_path) and dest_path or None
+        return os.path.isfile(dest_path) and dest_path or None
 
     def _cache_info_source_images(self, show_obj, img_type, num_files=0, max_files=500, force=False, show_infos=None):
         # type: (TVShow, int, int, int, bool, ShowInfosDict) -> bool
@@ -588,7 +585,7 @@ class ImageCache(object):
                 return False
 
             crcs = []
-            for cache_file_name in ek.ek(glob.glob, dest_path):
+            for cache_file_name in glob.glob(dest_path):
                 with open(cache_file_name, mode='rb') as resource:
                     crc = '%05X' % (zlib.crc32(resource.read()) & 0xFFFFFFFF)
                 if crc not in crcs:
@@ -627,7 +624,7 @@ class ImageCache(object):
                 success += (0, 1)[result]
                 if num_files > max_files:
                     break
-            total = len(ek.ek(glob.glob, dest_path))
+            total = len(glob.glob(dest_path))
             logger.log(u'Saved %s fanart images%s. Cached %s of max %s fanart file%s'
                        % (success,
                           ('', ' from ' + ', '.join([x for x in list(set(sources))]))[0 < len(sources)],
@@ -696,7 +693,7 @@ class ImageCache(object):
             cache_path = self.fanart_path(*arg_tvid_prodid).replace('fanart.jpg', '')
             # num_images = len(fnmatch.filter(os.listdir(cache_path), '*.jpg'))
 
-            for cache_dir in ek.ek(glob.glob, cache_path):
+            for cache_dir in glob.glob(cache_path):
                 if show_obj.tvid_prodid in sickgear.FANART_RATINGS:
                     del (sickgear.FANART_RATINGS[show_obj.tvid_prodid])
                 result = sg_helpers.remove_file(cache_dir, tree=True)
@@ -712,11 +709,11 @@ class ImageCache(object):
                 needed = []
                 if any([need_images[self.POSTER], need_images[self.BANNER]]):
                     poster_path = cur_provider.get_poster_path(show_obj)
-                    if poster_path not in checked_files and ek.ek(os.path.isfile, poster_path):
+                    if poster_path not in checked_files and os.path.isfile(poster_path):
                         needed += [[False, poster_path]]
                 if need_images[self.FANART]:
                     fanart_path = cur_provider.get_fanart_path(show_obj)
-                    if fanart_path not in checked_files and ek.ek(os.path.isfile, fanart_path):
+                    if fanart_path not in checked_files and os.path.isfile(fanart_path):
                         needed += [[True, fanart_path]]
                 if 0 == len(needed):
                     break

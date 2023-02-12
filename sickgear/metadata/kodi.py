@@ -25,8 +25,6 @@ import sg_helpers
 from ..indexers.indexer_config import TVINFO_IMDB, TVINFO_TVDB
 from lib.tvinfo_base.exceptions import *
 import sickgear
-# noinspection PyPep8Naming
-import encodingKludge as ek
 import exceptions_helper
 from exceptions_helper import ex
 from lxml_etree import etree
@@ -472,8 +470,8 @@ def remove_default_attr(*args, **kwargs):
                     if nfo_path:
                         # show
                         try:
-                            if ek.ek(os.path.isfile, nfo_path):
-                                with ek.ek(io.open, nfo_path, 'r', encoding='utf8') as xml_file_obj:
+                            if os.path.isfile(nfo_path):
+                                with io.open(nfo_path, 'r', encoding='utf8') as xml_file_obj:
                                     xmltree = etree.ElementTree(file=xml_file_obj)
 
                                 # remove default="" attributes
@@ -519,8 +517,8 @@ def remove_default_attr(*args, **kwargs):
                             try:
                                 changed = False
                                 nfo_path = kodi.get_episode_file_path(cur_ep_obj)
-                                if nfo_path and ek.ek(os.path.isfile, nfo_path):
-                                    with ek.ek(io.open, nfo_path, 'r', encoding='utf8') as xml_file_obj:
+                                if nfo_path and os.path.isfile(nfo_path):
+                                    with io.open(nfo_path, 'r', encoding='utf8') as xml_file_obj:
                                         xmltree = etree.ElementTree(file=xml_file_obj)
 
                                     # remove default="" attributes
@@ -573,8 +571,8 @@ def rebuild_nfo(*args, **kwargs):
 
                     try:
                         nfo_path = kodi.get_show_file_path(cur_show_obj)
-                        if nfo_path and ek.ek(os.path.isfile, nfo_path):
-                            with ek.ek(io.open, nfo_path, 'r', encoding='utf8') as xml_file_obj:
+                        if nfo_path and os.path.isfile(nfo_path):
+                            with io.open(nfo_path, 'r', encoding='utf8') as xml_file_obj:
                                 xmltree = etree.ElementTree(file=xml_file_obj)
 
                             # check xml keys exist to validate file as type Kodi episode or tvshow .nfo

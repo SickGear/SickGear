@@ -36,8 +36,6 @@ from .common import cpu_presets, mediaExtensions, Overview, Quality, statusStrin
     ARCHIVED, DOWNLOADED, FAILED, IGNORED, SKIPPED, SNATCHED_ANY, SUBTITLED, UNAIRED, UNKNOWN, WANTED
 from .sgdatetime import timestamp_near
 from lib.tvinfo_base.exceptions import *
-# noinspection PyPep8Naming
-import encodingKludge as ek
 from exceptions_helper import ex, MultipleShowObjectsException
 
 import dateutil.parser
@@ -171,7 +169,7 @@ def has_image_ext(filename):
     :rtype: bool
     """
     try:
-        if ek.ek(os.path.splitext, filename)[1].lower() in ['.bmp', '.gif', '.jpeg', '.jpg', '.png', '.webp']:
+        if os.path.splitext(filename)[1].lower() in ['.bmp', '.gif', '.jpeg', '.jpg', '.png', '.webp']:
             return True
     except (BaseException, Exception):
         pass
@@ -251,9 +249,9 @@ def make_dir(path):
     :return: success of creation
     :rtype: bool
     """
-    if not ek.ek(os.path.isdir, path):
+    if not os.path.isdir(path):
         try:
-            ek.ek(os.makedirs, path)
+            os.makedirs(path)
             # do a Synology library update
             notifiers.NotifierFactory().get('SYNOINDEX').addFolder(path)
         except OSError:
@@ -391,7 +389,7 @@ def link(src_file, dest_file):
         if 0 == ctypes.windll.kernel32.CreateHardLinkW(text_type(dest_file), text_type(src_file), 0):
             raise ctypes.WinError()
     else:
-        ek.ek(os.link, src_file, dest_file)
+        os.link(src_file, dest_file)
 
 
 def hardlink_file(src_file, dest_file):
@@ -403,7 +401,7 @@ def hardlink_file(src_file, dest_file):
     :type dest_file: AnyStr
     """
     try:
-        ek.ek(link, src_file, dest_file)
+        link(src_file, dest_file)
         fix_set_group_id(dest_file)
     except (BaseException, Exception) as e:
         logger.log(u"Failed to create hardlink of %s at %s: %s. Copying instead." % (src_file, dest_file, ex(e)),
@@ -423,10 +421,10 @@ def symlink(src_file, dest_file):
         import ctypes
 
         if ctypes.windll.kernel32.CreateSymbolicLinkW(
-                text_type(dest_file), text_type(src_file), 1 if ek.ek(os.path.isdir, src_file) else 0) in [0, 1280]:
+                text_type(dest_file), text_type(src_file), 1 if os.path.isdir(src_file) else 0) in [0, 1280]:
             raise ctypes.WinError()
     else:
-        ek.ek(os.symlink, src_file, dest_file)
+        os.symlink(src_file, dest_file)
 
 
 def move_and_symlink_file(src_file, dest_file):
@@ -438,9 +436,9 @@ def move_and_symlink_file(src_file, dest_file):
     :type dest_file: AnyStr
     """
     try:
-        ek.ek(shutil.move, src_file, dest_file)
+        shutil.move(src_file, dest_file)
         fix_set_group_id(dest_file)
-        ek.ek(symlink, dest_file, src_file)
+        symlink(dest_file, src_file)
     except (BaseException, Exception):
         logger.log(u"Failed to create symlink of %s at %s. Copying instead" % (src_file, dest_file), logger.ERROR)
         copy_file(src_file, dest_file)
@@ -461,11 +459,11 @@ def rename_ep_file(cur_path, new_path, old_path_length=0):
     :rtype: bool
     """
 
-    # new_dest_dir, new_dest_name = ek.ek(os.path.split, new_path)
+    # new_dest_dir, new_dest_name = os.path.split(new_path)
 
     if 0 == old_path_length or len(cur_path) < old_path_length:
         # approach from the right
-        cur_file_name, cur_file_ext = ek.ek(os.path.splitext, cur_path)
+        cur_file_name, cur_file_ext = os.path.splitext(cur_path)
     else:
         # approach from the left
         cur_file_ext = cur_path[old_path_length:]
@@ -473,7 +471,7 @@ def rename_ep_file(cur_path, new_path, old_path_length=0):
 
     if cur_file_ext[1:] in subtitleExtensions:
         # Extract subtitle language from filename
-        sublang = ek.ek(os.path.splitext, cur_file_name)[1][1:]
+        sublang = os.path.splitext(cur_file_name)[1][1:]
 
         # Check if the language extracted from filename is a valid language
         try:
@@ -485,18 +483,18 @@ def rename_ep_file(cur_path, new_path, old_path_length=0):
     # put the extension on the incoming file
     new_path += cur_file_ext
 
-    make_path(ek.ek(os.path.dirname, new_path), syno=True)
+    make_path(os.path.dirname(new_path), syno=True)
 
     # move the file
     try:
         logger.log(u'Renaming file from %s to %s' % (cur_path, new_path))
-        ek.ek(shutil.move, cur_path, new_path)
+        shutil.move(cur_path, new_path)
     except (OSError, IOError) as e:
         logger.log(u"Failed renaming " + cur_path + " to " + new_path + ": " + ex(e), logger.ERROR)
         return False
 
     # clean up any old folders that are empty
-    delete_empty_folders(ek.ek(os.path.dirname, cur_path))
+    delete_empty_folders(os.path.dirname(cur_path))
 
     return True
 
@@ -517,8 +515,8 @@ def delete_empty_folders(check_empty_dir, keep_dir=None):
     logger.log(u"Trying to clean any empty folders under " + check_empty_dir)
 
     # as long as the folder exists and doesn't contain any files, delete it
-    while ek.ek(os.path.isdir, check_empty_dir) and check_empty_dir != keep_dir:
-        check_files = ek.ek(os.listdir, check_empty_dir)
+    while os.path.isdir(check_empty_dir) and check_empty_dir != keep_dir:
+        check_files = os.listdir(check_empty_dir)
 
         if not check_files or (len(check_files) <= len(ignore_items) and all(
                 [check_file in ignore_items for check_file in check_files])):
@@ -526,13 +524,13 @@ def delete_empty_folders(check_empty_dir, keep_dir=None):
             try:
                 logger.log(u"Deleting empty folder: " + check_empty_dir)
                 # need shutil.rmtree when ignore_items is really implemented
-                ek.ek(os.rmdir, check_empty_dir)
+                os.rmdir(check_empty_dir)
                 # do a Synology library update
                 notifiers.NotifierFactory().get('SYNOINDEX').deleteFolder(check_empty_dir)
             except OSError as e:
                 logger.log(u"Unable to delete " + check_empty_dir + ": " + repr(e) + " / " + ex(e), logger.WARNING)
                 break
-            check_empty_dir = ek.ek(os.path.dirname, check_empty_dir)
+            check_empty_dir = os.path.dirname(check_empty_dir)
         else:
             break
 
@@ -565,7 +563,7 @@ def get_absolute_number_from_season_and_episode(show_obj, season, episode):
                 logger.DEBUG)
         else:
             logger.debug('No entries for absolute number in show: %s found using %sx%s' %
-                       (show_obj.unique_name, str(season), str(episode)))
+                         (show_obj.unique_name, str(season), str(episode)))
 
     return absolute_number
 
@@ -608,7 +606,7 @@ def sanitize_scene_name(name):
 
         # tidy up stuff that doesn't belong in scene names
         name = re.sub(r'(-?\s|/)', '.', name).replace('&', 'and')
-        name = re.sub(r"\.\.*", '.', name).rstrip('.')
+        name = re.sub(r"\.+", '.', name).rstrip('.')
 
         return name
     return ''
@@ -675,24 +673,24 @@ def backup_versioned_file(old_file, version):
 
     new_file = '%s.v%s' % (old_file, version)
 
-    if ek.ek(os.path.isfile, new_file):
+    if os.path.isfile(new_file):
         changed_old_db = False
         for back_nr in range(1, 10000):
             alt_name = '%s.r%s' % (new_file, back_nr)
-            if not ek.ek(os.path.isfile, alt_name):
+            if not os.path.isfile(alt_name):
                 try:
                     shutil.move(new_file, alt_name)
                     changed_old_db = True
                     break
                 except (BaseException, Exception):
-                    if ek.ek(os.path.isfile, new_file):
+                    if os.path.isfile(new_file):
                         continue
                     logger.log('could not rename old backup db file', logger.WARNING)
         if not changed_old_db:
             raise Exception('can\'t create a backup of db')
 
-    while not ek.ek(os.path.isfile, new_file):
-        if not ek.ek(os.path.isfile, old_file) or 0 == get_size(old_file):
+    while not os.path.isfile(new_file):
+        if not os.path.isfile(old_file) or 0 == get_size(old_file):
             logger.log(u'No need to create backup', logger.DEBUG)
             break
 
@@ -724,12 +722,12 @@ def restore_versioned_file(backup_file, version):
     :return: success
     :rtype: bool
     """
-    numTries = 0
+    num_tries = 0
 
-    new_file, backup_version = ek.ek(os.path.splitext, backup_file)
+    new_file, backup_version = os.path.splitext(backup_file)
     restore_file = new_file + '.' + 'v' + str(version)
 
-    if not ek.ek(os.path.isfile, new_file):
+    if not os.path.isfile(new_file):
         logger.log(u"Not restoring, " + new_file + " doesn't exist", logger.DEBUG)
         return False
 
@@ -744,8 +742,8 @@ def restore_versioned_file(backup_file, version):
             logger.WARNING)
         return False
 
-    while not ek.ek(os.path.isfile, new_file):
-        if not ek.ek(os.path.isfile, restore_file):
+    while not os.path.isfile(new_file):
+        if not os.path.isfile(restore_file):
             logger.log(u"Not restoring, " + restore_file + " doesn't exist", logger.DEBUG)
             break
 
@@ -756,11 +754,11 @@ def restore_versioned_file(backup_file, version):
             break
         except (BaseException, Exception) as e:
             logger.log(u"Error while trying to restore " + restore_file + ": " + ex(e), logger.WARNING)
-            numTries += 1
+            num_tries += 1
             time.sleep(1)
             logger.log(u"Trying again.", logger.DEBUG)
 
-        if 10 <= numTries:
+        if 10 <= num_tries:
             logger.log(u"Unable to restore " + restore_file + " to " + new_file + " please do it manually.",
                        logger.ERROR)
             return False
@@ -978,8 +976,8 @@ def is_hidden_folder(folder):
     :return: Returns True if folder is hidden
     :rtype: bool
     """
-    if ek.ek(os.path.isdir, folder):
-        if ek.ek(os.path.basename, folder).startswith('.'):
+    if os.path.isdir(folder):
+        if os.path.basename(folder).startswith('.'):
             return True
 
     return False
@@ -994,7 +992,7 @@ def real_path(path):
     :return: the canonicalized absolute pathname
     :rtype: AnyStr
     """
-    return ek.ek(os.path.normpath, ek.ek(os.path.normcase, ek.ek(os.path.realpath, ek.ek(os.path.expanduser, path))))
+    return os.path.normpath(os.path.normcase(os.path.realpath(os.path.expanduser(path))))
 
 
 def validate_show(show_obj, season=None, episode=None):
@@ -1048,7 +1046,7 @@ def clear_cache(force=False):
         elif direntry.is_dir(**direntry_args) and direntry.name not in ['cheetah', 'sessions', 'indexers']:
             dirty = dirty or False
             try:
-                ek.ek(os.rmdir, direntry.path)
+                os.rmdir(direntry.path)
             except OSError:
                 dirty = True
 
@@ -1098,8 +1096,8 @@ def get_size(start_path='.'):
     :return: size in bytes
     :rtype: int or long
     """
-    if ek.ek(os.path.isfile, start_path):
-        return ek.ek(os.path.getsize, start_path)
+    if os.path.isfile(start_path):
+        return os.path.getsize(start_path)
     try:
         return sum(map((lambda x: x.stat(follow_symlinks=False).st_size), scantree(start_path)))
     except OSError:
@@ -1115,14 +1113,14 @@ def get_media_stats(start_path='.'):
 
     :param start_path: path to scan
     """
-    if ek.ek(os.path.isdir, start_path):
+    if os.path.isdir(start_path):
         sizes = sorted(map(lambda y: y.stat(follow_symlinks=False).st_size,
                            filter(lambda x: has_media_ext(x.name), scantree(start_path))))
         if sizes:
             return len(sizes), sizes[0], sizes[-1], int(sum(sizes) / len(sizes))
 
-    elif ek.ek(os.path.isfile, start_path):
-        size = ek.ek(os.path.getsize, start_path)
+    elif os.path.isfile(start_path):
+        size = os.path.getsize(start_path)
         return 1, size, size, size
 
     return 0, 0, 0, 0
@@ -1137,7 +1135,7 @@ def remove_article(text=''):
     :return: text without articles
     :rtype: AnyStr
     """
-    return re.sub(r'(?i)^(?:(?:A(?!\s+to)n?)|The)\s(\w)', r'\1', text)
+    return re.sub(r'(?i)^(?:A(?!\s+to)n?|The)\s(\w)', r'\1', text)
 
 
 def re_valid_hostname(with_allowed=True):
@@ -1332,11 +1330,11 @@ def cleanup_cache():
     Delete old cached files
     """
     delete_not_changed_in(
-        [ek.ek(os.path.join, sickgear.CACHE_DIR, 'images', 'browse', 'thumb', x)
+        [os.path.join(sickgear.CACHE_DIR, 'images', 'browse', 'thumb', x)
          for x in ['anidb', 'imdb', 'trakt', 'tvdb']] +
-        [ek.ek(os.path.join, sickgear.CACHE_DIR, 'images', x)
+        [os.path.join(sickgear.CACHE_DIR, 'images', x)
          for x in ['characters', 'person']] +
-        [ek.ek(os.path.join, sickgear.CACHE_DIR, 'tvinfo_cache')])
+        [os.path.join(sickgear.CACHE_DIR, 'tvinfo_cache')])
 
 
 def delete_not_changed_in(paths, days=30, minutes=0):
@@ -1377,8 +1375,8 @@ def set_file_timestamp(filename, min_age=3, new_time=None):
     """
     min_time = int(timestamp_near((datetime.datetime.now() - datetime.timedelta(days=min_age))))
     try:
-        if ek.ek(os.path.isfile, filename) and ek.ek(os.path.getmtime, filename) < min_time:
-            ek.ek(os.utime, filename, new_time)
+        if os.path.isfile(filename) and os.path.getmtime(filename) < min_time:
+            os.utime(filename, new_time)
     except (BaseException, Exception):
         pass
 
@@ -1407,7 +1405,7 @@ def is_link(filepath):
     :return: True or False
     """
     if 'win32' == sys.platform:
-        if not ek.ek(os.path.exists, filepath):
+        if not os.path.exists(filepath):
             return False
 
         import ctypes
@@ -1417,7 +1415,7 @@ def is_link(filepath):
         attr = ctypes.windll.kernel32.GetFileAttributesW(text_type(filepath))
         return invalid_file_attributes != attr and 0 != attr & file_attribute_reparse_point
 
-    return ek.ek(os.path.islink, filepath)
+    return os.path.islink(filepath)
 
 
 def df():
@@ -1496,11 +1494,11 @@ def path_mapper(search, replace, subject):
     :rtype: Tuple[AnyStr, bool]
     """
     delim = '/!~!/'
-    search = re.sub(r'[\\]', delim, search)
-    replace = re.sub(r'[\\]', delim, replace)
-    path = re.sub(r'[\\]', delim, subject)
+    search = re.sub(r'\\', delim, search)
+    replace = re.sub(r'\\', delim, replace)
+    path = re.sub(r'\\', delim, subject)
     result = re.sub('(?i)^%s' % search, replace, path)
-    result = ek.ek(os.path.normpath, re.sub(delim, '/', result))
+    result = os.path.normpath(re.sub(delim, '/', result))
 
     return result, result != subject
 
@@ -1559,7 +1557,7 @@ def generate_show_dir_name(root_dir, show_name):
         san_show_name = san_show_name.replace(' ', '.')
     if None is root_dir:
         return san_show_name
-    return ek.ek(os.path.join, root_dir, san_show_name)
+    return os.path.join(root_dir, san_show_name)
 
 
 def count_files_dirs(base_dir):
@@ -1572,7 +1570,7 @@ def count_files_dirs(base_dir):
     """
     f = d = 0
     try:
-        files = ek.ek(scandir, base_dir)
+        files = scandir(base_dir)
     except OSError as e:
         logger.log('Unable to count files %s / %s' % (repr(e), ex(e)), logger.WARNING)
     else:
@@ -1603,8 +1601,8 @@ def upgrade_new_naming():
         sickgear.CFG.setdefault('GUI', {})['fanart_ratings'] = '%s' % ne
         sickgear.CFG.write()
 
-    image_cache_dir = ek.ek(os.path.join, sickgear.CACHE_DIR, 'images')
-    bp_match = re.compile(r'(\d+)\.((?:banner|poster|(?:(?:\d+(?:\.\w*)?\.(?:\w{5,8}))\.)?fanart)\.jpg)', flags=re.I)
+    image_cache_dir = os.path.join(sickgear.CACHE_DIR, 'images')
+    bp_match = re.compile(r'(\d+)\.((?:banner|poster|(?:\d+(?:\.\w*)?\.\w{5,8}\.)?fanart)\.jpg)', flags=re.I)
 
     def _set_progress(p_msg, c, s):
         ps = None
@@ -1618,14 +1616,14 @@ def upgrade_new_naming():
             sickgear.classes.loading_msg.set_msg_progress(p_msg, '{:6.2f}%'.format(ps))
 
     for d in ['', 'thumbnails']:
-        bd = ek.ek(os.path.join, image_cache_dir, d)
-        if ek.ek(os.path.isdir, bd):
+        bd = os.path.join(image_cache_dir, d)
+        if os.path.isdir(bd):
             fc, dc = count_files_dirs(bd)
             step = fc / float(100)
             cf = 0
             p_text = 'Upgrading %s' % (d, 'banner/poster')[not d]
             _set_progress(p_text, 0, 0)
-            for entry in ek.ek(scandir, bd):
+            for entry in scandir(bd):
                 if entry.is_file():
                     cf += 1
                     _set_progress(p_text, cf, step)
@@ -1634,14 +1632,13 @@ def upgrade_new_naming():
                         old_id = int(b_s.group(1))
                         tvid = show_list.get(old_id)
                         if tvid:
-                            nb_dir = ek.ek(os.path.join, sickgear.CACHE_DIR, 'images', 'shows',
-                                           '%s-%s' % (tvid, old_id), d)
-                            if not ek.ek(os.path.isdir, nb_dir):
+                            nb_dir = os.path.join(sickgear.CACHE_DIR, 'images', 'shows', '%s-%s' % (tvid, old_id), d)
+                            if not os.path.isdir(nb_dir):
                                 try:
-                                    ek.ek(os.makedirs, nb_dir)
+                                    os.makedirs(nb_dir)
                                 except (BaseException, Exception):
                                     pass
-                            new_name = ek.ek(os.path.join, nb_dir, bp_match.sub(r'\2', entry.name))
+                            new_name = os.path.join(nb_dir, bp_match.sub(r'\2', entry.name))
                             try:
                                 move_file(entry.path, new_name)
                             except (BaseException, Exception) as e:
@@ -1650,7 +1647,7 @@ def upgrade_new_naming():
                         else:
                             # clean up files without reference in db
                             try:
-                                ek.ek(os.remove, entry.path)
+                                os.remove(entry.path)
                             except (BaseException, Exception):
                                 pass
                 elif entry.is_dir():
@@ -1664,7 +1661,7 @@ def upgrade_new_naming():
                         p_text = 'Upgrading fanart'
                         _set_progress(p_text, 0, 0)
                         try:
-                            entries = ek.ek(scandir, entry.path)
+                            entries = scandir(entry.path)
                         except OSError as e:
                             logger.log('Unable to stat dirs %s / %s' % (repr(e), ex(e)), logger.WARNING)
                             continue
@@ -1676,17 +1673,16 @@ def upgrade_new_naming():
                                 if old_id:
                                     new_id = show_list.get(old_id)
                                     if new_id:
-                                        new_dir_name = ek.ek(os.path.join, sickgear.CACHE_DIR, 'images', 'shows',
-                                                             '%s-%s' % (new_id, old_id), 'fanart')
+                                        new_dir_name = os.path.join(sickgear.CACHE_DIR, 'images', 'shows',
+                                                                    '%s-%s' % (new_id, old_id), 'fanart')
                                         try:
                                             move_file(d_entry.path, new_dir_name)
                                         except (BaseException, Exception) as e:
                                             logger.log('Unable to rename %s to %s: %s / %s' %
                                                        (d_entry.path, new_dir_name, repr(e), ex(e)), logger.WARNING)
-                                        if ek.ek(os.path.isdir, new_dir_name):
+                                        if os.path.isdir(new_dir_name):
                                             try:
-                                                f_n = filter_iter(lambda fn: fn.is_file(),
-                                                                  ek.ek(scandir, new_dir_name))
+                                                f_n = filter_iter(lambda fn: fn.is_file(), scandir(new_dir_name))
                                             except OSError as e:
                                                 logger.log('Unable to rename %s / %s' % (repr(e), ex(e)),
                                                            logger.WARNING)
@@ -1704,20 +1700,20 @@ def upgrade_new_naming():
                                                                    (args[0], args[1], repr(e), ex(e)), logger.WARNING)
                                     else:
                                         try:
-                                            ek.ek(shutil.rmtree, d_entry.path)
+                                            shutil.rmtree(d_entry.path)
                                         except (BaseException, Exception):
                                             pass
                                 try:
-                                    ek.ek(shutil.rmtree, d_entry.path)
+                                    shutil.rmtree(d_entry.path)
                                 except (BaseException, Exception):
                                     pass
                     try:
-                        ek.ek(os.rmdir, entry.path)
+                        os.rmdir(entry.path)
                     except (BaseException, Exception):
                         pass
             if 'thumbnails' == d:
                 try:
-                    ek.ek(os.rmdir, bd)
+                    os.rmdir(bd)
                 except (BaseException, Exception):
                     pass
             _set_progress(p_text, 0, 1)

@@ -32,7 +32,7 @@ from cfscrape import CloudflareScraper
 from send2trash import send2trash
 
 # noinspection PyPep8Naming
-import encodingKludge as ek
+from encodingKludge import SYS_ENCODING
 import requests
 
 from _23 import decode_bytes, filter_list, html_unescape, list_range, \
@@ -65,7 +65,7 @@ if False:
 
 html_convert_fractions = {0: '', 25: '&frac14;', 50: '&frac12;', 75: '&frac34;', 100: 1}
 
-PROG_DIR = ek.ek(os.path.join, os.path.dirname(os.path.normpath(os.path.abspath(__file__))), '..')
+PROG_DIR = os.path.join(os.path.dirname(os.path.normpath(os.path.abspath(__file__))), '..')
 
 # Mapping error status codes to official W3C names
 http_error_code = {
@@ -676,9 +676,9 @@ def get_system_temp_dir():
         try:
             uid = getpass.getuser()
         except ImportError:
-            return ek.ek(os.path.join, tempfile.gettempdir(), 'SickGear')
+            return os.path.join(tempfile.gettempdir(), 'SickGear')
 
-    return ek.ek(os.path.join, tempfile.gettempdir(), 'SickGear-%s' % uid)
+    return os.path.join(tempfile.gettempdir(), 'SickGear-%s' % uid)
 
 
 def proxy_setting(setting, request_url, force=False):
@@ -834,7 +834,7 @@ def get_url(url,  # type: AnyStr
 
     if not kwargs.pop('nocache', False):
         cache_dir = CACHE_DIR or get_system_temp_dir()
-        session = CacheControl(sess=session, cache=caches.FileCache(ek.ek(os.path.join, cache_dir, 'sessions')))
+        session = CacheControl(sess=session, cache=caches.FileCache(os.path.join(cache_dir, 'sessions')))
 
     provider = kwargs.pop('provider', None)
 
@@ -1065,11 +1065,11 @@ def scantree(path,  # type: AnyStr
     :param filter_kind: None to yield everything, True yields directories, False yields files
     :param recurse: Recursively scan the tree
     """
-    if isinstance(path, string_types) and path and ek.ek(os.path.isdir, path):
+    if isinstance(path, string_types) and path and os.path.isdir(path):
         rc_exc, rc_inc = [re.compile(rx % '|'.join(
             [x for x in (param, ([param], [])[None is param])[not isinstance(param, list)]]))
                           for rx, param in ((r'(?i)^(?:(?!%s).)*$', exclude), (r'(?i)%s', include))]
-        for entry in ek.ek(scandir, path):
+        for entry in scandir(path):
             is_dir = entry.is_dir(follow_symlinks=follow_symlinks)
             is_file = entry.is_file(follow_symlinks=follow_symlinks)
             no_filter = any([None is filter_kind, filter_kind and is_dir, not filter_kind and is_file])
@@ -1084,25 +1084,25 @@ def scantree(path,  # type: AnyStr
 
 def copy_file(src_file, dest_file):
     if os.name.startswith('posix'):
-        ek.ek(subprocess.call, ['cp', src_file, dest_file])
+        subprocess.call(['cp', src_file, dest_file])
     else:
-        ek.ek(shutil.copyfile, src_file, dest_file)
+        shutil.copyfile(src_file, dest_file)
 
     try:
-        ek.ek(shutil.copymode, src_file, dest_file)
+        shutil.copymode(src_file, dest_file)
     except OSError:
         pass
 
 
 def move_file(src_file, dest_file, raise_exceptions=False):
     try:
-        ek.ek(shutil.move, src_file, dest_file)
+        shutil.move(src_file, dest_file)
         fix_set_group_id(dest_file)
     except OSError:
         copy_file(src_file, dest_file)
-        if ek.ek(os.path.exists, dest_file):
+        if os.path.exists(dest_file):
             fix_set_group_id(dest_file)
-            ek.ek(os.unlink, src_file)
+            os.unlink(src_file)
         elif raise_exceptions:
             raise OSError('Destination file could not be created: %s' % dest_file)
 
@@ -1118,13 +1118,13 @@ def fix_set_group_id(child_path):
     if os.name in ('nt', 'ce'):
         return
 
-    parent_path = ek.ek(os.path.dirname, child_path)
-    parent_stat = ek.ek(os.stat, parent_path)
+    parent_path = os.path.dirname(child_path)
+    parent_stat = os.stat(parent_path)
     parent_mode = stat.S_IMODE(parent_stat[stat.ST_MODE])
 
     if parent_mode & stat.S_ISGID:
         parent_gid = parent_stat[stat.ST_GID]
-        child_stat = ek.ek(os.stat, child_path)
+        child_stat = os.stat(child_path)
         child_gid = child_stat[stat.ST_GID]
 
         if child_gid == parent_gid:
@@ -1138,7 +1138,7 @@ def fix_set_group_id(child_path):
             return
 
         try:
-            ek.ek(os.chown, child_path, -1, parent_gid)  # only available on UNIX
+            os.chown(child_path, -1, parent_gid)  # only available on UNIX
             logger.debug(u'Respecting the set-group-ID bit on the parent directory for %s' % child_path)
         except OSError:
             logger.error(u'Failed to respect the set-group-id bit on the parent directory for %s (setting group id %i)'
@@ -1154,11 +1154,11 @@ def remove_file_perm(filepath, log_err=True):
     :param log_err: False to suppress log msgs
     :return True if filepath does not exist else None if no removal
     """
-    if not ek.ek(os.path.exists, filepath):
+    if not os.path.exists(filepath):
         return True
     for t in list_range(10):  # total seconds to wait 0 - 9 = 45s over 10 iterations
         try:
-            ek.ek(os.remove, filepath)
+            os.remove(filepath)
         except OSError as e:
             if getattr(e, 'winerror', 0) not in (5, 32):  # 5=access denied (e.g. av), 32=another process has lock
                 if log_err:
@@ -1167,7 +1167,7 @@ def remove_file_perm(filepath, log_err=True):
         except (BaseException, Exception):
             pass
         time.sleep(t)
-        if not ek.ek(os.path.exists, filepath):
+        if not os.path.exists(filepath):
             return True
     if log_err:
         logger.warning('Unable to delete %s' % filepath)
@@ -1195,11 +1195,11 @@ def remove_file(filepath, tree=False, prefix_failure='', log_level=logging.INFO)
                 result = 'Deleted'
                 if TRASH_REMOVE_SHOW:
                     result = 'Trashed'
-                    ek.ek(send2trash, filepath)
+                    send2trash(filepath)
                 elif tree:
-                    ek.ek(shutil.rmtree, filepath)
+                    shutil.rmtree(filepath)
                 else:
-                    ek.ek(os.remove, filepath)
+                    os.remove(filepath)
             except OSError as e:
                 if getattr(e, 'winerror', 0) not in (5, 32):  # 5=access denied (e.g. av), 32=another process has lock
                     logger.log(level=log_level, msg=u'%sUnable to %s %s %s: %s' %
@@ -1207,10 +1207,10 @@ def remove_file(filepath, tree=False, prefix_failure='', log_level=logging.INFO)
                                                      ('file', 'dir')[tree], filepath, ex(e)))
                     break
             time.sleep(t)
-            if not ek.ek(os.path.exists, filepath):
+            if not os.path.exists(filepath):
                 break
 
-    return (None, result)[filepath and not ek.ek(os.path.exists, filepath)]
+    return (None, result)[filepath and not os.path.exists(filepath)]
 
 
 def touch_file(name, atime=None, dir_name=None):
@@ -1224,9 +1224,9 @@ def touch_file(name, atime=None, dir_name=None):
     :return: success
     """
     if None is not dir_name:
-        name = ek.ek(os.path.join, dir_name, name)
+        name = os.path.join(dir_name, name)
         if make_path(dir_name):
-            if not ek.ek(os.path.exists, name):
+            if not os.path.exists(name):
                 with io.open(name, 'w') as fh:
                     fh.flush()
             if None is atime:
@@ -1235,7 +1235,7 @@ def touch_file(name, atime=None, dir_name=None):
     if None is not atime:
         try:
             with open(name, 'a'):
-                ek.ek(os.utime, name, (atime, atime))
+                os.utime(name, (atime, atime))
             return True
         except (BaseException, Exception):
             logger.debug('File air date stamping not available on your OS')
@@ -1253,12 +1253,12 @@ def make_path(name, syno=False):
     :param syno: whether to trigger a syno library update for path
     :return: success or dir exists
     """
-    if not ek.ek(os.path.isdir, name):
+    if not os.path.isdir(name):
         # Windows, create all missing folders
         if os.name in ('nt', 'ce'):
             try:
                 logger.debug(u'Path %s doesn\'t exist, creating it' % name)
-                ek.ek(os.makedirs, name)
+                os.makedirs(name)
             except (OSError, IOError) as e:
                 logger.error(u'Failed creating %s : %s' % (name, ex(e)))
                 return False
@@ -1273,14 +1273,14 @@ def make_path(name, syno=False):
                 sofar += cur_folder + os.path.sep
 
                 # if it exists then just keep walking down the line
-                if ek.ek(os.path.isdir, sofar):
+                if os.path.isdir(sofar):
                     continue
 
                 try:
                     logger.debug(u'Path %s doesn\'t exist, creating it' % sofar)
-                    ek.ek(os.mkdir, sofar)
+                    os.mkdir(sofar)
                     # use normpath to remove end separator, otherwise checks permissions against itself
-                    chmod_as_parent(ek.ek(os.path.normpath, sofar))
+                    chmod_as_parent(os.path.normpath(sofar))
                     if syno:
                         # do the library update for synoindex
                         NOTIFIERS.NotifierFactory().get('SYNOINDEX').addFolder(sofar)
@@ -1302,19 +1302,19 @@ def chmod_as_parent(child_path):
     if os.name in ('nt', 'ce'):
         return
 
-    parent_path = ek.ek(os.path.dirname, child_path)
+    parent_path = os.path.dirname(child_path)
 
     if not parent_path:
         logger.debug(u'No parent path provided in %s, unable to get permissions from it' % child_path)
         return
 
-    parent_path_stat = ek.ek(os.stat, parent_path)
+    parent_path_stat = os.stat(parent_path)
     parent_mode = stat.S_IMODE(parent_path_stat[stat.ST_MODE])
 
-    child_path_stat = ek.ek(os.stat, child_path)
+    child_path_stat = os.stat(child_path)
     child_path_mode = stat.S_IMODE(child_path_stat[stat.ST_MODE])
 
-    if ek.ek(os.path.isfile, child_path):
+    if os.path.isfile(child_path):
         child_mode = file_bit_filter(parent_mode)
     else:
         child_mode = parent_mode
@@ -1330,7 +1330,7 @@ def chmod_as_parent(child_path):
         return
 
     try:
-        ek.ek(os.chmod, child_path, child_mode)
+        os.chmod(child_path, child_mode)
         logger.debug(u'Setting permissions for %s to %o as parent directory has %o'
                      % (child_path, child_mode, parent_mode))
     except OSError:
@@ -1366,17 +1366,17 @@ def write_file(filepath,  # type: AnyStr
     """
     result = False
 
-    if make_path(ek.ek(os.path.dirname, filepath)):
+    if make_path(os.path.dirname(filepath)):
         try:
             if raw:
                 empty_file = True
-                with ek.ek(io.FileIO, filepath, 'wb') as fh:
+                with io.FileIO(filepath, 'wb') as fh:
                     for chunk in data.iter_content(chunk_size=1024):
                         if chunk:
                             empty_file = False
                             fh.write(chunk)
                             fh.flush()
-                    ek.ek(os.fsync, fh.fileno())
+                    os.fsync(fh.fileno())
                 if empty_file:
                     remove_file_perm(filepath, log_err=False)
                     return result
@@ -1384,11 +1384,11 @@ def write_file(filepath,  # type: AnyStr
                 w_mode = 'w'
                 if utf8:
                     w_mode = 'a'
-                    with ek.ek(io.FileIO, filepath, 'wb') as fh:
+                    with io.FileIO(filepath, 'wb') as fh:
                         fh.write(codecs.BOM_UTF8)
 
                 if xmltree:
-                    with ek.ek(io.FileIO, filepath, w_mode) as fh:
+                    with io.FileIO(filepath, w_mode) as fh:
                         params = {}
                         if utf8:
                             params = dict(encoding='utf-8')
@@ -1397,10 +1397,10 @@ def write_file(filepath,  # type: AnyStr
                         data.write(fh, **params)
                 else:
                     if isinstance(data, text_type):
-                        with ek.ek(io.open, filepath, w_mode, encoding='utf-8') as fh:
+                        with io.open(filepath, w_mode, encoding='utf-8') as fh:
                             fh.write(data)
                     else:
-                        with ek.ek(io.FileIO, filepath, w_mode) as fh:
+                        with io.FileIO(filepath, w_mode) as fh:
                             fh.write(data)
 
             chmod_as_parent(filepath)
@@ -1451,7 +1451,7 @@ def replace_extension(filename, new_ext):
 def long_path(path):
     # type: (AnyStr) -> AnyStr
     """add long path prefix for Windows"""
-    if 'nt' == os.name and 260 < len(path) and not path.startswith('\\\\?\\') and ek.ek(os.path.isabs, path):
+    if 'nt' == os.name and 260 < len(path) and not path.startswith('\\\\?\\') and os.path.isabs(path):
         return '\\\\?\\' + path
     return path
 
@@ -1504,8 +1504,7 @@ def cmdline_runner(cmd, shell=False, suppress_stderr=False, env=None):
     if isinstance(env, dict):
         kw.update(env=dict(os.environ, **env))
 
-    if not PY2:
-        kw.update(dict(encoding=ek.SYS_ENCODING, text=True, bufsize=0))
+    kw.update(dict(encoding=SYS_ENCODING, text=True, bufsize=0))
 
     if 'win32' == sys.platform:
         kw['creationflags'] = 0x08000000   # CREATE_NO_WINDOW (needed for py2exe)

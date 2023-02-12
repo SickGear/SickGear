@@ -19,8 +19,6 @@ import os
 
 import adba
 from adba.aniDBresponses import LoginFirstResponse
-# noinspection PyPep8Naming
-import encodingKludge as ek
 from exceptions_helper import ex
 
 import sickgear
@@ -182,7 +180,7 @@ def short_group_names(groups):
 
 def anidb_cache_dir():
     # type: (...) -> Optional[AnyStr]
-    cache_dir = ek.ek(os.path.join, sickgear.CACHE_DIR or get_system_temp_dir(), 'anidb')
+    cache_dir = os.path.join(sickgear.CACHE_DIR or get_system_temp_dir(), 'anidb')
     if not make_path(cache_dir):
         cache_dir = None
     return cache_dir

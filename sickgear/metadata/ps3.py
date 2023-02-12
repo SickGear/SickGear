@@ -17,8 +17,6 @@
 import os
 
 from . import generic
-# noinspection PyPep8Naming
-import encodingKludge as ek
 import sickgear
 
 # noinspection PyUnreachableCode
@@ -79,7 +77,7 @@ class PS3Metadata(generic.GenericMetadata):
         self.eg_season_all_banner = "<i>not supported</i>"  # type: AnyStr
 
     # Override with empty methods for unsupported features
-    def retrieveShowMetadata(self, folder):
+    def retrieve_show_metadata(self, folder):
         # type: (AnyStr) -> Tuple[None, None, None]
         # no show metadata generated, we abort this lookup function
         return None, None, None
@@ -132,7 +130,7 @@ class PS3Metadata(generic.GenericMetadata):
 
         ep_obj: a TVEpisode instance for which to create the thumbnail
         """
-        if ek.ek(os.path.isfile, ep_obj.location):
+        if os.path.isfile(ep_obj.location):
             tbn_filename = ep_obj.location + ".cover.jpg"
         else:
             return None

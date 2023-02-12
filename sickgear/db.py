@@ -24,8 +24,6 @@ import sqlite3
 import threading
 import time
 
-# noinspection PyPep8Naming
-import encodingKludge as ek
 from exceptions_helper import ex
 
 import sickgear
@@ -60,7 +58,7 @@ def dbFilename(filename='sickbeard.db', suffix=None):
     """
     if suffix:
         filename = '%s.%s' % (filename, suffix)
-    return ek.ek(os.path.join, sickgear.DATA_DIR, filename)
+    return os.path.join(sickgear.DATA_DIR, filename)
 
 
 def mass_upsert_sql(table_name, value_dict, key_dict, sanitise=True):
@@ -136,12 +134,12 @@ class DBConnection(object):
             logger.log('this python sqlite3 version doesn\'t support backups', logger.DEBUG)
             return False, 'this python sqlite3 version doesn\'t support backups'
 
-        if not ek.ek(os.path.isdir, target):
+        if not os.path.isdir(target):
             logger.log('Backup target invalid', logger.ERROR)
             return False, 'Backup target invalid'
 
-        target_db = ek.ek(os.path.join, target, (backup_filename, self.filename)[None is backup_filename])
-        if ek.ek(os.path.exists, target_db):
+        target_db = os.path.join(target, (backup_filename, self.filename)[None is backup_filename])
+        if os.path.exists(target_db):
             logger.log('Backup target file already exists', logger.ERROR)
             return False, 'Backup target file already exists'
 
@@ -758,14 +756,14 @@ def MigrationCode(my_db):
 
 def cleanup_old_db_backups(filename):
     try:
-        d, filename = ek.ek(os.path.split, filename)
+        d, filename = os.path.split(filename)
         if not d:
             d = sickgear.DATA_DIR
         for f in filter_iter(lambda fn: fn.is_file() and filename in fn.name and
                              re.search(r'\.db(\.v\d+)?\.r\d+$', fn.name),
-                             ek.ek(scandir, d)):
+                             scandir(d)):
             try:
-                ek.ek(os.unlink, f.path)
+                os.unlink(f.path)
             except (BaseException, Exception):
                 pass
     except (BaseException, Exception):
@@ -870,7 +868,7 @@ def backup_all_dbs(target, compress=True, prefer_7z=True):
         if not success:
             return False, msg
         if compress:
-            full_path = ek.ek(os.path.join, target, name)
+            full_path = os.path.join(target, name)
             if not compress_file(full_path, '%s.db' % cur_db, prefer_7z=prefer_7z):
                 return False, 'Failure to compress backup'
     delete_old_db_backups(target)

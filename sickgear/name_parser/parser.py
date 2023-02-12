@@ -32,8 +32,6 @@ except ImportError:
     regex = None
 
 from . import regexes
-# noinspection PyPep8Naming
-import encodingKludge as ek
 from exceptions_helper import ex
 import sickgear
 from .. import common, db, helpers, logger, scene_exceptions, scene_numbering
@@ -381,7 +379,7 @@ class NameParser(object):
 
                             season_number = int(ep_obj['seasonnumber'])
                             episode_numbers = [int(ep_obj['episodenumber'])]
-                        except BaseTVinfoEpisodenotfound as e:
+                        except BaseTVinfoEpisodenotfound:
                             logger.warning(u'Unable to find episode with date %s for show %s, skipping' %
                                            (best_result.air_date, show_obj.unique_name))
                             episode_numbers = []
@@ -581,7 +579,7 @@ class NameParser(object):
             return cached
 
         # break it into parts if there are any (dirname, file name, extension)
-        dir_name, file_name = ek.ek(os.path.split, name)
+        dir_name, file_name = os.path.split(name)
 
         if self.file_name:
             base_file_name = helpers.remove_extension(file_name)
@@ -596,7 +594,7 @@ class NameParser(object):
         file_name_result = self._parse_string(base_file_name)
 
         # use only the direct parent dir
-        dir_name = ek.ek(os.path.basename, dir_name)
+        dir_name = os.path.basename(dir_name)
 
         # parse the dirname for extra info if needed
         dir_name_result = self._parse_string(dir_name)

@@ -26,7 +26,7 @@ class SceneTests(test.SickbeardTestDBCase):
         s.tvid = TVINFO_TVDB
         s.name = name
 
-        result = show_name_helpers.allPossibleShowNames(s, season=season)
+        result = show_name_helpers.all_possible_show_names(s, season=season)
         self.assertTrue(len(set(expected).intersection(set(result))) == len(expected))
 
     def _test_pass_wordlist_checks(self, name, expected):

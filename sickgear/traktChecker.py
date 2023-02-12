@@ -19,9 +19,6 @@ import datetime
 import os
 import traceback
 
-# noinspection PyPep8Naming
-import encodingKludge as ek
-
 import sickgear
 from . import helpers, logger, search_queue
 from .common import SKIPPED, WANTED
@@ -175,7 +172,7 @@ class TraktChecker(object):
                 location = None
 
             if location:
-                showPath = ek.ek(os.path.join, location, helpers.sanitize_filename(name))
+                showPath = os.path.join(location, helpers.sanitize_filename(name))
                 dir_exists = helpers.make_dir(showPath)
                 if not dir_exists:
                     logger.log(u"Unable to create the folder " + showPath + ", can't add the show", logger.ERROR)
