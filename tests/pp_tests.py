@@ -27,7 +27,7 @@ import unittest
 
 import sickgear
 from sickgear.helpers import real_path
-from sickgear.name_cache import addNameToCache
+from sickgear.name_cache import add_name_to_cache
 from sickgear.postProcessor import PostProcessor
 from sickgear.processTV import ProcessTVShow
 from sickgear.tv import TVEpisode, TVShow, logger
@@ -94,7 +94,7 @@ class PPBasicTests(test.SickbeardTestDBCase):
         ep_obj.release_name = 'test setter'
         ep_obj.save_to_db()
 
-        addNameToCache('show name', tvid=TVINFO_TVDB, prodid=3)
+        add_name_to_cache('show name', tvid=TVINFO_TVDB, prodid=3)
         sickgear.PROCESS_METHOD = 'move'
 
         pp = PostProcessor(test.FILEPATH)

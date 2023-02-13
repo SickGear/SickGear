@@ -73,7 +73,7 @@ def search_propers(provider_proper_obj=None):
 
         proper_sch = sickgear.proper_finder_scheduler
         if None is proper_sch.start_time:
-            run_in = proper_sch.lastRun + proper_sch.cycleTime - datetime.datetime.now()
+            run_in = proper_sch.last_run + proper_sch.cycle_time - datetime.datetime.now()
             run_at = ', next check '
             if datetime.timedelta() > run_in:
                 run_at += 'imminent'
@@ -131,7 +131,7 @@ def get_old_proper_level(show_obj, tvid, prodid, season, episode_numbers, old_st
                 [tvid, prodid, season, episode])
             if not result or not isinstance(result[0]['resource'], string_types) or not result[0]['resource']:
                 continue
-            nq = Quality.sceneQuality(result[0]['resource'], show_obj.is_anime)
+            nq = Quality.scene_quality(result[0]['resource'], show_obj.is_anime)
             if nq != new_quality:
                 continue
             try:
@@ -214,7 +214,7 @@ def load_webdl_types():
 def _search_provider(cur_provider, provider_propers, aired_since_shows, recent_shows, recent_anime):
     # type: (GenericProvider, List, datetime.datetime, List[Tuple[int, int]], List[Tuple[int, int]]) -> None
     try:
-        # we need to extent the referenced list from parameter to update the original var
+        # we need to extend the referenced list from parameter to update the original var
         provider_propers.extend(cur_provider.find_propers(search_date=aired_since_shows, shows=recent_shows,
                                                           anime=recent_anime))
     except AuthException as e:
@@ -253,7 +253,7 @@ def _get_proper_list(aired_since_shows,  # type: datetime.datetime
     # 2. native proper search: active search enabled providers
     provider_list = list(filter(
         lambda p: p.is_active() and (p.enable_recentsearch, p.enable_backlog)[None is proper_dict],
-        sickgear.providers.sortedProviderList()))
+        sickgear.providers.sorted_sources()))
     search_threads = []
 
     if None is proper_dict:
@@ -362,8 +362,8 @@ def _get_proper_list(aired_since_shows,  # type: datetime.datetime
             # only keep the Proper if we already retrieved the same quality ep (don't get better/worse ones)
             # check if we want this release: same quality as current, current has correct status
             # restrict other release group releases to Proper's
-            old_status, old_quality = Quality.splitCompositeStatus(int(sql_result[0]['status']))
-            cur_proper.quality = Quality.nameQuality(cur_proper.name, parse_result.is_anime)
+            old_status, old_quality = Quality.split_composite_status(int(sql_result[0]['status']))
+            cur_proper.quality = Quality.name_quality(cur_proper.name, parse_result.is_anime)
             cur_proper.is_repack, cur_proper.properlevel = Quality.get_proper_level(
                 parse_result.extra_info_no_name(), parse_result.version, parse_result.is_anime, check_is_repack=True)
             cur_proper.proper_level = cur_proper.properlevel    # local non global value
@@ -631,7 +631,7 @@ def get_needed_qualites(needed=None):
                 continue
             ep_obj = show_obj.get_episode(season=cur_result['season'], episode=cur_result['episode'])
             if ep_obj:
-                ep_status, ep_quality = Quality.splitCompositeStatus(ep_obj.status)
+                ep_status, ep_quality = Quality.split_composite_status(ep_obj.status)
                 if ep_status in SNATCHED_ANY + [DOWNLOADED, ARCHIVED]:
                     needed.check_needed_qualities([ep_quality])
 
@@ -699,7 +699,7 @@ def _set_last_proper_search(when):
 
 
 def next_proper_timeleft():
-    return sickgear.proper_finder_scheduler.timeLeft()
+    return sickgear.proper_finder_scheduler.time_left()
 
 
 def get_last_proper_search():

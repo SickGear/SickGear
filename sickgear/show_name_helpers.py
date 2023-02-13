@@ -264,7 +264,7 @@ def make_scene_season_search_string(show_obj,  # type: sickgear.tv.TVShow
         ep_obj_list = show_obj.get_all_episodes(ep_obj.season)
 
         # get show qualities
-        any_qualities, best_qualities = common.Quality.splitQuality(show_obj.quality)
+        any_qualities, best_qualities = common.Quality.split_quality(show_obj.quality)
 
         # compile a list of all the episode numbers we need in this 'season'
         season_strings = []
@@ -272,7 +272,7 @@ def make_scene_season_search_string(show_obj,  # type: sickgear.tv.TVShow
 
             # get quality of the episode
             cur_composite_status = episode.status
-            cur_status, cur_quality = common.Quality.splitCompositeStatus(cur_composite_status)
+            cur_status, cur_quality = common.Quality.split_composite_status(cur_composite_status)
 
             if best_qualities:
                 highest_best_quality = max(best_qualities)
@@ -378,7 +378,7 @@ def all_possible_show_names(show_obj, season=-1, force_anime=False):
     # type: (sickgear.tv.TVShow, int, bool) -> List[AnyStr]
     """
     Figures out every possible variation of the name for a particular show. Includes TVDB name, TVRage name,
-    country codes on the end, eg. "Show Name (AU)", and any scene exception names.
+    country codes on the end, e.g. "Show Name (AU)", and any scene exception names.
 
     :param show_obj: a TVShow object that we should get the names of
     :param season: season
@@ -387,7 +387,7 @@ def all_possible_show_names(show_obj, season=-1, force_anime=False):
     """
 
     show_names = get_scene_exceptions(show_obj.tvid, show_obj.prodid, season=season)[:]
-    if not show_names:  # if we dont have any season specific exceptions fallback to generic exceptions
+    if not show_names:  # if we don't have any season specific exceptions fallback to generic exceptions
         season = -1
         show_names = get_scene_exceptions(show_obj.tvid, show_obj.prodid, season=season)[:]
 

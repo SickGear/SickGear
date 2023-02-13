@@ -367,7 +367,7 @@ class BTNCache(tvcache.TVCache):
 
     def _cache_data(self, **kwargs):
 
-        return self.provider.cache_data(age=self._getLastUpdate().timetuple(), min_time=self.update_iv)
+        return self.provider.cache_data(age=self._get_last_update().timetuple(), min_time=self.update_iv)
 
 
 provider = BTNProvider()

@@ -90,7 +90,7 @@ class RtorrentAPI(GenericClient):
         # try:
         # if ratio > 0:
         #
-        # # Explicitly set all group options to ensure it is setup correctly
+        # # Explicitly set all group options to ensure it is set up correctly
         # group.set_upload('1M')
         # group.set_min(ratio)
         # group.set_max(ratio)

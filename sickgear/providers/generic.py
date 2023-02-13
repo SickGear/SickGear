@@ -502,7 +502,7 @@ class GenericProvider(object):
                 if log_warning:
                     # Ensure provider name output (e.g. when displaying config/provs) instead of e.g. thread "Tornado"
                     prepend = ('[%s] :: ' % self.name, '')[any([x.name in threading.current_thread().name
-                                                                for x in sickgear.providers.sortedProviderList()])]
+                                                                for x in sickgear.providers.sorted_sources()])]
                     logger.log('%sToo many requests reached at %s, waiting for %s' % (
                         prepend, self.fmt_delta(self.tmr_limit_time), self.fmt_delta(time_left)), logger.WARNING)
                 return use_tmr_limit
@@ -544,8 +544,8 @@ class GenericProvider(object):
         :param url: Address where to fetch data from
         :param skip_auth: Skip authentication check of provider if True
         :param use_tmr_limit: An API limit can be +ve before a fetch, but unwanted, set False to short should_skip
-        :param args: params to pass-through to get_url
-        :param kwargs: keyword params to pass-through to get_url
+        :param args: params to pass through to get_url
+        :param kwargs: keyword params to pass through to get_url
         :return: None or data fetched from URL
         """
         data = None
@@ -641,7 +641,7 @@ class GenericProvider(object):
         :param name: name
         :return:
         """
-        return re.sub(r'[^\w\d_]', '_', name.strip().lower())
+        return re.sub(r'[^\w_]', '_', name.strip().lower())
 
     def image_name(self, *default_name):
         # type: (...) -> AnyStr
@@ -672,7 +672,7 @@ class GenericProvider(object):
         rxc_delim = re.compile(r'[&;]')
         rxc_skip_key = re.compile(r'clearance')
 
-        for cur_p in sickgear.providers.sortedProviderList():
+        for cur_p in sickgear.providers.sorted_sources():
             pid = cur_p.get_id()
             auths = set([])
             for cur_kt in ['password', 'passkey', 'api_key', 'key', 'digest', 'cookies', 'hash']:
@@ -755,7 +755,7 @@ class GenericProvider(object):
     def is_enabled(self):
         # type: (...) -> bool
         """
-        This should be overridden and should return the config setting eg. sickgear.MYPROVIDER
+        This should be overridden and should return the config setting e.g. sickgear.MYPROVIDER
         """
         return self.enabled
 
@@ -804,7 +804,7 @@ class GenericProvider(object):
             try:
                 btih = None
                 try:
-                    btih = re.findall(r'urn:btih:([\w]{32,40})', result.url)[0]
+                    btih = re.findall(r'urn:btih:(\w{32,40})', result.url)[0]
                     if 32 == len(btih):
                         btih = make_btih(btih)
                 except (BaseException, Exception):
@@ -927,7 +927,7 @@ class GenericProvider(object):
 
     def search_rss(self, ep_obj_list):
         # type: (List[TVEpisode]) -> Dict[TVEpisode, SearchResult]
-        return self.cache.findNeededEpisodes(ep_obj_list)
+        return self.cache.find_needed_episodes(ep_obj_list)
 
     def get_quality(self, item, anime=False):
         # type: (etree.Element, bool) -> int
@@ -939,7 +939,7 @@ class GenericProvider(object):
         :return: a Quality value obtained from the node's data
         """
         (title, url) = self._title_and_url(item)
-        quality = Quality.sceneQuality(title, anime)
+        quality = Quality.scene_quality(title, anime)
         return quality
 
     def _search_provider(self, search_params, search_mode='eponly', epcount=0, age=0, **kwargs):
@@ -1008,7 +1008,7 @@ class GenericProvider(object):
         all_cells = all_cells if any(all_cells) else header_row.find_all('td')
 
         headers = [re.sub(
-            r'[\s]+', '',
+            r'\s+', '',
             ((any([cell.get_text()]) and any([rc[x].search(cell.get_text()) for x in iterkeys(rc)]) and cell.get_text())
              or (cell.attrs.get('id') and any([rc[x].search(cell['id']) for x in iterkeys(rc)]) and cell['id'])
              or (cell.attrs.get('title') and any([rc[x].search(cell['title']) for x in iterkeys(rc)]) and cell['title'])
@@ -1103,7 +1103,7 @@ class GenericProvider(object):
         search_list = []
         for cur_ep_obj in ep_obj_list:
             # search cache for episode result
-            cache_result = self.cache.searchCache(cur_ep_obj, manual_search)  # type: List[SearchResult]
+            cache_result = self.cache.search_cache(cur_ep_obj, manual_search)  # type: List[SearchResult]
             if cache_result:
                 if cur_ep_obj.episode not in results:
                     results[cur_ep_obj.episode] = cache_result
@@ -1348,7 +1348,7 @@ class GenericProvider(object):
         :param kwargs:
         :return:
         """
-        results = self.cache.listPropers(search_date)
+        results = self.cache.list_propers(search_date)
 
         return [classes.Proper(x['name'], x['url'], datetime.datetime.fromtimestamp(x['time']), self.show_obj) for x in
                 results]
@@ -1458,7 +1458,7 @@ class GenericProvider(object):
         except IndexError:
             return None
         try:
-            value *= 1024 ** ['b', 'k', 'm', 'g', 't'].index(re.findall('([tgmk])[i]?b', size_dim.lower())[0])
+            value *= 1024 ** ['b', 'k', 'm', 'g', 't'].index(re.findall('([tgmk])i?b', size_dim.lower())[0])
         except IndexError:
             pass
         return int(math.ceil(value))
@@ -1531,7 +1531,7 @@ class NZBProvider(GenericProvider):
         :param kwargs:
         :return:
         """
-        cache_results = self.cache.listPropers(search_date)
+        cache_results = self.cache.list_propers(search_date)
         results = [classes.Proper(x['name'], x['url'], datetime.datetime.fromtimestamp(x['time']), self.show_obj)
                    for x in cache_results]
 
@@ -1708,7 +1708,7 @@ class TorrentProvider(GenericProvider):
         else:
             # noinspection PyUnresolvedReferences
             name = item.title
-        return Quality.sceneQuality(name, anime)
+        return Quality.scene_quality(name, anime)
 
     @staticmethod
     def _reverse_quality(quality):
@@ -1829,7 +1829,7 @@ class TorrentProvider(GenericProvider):
         prefix = ([prefix], prefix)[isinstance(prefix, list)]
 
         search_params = []
-        crop = re.compile(r'([.\s])(?:\1)+')
+        crop = re.compile(r'([.\s])\1+')
         for name in get_show_names_all_possible(self.show_obj, scenify=process_name and getattr(self, 'scene', True),
                                                 season=season):
             for detail in ep_detail:
@@ -1965,7 +1965,7 @@ class TorrentProvider(GenericProvider):
 
         seen_attr = 'PROVIDER_SEEN'
         setattr(sickgear, seen_attr, list(filter(lambda u: self.__module__ not in u,
-                                                  getattr(sickgear, seen_attr, []))))
+                                                 getattr(sickgear, seen_attr, []))))
 
         self.failure_count = 3 * bool(failure_count)
         if self.should_skip():
@@ -2160,7 +2160,7 @@ class TorrentProvider(GenericProvider):
             if self.should_skip(log_warning=False):
                 break
 
-            proper_check = re.compile(r'(?i)(?:%s)' % clean_term.sub('', proper_term))
+            proper_check = re.compile(r'(?i)%s' % clean_term.sub('', proper_term))
             for item in items:
                 if self.should_skip(log_warning=False):
                     break

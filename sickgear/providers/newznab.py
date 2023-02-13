@@ -347,7 +347,7 @@ class NewznabProvider(generic.NZBProvider):
                 caps[NewznabConstants.SEARCH_SEASON] = 'season'
             if NewznabConstants.SEARCH_EPISODE not in caps or not caps.get(NewznabConstants.SEARCH_EPISODE):
                 caps[NewznabConstants.SEARCH_TEXT] = 'ep'
-            if (TVINFO_TVRAGE not in caps or not caps.get(TVINFO_TVRAGE)):
+            if TVINFO_TVRAGE not in caps or not caps.get(TVINFO_TVRAGE):
                 caps[TVINFO_TVRAGE] = 'rid'
         if NewznabConstants.SEARCH_TEXT not in caps or not caps.get(NewznabConstants.SEARCH_TEXT):
             caps[NewznabConstants.SEARCH_TEXT] = 'q'
@@ -645,7 +645,7 @@ class NewznabProvider(generic.NZBProvider):
                 if not getattr(s, 'wanted_quality', None):
                     # this should not happen, the creation is missing for the search in this case
                     logger.log('wanted_quality property was missing for search, creating it', logger.WARNING)
-                    ep_status, ep_quality = Quality.splitCompositeStatus(ep_obj.status)
+                    ep_status, ep_quality = Quality.split_composite_status(ep_obj.status)
                     s.wanted_quality = get_wanted_qualities(ep_obj, ep_status, ep_quality, unaired=True)
                 needed.check_needed_qualities(s.wanted_quality)
 
@@ -682,14 +682,14 @@ class NewznabProvider(generic.NZBProvider):
             needed.check_needed_types(ep_obj.show_obj)
             if not ep_obj.show_obj.is_anime and not ep_obj.show_obj.is_sports:
                 if not getattr(ep_obj, 'wanted_quality', None):
-                    ep_status, ep_quality = Quality.splitCompositeStatus(ep_obj.status)
+                    ep_status, ep_quality = Quality.split_composite_status(ep_obj.status)
                     ep_obj.wanted_quality = get_wanted_qualities(ep_obj, ep_status, ep_quality, unaired=True)
                 needed.check_needed_qualities(ep_obj.wanted_quality)
         else:
             if not ep_obj.show_obj.is_anime and not ep_obj.show_obj.is_sports:
                 for cur_ep_obj in ep_obj_list:
                     if not getattr(cur_ep_obj, 'wanted_quality', None):
-                        ep_status, ep_quality = Quality.splitCompositeStatus(cur_ep_obj.status)
+                        ep_status, ep_quality = Quality.split_composite_status(cur_ep_obj.status)
                         cur_ep_obj.wanted_quality = get_wanted_qualities(cur_ep_obj, ep_status, ep_quality,
                                                                          unaired=True)
                     needed.check_needed_qualities(cur_ep_obj.wanted_quality)
@@ -733,7 +733,7 @@ class NewznabProvider(generic.NZBProvider):
                 continue
 
             # search cache for episode result
-            cache_result = self.cache.searchCache(ep_obj, manual_search)
+            cache_result = self.cache.search_cache(ep_obj, manual_search)
             if cache_result:
                 if ep_obj.episode not in results:
                     results[ep_obj.episode] = cache_result
@@ -1070,7 +1070,7 @@ class NewznabProvider(generic.NZBProvider):
         :param kwargs:
         :return:
         """
-        cache_results = self.cache.listPropers(search_date)
+        cache_results = self.cache.list_propers(search_date)
         results = [classes.Proper(x['name'], x['url'],
                                   datetime.datetime.fromtimestamp(x['time']), self.show_obj) for x in cache_results]
 
@@ -1183,10 +1183,10 @@ class NewznabCache(tvcache.TVCache):
                     root = elem
         return root, ns
 
-    def updateCache(self,
-                    needed=NeededQualities(need_all=True),  # type: NeededQualities
-                    **kwargs
-                    ):
+    def update_cache(self,
+                     needed=NeededQualities(need_all=True),  # type: NeededQualities
+                     **kwargs
+                     ):
         """
 
         :param needed: needed qualites class
@@ -1195,7 +1195,7 @@ class NewznabCache(tvcache.TVCache):
         if 4489 != sickgear.RECENTSEARCH_INTERVAL or self.should_update():
             n_spaces = {}
             try:
-                check = self._checkAuth()
+                check = self.check_auth()
                 if isinstance(check, bool) and not check:
                     items = None
                 else:
@@ -1205,12 +1205,12 @@ class NewznabCache(tvcache.TVCache):
                 items = None
 
             if items:
-                self._clearCache()
+                self.clear_cache()
 
                 # parse data
                 cl = []
                 for item in items:
-                    ci = self._parseItem(n_spaces, item)
+                    ci = self.parse_item(n_spaces, item)
                     if None is not ci:
                         cl.append(ci)
 
@@ -1219,7 +1219,7 @@ class NewznabCache(tvcache.TVCache):
                     my_db.mass_action(cl)
 
             # set updated as time the attempt to fetch data is
-            self.setLastUpdate()
+            self.set_last_update()
 
     @staticmethod
     def parse_ids(item, ns):
@@ -1240,7 +1240,7 @@ class NewznabCache(tvcache.TVCache):
         return ids
 
     # overwrite method with that parses the rageid from the newznab feed
-    def _parseItem(self,
+    def parse_item(self,
                    ns,  # type: Dict
                    item  # type: etree.Element
                    ):  # type: (...) -> Union[List[AnyStr, List[Any]], None]

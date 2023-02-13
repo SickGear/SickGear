@@ -132,7 +132,7 @@ def confirm_show(premiere_date, shows_premiere, expected_name, show_name):
     # type: (Optional[datetime.date], Optional[Union[AnyStr, datetime.date]], AnyStr, AnyStr) -> bool
     """
     confirm show possible confirmations:
-    1. premiere dates are less then 2 days apart
+    1. premiere dates are less than 2 days apart
     2. show name is the same and premiere year is 1 year or less apart
 
     :param premiere_date: expected show premiere date
@@ -252,7 +252,7 @@ def map_indexers_to_show(show_obj, update=False, force=False, recheck=False, im_
         all_ids_srcs = [src_tv_id] + [s for s in (TVINFO_TRAKT, TVINFO_TMDB, TVINFO_TVMAZE, TVINFO_TVDB, TVINFO_IMDB)
                                       if s != src_tv_id]
         searched, confirmed = {}, False
-        for r in moves.range(len(all_ids_srcs)):
+        for _ in moves.range(len(all_ids_srcs)):
             search_done = False
             for i in all_ids_srcs:
                 if new_ids.verified.get(i):

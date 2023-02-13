@@ -318,7 +318,7 @@ def retrieve_exceptions():
 
     if cl:
         my_db.mass_action(cl)
-        name_cache.buildNameCache(update_only_scene=True)
+        name_cache.build_name_cache(update_only_scene=True)
 
     # since this could invalidate the results of the cache we clear it out after updating
     if changed_exceptions:
@@ -369,7 +369,7 @@ def update_scene_exceptions(tvid, prodid, scene_exceptions):
                      ' (indexer, indexer_id, show_name, season) VALUES (?,?,?,?)',
                      [tvid, prodid, cur_exception, cur_season])
 
-    sickgear.name_cache.buildNameCache(update_only_scene=True)
+    sickgear.name_cache.build_name_cache(update_only_scene=True)
 
 
 def _custom_exceptions_fetcher():

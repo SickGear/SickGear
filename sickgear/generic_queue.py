@@ -175,7 +175,7 @@ class GenericQueue(object):
         """
         clear queue excluding internal defined types
 
-        :param action_types: only clear all of given action type
+        :param action_types: only clear supplied action types
         """
         if not isinstance(action_types, list):
             action_types = [action_types]

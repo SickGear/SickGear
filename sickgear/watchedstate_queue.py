@@ -48,7 +48,7 @@ class WatchedStateQueue(generic_queue.GenericQueue):
 
         return length
 
-    def add_item(self, item):
+    def add_item(self, item, **kwargs):
         if isinstance(item, EmbyWatchedStateQueueItem) and not self.is_in_queue(EmbyWatchedStateQueueItem):
             # emby watched state item
             generic_queue.GenericQueue.add_item(self, item)

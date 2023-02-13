@@ -152,7 +152,7 @@ def schedule_mediaprocess(iv):
     if sickgear.MEDIAPROCESS_INTERVAL < sickgear.MIN_MEDIAPROCESS_INTERVAL:
         sickgear.MEDIAPROCESS_INTERVAL = sickgear.MIN_MEDIAPROCESS_INTERVAL
 
-    sickgear.media_process_scheduler.cycleTime = datetime.timedelta(minutes=sickgear.MEDIAPROCESS_INTERVAL)
+    sickgear.media_process_scheduler.cycle_time = datetime.timedelta(minutes=sickgear.MEDIAPROCESS_INTERVAL)
     sickgear.media_process_scheduler.set_paused_state()
 
 
@@ -162,14 +162,14 @@ def schedule_recentsearch(iv):
     if sickgear.RECENTSEARCH_INTERVAL < sickgear.MIN_RECENTSEARCH_INTERVAL:
         sickgear.RECENTSEARCH_INTERVAL = sickgear.MIN_RECENTSEARCH_INTERVAL
 
-    sickgear.recent_search_scheduler.cycleTime = datetime.timedelta(minutes=sickgear.RECENTSEARCH_INTERVAL)
+    sickgear.recent_search_scheduler.cycle_time = datetime.timedelta(minutes=sickgear.RECENTSEARCH_INTERVAL)
 
 
 def schedule_backlog(iv):
     sickgear.BACKLOG_PERIOD = minimax(iv, sickgear.DEFAULT_BACKLOG_PERIOD,
-                                       sickgear.MIN_BACKLOG_PERIOD, sickgear.MAX_BACKLOG_PERIOD)
+                                      sickgear.MIN_BACKLOG_PERIOD, sickgear.MAX_BACKLOG_PERIOD)
 
-    sickgear.backlog_search_scheduler.action.cycleTime = sickgear.BACKLOG_PERIOD
+    sickgear.backlog_search_scheduler.action.cycle_time = sickgear.BACKLOG_PERIOD
 
 
 def schedule_update_software(iv):
@@ -178,7 +178,7 @@ def schedule_update_software(iv):
     if sickgear.UPDATE_INTERVAL < sickgear.MIN_UPDATE_INTERVAL:
         sickgear.UPDATE_INTERVAL = sickgear.MIN_UPDATE_INTERVAL
 
-    sickgear.update_software_scheduler.cycleTime = datetime.timedelta(hours=sickgear.UPDATE_INTERVAL)
+    sickgear.update_software_scheduler.cycle_time = datetime.timedelta(hours=sickgear.UPDATE_INTERVAL)
 
 
 def schedule_update_software_notify(update_notify):
@@ -195,10 +195,10 @@ def schedule_update_software_notify(update_notify):
 
 def schedule_update_packages(iv):
     sickgear.UPDATE_PACKAGES_INTERVAL = minimax(iv, sickgear.DEFAULT_UPDATE_PACKAGES_INTERVAL,
-                                                 sickgear.MIN_UPDATE_PACKAGES_INTERVAL,
-                                                 sickgear.MAX_UPDATE_PACKAGES_INTERVAL)
+                                                sickgear.MIN_UPDATE_PACKAGES_INTERVAL,
+                                                sickgear.MAX_UPDATE_PACKAGES_INTERVAL)
 
-    sickgear.update_packages_scheduler.cycleTime = datetime.timedelta(hours=sickgear.UPDATE_PACKAGES_INTERVAL)
+    sickgear.update_packages_scheduler.cycle_time = datetime.timedelta(hours=sickgear.UPDATE_PACKAGES_INTERVAL)
 
 
 def schedule_update_packages_notify(update_packages_notify):
@@ -228,15 +228,6 @@ def schedule_trakt(use_trakt):
         return
 
     sickgear.USE_TRAKT = use_trakt
-    # if sickgear.USE_TRAKT:
-    #     sickgear.trakt_checker_scheduler.start()
-    # else:
-    #     sickgear.trakt_checker_scheduler.stop()
-    #     logger.log(u'Waiting for the TRAKTCHECKER thread to exit')
-    #     try:
-    #         sickgear.trakt_checker_scheduler.join(10)
-    #     except:
-    #         pass
 
 
 def schedule_subtitles(use_subtitles):
@@ -250,7 +241,7 @@ def schedule_emby_watched(emby_watched_interval):
                               0, sickgear.MAX_WATCHEDSTATE_INTERVAL)
     if emby_watched_iv and emby_watched_iv != sickgear.EMBY_WATCHEDSTATE_INTERVAL:
         sickgear.EMBY_WATCHEDSTATE_INTERVAL = emby_watched_iv
-        sickgear.emby_watched_state_scheduler.cycleTime = datetime.timedelta(minutes=emby_watched_iv)
+        sickgear.emby_watched_state_scheduler.cycle_time = datetime.timedelta(minutes=emby_watched_iv)
 
     sickgear.EMBY_WATCHEDSTATE_SCHEDULED = bool(emby_watched_iv)
     sickgear.emby_watched_state_scheduler.set_paused_state()
@@ -261,7 +252,7 @@ def schedule_plex_watched(plex_watched_interval):
                               0, sickgear.MAX_WATCHEDSTATE_INTERVAL)
     if plex_watched_iv and plex_watched_iv != sickgear.PLEX_WATCHEDSTATE_INTERVAL:
         sickgear.PLEX_WATCHEDSTATE_INTERVAL = plex_watched_iv
-        sickgear.plex_watched_state_scheduler.cycleTime = datetime.timedelta(minutes=plex_watched_iv)
+        sickgear.plex_watched_state_scheduler.cycle_time = datetime.timedelta(minutes=plex_watched_iv)
 
     sickgear.PLEX_WATCHEDSTATE_SCHEDULED = bool(plex_watched_iv)
     sickgear.plex_watched_state_scheduler.set_paused_state()
@@ -345,7 +336,7 @@ def clean_hosts(hosts, default_port=None, allow_base=False):
 
 
 def clean_url(url, add_slash=True):
-    """ Returns an cleaned url starting with a scheme and folder with trailing '/' or an empty string """
+    """ Returns a cleaned url starting with a scheme and folder with trailing '/' or an empty string """
 
     if url and url.strip():
 
@@ -437,7 +428,7 @@ def check_setting_float(config, cfg_name, item_name, def_val):
 
 def check_setting_str(config, cfg_name, item_name, def_val, log=True):
     """
-    For passwords you must include the word `password` in the item_name and
+    For passwords, you must include the word `password` in the item_name and
     add `helpers.encrypt(ITEM_NAME, ENCRYPTION_VERSION)` in save_config()
     """
 
@@ -662,7 +653,7 @@ class ConfigMigrator(object):
         Reads in the old naming settings from your config and generates a new config template from them.
         """
         # get the old settings from the file and store them in the new variable names
-        for prov in [curProvider for curProvider in sickgear.providers.sortedProviderList()
+        for prov in [curProvider for curProvider in sickgear.providers.sorted_sources()
                      if 'omgwtfnzbs' == curProvider.name]:
             prov.username = check_setting_str(self.config_obj, 'omgwtfnzbs', 'omgwtfnzbs_uid', '')
             prov.api_key = check_setting_str(self.config_obj, 'omgwtfnzbs', 'omgwtfnzbs_key', '')
@@ -773,13 +764,13 @@ class ConfigMigrator(object):
     # Migration v6: Rename daily search to recent search
     def _migrate_v6(self):
         sickgear.RECENTSEARCH_INTERVAL = check_setting_int(self.config_obj, 'General', 'dailysearch_frequency',
-                                                            sickgear.DEFAULT_RECENTSEARCH_INTERVAL)
+                                                           sickgear.DEFAULT_RECENTSEARCH_INTERVAL)
 
         sickgear.RECENTSEARCH_STARTUP = bool(check_setting_int(self.config_obj, 'General', 'dailysearch_startup', 1))
         if sickgear.RECENTSEARCH_INTERVAL < sickgear.MIN_RECENTSEARCH_INTERVAL:
             sickgear.RECENTSEARCH_INTERVAL = sickgear.MIN_RECENTSEARCH_INTERVAL
 
-        for curProvider in sickgear.providers.sortedProviderList():
+        for curProvider in sickgear.providers.sorted_sources():
             if hasattr(curProvider, 'enable_recentsearch'):
                 curProvider.enable_recentsearch = bool(check_setting_int(
                     self.config_obj, curProvider.get_id().upper(), curProvider.get_id() + '_enable_dailysearch', 1))
@@ -831,7 +822,7 @@ class ConfigMigrator(object):
     # Migration v15: Transmithe.net variables
     def _migrate_v15(self):
         try:
-            neb = list(filter(lambda p: 'Nebulance' in p.name, sickgear.providers.sortedProviderList()))[0]
+            neb = list(filter(lambda p: 'Nebulance' in p.name, sickgear.providers.sorted_sources()))[0]
         except (BaseException, Exception):
             return
         # get the old settings from the file and store them in the new variable names

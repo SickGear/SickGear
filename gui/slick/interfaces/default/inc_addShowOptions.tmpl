@@ -18,7 +18,7 @@
 			</div>
 
 			<div class="field-pair">
-#set $qualities = $Quality.splitQuality($sg_var('QUALITY_DEFAULT', SD))
+#set $qualities = $Quality.split_quality($sg_var('QUALITY_DEFAULT', SD))
 #set global $any_qualities = $qualities[0]
 #set global $best_qualities = $qualities[1]
 #include $os.path.join($sg_str('PROG_DIR'), 'gui/slick/interfaces/default/inc_qualityChooser.tmpl')

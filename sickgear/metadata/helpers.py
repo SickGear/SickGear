@@ -22,7 +22,7 @@ if False:
     from typing import AnyStr, Optional
 
 
-def getShowImage(url, img_num=None, show_name=None, supress_log=False):
+def get_show_image(url, img_num=None, show_name=None, supress_log=False):
     # type: (AnyStr, Optional[int], Optional[AnyStr], bool) -> Optional[bytes]
     """
 

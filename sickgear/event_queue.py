@@ -33,7 +33,7 @@ class Events(threading.Thread):
                 # get event type
                 etype = self.queue.get(True, 1)
 
-                # perform callback if we got a event type
+                # perform callback if we got an event type
                 self.callback(etype)
 
                 # event completed

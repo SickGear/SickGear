@@ -118,7 +118,7 @@ def access_method(host):
 
 def test_authentication(host=None, username=None, password=None, apikey=None):
     """
-    Sends a simple API request to SAB to determine if the given connection information is connect
+    Sends a simple API request to SAB to determine if the given connection information is correct
 
     Returns: A tuple containing the success boolean and a message
     :param host: The host where SAB is running (incl port)

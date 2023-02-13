@@ -15,11 +15,24 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
-import datetime
-from collections import deque
-from itertools import islice
-from sys import version_info
 from base64 import encodebytes as b64encodebytes
+from collections import deque
+# noinspection PyUnresolvedReferences
+from configparser import ConfigParser
+# noinspection PyUnresolvedReferences
+from enum import Enum
+from itertools import islice, zip_longest
+# noinspection PyUnresolvedReferences
+from inspect import getfullargspec as getargspec
+# noinspection PyUnresolvedReferences
+from os import scandir, DirEntry
+# noinspection PyUnresolvedReferences
+from subprocess import Popen
+from sys import version_info
+
+import datetime
+# noinspection PyUnresolvedReferences, PyPep8Naming
+import xml.etree.ElementTree as etree
 
 # noinspection PyUnresolvedReferences
 from six.moves.urllib.parse import quote, quote_plus, unquote as six_unquote, unquote_plus as six_unquote_plus, \
@@ -40,8 +53,6 @@ if False:
     # noinspection PyTypeChecker
     urlencode = urlsplit = urlunparse = urlunsplit = None  # type: Callable
 
-PY38 = version_info[0:2] >= (3, 8)
-
 
 def map_consume(*args):
     # type: (...) -> None
@@ -53,13 +64,13 @@ def consume(iterator, n=None):
     # type: (Iterator, Optional[int]) -> None
     """Advance the iterator n-steps ahead. If n is None, consume entirely. Returns nothing.
 
-    Useful if a method returns a Iterator but it's not used, but still all should be called,
+    Useful if a method returns an Iterator that is not used, but still all should be called,
     for example if each iter element calls a function that should be called for all or
     given amount of elements in Iterator
 
     examples:
-    consume(filter_iter(...))  # consumes all elements of given function that returns a Iterator
-    consume(filter_iter(...), 3)  # consumes next 3 elements of given function that returns a Iterator
+    consume(filter_iter(...))  # consumes all elements of given function that returns an Iterator
+    consume(filter_iter(...), 3)  # consumes next 3 elements of given function that returns an Iterator
     """
     # Use functions that consume iterators at C speed.
     if n is None:
@@ -131,24 +142,6 @@ def b64encodestring(s, keep_eol=False):
     return data.rstrip()
 
 
-# noinspection PyUnresolvedReferences,PyProtectedMember
-# noinspection PyUnresolvedReferences,PyCompatibility
-from configparser import ConfigParser
-# noinspection PyUnresolvedReferences
-from enum import Enum
-# noinspection PyUnresolvedReferences
-from os import scandir, DirEntry
-# noinspection PyUnresolvedReferences
-from itertools import zip_longest
-# noinspection PyUnresolvedReferences
-from inspect import getfullargspec as getargspec
-
-# noinspection PyUnresolvedReferences
-from subprocess import Popen
-
-# noinspection PyUnresolvedReferences, PyPep8Naming
-import xml.etree.ElementTree as etree
-
 native_timestamp = datetime.datetime.timestamp  # type: Callable[[datetime.datetime], float]
 
 
@@ -172,4 +165,3 @@ def decode_bytes(d, encoding='utf-8', errors='replace'):
 def map_none(*args):
     # type: (...) -> List
     return list(zip_longest(*args))
-

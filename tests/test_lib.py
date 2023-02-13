@@ -91,8 +91,8 @@ sickgear.NAMING_SPORTS_PATTERN = ''
 sickgear.NAMING_MULTI_EP = 1
 
 sickgear.PROVIDER_ORDER = []
-sickgear.newznabProviderList = providers.getNewznabProviderList('')
-sickgear.providerList = providers.makeProviderList()
+sickgear.newznab_providers = providers.newznab_source_list('')
+sickgear.provider_list = providers.provider_modules()
 
 sickgear.PROG_DIR = os.path.abspath('..')
 # sickgear.DATA_DIR = os.path.join(sickgear.PROG_DIR, 'tests')

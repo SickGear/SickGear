@@ -27,7 +27,7 @@ from six import integer_types, string_types
 
 # noinspection PyUnreachableCode
 if False:
-    from typing import Callable, Optional, Union
+    from typing import Optional, Union
 
 date_presets = ('%Y-%m-%d',
                 '%a, %Y-%m-%d',
@@ -234,7 +234,7 @@ class SGDatetime(datetime.datetime):
         """
         convert datetime to filetime
         special handling for windows filetime issues
-        for pre Windows 7 this can result in an exception for pre 1970 dates
+        for pre Windows 7 this can result in an exception for pre-1970 dates
         """
         obj = (dt, self)[self is not None]  # type: datetime.datetime
         if is_win:
@@ -286,6 +286,7 @@ class SGDatetime(datetime.datetime):
 # noinspection PyUnreachableCode
 if False:
     # just to trick pycharm in correct type detection
+    # noinspection PyUnusedLocal
     def timestamp_near(d_t):
         # type: (datetime.datetime) -> float
         pass

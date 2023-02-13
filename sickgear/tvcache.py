@@ -33,6 +33,7 @@ from .tv import TVEpisode
 # noinspection PyUnreachableCode
 if False:
     from typing import Any, AnyStr, Dict, List, Tuple, Union
+    from providers.generic import GenericProvider, NZBProvider, TorrentProvider
 
 
 class CacheDBConnection(db.DBConnection):
@@ -50,7 +51,7 @@ class CacheDBConnection(db.DBConnection):
 
 class TVCache(object):
     def __init__(self, provider, interval=10):
-        # type: (AnyStr, int) -> None
+        # type: (Union[GenericProvider, NZBProvider, TorrentProvider], int) -> None
         self.provider = provider
         self.providerID = self.provider.get_id()
         self.providerDB = None
@@ -60,7 +61,7 @@ class TVCache(object):
     def get_db():
         return CacheDBConnection()
 
-    def _clearCache(self):
+    def clear_cache(self):
         if self.should_clear_cache():
             my_db = self.get_db()
             my_db.action('DELETE FROM provider_cache WHERE provider = ?', [self.providerID])
@@ -81,26 +82,13 @@ class TVCache(object):
         data = None
         return data
 
-    def _checkAuth(self):
+    def check_auth(self):
         # noinspection PyProtectedMember
         return self.provider._check_auth()
 
-    @staticmethod
-    def _checkItemAuth(title, url):
-        """
-
-        :param title: title
-        :type title: AnyStr
-        :param url: url
-        :type url: AnyStr
-        :return:
-        :rtype: bool
-        """
-        return True
-
-    def updateCache(self, **kwargs):
+    def update_cache(self, **kwargs):
         try:
-            self._checkAuth()
+            self.check_auth()
         except AuthException as e:
             logger.log(u'Authentication error: ' + ex(e), logger.ERROR)
             return []
@@ -110,13 +98,13 @@ class TVCache(object):
 
             # clear cache
             if data:
-                self._clearCache()
+                self.clear_cache()
 
             # parse data
             cl = []
             for item in data or []:
                 title, url = self._title_and_url(item)
-                ci = self._parseItem(title, url)
+                ci = self.parse_item(title, url)
                 if None is not ci:
                     cl.append(ci)
 
@@ -128,13 +116,13 @@ class TVCache(object):
                     logger.log('Warning could not save cache value [%s], caught err: %s' % (cl, ex(e)))
 
             # set updated as time the attempt to fetch data is
-            self.setLastUpdate()
+            self.set_last_update()
 
     def get_rss(self, url, **kwargs):
         return RSSFeeds(self.provider).get_feed(url, **kwargs)
 
     @staticmethod
-    def _translateTitle(title):
+    def _translate_title(title):
         """
 
         :param title: title
@@ -145,7 +133,7 @@ class TVCache(object):
         return u'' + title.replace(' ', '.')
 
     @staticmethod
-    def _translateLinkURL(url):
+    def _translate_link_url(url):
         """
 
         :param url: url
@@ -155,7 +143,7 @@ class TVCache(object):
         """
         return url.replace('&amp;', '&')
 
-    def _parseItem(self, title, url):
+    def parse_item(self, title, url):
         """
 
         :param title: title
@@ -165,18 +153,16 @@ class TVCache(object):
         :return:
         :rtype: None or List[AnyStr, List[Any]]
         """
-        self._checkItemAuth(title, url)
-
         if title and url:
-            title = self._translateTitle(title)
-            url = self._translateLinkURL(url)
+            title = self._translate_title(title)
+            url = self._translate_link_url(url)
 
             return self.add_cache_entry(title, url)
 
         logger.log('Data returned from the %s feed is incomplete, this result is unusable' % self.provider.name,
                    logger.DEBUG)
 
-    def _getLastUpdate(self):
+    def _get_last_update(self):
         """
 
         :return:
@@ -186,15 +172,15 @@ class TVCache(object):
         sql_result = my_db.select('SELECT time FROM lastUpdate WHERE provider = ?', [self.providerID])
 
         if sql_result:
-            lastTime = int(sql_result[0]['time'])
-            if lastTime > int(timestamp_near(datetime.datetime.now())):
-                lastTime = 0
+            last_time = int(sql_result[0]['time'])
+            if last_time > int(timestamp_near(datetime.datetime.now())):
+                last_time = 0
         else:
-            lastTime = 0
+            last_time = 0
 
-        return datetime.datetime.fromtimestamp(lastTime)
+        return datetime.datetime.fromtimestamp(last_time)
 
-    def _getLastSearch(self):
+    def _get_last_search(self):
         """
 
         :return:
@@ -204,15 +190,15 @@ class TVCache(object):
         sql_result = my_db.select('SELECT time FROM lastSearch WHERE provider = ?', [self.providerID])
 
         if sql_result:
-            lastTime = int(sql_result[0]['time'])
-            if lastTime > int(timestamp_near(datetime.datetime.now())):
-                lastTime = 0
+            last_time = int(sql_result[0]['time'])
+            if last_time > int(timestamp_near(datetime.datetime.now())):
+                last_time = 0
         else:
-            lastTime = 0
+            last_time = 0
 
-        return datetime.datetime.fromtimestamp(lastTime)
+        return datetime.datetime.fromtimestamp(last_time)
 
-    def setLastUpdate(self, to_date=None):
+    def set_last_update(self, to_date=None):
         """
 
         :param to_date: date time
@@ -226,7 +212,7 @@ class TVCache(object):
                      {'time': int(time.mktime(to_date.timetuple()))},
                      {'provider': self.providerID})
 
-    def setLastSearch(self, to_date=None):
+    def _set_last_search(self, to_date=None):
         """
 
         :param to_date: date time
@@ -240,8 +226,8 @@ class TVCache(object):
                      {'time': int(time.mktime(to_date.timetuple()))},
                      {'provider': self.providerID})
 
-    lastUpdate = property(_getLastUpdate)
-    lastSearch = property(_getLastSearch)
+    last_update = property(_get_last_update)
+    last_search = property(_get_last_search)
 
     def should_update(self):
         """
@@ -250,7 +236,7 @@ class TVCache(object):
         :rtype: bool
         """
         # if we've updated recently then skip the update
-        return datetime.datetime.now() - self.lastUpdate >= datetime.timedelta(minutes=self.update_iv)
+        return datetime.datetime.now() - self.last_update >= datetime.timedelta(minutes=self.update_iv)
 
     def should_clear_cache(self):
         """
@@ -259,7 +245,7 @@ class TVCache(object):
         :rtype: bool
         """
         # if recent search hasn't used our previous results yet then don't clear the cache
-        return self.lastSearch >= self.lastUpdate
+        return self.last_search >= self.last_update
 
     def add_cache_entry(self,
                         name,  # type: AnyStr
@@ -340,22 +326,22 @@ class TVCache(object):
                  url, cur_timestamp, quality, release_group, version,
                  parse_result.show_obj.tvid]]
 
-    def searchCache(self,
-                    episode,  # type: TVEpisode
-                    manual_search=False  # type: bool
-                    ):  # type: (...) -> List[SearchResult]
+    def search_cache(self,
+                     episode,  # type: TVEpisode
+                     manual_search=False  # type: bool
+                     ):  # type: (...) -> List[SearchResult]
         """
 
         :param episode: episode object
         :param manual_search: manual search
         :return: found results or empty List
         """
-        neededEps = self.findNeededEpisodes(episode, manual_search)
-        if 0 != len(neededEps):
-            return neededEps[episode]
+        needed_eps = self.find_needed_episodes(episode, manual_search)
+        if 0 != len(needed_eps):
+            return needed_eps[episode]
         return []
 
-    def listPropers(self, date=None):
+    def list_propers(self, date=None):
         """
 
         :param date: date
@@ -372,14 +358,14 @@ class TVCache(object):
 
         return list(filter(lambda x: x['indexerid'] != 0, my_db.select(sql, [self.providerID])))
 
-    def findNeededEpisodes(self, ep_obj_list, manual_search=False):
+    def find_needed_episodes(self, ep_obj_list, manual_search=False):
         # type: (Union[TVEpisode, List[TVEpisode]], bool) -> Dict[TVEpisode, SearchResult]
         """
 
         :param ep_obj_list: episode object or list of episode objects
         :param manual_search: manual search
         """
-        neededEps = {}
+        needed_eps = {}
         cl = []
 
         my_db = self.get_db()
@@ -402,8 +388,8 @@ class TVCache(object):
             sql_result = list(itertools.chain(*sql_result))
 
         if not sql_result:
-            self.setLastSearch()
-            return neededEps
+            self._set_last_search()
+            return needed_eps
 
         # for each cache entry
         for cur_result in sql_result:
@@ -473,12 +459,12 @@ class TVCache(object):
                                                                             check_is_repack=True)
 
             # add it to the list
-            if ep_obj not in neededEps:
-                neededEps[ep_obj] = [result]
+            if ep_obj not in needed_eps:
+                needed_eps[ep_obj] = [result]
             else:
-                neededEps[ep_obj].append(result)
+                needed_eps[ep_obj].append(result)
 
         # datetime stamp this search so cache gets cleared
-        self.setLastSearch()
+        self._set_last_search()
 
-        return neededEps
+        return needed_eps

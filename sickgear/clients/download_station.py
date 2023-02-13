@@ -164,8 +164,8 @@ class DownloadStationAPI(GenericClient):
         # type: (Union[AnyStr, list]) -> Union[bool, list]
         """
         Pause item(s)
-        :param ids: Id(s) to pause
-        :return: True/Falsy if success/failure else Id(s) that failed to be paused
+        :param ids: ID(s) to pause
+        :return: True/Falsy if success/failure else ID(s) that failed to be paused
         """
         return self._action(
             'pause', ids,
@@ -177,8 +177,8 @@ class DownloadStationAPI(GenericClient):
         # type: (Union[AnyStr, list]) -> Union[bool, list]
         """
         Resume task(s) in client
-        :param ids: Id(s) to act on
-        :return: True if success, Id(s) that could not be resumed, else Falsy if failure
+        :param ids: ID(s) to act on
+        :return: True if success, ID(s) that could not be resumed, else Falsy if failure
         """
         return self._perform_task(
             'resume', ids,
@@ -190,8 +190,8 @@ class DownloadStationAPI(GenericClient):
         # type: (Union[AnyStr, list]) -> Union[bool, list]
         """
         Delete task(s) from client
-        :param ids: Id(s) to act on
-        :return: True if success, Id(s) that could not be deleted, else Falsy if failure
+        :param ids: ID(s) to act on
+        :return: True if success, ID(s) that could not be deleted, else Falsy if failure
         """
         return self._perform_task(
             'delete', ids,
@@ -205,10 +205,10 @@ class DownloadStationAPI(GenericClient):
         """
         Set up and send a method to client
         :param method: Either `resume` or `delete`
-        :param ids: Id(s) to perform method on
+        :param ids: ID(s) to perform method on
         :param filter_func: Call back function to filter tasks as failed or erroneous
         :param pause_first: True if task should be paused prior to invoking method
-        :return: True if success, Id(s) that could not be acted upon, else Falsy if failure
+        :return: True if success, ID(s) that could not be acted upon, else Falsy if failure
         """
         if isinstance(ids, (string_types, list)):
             rids = ids if isinstance(ids, list) else list(map(lambda x: x.strip(), ids.split(',')))
@@ -256,7 +256,7 @@ class DownloadStationAPI(GenericClient):
         """
         Add magnet to client (overridden class function)
         :param search_result: A populated search result object
-        :return: Id of task in client, True if added but no ID, else Falsy if nothing added
+        :return: ID of task in client, True if added but no ID, else Falsy if nothing added
         """
         if 3 <= self._task_version:
             return self._add_torrent(uri={'uri': search_result.url})
@@ -269,7 +269,7 @@ class DownloadStationAPI(GenericClient):
         """
         Add file to client (overridden class function)
         :param search_result: A populated search result object
-        :return: Id of task in client, True if added but no ID, else Falsy if nothing added
+        :return: ID of task in client, True if added but no ID, else Falsy if nothing added
         """
         return self._add_torrent(
             files={'file': ('%s.torrent' % re.sub(r'(\.torrent)+$', '', search_result.name), search_result.content)})
@@ -280,7 +280,7 @@ class DownloadStationAPI(GenericClient):
         Create client task
         :param uri: URI param for client API
         :param files: file param for client API
-        :return: Id of task in client, True if created but no id found, else Falsy if nothing created
+        :return: ID of task in client, True if created but no id found, else Falsy if nothing created
         """
         if self._testmode:
             # noinspection PyUnresolvedReferences

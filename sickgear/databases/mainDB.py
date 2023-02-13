@@ -474,7 +474,7 @@ class AddSizeAndSceneNameFields(db.SchemaUpgrade):
                 continue
 
             # get the status/quality of the existing ep and make sure it's what we expect
-            ep_status, ep_quality = common.Quality.splitCompositeStatus(int(sql_result[0]['status']))
+            ep_status, ep_quality = common.Quality.split_composite_status(int(sql_result[0]['status']))
             if ep_status != common.DOWNLOADED:
                 continue
 
@@ -581,8 +581,8 @@ class Add1080pAndRawHDQualities(db.SchemaUpgrade):
     """
 
     def _update_status(self, old_status):
-        (status, quality) = common.Quality.splitCompositeStatus(old_status)
-        return common.Quality.compositeStatus(status, self._update_quality(quality))
+        (status, quality) = common.Quality.split_composite_status(old_status)
+        return common.Quality.composite_status(status, self._update_quality(quality))
 
     @staticmethod
     def _update_quality(old_quality):
@@ -635,17 +635,17 @@ class Add1080pAndRawHDQualities(db.SchemaUpgrade):
         sickgear.save_config()
 
         # upgrade previous HD to HD720p -- shift previous qualities to new placevalues
-        old_hd = common.Quality.combineQualities(
+        old_hd = common.Quality.combine_qualities(
             [common.Quality.HDTV, common.Quality.HDWEBDL >> 2, common.Quality.HDBLURAY >> 3], [])
-        new_hd = common.Quality.combineQualities([common.Quality.HDTV, common.Quality.HDWEBDL,
-                                                  common.Quality.HDBLURAY], [])
+        new_hd = common.Quality.combine_qualities([common.Quality.HDTV, common.Quality.HDWEBDL,
+                                                   common.Quality.HDBLURAY], [])
 
         # update ANY -- shift existing qualities and add new 1080p qualities,
         # note that rawHD was not added to the ANY template
-        old_any = common.Quality.combineQualities(
+        old_any = common.Quality.combine_qualities(
             [common.Quality.SDTV, common.Quality.SDDVD, common.Quality.HDTV, common.Quality.HDWEBDL >> 2,
              common.Quality.HDBLURAY >> 3, common.Quality.UNKNOWN], [])
-        new_any = common.Quality.combineQualities(
+        new_any = common.Quality.combine_qualities(
             [common.Quality.SDTV, common.Quality.SDDVD, common.Quality.HDTV, common.Quality.FULLHDTV,
              common.Quality.HDWEBDL, common.Quality.FULLHDWEBDL, common.Quality.HDBLURAY, common.Quality.FULLHDBLURAY,
              common.Quality.UNKNOWN], [])

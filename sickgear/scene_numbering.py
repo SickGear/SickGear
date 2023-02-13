@@ -45,8 +45,8 @@ def get_scene_numbering(tvid, prodid, season, episode, fallback_to_xem=True, sho
     returns the TVDB numbering.
     (so the return values will always be set)
 
-    kwargs['scene_result']: type: Optional[List[Row]] passed thru
-    kwargs['show_result']: type: Optional[List[Row]] passed thru
+    kwargs['scene_result']: type: Optional[List[Row]] passed through
+    kwargs['show_result']: type: Optional[List[Row]] passed through
 
     :param tvid: tvid
     :type tvid: int
@@ -134,8 +134,8 @@ def get_scene_absolute_numbering(tvid, prodid, absolute_number, season, episode,
     returns the TVDB numbering.
     (so the return values will always be set)
 
-    kwargs['scene_result']: type: Optional[List[Row]] passed thru
-    kwargs['show_result']: type: Optional[List[Row]] passed thru
+    kwargs['scene_result']: type: Optional[List[Row]] passed through
+    kwargs['show_result']: type: Optional[List[Row]] passed through
 
     :param tvid: tvid
     :type tvid: int

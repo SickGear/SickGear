@@ -46,7 +46,7 @@ def get_win_drives():
 def folders_at_path(path, include_parent=False, include_files=False):
     """ Returns a list of dictionaries with the folders contained at the given path
         Give the empty string as the path to list the contents of the root path
-        under Unix this means "/", on Windows this will be a list of drive letters)
+        under Unix this means "/", (on Windows this will be a list of drive letters)
     """
 
     # walk up the tree until we find a valid path

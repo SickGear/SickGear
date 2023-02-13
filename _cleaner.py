@@ -37,6 +37,9 @@ if old_magic != magic_number:
 
 # skip cleaned005 as used during dev by testers
 cleanups = [
+    ['.cleaned009.tmp', r'lib\scandir', [
+        r'lib\scandir\__pycache__', r'lib\scandir',
+    ]],
     ['.cleaned008.tmp', r'lib\tornado_py3', [
         r'lib\bs4_py2\builder\__pycache__', r'lib\bs4_py2\builder', r'lib\bs4_py2',
         r'lib\bs4_py3\builder\__pycache__', r'lib\bs4_py3\builder', r'lib\bs4_py3',

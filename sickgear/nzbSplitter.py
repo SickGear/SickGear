@@ -40,7 +40,7 @@ SUBJECT_FN_MATCHER = re.compile(r'"([^"]*)"')
 RE_NORMAL_NAME = re.compile(r'\.\w{1,5}$')
 
 
-def platform_encode(p):
+def _platform_encode(p):
     """ Return Unicode name, if not already Unicode, decode with UTF-8 or latin1 """
     try:
         return decode_str(p)
@@ -48,17 +48,17 @@ def platform_encode(p):
         return decode_str(p, sickgear.SYS_ENCODING, errors='replace').replace('?', '!')
 
 
-def name_extractor(subject):
+def _name_extractor(subject):
     """ Try to extract a file name from a subject line, return `subject` if in doubt """
     result = subject
     for name in re.findall(SUBJECT_FN_MATCHER, subject):
         name = name.strip(' "')
         if name and RE_NORMAL_NAME.search(name):
             result = name
-    return platform_encode(result)
+    return _platform_encode(result)
 
 
-def getSeasonNZBs(name, url_data, season):
+def _get_season_nzbs(name, url_data, season):
     """
 
     :param name: name
@@ -71,31 +71,31 @@ def getSeasonNZBs(name, url_data, season):
     :rtype: Tuple[Dict, AnyStr]
     """
     try:
-        showXML = etree.ElementTree(etree.XML(url_data))
+        show_xml = etree.ElementTree(etree.XML(url_data))
     except SyntaxError:
         logger.log(u'Unable to parse the XML of %s, not splitting it' % name, logger.ERROR)
         return {}, ''
 
     filename = name.replace('.nzb', '')
 
-    nzbElement = showXML.getroot()
+    nzb_element = show_xml.getroot()
 
     regex = r'([\w\._\ ]+)[\._ ]S%02d[\._ ]([\w\._\-\ ]+)' % season
 
-    sceneNameMatch = re.search(regex, filename, re.I)
-    if sceneNameMatch:
-        showName, qualitySection = sceneNameMatch.groups()
+    scene_name_match = re.search(regex, filename, re.I)
+    if scene_name_match:
+        show_name, quality_section = scene_name_match.groups()
     else:
         logger.log('%s - Not a valid season pack scene name. If it\'s a valid one, log a bug.' % name, logger.ERROR)
         return {}, ''
 
-    regex = r'(%s[\._]S%02d(?:[E0-9]+)\.[\w\._]+)' % (re.escape(showName), season)
+    regex = r'(%s[\._]S%02d(?:[E0-9]+)\.[\w\._]+)' % (re.escape(show_name), season)
     regex = regex.replace(' ', '.')
 
     ep_files = {}
     xmlns = None
 
-    for cur_file in list(nzbElement):
+    for cur_file in list(nzb_element):
         if not isinstance(cur_file.tag, string_types):
             continue
         xmlns_match = re.match(r'[{](https?://[A-Za-z0-9_./]+/nzb)[}]file', cur_file.tag)
@@ -108,7 +108,7 @@ def getSeasonNZBs(name, url_data, season):
             # print curFile.get("subject"), "doesn't match", regex
             continue
         cur_ep = match.group(1)
-        fn = name_extractor(cur_file.get('subject', ''))
+        fn = _name_extractor(cur_file.get('subject', ''))
         if cur_ep == re.sub(r'\+\d+\.par2$', '', fn, flags=re.I):
             bn, ext = os.path.splitext(fn)
             cur_ep = re.sub(r'\.(part\d+|vol\d+(\+\d+)?)$', '', bn, flags=re.I)
@@ -126,7 +126,7 @@ def getSeasonNZBs(name, url_data, season):
     return ep_files, xmlns
 
 
-def createNZBString(file_elements, xmlns):
+def _create_nzb_string(file_elements, xmlns):
     """
 
     :param file_elements: first element
@@ -134,17 +134,17 @@ def createNZBString(file_elements, xmlns):
     :return:
     :rtype: AnyStr
     """
-    rootElement = etree.Element("nzb")
+    root_element = etree.Element("nzb")
     if xmlns:
-        rootElement.set("xmlns", xmlns)
+        root_element.set("xmlns", xmlns)
 
     for curFile in file_elements:
-        rootElement.append(stripNS(curFile, xmlns))
+        root_element.append(_strip_ns(curFile, xmlns))
 
-    return etree.tostring(rootElement, encoding='utf-8')
+    return etree.tostring(root_element, encoding='utf-8')
 
 
-def saveNZB(nzb_name, nzb_string):
+def _save_nzb(nzb_name, nzb_string):
     """
 
     :param nzb_name: nzb name
@@ -160,15 +160,15 @@ def saveNZB(nzb_name, nzb_string):
         logger.log(u'Unable to save NZB: ' + ex(e), logger.ERROR)
 
 
-def stripNS(element, ns):
+def _strip_ns(element, ns):
     element.tag = element.tag.replace("{" + ns + "}", "")
     for curChild in list(element):
-        stripNS(curChild, ns)
+        _strip_ns(curChild, ns)
 
     return element
 
 
-def splitResult(result):
+def split_result(result):
     """
 
     :param result: search result
@@ -195,7 +195,7 @@ def splitResult(result):
     # bust it up
     season = parse_result.season_number if None is not parse_result.season_number else 1
 
-    separate_nzbs, xmlns = getSeasonNZBs(result.name, resp, season)
+    separate_nzbs, xmlns = _get_season_nzbs(result.name, resp, season)
 
     result_list = []
 
@@ -246,7 +246,7 @@ def splitResult(result):
         nzb_result.provider = result.provider
         nzb_result.quality = result.quality
         nzb_result.show_obj = result.show_obj
-        nzb_result.extraInfo = [createNZBString(separate_nzbs[new_nzb], xmlns)]
+        nzb_result.extraInfo = [_create_nzb_string(separate_nzbs[new_nzb], xmlns)]
 
         result_list.append(nzb_result)
 

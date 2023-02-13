@@ -3,6 +3,7 @@
 * Update package resource API 63.2.0 (3ae44cd) to 67.3.2 (b9bf2ec)
 * Change remove calls to legacy py2 fix encoding function
 * Change requirements for pure py3
+* Change codebase cleanups
 
 
 ### 3.27.8 (2023-02-20 23:30:00 UTC)
@@ -1080,7 +1081,7 @@
 * Add API response field `global exclude require` to sg.listrequirewords endpoint
 * Change improve Popen resource usage under py2
 * Add overall failure monitoring to History/Connect fails (renamed from "Provider fails")
-* Change log exception during updateCache in newznab
+* Change log exception during update_cache in newznab
 * Change make Py3.9 preparations
 * Change anime "Available groups" to display "No groups listed..." when API is fine with no results instead of blank
 * Change improve clarity of anime group lists by using terms Allow list and Block list

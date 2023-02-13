@@ -222,7 +222,7 @@
     #for item in $history_compact
         #if 'tvid_prodid' in $item
             #set $action = $item['actions'][0]
-            #set $curStatus, $curQuality = $Quality.splitCompositeStatus(int($action['action']))
+            #set $curStatus, $curQuality = $Quality.split_composite_status(int($action['action']))
             #set $status = None
             #if $curStatus in $SNATCHED_ANY + [$FAILED]
                 #set $status = 'snatched'

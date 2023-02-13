@@ -18,7 +18,7 @@
 #else:
     #set $initial_quality = $SD
 #end if
-#set $anyQualities, $bestQualities = $Quality.splitQuality($sg_var('QUALITY_DEFAULT', $initial_quality))
+#set $anyQualities, $bestQualities = $Quality.split_quality($sg_var('QUALITY_DEFAULT', $initial_quality))
 <script type="text/javascript" src="$sbRoot/js/qualityChooser.js?v=$sbPID"></script>
 <script type="text/javascript" src="$sbRoot/js/massEdit.js?v=$sbPID"></script>
 

@@ -155,7 +155,7 @@ class SearchResult(LegacySearchResult):
 
 class NZBSearchResult(SearchResult):
     """
-    Regular NZB result with an URL to the NZB
+    Regular NZB result with a URL to the NZB
     """
     resultType = 'nzb'
 
@@ -169,7 +169,7 @@ class NZBDataSearchResult(SearchResult):
 
 class TorrentSearchResult(SearchResult):
     """
-    Torrent result with an URL to the torrent
+    Torrent result with a URL to the torrent
     """
     resultType = 'torrent'
 
@@ -456,7 +456,7 @@ class SimpleNamespace(object):
 
 
 # list that supports weak reference
-class weakList(list):
+class WeakList(list):
     __slots__ = ('__weakref__',)
 
 

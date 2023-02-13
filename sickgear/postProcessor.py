@@ -762,7 +762,7 @@ class PostProcessor(object):
 
         # if there is a quality available in the status then we don't need to bother guessing from the filename
         if ep_obj.status in common.Quality.SNATCHED_ANY:
-            old_status, ep_quality = common.Quality.splitCompositeStatus(ep_obj.status)
+            old_status, ep_quality = common.Quality.split_composite_status(ep_obj.status)
             if common.Quality.UNKNOWN != ep_quality:
                 self._log(
                     u'Using "%s" quality from the old status' % common.Quality.qualityStrings[ep_quality],
@@ -779,7 +779,7 @@ class PostProcessor(object):
             if not cur_name:
                 continue
 
-            ep_quality = common.Quality.nameQuality(cur_name, ep_obj.show_obj.is_anime)
+            ep_quality = common.Quality.name_quality(cur_name, ep_obj.show_obj.is_anime)
             quality_log = u' "%s" quality parsed from the %s %s'\
                           % (common.Quality.qualityStrings[ep_quality], thing, cur_name)
 
@@ -790,14 +790,14 @@ class PostProcessor(object):
             else:
                 self._log(u'Found' + quality_log, logger.DEBUG)
 
-        ep_quality = common.Quality.fileQuality(self.file_path)
+        ep_quality = common.Quality.file_quality(self.file_path)
         if common.Quality.UNKNOWN != ep_quality:
             self._log(u'Using "%s" quality parsed from the metadata file content of %s'
                       % (common.Quality.qualityStrings[ep_quality], self.file_name), logger.DEBUG)
             return ep_quality
 
         # Try guessing quality from the file name
-        ep_quality = common.Quality.assumeQuality(self.file_name)
+        ep_quality = common.Quality.assume_quality(self.file_name)
         self._log(u'Using guessed "%s" quality from the file name %s'
                   % (common.Quality.qualityStrings[ep_quality], self.file_name), logger.DEBUG)
 
@@ -889,7 +889,7 @@ class PostProcessor(object):
             self._log(u'SickGear snatched this episode, marking it safe to replace', logger.DEBUG)
             return True
 
-        old_ep_status, old_ep_quality = common.Quality.splitCompositeStatus(ep_obj.status)
+        old_ep_status, old_ep_quality = common.Quality.split_composite_status(ep_obj.status)
 
         # if old episode is not downloaded/archived then it's safe
         if common.DOWNLOADED != old_ep_status and common.ARCHIVED != old_ep_status:
@@ -1002,10 +1002,10 @@ class PostProcessor(object):
 
                 cur_ep_obj.release_name = self.release_name or ''
 
-                any_qualities, best_qualities = common.Quality.splitQuality(cur_ep_obj.show_obj.quality)
-                cur_status, cur_quality = common.Quality.splitCompositeStatus(cur_ep_obj.status)
+                any_qualities, best_qualities = common.Quality.split_quality(cur_ep_obj.show_obj.quality)
+                cur_status, cur_quality = common.Quality.split_composite_status(cur_ep_obj.status)
 
-                cur_ep_obj.status = common.Quality.compositeStatus(
+                cur_ep_obj.status = common.Quality.composite_status(
                     **({'status': common.DOWNLOADED, 'quality': quality},
                        {'status': common.ARCHIVED, 'quality': quality})
                     [cur_ep_obj.status in common.Quality.SNATCHED_BEST or
@@ -1111,7 +1111,7 @@ class PostProcessor(object):
 
             # set the status of the episodes
             # for cur_ep_obj in [ep_obj] + ep_obj.related_ep_obj:
-            #    cur_ep_obj.status = common.Quality.compositeStatus(common.SNATCHED, new_ep_quality)
+            #    cur_ep_obj.status = common.Quality.composite_status(common.SNATCHED, new_ep_quality)
 
         # if the show directory doesn't exist then make it if allowed
         if not os.path.isdir(ep_obj.show_obj.location) and sickgear.CREATE_MISSING_SHOW_DIRS:

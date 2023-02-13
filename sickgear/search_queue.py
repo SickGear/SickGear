@@ -22,12 +22,10 @@ import re
 import threading
 import traceback
 
-import exceptions_helper
 # noinspection PyPep8Naming
 from exceptions_helper import ex
 
 import sickgear
-from lib.dateutil import tz
 from . import common, db, failed_history, generic_queue, helpers, \
     history, logger, network_timezones, properFinder, search, ui
 from .classes import Proper, SimpleNamespace
@@ -519,7 +517,7 @@ class RecentSearchQueueItem(generic_queue.QueueItem):
         threads = []
 
         providers = list(filter(lambda x: x.is_active() and x.enable_recentsearch,
-                                sickgear.providers.sortedProviderList()))
+                                sickgear.providers.sorted_sources()))
         for cur_provider in providers:
             if not cur_provider.cache.should_update():
                 continue
@@ -528,7 +526,7 @@ class RecentSearchQueueItem(generic_queue.QueueItem):
                 logger.log('Updating provider caches with recent upload data')
 
             # spawn a thread for each provider to save time waiting for slow response providers
-            threads.append(threading.Thread(target=cur_provider.cache.updateCache,
+            threads.append(threading.Thread(target=cur_provider.cache.update_cache,
                                             kwargs={'needed': needed},
                                             name='%s :: [%s]' % (orig_thread_name, cur_provider.name)))
             # start the thread we just created
@@ -645,7 +643,7 @@ class ManualSearchQueueItem(BaseSearchQueueItem):
             ep_count, ep_count_scene = get_aired_in_season(self.show_obj)
             set_wanted_aired(self.segment, True, ep_count, ep_count_scene, manual=True)
             if not getattr(self.segment, 'wanted_quality', None):
-                ep_status, ep_quality = common.Quality.splitCompositeStatus(self.segment.status)
+                ep_status, ep_quality = common.Quality.split_composite_status(self.segment.status)
                 self.segment.wanted_quality = search.get_wanted_qualities(self.segment, ep_status, ep_quality,
                                                                           unaired=True, manual=True)
                 if not self.segment.wanted_quality:

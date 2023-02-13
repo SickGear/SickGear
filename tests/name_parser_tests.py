@@ -508,8 +508,8 @@ class MultiSceneNumbering(test.SickbeardTestDBCase):
                         )
             my_db = db.DBConnection()
             my_db.mass_action(c_l)
-            name_cache.addNameToCache(e_t['show_obj']['name'], tvid=e_t['show_obj']['tvid'],
-                                      prodid=e_t['show_obj']['prodid'])
+            name_cache.add_name_to_cache(e_t['show_obj']['name'], tvid=e_t['show_obj']['tvid'],
+                                         prodid=e_t['show_obj']['prodid'])
             for _t in e_t['tests']:
                 try:
                     res = parser.NameParser(True, convert=True).parse(_t['parse_name'])
@@ -533,8 +533,8 @@ class EpisodeNameCases(unittest.TestCase):
                     e_obj.season = e_o['season']
                     e_obj.episode = e_o['number']
                     s.sxe_ep_obj.setdefault(e_obj.season, {})[e_obj.episode] = e_obj
-            name_cache.addNameToCache(e_t['show_obj']['name'], tvid=e_t['show_obj']['tvid'],
-                                      prodid=e_t['show_obj']['prodid'])
+            name_cache.add_name_to_cache(e_t['show_obj']['name'], tvid=e_t['show_obj']['tvid'],
+                                         prodid=e_t['show_obj']['prodid'])
             try:
                 res = parser.NameParser(True).parse(e_t['parse_name'])
             except (BaseException, Exception):
@@ -550,7 +550,7 @@ class InvalidCases(unittest.TestCase):
         for s in [TVShowTest(name=rls_name, prodid=prodid, tvid=tvid, is_anime=is_anime)]:
             sickgear.showList.append(s)
             sickgear.showDict[s.sid_int] = s
-        name_cache.addNameToCache(show_name, tvid=tvid, prodid=prodid)
+        name_cache.add_name_to_cache(show_name, tvid=tvid, prodid=prodid)
         invalidexception = False
         try:
             _ = parser.NameParser(True).parse(rls_name)
@@ -939,7 +939,7 @@ class ExtraInfoNoNameTests(test.SickbeardTestDBCase):
                 sickgear.showList = [tvs]
                 sickgear.showDict = {tvs.sid_int: tvs}
                 name_cache.nameCache = {}
-                name_cache.buildNameCache()
+                name_cache.build_name_cache()
 
                 np = parser.NameParser()
                 r = np.parse(case[2], cache_result=False)

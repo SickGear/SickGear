@@ -164,7 +164,7 @@ class SnowflProvider(generic.TorrentProvider):
             from sickgear import providers
             if 'torlock' in url.lower():
                 prov = next(filter(lambda p: 'torlock' == p.name.lower(), (filter(
-                    lambda sp: sp.providerType == self.providerType, providers.sortedProviderList()))))
+                    lambda sp: sp.providerType == self.providerType, providers.sorted_sources()))))
                 state = prov.enabled
                 prov.enabled = True
                 _ = prov.url

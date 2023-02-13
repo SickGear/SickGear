@@ -84,7 +84,7 @@ class TransmissionAPI(GenericClient):
 
     def _add_torrent(self, t_object):
 
-        # populate blankable and download_dir
+        # populate blanked and download_dir
         if not self._get_auth():
             logger.log('%s: Authentication failed' % self.name, logger.ERROR)
             return False

@@ -160,8 +160,8 @@ def set_episode_failed(ep_obj):
     """
     try:
         with ep_obj.lock:
-            quality = Quality.splitCompositeStatus(ep_obj.status)[1]
-            ep_obj.status = Quality.compositeStatus(FAILED, quality)
+            quality = Quality.split_composite_status(ep_obj.status)[1]
+            ep_obj.status = Quality.composite_status(FAILED, quality)
             ep_obj.save_to_db()
 
     except EpisodeNotFoundException as e:
@@ -231,7 +231,7 @@ def revert_episode(ep_obj):
             if ep_obj.episode in history_eps:
                 status_revert = history_eps[ep_obj.episode]['old_status']
 
-                status, quality = Quality.splitCompositeStatus(status_revert)
+                status, quality = Quality.split_composite_status(status_revert)
                 logger.log('Found in failed.db history with status: %s quality: %s' % (
                     statusStrings[status], Quality.qualityStrings[quality]))
             else:

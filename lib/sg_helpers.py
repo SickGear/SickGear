@@ -683,8 +683,9 @@ def get_system_temp_dir():
 
 def proxy_setting(setting, request_url, force=False):
     """
-    Returns a list of a) proxy_setting address value or a PAC is fetched and parsed if proxy_setting
-    starts with "PAC:" (case-insensitive) and b) True/False if "PAC" is found in the proxy_setting.
+    Returns a list of
+    a) proxy_setting address value or a PAC is fetched and parsed if proxy_setting starts with "PAC:" (case-insensitive)
+    b) True/False if "PAC" is found in the proxy_setting.
 
     The PAC data parser is crude, javascript is not eval'd. The first "PROXY URL" found is extracted with a list
     of "url_a_part.url_remaining", "url_b_part.url_remaining", "url_n_part.url_remaining" and so on.
@@ -720,7 +721,7 @@ def proxy_setting(setting, request_url, force=False):
     request_url_match = False
     parsed_url = urlparse(request_url)
     netloc = parsed_url.netloc
-    for pac_data in re.finditer(r"""(?:[^'"]*['"])([^.]+\.[^'"]*)(?:['"])""", resp, re.I):
+    for pac_data in re.finditer(r"""[^'"]*['"]([^.]+\.[^'"]*)['"]""", resp, re.I):
         data = re.search(r"""PROXY\s+([^'"]+)""", pac_data.group(1), re.I)
         if data:
             if force:
@@ -1570,8 +1571,6 @@ def int_to_time(d_int):
     """
     convert integer from dt_to_int back to datetime.time
 
-    :param d_int: integer
-    :return: datetime.time
     """
     if None is d_int:
         return None
@@ -1610,7 +1609,7 @@ def ast_eval(value, default=None):
     """Convert string typed value into actual Python type and value
 
     :param value: string value to convert
-    :param default: value to return if cannot convert
+    :param default: value to return if it cannot convert
     :return: converted type and value or default
     """
     if not isinstance(value, string_types):
@@ -1667,8 +1666,8 @@ def calc_age(birthday, deathday=None, date=None):
     # type: (datetime.date, datetime.date, Optional[datetime.date]) -> Optional[int]
     """
     returns age based on current date or given date
-    :param birthday: birth date
-    :param deathday: death date
+    :param birthday: birthdate
+    :param deathday: deathdate
     :param date:
     """
     if isinstance(birthday, datetime.date):
@@ -1677,7 +1676,7 @@ def calc_age(birthday, deathday=None, date=None):
         try:
             b_d = birthday.replace(year=today.year)
 
-        # raised when birth date is February 29
+        # raised when birthdate is February 29
         # and the current year is not a leap year
         except ValueError:
             b_d = birthday.replace(year=today.year, month=birthday.month + 1, day=1)

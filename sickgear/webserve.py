@@ -19,6 +19,7 @@ from __future__ import with_statement, division
 
 # noinspection PyProtectedMember
 from mimetypes import MimeTypes
+from urllib.parse import urljoin
 
 import base64
 import copy
@@ -41,13 +42,21 @@ from json_helper import json_dumps, json_loads
 import sg_helpers
 from sg_helpers import remove_file, scantree, is_virtualenv
 
+from sg_futures import SgThreadPoolExecutor
+try:
+    from multiprocessing import cpu_count
+except ImportError:
+    # some platforms don't have multiprocessing
+    def cpu_count():
+        return None
+
 import sickgear
 from . import classes, clients, config, db, helpers, history, image_cache, logger, name_cache, naming, \
     network_timezones, notifiers, nzbget, processTV, sab, scene_exceptions, search_queue, subtitles, ui
 from .anime import AniGroupList, pull_anidb_groups, short_group_names
 from .browser import folders_at_path
 from .common import ARCHIVED, DOWNLOADED, FAILED, IGNORED, SKIPPED, SNATCHED, SNATCHED_ANY, UNAIRED, UNKNOWN, WANTED, \
-     SD, HD720p, HD1080p, UHD2160p, Overview, Quality, qualityPresetStrings, statusStrings
+    SD, HD720p, HD1080p, UHD2160p, Overview, Quality, qualityPresetStrings, statusStrings
 from .helpers import get_media_stats, has_image_ext, real_path, remove_article, remove_file_perm, starify
 from .indexermapper import MapStatus, map_indexers_to_show, save_mapping
 from .indexers.indexer_config import TVINFO_IMDB, TVINFO_TMDB, TVINFO_TRAKT, TVINFO_TVDB, TVINFO_TVMAZE, \
@@ -72,13 +81,9 @@ from unidecode import unidecode
 import dateutil.parser
 
 from tornado import gen, iostream
-# noinspection PyUnresolvedReferences
+from tornado.escape import utf8
 from tornado.web import RequestHandler, StaticFileHandler, authenticated
 from tornado.concurrent import run_on_executor
-# tornado.web.RequestHandler above is unresolved until...
-# 1) RouteHandler derives from RequestHandler instead of LegacyBaseHandler
-# 2) the following line is removed (plus the noinspection deleted)
-from ._legacy import LegacyBaseHandler
 
 from lib import subliminal
 from lib.cfscrape import CloudflareScraper
@@ -98,6 +103,7 @@ from six import binary_type, integer_types, iteritems, iterkeys, itervalues, mov
 if False:
     from typing import Any, AnyStr, Dict, List, Optional, Set, Tuple
     from sickgear.providers.generic import TorrentProvider
+    from tv import TVInfoShow
 
 
 # noinspection PyAbstractClass
@@ -187,7 +193,50 @@ class BaseStaticFileHandler(StaticFileHandler):
             self.set_header('X-Frame-Options', 'SAMEORIGIN')
 
 
-class RouteHandler(LegacyBaseHandler):
+class RouteHandler(RequestHandler):
+
+    executor = SgThreadPoolExecutor(thread_name_prefix='WEBSERVER', max_workers=min(32, (cpu_count() or 1) + 4))
+
+    def redirect(self, url, permanent=False, status=None):
+        """Send a redirect to the given (optionally relative) URL.
+
+        ----->>>>> NOTE: Removed self.finish <<<<<-----
+
+        If the ``status`` argument is specified, that value is used as the
+        HTTP status code; otherwise either 301 (permanent) or 302
+        (temporary) is chosen based on the ``permanent`` argument.
+        The default is 302 (temporary).
+        """
+        if not url.startswith(sickgear.WEB_ROOT):
+            url = sickgear.WEB_ROOT + url
+
+        # noinspection PyUnresolvedReferences
+        if self._headers_written:
+            raise Exception('Cannot redirect after headers have been written')
+        if status is None:
+            status = 301 if permanent else 302
+        else:
+            assert isinstance(status, int)
+            assert 300 <= status <= 399
+        self.set_status(status)
+        self.set_header('Location', urljoin(utf8(self.request.uri), utf8(url)))
+
+    def write_error(self, status_code, **kwargs):
+        body = ''
+        try:
+            if self.request.body:
+                body = '\nRequest body: %s' % decode_str(self.request.body)
+        except (BaseException, Exception):
+            pass
+        logger.log('Sent %s error response to a `%s` request for `%s` with headers:\n%s%s' %
+                   (status_code, self.request.method, self.request.path, self.request.headers, body), logger.WARNING)
+        # suppress traceback by removing 'exc_info' kwarg
+        if 'exc_info' in kwargs:
+            logger.log('Gracefully handled exception text:\n%s' % traceback.format_exception(*kwargs["exc_info"]),
+                       logger.DEBUG)
+            del kwargs['exc_info']
+        return super(RouteHandler, self).write_error(status_code, **kwargs)
+
     def data_received(self, *args):
         pass
 
@@ -307,7 +356,7 @@ class BaseHandler(RouteHandler):
             elif 'fanart' == which[0:6]:
                 image_file_name = [cache_obj.fanart_path(
                     *tvid_prodid_obj.tuple +
-                    ('%s' % (re.sub(r'.*?fanart_(\d+(?:\.\w{1,20})?\.\w{5,8}).*', r'\1.', which, 0, re.I)),))]
+                     ('%s' % (re.sub(r'.*?fanart_(\d+(?:\.\w{1,20})?\.\w{5,8}).*', r'\1.', which, 0, re.I)),))]
 
             for cur_name in image_file_name:
                 if os.path.isfile(cur_name):
@@ -618,7 +667,7 @@ class RepoHandler(BaseStaticFileHandler):
         return self.index([('resource.language.en_gb/', 'English/')[self.kodi_is_legacy]])
 
     def render_kodi_service_sickgear_watchedstate_updater_resources_language_english_index(self):
-         return self.index([('strings.po', 'strings.xml')[self.kodi_is_legacy]])
+        return self.index([('strings.po', 'strings.xml')[self.kodi_is_legacy]])
 
     def repo_sickgear_details(self):
         return re.findall(r'(?si)addon\sid="(repository\.[^"]+)[^>]+version="([^"]+)',
@@ -875,9 +924,10 @@ class LogfileHandler(BaseHandler):
         super(LogfileHandler, self).__init__(application, request, **kwargs)
         self.lock = threading.Lock()
 
+    # noinspection PyUnusedLocal
     @authenticated
     @gen.coroutine
-    def get(self, path, *args, **kwargs):
+    def get(self, *args, **kwargs):
         logfile_name = logger.current_log_file()
 
         try:
@@ -1127,7 +1177,7 @@ class MainHandler(WebHandler):
 
         # make a dict out of the sql results
         sql_result = [dict(row) for row in sql_result
-                      if Quality.splitCompositeStatus(helpers.try_int(row['status']))[0] not in
+                      if Quality.split_composite_status(helpers.try_int(row['status']))[0] not in
                       SNATCHED_ANY + [DOWNLOADED, ARCHIVED, IGNORED, SKIPPED]]
 
         # multi dimension sort
@@ -1178,8 +1228,8 @@ class MainHandler(WebHandler):
                     pass
             if imdb_id:
                 sql_result[index]['imdb_url'] = sickgear.indexers.indexer_config.tvinfo_config[
-                                                     sickgear.indexers.indexer_config.TVINFO_IMDB][
-                                                     'show_url'] % imdb_id
+                                                    sickgear.indexers.indexer_config.TVINFO_IMDB][
+                                                    'show_url'] % imdb_id
             else:
                 sql_result[index]['imdb_url'] = ''
 
@@ -1282,7 +1332,7 @@ class MainHandler(WebHandler):
 
         now = datetime.datetime.now()
         events = [
-            ('recent', sickgear.recent_search_scheduler.timeLeft),
+            ('recent', sickgear.recent_search_scheduler.time_left),
             ('backlog', sickgear.backlog_search_scheduler.next_backlog_timeleft),
         ]
 
@@ -1996,7 +2046,7 @@ class Home(MainHandler):
             if not line.strip():
                 continue
             if line.startswith('  '):
-                change_parts = re.findall(r'^[\W]+(.*)$', line)
+                change_parts = re.findall(r'^\W+(.*)$', line)
                 change['text'] += change_parts and (' %s' % change_parts[0].strip()) or ''
             else:
                 if change:
@@ -2008,11 +2058,11 @@ class Home(MainHandler):
                 elif not max_rel:
                     break
                 elif line.startswith('### '):
-                    rel_data = re.findall(r'(?im)^###\W*([^\s]+)\W\(([^)]+)\)', line)
+                    rel_data = re.findall(r'(?im)^###\W*(\S+)\W\(([^)]+)\)', line)
                     rel_data and output.append({'type': 'rel', 'ver': rel_data[0][0], 'date': rel_data[0][1]})
                     max_rel -= 1
                 elif line.startswith('# '):
-                    max_data = re.findall(r'^#\W*([\d]+)\W*$', line)
+                    max_data = re.findall(r'^#\W*(\d+)\W*$', line)
                     max_rel = max_data and helpers.try_int(max_data[0], None) or 5
         if change:
             output.append(change)
@@ -2071,6 +2121,7 @@ class Home(MainHandler):
         else:
             self.redirect('/home/')
 
+    # noinspection PyUnusedLocal
     def season_render(self, tvid_prodid=None, season=None, **kwargs):
 
         response = {'success': False}
@@ -2309,7 +2360,7 @@ class Home(MainHandler):
             status_overview = show_obj.get_overview(row['status'])
             if status_overview:
                 ep_counts[status_overview] += row['cnt']
-                if ARCHIVED == Quality.splitCompositeStatus(row['status'])[0]:
+                if ARCHIVED == Quality.split_composite_status(row['status'])[0]:
                     ep_counts['archived'].setdefault(row['season'], 0)
                     ep_counts['archived'][row['season']] = row['cnt'] + ep_counts['archived'].get(row['season'], 0)
                 else:
@@ -2376,7 +2427,7 @@ class Home(MainHandler):
 
         t.clean_show_name = quote_plus(sickgear.indexermapper.clean_show_name(show_obj.name))
 
-        t.min_initial = Quality.get_quality_ui(min(Quality.splitQuality(show_obj.quality)[0]))
+        t.min_initial = Quality.get_quality_ui(min(Quality.split_quality(show_obj.quality)[0]))
         t.show_obj.exceptions = scene_exceptions.get_scene_exceptions(show_obj.tvid, show_obj.prodid)
         # noinspection PyUnresolvedReferences
         t.all_scene_exceptions = show_obj.exceptions  # normally Unresolved as not a class attribute, force set above
@@ -2422,7 +2473,7 @@ class Home(MainHandler):
                         sorted_show_list[i].unique_name = '%s (%s)' % (sorted_show_list[i].name, start_year)
                         dups[sorted_show_list[i].unique_name] = i
 
-        name_cache.buildNameCache()
+        name_cache.build_name_cache()
 
     @staticmethod
     def sorted_show_lists():
@@ -2577,12 +2628,12 @@ class Home(MainHandler):
                 for k, v in iteritems(new_ids):
                     if None is v.get('id') or None is v.get('status'):
                         continue
-                    if (show_obj.ids.get(k, {'id': 0}).get('id') != v.get('id') or
-                            (MapStatus.NO_AUTOMATIC_CHANGE == v.get('status') and
-                             MapStatus.NO_AUTOMATIC_CHANGE != show_obj.ids.get(
-                                        k, {'status': MapStatus.NONE}).get('status')) or
-                            (MapStatus.NO_AUTOMATIC_CHANGE != v.get('status') and
-                             MapStatus.NO_AUTOMATIC_CHANGE == show_obj.ids.get(
+                    if (show_obj.ids.get(k, {'id': 0}).get('id') != v.get('id')
+                            or (MapStatus.NO_AUTOMATIC_CHANGE == v.get('status')
+                                and MapStatus.NO_AUTOMATIC_CHANGE != show_obj.ids.get(
+                                        k, {'status': MapStatus.NONE}).get('status'))
+                            or (MapStatus.NO_AUTOMATIC_CHANGE != v.get('status')
+                                and MapStatus.NO_AUTOMATIC_CHANGE == show_obj.ids.get(
                                         k, {'status': MapStatus.NONE}).get('status'))):
                         show_obj.ids[k]['id'] = (0, v['id'])[v['id'] >= 0]
                         show_obj.ids[k]['status'] = (MapStatus.NOT_FOUND, v['status'])[v['id'] != 0]
@@ -2837,7 +2888,7 @@ class Home(MainHandler):
 
         errors = []
         with show_obj.lock:
-            show_obj.quality = Quality.combineQualities(list(map(int, any_qualities)), list(map(int, best_qualities)))
+            show_obj.quality = Quality.combine_qualities(list(map(int, any_qualities)), list(map(int, best_qualities)))
             show_obj.upgrade_once = upgrade_once
 
             # reversed for now
@@ -3032,6 +3083,7 @@ class Home(MainHandler):
 
         self.redirect('/home/view-show?tvid_prodid=%s' % show_obj.tvid_prodid)
 
+    # noinspection PyUnusedLocal
     def subtitle_show(self, tvid_prodid=None, force=0):
 
         if None is tvid_prodid:
@@ -3050,6 +3102,7 @@ class Home(MainHandler):
 
         self.redirect('/home/view-show?tvid_prodid=%s' % show_obj.tvid_prodid)
 
+    # noinspection PyUnusedLocal
     def update_mb(self, tvid_prodid=None, **kwargs):
 
         if notifiers.NotifierFactory().get('EMBY').update_library(
@@ -3115,7 +3168,7 @@ class Home(MainHandler):
                 return json_dumps({'result': 'error'})
             return self._generic_message('Error', err_msg)
 
-        min_initial = min(Quality.splitQuality(show_obj.quality)[0])
+        min_initial = min(Quality.split_quality(show_obj.quality)[0])
         segments = {}
         if None is not eps:
 
@@ -3157,12 +3210,12 @@ class Home(MainHandler):
 
                     if ARCHIVED == status:
                         if ep_obj.status in Quality.DOWNLOADED or direct:
-                            ep_obj.status = Quality.compositeStatus(
-                                ARCHIVED, (Quality.splitCompositeStatus(ep_obj.status)[1], min_initial)[use_default])
+                            ep_obj.status = Quality.composite_status(
+                                ARCHIVED, (Quality.split_composite_status(ep_obj.status)[1], min_initial)[use_default])
                     elif DOWNLOADED == status:
                         if ep_obj.status in Quality.ARCHIVED:
-                            ep_obj.status = Quality.compositeStatus(
-                                DOWNLOADED, Quality.splitCompositeStatus(ep_obj.status)[1])
+                            ep_obj.status = Quality.composite_status(
+                                DOWNLOADED, Quality.split_composite_status(ep_obj.status)[1])
                     else:
                         ep_obj.status = status
 
@@ -3248,12 +3301,12 @@ class Home(MainHandler):
                     for _cur_ep_obj in cur_ep_obj.related_ep_obj + [cur_ep_obj]:
                         if _cur_ep_obj in ep_obj_rename_list:
                             break
-                        ep_status, ep_qual = Quality.splitCompositeStatus(_cur_ep_obj.status)
+                        ep_status, ep_qual = Quality.split_composite_status(_cur_ep_obj.status)
                         if not ep_qual:
                             continue
                         ep_obj_rename_list.append(cur_ep_obj)
                 else:
-                    ep_status, ep_qual = Quality.splitCompositeStatus(cur_ep_obj.status)
+                    ep_status, ep_qual = Quality.split_composite_status(cur_ep_obj.status)
                     if not ep_qual:
                         continue
                     ep_obj_rename_list.append(cur_ep_obj)
@@ -3330,7 +3383,7 @@ class Home(MainHandler):
         # retrieve the episode object and fail if we can't get one
         ep_obj = self._get_episode(tvid_prodid, season, episode)
         if not isinstance(ep_obj, str):
-            if UNKNOWN == Quality.splitCompositeStatus(ep_obj.status)[0]:
+            if UNKNOWN == Quality.split_composite_status(ep_obj.status)[0]:
                 ep_obj.status = SKIPPED
 
             # make a queue item for the TVEpisode and put it on the queue
@@ -3400,7 +3453,7 @@ class Home(MainHandler):
                 seen_eps.add(uniq_sxe)
 
             for snatched in filter(lambda s: ((s.tvid, s.prodid, s.season, s.episode) not in seen_eps),
-                                        item.snatched_eps):
+                                   item.snatched_eps):
                 ep_obj = getattr(snatched, 'ep_obj', None)
                 if not ep_obj:
                     continue
@@ -3435,9 +3488,9 @@ class Home(MainHandler):
         """
         # Find the quality class for the episode
         quality_class = Quality.qualityStrings[Quality.UNKNOWN]
-        ep_status, ep_quality = Quality.splitCompositeStatus(ep_type.status)
+        ep_status, ep_quality = Quality.split_composite_status(ep_type.status)
         for x in (SD, HD720p, HD1080p, UHD2160p):
-            if ep_quality in Quality.splitQuality(x)[0]:
+            if ep_quality in Quality.split_quality(x)[0]:
                 quality_class = qualityPresetStrings[x]
                 break
 
@@ -3466,7 +3519,7 @@ class Home(MainHandler):
         if isinstance(ep_obj, str):
             return json_dumps({'result': 'failure'})
 
-        # try do download subtitles for that episode
+        # try to download subtitles for that episode
         try:
             previous_subtitles = set([subliminal.language.Language(x) for x in ep_obj.subtitles])
             ep_obj.subtitles = set([x.language for x in next(itervalues(ep_obj.download_subtitles()))])
@@ -3880,7 +3933,7 @@ class HomeProcessMedia(Home):
                     regexp = re.compile(r'(?i)<br[\s/]+>', flags=re.UNICODE)
                     result = regexp.sub('\n', result)
                     if None is not quiet and 1 == int(quiet):
-                        regexp = re.compile(u'(?i)<a[^>]+>([^<]+)<[/]a>', flags=re.UNICODE)
+                        regexp = re.compile(u'(?i)<a[^>]+>([^<]+)</a>', flags=re.UNICODE)
                         return u'%s' % regexp.sub(r'\1', result)
                     return self._generic_message('Postprocessing results', u'<pre>%s</pre>' % result)
 
@@ -3985,7 +4038,7 @@ class AddShows(Home):
             r'(?P<tmdb_full>[^ ]+themoviedb\.org/tv/(?P<tmdb>\d+)[^ ]*)|'
             r'(?P<trakt_full>[^ ]+trakt\.tv/shows/(?P<trakt>[^ /]+)[^ ]*)|'
             r'(?P<tvdb_full>[^ ]+thetvdb\.com/series/(?P<tvdb>[^ /]+)[^ ]*)|'
-            r'(?P<tvdb_id_full>[^ ]+thetvdb\.com/[^\d]+(?P<tvdb_id>[^ /]+)[^ ]*)|'
+            r'(?P<tvdb_id_full>[^ ]+thetvdb\.com/\D+(?P<tvdb_id>[^ /]+)[^ ]*)|'
             r'(?P<tvmaze_full>[^ ]+tvmaze\.com/shows/(?P<tvmaze>\d+)/?[^ ]*)', search_term)
         if id_check:
             for cur_match in id_check:
@@ -4035,7 +4088,7 @@ class AddShows(Home):
             t = sickgear.TVInfoAPI(cur_tvid).setup(**tvinfo_config)
             results.setdefault(cur_tvid, {})
             try:
-                for cur_result in t.search_show(list(used_search_term), ids=ids_search_used):
+                for cur_result in t.search_show(list(used_search_term), ids=ids_search_used):  # type: TVInfoShow
                     if TVINFO_TRAKT == cur_tvid and not cur_result['ids'].tvdb:
                         continue
                     tv_src_id = int(cur_result['id'])
@@ -4679,7 +4732,7 @@ class AddShows(Home):
 
     def parse_imdb_html(self, html, filtered, kwargs):
 
-        img_size = re.compile(r'(?im)(V1[^XY]+([XY]))(\d+)([^\d]+)(\d+)([^\d]+)(\d+)([^\d]+)(\d+)([^\d]+)(\d+)(.*?)$')
+        img_size = re.compile(r'(?im)(V1[^XY]+([XY]))(\d+)(\D+)(\d+)(\D+)(\d+)(\D+)(\d+)(\D+)(\d+)(.*?)$')
 
         with BS4Parser(html, features=['html5lib', 'permissive']) as soup:
             show_list = soup.select('.lister-list')
@@ -5200,7 +5253,7 @@ class AddShows(Home):
                         channel_tag_copy = copy.copy(channel_tag)
                         if channel_tag_copy:
                             network = channel_tag_copy.a.extract().get_text(strip=True)
-                            date_info = re.sub(r'^[^\d]+', '', channel_tag_copy.get_text(strip=True))
+                            date_info = re.sub(r'^\D+', '', channel_tag_copy.get_text(strip=True))
                             if date_info:
                                 dt = dateutil.parser.parse((date_info, '%s.01.01' % date_info)[4 == len(date_info)])
 
@@ -5209,7 +5262,7 @@ class AddShows(Home):
                                    and 'printed' in ' '.join(t.get('class', ''))]
                             if len(tag):
                                 age_args = {}
-                                future = re.sub(r'[^\d]+(.*)', r'\1', tag[0].get_text(strip=True))
+                                future = re.sub(r'\D+(.*)', r'\1', tag[0].get_text(strip=True))
                                 for (dim, rcx) in rc:
                                     value = helpers.try_int(rcx.sub(r'\1', future), None)
                                     if value:
@@ -5237,7 +5290,7 @@ class AddShows(Home):
 
                         genres = row.find(class_='genre')
                         if genres:
-                            genres = re.sub(r',([^\s])', r', \1', genres.get_text(strip=True))
+                            genres = re.sub(r',(\S)', r', \1', genres.get_text(strip=True))
                         overview = row.find(class_='summary')
                         if overview:
                             overview = overview.get_text(strip=True)
@@ -6031,7 +6084,7 @@ class AddShows(Home):
             any_qualities = [any_qualities]
         if type(best_qualities) != list:
             best_qualities = [best_qualities]
-        new_quality = Quality.combineQualities(list(map(int, any_qualities)), list(map(int, best_qualities)))
+        new_quality = Quality.combine_qualities(list(map(int, any_qualities)), list(map(int, best_qualities)))
         upgrade_once = config.checkbox_to_value(upgrade_once)
 
         wanted_begin = config.minimax(wanted_begin, 0, -1, 10)
@@ -6226,7 +6279,7 @@ class Manage(MainHandler):
             if cur_season not in result:
                 result[cur_season] = {}
 
-            cur_quality = Quality.splitCompositeStatus(int(cur_result['status']))[1]
+            cur_quality = Quality.split_composite_status(int(cur_result['status']))[1]
             result[cur_season][cur_episode] = {'name': cur_result['name'],
                                                'airdateNever': 1000 > int(cur_result['airdate']),
                                                'qualityCss': Quality.get_quality_css(cur_quality),
@@ -6246,9 +6299,9 @@ class Manage(MainHandler):
                 if event_sql_result:
                     for cur_result_event in event_sql_result:
                         if None is d_status and cur_result_event['action'] in Quality.DOWNLOADED:
-                            d_status, d_qual = Quality.splitCompositeStatus(cur_result_event['action'])
+                            d_status, d_qual = Quality.split_composite_status(cur_result_event['action'])
                         if None is s_status and cur_result_event['action'] in Quality.SNATCHED_ANY:
-                            s_status, s_quality = Quality.splitCompositeStatus(cur_result_event['action'])
+                            s_status, s_quality = Quality.split_composite_status(cur_result_event['action'])
                             aged = ((datetime.datetime.now() -
                                      datetime.datetime.strptime(str(cur_result_event['date']),
                                                                 sickgear.history.dateFormat))
@@ -6289,11 +6342,11 @@ class Manage(MainHandler):
         if Quality.NONE == cur_quality:
             return undo_from_history, change_to, status
 
-        cur_status = Quality.splitCompositeStatus(int(cur_status))[0]
+        cur_status = Quality.split_composite_status(int(cur_status))[0]
         if any([location]):
             undo_from_history = True
             change_to = statusStrings[DOWNLOADED]
-            status = [Quality.compositeStatus(DOWNLOADED, d_qual or cur_quality)]
+            status = [Quality.composite_status(DOWNLOADED, d_qual or cur_quality)]
         elif cur_status in Quality.SNATCHED_ANY + [IGNORED, SKIPPED, WANTED]:
             if None is d_qual:
                 if cur_status not in [IGNORED, SKIPPED]:
@@ -6305,7 +6358,7 @@ class Manage(MainHandler):
                         or sickgear.SKIP_REMOVED_FILES in [ARCHIVED, IGNORED, SKIPPED]:
                     undo_from_history = True
                     change_to = '%s %s' % (statusStrings[ARCHIVED], Quality.qualityStrings[d_qual])
-                    status = [Quality.compositeStatus(ARCHIVED, d_qual)]
+                    status = [Quality.composite_status(ARCHIVED, d_qual)]
                 elif sickgear.SKIP_REMOVED_FILES in [IGNORED, SKIPPED] \
                         and cur_status not in [IGNORED, SKIPPED]:
                     change_to = statusStrings[statusStrings[sickgear.SKIP_REMOVED_FILES]]
@@ -6893,7 +6946,7 @@ class Manage(MainHandler):
             new_subtitles = 'on' if new_subtitles else 'off'
 
             if 'keep' == quality_preset:
-                any_qualities, best_qualities = Quality.splitQuality(show_obj.quality)
+                any_qualities, best_qualities = Quality.split_quality(show_obj.quality)
             elif int(quality_preset):
                 best_qualities = []
 
@@ -7110,7 +7163,7 @@ class ManageSearch(Manage):
     def retry_provider(provider=None):
         if not provider:
             return
-        prov = [p for p in sickgear.providerList + sickgear.newznabProviderList if p.get_id() == provider]
+        prov = [p for p in sickgear.provider_list + sickgear.newznab_providers if p.get_id() == provider]
         if not prov:
             return
         prov[0].retry_next()
@@ -7131,7 +7184,7 @@ class ManageSearch(Manage):
 
         # force it to run the next time it looks
         if not sickgear.search_queue_scheduler.action.is_recentsearch_in_progress():
-            result = sickgear.recent_search_scheduler.forceRun()
+            result = sickgear.recent_search_scheduler.force_run()
             if result:
                 logger.log(u'Recent search forced')
                 ui.notifications.message('Recent search started')
@@ -7142,7 +7195,7 @@ class ManageSearch(Manage):
     def force_find_propers(self):
 
         # force it to run the next time it looks
-        result = sickgear.proper_finder_scheduler.forceRun()
+        result = sickgear.proper_finder_scheduler.force_run()
         if result:
             logger.log(u'Find propers search forced')
             ui.notifications.message('Find propers search started')
@@ -7166,7 +7219,7 @@ class ShowTasks(Manage):
         t = PageTemplate(web_handler=self, file='manage_showProcesses.tmpl')
         t.queue_length = sickgear.show_queue_scheduler.action.queue_length()
         t.people_queue = sickgear.people_queue_scheduler.action.queue_data()
-        t.next_run = sickgear.show_update_scheduler.lastRun.replace(
+        t.next_run = sickgear.show_update_scheduler.last_run.replace(
             hour=sickgear.show_update_scheduler.start_time.hour)
         t.show_update_running = sickgear.show_queue_scheduler.action.is_show_update_running() \
             or sickgear.show_update_scheduler.action.amActive
@@ -7252,7 +7305,7 @@ class ShowTasks(Manage):
 
     def force_show_update(self):
 
-        result = sickgear.show_update_scheduler.forceRun()
+        result = sickgear.show_update_scheduler.force_run()
         if result:
             logger.log(u'Show Update forced')
             ui.notifications.message('Forced Show Update started')
@@ -7412,7 +7465,7 @@ class History(MainHandler):
                     r['status'] = r['status_w']
                     r['file_size'] = r['file_size_w']
 
-                r['status'], r['quality'] = Quality.splitCompositeStatus(helpers.try_int(r['status']))
+                r['status'], r['quality'] = Quality.split_composite_status(helpers.try_int(r['status']))
                 r['season'], r['episode'] = '%02i' % r['season'], '%02i' % r['episode']
                 if r['tvep_id'] not in mru_count:
                     # depends on SELECT ORDER BY date_watched DESC to determine mru_count
@@ -7428,9 +7481,9 @@ class History(MainHandler):
 
         elif 'stats' in sickgear.HISTORY_LAYOUT:
 
-            prov_list = [p.name for p in (sickgear.providerList
-                                          + sickgear.newznabProviderList
-                                          + sickgear.torrentRssProviderList)]
+            prov_list = [p.name for p in (sickgear.provider_list
+                                          + sickgear.newznab_providers
+                                          + sickgear.torrent_rss_providers)]
             # noinspection SqlResolve
             sql = 'SELECT COUNT(1) AS count,' \
                   ' MIN(DISTINCT date) AS earliest,' \
@@ -7462,7 +7515,7 @@ class History(MainHandler):
                      prov_id=p.get_id(),  # 2020.03.17 legacy var, remove at future date
                      fails=p.fails.fails_sorted, next_try=p.get_next_try_time,
                      has_limit=getattr(p, 'has_limit', False), tmr_limit_time=p.tmr_limit_time)
-                for p in sickgear.providerList + sickgear.newznabProviderList]))
+                for p in sickgear.provider_list + sickgear.newznab_providers]))
 
             t.provider_fail_cnt = len([p for p in t.provider_fail_stats if len(p['fails'])])
             t.provider_fails = t.provider_fail_cnt  # 2020.03.17 legacy var, remove at future date
@@ -7841,7 +7894,7 @@ class History(MainHandler):
                 show_obj = helpers.find_show_by_id(tvid_prodid_dict)
                 ep_obj = show_obj.get_episode(cur_result['season'], cur_result['episode'])
                 for n in filter(lambda x: x.name.lower() in ('emby', 'kodi', 'plex'),
-                                     notifiers.NotifierFactory().get_enabled()):
+                                notifiers.NotifierFactory().get_enabled()):
                     if 'PLEX' == n.name:
                         if updating:
                             continue
@@ -8011,7 +8064,7 @@ class ConfigGeneral(Config):
         return json_dumps(dict(text='%s\n\n' % ui_output))
 
     @staticmethod
-    def generate_key():
+    def generate_key(*args, **kwargs):
         """ Return a new randomized API_KEY
         """
         # Create some values to seed md5
@@ -8019,8 +8072,10 @@ class ConfigGeneral(Config):
 
         result = hashlib.new('md5', decode_bytes(seed)).hexdigest()
 
-        # Return a hex digest of the md5, eg 49f68a5c8493ec2c0bf489821c21fc3b
-        logger.log(u'New API generated')
+        # Return a hex digest of the md5, e.g. 49f68a5c8493ec2c0bf489821c21fc3b
+        app_name = kwargs.get('app_name')
+        app_name = '' if not app_name else ' for [%s]' % app_name
+        logger.log(u'New API generated%s' % app_name)
 
         return result
 
@@ -8053,8 +8108,8 @@ class ConfigGeneral(Config):
         any_qualities = ([], any_qualities.split(','))[any(any_qualities)]
         best_qualities = ([], best_qualities.split(','))[any(best_qualities)]
 
-        sickgear.QUALITY_DEFAULT = int(Quality.combineQualities(list(map(int, any_qualities)),
-                                                                list(map(int, best_qualities))))
+        sickgear.QUALITY_DEFAULT = int(Quality.combine_qualities(list(map(int, any_qualities)),
+                                                                 list(map(int, best_qualities))))
         sickgear.WANTED_BEGIN_DEFAULT = config.minimax(default_wanted_begin, 0, -1, 10)
         sickgear.WANTED_LATEST_DEFAULT = config.minimax(default_wanted_latest, 0, -1, 10)
         sickgear.SHOW_TAG_DEFAULT = default_tag
@@ -8067,33 +8122,6 @@ class ConfigGeneral(Config):
 
         sickgear.save_config()
 
-    @staticmethod
-    def generateKey(*args, **kwargs):
-        """ Return a new randomized API_KEY
-        """
-
-        try:
-            from hashlib import md5
-        except ImportError:
-            # noinspection PyUnresolvedReferences,PyCompatibility
-            from md5 import md5
-
-        # Create some values to seed md5
-        t = str(time.time())
-        r = str(random.random())
-
-        # Create the md5 instance and give it the current time
-        m = md5(decode_bytes(t))
-
-        # Update the md5 instance with the random variable
-        m.update(decode_bytes(r))
-
-        # Return a hex digest of the md5, eg 49f68a5c8493ec2c0bf489821c21fc3b
-        app_name = kwargs.get('app_name')
-        app_name = '' if not app_name else ' for [%s]' % app_name
-        logger.log(u'New apikey generated%s' % app_name)
-        return m.hexdigest()
-
     def create_apikey(self, app_name):
         result = dict()
         if not app_name:
@@ -8101,7 +8129,7 @@ class ConfigGeneral(Config):
         elif app_name in [k[0] for k in sickgear.API_KEYS if k[0]]:
             result['result'] = 'Failed: name is not unique'
         else:
-            api_key = self.generateKey(app_name=app_name)
+            api_key = self.generate_key(app_name=app_name)
             if api_key in [k[1] for k in sickgear.API_KEYS if k[0]]:
                 result['result'] = 'Failed: apikey already exists, try again'
             else:
@@ -8199,7 +8227,7 @@ class ConfigGeneral(Config):
         sickgear.FANART_LIMIT = config.minimax(fanart_limit, 3, 0, 500)
         sickgear.SHOWLIST_TAGVIEW = showlist_tagview
 
-        # 'Show List' is the must have default fallback. Tags in use that are removed from config ui are restored,
+        # 'Show List' is the must-have default fallback. Tags in use that are removed from config ui are restored,
         # not deleted. Deduped list order preservation is key to feature function.
         my_db = db.DBConnection()
         sql_result = my_db.select('SELECT DISTINCT tag FROM tv_shows')
@@ -8211,7 +8239,7 @@ class ConfigGeneral(Config):
             results += [u'An attempt was prevented to remove a show list group name still in use']
         dedupe = {}
         sickgear.SHOW_TAGS = [dedupe.setdefault(item, item) for item in (cleanser + new_names + [u'Show List'])
-                               if item not in dedupe]
+                              if item not in dedupe]
 
         sickgear.HOME_SEARCH_FOCUS = config.checkbox_to_value(home_search_focus)
         sickgear.USE_IMDB_INFO = config.checkbox_to_value(use_imdb_info)
@@ -8255,7 +8283,7 @@ class ConfigGeneral(Config):
         sickgear.HANDLE_REVERSE_PROXY = config.checkbox_to_value(handle_reverse_proxy)
         sickgear.SEND_SECURITY_HEADERS = config.checkbox_to_value(send_security_headers)
         hosts = ','.join(filter(lambda name: not helpers.re_valid_hostname(with_allowed=False).match(name),
-                                     config.clean_hosts(allowed_hosts).split(',')))
+                                config.clean_hosts(allowed_hosts).split(',')))
         if not hosts or self.request.host_name in hosts:
             sickgear.ALLOWED_HOSTS = hosts
         sickgear.ALLOW_ANYIP = config.checkbox_to_value(allow_anyip)
@@ -8395,9 +8423,9 @@ class ConfigSearch(Config):
         sickgear.USENET_RETENTION = config.to_int(usenet_retention, default=500)
 
         sickgear.IGNORE_WORDS, sickgear.IGNORE_WORDS_REGEX = helpers.split_word_str(ignore_words
-                                                                                      if ignore_words else '')
+                                                                                    if ignore_words else '')
         sickgear.REQUIRE_WORDS, sickgear.REQUIRE_WORDS_REGEX = helpers.split_word_str(require_words
-                                                                                        if require_words else '')
+                                                                                      if require_words else '')
 
         clean_ignore_require_words()
 
@@ -8406,7 +8434,7 @@ class ConfigSearch(Config):
 
         sickgear.SEARCH_UNAIRED = bool(config.checkbox_to_value(search_unaired))
         sickgear.UNAIRED_RECENT_SEARCH_ONLY = bool(config.checkbox_to_value(unaired_recent_search_only,
-                                                                             value_off=1, value_on=0))
+                                                                            value_off=1, value_on=0))
 
         sickgear.FLARESOLVERR_HOST = config.clean_url(flaresolverr_host)
         sg_helpers.FLARESOLVERR_HOST = sickgear.FLARESOLVERR_HOST
@@ -8668,9 +8696,9 @@ class ConfigProviders(Config):
             return json_dumps({'error': 'No Provider Name or url specified'})
 
         provider_dict = dict(zip([sickgear.providers.generic_provider_name(x.get_id())
-                                 for x in sickgear.newznabProviderList], sickgear.newznabProviderList))
+                                  for x in sickgear.newznab_providers], sickgear.newznab_providers))
         provider_url_dict = dict(zip([sickgear.providers.generic_provider_url(x.url)
-                                 for x in sickgear.newznabProviderList], sickgear.newznabProviderList))
+                                      for x in sickgear.newznab_providers], sickgear.newznab_providers))
 
         temp_provider = newznab.NewznabProvider(name, config.clean_url(url))
 
@@ -8694,12 +8722,12 @@ class ConfigProviders(Config):
             error = '\nNo provider %s specified' % error
             return json_dumps({'success': False, 'error': error})
 
-        if name in [n.name for n in sickgear.newznabProviderList if n.url == url]:
-            provider = [n for n in sickgear.newznabProviderList if n.name == name][0]
+        if name in [n.name for n in sickgear.newznab_providers if n.url == url]:
+            provider = [n for n in sickgear.newznab_providers if n.name == name][0]
             tv_categories = provider.clean_newznab_categories(provider.all_cats)
             state = provider.is_enabled()
         else:
-            providers = dict(zip([x.get_id() for x in sickgear.newznabProviderList], sickgear.newznabProviderList))
+            providers = dict(zip([x.get_id() for x in sickgear.newznab_providers], sickgear.newznab_providers))
             temp_provider = newznab.NewznabProvider(name, url, key)
             if None is not key and starify(key, True):
                 temp_provider.key = providers[temp_provider.get_id()].key
@@ -8715,7 +8743,7 @@ class ConfigProviders(Config):
             return json_dumps({'error': 'Invalid name specified'})
 
         provider_dict = dict(
-            zip([x.get_id() for x in sickgear.torrentRssProviderList], sickgear.torrentRssProviderList))
+            zip([x.get_id() for x in sickgear.torrent_rss_providers], sickgear.torrent_rss_providers))
 
         temp_provider = rsstorrent.TorrentRssProvider(name, url, cookies)
 
@@ -8730,7 +8758,7 @@ class ConfigProviders(Config):
 
     @staticmethod
     def check_providers_ping():
-        for p in sickgear.providers.sortedProviderList():
+        for p in sickgear.providers.sorted_sources():
             if getattr(p, 'ping_iv', None):
                 if p.is_active() and (p.get_id() not in sickgear.provider_ping_thread_pool
                                       or not sickgear.provider_ping_thread_pool[p.get_id()].is_alive()):
@@ -8748,7 +8776,7 @@ class ConfigProviders(Config):
                         pass
 
         # stop removed providers
-        prov = [n.get_id() for n in sickgear.providers.sortedProviderList()]
+        prov = [n.get_id() for n in sickgear.providers.sorted_sources()]
         for p in [x for x in sickgear.provider_ping_thread_pool if x not in prov]:
             sickgear.provider_ping_thread_pool[p].stop = True
             try:
@@ -8764,7 +8792,7 @@ class ConfigProviders(Config):
         provider_list = []
 
         # add all the newznab info we have into our list
-        newznab_sources = dict(zip([x.get_id() for x in sickgear.newznabProviderList], sickgear.newznabProviderList))
+        newznab_sources = dict(zip([x.get_id() for x in sickgear.newznab_providers], sickgear.newznab_providers))
         active_ids = []
         reload_page = False
         if newznab_string:
@@ -8821,18 +8849,18 @@ class ConfigProviders(Config):
                     new_provider.enabled = True
                     _ = new_provider.caps  # when adding a custom, trigger server_type update
                     new_provider.enabled = False
-                    sickgear.newznabProviderList.append(new_provider)
+                    sickgear.newznab_providers.append(new_provider)
 
                 active_ids.append(cur_id)
 
         # delete anything that is missing
         if sickgear.USE_NZBS:
-            for source in [x for x in sickgear.newznabProviderList if x.get_id() not in active_ids]:
-                sickgear.newznabProviderList.remove(source)
+            for source in [x for x in sickgear.newznab_providers if x.get_id() not in active_ids]:
+                sickgear.newznab_providers.remove(source)
 
         # add all the torrent RSS info we have into our list
-        torrent_rss_sources = dict(zip([x.get_id() for x in sickgear.torrentRssProviderList],
-                                       sickgear.torrentRssProviderList))
+        torrent_rss_sources = dict(zip([x.get_id() for x in sickgear.torrent_rss_providers],
+                                       sickgear.torrent_rss_providers))
         active_ids = []
         if torrentrss_string:
             for curTorrentRssProviderStr in torrentrss_string.split('!!!'):
@@ -8868,19 +8896,19 @@ class ConfigProviders(Config):
                         if attr_check in kwargs:
                             setattr(torrss_src, attr, str(kwargs.get(attr_check) or '').strip())
                 else:
-                    sickgear.torrentRssProviderList.append(new_provider)
+                    sickgear.torrent_rss_providers.append(new_provider)
 
                 active_ids.append(cur_id)
 
         # delete anything that is missing
         if sickgear.USE_TORRENTS:
-            for source in [x for x in sickgear.torrentRssProviderList if x.get_id() not in active_ids]:
-                sickgear.torrentRssProviderList.remove(source)
+            for source in [x for x in sickgear.torrent_rss_providers if x.get_id() not in active_ids]:
+                sickgear.torrent_rss_providers.remove(source)
 
         # enable/disable states of source providers
         provider_str_list = provider_order.split()
-        sources = dict(zip([x.get_id() for x in sickgear.providers.sortedProviderList()],
-                           sickgear.providers.sortedProviderList()))
+        sources = dict(zip([x.get_id() for x in sickgear.providers.sorted_sources()],
+                           sickgear.providers.sorted_sources()))
         for cur_src_str in provider_str_list:
             src_name, src_enabled = cur_src_str.split(':')
 
@@ -8904,7 +8932,7 @@ class ConfigProviders(Config):
                 torrent_rss_sources[src_name].enabled = src_enabled
 
         # update torrent source settings
-        for torrent_src in [src for src in sickgear.providers.sortedProviderList()
+        for torrent_src in [src for src in sickgear.providers.sorted_sources()
                             if sickgear.GenericProvider.TORRENT == src.providerType]:  # type: TorrentProvider
             src_id_prefix = torrent_src.get_id() + '_'
 
@@ -8951,7 +8979,7 @@ class ConfigProviders(Config):
                 setattr(torrent_src, attr, str(kwargs.get(src_id_prefix + attr) or default).strip())
 
         # update nzb source settings
-        for nzb_src in [src for src in sickgear.providers.sortedProviderList() if
+        for nzb_src in [src for src in sickgear.providers.sorted_sources() if
                         sickgear.GenericProvider.NZB == src.providerType]:
             src_id_prefix = nzb_src.get_id() + '_'
 
@@ -8979,7 +9007,7 @@ class ConfigProviders(Config):
                 if hasattr(nzb_src, attr):
                     setattr(nzb_src, attr, str(kwargs.get(src_id_prefix + attr) or default).strip())
 
-        sickgear.NEWZNAB_DATA = '!!!'.join([x.config_str() for x in sickgear.newznabProviderList])
+        sickgear.NEWZNAB_DATA = '!!!'.join([x.config_str() for x in sickgear.newznab_providers])
         sickgear.PROVIDER_ORDER = provider_list
 
         helpers.clear_unused_providers()
@@ -9487,17 +9515,11 @@ class EventLogs(MainHandler):
 class WebFileBrowser(MainHandler):
 
     def index(self, path='', include_files=False, **kwargs):
-        """ prevent issues with requests using legacy params """
-        include_files = include_files or kwargs.get('includeFiles') or False
-        """ /legacy """
 
         self.set_header('Content-Type', 'application/json')
         return json_dumps(folders_at_path(path, True, bool(int(include_files))))
 
     def complete(self, term, include_files=0, **kwargs):
-        """ prevent issues with requests using legacy params """
-        include_files = include_files or kwargs.get('includeFiles') or False
-        """ /legacy """
 
         self.set_header('Content-Type', 'application/json')
         return json_dumps([entry['path'] for entry in folders_at_path(
@@ -9700,7 +9722,7 @@ class CachedImages(MainHandler):
         :param tvid_prodid:
         :param thumb: return thumb or normal as fallback
         :param pid: optional person_id
-        :param prefer_person: prefer person image if person_id is set and character has more then 1 person assigned
+        :param prefer_person: prefer person image if person_id is set and character has more than 1 person assigned
         """
         _ = kwargs.get('oid')  # suppress pyc non used var highlight, oid (original id) is a visual ui key
         show_obj = tvid_prodid and helpers.find_show_by_id(tvid_prodid)

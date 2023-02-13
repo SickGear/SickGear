@@ -791,7 +791,7 @@ def _mapQuality(show_obj):
     anyQualities = []
     bestQualities = []
 
-    iqualityID, aqualityID = Quality.splitQuality(int(show_obj))
+    iqualityID, aqualityID = Quality.split_quality(int(show_obj))
     if iqualityID:
         for quality in iqualityID:
             anyQualities.append(quality_map[quality])
@@ -1155,7 +1155,7 @@ class CMD_SickGearEpisode(ApiCall):
         timezone, episode['timezone'] = network_timezones.get_network_timezone(show_obj.network, return_name=True)
         episode['airdate'] = SGDatetime.sbfdate(SGDatetime.convert_to_setting(
             network_timezones.parse_date_time(int(episode['airdate']), show_obj.airs, timezone)), d_preset=dateFormat)
-        status, quality = Quality.splitCompositeStatus(int(episode["status"]))
+        status, quality = Quality.split_composite_status(int(episode["status"]))
         episode["status"] = _get_status_Strings(status)
         episode["quality"] = _get_quality_string(quality)
         episode["file_size_human"] = _sizeof_fmt(episode["file_size"])
@@ -1224,7 +1224,7 @@ class CMD_SickGearEpisodeSearch(ApiCall):
 
         # return the correct json value
         if ep_queue_item.success:
-            status, quality = Quality.splitCompositeStatus(ep_obj.status)
+            status, quality = Quality.split_composite_status(ep_obj.status)
             # TODO: split quality and status?
             return _responds(RESULT_SUCCESS, {"quality": _get_quality_string(quality)},
                              "Snatched (" + _get_quality_string(quality) + ")")
@@ -1348,7 +1348,7 @@ class CMD_SickGearEpisodeSetStatus(ApiCall):
                     continue
 
                 if None is not self.quality:
-                    ep_obj.status = Quality.compositeStatus(self.status, self.quality)
+                    ep_obj.status = Quality.composite_status(self.status, self.quality)
                 else:
                     ep_obj.status = self.status
                 result = ep_obj.get_sql()
@@ -1667,7 +1667,7 @@ class CMD_SickGearHistory(ApiCall):
         results = []
         np = NameParser(True, testing=True, indexer_lookup=False, try_scene_exceptions=False)
         for cur_result in sql_result:
-            status, quality = Quality.splitCompositeStatus(int(cur_result["action"]))
+            status, quality = Quality.split_composite_status(int(cur_result["action"]))
             if type_filter and status not in type_filter:
                 continue
             status = _get_status_Strings(status)
@@ -2164,14 +2164,14 @@ class CMD_SickGearForceSearch(ApiCall):
         result = None
         if 'recent' == self.searchtype and not sickgear.search_queue_scheduler.action.is_recentsearch_in_progress() \
                 and not sickgear.recent_search_scheduler.action.amActive:
-            result = sickgear.recent_search_scheduler.forceRun()
+            result = sickgear.recent_search_scheduler.force_run()
         elif 'backlog' == self.searchtype and not sickgear.search_queue_scheduler.action.is_backlog_in_progress() \
                 and not sickgear.backlog_search_scheduler.action.amActive:
             sickgear.backlog_search_scheduler.force_search(force_type=FORCED_BACKLOG)
             result = True
         elif 'proper' == self.searchtype and not sickgear.search_queue_scheduler.action.is_propersearch_in_progress() \
                 and not sickgear.proper_finder_scheduler.action.amActive:
-            result = sickgear.proper_finder_scheduler.forceRun()
+            result = sickgear.proper_finder_scheduler.force_run()
         if result:
             return _responds(RESULT_SUCCESS, msg='%s search successfully forced' % self.searchtype)
         return _responds(RESULT_FAILURE,
@@ -2666,7 +2666,7 @@ class CMD_SickGearSetDefaults(ApiCall):
                 aqualityID.append(quality_map[quality])
 
         if iqualityID or aqualityID:
-            sickgear.QUALITY_DEFAULT = Quality.combineQualities(iqualityID, aqualityID)
+            sickgear.QUALITY_DEFAULT = Quality.combine_qualities(iqualityID, aqualityID)
 
         if self.status:
             # convert the string status to a int
@@ -3365,7 +3365,7 @@ class CMD_SickGearShowAddExisting(ApiCall):
                 aqualityID.append(quality_map[quality])
 
         if iqualityID or aqualityID:
-            newQuality = Quality.combineQualities(iqualityID, aqualityID)
+            newQuality = Quality.combine_qualities(iqualityID, aqualityID)
 
         sickgear.show_queue_scheduler.action.add_show(
             int(self.tvid), int(self.prodid), self.location,
@@ -3471,7 +3471,7 @@ class CMD_SickGearShowAddNew(ApiCall):
                 aqualityID.append(quality_map[quality])
 
         if iqualityID or aqualityID:
-            newQuality = Quality.combineQualities(iqualityID, aqualityID)
+            newQuality = Quality.combine_qualities(iqualityID, aqualityID)
 
         # use default status as a failsafe
         newStatus = sickgear.STATUS_DEFAULT
@@ -4144,7 +4144,7 @@ class CMD_SickGearShowSeasons(ApiCall):
                 [self.tvid, self.prodid])
             seasons = {}  # type: Dict[int, Dict]
             for cur_result in sql_result:
-                status, quality = Quality.splitCompositeStatus(int(cur_result["status"]))
+                status, quality = Quality.split_composite_status(int(cur_result["status"]))
                 cur_result["status"] = _get_status_Strings(status)
                 cur_result["quality"] = _get_quality_string(quality)
                 timezone, cur_result['timezone'] = network_timezones.get_network_timezone(show_obj.network,
@@ -4177,7 +4177,7 @@ class CMD_SickGearShowSeasons(ApiCall):
             for cur_result in sql_result:
                 curEpisode = int(cur_result["episode"])
                 del cur_result["episode"]
-                status, quality = Quality.splitCompositeStatus(int(cur_result["status"]))
+                status, quality = Quality.split_composite_status(int(cur_result["status"]))
                 cur_result["status"] = _get_status_Strings(status)
                 cur_result["quality"] = _get_quality_string(quality)
                 timezone, cur_result['timezone'] = network_timezones.get_network_timezone(show_obj.network,
@@ -4262,7 +4262,7 @@ class CMD_SickGearShowSetQuality(ApiCall):
                 aqualityID.append(quality_map[quality])
 
         if iqualityID or aqualityID:
-            newQuality = Quality.combineQualities(iqualityID, aqualityID)
+            newQuality = Quality.combine_qualities(iqualityID, aqualityID)
         show_obj.quality = newQuality
 
         show_obj.upgrade_once = self.upgradeonce
@@ -4326,7 +4326,7 @@ class CMD_SickGearShowStats(ApiCall):
         # add all the downloaded qualities
         episode_qualities_counts_download = {"total": 0}
         for statusCode in Quality.DOWNLOADED:
-            status, quality = Quality.splitCompositeStatus(statusCode)
+            status, quality = Quality.split_composite_status(statusCode)
             if quality in [Quality.NONE]:
                 continue
             episode_qualities_counts_download[statusCode] = 0
@@ -4334,7 +4334,7 @@ class CMD_SickGearShowStats(ApiCall):
         # add all snatched qualities
         episode_qualities_counts_snatch = {"total": 0}
         for statusCode in Quality.SNATCHED_ANY:
-            status, quality = Quality.splitCompositeStatus(statusCode)
+            status, quality = Quality.split_composite_status(statusCode)
             if quality in [Quality.NONE]:
                 continue
             episode_qualities_counts_snatch[statusCode] = 0
@@ -4345,7 +4345,7 @@ class CMD_SickGearShowStats(ApiCall):
                                   [self.prodid, self.tvid])
         # the main loop that goes through all episodes
         for cur_result in sql_result:
-            status, quality = Quality.splitCompositeStatus(int(cur_result["status"]))
+            status, quality = Quality.split_composite_status(int(cur_result["status"]))
 
             episode_status_counts_total["total"] += 1
 
@@ -4367,7 +4367,7 @@ class CMD_SickGearShowStats(ApiCall):
             if "total" == statusCode:
                 episodes_stats["downloaded"]["total"] = episode_qualities_counts_download[statusCode]
                 continue
-            status, quality = Quality.splitCompositeStatus(int(statusCode))
+            status, quality = Quality.split_composite_status(int(statusCode))
             statusString = Quality.qualityStrings[quality].lower().replace(" ", "_").replace("(", "").replace(")", "")
             episodes_stats["downloaded"][statusString] = episode_qualities_counts_download[statusCode]
 
@@ -4378,7 +4378,7 @@ class CMD_SickGearShowStats(ApiCall):
             if "total" == statusCode:
                 episodes_stats["snatched"]["total"] = episode_qualities_counts_snatch[statusCode]
                 continue
-            status, quality = Quality.splitCompositeStatus(int(statusCode))
+            status, quality = Quality.split_composite_status(int(statusCode))
             statusString = Quality.qualityStrings[quality].lower().replace(" ", "_").replace("(", "").replace(")", "")
             if Quality.qualityStrings[quality] in episodes_stats["snatched"]:
                 episodes_stats["snatched"][statusString] += episode_qualities_counts_snatch[statusCode]
@@ -4390,7 +4390,7 @@ class CMD_SickGearShowStats(ApiCall):
             if "total" == statusCode:
                 episodes_stats["total"] = episode_status_counts_total[statusCode]
                 continue
-            status, quality = Quality.splitCompositeStatus(int(statusCode))
+            status, quality = Quality.split_composite_status(int(statusCode))
             statusString = statusStrings.statusStrings[statusCode].lower().replace(" ", "_").replace("(", "").replace(
                 ")", "")
             episodes_stats[statusString] = episode_status_counts_total[statusCode]
@@ -4653,7 +4653,7 @@ class CMD_SickGearShowsForceUpdate(ApiCall):
                 or sickgear.show_update_scheduler.action.amActive:
             return _responds(RESULT_FAILURE, msg="show update already running.")
 
-        result = sickgear.show_update_scheduler.forceRun()
+        result = sickgear.show_update_scheduler.force_run()
         if result:
             return _responds(RESULT_SUCCESS, msg="daily show update started")
         return _responds(RESULT_FAILURE, msg="can't start show update currently")

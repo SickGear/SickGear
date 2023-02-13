@@ -154,7 +154,7 @@ class PeopleQueueActions(object):
 
 class PeopleQueueItem(generic_queue.QueueItem):
     def __init__(self, action_id, show_obj, uid=None, force=False, **kwargs):
-        # type: (integer_types, TVShow, AnyStr, bool, Dict) -> PeopleQueueItem
+        # type: (integer_types, TVShow, AnyStr, bool, Dict) -> None
         """
 
         :param action_id:
@@ -172,7 +172,7 @@ class PeopleQueueItem(generic_queue.QueueItem):
 class CastQueueItem(PeopleQueueItem):
     def __init__(self, show_obj, show_info_cast=None, uid=None, force=False, scheduled_update=False, switch=False,
                  **kwargs):
-        # type: (TVShow, CastList, AnyStr, bool, bool, bool, Dict) -> CastQueueItem
+        # type: (TVShow, CastList, AnyStr, bool, bool, bool, Dict) -> None
         """
 
         :param show_obj: show obj

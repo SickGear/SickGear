@@ -117,7 +117,7 @@ class Notification(object):
 
 class ProgressIndicator(object):
     def __init__(self, percent_complete=0, current_status=None):
-        self.percentComplete = percent_complete
+        self.percent_complete = percent_complete
         self.currentStatus = {'title': ''} if None is current_status else current_status
 
 
@@ -128,20 +128,20 @@ class ProgressIndicators(object):
            }
 
     @staticmethod
-    def getIndicator(name):
+    def get_indicator(name):
         if name not in ProgressIndicators._pi:
             return []
 
         # if any of the progress indicators are done take them off the list
         for curPI in ProgressIndicators._pi[name]:
-            if None is not curPI and 100 == curPI.percentComplete():
+            if None is not curPI and 100 == curPI.percent_complete():
                 ProgressIndicators._pi[name].remove(curPI)
 
         # return the list of progress indicators associated with this name
         return ProgressIndicators._pi[name]
 
     @staticmethod
-    def setIndicator(name, indicator):
+    def set_indicator(name, indicator):
         ProgressIndicators._pi[name].append(indicator)
 
 
@@ -154,16 +154,16 @@ class QueueProgressIndicator(object):
         self.queueItemList = queue_item_list
         self.name = name
 
-    def numTotal(self):
+    def num_total(self):
         return len(self.queueItemList)
 
-    def numFinished(self):
+    def num_finished(self):
         return len([x for x in self.queueItemList if not x.is_in_queue()])
 
-    def numRemaining(self):
+    def num_remaining(self):
         return len([x for x in self.queueItemList if x.is_in_queue()])
 
-    def nextName(self):
+    def next_name(self):
         for curItem in [
                            sickgear.show_queue_scheduler.action.currentItem] + sickgear.show_queue_scheduler.action.queue:
             if curItem in self.queueItemList:
@@ -171,13 +171,13 @@ class QueueProgressIndicator(object):
 
         return "Unknown"
 
-    def percentComplete(self):
-        numFinished = self.numFinished()
-        numTotal = self.numTotal()
+    def percent_complete(self):
+        num_finished = self.num_finished()
+        num_total = self.num_total()
 
-        if 0 == numTotal:
+        if 0 == num_total:
             return 0
-        return int(float(numFinished) / float(numTotal) * 100)
+        return int(float(num_finished) / float(num_total) * 100)
 
 
 class LoadingTVShow(object):

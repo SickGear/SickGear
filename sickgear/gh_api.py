@@ -23,7 +23,7 @@ if False:
 
 class GitHub(object):
     """
-    Simple api wrapper for the Github API v3. Currently only supports the small thing that SB
+    Simple api wrapper for the GitHub API v3. Currently only supports the small thing that SB
     needs it for - list of commits.
     """
 
@@ -34,7 +34,7 @@ class GitHub(object):
         self.branch = branch
 
     @staticmethod
-    def _access_API(path, params=None):
+    def _access_api(path, params=None):
         """
         Access the API at the path given and with the optional params given.
 
@@ -49,55 +49,57 @@ class GitHub(object):
         if params and type(params) is dict:
             url += '?' + '&'.join([str(x) + '=' + str(params[x]) for x in params])
 
-        parsedJSON = helpers.get_url(url, parse_json=True)
-        if not parsedJSON:
+        parsed_json = helpers.get_url(url, parse_json=True)
+        if not parsed_json:
             return []
 
-        return parsedJSON
+        return parsed_json
 
     def commits(self):
         """
         Get a list of the 100 most recent commits from the specified user/repo/branch, starting from HEAD.
 
-        user: The github username of the person whose repo you're querying
+        user: The GitHub username of the person whose repo you're querying
         repo: The repo name to query
         branch: Optional, the branch name to show commits from
 
-        Returns a deserialized json object containing the commit info. See http://developer.github.com/v3/repos/commits/
+        Returns a deserialized json object containing the commit info.
+        See https://developer.github.com/v3/repos/commits/
         """
-        access_API = self._access_API(['repos', self.github_repo_user, self.github_repo, 'commits'],
+        access_api = self._access_api(['repos', self.github_repo_user, self.github_repo, 'commits'],
                                       params={'per_page': 100, 'sha': self.branch})
-        return access_API
+        return access_api
 
     def compare(self, base, head, per_page=1):
         """
         Uses the API to get a list of compares between base and head.
 
-        user: The github username of the person whose repo you're querying
+        user: The GitHub username of the person whose repo you're querying
         repo: The repo name to query
         base: Start compare from branch
         head: Current commit sha or branch name to compare
         per_page: number of items per page
 
-        Returns a deserialized json object containing the compare info. See http://developer.github.com/v3/repos/commits
+        Returns a deserialized json object containing the compare info. 
+        See https://developer.github.com/v3/repos/commits
         """
-        access_API = self._access_API(
+        access_api = self._access_api(
             ['repos', self.github_repo_user, self.github_repo, 'compare', base + '...' + head],
             params={'per_page': per_page})
-        return access_API
+        return access_api
 
     def branches(self):
-        access_API = self._access_API(
+        access_api = self._access_api(
             ['repos', self.github_repo_user, self.github_repo, 'branches'],
             params={'per_page': 100})
-        return access_API
+        return access_api
 
     def pull_requests(self):
-        access_API = self._access_API(
+        access_api = self._access_api(
             ['repos', self.github_repo_user, self.github_repo, 'pulls'],
             params={'per_page': 100})  # type: Optional[Dict]
         pulls = []
-        for x in access_API:
+        for x in access_api:
             try:
                 pull = PullRequest(x['head']['ref'], x['number'])
                 pulls.append((repr(pull), pull.fetch_name()))

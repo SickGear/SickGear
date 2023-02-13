@@ -165,9 +165,9 @@ def snatch_episode(result, end_status=SNATCHED):
     for cur_ep_obj in result.ep_obj_list:
         with cur_ep_obj.lock:
             if is_first_best_match(cur_ep_obj.status, result):
-                cur_ep_obj.status = Quality.compositeStatus(SNATCHED_BEST, result.quality)
+                cur_ep_obj.status = Quality.composite_status(SNATCHED_BEST, result.quality)
             else:
-                cur_ep_obj.status = Quality.compositeStatus(end_status, result.quality)
+                cur_ep_obj.status = Quality.composite_status(end_status, result.quality)
 
             item = cur_ep_obj.get_sql()
             if None is not item:
@@ -354,7 +354,7 @@ def is_final_result(result):
     Checks if the given result is good enough quality that we can stop searching for other ones.
 
     :param result: search result to check
-    :return: If the result is the highest quality in both the any/best quality lists then this function
+    :return: If the result is the highest quality in both any and best quality lists then this function
              returns True, if not then it's False
     """
 
@@ -362,7 +362,7 @@ def is_final_result(result):
 
     show_obj = result.ep_obj_list[0].show_obj
 
-    any_qualities, best_qualities = Quality.splitQuality(show_obj.quality)
+    any_qualities, best_qualities = Quality.split_quality(show_obj.quality)
 
     # if there is a download that's higher than this then we definitely need to keep looking
     if best_qualities and max(best_qualities) > result.quality:
@@ -378,11 +378,11 @@ def is_final_result(result):
 
     elif best_qualities and max(best_qualities) == result.quality:
 
-        # if this is the best download but we have a higher initial download then keep looking
+        # if this is the best download, but we have a higher initial download then keep looking
         if any_qualities and max(any_qualities) > result.quality:
             return False
 
-        # if this is the best download and we don't have a higher initial download then we're done
+        # if this is the best download, and we don't have a higher initial download then we're done
         return True
 
     # if we got here than it's either not on the lists, they're empty, or it's lower than the highest required
@@ -392,7 +392,7 @@ def is_final_result(result):
 def is_first_best_match(ep_status, result):
     # type: (int, sickgear.classes.SearchResult) -> bool
     """
-    Checks if the given result is a best quality match and if we want to archive the episode on first match.
+    Checks if the given result is the best quality match and if we want to archive the episode on first match.
 
     :param ep_status: current episode object status
     :param result: search result to check
@@ -403,11 +403,11 @@ def is_first_best_match(ep_status, result):
                result.name, logger.DEBUG)
 
     show_obj = result.ep_obj_list[0].show_obj
-    cur_status, cur_quality = Quality.splitCompositeStatus(ep_status)
+    cur_status, cur_quality = Quality.split_composite_status(ep_status)
 
-    any_qualities, best_qualities = Quality.splitQuality(show_obj.quality)
+    any_qualities, best_qualities = Quality.split_quality(show_obj.quality)
 
-    # if there is a download that's a match to one of our best qualities and
+    # if there is a download that's a match to one of our best qualities, and
     # we want to archive the episode then we are done
     if best_qualities and show_obj.upgrade_once and \
             (result.quality in best_qualities and
@@ -433,7 +433,7 @@ def set_wanted_aired(ep_obj,  # type: TVEpisode
     :param ep_count_scene: count of episodes in scene seasons
     :param manual: manual search
     """
-    ep_status, ep_quality = common.Quality.splitCompositeStatus(ep_obj.status)
+    ep_status, ep_quality = common.Quality.split_composite_status(ep_obj.status)
     ep_obj.wanted_quality = get_wanted_qualities(ep_obj, ep_status, ep_quality, unaired=unaired, manual=manual)
     ep_obj.eps_aired_in_season = ep_count.get(ep_obj.season, 0)
     ep_obj.eps_aired_in_scene_season = ep_count_scene.get(
@@ -458,7 +458,7 @@ def get_wanted_qualities(ep_obj,  # type: TVEpisode
     """
     if isinstance(ep_obj, TVEpisode):
         return sickgear.WANTEDLIST_CACHE.get_wantedlist(ep_obj.show_obj.quality, ep_obj.show_obj.upgrade_once,
-                                                         cur_quality, cur_status, unaired, manual)
+                                                        cur_quality, cur_status, unaired, manual)
 
     return []
 
@@ -543,7 +543,7 @@ def wanted_episodes(show_obj,  # type: TVShow
 
     for result in sql_result:
         ep_obj = show_obj.get_episode(int(result['season']), int(result['episode']), ep_result=ep_sql_result)
-        cur_status, cur_quality = common.Quality.splitCompositeStatus(ep_obj.status)
+        cur_status, cur_quality = common.Quality.split_composite_status(ep_obj.status)
         ep_obj.wanted_quality = get_wanted_qualities(ep_obj, cur_status, cur_quality, unaired=unaired)
         if not ep_obj.wanted_quality:
             continue
@@ -589,7 +589,7 @@ def search_for_needed_episodes(ep_obj_list):
 
     orig_thread_name = threading.current_thread().name
 
-    providers = list(filter(lambda x: x.is_active() and x.enable_recentsearch, sickgear.providers.sortedProviderList()))
+    providers = list(filter(lambda x: x.is_active() and x.enable_recentsearch, sickgear.providers.sorted_sources()))
 
     for cur_provider in providers:
         threading.current_thread().name = '%s :: [%s]' % (orig_thread_name, cur_provider.name)
@@ -615,7 +615,7 @@ def search_for_needed_episodes(ep_obj_list):
                 logger.log(u'All found results for %s were rejected.' % cur_ep_obj.pretty_name(), logger.DEBUG)
                 continue
 
-            # if it's already in the list (from another provider) and the newly found quality is no better then skip it
+            # if it's already in the list (from another provider) and the newly found quality is no better, then skip it
             if cur_ep_obj in found_results and best_result.quality <= found_results[cur_ep_obj].quality:
                 continue
 
@@ -632,7 +632,7 @@ def search_for_needed_episodes(ep_obj_list):
             found_results[cur_ep_obj] = best_result
 
             try:
-                cur_provider.save_list()
+                cur_provider.fails.save_list()
             except (BaseException, Exception):
                 pass
 
@@ -718,7 +718,7 @@ def _search_provider_thread(provider, provider_results, show_obj, ep_obj_list, m
             logger.log(u'Performing season pack search for %s' % show_obj.unique_name)
 
         try:
-            provider.cache._clearCache()
+            provider.cache.clear_cache()
             search_result_list = provider.find_search_results(show_obj, ep_obj_list, search_mode, manual_search,
                                                               try_other_searches=try_other_searches)
             if any(search_result_list):
@@ -766,7 +766,7 @@ def cache_torrent_file(
     # type: (...) -> Optional[TorrentSearchResult]
 
     cache_file = os.path.join(sickgear.CACHE_DIR or helpers.get_system_temp_dir(),
-                       '%s.torrent' % (helpers.sanitize_filename(search_result.name)))
+                              '%s.torrent' % (helpers.sanitize_filename(search_result.name)))
 
     if not helpers.download_file(
             search_result.url, cache_file, session=search_result.provider.session, failure_monitor=False):
@@ -840,7 +840,7 @@ def search_providers(
 
     orig_thread_name = threading.current_thread().name
 
-    provider_list = [x for x in sickgear.providers.sortedProviderList() if x.is_active() and
+    provider_list = [x for x in sickgear.providers.sorted_sources() if x.is_active() and
                      getattr(x, 'enable_backlog', None) and
                      (not torrent_only or GenericProvider.TORRENT == x.providerType) and
                      (not scheduled or getattr(x, 'enable_scheduled_backlog', None))]
@@ -878,7 +878,7 @@ def search_providers(
         if provider_id not in found_results or not len(found_results[provider_id]):
             continue
 
-        any_qualities, best_qualities = Quality.splitQuality(show_obj.quality)
+        any_qualities, best_qualities = Quality.split_quality(show_obj.quality)
 
         # pick the best season NZB
         best_season_result = None
@@ -918,8 +918,8 @@ def search_providers(
                 else:
                     any_wanted = True
 
-            # if we need every ep in the season and there's nothing better then just download this and
-            # be done with it (unless single episodes are preferred)
+            # if we need every ep in the season and there's nothing better,
+            # then download this and be done with it (unless single episodes are preferred)
             if all_wanted and highest_quality_overall == best_season_result.quality:
                 logger.log(u'Every episode in this season is needed, downloading the whole %s %s' %
                            (best_season_result.provider.providerType, best_season_result.name))
@@ -938,7 +938,7 @@ def search_providers(
                     logger.log(u'Breaking apart the NZB and adding the individual ones to our results', logger.DEBUG)
 
                     # if not, break it apart and add them as the lowest priority results
-                    individual_results = nzbSplitter.splitResult(best_season_result)
+                    individual_results = nzbSplitter.split_result(best_season_result)
 
                     for cur_result in filter(
                         lambda r: r.show_obj == show_obj and show_name_helpers.pass_wordlist_checks(
@@ -985,7 +985,7 @@ def search_providers(
                 logger.log(u'Checking usefulness of multi episode result [%s]' % multi_result.name, logger.DEBUG)
 
                 if sickgear.USE_FAILED_DOWNLOADS and failed_history.has_failed(multi_result.name, multi_result.size,
-                                                                                multi_result.provider.name):
+                                                                               multi_result.provider.name):
                     logger.log(u'Rejecting previously failed multi episode result [%s]' % multi_result.name)
                     continue
 
@@ -1057,7 +1057,7 @@ def search_providers(
                                  found_results[provider_id][cur_search_result][0].ep_obj_list[0]) or \
                              found_results[provider_id][cur_search_result][0].ep_obj_list[0].status
                 if old_status:
-                    status, quality = Quality.splitCompositeStatus(old_status)
+                    status, quality = Quality.split_composite_status(old_status)
                     use_quality_list = (status not in (
                         common.WANTED, common.FAILED, common.UNAIRED, common.SKIPPED, common.IGNORED, common.UNKNOWN))
 
@@ -1093,7 +1093,7 @@ def search_providers(
                     best_result.after_get_data_func(best_result)
                     best_result.after_get_data_func = None  # consume only once
 
-            # add result if its not a duplicate
+            # add result if it's not a duplicate
             found = False
             for i, result in enumerate(final_results):
                 for best_result_ep in best_result.ep_obj_list:

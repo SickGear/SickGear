@@ -931,7 +931,7 @@ class QueueItemAdd(ShowQueueItem):
                     wanted_updates.append({'season': sr['season'], 'episode': sr['episode'],
                                            'status': sr['status']})
                 elif sr['status'] not in [WANTED]:
-                    cur_status, cur_quality = Quality.splitCompositeStatus(int(sr['status']))
+                    cur_status, cur_quality = Quality.split_composite_status(int(sr['status']))
                     if sickgear.WANTEDLIST_CACHE.get_wantedlist(
                             self.quality, self.upgrade_once, cur_quality, cur_status,
                             unaired=(sickgear.SEARCH_UNAIRED and not sickgear.UNAIRED_RECENT_SEARCH_ONLY)):
@@ -1155,7 +1155,7 @@ class QueueItemAdd(ShowQueueItem):
             raise
 
         # update internal name cache
-        name_cache.buildNameCache(self.show_obj)
+        name_cache.build_name_cache(self.show_obj)
 
         self.show_obj.load_episodes_from_db()
 
@@ -1446,7 +1446,7 @@ class QueueItemUpdate(ShowQueueItem):
             for cur_season in db_ep_obj_list:
                 for cur_episode in db_ep_obj_list[cur_season]:
                     ep_obj = self.show_obj.get_episode(cur_season, cur_episode)  # type: Optional[TVEpisode]
-                    status = sickgear.common.Quality.splitCompositeStatus(ep_obj.status)[0]
+                    status = sickgear.common.Quality.split_composite_status(ep_obj.status)[0]
                     if self.switch or should_delete_episode(status):
                         if self.switch:
                             cl.append(self.show_obj.switch_ep_change_sql(

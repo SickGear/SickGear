@@ -36,7 +36,7 @@ if False:
     from _23 import DirEntry
     from typing import AnyStr, Optional, Tuple, Union
 
-# regex to parse time (12/24 hour format)
+# regex to parse time (12/24-hour format)
 time_regex = re.compile(r'(\d{1,2})(([:.](\d{2}))? ?([PA][. ]? ?M)|[:.](\d{2}))\b', flags=re.I)
 am_regex = re.compile(r'(A[. ]? ?M)', flags=re.I)
 pm_regex = re.compile(r'(P[. ]? ?M)', flags=re.I)
@@ -174,7 +174,7 @@ def _update_zoneinfo():
     url_data = helpers.get_url(url)
     if None is url_data:
         update_last_retry()
-        # when None is urlData, trouble connecting to github
+        # when None is urlData, trouble connecting to GitHub
         logger.log(u'Fetching zoneinfo.txt failed, this can happen from time to time. Unable to get URL: %s' % url,
                    logger.WARNING)
         return
@@ -263,13 +263,13 @@ def update_network_dict():
 
     network_tz_data = {}
 
-    # network timezones are stored on github pages
+    # network timezones are stored on GitHub pages
     url = 'https://raw.githubusercontent.com/Prinz23/sb_network_timezones/master/network_timezones.txt'
 
     url_data = helpers.get_url(url)
     if url_data in (None, ''):
         update_last_retry()
-        # When None is urlData, trouble connecting to github
+        # When None is urlData, trouble connecting to GitHub
         logger.debug(u'Updating network timezones failed, this can happen from time to time. URL: %s' % url)
         load_network_dict(load=False)
         return
@@ -413,7 +413,7 @@ def parse_time(time_of_day):
                 hour = helpers.try_int(time_parsed.group(1))
                 mins = helpers.try_int(time_parsed.group(4))
                 ampm = time_parsed.group(5)
-                # convert am/pm to 24 hour clock
+                # convert am/pm to 24-hour clock
                 if None is not ampm:
                     if None is not pm_regex.search(ampm) and 12 != hour:
                         hour += 12
@@ -505,13 +505,13 @@ def _load_network_conversions():
 
     conversions_in = []
 
-    # network conversions are stored on github pages
+    # network conversions are stored on GitHub pages
     url = 'https://raw.githubusercontent.com/prinz23/sg_network_conversions/master/conversions.txt'
 
     url_data = helpers.get_url(url)
     if url_data in (None, ''):
         update_last_retry()
-        # when no url_data, trouble connecting to github
+        # when no url_data, trouble connecting to GitHub
         logger.debug(u'Updating network conversions failed, this can happen from time to time. URL: %s' % url)
         return
 

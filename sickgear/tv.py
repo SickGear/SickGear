@@ -43,7 +43,7 @@ import sickgear
 from . import db, helpers, history, image_cache, indexermapper, logger, \
     name_cache, network_timezones, notifiers, postProcessor, subtitles
 from .anime import AniGroupList
-from .classes import weakList
+from .classes import WeakList
 from .common import Quality, statusStrings, \
     ARCHIVED, DOWNLOADED, FAILED, IGNORED, SKIPPED, SNATCHED, SNATCHED_ANY, SNATCHED_PROPER, UNAIRED, UNKNOWN, WANTED, \
     NAMING_DUPLICATE, NAMING_EXTEND, NAMING_LIMITED_EXTEND, NAMING_LIMITED_EXTEND_E_PREFIXED, NAMING_SEPARATED_REPEAT
@@ -280,7 +280,7 @@ def usable_id(value):
 def usable_rid(value):
     # type: (Union[AnyStr]) -> Optional[AnyStr]
     """
-    return value if is a id:format is valid
+    return value if is an id:format is valid
     otherwise None if value fails basic id format validation
     """
     if isinstance(value, string_types) and ':' in value:
@@ -452,7 +452,7 @@ class Person(Referential):
     def reset(self, person_obj=None):
         # type: (TVInfoPerson) -> None
         """
-        reset all properties with the exception of: name, id, ids
+        reset all properties except; name, id, ids
 
         :param person_obj: TVInfo Person object to reset to
         """
@@ -790,7 +790,7 @@ class Person(Referential):
                         for i in (TVINFO_TRAKT, TVINFO_IMDB, TVINFO_TMDB, TVINFO_TVMAZE, TVINFO_TVDB):
                             if not rp.ids.get(i):
                                 continue
-                            # in case it's the current source use it's id and lock if from being changed
+                            # in case it's the current source use its id and lock if from being changed
                             if cur_tv_info_src == i and rp.ids.get(i):
                                 source_confirmed[i] = True
                                 if rp.ids.get(i) != self.ids.get(i):
@@ -1403,8 +1403,8 @@ class TVShow(TVShowBase):
 
     @cast_list.setter
     def cast_list(self, value):
-        # type: (weakList[Character]) -> None
-        self._cast_list = None if not isinstance(value, weakList) else weakref.ref(value)
+        # type: (WeakList[Character]) -> None
+        self._cast_list = None if not isinstance(value, WeakList) else weakref.ref(value)
 
     @property
     def network_id(self):
@@ -1900,7 +1900,7 @@ class TVShow(TVShowBase):
                     bio=cur_row['c_bio'], ids=c_ids, image_url=cur_row['image_url'], person=[person],
                     persons_years=p_years, show_obj=self, sid=cur_row['c_id'],
                     thumb_url=cur_row['thumb_url'], updated=cur_row['cast_updated']))
-        cast_list = weakList(c for c in old_cast or [] if c.id not in old_list)
+        cast_list = WeakList(c for c in old_cast or [] if c.id not in old_list)
         self.cast_list = cast_list
         return cast_list
 
@@ -1990,7 +1990,7 @@ class TVShow(TVShowBase):
                 return True
             return False
 
-        # In some situations self.status = None.. need to figure out where that is!
+        # In some situations self.status = None, need to figure out where that is!
         if not self._status:
             self.status = ''
             logger.log('Status missing for show: [%s] with status: [%s]' %
@@ -2026,7 +2026,7 @@ class TVShow(TVShowBase):
         last_airdate = datetime.date.fromordinal(sql_result[1][0]['airdate']) \
             if sql_result and sql_result[1] else datetime.date.fromordinal(1)
 
-        # if show is not 'Ended' and last episode aired less then 460 days ago
+        # if show is not 'Ended' and last episode aired less than 460 days ago
         # or don't have an airdate for the last episode always update (status 'Continuing' or '')
         update_days_limit = 2013
         ended_limit = datetime.timedelta(days=update_days_limit)
@@ -2446,7 +2446,7 @@ class TVShow(TVShowBase):
             logger.log('No episode number found in %s, ignoring it' % path, logger.ERROR)
             return None
 
-        # for now lets assume that any episode in the show dir belongs to that show
+        # for now let's assume that any episode in the show dir belongs to that show
         season_number = parse_result.season_number if None is not parse_result.season_number else 1
         episode_numbers = parse_result.episode_numbers
         root_ep_obj = None
@@ -2471,7 +2471,7 @@ class TVShow(TVShowBase):
 
             else:
                 # if there is a new file associated with this ep then re-check the quality
-                status, quality = sickgear.common.Quality.splitCompositeStatus(ep_obj.status)
+                status, quality = sickgear.common.Quality.split_composite_status(ep_obj.status)
 
                 if IGNORED == status:
                     continue
@@ -2506,25 +2506,25 @@ class TVShow(TVShowBase):
 
             # if user replaces a file, attempt to recheck the quality unless it's know to be the same file
             if check_quality_again and not same_file:
-                new_quality = Quality.nameQuality(path, self.is_anime)
+                new_quality = Quality.name_quality(path, self.is_anime)
                 if Quality.UNKNOWN == new_quality:
-                    new_quality = Quality.fileQuality(path)
+                    new_quality = Quality.file_quality(path)
                 logger.log('Since this file was renamed, file %s was checked and quality "%s" found'
                            % (path, Quality.qualityStrings[new_quality]), logger.DEBUG)
-                status, quality = sickgear.common.Quality.splitCompositeStatus(ep_obj.status)
+                status, quality = sickgear.common.Quality.split_composite_status(ep_obj.status)
                 if Quality.UNKNOWN != new_quality or status in (SKIPPED, UNAIRED):
-                    ep_obj.status = Quality.compositeStatus(DOWNLOADED, new_quality)
+                    ep_obj.status = Quality.composite_status(DOWNLOADED, new_quality)
 
             # check for status/quality changes as long as it's a new file
             elif not same_file and sickgear.helpers.has_media_ext(path)\
                     and ep_obj.status not in Quality.DOWNLOADED + Quality.ARCHIVED + [IGNORED]:
 
-                old_status, old_quality = Quality.splitCompositeStatus(ep_obj.status)
-                new_quality = Quality.nameQuality(path, self.is_anime)
+                old_status, old_quality = Quality.split_composite_status(ep_obj.status)
+                new_quality = Quality.name_quality(path, self.is_anime)
                 if Quality.UNKNOWN == new_quality:
-                    new_quality = Quality.fileQuality(path)
+                    new_quality = Quality.file_quality(path)
                     if Quality.UNKNOWN == new_quality:
-                        new_quality = Quality.assumeQuality(path)
+                        new_quality = Quality.assume_quality(path)
 
                 new_status = None
 
@@ -2536,7 +2536,7 @@ class TVShow(TVShowBase):
                                logger.DEBUG)
                     new_status = DOWNLOADED
 
-                # if it was snatched proper and we found a higher quality one then allow the status change
+                # if it was snatched proper, and we found a higher quality one then allow the status change
                 elif SNATCHED_PROPER == old_status and old_quality < new_quality:
                     logger.log('STATUS: this episode used to be snatched proper with quality %s but'
                                ' a file exists with quality %s so setting the status to DOWNLOADED'
@@ -2550,18 +2550,18 @@ class TVShow(TVShowBase):
                 if None is not new_status:
                     with ep_obj.lock:
                         logger.log('STATUS: we have an associated file, so setting the status from %s to DOWNLOADED/%s'
-                                   % (ep_obj.status, Quality.compositeStatus(new_status, new_quality)), logger.DEBUG)
-                        ep_obj.status = Quality.compositeStatus(new_status, new_quality)
+                                   % (ep_obj.status, Quality.composite_status(new_status, new_quality)), logger.DEBUG)
+                        ep_obj.status = Quality.composite_status(new_status, new_quality)
 
             elif same_file:
-                status, quality = Quality.splitCompositeStatus(ep_obj.status)
+                status, quality = Quality.split_composite_status(ep_obj.status)
                 if status in (SKIPPED, UNAIRED):
-                    new_quality = Quality.nameQuality(path, self.is_anime)
+                    new_quality = Quality.name_quality(path, self.is_anime)
                     if Quality.UNKNOWN == new_quality:
-                        new_quality = Quality.fileQuality(path)
+                        new_quality = Quality.file_quality(path)
                     logger.log('Since this file has status: "%s", file %s was checked and quality "%s" found'
                                % (statusStrings[status], path, Quality.qualityStrings[new_quality]), logger.DEBUG)
-                    ep_obj.status = Quality.compositeStatus(DOWNLOADED, new_quality)
+                    ep_obj.status = Quality.composite_status(DOWNLOADED, new_quality)
 
             with ep_obj.lock:
                 result = ep_obj.get_sql()
@@ -2773,7 +2773,7 @@ class TVShow(TVShowBase):
         :param scheduled_update:
         :param switch:
         """
-        # There's gotta be a better way of doing this but we don't wanna
+        # There's gotta be a better way of doing this, but we don't want to
         # change the cache value elsewhere
         if None is tvapi:
             tvinfo_config = sickgear.TVInfoAPI(self.tvid).api_params.copy()
@@ -2900,7 +2900,7 @@ class TVShow(TVShowBase):
 
         cast_list = self._load_cast_from_db()
         remove_char_ids = {c.id for c in cast_list or []}
-        cast_ordered = weakList()
+        cast_ordered = WeakList()
         for ct, c_l in iteritems(show_info_cast):  # type: (integer_types, List[TVInfoCharacter])
             if ct not in (RoleTypes.ActorMain, RoleTypes.Host, RoleTypes.Interviewer, RoleTypes.Presenter):
                 continue
@@ -3386,11 +3386,11 @@ class TVShow(TVShowBase):
                 # check if downloaded files still exist, update our data if this has changed
                 if 1 != sickgear.SKIP_REMOVED_FILES:
                     with ep_obj.lock:
-                        # if it used to have a file associated with it and it doesn't anymore then set it to IGNORED
+                        # if it used to have a file associated with it, and it doesn't anymore then set it to IGNORED
                         if ep_obj.location and ep_obj.status in Quality.DOWNLOADED:
                             if ARCHIVED == sickgear.SKIP_REMOVED_FILES:
-                                ep_obj.status = Quality.compositeStatus(
-                                    ARCHIVED, Quality.qualityDownloaded(ep_obj.status))
+                                ep_obj.status = Quality.composite_status(
+                                    ARCHIVED, Quality.quality_downloaded(ep_obj.status))
                             else:
                                 ep_obj.status = (sickgear.SKIP_REMOVED_FILES, IGNORED)[
                                     not sickgear.SKIP_REMOVED_FILES]
@@ -3545,7 +3545,7 @@ class TVShow(TVShowBase):
                 sickgear.FANART_RATINGS[self.tvid_prodid] = rating
                 sickgear.save_config()
 
-            name_cache.buildNameCache(self)
+            name_cache.build_name_cache(self)
             self.reset_not_found_count()
             old_sid_int = self.create_sid(old_tvid, old_prodid)
             if old_sid_int != self.sid_int:
@@ -3680,7 +3680,7 @@ class TVShow(TVShowBase):
                 wq = getattr(self.sxe_ep_obj.get(season, {}).get(episode, {}), 'wanted_quality', None)
                 if None is not wq:
                     if quality in wq:
-                        cur_status, cur_quality = Quality.splitCompositeStatus(self.sxe_ep_obj[season][episode].status)
+                        cur_status, cur_quality = Quality.split_composite_status(self.sxe_ep_obj[season][episode].status)
                         if cur_status in (WANTED, UNAIRED, SKIPPED, FAILED):
                             logger.log('Existing episode status is wanted/unaired/skipped/failed,'
                                        ' getting found episode', logger.DEBUG)
@@ -3700,7 +3700,7 @@ class TVShow(TVShowBase):
                 pass
 
         # if the quality isn't one we want under any circumstances then just say no
-        initial_qualities, archive_qualities = Quality.splitQuality(self._quality)
+        initial_qualities, archive_qualities = Quality.split_quality(self._quality)
         all_qualities = list(set(initial_qualities + archive_qualities))
 
         initial = '= (%s)' % ','.join([Quality.qualityStrings[qual] for qual in initial_qualities])
@@ -3725,7 +3725,7 @@ class TVShow(TVShowBase):
             logger.log('Unable to find a matching episode in database, ignoring found episode', logger.DEBUG)
             return False
 
-        cur_status, cur_quality = Quality.splitCompositeStatus(int(sql_result[0]['status']))
+        cur_status, cur_quality = Quality.split_composite_status(int(sql_result[0]['status']))
         ep_status_text = statusStrings[cur_status]
 
         logger.log('Existing episode status: %s (%s)' % (statusStrings[cur_status], ep_status_text), logger.DEBUG)
@@ -4011,7 +4011,7 @@ class TVEpisode(TVEpisodeBase):
             return
 
         self.refresh_subtitles()
-        # added the if because sometime it raises an error
+        # added the if because sometimes it raises an error
         self.subtitles_searchcount = self.subtitles_searchcount + 1 if self.subtitles_searchcount else 1
         self.subtitles_lastsearch = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         self.save_to_db()
@@ -4292,7 +4292,7 @@ class TVEpisode(TVEpisodeBase):
         except (BaseTVinfoEpisodenotfound, BaseTVinfoSeasonnotfound):
             logger.log('Unable to find the episode on %s... has it been removed? Should I delete from db?' %
                        sickgear.TVInfoAPI(self.tvid).name, logger.DEBUG)
-            # if I'm no longer on the Indexers but I once was then delete myself from the DB
+            # if I'm no longer on the Indexers, but I once was then delete myself from the DB
             if -1 != self._epid and helpers.should_delete_episode(self._status):
                 self.delete_episode()
             elif UNKNOWN == self._status:
@@ -4352,7 +4352,7 @@ class TVEpisode(TVEpisodeBase):
         except (ValueError, IndexError):
             logger.error('Malformed air date retrieved from %s (%s - %sx%s)' %
                          (sickgear.TVInfoAPI(self.tvid).name, self.show_obj.unique_name, season, episode))
-            # if I'm incomplete on TVDB but I once was complete then just delete myself from the DB for now
+            # if I'm incomplete on TVDB, but I once was complete then just delete myself from the DB for now
             if -1 != self._epid and helpers.should_delete_episode(self._status):
                 self.delete_episode()
             elif UNKNOWN == self._status:
@@ -4484,7 +4484,7 @@ class TVEpisode(TVEpisodeBase):
             # leave propers alone, you have to either post-process them or manually change them back
             elif self._status not in Quality.SNATCHED_ANY + Quality.DOWNLOADED + Quality.ARCHIVED:
                 msg = '(1) Status changes from %s to ' % statusStrings[self._status]
-                self.status = Quality.statusFromNameOrFile(self._location, anime=self._show_obj.is_anime)
+                self.status = Quality.status_from_name_or_file(self._location, anime=self._show_obj.is_anime)
                 logger.log('%s%s' % (msg, statusStrings[self._status]), logger.DEBUG)
 
         # shouldn't get here probably
@@ -4513,7 +4513,7 @@ class TVEpisode(TVEpisodeBase):
         if '' != self.location:
 
             if UNKNOWN == self._status and sickgear.helpers.has_media_ext(self.location):
-                status_quality = Quality.statusFromNameOrFile(self.location, anime=self._show_obj.is_anime)
+                status_quality = Quality.status_from_name_or_file(self.location, anime=self._show_obj.is_anime)
                 logger.log('(3) Status changes from %s to %s' % (self._status, status_quality), logger.DEBUG)
                 self.status = status_quality
 
@@ -4841,8 +4841,8 @@ class TVEpisode(TVEpisodeBase):
     def _ep_name(self):
         """
         :return: the name of the episode to use during renaming. Combines the names of related episodes.
-        Eg. "Ep Name (1)" and "Ep Name (2)" becomes "Ep Name"
-            "Ep Name" and "Other Ep Name" becomes "Ep Name & Other Ep Name"
+        E.g. "Ep Name (1)" and "Ep Name (2)" becomes "Ep Name"
+             "Ep Name" and "Other Ep Name" becomes "Ep Name & Other Ep Name"
         :rtype: AnyStr
         """
 
@@ -4915,7 +4915,7 @@ class TVEpisode(TVEpisodeBase):
                 return ''
             return parse_result.release_group
 
-        ep_status, ep_qual = Quality.splitCompositeStatus(self._status)
+        ep_status, ep_qual = Quality.split_composite_status(self._status)
 
         if sickgear.NAMING_STRIP_YEAR:
             show_name = re.sub(r'\(\d+\)$', '', self._show_obj.name).rstrip()
@@ -5061,7 +5061,7 @@ class TVEpisode(TVEpisodeBase):
             if not ep_sep or not ep_format:
                 continue
 
-            # start with the ep string, eg. E03
+            # start with the ep string, e.g. E03
             ep_string = self._format_string(ep_format.upper(), replace_map)
             for cur_ep_obj in self.related_ep_obj:
 
@@ -5089,7 +5089,7 @@ class TVEpisode(TVEpisodeBase):
             if 3 != anime_type:
                 absolute_number = (self._absolute_number, self._episode)[0 == self._absolute_number]
 
-                if 0 != self._season:  # dont set absolute numbers if we are on specials !
+                if 0 != self._season:  # don't set absolute numbers if we are on specials !
                     if 1 == anime_type:  # this crazy person wants both ! (note: +=)
                         ep_string += sep + '%(#)03d' % {'#': absolute_number}
                     elif 2 == anime_type:  # total anime freak only need the absolute number ! (note: =)
@@ -5272,7 +5272,7 @@ class TVEpisode(TVEpisodeBase):
 
     def airdate_modify_stamp(self):
         """
-        Make the modify date and time of a file reflect the show air date and time.
+        Make modify date and time of a file reflect the show air date and time.
         Note: Also called from postProcessor
 
         """

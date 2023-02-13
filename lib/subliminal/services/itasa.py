@@ -47,7 +47,7 @@ class Itasa(ServiceBase):
     quality_dict = {Quality.SDTV : '',
                     Quality.SDDVD : 'dvdrip',
                     Quality.RAWHDTV : '1080i',
-                    Quality.HDTV : '720p',                    
+                    Quality.HDTV : '720p',
                     Quality.FULLHDTV : ('1080p','720p'),
                     Quality.HDWEBDL :  'web-dl',
                     Quality.FULLHDWEBDL : 'web-dl',
@@ -55,20 +55,20 @@ class Itasa(ServiceBase):
                     Quality.FULLHDBLURAY  : ('bdrip', 'bluray'),
                     Quality.UNKNOWN : 'unknown' #Any subtitle will be downloaded
                     }
-    
+
     def init(self):
-       
+
         super(Itasa, self).init()
         login_pattern = '<input type="hidden" name="return" value="([^\n\r\t ]+?)" /><input type="hidden" name="([^\n\r\t ]+?)" value="([^\n\r\t ]+?)" />'
 
         response = requests.get(self.server_url + 'index.php')
         if response.status_code != 200:
             raise ServiceError('Initiate failed')
-        
+
         match = re.search(login_pattern, response.content, re.IGNORECASE | re.DOTALL)
         if not match:
             raise ServiceError('Can not find unique id parameter on page')
-        
+
         login_parameter = {'username': 'sickbeard',
                            'passwd': 'subliminal',
                            'remember': 'yes',
@@ -77,7 +77,7 @@ class Itasa(ServiceBase):
                            'option': 'com_user',
                            'task': 'login',
                            'silent': 'true',
-                           'return': match.group(1), 
+                           'return': match.group(1),
                             match.group(2): match.group(3)
                           }
 
@@ -85,7 +85,7 @@ class Itasa(ServiceBase):
         r = self.session.post(self.server_url + 'index.php', data=login_parameter)
         if not re.search('logouticon.png', r.content, re.IGNORECASE | re.DOTALL):
             raise ServiceError('Itasa Login Failed')
-        
+
     @cachedmethod
     def get_series_id(self, name):
         """Get the show page and cache every show found in it"""
@@ -100,7 +100,7 @@ class Itasa(ServiceBase):
             series_id = int(match.group(1))
             self.cache_for(self.get_series_id, args=(series_name,), result=series_id)
         return self.cached_value(self.get_series_id, args=(name,))
-    
+
     def get_episode_id(self, series, series_id, season, episode, quality):
         """Get the id subtitle for episode with the given quality"""
 
@@ -115,14 +115,14 @@ class Itasa(ServiceBase):
             if seasons.text.lower().strip() == 'stagione %s' % str(season):
                 season_link = seasons['href']
                 break
-        
+
         if not season_link:
             logger.debug(u'Could not find season %s for series %s' % (series, str(season)))
             return None
-        
+
         r = self.session.get(season_link)
         soup = BeautifulSoup(r.content, self.required_features)
-        
+
         all_qualities = soup.find('div', attrs = {'id' : 'remositorycontainerlist'})
         for qualities in all_qualities.find_all(href=re.compile('func=select')):
             if qualities.text.lower().strip() in self.quality_dict[quality]:
@@ -131,11 +131,11 @@ class Itasa(ServiceBase):
                 soup = BeautifulSoup(r.content, self.required_features)
                 break
 
-        #If we want SDTV we are just on the right page so quality link will be None                
+        #If we want SDTV we are just on the right page so quality link will be None
         if not quality == Quality.SDTV and not quality_link:
             logger.debug(u'Could not find a subtitle with required quality for series %s season %s' % (series, str(season)))
             return None
-        
+
         all_episodes = soup.find('div', attrs = {'id' : 'remositoryfilelisting'})
         for episodes in all_episodes.find_all(href=re.compile('func=fileinfo')):
             ep_string = "%(seasonnumber)dx%(episodenumber)02d" % {'seasonnumber': season, 'episodenumber': episode}
@@ -144,12 +144,12 @@ class Itasa(ServiceBase):
                 if match:
                     episode_id = match.group(1)
                     return episode_id
-                
+
         return episode_id
- 
+
     def list_checked(self, video, languages):
         return self.query(video.path or video.release, languages, get_keywords(video.guess), video.series, video.season, video.episode)
-            
+
     def query(self, filepath, languages, keywords, series, season, episode):
 
         logger.debug(u'Getting subtitles for %s season %d episode %d with languages %r' % (series, season, episode, languages))
@@ -160,8 +160,8 @@ class Itasa(ServiceBase):
         except KeyError:
             logger.debug(u'Could not find series id for %s' % series)
             return []
-        
-        episode_id = self.get_episode_id(series, series_id, season, episode, Quality.nameQuality(filepath))
+
+        episode_id = self.get_episode_id(series, series_id, season, episode, Quality.name_quality(filepath))
         if not episode_id:
             logger.debug(u'Could not find subtitle for series %s' % series)
             return []
@@ -173,11 +173,11 @@ class Itasa(ServiceBase):
         sub_language = self.get_language('it')
         path = get_subtitle_path(filepath, sub_language, self.config.multi)
         subtitle = ResultSubtitle(path, sub_language, self.__class__.__name__.lower(), sub_link)
-        
+
         return [subtitle]
 
     def download(self, subtitle):
-        
+
         logger.info(u'Downloading %s in %s' % (subtitle.link, subtitle.path))
         try:
             r = self.session.get(subtitle.link, headers={'Referer': self.server_url, 'User-Agent': self.user_agent})
@@ -204,13 +204,13 @@ class Itasa(ServiceBase):
             else:
                 zipsub.close()
                 raise DownloadFailedError('No subtitles found in zip file')
-            
+
             zipsub.close()
         except Exception as e:
             if os.path.exists(subtitle.path):
                 os.remove(subtitle.path)
             raise DownloadFailedError(str(e))
-        
+
         logger.debug(u'Download finished')
-        
-Service = Itasa        
+
+Service = Itasa

@@ -62,7 +62,7 @@
 		<tbody>
 #set $order = $oldest
 #for $hItem in $failed_results[::-1]
-    #set $provider = $providers.getProviderClass($generic.GenericProvider.make_id($hItem['provider']))
+    #set $provider = $providers.get_by_id($generic.GenericProvider.make_id($hItem['provider']))
     #set $provider_name = None is not $provider and $provider.name or 'missing provider'
     #set $provider_image = None is not $provider and $provider.image_name() or 'missing.png'
 			<tr>

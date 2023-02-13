@@ -5,7 +5,7 @@
 #set $html_selected = ' selected="selected"'
 <div class="field-pair">
 	<label for="quality-preset" class="clearfix">
-#set $overall_quality = $Quality.combineQualities($any_qualities, $best_qualities)
+#set $overall_quality = $Quality.combine_qualities($any_qualities, $best_qualities)
 		<span class="component-title input">Quality to download</span>
 		<span class="component-desc">
 #set $selected = None

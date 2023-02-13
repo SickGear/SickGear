@@ -26,17 +26,17 @@ from exceptions_helper import ex
 
 
 class Scheduler(threading.Thread):
-    def __init__(self, action, cycleTime=datetime.timedelta(minutes=10), run_delay=datetime.timedelta(minutes=0),
-                 start_time=None, threadName="ScheduledThread", silent=True, prevent_cycle_run=None, paused=False):
+    def __init__(self, action, cycle_time=datetime.timedelta(minutes=10), run_delay=datetime.timedelta(minutes=0),
+                 start_time=None, thread_name="ScheduledThread", silent=True, prevent_cycle_run=None, paused=False):
         super(Scheduler, self).__init__()
 
-        self.lastRun = datetime.datetime.now() + run_delay - cycleTime
+        self.last_run = datetime.datetime.now() + run_delay - cycle_time
         self.action = action
-        self.cycleTime = cycleTime
+        self.cycle_time = cycle_time
         self.start_time = start_time
         self.prevent_cycle_run = prevent_cycle_run
 
-        self.name = threadName
+        self.name = thread_name
         self.silent = silent
         self._stopper = threading.Event()
         self._unpause = threading.Event()
@@ -65,10 +65,10 @@ class Scheduler(threading.Thread):
             else:
                 self.unpause()
 
-    def timeLeft(self):
-        return self.cycleTime - (datetime.datetime.now() - self.lastRun)
+    def time_left(self):
+        return self.cycle_time - (datetime.datetime.now() - self.last_run)
 
-    def forceRun(self):
+    def force_run(self):
         if not self.action.amActive:
             self.force = True
             return True
@@ -93,15 +93,15 @@ class Scheduler(threading.Thread):
                     should_run = False
 
                     # check if interval has passed
-                    if current_time - self.lastRun >= self.cycleTime:
+                    if current_time - self.last_run >= self.cycle_time:
                         # check if wanting to start around certain time taking interval into account
                         if self.start_time:
                             hour_diff = current_time.time().hour - self.start_time.hour
-                            if not hour_diff < 0 and hour_diff < self.cycleTime.seconds // 3600:
+                            if not hour_diff < 0 and hour_diff < self.cycle_time.seconds // 3600:
                                 should_run = True
                             else:
-                                # set lastRun to only check start_time after another cycleTime
-                                self.lastRun = current_time
+                                # set last_run to only check start_time after another cycle_time
+                                self.last_run = current_time
                         else:
                             should_run = True
 
@@ -110,13 +110,13 @@ class Scheduler(threading.Thread):
 
                     if should_run and ((self.prevent_cycle_run is not None and self.prevent_cycle_run()) or
                                        getattr(self.action, 'prevent_run', False)):
-                        logger.log(u'%s skipping this cycleTime' % self.name, logger.WARNING)
-                        # set lastRun to only check start_time after another cycleTime
-                        self.lastRun = current_time
+                        logger.log(u'%s skipping this cycle_time' % self.name, logger.WARNING)
+                        # set last_run to only check start_time after another cycle_time
+                        self.last_run = current_time
                         should_run = False
 
                     if should_run:
-                        self.lastRun = current_time
+                        self.last_run = current_time
 
                         try:
                             if not self.silent:

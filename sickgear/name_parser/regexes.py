@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
-# all regexes are case insensitive
+# all regexes are case-insensitive
 
 normal_regexes = [
     ('garbage_name',

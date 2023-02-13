@@ -24,17 +24,17 @@ from _23 import urlencode
 from six import iteritems
 
 
-class uTorrentAPI(GenericClient):
+class UtorrentAPI(GenericClient):
     def __init__(self, host=None, username=None, password=None):
 
-        super(uTorrentAPI, self).__init__('uTorrent', host, username, password)
+        super(UtorrentAPI, self).__init__('uTorrent', host, username, password)
 
         self.url = self.host + 'gui/'
 
     def _request(self, method='get', params=None, files=None, **kwargs):
         params = {} if None is params else params
 
-        return super(uTorrentAPI, self)._request(
+        return super(UtorrentAPI, self)._request(
             method=method,
             params='token={0:s}&{1:s}'.format(self.auth, '&'.join(
                 ['%s' % urlencode(dict([[key, str(value)]]))
@@ -128,4 +128,4 @@ class uTorrentAPI(GenericClient):
         return self._request(params=params)
 
 
-api = uTorrentAPI()
+api = UtorrentAPI()

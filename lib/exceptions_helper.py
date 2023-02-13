@@ -14,8 +14,6 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
-from six import PY2, string_types
-
 # noinspection PyUnreachableCode
 if False:
     from typing import AnyStr
@@ -28,6 +26,7 @@ def ex(e):
     return str(e)
 
 
+# noinspection DuplicatedCode
 class SickGearException(Exception):
     """Generic SickGear Exception - should never be thrown, only subclassed"""
 

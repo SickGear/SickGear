@@ -147,7 +147,7 @@ class QbittorrentAPI(GenericClient):
         """
         Set maximal priority in queue to torrent task
         :param ids: ID(s) to promote
-        :return: True/Falsy if success/failure else Id(s) that failed to be changed
+        :return: True/Falsy if success/failure else ID(s) that failed to be changed
         """
         def _maxpri_filter(t):
             mark_fail = True
@@ -179,7 +179,7 @@ class QbittorrentAPI(GenericClient):
         """
         Set label/category to torrent task
         :param ids: ID(s) to change
-        :return: True/Falsy if success/failure else Id(s) that failed to be changed
+        :return: True/Falsy if success/failure else ID(s) that failed to be changed
         """
         def _label_filter(t):
             mark_fail = True
@@ -205,8 +205,8 @@ class QbittorrentAPI(GenericClient):
         # type: (Union[AnyStr, list]) -> Union[bool, list]
         """
         Pause item(s)
-        :param ids: Id(s) to pause
-        :return: True/Falsy if success/failure else Id(s) that failed to be paused
+        :param ids: ID(s) to pause
+        :return: True/Falsy if success/failure else ID(s) that failed to be paused
         """
         def _pause_filter(t):
             mark_fail = True
@@ -252,8 +252,8 @@ class QbittorrentAPI(GenericClient):
         # type: (Union[AnyStr, list]) -> Union[bool, list]
         """
         Resume task(s) in client
-        :param ids: Id(s) to act on
-        :return: True if success, Id(s) that could not be resumed, else Falsy if failure
+        :param ids: ID(s) to act on
+        :return: True if success, ID(s) that could not be resumed, else Falsy if failure
         """
         return self._perform_task(
             'resume', ids,
@@ -267,8 +267,8 @@ class QbittorrentAPI(GenericClient):
         # type: (Union[AnyStr, list]) -> Union[bool, list]
         """
         Delete task(s) from client
-        :param ids: Id(s) to act on
-        :return: True if success, Id(s) that could not be deleted, else Falsy if failure
+        :param ids: ID(s) to act on
+        :return: True if success, ID(s) that could not be deleted, else Falsy if failure
         """
         return self._perform_task(
             'delete', ids,
@@ -283,10 +283,10 @@ class QbittorrentAPI(GenericClient):
         """
         Set up and send a method to client
         :param method: Either `resume` or `delete`
-        :param ids: Id(s) to perform method on
+        :param ids: ID(s) to perform method on
         :param filter_func: Call back function passed to _action that will filter tasks as failed or erroneous
         :param pause_first: True if task should be paused prior to invoking method
-        :return: True if success, Id(s) that could not be acted upon, else Falsy if failure
+        :return: True if success, ID(s) that could not be acted upon, else Falsy if failure
         """
         if isinstance(ids, (string_types, list)):
             rids = ids if isinstance(ids, list) else list(map(lambda x: x.strip(), ids.split(',')))
@@ -395,7 +395,7 @@ class QbittorrentAPI(GenericClient):
         """
         Send a request to client
         :param cmd: Api task to invoke
-        :param kwargs: keyword arguments to pass thru to helpers getURL function
+        :param kwargs: keyword arguments to pass through to helpers getURL function
         :return: JSON decoded response dict, True if success and no response body, Text error or None if failure,
         """
         authless = bool(re.search('(?i)login|version', cmd))
