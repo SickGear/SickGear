@@ -1,4 +1,9 @@
-﻿### 3.27.2 (2023-02-10 19:25:00 UTC)
+﻿### 3.27.3 (2023-02-15 02:00:00 UTC)
+
+* Fix reading legacy autoProcessTV.cfg
+
+
+### 3.27.2 (2023-02-10 19:25:00 UTC)
 
 * Fix revert update
 * Fix installations that don't have previously saved cleanup lock files 

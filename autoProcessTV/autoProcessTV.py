@@ -95,7 +95,7 @@ def process_files(dir_to_process, org_nzb_name=None, status=None):
             def cfg_get(cfg, option):
                 try:
                     return cfg.get('SickGear', option)
-                except configparser.NoOptionError:
+                except (configparser.NoOptionError, configparser.NoSectionError):
                     return cfg.get('SickBeard', option)
 
             # Replace default values with config_file values
