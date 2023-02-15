@@ -39,7 +39,7 @@ from exceptions_helper import ex, MultipleShowObjectsException
 import exceptions_helper
 from json_helper import json_dumps, json_loads
 import sg_helpers
-from sg_helpers import remove_file, scantree
+from sg_helpers import remove_file, scantree, is_virtualenv
 
 import sickgear
 from . import classes, clients, config, db, helpers, history, image_cache, logger, name_cache, naming, \
@@ -7934,6 +7934,7 @@ class ConfigGeneral(Config):
         t.request_host = helpers.xhtml_escape(self.request.host_name, False)
         api_keys = '|||'.join([':::'.join(a) for a in sickgear.API_KEYS])
         t.api_keys = api_keys and sickgear.API_KEYS or []
+        t.pip_user_arg = ('--user ', '')[is_virtualenv()]
         if 'git' == sickgear.update_software_scheduler.action.install_type:
             # noinspection PyProtectedMember
             sickgear.update_software_scheduler.action.updater._find_installed_version()

@@ -1733,3 +1733,13 @@ def iterate_chunk(lst, n):
     """
     for i in moves.range(0, len(lst), n):
         yield lst[i:i + n]
+
+
+def is_virtualenv():
+    # type: (...) -> bool
+    """
+    :return: True if virtualenv Python environment is detected
+    """
+    """Get base/real prefix, or `sys.prefix` if there is none."""
+    get_base_prefix_compat = getattr(sys, 'base_prefix', None) or getattr(sys, 'real_prefix', None) or sys.prefix
+    return get_base_prefix_compat != sys.prefix

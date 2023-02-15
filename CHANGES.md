@@ -4,6 +4,11 @@
 * Change requirements for pure py3
 
 
+### 3.27.4 (2023-02-15 13:30:00 UTC)
+
+* Fix updating with running virtualenv
+
+
 ### 3.27.3 (2023-02-15 02:00:00 UTC)
 
 * Fix reading legacy autoProcessTV.cfg

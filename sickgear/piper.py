@@ -8,7 +8,7 @@ import os
 import re
 
 from json_helper import json_loads
-from sg_helpers import cmdline_runner
+from sg_helpers import cmdline_runner, is_virtualenv
 
 from _23 import filter_list, ordered_dict
 from six import iteritems, PY2
@@ -97,7 +97,7 @@ def initial_requirements():
                 run_pip(['uninstall', '-r', 'recommended-remove.txt'])
                 raise ValueError
         except (BaseException, ImportError):
-            run_pip(['install', '-U', '--user', '-r', 'requirements.txt'])
+            run_pip(['install', '-U'] + (['--user'], [])[is_virtualenv()] + ['-r', 'requirements.txt'])
             module = 'Cheetah'
             try:
                 locals()[module] = __import__(module)
@@ -319,7 +319,8 @@ def pip_update(loading_msg, updates_todo, data_dir):
         # exclude Cheetah3 to prevent `No matching distro found` and fallback to its legacy setup.py installer
         output, err, exit_status = run_pip(['install', '-U']
                                            + ([], ['--only-binary=:all:'])[cur_project_name not in ('Cheetah3', )]
-                                           + ['--user', '-r', piper_path, '--extra-index-url',
+                                           + (['--user'], [])[is_virtualenv()]
+                                           + ['-r', piper_path, '--extra-index-url',
                                               'https://gitlab+deploy-token-1599941:UNupqjtDab_zxNzvP2gA@gitlab.com/api/'
                                               'v4/projects/279215/packages/pypi/simple'])
         pip_version = None
