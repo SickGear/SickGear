@@ -523,12 +523,13 @@ class TvMaze(TVInfoBase):
             show.overview = clean_data(c.show.summary)
             show.status = clean_data(c.show.status)
             net = c.show.network or c.show.web_channel
-            show.network = clean_data(net.name)
-            show.network_id = net.maze_id
-            show.network_country = clean_data(net.country)
-            show.network_timezone = clean_data(net.timezone)
-            show.network_country_code = clean_data(net.code)
-            show.network_is_stream = None is not c.show.web_channel
+            if net:
+                show.network = clean_data(net.name)
+                show.network_id = net.maze_id
+                show.network_country = clean_data(net.country)
+                show.network_timezone = clean_data(net.timezone)
+                show.network_country_code = clean_data(net.code)
+                show.network_is_stream = None is not c.show.web_channel
             ch.append(TVInfoCharacter(name=clean_data(c.character.name), show=show))
         try:
             birthdate = person_obj.birthday and tz_p.parse(person_obj.birthday).date()

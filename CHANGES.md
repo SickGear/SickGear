@@ -1,4 +1,9 @@
-﻿### 3.27.4 (2023-02-15 13:30:00 UTC)
+﻿### 3.27.5 (2023-02-16 18:30:00 UTC)
+
+* Fix network for persons
+
+
+### 3.27.4 (2023-02-15 13:30:00 UTC)
 
 * Fix updating with running virtualenv
 
