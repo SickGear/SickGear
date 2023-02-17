@@ -1,5 +1,6 @@
 ﻿### 3.28.0 (2023-xx-xx xx:xx:00 UTC)
 
+* Update package resource API 63.2.0 (3ae44cd) to 67.3.2 (b9bf2ec)
 * Change remove calls to legacy py2 fix encoding function
 * Change requirements for pure py3
 
