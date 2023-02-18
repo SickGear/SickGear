@@ -1,4 +1,9 @@
-﻿### 3.27.6 (2023-02-18 20:10:00 UTC)
+﻿### 3.27.7 (2023-02-18 22:40:00 UTC)
+
+* Fix using recently updated torrent parser for py3 bytes
+
+
+### 3.27.6 (2023-02-18 20:10:00 UTC)
 
 * Fix show view edit language
 * Fix TVDb image parsing
