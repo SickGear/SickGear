@@ -141,6 +141,8 @@ class Tvdb(TVInfoBase):
     >> t['Scrubs'][1][24]['episodename']
     u'My Last Day'
     """
+    map_languages = {}
+    reverse_map_languages = {v: k for k, v in iteritems(map_languages)}
     supported_id_searches = [TVINFO_TVDB, TVINFO_TVDB_SLUG]
 
     # noinspection PyUnusedLocal
@@ -839,10 +841,10 @@ class Tvdb(TVInfoBase):
                     k, v = k.lower(), v.lower() if isinstance(v, string_types) else v
                     if 'filename' == k:
                         k = 'bannerpath'
-                        v = self.config['url_artworks'] % v
+                        v = self._make_image(self.config['url_artworks'], v)
                     elif 'thumbnail' == k:
                         k = 'thumbnailpath'
-                        v = self.config['url_artworks'] % v
+                        v = self._make_image(self.config['url_artworks'], v)
                     elif 'keytype' == k:
                         k = 'bannertype'
                     banners.setdefault(btype, OrderedDict()).setdefault(btype2, OrderedDict()).setdefault(bid, {})[
@@ -852,6 +854,13 @@ class Tvdb(TVInfoBase):
             pass
 
         self._set_show_data(sid, '_banners', banners, add=True)
+
+    @staticmethod
+    def _make_image(base_url, url):
+        # type: (str, str) -> str
+        if not url or url.lower().startswith('http'):
+            return url or ''
+        return base_url % url
 
     def _parse_actors(self, sid, actor_list, actor_list_alt):
 
@@ -937,7 +946,7 @@ class Tvdb(TVInfoBase):
                 role_image = (alts.get(n['id'], {}).get('image'), n.get('image'))[
                     any([n.get('image')]) and 1 == c_p_list.count((n['name'], n['role']))]
                 if role_image:
-                    role_image = self.config['url_artworks'] % role_image
+                    role_image = self._make_image(self.config['url_artworks'], role_image)
                 character_name = n.get('role', '').strip() or alts.get(n['id'], {}).get('role', '')
                 person_name = n.get('name', '').strip() or alts.get(n['id'], {}).get('name', '')
                 try:
@@ -986,7 +995,7 @@ class Tvdb(TVInfoBase):
 
                     if None is not v:
                         if 'filename' == k and v:
-                            v = self.config['url_artworks'] % v
+                            v = self._make_image(self.config['url_artworks'], v)
                         else:
                             v = clean_data(v)
                     data[k] = v
@@ -1004,8 +1013,8 @@ class Tvdb(TVInfoBase):
                 image_data['data'] = sorted(image_data['data'], reverse=True,
                                             key=lambda x: (x['ratingsinfo']['average'], x['ratingsinfo']['count']))
                 if not excluded_main_data:
-                    url_image = self.config['url_artworks'] % image_data['data'][0]['filename']
-                    url_thumb = self.config['url_artworks'] % image_data['data'][0]['thumbnail']
+                    url_image = self._make_image(self.config['url_artworks'], image_data['data'][0]['filename'])
+                    url_thumb = self._make_image(self.config['url_artworks'], image_data['data'][0]['thumbnail'])
                     self._set_show_data(sid, image_type, url_image)
                     self._set_show_data(sid, u'%s_thumb' % image_type, url_thumb)
                     excluded_main_data = True  # artwork found so prevent fallback
@@ -1037,7 +1046,7 @@ class Tvdb(TVInfoBase):
 
         # Parse show information
         url = self.config['url_series_info'] % sid
-        if direct_data or sid not in self.shows or None is self.shows[sid].id:
+        if direct_data or sid not in self.shows or None is self.shows[sid].id or language != self.shows[sid].language:
             log.debug('Getting all series data for %s' % sid)
             show_data = self._getetsrc(url, language=language)
             if not show_data or not show_data.get('data'):
@@ -1200,7 +1209,7 @@ class Tvdb(TVInfoBase):
                     if None is not v:
                         if 'filename' == k and v:
                             if '://' not in v:
-                                v = self.config['url_artworks'] % v
+                                v = self._make_image(self.config['url_artworks'], v)
                         else:
                             v = clean_data(v)
 
