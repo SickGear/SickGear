@@ -604,7 +604,7 @@ class TmdbIndexer(TVInfoBase):
         # type: (integer_types, AnyStr, bool, bool, bool, bool, bool, bool, bool, Optional[Any]) -> bool
         # note: this is only working for images fetching currently
         self.show_not_found = False
-        to_append = ['external_ids', 'alternative_titles', 'content_ratings']
+        to_append = ['external_ids', 'alternative_titles', 'content_ratings', 'translations']
         tmdb_lang = ('en-US', language)[language in self._tmdb_supported_lang_list]
         if any((banners, posters, seasons, seasonwides, fanart)):
             to_append.append('images')
@@ -615,7 +615,7 @@ class TmdbIndexer(TVInfoBase):
         try:
             tmdb = tmdbsimple.TV(sid)
             show_data = tmdb.info(append_to_response=','.join(to_append), language=tmdb_lang)
-            if tmdb_lang not in show_data.get('languages'):
+            if tmdb_lang not in (_l['iso_639_1'] for _l in show_data['translations'].get('translations', []) or []):
                 tmdb_lang = 'en'
                 show_data = tmdb.info(append_to_response=','.join(to_append), language=tmdb_lang)
         except (BaseException, Exception):
