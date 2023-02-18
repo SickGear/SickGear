@@ -2232,7 +2232,7 @@ class TVShow(TVShowBase):
 
         cached_show = None
         try:
-            cached_show = t.get_show(self.prodid)
+            cached_show = t.get_show(self.prodid, language=self._lang)
         except BaseTVinfoError as e:
             logger.log('Unable to find cached seasons from %s: %s' % (
                 sickgear.TVInfoAPI(self.tvid).name, ex(e)), logger.WARNING)
@@ -2332,7 +2332,7 @@ class TVShow(TVShowBase):
         else:
             try:
                 t = sickgear.TVInfoAPI(self.tvid).setup(**tvinfo_config)
-                show_obj = t.get_show(self.prodid)
+                show_obj = t.get_show(self.prodid, language=self._lang)
             except BaseTVinfoError:
                 logger.log('%s timed out, unable to update episodes for [%s] from %s' %
                            (sickgear.TVInfoAPI(self.tvid).name, self._name, sickgear.TVInfoAPI(self.tvid).name),
@@ -2596,7 +2596,7 @@ class TVShow(TVShowBase):
                     if self._lang:
                         tvinfo_config['language'] = self._lang
                     t = sickgear.TVInfoAPI(self.tvid).setup(**tvinfo_config)
-                    cached_show = t.get_show(self.prodid, load_episodes=False)
+                    cached_show = t.get_show(self.prodid, load_episodes=False, language=self._lang)
                     vals = (self.prodid, '' if not cached_show else ' [%s]' % cached_show['seriesname'].strip())
                     if len(sql_result):
                         logger.log('%s: Loading show info%s from database' % vals)
@@ -2791,7 +2791,7 @@ class TVShow(TVShowBase):
         if getattr(tvinfo_data, 'id', None) == self.prodid:
             show_info = tvinfo_data
         else:
-            show_info = t.get_show(self.prodid, actors=True)  # type: Optional[TVInfoShow]
+            show_info = t.get_show(self.prodid, actors=True, language=self._lang)  # type: Optional[TVInfoShow]
         if None is show_info or getattr(t, 'show_not_found', False):
             if getattr(t, 'show_not_found', False):
                 self.inc_not_found_count()
@@ -2888,7 +2888,8 @@ class TVShow(TVShowBase):
         if not show_info_cast:
             tvinfo_config = sickgear.TVInfoAPI(self.tvid).api_params.copy()
             t = sickgear.TVInfoAPI(self.tvid).setup(**tvinfo_config)
-            show_info = t.get_show(self.prodid, load_episodes=False, actors=True)  # type: Optional[TVInfoShow]
+            show_info = t.get_show(self.prodid, load_episodes=False, actors=True,
+                                   language=self._lang)  # type: Optional[TVInfoShow]
             if None is show_info:
                 return
             show_info_cast = show_info.cast
@@ -4281,7 +4282,8 @@ class TVEpisode(TVEpisodeBase):
                     t = sickgear.TVInfoAPI(self.tvid).setup(**tvinfo_config)
                 else:
                     t = tvapi
-                ep_info = t.get_show(self._show_obj.prodid)[season][episode]  # type: TVInfoEpisode
+                ep_info = t.get_show(self._show_obj.prodid,
+                                     language=self.show_obj.lang)[season][episode]  # type: TVInfoEpisode
             else:
                 ep_info = cached_season[episode]  # type: TVInfoEpisode
 

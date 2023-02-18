@@ -5,6 +5,12 @@
 * Change requirements for pure py3
 
 
+### 3.27.6 (2023-02-18 20:10:00 UTC)
+
+* Fix show view edit language
+* Fix TVDb image parsing
+
+
 ### 3.27.5 (2023-02-16 18:30:00 UTC)
 
 * Fix network for persons

@@ -332,6 +332,7 @@ class TVInfoShow(dict):
         self.vote_count = None  # type: Optional[integer_types]
         self.vote_average = None  # type: Optional[Union[integer_types, float]]
         self.origin_countries = []  # type: List[AnyStr]
+        self.requested_language = ''  # type: AnyStr
 
     def __str__(self):
         nr_seasons = len(self)
@@ -905,8 +906,8 @@ class TVInfoBase(object):
             'cache_search': kwargs.get('cache_search'),
         }  # type: Dict[AnyStr, Any]
 
-    def _must_load_data(self, sid, load_episodes, banners, posters, seasons, seasonwides, fanart, actors):
-        # type: (integer_types, bool, bool, bool, bool, bool, bool, bool) -> bool
+    def _must_load_data(self, sid, load_episodes, banners, posters, seasons, seasonwides, fanart, actors, lang):
+        # type: (integer_types, bool, bool, bool, bool, bool, bool, bool, str) -> bool
         """
         returns if show data has to be fetched for (extra) data (episodes, images, ...)
         or can taken from self.shows cache
@@ -918,9 +919,15 @@ class TVInfoBase(object):
         :param seasonwides: should load season wide images
         :param fanart: should load fanart
         :param actors: should load actors
+        :param lang: requested language
         """
         if sid not in self.shows or None is self.shows[sid].id or \
                 (load_episodes and not getattr(self.shows[sid], 'ep_loaded', False)):
+            return True
+        _show = self.shows[sid]  # type: TVInfoShow
+        if _show.requested_language != lang:
+            _show.ep_loaded = _show.poster_loaded = _show.banner_loaded = _show.actors_loaded = _show.fanart_loaded = \
+                _show.seasonwide_images_loaded = _show.season_images_loaded = False
             return True
         for data_type, en_type, p_type in [(u'poster', 'posters_enabled', posters),
                                            (u'banner', 'banners_enabled', banners),
@@ -929,7 +936,7 @@ class TVInfoBase(object):
                                            (u'seasonwide', 'seasonwides_enabled', seasonwides),
                                            (u'actors', 'actors_enabled', actors)]:
             if (p_type or self.config.get(en_type, False)) and \
-                    not getattr(self.shows[sid], '%s_loaded' % data_type, False):
+                    not getattr(_show, '%s_loaded' % data_type, False):
                 return True
         return False
 
@@ -1102,7 +1109,8 @@ class TVInfoBase(object):
                 self.shows.lock.release()
                 try:
                     if self._must_load_data(show_id, load_episodes, banners, posters, seasons, seasonwides, fanart,
-                                            actors):
+                                            actors, self.config['language']):
+                        self.shows[show_id].requested_language = self.config['language']
                         self._get_show_data(show_id, self.map_languages.get(self.config['language'],
                                                                             self.config['language']),
                                             load_episodes, banners, posters, seasons, seasonwides, fanart, actors)

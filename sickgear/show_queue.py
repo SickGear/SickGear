@@ -979,7 +979,7 @@ class QueueItemAdd(ShowQueueItem):
             logger.log(u'' + str(sickgear.TVInfoAPI(self.tvid).name) + ': ' + repr(tvinfo_config))
 
             t = sickgear.TVInfoAPI(self.tvid).setup(**tvinfo_config)
-            s = t.get_show(self.prodid, load_episodes=False)
+            s = t.get_show(self.prodid, load_episodes=False, language=self.lang)
 
             if getattr(t, 'show_not_found', False):
                 logger.log('Show %s was not found on %s, maybe show was deleted' %
@@ -1693,7 +1693,7 @@ class QueueItemSwitchSource(ShowQueueItem):
                     if new_prodid != self.show_obj.ids.get(self.new_tvid, {}).get('id') is not None:
                         new_prodid = self.show_obj.ids.get(self.new_tvid, {}).get('id')
                         try:
-                            td = t.get_show(show_id=new_prodid, actors=True)
+                            td = t.get_show(show_id=new_prodid, actors=True, language=self.show_obj.lang)
                         except (BaseException, Exception):
                             td = None
                             logger.log('Failed to get new tv show id (%s) from source %s' %

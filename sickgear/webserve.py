@@ -2789,7 +2789,9 @@ class Home(MainHandler):
             del sickgear.FANART_RATINGS[tvid_prodid]
             sickgear.save_config()
 
-        if tvinfo_lang and tvinfo_lang in sickgear.TVInfoAPI(show_obj.tvid).setup().config['valid_languages']:
+        t = sickgear.TVInfoAPI(show_obj.tvid).setup()
+        if tvinfo_lang and (tvinfo_lang in t.config['valid_languages'] or
+                            tvinfo_lang in (_l.get('sg_lang') for _l in t.get_languages() or [])):
             infosrc_lang = tvinfo_lang
         else:
             infosrc_lang = show_obj.lang
