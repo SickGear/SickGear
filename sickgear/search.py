@@ -787,7 +787,7 @@ def cache_torrent_file(
 
     try:
         import torrent_parser as tp
-        torrent_meta = tp.decode(torrent_content, use_ordered_dict=True)
+        torrent_meta = tp.decode(torrent_content, use_ordered_dict=True, errors='usebytes')
     except (BaseException, Exception):
         return
 
