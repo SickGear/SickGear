@@ -42,7 +42,7 @@ class CacheDBConnection(db.DBConnection):
 
         # Create the table if it's not already there
         try:
-            if not self.hasTable('lastUpdate'):
+            if not self.has_table('lastUpdate'):
                 self.action('CREATE TABLE lastUpdate (provider TEXT, time NUMERIC)')
         except (BaseException, Exception) as e:
             if ex(e) != 'table lastUpdate already exists':

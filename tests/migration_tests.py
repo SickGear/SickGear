@@ -48,7 +48,7 @@ class MigrationBasicTests(test.SickbeardTestDBCase):
                 update.execute()
                 sleep(0.1)
 
-            db.MigrationCode(my_db)
+            db.migration_code(my_db)
             my_db.close()
 
             # force python to garbage collect all db connections, so that the file can be deleted
@@ -67,9 +67,9 @@ class MigrationBasicTests(test.SickbeardTestDBCase):
 # 0 -> 31
 class OldInitialSchema(db.SchemaUpgrade):
     def execute(self):
-        db.backup_database(self.connection, 'sickbeard.db', self.checkDBVersion())
+        db.backup_database(self.connection, 'sickbeard.db', self.call_check_db_version())
 
-        if not self.hasTable('tv_shows') and not self.hasTable('db_version'):
+        if not self.has_table('tv_shows') and not self.has_table('db_version'):
             queries = [
                 'CREATE TABLE db_version (db_version INTEGER);',
                 'CREATE TABLE history ('
@@ -105,7 +105,7 @@ class OldInitialSchema(db.SchemaUpgrade):
                 self.connection.action(query)
 
         else:
-            cur_db_version = self.checkDBVersion()
+            cur_db_version = self.call_check_db_version()
 
             if cur_db_version < MIN_DB_VERSION:
                 logger.log_error_and_exit(
@@ -127,13 +127,13 @@ class OldInitialSchema(db.SchemaUpgrade):
                       ' your database may be unusable due to their modifications.'
                 )
 
-        return self.checkDBVersion()
+        return self.call_check_db_version()
 
 
 class AddDefaultEpStatusToTvShows(db.SchemaUpgrade):
     def execute(self):
-        self.addColumn('tv_shows', 'default_ep_status', 'TEXT', '')
-        self.setDBVersion(41, check_db_version=False)
+        self.add_column('tv_shows', 'default_ep_status', 'TEXT', '')
+        self.set_db_version(41, check_db_version=False)
 
 
 if '__main__' == __name__:

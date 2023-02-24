@@ -159,7 +159,7 @@ class ConnectionFailDict(object):
         if None is not db:
             with self.lock:
                 my_db = db.DBConnection('cache.db')
-                if my_db.hasTable('connection_fails'):
+                if my_db.has_table('connection_fails'):
                     domains = my_db.select('SELECT DISTINCT domain_url from connection_fails')
                     for domain in domains:
                         self.domain_list[domain['domain_url']] = ConnectionFailList(domain['domain_url'])
@@ -515,7 +515,7 @@ class ConnectionFailList(object):
     def _load_fail_values(self):
         if None is not DATA_DIR:
             my_db = db.DBConnection('cache.db')
-            if my_db.hasTable('connection_fails_count'):
+            if my_db.has_table('connection_fails_count'):
                 r = my_db.select('SELECT * FROM connection_fails_count WHERE domain_url = ?', [self.url])
                 if r:
                     self._failure_count = try_int(r[0]['failure_count'], 0)
@@ -536,7 +536,7 @@ class ConnectionFailList(object):
 
     def _save_fail_value(self, field, value):
         my_db = db.DBConnection('cache.db')
-        if my_db.hasTable('connection_fails_count'):
+        if my_db.has_table('connection_fails_count'):
             r = my_db.action('UPDATE connection_fails_count SET %s = ? WHERE domain_url = ?' % field,
                              [value, self.url])
             if 0 == r.rowcount:
@@ -568,7 +568,7 @@ class ConnectionFailList(object):
             with self.lock:
                 try:
                     my_db = db.DBConnection('cache.db')
-                    if my_db.hasTable('connection_fails'):
+                    if my_db.has_table('connection_fails'):
                         results = my_db.select('SELECT * FROM connection_fails WHERE domain_url = ?', [self.url])
                         self._fails = []
                         for r in results:
@@ -586,7 +586,7 @@ class ConnectionFailList(object):
             with self.lock:
                 try:
                     my_db = db.DBConnection('cache.db')
-                    if my_db.hasTable('connection_fails'):
+                    if my_db.has_table('connection_fails'):
                         # noinspection PyCallByClass,PyTypeChecker
                         time_limit = _totimestamp(datetime.datetime.now() - datetime.timedelta(days=28))
                         my_db.action('DELETE FROM connection_fails WHERE fail_time < ?', [time_limit])

@@ -193,7 +193,7 @@ class ProviderFailList(object):
         with self.lock:
             try:
                 my_db = db.DBConnection('cache.db')
-                if my_db.hasTable('provider_fails'):
+                if my_db.has_table('provider_fails'):
                     results = my_db.select('SELECT * FROM provider_fails WHERE prov_name = ?', [self.provider_name()])
                     self._fails = []
                     for r in results:
@@ -210,7 +210,7 @@ class ProviderFailList(object):
         with self.lock:
             try:
                 my_db = db.DBConnection('cache.db')
-                if my_db.hasTable('provider_fails'):
+                if my_db.has_table('provider_fails'):
                     # noinspection PyCallByClass,PyTypeChecker
                     time_limit = int(timestamp_near(datetime.datetime.now() - datetime.timedelta(days=28)))
                     my_db.action('DELETE FROM provider_fails WHERE fail_time < ?', [time_limit])
@@ -281,7 +281,7 @@ class GenericProvider(object):
     def _load_fail_values(self):
         if hasattr(sickgear, 'DATA_DIR'):
             my_db = db.DBConnection('cache.db')
-            if my_db.hasTable('provider_fails_count'):
+            if my_db.has_table('provider_fails_count'):
                 r = my_db.select('SELECT * FROM provider_fails_count WHERE prov_name = ?', [self.get_id()])
                 if r:
                     self._failure_count = helpers.try_int(r[0]['failure_count'], 0)
@@ -302,7 +302,7 @@ class GenericProvider(object):
 
     def _save_fail_value(self, field, value):
         my_db = db.DBConnection('cache.db')
-        if my_db.hasTable('provider_fails_count'):
+        if my_db.has_table('provider_fails_count'):
             r = my_db.action('UPDATE provider_fails_count SET %s = ? WHERE prov_name = ?' % field,
                              [value, self.get_id()])
             if 0 == r.rowcount:

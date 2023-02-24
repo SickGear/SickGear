@@ -1539,19 +1539,19 @@ def init_stage_2():
 
     # initialize main database
     my_db = db.DBConnection()
-    db.MigrationCode(my_db)
+    db.migration_code(my_db)
 
     # initialize the cache database
     my_db = db.DBConnection('cache.db')
-    db.upgradeDatabase(my_db, cache_db.InitialSchema)
+    db.upgrade_database(my_db, cache_db.InitialSchema)
 
     # initialize the failed downloads database
     my_db = db.DBConnection('failed.db')
-    db.upgradeDatabase(my_db, failed_db.InitialSchema)
+    db.upgrade_database(my_db, failed_db.InitialSchema)
 
     # fix up any db problems
     my_db = db.DBConnection()
-    db.sanityCheckDatabase(my_db, mainDB.MainSanityCheck)
+    db.sanity_check_db(my_db, mainDB.MainSanityCheck)
 
     # initialize metadata_providers
     metadata_provider_dict = metadata.get_metadata_generator_dict()

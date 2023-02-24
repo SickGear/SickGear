@@ -195,16 +195,16 @@ def setup_test_db():
     """upgrades the db to the latest version
     """
     # upgrading the db
-    db.MigrationCode(db.DBConnection())
+    db.migration_code(db.DBConnection())
 
     # fix up any db problems
-    db.sanityCheckDatabase(db.DBConnection(), mainDB.MainSanityCheck)
+    db.sanity_check_db(db.DBConnection(), mainDB.MainSanityCheck)
 
     # and for cachedb too
-    db.upgradeDatabase(db.DBConnection('cache.db'), cache_db.InitialSchema)
+    db.upgrade_database(db.DBConnection('cache.db'), cache_db.InitialSchema)
 
     # and for faileddb too
-    db.upgradeDatabase(db.DBConnection('failed.db'), failed_db.InitialSchema)
+    db.upgrade_database(db.DBConnection('failed.db'), failed_db.InitialSchema)
 
 
 def teardown_test_db():

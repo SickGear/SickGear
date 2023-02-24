@@ -428,7 +428,7 @@ class SickGear(object):
             ('sickbeard.db', sickgear.mainDB.MIN_DB_VERSION, sickgear.mainDB.MAX_DB_VERSION,
              sickgear.mainDB.TEST_BASE_VERSION, 'MainDb')
         ]:
-            cur_db_version = db.DBConnection(d).checkDBVersion()
+            cur_db_version = db.DBConnection(d).check_db_version()
 
             # handling of standalone TEST db versions
             load_msg = 'Downgrading %s to production version' % d
@@ -437,7 +437,7 @@ class SickGear(object):
                 print('Your [%s] database version (%s) is a test db version and doesn\'t match SickGear required '
                       'version (%s), downgrading to production db' % (d, cur_db_version, max_v))
                 self.execute_rollback(mo, max_v, load_msg)
-                cur_db_version = db.DBConnection(d).checkDBVersion()
+                cur_db_version = db.DBConnection(d).check_db_version()
                 if 100000 <= cur_db_version:
                     print(u'Rollback to production failed.')
                     sys.exit(u'If you have used other forks, your database may be unusable due to their changes')
@@ -452,7 +452,7 @@ class SickGear(object):
                 print('Your [%s] database version (%s) is a db version and doesn\'t match SickGear required '
                       'version (%s), downgrading to production base db' % (d, cur_db_version, max_v))
                 self.execute_rollback(mo, base_v, load_msg)
-                cur_db_version = db.DBConnection(d).checkDBVersion()
+                cur_db_version = db.DBConnection(d).check_db_version()
                 if 100000 <= cur_db_version:
                     print(u'Rollback to production base failed.')
                     sys.exit(u'If you have used other forks, your database may be unusable due to their changes')
@@ -474,7 +474,7 @@ class SickGear(object):
                           u' what this version of SickGear supports. Trying to rollback now. Please wait...' %
                           (d, cur_db_version))
                     self.execute_rollback(mo, max_v, load_msg)
-                    if db.DBConnection(d).checkDBVersion() > max_v:
+                    if db.DBConnection(d).check_db_version() > max_v:
                         print(u'Rollback failed.')
                         sys.exit(u'If you have used other forks, your database may be unusable due to their changes')
                     print(u'Rollback of [%s] successful.' % d)
