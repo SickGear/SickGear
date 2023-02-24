@@ -109,7 +109,7 @@ class TVEpisodeSample(tv.TVEpisode):
         self.scene_absolute_number = absolute_number  # type: int
         self._airdate = datetime.date(2010, 3, 9)  # type: datetime.date
         self.show_obj = TVShowSample()  # type: TVShowSample
-        self._status = Quality.compositeStatus(common.DOWNLOADED, common.Quality.SDTV)  # type: int
+        self._status = Quality.composite_status(common.DOWNLOADED, common.Quality.SDTV)  # type: int
         self._release_name = 'Show.Name.S02E03.HDTV.XviD-RLSGROUP'  # type: AnyStr
         self._is_proper = True  # type: bool
         self._version = 2  # type: int
@@ -196,7 +196,7 @@ def check_valid_abd_naming(pattern=None):
 
 def check_valid_sports_naming(pattern=None):
     """
-    Checks if the name is can be parsed back to its original form for an sports format.
+    Checks if the name is can be parsed back to its original form for a sports format.
 
     Returns true if the naming is valid, false if not.
     :param pattern: String Naming Pattern
@@ -294,7 +294,7 @@ def generate_sample_ep(multi=None, abd=False, sports=False, anime=False, anime_t
     # make a fake episode object
     sample_ep_obj = TVEpisodeSample(2, 3, 3, 'Ep Name')
 
-    sample_ep_obj._status = Quality.compositeStatus(DOWNLOADED, Quality.HDTV)
+    sample_ep_obj._status = Quality.composite_status(DOWNLOADED, Quality.HDTV)
     sample_ep_obj._airdate = datetime.date(2011, 3, 9)
 
     if abd:
@@ -313,14 +313,14 @@ def generate_sample_ep(multi=None, abd=False, sports=False, anime=False, anime_t
     if None is not multi:
         sample_ep_obj._name = 'Ep Name (1)'
         second_ep = TVEpisodeSample(2, 4, 4, 'Ep Name (2)')
-        second_ep._status = Quality.compositeStatus(DOWNLOADED, Quality.HDTV)
+        second_ep._status = Quality.composite_status(DOWNLOADED, Quality.HDTV)
         normal_naming = not anime or 3 == anime_type
         release_name = sample_ep_obj._release_name = second_ep._release_name = \
             ('Show.Name.003-004.HDTV.XviD-RLSGROUP', 'Show.Name.S02E03E04E05.HDTV.XviD-RLSGROUP')[normal_naming]
         sample_ep_obj.related_ep_obj.append(second_ep)
         if normal_naming:
             third_ep = TVEpisodeSample(2, 5, 5, 'Ep Name (3)')
-            third_ep._status = Quality.compositeStatus(DOWNLOADED, Quality.HDTV)
+            third_ep._status = Quality.composite_status(DOWNLOADED, Quality.HDTV)
             third_ep._release_name = release_name
             sample_ep_obj.related_ep_obj.append(third_ep)
         else:

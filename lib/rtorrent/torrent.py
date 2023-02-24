@@ -25,8 +25,6 @@ from .peer import Peer, methods as peer_methods
 from .rpc import Method
 from .tracker import Tracker, methods as tracker_methods
 
-from _23 import filter_iter, filter_list
-
 
 class Torrent(object):
     """Represents an individual torrent within a L{RTorrent} instance."""
@@ -70,7 +68,7 @@ class Torrent(object):
         @note: also assigns return value to self.peers
         """
         self.peers = []
-        retriever_methods = filter_list(lambda m: m.is_retriever() and m.is_available(self._rt_obj), peer_methods)
+        retriever_methods = list(filter(lambda m: m.is_retriever() and m.is_available(self._rt_obj), peer_methods))
         mc = rpc.Multicall(self)
 
         # need to leave 2nd arg empty (dunno why)
@@ -97,7 +95,7 @@ class Torrent(object):
         @note: also assigns return value to self.trackers
         """
         self.trackers = []
-        retriever_methods = filter_list(lambda m: m.is_retriever() and m.is_available(self._rt_obj), tracker_methods)
+        retriever_methods = list(filter(lambda m: m.is_retriever() and m.is_available(self._rt_obj), tracker_methods))
         mc = rpc.Multicall(self)
 
         # need to leave 2nd arg empty (dunno why)
@@ -125,7 +123,7 @@ class Torrent(object):
         """
 
         self.files = []
-        retriever_methods = filter_list(lambda m: m.is_retriever() and m.is_available(self._rt_obj), file_methods)
+        retriever_methods = list(filter(lambda m: m.is_retriever() and m.is_available(self._rt_obj), file_methods))
         mc = rpc.Multicall(self)
 
         # 2nd arg can be anything, but it'll return all files in torrent
@@ -155,7 +153,7 @@ class Torrent(object):
     def _get_method(self, *choices):
 
         try:
-            return next(filter_iter(lambda method: self._rt_obj.method_exists(method), choices))
+            return next(filter(lambda method: self._rt_obj.method_exists(method), choices))
         except (BaseException, Exception):
             pass
 
@@ -276,7 +274,7 @@ class Torrent(object):
         """
         mc = rpc.Multicall(self)
 
-        for method in filter_iter(lambda m: m.is_retriever() and m.is_available(self._rt_obj), methods):
+        for method in filter(lambda m: m.is_retriever() and m.is_available(self._rt_obj), methods):
             mc.add(method, self.rpc_id)
 
         mc.call()

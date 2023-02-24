@@ -1,5 +1,5 @@
 import os
-from sys import exc_info, platform
+from sys import exc_info
 import threading
 
 from tornado.ioloop import IOLoop
@@ -8,13 +8,8 @@ from tornado.routing import AnyMatches, Rule
 from tornado.web import Application, _ApplicationRouter
 
 from . import logger, webapi, webserve
-from ._legacy import LegacyConfigPostProcessing, LegacyHomeAddShows, \
-    LegacyManageManageSearches, LegacyManageShowProcesses, LegacyErrorLogs
 from .helpers import create_https_certificates, re_valid_hostname
 import sickgear
-
-from _23 import PY38
-from six import PY2
 
 # noinspection PyUnreachableCode
 if False:
@@ -219,22 +214,6 @@ class WebServer(threading.Thread):
             (r'%s/api/builder(/?)(.*)' % self.options['web_root'], webserve.ApiBuilder),
             (r'%s/api(/?.*)' % self.options['web_root'], webapi.Api),
             # ----------------------------------------------------------------------------------------------------------
-            # legacy deprecated Aug 2019
-            (r'%s/home/addShows/?$' % self.options['web_root'], LegacyHomeAddShows),
-            (r'%s/manage/manageSearches/?$' % self.options['web_root'], LegacyManageManageSearches),
-            (r'%s/manage/showProcesses/?$' % self.options['web_root'], LegacyManageShowProcesses),
-            (r'%s/config/postProcessing/?$' % self.options['web_root'], LegacyConfigPostProcessing),
-            (r'%s/errorlogs/?$' % self.options['web_root'], LegacyErrorLogs),
-            (r'%s/home/is_alive(/?.*)' % self.options['web_root'], webserve.IsAliveHandler),
-            (r'%s/home/addShows(/?.*)' % self.options['web_root'], webserve.AddShows),
-            (r'%s/manage/manageSearches(/?.*)' % self.options['web_root'], webserve.ManageSearch),
-            (r'%s/manage/showProcesses(/?.*)' % self.options['web_root'], webserve.ShowTasks),
-            (r'%s/config/postProcessing(/?.*)' % self.options['web_root'], webserve.ConfigMediaProcess),
-            (r'%s/errorlogs(/?.*)' % self.options['web_root'], webserve.EventLogs),
-            # ----------------------------------------------------------------------------------------------------------
-            # legacy deprecated Aug 2019 - never remove as used in external scripts
-            (r'%s/home/postprocess(/?.*)' % self.options['web_root'], webserve.HomeProcessMedia),
-            (r'%s(/?update_watched_state_kodi/?)' % self.options['web_root'], webserve.NoXSRFHandler),
             # regular catchall routes - keep here at the bottom
             (r'%s/home(/?.*)' % self.options['web_root'], webserve.Home),
             (r'%s/manage/(/?.*)' % self.options['web_root'], webserve.Manage),
@@ -255,14 +234,10 @@ class WebServer(threading.Thread):
         logger.log(u'Starting SickGear on %s://%s:%s/' % (protocol, self.options['host'],  self.options['port']))
 
         # python 3 needs to start event loop first
-        if not PY2:
-            import asyncio
-            if 'win32' == platform and PY38:
-                # noinspection PyUnresolvedReferences
-                asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
-            asyncio.set_event_loop(asyncio.new_event_loop())
-            from tornado.platform.asyncio import AnyThreadEventLoopPolicy
-            asyncio.set_event_loop_policy(AnyThreadEventLoopPolicy())
+        import asyncio
+        asyncio.set_event_loop(asyncio.new_event_loop())
+        from tornado.platform.asyncio import AnyThreadEventLoopPolicy
+        asyncio.set_event_loop_policy(AnyThreadEventLoopPolicy())
 
         try:
             self.server = self.app.listen(self.options['port'], self.options['host'], ssl_options=ssl_options,

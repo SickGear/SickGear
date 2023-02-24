@@ -263,8 +263,8 @@ class SBRotatingLogHandler(object):
                 buf = fh.read(min(remaining_size, buf_size))
                 remaining_size -= buf_size
                 lines = buf.split('\n')
-                # the first line of the buffer is probably not a complete line so
-                # we'll save it and append it to the last line of the next buffer
+                # the first line of the buffer is probably not a complete line,
+                # so save it and append it to the last line of the next buffer
                 # we read
                 if None is not segment:
                     # if the previous chunk starts right from the beginning of line

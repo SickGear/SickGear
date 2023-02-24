@@ -13,7 +13,6 @@
 #from sickgear.sgdatetime import *
 <% def sg_var(varname, default=False): return getattr(sickgear, varname, default) %>#slurp#
 <% def sg_str(varname, default=''): return getattr(sickgear, varname, default) %>#slurp#
-#from _23 import list_keys
 ##
 #set global $title  = 'Config - General'
 #set global $header = 'General Settings'
@@ -846,7 +845,7 @@
 								<span class="component-title">File logging level:</span>
 								<span class="component-desc">
 									<select id="file_logging_presets" name="file_logging_preset" class="form-control input-sm">
-#set $levels = $list_keys(file_logging_presets)
+#set $levels = $list(file_logging_presets)
 #set void = $levels.sort(key=lambda x: $file_logging_presets[$x])
 #set $level_count = len($levels)
 #for $level in $levels

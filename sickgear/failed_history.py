@@ -25,7 +25,6 @@ from .history import dateFormat
 from exceptions_helper import EpisodeNotFoundException, ex
 
 from _23 import unquote
-from six import PY2, text_type
 
 # noinspection PyUnresolvedReferences
 # noinspection PyUnreachableCode
@@ -82,10 +81,6 @@ def prepare_failed_name(release):
         fixed = fixed.rpartition('.')[0]
 
     fixed = re.sub(r'[.\-+ ]', '_', fixed)
-
-    # noinspection PyUnresolvedReferences
-    if PY2 and not isinstance(fixed, unicode):
-        fixed = text_type(fixed, 'utf-8', 'replace')
 
     return fixed
 
@@ -165,8 +160,8 @@ def set_episode_failed(ep_obj):
     """
     try:
         with ep_obj.lock:
-            quality = Quality.splitCompositeStatus(ep_obj.status)[1]
-            ep_obj.status = Quality.compositeStatus(FAILED, quality)
+            quality = Quality.split_composite_status(ep_obj.status)[1]
+            ep_obj.status = Quality.composite_status(FAILED, quality)
             ep_obj.save_to_db()
 
     except EpisodeNotFoundException as e:
@@ -236,7 +231,7 @@ def revert_episode(ep_obj):
             if ep_obj.episode in history_eps:
                 status_revert = history_eps[ep_obj.episode]['old_status']
 
-                status, quality = Quality.splitCompositeStatus(status_revert)
+                status, quality = Quality.split_composite_status(status_revert)
                 logger.log('Found in failed.db history with status: %s quality: %s' % (
                     statusStrings[status], Quality.qualityStrings[quality]))
             else:

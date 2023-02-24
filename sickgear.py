@@ -43,7 +43,8 @@ versions = [((3, 7, 1), (3, 8, 16)),
             ((3, 9, 0), (3, 9, 2)), ((3, 9, 4), (3, 9, 16)),
             ((3, 10, 0), (3, 11, 2))]  # inclusive version ranges
 if not any(list(map(lambda v: v[0] <= sys.version_info[:3] <= v[1], versions))) and not int(os.environ.get('PYT', 0)):
-    print('Python %s.%s.%s detected.' % sys.version_info[:3])
+    major, minor, micro = sys.version_info[:3]
+    print('Python %s.%s.%s detected.' % (major, minor, micro))
     print('Sorry, SickGear requires a Python version %s' % ', '.join(map(
         lambda r: '%s - %s' % tuple(map(lambda v: str(v).replace(',', '.')[1:-1], r)), versions)))
     sys.exit(1)
@@ -225,7 +226,7 @@ class SickGear(object):
             if o in ('-h', '--help'):
                 sys.exit(self.help_message())
 
-            # For now we'll just silence the logging
+            # For now, we'll just silence the logging
             if o in ('-q', '--quiet'):
                 self.console_logging = False
 
@@ -427,7 +428,7 @@ class SickGear(object):
             ('sickbeard.db', sickgear.mainDB.MIN_DB_VERSION, sickgear.mainDB.MAX_DB_VERSION,
              sickgear.mainDB.TEST_BASE_VERSION, 'MainDb')
         ]:
-            cur_db_version = db.DBConnection(d).checkDBVersion()
+            cur_db_version = db.DBConnection(d).check_db_version()
 
             # handling of standalone TEST db versions
             load_msg = 'Downgrading %s to production version' % d
@@ -436,7 +437,7 @@ class SickGear(object):
                 print('Your [%s] database version (%s) is a test db version and doesn\'t match SickGear required '
                       'version (%s), downgrading to production db' % (d, cur_db_version, max_v))
                 self.execute_rollback(mo, max_v, load_msg)
-                cur_db_version = db.DBConnection(d).checkDBVersion()
+                cur_db_version = db.DBConnection(d).check_db_version()
                 if 100000 <= cur_db_version:
                     print(u'Rollback to production failed.')
                     sys.exit(u'If you have used other forks, your database may be unusable due to their changes')
@@ -445,13 +446,13 @@ class SickGear(object):
                 print(u'Rollback to production of [%s] successful.' % d)
                 sickgear.classes.loading_msg.set_msg_progress(load_msg, 'Finished')
 
-            # handling of production version higher then current base of test db
+            # handling of production version higher than current base of test db
             if isinstance(base_v, integer_types) and max_v >= 100000 > cur_db_version > base_v:
                 sickgear.classes.loading_msg.set_msg_progress(load_msg, 'Rollback')
                 print('Your [%s] database version (%s) is a db version and doesn\'t match SickGear required '
                       'version (%s), downgrading to production base db' % (d, cur_db_version, max_v))
                 self.execute_rollback(mo, base_v, load_msg)
-                cur_db_version = db.DBConnection(d).checkDBVersion()
+                cur_db_version = db.DBConnection(d).check_db_version()
                 if 100000 <= cur_db_version:
                     print(u'Rollback to production base failed.')
                     sys.exit(u'If you have used other forks, your database may be unusable due to their changes')
@@ -473,7 +474,7 @@ class SickGear(object):
                           u' what this version of SickGear supports. Trying to rollback now. Please wait...' %
                           (d, cur_db_version))
                     self.execute_rollback(mo, max_v, load_msg)
-                    if db.DBConnection(d).checkDBVersion() > max_v:
+                    if db.DBConnection(d).check_db_version() > max_v:
                         print(u'Rollback failed.')
                         sys.exit(u'If you have used other forks, your database may be unusable due to their changes')
                     print(u'Rollback of [%s] successful.' % d)
@@ -553,7 +554,7 @@ class SickGear(object):
 
         # Build internal name cache
         sickgear.classes.loading_msg.message = 'Build name cache'
-        name_cache.buildNameCache()
+        name_cache.build_name_cache()
 
         # load all ids from xem
         sickgear.classes.loading_msg.message = 'Loading xem data'
@@ -816,7 +817,7 @@ class SickGear(object):
 
     @staticmethod
     def exit(code):
-        # noinspection PyProtectedMember
+        # noinspection PyProtectedMember,PyUnresolvedReferences
         os._exit(code)
 
 

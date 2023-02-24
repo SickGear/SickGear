@@ -25,7 +25,7 @@ from .. import logger
 from ..helpers import try_int
 from bs4_parser import BS4Parser
 
-from _23 import b64decodestring, unidecode
+from _23 import b64decodestring
 from six import iteritems
 
 
@@ -90,7 +90,6 @@ class ThePirateBayProvider(generic.TorrentProvider):
 
         for mode in search_params:
             for search_string in search_params[mode]:
-                search_string = unidecode(search_string)
 
                 if 'Cache' != mode:
                     search_url = self.urls['api'] % search_string

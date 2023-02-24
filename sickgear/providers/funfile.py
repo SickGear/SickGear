@@ -24,7 +24,6 @@ from .. import logger
 from ..helpers import try_int
 from bs4_parser import BS4Parser
 
-from _23 import unidecode
 from six import iteritems
 
 
@@ -64,7 +63,6 @@ class FunFileProvider(generic.TorrentProvider):
         for mode in search_params:
             rc['cats'] = re.compile('(?i)cat=(?:%s)' % self._categories_string(mode, template='', delimiter='|'))
             for search_string in search_params[mode]:
-                search_string = unidecode(search_string)
                 search_url = self.urls['search'] % (self._categories_string(mode), search_string)
 
                 html = self.get_url(search_url, timeout=self.url_timeout)

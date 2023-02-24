@@ -43,8 +43,9 @@ import requests
 import requests.exceptions
 import subliminal
 from lxml_etree import etree, is_lxml
+from base64 import decodebytes as b64decodebytes, encodebytes as b64encodebytes
 
-from _23 import b64decodebytes, b64encodebytes, decode_bytes, decode_str, filter_iter, scandir
+from _23 import decode_bytes, decode_str, scandir
 from six import iteritems, string_types, text_type
 # noinspection PyUnresolvedReferences
 from six.moves import zip
@@ -62,7 +63,7 @@ if False:
     from typing import Any, AnyStr, Dict, Generator, NoReturn, Iterable, Iterator, List, Optional, Set, Tuple, Union
     from .tv import TVShow
     # the following workaround hack resolves a pyc resolution bug
-    from .name_cache import retrieveNameFromCache
+    from .name_cache import retrieve_name_from_cache
     from six import integer_types
 
 RE_XML_ENCODING = re.compile(r'^(<\?xml[^>]+)\s+(encoding\s*=\s*[\"\'][^\"\']*[\"\'])(\s*\?>|)', re.U)
@@ -953,7 +954,7 @@ def get_show(name, try_scene_exceptions=False):
     show_obj = None
 
     try:
-        tvid, prodid = sickgear.name_cache.retrieveNameFromCache(name)
+        tvid, prodid = sickgear.name_cache.retrieve_name_from_cache(name)
         if tvid and prodid:
             show_obj = find_show_by_id({tvid: prodid})
 
@@ -1283,7 +1284,7 @@ def check_port(host, port, timeout=1.0):
 
 
 def clear_unused_providers():
-    providers = [x.cache.providerID for x in sickgear.providers.sortedProviderList() if x.is_active()]
+    providers = [x.cache.providerID for x in sickgear.providers.sorted_sources() if x.is_active()]
 
     if providers:
         my_db = db.DBConnection('cache.db')
@@ -1317,7 +1318,7 @@ def has_anime():
     :rtype: bool
     """
     # noinspection PyTypeChecker
-    return False if not sickgear.showList else any(filter_iter(lambda show: show.is_anime, sickgear.showList))
+    return False if not sickgear.showList else any(filter(lambda show: show.is_anime, sickgear.showList))
 
 
 def cpu_sleep():
@@ -1390,7 +1391,7 @@ def should_delete_episode(status):
     :return: should be deleted
     :rtype: bool
     """
-    s = Quality.splitCompositeStatus(status)[0]
+    s = Quality.split_composite_status(status)[0]
     if s not in SNATCHED_ANY + [DOWNLOADED, ARCHIVED, IGNORED]:
         return True
     logger.log('not safe to delete episode from db because of status: %s' % statusStrings[s], logger.DEBUG)
@@ -1514,7 +1515,7 @@ def get_overview(ep_status, show_quality, upgrade_once, split_snatch=False):
     :type split_snatch: bool
     :return: constant from classes Overview
     """
-    status, quality = Quality.splitCompositeStatus(ep_status)
+    status, quality = Quality.split_composite_status(ep_status)
     if ARCHIVED == status:
         return Overview.GOOD
     if WANTED == status:
@@ -1530,7 +1531,7 @@ def get_overview(ep_status, show_quality, upgrade_once, split_snatch=False):
         if not split_snatch and status in SNATCHED_ANY:
             return Overview.SNATCHED
 
-        void, best_qualities = Quality.splitQuality(show_quality)
+        void, best_qualities = Quality.split_quality(show_quality)
         # if re-downloads aren't wanted then mark it "good" if there is anything
         if not len(best_qualities):
             return Overview.GOOD
@@ -1682,7 +1683,7 @@ def upgrade_new_naming():
                                                        (d_entry.path, new_dir_name, repr(e), ex(e)), logger.WARNING)
                                         if os.path.isdir(new_dir_name):
                                             try:
-                                                f_n = filter_iter(lambda fn: fn.is_file(), scandir(new_dir_name))
+                                                f_n = filter(lambda fn: fn.is_file(), scandir(new_dir_name))
                                             except OSError as e:
                                                 logger.log('Unable to rename %s / %s' % (repr(e), ex(e)),
                                                            logger.WARNING)

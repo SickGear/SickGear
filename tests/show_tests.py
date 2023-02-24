@@ -31,7 +31,7 @@ from sickgear.tv import TVEpisode, TVShow
 wanted_tests = [
     dict(
         name='Start and End',
-        show=dict(indexer=1, indexerid=1, quality=Quality.combineQualities([Quality.SDTV], [])),
+        show=dict(indexer=1, indexerid=1, quality=Quality.combine_qualities([Quality.SDTV], [])),
         episodes=[
             dict(season=1, episode=1, status=SKIPPED, quality=Quality.NONE, airdate=datetime.date(2019, 1, 1)),
             dict(season=1, episode=2, status=SKIPPED, quality=Quality.NONE, airdate=datetime.date(2019, 1, 1)),
@@ -64,7 +64,7 @@ wanted_tests = [
 
     dict(
         name='Start and End, entire season',
-        show=dict(indexer=1, indexerid=10, quality=Quality.combineQualities([Quality.SDTV], [])),
+        show=dict(indexer=1, indexerid=10, quality=Quality.combine_qualities([Quality.SDTV], [])),
         episodes=[
             dict(season=1, episode=1, status=SKIPPED, quality=Quality.NONE, airdate=datetime.date(2019, 1, 2)),
             dict(season=1, episode=2, status=SKIPPED, quality=Quality.NONE, airdate=datetime.date(2019, 1, 1)),
@@ -97,7 +97,7 @@ wanted_tests = [
 
     dict(
         name='Start, entire season',
-        show=dict(indexer=1, indexerid=210, quality=Quality.combineQualities([Quality.SDTV], [])),
+        show=dict(indexer=1, indexerid=210, quality=Quality.combine_qualities([Quality.SDTV], [])),
         episodes=[
             dict(season=1, episode=1, status=SKIPPED, quality=Quality.NONE, airdate=datetime.date(2019, 1, 2)),
             dict(season=1, episode=2, status=SKIPPED, quality=Quality.NONE, airdate=datetime.date(2019, 1, 1)),
@@ -130,7 +130,7 @@ wanted_tests = [
 
     dict(
         name='End only',
-        show=dict(indexer=1, indexerid=2, quality=Quality.combineQualities([Quality.SDTV], [])),
+        show=dict(indexer=1, indexerid=2, quality=Quality.combine_qualities([Quality.SDTV], [])),
         episodes=[
             dict(season=1, episode=1, status=SKIPPED, quality=Quality.NONE, airdate=datetime.date(2019, 1, 3)),
             dict(season=1, episode=2, status=SKIPPED, quality=Quality.NONE, airdate=datetime.date(2019, 1, 1)),
@@ -163,7 +163,7 @@ wanted_tests = [
 
     dict(
         name='End only, entire season',
-        show=dict(indexer=1, indexerid=20, quality=Quality.combineQualities([Quality.SDTV], [])),
+        show=dict(indexer=1, indexerid=20, quality=Quality.combine_qualities([Quality.SDTV], [])),
         episodes=[
             dict(season=1, episode=1, status=SKIPPED, quality=Quality.NONE, airdate=datetime.date(2019, 1, 4)),
             dict(season=1, episode=2, status=SKIPPED, quality=Quality.NONE, airdate=datetime.date(2019, 1, 1)),
@@ -196,7 +196,7 @@ wanted_tests = [
 
     dict(
         name='End only, multi season',
-        show=dict(indexer=1, indexerid=3, quality=Quality.combineQualities([Quality.SDTV], [])),
+        show=dict(indexer=1, indexerid=3, quality=Quality.combine_qualities([Quality.SDTV], [])),
         episodes=[
             dict(season=1, episode=1, status=SKIPPED, quality=Quality.NONE, airdate=datetime.date(2019, 1, 5)),
             dict(season=1, episode=2, status=SKIPPED, quality=Quality.NONE, airdate=datetime.date(2019, 1, 1)),
@@ -229,7 +229,7 @@ wanted_tests = [
 
     dict(
         name='End only, multi season, entire season',
-        show=dict(indexer=1, indexerid=30, quality=Quality.combineQualities([Quality.SDTV], [])),
+        show=dict(indexer=1, indexerid=30, quality=Quality.combine_qualities([Quality.SDTV], [])),
         episodes=[
             dict(season=1, episode=1, status=SKIPPED, quality=Quality.NONE, airdate=datetime.date(2019, 1, 6)),
             dict(season=1, episode=2, status=SKIPPED, quality=Quality.NONE, airdate=datetime.date(2019, 1, 1)),
@@ -262,7 +262,7 @@ wanted_tests = [
 
     dict(
         name='End only, multi season, cross season',
-        show=dict(indexer=1, indexerid=33, quality=Quality.combineQualities([Quality.SDTV], [])),
+        show=dict(indexer=1, indexerid=33, quality=Quality.combine_qualities([Quality.SDTV], [])),
         episodes=[
             dict(season=1, episode=1, status=SKIPPED, quality=Quality.NONE, airdate=datetime.date(2019, 1, 7)),
             dict(season=1, episode=2, status=SKIPPED, quality=Quality.NONE, airdate=datetime.date(2019, 1, 1)),
@@ -295,7 +295,7 @@ wanted_tests = [
 
     dict(
         name='all episodes unaired',
-        show=dict(indexer=1, indexerid=35, quality=Quality.combineQualities([Quality.SDTV], [])),
+        show=dict(indexer=1, indexerid=35, quality=Quality.combine_qualities([Quality.SDTV], [])),
         episodes=[
             dict(season=1, episode=1, status=UNAIRED, quality=Quality.NONE, airdate=datetime.date.fromordinal(1)),
             dict(season=1, episode=2, status=UNAIRED, quality=Quality.NONE, airdate=datetime.date.fromordinal(1)),
@@ -317,7 +317,7 @@ wanted_tests = [
 
     dict(
         name='no episodes',
-        show=dict(indexer=1, indexerid=36, quality=Quality.combineQualities([Quality.SDTV], [])),
+        show=dict(indexer=1, indexerid=36, quality=Quality.combine_qualities([Quality.SDTV], [])),
         episodes=[
         ],
         start_wanted=7, end_wanted=3,
@@ -332,7 +332,7 @@ wanted_tests = [
 
     dict(
         name='no episodes, whole first season',
-        show=dict(indexer=1, indexerid=37, quality=Quality.combineQualities([Quality.SDTV], [])),
+        show=dict(indexer=1, indexerid=37, quality=Quality.combine_qualities([Quality.SDTV], [])),
         episodes=[
         ],
         start_wanted=-1, end_wanted=0,
@@ -347,7 +347,7 @@ wanted_tests = [
 
     dict(
         name='no episodes, whole last season',
-        show=dict(indexer=1, indexerid=38, quality=Quality.combineQualities([Quality.SDTV], [])),
+        show=dict(indexer=1, indexerid=38, quality=Quality.combine_qualities([Quality.SDTV], [])),
         episodes=[
         ],
         start_wanted=0, end_wanted=-1,
@@ -362,7 +362,7 @@ wanted_tests = [
 
     dict(
         name='no episodes, whole first and last season',
-        show=dict(indexer=1, indexerid=39, quality=Quality.combineQualities([Quality.SDTV], [])),
+        show=dict(indexer=1, indexerid=39, quality=Quality.combine_qualities([Quality.SDTV], [])),
         episodes=[
         ],
         start_wanted=-1, end_wanted=-1,
@@ -408,7 +408,7 @@ class ShowAddTests(test.SickbeardTestDBCase):
                     show_obj.sxe_ep_obj[ep['season']] = {}
                 show_obj.sxe_ep_obj[ep['season']][ep['episode']] = TVEpisode(show_obj, ep['season'], ep['episode'])
                 episode = show_obj.sxe_ep_obj[ep['season']][ep['episode']]
-                episode.status = Quality.compositeStatus(ep['status'], ep['quality'])
+                episode.status = Quality.composite_status(ep['status'], ep['quality'])
                 episode.airdate = ep['airdate']
                 episode.name = 'nothing'
                 episode.epid = ep_id

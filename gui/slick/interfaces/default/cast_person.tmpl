@@ -182,7 +182,11 @@ def param(visible=True, rid=None, cache_person=None, cache_char=None, person=Non
 #end if
 
 #set $section_links = False
+#set $all_sources = $TVInfoAPI().all_sources
 #for $cur_src, $cur_sid in sorted(iteritems($person.ids))
+	#if $cur_src not in $all_sources:
+		#continue
+	#end if
     #if $TVInfoAPI($cur_src).config.get('people_url')
         #if not $section_links
             #set $section_links = True

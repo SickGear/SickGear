@@ -39,8 +39,8 @@ from lib.tvinfo_base.exceptions import *
 from ..classes import OrderedDefaultdict
 
 from .._legacy_classes import LegacyParseResult
-from _23 import decode_str, list_keys, list_range
-from six import iteritems, iterkeys, itervalues, PY2, string_types, text_type
+from _23 import decode_str, list_range
+from six import iteritems, iterkeys, itervalues, string_types, text_type
 
 # noinspection PyUnreachableCode
 if False:
@@ -166,7 +166,7 @@ class NameParser(object):
                 result.which_regex = [cur_regex_name]
                 result.score = 0 - cur_regex_num
 
-                named_groups = list_keys(match.groupdict())
+                named_groups = list(match.groupdict())
 
                 if 'series_name' in named_groups:
                     result.series_name = match.group('series_name')
@@ -260,7 +260,7 @@ class NameParser(object):
                 if 'extra_info' in named_groups:
                     tmp_extra_info = match.group('extra_info')
 
-                    # Show.S04.Special or Show.S05.Part.2.Extras is almost certainly not every episode in the season
+                    # Show.S04.Special or Show.S05.Part.2.Extras are almost certainly not every episode in the season
                     if tmp_extra_info and 'season_only' == cur_regex_name and re.search(
                             r'([. _-]|^)(special|extra)s?\w*([. _-]|$)', tmp_extra_info, re.I):
                         continue
@@ -292,7 +292,7 @@ class NameParser(object):
                 matches.append(result)
 
             if len(matches):
-                # pick best match with highest score based on placement
+                # pick best match with the highest score based on placement
                 best_result = max(sorted(matches, reverse=True, key=lambda x: x.which_regex), key=lambda x: x.score)
 
                 show_obj = None
@@ -326,7 +326,7 @@ class NameParser(object):
 
                 # get quality
                 new_name = helpers.remove_non_release_groups(name, show_obj.is_anime)
-                best_result.quality = common.Quality.nameQuality(new_name, show_obj.is_anime)
+                best_result.quality = common.Quality.name_quality(new_name, show_obj.is_anime)
 
                 new_episode_numbers = []
                 new_season_numbers = []
@@ -451,7 +451,7 @@ class NameParser(object):
                                                'SickGear does not support this.  '
                                                'Sorry.' % (str(new_season_numbers)))
 
-                # I guess it's possible that we'd have duplicate episodes too, so lets
+                # I guess it's possible that we'd have duplicate episodes too, so let's
                 # eliminate them
                 new_episode_numbers = list(set(new_episode_numbers))
                 new_episode_numbers.sort()
@@ -500,23 +500,20 @@ class NameParser(object):
         if not second:
             return getattr(first, attr)
 
-        a = getattr(first, attr, [])
-        b = getattr(second, attr)
+        first_val = getattr(first, attr, [])
+        second_val = getattr(second, attr)
 
-        # if a is good use it
-        if None is not a or (isinstance(a, list) and len(a)):
-            return a
+        # if first_val is good use it
+        if None is not first_val or (isinstance(first_val, list) and len(first_val)):
+            return first_val
         # if not use b (if b isn't set it'll just be default)
-        return b
+        return second_val
 
     @staticmethod
-    def _unicodify(obj, encoding='utf-8'):
-        if PY2 and isinstance(obj, string_types):
-            if not isinstance(obj, text_type):
-                obj = text_type(obj, encoding, 'replace')
-        if not PY2 and isinstance(obj, text_type):
+    def _unicodify(obj, encoding='utf8'):
+        if isinstance(obj, text_type):
             try:
-                return obj.encode('latin1').decode('utf8')
+                return obj.encode('latin1').decode(encoding)
             except (BaseException, Exception):
                 pass
         return obj
@@ -751,9 +748,7 @@ class ParseResult(LegacyParseResult):
                      self.release_group, self.air_date, tuple(self.ab_episode_numbers)))
 
     def __str__(self):
-        if not PY2:
-            return self.__unicode__()
-        return self.__unicode__().encode('utf-8', errors='ignore')
+        return self.__unicode__()
 
     def __unicode__(self):
         if None is not self.series_name:

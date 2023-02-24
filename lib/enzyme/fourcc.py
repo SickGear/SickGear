@@ -21,7 +21,7 @@ import string
 import re
 import struct
 from six import string_types, integer_types
-from _23 import decode_str, list_items
+from _23 import decode_str
 
 __all__ = ['resolve']
 
@@ -845,7 +845,7 @@ FOURCC = {
 }
 
 # make it fool prove
-for code, value in list_items(FOURCC):
+for code, value in list(FOURCC.items()):
     if not code.upper() in FOURCC:
         FOURCC[code.upper()] = value
     if code.endswith(' '):

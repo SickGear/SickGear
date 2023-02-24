@@ -23,11 +23,11 @@ import sys
 import sickgear
 from dateutil import tz
 
-from six import integer_types, PY2, string_types
+from six import integer_types, string_types
 
 # noinspection PyUnreachableCode
 if False:
-    from typing import Callable, Optional, Union
+    from typing import Optional, Union
 
 date_presets = ('%Y-%m-%d',
                 '%a, %Y-%m-%d',
@@ -234,7 +234,7 @@ class SGDatetime(datetime.datetime):
         """
         convert datetime to filetime
         special handling for windows filetime issues
-        for pre Windows 7 this can result in an exception for pre 1970 dates
+        for pre Windows 7 this can result in an exception for pre-1970 dates
         """
         obj = (dt, self)[self is not None]  # type: datetime.datetime
         if is_win:
@@ -283,21 +283,15 @@ class SGDatetime(datetime.datetime):
             return (default, timestamp)[isinstance(timestamp, (float, integer_types))]
 
 
-if PY2:
-    """
-    Use `timestamp_near` for a timezone aware UTC timestamp in the near future or recent past.
-
-    Under py3, using the faster variable assigned cpython callable, so py2 is set up to mimic the signature types.
-    Note: the py3 callable is limited to datetime.datetime and does not work with datetime.date.
-    """
-    def _py2timestamp(dt=None):
+# noinspection PyUnreachableCode
+if False:
+    # just to trick pycharm in correct type detection
+    # noinspection PyUnusedLocal
+    def timestamp_near(d_t):
         # type: (datetime.datetime) -> float
-        try:
-            import time
-            return int(time.mktime(dt.timetuple()))
-        except (BaseException, Exception):
-            return 0
-    timestamp_near = _py2timestamp  # type: Callable[[datetime.datetime], float]
-else:
-    # py3 native timestamp uses milliseconds
-    timestamp_near = datetime.datetime.timestamp  # type: Callable[[datetime.datetime], float]
+        pass
+
+
+# py3 native timestamp uses milliseconds
+# noinspection PyRedeclaration
+timestamp_near = datetime.datetime.timestamp

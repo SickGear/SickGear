@@ -35,7 +35,6 @@ from sg_helpers import cmdline_runner, get_url
 # noinspection PyUnresolvedReferences
 from six.moves import urllib
 from six import string_types
-from _23 import list_keys
 
 # noinspection PyUnreachableCode
 if False:
@@ -83,7 +82,7 @@ class PackagesUpdater(object):
                 ui.notifications.message(msg)
             return False
 
-        logger.log('Update(s) for %s found %s' % (self.install_type, list_keys(sickgear.UPDATES_TODO)))
+        logger.log('Update(s) for %s found %s' % (self.install_type, list(sickgear.UPDATES_TODO)))
 
         # save updates_todo to config to be loaded after restart
         sickgear.save_config()

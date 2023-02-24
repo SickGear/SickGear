@@ -25,7 +25,7 @@ from ..helpers import try_int
 from bs4_parser import BS4Parser
 from requests.cookies import cookiejar_from_dict
 
-from _23 import filter_list, quote, unquote
+from _23 import quote, unquote
 from six import string_types, iteritems
 
 
@@ -63,12 +63,12 @@ class SpeedCDProvider(generic.TorrentProvider):
             self.session.cookies.clear()
             json = self.get_url(self.urls['login_1'], skip_auth=True,
                                 post_data={'username': self.username}, parse_json=True)
-            resp = filter_list(lambda l: isinstance(l, list), json.get('Fs', []))
+            resp = list(filter(lambda l: isinstance(l, list), json.get('Fs', [])))
 
             def get_html(_resp):
                 for cur_item in _resp:
                     if isinstance(cur_item, list):
-                        _html = filter_list(lambda s: isinstance(s, string_types) and 'password' in s, cur_item)
+                        _html = list(filter(lambda s: isinstance(s, string_types) and 'password' in s, cur_item))
                         if not _html:
                             _html = get_html(cur_item)
                         if _html:
@@ -128,13 +128,13 @@ class SpeedCDProvider(generic.TorrentProvider):
 
                 cnt = len(items[mode])
                 try:
-                    html = filter_list(lambda l: isinstance(l, list), data_json.get('Fs', []))
+                    html = list(filter(lambda l: isinstance(l, list), data_json.get('Fs', [])))
                     while html:
                         if html and all(isinstance(x, string_types) for x in html):
                             str_lengths = [len(x) for x in html]
                             html = html[str_lengths.index(max(str_lengths))]
                             break
-                        html = filter_list(lambda l: isinstance(l, list), html)
+                        html = list(filter(lambda l: isinstance(l, list), html))
                         if html and 0 < len(html):
                             html = html[0]
 

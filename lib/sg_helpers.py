@@ -35,8 +35,8 @@ from send2trash import send2trash
 from encodingKludge import SYS_ENCODING
 import requests
 
-from _23 import decode_bytes, filter_list, html_unescape, list_range, \
-    ordered_dict, Popen, scandir, urlparse, urlsplit, urlunparse
+from _23 import decode_bytes, html_unescape, list_range, \
+    Popen, scandir, urlparse, urlsplit, urlunparse
 from six import integer_types, iteritems, iterkeys, itervalues, moves, PY2, string_types, text_type
 
 import zipfile
@@ -159,7 +159,7 @@ class ConnectionFailDict(object):
         if None is not db:
             with self.lock:
                 my_db = db.DBConnection('cache.db')
-                if my_db.hasTable('connection_fails'):
+                if my_db.has_table('connection_fails'):
                     domains = my_db.select('SELECT DISTINCT domain_url from connection_fails')
                     for domain in domains:
                         self.domain_list[domain['domain_url']] = ConnectionFailList(domain['domain_url'])
@@ -515,7 +515,7 @@ class ConnectionFailList(object):
     def _load_fail_values(self):
         if None is not DATA_DIR:
             my_db = db.DBConnection('cache.db')
-            if my_db.hasTable('connection_fails_count'):
+            if my_db.has_table('connection_fails_count'):
                 r = my_db.select('SELECT * FROM connection_fails_count WHERE domain_url = ?', [self.url])
                 if r:
                     self._failure_count = try_int(r[0]['failure_count'], 0)
@@ -536,7 +536,7 @@ class ConnectionFailList(object):
 
     def _save_fail_value(self, field, value):
         my_db = db.DBConnection('cache.db')
-        if my_db.hasTable('connection_fails_count'):
+        if my_db.has_table('connection_fails_count'):
             r = my_db.action('UPDATE connection_fails_count SET %s = ? WHERE domain_url = ?' % field,
                              [value, self.url])
             if 0 == r.rowcount:
@@ -568,7 +568,7 @@ class ConnectionFailList(object):
             with self.lock:
                 try:
                     my_db = db.DBConnection('cache.db')
-                    if my_db.hasTable('connection_fails'):
+                    if my_db.has_table('connection_fails'):
                         results = my_db.select('SELECT * FROM connection_fails WHERE domain_url = ?', [self.url])
                         self._fails = []
                         for r in results:
@@ -586,7 +586,7 @@ class ConnectionFailList(object):
             with self.lock:
                 try:
                     my_db = db.DBConnection('cache.db')
-                    if my_db.hasTable('connection_fails'):
+                    if my_db.has_table('connection_fails'):
                         # noinspection PyCallByClass,PyTypeChecker
                         time_limit = _totimestamp(datetime.datetime.now() - datetime.timedelta(days=28))
                         my_db.action('DELETE FROM connection_fails WHERE fail_time < ?', [time_limit])
@@ -683,8 +683,9 @@ def get_system_temp_dir():
 
 def proxy_setting(setting, request_url, force=False):
     """
-    Returns a list of a) proxy_setting address value or a PAC is fetched and parsed if proxy_setting
-    starts with "PAC:" (case-insensitive) and b) True/False if "PAC" is found in the proxy_setting.
+    Returns a list of
+    a) proxy_setting address value or a PAC is fetched and parsed if proxy_setting starts with "PAC:" (case-insensitive)
+    b) True/False if "PAC" is found in the proxy_setting.
 
     The PAC data parser is crude, javascript is not eval'd. The first "PROXY URL" found is extracted with a list
     of "url_a_part.url_remaining", "url_b_part.url_remaining", "url_n_part.url_remaining" and so on.
@@ -720,7 +721,7 @@ def proxy_setting(setting, request_url, force=False):
     request_url_match = False
     parsed_url = urlparse(request_url)
     netloc = parsed_url.netloc
-    for pac_data in re.finditer(r"""(?:[^'"]*['"])([^.]+\.[^'"]*)(?:['"])""", resp, re.I):
+    for pac_data in re.finditer(r"""[^'"]*['"]([^.]+\.[^'"]*)['"]""", resp, re.I):
         data = re.search(r"""PROXY\s+([^'"]+)""", pac_data.group(1), re.I)
         if data:
             if force:
@@ -810,8 +811,8 @@ def get_url(url,  # type: AnyStr
     response_attr = ('text', 'content')[as_binary]
 
     # selectively mute some errors
-    mute = filter_list(lambda x: kwargs.pop(x, False), [
-        'mute_connect_err', 'mute_read_timeout', 'mute_connect_timeout', 'mute_http_error'])
+    mute = list(filter(lambda x: kwargs.pop(x, False), [
+        'mute_connect_err', 'mute_read_timeout', 'mute_connect_timeout', 'mute_http_error']))
 
     # reuse or instantiate request session
     resp_sess = kwargs.pop('resp_sess', None)
@@ -1570,8 +1571,6 @@ def int_to_time(d_int):
     """
     convert integer from dt_to_int back to datetime.time
 
-    :param d_int: integer
-    :return: datetime.time
     """
     if None is d_int:
         return None
@@ -1610,19 +1609,19 @@ def ast_eval(value, default=None):
     """Convert string typed value into actual Python type and value
 
     :param value: string value to convert
-    :param default: value to return if cannot convert
+    :param default: value to return if it cannot convert
     :return: converted type and value or default
     """
     if not isinstance(value, string_types):
         return default
 
     if 'OrderedDict()' == value:
-        value = ordered_dict()
+        value = dict()
 
     elif 'OrderedDict([(' == value[0:14]:
         try:
             list_of_tuples = ast.literal_eval(value[12:-1])
-            value = ordered_dict()
+            value = dict()
             for cur_tuple in list_of_tuples:
                 value[cur_tuple[0]] = cur_tuple[1]
         except (BaseException, Exception):
@@ -1667,8 +1666,8 @@ def calc_age(birthday, deathday=None, date=None):
     # type: (datetime.date, datetime.date, Optional[datetime.date]) -> Optional[int]
     """
     returns age based on current date or given date
-    :param birthday: birth date
-    :param deathday: death date
+    :param birthday: birthdate
+    :param deathday: deathdate
     :param date:
     """
     if isinstance(birthday, datetime.date):
@@ -1677,7 +1676,7 @@ def calc_age(birthday, deathday=None, date=None):
         try:
             b_d = birthday.replace(year=today.year)
 
-        # raised when birth date is February 29
+        # raised when birthdate is February 29
         # and the current year is not a leap year
         except ValueError:
             b_d = birthday.replace(year=today.year, month=birthday.month + 1, day=1)

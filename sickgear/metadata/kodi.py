@@ -29,7 +29,7 @@ import exceptions_helper
 from exceptions_helper import ex
 from lxml_etree import etree
 
-from _23 import decode_str, map_iter
+from _23 import decode_str
 from six import string_types
 
 # noinspection PyUnreachableCode
@@ -107,7 +107,7 @@ class KODIMetadata(generic.GenericMetadata):
         show_obj: a TVShow instance to create the NFO for
         """
 
-        show_ID = show_obj.prodid
+        show_id = show_obj.prodid
 
         show_lang = show_obj.lang
         tvinfo_config = sickgear.TVInfoAPI(show_obj.tvid).api_params.copy()
@@ -125,9 +125,9 @@ class KODIMetadata(generic.GenericMetadata):
         tv_node = etree.Element('tvshow')
 
         try:
-            show_info = t[int(show_ID)]
+            show_info = t[int(show_id)]
         except BaseTVinfoShownotfound as e:
-            logger.log('Unable to find show with id %s on %s, skipping it' % (show_ID, sickgear.TVInfoAPI(
+            logger.log('Unable to find show with id %s on %s, skipping it' % (show_id, sickgear.TVInfoAPI(
                 show_obj.tvid).name), logger.ERROR)
             raise e
         except BaseTVinfoError as e:
@@ -141,7 +141,7 @@ class KODIMetadata(generic.GenericMetadata):
 
         # check for title and id
         if None is getattr(show_info, 'seriesname', None) or None is getattr(show_info, 'id', None):
-            logger.log('Incomplete info for show with id %s on %s, skipping it' % (show_ID, sickgear.TVInfoAPI(
+            logger.log('Incomplete info for show with id %s on %s, skipping it' % (show_id, sickgear.TVInfoAPI(
                 show_obj.tvid).name), logger.ERROR)
             return False
 
@@ -157,7 +157,7 @@ class KODIMetadata(generic.GenericMetadata):
 
         has_id = False
         tvdb_id = None
-        for tvid, slug in map_iter(
+        for tvid, slug in map(
                 lambda _tvid: (_tvid, sickgear.TVInfoAPI(_tvid).config.get('kodi_slug')),
                 list(sickgear.TVInfoAPI().all_sources)):
             mid = slug and show_obj.ids[tvid].get('id')
@@ -171,7 +171,7 @@ class KODIMetadata(generic.GenericMetadata):
                 uniqueid = etree.SubElement(tv_node, 'uniqueid', **kwargs)
                 uniqueid.text = '%s%s' % (('', 'tt')[TVINFO_IMDB == tvid], mid)
         if not has_id:
-            logger.log('Incomplete info for show with id %s on %s, skipping it' % (show_ID, sickgear.TVInfoAPI(
+            logger.log('Incomplete info for show with id %s on %s, skipping it' % (show_id, sickgear.TVInfoAPI(
                 show_obj.tvid).name), logger.ERROR)
             return False
 

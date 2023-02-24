@@ -25,8 +25,6 @@ from . import emby, kodi, plex, xbmc, \
 
 import sickgear
 
-from _23 import filter_iter, list_values
-
 
 class NotifierFactory(object):
 
@@ -68,32 +66,27 @@ class NotifierFactory(object):
         :return: ID String
         :rtype: String
         """
-        for n in filter_iter(lambda v: v.is_enabled(),
-                             list_values(self.notifiers)):
+        for n in filter(lambda v: v.is_enabled(), list(self.notifiers.values())):
             yield n.id()
 
     @property
     def enabled_onsnatch(self):
-        for n in filter_iter(lambda v: v.is_enabled() and v.is_enabled_onsnatch(),
-                             list_values(self.notifiers)):
+        for n in filter(lambda v: v.is_enabled() and v.is_enabled_onsnatch(), list(self.notifiers.values())):
             yield n.id()
 
     @property
     def enabled_ondownload(self):
-        for n in filter_iter(lambda v: v.is_enabled() and v.is_enabled_ondownload(),
-                             list_values(self.notifiers)):
+        for n in filter(lambda v: v.is_enabled() and v.is_enabled_ondownload(), list(self.notifiers.values())):
             yield n.id()
 
     @property
     def enabled_onsubtitledownload(self):
-        for n in filter_iter(lambda v: v.is_enabled() and v.is_enabled_onsubtitledownload(),
-                             list_values(self.notifiers)):
+        for n in filter(lambda v: v.is_enabled() and v.is_enabled_onsubtitledownload(), list(self.notifiers.values())):
             yield n.id()
 
     @property
     def enabled_library(self):
-        for n in filter_iter(lambda v: v.is_enabled() and v.is_enabled_library(),
-                             list_values(self.notifiers)):
+        for n in filter(lambda v: v.is_enabled() and v.is_enabled_library(), list(self.notifiers.values())):
             yield n.id()
 
     def get(self, nid):

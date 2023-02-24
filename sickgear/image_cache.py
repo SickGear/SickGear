@@ -271,7 +271,7 @@ class ImageCache(object):
         """
         :param image_file: image file
         :type image_file: AnyStr
-        :return: true if a image_file exists
+        :return: true if an image_file exists
         :rtype: bool
         """
         result = []
@@ -652,7 +652,7 @@ class ImageCache(object):
                 if thumb_img_data:
                     thumb_result = metadata_generator.write_image(thumb_img_data, dest_thumb_path, force=True)
                 if not thumb_result:
-                    thumb_result = metadata_generator.write_image(img_data, dest_thumb_path, force=True)
+                    metadata_generator.write_image(img_data, dest_thumb_path, force=True)
             break
 
         if result:

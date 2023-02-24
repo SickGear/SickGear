@@ -16,20 +16,25 @@
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
 import random
-from six import moves
 
 # Browser apps represented in data
+# noinspection PyUnresolvedReferences
 __all__ = ['chrome', 'opera', 'firefox', 'safari', 'ie']
 
 
+# noinspection PyUnreachableCode
+if False:
+    from typing import AnyStr
+
+
 def get_ua():
+    # type: (...) -> AnyStr
     """
     Return a random browser user agent string
-    :return: A browser user agent string
-    :rtype: String
+    :return: A browser user agent
     """
     ua = []
-    for x in moves.xrange(1, 10):
+    for x in range(1, 10):
         ua += [random.choice(browser_ua.get(random.choice(__all__)))]
     return random.choice(ua)
 

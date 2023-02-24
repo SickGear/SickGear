@@ -32,11 +32,12 @@ from .sgdatetime import timestamp_near
 
 from sg_helpers import make_path, compress_file, remove_file_perm, scantree
 
-from _23 import filter_iter, filter_list, list_values, scandir
+from _23 import scandir
 from six import iterkeys, iteritems, itervalues
 
 # noinspection PyUnreachableCode
 if False:
+    # noinspection PyUnresolvedReferences
     from typing import Any, AnyStr, Dict, List, Optional, Tuple, Union
 
 
@@ -47,7 +48,7 @@ db_support_upsert = (3, 25, 0) <= sqlite3.sqlite_version_info  # type: bool
 db_supports_backup = hasattr(sqlite3.Connection, 'backup') and (3, 6, 11) <= sqlite3.sqlite_version_info  # type: bool
 
 
-def dbFilename(filename='sickbeard.db', suffix=None):
+def db_filename(filename='sickbeard.db', suffix=None):
     # type: (AnyStr, Optional[AnyStr]) -> AnyStr
     """
     @param filename: The sqlite database filename to use. If not specified,
@@ -70,7 +71,7 @@ def mass_upsert_sql(table_name, value_dict, key_dict, sanitise=True):
     :param value_dict: dict of values to be set {'table_fieldname': value}
     :param key_dict: dict of restrains for update {'table_fieldname': value}
     :param sanitise: True to remove k, v pairs in keyDict from valueDict as they must not exist in both.
-    This option has a performance hit so it's best to remove key_dict keys from value_dict and set this False instead.
+    This option has a performance hit, so it's best to remove key_dict keys from value_dict and set this False instead.
     :type sanitise: Boolean
     :return: list of 2 sql command
     """
@@ -80,12 +81,12 @@ def mass_upsert_sql(table_name, value_dict, key_dict, sanitise=True):
 
     # sanity: remove k, v pairs in keyDict from valueDict
     if sanitise:
-        value_dict = dict(filter_iter(lambda k: k[0] not in key_dict, iteritems(value_dict)))
+        value_dict = dict(filter(lambda k: k[0] not in key_dict, iteritems(value_dict)))
 
     # noinspection SqlResolve
     cl.append(['UPDATE [%s] SET %s WHERE %s' %
                (table_name, ', '.join(gen_params(value_dict)), ' AND '.join(gen_params(key_dict))),
-               list_values(value_dict) + list_values(key_dict)])
+               list(value_dict.values()) + list(key_dict.values())])
 
     # noinspection SqlResolve
     cl.append(['INSERT INTO [' + table_name + '] (' +
@@ -104,9 +105,9 @@ class DBConnection(object):
 
         from . import helpers
         self.new_db = False
-        db_src = dbFilename(filename)
+        db_src = db_filename(filename)
         if not os.path.isfile(db_src):
-            db_alt = dbFilename('sickrage.db')
+            db_alt = db_filename('sickrage.db')
             if os.path.isfile(db_alt):
                 helpers.copy_file(db_alt, db_src)
 
@@ -143,6 +144,7 @@ class DBConnection(object):
             logger.log('Backup target file already exists', logger.ERROR)
             return False, 'Backup target file already exists'
 
+        # noinspection PyUnusedLocal
         def progress(status, remaining, total):
             logger.log('Copied %s of %s pages...' % (total - remaining, total), logger.DEBUG)
 
@@ -167,11 +169,11 @@ class DBConnection(object):
 
         return True, 'Backup successful'
 
-    def checkDBVersion(self):
+    def check_db_version(self):
         # type: (...) -> int
 
         try:
-            if self.hasTable('db_version'):
+            if self.has_table('db_version'):
                 result = self.select('SELECT db_version FROM db_version')
             else:
                 version = self.select('PRAGMA user_version')[0]['user_version']
@@ -185,7 +187,7 @@ class DBConnection(object):
 
         if result:
             version = int(result[0]['db_version'])
-            if 10000 > version and self.hasColumn('db_version', 'db_minor_version'):
+            if 10000 > version and self.has_column('db_version', 'db_minor_version'):
                 # noinspection SqlResolve
                 minor = self.select('SELECT db_minor_version FROM db_version')
                 return version * 100 + int(minor[0]['db_minor_version'])
@@ -304,16 +306,16 @@ class DBConnection(object):
         query = 'UPDATE [%s] SET %s WHERE %s' % (
             table_name, ', '.join(gen_params(value_dict)), ' AND '.join(gen_params(key_dict)))
 
-        self.action(query, list_values(value_dict) + list_values(key_dict))
+        self.action(query, list(value_dict.values()) + list(key_dict.values()))
 
         if self.connection.total_changes == changes_before:
             # noinspection SqlResolve
             query = 'INSERT INTO [' + table_name + ']' \
                     + ' (%s)' % ', '.join(itertools.chain(iterkeys(value_dict), iterkeys(key_dict))) \
                     + ' VALUES (%s)' % ', '.join(['?'] * (len(value_dict) + len(key_dict)))
-            self.action(query, list_values(value_dict) + list_values(key_dict))
+            self.action(query, list(value_dict.values()) + list(key_dict.values()))
 
-    def tableInfo(self, table_name):
+    def table_info(self, table_name):
         # type: (AnyStr) -> Dict[AnyStr, Dict[AnyStr, AnyStr]]
 
         # FIXME ? binding is not supported here, but I cannot find a way to escape a string manually
@@ -331,37 +333,31 @@ class DBConnection(object):
             d[col[0]] = row[idx]
         return d
 
-    def hasTable(self, table_name):
+    def has_table(self, table_name):
         # type: (AnyStr) -> bool
         return 0 < len(self.select('SELECT 1 FROM sqlite_master WHERE name = ?;', (table_name,)))
 
-    def hasColumn(self, table_name, column):
+    def has_column(self, table_name, column):
         # type: (AnyStr, AnyStr) -> bool
-        return column in self.tableInfo(table_name)
+        return column in self.table_info(table_name)
 
-    def hasIndex(self, table_name, index):
+    def has_index(self, table_name, index):
         # type: (AnyStr, AnyStr) -> bool
-        sqlResults = self.select('PRAGMA index_list([%s])' % table_name)
-        for result in sqlResults:
+        sql_results = self.select('PRAGMA index_list([%s])' % table_name)
+        for result in sql_results:
             if result['name'] == index:
                 return True
         return False
 
-    def removeIndex(self, table, name):
+    def remove_index(self, table, name):
         # type: (AnyStr, AnyStr) -> None
-        if self.hasIndex(table, name):
+        if self.has_index(table, name):
             self.action('DROP INDEX' + ' [%s]' % name)
 
-    def removeTable(self, name):
+    def remove_table(self, name):
         # type: (AnyStr) -> None
-        if self.hasTable(name):
+        if self.has_table(name):
             self.action('DROP TABLE' + ' [%s]' % name)
-
-    # noinspection SqlResolve
-    def addColumn(self, table, column, data_type='NUMERIC', default=0):
-        # type: (AnyStr, AnyStr, AnyStr, Any) -> None
-        self.action('ALTER TABLE [%s] ADD %s %s' % (table, column, data_type))
-        self.action('UPDATE [%s] SET %s = ?' % (table, column), (default,))
 
     def has_flag(self, flag_name):
         # type: (AnyStr) -> bool
@@ -415,7 +411,7 @@ class DBConnection(object):
         logger.load_log('Upgrading %s' % self.filename, to_log, log_level)
 
 
-def sanityCheckDatabase(connection, sanity_check):
+def sanity_check_db(connection, sanity_check):
     sanity_check(connection).check()
 
 
@@ -427,36 +423,36 @@ class DBSanityCheck(object):
         pass
 
 
-def upgradeDatabase(connection, schema):
+def upgrade_database(connection, schema):
     logger.log(u'Checking database structure...', logger.MESSAGE)
     connection.is_upgrading = False
-    connection.new_db = 0 == connection.checkDBVersion()
-    _processUpgrade(connection, schema)
+    connection.new_db = 0 == connection.check_db_version()
+    _process_upgrade(connection, schema)
     if connection.is_upgrading:
         connection.upgrade_log('Finished')
 
 
-def prettyName(class_name):
+def _pretty_name(class_name):
     # type: (AnyStr) -> AnyStr
     return ' '.join([x.group() for x in re.finditer('([A-Z])([a-z0-9]+)', class_name)])
 
 
-def restoreDatabase(filename, version):
+def _restore_database(filename, version):
     logger.log(u'Restoring database before trying upgrade again')
-    if not sickgear.helpers.restore_versioned_file(dbFilename(filename=filename, suffix='v%s' % version), version):
+    if not sickgear.helpers.restore_versioned_file(db_filename(filename=filename, suffix='v%s' % version), version):
         logger.log_error_and_exit(u'Database restore failed, abort upgrading database')
         return False
     return True
 
 
-def _processUpgrade(connection, upgrade_class):
+def _process_upgrade(connection, upgrade_class):
     instance = upgrade_class(connection)
-    logger.log('Checking %s database upgrade' % prettyName(upgrade_class.__name__), logger.DEBUG)
+    logger.log('Checking %s database upgrade' % _pretty_name(upgrade_class.__name__), logger.DEBUG)
     if not instance.test():
         connection.is_upgrading = True
-        connection.upgrade_log(getattr(upgrade_class, 'pretty_name', None) or prettyName(upgrade_class.__name__))
-        logger.log('Database upgrade required: %s' % prettyName(upgrade_class.__name__), logger.MESSAGE)
-        db_version = connection.checkDBVersion()
+        connection.upgrade_log(getattr(upgrade_class, 'pretty_name', None) or _pretty_name(upgrade_class.__name__))
+        logger.log('Database upgrade required: %s' % _pretty_name(upgrade_class.__name__), logger.MESSAGE)
+        db_version = connection.check_db_version()
         try:
             # only do backup if it's not a new db
             0 < db_version and backup_database(connection, connection.filename, db_version)
@@ -468,7 +464,7 @@ def _processUpgrade(connection, upgrade_class):
                 # close db before attempting restore
                 connection.close()
 
-                if restoreDatabase(connection.filename, db_version):
+                if _restore_database(connection.filename, db_version):
                     logger.log_error_and_exit('Successfully restored database version: %s' % db_version)
                 else:
                     logger.log_error_and_exit('Failed to restore database version: %s' % db_version)
@@ -480,7 +476,7 @@ def _processUpgrade(connection, upgrade_class):
         logger.log('%s upgrade not required' % upgrade_class.__name__, logger.DEBUG)
 
     for upgradeSubClass in upgrade_class.__subclasses__():
-        _processUpgrade(connection, upgradeSubClass)
+        _process_upgrade(connection, upgradeSubClass)
 
 
 # Base migration class. All future DB changes should be subclassed from this class
@@ -488,11 +484,11 @@ class SchemaUpgrade(object):
     def __init__(self, connection, **kwargs):
         self.connection = connection
 
-    def hasTable(self, table_name):
+    def has_table(self, table_name):
         return 0 < len(self.connection.select('SELECT 1 FROM sqlite_master WHERE name = ?;', (table_name,)))
 
-    def hasColumn(self, table_name, column):
-        return column in self.connection.tableInfo(table_name)
+    def has_column(self, table_name, column):
+        return column in self.connection.table_info(table_name)
 
     def list_tables(self):
         # type: (...) -> List[AnyStr]
@@ -511,13 +507,13 @@ class SchemaUpgrade(object):
                                                           ['index'])]
 
     # noinspection SqlResolve
-    def addColumn(self, table, column, data_type='NUMERIC', default=0, set_default=False):
+    def add_column(self, table, column, data_type='NUMERIC', default=0, set_default=False):
         self.connection.action('ALTER TABLE [%s] ADD %s %s%s' %
                                (table, column, data_type, ('', ' DEFAULT "%s"' % default)[set_default]))
         self.connection.action('UPDATE [%s] SET %s = ?' % (table, column), (default,))
 
     # noinspection SqlResolve
-    def addColumns(self, table, column_list=None):
+    def add_columns(self, table, column_list=None):
         # type: (AnyStr, List) -> None
         if isinstance(column_list, list):
             sql = []
@@ -535,25 +531,21 @@ class SchemaUpgrade(object):
             if sql:
                 self.connection.mass_action(sql)
 
-    def dropColumn(self, table, columns):
-        # type: (AnyStr, AnyStr) -> None
-        self.drop_columns(table, columns)
-
     def drop_columns(self, table, column):
         # type: (AnyStr, Union[AnyStr, List[AnyStr]]) -> None
         # get old table columns and store the ones we want to keep
         result = self.connection.select('pragma table_info([%s])' % table)
         columns_list = ([column], column)[isinstance(column, list)]
-        keptColumns = filter_list(lambda col: col['name'] not in columns_list, result)
+        kept_columns = list(filter(lambda col: col['name'] not in columns_list, result))
 
-        keptColumnsNames = []
+        kept_columns_names = []
         final = []
         pk = []
 
         # copy the old table schema, column by column
-        for column in keptColumns:
+        for column in kept_columns:
 
-            keptColumnsNames.append(column['name'])
+            kept_columns_names.append(column['name'])
 
             cl = [column['name'], column['type']]
 
@@ -574,7 +566,7 @@ class SchemaUpgrade(object):
 
         # join all the table column creation fields
         final = ', '.join(final)
-        keptColumnsNames = ', '.join(keptColumnsNames)
+        kept_columns_names = ', '.join(kept_columns_names)
 
         # generate sql for the new table creation
         if 0 == len(pk):
@@ -586,12 +578,12 @@ class SchemaUpgrade(object):
         # create new temporary table and copy the old table data across, barring the removed column
         self.connection.action(sql)
         # noinspection SqlResolve
-        self.connection.action('INSERT INTO [%s_new] SELECT %s FROM [%s]' % (table, keptColumnsNames, table))
+        self.connection.action('INSERT INTO [%s_new] SELECT %s FROM [%s]' % (table, kept_columns_names, table))
 
         # copy the old indexes from the old table
         result = self.connection.select("SELECT sql FROM sqlite_master WHERE tbl_name=? AND type='index'", [table])
 
-        # remove the old table and rename the new table to take it's place
+        # remove the old table and rename the new table to take its place
         # noinspection SqlResolve
         self.connection.action('DROP TABLE [%s]' % table)
         # noinspection SqlResolve
@@ -605,22 +597,19 @@ class SchemaUpgrade(object):
         # vacuum the db as we will have a lot of space to reclaim after dropping tables
         self.connection.action('VACUUM')
 
-    def checkDBVersion(self):
-        return self.connection.checkDBVersion()
+    def call_check_db_version(self):
+        return self.connection.check_db_version()
 
-    def incDBVersion(self):
-        new_version = self.checkDBVersion() + 1
+    def inc_db_version(self):
+        new_version = self.call_check_db_version() + 1
         # noinspection SqlConstantCondition
         self.connection.action('UPDATE db_version SET db_version = ? WHERE 1=1', [new_version])
         return new_version
 
-    def setDBVersion(self, new_version, check_db_version=True):
+    def set_db_version(self, new_version, check_db_version=True):
         # noinspection SqlConstantCondition
         self.connection.action('UPDATE db_version SET db_version = ? WHERE 1=1', [new_version])
-        return check_db_version and self.checkDBVersion()
-
-    def listTables(self):
-        return self.list_tables()
+        return check_db_version and self.call_check_db_version()
 
     def do_query(self, queries):
         if not isinstance(queries, list):
@@ -630,23 +619,23 @@ class SchemaUpgrade(object):
 
         for query in queries:
             tbl_name = re.findall(r'(?i)DROP.*?TABLE.*?\[?([^\s\]]+)', query)
-            if tbl_name and not self.hasTable(tbl_name[0]):
+            if tbl_name and not self.has_table(tbl_name[0]):
                 continue
             tbl_name = re.findall(r'(?i)CREATE.*?TABLE.*?\s([^\s(]+)\s*\(', query)
-            if tbl_name and self.hasTable(tbl_name[0]):
+            if tbl_name and self.has_table(tbl_name[0]):
                 continue
             self.connection.action(query)
 
     def finish(self, tbl_dropped=False):
         if tbl_dropped:
             self.connection.action('VACUUM')
-        self.incDBVersion()
+        self.inc_db_version()
 
     def upgrade_log(self, *args, **kwargs):
         self.connection.upgrade_log(*args, **kwargs)
 
 
-def MigrationCode(my_db):
+def migration_code(my_db):
     schema = {
         0: sickgear.mainDB.InitialSchema,
         9: sickgear.mainDB.AddSizeAndSceneNameFields,
@@ -719,7 +708,7 @@ def MigrationCode(my_db):
         # 20002: sickgear.mainDB.AddCoolSickGearFeature3,
     }
 
-    db_version = my_db.checkDBVersion()
+    db_version = my_db.check_db_version()
     my_db.new_db = 0 == db_version
     logger.log(u'Detected database version: v%s' % db_version, logger.DEBUG)
 
@@ -746,7 +735,7 @@ def MigrationCode(my_db):
                 my_db.close()
                 logger.log(u'Failed to update database with error: %s attempting recovery...' % ex(e), logger.ERROR)
 
-                if restoreDatabase(my_db.filename, db_version):
+                if _restore_database(my_db.filename, db_version):
                     # initialize the main SB database
                     logger.log_error_and_exit(u'Successfully restored database version: %s' % db_version)
                 else:
@@ -759,9 +748,9 @@ def cleanup_old_db_backups(filename):
         d, filename = os.path.split(filename)
         if not d:
             d = sickgear.DATA_DIR
-        for f in filter_iter(lambda fn: fn.is_file() and filename in fn.name and
-                             re.search(r'\.db(\.v\d+)?\.r\d+$', fn.name),
-                             scandir(d)):
+        for f in filter(lambda fn: fn.is_file() and filename in fn.name and
+                        re.search(r'\.db(\.v\d+)?\.r\d+$', fn.name),
+                        scandir(d)):
             try:
                 os.unlink(f.path)
             except (BaseException, Exception):
@@ -777,7 +766,7 @@ def backup_database(db_connection, filename, version):
         return
 
     logger.log(u'Backing up database before upgrade')
-    if not sickgear.helpers.backup_versioned_file(dbFilename(filename), version):
+    if not sickgear.helpers.backup_versioned_file(db_filename(filename), version):
         logger.log_error_and_exit(u'Database backup failed, abort upgrading database')
     else:
         logger.log(u'Proceeding with upgrade')
@@ -841,7 +830,7 @@ def backup_all_dbs(target, compress=True, prefer_7z=True):
     optional compress with zip or 7z (python 3 only, external lib py7zr required)
     7z falls back to zip if py7zr is not available
 
-    :param target: target folder to backup to
+    :param target: target folder for backup db
     :param compress: compress db backups
     :param prefer_7z: prefer 7z compression if available
     :return: success, message

@@ -26,7 +26,6 @@ from ..helpers import try_int
 
 from bs4_parser import BS4Parser
 
-from _23 import unidecode
 from six import iteritems
 
 
@@ -67,7 +66,7 @@ class MoreThanProvider(generic.TorrentProvider):
                    for (k, v) in iteritems({'info': r'torrents.php\?id', 'get': 'download', 'nuked': 'nuked'})])
         for mode in search_params:
             for search_string in search_params[mode]:
-                search_string = unidecode(search_string).replace('.', ' ')
+                search_string = search_string.replace('.', ' ')
                 search_url = self.urls['search'] % (search_string,
                                                     self._categories_string(mode, template='filter_cat[%s]=1'))
 

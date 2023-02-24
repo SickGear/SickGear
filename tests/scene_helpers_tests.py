@@ -75,7 +75,7 @@ class SceneExceptionTestCase(test.SickbeardTestDBCase):
             sickgear.showDict[s.sid_int] = s
         sickgear.webserve.Home.make_showlist_unique_names()
         scene_exceptions.retrieve_exceptions()
-        name_cache.buildNameCache()
+        name_cache.build_name_cache()
 
     def test_sceneExceptionsEmpty(self):
         self.assertEqual(scene_exceptions.get_scene_exceptions(0, 0), [])
@@ -99,7 +99,7 @@ class SceneExceptionTestCase(test.SickbeardTestDBCase):
             sickgear.showList.append(s)
             sickgear.showDict[s.sid_int] = s
         scene_exceptions.retrieve_exceptions()
-        name_cache.buildNameCache()
+        name_cache.build_name_cache()
         self.assertEqual(scene_exceptions.get_scene_exception_by_name(u'ブラック・ラグーン'), [1, 79604, -1])
         self.assertEqual(scene_exceptions.get_scene_exception_by_name(u'Burakku Ragūn'), [1, 79604, -1])
         self.assertEqual(scene_exceptions.get_scene_exception_by_name('Rokka no Yuusha'), [1, 295243, -1])
@@ -114,11 +114,11 @@ class SceneExceptionTestCase(test.SickbeardTestDBCase):
         my_db.action('DELETE FROM scene_exceptions WHERE 1=1')
 
         # put something in the cache
-        name_cache.addNameToCache('Cached Name', prodid=0)
+        name_cache.add_name_to_cache('Cached Name', prodid=0)
 
         # updating should not clear the cache this time since our exceptions didn't change
         scene_exceptions.retrieve_exceptions()
-        self.assertEqual(name_cache.retrieveNameFromCache('Cached Name'), (0, 0))
+        self.assertEqual(name_cache.retrieve_name_from_cache('Cached Name'), (0, 0))
 
 
 if '__main__' == __name__:

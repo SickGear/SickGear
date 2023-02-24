@@ -96,16 +96,16 @@ class InitialSchema(db.SchemaUpgrade):
         ])
 
     def test(self):
-        return self.hasTable('lastUpdate')
+        return self.has_table('lastUpdate')
 
     def execute(self):
         self.do_query(self.queries[next(iter(self.queries))])
-        self.setDBVersion(MIN_DB_VERSION, check_db_version=False)
+        self.set_db_version(MIN_DB_VERSION, check_db_version=False)
 
 
 class ConsolidateProviders(InitialSchema):
     def test(self):
-        return 1 < self.checkDBVersion()
+        return 1 < self.call_check_db_version()
 
     def execute(self):
         keep_tables = {'lastUpdate', 'lastSearch', 'db_version',
@@ -113,13 +113,13 @@ class ConsolidateProviders(InitialSchema):
         # old provider_cache is dropped before re-creation
         # noinspection SqlResolve
         self.do_query(['DROP TABLE [provider_cache]'] + self.queries['consolidate_providers'] +
-                      ['DROP TABLE [%s]' % t for t in (set(self.listTables()) - keep_tables)])
+                      ['DROP TABLE [%s]' % t for t in (set(self.list_tables()) - keep_tables)])
         self.finish(True)
 
 
 class AddBacklogParts(ConsolidateProviders):
     def test(self):
-        return 2 < self.checkDBVersion()
+        return 2 < self.call_check_db_version()
 
     def execute(self):
         # noinspection SqlResolve
@@ -130,7 +130,7 @@ class AddBacklogParts(ConsolidateProviders):
 
 class AddProviderFailureHandling(AddBacklogParts):
     def test(self):
-        return 3 < self.checkDBVersion()
+        return 3 < self.call_check_db_version()
 
     def execute(self):
         self.do_query(self.queries['add_provider_fails'])
@@ -139,17 +139,17 @@ class AddProviderFailureHandling(AddBacklogParts):
 
 class AddIndexerToTables(AddProviderFailureHandling):
     def test(self):
-        return 4 < self.checkDBVersion()
+        return 4 < self.call_check_db_version()
 
     def execute(self):
         self.do_query(self.queries['add_indexer_to_tables'])
-        self.addColumn('provider_cache', 'indexer', 'NUMERIC')
+        self.add_column('provider_cache', 'indexer', 'NUMERIC')
         self.finish()
 
 
 class AddGenericFailureHandling(AddBacklogParts):
     def test(self):
-        return 5 < self.checkDBVersion()
+        return 5 < self.call_check_db_version()
 
     def execute(self):
         self.do_query(self.queries['connection_fails'])
@@ -158,7 +158,7 @@ class AddGenericFailureHandling(AddBacklogParts):
 
 class AddSaveQueues(AddGenericFailureHandling):
     def test(self):
-        return 6 < self.checkDBVersion()
+        return 6 < self.call_check_db_version()
 
     def execute(self):
         self.do_query(self.queries['save_queues'])

@@ -35,8 +35,8 @@ from .sgdatetime import timestamp_near
 
 import lib.rarfile.rarfile as rarfile
 
-from _23 import filter_iter, list_range, map_iter
-from six import iteritems, PY2, text_type
+from _23 import list_range
+from six import iteritems, text_type
 
 # noinspection PyUnreachableCode
 if False:
@@ -303,16 +303,13 @@ def retrieve_exceptions():
                                             list(cur_tvid_prodid))]
 
         # if this exception isn't already in the DB then add it
-        for cur_exception_dict in filter_iter(lambda e: e not in existing_exceptions, exception_dict[cur_tvid_prodid]):
+        for cur_exception_dict in filter(lambda e: e not in existing_exceptions, exception_dict[cur_tvid_prodid]):
             try:
                 cur_exception, cur_season = next(iteritems(cur_exception_dict))
             except (BaseException, Exception):
                 logger.log('scene exception error', logger.ERROR)
                 logger.log(traceback.format_exc(), logger.ERROR)
                 continue
-
-            if PY2 and not isinstance(cur_exception, text_type):
-                cur_exception = text_type(cur_exception, 'utf-8', 'replace')
 
             cl.append(['INSERT INTO scene_exceptions'
                        ' (indexer, indexer_id, show_name, season) VALUES (?,?,?,?)',
@@ -321,7 +318,7 @@ def retrieve_exceptions():
 
     if cl:
         my_db.mass_action(cl)
-        name_cache.buildNameCache(update_only_scene=True)
+        name_cache.build_name_cache(update_only_scene=True)
 
     # since this could invalidate the results of the cache we clear it out after updating
     if changed_exceptions:
@@ -368,14 +365,11 @@ def update_scene_exceptions(tvid, prodid, scene_exceptions):
 
         exceptionsCache[(tvid, prodid)][cur_season].append(cur_exception)
 
-        if PY2 and not isinstance(cur_exception, text_type):
-            cur_exception = text_type(cur_exception, 'utf-8', 'replace')
-
         my_db.action('INSERT INTO scene_exceptions'
                      ' (indexer, indexer_id, show_name, season) VALUES (?,?,?,?)',
                      [tvid, prodid, cur_exception, cur_season])
 
-    sickgear.name_cache.buildNameCache(update_only_scene=True)
+    sickgear.name_cache.build_name_cache(update_only_scene=True)
 
 
 def _custom_exceptions_fetcher():
@@ -489,7 +483,7 @@ def _anidb_exceptions_fetcher():
 
     if should_refresh('anidb'):
         logger.log(u'Checking for AniDB scene exception updates')
-        for cur_show_obj in filter_iter(lambda _s: _s.is_anime and TVINFO_TVDB == _s.tvid, sickgear.showList):
+        for cur_show_obj in filter(lambda _s: _s.is_anime and TVINFO_TVDB == _s.tvid, sickgear.showList):
             try:
                 anime = create_anidb_obj(name=cur_show_obj.name, tvdbid=cur_show_obj.prodid, autoCorrectName=True)
             except (BaseException, Exception):
@@ -559,8 +553,8 @@ def _xem_get_ids(infosrc_name, xem_origin):
                    % (task.lower() % ('', 's'), infosrc_name, url), logger.ERROR)
     else:
         if 'success' == parsed_json.get('result', '') and 'data' in parsed_json:
-            xem_ids = list(set(filter_iter(lambda prodid: 0 < prodid,
-                                           map_iter(lambda pid: helpers.try_int(pid), parsed_json['data']))))
+            xem_ids = list(set(filter(lambda prodid: 0 < prodid,
+                                      map(lambda pid: helpers.try_int(pid), parsed_json['data']))))
             if 0 == len(xem_ids):
                 logger.log(u'Failed %s %s, no data items parsed from URL: %s'
                            % (task.lower() % ('', 's'), infosrc_name, url), logger.WARNING)

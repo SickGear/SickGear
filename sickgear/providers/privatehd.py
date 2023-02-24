@@ -25,7 +25,6 @@ from .. import logger
 from ..helpers import try_int
 from bs4_parser import BS4Parser
 
-from _23 import filter_iter, unidecode
 from six import iteritems
 
 
@@ -93,7 +92,6 @@ class PrivateHDProvider(generic.TorrentProvider):
                     return results
 
             for search_string in search_params[mode]:
-                search_string = unidecode(search_string)
                 search_url = self.urls['search'] % (
                     '+'.join(search_string.split()), self._categories_string(mode, ''))
 
@@ -120,7 +118,7 @@ class PrivateHDProvider(generic.TorrentProvider):
                             if any(self.filter):
                                 marked = ','.join([x.attrs.get('title', '').lower() for x in tr.find_all(
                                     'i', attrs={'class': ['fa-star', 'fa-diamond', 'fa-star-half-o']})])
-                                munged = ''.join(filter_iter(marked.__contains__, ['free', 'half', 'double']))
+                                munged = ''.join(filter(marked.__contains__, ['free', 'half', 'double']))
                                 # noinspection PyUnboundLocalVariable
                                 if ((non_marked and rc['filter'].search(munged)) or
                                         (not non_marked and not rc['filter'].search(munged))):

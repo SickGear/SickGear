@@ -25,7 +25,7 @@ from ..helpers import try_int
 from bs4_parser import BS4Parser
 from json_helper import json_dumps
 
-from _23 import filter_list, unidecode, unquote_plus
+from _23 import unquote_plus
 from six import iteritems
 
 
@@ -83,7 +83,6 @@ class NebulanceProvider(generic.TorrentProvider):
         rc = dict([(k, re.compile('(?i)' + v)) for (k, v) in iteritems({'nodots': r'[\.\s]+'})])
         for mode in search_params:
             for search_string in search_params[mode]:
-                search_string = unidecode(search_string)
 
                 search_url = self.urls['browse'] % (self.user_authkey, self.user_passkey)
                 if 'Cache' != mode:
@@ -164,7 +163,7 @@ class NebulanceProvider(generic.TorrentProvider):
                   ('(?i)%s(Proper)%s' % (bl, br), r'`\1`'), (r'%s\s*%s' % (bl, br), '`')]:
             title = re.sub(r[0], r[1], title)
 
-        grp = filter_list(lambda rn: '.release' in rn.lower(), item['tags'])
+        grp = list(filter(lambda rn: '.release' in rn.lower(), item['tags']))
         title = '%s%s-%s' % (('', t[0])[1 < len(t)], title,
                              (any(grp) and grp[0] or 'nogrp').upper().replace('.RELEASE', ''))
 
@@ -186,7 +185,7 @@ class NebulanceProvider(generic.TorrentProvider):
 
         for mode in search_params:
             for search_string in search_params[mode]:
-                search_string = unquote_plus(unidecode(search_string))
+                search_string = unquote_plus(search_string)
 
                 params = {'release': search_string}
                 if 'Cache' == mode:

@@ -25,7 +25,6 @@ from .. import logger
 from ..helpers import try_int
 from bs4_parser import BS4Parser
 
-from _23 import unidecode
 from six import iteritems
 
 
@@ -76,7 +75,6 @@ class HDSpaceProvider(generic.TorrentProvider):
             log = '%sing (%s) ' % (('keep', 'skipp')[non_marked], ', '.join([self.may_filter[f][0] for f in filters]))
         for mode in search_params:
             for search_string in search_params[mode]:
-                search_string = unidecode(search_string)
 
                 search_url = self.urls['browse'] + self._categories_string(template='', delimiter=';')
                 if 'Cache' != mode:

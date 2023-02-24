@@ -35,7 +35,6 @@ from lib.fanart.core import Request as fanartRequest
 import lib.fanart as fanart
 from lxml_etree import etree
 
-from _23 import filter_iter, list_keys
 from six import iteritems, itervalues, string_types
 
 # noinspection PyUnreachableCode
@@ -614,7 +613,7 @@ class GenericMetadata(object):
             logger.log(u"No thumb is available for this episode, not creating a thumb", logger.DEBUG)
             return False
 
-        thumb_data = metadata_helpers.getShowImage(thumb_url, show_name=ep_obj.show_obj.name)
+        thumb_data = metadata_helpers.get_show_image(thumb_url, show_name=ep_obj.show_obj.name)
 
         result = self._write_image(thumb_data, file_path)
 
@@ -712,7 +711,7 @@ class GenericMetadata(object):
             if 0 == len(cur_season_art):
                 continue
 
-            # Just grab whatever's there for now
+            # Just grab whatever is there for now
             art_id, season_url = cur_season_art.popitem()
 
             season_poster_file_path = self.get_season_poster_path(show_obj, cur_season)
@@ -722,7 +721,7 @@ class GenericMetadata(object):
                            logger.DEBUG)
                 continue
 
-            season_data = metadata_helpers.getShowImage(season_url, show_name=show_obj.name)
+            season_data = metadata_helpers.get_show_image(season_url, show_name=show_obj.name)
 
             if not season_data:
                 logger.log(u'No season poster data available, skipping this season', logger.DEBUG)
@@ -757,7 +756,7 @@ class GenericMetadata(object):
             if 0 == len(cur_season_art):
                 continue
 
-            # Just grab whatever's there for now
+            # Just grab whatever is there for now
             art_id, season_url = cur_season_art.popitem()
 
             season_banner_file_path = self.get_season_banner_path(show_obj, cur_season)
@@ -767,7 +766,7 @@ class GenericMetadata(object):
                            logger.DEBUG)
                 continue
 
-            season_data = metadata_helpers.getShowImage(season_url, show_name=show_obj.name)
+            season_data = metadata_helpers.get_show_image(season_url, show_name=show_obj.name)
 
             if not season_data:
                 logger.log(u'No season banner data available, skipping this season', logger.DEBUG)
@@ -855,7 +854,7 @@ class GenericMetadata(object):
         def _get_show_info(tv_id):
             try:
                 show_lang = show_obj.lang
-                # There's gotta be a better way of doing this but we don't wanna
+                # There's gotta be a better way of doing this, but we don't want to
                 # change the language value elsewhere
                 tvinfo_config = sickgear.TVInfoAPI(tv_id).api_params.copy()
                 tvinfo_config['fanart'] = True
@@ -874,7 +873,7 @@ class GenericMetadata(object):
                     tv_id).name + ", not downloading images: " + ex(e), logger.WARNING)
 
         # todo: when tmdb is added as tv source remove the hardcoded TVINFO_TMDB
-        for tv_src in list(OrderedDict.fromkeys([show_obj.tvid] + list_keys(sickgear.TVInfoAPI().search_sources) +
+        for tv_src in list(OrderedDict.fromkeys([show_obj.tvid] + list(sickgear.TVInfoAPI().search_sources) +
                                                 [TVINFO_TMDB])):
             if tv_src != show_obj.tvid and not show_obj.ids.get(tv_src, {}).get('id'):
                 continue
@@ -1059,7 +1058,7 @@ class GenericMetadata(object):
                     if image_type in ('poster', 'banner'):
                         if isinstance(image_url, tuple):
                             image_url = image_url[0]
-                    img_data = metadata_helpers.getShowImage(image_url, which, show_obj.name)
+                    img_data = metadata_helpers.get_show_image(image_url, which, show_obj.name)
                     if img_cache_type and img_cache_type != image_cache.which_type(img_data, is_binary=True):
                         img_data = None
                         continue
@@ -1083,7 +1082,7 @@ class GenericMetadata(object):
         result = {}
 
         try:
-            # There's gotta be a better way of doing this but we don't wanna
+            # There's gotta be a better way of doing this, but we don't want to
             # change the language value elsewhere
             tvinfo_config = sickgear.TVInfoAPI(show_obj.tvid).api_params.copy()
             tvinfo_config[image_type] = True
@@ -1220,9 +1219,9 @@ class GenericMetadata(object):
                 resp = request.response()
                 itemlist = []
                 dedupe = []
-                for art in filter_iter(lambda i: 10 < len(i.get('url', '')) and (lang == i.get('lang', '')[0:2]),
-                                       # remove "[0:2]" ... to strictly use only data where "en" is at source
-                                       resp[types[image_type]]):  # type: dict
+                for art in filter(lambda i: 10 < len(i.get('url', '')) and (lang == i.get('lang', '')[0:2]),
+                                  # remove "[0:2]" ... to strictly use only data where "en" is at source
+                                  resp[types[image_type]]):  # type: dict
                     try:
                         url = (art['url'], art['url'].replace('/fanart/', '/preview/'))[thumb]
                         if url not in dedupe:

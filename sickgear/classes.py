@@ -25,7 +25,7 @@ import sickgear
 from ._legacy_classes import LegacySearchResult, LegacyProper
 from .common import Quality
 
-from six import integer_types, iteritems, PY2, string_types
+from six import integer_types, iteritems, string_types
 
 # noinspection PyUnreachableCode
 if False:
@@ -155,7 +155,7 @@ class SearchResult(LegacySearchResult):
 
 class NZBSearchResult(SearchResult):
     """
-    Regular NZB result with an URL to the NZB
+    Regular NZB result with a URL to the NZB
     """
     resultType = 'nzb'
 
@@ -169,7 +169,7 @@ class NZBDataSearchResult(SearchResult):
 
 class TorrentSearchResult(SearchResult):
     """
-    Torrent result with an URL to the torrent
+    Torrent result with a URL to the torrent
     """
     resultType = 'torrent'
 
@@ -359,41 +359,11 @@ class OrderedDefaultdict(OrderedDict):
         args = (self.default_factory,) if self.default_factory else ()
         return self.__class__, args, None, None, iteritems(self)
 
-    if PY2:
-        # backport from python 3
-        def move_to_end(self, key, last=True):
-            """Move an existing element to the end (or beginning if last==False).
+    def first_key(self):
+        return next(iter(self))
 
-            Raises KeyError if the element does not exist.
-            When last=True, acts like a fast version of self[key]=self.pop(key).
-
-            """
-            link_prev, link_next, key = link = getattr(self, '_OrderedDict__map')[key]
-            link_prev[1] = link_next
-            link_next[0] = link_prev
-            root = getattr(self, '_OrderedDict__root')
-            if last:
-                last = root[0]
-                link[0] = last
-                link[1] = root
-                last[1] = root[0] = link
-            else:
-                first = root[1]
-                link[0] = root
-                link[1] = first
-                root[1] = first[0] = link
-
-        def first_key(self):
-            return getattr(self, '_OrderedDict__root')[1][2]
-
-        def last_key(self):
-            return getattr(self, '_OrderedDict__root')[0][2]
-    else:
-        def first_key(self):
-            return next(iter(self))
-
-        def last_key(self):
-            return next(reversed(self))
+    def last_key(self):
+        return next(reversed(self))
 
 
 class ImageUrlList(list):
@@ -455,61 +425,14 @@ class EnvVar(object):
         pass
 
     def __getitem__(self, key):
-        return os.environ(key)
+        return os.environ[key]
 
     @staticmethod
     def get(key, default=None):
         return os.environ.get(key, default)
 
 
-if not PY2:
-    sickgear.ENV = EnvVar()
-
-elif 'nt' == os.name:
-    from ctypes import windll, create_unicode_buffer
-
-    # noinspection PyCompatibility
-    class WinEnvVar(EnvVar):
-
-        @staticmethod
-        def get_environment_variable(name):
-            # noinspection PyUnresolvedReferences
-            name = unicode(name)  # ensures string argument is unicode
-            n = windll.kernel32.GetEnvironmentVariableW(name, None, 0)
-            env_value = None
-            if n:
-                buf = create_unicode_buffer(u'\0' * n)
-                windll.kernel32.GetEnvironmentVariableW(name, buf, n)
-                env_value = buf.value
-            return env_value
-
-        def __getitem__(self, key):
-            return self.get_environment_variable(key)
-
-        def get(self, key, default=None):
-            r = self.get_environment_variable(key)
-            return r if None is not r else default
-
-    sickgear.ENV = WinEnvVar()
-else:
-    # noinspection PyCompatibility
-    class LinuxEnvVar(EnvVar):
-        # noinspection PyMissingConstructor
-        def __init__(self, environ):
-            self.environ = environ
-
-        def __getitem__(self, key):
-            v = self.environ.get(key)
-            try:
-                return v if not isinstance(v, str) else v.decode(sickgear.SYS_ENCODING)
-            except (UnicodeDecodeError, UnicodeEncodeError):
-                return v
-
-        def get(self, key, default=None):
-            v = self[key]
-            return v if None is not v else default
-
-    sickgear.ENV = LinuxEnvVar(os.environ)
+sickgear.ENV = EnvVar()
 
 
 # backport from python 3
@@ -533,7 +456,7 @@ class SimpleNamespace(object):
 
 
 # list that supports weak reference
-class weakList(list):
+class WeakList(list):
     __slots__ = ('__weakref__',)
 
 

@@ -28,7 +28,6 @@ from .search import wanted_episodes
 from .sgdatetime import SGDatetime, timestamp_near
 from .tv import TVidProdid, TVEpisode, TVShow
 
-from _23 import filter_list, map_iter, map_list
 from six import iteritems, itervalues, moves
 
 # noinspection PyUnreachableCode
@@ -48,29 +47,29 @@ class BacklogSearchScheduler(scheduler.Scheduler):
         self.force = True
 
     def next_run(self):
-        if 1 >= self.action._lastBacklog:
+        if 1 >= self.action.last_backlog:
             return datetime.date.today()
-        elif (self.action._lastBacklog + self.action.cycleTime) < datetime.date.today().toordinal():
+        elif (self.action.last_backlog + self.action.cycle_time) < datetime.date.today().toordinal():
             return datetime.date.today()
-        return datetime.date.fromordinal(self.action._lastBacklog + self.action.cycleTime)
+        return datetime.date.fromordinal(self.action.last_backlog + self.action.cycle_time)
 
     def next_backlog_timeleft(self):
         now = datetime.datetime.now()
-        torrent_enabled = 0 < len([x for x in sickgear.providers.sortedProviderList() if x.is_active() and
+        torrent_enabled = 0 < len([x for x in sickgear.providers.sorted_sources() if x.is_active() and
                                    getattr(x, 'enable_backlog', None) and GenericProvider.TORRENT == x.providerType])
-        if now > self.action.nextBacklog or self.action.nextCyleTime != self.cycleTime:
-            nextruntime = now + self.timeLeft()
+        if now > self.action.nextBacklog or self.action.nextCyleTime != self.cycle_time:
+            nextruntime = now + self.time_left()
             if not torrent_enabled:
                 nextpossibleruntime = (datetime.datetime.fromtimestamp(self.action.last_runtime) +
                                        datetime.timedelta(hours=23))
                 for _ in moves.xrange(5):
                     if nextruntime > nextpossibleruntime:
                         self.action.nextBacklog = nextruntime
-                        self.action.nextCyleTime = self.cycleTime
+                        self.action.nextCyleTime = self.cycle_time
                         break
-                    nextruntime += self.cycleTime
+                    nextruntime += self.cycle_time
             else:
-                self.action.nextCyleTime = self.cycleTime
+                self.action.nextCyleTime = self.cycle_time
                 self.action.nextBacklog = nextruntime
         return self.action.nextBacklog - now if self.action.nextBacklog > now else datetime.timedelta(seconds=0)
 
@@ -78,8 +77,8 @@ class BacklogSearchScheduler(scheduler.Scheduler):
 class BacklogSearcher(object):
     def __init__(self):
 
-        self._lastBacklog = self._get_last_backlog()
-        self.cycleTime = sickgear.BACKLOG_PERIOD
+        self.last_backlog = self._get_last_backlog()
+        self.cycle_time = sickgear.BACKLOG_PERIOD
         self.lock = threading.Lock()
         self.amActive = False  # type: bool
         self.amPaused = False  # type: bool
@@ -176,7 +175,7 @@ class BacklogSearcher(object):
         :param scheduled: scheduled backlog search (can be from webif or scheduler)
         :return: any provider is active for given backlog
         """
-        return 0 < len([x for x in sickgear.providers.sortedProviderList() if x.is_active() and
+        return 0 < len([x for x in sickgear.providers.sorted_sources() if x.is_active() and
                         getattr(x, 'enable_backlog', None) and
                         (not torrent_only or GenericProvider.TORRENT == x.providerType) and
                         (not scheduled or getattr(x, 'enable_scheduled_backlog', None))])
@@ -212,10 +211,10 @@ class BacklogSearcher(object):
         any_torrent_enabled = continued_backlog = False
         if not force and standard_backlog and (datetime.datetime.now() - datetime.datetime.fromtimestamp(
                 self._get_last_runtime())) < datetime.timedelta(hours=23):
-            any_torrent_enabled = any(map_iter(
+            any_torrent_enabled = any(map(
                 lambda x: x.is_active() and getattr(x, 'enable_backlog', None)
                 and GenericProvider.TORRENT == x.providerType,
-                sickgear.providers.sortedProviderList()))
+                sickgear.providers.sorted_sources()))
             if not any_torrent_enabled:
                 logger.log('Last scheduled backlog run was within the last day, skipping this run.', logger.DEBUG)
                 return
@@ -291,8 +290,8 @@ class BacklogSearcher(object):
 
         if not runparts and parts:
             runparts = parts[0]
-            wanted_list = filter_list(
-                lambda wi: wi and next(itervalues(wi))[0].show_obj.tvid_prodid in runparts, wanted_list)
+            wanted_list = list(filter(
+                lambda wi: wi and next(itervalues(wi))[0].show_obj.tvid_prodid in runparts, wanted_list))
 
         limited_wanted_list = []
         if standard_backlog and not any_torrent_enabled and runparts:
@@ -314,8 +313,8 @@ class BacklogSearcher(object):
             for i, l in enumerate(parts):
                 if 0 == i:
                     continue
-                cl += map_list(lambda m: ['INSERT INTO backlogparts (part, indexer, indexerid) VALUES (?,?,?)',
-                                          [i + 1] + TVidProdid(m).list], l)
+                cl += list(map(lambda m: ['INSERT INTO backlogparts (part, indexer, indexerid) VALUES (?,?,?)',
+                                          [i + 1] + TVidProdid(m).list], l))
 
             if 0 < len(cl):
                 my_db.mass_action(cl)
@@ -384,8 +383,8 @@ class BacklogSearcher(object):
             if last_backlog > datetime.date.today().toordinal():
                 last_backlog = 1
 
-        self._lastBacklog = last_backlog
-        return self._lastBacklog
+        self.last_backlog = last_backlog
+        return self.last_backlog
 
     @staticmethod
     def _set_last_backlog(when):

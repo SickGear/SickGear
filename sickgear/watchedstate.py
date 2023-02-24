@@ -33,6 +33,7 @@ class WatchedStateUpdater(object):
         return sickgear.watched_state_queue_scheduler.action.is_in_queue(self.queue_item)
 
     def run(self):
+        # noinspection PyUnresolvedReferences
         if self.is_enabled():
             self.amActive = True
             new_item = self.queue_item()

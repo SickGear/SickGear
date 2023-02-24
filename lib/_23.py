@@ -15,12 +15,25 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
-import datetime
+from base64 import encodebytes as b64encodebytes
 from collections import deque
-from itertools import islice
+# noinspection PyUnresolvedReferences
+from configparser import ConfigParser
+# noinspection PyUnresolvedReferences
+from enum import Enum
+from itertools import islice, zip_longest
+# noinspection PyUnresolvedReferences
+from inspect import getfullargspec as getargspec
+# noinspection PyUnresolvedReferences
+from os import scandir, DirEntry
+# noinspection PyUnresolvedReferences
+from subprocess import Popen
 from sys import version_info
 
-from six import binary_type, moves
+import datetime
+# noinspection PyUnresolvedReferences, PyPep8Naming
+import xml.etree.ElementTree as etree
+
 # noinspection PyUnresolvedReferences
 from six.moves.urllib.parse import quote, quote_plus, unquote as six_unquote, unquote_plus as six_unquote_plus, \
     urlencode, urlsplit, urlunparse, urlunsplit
@@ -40,30 +53,24 @@ if False:
     # noinspection PyTypeChecker
     urlencode = urlsplit = urlunparse = urlunsplit = None  # type: Callable
 
-PY38 = version_info[0:2] >= (3, 8)
-
-""" one off consumables (Iterators) """
-filter_iter = moves.filter  # type: Callable[[Callable, Iterable], Iterator]
-map_iter = moves.map  # type: Callable[[Callable, ...], Iterator]
-
 
 def map_consume(*args):
     # type: (...) -> None
     """Run a lambda over elements without returning anything"""
-    deque(moves.map(*args), maxlen=0)
+    deque(map(*args), maxlen=0)
 
 
 def consume(iterator, n=None):
     # type: (Iterator, Optional[int]) -> None
     """Advance the iterator n-steps ahead. If n is None, consume entirely. Returns nothing.
 
-    Useful if a method returns a Iterator but it's not used, but still all should be called,
+    Useful if a method returns an Iterator that is not used, but still all should be called,
     for example if each iter element calls a function that should be called for all or
     given amount of elements in Iterator
 
     examples:
-    consume(filter_iter(...))  # consumes all elements of given function that returns a Iterator
-    consume(filter_iter(...), 3)  # consumes next 3 elements of given function that returns a Iterator
+    consume(filter_iter(...))  # consumes all elements of given function that returns an Iterator
+    consume(filter_iter(...), 3)  # consumes next 3 elements of given function that returns an Iterator
     """
     # Use functions that consume iterators at C speed.
     if n is None:
@@ -76,7 +83,7 @@ def consume(iterator, n=None):
 
 def decode_str(s, encoding='utf-8', errors=None):
     # type: (...) -> AnyStr
-    if isinstance(s, binary_type):
+    if isinstance(s, bytes):
         if None is errors:
             return s.decode(encoding)
         return s.decode(encoding, errors)
@@ -99,7 +106,7 @@ def html_unescape(s):
 
 def list_range(*args, **kwargs):
     # type: (...) -> List
-    return list(moves.range(*args, **kwargs))
+    return list(range(*args, **kwargs))
 
 
 def urlparse(url, scheme='', allow_fragments=True):
@@ -135,181 +142,26 @@ def b64encodestring(s, keep_eol=False):
     return data.rstrip()
 
 
-if 2 != version_info[0]:
-    # ---------
-    # Python 3+
-    # ---------
-    # noinspection PyUnresolvedReferences,PyProtectedMember
-    from base64 import decodebytes, encodebytes
-    b64decodebytes = decodebytes
-    b64encodebytes = encodebytes
-    # noinspection PyUnresolvedReferences,PyCompatibility
-    from configparser import ConfigParser
-    # noinspection PyUnresolvedReferences
-    from enum import Enum
-    # noinspection PyUnresolvedReferences
-    from os import scandir, DirEntry
-    # noinspection PyUnresolvedReferences
-    from itertools import zip_longest
-    # noinspection PyUnresolvedReferences
-    from inspect import getfullargspec as getargspec
+native_timestamp = datetime.datetime.timestamp  # type: Callable[[datetime.datetime], float]
 
-    # noinspection PyUnresolvedReferences
-    from subprocess import Popen
 
-    # noinspection PyUnresolvedReferences, PyPep8Naming
-    import xml.etree.ElementTree as etree
+def unquote(string, encoding='utf-8', errors='replace'):
+    return decode_str(six_unquote(decode_str(string, encoding, errors), encoding=encoding, errors=errors),
+                      encoding, errors)
 
-    ordered_dict = dict
 
-    native_timestamp = datetime.datetime.timestamp  # type: Callable[[datetime.datetime], float]
+def unquote_plus(string, encoding='utf-8', errors='replace'):
+    return decode_str(six_unquote_plus(decode_str(string, encoding, errors), encoding=encoding, errors=errors),
+                      encoding, errors)
 
-    def unquote(string, encoding='utf-8', errors='replace'):
-        return decode_str(six_unquote(decode_str(string, encoding, errors), encoding=encoding, errors=errors),
-                          encoding, errors)
 
-    def unquote_plus(string, encoding='utf-8', errors='replace'):
-        return decode_str(six_unquote_plus(decode_str(string, encoding, errors), encoding=encoding, errors=errors),
-                          encoding, errors)
+def decode_bytes(d, encoding='utf-8', errors='replace'):
+    if not isinstance(d, bytes):
+        # noinspection PyArgumentList
+        return bytes(d, encoding=encoding, errors=errors)
+    return d
 
-    def decode_bytes(d, encoding='utf-8', errors='replace'):
-        if not isinstance(d, binary_type):
-            # noinspection PyArgumentList
-            return bytes(d, encoding=encoding, errors=errors)
-        return d
 
-    def filter_list(*args):
-        # type: (...) -> List
-        return list(filter(*args))
-
-    def list_items(d):
-        # type: (Dict) -> List[Tuple[Any, Any]]
-        """
-        equivalent to python 2 .items()
-        """
-        return list(d.items())
-
-    def list_keys(d):
-        # type: (Dict) -> List
-        """
-        equivalent to python 2 .keys()
-        """
-        return list(d)
-
-    def list_values(d):
-        # type: (Dict) -> List
-        """
-        equivalent to python 2 .values()
-        """
-        return list(d.values())
-
-    def map_list(*args):
-        # type: (...) -> List
-        return list(map(*args))
-
-    def map_none(*args):
-        # type: (...) -> List
-        return list(zip_longest(*args))
-
-    def unidecode(data):
-        # type: (AnyStr) -> AnyStr
-        return data
-
-else:
-    # ---------
-    # Python 2
-    # ---------
-    import time
-    from lib.unidecode import unidecode as unicode_decode
-    # noinspection PyProtectedMember,PyDeprecation
-    from base64 import decodestring, encodestring
-    # noinspection PyDeprecation
-    b64decodebytes = decodestring
-    # noinspection PyDeprecation
-    b64encodebytes = encodestring
-    # noinspection PyUnresolvedReferences
-    from lib.backports.configparser import ConfigParser
-    # noinspection PyUnresolvedReferences
-    from lib.enum34 import Enum
-    # noinspection PyProtectedMember,PyUnresolvedReferences
-    from lib.scandir.scandir import scandir, GenericDirEntry as DirEntry
-    # noinspection PyUnresolvedReferences,PyDeprecation
-    from inspect import getargspec
-
-    try:
-        # noinspection PyPep8Naming
-        import xml.etree.cElementTree as etree
-    except ImportError:
-        # noinspection PyPep8Naming
-        import xml.etree.ElementTree as etree
-
-    from collections import OrderedDict
-    ordered_dict = OrderedDict
-
-    def _totimestamp(dt=None):
-        # type: (datetime.datetime) -> float
-        """ This function should only be used in this module due to its 1970s+ limitation as that's all we need here and
-        sgdatatime can't be used at this module level
-        """
-        return time.mktime(dt.timetuple())
-
-    native_timestamp = _totimestamp  # type: Callable[[datetime.datetime], float]
-
-    from subprocess import Popen as _Popen
-
-    class Popen(_Popen):
-
-        def __enter__(self):
-            return self
-
-        def __exit__(self, *args, **kwargs):
-            for x in filter_iter(lambda y: y, [self.stdout, self.stderr, self.stdin]):
-                x.close()
-            self.wait()
-
-    def unquote(string, encoding='utf-8', errors='replace'):
-        return decode_str(six_unquote(decode_str(string, encoding, errors)), encoding, errors)
-
-    def unquote_plus(string, encoding='utf-8', errors='replace'):
-        return decode_str(six_unquote_plus(decode_str(string, encoding, errors)), encoding, errors)
-
-    # noinspection PyUnusedLocal
-    def decode_bytes(d, encoding='utf-8', errors='replace'):
-        if not isinstance(d, binary_type):
-            return bytes(d)
-        return d
-
-    def filter_list(*args):
-        # type: (...) -> List
-        # noinspection PyTypeChecker
-        return filter(*args)
-
-    def list_items(d):
-        # type: (Dict) -> List[Tuple[Any, Any]]
-        # noinspection PyTypeChecker
-        return d.items()
-
-    def list_keys(d):
-        # type: (Dict) -> List
-        # noinspection PyTypeChecker
-        return d.keys()
-
-    def list_values(d):
-        # type: (Dict) -> List
-        # noinspection PyTypeChecker
-        return d.values()
-
-    def map_list(*args):
-        # type: (...) -> List
-        # noinspection PyTypeChecker
-        return map(*args)
-
-    def map_none(*args):
-        # type: (...) -> List
-        # noinspection PyTypeChecker
-        return map(None, *args)
-
-    def unidecode(data):
-        # type: (AnyStr) -> AnyStr
-        # noinspection PyUnresolvedReferences
-        return isinstance(data, unicode) and unicode_decode(data) or data
+def map_none(*args):
+    # type: (...) -> List
+    return list(zip_longest(*args))

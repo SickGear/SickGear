@@ -24,7 +24,6 @@ from ..helpers import try_int
 
 from bs4_parser import BS4Parser
 
-from _23 import unidecode
 from six import iteritems
 
 
@@ -53,7 +52,6 @@ class MagnetDLProvider(generic.TorrentProvider):
             for search_string in search_params[mode]:
                 urls = [self.urls['browse'], self.urls['browse'] + '2']
                 if 'Cache' != mode:
-                    search_string = unidecode(search_string)
                     urls = [self.urls['search'] % re.sub(r'[.\s]+', ' ', search_string)]
 
                 html = ''

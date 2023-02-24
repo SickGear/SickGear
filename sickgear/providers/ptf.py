@@ -26,7 +26,6 @@ from .. import logger
 from ..helpers import anon_url, try_int
 from bs4_parser import BS4Parser
 
-from _23 import unidecode
 from six import iteritems
 
 
@@ -82,7 +81,6 @@ class PTFProvider(generic.TorrentProvider):
         for mode in search_params:
             rc['cats'] = re.compile('(?i)cat=(?:%s)' % self._categories_string(mode, template='', delimiter='|'))
             for search_string in search_params[mode]:
-                search_string = unidecode(search_string)
 
                 search_url = self.urls['search'] % ('+'.join(search_string.split()), self._categories_string(mode))
                 html = self.get_url(search_url)

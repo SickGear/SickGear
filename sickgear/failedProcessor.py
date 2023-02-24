@@ -69,19 +69,19 @@ class FailedProcessor(LegacyFailedProcessor):
         """
         self._log(u'Failed download detected: (%s, %s)' % (self.nzb_name, self.dir_name))
 
-        releaseName = show_name_helpers.determine_release_name(self.dir_name, self.nzb_name)
-        if None is releaseName:
+        release_name = show_name_helpers.determine_release_name(self.dir_name, self.nzb_name)
+        if None is release_name:
             self._log(u'Warning: unable to find a valid release name.', logger.WARNING)
             raise exceptions_helper.FailedProcessingFailed()
 
         try:
             parser = NameParser(False, show_obj=self.show_obj, convert=True)
-            parsed = parser.parse(releaseName)
+            parsed = parser.parse(release_name)
         except InvalidNameException:
-            self._log(u'Error: release name is invalid: ' + releaseName, logger.DEBUG)
+            self._log(u'Error: release name is invalid: ' + release_name, logger.DEBUG)
             raise exceptions_helper.FailedProcessingFailed()
         except InvalidShowException:
-            self._log(u'Error: unable to parse release name %s into a valid show' % releaseName, logger.DEBUG)
+            self._log(u'Error: unable to parse release name %s into a valid show' % release_name, logger.DEBUG)
             raise exceptions_helper.FailedProcessingFailed()
 
         logger.log(u"name_parser info: ", logger.DEBUG)

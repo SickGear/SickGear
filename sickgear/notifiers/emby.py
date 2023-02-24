@@ -21,7 +21,7 @@ from .generic import Notifier
 from json_helper import json_loads
 import sickgear
 
-from _23 import decode_bytes, decode_str, map_list
+from _23 import decode_bytes, decode_str
 
 
 class EmbyNotifier(Notifier):
@@ -50,7 +50,7 @@ class EmbyNotifier(Notifier):
             timeout=20, hooks=dict(response=self._cb_response), json=True)
 
         return self.response and self.response.get('ok') and 200 == self.response.get('status_code') and \
-            version <= map_list(lambda x: int(x), (response and response.get('Version') or '0.0.0.0').split('.'))
+            version <= list(map(lambda x: int(x), (response and response.get('Version') or '0.0.0.0').split('.')))
 
     def update_library(self, show_obj=None, **kwargs):
         """ Update library function

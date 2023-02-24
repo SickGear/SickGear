@@ -129,7 +129,7 @@ class GenericClient(object):
     def _add_torrent_file(self, result):
         """
         This should be overridden to return the True/False from the client
-        when a torrent is added via result.content (only .torrent file)
+        when a torrent is added via `result.content` (only .torrent file)
         """
         return False
 
@@ -179,9 +179,9 @@ class GenericClient(object):
         """
         This should be overridden to resume task(s) in client
 
-        :param ids: Id(s) to act on
+        :param ids: ID(s) to act on
         :type ids: list or string
-        :return: True if success, Id(s) that could not be resumed, else Falsy if failure
+        :return: True if success, ID(s) that could not be resumed, else Falsy if failure
         :rtype: bool or list
         """
         return False
@@ -189,9 +189,9 @@ class GenericClient(object):
     def _delete_torrent(self, ids):
         """
         This should be overridden to delete task(s) from client
-        :param ids: Id(s) to act on
+        :param ids: ID(s) to act on
         :type ids: list or string
-        :return: True if success, Id(s) that could not be deleted, else Falsy if failure
+        :return: True if success, ID(s) that could not be deleted, else Falsy if failure
         :rtype: bool or list
         """
         return False
@@ -200,7 +200,7 @@ class GenericClient(object):
     def _get_torrent_hash(result):
 
         if result.url.startswith('magnet'):
-            result.hash = re.findall(r'urn:btih:([\w]{32,40})', result.url)[0]
+            result.hash = re.findall(r'urn:btih:(\w{32,40})', result.url)[0]
             if 32 == len(result.hash):
                 result.hash = make_btih(result.hash).lower()
         else:

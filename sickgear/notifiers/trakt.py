@@ -22,7 +22,6 @@ import sickgear
 from lib.api_trakt import TraktAPI, exceptions
 from exceptions_helper import ConnectionSkipException
 
-from _23 import list_keys
 from six import iteritems
 
 # noinspection PyUnreachableCode
@@ -38,7 +37,7 @@ class TraktNotifier(BaseNotifier):
     def is_enabled_library(cls):
         if sickgear.TRAKT_ACCOUNTS:
             for tid, locations in iteritems(sickgear.TRAKT_UPDATE_COLLECTION):
-                if tid in list_keys(sickgear.TRAKT_ACCOUNTS):
+                if tid in list(sickgear.TRAKT_ACCOUNTS):
                     return True
         return False
 
@@ -89,7 +88,7 @@ class TraktNotifier(BaseNotifier):
                 data['shows'][0]['seasons'][0]['episodes'].append({'number': cur_ep_obj.episode})
 
             for tid, locations in iteritems(sickgear.TRAKT_UPDATE_COLLECTION):
-                if tid not in list_keys(sickgear.TRAKT_ACCOUNTS):
+                if tid not in list(sickgear.TRAKT_ACCOUNTS):
                     continue
                 for loc in locations:
                     if not ep_obj.location.startswith('%s%s' % (loc.rstrip(os.path.sep), os.path.sep)):

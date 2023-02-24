@@ -22,8 +22,6 @@ from .common import FAILED, SNATCHED, SNATCHED_PROPER, SUBTITLED, Quality
 from .name_parser.parser import NameParser
 import sickgear
 
-from six import PY2, text_type
-
 # noinspection PyUnreachableCode
 if False:
     from typing import Any, AnyStr
@@ -46,9 +44,6 @@ def _log_history_item(action, tvid, prodid, season, episode, quality, resource, 
     :param version: version
     """
     log_date = datetime.datetime.now().strftime(dateFormat)
-
-    if PY2 and not isinstance(resource, text_type):
-        resource = text_type(resource, 'utf-8', 'replace')
 
     my_db = db.DBConnection()
     my_db.action(
@@ -77,7 +72,7 @@ def log_snatch(search_result):
         else:
             provider = 'unknown'
 
-        action = Quality.compositeStatus((SNATCHED, SNATCHED_PROPER)[is_proper], search_result.quality)
+        action = Quality.composite_status((SNATCHED, SNATCHED_PROPER)[is_proper], search_result.quality)
 
         resource = search_result.name
 
@@ -125,8 +120,8 @@ def log_subtitle(tvid, prodid, season, episode, status, subtitle_result):
     """
     resource = subtitle_result.path
     provider = subtitle_result.service
-    status, quality = Quality.splitCompositeStatus(status)
-    action = Quality.compositeStatus(SUBTITLED, quality)
+    status, quality = Quality.split_composite_status(status)
+    action = Quality.composite_status(SUBTITLED, quality)
 
     _log_history_item(action, tvid, prodid, season, episode, quality, resource, provider)
 
@@ -140,8 +135,8 @@ def log_failed(ep_obj, release, provider=None):
     :param release: release
     :param provider: provider name
     """
-    status, quality = Quality.splitCompositeStatus(ep_obj.status)
-    action = Quality.compositeStatus(FAILED, quality)
+    status, quality = Quality.split_composite_status(ep_obj.status)
+    action = Quality.composite_status(FAILED, quality)
 
     _log_history_item(action, ep_obj.show_obj.tvid, ep_obj.show_obj.prodid,
                       ep_obj.season, ep_obj.episode, quality, release, provider)
@@ -215,7 +210,7 @@ def history_snatched_proper_fix():
                     continue
                 if 0 < Quality.get_proper_level(pr.extra_info_no_name(), pr.version, pr.is_anime):
                     cl.append(['UPDATE history SET action = ? WHERE rowid = ?',
-                               [Quality.compositeStatus(SNATCHED_PROPER, int(r['quality'])),
+                               [Quality.composite_status(SNATCHED_PROPER, int(r['quality'])),
                                 r['rowid']]])
             if cl:
                 my_db.mass_action(cl)

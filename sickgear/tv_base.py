@@ -20,7 +20,7 @@ import sickgear
 from . import logger
 from ._legacy_classes import LegacyTVShow, LegacyTVEpisode
 from .common import UNKNOWN
-from .name_cache import buildNameCache
+from .name_cache import build_name_cache
 
 from six import string_types
 
@@ -132,7 +132,7 @@ class TVShowBase(LegacyTVShow, TVBase):
         _current_name = self._name
         self.dirty_setter('_name')(self, *arg)
         if _current_name != self._name:
-            buildNameCache(self)
+            build_name_cache(self)
 
     # imdbid = property(lambda self: self._imdbid, dirty_setter('_imdbid'))
     @property

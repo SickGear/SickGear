@@ -39,7 +39,6 @@ from lib.tvinfo_base import CastList, TVInfoCharacter, CrewList, TVInfoPerson, R
 from .tvdb_exceptions import TvdbError, TvdbShownotfound, TvdbTokenexpired
 from .tvdb_ui import BaseUI, ConsoleUI
 
-from _23 import filter_list, list_keys, list_values, map_list
 from six import integer_types, iteritems, PY2, string_types
 
 # noinspection PyUnreachableCode
@@ -290,7 +289,7 @@ class Tvdb(TVInfoBase):
             'nl': 'nld', 'no': 'nor',
             'pl': 'pol', 'pt': 'pot', 'ru': 'rus', 'sk': 'slv', 'sv': 'swe', 'zh': 'zho', '_1': 'srp',
         }
-        self.config['valid_languages_3'] = list_values(self.config['langabbv_23'])
+        self.config['valid_languages_3'] = list(self.config['langabbv_23'].values())
 
         # TheTvdb.com should be based around numeric language codes,
         # but to link to a series like http://thetvdb.com/?tab=series&id=79349&lid=16
@@ -358,7 +357,7 @@ class Tvdb(TVInfoBase):
                 else:
                     d_m = shows
                 if d_m:
-                    results = map_list(map_data, [d_m['data']])
+                    results = list(map(map_data, [d_m['data']]))
             if ids.get(TVINFO_TVDB_SLUG):
                 cache_id_key = 's-id-%s-%s' % (TVINFO_TVDB, ids[TVINFO_TVDB_SLUG])
                 is_none, shows = self._get_cache_entry(cache_id_key)
@@ -373,7 +372,7 @@ class Tvdb(TVInfoBase):
                 if d_m:
                     for r in d_m:
                         if ids.get(TVINFO_TVDB_SLUG) == r['slug']:
-                            results = map_list(map_data, [r])
+                            results = list(map(map_data, [r]))
                             break
         if name:
             for n in ([name], name)[isinstance(name, list)]:
@@ -390,7 +389,7 @@ class Tvdb(TVInfoBase):
                 if r:
                     if not isinstance(r, list):
                         r = [r]
-                    results.extend(map_list(map_data, r))
+                    results.extend(list(map(map_data, r)))
 
         seen = set()
         results = [seen.add(r['id']) or r for r in results if r['id'] not in seen]
@@ -613,8 +612,8 @@ class Tvdb(TVInfoBase):
         # type: (int, Optional[str]) -> Optional[dict]
         results = self.search_tvs(sid, language=language)
         for cur_result in (isinstance(results, dict) and results.get('results') or []):
-            result = filter_list(lambda r: 'series' == r['type'] and sid == r['id'],
-                                 cur_result.get('nbHits') and cur_result.get('hits') or [])
+            result = list(filter(lambda r: 'series' == r['type'] and sid == r['id'],
+                                 cur_result.get('nbHits') and cur_result.get('hits') or []))
             if 1 == len(result):
                 result[0]['overview'] = self.clean_overview(
                     result[0]['overviews'][self.config['langabbv_23'].get(language) or 'eng'])
@@ -627,7 +626,7 @@ class Tvdb(TVInfoBase):
 
                 # notify of new keys
                 if ENV.get('SG_DEV_MODE'):
-                    new_keys = set(list_keys(result[0])).difference({
+                    new_keys = set(list(result[0])).difference({
                         '_highlightResult', 'aliases', 'banner',
                         'fanart', 'firstaired', 'follower_count',
                         'id', 'image', 'is_tvdb_searchable', 'is_tvt_searchable',
@@ -788,7 +787,7 @@ class Tvdb(TVInfoBase):
             series_found = self._getetsrc(self.config['url_search_series'], params=self.config['params_search_series'],
                                           language=self.config['language'])
             if series_found:
-                return list_values(series_found)[0]
+                return list(series_found.values())[0]
         except (BaseException, Exception):
             pass
 
@@ -899,15 +898,15 @@ class Tvdb(TVInfoBase):
                                 try:
                                     for cur_result in (isinstance(results, dict) and results.get('results') or []):
                                         # sorts 'banners/images/missing/' to last before filter
-                                        people = filter_list(
+                                        people = list(filter(
                                             lambda r: 'person' == r['type']
                                                       and rc_clean.sub(name, '') == rc_clean.sub(r['name'], ''),
                                             cur_result.get('nbHits')
                                             and sorted(cur_result.get('hits'),
-                                                       key=lambda x: len(x['image']), reverse=True) or [])
+                                                       key=lambda x: len(x['image']), reverse=True) or []))
                                         if ENV.get('SG_DEV_MODE'):
                                             for person in people:
-                                                new_keys = set(list_keys(person)).difference({
+                                                new_keys = set(list(person)).difference({
                                                     '_highlightResult', 'banner', 'id', 'image',
                                                     'is_tvdb_searchable', 'is_tvt_searchable', 'name',
                                                     'objectID', 'people_birthdate', 'people_died',

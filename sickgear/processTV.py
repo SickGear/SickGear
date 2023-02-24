@@ -35,8 +35,7 @@ from .history import reset_status
 from .name_parser.parser import InvalidNameException, InvalidShowException, NameParser
 from .sgdatetime import timestamp_near
 
-from _23 import filter_list, filter_iter, list_values, map_iter
-from six import iteritems, iterkeys, string_types, PY2, text_type
+from six import iteritems, iterkeys, string_types, text_type
 from sg_helpers import long_path, scantree
 
 import lib.rarfile.rarfile as rarfile
@@ -281,7 +280,7 @@ class ProcessTVShow(object):
         build_path = (lambda old_path: '%s%s' % (helpers.real_path(old_path).rstrip(os.path.sep), os.path.sep))
 
         process_path = build_path(path)
-        for parent in map_iter(lambda p: build_path(p), sickgear.ROOT_DIRS.split('|')[1:]):
+        for parent in map(lambda p: build_path(p), sickgear.ROOT_DIRS.split('|')[1:]):
             if process_path.startswith(parent):
                 return parent.rstrip(os.path.sep)
 
@@ -352,7 +351,7 @@ class ProcessTVShow(object):
 
         path, dirs, files = self._get_path_dir_files(dir_name, nzb_name, pp_type)
 
-        if sickgear.POSTPONE_IF_SYNC_FILES and any(filter_iter(helpers.is_sync_file, files)):
+        if sickgear.POSTPONE_IF_SYNC_FILES and any(filter(helpers.is_sync_file, files)):
             self._log_helper(u'Found temporary sync files, skipping post process', logger.ERROR)
             return self.result
 
@@ -367,7 +366,7 @@ class ProcessTVShow(object):
             work_files += [joined]
 
         rar_files, rarfile_history = self.unused_archives(
-            path, filter_list(helpers.is_first_rar_volume, files), pp_type, process_method)
+            path, list(filter(helpers.is_first_rar_volume, files)), pp_type, process_method)
         rar_content = self._unrar(path, rar_files, force)
         if self.fail_detected:
             self._process_failed(dir_name, nzb_name, show_obj=show_obj)
@@ -376,8 +375,8 @@ class ProcessTVShow(object):
         rar_content = [x for x in rar_content if not helpers.is_link(os.path.join(path, x))]
         path, dirs, files = self._get_path_dir_files(dir_name, nzb_name, pp_type)
         files = [x for x in files if not helpers.is_link(os.path.join(path, x))]
-        video_files = filter_list(helpers.has_media_ext, files)
-        video_in_rar = filter_list(helpers.has_media_ext, rar_content)
+        video_files = list(filter(helpers.has_media_ext, files))
+        video_in_rar = list(filter(helpers.has_media_ext, rar_content))
         work_files += [os.path.join(path, item) for item in rar_content]
 
         if 0 < len(files):
@@ -438,7 +437,7 @@ class ProcessTVShow(object):
 
             for walk_path, walk_dir, files in os.walk(os.path.join(path, directory), topdown=False):
 
-                if sickgear.POSTPONE_IF_SYNC_FILES and any(filter_iter(helpers.is_sync_file, files)):
+                if sickgear.POSTPONE_IF_SYNC_FILES and any(filter(helpers.is_sync_file, files)):
                     self._log_helper(u'Found temporary sync files, skipping post process', logger.ERROR)
                     return self.result
 
@@ -452,7 +451,7 @@ class ProcessTVShow(object):
                 files = [x for x in files if not helpers.is_link(os.path.join(walk_path, x))]
 
                 rar_files, rarfile_history = self.unused_archives(
-                    walk_path, filter_list(helpers.is_first_rar_volume, files), pp_type, process_method,
+                    walk_path, list(filter(helpers.is_first_rar_volume, files)), pp_type, process_method,
                     rarfile_history)
                 rar_content = self._unrar(walk_path, rar_files, force)
                 work_files += [os.path.join(walk_path, item) for item in rar_content]
@@ -461,8 +460,8 @@ class ProcessTVShow(object):
                     continue
                 rar_content = [x for x in rar_content if not helpers.is_link(os.path.join(walk_path, x))]
                 files = list(set(files + rar_content))
-                video_files = filter_list(helpers.has_media_ext, files)
-                video_in_rar = filter_list(helpers.has_media_ext, rar_content)
+                video_files = list(filter(helpers.has_media_ext, files))
+                video_in_rar = list(filter(helpers.has_media_ext, rar_content))
                 notwanted_files = [x for x in files if x not in video_files]
 
                 # Don't Link media when the media is extracted from a rar in the same path
@@ -640,7 +639,7 @@ class ProcessTVShow(object):
             all_dirs += process_dir
             all_files += fileList
 
-        video_files = filter_list(helpers.has_media_ext, all_files)
+        video_files = list(filter(helpers.has_media_ext, all_files))
         all_dirs.append(dir_name)
 
         # check if the directory have at least one tv video file
@@ -660,7 +659,7 @@ class ProcessTVShow(object):
 
         if sickgear.UNPACK and process_path and all_files:
             # Search for packed release
-            packed_files = filter_list(helpers.is_first_rar_volume, all_files)
+            packed_files = list(filter(helpers.is_first_rar_volume, all_files))
 
             for packed in packed_files:
                 try:
@@ -719,9 +718,8 @@ class ProcessTVShow(object):
                         rar_content = [os.path.normpath(x.filename) for x in rar_handle.infolist() if not x.is_dir()]
                         renamed = self.cleanup_names(path, rar_content)
                         cur_unpacked = rar_content if not renamed else \
-                            (list(set(rar_content) - set(iterkeys(renamed))) + list_values(renamed))
-                        self._log_helper(u'Unpacked content: [u\'%s\']' % '\', u\''.join(map_iter(text_type,
-                                                                                                  cur_unpacked)))
+                            (list(set(rar_content) - set(iterkeys(renamed))) + list(renamed.values()))
+                        self._log_helper(u'Unpacked content: [u\'%s\']' % '\', u\''.join(map(text_type, cur_unpacked)))
                         unpacked_files += cur_unpacked
                 except (rarfile.PasswordRequired, rarfile.RarWrongPassword):
                     self._log_helper(u'Failed to unpack archive PasswordRequired: %s' % archive, logger.ERROR)
@@ -928,10 +926,6 @@ class ProcessTVShow(object):
         if force or not self.any_vid_processed:
             return False
 
-        # Needed for accessing DB with a unicode dir_name
-        if PY2 and not isinstance(dir_name, text_type):
-            dir_name = text_type(dir_name, 'utf_8')
-
         parse_result = None
         try:
             parse_result = NameParser(convert=True).parse(videofile, cache_result=False)
@@ -974,8 +968,6 @@ class ProcessTVShow(object):
 
         else:
             # This is needed for video whose name differ from dir_name
-            if PY2 and not isinstance(videofile, text_type):
-                videofile = text_type(videofile, 'utf_8')
 
             sql_result = my_db.select(
                 'SELECT * FROM tv_episodes WHERE release_name = ?', [videofile.rpartition('.')[0]])

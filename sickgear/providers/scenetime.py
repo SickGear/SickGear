@@ -23,7 +23,6 @@ from .. import logger
 from ..helpers import anon_url, try_int
 from bs4_parser import BS4Parser
 
-from _23 import unidecode
 from six import iteritems
 
 
@@ -70,7 +69,6 @@ class SceneTimeProvider(generic.TorrentProvider):
             urls = []
             for search_string in search_params[mode]:
                 urls += [[]]
-                search_string = unidecode(search_string)
                 search_url = self.urls['search'] % (self._categories_string(),
                                                     '+'.join(search_string.replace('.', ' ').split()),
                                                     ('', '&freeleech=on')[self.freeleech])
