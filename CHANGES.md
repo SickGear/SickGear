@@ -6,6 +6,11 @@
 * Change codebase cleanups
 
 
+### 3.27.9 (2023-02-27 01:10:00 UTC)
+
+* Fix remove incorrectly displayed NZBGet tip
+
+
 ### 3.27.8 (2023-02-20 23:30:00 UTC)
 
 * Update UnRar x64 for Windows 6.20 to 6.21

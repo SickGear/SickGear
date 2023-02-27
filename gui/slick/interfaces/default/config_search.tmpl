@@ -364,7 +364,7 @@
 								<span class="component-desc" style="margin:0;width:100%">
 									<div class="clear-left"><p><span class="grey-text"><span class="red-text">Important!</span> To set up NZBGet to communicate with SickGear, follow the guide <a href="https://github.com/SickGear/SickGear/wiki/Install-SickGear-%5B80%5D-Extras">here</a></span></p></div>
 								</span>
-#if not $sickgear.NZBGET_SKIP_PM
+#if $sickgear.NZBGET_SKIP_PM
 								<span class="component-desc" style="margin:0;width:100%">
 									<div class="clear-left"><p><span class="grey-text"><span class="red-text">Important!</span> NZBGet script calls will not process media. Set</span> nzbget_skip_process_media = 0 <span class="grey-text">in <code>config.ini</code> for full process</span></p></div>
 								</span>
