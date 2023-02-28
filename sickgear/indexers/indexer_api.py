@@ -100,10 +100,18 @@ class TVInfoAPI(object):
     def all_sources(self):
         # type: () -> Dict[int, AnyStr]
         """
-        :return: return all indexers including mapped only indexers excluding fallback indexers
+        :return: return all indexers for show data including mapped only indexers excluding fallback indexers
         """
         return self._filter(lambda x:
                             True is not x.get('fallback') and True is not x.get('people_only'))
+
+    @property
+    def all_non_fallback_sources(self):
+        # type: (...) -> Dict[int, AnyStr]
+        """
+        return all sources with the exclusion of fallback indexer
+        """
+        return self._filter(lambda x: True is not x.get('fallback'))
 
     @property
     def fallback_sources(self):

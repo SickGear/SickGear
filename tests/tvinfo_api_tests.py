@@ -52,7 +52,7 @@ only_new_urls_data_creation = True
 delete_unused_mock_files = False
 
 # other settings
-pickle_protocol = 3  # needed for python 3.7 compatibility
+pickle_protocol = 5  # needed for python 3.8 compatibility
 used_files = {'browse_start_date.data'}
 
 
@@ -153,6 +153,8 @@ def _load_pickle_file(f_name):
     try:
         with lzma.open(full_filename, 'rb') as f:
             return pickle.load(f)
+    except (BaseException, Exception):
+        return
     finally:
         datetime.date = _FakeDate
         datetime.datetime = _FakeDateTime

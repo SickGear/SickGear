@@ -41,6 +41,7 @@ log.addHandler(logging.NullHandler())
 
 TVDB_API_CONFIG = {}
 
+NoneType = type(None)
 
 # always use https in cases of redirects
 # noinspection PyUnusedLocal,HttpUrlsUsage
@@ -248,10 +249,7 @@ class TvdbAPIv4(TVInfoBase):
 
     def _get_data(self, endpoint, **kwargs):
         # type: (string_types, Any) -> Any
-        is_series_info, retry = endpoint.startswith('/series/'), kwargs.pop('token_retry', 1)
-        if retry > 3:
-            raise TvdbTokenFailure('Failed to get new token')
-        if is_series_info:
+        if is_series_info := endpoint.startswith('/series/'):
             self.show_not_found = False
         try:
             return tvdb_endpoint_get(url='%s%s' % (self.base_url, endpoint), params=kwargs, parse_json=True,
@@ -368,8 +366,7 @@ class TvdbAPIv4(TVInfoBase):
         """
         if not p_id:
             return
-        cache_key_name = 'p-v4-%s' % p_id
-        is_none, people_obj = self._get_cache_entry(cache_key_name)
+        is_none, people_obj = self._get_cache_entry(cache_key_name := 'p-v4-%s' % p_id)
         if None is people_obj and not is_none:
             resp = self._get_data('/people/%s/extended' % p_id)
             self._set_cache_entry(cache_key_name, resp)
@@ -396,8 +393,7 @@ class TvdbAPIv4(TVInfoBase):
                         result.append(r)
                 if tv_src in (TVINFO_IMDB, TVINFO_TMDB, TVINFO_TVMAZE):
                     _src = tv_src
-                    cache_id_key = 'p-v4-id-%s-%s' % (_src, ids[_src])
-                    is_none, shows = self._get_cache_entry(cache_id_key)
+                    is_none, shows = self._get_cache_entry(cache_id_key := 'p-v4-id-%s-%s' % (_src, ids[_src]))
                     d_m = None
                     if not self.config.get('cache_search') or (None is shows and not is_none):
                         try:
@@ -426,8 +422,7 @@ class TvdbAPIv4(TVInfoBase):
                                     result.extend(self._convert_person(r['people'], ids))
                                 break
         if name:
-            cache_key_name = 'p-v4-src-text-%s' % name
-            is_none, people_objs = self._get_cache_entry(cache_key_name)
+            is_none, people_objs = self._get_cache_entry(cache_key_name := 'p-v4-src-text-%s' % name)
             if None is people_objs and not is_none:
                 resp = self._get_data('/search', query=name, type='people')
                 self._set_cache_entry(cache_key_name, resp)
@@ -496,10 +491,13 @@ class TvdbAPIv4(TVInfoBase):
 
     def _get_series_name(self, show_data, language=None):
         # type: (Dict, AnyStr) -> Tuple[Optional[AnyStr], List]
-        series_name = clean_data(
-            next(filter(lambda l: language and language == l['language'],
-                        show_data.get('translations', {}).get('nameTranslations', [])),
-                 {'name': show_data['name']})['name'])
+        if 'nameTranslations' in show_data.get('translations', {}):
+            series_name = clean_data(
+                next(filter(lambda l: language and language == l['language'],
+                            show_data.get('translations', {}).get('nameTranslations', [])),
+                     {'name': show_data['name']})['name'])
+        else:
+            series_name = clean_data(show_data.get('translations', {}).get(language, show_data['name']))
         series_aliases = self._get_aliases(show_data)
         if not series_name:
             if isinstance(series_aliases, list) and 0 < len(series_aliases):
@@ -627,11 +625,11 @@ class TvdbAPIv4(TVInfoBase):
                     elif TVINFO_WIKIDATA == src_type or 'wikidata' in src_name:
                         social_ids['wikidata'] = src_value
                     elif TVINFO_TIKTOK == src_type or 'tiktok' in src_name:
-                        social_ids[TVINFO_TIKTOK] = src_value
+                        social_ids['tiktok'] = src_value
                     elif TVINFO_LINKEDIN == src_type:
-                        social_ids[TVINFO_LINKEDIN] = src_value
+                        social_ids['linkedin'] = src_value
                     elif TVINFO_FANSITE == src_type:
-                        social_ids[TVINFO_FANSITE] = src_value
+                        social_ids['fansite'] = src_value
 
             ti_show.ids = TVInfoIDs(tvdb=show_data['id'], **ids)
             if social_ids:
@@ -657,7 +655,8 @@ class TvdbAPIv4(TVInfoBase):
                             img_id=artwork['id'],
                             lang=artwork['language'],
                             rating=artwork['score'],
-                            updated_at=artwork['updatedAt'] or None
+                            updated_at=artwork['updatedAt'] or None,
+                            has_text=enforce_type(artwork.get('includesText'), (bool, NoneType), None)
                         )
                     )
 
@@ -1100,7 +1099,7 @@ class TvdbAPIv4(TVInfoBase):
                 # noinspection DuplicatedCode
                 if not self.config.get('cache_search') or (None is shows and not is_none):
                     try:
-                        d_m = self._get_show_data(ids.get(TVINFO_TVDB), self.config['language'], direct_data=True)
+                        d_m = self._get_show_data(ids.get(TVINFO_TVDB), lang, direct_data=True)
                         self._set_cache_entry(cache_id_key, d_m, expire=self.search_cache_expire)
                     except (BaseException, Exception):
                         d_m = None
@@ -1110,12 +1109,10 @@ class TvdbAPIv4(TVInfoBase):
                         and isinstance(d_m['data'], dict):
                     results.extend(_make_result_dict(d_m['data']))
 
-            if ids.get(TVINFO_IMDB):
-                cache_id_key = 's-v4-id-%s-%s' % (TVINFO_IMDB, ids[TVINFO_IMDB])
-                is_none, shows = self._get_cache_entry(cache_id_key)
+                is_none, shows = self._get_cache_entry(cache_id_key := 's-v4-id-%s-%s' % (cur_tvinfo, ids[cur_tvinfo]))
                 if not self.config.get('cache_search') or (None is shows and not is_none):
                     try:
-                        d_m = self._get_data('search', remote_id='tt%07d' % ids.get(TVINFO_IMDB),
+                        d_m = self._get_data('search?meta=translations', remote_id='tt%07d' % ids.get(TVINFO_IMDB),
                                              query='tt%07d' % ids.get(TVINFO_IMDB), type='series')
                         self._set_cache_entry(cache_id_key, d_m, expire=self.search_cache_expire)
                     except (BaseException, Exception):
@@ -1139,7 +1136,7 @@ class TvdbAPIv4(TVInfoBase):
                 is_none, shows = self._get_cache_entry(cache_id_key)
                 if not self.config.get('cache_search') or (None is shows and not is_none):
                     try:
-                        d_m = self._get_data('search', remote_id='%s' % ids.get(TVINFO_TMDB),
+                        d_m = self._get_data('search?meta=translations', remote_id='%s' % ids.get(TVINFO_TMDB),
                                              query='%s' % ids.get(TVINFO_TMDB), type='series')
                         self._set_cache_entry(cache_id_key, d_m, expire=self.search_cache_expire)
                     except (BaseException, Exception):
@@ -1163,7 +1160,7 @@ class TvdbAPIv4(TVInfoBase):
                 is_none, shows = self._get_cache_entry(cache_id_key)
                 if not self.config.get('cache_search') or (None is shows and not is_none):
                     try:
-                        d_m = self._get_data('search', remote_id='%s' % ids.get(TVINFO_TVMAZE),
+                        d_m = self._get_data('search?meta=translations', remote_id='%s' % ids.get(TVINFO_TVMAZE),
                                              query='%s' % ids.get(TVINFO_TVMAZE), type='series')
                         self._set_cache_entry(cache_id_key, d_m, expire=self.search_cache_expire)
                     except (BaseException, Exception):
@@ -1183,11 +1180,11 @@ class TvdbAPIv4(TVInfoBase):
                             pass
 
             if ids.get(TVINFO_TVDB_SLUG) and isinstance(ids.get(TVINFO_TVDB_SLUG), string_types):
-                cache_id_key = 's-id-%s-%s' % (TVINFO_TVDB, ids[TVINFO_TVDB_SLUG])
-                is_none, shows = self._get_cache_entry(cache_id_key)
+                is_none, shows = self._get_cache_entry(cache_id_key :=
+                                                       's-id-%s-%s' % (TVINFO_TVDB, ids[TVINFO_TVDB_SLUG]))
                 if not self.config.get('cache_search') or (None is shows and not is_none):
                     try:
-                        d_m = self._get_data('/series/slug/%s' % ids.get(TVINFO_TVDB_SLUG))
+                        d_m = self._get_data('/series/slug/%s?meta=translations' % ids.get(TVINFO_TVDB_SLUG))
                         self._set_cache_entry(cache_id_key, d_m, expire=self.search_cache_expire)
                     except (BaseException, Exception):
                         d_m = None
@@ -1202,7 +1199,7 @@ class TvdbAPIv4(TVInfoBase):
                 cache_name_key = 's-v4-name-%s' % n
                 is_none, shows = self._get_cache_entry(cache_name_key)
                 if not self.config.get('cache_search') or (None is shows and not is_none):
-                    resp = self._get_data('search', query=n, type='series')
+                    resp = self._get_data('search?meta=translations', query=n, type='series')
                     self._set_cache_entry(cache_name_key, resp, expire=self.search_cache_expire)
                 else:
                     resp = shows

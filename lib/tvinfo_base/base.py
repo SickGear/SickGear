@@ -329,7 +329,7 @@ class TVInfoImageSize(object):
 
 class TVInfoImage(object):
     def __init__(self, image_type, sizes, img_id=None, main_image=False, type_str='', rating=None, votes=None,
-                 lang=None, height=None, width=None, aspect_ratio=None, updated_at=None):
+                 lang=None, height=None, width=None, aspect_ratio=None, updated_at=None, has_text=None):
         self.img_id = img_id  # type: Optional[integer_types]
         self.image_type = image_type  # type: integer_types
         self.sizes = sizes  # type: Union[TVInfoImageSize, Dict]
@@ -341,6 +341,7 @@ class TVInfoImage(object):
         self.height = height  # type: Optional[integer_types]
         self.width = width  # type: Optional[integer_types]
         self.aspect_ratio = aspect_ratio  # type: Optional[Union[float, integer_types]]
+        self.has_text = has_text  # type: Optional[bool]
         self.updated_at = updated_at  # type: Optional[integer_types]
 
     def __eq__(self, other):
@@ -1370,7 +1371,7 @@ class TVInfoBase(object):
         if None is lang:
             if self.config.get('language'):
                 lang = self.config['language']
-            lang = self.map_languages.get(lang, lang)
+        lang = self.map_languages.get(lang, lang)
         if not name and not ids:
             log.debug('Nothing to search')
             raise BaseTVinfoShownotfound('Nothing to search')
