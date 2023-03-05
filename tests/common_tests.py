@@ -127,6 +127,15 @@ quality_tests = {
             'Test.Show.S01E02.2160p.WEBRip.x264-GROUP',
             'Test.Show.S01E02.2160p.WEBRip.x265-GROUP',
             'Test.Show.S01E02.2160p.WEBRip.vp9-GROUP'],
+    common.Quality.UHD4KBLURAY: [
+            'Test.Show.S01E02.2160p.BluRay.h264-GROUP',
+            'Test.Show.S01E02.2160p.BluRay.x264-GROUP',
+            'Test.Show.S01E02.2160p.BluRay.x265-GROUP',
+            'Test.Show.S01E02.2160p.BluRay.vp9-GROUP',
+            'Test.Show.S01E02.2160p.UHD.BluRay.h264-GROUP',
+            'Test.Show.S01E02.2160p.UHD.BluRay.x264-GROUP',
+            'Test.Show.S01E02.2160p.UHD.BluRay.x265-GROUP',
+            'Test.Show.S01E02.2160p.UHD.BluRay.vp9-GROUP'],
     common.Quality.UNKNOWN: ['Test.Show.S01E02-SiCKGEAR']
 }
 
@@ -154,7 +163,7 @@ class QualityTests(unittest.TestCase):
             for w, v in iteritems(wd):
                 if w == sq:
                     for u, o in sorted(iteritems(v)):
-                        self.assertEqual(o, result.get(u))
+                        self.assertEqual(o, result.get(u), msg='%s' % show_quality)
 
     def check_wantedquality_get_wantedlist(self, cases):
         for show_quality, result in cases:
@@ -260,6 +269,9 @@ class QualityTests(unittest.TestCase):
              Quality.UHD4KWEB: {
                 WantedQualities.wantedlist: [],
                 WantedQualities.bothlists: False, WantedQualities.upgradelist: False},
+             Quality.UHD4KBLURAY: {
+                WantedQualities.wantedlist: [],
+                WantedQualities.bothlists: False, WantedQualities.upgradelist: False},
              Quality.UNKNOWN: {
                 WantedQualities.wantedlist: [],
                 WantedQualities.bothlists: False, WantedQualities.upgradelist: False
@@ -298,6 +310,9 @@ class QualityTests(unittest.TestCase):
                 WantedQualities.wantedlist: [],
                 WantedQualities.bothlists: False, WantedQualities.upgradelist: False},
              Quality.UHD4KWEB: {
+                WantedQualities.wantedlist: [],
+                WantedQualities.bothlists: False, WantedQualities.upgradelist: False},
+             Quality.UHD4KBLURAY: {
                 WantedQualities.wantedlist: [],
                 WantedQualities.bothlists: False, WantedQualities.upgradelist: False},
              Quality.UNKNOWN: {
@@ -339,6 +354,9 @@ class QualityTests(unittest.TestCase):
                 WantedQualities.wantedlist: [],
                 WantedQualities.bothlists: True, WantedQualities.upgradelist: True},
              Quality.UHD4KWEB: {
+                WantedQualities.wantedlist: [],
+                WantedQualities.bothlists: False, WantedQualities.upgradelist: False},
+             Quality.UHD4KBLURAY: {
                 WantedQualities.wantedlist: [],
                 WantedQualities.bothlists: False, WantedQualities.upgradelist: False},
              Quality.UNKNOWN: {
@@ -3090,7 +3108,7 @@ class QualityTests(unittest.TestCase):
             (('The Show (15 Jan 2019) [text] 720HD mp4', False), common.Quality.HDTV),
             (('The.Show.s03e11.ep.name.1080p.web.dl.hevc.x265.Group', False), common.Quality.FULLHDWEBDL),
             (('The.Show.S03E05.1080p.NF.WEB-DL.DD5.1.HDR.HEVC-Group', False), common.Quality.FULLHDWEBDL),
-            (('The.Show.S01E10.Name.2160p.UHD.BluRay.REMUX.HDR.HEVC.DTS-HD.MA.5.1', False), common.Quality.UNKNOWN),
+            (('The.Show.S01E10.Name.2160p.UHD.BluRay.REMUX.HDR.HEVC.DTS-HD.MA.5.1', False), common.Quality.UHD4KBLURAY),
             (('Show.S01E07.2160p.4K.UHD.10bit.NF.WEBRip.5.1.x265.HEVC-Group', False), common.Quality.UHD4KWEB),
         ])
         for q, l in iteritems(quality_tests):

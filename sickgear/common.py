@@ -94,7 +94,7 @@ class Quality(object):
     FULLHDBLURAY = 1 << 8  # 256
     # UHD4KTV = 1 << 9 # reserved for the future
     UHD4KWEB = 1 << 10
-    # UHD4KBLURAY = 1 << 11 # reserved for the future
+    UHD4KBLURAY = 1 << 11
 
     # put these bits at the other end of the spectrum, far enough out that they shouldn't interfere
     UNKNOWN = 1 << 15  # 32768
@@ -110,7 +110,8 @@ class Quality(object):
                       FULLHDWEBDL: '1080p WEB-DL',
                       HDBLURAY: '720p BluRay',
                       FULLHDBLURAY: '1080p BluRay',
-                      UHD4KWEB: '2160p UHD 4K WEB'}
+                      UHD4KWEB: '2160p UHD 4K WEB',
+                      UHD4KBLURAY: '2160p UHD BluRay'}
 
     statusPrefixes = {DOWNLOADED: 'Downloaded',
                       SNATCHED: 'Snatched',
@@ -345,8 +346,11 @@ class Quality(object):
                 return Quality.FULLHDWEBDL
             if name_has([fmt]):
                 return Quality.FULLHDTV
-        if name_has(['2160p', webfmt]):
-            return Quality.UHD4KWEB
+        if name_has(['2160p']):
+            if name_has(['bluray']):
+                return Quality.UHD4KBLURAY
+            if name_has([webfmt]):
+                return Quality.UHD4KWEB
 
         return Quality.UNKNOWN
 
@@ -579,7 +583,7 @@ HD = Quality.combineQualities(
     [])  # HD720p + HD1080p
 HD720p = Quality.combineQualities([Quality.HDTV, Quality.HDWEBDL, Quality.HDBLURAY], [])
 HD1080p = Quality.combineQualities([Quality.FULLHDTV, Quality.FULLHDWEBDL, Quality.FULLHDBLURAY], [])
-UHD2160p = Quality.combineQualities([Quality.UHD4KWEB], [])
+UHD2160p = Quality.combineQualities([Quality.UHD4KWEB, Quality.UHD4KBLURAY], [])
 ANY = Quality.combineQualities(
     [Quality.SDTV, Quality.SDDVD, Quality.HDTV, Quality.FULLHDTV, Quality.HDWEBDL, Quality.FULLHDWEBDL,
      Quality.HDBLURAY, Quality.FULLHDBLURAY, Quality.UNKNOWN], [])  # SD + HD
