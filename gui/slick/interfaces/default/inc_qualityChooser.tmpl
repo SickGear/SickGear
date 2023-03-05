@@ -39,13 +39,12 @@
 #for $cur_quality in sorted($any_quality_list):
     ##set $has_unknown |= ($Quality.UNKNOWN == $cur_quality and $cur_quality in $any_qualities)
 				<a href="#" data-quality="$cur_quality" class="btn btn-inverse dark-bg#echo ('', ' active')[$cur_quality in $any_qualities]#" role="button"><i class="icon-glyph searchadd"></i>$Quality.get_quality_ui($cur_quality)</a>
-    #if $Quality.UHD4KWEB == $cur_quality
-				<span class="btn-placeholder"></span>
+    #if $Quality.UHD4KBLURAY == $cur_quality
 				<span class="btn-placeholder"></span>
 				<a href="#" data-quality="$Quality.UNKNOWN" class="btn btn-inverse dark-bg#echo ('', ' active')[$Quality.UNKNOWN in $any_qualities]#" role="button"><i class="icon-glyph searchadd"></i>$Quality.get_quality_ui($Quality.UNKNOWN)</a>
 
     #end if
-    #if $cur_quality in [$Quality.SDDVD, $Quality.FULLHDTV, $Quality.FULLHDBLURAY, $Quality.UHD4KWEB]
+    #if $cur_quality in [$Quality.SDDVD, $Quality.FULLHDTV, $Quality.FULLHDBLURAY, $Quality.UHD4KBLURAY]
 				<br>
     #end if
 #end for

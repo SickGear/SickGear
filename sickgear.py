@@ -71,7 +71,7 @@ except (BaseException, Exception):
 try:
     import Cheetah
 except (BaseException, Exception):
-    print('The Python module Cheetah is required')
+    print('The Python module CT3 (Cheetah) is required')
     if is_win:
         print('(1) However, this first run may have just installed it, so try to simply rerun sickgear.py again')
         print('(2) If this output is a rerun of (1) then open a command line prompt and manually install using...')
