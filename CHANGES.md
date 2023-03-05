@@ -1,4 +1,10 @@
-﻿### 3.27.9 (2023-02-27 01:10:00 UTC)
+﻿### 3.27.10 (2023-03-05 00:20:00 UTC)
+
+* Add UHD Bluray
+* Change an error text for Cheetah module availability
+
+
+### 3.27.9 (2023-02-27 01:10:00 UTC)
 
 * Fix remove incorrectly displayed NZBGet tip
 
