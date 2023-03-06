@@ -583,6 +583,6 @@ def has_abs_episodes(ep_obj=None, name=None):
     :return:
     :rtype: bool
     """
-    return any([(name or ep_obj.show_obj.name or '').lower().startswith(x.lower()) for x in [
+    return any((name or ep_obj.show_obj.name or '').lower().startswith(x.lower()) for x in [
         'The Eighties', 'The Making of the Mob', 'The Night Of', 'Roots 2016', 'Trepalium'
-    ]])
+    ])

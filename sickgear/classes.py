@@ -195,7 +195,7 @@ class ShowInfoFilter(object):
         return isinstance(show_info, dict) \
                and 'seriesname' in show_info \
                and isinstance(show_info['seriesname'], string_types) \
-               and any([x.search(show_info['seriesname']) for x in self.bad_names])
+               and any(x.search(show_info['seriesname']) for x in self.bad_names)
 
     @staticmethod
     def _fix_firstaired(show_info):

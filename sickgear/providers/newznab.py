@@ -911,9 +911,9 @@ class NewznabProvider(generic.NZBProvider):
                 # category ids
                 cat = []
                 if 'Episode' == mode or 'Season' == mode:
-                    if not (any([x in params for x in
-                                 [v for c, v in iteritems(self.caps)
-                                  if c not in [NewznabConstants.SEARCH_EPISODE, NewznabConstants.SEARCH_SEASON]]])):
+                    if not (any(x in params for x in
+                                [v for c, v in iteritems(self.caps)
+                                 if c not in [NewznabConstants.SEARCH_EPISODE, NewznabConstants.SEARCH_SEASON]])):
                         logger.log('Show is missing either an id or search term for search')
                         continue
 
@@ -938,7 +938,7 @@ class NewznabProvider(generic.NZBProvider):
                 request_params = base_params.copy()
                 # if ('Propers' == mode or 'nzbs_org' == self.get_id()) \
                 if 'Propers' == mode \
-                        and 'q' in params and not (any([x in params for x in ['season', 'ep']])):
+                        and 'q' in params and not (any(x in params for x in ['season', 'ep'])):
                     request_params['t'] = 'search'
                 request_params.update(params)
 
@@ -1048,10 +1048,10 @@ class NewznabProvider(generic.NZBProvider):
                 if exit_log:
                     self._log_search(mode, len(results), search_url)
 
-                if not try_all_searches and any([x in request_params for x in [
+                if not try_all_searches and any(x in request_params for x in [
                     v for c, v in iteritems(self.caps)
                     if c not in [NewznabConstants.SEARCH_EPISODE, NewznabConstants.SEARCH_SEASON,
-                                 NewznabConstants.SEARCH_TEXT]]]) and len(results):
+                                 NewznabConstants.SEARCH_TEXT]]) and len(results):
                     break
 
         return results, n_spaces

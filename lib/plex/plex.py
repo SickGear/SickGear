@@ -381,7 +381,7 @@ class Plex(object):
 
                     section_path = re.sub(r'[/\\]+', '/', section.find('Location').get('path').lower())
                     section_path = re.sub(r'^(.{,2})[/\\]', '', section_path)
-                    if not any([section_path in path for path in self.section_filter_path]):
+                    if not any(section_path in path for path in self.section_filter_path):
                         continue
 
                     if section.get('key') not in self.ignore_sections \

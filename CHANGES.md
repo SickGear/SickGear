@@ -4,6 +4,8 @@
 * Change remove calls to legacy py2 fix encoding function
 * Change requirements for pure py3
 * Change codebase cleanups
+* Change improve perf by using generators with `any`
+
 
 [develop changelog]
 
