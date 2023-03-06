@@ -1747,6 +1747,7 @@ def restart(soft=True, update_pkg=None):
         if update_pkg:
             MY_ARGS.append('--update-pkg')
 
+        logger.log(u'Trigger event restart')
         events.put(events.SystemEvent.RESTART)
 
     else:
@@ -1770,8 +1771,10 @@ def sig_handler(signum=None, _=None):
 def halt():
     global __INITIALIZED__, started
 
+    logger.debug('Check INIT_LOCK on halt')
     with INIT_LOCK:
 
+        logger.debug(f'Check __INITIALIZED__ on halt: {__INITIALIZED__}')
         if __INITIALIZED__:
 
             logger.log('Exiting threads')

@@ -769,6 +769,7 @@ class SickGear(object):
             return False
 
     def shutdown(self, ev_type):
+        logger.debug(f'Shutdown ev_type:{ev_type}, sickgear.started:{sickgear.started}')
         if sickgear.started:
             # stop all tasks
             sickgear.halt()

@@ -32,7 +32,17 @@ class Events(threading.Thread):
             try:
                 # get event type
                 etype = self.queue.get(True, 1)
+            except moves.queue.Empty:
+                etype = 'Empty'
+            except(BaseException, Exception):
+                etype = None
+            if etype in (self.SystemEvent.RESTART, self.SystemEvent.SHUTDOWN, None, 'Empty'):
+                if etype in ('Empty',):
+                    continue
+                from sickgear import logger
+                logger.debug(f'Callback {self.callback.__name__}(event type:{etype})')
 
+            try:
                 # perform callback if we got an event type
                 self.callback(etype)
 

@@ -5,6 +5,10 @@
 * Change requirements for pure py3
 * Change codebase cleanups
 
+[develop changelog]
+
+* Add logging around the restart/shutdown event
+
 
 ### 3.27.11 (2023-03-06 23:40:00 UTC)
 
