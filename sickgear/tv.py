@@ -5276,14 +5276,20 @@ class TVEpisode(TVEpisodeBase):
         Note: Also called from postProcessor
 
         """
-        has_timestamp = isinstance(self._timestamp, int) and 1 < self._timestamp
+        has_timestamp = isinstance(self._timestamp, int) and 0 != self._timestamp
         if not has_timestamp and (not isinstance(self._airdate, datetime.date) or 1 == self._airdate.year):
             logger.log('%s: Did not change modify date of %s because episode date is never aired or invalid'
                        % (self._show_obj.tvid_prodid, ek.ek(os.path.basename, self.location)), logger.DEBUG)
             return
 
         aired_dt = None
-        if not has_timestamp:
+        if has_timestamp:
+            try:
+                aired_dt = SGDatetime.from_timestamp(self._timestamp)
+            except (BaseException, Exception):
+                aired_dt = None
+
+        if not aired_dt:
             if isinstance(self._airtime, datetime.time):
                 airtime = self._airtime
             else:
