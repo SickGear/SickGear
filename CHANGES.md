@@ -6,6 +6,11 @@
 * Change codebase cleanups
 
 
+### 3.27.11 (2023-03-06 23:40:00 UTC)
+
+* Fix "Change File Date" not using timestamp of episode if available
+
+
 ### 3.27.10 (2023-03-05 00:20:00 UTC)
 
 * Add UHD Bluray
