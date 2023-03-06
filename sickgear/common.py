@@ -745,9 +745,9 @@ class NeededQualities(object):
             else:
                 if not self.need_sd and min(wanted_qualities) <= NeededQualities.max_sd:
                     self.need_sd = True
-                if not self.need_hd and any([i in NeededQualities.hd_qualities for i in wanted_qualities]):
+                if not self.need_hd and any(i in NeededQualities.hd_qualities for i in wanted_qualities):
                     self.need_hd = True
-                if not self.need_webdl and any([i in NeededQualities.webdl_qualities for i in wanted_qualities]):
+                if not self.need_webdl and any(i in NeededQualities.webdl_qualities for i in wanted_qualities):
                     self.need_webdl = True
                 if not self.need_uhd and max(wanted_qualities) > NeededQualities.max_hd:
                     self.need_uhd = True

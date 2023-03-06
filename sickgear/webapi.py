@@ -600,7 +600,7 @@ class ApiCall(object):
                     elif isinstance(value, string_types):
                         if '|' in value:
                             li = [int(v) for v in value.split('|')]
-                            if any([not isinstance(v, integer_types) for v in li]):
+                            if any(not isinstance(v, integer_types) for v in li):
                                 error = True
                             else:
                                 value = li
@@ -610,7 +610,7 @@ class ApiCall(object):
                         error = True
                 else:
                     li = value.split('|')
-                    if any([sub_type is not type(v) for v in li]):
+                    if any(sub_type is not type(v) for v in li):
                         error = True
                     else:
                         value = li

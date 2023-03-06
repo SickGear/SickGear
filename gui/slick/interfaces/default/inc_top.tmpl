@@ -105,7 +105,7 @@
 #except
     #pass
 #end try
-#if not any([x in $body_attr for x in ['back-art', 'pro', 'ii']])
+#if not any(x in $body_attr for x in ['back-art', 'pro', 'ii'])
     #set $parts = $body_attr.split('class="')
     #set $body_attr = ('class="%s '.join($parts), $parts[0] + ' class="%s"')[1 == len($parts)] % {0: '', 1: 'pro', 2: 'pro ii'}.get(getattr($sickgear, 'DISPLAY_SHOW_VIEWMODE', 0))
 #end if

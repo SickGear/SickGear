@@ -501,8 +501,8 @@ class GenericProvider(object):
             if time_left > datetime.timedelta(seconds=0):
                 if log_warning:
                     # Ensure provider name output (e.g. when displaying config/provs) instead of e.g. thread "Tornado"
-                    prepend = ('[%s] :: ' % self.name, '')[any([x.name in threading.current_thread().name
-                                                                for x in sickgear.providers.sorted_sources()])]
+                    prepend = ('[%s] :: ' % self.name, '')[any(x.name in threading.current_thread().name
+                                                               for x in sickgear.providers.sorted_sources())]
                     logger.log('%sToo many requests reached at %s, waiting for %s' % (
                         prepend, self.fmt_delta(self.tmr_limit_time), self.fmt_delta(time_left)), logger.WARNING)
                 return use_tmr_limit
@@ -1009,9 +1009,9 @@ class GenericProvider(object):
 
         headers = [re.sub(
             r'\s+', '',
-            ((any([cell.get_text()]) and any([rc[x].search(cell.get_text()) for x in iterkeys(rc)]) and cell.get_text())
-             or (cell.attrs.get('id') and any([rc[x].search(cell['id']) for x in iterkeys(rc)]) and cell['id'])
-             or (cell.attrs.get('title') and any([rc[x].search(cell['title']) for x in iterkeys(rc)]) and cell['title'])
+            ((any([cell.get_text()]) and any(rc[x].search(cell.get_text()) for x in iterkeys(rc)) and cell.get_text())
+             or (cell.attrs.get('id') and any(rc[x].search(cell['id']) for x in iterkeys(rc)) and cell['id'])
+             or (cell.attrs.get('title') and any(rc[x].search(cell['title']) for x in iterkeys(rc)) and cell['title'])
              or next(iter(set(filter(lambda rz: any([rz]), [
                 next(iter(set(filter(lambda ry: any([ry]), [
                     cell.find(tag, **p) for p in [{attr: rc[x]} for x in iterkeys(rc)]]))), {}).get(attr)
@@ -1932,7 +1932,7 @@ class TorrentProvider(GenericProvider):
         url_list = list(map(lambda u: '%s/' % u.rstrip('/'), url_list))
         last_url, expire = sickgear.PROVIDER_HOMES.get(self.get_id(), ('', None))
         url_drop = (url_exclude or []) + getattr(self, 'url_drop', [])
-        if url_drop and any([url in last_url for url in url_drop]):  # deprecate url
+        if url_drop and any(url in last_url for url in url_drop):  # deprecate url
             last_url = ''
 
         if 'site down' == last_url:

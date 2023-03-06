@@ -3042,7 +3042,7 @@ class TVShow(TVShowBase):
         page_url = 'https://www.imdb.com/title/{0}/'.format(imdb_id)
         try:
             response = requests.head(page_url, allow_redirects=True)
-            if response.history and any([h for h in response.history if 301 == h.status_code]):
+            if response.history and any(h for h in response.history if 301 == h.status_code):
                 return helpers.parse_imdb_id(response.url)
         except (BaseException, Exception):
             pass
