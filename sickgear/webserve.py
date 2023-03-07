@@ -320,7 +320,7 @@ class BaseHandler(RouteHandler):
 
     def get_current_user(self):
         if sickgear.WEB_USERNAME or sickgear.WEB_PASSWORD:
-            return self.get_secure_cookie('sickgear-session-%s' % helpers.md5_for_text(sickgear.WEB_PORT))
+            return self.get_signed_cookie('sickgear-session-%s' % helpers.md5_for_text(sickgear.WEB_PORT))
         return True
 
     def get_image(self, image):
@@ -401,7 +401,7 @@ class LoginHandler(BaseHandler):
                           httponly=True)
             if sickgear.ENABLE_HTTPS:
                 params.update(dict(secure=True))
-            self.set_secure_cookie('sickgear-session-%s' % helpers.md5_for_text(sickgear.WEB_PORT),
+            self.set_signed_cookie('sickgear-session-%s' % helpers.md5_for_text(sickgear.WEB_PORT),
                                    sickgear.COOKIE_SECRET, **params)
             self.redirect(self.get_argument('next', '/home/'))
         else:

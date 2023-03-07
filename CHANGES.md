@@ -2,6 +2,7 @@
 
 * Update html5lib 1.1 (f87487a) to 1.2-dev (3e500bb)
 * Update package resource API 63.2.0 (3ae44cd) to 67.5.1 (f51eccd)
+* Update Tornado Web Server 6.2.0 (a4f08a3) to 6.3.0 (7186b86)
 * Update urllib3 1.26.13 (25fbd5f) to 1.26.14 (a06c05c)
 * Change remove calls to legacy py2 fix encoding function
 * Change requirements for pure py3
