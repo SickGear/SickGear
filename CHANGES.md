@@ -2,6 +2,7 @@
 
 * Update html5lib 1.1 (f87487a) to 1.2-dev (3e500bb)
 * Update package resource API 63.2.0 (3ae44cd) to 67.3.2 (b9bf2ec)
+* Update urllib3 1.26.13 (25fbd5f) to 1.26.14 (a06c05c)
 * Change remove calls to legacy py2 fix encoding function
 * Change requirements for pure py3
 * Change codebase cleanups
