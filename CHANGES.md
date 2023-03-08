@@ -1,4 +1,9 @@
-﻿### 3.27.11 (2023-03-06 23:40:00 UTC)
+﻿### 3.27.12 (2023-03-08 23:30:00 UTC)
+
+* Change meta providers to new TVInfoAPI get_show to make sure language is used
+
+
+### 3.27.11 (2023-03-06 23:40:00 UTC)
 
 * Fix "Change File Date" not using timestamp of episode if available
 
