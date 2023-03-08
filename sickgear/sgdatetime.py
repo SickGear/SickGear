@@ -282,16 +282,25 @@ class SGDatetime(datetime.datetime):
         finally:
             return (default, timestamp)[isinstance(timestamp, (float, integer_types))]
 
+    @static_or_instance
+    def timestamp_near(self,
+                       dt=None,  # type: Optional[SGDatetime, datetime.datetime]
+                       td=None,  # type: Optional[datetime.timedelta]
+                       return_int=True  # type: bool
+                       ):
+        # type: (...) -> Union[float, integer_types]
+        """
+        Use `timestamp_near` for a timestamp in the near future or near past
 
-# noinspection PyUnreachableCode
-if False:
-    # just to trick pycharm in correct type detection
-    # noinspection PyUnusedLocal
-    def timestamp_near(d_t):
-        # type: (datetime.datetime) -> float
-        pass
+        Raises exception if dt cannot be converted to int
 
-
-# py3 native timestamp uses milliseconds
-# noinspection PyRedeclaration
-timestamp_near = datetime.datetime.timestamp
+        td is timedelta to subtract from datetime
+        """
+        obj = (dt, self)[self is not None]  # type: datetime.datetime
+        if None is obj:
+            obj = datetime.datetime.now()
+            if isinstance(td, datetime.timedelta):
+                obj -= td
+        if not return_int:
+            return datetime.datetime.timestamp(obj)
+        return int(datetime.datetime.timestamp(obj))

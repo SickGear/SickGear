@@ -52,7 +52,7 @@ from .helpers import try_float, try_int
 from .indexermapper import del_mapping, MapStatus, save_mapping
 from .indexers.indexer_config import TVINFO_IMDB, TVINFO_TMDB, TVINFO_TRAKT, TVINFO_TVDB, TVINFO_TVMAZE, TVINFO_TVRAGE
 from .name_parser.parser import InvalidNameException, InvalidShowException, NameParser
-from .sgdatetime import SGDatetime, timestamp_near
+from .sgdatetime import SGDatetime
 from .tv_base import TVEpisodeBase, TVShowBase
 
 from lib import imdbpie, subliminal
@@ -1530,7 +1530,7 @@ class TVShow(TVShowBase):
             self._last_found_on_indexer = self.last_found_on_indexer
             my_db = db.DBConnection()
             # noinspection PyUnresolvedReferences
-            last_check = int(timestamp_near(datetime.datetime.now()))
+            last_check = SGDatetime.timestamp_near()
             # in case of flag change (+/-) don't change last_check date
             if abs(v) == abs(self._not_found_count):
                 sql_result = my_db.select(

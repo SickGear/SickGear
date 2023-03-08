@@ -30,7 +30,7 @@ from .common import ARCHIVED, FAILED, DOWNLOADED, SNATCHED_ANY, SNATCHED_PROPER,
     NeededQualities, Quality
 from .history import dateFormat
 from .name_parser.parser import InvalidNameException, InvalidShowException, NameParser
-from .sgdatetime import timestamp_near
+from .sgdatetime import SGDatetime
 
 from _23 import map_consume
 from six import string_types
@@ -689,10 +689,10 @@ def _set_last_proper_search(when):
 
     if 0 == len(sql_result):
         my_db.action('INSERT INTO info (last_backlog, last_indexer, last_proper_search) VALUES (?,?,?)',
-                     [0, 0, int(timestamp_near(when))])
+                     [0, 0, SGDatetime.timestamp_near(when)])
     else:
         # noinspection SqlConstantCondition
-        my_db.action('UPDATE info SET last_proper_search=%s WHERE 1=1' % int(timestamp_near(when)))
+        my_db.action('UPDATE info SET last_proper_search=%s WHERE 1=1' % SGDatetime.timestamp_near(when))
 
 
 def next_proper_timeleft():

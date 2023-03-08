@@ -26,7 +26,7 @@ import sickgear
 import sg_helpers
 from . import db, logger
 from .metadata.generic import GenericMetadata
-from .sgdatetime import timestamp_near
+from .sgdatetime import SGDatetime
 from .indexers.indexer_config import TVINFO_TVDB, TVINFO_TVMAZE, TVINFO_TMDB, TVINFO_IMDB
 
 from six import itervalues, iteritems
@@ -465,7 +465,7 @@ class ImageCache(object):
             minutes_iv = 60 * 3
             # daily_interval = 60 * 60 * 23
             iv = minutes_iv
-            now_stamp = int(timestamp_near(datetime.datetime.now()))
+            now_stamp = SGDatetime.timestamp_near()
             the_time = int(sql_result[0]['time'])
             return now_stamp - the_time > iv
 
@@ -482,7 +482,7 @@ class ImageCache(object):
         """
         my_db = db.DBConnection('cache.db')
         my_db.upsert('lastUpdate',
-                     {'time': int(timestamp_near(datetime.datetime.now()))},
+                     {'time': SGDatetime.timestamp_near()},
                      {'provider': 'imsg_%s_%s' % ((image_type, self.FANART)[None is image_type], provider)})
 
     def _cache_image_from_file(self, image_path, img_type, tvid, prodid, prefix='', move_file=False):

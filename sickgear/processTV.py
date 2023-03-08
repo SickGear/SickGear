@@ -33,7 +33,7 @@ from . import common, db, failedProcessor, helpers, logger, notifiers, postProce
 from .common import SNATCHED_ANY
 from .history import reset_status
 from .name_parser.parser import InvalidNameException, InvalidShowException, NameParser
-from .sgdatetime import timestamp_near
+from .sgdatetime import SGDatetime
 
 from six import iteritems, iterkeys, string_types, text_type
 from sg_helpers import long_path, scantree
@@ -571,7 +571,7 @@ class ProcessTVShow(object):
             archives = [os.path.basename(x) for x in unused_files]
             if unused_files:
                 for f in unused_files:
-                    archive_history.setdefault(f, int(timestamp_near(datetime.datetime.utcnow())))
+                    archive_history.setdefault(f, SGDatetime.timestamp_near(datetime.datetime.utcnow()))
 
             if init_history_cnt != len(archive_history):
                 try:

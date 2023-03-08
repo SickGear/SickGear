@@ -39,7 +39,7 @@ from ..helpers import maybe_plural, remove_file_perm
 from ..name_parser.parser import InvalidNameException, InvalidShowException, NameParser
 from ..scene_exceptions import has_season_exceptions
 from ..show_name_helpers import get_show_names_all_possible
-from ..sgdatetime import SGDatetime, timestamp_near
+from ..sgdatetime import SGDatetime
 from ..tv import TVEpisode, TVShow
 
 from cfscrape import CloudflareScraper
@@ -112,7 +112,7 @@ class ProviderFailList(object):
             date_time = datetime.datetime.combine(fail_date, datetime.time(hour=fail_hour))
             if ProviderFailTypes.names[e.fail_type] not in fail_dict.get(date_time, {}):
                 if isinstance(e.fail_time, datetime.datetime):
-                    value = timestamp_near(e.fail_time)
+                    value = SGDatetime.timestamp_near(e.fail_time, return_int=False)
                 else:
                     value = SGDatetime.timestamp_far(e.fail_time)
                 default = {'date': str(fail_date), 'date_time': date_time,
@@ -178,7 +178,7 @@ class ProviderFailList(object):
                 cl = []
                 for f in self._fails:
                     if isinstance(f.fail_time, datetime.datetime):
-                        value = int(timestamp_near(f.fail_time))
+                        value = SGDatetime.timestamp_near(f.fail_time)
                     else:
                         value = SGDatetime.timestamp_far(f.fail_time)
                     cl.append(['INSERT OR IGNORE INTO provider_fails (prov_name, fail_type, fail_code, fail_time) '
@@ -211,7 +211,7 @@ class ProviderFailList(object):
                 my_db = db.DBConnection('cache.db')
                 if my_db.has_table('provider_fails'):
                     # noinspection PyCallByClass,PyTypeChecker
-                    time_limit = int(timestamp_near(datetime.datetime.now() - datetime.timedelta(days=28)))
+                    time_limit = SGDatetime.timestamp_near(td=datetime.timedelta(days=28))
                     my_db.action('DELETE FROM provider_fails WHERE fail_time < ?', [time_limit])
             except (BaseException, Exception):
                 pass
@@ -340,7 +340,7 @@ class GenericProvider(object):
             self._failure_time = value
             if changed_val:
                 if isinstance(value, datetime.datetime):
-                    value = int(timestamp_near(value))
+                    value = SGDatetime.timestamp_near(value)
                 elif value:
                     # noinspection PyCallByClass
                     value = SGDatetime.timestamp_far(value)
@@ -370,7 +370,7 @@ class GenericProvider(object):
             self._tmr_limit_time = value
             if changed_val:
                 if isinstance(value, datetime.datetime):
-                    value = int(timestamp_near(value))
+                    value = SGDatetime.timestamp_near(value)
                 elif value:
                     # noinspection PyCallByClass
                     value = SGDatetime.timestamp_far(value)

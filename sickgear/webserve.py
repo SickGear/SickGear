@@ -66,7 +66,7 @@ from .providers import newznab, rsstorrent
 from .scene_numbering import get_scene_absolute_numbering_for_show, get_scene_numbering_for_show, \
     get_xem_absolute_numbering_for_show, get_xem_numbering_for_show, set_scene_numbering_helper
 from .search_backlog import FORCED_BACKLOG
-from .sgdatetime import SGDatetime, timestamp_near
+from .sgdatetime import SGDatetime
 from .show_name_helpers import abbr_showname
 
 from .show_updater import clean_ignore_require_words
@@ -674,7 +674,7 @@ class RepoHandler(BaseStaticFileHandler):
 
     def get_watchedstate_updater_addon_xml(self):
         mem_key = 'kodi_xml'
-        if int(timestamp_near(datetime.datetime.now())) < sickgear.MEMCACHE.get(mem_key, {}).get('last_update', 0):
+        if SGDatetime.timestamp_near() < sickgear.MEMCACHE.get(mem_key, {}).get('last_update', 0):
             return sickgear.MEMCACHE.get(mem_key).get('data')
 
         filename = 'addon%s.xml' % self.kodi_include
@@ -682,7 +682,7 @@ class RepoHandler(BaseStaticFileHandler):
                                   'service.sickgear.watchedstate.updater', filename), 'r', encoding='utf8') as fh:
             xml = fh.read().strip() % dict(ADDON_VERSION=self.get_addon_version(self.kodi_include))
 
-        sickgear.MEMCACHE[mem_key] = dict(last_update=30 + int(timestamp_near(datetime.datetime.now())), data=xml)
+        sickgear.MEMCACHE[mem_key] = dict(last_update=30 + SGDatetime.timestamp_near(), data=xml)
         return xml
 
     @staticmethod
@@ -696,7 +696,7 @@ class RepoHandler(BaseStaticFileHandler):
         Must use an arg here instead of `self` due to static call use case from external class
         """
         mem_key = 'kodi_ver'
-        if int(timestamp_near(datetime.datetime.now())) < sickgear.MEMCACHE.get(mem_key, {}).get('last_update', 0):
+        if SGDatetime.timestamp_near() < sickgear.MEMCACHE.get(mem_key, {}).get('last_update', 0):
             return sickgear.MEMCACHE.get(mem_key).get('data')
 
         filename = 'service%s.py' % kodi_include
@@ -704,7 +704,7 @@ class RepoHandler(BaseStaticFileHandler):
                                   'service.sickgear.watchedstate.updater', filename), 'r', encoding='utf8') as fh:
             version = re.findall(r'ADDON_VERSION\s*?=\s*?\'([^\']+)', fh.read())[0]
 
-        sickgear.MEMCACHE[mem_key] = dict(last_update=30 + int(timestamp_near(datetime.datetime.now())), data=version)
+        sickgear.MEMCACHE[mem_key] = dict(last_update=30 + SGDatetime.timestamp_near(), data=version)
         return version
 
     def render_kodi_repo_addon_xml(self):
@@ -1465,7 +1465,7 @@ r.close()
                     continue
 
                 if bname in ep_results:
-                    date_watched = now = int(timestamp_near(datetime.datetime.now()))
+                    date_watched = now = SGDatetime.timestamp_near()
                     if 1500000000 < date_watched:
                         date_watched = helpers.try_int(float(v.get('date_watched')))
 
@@ -9589,8 +9589,8 @@ class CachedImages(MainHandler):
             dummy_file = '%s.%s.dummy' % (os.path.splitext(filename)[0], source)
             if os.path.isfile(dummy_file):
                 if os.stat(dummy_file).st_mtime \
-                        < (int(timestamp_near((datetime.datetime.now()
-                                               - datetime.timedelta(days=days, minutes=minutes))))):
+                        < (SGDatetime.timestamp_near(datetime.datetime.now()
+                                                     - datetime.timedelta(days=days, minutes=minutes))):
                     CachedImages.delete_dummy_image(dummy_file)
                 else:
                     result = False
@@ -9695,7 +9695,7 @@ class CachedImages(MainHandler):
         """
         if not os.path.isfile(filename) or \
                 os.stat(filename).st_mtime < \
-                (int(timestamp_near((datetime.datetime.now() - datetime.timedelta(days=days))))):
+                SGDatetime.timestamp_near(td=datetime.timedelta(days=days)):
             return True
         return False
 

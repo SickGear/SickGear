@@ -30,7 +30,7 @@ import sickgear
 from . import db, logger
 from .helpers import try_int
 from .scene_exceptions import xem_ids_list
-from .sgdatetime import timestamp_near
+from .sgdatetime import SGDatetime
 
 # noinspection PyUnreachableCode
 if False:
@@ -794,7 +794,7 @@ def xem_refresh(tvid, prodid, force=False):
         """, [tvid, prodid])
     if sql_result:
         last_refresh = int(sql_result[0]['last_refreshed'])
-        refresh = int(timestamp_near(datetime.datetime.now())) > last_refresh + max_refresh_age_secs
+        refresh = SGDatetime.timestamp_near() > last_refresh + max_refresh_age_secs
     else:
         refresh = True
 
@@ -803,7 +803,7 @@ def xem_refresh(tvid, prodid, force=False):
 
         # mark refreshed
         my_db.upsert('xem_refresh',
-                     dict(last_refreshed=int(timestamp_near(datetime.datetime.now()))),
+                     dict(last_refreshed=SGDatetime.timestamp_near()),
                      dict(indexer=tvid, indexer_id=prodid))
 
         try:

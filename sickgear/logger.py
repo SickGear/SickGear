@@ -31,7 +31,7 @@ from logging.handlers import TimedRotatingFileHandler
 
 import sickgear
 from . import classes
-from .sgdatetime import timestamp_near
+from .sgdatetime import SGDatetime
 from sg_helpers import md5_for_text, remove_file_perm
 
 # noinspection PyUnreachableCode
@@ -198,7 +198,7 @@ class SBRotatingLogHandler(object):
         mem_key = 'logger'
         for to_log in log_list:
             log_id = md5_for_text(to_log)
-            now = int(timestamp_near(datetime.datetime.now()))
+            now = SGDatetime.timestamp_near()
             expired = now > sickgear.MEMCACHE.get(mem_key, {}).get(log_id, 0)
             sickgear.MEMCACHE[mem_key] = {}
             sickgear.MEMCACHE[mem_key][log_id] = 2 + now
