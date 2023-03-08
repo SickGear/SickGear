@@ -14,6 +14,7 @@
 
 * Add logging around the restart/shutdown event
 * Update package resource API 63.2.0 (3ae44cd) to 67.3.2 (b9bf2ec)
+* Refactor `timestamp_near` to `SGDatetime.timestamp_near`
 
 
 ### 3.27.11 (2023-03-06 23:40:00 UTC)

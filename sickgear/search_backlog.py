@@ -25,7 +25,7 @@ from . import db, logger, scheduler, search_queue, ui
 from .helpers import find_show_by_id
 from .providers.generic import GenericProvider
 from .search import wanted_episodes
-from .sgdatetime import SGDatetime, timestamp_near
+from .sgdatetime import SGDatetime
 from .tv import TVidProdid, TVEpisode, TVShow
 
 from six import iteritems, itervalues, moves
@@ -344,7 +344,7 @@ class BacklogSearcher(object):
             last_run_time = 1
         else:
             last_run_time = int(sql_result[0]['last_run_backlog'])
-            if last_run_time > int(timestamp_near(datetime.datetime.now())):
+            if last_run_time > SGDatetime.timestamp_near():
                 last_run_time = 1
 
         return last_run_time
@@ -356,7 +356,7 @@ class BacklogSearcher(object):
         sql_result = my_db.select('SELECT * FROM info')
 
         if isinstance(when, datetime.datetime):
-            when = int(timestamp_near(when))
+            when = SGDatetime.timestamp_near(when)
         else:
             when = SGDatetime.timestamp_far(when, default=0)
         if 0 == len(sql_result):

@@ -28,7 +28,7 @@ from exceptions_helper import ex
 
 import sickgear
 from . import logger, sgdatetime
-from .sgdatetime import timestamp_near
+from .sgdatetime import SGDatetime
 
 from sg_helpers import make_path, compress_file, remove_file_perm, scantree
 
@@ -841,7 +841,7 @@ def backup_all_dbs(target, compress=True, prefer_7z=True):
     my_db = DBConnection('cache.db')
     last_backup = my_db.select('SELECT time FROM lastUpdate WHERE provider = ?', ['sickgear_db_backup'])
     if last_backup:
-        now_stamp = int(timestamp_near(datetime.datetime.now()))
+        now_stamp = SGDatetime.timestamp_near()
         the_time = int(last_backup[0]['time'])
         # only backup every 23 hours
         if now_stamp - the_time < 60 * 60 * 23:

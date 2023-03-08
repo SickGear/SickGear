@@ -34,7 +34,7 @@ import sickgear
 from . import db, logger, notifiers
 from .common import cpu_presets, mediaExtensions, Overview, Quality, statusStrings, subtitleExtensions, \
     ARCHIVED, DOWNLOADED, FAILED, IGNORED, SKIPPED, SNATCHED_ANY, SUBTITLED, UNAIRED, UNKNOWN, WANTED
-from .sgdatetime import timestamp_near
+from .sgdatetime import SGDatetime
 from lib.tvinfo_base.exceptions import *
 from exceptions_helper import ex, MultipleShowObjectsException
 
@@ -1031,7 +1031,7 @@ def clear_cache(force=False):
     """
     # clean out cache directory, remove everything > 12 hours old
     dirty = None
-    del_time = int(timestamp_near((datetime.datetime.now() - datetime.timedelta(hours=12))))
+    del_time = SGDatetime.timestamp_near(td=datetime.timedelta(hours=12))
     direntry_args = dict(follow_symlinks=False)
     for direntry in scantree(sickgear.CACHE_DIR, ['images|rss|zoneinfo'], follow_symlinks=True):
         if direntry.is_file(**direntry_args) and (force or del_time > direntry.stat(**direntry_args).st_mtime):
@@ -1342,7 +1342,7 @@ def delete_not_changed_in(paths, days=30, minutes=0):
     :param minutes: Purge files not modified in this number of minutes (default: 0 minutes)
     :return: tuple; number of files that qualify for deletion, number of qualifying files that failed to be deleted
     """
-    del_time = int(timestamp_near((datetime.datetime.now() - datetime.timedelta(days=days, minutes=minutes))))
+    del_time = SGDatetime.timestamp_near(td=datetime.timedelta(days=days, minutes=minutes))
     errors = 0
     qualified = 0
     for cur_path in (paths, [paths])[not isinstance(paths, list)]:
@@ -1367,7 +1367,7 @@ def set_file_timestamp(filename, min_age=3, new_time=None):
     :param new_time:
     :type new_time: None or int
     """
-    min_time = int(timestamp_near((datetime.datetime.now() - datetime.timedelta(days=min_age))))
+    min_time = SGDatetime.timestamp_near(td=datetime.timedelta(days=min_age))
     try:
         if os.path.isfile(filename) and os.path.getmtime(filename) < min_time:
             os.utime(filename, new_time)

@@ -31,7 +31,7 @@ from ..common import NeededQualities, Quality
 from ..helpers import remove_non_release_groups
 from ..indexers.indexer_config import *
 from ..network_timezones import SG_TIMEZONE
-from ..sgdatetime import SGDatetime, timestamp_near
+from ..sgdatetime import SGDatetime
 from ..search import get_aired_in_season, get_wanted_qualities
 from ..show_name_helpers import get_show_names
 from ..scene_exceptions import has_season_exceptions
@@ -217,7 +217,7 @@ class NewznabProvider(generic.NZBProvider):
         try:
             my_db = db.DBConnection('cache.db')
             if isinstance(value, datetime.datetime):
-                save_value = int(timestamp_near(value))
+                save_value = SGDatetime.timestamp_near(value)
             else:
                 save_value = SGDatetime.timestamp_far(value, default=0)
             my_db.action('INSERT OR REPLACE INTO "lastrecentsearch" (name, datetime) VALUES (?,?)',

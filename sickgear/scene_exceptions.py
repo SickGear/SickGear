@@ -31,7 +31,7 @@ from . import db, helpers, logger, name_cache
 from .anime import create_anidb_obj
 from .classes import OrderedDefaultdict
 from .indexers.indexer_config import TVINFO_TVDB
-from .sgdatetime import timestamp_near
+from .sgdatetime import SGDatetime
 
 import lib.rarfile.rarfile as rarfile
 
@@ -68,9 +68,9 @@ def should_refresh(name, max_refresh_age_secs=86400, remaining=False):
     if rows:
         last_refresh = int(rows[0]['last_refreshed'])
         if remaining:
-            time_left = (last_refresh + max_refresh_age_secs - int(timestamp_near(datetime.datetime.now())))
+            time_left = (last_refresh + max_refresh_age_secs - SGDatetime.timestamp_near())
             return (0, time_left)[time_left > 0]
-        return int(timestamp_near(datetime.datetime.now())) > last_refresh + max_refresh_age_secs
+        return SGDatetime.timestamp_near() > last_refresh + max_refresh_age_secs
     return True
 
 
@@ -82,7 +82,7 @@ def set_last_refresh(name):
     """
     my_db = db.DBConnection()
     my_db.upsert('scene_exceptions_refresh',
-                 {'last_refreshed': int(timestamp_near(datetime.datetime.now()))},
+                 {'last_refreshed': SGDatetime.timestamp_near()},
                  {'list': name})
 
 

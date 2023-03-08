@@ -14,14 +14,13 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
-from datetime import datetime
 import re
 import time
 
 from .generic import GenericClient
 from .. import logger
 from ..helpers import get_url, try_int
-from ..sgdatetime import timestamp_near
+from ..sgdatetime import SGDatetime
 import sickgear
 
 from requests.exceptions import HTTPError
@@ -372,7 +371,7 @@ class QbittorrentAPI(GenericClient):
         else:
             kwargs = dict(post_data=params, files={'torrents': ('%s.torrent' % data.name, data.content)})
 
-        task_stamp = int(timestamp_near(datetime.now()))
+        task_stamp = SGDatetime.timestamp_near()
         response = self._client_request(('torrents/add', 'command/%s' % cmd)[not self.api_ns], **kwargs)
 
         if True is response:

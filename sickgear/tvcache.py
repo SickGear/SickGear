@@ -27,7 +27,7 @@ from .classes import SearchResult
 from .common import Quality
 from .name_parser.parser import InvalidNameException, InvalidShowException, NameParser, ParseResult
 from .rssfeeds import RSSFeeds
-from .sgdatetime import timestamp_near
+from .sgdatetime import SGDatetime
 from .tv import TVEpisode
 
 # noinspection PyUnreachableCode
@@ -172,7 +172,7 @@ class TVCache(object):
 
         if sql_result:
             last_time = int(sql_result[0]['time'])
-            if last_time > int(timestamp_near(datetime.datetime.now())):
+            if last_time > SGDatetime.timestamp_near():
                 last_time = 0
         else:
             last_time = 0
@@ -190,7 +190,7 @@ class TVCache(object):
 
         if sql_result:
             last_time = int(sql_result[0]['time'])
-            if last_time > int(timestamp_near(datetime.datetime.now())):
+            if last_time > SGDatetime.timestamp_near():
                 last_time = 0
         else:
             last_time = 0
@@ -300,7 +300,7 @@ class TVCache(object):
             episode_text = '|%s|' % '|'.join(map(str, episode_numbers))
 
             # get the current timestamp
-            cur_timestamp = int(timestamp_near(datetime.datetime.now()))
+            cur_timestamp = SGDatetime.timestamp_near()
 
             # get quality of release
             quality = parse_result.quality
