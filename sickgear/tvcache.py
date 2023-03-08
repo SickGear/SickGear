@@ -90,7 +90,7 @@ class TVCache(object):
         try:
             self.check_auth()
         except AuthException as e:
-            logger.log(u'Authentication error: ' + ex(e), logger.ERROR)
+            logger.error(f'Authentication error: {ex(e)}')
             return []
 
         if self.should_update():
@@ -130,7 +130,7 @@ class TVCache(object):
         :return:
         :rtype: AnyStr
         """
-        return u'' + title.replace(' ', '.')
+        return f'{title.replace(" ", ".")}'
 
     @staticmethod
     def _translate_link_url(url):
@@ -159,8 +159,7 @@ class TVCache(object):
 
             return self.add_cache_entry(title, url)
 
-        logger.log('Data returned from the %s feed is incomplete, this result is unusable' % self.provider.name,
-                   logger.DEBUG)
+        logger.debug('Data returned from the %s feed is incomplete, this result is unusable' % self.provider.name)
 
     def _get_last_update(self):
         """
@@ -276,7 +275,7 @@ class TVCache(object):
                 parser = NameParser(show_obj=show_obj, convert=True, indexer_lookup=False)
                 parse_result = parser.parse(name)
             except InvalidNameException:
-                logger.log('Unable to parse the filename %s into a valid episode' % name, logger.DEBUG)
+                logger.debug('Unable to parse the filename %s into a valid episode' % name)
                 return
             except InvalidShowException:
                 return
@@ -312,7 +311,7 @@ class TVCache(object):
             # get version
             version = parse_result.version
 
-            logger.log('Add to cache: [%s]' % name, logger.DEBUG)
+            logger.debug('Add to cache: [%s]' % name)
 
             return [
                 'INSERT OR IGNORE INTO provider_cache'
@@ -406,7 +405,7 @@ class TVCache(object):
 
             # skip if provider is anime only and show is not anime
             if self.provider.anime_only and not show_obj.is_anime:
-                logger.debug(u'%s is not an anime, skipping' % show_obj.unique_name)
+                logger.debug(f'{show_obj.unique_name} is not an anime, skipping')
                 continue
 
             # get season and ep data (ignoring multi-eps for now)
@@ -424,8 +423,8 @@ class TVCache(object):
 
             # if the show says we want that episode then add it to the list
             if not show_obj.want_episode(season, ep_obj_list, quality, manual_search):
-                logger.log(u'Skipping ' + cur_result['name'] + ' because we don\'t want an episode that\'s ' +
-                           Quality.qualityStrings[quality], logger.DEBUG)
+                logger.debug(f"Skipping {cur_result['name']}"
+                             f" because we don't want an episode that's {Quality.qualityStrings[quality]}")
                 continue
 
             ep_obj = show_obj.get_episode(season, ep_obj_list)
@@ -434,7 +433,7 @@ class TVCache(object):
             title = cur_result['name']
             url = cur_result['url']
 
-            logger.log(u'Found result ' + title + ' at ' + url)
+            logger.log(f'Found result {title} at {url}')
 
             result = self.provider.get_result([ep_obj], url)
             if None is result:

@@ -127,10 +127,10 @@ class Mede8erMetadata(mediabrowser.MediaBrowserMetadata):
         try:
             show_info = t[int(show_obj.prodid)]
         except BaseTVinfoShownotfound as e:
-            logger.log(u'Unable to find show with id ' + str(show_obj.prodid) + ' on tvdb, skipping it', logger.ERROR)
+            logger.error(f'Unable to find show with id {show_obj.prodid} on tvdb, skipping it')
             raise e
         except BaseTVinfoError as e:
-            logger.log(u'TVDB is down, can\'t use its data to make the NFO', logger.ERROR)
+            logger.error(f'TVDB is down, can\'t use its data to make the NFO')
             raise e
 
         if not self._valid_show(show_info, show_obj):
@@ -142,12 +142,12 @@ class Mede8erMetadata(mediabrowser.MediaBrowserMetadata):
                     or '' == show_info['seriesname'] \
                     or None is show_info['id'] \
                     or '' == show_info['id']:
-                logger.log('Incomplete info for show with id %s on %s, skipping it' %
-                           (show_obj.prodid, sickgear.TVInfoAPI(show_obj.tvid).name), logger.ERROR)
+                logger.error(f'Incomplete info for show with id {show_obj.prodid}'
+                             f' on {sickgear.TVInfoAPI(show_obj.tvid).name}, skipping it')
                 return False
         except BaseTVinfoAttributenotfound:
-            logger.log('Incomplete info for show with id %s on %s, skipping it' %
-                       (show_obj.prodid, sickgear.TVInfoAPI(show_obj.tvid).name), logger.ERROR)
+            logger.error(f'Incomplete info for show with id {show_obj.prodid}'
+                         f' on {sickgear.TVInfoAPI(show_obj.tvid).name}, skipping it')
             return False
 
         SeriesName = etree.SubElement(tv_node, 'title')
@@ -241,8 +241,8 @@ class Mede8erMetadata(mediabrowser.MediaBrowserMetadata):
         except BaseTVinfoShownotfound as e:
             raise exceptions_helper.ShowNotFoundException(ex(e))
         except BaseTVinfoError as e:
-            logger.log('Unable to connect to %s while creating meta files - skipping - %s' %
-                       (sickgear.TVInfoAPI(ep_obj.show_obj.tvid).name, ex(e)), logger.ERROR)
+            logger.error(f'Unable to connect to {sickgear.TVInfoAPI(ep_obj.show_obj.tvid).name}'
+                         f' while creating meta files - skipping - {ex(e)}')
             return False
 
         if not self._valid_show(show_info, ep_obj.show_obj):
@@ -261,8 +261,8 @@ class Mede8erMetadata(mediabrowser.MediaBrowserMetadata):
             try:
                 ep_info = show_info[cur_ep_obj.season][cur_ep_obj.episode]
             except (BaseException, Exception):
-                logger.log(u'Unable to find episode %sx%s on tvdb... has it been removed? Should I delete from db?' %
-                           (cur_ep_obj.season, cur_ep_obj.episode))
+                logger.log(f'Unable to find episode {cur_ep_obj.season}x{cur_ep_obj.episode} on tvdb...'
+                           f' has it been removed? Should it be deleted from the db?')
                 return None
 
             if cur_ep_obj == ep_obj:

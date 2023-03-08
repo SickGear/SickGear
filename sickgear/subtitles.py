@@ -124,11 +124,11 @@ class SubtitlesFinder(object):
 
     def _main(self):
         if 1 > len(sickgear.subtitles.get_enabled_service_list()):
-            logger.log(u'Not enough services selected. At least 1 service is required to'
-                       u' search subtitles in the background', logger.ERROR)
+            logger.error('Not enough services selected. At least 1 service is required to'
+                         ' search subtitles in the background')
             return
 
-        logger.log(u'Checking for subtitles', logger.MESSAGE)
+        logger.log('Checking for subtitles')
 
         # get episodes on which we want subtitles
         # criteria is:
@@ -164,8 +164,8 @@ class SubtitlesFinder(object):
         for cur_result in sql_result:
 
             if not os.path.isfile(cur_result['location']):
-                logger.log('Episode file does not exist, cannot download subtitles for episode %dx%d of show %s'
-                           % (cur_result['season'], cur_result['episode'], cur_result['show_name']), logger.DEBUG)
+                logger.debug(f'Episode file does not exist, cannot download subtitles for episode'
+                             f' {cur_result["season"]:d}x{cur_result["episode"]:d} of show {cur_result["show_name"]}')
                 continue
 
             # Old shows rule
@@ -177,17 +177,17 @@ class SubtitlesFinder(object):
                     (cur_result['airdate_daydiff'] <= 7 and cur_result['searchcount'] < 7
                      and now - datetime.datetime.strptime(cur_result['lastsearch'], '%Y-%m-%d %H:%M:%S')
                      > datetime.timedelta(hours=rules['new'][cur_result['searchcount']]))):
-                logger.log('Downloading subtitles for episode %dx%d of show %s'
-                           % (cur_result['season'], cur_result['episode'], cur_result['show_name']), logger.DEBUG)
+                logger.debug(f'Downloading subtitles for episode {cur_result["season"]:d}x{cur_result["episode"]:d}'
+                             f' of show {cur_result["show_name"]}')
 
                 show_obj = helpers.find_show_by_id({int(cur_result['tv_id']): int(cur_result['prod_id'])})
                 if not show_obj:
-                    logger.log(u'Show not found', logger.DEBUG)
+                    logger.debug('Show not found')
                     return
 
                 ep_obj = show_obj.get_episode(int(cur_result['season']), int(cur_result['episode']))
                 if isinstance(ep_obj, str):
-                    logger.log(u'Episode not found', logger.DEBUG)
+                    logger.debug('Episode not found')
                     return
 
                 # noinspection PyUnusedLocal
@@ -197,7 +197,7 @@ class SubtitlesFinder(object):
                     # noinspection PyUnusedLocal
                     subtitles = ep_obj.download_subtitles()
                 except (BaseException, Exception):
-                    logger.log(u'Unable to find subtitles', logger.DEBUG)
+                    logger.debug('Unable to find subtitles')
                     return
 
     @staticmethod

@@ -67,10 +67,10 @@ def send_nzb(search_result):
                 return False
             kwargs['files'] = {'nzbfile': ('%s.nzb' % search_result.name, nzb_data)}
 
-        logger.log(u'Sending %s to SABnzbd: %s' % (nzb_type, search_result.name))
+        logger.log(f'Sending {nzb_type} to SABnzbd: {search_result.name}')
 
         url = '%sapi' % sickgear.SAB_HOST
-        logger.log(u'SABnzbd at %s sent params: %s' % (url, params), logger.DEBUG)
+        logger.debug(f'SABnzbd at {url} sent params: {params}')
         success, result = _get_url(url, **kwargs)
 
     if not success:
@@ -78,23 +78,23 @@ def send_nzb(search_result):
 
     # do some crude parsing of the result text to determine what SAB said
     if result.get('status'):
-        logger.log(u'Success from SABnzbd using %s' % nzb_type, logger.DEBUG)
+        logger.debug(f'Success from SABnzbd using {nzb_type}')
         return True
     elif 'error' in result:
-        logger.log(u'Failed using %s with SABnzbd, response: %s' % (nzb_type, result.get('error', 'und')), logger.ERROR)
+        logger.error(f'Failed using {nzb_type} with SABnzbd, response: {result.get("error", "und")}')
     else:
-        logger.log(u'Failure unknown using %s with SABnzbd, response: %s' % (nzb_type, result), logger.ERROR)
+        logger.error(f'Failure unknown using {nzb_type} with SABnzbd, response: {result}')
     return False
 
 
 def _check_sab_response(result):
 
     if 0 == len(result):
-        logger.log('No data returned from SABnzbd, nzb not used', logger.ERROR)
+        logger.error('No data returned from SABnzbd, nzb not used')
         return False, 'No data from SABnzbd'
 
     if 'error' in result:
-        logger.log(result['error'], logger.ERROR)
+        logger.error(result['error'])
         return False, result['error']
     return True, result
 
@@ -103,7 +103,7 @@ def _get_url(url, params=None, **kwargs):
 
     result = sickgear.helpers.get_url(url, params=params, parse_json=True, **kwargs)
     if None is result:
-        logger.log('Error, no response from SABnzbd', logger.ERROR)
+        logger.error('Error, no response from SABnzbd')
         return False, 'Error, no response from SABnzbd'
     return True, result
 
@@ -132,7 +132,7 @@ def test_authentication(host=None, username=None, password=None, apikey=None):
     url = '%sapi' % host
 
     # send the test request
-    logger.log(u'SABnzbd test URL: %s with parameters: %s' % (url, params), logger.DEBUG)
+    logger.debug(f'SABnzbd test URL: {url} with parameters: {params}')
     success, result = _get_url(url, params=params)
     if not success:
         return False, result

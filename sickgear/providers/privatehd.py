@@ -56,7 +56,7 @@ class PrivateHDProvider(generic.TorrentProvider):
         return super(PrivateHDProvider, self)._authorised(
             logged_in=(lambda y='': 'English' in y and 'auth/login' not in y and all(
                 [(self.session.cookies.get('privatehdx_session', domain='') or 'sg!no!pw') in self.digest])),
-            failed_msg=(lambda y=None: u'Invalid cookie details for %s. Check settings'))
+            failed_msg=(lambda y=None: 'Invalid cookie details for %s. Check settings'))
 
     def _search_provider(self, search_params, **kwargs):
 
@@ -88,7 +88,7 @@ class PrivateHDProvider(generic.TorrentProvider):
                 show_type = self.show_obj.air_by_date and 'Air By Date' \
                             or self.show_obj.is_sports and 'Sports' or self.show_obj.is_anime and 'Anime' or None
                 if show_type:
-                    logger.log(u'Provider does not carry shows of type: [%s], skipping' % show_type, logger.DEBUG)
+                    logger.debug(f'Provider does not carry shows of type: [{show_type}], skipping')
                     return results
 
             for search_string in search_params[mode]:
@@ -141,7 +141,7 @@ class PrivateHDProvider(generic.TorrentProvider):
                 except generic.HaltParseException:
                     pass
                 except (BaseException, Exception):
-                    logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
+                    logger.error(f'Failed to parse. Traceback: {traceback.format_exc()}')
 
                 self._log_search(mode, len(items[mode]) - cnt, log + search_url)
 

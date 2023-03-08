@@ -52,7 +52,7 @@ class AniGroupList(object):
         self.load()
 
     def load(self):
-        logger.log(u'Building allow amd block list for %s' % self.tvid_prodid, logger.DEBUG)
+        logger.debug(f'Building allow amd block list for {self.tvid_prodid}')
         self.allowlist = self._load_list('allowlist')
         self.blocklist = self._load_list('blocklist')
 
@@ -74,8 +74,7 @@ class AniGroupList(object):
         for cur_result in sql_result:
             groups.append(cur_result['keyword'])
 
-        logger.log('AniPermsList: %s loaded keywords from %s: %s' % (self.tvid_prodid, table, groups),
-                   logger.DEBUG)
+        logger.debug('AniPermsList: %s loaded keywords from %s: %s' % (self.tvid_prodid, table, groups))
 
         return groups
 
@@ -88,7 +87,7 @@ class AniGroupList(object):
         self._del_all_keywords('allowlist')
         self._add_keywords('allowlist', values)
         self.allowlist = values
-        logger.log('Allowlist set to: %s' % self.allowlist, logger.DEBUG)
+        logger.debug('Allowlist set to: %s' % self.allowlist)
 
     def set_block_keywords(self, values):
         # type: (List[AnyStr]) -> None
@@ -99,7 +98,7 @@ class AniGroupList(object):
         self._del_all_keywords('blocklist')
         self._add_keywords('blocklist', values)
         self.blocklist = values
-        logger.log('Blocklist set to: %s' % self.blocklist, logger.DEBUG)
+        logger.debug('Blocklist set to: %s' % self.blocklist)
 
     def _del_all_keywords(self, table):
         # type: (AnyStr) -> None
@@ -133,15 +132,14 @@ class AniGroupList(object):
         :return: True or False
         """
         if not result.release_group:
-            logger.log('Failed to detect release group, invalid result', logger.DEBUG)
+            logger.debug('Failed to detect release group, invalid result')
             return False
 
         allowed = result.release_group.lower() in [x.lower() for x in self.allowlist] or not self.allowlist
         blocked = result.release_group.lower() in [x.lower() for x in self.blocklist]
 
-        logger.log('Result %sallowed%s in block list. Parsed group name: "%s" from result "%s"' %
-                   (('not ', '')[allowed], (', but', ' and not')[not blocked], result.release_group, result.name),
-                   logger.DEBUG)
+        logger.debug(f'Result {("not ", "")[allowed]}allowed{(", but", " and not")[not blocked]} in block list.'
+                     f' Parsed group name: "{result.release_group}" from result "{result.name}"')
 
         return allowed and not blocked
 
@@ -193,29 +191,29 @@ def create_anidb_obj(**kwargs):
 
 def set_up_anidb_connection():
     if not sickgear.USE_ANIDB:
-        logger.log(u'Usage of anidb disabled. Skipping', logger.DEBUG)
+        logger.debug('Usage of anidb disabled. Skipping')
         return False
 
     if not sickgear.ANIDB_USERNAME and not sickgear.ANIDB_PASSWORD:
-        logger.log(u'anidb username and/or password are not set. Aborting anidb lookup.', logger.DEBUG)
+        logger.debug('anidb username and/or password are not set. Aborting anidb lookup.')
         return False
 
     if not sickgear.ADBA_CONNECTION:
-        # anidb_logger = (lambda x: logger.log('ANIDB: ' + str(x)), logger.DEBUG)
+        # anidb_logger = (lambda x: logger.debug('ANIDB: ' + str(x)))
         sickgear.ADBA_CONNECTION = adba.Connection(keepAlive=True)  # , log=anidb_logger)
 
     auth = False
     try:
         auth = sickgear.ADBA_CONNECTION.authed()
     except (BaseException, Exception) as e:
-        logger.log(u'exception msg: ' + ex(e))
+        logger.log(f'exception msg: {ex(e)}')
         pass
 
     if not auth:
         try:
             sickgear.ADBA_CONNECTION.auth(sickgear.ANIDB_USERNAME, sickgear.ANIDB_PASSWORD)
         except (BaseException, Exception) as e:
-            logger.log(u'exception msg: ' + ex(e))
+            logger.log(f'exception msg: {ex(e)}')
             return False
     else:
         return True
@@ -230,7 +228,7 @@ def pull_anidb_groups(show_name):
             anime = create_anidb_obj(name=show_name)
             return anime.get_groups()
         except (BaseException, Exception) as e:
-            logger.log(u'Anidb exception: %s' % ex(e), logger.DEBUG)
+            logger.debug(f'Anidb exception: {ex(e)}')
             return False
 
 
@@ -258,7 +256,7 @@ def push_anidb_mylist(filepath, anidb_episode):
             log = ('Adding the file to the anidb mylist', logger.DEBUG)
             result = True
         except (BaseException, Exception) as e:
-            log = (u'exception msg: %s' % ex(e), logger.MESSAGE)
+            log = (f'exception msg: {ex(e)}', logger.MESSAGE)
             result = False
 
     return result, log

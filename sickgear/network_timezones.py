@@ -156,9 +156,9 @@ def _remove_old_zoneinfo():
                                           for _dir in (sickgear.ZONEINFO_DIR, )]):  # type: DirEntry
             if current_file != entry.path:
                 if remove_file_perm(entry.path, log_err=False):
-                    logger.log(u'Delete unneeded old zoneinfo File: %s' % entry.path)
+                    logger.log(f'Delete unneeded old zoneinfo File: {entry.path}')
                 else:
-                    logger.log(u'Unable to delete: %s' % entry.path, logger.ERROR)
+                    logger.error(f'Unable to delete: {entry.path}')
 
 
 def _update_zoneinfo():
@@ -175,16 +175,15 @@ def _update_zoneinfo():
     if None is url_data:
         update_last_retry()
         # when None is urlData, trouble connecting to GitHub
-        logger.log(u'Fetching zoneinfo.txt failed, this can happen from time to time. Unable to get URL: %s' % url,
-                   logger.WARNING)
+        logger.warning(f'Fetching zoneinfo.txt failed, this can happen from time to time. Unable to get URL: {url}')
         return
 
     reset_last_retry()
 
     try:
-        (new_zoneinfo, zoneinfo_md5) = url_data.strip().rsplit(u' ')
+        (new_zoneinfo, zoneinfo_md5) = url_data.strip().rsplit(' ')
     except (BaseException, Exception):
-        logger.log('Fetching zoneinfo.txt failed, update contains unparsable data: %s' % url_data, logger.DEBUG)
+        logger.debug('Fetching zoneinfo.txt failed, update contains unparsable data: %s' % url_data)
         return
 
     current_file = zoneinfo.ZONEFILENAME
@@ -206,25 +205,25 @@ def _update_zoneinfo():
         return
 
     # load the new zoneinfo
-    url_tar = u'https://raw.githubusercontent.com/Prinz23/sb_network_timezones/master/%s' % new_zoneinfo
+    url_tar = f'https://raw.githubusercontent.com/Prinz23/sb_network_timezones/master/{new_zoneinfo}'
 
     zonefile_tmp = re.sub(r'\.tar\.gz$', '.tmp', zonefile)
 
     if not remove_file_perm(zonefile_tmp, log_err=False):
-        logger.log(u'Unable to delete: %s' % zonefile_tmp, logger.ERROR)
+        logger.error(f'Unable to delete: {zonefile_tmp}')
         return
 
     if not helpers.download_file(url_tar, zonefile_tmp):
         return
 
     if not os.path.exists(zonefile_tmp):
-        logger.log(u'Download of %s failed.' % zonefile_tmp, logger.ERROR)
+        logger.error(f'Download of {zonefile_tmp} failed.')
         return
 
     new_hash = str(helpers.md5_for_file(zonefile_tmp))
 
     if zoneinfo_md5.upper() == new_hash.upper():
-        logger.log(u'Updating timezone info with new one: %s' % new_zoneinfo, logger.MESSAGE)
+        logger.log(f'Updating timezone info with new one: {new_zoneinfo}', logger.MESSAGE)
         try:
             # remove the old zoneinfo file
             if None is not current_file:
@@ -245,7 +244,7 @@ def _update_zoneinfo():
             return
     else:
         remove_file_perm(zonefile_tmp, log_err=False)
-        logger.log(u'MD5 hash does not match: %s File: %s' % (zoneinfo_md5.upper(), new_hash.upper()), logger.ERROR)
+        logger.error(f'MD5 hash does not match: {zoneinfo_md5.upper()} File: {new_hash.upper()}')
         return
 
 
@@ -270,7 +269,7 @@ def update_network_dict():
     if url_data in (None, ''):
         update_last_retry()
         # When None is urlData, trouble connecting to GitHub
-        logger.debug(u'Updating network timezones failed, this can happen from time to time. URL: %s' % url)
+        logger.debug(f'Updating network timezones failed, this can happen from time to time. URL: {url}')
         load_network_dict(load=False)
         return
 
@@ -279,7 +278,7 @@ def update_network_dict():
     try:
         for line in url_data.splitlines():
             try:
-                (name, tzone) = line.strip().rsplit(u':', 1)
+                (name, tzone) = line.strip().rsplit(':', 1)
             except (BaseException, Exception):
                 continue
             if None is name or None is tzone:
@@ -512,14 +511,14 @@ def _load_network_conversions():
     if url_data in (None, ''):
         update_last_retry()
         # when no url_data, trouble connecting to GitHub
-        logger.debug(u'Updating network conversions failed, this can happen from time to time. URL: %s' % url)
+        logger.debug(f'Updating network conversions failed, this can happen from time to time. URL: {url}')
         return
 
     reset_last_retry()
 
     try:
         for line in url_data.splitlines():
-            (tvdb_network, tvrage_network, tvrage_country) = line.strip().rsplit(u'::', 2)
+            (tvdb_network, tvrage_network, tvrage_country) = line.strip().rsplit('::', 2)
             if not (tvdb_network and tvrage_network and tvrage_country):
                 continue
             conversions_in.append(

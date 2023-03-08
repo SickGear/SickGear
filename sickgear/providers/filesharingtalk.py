@@ -80,7 +80,7 @@ class FSTProvider(generic.NZBProvider):
             success, msg = self._check_cookie()
             if success:
                 return False
-            logger.warning(u'%s: %s' % (msg, self.cookies))
+            logger.warning(f'{msg}: {self.cookies}')
 
         self.cookies = None
         return None
@@ -166,7 +166,7 @@ class FSTProvider(generic.NZBProvider):
                 time.sleep(1.1)
                 pass
             except (BaseException, Exception):
-                logger.error(u'Failed to parse. Traceback: %s' % traceback.format_exc())
+                logger.error(f'Failed to parse. Traceback: {traceback.format_exc()}')
 
             self._log_search((mode, search_mode)['Propers' == search_mode], len(results) - cnt, search_url)
         return results

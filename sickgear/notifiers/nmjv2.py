@@ -78,7 +78,7 @@ class NMJv2Notifier(BaseNotifier):
                         result = True
 
         except IOError as e:
-            self._log_warning(u'Couldn\'t contact popcorn hour on host %s: %s' % (host, ex(e)))
+            self._log_warning(f'Couldn\'t contact popcorn hour on host {host}: {ex(e)}')
 
         if result:
             return '{"message": "Success, NMJ Database found at: %(host)s", "database": "%(database)s"}' % {
@@ -100,7 +100,7 @@ class NMJv2Notifier(BaseNotifier):
 
         host = self._choose(host, sickgear.NMJv2_HOST)
 
-        self._log_debug(u'Sending scan command for NMJ ')
+        self._log_debug('Sending scan command for NMJ ')
 
         # if a host is provided then attempt to open a handle to that URL
         try:
@@ -108,11 +108,11 @@ class NMJv2Notifier(BaseNotifier):
 
             url_scandir = '%s%s%s' % (base_url, 'metadata_database?', urlencode(
                 dict(arg0='update_scandir', arg1=sickgear.NMJv2_DATABASE, arg2='', arg3='update_all')))
-            self._log_debug(u'Scan update command sent to host: %s' % host)
+            self._log_debug(f'Scan update command sent to host: {host}')
 
             url_updatedb = '%s%s%s' % (base_url, 'metadata_database?', urlencode(
                 dict(arg0='scanner_start', arg1=sickgear.NMJv2_DATABASE, arg2='background', arg3='')))
-            self._log_debug(u'Try to mount network drive via url: %s' % host)
+            self._log_debug(f'Try to mount network drive via url: {host}')
 
             prereq = urllib.request.Request(url_scandir)
             req = urllib.request.Request(url_updatedb)
@@ -127,24 +127,24 @@ class NMJv2Notifier(BaseNotifier):
             response2 = http_response_obj2.read()
             http_response_obj2.close()
         except IOError as e:
-            self._log_warning(u'Couldn\'t contact popcorn hour on host %s: %s' % (host, ex(e)))
+            self._log_warning(f'Couldn\'t contact popcorn hour on host {host}: {ex(e)}')
             return False
 
         try:
             et = etree.fromstring(response1)
             result1 = et.findtext('returnValue')
         except SyntaxError as e:
-            self._log_error(u'Unable to parse XML returned from the Popcorn Hour: update_scandir, %s' % ex(e))
+            self._log_error(f'Unable to parse XML returned from the Popcorn Hour: update_scandir, {ex(e)}')
             return False
 
         try:
             et = etree.fromstring(response2)
             result2 = et.findtext('returnValue')
         except SyntaxError as e:
-            self._log_error(u'Unable to parse XML returned from the Popcorn Hour: scanner_start, %s' % ex(e))
+            self._log_error(f'Unable to parse XML returned from the Popcorn Hour: scanner_start, {ex(e)}')
             return False
 
-        # if the result was a number then consider that an error
+        # if the result was a number, then consider that an error
         error_codes = ['8', '11', '22', '49', '50', '51', '60']
         error_messages = ['Invalid parameter(s)/argument(s)',
                           'Invalid database path',
@@ -155,15 +155,15 @@ class NMJv2Notifier(BaseNotifier):
                           'Read only file system']
         if 0 < int(result1):
             index = error_codes.index(result1)
-            self._log_error(u'Popcorn Hour returned an error: %s' % (error_messages[index]))
+            self._log_error(f'Popcorn Hour returned an error: {error_messages[index]}')
             return False
 
         elif 0 < int(result2):
             index = error_codes.index(result2)
-            self._log_error(u'Popcorn Hour returned an error: %s' % (error_messages[index]))
+            self._log_error(f'Popcorn Hour returned an error: {error_messages[index]}')
             return False
 
-        self._log(u'NMJv2 started background scan')
+        self._log('NMJv2 started background scan')
         return True
 
     def _notify(self, host=None, **kwargs):

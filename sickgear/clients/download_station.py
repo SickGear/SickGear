@@ -71,7 +71,7 @@ class DownloadStationAPI(GenericClient):
         # type: (AnyStr) -> None
         out = '%s%s: %s' % (self.name, (' replied with', '')['Could not' in msg], msg)
         self._errmsg = '<br>%s.' % out
-        logger.log(out, logger.ERROR)
+        logger.error(out)
 
     def _error_task(self, response):
 
@@ -234,7 +234,7 @@ class DownloadStationAPI(GenericClient):
             i = 0
             while retry_ids:
                 for i in tries:
-                    logger.log('%s: retry %s %s item(s) in %ss' % (self.name, act, len(item['fail']), i), logger.DEBUG)
+                    logger.debug('%s: retry %s %s item(s) in %ss' % (self.name, act, len(item['fail']), i))
                     time.sleep(i)
                     item['fail'] = []
                     for task in filter(filter_func, self._tinf(retry_ids, err=True)):
@@ -246,8 +246,8 @@ class DownloadStationAPI(GenericClient):
                     retry_ids = item['fail']
                 else:
                     if max(tries) == i:
-                        logger.log('%s: failed to %s %s item(s) after %s tries over %s mins, aborted' %
-                                   (self.name, act, len(item['fail']), len(tries), sum(tries) / 60), logger.DEBUG)
+                        logger.debug('%s: failed to %s %s item(s) after %s tries over %s mins, aborted' %
+                                     (self.name, act, len(item['fail']), len(tries), sum(tries) / 60))
 
             return (item['fail'] + item['ignore']) or True
 
@@ -261,8 +261,8 @@ class DownloadStationAPI(GenericClient):
         if 3 <= self._task_version:
             return self._add_torrent(uri={'uri': search_result.url})
 
-        logger.log('%s: the API at %s doesn\'t support torrent magnet, download skipped' %
-                   (self.name, self.host), logger.WARNING)
+        logger.warning('%s: the API at %s doesn\'t support torrent magnet, download skipped' %
+                       (self.name, self.host))
 
     def _add_torrent_file(self, search_result):
         # type: (TorrentSearchResult) -> Union[AnyStr, bool]

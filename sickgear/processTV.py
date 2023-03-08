@@ -70,7 +70,7 @@ class ProcessTVShow(object):
     @property
     def result(self, pre=True):
         # type: (bool) -> AnyStr
-        return (('<br />', u'\n')[pre]).join(self._output)
+        return (('<br>', '\n')[pre]).join(self._output)
 
     def _buffer(self, text=None):
         if None is not text:
@@ -78,7 +78,7 @@ class ProcessTVShow(object):
             if self.webhandler:
                 logger_msg = re.sub(r'(?i)<br[\s/]+>', '\n', text)
                 logger_msg = re.sub('(?i)<a[^>]+>([^<]+)</a>', r'\1', logger_msg)
-                self.webhandler('%s%s' % (logger_msg, u'\n'))
+                self.webhandler('%s%s' % (logger_msg, '\n'))
 
     def _log_helper(self, message, log_level=logger.DEBUG):
         """
@@ -90,7 +90,7 @@ class ProcessTVShow(object):
         """
         logger_msg = re.sub(r'(?i)<br[\s/]+>\.*', '', message)
         logger_msg = re.sub('(?i)<a[^>]+>([^<]+)</a>', r'\1', logger_msg)
-        logger.log(u'%s' % logger_msg, log_level)
+        logger.log(f'{logger_msg}', log_level)
         self._buffer(message)
         return
 
@@ -136,14 +136,14 @@ class ProcessTVShow(object):
         try:
             shutil.rmtree(folder)
         except (OSError, IOError) as e:
-            logger.log(u'Warning: unable to delete folder: %s: %s' % (folder, ex(e)), logger.WARNING)
+            logger.warning(f'Warning: unable to delete folder: {folder}: {ex(e)}')
             return False
 
         if os.path.isdir(folder):
-            logger.log(u'Warning: unable to delete folder: %s' % folder, logger.WARNING)
+            logger.warning(f'Warning: unable to delete folder: {folder}')
             return False
 
-        self._log_helper(u'Deleted folder ' + folder, logger.MESSAGE)
+        self._log_helper(f'Deleted folder {folder}', logger.MESSAGE)
         return True
 
     def _delete_files(self, process_path, notwanted_files, force=False):
@@ -170,18 +170,18 @@ class ProcessTVShow(object):
             file_attribute = os.stat(cur_file_path)[0]
             if not file_attribute & stat.S_IWRITE:
                 # File is read-only, so make it writeable
-                self._log_helper(u'Changing ReadOnly flag for file ' + cur_file)
+                self._log_helper(f'Changing ReadOnly flag for file {cur_file}')
                 try:
                     os.chmod(cur_file_path, stat.S_IWRITE)
                 except OSError as e:
-                    self._log_helper(u'Cannot change permissions of %s: %s' % (cur_file_path, ex(e)))
+                    self._log_helper(f'Cannot change permissions of {cur_file_path}: {ex(e)}')
 
             removal_type = helpers.remove_file(cur_file_path)
 
             if os.path.isfile(cur_file_path):
                 result = False
             else:
-                self._log_helper(u'%s file %s' % (removal_type, cur_file))
+                self._log_helper(f'{removal_type} file {cur_file}')
 
         return result
 
@@ -209,7 +209,7 @@ class ProcessTVShow(object):
                 show_obj = helpers.find_show_by_id({int(sql_result[-1]['indexer']): int(sql_result[-1]['showid'])},
                                                    check_multishow=True)
                 if hasattr(show_obj, 'name'):
-                    logger.log('Found Show: %s in snatch history for: %s' % (show_obj.name, name), logger.DEBUG)
+                    logger.debug('Found Show: %s in snatch history for: %s' % (show_obj.name, name))
             except MultipleShowObjectsException:
                 show_obj = None
         return show_obj
@@ -319,19 +319,19 @@ class ProcessTVShow(object):
         elif dir_name and sickgear.TV_DOWNLOAD_DIR and os.path.isdir(sickgear.TV_DOWNLOAD_DIR)\
                 and os.path.normpath(dir_name) != os.path.normpath(sickgear.TV_DOWNLOAD_DIR):
             dir_name = os.path.join(sickgear.TV_DOWNLOAD_DIR, os.path.abspath(dir_name).split(os.path.sep)[-1])
-            self._log_helper(u'SickGear PP Config, completed TV downloads folder: ' + sickgear.TV_DOWNLOAD_DIR)
+            self._log_helper(f'SickGear PP Config, completed TV downloads folder: {sickgear.TV_DOWNLOAD_DIR}')
 
         if dir_name:
-            self._log_helper(u'Checking folder... ' + dir_name)
+            self._log_helper(f'Checking folder... {dir_name}')
 
         # if we didn't find a real directory then process "failed" or just quit
         if not dir_name or not os.path.isdir(dir_name):
             if nzb_name and failed:
                 self._process_failed(dir_name, nzb_name, show_obj=show_obj)
             else:
-                self._log_helper(u'Unable to figure out what folder to process. ' +
-                                 u'If your downloader and SickGear aren\'t on the same PC then make sure ' +
-                                 u'you fill out your completed TV download folder in the PP config.')
+                self._log_helper('Unable to figure out what folder to process. '
+                                 'If your downloader and SickGear aren\'t on the same PC then make sure '
+                                 'you fill out your completed TV download folder in the PP config.')
             return self.result
 
         parent = self.find_parent(dir_name)
@@ -352,13 +352,13 @@ class ProcessTVShow(object):
         path, dirs, files = self._get_path_dir_files(dir_name, nzb_name, pp_type)
 
         if sickgear.POSTPONE_IF_SYNC_FILES and any(filter(helpers.is_sync_file, files)):
-            self._log_helper(u'Found temporary sync files, skipping post process', logger.ERROR)
+            self._log_helper('Found temporary sync files, skipping post process', logger.ERROR)
             return self.result
 
         if not process_method:
             process_method = sickgear.PROCESS_METHOD
 
-        self._log_helper(u'Processing folder... %s' % path)
+        self._log_helper(f'Processing folder... {path}')
 
         work_files = []
         joined = self.join(path)
@@ -380,13 +380,13 @@ class ProcessTVShow(object):
         work_files += [os.path.join(path, item) for item in rar_content]
 
         if 0 < len(files):
-            self._log_helper(u'Process file%s: %s' % (helpers.maybe_plural(files), str(files)))
+            self._log_helper(f'Process file{helpers.maybe_plural(files)}: {str(files)}')
         if 0 < len(video_files):
-            self._log_helper(u'Process video file%s: %s' % (helpers.maybe_plural(video_files), str(video_files)))
+            self._log_helper(f'Process video file{helpers.maybe_plural(video_files)}: {str(video_files)}')
         if 0 < len(rar_content):
-            self._log_helper(u'Process rar content: ' + str(rar_content))
+            self._log_helper(f'Process rar content: {rar_content}')
         if 0 < len(video_in_rar):
-            self._log_helper(u'Process video%s in rar: %s' % (helpers.maybe_plural(video_in_rar), str(video_in_rar)))
+            self._log_helper(f'Process video{helpers.maybe_plural(video_in_rar)} in rar: {str(video_in_rar)}')
 
         # If nzb_name is set and there's more than one videofile in the folder, files will be lost (overwritten).
         nzb_name_original = nzb_name
@@ -425,8 +425,7 @@ class ProcessTVShow(object):
                                     force, force_replace, use_trash=cleanup, show_obj=show_obj)
 
         except OSError as e:
-            logger.log('Batch skipped, %s%s' %
-                       (ex(e), e.filename and (' (file %s)' % e.filename) or ''), logger.WARNING)
+            logger.warning('Batch skipped, %s%s' % (ex(e), e.filename and (' (file %s)' % e.filename) or ''))
 
         # Process video files in TV subdirectories
         for directory in [x for x in dirs if self._validate_dir(
@@ -438,7 +437,7 @@ class ProcessTVShow(object):
             for walk_path, walk_dir, files in os.walk(os.path.join(path, directory), topdown=False):
 
                 if sickgear.POSTPONE_IF_SYNC_FILES and any(filter(helpers.is_sync_file, files)):
-                    self._log_helper(u'Found temporary sync files, skipping post process', logger.ERROR)
+                    self._log_helper('Found temporary sync files, skipping post process', logger.ERROR)
                     return self.result
 
                 parent = self.find_parent(walk_path)
@@ -493,8 +492,7 @@ class ProcessTVShow(object):
                                                           self.check_video_filenames(walk_dir, video_pick)))
 
                 except OSError as e:
-                    logger.log('Batch skipped, %s%s' %
-                               (ex(e), e.filename and (' (file %s)' % e.filename) or ''), logger.WARNING)
+                    logger.warning(f'Batch skipped, {ex(e)}{e.filename and (" (file %s)" % e.filename) or ""}')
 
                 if process_method in ('hardlink', 'symlink') and video_in_rar:
                     self._delete_files(walk_path, rar_content)
@@ -526,12 +524,13 @@ class ProcessTVShow(object):
 
         if self.any_vid_processed:
             if not self.files_failed:
-                _bottom_line(u'Successfully processed.', logger.MESSAGE)
+                _bottom_line('Successfully processed.', logger.MESSAGE)
             else:
-                _bottom_line(u'Successfully processed at least one video file%s.' %
-                             (', others were skipped', ' and skipped another')[1 == self.files_failed], logger.MESSAGE)
+                _bottom_line(f'Successfully processed at least one video file'
+                             f'{(", others were skipped", " and skipped another")[1 == self.files_failed]}.',
+                             logger.MESSAGE)
         else:
-            _bottom_line(u'Failed! Did not process any files.', logger.WARNING)
+            _bottom_line('Failed! Did not process any files.', logger.WARNING)
 
         return self.result
 
@@ -599,16 +598,16 @@ class ProcessTVShow(object):
         :return: success
         :rtype: bool
         """
-        self._log_helper(u'Processing sub dir: ' + dir_name)
+        self._log_helper(f'Processing sub dir: {dir_name}')
 
         if os.path.basename(dir_name).startswith('_FAILED_'):
-            self._log_helper(u'The directory name indicates it failed to extract.')
+            self._log_helper('The directory name indicates it failed to extract.')
             failed = True
         elif os.path.basename(dir_name).startswith('_UNDERSIZED_'):
-            self._log_helper(u'The directory name indicates that it was previously rejected for being undersized.')
+            self._log_helper('The directory name indicates that it was previously rejected for being undersized.')
             failed = True
         elif os.path.basename(dir_name).upper().startswith('_UNPACK'):
-            self._log_helper(u'The directory name indicates that this release is in the process of being unpacked.')
+            self._log_helper('The directory name indicates that this release is in the process of being unpacked.')
             return False
 
         if failed:
@@ -616,7 +615,7 @@ class ProcessTVShow(object):
             return False
 
         if helpers.is_hidden_folder(dir_name):
-            self._log_helper(u'Ignoring hidden folder: ' + dir_name)
+            self._log_helper(f'Ignoring hidden folder: {dir_name}')
             return False
 
         # make sure the directory isn't inside a show directory
@@ -626,9 +625,7 @@ class ProcessTVShow(object):
         for cur_result in sql_result:
             if dir_name.lower().startswith(os.path.realpath(cur_result['location']).lower() + os.sep) \
                     or dir_name.lower() == os.path.realpath(cur_result['location']).lower():
-                self._log_helper(
-                    u'Found an episode that has already been moved to its show dir, skipping',
-                    logger.ERROR)
+                self._log_helper('Found an episode that has already been moved to its show dir, skipping', logger.ERROR)
                 return False
 
         # Get the videofile list for the next checks
@@ -686,16 +683,16 @@ class ProcessTVShow(object):
 
         if sickgear.UNPACK and rar_files:
 
-            self._log_helper(u'Packed releases detected: ' + str(rar_files))
+            self._log_helper(f'Packed releases detected: {rar_files}')
 
             for archive in rar_files:
 
-                self._log_helper(u'Unpacking archive: ' + archive)
+                self._log_helper(f'Unpacking archive: {archive}')
 
                 try:
                     rar_handle = rarfile.RarFile(os.path.join(path, archive))
                 except (BaseException, Exception):
-                    self._log_helper(u'Failed to open archive: %s' % archive, logger.ERROR)
+                    self._log_helper(f'Failed to open archive: {archive}', logger.ERROR)
                     self._set_process_success(False)
                     continue
                 try:
@@ -704,8 +701,7 @@ class ProcessTVShow(object):
                     for file_in_archive in [os.path.basename(x.filename)
                                             for x in rar_handle.infolist() if not x.is_dir()]:
                         if self._already_postprocessed(path, file_in_archive, force):
-                            self._log_helper(
-                                u'Archive file already processed, extraction skipped: ' + file_in_archive)
+                            self._log_helper(f'Archive file already processed, extraction skipped: {file_in_archive}')
                             skip_file = True
                             break
 
@@ -719,14 +715,14 @@ class ProcessTVShow(object):
                         renamed = self.cleanup_names(path, rar_content)
                         cur_unpacked = rar_content if not renamed else \
                             (list(set(rar_content) - set(iterkeys(renamed))) + list(renamed.values()))
-                        self._log_helper(u'Unpacked content: [u\'%s\']' % '\', u\''.join(map(text_type, cur_unpacked)))
+                        self._log_helper('Unpacked content: ["%s"]' % '", "'.join(map(text_type, cur_unpacked)))
                         unpacked_files += cur_unpacked
                 except (rarfile.PasswordRequired, rarfile.RarWrongPassword):
-                    self._log_helper(u'Failed to unpack archive PasswordRequired: %s' % archive, logger.ERROR)
+                    self._log_helper(f'Failed to unpack archive PasswordRequired: {archive}', logger.ERROR)
                     self._set_process_success(False)
                     self.fail_detected = True
                 except (BaseException, Exception):
-                    self._log_helper(u'Failed to unpack archive: %s' % archive, logger.ERROR)
+                    self._log_helper(f'Failed to unpack archive: {archive}', logger.ERROR)
                     self._set_process_success(False)
                 finally:
                     rar_handle.close()
@@ -738,11 +734,11 @@ class ProcessTVShow(object):
                 try:
                     rar_handle = rarfile.RarFile(os.path.join(path, archive))
                 except (BaseException, Exception):
-                    self._log_helper(u'Failed to open archive: %s' % archive, logger.ERROR)
+                    self._log_helper(f'Failed to open archive: {archive}', logger.ERROR)
                     continue
                 try:
                     if rar_handle.needs_password():
-                        self._log_helper(u'Failed to unpack archive PasswordRequired: %s' % archive, logger.ERROR)
+                        self._log_helper(f'Failed to unpack archive PasswordRequired: {archive}', logger.ERROR)
                         self._set_process_success(False)
                         self.failure_detected = True
                     rar_handle.close()
@@ -813,7 +809,7 @@ class ProcessTVShow(object):
                         is_renamed[os.path.relpath(file_path, directory)] = \
                             os.path.relpath(new_filename + file_extension, directory)
                     except OSError as _e:
-                        logger.log('Error unable to rename file "%s" because %s' % (cur_filename, ex(_e)), logger.ERROR)
+                        logger.error('Error unable to rename file "%s" because %s' % (cur_filename, ex(_e)))
                 elif helpers.has_media_ext(cur_filename) and \
                         None is not garbage_name.search(file_name) and None is not media_pattern.search(base_name):
                     _num_videos += 1
@@ -836,7 +832,7 @@ class ProcessTVShow(object):
                 os.rename(old_name, new_name)
                 is_renamed[os.path.relpath(old_name, directory)] = os.path.relpath(new_name, directory)
             except OSError as e:
-                logger.log('Error unable to rename file "%s" because %s' % (old_name, ex(e)), logger.ERROR)
+                logger.error('Error unable to rename file "%s" because %s' % (old_name, ex(e)))
 
         return is_renamed
 
@@ -876,7 +872,7 @@ class ProcessTVShow(object):
                         try:
                             os.rename(base_filepath, outfile)
                         except OSError:
-                            logger.log('Error unable to rename file %s' % base_filepath, logger.ERROR)
+                            logger.error('Error unable to rename file %s' % base_filepath)
                             return result
                         chunk_set.append(outfile)
                         chunk_set.sort()
@@ -957,8 +953,8 @@ class ProcessTVShow(object):
         my_db = db.DBConnection()
         sql_result = my_db.select('SELECT * FROM tv_episodes WHERE release_name = ?', [dir_name])
         if sql_result:
-            self._log_helper(u'Found a release directory %s that has already been processed,<br />.. skipping: %s'
-                             % (showlink, dir_name))
+            self._log_helper(f'Found a release directory {showlink} that has already been processed,<br>'
+                             f'.. skipping: {dir_name}')
             if ep_detail_sql:
                 reset_status(parse_result.show_obj.tvid,
                              parse_result.show_obj.prodid,
@@ -972,8 +968,8 @@ class ProcessTVShow(object):
             sql_result = my_db.select(
                 'SELECT * FROM tv_episodes WHERE release_name = ?', [videofile.rpartition('.')[0]])
             if sql_result:
-                self._log_helper(u'Found a video, but that release %s was already processed,<br />.. skipping: %s'
-                                 % (showlink, videofile))
+                self._log_helper(f'Found a video, but that release {showlink} was already processed,<br>'
+                                 f'.. skipping: {videofile}')
                 if ep_detail_sql:
                     reset_status(parse_result.show_obj.tvid,
                                  parse_result.show_obj.prodid,
@@ -991,10 +987,10 @@ class ProcessTVShow(object):
                          + ' and tv_episodes.status IN (%s)' % ','.join([str(x) for x in common.Quality.DOWNLOADED])\
                          + ' and history.resource LIKE ?'
 
-            sql_result = my_db.select(search_sql, [u'%' + videofile])
+            sql_result = my_db.select(search_sql, [f'%{videofile}'])
             if sql_result:
-                self._log_helper(u'Found a video, but the episode %s is already processed,<br />.. skipping: %s'
-                                 % (showlink, videofile))
+                self._log_helper(f'Found a video, but the episode {showlink} is already processed,<br>'
+                                 f'.. skipping: {videofile}')
                 if ep_detail_sql:
                     reset_status(parse_result.show_obj.tvid,
                                  parse_result.show_obj.prodid,
@@ -1051,7 +1047,7 @@ class ProcessTVShow(object):
                 process_fail_message = ''
             except exceptions_helper.PostProcessingFailed:
                 file_success = False
-                process_fail_message = '<br />.. Post Processing Failed'
+                process_fail_message = '<br>.. Post Processing Failed'
 
             self._set_process_success(file_success)
 
@@ -1059,13 +1055,11 @@ class ProcessTVShow(object):
                 self._buffer(processor.log.strip('\n'))
 
             if file_success:
-                self._log_helper(u'Successfully processed ' + cur_video_file, logger.MESSAGE)
+                self._log_helper(f'Successfully processed {cur_video_file}', logger.MESSAGE)
             elif self.any_vid_processed:
-                self._log_helper(u'Warning fail for %s%s' % (cur_video_file_path, process_fail_message),
-                                 logger.WARNING)
+                self._log_helper(f'Warning fail for {cur_video_file_path}{process_fail_message}', logger.WARNING)
             else:
-                self._log_helper(u'Did not use file %s%s' % (cur_video_file_path, process_fail_message),
-                                 logger.WARNING)
+                self._log_helper(f'Did not use file {cur_video_file_path}{process_fail_message}', logger.WARNING)
 
     @staticmethod
     def _get_path_dir_files(dir_name, nzb_name, pp_type):
@@ -1131,13 +1125,12 @@ class ProcessTVShow(object):
             if sickgear.DELETE_FAILED and self.any_vid_processed:
                 self._delete_folder(dir_name, check_empty=False)
 
-            task = u'Failed download processing'
+            task = 'Failed download processing'
             if self.any_vid_processed:
-                self._log_helper(u'Successful %s: (%s, %s)'
-                                 % (task.lower(), str(nzb_name), dir_name), logger.MESSAGE)
+                self._log_helper(f'Successful {task.lower()}: ({str(nzb_name)}, {dir_name})', logger.MESSAGE)
             else:
-                self._log_helper(u'%s failed: (%s, %s): %s'
-                                 % (task, str(nzb_name), dir_name, process_fail_message), logger.WARNING)
+                self._log_helper(f'{task} failed: ({str(nzb_name)}, {dir_name}): {process_fail_message}',
+                                 logger.WARNING)
 
     def process_minimal(self, nzb_name, show_obj, failed, webhandler):
         if failed:

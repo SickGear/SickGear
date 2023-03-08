@@ -68,7 +68,7 @@ class RarbgProvider(generic.TorrentProvider):
                 return True
             time.sleep(2)
 
-        logger.log(u'No usable API token returned from: %s' % self.urls['api_token'], logger.ERROR)
+        logger.error(f'No usable API token returned from: {self.urls["api_token"]}')
         return False
 
     @staticmethod

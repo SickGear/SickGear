@@ -132,21 +132,21 @@ class DBConnection(object):
         :return: success, message
         """
         if not db_supports_backup:
-            logger.log('this python sqlite3 version doesn\'t support backups', logger.DEBUG)
+            logger.debug('this python sqlite3 version doesn\'t support backups')
             return False, 'this python sqlite3 version doesn\'t support backups'
 
         if not os.path.isdir(target):
-            logger.log('Backup target invalid', logger.ERROR)
+            logger.error('Backup target invalid')
             return False, 'Backup target invalid'
 
         target_db = os.path.join(target, (backup_filename, self.filename)[None is backup_filename])
         if os.path.exists(target_db):
-            logger.log('Backup target file already exists', logger.ERROR)
+            logger.error('Backup target file already exists')
             return False, 'Backup target file already exists'
 
         # noinspection PyUnusedLocal
         def progress(status, remaining, total):
-            logger.log('Copied %s of %s pages...' % (total - remaining, total), logger.DEBUG)
+            logger.debug('Copied %s of %s pages...' % (total - remaining, total))
 
         backup_con = None
 
@@ -156,9 +156,9 @@ class DBConnection(object):
             with backup_con:
                 with db_lock:
                     self.connection.backup(backup_con, progress=progress)
-            logger.log('%s backup successful' % self.filename, logger.DEBUG)
+            logger.debug('%s backup successful' % self.filename)
         except sqlite3.Error as error:
-            logger.log("Error while taking backup: %s" % ex(error), logger.ERROR)
+            logger.error("Error while taking backup: %s" % ex(error))
             return False, 'Backup failed'
         finally:
             if backup_con:
@@ -226,8 +226,8 @@ class DBConnection(object):
 
                     self.connection.commit()
                     if 0 < affected:
-                        logger.debug(u'Transaction with %s queries executed affected at least %i row%s' % (
-                            len(queries), affected, helpers.maybe_plural(affected)))
+                        logger.debug(f'Transaction with {len(queries)} queries executed affected at least {affected:d}'
+                                     f' row{helpers.maybe_plural(affected)}')
                     return sql_result
                 except sqlite3.OperationalError as e:
                     sql_result = []
@@ -239,7 +239,7 @@ class DBConnection(object):
                 except sqlite3.DatabaseError as e:
                     if self.connection:
                         self.connection.rollback()
-                    logger.error(u'Fatal error executing query: ' + ex(e))
+                    logger.error(f'Fatal error executing query: {ex(e)}')
                     raise
 
             return sql_result
@@ -248,10 +248,10 @@ class DBConnection(object):
     def action_error(e):
 
         if 'unable to open database file' in e.args[0] or 'database is locked' in e.args[0]:
-            logger.log(u'DB error: ' + ex(e), logger.WARNING)
+            logger.warning(f'DB error: {ex(e)}')
             time.sleep(1)
             return True
-        logger.log(u'DB error: ' + ex(e), logger.ERROR)
+        logger.error(f'DB error: {ex(e)}')
 
     def action(self, query, args=None):
         # type: (AnyStr, Optional[List, Tuple]) -> Optional[Union[List, sqlite3.Cursor]]
@@ -280,7 +280,7 @@ class DBConnection(object):
                         raise
                     attempt += 1
                 except sqlite3.DatabaseError as e:
-                    logger.log(u'Fatal error executing query: ' + ex(e), logger.ERROR)
+                    logger.error(f'Fatal error executing query: {ex(e)}')
                     raise
 
             return sql_result
@@ -424,7 +424,7 @@ class DBSanityCheck(object):
 
 
 def upgrade_database(connection, schema):
-    logger.log(u'Checking database structure...', logger.MESSAGE)
+    logger.log('Checking database structure...', logger.MESSAGE)
     connection.is_upgrading = False
     connection.new_db = 0 == connection.check_db_version()
     _process_upgrade(connection, schema)
@@ -438,16 +438,16 @@ def _pretty_name(class_name):
 
 
 def _restore_database(filename, version):
-    logger.log(u'Restoring database before trying upgrade again')
+    logger.log('Restoring database before trying upgrade again')
     if not sickgear.helpers.restore_versioned_file(db_filename(filename=filename, suffix='v%s' % version), version):
-        logger.log_error_and_exit(u'Database restore failed, abort upgrading database')
+        logger.log_error_and_exit('Database restore failed, abort upgrading database')
         return False
     return True
 
 
 def _process_upgrade(connection, upgrade_class):
     instance = upgrade_class(connection)
-    logger.log('Checking %s database upgrade' % _pretty_name(upgrade_class.__name__), logger.DEBUG)
+    logger.debug('Checking %s database upgrade' % _pretty_name(upgrade_class.__name__))
     if not instance.test():
         connection.is_upgrading = True
         connection.upgrade_log(getattr(upgrade_class, 'pretty_name', None) or _pretty_name(upgrade_class.__name__))
@@ -471,9 +471,9 @@ def _process_upgrade(connection, upgrade_class):
             else:
                 logger.log_error_and_exit('Database upgrade failed, can\'t determine old db version, not restoring.')
 
-        logger.log('%s upgrade completed' % upgrade_class.__name__, logger.DEBUG)
+        logger.debug('%s upgrade completed' % upgrade_class.__name__)
     else:
-        logger.log('%s upgrade not required' % upgrade_class.__name__, logger.DEBUG)
+        logger.debug('%s upgrade not required' % upgrade_class.__name__)
 
     for upgradeSubClass in upgrade_class.__subclasses__():
         _process_upgrade(connection, upgradeSubClass)
@@ -710,15 +710,15 @@ def migration_code(my_db):
 
     db_version = my_db.check_db_version()
     my_db.new_db = 0 == db_version
-    logger.log(u'Detected database version: v%s' % db_version, logger.DEBUG)
+    logger.debug(f'Detected database version: v{db_version}')
 
     if not (db_version in schema):
         if db_version == sickgear.mainDB.MAX_DB_VERSION:
-            logger.log(u'Database schema is up-to-date, no upgrade required')
+            logger.log('Database schema is up-to-date, no upgrade required')
         elif 10000 > db_version:
-            logger.log_error_and_exit(u'SickGear does not currently support upgrading from this database version')
+            logger.log_error_and_exit('SickGear does not currently support upgrading from this database version')
         else:
-            logger.log_error_and_exit(u'Invalid database version')
+            logger.log_error_and_exit('Invalid database version')
 
     else:
 
@@ -733,13 +733,13 @@ def migration_code(my_db):
                 cleanup_old_db_backups(my_db.filename)
             except (BaseException, Exception) as e:
                 my_db.close()
-                logger.log(u'Failed to update database with error: %s attempting recovery...' % ex(e), logger.ERROR)
+                logger.error(f'Failed to update database with error: {ex(e)} attempting recovery...')
 
                 if _restore_database(my_db.filename, db_version):
                     # initialize the main SB database
-                    logger.log_error_and_exit(u'Successfully restored database version: %s' % db_version)
+                    logger.log_error_and_exit(f'Successfully restored database version: {db_version}')
                 else:
-                    logger.log_error_and_exit(u'Failed to restore database version: %s' % db_version)
+                    logger.log_error_and_exit(f'Failed to restore database version: {db_version}')
         my_db.upgrade_log('Finished')
 
 
@@ -765,11 +765,11 @@ def backup_database(db_connection, filename, version):
         logger.debug('new db, no backup required')
         return
 
-    logger.log(u'Backing up database before upgrade')
+    logger.log('Backing up database before upgrade')
     if not sickgear.helpers.backup_versioned_file(db_filename(filename), version):
-        logger.log_error_and_exit(u'Database backup failed, abort upgrading database')
+        logger.log_error_and_exit('Database backup failed, abort upgrading database')
     else:
-        logger.log(u'Proceeding with upgrade')
+        logger.log('Proceeding with upgrade')
 
 
 def get_rollback_module():
@@ -836,7 +836,7 @@ def backup_all_dbs(target, compress=True, prefer_7z=True):
     :return: success, message
     """
     if not make_path(target):
-        logger.log('Failed to create db backup dir', logger.ERROR)
+        logger.error('Failed to create db backup dir')
         return False, 'Failed to create db backup dir'
     my_db = DBConnection('cache.db')
     last_backup = my_db.select('SELECT time FROM lastUpdate WHERE provider = ?', ['sickgear_db_backup'])

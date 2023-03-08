@@ -42,7 +42,7 @@ def get_show_image(url, img_num=None, show_name=None, supress_log=False):
     # if they provided a fanart number try to use it instead
     temp_url = url if None is img_num else url.split('-')[0] + '-' + str(img_num) + '.jpg'
 
-    logger.log(u'Fetching image from ' + temp_url, logger.DEBUG)
+    logger.debug(f'Fetching image from {temp_url}')
 
     from sickgear import FLARESOLVERR_HOST, MEMCACHE
     MEMCACHE.setdefault('cookies', {})
@@ -51,8 +51,8 @@ def get_show_image(url, img_num=None, show_name=None, supress_log=False):
     if None is image_data:
         if supress_log:
             return
-        logger.log('There was an error trying to retrieve the image%s, aborting' %
-                   ('', ' for show: %s' % show_name)[None is not show_name], logger.WARNING)
+        logger.warning(f'There was an error trying to retrieve the image'
+                       f'{("", " for show: %s" % show_name)[None is not show_name]}, aborting')
         return
 
     return image_data

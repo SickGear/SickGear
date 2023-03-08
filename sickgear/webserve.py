@@ -167,12 +167,12 @@ class BaseStaticFileHandler(StaticFileHandler):
                 body = '\nRequest body: %s' % decode_str(self.request.body)
         except (BaseException, Exception):
             pass
-        logger.log('Sent %s error response to a `%s` request for `%s` with headers:\n%s%s' %
-                   (status_code, self.request.method, self.request.path, self.request.headers, body), logger.WARNING)
+        logger.warning(f'Sent {status_code} error response to a `{self.request.method}`'
+                       f' request for `{self.request.path}` with headers:\n'
+                       f'{self.request.headers}{body}')
         # suppress traceback by removing 'exc_info' kwarg
         if 'exc_info' in kwargs:
-            logger.log('Gracefully handled exception text:\n%s' % traceback.format_exception(*kwargs["exc_info"]),
-                       logger.DEBUG)
+            logger.debug('Gracefully handled exception text:\n%s' % traceback.format_exception(*kwargs["exc_info"]))
             del kwargs['exc_info']
         return super(BaseStaticFileHandler, self).write_error(status_code, **kwargs)
 
@@ -228,12 +228,11 @@ class RouteHandler(RequestHandler):
                 body = '\nRequest body: %s' % decode_str(self.request.body)
         except (BaseException, Exception):
             pass
-        logger.log('Sent %s error response to a `%s` request for `%s` with headers:\n%s%s' %
-                   (status_code, self.request.method, self.request.path, self.request.headers, body), logger.WARNING)
+        logger.warning(f'Sent {status_code} error response to a `{self.request.method}`'
+                       f' request for `{self.request.path}` with headers:\n{self.request.headers}{body}')
         # suppress traceback by removing 'exc_info' kwarg
         if 'exc_info' in kwargs:
-            logger.log('Gracefully handled exception text:\n%s' % traceback.format_exception(*kwargs["exc_info"]),
-                       logger.DEBUG)
+            logger.debug('Gracefully handled exception text:\n%s' % traceback.format_exception(*kwargs["exc_info"]))
             del kwargs['exc_info']
         return super(RouteHandler, self).write_error(status_code, **kwargs)
 
@@ -432,7 +431,7 @@ class CalendarHandler(BaseHandler):
         Works with iCloud, Google Calendar and Outlook.
         Provides a subscribeable URL for iCal subscriptions """
 
-        logger.log(u'Receiving iCal request from %s' % self.request.remote_ip)
+        logger.log(f'Receiving iCal request from {self.request.remote_ip}')
 
         # Limit dates
         past_date = (datetime.date.today() + datetime.timedelta(weeks=-52)).toordinal()
@@ -472,21 +471,17 @@ class CalendarHandler(BaseHandler):
                     minutes=helpers.try_int(show['runtime'], 60))
 
                 # Create event for episode
-                ical += 'BEGIN:VEVENT%s' % crlf \
-                        + 'DTSTART:%sT%sZ%s' % (air_date_time.strftime('%Y%m%d'),
-                                                air_date_time.strftime('%H%M%S'), crlf) \
-                        + 'DTEND:%sT%sZ%s' % (air_date_time_end.strftime('%Y%m%d'),
-                                              air_date_time_end.strftime('%H%M%S'), crlf) \
-                        + u'SUMMARY:%s - %sx%s - %s%s' % (show['show_name'], episode['season'], episode['episode'],
-                                                          episode['name'], crlf) \
-                        + u'UID:%s-%s-%s-E%sS%s%s' % (appname, datetime.date.today().isoformat(),
-                                                      show['show_name'].replace(' ', '-'),
-                                                      episode['episode'], episode['season'], crlf) \
-                        + u'DESCRIPTION:%s on %s' % ((show['airs'] or '(Unknown airs)'),
-                                                     (show['network'] or 'Unknown network')) \
-                        + ('' if not episode['description']
-                           else u'%s%s' % (nl, episode['description'].splitlines()[0])) \
-                        + '%sEND:VEVENT%s' % (crlf, crlf)
+                desc = '' if not episode['description'] else f'{nl}{episode["description"].splitlines()[0]}'
+                ical += (f'BEGIN:VEVENT{crlf}'
+                         f'DTSTART:{air_date_time.strftime("%Y%m%d")}T{air_date_time.strftime("%H%M%S")}Z{crlf}'
+                         f'DTEND:{air_date_time_end.strftime("%Y%m%d")}T{air_date_time_end.strftime("%H%M%S")}Z{crlf}'
+                         f'SUMMARY:{show["show_name"]} - {episode["season"]}x{episode["episode"]}'
+                            f' - {episode["name"]}{crlf}'
+                         f'UID:{appname}-{datetime.date.today().isoformat()}-{show["show_name"].replace(" ", "-")}'
+                            f'-E{episode["episode"]}S{episode["season"]}{crlf}'
+                         f'DESCRIPTION:{(show["airs"] or "(Unknown airs)")} on {(show["network"] or "Unknown network")}'
+                         f'{desc}{crlf}'
+                         f'END:VEVENT{crlf}')
 
         # Ending the iCal
         return ical + 'END:VCALENDAR'
@@ -499,7 +494,7 @@ class RepoHandler(BaseStaticFileHandler):
     kodi_is_legacy = None
 
     def parse_url_path(self, url_path):
-        logger.log('Kodi req... get(path): %s' % url_path, logger.DEBUG)
+        logger.debug('Kodi req... get(path): %s' % url_path)
         return super(RepoHandler, self).parse_url_path(url_path)
 
     def set_extra_headers(self, *args, **kwargs):
@@ -514,7 +509,7 @@ class RepoHandler(BaseStaticFileHandler):
 
         super(RepoHandler, self).initialize(*args, **kwargs)
 
-        logger.log('Kodi req... initialize(path): %s' % kwargs['path'], logger.DEBUG)
+        logger.debug('Kodi req... initialize(path): %s' % kwargs['path'])
         cache_client = os.path.join(sickgear.CACHE_DIR, 'clients')
         cache_client_kodi = os.path.join(cache_client, 'kodi')
         cache_client_kodi_watchedstate = os.path.join(cache_client_kodi, 'service.sickgear.watchedstate.updater')
@@ -583,7 +578,7 @@ class RepoHandler(BaseStaticFileHandler):
 
                 # Force a UNIX line ending, like the md5sum utility.
                 with io.open(os.path.join(zip_path, '%s.md5' % zip_name), 'w', newline='\n') as zh:
-                    zh.write(u'%s *%s\n' % (self.md5ify(zip_data), zip_name))
+                    zh.write(f'{self.md5ify(zip_data)} *{zip_name}\n')
 
             aid, ver = self.repo_sickgear_details()
             save_zip(aid, ver, os.path.join(cache_client_kodi, 'repository.sickgear'),
@@ -739,7 +734,7 @@ class RepoHandler(BaseStaticFileHandler):
     def md5ify(string):
         if not isinstance(string, binary_type):
             string = string.encode('utf-8')
-        return u'%s' % hashlib.new('md5', string).hexdigest()
+        return f'{hashlib.new("md5", string).hexdigest()}'
 
     def kodi_repository_sickgear_zip(self):
         bfr = io.BytesIO()
@@ -753,7 +748,7 @@ class RepoHandler(BaseStaticFileHandler):
                     infile = fh.read()
                 zh.writestr('repository.sickgear/icon.png', infile, zipfile.ZIP_DEFLATED)
         except OSError as e:
-            logger.log('Unable to zip: %r / %s' % (e, ex(e)), logger.WARNING)
+            logger.warning('Unable to zip: %r / %s' % (e, ex(e)))
 
         zip_data = bfr.getvalue()
         bfr.close()
@@ -792,7 +787,7 @@ class RepoHandler(BaseStaticFileHandler):
                     zh.writestr(os.path.relpath(direntry.path.replace(self.kodi_legacy, ''), basepath),
                                 infile, zipfile.ZIP_DEFLATED)
             except OSError as e:
-                logger.log('Unable to zip %s: %r / %s' % (direntry.path, e, ex(e)), logger.WARNING)
+                logger.warning('Unable to zip %s: %r / %s' % (direntry.path, e, ex(e)))
 
         zip_data = bfr.getvalue()
         bfr.close()
@@ -1466,7 +1461,7 @@ r.close()
                 if not bname:
                     msg = 'Missing media file name provided'
                     data[k] = msg
-                    logger.log('Update watched state skipped an item: %s' % msg, logger.WARNING)
+                    logger.warning('Update watched state skipped an item: %s' % msg)
                     continue
 
                 if bname in ep_results:
@@ -1494,7 +1489,7 @@ r.close()
         if as_json:
             if not data:
                 data = dict(error='Request made to SickGear with invalid payload')
-                logger.log('Update watched state failed: %s' % data['error'], logger.WARNING)
+                logger.warning('Update watched state failed: %s' % data['error'])
 
             return json_dumps(data)
 
@@ -1628,13 +1623,13 @@ class Home(MainHandler):
             images_path = os.path.join(sickgear.PROG_DIR, 'gui', 'slick', 'images', 'network')
             for cur_show_obj in sickgear.showList:
                 network_name = 'nonetwork' if None is cur_show_obj.network \
-                    else cur_show_obj.network.replace(u'\u00C9', 'e').lower()
+                    else cur_show_obj.network.replace('\u00C9', 'e').lower()
                 if network_name not in networks:
-                    filename = u'%s.png' % network_name
+                    filename = f'{network_name}.png'
                     if not os.path.isfile(os.path.join(images_path, filename)):
-                        filename = u'%s.png' % re.sub(r'(?m)(.*)\s+\(\w{2}\)$', r'\1', network_name)
+                        filename = '%s.png' % re.sub(r'(?m)(.*)\s+\(\w{2}\)$', r'\1', network_name)
                         if not os.path.isfile(os.path.join(images_path, filename)):
-                            filename = u'nonetwork.png'
+                            filename = 'nonetwork.png'
                     networks.setdefault(network_name, filename)
                 t.network_images.setdefault(cur_show_obj.tvid_prodid, networks[network_name])
 
@@ -1690,10 +1685,10 @@ class Home(MainHandler):
 
             authed, auth_msg = sab.test_authentication(host, username, password, apikey)
             if authed:
-                return u'Success. Connected %s authentication' % \
-                       ('using %s' % access_msg, 'with no')['None' == auth_msg.lower()]
-            return u'Authentication failed. %s' % auth_msg
-        return u'Unable to connect to host'
+                return f'Success. Connected' \
+                       f' {(f"using {access_msg}", "with no")["None" == auth_msg.lower()]} authentication'
+            return f'Authentication failed. {auth_msg}'
+        return 'Unable to connect to host'
 
     def test_nzbget(self, host=None, use_https=None, username=None, password=None):
         self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
@@ -2022,10 +2017,10 @@ class Home(MainHandler):
     def check_update(self):
         # force a check to see if there is a new version
         if sickgear.update_software_scheduler.action.check_for_new_version(force=True):
-            logger.log(u'Forced version check found results')
+            logger.log('Forced version check found results')
 
         if sickgear.update_packages_scheduler.action.check_for_new_version(force=True):
-            logger.log(u'Forced package version check found results')
+            logger.log('Forced package version check found results')
 
         self.redirect('/home/')
 
@@ -2591,7 +2586,7 @@ class Home(MainHandler):
                                                              new_prodid=m_prodid, force_id=True,
                                                              set_pause=set_pause, mark_wanted=mark_wanted)
         except (BaseException, Exception) as e:
-            logger.log('Could not add show %s to switch queue: %s' % (show_obj.tvid_prodid, ex(e)), logger.WARNING)
+            logger.warning('Could not add show %s to switch queue: %s' % (show_obj.tvid_prodid, ex(e)))
 
         ui.notifications.message('TV info source switch', 'Queued switch of tv info source')
         return {'Success': 'Switched to new TV info source'}
@@ -2658,12 +2653,12 @@ class Home(MainHandler):
                 else:
                     msg = 'Main ID unchanged, because show from %s with ID: %s exists in DB.' % \
                           (sickgear.TVInfoAPI(m_tvid).name, mtvid_prodid)
-                    logger.log(msg, logger.WARNING)
+                    logger.warning(msg)
                     ui.notifications.message(*[s.strip() for s in msg.split(',')])
             except MultipleShowObjectsException:
                 msg = 'Main ID unchanged, because show from %s with ID: %s exists in DB.' % \
                       (sickgear.TVInfoAPI(m_tvid).name, m_prodid)
-                logger.log(msg, logger.WARNING)
+                logger.warning(msg)
                 ui.notifications.message(*[s.strip() for s in msg.split(',')])
 
         response.update({
@@ -2943,9 +2938,9 @@ class Home(MainHandler):
             old_path = os.path.normpath(show_obj._location)
             new_path = os.path.normpath(location)
             if old_path != new_path:
-                logger.log(u'%s != %s' % (old_path, new_path), logger.DEBUG)
+                logger.debug(f'{old_path} != {new_path}')
                 if not os.path.isdir(new_path) and not sickgear.CREATE_MISSING_SHOW_DIRS:
-                    errors.append(u'New location <tt>%s</tt> does not exist' % new_path)
+                    errors.append(f'New location <tt>{new_path}</tt> does not exist')
 
                 # don't bother if we're going to update anyway
                 elif not do_update:
@@ -2960,9 +2955,8 @@ class Home(MainHandler):
                             # show_obj.load_episodes_from_tvinfo()
                             # rescan the episodes in the new folder
                     except exceptions_helper.NoNFOException:
-                        errors.append(
-                            u"The folder at <tt>%s</tt> doesn't contain a tvshow.nfo - "
-                            u"copy your files to that folder before you change the directory in SickGear." % new_path)
+                        errors.append(f'The folder at <tt>{new_path}</tt> doesn"t contain a tvshow.nfo -'
+                                      f' copy your files to that folder before you change the directory in SickGear.')
 
             # save it to the DB
             show_obj.save_to_db()
@@ -3175,7 +3169,7 @@ class Home(MainHandler):
             sql_l = []
             for cur_ep in eps.split('|'):
 
-                logger.log(u'Attempting to set status on episode %s to %s' % (cur_ep, status), logger.DEBUG)
+                logger.debug(f'Attempting to set status on episode {cur_ep} to {status}')
 
                 ep_obj = show_obj.get_episode(*tuple([int(x) for x in cur_ep.split('x')]))
 
@@ -3205,7 +3199,7 @@ class Home(MainHandler):
                         err_msg = 'to downloaded because it\'s not snatched/downloaded/archived'
 
                     if err_msg:
-                        logger.log('Refusing to change status of %s %s' % (cur_ep, err_msg), logger.ERROR)
+                        logger.error('Refusing to change status of %s %s' % (cur_ep, err_msg))
                         continue
 
                     if ARCHIVED == status:
@@ -3239,31 +3233,31 @@ class Home(MainHandler):
 
                     if season not in season_wanted:
                         season_wanted += [season]
-                        season_list += u'<li>Season %s</li>' % season
-                        logger.log((u'Not adding wanted eps to backlog search for %s season %s because show is paused',
-                                    u'Starting backlog search for %s season %s because eps were set to wanted')[
+                        season_list += f'<li>Season {season}</li>'
+                        logger.log(('Not adding wanted eps to backlog search for %s season %s because show is paused',
+                                    'Starting backlog search for %s season %s because eps were set to wanted')[
                                        not show_obj.paused] % (show_obj.unique_name, season))
 
-                (title, msg) = (('Not starting backlog', u'Paused show prevented backlog search'),
-                                ('Backlog started', u'Backlog search started'))[not show_obj.paused]
+                (title, msg) = (('Not starting backlog', 'Paused show prevented backlog search'),
+                                ('Backlog started', 'Backlog search started'))[not show_obj.paused]
 
                 if segments:
                     ui.notifications.message(title,
-                                             u'%s for the following seasons of <b>%s</b>:<br /><ul>%s</ul>'
-                                             % (msg, show_obj.unique_name, season_list))
+                                             f'{msg} for the following seasons of <b>{show_obj.unique_name}</b>:<br>'
+                                             f'<ul>{season_list}</ul>')
             else:
                 ui.notifications.message('Not starting backlog', 'No provider has active searching enabled')
 
         elif FAILED == status:
-            msg = u'Retrying search automatically for the following season of <b>%s</b>:<br><ul>' % show_obj.unique_name
+            msg = f'Retrying search automatically for the following season of <b>{show_obj.unique_name}</b>:<br><ul>'
 
             for season, segment in iteritems(segments):  # type: int, List[sickgear.tv.TVEpisode]
                 cur_failed_queue_item = search_queue.FailedQueueItem(show_obj, segment)
                 sickgear.search_queue_scheduler.action.add_item(cur_failed_queue_item)
 
                 msg += '<li>Season %s</li>' % season
-                logger.log(u'Retrying search for %s season %s because some eps were set to failed' %
-                           (show_obj.unique_name, season))
+                logger.log(f'Retrying search for {show_obj.unique_name} season {season}'
+                           f' because some eps were set to failed')
 
             msg += '</ul>'
 
@@ -3359,7 +3353,7 @@ class Home(MainHandler):
                 tvid_prodid_obj.list
                 + [ep_info[0], ep_info[1]])
             if not sql_result:
-                logger.log(u'Unable to find an episode for ' + cur_ep + ', skipping', logger.WARNING)
+                logger.warning(f'Unable to find an episode for {cur_ep}, skipping')
                 continue
             related_ep_result = my_db.select('SELECT * FROM tv_episodes WHERE location = ? AND episode != ?',
                                              [sql_result[0]['location'], ep_info[1]])
@@ -3895,8 +3889,8 @@ class HomeProcessMedia(Home):
             skip_failure_processing = nzbget_call and not nzbget_dupekey
 
             if nzbget_call and sickgear.NZBGET_SCRIPT_VERSION != kwargs.get('pp_version', '0'):
-                logger.log('Calling SickGear-NG.py script %s is not current version %s, please update.' %
-                           (kwargs.get('pp_version', '0'), sickgear.NZBGET_SCRIPT_VERSION), logger.ERROR)
+                logger.error(f'Calling SickGear-NG.py script {kwargs.get("pp_version", "0")} is not current version'
+                             f' {sickgear.NZBGET_SCRIPT_VERSION}, please update.')
 
             if sickgear.NZBGET_SKIP_PM and nzbget_call and nzbget_dupekey and nzb_name and show_obj:
                 processTV.process_minimal(nzb_name, show_obj,
@@ -3933,9 +3927,9 @@ class HomeProcessMedia(Home):
                     regexp = re.compile(r'(?i)<br[\s/]+>', flags=re.UNICODE)
                     result = regexp.sub('\n', result)
                     if None is not quiet and 1 == int(quiet):
-                        regexp = re.compile(u'(?i)<a[^>]+>([^<]+)</a>', flags=re.UNICODE)
-                        return u'%s' % regexp.sub(r'\1', result)
-                    return self._generic_message('Postprocessing results', u'<pre>%s</pre>' % result)
+                        regexp = re.compile('(?i)<a[^>]+>([^<]+)</a>', flags=re.UNICODE)
+                        return regexp.sub(r'\1', result)
+                    return self._generic_message('Postprocessing results', f'<pre>{result}</pre>')
 
     # noinspection PyPep8Naming
     def processEpisode(self, dir_name=None, nzb_name=None, process_type=None, **kwargs):
@@ -5027,13 +5021,13 @@ class AddShows(Home):
                     normalised = resp
                 else:
                     for item in resp:
-                        normalised.append({u'show': item})
+                        normalised.append({'show': item})
                 del resp
         except TraktAuthException as e:
-            logger.log(u'Pin authorisation needed to connect to Trakt service: %s' % ex(e), logger.WARNING)
+            logger.warning(f'Pin authorisation needed to connect to Trakt service: {ex(e)}')
             error_msg = 'Unauthorized: Get another pin in the Notifications Trakt settings'
         except TraktException as e:
-            logger.log(u'Could not connect to Trakt service: %s' % ex(e), logger.WARNING)
+            logger.warning(f'Could not connect to Trakt service: {ex(e)}')
         except exceptions_helper.ConnectionSkipException as e:
             logger.log('Skipping Trakt because of previous failure: %s' % ex(e))
         except (IndexError, KeyError):
@@ -6031,8 +6025,7 @@ class AddShows(Home):
         series_pieces = which_series.split('|')
         if (which_series and root_dir) or (which_series and full_show_path and 1 < len(series_pieces)):
             if 4 > len(series_pieces):
-                logger.log('Unable to add show due to show selection. Not enough arguments: %s' % (repr(series_pieces)),
-                           logger.ERROR)
+                logger.error(f'Unable to add show due to show selection. Not enough arguments: {repr(series_pieces)}')
                 ui.notifications.error('Unknown error. Unable to add show due to problem with show selection.')
                 return self.redirect('/add-shows/import/')
 
@@ -6058,7 +6051,7 @@ class AddShows(Home):
 
         # if the dir exists, do 'add existing show'
         if os.path.isdir(show_dir) and not full_show_path:
-            ui.notifications.error('Unable to add show', u'Found existing folder: ' + show_dir)
+            ui.notifications.error('Unable to add show', f'Found existing folder: {show_dir}')
             return self.redirect(
                 '/add-shows/import?tvid_prodid=%s%s%s&hash_dir=%s%s' %
                 (tvid, TVidProdid.glue, prodid, re.sub('[^a-z]', '', sg_helpers.md5_for_text(show_dir)),
@@ -6066,11 +6059,11 @@ class AddShows(Home):
 
         # don't create show dir if config says not to
         if sickgear.ADD_SHOWS_WO_DIR:
-            logger.log(u'Skipping initial creation due to config.ini setting (add_shows_wo_dir)')
+            logger.log('Skipping initial creation due to config.ini setting (add_shows_wo_dir)')
         else:
             if not helpers.make_dir(show_dir):
-                logger.log(u'Unable to add show because can\'t create folder: ' + show_dir, logger.ERROR)
-                ui.notifications.error('Unable to add show', u'Can\'t create folder: ' + show_dir)
+                logger.error(f"Unable to add show because can't create folder: {show_dir}")
+                ui.notifications.error('Unable to add show', f"Can't create folder: {show_dir}")
                 return self.redirect('/home/')
 
             helpers.chmod_as_parent(show_dir)
@@ -6880,8 +6873,7 @@ class Manage(MainHandler):
                         base_dir = dir_map[cur_root_dir]
                     new_show_dir = os.path.join(base_dir, cur_show_dir)
                 # noinspection PyProtectedMember
-                logger.log(u'For show %s changing dir from %s to %s' %
-                           (show_obj.unique_name, show_obj._location, new_show_dir))
+                logger.log(f'For show {show_obj.unique_name} changing dir from {show_obj._location} to {new_show_dir}')
             else:
                 # noinspection PyProtectedMember
                 new_show_dir = show_obj._location
@@ -6960,7 +6952,7 @@ class Manage(MainHandler):
                 prune=new_prune, tag=new_tag, direct_call=True)
 
             if cur_errors:
-                logger.log(u'Errors: ' + str(cur_errors), logger.ERROR)
+                logger.error(f'Errors: {cur_errors}')
                 errors.append('<b>%s:</b>\n<ul>' % show_obj.unique_name + ' '.join(
                     ['<li>%s</li>' % error for error in cur_errors]) + '</ul>')
 
@@ -7086,7 +7078,7 @@ class Manage(MainHandler):
             new_show_id = new_show.split(':')
             new_tvid = int(new_show_id[0])
             if new_tvid not in tv_sources:
-                logger.log('Skipping %s because target is not a valid source' % show, logger.WARNING)
+                logger.warning('Skipping %s because target is not a valid source' % show)
                 errors.append('Skipping %s because target is not a valid source' % show)
                 continue
             try:
@@ -7094,7 +7086,7 @@ class Manage(MainHandler):
             except (BaseException, Exception):
                 show_obj = None
             if not show_obj:
-                logger.log('Skipping %s because source is not a valid show' % show, logger.WARNING)
+                logger.warning('Skipping %s because source is not a valid show' % show)
                 errors.append('Skipping %s because source is not a valid show' % show)
                 continue
             if 2 == len(new_show_id):
@@ -7104,21 +7096,20 @@ class Manage(MainHandler):
                 except (BaseException, Exception):
                     new_show_obj = None
                 if new_show_obj:
-                    logger.log('Skipping %s because target show with that id already exists in db' % show,
-                               logger.WARNING)
+                    logger.warning('Skipping %s because target show with that id already exists in db' % show)
                     errors.append('Skipping %s because target show with that id already exists in db' % show)
                     continue
             else:
                 new_prodid = None
             if show_obj.tvid == new_tvid and (not new_prodid or new_prodid == show_obj.prodid):
-                logger.log('Skipping %s because target same as source' % show, logger.WARNING)
+                logger.warning('Skipping %s because target same as source' % show)
                 errors.append('Skipping %s because target same as source' % show)
                 continue
             try:
                 sickgear.show_queue_scheduler.action.switch_show(show_obj=show_obj, new_tvid=new_tvid,
                                                                  new_prodid=new_prodid, force_id=force_id)
             except (BaseException, Exception) as e:
-                logger.log('Could not add show %s to switch queue: %s' % (show_obj.tvid_prodid, ex(e)), logger.WARNING)
+                logger.warning('Could not add show %s to switch queue: %s' % (show_obj.tvid_prodid, ex(e)))
                 errors.append('Could not add show %s to switch queue: %s' % (show_obj.tvid_prodid, ex(e)))
 
         return json_dumps(({'result': 'success'}, {'errors': ', '.join(errors)})[0 < len(errors)])
@@ -7174,7 +7165,7 @@ class ManageSearch(Manage):
         # force it to run the next time it looks
         if not sickgear.search_queue_scheduler.action.is_standard_backlog_in_progress():
             sickgear.backlog_search_scheduler.force_search(force_type=FORCED_BACKLOG)
-            logger.log(u'Backlog search forced')
+            logger.log('Backlog search forced')
             ui.notifications.message('Backlog search started')
 
             time.sleep(5)
@@ -7186,7 +7177,7 @@ class ManageSearch(Manage):
         if not sickgear.search_queue_scheduler.action.is_recentsearch_in_progress():
             result = sickgear.recent_search_scheduler.force_run()
             if result:
-                logger.log(u'Recent search forced')
+                logger.log('Recent search forced')
                 ui.notifications.message('Recent search started')
 
         time.sleep(5)
@@ -7197,7 +7188,7 @@ class ManageSearch(Manage):
         # force it to run the next time it looks
         result = sickgear.proper_finder_scheduler.force_run()
         if result:
-            logger.log(u'Find propers search forced')
+            logger.log('Find propers search forced')
             ui.notifications.message('Find propers search started')
 
         time.sleep(5)
@@ -7307,7 +7298,7 @@ class ShowTasks(Manage):
 
         result = sickgear.show_update_scheduler.force_run()
         if result:
-            logger.log(u'Show Update forced')
+            logger.log('Show Update forced')
             ui.notifications.message('Forced Show Update started')
 
         time.sleep(5)
@@ -7658,7 +7649,7 @@ class History(MainHandler):
         hosts, keys, message = client.check_config(sickgear.EMBY_HOST, sickgear.EMBY_APIKEY)
 
         if sickgear.USE_EMBY and hosts:
-            logger.log('Updating Emby watched episode states', logger.DEBUG)
+            logger.debug('Updating Emby watched episode states')
 
             rd = sickgear.ROOT_DIRS.split('|')[1:] \
                 + [x.split('=')[0] for x in sickgear.EMBY_PARENT_MAPS.split(',') if any(x)]
@@ -7744,8 +7735,8 @@ class History(MainHandler):
                             except (BaseException, Exception):
                                 continue
             if mapping:
-                logger.log('Folder mappings used, the first of %s is [%s] in Emby is [%s] in SickGear' %
-                           (mapped, mapping[0], mapping[1]), logger.DEBUG)
+                logger.debug(f'Folder mappings used, the first of {mapped} is [{mapping[0]}] in Emby is'
+                             f' [{mapping[1]}] in SickGear')
 
             if states:
                 # Prune user removed items that are no longer being returned by API
@@ -7767,7 +7758,7 @@ class History(MainHandler):
 
         hosts = [x.strip().lower() for x in sickgear.PLEX_SERVER_HOST.split(',')]
         if sickgear.USE_PLEX and hosts:
-            logger.log('Updating Plex watched episode states', logger.DEBUG)
+            logger.debug('Updating Plex watched episode states')
 
             from lib.plex import Plex
 
@@ -7785,7 +7776,7 @@ class History(MainHandler):
                 # noinspection HttpUrlsUsage
                 parts = re.search(r'(.*):(\d+)$', urlparse('http://' + re.sub(r'^\w+://', '', cur_host)).netloc)
                 if not parts:
-                    logger.log('Skipping host not in min. host:port format : %s' % cur_host, logger.WARNING)
+                    logger.warning('Skipping host not in min. host:port format : %s' % cur_host)
                 elif parts.group(1):
                     plex.plex_host = parts.group(1)
                     if None is not parts.group(2):
@@ -7810,11 +7801,10 @@ class History(MainHandler):
 
                             idx += 1
 
-                    logger.log('Fetched %s of %s played for host : %s' % (len(plex.show_states), played, cur_host),
-                               logger.DEBUG)
+                    logger.debug('Fetched %s of %s played for host : %s' % (len(plex.show_states), played, cur_host))
             if mapping:
-                logger.log('Folder mappings used, the first of %s is [%s] in Plex is [%s] in SickGear' %
-                           (mapped, mapping[0], mapping[1]), logger.DEBUG)
+                logger.debug(f'Folder mappings used, the first of {mapped} is [{mapping[0]}] in Plex is'
+                             f' [{mapping[1]}] in SickGear')
 
             if states:
                 # Prune user removed items that are no longer being returned by API
@@ -7866,7 +7856,7 @@ class History(MainHandler):
 
                 result = helpers.remove_file(cur_result['location'])
                 if result:
-                    logger.log(u'%s file %s' % (result, cur_result['location']))
+                    logger.log(f'{result} file {cur_result["location"]}')
 
                     deleted.update({cur_result['tvep_id']: row_show_ids[cur_result['rowid']]})
                     if row_show_ids[cur_result['rowid']] not in refresh:
@@ -8075,7 +8065,7 @@ class ConfigGeneral(Config):
         # Return a hex digest of the md5, e.g. 49f68a5c8493ec2c0bf489821c21fc3b
         app_name = kwargs.get('app_name')
         app_name = '' if not app_name else ' for [%s]' % app_name
-        logger.log(u'New API generated%s' % app_name)
+        logger.log(f'New API generated{app_name}')
 
         return result
 
@@ -8134,7 +8124,7 @@ class ConfigGeneral(Config):
                 result['result'] = 'Failed: apikey already exists, try again'
             else:
                 sickgear.API_KEYS.append([app_name, api_key])
-                logger.log('Created apikey for [%s]' % app_name, logger.DEBUG)
+                logger.debug('Created apikey for [%s]' % app_name)
                 result.update(dict(result='Success: apikey added', added=api_key))
                 sickgear.USE_API = 1
                 sickgear.save_config()
@@ -8153,7 +8143,7 @@ class ConfigGeneral(Config):
             result['result'] = 'Failed: key doesn\'t exist'
         else:
             sickgear.API_KEYS = [ak for ak in sickgear.API_KEYS if ak[0] and api_key != ak[1]]
-            logger.log('Revoked [%s] apikey [%s]' % (app_name, api_key), logger.DEBUG)
+            logger.debug('Revoked [%s] apikey [%s]' % (app_name, api_key))
             result.update(dict(result='Success: apikey removed', removed=True))
             sickgear.save_config()
             ui.notifications.message('Configuration Saved', os.path.join(sickgear.CONFIG_FILE))
@@ -8196,7 +8186,7 @@ class ConfigGeneral(Config):
             with sickgear.show_update_scheduler.lock:
                 sickgear.show_update_scheduler.start_time = datetime.time(hour=sickgear.SHOW_UPDATE_HOUR)
         except (BaseException, Exception) as e:
-            logger.log('Could not change Show Update Scheduler time: %s' % ex(e), logger.ERROR)
+            logger.error('Could not change Show Update Scheduler time: %s' % ex(e))
         sickgear.TRASH_REMOVE_SHOW = config.checkbox_to_value(trash_remove_show)
         sg_helpers.TRASH_REMOVE_SHOW = sickgear.TRASH_REMOVE_SHOW
         sickgear.TRASH_ROTATE_LOGS = config.checkbox_to_value(trash_rotate_logs)
@@ -8231,14 +8221,14 @@ class ConfigGeneral(Config):
         # not deleted. Deduped list order preservation is key to feature function.
         my_db = db.DBConnection()
         sql_result = my_db.select('SELECT DISTINCT tag FROM tv_shows')
-        new_names = [u'' + v.strip() for v in (show_tags.split(u','), [])[None is show_tags] if v.strip()]
+        new_names = [v.strip() for v in (show_tags.split(','), [])[None is show_tags] if v.strip()]
         orphans = [item for item in [v['tag'] for v in sql_result or []] if item not in new_names]
         cleanser = []
         if 0 < len(orphans):
             cleanser = [item for item in sickgear.SHOW_TAGS if item in orphans or item in new_names]
-            results += [u'An attempt was prevented to remove a show list group name still in use']
+            results += ['An attempt was prevented to remove a show list group name still in use']
         dedupe = {}
-        sickgear.SHOW_TAGS = [dedupe.setdefault(item, item) for item in (cleanser + new_names + [u'Show List'])
+        sickgear.SHOW_TAGS = [dedupe.setdefault(item, item) for item in (cleanser + new_names + ['Show List'])
                               if item not in dedupe]
 
         sickgear.HOME_SEARCH_FOCUS = config.checkbox_to_value(home_search_focus)
@@ -8251,7 +8241,7 @@ class ConfigGeneral(Config):
             sickgear.DATE_PRESET = date_preset
         if time_preset:
             sickgear.TIME_PRESET_W_SECONDS = time_preset
-            sickgear.TIME_PRESET = sickgear.TIME_PRESET_W_SECONDS.replace(u':%S', u'')
+            sickgear.TIME_PRESET = sickgear.TIME_PRESET_W_SECONDS.replace(':%S', '')
         sickgear.TIMEZONE_DISPLAY = timezone_display
 
         # Web interface
@@ -8307,7 +8297,7 @@ class ConfigGeneral(Config):
 
         if 0 < len(results):
             for v in results:
-                logger.log(v, logger.ERROR)
+                logger.error(v)
             ui.notifications.error('Error(s) Saving Configuration',
                                    '<br>\n'.join(results))
         else:
@@ -8331,7 +8321,7 @@ class ConfigGeneral(Config):
                 pulls = sickgear.update_software_scheduler.action.list_remote_pulls()
                 return json_dumps({'result': 'success', 'pulls': pulls})
             except (BaseException, Exception) as e:
-                logger.log(u'exception msg: ' + ex(e), logger.DEBUG)
+                logger.debug(f'exception msg: {ex(e)}')
                 return json_dumps({'result': 'fail'})
 
     @staticmethod
@@ -8340,7 +8330,7 @@ class ConfigGeneral(Config):
             branches = sickgear.update_software_scheduler.action.list_remote_branches()
             return json_dumps({'result': 'success', 'branches': branches, 'current': sickgear.BRANCH or 'main'})
         except (BaseException, Exception) as e:
-            logger.log(u'exception msg: ' + ex(e), logger.DEBUG)
+            logger.debug(f'exception msg: {ex(e)}')
             return json_dumps({'result': 'fail'})
 
 
@@ -8465,7 +8455,7 @@ class ConfigSearch(Config):
         sickgear.TORRENT_LABEL = torrent_label
         sickgear.TORRENT_LABEL_VAR = config.to_int((0, torrent_label_var)['rtorrent' == torrent_method], 1)
         if not (0 <= sickgear.TORRENT_LABEL_VAR <= 5):
-            logger.log('Setting rTorrent custom%s is not 0-5, defaulting to custom1' % torrent_label_var, logger.DEBUG)
+            logger.debug('Setting rTorrent custom%s is not 0-5, defaulting to custom1' % torrent_label_var)
             sickgear.TORRENT_LABEL_VAR = 1
         sickgear.TORRENT_VERIFY_CERT = config.checkbox_to_value(torrent_verify_cert)
         sickgear.TORRENT_PATH = torrent_path
@@ -8478,7 +8468,7 @@ class ConfigSearch(Config):
 
         if 0 < len(results):
             for x in results:
-                logger.log(x, logger.ERROR)
+                logger.error(x)
             ui.notifications.error('Error(s) Saving Configuration',
                                    '<br>\n'.join(results))
         else:
@@ -8605,7 +8595,7 @@ class ConfigMediaProcess(Config):
 
         if 0 < len(results):
             for x in results:
-                logger.log(x, logger.ERROR)
+                logger.error(x)
             ui.notifications.error('Error(s) Saving Configuration',
                                    '<br>\n'.join(results))
         else:
@@ -8679,7 +8669,7 @@ class ConfigMediaProcess(Config):
         except (BaseException, Exception) as e:
             msg = ex(e)
 
-        logger.log(u'Rar Not Supported: %s' % msg, logger.ERROR)
+        logger.error(f'Rar Not Supported: {msg}')
         return 'not supported'
 
 
@@ -9019,7 +9009,7 @@ class ConfigProviders(Config):
 
         if 0 < len(results):
             for x in results:
-                logger.log(x, logger.ERROR)
+                logger.error(x)
             ui.notifications.error('Error(s) Saving Configuration', '<br>\n'.join(results))
         else:
             ui.notifications.message('Configuration Saved', os.path.join(sickgear.CONFIG_FILE))
@@ -9286,7 +9276,7 @@ class ConfigNotifications(Config):
 
         if 0 < len(results):
             for x in results:
-                logger.log(x, logger.ERROR)
+                logger.error(x)
             ui.notifications.error('Error(s) Saving Configuration',
                                    '<br>\n'.join(results))
         else:
@@ -9341,7 +9331,7 @@ class ConfigSubtitles(Config):
 
         if 0 < len(results):
             for x in results:
-                logger.log(x, logger.ERROR)
+                logger.error(x)
             ui.notifications.error('Error(s) Saving Configuration',
                                    '<br>\n'.join(results))
         else:
@@ -9374,7 +9364,7 @@ class ConfigAnime(Config):
 
         if 0 < len(results):
             for x in results:
-                logger.log(x, logger.ERROR)
+                logger.error(x)
             ui.notifications.error('Error(s) Saving Configuration',
                                    '<br>\n'.join(results))
         else:

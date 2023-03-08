@@ -59,7 +59,7 @@ class TorrentRssProvider(generic.TorrentProvider):
         title, url = None, None
 
         if item.title:
-            title = re.sub(r'\s+', '.', u'' + item.title)
+            title = re.sub(r'\s+', '.', '' + item.title)
 
         attempt_list = [lambda: item.torrent_magneturi,
                         lambda: item.enclosures[0].href,

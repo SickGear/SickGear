@@ -43,11 +43,11 @@ class NMJNotifier(BaseNotifier):
         try:
             terminal = telnetlib.Telnet(host)
         except (BaseException, Exception):
-            self._log_warning(u'Unable to get a telnet session to %s' % host)
+            self._log_warning(f'Unable to get a telnet session to {host}')
 
         if result:
             # tell the terminal to output the necessary info to the screen so we can search it later
-            self._log_debug(u'Connected to %s via telnet' % host)
+            self._log_debug(f'Connected to {host} via telnet')
             terminal.read_until('sh-3.00# ')
             terminal.write('cat /tmp/source\n')
             terminal.write('cat /tmp/netshare\n')
@@ -57,11 +57,11 @@ class NMJNotifier(BaseNotifier):
             match = re.search(r'(.+\.db)\r\n?(.+)(?=sh-3.00# cat /tmp/netshare)', tnoutput)
             # if we found the database in the terminal output then save that database to the config
             if not match:
-                self._log_warning(u'Could not get current NMJ database on %s, NMJ is probably not running!' % host)
+                self._log_warning(f'Could not get current NMJ database on {host}, NMJ is probably not running!')
             else:
                 database = match.group(1)
                 device = match.group(2)
-                self._log_debug(u'Found NMJ database %s on device %s' % (database, device))
+                self._log_debug(f'Found NMJ database {database} on device {device}')
                 sickgear.NMJ_DATABASE = database
                 # if the device is a remote host then try to parse the mounting URL and save it to the config
                 if device.startswith('NETWORK_SHARE/'):
@@ -72,7 +72,7 @@ class NMJNotifier(BaseNotifier):
                                           'but could not get the mounting url')
                     else:
                         mount = match.group().replace('127.0.0.1', host)
-                        self._log_debug(u'Found mounting url on the Popcorn Hour in configuration: %s' % mount)
+                        self._log_debug(f'Found mounting url on the Popcorn Hour in configuration: {mount}')
                         sickgear.NMJ_MOUNT = mount
                         result = True
 
@@ -96,23 +96,23 @@ class NMJNotifier(BaseNotifier):
         database = self._choose(database, sickgear.NMJ_DATABASE)
         mount = self._choose(mount, sickgear.NMJ_MOUNT)
 
-        self._log_debug(u'Sending scan command for NMJ ')
+        self._log_debug('Sending scan command for NMJ')
 
         # if a mount URL is provided then attempt to open a handle to that URL
         if mount:
             try:
                 req = urllib.request.Request(mount)
-                self._log_debug(u'Try to mount network drive via url: %s' % mount)
+                self._log_debug(f'Try to mount network drive via url: {mount}')
                 http_response_obj = urllib.request.urlopen(req)  # PY2 http_response_obj has no `with` context manager
                 http_response_obj.close()
             except IOError as e:
                 if hasattr(e, 'reason'):
-                    self._log_warning(u'Could not contact Popcorn Hour on host %s: %s' % (host, e.reason))
+                    self._log_warning(f'Could not contact Popcorn Hour on host {host}: {e.reason}')
                 elif hasattr(e, 'code'):
-                    self._log_warning(u'Problem with Popcorn Hour on host %s: %s' % (host, e.code))
+                    self._log_warning(f'Problem with Popcorn Hour on host {host}: {e.code}')
                 return False
             except (BaseException, Exception) as e:
-                self._log_error(u'Unknown exception: ' + ex(e))
+                self._log_error(f'Unknown exception: {ex(e)}')
                 return False
 
         # build up the request URL and parameters
@@ -123,18 +123,18 @@ class NMJNotifier(BaseNotifier):
         # send the request to the server
         try:
             req = urllib.request.Request(update_url)
-            self._log_debug(u'Sending scan update command via url: %s' % update_url)
+            self._log_debug(f'Sending scan update command via url: {update_url}')
             http_response_obj = urllib.request.urlopen(req)
             response = http_response_obj.read()
             http_response_obj.close()
         except IOError as e:
             if hasattr(e, 'reason'):
-                self._log_warning(u'Could not contact Popcorn Hour on host %s: %s' % (host, e.reason))
+                self._log_warning(f'Could not contact Popcorn Hour on host {host}: {e.reason}')
             elif hasattr(e, 'code'):
-                self._log_warning(u'Problem with Popcorn Hour on host %s: %s' % (host, e.code))
+                self._log_warning(f'Problem with Popcorn Hour on host {host}: {e.code}')
             return False
         except (BaseException, Exception) as e:
-            self._log_error(u'Unknown exception: ' + ex(e))
+            self._log_error(f'Unknown exception: {ex(e)}')
             return False
 
         # try to parse the resulting XML
@@ -142,15 +142,15 @@ class NMJNotifier(BaseNotifier):
             et = etree.fromstring(response)
             result = et.findtext('returnValue')
         except SyntaxError as e:
-            self._log_error(u'Unable to parse XML returned from the Popcorn Hour: %s' % ex(e))
+            self._log_error(f'Unable to parse XML returned from the Popcorn Hour: {ex(e)}')
             return False
 
-        # if the result was a number then consider that an error
+        # if the result was a number, then consider that an error
         if 0 < int(result):
-            self._log_error(u'Popcorn Hour returned an errorcode: %s' % result)
+            self._log_error(f'Popcorn Hour returned an errorcode: {result}')
             return False
 
-        self._log(u'NMJ started background scan')
+        self._log('NMJ started background scan')
         return True
 
     def _notify(self, host=None, database=None, mount=None, **kwargs):

@@ -40,8 +40,8 @@ class TelegramNotifier(Notifier):
         access_token = self._choose(access_token, sickgear.TELEGRAM_ACCESS_TOKEN)
         cid = self._choose(chatid, sickgear.TELEGRAM_CHATID)
         try:
-            msg = self._body_only(('' if not title else u'<b>%s</b>' % title), body)
-            msg = msg.replace(u'<b>%s</b>: ' % title, u'<b>%s:</b>\r\n' % ('SickGear ' + title, title)[use_icon])
+            msg = self._body_only(('' if not title else f'<b>{title}</b>'), body)
+            msg = msg.replace(f'<b>{title}</b>: ', f'<b>{("SickGear " + title, title)[use_icon]}:</b>\r\n')
             # HTML spaces (&nbsp;) and tabs (&emsp;) aren't supported
             # See https://core.telegram.org/bots/api#html-style
             msg = re.sub('(?i)&nbsp;?', ' ', msg)

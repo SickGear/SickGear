@@ -367,16 +367,16 @@ combination_test_cases = [
 ]
 
 unicode_test_cases = [
-    (u'The.Big.Bang.Theory.2x07.The.Panty.Pi\xf1ata.Polarization.720p.HDTV.x264.AC3-SHELDON.mkv',
+    ('The.Big.Bang.Theory.2x07.The.Panty.Pi\xf1ata.Polarization.720p.HDTV.x264.AC3-SHELDON.mkv',
      parser.ParseResult(
-         u'The.Big.Bang.Theory.2x07.The.Panty.Pi\xf1ata.Polarization.720p.HDTV.x264.AC3-SHELDON.mkv',
-         u'The Big Bang Theory', 2, [7], u'The.Panty.Pi\xf1ata.Polarization.720p.HDTV.x264.AC3', u'SHELDON',
+         'The.Big.Bang.Theory.2x07.The.Panty.Pi\xf1ata.Polarization.720p.HDTV.x264.AC3-SHELDON.mkv',
+         'The Big Bang Theory', 2, [7], 'The.Panty.Pi\xf1ata.Polarization.720p.HDTV.x264.AC3', 'SHELDON',
          version=-1)
      ),
     ('The.Big.Bang.Theory.2x07.The.Panty.Pi\xc3\xb1ata.Polarization.720p.HDTV.x264.AC3-SHELDON.mkv',
      parser.ParseResult(
-         u'The.Big.Bang.Theory.2x07.The.Panty.Pi\xf1ata.Polarization.720p.HDTV.x264.AC3-SHELDON.mkv',
-         u'The Big Bang Theory', 2, [7], u'The.Panty.Pi\xf1ata.Polarization.720p.HDTV.x264.AC3', u'SHELDON',
+         'The.Big.Bang.Theory.2x07.The.Panty.Pi\xf1ata.Polarization.720p.HDTV.x264.AC3-SHELDON.mkv',
+         'The Big Bang Theory', 2, [7], 'The.Panty.Pi\xf1ata.Polarization.720p.HDTV.x264.AC3', 'SHELDON',
          version=-1)
      ),
 ]

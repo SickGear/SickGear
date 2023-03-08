@@ -253,7 +253,7 @@ class Api(webserve.BaseHandler):
             result = function(*ag)
             return result
         except Exception as e:
-            logger.log(ex(e), logger.ERROR)
+            logger.error(ex(e))
             raise e
 
     def _out_as_json(self, dict):
@@ -277,17 +277,17 @@ class Api(webserve.BaseHandler):
         self.apikey_name = ''
 
         if not sickgear.USE_API:
-            msg = u'%s - SB API Disabled. ACCESS DENIED' % remoteIp
+            msg = f'{remoteIp} - SB API Disabled. ACCESS DENIED'
             return False, msg, args, kwargs
         if not apiKey:
-            msg = u'%s - gave NO API KEY. ACCESS DENIED' % remoteIp
+            msg = f'{remoteIp} - gave NO API KEY. ACCESS DENIED'
             return False, msg, args, kwargs
         for realKey in realKeys:
             if apiKey == realKey[1]:
                 self.apikey_name = realKey[0]
-                msg = u'%s - gave correct API KEY: %s. ACCESS GRANTED' % (remoteIp, realKey[0])
+                msg = f'{remoteIp} - gave correct API KEY: {realKey[0]}. ACCESS GRANTED'
                 return True, msg, args, kwargs
-        msg = u'%s - gave WRONG API KEY %s. ACCESS DENIED' % (remoteIp, apiKey)
+        msg = f'{remoteIp} - gave WRONG API KEY {apiKey}. ACCESS DENIED'
         return False, msg, args, kwargs
 
 
@@ -306,10 +306,10 @@ def call_dispatcher(handler, args, kwargs):
         cmds = kwargs["cmd"]
         del kwargs["cmd"]
 
-    api_log(handler, u"cmd: '" + str(cmds) + "'", logger.DEBUG)
-    api_log(handler, u"all args: '" + str(args) + "'", logger.DEBUG)
-    api_log(handler, u"all kwargs: '" + str(kwargs) + "'", logger.DEBUG)
-    # logger.log(u"dateFormat: '" + str(dateFormat) + "'", logger.DEBUG)
+    api_log(handler, f'cmd: "{cmds}"', logger.DEBUG)
+    api_log(handler, f'all args: "{args}"', logger.DEBUG)
+    api_log(handler, f'all kwargs: "{kwargs}"', logger.DEBUG)
+    # logger.debug(f'dateFormat: "{dateFormat}"')
 
 
     outDict = {}
@@ -626,14 +626,11 @@ class ApiCall(object):
         elif "ignore" == type:
             pass
         else:
-            self.log(u"Invalid param type set " + str(type) + " can not check or convert ignoring it",
-                       logger.ERROR)
+            self.log(f"Invalid param type set {type} can not check or convert ignoring it", logger.ERROR)
 
         if error:
             # this is a real ApiError !!
-            raise ApiError(
-                u"param: '" + str(name) + "' with given value: '" + str(value) + "' could not be parsed into '" + str(
-                    type) + "'")
+            raise ApiError(f'param: "{name}" with given value: "{value}" could not be parsed into "{type}"')
 
         return value
 
@@ -654,8 +651,7 @@ class ApiCall(object):
 
             if error:
                 # this is kinda a ApiError but raising an error is the only way of quitting here
-                raise ApiError(u"param: '" + str(name) + "' with given value: '" + str(
-                    value) + "' is out of allowed range '" + str(allowedValues) + "'")
+                raise ApiError(f'param: "{name}" with given value: "{value}" is out of allowed range "{allowedValues}"')
 
 
 class TVDBShorthandWrapper(ApiCall):
@@ -1369,8 +1365,8 @@ class CMD_SickGearEpisodeSetStatus(ApiCall):
                 backlog_queue_item = search_queue.BacklogQueueItem(show_obj, segment)
                 sickgear.search_queue_scheduler.action.add_item(backlog_queue_item)
 
-                self.log(u'Starting backlog for %s season %s because some episodes were set to WANTED' %
-                         (show_obj.unique_name, season))
+                self.log(f'Starting backlog for {show_obj.unique_name} season {season}'
+                         f' because some episodes were set to WANTED')
 
             extra_msg = " Backlog started"
 
@@ -3336,7 +3332,7 @@ class CMD_SickGearShowAddExisting(ApiCall):
         try:
             myShow = t[int(self.prodid), False]
         except BaseTVinfoError as e:
-            self.log(u"Unable to find show with id " + str(self.tvid), logger.WARNING)
+            self.log(f'Unable to find show with id {self.tvid}', logger.WARNING)
             return _responds(RESULT_FAILURE, msg="Unable to retrieve information from indexer")
 
         indexerName = None
@@ -3499,7 +3495,7 @@ class CMD_SickGearShowAddNew(ApiCall):
         try:
             myShow = t[int(self.prodid), False]
         except BaseTVinfoError as e:
-            self.log(u"Unable to find show with id " + str(self.tvid), logger.WARNING)
+            self.log(f'Unable to find show with id {self.tvid}', logger.WARNING)
             return _responds(RESULT_FAILURE, msg="Unable to retrieve information from indexer")
 
         indexerName = None
@@ -3520,11 +3516,11 @@ class CMD_SickGearShowAddNew(ApiCall):
 
         # don't create show dir if config says not to
         if sickgear.ADD_SHOWS_WO_DIR:
-            self.log(u"Skipping initial creation of " + showPath + " due to config.ini setting")
+            self.log(f'Skipping initial creation of {showPath} due to config.ini setting')
         else:
             dir_exists = helpers.make_dir(showPath)
             if not dir_exists:
-                self.log(u"Unable to create the folder " + showPath + ", can't add the show", logger.ERROR)
+                self.log(f"Unable to create the folder {showPath}, can't add the show", logger.ERROR)
                 return _responds(RESULT_FAILURE, {"path": showPath},
                                  "Unable to create the folder " + showPath + ", can't add the show")
             else:
@@ -4440,7 +4436,7 @@ class CMD_SickGearShowUpdate(ApiCall):
             sickgear.show_queue_scheduler.action.update_show(show_obj, True)
             return _responds(RESULT_SUCCESS, msg='%s has queued to be updated' % show_obj.unique_name)
         except exceptions_helper.CantUpdateException as e:
-            self.log(u'Unable to update %s. %s' % (show_obj.unique_name, ex(e)), logger.ERROR)
+            self.log(f'Unable to update {show_obj.unique_name}. {ex(e)}', logger.ERROR)
             return _responds(RESULT_FAILURE, msg='Unable to update %s. %s' % (show_obj.unique_name, ex(e)))
 
 

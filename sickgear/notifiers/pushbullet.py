@@ -69,7 +69,7 @@ class PushbulletNotifier(Notifier):
                 result = resp.json()['error']['message']
             except (BaseException, Exception):
                 result = 'no response'
-            self._log_warning(u'%s' % result)
+            self._log_warning(f'{result}')
 
         return self._choose((True, 'Failed to send notification: %s' % result)[bool(result)], not bool(result))
 

@@ -94,7 +94,7 @@ class GrowlNotifier(Notifier):
                     success = True
 
             except (BaseException, Exception) as e:
-                self._log_warning(u'Unable to send growl to %s:%s - %s' % (opts['host'], opts['port'], ex(e)))
+                self._log_warning(f'Unable to send growl to {opts["host"]}:{opts["port"]} - {ex(e)}')
 
         return success
 

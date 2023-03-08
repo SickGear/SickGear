@@ -100,8 +100,8 @@ class SceneExceptionTestCase(test.SickbeardTestDBCase):
             sickgear.showDict[s.sid_int] = s
         scene_exceptions.retrieve_exceptions()
         name_cache.build_name_cache()
-        self.assertEqual(scene_exceptions.get_scene_exception_by_name(u'ブラック・ラグーン'), [1, 79604, -1])
-        self.assertEqual(scene_exceptions.get_scene_exception_by_name(u'Burakku Ragūn'), [1, 79604, -1])
+        self.assertEqual(scene_exceptions.get_scene_exception_by_name('ブラック・ラグーン'), [1, 79604, -1])
+        self.assertEqual(scene_exceptions.get_scene_exception_by_name('Burakku Ragūn'), [1, 79604, -1])
         self.assertEqual(scene_exceptions.get_scene_exception_by_name('Rokka no Yuusha'), [1, 295243, -1])
 
     def test_sceneExceptionByNameEmpty(self):

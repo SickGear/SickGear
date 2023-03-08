@@ -94,9 +94,9 @@ class SpeedCDProvider(generic.TorrentProvider):
                         self.digest = 'inSpeed_speedian=%s' % self.session.cookies.get('inSpeed_speedian')
                     sickgear.save_config()
                     result = True
-                    logger.log('Cookie details for %s updated.' % self.name, logger.DEBUG)
+                    logger.debug('Cookie details for %s updated.' % self.name)
             elif not self.failure_count:
-                logger.log('Invalid cookie details for %s and login failed. Check settings' % self.name, logger.ERROR)
+                logger.error('Invalid cookie details for %s and login failed. Check settings' % self.name)
         return result
 
     @staticmethod

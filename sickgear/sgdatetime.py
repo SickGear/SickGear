@@ -211,7 +211,7 @@ class SGDatetime(datetime.datetime):
         obj = (dt, self)[self is not None]  # type: datetime.datetime
         try:
             if None is not obj:
-                strd = u'%s, %s' % (
+                strd = '%s, %s' % (
                     SGDatetime.sbstrftime(obj, (sickgear.DATE_PRESET, d_preset)[None is not d_preset]),
                     SGDatetime.sbftime(dt, show_seconds, t_preset, False, markup))
 

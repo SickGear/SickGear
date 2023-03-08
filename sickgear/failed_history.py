@@ -99,21 +99,20 @@ def add_failed(release):
     sql_result = db_select('SELECT * FROM history t WHERE t.release=?', [release])
 
     if not any(sql_result):
-        logger.log('Release not found in failed.db snatch history', logger.WARNING)
+        logger.warning('Release not found in failed.db snatch history')
 
     elif 1 < len(sql_result):
-        logger.log('Multiple logged snatches found for release in failed.db', logger.WARNING)
+        logger.warning('Multiple logged snatches found for release in failed.db')
         sizes = len(set([x['size'] for x in sql_result]))
         providers = len(set([x['provider'] for x in sql_result]))
 
         if 1 == sizes:
-            logger.log('However, they\'re all the same size. Continuing with found size', logger.WARNING)
+            logger.warning('However, they\'re all the same size. Continuing with found size')
             size = sql_result[0]['size']
 
         else:
-            logger.log(
-                'They also vary in size. Deleting logged snatches and recording this release with no size/provider',
-                logger.WARNING)
+            logger.warning(
+                'They also vary in size. Deleting logged snatches and recording this release with no size/provider')
             for cur_result in sql_result:
                 remove_snatched(cur_result['release'], cur_result['size'], cur_result['provider'])
 
@@ -165,7 +164,7 @@ def set_episode_failed(ep_obj):
             ep_obj.save_to_db()
 
     except EpisodeNotFoundException as e:
-        logger.log('Unable to get episode, please set its status manually: %s' % ex(e), logger.WARNING)
+        logger.warning('Unable to get episode, please set its status manually: %s' % ex(e))
 
 
 def remove_failed(release):
@@ -237,13 +236,13 @@ def revert_episode(ep_obj):
             else:
                 status_revert = WANTED
 
-                logger.log('Episode not found in failed.db history. Setting it to WANTED', logger.WARNING)
+                logger.warning('Episode not found in failed.db history. Setting it to WANTED')
 
             ep_obj.status = status_revert
             ep_obj.save_to_db()
 
     except EpisodeNotFoundException as e:
-        logger.log('Unable to create episode, please set its status manually: %s' % ex(e), logger.WARNING)
+        logger.warning('Unable to create episode, please set its status manually: %s' % ex(e))
 
 
 def find_old_status(ep_obj):
@@ -289,8 +288,7 @@ def find_release(ep_obj):
         db_action('DELETE FROM history WHERE %s=? AND %s!=?' % ('`release`', '`date`'), [release, r['date']])
 
         # Found a previously failed release
-        logger.log('Found failed.db history release %sx%s: [%s]' % (
-            ep_obj.season, ep_obj.episode, release), logger.DEBUG)
+        logger.debug(f'Found failed.db history release {ep_obj.season}x{ep_obj.episode}: [{release}]')
     else:
         release = None
         provider = None

@@ -17,8 +17,8 @@ It must have a method "select_series", this is passed a list of dicts, each dict
 contains the the keys "name" (human readable show name), and "sid" (the shows
 ID as on thetvdb.com). For example:
 
-[{'name': u'Lost', 'sid': u'73739'},
- {'name': u'Lost Universe', 'sid': u'73181'}]
+[{'name': 'Lost', 'sid': '73739'},
+ {'name': 'Lost Universe', 'sid': '73181'}]
 
 The "select_series" method must return the appropriate dict, or it can raise
 tvdb_userabort (if the selection is aborted), tvdb_shownotfound (if the show

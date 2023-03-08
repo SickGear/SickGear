@@ -110,7 +110,7 @@ class Scheduler(threading.Thread):
 
                     if should_run and ((self.prevent_cycle_run is not None and self.prevent_cycle_run()) or
                                        getattr(self.action, 'prevent_run', False)):
-                        logger.log(u'%s skipping this cycle_time' % self.name, logger.WARNING)
+                        logger.warning(f'{self.name} skipping this cycle_time')
                         # set last_run to only check start_time after another cycle_time
                         self.last_run = current_time
                         should_run = False
@@ -120,12 +120,12 @@ class Scheduler(threading.Thread):
 
                         try:
                             if not self.silent:
-                                logger.log(u"Starting new thread: " + self.name, logger.DEBUG)
+                                logger.debug(f'Starting new thread: {self.name}')
 
                             self.action.run()
                         except (BaseException, Exception) as e:
-                            logger.log(u"Exception generated in thread " + self.name + ": " + ex(e), logger.ERROR)
-                            logger.log(repr(traceback.format_exc()), logger.ERROR)
+                            logger.error(f'Exception generated in thread {self.name}: {ex(e)}')
+                            logger.error(repr(traceback.format_exc()))
 
                 finally:
                     if self.force:

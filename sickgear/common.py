@@ -300,7 +300,7 @@ class Quality(object):
                 if not hd_options and full_hd:
                     return Quality.FULLHDBLURAY
             if sickgear.ANIME_TREAT_AS_HDTV:
-                logger.log(u'Treating file: %s with "unknown" quality as HDTV per user settings' % name, logger.DEBUG)
+                logger.debug(f'Treating file: {name} with "unknown" quality as HDTV per user settings')
                 return Quality.HDTV
             return Quality.UNKNOWN
 
@@ -371,10 +371,10 @@ class Quality(object):
             try:
                 parser = createParser(filename)
             except InputStreamError as e:
-                logger.log(msg % (filename, ex(e)), logger.WARNING)
+                logger.warning(msg % (filename, ex(e)))
             except (BaseException, Exception) as e:
-                logger.log(msg % (filename, ex(e)), logger.ERROR)
-                logger.log(traceback.format_exc(), logger.ERROR)
+                logger.error(msg % (filename, ex(e)))
+                logger.error(traceback.format_exc())
 
             if parser:
                 extract = None
@@ -385,7 +385,7 @@ class Quality(object):
                     parser.parse_comments = False
                     extract = extractMetadata(parser, **args)
                 except (BaseException, Exception) as e:
-                    logger.log(msg % (filename, ex(e)), logger.WARNING)
+                    logger.warning(msg % (filename, ex(e)))
                 if extract:
                     try:
                         height = extract.get('height')

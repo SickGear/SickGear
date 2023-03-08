@@ -89,7 +89,7 @@ class GenericQueue(object):
                 my_db = db.DBConnection('cache.db')
                 my_db.mass_action(cl)
         except (BaseException, Exception) as e:
-            logger.log('Exception saving queue %s to db: %s' % (self.__class__.__name__, ex(e)), logger.ERROR)
+            logger.error('Exception saving queue %s to db: %s' % (self.__class__.__name__, ex(e)))
 
     def _clear_sql(self):
         # type: (...) -> List[List]
@@ -103,7 +103,7 @@ class GenericQueue(object):
                     my_db = db.DBConnection('cache.db')
                     my_db.mass_action(item_sql)
         except (BaseException, Exception) as e:
-            logger.log('Exception saving item %s to db: %s' % (item, ex(e)), logger.ERROR)
+            logger.error('Exception saving item %s to db: %s' % (item, ex(e)))
 
     def delete_item(self, item, finished_run=False):
         # type: (Union[QueueItem, CastQueueItem], bool) -> None
@@ -119,7 +119,7 @@ class GenericQueue(object):
                     my_db = db.DBConnection('cache.db')
                     my_db.mass_action(item_sql)
             except (BaseException, Exception) as e:
-                logger.log('Exception deleting item %s from db: %s' % (item, ex(e)), logger.ERROR)
+                logger.error('Exception deleting item %s from db: %s' % (item, ex(e)))
 
     def _get_item_sql(self, item):
         # type: (Union[QueueItem, CastQueueItem]) -> List[List]
@@ -211,12 +211,12 @@ class GenericQueue(object):
                 my_db.mass_action(del_main_sql)
 
     def pause(self):
-        logger.log(u'Pausing queue')
+        logger.log('Pausing queue')
         if self.lock:
             self.min_priority = 999999999999
 
     def unpause(self):
-        logger.log(u'Unpausing queue')
+        logger.log('Unpausing queue')
         with self.lock:
             self.min_priority = 0
 
@@ -258,7 +258,7 @@ class GenericQueue(object):
                     if 0 == len(self.events[event_type]):
                         del self.events[event_type]
                 except (BaseException, Exception) as e:
-                    logger.log('Error removing event method from queue: %s' % ex(e), logger.ERROR)
+                    logger.error('Error removing event method from queue: %s' % ex(e))
 
     def execute_events(self, event_type, *args, **kwargs):
         # type: (int, Tuple, Dict) -> None
@@ -267,7 +267,7 @@ class GenericQueue(object):
                 try:
                     event(*args, **kwargs)
                 except (BaseException, Exception) as e:
-                    logger.log('Error executing Event: %s' % ex(e), logger.ERROR)
+                    logger.error('Error executing Event: %s' % ex(e))
 
     def run(self):
 

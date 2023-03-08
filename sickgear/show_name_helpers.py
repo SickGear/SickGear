@@ -62,14 +62,14 @@ def pass_wordlist_checks(name,  # type: AnyStr
     """
 
     if parse:
-        err_msg = u'Unable to parse the filename %s into a valid ' % name
+        err_msg = f'Unable to parse the filename {name} into a valid '
         try:
             NameParser(indexer_lookup=indexer_lookup).parse(name)
         except InvalidNameException:
-            logger.log(err_msg + 'episode', logger.DEBUG)
+            logger.debug(err_msg + 'episode')
             return False
         except InvalidShowException:
-            logger.log(err_msg + 'show', logger.DEBUG)
+            logger.debug(err_msg + 'show')
             return False
 
     word_list = {'sub(bed|ed|pack|s)', '(dk|fin|heb|kor|nor|nordic|pl|swe)sub(bed|ed|s)?',
@@ -94,7 +94,7 @@ def pass_wordlist_checks(name,  # type: AnyStr
 
     result = result or contains_any(name, word_list, rx=sickgear.IGNORE_WORDS_REGEX)
     if None is not result and result:
-        logger.log(u'Ignored: %s for containing ignore word' % name, logger.DEBUG)
+        logger.debug(f'Ignored: {name} for containing ignore word')
         return False
 
     result = None
@@ -108,7 +108,7 @@ def pass_wordlist_checks(name,  # type: AnyStr
     # if any of the good strings aren't in the name then say no
     result = result or not_contains_any(name, req_word_list, rx=sickgear.REQUIRE_WORDS_REGEX)
     if None is not result and result:
-        logger.log(u'Ignored: %s for not containing required word match' % name, logger.DEBUG)
+        logger.debug(f'Ignored: {name} for not containing required word match')
         return False
 
     return True
@@ -160,7 +160,7 @@ def contains_any(subject,  # type: AnyStr
             if (match and not invert) or (not match and invert):
                 msg = match and not invert and 'Found match' or ''
                 msg = not match and invert and 'No match found' or msg
-                logger.log(u'%s from pattern: %s in text: %s ' % (msg, rc_filter.pattern, subject), logger.DEBUG)
+                logger.debug(f'{msg} from pattern: {rc_filter.pattern} in text: {subject} ')
                 return True
         return False
     return None
@@ -190,13 +190,11 @@ def compile_word_list(lookup_words,  # type: Union[AnyStr, Set[AnyStr]]
                 subject = search_raw and re.escape(word) or re.sub(r'([\" \'])', r'\\\1', word)
                 result.append(re.compile('(?i)%s%s%s' % (re_prefix, subject, re_suffix)))
             except re.error as e:
-                logger.log(u'Failure to compile filter expression: %s ... Reason: %s' % (word, ex(e)),
-                           logger.DEBUG)
+                logger.debug(f'Failure to compile filter expression: {word} ... Reason: {ex(e)}')
 
         diff = len(lookup_words) - len(result)
         if diff:
-            logger.log(u'From %s expressions, %s was discarded during compilation' % (len(lookup_words), diff),
-                       logger.DEBUG)
+            logger.debug(f'From {len(lookup_words)} expressions, {diff} was discarded during compilation')
 
     return result
 
@@ -430,7 +428,7 @@ def determine_release_name(dir_name=None, nzb_name=None):
     """
 
     if None is not nzb_name:
-        logger.log(u'Using nzb name for release name.')
+        logger.log('Using nzb name for release name.')
         return nzb_name.rpartition('.')[0]
 
     if not dir_name or not os.path.isdir(dir_name):
@@ -446,7 +444,7 @@ def determine_release_name(dir_name=None, nzb_name=None):
         if 1 == len(results):
             found_file = results[0].rpartition('.')[0]
             if pass_wordlist_checks(found_file):
-                logger.log(u'Release name (%s) found from file (%s)' % (found_file, results[0]))
+                logger.log(f'Release name ({found_file}) found from file ({results[0]})')
                 return found_file.rpartition('.')[0]
 
     # If that fails, we try the folder
@@ -455,7 +453,7 @@ def determine_release_name(dir_name=None, nzb_name=None):
         # NOTE: Multiple failed downloads will change the folder name.
         # (e.g., appending #s)
         # Should we handle that?
-        logger.log(u'Folder name (%s) appears to be a valid release name. Using it.' % folder)
+        logger.log(f'Folder name ({folder}) appears to be a valid release name. Using it.')
         return folder
 
     return None

@@ -114,7 +114,7 @@ class LimeTorrentsProvider(generic.TorrentProvider):
                 except generic.HaltParseException:
                     pass
                 except (BaseException, Exception):
-                    logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
+                    logger.error(f'Failed to parse. Traceback: {traceback.format_exc()}')
 
                 self._log_search(mode, len(items[mode]) - cnt, search_url)
 
@@ -131,7 +131,7 @@ class LimeTorrentsProvider(generic.TorrentProvider):
         try:
             result = re.findall('(?i)"(magnet:[^"]+?)"', html)[0]
         except IndexError:
-            logger.log('Failed no magnet in response', logger.DEBUG)
+            logger.debug('Failed no magnet in response')
         return result
 
 

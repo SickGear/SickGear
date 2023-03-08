@@ -105,7 +105,7 @@ class BacklogSearcher(object):
 
     def am_running(self):
         # type: (...) -> bool
-        logger.log(u'amWaiting: ' + str(self.amWaiting) + ', amActive: ' + str(self.amActive), logger.DEBUG)
+        logger.debug(f'amWaiting: {self.amWaiting}, amActive: {self.amActive}')
         return (not self.amWaiting) and self.amActive
 
     def add_backlog_item(self,
@@ -197,7 +197,7 @@ class BacklogSearcher(object):
         :rtype: None
         """
         if self.amActive and not which_shows:
-            logger.log(u'Backlog is still running, not starting it again', logger.DEBUG)
+            logger.debug('Backlog is still running, not starting it again')
             return
 
         if which_shows:
@@ -216,12 +216,12 @@ class BacklogSearcher(object):
                 and GenericProvider.TORRENT == x.providerType,
                 sickgear.providers.sorted_sources()))
             if not any_torrent_enabled:
-                logger.log('Last scheduled backlog run was within the last day, skipping this run.', logger.DEBUG)
+                logger.debug('Last scheduled backlog run was within the last day, skipping this run.')
                 return
 
         if not self.providers_active(any_torrent_enabled, standard_backlog):
-            logger.log('No NZB/Torrent provider has active searching enabled in config/Media Providers,'
-                       ' cannot start backlog.', logger.WARNING)
+            logger.warning('No NZB/Torrent provider has active searching enabled in config/Media Providers,'
+                           ' cannot start backlog.')
             return
 
         self._get_last_backlog()
@@ -234,14 +234,14 @@ class BacklogSearcher(object):
 
         limited_backlog = False
         if standard_backlog and (any_torrent_enabled or sickgear.BACKLOG_NOFULL):
-            logger.log(u'Running limited backlog for episodes missed during the last %s day(s)' %
-                       str(sickgear.BACKLOG_LIMITED_PERIOD))
+            logger.log(f'Running limited backlog for episodes missed during the last'
+                       f' {sickgear.BACKLOG_LIMITED_PERIOD} day(s)')
             from_date = limited_from_date
             limited_backlog = True
 
         runparts = []
         if standard_backlog and not any_torrent_enabled and sickgear.BACKLOG_NOFULL:
-            logger.log(u'Skipping automated full backlog search because it is disabled in search settings')
+            logger.log('Skipping automated full backlog search because it is disabled in search settings')
 
         my_db = db.DBConnection('cache.db')
         if standard_backlog and not any_torrent_enabled and not sickgear.BACKLOG_NOFULL:
@@ -333,7 +333,7 @@ class BacklogSearcher(object):
 
     @staticmethod
     def _get_last_runtime():
-        logger.log('Retrieving the last runtime of Backlog from the DB', logger.DEBUG)
+        logger.debug('Retrieving the last runtime of Backlog from the DB')
 
         my_db = db.DBConnection()
         sql_result = my_db.select('SELECT * FROM info')
@@ -350,7 +350,7 @@ class BacklogSearcher(object):
         return last_run_time
 
     def _set_last_runtime(self, when):
-        logger.log('Setting the last backlog runtime in the DB to %s' % when, logger.DEBUG)
+        logger.debug('Setting the last backlog runtime in the DB to %s' % when)
 
         my_db = db.DBConnection()
         sql_result = my_db.select('SELECT * FROM info')
@@ -369,7 +369,7 @@ class BacklogSearcher(object):
 
     def _get_last_backlog(self):
 
-        logger.log('Retrieving the last check time from the DB', logger.DEBUG)
+        logger.debug('Retrieving the last check time from the DB')
 
         my_db = db.DBConnection()
         sql_result = my_db.select('SELECT * FROM info')
@@ -389,7 +389,7 @@ class BacklogSearcher(object):
     @staticmethod
     def _set_last_backlog(when):
 
-        logger.log('Setting the last backlog in the DB to %s' % when, logger.DEBUG)
+        logger.debug('Setting the last backlog in the DB to %s' % when)
 
         my_db = db.DBConnection()
         sql_result = my_db.select('SELECT * FROM info')
