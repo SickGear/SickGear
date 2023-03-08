@@ -158,7 +158,7 @@ class TIVOMetadata(generic.GenericMetadata):
             metadata_dir_name = os.path.join(os.path.dirname(ep_obj.location), '.meta')
             metadata_file_path = os.path.join(metadata_dir_name, metadata_file_name)
         else:
-            logger.log(u"Episode location doesn't exist: " + str(ep_obj.location), logger.DEBUG)
+            logger.debug(f'Episode location doesn\'t exist: {ep_obj.location}')
             return ''
         return metadata_file_path
 
@@ -203,8 +203,8 @@ class TIVOMetadata(generic.GenericMetadata):
         except BaseTVinfoShownotfound as e:
             raise exceptions_helper.ShowNotFoundException(ex(e))
         except BaseTVinfoError as e:
-            logger.log("Unable to connect to %s while creating meta files - skipping - %s" %
-                       (sickgear.TVInfoAPI(ep_obj.show_obj.tvid).name, ex(e)), logger.ERROR)
+            logger.error(f'Unable to connect to {sickgear.TVInfoAPI(ep_obj.show_obj.tvid).name}'
+                         f' while creating meta files - skipping - {ex(e)}')
             return False
 
         if not self._valid_show(show_info, ep_obj.show_obj):
@@ -251,10 +251,10 @@ class TIVOMetadata(generic.GenericMetadata):
             # Write the synopsis of the video here
             sanitizedDescription = cur_ep_obj.description
             # Replace double curly quotes
-            sanitizedDescription = sanitizedDescription.replace(u"\u201c", "\"").replace(u"\u201d", "\"")
+            sanitizedDescription = sanitizedDescription.replace('\u201c', '"').replace('\u201d', '"')
             # Replace single curly quotes
-            sanitizedDescription = sanitizedDescription.replace(u"\u2018", "'").replace(u"\u2019", "'").replace(
-                u"\u02BC", "'")
+            sanitizedDescription = sanitizedDescription.replace('\u2018', '\'').replace('\u2019', '\'').replace(
+                '\u02BC', '\'')
 
             data += ("description : " + sanitizedDescription + "\n")
 
@@ -337,11 +337,11 @@ class TIVOMetadata(generic.GenericMetadata):
 
         try:
             if not os.path.isdir(nfo_file_dir):
-                logger.log(u"Metadata dir didn't exist, creating it at " + nfo_file_dir, logger.DEBUG)
+                logger.debug(f'Metadata dir didn\'t exist, creating it at {nfo_file_dir}')
                 os.makedirs(nfo_file_dir)
                 sg_helpers.chmod_as_parent(nfo_file_dir)
 
-            logger.log(u"Writing episode nfo file to " + nfo_file_path, logger.DEBUG)
+            logger.debug(f'Writing episode nfo file to {nfo_file_path}')
 
             with open(nfo_file_path, 'w') as nfo_file:
                 # Calling encode directly, b/c often descriptions have wonky characters.
@@ -350,8 +350,7 @@ class TIVOMetadata(generic.GenericMetadata):
             sg_helpers.chmod_as_parent(nfo_file_path)
 
         except EnvironmentError as e:
-            logger.log(u"Unable to write file to " + nfo_file_path + " - are you sure the folder is writable? " + ex(e),
-                       logger.ERROR)
+            logger.error(f'Unable to write file to {nfo_file_path} - are you sure the folder is writable? {ex(e)}')
             return False
 
         return True

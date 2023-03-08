@@ -44,14 +44,14 @@ def diagnose():
         try:
             bus = dbus.SessionBus()
         except dbus.DBusException as e:
-            return (u'Error: unable to connect to D-Bus session bus: <code>%s</code>. '
-                    u'Are you running SickGear in a desktop session?') % (cgi.escape(e),)
+            return (f'Error: unable to connect to D-Bus session bus: <code>{cgi.escape(e)}</code>.'
+                    f' Are you running SickGear in a desktop session?')
         try:
             bus.get_object('org.freedesktop.Notifications',
                            '/org/freedesktop/Notifications')
         except dbus.DBusException as e:
-            return (u'Error: there doesn\'t seem to be a notification daemon available: <code>%s</code> '
-                    u'Try installing notification-daemon or notify-osd.') % (cgi.escape(e),)
+            return (f'Error: there doesn\'t seem to be a notification daemon available: <code>{cgi.escape(e)}</code>.'
+                    f' Try installing notification-daemon or notify-osd.')
     return 'Error: Unable to send notification.'
 
 
@@ -71,18 +71,18 @@ class LibnotifyNotifier(Notifier):
             # noinspection PyPackageRequirements
             import pynotify
         except ImportError:
-            self._log_error(u'Unable to import pynotify. libnotify notifications won\'t work')
+            self._log_error("Unable to import pynotify. libnotify notifications won't work")
             return False
 
         try:
             # noinspection PyPackageRequirements
             from gi.repository import GObject
         except ImportError:
-            self._log_error(u'Unable to import GObject from gi.repository. Cannot catch a GError in display')
+            self._log_error('Unable to import GObject from gi.repository. Cannot catch a GError in display')
             return False
 
         if not pynotify.init('SickGear'):
-            self._log_error(u'Initialization of pynotify failed. libnotify notifications won\'t work')
+            self._log_error('Initialization of pynotify failed. libnotify notifications won\'t work')
             return False
 
         self.pynotify = pynotify

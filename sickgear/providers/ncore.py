@@ -105,7 +105,7 @@ class NcoreProvider(generic.TorrentProvider):
                 except generic.HaltParseException:
                     pass
                 except (BaseException, Exception):
-                    logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
+                    logger.error(f'Failed to parse. Traceback: {traceback.format_exc()}')
 
                 self._log_search(mode, len(items[mode]) - cnt, search_url)
 

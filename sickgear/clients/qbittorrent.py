@@ -168,7 +168,7 @@ class QbittorrentAPI(GenericClient):
                     task = self._tinf(t.get('hash'), use_props=False, err=True)[0]
                     return 1 < task.get('priority') or self._ignore_state(task)  # then mark fail
                 elif isinstance(response, string_types) and 'queueing' in response.lower():
-                    logger.log('%s: %s' % (self.name, response), logger.ERROR)
+                    logger.error('%s: %s' % (self.name, response))
                     return not mark_fail
             return mark_fail
 
@@ -195,7 +195,7 @@ class QbittorrentAPI(GenericClient):
                     task = self._tinf(t.get('hash'), use_props=False, err=True)[0]
                     return label not in task.get('category') or self._ignore_state(task)  # then mark fail
                 elif isinstance(response, string_types) and 'incorrect' in response.lower():
-                    logger.log('%s: %s. "%s" isn\'t known to qB' % (self.name, response, label), logger.ERROR)
+                    logger.error('%s: %s. "%s" isn\'t known to qB' % (self.name, response, label))
                     return not mark_fail
             return mark_fail
 
@@ -312,7 +312,7 @@ class QbittorrentAPI(GenericClient):
             i = 0
             while retry_ids:
                 for i in tries:
-                    logger.log('%s: retry %s %s item(s) in %ss' % (self.name, act, len(item['fail']), i), logger.DEBUG)
+                    logger.debug('%s: retry %s %s item(s) in %ss' % (self.name, act, len(item['fail']), i))
                     time.sleep(i)
                     item['fail'] = []
                     for task in filter(filter_func, self._tinf(retry_ids, use_props=False, err=True)):
@@ -324,8 +324,8 @@ class QbittorrentAPI(GenericClient):
                     retry_ids = item['fail']
                 else:
                     if max(tries) == i:
-                        logger.log('%s: failed to %s %s item(s) after %s tries over %s mins, aborted' %
-                                   (self.name, act, len(item['fail']), len(tries), sum(tries) / 60), logger.DEBUG)
+                        logger.debug('%s: failed to %s %s item(s) after %s tries over %s mins, aborted' %
+                                     (self.name, act, len(item['fail']), len(tries), sum(tries) / 60))
 
             return (item['fail'] + item['ignore']) or True
 
@@ -356,7 +356,7 @@ class QbittorrentAPI(GenericClient):
         :return: True if created, else Falsy if nothing created
         """
         if self._tinf(data.hash):
-            logger.log('Could not create task, the hash is already in use', logger.ERROR)
+            logger.error('Could not create task, the hash is already in use')
             return
 
         label = sickgear.TORRENT_LABEL.replace(' ', '_')
@@ -401,7 +401,7 @@ class QbittorrentAPI(GenericClient):
         authless = bool(re.search('(?i)login|version', cmd))
         if authless or self.auth:
             if not authless and not self._get_auth():
-                logger.log('%s: Authentication failed' % self.name, logger.ERROR)
+                logger.error('%s: Authentication failed' % self.name)
                 return
 
             # self._log_request_details('%s%s' % (self.api_ns, cmd.strip('/')), **kwargs)
@@ -431,7 +431,7 @@ class QbittorrentAPI(GenericClient):
         self.api_ns = 'api/v2/'
         response = self._client_request('auth/login', post_data=post_data, raise_status_code=True)
         if isinstance(response, string_types) and 'banned' in response.lower():
-            logger.log('%s: %s' % (self.name, response), logger.ERROR)
+            logger.error('%s: %s' % (self.name, response))
             response = False
         elif not response:
             self.api_ns = ''

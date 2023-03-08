@@ -42,8 +42,8 @@ class TVBase(object):
                     setattr(self, attr_name, val)
                     self.dirty = True
                 else:
-                    logger.log('Didn\'t change property "%s" because expected: %s, but got: %s with value: %s' %
-                               (attr_name, types, type(val), val), logger.WARNING)
+                    logger.warning(f'Didn\'t change property "{attr_name}" because expected: {types},'
+                                   f' but got: {type(val)} with value: {val}')
 
         return wrapper
 

@@ -56,7 +56,7 @@ class PTFProvider(generic.TorrentProvider):
             logged_in=(lambda y='': all(
                 ['RSS Feed' in y, self.has_all_cookies('session_key')] +
                 [(self.session.cookies.get(x) or 'sg!no!pw') in self.digest for x in ['session_key']])),
-            failed_msg=(lambda y=None: u'Invalid cookie details for %s. Check settings'))
+            failed_msg=(lambda y=None: 'Invalid cookie details for %s. Check settings'))
 
     def _search_provider(self, search_params, **kwargs):
 
@@ -144,7 +144,7 @@ class PTFProvider(generic.TorrentProvider):
                 except generic.HaltParseException:
                     pass
                 except (BaseException, Exception):
-                    logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
+                    logger.error(f'Failed to parse. Traceback: {traceback.format_exc()}')
 
                 self._log_search(mode, len(items[mode]) - cnt, log + self.session.response.get('url'))
 

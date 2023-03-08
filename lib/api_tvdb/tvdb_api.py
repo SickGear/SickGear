@@ -138,7 +138,7 @@ class Tvdb(TVInfoBase):
     """Create easy-to-use interface to name of season/episode name
     >> t = Tvdb()
     >> t['Scrubs'][1][24]['episodename']
-    u'My Last Day'
+    'My Last Day'
     """
     map_languages = {}
     reverse_map_languages = {v: k for k, v in iteritems(map_languages)}
@@ -201,7 +201,7 @@ class Tvdb(TVInfoBase):
 
             >> t = Tvdb(actors=True)
             >> t['scrubs']['actors'][0]['name']
-            u'Zach Braff'
+            'Zach Braff'
 
         custom_ui (tvdb_ui.BaseUI subclass):
             A callable subclass of tvdb_ui.BaseUI (overrides interactive option)
@@ -580,7 +580,7 @@ class Tvdb(TVInfoBase):
                             data_list.append(cr)
                 resp['data'] = data_list
             return resp
-        return dict([(u'data', (None, resp)[isinstance(resp, string_types)])])
+        return dict([('data', (None, resp)[isinstance(resp, string_types)])])
 
     def _getetsrc(self, url, params=None, language=None, parse_json=False):
         """Loads a URL using caching
@@ -1015,14 +1015,14 @@ class Tvdb(TVInfoBase):
                     url_image = self._make_image(self.config['url_artworks'], image_data['data'][0]['filename'])
                     url_thumb = self._make_image(self.config['url_artworks'], image_data['data'][0]['thumbnail'])
                     self._set_show_data(sid, image_type, url_image)
-                    self._set_show_data(sid, u'%s_thumb' % image_type, url_thumb)
+                    self._set_show_data(sid, f'{image_type}_thumb', url_thumb)
                     excluded_main_data = True  # artwork found so prevent fallback
                 self._parse_banners(sid, image_data['data'])
                 self.shows[sid].__dict__[loaded_name] = True
 
         # fallback image thumbnail for none excluded_main_data if artwork is not found
         if not excluded_main_data and show_data['data'].get(image_type):
-            self._set_show_data(sid, u'%s_thumb' % image_type,
+            self._set_show_data(sid, f'{image_type}_thumb',
                                 re.sub(r'\.jpg$', '_t.jpg', show_data['data'][image_type], flags=re.I))
 
     def _get_show_data(self,
@@ -1067,11 +1067,11 @@ class Tvdb(TVInfoBase):
         else:
             show_data = {'data': {}}
 
-        for img_type, en_type, p_type in [(u'poster', 'posters_enabled', posters),
-                                          (u'banner', 'banners_enabled', banners),
-                                          (u'fanart', 'fanart_enabled', fanart),
-                                          (u'season', 'seasons_enabled', seasons),
-                                          (u'seasonwide', 'seasonwides_enabled', seasonwides)]:
+        for img_type, en_type, p_type in [('poster', 'posters_enabled', posters),
+                                          ('banner', 'banners_enabled', banners),
+                                          ('fanart', 'fanart_enabled', fanart),
+                                          ('season', 'seasons_enabled', seasons),
+                                          ('seasonwide', 'seasonwides_enabled', seasonwides)]:
             self._parse_images(sid, language, show_data, img_type, en_type, p_type)
 
         if (actors or self.config['actors_enabled']) and not getattr(self.shows.get(sid), 'actors_loaded', False):
@@ -1175,9 +1175,9 @@ class Tvdb(TVInfoBase):
                 else:
                     page += 1
 
-            ep_map_keys = {'absolutenumber': u'absolute_number', 'airedepisodenumber': u'episodenumber',
-                           'airedseason': u'seasonnumber', 'airedseasonid': u'seasonid',
-                           'dvdepisodenumber': u'dvd_episodenumber', 'dvdseason': u'dvd_season'}
+            ep_map_keys = {'absolutenumber': 'absolute_number', 'airedepisodenumber': 'episodenumber',
+                           'airedseason': 'seasonnumber', 'airedseasonid': 'seasonid',
+                           'dvdepisodenumber': 'dvd_episodenumber', 'dvdseason': 'dvd_season'}
 
             for cur_ep in episodes:
                 if self.config['dvdorder']:

@@ -52,7 +52,7 @@ class DelugeAPI(GenericClient):
             if not connected:
                 hosts = self._post_json({'method': 'web.get_hosts', 'params': [], 'id': 11})
                 if 0 == len(hosts):
-                    logger.log('%s: WebUI does not contain daemons' % self.name, logger.ERROR)
+                    logger.error('%s: WebUI does not contain daemons' % self.name)
                     return None
 
                 self._post_json({'method': 'web.connect', 'params': [hosts[0][0]], 'id': 11}, False)
@@ -60,7 +60,7 @@ class DelugeAPI(GenericClient):
                 connected = self._post_json({'method': 'web.connected', 'params': [], 'id': 10})
 
             if not connected:
-                logger.log('%s: WebUI could not connect to daemon' % self.name, logger.ERROR)
+                logger.error('%s: WebUI could not connect to daemon' % self.name)
                 return None
         except RequestException:
             return None
@@ -94,7 +94,7 @@ class DelugeAPI(GenericClient):
 
         label = sickgear.TORRENT_LABEL
         if ' ' in label:
-            logger.log('%s: Invalid label. Label must not contain a space' % self.name, logger.ERROR)
+            logger.error('%s: Invalid label. Label must not contain a space' % self.name)
             return False
 
         if label:
@@ -106,22 +106,21 @@ class DelugeAPI(GenericClient):
 
             if None is not labels:
                 if label not in labels:
-                    logger.log('%s: %s label does not exist in Deluge we must add it' % (self.name, label),
-                               logger.DEBUG)
+                    logger.debug('%s: %s label does not exist in Deluge we must add it' % (self.name, label))
                     self._request_json({
                         'method': 'label.add',
                         'params': [label],
                         'id': 4})
-                    logger.log('%s: %s label added to Deluge' % (self.name, label), logger.DEBUG)
+                    logger.debug('%s: %s label added to Deluge' % (self.name, label))
 
                 # add label to torrent
                 self._request_json({
                     'method': 'label.set_torrent',
                     'params': [result.hash, label],
                     'id': 5})
-                logger.log('%s: %s label added to torrent' % (self.name, label), logger.DEBUG)
+                logger.debug('%s: %s label added to torrent' % (self.name, label))
             else:
-                logger.log('%s: label plugin not detected' % self.name, logger.DEBUG)
+                logger.debug('%s: label plugin not detected' % self.name)
                 return False
 
         return True

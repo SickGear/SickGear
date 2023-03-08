@@ -177,7 +177,7 @@ def _create_newznab_source(config_string):
             except IndexError:
                 params.update({k: d})
     else:
-        logger.log(u'Skipping Newznab provider string: \'%s\', incorrect format' % config_string, logger.ERROR)
+        logger.error(f'Skipping Newznab provider string: \'{config_string}\', incorrect format')
         return None
 
     newznab_module = sys.modules['sickgear.providers.newznab']
@@ -213,8 +213,7 @@ def _create_torrent_rss_source(config_string):
             url = values[1]
             enabled = values[3]
     except ValueError:
-        logger.log(u"Skipping RSS Torrent provider string: '" + config_string + "', incorrect format",
-                   logger.ERROR)
+        logger.error(f'Skipping RSS Torrent provider string: \'{config_string}\', incorrect format')
         return None
 
     try:

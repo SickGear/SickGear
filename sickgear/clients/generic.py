@@ -51,7 +51,7 @@ class GenericClient(object):
                     seg = seg[0:c - (len(sample) - 2)] + sample
                 output += ['%s: request %s= %s%s%s' % (self.name, arg, ('', '..')[bool(i)], seg, ('', '..')[i != nch])]
 
-        logger.log(output, logger.DEBUG)
+        logger.debug(output)
 
     def _request(self, method='get', params=None, data=None, files=None, **kwargs):
 
@@ -61,7 +61,7 @@ class GenericClient(object):
             self.last_time = time.time()
 
             if not self._get_auth():
-                logger.log('%s: Authentication failed' % self.name, logger.ERROR)
+                logger.error('%s: Authentication failed' % self.name)
                 return False
 
         # self._log_request_details(method, params, data, files, **kwargs)
@@ -70,31 +70,30 @@ class GenericClient(object):
             response = self.session.__getattribute__(method)(self.url, params=params, data=data, files=files,
                                                              timeout=kwargs.pop('timeout', 120), verify=False, **kwargs)
         except requests.exceptions.ConnectionError as e:
-            logger.log('%s: Unable to connect %s' % (self.name, ex(e)), logger.ERROR)
+            logger.error('%s: Unable to connect %s' % (self.name, ex(e)))
             return False
         except (requests.exceptions.MissingSchema, requests.exceptions.InvalidURL):
-            logger.log('%s: Invalid host' % self.name, logger.ERROR)
+            logger.error('%s: Invalid host' % self.name)
             return False
         except requests.exceptions.HTTPError as e:
-            logger.log('%s: Invalid HTTP request %s' % (self.name, ex(e)), logger.ERROR)
+            logger.error('%s: Invalid HTTP request %s' % (self.name, ex(e)))
             return False
         except requests.exceptions.Timeout as e:
-            logger.log('%s: Connection timeout %s' % (self.name, ex(e)), logger.ERROR)
+            logger.error('%s: Connection timeout %s' % (self.name, ex(e)))
             return False
         except (BaseException, Exception) as e:
-            logger.log('%s: Unknown exception raised when sending torrent to %s: %s' % (self.name, self.name, ex(e)),
-                       logger.ERROR)
+            logger.error('%s: Unknown exception raised when sending torrent to %s: %s' % (self.name, self.name, ex(e)))
             return False
 
         if 401 == response.status_code:
-            logger.log('%s: Invalid username or password, check your config' % self.name, logger.ERROR)
+            logger.error('%s: Invalid username or password, check your config' % self.name)
             return False
 
         if response.status_code in http_error_code:
-            logger.log('%s: %s' % (self.name, http_error_code[response.status_code]), logger.DEBUG)
+            logger.debug('%s: %s' % (self.name, http_error_code[response.status_code]))
             return False
 
-        logger.log('%s: Response to %s request is %s' % (self.name, method.upper(), response.text), logger.DEBUG)
+        logger.debug('%s: Response to %s request is %s' % (self.name, method.upper(), response.text))
 
         return response
 
@@ -213,10 +212,10 @@ class GenericClient(object):
 
         r_code = False
 
-        logger.log('Calling %s client' % self.name, logger.DEBUG)
+        logger.debug('Calling %s client' % self.name)
 
         if not self._get_auth():
-            logger.log('%s: Authentication failed' % self.name, logger.ERROR)
+            logger.error('%s: Authentication failed' % self.name)
             return r_code
 
         try:
@@ -225,8 +224,8 @@ class GenericClient(object):
 
             result = self._get_torrent_hash(result)
         except (BaseException, Exception) as e:
-            logger.log('Bad torrent data: hash is %s for [%s]' % (result.hash, result.name), logger.ERROR)
-            logger.log('Exception raised when checking torrent data: %s' % (ex(e)), logger.DEBUG)
+            logger.error('Bad torrent data: hash is %s for [%s]' % (result.hash, result.name))
+            logger.debug('Exception raised when checking torrent data: %s' % (ex(e)))
             return r_code
 
         try:
@@ -237,30 +236,30 @@ class GenericClient(object):
 
             self.created_id = isinstance(r_code, string_types) and r_code or None
             if not r_code:
-                logger.log('%s: Unable to send torrent to client' % self.name, logger.ERROR)
+                logger.error('%s: Unable to send torrent to client' % self.name)
                 return False
 
             if not self._set_torrent_pause(result):
-                logger.log('%s: Unable to set the pause for torrent' % self.name, logger.ERROR)
+                logger.error('%s: Unable to set the pause for torrent' % self.name)
 
             if not self._set_torrent_label(result):
-                logger.log('%s: Unable to set the label for torrent' % self.name, logger.ERROR)
+                logger.error('%s: Unable to set the label for torrent' % self.name)
 
             if not self._set_torrent_ratio(result):
-                logger.log('%s: Unable to set the ratio for torrent' % self.name, logger.ERROR)
+                logger.error('%s: Unable to set the ratio for torrent' % self.name)
 
             if not self._set_torrent_seed_time(result):
-                logger.log('%s: Unable to set the seed time for torrent' % self.name, logger.ERROR)
+                logger.error('%s: Unable to set the seed time for torrent' % self.name)
 
             if not self._set_torrent_path(result):
-                logger.log('%s: Unable to set the path for torrent' % self.name, logger.ERROR)
+                logger.error('%s: Unable to set the path for torrent' % self.name)
 
             if 0 != result.priority and not self._set_torrent_priority(result):
-                logger.log('%s: Unable to set priority for torrent' % self.name, logger.ERROR)
+                logger.error('%s: Unable to set priority for torrent' % self.name)
 
         except (BaseException, Exception) as e:
-            logger.log('%s: Failed sending torrent: %s - %s' % (self.name, result.name, result.hash), logger.ERROR)
-            logger.log('%s: Exception raised when sending torrent: %s' % (self.name, ex(e)), logger.DEBUG)
+            logger.error('%s: Failed sending torrent: %s - %s' % (self.name, result.name, result.hash))
+            logger.debug('%s: Exception raised when sending torrent: %s' % (self.name, ex(e)))
 
         return r_code
 

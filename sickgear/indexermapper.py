@@ -408,7 +408,7 @@ def load_mapped_ids(**kwargs):
                 cur_show_obj.ids = sickgear.indexermapper.map_indexers_to_show(cur_show_obj, **n_kargs)
             except (BaseException, Exception):
                 logger.debug('Error loading mapped id\'s for show: %s' % cur_show_obj.unique_name)
-                logger.log('Traceback: %s' % traceback.format_exc(), logger.ERROR)
+                logger.error('Traceback: %s' % traceback.format_exc())
     logger.log('TV info mappings loaded')
 
 

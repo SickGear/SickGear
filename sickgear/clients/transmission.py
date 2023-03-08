@@ -86,7 +86,7 @@ class TransmissionAPI(GenericClient):
 
         # populate blanked and download_dir
         if not self._get_auth():
-            logger.log('%s: Authentication failed' % self.name, logger.ERROR)
+            logger.error('%s: Authentication failed' % self.name)
             return False
 
         download_dir = None
@@ -95,7 +95,7 @@ class TransmissionAPI(GenericClient):
         elif self.download_dir:
             download_dir = self.download_dir
         else:
-            logger.log('Path required for Transmission Downloaded files location', logger.ERROR)
+            logger.error('Path required for Transmission Downloaded files location')
 
         if not download_dir and not self.blankable:
             return False

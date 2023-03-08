@@ -660,7 +660,7 @@ def clean_data(data):
     if isinstance(data, dict):
         return {k: clean_data(v) for k, v in iteritems(data)}
     if isinstance(data, string_types):
-        return unicodedata.normalize('NFKD', html_unescape(data).strip().replace(u'&amp;', u'&'))
+        return unicodedata.normalize('NFKD', html_unescape(data).strip().replace('&amp;', '&'))
     return data
 
 
@@ -938,8 +938,8 @@ def get_url(url,  # type: AnyStr
                 else:
                     http_err_text = 'Custom HTTP error code'
                     if 'mute_http_error' not in mute:
-                        logger.debug(u'Response not ok. %s: %s from requested url %s'
-                                     % (response.status_code, http_err_text, url))
+                        logger.debug(f'Response not ok. {response.status_code}: {http_err_text} from requested url'
+                                     f' {url}')
 
     except requests.exceptions.HTTPError as e:
         raised = e
@@ -948,29 +948,29 @@ def get_url(url,  # type: AnyStr
                 not (exclude_client_http_codes and is_client_error):
             connection_fail_params = dict(fail_type=ConnectionFailTypes.http, code=e.response.status_code)
         if not raise_status_code:
-            logger.warning(u'HTTP error %s while loading URL%s' % (e.errno, _maybe_request_url(e)))
+            logger.warning(f'HTTP error {e.errno} while loading URL{_maybe_request_url(e)}')
     except requests.exceptions.ConnectionError as e:
         raised = e
         if 'mute_connect_err' not in mute:
-            logger.warning(u'Connection error msg:%s while loading URL%s' % (ex(e), _maybe_request_url(e)))
+            logger.warning(f"Connection error msg:{ex(e)} while loading URL{_maybe_request_url(e)}")
         if failure_monitor:
             connection_fail_params = dict(fail_type=ConnectionFailTypes.connection)
     except requests.exceptions.ReadTimeout as e:
         raised = e
         if 'mute_read_timeout' not in mute:
-            logger.warning(u'Read timed out msg:%s while loading URL%s' % (ex(e), _maybe_request_url(e)))
+            logger.warning(f'Read timed out msg:{ex(e)} while loading URL{_maybe_request_url(e)}')
         if failure_monitor:
             connection_fail_params = dict(fail_type=ConnectionFailTypes.timeout)
     except (requests.exceptions.Timeout, socket.timeout) as e:
         raised = e
         if 'mute_connect_timeout' not in mute:
-            logger.warning(u'Connection timed out msg:%s while loading URL %s' % (ex(e), _maybe_request_url(e, url)))
+            logger.warning(f'Connection timed out msg:{ex(e)} while loading URL {_maybe_request_url(e, url)}')
         if failure_monitor:
             connection_fail_params = dict(fail_type=ConnectionFailTypes.connection_timeout)
     except (BaseException, Exception) as e:
         raised = e
-        logger.warning((u'Exception caught while loading URL {0}\r\nDetail... %s\r\n{1}' % ex(e),
-                        u'Unknown exception while loading URL {0}\r\nDetail... {1}')[not ex(e)]
+        logger.warning(('Exception caught while loading URL {0}\r\nDetail... %s\r\n{1}' % ex(e),
+                        'Unknown exception while loading URL {0}\r\nDetail... {1}')[not ex(e)]
                        .format(url, traceback.format_exc()))
         if failure_monitor:
             connection_fail_params = dict(fail_type=ConnectionFailTypes.other)
@@ -1009,8 +1009,8 @@ def get_url(url,  # type: AnyStr
                     result = result, session
             except (TypeError, Exception) as e:
                 raised = e
-                logger.warning(u'%s data issue from URL %s\r\nDetail... %s' % (
-                    ('Proxy browser', 'JSON')[parse_json], url, ex(e)))
+                logger.warning(f'{("Proxy browser", "JSON")[parse_json]} data issue from URL {url}\r\n'
+                               f'Detail... {ex(e)}')
 
         elif savename:
             try:
@@ -1135,15 +1135,15 @@ def fix_set_group_id(child_path):
         user_id = os.geteuid()  # only available on UNIX
 
         if 0 != user_id and user_id != child_path_owner:
-            logger.debug(u'Not running as root or owner of %s, not trying to set the set-group-id' % child_path)
+            logger.debug(f'Not running as root or owner of {child_path}, not trying to set the set-group-id')
             return
 
         try:
             os.chown(child_path, -1, parent_gid)  # only available on UNIX
-            logger.debug(u'Respecting the set-group-ID bit on the parent directory for %s' % child_path)
+            logger.debug(f'Respecting the set-group-ID bit on the parent directory for {child_path}')
         except OSError:
-            logger.error(u'Failed to respect the set-group-id bit on the parent directory for %s (setting group id %i)'
-                         % (child_path, parent_gid))
+            logger.error(f'Failed to respect the set-group-id bit on the parent directory for {child_path}'
+                         f' (setting group id {parent_gid:d})')
 
 
 def remove_file_perm(filepath, log_err=True):
@@ -1203,9 +1203,9 @@ def remove_file(filepath, tree=False, prefix_failure='', log_level=logging.INFO)
                     os.remove(filepath)
             except OSError as e:
                 if getattr(e, 'winerror', 0) not in (5, 32):  # 5=access denied (e.g. av), 32=another process has lock
-                    logger.log(level=log_level, msg=u'%sUnable to %s %s %s: %s' %
-                                                    (prefix_failure, ('delete', 'trash')[TRASH_REMOVE_SHOW],
-                                                     ('file', 'dir')[tree], filepath, ex(e)))
+                    logger.log(level=log_level,
+                               msg=f'{prefix_failure}Unable to {("delete", "trash")[TRASH_REMOVE_SHOW]}'
+                                   f' {("file", "dir")[tree]} {filepath}: {ex(e)}')
                     break
             time.sleep(t)
             if not os.path.exists(filepath):
@@ -1258,10 +1258,10 @@ def make_path(name, syno=False):
         # Windows, create all missing folders
         if os.name in ('nt', 'ce'):
             try:
-                logger.debug(u'Path %s doesn\'t exist, creating it' % name)
+                logger.debug(f"Path {name} doesn't exist, creating it")
                 os.makedirs(name)
             except (OSError, IOError) as e:
-                logger.error(u'Failed creating %s : %s' % (name, ex(e)))
+                logger.error(f'Failed creating {name} : {ex(e)}')
                 return False
 
         # not Windows, create all missing folders and set permissions
@@ -1278,7 +1278,7 @@ def make_path(name, syno=False):
                     continue
 
                 try:
-                    logger.debug(u'Path %s doesn\'t exist, creating it' % sofar)
+                    logger.debug(f"Path {sofar} doesn't exist, creating it")
                     os.mkdir(sofar)
                     # use normpath to remove end separator, otherwise checks permissions against itself
                     chmod_as_parent(os.path.normpath(sofar))
@@ -1286,7 +1286,7 @@ def make_path(name, syno=False):
                         # do the library update for synoindex
                         NOTIFIERS.NotifierFactory().get('SYNOINDEX').addFolder(sofar)
                 except (OSError, IOError) as e:
-                    logger.error(u'Failed creating %s : %s' % (sofar, ex(e)))
+                    logger.error(f'Failed creating {sofar} : {ex(e)}')
                     return False
 
     return True
@@ -1306,7 +1306,7 @@ def chmod_as_parent(child_path):
     parent_path = os.path.dirname(child_path)
 
     if not parent_path:
-        logger.debug(u'No parent path provided in %s, unable to get permissions from it' % child_path)
+        logger.debug(f'No parent path provided in {child_path}, unable to get permissions from it')
         return
 
     parent_path_stat = os.stat(parent_path)
@@ -1327,15 +1327,14 @@ def chmod_as_parent(child_path):
     user_id = os.geteuid()  # only available on UNIX
 
     if 0 != user_id and user_id != child_path_owner:
-        logger.debug(u'Not running as root or owner of %s, not trying to set permissions' % child_path)
+        logger.debug(f'Not running as root or owner of {child_path}, not trying to set permissions')
         return
 
     try:
         os.chmod(child_path, child_mode)
-        logger.debug(u'Setting permissions for %s to %o as parent directory has %o'
-                     % (child_path, child_mode, parent_mode))
+        logger.debug(f'Setting permissions for {child_path} to {child_mode:o} as parent directory has {parent_mode:o}')
     except OSError:
-        logger.error(u'Failed to set permission for %s to %o' % (child_path, child_mode))
+        logger.error(f'Failed to set permission for {child_path} to {child_mode:o}')
 
 
 def file_bit_filter(mode):

@@ -98,7 +98,7 @@ class NameParser(object):
                     cur_pattern = strip_comment.sub('', cur_pattern)
                     cur_regex = re.compile('(?x)' + cur_pattern, re.VERBOSE | re.IGNORECASE)
                 except re.error as errormsg:
-                    logger.log(u'WARNING: Invalid episode_pattern, %s. %s' % (errormsg, cur_pattern))
+                    logger.log(f'WARNING: Invalid episode_pattern, {errormsg}. {cur_pattern}')
                 else:
                     cls.compiled_regexes[index].append([cur_pattern_num, cur_pattern_name, cur_regex])
             index += 1
@@ -380,12 +380,11 @@ class NameParser(object):
                             season_number = int(ep_obj['seasonnumber'])
                             episode_numbers = [int(ep_obj['episodenumber'])]
                         except BaseTVinfoEpisodenotfound:
-                            logger.warning(u'Unable to find episode with date %s for show %s, skipping' %
-                                           (best_result.air_date, show_obj.unique_name))
+                            logger.warning(f'Unable to find episode with date {best_result.air_date}'
+                                           f' for show {show_obj.unique_name}, skipping')
                             episode_numbers = []
                         except BaseTVinfoError as e:
-                            logger.log(u'Unable to contact ' + sickgear.TVInfoAPI(show_obj.tvid).name
-                                       + ': ' + ex(e), logger.WARNING)
+                            logger.warning(f'Unable to contact {sickgear.TVInfoAPI(show_obj.tvid).name}: {ex(e)}')
                             episode_numbers = []
 
                     for epNo in episode_numbers:
@@ -468,9 +467,8 @@ class NameParser(object):
                     best_result.season_number = new_season_numbers[0]
 
                 if self.convert and show_obj.is_scene:
-                    logger.log(u'Converted parsed result %s into %s'
-                               % (best_result.original_name, decode_str(str(best_result), errors='xmlcharrefreplace')),
-                               logger.DEBUG)
+                    logger.debug(f'Converted parsed result {best_result.original_name}'
+                                 f' into {decode_str(best_result, errors="xmlcharrefreplace")}')
 
                 helpers.cpu_sleep()
 
@@ -646,7 +644,7 @@ class NameParser(object):
                 and any('anime' in wr for wr in final_result.which_regex) == bool(final_result.show_obj.is_anime):
             name_parser_cache.add(name, final_result)
 
-        logger.log(u'Parsed %s into %s' % (name, final_result), logger.DEBUG)
+        logger.debug(f'Parsed {name} into {final_result}')
         return final_result
 
 
@@ -752,9 +750,9 @@ class ParseResult(LegacyParseResult):
 
     def __unicode__(self):
         if None is not self.series_name:
-            to_return = self.series_name + u' - '
+            to_return = f'{self.series_name} - '
         else:
-            to_return = u''
+            to_return = ''
         if None is not self.season_number:
             to_return += 'S' + str(self.season_number)
         if self.episode_numbers and len(self.episode_numbers):
@@ -863,7 +861,7 @@ class NameParserCache(object):
                         key = self._previous_parsed.first_key()
                         del self._previous_parsed[key]
                     except KeyError:
-                        logger.log('Could not remove old NameParserCache entry: %s' % key, logger.DEBUG)
+                        logger.debug('Could not remove old NameParserCache entry: %s' % key)
 
     def get(self, name):
         # type: (AnyStr) -> ParseResult
@@ -876,7 +874,7 @@ class NameParserCache(object):
         """
         with self.lock:
             if name in self._previous_parsed:
-                logger.log('Using cached parse result for: ' + name, logger.DEBUG)
+                logger.debug('Using cached parse result for: ' + name)
                 self._previous_parsed.move_to_end(name)
                 return self._previous_parsed[name]
 

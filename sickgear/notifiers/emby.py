@@ -61,7 +61,7 @@ class EmbyNotifier(Notifier):
         """
         hosts, keys, message = self._check_config()
         if not hosts:
-            self._log_warning(u'Issue with hosts or api keys, check your settings')
+            self._log_warning('Issue with hosts or api keys, check your settings')
             return False
 
         from sickgear.indexers import indexer_config
@@ -98,10 +98,10 @@ class EmbyNotifier(Notifier):
                 timeout=20, hooks=dict(response=self._cb_response), **args)
             # Emby will initiate a LibraryMonitor path refresh one minute after this success
             if self.response and 204 == self.response.get('status_code') and self.response.get('ok'):
-                self._log(u'Success: update %s sent to host %s in a library updated call' % (mode_to_log, cur_host))
+                self._log(f'Success: update {mode_to_log} sent to host {cur_host} in a library updated call')
                 continue
             elif self.response and 401 == self.response.get('status_code'):
-                self._log_warning(u'Failed to authenticate with %s' % cur_host)
+                self._log_warning(f'Failed to authenticate with {cur_host}')
             elif self.response and 404 == self.response.get('status_code'):
                 self.response = None
                 sickgear.helpers.get_url(
@@ -109,16 +109,16 @@ class EmbyNotifier(Notifier):
                     headers={'Content-type': 'application/json', 'X-MediaBrowser-Token': keys[i]},
                     timeout=20, hooks=dict(response=self._cb_response), post_json={'Path': '', 'UpdateType': ''})
                 if self.response and 204 == self.response.get('status_code') and self.response.get('ok'):
-                    self._log(u'Success: fallback to sending Library/Media/Updated call'
-                              u' to scan all shows at host %s' % cur_host)
+                    self._log(f'Success: fallback to sending Library/Media/Updated call'
+                              f' to scan all shows at host {cur_host}')
                     continue
-                self._log_debug(u'Warning, Library update responded 404 not found and'
-                                u' fallback to new /Library/Media/Updated api call failed at %s' % cur_host)
+                self._log_debug(f'Warning, Library update responded 404 not found and'
+                                f' fallback to new /Library/Media/Updated api call failed at {cur_host}')
             elif not response and not self.response or not self.response.get('ok'):
-                self._log_warning(u'Warning, could not connect with server at %s' % cur_host)
+                self._log_warning(f'Warning, could not connect with server at {cur_host}')
             else:
-                self._log_debug(u'Warning, unknown response %sfrom %s, can most likely be ignored'
-                                % (self.response and '%s ' % self.response.get('status_code') or '', cur_host))
+                self._log_debug(f'Warning, unknown response %sfrom {cur_host}, can most likely be ignored'
+                                % (self.response and '%s ' % self.response.get('status_code') or ''))
             total_success = False
 
         return total_success
@@ -181,7 +181,7 @@ class EmbyNotifier(Notifier):
 
         if len(hosts) != len(apikeys):
             message = ('Not enough Api keys for hosts', 'More Api keys than hosts')[len(apikeys) > len(hosts)]
-            self._log_warning(u'%s, check your settings' % message)
+            self._log_warning(f'{message}, check your settings')
             return False, False, message
 
         return hosts, apikeys, 'OK'
@@ -215,12 +215,12 @@ class EmbyNotifier(Notifier):
                 if self.response and 401 == self.response.get('status_code'):
                     success = False
                     message += ['Fail: Cannot authenticate API key with %s' % cur_host]
-                    self._log_warning(u'Failed to authenticate with %s' % cur_host)
+                    self._log_warning(f'Failed to authenticate with {cur_host}')
                     continue
                 elif not response and not self.response or not self.response.get('ok'):
                     success = False
                     message += ['Fail: No supported Emby server found at %s' % cur_host]
-                    self._log_warning(u'Warning, could not connect with server at ' + cur_host)
+                    self._log_warning(f'Warning, could not connect with server at {cur_host}')
                     continue
             message += ['OK: %s' % cur_host]
 

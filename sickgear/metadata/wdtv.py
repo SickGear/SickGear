@@ -168,10 +168,10 @@ class WDTVMetadata(generic.GenericMetadata):
                 break
 
         if not season_dir:
-            logger.log(u"Unable to find a season dir for season " + str(season), logger.DEBUG)
+            logger.debug(f'Unable to find a season dir for season {season}')
             return None
 
-        logger.log(u"Using " + str(season_dir) + "/folder.jpg as season dir for season " + str(season), logger.DEBUG)
+        logger.debug(f'Using {season_dir}/folder.jpg as season dir for season {season}')
 
         return os.path.join(show_obj.location, season_dir, 'folder.jpg')
 
@@ -204,8 +204,8 @@ class WDTVMetadata(generic.GenericMetadata):
         except BaseTVinfoShownotfound as e:
             raise exceptions_helper.ShowNotFoundException(ex(e))
         except BaseTVinfoError as e:
-            logger.log("Unable to connect to %s while creating meta files - skipping - %s" %
-                       (sickgear.TVInfoAPI(ep_obj.show_obj.tvid).name, ex(e)), logger.ERROR)
+            logger.error(f'Unable to connect to {sickgear.TVInfoAPI(ep_obj.show_obj.tvid).name}'
+                         f' while creating meta files - skipping - {ex(e)}')
             return False
 
         if not self._valid_show(show_info, ep_obj.show_obj):

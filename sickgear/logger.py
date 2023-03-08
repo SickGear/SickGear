@@ -51,7 +51,7 @@ MESSAGE = logging.INFO
 DEBUG = logging.DEBUG
 DB = 5
 
-reverseNames = {u'ERROR': ERROR, u'WARNING': WARNING, u'INFO': MESSAGE, u'DEBUG': DEBUG, u'DB': DB}
+reverseNames = {'ERROR': ERROR, 'WARNING': WARNING, 'INFO': MESSAGE, 'DEBUG': DEBUG, 'DB': DB}
 
 
 # suppress output with this handler

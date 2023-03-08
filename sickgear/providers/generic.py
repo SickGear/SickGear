@@ -166,9 +166,8 @@ class ProviderFailList(object):
             with self.lock:
                 self.dirty = True
                 self._fails.append(fail)
-                logger.log('Adding fail.%s for %s' % (ProviderFailTypes.names.get(
-                    fail.fail_type, ProviderFailTypes.names[ProviderFailTypes.other]), self.provider_name()),
-                           logger.DEBUG)
+                logger.debug('Adding fail.%s for %s' % (ProviderFailTypes.names.get(
+                    fail.fail_type, ProviderFailTypes.names[ProviderFailTypes.other]), self.provider_name()))
             self.save_list()
 
     def save_list(self):
@@ -426,8 +425,8 @@ class GenericProvider(object):
         if not limit_set:
             time_index = self.fail_time_index(base_limit=0)
             self.tmr_limit_wait = self.wait_time(time_index)
-        logger.log('Request limit reached. Waiting for %s until next retry. Message: %s' %
-                   (self.tmr_limit_wait, desc or 'none found'), logger.WARNING)
+        logger.warning(f'Request limit reached. Waiting for {self.tmr_limit_wait} until next retry.'
+                       f' Message: {desc or "none found"}')
 
     def wait_time(self, time_index=None):
         # type: (Optional[int]) -> datetime.timedelta
@@ -503,8 +502,8 @@ class GenericProvider(object):
                     # Ensure provider name output (e.g. when displaying config/provs) instead of e.g. thread "Tornado"
                     prepend = ('[%s] :: ' % self.name, '')[any(x.name in threading.current_thread().name
                                                                for x in sickgear.providers.sorted_sources())]
-                    logger.log('%sToo many requests reached at %s, waiting for %s' % (
-                        prepend, self.fmt_delta(self.tmr_limit_time), self.fmt_delta(time_left)), logger.WARNING)
+                    logger.warning(f'{prepend}Too many requests reached at {self.fmt_delta(self.tmr_limit_time)},'
+                                   f' waiting for {self.fmt_delta(time_left)}')
                 return use_tmr_limit
             else:
                 self.tmr_limit_time = None
@@ -515,10 +514,9 @@ class GenericProvider(object):
             if self.is_waiting():
                 if log_warning:
                     time_left = self.wait_time() - self.fail_newest_delta()
-                    logger.log('Failed %s times, skipping provider for %s, last failure at %s with fail type: %s' % (
+                    logger.warning('Failed %s times, skipping provider for %s, last failure at %s with fail type: %s' % (
                         self.failure_count, self.fmt_delta(time_left), self.fmt_delta(self.failure_time),
-                        ProviderFailTypes.names.get(
-                            self.last_fail, ProviderFailTypes.names[ProviderFailTypes.other])), logger.WARNING)
+                        ProviderFailTypes.names.get(self.last_fail, ProviderFailTypes.names[ProviderFailTypes.other])))
                 return True
         return False
 
@@ -533,7 +531,7 @@ class GenericProvider(object):
             self._last_fail_type = fail_type
             self.fails.add_fail(*args, **kwargs)
         else:
-            logger.log('%s: Not logging same failure within 3 seconds' % self.name, logger.DEBUG)
+            logger.debug('%s: Not logging same failure within 3 seconds' % self.name)
 
     def get_url(self, url, skip_auth=False, use_tmr_limit=True, *args, **kwargs):
         # type: (AnyStr, bool, bool, Any, Any) -> Optional[AnyStr, Dict]
@@ -580,7 +578,7 @@ class GenericProvider(object):
             if data and not isinstance(data, tuple) \
                     or isinstance(data, tuple) and data[0]:
                 if 0 != self.failure_count:
-                    logger.log('Unblocking provider: %s' % self.get_id(), logger.DEBUG)
+                    logger.debug('Unblocking provider: %s' % self.get_id())
                 self.failure_count = 0
                 self.failure_time = None
             else:
@@ -628,7 +626,7 @@ class GenericProvider(object):
                 post += [' .. Post params: [%s]' % '&'.join([post_data])]
             if post_json:
                 post += [' .. Json params: [%s]' % '&'.join([post_json])]
-            logger.log('Failure URL: %s%s' % (url, ''.join(post)), logger.WARNING)
+            logger.warning('Failure URL: %s%s' % (url, ''.join(post)))
 
     def get_id(self):
         # type: (...) -> AnyStr
@@ -812,7 +810,7 @@ class GenericProvider(object):
 
                 if not btih or not re.search('(?i)[0-9a-f]{32,40}', btih):
                     assert not result.url.startswith('http')
-                    logger.log('Unable to extract torrent hash from link: ' + ex(result.url), logger.ERROR)
+                    logger.error('Unable to extract torrent hash from link: ' + ex(result.url))
                     return False
 
                 urls = ['http%s://%s/torrent/%s.torrent' % (u + (btih.upper(),))
@@ -846,14 +844,14 @@ class GenericProvider(object):
                                                failure_monitor=False):
 
                 if self._verify_download(cache_file):
-                    logger.log(u'Downloaded %s result from %s' % (self.name, url))
+                    logger.log(f'Downloaded {self.name} result from {url}')
                     try:
                         helpers.move_file(cache_file, final_file)
                         msg = 'moved'
                     except (OSError, Exception):
                         msg = 'copied cached file'
-                    logger.log(u'Saved .%s data and %s to %s' % (
-                        (link_type, 'torrent cache')['magnet' == link_type], msg, final_file))
+                    logger.log(f'Saved .{(link_type, "torrent cache")["magnet" == link_type]} data'
+                               f' and {msg} to {final_file}')
                     saved = True
                     break
 
@@ -866,7 +864,7 @@ class GenericProvider(object):
                 del(self.session.headers['Referer'])
 
         if not saved and 'magnet' == link_type:
-            logger.log(u'All torrent cache servers failed to return a downloadable result', logger.DEBUG)
+            logger.debug('All torrent cache servers failed to return a downloadable result')
             final_file = os.path.join(final_dir, '%s.%s' % (helpers.sanitize_filename(result.name), link_type))
             try:
                 with open(final_file, 'wb') as fp:
@@ -874,12 +872,12 @@ class GenericProvider(object):
                     fp.flush()
                     os.fsync(fp.fileno())
                 saved = True
-                logger.log(u'Saved magnet link to file as some clients (or plugins) support this, %s' % final_file)
+                logger.log(f'Saved magnet link to file as some clients (or plugins) support this, {final_file}')
                 if 'blackhole' == sickgear.TORRENT_METHOD:
                     logger.log('Tip: If your client fails to load magnet in files, ' +
                                'change blackhole to a client connection method in search settings')
             except (BaseException, Exception):
-                logger.log(u'Failed to save magnet link to file, %s' % final_file)
+                logger.log(f'Failed to save magnet link to file, {final_file}')
         elif not saved:
             if 'torrent' == link_type and result.provider.get_id() in sickgear.PROVIDER_HOMES:
                 t_result = result  # type: TorrentSearchResult
@@ -895,7 +893,7 @@ class GenericProvider(object):
                     t_result.provider._valid_home(url_exclude=urls)
                     setattr(sickgear, 'PROVIDER_EXCLUDE', ([], urls)[any([t_result.provider.url])])
 
-            logger.log(u'Server failed to return anything useful', logger.ERROR)
+            logger.error('Server failed to return anything useful')
 
         return saved
 
@@ -969,7 +967,7 @@ class GenericProvider(object):
         except (BaseException, Exception):
             pass
 
-        title = title and re.sub(r'\s+', '.', u'%s' % title)
+        title = title and re.sub(r'\s+', '.', f'{title}')
         if url and not re.match('(?i)magnet:', url):
             url = str(url).replace('&amp;', '&')
 
@@ -1193,10 +1191,10 @@ class GenericProvider(object):
             try:
                 parse_result = parser.parse(title, release_group=self.get_id())
             except InvalidNameException:
-                logger.log(u'Unable to parse the filename %s into a valid episode' % title, logger.DEBUG)
+                logger.debug(f'Unable to parse the filename {title} into a valid episode')
                 continue
             except InvalidShowException:
-                logger.log(u'No match for search criteria in the parsed filename ' + title, logger.DEBUG)
+                logger.debug(f'No match for search criteria in the parsed filename {title}')
                 continue
 
             if parse_result.show_obj.is_anime:
@@ -1208,8 +1206,8 @@ class GenericProvider(object):
                     continue
 
             if not (parse_result.show_obj.tvid == show_obj.tvid and parse_result.show_obj.prodid == show_obj.prodid):
-                logger.debug(u'Parsed show [%s] is not show [%s] we are searching for' % (
-                    parse_result.show_obj.unique_name, show_obj.unique_name))
+                logger.debug(f'Parsed show [{parse_result.show_obj.unique_name}] is not show [{show_obj.unique_name}]'
+                             f' we are searching for')
                 continue
 
             parsed_show_obj = parse_result.show_obj
@@ -1223,15 +1221,15 @@ class GenericProvider(object):
             if not (parsed_show_obj.air_by_date or parsed_show_obj.is_sports):
                 if 'sponly' == search_mode:
                     if len(parse_result.episode_numbers):
-                        logger.log(u'This is supposed to be a season pack search but the result ' + title +
-                                   u' is not a valid season pack, skipping it', logger.DEBUG)
+                        logger.debug(f'This is supposed to be a season pack search but the result {title}'
+                                     f' is not a valid season pack, skipping it')
                         add_cache_entry = True
                     if len(parse_result.episode_numbers) \
                             and (parse_result.season_number not in set([ep_obj.season for ep_obj in ep_obj_list])
                                  or not [ep_obj for ep_obj in ep_obj_list
                                          if ep_obj.scene_episode in parse_result.episode_numbers]):
-                        logger.log(u'The result ' + title + u' doesn\'t seem to be a valid episode that we are trying' +
-                                   u' to snatch, ignoring', logger.DEBUG)
+                        logger.debug(f'The result {title} doesn\'t seem to be a valid episode that we are trying'
+                                     f' to snatch, ignoring')
                         add_cache_entry = True
                 else:
                     if not len(parse_result.episode_numbers)\
@@ -1239,14 +1237,14 @@ class GenericProvider(object):
                             and not [ep_obj for ep_obj in ep_obj_list
                                      if ep_obj.season == parse_result.season_number and
                                      ep_obj.episode in parse_result.episode_numbers]:
-                        logger.log(u'The result ' + title + u' doesn\'t seem to be a valid season that we are trying' +
-                                   u' to snatch, ignoring', logger.DEBUG)
+                        logger.debug(f'The result {title} doesn\'t seem to be a valid season that we are trying'
+                                     f' to snatch, ignoring')
                         add_cache_entry = True
                     elif len(parse_result.episode_numbers) and not [
                         ep_obj for ep_obj in ep_obj_list if ep_obj.season == parse_result.season_number
                             and ep_obj.episode in parse_result.episode_numbers]:
-                        logger.log(u'The result ' + title + ' doesn\'t seem to be a valid episode that we are trying' +
-                                   u' to snatch, ignoring', logger.DEBUG)
+                        logger.debug(f'The result {title} doesn\'t seem to be a valid episode that we are trying'
+                                     f' to snatch, ignoring')
                         add_cache_entry = True
 
                 if not add_cache_entry:
@@ -1255,8 +1253,8 @@ class GenericProvider(object):
                     episode_numbers = parse_result.episode_numbers
             else:
                 if not parse_result.is_air_by_date:
-                    logger.log(u'This is supposed to be a date search but the result ' + title +
-                               u' didn\'t parse as one, skipping it', logger.DEBUG)
+                    logger.debug(f'This is supposed to be a date search but the result {title}'
+                                 f' didn\'t parse as one, skipping it')
                     add_cache_entry = True
                 else:
                     season_number = parse_result.season_number
@@ -1265,13 +1263,13 @@ class GenericProvider(object):
                     if not episode_numbers or \
                             not [ep_obj for ep_obj in ep_obj_list
                                  if ep_obj.season == season_number and ep_obj.episode in episode_numbers]:
-                        logger.log(u'The result ' + title + ' doesn\'t seem to be a valid episode that we are trying' +
-                                   u' to snatch, ignoring', logger.DEBUG)
+                        logger.debug(f'The result {title} doesn\'t seem to be a valid episode that we are trying'
+                                     f' to snatch, ignoring')
                         add_cache_entry = True
 
             # add parsed result to cache for usage later on
             if add_cache_entry:
-                logger.log(u'Adding item from search to cache: ' + title, logger.DEBUG)
+                logger.debug(f'Adding item from search to cache: {title}')
                 ci = self.cache.add_cache_entry(title, url, parse_result=parse_result)
                 if None is not ci:
                     cl.append(ci)
@@ -1288,11 +1286,11 @@ class GenericProvider(object):
                 multi_ep = 1 < len(episode_numbers)
 
             if not want_ep:
-                logger.log(u'Ignoring result %s because we don\'t want an episode that is %s'
-                           % (title, Quality.qualityStrings[quality]), logger.DEBUG)
+                logger.debug(f'Ignoring result {title} because we don\'t want an episode that is'
+                             f' {Quality.qualityStrings[quality]}')
                 continue
 
-            logger.log(u'Found result %s at %s' % (title, url), logger.DEBUG)
+            logger.debug(f'Found result {title} at {url}')
 
             # make a result object
             ep_obj_results = []  # type: List[TVEpisode]
@@ -1317,14 +1315,14 @@ class GenericProvider(object):
             ep_num = None
             if 1 == len(ep_obj_results):
                 ep_num = ep_obj_results[0].episode
-                logger.log(u'Single episode result.', logger.DEBUG)
+                logger.debug('Single episode result.')
             elif 1 < len(ep_obj_results):
                 ep_num = MULTI_EP_RESULT
-                logger.log(u'Separating multi-episode result to check for later - result contains episodes: ' +
-                           str(parse_result.episode_numbers), logger.DEBUG)
+                logger.debug(f'Separating multi-episode result to check for later - result contains episodes:'
+                             f' {parse_result.episode_numbers}')
             elif 0 == len(ep_obj_results):
                 ep_num = SEASON_RESULT
-                logger.log(u'Separating full season result to check for later', logger.DEBUG)
+                logger.debug('Separating full season result to check for later')
 
             if ep_num not in results:
                 # noinspection PyTypeChecker
@@ -1390,7 +1388,7 @@ class GenericProvider(object):
 
         if not self.should_skip():
             str1, thing, str3 = (('', '%s item' % mode.lower(), ''), (' usable', 'proper', ' found'))['Propers' == mode]
-            logger.log((u'%s %s in response%s from %s' % (('No' + str1, count)[0 < count], (
+            logger.log(('%s %s in response%s from %s' % (('No' + str1, count)[0 < count], (
                 '%s%s%s%s' % (('', 'freeleech ')[getattr(self, 'freeleech', False)], thing, maybe_plural(count), str3)),
                 ('', ' (rejects: %s)' % rejects)[bool(rejects)], re.sub(r'(\s)\s+', r'\1', url))).replace('%%', '%'))
 
@@ -1412,9 +1410,9 @@ class GenericProvider(object):
                     reqd = 'cf_clearance'
                     if reqd in ui_string_method(key) and reqd not in cookies:
                         return False, \
-                               u'%(p)s Cookies setting require %(r)s. If %(r)s not found in browser, log out,' \
-                               u' delete site cookies, refresh browser, %(r)s should be created' % \
-                               dict(p=self.name, r='\'%s\'' % reqd)
+                            '%(p)s Cookies setting require %(r)s. If %(r)s not found in browser, log out,' \
+                            ' delete site cookies, refresh browser, %(r)s should be created' % \
+                            dict(p=self.name, r='\'%s\'' % reqd)
 
             cj = requests.utils.add_dict_to_cookiejar(self.session.cookies,
                                                       dict([x.strip().split('=', 1) for x in cookies.split(';')
@@ -1586,7 +1584,7 @@ class NZBProvider(GenericProvider):
                     if result_date:
                         result_date = datetime.datetime(*result_date[0:6])
                 else:
-                    logger.log(u'Unable to figure out the date for entry %s, skipping it' % title)
+                    logger.log(f'Unable to figure out the date for entry {title}, skipping it')
                     continue
 
                 if not search_date or search_date < result_date:
@@ -1918,7 +1916,7 @@ class TorrentProvider(GenericProvider):
             success, msg = self._check_cookie()
             if not success:
                 self.cookies = None
-                logger.log(u'%s' % msg, logger.WARNING)
+                logger.warning(f'{msg}')
                 return
 
         url_base = getattr(self, 'url_base', None)
@@ -1998,12 +1996,12 @@ class TorrentProvider(GenericProvider):
             r'(?i)([1-3]((<[^>]+>)|\W)*(attempts|tries|remain)[\W\w]{,40}?(remain|left|attempt)|last[^<]+?attempt)', y))
         logged_in, failed_msg = [None is not a and a or b for (a, b) in (
             (logged_in, (lambda y=None: self.has_all_cookies())),
-            (failed_msg, (lambda y='': maxed_out(y) and u'Urgent abort, running low on login attempts. ' +
-                                                        u'Password flushed to prevent service disruption to %s.' or
+            (failed_msg, (lambda y='': maxed_out(y) and 'Urgent abort, running low on login attempts. ' +
+                                                        'Password flushed to prevent service disruption to %s.' or
                           (re.search(r'(?i)(username|password)((<[^>]+>)|\W)*' +
                                      r'(or|and|/|\s)((<[^>]+>)|\W)*(password|incorrect)', y) and
-                           u'Invalid username or password for %s. Check settings' or
-                           u'Failed to authenticate or parse a response from %s, abort provider')))
+                           'Invalid username or password for %s. Check settings' or
+                           'Failed to authenticate or parse a response from %s, abort provider')))
         )]
 
         if logged_in() and (not hasattr(self, 'urls') or bool(len(getattr(self, 'urls')))):
@@ -2017,7 +2015,7 @@ class TorrentProvider(GenericProvider):
                 if not self._check_auth():
                     return False
             except AuthException as e:
-                logger.log('%s' % ex(e), logger.ERROR)
+                logger.error('%s' % ex(e))
                 return False
 
         if isinstance(url, type([])):
@@ -2094,7 +2092,7 @@ class TorrentProvider(GenericProvider):
                 sickgear.save_config()
             msg = failed_msg(response)
             if msg:
-                logger.log(msg % self.name, logger.ERROR)
+                logger.error(msg % self.name)
 
         return False
 

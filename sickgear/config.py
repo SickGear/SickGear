@@ -56,7 +56,7 @@ def change_https_cert(https_cert):
     if os.path.normpath(sickgear.HTTPS_CERT) != os.path.normpath(https_cert):
         if helpers.make_dir(os.path.dirname(os.path.abspath(https_cert))):
             sickgear.HTTPS_CERT = os.path.normpath(https_cert)
-            logger.log(u'Changed https cert path to %s' % https_cert)
+            logger.log(f'Changed https cert path to {https_cert}')
         else:
             return False
 
@@ -71,7 +71,7 @@ def change_https_key(https_key):
     if os.path.normpath(sickgear.HTTPS_KEY) != os.path.normpath(https_key):
         if helpers.make_dir(os.path.dirname(os.path.abspath(https_key))):
             sickgear.HTTPS_KEY = os.path.normpath(https_key)
-            logger.log(u'Changed https key path to %s' % https_key)
+            logger.log(f'Changed https key path to {https_key}')
         else:
             return False
 
@@ -89,7 +89,7 @@ def change_log_dir(log_dir, web_log):
             sickgear.LOG_DIR = abs_log_dir
 
             logger.sb_log_instance.init_logging()
-            logger.log(u'Initialized new log file in %s' % sickgear.LOG_DIR)
+            logger.log(f'Initialized new log file in {sickgear.LOG_DIR}')
             log_dir_changed = True
 
         else:
@@ -109,7 +109,7 @@ def change_nzb_dir(nzb_dir):
     if os.path.normpath(sickgear.NZB_DIR) != os.path.normpath(nzb_dir):
         if helpers.make_dir(nzb_dir):
             sickgear.NZB_DIR = os.path.normpath(nzb_dir)
-            logger.log(u'Changed NZB folder to %s' % nzb_dir)
+            logger.log(f'Changed NZB folder to {nzb_dir}')
         else:
             return False
 
@@ -124,7 +124,7 @@ def change_torrent_dir(torrent_dir):
     if os.path.normpath(sickgear.TORRENT_DIR) != os.path.normpath(torrent_dir):
         if helpers.make_dir(torrent_dir):
             sickgear.TORRENT_DIR = os.path.normpath(torrent_dir)
-            logger.log(u'Changed torrent folder to %s' % torrent_dir)
+            logger.log(f'Changed torrent folder to {torrent_dir}')
         else:
             return False
 
@@ -139,7 +139,7 @@ def change_tv_download_dir(tv_download_dir):
     if os.path.normpath(sickgear.TV_DOWNLOAD_DIR) != os.path.normpath(tv_download_dir):
         if helpers.make_dir(tv_download_dir):
             sickgear.TV_DOWNLOAD_DIR = os.path.normpath(tv_download_dir)
-            logger.log(u'Changed TV download folder to %s' % tv_download_dir)
+            logger.log(f'Changed TV download folder to {tv_download_dir}')
         else:
             return False
 
@@ -407,7 +407,7 @@ def check_setting_int(config, cfg_name, item_name, def_val):
         except (BaseException, Exception):
             config[cfg_name] = {}
             config[cfg_name][item_name] = my_val
-    logger.log('%s -> %s' % (item_name, my_val), logger.DEBUG)
+    logger.debug('%s -> %s' % (item_name, my_val))
     return my_val
 
 
@@ -422,7 +422,7 @@ def check_setting_float(config, cfg_name, item_name, def_val):
             config[cfg_name] = {}
             config[cfg_name][item_name] = my_val
 
-    logger.log('%s -> %s' % (item_name, my_val), logger.DEBUG)
+    logger.debug('%s -> %s' % (item_name, my_val))
     return my_val
 
 
@@ -449,9 +449,9 @@ def check_setting_str(config, cfg_name, item_name, def_val, log=True):
             config[cfg_name][item_name] = helpers.encrypt(my_val, encryption_version)
 
     if log:
-        logger.log('%s -> %s' % (item_name, my_val), logger.DEBUG)
+        logger.debug('%s -> %s' % (item_name, my_val))
     else:
-        logger.log('%s -> ******' % item_name, logger.DEBUG)
+        logger.debug('%s -> ******' % item_name)
 
     return (my_val, def_val)['None' == my_val]
 
@@ -497,9 +497,10 @@ class ConfigMigrator(object):
 
         if self.config_version > self.expected_config_version:
             logger.log_error_and_exit(
-                u'Your config version (%s) has been incremented past what this version of SickGear supports (%s).\n'
-                'If you have used other forks or a newer version of SickGear, your config file may be unusable due to '
-                'their modifications.' % (self.config_version, self.expected_config_version))
+                f'Your config version ({self.config_version})'
+                f' has been incremented past what this version of SickGear supports ({self.expected_config_version}).\n'
+                f'If you have used other forks or a newer version of SickGear,'
+                f' your config file may be unusable due to their modifications.')
 
         sickgear.CONFIG_VERSION = self.config_version
 
@@ -511,20 +512,20 @@ class ConfigMigrator(object):
             else:
                 migration_name = ''
 
-            logger.log(u'Backing up config before upgrade')
+            logger.log('Backing up config before upgrade')
             if not helpers.backup_versioned_file(sickgear.CONFIG_FILE, self.config_version):
-                logger.log_error_and_exit(u'Config backup failed, abort upgrading config')
+                logger.log_error_and_exit('Config backup failed, abort upgrading config')
             else:
-                logger.log(u'Proceeding with upgrade')
+                logger.log('Proceeding with upgrade')
 
             # do the migration, expect a method named _migrate_v<num>
-            logger.log(u'Migrating config up to version %s %s' % (next_version, migration_name))
+            logger.log(f'Migrating config up to version {next_version} {migration_name}')
             getattr(self, '_migrate_v%s' % next_version)()
             self.config_version = next_version
 
             # save new config after migration
             sickgear.CONFIG_VERSION = self.config_version
-            logger.log(u'Saving config file to disk')
+            logger.log('Saving config file to disk')
             sickgear.save_config()
 
     @staticmethod
@@ -569,17 +570,17 @@ class ConfigMigrator(object):
                     new_season_format = str(new_season_format).replace('09', '%0S')
                     new_season_format = new_season_format.replace('9', '%S')
 
-                    logger.log(u'Changed season folder format from %s to %s, prepending it to your naming config' %
-                               (old_season_format, new_season_format))
+                    logger.log(f'Changed season folder format from {old_season_format} to {new_season_format},'
+                               f' prepending it to your naming config')
                     sickgear.NAMING_PATTERN = new_season_format + os.sep + sickgear.NAMING_PATTERN
 
                 except (TypeError, ValueError):
-                    logger.log(u'Can not change %s to new season format' % old_season_format, logger.ERROR)
+                    logger.error(f'Can not change {old_season_format} to new season format')
 
         # if no shows had it on then don't flatten any shows and don't put season folders in the config
         else:
 
-            logger.log(u'No shows were using season folders before so I am disabling flattening on all shows')
+            logger.log('No shows were using season folders before so I am disabling flattening on all shows')
 
             # don't flatten any shows at all
             my_db.action('UPDATE tv_shows SET flatten_folders = 0 WHERE 1=1')
@@ -672,8 +673,7 @@ class ConfigMigrator(object):
                 try:
                     name, url, key, enabled = cur_provider_data.split('|')
                 except ValueError:
-                    logger.log(u'Skipping Newznab provider string: "%s", incorrect format' % cur_provider_data,
-                               logger.ERROR)
+                    logger.error(f'Skipping Newznab provider string: "{cur_provider_data}", incorrect format')
                     continue
 
                 cat_ids = '5030,5040,5060'
@@ -727,7 +727,7 @@ class ConfigMigrator(object):
             cur_metadata = metadata.split('|')
             # if target has the old number of values, do upgrade
             if 6 == len(cur_metadata):
-                logger.log(u'Upgrading ' + metadata_name + ' metadata, old value: ' + metadata)
+                logger.log('Upgrading ' + metadata_name + ' metadata, old value: ' + metadata)
                 cur_metadata.insert(4, '0')
                 cur_metadata.append('0')
                 cur_metadata.append('0')
@@ -740,15 +740,15 @@ class ConfigMigrator(object):
                     cur_metadata[4], cur_metadata[3] = cur_metadata[3], '0'
                 # write new format
                 metadata = '|'.join(cur_metadata)
-                logger.log(u'Upgrading %s metadata, new value: %s' % (metadata_name, metadata))
+                logger.log(f'Upgrading {metadata_name} metadata, new value: {metadata}')
 
             elif 10 == len(cur_metadata):
                 metadata = '|'.join(cur_metadata)
-                logger.log(u'Keeping %s metadata, value: %s' % (metadata_name, metadata))
+                logger.log(f'Keeping {metadata_name} metadata, value: {metadata}')
             else:
-                logger.log(u'Skipping %s: "%s", incorrect format' % (metadata_name, metadata), logger.ERROR)
+                logger.error(f'Skipping {metadata_name}: "{metadata}", incorrect format')
                 metadata = '0|0|0|0|0|0|0|0|0|0'
-                logger.log(u'Setting %s metadata, new value: %s' % (metadata_name, metadata))
+                logger.log(f'Setting {metadata_name} metadata, new value: {metadata}')
 
             return metadata
 

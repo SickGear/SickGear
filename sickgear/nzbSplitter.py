@@ -73,7 +73,7 @@ def _get_season_nzbs(name, url_data, season):
     try:
         show_xml = etree.ElementTree(etree.XML(url_data))
     except SyntaxError:
-        logger.log(u'Unable to parse the XML of %s, not splitting it' % name, logger.ERROR)
+        logger.error(f'Unable to parse the XML of {name}, not splitting it')
         return {}, ''
 
     filename = name.replace('.nzb', '')
@@ -86,7 +86,7 @@ def _get_season_nzbs(name, url_data, season):
     if scene_name_match:
         show_name, quality_section = scene_name_match.groups()
     else:
-        logger.log('%s - Not a valid season pack scene name. If it\'s a valid one, log a bug.' % name, logger.ERROR)
+        logger.error('%s - Not a valid season pack scene name. If it\'s a valid one, log a bug.' % name)
         return {}, ''
 
     regex = r'(%s[\._]S%02d(?:[E0-9]+)\.[\w\._]+)' % (re.escape(show_name), season)
@@ -116,7 +116,7 @@ def _get_season_nzbs(name, url_data, season):
         if isinstance(ext, string_types) \
                 and re.search(r'^\.(nzb|r\d{2}|rar|7z|zip|par2|vol\d+|nfo|srt|txt|bat|sh|mkv|mp4|avi|wmv)$', ext,
                               flags=re.I):
-            logger.log('Unable to split %s into episode nzb\'s' % name, logger.WARNING)
+            logger.warning('Unable to split %s into episode nzb\'s' % name)
             return {}, ''
         if cur_ep not in ep_files:
             ep_files[cur_ep] = [cur_file]
@@ -157,7 +157,7 @@ def _save_nzb(nzb_name, nzb_string):
             nzb_fh.write(nzb_string)
 
     except EnvironmentError as e:
-        logger.log(u'Unable to save NZB: ' + ex(e), logger.ERROR)
+        logger.error(f'Unable to save NZB: {ex(e)}')
 
 
 def _strip_ns(element, ns):
@@ -178,7 +178,7 @@ def split_result(result):
     """
     resp = helpers.get_url(result.url, failure_monitor=False)
     if None is resp:
-        logger.log(u'Unable to load url %s, can\'t download season NZB' % result.url, logger.ERROR)
+        logger.error(f'Unable to load url {result.url}, can\'t download season NZB')
         return False
 
     # parse the season ep name
@@ -186,10 +186,10 @@ def split_result(result):
         np = NameParser(False, show_obj=result.show_obj)
         parse_result = np.parse(result.name)
     except InvalidNameException:
-        logger.log(u'Unable to parse the filename %s into a valid episode' % result.name, logger.DEBUG)
+        logger.debug(f'Unable to parse the filename {result.name} into a valid episode')
         return False
     except InvalidShowException:
-        logger.log(u'Unable to parse the filename %s into a valid show' % result.name, logger.DEBUG)
+        logger.debug(f'Unable to parse the filename {result.name} into a valid show')
         return False
 
     # bust it up
@@ -201,35 +201,35 @@ def split_result(result):
 
     for new_nzb in separate_nzbs:
 
-        logger.log(u'Split out %s from %s' % (new_nzb, result.name), logger.DEBUG)
+        logger.debug(f'Split out {new_nzb} from {result.name}')
 
         # parse the name
         try:
             np = NameParser(False, show_obj=result.show_obj)
             parse_result = np.parse(new_nzb)
         except InvalidNameException:
-            logger.log(u"Unable to parse the filename %s into a valid episode" % new_nzb, logger.DEBUG)
+            logger.debug(f'Unable to parse the filename {new_nzb} into a valid episode')
             return False
         except InvalidShowException:
-            logger.log(u"Unable to parse the filename %s into a valid show" % new_nzb, logger.DEBUG)
+            logger.debug(f'Unable to parse the filename {new_nzb} into a valid show')
             return False
 
         # make sure the result is sane
         if (None is not parse_result.season_number and season != parse_result.season_number) \
                 or (None is parse_result.season_number and 1 != season):
-            logger.log(u'Found %s inside %s but it doesn\'t seem to belong to the same season, ignoring it'
-                       % (new_nzb, result.name), logger.WARNING)
+            logger.warning(f'Found {new_nzb} inside {result.name} but it doesn\'t seem to belong to the same season,'
+                           f' ignoring it')
             continue
         elif 0 == len(parse_result.episode_numbers):
-            logger.log(u'Found %s inside %s but it doesn\'t seem to be a valid episode NZB, ignoring it'
-                       % (new_nzb, result.name), logger.WARNING)
+            logger.warning(f'Found {new_nzb} inside {result.name} but it doesn\'t seem to be a valid episode NZB,'
+                           f' ignoring it')
             continue
 
         want_ep = True
         for ep_no in parse_result.episode_numbers:
             if not result.show_obj.want_episode(season, ep_no, result.quality):
-                logger.log(u'Ignoring result %s because we don\'t want an episode that is %s'
-                           % (new_nzb, Quality.qualityStrings[result.quality]), logger.DEBUG)
+                logger.debug(f'Ignoring result {new_nzb} because we don\'t want an episode that is'
+                             f' {Quality.qualityStrings[result.quality]}')
                 want_ep = False
                 break
         if not want_ep:

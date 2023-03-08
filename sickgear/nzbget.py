@@ -34,7 +34,7 @@ def test_nzbget(host, use_https, username, password, timeout=300):
     result = False
     if not host:
         msg = 'No NZBGet host found. Please configure it'
-        logger.log(msg, logger.ERROR)
+        logger.error(msg)
         return result, msg, None
 
     url = 'http%(scheme)s://%(username)s:%(password)s@%(host)s/xmlrpc' % {
@@ -44,24 +44,24 @@ def test_nzbget(host, use_https, username, password, timeout=300):
     try:
         msg = 'Success. Connected'
         if rpc_client.writelog('INFO', 'SickGear connected as a test'):
-            logger.log(msg, logger.DEBUG)
+            logger.debug(msg)
         else:
             msg += ', but unable to send a message'
-            logger.log(msg, logger.ERROR)
+            logger.error(msg)
         result = True
-        logger.log(u'NZBGet URL: %s' % url, logger.DEBUG)
+        logger.debug(f'NZBGet URL: {url}')
 
     except moves.http_client.socket.error:
         msg = 'Please check NZBGet host and port (if it is running). NZBGet is not responding to these values'
-        logger.log(msg, logger.ERROR)
+        logger.error(msg)
 
     except moves.xmlrpc_client.ProtocolError as e:
         if 'Unauthorized' == e.errmsg:
             msg = 'NZBGet username or password is incorrect'
-            logger.log(msg, logger.ERROR)
+            logger.error(msg)
         else:
             msg = 'Protocol Error: %s' % e.errmsg
-            logger.log(msg, logger.ERROR)
+            logger.error(msg)
 
     return result, msg, rpc_client
 
@@ -114,7 +114,7 @@ def send_nzb(search_result):
             return result
         nzbcontent64 = b64encodestring(data, keep_eol=True)
 
-    logger.log(u'Sending NZB to NZBGet: %s' % search_result.name)
+    logger.log(f'Sending NZB to NZBGet: {search_result.name}')
 
     try:
         # Find out if nzbget supports priority (Version 9.0+), old versions beginning with a 0.x will use the old cmd
@@ -161,11 +161,11 @@ def send_nzb(search_result):
                                                      nzbget_prio, False, search_result.url)
 
         if nzbget_result:
-            logger.log(u'NZB sent to NZBGet successfully', logger.DEBUG)
+            logger.debug('NZB sent to NZBGet successfully')
             result = True
         else:
-            logger.log(u'NZBGet could not add %s.nzb to the queue' % search_result.name, logger.ERROR)
+            logger.error(f'NZBGet could not add {search_result.name}.nzb to the queue')
     except (BaseException, Exception):
-        logger.log(u'Connect Error to NZBGet: could not add %s.nzb to the queue' % search_result.name, logger.ERROR)
+        logger.error(f'Connect Error to NZBGet: could not add {search_result.name}.nzb to the queue')
 
     return result

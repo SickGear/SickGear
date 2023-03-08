@@ -803,7 +803,7 @@ def init_stage_1(console_logging):
         CACHE_DIR = ACTUAL_CACHE_DIR
 
     if not helpers.make_dir(CACHE_DIR):
-        logger.log(u'!!! Creating local cache dir failed, using system default', logger.ERROR)
+        logger.error('!!! creating local cache dir failed, using system default')
         CACHE_DIR = None
 
     # clean cache folders
@@ -811,7 +811,7 @@ def init_stage_1(console_logging):
         helpers.clear_cache()
         ZONEINFO_DIR = os.path.join(CACHE_DIR, 'zoneinfo')
         if not os.path.isdir(ZONEINFO_DIR) and not helpers.make_path(ZONEINFO_DIR):
-            logger.log(u'!!! Creating local zoneinfo dir failed', logger.ERROR)
+            logger.error('!!! creating local zoneinfo dir failed')
     sg_helpers.CACHE_DIR = CACHE_DIR
     sg_helpers.DATA_DIR = DATA_DIR
 
@@ -830,7 +830,7 @@ def init_stage_1(console_logging):
     TRIM_ZERO = bool(check_setting_int(CFG, 'GUI', 'trim_zero', 0))
     DATE_PRESET = check_setting_str(CFG, 'GUI', 'date_preset', '%x')
     TIME_PRESET_W_SECONDS = check_setting_str(CFG, 'GUI', 'time_preset', '%I:%M:%S %p')
-    TIME_PRESET = TIME_PRESET_W_SECONDS.replace(u':%S', u'')
+    TIME_PRESET = TIME_PRESET_W_SECONDS.replace(':%S', '')
     TIMEZONE_DISPLAY = check_setting_str(CFG, 'GUI', 'timezone_display', 'network')
     SHOW_TAGS = check_setting_str(CFG, 'GUI', 'show_tags', 'Show List').split(',')
     SHOW_TAG_DEFAULT = check_setting_str(CFG, 'GUI', 'show_tag_default',
@@ -842,7 +842,7 @@ def init_stage_1(console_logging):
     LOG_DIR = os.path.normpath(os.path.join(DATA_DIR, ACTUAL_LOG_DIR))
 
     if not helpers.make_dir(LOG_DIR):
-        logger.log(u'!!! No log folder, logging to screen only!', logger.ERROR)
+        logger.error('!!! no log folder, logging to screen only!')
 
     FILE_LOGGING_PRESET = check_setting_str(CFG, 'General', 'file_logging_preset', 'DEBUG')
     if bool(check_setting_int(CFG, 'General', 'file_logging_db', 0)):
@@ -1488,7 +1488,7 @@ def init_stage_1(console_logging):
         ('docker/other', 'snap')['snap' in CUR_COMMIT_HASH]
 
     if not os.path.isfile(CONFIG_FILE):
-        logger.log(u'Unable to find \'%s\', all settings will be default!' % CONFIG_FILE, logger.DEBUG)
+        logger.debug(f'Unable to find \'{CONFIG_FILE}\', all settings will be default!')
         update_config = True
 
     # Get expected config version
@@ -1747,20 +1747,20 @@ def restart(soft=True, update_pkg=None):
         if update_pkg:
             MY_ARGS.append('--update-pkg')
 
-        logger.log(u'Trigger event restart')
+        logger.log('Trigger event restart')
         events.put(events.SystemEvent.RESTART)
 
     else:
         halt()
         save_all()
-        logger.log(u'Re-initializing all data')
+        logger.log('Re-initializing all data')
         initialize()
 
 
 def sig_handler(signum=None, _=None):
     is_ctrlbreak = 'win32' == sys.platform and signal.SIGBREAK == signum
-    msg = u'Signal "%s" found' % (signal.SIGINT == signum and 'CTRL-C' or is_ctrlbreak and 'CTRL+BREAK' or
-                                  signal.SIGTERM == signum and 'Termination' or signum)
+    msg = 'Signal "%s" found' % (signal.SIGINT == signum and 'CTRL-C' or is_ctrlbreak and 'CTRL+BREAK' or
+                                 signal.SIGTERM == signum and 'Termination' or signum)
     if None is signum or signum in (signal.SIGINT, signal.SIGTERM) or is_ctrlbreak:
         logger.log('%s, saving and exiting...' % msg)
         events.put(events.SystemEvent.SHUTDOWN)
@@ -1831,12 +1831,12 @@ def save_all():
         global showList
 
         # write all shows
-        logger.log(u'Saving all shows to the database')
+        logger.log('Saving all shows to the database')
         for show_obj in showList:  # type: tv.TVShow
             show_obj.save_to_db()
 
     # save config
-    logger.log(u'Saving config file to disk')
+    logger.log('Saving config file to disk')
     save_config()
 
 
@@ -2400,4 +2400,4 @@ def launch_browser(start_port=None):
         try:
             webbrowser.open(browser_url, 1, True)
         except (BaseException, Exception):
-            logger.log('Unable to launch a browser', logger.ERROR)
+            logger.error('Unable to launch a browser')

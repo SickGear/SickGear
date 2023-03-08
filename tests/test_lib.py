@@ -42,10 +42,10 @@ TESTDBNAME = 'sickbeard.db'
 TESTCACHEDBNAME = 'cache.db'
 TESTFAILEDDBNAME = 'failed.db'
 
-SHOWNAME = u'show name'
+SHOWNAME = 'show name'
 SEASON = 4
 EPISODE = 2
-FILENAME = u'show name - s0' + str(SEASON) + 'e0' + str(EPISODE) + '.mkv'
+FILENAME = f'show name - s0{SEASON}e0{EPISODE}.mkv'
 FILEDIR = os.path.join(TESTDIR, SHOWNAME)
 FILEPATH = os.path.join(FILEDIR, FILENAME)
 

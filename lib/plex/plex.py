@@ -96,7 +96,7 @@ class Plex(object):
             if self.use_logger:
                 msg = 'Plex:: ' + msg
                 if debug:
-                    logger.log(msg, logger.DEBUG)
+                    logger.debug(msg)
                 else:
                     logger.log(msg)
             # else:

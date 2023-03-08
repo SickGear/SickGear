@@ -331,7 +331,7 @@ class NewznabProvider(generic.NZBProvider):
                             except (BaseException, Exception):
                                 continue
             except (BaseException, Exception):
-                logger.log('Error parsing result for [%s]' % self.name, logger.DEBUG)
+                logger.debug('Error parsing result for [%s]' % self.name)
 
         if not caps and self._caps and not all_cats and self._caps_all_cats and not cats and self._caps_cats:
             self._check_excludes(cats)
@@ -644,14 +644,14 @@ class NewznabProvider(generic.NZBProvider):
             if not s.show_obj.is_anime and not s.show_obj.is_sports:
                 if not getattr(s, 'wanted_quality', None):
                     # this should not happen, the creation is missing for the search in this case
-                    logger.log('wanted_quality property was missing for search, creating it', logger.WARNING)
+                    logger.warning('wanted_quality property was missing for search, creating it')
                     ep_status, ep_quality = Quality.split_composite_status(ep_obj.status)
                     s.wanted_quality = get_wanted_qualities(ep_obj, ep_status, ep_quality, unaired=True)
                 needed.check_needed_qualities(s.wanted_quality)
 
         if not hasattr(ep_obj, 'eps_aired_in_season'):
             # this should not happen, the creation is missing for the search in this case
-            logger.log('eps_aired_in_season property was missing for search, creating it', logger.WARNING)
+            logger.warning('eps_aired_in_season property was missing for search, creating it')
             ep_count, ep_count_scene = get_aired_in_season(ep_obj.show_obj)
             ep_obj.eps_aired_in_season = ep_count.get(ep_obj.season, 0)
             ep_obj.eps_aired_in_scene_season = ep_count_scene.get(ep_obj.scene_season, 0) if ep_obj.show_obj.is_scene \
@@ -978,14 +978,14 @@ class NewznabProvider(generic.NZBProvider):
                         parsed_xml, n_spaces = self.cache.parse_and_get_ns(data)
                         items = parsed_xml.findall('channel/item')
                     except (BaseException, Exception):
-                        logger.log('Error trying to load %s RSS feed' % self.name, logger.WARNING)
+                        logger.warning('Error trying to load %s RSS feed' % self.name)
                         break
 
                     if not self._check_auth_from_data(parsed_xml, search_url):
                         break
 
                     if 'rss' != parsed_xml.tag:
-                        logger.log('Resulting XML from %s isn\'t RSS, not parsing it' % self.name, logger.WARNING)
+                        logger.warning('Resulting XML from %s isn\'t RSS, not parsing it' % self.name)
                         break
 
                     i and time.sleep(2.1)
@@ -996,8 +996,7 @@ class NewznabProvider(generic.NZBProvider):
                         if title and url:
                             results.append(item)
                         else:
-                            logger.log('The data returned from %s is incomplete, this result is unusable' % self.name,
-                                       logger.DEBUG)
+                            logger.debug('The data returned from %s is incomplete, this result is unusable' % self.name)
 
                     # get total and offset attributes
                     try:
@@ -1036,8 +1035,8 @@ class NewznabProvider(generic.NZBProvider):
 
                     # there are more items available than the amount given in one call, grab some more
                     items = total - request_params['offset']
-                    logger.log('%s more item%s to fetch from a batch of up to %s items.'
-                               % (items, helpers.maybe_plural(items), request_params['limit']), logger.DEBUG)
+                    logger.debug(f'{items} more item{helpers.maybe_plural(items)} to fetch from a batch of up to'
+                                 f' {request_params["limit"]} items.')
 
                     batch_count = self._log_result(results, mode, cnt, search_url)
                     exit_log = False
@@ -1125,7 +1124,7 @@ class NewznabProvider(generic.NZBProvider):
 
                 result_date = self._parse_pub_date(item)
                 if not result_date:
-                    logger.log(u'Unable to figure out the date for entry %s, skipping it' % title)
+                    logger.log(f'Unable to figure out the date for entry {title}, skipping it')
                     continue
 
                 result_size, result_uid = self._parse_size_uid(item, ns=n_space)
@@ -1201,7 +1200,7 @@ class NewznabCache(tvcache.TVCache):
                 else:
                     (items, n_spaces) = self.provider.cache_data(needed=needed)
             except (BaseException, Exception) as e:
-                logger.log('Error updating Cache: %s' % ex(e), logger.ERROR)
+                logger.error('Error updating Cache: %s' % ex(e))
                 items = None
 
             if items:
@@ -1257,5 +1256,4 @@ class NewznabCache(tvcache.TVCache):
         if title and url:
             return self.add_cache_entry(title, url, tvid_prodid=ids)
 
-        logger.log('Data returned from the %s feed is incomplete, this result is unusable' % self.provider.name,
-                   logger.DEBUG)
+        logger.debug('Data returned from the %s feed is incomplete, this result is unusable' % self.provider.name)

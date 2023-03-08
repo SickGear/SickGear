@@ -66,7 +66,7 @@ class PyTivoNotifier(BaseNotifier):
         request_url = 'http://%s/TiVoConnect?%s' % (host, urlencode(
             dict(Command='Push', Container=container, File=file_path, tsn=tsn)))
 
-        self._log_debug(u'Requesting ' + request_url)
+        self._log_debug(f'Requesting {request_url}')
 
         request = urllib.request.Request(request_url)
 
@@ -76,17 +76,17 @@ class PyTivoNotifier(BaseNotifier):
 
         except urllib.error.HTTPError as e:
             if hasattr(e, 'reason'):
-                self._log_error(u'Error, failed to reach a server - ' + e.reason)
+                self._log_error('Error, failed to reach a server - ' + e.reason)
                 return False
             elif hasattr(e, 'code'):
-                self._log_error(u'Error, the server couldn\'t fulfill the request - ' + e.code)
+                self._log_error('Error, the server couldn\'t fulfill the request - ' + e.code)
             return False
 
         except (BaseException, Exception) as e:
-            self._log_error(u'Unknown exception: ' + ex(e))
+            self._log_error(f'Unknown exception: {ex(e)}')
             return False
 
-        self._log(u'Successfully requested transfer of file')
+        self._log('Successfully requested transfer of file')
         return True
 
 

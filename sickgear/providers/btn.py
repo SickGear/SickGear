@@ -75,8 +75,7 @@ class BTNProvider(generic.TorrentProvider):
                 self.tmr_limit_update('1', 'h', '150/hr %s' % data)
                 self.log_failure_url(url, post_data, post_json)
             else:
-                logger.log(u'Action prematurely ended. %(prov)s server error response = %(desc)s' %
-                           {'prov': self.name, 'desc': data}, logger.WARNING)
+                logger.warning(f'Action prematurely ended. {self.name} server error response = {data}')
 
     def _search_provider(self, search_params, age=0, **kwargs):
 
@@ -118,7 +117,7 @@ class BTNProvider(generic.TorrentProvider):
                         self._check_response(error_text, self.url_api, post_data=json_rpc(params))
                         return results
                 except AuthException:
-                    logger.log('API looks to be down, add un/pw config detail to be used as a fallback', logger.WARNING)
+                    logger.warning('API looks to be down, add un/pw config detail to be used as a fallback')
                 except (KeyError, Exception):
                     pass
 
@@ -247,7 +246,7 @@ class BTNProvider(generic.TorrentProvider):
             except generic.HaltParseException:
                 pass
             except (BaseException, Exception):
-                logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
+                logger.error(f'Failed to parse. Traceback: {traceback.format_exc()}')
 
             self._log_search(mode, len(results) - cnt, search_url)
 
@@ -267,7 +266,7 @@ class BTNProvider(generic.TorrentProvider):
 
         else:
             # If we don't have a release name we need to get creative
-            title = u''
+            title = ''
             keys = ['Series', 'GroupName', 'Resolution', 'Source', 'Codec']
             for key in keys:
                 if key in data_json:
@@ -353,8 +352,8 @@ class BTNProvider(generic.TorrentProvider):
         # Set maximum to 24 hours (24 * 60 * 60 = 86400 seconds) of "RSS" data search,
         # older items will be done through backlog
         if 86400 < seconds_since_last_update:
-            logger.log(u'Only trying to fetch the last 24 hours even though the last known successful update on ' +
-                       '%s was over 24 hours' % self.name, logger.WARNING)
+            logger.warning(f'Only trying to fetch the last 24 hours even though the last known successful update on'
+                           f' {self.name} was over 24 hours')
             seconds_since_last_update = 86400
 
         return self._search_provider(dict(Cache=['']), age=seconds_since_last_update)

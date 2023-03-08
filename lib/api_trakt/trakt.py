@@ -277,7 +277,7 @@ class TraktAPI(object):
             code = getattr(e.response, 'status_code', None)
             if not code:
                 if 'timed out' in ex(e):
-                    log.warning(u'Timeout connecting to Trakt')
+                    log.warning('Timeout connecting to Trakt')
                     if count >= self.max_retrys:
                         raise TraktTimeout()
                     return self.trakt_request(path, data, headers, url, count=count, sleep_retry=sleep_retry,
@@ -285,12 +285,12 @@ class TraktAPI(object):
                 # This is pretty much a fatal error if there is no status_code
                 # It means there basically was no response at all
                 else:
-                    log.warning(u'Could not connect to Trakt. Error: %s' % ex(e))
+                    log.warning('Could not connect to Trakt. Error: %s' % ex(e))
                     raise TraktException('Could not connect to Trakt. Error: %s' % ex(e))
 
             elif 502 == code:
                 # Retry the request, Cloudflare had a proxying issue
-                log.warning(u'Retrying Trakt api request: %s' % path)
+                log.warning(f'Retrying Trakt api request: {path}')
                 if count >= self.max_retrys:
                     raise TraktCloudFlareException()
                 return self.trakt_request(path, data, headers, url, count=count, sleep_retry=sleep_retry,
@@ -303,7 +303,7 @@ class TraktAPI(object):
                             return self.trakt_request(path, data, headers, url, count=count, sleep_retry=sleep_retry,
                                                       send_oauth=send_oauth, method=method)
 
-                        log.warning(u'Unauthorized. Please check your Trakt settings')
+                        log.warning('Unauthorized. Please check your Trakt settings')
                         sickgear.TRAKT_ACCOUNTS[send_oauth].auth_failure()
                         raise TraktAuthException()
 
@@ -318,18 +318,18 @@ class TraktAPI(object):
                 raise TraktAuthException()
             elif code in (500, 501, 503, 504, 520, 521, 522):
                 if count >= self.max_retrys:
-                    log.warning(u'Trakt may have some issues and it\'s unavailable. Code: %s' % code)
+                    log.warning(f'Trakt may have some issues and it\'s unavailable. Code: {code}')
                     raise TraktServerError(error_code=code)
                 # http://docs.trakt.apiary.io/#introduction/status-codes
-                log.warning(u'Trakt may have some issues and it\'s unavailable. Trying again')
+                log.warning('Trakt may have some issues and it\'s unavailable. Trying again')
                 return self.trakt_request(path, data, headers, url, count=count, sleep_retry=sleep_retry,
                                           send_oauth=send_oauth, method=method)
             elif 404 == code:
-                log.warning(u'Trakt error (404) the resource does not exist: %s%s' % (url, path))
+                log.warning(f'Trakt error (404) the resource does not exist: {url}{path}')
                 raise TraktMethodNotExisting('Trakt error (404) the resource does not exist: %s%s' % (url, path))
             elif 429 == code:
                 if count >= self.max_retrys:
-                    log.warning(u'Trakt replied with Rate-Limiting, maximum retries exceeded.')
+                    log.warning('Trakt replied with Rate-Limiting, maximum retries exceeded.')
                     raise TraktServerError(error_code=code)
                 r_headers = getattr(e.response, 'headers', None)
                 if None is not r_headers:
@@ -356,14 +356,14 @@ class TraktAPI(object):
                                         'revoked, does not match the redirection URI used in the authorization request,'
                                         ' or was issued to another client.')
             else:
-                log.error(u'Could not connect to Trakt. Code error: {0}'.format(code))
+                log.error('Could not connect to Trakt. Code error: {0}'.format(code))
                 raise TraktException('Could not connect to Trakt. Code error: %s' % code)
         except ConnectionSkipException as e:
             log.warning('Connection is skipped')
             raise e
         except ValueError as e:
-            log.error(u'Value Error: %s' % ex(e))
-            raise TraktValueError(u'Value Error: %s' % ex(e))
+            log.error(f'Value Error: {ex(e)}')
+            raise TraktValueError(f'Value Error: {ex(e)}')
         except (BaseException, Exception) as e:
             log.error('Exception: %s' % ex(e))
             raise TraktException('Could not connect to Trakt. Code error: %s' % ex(e))

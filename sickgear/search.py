@@ -52,7 +52,7 @@ def _download_result(result):
 
     res_provider = result.provider
     if None is res_provider:
-        logger.log(u'Invalid provider name - this is a coding error, report it please', logger.ERROR)
+        logger.error('Invalid provider name - this is a coding error, report it please')
         return False
 
     # NZB files with a URL can just be downloaded from the provider
@@ -62,9 +62,9 @@ def _download_result(result):
     elif 'nzbdata' == result.resultType:
 
         # get the final file path to the nzb
-        file_name = os.path.join(sickgear.NZB_DIR, u'%s.nzb' % result.name)
+        file_name = os.path.join(sickgear.NZB_DIR, f'{result.name}.nzb')
 
-        logger.log(u'Saving NZB to %s' % file_name)
+        logger.log(f'Saving NZB to {file_name}')
 
         new_result = True
 
@@ -77,12 +77,12 @@ def _download_result(result):
                 write_file(file_name, data, raise_exceptions=True)
 
         except (EnvironmentError, IOError) as e:
-            logger.log(u'Error trying to save NZB to black hole: %s' % ex(e), logger.ERROR)
+            logger.error(f'Error trying to save NZB to black hole: {ex(e)}')
             new_result = False
     elif 'torrent' == res_provider.providerType:
         new_result = res_provider.download_result(result)
     else:
-        logger.log(u'Invalid provider type - this is a coding error, report it please', logger.ERROR)
+        logger.error('Invalid provider type - this is a coding error, report it please')
         new_result = False
 
     return new_result
@@ -120,7 +120,7 @@ def snatch_episode(result, end_status=SNATCHED):
         elif 'nzbget' == sickgear.NZB_METHOD:
             dl_result = nzbget.send_nzb(result)
         else:
-            logger.log(u'Unknown NZB action specified in config: %s' % sickgear.NZB_METHOD, logger.ERROR)
+            logger.error(f'Unknown NZB action specified in config: {sickgear.NZB_METHOD}')
             dl_result = False
 
     # TORRENT files can be sent to clients or saved to disk
@@ -138,7 +138,7 @@ def snatch_episode(result, end_status=SNATCHED):
             if not result.content and not result.url.startswith('magnet'):
                 result.content = result.provider.get_url(result.url, as_binary=True)
                 if result.provider.should_skip() or not result.content:
-                    logger.log(u'Torrent content failed to download from %s' % result.url, logger.ERROR)
+                    logger.error(f'Torrent content failed to download from {result.url}')
                     return False
             # Snatches torrent with client
             dl_result = clients.get_client_instance(sickgear.TORRENT_METHOD)().send_torrent(result)
@@ -146,7 +146,7 @@ def snatch_episode(result, end_status=SNATCHED):
             if result.cache_filepath:
                 helpers.remove_file_perm(result.cache_filepath)
     else:
-        logger.log(u'Unknown result type, unable to download it', logger.ERROR)
+        logger.error('Unknown result type, unable to download it')
         dl_result = False
 
     if not dl_result:
@@ -155,7 +155,7 @@ def snatch_episode(result, end_status=SNATCHED):
     if sickgear.USE_FAILED_DOWNLOADS:
         failed_history.add_snatched(result)
 
-    ui.notifications.message(u'Episode snatched', result.name)
+    ui.notifications.message('Episode snatched', result.name)
 
     history.log_snatch(result)
 
@@ -198,13 +198,13 @@ def pass_show_wordlist_checks(name, show_obj):
     result = show_name_helpers.contains_any(name, show_obj.rls_ignore_words, rx=show_obj.rls_ignore_words_regex,
                                             **re_extras)
     if None is not result and result:
-        logger.log(u'Ignored: %s for containing ignore word' % name)
+        logger.log(f'Ignored: {name} for containing ignore word')
         return False
 
     result = show_name_helpers.contains_any(name, show_obj.rls_require_words, rx=show_obj.rls_require_words_regex,
                                             **re_extras)
     if None is not result and not result:
-        logger.log(u'Ignored: %s for not containing any required word match' % name)
+        logger.log(f'Ignored: {name} for not containing any required word match')
         return False
     return True
 
@@ -225,8 +225,8 @@ def pick_best_result(
     :param filter_rls: optional thread name
     :return: best search result
     """
-    msg = (u'Picking the best result out of %s', u'Checking the best result %s')[1 == len(results)]
-    logger.log(msg % [x.name for x in results], logger.DEBUG)
+    msg = ('Picking the best result out of %s', 'Checking the best result %s')[1 == len(results)]
+    logger.debug(msg % [x.name for x in results])
 
     # find the best result for the current episode
     best_result = None
@@ -252,8 +252,8 @@ def pick_best_result(
             continue
 
         if quality_list and cur_result.quality not in quality_list:
-            logger.log(u'Rejecting unwanted quality %s for [%s]' % (
-                Quality.qualityStrings[cur_result.quality], cur_result.name), logger.DEBUG)
+            logger.debug(f'Rejecting unwanted quality {Quality.qualityStrings[cur_result.quality]}'
+                         f' for [{cur_result.name}]')
             continue
 
         if not pass_show_wordlist_checks(cur_result.name, show_obj):
@@ -262,12 +262,12 @@ def pick_best_result(
         cur_size = getattr(cur_result, 'size', None)
         if sickgear.USE_FAILED_DOWNLOADS and None is not cur_size and failed_history.has_failed(
                 cur_result.name, cur_size, cur_result.provider.name):
-            logger.log(u'Rejecting previously failed [%s]' % cur_result.name)
+            logger.log(f'Rejecting previously failed [{cur_result.name}]')
             continue
 
         if filter_rls and any([scene_only, non_scene_fallback, scene_rej_nuked, scene_nuked_active]):
             if show_obj.is_anime:
-                addendum = u'anime (skipping scene/nuke filter) '
+                addendum = 'anime (skipping scene/nuke filter) '
             else:
                 scene_contains = False
                 if scene_only and scene_or_contain:
@@ -277,25 +277,23 @@ def pick_best_result(
                         scene_contains = True
 
                 if scene_contains and not scene_rej_nuked:
-                    logger.log(u'Considering title match to \'or contain\' [%s]' % cur_result.name, logger.DEBUG)
+                    logger.debug(f'Considering title match to \'or contain\' [{cur_result.name}]')
                     reject = False
                 else:
                     reject, url = can_reject(cur_result.name)
                     if reject:
                         if isinstance(reject, string_types):
                             if scene_rej_nuked and not scene_nuked_active:
-                                logger.log(u'Rejecting nuked release. Nuke reason [%s] source [%s]' % (reject, url),
-                                           logger.DEBUG)
+                                logger.debug(f'Rejecting nuked release. Nuke reason [{reject}] source [{url}]')
                             elif scene_nuked_active:
                                 best_fallback_result = best_candidate(best_fallback_result, cur_result)
                             else:
-                                logger.log(u'Considering nuked release. Nuke reason [%s] source [%s]' % (reject, url),
-                                           logger.DEBUG)
+                                logger.debug(f'Considering nuked release. Nuke reason [{reject}] source [{url}]')
                                 reject = False
                         elif scene_contains or non_scene_fallback:
                             best_fallback_result = best_candidate(best_fallback_result, cur_result)
                         else:
-                            logger.log(u'Rejecting as not scene release listed at any [%s]' % url, logger.DEBUG)
+                            logger.debug(f'Rejecting as not scene release listed at any [{url}]')
 
                 if reject:
                     continue
@@ -303,16 +301,16 @@ def pick_best_result(
         best_result = best_candidate(best_result, cur_result)
 
     if best_result and scene_only and not show_obj.is_anime:
-        addendum = u'scene release filtered '
+        addendum = 'scene release filtered '
     elif not best_result and best_fallback_result:
-        addendum = u'non scene release filtered '
+        addendum = 'non scene release filtered '
         best_result = best_fallback_result
 
     if best_result:
-        msg = (u'Picked as the best %s[%s]', u'Confirmed as the best %s[%s]')[1 == len(results)]
-        logger.log(msg % (addendum, best_result.name), logger.DEBUG)
+        msg = ('Picked as the best %s[%s]', 'Confirmed as the best %s[%s]')[1 == len(results)]
+        logger.debug(msg % (addendum, best_result.name))
     else:
-        logger.log(u'No result picked.', logger.DEBUG)
+        logger.debug('No result picked.')
 
     return best_result
 
@@ -326,7 +324,7 @@ def best_candidate(best_result, cur_result):
     :param cur_result: current best search result
     :return: new best search result
     """
-    logger.log(u'Quality is %s for [%s]' % (Quality.qualityStrings[cur_result.quality], cur_result.name))
+    logger.log(f'Quality is {Quality.qualityStrings[cur_result.quality]} for [{cur_result.name}]')
 
     if not best_result or best_result.quality < cur_result.quality != Quality.UNKNOWN:
         best_result = cur_result
@@ -337,10 +335,10 @@ def best_candidate(best_result, cur_result):
             best_result = cur_result
         elif cur_result.properlevel == best_result.properlevel:
             if 'xvid' in best_result.name.lower() and 'x264' in cur_result.name.lower():
-                logger.log(u'Preferring (x264 over xvid) [%s]' % cur_result.name)
+                logger.log(f'Preferring (x264 over xvid) [{cur_result.name}]')
                 best_result = cur_result
             elif re.search('(?i)(h.?|x)264', best_result.name) and re.search('(?i)((h.?|x)265|hevc)', cur_result.name):
-                logger.log(u'Preferring (x265 over x264) [%s]' % cur_result.name)
+                logger.log(f'Preferring (x265 over x264) [{cur_result.name}]')
                 best_result = cur_result
             elif 'internal' in best_result.name.lower() and 'internal' not in cur_result.name.lower():
                 best_result = cur_result
@@ -358,7 +356,7 @@ def is_final_result(result):
              returns True, if not then it's False
     """
 
-    logger.log(u'Checking if searching should continue after finding %s' % result.name, logger.DEBUG)
+    logger.debug(f'Checking if searching should continue after finding {result.name}')
 
     show_obj = result.ep_obj_list[0].show_obj
 
@@ -399,8 +397,7 @@ def is_first_best_match(ep_status, result):
     :return:
     """
 
-    logger.log(u'Checking if the first best quality match should be archived for episode %s' %
-               result.name, logger.DEBUG)
+    logger.debug(f'Checking if the first best quality match should be archived for episode {result.name}')
 
     show_obj = result.ep_obj_list[0].show_obj
     cur_status, cur_quality = Quality.split_composite_status(ep_status)
@@ -570,7 +567,7 @@ def wanted_episodes(show_obj,  # type: TVShow
                           ['%d unaired episode%s', total_unaired]:
             if 0 < total:
                 actions.append(msg % (total, helpers.maybe_plural(total)))
-        logger.log(u'We want %s for %s' % (' and '.join(actions), show_obj.unique_name))
+        logger.log(f'We want {" and ".join(actions)} for {show_obj.unique_name}')
 
     return wanted
 
@@ -602,8 +599,8 @@ def search_for_needed_episodes(ep_obj_list):
         for cur_ep_obj in ep_obj_search_result_list:
 
             if cur_ep_obj.show_obj.paused:
-                logger.debug(u'Show %s is paused, ignoring all RSS items for %s' %
-                             (cur_ep_obj.show_obj.unique_name, cur_ep_obj.pretty_name()))
+                logger.debug(f'Show {cur_ep_obj.show_obj.unique_name} is paused,'
+                             f' ignoring all RSS items for {cur_ep_obj.pretty_name()}')
                 continue
 
             # find the best result for the current episode
@@ -612,7 +609,7 @@ def search_for_needed_episodes(ep_obj_list):
 
             # if all results were rejected move on to the next episode
             if not best_result:
-                logger.log(u'All found results for %s were rejected.' % cur_ep_obj.pretty_name(), logger.DEBUG)
+                logger.debug(f'All found results for {cur_ep_obj.pretty_name()} were rejected.')
                 continue
 
             # if it's already in the list (from another provider) and the newly found quality is no better, then skip it
@@ -639,11 +636,10 @@ def search_for_needed_episodes(ep_obj_list):
     threading.current_thread().name = orig_thread_name
 
     if not len(providers):
-        logger.log('No NZB/Torrent providers in Media Providers/Options are enabled to match recent episodes',
-                   logger.WARNING)
+        logger.warning('No NZB/Torrent providers in Media Providers/Options are enabled to match recent episodes')
     elif not search_done:
-        logger.log('Failed recent search of %s enabled provider%s. More info in debug log.' % (
-            len(providers), helpers.maybe_plural(providers)), logger.ERROR)
+        logger.error(f'Failed recent search of {len(providers)} enabled provider{helpers.maybe_plural(providers)}.'
+                     f' More info in debug log.')
 
     return list(found_results.values())
 
@@ -713,9 +709,9 @@ def _search_provider_thread(provider, provider_results, show_obj, ep_obj_list, m
         search_count += 1
 
         if 'eponly' == search_mode:
-            logger.log(u'Performing episode search for %s' % show_obj.unique_name)
+            logger.log(f'Performing episode search for {show_obj.unique_name}')
         else:
-            logger.log(u'Performing season pack search for %s' % show_obj.unique_name)
+            logger.log(f'Performing season pack search for {show_obj.unique_name}')
 
         try:
             provider.cache.clear_cache()
@@ -726,10 +722,10 @@ def _search_provider_thread(provider, provider_results, show_obj, ep_obj_list, m
                     len(v), (('multiep', 'season')[SEASON_RESULT == k], 'episode')['ep' in search_mode],
                     helpers.maybe_plural(v)) for (k, v) in iteritems(search_result_list)]))
         except exceptions_helper.AuthException as e:
-            logger.error(u'Authentication error: %s' % ex(e))
+            logger.error(f'Authentication error: {ex(e)}')
             break
         except (BaseException, Exception) as e:
-            logger.error(u'Error while searching %s, skipping: %s' % (provider.name, ex(e)))
+            logger.error(f'Error while searching {provider.name}, skipping: {ex(e)}')
             logger.error(traceback.format_exc())
             break
 
@@ -752,7 +748,7 @@ def _search_provider_thread(provider, provider_results, show_obj, ep_obj_list, m
             break
 
         search_mode = '%sonly' % ('ep', 'sp')['ep' in search_mode]
-        logger.log(u'Falling back to %s search ...' % ('season pack', 'episode')['ep' in search_mode])
+        logger.log(f'Falling back to {("season pack", "episode")["ep" in search_mode]} search ...')
 
     if not provider_results:
         logger.log('No suitable result at [%s]' % provider.name)
@@ -804,7 +800,7 @@ def cache_torrent_file(
                 torrent_name = search_result.provider.regulate_cache_torrent_file(torrent_name)
             if not pick_best_result([search_result], show_obj, **kwargs) or \
                     not show_name_helpers.pass_wordlist_checks(torrent_name, indexer_lookup=False, show_obj=show_obj):
-                logger.log(u'Ignored %s that contains %s (debug log has detail)' % (result_name, torrent_name))
+                logger.log(f'Ignored {result_name} that contains {torrent_name} (debug log has detail)')
                 return
 
     return search_result
@@ -848,7 +844,7 @@ def search_providers(
     # create a thread for each provider to search
     for cur_provider in provider_list:
         if cur_provider.anime_only and not show_obj.is_anime:
-            logger.debug(u'%s is not an anime, skipping' % show_obj.unique_name)
+            logger.debug(f'{show_obj.unique_name} is not an anime, skipping')
             continue
 
         provider_id = cur_provider.get_id()
@@ -891,14 +887,14 @@ def search_providers(
             for cur_result in found_results[provider_id][cur_episode]:
                 if Quality.UNKNOWN != cur_result.quality and highest_quality_overall < cur_result.quality:
                     highest_quality_overall = cur_result.quality
-        logger.debug(u'%s is the highest quality of any match' % Quality.qualityStrings[highest_quality_overall])
+        logger.debug(f'{Quality.qualityStrings[highest_quality_overall]} is the highest quality of any match')
 
         # see if every episode is wanted
         if best_season_result:
             # get the quality of the season nzb
             season_qual = best_season_result.quality
-            logger.log(u'%s is the quality of the season %s' % (Quality.qualityStrings[season_qual],
-                                                                best_season_result.provider.providerType), logger.DEBUG)
+            logger.debug(f'{Quality.qualityStrings[season_qual]} is the quality of the season'
+                         f' {best_season_result.provider.providerType}')
 
             my_db = db.DBConnection()
             sql = 'SELECT season, episode' \
@@ -907,8 +903,8 @@ def search_providers(
                   (show_obj.tvid, show_obj.prodid, ','.join([str(x.season) for x in ep_obj_list]))
             ep_nums = [(int(x['season']), int(x['episode'])) for x in my_db.select(sql)]
 
-            logger.log(u'Executed query: [%s]' % sql)
-            logger.log(u'Episode list: %s' % ep_nums, logger.DEBUG)
+            logger.log(f'Executed query: [{sql}]')
+            logger.debug(f'Episode list: {ep_nums}')
 
             all_wanted = True
             any_wanted = False
@@ -921,8 +917,8 @@ def search_providers(
             # if we need every ep in the season and there's nothing better,
             # then download this and be done with it (unless single episodes are preferred)
             if all_wanted and highest_quality_overall == best_season_result.quality:
-                logger.log(u'Every episode in this season is needed, downloading the whole %s %s' %
-                           (best_season_result.provider.providerType, best_season_result.name))
+                logger.log(f'Every episode in this season is needed, downloading the whole'
+                           f' {best_season_result.provider.providerType} {best_season_result.name}')
                 ep_obj_list = []
                 for ep_num in ep_nums:
                     ep_obj_list.append(show_obj.get_episode(ep_num[0], ep_num[1]))
@@ -931,11 +927,11 @@ def search_providers(
                 return [best_season_result]
 
             elif not any_wanted:
-                logger.log(u'No episodes from this season are wanted at this quality, ignoring the result of ' +
-                           best_season_result.name, logger.DEBUG)
+                logger.debug(f'No episodes from this season are wanted at this quality,'
+                             f' ignoring the result of {best_season_result.name}')
             else:
                 if GenericProvider.NZB == best_season_result.provider.providerType:
-                    logger.log(u'Breaking apart the NZB and adding the individual ones to our results', logger.DEBUG)
+                    logger.debug('Breaking apart the NZB and adding the individual ones to our results')
 
                     # if not, break it apart and add them as the lowest priority results
                     individual_results = nzbSplitter.split_result(best_season_result)
@@ -959,8 +955,8 @@ def search_providers(
                 else:
 
                     # Season result from Torrent Provider must be a full-season torrent, creating multi-ep result for it
-                    logger.log(u'Adding multi episode result for full season torrent. In your torrent client, set ' +
-                               u'the episodes that you do not want to "don\'t download"')
+                    logger.log('Adding multi episode result for full season torrent. In your torrent client,'
+                               ' set the episodes that you do not want to "don\'t download"')
                     ep_obj_list = []
                     for ep_num in ep_nums:
                         ep_obj_list.append(show_obj.get_episode(ep_num[0], ep_num[1]))
@@ -982,11 +978,11 @@ def search_providers(
         if MULTI_EP_RESULT in found_results[provider_id]:
             for multi_result in found_results[provider_id][MULTI_EP_RESULT]:
 
-                logger.log(u'Checking usefulness of multi episode result [%s]' % multi_result.name, logger.DEBUG)
+                logger.debug(f'Checking usefulness of multi episode result [{multi_result.name}]')
 
                 if sickgear.USE_FAILED_DOWNLOADS and failed_history.has_failed(multi_result.name, multi_result.size,
                                                                                multi_result.provider.name):
-                    logger.log(u'Rejecting previously failed multi episode result [%s]' % multi_result.name)
+                    logger.log(f'Rejecting previously failed multi episode result [{multi_result.name}]')
                     continue
 
                 # see how many of the eps that this result covers aren't covered by single results
@@ -1000,12 +996,12 @@ def search_providers(
                     else:
                         not_needed_eps.append(ep_num)
 
-                logger.log(u'Single episode check result is... needed episodes: %s, not needed episodes: %s' %
-                           (needed_eps, not_needed_eps), logger.DEBUG)
+                logger.debug(f'Single episode check result is... needed episodes: {needed_eps},'
+                             f' not needed episodes: {not_needed_eps}')
 
                 if not not_needed_eps:
-                    logger.log(u'All of these episodes were covered by single episode results, ' +
-                               'ignoring this multi episode result', logger.DEBUG)
+                    logger.debug('All of these episodes were covered by single episode results,'
+                                 ' ignoring this multi episode result')
                     continue
 
                 # check if these eps are already covered by another multi-result
@@ -1018,13 +1014,13 @@ def search_providers(
                     else:
                         multi_needed_eps.append(ep_num)
 
-                logger.log(u'Multi episode check result is... multi needed episodes: ' +
-                           '%s, multi not needed episodes: %s' % (multi_needed_eps, multi_not_needed_eps), logger.DEBUG)
+                logger.debug(f'Multi episode check result is...'
+                             f' multi needed episodes: {multi_needed_eps},'
+                             f' multi not needed episodes: {multi_not_needed_eps}')
 
                 if not multi_needed_eps:
-                    logger.log(u'All of these episodes were covered by another multi episode nzb, ' +
-                               'ignoring this multi episode result',
-                               logger.DEBUG)
+                    logger.debug('All of these episodes were covered by another multi episode nzb,'
+                                 ' ignoring this multi episode result')
                     continue
 
                 # if we're keeping this multi-result then remember it
@@ -1035,8 +1031,8 @@ def search_providers(
                 for ep_obj in multi_result.ep_obj_list:
                     ep_num = ep_obj.episode
                     if ep_num in found_results[provider_id]:
-                        logger.log(u'A needed multi episode result overlaps with a single episode result for episode ' +
-                                   '#%s, removing the single episode results from the list' % ep_num, logger.DEBUG)
+                        logger.debug(f'A needed multi episode result overlaps with a single episode result'
+                                     f' for episode #{ep_num}, removing the single episode results from the list')
                         del found_results[provider_id][ep_num]
 
         # of all the single ep results narrow it down to the best one for each episode
@@ -1119,8 +1115,8 @@ def search_providers(
     if not len(provider_list):
         logger.warning('No NZB/Torrent providers in Media Providers/Options are allowed for active searching')
     elif not search_done:
-        logger.log('Failed active search of %s enabled provider%s. More info in debug log.' % (
-            len(provider_list), helpers.maybe_plural(provider_list)), logger.ERROR)
+        logger.error(f'Failed active search of {len(provider_list)}'
+                     f' enabled provider{helpers.maybe_plural(provider_list)}. More info in debug log.')
     elif not any(final_results):
         logger.log('No suitable candidates')
 

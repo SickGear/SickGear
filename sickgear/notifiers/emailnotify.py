@@ -44,8 +44,8 @@ class EmailNotifier(Notifier):
 
         use_tls = 1 == sickgear.helpers.try_int(use_tls)
         login = any(user) and any(pwd)
-        self._log_debug(u'Sendmail HOST: %s; PORT: %s; LOGIN: %s, TLS: %s, USER: %s, FROM: %s, TO: %s' % (
-            host, port, login, use_tls, user, smtp_from, to))
+        self._log_debug(f'Sendmail HOST: {host}; PORT: {port};'
+                        f' LOGIN: {login}, TLS: {use_tls}, USER: {user}, FROM: {smtp_from}, TO: {to}')
 
         try:
             srv = smtplib.SMTP(host, int(port))
@@ -54,16 +54,16 @@ class EmailNotifier(Notifier):
 
             if use_tls or login:
                 srv.ehlo()
-                self._log_debug(u'Sent initial EHLO command')
+                self._log_debug('Sent initial EHLO command')
 
                 if use_tls:
                     srv.starttls()
                     srv.ehlo()
-                    self._log_debug(u'Sent STARTTLS and EHLO command')
+                    self._log_debug('Sent STARTTLS and EHLO command')
 
                 if login:
                     srv.login(user, pwd)
-                    self._log_debug(u'Sent LOGIN command')
+                    self._log_debug('Sent LOGIN command')
 
             srv.sendmail(smtp_from, to, msg.as_string())
             srv.quit()
@@ -101,10 +101,10 @@ class EmailNotifier(Notifier):
         show_name = body.split(' - ')[0]
         to = self._get_recipients(show_name)
         if not any(to):
-            self._log_warning(u'No email recipients to notify, skipping')
+            self._log_warning('No email recipients to notify, skipping')
             return
 
-        self._log_debug(u'Email recipients to notify: %s' % to)
+        self._log_debug(f'Email recipients to notify: {to}')
 
         try:
             msg = MIMEMultipart('alternative')
@@ -131,9 +131,9 @@ class EmailNotifier(Notifier):
         msg['Date'] = formatdate(localtime=True)
         if self._sendmail(sickgear.EMAIL_HOST, sickgear.EMAIL_PORT, sickgear.EMAIL_FROM, sickgear.EMAIL_TLS,
                           sickgear.EMAIL_USER, sickgear.EMAIL_PASSWORD, to, msg):
-            self._log_debug(u'%s notification sent to [%s] for "%s"' % (title, to, body))
+            self._log_debug(f'{title} notification sent to [{to}] for "{body}"')
         else:
-            self._log_error(u'%s notification ERROR: %s' % (title, self.last_err))
+            self._log_error(f'{title} notification ERROR: {self.last_err}')
 
     def test_notify(self, host, port, smtp_from, use_tls, user, pwd, to):
         self._testing = True

@@ -30,9 +30,9 @@ class RSSFeeds(object):
                     if data and 'error' in data.feed:
                         err_code = data.feed['error']['code']
                         err_desc = data.feed['error']['description']
-                        logger.log(u'RSS error:[%s] code:[%s]' % (err_desc, err_code), logger.DEBUG)
+                        logger.debug(f'RSS error:[{err_desc}] code:[{err_code}]')
                     else:
-                        logger.log(u'RSS error loading url: ' + url, logger.DEBUG)
+                        logger.debug(f'RSS error loading url: {url}')
 
                 except (BaseException, Exception) as e:
-                    logger.log(u'RSS error: ' + ex(e), logger.DEBUG)
+                    logger.debug(f'RSS error: {ex(e)}')

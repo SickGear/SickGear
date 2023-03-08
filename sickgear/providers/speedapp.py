@@ -46,7 +46,7 @@ class SpeedAppProvider(generic.TorrentProvider):
 
         return super(SpeedAppProvider, self)._authorised(
             logged_in=self.logged_in, parse_json=True, headers=self.auth_header(),
-            failed_msg=(lambda y=None: u'Invalid token or permissions for %s. Check settings'))
+            failed_msg=(lambda y=None: 'Invalid token or permissions for %s. Check settings'))
 
     def logged_in(self, resp=None):
 

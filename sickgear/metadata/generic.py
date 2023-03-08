@@ -150,31 +150,31 @@ class GenericMetadata(object):
     def _has_show_metadata(self, show_obj):
         # type: (sickgear.tv.TVShow) -> bool
         result = os.path.isfile(self.get_show_file_path(show_obj))
-        logger.log(u"Checking if " + self.get_show_file_path(show_obj) + " exists: " + str(result), logger.DEBUG)
+        logger.debug(f'Checking if {self.get_show_file_path(show_obj)} exists: {result}')
         return result
 
     def has_episode_metadata(self, ep_obj):
         # type: (sickgear.tv.TVEpisode) -> bool
         result = os.path.isfile(self.get_episode_file_path(ep_obj))
-        logger.log(u"Checking if " + self.get_episode_file_path(ep_obj) + " exists: " + str(result), logger.DEBUG)
+        logger.debug(f'Checking if {self.get_episode_file_path(ep_obj)} exists: {result}')
         return result
 
     def _has_fanart(self, show_obj):
         # type: (sickgear.tv.TVShow) -> bool
         result = os.path.isfile(self.get_fanart_path(show_obj))
-        logger.log(u"Checking if " + self.get_fanart_path(show_obj) + " exists: " + str(result), logger.DEBUG)
+        logger.debug(f'Checking if {self.get_fanart_path(show_obj)} exists: {result}')
         return result
 
     def _has_poster(self, show_obj):
         # type: (sickgear.tv.TVShow) -> bool
         result = os.path.isfile(self.get_poster_path(show_obj))
-        logger.log(u"Checking if " + self.get_poster_path(show_obj) + " exists: " + str(result), logger.DEBUG)
+        logger.debug(f'Checking if {self.get_poster_path(show_obj)} exists: {result}')
         return result
 
     def _has_banner(self, show_obj):
         # type: (sickgear.tv.TVShow) -> bool
         result = os.path.isfile(self.get_banner_path(show_obj))
-        logger.log(u"Checking if " + self.get_banner_path(show_obj) + " exists: " + str(result), logger.DEBUG)
+        logger.debug(f'Checking if {self.get_banner_path(show_obj)} exists: {result}')
         return result
 
     def has_episode_thumb(self, ep_obj):
@@ -182,7 +182,7 @@ class GenericMetadata(object):
         location = self.get_episode_thumb_path(ep_obj)
         result = None is not location and os.path.isfile(location)
         if location:
-            logger.log(u"Checking if " + location + " exists: " + str(result), logger.DEBUG)
+            logger.debug(f'Checking if {location} exists: {result}')
         return result
 
     def _has_season_poster(self, show_obj, season):
@@ -190,7 +190,7 @@ class GenericMetadata(object):
         location = self.get_season_poster_path(show_obj, season)
         result = None is not location and os.path.isfile(location)
         if location:
-            logger.log(u"Checking if " + location + " exists: " + str(result), logger.DEBUG)
+            logger.debug(f'Checking if {location} exists: {result}')
         return result
 
     def _has_season_banner(self, show_obj, season):
@@ -198,21 +198,19 @@ class GenericMetadata(object):
         location = self.get_season_banner_path(show_obj, season)
         result = None is not location and os.path.isfile(location)
         if location:
-            logger.log(u"Checking if " + location + " exists: " + str(result), logger.DEBUG)
+            logger.debug(f'Checking if {location} exists: {result}')
         return result
 
     def _has_season_all_poster(self, show_obj):
         # type: (sickgear.tv.TVShow) -> bool
         result = os.path.isfile(self.get_season_all_poster_path(show_obj))
-        logger.log(u"Checking if " + self.get_season_all_poster_path(show_obj) + " exists: " + str(result),
-                   logger.DEBUG)
+        logger.debug(f'Checking if {self.get_season_all_poster_path(show_obj)} exists: {result}')
         return result
 
     def _has_season_all_banner(self, show_obj):
         # type: (sickgear.tv.TVShow) -> bool
         result = os.path.isfile(self.get_season_all_banner_path(show_obj))
-        logger.log(u"Checking if " + self.get_season_all_banner_path(show_obj) + " exists: " + str(result),
-                   logger.DEBUG)
+        logger.debug(f'Checking if {self.get_season_all_banner_path(show_obj)} exists: {result}')
         return result
 
     @staticmethod
@@ -343,8 +341,7 @@ class GenericMetadata(object):
                 isinstance(getattr(fetched_show_info, 'data', None), (list, dict)) and
                 'seriesname' in getattr(fetched_show_info, 'data', [])) and \
                 not hasattr(fetched_show_info, 'seriesname'):
-            logger.log(u'Show %s not found on %s ' %
-                       (show_obj.name, sickgear.TVInfoAPI(show_obj.tvid).name), logger.WARNING)
+            logger.warning(f'Show {show_obj.name} not found on {sickgear.TVInfoAPI(show_obj.tvid).name} ')
             return False
         return True
 
@@ -364,8 +361,8 @@ class GenericMetadata(object):
             try:
                 result = self.write_show_file(show_obj)
             except BaseTVinfoError as e:
-                logger.log('Unable to find useful show metadata for %s on %s: %s' % (
-                    self.name, sickgear.TVInfoAPI(show_obj.tvid).name, ex(e)), logger.WARNING)
+                logger.warning(f'Unable to find useful show metadata for {self.name}'
+                               f' on {sickgear.TVInfoAPI(show_obj.tvid).name}: {ex(e)}')
 
         return result
 
@@ -373,21 +370,20 @@ class GenericMetadata(object):
         # type: (sickgear.tv.TVEpisode, bool) -> bool
         result = False
         if self.episode_metadata and ep_obj and (not self.has_episode_metadata(ep_obj) or force):
-            logger.log('Metadata provider %s creating episode metadata for %s' % (self.name, ep_obj.pretty_name()),
-                       logger.DEBUG)
+            logger.debug('Metadata provider %s creating episode metadata for %s' % (self.name, ep_obj.pretty_name()))
             try:
                 result = self.write_ep_file(ep_obj)
             except BaseTVinfoError as e:
-                logger.log('Unable to find useful episode metadata for %s on %s: %s' % (
-                    self.name, sickgear.TVInfoAPI(ep_obj.show_obj.tvid).name, ex(e)), logger.WARNING)
+                logger.warning(f'Unable to find useful episode metadata for {self.name}'
+                               f' on {sickgear.TVInfoAPI(ep_obj.show_obj.tvid).name}: {ex(e)}')
 
         return result
 
     def update_show_indexer_metadata(self, show_obj):
         # type: (sickgear.tv.TVShow) -> bool
         if self.show_metadata and show_obj and self._has_show_metadata(show_obj):
-            logger.debug(u'Metadata provider %s updating show indexer metadata file for %s' % (
-                self.name, show_obj.unique_name))
+            logger.debug(f'Metadata provider {self.name}'
+                         f' updating show indexer metadata file for {show_obj.unique_name}')
 
             nfo_file_path = self.get_show_file_path(show_obj)
             with io.open(nfo_file_path, 'r', encoding='utf8') as xmlFileObj:
@@ -419,29 +415,28 @@ class GenericMetadata(object):
     def create_fanart(self, show_obj):
         # type: (sickgear.tv.TVShow) -> bool
         if self.fanart and show_obj and not self._has_fanart(show_obj):
-            logger.debug(u'Metadata provider %s creating fanart for %s' % (self.name, show_obj.unique_name))
+            logger.debug(f'Metadata provider {self.name} creating fanart for {show_obj.unique_name}')
             return self.save_fanart(show_obj)
         return False
 
     def create_poster(self, show_obj):
         # type: (sickgear.tv.TVShow) -> bool
         if self.poster and show_obj and not self._has_poster(show_obj):
-            logger.debug(u'Metadata provider %s creating poster for %s' % (self.name, show_obj.unique_name))
+            logger.debug(f'Metadata provider {self.name} creating poster for {show_obj.unique_name}')
             return self.save_poster(show_obj)
         return False
 
     def create_banner(self, show_obj):
         # type: (sickgear.tv.TVShow) -> bool
         if self.banner and show_obj and not self._has_banner(show_obj):
-            logger.debug(u'Metadata provider %s creating banner for %s' % (self.name, show_obj.unique_name))
+            logger.debug(f'Metadata provider {self.name} creating banner for {show_obj.unique_name}')
             return self.save_banner(show_obj)
         return False
 
     def create_episode_thumb(self, ep_obj):
         # type: (sickgear.tv.TVEpisode) -> bool
         if self.episode_thumbnails and ep_obj and not self.has_episode_thumb(ep_obj):
-            logger.log(u"Metadata provider " + self.name + " creating episode thumbnail for " + ep_obj.pretty_name(),
-                       logger.DEBUG)
+            logger.debug(f'Metadata provider {self.name} creating episode thumbnail for {ep_obj.pretty_name()}')
             return self.save_thumbnail(ep_obj)
         return False
 
@@ -451,8 +446,7 @@ class GenericMetadata(object):
             result = []
             for season, _ in iteritems(show_obj.sxe_ep_obj):
                 if not self._has_season_poster(show_obj, season):
-                    logger.debug(u'Metadata provider %s creating season posters for %s' % (
-                        self.name, show_obj.unique_name))
+                    logger.debug(f'Metadata provider {self.name} creating season posters for {show_obj.unique_name}')
                     result = result + [self.save_season_posters(show_obj, season)]
             return all(result)
         return False
@@ -463,8 +457,7 @@ class GenericMetadata(object):
             result = []
             for season, _ in iteritems(show_obj.sxe_ep_obj):
                 if not self._has_season_banner(show_obj, season):
-                    logger.debug(u'Metadata provider %s creating season banners for %s' % (
-                        self.name, show_obj.unique_name))
+                    logger.debug(f'Metadata provider {self.name} creating season banners for {show_obj.unique_name}')
                     result = result + [self.save_season_banners(show_obj, season)]
             return all(result)
         return False
@@ -472,16 +465,14 @@ class GenericMetadata(object):
     def create_season_all_poster(self, show_obj):
         # type: (sickgear.tv.TVShow) -> bool
         if self.season_all_poster and show_obj and not self._has_season_all_poster(show_obj):
-            logger.debug(u'Metadata provider %s creating season all posters for %s' % (
-                        self.name, show_obj.unique_name))
+            logger.debug(f'Metadata provider {self.name} creating season all posters for {show_obj.unique_name}')
             return self.save_season_all_poster(show_obj)
         return False
 
     def create_season_all_banner(self, show_obj):
         # type: (sickgear.tv.TVShow) -> bool
         if self.season_all_banner and show_obj and not self._has_season_all_banner(show_obj):
-            logger.debug(u'Metadata provider %s creating season all banner for %s' % (
-                        self.name, show_obj.unique_name))
+            logger.debug(f'Metadata provider {self.name} creating season all banner for {show_obj.unique_name}')
             return self.save_season_all_banner(show_obj)
         return False
 
@@ -557,7 +548,7 @@ class GenericMetadata(object):
 
         nfo_file_path = self.get_show_file_path(show_obj)
 
-        logger.log(u'Writing show metadata file: %s' % nfo_file_path, logger.DEBUG)
+        logger.debug(f'Writing show metadata file: {nfo_file_path}')
 
         return sg_helpers.write_file(nfo_file_path, data, xmltree=True, utf8=True)
 
@@ -586,7 +577,7 @@ class GenericMetadata(object):
 
         nfo_file_path = self.get_episode_file_path(ep_obj)
 
-        logger.log(u'Writing episode metadata file: %s' % nfo_file_path, logger.DEBUG)
+        logger.debug(f'Writing episode metadata file: {nfo_file_path}')
 
         return sg_helpers.write_file(nfo_file_path, data, xmltree=True, utf8=True)
 
@@ -603,14 +594,14 @@ class GenericMetadata(object):
         file_path = self.get_episode_thumb_path(ep_obj)
 
         if not file_path:
-            logger.log(u"Unable to find a file path to use for this thumbnail, not generating it", logger.DEBUG)
+            logger.debug('Unable to find a file path to use for this thumbnail, not generating it')
             return False
 
         thumb_url = self._get_episode_thumb_url(ep_obj)
 
         # if we can't find one then give up
         if not thumb_url:
-            logger.log(u"No thumb is available for this episode, not creating a thumb", logger.DEBUG)
+            logger.debug('No thumb is available for this episode, not creating a thumb')
             return False
 
         thumb_data = metadata_helpers.get_show_image(thumb_url, show_name=ep_obj.show_obj.name)
@@ -641,7 +632,7 @@ class GenericMetadata(object):
                                                 img_cache_type=sickgear.image_cache.ImageCache.FANART)
 
         if not fanart_data:
-            logger.log(u"No fanart image was retrieved, unable to write fanart", logger.DEBUG)
+            logger.debug('No fanart image was retrieved, unable to write fanart')
             return False
 
         return self._write_image(fanart_data, fanart_path)
@@ -662,7 +653,7 @@ class GenericMetadata(object):
                                                 img_cache_type=sickgear.image_cache.ImageCache.POSTER)
 
         if not poster_data:
-            logger.log(u"No show poster image was retrieved, unable to write poster", logger.DEBUG)
+            logger.debug('No show poster image was retrieved, unable to write poster')
             return False
 
         return self._write_image(poster_data, poster_path)
@@ -683,7 +674,7 @@ class GenericMetadata(object):
                                                 img_cache_type=sickgear.image_cache.ImageCache.BANNER)
 
         if not banner_data:
-            logger.log(u"No show banner image was retrieved, unable to write banner", logger.DEBUG)
+            logger.debug('No show banner image was retrieved, unable to write banner')
             return False
 
         return self._write_image(banner_data, banner_path)
@@ -717,14 +708,13 @@ class GenericMetadata(object):
             season_poster_file_path = self.get_season_poster_path(show_obj, cur_season)
 
             if not season_poster_file_path:
-                logger.log(u'Path for season ' + str(cur_season) + ' came back blank, skipping this season',
-                           logger.DEBUG)
+                logger.debug(f'Path for season {cur_season} came back blank, skipping this season')
                 continue
 
             season_data = metadata_helpers.get_show_image(season_url, show_name=show_obj.name)
 
             if not season_data:
-                logger.log(u'No season poster data available, skipping this season', logger.DEBUG)
+                logger.debug('No season poster data available, skipping this season')
                 continue
 
             result = result + [self._write_image(season_data, season_poster_file_path)]
@@ -762,14 +752,13 @@ class GenericMetadata(object):
             season_banner_file_path = self.get_season_banner_path(show_obj, cur_season)
 
             if not season_banner_file_path:
-                logger.log(u'Path for season ' + str(cur_season) + ' came back blank, skipping this season',
-                           logger.DEBUG)
+                logger.debug(f'Path for season {cur_season} came back blank, skipping this season')
                 continue
 
             season_data = metadata_helpers.get_show_image(season_url, show_name=show_obj.name)
 
             if not season_data:
-                logger.log(u'No season banner data available, skipping this season', logger.DEBUG)
+                logger.debug('No season banner data available, skipping this season')
                 continue
 
             result = result + [self._write_image(season_data, season_banner_file_path)]
@@ -787,7 +776,7 @@ class GenericMetadata(object):
                                                 img_cache_type=sickgear.image_cache.ImageCache.POSTER)
 
         if not poster_data:
-            logger.log(u"No show poster image was retrieved, unable to write season all poster", logger.DEBUG)
+            logger.debug('No show poster image was retrieved, unable to write season all poster')
             return False
 
         return self._write_image(poster_data, poster_path)
@@ -801,7 +790,7 @@ class GenericMetadata(object):
                                                 img_cache_type=sickgear.image_cache.ImageCache.BANNER)
 
         if not banner_data:
-            logger.log(u"No show banner image was retrieved, unable to write season all banner", logger.DEBUG)
+            logger.debug('No show banner image was retrieved, unable to write season all banner')
             return False
 
         return self._write_image(banner_data, banner_path)
@@ -819,18 +808,18 @@ class GenericMetadata(object):
 
         # don't bother overwriting it
         if not force and os.path.isfile(image_path):
-            logger.log(u"Image already exists, not downloading", logger.DEBUG)
+            logger.debug('Image already exists, not downloading')
             return False
 
         if not image_data:
-            logger.log(u"Unable to retrieve image, skipping", logger.WARNING)
+            logger.warning('Unable to retrieve image, skipping')
             return False
 
         image_dir = os.path.dirname(image_path)
 
         try:
             if not os.path.isdir(image_dir):
-                logger.log(u"Metadata dir didn't exist, creating it at " + image_dir, logger.DEBUG)
+                logger.debug(f'Metadata dir didn"t exist, creating it at {image_dir}')
                 os.makedirs(image_dir)
                 sg_helpers.chmod_as_parent(image_dir)
 
@@ -839,9 +828,7 @@ class GenericMetadata(object):
             out_file.close()
             sg_helpers.chmod_as_parent(image_path)
         except IOError as e:
-            logger.log(
-                u"Unable to write image to " + image_path + " - are you sure the show folder is writable? " + ex(e),
-                logger.ERROR)
+            logger.error(f'Unable to write image to {image_path} - are you sure the show folder is writable? {ex(e)}')
             return False
 
         return True
@@ -869,8 +856,8 @@ class GenericMetadata(object):
                 return t.get_show((show_obj.ids[tv_id]['id'], show_obj.prodid)[tv_src == show_obj.tvid],
                                   load_episodes=False, banners=True, posters=True, fanart=True, language=show_obj.lang)
             except (BaseTVinfoError, IOError) as e:
-                logger.log(u"Unable to look up show on " + sickgear.TVInfoAPI(
-                    tv_id).name + ", not downloading images: " + ex(e), logger.WARNING)
+                logger.warning(f'Unable to look up show on {sickgear.TVInfoAPI(tv_id).name},'
+                               f' not downloading images: {ex(e)}')
 
         # todo: when tmdb is added as tv source remove the hardcoded TVINFO_TMDB
         for tv_src in list(OrderedDict.fromkeys([show_obj.tvid] + list(sickgear.TVInfoAPI().search_sources) +
@@ -1042,8 +1029,8 @@ class GenericMetadata(object):
             image_type = 'fanart'
 
         if image_type not in ('poster', 'banner', 'fanart', 'poster_thumb', 'banner_thumb'):
-            logger.log(u"Invalid image type " + str(image_type) + ", couldn't find it in the " + sickgear.TVInfoAPI(
-                show_obj.tvid).name + " object", logger.ERROR)
+            logger.error(f'Invalid image type {image_type}, couldn\'t find it in the'
+                         f' {sickgear.TVInfoAPI(show_obj.tvid).name} object')
             return
 
         image_urls = self._retrieve_image_urls(show_obj, image_type, show_infos)
@@ -1094,8 +1081,8 @@ class GenericMetadata(object):
             t = sickgear.TVInfoAPI(show_obj.tvid).setup(**tvinfo_config)
             tvinfo_obj_show = t[show_obj.prodid]
         except (BaseTVinfoError, IOError) as e:
-            logger.log(u'Unable to look up show on ' + sickgear.TVInfoAPI(
-                show_obj.tvid).name + ', not downloading images: ' + ex(e), logger.WARNING)
+            logger.warning(f'Unable to look up show on {sickgear.TVInfoAPI(show_obj.tvid).name},'
+                           f' not downloading images: {ex(e)}')
             return result
 
         if not self._valid_show(tvinfo_obj_show, show_obj):
@@ -1124,10 +1111,10 @@ class GenericMetadata(object):
         metadata_path = os.path.join(folder, self._show_metadata_filename)
 
         if not os.path.isdir(folder) or not os.path.isfile(metadata_path):
-            logger.log(u"Can't load the metadata file from " + repr(metadata_path) + ", it doesn't exist", logger.DEBUG)
+            logger.debug(f'Can\'t load the metadata file from {repr(metadata_path)}, it doesn\'t exist')
             return empty_return
 
-        logger.log(u"Loading show info from metadata file in " + folder, logger.DEBUG)
+        logger.debug(f'Loading show info from metadata file in {folder}')
 
         try:
             with io.open(metadata_path, 'r', encoding='utf8') as xmlFileObj:
@@ -1138,11 +1125,9 @@ class GenericMetadata(object):
                                                  show_xml.findtext('tvdbid'),
                                                  show_xml.findtext('id'),
                                                  show_xml.findtext('indexer'))):
-                logger.log(u"Invalid info in tvshow.nfo (missing name or id):"
-                           + str(show_xml.findtext('title')) + ' '
-                           + str(show_xml.findtext('indexer')) + ' '
-                           + str(show_xml.findtext('tvdbid')) + ' '
-                           + str(show_xml.findtext('id')))
+                logger.log(f'Invalid info in tvshow.nfo (missing name or id):'
+                           f'{show_xml.findtext("title")} {show_xml.findtext("indexer")} '
+                           f'{show_xml.findtext("tvdbid")} {show_xml.findtext("id")}')
                 return empty_return
 
             name = show_xml.findtext('title')
@@ -1178,17 +1163,15 @@ class GenericMetadata(object):
                 except (BaseException, Exception):
                     pass
             else:
-                logger.log(u"Empty <id> or <tvdbid> field in NFO, unable to find a ID", logger.WARNING)
+                logger.warning('Empty <id> or <tvdbid> field in NFO, unable to find a ID')
                 return empty_return
 
             if None is prodid:
-                logger.log(u"Invalid Show ID (%s), not using metadata file" % prodid, logger.WARNING)
+                logger.warning(f'Invalid Show ID (%s), not using metadata file {prodid}')
                 return empty_return
 
         except (BaseException, Exception) as e:
-            logger.log(
-                u"There was an error parsing your existing metadata file: '" + metadata_path + "' error: " + ex(e),
-                logger.WARNING)
+            logger.warning(f'There was an error parsing your existing metadata file: "{metadata_path}" error: {ex(e)}')
             return empty_return
 
         return tvid, prodid, name
@@ -1202,7 +1185,7 @@ class GenericMetadata(object):
         except (BaseException, Exception):
             pass
 
-        logger.log(u'Could not find any %s images on Fanart.tv for %s' % (image_type, show_obj.name), logger.DEBUG)
+        logger.debug(f'Could not find any {image_type} images on Fanart.tv for {show_obj.name}')
 
     @staticmethod
     def _fanart_urls(tvdb_id, image_type='banner', lang='en', thumb=False):

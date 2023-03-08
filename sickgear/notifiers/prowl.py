@@ -52,7 +52,7 @@ class ProwlNotifier(Notifier):
 
             if 200 != response.status:
                 if 401 == response.status:
-                    result = u'Authentication, %s (bad API key?)' % response.reason
+                    result = f'Authentication, {response.reason} (bad API key?)'
                 else:
                     result = 'Http response code "%s"' % response.status
 

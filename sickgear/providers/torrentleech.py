@@ -44,7 +44,7 @@ class TorrentLeechProvider(generic.TorrentProvider):
         return super(TorrentLeechProvider, self)._authorised(
             logged_in=(lambda y='': all(
                 ['TorrentLeech' in y, 'type="password"' not in y[0:4096], self.has_all_cookies(pre='tl')])),
-            failed_msg=(lambda y=None: u'Invalid cookie details for %s. Check settings'))
+            failed_msg=(lambda y=None: 'Invalid cookie details for %s. Check settings'))
 
     @staticmethod
     def _has_signature(data=None):

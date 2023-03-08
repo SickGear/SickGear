@@ -345,7 +345,7 @@ def list_media_files(path):
     result = []
     if path:
         if [direntry for direntry in scantree(path, include=[r'\.sickgearignore'], filter_kind=False, recurse=False)]:
-            logger.log('Skipping folder "%s" because it contains ".sickgearignore"' % path, logger.DEBUG)
+            logger.debug('Skipping folder "%s" because it contains ".sickgearignore"' % path)
         else:
             result = [direntry.path for direntry in scantree(path, exclude=['Extras'], filter_kind=False)
                       if has_media_ext(direntry.name)]
@@ -405,8 +405,7 @@ def hardlink_file(src_file, dest_file):
         link(src_file, dest_file)
         fix_set_group_id(dest_file)
     except (BaseException, Exception) as e:
-        logger.log(u"Failed to create hardlink of %s at %s: %s. Copying instead." % (src_file, dest_file, ex(e)),
-                   logger.ERROR)
+        logger.error(f'Failed to create hardlink of {src_file} at {dest_file}: {ex(e)}. Copying instead.')
         copy_file(src_file, dest_file)
 
 
@@ -441,7 +440,7 @@ def move_and_symlink_file(src_file, dest_file):
         fix_set_group_id(dest_file)
         symlink(dest_file, src_file)
     except (BaseException, Exception):
-        logger.log(u"Failed to create symlink of %s at %s. Copying instead" % (src_file, dest_file), logger.ERROR)
+        logger.error(f'Failed to create symlink of {src_file} at {dest_file}. Copying instead')
         copy_file(src_file, dest_file)
 
 
@@ -488,10 +487,10 @@ def rename_ep_file(cur_path, new_path, old_path_length=0):
 
     # move the file
     try:
-        logger.log(u'Renaming file from %s to %s' % (cur_path, new_path))
+        logger.log(f'Renaming file from {cur_path} to {new_path}')
         shutil.move(cur_path, new_path)
     except (OSError, IOError) as e:
-        logger.log(u"Failed renaming " + cur_path + " to " + new_path + ": " + ex(e), logger.ERROR)
+        logger.error(f'Failed renaming {cur_path} to {new_path}: {ex(e)}')
         return False
 
     # clean up any old folders that are empty
@@ -513,7 +512,7 @@ def delete_empty_folders(check_empty_dir, keep_dir=None):
     # treat check_empty_dir as empty when it only contains these items
     ignore_items = []
 
-    logger.log(u"Trying to clean any empty folders under " + check_empty_dir)
+    logger.log(f'Trying to clean any empty folders under {check_empty_dir}')
 
     # as long as the folder exists and doesn't contain any files, delete it
     while os.path.isdir(check_empty_dir) and check_empty_dir != keep_dir:
@@ -523,13 +522,13 @@ def delete_empty_folders(check_empty_dir, keep_dir=None):
                 [check_file in ignore_items for check_file in check_files])):
             # directory is empty or contains only ignore_items
             try:
-                logger.log(u"Deleting empty folder: " + check_empty_dir)
+                logger.log(f"Deleting empty folder: {check_empty_dir}")
                 # need shutil.rmtree when ignore_items is really implemented
                 os.rmdir(check_empty_dir)
                 # do a Synology library update
                 notifiers.NotifierFactory().get('SYNOINDEX').deleteFolder(check_empty_dir)
             except OSError as e:
-                logger.log(u"Unable to delete " + check_empty_dir + ": " + repr(e) + " / " + ex(e), logger.WARNING)
+                logger.warning(f'Unable to delete {check_empty_dir}: {repr(e)} / {ex(e)}')
                 break
             check_empty_dir = os.path.dirname(check_empty_dir)
         else:
@@ -559,9 +558,7 @@ def get_absolute_number_from_season_and_episode(show_obj, season, episode):
 
         if 1 == len(sql_result):
             absolute_number = int(sql_result[0]["absolute_number"])
-            logger.log(
-                "Found absolute_number:" + str(absolute_number) + " by " + str(season) + "x" + str(episode),
-                logger.DEBUG)
+            logger.debug(f'Found absolute_number:{absolute_number} by {season}x{episode}')
         else:
             logger.debug('No entries for absolute number in show: %s found using %sx%s' %
                          (show_obj.unique_name, str(season), str(episode)))
@@ -600,7 +597,7 @@ def sanitize_scene_name(name):
     :rtype: AnyStr
     """
     if name:
-        bad_chars = u',:()£\'!?\u2019'
+        bad_chars = ',:()£\'!?\u2019'
 
         # strip out any bad chars
         name = re.sub(r'[%s]' % bad_chars, '', name, flags=re.U)
@@ -654,7 +651,7 @@ def parse_xml(data, del_xmlns=False):
     try:
         parsed_xml = etree.fromstring(data)
     except (BaseException, Exception) as e:
-        logger.log(u"Error trying to parse xml data. Error: " + ex(e), logger.DEBUG)
+        logger.debug(f"Error trying to parse xml data. Error: {ex(e)}")
         parsed_xml = None
 
     return parsed_xml
@@ -686,28 +683,28 @@ def backup_versioned_file(old_file, version):
                 except (BaseException, Exception):
                     if os.path.isfile(new_file):
                         continue
-                    logger.log('could not rename old backup db file', logger.WARNING)
+                    logger.warning('could not rename old backup db file')
         if not changed_old_db:
             raise Exception('can\'t create a backup of db')
 
     while not os.path.isfile(new_file):
         if not os.path.isfile(old_file) or 0 == get_size(old_file):
-            logger.log(u'No need to create backup', logger.DEBUG)
+            logger.debug('No need to create backup')
             break
 
         try:
-            logger.log(u'Trying to back up %s to %s' % (old_file, new_file), logger.DEBUG)
+            logger.debug(f'Trying to back up {old_file} to {new_file}')
             shutil.copy(old_file, new_file)
-            logger.log(u'Backup done', logger.DEBUG)
+            logger.debug('Backup done')
             break
         except (BaseException, Exception) as e:
-            logger.log(u'Error while trying to back up %s to %s : %s' % (old_file, new_file, ex(e)), logger.WARNING)
+            logger.warning(f'Error while trying to back up {old_file} to {new_file} : {ex(e)}')
             num_tries += 1
             time.sleep(3)
-            logger.log(u'Trying again.', logger.DEBUG)
+            logger.debug('Trying again.')
 
         if 3 <= num_tries:
-            logger.log(u'Unable to back up %s to %s please do it manually.' % (old_file, new_file), logger.ERROR)
+            logger.error(f'Unable to back up {old_file} to {new_file} please do it manually.')
             return False
 
     return True
@@ -729,39 +726,34 @@ def restore_versioned_file(backup_file, version):
     restore_file = new_file + '.' + 'v' + str(version)
 
     if not os.path.isfile(new_file):
-        logger.log(u"Not restoring, " + new_file + " doesn't exist", logger.DEBUG)
+        logger.debug(f'Not restoring, {new_file} doesn\'t exist')
         return False
 
     try:
-        logger.log(
-            u"Trying to backup " + new_file + " to " + new_file + "." + "r" + str(version) + " before restoring backup",
-            logger.DEBUG)
+        logger.debug(f'Trying to backup {new_file} to {new_file}.r{version} before restoring backup')
         shutil.move(new_file, new_file + '.' + 'r' + str(version))
     except (BaseException, Exception) as e:
-        logger.log(
-            u"Error while trying to backup DB file " + restore_file + " before proceeding with restore: " + ex(e),
-            logger.WARNING)
+        logger.warning(f'Error while trying to backup DB file {restore_file} before proceeding with restore: {ex(e)}')
         return False
 
     while not os.path.isfile(new_file):
         if not os.path.isfile(restore_file):
-            logger.log(u"Not restoring, " + restore_file + " doesn't exist", logger.DEBUG)
+            logger.debug(f'Not restoring, {restore_file} doesn\'t exist')
             break
 
         try:
-            logger.log(u"Trying to restore " + restore_file + " to " + new_file, logger.DEBUG)
+            logger.debug(f'Trying to restore {restore_file} to {new_file}')
             shutil.copy(restore_file, new_file)
-            logger.log(u"Restore done", logger.DEBUG)
+            logger.debug('Restore done')
             break
         except (BaseException, Exception) as e:
-            logger.log(u"Error while trying to restore " + restore_file + ": " + ex(e), logger.WARNING)
+            logger.warning(f'Error while trying to restore {restore_file}: {ex(e)}')
             num_tries += 1
             time.sleep(1)
-            logger.log(u"Trying again.", logger.DEBUG)
+            logger.debug('Trying again.')
 
         if 10 <= num_tries:
-            logger.log(u"Unable to restore " + restore_file + " to " + new_file + " please do it manually.",
-                       logger.ERROR)
+            logger.error(f'Unable to restore {restore_file} to {new_file} please do it manually.')
             return False
 
     return True
@@ -963,7 +955,7 @@ def get_show(name, try_scene_exceptions=False):
             if tvid and prodid:
                 show_obj = find_show_by_id({tvid: prodid})
     except (BaseException, Exception) as e:
-        logger.log(u'Error when attempting to find show: ' + name + ' in SickGear: ' + ex(e), logger.DEBUG)
+        logger.debug(f'Error when attempting to find show: {name} in SickGear: {ex(e)}')
 
     return show_obj
 
@@ -1051,8 +1043,9 @@ def clear_cache(force=False):
             except OSError:
                 dirty = True
 
-    logger.log(u'%s from cache folder %s' % ((('Found items not removed', 'Found items removed')[not dirty],
-                                              'No items found to remove')[None is dirty], sickgear.CACHE_DIR))
+    logger.log(
+        f'{(("Found items not removed", "Found items removed")[not dirty], "No items found to remove")[None is dirty]}'
+        f' from cache folder {sickgear.CACHE_DIR}')
 
 
 def human(size):
@@ -1298,7 +1291,7 @@ def make_search_segment_html_string(segment, max_eps=5):
         segment = [segment]
     if segment and len(segment) > max_eps:
         seasons = [x for x in set([x.season for x in segment])]
-        seg_str = u'Season%s: ' % maybe_plural(len(seasons))
+        seg_str = f'Season{maybe_plural(len(seasons))}: '
         divider = ''
         for x in seasons:
             eps = [str(s.episode) for s in segment if x == s.season]
@@ -1308,7 +1301,7 @@ def make_search_segment_html_string(segment, max_eps=5):
             divider = ', '
     elif segment:
         episode_numbers = ['S%sE%s' % (str(x.season).zfill(2), str(x.episode).zfill(2)) for x in segment]
-        seg_str = u'Episode%s: %s' % (maybe_plural(len(episode_numbers)), ', '.join(episode_numbers))
+        seg_str = f'Episode{maybe_plural(len(episode_numbers))}: {", ".join(episode_numbers)}'
     return seg_str
 
 
@@ -1394,7 +1387,7 @@ def should_delete_episode(status):
     s = Quality.split_composite_status(status)[0]
     if s not in SNATCHED_ANY + [DOWNLOADED, ARCHIVED, IGNORED]:
         return True
-    logger.log('not safe to delete episode from db because of status: %s' % statusStrings[s], logger.DEBUG)
+    logger.debug('not safe to delete episode from db because of status: %s' % statusStrings[s])
     return False
 
 
@@ -1573,7 +1566,7 @@ def count_files_dirs(base_dir):
     try:
         files = scandir(base_dir)
     except OSError as e:
-        logger.log('Unable to count files %s / %s' % (repr(e), ex(e)), logger.WARNING)
+        logger.warning('Unable to count files %s / %s' % (repr(e), ex(e)))
     else:
         for e in files:
             if e.is_file():
@@ -1643,8 +1636,8 @@ def upgrade_new_naming():
                             try:
                                 move_file(entry.path, new_name)
                             except (BaseException, Exception) as e:
-                                logger.log('Unable to rename %s to %s: %s / %s'
-                                           % (entry.path, new_name, repr(e), ex(e)), logger.WARNING)
+                                logger.warning('Unable to rename %s to %s: %s / %s'
+                                               % (entry.path, new_name, repr(e), ex(e)))
                         else:
                             # clean up files without reference in db
                             try:
@@ -1664,7 +1657,7 @@ def upgrade_new_naming():
                         try:
                             entries = scandir(entry.path)
                         except OSError as e:
-                            logger.log('Unable to stat dirs %s / %s' % (repr(e), ex(e)), logger.WARNING)
+                            logger.warning('Unable to stat dirs %s / %s' % (repr(e), ex(e)))
                             continue
                         for d_entry in entries:
                             if d_entry.is_dir():
@@ -1679,14 +1672,13 @@ def upgrade_new_naming():
                                         try:
                                             move_file(d_entry.path, new_dir_name)
                                         except (BaseException, Exception) as e:
-                                            logger.log('Unable to rename %s to %s: %s / %s' %
-                                                       (d_entry.path, new_dir_name, repr(e), ex(e)), logger.WARNING)
+                                            logger.warning(f'Unable to rename {d_entry.path} to {new_dir_name}:'
+                                                           f' {repr(e)} / {ex(e)}')
                                         if os.path.isdir(new_dir_name):
                                             try:
                                                 f_n = filter(lambda fn: fn.is_file(), scandir(new_dir_name))
                                             except OSError as e:
-                                                logger.log('Unable to rename %s / %s' % (repr(e), ex(e)),
-                                                           logger.WARNING)
+                                                logger.warning('Unable to rename %s / %s' % (repr(e), ex(e)))
                                             else:
                                                 rename_args = []
                                                 # noinspection PyTypeChecker
@@ -1697,8 +1689,8 @@ def upgrade_new_naming():
                                                     try:
                                                         move_file(*args)
                                                     except (BaseException, Exception) as e:
-                                                        logger.log('Unable to rename %s to %s: %s / %s' %
-                                                                   (args[0], args[1], repr(e), ex(e)), logger.WARNING)
+                                                        logger.warning(f'Unable to rename {args[0]} to {args[1]}:'
+                                                                       f' {repr(e)} / {ex(e)}')
                                     else:
                                         try:
                                             shutil.rmtree(d_entry.path)
@@ -1754,11 +1746,11 @@ def normalise_chars(text):
     :return: Text with entities replaced
     :rtype: AnyStr
     """
-    result = text.replace(u'\u2010', u'-').replace(u'\u2011', u'-').replace(u'\u2012', u'-') \
-        .replace(u'\u2013', u'-').replace(u'\u2014', u'-').replace(u'\u2015', u'-') \
-        .replace(u'\u2018', u"'").replace(u'\u2019', u"'") \
-        .replace(u'\u201c', u'\"').replace(u'\u201d', u'\"') \
-        .replace(u'\u0020', u' ').replace(u'\u00a0', u' ')
+    result = text.replace('\u2010', '-').replace('\u2011', '-').replace('\u2012', '-') \
+        .replace('\u2013', '-').replace('\u2014', '-').replace('\u2015', '-') \
+        .replace('\u2018', "'").replace('\u2019', "'") \
+        .replace('\u201c', '\"').replace('\u201d', '\"') \
+        .replace('\u0020', ' ').replace('\u00a0', ' ')
 
     return result
 

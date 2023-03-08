@@ -47,7 +47,7 @@ class SceneHDProvider(generic.TorrentProvider):
         return super(SceneHDProvider, self)._authorised(
             logged_in=(lambda y='': ['RSS links' in y] and all(
                 [(self.session.cookies.get(c, domain='') or 'sg!no!pw') in self.digest for c in ('uid', 'pass')])),
-            failed_msg=(lambda y=None: u'Invalid cookie details for %s. Check settings'))
+            failed_msg=(lambda y=None: 'Invalid cookie details for %s. Check settings'))
 
     def _search_provider(self, search_params, **kwargs):
 
@@ -109,7 +109,7 @@ class SceneHDProvider(generic.TorrentProvider):
                 except generic.HaltParseException:
                     pass
                 except (BaseException, Exception):
-                    logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
+                    logger.error(f'Failed to parse. Traceback: {traceback.format_exc()}')
 
                 self._log_search(mode, len(items[mode]) - cnt, search_url)
 

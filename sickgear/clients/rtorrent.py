@@ -43,7 +43,7 @@ class RtorrentAPI(GenericClient):
         if self.auth:
             try:
                 if self.auth.has_local_id(data.hash):
-                    logger.log('%s: Item already exists %s' % (self.name, data.name), logger.WARNING)
+                    logger.warning('%s: Item already exists %s' % (self.name, data.name))
                     raise
 
                 custom_var = (1, sickgear.TORRENT_LABEL_VAR or '')[0 <= sickgear.TORRENT_LABEL_VAR <= 5]
@@ -62,8 +62,8 @@ class RtorrentAPI(GenericClient):
                 if torrent and sickgear.TORRENT_LABEL:
                     label = torrent.get_custom(custom_var)
                     if sickgear.TORRENT_LABEL != label:
-                        logger.log('%s: could not change custom%s label value \'%s\' to \'%s\' for %s' % (
-                            self.name, custom_var, label, sickgear.TORRENT_LABEL, torrent.name), logger.WARNING)
+                        logger.warning('%s: could not change custom%s label value \'%s\' to \'%s\' for %s' % (
+                            self.name, custom_var, label, sickgear.TORRENT_LABEL, torrent.name))
 
             except (BaseException, Exception):
                 pass

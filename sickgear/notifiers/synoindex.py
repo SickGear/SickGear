@@ -32,11 +32,11 @@ class SynoIndexNotifier(BaseNotifier):
         self._move_object(old_file, new_file)
 
     def _cmdline_run(self, synoindex_cmd):
-        self._log_debug(u'Executing command ' + str(synoindex_cmd))
-        self._log_debug(u'Absolute path to command: ' + os.path.abspath(synoindex_cmd[0]))
+        self._log_debug(f'Executing command {str(synoindex_cmd)}')
+        self._log_debug(f'Absolute path to command: {os.path.abspath(synoindex_cmd[0])}')
         try:
             output, err, exit_status = cmdline_runner(synoindex_cmd)
-            self._log_debug(u'Script result: %s' % output)
+            self._log_debug(f'Script result: {output}')
         except (BaseException, Exception) as e:
             self._log_error('Unable to run synoindex: %s' % ex(e))
 

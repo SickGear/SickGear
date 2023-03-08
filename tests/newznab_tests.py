@@ -39,12 +39,12 @@ item_parse_test_cases = [
      ('Show.Name.S02E04.720p.HDTV.x264-GROUP', 'https://test.h')),
     (('Show.Name.S02E05.720p.HDTV.x264-GROUP-JUNK[JUNK]', 'https://test.h'),
      ('Show.Name.S02E05.720p.HDTV.x264-GROUP', 'https://test.h')),
-    ((u'Show.Name.S02E06.720p.HDTV.x264-GROUP-JUNK[JUNK帝]', 'https://test.h'),
-     (u'Show.Name.S02E06.720p.HDTV.x264-GROUP', 'https://test.h')),
-    ((u'Show.Name.S02E07-EpName帝.720p.HDTV.x264-GROUP帝-JUNK[JUNK帝]', 'https://test.h'),
-     (u'Show.Name.S02E07-EpName帝.720p.HDTV.x264-GROUP帝', 'https://test.h')),
-    ((u'[grp 帝] Show Name - 11 [1024x576 h264 AAC ger-sub][123456].mp4', 'https://test.h'),
-     (u'[grp.帝].Show.Name.-.11.[1024x576.h264.AAC.ger-sub][123456]', 'https://test.h')),
+    (('Show.Name.S02E06.720p.HDTV.x264-GROUP-JUNK[JUNK帝]', 'https://test.h'),
+     ('Show.Name.S02E06.720p.HDTV.x264-GROUP', 'https://test.h')),
+    (('Show.Name.S02E07-EpName帝.720p.HDTV.x264-GROUP帝-JUNK[JUNK帝]', 'https://test.h'),
+     ('Show.Name.S02E07-EpName帝.720p.HDTV.x264-GROUP帝', 'https://test.h')),
+    (('[grp 帝] Show Name - 11 [1024x576 h264 AAC ger-sub][123456].mp4', 'https://test.h'),
+     ('[grp.帝].Show.Name.-.11.[1024x576.h264.AAC.ger-sub][123456]', 'https://test.h')),
 ]
 
 size_test_cases = [

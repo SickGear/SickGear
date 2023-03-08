@@ -94,7 +94,7 @@ class KodiNotifier(Notifier):
         Returns: True if processing succeeded with no issues else False if any issues found
         """
         if not sickgear.KODI_HOST:
-            self._log_warning(u'No Kodi hosts specified, check your settings')
+            self._log_warning('No Kodi hosts specified, check your settings')
             return False
 
         # either update each host, or only attempt to update until one successful result
@@ -108,7 +108,7 @@ class KodiNotifier(Notifier):
 
             response = self._send_json(cur_host, dict(method='Profiles.GetCurrentProfile'))
             if self.response and 401 == self.response.get('status_code'):
-                self._log_debug(u'Failed to authenticate with %s' % cur_host)
+                self._log_debug(f'Failed to authenticate with {cur_host}')
                 continue
             if not response:
                 self._maybe_log_failed_detection(cur_host)
@@ -117,7 +117,7 @@ class KodiNotifier(Notifier):
             if self._send_library_update(cur_host, show_name):
                 only_first.update(dict(profile=response.get('label') or 'Master', host=cur_host))
                 self._log('Success: profile;' +
-                          u'"%(profile)s" at%(first)s host;%(host)s updated%(show)s%(first_note)s' % only_first)
+                          '"%(profile)s" at%(first)s host;%(host)s updated%(show)s%(first_note)s' % only_first)
             else:
                 self._maybe_log_failed_detection(cur_host)
                 result += 1
@@ -148,10 +148,10 @@ class KodiNotifier(Notifier):
 
             failed_msg = 'Single show update failed,'
             if sickgear.KODI_UPDATE_FULL:
-                self._log_debug(u'%s falling back to full update' % failed_msg)
+                self._log_debug(f'{failed_msg} falling back to full update')
                 return __method_update(host)
 
-            self._log_debug(u'%s consider enabling "Perform full library update" in config/notifications' % failed_msg)
+            self._log_debug(f'{failed_msg} consider enabling "Perform full library update" in config/notifications')
         return False
 
     ##############################################################################
@@ -169,7 +169,7 @@ class KodiNotifier(Notifier):
         """
 
         if not host:
-            self._log_warning(u'No host specified, aborting update')
+            self._log_warning('No host specified, aborting update')
             return False
 
         args = {}
@@ -198,14 +198,14 @@ class KodiNotifier(Notifier):
         """
 
         if not host:
-            self._log_warning(u'No host specified, aborting update')
+            self._log_warning('No host specified, aborting update')
             return False
 
-        self._log_debug(u'Updating library via HTTP method for host: %s' % host)
+        self._log_debug(f'Updating library via HTTP method for host: {host}')
 
         # if we're doing per-show
         if show_name:
-            self._log_debug(u'Updating library via HTTP method for show %s' % show_name)
+            self._log_debug(f'Updating library via HTTP method for show {show_name}')
 
             # noinspection SqlResolve
             path_sql = 'SELECT path.strPath' \
@@ -223,29 +223,28 @@ class KodiNotifier(Notifier):
             # sql used to grab path(s)
             response = self._send(host, {'command': 'QueryVideoDatabase(%s)' % path_sql})
             if not response:
-                self._log_debug(u'Invalid response for %s on %s' % (show_name, host))
+                self._log_debug(f'Invalid response for {show_name} on {host}')
                 return False
 
             try:
                 et = etree.fromstring(quote(response, ':\\/<>'))
             except SyntaxError as e:
-                self._log_error(u'Unable to parse XML in response: %s' % ex(e))
+                self._log_error(f'Unable to parse XML in response: {ex(e)}')
                 return False
 
             paths = et.findall('.//field')
             if not paths:
-                self._log_debug(u'No valid path found for %s on %s' % (show_name, host))
+                self._log_debug(f'No valid path found for {show_name} on {host}')
                 return False
 
             for path in paths:
                 # we do not need it double-encoded, gawd this is dumb
                 un_enc_path = decode_str(unquote(path.text), sickgear.SYS_ENCODING)
-                self._log_debug(u'Updating %s on %s at %s' % (show_name, host, un_enc_path))
+                self._log_debug(f'Updating {show_name} on {host} at {un_enc_path}')
 
                 if not self._send(
                         host, dict(command='ExecBuiltIn', parameter='Kodi.updatelibrary(video, %s)' % un_enc_path)):
-                    self._log_error(u'Update of show directory failed for %s on %s at %s'
-                                    % (show_name, host, un_enc_path))
+                    self._log_error(f'Update of show directory failed for {show_name} on {host} at {un_enc_path}')
                     return False
 
                 # sleep for a few seconds just to be sure kodi has a chance to finish each directory
@@ -253,10 +252,10 @@ class KodiNotifier(Notifier):
                     time.sleep(5)
         # do a full update if requested
         else:
-            self._log_debug(u'Full library update on host: %s' % host)
+            self._log_debug(f'Full library update on host: {host}')
 
             if not self._send(host, dict(command='ExecBuiltIn', parameter='Kodi.updatelibrary(video)')):
-                self._log_error(u'Failed full library update on: %s' % host)
+                self._log_error(f'Failed full library update on: {host}')
                 return False
 
         return True
@@ -277,7 +276,7 @@ class KodiNotifier(Notifier):
 
         result = {}
         if not host:
-            self._log_warning(u'No host specified, aborting update')
+            self._log_warning('No host specified, aborting update')
             return result
 
         if isinstance(command, dict):
@@ -300,8 +299,8 @@ class KodiNotifier(Notifier):
             if not response.get('error'):
                 return 'OK' == response.get('result') and {'OK': True} or response.get('result')
 
-            self._log_error(u'API error; %s from %s in response to command: %s'
-                            % (json_dumps(response['error']), host, json_dumps(command)))
+            self._log_error(f'API error; {json_dumps(response["error"])} from {host}'
+                            f' in response to command: {json_dumps(command)}')
         return result
 
     def _update_json(self, host=None, show_name=None):
@@ -317,12 +316,12 @@ class KodiNotifier(Notifier):
         """
 
         if not host:
-            self._log_warning(u'No host specified, aborting update')
+            self._log_warning('No host specified, aborting update')
             return False
 
         # if we're doing per-show
         if show_name:
-            self._log_debug(u'JSON library update. Host: %s Show: %s' % (host, show_name))
+            self._log_debug(f'JSON library update. Host: {host} Show: {show_name}')
 
             # try fetching tvshowid using show_name with a fallback to getting show list
             show_name = unquote_plus(show_name)
@@ -339,7 +338,7 @@ class KodiNotifier(Notifier):
                     break
 
             if not shows:
-                self._log_debug(u'No items in GetTVShows response')
+                self._log_debug('No items in GetTVShows response')
                 return False
 
             tvshowid = -1
@@ -354,7 +353,7 @@ class KodiNotifier(Notifier):
 
             # we didn't find the show (exact match), thus revert to just doing a full update if enabled
             if -1 == tvshowid:
-                self._log_debug(u'Doesn\'t have "%s" in it\'s known shows, full library update required' % show_name)
+                self._log_debug(f'Doesn\'t have "{show_name}" in it\'s known shows, full library update required')
                 return False
 
             # lookup tv-show path if we don't already know it
@@ -365,24 +364,24 @@ class KodiNotifier(Notifier):
                 path = 'tvshowdetails' in response and response['tvshowdetails'].get('file', '') or ''
 
             if not len(path):
-                self._log_warning(u'No valid path found for %s with ID: %s on %s' % (show_name, tvshowid, host))
+                self._log_warning(f'No valid path found for {show_name} with ID: {tvshowid} on {host}')
                 return False
 
-            self._log_debug(u'Updating %s on %s at %s' % (show_name, host, path))
+            self._log_debug(f'Updating {show_name} on {host} at {path}')
             command = dict(method='VideoLibrary.Scan',
                            params={'directory': '%s' % json_dumps(path)[1:-1].replace('\\\\', '\\')})
             response_scan = self._send_json(host, command)
             if not response_scan.get('OK'):
-                self._log_error(u'Update of show directory failed for %s on %s at %s response: %s' %
-                                (show_name, host, path, response_scan))
+                self._log_error(f'Update of show directory failed for {show_name} on {host} at {path}'
+                                f' response: {response_scan}')
                 return False
 
         # do a full update if requested
         else:
-            self._log_debug(u'Full library update on host: %s' % host)
+            self._log_debug(f'Full library update on host: {host}')
             response_scan = self._send_json(host, dict(method='VideoLibrary.Scan'))
             if not response_scan.get('OK'):
-                self._log_error(u'Failed full library update on: %s response: %s' % (host, response_scan))
+                self._log_error(f'Failed full library update on: {host} response: {response_scan}')
                 return False
 
         return True
@@ -400,7 +399,7 @@ class KodiNotifier(Notifier):
 
     def _maybe_log_failed_detection(self, host, msg='connect to'):
 
-        self._maybe_log(u'Failed to %s %s, check device(s) and config' % (msg, host), logger.ERROR)
+        self._maybe_log(f'Failed to {msg} {host}, check device(s) and config', logger.ERROR)
 
     def _notify(self, title, body, hosts=None, username=None, password=None, **kwargs):
         """ Internal wrapper for the notify_snatch and notify_download functions
@@ -429,20 +428,20 @@ class KodiNotifier(Notifier):
             if self.response and 401 == self.response.get('status_code'):
                 success = False
                 message += ['Fail: Cannot authenticate with %s' % cur_host]
-                self._log_debug(u'Failed to authenticate with %s' % cur_host)
+                self._log_debug(f'Failed to authenticate with {cur_host}')
             elif not api_version:
                 success = False
                 message += ['Fail: No supported Kodi found at %s' % cur_host]
                 self._maybe_log_failed_detection(cur_host, 'connect and detect version for')
             else:
                 if 4 >= api_version:
-                    self._log_debug(u'Detected %sversion <= 11, using HTTP API'
-                                    % self.prefix and ' ' + self.prefix.capitalize())
+                    self._log_debug(f'Detected {self.prefix and " " + self.prefix.capitalize()}version <= 11,'
+                                    f' using HTTP API')
                     __method_send = self._send
                     command = dict(command='ExecBuiltIn',
                                    parameter='Notification(%s,%s)' % (title, body))
                 else:
-                    self._log_debug(u'Detected version >= 12, using JSON API')
+                    self._log_debug('Detected version >= 12, using JSON API')
                     __method_send = self._send_json
                     command = dict(method='GUI.ShowNotification', params=dict(
                         [('title', title), ('message', body), ('image', self._sg_logo_url)]

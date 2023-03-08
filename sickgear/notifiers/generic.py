@@ -25,7 +25,7 @@ notify_strings = dict(
     git_updated='SickGear updated',
     git_updated_text='SickGear updated to commit#: ',
     test_title='SickGear notification test',
-    test_body=u'Success testing %s settings from SickGear ʕ•ᴥ•ʔ',
+    test_body='Success testing %s settings from SickGear ʕ•ᴥ•ʔ',
 )
 
 
@@ -40,7 +40,7 @@ class BaseNotifier(object):
         return 'https://raw.githubusercontent.com/SickGear/SickGear/main/gui/slick/images/ico/' + self.sg_logo_file
 
     def _log(self, msg, level=logger.MESSAGE):
-        logger.log(u'%s: %s' % (self.name, msg), level)
+        logger.log(f'{self.name}: {msg}', level)
 
     def _log_debug(self, msg):
         self._log(msg, logger.DEBUG)
@@ -108,7 +108,7 @@ class BaseNotifier(object):
     @staticmethod
     def _body_only(title, body):
         # don't use title with updates or testing, as only one str is used
-        return body if 'SickGear' in title else u'%s: %s' % (title, body.replace('#: ', '# '))
+        return body if 'SickGear' in title else f'{title}: {body.replace("#: ", "# ")}'
 
 
 class Notifier(BaseNotifier):
@@ -136,7 +136,7 @@ class Notifier(BaseNotifier):
         self._pre_notify('git_updated', notify_strings['git_updated_text'] + new_version, **kwargs)
 
     def _pre_notify(self, notify_string, message, *args, **kwargs):
-        self._log_debug(u'Sending notification "%s"' % (self._body_only(notify_strings[notify_string], message)))
+        self._log_debug(f'Sending notification "{self._body_only(notify_strings[notify_string], message)}"')
         try:
             return self._notify(notify_strings[notify_string], message, *args, **kwargs)
         except (BaseException, Exception):
