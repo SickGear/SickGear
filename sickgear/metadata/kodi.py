@@ -125,7 +125,7 @@ class KODIMetadata(generic.GenericMetadata):
         tv_node = etree.Element('tvshow')
 
         try:
-            show_info = t[int(show_id)]
+            show_info = t.get_show(show_obj.prodid, language=show_obj.lang)
         except BaseTVinfoShownotfound as e:
             logger.error(f'Unable to find show with id {show_id} on {sickgear.TVInfoAPI(show_obj.tvid).name},'
                          f' skipping it')
@@ -286,7 +286,7 @@ class KODIMetadata(generic.GenericMetadata):
 
         try:
             t = sickgear.TVInfoAPI(ep_obj.show_obj.tvid).setup(**tvinfo_config)
-            show_info = t[ep_obj.show_obj.prodid]
+            show_info = t.get_show(ep_obj.show_obj.prodid, language=ep_obj.show_obj.lang)
         except BaseTVinfoShownotfound as e:
             raise exceptions_helper.ShowNotFoundException(ex(e))
         except BaseTVinfoError as e:

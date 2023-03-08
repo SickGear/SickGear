@@ -509,7 +509,8 @@ class GenericMetadata(object):
 
                     t = sickgear.TVInfoAPI(TVINFO_TVDB).setup(**tvinfo_config)
 
-                    ep_info = t[cur_ep_obj.show_obj.prodid][cur_ep_obj.season][cur_ep_obj.episode]
+                    ep_info = t.get_show(cur_ep_obj.show_obj.prodid, language=show_lang)[
+                        cur_ep_obj.season][cur_ep_obj.episode]
                 except (BaseTVinfoEpisodenotfound, BaseTVinfoSeasonnotfound, TypeError):
                     ep_info = None
             else:
@@ -1079,7 +1080,7 @@ class GenericMetadata(object):
                 tvinfo_config['language'] = show_obj.lang
 
             t = sickgear.TVInfoAPI(show_obj.tvid).setup(**tvinfo_config)
-            tvinfo_obj_show = t[show_obj.prodid]
+            tvinfo_obj_show = t.get_show(show_obj.prodid, language=show_obj.lang)
         except (BaseTVinfoError, IOError) as e:
             logger.warning(f'Unable to look up show on {sickgear.TVInfoAPI(show_obj.tvid).name},'
                            f' not downloading images: {ex(e)}')
