@@ -10,8 +10,10 @@
 #set $mode = $kwargs and $kwargs.get('mode', '')
 #set $use_network = $kwargs.get('use_networks', False)
 #set $use_returning = 'returning' == mode
-#set $use_votes = $kwargs and $kwargs.get('use_votes', True)
+#set $use_filter = $kwargs and $kwargs.get('use_filter', True)
 #set $use_ratings = $kwargs and $kwargs.get('use_ratings', True)
+#set $use_votes = $kwargs and $kwargs.get('use_votes', True)
+#set $term_vote = $kwargs and $kwargs.get('term_vote', 'Votes')
 ##
 #set global $title='Browse %s Shows' % $browse_type
 #set global $header='Browse Shows'
@@ -236,7 +238,8 @@ $(document).ready(function(){
 	$('#showfilter').on('change', function(){
 		var filterValue = this.value;
 		if (-1 == filterValue.indexOf('trakt') && -1 == filterValue.indexOf('imdb') && -1 == filterValue.indexOf('mc_')
-		 && -1 == filterValue.indexOf('tvc_') && -1 == filterValue.indexOf('tvm_')
+		 && -1 == filterValue.indexOf('tmdb_') && -1 == filterValue.indexOf('tvc_')
+		 && -1 == filterValue.indexOf('tvm_')
 		 && -1 == filterValue.indexOf('ne_') && -1 == filterValue.indexOf('_ne')
 		 && -1 == filterValue.indexOf('default')) {
 			var el$ = $('#container')
@@ -322,16 +325,16 @@ $(document).ready(function(){
 		</optgroup>
 		<optgroup label="Sort by">
 			<option value="by_name"#if 'by_name' in $saved_showsort_sortby and not $reset_showsort_sortby#$selected>>&nbsp;#else#>#end if#Name</option>
-## omit for TVMaze as original order == First Aired
-#if 'TVmaze' not in $browse_type
+    ## omit for TVMaze as original order == First Aired
+    #if 'TVmaze' not in $browse_type
 			<option value="by_order"#if 'by_order' in $saved_showsort_sortby or $reset_showsort_sortby#$selected>>&nbsp;#else#>#end if#Original</option>
-#end if
+    #end if
 			<option value="by_premiered"#if 'by_premiered' in $saved_showsort_sortby and not $reset_showsort_sortby#$selected>>&nbsp;#else#>#end if#First aired</option>
 	#if $use_returning
 			<option value="by_returning"#if 'by_returning' in $saved_showsort_sortby and not $reset_showsort_sortby#$selected>>&nbsp;#else#>#end if#Returning</option>
 	#end if
     #if $use_votes
-			<option value="by_votes"#if 'by_votes' in $saved_showsort_sortby#$selected>>&nbsp;#else#>#end if#Votes</option>
+			<option value="by_votes"#if 'by_votes' in $saved_showsort_sortby#$selected>>&nbsp;#else#>#end if#$term_vote</option>
     #end if
     #if $use_ratings
 			<option value="by_rating"#if 'by_rating' in $saved_showsort_sortby#$selected>>&nbsp;#else#>#end if#% Rating</option>
@@ -342,13 +345,13 @@ $(document).ready(function(){
 		</optgroup>
 	</select>
 
-    #if 'Ani' not in $browse_type
+    #if 'Ani' not in $browse_type and $use_filter
 	<select id="showfilter" class="form-control form-control-inline input-sm">
         #set $selected = ' class="selected" selected="selected"'
         #if 'Trakt' == $browse_type
 		<optgroup label="Trakt">
 			<option value="trakt_anticipated"#echo ('', selected)['anticipated' == $mode]#>Anticipating</option>
-			<option value="trakt_newseasons"#echo ('', selected)['newseasons' == $mode]#>New Seasons</option>
+			<option value="trakt_newseasons"#echo ('', selected)['returning' == $mode]#>New Seasons</option>
 			<option value="trakt_newshows"#echo ('', selected)['newshows' == $mode]#>New Shows</option>
 			<option value="trakt_popular"#echo ('', selected)['popular' == $mode]#>Popular</option>
 			<option value="trakt_trending"#echo ('', selected)['trending' == $mode]#>Trending</option>
@@ -423,6 +426,14 @@ $(document).ready(function(){
             <option value="mc_newseries?more=1"#echo ('', selected + ' disabled')[mode.endswith('more')]#>... list more</option>
             #end if
 		</optgroup>
+        #elif 'TMDB' == $browse_type
+		<optgroup label="TMDB">
+			<option value="tmdb_upcoming"#echo ('', selected)['upcoming' == $mode]#>Upcoming</option>
+			<option value="tmdb_popular"#echo ('', selected)['popular' == $mode]#>Popular</option>
+			<option value="tmdb_toprated"#echo ('', selected)['toprated' == $mode]#>Top rated</option>
+			<option value="tmdb_trending_today"#echo ('', selected)['trending_today' == $mode]#>Trending today</option>
+			<option value="tmdb_trending_week"#echo ('', selected)['trending_week' == $mode]#>Trending this week</option>
+		</optgroup>
         #elif 'TVCalendar' == $browse_type
 		<optgroup label="TVCalendar">
             #for $page in $kwargs.get('pages') or []
@@ -466,10 +477,10 @@ $(document).ready(function(){
         #set $poster_id += 1
 
         #set $title_html = $this_show['title'].replace('"', '&quot;').replace("'", '&#39;')
-        #if 'newseasons' == $mode
+        #if 'returning' == $mode
             #set $overview = '%s: %s' % (
-            	('Season %s' % $this_show['episode_season'], 'Brand-new')[1 == $this_show['episode_season']],
-                ($this_show['overview'], $this_show['episode_overview'])[any($this_show['episode_overview']) and 1 != $this_show['episode_season']])
+            	'Season %s' % $this_show['episode_season'],
+                $this_show['episode_overview'] or $this_show['overview'])
         #else
             #set $overview = $this_show['overview']
         #end if
@@ -477,16 +488,18 @@ $(document).ready(function(){
         #set $show_id = $this_show.get('show_id')
         #set $known = ('not', '')[bool($this_show.get('indb'))]
         #set $hide = ('', '%shide ' % ('', 'to-')['.hide' in $saved_showsort_view])[bool($this_show.get('hide'))]
-        #set $data_rating = $try_float($this_show['rating'])
+        #if $use_ratings:
+            #set $data_rating = $try_float($this_show['rating'])
+        #end if
 
-	<div class="show-card ${hide}${known}inlibrary" data-name="#echo re.sub(r'([\'\"])', r'', $this_show['title'])#" data_id="$show_id"#if $use_ratings# data-rating="$data_rating"#end if##if $use_votes# data-votes="$this_show['votes']"#end if# data-premiered="$this_show['premiered']"#if $use_returning# data-returning="$this_show['returning']"#end if# data-order="$this_show['order']"#if $use_network# data-network="$this_show['network']"#end if#>
+	<div class="show-card ${hide}${known}inlibrary" data-name="#echo re.sub(r'([\'\"])', r'', $this_show['title'])#" data_id="$show_id"#if $use_ratings# data-rating="$data_rating"#end if##if $use_votes# data-votes="$this_show['votes']"#end if# data-premiered="$this_show['ord_premiered']"#if $use_returning# data-returning="$this_show['ord_returning']"#end if# data-order="$this_show['order']"#if $use_network# data-network="$this_show['network']"#end if#>
 		<div class="show-card-inner">
 			<div class="browse-image">
 				<a class="browse-image" href="<%= anon_url(this_show['url_src_db']) %>" target="_blank"
 					title="<span style='color: rgb(66, 139, 202)'>$re.sub(r'(?m)\s+\((?:19|20)\d\d\)\s*$', '', $title_html)</span>
 
 					#if $this_show['genres']#<br><div style='font-weight:bold'>(<em>$this_show['genres']</em>)</div>#end if#
-					#if $kwargs and $use_returning#<span style='display:block;clear:both;font-weight:bold;font-size:0.9em;color:#888'><em>Season $this_show['episode_season'] returns $this_show['returning_str']</em></span>#end if#
+					#if $kwargs and $use_returning#<span style='display:block;clear:both;font-weight:bold;font-size:0.9em;color:#888'><em>Season $this_show['episode_season'] return#echo ('s', 'ed')[$this_show['return_past']]# $this_show['str_returning']</em></span>#end if#
         #if $this_show.get('country') or $this_show.get('language')
 					 <p style='line-height:15px;margin-bottom:2px'>
             #if $this_show.get('country')
@@ -498,7 +511,7 @@ $(document).ready(function(){
 					</p>
         #end if
 					<p style='margin:0 0 2px'>#echo re.sub(r'([,\.!][^,\.!]*?)$', '...', re.sub(r'([!\?\.])(?=\w)', r'\1 ', $overview)).replace('.....', '...')#</p>
-					<p>#if $this_show['premiered_str']#<span style='font-weight:bold;font-size:0.9em;color:#888'><em>#if $kwargs and 'newseasons' == $mode#Air#else#First air#end if##echo ('s', 'ed')[$this_show['when_past']]#: $this_show['premiered_str']</em></span>#end if#
+					<p>#if $this_show['str_premiered']#<span style='font-weight:bold;font-size:0.9em;color:#888'><em>#if 'Trakt' == $browse_type and $kwargs and 'returning' == $mode#Air#else#First air#end if##echo ('s', 'ed')[$this_show['started_past']]#: $this_show['str_premiered']</em></span>#end if#
 					#if $this_show.get('ended_str')# - <span style='font-weight:bold;font-size:0.9em;color:#888'><em>Ended: $this_show['ended_str']</em></span>#end if#
 					#if $this_show.get('network')#<span style='display:block;clear:both;font-weight:bold;font-size:0.9em;color:#888'><em>On: $this_show['network']</em></span>#end if#
 					</p>
@@ -521,7 +534,7 @@ $(document).ready(function(){
         #end if
 			<div class="clearfix">
         #if $use_ratings or $use_votes
-				<p>#if $use_ratings#$this_show['rating']#if $re.search(r'^\d+(\.\d+)?$', (str($this_show['rating'])))#%#end if##end if##if $use_votes#<i class="heart icon-glyph"></i><i>$this_show['votes'] votes</i>#end if#</p>#slurp#
+				<p>#if $use_ratings#<span class="rating">$this_show['rating']#if $re.search(r'^\d+(\.\d+)?$', (str($this_show['rating'])))#%</span>#end if##end if##if $use_votes#<i class="heart icon-glyph"></i><i>$this_show['votes'] $term_vote.lower()</i>#end if#</p>#slurp#
         #end if
         #if 'url_tvdb' in $this_show and $this_show['url_tvdb']
 				<a class="service" href="<%= anon_url(this_show['url_tvdb']) %>" onclick="window.open(this.href, '_blank'); return false;"
@@ -539,7 +552,7 @@ $(document).ready(function(){
 			</div>
 		</div>
 		<div class="ui-progressbar ui-widget ui-widget-content ui-corner-all">
-        #set $state = 'progress-%s0" title="%s"' % (('2', 'Upcoming'), ('8', 'Started'))[$this_show['when_past']]
+        #set $state = 'progress-%s0" title="%s"' % (('2', 'Upcoming'), ('8', 'Started'))[$this_show['started_past']]
 			<div style="width:102%" class="ui-progressbar-value ui-widget-header ui-corner-left ui-corner-right $state></div>
 		</div>
 	</div>

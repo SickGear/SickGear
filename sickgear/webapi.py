@@ -4631,24 +4631,22 @@ class CMD_SickGearShowsBrowseTrakt(ApiCall):
 
     def run(self):
         """ browse trakt shows in sickgear """
-        urls = {'anticipated': 'shows/anticipated?limit=%s&' % 100,
-                'newshows': '/calendars/all/shows/new/%s/%s?' % (SGDatetime.sbfdate(
-                        dt=datetime.datetime.now() + datetime.timedelta(days=-16), d_preset='%Y-%m-%d'), 32),
-                'newseasons': '/calendars/all/shows/premieres/%s/%s?' % (SGDatetime.sbfdate(
-                        dt=datetime.datetime.now() + datetime.timedelta(days=-16), d_preset='%Y-%m-%d'), 32),
-                'popular': 'shows/popular?limit=%s&' % 100,
-                'trending': 'shows/trending?limit=%s&' % 100,
-                'recommended': 'recommendations/shows?limit=%s&' % 100,
-                }
+        func = dict(anticipated='get_anticipated',
+                    newshows='get_new_shows',
+                    newseasons='get_new_seasons',
+                    popular='get_popular',
+                    trending='get_trending')
         kwargs = {}
         if self.type in ('recommended', 'watchlist'):
             if not self.account:
                 return _responds(RESULT_FAILURE, msg='Need Trakt account')
-            kwargs['send_oauth'] = self.account
-            urls['watchlist'] = 'users/%s/watchlist/shows?limit=%s&' \
-                                % (sickgear.TRAKT_ACCOUNTS[self.account].slug, 100)
+            func.update(dict(recommended='get_recommended_for_account',
+                             watchlist='get_watchlisted_for_account'))
+            kwargs.update(dict(account=self.account, ignore_collected=True))
+            if self.type in ('recommended',):
+                kwargs.update(dict(ignore_watchlisted=True))
         try:
-            data, oldest, newest = AddShows.get_trakt_data(urls[self.type], **kwargs)
+            data, oldest, newest = AddShows.get_trakt_data(func[self.type], **kwargs)
         except Exception as e:
             return _responds(RESULT_FAILURE, msg=ex(e))
         return _responds(RESULT_SUCCESS, data)

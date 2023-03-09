@@ -1439,12 +1439,16 @@ home_browseShows.tmpl
 	padding-top:2px
 }
 
+.show-card-inner .rating{
+	margin-right:3px;
+}
+
 .show-card-inner .heart.icon-glyph{
 	display:inline-block;
 	float:none;
 	height:15px;
 	width:15px;
-	margin:0 -3px -2px 2px
+	margin:0 -3px -2px -1px
 }
 
 .show-card-inner p, .show-card-inner i{

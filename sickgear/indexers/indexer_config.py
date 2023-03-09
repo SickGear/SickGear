@@ -189,7 +189,7 @@ tvinfo_config = {
         people_url='%s',
         show_url=None,
         people_only=True,
-        icon='fansite16.png'
+        icon='_placeholder16.png'
     ),
     TVINFO_LINKEDIN: dict(
         id=TVINFO_LINKEDIN,

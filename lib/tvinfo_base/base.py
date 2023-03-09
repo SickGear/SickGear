@@ -10,8 +10,6 @@ from collections import deque
 from exceptions_helper import ex
 
 from six import integer_types, iteritems, iterkeys, string_types, text_type
-from six import PY2  # deprecate after rebase ?
-from _23 import list_keys, list_items, list_values, izip  # deprecate after rebase ?
 from typing import Callable
 
 
@@ -117,7 +115,7 @@ class ShowContainer(dict):
 
     def cleanup_old(self):
         """
-        remove entries that are older then max_age
+        remove entries that are older than max_age
         """
         acquired_lock = self.lock.acquire(False)
         if acquired_lock:
@@ -190,7 +188,7 @@ class TVInfoIDs(object):
 
     def __len__(self):
         counter = itertools.count()
-        deque(izip(self.__iter__(), counter), maxlen=0)  # (consume at C speed)
+        deque(zip(self.__iter__(), counter), maxlen=0)  # (consume at C speed)
         return next(counter)
 
     def __str__(self):
@@ -268,7 +266,7 @@ class TVInfoSocialIDs(object):
 
     def __len__(self):
         counter = itertools.count()
-        deque(izip(self.__iter__(), counter), maxlen=0)  # (consume at C speed)
+        deque(zip(self.__iter__(), counter), maxlen=0)  # (consume at C speed)
         return next(counter)
 
     def __str__(self):
@@ -1304,8 +1302,8 @@ class TVInfoBase(object):
                         show_copy = copy.deepcopy(self.ti_shows[show_id])  # type: TVInfoShow
                         # provide old call compatibility for dvd order
                         if self.config.get('dvdorder') and TVInfoSeasonTypes.dvd in show_copy.alt_ep_numbering:
-                            org_seasons, dvd_seasons = list_keys(show_copy), \
-                                                       list_keys(show_copy.alt_ep_numbering[TVInfoSeasonTypes.dvd])
+                            org_seasons, dvd_seasons = list(show_copy), \
+                                                       list(show_copy.alt_ep_numbering[TVInfoSeasonTypes.dvd])
                             for r_season in set(org_seasons) - set(dvd_seasons):
                                 try:
                                     del show_copy[r_season]

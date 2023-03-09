@@ -8,6 +8,7 @@ __api_version__ = '1.0.0'
 
 import datetime
 import logging
+import re
 
 from lib import tmdbsimple
 from lib.dateutil.parser import parser
@@ -191,7 +192,7 @@ class TmdbIndexer(TVInfoBase):
                 ti_show.overview, ti_show.poster, ti_show.ids, ti_show.language, ti_show.popularity, ti_show.rating = \
                 clean_data(s['name']), s['id'], s['id'], clean_data(s.get('first_air_date')) or None, \
                 clean_data([self.tv_genres.get(g) for g in s.get('genre_ids') or []]), \
-                enforce_type(clean_data(s.get('overview')), str, ''), s.get('poster_path') and '%s%s%s' % (
+                self._enforce_text(s.get('overview')), s.get('poster_path') and '%s%s%s' % (
                     self.img_base_url, self.size_map[TVInfoImageType.poster][TVInfoImageSize.original],
                     s.get('poster_path')), \
                 TVInfoIDs(tvdb=s.get('external_ids') and s['external_ids'].get('tvdb_id'),
@@ -327,7 +328,7 @@ class TmdbIndexer(TVInfoBase):
             ti_show.id = character.get('id')
             ti_show.ids = TVInfoIDs(ids={TVINFO_TMDB: ti_show.id})
             ti_show.seriesname = enforce_type(clean_data(character.get('original_name')), str, '')
-            ti_show.overview = enforce_type(clean_data(character.get('overview')), str, '')
+            ti_show.overview = self._enforce_text(character.get('overview'))
             ti_show.firstaired = clean_data(character.get('first_air_date'))
             ti_show.language = clean_data(character.get('original_language'))
             ti_show.genre_list = []
@@ -456,7 +457,7 @@ class TmdbIndexer(TVInfoBase):
             ti_show.seriesid = ti_show.id
             ti_show.language = clean_data(show_dict.get('original_language'))
             ti_show.spoken_languages = [_l['iso_639_1'] for _l in show_dict.get('spoken_languages') or []]
-            ti_show.overview = enforce_type(clean_data(show_dict.get('overview')), str, '')
+            ti_show.overview = self._enforce_text(show_dict.get('overview'))
             ti_show.status = clean_data(show_dict.get('status', ''))
             ti_show.show_type = clean_data((show_dict.get('type') and [show_dict['type']]) or [])
             ti_show.firstaired = clean_data(show_dict.get('first_air_date'))
@@ -845,3 +846,19 @@ class TmdbIndexer(TVInfoBase):
         else:
             TmdbIndexer._supported_languages = []
             TmdbIndexer._tmdb_lang_list = []
+
+    @staticmethod
+    def _enforce_text(text):
+        """
+        Set nonsense text to an enforced type
+        :param text:
+        :type text: AnyStr
+        :return:
+        :rtype: AnyStr
+        """
+        text = enforce_type(clean_data(text), str, '').strip()
+        tmp = text.lower()
+        if 'details here' == tmp \
+                or re.search(r'no(\s\w+){1,2}\savailable', tmp):
+            return ''
+        return text

@@ -971,6 +971,7 @@ class QueueItemAdd(ShowQueueItem):
         try:
 
             tvinfo_config = sickgear.TVInfoAPI(self.tvid).api_params.copy()
+            kw = {}
             if self.lang:
                 tvinfo_config['language'] = self.lang
                 kw = {'language': self.lang}
