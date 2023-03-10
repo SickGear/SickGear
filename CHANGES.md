@@ -8,6 +8,7 @@
 * Change requirements for pure py3
 * Change codebase cleanups
 * Change improve perf by using generators with `any`
+* Change deprecate processEpisode used by nzbToMedia to advise how to configure API instead
 
 
 [develop changelog]

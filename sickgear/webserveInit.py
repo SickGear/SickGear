@@ -216,7 +216,6 @@ class WebServer(threading.Thread):
             # ----------------------------------------------------------------------------------------------------------
             # legacy deprecated Aug 2019 - NEVER remove as used in external scripts
             (r'%s/home/postprocess(/?.*)' % self.options['web_root'], webserve.HomeProcessMedia),
-            (r'%s(/?update_watched_state_kodi/?)' % self.options['web_root'], webserve.NoXSRFHandler),
             # regular catchall routes - keep here at the bottom
             (r'%s/home(/?.*)' % self.options['web_root'], webserve.Home),
             (r'%s/manage/(/?.*)' % self.options['web_root'], webserve.Manage),

@@ -3932,16 +3932,13 @@ class HomeProcessMedia(Home):
                     return self._generic_message('Postprocessing results', f'<pre>{result}</pre>')
 
     # noinspection PyPep8Naming
-    def processEpisode(self, dir_name=None, nzb_name=None, process_type=None, **kwargs):
-        """ legacy function name, stubbed but can _not_ be removed as this
-         is potentially used in pp scripts located outside of SG path (need to verify this)
+    @staticmethod
+    def processEpisode(**kwargs):
+        """ legacy function name, stubbed and will be removed
         """
-        kwargs['dir_name'] = dir_name or kwargs.pop('dir', None)
-        kwargs['nzb_name'] = nzb_name or kwargs.pop('nzbName', None)
-        kwargs['process_type'] = process_type or kwargs.pop('type', 'auto')
-        kwargs['pp_version'] = kwargs.pop('ppVersion', '0')
-        return self.process_files(**kwargs)
-
+        logger.error('This endpoint is no longer to be used,'
+                     ' nzbToMedia users please follow: https://github.com/SickGear/SickGear/wiki/FAQ-nzbToMedia')
+        sickgear.MEMCACHE['DEPRECATE_PP_LEGACY'] = True
 
 class AddShows(Home):
 
