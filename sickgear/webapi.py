@@ -45,7 +45,7 @@ from . import classes, db, helpers, history, image_cache, logger, network_timezo
 from .common import ARCHIVED, DOWNLOADED, FAILED, IGNORED, SKIPPED, SNATCHED, SNATCHED_ANY, SNATCHED_BEST, \
     SNATCHED_PROPER, UNAIRED, UNKNOWN, WANTED, Quality, qualityPresetStrings, statusStrings
 from .name_parser.parser import NameParser
-from .helpers import starify
+from .helpers import starify, df
 from .indexers import indexer_api, indexer_config
 from .indexers.indexer_config import *
 from lib.tvinfo_base.exceptions import *
@@ -830,7 +830,15 @@ def _getRootDirs():
     default_dir = root_dirs[default_index]
 
     dir_list = []
+    diskfree = df()[0]
+    free_space = ""
+
     for root_dir in root_dirs:
+        if diskfree:
+            for disk, space in diskfree:
+                if disk == root_dir:
+                    free_space = space
+
         valid = 1
         try:
             ek.ek(os.listdir, root_dir)
@@ -840,7 +848,7 @@ def _getRootDirs():
         if root_dir is default_dir:
             default = 1
 
-        dir_list.append({'valid': valid, 'location': root_dir, 'default': default})
+        dir_list.append({'valid': valid, 'location': root_dir, 'default': default, 'free_space': free_space})
 
     return dir_list
 
