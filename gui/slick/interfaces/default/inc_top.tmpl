@@ -395,6 +395,13 @@
 	</div>
 #end if
 ##
+#if $sickgear.MEMCACHE.get('DEPRECATE_PP_LEGACY')
+	<div style="background-color:#a00; margin-top:35px; padding:5px 5px 1px 5px">
+		<p>Mar 2020: The `<em><span style="color:#fff">nzbToMedia</em></span>`  script began using the <em><span style="color:#fff">secure</em></span> API to process media</p>
+		<p>Mar 2023: To remove this red box, please follow this <a target="_blank" href="https://github.com/SickGear/SickGear/wiki/FAQ-nzbToMedia"><span style="color:#fff">guidance</span></a></p>
+	</div>
+#end if
+##
 #set $items = []
 #try
     #set void = $items.append($topmenu)
