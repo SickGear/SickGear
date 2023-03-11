@@ -9,6 +9,12 @@
 * Change codebase cleanups
 * Change improve perf by using generators with `any`
 * Change deprecate processEpisode used by nzbToMedia to advise how to configure API instead
+* Change optionally add disk free space in response to three Web API endpoints
+* Change increase API version number to 15
+* Add actually use mount points to get disk free space
+* Add optional "freespace" parameter to endpoints: sg.getrootdirs, sg.addrootdir, sg.deleterootdir
+* Change update help of affected endpoints
+* Fix explicitly save rootdirs after adding or deleting via Web API
 
 
 [develop changelog]
