@@ -43,7 +43,7 @@ from . import classes, db, helpers, history, image_cache, logger, network_timezo
 from .common import ARCHIVED, DOWNLOADED, FAILED, IGNORED, SKIPPED, SNATCHED, SNATCHED_ANY, SNATCHED_BEST, \
     SNATCHED_PROPER, UNAIRED, UNKNOWN, WANTED, Quality, qualityPresetStrings, statusStrings
 from .name_parser.parser import NameParser
-from .helpers import starify
+from .helpers import df, find_mount_point, starify
 from .indexers import indexer_api, indexer_config
 from .indexers.indexer_config import *
 from lib.tvinfo_base.exceptions import *
@@ -150,7 +150,7 @@ else:
 
 class Api(webserve.BaseHandler):
     """ api class that returns json results """
-    version = 14  # use an int since float-point is unpredictable
+    version = 15  # use an int since float-point is unpredictable
 
     def check_xsrf_cookie(self):
         pass
@@ -801,38 +801,45 @@ def _getQualityMap():
     return quality_map_inversed
 
 
-def _getRootDirs():
-    if "" == sickgear.ROOT_DIRS:
-        return {}
+def _get_root_dirs(get_freespace=False):
+    # type: (bool) -> List[Dict]
+    """
 
-    rootDir = {}
+    :param get_freespace: include disk free space info in response
+    """
+    dir_list = []
+    if not sickgear.ROOT_DIRS:
+        return dir_list
+
     root_dirs = sickgear.ROOT_DIRS.split('|')
-    default_index = int(sickgear.ROOT_DIRS.split('|')[0])
-
-    rootDir["default_index"] = int(sickgear.ROOT_DIRS.split('|')[0])
-    # remove default_index value from list (this fixes the offset)
-    root_dirs.pop(0)
+    default_index = int(root_dirs.pop(0))
 
     if len(root_dirs) < default_index:
-        return {}
+        return dir_list
 
     # clean up the list - replace %xx escapes by their single-character equivalent
     root_dirs = [unquote_plus(x) for x in root_dirs]
 
     default_dir = root_dirs[default_index]
 
-    dir_list = []
-    for root_dir in root_dirs:
-        valid = 1
+    if root_dirs and get_freespace:
+        diskfree, _ = df()
+
+    for cur_root_dir in root_dirs:
         try:
-            os.listdir(root_dir)
+            os.listdir(cur_root_dir)
+            valid = 1
         except (BaseException, Exception):
             valid = 0
-        default = 0
-        if root_dir is default_dir:
-            default = 1
 
-        dir_list.append({'valid': valid, 'location': root_dir, 'default': default})
+        new_entry = {'valid': valid, 'location': cur_root_dir, 'default': int(cur_root_dir is default_dir)}
+
+        if get_freespace:
+            # noinspection PyUnboundLocalVariable
+            new_entry.update({'free_space': next((space for disk, space in diskfree or []
+                                                  if disk == find_mount_point(cur_root_dir)), '')})
+
+        dir_list.append(new_entry)
 
     return dir_list
 
@@ -1975,7 +1982,8 @@ class CMD_SickGearAddRootDir(ApiCall):
     _help = {"desc": "add a user configured parent directory",
              "requiredParameters": {"location": {"desc": "the full path to root (parent) directory"}
                                     },
-             "optionalParameters": {"default": {"desc": "make the location passed the default root (parent) directory"}
+             "optionalParameters": {"default": {"desc": "make the location passed the default root (parent) directory"},
+                                    "freespace": {"desc": "include free space of paths in response"}
                                     }
              }
 
@@ -1984,6 +1992,7 @@ class CMD_SickGearAddRootDir(ApiCall):
         self.location, args = self.check_params(args, kwargs, "location", None, True, "string", [])
         # optional
         self.default, args = self.check_params(args, kwargs, "default", 0, False, "bool", [])
+        self.freespace, args = self.check_params(args, kwargs, "freespace", 0, False, "bool", [])
         # super, missing, help
         ApiCall.__init__(self, handler, args, kwargs)
 
@@ -2026,7 +2035,9 @@ class CMD_SickGearAddRootDir(ApiCall):
         root_dirs_new = '|'.join([text_type(x) for x in root_dirs_new])
 
         sickgear.ROOT_DIRS = root_dirs_new
-        return _responds(RESULT_SUCCESS, _getRootDirs(), msg="Root directories updated")
+        sickgear.save_config()
+        return _responds(RESULT_SUCCESS, _get_root_dirs(not self.sickbeard_call and self.freespace),
+                         msg="Root directories updated")
 
 
 class CMD_SickBeardAddRootDir(CMD_SickGearAddRootDir):
@@ -2084,20 +2095,24 @@ class CMD_SickBeardCheckScheduler(CMD_SickGearCheckScheduler):
 
 class CMD_SickGearDeleteRootDir(ApiCall):
     _help = {"desc": "delete a user configured parent directory",
-             "requiredParameters": {"location": {"desc": "the full path to root (parent) directory"}}
+             "requiredParameters": {"location": {"desc": "the full path to root (parent) directory"}},
+             "optionalParameters": {"freespace": {"desc": "include free space of paths in response"}
+                                    }
              }
 
     def __init__(self, handler, args, kwargs):
         # required
         self.location, args = self.check_params(args, kwargs, "location", None, True, "string", [])
         # optional
+        self.freespace, args = self.check_params(args, kwargs, "freespace", 0, False, "bool", [])
         # super, missing, help
         ApiCall.__init__(self, handler, args, kwargs)
 
     def run(self):
         """ delete a user configured parent directory """
         if sickgear.ROOT_DIRS == "":
-            return _responds(RESULT_FAILURE, _getRootDirs(), msg="No root directories detected")
+            return _responds(RESULT_FAILURE, _get_root_dirs(not self.sickbeard_call and self.freespace),
+                             msg="No root directories detected")
 
         newIndex = 0
         root_dirs_new = []
@@ -2124,8 +2139,10 @@ class CMD_SickGearDeleteRootDir(ApiCall):
         root_dirs_new = "|".join([text_type(x) for x in root_dirs_new])
 
         sickgear.ROOT_DIRS = root_dirs_new
+        sickgear.save_config()
         # what if the root dir was not found?
-        return _responds(RESULT_SUCCESS, _getRootDirs(), msg="Root directory deleted")
+        return _responds(RESULT_SUCCESS, _get_root_dirs(not self.sickbeard_call and self.freespace),
+                         msg="Root directory deleted")
 
 
 class CMD_SickBeardDeleteRootDir(CMD_SickGearDeleteRootDir):
@@ -2374,18 +2391,22 @@ class CMD_SickGearGetqualityStrings(ApiCall):
 
 
 class CMD_SickGearGetRootDirs(ApiCall):
-    _help = {"desc": "get list of user configured parent directories"}
+    _help = {"desc": "get list of user configured parent directories",
+             "optionalParameters": {"freespace": {"desc": "include free space of paths in response"}
+                                    }
+             }
 
     def __init__(self, handler, args, kwargs):
         # required
         # optional
+        self.freespace, args = self.check_params(args, kwargs, "freespace", 0, False, "bool", [])
         # super, missing, help
         ApiCall.__init__(self, handler, args, kwargs)
 
     def run(self):
         """ get list of user configured parent directories """
 
-        return _responds(RESULT_SUCCESS, _getRootDirs())
+        return _responds(RESULT_SUCCESS, _get_root_dirs(not self.sickbeard_call and self.freespace))
 
 
 class CMD_SickBeardGetRootDirs(CMD_SickGearGetRootDirs):

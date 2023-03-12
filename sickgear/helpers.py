@@ -1412,6 +1412,19 @@ def is_link(filepath):
     return os.path.islink(filepath)
 
 
+def find_mount_point(path):
+    # type: (AnyStr) -> AnyStr
+    """
+    returns the mount point for the given path
+    :param path: path to find the mount point
+    :return: mount point for path
+    """
+    path = os.path.realpath(os.path.abspath(path))
+    while not os.path.ismount(path):
+        path = os.path.dirname(path)
+    return path
+
+
 def df():
     """
     Return disk free space at known parent locations
@@ -1424,17 +1437,9 @@ def df():
     if sickgear.ROOT_DIRS and sickgear.DISPLAY_FREESPACE:
         targets = []
         for path in sickgear.ROOT_DIRS.split('|')[1:]:
-            location_parts = os.path.splitdrive(path)
-            target = location_parts[0]
-            if 'win32' == sys.platform:
-                if not re.match('(?i)[a-z]:(?:\\\\)?$', target):
-                    # simple drive letter not found, fallback to full path
-                    target = path
-                    min_output = False
-            elif sys.platform.startswith(('linux', 'darwin', 'sunos5')) or 'bsd' in sys.platform:
-                target = path
-                min_output = False
+            target = find_mount_point(path)
             if target and target not in targets:
+                min_output = False
                 targets += [target]
                 free = freespace(path)
                 if None is not free:

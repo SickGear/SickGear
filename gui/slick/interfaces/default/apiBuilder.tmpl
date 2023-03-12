@@ -70,11 +70,11 @@ addList("Command", "Help", "?cmd=help", "sg.functions-list", "","", "default");
 addOption("sg.functions-list", "$k", "&subject=$k", "", "", "#echo ('sb', 'sg')['sg' in $k]#")
 #end for
 addList("Command", "SickBeard.AddRootDir", "?cmd=sb.addrootdir", "sb.addrootdir");
-addList("Command", "SickGear.AddRootDir", "?cmd=sg.addrootdir", "sb.addrootdir");
+addList("Command", "SickGear.AddRootDir", "?cmd=sg.addrootdir", "sg.addrootdir");
 addOption("Command", "SickBeard.CheckScheduler", "?cmd=sb.checkscheduler");
 addOption("Command", "SickGear.CheckScheduler", "?cmd=sg.checkscheduler");
 addList("Command", "SickBeard.DeleteRootDir", "?cmd=sb.deleterootdir", "sb.deleterootdir");
-addList("Command", "SickGear.DeleteRootDir", "?cmd=sg.deleterootdir", "sb.deleterootdir");
+addList("Command", "SickGear.DeleteRootDir", "?cmd=sg.deleterootdir", "sg.deleterootdir");
 addOption("Command", "SickBeard.ForceSearch", "?cmd=sb.forcesearch");
 addList("Command", "SickGear.ForceSearch", "?cmd=sg.forcesearch", "sg.forcesearch");
 addOption("Command", "SickGear.SearchQueue", "?cmd=sg.searchqueue");
@@ -88,7 +88,7 @@ addList("Command", "SickGear.GetIndexers", "?cmd=sg.getindexers", "listindexers"
 addList("Command", "SickGear.GetIndexerIcon", "?cmd=sg.getindexericon", "getindexericon");
 addList("Command", "SickGear.GetNetworkIcon", "?cmd=sg.getnetworkicon", "getnetworkicon");
 addOption("Command", "SickBeard.GetRootDirs", "?cmd=sb.getrootdirs");
-addOption("Command", "SickGear.GetRootDirs", "?cmd=sg.getrootdirs");
+addList("Command", "SickGear.GetRootDirs", "?cmd=sg.getrootdirs", "sg.addfreespace");
 addList("Command", "SickBeard.PauseBacklog", "?cmd=sb.pausebacklog", "sb.pausebacklog");
 addList("Command", "SickGear.PauseBacklog", "?cmd=sg.pausebacklog", "sb.pausebacklog");
 addOption("Command", "SickBeard.Ping", "?cmd=sb.ping");
@@ -621,9 +621,25 @@ addOption("sb.addrootdir-opt", "Optional Param", "", 1);
 addOption("sb.addrootdir-opt", "Default", "&default=1");
 addOption("sb.addrootdir-opt", "Not Default", "&default=0");
 
-addOption("sb.deleterootdir", "C:\\Temp", "&location=C:\\Temp", "", 1);
+addList("sg.addrootdir", "C:\\Temp", "&location=C:\\Temp", "sg.addrootdir-opt");
+addList("sg.addrootdir", "/usr/bin", "&location=/usr/bin/", "sg.addrootdir-opt");
+addList("sg.addrootdir", "S:\\Invalid_Location", "&location=S:\\Invalid_Location", "sg.addrootdir-opt");
+
+addList("sg.addrootdir-opt", "Optional Param", "", "sg.addfreespace");
+addList("sg.addrootdir-opt", "Default", "&default=1", "sg.addfreespace");
+addList("sg.addrootdir-opt", "Not Default", "&default=0", "sg.addfreespace");
+
+addOption("sb.deleterootdir", "C:\\Temp", "&location=C:\\Temp", 1);
 addOption("sb.deleterootdir", "/usr/bin", "&location=/usr/bin/");
 addOption("sb.deleterootdir", "S:\\Invalid_Location", "&location=S:\\Invalid_Location");
+
+addList("sg.deleterootdir", "C:\\Temp", "&location=C:\\Temp", "sg.addfreespace");
+addList("sg.deleterootdir", "/usr/bin", "&location=/usr/bin/", "sg.addfreespace");
+addList("sg.deleterootdir", "S:\\Invalid_Location", "&location=S:\\Invalid_Location", "sg.addfreespace");
+
+addOption("sg.addfreespace", "Optional Param", "", 1)
+addOption("sg.addfreespace", "incl Freespace", "&freespace=1")
+addOption("sg.addfreespace", "excl Freespace", "&freespace=0")
 
 #for $cur_show_obj in $sortedShowList:
 addList("show.pause", "$cur_show_obj.name", "&indexerid=$cur_show_obj.prodid", "show.pause-opt");
