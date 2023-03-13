@@ -1419,18 +1419,28 @@ def find_mount_point(path):
     :param path: path to find the mount point
     :return: mount point for path
     """
+    if not os.path.exists(path):
+        return path
+    org_path = path
     path = os.path.realpath(os.path.abspath(path))
-    while not os.path.ismount(path):
-        path = os.path.dirname(path)
+    try:
+        while not os.path.ismount(path):
+            new_path = os.path.dirname(path)
+            if new_path == path:
+                # in case no mount point was found return original path
+                return org_path
+            path = new_path
+    except (BaseException, Exception):
+        return org_path
     return path
 
 
 def df():
+    # type: (...) -> Tuple[List[Tuple[AnyStr, AnyStr]], bool]
     """
     Return disk free space at known parent locations
 
     :return: string path, string value that is formatted size
-    :rtype: Tuple[List[Tuple[AnyStr, AnyStr]], bool]
     """
     result = []
     min_output = True
@@ -1441,9 +1451,11 @@ def df():
             if target and target not in targets:
                 min_output = False
                 targets += [target]
-                free = freespace(path)
+                free = freespace(target)
                 if None is not free:
                     result += [(target, sizeof_fmt(free).replace(' ', ''))]
+                else:
+                    result += [(target, 'unavailable')]
     return result, min_output
 
 
