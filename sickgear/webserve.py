@@ -8475,7 +8475,6 @@ class ConfigMediaProcess(Config):
         return t.respond()
 
     def save_post_processing(self, tv_download_dir=None, process_automatically=None, mediaprocess_interval=None,
-                             autopostprocesser_frequency=None,
                              unpack=None, keep_processed_dir=None, process_method=None,
                              extra_scripts='', sg_extra_scripts='',
                              rename_episodes=None, airdate_episodes=None,
@@ -8487,11 +8486,8 @@ class ConfigMediaProcess(Config):
                              wdtv_data=None, tivo_data=None, mede8er_data=None, kodi_data=None,
                              naming_pattern=None, naming_multi_ep=None,
                              naming_anime=None, naming_anime_pattern=None, naming_anime_multi_ep=None,
-                             naming_abd_pattern=None, naming_sports_pattern=None):
-
-        # prevent deprecated var issues from existing ui, delete in future, added 2020.11.07
-        if None is mediaprocess_interval and None is not autopostprocesser_frequency:
-            mediaprocess_interval = autopostprocesser_frequency
+                             naming_abd_pattern=None, naming_sports_pattern=None,
+                             **kwargs):  # kwargs picks up deprecated vars sent from legacy UIs
 
         results = []
 

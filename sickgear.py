@@ -41,7 +41,7 @@ warnings.filterwarnings('ignore', message='.*deprecated in cryptography.*')
 
 versions = [((3, 7, 1), (3, 8, 16)),
             ((3, 9, 0), (3, 9, 2)), ((3, 9, 4), (3, 9, 16)),
-            ((3, 10, 0), (3, 11, 2))]  # inclusive version ranges
+            ((3, 10, 0), (3, 11, 3))]  # inclusive version ranges
 if not any(list(map(lambda v: v[0] <= sys.version_info[:3] <= v[1], versions))) and not int(os.environ.get('PYT', 0)):
     print('Python %s.%s.%s detected.' % sys.version_info[:3])
     print('Sorry, SickGear requires a Python version %s' % ', '.join(map(
