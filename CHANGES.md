@@ -1,4 +1,13 @@
-﻿### 3.27.12 (2023-03-08 23:30:00 UTC)
+﻿### 3.27.13 (2023-04-12 10:15:00 UTC)
+
+* Change fix show id log output
+* Change handle exceptions thrown from pkg_resources parsing newly extended working set modules not even used by SG
+* Fix parsing shows where multiple same names are in SG and show_obj is set for parser
+* Change update fallback zoneinfo to 2023c
+* Change allow Python 3.11.3, 3.10.11
+
+
+### 3.27.12 (2023-03-08 23:30:00 UTC)
 
 * Change meta providers to new TVInfoAPI get_show to make sure language is used
 
