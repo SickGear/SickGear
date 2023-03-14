@@ -23,6 +23,7 @@
 * Update package resource API 63.2.0 (3ae44cd) to 67.3.2 (b9bf2ec)
 * Refactor `timestamp_near` to `SGDatetime.timestamp_near`
 * Change re-add deprecated endpoint used by external scripts
+* Fix UI by marking resource as unavailable if cannot determine its free space
 
 
 ### 3.27.12 (2023-03-08 23:30:00 UTC)
