@@ -835,12 +835,10 @@ def _get_root_dirs(get_freespace=False):
         new_entry = {'valid': valid, 'location': cur_root_dir, 'default': int(cur_root_dir is default_dir)}
 
         if get_freespace:
-            if sickgear.DISPLAY_FREESPACE:
-                # noinspection PyUnboundLocalVariable
-                new_entry.update({'free_space': next((space for disk, space in diskfree or []
-                                                      if disk == find_mount_point(cur_root_dir)), '')})
-            else:
-                new_entry.update({'free_space': 'Required setting "Display freespace" is not enabled'})
+            # noinspection PyUnboundLocalVariable
+            new_entry['free_space'] = 'Required setting "Display freespace" is not enabled' \
+                if not sickgear.DISPLAY_FREESPACE \
+                else next((_space for _disk, _space in diskfree or [] if _disk == find_mount_point(cur_root_dir)), '')
 
         dir_list.append(new_entry)
 

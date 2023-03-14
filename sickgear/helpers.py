@@ -57,6 +57,11 @@ from sg_helpers import chmod_as_parent, clean_data, copy_file, download_file, fi
     get_url, indent_xml, make_path, maybe_plural, md5_for_text, move_file, proxy_setting, remove_file, \
     remove_file_perm, replace_extension, sanitize_filename, scantree, touch_file, try_int, try_ord, write_file
 
+# deprecated item, remove in 2020, kept here as rollback uses it
+copyFile = copy_file
+moveFile = move_file
+tryInt = try_int  # one legacy custom provider is keeping this signature here
+
 # noinspection PyUnreachableCode
 if False:
     # noinspection PyUnresolvedReferences
@@ -319,19 +324,20 @@ def search_infosrc_for_show_id(reg_show_name, tvid=None, prodid=None, ui=None):
     return None, None, None
 
 
-def sizeof_fmt(num):
+def sizeof_fmt(number, digits=1, sep=' '):
+    # type: (int, int, AnyStr) -> AnyStr
     """
-    format given bytes to human readable string
+    format given bytes to human-readable text
 
-    :param num: number
-    :type num: int or long
-    :return: human readable formatted string
-    :rtype: AnyStr
+    :param number: value to convert
+    :param digits: number of digits after decimal point
+    :param sep: seperater of value and dimension
+    :return: human-readable formatted text
     """
-    for x in ['bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB']:
-        if 1024.0 > num:
-            return "%3.1f %s" % (num, x)
-        num /= 1024.0
+    for cur_dimension in ['bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB']:
+        if 1024.0 > number:
+            return f'{number:3.{digits}f}{sep}{cur_dimension}'
+        number /= 1024.0
 
 
 def list_media_files(path):
@@ -350,30 +356,6 @@ def list_media_files(path):
             result = [direntry.path for direntry in scantree(path, exclude=['Extras'], filter_kind=False)
                       if has_media_ext(direntry.name)]
     return result
-
-
-def copyFile(src_file, dest_file):
-    """ deprecated_item, remove in 2020, kept here as rollback uses it
-    :param src_file: source file
-    :type src_file: AnyStr
-    :param dest_file: destination file
-    :type dest_file: AnyStr
-    :return: nothing
-    :rtype: None
-    """
-    return copy_file(src_file, dest_file)
-
-
-def moveFile(src_file, dest_file):
-    """ deprecated_item, remove in 2020, kept here as rollback uses it
-    :param src_file: source file
-    :type src_file: AnyStr
-    :param dest_file: destination file
-    :type dest_file: AnyStr
-    :return: nothing
-    :rtype: None
-    """
-    return move_file(src_file, dest_file)
 
 
 def link(src_file, dest_file):
@@ -757,12 +739,6 @@ def restore_versioned_file(backup_file, version):
             return False
 
     return True
-
-
-# one legacy custom provider is keeping this signature here,
-# a monkey patch could fix that so that this can be removed
-def tryInt(s, s_default=0):
-    return try_int(s, s_default)
 
 
 # try to convert to float, return default on failure
@@ -1416,23 +1392,23 @@ def find_mount_point(path):
     # type: (AnyStr) -> AnyStr
     """
     returns the mount point for the given path
-    :param path: path to find the mount point
-    :return: mount point for path
+
+    :param path: to find the mount path
+    :return: mount point for path or path if no mount
     """
-    if not os.path.exists(path):
-        return path
-    org_path = path
-    path = os.path.realpath(os.path.abspath(path))
-    try:
-        while not os.path.ismount(path):
-            new_path = os.path.dirname(path)
-            if new_path == path:
-                # in case no mount point was found return original path
-                return org_path
-            path = new_path
-    except (BaseException, Exception):
-        return org_path
-    return path
+    result = path
+    if os.path.exists(path):
+        result = os.path.realpath(os.path.abspath(path))
+        try:
+            while not os.path.ismount(result):
+                new_path = os.path.dirname(result)
+                if new_path == result:
+                    # return input path if mount point not found
+                    return path
+                result = new_path
+        except (BaseException, Exception):
+            return path
+    return result
 
 
 def df():
@@ -1443,19 +1419,22 @@ def df():
     :return: string path, string value that is formatted size
     """
     result = []
-    min_output = True
+    min_output = True  # flag ui to output minimal (e.g. vol: size, vol: size)
     if sickgear.ROOT_DIRS and sickgear.DISPLAY_FREESPACE:
         targets = []
-        for path in sickgear.ROOT_DIRS.split('|')[1:]:
-            target = find_mount_point(path)
-            if target and target not in targets:
+        for cur_target in filter(lambda _t: _t and _t not in targets,
+                                 map(find_mount_point, sickgear.ROOT_DIRS.split('|')[1:])):
+            targets += [cur_target]
+            free = freespace(cur_target)
+            if 'win32' == sys.platform and None is not free:
+                cur_target = os.path.splitdrive(cur_target)[0]
+            if any(['win32' == sys.platform and not re.match('(?i)[a-z]:(\\\\)?$', cur_target),
+                    # Windows, if a simple drive letter isn't found, fallback to full path. On Linux, full path is used
+                    # trigger ui to output long paths instead of minimal volume letters layout
+                    sys.platform.startswith(('linux', 'darwin', 'sunos5')), 'bsd' in sys.platform]):
                 min_output = False
-                targets += [target]
-                free = freespace(target)
-                if None is not free:
-                    result += [(target, sizeof_fmt(free).replace(' ', ''))]
-                else:
-                    result += [(target, 'unavailable')]
+            result += [(cur_target, 'unavailable' if None is free else sizeof_fmt(free, sep=''))]
+
     return result, min_output
 
 
