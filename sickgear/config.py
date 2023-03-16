@@ -152,8 +152,8 @@ def schedule_mediaprocess(iv):
     if sickgear.MEDIAPROCESS_INTERVAL < sickgear.MIN_MEDIAPROCESS_INTERVAL:
         sickgear.MEDIAPROCESS_INTERVAL = sickgear.MIN_MEDIAPROCESS_INTERVAL
 
-    sickgear.media_process_scheduler.cycle_time = datetime.timedelta(minutes=sickgear.MEDIAPROCESS_INTERVAL)
-    sickgear.media_process_scheduler.set_paused_state()
+    sickgear.process_media_scheduler.cycle_time = datetime.timedelta(minutes=sickgear.MEDIAPROCESS_INTERVAL)
+    sickgear.process_media_scheduler.set_paused_state()
 
 
 def schedule_recentsearch(iv):
@@ -162,14 +162,14 @@ def schedule_recentsearch(iv):
     if sickgear.RECENTSEARCH_INTERVAL < sickgear.MIN_RECENTSEARCH_INTERVAL:
         sickgear.RECENTSEARCH_INTERVAL = sickgear.MIN_RECENTSEARCH_INTERVAL
 
-    sickgear.recent_search_scheduler.cycle_time = datetime.timedelta(minutes=sickgear.RECENTSEARCH_INTERVAL)
+    sickgear.search_recent_scheduler.cycle_time = datetime.timedelta(minutes=sickgear.RECENTSEARCH_INTERVAL)
 
 
 def schedule_backlog(iv):
     sickgear.BACKLOG_PERIOD = minimax(iv, sickgear.DEFAULT_BACKLOG_PERIOD,
                                       sickgear.MIN_BACKLOG_PERIOD, sickgear.MAX_BACKLOG_PERIOD)
 
-    sickgear.backlog_search_scheduler.action.cycle_time = sickgear.BACKLOG_PERIOD
+    sickgear.search_backlog_scheduler.action.cycle_time = sickgear.BACKLOG_PERIOD
 
 
 def schedule_update_software(iv):
@@ -220,7 +220,7 @@ def schedule_update_packages_notify(update_packages_notify):
 def schedule_download_propers(download_propers):
     if sickgear.DOWNLOAD_PROPERS != download_propers:
         sickgear.DOWNLOAD_PROPERS = download_propers
-        sickgear.proper_finder_scheduler.set_paused_state()
+        sickgear.search_propers_scheduler.set_paused_state()
 
 
 def schedule_trakt(use_trakt):
@@ -233,7 +233,7 @@ def schedule_trakt(use_trakt):
 def schedule_subtitles(use_subtitles):
     if sickgear.USE_SUBTITLES != use_subtitles:
         sickgear.USE_SUBTITLES = use_subtitles
-        sickgear.subtitles_finder_scheduler.set_paused_state()
+        sickgear.search_subtitles_scheduler.set_paused_state()
 
 
 def schedule_emby_watched(emby_watched_interval):

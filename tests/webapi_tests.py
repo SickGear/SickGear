@@ -180,7 +180,7 @@ class WebAPICase(test.SickbeardTestDBCase):
                 search_queue.SearchQueue(),
                 cycle_time=datetime.timedelta(seconds=3),
                 thread_name='SEARCHQUEUE')
-            sickgear.backlog_search_scheduler = search_backlog.BacklogSearchScheduler(
+            sickgear.search_backlog_scheduler = search_backlog.BacklogSearchScheduler(
                 search_backlog.BacklogSearcher(),
                 cycle_time=datetime.timedelta(minutes=60),
                 run_delay=datetime.timedelta(minutes=60),

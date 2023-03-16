@@ -19,6 +19,7 @@ import datetime
 
 from . import db, helpers, logger
 from .common import *
+from .scheduler import Job
 
 import sickgear
 
@@ -103,24 +104,22 @@ def subtitle_language_filter():
     return [language for language in subliminal.language.LANGUAGES if language[2] != ""]
 
 
-class SubtitlesFinder(object):
+class SubtitlesFinder(Job):
     """
     The SubtitlesFinder will be executed every hour but will not necessarily search
     and download subtitles. Only if the defined rule is true
     """
 
     def __init__(self):
-        self.amActive = False
+        super(SubtitlesFinder, self).__init__(self.job_run, kwargs={}, thread_lock=True)
 
     @staticmethod
     def is_enabled():
         return sickgear.USE_SUBTITLES
 
-    def run(self):
+    def job_run(self):
         if self.is_enabled():
-            self.amActive = True
             self._main()
-            self.amActive = False
 
     def _main(self):
         if 1 > len(sickgear.subtitles.get_enabled_service_list()):

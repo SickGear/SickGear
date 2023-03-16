@@ -48,6 +48,7 @@ from .indexers import indexer_api, indexer_config
 from .indexers.indexer_config import *
 from lib.tvinfo_base.exceptions import *
 from .scene_numbering import set_scene_numbering_helper
+from .scheduler import Scheduler
 from .search_backlog import FORCED_BACKLOG
 from .show_updater import clean_ignore_require_words
 from .sgdatetime import SGDatetime
@@ -1915,9 +1916,9 @@ class CMD_SickGearPostProcess(ApiCall):
         if not self.type:
             self.type = 'manual'
 
-        data = processTV.processDir(self.path, process_method=self.process_method, force=self.force_replace,
-                                    force_replace=self.is_priority, failed=self.failed, pp_type=self.type,
-                                    client=self.client)
+        data = processTV.process_dir(self.path, process_method=self.process_method, force=self.force_replace,
+                                     force_replace=self.is_priority, failed=self.failed, pp_type=self.type,
+                                     client=self.client)
 
         if not self.return_data:
             data = ""
@@ -2074,7 +2075,7 @@ class CMD_SickGearCheckScheduler(ApiCall):
 
         backlogPaused = sickgear.search_queue_scheduler.action.is_backlog_paused()
         backlogRunning = sickgear.search_queue_scheduler.action.is_backlog_in_progress()
-        nextBacklog = sickgear.backlog_search_scheduler.next_run().strftime(dateFormat)
+        nextBacklog = sickgear.search_backlog_scheduler.next_run().strftime(dateFormat)
 
         data = {"backlog_is_paused": int(backlogPaused), "backlog_is_running": int(backlogRunning),
                 "last_backlog": (0 < len(sql_result) and _ordinal_to_dateForm(sql_result[0]["last_backlog"])) or '',
@@ -2177,15 +2178,15 @@ class CMD_SickGearForceSearch(ApiCall):
         """ force the specified search type to run """
         result = None
         if 'recent' == self.searchtype and not sickgear.search_queue_scheduler.action.is_recentsearch_in_progress() \
-                and not sickgear.recent_search_scheduler.action.amActive:
-            result = sickgear.recent_search_scheduler.force_run()
+                and not sickgear.search_recent_scheduler.is_running_job:
+            result = sickgear.search_recent_scheduler.force_run()
         elif 'backlog' == self.searchtype and not sickgear.search_queue_scheduler.action.is_backlog_in_progress() \
-                and not sickgear.backlog_search_scheduler.action.amActive:
-            sickgear.backlog_search_scheduler.force_search(force_type=FORCED_BACKLOG)
+                and not sickgear.search_backlog_scheduler.is_running_job:
+            sickgear.search_backlog_scheduler.force_search(force_type=FORCED_BACKLOG)
             result = True
         elif 'proper' == self.searchtype and not sickgear.search_queue_scheduler.action.is_propersearch_in_progress() \
-                and not sickgear.proper_finder_scheduler.action.amActive:
-            result = sickgear.proper_finder_scheduler.force_run()
+                and not sickgear.search_propers_scheduler.is_running_job:
+            result = sickgear.search_propers_scheduler.force_run()
         if result:
             return _responds(RESULT_SUCCESS, msg='%s search successfully forced' % self.searchtype)
         return _responds(RESULT_FAILURE,
@@ -2499,6 +2500,13 @@ class CMD_SickGearRestart(ApiCall):
 
     def run(self):
         """ restart sickgear """
+
+        response = Scheduler.blocking_jobs()
+        if response:
+            msg = f'Restart aborted from API because {response.lower()}'
+            logger.log(msg, logger.DEBUG)
+            return _responds(RESULT_FAILURE, msg=msg)
+
         sickgear.restart(soft=False)
         return _responds(RESULT_SUCCESS, msg="SickGear is restarting...")
 
@@ -2817,6 +2825,13 @@ class CMD_SickGearShutdown(ApiCall):
 
     def run(self):
         """ shutdown sickgear """
+
+        response = Scheduler.blocking_jobs()
+        if response:
+            msg = f'Shutdown aborted from API because {response.lower()}'
+            logger.log(msg, logger.DEBUG)
+            return _responds(RESULT_FAILURE, msg=msg)
+
         sickgear.events.put(sickgear.events.SystemEvent.SHUTDOWN)
         return _responds(RESULT_SUCCESS, msg="SickGear is shutting down...")
 
@@ -4668,10 +4683,10 @@ class CMD_SickGearShowsForceUpdate(ApiCall):
     def run(self):
         """ force the daily show update now """
         if sickgear.show_queue_scheduler.action.is_show_update_running() \
-                or sickgear.show_update_scheduler.action.amActive:
+                or sickgear.update_show_scheduler.is_running_job:
             return _responds(RESULT_FAILURE, msg="show update already running.")
 
-        result = sickgear.show_update_scheduler.force_run()
+        result = sickgear.update_show_scheduler.force_run()
         if result:
             return _responds(RESULT_SUCCESS, msg="daily show update started")
         return _responds(RESULT_FAILURE, msg="can't start show update currently")

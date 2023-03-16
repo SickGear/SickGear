@@ -23,6 +23,7 @@ from exceptions_helper import ex
 
 import sickgear
 from . import db, logger, network_timezones, properFinder, ui
+from .scheduler import Job
 
 # noinspection PyUnreachableCode
 if False:
@@ -54,13 +55,12 @@ def clean_ignore_require_words():
         pass
 
 
-class ShowUpdater(object):
+class ShowUpdater(Job):
     def __init__(self):
-        self.amActive = False
+        super(ShowUpdater, self).__init__(self.job_run, kwargs={})
 
-    def run(self):
-
-        self.amActive = True
+    @staticmethod
+    def job_run():
 
         try:
             update_datetime = datetime.datetime.now()
@@ -89,14 +89,14 @@ class ShowUpdater(object):
 
             # update xem id lists
             try:
-                sickgear.scene_exceptions.get_xem_ids()
+                sickgear.scene_exceptions.ReleaseMap().fetch_xem_ids()
             except (BaseException, Exception):
                 logger.error('xem id list update error')
                 logger.error(traceback.format_exc())
 
             # update scene exceptions
             try:
-                sickgear.scene_exceptions.retrieve_exceptions()
+                sickgear.scene_exceptions.ReleaseMap().fetch_exceptions()
             except (BaseException, Exception):
                 logger.error('scene exceptions update error')
                 logger.error(traceback.format_exc())
@@ -147,7 +147,7 @@ class ShowUpdater(object):
                 import threading
                 try:
                     sickgear.background_mapping_task = threading.Thread(
-                        name='MAPPINGSUPDATER', target=sickgear.indexermapper.load_mapped_ids, kwargs={'update': True})
+                        name='MAPPINGUPDATES', target=sickgear.indexermapper.load_mapped_ids, kwargs={'update': True})
                     sickgear.background_mapping_task.start()
                 except (BaseException, Exception):
                     logger.error('missing mapped ids update error')
@@ -224,8 +224,8 @@ class ShowUpdater(object):
 
             logger.log('Added all shows to show queue for full update')
 
-        finally:
-            self.amActive = False
+        except(BaseException, Exception):
+            pass
 
     def __del__(self):
         pass

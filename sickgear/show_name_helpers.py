@@ -25,7 +25,7 @@ import sickgear
 from . import common, db, logger
 from .helpers import sanitize_scene_name
 from .name_parser.parser import InvalidNameException, InvalidShowException, NameParser
-from .scene_exceptions import get_scene_exceptions
+from .scene_exceptions import ReleaseMap
 from sg_helpers import scantree
 
 from _23 import quote_plus
@@ -384,10 +384,10 @@ def all_possible_show_names(show_obj, season=-1, force_anime=False):
     :return: a list of all the possible show names
     """
 
-    show_names = get_scene_exceptions(show_obj.tvid, show_obj.prodid, season=season)[:]
-    if not show_names:  # if we don't have any season specific exceptions fallback to generic exceptions
+    show_names = ReleaseMap().get_alt_names(show_obj.tvid, show_obj.prodid, season)[:]
+    if -1 != season and not show_names:  # fallback to generic exceptions if no season specific exceptions
         season = -1
-        show_names = get_scene_exceptions(show_obj.tvid, show_obj.prodid, season=season)[:]
+        show_names = ReleaseMap().get_alt_names(show_obj.tvid, show_obj.prodid)[:]
 
     if -1 == season:
         show_names.append(show_obj.name)

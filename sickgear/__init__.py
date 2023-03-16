@@ -37,7 +37,7 @@ import zlib
 from . import classes, db, helpers, image_cache, indexermapper, logger, metadata, naming, people_queue, providers, \
     scene_exceptions, scene_numbering, scheduler, search_backlog, search_propers, search_queue, search_recent, \
     show_queue, show_updater, subtitles, trakt_helpers, version_checker, watchedstate_queue
-from . import auto_post_processer, properFinder  # must come after the above imports
+from . import auto_media_process, properFinder  # must come after the above imports
 from .common import SD, SKIPPED, USER_AGENT
 from .config import check_section, check_setting_int, check_setting_str, ConfigMigrator, minimax
 from .databases import cache_db, failed_db, mainDB
@@ -61,7 +61,7 @@ import sg_helpers
 
 # noinspection PyUnreachableCode
 if False:
-    from typing import AnyStr, Dict, List
+    from typing import AnyStr, Dict, List, Optional
     from adba import Connection
     from .event_queue import Events
     from .tv import TVShow
@@ -88,23 +88,25 @@ DATA_DIR = ''
 # noinspection PyTypeChecker
 events = None  # type: Events
 
-recent_search_scheduler = None
-backlog_search_scheduler = None
-show_update_scheduler = None
-people_queue_scheduler = None
-update_software_scheduler = None
-update_packages_scheduler = None
-show_queue_scheduler = None
-search_queue_scheduler = None
-proper_finder_scheduler = None
-media_process_scheduler = None
-subtitles_finder_scheduler = None
-# trakt_checker_scheduler = None
-emby_watched_state_scheduler = None
-plex_watched_state_scheduler = None
-watched_state_queue_scheduler = None
+show_queue_scheduler = None  # type: Optional[scheduler.Scheduler]
+search_queue_scheduler = None  # type: Optional[scheduler.Scheduler]
+people_queue_scheduler = None  # type: Optional[scheduler.Scheduler]
+watched_state_queue_scheduler = None  # type: Optional[scheduler.Scheduler]
+update_software_scheduler = None  # type: Optional[scheduler.Scheduler]
+update_packages_scheduler = None  # type: Optional[scheduler.Scheduler]
+update_show_scheduler = None  # type: Optional[scheduler.Scheduler]
+update_release_mappings_scheduler = None  # type: Optional[scheduler.Scheduler]
+search_recent_scheduler = None  # type: Optional[scheduler.Scheduler]
+search_backlog_scheduler = None  # type: Optional[search_backlog.BacklogSearchScheduler]
+search_propers_scheduler = None  # type: Optional[scheduler.Scheduler]
+search_subtitles_scheduler = None  # type: Optional[scheduler.Scheduler]
+emby_watched_state_scheduler = None  # type: Optional[scheduler.Scheduler]
+plex_watched_state_scheduler = None  # type: Optional[scheduler.Scheduler]
+process_media_scheduler = None  # type: Optional[scheduler.Scheduler]
 # noinspection PyTypeChecker
 background_mapping_task = None  # type: threading.Thread
+# deprecated
+# trakt_checker_scheduler = None
 
 provider_ping_thread_pool = {}
 
@@ -624,9 +626,11 @@ __INITIALIZED__ = False
 __INIT_STAGE__ = 0
 
 # don't reassign MEMCACHE var without reassigning sg_helpers.MEMCACHE
+# and scene_exceptions.MEMCACHE
 # as long as the pointer is the same (dict only modified) all is fine
 MEMCACHE = {}
 sg_helpers.MEMCACHE = MEMCACHE
+scene_exceptions.MEMCACHE = MEMCACHE
 MEMCACHE_FLAG_IMAGES = {}
 
 
@@ -1518,11 +1522,14 @@ def init_stage_2():
     global __INITIALIZED__, MEMCACHE, MEMCACHE_FLAG_IMAGES, RECENTSEARCH_STARTUP
     # Schedulers
     # global trakt_checker_scheduler
-    global recent_search_scheduler, backlog_search_scheduler, people_queue_scheduler, show_update_scheduler, \
-        update_software_scheduler, update_packages_scheduler, show_queue_scheduler, search_queue_scheduler, \
-        proper_finder_scheduler, media_process_scheduler, subtitles_finder_scheduler, \
-        background_mapping_task, \
-        watched_state_queue_scheduler, emby_watched_state_scheduler, plex_watched_state_scheduler
+    global update_software_scheduler, update_packages_scheduler, \
+        update_show_scheduler, update_release_mappings_scheduler, \
+        search_backlog_scheduler, search_propers_scheduler, \
+        search_recent_scheduler, search_subtitles_scheduler, \
+        search_queue_scheduler, show_queue_scheduler, people_queue_scheduler, \
+        watched_state_queue_scheduler, emby_watched_state_scheduler, plex_watched_state_scheduler, \
+        process_media_scheduler, background_mapping_task
+
     # Gen Config/Misc
     global SHOW_UPDATE_HOUR, UPDATE_INTERVAL, UPDATE_PACKAGES_INTERVAL
     # Search Settings/Episode
@@ -1570,32 +1577,17 @@ def init_stage_2():
         metadata_provider_dict[tmp_provider.name] = tmp_provider
 
     # initialize schedulers
-    # updaters
-    update_now = datetime.timedelta(minutes=0)
-    update_software_scheduler = scheduler.Scheduler(
-        version_checker.SoftwareUpdater(),
-        cycle_time=datetime.timedelta(hours=UPDATE_INTERVAL),
-        thread_name='SOFTWAREUPDATER',
-        silent=False)
-
-    update_packages_scheduler = scheduler.Scheduler(
-        version_checker.PackagesUpdater(),
-        cycle_time=datetime.timedelta(hours=UPDATE_PACKAGES_INTERVAL),
-        # run_delay=datetime.timedelta(minutes=2),
-        thread_name='PACKAGESUPDATER',
-        silent=False)
-
+    # /
+    # queues must be first
     show_queue_scheduler = scheduler.Scheduler(
         show_queue.ShowQueue(),
         cycle_time=datetime.timedelta(seconds=3),
         thread_name='SHOWQUEUE')
 
-    show_update_scheduler = scheduler.Scheduler(
-        show_updater.ShowUpdater(),
-        cycle_time=datetime.timedelta(hours=1),
-        start_time=datetime.time(hour=SHOW_UPDATE_HOUR),
-        thread_name='SHOWUPDATER',
-        prevent_cycle_run=show_queue_scheduler.action.is_show_update_running)  # 3AM
+    search_queue_scheduler = scheduler.Scheduler(
+        search_queue.SearchQueue(),
+        cycle_time=datetime.timedelta(seconds=3),
+        thread_name='SEARCHQUEUE')
 
     people_queue_scheduler = scheduler.Scheduler(
         people_queue.PeopleQueue(),
@@ -1603,21 +1595,52 @@ def init_stage_2():
         thread_name='PEOPLEQUEUE'
     )
 
-    # searchers
-    search_queue_scheduler = scheduler.Scheduler(
-        search_queue.SearchQueue(),
+    watched_state_queue_scheduler = scheduler.Scheduler(
+        watchedstate_queue.WatchedStateQueue(),
         cycle_time=datetime.timedelta(seconds=3),
-        thread_name='SEARCHQUEUE')
+        thread_name='WATCHEDSTATEQUEUE')
 
+    # /
+    # updaters
+    update_software_scheduler = scheduler.Scheduler(
+        version_checker.SoftwareUpdater(),
+        cycle_time=datetime.timedelta(hours=UPDATE_INTERVAL),
+        thread_name='SOFTWAREUPDATE',
+        silent=False)
+
+    update_packages_scheduler = scheduler.Scheduler(
+        version_checker.PackagesUpdater(),
+        cycle_time=datetime.timedelta(hours=UPDATE_PACKAGES_INTERVAL),
+        # run_delay=datetime.timedelta(minutes=2),
+        thread_name='PACKAGESUPDATE',
+        silent=False)
+
+    update_show_scheduler = scheduler.Scheduler(
+        show_updater.ShowUpdater(),
+        cycle_time=datetime.timedelta(hours=1),
+        start_time=datetime.time(hour=SHOW_UPDATE_HOUR),
+        thread_name='SHOWDATAUPDATE',
+        prevent_cycle_run=show_queue_scheduler.action.is_show_update_running)  # 3AM
+
+    classes.loading_msg.message = 'Loading show maps'
+    update_release_mappings_scheduler = scheduler.Scheduler(
+        scene_exceptions.ReleaseMap(),
+        cycle_time=datetime.timedelta(hours=2),
+        thread_name='SHOWMAPSUPDATE',
+        silent=False)
+
+    # /
+    # searchers
     init_search_delay = int(os.environ.get('INIT_SEARCH_DELAY', 0))
 
     # enter 4499 (was 4489) for experimental internal provider intervals
     update_interval = datetime.timedelta(minutes=(RECENTSEARCH_INTERVAL, 1)[4499 == RECENTSEARCH_INTERVAL])
-    recent_search_scheduler = scheduler.Scheduler(
+    update_now = datetime.timedelta(minutes=0)
+    search_recent_scheduler = scheduler.Scheduler(
         search_recent.RecentSearcher(),
         cycle_time=update_interval,
         run_delay=update_now if RECENTSEARCH_STARTUP else datetime.timedelta(minutes=init_search_delay or 5),
-        thread_name='RECENTSEARCHER',
+        thread_name='RECENTSEARCH',
         prevent_cycle_run=search_queue_scheduler.action.is_recentsearch_in_progress)
 
     if [x for x in providers.sorted_sources()
@@ -1635,14 +1658,13 @@ def init_stage_2():
         backlogdelay = helpers.try_int((time_diff.total_seconds() / 60) + 10, 10)
     else:
         backlogdelay = 10
-    backlog_search_scheduler = search_backlog.BacklogSearchScheduler(
+    search_backlog_scheduler = search_backlog.BacklogSearchScheduler(
         search_backlog.BacklogSearcher(),
         cycle_time=datetime.timedelta(minutes=get_backlog_cycle_time()),
         run_delay=datetime.timedelta(minutes=init_search_delay or backlogdelay),
-        thread_name='BACKLOG',
+        thread_name='BACKLOGSEARCH',
         prevent_cycle_run=search_queue_scheduler.action.is_standard_backlog_in_progress)
 
-    propers_searcher = search_propers.ProperSearcher()
     last_proper_search = datetime.datetime.fromtimestamp(properFinder.get_last_proper_search())
     time_diff = datetime.timedelta(days=1) - (datetime.datetime.now() - last_proper_search)
     if time_diff < datetime.timedelta(seconds=0):
@@ -1650,34 +1672,21 @@ def init_stage_2():
     else:
         properdelay = helpers.try_int((time_diff.total_seconds() / 60) + 5, 20)
 
-    proper_finder_scheduler = scheduler.Scheduler(
-        propers_searcher,
+    search_propers_scheduler = scheduler.Scheduler(
+        search_propers.ProperSearcher(),
         cycle_time=datetime.timedelta(days=1),
         run_delay=datetime.timedelta(minutes=init_search_delay or properdelay),
-        thread_name='FINDPROPERS',
+        thread_name='PROPERSSEARCH',
         prevent_cycle_run=search_queue_scheduler.action.is_propersearch_in_progress)
 
-    # processors
-    media_process_scheduler = scheduler.Scheduler(
-        auto_post_processer.PostProcesser(),
-        cycle_time=datetime.timedelta(minutes=MEDIAPROCESS_INTERVAL),
-        thread_name='POSTPROCESSER',
-        silent=not PROCESS_AUTOMATICALLY)
-
-    subtitles_finder_scheduler = scheduler.Scheduler(
+    search_subtitles_scheduler = scheduler.Scheduler(
         subtitles.SubtitlesFinder(),
         cycle_time=datetime.timedelta(hours=SUBTITLES_FINDER_INTERVAL),
-        thread_name='FINDSUBTITLES',
+        thread_name='SUBTITLESEARCH',
         silent=not USE_SUBTITLES)
 
-    background_mapping_task = threading.Thread(name='MAPPINGSUPDATER', target=indexermapper.load_mapped_ids,
-                                               kwargs={'load_all': True})
-
-    watched_state_queue_scheduler = scheduler.Scheduler(
-        watchedstate_queue.WatchedStateQueue(),
-        cycle_time=datetime.timedelta(seconds=3),
-        thread_name='WATCHEDSTATEQUEUE')
-
+    # /
+    # others
     emby_watched_state_scheduler = scheduler.Scheduler(
         EmbyWatchedStateUpdater(),
         cycle_time=datetime.timedelta(minutes=EMBY_WATCHEDSTATE_INTERVAL),
@@ -1689,6 +1698,15 @@ def init_stage_2():
         cycle_time=datetime.timedelta(minutes=PLEX_WATCHEDSTATE_INTERVAL),
         run_delay=datetime.timedelta(minutes=5),
         thread_name='PLEXWATCHEDSTATE')
+
+    process_media_scheduler = scheduler.Scheduler(
+        auto_media_process.MediaProcess(),
+        cycle_time=datetime.timedelta(minutes=MEDIAPROCESS_INTERVAL),
+        thread_name='PROCESSMEDIA',
+        silent=not PROCESS_AUTOMATICALLY)
+
+    background_mapping_task = threading.Thread(name='MAPPINGUPDATES', target=indexermapper.load_mapped_ids,
+                                               kwargs={'load_all': True})
 
     MEMCACHE['history_tab_limit'] = 11
     MEMCACHE['history_tab'] = History.menu_tab(MEMCACHE['history_tab_limit'])
@@ -1707,11 +1725,15 @@ def init_stage_2():
 def enabled_schedulers(is_init=False):
     # ([], [trakt_checker_scheduler])[USE_TRAKT] + \
     return ([], [events])[is_init] \
-           + ([], [recent_search_scheduler, backlog_search_scheduler, show_update_scheduler, people_queue_scheduler,
-                   update_software_scheduler, update_packages_scheduler,
-                   show_queue_scheduler, search_queue_scheduler, proper_finder_scheduler,
-                   media_process_scheduler, subtitles_finder_scheduler,
-                   emby_watched_state_scheduler, plex_watched_state_scheduler, watched_state_queue_scheduler]
+           + ([], [update_software_scheduler, update_packages_scheduler,
+                   update_show_scheduler, update_release_mappings_scheduler,
+                   search_recent_scheduler, search_backlog_scheduler,
+                   search_propers_scheduler, search_subtitles_scheduler,
+                   show_queue_scheduler, search_queue_scheduler,
+                   people_queue_scheduler, watched_state_queue_scheduler,
+                   emby_watched_state_scheduler, plex_watched_state_scheduler,
+                   process_media_scheduler
+                   ]
               )[not MEMCACHE.get('update_restart')] \
            + ([events], [])[is_init]
 

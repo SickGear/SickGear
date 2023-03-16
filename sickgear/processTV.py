@@ -1141,10 +1141,9 @@ class ProcessTVShow(object):
             self._buffer(processor.log.strip('\n'))
 
 
-# backward compatibility prevents the case of this function name from being updated to PEP8
-def processDir(dir_name, nzb_name=None, process_method=None, force=False, force_replace=None,
-               failed=False, pp_type='auto', cleanup=False, webhandler=None, show_obj=None, is_basedir=True,
-               skip_failure_processing=False, client=None):
+def process_dir(dir_name, nzb_name=None, process_method=None, force=False, force_replace=None,
+                failed=False, pp_type='auto', cleanup=False, webhandler=None, show_obj=None, is_basedir=True,
+                skip_failure_processing=False, client=None):
     """
 
     :param dir_name: dir name
@@ -1180,6 +1179,10 @@ def processDir(dir_name, nzb_name=None, process_method=None, force=False, force_
     return ProcessTVShow(webhandler, is_basedir, skip_failure_processing=skip_failure_processing,
                          client=client).process_dir(dir_name, nzb_name, process_method, force, force_replace, failed,
                                                     pp_type, cleanup, show_obj)
+
+
+# backward compatibility
+processDir = process_dir
 
 
 def process_minimal(nzb_name, show_obj, failed, webhandler):
