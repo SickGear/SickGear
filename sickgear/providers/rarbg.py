@@ -41,7 +41,7 @@ class RarbgProvider(generic.TorrentProvider):
                      'api_list': self.url_api + 'mode=list',
                      'api_search': self.url_api + 'mode=search'}
 
-        self.params = {'defaults': '&format=json_extended&category=18;41&limit=100&sort=last&ranked={r}&token={t}',
+        self.params = {'defaults': '&format=json_extended&category=18;41;49&limit=100&sort=last&ranked={r}&token={t}',
                        'param_iid': '&search_imdb=%(sid)s',
                        'param_tid': '&search_tvdb=%(sid)s',
                        'param_str': '&search_string=%(str)s',
