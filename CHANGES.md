@@ -15,6 +15,7 @@
 * Add optional "freespace" parameter to endpoints: sg.getrootdirs, sg.addrootdir, sg.deleterootdir
 * Change update help of affected endpoints
 * Fix explicitly save rootdirs after adding or deleting via Web API
+* Change add Rarbg UHD search category 
 
 
 [develop changelog]
