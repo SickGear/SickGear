@@ -1,4 +1,9 @@
-﻿### 3.28.0 (2023-04-12 13:05:00 UTC)
+﻿### 3.29.0 (2023-xx-xx xx:xx:00 UTC)
+
+* Update SimpleJSON 3.18.1 (c891b95) to 3.19.1 (aeb63ee)
+
+
+### 3.28.0 (2023-04-12 13:05:00 UTC)
 
 * Update html5lib 1.1 (f87487a) to 1.2-dev (3e500bb)
 * Update package resource API 63.2.0 (3ae44cd) to 67.5.1 (f51eccd)
