@@ -1,6 +1,7 @@
 ﻿### 3.29.0 (2023-xx-xx xx:xx:00 UTC)
 
 * Update SimpleJSON 3.18.1 (c891b95) to 3.19.1 (aeb63ee)
+* Update Tornado Web Server 6.3.0 (7186b86) to 6.3.1 (419838b)
 
 
 ### 3.28.0 (2023-04-12 13:05:00 UTC)
@@ -20,7 +21,7 @@
 * Add optional "freespace" parameter to endpoints: sg.getrootdirs, sg.addrootdir, sg.deleterootdir
 * Change update help of affected endpoints
 * Fix explicitly save rootdirs after adding or deleting via Web API
-* Change add Rarbg UHD search category 
+* Change add Rarbg UHD search category
 
 
 ### 3.27.13 (2023-04-12 10:15:00 UTC)
