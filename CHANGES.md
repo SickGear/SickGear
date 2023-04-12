@@ -1,4 +1,4 @@
-﻿### 3.28.0 (2023-xx-xx xx:xx:00 UTC)
+﻿### 3.28.0 (2023-04-12 13:05:00 UTC)
 
 * Update html5lib 1.1 (f87487a) to 1.2-dev (3e500bb)
 * Update package resource API 63.2.0 (3ae44cd) to 67.5.1 (f51eccd)
@@ -16,15 +16,6 @@
 * Change update help of affected endpoints
 * Fix explicitly save rootdirs after adding or deleting via Web API
 * Change add Rarbg UHD search category 
-
-
-[develop changelog]
-
-* Add logging around the restart/shutdown event
-* Update package resource API 63.2.0 (3ae44cd) to 67.3.2 (b9bf2ec)
-* Refactor `timestamp_near` to `SGDatetime.timestamp_near`
-* Change re-add deprecated endpoint used by external scripts
-* Fix UI by marking resource as unavailable if cannot determine its free space
 
 
 ### 3.27.13 (2023-04-12 10:15:00 UTC)
