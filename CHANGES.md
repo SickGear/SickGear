@@ -1,5 +1,6 @@
 ﻿### 3.29.0 (2023-xx-xx xx:xx:00 UTC)
 
+* Update Msgpack 1.0.4 (b5acfd5) to 1.0.5 (0516c2c)
 * Update SimpleJSON 3.18.1 (c891b95) to 3.19.1 (aeb63ee)
 * Update Tornado Web Server 6.3.0 (7186b86) to 6.3.1 (419838b)
 
