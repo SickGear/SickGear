@@ -25,21 +25,18 @@ import sickgear
 from . import db, helpers, logger
 from sg_helpers import int_to_time
 
-# noinspection PyPep8Naming
-import encodingKludge as ek
 from lib.dateutil import tz, zoneinfo
 from lib.tzlocal import get_localzone
 
 from sg_helpers import remove_file_perm, scantree
-from six import integer_types, iteritems, string_types, PY2
-from _23 import list_keys
+from six import integer_types, iteritems, string_types
 
 # noinspection PyUnreachableCode
 if False:
     from _23 import DirEntry
     from typing import AnyStr, Optional, Tuple, Union
 
-# regex to parse time (12/24 hour format)
+# regex to parse time (12/24-hour format)
 time_regex = re.compile(r'(\d{1,2})(([:.](\d{2}))? ?([PA][. ]? ?M)|[:.](\d{2}))\b', flags=re.I)
 am_regex = re.compile(r'(A[. ]? ?M)', flags=re.I)
 pm_regex = re.compile(r'(P[. ]? ?M)', flags=re.I)
@@ -126,8 +123,8 @@ def get_utc():
             pass
         if isinstance(utc, datetime.tzinfo):
             return utc
-    tz_utc_file = ek.ek(os.path.join, ek.ek(os.path.dirname, zoneinfo.__file__), 'Greenwich')
-    if ek.ek(os.path.isfile, tz_utc_file):
+    tz_utc_file = os.path.join(os.path.dirname(zoneinfo.__file__), 'Greenwich')
+    if os.path.isfile(tz_utc_file):
         return tz.tzfile(tz_utc_file)
 
 
@@ -154,14 +151,14 @@ def _remove_old_zoneinfo():
     """
     if None is not zoneinfo.ZONEFILENAME:
         current_file = helpers.real_path(
-            ek.ek(os.path.join, sickgear.ZONEINFO_DIR, ek.ek(os.path.basename, zoneinfo.ZONEFILENAME)))
+            os.path.join(sickgear.ZONEINFO_DIR, os.path.basename(zoneinfo.ZONEFILENAME)))
         for entry in chain.from_iterable([scantree(helpers.real_path(_dir), include=r'\.tar\.gz$', filter_kind=False)
                                           for _dir in (sickgear.ZONEINFO_DIR, )]):  # type: DirEntry
             if current_file != entry.path:
                 if remove_file_perm(entry.path, log_err=False):
-                    logger.log(u'Delete unneeded old zoneinfo File: %s' % entry.path)
+                    logger.log(f'Delete unneeded old zoneinfo File: {entry.path}')
                 else:
-                    logger.log(u'Unable to delete: %s' % entry.path, logger.ERROR)
+                    logger.error(f'Unable to delete: {entry.path}')
 
 
 def _update_zoneinfo():
@@ -177,24 +174,23 @@ def _update_zoneinfo():
     url_data = helpers.get_url(url)
     if None is url_data:
         update_last_retry()
-        # when None is urlData, trouble connecting to github
-        logger.log(u'Fetching zoneinfo.txt failed, this can happen from time to time. Unable to get URL: %s' % url,
-                   logger.WARNING)
+        # when None is urlData, trouble connecting to GitHub
+        logger.warning(f'Fetching zoneinfo.txt failed, this can happen from time to time. Unable to get URL: {url}')
         return
 
     reset_last_retry()
 
     try:
-        (new_zoneinfo, zoneinfo_md5) = url_data.strip().rsplit(u' ')
+        (new_zoneinfo, zoneinfo_md5) = url_data.strip().rsplit(' ')
     except (BaseException, Exception):
-        logger.log('Fetching zoneinfo.txt failed, update contains unparsable data: %s' % url_data, logger.DEBUG)
+        logger.debug('Fetching zoneinfo.txt failed, update contains unparsable data: %s' % url_data)
         return
 
     current_file = zoneinfo.ZONEFILENAME
     if None is not current_file:
-        current_file = ek.ek(os.path.basename, current_file)
-    zonefile = helpers.real_path(ek.ek(os.path.join, sickgear.ZONEINFO_DIR, current_file))
-    zonemetadata = None if not ek.ek(os.path.isfile, zonefile) else \
+        current_file = os.path.basename(current_file)
+    zonefile = helpers.real_path(os.path.join(sickgear.ZONEINFO_DIR, current_file))
+    zonemetadata = None if not os.path.isfile(zonefile) else \
         zoneinfo.ZoneInfoFile(zoneinfo.getzoneinfofile_stream()).metadata
 
     newtz_regex = re.search(r'(\d{4}[^.]+)', new_zoneinfo)
@@ -209,31 +205,31 @@ def _update_zoneinfo():
         return
 
     # load the new zoneinfo
-    url_tar = u'https://raw.githubusercontent.com/Prinz23/sb_network_timezones/master/%s' % new_zoneinfo
+    url_tar = f'https://raw.githubusercontent.com/Prinz23/sb_network_timezones/master/{new_zoneinfo}'
 
     zonefile_tmp = re.sub(r'\.tar\.gz$', '.tmp', zonefile)
 
     if not remove_file_perm(zonefile_tmp, log_err=False):
-        logger.log(u'Unable to delete: %s' % zonefile_tmp, logger.ERROR)
+        logger.error(f'Unable to delete: {zonefile_tmp}')
         return
 
     if not helpers.download_file(url_tar, zonefile_tmp):
         return
 
-    if not ek.ek(os.path.exists, zonefile_tmp):
-        logger.log(u'Download of %s failed.' % zonefile_tmp, logger.ERROR)
+    if not os.path.exists(zonefile_tmp):
+        logger.error(f'Download of {zonefile_tmp} failed.')
         return
 
     new_hash = str(helpers.md5_for_file(zonefile_tmp))
 
     if zoneinfo_md5.upper() == new_hash.upper():
-        logger.log(u'Updating timezone info with new one: %s' % new_zoneinfo, logger.MESSAGE)
+        logger.log(f'Updating timezone info with new one: {new_zoneinfo}', logger.MESSAGE)
         try:
             # remove the old zoneinfo file
             if None is not current_file:
                 remove_file_perm(zonefile)
             # rename downloaded file
-            ek.ek(os.rename, zonefile_tmp, zonefile)
+            os.rename(zonefile_tmp, zonefile)
             setattr(zoneinfo, '_CLASS_ZONE_INSTANCE', list())
             tz.gettz.cache_clear()
             from dateutil.zoneinfo import get_zonefile_instance
@@ -248,7 +244,7 @@ def _update_zoneinfo():
             return
     else:
         remove_file_perm(zonefile_tmp, log_err=False)
-        logger.log(u'MD5 hash does not match: %s File: %s' % (zoneinfo_md5.upper(), new_hash.upper()), logger.ERROR)
+        logger.error(f'MD5 hash does not match: {zoneinfo_md5.upper()} File: {new_hash.upper()}')
         return
 
 
@@ -266,14 +262,14 @@ def update_network_dict():
 
     network_tz_data = {}
 
-    # network timezones are stored on github pages
+    # network timezones are stored on GitHub pages
     url = 'https://raw.githubusercontent.com/Prinz23/sb_network_timezones/master/network_timezones.txt'
 
     url_data = helpers.get_url(url)
     if url_data in (None, ''):
         update_last_retry()
-        # When None is urlData, trouble connecting to github
-        logger.debug(u'Updating network timezones failed, this can happen from time to time. URL: %s' % url)
+        # When None is urlData, trouble connecting to GitHub
+        logger.debug(f'Updating network timezones failed, this can happen from time to time. URL: {url}')
         load_network_dict(load=False)
         return
 
@@ -282,7 +278,7 @@ def update_network_dict():
     try:
         for line in url_data.splitlines():
             try:
-                (name, tzone) = line.strip().rsplit(u':', 1)
+                (name, tzone) = line.strip().rsplit(':', 1)
             except (BaseException, Exception):
                 continue
             if None is name or None is tzone:
@@ -416,7 +412,7 @@ def parse_time(time_of_day):
                 hour = helpers.try_int(time_parsed.group(1))
                 mins = helpers.try_int(time_parsed.group(4))
                 ampm = time_parsed.group(5)
-                # convert am/pm to 24 hour clock
+                # convert am/pm to 24-hour clock
                 if None is not ampm:
                     if None is not pm_regex.search(ampm) and 12 != hour:
                         hour += 12
@@ -508,21 +504,21 @@ def _load_network_conversions():
 
     conversions_in = []
 
-    # network conversions are stored on github pages
+    # network conversions are stored on GitHub pages
     url = 'https://raw.githubusercontent.com/prinz23/sg_network_conversions/master/conversions.txt'
 
     url_data = helpers.get_url(url)
     if url_data in (None, ''):
         update_last_retry()
-        # when no url_data, trouble connecting to github
-        logger.debug(u'Updating network conversions failed, this can happen from time to time. URL: %s' % url)
+        # when no url_data, trouble connecting to GitHub
+        logger.debug(f'Updating network conversions failed, this can happen from time to time. URL: {url}')
         return
 
     reset_last_retry()
 
     try:
         for line in url_data.splitlines():
-            (tvdb_network, tvrage_network, tvrage_country) = line.strip().rsplit(u'::', 2)
+            (tvdb_network, tvrage_network, tvrage_country) = line.strip().rsplit('::', 2)
             if not (tvdb_network and tvrage_network and tvrage_country):
                 continue
             conversions_in.append(
@@ -549,7 +545,7 @@ def _load_network_conversions():
 
     # remove deleted records
     if 0 < len(conversions_db):
-        network_name = list_keys(conversions_db)
+        network_name = list(conversions_db)
         cl.append(['DELETE FROM network_conversions WHERE tvdb_network'
                    ' IN (%s)' % ','.join(['?'] * len(network_name)), network_name])
 
@@ -612,7 +608,6 @@ def get_episode_time(d,  # type: int
             return SGDatetime.from_timestamp(ep_timestamp, tzinfo=tzinfo, tz_aware=True, local_time=False)
         except OverflowError:
             logger.debug('Invalid timestamp: %s, using fallback' % ep_timestamp)
-            ep_timestamp = None
 
     ep_time = None
     if isinstance(ep_airtime, integer_types):
@@ -635,8 +630,6 @@ def get_episode_time(d,  # type: int
 
     if d and None is not ep_time and None is not tzinfo:
         ep_date = datetime.date.fromordinal(helpers.try_int(d))
-        if PY2:
-            return datetime.datetime.combine(ep_date, ep_time).replace(tzinfo=tzinfo)
         return datetime.datetime.combine(ep_date, ep_time, tzinfo)
 
     return parse_date_time(d, t, tzinfo)

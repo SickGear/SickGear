@@ -18,11 +18,10 @@ import re
 
 from .generic import Notifier
 import sickgear
-from encodingKludge import fixStupidEncodings
 from exceptions_helper import ex
 
-from _23 import b64encodestring, decode_str, etree, filter_iter, list_values, unquote_plus, urlencode
-from six import iteritems, text_type, PY2
+from _23 import b64encodestring, decode_str, etree, unquote_plus, urlencode
+from six import iteritems
 # noinspection PyUnresolvedReferences
 from six.moves import urllib
 
@@ -46,34 +45,33 @@ class PLEXNotifier(Notifier):
 
         """
         if not host:
-            self._log_error(u'No host specified, check your settings')
+            self._log_error('No host specified, check your settings')
             return False
 
         for key in command:
-            if not PY2 or type(command[key]) == text_type:
-                command[key] = command[key].encode('utf-8')
+            command[key] = command[key].encode('utf-8')
 
         enc_command = urlencode(command)
-        self._log_debug(u'Encoded API command: ' + enc_command)
+        self._log_debug(f'Encoded API command: {enc_command}')
 
         url = 'http://%s/xbmcCmds/xbmcHttp/?%s' % (host, enc_command)
         try:
             req = urllib.request.Request(url)
             if password:
                 req.add_header('Authorization', 'Basic %s' % b64encodestring('%s:%s' % (username, password)))
-                self._log_debug(u'Contacting (with auth header) via url: ' + url)
+                self._log_debug(f'Contacting (with auth header) via url: {url}')
             else:
-                self._log_debug(u'Contacting via url: ' + url)
+                self._log_debug(f'Contacting via url: {url}')
 
             http_response_obj = urllib.request.urlopen(req)  # PY2 http_response_obj has no `with` context manager
             result = decode_str(http_response_obj.read(), sickgear.SYS_ENCODING)
             http_response_obj.close()
 
-            self._log_debug(u'HTTP response: ' + result.replace('\n', ''))
+            self._log_debug('HTTP response: ' + result.replace('\n', ''))
             return True
 
         except (urllib.error.URLError, IOError) as e:
-            self._log_warning(u'Couldn\'t contact Plex at ' + fixStupidEncodings(url) + ' ' + ex(e))
+            self._log_warning(f'Couldn\'t contact Plex at {url} {ex(e)}')
             return False
 
     @staticmethod
@@ -115,7 +113,7 @@ class PLEXNotifier(Notifier):
         results = []
         for cur_host in [x.strip() for x in host.split(',')]:
             cur_host = unquote_plus(cur_host)
-            self._log(u'Sending notification to \'%s\'' % cur_host)
+            self._log(f'Sending notification to \'{cur_host}\'')
             result = self._send_to_plex(command, cur_host, username, password)
             results += [self._choose(('%s Plex client ... %s' % (('Successful test notice sent to',
                                                                   'Failed test for')[not result], cur_host)), result)]
@@ -150,7 +148,7 @@ class PLEXNotifier(Notifier):
         """
         host = self._choose(host, sickgear.PLEX_SERVER_HOST)
         if not host:
-            msg = u'No Plex Media Server host specified, check your settings'
+            msg = 'No Plex Media Server host specified, check your settings'
             self._log_debug(msg)
             return '%sFail: %s' % (('', '<br>')[self._testing], msg)
 
@@ -161,7 +159,7 @@ class PLEXNotifier(Notifier):
         token_arg = None
         if username and password:
 
-            self._log_debug(u'Fetching plex.tv credentials for user: ' + username)
+            self._log_debug('Fetching plex.tv credentials for user: ' + username)
             req = urllib.request.Request('https://plex.tv/users/sign_in.xml', data=b'')
             req.add_header('Authorization', 'Basic %s' % b64encodestring('%s:%s' % (username, password)))
             req.add_header('X-Plex-Device-Name', 'SickGear')
@@ -178,10 +176,10 @@ class PLEXNotifier(Notifier):
                 token_arg = '?X-Plex-Token=' + token
 
             except urllib.error.URLError as e:
-                self._log(u'Error fetching credentials from plex.tv for user %s: %s' % (username, ex(e)))
+                self._log(f'Error fetching credentials from plex.tv for user {username}: {ex(e)}')
 
             except (ValueError, IndexError) as e:
-                self._log(u'Error parsing plex.tv response: ' + ex(e))
+                self._log('Error parsing plex.tv response: ' + ex(e))
 
         file_location = location if None is not location else '' if None is ep_obj else ep_obj.location
         host_validate = self._get_host_list(host, all([token_arg]))
@@ -200,11 +198,11 @@ class PLEXNotifier(Notifier):
 
             sections = response.findall('.//Directory')
             if not sections:
-                self._log(u'Plex Media Server not running on: ' + cur_host)
+                self._log('Plex Media Server not running on: ' + cur_host)
                 hosts_failed.append(cur_host)
                 continue
 
-            for section in filter_iter(lambda x: 'show' == x.attrib['type'], sections):
+            for section in filter(lambda x: 'show' == x.attrib['type'], sections):
                 if str(section.attrib['key']) in hosts_all:
                     continue
                 keyed_host = [(str(section.attrib['key']), cur_host)]
@@ -234,32 +232,28 @@ class PLEXNotifier(Notifier):
                     host_list.append(cur_host)
                 else:
                     hosts_failed.append(cur_host)
-                    self._log_error(u'Error updating library section for Plex Media Server: %s' % cur_host)
+                    self._log_error(f'Error updating library section for Plex Media Server: {cur_host}')
 
             if len(hosts_failed) == len(host_validate):
-                self._log(u'No successful Plex host updated')
+                self._log('No successful Plex host updated')
                 return 'Fail no successful Plex host updated: %s' % ', '.join([host for host in hosts_failed])
             else:
                 hosts = ', '.join(set(host_list))
                 if len(hosts_match):
-                    self._log(u'Hosts updating where TV section paths match the downloaded show: %s' % hosts)
+                    self._log(f'Hosts updating where TV section paths match the downloaded show: {hosts}')
                 else:
-                    self._log(u'Updating all hosts with TV sections: %s' % hosts)
+                    self._log(f'Updating all hosts with TV sections: {hosts}')
                 return ''
 
         hosts = [
-            host.replace('http://', '') for host in filter_iter(lambda x: x.startswith('http:'),
-                                                                list_values(hosts_all))]
+            host.replace('http://', '') for host in filter(lambda x: x.startswith('http:'), list(hosts_all.values()))]
         secured = [
-            host.replace('https://', '') for host in filter_iter(lambda x: x.startswith('https:'),
-                                                                 list_values(hosts_all))]
+            host.replace('https://', '') for host in filter(lambda x: x.startswith('https:'), list(hosts_all.values()))]
         failed = ', '.join([
-            host.replace('http://', '') for host in filter_iter(lambda x: x.startswith('http:'),
-                                                                hosts_failed)])
-        failed_secured = ', '.join(filter_iter(
+            host.replace('http://', '') for host in filter(lambda x: x.startswith('http:'), hosts_failed)])
+        failed_secured = ', '.join(filter(
             lambda x: x not in hosts,
-            [host.replace('https://', '') for host in filter_iter(lambda x: x.startswith('https:'),
-                                                                  hosts_failed)]))
+            [host.replace('https://', '') for host in filter(lambda x: x.startswith('https:'), hosts_failed)]))
 
         return '<br>' + '<br>'.join([result for result in [
             ('', 'Fail: username/password when fetching credentials from plex.tv')[False is token_arg],

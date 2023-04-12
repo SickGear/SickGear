@@ -21,8 +21,6 @@ import re
 import threading
 import traceback
 
-# noinspection PyPep8Naming
-import encodingKludge as ek
 from exceptions_helper import ex, MultipleShowObjectsException, AuthException
 
 import sickgear
@@ -32,9 +30,9 @@ from .common import ARCHIVED, FAILED, DOWNLOADED, SNATCHED_ANY, SNATCHED_PROPER,
     NeededQualities, Quality
 from .history import dateFormat
 from .name_parser.parser import InvalidNameException, InvalidShowException, NameParser
-from .sgdatetime import timestamp_near
+from .sgdatetime import SGDatetime
 
-from _23 import filter_iter, filter_list, list_values, map_consume, map_list
+from _23 import map_consume
 from six import string_types
 
 # noinspection PyUnreachableCode
@@ -75,7 +73,7 @@ def search_propers(provider_proper_obj=None):
 
         proper_sch = sickgear.proper_finder_scheduler
         if None is proper_sch.start_time:
-            run_in = proper_sch.lastRun + proper_sch.cycleTime - datetime.datetime.now()
+            run_in = proper_sch.last_run + proper_sch.cycle_time - datetime.datetime.now()
             run_at = ', next check '
             if datetime.timedelta() > run_in:
                 run_at += 'imminent'
@@ -133,7 +131,7 @@ def get_old_proper_level(show_obj, tvid, prodid, season, episode_numbers, old_st
                 [tvid, prodid, season, episode])
             if not result or not isinstance(result[0]['resource'], string_types) or not result[0]['resource']:
                 continue
-            nq = Quality.sceneQuality(result[0]['resource'], show_obj.is_anime)
+            nq = Quality.scene_quality(result[0]['resource'], show_obj.is_anime)
             if nq != new_quality:
                 continue
             try:
@@ -187,7 +185,7 @@ def load_webdl_types():
         try:
             for line in url_data.splitlines():
                 try:
-                    (key, val) = line.strip().split(u'::', 1)
+                    (key, val) = line.strip().split('::', 1)
                 except (BaseException, Exception):
                     continue
                 if None is key or None is val:
@@ -216,14 +214,14 @@ def load_webdl_types():
 def _search_provider(cur_provider, provider_propers, aired_since_shows, recent_shows, recent_anime):
     # type: (GenericProvider, List, datetime.datetime, List[Tuple[int, int]], List[Tuple[int, int]]) -> None
     try:
-        # we need to extent the referenced list from parameter to update the original var
+        # we need to extend the referenced list from parameter to update the original var
         provider_propers.extend(cur_provider.find_propers(search_date=aired_since_shows, shows=recent_shows,
                                                           anime=recent_anime))
     except AuthException as e:
-        logger.log('Authentication error: %s' % ex(e), logger.ERROR)
+        logger.error('Authentication error: %s' % ex(e))
     except (BaseException, Exception) as e:
-        logger.log('Error while searching %s, skipping: %s' % (cur_provider.name, ex(e)), logger.ERROR)
-        logger.log(traceback.format_exc(), logger.ERROR)
+        logger.error('Error while searching %s, skipping: %s' % (cur_provider.name, ex(e)))
+        logger.error(traceback.format_exc())
 
     if not provider_propers:
         logger.log('No Proper releases found at [%s]' % cur_provider.name)
@@ -253,9 +251,9 @@ def _get_proper_list(aired_since_shows,  # type: datetime.datetime
     # filter provider list for:
     # 1. from recent search: recent search enabled providers
     # 2. native proper search: active search enabled providers
-    provider_list = filter_list(
+    provider_list = list(filter(
         lambda p: p.is_active() and (p.enable_recentsearch, p.enable_backlog)[None is proper_dict],
-        sickgear.providers.sortedProviderList())
+        sickgear.providers.sorted_sources()))
     search_threads = []
 
     if None is proper_dict:
@@ -308,8 +306,8 @@ def _get_proper_list(aired_since_shows,  # type: datetime.datetime
             cur_proper.parsed_show_obj = (cur_proper.parsed_show_obj
                                           or helpers.find_show_by_id(parse_result.show_obj.tvid_prodid))
             if None is cur_proper.parsed_show_obj:
-                logger.log('Skip download; cannot find show with ID [%s] at %s' %
-                           (cur_proper.prodid, sickgear.TVInfoAPI(cur_proper.tvid).name), logger.ERROR)
+                logger.error('Skip download; cannot find show with ID [%s] at %s' %
+                             (cur_proper.prodid, sickgear.TVInfoAPI(cur_proper.tvid).name))
                 continue
 
             cur_proper.tvid = cur_proper.parsed_show_obj.tvid
@@ -321,26 +319,25 @@ def _get_proper_list(aired_since_shows,  # type: datetime.datetime
 
             # only get anime Proper if it has release group and version
             if parse_result.is_anime and not parse_result.release_group and -1 == parse_result.version:
-                logger.log('Ignored Proper with no release group and version in name [%s]' % cur_proper.name,
-                           logger.DEBUG)
+                logger.debug('Ignored Proper with no release group and version in name [%s]' % cur_proper.name)
                 continue
 
             if not show_name_helpers.pass_wordlist_checks(cur_proper.name, parse=False, indexer_lookup=False,
                                                           show_obj=cur_proper.parsed_show_obj):
-                logger.log('Ignored unwanted Proper [%s]' % cur_proper.name, logger.DEBUG)
+                logger.debug('Ignored unwanted Proper [%s]' % cur_proper.name)
                 continue
 
             re_x = dict(re_prefix='.*', re_suffix='.*')
             result = show_name_helpers.contains_any(cur_proper.name, cur_proper.parsed_show_obj.rls_ignore_words,
                                                     rx=cur_proper.parsed_show_obj.rls_ignore_words_regex, **re_x)
             if None is not result and result:
-                logger.log('Ignored Proper containing ignore word [%s]' % cur_proper.name, logger.DEBUG)
+                logger.debug('Ignored Proper containing ignore word [%s]' % cur_proper.name)
                 continue
 
             result = show_name_helpers.contains_any(cur_proper.name, cur_proper.parsed_show_obj.rls_require_words,
                                                     rx=cur_proper.parsed_show_obj.rls_require_words_regex, **re_x)
             if None is not result and not result:
-                logger.log('Ignored Proper for not containing any required word [%s]' % cur_proper.name, logger.DEBUG)
+                logger.debug('Ignored Proper for not containing any required word [%s]' % cur_proper.name)
                 continue
 
             cur_size = getattr(cur_proper, 'size', None)
@@ -364,8 +361,8 @@ def _get_proper_list(aired_since_shows,  # type: datetime.datetime
             # only keep the Proper if we already retrieved the same quality ep (don't get better/worse ones)
             # check if we want this release: same quality as current, current has correct status
             # restrict other release group releases to Proper's
-            old_status, old_quality = Quality.splitCompositeStatus(int(sql_result[0]['status']))
-            cur_proper.quality = Quality.nameQuality(cur_proper.name, parse_result.is_anime)
+            old_status, old_quality = Quality.split_composite_status(int(sql_result[0]['status']))
+            cur_proper.quality = Quality.name_quality(cur_proper.name, parse_result.is_anime)
             cur_proper.is_repack, cur_proper.properlevel = Quality.get_proper_level(
                 parse_result.extra_info_no_name(), parse_result.version, parse_result.is_anime, check_is_repack=True)
             cur_proper.proper_level = cur_proper.properlevel    # local non global value
@@ -421,15 +418,15 @@ def _get_proper_list(aired_since_shows,  # type: datetime.datetime
                 old_webdl_type = get_webdl_type(old_extra_no_name, old_name)
                 new_webdl_type = get_webdl_type(parse_result.extra_info_no_name(), cur_proper.name)
                 if old_webdl_type != new_webdl_type:
-                    logger.log('Ignored Proper webdl source [%s], does not match existing webdl source [%s] for [%s]'
-                               % (old_webdl_type, new_webdl_type, cur_proper.name), logger.DEBUG)
+                    logger.debug(f'Ignored Proper webdl source [{old_webdl_type}], does not match existing webdl source'
+                                 f' [{new_webdl_type}] for [{cur_proper.name}]')
                     continue
 
             # for webdls, prevent Propers from different groups
             log_same_grp = 'Ignored Proper from release group [%s] does not match existing group [%s] for [%s]' \
                            % (parse_result.release_group, old_release_group, cur_proper.name)
             if sickgear.PROPERS_WEBDL_ONEGRP and is_web and not same_release_group:
-                logger.log(log_same_grp, logger.DEBUG)
+                logger.debug(log_same_grp)
                 continue
 
             # check if we actually want this Proper (if it's the right release group and a higher version)
@@ -438,7 +435,7 @@ def _get_proper_list(aired_since_shows,  # type: datetime.datetime
                 if not (-1 < old_version < parse_result.version):
                     continue
                 if not same_release_group:
-                    logger.log(log_same_grp, logger.DEBUG)
+                    logger.debug(log_same_grp)
                     continue
                 found_msg = 'Found anime Proper v%s to replace v%s' % (parse_result.version, old_version)
             else:
@@ -456,7 +453,7 @@ def _get_proper_list(aired_since_shows,  # type: datetime.datetime
 
             # skip if the episode has never downloaded, because a previous quality is required to match the Proper
             if not len(history_results):
-                logger.log('Ignored Proper cannot find a recent history item for [%s]' % cur_proper.name, logger.DEBUG)
+                logger.debug('Ignored Proper cannot find a recent history item for [%s]' % cur_proper.name)
                 continue
 
             # make sure that none of the existing history downloads are the same Proper as the download candidate
@@ -466,14 +463,14 @@ def _get_proper_list(aired_since_shows,  # type: datetime.datetime
             for hitem in history_results:
                 # if the result exists in history already we need to skip it
                 if clean_proper_name == _generic_name(helpers.remove_non_release_groups(
-                        ek.ek(os.path.basename, hitem['resource']))):
+                        os.path.basename(hitem['resource']))):
                     is_same = True
                     break
             if is_same:
                 logger.log('Ignored Proper already in history [%s]' % cur_proper.name)
                 continue
 
-            logger.log(found_msg, logger.DEBUG)
+            logger.debug(found_msg)
 
             # finish populating the Proper instance
             # cur_proper.show_obj = cur_proper.parsed_show_obj.prodid
@@ -489,7 +486,7 @@ def _get_proper_list(aired_since_shows,  # type: datetime.datetime
 
         cur_provider.log_result('Propers', len(propers), '%s' % cur_provider.name)
 
-    return list_values(propers)
+    return list(propers.values())
 
 
 def _download_propers(proper_list):
@@ -509,24 +506,24 @@ def _download_propers(proper_list):
 
         # get verified list; sort the list of unique Propers for highest proper_level, newest first
         for cur_proper in sorted(
-                filter_iter(lambda p: p not in consumed_proper,
-                            # allows Proper to fail or be rejected and another to be tried (with a different name)
-                            filter_iter(lambda p: _epid(p) not in downloaded_epid, proper_list)),
+                filter(lambda p: p not in consumed_proper,
+                       # allows Proper to fail or be rejected and another to be tried (with a different name)
+                       filter(lambda p: _epid(p) not in downloaded_epid, proper_list)),
                 key=operator.attrgetter('properlevel', 'date'), reverse=True):  # type: Proper
 
             epid = _epid(cur_proper)
 
             # if the show is in our list and there hasn't been a Proper already added for that particular episode
             # then add it to our list of Propers
-            if epid not in map_list(_epid, verified_propers):
+            if epid not in list(map(_epid, verified_propers)):
                 logger.log('Proper may be useful [%s]' % cur_proper.name)
                 verified_propers.add(cur_proper)
             else:
                 # use Proper with the highest level
                 remove_propers = set()
                 map_consume(lambda vp: remove_propers.add(vp),
-                            filter_iter(lambda p: (epid == _epid(p) and cur_proper.proper_level > p.proper_level),
-                                        verified_propers))
+                            filter(lambda p: (epid == _epid(p) and cur_proper.proper_level > p.proper_level),
+                                   verified_propers))
 
                 if remove_propers:
                     verified_propers -= remove_propers
@@ -559,16 +556,14 @@ def _download_propers(proper_list):
                     if reject:
                         if isinstance(reject, string_types):
                             if scene_rej_nuked and not scene_nuked_active:
-                                logger.log('Rejecting nuked release. Nuke reason [%s] source [%s]' % (reject, url),
-                                           logger.DEBUG)
+                                logger.debug('Rejecting nuked release. Nuke reason [%s] source [%s]' % (reject, url))
                             else:
-                                logger.log('Considering nuked release. Nuke reason [%s] source [%s]' % (reject, url),
-                                           logger.DEBUG)
+                                logger.debug('Considering nuked release. Nuke reason [%s] source [%s]' % (reject, url))
                                 reject = False
                         elif scene_contains or non_scene_fallback:
                             reject = False
                         else:
-                            logger.log('Rejecting as not scene release listed at any [%s]' % url, logger.DEBUG)
+                            logger.debug('Rejecting as not scene release listed at any [%s]' % url)
 
                 if reject:
                     continue
@@ -633,7 +628,7 @@ def get_needed_qualites(needed=None):
                 continue
             ep_obj = show_obj.get_episode(season=cur_result['season'], episode=cur_result['episode'])
             if ep_obj:
-                ep_status, ep_quality = Quality.splitCompositeStatus(ep_obj.status)
+                ep_status, ep_quality = Quality.split_composite_status(ep_obj.status)
                 if ep_status in SNATCHED_ANY + [DOWNLOADED, ARCHIVED]:
                     needed.check_needed_qualities([ep_quality])
 
@@ -687,21 +682,21 @@ def _generic_name(name):
 
 def _set_last_proper_search(when):
 
-    logger.log(u'Setting the last Proper search in the DB to %s' % when, logger.DEBUG)
+    logger.debug(f'Setting the last Proper search in the DB to {when}')
 
     my_db = db.DBConnection()
     sql_result = my_db.select('SELECT * FROM info')
 
     if 0 == len(sql_result):
         my_db.action('INSERT INTO info (last_backlog, last_indexer, last_proper_search) VALUES (?,?,?)',
-                     [0, 0, int(timestamp_near(when))])
+                     [0, 0, SGDatetime.timestamp_near(when)])
     else:
         # noinspection SqlConstantCondition
-        my_db.action('UPDATE info SET last_proper_search=%s WHERE 1=1' % int(timestamp_near(when)))
+        my_db.action('UPDATE info SET last_proper_search=%s WHERE 1=1' % SGDatetime.timestamp_near(when))
 
 
 def next_proper_timeleft():
-    return sickgear.proper_finder_scheduler.timeLeft()
+    return sickgear.proper_finder_scheduler.time_left()
 
 
 def get_last_proper_search():

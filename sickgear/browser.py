@@ -17,8 +17,6 @@
 import os
 import string
 
-# noinspection PyPep8Naming
-import encodingKludge as ek
 from exceptions_helper import ex
 
 from . import logger
@@ -31,7 +29,7 @@ if 'nt' == os.name:
 
 # adapted from
 # http://stackoverflow.com/questions/827371/is-there-a-way-to-list-all-the-available-drive-letters-in-python/827490
-def getWinDrives():
+def get_win_drives():
     """ Return list of detected drives """
     assert 'nt' == os.name
 
@@ -45,33 +43,24 @@ def getWinDrives():
     return drives
 
 
-def foldersAtPath(path, include_parent=False, include_files=False, **kwargs):
-    """ deprecated_item, remove in 2020 """
-    """ prevent issues with requests using legacy params """
-    include_parent = include_parent or kwargs.get('includeParent') or False
-    include_files = include_files or kwargs.get('includeFiles') or False
-    """ /legacy """
-    return folders_at_path(path, include_parent, include_files)
-
-
 def folders_at_path(path, include_parent=False, include_files=False):
     """ Returns a list of dictionaries with the folders contained at the given path
         Give the empty string as the path to list the contents of the root path
-        under Unix this means "/", on Windows this will be a list of drive letters)
+        under Unix this means "/", (on Windows this will be a list of drive letters)
     """
 
     # walk up the tree until we find a valid path
-    while path and not ek.ek(os.path.isdir, path):
-        if path == ek.ek(os.path.dirname, path):
+    while path and not os.path.isdir(path):
+        if path == os.path.dirname(path):
             path = ''
             break
         else:
-            path = ek.ek(os.path.dirname, path)
+            path = os.path.dirname(path)
 
     if '' == path:
         if 'nt' == os.name:
             entries = [{'currentPath': r'\My Computer'}]
-            for letter in getWinDrives():
+            for letter in get_win_drives():
                 letter_path = '%s:\\' % letter
                 entries.append({'name': letter_path, 'path': letter_path})
             return entries
@@ -79,8 +68,8 @@ def folders_at_path(path, include_parent=False, include_files=False):
             path = '/'
 
     # fix up the path and find the parent
-    path = ek.ek(os.path.abspath, ek.ek(os.path.normpath, path))
-    parent_path = ek.ek(os.path.dirname, path)
+    path = os.path.abspath(os.path.normpath(path))
+    parent_path = os.path.dirname(path)
 
     # if we're at the root then the next step is the meta-node showing our drive letters
     if 'nt' == os.name and path == parent_path:
@@ -89,10 +78,10 @@ def folders_at_path(path, include_parent=False, include_files=False):
     try:
         file_list = get_file_list(path, include_files)
     except OSError as e:
-        logger.log('Unable to open %s: %r / %s' % (path, e, ex(e)), logger.WARNING)
+        logger.warning('Unable to open %s: %r / %s' % (path, e, ex(e)))
         file_list = get_file_list(parent_path, include_files)
 
-    file_list = sorted(file_list, key=lambda x: ek.ek(os.path.basename, x['name']).lower())
+    file_list = sorted(file_list, key=lambda x: os.path.basename(x['name']).lower())
 
     entries = [{'currentPath': path}]
     if include_parent and path != parent_path:

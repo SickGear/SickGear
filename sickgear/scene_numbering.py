@@ -30,9 +30,7 @@ import sickgear
 from . import db, logger
 from .helpers import try_int
 from .scene_exceptions import xem_ids_list
-from .sgdatetime import timestamp_near
-
-from _23 import filter_iter, map_list
+from .sgdatetime import SGDatetime
 
 # noinspection PyUnreachableCode
 if False:
@@ -47,8 +45,8 @@ def get_scene_numbering(tvid, prodid, season, episode, fallback_to_xem=True, sho
     returns the TVDB numbering.
     (so the return values will always be set)
 
-    kwargs['scene_result']: type: Optional[List[Row]] passed thru
-    kwargs['show_result']: type: Optional[List[Row]] passed thru
+    kwargs['scene_result']: type: Optional[List[Row]] passed through
+    kwargs['show_result']: type: Optional[List[Row]] passed through
 
     :param tvid: tvid
     :type tvid: int
@@ -136,8 +134,8 @@ def get_scene_absolute_numbering(tvid, prodid, absolute_number, season, episode,
     returns the TVDB numbering.
     (so the return values will always be set)
 
-    kwargs['scene_result']: type: Optional[List[Row]] passed thru
-    kwargs['show_result']: type: Optional[List[Row]] passed thru
+    kwargs['scene_result']: type: Optional[List[Row]] passed through
+    kwargs['show_result']: type: Optional[List[Row]] passed through
 
     :param tvid: tvid
     :type tvid: int
@@ -718,8 +716,8 @@ def _get_absolute_numbering_for_show(tbl, tvid, prodid):
             """ % (tbl, ('indexer_id', 'showid')['tv_episodes' == tbl]), [int(tvid), int(prodid)])
 
         for cur_row in sql_result:
-            season, episode, abs_num = map_list(lambda x: try_int(cur_row[x], None),
-                                                ('season', 'episode', 'absolute_number'))
+            season, episode, abs_num = list(map(lambda x: try_int(cur_row[x], None),
+                                                ('season', 'episode', 'absolute_number')))
             if None is season and None is episode and None is not abs_num:
                 season, episode, _ = _get_sea(tvid, prodid, absolute_number=abs_num)
 
@@ -796,26 +794,26 @@ def xem_refresh(tvid, prodid, force=False):
         """, [tvid, prodid])
     if sql_result:
         last_refresh = int(sql_result[0]['last_refreshed'])
-        refresh = int(timestamp_near(datetime.datetime.now())) > last_refresh + max_refresh_age_secs
+        refresh = SGDatetime.timestamp_near() > last_refresh + max_refresh_age_secs
     else:
         refresh = True
 
     if refresh or force:
-        logger.log(u'Looking up XEM scene mapping for show %s on %s' % (prodid, tvinfo.name), logger.DEBUG)
+        logger.debug(f'Looking up XEM scene mapping for show {prodid} on {tvinfo.name}')
 
         # mark refreshed
         my_db.upsert('xem_refresh',
-                     dict(last_refreshed=int(timestamp_near(datetime.datetime.now()))),
+                     dict(last_refreshed=SGDatetime.timestamp_near()),
                      dict(indexer=tvid, indexer_id=prodid))
 
         try:
             parsed_json = sickgear.helpers.get_url(url, parse_json=True, timeout=90)
             if not parsed_json or '' == parsed_json:
-                logger.log(u'No XEM data for show %s on %s' % (prodid, tvinfo.name), logger.MESSAGE)
+                logger.log(f'No XEM data for show {prodid} on {tvinfo.name}', logger.MESSAGE)
                 return
 
             if 'success' in parsed_json['result']:
-                cl = map_list(lambda entry: [
+                cl = list(map(lambda entry: [
                         """
                         UPDATE tv_episodes
                         SET scene_season = ?, scene_episode = ?, scene_absolute_number = ?
@@ -824,17 +822,16 @@ def xem_refresh(tvid, prodid, force=False):
                               for v in ('season', 'episode', 'absolute')]
                         + [tvid, prodid]
                         + [entry.get(xem_origin).get(v) for v in ('season', 'episode')]
-                ], filter_iter(lambda x: 'scene' in x, parsed_json['data']))
+                ], filter(lambda x: 'scene' in x, parsed_json['data'])))
 
                 if 0 < len(cl):
                     my_db = db.DBConnection()
                     my_db.mass_action(cl)
             else:
-                logger.log(u'Empty lookup result - no XEM data for show %s on %s' % (prodid, tvinfo.name), logger.DEBUG)
+                logger.debug(f'Empty lookup result - no XEM data for show {prodid} on {tvinfo.name}')
         except (BaseException, Exception) as e:
-            logger.log(u'Exception refreshing XEM data for show ' + str(prodid) + ' on ' + tvinfo.name + ': ' + ex(e),
-                       logger.WARNING)
-            logger.log(traceback.format_exc(), logger.ERROR)
+            logger.warning(f'Exception refreshing XEM data for show {str(prodid)} on {tvinfo.name}: {ex(e)}')
+            logger.error(traceback.format_exc())
 
 
 def fix_xem_numbering(tvid, prodid):
@@ -868,9 +865,7 @@ def fix_xem_numbering(tvid, prodid):
     update_scene_episode = False
     update_scene_absolute_number = False
 
-    logger.log(
-        u'Fixing any XEM scene mapping issues for show %s on %s' % (prodid, sickgear.TVInfoAPI(tvid).name),
-        logger.DEBUG)
+    logger.debug(f'Fixing any XEM scene mapping issues for show {prodid} on {sickgear.TVInfoAPI(tvid).name}')
 
     cl = []
     for cur_row in sql_result:
@@ -1003,15 +998,15 @@ def set_scene_numbering_helper(tvid, prodid, for_season=None, for_episode=None, 
     if not show_obj.is_anime:
         scene_season = None if scene_season in [None, 'null', ''] else int(scene_season)
         scene_episode = None if scene_episode in [None, 'null', ''] else int(scene_episode)
-        action_log = u'Set episode scene numbering to %sx%s for episode %sx%s of "%s"' \
-                     % (scene_season, scene_episode, for_season, for_episode, show_obj.unique_name)
+        action_log = f'Set episode scene numbering to {scene_season}x{scene_episode}' \
+                     f' for episode {for_season}x{for_episode} of "{show_obj.unique_name}"'
         scene_args.update({'scene_season': scene_season, 'scene_episode': scene_episode})
         result = {'forSeason': for_season, 'forEpisode': for_episode, 'sceneSeason': None, 'sceneEpisode': None}
     else:
         for_absolute = None if for_absolute in [None, 'null', ''] else int(for_absolute)
         scene_absolute = None if scene_absolute in [None, 'null', ''] else int(scene_absolute)
-        action_log = u'Set absolute scene numbering to %s for episode %sx%s of "%s"' \
-                     % (scene_absolute, for_season, for_episode, show_obj.unique_name)
+        action_log = f'Set absolute scene numbering to {scene_absolute}' \
+                     f' for episode {for_season}x{for_episode} of "{show_obj.unique_name}"'
         ep_args.update({'absolute': for_absolute})
         scene_args.update({'absolute_number': for_absolute, 'scene_absolute': scene_absolute, 'anime': True})
         result = {'forAbsolute': for_absolute, 'sceneAbsolute': None}
@@ -1025,7 +1020,7 @@ def set_scene_numbering_helper(tvid, prodid, for_season=None, for_episode=None, 
 
     result['success'] = None is not ep_obj and not isinstance(ep_obj, str)
     if result['success']:
-        logger.log(action_log, logger.DEBUG)
+        logger.debug(action_log)
         set_scene_numbering(**scene_args)
         show_obj.flush_episodes()
         if not show_obj.is_anime:

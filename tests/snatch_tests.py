@@ -57,7 +57,7 @@ class SearchTest(test.SickbeardTestDBCase):
         return True
 
     def __init__(self, something):
-        for provider in sickgear.providers.sortedProviderList():
+        for provider in sickgear.providers.sorted_sources():
             provider.get_url = self._fake_getURL
             #provider.isActive = self._fake_isActive
 

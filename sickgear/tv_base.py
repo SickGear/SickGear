@@ -20,7 +20,7 @@ import sickgear
 from . import logger
 from ._legacy_classes import LegacyTVShow, LegacyTVEpisode
 from .common import UNKNOWN
-from .name_cache import buildNameCache
+from .name_cache import build_name_cache
 
 from six import string_types
 
@@ -42,8 +42,8 @@ class TVBase(object):
                     setattr(self, attr_name, val)
                     self.dirty = True
                 else:
-                    logger.log('Didn\'t change property "%s" because expected: %s, but got: %s with value: %s' %
-                               (attr_name, types, type(val), val), logger.WARNING)
+                    logger.warning(f'Didn\'t change property "{attr_name}" because expected: {types},'
+                                   f' but got: {type(val)} with value: {val}')
 
         return wrapper
 
@@ -132,7 +132,7 @@ class TVShowBase(LegacyTVShow, TVBase):
         _current_name = self._name
         self.dirty_setter('_name')(self, *arg)
         if _current_name != self._name:
-            buildNameCache(self)
+            build_name_cache(self)
 
     # imdbid = property(lambda self: self._imdbid, dirty_setter('_imdbid'))
     @property

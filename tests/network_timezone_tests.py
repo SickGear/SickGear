@@ -10,8 +10,6 @@ import datetime
 from lib.dateutil import tz
 import sickgear
 from sickgear import network_timezones, helpers
-# noinspection PyPep8Naming
-import encodingKludge as ek
 
 
 class NetworkTimezoneTests(test.SickbeardTestDBCase):
@@ -33,12 +31,12 @@ class NetworkTimezoneTests(test.SickbeardTestDBCase):
     @classmethod
     def remove_zoneinfo(cls):
         # delete all existing zoneinfo files
-        for (path, dirs, files) in ek.ek(os.walk, helpers.real_path(sickgear.ZONEINFO_DIR)):
+        for (path, dirs, files) in os.walk(helpers.real_path(sickgear.ZONEINFO_DIR)):
             for filename in files:
                 if filename.endswith('.tar.gz'):
-                    file_w_path = ek.ek(os.path.join, path, filename)
+                    file_w_path = os.path.join(path, filename)
                     try:
-                        ek.ek(os.remove, file_w_path)
+                        os.remove(file_w_path)
                     except (BaseException, Exception):
                         pass
 

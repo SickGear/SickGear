@@ -43,7 +43,8 @@ versions = [((3, 7, 1), (3, 8, 16)),
             ((3, 9, 0), (3, 9, 2)), ((3, 9, 4), (3, 9, 16)),
             ((3, 10, 0), (3, 11, 3))]  # inclusive version ranges
 if not any(list(map(lambda v: v[0] <= sys.version_info[:3] <= v[1], versions))) and not int(os.environ.get('PYT', 0)):
-    print('Python %s.%s.%s detected.' % sys.version_info[:3])
+    major, minor, micro = sys.version_info[:3]
+    print('Python %s.%s.%s detected.' % (major, minor, micro))
     print('Sorry, SickGear requires a Python version %s' % ', '.join(map(
         lambda r: '%s - %s' % tuple(map(lambda v: str(v).replace(',', '.')[1:-1], r)), versions)))
     sys.exit(1)
@@ -90,7 +91,7 @@ from multiprocessing import freeze_support
 
 from configobj import ConfigObj
 # noinspection PyPep8Naming
-from encodingKludge import EXIT_BAD_ENCODING, SYS_ENCODING
+from encodingKludge import SYS_ENCODING
 from exceptions_helper import ex
 import sickgear
 from sickgear import db, logger, name_cache, network_timezones
@@ -189,7 +190,7 @@ class SickGear(object):
                 rc.load_msg = load_msg
                 rc.run(max_v)
             else:
-                print(u'ERROR: Could not download Rollback Module.')
+                print('ERROR: Could not download Rollback Module.')
         except (BaseException, Exception):
             pass
 
@@ -200,10 +201,6 @@ class SickGear(object):
         sickgear.PROG_DIR = os.path.dirname(sickgear.MY_FULLNAME)
         sickgear.DATA_DIR = sickgear.PROG_DIR
         sickgear.MY_ARGS = sys.argv[1:]
-        if EXIT_BAD_ENCODING:
-            print('Sorry, you MUST add the SickGear folder to the PYTHONPATH environment variable')
-            print('or find another way to force Python to use %s for string encoding.' % SYS_ENCODING)
-            sys.exit(1)
         sickgear.SYS_ENCODING = SYS_ENCODING
         legacy_runner = globals().get('_legacy_sickgear_runner')
         if not legacy_runner:
@@ -229,7 +226,7 @@ class SickGear(object):
             if o in ('-h', '--help'):
                 sys.exit(self.help_message())
 
-            # For now we'll just silence the logging
+            # For now, we'll just silence the logging
             if o in ('-q', '--quiet'):
                 self.console_logging = False
 
@@ -293,13 +290,13 @@ class SickGear(object):
             if self.run_as_daemon:
                 pid_dir = os.path.dirname(self.pid_file)
                 if not os.access(pid_dir, os.F_OK):
-                    sys.exit(u"PID dir: %s doesn't exist. Exiting." % pid_dir)
+                    sys.exit(f"PID dir: {pid_dir} doesn't exist. Exiting.")
                 if not os.access(pid_dir, os.W_OK):
-                    sys.exit(u'PID dir: %s must be writable (write permissions). Exiting.' % pid_dir)
+                    sys.exit(f'PID dir: {pid_dir} must be writable (write permissions). Exiting.')
 
             else:
                 if self.console_logging:
-                    print(u'Not running in daemon mode. PID file creation disabled')
+                    print('Not running in daemon mode. PID file creation disabled')
 
                 self.create_pid = False
 
@@ -312,27 +309,27 @@ class SickGear(object):
             try:
                 os.makedirs(sickgear.DATA_DIR, 0o744)
             except os.error:
-                sys.exit(u'Unable to create data directory: %s Exiting.' % sickgear.DATA_DIR)
+                sys.exit(f'Unable to create data directory: {sickgear.DATA_DIR} Exiting.')
 
         # Make sure we can write to the data dir
         if not os.access(sickgear.DATA_DIR, os.W_OK):
-            sys.exit(u'Data directory: %s must be writable (write permissions). Exiting.' % sickgear.DATA_DIR)
+            sys.exit(f'Data directory: {sickgear.DATA_DIR} must be writable (write permissions). Exiting.')
 
         # Make sure we can write to the config file
         if not os.access(sickgear.CONFIG_FILE, os.W_OK):
             if os.path.isfile(sickgear.CONFIG_FILE):
-                sys.exit(u'Config file: %s must be writeable (write permissions). Exiting.' % sickgear.CONFIG_FILE)
+                sys.exit(f'Config file: {sickgear.CONFIG_FILE} must be writeable (write permissions). Exiting.')
             elif not os.access(os.path.dirname(sickgear.CONFIG_FILE), os.W_OK):
-                sys.exit(u'Config file directory: %s must be writeable (write permissions). Exiting'
-                         % os.path.dirname(sickgear.CONFIG_FILE))
+                sys.exit(f'Config file directory: {os.path.dirname(sickgear.CONFIG_FILE)}'
+                         f' must be writeable (write permissions). Exiting')
         os.chdir(sickgear.DATA_DIR)
 
         if self.console_logging:
-            print(u'Starting up SickGear from %s' % sickgear.CONFIG_FILE)
+            print(f'Starting up SickGear from {sickgear.CONFIG_FILE}')
 
         # Load the config and publish it to the sickgear package
         if not os.path.isfile(sickgear.CONFIG_FILE):
-            print(u'Unable to find "%s", all settings will be default!' % sickgear.CONFIG_FILE)
+            print(f'Unable to find "{sickgear.CONFIG_FILE}", all settings will be default!')
 
         sickgear.CFG = ConfigObj(sickgear.CONFIG_FILE)
         try:
@@ -356,7 +353,7 @@ class SickGear(object):
         sickgear.initialize(console_logging=self.console_logging)
 
         if self.forced_port:
-            logger.log(u'Forcing web server to port %s' % self.forced_port)
+            logger.log(f'Forcing web server to port {self.forced_port}')
             self.start_port = self.forced_port
         else:
             self.start_port = sickgear.WEB_PORT
@@ -406,12 +403,11 @@ class SickGear(object):
             self.webserver.wait_server_start()
             sickgear.started = True
         except (BaseException, Exception):
-            logger.log(u'Unable to start web server, is something else running on port %d?' % self.start_port,
-                       logger.ERROR)
+            logger.error(f'Unable to start web server, is something else running on port {self.start_port:d}?')
             if self.run_as_systemd:
                 self.exit(0)
             if sickgear.LAUNCH_BROWSER and not self.no_launch:
-                logger.log(u'Launching browser and exiting', logger.ERROR)
+                logger.error('Launching browser and exiting')
                 sickgear.launch_browser(self.start_port)
             self.exit(1)
 
@@ -431,7 +427,7 @@ class SickGear(object):
             ('sickbeard.db', sickgear.mainDB.MIN_DB_VERSION, sickgear.mainDB.MAX_DB_VERSION,
              sickgear.mainDB.TEST_BASE_VERSION, 'MainDb')
         ]:
-            cur_db_version = db.DBConnection(d).checkDBVersion()
+            cur_db_version = db.DBConnection(d).check_db_version()
 
             # handling of standalone TEST db versions
             load_msg = 'Downgrading %s to production version' % d
@@ -440,47 +436,46 @@ class SickGear(object):
                 print('Your [%s] database version (%s) is a test db version and doesn\'t match SickGear required '
                       'version (%s), downgrading to production db' % (d, cur_db_version, max_v))
                 self.execute_rollback(mo, max_v, load_msg)
-                cur_db_version = db.DBConnection(d).checkDBVersion()
+                cur_db_version = db.DBConnection(d).check_db_version()
                 if 100000 <= cur_db_version:
-                    print(u'Rollback to production failed.')
-                    sys.exit(u'If you have used other forks, your database may be unusable due to their changes')
+                    print('Rollback to production failed.')
+                    sys.exit('If you have used other forks, your database may be unusable due to their changes')
                 if 100000 <= max_v and None is not base_v:
                     max_v = base_v  # set max_v to the needed base production db for test_db
-                print(u'Rollback to production of [%s] successful.' % d)
+                print(f'Rollback to production of [{d}] successful.')
                 sickgear.classes.loading_msg.set_msg_progress(load_msg, 'Finished')
 
-            # handling of production version higher then current base of test db
+            # handling of production version higher than current base of test db
             if isinstance(base_v, integer_types) and max_v >= 100000 > cur_db_version > base_v:
                 sickgear.classes.loading_msg.set_msg_progress(load_msg, 'Rollback')
                 print('Your [%s] database version (%s) is a db version and doesn\'t match SickGear required '
                       'version (%s), downgrading to production base db' % (d, cur_db_version, max_v))
                 self.execute_rollback(mo, base_v, load_msg)
-                cur_db_version = db.DBConnection(d).checkDBVersion()
+                cur_db_version = db.DBConnection(d).check_db_version()
                 if 100000 <= cur_db_version:
-                    print(u'Rollback to production base failed.')
-                    sys.exit(u'If you have used other forks, your database may be unusable due to their changes')
+                    print('Rollback to production base failed.')
+                    sys.exit('If you have used other forks, your database may be unusable due to their changes')
                 if 100000 <= max_v and None is not base_v:
                     max_v = base_v  # set max_v to the needed base production db for test_db
-                print(u'Rollback to production base of [%s] successful.' % d)
+                print(f'Rollback to production base of [{d}] successful.')
                 sickgear.classes.loading_msg.set_msg_progress(load_msg, 'Finished')
 
             # handling of production db versions
             if 0 < cur_db_version < 100000:
                 if cur_db_version < min_v:
-                    print(u'Your [%s] database version (%s) is too old to migrate from with this version of SickGear'
-                          % (d, cur_db_version))
-                    sys.exit(u'Upgrade using a previous version of SG first,'
-                             + u' or start with no database file to begin fresh')
+                    print(f'Your [{d}] database version ({cur_db_version})'
+                          f' is too old to migrate from with this version of SickGear')
+                    sys.exit('Upgrade using a previous version of SG first,'
+                             ' or start with no database file to begin fresh')
                 if cur_db_version > max_v:
                     sickgear.classes.loading_msg.set_msg_progress(load_msg, 'Rollback')
-                    print(u'Your [%s] database version (%s) has been incremented past'
-                          u' what this version of SickGear supports. Trying to rollback now. Please wait...' %
-                          (d, cur_db_version))
+                    print(f'Your [{d}] database version ({cur_db_version}) has been incremented past what this'
+                          f' version of SickGear supports. Trying to rollback now. Please wait...')
                     self.execute_rollback(mo, max_v, load_msg)
-                    if db.DBConnection(d).checkDBVersion() > max_v:
-                        print(u'Rollback failed.')
-                        sys.exit(u'If you have used other forks, your database may be unusable due to their changes')
-                    print(u'Rollback of [%s] successful.' % d)
+                    if db.DBConnection(d).check_db_version() > max_v:
+                        print('Rollback failed.')
+                        sys.exit('If you have used other forks, your database may be unusable due to their changes')
+                    print(f'Rollback of [{d}] successful.')
                     sickgear.classes.loading_msg.set_msg_progress(load_msg, 'Finished')
 
         # migrate the config if it needs it
@@ -504,9 +499,9 @@ class SickGear(object):
         if os.path.exists(restore_dir):
             sickgear.classes.loading_msg.message = 'Restoring files'
             if self.restore(restore_dir, sickgear.DATA_DIR):
-                logger.log(u'Restore successful...')
+                logger.log('Restore successful...')
             else:
-                logger.log_error_and_exit(u'Restore FAILED!')
+                logger.log_error_and_exit('Restore FAILED!')
 
         # refresh network timezones
         sickgear.classes.loading_msg.message = 'Checking network timezones'
@@ -557,7 +552,7 @@ class SickGear(object):
 
         # Build internal name cache
         sickgear.classes.loading_msg.message = 'Build name cache'
-        name_cache.buildNameCache()
+        name_cache.build_name_cache()
 
         # load all ids from xem
         sickgear.classes.loading_msg.message = 'Loading xem data'
@@ -672,7 +667,7 @@ class SickGear(object):
         # Write pid
         if self.create_pid:
             pid = str(os.getpid())
-            logger.log(u'Writing PID: %s to %s' % (pid, self.pid_file))
+            logger.log(f'Writing PID: {pid} to {self.pid_file}')
             try:
                 os.fdopen(os.open(self.pid_file, os.O_CREAT | os.O_WRONLY, 0o644), 'w').write('%s\n' % pid)
             except (BaseException, Exception) as er:
@@ -708,7 +703,7 @@ class SickGear(object):
         Populates the showList with shows from the database
         """
 
-        logger.log(u'Loading initial show list')
+        logger.log('Loading initial show list')
 
         my_db = db.DBConnection(row_type='dict')
         sql_result = my_db.select(
@@ -752,8 +747,7 @@ class SickGear(object):
                 sickgear.showDict[show_obj.sid_int] = show_obj
                 _ = show_obj.ids
             except (BaseException, Exception) as err:
-                logger.log('There was an error creating the show in %s: %s' % (
-                    cur_result['location'], ex(err)), logger.ERROR)
+                logger.error('There was an error creating the show in %s: %s' % (cur_result['location'], ex(err)))
         sickgear.webserve.Home.make_showlist_unique_names()
 
     @staticmethod
@@ -772,6 +766,7 @@ class SickGear(object):
             return False
 
     def shutdown(self, ev_type):
+        logger.debug(f'Shutdown ev_type:{ev_type}, sickgear.started:{sickgear.started}')
         if sickgear.started:
             # stop all tasks
             sickgear.halt()
@@ -803,13 +798,13 @@ class SickGear(object):
                     popen_list += sickgear.MY_ARGS
 
                     if self.run_as_systemd:
-                        logger.log(u'Restarting SickGear with exit(1) handler and %s' % popen_list)
+                        logger.log(f'Restarting SickGear with exit(1) handler and {popen_list}')
                         logger.close()
                         self.exit(1)
 
                     if '--nolaunch' not in popen_list:
                         popen_list += ['--nolaunch']
-                    logger.log(u'Restarting SickGear with %s' % popen_list)
+                    logger.log(f'Restarting SickGear with {popen_list}')
                     logger.close()
                     from _23 import Popen
                     with Popen(popen_list, cwd=os.getcwd()):
@@ -820,7 +815,7 @@ class SickGear(object):
 
     @staticmethod
     def exit(code):
-        # noinspection PyProtectedMember
+        # noinspection PyProtectedMember,PyUnresolvedReferences
         os._exit(code)
 
 

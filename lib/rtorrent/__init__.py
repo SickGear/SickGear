@@ -36,8 +36,6 @@ from .rpc import Method
 from .torrent import Torrent, methods as torrent_methods
 from .tracker import Tracker, methods as tracker_methods
 
-from _23 import filter_iter, filter_list, map_list
-
 
 __version__ = '0.2.10'
 __author__ = 'Chris Lucas'
@@ -184,15 +182,16 @@ class RTorrent(object):
         @todo: add validity check for specified view
         """
         self.torrents = []
-        retriever_methods = filter_list(lambda m: m.is_retriever() and m.is_available(self), torrent_methods)
+        retriever_methods = list(filter(lambda m: m.is_retriever() and m.is_available(self), torrent_methods))
         mc = rpc.Multicall(self)
 
         if self.method_exists('d.multicall2'):
             mc.add('d.multicall2', '', view, 'd.hash=',
-                   *map_list(lambda m2: ((getattr(m2, 'aliases') or [''])[-1] or m2.rpc_call) + '=', retriever_methods))
+                   *list(map(lambda m2: ((getattr(m2, 'aliases') or [''])[-1] or m2.rpc_call) + '=',
+                             retriever_methods)))
         else:
             mc.add('d.multicall', view, 'd.get_hash=',
-                   *map_list(lambda m1: m1.rpc_call + '=', retriever_methods))
+                   *list(map(lambda m1: m1.rpc_call + '=', retriever_methods)))
 
         results = mc.call()[0]  # only sent one call, only need first result
 
@@ -240,7 +239,7 @@ class RTorrent(object):
             try:
                 call, arg = x.split('=')
                 method = rpc.find_method(call)
-                method_name = next(filter_iter(lambda m: self.method_exists(m), (method.rpc_call,) + method.aliases))
+                method_name = next(filter(lambda m: self.method_exists(m), (method.rpc_call,) + method.aliases))
                 param += ['%s=%s' % (method_name, arg)]
             except (BaseException, Exception):
                 pass
@@ -267,7 +266,7 @@ class RTorrent(object):
             max_retries = 10
             while max_retries:
                 try:
-                    t = next(filter_iter(lambda td: td.info_hash.upper() == info_hash, self.get_torrents()))
+                    t = next(filter(lambda td: td.info_hash.upper() == info_hash, self.get_torrents()))
                     break
                 except (BaseException, Exception):
                     time.sleep(self.request_interval)
@@ -326,7 +325,7 @@ class RTorrent(object):
         if verify_load:
             while verify_retries:
                 try:
-                    t = next(filter_iter(lambda td: td.info_hash == info_hash, self.get_torrents()))
+                    t = next(filter(lambda td: td.info_hash == info_hash, self.get_torrents()))
                     break
                 except (BaseException, Exception):
                     time.sleep(self.request_interval)
@@ -437,7 +436,7 @@ class RTorrent(object):
         method = rpc.find_method('d.get_local_id')
         result = True
         try:
-            func = next(filter_iter(lambda m: self.method_exists(m), (method.rpc_call,) + method.aliases))
+            func = next(filter(lambda m: self.method_exists(m), (method.rpc_call,) + method.aliases))
             getattr(self.get_connection(), func)(info_hash)
         except (BaseException, Exception):
             result = False
@@ -466,7 +465,7 @@ class RTorrent(object):
         """
         mc = rpc.Multicall(self)
 
-        for method in filter_iter(lambda m: m.is_retriever() and m.is_available(self), methods):
+        for method in filter(lambda m: m.is_retriever() and m.is_available(self), methods):
             mc.add(method)
 
         mc.call()

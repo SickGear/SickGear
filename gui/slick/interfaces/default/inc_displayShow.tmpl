@@ -25,7 +25,7 @@
     #set $ep_str = '%sx%s' % $ep_key
     #set $epLoc = $ep['location']
     #set never_aired = 0 < int($ep['season']) and 1 == int($ep['airdate'])
-		<tr class="#echo ' '.join([$Overview.overviewStrings[$ep_cats[$ep_str]], ('', 'airdate-never')[$never_aired], ('', 'archived')[$ARCHIVED == $Quality.splitCompositeStatus(int($ep['status']))[0]]])#">
+		<tr class="#echo ' '.join([$Overview.overviewStrings[$ep_cats[$ep_str]], ('', 'airdate-never')[$never_aired], ('', 'archived')[$ARCHIVED == $Quality.split_composite_status(int($ep['status']))[0]]])#">
 			<td class="col-checkbox">
 				<input type="checkbox" class="epCheck #echo 'hide' if $UNAIRED == int($ep['status']) else ''#" id="$ep_str" name="$ep_str">
 			</td>
@@ -99,7 +99,7 @@
 			</td>
     #end if
     #slurp
-    #set $curStatus, $curQuality = $Quality.splitCompositeStatus(int($ep['status']))
+    #set $curStatus, $curQuality = $Quality.split_composite_status(int($ep['status']))
     #if Quality.NONE != $curQuality
 			<td class="col-status">#if $SUBTITLED == $curStatus#<span class="addQTip" title="$statusStrings[$curStatus]"><i class="sgicon-subtitles" style="vertical-align:middle"></i></span>#else#$statusStrings[$curStatus].replace('Downloaded', '')#end if# #if 'Unknown' != $statusStrings[$curStatus]#<span class="quality $Quality.get_quality_css($curQuality)#if $downloaded# addQTip" title="$downloaded#end if#">$Quality.get_quality_ui($curQuality)</span>#end if#</td>
     #else
@@ -107,7 +107,7 @@
     #end if
 			<td class="col-search">
     #if 0 != int($ep['season'])
-        #set $status = $Quality.splitCompositeStatus(int($ep['status']))[0]
+        #set $status = $Quality.split_composite_status(int($ep['status']))[0]
         #if ($status in $SNATCHED_ANY + [$DOWNLOADED, $ARCHIVED]) and $sg_var('USE_FAILED_DOWNLOADS')
 				<a class="ep-retry" href="$sbRoot/home/episode-retry?tvid_prodid=$show_obj.tvid_prodid&amp;season=$ep['season']&amp;episode=$ep['episode']"><img src="$sbRoot/images/search16.png" height="16" alt="retry" title="Retry download"></a>
         #else

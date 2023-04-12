@@ -25,7 +25,7 @@ from .. import logger
 from ..helpers import try_int
 from json_helper import json_loads
 
-from _23 import b64encodestring, filter_iter, map_list, quote, unidecode
+from _23 import b64encodestring, quote
 from six import iteritems
 
 # noinspection PyUnreachableCode
@@ -74,7 +74,7 @@ class SnowflProvider(generic.TorrentProvider):
 
                         params = dict(token=token[0], ent=token[1])
                         if 'Cache' != mode:
-                            params.update({'ss': quote_fx(unidecode(search_string))})
+                            params.update({'ss': quote_fx(search_string)})
 
                         data_json = None
                         vals = [i for i in range(3, 8)]
@@ -92,13 +92,13 @@ class SnowflProvider(generic.TorrentProvider):
                             if self.should_skip():
                                 return results
 
-                        for item in filter_iter(lambda di: re.match('(?i).*?(tv|television)',
-                                                                    di.get('type', '') or di.get('category', ''))
-                                                and (not self.confirmed or di.get('trusted') or di.get('verified')),
-                                                data_json or {}):
-                            seeders, leechers, size = map_list(lambda arg: try_int(
+                        for item in filter(lambda di: re.match('(?i).*?(tv|television)',
+                                                               di.get('type', '') or di.get('category', ''))
+                                           and (not self.confirmed or di.get('trusted') or di.get('verified')),
+                                           data_json or {}):
+                            seeders, leechers, size = list(map(lambda arg: try_int(
                                 *([item.get(arg[0]) if None is not item.get(arg[0]) else item.get(arg[1])]) * 2),
-                                (('seeder', 'seed'), ('leecher', 'leech'), ('size', 'size')))
+                                (('seeder', 'seed'), ('leecher', 'leech'), ('size', 'size'))))
                             if self._reject_item(seeders, leechers):
                                 continue
                             title = item.get('name') or item.get('title')
@@ -117,7 +117,7 @@ class SnowflProvider(generic.TorrentProvider):
                 except generic.HaltParseException:
                     pass
                 except (BaseException, Exception):
-                    logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
+                    logger.error(f'Failed to parse. Traceback: {traceback.format_exc()}')
 
                 self._log_search(mode, len(items[mode]) - cnt, search_url)
 
@@ -163,8 +163,8 @@ class SnowflProvider(generic.TorrentProvider):
         else:
             from sickgear import providers
             if 'torlock' in url.lower():
-                prov = next(filter_iter(lambda p: 'torlock' == p.name.lower(), (filter_iter(
-                    lambda sp: sp.providerType == self.providerType, providers.sortedProviderList()))))
+                prov = next(filter(lambda p: 'torlock' == p.name.lower(), (filter(
+                    lambda sp: sp.providerType == self.providerType, providers.sorted_sources()))))
                 state = prov.enabled
                 prov.enabled = True
                 _ = prov.url

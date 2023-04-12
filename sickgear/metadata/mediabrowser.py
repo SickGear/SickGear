@@ -24,8 +24,6 @@ from .. import logger
 import sg_helpers
 from lib.tvinfo_base.exceptions import *
 import sickgear
-# noinspection PyPep8Naming
-import encodingKludge as ek
 import exceptions_helper
 from exceptions_helper import ex
 from lxml_etree import etree
@@ -98,7 +96,7 @@ class MediaBrowserMetadata(generic.GenericMetadata):
         self.eg_season_all_banner = "<i>not supported</i>"  # type: AnyStr
 
     # Override with empty methods for unsupported features
-    def retrieveShowMetadata(self, folder):
+    def retrieve_show_metadata(self, folder):
         # type: (AnyStr) -> Tuple[None, None, None]
         # while show metadata is generated, it is not supported for our lookup
         return None, None, None
@@ -120,12 +118,12 @@ class MediaBrowserMetadata(generic.GenericMetadata):
         ep_obj: a TVEpisode object to get the path for
         """
 
-        if ek.ek(os.path.isfile, ep_obj.location):
-            xml_file_name = sg_helpers.replace_extension(ek.ek(os.path.basename, ep_obj.location), self._ep_nfo_extension)
-            metadata_dir_name = ek.ek(os.path.join, ek.ek(os.path.dirname, ep_obj.location), 'metadata')
-            xml_file_path = ek.ek(os.path.join, metadata_dir_name, xml_file_name)
+        if os.path.isfile(ep_obj.location):
+            xml_file_name = sg_helpers.replace_extension(os.path.basename(ep_obj.location), self._ep_nfo_extension)
+            metadata_dir_name = os.path.join(os.path.dirname(ep_obj.location), 'metadata')
+            xml_file_path = os.path.join(metadata_dir_name, xml_file_name)
         else:
-            logger.log(u"Episode location doesn't exist: " + str(ep_obj.location), logger.DEBUG)
+            logger.debug(f'Episode location doesn\'t exist: {ep_obj.location}')
             return ''
 
         return xml_file_path
@@ -139,10 +137,10 @@ class MediaBrowserMetadata(generic.GenericMetadata):
         ep_obj: a TVEpisode object to get the path from
         """
 
-        if ek.ek(os.path.isfile, ep_obj.location):
-            metadata_dir_name = ek.ek(os.path.join, ek.ek(os.path.dirname, ep_obj.location), 'metadata')
-            tbn_file_name = sg_helpers.replace_extension(ek.ek(os.path.basename, ep_obj.location), 'jpg')
-            return ek.ek(os.path.join, metadata_dir_name, tbn_file_name)
+        if os.path.isfile(ep_obj.location):
+            metadata_dir_name = os.path.join(os.path.dirname(ep_obj.location), 'metadata')
+            tbn_file_name = sg_helpers.replace_extension(os.path.basename(ep_obj.location), 'jpg')
+            return os.path.join(metadata_dir_name, tbn_file_name)
 
     def get_season_poster_path(self, show_obj, season):
         # type: (sickgear.tv.TVShow, int) -> Optional[AnyStr]
@@ -152,8 +150,7 @@ class MediaBrowserMetadata(generic.GenericMetadata):
         If no season folder exists, None is returned
         """
 
-        dir_list = [x for x in ek.ek(os.listdir, show_obj.location) if
-                    ek.ek(os.path.isdir, ek.ek(os.path.join, show_obj.location, x))]
+        dir_list = [x for x in os.listdir(show_obj.location) if os.path.isdir(os.path.join(show_obj.location, x))]
 
         season_dir_regex = r'^Season\s+(\d+)$'
 
@@ -178,12 +175,12 @@ class MediaBrowserMetadata(generic.GenericMetadata):
                 break
 
         if not season_dir:
-            logger.log(u"Unable to find a season dir for season " + str(season), logger.DEBUG)
+            logger.debug(f'Unable to find a season dir for season {season}')
             return None
 
-        logger.log(u"Using " + str(season_dir) + "/folder.jpg as season dir for season " + str(season), logger.DEBUG)
+        logger.debug(f'Using {season_dir}/folder.jpg as season dir for season {season}')
 
-        return ek.ek(os.path.join, show_obj.location, season_dir, 'folder.jpg')
+        return os.path.join(show_obj.location, season_dir, 'folder.jpg')
 
     def get_season_banner_path(self, show_obj, season):
         # type: (sickgear.tv.TVShow, int) -> Optional[AnyStr]
@@ -193,8 +190,7 @@ class MediaBrowserMetadata(generic.GenericMetadata):
         If no season folder exists, None is returned
         """
 
-        dir_list = [x for x in ek.ek(os.listdir, show_obj.location) if
-                    ek.ek(os.path.isdir, ek.ek(os.path.join, show_obj.location, x))]
+        dir_list = [x for x in os.listdir(show_obj.location) if os.path.isdir(os.path.join(show_obj.location, x))]
 
         season_dir_regex = r'^Season\s+(\d+)$'
 
@@ -219,12 +215,12 @@ class MediaBrowserMetadata(generic.GenericMetadata):
                 break
 
         if not season_dir:
-            logger.log(u"Unable to find a season dir for season " + str(season), logger.DEBUG)
+            logger.debug(f'Unable to find a season dir for season {season}')
             return None
 
-        logger.log(u"Using " + str(season_dir) + "/banner.jpg as season dir for season " + str(season), logger.DEBUG)
+        logger.debug(f'Using {season_dir}/banner.jpg as season dir for season {season}')
 
-        return ek.ek(os.path.join, show_obj.location, season_dir, 'banner.jpg')
+        return os.path.join(show_obj.location, season_dir, 'banner.jpg')
 
     def _show_data(self, show_obj):
         # type: (sickgear.tv.TVShow) -> Optional[Union[bool, etree.Element]]
@@ -256,12 +252,11 @@ class MediaBrowserMetadata(generic.GenericMetadata):
         try:
             show_info = t.get_show(show_obj.prodid, language=show_obj.lang)
         except BaseTVinfoShownotfound as e:
-            logger.log("Unable to find show with id %s on %s, skipping it" %
-                       (show_obj.prodid, sickgear.TVInfoAPI(show_obj.tvid).name), logger.ERROR)
+            logger.error(f'Unable to find show with id {show_obj.prodid} '
+                         f'on {sickgear.TVInfoAPI(show_obj.tvid).name}, skipping it')
             raise e
         except BaseTVinfoError as e:
-            logger.log("%s is down, can't use its data to make the NFO" % sickgear.TVInfoAPI(show_obj.tvid).name,
-                       logger.ERROR)
+            logger.error('%s is down, can\'t use its data to make the NFO' % sickgear.TVInfoAPI(show_obj.tvid).name)
             raise e
 
         if not self._valid_show(show_info, show_obj):
@@ -269,8 +264,8 @@ class MediaBrowserMetadata(generic.GenericMetadata):
 
         # check for title and id
         if None is getattr(show_info, 'seriesname', None) or None is getattr(show_info, 'id', None):
-            logger.log("Incomplete info for show with id %s on %s, skipping it" %
-                       (show_obj.prodid, sickgear.TVInfoAPI(show_obj.tvid).name), logger.ERROR)
+            logger.error(f'Incomplete info for show with id {show_obj.prodid}'
+                         f' on {sickgear.TVInfoAPI(show_obj.tvid).name}, skipping it')
             return False
 
         prodid = etree.SubElement(tv_node, "id")
@@ -419,8 +414,8 @@ class MediaBrowserMetadata(generic.GenericMetadata):
         except BaseTVinfoShownotfound as e:
             raise exceptions_helper.ShowNotFoundException(ex(e))
         except BaseTVinfoError as e:
-            logger.log("Unable to connect to %s while creating meta files - skipping - %s" %
-                       (sickgear.TVInfoAPI(ep_obj.show_obj.tvid).name, ex(e)), logger.ERROR)
+            logger.error(f'Unable to connect to {sickgear.TVInfoAPI(ep_obj.show_obj.tvid).name}'
+                         f' while creating meta files - skipping - {ex(e)}')
             return False
 
         if not self._valid_show(show_info, ep_obj.show_obj):

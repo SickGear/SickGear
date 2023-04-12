@@ -77,7 +77,7 @@ def generate_key(key_size=4096, output_file='server.key'):
 # Ported from cryptography docs/x509/tutorial.rst
 def generate_local_cert(private_key, days_valid=3650, output_file='server.crt', loc_name=None, org_name=None):
 
-    def_name = u'SickGear'
+    def_name = 'SickGear'
 
     # Various details about who we are. For a self-signed certificate the
     # subject and issuer are always the same.
@@ -88,7 +88,7 @@ def generate_local_cert(private_key, days_valid=3650, output_file='server.crt', 
 
     # build Subject Alternate Names (aka SAN) list
     # First the host names, add with x509.DNSName():
-    san_list = [x509.DNSName(u'localhost')]
+    san_list = [x509.DNSName('localhost')]
     try:
         thishostname = text_type(socket.gethostname())
         san_list.append(x509.DNSName(thishostname))
@@ -100,13 +100,13 @@ def generate_local_cert(private_key, days_valid=3650, output_file='server.crt', 
     try:
         # noinspection PyCompatibility
         from ipaddress import IPv4Address, IPv6Address
-        san_list.append(x509.IPAddress(IPv4Address(u'127.0.0.1')))
-        san_list.append(x509.IPAddress(IPv6Address(u'::1')))
+        san_list.append(x509.IPAddress(IPv4Address('127.0.0.1')))
+        san_list.append(x509.IPAddress(IPv6Address('::1')))
 
         # append local v4 ip
         mylocalipv4 = localipv4()
         if mylocalipv4:
-            san_list.append(x509.IPAddress(IPv4Address(u'' + mylocalipv4)))
+            san_list.append(x509.IPAddress(IPv4Address('' + mylocalipv4)))
     except (ImportError, Exception):
         pass
 

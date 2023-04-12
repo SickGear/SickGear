@@ -21,8 +21,7 @@ import re
 from . import generic
 from ..helpers import anon_url, try_int
 
-from _23 import unidecode
-from six import iteritems, PY2
+from six import iteritems
 
 
 class TorrentLeechProvider(generic.TorrentProvider):
@@ -45,7 +44,7 @@ class TorrentLeechProvider(generic.TorrentProvider):
         return super(TorrentLeechProvider, self)._authorised(
             logged_in=(lambda y='': all(
                 ['TorrentLeech' in y, 'type="password"' not in y[0:4096], self.has_all_cookies(pre='tl')])),
-            failed_msg=(lambda y=None: u'Invalid cookie details for %s. Check settings'))
+            failed_msg=(lambda y=None: 'Invalid cookie details for %s. Check settings'))
 
     @staticmethod
     def _has_signature(data=None):
@@ -66,7 +65,7 @@ class TorrentLeechProvider(generic.TorrentProvider):
                 for page in range((3, 5)['Cache' == mode])[1:]:
                     urls[-1] += [self.urls[('search', 'browse')['Cache' == mode]] % {
                         'cats': self._categories_string(mode, '', ','),
-                        'query': unidecode(search_string) or search_string,
+                        'query': search_string,
                         'x': '%spage/%s' % (('facets/tags:FREELEECH/', '')[not self.freeleech], page)
                     }]
             results += self._search_urls(mode, last_recent_search, urls)
@@ -125,8 +124,7 @@ class TorrentLeechProvider(generic.TorrentProvider):
                             download_url = None
                             if dl and dl_id:
                                 # noinspection PyUnresolvedReferences
-                                download_url = self._link('download/%s/%s' % (dl_id, dl),
-                                                          url_quote=PY2 and isinstance(dl, unicode) or None)
+                                download_url = self._link('download/%s/%s' % (dl_id, dl))
                         except (BaseException, Exception):
                             continue
 

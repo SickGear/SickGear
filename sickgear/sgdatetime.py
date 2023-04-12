@@ -23,11 +23,11 @@ import sys
 import sickgear
 from dateutil import tz
 
-from six import integer_types, PY2, string_types
+from six import integer_types, string_types
 
 # noinspection PyUnreachableCode
 if False:
-    from typing import Callable, Optional, Union
+    from typing import Optional, Union
 
 date_presets = ('%Y-%m-%d',
                 '%a, %Y-%m-%d',
@@ -211,7 +211,7 @@ class SGDatetime(datetime.datetime):
         obj = (dt, self)[self is not None]  # type: datetime.datetime
         try:
             if None is not obj:
-                strd = u'%s, %s' % (
+                strd = '%s, %s' % (
                     SGDatetime.sbstrftime(obj, (sickgear.DATE_PRESET, d_preset)[None is not d_preset]),
                     SGDatetime.sbftime(dt, show_seconds, t_preset, False, markup))
 
@@ -234,7 +234,7 @@ class SGDatetime(datetime.datetime):
         """
         convert datetime to filetime
         special handling for windows filetime issues
-        for pre Windows 7 this can result in an exception for pre 1970 dates
+        for pre Windows 7 this can result in an exception for pre-1970 dates
         """
         obj = (dt, self)[self is not None]  # type: datetime.datetime
         if is_win:
@@ -282,22 +282,25 @@ class SGDatetime(datetime.datetime):
         finally:
             return (default, timestamp)[isinstance(timestamp, (float, integer_types))]
 
+    @static_or_instance
+    def timestamp_near(self,
+                       dt=None,  # type: Optional[SGDatetime, datetime.datetime]
+                       td=None,  # type: Optional[datetime.timedelta]
+                       return_int=True  # type: bool
+                       ):
+        # type: (...) -> Union[float, integer_types]
+        """
+        Use `timestamp_near` for a timestamp in the near future or near past
 
-if PY2:
-    """
-    Use `timestamp_near` for a timezone aware UTC timestamp in the near future or recent past.
+        Raises exception if dt cannot be converted to int
 
-    Under py3, using the faster variable assigned cpython callable, so py2 is set up to mimic the signature types.
-    Note: the py3 callable is limited to datetime.datetime and does not work with datetime.date.
-    """
-    def _py2timestamp(dt=None):
-        # type: (datetime.datetime) -> float
-        try:
-            import time
-            return int(time.mktime(dt.timetuple()))
-        except (BaseException, Exception):
-            return 0
-    timestamp_near = _py2timestamp  # type: Callable[[datetime.datetime], float]
-else:
-    # py3 native timestamp uses milliseconds
-    timestamp_near = datetime.datetime.timestamp  # type: Callable[[datetime.datetime], float]
+        td is timedelta to subtract from datetime
+        """
+        obj = (dt, self)[self is not None]  # type: datetime.datetime
+        if None is obj:
+            obj = datetime.datetime.now()
+            if isinstance(td, datetime.timedelta):
+                obj -= td
+        if not return_int:
+            return datetime.datetime.timestamp(obj)
+        return int(datetime.datetime.timestamp(obj))

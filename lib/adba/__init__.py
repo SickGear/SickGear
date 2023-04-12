@@ -22,7 +22,7 @@ import threading
 from datetime import timedelta
 from time import sleep, time
 
-from _23 import ConfigParser
+from configparser import ConfigParser
 
 from .aniDBlink import AniDBLink
 from .aniDBcommands import *

@@ -48,7 +48,7 @@ class MigrationBasicTests(test.SickbeardTestDBCase):
                 update.execute()
                 sleep(0.1)
 
-            db.MigrationCode(my_db)
+            db.migration_code(my_db)
             my_db.close()
 
             # force python to garbage collect all db connections, so that the file can be deleted
@@ -67,9 +67,9 @@ class MigrationBasicTests(test.SickbeardTestDBCase):
 # 0 -> 31
 class OldInitialSchema(db.SchemaUpgrade):
     def execute(self):
-        db.backup_database(self.connection, 'sickbeard.db', self.checkDBVersion())
+        db.backup_database(self.connection, 'sickbeard.db', self.call_check_db_version())
 
-        if not self.hasTable('tv_shows') and not self.hasTable('db_version'):
+        if not self.has_table('tv_shows') and not self.has_table('db_version'):
             queries = [
                 'CREATE TABLE db_version (db_version INTEGER);',
                 'CREATE TABLE history ('
@@ -105,35 +105,31 @@ class OldInitialSchema(db.SchemaUpgrade):
                 self.connection.action(query)
 
         else:
-            cur_db_version = self.checkDBVersion()
+            cur_db_version = self.call_check_db_version()
 
             if cur_db_version < MIN_DB_VERSION:
                 logger.log_error_and_exit(
-                    u'Your database version ('
-                    + str(cur_db_version)
-                    + ') is too old to migrate from what this version of SickGear supports ('
-                    + str(MIN_DB_VERSION) + ').' + '\n'
-                    + 'Upgrade using a previous version (tag) build 496 to build 501 of SickGear first or'
-                      ' remove database file to begin fresh.'
+                    f'Your database version ({str(cur_db_version)}) is too old to migrate from what'
+                    f' this version of SickGear supports ({str(MIN_DB_VERSION)}).\n'
+                    f'Upgrade using a previous version (tag) build 496 to build 501 of SickGear first'
+                    f' or remove database file to begin fresh.'
                 )
 
             if cur_db_version > MAX_DB_VERSION:
                 logger.log_error_and_exit(
-                    u'Your database version ('
-                    + str(cur_db_version)
-                    + ') has been incremented past what this version of SickGear supports ('
-                    + str(MAX_DB_VERSION) + ').' + '\n'
-                    + 'If you have used other forks of SickGear,'
-                      ' your database may be unusable due to their modifications.'
+                    f'Your database version ({str(cur_db_version)}) has been incremented past what'
+                    f' this version of SickGear supports ({str(MAX_DB_VERSION)}).\n'
+                    f'If you have used other forks of SickGear,'
+                    f' your database may be unusable due to their modifications.'
                 )
 
-        return self.checkDBVersion()
+        return self.call_check_db_version()
 
 
 class AddDefaultEpStatusToTvShows(db.SchemaUpgrade):
     def execute(self):
-        self.addColumn('tv_shows', 'default_ep_status', 'TEXT', '')
-        self.setDBVersion(41, check_db_version=False)
+        self.add_column('tv_shows', 'default_ep_status', 'TEXT', '')
+        self.set_db_version(41, check_db_version=False)
 
 
 if '__main__' == __name__:

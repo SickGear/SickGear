@@ -26,7 +26,6 @@ from ..helpers import try_int
 
 from bs4_parser import BS4Parser
 
-from _23 import unidecode
 from six import iteritems
 
 
@@ -66,7 +65,6 @@ class NcoreProvider(generic.TorrentProvider):
             'list': '.*?torrent_all', 'info': 'details', 'key': 'key=([^"]+)">Torrent let'})])
         for mode in search_params:
             for search_string in search_params[mode]:
-                search_string = unidecode(search_string)
                 search_url = self.urls['search'] % search_string
 
                 # fetches 15 results by default, and up to 100 if allowed in user profile
@@ -107,7 +105,7 @@ class NcoreProvider(generic.TorrentProvider):
                 except generic.HaltParseException:
                     pass
                 except (BaseException, Exception):
-                    logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
+                    logger.error(f'Failed to parse. Traceback: {traceback.format_exc()}')
 
                 self._log_search(mode, len(items[mode]) - cnt, search_url)
 

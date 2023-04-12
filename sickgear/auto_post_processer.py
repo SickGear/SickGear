@@ -16,9 +16,6 @@
 
 import os.path
 
-# noinspection PyPep8Naming
-import encodingKludge as ek
-
 import sickgear
 from . import logger, processTV
 
@@ -40,14 +37,13 @@ class PostProcesser(object):
     @staticmethod
     def _main():
 
-        if not ek.ek(os.path.isdir, sickgear.TV_DOWNLOAD_DIR):
-            logger.log(u"Automatic post-processing attempted but dir %s doesn't exist" % sickgear.TV_DOWNLOAD_DIR,
-                       logger.ERROR)
+        if not os.path.isdir(sickgear.TV_DOWNLOAD_DIR):
+            logger.error('Automatic post-processing attempted but dir %s doesn\'t exist' % sickgear.TV_DOWNLOAD_DIR)
             return
 
-        if not ek.ek(os.path.isabs, sickgear.TV_DOWNLOAD_DIR):
-            logger.log(u'Automatic post-processing attempted but dir %s is relative '
-                       '(and probably not what you really want to process)' % sickgear.TV_DOWNLOAD_DIR, logger.ERROR)
+        if not os.path.isabs(sickgear.TV_DOWNLOAD_DIR):
+            logger.error('Automatic post-processing attempted but dir %s is relative '
+                         '(and probably not what you really want to process)' % sickgear.TV_DOWNLOAD_DIR)
             return
 
         processTV.processDir(sickgear.TV_DOWNLOAD_DIR, is_basedir=True)

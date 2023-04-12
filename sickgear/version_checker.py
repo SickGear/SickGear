@@ -25,8 +25,6 @@ import time
 import traceback
 from . import gh_api as github
 
-# noinspection PyPep8Naming
-import encodingKludge as ek
 from exceptions_helper import ex
 
 import sickgear
@@ -37,7 +35,6 @@ from sg_helpers import cmdline_runner, get_url
 # noinspection PyUnresolvedReferences
 from six.moves import urllib
 from six import string_types
-from _23 import list_keys
 
 # noinspection PyUnreachableCode
 if False:
@@ -85,7 +82,7 @@ class PackagesUpdater(object):
                 ui.notifications.message(msg)
             return False
 
-        logger.log('Update(s) for %s found %s' % (self.install_type, list_keys(sickgear.UPDATES_TODO)))
+        logger.log('Update(s) for %s found %s' % (self.install_type, list(sickgear.UPDATES_TODO)))
 
         # save updates_todo to config to be loaded after restart
         sickgear.save_config()
@@ -176,7 +173,7 @@ class SoftwareUpdater(object):
             'git': running from source using git
             'source': running from source without git
         """
-        return ('source', 'git')[os.path.isdir(ek.ek(os.path.join, sickgear.PROG_DIR, '.git'))]
+        return ('source', 'git')[os.path.isdir(os.path.join(sickgear.PROG_DIR, '.git'))]
 
     def check_for_new_version(self, force=False):
         """
@@ -280,17 +277,17 @@ class GitUpdateManager(UpdateManager):
 
     def _find_working_git(self):
 
-        logger.debug(u'Checking if git commands are available')
+        logger.debug('Checking if git commands are available')
 
         main_git = (sickgear.GIT_PATH, 'git')[not sickgear.GIT_PATH]
 
         _, _, exit_status = self._git_version(main_git)
 
         if 0 == exit_status:
-            logger.debug(u'Using: %s' % main_git)
+            logger.debug(f'Using: {main_git}')
             return main_git
 
-        logger.debug(u'Git not found: %s' % main_git)
+        logger.debug(f'Git not found: {main_git}')
 
         # trying alternatives
 
@@ -304,12 +301,12 @@ class GitUpdateManager(UpdateManager):
             if main_git != main_git.lower():
                 alt_git_paths.append(main_git.lower())
             if sickgear.GIT_PATH:
-                logger.debug(u'git.exe is missing, remove `git_path` from config.ini: %s' % main_git)
+                logger.debug(f'git.exe is missing, remove `git_path` from config.ini: {main_git}')
                 if re.search(r' \(x86\)', main_git):
                     alt_git_paths.append(re.sub(r' \(x86\)', '', main_git))
                 else:
                     alt_git_paths.append(re.sub('Program Files', 'Program Files (x86)', main_git))
-                logger.debug(u'Until `git_path` is removed by a config.ini edit, trying: %s' % alt_git_paths[-1])
+                logger.debug(f'Until `git_path` is removed by a config.ini edit, trying: {alt_git_paths[-1]}')
 
         if alt_git_paths:
             logger.debug('Trying known alternative git locations')
@@ -318,9 +315,9 @@ class GitUpdateManager(UpdateManager):
                 _, _, exit_status = self._git_version(cur_git_path)
 
                 if 0 == exit_status:
-                    logger.debug(u'Using: %s' % cur_git_path)
+                    logger.debug(f'Using: {cur_git_path}')
                     return cur_git_path
-                logger.debug(u'Not using: %s' % cur_git_path)
+                logger.debug(f'Not using: {cur_git_path}')
 
         # Still haven't found a working git
         error_message = 'Unable to find your git executable - Shutdown SickGear and EITHER set git_path' \
@@ -340,15 +337,15 @@ class GitUpdateManager(UpdateManager):
             git_path = self._git_path
 
         if not git_path:
-            logger.error(u'No git specified, cannot use git commands')
+            logger.error('No git specified, cannot use git commands')
             return output, err, exit_status
 
         cmd = ' '.join([git_path] + arg_list)
 
         try:
-            logger.debug(u'Executing %s with your shell in %s' % (cmd, sickgear.PROG_DIR))
+            logger.debug(f'Executing {cmd} with your shell in {sickgear.PROG_DIR}')
             output, err, exit_status = cmdline_runner([git_path] + arg_list, env={'LANG': 'en_US.UTF-8'})
-            logger.debug(u'git output: %s' % output)
+            logger.debug(f'git output: {output}')
 
         except OSError:
             logger.log('Failed command: %s' % cmd)
@@ -357,12 +354,12 @@ class GitUpdateManager(UpdateManager):
             logger.log('Failed command: %s, %s' % (cmd, ex(e)))
 
         if 0 == exit_status:
-            logger.debug(u'Successful return: %s' % cmd)
+            logger.debug(f'Successful return: {cmd}')
             exit_status = 0
             self.unsafe = False
 
         elif 1 == exit_status:
-            logger.error(u'Failed: %s returned: %s' % (cmd, output))
+            logger.error(f'Failed: {cmd} returned: {output}')
 
         elif 128 == exit_status or 'fatal:' in output or err:
             if 'unsafe repository' not in output and 'fatal:' in output:
@@ -385,14 +382,14 @@ class GitUpdateManager(UpdateManager):
                 except (BaseException, Exception):
                     pass
             exit_status = 128
-            msg = u'Fatal: %s returned: %s' % (cmd, output)
+            msg = f'Fatal: {cmd} returned: {output}'
             if 'develop' in output.lower() or 'main' in output.lower():
                 logger.error(msg)
             else:
                 logger.debug(msg)
 
         else:
-            logger.error(u'Treat as error for now, command: %s returned: %s' % (cmd, output))
+            logger.error(f'Treat as error for now, command: {cmd} returned: {output}')
 
         return output, err, exit_status
 
@@ -408,7 +405,7 @@ class GitUpdateManager(UpdateManager):
         if 0 == exit_status and output:
             cur_commit_hash = output.strip()
             if not re.match(r'^[a-z0-9]+$', cur_commit_hash):
-                logger.error(u'Output doesn\'t look like a hash, not using it')
+                logger.error("Output doesn't look like a hash, not using it")
                 return False
             self._cur_commit_hash = cur_commit_hash
             sickgear.CUR_COMMIT_HASH = str(cur_commit_hash)
@@ -437,7 +434,7 @@ class GitUpdateManager(UpdateManager):
         _, _, exit_status = self._run_git(['fetch', '%s' % sickgear.GIT_REMOTE])
 
         if 0 != exit_status:
-            logger.error(u'Unable to contact github, can\'t check for update')
+            logger.error("Unable to contact github, can't check for update")
             return
 
         if not self._cur_pr_number:
@@ -449,14 +446,14 @@ class GitUpdateManager(UpdateManager):
                 cur_commit_hash = output.strip()
 
                 if not re.match('^[a-z0-9]+$', cur_commit_hash):
-                    logger.debug(u'Output doesn\'t look like a hash, not using it')
+                    logger.debug("Output doesn't look like a hash, not using it")
                     return
 
                 self._newest_commit_hash = cur_commit_hash
                 self._old_commit_hash = cur_commit_hash
                 self._old_branch = self._find_installed_branch()
             else:
-                logger.debug(u'git didn\'t return newest commit hash')
+                logger.debug("git didn't return newest commit hash")
                 return
 
             # get number of commits behind and ahead (option --count not supported git < 1.7.2)
@@ -469,11 +466,13 @@ class GitUpdateManager(UpdateManager):
                     self._num_commits_ahead = int(output.count('>'))
 
                 except (BaseException, Exception):
-                    logger.debug(u'git didn\'t return numbers for behind and ahead, not using it')
+                    logger.debug("git didn't return numbers for behind and ahead, not using it")
                     return
 
-            logger.debug(u'cur_commit = %s, newest_commit = %s, num_commits_behind = %s, num_commits_ahead = %s' % (
-                self._cur_commit_hash, self._newest_commit_hash, self._num_commits_behind, self._num_commits_ahead))
+            logger.debug(f'cur_commit = {self._cur_commit_hash}'
+                         f', newest_commit = {self._newest_commit_hash}'
+                         f', num_commits_behind = {self._num_commits_behind}'
+                         f', num_commits_ahead = {self._num_commits_ahead}')
         else:
             # we need to treat pull requests specially as it doesn't seem possible to set their "@{upstream}" tag
             output, _, _ = self._run_git(['ls-remote', '%s' % sickgear.GIT_REMOTE,
@@ -515,7 +514,7 @@ class GitUpdateManager(UpdateManager):
 
         installed_branch = self._find_installed_branch()
         if self.branch != installed_branch:
-            logger.debug(u'Branch checkout: %s->%s' % (installed_branch, self.branch))
+            logger.debug(f'Branch checkout: {installed_branch}->{self.branch}')
             return True
 
         self._find_installed_version()
@@ -527,7 +526,7 @@ class GitUpdateManager(UpdateManager):
         try:
             self._check_github_for_update()
         except (BaseException, Exception) as e:
-            logger.error(u'Unable to contact github, can\'t check for update: %r' % e)
+            logger.error(f"Unable to contact github, can't check for update: {e!r}")
             return False
 
         if 0 < self._num_commits_behind:
@@ -664,12 +663,12 @@ class SourceUpdateManager(UpdateManager):
         try:
             self._check_github_for_update()
         except (BaseException, Exception) as e:
-            logger.error(u'Unable to contact github, can\'t check for update: %r' % e)
+            logger.error(f"Unable to contact github, can't check for update: {e!r}")
             return False
 
         installed_branch = self._find_installed_branch()
         if self.branch != installed_branch:
-            logger.debug(u'Branch checkout: %s->%s' % (installed_branch, self.branch))
+            logger.debug(f'Branch checkout: {installed_branch}->{self.branch}')
             return True
 
         if not self._cur_commit_hash or 0 < self._num_commits_behind:
@@ -715,8 +714,9 @@ class SourceUpdateManager(UpdateManager):
                 # when _cur_commit_hash doesn't match anything _num_commits_behind == 100
                 self._num_commits_behind += 1
 
-        logger.debug(u'cur_commit = %s, newest_commit = %s, num_commits_behind = %s'
-                     % (self._cur_commit_hash, self._newest_commit_hash, self._num_commits_behind))
+        logger.debug(f'cur_commit = {self._cur_commit_hash}'
+                     f', newest_commit = {self._newest_commit_hash}'
+                     f', num_commits_behind = {self._num_commits_behind}')
 
     def set_newest_text(self):
 
@@ -724,7 +724,7 @@ class SourceUpdateManager(UpdateManager):
         newest_text = None
 
         if not self._cur_commit_hash:
-            logger.debug(u'Unknown current version number, don\'t know if we should update or not')
+            logger.debug("Unknown current version number, don't know if we should update or not")
 
             newest_text = 'Unknown current version number: If you\'ve never used the SickGear upgrade system' \
                           ' before then current version is not set. &mdash; <a href="%s">Update Now</a>' \
@@ -754,48 +754,48 @@ class SourceUpdateManager(UpdateManager):
 
         try:
             # prepare the update dir
-            sg_update_dir = ek.ek(os.path.join, sickgear.PROG_DIR, u'sg-update')
+            sg_update_dir = os.path.join(sickgear.PROG_DIR, 'sg-update')
 
             if os.path.isdir(sg_update_dir):
-                logger.log(u'Clearing out update folder %s before extracting' % sg_update_dir)
+                logger.log(f'Clearing out update folder {sg_update_dir} before extracting')
                 shutil.rmtree(sg_update_dir)
 
-            logger.log(u'Creating update folder %s before extracting' % sg_update_dir)
+            logger.log(f'Creating update folder {sg_update_dir} before extracting')
             os.makedirs(sg_update_dir)
 
             # retrieve file
-            logger.log(u'Downloading update from %r' % tar_download_url)
-            tar_download_path = os.path.join(sg_update_dir, u'sg-update.tar')
+            logger.log(f'Downloading update from {tar_download_url!r}')
+            tar_download_path = os.path.join(sg_update_dir, 'sg-update.tar')
             urllib.request.urlretrieve(tar_download_url, tar_download_path)
 
-            if not ek.ek(os.path.isfile, tar_download_path):
-                logger.error(u'Unable to retrieve new version from %s, can\'t update' % tar_download_url)
+            if not os.path.isfile(tar_download_path):
+                logger.error(f"Unable to retrieve new version from {tar_download_url}, can't update")
                 return False
 
-            if not ek.ek(tarfile.is_tarfile, tar_download_path):
-                logger.error(u'Retrieved version from %s is corrupt, can\'t update' % tar_download_url)
+            if not tarfile.is_tarfile(tar_download_path):
+                logger.error(f"Retrieved version from {tar_download_url} is corrupt, can't update")
                 return False
 
             # extract to sg-update dir
-            logger.log(u'Extracting file %s' % tar_download_path)
+            logger.log(f'Extracting file {tar_download_path}')
             tar = tarfile.open(tar_download_path)
             tar.extractall(sg_update_dir)
             tar.close()
 
             # delete .tar.gz
-            logger.log(u'Deleting file %s' % tar_download_path)
+            logger.log(f'Deleting file {tar_download_path}')
             os.remove(tar_download_path)
 
             # find update dir name
             update_dir_contents = [x for x in os.listdir(sg_update_dir) if
                                    os.path.isdir(os.path.join(sg_update_dir, x))]
             if 1 != len(update_dir_contents):
-                logger.error(u'Invalid update data, update failed: %s' % update_dir_contents)
+                logger.error(f'Invalid update data, update failed: {update_dir_contents}')
                 return False
             content_dir = os.path.join(sg_update_dir, update_dir_contents[0])
 
             # walk temp folder and move files to main folder
-            logger.log(u'Moving files from %s to %s' % (content_dir, sickgear.PROG_DIR))
+            logger.log(f'Moving files from {content_dir} to {sickgear.PROG_DIR}')
             for dirname, dirnames, filenames in os.walk(content_dir):
                 dirname = dirname[len(content_dir) + 1:]
                 for curfile in filenames:
@@ -811,7 +811,7 @@ class SourceUpdateManager(UpdateManager):
                             os.remove(new_path)
                             os.renames(old_path, new_path)
                         except (BaseException, Exception) as e:
-                            logger.debug(u'Unable to update %s: %s' % (new_path, ex(e)))
+                            logger.debug(f'Unable to update {new_path}: {ex(e)}')
                             os.remove(old_path)  # Trash the updated file without moving in new path
                         continue
 
@@ -823,8 +823,8 @@ class SourceUpdateManager(UpdateManager):
             sickgear.CUR_COMMIT_BRANCH = self.branch
 
         except (BaseException, Exception) as e:
-            logger.error(u'Error while trying to update: %s' % ex(e))
-            logger.debug(u'Traceback: %s' % traceback.format_exc())
+            logger.error(f'Error while trying to update: {ex(e)}')
+            logger.debug(f'Traceback: {traceback.format_exc()}')
             return False
 
         # Notify update successful

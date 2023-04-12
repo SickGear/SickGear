@@ -202,7 +202,7 @@
 
 
 					<div class="field-pair">
-#set $qualities = $common.Quality.splitQuality(int($show_obj.quality))
+#set $qualities = $common.Quality.split_quality(int($show_obj.quality))
 #set global $any_qualities = $qualities[0]
 #set global $best_qualities = $qualities[1]
 #include $os.path.join($sg_str('PROG_DIR'), 'gui/slick/interfaces/default/inc_qualityChooser.tmpl')

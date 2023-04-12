@@ -28,7 +28,7 @@ TEST_BASE_VERSION = None  # the base production db version, only needed for TEST
 # Add new migrations at the bottom of the list; subclass the previous migration.
 class InitialSchema(db.SchemaUpgrade):
     def test(self):
-        return self.hasTable('failed')
+        return self.has_table('failed')
 
     def execute(self):
         queries = [
@@ -45,18 +45,18 @@ class InitialSchema(db.SchemaUpgrade):
 
 class SizeAndProvider(InitialSchema):
     def test(self):
-        return self.hasColumn('failed', 'size') and self.hasColumn('failed', 'provider')
+        return self.has_column('failed', 'size') and self.has_column('failed', 'provider')
 
     def execute(self):
-        self.addColumn('failed', 'size')
-        self.addColumn('failed', 'provider', 'TEXT', '')
+        self.add_column('failed', 'size')
+        self.add_column('failed', 'provider', 'TEXT', '')
 
 
 class History(SizeAndProvider):
     """Snatch history that can't be modified by the user"""
 
     def test(self):
-        return self.hasTable('history')
+        return self.has_table('history')
 
     def execute(self):
         self.connection.action('CREATE TABLE history (date NUMERIC, ' +
@@ -67,21 +67,21 @@ class HistoryStatus(History):
     """Store episode status before snatch to revert to if necessary"""
 
     def test(self):
-        return self.hasColumn('history', 'old_status')
+        return self.has_column('history', 'old_status')
 
     def execute(self):
-        self.addColumn('history', 'old_status', 'NUMERIC', Quality.NONE)
-        self.addColumn('history', 'showid', 'NUMERIC', '-1')
-        self.addColumn('history', 'season', 'NUMERIC', '-1')
-        self.addColumn('history', 'episode', 'NUMERIC', '-1')
+        self.add_column('history', 'old_status', 'NUMERIC', Quality.NONE)
+        self.add_column('history', 'showid', 'NUMERIC', '-1')
+        self.add_column('history', 'season', 'NUMERIC', '-1')
+        self.add_column('history', 'episode', 'NUMERIC', '-1')
 
 
 class AddIndexerToTables(HistoryStatus):
     def test(self):
-        return self.hasColumn('history', 'indexer')
+        return self.has_column('history', 'indexer')
 
     def execute(self):
-        self.addColumn('history', 'indexer', 'NUMERIC')
+        self.add_column('history', 'indexer', 'NUMERIC')
 
         main_db = db.DBConnection('sickbeard.db')
         show_ids = {s['prod_id']: s['tv_id'] for s in
@@ -91,15 +91,15 @@ class AddIndexerToTables(HistoryStatus):
             cl.append(['UPDATE history SET indexer = ? WHERE showid = ?', [i, s_id]])
         self.connection.mass_action(cl)
 
-        if self.connection.hasTable('backup_history'):
+        if self.connection.has_table('backup_history'):
             self.connection.action(
                 'REPLACE INTO history '
                 '(date, size, `release`, provider, old_status, showid, season, episode, indexer)'
                 ' SELECT'
                 ' date, size, `release`, provider, old_status, showid, season, episode, indexer'
                 ' FROM backup_history')
-            self.connection.removeTable('backup_history')
+            self.connection.remove_table('backup_history')
 
         self.connection.action('VACUUM')
 
-        self.setDBVersion(2, check_db_version=False)
+        self.set_db_version(2, check_db_version=False)

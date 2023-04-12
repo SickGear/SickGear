@@ -36,12 +36,12 @@
 <!--
 \$(document).ready(function(){
     #if $sickgear.USE_NZBS
-        #for $cur_newznab_provider in $sickgear.newznabProviderList:
+        #for $cur_newznab_provider in $sickgear.newznab_providers:
 	\$(this).addProvider('$cur_newznab_provider.get_id()', '$cur_newznab_provider.name', '$cur_newznab_provider.url', '<%= starify(cur_newznab_provider.key) %>', '$cur_newznab_provider.cat_ids', $int($cur_newznab_provider.default), !0);
         #end for
     #end if
     #if $sickgear.USE_TORRENTS
-        #for $cur_torrent_rss_provider in $sickgear.torrentRssProviderList:
+        #for $cur_torrent_rss_provider in $sickgear.torrent_rss_providers:
 	\$(this).addTorrentRssProvider('$cur_torrent_rss_provider.get_id()', '$cur_torrent_rss_provider.name', '$cur_torrent_rss_provider.url', '<%= starify(cur_torrent_rss_provider.cookies) %>');
         #end for
     #end if
@@ -101,7 +101,7 @@
 
 
 						<ul id="provider_order_list" class="provider_order_panel">
-#for $cur_provider in [$x for $x in $sickgear.providers.sortedProviderList()
+#for $cur_provider in [$x for $x in $sickgear.providers.sorted_sources()
     if $x.providerType == $GenericProvider.NZB and $sickgear.USE_NZBS or
        $x.providerType == $GenericProvider.TORRENT and $sickgear.USE_TORRENTS]
     #set $cur_name = $cur_provider.get_id()
@@ -129,7 +129,7 @@
 #end for
 						</ul>
 
-						<input type="hidden" name="provider_order" id="provider_order" value="<%=' '.join([x.get_id()+':'+str(int(x.is_enabled())) for x in sickgear.providers.sortedProviderList()])%>"/>
+						<input type="hidden" name="provider_order" id="provider_order" value="<%=' '.join([x.get_id()+':'+str(int(x.is_enabled())) for x in sickgear.providers.sorted_sources()])%>"/>
 #if $sickgear.USE_NZBS or $sickgear.USE_TORRENTS
 						<div id="provider_key">
 							<span style="float:left;font-size:10px;vertical-align:top;font-weight:normal">(PA)</span><p class="note">Public access, no account required</p>
@@ -168,7 +168,7 @@
 								<span class="component-desc">
 #set $provider_config_list_enabled = []
 #set $provider_config_list = []
-#for $cur_provider in [$x for $x in $sickgear.providers.sortedProviderList()
+#for $cur_provider in [$x for $x in $sickgear.providers.sorted_sources()
     if $x.providerType == $GenericProvider.NZB and $sickgear.USE_NZBS or
         $x.providerType == $GenericProvider.TORRENT and $sickgear.USE_TORRENTS]
     #if $cur_provider.is_enabled()
@@ -213,7 +213,7 @@
 #set $filter_scene_rej_nuked_desc = 'not scene nuked'
 #set $filter_scene_nuked_active_desc = 'nuked if no active search results'
 #set $filter_tip = 'nothing selected allows everything (i.e. no filtering, default)'
-#for $cur_newznab_provider in [$cur_provider for $cur_provider in $sickgear.newznabProviderList]
+#for $cur_newznab_provider in [$cur_provider for $cur_provider in $sickgear.newznab_providers]
 					<div class="providerDiv" id="${cur_newznab_provider.get_id()}Div">
     #set $can_recent = $hasattr($cur_newznab_provider, 'enable_recentsearch')
     #set $can_backlog = $hasattr($cur_newznab_provider, 'enable_backlog')
@@ -345,8 +345,8 @@
 ##
 
 ##
-#for $cur_nzb_provider in [$cur_provider for $cur_provider in $sickgear.providers.sortedProviderList()
-    if $cur_provider.providerType == $GenericProvider.NZB and $cur_provider not in $sickgear.newznabProviderList]:
+#for $cur_nzb_provider in [$cur_provider for $cur_provider in $sickgear.providers.sorted_sources()
+    if $cur_provider.providerType == $GenericProvider.NZB and $cur_provider not in $sickgear.newznab_providers]:
 					<div class="providerDiv" id="${cur_nzb_provider.get_id()}Div">
     #set $can_recent = $hasattr($cur_nzb_provider, 'enable_recentsearch')
     #set $can_backlog = $hasattr($cur_nzb_provider, 'enable_backlog')
@@ -488,7 +488,7 @@
 ##
 
 ##
-#for $cur_torrent_provider in $sickgear.USE_TORRENTS and [$cur_provider for $cur_provider in $sickgear.providers.sortedProviderList()
+#for $cur_torrent_provider in $sickgear.USE_TORRENTS and [$cur_provider for $cur_provider in $sickgear.providers.sorted_sources()
     if $cur_provider.providerType == $GenericProvider.TORRENT] or []:
 					<div class="providerDiv" id="${cur_torrent_provider.get_id()}Div">
     #if callable(getattr(cur_torrent_provider, 'ui_string', None))

@@ -23,7 +23,6 @@ from .. import logger
 from ..helpers import try_int
 from bs4_parser import BS4Parser
 
-from _23 import unidecode
 from six import iteritems
 
 
@@ -58,7 +57,6 @@ class PreToMeProvider(generic.TorrentProvider):
         rc = dict([(k, re.compile('(?i)' + v)) for (k, v) in iteritems({'info': 'details', 'get': 'download'})])
         for mode in search_params:
             for search_string in search_params[mode]:
-                search_string = unidecode(search_string)
                 search_url = self.urls['search'] % search_string
 
                 html = self.get_url(search_url)
@@ -102,7 +100,7 @@ class PreToMeProvider(generic.TorrentProvider):
                 except generic.HaltParseException:
                     pass
                 except (BaseException, Exception):
-                    logger.error(u'Failed to parse. Traceback: %s' % traceback.format_exc())
+                    logger.error(f'Failed to parse. Traceback: {traceback.format_exc()}')
 
                 self._log_search(mode, len(items[mode]) - cnt, search_url)
 

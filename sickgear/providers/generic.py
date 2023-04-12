@@ -29,9 +29,7 @@ import threading
 import socket
 import zlib
 
-# noinspection PyPep8Naming
-import encodingKludge as ek
-from exceptions_helper import SickBeardException, AuthException, ex
+from exceptions_helper import SickGearException, AuthException, ex
 
 import sickgear
 from .. import classes, db, helpers, logger, tvcache
@@ -41,7 +39,7 @@ from ..helpers import maybe_plural, remove_file_perm
 from ..name_parser.parser import InvalidNameException, InvalidShowException, NameParser
 from ..scene_exceptions import has_season_exceptions
 from ..show_name_helpers import get_show_names_all_possible
-from ..sgdatetime import SGDatetime, timestamp_near
+from ..sgdatetime import SGDatetime
 from ..tv import TVEpisode, TVShow
 
 from cfscrape import CloudflareScraper
@@ -51,8 +49,8 @@ from lxml_etree import etree
 import requests
 import requests.cookies
 
-from _23 import decode_bytes, filter_list, filter_iter, make_btih, map_list, quote, quote_plus, urlparse
-from six import iteritems, iterkeys, itervalues, PY2, string_types
+from _23 import decode_bytes, make_btih, quote, quote_plus, urlparse
+from six import iteritems, iterkeys, itervalues, string_types
 from sg_helpers import try_int
 
 # noinspection PyUnreachableCode
@@ -60,7 +58,7 @@ if False:
     from typing import Any, AnyStr, Callable, Dict, List, Match, Optional, Tuple, Union
 
 
-class HaltParseException(SickBeardException):
+class HaltParseException(SickGearException):
     """Something requires the current processing to abort"""
 
 
@@ -114,7 +112,7 @@ class ProviderFailList(object):
             date_time = datetime.datetime.combine(fail_date, datetime.time(hour=fail_hour))
             if ProviderFailTypes.names[e.fail_type] not in fail_dict.get(date_time, {}):
                 if isinstance(e.fail_time, datetime.datetime):
-                    value = timestamp_near(e.fail_time)
+                    value = SGDatetime.timestamp_near(e.fail_time, return_int=False)
                 else:
                     value = SGDatetime.timestamp_far(e.fail_time)
                 default = {'date': str(fail_date), 'date_time': date_time,
@@ -168,9 +166,8 @@ class ProviderFailList(object):
             with self.lock:
                 self.dirty = True
                 self._fails.append(fail)
-                logger.log('Adding fail.%s for %s' % (ProviderFailTypes.names.get(
-                    fail.fail_type, ProviderFailTypes.names[ProviderFailTypes.other]), self.provider_name()),
-                           logger.DEBUG)
+                logger.debug('Adding fail.%s for %s' % (ProviderFailTypes.names.get(
+                    fail.fail_type, ProviderFailTypes.names[ProviderFailTypes.other]), self.provider_name()))
             self.save_list()
 
     def save_list(self):
@@ -181,7 +178,7 @@ class ProviderFailList(object):
                 cl = []
                 for f in self._fails:
                     if isinstance(f.fail_time, datetime.datetime):
-                        value = int(timestamp_near(f.fail_time))
+                        value = SGDatetime.timestamp_near(f.fail_time)
                     else:
                         value = SGDatetime.timestamp_far(f.fail_time)
                     cl.append(['INSERT OR IGNORE INTO provider_fails (prov_name, fail_type, fail_code, fail_time) '
@@ -195,7 +192,7 @@ class ProviderFailList(object):
         with self.lock:
             try:
                 my_db = db.DBConnection('cache.db')
-                if my_db.hasTable('provider_fails'):
+                if my_db.has_table('provider_fails'):
                     results = my_db.select('SELECT * FROM provider_fails WHERE prov_name = ?', [self.provider_name()])
                     self._fails = []
                     for r in results:
@@ -212,9 +209,9 @@ class ProviderFailList(object):
         with self.lock:
             try:
                 my_db = db.DBConnection('cache.db')
-                if my_db.hasTable('provider_fails'):
+                if my_db.has_table('provider_fails'):
                     # noinspection PyCallByClass,PyTypeChecker
-                    time_limit = int(timestamp_near(datetime.datetime.now() - datetime.timedelta(days=28)))
+                    time_limit = SGDatetime.timestamp_near(td=datetime.timedelta(days=28))
                     my_db.action('DELETE FROM provider_fails WHERE fail_time < ?', [time_limit])
             except (BaseException, Exception):
                 pass
@@ -283,7 +280,7 @@ class GenericProvider(object):
     def _load_fail_values(self):
         if hasattr(sickgear, 'DATA_DIR'):
             my_db = db.DBConnection('cache.db')
-            if my_db.hasTable('provider_fails_count'):
+            if my_db.has_table('provider_fails_count'):
                 r = my_db.select('SELECT * FROM provider_fails_count WHERE prov_name = ?', [self.get_id()])
                 if r:
                     self._failure_count = helpers.try_int(r[0]['failure_count'], 0)
@@ -304,7 +301,7 @@ class GenericProvider(object):
 
     def _save_fail_value(self, field, value):
         my_db = db.DBConnection('cache.db')
-        if my_db.hasTable('provider_fails_count'):
+        if my_db.has_table('provider_fails_count'):
             r = my_db.action('UPDATE provider_fails_count SET %s = ? WHERE prov_name = ?' % field,
                              [value, self.get_id()])
             if 0 == r.rowcount:
@@ -343,7 +340,7 @@ class GenericProvider(object):
             self._failure_time = value
             if changed_val:
                 if isinstance(value, datetime.datetime):
-                    value = int(timestamp_near(value))
+                    value = SGDatetime.timestamp_near(value)
                 elif value:
                     # noinspection PyCallByClass
                     value = SGDatetime.timestamp_far(value)
@@ -373,7 +370,7 @@ class GenericProvider(object):
             self._tmr_limit_time = value
             if changed_val:
                 if isinstance(value, datetime.datetime):
-                    value = int(timestamp_near(value))
+                    value = SGDatetime.timestamp_near(value)
                 elif value:
                     # noinspection PyCallByClass
                     value = SGDatetime.timestamp_far(value)
@@ -428,8 +425,8 @@ class GenericProvider(object):
         if not limit_set:
             time_index = self.fail_time_index(base_limit=0)
             self.tmr_limit_wait = self.wait_time(time_index)
-        logger.log('Request limit reached. Waiting for %s until next retry. Message: %s' %
-                   (self.tmr_limit_wait, desc or 'none found'), logger.WARNING)
+        logger.warning(f'Request limit reached. Waiting for {self.tmr_limit_wait} until next retry.'
+                       f' Message: {desc or "none found"}')
 
     def wait_time(self, time_index=None):
         # type: (Optional[int]) -> datetime.timedelta
@@ -503,10 +500,10 @@ class GenericProvider(object):
             if time_left > datetime.timedelta(seconds=0):
                 if log_warning:
                     # Ensure provider name output (e.g. when displaying config/provs) instead of e.g. thread "Tornado"
-                    prepend = ('[%s] :: ' % self.name, '')[any([x.name in threading.current_thread().name
-                                                                for x in sickgear.providers.sortedProviderList()])]
-                    logger.log('%sToo many requests reached at %s, waiting for %s' % (
-                        prepend, self.fmt_delta(self.tmr_limit_time), self.fmt_delta(time_left)), logger.WARNING)
+                    prepend = ('[%s] :: ' % self.name, '')[any(x.name in threading.current_thread().name
+                                                               for x in sickgear.providers.sorted_sources())]
+                    logger.warning(f'{prepend}Too many requests reached at {self.fmt_delta(self.tmr_limit_time)},'
+                                   f' waiting for {self.fmt_delta(time_left)}')
                 return use_tmr_limit
             else:
                 self.tmr_limit_time = None
@@ -517,10 +514,9 @@ class GenericProvider(object):
             if self.is_waiting():
                 if log_warning:
                     time_left = self.wait_time() - self.fail_newest_delta()
-                    logger.log('Failed %s times, skipping provider for %s, last failure at %s with fail type: %s' % (
+                    logger.warning('Failed %s times, skipping provider for %s, last failure at %s with fail type: %s' % (
                         self.failure_count, self.fmt_delta(time_left), self.fmt_delta(self.failure_time),
-                        ProviderFailTypes.names.get(
-                            self.last_fail, ProviderFailTypes.names[ProviderFailTypes.other])), logger.WARNING)
+                        ProviderFailTypes.names.get(self.last_fail, ProviderFailTypes.names[ProviderFailTypes.other])))
                 return True
         return False
 
@@ -535,7 +531,7 @@ class GenericProvider(object):
             self._last_fail_type = fail_type
             self.fails.add_fail(*args, **kwargs)
         else:
-            logger.log('%s: Not logging same failure within 3 seconds' % self.name, logger.DEBUG)
+            logger.debug('%s: Not logging same failure within 3 seconds' % self.name)
 
     def get_url(self, url, skip_auth=False, use_tmr_limit=True, *args, **kwargs):
         # type: (AnyStr, bool, bool, Any, Any) -> Optional[AnyStr, Dict]
@@ -546,8 +542,8 @@ class GenericProvider(object):
         :param url: Address where to fetch data from
         :param skip_auth: Skip authentication check of provider if True
         :param use_tmr_limit: An API limit can be +ve before a fetch, but unwanted, set False to short should_skip
-        :param args: params to pass-through to get_url
-        :param kwargs: keyword params to pass-through to get_url
+        :param args: params to pass through to get_url
+        :param kwargs: keyword params to pass through to get_url
         :return: None or data fetched from URL
         """
         data = None
@@ -582,7 +578,7 @@ class GenericProvider(object):
             if data and not isinstance(data, tuple) \
                     or isinstance(data, tuple) and data[0]:
                 if 0 != self.failure_count:
-                    logger.log('Unblocking provider: %s' % self.get_id(), logger.DEBUG)
+                    logger.debug('Unblocking provider: %s' % self.get_id())
                 self.failure_count = 0
                 self.failure_time = None
             else:
@@ -630,7 +626,7 @@ class GenericProvider(object):
                 post += [' .. Post params: [%s]' % '&'.join([post_data])]
             if post_json:
                 post += [' .. Json params: [%s]' % '&'.join([post_json])]
-            logger.log('Failure URL: %s%s' % (url, ''.join(post)), logger.WARNING)
+            logger.warning('Failure URL: %s%s' % (url, ''.join(post)))
 
     def get_id(self):
         # type: (...) -> AnyStr
@@ -643,7 +639,7 @@ class GenericProvider(object):
         :param name: name
         :return:
         """
-        return re.sub(r'[^\w\d_]', '_', name.strip().lower())
+        return re.sub(r'[^\w_]', '_', name.strip().lower())
 
     def image_name(self, *default_name):
         # type: (...) -> AnyStr
@@ -653,8 +649,7 @@ class GenericProvider(object):
         :return:
         """
         for name in ['%s.%s' % (self.get_id(), image_ext) for image_ext in ['png', 'gif', 'jpg']]:
-            if ek.ek(os.path.isfile,
-                     ek.ek(os.path.join, sickgear.PROG_DIR, 'gui', sickgear.GUI_NAME, 'images', 'providers', name)):
+            if os.path.isfile(os.path.join(sickgear.PROG_DIR, 'gui', sickgear.GUI_NAME, 'images', 'providers', name)):
                 return name
 
         return '%s.png' % ('newznab', default_name[0])[any(default_name)]
@@ -675,7 +670,7 @@ class GenericProvider(object):
         rxc_delim = re.compile(r'[&;]')
         rxc_skip_key = re.compile(r'clearance')
 
-        for cur_p in sickgear.providers.sortedProviderList():
+        for cur_p in sickgear.providers.sorted_sources():
             pid = cur_p.get_id()
             auths = set([])
             for cur_kt in ['password', 'passkey', 'api_key', 'key', 'digest', 'cookies', 'hash']:
@@ -758,7 +753,7 @@ class GenericProvider(object):
     def is_enabled(self):
         # type: (...) -> bool
         """
-        This should be overridden and should return the config setting eg. sickgear.MYPROVIDER
+        This should be overridden and should return the config setting e.g. sickgear.MYPROVIDER
         """
         return self.enabled
 
@@ -807,7 +802,7 @@ class GenericProvider(object):
             try:
                 btih = None
                 try:
-                    btih = re.findall(r'urn:btih:([\w]{32,40})', result.url)[0]
+                    btih = re.findall(r'urn:btih:(\w{32,40})', result.url)[0]
                     if 32 == len(btih):
                         btih = make_btih(btih)
                 except (BaseException, Exception):
@@ -815,7 +810,7 @@ class GenericProvider(object):
 
                 if not btih or not re.search('(?i)[0-9a-f]{32,40}', btih):
                     assert not result.url.startswith('http')
-                    logger.log('Unable to extract torrent hash from link: ' + ex(result.url), logger.ERROR)
+                    logger.error('Unable to extract torrent hash from link: ' + ex(result.url))
                     return False
 
                 urls = ['http%s://%s/torrent/%s.torrent' % (u + (btih.upper(),))
@@ -838,25 +833,25 @@ class GenericProvider(object):
             cache_dir = sickgear.CACHE_DIR or helpers.get_system_temp_dir()
             base_name = '%s.%s' % (re.sub('.%s$' % self.providerType, '', helpers.sanitize_filename(result.name)),
                                    self.providerType)
-            final_file = ek.ek(os.path.join, final_dir, base_name)
+            final_file = os.path.join(final_dir, base_name)
             cached = result.cache_filepath
-            if cached and ek.ek(os.path.isfile, cached):
-                base_name = ek.ek(os.path.basename, cached)
-            cache_file = ek.ek(os.path.join, cache_dir, base_name)
+            if cached and os.path.isfile(cached):
+                base_name = os.path.basename(cached)
+            cache_file = os.path.join(cache_dir, base_name)
 
             self.session.headers['Referer'] = url
             if cached or helpers.download_file(url, cache_file, session=self.session, allow_redirects='/it' not in url,
                                                failure_monitor=False):
 
                 if self._verify_download(cache_file):
-                    logger.log(u'Downloaded %s result from %s' % (self.name, url))
+                    logger.log(f'Downloaded {self.name} result from {url}')
                     try:
                         helpers.move_file(cache_file, final_file)
                         msg = 'moved'
                     except (OSError, Exception):
                         msg = 'copied cached file'
-                    logger.log(u'Saved .%s data and %s to %s' % (
-                        (link_type, 'torrent cache')['magnet' == link_type], msg, final_file))
+                    logger.log(f'Saved .{(link_type, "torrent cache")["magnet" == link_type]} data'
+                               f' and {msg} to {final_file}')
                     saved = True
                     break
 
@@ -869,20 +864,20 @@ class GenericProvider(object):
                 del(self.session.headers['Referer'])
 
         if not saved and 'magnet' == link_type:
-            logger.log(u'All torrent cache servers failed to return a downloadable result', logger.DEBUG)
-            final_file = ek.ek(os.path.join, final_dir, '%s.%s' % (helpers.sanitize_filename(result.name), link_type))
+            logger.debug('All torrent cache servers failed to return a downloadable result')
+            final_file = os.path.join(final_dir, '%s.%s' % (helpers.sanitize_filename(result.name), link_type))
             try:
                 with open(final_file, 'wb') as fp:
                     fp.write(decode_bytes(result.url))
                     fp.flush()
                     os.fsync(fp.fileno())
                 saved = True
-                logger.log(u'Saved magnet link to file as some clients (or plugins) support this, %s' % final_file)
+                logger.log(f'Saved magnet link to file as some clients (or plugins) support this, {final_file}')
                 if 'blackhole' == sickgear.TORRENT_METHOD:
                     logger.log('Tip: If your client fails to load magnet in files, ' +
                                'change blackhole to a client connection method in search settings')
             except (BaseException, Exception):
-                logger.log(u'Failed to save magnet link to file, %s' % final_file)
+                logger.log(f'Failed to save magnet link to file, {final_file}')
         elif not saved:
             if 'torrent' == link_type and result.provider.get_id() in sickgear.PROVIDER_HOMES:
                 t_result = result  # type: TorrentSearchResult
@@ -898,7 +893,7 @@ class GenericProvider(object):
                     t_result.provider._valid_home(url_exclude=urls)
                     setattr(sickgear, 'PROVIDER_EXCLUDE', ([], urls)[any([t_result.provider.url])])
 
-            logger.log(u'Server failed to return anything useful', logger.ERROR)
+            logger.error('Server failed to return anything useful')
 
         return saved
 
@@ -930,7 +925,7 @@ class GenericProvider(object):
 
     def search_rss(self, ep_obj_list):
         # type: (List[TVEpisode]) -> Dict[TVEpisode, SearchResult]
-        return self.cache.findNeededEpisodes(ep_obj_list)
+        return self.cache.find_needed_episodes(ep_obj_list)
 
     def get_quality(self, item, anime=False):
         # type: (etree.Element, bool) -> int
@@ -942,7 +937,7 @@ class GenericProvider(object):
         :return: a Quality value obtained from the node's data
         """
         (title, url) = self._title_and_url(item)
-        quality = Quality.sceneQuality(title, anime)
+        quality = Quality.scene_quality(title, anime)
         return quality
 
     def _search_provider(self, search_params, search_mode='eponly', epcount=0, age=0, **kwargs):
@@ -972,7 +967,7 @@ class GenericProvider(object):
         except (BaseException, Exception):
             pass
 
-        title = title and re.sub(r'\s+', '.', u'%s' % title)
+        title = title and re.sub(r'\s+', '.', f'{title}')
         if url and not re.match('(?i)magnet:', url):
             url = str(url).replace('&amp;', '&')
 
@@ -981,11 +976,6 @@ class GenericProvider(object):
     def _link(self, url, url_tmpl=None, url_quote=None):
         url = '%s' % url  # ensure string type
         if url and not re.match('(?i)magnet:', url):
-            if PY2:
-                try:
-                    url = url.encode('utf-8')
-                except (BaseException, Exception):
-                    pass
             url = url.strip().replace('&amp;', '&')
         if not url:
             url = ''
@@ -1016,12 +1006,12 @@ class GenericProvider(object):
         all_cells = all_cells if any(all_cells) else header_row.find_all('td')
 
         headers = [re.sub(
-            r'[\s]+', '',
-            ((any([cell.get_text()]) and any([rc[x].search(cell.get_text()) for x in iterkeys(rc)]) and cell.get_text())
-             or (cell.attrs.get('id') and any([rc[x].search(cell['id']) for x in iterkeys(rc)]) and cell['id'])
-             or (cell.attrs.get('title') and any([rc[x].search(cell['title']) for x in iterkeys(rc)]) and cell['title'])
-             or next(iter(set(filter_iter(lambda rz: any([rz]), [
-                next(iter(set(filter_iter(lambda ry: any([ry]), [
+            r'\s+', '',
+            ((any([cell.get_text()]) and any(rc[x].search(cell.get_text()) for x in iterkeys(rc)) and cell.get_text())
+             or (cell.attrs.get('id') and any(rc[x].search(cell['id']) for x in iterkeys(rc)) and cell['id'])
+             or (cell.attrs.get('title') and any(rc[x].search(cell['title']) for x in iterkeys(rc)) and cell['title'])
+             or next(iter(set(filter(lambda rz: any([rz]), [
+                next(iter(set(filter(lambda ry: any([ry]), [
                     cell.find(tag, **p) for p in [{attr: rc[x]} for x in iterkeys(rc)]]))), {}).get(attr)
                 for (tag, attr) in [
                     ('img', 'title'), ('img', 'src'), ('i', 'title'), ('i', 'class'),
@@ -1038,7 +1028,7 @@ class GenericProvider(object):
 
         for k, r in iteritems(rc):
             if k not in results:
-                for name in filter_iter(lambda v: any([v]) and r.search(v), all_headers[::-1]):
+                for name in filter(lambda v: any([v]) and r.search(v), all_headers[::-1]):
                     results[k] = all_headers.index(name) - len(all_headers)
                     break
 
@@ -1111,7 +1101,7 @@ class GenericProvider(object):
         search_list = []
         for cur_ep_obj in ep_obj_list:
             # search cache for episode result
-            cache_result = self.cache.searchCache(cur_ep_obj, manual_search)  # type: List[SearchResult]
+            cache_result = self.cache.search_cache(cur_ep_obj, manual_search)  # type: List[SearchResult]
             if cache_result:
                 if cur_ep_obj.episode not in results:
                     results[cur_ep_obj.episode] = cache_result
@@ -1201,10 +1191,10 @@ class GenericProvider(object):
             try:
                 parse_result = parser.parse(title, release_group=self.get_id())
             except InvalidNameException:
-                logger.log(u'Unable to parse the filename %s into a valid episode' % title, logger.DEBUG)
+                logger.debug(f'Unable to parse the filename {title} into a valid episode')
                 continue
             except InvalidShowException:
-                logger.log(u'No match for search criteria in the parsed filename ' + title, logger.DEBUG)
+                logger.debug(f'No match for search criteria in the parsed filename {title}')
                 continue
 
             if parse_result.show_obj.is_anime:
@@ -1216,8 +1206,8 @@ class GenericProvider(object):
                     continue
 
             if not (parse_result.show_obj.tvid == show_obj.tvid and parse_result.show_obj.prodid == show_obj.prodid):
-                logger.debug(u'Parsed show [%s] is not show [%s] we are searching for' % (
-                    parse_result.show_obj.unique_name, show_obj.unique_name))
+                logger.debug(f'Parsed show [{parse_result.show_obj.unique_name}] is not show [{show_obj.unique_name}]'
+                             f' we are searching for')
                 continue
 
             parsed_show_obj = parse_result.show_obj
@@ -1231,15 +1221,15 @@ class GenericProvider(object):
             if not (parsed_show_obj.air_by_date or parsed_show_obj.is_sports):
                 if 'sponly' == search_mode:
                     if len(parse_result.episode_numbers):
-                        logger.log(u'This is supposed to be a season pack search but the result ' + title +
-                                   u' is not a valid season pack, skipping it', logger.DEBUG)
+                        logger.debug(f'This is supposed to be a season pack search but the result {title}'
+                                     f' is not a valid season pack, skipping it')
                         add_cache_entry = True
                     if len(parse_result.episode_numbers) \
                             and (parse_result.season_number not in set([ep_obj.season for ep_obj in ep_obj_list])
                                  or not [ep_obj for ep_obj in ep_obj_list
                                          if ep_obj.scene_episode in parse_result.episode_numbers]):
-                        logger.log(u'The result ' + title + u' doesn\'t seem to be a valid episode that we are trying' +
-                                   u' to snatch, ignoring', logger.DEBUG)
+                        logger.debug(f'The result {title} doesn\'t seem to be a valid episode that we are trying'
+                                     f' to snatch, ignoring')
                         add_cache_entry = True
                 else:
                     if not len(parse_result.episode_numbers)\
@@ -1247,14 +1237,14 @@ class GenericProvider(object):
                             and not [ep_obj for ep_obj in ep_obj_list
                                      if ep_obj.season == parse_result.season_number and
                                      ep_obj.episode in parse_result.episode_numbers]:
-                        logger.log(u'The result ' + title + u' doesn\'t seem to be a valid season that we are trying' +
-                                   u' to snatch, ignoring', logger.DEBUG)
+                        logger.debug(f'The result {title} doesn\'t seem to be a valid season that we are trying'
+                                     f' to snatch, ignoring')
                         add_cache_entry = True
                     elif len(parse_result.episode_numbers) and not [
                         ep_obj for ep_obj in ep_obj_list if ep_obj.season == parse_result.season_number
                             and ep_obj.episode in parse_result.episode_numbers]:
-                        logger.log(u'The result ' + title + ' doesn\'t seem to be a valid episode that we are trying' +
-                                   u' to snatch, ignoring', logger.DEBUG)
+                        logger.debug(f'The result {title} doesn\'t seem to be a valid episode that we are trying'
+                                     f' to snatch, ignoring')
                         add_cache_entry = True
 
                 if not add_cache_entry:
@@ -1263,8 +1253,8 @@ class GenericProvider(object):
                     episode_numbers = parse_result.episode_numbers
             else:
                 if not parse_result.is_air_by_date:
-                    logger.log(u'This is supposed to be a date search but the result ' + title +
-                               u' didn\'t parse as one, skipping it', logger.DEBUG)
+                    logger.debug(f'This is supposed to be a date search but the result {title}'
+                                 f' didn\'t parse as one, skipping it')
                     add_cache_entry = True
                 else:
                     season_number = parse_result.season_number
@@ -1273,13 +1263,13 @@ class GenericProvider(object):
                     if not episode_numbers or \
                             not [ep_obj for ep_obj in ep_obj_list
                                  if ep_obj.season == season_number and ep_obj.episode in episode_numbers]:
-                        logger.log(u'The result ' + title + ' doesn\'t seem to be a valid episode that we are trying' +
-                                   u' to snatch, ignoring', logger.DEBUG)
+                        logger.debug(f'The result {title} doesn\'t seem to be a valid episode that we are trying'
+                                     f' to snatch, ignoring')
                         add_cache_entry = True
 
             # add parsed result to cache for usage later on
             if add_cache_entry:
-                logger.log(u'Adding item from search to cache: ' + title, logger.DEBUG)
+                logger.debug(f'Adding item from search to cache: {title}')
                 ci = self.cache.add_cache_entry(title, url, parse_result=parse_result)
                 if None is not ci:
                     cl.append(ci)
@@ -1296,11 +1286,11 @@ class GenericProvider(object):
                 multi_ep = 1 < len(episode_numbers)
 
             if not want_ep:
-                logger.log(u'Ignoring result %s because we don\'t want an episode that is %s'
-                           % (title, Quality.qualityStrings[quality]), logger.DEBUG)
+                logger.debug(f'Ignoring result {title} because we don\'t want an episode that is'
+                             f' {Quality.qualityStrings[quality]}')
                 continue
 
-            logger.log(u'Found result %s at %s' % (title, url), logger.DEBUG)
+            logger.debug(f'Found result {title} at {url}')
 
             # make a result object
             ep_obj_results = []  # type: List[TVEpisode]
@@ -1325,14 +1315,14 @@ class GenericProvider(object):
             ep_num = None
             if 1 == len(ep_obj_results):
                 ep_num = ep_obj_results[0].episode
-                logger.log(u'Single episode result.', logger.DEBUG)
+                logger.debug('Single episode result.')
             elif 1 < len(ep_obj_results):
                 ep_num = MULTI_EP_RESULT
-                logger.log(u'Separating multi-episode result to check for later - result contains episodes: ' +
-                           str(parse_result.episode_numbers), logger.DEBUG)
+                logger.debug(f'Separating multi-episode result to check for later - result contains episodes:'
+                             f' {parse_result.episode_numbers}')
             elif 0 == len(ep_obj_results):
                 ep_num = SEASON_RESULT
-                logger.log(u'Separating full season result to check for later', logger.DEBUG)
+                logger.debug('Separating full season result to check for later')
 
             if ep_num not in results:
                 # noinspection PyTypeChecker
@@ -1356,7 +1346,7 @@ class GenericProvider(object):
         :param kwargs:
         :return:
         """
-        results = self.cache.listPropers(search_date)
+        results = self.cache.list_propers(search_date)
 
         return [classes.Proper(x['name'], x['url'], datetime.datetime.fromtimestamp(x['time']), self.show_obj) for x in
                 results]
@@ -1387,18 +1377,18 @@ class GenericProvider(object):
         :param count: count of successfully processed items
         :param url: source url of item(s)
         """
-        stats = map_list(lambda arg: ('_reject_%s' % arg[0], arg[1]),
-                         filter_iter(lambda _arg: all([getattr(self, '_reject_%s' % _arg[0], None)]),
-                                     (('seed', '%s <min seeders'), ('leech', '%s <min leechers'),
-                                      ('notfree', '%s not freeleech'), ('unverified', '%s unverified'),
-                                      ('container', '%s unwanted containers'))))
+        stats = list(map(lambda arg: ('_reject_%s' % arg[0], arg[1]),
+                         filter(lambda _arg: all([getattr(self, '_reject_%s' % _arg[0], None)]),
+                                (('seed', '%s <min seeders'), ('leech', '%s <min leechers'),
+                                ('notfree', '%s not freeleech'), ('unverified', '%s unverified'),
+                                ('container', '%s unwanted containers')))))
         rejects = ', '.join([(text % getattr(self, attr, '')).strip() for attr, text in stats])
         for (attr, _) in stats:
             setattr(self, attr, None)
 
         if not self.should_skip():
             str1, thing, str3 = (('', '%s item' % mode.lower(), ''), (' usable', 'proper', ' found'))['Propers' == mode]
-            logger.log((u'%s %s in response%s from %s' % (('No' + str1, count)[0 < count], (
+            logger.log(('%s %s in response%s from %s' % (('No' + str1, count)[0 < count], (
                 '%s%s%s%s' % (('', 'freeleech ')[getattr(self, 'freeleech', False)], thing, maybe_plural(count), str3)),
                 ('', ' (rejects: %s)' % rejects)[bool(rejects)], re.sub(r'(\s)\s+', r'\1', url))).replace('%%', '%'))
 
@@ -1420,9 +1410,9 @@ class GenericProvider(object):
                     reqd = 'cf_clearance'
                     if reqd in ui_string_method(key) and reqd not in cookies:
                         return False, \
-                               u'%(p)s Cookies setting require %(r)s. If %(r)s not found in browser, log out,' \
-                               u' delete site cookies, refresh browser, %(r)s should be created' % \
-                               dict(p=self.name, r='\'%s\'' % reqd)
+                            '%(p)s Cookies setting require %(r)s. If %(r)s not found in browser, log out,' \
+                            ' delete site cookies, refresh browser, %(r)s should be created' % \
+                            dict(p=self.name, r='\'%s\'' % reqd)
 
             cj = requests.utils.add_dict_to_cookiejar(self.session.cookies,
                                                       dict([x.strip().split('=', 1) for x in cookies.split(';')
@@ -1466,7 +1456,7 @@ class GenericProvider(object):
         except IndexError:
             return None
         try:
-            value *= 1024 ** ['b', 'k', 'm', 'g', 't'].index(re.findall('([tgmk])[i]?b', size_dim.lower())[0])
+            value *= 1024 ** ['b', 'k', 'm', 'g', 't'].index(re.findall('([tgmk])i?b', size_dim.lower())[0])
         except IndexError:
             pass
         return int(math.ceil(value))
@@ -1539,7 +1529,7 @@ class NZBProvider(GenericProvider):
         :param kwargs:
         :return:
         """
-        cache_results = self.cache.listPropers(search_date)
+        cache_results = self.cache.list_propers(search_date)
         results = [classes.Proper(x['name'], x['url'], datetime.datetime.fromtimestamp(x['time']), self.show_obj)
                    for x in cache_results]
 
@@ -1594,7 +1584,7 @@ class NZBProvider(GenericProvider):
                     if result_date:
                         result_date = datetime.datetime(*result_date[0:6])
                 else:
-                    logger.log(u'Unable to figure out the date for entry %s, skipping it' % title)
+                    logger.log(f'Unable to figure out the date for entry {title}, skipping it')
                     continue
 
                 if not search_date or search_date < result_date:
@@ -1687,7 +1677,7 @@ class TorrentProvider(GenericProvider):
 
     def _reject_item(self, seeders=0, leechers=0, freeleech=None, verified=None, container=None):
         reject = False
-        for condition, attr in filter_iter(lambda arg: all([arg[0]]), (
+        for condition, attr in filter(lambda arg: all([arg[0]]), (
                 (seeders < getattr(self, 'minseed', 0), 'seed'),
                 (leechers < getattr(self, 'minleech', 0), 'leech'),
                 (all([freeleech]), 'notfree'),
@@ -1716,7 +1706,7 @@ class TorrentProvider(GenericProvider):
         else:
             # noinspection PyUnresolvedReferences
             name = item.title
-        return Quality.sceneQuality(name, anime)
+        return Quality.scene_quality(name, anime)
 
     @staticmethod
     def _reverse_quality(quality):
@@ -1837,7 +1827,7 @@ class TorrentProvider(GenericProvider):
         prefix = ([prefix], prefix)[isinstance(prefix, list)]
 
         search_params = []
-        crop = re.compile(r'([.\s])(?:\1)+')
+        crop = re.compile(r'([.\s])\1+')
         for name in get_show_names_all_possible(self.show_obj, scenify=process_name and getattr(self, 'scene', True),
                                                 season=season):
             for detail in ep_detail:
@@ -1880,7 +1870,7 @@ class TorrentProvider(GenericProvider):
         seen_attr = 'PROVIDER_SEEN'
         if obf and self.__module__ not in getattr(sickgear, seen_attr, []):
             file_path = '%s.py' % os.path.join(sickgear.PROG_DIR, *self.__module__.split('.'))
-            if ek.ek(os.path.isfile, file_path):
+            if os.path.isfile(file_path):
                 with open(file_path, 'rb') as file_hd:
                     c = bytearray(codecs.encode(decode_bytes(str(zlib.crc32(file_hd.read()))), 'hex_codec'))
 
@@ -1892,13 +1882,13 @@ class TorrentProvider(GenericProvider):
                         url_exclude = url_exclude or []
                         if url_exclude:
                             urls = urls[1:]
-                        urls = filter_list(lambda u: u not in url_exclude, urls)
+                        urls = list(filter(lambda u: u not in url_exclude, urls))
                         break
                 if not urls:
                     setattr(sickgear, seen_attr, list(set(getattr(sickgear, seen_attr, []) + [self.__module__])))
 
         if not urls:
-            urls = filter_list(lambda uh: 'http' in uh, getattr(self, 'url_home', []))
+            urls = list(filter(lambda uh: 'http' in uh, getattr(self, 'url_home', [])))
 
         return urls
 
@@ -1906,8 +1896,7 @@ class TorrentProvider(GenericProvider):
     @staticmethod
     def _decode(data, c):
         try:
-            fx = (lambda x: x, lambda x: str(x))[PY2]
-            result = ''.join(chr(int(fx(bytearray([(8 * c)[i] ^ x for i, x in enumerate(data)])[i:i + 2]), 16))
+            result = ''.join(chr(int(bytearray([(8 * c)[i] ^ x for i, x in enumerate(data)])[i:i + 2], 16))
                              for i in range(0, len(data), 2))
         except (BaseException, Exception):
             result = '|'
@@ -1927,7 +1916,7 @@ class TorrentProvider(GenericProvider):
             success, msg = self._check_cookie()
             if not success:
                 self.cookies = None
-                logger.log(u'%s' % msg, logger.WARNING)
+                logger.warning(f'{msg}')
                 return
 
         url_base = getattr(self, 'url_base', None)
@@ -1935,13 +1924,13 @@ class TorrentProvider(GenericProvider):
             return url_base
 
         url_list = self._decode_urls(url_exclude)
-        if not url_list and getattr(self, 'url_edit', None) or not any(filter_iter(lambda u: 10 < len(u), url_list)):
+        if not url_list and getattr(self, 'url_edit', None) or not any(filter(lambda u: 10 < len(u), url_list)):
             return None
 
-        url_list = map_list(lambda u: '%s/' % u.rstrip('/'), url_list)
+        url_list = list(map(lambda u: '%s/' % u.rstrip('/'), url_list))
         last_url, expire = sickgear.PROVIDER_HOMES.get(self.get_id(), ('', None))
         url_drop = (url_exclude or []) + getattr(self, 'url_drop', [])
-        if url_drop and any([url in last_url for url in url_drop]):  # deprecate url
+        if url_drop and any(url in last_url for url in url_drop):  # deprecate url
             last_url = ''
 
         if 'site down' == last_url:
@@ -1973,8 +1962,8 @@ class TorrentProvider(GenericProvider):
                 return cur_url
 
         seen_attr = 'PROVIDER_SEEN'
-        setattr(sickgear, seen_attr, filter_list(lambda u: self.__module__ not in u,
-                                                  getattr(sickgear, seen_attr, [])))
+        setattr(sickgear, seen_attr, list(filter(lambda u: self.__module__ not in u,
+                                                 getattr(sickgear, seen_attr, []))))
 
         self.failure_count = 3 * bool(failure_count)
         if self.should_skip():
@@ -1996,7 +1985,7 @@ class TorrentProvider(GenericProvider):
         if 2012691328 == s + zlib.crc32(decode_bytes(('.%s' % parsed.netloc).split('.')[-2])):
             is_valid = False
             file_name = '%s.py' % os.path.join(sickgear.PROG_DIR, *self.__module__.split('.'))
-            if ek.ek(os.path.isfile, file_name):
+            if os.path.isfile(file_name):
                 with open(file_name, 'rb') as file_hd:
                     is_valid = s + zlib.crc32(file_hd.read()) in (1661931498, 472149389)
         return is_valid
@@ -2007,12 +1996,12 @@ class TorrentProvider(GenericProvider):
             r'(?i)([1-3]((<[^>]+>)|\W)*(attempts|tries|remain)[\W\w]{,40}?(remain|left|attempt)|last[^<]+?attempt)', y))
         logged_in, failed_msg = [None is not a and a or b for (a, b) in (
             (logged_in, (lambda y=None: self.has_all_cookies())),
-            (failed_msg, (lambda y='': maxed_out(y) and u'Urgent abort, running low on login attempts. ' +
-                                                        u'Password flushed to prevent service disruption to %s.' or
+            (failed_msg, (lambda y='': maxed_out(y) and 'Urgent abort, running low on login attempts. ' +
+                                                        'Password flushed to prevent service disruption to %s.' or
                           (re.search(r'(?i)(username|password)((<[^>]+>)|\W)*' +
                                      r'(or|and|/|\s)((<[^>]+>)|\W)*(password|incorrect)', y) and
-                           u'Invalid username or password for %s. Check settings' or
-                           u'Failed to authenticate or parse a response from %s, abort provider')))
+                           'Invalid username or password for %s. Check settings' or
+                           'Failed to authenticate or parse a response from %s, abort provider')))
         )]
 
         if logged_in() and (not hasattr(self, 'urls') or bool(len(getattr(self, 'urls')))):
@@ -2026,7 +2015,7 @@ class TorrentProvider(GenericProvider):
                 if not self._check_auth():
                     return False
             except AuthException as e:
-                logger.log('%s' % ex(e), logger.ERROR)
+                logger.error('%s' % ex(e))
                 return False
 
         if isinstance(url, type([])):
@@ -2103,7 +2092,7 @@ class TorrentProvider(GenericProvider):
                 sickgear.save_config()
             msg = failed_msg(response)
             if msg:
-                logger.log(msg % self.name, logger.ERROR)
+                logger.error(msg % self.name)
 
         return False
 
@@ -2169,7 +2158,7 @@ class TorrentProvider(GenericProvider):
             if self.should_skip(log_warning=False):
                 break
 
-            proper_check = re.compile(r'(?i)(?:%s)' % clean_term.sub('', proper_term))
+            proper_check = re.compile(r'(?i)%s' % clean_term.sub('', proper_term))
             for item in items:
                 if self.should_skip(log_warning=False):
                     break

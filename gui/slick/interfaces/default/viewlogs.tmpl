@@ -3,7 +3,6 @@
 #from sickgear.common import *
 #from sickgear.logger import reverseNames
 #from sickgear.helpers import maybe_plural
-#from _23 import list_keys
 ##
 #set global $header = 'Log File'
 #set global $title = 'Logs'
@@ -23,7 +22,7 @@
 
 <div class="h2footer pull-right">
 	<select name="minLevel" id="minLevel" class="form-control form-control-inline input-sm pull-right">
-#set $levels = $list_keys($reverseNames)
+#set $levels = $list($reverseNames)
 #set void = $levels.sort(key=lambda x: $reverseNames[$x])
 #set $level_count = len($levels)
 #for $level in $levels

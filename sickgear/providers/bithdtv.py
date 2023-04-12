@@ -23,7 +23,6 @@ from .. import logger
 from ..helpers import try_int
 from bs4_parser import BS4Parser
 
-from _23 import unidecode
 from six import iteritems
 
 
@@ -49,7 +48,7 @@ class BitHDTVProvider(generic.TorrentProvider):
                 [(None is y or re.search(r'(?i)rss\slink', y)),
                  self.has_all_cookies(['su', 'sp', 'sl'], 'h_'), 'search' in self.urls] +
                 [(self.session.cookies.get('h_' + x) or 'sg!no!pw') in self.digest for x in ('su', 'sp', 'sl')])),
-            failed_msg=(lambda y=None: u'Invalid cookie details for %s. Check settings'))
+            failed_msg=(lambda y=None: 'Invalid cookie details for %s. Check settings'))
 
     @staticmethod
     def _has_signature(data=None):
@@ -67,7 +66,6 @@ class BitHDTVProvider(generic.TorrentProvider):
 
         for mode in search_params:
             for search_string in search_params[mode]:
-                search_string = unidecode(search_string)
                 search_url = self.urls['search'] % (search_string, self._categories_string(mode, '%s', ','))
 
                 html = self.get_url(search_url, timeout=90)
@@ -112,7 +110,7 @@ class BitHDTVProvider(generic.TorrentProvider):
                 except generic.HaltParseException:
                     pass
                 except (BaseException, Exception):
-                    logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
+                    logger.error(f'Failed to parse. Traceback: {traceback.format_exc()}')
 
                 self._log_search(mode, len(items[mode]) - cnt, search_url)
 

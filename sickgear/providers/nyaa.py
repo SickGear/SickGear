@@ -22,7 +22,6 @@ from .. import logger
 from ..helpers import try_int
 from bs4_parser import BS4Parser
 
-from _23 import unidecode
 from six import iteritems
 
 
@@ -51,7 +50,6 @@ class NyaaProvider(generic.TorrentProvider):
         rc = dict([(k, re.compile('(?i)' + v)) for (k, v) in iteritems({'info': 'view', 'get': '(?:torrent|magnet:)'})])
         for mode in search_params:
             for search_string in search_params[mode]:
-                search_string = unidecode(search_string)
                 search_url = self.urls['search'] % ((0, 2)[self.confirmed], search_string.replace('.', ' '))
 
                 html = self.get_url(search_url)
@@ -93,7 +91,7 @@ class NyaaProvider(generic.TorrentProvider):
                 except generic.HaltParseException:
                     pass
                 except (BaseException, Exception):
-                    logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
+                    logger.error(f'Failed to parse. Traceback: {traceback.format_exc()}')
 
                 self._log_search(mode, len(items[mode]) - cnt, search_url)
 

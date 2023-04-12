@@ -31,8 +31,6 @@ import time
 import traceback
 from . import webserve
 
-# noinspection PyPep8Naming
-import encodingKludge as ek
 import exceptions_helper
 from exceptions_helper import ex
 from json_helper import is_orjson, json_dumps, JSON_INDENT, json_loads, JSONEncoder, ORJSON_OPTIONS
@@ -45,7 +43,7 @@ from . import classes, db, helpers, history, image_cache, logger, network_timezo
 from .common import ARCHIVED, DOWNLOADED, FAILED, IGNORED, SKIPPED, SNATCHED, SNATCHED_ANY, SNATCHED_BEST, \
     SNATCHED_PROPER, UNAIRED, UNKNOWN, WANTED, Quality, qualityPresetStrings, statusStrings
 from .name_parser.parser import NameParser
-from .helpers import starify
+from .helpers import df, find_mount_point, starify
 from .indexers import indexer_api, indexer_config
 from .indexers.indexer_config import *
 from lib.tvinfo_base.exceptions import *
@@ -57,8 +55,8 @@ from .tv import TVEpisode, TVShow,  TVidProdid
 from .webserve import AddShows
 import dateutil.parser
 
-from _23 import decode_str, list_keys, unquote_plus
-from six import integer_types, iteritems, iterkeys, PY2, string_types, text_type
+from _23 import decode_str, unquote_plus
+from six import integer_types, iteritems, iterkeys, string_types, text_type
 
 # noinspection PyUnreachableCode
 if False:
@@ -152,7 +150,7 @@ else:
 
 class Api(webserve.BaseHandler):
     """ api class that returns json results """
-    version = 14  # use an int since float-point is unpredictable
+    version = 15  # use an int since float-point is unpredictable
 
     def check_xsrf_cookie(self):
         pass
@@ -255,9 +253,7 @@ class Api(webserve.BaseHandler):
             result = function(*ag)
             return result
         except Exception as e:
-            if PY2:
-                logger.log('traceback: %s' % traceback.format_exc(), logger.ERROR)
-            logger.log(ex(e), logger.ERROR)
+            logger.error(ex(e))
             raise e
 
     def _out_as_json(self, dict):
@@ -281,17 +277,17 @@ class Api(webserve.BaseHandler):
         self.apikey_name = ''
 
         if not sickgear.USE_API:
-            msg = u'%s - SB API Disabled. ACCESS DENIED' % remoteIp
+            msg = f'{remoteIp} - SB API Disabled. ACCESS DENIED'
             return False, msg, args, kwargs
         if not apiKey:
-            msg = u'%s - gave NO API KEY. ACCESS DENIED' % remoteIp
+            msg = f'{remoteIp} - gave NO API KEY. ACCESS DENIED'
             return False, msg, args, kwargs
         for realKey in realKeys:
             if apiKey == realKey[1]:
                 self.apikey_name = realKey[0]
-                msg = u'%s - gave correct API KEY: %s. ACCESS GRANTED' % (remoteIp, realKey[0])
+                msg = f'{remoteIp} - gave correct API KEY: {realKey[0]}. ACCESS GRANTED'
                 return True, msg, args, kwargs
-        msg = u'%s - gave WRONG API KEY %s. ACCESS DENIED' % (remoteIp, apiKey)
+        msg = f'{remoteIp} - gave WRONG API KEY {apiKey}. ACCESS DENIED'
         return False, msg, args, kwargs
 
 
@@ -310,10 +306,10 @@ def call_dispatcher(handler, args, kwargs):
         cmds = kwargs["cmd"]
         del kwargs["cmd"]
 
-    api_log(handler, u"cmd: '" + str(cmds) + "'", logger.DEBUG)
-    api_log(handler, u"all args: '" + str(args) + "'", logger.DEBUG)
-    api_log(handler, u"all kwargs: '" + str(kwargs) + "'", logger.DEBUG)
-    # logger.log(u"dateFormat: '" + str(dateFormat) + "'", logger.DEBUG)
+    api_log(handler, f'cmd: "{cmds}"', logger.DEBUG)
+    api_log(handler, f'all args: "{args}"', logger.DEBUG)
+    api_log(handler, f'all kwargs: "{kwargs}"', logger.DEBUG)
+    # logger.debug(f'dateFormat: "{dateFormat}"')
 
 
     outDict = {}
@@ -604,7 +600,7 @@ class ApiCall(object):
                     elif isinstance(value, string_types):
                         if '|' in value:
                             li = [int(v) for v in value.split('|')]
-                            if any([not isinstance(v, integer_types) for v in li]):
+                            if any(not isinstance(v, integer_types) for v in li):
                                 error = True
                             else:
                                 value = li
@@ -614,7 +610,7 @@ class ApiCall(object):
                         error = True
                 else:
                     li = value.split('|')
-                    if any([sub_type is not type(v) for v in li]):
+                    if any(sub_type is not type(v) for v in li):
                         error = True
                     else:
                         value = li
@@ -630,14 +626,11 @@ class ApiCall(object):
         elif "ignore" == type:
             pass
         else:
-            self.log(u"Invalid param type set " + str(type) + " can not check or convert ignoring it",
-                       logger.ERROR)
+            self.log(f"Invalid param type set {type} can not check or convert ignoring it", logger.ERROR)
 
         if error:
             # this is a real ApiError !!
-            raise ApiError(
-                u"param: '" + str(name) + "' with given value: '" + str(value) + "' could not be parsed into '" + str(
-                    type) + "'")
+            raise ApiError(f'param: "{name}" with given value: "{value}" could not be parsed into "{type}"')
 
         return value
 
@@ -658,8 +651,7 @@ class ApiCall(object):
 
             if error:
                 # this is kinda a ApiError but raising an error is the only way of quitting here
-                raise ApiError(u"param: '" + str(name) + "' with given value: '" + str(
-                    value) + "' is out of allowed range '" + str(allowedValues) + "'")
+                raise ApiError(f'param: "{name}" with given value: "{value}" is out of allowed range "{allowedValues}"')
 
 
 class TVDBShorthandWrapper(ApiCall):
@@ -795,7 +787,7 @@ def _mapQuality(show_obj):
     anyQualities = []
     bestQualities = []
 
-    iqualityID, aqualityID = Quality.splitQuality(int(show_obj))
+    iqualityID, aqualityID = Quality.split_quality(int(show_obj))
     if iqualityID:
         for quality in iqualityID:
             anyQualities.append(quality_map[quality])
@@ -809,38 +801,46 @@ def _getQualityMap():
     return quality_map_inversed
 
 
-def _getRootDirs():
-    if "" == sickgear.ROOT_DIRS:
-        return {}
+def _get_root_dirs(get_freespace=False):
+    # type: (bool) -> List[Dict]
+    """
 
-    rootDir = {}
+    :param get_freespace: include disk free space info in response
+    """
+    dir_list = []
+    if not sickgear.ROOT_DIRS:
+        return dir_list
+
     root_dirs = sickgear.ROOT_DIRS.split('|')
-    default_index = int(sickgear.ROOT_DIRS.split('|')[0])
-
-    rootDir["default_index"] = int(sickgear.ROOT_DIRS.split('|')[0])
-    # remove default_index value from list (this fixes the offset)
-    root_dirs.pop(0)
+    default_index = int(root_dirs.pop(0))
 
     if len(root_dirs) < default_index:
-        return {}
+        return dir_list
 
     # clean up the list - replace %xx escapes by their single-character equivalent
     root_dirs = [unquote_plus(x) for x in root_dirs]
 
     default_dir = root_dirs[default_index]
 
-    dir_list = []
-    for root_dir in root_dirs:
-        valid = 1
+    if root_dirs and get_freespace and sickgear.DISPLAY_FREESPACE:
+        diskfree, _ = df()
+
+    for cur_root_dir in root_dirs:
         try:
-            ek.ek(os.listdir, root_dir)
+            os.listdir(cur_root_dir)
+            valid = 1
         except (BaseException, Exception):
             valid = 0
-        default = 0
-        if root_dir is default_dir:
-            default = 1
 
-        dir_list.append({'valid': valid, 'location': root_dir, 'default': default})
+        new_entry = {'valid': valid, 'location': cur_root_dir, 'default': int(cur_root_dir is default_dir)}
+
+        if get_freespace:
+            # noinspection PyUnboundLocalVariable
+            new_entry['free_space'] = 'Required setting "Display freespace" is not enabled' \
+                if not sickgear.DISPLAY_FREESPACE \
+                else next((_space for _disk, _space in diskfree or [] if _disk == find_mount_point(cur_root_dir)), '')
+
+        dir_list.append(new_entry)
 
     return dir_list
 
@@ -1045,7 +1045,7 @@ class CMD_SickGearComingEpisodes(ApiCall):
                     ep['network'] and network_timezones.get_network_timezone(ep['network'], return_name=True)[1])
 
             # remove all field we don't want for api response
-            for cur_f in list_keys(ep):
+            for cur_f in list(ep):
                 if cur_f not in [  # fields to preserve
                     'absolute_number', 'air_by_date', 'airdate', 'airs', 'archive_firstmatch',
                     'classification', 'data_network', 'data_show_name',
@@ -1159,7 +1159,7 @@ class CMD_SickGearEpisode(ApiCall):
         timezone, episode['timezone'] = network_timezones.get_network_timezone(show_obj.network, return_name=True)
         episode['airdate'] = SGDatetime.sbfdate(SGDatetime.convert_to_setting(
             network_timezones.parse_date_time(int(episode['airdate']), show_obj.airs, timezone)), d_preset=dateFormat)
-        status, quality = Quality.splitCompositeStatus(int(episode["status"]))
+        status, quality = Quality.split_composite_status(int(episode["status"]))
         episode["status"] = _get_status_Strings(status)
         episode["quality"] = _get_quality_string(quality)
         episode["file_size_human"] = _sizeof_fmt(episode["file_size"])
@@ -1228,7 +1228,7 @@ class CMD_SickGearEpisodeSearch(ApiCall):
 
         # return the correct json value
         if ep_queue_item.success:
-            status, quality = Quality.splitCompositeStatus(ep_obj.status)
+            status, quality = Quality.split_composite_status(ep_obj.status)
             # TODO: split quality and status?
             return _responds(RESULT_SUCCESS, {"quality": _get_quality_string(quality)},
                              "Snatched (" + _get_quality_string(quality) + ")")
@@ -1352,7 +1352,7 @@ class CMD_SickGearEpisodeSetStatus(ApiCall):
                     continue
 
                 if None is not self.quality:
-                    ep_obj.status = Quality.compositeStatus(self.status, self.quality)
+                    ep_obj.status = Quality.composite_status(self.status, self.quality)
                 else:
                     ep_obj.status = self.status
                 result = ep_obj.get_sql()
@@ -1373,8 +1373,8 @@ class CMD_SickGearEpisodeSetStatus(ApiCall):
                 backlog_queue_item = search_queue.BacklogQueueItem(show_obj, segment)
                 sickgear.search_queue_scheduler.action.add_item(backlog_queue_item)
 
-                self.log(u'Starting backlog for %s season %s because some episodes were set to WANTED' %
-                         (show_obj.unique_name, season))
+                self.log(f'Starting backlog for {show_obj.unique_name} season {season}'
+                         f' because some episodes were set to WANTED')
 
             extra_msg = " Backlog started"
 
@@ -1671,7 +1671,7 @@ class CMD_SickGearHistory(ApiCall):
         results = []
         np = NameParser(True, testing=True, indexer_lookup=False, try_scene_exceptions=False)
         for cur_result in sql_result:
-            status, quality = Quality.splitCompositeStatus(int(cur_result["action"]))
+            status, quality = Quality.split_composite_status(int(cur_result["action"]))
             if type_filter and status not in type_filter:
                 continue
             status = _get_status_Strings(status)
@@ -1983,7 +1983,8 @@ class CMD_SickGearAddRootDir(ApiCall):
     _help = {"desc": "add a user configured parent directory",
              "requiredParameters": {"location": {"desc": "the full path to root (parent) directory"}
                                     },
-             "optionalParameters": {"default": {"desc": "make the location passed the default root (parent) directory"}
+             "optionalParameters": {"default": {"desc": "make the location passed the default root (parent) directory"},
+                                    "freespace": {"desc": "include free space of paths in response"}
                                     }
              }
 
@@ -1992,6 +1993,7 @@ class CMD_SickGearAddRootDir(ApiCall):
         self.location, args = self.check_params(args, kwargs, "location", None, True, "string", [])
         # optional
         self.default, args = self.check_params(args, kwargs, "default", 0, False, "bool", [])
+        self.freespace, args = self.check_params(args, kwargs, "freespace", 0, False, "bool", [])
         # super, missing, help
         ApiCall.__init__(self, handler, args, kwargs)
 
@@ -2003,7 +2005,7 @@ class CMD_SickGearAddRootDir(ApiCall):
         index = 0
 
         # disallow adding/setting an invalid dir
-        if not ek.ek(os.path.isdir, self.location):
+        if not os.path.isdir(self.location):
             return _responds(RESULT_FAILURE, msg="Location is invalid")
 
         root_dirs = []
@@ -2034,7 +2036,9 @@ class CMD_SickGearAddRootDir(ApiCall):
         root_dirs_new = '|'.join([text_type(x) for x in root_dirs_new])
 
         sickgear.ROOT_DIRS = root_dirs_new
-        return _responds(RESULT_SUCCESS, _getRootDirs(), msg="Root directories updated")
+        sickgear.save_config()
+        return _responds(RESULT_SUCCESS, _get_root_dirs(not self.sickbeard_call and self.freespace),
+                         msg="Root directories updated")
 
 
 class CMD_SickBeardAddRootDir(CMD_SickGearAddRootDir):
@@ -2092,20 +2096,24 @@ class CMD_SickBeardCheckScheduler(CMD_SickGearCheckScheduler):
 
 class CMD_SickGearDeleteRootDir(ApiCall):
     _help = {"desc": "delete a user configured parent directory",
-             "requiredParameters": {"location": {"desc": "the full path to root (parent) directory"}}
+             "requiredParameters": {"location": {"desc": "the full path to root (parent) directory"}},
+             "optionalParameters": {"freespace": {"desc": "include free space of paths in response"}
+                                    }
              }
 
     def __init__(self, handler, args, kwargs):
         # required
         self.location, args = self.check_params(args, kwargs, "location", None, True, "string", [])
         # optional
+        self.freespace, args = self.check_params(args, kwargs, "freespace", 0, False, "bool", [])
         # super, missing, help
         ApiCall.__init__(self, handler, args, kwargs)
 
     def run(self):
         """ delete a user configured parent directory """
         if sickgear.ROOT_DIRS == "":
-            return _responds(RESULT_FAILURE, _getRootDirs(), msg="No root directories detected")
+            return _responds(RESULT_FAILURE, _get_root_dirs(not self.sickbeard_call and self.freespace),
+                             msg="No root directories detected")
 
         newIndex = 0
         root_dirs_new = []
@@ -2132,8 +2140,10 @@ class CMD_SickGearDeleteRootDir(ApiCall):
         root_dirs_new = "|".join([text_type(x) for x in root_dirs_new])
 
         sickgear.ROOT_DIRS = root_dirs_new
+        sickgear.save_config()
         # what if the root dir was not found?
-        return _responds(RESULT_SUCCESS, _getRootDirs(), msg="Root directory deleted")
+        return _responds(RESULT_SUCCESS, _get_root_dirs(not self.sickbeard_call and self.freespace),
+                         msg="Root directory deleted")
 
 
 class CMD_SickBeardDeleteRootDir(CMD_SickGearDeleteRootDir):
@@ -2168,14 +2178,14 @@ class CMD_SickGearForceSearch(ApiCall):
         result = None
         if 'recent' == self.searchtype and not sickgear.search_queue_scheduler.action.is_recentsearch_in_progress() \
                 and not sickgear.recent_search_scheduler.action.amActive:
-            result = sickgear.recent_search_scheduler.forceRun()
+            result = sickgear.recent_search_scheduler.force_run()
         elif 'backlog' == self.searchtype and not sickgear.search_queue_scheduler.action.is_backlog_in_progress() \
                 and not sickgear.backlog_search_scheduler.action.amActive:
             sickgear.backlog_search_scheduler.force_search(force_type=FORCED_BACKLOG)
             result = True
         elif 'proper' == self.searchtype and not sickgear.search_queue_scheduler.action.is_propersearch_in_progress() \
                 and not sickgear.proper_finder_scheduler.action.amActive:
-            result = sickgear.proper_finder_scheduler.forceRun()
+            result = sickgear.proper_finder_scheduler.force_run()
         if result:
             return _responds(RESULT_SUCCESS, msg='%s search successfully forced' % self.searchtype)
         return _responds(RESULT_FAILURE,
@@ -2340,8 +2350,8 @@ class CMD_SickGearGetIndexerIcon(ApiCall):
             self.handler.set_status(404)
             return _responds(RESULT_FAILURE, 'Icon not found')
         img = i['icon']
-        image = ek.ek(os.path.join, sickgear.PROG_DIR, 'gui', 'slick', 'images', img)
-        if not ek.ek(os.path.isfile, image):
+        image = os.path.join(sickgear.PROG_DIR, 'gui', 'slick', 'images', img)
+        if not os.path.isfile(image):
             self.handler.set_status(404)
             return _responds(RESULT_FAILURE, 'Icon not found')
         return {'outputType': 'image', 'image': self.handler.get_image(image)}
@@ -2361,9 +2371,8 @@ class CMD_SickGearGetNetworkIcon(ApiCall):
         ApiCall.__init__(self, handler, args, kwargs)
 
     def run(self):
-        image = ek.ek(os.path.join, sickgear.PROG_DIR, 'gui', 'slick', 'images', 'network',
-                      '%s.png' % self.network.lower())
-        if not ek.ek(os.path.isfile, image):
+        image = os.path.join(sickgear.PROG_DIR, 'gui', 'slick', 'images', 'network', '%s.png' % self.network.lower())
+        if not os.path.isfile(image):
             self.handler.set_status(404)
             return _responds(RESULT_FAILURE, 'Icon not found')
         return {'outputType': 'image', 'image': self.handler.get_image(image)}
@@ -2383,18 +2392,22 @@ class CMD_SickGearGetqualityStrings(ApiCall):
 
 
 class CMD_SickGearGetRootDirs(ApiCall):
-    _help = {"desc": "get list of user configured parent directories"}
+    _help = {"desc": "get list of user configured parent directories",
+             "optionalParameters": {"freespace": {"desc": "include free space of paths in response"}
+                                    }
+             }
 
     def __init__(self, handler, args, kwargs):
         # required
         # optional
+        self.freespace, args = self.check_params(args, kwargs, "freespace", 0, False, "bool", [])
         # super, missing, help
         ApiCall.__init__(self, handler, args, kwargs)
 
     def run(self):
         """ get list of user configured parent directories """
 
-        return _responds(RESULT_SUCCESS, _getRootDirs())
+        return _responds(RESULT_SUCCESS, _get_root_dirs(not self.sickbeard_call and self.freespace))
 
 
 class CMD_SickBeardGetRootDirs(CMD_SickGearGetRootDirs):
@@ -2671,7 +2684,7 @@ class CMD_SickGearSetDefaults(ApiCall):
                 aqualityID.append(quality_map[quality])
 
         if iqualityID or aqualityID:
-            sickgear.QUALITY_DEFAULT = Quality.combineQualities(iqualityID, aqualityID)
+            sickgear.QUALITY_DEFAULT = Quality.combine_qualities(iqualityID, aqualityID)
 
         if self.status:
             # convert the string status to a int
@@ -3328,7 +3341,7 @@ class CMD_SickGearShowAddExisting(ApiCall):
         if show_obj:
             return _responds(RESULT_FAILURE, msg="An existing indexerid already exists in the database")
 
-        if not ek.ek(os.path.isdir, self.location):
+        if not os.path.isdir(self.location):
             return _responds(RESULT_FAILURE, msg='Not a valid location')
 
         lINDEXER_API_PARMS = sickgear.TVInfoAPI(self.tvid).api_params.copy()
@@ -3341,7 +3354,7 @@ class CMD_SickGearShowAddExisting(ApiCall):
         try:
             myShow = t[int(self.prodid), False]
         except BaseTVinfoError as e:
-            self.log(u"Unable to find show with id " + str(self.tvid), logger.WARNING)
+            self.log(f'Unable to find show with id {self.tvid}', logger.WARNING)
             return _responds(RESULT_FAILURE, msg="Unable to retrieve information from indexer")
 
         indexerName = None
@@ -3370,7 +3383,7 @@ class CMD_SickGearShowAddExisting(ApiCall):
                 aqualityID.append(quality_map[quality])
 
         if iqualityID or aqualityID:
-            newQuality = Quality.combineQualities(iqualityID, aqualityID)
+            newQuality = Quality.combine_qualities(iqualityID, aqualityID)
 
         sickgear.show_queue_scheduler.action.add_show(
             int(self.tvid), int(self.prodid), self.location,
@@ -3460,7 +3473,7 @@ class CMD_SickGearShowAddNew(ApiCall):
             else:
                 return _responds(RESULT_FAILURE, msg="Root directory is not set, please provide a location")
 
-        if not ek.ek(os.path.isdir, self.location):
+        if not os.path.isdir(self.location):
             return _responds(RESULT_FAILURE, msg="'" + self.location + "' is not a valid location")
 
         # use default quality as a failsafe
@@ -3476,7 +3489,7 @@ class CMD_SickGearShowAddNew(ApiCall):
                 aqualityID.append(quality_map[quality])
 
         if iqualityID or aqualityID:
-            newQuality = Quality.combineQualities(iqualityID, aqualityID)
+            newQuality = Quality.combine_qualities(iqualityID, aqualityID)
 
         # use default status as a failsafe
         newStatus = sickgear.STATUS_DEFAULT
@@ -3504,7 +3517,7 @@ class CMD_SickGearShowAddNew(ApiCall):
         try:
             myShow = t[int(self.prodid), False]
         except BaseTVinfoError as e:
-            self.log(u"Unable to find show with id " + str(self.tvid), logger.WARNING)
+            self.log(f'Unable to find show with id {self.tvid}', logger.WARNING)
             return _responds(RESULT_FAILURE, msg="Unable to retrieve information from indexer")
 
         indexerName = None
@@ -3525,11 +3538,11 @@ class CMD_SickGearShowAddNew(ApiCall):
 
         # don't create show dir if config says not to
         if sickgear.ADD_SHOWS_WO_DIR:
-            self.log(u"Skipping initial creation of " + showPath + " due to config.ini setting")
+            self.log(f'Skipping initial creation of {showPath} due to config.ini setting')
         else:
             dir_exists = helpers.make_dir(showPath)
             if not dir_exists:
-                self.log(u"Unable to create the folder " + showPath + ", can't add the show", logger.ERROR)
+                self.log(f"Unable to create the folder {showPath}, can't add the show", logger.ERROR)
                 return _responds(RESULT_FAILURE, {"path": showPath},
                                  "Unable to create the folder " + showPath + ", can't add the show")
             else:
@@ -3611,9 +3624,9 @@ class CMD_SickGearShowCache(ApiCall):
         has_poster = 0
         has_banner = 0
 
-        if ek.ek(os.path.isfile, cache_obj.poster_path(show_obj.tvid, show_obj.prodid)):
+        if os.path.isfile(cache_obj.poster_path(show_obj.tvid, show_obj.prodid)):
             has_poster = 1
-        if ek.ek(os.path.isfile, cache_obj.banner_path(show_obj.tvid, show_obj.prodid)):
+        if os.path.isfile(cache_obj.banner_path(show_obj.tvid, show_obj.prodid)):
             has_banner = 1
 
         return _responds(RESULT_SUCCESS, {"poster": has_poster, "banner": has_banner})
@@ -3663,8 +3676,8 @@ class CMD_SickGearShowDelete(ApiCall):
         if not show_obj:
             return _responds(RESULT_FAILURE, msg="Show not found")
 
-        if sickgear.show_queue_scheduler.action.isBeingAdded(
-                show_obj) or sickgear.show_queue_scheduler.action.isBeingUpdated(show_obj):
+        if sickgear.show_queue_scheduler.action.is_being_added(
+                show_obj) or sickgear.show_queue_scheduler.action.is_being_updated(show_obj):
             return _responds(RESULT_FAILURE, msg="Show can not be deleted while being added or updated")
 
         show_obj.delete_show(full=self.full_delete)
@@ -3834,8 +3847,7 @@ class CMD_SickGearShowListFanart(ApiCall):
         fanart = []
         rating_names = {10: 'group', 20: 'favorite', 30: 'avoid'}
         cache_obj = image_cache.ImageCache()
-        for img in ek.ek(glob.glob, cache_obj.fanart_path(
-                show_obj.tvid, show_obj.prodid).replace('fanart.jpg', '*')) or []:
+        for img in glob.glob(cache_obj.fanart_path(show_obj.tvid, show_obj.prodid).replace('fanart.jpg', '*')) or []:
             match = re.search(r'(\d+(?:\.(\w*?(\d*)))?\.(?:\w{5,8}))\.fanart\.', img, re.I)
             if match and match.group(1):
                 fanart += [(match.group(1), rating_names.get(sickgear.FANART_RATINGS.get(
@@ -3870,7 +3882,7 @@ class CMD_SickGearShowRateFanart(ApiCall):
         cache_obj = image_cache.ImageCache()
         fanartfile = cache_obj.fanart_path(self.tvid, self.prodid).replace('fanart.jpg',
                                                                            '%s.fanart.jpg' % self.fanartname)
-        if not ek.ek(os.path.isfile, fanartfile):
+        if not os.path.isfile(fanartfile):
             return _responds(RESULT_FAILURE, msg='Unknown Fanart')
         fan_ratings = {'unrate': 0, 'group': 10, 'favorite': 20, 'avoid': 30}
         show_id = TVidProdid({self.tvid: self.prodid})()
@@ -3906,19 +3918,19 @@ class CMD_SickGearShowGetFanart(ApiCall):
     def run(self):
         """ get the fanart stored for a show """
         cache_obj = image_cache.ImageCache()
-        default_fanartfile = ek.ek(os.path.join, sickgear.PROG_DIR, 'gui', 'slick', 'images', 'trans.png')
+        default_fanartfile = os.path.join(sickgear.PROG_DIR, 'gui', 'slick', 'images', 'trans.png')
         fanartfile = default_fanartfile
         used_fanart = 'default'
         if self.fanartname:
             fanartfile = cache_obj.fanart_path(self.tvid, self.prodid).replace('fanart.jpg',
                                                                                '%s.fanart.jpg' % self.fanartname)
-            if not ek.ek(os.path.isfile, fanartfile):
+            if not os.path.isfile(fanartfile):
                 fanartfile = default_fanartfile
                 used_fanart = self.fanartname
         else:
             fanart = []
-            for img in ek.ek(glob.glob, cache_obj.fanart_path(self.tvid, self.prodid).replace('fanart.jpg', '*')) or []:
-                if not ek.ek(os.path.isfile, img):
+            for img in glob.glob(cache_obj.fanart_path(self.tvid, self.prodid).replace('fanart.jpg', '*')) or []:
+                if not os.path.isfile(img):
                     continue
                 match = re.search(r'(\d+(?:\.(\w*?(\d*)))?\.(?:\w{5,8}))\.fanart\.', img, re.I)
                 if match and match.group(1):
@@ -3933,8 +3945,8 @@ class CMD_SickGearShowGetFanart(ApiCall):
                     fanartfile = fanartsorted[random_fanart][0]
                     used_fanart = fanartsorted[random_fanart][1]
 
-        if fanartfile and ek.ek(os.path.isfile, fanartfile):
-            with ek.ek(open, fanartfile, 'rb') as f:
+        if fanartfile and os.path.isfile(fanartfile):
+            with open(fanartfile, 'rb') as f:
                 mime_type, encoding = MimeTypes().guess_type(fanartfile)
                 self.handler.set_header('X-Fanartname', used_fanart)
                 self.handler.set_header('Content-Type', mime_type)
@@ -4021,7 +4033,7 @@ class CMD_SickGearShowRefresh(ApiCall):
             return _responds(RESULT_FAILURE, msg="Show not found")
 
         try:
-            sickgear.show_queue_scheduler.action.refreshShow(show_obj)
+            sickgear.show_queue_scheduler.action.refresh_show(show_obj)
             return _responds(RESULT_SUCCESS, msg='%s has queued to be refreshed' % show_obj.unique_name)
         except exceptions_helper.CantRefreshException as e:
             # TODO: log the exception
@@ -4150,7 +4162,7 @@ class CMD_SickGearShowSeasons(ApiCall):
                 [self.tvid, self.prodid])
             seasons = {}  # type: Dict[int, Dict]
             for cur_result in sql_result:
-                status, quality = Quality.splitCompositeStatus(int(cur_result["status"]))
+                status, quality = Quality.split_composite_status(int(cur_result["status"]))
                 cur_result["status"] = _get_status_Strings(status)
                 cur_result["quality"] = _get_quality_string(quality)
                 timezone, cur_result['timezone'] = network_timezones.get_network_timezone(show_obj.network,
@@ -4183,7 +4195,7 @@ class CMD_SickGearShowSeasons(ApiCall):
             for cur_result in sql_result:
                 curEpisode = int(cur_result["episode"])
                 del cur_result["episode"]
-                status, quality = Quality.splitCompositeStatus(int(cur_result["status"]))
+                status, quality = Quality.split_composite_status(int(cur_result["status"]))
                 cur_result["status"] = _get_status_Strings(status)
                 cur_result["quality"] = _get_quality_string(quality)
                 timezone, cur_result['timezone'] = network_timezones.get_network_timezone(show_obj.network,
@@ -4268,7 +4280,7 @@ class CMD_SickGearShowSetQuality(ApiCall):
                 aqualityID.append(quality_map[quality])
 
         if iqualityID or aqualityID:
-            newQuality = Quality.combineQualities(iqualityID, aqualityID)
+            newQuality = Quality.combine_qualities(iqualityID, aqualityID)
         show_obj.quality = newQuality
 
         show_obj.upgrade_once = self.upgradeonce
@@ -4332,7 +4344,7 @@ class CMD_SickGearShowStats(ApiCall):
         # add all the downloaded qualities
         episode_qualities_counts_download = {"total": 0}
         for statusCode in Quality.DOWNLOADED:
-            status, quality = Quality.splitCompositeStatus(statusCode)
+            status, quality = Quality.split_composite_status(statusCode)
             if quality in [Quality.NONE]:
                 continue
             episode_qualities_counts_download[statusCode] = 0
@@ -4340,7 +4352,7 @@ class CMD_SickGearShowStats(ApiCall):
         # add all snatched qualities
         episode_qualities_counts_snatch = {"total": 0}
         for statusCode in Quality.SNATCHED_ANY:
-            status, quality = Quality.splitCompositeStatus(statusCode)
+            status, quality = Quality.split_composite_status(statusCode)
             if quality in [Quality.NONE]:
                 continue
             episode_qualities_counts_snatch[statusCode] = 0
@@ -4351,7 +4363,7 @@ class CMD_SickGearShowStats(ApiCall):
                                   [self.prodid, self.tvid])
         # the main loop that goes through all episodes
         for cur_result in sql_result:
-            status, quality = Quality.splitCompositeStatus(int(cur_result["status"]))
+            status, quality = Quality.split_composite_status(int(cur_result["status"]))
 
             episode_status_counts_total["total"] += 1
 
@@ -4373,7 +4385,7 @@ class CMD_SickGearShowStats(ApiCall):
             if "total" == statusCode:
                 episodes_stats["downloaded"]["total"] = episode_qualities_counts_download[statusCode]
                 continue
-            status, quality = Quality.splitCompositeStatus(int(statusCode))
+            status, quality = Quality.split_composite_status(int(statusCode))
             statusString = Quality.qualityStrings[quality].lower().replace(" ", "_").replace("(", "").replace(")", "")
             episodes_stats["downloaded"][statusString] = episode_qualities_counts_download[statusCode]
 
@@ -4384,7 +4396,7 @@ class CMD_SickGearShowStats(ApiCall):
             if "total" == statusCode:
                 episodes_stats["snatched"]["total"] = episode_qualities_counts_snatch[statusCode]
                 continue
-            status, quality = Quality.splitCompositeStatus(int(statusCode))
+            status, quality = Quality.split_composite_status(int(statusCode))
             statusString = Quality.qualityStrings[quality].lower().replace(" ", "_").replace("(", "").replace(")", "")
             if Quality.qualityStrings[quality] in episodes_stats["snatched"]:
                 episodes_stats["snatched"][statusString] += episode_qualities_counts_snatch[statusCode]
@@ -4396,7 +4408,7 @@ class CMD_SickGearShowStats(ApiCall):
             if "total" == statusCode:
                 episodes_stats["total"] = episode_status_counts_total[statusCode]
                 continue
-            status, quality = Quality.splitCompositeStatus(int(statusCode))
+            status, quality = Quality.split_composite_status(int(statusCode))
             statusString = statusStrings.statusStrings[statusCode].lower().replace(" ", "_").replace("(", "").replace(
                 ")", "")
             episodes_stats[statusString] = episode_status_counts_total[statusCode]
@@ -4443,10 +4455,10 @@ class CMD_SickGearShowUpdate(ApiCall):
             return _responds(RESULT_FAILURE, msg="Show not found")
 
         try:
-            sickgear.show_queue_scheduler.action.updateShow(show_obj, True)
+            sickgear.show_queue_scheduler.action.update_show(show_obj, True)
             return _responds(RESULT_SUCCESS, msg='%s has queued to be updated' % show_obj.unique_name)
         except exceptions_helper.CantUpdateException as e:
-            self.log(u'Unable to update %s. %s' % (show_obj.unique_name, ex(e)), logger.ERROR)
+            self.log(f'Unable to update {show_obj.unique_name}. {ex(e)}', logger.ERROR)
             return _responds(RESULT_FAILURE, msg='Unable to update %s. %s' % (show_obj.unique_name, ex(e)))
 
 
@@ -4655,11 +4667,11 @@ class CMD_SickGearShowsForceUpdate(ApiCall):
 
     def run(self):
         """ force the daily show update now """
-        if sickgear.show_queue_scheduler.action.isShowUpdateRunning() \
+        if sickgear.show_queue_scheduler.action.is_show_update_running() \
                 or sickgear.show_update_scheduler.action.amActive:
             return _responds(RESULT_FAILURE, msg="show update already running.")
 
-        result = sickgear.show_update_scheduler.forceRun()
+        result = sickgear.show_update_scheduler.force_run()
         if result:
             return _responds(RESULT_SUCCESS, msg="daily show update started")
         return _responds(RESULT_FAILURE, msg="can't start show update currently")

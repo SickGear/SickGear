@@ -8,7 +8,6 @@ import time
 from exceptions_helper import ex
 
 from six import integer_types, iteritems, iterkeys, string_types, text_type
-from _23 import list_items, list_values
 
 from lib.tvinfo_base.exceptions import *
 from sg_helpers import calc_age, make_path
@@ -53,7 +52,7 @@ tv_src_names = {
     TVINFO_IMDB: 'imdb',
     TVINFO_TRAKT: 'trakt',
     TVINFO_TMDB: 'tmdb',
-    TVINFO_TVDB_SLUG : 'tvdb slug',
+    TVINFO_TVDB_SLUG: 'tvdb slug',
     TVINFO_TRAKT_SLUG: 'trakt slug',
 
     TVINFO_SLUG: 'generic slug',
@@ -67,7 +66,7 @@ tv_src_names = {
 
 log = logging.getLogger('TVInfo')
 log.addHandler(logging.NullHandler())
-TVInfoShowContainer = {}  # type: Dict[ShowContainer]
+TVInfoShowContainer = {}  # type: Dict[str, ShowContainer]
 
 
 class ShowContainer(dict):
@@ -94,7 +93,7 @@ class ShowContainer(dict):
         if acquired_lock:
             try:
                 current_time = time.time()
-                for k, v in list_items(self):
+                for k, v in list(self.items()):
                     if self.max_age < current_time - v[1]:
                         lock_acquired = self[k].lock.acquire(False)
                         if lock_acquired:
@@ -125,7 +124,7 @@ class TVInfoIDs(object):
             trakt=None,  # type: integer_types
             rage=None,  # type: integer_types
             ids=None  # type: Dict[int, integer_types]
-    ):  # type: (...) -> TVInfoIDs
+    ):
         ids = ids or {}
         self.tvdb = tvdb or ids.get(TVINFO_TVDB)
         self.tmdb = tmdb or ids.get(TVINFO_TMDB)
@@ -156,7 +155,7 @@ class TVInfoIDs(object):
 
 class TVInfoSocialIDs(object):
     def __init__(self, twitter=None, instagram=None, facebook=None, wikipedia=None, ids=None):
-        # type: (str_int, str_int, str_int, str_int, Dict[int, str_int]) -> TVInfoSocialIDs
+        # type: (str_int, str_int, str_int, str_int, Dict[int, str_int]) -> None
         ids = ids or {}
         self.twitter = twitter or ids.get(TVINFO_TWITTER)
         self.instagram = instagram or ids.get(TVINFO_INSTAGRAM)
@@ -231,7 +230,7 @@ class TVInfoImage(object):
                  lang=None, height=None, width=None, aspect_ratio=None):
         self.img_id = img_id  # type: Optional[integer_types]
         self.image_type = image_type  # type: integer_types
-        self.sizes = sizes  # type: Dict[TVInfoImageSize, AnyStr]
+        self.sizes = sizes  # type: Dict[int, AnyStr]
         self.type_str = type_str  # type: AnyStr
         self.main_image = main_image  # type: bool
         self.rating = rating  # type: Optional[Union[float, integer_types]]
@@ -243,7 +242,7 @@ class TVInfoImage(object):
 
     def __str__(self):
         return '<TVInfoImage %s [%s]>' % (TVInfoImageType.reverse_str.get(self.image_type, 'unknown'),
-                                          ', '.join(TVInfoImageSize.reverse_str.get(s, 'unkown') for s in self.sizes))
+                                          ', '.join(TVInfoImageSize.reverse_str.get(s, 'unknown') for s in self.sizes))
 
     __repr__ = __str__
 
@@ -409,7 +408,7 @@ class TVInfoShow(dict):
         match, and so on.
         """
         results = []
-        for cur_season in list_values(self):
+        for cur_season in self.values():
             searchresult = cur_season.search(term=term, key=key)
             if 0 != len(searchresult):
                 results.extend(searchresult)
@@ -487,7 +486,7 @@ class TVInfoSeason(dict):
         instances.
         """
         results = []
-        for ep in list_values(self):
+        for ep in self.values():
             searchresult = ep.search(term=term, key=key)
             if None is not searchresult:
                 results.append(searchresult)
@@ -679,7 +678,7 @@ class PersonBase(dict):
             ids=None,  # type: Dict
             thumb_url=None,  # type: AnyStr
             **kwargs  # type: Dict
-    ):  # type: (...) -> PersonBase
+    ):
         super(PersonBase, self).__init__(**kwargs)
         self.id = p_id  # type: Optional[integer_types]
         self.name = name  # type: Optional[AnyStr]
@@ -769,7 +768,7 @@ class TVInfoPerson(PersonBase):
             real_name=None,  # type: AnyStr
             akas=None,  # type: Set[AnyStr]
             **kwargs  # type: Dict
-    ):  # type: (...) -> TVInfoPerson
+    ):
         super(TVInfoPerson, self).__init__(
             p_id=p_id, name=name, image=image, thumb_url=thumb_url, bio=bio, gender=gender,
             birthdate=birthdate, deathdate=deathdate, country=country, images=images,
@@ -795,7 +794,7 @@ class TVInfoPerson(PersonBase):
 class TVInfoCharacter(PersonBase):
     def __init__(self, person=None, voice=None, plays_self=None, regular=None, show=None, start_year=None,
                  end_year=None, **kwargs):
-        # type: (List[TVInfoPerson], bool, bool, bool, TVInfoShow, int, int, Dict) -> TVInfoCharacter
+        # type: (List[TVInfoPerson], bool, bool, bool, TVInfoShow, int, int, Dict) -> None
         super(TVInfoCharacter, self).__init__(**kwargs)
         self.person = person  # type: List[TVInfoPerson]
         self.voice = voice  # type: Optional[bool]

@@ -42,10 +42,10 @@ TESTDBNAME = 'sickbeard.db'
 TESTCACHEDBNAME = 'cache.db'
 TESTFAILEDDBNAME = 'failed.db'
 
-SHOWNAME = u'show name'
+SHOWNAME = 'show name'
 SEASON = 4
 EPISODE = 2
-FILENAME = u'show name - s0' + str(SEASON) + 'e0' + str(EPISODE) + '.mkv'
+FILENAME = f'show name - s0{SEASON}e0{EPISODE}.mkv'
 FILEDIR = os.path.join(TESTDIR, SHOWNAME)
 FILEPATH = os.path.join(FILEDIR, FILENAME)
 
@@ -91,8 +91,8 @@ sickgear.NAMING_SPORTS_PATTERN = ''
 sickgear.NAMING_MULTI_EP = 1
 
 sickgear.PROVIDER_ORDER = []
-sickgear.newznabProviderList = providers.getNewznabProviderList('')
-sickgear.providerList = providers.makeProviderList()
+sickgear.newznab_providers = providers.newznab_source_list('')
+sickgear.provider_list = providers.provider_modules()
 
 sickgear.PROG_DIR = os.path.abspath('..')
 # sickgear.DATA_DIR = os.path.join(sickgear.PROG_DIR, 'tests')
@@ -195,16 +195,16 @@ def setup_test_db():
     """upgrades the db to the latest version
     """
     # upgrading the db
-    db.MigrationCode(db.DBConnection())
+    db.migration_code(db.DBConnection())
 
     # fix up any db problems
-    db.sanityCheckDatabase(db.DBConnection(), mainDB.MainSanityCheck)
+    db.sanity_check_db(db.DBConnection(), mainDB.MainSanityCheck)
 
     # and for cachedb too
-    db.upgradeDatabase(db.DBConnection('cache.db'), cache_db.InitialSchema)
+    db.upgrade_database(db.DBConnection('cache.db'), cache_db.InitialSchema)
 
     # and for faileddb too
-    db.upgradeDatabase(db.DBConnection('failed.db'), failed_db.InitialSchema)
+    db.upgrade_database(db.DBConnection('failed.db'), failed_db.InitialSchema)
 
 
 def teardown_test_db():

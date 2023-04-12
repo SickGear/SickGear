@@ -31,7 +31,7 @@ from ..common import NeededQualities, Quality
 from ..helpers import remove_non_release_groups
 from ..indexers.indexer_config import *
 from ..network_timezones import SG_TIMEZONE
-from ..sgdatetime import SGDatetime, timestamp_near
+from ..sgdatetime import SGDatetime
 from ..search import get_aired_in_season, get_wanted_qualities
 from ..show_name_helpers import get_show_names
 from ..scene_exceptions import has_season_exceptions
@@ -217,7 +217,7 @@ class NewznabProvider(generic.NZBProvider):
         try:
             my_db = db.DBConnection('cache.db')
             if isinstance(value, datetime.datetime):
-                save_value = int(timestamp_near(value))
+                save_value = SGDatetime.timestamp_near(value)
             else:
                 save_value = SGDatetime.timestamp_far(value, default=0)
             my_db.action('INSERT OR REPLACE INTO "lastrecentsearch" (name, datetime) VALUES (?,?)',
@@ -331,7 +331,7 @@ class NewznabProvider(generic.NZBProvider):
                             except (BaseException, Exception):
                                 continue
             except (BaseException, Exception):
-                logger.log('Error parsing result for [%s]' % self.name, logger.DEBUG)
+                logger.debug('Error parsing result for [%s]' % self.name)
 
         if not caps and self._caps and not all_cats and self._caps_all_cats and not cats and self._caps_cats:
             self._check_excludes(cats)
@@ -347,7 +347,7 @@ class NewznabProvider(generic.NZBProvider):
                 caps[NewznabConstants.SEARCH_SEASON] = 'season'
             if NewznabConstants.SEARCH_EPISODE not in caps or not caps.get(NewznabConstants.SEARCH_EPISODE):
                 caps[NewznabConstants.SEARCH_TEXT] = 'ep'
-            if (TVINFO_TVRAGE not in caps or not caps.get(TVINFO_TVRAGE)):
+            if TVINFO_TVRAGE not in caps or not caps.get(TVINFO_TVRAGE):
                 caps[TVINFO_TVRAGE] = 'rid'
         if NewznabConstants.SEARCH_TEXT not in caps or not caps.get(NewznabConstants.SEARCH_TEXT):
             caps[NewznabConstants.SEARCH_TEXT] = 'q'
@@ -644,14 +644,14 @@ class NewznabProvider(generic.NZBProvider):
             if not s.show_obj.is_anime and not s.show_obj.is_sports:
                 if not getattr(s, 'wanted_quality', None):
                     # this should not happen, the creation is missing for the search in this case
-                    logger.log('wanted_quality property was missing for search, creating it', logger.WARNING)
-                    ep_status, ep_quality = Quality.splitCompositeStatus(ep_obj.status)
+                    logger.warning('wanted_quality property was missing for search, creating it')
+                    ep_status, ep_quality = Quality.split_composite_status(ep_obj.status)
                     s.wanted_quality = get_wanted_qualities(ep_obj, ep_status, ep_quality, unaired=True)
                 needed.check_needed_qualities(s.wanted_quality)
 
         if not hasattr(ep_obj, 'eps_aired_in_season'):
             # this should not happen, the creation is missing for the search in this case
-            logger.log('eps_aired_in_season property was missing for search, creating it', logger.WARNING)
+            logger.warning('eps_aired_in_season property was missing for search, creating it')
             ep_count, ep_count_scene = get_aired_in_season(ep_obj.show_obj)
             ep_obj.eps_aired_in_season = ep_count.get(ep_obj.season, 0)
             ep_obj.eps_aired_in_scene_season = ep_count_scene.get(ep_obj.scene_season, 0) if ep_obj.show_obj.is_scene \
@@ -682,14 +682,14 @@ class NewznabProvider(generic.NZBProvider):
             needed.check_needed_types(ep_obj.show_obj)
             if not ep_obj.show_obj.is_anime and not ep_obj.show_obj.is_sports:
                 if not getattr(ep_obj, 'wanted_quality', None):
-                    ep_status, ep_quality = Quality.splitCompositeStatus(ep_obj.status)
+                    ep_status, ep_quality = Quality.split_composite_status(ep_obj.status)
                     ep_obj.wanted_quality = get_wanted_qualities(ep_obj, ep_status, ep_quality, unaired=True)
                 needed.check_needed_qualities(ep_obj.wanted_quality)
         else:
             if not ep_obj.show_obj.is_anime and not ep_obj.show_obj.is_sports:
                 for cur_ep_obj in ep_obj_list:
                     if not getattr(cur_ep_obj, 'wanted_quality', None):
-                        ep_status, ep_quality = Quality.splitCompositeStatus(cur_ep_obj.status)
+                        ep_status, ep_quality = Quality.split_composite_status(cur_ep_obj.status)
                         cur_ep_obj.wanted_quality = get_wanted_qualities(cur_ep_obj, ep_status, ep_quality,
                                                                          unaired=True)
                     needed.check_needed_qualities(cur_ep_obj.wanted_quality)
@@ -733,7 +733,7 @@ class NewznabProvider(generic.NZBProvider):
                 continue
 
             # search cache for episode result
-            cache_result = self.cache.searchCache(ep_obj, manual_search)
+            cache_result = self.cache.search_cache(ep_obj, manual_search)
             if cache_result:
                 if ep_obj.episode not in results:
                     results[ep_obj.episode] = cache_result
@@ -911,9 +911,9 @@ class NewznabProvider(generic.NZBProvider):
                 # category ids
                 cat = []
                 if 'Episode' == mode or 'Season' == mode:
-                    if not (any([x in params for x in
-                                 [v for c, v in iteritems(self.caps)
-                                  if c not in [NewznabConstants.SEARCH_EPISODE, NewznabConstants.SEARCH_SEASON]]])):
+                    if not (any(x in params for x in
+                                [v for c, v in iteritems(self.caps)
+                                 if c not in [NewznabConstants.SEARCH_EPISODE, NewznabConstants.SEARCH_SEASON]])):
                         logger.log('Show is missing either an id or search term for search')
                         continue
 
@@ -938,7 +938,7 @@ class NewznabProvider(generic.NZBProvider):
                 request_params = base_params.copy()
                 # if ('Propers' == mode or 'nzbs_org' == self.get_id()) \
                 if 'Propers' == mode \
-                        and 'q' in params and not (any([x in params for x in ['season', 'ep']])):
+                        and 'q' in params and not (any(x in params for x in ['season', 'ep'])):
                     request_params['t'] = 'search'
                 request_params.update(params)
 
@@ -978,14 +978,14 @@ class NewznabProvider(generic.NZBProvider):
                         parsed_xml, n_spaces = self.cache.parse_and_get_ns(data)
                         items = parsed_xml.findall('channel/item')
                     except (BaseException, Exception):
-                        logger.log('Error trying to load %s RSS feed' % self.name, logger.WARNING)
+                        logger.warning('Error trying to load %s RSS feed' % self.name)
                         break
 
                     if not self._check_auth_from_data(parsed_xml, search_url):
                         break
 
                     if 'rss' != parsed_xml.tag:
-                        logger.log('Resulting XML from %s isn\'t RSS, not parsing it' % self.name, logger.WARNING)
+                        logger.warning('Resulting XML from %s isn\'t RSS, not parsing it' % self.name)
                         break
 
                     i and time.sleep(2.1)
@@ -996,8 +996,7 @@ class NewznabProvider(generic.NZBProvider):
                         if title and url:
                             results.append(item)
                         else:
-                            logger.log('The data returned from %s is incomplete, this result is unusable' % self.name,
-                                       logger.DEBUG)
+                            logger.debug('The data returned from %s is incomplete, this result is unusable' % self.name)
 
                     # get total and offset attributes
                     try:
@@ -1036,8 +1035,8 @@ class NewznabProvider(generic.NZBProvider):
 
                     # there are more items available than the amount given in one call, grab some more
                     items = total - request_params['offset']
-                    logger.log('%s more item%s to fetch from a batch of up to %s items.'
-                               % (items, helpers.maybe_plural(items), request_params['limit']), logger.DEBUG)
+                    logger.debug(f'{items} more item{helpers.maybe_plural(items)} to fetch from a batch of up to'
+                                 f' {request_params["limit"]} items.')
 
                     batch_count = self._log_result(results, mode, cnt, search_url)
                     exit_log = False
@@ -1048,10 +1047,10 @@ class NewznabProvider(generic.NZBProvider):
                 if exit_log:
                     self._log_search(mode, len(results), search_url)
 
-                if not try_all_searches and any([x in request_params for x in [
+                if not try_all_searches and any(x in request_params for x in [
                     v for c, v in iteritems(self.caps)
                     if c not in [NewznabConstants.SEARCH_EPISODE, NewznabConstants.SEARCH_SEASON,
-                                 NewznabConstants.SEARCH_TEXT]]]) and len(results):
+                                 NewznabConstants.SEARCH_TEXT]]) and len(results):
                     break
 
         return results, n_spaces
@@ -1070,7 +1069,7 @@ class NewznabProvider(generic.NZBProvider):
         :param kwargs:
         :return:
         """
-        cache_results = self.cache.listPropers(search_date)
+        cache_results = self.cache.list_propers(search_date)
         results = [classes.Proper(x['name'], x['url'],
                                   datetime.datetime.fromtimestamp(x['time']), self.show_obj) for x in cache_results]
 
@@ -1125,7 +1124,7 @@ class NewznabProvider(generic.NZBProvider):
 
                 result_date = self._parse_pub_date(item)
                 if not result_date:
-                    logger.log(u'Unable to figure out the date for entry %s, skipping it' % title)
+                    logger.log(f'Unable to figure out the date for entry {title}, skipping it')
                     continue
 
                 result_size, result_uid = self._parse_size_uid(item, ns=n_space)
@@ -1183,10 +1182,10 @@ class NewznabCache(tvcache.TVCache):
                     root = elem
         return root, ns
 
-    def updateCache(self,
-                    needed=NeededQualities(need_all=True),  # type: NeededQualities
-                    **kwargs
-                    ):
+    def update_cache(self,
+                     needed=NeededQualities(need_all=True),  # type: NeededQualities
+                     **kwargs
+                     ):
         """
 
         :param needed: needed qualites class
@@ -1195,22 +1194,22 @@ class NewznabCache(tvcache.TVCache):
         if 4489 != sickgear.RECENTSEARCH_INTERVAL or self.should_update():
             n_spaces = {}
             try:
-                check = self._checkAuth()
+                check = self.check_auth()
                 if isinstance(check, bool) and not check:
                     items = None
                 else:
                     (items, n_spaces) = self.provider.cache_data(needed=needed)
             except (BaseException, Exception) as e:
-                logger.log('Error updating Cache: %s' % ex(e), logger.ERROR)
+                logger.error('Error updating Cache: %s' % ex(e))
                 items = None
 
             if items:
-                self._clearCache()
+                self.clear_cache()
 
                 # parse data
                 cl = []
                 for item in items:
-                    ci = self._parseItem(n_spaces, item)
+                    ci = self.parse_item(n_spaces, item)
                     if None is not ci:
                         cl.append(ci)
 
@@ -1219,7 +1218,7 @@ class NewznabCache(tvcache.TVCache):
                     my_db.mass_action(cl)
 
             # set updated as time the attempt to fetch data is
-            self.setLastUpdate()
+            self.set_last_update()
 
     @staticmethod
     def parse_ids(item, ns):
@@ -1240,7 +1239,7 @@ class NewznabCache(tvcache.TVCache):
         return ids
 
     # overwrite method with that parses the rageid from the newznab feed
-    def _parseItem(self,
+    def parse_item(self,
                    ns,  # type: Dict
                    item  # type: etree.Element
                    ):  # type: (...) -> Union[List[AnyStr, List[Any]], None]
@@ -1257,5 +1256,4 @@ class NewznabCache(tvcache.TVCache):
         if title and url:
             return self.add_cache_entry(title, url, tvid_prodid=ids)
 
-        logger.log('Data returned from the %s feed is incomplete, this result is unusable' % self.provider.name,
-                   logger.DEBUG)
+        logger.debug('Data returned from the %s feed is incomplete, this result is unusable' % self.provider.name)

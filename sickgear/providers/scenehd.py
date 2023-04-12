@@ -23,7 +23,6 @@ from .. import logger
 from ..helpers import try_int
 from bs4_parser import BS4Parser
 
-from _23 import unidecode
 from six import iteritems
 
 
@@ -48,7 +47,7 @@ class SceneHDProvider(generic.TorrentProvider):
         return super(SceneHDProvider, self)._authorised(
             logged_in=(lambda y='': ['RSS links' in y] and all(
                 [(self.session.cookies.get(c, domain='') or 'sg!no!pw') in self.digest for c in ('uid', 'pass')])),
-            failed_msg=(lambda y=None: u'Invalid cookie details for %s. Check settings'))
+            failed_msg=(lambda y=None: 'Invalid cookie details for %s. Check settings'))
 
     def _search_provider(self, search_params, **kwargs):
 
@@ -62,7 +61,6 @@ class SceneHDProvider(generic.TorrentProvider):
                                                                         'nuked': 'nuke', 'filter': 'free'})])
         for mode in search_params:
             for search_string in search_params[mode]:
-                search_string = unidecode(search_string)
                 search_url = self.urls['search'] % (search_string, self._categories_string(mode, '%s', ','))
 
                 html = self.get_url(search_url, timeout=90)
@@ -111,7 +109,7 @@ class SceneHDProvider(generic.TorrentProvider):
                 except generic.HaltParseException:
                     pass
                 except (BaseException, Exception):
-                    logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
+                    logger.error(f'Failed to parse. Traceback: {traceback.format_exc()}')
 
                 self._log_search(mode, len(items[mode]) - cnt, search_url)
 

@@ -1,5 +1,5 @@
 import os
-from sys import exc_info, platform
+from sys import exc_info
 import threading
 
 from tornado.ioloop import IOLoop
@@ -8,13 +8,8 @@ from tornado.routing import AnyMatches, Rule
 from tornado.web import Application, _ApplicationRouter
 
 from . import logger, webapi, webserve
-from ._legacy import LegacyConfigPostProcessing, LegacyHomeAddShows, \
-    LegacyManageManageSearches, LegacyManageShowProcesses, LegacyErrorLogs
 from .helpers import create_https_certificates, re_valid_hostname
 import sickgear
-
-from _23 import PY38
-from six import PY2
 
 # noinspection PyUnreachableCode
 if False:
@@ -79,7 +74,7 @@ class WebServer(threading.Thread):
             # If either the HTTPS certificate or key do not exist, make some self-signed ones.
             if make_cert:
                 if not create_https_certificates(self.https_cert, self.https_key):
-                    logger.log(u'Unable to create CERT/KEY files, disabling HTTPS')
+                    logger.log('Unable to create CERT/KEY files, disabling HTTPS')
                     update_cfg |= False is not sickgear.ENABLE_HTTPS
                     sickgear.ENABLE_HTTPS = False
                     self.enable_https = False
@@ -87,7 +82,7 @@ class WebServer(threading.Thread):
                     update_cfg = True
 
             if not (os.path.isfile(self.https_cert) and os.path.isfile(self.https_key)):
-                logger.log(u'Disabled HTTPS because of missing CERT and KEY files', logger.WARNING)
+                logger.warning('Disabled HTTPS because of missing CERT and KEY files')
                 update_cfg |= False is not sickgear.ENABLE_HTTPS
                 sickgear.ENABLE_HTTPS = False
                 self.enable_https = False
@@ -219,22 +214,8 @@ class WebServer(threading.Thread):
             (r'%s/api/builder(/?)(.*)' % self.options['web_root'], webserve.ApiBuilder),
             (r'%s/api(/?.*)' % self.options['web_root'], webapi.Api),
             # ----------------------------------------------------------------------------------------------------------
-            # legacy deprecated Aug 2019
-            (r'%s/home/addShows/?$' % self.options['web_root'], LegacyHomeAddShows),
-            (r'%s/manage/manageSearches/?$' % self.options['web_root'], LegacyManageManageSearches),
-            (r'%s/manage/showProcesses/?$' % self.options['web_root'], LegacyManageShowProcesses),
-            (r'%s/config/postProcessing/?$' % self.options['web_root'], LegacyConfigPostProcessing),
-            (r'%s/errorlogs/?$' % self.options['web_root'], LegacyErrorLogs),
-            (r'%s/home/is_alive(/?.*)' % self.options['web_root'], webserve.IsAliveHandler),
-            (r'%s/home/addShows(/?.*)' % self.options['web_root'], webserve.AddShows),
-            (r'%s/manage/manageSearches(/?.*)' % self.options['web_root'], webserve.ManageSearch),
-            (r'%s/manage/showProcesses(/?.*)' % self.options['web_root'], webserve.ShowTasks),
-            (r'%s/config/postProcessing(/?.*)' % self.options['web_root'], webserve.ConfigMediaProcess),
-            (r'%s/errorlogs(/?.*)' % self.options['web_root'], webserve.EventLogs),
-            # ----------------------------------------------------------------------------------------------------------
-            # legacy deprecated Aug 2019 - never remove as used in external scripts
+            # legacy deprecated Aug 2019 - NEVER remove as used in external scripts
             (r'%s/home/postprocess(/?.*)' % self.options['web_root'], webserve.HomeProcessMedia),
-            (r'%s(/?update_watched_state_kodi/?)' % self.options['web_root'], webserve.NoXSRFHandler),
             # regular catchall routes - keep here at the bottom
             (r'%s/home(/?.*)' % self.options['web_root'], webserve.Home),
             (r'%s/manage/(/?.*)' % self.options['web_root'], webserve.Manage),
@@ -252,25 +233,20 @@ class WebServer(threading.Thread):
         protocol, ssl_options = (('http', None),
                                  ('https', {'certfile': self.https_cert, 'keyfile': self.https_key}))[self.enable_https]
 
-        logger.log(u'Starting SickGear on %s://%s:%s/' % (protocol, self.options['host'],  self.options['port']))
+        logger.log(f'Starting SickGear on {protocol}://{self.options["host"]}:{self.options["port"]}/')
 
         # python 3 needs to start event loop first
-        if not PY2:
-            import asyncio
-            if 'win32' == platform and PY38:
-                # noinspection PyUnresolvedReferences
-                asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
-            asyncio.set_event_loop(asyncio.new_event_loop())
-            from tornado.platform.asyncio import AnyThreadEventLoopPolicy
-            asyncio.set_event_loop_policy(AnyThreadEventLoopPolicy())
+        import asyncio
+        asyncio.set_event_loop(asyncio.new_event_loop())
+        from tornado.platform.asyncio import AnyThreadEventLoopPolicy
+        asyncio.set_event_loop_policy(AnyThreadEventLoopPolicy())
 
         try:
             self.server = self.app.listen(self.options['port'], self.options['host'], ssl_options=ssl_options,
                                           xheaders=sickgear.HANDLE_REVERSE_PROXY, protocol=protocol)
         except (BaseException, Exception):
             etype, evalue, etb = exc_info()
-            logger.log('Could not start webserver on %s. Exception: %s, Error: %s' % (
-                self.options['port'], etype, evalue), logger.ERROR)
+            logger.error(f'Could not start webserver on {self.options["port"]}. Exception: {etype}, Error: {evalue}')
             return
 
         self.io_loop = IOLoop.current()
@@ -296,7 +272,7 @@ class WebServer(threading.Thread):
                 getattr(s, nh)()
                 sickgear.classes.loading_msg.reset()
             self.io_loop.add_callback(d_f, self, new_handler)
-            logger.log('Switching HTTP Server handlers to %s' % new_handler, logger.DEBUG)
+            logger.debug('Switching HTTP Server handlers to %s' % new_handler)
 
     def shut_down(self):
         self.alive = False

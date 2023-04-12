@@ -319,7 +319,7 @@
 					</div>
 #end if
 
-#set $anyQualities, $bestQualities = $Quality.splitQuality(int($show_obj.quality))
+#set $anyQualities, $bestQualities = $Quality.split_quality(int($show_obj.quality))
 #if $show_obj.quality in $qualityPresets
 					<div>
 						<span class="details-title">Quality</span>

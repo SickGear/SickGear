@@ -26,7 +26,6 @@ from .. import logger
 from ..helpers import anon_url, try_int
 from bs4_parser import BS4Parser
 
-from _23 import unidecode
 from six import iteritems
 
 
@@ -57,7 +56,7 @@ class PTFProvider(generic.TorrentProvider):
             logged_in=(lambda y='': all(
                 ['RSS Feed' in y, self.has_all_cookies('session_key')] +
                 [(self.session.cookies.get(x) or 'sg!no!pw') in self.digest for x in ['session_key']])),
-            failed_msg=(lambda y=None: u'Invalid cookie details for %s. Check settings'))
+            failed_msg=(lambda y=None: 'Invalid cookie details for %s. Check settings'))
 
     def _search_provider(self, search_params, **kwargs):
 
@@ -82,7 +81,6 @@ class PTFProvider(generic.TorrentProvider):
         for mode in search_params:
             rc['cats'] = re.compile('(?i)cat=(?:%s)' % self._categories_string(mode, template='', delimiter='|'))
             for search_string in search_params[mode]:
-                search_string = unidecode(search_string)
 
                 search_url = self.urls['search'] % ('+'.join(search_string.split()), self._categories_string(mode))
                 html = self.get_url(search_url)
@@ -146,7 +144,7 @@ class PTFProvider(generic.TorrentProvider):
                 except generic.HaltParseException:
                     pass
                 except (BaseException, Exception):
-                    logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
+                    logger.error(f'Failed to parse. Traceback: {traceback.format_exc()}')
 
                 self._log_search(mode, len(items[mode]) - cnt, log + self.session.response.get('url'))
 

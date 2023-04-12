@@ -1,4 +1,24 @@
-﻿### 3.27.13 (2023-04-12 10:15:00 UTC)
+﻿### 3.28.0 (2023-04-12 13:05:00 UTC)
+
+* Update html5lib 1.1 (f87487a) to 1.2-dev (3e500bb)
+* Update package resource API 63.2.0 (3ae44cd) to 67.5.1 (f51eccd)
+* Update Tornado Web Server 6.2.0 (a4f08a3) to 6.3.0 (7186b86)
+* Update urllib3 1.26.13 (25fbd5f) to 1.26.14 (a06c05c)
+* Change remove calls to legacy py2 fix encoding function
+* Change requirements for pure py3
+* Change codebase cleanups
+* Change improve perf by using generators with `any`
+* Change deprecate processEpisode used by nzbToMedia to advise how to configure API instead
+* Change optionally add disk free space in response to three Web API endpoints
+* Change increase API version number to 15
+* Add actually use mount points to get disk free space
+* Add optional "freespace" parameter to endpoints: sg.getrootdirs, sg.addrootdir, sg.deleterootdir
+* Change update help of affected endpoints
+* Fix explicitly save rootdirs after adding or deleting via Web API
+* Change add Rarbg UHD search category 
+
+
+### 3.27.13 (2023-04-12 10:15:00 UTC)
 
 * Change fix show id log output
 * Change handle exceptions thrown from pkg_resources parsing newly extended working set modules not even used by SG
@@ -771,7 +791,7 @@
 
 * Change allow Python 3.8.10 and 3.9.5
 * Remove PiSexy provider
-* Fix refreshShow, prevent another refresh of show if already in queue and not forced
+* Fix refresh_show, prevent another refresh of show if already in queue and not forced
 * Fix webapi set scene season
 * Fix set path in all_tests for py2
 * Fix webapi exception if no backlog was done before (CMD_SickGearCheckScheduler)
@@ -1103,7 +1123,7 @@
 * Add API response field `global exclude require` to sg.listrequirewords endpoint
 * Change improve Popen resource usage under py2
 * Add overall failure monitoring to History/Connect fails (renamed from "Provider fails")
-* Change log exception during updateCache in newznab
+* Change log exception during update_cache in newznab
 * Change make Py3.9 preparations
 * Change anime "Available groups" to display "No groups listed..." when API is fine with no results instead of blank
 * Change improve clarity of anime group lists by using terms Allow list and Block list

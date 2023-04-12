@@ -123,12 +123,11 @@ class XBMC12PlusMetadata(generic.GenericMetadata):
         try:
             show_info = t.get_show(show_id, language=show_lang)
         except BaseTVinfoShownotfound as e:
-            logger.log('Unable to find show with id %s on %s, skipping it' %
-                       (show_id, sickgear.TVInfoAPI(show_obj.tvid).name), logger.ERROR)
+            logger.error(f'Unable to find show with id {show_id} on {sickgear.TVInfoAPI(show_obj.tvid).name},'
+                         f' skipping it')
             raise e
         except BaseTVinfoError as e:
-            logger.log('%s is down, can\'t use its data to add this show' % sickgear.TVInfoAPI(show_obj.tvid).name,
-                       logger.ERROR)
+            logger.error('%s is down, can\'t use its data to add this show' % sickgear.TVInfoAPI(show_obj.tvid).name)
             raise e
 
         if not self._valid_show(show_info, show_obj):
@@ -136,8 +135,8 @@ class XBMC12PlusMetadata(generic.GenericMetadata):
 
         # check for title and id
         if None is getattr(show_info, 'seriesname', None) or None is getattr(show_info, 'id', None):
-            logger.log('Incomplete info for show with id %s on %s, skipping it' %
-                       (show_id, sickgear.TVInfoAPI(show_obj.tvid).name), logger.ERROR)
+            logger.error(f'Incomplete info for show with id {show_id} on {sickgear.TVInfoAPI(show_obj.tvid).name},'
+                         f' skipping it')
             return False
 
         title = etree.SubElement(tv_node, 'title')
@@ -227,8 +226,9 @@ class XBMC12PlusMetadata(generic.GenericMetadata):
         except BaseTVinfoShownotfound as e:
             raise exceptions_helper.ShowNotFoundException(ex(e))
         except BaseTVinfoError as e:
-            logger.log('Unable to connect to %s while creating meta files - skipping - %s' %
-                       (sickgear.TVInfoAPI(ep_obj.show_obj.tvid).name, ex(e)), logger.ERROR)
+            logger.error(
+                f'Unable to connect to {sickgear.TVInfoAPI(ep_obj.show_obj.tvid).name} while creating meta files'
+                f' - skipping - {ex(e)}')
             return
 
         if not self._valid_show(show_info, ep_obj.show_obj):
@@ -249,17 +249,17 @@ class XBMC12PlusMetadata(generic.GenericMetadata):
                            (cur_ep_obj.season, cur_ep_obj.episode, sickgear.TVInfoAPI(ep_obj.show_obj.tvid).name))
                 return None
             except (BaseException, Exception):
-                logger.log(u'Not generating nfo because failed to fetched tv info data at this time', logger.DEBUG)
+                logger.debug('Not generating nfo because failed to fetched tv info data at this time')
                 return None
 
             if None is getattr(ep_info, 'firstaired', None):
                 ep_info['firstaired'] = str(datetime.date.fromordinal(1))
 
             if None is getattr(ep_info, 'episodename', None):
-                logger.log(u'Not generating nfo because the ep has no title', logger.DEBUG)
+                logger.debug('Not generating nfo because the ep has no title')
                 return None
 
-            logger.log(u'Creating metadata for episode ' + str(ep_obj.season) + 'x' + str(ep_obj.episode), logger.DEBUG)
+            logger.debug(f'Creating metadata for episode {ep_obj.season}x{ep_obj.episode}')
 
             if 1 < len(ep_obj_list_to_write):
                 episode = etree.SubElement(rootNode, 'episodedetails')

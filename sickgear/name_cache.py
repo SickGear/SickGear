@@ -32,7 +32,7 @@ sceneNameCache = {}
 nameCacheLock = threading.Lock()
 
 
-def addNameToCache(name, tvid=0, prodid=0, season=-1):
+def add_name_to_cache(name, tvid=0, prodid=0, season=-1):
     """Adds the show & tvdb id to the namecache
 
     :param name: the show name to cache
@@ -41,7 +41,7 @@ def addNameToCache(name, tvid=0, prodid=0, season=-1):
     :type tvid: int
     :param prodid: the production id that this show should be cached with (can be None/0 for unknown)
     :type prodid: int or long
-    :param season: the season the the name exception belongs to. -1 for generic exception
+    :param season: the season the name exception belongs to. -1 for generic exception
     :type season: int
     """
     global nameCache
@@ -53,7 +53,7 @@ def addNameToCache(name, tvid=0, prodid=0, season=-1):
             nameCache[name] = [int(tvid), int(prodid), season]
 
 
-def retrieveNameFromCache(name):
+def retrieve_name_from_cache(name):
     # type: (AnyStr) -> Union[Tuple[int, int], Tuple[None, None]]
     """Looks up the given name in the name cache
 
@@ -71,7 +71,7 @@ def retrieveNameFromCache(name):
     return None, None
 
 
-def buildNameCache(show_obj=None, update_only_scene=False):
+def build_name_cache(show_obj=None, update_only_scene=False):
     # type: (Optional[Union[TVShow, TVShowBase]], bool) -> None
     """Adds all new name exceptions to the namecache memory and flushes any removed name exceptions
 
@@ -104,7 +104,7 @@ def buildNameCache(show_obj=None, update_only_scene=False):
                      for cur_so in sickgear.showList if cur_so])
                 sceneNameCache = {}
 
-        cacheDB = db.DBConnection()
+        cache_db = db.DBConnection()
 
         cache_results = []
         if update_only_scene:
@@ -117,7 +117,7 @@ def buildNameCache(show_obj=None, update_only_scene=False):
             tmp_scene_name_cache = sceneNameCache.copy()
 
         for t, s in iteritems(show_ids):
-            cache_results += cacheDB.select(
+            cache_results += cache_db.select(
                 'SELECT show_name, indexer AS tv_id, indexer_id AS prod_id, season'
                 ' FROM scene_exceptions'
                 ' WHERE indexer = %s AND indexer_id IN (%s)' % (t, ','.join(['%s' % i for i in s])))

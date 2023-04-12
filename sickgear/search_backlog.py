@@ -25,10 +25,9 @@ from . import db, logger, scheduler, search_queue, ui
 from .helpers import find_show_by_id
 from .providers.generic import GenericProvider
 from .search import wanted_episodes
-from .sgdatetime import SGDatetime, timestamp_near
+from .sgdatetime import SGDatetime
 from .tv import TVidProdid, TVEpisode, TVShow
 
-from _23 import filter_list, map_iter, map_list
 from six import iteritems, itervalues, moves
 
 # noinspection PyUnreachableCode
@@ -48,29 +47,29 @@ class BacklogSearchScheduler(scheduler.Scheduler):
         self.force = True
 
     def next_run(self):
-        if 1 >= self.action._lastBacklog:
+        if 1 >= self.action.last_backlog:
             return datetime.date.today()
-        elif (self.action._lastBacklog + self.action.cycleTime) < datetime.date.today().toordinal():
+        elif (self.action.last_backlog + self.action.cycle_time) < datetime.date.today().toordinal():
             return datetime.date.today()
-        return datetime.date.fromordinal(self.action._lastBacklog + self.action.cycleTime)
+        return datetime.date.fromordinal(self.action.last_backlog + self.action.cycle_time)
 
     def next_backlog_timeleft(self):
         now = datetime.datetime.now()
-        torrent_enabled = 0 < len([x for x in sickgear.providers.sortedProviderList() if x.is_active() and
+        torrent_enabled = 0 < len([x for x in sickgear.providers.sorted_sources() if x.is_active() and
                                    getattr(x, 'enable_backlog', None) and GenericProvider.TORRENT == x.providerType])
-        if now > self.action.nextBacklog or self.action.nextCyleTime != self.cycleTime:
-            nextruntime = now + self.timeLeft()
+        if now > self.action.nextBacklog or self.action.nextCyleTime != self.cycle_time:
+            nextruntime = now + self.time_left()
             if not torrent_enabled:
                 nextpossibleruntime = (datetime.datetime.fromtimestamp(self.action.last_runtime) +
                                        datetime.timedelta(hours=23))
                 for _ in moves.xrange(5):
                     if nextruntime > nextpossibleruntime:
                         self.action.nextBacklog = nextruntime
-                        self.action.nextCyleTime = self.cycleTime
+                        self.action.nextCyleTime = self.cycle_time
                         break
-                    nextruntime += self.cycleTime
+                    nextruntime += self.cycle_time
             else:
-                self.action.nextCyleTime = self.cycleTime
+                self.action.nextCyleTime = self.cycle_time
                 self.action.nextBacklog = nextruntime
         return self.action.nextBacklog - now if self.action.nextBacklog > now else datetime.timedelta(seconds=0)
 
@@ -78,8 +77,8 @@ class BacklogSearchScheduler(scheduler.Scheduler):
 class BacklogSearcher(object):
     def __init__(self):
 
-        self._lastBacklog = self._get_last_backlog()
-        self.cycleTime = sickgear.BACKLOG_PERIOD
+        self.last_backlog = self._get_last_backlog()
+        self.cycle_time = sickgear.BACKLOG_PERIOD
         self.lock = threading.Lock()
         self.amActive = False  # type: bool
         self.amPaused = False  # type: bool
@@ -106,7 +105,7 @@ class BacklogSearcher(object):
 
     def am_running(self):
         # type: (...) -> bool
-        logger.log(u'amWaiting: ' + str(self.amWaiting) + ', amActive: ' + str(self.amActive), logger.DEBUG)
+        logger.debug(f'amWaiting: {self.amWaiting}, amActive: {self.amActive}')
         return (not self.amWaiting) and self.amActive
 
     def add_backlog_item(self,
@@ -176,7 +175,7 @@ class BacklogSearcher(object):
         :param scheduled: scheduled backlog search (can be from webif or scheduler)
         :return: any provider is active for given backlog
         """
-        return 0 < len([x for x in sickgear.providers.sortedProviderList() if x.is_active() and
+        return 0 < len([x for x in sickgear.providers.sorted_sources() if x.is_active() and
                         getattr(x, 'enable_backlog', None) and
                         (not torrent_only or GenericProvider.TORRENT == x.providerType) and
                         (not scheduled or getattr(x, 'enable_scheduled_backlog', None))])
@@ -198,7 +197,7 @@ class BacklogSearcher(object):
         :rtype: None
         """
         if self.amActive and not which_shows:
-            logger.log(u'Backlog is still running, not starting it again', logger.DEBUG)
+            logger.debug('Backlog is still running, not starting it again')
             return
 
         if which_shows:
@@ -212,17 +211,17 @@ class BacklogSearcher(object):
         any_torrent_enabled = continued_backlog = False
         if not force and standard_backlog and (datetime.datetime.now() - datetime.datetime.fromtimestamp(
                 self._get_last_runtime())) < datetime.timedelta(hours=23):
-            any_torrent_enabled = any(map_iter(
+            any_torrent_enabled = any(map(
                 lambda x: x.is_active() and getattr(x, 'enable_backlog', None)
                 and GenericProvider.TORRENT == x.providerType,
-                sickgear.providers.sortedProviderList()))
+                sickgear.providers.sorted_sources()))
             if not any_torrent_enabled:
-                logger.log('Last scheduled backlog run was within the last day, skipping this run.', logger.DEBUG)
+                logger.debug('Last scheduled backlog run was within the last day, skipping this run.')
                 return
 
         if not self.providers_active(any_torrent_enabled, standard_backlog):
-            logger.log('No NZB/Torrent provider has active searching enabled in config/Media Providers,'
-                       ' cannot start backlog.', logger.WARNING)
+            logger.warning('No NZB/Torrent provider has active searching enabled in config/Media Providers,'
+                           ' cannot start backlog.')
             return
 
         self._get_last_backlog()
@@ -235,14 +234,14 @@ class BacklogSearcher(object):
 
         limited_backlog = False
         if standard_backlog and (any_torrent_enabled or sickgear.BACKLOG_NOFULL):
-            logger.log(u'Running limited backlog for episodes missed during the last %s day(s)' %
-                       str(sickgear.BACKLOG_LIMITED_PERIOD))
+            logger.log(f'Running limited backlog for episodes missed during the last'
+                       f' {sickgear.BACKLOG_LIMITED_PERIOD} day(s)')
             from_date = limited_from_date
             limited_backlog = True
 
         runparts = []
         if standard_backlog and not any_torrent_enabled and sickgear.BACKLOG_NOFULL:
-            logger.log(u'Skipping automated full backlog search because it is disabled in search settings')
+            logger.log('Skipping automated full backlog search because it is disabled in search settings')
 
         my_db = db.DBConnection('cache.db')
         if standard_backlog and not any_torrent_enabled and not sickgear.BACKLOG_NOFULL:
@@ -291,8 +290,8 @@ class BacklogSearcher(object):
 
         if not runparts and parts:
             runparts = parts[0]
-            wanted_list = filter_list(
-                lambda wi: wi and next(itervalues(wi))[0].show_obj.tvid_prodid in runparts, wanted_list)
+            wanted_list = list(filter(
+                lambda wi: wi and next(itervalues(wi))[0].show_obj.tvid_prodid in runparts, wanted_list))
 
         limited_wanted_list = []
         if standard_backlog and not any_torrent_enabled and runparts:
@@ -314,8 +313,8 @@ class BacklogSearcher(object):
             for i, l in enumerate(parts):
                 if 0 == i:
                     continue
-                cl += map_list(lambda m: ['INSERT INTO backlogparts (part, indexer, indexerid) VALUES (?,?,?)',
-                                          [i + 1] + TVidProdid(m).list], l)
+                cl += list(map(lambda m: ['INSERT INTO backlogparts (part, indexer, indexerid) VALUES (?,?,?)',
+                                          [i + 1] + TVidProdid(m).list], l))
 
             if 0 < len(cl):
                 my_db.mass_action(cl)
@@ -334,7 +333,7 @@ class BacklogSearcher(object):
 
     @staticmethod
     def _get_last_runtime():
-        logger.log('Retrieving the last runtime of Backlog from the DB', logger.DEBUG)
+        logger.debug('Retrieving the last runtime of Backlog from the DB')
 
         my_db = db.DBConnection()
         sql_result = my_db.select('SELECT * FROM info')
@@ -345,19 +344,19 @@ class BacklogSearcher(object):
             last_run_time = 1
         else:
             last_run_time = int(sql_result[0]['last_run_backlog'])
-            if last_run_time > int(timestamp_near(datetime.datetime.now())):
+            if last_run_time > SGDatetime.timestamp_near():
                 last_run_time = 1
 
         return last_run_time
 
     def _set_last_runtime(self, when):
-        logger.log('Setting the last backlog runtime in the DB to %s' % when, logger.DEBUG)
+        logger.debug('Setting the last backlog runtime in the DB to %s' % when)
 
         my_db = db.DBConnection()
         sql_result = my_db.select('SELECT * FROM info')
 
         if isinstance(when, datetime.datetime):
-            when = int(timestamp_near(when))
+            when = SGDatetime.timestamp_near(when)
         else:
             when = SGDatetime.timestamp_far(when, default=0)
         if 0 == len(sql_result):
@@ -370,7 +369,7 @@ class BacklogSearcher(object):
 
     def _get_last_backlog(self):
 
-        logger.log('Retrieving the last check time from the DB', logger.DEBUG)
+        logger.debug('Retrieving the last check time from the DB')
 
         my_db = db.DBConnection()
         sql_result = my_db.select('SELECT * FROM info')
@@ -384,13 +383,13 @@ class BacklogSearcher(object):
             if last_backlog > datetime.date.today().toordinal():
                 last_backlog = 1
 
-        self._lastBacklog = last_backlog
-        return self._lastBacklog
+        self.last_backlog = last_backlog
+        return self.last_backlog
 
     @staticmethod
     def _set_last_backlog(when):
 
-        logger.log('Setting the last backlog in the DB to %s' % when, logger.DEBUG)
+        logger.debug('Setting the last backlog in the DB to %s' % when)
 
         my_db = db.DBConnection()
         sql_result = my_db.select('SELECT * FROM info')

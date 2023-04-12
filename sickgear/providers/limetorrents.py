@@ -24,7 +24,7 @@ from ..helpers import try_int
 
 from bs4_parser import BS4Parser
 
-from _23 import b64decodestring, quote_plus, unidecode
+from _23 import b64decodestring, quote_plus
 
 
 class LimeTorrentsProvider(generic.TorrentProvider):
@@ -60,8 +60,6 @@ class LimeTorrentsProvider(generic.TorrentProvider):
 
         for mode in search_params:
             for search_string in search_params[mode]:
-
-                search_string = unidecode(search_string)
 
                 search_url = self.urls['browse'] if 'Cache' == mode \
                     else self.urls['search'] % (quote_plus(search_string))
@@ -116,7 +114,7 @@ class LimeTorrentsProvider(generic.TorrentProvider):
                 except generic.HaltParseException:
                     pass
                 except (BaseException, Exception):
-                    logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
+                    logger.error(f'Failed to parse. Traceback: {traceback.format_exc()}')
 
                 self._log_search(mode, len(items[mode]) - cnt, search_url)
 
@@ -133,7 +131,7 @@ class LimeTorrentsProvider(generic.TorrentProvider):
         try:
             result = re.findall('(?i)"(magnet:[^"]+?)"', html)[0]
         except IndexError:
-            logger.log('Failed no magnet in response', logger.DEBUG)
+            logger.debug('Failed no magnet in response')
         return result
 
 

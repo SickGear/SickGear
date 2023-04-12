@@ -65,7 +65,7 @@
 
 		<tbody>
 #for $hItem in $cacheResults:
-    #set $provider = $providers.getProviderClass($hItem['provider'])
+    #set $provider = $providers.get_by_id($hItem['provider'])
     #set $tip = '%s @ %s' % ($hItem['provider'], $SGDatetime.sbfdatetime($SGDatetime.fromtimestamp($hItem['time'])))
     #set $ver = $hItem['version']
     #set $ver = ($ver, '')[-1 == $ver]

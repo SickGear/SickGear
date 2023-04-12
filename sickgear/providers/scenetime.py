@@ -23,7 +23,6 @@ from .. import logger
 from ..helpers import anon_url, try_int
 from bs4_parser import BS4Parser
 
-from _23 import unidecode
 from six import iteritems
 
 
@@ -51,7 +50,7 @@ class SceneTimeProvider(generic.TorrentProvider):
                 ['staff-support' in y, self.has_all_cookies()] +
                 [(self.session.cookies.get(x, domain='') or 'sg!no!pw') in self.digest
                  for x in ('uid', 'pass')])),
-            failed_msg=(lambda y=None: u'Invalid cookie details for %s. Check settings'))
+            failed_msg=(lambda y=None: 'Invalid cookie details for %s. Check settings'))
 
     @staticmethod
     def _has_signature(data=None):
@@ -70,7 +69,6 @@ class SceneTimeProvider(generic.TorrentProvider):
             urls = []
             for search_string in search_params[mode]:
                 urls += [[]]
-                search_string = unidecode(search_string)
                 search_url = self.urls['search'] % (self._categories_string(),
                                                     '+'.join(search_string.replace('.', ' ').split()),
                                                     ('', '&freeleech=on')[self.freeleech])
@@ -148,7 +146,7 @@ class SceneTimeProvider(generic.TorrentProvider):
                 except generic.HaltParseException:
                     pass
                 except (BaseException, Exception):
-                    logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
+                    logger.error(f'Failed to parse. Traceback: {traceback.format_exc()}')
 
                 self._log_search(mode, len(items[mode]) - cnt, search_url, log_settings_hint)
 

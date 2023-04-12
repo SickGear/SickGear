@@ -32,11 +32,11 @@ from cfscrape import CloudflareScraper
 from send2trash import send2trash
 
 # noinspection PyPep8Naming
-import encodingKludge as ek
+from encodingKludge import SYS_ENCODING
 import requests
 
-from _23 import decode_bytes, filter_list, html_unescape, list_range, \
-    ordered_dict, Popen, scandir, urlparse, urlsplit, urlunparse
+from _23 import decode_bytes, html_unescape, list_range, \
+    Popen, scandir, urlparse, urlsplit, urlunparse
 from six import integer_types, iteritems, iterkeys, itervalues, moves, PY2, string_types, text_type
 
 import zipfile
@@ -65,7 +65,7 @@ if False:
 
 html_convert_fractions = {0: '', 25: '&frac14;', 50: '&frac12;', 75: '&frac34;', 100: 1}
 
-PROG_DIR = ek.ek(os.path.join, os.path.dirname(os.path.normpath(os.path.abspath(__file__))), '..')
+PROG_DIR = os.path.join(os.path.dirname(os.path.normpath(os.path.abspath(__file__))), '..')
 
 # Mapping error status codes to official W3C names
 http_error_code = {
@@ -159,7 +159,7 @@ class ConnectionFailDict(object):
         if None is not db:
             with self.lock:
                 my_db = db.DBConnection('cache.db')
-                if my_db.hasTable('connection_fails'):
+                if my_db.has_table('connection_fails'):
                     domains = my_db.select('SELECT DISTINCT domain_url from connection_fails')
                     for domain in domains:
                         self.domain_list[domain['domain_url']] = ConnectionFailList(domain['domain_url'])
@@ -515,7 +515,7 @@ class ConnectionFailList(object):
     def _load_fail_values(self):
         if None is not DATA_DIR:
             my_db = db.DBConnection('cache.db')
-            if my_db.hasTable('connection_fails_count'):
+            if my_db.has_table('connection_fails_count'):
                 r = my_db.select('SELECT * FROM connection_fails_count WHERE domain_url = ?', [self.url])
                 if r:
                     self._failure_count = try_int(r[0]['failure_count'], 0)
@@ -536,7 +536,7 @@ class ConnectionFailList(object):
 
     def _save_fail_value(self, field, value):
         my_db = db.DBConnection('cache.db')
-        if my_db.hasTable('connection_fails_count'):
+        if my_db.has_table('connection_fails_count'):
             r = my_db.action('UPDATE connection_fails_count SET %s = ? WHERE domain_url = ?' % field,
                              [value, self.url])
             if 0 == r.rowcount:
@@ -568,7 +568,7 @@ class ConnectionFailList(object):
             with self.lock:
                 try:
                     my_db = db.DBConnection('cache.db')
-                    if my_db.hasTable('connection_fails'):
+                    if my_db.has_table('connection_fails'):
                         results = my_db.select('SELECT * FROM connection_fails WHERE domain_url = ?', [self.url])
                         self._fails = []
                         for r in results:
@@ -586,7 +586,7 @@ class ConnectionFailList(object):
             with self.lock:
                 try:
                     my_db = db.DBConnection('cache.db')
-                    if my_db.hasTable('connection_fails'):
+                    if my_db.has_table('connection_fails'):
                         # noinspection PyCallByClass,PyTypeChecker
                         time_limit = _totimestamp(datetime.datetime.now() - datetime.timedelta(days=28))
                         my_db.action('DELETE FROM connection_fails WHERE fail_time < ?', [time_limit])
@@ -660,7 +660,7 @@ def clean_data(data):
     if isinstance(data, dict):
         return {k: clean_data(v) for k, v in iteritems(data)}
     if isinstance(data, string_types):
-        return unicodedata.normalize('NFKD', html_unescape(data).strip().replace(u'&amp;', u'&'))
+        return unicodedata.normalize('NFKD', html_unescape(data).strip().replace('&amp;', '&'))
     return data
 
 
@@ -676,15 +676,16 @@ def get_system_temp_dir():
         try:
             uid = getpass.getuser()
         except ImportError:
-            return ek.ek(os.path.join, tempfile.gettempdir(), 'SickGear')
+            return os.path.join(tempfile.gettempdir(), 'SickGear')
 
-    return ek.ek(os.path.join, tempfile.gettempdir(), 'SickGear-%s' % uid)
+    return os.path.join(tempfile.gettempdir(), 'SickGear-%s' % uid)
 
 
 def proxy_setting(setting, request_url, force=False):
     """
-    Returns a list of a) proxy_setting address value or a PAC is fetched and parsed if proxy_setting
-    starts with "PAC:" (case-insensitive) and b) True/False if "PAC" is found in the proxy_setting.
+    Returns a list of
+    a) proxy_setting address value or a PAC is fetched and parsed if proxy_setting starts with "PAC:" (case-insensitive)
+    b) True/False if "PAC" is found in the proxy_setting.
 
     The PAC data parser is crude, javascript is not eval'd. The first "PROXY URL" found is extracted with a list
     of "url_a_part.url_remaining", "url_b_part.url_remaining", "url_n_part.url_remaining" and so on.
@@ -720,7 +721,7 @@ def proxy_setting(setting, request_url, force=False):
     request_url_match = False
     parsed_url = urlparse(request_url)
     netloc = parsed_url.netloc
-    for pac_data in re.finditer(r"""(?:[^'"]*['"])([^.]+\.[^'"]*)(?:['"])""", resp, re.I):
+    for pac_data in re.finditer(r"""[^'"]*['"]([^.]+\.[^'"]*)['"]""", resp, re.I):
         data = re.search(r"""PROXY\s+([^'"]+)""", pac_data.group(1), re.I)
         if data:
             if force:
@@ -810,8 +811,8 @@ def get_url(url,  # type: AnyStr
     response_attr = ('text', 'content')[as_binary]
 
     # selectively mute some errors
-    mute = filter_list(lambda x: kwargs.pop(x, False), [
-        'mute_connect_err', 'mute_read_timeout', 'mute_connect_timeout', 'mute_http_error'])
+    mute = list(filter(lambda x: kwargs.pop(x, False), [
+        'mute_connect_err', 'mute_read_timeout', 'mute_connect_timeout', 'mute_http_error']))
 
     # reuse or instantiate request session
     resp_sess = kwargs.pop('resp_sess', None)
@@ -834,7 +835,7 @@ def get_url(url,  # type: AnyStr
 
     if not kwargs.pop('nocache', False):
         cache_dir = CACHE_DIR or get_system_temp_dir()
-        session = CacheControl(sess=session, cache=caches.FileCache(ek.ek(os.path.join, cache_dir, 'sessions')))
+        session = CacheControl(sess=session, cache=caches.FileCache(os.path.join(cache_dir, 'sessions')))
 
     provider = kwargs.pop('provider', None)
 
@@ -937,8 +938,8 @@ def get_url(url,  # type: AnyStr
                 else:
                     http_err_text = 'Custom HTTP error code'
                     if 'mute_http_error' not in mute:
-                        logger.debug(u'Response not ok. %s: %s from requested url %s'
-                                     % (response.status_code, http_err_text, url))
+                        logger.debug(f'Response not ok. {response.status_code}: {http_err_text} from requested url'
+                                     f' {url}')
 
     except requests.exceptions.HTTPError as e:
         raised = e
@@ -947,29 +948,29 @@ def get_url(url,  # type: AnyStr
                 not (exclude_client_http_codes and is_client_error):
             connection_fail_params = dict(fail_type=ConnectionFailTypes.http, code=e.response.status_code)
         if not raise_status_code:
-            logger.warning(u'HTTP error %s while loading URL%s' % (e.errno, _maybe_request_url(e)))
+            logger.warning(f'HTTP error {e.errno} while loading URL{_maybe_request_url(e)}')
     except requests.exceptions.ConnectionError as e:
         raised = e
         if 'mute_connect_err' not in mute:
-            logger.warning(u'Connection error msg:%s while loading URL%s' % (ex(e), _maybe_request_url(e)))
+            logger.warning(f"Connection error msg:{ex(e)} while loading URL{_maybe_request_url(e)}")
         if failure_monitor:
             connection_fail_params = dict(fail_type=ConnectionFailTypes.connection)
     except requests.exceptions.ReadTimeout as e:
         raised = e
         if 'mute_read_timeout' not in mute:
-            logger.warning(u'Read timed out msg:%s while loading URL%s' % (ex(e), _maybe_request_url(e)))
+            logger.warning(f'Read timed out msg:{ex(e)} while loading URL{_maybe_request_url(e)}')
         if failure_monitor:
             connection_fail_params = dict(fail_type=ConnectionFailTypes.timeout)
     except (requests.exceptions.Timeout, socket.timeout) as e:
         raised = e
         if 'mute_connect_timeout' not in mute:
-            logger.warning(u'Connection timed out msg:%s while loading URL %s' % (ex(e), _maybe_request_url(e, url)))
+            logger.warning(f'Connection timed out msg:{ex(e)} while loading URL {_maybe_request_url(e, url)}')
         if failure_monitor:
             connection_fail_params = dict(fail_type=ConnectionFailTypes.connection_timeout)
     except (BaseException, Exception) as e:
         raised = e
-        logger.warning((u'Exception caught while loading URL {0}\r\nDetail... %s\r\n{1}' % ex(e),
-                        u'Unknown exception while loading URL {0}\r\nDetail... {1}')[not ex(e)]
+        logger.warning(('Exception caught while loading URL {0}\r\nDetail... %s\r\n{1}' % ex(e),
+                        'Unknown exception while loading URL {0}\r\nDetail... {1}')[not ex(e)]
                        .format(url, traceback.format_exc()))
         if failure_monitor:
             connection_fail_params = dict(fail_type=ConnectionFailTypes.other)
@@ -1008,8 +1009,8 @@ def get_url(url,  # type: AnyStr
                     result = result, session
             except (TypeError, Exception) as e:
                 raised = e
-                logger.warning(u'%s data issue from URL %s\r\nDetail... %s' % (
-                    ('Proxy browser', 'JSON')[parse_json], url, ex(e)))
+                logger.warning(f'{("Proxy browser", "JSON")[parse_json]} data issue from URL {url}\r\n'
+                               f'Detail... {ex(e)}')
 
         elif savename:
             try:
@@ -1065,11 +1066,11 @@ def scantree(path,  # type: AnyStr
     :param filter_kind: None to yield everything, True yields directories, False yields files
     :param recurse: Recursively scan the tree
     """
-    if isinstance(path, string_types) and path and ek.ek(os.path.isdir, path):
+    if isinstance(path, string_types) and path and os.path.isdir(path):
         rc_exc, rc_inc = [re.compile(rx % '|'.join(
             [x for x in (param, ([param], [])[None is param])[not isinstance(param, list)]]))
                           for rx, param in ((r'(?i)^(?:(?!%s).)*$', exclude), (r'(?i)%s', include))]
-        for entry in ek.ek(scandir, path):
+        for entry in scandir(path):
             is_dir = entry.is_dir(follow_symlinks=follow_symlinks)
             is_file = entry.is_file(follow_symlinks=follow_symlinks)
             no_filter = any([None is filter_kind, filter_kind and is_dir, not filter_kind and is_file])
@@ -1084,25 +1085,25 @@ def scantree(path,  # type: AnyStr
 
 def copy_file(src_file, dest_file):
     if os.name.startswith('posix'):
-        ek.ek(subprocess.call, ['cp', src_file, dest_file])
+        subprocess.call(['cp', src_file, dest_file])
     else:
-        ek.ek(shutil.copyfile, src_file, dest_file)
+        shutil.copyfile(src_file, dest_file)
 
     try:
-        ek.ek(shutil.copymode, src_file, dest_file)
+        shutil.copymode(src_file, dest_file)
     except OSError:
         pass
 
 
 def move_file(src_file, dest_file, raise_exceptions=False):
     try:
-        ek.ek(shutil.move, src_file, dest_file)
+        shutil.move(src_file, dest_file)
         fix_set_group_id(dest_file)
     except OSError:
         copy_file(src_file, dest_file)
-        if ek.ek(os.path.exists, dest_file):
+        if os.path.exists(dest_file):
             fix_set_group_id(dest_file)
-            ek.ek(os.unlink, src_file)
+            os.unlink(src_file)
         elif raise_exceptions:
             raise OSError('Destination file could not be created: %s' % dest_file)
 
@@ -1118,13 +1119,13 @@ def fix_set_group_id(child_path):
     if os.name in ('nt', 'ce'):
         return
 
-    parent_path = ek.ek(os.path.dirname, child_path)
-    parent_stat = ek.ek(os.stat, parent_path)
+    parent_path = os.path.dirname(child_path)
+    parent_stat = os.stat(parent_path)
     parent_mode = stat.S_IMODE(parent_stat[stat.ST_MODE])
 
     if parent_mode & stat.S_ISGID:
         parent_gid = parent_stat[stat.ST_GID]
-        child_stat = ek.ek(os.stat, child_path)
+        child_stat = os.stat(child_path)
         child_gid = child_stat[stat.ST_GID]
 
         if child_gid == parent_gid:
@@ -1134,15 +1135,15 @@ def fix_set_group_id(child_path):
         user_id = os.geteuid()  # only available on UNIX
 
         if 0 != user_id and user_id != child_path_owner:
-            logger.debug(u'Not running as root or owner of %s, not trying to set the set-group-id' % child_path)
+            logger.debug(f'Not running as root or owner of {child_path}, not trying to set the set-group-id')
             return
 
         try:
-            ek.ek(os.chown, child_path, -1, parent_gid)  # only available on UNIX
-            logger.debug(u'Respecting the set-group-ID bit on the parent directory for %s' % child_path)
+            os.chown(child_path, -1, parent_gid)  # only available on UNIX
+            logger.debug(f'Respecting the set-group-ID bit on the parent directory for {child_path}')
         except OSError:
-            logger.error(u'Failed to respect the set-group-id bit on the parent directory for %s (setting group id %i)'
-                         % (child_path, parent_gid))
+            logger.error(f'Failed to respect the set-group-id bit on the parent directory for {child_path}'
+                         f' (setting group id {parent_gid:d})')
 
 
 def remove_file_perm(filepath, log_err=True):
@@ -1154,11 +1155,11 @@ def remove_file_perm(filepath, log_err=True):
     :param log_err: False to suppress log msgs
     :return True if filepath does not exist else None if no removal
     """
-    if not ek.ek(os.path.exists, filepath):
+    if not os.path.exists(filepath):
         return True
     for t in list_range(10):  # total seconds to wait 0 - 9 = 45s over 10 iterations
         try:
-            ek.ek(os.remove, filepath)
+            os.remove(filepath)
         except OSError as e:
             if getattr(e, 'winerror', 0) not in (5, 32):  # 5=access denied (e.g. av), 32=another process has lock
                 if log_err:
@@ -1167,7 +1168,7 @@ def remove_file_perm(filepath, log_err=True):
         except (BaseException, Exception):
             pass
         time.sleep(t)
-        if not ek.ek(os.path.exists, filepath):
+        if not os.path.exists(filepath):
             return True
     if log_err:
         logger.warning('Unable to delete %s' % filepath)
@@ -1195,22 +1196,22 @@ def remove_file(filepath, tree=False, prefix_failure='', log_level=logging.INFO)
                 result = 'Deleted'
                 if TRASH_REMOVE_SHOW:
                     result = 'Trashed'
-                    ek.ek(send2trash, filepath)
+                    send2trash(filepath)
                 elif tree:
-                    ek.ek(shutil.rmtree, filepath)
+                    shutil.rmtree(filepath)
                 else:
-                    ek.ek(os.remove, filepath)
+                    os.remove(filepath)
             except OSError as e:
                 if getattr(e, 'winerror', 0) not in (5, 32):  # 5=access denied (e.g. av), 32=another process has lock
-                    logger.log(level=log_level, msg=u'%sUnable to %s %s %s: %s' %
-                                                    (prefix_failure, ('delete', 'trash')[TRASH_REMOVE_SHOW],
-                                                     ('file', 'dir')[tree], filepath, ex(e)))
+                    logger.log(level=log_level,
+                               msg=f'{prefix_failure}Unable to {("delete", "trash")[TRASH_REMOVE_SHOW]}'
+                                   f' {("file", "dir")[tree]} {filepath}: {ex(e)}')
                     break
             time.sleep(t)
-            if not ek.ek(os.path.exists, filepath):
+            if not os.path.exists(filepath):
                 break
 
-    return (None, result)[filepath and not ek.ek(os.path.exists, filepath)]
+    return (None, result)[filepath and not os.path.exists(filepath)]
 
 
 def touch_file(name, atime=None, dir_name=None):
@@ -1224,9 +1225,9 @@ def touch_file(name, atime=None, dir_name=None):
     :return: success
     """
     if None is not dir_name:
-        name = ek.ek(os.path.join, dir_name, name)
+        name = os.path.join(dir_name, name)
         if make_path(dir_name):
-            if not ek.ek(os.path.exists, name):
+            if not os.path.exists(name):
                 with io.open(name, 'w') as fh:
                     fh.flush()
             if None is atime:
@@ -1235,7 +1236,7 @@ def touch_file(name, atime=None, dir_name=None):
     if None is not atime:
         try:
             with open(name, 'a'):
-                ek.ek(os.utime, name, (atime, atime))
+                os.utime(name, (atime, atime))
             return True
         except (BaseException, Exception):
             logger.debug('File air date stamping not available on your OS')
@@ -1253,14 +1254,14 @@ def make_path(name, syno=False):
     :param syno: whether to trigger a syno library update for path
     :return: success or dir exists
     """
-    if not ek.ek(os.path.isdir, name):
+    if not os.path.isdir(name):
         # Windows, create all missing folders
         if os.name in ('nt', 'ce'):
             try:
-                logger.debug(u'Path %s doesn\'t exist, creating it' % name)
-                ek.ek(os.makedirs, name)
+                logger.debug(f"Path {name} doesn't exist, creating it")
+                os.makedirs(name)
             except (OSError, IOError) as e:
-                logger.error(u'Failed creating %s : %s' % (name, ex(e)))
+                logger.error(f'Failed creating {name} : {ex(e)}')
                 return False
 
         # not Windows, create all missing folders and set permissions
@@ -1273,19 +1274,19 @@ def make_path(name, syno=False):
                 sofar += cur_folder + os.path.sep
 
                 # if it exists then just keep walking down the line
-                if ek.ek(os.path.isdir, sofar):
+                if os.path.isdir(sofar):
                     continue
 
                 try:
-                    logger.debug(u'Path %s doesn\'t exist, creating it' % sofar)
-                    ek.ek(os.mkdir, sofar)
+                    logger.debug(f"Path {sofar} doesn't exist, creating it")
+                    os.mkdir(sofar)
                     # use normpath to remove end separator, otherwise checks permissions against itself
-                    chmod_as_parent(ek.ek(os.path.normpath, sofar))
+                    chmod_as_parent(os.path.normpath(sofar))
                     if syno:
                         # do the library update for synoindex
                         NOTIFIERS.NotifierFactory().get('SYNOINDEX').addFolder(sofar)
                 except (OSError, IOError) as e:
-                    logger.error(u'Failed creating %s : %s' % (sofar, ex(e)))
+                    logger.error(f'Failed creating {sofar} : {ex(e)}')
                     return False
 
     return True
@@ -1302,19 +1303,19 @@ def chmod_as_parent(child_path):
     if os.name in ('nt', 'ce'):
         return
 
-    parent_path = ek.ek(os.path.dirname, child_path)
+    parent_path = os.path.dirname(child_path)
 
     if not parent_path:
-        logger.debug(u'No parent path provided in %s, unable to get permissions from it' % child_path)
+        logger.debug(f'No parent path provided in {child_path}, unable to get permissions from it')
         return
 
-    parent_path_stat = ek.ek(os.stat, parent_path)
+    parent_path_stat = os.stat(parent_path)
     parent_mode = stat.S_IMODE(parent_path_stat[stat.ST_MODE])
 
-    child_path_stat = ek.ek(os.stat, child_path)
+    child_path_stat = os.stat(child_path)
     child_path_mode = stat.S_IMODE(child_path_stat[stat.ST_MODE])
 
-    if ek.ek(os.path.isfile, child_path):
+    if os.path.isfile(child_path):
         child_mode = file_bit_filter(parent_mode)
     else:
         child_mode = parent_mode
@@ -1326,15 +1327,14 @@ def chmod_as_parent(child_path):
     user_id = os.geteuid()  # only available on UNIX
 
     if 0 != user_id and user_id != child_path_owner:
-        logger.debug(u'Not running as root or owner of %s, not trying to set permissions' % child_path)
+        logger.debug(f'Not running as root or owner of {child_path}, not trying to set permissions')
         return
 
     try:
-        ek.ek(os.chmod, child_path, child_mode)
-        logger.debug(u'Setting permissions for %s to %o as parent directory has %o'
-                     % (child_path, child_mode, parent_mode))
+        os.chmod(child_path, child_mode)
+        logger.debug(f'Setting permissions for {child_path} to {child_mode:o} as parent directory has {parent_mode:o}')
     except OSError:
-        logger.error(u'Failed to set permission for %s to %o' % (child_path, child_mode))
+        logger.error(f'Failed to set permission for {child_path} to {child_mode:o}')
 
 
 def file_bit_filter(mode):
@@ -1366,17 +1366,17 @@ def write_file(filepath,  # type: AnyStr
     """
     result = False
 
-    if make_path(ek.ek(os.path.dirname, filepath)):
+    if make_path(os.path.dirname(filepath)):
         try:
             if raw:
                 empty_file = True
-                with ek.ek(io.FileIO, filepath, 'wb') as fh:
+                with io.FileIO(filepath, 'wb') as fh:
                     for chunk in data.iter_content(chunk_size=1024):
                         if chunk:
                             empty_file = False
                             fh.write(chunk)
                             fh.flush()
-                    ek.ek(os.fsync, fh.fileno())
+                    os.fsync(fh.fileno())
                 if empty_file:
                     remove_file_perm(filepath, log_err=False)
                     return result
@@ -1384,11 +1384,11 @@ def write_file(filepath,  # type: AnyStr
                 w_mode = 'w'
                 if utf8:
                     w_mode = 'a'
-                    with ek.ek(io.FileIO, filepath, 'wb') as fh:
+                    with io.FileIO(filepath, 'wb') as fh:
                         fh.write(codecs.BOM_UTF8)
 
                 if xmltree:
-                    with ek.ek(io.FileIO, filepath, w_mode) as fh:
+                    with io.FileIO(filepath, w_mode) as fh:
                         params = {}
                         if utf8:
                             params = dict(encoding='utf-8')
@@ -1397,10 +1397,10 @@ def write_file(filepath,  # type: AnyStr
                         data.write(fh, **params)
                 else:
                     if isinstance(data, text_type):
-                        with ek.ek(io.open, filepath, w_mode, encoding='utf-8') as fh:
+                        with io.open(filepath, w_mode, encoding='utf-8') as fh:
                             fh.write(data)
                     else:
-                        with ek.ek(io.FileIO, filepath, w_mode) as fh:
+                        with io.FileIO(filepath, w_mode) as fh:
                             fh.write(data)
 
             chmod_as_parent(filepath)
@@ -1451,7 +1451,7 @@ def replace_extension(filename, new_ext):
 def long_path(path):
     # type: (AnyStr) -> AnyStr
     """add long path prefix for Windows"""
-    if 'nt' == os.name and 260 < len(path) and not path.startswith('\\\\?\\') and ek.ek(os.path.isabs, path):
+    if 'nt' == os.name and 260 < len(path) and not path.startswith('\\\\?\\') and os.path.isabs(path):
         return '\\\\?\\' + path
     return path
 
@@ -1504,8 +1504,7 @@ def cmdline_runner(cmd, shell=False, suppress_stderr=False, env=None):
     if isinstance(env, dict):
         kw.update(env=dict(os.environ, **env))
 
-    if not PY2:
-        kw.update(dict(encoding=ek.SYS_ENCODING, text=True, bufsize=0))
+    kw.update(dict(encoding=SYS_ENCODING, text=True, bufsize=0))
 
     if 'win32' == sys.platform:
         kw['creationflags'] = 0x08000000   # CREATE_NO_WINDOW (needed for py2exe)
@@ -1571,8 +1570,6 @@ def int_to_time(d_int):
     """
     convert integer from dt_to_int back to datetime.time
 
-    :param d_int: integer
-    :return: datetime.time
     """
     if None is d_int:
         return None
@@ -1611,19 +1608,19 @@ def ast_eval(value, default=None):
     """Convert string typed value into actual Python type and value
 
     :param value: string value to convert
-    :param default: value to return if cannot convert
+    :param default: value to return if it cannot convert
     :return: converted type and value or default
     """
     if not isinstance(value, string_types):
         return default
 
     if 'OrderedDict()' == value:
-        value = ordered_dict()
+        value = dict()
 
     elif 'OrderedDict([(' == value[0:14]:
         try:
             list_of_tuples = ast.literal_eval(value[12:-1])
-            value = ordered_dict()
+            value = dict()
             for cur_tuple in list_of_tuples:
                 value[cur_tuple[0]] = cur_tuple[1]
         except (BaseException, Exception):
@@ -1668,8 +1665,8 @@ def calc_age(birthday, deathday=None, date=None):
     # type: (datetime.date, datetime.date, Optional[datetime.date]) -> Optional[int]
     """
     returns age based on current date or given date
-    :param birthday: birth date
-    :param deathday: death date
+    :param birthday: birthdate
+    :param deathday: deathdate
     :param date:
     """
     if isinstance(birthday, datetime.date):
@@ -1678,7 +1675,7 @@ def calc_age(birthday, deathday=None, date=None):
         try:
             b_d = birthday.replace(year=today.year)
 
-        # raised when birth date is February 29
+        # raised when birthdate is February 29
         # and the current year is not a leap year
         except ValueError:
             b_d = birthday.replace(year=today.year, month=birthday.month + 1, day=1)

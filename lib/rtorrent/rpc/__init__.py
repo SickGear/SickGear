@@ -27,8 +27,6 @@ import re
 
 import rtorrent
 
-from _23 import filter_iter, map_list
-
 
 def get_varname(rpc_call):
     """Transform rpc method into variable name.
@@ -94,8 +92,8 @@ class Method(object):
 
         if rt_obj.get_client_version_tuple() >= self.min_version:
             try:
-                self.varname = get_varname(next(filter_iter(lambda f: rt_obj.method_exists(f),
-                                                            (self.rpc_call,) + tuple(getattr(self, 'aliases', '')))))
+                self.varname = get_varname(next(filter(lambda f: rt_obj.method_exists(f),
+                                                       (self.rpc_call,) + tuple(getattr(self, 'aliases', '')))))
                 return True
             except (BaseException, Exception):
                 pass
@@ -162,7 +160,7 @@ class Multicall(object):
             getattr(xmc, rpc_call)(*args)
 
         try:
-            results = tuple(next(filter_iter(lambda x: isinstance(x, list), xmc().results)))
+            results = tuple(next(filter(lambda x: isinstance(x, list), xmc().results)))
         except (BaseException, Exception):
             return [[]]
 
@@ -216,8 +214,8 @@ def find_method(rpc_call):
     """Return L{Method} instance associated with given RPC call"""
     try:
         rpc_call = rpc_call.lower()
-        return next(filter_iter(lambda m: rpc_call in map_list(
-            lambda n: n.lower(), [m.rpc_call] + list(getattr(m, 'aliases', []))),
+        return next(filter(lambda m: rpc_call in list(map(
+            lambda n: n.lower(), [m.rpc_call] + list(getattr(m, 'aliases', [])))),
                       rtorrent.methods + rtorrent.torrent.methods +
                       rtorrent.file.methods + rtorrent.tracker.methods + rtorrent.peer.methods))
     except (BaseException, Exception):

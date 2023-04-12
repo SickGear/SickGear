@@ -144,7 +144,7 @@ class QualityTests(unittest.TestCase):
 
     def check_quality_names(self, quality, cases):
         for fn in cases:
-            second = common.Quality.nameQuality(fn)
+            second = common.Quality.name_quality(fn)
             self.assertEqual(quality, second, msg='fail [%s] != [%s] for case: %s' %
                                                   (Quality.qualityStrings[quality], Quality.qualityStrings[second], fn))
 
@@ -157,7 +157,7 @@ class QualityTests(unittest.TestCase):
 
     def check_wantedquality_list(self, cases):
         for show_quality, result in cases:
-            sq = common.Quality.combineQualities(*show_quality)
+            sq = common.Quality.combine_qualities(*show_quality)
             wd = common.WantedQualities()
             _ = wd.get_wantedlist(sq, False, common.Quality.NONE, common.UNAIRED, manual=True)
             for w, v in iteritems(wd):
@@ -167,7 +167,7 @@ class QualityTests(unittest.TestCase):
 
     def check_wantedquality_get_wantedlist(self, cases):
         for show_quality, result in cases:
-            sq = common.Quality.combineQualities(*show_quality)
+            sq = common.Quality.combine_qualities(*show_quality)
             wd = common.WantedQualities()
             for case, wlist in result:
                 ka = {'qualities': sq}
@@ -178,7 +178,7 @@ class QualityTests(unittest.TestCase):
     def check_sceneQuality(self, cases):
         msg = 'Test case: "%s", actual: [%s] != expected: [%s]'
         for show_name, result in cases:
-            sq = common.Quality.sceneQuality(show_name[0], show_name[1])
+            sq = common.Quality.scene_quality(show_name[0], show_name[1])
             self.assertEqual(result, sq, msg=msg % (show_name[0], Quality.qualityStrings[sq],
                                                     Quality.qualityStrings[result]))
 
@@ -186,8 +186,8 @@ class QualityTests(unittest.TestCase):
 
     def test_SDTV(self):
 
-        self.assertEqual(common.Quality.compositeStatus(common.DOWNLOADED, common.Quality.SDTV),
-                         common.Quality.statusFromName('Test.Show.S01E02-GROUP.mkv'))
+        self.assertEqual(common.Quality.composite_status(common.DOWNLOADED, common.Quality.SDTV),
+                         common.Quality.status_from_name('Test.Show.S01E02-GROUP.mkv'))
 
     def test_qualites(self):
         self.longMessage = True

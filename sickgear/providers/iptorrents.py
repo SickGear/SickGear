@@ -24,7 +24,7 @@ from ..helpers import try_int
 
 from bs4_parser import BS4Parser
 
-from _23 import b64decodestring, unidecode
+from _23 import b64decodestring
 from six import iteritems
 
 
@@ -58,7 +58,7 @@ class IPTorrentsProvider(generic.TorrentProvider):
                 ['IPTorrents' in y, 'type="password"' not in y[0:2048], self.has_all_cookies()] +
                 [(self.session.cookies.get(c, domain='') or 'sg!no!pw') in self.digest
                  for c in ('uid', 'pass')])),
-            failed_msg=(lambda y=None: u'Invalid cookie details for %s. Check settings'))
+            failed_msg=(lambda y=None: 'Invalid cookie details for %s. Check settings'))
 
     @staticmethod
     def _has_signature(data=None):
@@ -77,7 +77,6 @@ class IPTorrentsProvider(generic.TorrentProvider):
             urls = []
             for search_string in search_params[mode]:
                 urls += [[]]
-                search_string = unidecode(search_string) or search_string
                 for page in range((3, 5)['Cache' == mode])[1:]:
                     # URL with 50 tv-show results, or max 150 if adjusted in IPTorrents profile
                     urls[-1] += [self.urls['search'] % (
@@ -155,7 +154,7 @@ class IPTorrentsProvider(generic.TorrentProvider):
                 except generic.HaltParseException:
                     pass
                 except (BaseException, Exception):
-                    logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
+                    logger.error(f'Failed to parse. Traceback: {traceback.format_exc()}')
                 self._log_search(mode, len(items[mode]) - cnt, search_url, log_settings_hint)
 
                 if self.is_search_finished(mode, items, cnt_search, rc['id'], last_recent_search, lrs_new, lrs_found):

@@ -25,7 +25,7 @@ from .. import logger
 from ..helpers import try_int
 from bs4_parser import BS4Parser
 
-from _23 import b64decodestring, unidecode
+from _23 import b64decodestring
 from six import iteritems
 
 
@@ -90,7 +90,6 @@ class ThePirateBayProvider(generic.TorrentProvider):
 
         for mode in search_params:
             for search_string in search_params[mode]:
-                search_string = unidecode(search_string)
 
                 if 'Cache' != mode:
                     search_url = self.urls['api'] % search_string
@@ -114,7 +113,7 @@ class ThePirateBayProvider(generic.TorrentProvider):
                             if not self._reject_item(seeders, leechers):
                                 status, info_hash = [cur_item.get(k) for k in ('status', 'info_hash')]
                                 if self.confirmed and not rc['verify'].search(status):
-                                    logger.log(u'Skipping untrusted non-verified result: ' + title, logger.DEBUG)
+                                    logger.debug('Skipping untrusted non-verified result: ' + title)
                                     continue
                                 download_magnet = info_hash if '&tr=' in info_hash \
                                     else self._dhtless_magnet(info_hash, title)
@@ -237,7 +236,7 @@ class ThePirateBayProvider(generic.TorrentProvider):
                             if self.confirmed and not (
                                     tr.find('img', title=rc['verify']) or tr.find('img', alt=rc['verify'])
                                     or tr.find('img', src=rc['verify'])):
-                                logger.log(u'Skipping untrusted non-verified result: ' + title, logger.DEBUG)
+                                logger.debug('Skipping untrusted non-verified result: ' + title)
                                 continue
 
                             if title and download_magnet:
@@ -246,7 +245,7 @@ class ThePirateBayProvider(generic.TorrentProvider):
                 except generic.HaltParseException:
                     pass
                 except (BaseException, Exception):
-                    logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
+                    logger.error(f'Failed to parse. Traceback: {traceback.format_exc()}')
                 self._log_search(mode, len(items[mode]) - cnt, search_url)
 
             results = self._sort_seeding(mode, results + items[mode])

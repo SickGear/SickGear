@@ -25,7 +25,6 @@ from .. import logger
 from ..helpers import try_int
 from bs4_parser import BS4Parser
 
-from _23 import filter_iter, unidecode
 from six import iteritems
 
 
@@ -55,7 +54,7 @@ class BlutopiaProvider(generic.TorrentProvider):
     def _authorised(self, **kwargs):
 
         return super(BlutopiaProvider, self)._authorised(
-            logged_in=self.logged_in, failed_msg=(lambda y=None: u'Invalid cookie details for %s. Check settings'))
+            logged_in=self.logged_in, failed_msg=(lambda y=None: 'Invalid cookie details for %s. Check settings'))
 
     def logged_in(self, resp=None):
 
@@ -103,11 +102,10 @@ class BlutopiaProvider(generic.TorrentProvider):
                 show_type = self.show_obj.air_by_date and 'Air By Date' \
                             or self.show_obj.is_sports and 'Sports' or None
                 if show_type:
-                    logger.log(u'Provider does not carry shows of type: [%s], skipping' % show_type, logger.DEBUG)
+                    logger.debug(f'Provider does not carry shows of type: [{show_type}], skipping')
                     return results
 
             for search_string in search_params[mode]:
-                search_string = unidecode(search_string)
                 search_url = self.urls['search'] % (
                     self._token, search_string.replace('.', ' '), self._categories_string(template=''), '', '', '')
 
@@ -136,7 +134,7 @@ class BlutopiaProvider(generic.TorrentProvider):
                                 marked = ','.join([x.attrs.get('data-original-title', '').lower() for x in tr.find_all(
                                     'i', attrs={'class': ['text-gold', 'fa-diamond', 'fa-certificate']})])
                                 # noinspection PyTypeChecker
-                                munged = ''.join(filter_iter(marked.__contains__, ['free', 'double', 'feat']))
+                                munged = ''.join(filter(marked.__contains__, ['free', 'double', 'feat']))
                                 # noinspection PyUnboundLocalVariable
                                 if ((non_marked and rc['filter'].search(munged)) or
                                         (not non_marked and not rc['filter'].search(munged))):
@@ -161,7 +159,7 @@ class BlutopiaProvider(generic.TorrentProvider):
                 except generic.HaltParseException:
                     pass
                 except (BaseException, Exception):
-                    logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
+                    logger.error(f'Failed to parse. Traceback: {traceback.format_exc()}')
 
                 self._log_search(mode, len(items[mode]) - cnt, log + search_url)
 

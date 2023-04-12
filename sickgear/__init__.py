@@ -34,11 +34,9 @@ import threading
 import uuid
 import zlib
 
-# noinspection PyPep8Naming
-import encodingKludge as ek
 from . import classes, db, helpers, image_cache, indexermapper, logger, metadata, naming, people_queue, providers, \
     scene_exceptions, scene_numbering, scheduler, search_backlog, search_propers, search_queue, search_recent, \
-    show_queue, show_updater, subtitles, trakt_helpers, traktChecker, version_checker, watchedstate_queue
+    show_queue, show_updater, subtitles, trakt_helpers, version_checker, watchedstate_queue
 from . import auto_post_processer, properFinder  # must come after the above imports
 from .common import SD, SKIPPED, USER_AGENT
 from .config import check_section, check_setting_int, check_setting_str, ConfigMigrator, minimax
@@ -57,8 +55,8 @@ from browser_ua import get_ua
 from configobj import ConfigObj
 from api_trakt import TraktAPI
 
-from _23 import b64encodestring, decode_bytes, filter_iter, list_items, map_list, ordered_dict, scandir
-from six import iteritems, PY2, string_types
+from _23 import b64encodestring, decode_bytes, scandir
+from six import iteritems, string_types
 import sg_helpers
 
 # noinspection PyUnreachableCode
@@ -121,9 +119,9 @@ REMOVE_FILENAME_CHARS = None
 IMPORT_DEFAULT_CHECKED_SHOWS = 0
 # /non ui settings
 
-providerList = []
-newznabProviderList = []
-torrentRssProviderList = []
+provider_list = []
+newznab_providers = []
+torrent_rss_providers = []
 metadata_provider_dict = {}
 
 MODULE_UPDATE_STRING = None
@@ -513,7 +511,7 @@ ANIDB_USE_MYLIST = False
 ADBA_CONNECTION = None  # type: Connection
 ANIME_TREAT_AS_HDTV = False
 
-GUI_NAME = None
+GUI_NAME = ''
 DEFAULT_HOME = None
 FANART_LIMIT = None
 FANART_PANEL = None
@@ -657,7 +655,7 @@ def initialize(console_logging=True):
 def init_stage_1(console_logging):
 
     # Misc
-    global showList, showDict, switched_shows, providerList, newznabProviderList, torrentRssProviderList, \
+    global showList, showDict, switched_shows, provider_list, newznab_providers, torrent_rss_providers, \
         WEB_HOST, WEB_ROOT, ACTUAL_CACHE_DIR, CACHE_DIR, ZONEINFO_DIR, ADD_SHOWS_WO_DIR, ADD_SHOWS_METALANG, \
         CREATE_MISSING_SHOW_DIRS, SHOW_DIRS_WITH_DOTS, \
         RECENTSEARCH_STARTUP, NAMING_FORCE_FOLDERS, SOCKET_TIMEOUT, DEBUG, TVINFO_DEFAULT, \
@@ -668,7 +666,7 @@ def init_stage_1(console_logging):
     # Add Show Defaults
     global QUALITY_DEFAULT, WANTED_BEGIN_DEFAULT, WANTED_LATEST_DEFAULT, SHOW_TAG_DEFAULT, PAUSE_DEFAULT, \
         STATUS_DEFAULT, SCENE_DEFAULT, SUBTITLES_DEFAULT, FLATTEN_FOLDERS_DEFAULT, ANIME_DEFAULT
-    # Post processing
+    # Post-processing
     global KEEP_PROCESSED_DIR, PROCESS_LAST_DIR, PROCESS_LAST_METHOD, PROCESS_LAST_CLEANUP
     # Views
     global GUI_NAME, HOME_LAYOUT, FOOTER_TIME_LAYOUT, POSTER_SORTBY, POSTER_SORTDIR, DISPLAY_SHOW_SPECIALS, \
@@ -805,15 +803,15 @@ def init_stage_1(console_logging):
         CACHE_DIR = ACTUAL_CACHE_DIR
 
     if not helpers.make_dir(CACHE_DIR):
-        logger.log(u'!!! Creating local cache dir failed, using system default', logger.ERROR)
+        logger.error('!!! creating local cache dir failed, using system default')
         CACHE_DIR = None
 
     # clean cache folders
     if CACHE_DIR:
         helpers.clear_cache()
-        ZONEINFO_DIR = ek.ek(os.path.join, CACHE_DIR, 'zoneinfo')
-        if not ek.ek(os.path.isdir, ZONEINFO_DIR) and not helpers.make_path(ZONEINFO_DIR):
-            logger.log(u'!!! Creating local zoneinfo dir failed', logger.ERROR)
+        ZONEINFO_DIR = os.path.join(CACHE_DIR, 'zoneinfo')
+        if not os.path.isdir(ZONEINFO_DIR) and not helpers.make_path(ZONEINFO_DIR):
+            logger.error('!!! creating local zoneinfo dir failed')
     sg_helpers.CACHE_DIR = CACHE_DIR
     sg_helpers.DATA_DIR = DATA_DIR
 
@@ -832,7 +830,7 @@ def init_stage_1(console_logging):
     TRIM_ZERO = bool(check_setting_int(CFG, 'GUI', 'trim_zero', 0))
     DATE_PRESET = check_setting_str(CFG, 'GUI', 'date_preset', '%x')
     TIME_PRESET_W_SECONDS = check_setting_str(CFG, 'GUI', 'time_preset', '%I:%M:%S %p')
-    TIME_PRESET = TIME_PRESET_W_SECONDS.replace(u':%S', u'')
+    TIME_PRESET = TIME_PRESET_W_SECONDS.replace(':%S', '')
     TIMEZONE_DISPLAY = check_setting_str(CFG, 'GUI', 'timezone_display', 'network')
     SHOW_TAGS = check_setting_str(CFG, 'GUI', 'show_tags', 'Show List').split(',')
     SHOW_TAG_DEFAULT = check_setting_str(CFG, 'GUI', 'show_tag_default',
@@ -844,7 +842,7 @@ def init_stage_1(console_logging):
     LOG_DIR = os.path.normpath(os.path.join(DATA_DIR, ACTUAL_LOG_DIR))
 
     if not helpers.make_dir(LOG_DIR):
-        logger.log(u'!!! No log folder, logging to screen only!', logger.ERROR)
+        logger.error('!!! no log folder, logging to screen only!')
 
     FILE_LOGGING_PRESET = check_setting_str(CFG, 'General', 'file_logging_preset', 'DEBUG')
     if bool(check_setting_int(CFG, 'General', 'file_logging_db', 0)):
@@ -1054,8 +1052,8 @@ def init_stage_1(console_logging):
     NZBGET_SKIP_PM = bool(check_setting_int(CFG, 'NZBGet', 'nzbget_skip_process_media', 0))
 
     try:
-        ng_script_file = ek.ek(os.path.join, ek.ek(os.path.dirname, ek.ek(os.path.dirname, __file__)),
-                               'autoProcessTV', 'SickGear-NG', 'SickGear-NG.py')
+        ng_script_file = os.path.join(os.path.dirname(os.path.dirname(__file__)),
+                                      'autoProcessTV', 'SickGear-NG', 'SickGear-NG.py')
         with io.open(ng_script_file, 'r', encoding='utf8') as ng:
             text = ng.read()
         NZBGET_SCRIPT_VERSION = re.search(r""".*version: (\d+\.\d+)""", text, flags=re.M).group(1)
@@ -1355,10 +1353,10 @@ def init_stage_1(console_logging):
     EPISODE_VIEW_MISSED_RANGE = check_setting_int(CFG, 'GUI', 'episode_view_missed_range', 7)
 
     HISTORY_LAYOUT = check_setting_str(CFG, 'GUI', 'history_layout', 'detailed')
-    BROWSELIST_HIDDEN = map_list(
+    BROWSELIST_HIDDEN = list(map(
         lambda y: TVidProdid.glue in y and y or '%s%s%s' % (
             (TVINFO_TVDB, TVINFO_IMDB)[bool(helpers.parse_imdb_id(y))], TVidProdid.glue, y),
-        [x.strip() for x in check_setting_str(CFG, 'GUI', 'browselist_hidden', '').split('|~|') if x.strip()])
+        [x.strip() for x in check_setting_str(CFG, 'GUI', 'browselist_hidden', '').split('|~|') if x.strip()]))
     BROWSELIST_MRU = sg_helpers.ast_eval(check_setting_str(CFG, 'GUI', 'browselist_prefs', None), {})
 
     BACKUP_DB_PATH = check_setting_str(CFG, 'Backup', 'backup_db_path', '')
@@ -1372,16 +1370,16 @@ def init_stage_1(console_logging):
     sg_helpers.DOMAIN_FAILURES.load_from_db()
 
     # initialize NZB and TORRENT providers
-    providerList = providers.makeProviderList()
+    provider_list = providers.provider_modules()
 
     NEWZNAB_DATA = check_setting_str(CFG, 'Newznab', 'newznab_data', '')
-    newznabProviderList = providers.getNewznabProviderList(NEWZNAB_DATA)
+    newznab_providers = providers.newznab_source_list(NEWZNAB_DATA)
 
     torrentrss_data = check_setting_str(CFG, 'TorrentRss', 'torrentrss_data', '')
-    torrentRssProviderList = providers.getTorrentRssProviderList(torrentrss_data)
+    torrent_rss_providers = providers.torrent_rss_source_list(torrentrss_data)
 
     # dynamically load provider settings
-    for torrent_prov in [curProvider for curProvider in providers.sortedProviderList()
+    for torrent_prov in [curProvider for curProvider in providers.sorted_sources()
                          if GenericProvider.TORRENT == curProvider.providerType]:
         prov_id = torrent_prov.get_id()
         prov_id_uc = torrent_prov.get_id().upper()
@@ -1426,7 +1424,7 @@ def init_stage_1(console_logging):
                 elif isinstance(default, int):
                     setattr(torrent_prov, attr, check_setting_int(CFG, prov_id_uc, attr_check, default))
 
-    for nzb_prov in [curProvider for curProvider in providers.sortedProviderList()
+    for nzb_prov in [curProvider for curProvider in providers.sorted_sources()
                      if GenericProvider.NZB == curProvider.providerType]:
         prov_id = nzb_prov.get_id()
         prov_id_uc = nzb_prov.get_id().upper()
@@ -1452,10 +1450,10 @@ def init_stage_1(console_logging):
                     setattr(nzb_prov, attr, check_setting_str(CFG, prov_id_uc, attr_check, default))
                 elif isinstance(default, int):
                     setattr(nzb_prov, attr, check_setting_int(CFG, prov_id_uc, attr_check, default))
-    for cur_provider in filter_iter(lambda p: abs(zlib.crc32(decode_bytes(p.name))) + 40000400 in (
+    for cur_provider in filter(lambda p: abs(zlib.crc32(decode_bytes(p.name))) + 40000400 in (
             1449593765, 1597250020, 1524942228, 160758496, 2925374331
     ) or (p.url and abs(zlib.crc32(decode_bytes(re.sub(r'[./]', '', p.url[-10:])))) + 40000400 in (
-            2417143804,)), providers.sortedProviderList()):
+            2417143804,)), providers.sorted_sources()):
         header = {'User-Agent': get_ua()}
         if hasattr(cur_provider, 'nn'):
             cur_provider.nn = False
@@ -1490,7 +1488,7 @@ def init_stage_1(console_logging):
         ('docker/other', 'snap')['snap' in CUR_COMMIT_HASH]
 
     if not os.path.isfile(CONFIG_FILE):
-        logger.log(u'Unable to find \'%s\', all settings will be default!' % CONFIG_FILE, logger.DEBUG)
+        logger.debug(f'Unable to find \'{CONFIG_FILE}\', all settings will be default!')
         update_config = True
 
     # Get expected config version
@@ -1506,24 +1504,6 @@ def init_stage_1(console_logging):
         except (BaseException, Exception):
             pass
     logger.sb_log_instance.init_logging(console_logging=console_logging)
-
-    if PY2:
-        try:
-            import _scandir
-        except ImportError:
-            _scandir = None
-
-        try:
-            import ctypes
-        except ImportError:
-            ctypes = None
-
-        if None is not _scandir and None is not ctypes and not getattr(_scandir, 'DirEntry', None):
-            MODULE_UPDATE_STRING = \
-                'Your scandir binary module is outdated, using the slow but newer Python module.' \
-                '<br>Upgrade the binary at a command prompt with' \
-                ' # <span class="boldest">python -m pip install -U scandir</span>' \
-                '<br>Important: You <span class="boldest">must</span> Shutdown SickGear before upgrading'
 
     showList = []
     showDict = {}
@@ -1559,19 +1539,19 @@ def init_stage_2():
 
     # initialize main database
     my_db = db.DBConnection()
-    db.MigrationCode(my_db)
+    db.migration_code(my_db)
 
     # initialize the cache database
     my_db = db.DBConnection('cache.db')
-    db.upgradeDatabase(my_db, cache_db.InitialSchema)
+    db.upgrade_database(my_db, cache_db.InitialSchema)
 
     # initialize the failed downloads database
     my_db = db.DBConnection('failed.db')
-    db.upgradeDatabase(my_db, failed_db.InitialSchema)
+    db.upgrade_database(my_db, failed_db.InitialSchema)
 
     # fix up any db problems
     my_db = db.DBConnection()
-    db.sanityCheckDatabase(my_db, mainDB.MainSanityCheck)
+    db.sanity_check_db(my_db, mainDB.MainSanityCheck)
 
     # initialize metadata_providers
     metadata_provider_dict = metadata.get_metadata_generator_dict()
@@ -1594,40 +1574,40 @@ def init_stage_2():
     update_now = datetime.timedelta(minutes=0)
     update_software_scheduler = scheduler.Scheduler(
         version_checker.SoftwareUpdater(),
-        cycleTime=datetime.timedelta(hours=UPDATE_INTERVAL),
-        threadName='SOFTWAREUPDATER',
+        cycle_time=datetime.timedelta(hours=UPDATE_INTERVAL),
+        thread_name='SOFTWAREUPDATER',
         silent=False)
 
     update_packages_scheduler = scheduler.Scheduler(
         version_checker.PackagesUpdater(),
-        cycleTime=datetime.timedelta(hours=UPDATE_PACKAGES_INTERVAL),
+        cycle_time=datetime.timedelta(hours=UPDATE_PACKAGES_INTERVAL),
         # run_delay=datetime.timedelta(minutes=2),
-        threadName='PACKAGESUPDATER',
+        thread_name='PACKAGESUPDATER',
         silent=False)
 
     show_queue_scheduler = scheduler.Scheduler(
         show_queue.ShowQueue(),
-        cycleTime=datetime.timedelta(seconds=3),
-        threadName='SHOWQUEUE')
+        cycle_time=datetime.timedelta(seconds=3),
+        thread_name='SHOWQUEUE')
 
     show_update_scheduler = scheduler.Scheduler(
         show_updater.ShowUpdater(),
-        cycleTime=datetime.timedelta(hours=1),
+        cycle_time=datetime.timedelta(hours=1),
         start_time=datetime.time(hour=SHOW_UPDATE_HOUR),
-        threadName='SHOWUPDATER',
-        prevent_cycle_run=show_queue_scheduler.action.isShowUpdateRunning)  # 3AM
+        thread_name='SHOWUPDATER',
+        prevent_cycle_run=show_queue_scheduler.action.is_show_update_running)  # 3AM
 
     people_queue_scheduler = scheduler.Scheduler(
         people_queue.PeopleQueue(),
-        cycleTime=datetime.timedelta(seconds=3),
-        threadName='PEOPLEQUEUE'
+        cycle_time=datetime.timedelta(seconds=3),
+        thread_name='PEOPLEQUEUE'
     )
 
     # searchers
     search_queue_scheduler = scheduler.Scheduler(
         search_queue.SearchQueue(),
-        cycleTime=datetime.timedelta(seconds=3),
-        threadName='SEARCHQUEUE')
+        cycle_time=datetime.timedelta(seconds=3),
+        thread_name='SEARCHQUEUE')
 
     init_search_delay = int(os.environ.get('INIT_SEARCH_DELAY', 0))
 
@@ -1635,13 +1615,13 @@ def init_stage_2():
     update_interval = datetime.timedelta(minutes=(RECENTSEARCH_INTERVAL, 1)[4499 == RECENTSEARCH_INTERVAL])
     recent_search_scheduler = scheduler.Scheduler(
         search_recent.RecentSearcher(),
-        cycleTime=update_interval,
+        cycle_time=update_interval,
         run_delay=update_now if RECENTSEARCH_STARTUP else datetime.timedelta(minutes=init_search_delay or 5),
-        threadName='RECENTSEARCHER',
+        thread_name='RECENTSEARCHER',
         prevent_cycle_run=search_queue_scheduler.action.is_recentsearch_in_progress)
 
-    if [x for x in providers.sortedProviderList() if x.is_active() and
-            getattr(x, 'enable_backlog', None) and GenericProvider.NZB == x.providerType]:
+    if [x for x in providers.sorted_sources()
+            if x.is_active() and getattr(x, 'enable_backlog', None) and GenericProvider.NZB == x.providerType]:
         nextbacklogpossible = datetime.datetime.fromtimestamp(
             search_backlog.BacklogSearcher().last_runtime) + datetime.timedelta(hours=23)
         now = datetime.datetime.now()
@@ -1657,9 +1637,9 @@ def init_stage_2():
         backlogdelay = 10
     backlog_search_scheduler = search_backlog.BacklogSearchScheduler(
         search_backlog.BacklogSearcher(),
-        cycleTime=datetime.timedelta(minutes=get_backlog_cycle_time()),
+        cycle_time=datetime.timedelta(minutes=get_backlog_cycle_time()),
         run_delay=datetime.timedelta(minutes=init_search_delay or backlogdelay),
-        threadName='BACKLOG',
+        thread_name='BACKLOG',
         prevent_cycle_run=search_queue_scheduler.action.is_standard_backlog_in_progress)
 
     propers_searcher = search_propers.ProperSearcher()
@@ -1672,26 +1652,22 @@ def init_stage_2():
 
     proper_finder_scheduler = scheduler.Scheduler(
         propers_searcher,
-        cycleTime=datetime.timedelta(days=1),
+        cycle_time=datetime.timedelta(days=1),
         run_delay=datetime.timedelta(minutes=init_search_delay or properdelay),
-        threadName='FINDPROPERS',
+        thread_name='FINDPROPERS',
         prevent_cycle_run=search_queue_scheduler.action.is_propersearch_in_progress)
 
     # processors
     media_process_scheduler = scheduler.Scheduler(
         auto_post_processer.PostProcesser(),
-        cycleTime=datetime.timedelta(minutes=MEDIAPROCESS_INTERVAL),
-        threadName='POSTPROCESSER',
+        cycle_time=datetime.timedelta(minutes=MEDIAPROCESS_INTERVAL),
+        thread_name='POSTPROCESSER',
         silent=not PROCESS_AUTOMATICALLY)
-    """
-    trakt_checker_scheduler = scheduler.Scheduler(
-        traktChecker.TraktChecker(), cycleTime=datetime.timedelta(hours=1),
-        threadName='TRAKTCHECKER', silent=not USE_TRAKT)
-    """
+
     subtitles_finder_scheduler = scheduler.Scheduler(
         subtitles.SubtitlesFinder(),
-        cycleTime=datetime.timedelta(hours=SUBTITLES_FINDER_INTERVAL),
-        threadName='FINDSUBTITLES',
+        cycle_time=datetime.timedelta(hours=SUBTITLES_FINDER_INTERVAL),
+        thread_name='FINDSUBTITLES',
         silent=not USE_SUBTITLES)
 
     background_mapping_task = threading.Thread(name='MAPPINGSUPDATER', target=indexermapper.load_mapped_ids,
@@ -1699,28 +1675,28 @@ def init_stage_2():
 
     watched_state_queue_scheduler = scheduler.Scheduler(
         watchedstate_queue.WatchedStateQueue(),
-        cycleTime=datetime.timedelta(seconds=3),
-        threadName='WATCHEDSTATEQUEUE')
+        cycle_time=datetime.timedelta(seconds=3),
+        thread_name='WATCHEDSTATEQUEUE')
 
     emby_watched_state_scheduler = scheduler.Scheduler(
         EmbyWatchedStateUpdater(),
-        cycleTime=datetime.timedelta(minutes=EMBY_WATCHEDSTATE_INTERVAL),
+        cycle_time=datetime.timedelta(minutes=EMBY_WATCHEDSTATE_INTERVAL),
         run_delay=datetime.timedelta(minutes=5),
-        threadName='EMBYWATCHEDSTATE')
+        thread_name='EMBYWATCHEDSTATE')
 
     plex_watched_state_scheduler = scheduler.Scheduler(
         PlexWatchedStateUpdater(),
-        cycleTime=datetime.timedelta(minutes=PLEX_WATCHEDSTATE_INTERVAL),
+        cycle_time=datetime.timedelta(minutes=PLEX_WATCHEDSTATE_INTERVAL),
         run_delay=datetime.timedelta(minutes=5),
-        threadName='PLEXWATCHEDSTATE')
+        thread_name='PLEXWATCHEDSTATE')
 
     MEMCACHE['history_tab_limit'] = 11
     MEMCACHE['history_tab'] = History.menu_tab(MEMCACHE['history_tab_limit'])
 
     try:
-        for f in ek.ek(scandir, ek.ek(os.path.join, PROG_DIR, 'gui', GUI_NAME, 'images', 'flags')):
+        for f in scandir(os.path.join(PROG_DIR, 'gui', GUI_NAME, 'images', 'flags')):
             if f.is_file():
-                MEMCACHE_FLAG_IMAGES[ek.ek(os.path.splitext, f.name)[0].lower()] = True
+                MEMCACHE_FLAG_IMAGES[os.path.splitext(f.name)[0].lower()] = True
     except (BaseException, Exception):
         pass
 
@@ -1752,7 +1728,7 @@ def start():
                                           and True is not TVInfoAPI(i).config.get('people_only')]
             background_mapping_task.start()
 
-            for p in providers.sortedProviderList():
+            for p in providers.sorted_sources():
                 if p.is_active() and getattr(p, 'ping_iv', None):
                     # noinspection PyProtectedMember
                     provider_ping_thread_pool[p.get_id()] = threading.Thread(
@@ -1771,19 +1747,20 @@ def restart(soft=True, update_pkg=None):
         if update_pkg:
             MY_ARGS.append('--update-pkg')
 
+        logger.log('Trigger event restart')
         events.put(events.SystemEvent.RESTART)
 
     else:
         halt()
         save_all()
-        logger.log(u'Re-initializing all data')
+        logger.log('Re-initializing all data')
         initialize()
 
 
 def sig_handler(signum=None, _=None):
     is_ctrlbreak = 'win32' == sys.platform and signal.SIGBREAK == signum
-    msg = u'Signal "%s" found' % (signal.SIGINT == signum and 'CTRL-C' or is_ctrlbreak and 'CTRL+BREAK' or
-                                  signal.SIGTERM == signum and 'Termination' or signum)
+    msg = 'Signal "%s" found' % (signal.SIGINT == signum and 'CTRL-C' or is_ctrlbreak and 'CTRL+BREAK' or
+                                 signal.SIGTERM == signum and 'Termination' or signum)
     if None is signum or signum in (signal.SIGINT, signal.SIGTERM) or is_ctrlbreak:
         logger.log('%s, saving and exiting...' % msg)
         events.put(events.SystemEvent.SHUTDOWN)
@@ -1794,8 +1771,10 @@ def sig_handler(signum=None, _=None):
 def halt():
     global __INITIALIZED__, started
 
+    logger.debug('Check INIT_LOCK on halt')
     with INIT_LOCK:
 
+        logger.debug(f'Check __INITIALIZED__ on halt: {__INITIALIZED__}')
         if __INITIALIZED__:
 
             logger.log('Exiting threads')
@@ -1852,12 +1831,12 @@ def save_all():
         global showList
 
         # write all shows
-        logger.log(u'Saving all shows to the database')
+        logger.log('Saving all shows to the database')
         for show_obj in showList:  # type: tv.TVShow
             show_obj.save_to_db()
 
     # save config
-    logger.log(u'Saving config file to disk')
+    logger.log('Saving config file to disk')
     save_config()
 
 
@@ -1865,9 +1844,9 @@ def save_config():
     new_config = ConfigObj()
     new_config.filename = CONFIG_FILE
 
-    # For passwords you must include the word `password` in the item_name and
+    # For passwords, you must include the word `password` in the item_name and
     # add `helpers.encrypt(ITEM_NAME, ENCRYPTION_VERSION)` in save_config()
-    new_config['General'] = ordered_dict()
+    new_config['General'] = dict()
     s_z = check_setting_int(CFG, 'General', 'stack_size', 0)
     if s_z:
         new_config['General']['stack_size'] = s_z
@@ -1929,8 +1908,9 @@ def save_config():
     new_config['General']['flatten_folders_default'] = int(FLATTEN_FOLDERS_DEFAULT)
     new_config['General']['anime_default'] = int(ANIME_DEFAULT)
     new_config['General']['provider_order'] = ' '.join(PROVIDER_ORDER)
-    new_config['General']['provider_homes'] = '%s' % dict([(pid, v) for pid, v in list_items(PROVIDER_HOMES) if pid in [
-        p.get_id() for p in [x for x in providers.sortedProviderList() if GenericProvider.TORRENT == x.providerType]]])
+    new_config['General']['provider_homes'] = '%s' % dict([(pid, v) for pid, v in list(PROVIDER_HOMES.items())
+                                                           if pid in [
+        p.get_id() for p in [x for x in providers.sorted_sources() if GenericProvider.TORRENT == x.providerType]]])
     new_config['General']['update_notify'] = int(UPDATE_NOTIFY)
     new_config['General']['update_auto'] = int(UPDATE_AUTO)
     new_config['General']['update_interval'] = int(UPDATE_INTERVAL)
@@ -2016,7 +1996,7 @@ def save_config():
     new_config['Backup']['backup_db_max_count'] = BACKUP_DB_MAX_COUNT
 
     default_not_zero = ('enable_recentsearch', 'enable_backlog', 'enable_scheduled_backlog', 'use_after_get_data')
-    for src in filter_iter(lambda px: GenericProvider.TORRENT == px.providerType, providers.sortedProviderList()):
+    for src in filter(lambda px: GenericProvider.TORRENT == px.providerType, providers.sorted_sources()):
         src_id = src.get_id()
         src_id_uc = src_id.upper()
         new_config[src_id_uc] = {}
@@ -2054,19 +2034,19 @@ def save_config():
             del new_config[src_id_uc]
 
     default_not_zero = ('enable_recentsearch', 'enable_backlog', 'enable_scheduled_backlog')
-    for src in filter_iter(lambda px: GenericProvider.NZB == px.providerType, providers.sortedProviderList()):
+    for src in filter(lambda px: GenericProvider.NZB == px.providerType, providers.sorted_sources()):
         src_id = src.get_id()
         src_id_uc = src.get_id().upper()
         new_config[src_id_uc] = {}
         if int(src.enabled):
             new_config[src_id_uc][src_id] = int(src.enabled)
 
-        for attr in filter_iter(lambda _a: None is not getattr(src, _a, None),
-                                ('api_key', 'digest', 'username', 'search_mode')):
+        for attr in filter(lambda _a: None is not getattr(src, _a, None),
+                           ('api_key', 'digest', 'username', 'search_mode')):
             if 'search_mode' != attr or 'eponly' != getattr(src, attr):
                 new_config[src_id_uc]['%s_%s' % (src_id, attr)] = getattr(src, attr)
 
-        for attr in filter_iter(lambda _a: None is not getattr(src, _a, None), (
+        for attr in filter(lambda _a: None is not getattr(src, _a, None), (
                 'enable_recentsearch', 'enable_backlog', 'enable_scheduled_backlog',
                 'scene_only', 'scene_loose', 'scene_loose_active',
                 'scene_rej_nuked', 'scene_nuked_active',
@@ -2282,7 +2262,7 @@ def save_config():
         cfg_lc = cfg.lower()
         cfg_keys += [cfg]
         new_config[cfg] = {}
-        for (k, v) in filter_iter(lambda arg: any([arg[1]]) or (
+        for (k, v) in filter(lambda arg: any([arg[1]]) or (
                 # allow saving where item value default is non-zero but 0 is a required setting value
                 cfg_lc in ('kodi', 'xbmc', 'synoindex', 'nzbget', 'torrent', 'telegram')
                 and arg[0] in ('always_on', 'priority', 'send_image'))
@@ -2322,13 +2302,13 @@ def save_config():
                 new_config[notifier]['%s_notify_onsubtitledownload' % notifier.lower()] = int(onsubtitledownload)
 
     # remove empty stanzas
-    for k in filter_iter(lambda c: not new_config[c], cfg_keys):
+    for k in filter(lambda c: not new_config[c], cfg_keys):
         del new_config[k]
 
     new_config['Newznab'] = {}
     new_config['Newznab']['newznab_data'] = NEWZNAB_DATA
 
-    torrent_rss = '!!!'.join([x.config_str() for x in torrentRssProviderList])
+    torrent_rss = '!!!'.join([x.config_str() for x in torrent_rss_providers])
     if torrent_rss:
         new_config['TorrentRss'] = {}
         new_config['TorrentRss']['torrentrss_data'] = torrent_rss
@@ -2420,4 +2400,4 @@ def launch_browser(start_port=None):
         try:
             webbrowser.open(browser_url, 1, True)
         except (BaseException, Exception):
-            logger.log('Unable to launch a browser', logger.ERROR)
+            logger.error('Unable to launch a browser')

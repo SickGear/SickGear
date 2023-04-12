@@ -20,8 +20,6 @@ import traceback
 
 import exceptions_helper
 from exceptions_helper import ex
-# noinspection PyPep8Naming
-import encodingKludge as ek
 
 import sickgear
 from . import db, logger, network_timezones, properFinder, ui
@@ -72,101 +70,100 @@ class ShowUpdater(object):
             if sickgear.db.db_supports_backup and 0 < sickgear.BACKUP_DB_MAX_COUNT:
                 logger.log('backing up all db\'s')
                 try:
-                    sickgear.db.backup_all_dbs(sickgear.BACKUP_DB_PATH or
-                                                ek.ek(os.path.join, sickgear.DATA_DIR, 'backup'))
+                    sickgear.db.backup_all_dbs(sickgear.BACKUP_DB_PATH or os.path.join(sickgear.DATA_DIR, 'backup'))
                 except (BaseException, Exception):
-                    logger.log('backup db error', logger.ERROR)
+                    logger.error('backup db error')
 
             # refresh network timezones
             try:
                 network_timezones.update_network_dict()
             except (BaseException, Exception):
-                logger.log('network timezone update error', logger.ERROR)
-                logger.log(traceback.format_exc(), logger.ERROR)
+                logger.error('network timezone update error')
+                logger.error(traceback.format_exc())
 
             # refresh webdl types
             try:
                 properFinder.load_webdl_types()
             except (BaseException, Exception):
-                logger.log('error loading webdl_types', logger.DEBUG)
+                logger.debug('error loading webdl_types')
 
             # update xem id lists
             try:
                 sickgear.scene_exceptions.get_xem_ids()
             except (BaseException, Exception):
-                logger.log('xem id list update error', logger.ERROR)
-                logger.log(traceback.format_exc(), logger.ERROR)
+                logger.error('xem id list update error')
+                logger.error(traceback.format_exc())
 
             # update scene exceptions
             try:
                 sickgear.scene_exceptions.retrieve_exceptions()
             except (BaseException, Exception):
-                logger.log('scene exceptions update error', logger.ERROR)
-                logger.log(traceback.format_exc(), logger.ERROR)
+                logger.error('scene exceptions update error')
+                logger.error(traceback.format_exc())
 
             # clear the data of unused providers
             try:
                 sickgear.helpers.clear_unused_providers()
             except (BaseException, Exception):
-                logger.log('unused provider cleanup error', logger.ERROR)
-                logger.log(traceback.format_exc(), logger.ERROR)
+                logger.error('unused provider cleanup error')
+                logger.error(traceback.format_exc())
 
             # cleanup image cache
             try:
                 sickgear.helpers.cleanup_cache()
             except (BaseException, Exception):
-                logger.log('image cache cleanup error', logger.ERROR)
-                logger.log(traceback.format_exc(), logger.ERROR)
+                logger.error('image cache cleanup error')
+                logger.error(traceback.format_exc())
 
             # check tvinfo cache
             try:
                 for i in sickgear.TVInfoAPI().all_sources:
                     sickgear.TVInfoAPI(i).setup().check_cache()
             except (BaseException, Exception):
-                logger.log('tvinfo cache check error', logger.ERROR)
-                logger.log(traceback.format_exc(), logger.ERROR)
+                logger.error('tvinfo cache check error')
+                logger.error(traceback.format_exc())
 
             # cleanup tvinfo cache
             try:
                 for i in sickgear.TVInfoAPI().all_sources:
                     sickgear.TVInfoAPI(i).setup().clean_cache()
             except (BaseException, Exception):
-                logger.log('tvinfo cache cleanup error', logger.ERROR)
-                logger.log(traceback.format_exc(), logger.ERROR)
+                logger.error('tvinfo cache cleanup error')
+                logger.error(traceback.format_exc())
 
             # cleanup ignore and require lists
             try:
                 clean_ignore_require_words()
-            except Exception:
-                logger.log('ignore, require words cleanup error', logger.ERROR)
-                logger.log(traceback.format_exc(), logger.ERROR)
+            except (BaseException, Exception):
+                logger.error('ignore, require words cleanup error')
+                logger.error(traceback.format_exc())
 
             # cleanup manual search history
             sickgear.search_queue.remove_old_fifo(sickgear.search_queue.MANUAL_SEARCH_HISTORY)
 
             # add missing mapped ids
             if not sickgear.background_mapping_task.is_alive():
-                logger.log(u'Updating the TV info mappings')
+                logger.log('Updating the TV info mappings')
                 import threading
                 try:
                     sickgear.background_mapping_task = threading.Thread(
                         name='MAPPINGSUPDATER', target=sickgear.indexermapper.load_mapped_ids, kwargs={'update': True})
                     sickgear.background_mapping_task.start()
                 except (BaseException, Exception):
-                    logger.log('missing mapped ids update error', logger.ERROR)
-                    logger.log(traceback.format_exc(), logger.ERROR)
+                    logger.error('missing mapped ids update error')
+                    logger.error(traceback.format_exc())
 
-            logger.log(u'Doing full update on all shows')
+            logger.log('Doing full update on all shows')
 
             # clean out cache directory, remove everything > 12 hours old
             try:
                 sickgear.helpers.clear_cache()
             except (BaseException, Exception):
-                logger.log('cache dir cleanup error', logger.ERROR)
-                logger.log(traceback.format_exc(), logger.ERROR)
+                logger.error('cache dir cleanup error')
+                logger.error(traceback.format_exc())
 
             # select 10 'Ended' tv_shows updated more than 90 days ago
-            # and all shows not updated more then 180 days ago to include in this update
+            # and all shows not updated more than 180 days ago to include in this update
             stale_should_update = []
             stale_update_date = (update_date - datetime.timedelta(days=90)).toordinal()
             stale_update_date_max = (update_date - datetime.timedelta(days=180)).toordinal()
@@ -204,28 +201,28 @@ class ShowUpdater(object):
                 try:
                     # if should_update returns True (not 'Ended') or show is selected stale 'Ended' then update,
                     # otherwise just refresh
-                    if cur_show_obj.should_update(update_date=update_date,
-                                                  last_indexer_change=show_updates.get(cur_show_obj.tvid, {}).
-                                                          get(cur_show_obj.prodid)) \
+                    if cur_show_obj.should_update(
+                            update_date=update_date,
+                            last_indexer_change=show_updates.get(cur_show_obj.tvid, {}).get(cur_show_obj.prodid)) \
                             or cur_show_obj.tvid_prodid in stale_should_update:
-                        cur_queue_item = sickgear.show_queue_scheduler.action.updateShow(cur_show_obj,
-                                                                                          scheduled_update=True)
+                        cur_queue_item = sickgear.show_queue_scheduler.action.update_show(
+                            cur_show_obj, scheduled_update=True)
                     else:
-                        logger.debug(u'Not updating episodes for show %s because it\'s marked as ended and last/next'
-                                     u' episode is not within the grace period.' % cur_show_obj.unique_name)
-                        cur_queue_item = sickgear.show_queue_scheduler.action.refreshShow(cur_show_obj, True, True)
+                        logger.debug(f'Not updating episodes for show {cur_show_obj.unique_name} because it\'s'
+                                     f' marked as ended and last/next episode is not within the grace period.')
+                        cur_queue_item = sickgear.show_queue_scheduler.action.refresh_show(cur_show_obj, True, True)
 
                     pi_list.append(cur_queue_item)
 
                 except (exceptions_helper.CantUpdateException, exceptions_helper.CantRefreshException) as e:
-                    logger.log(u'Automatic update failed: ' + ex(e), logger.ERROR)
+                    logger.error(f'Automatic update failed: {ex(e)}')
 
             if len(pi_list):
                 sickgear.show_queue_scheduler.action.daily_update_running = True
 
-            ui.ProgressIndicators.setIndicator('dailyUpdate', ui.QueueProgressIndicator('Daily Update', pi_list))
+            ui.ProgressIndicators.set_indicator('dailyUpdate', ui.QueueProgressIndicator('Daily Update', pi_list))
 
-            logger.log(u'Added all shows to show queue for full update')
+            logger.log('Added all shows to show queue for full update')
 
         finally:
             self.amActive = False

@@ -30,7 +30,7 @@ class PushalotNotifier(Notifier):
 
         pushalot_auth_token = self._choose(pushalot_auth_token, sickgear.PUSHALOT_AUTHORIZATIONTOKEN)
 
-        self._log_debug(u'Title: %s, Message: %s, API: %s' % (title, body, pushalot_auth_token))
+        self._log_debug(f'Title: {title}, Message: {body}, API: {pushalot_auth_token}')
 
         http_handler = moves.http_client.HTTPSConnection('pushalot.com')
 
@@ -49,7 +49,7 @@ class PushalotNotifier(Notifier):
 
             if 200 != response.status:
                 if 410 == response.status:
-                    result = u'Authentication, %s (bad API key?)' % response.reason
+                    result = f'Authentication, {response.reason} (bad API key?)'
                 else:
                     result = 'Http response code "%s"' % response.status
 

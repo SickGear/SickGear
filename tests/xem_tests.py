@@ -61,12 +61,12 @@ class XEMBasicTests(test.SickbeardTestDBCase):
         curRegex = '^' + escaped_name + r'\W+(?:(?:S\d[\dE._ -])|(?:\d\d?x)|(?:\d{4}\W\d\d\W\d\d)|(?:(?:part|pt)' \
                                         r'[\._ -]?(\d|[ivx]))|Season\W+\d+\W+|E\d+\W+|(?:\d{1,3}.+\d{1,}[a-zA-Z]{2}' \
                                         r'\W+[a-zA-Z]{3,}\W+\d{4}.+))'
-        # print(u"Checking if show " + name + " matches " + curRegex)
+        # print("Checking if show " + name + " matches " + curRegex)
 
         # noinspection PyUnusedLocal
         match = re.search(curRegex, name, re.I)
         # if match:
-        #     print(u"Matched " + curRegex + " to " + name)
+        #     print("Matched " + curRegex + " to " + name)
 
 
 if '__main__' == __name__:

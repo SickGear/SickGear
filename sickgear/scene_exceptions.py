@@ -25,20 +25,18 @@ import threading
 import traceback
 
 import sickgear
-# noinspection PyPep8Naming
-import encodingKludge as ek
 from exceptions_helper import ex
 from json_helper import json_load
 from . import db, helpers, logger, name_cache
 from .anime import create_anidb_obj
 from .classes import OrderedDefaultdict
 from .indexers.indexer_config import TVINFO_TVDB
-from .sgdatetime import timestamp_near
+from .sgdatetime import SGDatetime
 
 import lib.rarfile.rarfile as rarfile
 
-from _23 import filter_iter, list_range, map_iter
-from six import iteritems, PY2, text_type
+from _23 import list_range
+from six import iteritems
 
 # noinspection PyUnreachableCode
 if False:
@@ -70,9 +68,9 @@ def should_refresh(name, max_refresh_age_secs=86400, remaining=False):
     if rows:
         last_refresh = int(rows[0]['last_refreshed'])
         if remaining:
-            time_left = (last_refresh + max_refresh_age_secs - int(timestamp_near(datetime.datetime.now())))
+            time_left = (last_refresh + max_refresh_age_secs - SGDatetime.timestamp_near())
             return (0, time_left)[time_left > 0]
-        return int(timestamp_near(datetime.datetime.now())) > last_refresh + max_refresh_age_secs
+        return SGDatetime.timestamp_near() > last_refresh + max_refresh_age_secs
     return True
 
 
@@ -84,7 +82,7 @@ def set_last_refresh(name):
     """
     my_db = db.DBConnection()
     my_db.upsert('scene_exceptions_refresh',
-                 {'last_refreshed': int(timestamp_near(datetime.datetime.now()))},
+                 {'last_refreshed': SGDatetime.timestamp_near()},
                  {'list': name})
 
 
@@ -231,10 +229,10 @@ def retrieve_exceptions():
     """
     global exception_dict, anidb_exception_dict, xem_exception_dict
 
-    # exceptions are stored on github pages
+    # exceptions are stored on GitHub pages
     for tvid in sickgear.TVInfoAPI().sources:
         if should_refresh(sickgear.TVInfoAPI(tvid).name):
-            logger.log(u'Checking for scene exception updates for %s' % sickgear.TVInfoAPI(tvid).name)
+            logger.log(f'Checking for scene exception updates for {sickgear.TVInfoAPI(tvid).name}')
 
             url = sickgear.TVInfoAPI(tvid).config.get('scene_url')
             if not url:
@@ -243,7 +241,7 @@ def retrieve_exceptions():
             url_data = helpers.get_url(url)
             if None is url_data:
                 # When None is urlData, trouble connecting to github
-                logger.log(u'Check scene exceptions update failed. Unable to get URL: %s' % url, logger.ERROR)
+                logger.error(f'Check scene exceptions update failed. Unable to get URL: {url}')
                 continue
 
             else:
@@ -305,16 +303,13 @@ def retrieve_exceptions():
                                             list(cur_tvid_prodid))]
 
         # if this exception isn't already in the DB then add it
-        for cur_exception_dict in filter_iter(lambda e: e not in existing_exceptions, exception_dict[cur_tvid_prodid]):
+        for cur_exception_dict in filter(lambda e: e not in existing_exceptions, exception_dict[cur_tvid_prodid]):
             try:
                 cur_exception, cur_season = next(iteritems(cur_exception_dict))
             except (BaseException, Exception):
-                logger.log('scene exception error', logger.ERROR)
-                logger.log(traceback.format_exc(), logger.ERROR)
+                logger.error('scene exception error')
+                logger.error(traceback.format_exc())
                 continue
-
-            if PY2 and not isinstance(cur_exception, text_type):
-                cur_exception = text_type(cur_exception, 'utf-8', 'replace')
 
             cl.append(['INSERT INTO scene_exceptions'
                        ' (indexer, indexer_id, show_name, season) VALUES (?,?,?,?)',
@@ -323,13 +318,13 @@ def retrieve_exceptions():
 
     if cl:
         my_db.mass_action(cl)
-        name_cache.buildNameCache(update_only_scene=True)
+        name_cache.build_name_cache(update_only_scene=True)
 
     # since this could invalidate the results of the cache we clear it out after updating
     if changed_exceptions:
-        logger.log(u'Updated scene exceptions')
+        logger.log('Updated scene exceptions')
     else:
-        logger.log(u'No scene exceptions update needed')
+        logger.log('No scene exceptions update needed')
 
     # cleanup
     exception_dict.clear()
@@ -358,26 +353,22 @@ def update_scene_exceptions(tvid, prodid, scene_exceptions):
     # A change has been made to the scene exception list. Let's clear the cache, to make this visible
     exceptionsCache[(tvid, prodid)] = defaultdict(list)
 
-    logger.log(u'Updating scene exceptions', logger.MESSAGE)
+    logger.log('Updating scene exceptions', logger.MESSAGE)
     for exception in scene_exceptions:
         cur_season, cur_exception = exception.split('|', 1)
         try:
             cur_season = int(cur_season)
         except (BaseException, Exception):
-            logger.log('invalid scene exception: %s - %s:%s' % ('%s:%s' % (tvid, prodid), cur_season, cur_exception),
-                       logger.ERROR)
+            logger.error('invalid scene exception: %s - %s:%s' % ('%s:%s' % (tvid, prodid), cur_season, cur_exception))
             continue
 
         exceptionsCache[(tvid, prodid)][cur_season].append(cur_exception)
-
-        if PY2 and not isinstance(cur_exception, text_type):
-            cur_exception = text_type(cur_exception, 'utf-8', 'replace')
 
         my_db.action('INSERT INTO scene_exceptions'
                      ' (indexer, indexer_id, show_name, season) VALUES (?,?,?,?)',
                      [tvid, prodid, cur_exception, cur_season])
 
-    sickgear.name_cache.buildNameCache(update_only_scene=True)
+    sickgear.name_cache.build_name_cache(update_only_scene=True)
 
 
 def _custom_exceptions_fetcher():
@@ -385,29 +376,29 @@ def _custom_exceptions_fetcher():
     cnt_updated_numbers = 0
 
     src_id = 'GHSG'
-    logger.log(u'Checking to update custom alternatives from %s' % src_id)
+    logger.log(f'Checking to update custom alternatives from {src_id}')
 
-    dirpath = ek.ek(os.path.join, sickgear.CACHE_DIR, 'alts')
-    tmppath = ek.ek(os.path.join, dirpath, 'tmp')
-    file_rar = ek.ek(os.path.join, tmppath, 'alt.rar')
-    file_cache = ek.ek(os.path.join, dirpath, 'alt.json')
+    dirpath = os.path.join(sickgear.CACHE_DIR, 'alts')
+    tmppath = os.path.join(dirpath, 'tmp')
+    file_rar = os.path.join(tmppath, 'alt.rar')
+    file_cache = os.path.join(dirpath, 'alt.json')
     iv = 30 * 60  # min interval to fetch updates
     refresh = should_refresh(src_id, iv)
-    fetch_data = not ek.ek(os.path.isfile, file_cache) or (not int(os.environ.get('NO_ALT_GET', 0)) and refresh)
+    fetch_data = not os.path.isfile(file_cache) or (not int(os.environ.get('NO_ALT_GET', 0)) and refresh)
     if fetch_data:
-        if ek.ek(os.path.exists, tmppath):
+        if os.path.exists(tmppath):
             helpers.remove_file(tmppath, tree=True)
         helpers.make_path(tmppath)
         helpers.download_file(r'https://github.com/SickGear/sickgear.altdata/raw/main/alt.rar', file_rar)
 
         rar_handle = None
         if 'win32' == sys.platform:
-            rarfile.UNRAR_TOOL = ek.ek(os.path.join, sickgear.PROG_DIR, 'lib', 'rarfile', 'UnRAR.exe')
+            rarfile.UNRAR_TOOL = os.path.join(sickgear.PROG_DIR, 'lib', 'rarfile', 'UnRAR.exe')
         try:
             rar_handle = rarfile.RarFile(file_rar)
             rar_handle.extractall(path=dirpath, pwd='sickgear_alt')
         except(BaseException, Exception) as e:
-            logger.log(u'Failed to unpack archive: %s with error: %s' % (file_rar, ex(e)), logger.ERROR)
+            logger.error(f'Failed to unpack archive: {file_rar} with error: {ex(e)}')
 
         if rar_handle:
             rar_handle.close()
@@ -418,8 +409,8 @@ def _custom_exceptions_fetcher():
     if refresh:
         set_last_refresh(src_id)
 
-    if not fetch_data and not ek.ek(os.path.isfile, file_cache):
-        logger.debug(u'Unable to fetch custom exceptions, skipped: %s' % file_rar)
+    if not fetch_data and not os.path.isfile(file_cache):
+        logger.debug(f'Unable to fetch custom exceptions, skipped: {file_rar}')
         return custom_exception_dict, cnt_updated_numbers, should_refresh(src_id, iv, remaining=True)
 
     data = {}
@@ -427,7 +418,7 @@ def _custom_exceptions_fetcher():
         with io.open(file_cache) as fh:
             data = json_load(fh)
     except(BaseException, Exception) as e:
-        logger.log(u'Failed to unpack json data: %s with error: %s' % (file_rar, ex(e)), logger.ERROR)
+        logger.error(f'Failed to unpack json data: {file_rar} with error: {ex(e)}')
 
     # handle data
     from .scene_numbering import find_scene_numbering, set_scene_numbering_helper
@@ -467,11 +458,9 @@ def _custom_exceptions_fetcher():
                         used.add((for_season, for_episode, target_season, target_episode))
                         if sn and ((for_season, for_episode) + sn) not in used \
                                 and (for_season, for_episode) not in used:
-                            logger.log(
-                                u'Skipped setting "%s" episode %sx%s to target a release %sx%s because set to %sx%s'
-                                % (show_obj.unique_name, for_season, for_episode,
-                                   target_season, target_episode, sn[0], sn[1]),
-                                logger.DEBUG)
+                            logger.debug(f'Skipped setting "{show_obj.unique_name}" episode {for_season}x{for_episode}'
+                                         f' to target a release {target_season}x{target_episode}'
+                                         f' because set to {sn[0]}x{sn[1]}')
                         else:
                             used.add((for_season, for_episode))
                             if not sn or sn != (target_season, target_episode):  # not already set
@@ -490,8 +479,8 @@ def _anidb_exceptions_fetcher():
     global anidb_exception_dict
 
     if should_refresh('anidb'):
-        logger.log(u'Checking for AniDB scene exception updates')
-        for cur_show_obj in filter_iter(lambda _s: _s.is_anime and TVINFO_TVDB == _s.tvid, sickgear.showList):
+        logger.log('Checking for AniDB scene exception updates')
+        for cur_show_obj in filter(lambda _s: _s.is_anime and TVINFO_TVDB == _s.tvid, sickgear.showList):
             try:
                 anime = create_anidb_obj(name=cur_show_obj.name, tvdbid=cur_show_obj.prodid, autoCorrectName=True)
             except (BaseException, Exception):
@@ -514,15 +503,15 @@ def _xem_exceptions_fetcher():
 
     if should_refresh(xem_list):
         for tvid in [i for i in sickgear.TVInfoAPI().sources if 'xem_origin' in sickgear.TVInfoAPI(i).config]:
-            logger.log(u'Checking for XEM scene exception updates for %s' % sickgear.TVInfoAPI(tvid).name)
+            logger.log(f'Checking for XEM scene exception updates for {sickgear.TVInfoAPI(tvid).name}')
 
-            url = 'http://thexem.info/map/allNames?origin=%s%s&seasonNumbers=1'\
+            url = 'https://thexem.info/map/allNames?origin=%s%s&seasonNumbers=1'\
                   % (sickgear.TVInfoAPI(tvid).config['xem_origin'], ('&language=us', '')['xem' == xem_list])
 
             parsed_json = helpers.get_url(url, parse_json=True, timeout=90)
             if not parsed_json:
-                logger.log(u'Check scene exceptions update failed for %s, Unable to get URL: %s'
-                           % (sickgear.TVInfoAPI(tvid).name, url), logger.ERROR)
+                logger.error(f'Check scene exceptions update failed for {sickgear.TVInfoAPI(tvid).name},'
+                             f' Unable to get URL: {url}')
                 continue
 
             if 'failure' == parsed_json['result']:
@@ -551,24 +540,23 @@ def _xem_get_ids(infosrc_name, xem_origin):
     """
     xem_ids = []
 
-    url = 'http://thexem.info/map/havemap?origin=%s' % xem_origin
+    url = 'https://thexem.info/map/havemap?origin=%s' % xem_origin
 
     task = 'Fetching show ids with%s xem scene mapping%s for origin'
-    logger.log(u'%s %s' % (task % ('', 's'), infosrc_name))
+    logger.log(f'{task % ("", "s")} {infosrc_name}')
     parsed_json = helpers.get_url(url, parse_json=True, timeout=90)
     if not isinstance(parsed_json, dict) or not parsed_json:
-        logger.log(u'Failed %s %s, Unable to get URL: %s'
-                   % (task.lower() % ('', 's'), infosrc_name, url), logger.ERROR)
+        logger.error(f'Failed {task.lower() % ("", "s")} {infosrc_name},'
+                     f' Unable to get URL: {url}')
     else:
         if 'success' == parsed_json.get('result', '') and 'data' in parsed_json:
-            xem_ids = list(set(filter_iter(lambda prodid: 0 < prodid,
-                                           map_iter(lambda pid: helpers.try_int(pid), parsed_json['data']))))
+            xem_ids = list(set(filter(lambda prodid: 0 < prodid,
+                                      map(lambda pid: helpers.try_int(pid), parsed_json['data']))))
             if 0 == len(xem_ids):
-                logger.log(u'Failed %s %s, no data items parsed from URL: %s'
-                           % (task.lower() % ('', 's'), infosrc_name, url), logger.WARNING)
+                logger.warning(f'Failed {task.lower() % ("", "s")} {infosrc_name},'
+                               f' no data items parsed from URL: {url}')
 
-    logger.log(u'Finished %s %s' % (task.lower() % (' %s' % len(xem_ids), helpers.maybe_plural(xem_ids)),
-                                    infosrc_name))
+    logger.log(f'Finished {task.lower() % (f" {len(xem_ids)}", helpers.maybe_plural(xem_ids))} {infosrc_name}')
     return xem_ids
 
 
@@ -591,6 +579,6 @@ def has_abs_episodes(ep_obj=None, name=None):
     :return:
     :rtype: bool
     """
-    return any([(name or ep_obj.show_obj.name or '').lower().startswith(x.lower()) for x in [
+    return any((name or ep_obj.show_obj.name or '').lower().startswith(x.lower()) for x in [
         'The Eighties', 'The Making of the Mob', 'The Night Of', 'Roots 2016', 'Trepalium'
-    ]])
+    ])

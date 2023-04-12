@@ -105,7 +105,7 @@
 #except
     #pass
 #end try
-#if not any([x in $body_attr for x in ['back-art', 'pro', 'ii']])
+#if not any(x in $body_attr for x in ['back-art', 'pro', 'ii'])
     #set $parts = $body_attr.split('class="')
     #set $body_attr = ('class="%s '.join($parts), $parts[0] + ' class="%s"')[1 == len($parts)] % {0: '', 1: 'pro', 2: 'pro ii'}.get(getattr($sickgear, 'DISPLAY_SHOW_VIEWMODE', 0))
 #end if
@@ -222,7 +222,7 @@
     #for item in $history_compact
         #if 'tvid_prodid' in $item
             #set $action = $item['actions'][0]
-            #set $curStatus, $curQuality = $Quality.splitCompositeStatus(int($action['action']))
+            #set $curStatus, $curQuality = $Quality.split_composite_status(int($action['action']))
             #set $status = None
             #if $curStatus in $SNATCHED_ANY + [$FAILED]
                 #set $status = 'snatched'
@@ -392,6 +392,13 @@
 		<p>Nov 2022:
 		To remove this red box, and to prevent a future startup failure when the outdated `<span style="color:#fff">SickBeard.py</span>` is removed,
 		<br>please change whatever starts SickGear to run `<em><span style="color:#fff">sickgear.py</em></span>`.</p>
+	</div>
+#end if
+##
+#if $sickgear.MEMCACHE.get('DEPRECATE_PP_LEGACY')
+	<div style="background-color:#a00; margin-top:35px; padding:5px 5px 1px 5px">
+		<p>Mar 2020: The `<em><span style="color:#fff">nzbToMedia</em></span>`  script began using the <em><span style="color:#fff">secure</em></span> API to process media</p>
+		<p>Mar 2023: To remove this red box, please follow this <a target="_blank" href="https://github.com/SickGear/SickGear/wiki/FAQ-nzbToMedia"><span style="color:#fff">guidance</span></a></p>
 	</div>
 #end if
 ##

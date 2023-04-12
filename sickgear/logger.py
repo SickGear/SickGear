@@ -31,7 +31,7 @@ from logging.handlers import TimedRotatingFileHandler
 
 import sickgear
 from . import classes
-from .sgdatetime import timestamp_near
+from .sgdatetime import SGDatetime
 from sg_helpers import md5_for_text, remove_file_perm
 
 # noinspection PyUnreachableCode
@@ -51,7 +51,7 @@ MESSAGE = logging.INFO
 DEBUG = logging.DEBUG
 DB = 5
 
-reverseNames = {u'ERROR': ERROR, u'WARNING': WARNING, u'INFO': MESSAGE, u'DEBUG': DEBUG, u'DB': DB}
+reverseNames = {'ERROR': ERROR, 'WARNING': WARNING, 'INFO': MESSAGE, 'DEBUG': DEBUG, 'DB': DB}
 
 
 # suppress output with this handler
@@ -198,7 +198,7 @@ class SBRotatingLogHandler(object):
         mem_key = 'logger'
         for to_log in log_list:
             log_id = md5_for_text(to_log)
-            now = int(timestamp_near(datetime.datetime.now()))
+            now = SGDatetime.timestamp_near()
             expired = now > sickgear.MEMCACHE.get(mem_key, {}).get(log_id, 0)
             sickgear.MEMCACHE[mem_key] = {}
             sickgear.MEMCACHE[mem_key][log_id] = 2 + now
@@ -263,8 +263,8 @@ class SBRotatingLogHandler(object):
                 buf = fh.read(min(remaining_size, buf_size))
                 remaining_size -= buf_size
                 lines = buf.split('\n')
-                # the first line of the buffer is probably not a complete line so
-                # we'll save it and append it to the last line of the next buffer
+                # the first line of the buffer is probably not a complete line,
+                # so save it and append it to the last line of the next buffer
                 # we read
                 if None is not segment:
                     # if the previous chunk starts right from the beginning of line
@@ -337,9 +337,8 @@ class TimedCompressedRotatingFileHandler(TimedRotatingFileHandler):
         except AttributeError:
             pass
 
-        import encodingKludge
         try:
-            encodingKludge.ek(os.rename, self.baseFilename, dfn)
+            os.rename(self.baseFilename, dfn)
         except (BaseException, Exception):
             pass
 
@@ -360,9 +359,8 @@ class TimedCompressedRotatingFileHandler(TimedRotatingFileHandler):
         if 0 < self.backupCount:
             # find the oldest log file and delete it
             # phase out files named sickgear.log in favour of sickgear.logs over backup_count days
-            all_names = encodingKludge.ek(glob.glob, file_name + '_*') + \
-                        encodingKludge.ek(glob.glob, encodingKludge.ek(os.path.join, encodingKludge.ek(
-                            os.path.dirname, file_name), 'sickbeard_*'))
+            all_names = glob.glob(file_name + '_*') \
+                        + glob.glob(os.path.join(os.path.dirname(file_name), 'sickbeard_*'))
             if len(all_names) > self.backupCount:
                 all_names.sort()
                 self.delete_logfile(all_names[0])

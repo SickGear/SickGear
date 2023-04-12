@@ -1,13 +1,5 @@
 import sys
 
-# noinspection PyPep8Naming
-import encodingKludge as ek
-
-if ek.EXIT_BAD_ENCODING:
-    print('Sorry, you MUST add the SickGear folder to the PYTHONPATH environment variable')
-    print('or find another way to force Python to use %s for string encoding.' % ek.SYS_ENCODING)
-    sys.exit(1)
-
 # #################################
 # Sanity check passed, can continue
 # #################################
@@ -18,8 +10,7 @@ import re
 from json_helper import json_loads
 from sg_helpers import cmdline_runner, is_virtualenv
 
-from _23 import filter_list, ordered_dict
-from six import iteritems, PY2
+from six import iteritems
 
 # noinspection PyUnreachableCode
 if False:
@@ -32,7 +23,7 @@ def is_pip_ok():
 
     :return: True if pip is ok
     """
-    pip_ok = '/' != ek.ek(os.path.expanduser, '~')
+    pip_ok = '/' != os.path.expanduser('~')
     if pip_ok:
         pip_version, _, _ = _get_pip_version()
         if not pip_version:
@@ -59,10 +50,6 @@ def run_pip(pip_cmd, suppress_stderr=False):
         pip_cmd += ['--progress-bar', 'off']
 
     new_pip_arg = ['--no-python-version-warning']
-    if PY2:
-        pip_version, _, _ = _get_pip_version()
-        if pip_version and 20 > int(pip_version.split('.')[0]):
-            new_pip_arg = []
 
     return cmdline_runner(
         [sys.executable, '-m', 'pip'] + new_pip_arg + ['--disable-pip-version-check'] + pip_cmd,
@@ -80,7 +67,7 @@ def initial_requirements():
             from Cheetah import VersionTuple
 
             is_cheetah2 = (3, 0, 0) > VersionTuple[0:3]
-            is_cheetah3py3 = not PY2 and (3, 3, 0) > VersionTuple[0:3]
+            is_cheetah3py3 = (3, 3, 0) > VersionTuple[0:3]
             if not (is_cheetah2 or is_cheetah3py3):
                 return
 
@@ -115,7 +102,7 @@ def initial_requirements():
 
 
 def extras_failed_filepath(data_dir):
-    return ek.ek(os.path.join, data_dir, '.pip_req_spec_failed.txt')
+    return os.path.join(data_dir, '.pip_req_spec_failed.txt')
 
 
 def load_ignorables(data_dir):
@@ -124,7 +111,7 @@ def load_ignorables(data_dir):
     data = []
 
     filepath = extras_failed_filepath(data_dir)
-    if ek.ek(os.path.isfile, filepath):
+    if os.path.isfile(filepath):
         try:
             with io.open(filepath, 'r', encoding='UTF8') as fp:
                 data = fp.readlines()
@@ -166,13 +153,10 @@ def check_pip_env():
 
     _, _, installed, failed_names = _check_pip_env()
 
-    py2_last = 'final py2 release'
     boost = 'performance boost'
     extra_info = dict({'Cheetah3': 'filled requirement', 'CT3': 'filled requirement',
                        'lxml': boost, 'python-Levenshtein': boost})
-    extra_info.update((dict(cryptography=py2_last, pip=py2_last, regex=py2_last,
-                            scandir=boost, setuptools=py2_last),
-                       dict(regex=boost))[not PY2])
+    extra_info.update(dict(regex=boost))
     return installed, extra_info, failed_names
 
 
@@ -194,7 +178,7 @@ def _check_pip_env(pip_outdated=False, reset_fails=False):
     from sickgear import logger, PROG_DIR, DATA_DIR
     for cur_reco_file in ['requirements.txt', 'recommended.txt']:
         try:
-            with io.open(ek.ek(os.path.join, PROG_DIR, cur_reco_file)) as fh:
+            with io.open(os.path.join(PROG_DIR, cur_reco_file)) as fh:
                 input_reco += ['%s\n' % line.strip() for line in fh]  # must ensure EOL marker
         except (BaseException, Exception):
             pass
@@ -267,9 +251,9 @@ def _check_pip_env(pip_outdated=False, reset_fails=False):
             names_outdated = dict({cur_item.get('name'): {k: cur_item.get(k) for k in ('version', 'latest_version',
                                                                                        'latest_filetype')}
                                    for cur_item in json_loads(output)})
-            to_update = set(filter_list(
+            to_update = set(list(filter(
                 lambda name: name in specifiers and names_outdated[name]['latest_version'] in specifiers[name],
-                set(names_reco).intersection(set(names_outdated))))
+                set(names_reco).intersection(set(names_outdated)))))
 
             # check whether to ignore direct reference specification updates if not dev mode
             if not int(os.environ.get('CHK_URL_SPECIFIERS', 0)):
@@ -283,7 +267,7 @@ def _check_pip_env(pip_outdated=False, reset_fails=False):
         except (BaseException, Exception):
             pass
 
-    updates_todo = ordered_dict()
+    updates_todo = dict()
     todo = to_install.union(to_update, requirement_update)
     for cur_name in [cur_n for cur_n in names_reco if cur_n in todo]:
         updates_todo[cur_name] = dict({
@@ -305,7 +289,7 @@ def pip_update(loading_msg, updates_todo, data_dir):
     failed_lines = []
     input_reco = None
 
-    piper_path = ek.ek(os.path.join, data_dir, '.pip_req_spec_temp.txt')
+    piper_path = os.path.join(data_dir, '.pip_req_spec_temp.txt')
     for cur_project_name, cur_data in iteritems(updates_todo):
         msg = 'Installing package "%s"' % cur_project_name
         if cur_data.get('info'):
@@ -343,7 +327,7 @@ def pip_update(loading_msg, updates_todo, data_dir):
             if not parsed_name:
                 parsed_name = re.findall(r'(?sim)up-to-date\S+\s*(%s).*?\s\(([^)]+)\)$' % find_name, output)
                 parsed_name = ['' if not parsed_name else '-'.join(parsed_name[0])]
-            pip_version = re.findall(r'%s-([\d.]+).*?' % find_name, ek.ek(os.path.basename, parsed_name[0]), re.I)[0]
+            pip_version = re.findall(r'%s-([\d.]+).*?' % find_name, os.path.basename(parsed_name[0]), re.I)[0]
         except (BaseException, Exception):
             pass
 

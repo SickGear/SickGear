@@ -57,7 +57,7 @@ class TorrentDayProvider(generic.TorrentProvider):
                 ['RSS URL' in y, self.has_all_cookies()] +
                 [(self.session.cookies.get(c, domain='') or 'sg!no!pw') in self.digest
                  for c in ('uid', 'pass')])),
-            failed_msg=(lambda y=None: u'Invalid cookie details for %s. Check settings'))
+            failed_msg=(lambda y=None: 'Invalid cookie details for %s. Check settings'))
 
     @staticmethod
     def _has_signature(data=None):

@@ -26,7 +26,7 @@ from .. import logger
 from ..helpers import try_int
 from bs4_parser import BS4Parser
 
-from _23 import unidecode, unquote_plus
+from _23 import unquote_plus
 from six import iteritems, text_type
 
 
@@ -75,7 +75,6 @@ class ShazbatProvider(generic.TorrentProvider):
                     if self.should_skip():
                         return results
                 else:
-                    search_string = unidecode(search_string)
                     search_string = search_string.replace(show_detail, '').strip()
                     search_url = self.urls['search'] % search_string
                     html = self.get_url(search_url)
@@ -135,7 +134,7 @@ class ShazbatProvider(generic.TorrentProvider):
                 except generic.HaltParseException:
                     pass
                 except (BaseException, Exception):
-                    logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
+                    logger.error(f'Failed to parse. Traceback: {traceback.format_exc()}')
                 self._log_search(mode, len(items[mode]) - cnt, search_url)
 
             results = self._sort_seeding(mode, results + items[mode])

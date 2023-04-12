@@ -22,8 +22,6 @@ import re
 from ..common import USER_AGENT
 from .generic import Notifier
 
-# noinspection PyPep8Naming
-import encodingKludge as ek
 from exceptions_helper import ex
 import sickgear
 from sickgear.image_cache import ImageCache
@@ -42,8 +40,8 @@ class TelegramNotifier(Notifier):
         access_token = self._choose(access_token, sickgear.TELEGRAM_ACCESS_TOKEN)
         cid = self._choose(chatid, sickgear.TELEGRAM_CHATID)
         try:
-            msg = self._body_only(('' if not title else u'<b>%s</b>' % title), body)
-            msg = msg.replace(u'<b>%s</b>: ' % title, u'<b>%s:</b>\r\n' % ('SickGear ' + title, title)[use_icon])
+            msg = self._body_only(('' if not title else f'<b>{title}</b>'), body)
+            msg = msg.replace(f'<b>{title}</b>: ', f'<b>{("SickGear " + title, title)[use_icon]}:</b>\r\n')
             # HTML spaces (&nbsp;) and tabs (&emsp;) aren't supported
             # See https://core.telegram.org/bots/api#html-style
             msg = re.sub('(?i)&nbsp;?', ' ', msg)
@@ -51,11 +49,11 @@ class TelegramNotifier(Notifier):
             msg = re.sub('(?i)&emsp;?', '   ', msg)
 
             if use_icon:
-                image_path = ek.ek(os.path.join, sickgear.PROG_DIR, 'gui', 'slick', 'images', 'banner_thumb.jpg')
+                image_path = os.path.join(sickgear.PROG_DIR, 'gui', 'slick', 'images', 'banner_thumb.jpg')
                 if not self._testing:
                     show_obj = ep_obj.show_obj
                     banner_path = ImageCache().banner_thumb_path(show_obj.tvid, show_obj.prodid)
-                    if ek.ek(os.path.isfile, banner_path):
+                    if os.path.isfile(banner_path):
                         image_path = banner_path
 
                 with open(image_path, 'rb') as f:

@@ -24,10 +24,6 @@ from . import emby, kodi, plex, xbmc, \
     discord, emailnotify, gitter, libnotify, growl, prowl, slack, telegram, trakt
 
 import sickgear
-# noinspection PyPep8Naming
-import encodingKludge as ek
-
-from _23 import filter_iter, list_values
 
 
 class NotifierFactory(object):
@@ -70,32 +66,27 @@ class NotifierFactory(object):
         :return: ID String
         :rtype: String
         """
-        for n in filter_iter(lambda v: v.is_enabled(),
-                             list_values(self.notifiers)):
+        for n in filter(lambda v: v.is_enabled(), list(self.notifiers.values())):
             yield n.id()
 
     @property
     def enabled_onsnatch(self):
-        for n in filter_iter(lambda v: v.is_enabled() and v.is_enabled_onsnatch(),
-                             list_values(self.notifiers)):
+        for n in filter(lambda v: v.is_enabled() and v.is_enabled_onsnatch(), list(self.notifiers.values())):
             yield n.id()
 
     @property
     def enabled_ondownload(self):
-        for n in filter_iter(lambda v: v.is_enabled() and v.is_enabled_ondownload(),
-                             list_values(self.notifiers)):
+        for n in filter(lambda v: v.is_enabled() and v.is_enabled_ondownload(), list(self.notifiers.values())):
             yield n.id()
 
     @property
     def enabled_onsubtitledownload(self):
-        for n in filter_iter(lambda v: v.is_enabled() and v.is_enabled_onsubtitledownload(),
-                             list_values(self.notifiers)):
+        for n in filter(lambda v: v.is_enabled() and v.is_enabled_onsubtitledownload(), list(self.notifiers.values())):
             yield n.id()
 
     @property
     def enabled_library(self):
-        for n in filter_iter(lambda v: v.is_enabled() and v.is_enabled_library(),
-                             list_values(self.notifiers)):
+        for n in filter(lambda v: v.is_enabled() and v.is_enabled_library(), list(self.notifiers.values())):
             yield n.id()
 
     def get(self, nid):
@@ -159,7 +150,7 @@ def notify_update_library(ep_obj, flush_q=False):
                                 continue
                             shows.add(show_name)
                         else:
-                            parent_dir = re.sub(r'[/\\]+%s.*' % show_name, '', ek.ek(os.path.dirname, location))
+                            parent_dir = re.sub(r'[/\\]+%s.*' % show_name, '', os.path.dirname(location))
                             parent_dir = re.sub(r'^(.{,2})[/\\]', '', parent_dir)
                             if parent_dir in locations:
                                 continue

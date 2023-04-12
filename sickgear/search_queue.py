@@ -22,19 +22,15 @@ import re
 import threading
 import traceback
 
-import exceptions_helper
 # noinspection PyPep8Naming
 from exceptions_helper import ex
 
 import sickgear
-from lib.dateutil import tz
 from . import common, db, failed_history, generic_queue, helpers, \
     history, logger, network_timezones, properFinder, search, ui
 from .classes import Proper, SimpleNamespace
 from .search import wanted_episodes, get_aired_in_season, set_wanted_aired
 from .tv import TVEpisode
-
-from _23 import filter_list
 
 # noinspection PyUnreachableCode
 if False:
@@ -87,7 +83,7 @@ class SearchQueue(generic_queue.GenericQueue):
                     continue
                 self.add_item(item, add_to_db=False)
         except (BaseException, Exception) as e:
-            logger.log('Exception loading queue %s: %s' % (self.__class__.__name__, ex(e)), logger.ERROR)
+            logger.error('Exception loading queue %s: %s' % (self.__class__.__name__, ex(e)))
 
     def _clear_sql(self):
         return [
@@ -326,7 +322,7 @@ class SearchQueue(generic_queue.GenericQueue):
             # manual and failed searches
             generic_queue.GenericQueue.add_item(self, item, add_to_db=add_to_db)
         else:
-            logger.log(u'Not adding item, it\'s already in the queue', logger.DEBUG)
+            logger.debug("Not adding item, it's already in the queue")
 
 
 class RecentSearchQueueItem(generic_queue.QueueItem):
@@ -371,24 +367,23 @@ class RecentSearchQueueItem(generic_queue.QueueItem):
             self._check_for_propers(needed)
 
             if not self.ep_obj_list:
-                logger.log(u'No search of cache for episodes required')
+                logger.log('No search of cache for episodes required')
                 self.success = True
             else:
                 num_shows = len(set([ep_obj.show_obj.name for ep_obj in self.ep_obj_list]))
-                logger.log(u'Found %d needed episode%s spanning %d show%s'
-                           % (len(self.ep_obj_list), helpers.maybe_plural(self.ep_obj_list),
-                              num_shows, helpers.maybe_plural(num_shows)))
+                logger.log(f'Found {len(self.ep_obj_list):d} needed episode{helpers.maybe_plural(self.ep_obj_list)}'
+                           f' spanning {num_shows:d} show{helpers.maybe_plural(num_shows)}')
 
                 try:
-                    logger.log(u'Beginning recent search for episodes')
+                    logger.log('Beginning recent search for episodes')
                     # noinspection PyTypeChecker
                     search_results = search.search_for_needed_episodes(self.ep_obj_list)
 
                     if not len(search_results):
-                        logger.log(u'No needed episodes found')
+                        logger.log('No needed episodes found')
                     else:
                         for result in search_results:
-                            logger.log(u'Downloading %s from %s' % (result.name, result.provider.name))
+                            logger.log(f'Downloading {result.name} from {result.provider.name}')
                             self.success = search.snatch_episode(result)
                             if self.success:
                                 for ep_obj in result.ep_obj_list:
@@ -403,7 +398,7 @@ class RecentSearchQueueItem(generic_queue.QueueItem):
                             helpers.cpu_sleep()
 
                 except (BaseException, Exception):
-                    logger.log(traceback.format_exc(), logger.ERROR)
+                    logger.error(traceback.format_exc())
 
                 if None is self.success:
                     self.success = False
@@ -501,13 +496,13 @@ class RecentSearchQueueItem(generic_queue.QueueItem):
                     wanted |= (False, True)[common.WANTED == ep_obj.status]
 
         if not wanted:
-            logger.log(u'No unaired episodes marked wanted')
+            logger.log('No unaired episodes marked wanted')
 
         if 0 < len(sql_l):
             my_db = db.DBConnection()
             my_db.mass_action(sql_l)
             if wanted:
-                logger.log(u'Found new episodes marked wanted')
+                logger.log('Found new episodes marked wanted')
 
     @staticmethod
     def update_providers(needed=common.NeededQualities(need_all=True)):
@@ -520,8 +515,8 @@ class RecentSearchQueueItem(generic_queue.QueueItem):
         orig_thread_name = threading.current_thread().name
         threads = []
 
-        providers = filter_list(lambda x: x.is_active() and x.enable_recentsearch,
-                                sickgear.providers.sortedProviderList())
+        providers = list(filter(lambda x: x.is_active() and x.enable_recentsearch,
+                                sickgear.providers.sorted_sources()))
         for cur_provider in providers:
             if not cur_provider.cache.should_update():
                 continue
@@ -530,15 +525,14 @@ class RecentSearchQueueItem(generic_queue.QueueItem):
                 logger.log('Updating provider caches with recent upload data')
 
             # spawn a thread for each provider to save time waiting for slow response providers
-            threads.append(threading.Thread(target=cur_provider.cache.updateCache,
+            threads.append(threading.Thread(target=cur_provider.cache.update_cache,
                                             kwargs={'needed': needed},
                                             name='%s :: [%s]' % (orig_thread_name, cur_provider.name)))
             # start the thread we just created
             threads[-1].start()
 
         if not len(providers):
-            logger.log('No NZB/Torrent providers in Media Providers/Options are enabled to match recent episodes',
-                       logger.WARNING)
+            logger.warning('No NZB/Torrent providers in Media Providers/Options are enabled to match recent episodes')
 
         if threads:
             # wait for all threads to finish
@@ -641,13 +635,13 @@ class ManualSearchQueueItem(BaseSearchQueueItem):
         generic_queue.QueueItem.run(self)
 
         try:
-            logger.log(u'Beginning manual search for: [%s]' % self.segment.pretty_name())
+            logger.log(f'Beginning manual search for: [{self.segment.pretty_name()}]')
             self.started = True
 
             ep_count, ep_count_scene = get_aired_in_season(self.show_obj)
             set_wanted_aired(self.segment, True, ep_count, ep_count_scene, manual=True)
             if not getattr(self.segment, 'wanted_quality', None):
-                ep_status, ep_quality = common.Quality.splitCompositeStatus(self.segment.status)
+                ep_status, ep_quality = common.Quality.split_composite_status(self.segment.status)
                 self.segment.wanted_quality = search.get_wanted_qualities(self.segment, ep_status, ep_quality,
                                                                           unaired=True, manual=True)
                 if not self.segment.wanted_quality:
@@ -660,7 +654,7 @@ class ManualSearchQueueItem(BaseSearchQueueItem):
 
             if search_result:
                 for result in search_result:  # type: sickgear.classes.NZBSearchResult
-                    logger.log(u'Downloading %s from %s' % (result.name, result.provider.name))
+                    logger.log(f'Downloading {result.name} from {result.provider.name}')
                     self.success = search.snatch_episode(result)
                     for ep_obj in result.ep_obj_list:  # type: sickgear.tv.TVEpisode
                         self.snatched_eps.add(SimpleNamespace(tvid_prodid=ep_obj.show_obj.tvid_prodid,
@@ -677,12 +671,12 @@ class ManualSearchQueueItem(BaseSearchQueueItem):
                     break
             else:
                 ui.notifications.message('No downloads found',
-                                         u'Could not find a download for <i>%s</i>' % self.segment.pretty_name())
+                                         f'Could not find a download for <i>{self.segment.pretty_name()}</i>')
 
-                logger.log(u'Unable to find a download for: [%s]' % self.segment.pretty_name())
+                logger.log(f'Unable to find a download for: [{self.segment.pretty_name()}]')
 
         except (BaseException, Exception):
-            logger.log(traceback.format_exc(), logger.ERROR)
+            logger.error(traceback.format_exc())
 
         finally:
             # Keep a list with the last executed searches
@@ -733,7 +727,7 @@ class BacklogQueueItem(BaseSearchQueueItem):
                 for ep_obj in self.segment:  # type: sickgear.tv.TVEpisode
                     set_wanted_aired(ep_obj, True, ep_count, ep_count_scene)
 
-            logger.log(u'Beginning backlog search for: [%s]' % self.show_obj.unique_name)
+            logger.log(f'Beginning backlog search for: [{self.show_obj.unique_name}]')
             search_result = search.search_providers(
                 self.show_obj, self.segment, False,
                 try_other_searches=(not self.standard_backlog or not self.limited_backlog),
@@ -741,7 +735,7 @@ class BacklogQueueItem(BaseSearchQueueItem):
 
             if search_result:
                 for result in search_result:  # type: sickgear.classes.NZBSearchResult
-                    logger.log(u'Downloading %s from %s' % (result.name, result.provider.name))
+                    logger.log(f'Downloading {result.name} from {result.provider.name}')
                     if search.snatch_episode(result):
                         for ep_obj in result.ep_obj_list:  # type: sickgear.tv.TVEpisode
                             self.snatched_eps.add(SimpleNamespace(tvid_prodid=ep_obj.show_obj.tvid_prodid,
@@ -754,10 +748,10 @@ class BacklogQueueItem(BaseSearchQueueItem):
 
                     helpers.cpu_sleep()
             else:
-                logger.log(u'No needed episodes found during backlog search for: [%s]' % self.show_obj.unique_name)
+                logger.log(f'No needed episodes found during backlog search for: [{self.show_obj.unique_name}]')
         except (BaseException, Exception):
             is_error = True
-            logger.log(traceback.format_exc(), logger.ERROR)
+            logger.error(traceback.format_exc())
 
         finally:
             logger.log('Completed backlog search %sfor: [%s]'
@@ -787,7 +781,7 @@ class FailedQueueItem(BaseSearchQueueItem):
             ep_count, ep_count_scene = get_aired_in_season(self.show_obj)
             for ep_obj in self.segment:  # type: sickgear.tv.TVEpisode
 
-                logger.log(u'Marking episode as bad: [%s]' % ep_obj.pretty_name())
+                logger.log(f'Marking episode as bad: [{ep_obj.pretty_name()}]')
 
                 failed_history.set_episode_failed(ep_obj)
                 (release, provider) = failed_history.find_release(ep_obj)
@@ -796,14 +790,14 @@ class FailedQueueItem(BaseSearchQueueItem):
                     failed_history.add_failed(release)
                     history.log_failed(ep_obj, release, provider)
 
-                logger.log(u'Beginning failed download search for: [%s]' % ep_obj.pretty_name())
+                logger.log(f'Beginning failed download search for: [{ep_obj.pretty_name()}]')
 
                 set_wanted_aired(ep_obj, True, ep_count, ep_count_scene, manual=True)
 
             search_result = search.search_providers(self.show_obj, self.segment, True, try_other_searches=True) or []
 
             for result in search_result:  # type: sickgear.classes.NZBSearchResult
-                logger.log(u'Downloading %s from %s' % (result.name, result.provider.name))
+                logger.log(f'Downloading {result.name} from {result.provider.name}')
                 if search.snatch_episode(result):
                     for ep_obj in result.ep_obj_list:  # type: sickgear.tv.TVEpisode
                         self.snatched_eps.add(SimpleNamespace(tvid_prodid=ep_obj.show_obj.tvid_prodid,
@@ -817,9 +811,9 @@ class FailedQueueItem(BaseSearchQueueItem):
                 helpers.cpu_sleep()
             else:
                 pass
-                # logger.log(u'No valid episode found to retry for: [%s]' % self.segment.pretty_name())
+                # logger.log(f'No valid episode found to retry for: [{self.segment.pretty_name()}]')
         except (BaseException, Exception):
-            logger.log(traceback.format_exc(), logger.ERROR)
+            logger.error(traceback.format_exc())
 
         finally:
             # Keep a list with the last executed searches

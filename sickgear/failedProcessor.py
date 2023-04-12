@@ -67,30 +67,33 @@ class FailedProcessor(LegacyFailedProcessor):
         :return: success
         :type: bool or None
         """
-        self._log(u'Failed download detected: (%s, %s)' % (self.nzb_name, self.dir_name))
+        self._log(f'Failed download detected: ({self.nzb_name}, {self.dir_name})')
 
-        releaseName = show_name_helpers.determineReleaseName(self.dir_name, self.nzb_name)
-        if None is releaseName:
-            self._log(u'Warning: unable to find a valid release name.', logger.WARNING)
+        release_name = show_name_helpers.determine_release_name(self.dir_name, self.nzb_name)
+        if None is release_name:
+            self._log('Warning: unable to find a valid release name.', logger.WARNING)
             raise exceptions_helper.FailedProcessingFailed()
 
         try:
             parser = NameParser(False, show_obj=self.show_obj, convert=True)
-            parsed = parser.parse(releaseName)
+            parsed = parser.parse(release_name)
         except InvalidNameException:
-            self._log(u'Error: release name is invalid: ' + releaseName, logger.DEBUG)
+            self._log(f'Error: release name is invalid: {release_name}', logger.DEBUG)
             raise exceptions_helper.FailedProcessingFailed()
         except InvalidShowException:
-            self._log(u'Error: unable to parse release name %s into a valid show' % releaseName, logger.DEBUG)
+            self._log(f'Error: unable to parse release name {release_name} into a valid show', logger.DEBUG)
             raise exceptions_helper.FailedProcessingFailed()
 
-        logger.log(u"name_parser info: ", logger.DEBUG)
-        logger.log(u" - " + str(parsed.series_name), logger.DEBUG)
-        logger.log(u" - " + str(parsed.season_number), logger.DEBUG)
-        logger.log(u" - " + str(parsed.episode_numbers), logger.DEBUG)
-        logger.log(u" - " + str(parsed.extra_info), logger.DEBUG)
-        logger.log(u" - " + str(parsed.release_group), logger.DEBUG)
-        logger.log(u" - " + str(parsed.air_date), logger.DEBUG)
+        for cur_msg in (
+                'name_parser info: ',
+                f' - {parsed.series_name}',
+                f' - {parsed.season_number}',
+                f' - {parsed.episode_numbers}',
+                f' - {parsed.extra_info}',
+                f' - {parsed.release_group}',
+                f' - {parsed.air_date}'
+        ):
+            logger.debug(cur_msg)
 
         for episode in parsed.episode_numbers:
             segment = parsed.show_obj.get_episode(parsed.season_number, episode)

@@ -75,7 +75,7 @@ test_shows = [
      'quality_init': [], 'quality_upgrade': [],
      'episodes': {
                 1: {
-                    1: {'name': 'ep1', 'status': Quality.compositeStatus(DOWNLOADED, Quality.HDWEBDL),
+                    1: {'name': 'ep1', 'status': Quality.composite_status(DOWNLOADED, Quality.HDWEBDL),
                         'airdate': old_date, 'description': 'ep1 description'},
                     2: {'name': 'ep2', 'status': WANTED, 'airdate': last_week, 'description': 'ep2 description'},
                     3: {'name': 'ep3', 'status': WANTED, 'airdate': today, 'description': 'ep3 description'},
@@ -174,17 +174,17 @@ class WebAPICase(test.SickbeardTestDBCase):
             sickgear.events = Events(None)
             sickgear.show_queue_scheduler = scheduler.Scheduler(
                 show_queue.ShowQueue(),
-                cycleTime=datetime.timedelta(seconds=3),
-                threadName='SHOWQUEUE')
+                cycle_time=datetime.timedelta(seconds=3),
+                thread_name='SHOWQUEUE')
             sickgear.search_queue_scheduler = scheduler.Scheduler(
                 search_queue.SearchQueue(),
-                cycleTime=datetime.timedelta(seconds=3),
-                threadName='SEARCHQUEUE')
+                cycle_time=datetime.timedelta(seconds=3),
+                thread_name='SEARCHQUEUE')
             sickgear.backlog_search_scheduler = search_backlog.BacklogSearchScheduler(
                 search_backlog.BacklogSearcher(),
-                cycleTime=datetime.timedelta(minutes=60),
+                cycle_time=datetime.timedelta(minutes=60),
                 run_delay=datetime.timedelta(minutes=60),
-                threadName='BACKLOG')
+                thread_name='BACKLOG')
             sickgear.indexermapper.indexer_list = [i for i in sickgear.indexers.indexer_api.TVInfoAPI().all_sources]
             for root_dirs, path, expected in root_folder_tests:
                 sickgear.ROOT_DIRS = root_dirs
@@ -198,8 +198,8 @@ class WebAPICase(test.SickbeardTestDBCase):
                     elif k in show_obj.__dict__:
                         show_obj.__dict__[k] = v
                 if 'quality_init' in cur_show and cur_show['quality_init']:
-                    show_obj.quality = Quality.combineQualities(cur_show['quality_init'],
-                                                                cur_show.get('quality_upgrade', []))
+                    show_obj.quality = Quality.combine_qualities(cur_show['quality_init'],
+                                                                 cur_show.get('quality_upgrade', []))
                 show_obj.dirty = True
 
                 show_obj.save_to_db(True)
@@ -216,7 +216,7 @@ class WebAPICase(test.SickbeardTestDBCase):
                                 ep_obj.__dict__[k] = v
                         show_obj.sxe_ep_obj.setdefault(season, {})[ep] = ep_obj
                         ep_obj.save_to_db(True)
-                        status, quality = Quality.splitCompositeStatus(ep_obj.status)
+                        status, quality = Quality.split_composite_status(ep_obj.status)
                         if status in (DOWNLOADED, SNATCHED):
                             s_r = SearchResult([ep_obj])
                             s_r.show_obj, s_r.quality, s_r.provider, s_r.name = \
@@ -240,8 +240,8 @@ class WebAPICase(test.SickbeardTestDBCase):
             for cur_show in test_shows:
                 show_obj = sickgear.helpers.find_show_by_id({cur_show['tvid']: cur_show['prodid']})
                 if 'quality_init' in cur_show and cur_show['quality_init']:
-                    show_obj.quality = Quality.combineQualities(cur_show['quality_init'],
-                                                                cur_show.get('quality_upgrade', []))
+                    show_obj.quality = Quality.combine_qualities(cur_show['quality_init'],
+                                                                 cur_show.get('quality_upgrade', []))
                 else:
                     show_obj.quality = int(sickgear.QUALITY_DEFAULT)
                 show_obj.upgrade_once = int(cur_show.get('upgrade_once', 0))
@@ -821,7 +821,7 @@ class WebAPICase(test.SickbeardTestDBCase):
                             if cur_quality:
                                 params.update({'quality': cur_quality_str})
                             old_status = ep_obj.status
-                            status, quality = Quality.splitCompositeStatus(ep_obj.status)
+                            status, quality = Quality.split_composite_status(ep_obj.status)
                             expect_fail = UNAIRED == status or (DOWNLOADED == status and not cur_quality)
                             expected_msg = (success_msg, failed_msg)[expect_fail]
                             data = self._request_from_api(webapi.CMD_SickGearEpisodeSetStatus, params=params)

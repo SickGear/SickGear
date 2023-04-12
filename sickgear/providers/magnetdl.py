@@ -24,7 +24,6 @@ from ..helpers import try_int
 
 from bs4_parser import BS4Parser
 
-from _23 import unidecode
 from six import iteritems
 
 
@@ -53,7 +52,6 @@ class MagnetDLProvider(generic.TorrentProvider):
             for search_string in search_params[mode]:
                 urls = [self.urls['browse'], self.urls['browse'] + '2']
                 if 'Cache' != mode:
-                    search_string = unidecode(search_string)
                     urls = [self.urls['search'] % re.sub(r'[.\s]+', ' ', search_string)]
 
                 html = ''
@@ -101,7 +99,7 @@ class MagnetDLProvider(generic.TorrentProvider):
                 except generic.HaltParseException:
                     pass
                 except (BaseException, Exception):
-                    logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
+                    logger.error(f'Failed to parse. Traceback: {traceback.format_exc()}')
 
                 self._log_search(mode, len(items[mode]) - cnt, search_url)
 

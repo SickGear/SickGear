@@ -65,7 +65,7 @@ class HelpersTests(unittest.TestCase):
             ((WANTED, Quality.NONE), True),
         ]
         for c, b in test_cases:
-            self.assertEqual(helpers.should_delete_episode(Quality.compositeStatus(*c)), b)
+            self.assertEqual(helpers.should_delete_episode(Quality.composite_status(*c)), b)
 
     def test_encrypt(self):
         helpers.unique_key1 = '0x12d48f154876c16164a1646'

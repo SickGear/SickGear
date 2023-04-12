@@ -25,7 +25,6 @@ import uuid
 
 import sickgear
 
-from _23 import map_list
 from six import integer_types, iterkeys, string_types
 
 # noinspection PyUnresolvedReferences
@@ -181,7 +180,7 @@ class Quality(object):
         return Quality.qualityStrings[quality].replace('SD DVD', 'SD DVD/BR/BD')
 
     @staticmethod
-    def _getStatusStrings(status):
+    def _get_status_strings(status):
         """
 
         :param status: status
@@ -189,14 +188,14 @@ class Quality(object):
         :return:
         :rtype: AnyStr
         """
-        toReturn = {}
+        to_return = {}
         for _x in Quality.qualityStrings:
-            toReturn[Quality.compositeStatus(status, _x)] = '%s (%s)' % (
+            to_return[Quality.composite_status(status, _x)] = '%s (%s)' % (
                 Quality.statusPrefixes[status], Quality.qualityStrings[_x])
-        return toReturn
+        return to_return
 
     @staticmethod
-    def combineQualities(any_qualities, best_qualities):
+    def combine_qualities(any_qualities, best_qualities):
         # type: (List[int], List[int]) -> int
         """
 
@@ -212,7 +211,7 @@ class Quality(object):
         return any_quality | (best_quality << 16)
 
     @staticmethod
-    def splitQuality(quality):
+    def split_quality(quality):
         # type: (int) -> Tuple[List[int], List[int]]
         """
 
@@ -229,10 +228,10 @@ class Quality(object):
         return sorted(any_qualities), sorted(best_qualities)
 
     @staticmethod
-    def nameQuality(name, anime=False):
+    def name_quality(name, anime=False):
         """
         Return The quality from an episode File renamed by SickGear
-        If no quality is achieved it will try sceneQuality regex
+        If no quality is achieved it will try scene_quality regex
         :param name: name
         :type name: AnyStr
         :param anime: is anmie
@@ -241,9 +240,7 @@ class Quality(object):
         :rtype: int
         """
 
-        # noinspection PyPep8Naming
-        import encodingKludge as ek
-        name = ek.ek(os.path.basename, name)
+        name = os.path.basename(name)
 
         # if we have our exact text then assume we put it there
         for _x in sorted(iterkeys(Quality.qualityStrings), reverse=True):
@@ -251,7 +248,7 @@ class Quality(object):
                 continue
 
             if Quality.NONE == _x:  # Last chance
-                return Quality.sceneQuality(name, anime)
+                return Quality.scene_quality(name, anime)
 
             regex = r'\W' + Quality.qualityStrings[_x].replace(' ', r'\W') + r'\W'
             regex_match = re.search(regex, name, re.I)
@@ -259,7 +256,7 @@ class Quality(object):
                 return _x
 
     @staticmethod
-    def sceneQuality(name, anime=False):
+    def scene_quality(name, anime=False):
         """
         Return The quality from the scene episode File
         :param name: name
@@ -269,10 +266,8 @@ class Quality(object):
         :return:
         :rtype: int
         """
-        # noinspection PyPep8Naming
-        import encodingKludge as ek
         from sickgear import logger
-        name = ek.ek(os.path.basename, name)
+        name = os.path.basename(name)
 
         name_has = (lambda quality_list, func=all: func([re.search(q, name, re.I) for q in quality_list]))
 
@@ -305,7 +300,7 @@ class Quality(object):
                 if not hd_options and full_hd:
                     return Quality.FULLHDBLURAY
             if sickgear.ANIME_TREAT_AS_HDTV:
-                logger.log(u'Treating file: %s with "unknown" quality as HDTV per user settings' % name, logger.DEBUG)
+                logger.debug(f'Treating file: {name} with "unknown" quality as HDTV per user settings')
                 return Quality.HDTV
             return Quality.UNKNOWN
 
@@ -355,7 +350,7 @@ class Quality(object):
         return Quality.UNKNOWN
 
     @staticmethod
-    def fileQuality(filename):
+    def file_quality(filename):
         """
 
         :param filename: filename
@@ -363,11 +358,9 @@ class Quality(object):
         :return:
         :rtype: int
         """
-        # noinspection PyPep8Naming
-        import encodingKludge as ek
         from exceptions_helper import ex
         from sickgear import logger
-        if ek.ek(os.path.isfile, filename):
+        if os.path.isfile(filename):
 
             from hachoir.parser import createParser
             from hachoir.metadata import extractMetadata
@@ -376,12 +369,12 @@ class Quality(object):
             parser = height = None
             msg = 'Hachoir can\'t parse file "%s" content quality because it found error: %s'
             try:
-                parser = ek.ek(createParser, filename)
+                parser = createParser(filename)
             except InputStreamError as e:
-                logger.log(msg % (filename, ex(e)), logger.WARNING)
+                logger.warning(msg % (filename, ex(e)))
             except (BaseException, Exception) as e:
-                logger.log(msg % (filename, ex(e)), logger.ERROR)
-                logger.log(traceback.format_exc(), logger.ERROR)
+                logger.error(msg % (filename, ex(e)))
+                logger.error(traceback.format_exc())
 
             if parser:
                 extract = None
@@ -392,7 +385,7 @@ class Quality(object):
                     parser.parse_comments = False
                     extract = extractMetadata(parser, **args)
                 except (BaseException, Exception) as e:
-                    logger.log(msg % (filename, ex(e)), logger.WARNING)
+                    logger.warning(msg % (filename, ex(e)))
                 if extract:
                     try:
                         height = extract.get('height')
@@ -416,7 +409,7 @@ class Quality(object):
         return Quality.UNKNOWN
 
     @staticmethod
-    def assumeQuality(name):
+    def assume_quality(name):
         """
 
         :param name: name
@@ -431,7 +424,7 @@ class Quality(object):
         return Quality.UNKNOWN
 
     @staticmethod
-    def compositeStatus(status, quality):
+    def composite_status(status, quality):
         """
 
         :param status: status
@@ -444,7 +437,7 @@ class Quality(object):
         return status + 100 * quality
 
     @staticmethod
-    def qualityDownloaded(status):
+    def quality_downloaded(status):
         # type: (int) -> int
         """
 
@@ -456,7 +449,7 @@ class Quality(object):
         return (status - DOWNLOADED) // 100
 
     @staticmethod
-    def splitCompositeStatus(status):
+    def split_composite_status(status):
         # type: (int) -> Tuple[int, int]
         """Returns a tuple containing (status, quality)
         :param status: status
@@ -471,7 +464,7 @@ class Quality(object):
         return status, Quality.NONE
 
     @staticmethod
-    def statusFromName(name, assume=True, anime=False):
+    def status_from_name(name, assume=True, anime=False):
         """
 
         :param name: name
@@ -483,13 +476,13 @@ class Quality(object):
         :return:
         :rtype: int or long
         """
-        quality = Quality.nameQuality(name, anime)
+        quality = Quality.name_quality(name, anime)
         if assume and Quality.UNKNOWN == quality:
-            quality = Quality.assumeQuality(name)
-        return Quality.compositeStatus(DOWNLOADED, quality)
+            quality = Quality.assume_quality(name)
+        return Quality.composite_status(DOWNLOADED, quality)
 
     @staticmethod
-    def statusFromNameOrFile(file_path, assume=True, anime=False):
+    def status_from_name_or_file(file_path, assume=True, anime=False):
         """
 
         :param file_path: file path
@@ -501,12 +494,12 @@ class Quality(object):
         :return:
         :rtype: int or long
         """
-        quality = Quality.nameQuality(file_path, anime)
+        quality = Quality.name_quality(file_path, anime)
         if Quality.UNKNOWN == quality:
-            quality = Quality.fileQuality(file_path)
+            quality = Quality.file_quality(file_path)
             if assume and Quality.UNKNOWN == quality:
-                quality = Quality.assumeQuality(file_path)
-        return Quality.compositeStatus(DOWNLOADED, quality)
+                quality = Quality.assume_quality(file_path)
+        return Quality.composite_status(DOWNLOADED, quality)
 
     SNATCHED = None
     SNATCHED_PROPER = None
@@ -526,7 +519,7 @@ class WantedQualities(dict):
         super(WantedQualities, self).__init__(**kwargs)
 
     def _generate_wantedlist(self, qualities):
-        initial_qualities, upgrade_qualities = Quality.splitQuality(qualities)
+        initial_qualities, upgrade_qualities = Quality.split_quality(qualities)
         max_initial_quality = max(initial_qualities or [Quality.NONE])
         min_upgrade_quality = min(upgrade_qualities or [1 << 16])
         self[qualities] = {0: {self.bothlists: False, self.wantedlist: initial_qualities, self.upgradelist: False}}
@@ -573,23 +566,23 @@ for (attr_name, qual_val) in [
     ('SNATCHED', SNATCHED), ('SNATCHED_PROPER', SNATCHED_PROPER), ('SNATCHED_BEST', SNATCHED_BEST),
     ('DOWNLOADED', DOWNLOADED), ('ARCHIVED', ARCHIVED), ('FAILED', FAILED),
 ]:
-    setattr(Quality, attr_name, map_list(lambda qk: Quality.compositeStatus(qual_val, qk),
-                                         iterkeys(Quality.qualityStrings)))
+    setattr(Quality, attr_name, list(map(lambda qk: Quality.composite_status(qual_val, qk),
+                                         iterkeys(Quality.qualityStrings))))
 Quality.SNATCHED_ANY = Quality.SNATCHED + Quality.SNATCHED_PROPER + Quality.SNATCHED_BEST
 
-SD = Quality.combineQualities([Quality.SDTV, Quality.SDDVD], [])
-HD = Quality.combineQualities(
+SD = Quality.combine_qualities([Quality.SDTV, Quality.SDDVD], [])
+HD = Quality.combine_qualities(
     [Quality.HDTV, Quality.FULLHDTV, Quality.HDWEBDL, Quality.FULLHDWEBDL, Quality.HDBLURAY, Quality.FULLHDBLURAY],
     [])  # HD720p + HD1080p
-HD720p = Quality.combineQualities([Quality.HDTV, Quality.HDWEBDL, Quality.HDBLURAY], [])
-HD1080p = Quality.combineQualities([Quality.FULLHDTV, Quality.FULLHDWEBDL, Quality.FULLHDBLURAY], [])
-UHD2160p = Quality.combineQualities([Quality.UHD4KWEB, Quality.UHD4KBLURAY], [])
-ANY = Quality.combineQualities(
+HD720p = Quality.combine_qualities([Quality.HDTV, Quality.HDWEBDL, Quality.HDBLURAY], [])
+HD1080p = Quality.combine_qualities([Quality.FULLHDTV, Quality.FULLHDWEBDL, Quality.FULLHDBLURAY], [])
+UHD2160p = Quality.combine_qualities([Quality.UHD4KWEB, Quality.UHD4KBLURAY], [])
+ANY = Quality.combine_qualities(
     [Quality.SDTV, Quality.SDDVD, Quality.HDTV, Quality.FULLHDTV, Quality.HDWEBDL, Quality.FULLHDWEBDL,
      Quality.HDBLURAY, Quality.FULLHDBLURAY, Quality.UNKNOWN], [])  # SD + HD
 
 # legacy template, can't remove due to reference in mainDB upgrade?
-BEST = Quality.combineQualities([Quality.SDTV, Quality.HDTV, Quality.HDWEBDL], [Quality.HDTV])
+BEST = Quality.combine_qualities([Quality.SDTV, Quality.HDTV, Quality.HDWEBDL], [Quality.HDTV])
 
 qualityPresets = (SD, HD, HD720p, HD1080p, UHD2160p, ANY)
 
@@ -618,7 +611,7 @@ class StatusStrings(object):
 
     def __getitem__(self, name):
         if name in Quality.SNATCHED_ANY + Quality.DOWNLOADED + Quality.ARCHIVED:
-            status, quality = Quality.splitCompositeStatus(name)
+            status, quality = Quality.split_composite_status(name)
             if quality == Quality.NONE:
                 return self.statusStrings[status]
             return '%s (%s)' % (self.statusStrings[status], Quality.qualityStrings[quality])
@@ -714,7 +707,7 @@ class NeededQualities(object):
         """
         from sickgear.tv import TVShow
         if isinstance(show_obj, TVShow):
-            init, upgrade = Quality.splitQuality(show_obj.quality)
+            init, upgrade = Quality.split_quality(show_obj.quality)
             all_qual = set(init + upgrade)
             need_sd = need_hd = need_uhd = need_webdl = False
             for wanted_qualities in all_qual:
@@ -752,9 +745,9 @@ class NeededQualities(object):
             else:
                 if not self.need_sd and min(wanted_qualities) <= NeededQualities.max_sd:
                     self.need_sd = True
-                if not self.need_hd and any([i in NeededQualities.hd_qualities for i in wanted_qualities]):
+                if not self.need_hd and any(i in NeededQualities.hd_qualities for i in wanted_qualities):
                     self.need_hd = True
-                if not self.need_webdl and any([i in NeededQualities.webdl_qualities for i in wanted_qualities]):
+                if not self.need_webdl and any(i in NeededQualities.webdl_qualities for i in wanted_qualities):
                     self.need_webdl = True
                 if not self.need_uhd and max(wanted_qualities) > NeededQualities.max_hd:
                     self.need_uhd = True

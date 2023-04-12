@@ -27,7 +27,6 @@ from lib.tvinfo_base import TVInfoBase, TVInfoImage, TVInfoImageSize, TVInfoImag
     crew_type_names, TVInfoPerson, RoleTypes, TVInfoShow, TVInfoEpisode, TVInfoIDs, TVInfoNetwork, TVInfoSeason, \
     PersonGenders, TVINFO_TVMAZE, TVINFO_TVDB, TVINFO_IMDB
 
-from _23 import filter_iter
 from six import integer_types, iteritems, string_types
 
 # noinspection PyUnreachableCode
@@ -683,7 +682,7 @@ class TvMaze(TVInfoBase):
             premieres = []
             returning = []
             rc_lang = re.compile('(?i)eng|jap')
-            for cur_show in filter_iter(lambda s: 1 == s.episode_number and (
+            for cur_show in filter(lambda s: 1 == s.episode_number and (
                     None is s.show.language or rc_lang.search(s.show.language)), schedule):
                 if 1 == cur_show.season_number:
                     premieres += [cur_show]

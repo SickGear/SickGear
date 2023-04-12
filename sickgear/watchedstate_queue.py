@@ -48,7 +48,7 @@ class WatchedStateQueue(generic_queue.GenericQueue):
 
         return length
 
-    def add_item(self, item):
+    def add_item(self, item, **kwargs):
         if isinstance(item, EmbyWatchedStateQueueItem) and not self.is_in_queue(EmbyWatchedStateQueueItem):
             # emby watched state item
             generic_queue.GenericQueue.add_item(self, item)
@@ -56,7 +56,7 @@ class WatchedStateQueue(generic_queue.GenericQueue):
             # plex watched state item
             generic_queue.GenericQueue.add_item(self, item)
         else:
-            logger.log(u'Not adding item, it\'s already in the queue', logger.DEBUG)
+            logger.debug("Not adding item, it's already in the queue")
 
 
 class EmbyWatchedStateQueueItem(generic_queue.QueueItem):

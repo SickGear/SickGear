@@ -18,8 +18,6 @@
 import os
 
 from .generic import Notifier
-# noinspection PyPep8Naming
-import encodingKludge as ek
 from exceptions_helper import ex
 from sg_helpers import cmdline_runner
 
@@ -29,11 +27,11 @@ class SynologyNotifier(Notifier):
     def _notify(self, title, body, **kwargs):
 
         synodsmnotify_cmd = ['/usr/syno/bin/synodsmnotify', '@administrators', title, body]
-        self._log(u'Executing command ' + str(synodsmnotify_cmd))
-        self._log_debug(u'Absolute path to command: ' + ek.ek(os.path.abspath, synodsmnotify_cmd[0]))
+        self._log(f'Executing command {synodsmnotify_cmd}')
+        self._log_debug(f'Absolute path to command: {os.path.abspath(synodsmnotify_cmd[0])}')
         try:
             output, err, exit_status = cmdline_runner(synodsmnotify_cmd)
-            self._log_debug(u'Script result: %s' % output)
+            self._log_debug(f'Script result: {output}')
         except (BaseException, Exception) as e:
             self._log('Unable to run synodsmnotify: %s' % ex(e))
 

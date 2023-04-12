@@ -18,8 +18,6 @@
 import os
 
 from .generic import BaseNotifier
-# noinspection PyPep8Naming
-import encodingKludge as ek
 from exceptions_helper import ex
 from sg_helpers import cmdline_runner
 
@@ -34,18 +32,17 @@ class SynoIndexNotifier(BaseNotifier):
         self._move_object(old_file, new_file)
 
     def _cmdline_run(self, synoindex_cmd):
-        self._log_debug(u'Executing command ' + str(synoindex_cmd))
-        self._log_debug(u'Absolute path to command: ' + ek.ek(os.path.abspath, synoindex_cmd[0]))
+        self._log_debug(f'Executing command {str(synoindex_cmd)}')
+        self._log_debug(f'Absolute path to command: {os.path.abspath(synoindex_cmd[0])}')
         try:
             output, err, exit_status = cmdline_runner(synoindex_cmd)
-            self._log_debug(u'Script result: %s' % output)
+            self._log_debug(f'Script result: {output}')
         except (BaseException, Exception) as e:
             self._log_error('Unable to run synoindex: %s' % ex(e))
 
     def _move_object(self, old_path, new_path):
         if self.is_enabled():
-            self._cmdline_run(['/usr/syno/bin/synoindex', '-N', ek.ek(os.path.abspath, new_path),
-                               ek.ek(os.path.abspath, old_path)])
+            self._cmdline_run(['/usr/syno/bin/synoindex', '-N', os.path.abspath(new_path), os.path.abspath(old_path)])
 
     def deleteFolder(self, cur_path):
         self._make_object('-D', cur_path)
@@ -61,7 +58,7 @@ class SynoIndexNotifier(BaseNotifier):
 
     def _make_object(self, cmd_arg, cur_path):
         if self.is_enabled():
-            self._cmdline_run(['/usr/syno/bin/synoindex', cmd_arg, ek.ek(os.path.abspath, cur_path)])
+            self._cmdline_run(['/usr/syno/bin/synoindex', cmd_arg, os.path.abspath(cur_path)])
 
     def update_library(self, ep_obj=None, **kwargs):
         self.addFile(ep_obj.location)

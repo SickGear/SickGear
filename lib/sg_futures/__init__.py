@@ -14,9 +14,5 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
-import sys
 
-if 2 == sys.version_info[0]:
-    from .py2 import *
-else:
-    from .py3 import *
+from .py3 import *

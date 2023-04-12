@@ -20,17 +20,14 @@ import os.path
 import re
 import zlib
 
-# noinspection PyPep8Naming
-import encodingKludge as ek
 import exceptions_helper
 from exceptions_helper import ex
 import sickgear
 import sg_helpers
 from . import db, logger
 from .metadata.generic import GenericMetadata
-from .sgdatetime import timestamp_near
+from .sgdatetime import SGDatetime
 from .indexers.indexer_config import TVINFO_TVDB, TVINFO_TVMAZE, TVINFO_TMDB, TVINFO_IMDB
-from lib.tvinfo_base.exceptions import *
 
 from six import itervalues, iteritems
 
@@ -56,9 +53,9 @@ class ImageCache(object):
     characters_dir = None  # type: Optional[AnyStr]
 
     def __init__(self):
-        if None is ImageCache.base_dir and ek.ek(os.path.exists, sickgear.CACHE_DIR):
-            ImageCache.base_dir = ek.ek(os.path.abspath, ek.ek(os.path.join, sickgear.CACHE_DIR, 'images'))
-            ImageCache.shows_dir = ek.ek(os.path.abspath, ek.ek(os.path.join, self.base_dir, 'shows'))
+        if None is ImageCache.base_dir and os.path.exists(sickgear.CACHE_DIR):
+            ImageCache.base_dir = os.path.abspath(os.path.join(sickgear.CACHE_DIR, 'images'))
+            ImageCache.shows_dir = os.path.abspath(os.path.join(self.base_dir, 'shows'))
             ImageCache.persons_dir = self._persons_dir()
             ImageCache.characters_dir = self._characters_dir()
 
@@ -70,17 +67,17 @@ class ImageCache(object):
     #     """
     #     Builds up the full path to the image cache directory
     #     """
-    #     return ek.ek(os.path.abspath, ek.ek(os.path.join, sickgear.CACHE_DIR, 'images'))
+    #     return os.path.abspath(os.path.join(sickgear.CACHE_DIR, 'images'))
 
     @staticmethod
     def _persons_dir():
         # type: (...) -> AnyStr
-        return ek.ek(os.path.join, sickgear.CACHE_DIR, 'images', 'person')
+        return os.path.join(sickgear.CACHE_DIR, 'images', 'person')
 
     @staticmethod
     def _characters_dir():
         # type: (...) -> AnyStr
-        return ek.ek(os.path.join, sickgear.CACHE_DIR, 'images', 'characters')
+        return os.path.join(sickgear.CACHE_DIR, 'images', 'characters')
 
     def _fanart_dir(self, tvid=None, prodid=None):
         # type: (int, int) -> AnyStr
@@ -95,7 +92,7 @@ class ImageCache(object):
         :rtype: AnyStr or None
         """
         if None not in (tvid, prodid):
-            return ek.ek(os.path.abspath, ek.ek(os.path.join, self.shows_dir, '%s-%s' % (tvid, prodid), 'fanart'))
+            return os.path.abspath(os.path.join(self.shows_dir, '%s-%s' % (tvid, prodid), 'fanart'))
 
     def _thumbnails_dir(self, tvid, prodid):
         # type: (int, int) -> AnyStr
@@ -109,7 +106,7 @@ class ImageCache(object):
         :return: path
         :rtype: AnyStr
         """
-        return ek.ek(os.path.abspath, ek.ek(os.path.join, self.shows_dir, '%s-%s' % (tvid, prodid), 'thumbnails'))
+        return os.path.abspath(os.path.join(self.shows_dir, '%s-%s' % (tvid, prodid), 'thumbnails'))
 
     @staticmethod
     def _person_base_name(person_obj):
@@ -134,7 +131,7 @@ class ImageCache(object):
         :param base_path:
         """
         filename = '%s.jpg' % base_path or self._person_base_name(person_obj)
-        return ek.ek(os.path.join, self.persons_dir, filename)
+        return os.path.join(self.persons_dir, filename)
 
     def person_thumb_path(self, person_obj, base_path=None):
         # type: (Optional[Person], AnyStr) -> AnyStr
@@ -144,7 +141,7 @@ class ImageCache(object):
         :param base_path:
         """
         filename = '%s_thumb.jpg' % base_path or self._person_base_name(person_obj)
-        return ek.ek(os.path.join, self.persons_dir, filename)
+        return os.path.join(self.persons_dir, filename)
 
     def person_both_paths(self, person_obj):
         # type: (Person) -> Tuple[AnyStr, AnyStr]
@@ -164,7 +161,7 @@ class ImageCache(object):
         :param base_path:
         """
         filename = '%s.jpg' % base_path or self._character_base_name(character_obj, show_obj)
-        return ek.ek(os.path.join, self.characters_dir, filename)
+        return os.path.join(self.characters_dir, filename)
 
     def character_thumb_path(self, character_obj, show_obj, base_path=None):
         # type: (Optional[Character], Optional[TVShow], AnyStr) -> AnyStr
@@ -175,7 +172,7 @@ class ImageCache(object):
         :param base_path:
         """
         filename = '%s_thumb.jpg' % base_path or self._character_base_name(character_obj, show_obj)
-        return ek.ek(os.path.join, self.characters_dir, filename)
+        return os.path.join(self.characters_dir, filename)
 
     def character_both_path(self, character_obj, show_obj=None, tvid=None, proid=None, person_obj=None):
         # type: (Character, TVShow, integer_types, integer_types, Person) -> Tuple[AnyStr, AnyStr]
@@ -208,7 +205,7 @@ class ImageCache(object):
         :return: a full path to the cached poster file for the given tvid prodid
         :rtype: AnyStr
         """
-        return ek.ek(os.path.join, self.shows_dir, '%s-%s' % (tvid, prodid), 'poster.jpg')
+        return os.path.join(self.shows_dir, '%s-%s' % (tvid, prodid), 'poster.jpg')
 
     def banner_path(self, tvid, prodid):
         # type: (int, int) -> AnyStr
@@ -222,7 +219,7 @@ class ImageCache(object):
         :return: a full path to the cached banner file for the given tvid prodid
         :rtype: AnyStr
         """
-        return ek.ek(os.path.join, self.shows_dir, '%s-%s' % (tvid, prodid), 'banner.jpg')
+        return os.path.join(self.shows_dir, '%s-%s' % (tvid, prodid), 'banner.jpg')
 
     def fanart_path(self, tvid, prodid, prefix=''):
         # type: (int, int, Optional[AnyStr]) -> AnyStr
@@ -238,7 +235,7 @@ class ImageCache(object):
         :return: a full path to the cached fanart file for the given tvid prodid
         :rtype: AnyStr
         """
-        return ek.ek(os.path.join, self._fanart_dir(tvid, prodid), '%s%s' % (prefix, 'fanart.jpg'))
+        return os.path.join(self._fanart_dir(tvid, prodid), '%s%s' % (prefix, 'fanart.jpg'))
 
     def poster_thumb_path(self, tvid, prodid):
         # type: (int, int) -> AnyStr
@@ -252,7 +249,7 @@ class ImageCache(object):
         :return: a full path to the cached poster file for the given tvid prodid
         :rtype: AnyStr
         """
-        return ek.ek(os.path.join, self._thumbnails_dir(tvid, prodid), 'poster.jpg')
+        return os.path.join(self._thumbnails_dir(tvid, prodid), 'poster.jpg')
 
     def banner_thumb_path(self, tvid, prodid):
         # type: (int, int) -> AnyStr
@@ -266,7 +263,7 @@ class ImageCache(object):
         :return: a full path to the cached poster file for the given tvid prodid
         :rtype: AnyStr
         """
-        return ek.ek(os.path.join, self._thumbnails_dir(tvid, prodid), 'banner.jpg')
+        return os.path.join(self._thumbnails_dir(tvid, prodid), 'banner.jpg')
 
     @staticmethod
     def has_file(image_file):
@@ -274,15 +271,15 @@ class ImageCache(object):
         """
         :param image_file: image file
         :type image_file: AnyStr
-        :return: true if a image_file exists
+        :return: true if an image_file exists
         :rtype: bool
         """
         result = []
-        for filename in ek.ek(glob.glob, image_file):
-            result.append(ek.ek(os.path.isfile, filename) and filename)
-            logger.log(u'Found cached %s' % filename, logger.DEBUG)
+        for filename in glob.glob(image_file):
+            result.append(os.path.isfile(filename) and filename)
+            logger.debug(f'Found cached {filename}')
 
-        not any(result) and logger.log(u'No cache for %s' % image_file, logger.DEBUG)
+        not any(result) and logger.debug(f'No cache for {image_file}')
         return any(result)
 
     def has_poster(self, tvid, prodid):
@@ -367,8 +364,8 @@ class ImageCache(object):
         :param image: image file or data
         :param is_binary: is data instead of path
         """
-        if not is_binary and not ek.ek(os.path.isfile, image):
-            logger.warning(u'File not found to determine image type of %s' % image)
+        if not is_binary and not os.path.isfile(image):
+            logger.warning(f'File not found to determine image type of {image}')
             return
         if not image:
             logger.warning('No Image Data to determinate image type')
@@ -384,7 +381,7 @@ class ImageCache(object):
             img_parser.parse_photoshop_content = False
             img_metadata = extractMetadata(img_parser)
         except (BaseException, Exception) as e:
-            logger.debug(u'Unable to extract metadata from %s, not using file. Error: %s' % (image, ex(e)))
+            logger.debug(f'Unable to extract metadata from {image}, not using file. Error: {ex(e)}')
             return
 
         if not img_metadata:
@@ -392,7 +389,7 @@ class ImageCache(object):
                 msg = 'Image Data'
             else:
                 msg = image
-            logger.debug(u'Unable to extract metadata from %s, not using file' % msg)
+            logger.debug(f'Unable to extract metadata from {msg}, not using file')
             return
 
         width = img_metadata.get('width')
@@ -444,9 +441,9 @@ class ImageCache(object):
                 logger.debug(msg_success % 'fanart')
                 return self.FANART
 
-            logger.warning(u'Skipped image with fanart aspect ratio but less than 500 pixels wide')
+            logger.warning('Skipped image with fanart aspect ratio but less than 500 pixels wide')
         else:
-            logger.warning(u'Skipped image with useless ratio %s' % img_ratio)
+            logger.warning(f'Skipped image with useless ratio {img_ratio}')
 
     def should_refresh(self, image_type=None, provider='local'):
         # type: (int, Optional[AnyStr]) -> bool
@@ -468,7 +465,7 @@ class ImageCache(object):
             minutes_iv = 60 * 3
             # daily_interval = 60 * 60 * 23
             iv = minutes_iv
-            now_stamp = int(timestamp_near(datetime.datetime.now()))
+            now_stamp = SGDatetime.timestamp_near()
             the_time = int(sql_result[0]['time'])
             return now_stamp - the_time > iv
 
@@ -485,7 +482,7 @@ class ImageCache(object):
         """
         my_db = db.DBConnection('cache.db')
         my_db.upsert('lastUpdate',
-                     {'time': int(timestamp_near(datetime.datetime.now()))},
+                     {'time': SGDatetime.timestamp_near()},
                      {'provider': 'imsg_%s_%s' % ((image_type, self.FANART)[None is image_type], provider)})
 
     def _cache_image_from_file(self, image_path, img_type, tvid, prodid, prefix='', move_file=False):
@@ -525,13 +522,13 @@ class ImageCache(object):
             dest_path = self.fanart_path(*id_args + (prefix,)).replace('.fanart.jpg', '.%s.fanart.jpg' % crc)
             fanart_dir = [self._fanart_dir(*id_args)]
         else:
-            logger.log(u'Invalid cache image type: ' + str(img_type), logger.ERROR)
+            logger.error(f'Invalid cache image type: {img_type}')
             return False
 
         for cache_dir in [self.shows_dir, self._thumbnails_dir(*id_args)] + fanart_dir:
             sg_helpers.make_path(cache_dir)
 
-        logger.log(u'%sing from %s to %s' % (('Copy', 'Mov')[move_file], image_path, dest_path))
+        logger.log(f'{("Copy", "Mov")[move_file]}ing from {image_path} to {dest_path}')
         # copy poster, banner as thumb, even if moved we need to duplicate the images
         if img_type in (self.POSTER, self.BANNER) and dest_thumb_path:
             sg_helpers.copy_file(image_path, dest_thumb_path)
@@ -540,7 +537,7 @@ class ImageCache(object):
         else:
             sg_helpers.copy_file(image_path, dest_path)
 
-        return ek.ek(os.path.isfile, dest_path) and dest_path or None
+        return os.path.isfile(dest_path) and dest_path or None
 
     def _cache_info_source_images(self, show_obj, img_type, num_files=0, max_files=500, force=False, show_infos=None):
         # type: (TVShow, int, int, int, bool, ShowInfosDict) -> bool
@@ -577,7 +574,7 @@ class ImageCache(object):
             img_type_name = 'banner_thumb'
             dest_path = self.banner_thumb_path(*arg_tvid_prodid)
         else:
-            logger.log(u'Invalid cache image type: ' + str(img_type), logger.ERROR)
+            logger.error(f'Invalid cache image type: {img_type}')
             return False
 
         # retrieve the image from TV info source using the generic metadata class
@@ -588,7 +585,7 @@ class ImageCache(object):
                 return False
 
             crcs = []
-            for cache_file_name in ek.ek(glob.glob, dest_path):
+            for cache_file_name in glob.glob(dest_path):
                 with open(cache_file_name, mode='rb') as resource:
                     crc = '%05X' % (zlib.crc32(resource.read()) & 0xFFFFFFFF)
                 if crc not in crcs:
@@ -627,11 +624,10 @@ class ImageCache(object):
                 success += (0, 1)[result]
                 if num_files > max_files:
                     break
-            total = len(ek.ek(glob.glob, dest_path))
-            logger.log(u'Saved %s fanart images%s. Cached %s of max %s fanart file%s'
-                       % (success,
-                          ('', ' from ' + ', '.join([x for x in list(set(sources))]))[0 < len(sources)],
-                          total, sickgear.FANART_LIMIT, sg_helpers.maybe_plural(total)))
+            total = len(glob.glob(dest_path))
+            logger.log(f'Saved {success} fanart images'
+                       f'{("", " from " + ", ".join([x for x in list(set(sources))]))[0 < len(sources)]}.'
+                       f' Cached {total} of max {sickgear.FANART_LIMIT} fanart file{sg_helpers.maybe_plural(total)}')
             return bool(success)
 
         image_urls = metadata_generator.retrieve_show_image(img_type_name, show_obj, return_links=True,
@@ -655,11 +651,11 @@ class ImageCache(object):
                 if thumb_img_data:
                     thumb_result = metadata_generator.write_image(thumb_img_data, dest_thumb_path, force=True)
                 if not thumb_result:
-                    thumb_result = metadata_generator.write_image(img_data, dest_thumb_path, force=True)
+                    metadata_generator.write_image(img_data, dest_thumb_path, force=True)
             break
 
         if result:
-            logger.log(u'Saved image type %s' % img_type_name)
+            logger.log(f'Saved image type {img_type_name}')
         return result
 
     def fill_cache(self, show_obj, force=False):
@@ -686,7 +682,7 @@ class ImageCache(object):
                        self.BANNER_THUMB: not self.has_banner_thumbnail(*arg_tvid_prodid) or force}
 
         if not any(itervalues(need_images)):
-            logger.log(u'%s: No new cache images needed. Done.' % show_obj.tvid_prodid)
+            logger.log(f'{show_obj.tvid_prodid}: No new cache images needed. Done.')
             return
 
         show_infos = GenericMetadata.gen_show_infos_dict(show_obj)
@@ -696,12 +692,12 @@ class ImageCache(object):
             cache_path = self.fanart_path(*arg_tvid_prodid).replace('fanart.jpg', '')
             # num_images = len(fnmatch.filter(os.listdir(cache_path), '*.jpg'))
 
-            for cache_dir in ek.ek(glob.glob, cache_path):
+            for cache_dir in glob.glob(cache_path):
                 if show_obj.tvid_prodid in sickgear.FANART_RATINGS:
                     del (sickgear.FANART_RATINGS[show_obj.tvid_prodid])
                 result = sg_helpers.remove_file(cache_dir, tree=True)
                 if result:
-                    logger.log(u'%s cache file %s' % (result, cache_dir), logger.DEBUG)
+                    logger.debug(f'{result} cache file {cache_dir}')
 
         try:
             checked_files = []
@@ -712,16 +708,16 @@ class ImageCache(object):
                 needed = []
                 if any([need_images[self.POSTER], need_images[self.BANNER]]):
                     poster_path = cur_provider.get_poster_path(show_obj)
-                    if poster_path not in checked_files and ek.ek(os.path.isfile, poster_path):
+                    if poster_path not in checked_files and os.path.isfile(poster_path):
                         needed += [[False, poster_path]]
                 if need_images[self.FANART]:
                     fanart_path = cur_provider.get_fanart_path(show_obj)
-                    if fanart_path not in checked_files and ek.ek(os.path.isfile, fanart_path):
+                    if fanart_path not in checked_files and os.path.isfile(fanart_path):
                         needed += [[True, fanart_path]]
                 if 0 == len(needed):
                     break
 
-                logger.log(u'Checking for images from optional %s metadata' % cur_provider.name, logger.DEBUG)
+                logger.debug(f'Checking for images from optional {cur_provider.name} metadata')
 
                 for all_meta_provs, path_file in needed:
                     checked_files += [path_file]
@@ -738,9 +734,10 @@ class ImageCache(object):
                     if None is cur_file_type:
                         continue
 
-                    logger.log(u'Checking if image %s (type %s needs metadata: %s)'
-                               % (cache_file_name, str(cur_file_type),
-                                  ('No', 'Yes')[True is need_images[cur_file_type]]), logger.DEBUG)
+                    logger.debug(f'Checking if image {cache_file_name} '
+                                 f'(type {str(cur_file_type)}'
+                                 f' needs metadata: {("No", "Yes")[True is need_images[cur_file_type]]}'
+                                 f')')
 
                     if need_images.get(cur_file_type):
                         need_images[cur_file_type] = (
@@ -749,8 +746,8 @@ class ImageCache(object):
                         if self.FANART == cur_file_type and \
                                 (not sickgear.FANART_LIMIT or sickgear.FANART_LIMIT < need_images[cur_file_type]):
                             continue
-                        logger.log(u'Caching image found in the show directory to the image cache: %s, type %s'
-                                   % (cache_file_name, cur_file_type), logger.DEBUG)
+                        logger.debug(f'Caching image found in the show directory to the image cache: {cache_file_name},'
+                                     f' type {cur_file_type}')
 
                         self._cache_image_from_file(
                             cache_file_name, cur_file_type,
@@ -758,7 +755,7 @@ class ImageCache(object):
                                                     isinstance(need_images[cur_file_type], bool)],))
 
         except exceptions_helper.ShowDirNotFoundException:
-            logger.log(u'Unable to search for images in show directory because it doesn\'t exist', logger.WARNING)
+            logger.warning('Unable to search for images in show directory because it doesn\'t exist')
 
         # download images from TV info sources
         for image_type, name_type in [[self.POSTER, 'Poster'], [self.BANNER, 'Banner'], [self.FANART, 'Fanart']]:
@@ -766,12 +763,12 @@ class ImageCache(object):
             if not max_files or max_files < need_images[image_type]:
                 continue
 
-            logger.log(u'Seeing if we still need an image of type %s: %s'
-                       % (name_type, ('No', 'Yes')[True is need_images[image_type]]), logger.DEBUG)
+            logger.debug(f'Seeing if we still need an image of type {name_type}:'
+                         f' {("No", "Yes")[True is need_images[image_type]]}')
             if need_images[image_type]:
                 file_num = (need_images[image_type] + 1, 1)[isinstance(need_images[image_type], bool)]
                 if file_num <= max_files:
                     self._cache_info_source_images(show_obj, image_type, file_num, max_files, force=force,
                                                    show_infos=show_infos)
 
-        logger.log(u'Done cache check')
+        logger.log('Done cache check')

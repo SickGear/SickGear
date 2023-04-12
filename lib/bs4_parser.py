@@ -1,5 +1,6 @@
 import re
-from bs4 import BeautifulSoup, SoupStrainer
+from bs4 import BeautifulSoup
+from bs4.element import SoupStrainer
 from six import iteritems
 
 

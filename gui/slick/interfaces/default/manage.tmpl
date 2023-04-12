@@ -188,37 +188,37 @@ $xsrf_form_html
     #set $show_size = $max if not $show_loc else $get_size($show_loc)
     #set $option_state = '<input type="checkbox"%s class="%s-check"%s>'
     ##
-    #set $curUpdate_disabled = $sickgear.show_queue_scheduler.action.isBeingUpdated($cur_show_obj)\
-                               or $sickgear.show_queue_scheduler.action.isInUpdateQueue($cur_show_obj)
+    #set $curUpdate_disabled = $sickgear.show_queue_scheduler.action.is_being_updated($cur_show_obj)\
+                               or $sickgear.show_queue_scheduler.action.is_in_update_queue($cur_show_obj)
     #set $tip = ' title="Update%s"' % ('', $disabled_inprogress_tip)[$curUpdate_disabled]
     #set $curUpdate = ($tip, $option_state % (('', $disabled)[$curUpdate_disabled], 'update', $tip))
     ##
-    #set $curRefresh_disabled = $sickgear.show_queue_scheduler.action.isBeingRefreshed($cur_show_obj)\
-                                or $sickgear.show_queue_scheduler.action.isInRefreshQueue($cur_show_obj)
+    #set $curRefresh_disabled = $sickgear.show_queue_scheduler.action.is_being_refreshed($cur_show_obj)\
+                                or $sickgear.show_queue_scheduler.action.is_in_refresh_queue($cur_show_obj)
     #set $tip = ' title="Rescan%s"' % ('', $disabled_inprogress_tip)[$curRefresh_disabled]
     #set $curRefresh = ($tip, $option_state % (('', $disabled)[$curRefresh_disabled], 'refresh', $tip))
     ##
-    #set $curRename_disabled = $sickgear.show_queue_scheduler.action.isBeingRenamed($cur_show_obj)\
-                               or $sickgear.show_queue_scheduler.action.isInRenameQueue($cur_show_obj)
+    #set $curRename_disabled = $sickgear.show_queue_scheduler.action.is_being_renamed($cur_show_obj)\
+                               or $sickgear.show_queue_scheduler.action.is_in_rename_queue($cur_show_obj)
     #set $tip = ' title="Rename%s"' % ('', $disabled_inprogress_tip)[$curRename_disabled]
     #set $curRename = ($tip, $option_state % (('', $disabled)[$curRename_disabled], 'rename', $tip))
     ##
     #set $subtitles_disabled = not $cur_show_obj.subtitles\
-                               or $sickgear.show_queue_scheduler.action.isBeingSubtitled($cur_show_obj)\
-                               or $sickgear.show_queue_scheduler.action.isInSubtitleQueue($cur_show_obj)
+                               or $sickgear.show_queue_scheduler.action.is_being_subtitled($cur_show_obj)\
+                               or $sickgear.show_queue_scheduler.action.is_in_subtitle_queue($cur_show_obj)
     #set $tip = (' title="Search subtitle"', (' title="Search subtitle%s"' % $disabled_inprogress_tip,
                                               $disabled_subtitles_tip)[not $cur_show_obj.subtitles])[$subtitles_disabled]
     #set $curSubtitle = ($tip, $option_state % (('', $disabled)[$subtitles_disabled], 'subtitle', $tip))
     ##
-    #set $curDelete_disabled = $sickgear.show_queue_scheduler.action.isBeingRenamed($cur_show_obj)\
-                               or $sickgear.show_queue_scheduler.action.isInRenameQueue($cur_show_obj)\
-                               or $sickgear.show_queue_scheduler.action.isInRefreshQueue($cur_show_obj)
+    #set $curDelete_disabled = $sickgear.show_queue_scheduler.action.is_being_renamed($cur_show_obj)\
+                               or $sickgear.show_queue_scheduler.action.is_in_rename_queue($cur_show_obj)\
+                               or $sickgear.show_queue_scheduler.action.is_in_refresh_queue($cur_show_obj)
     #set $tip = ' title="Delete%s"' % ('', $disabled_inprogress_tip)[$curDelete_disabled]
     #set $curDelete = ($tip, $option_state % (('', $disabled)[$curDelete_disabled], 'delete', $tip))
     ##
-    #set $curRemove_disabled = $sickgear.show_queue_scheduler.action.isBeingRenamed($cur_show_obj)\
-                               or $sickgear.show_queue_scheduler.action.isInRenameQueue($cur_show_obj)\
-                               or $sickgear.show_queue_scheduler.action.isInRefreshQueue($cur_show_obj)
+    #set $curRemove_disabled = $sickgear.show_queue_scheduler.action.is_being_renamed($cur_show_obj)\
+                               or $sickgear.show_queue_scheduler.action.is_in_rename_queue($cur_show_obj)\
+                               or $sickgear.show_queue_scheduler.action.is_in_refresh_queue($cur_show_obj)
     #set $tip = ' title="Remove%s"' % ('', $disabled_inprogress_tip)[$curRemove_disabled]
     #set $curRemove = ($tip, $option_state % (('', $disabled)[$curRemove_disabled], 'remove', $tip))
 		<tr data-tvid_prodid="$cur_show_obj.tvid_prodid" data-size="$show_size">

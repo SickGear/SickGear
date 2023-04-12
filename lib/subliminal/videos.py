@@ -29,9 +29,6 @@ import struct
 from six import PY2, text_type
 from _23 import decode_str
 
-# noinspection PyPep8Naming
-import encodingKludge as ek
-
 
 __all__ = ['EXTENSIONS', 'MIMETYPES', 'Video', 'Episode', 'Movie', 'UnknownVideo',
            'scan', 'hash_opensubtitles', 'hash_thesubdb']
@@ -62,10 +59,10 @@ class Video(object):
         self._path = None
         self.hashes = {}
         self.subtitle_path = subtitle_path
-        
+
         if PY2 and isinstance(path, text_type):
             path = path.encode('utf-8')
-        
+
         if os.path.exists(path):
             self._path = path
             self.size = os.path.getsize(self._path)
@@ -150,8 +147,8 @@ class Video(object):
             folder = '.'
         existing = [f for f in os.listdir(folder) if f.startswith(basename)]
         if self.subtitle_path:
-            subsDir = ek.ek(os.path.join, folder, self.subtitle_path)
-            if ek.ek(os.path.isdir, subsDir):
+            subsDir = os.path.join(folder, self.subtitle_path)
+            if os.path.isdir(subsDir):
                 existing.extend([f for f in os.listdir(subsDir) if f.startswith(basename)])
         for path in existing:
             for ext in subtitles.EXTENSIONS:
@@ -232,7 +229,7 @@ def scan(entry, max_depth=3, scan_filter=None, depth=0):
     """
     if PY2 and isinstance(entry, text_type):
         entry = entry.encode('utf-8')
-    
+
     if depth > max_depth != 0:  # we do not want to search the whole file system except if max_depth = 0
         return []
     if os.path.isdir(entry):  # a dir? recurse

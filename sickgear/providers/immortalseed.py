@@ -27,7 +27,6 @@ from ..helpers import try_int
 import exceptions_helper
 import feedparser
 
-from _23 import unidecode
 from six import iteritems
 
 
@@ -72,7 +71,6 @@ class ImmortalSeedProvider(generic.TorrentProvider):
             'size': r'size[^\d/]+([^/]+)', 'get': '(.*download.*)', 'title': r'NUKED\b\.(.*)$'})])
         for mode in search_params:
             for search_string in search_params[mode]:
-                search_string = unidecode(search_string)
                 search_string = search_string.replace(' ', '.')
 
                 search_url = self.urls['search'] % (

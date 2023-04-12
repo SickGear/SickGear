@@ -87,8 +87,7 @@ class OmgwtfnzbsProvider(generic.NZBProvider):
 
                 if re.search('(?i)(information is incorrect|in(?:valid|correct).*?(?:username|api))',
                              data_json.get('notice')):
-                    logger.log(u'Incorrect authentication credentials for ' + self.name + ' : ' + str(description_text),
-                               logger.DEBUG)
+                    logger.debug(f'Incorrect authentication credentials for {self.name} : {description_text}')
                     raise AuthException(
                         'Your authentication credentials for ' + self.name + ' are incorrect, check your config.')
 
@@ -96,7 +95,7 @@ class OmgwtfnzbsProvider(generic.NZBProvider):
                     return True
 
                 else:
-                    logger.log(u'Unknown error given from ' + self.name + ' : ' + str(description_text), logger.DEBUG)
+                    logger.debug(f'Unknown error given from {self.name} : {str(description_text)}')
                     return False
 
             return True
@@ -109,7 +108,7 @@ class OmgwtfnzbsProvider(generic.NZBProvider):
         :return: list of search strings
         :rtype: List[AnyStr]
         """
-        return [x for x in show_name_helpers.makeSceneSeasonSearchString(self.show_obj, ep_obj)]
+        return [x for x in show_name_helpers.make_scene_season_search_string(self.show_obj, ep_obj)]
 
     def _episode_strings(self, ep_obj):
         """
@@ -119,7 +118,7 @@ class OmgwtfnzbsProvider(generic.NZBProvider):
         :return: list of search strings
         :rtype: List[AnyStr]
         """
-        return [x for x in show_name_helpers.makeSceneSearchString(self.show_obj, ep_obj)]
+        return [x for x in show_name_helpers.make_scene_search_string(self.show_obj, ep_obj)]
 
     def _title_and_url(self, item):
         """
@@ -149,7 +148,7 @@ class OmgwtfnzbsProvider(generic.NZBProvider):
                     self.tmr_limit_update('1', 'h', 'Your 24 hour limit of 10 NZBs has been reached')
                     self.log_failure_url(url)
                 elif '</nzb>' not in data or 'seem to be logged in' in data:
-                    logger.log('Failed nzb data response: %s' % data, logger.DEBUG)
+                    logger.debug('Failed nzb data response: %s' % data)
                 else:
                     result = data
         return result
@@ -345,7 +344,7 @@ class OmgwtfnzbsProvider(generic.NZBProvider):
             time.sleep(1.1)
             pass
         except (BaseException, Exception):
-            logger.log(u'Failed to parse. Traceback: %s' % traceback.format_exc(), logger.ERROR)
+            logger.error(f'Failed to parse. Traceback: {traceback.format_exc()}')
 
         mode = (mode, search_mode)['Propers' == search_mode]
         self._log_search(mode, len(results) - cnt, search_url)
@@ -400,7 +399,7 @@ class OmgwtfnzbsProvider(generic.NZBProvider):
         if success and self.nn:
             success, msg = None, 'pm dev in irc about this feature'
         if not success:
-            logger.log(u'%s: %s' % (msg, self.cookies), logger.WARNING)
+            logger.warning(f'{msg}: {self.cookies}')
             self.cookies = None
             return None
         return False

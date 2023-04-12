@@ -19,6 +19,7 @@ from __future__ import with_statement, division
 
 # noinspection PyProtectedMember
 from mimetypes import MimeTypes
+from urllib.parse import urljoin
 
 import base64
 import copy
@@ -37,11 +38,17 @@ import zipfile
 
 from exceptions_helper import ex, MultipleShowObjectsException
 import exceptions_helper
-# noinspection PyPep8Naming
-import encodingKludge as ek
 from json_helper import json_dumps, json_loads
 import sg_helpers
 from sg_helpers import remove_file, scantree, is_virtualenv
+
+from sg_futures import SgThreadPoolExecutor
+try:
+    from multiprocessing import cpu_count
+except ImportError:
+    # some platforms don't have multiprocessing
+    def cpu_count():
+        return None
 
 import sickgear
 from . import classes, clients, config, db, helpers, history, image_cache, logger, name_cache, naming, \
@@ -49,7 +56,7 @@ from . import classes, clients, config, db, helpers, history, image_cache, logge
 from .anime import AniGroupList, pull_anidb_groups, short_group_names
 from .browser import folders_at_path
 from .common import ARCHIVED, DOWNLOADED, FAILED, IGNORED, SKIPPED, SNATCHED, SNATCHED_ANY, UNAIRED, UNKNOWN, WANTED, \
-     SD, HD720p, HD1080p, UHD2160p, Overview, Quality, qualityPresetStrings, statusStrings
+    SD, HD720p, HD1080p, UHD2160p, Overview, Quality, qualityPresetStrings, statusStrings
 from .helpers import get_media_stats, has_image_ext, real_path, remove_article, remove_file_perm, starify
 from .indexermapper import MapStatus, map_indexers_to_show, save_mapping
 from .indexers.indexer_config import TVINFO_IMDB, TVINFO_TMDB, TVINFO_TRAKT, TVINFO_TVDB, TVINFO_TVMAZE, \
@@ -59,7 +66,7 @@ from .providers import newznab, rsstorrent
 from .scene_numbering import get_scene_absolute_numbering_for_show, get_scene_numbering_for_show, \
     get_xem_absolute_numbering_for_show, get_xem_numbering_for_show, set_scene_numbering_helper
 from .search_backlog import FORCED_BACKLOG
-from .sgdatetime import SGDatetime, timestamp_near
+from .sgdatetime import SGDatetime
 from .show_name_helpers import abbr_showname
 
 from .show_updater import clean_ignore_require_words
@@ -74,13 +81,9 @@ from unidecode import unidecode
 import dateutil.parser
 
 from tornado import gen, iostream
-# noinspection PyUnresolvedReferences
+from tornado.escape import utf8
 from tornado.web import RequestHandler, StaticFileHandler, authenticated
 from tornado.concurrent import run_on_executor
-# tornado.web.RequestHandler above is unresolved until...
-# 1) RouteHandler derives from RequestHandler instead of LegacyBaseHandler
-# 2) the following line is removed (plus the noinspection deleted)
-from ._legacy import LegacyBaseHandler
 
 from lib import subliminal
 from lib.cfscrape import CloudflareScraper
@@ -92,14 +95,15 @@ from lib.api_trakt.exceptions import TraktException, TraktAuthException
 
 import lib.rarfile.rarfile as rarfile
 
-from _23 import decode_bytes, decode_str, filter_list, filter_iter, getargspec, list_keys, list_values, \
-    map_consume, map_iter, map_list, map_none, ordered_dict, quote_plus, unquote_plus, urlparse
-from six import binary_type, integer_types, iteritems, iterkeys, itervalues, moves, PY2, string_types
+from _23 import decode_bytes, decode_str, getargspec, \
+    map_consume, map_none, quote_plus, unquote_plus, urlparse
+from six import binary_type, integer_types, iteritems, iterkeys, itervalues, moves, string_types
 
 # noinspection PyUnreachableCode
 if False:
     from typing import Any, AnyStr, Dict, List, Optional, Set, Tuple
     from sickgear.providers.generic import TorrentProvider
+    from tv import TVInfoShow
 
 
 # noinspection PyAbstractClass
@@ -163,17 +167,17 @@ class BaseStaticFileHandler(StaticFileHandler):
                 body = '\nRequest body: %s' % decode_str(self.request.body)
         except (BaseException, Exception):
             pass
-        logger.log('Sent %s error response to a `%s` request for `%s` with headers:\n%s%s' %
-                   (status_code, self.request.method, self.request.path, self.request.headers, body), logger.WARNING)
+        logger.warning(f'Sent {status_code} error response to a `{self.request.method}`'
+                       f' request for `{self.request.path}` with headers:\n'
+                       f'{self.request.headers}{body}')
         # suppress traceback by removing 'exc_info' kwarg
         if 'exc_info' in kwargs:
-            logger.log('Gracefully handled exception text:\n%s' % traceback.format_exception(*kwargs["exc_info"]),
-                       logger.DEBUG)
+            logger.debug('Gracefully handled exception text:\n%s' % traceback.format_exception(*kwargs["exc_info"]))
             del kwargs['exc_info']
         return super(BaseStaticFileHandler, self).write_error(status_code, **kwargs)
 
     def validate_absolute_path(self, root, absolute_path):
-        if '\\images\\flags\\' in absolute_path and not ek.ek(os.path.isfile, absolute_path):
+        if '\\images\\flags\\' in absolute_path and not os.path.isfile(absolute_path):
             absolute_path = re.sub(r'\\[^\\]+\.png$', '\\\\unknown.png', absolute_path)
         return super(BaseStaticFileHandler, self).validate_absolute_path(root, absolute_path)
 
@@ -189,7 +193,49 @@ class BaseStaticFileHandler(StaticFileHandler):
             self.set_header('X-Frame-Options', 'SAMEORIGIN')
 
 
-class RouteHandler(LegacyBaseHandler):
+class RouteHandler(RequestHandler):
+
+    executor = SgThreadPoolExecutor(thread_name_prefix='WEBSERVER', max_workers=min(32, (cpu_count() or 1) + 4))
+
+    def redirect(self, url, permanent=False, status=None):
+        """Send a redirect to the given (optionally relative) URL.
+
+        ----->>>>> NOTE: Removed self.finish <<<<<-----
+
+        If the ``status`` argument is specified, that value is used as the
+        HTTP status code; otherwise either 301 (permanent) or 302
+        (temporary) is chosen based on the ``permanent`` argument.
+        The default is 302 (temporary).
+        """
+        if not url.startswith(sickgear.WEB_ROOT):
+            url = sickgear.WEB_ROOT + url
+
+        # noinspection PyUnresolvedReferences
+        if self._headers_written:
+            raise Exception('Cannot redirect after headers have been written')
+        if status is None:
+            status = 301 if permanent else 302
+        else:
+            assert isinstance(status, int)
+            assert 300 <= status <= 399
+        self.set_status(status)
+        self.set_header('Location', urljoin(utf8(self.request.uri), utf8(url)))
+
+    def write_error(self, status_code, **kwargs):
+        body = ''
+        try:
+            if self.request.body:
+                body = '\nRequest body: %s' % decode_str(self.request.body)
+        except (BaseException, Exception):
+            pass
+        logger.warning(f'Sent {status_code} error response to a `{self.request.method}`'
+                       f' request for `{self.request.path}` with headers:\n{self.request.headers}{body}')
+        # suppress traceback by removing 'exc_info' kwarg
+        if 'exc_info' in kwargs:
+            logger.debug('Gracefully handled exception text:\n%s' % traceback.format_exception(*kwargs["exc_info"]))
+            del kwargs['exc_info']
+        return super(RouteHandler, self).write_error(status_code, **kwargs)
+
     def data_received(self, *args):
         pass
 
@@ -200,9 +246,7 @@ class RouteHandler(LegacyBaseHandler):
             return [self.decode_data(d) for d in data]
         if not isinstance(data, string_types):
             return data
-        if not PY2:
-            return data.encode('latin1').decode('utf-8')
-        return data.decode('utf-8')
+        return data.encode('latin1').decode('utf-8')
 
     @gen.coroutine
     def route_method(self, route, use_404=False, limit_route=None, xsrf_filter=True):
@@ -242,7 +286,7 @@ class RouteHandler(LegacyBaseHandler):
                 # no filtering for legacy and routes that depend on *args and **kwargs
                 result = yield self.async_call(method, request_kwargs)  # method(**request_kwargs)
             else:
-                filter_kwargs = dict(filter_iter(lambda kv: kv[0] in method_args, iteritems(request_kwargs)))
+                filter_kwargs = dict(filter(lambda kv: kv[0] in method_args, iteritems(request_kwargs)))
                 result = yield self.async_call(method, filter_kwargs)  # method(**filter_kwargs)
             self.finish(result)
 
@@ -251,8 +295,6 @@ class RouteHandler(LegacyBaseHandler):
         try:
             return function(**kw)
         except (BaseException, Exception) as e:
-            if PY2:
-                raise Exception(traceback.format_exc().replace('\n', '<br>'))
             raise e
 
     def page_not_found(self):
@@ -277,14 +319,14 @@ class BaseHandler(RouteHandler):
 
     def get_current_user(self):
         if sickgear.WEB_USERNAME or sickgear.WEB_PASSWORD:
-            return self.get_secure_cookie('sickgear-session-%s' % helpers.md5_for_text(sickgear.WEB_PORT))
+            return self.get_signed_cookie('sickgear-session-%s' % helpers.md5_for_text(sickgear.WEB_PORT))
         return True
 
     def get_image(self, image):
-        if ek.ek(os.path.isfile, image):
+        if os.path.isfile(image):
             mime_type, encoding = MimeTypes().guess_type(image)
             self.set_header('Content-Type', mime_type)
-            with ek.ek(open, image, 'rb') as img:
+            with open(image, 'rb') as img:
                 return img.read()
 
     def show_poster(self, tvid_prodid=None, which=None, api=None):
@@ -313,22 +355,22 @@ class BaseHandler(RouteHandler):
             elif 'fanart' == which[0:6]:
                 image_file_name = [cache_obj.fanart_path(
                     *tvid_prodid_obj.tuple +
-                    ('%s' % (re.sub(r'.*?fanart_(\d+(?:\.\w{1,20})?\.\w{5,8}).*', r'\1.', which, 0, re.I)),))]
+                     ('%s' % (re.sub(r'.*?fanart_(\d+(?:\.\w{1,20})?\.\w{5,8}).*', r'\1.', which, 0, re.I)),))]
 
             for cur_name in image_file_name:
-                if ek.ek(os.path.isfile, cur_name):
+                if os.path.isfile(cur_name):
                     static_image_path = cur_name
                     break
 
         if api:
-            used_file = ek.ek(os.path.basename, static_image_path)
+            used_file = os.path.basename(static_image_path)
             if static_image_path.startswith('/images'):
                 used_file = 'default'
-                static_image_path = ek.ek(os.path.join, sickgear.PROG_DIR, 'gui', 'slick', static_image_path[1:])
+                static_image_path = os.path.join(sickgear.PROG_DIR, 'gui', 'slick', static_image_path[1:])
             mime_type, encoding = MimeTypes().guess_type(static_image_path)
             self.set_header('Content-Type', mime_type)
             self.set_header('X-Filename', used_file)
-            with ek.ek(open, static_image_path, 'rb') as img:
+            with open(static_image_path, 'rb') as img:
                 return img.read()
         else:
             static_image_path = os.path.normpath(static_image_path.replace(sickgear.CACHE_DIR, '/cache'))
@@ -358,7 +400,7 @@ class LoginHandler(BaseHandler):
                           httponly=True)
             if sickgear.ENABLE_HTTPS:
                 params.update(dict(secure=True))
-            self.set_secure_cookie('sickgear-session-%s' % helpers.md5_for_text(sickgear.WEB_PORT),
+            self.set_signed_cookie('sickgear-session-%s' % helpers.md5_for_text(sickgear.WEB_PORT),
                                    sickgear.COOKIE_SECRET, **params)
             self.redirect(self.get_argument('next', '/home/'))
         else:
@@ -389,7 +431,7 @@ class CalendarHandler(BaseHandler):
         Works with iCloud, Google Calendar and Outlook.
         Provides a subscribeable URL for iCal subscriptions """
 
-        logger.log(u'Receiving iCal request from %s' % self.request.remote_ip)
+        logger.log(f'Receiving iCal request from {self.request.remote_ip}')
 
         # Limit dates
         past_date = (datetime.date.today() + datetime.timedelta(weeks=-52)).toordinal()
@@ -429,21 +471,17 @@ class CalendarHandler(BaseHandler):
                     minutes=helpers.try_int(show['runtime'], 60))
 
                 # Create event for episode
-                ical += 'BEGIN:VEVENT%s' % crlf \
-                        + 'DTSTART:%sT%sZ%s' % (air_date_time.strftime('%Y%m%d'),
-                                                air_date_time.strftime('%H%M%S'), crlf) \
-                        + 'DTEND:%sT%sZ%s' % (air_date_time_end.strftime('%Y%m%d'),
-                                              air_date_time_end.strftime('%H%M%S'), crlf) \
-                        + u'SUMMARY:%s - %sx%s - %s%s' % (show['show_name'], episode['season'], episode['episode'],
-                                                          episode['name'], crlf) \
-                        + u'UID:%s-%s-%s-E%sS%s%s' % (appname, datetime.date.today().isoformat(),
-                                                      show['show_name'].replace(' ', '-'),
-                                                      episode['episode'], episode['season'], crlf) \
-                        + u'DESCRIPTION:%s on %s' % ((show['airs'] or '(Unknown airs)'),
-                                                     (show['network'] or 'Unknown network')) \
-                        + ('' if not episode['description']
-                           else u'%s%s' % (nl, episode['description'].splitlines()[0])) \
-                        + '%sEND:VEVENT%s' % (crlf, crlf)
+                desc = '' if not episode['description'] else f'{nl}{episode["description"].splitlines()[0]}'
+                ical += (f'BEGIN:VEVENT{crlf}'
+                         f'DTSTART:{air_date_time.strftime("%Y%m%d")}T{air_date_time.strftime("%H%M%S")}Z{crlf}'
+                         f'DTEND:{air_date_time_end.strftime("%Y%m%d")}T{air_date_time_end.strftime("%H%M%S")}Z{crlf}'
+                         f'SUMMARY:{show["show_name"]} - {episode["season"]}x{episode["episode"]}'
+                            f' - {episode["name"]}{crlf}'
+                         f'UID:{appname}-{datetime.date.today().isoformat()}-{show["show_name"].replace(" ", "-")}'
+                            f'-E{episode["episode"]}S{episode["season"]}{crlf}'
+                         f'DESCRIPTION:{(show["airs"] or "(Unknown airs)")} on {(show["network"] or "Unknown network")}'
+                         f'{desc}{crlf}'
+                         f'END:VEVENT{crlf}')
 
         # Ending the iCal
         return ical + 'END:VCALENDAR'
@@ -456,7 +494,7 @@ class RepoHandler(BaseStaticFileHandler):
     kodi_is_legacy = None
 
     def parse_url_path(self, url_path):
-        logger.log('Kodi req... get(path): %s' % url_path, logger.DEBUG)
+        logger.debug('Kodi req... get(path): %s' % url_path)
         return super(RepoHandler, self).parse_url_path(url_path)
 
     def set_extra_headers(self, *args, **kwargs):
@@ -471,38 +509,38 @@ class RepoHandler(BaseStaticFileHandler):
 
         super(RepoHandler, self).initialize(*args, **kwargs)
 
-        logger.log('Kodi req... initialize(path): %s' % kwargs['path'], logger.DEBUG)
-        cache_client = ek.ek(os.path.join, sickgear.CACHE_DIR, 'clients')
-        cache_client_kodi = ek.ek(os.path.join, cache_client, 'kodi')
-        cache_client_kodi_watchedstate = ek.ek(os.path.join, cache_client_kodi, 'service.sickgear.watchedstate.updater')
+        logger.debug('Kodi req... initialize(path): %s' % kwargs['path'])
+        cache_client = os.path.join(sickgear.CACHE_DIR, 'clients')
+        cache_client_kodi = os.path.join(cache_client, 'kodi')
+        cache_client_kodi_watchedstate = os.path.join(cache_client_kodi, 'service.sickgear.watchedstate.updater')
 
-        cache_resources = ek.ek(os.path.join, cache_client_kodi_watchedstate, 'resources')
-        cache_lang = ek.ek(os.path.join, cache_resources, 'language')
-        cache_other_lang = ek.ek(os.path.join, cache_lang, ('English', 'resource.language.en_gb')[self.kodi_is_legacy])
-        ek.ek(os.path.exists, cache_other_lang) and remove_file(cache_other_lang, tree=True)
+        cache_resources = os.path.join(cache_client_kodi_watchedstate, 'resources')
+        cache_lang = os.path.join(cache_resources, 'language')
+        cache_other_lang = os.path.join(cache_lang, ('English', 'resource.language.en_gb')[self.kodi_is_legacy])
+        os.path.exists(cache_other_lang) and remove_file(cache_other_lang, tree=True)
 
-        cache_lang_sub = ek.ek(os.path.join, cache_lang, ('resource.language.en_gb', 'English')[self.kodi_is_legacy])
+        cache_lang_sub = os.path.join(cache_lang, ('resource.language.en_gb', 'English')[self.kodi_is_legacy])
         for folder in (cache_client,
                        cache_client_kodi,
-                       ek.ek(os.path.join, cache_client_kodi, 'repository.sickgear'),
+                       os.path.join(cache_client_kodi, 'repository.sickgear'),
                        cache_client_kodi_watchedstate,
-                       ek.ek(os.path.join, cache_resources),
+                       os.path.join(cache_resources),
                        cache_lang, cache_lang_sub,
                        ):
-            if not ek.ek(os.path.exists, folder):
-                ek.ek(os.mkdir, folder)
+            if not os.path.exists(folder):
+                os.mkdir(folder)
 
-        with io.open(ek.ek(os.path.join, cache_client_kodi, 'index.html'), 'w') as fh:
+        with io.open(os.path.join(cache_client_kodi, 'index.html'), 'w') as fh:
             fh.write(self.render_kodi_index())
-        with io.open(ek.ek(os.path.join, cache_client_kodi, 'repository.sickgear', 'index.html'), 'w') as fh:
+        with io.open(os.path.join(cache_client_kodi, 'repository.sickgear', 'index.html'), 'w') as fh:
             fh.write(self.render_kodi_repository_sickgear_index())
-        with io.open(ek.ek(os.path.join, cache_client_kodi_watchedstate, 'index.html'), 'w') as fh:
+        with io.open(os.path.join(cache_client_kodi_watchedstate, 'index.html'), 'w') as fh:
             fh.write(self.render_kodi_service_sickgear_watchedstate_updater_index())
-        with io.open(ek.ek(os.path.join, cache_resources, 'index.html'), 'w') as fh:
+        with io.open(os.path.join(cache_resources, 'index.html'), 'w') as fh:
             fh.write(self.render_kodi_service_sickgear_watchedstate_updater_resources_index())
-        with io.open(ek.ek(os.path.join, cache_lang, 'index.html'), 'w') as fh:
+        with io.open(os.path.join(cache_lang, 'index.html'), 'w') as fh:
             fh.write(self.render_kodi_service_sickgear_watchedstate_updater_resources_language_index())
-        with io.open(ek.ek(os.path.join, cache_lang_sub, 'index.html'), 'w') as fh:
+        with io.open(os.path.join(cache_lang_sub, 'index.html'), 'w') as fh:
             fh.write(self.render_kodi_service_sickgear_watchedstate_updater_resources_language_english_index())
 
         '''
@@ -511,7 +549,7 @@ class RepoHandler(BaseStaticFileHandler):
         if repo rendered md5 changes or flag is true, update the repo addon, where repo version *must* be increased
         
         '''
-        repo_md5_file = ek.ek(os.path.join, cache_client_kodi, 'addons.xml.md5')
+        repo_md5_file = os.path.join(cache_client_kodi, 'addons.xml.md5')
         saved_md5 = None
         try:
             with io.open(repo_md5_file, 'r', encoding='utf8') as fh:
@@ -520,18 +558,18 @@ class RepoHandler(BaseStaticFileHandler):
             pass
         rendered_md5 = self.render_kodi_repo_addons_xml_md5()
         if saved_md5 != rendered_md5:
-            with io.open(ek.ek(os.path.join, cache_client_kodi, 'repository.sickgear', 'addon.xml'), 'w') as fh:
+            with io.open(os.path.join(cache_client_kodi, 'repository.sickgear', 'addon.xml'), 'w') as fh:
                 fh.write(self.render_kodi_repo_addon_xml())
-            with io.open(ek.ek(os.path.join, cache_client_kodi_watchedstate, 'addon.xml'), 'w') as fh:
+            with io.open(os.path.join(cache_client_kodi_watchedstate, 'addon.xml'), 'w') as fh:
                 fh.write(self.get_watchedstate_updater_addon_xml())
-            with io.open(ek.ek(os.path.join, cache_client_kodi, 'addons.xml'), 'w') as fh:
+            with io.open(os.path.join(cache_client_kodi, 'addons.xml'), 'w') as fh:
                 fh.write(self.render_kodi_repo_addons_xml())
-            with io.open(ek.ek(os.path.join, cache_client_kodi, 'addons.xml.md5'), 'w') as fh:
+            with io.open(os.path.join(cache_client_kodi, 'addons.xml.md5'), 'w') as fh:
                 fh.write(rendered_md5)
 
             def save_zip(name, version, zip_path, zip_method):
                 zip_name = '%s-%s.zip' % (name, version)
-                zip_file = ek.ek(os.path.join, zip_path, zip_name)
+                zip_file = os.path.join(zip_path, zip_name)
                 for direntry in helpers.scantree(zip_path, ['resources'], [r'\.(?:md5|zip)$'], filter_kind=False):
                     remove_file_perm(direntry.path)
                 zip_data = zip_method()
@@ -539,11 +577,11 @@ class RepoHandler(BaseStaticFileHandler):
                     zh.write(zip_data)
 
                 # Force a UNIX line ending, like the md5sum utility.
-                with io.open(ek.ek(os.path.join, zip_path, '%s.md5' % zip_name), 'w', newline='\n') as zh:
-                    zh.write(u'%s *%s\n' % (self.md5ify(zip_data), zip_name))
+                with io.open(os.path.join(zip_path, '%s.md5' % zip_name), 'w', newline='\n') as zh:
+                    zh.write(f'{self.md5ify(zip_data)} *{zip_name}\n')
 
             aid, ver = self.repo_sickgear_details()
-            save_zip(aid, ver, ek.ek(os.path.join, cache_client_kodi, 'repository.sickgear'),
+            save_zip(aid, ver, os.path.join(cache_client_kodi, 'repository.sickgear'),
                      self.kodi_repository_sickgear_zip)
 
             aid, ver = self.addon_watchedstate_details()
@@ -566,8 +604,8 @@ class RepoHandler(BaseStaticFileHandler):
                   (cache_lang_sub, 'strings.xml')
                   ))[self.kodi_is_legacy],
         ):
-            helpers.copy_file(ek.ek(
-                os.path.join, *(sickgear.PROG_DIR, 'sickgear', 'clients', 'kodi') + src), ek.ek(os.path.join, *dst))
+            helpers.copy_file(
+                os.path.join(*(sickgear.PROG_DIR, 'sickgear', 'clients', 'kodi') + src), os.path.join(*dst))
 
     def get_content_type(self):
         if '.md5' == self.absolute_path[-4:] or '.po' == self.absolute_path[-3:]:
@@ -583,7 +621,7 @@ class RepoHandler(BaseStaticFileHandler):
         t.addon = '%s-%s.zip' % self.addon_watchedstate_details()
 
         try:
-            with open(ek.ek(os.path.join, sickgear.PROG_DIR, 'CHANGES.md')) as fh:
+            with open(os.path.join(sickgear.PROG_DIR, 'CHANGES.md')) as fh:
                 t.version = re.findall(r'###[^0-9x]+([0-9]+\.[0-9]+\.[0-9x]+)', fh.readline())[0]
         except (BaseException, Exception):
             t.version = ''
@@ -624,7 +662,7 @@ class RepoHandler(BaseStaticFileHandler):
         return self.index([('resource.language.en_gb/', 'English/')[self.kodi_is_legacy]])
 
     def render_kodi_service_sickgear_watchedstate_updater_resources_language_english_index(self):
-         return self.index([('strings.po', 'strings.xml')[self.kodi_is_legacy]])
+        return self.index([('strings.po', 'strings.xml')[self.kodi_is_legacy]])
 
     def repo_sickgear_details(self):
         return re.findall(r'(?si)addon\sid="(repository\.[^"]+)[^>]+version="([^"]+)',
@@ -636,15 +674,15 @@ class RepoHandler(BaseStaticFileHandler):
 
     def get_watchedstate_updater_addon_xml(self):
         mem_key = 'kodi_xml'
-        if int(timestamp_near(datetime.datetime.now())) < sickgear.MEMCACHE.get(mem_key, {}).get('last_update', 0):
+        if SGDatetime.timestamp_near() < sickgear.MEMCACHE.get(mem_key, {}).get('last_update', 0):
             return sickgear.MEMCACHE.get(mem_key).get('data')
 
         filename = 'addon%s.xml' % self.kodi_include
-        with io.open(ek.ek(os.path.join, sickgear.PROG_DIR, 'sickgear', 'clients',
-                           'kodi', 'service.sickgear.watchedstate.updater', filename), 'r', encoding='utf8') as fh:
+        with io.open(os.path.join(sickgear.PROG_DIR, 'sickgear', 'clients', 'kodi',
+                                  'service.sickgear.watchedstate.updater', filename), 'r', encoding='utf8') as fh:
             xml = fh.read().strip() % dict(ADDON_VERSION=self.get_addon_version(self.kodi_include))
 
-        sickgear.MEMCACHE[mem_key] = dict(last_update=30 + int(timestamp_near(datetime.datetime.now())), data=xml)
+        sickgear.MEMCACHE[mem_key] = dict(last_update=30 + SGDatetime.timestamp_near(), data=xml)
         return xml
 
     @staticmethod
@@ -658,15 +696,15 @@ class RepoHandler(BaseStaticFileHandler):
         Must use an arg here instead of `self` due to static call use case from external class
         """
         mem_key = 'kodi_ver'
-        if int(timestamp_near(datetime.datetime.now())) < sickgear.MEMCACHE.get(mem_key, {}).get('last_update', 0):
+        if SGDatetime.timestamp_near() < sickgear.MEMCACHE.get(mem_key, {}).get('last_update', 0):
             return sickgear.MEMCACHE.get(mem_key).get('data')
 
         filename = 'service%s.py' % kodi_include
-        with io.open(ek.ek(os.path.join, sickgear.PROG_DIR, 'sickgear', 'clients',
-                           'kodi', 'service.sickgear.watchedstate.updater', filename), 'r', encoding='utf8') as fh:
+        with io.open(os.path.join(sickgear.PROG_DIR, 'sickgear', 'clients', 'kodi',
+                                  'service.sickgear.watchedstate.updater', filename), 'r', encoding='utf8') as fh:
             version = re.findall(r'ADDON_VERSION\s*?=\s*?\'([^\']+)', fh.read())[0]
 
-        sickgear.MEMCACHE[mem_key] = dict(last_update=30 + int(timestamp_near(datetime.datetime.now())), data=version)
+        sickgear.MEMCACHE[mem_key] = dict(last_update=30 + SGDatetime.timestamp_near(), data=version)
         return version
 
     def render_kodi_repo_addon_xml(self):
@@ -696,7 +734,7 @@ class RepoHandler(BaseStaticFileHandler):
     def md5ify(string):
         if not isinstance(string, binary_type):
             string = string.encode('utf-8')
-        return u'%s' % hashlib.new('md5', string).hexdigest()
+        return f'{hashlib.new("md5", string).hexdigest()}'
 
     def kodi_repository_sickgear_zip(self):
         bfr = io.BytesIO()
@@ -705,12 +743,12 @@ class RepoHandler(BaseStaticFileHandler):
             with zipfile.ZipFile(bfr, 'w') as zh:
                 zh.writestr('repository.sickgear/addon.xml', self.render_kodi_repo_addon_xml(), zipfile.ZIP_DEFLATED)
 
-                with io.open(ek.ek(os.path.join, sickgear.PROG_DIR,
-                                   'sickgear', 'clients', 'kodi', 'repository.sickgear', 'icon.png'), 'rb') as fh:
+                with io.open(os.path.join(sickgear.PROG_DIR, 'sickgear', 'clients', 'kodi',
+                                          'repository.sickgear', 'icon.png'), 'rb') as fh:
                     infile = fh.read()
                 zh.writestr('repository.sickgear/icon.png', infile, zipfile.ZIP_DEFLATED)
         except OSError as e:
-            logger.log('Unable to zip: %r / %s' % (e, ex(e)), logger.WARNING)
+            logger.warning('Unable to zip: %r / %s' % (e, ex(e)))
 
         zip_data = bfr.getvalue()
         bfr.close()
@@ -719,12 +757,12 @@ class RepoHandler(BaseStaticFileHandler):
     def kodi_service_sickgear_watchedstate_updater_zip(self):
         bfr = io.BytesIO()
 
-        basepath = ek.ek(os.path.join, sickgear.PROG_DIR, 'sickgear', 'clients', 'kodi')
+        basepath = os.path.join(sickgear.PROG_DIR, 'sickgear', 'clients', 'kodi')
 
-        zip_path = ek.ek(os.path.join, basepath, 'service.sickgear.watchedstate.updater')
-        devenv_src = ek.ek(os.path.join, sickgear.PROG_DIR, 'tests', '_devenv.py')
-        devenv_dst = ek.ek(os.path.join, zip_path, '_devenv.py')
-        if sickgear.ENV.get('DEVENV') and ek.ek(os.path.exists, devenv_src):
+        zip_path = os.path.join(basepath, 'service.sickgear.watchedstate.updater')
+        devenv_src = os.path.join(sickgear.PROG_DIR, 'tests', '_devenv.py')
+        devenv_dst = os.path.join(zip_path, '_devenv.py')
+        if sickgear.ENV.get('DEVENV') and os.path.exists(devenv_src):
             helpers.copy_file(devenv_src, devenv_dst)
         else:
             helpers.remove_file_perm(devenv_dst)
@@ -746,10 +784,10 @@ class RepoHandler(BaseStaticFileHandler):
                         infile = fh.read()
 
                 with zipfile.ZipFile(bfr, 'a') as zh:
-                    zh.writestr(ek.ek(os.path.relpath, direntry.path.replace(self.kodi_legacy, ''), basepath),
+                    zh.writestr(os.path.relpath(direntry.path.replace(self.kodi_legacy, ''), basepath),
                                 infile, zipfile.ZIP_DEFLATED)
             except OSError as e:
-                logger.log('Unable to zip %s: %r / %s' % (direntry.path, e, ex(e)), logger.WARNING)
+                logger.warning('Unable to zip %s: %r / %s' % (direntry.path, e, ex(e)))
 
         zip_data = bfr.getvalue()
         bfr.close()
@@ -881,16 +919,17 @@ class LogfileHandler(BaseHandler):
         super(LogfileHandler, self).__init__(application, request, **kwargs)
         self.lock = threading.Lock()
 
+    # noinspection PyUnusedLocal
     @authenticated
     @gen.coroutine
-    def get(self, path, *args, **kwargs):
+    def get(self, *args, **kwargs):
         logfile_name = logger.current_log_file()
 
         try:
             self.set_header('Content-Type', 'text/html; charset=utf-8')
             self.set_header('Content-Description', 'Logfile Download')
             self.set_header('Content-Disposition', 'attachment; filename=sickgear.log')
-            # self.set_header('Content-Length', ek.ek(os.path.getsize, logfile_name))
+            # self.set_header('Content-Length', os.path.getsize(logfile_name))
             auths = sickgear.GenericProvider.dedupe_auths(True)
             rxc_auths = re.compile('(?i)%s' % '|'.join([(re.escape(_a)) for _a in auths]))
             replacements = dict([(_a, starify(_a)) for _a in auths])
@@ -1133,7 +1172,7 @@ class MainHandler(WebHandler):
 
         # make a dict out of the sql results
         sql_result = [dict(row) for row in sql_result
-                      if Quality.splitCompositeStatus(helpers.try_int(row['status']))[0] not in
+                      if Quality.split_composite_status(helpers.try_int(row['status']))[0] not in
                       SNATCHED_ANY + [DOWNLOADED, ARCHIVED, IGNORED, SKIPPED]]
 
         # multi dimension sort
@@ -1184,15 +1223,15 @@ class MainHandler(WebHandler):
                     pass
             if imdb_id:
                 sql_result[index]['imdb_url'] = sickgear.indexers.indexer_config.tvinfo_config[
-                                                     sickgear.indexers.indexer_config.TVINFO_IMDB][
-                                                     'show_url'] % imdb_id
+                                                    sickgear.indexers.indexer_config.TVINFO_IMDB][
+                                                    'show_url'] % imdb_id
             else:
                 sql_result[index]['imdb_url'] = ''
 
             if tvid_prodid in fanarts:
                 continue
 
-            for img in ek.ek(glob.glob, cache_obj.fanart_path(*tvid_prodid_obj.tuple).replace('fanart.jpg', '*')) or []:
+            for img in glob.glob(cache_obj.fanart_path(*tvid_prodid_obj.tuple).replace('fanart.jpg', '*')) or []:
                 match = re.search(r'(\d+(?:\.\w*)?\.\w{5,8})\.fanart\.', img, re.I)
                 if not match:
                     continue
@@ -1276,8 +1315,8 @@ class MainHandler(WebHandler):
                 elif 'backart' in kwargs:
                     sickgear.EPISODE_VIEW_BACKGROUND = backart
                     sickgear.FANART_PANEL = 'highlight-off' == sickgear.FANART_PANEL and 'highlight-off' or \
-                                             'highlight2' == sickgear.FANART_PANEL and 'highlight1' or \
-                                             'highlight1' == sickgear.FANART_PANEL and 'highlight' or 'highlight-off'
+                                            'highlight2' == sickgear.FANART_PANEL and 'highlight1' or \
+                                            'highlight1' == sickgear.FANART_PANEL and 'highlight' or 'highlight-off'
                 elif 'viewmode' in kwargs:
                     sickgear.EPISODE_VIEW_VIEWMODE = viewmode
 
@@ -1288,7 +1327,7 @@ class MainHandler(WebHandler):
 
         now = datetime.datetime.now()
         events = [
-            ('recent', sickgear.recent_search_scheduler.timeLeft),
+            ('recent', sickgear.recent_search_scheduler.time_left),
             ('backlog', sickgear.backlog_search_scheduler.next_backlog_timeleft),
         ]
 
@@ -1395,7 +1434,7 @@ r.close()
         if data:
             my_db = db.DBConnection(row_type='dict')
 
-            media_paths = map_list(lambda arg: ek.ek(os.path.basename, arg[1]['path_file']), iteritems(data))
+            media_paths = list(map(lambda arg: os.path.basename(arg[1]['path_file']), iteritems(data)))
 
             def chunks(lines, n):
                 for c in range(0, len(lines), n):
@@ -1412,21 +1451,21 @@ r.close()
             cl = []
 
             ep_results = {}
-            map_consume(lambda r: ep_results.update({'%s' % ek.ek(os.path.basename, r['location']).lower(): dict(
+            map_consume(lambda r: ep_results.update({'%s' % os.path.basename(r['location']).lower(): dict(
                         episode_id=r['episode_id'], status=r['status'], location=r['location'],
                         file_size=r['file_size'])}), sql_result)
 
             for (k, v) in iteritems(data):
 
-                bname = (ek.ek(os.path.basename, v.get('path_file')) or '').lower()
+                bname = (os.path.basename(v.get('path_file')) or '').lower()
                 if not bname:
                     msg = 'Missing media file name provided'
                     data[k] = msg
-                    logger.log('Update watched state skipped an item: %s' % msg, logger.WARNING)
+                    logger.warning('Update watched state skipped an item: %s' % msg)
                     continue
 
                 if bname in ep_results:
-                    date_watched = now = int(timestamp_near(datetime.datetime.now()))
+                    date_watched = now = SGDatetime.timestamp_near()
                     if 1500000000 < date_watched:
                         date_watched = helpers.try_int(float(v.get('date_watched')))
 
@@ -1450,7 +1489,7 @@ r.close()
         if as_json:
             if not data:
                 data = dict(error='Request made to SickGear with invalid payload')
-                logger.log('Update watched state failed: %s' % data['error'], logger.WARNING)
+                logger.warning('Update watched state failed: %s' % data['error'])
 
             return json_dumps(data)
 
@@ -1555,13 +1594,13 @@ class Home(MainHandler):
         index = 0
         if 'custom' == sickgear.SHOWLIST_TAGVIEW:
             for name in sickgear.SHOW_TAGS:
-                results = filter_list(lambda so: so.tag == name, sickgear.showList)
+                results = list(filter(lambda so: so.tag == name, sickgear.showList))
                 if results:
                     t.showlists.append(['container%s' % index, name, results])
                 index += 1
         elif 'anime' == sickgear.SHOWLIST_TAGVIEW:
-            show_results = filter_list(lambda so: not so.anime, sickgear.showList)
-            anime_results = filter_list(lambda so: so.anime, sickgear.showList)
+            show_results = list(filter(lambda so: not so.anime, sickgear.showList))
+            anime_results = list(filter(lambda so: so.anime, sickgear.showList))
             if show_results:
                 t.showlists.append(['container%s' % index, 'Show List', show_results])
                 index += 1
@@ -1581,16 +1620,16 @@ class Home(MainHandler):
         if 'simple' != sickgear.HOME_LAYOUT:
             t.network_images = {}
             networks = {}
-            images_path = ek.ek(os.path.join, sickgear.PROG_DIR, 'gui', 'slick', 'images', 'network')
+            images_path = os.path.join(sickgear.PROG_DIR, 'gui', 'slick', 'images', 'network')
             for cur_show_obj in sickgear.showList:
                 network_name = 'nonetwork' if None is cur_show_obj.network \
-                    else cur_show_obj.network.replace(u'\u00C9', 'e').lower()
+                    else cur_show_obj.network.replace('\u00C9', 'e').lower()
                 if network_name not in networks:
-                    filename = u'%s.png' % network_name
-                    if not ek.ek(os.path.isfile, ek.ek(os.path.join, images_path, filename)):
-                        filename = u'%s.png' % re.sub(r'(?m)(.*)\s+\(\w{2}\)$', r'\1', network_name)
-                        if not ek.ek(os.path.isfile, ek.ek(os.path.join, images_path, filename)):
-                            filename = u'nonetwork.png'
+                    filename = f'{network_name}.png'
+                    if not os.path.isfile(os.path.join(images_path, filename)):
+                        filename = '%s.png' % re.sub(r'(?m)(.*)\s+\(\w{2}\)$', r'\1', network_name)
+                        if not os.path.isfile(os.path.join(images_path, filename)):
+                            filename = 'nonetwork.png'
                     networks.setdefault(network_name, filename)
                 t.network_images.setdefault(cur_show_obj.tvid_prodid, networks[network_name])
 
@@ -1646,10 +1685,10 @@ class Home(MainHandler):
 
             authed, auth_msg = sab.test_authentication(host, username, password, apikey)
             if authed:
-                return u'Success. Connected %s authentication' % \
-                       ('using %s' % access_msg, 'with no')['None' == auth_msg.lower()]
-            return u'Authentication failed. %s' % auth_msg
-        return u'Unable to connect to host'
+                return f'Success. Connected' \
+                       f' {(f"using {access_msg}", "with no")["None" == auth_msg.lower()]} authentication'
+            return f'Authentication failed. {auth_msg}'
+        return 'Unable to connect to host'
 
     def test_nzbget(self, host=None, use_https=None, username=None, password=None):
         self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
@@ -1906,7 +1945,7 @@ class Home(MainHandler):
             ' AND notify_list != ""',
             [TVidProdid.glue])
         notify_lists = {}
-        for r in filter_iter(lambda x: x['notify_list'].strip(), rows):
+        for r in filter(lambda x: x['notify_list'].strip(), rows):
             # noinspection PyTypeChecker
             notify_lists[r['tvid_prodid']] = r['notify_list']
 
@@ -1978,10 +2017,10 @@ class Home(MainHandler):
     def check_update(self):
         # force a check to see if there is a new version
         if sickgear.update_software_scheduler.action.check_for_new_version(force=True):
-            logger.log(u'Forced version check found results')
+            logger.log('Forced version check found results')
 
         if sickgear.update_packages_scheduler.action.check_for_new_version(force=True):
-            logger.log(u'Forced package version check found results')
+            logger.log('Forced package version check found results')
 
         self.redirect('/home/')
 
@@ -2002,7 +2041,7 @@ class Home(MainHandler):
             if not line.strip():
                 continue
             if line.startswith('  '):
-                change_parts = re.findall(r'^[\W]+(.*)$', line)
+                change_parts = re.findall(r'^\W+(.*)$', line)
                 change['text'] += change_parts and (' %s' % change_parts[0].strip()) or ''
             else:
                 if change:
@@ -2014,11 +2053,11 @@ class Home(MainHandler):
                 elif not max_rel:
                     break
                 elif line.startswith('### '):
-                    rel_data = re.findall(r'(?im)^###\W*([^\s]+)\W\(([^)]+)\)', line)
+                    rel_data = re.findall(r'(?im)^###\W*(\S+)\W\(([^)]+)\)', line)
                     rel_data and output.append({'type': 'rel', 'ver': rel_data[0][0], 'date': rel_data[0][1]})
                     max_rel -= 1
                 elif line.startswith('# '):
-                    max_data = re.findall(r'^#\W*([\d]+)\W*$', line)
+                    max_data = re.findall(r'^#\W*(\d+)\W*$', line)
                     max_rel = max_data and helpers.try_int(max_data[0], None) or 5
         if change:
             output.append(change)
@@ -2077,6 +2116,7 @@ class Home(MainHandler):
         else:
             self.redirect('/home/')
 
+    # noinspection PyUnusedLocal
     def season_render(self, tvid_prodid=None, season=None, **kwargs):
 
         response = {'success': False}
@@ -2141,25 +2181,25 @@ class Home(MainHandler):
 
         show_message = []
 
-        if sickgear.show_queue_scheduler.action.isBeingAdded(show_obj):
+        if sickgear.show_queue_scheduler.action.is_being_added(show_obj):
             show_message = ['Downloading this show, the information below is incomplete']
 
-        elif sickgear.show_queue_scheduler.action.isBeingUpdated(show_obj):
+        elif sickgear.show_queue_scheduler.action.is_being_updated(show_obj):
             show_message = ['Updating information for this show']
 
-        elif sickgear.show_queue_scheduler.action.isBeingRefreshed(show_obj):
+        elif sickgear.show_queue_scheduler.action.is_being_refreshed(show_obj):
             show_message = ['Refreshing episodes from disk for this show']
 
-        elif sickgear.show_queue_scheduler.action.isBeingSubtitled(show_obj):
+        elif sickgear.show_queue_scheduler.action.is_being_subtitled(show_obj):
             show_message = ['Downloading subtitles for this show']
 
-        elif sickgear.show_queue_scheduler.action.isInRefreshQueue(show_obj):
+        elif sickgear.show_queue_scheduler.action.is_in_refresh_queue(show_obj):
             show_message = ['Refresh queued for this show']
 
-        elif sickgear.show_queue_scheduler.action.isInUpdateQueue(show_obj):
+        elif sickgear.show_queue_scheduler.action.is_in_update_queue(show_obj):
             show_message = ['Update queued for this show']
 
-        elif sickgear.show_queue_scheduler.action.isInSubtitleQueue(show_obj):
+        elif sickgear.show_queue_scheduler.action.is_in_subtitle_queue(show_obj):
             show_message = ['Subtitle download queued for this show']
 
         if sickgear.show_queue_scheduler.action.is_show_being_switched(show_obj):
@@ -2185,8 +2225,8 @@ class Home(MainHandler):
         show_message = '.<br>'.join(show_message)
 
         t.force_update = 'home/update-show?tvid_prodid=%s&amp;force=1&amp;web=1' % tvid_prodid
-        if not sickgear.show_queue_scheduler.action.isBeingAdded(show_obj):
-            if not sickgear.show_queue_scheduler.action.isBeingUpdated(show_obj):
+        if not sickgear.show_queue_scheduler.action.is_being_added(show_obj):
+            if not sickgear.show_queue_scheduler.action.is_being_updated(show_obj):
                 t.submenu.append(
                     {'title': 'Remove',
                      'path': 'home/delete-show?tvid_prodid=%s' % tvid_prodid, 'confirm': True})
@@ -2211,7 +2251,7 @@ class Home(MainHandler):
                 t.submenu.append(
                     {'title': 'Media Rename',
                      'path': 'home/rename-media?tvid_prodid=%s' % tvid_prodid})
-                if sickgear.USE_SUBTITLES and not sickgear.show_queue_scheduler.action.isBeingSubtitled(
+                if sickgear.USE_SUBTITLES and not sickgear.show_queue_scheduler.action.is_being_subtitled(
                         show_obj) and show_obj.subtitles:
                     t.submenu.append(
                         {'title': 'Download Subtitles',
@@ -2267,7 +2307,7 @@ class Home(MainHandler):
                 del (ep_counts['totals'][0])
 
         ep_counts['eps_all'] = sum(itervalues(ep_counts['totals']))
-        ep_counts['eps_most'] = max(list_values(ep_counts['totals']) + [0])
+        ep_counts['eps_most'] = max(list(ep_counts['totals'].values()) + [0])
         all_seasons = sorted(iterkeys(ep_counts['totals']), reverse=True)
         t.lowest_season, t.highest_season = all_seasons and (all_seasons[-1], all_seasons[0]) or (0, 0)
 
@@ -2315,7 +2355,7 @@ class Home(MainHandler):
             status_overview = show_obj.get_overview(row['status'])
             if status_overview:
                 ep_counts[status_overview] += row['cnt']
-                if ARCHIVED == Quality.splitCompositeStatus(row['status'])[0]:
+                if ARCHIVED == Quality.split_composite_status(row['status'])[0]:
                     ep_counts['archived'].setdefault(row['season'], 0)
                     ep_counts['archived'][row['season']] = row['cnt'] + ep_counts['archived'].get(row['season'], 0)
                 else:
@@ -2355,8 +2395,7 @@ class Home(MainHandler):
 
         t.fanart = []
         cache_obj = image_cache.ImageCache()
-        for img in ek.ek(glob.glob,
-                         cache_obj.fanart_path(show_obj.tvid, show_obj.prodid).replace('fanart.jpg', '*')) or []:
+        for img in glob.glob(cache_obj.fanart_path(show_obj.tvid, show_obj.prodid).replace('fanart.jpg', '*')) or []:
             match = re.search(r'(\d+(?:\.(\w*?(\d*)))?\.\w{5,8})\.fanart\.', img, re.I)
             if match and match.group(1):
                 t.fanart += [(match.group(1),
@@ -2383,7 +2422,7 @@ class Home(MainHandler):
 
         t.clean_show_name = quote_plus(sickgear.indexermapper.clean_show_name(show_obj.name))
 
-        t.min_initial = Quality.get_quality_ui(min(Quality.splitQuality(show_obj.quality)[0]))
+        t.min_initial = Quality.get_quality_ui(min(Quality.split_quality(show_obj.quality)[0]))
         t.show_obj.exceptions = scene_exceptions.get_scene_exceptions(show_obj.tvid, show_obj.prodid)
         # noinspection PyUnresolvedReferences
         t.all_scene_exceptions = show_obj.exceptions  # normally Unresolved as not a class attribute, force set above
@@ -2429,7 +2468,7 @@ class Home(MainHandler):
                         sorted_show_list[i].unique_name = '%s (%s)' % (sorted_show_list[i].name, start_year)
                         dups[sorted_show_list[i].unique_name] = i
 
-        name_cache.buildNameCache()
+        name_cache.build_name_cache()
 
     @staticmethod
     def sorted_show_lists():
@@ -2439,7 +2478,7 @@ class Home(MainHandler):
         if 'custom' == sickgear.SHOWLIST_TAGVIEW:
             sorted_show_lists = []
             for tag in sickgear.SHOW_TAGS:
-                results = filter_list(lambda _so: _so.tag == tag, sickgear.showList)
+                results = list(filter(lambda _so: _so.tag == tag, sickgear.showList))
                 if results:
                     sorted_show_lists.append([tag, sorted(results, key=lambda x: titler(x.unique_name))])
             # handle orphaned shows
@@ -2544,10 +2583,10 @@ class Home(MainHandler):
         show_obj = helpers.find_show_by_id({tvid: prodid}, no_mapped_ids=True)
         try:
             sickgear.show_queue_scheduler.action.switch_show(show_obj=show_obj, new_tvid=m_tvid,
-                                                              new_prodid=m_prodid, force_id=True,
-                                                              set_pause=set_pause, mark_wanted=mark_wanted)
+                                                             new_prodid=m_prodid, force_id=True,
+                                                             set_pause=set_pause, mark_wanted=mark_wanted)
         except (BaseException, Exception) as e:
-            logger.log('Could not add show %s to switch queue: %s' % (show_obj.tvid_prodid, ex(e)), logger.WARNING)
+            logger.warning('Could not add show %s to switch queue: %s' % (show_obj.tvid_prodid, ex(e)))
 
         ui.notifications.message('TV info source switch', 'Queued switch of tv info source')
         return {'Success': 'Switched to new TV info source'}
@@ -2584,12 +2623,12 @@ class Home(MainHandler):
                 for k, v in iteritems(new_ids):
                     if None is v.get('id') or None is v.get('status'):
                         continue
-                    if (show_obj.ids.get(k, {'id': 0}).get('id') != v.get('id') or
-                            (MapStatus.NO_AUTOMATIC_CHANGE == v.get('status') and
-                             MapStatus.NO_AUTOMATIC_CHANGE != show_obj.ids.get(
-                                        k, {'status': MapStatus.NONE}).get('status')) or
-                            (MapStatus.NO_AUTOMATIC_CHANGE != v.get('status') and
-                             MapStatus.NO_AUTOMATIC_CHANGE == show_obj.ids.get(
+                    if (show_obj.ids.get(k, {'id': 0}).get('id') != v.get('id')
+                            or (MapStatus.NO_AUTOMATIC_CHANGE == v.get('status')
+                                and MapStatus.NO_AUTOMATIC_CHANGE != show_obj.ids.get(
+                                        k, {'status': MapStatus.NONE}).get('status'))
+                            or (MapStatus.NO_AUTOMATIC_CHANGE != v.get('status')
+                                and MapStatus.NO_AUTOMATIC_CHANGE == show_obj.ids.get(
                                         k, {'status': MapStatus.NONE}).get('status'))):
                         show_obj.ids[k]['id'] = (0, v['id'])[v['id'] >= 0]
                         show_obj.ids[k]['status'] = (MapStatus.NOT_FOUND, v['status'])[v['id'] != 0]
@@ -2614,12 +2653,12 @@ class Home(MainHandler):
                 else:
                     msg = 'Main ID unchanged, because show from %s with ID: %s exists in DB.' % \
                           (sickgear.TVInfoAPI(m_tvid).name, mtvid_prodid)
-                    logger.log(msg, logger.WARNING)
+                    logger.warning(msg)
                     ui.notifications.message(*[s.strip() for s in msg.split(',')])
             except MultipleShowObjectsException:
                 msg = 'Main ID unchanged, because show from %s with ID: %s exists in DB.' % \
                       (sickgear.TVInfoAPI(m_tvid).name, m_prodid)
-                logger.log(msg, logger.WARNING)
+                logger.warning(msg)
                 ui.notifications.message(*[s.strip() for s in msg.split(',')])
 
         response.update({
@@ -2666,7 +2705,7 @@ class Home(MainHandler):
         t.fanart = []
         cache_obj = image_cache.ImageCache()
         show_obj = getattr(t, 'show_obj', None) or getattr(t, 'show', None)
-        for img in ek.ek(glob.glob, cache_obj.fanart_path(
+        for img in glob.glob(cache_obj.fanart_path(
                 show_obj.tvid, show_obj.prodid).replace('fanart.jpg', '*')) or []:
             match = re.search(r'(\d+(?:\.(\w*?(\d*)))?\.\w{5,8})\.fanart\.', img, re.I)
             if match and match.group(1):
@@ -2844,14 +2883,14 @@ class Home(MainHandler):
 
         errors = []
         with show_obj.lock:
-            show_obj.quality = Quality.combineQualities(map_list(int, any_qualities), map_list(int, best_qualities))
+            show_obj.quality = Quality.combine_qualities(list(map(int, any_qualities)), list(map(int, best_qualities)))
             show_obj.upgrade_once = upgrade_once
 
             # reversed for now
             if bool(show_obj.flatten_folders) != bool(flatten_folders):
                 show_obj.flatten_folders = flatten_folders
                 try:
-                    sickgear.show_queue_scheduler.action.refreshShow(show_obj)
+                    sickgear.show_queue_scheduler.action.refresh_show(show_obj)
                 except exceptions_helper.CantRefreshException as e:
                     errors.append('Unable to refresh this show: ' + ex(e))
 
@@ -2896,12 +2935,12 @@ class Home(MainHandler):
 
             # if we change location clear the db of episodes, change it, write to db, and rescan
             # noinspection PyProtectedMember
-            old_path = ek.ek(os.path.normpath, show_obj._location)
-            new_path = ek.ek(os.path.normpath, location)
+            old_path = os.path.normpath(show_obj._location)
+            new_path = os.path.normpath(location)
             if old_path != new_path:
-                logger.log(u'%s != %s' % (old_path, new_path), logger.DEBUG)
-                if not ek.ek(os.path.isdir, new_path) and not sickgear.CREATE_MISSING_SHOW_DIRS:
-                    errors.append(u'New location <tt>%s</tt> does not exist' % new_path)
+                logger.debug(f'{old_path} != {new_path}')
+                if not os.path.isdir(new_path) and not sickgear.CREATE_MISSING_SHOW_DIRS:
+                    errors.append(f'New location <tt>{new_path}</tt> does not exist')
 
                 # don't bother if we're going to update anyway
                 elif not do_update:
@@ -2909,16 +2948,15 @@ class Home(MainHandler):
                     try:
                         show_obj.location = new_path
                         try:
-                            sickgear.show_queue_scheduler.action.refreshShow(show_obj)
+                            sickgear.show_queue_scheduler.action.refresh_show(show_obj)
                         except exceptions_helper.CantRefreshException as e:
                             errors.append('Unable to refresh this show:' + ex(e))
                             # grab updated info from TVDB
                             # show_obj.load_episodes_from_tvinfo()
                             # rescan the episodes in the new folder
                     except exceptions_helper.NoNFOException:
-                        errors.append(
-                            u"The folder at <tt>%s</tt> doesn't contain a tvshow.nfo - "
-                            u"copy your files to that folder before you change the directory in SickGear." % new_path)
+                        errors.append(f'The folder at <tt>{new_path}</tt> doesn"t contain a tvshow.nfo -'
+                                      f' copy your files to that folder before you change the directory in SickGear.')
 
             # save it to the DB
             show_obj.save_to_db()
@@ -2926,7 +2964,7 @@ class Home(MainHandler):
         # force the update
         if do_update:
             try:
-                sickgear.show_queue_scheduler.action.updateShow(show_obj, True)
+                sickgear.show_queue_scheduler.action.update_show(show_obj, True)
                 helpers.cpu_sleep()
             except exceptions_helper.CantUpdateException:
                 errors.append('Unable to force an update on the show.')
@@ -2964,8 +3002,8 @@ class Home(MainHandler):
         if None is show_obj:
             return self._generic_message('Error', 'Unable to find the specified show')
 
-        if sickgear.show_queue_scheduler.action.isBeingAdded(
-                show_obj) or sickgear.show_queue_scheduler.action.isBeingUpdated(show_obj):
+        if sickgear.show_queue_scheduler.action.is_being_added(
+                show_obj) or sickgear.show_queue_scheduler.action.is_being_updated(show_obj):
             return self._generic_message("Error", "Shows can't be deleted while they're being added or updated.")
 
         # if sickgear.USE_TRAKT and sickgear.TRAKT_SYNC:
@@ -3010,7 +3048,7 @@ class Home(MainHandler):
 
         # force the update from the DB
         try:
-            sickgear.show_queue_scheduler.action.refreshShow(show_obj)
+            sickgear.show_queue_scheduler.action.refresh_show(show_obj)
         except exceptions_helper.CantRefreshException as e:
             ui.notifications.error('Unable to refresh this show.', ex(e))
 
@@ -3030,7 +3068,7 @@ class Home(MainHandler):
 
         # force the update
         try:
-            sickgear.show_queue_scheduler.action.updateShow(show_obj, bool(force), bool(web))
+            sickgear.show_queue_scheduler.action.update_show(show_obj, bool(force), bool(web))
         except exceptions_helper.CantUpdateException as e:
             ui.notifications.error('Unable to update this show.',
                                    ex(e))
@@ -3039,6 +3077,7 @@ class Home(MainHandler):
 
         self.redirect('/home/view-show?tvid_prodid=%s' % show_obj.tvid_prodid)
 
+    # noinspection PyUnusedLocal
     def subtitle_show(self, tvid_prodid=None, force=0):
 
         if None is tvid_prodid:
@@ -3057,6 +3096,7 @@ class Home(MainHandler):
 
         self.redirect('/home/view-show?tvid_prodid=%s' % show_obj.tvid_prodid)
 
+    # noinspection PyUnusedLocal
     def update_mb(self, tvid_prodid=None, **kwargs):
 
         if notifiers.NotifierFactory().get('EMBY').update_library(
@@ -3122,14 +3162,14 @@ class Home(MainHandler):
                 return json_dumps({'result': 'error'})
             return self._generic_message('Error', err_msg)
 
-        min_initial = min(Quality.splitQuality(show_obj.quality)[0])
+        min_initial = min(Quality.split_quality(show_obj.quality)[0])
         segments = {}
         if None is not eps:
 
             sql_l = []
             for cur_ep in eps.split('|'):
 
-                logger.log(u'Attempting to set status on episode %s to %s' % (cur_ep, status), logger.DEBUG)
+                logger.debug(f'Attempting to set status on episode {cur_ep} to {status}')
 
                 ep_obj = show_obj.get_episode(*tuple([int(x) for x in cur_ep.split('x')]))
 
@@ -3155,21 +3195,21 @@ class Home(MainHandler):
 
                     elif status in Quality.DOWNLOADED \
                             and ep_obj.status not in required + Quality.ARCHIVED + [IGNORED, SKIPPED] \
-                            and not ek.ek(os.path.isfile, ep_obj.location):
+                            and not os.path.isfile(ep_obj.location):
                         err_msg = 'to downloaded because it\'s not snatched/downloaded/archived'
 
                     if err_msg:
-                        logger.log('Refusing to change status of %s %s' % (cur_ep, err_msg), logger.ERROR)
+                        logger.error('Refusing to change status of %s %s' % (cur_ep, err_msg))
                         continue
 
                     if ARCHIVED == status:
                         if ep_obj.status in Quality.DOWNLOADED or direct:
-                            ep_obj.status = Quality.compositeStatus(
-                                ARCHIVED, (Quality.splitCompositeStatus(ep_obj.status)[1], min_initial)[use_default])
+                            ep_obj.status = Quality.composite_status(
+                                ARCHIVED, (Quality.split_composite_status(ep_obj.status)[1], min_initial)[use_default])
                     elif DOWNLOADED == status:
                         if ep_obj.status in Quality.ARCHIVED:
-                            ep_obj.status = Quality.compositeStatus(
-                                DOWNLOADED, Quality.splitCompositeStatus(ep_obj.status)[1])
+                            ep_obj.status = Quality.composite_status(
+                                DOWNLOADED, Quality.split_composite_status(ep_obj.status)[1])
                     else:
                         ep_obj.status = status
 
@@ -3193,31 +3233,31 @@ class Home(MainHandler):
 
                     if season not in season_wanted:
                         season_wanted += [season]
-                        season_list += u'<li>Season %s</li>' % season
-                        logger.log((u'Not adding wanted eps to backlog search for %s season %s because show is paused',
-                                    u'Starting backlog search for %s season %s because eps were set to wanted')[
+                        season_list += f'<li>Season {season}</li>'
+                        logger.log(('Not adding wanted eps to backlog search for %s season %s because show is paused',
+                                    'Starting backlog search for %s season %s because eps were set to wanted')[
                                        not show_obj.paused] % (show_obj.unique_name, season))
 
-                (title, msg) = (('Not starting backlog', u'Paused show prevented backlog search'),
-                                ('Backlog started', u'Backlog search started'))[not show_obj.paused]
+                (title, msg) = (('Not starting backlog', 'Paused show prevented backlog search'),
+                                ('Backlog started', 'Backlog search started'))[not show_obj.paused]
 
                 if segments:
                     ui.notifications.message(title,
-                                             u'%s for the following seasons of <b>%s</b>:<br /><ul>%s</ul>'
-                                             % (msg, show_obj.unique_name, season_list))
+                                             f'{msg} for the following seasons of <b>{show_obj.unique_name}</b>:<br>'
+                                             f'<ul>{season_list}</ul>')
             else:
                 ui.notifications.message('Not starting backlog', 'No provider has active searching enabled')
 
         elif FAILED == status:
-            msg = u'Retrying search automatically for the following season of <b>%s</b>:<br><ul>' % show_obj.unique_name
+            msg = f'Retrying search automatically for the following season of <b>{show_obj.unique_name}</b>:<br><ul>'
 
             for season, segment in iteritems(segments):  # type: int, List[sickgear.tv.TVEpisode]
                 cur_failed_queue_item = search_queue.FailedQueueItem(show_obj, segment)
                 sickgear.search_queue_scheduler.action.add_item(cur_failed_queue_item)
 
                 msg += '<li>Season %s</li>' % season
-                logger.log(u'Retrying search for %s season %s because some eps were set to failed' %
-                           (show_obj.unique_name, season))
+                logger.log(f'Retrying search for {show_obj.unique_name} season {season}'
+                           f' because some eps were set to failed')
 
             msg += '</ul>'
 
@@ -3255,12 +3295,12 @@ class Home(MainHandler):
                     for _cur_ep_obj in cur_ep_obj.related_ep_obj + [cur_ep_obj]:
                         if _cur_ep_obj in ep_obj_rename_list:
                             break
-                        ep_status, ep_qual = Quality.splitCompositeStatus(_cur_ep_obj.status)
+                        ep_status, ep_qual = Quality.split_composite_status(_cur_ep_obj.status)
                         if not ep_qual:
                             continue
                         ep_obj_rename_list.append(cur_ep_obj)
                 else:
-                    ep_status, ep_qual = Quality.splitCompositeStatus(cur_ep_obj.status)
+                    ep_status, ep_qual = Quality.split_composite_status(cur_ep_obj.status)
                     if not ep_qual:
                         continue
                     ep_obj_rename_list.append(cur_ep_obj)
@@ -3313,7 +3353,7 @@ class Home(MainHandler):
                 tvid_prodid_obj.list
                 + [ep_info[0], ep_info[1]])
             if not sql_result:
-                logger.log(u'Unable to find an episode for ' + cur_ep + ', skipping', logger.WARNING)
+                logger.warning(f'Unable to find an episode for {cur_ep}, skipping')
                 continue
             related_ep_result = my_db.select('SELECT * FROM tv_episodes WHERE location = ? AND episode != ?',
                                              [sql_result[0]['location'], ep_info[1]])
@@ -3337,7 +3377,7 @@ class Home(MainHandler):
         # retrieve the episode object and fail if we can't get one
         ep_obj = self._get_episode(tvid_prodid, season, episode)
         if not isinstance(ep_obj, str):
-            if UNKNOWN == Quality.splitCompositeStatus(ep_obj.status)[0]:
+            if UNKNOWN == Quality.split_composite_status(ep_obj.status)[0]:
                 ep_obj.status = SKIPPED
 
             # make a queue item for the TVEpisode and put it on the queue
@@ -3374,7 +3414,7 @@ class Home(MainHandler):
         sickgear.search_queue.remove_old_fifo(sickgear.search_queue.MANUAL_SEARCH_HISTORY)
         results = sickgear.search_queue.MANUAL_SEARCH_HISTORY
 
-        for item in filter_iter(lambda q: hasattr(q, 'segment_ns'), queued):
+        for item in filter(lambda q: hasattr(q, 'segment_ns'), queued):
             for ep_ns in item.segment_ns:
                 ep_data, uniq_sxe = self.prepare_episode(ep_ns, 'queued')
                 ep_data_list.append(ep_data)
@@ -3390,9 +3430,9 @@ class Home(MainHandler):
                 seen_eps.add(uniq_sxe)
 
         episode_params = dict(searchstate='finished', retrystate=True, statusoverview=True)
-        for item in filter_iter(lambda r: hasattr(r, 'segment_ns') and (
+        for item in filter(lambda r: hasattr(r, 'segment_ns') and (
                 not tvid_prodid or tvid_prodid == str(r.show_ns.tvid_prodid)), results):
-            for ep_ns in filter_iter(
+            for ep_ns in filter(
                     lambda e: (e.show_ns.tvid, e.show_ns.prodid, e.season, e.episode) not in seen_eps, item.segment_ns):
                 ep_obj = getattr(ep_ns, 'ep_obj', None)
                 if not ep_obj:
@@ -3406,8 +3446,8 @@ class Home(MainHandler):
                 ep_data_list.append(ep_data)
                 seen_eps.add(uniq_sxe)
 
-            for snatched in filter_iter(lambda s: ((s.tvid, s.prodid, s.season, s.episode) not in seen_eps),
-                                        item.snatched_eps):
+            for snatched in filter(lambda s: ((s.tvid, s.prodid, s.season, s.episode) not in seen_eps),
+                                   item.snatched_eps):
                 ep_obj = getattr(snatched, 'ep_obj', None)
                 if not ep_obj:
                     continue
@@ -3442,9 +3482,9 @@ class Home(MainHandler):
         """
         # Find the quality class for the episode
         quality_class = Quality.qualityStrings[Quality.UNKNOWN]
-        ep_status, ep_quality = Quality.splitCompositeStatus(ep_type.status)
+        ep_status, ep_quality = Quality.split_composite_status(ep_type.status)
         for x in (SD, HD720p, HD1080p, UHD2160p):
-            if ep_quality in Quality.splitQuality(x)[0]:
+            if ep_quality in Quality.split_quality(x)[0]:
                 quality_class = qualityPresetStrings[x]
                 break
 
@@ -3473,7 +3513,7 @@ class Home(MainHandler):
         if isinstance(ep_obj, str):
             return json_dumps({'result': 'failure'})
 
-        # try do download subtitles for that episode
+        # try to download subtitles for that episode
         try:
             previous_subtitles = set([subliminal.language.Language(x) for x in ep_obj.subtitles])
             ep_obj.subtitles = set([x.language for x in next(itervalues(ep_obj.download_subtitles()))])
@@ -3849,8 +3889,8 @@ class HomeProcessMedia(Home):
             skip_failure_processing = nzbget_call and not nzbget_dupekey
 
             if nzbget_call and sickgear.NZBGET_SCRIPT_VERSION != kwargs.get('pp_version', '0'):
-                logger.log('Calling SickGear-NG.py script %s is not current version %s, please update.' %
-                           (kwargs.get('pp_version', '0'), sickgear.NZBGET_SCRIPT_VERSION), logger.ERROR)
+                logger.error(f'Calling SickGear-NG.py script {kwargs.get("pp_version", "0")} is not current version'
+                             f' {sickgear.NZBGET_SCRIPT_VERSION}, please update.')
 
             if sickgear.NZBGET_SKIP_PM and nzbget_call and nzbget_dupekey and nzb_name and show_obj:
                 processTV.process_minimal(nzb_name, show_obj,
@@ -3887,21 +3927,18 @@ class HomeProcessMedia(Home):
                     regexp = re.compile(r'(?i)<br[\s/]+>', flags=re.UNICODE)
                     result = regexp.sub('\n', result)
                     if None is not quiet and 1 == int(quiet):
-                        regexp = re.compile(u'(?i)<a[^>]+>([^<]+)<[/]a>', flags=re.UNICODE)
-                        return u'%s' % regexp.sub(r'\1', result)
-                    return self._generic_message('Postprocessing results', u'<pre>%s</pre>' % result)
+                        regexp = re.compile('(?i)<a[^>]+>([^<]+)</a>', flags=re.UNICODE)
+                        return regexp.sub(r'\1', result)
+                    return self._generic_message('Postprocessing results', f'<pre>{result}</pre>')
 
     # noinspection PyPep8Naming
-    def processEpisode(self, dir_name=None, nzb_name=None, process_type=None, **kwargs):
-        """ legacy function name, stubbed but can _not_ be removed as this
-         is potentially used in pp scripts located outside of SG path (need to verify this)
+    @staticmethod
+    def processEpisode(**kwargs):
+        """ legacy function name, stubbed and will be removed
         """
-        kwargs['dir_name'] = dir_name or kwargs.pop('dir', None)
-        kwargs['nzb_name'] = nzb_name or kwargs.pop('nzbName', None)
-        kwargs['process_type'] = process_type or kwargs.pop('type', 'auto')
-        kwargs['pp_version'] = kwargs.pop('ppVersion', '0')
-        return self.process_files(**kwargs)
-
+        logger.error('This endpoint is no longer to be used,'
+                     ' nzbToMedia users please follow: https://github.com/SickGear/SickGear/wiki/FAQ-nzbToMedia')
+        sickgear.MEMCACHE['DEPRECATE_PP_LEGACY'] = True
 
 class AddShows(Home):
 
@@ -3944,12 +3981,12 @@ class AddShows(Home):
         b_term = decode_str(used_search_term).strip()
         terms = []
         try:
-            for cur_term in ([], [b_term.encode('utf-8')])[PY2] + [unidecode(b_term), b_term]:
+            for cur_term in [unidecode(b_term), b_term]:
                 if cur_term not in terms:
                     terms += [cur_term]
         except (BaseException, Exception):
             text = used_search_term.strip()
-            terms = [text if not PY2 else text.encode('utf-8')]
+            terms = text
 
         return set(s for s in set([used_search_term] + terms) if s)
 
@@ -3992,7 +4029,7 @@ class AddShows(Home):
             r'(?P<tmdb_full>[^ ]+themoviedb\.org/tv/(?P<tmdb>\d+)[^ ]*)|'
             r'(?P<trakt_full>[^ ]+trakt\.tv/shows/(?P<trakt>[^ /]+)[^ ]*)|'
             r'(?P<tvdb_full>[^ ]+thetvdb\.com/series/(?P<tvdb>[^ /]+)[^ ]*)|'
-            r'(?P<tvdb_id_full>[^ ]+thetvdb\.com/[^\d]+(?P<tvdb_id>[^ /]+)[^ ]*)|'
+            r'(?P<tvdb_id_full>[^ ]+thetvdb\.com/\D+(?P<tvdb_id>[^ /]+)[^ ]*)|'
             r'(?P<tvmaze_full>[^ ]+tvmaze\.com/shows/(?P<tvmaze>\d+)/?[^ ]*)', search_term)
         if id_check:
             for cur_match in id_check:
@@ -4042,7 +4079,7 @@ class AddShows(Home):
             t = sickgear.TVInfoAPI(cur_tvid).setup(**tvinfo_config)
             results.setdefault(cur_tvid, {})
             try:
-                for cur_result in t.search_show(list(used_search_term), ids=ids_search_used):
+                for cur_result in t.search_show(list(used_search_term), ids=ids_search_used):  # type: TVInfoShow
                     if TVINFO_TRAKT == cur_tvid and not cur_result['ids'].tvdb:
                         continue
                     tv_src_id = int(cur_result['id'])
@@ -4063,7 +4100,7 @@ class AddShows(Home):
                                 any(ids_to_search[si] == results[cur_tvid][tv_src_id].get('ids', {})[si]
                                     for si in ids_to_search):
                             ids_search_used.update({k: v for k, v in iteritems(
-                                results[cur_tvid][tv_src_id].get('ids',{}))
+                                results[cur_tvid][tv_src_id].get('ids', {}))
                                                     if v and k not in iterkeys(ids_to_search)})
                         results[cur_tvid][tv_src_id]['rename_suggest'] = '' \
                             if not results[cur_tvid][tv_src_id]['firstaired'] \
@@ -4085,7 +4122,7 @@ class AddShows(Home):
                     for tvid, name in iteritems(sickgear.TVInfoAPI().all_sources)}
 
         if TVINFO_TRAKT in results and TVINFO_TVDB in results:
-            tvdb_ids = list_keys(results[TVINFO_TVDB])
+            tvdb_ids = list(results[TVINFO_TVDB])
             results[TVINFO_TRAKT] = {k: v for k, v in iteritems(results[TVINFO_TRAKT]) if v['ids'].tvdb not in tvdb_ids}
 
         def in_db(tvid, prod_id):
@@ -4112,7 +4149,8 @@ class AddShows(Home):
                        show['seriesname'], helpers.xhtml_escape(show['seriesname']), show['firstaired'],
                        (isinstance(show['firstaired'], string_types)
                         and SGDatetime.sbfdate(_parse_date(show['firstaired'])) or ''),
-                       show.get('network', '') or '', (show.get('genres', '') or show.get('genre', '') or '').replace('|', ', '),  # 11 - 12
+                       show.get('network', '') or '',  # 11
+                       (show.get('genres', '') or show.get('genre', '') or '').replace('|', ', '),  # 12
                        show.get('language', ''), show.get('language_country_code') or '',  # 13 - 14
                        re.sub(r'([,.!][^,.!]*?)$', '...',
                               re.sub(r'([.!?])(?=\w)', r'\1 ',
@@ -4277,7 +4315,7 @@ class AddShows(Home):
             try:
                 for cur_dir in scantree(cur_root_dir, filter_kind=True, recurse=False):
 
-                    normpath = ek.ek(os.path.normpath, cur_dir.path)
+                    normpath = os.path.normpath(cur_dir.path)
                     highlight = hash_dir == re.sub('[^a-z]', '', sg_helpers.md5_for_text(normpath))
                     if hash_dir:
                         display_one_dir = highlight
@@ -4320,7 +4358,7 @@ class AddShows(Home):
                 if display_one_dir and not cur_data['highlight'][cur_enum]:
                     continue
 
-                dir_item = dict(normpath=cur_normpath, rootpath='%s%s' % (ek.ek(os.path.dirname, cur_normpath), os.sep),
+                dir_item = dict(normpath=cur_normpath, rootpath='%s%s' % (os.path.dirname(cur_normpath), os.sep),
                                 name=cur_data['name'][cur_enum], added_already=any(cur_data['exists'][cur_enum]),
                                 highlight=cur_data['highlight'][cur_enum])
 
@@ -4332,7 +4370,7 @@ class AddShows(Home):
                     if prodid and show_name:
                         break
 
-                    (tvid, prodid, show_name) = cur_provider.retrieveShowMetadata(cur_normpath)
+                    (tvid, prodid, show_name) = cur_provider.retrieve_show_metadata(cur_normpath)
 
                     # default to TVDB if TV info src was not detected
                     if show_name and (not tvid or not prodid):
@@ -4378,7 +4416,7 @@ class AddShows(Home):
         elif not show_dir:
             t.default_show_name = ''
         elif not show_name:
-            t.default_show_name = ek.ek(os.path.basename, ek.ek(os.path.normpath, show_dir)).replace('.', ' ')
+            t.default_show_name = os.path.basename(os.path.normpath(show_dir)).replace('.', ' ')
         else:
             t.default_show_name = show_name
 
@@ -4399,9 +4437,9 @@ class AddShows(Home):
         t.infosrc = sickgear.TVInfoAPI().search_sources
         search_tvid = None
         if use_show_name and 1 == show_name.count(':'):  # if colon is found once
-            search_tvid = filter_list(lambda x: bool(x),
+            search_tvid = list(filter(lambda x: bool(x),
                                       [('%s:' % sickgear.TVInfoAPI(_tvid).config['slug']) in show_name and _tvid
-                                       for _tvid, _ in iteritems(t.infosrc)])
+                                       for _tvid, _ in iteritems(t.infosrc)]))
             search_tvid = 1 == len(search_tvid) and search_tvid[0]
         t.provided_tvid = search_tvid or int(tvid or sickgear.TVINFO_DEFAULT)
         t.infosrc_icons = [sickgear.TVInfoAPI(cur_tvid).config.get('icon') for cur_tvid in t.infosrc]
@@ -4532,7 +4570,7 @@ class AddShows(Home):
 
     def info_anidb(self, ids, show_name):
 
-        if not filter_list(lambda tvid_prodid: helpers.find_show_by_id(tvid_prodid), ids.split(' ')):
+        if not list(filter(lambda tvid_prodid: helpers.find_show_by_id(tvid_prodid), ids.split(' '))):
             return self.new_show('|'.join(['', '', '', ' '.join([ids, show_name])]), use_show_name=True, is_anime=True)
 
     @staticmethod
@@ -4619,8 +4657,8 @@ class AddShows(Home):
 
         oldest, newest, oldest_dt, newest_dt = None, None, 9999999, 0
         show_list = (data or {}).get('list', {}).get('items', {})
-        idx_ids = dict(map_iter(lambda so: (so.imdbid, (so.tvid, so.prodid)),
-                                filter_iter(lambda _so: getattr(_so, 'imdbid', None), sickgear.showList)))
+        idx_ids = dict(map(lambda so: (so.imdbid, (so.tvid, so.prodid)),
+                           filter(lambda _so: getattr(_so, 'imdbid', None), sickgear.showList)))
 
         # list_id = (data or {}).get('list', {}).get('id', {})
         for row in show_list:
@@ -4685,7 +4723,7 @@ class AddShows(Home):
 
     def parse_imdb_html(self, html, filtered, kwargs):
 
-        img_size = re.compile(r'(?im)(V1[^XY]+([XY]))(\d+)([^\d]+)(\d+)([^\d]+)(\d+)([^\d]+)(\d+)([^\d]+)(\d+)(.*?)$')
+        img_size = re.compile(r'(?im)(V1[^XY]+([XY]))(\d+)(\D+)(\d+)(\D+)(\d+)(\D+)(\d+)(\D+)(\d+)(.*?)$')
 
         with BS4Parser(html, features=['html5lib', 'permissive']) as soup:
             show_list = soup.select('.lister-list')
@@ -4755,7 +4793,7 @@ class AddShows(Home):
 
                     show_obj = helpers.find_show_by_id({TVINFO_IMDB: int(ids['imdb'].replace('tt', ''))},
                                                        no_mapped_ids=False)
-                    for tvid in filter_iter(lambda _tvid: _tvid == show_obj.tvid, sickgear.TVInfoAPI().search_sources):
+                    for tvid in filter(lambda _tvid: _tvid == show_obj.tvid, sickgear.TVInfoAPI().search_sources):
                         infosrc_slug, infosrc_url = (sickgear.TVInfoAPI(tvid).config[x] for x in
                                                      ('slug', 'show_url'))
                         filtered[-1]['ids'][infosrc_slug] = show_obj.prodid
@@ -4980,13 +5018,13 @@ class AddShows(Home):
                     normalised = resp
                 else:
                     for item in resp:
-                        normalised.append({u'show': item})
+                        normalised.append({'show': item})
                 del resp
         except TraktAuthException as e:
-            logger.log(u'Pin authorisation needed to connect to Trakt service: %s' % ex(e), logger.WARNING)
+            logger.warning(f'Pin authorisation needed to connect to Trakt service: {ex(e)}')
             error_msg = 'Unauthorized: Get another pin in the Notifications Trakt settings'
         except TraktException as e:
-            logger.log(u'Could not connect to Trakt service: %s' % ex(e), logger.WARNING)
+            logger.warning(f'Could not connect to Trakt service: {ex(e)}')
         except exceptions_helper.ConnectionSkipException as e:
             logger.log('Skipping Trakt because of previous failure: %s' % ex(e))
         except (IndexError, KeyError):
@@ -5116,7 +5154,7 @@ class AddShows(Home):
 
     def info_trakt(self, ids, show_name):
 
-        if not filter_list(lambda tvid_prodid: helpers.find_show_by_id(tvid_prodid), ids.split(' ')):
+        if not list(filter(lambda tvid_prodid: helpers.find_show_by_id(tvid_prodid), ids.split(' '))):
             return self.new_show('|'.join(['', '', '', ' '.join([ids, show_name])]), use_show_name=True)
 
     def ne_default(self):
@@ -5206,7 +5244,7 @@ class AddShows(Home):
                         channel_tag_copy = copy.copy(channel_tag)
                         if channel_tag_copy:
                             network = channel_tag_copy.a.extract().get_text(strip=True)
-                            date_info = re.sub(r'^[^\d]+', '', channel_tag_copy.get_text(strip=True))
+                            date_info = re.sub(r'^\D+', '', channel_tag_copy.get_text(strip=True))
                             if date_info:
                                 dt = dateutil.parser.parse((date_info, '%s.01.01' % date_info)[4 == len(date_info)])
 
@@ -5215,7 +5253,7 @@ class AddShows(Home):
                                    and 'printed' in ' '.join(t.get('class', ''))]
                             if len(tag):
                                 age_args = {}
-                                future = re.sub(r'[^\d]+(.*)', r'\1', tag[0].get_text(strip=True))
+                                future = re.sub(r'\D+(.*)', r'\1', tag[0].get_text(strip=True))
                                 for (dim, rcx) in rc:
                                     value = helpers.try_int(rcx.sub(r'\1', future), None)
                                     if value:
@@ -5243,7 +5281,7 @@ class AddShows(Home):
 
                         genres = row.find(class_='genre')
                         if genres:
-                            genres = re.sub(r',([^\s])', r', \1', genres.get_text(strip=True))
+                            genres = re.sub(r',(\S)', r', \1', genres.get_text(strip=True))
                         overview = row.find(class_='summary')
                         if overview:
                             overview = overview.get_text(strip=True)
@@ -5430,7 +5468,7 @@ class AddShows(Home):
     # noinspection PyUnusedLocal
     def info_tvmaze(self, ids, show_name):
 
-        if not filter_list(lambda tvid_prodid: helpers.find_show_by_id(tvid_prodid), ids.split(' ')):
+        if not list(filter(lambda tvid_prodid: helpers.find_show_by_id(tvid_prodid), ids.split(' '))):
             return self.new_show('|'.join(['', '', '', ' '.join([ids, show_name])]), use_show_name=True)
 
     def tvc_default(self):
@@ -5729,7 +5767,7 @@ class AddShows(Home):
 
                         dt_ordinal = 0
                         dt_string = ''
-                        date_tags = filter_list(lambda t: t.find('span'), row.find_all('div', class_='clamp-details'))
+                        date_tags = list(filter(lambda t: t.find('span'), row.find_all('div', class_='clamp-details')))
                         if date_tags:
                             dt = dateutil.parser.parse(date_tags[0].get_text().strip())
                             dt_ordinal = dt.toordinal()
@@ -5842,11 +5880,11 @@ class AddShows(Home):
             tvid_prodid_list = []
 
             # first, process known ids
-            for tvid, infosrc_slug in filter_iter(
+            for tvid, infosrc_slug in filter(
                     lambda tvid_slug: item['ids'].get(tvid_slug[1])
                     and not sickgear.TVInfoAPI(tvid_slug[0]).config.get('defunct'),
-                    map_iter(lambda _tvid: (_tvid, sickgear.TVInfoAPI(_tvid).config['slug']),
-                             iterkeys(sickgear.TVInfoAPI().all_sources))):
+                    map(lambda _tvid: (_tvid, sickgear.TVInfoAPI(_tvid).config['slug']),
+                        iterkeys(sickgear.TVInfoAPI().all_sources))):
                 try:
                     src_id = item['ids'][infosrc_slug]
                     tvid_prodid_list += ['%s:%s' % (infosrc_slug, src_id)]
@@ -5901,7 +5939,7 @@ class AddShows(Home):
                 known.append(item['show_id'])
                 t.all_shows.append(item)
 
-                if any(filter_iter(lambda tp: tp in sickgear.BROWSELIST_HIDDEN, tvid_prodid_list)):
+                if any(filter(lambda tp: tp in sickgear.BROWSELIST_HIDDEN, tvid_prodid_list)):
                     item['hide'] = True
                     t.num_hidden += 1
 
@@ -5950,7 +5988,7 @@ class AddShows(Home):
             tvid, void, prodid, show_name = self.split_extra_show(which_series)
             if bool(helpers.try_int(cancel_form)):
                 tvid = tvid or provided_tvid or '0'
-                prodid = re.findall(r'tvid_prodid=[^%s]+%s([\d]+)' % tuple(2 * [TVidProdid.glue]), return_to)[0]
+                prodid = re.findall(r'tvid_prodid=[^%s]+%s(\d+)' % tuple(2 * [TVidProdid.glue]), return_to)[0]
             return self.redirect(return_to % (tvid, prodid))
 
         # grab our list of other dirs if given
@@ -5984,8 +6022,7 @@ class AddShows(Home):
         series_pieces = which_series.split('|')
         if (which_series and root_dir) or (which_series and full_show_path and 1 < len(series_pieces)):
             if 4 > len(series_pieces):
-                logger.log('Unable to add show due to show selection. Not enough arguments: %s' % (repr(series_pieces)),
-                           logger.ERROR)
+                logger.error(f'Unable to add show due to show selection. Not enough arguments: {repr(series_pieces)}')
                 ui.notifications.error('Unknown error. Unable to add show due to problem with show selection.')
                 return self.redirect('/add-shows/import/')
 
@@ -6003,15 +6040,15 @@ class AddShows(Home):
 
         # use the whole path if it's given, or else append the show name to the root dir to get the full show path
         if full_show_path:
-            show_dir = ek.ek(os.path.normpath, full_show_path)
+            show_dir = os.path.normpath(full_show_path)
             new_show = False
         else:
             show_dir = helpers.generate_show_dir_name(root_dir, show_name)
             new_show = True
 
         # if the dir exists, do 'add existing show'
-        if ek.ek(os.path.isdir, show_dir) and not full_show_path:
-            ui.notifications.error('Unable to add show', u'Found existing folder: ' + show_dir)
+        if os.path.isdir(show_dir) and not full_show_path:
+            ui.notifications.error('Unable to add show', f'Found existing folder: {show_dir}')
             return self.redirect(
                 '/add-shows/import?tvid_prodid=%s%s%s&hash_dir=%s%s' %
                 (tvid, TVidProdid.glue, prodid, re.sub('[^a-z]', '', sg_helpers.md5_for_text(show_dir)),
@@ -6019,11 +6056,11 @@ class AddShows(Home):
 
         # don't create show dir if config says not to
         if sickgear.ADD_SHOWS_WO_DIR:
-            logger.log(u'Skipping initial creation due to config.ini setting (add_shows_wo_dir)')
+            logger.log('Skipping initial creation due to config.ini setting (add_shows_wo_dir)')
         else:
             if not helpers.make_dir(show_dir):
-                logger.log(u'Unable to add show because can\'t create folder: ' + show_dir, logger.ERROR)
-                ui.notifications.error('Unable to add show', u'Can\'t create folder: ' + show_dir)
+                logger.error(f"Unable to add show because can't create folder: {show_dir}")
+                ui.notifications.error('Unable to add show', f"Can't create folder: {show_dir}")
                 return self.redirect('/home/')
 
             helpers.chmod_as_parent(show_dir)
@@ -6037,7 +6074,7 @@ class AddShows(Home):
             any_qualities = [any_qualities]
         if type(best_qualities) != list:
             best_qualities = [best_qualities]
-        new_quality = Quality.combineQualities(map_list(int, any_qualities), map_list(int, best_qualities))
+        new_quality = Quality.combine_qualities(list(map(int, any_qualities)), list(map(int, best_qualities)))
         upgrade_once = config.checkbox_to_value(upgrade_once)
 
         wanted_begin = config.minimax(wanted_begin, 0, -1, 10)
@@ -6232,7 +6269,7 @@ class Manage(MainHandler):
             if cur_season not in result:
                 result[cur_season] = {}
 
-            cur_quality = Quality.splitCompositeStatus(int(cur_result['status']))[1]
+            cur_quality = Quality.split_composite_status(int(cur_result['status']))[1]
             result[cur_season][cur_episode] = {'name': cur_result['name'],
                                                'airdateNever': 1000 > int(cur_result['airdate']),
                                                'qualityCss': Quality.get_quality_css(cur_quality),
@@ -6252,9 +6289,9 @@ class Manage(MainHandler):
                 if event_sql_result:
                     for cur_result_event in event_sql_result:
                         if None is d_status and cur_result_event['action'] in Quality.DOWNLOADED:
-                            d_status, d_qual = Quality.splitCompositeStatus(cur_result_event['action'])
+                            d_status, d_qual = Quality.split_composite_status(cur_result_event['action'])
                         if None is s_status and cur_result_event['action'] in Quality.SNATCHED_ANY:
-                            s_status, s_quality = Quality.splitCompositeStatus(cur_result_event['action'])
+                            s_status, s_quality = Quality.split_composite_status(cur_result_event['action'])
                             aged = ((datetime.datetime.now() -
                                      datetime.datetime.strptime(str(cur_result_event['date']),
                                                                 sickgear.history.dateFormat))
@@ -6295,11 +6332,11 @@ class Manage(MainHandler):
         if Quality.NONE == cur_quality:
             return undo_from_history, change_to, status
 
-        cur_status = Quality.splitCompositeStatus(int(cur_status))[0]
+        cur_status = Quality.split_composite_status(int(cur_status))[0]
         if any([location]):
             undo_from_history = True
             change_to = statusStrings[DOWNLOADED]
-            status = [Quality.compositeStatus(DOWNLOADED, d_qual or cur_quality)]
+            status = [Quality.composite_status(DOWNLOADED, d_qual or cur_quality)]
         elif cur_status in Quality.SNATCHED_ANY + [IGNORED, SKIPPED, WANTED]:
             if None is d_qual:
                 if cur_status not in [IGNORED, SKIPPED]:
@@ -6311,7 +6348,7 @@ class Manage(MainHandler):
                         or sickgear.SKIP_REMOVED_FILES in [ARCHIVED, IGNORED, SKIPPED]:
                     undo_from_history = True
                     change_to = '%s %s' % (statusStrings[ARCHIVED], Quality.qualityStrings[d_qual])
-                    status = [Quality.compositeStatus(ARCHIVED, d_qual)]
+                    status = [Quality.composite_status(ARCHIVED, d_qual)]
                 elif sickgear.SKIP_REMOVED_FILES in [IGNORED, SKIPPED] \
                         and cur_status not in [IGNORED, SKIPPED]:
                     change_to = statusStrings[statusStrings[sickgear.SKIP_REMOVED_FILES]]
@@ -6405,8 +6442,7 @@ class Manage(MainHandler):
                         ' AND season != 0'
                         ' AND indexer = ? AND showid = ?',
                         status_list + tvid_prodid_list)
-                    what = (sql_result and '|'.join(map_iter(lambda r: '%sx%s' % (r['season'], r['episode']),
-                                                             sql_result))
+                    what = (sql_result and '|'.join(map(lambda r: '%sx%s' % (r['season'], r['episode']), sql_result))
                             or None)
                     to = new_status
 
@@ -6564,7 +6600,8 @@ class Manage(MainHandler):
                         ' WHERE indexer = ? AND showid = ?'
                         ' AND season != 0 AND status LIKE \'%4\'',
                         TVidProdid(cur_tvid_prodid).list)
-                    to_download[cur_tvid_prodid] = map_list(lambda x: '%sx%s' % (x['season'], x['episode']), sql_result)
+                    to_download[cur_tvid_prodid] = list(map(lambda x: '%sx%s' % (x['season'], x['episode']),
+                                                            sql_result))
 
                 for epResult in to_download[cur_tvid_prodid]:
                     season, episode = epResult.split('x')
@@ -6693,7 +6730,7 @@ class Manage(MainHandler):
         for cur_show_obj in show_list:
 
             # noinspection PyProtectedMember
-            cur_root_dir = ek.ek(os.path.dirname, cur_show_obj._location)
+            cur_root_dir = os.path.dirname(cur_show_obj._location)
             if cur_root_dir not in root_dir_list:
                 root_dir_list.append(cur_root_dir)
 
@@ -6819,11 +6856,11 @@ class Manage(MainHandler):
                 continue
 
             # noinspection PyProtectedMember
-            cur_root_dir = ek.ek(os.path.dirname, show_obj._location)
+            cur_root_dir = os.path.dirname(show_obj._location)
             # noinspection PyProtectedMember
-            cur_show_dir = ek.ek(os.path.basename, show_obj._location)
+            cur_show_dir = os.path.basename(show_obj._location)
             if cur_root_dir in dir_map and cur_root_dir != dir_map[cur_root_dir]:
-                new_show_dir = ek.ek(os.path.join, dir_map[cur_root_dir], cur_show_dir)
+                new_show_dir = os.path.join(dir_map[cur_root_dir], cur_show_dir)
                 if 'nt' != os.name and ':\\' in cur_show_dir:
                     # noinspection PyProtectedMember
                     cur_show_dir = show_obj._location.split('\\')[-1]
@@ -6831,10 +6868,9 @@ class Manage(MainHandler):
                         base_dir = dir_map[cur_root_dir].rsplit(cur_show_dir)[0].rstrip('/')
                     except IndexError:
                         base_dir = dir_map[cur_root_dir]
-                    new_show_dir = ek.ek(os.path.join, base_dir, cur_show_dir)
+                    new_show_dir = os.path.join(base_dir, cur_show_dir)
                 # noinspection PyProtectedMember
-                logger.log(u'For show %s changing dir from %s to %s' %
-                           (show_obj.unique_name, show_obj._location, new_show_dir))
+                logger.log(f'For show {show_obj.unique_name} changing dir from {show_obj._location} to {new_show_dir}')
             else:
                 # noinspection PyProtectedMember
                 new_show_dir = show_obj._location
@@ -6899,7 +6935,7 @@ class Manage(MainHandler):
             new_subtitles = 'on' if new_subtitles else 'off'
 
             if 'keep' == quality_preset:
-                any_qualities, best_qualities = Quality.splitQuality(show_obj.quality)
+                any_qualities, best_qualities = Quality.split_quality(show_obj.quality)
             elif int(quality_preset):
                 best_qualities = []
 
@@ -6913,7 +6949,7 @@ class Manage(MainHandler):
                 prune=new_prune, tag=new_tag, direct_call=True)
 
             if cur_errors:
-                logger.log(u'Errors: ' + str(cur_errors), logger.ERROR)
+                logger.error(f'Errors: {cur_errors}')
                 errors.append('<b>%s:</b>\n<ul>' % show_obj.unique_name + ' '.join(
                     ['<li>%s</li>' % error for error in cur_errors]) + '</ul>')
 
@@ -6947,20 +6983,20 @@ class Manage(MainHandler):
             else:
                 if cur_tvid_prodid in to_update:
                     try:
-                        sickgear.show_queue_scheduler.action.updateShow(cur_show_obj, True, True)
+                        sickgear.show_queue_scheduler.action.update_show(cur_show_obj, True, True)
                         update.append(cur_show_obj.name)
                     except exceptions_helper.CantUpdateException as e:
                         errors.append('Unable to update show %s: %s' % (cur_show_obj.unique_name, ex(e)))
 
                 elif cur_tvid_prodid in to_refresh:
                     try:
-                        sickgear.show_queue_scheduler.action.refreshShow(cur_show_obj)
+                        sickgear.show_queue_scheduler.action.refresh_show(cur_show_obj)
                         refresh.append(cur_show_obj.name)
                     except exceptions_helper.CantRefreshException as e:
                         errors.append('Unable to refresh show %s: %s' % (cur_show_obj.unique_name, ex(e)))
 
                 if cur_tvid_prodid in to_rename:
-                    sickgear.show_queue_scheduler.action.renameShowEpisodes(cur_show_obj)
+                    sickgear.show_queue_scheduler.action.rename_show_episodes(cur_show_obj)
                     rename.append(cur_show_obj.name)
 
                 if sickgear.USE_SUBTITLES and cur_tvid_prodid in to_subtitle:
@@ -7039,7 +7075,7 @@ class Manage(MainHandler):
             new_show_id = new_show.split(':')
             new_tvid = int(new_show_id[0])
             if new_tvid not in tv_sources:
-                logger.log('Skipping %s because target is not a valid source' % show, logger.WARNING)
+                logger.warning('Skipping %s because target is not a valid source' % show)
                 errors.append('Skipping %s because target is not a valid source' % show)
                 continue
             try:
@@ -7047,7 +7083,7 @@ class Manage(MainHandler):
             except (BaseException, Exception):
                 show_obj = None
             if not show_obj:
-                logger.log('Skipping %s because source is not a valid show' % show, logger.WARNING)
+                logger.warning('Skipping %s because source is not a valid show' % show)
                 errors.append('Skipping %s because source is not a valid show' % show)
                 continue
             if 2 == len(new_show_id):
@@ -7057,21 +7093,20 @@ class Manage(MainHandler):
                 except (BaseException, Exception):
                     new_show_obj = None
                 if new_show_obj:
-                    logger.log('Skipping %s because target show with that id already exists in db' % show,
-                               logger.WARNING)
+                    logger.warning('Skipping %s because target show with that id already exists in db' % show)
                     errors.append('Skipping %s because target show with that id already exists in db' % show)
                     continue
             else:
                 new_prodid = None
             if show_obj.tvid == new_tvid and (not new_prodid or new_prodid == show_obj.prodid):
-                logger.log('Skipping %s because target same as source' % show, logger.WARNING)
+                logger.warning('Skipping %s because target same as source' % show)
                 errors.append('Skipping %s because target same as source' % show)
                 continue
             try:
                 sickgear.show_queue_scheduler.action.switch_show(show_obj=show_obj, new_tvid=new_tvid,
-                                                                  new_prodid=new_prodid, force_id=force_id)
+                                                                 new_prodid=new_prodid, force_id=force_id)
             except (BaseException, Exception) as e:
-                logger.log('Could not add show %s to switch queue: %s' % (show_obj.tvid_prodid, ex(e)), logger.WARNING)
+                logger.warning('Could not add show %s to switch queue: %s' % (show_obj.tvid_prodid, ex(e)))
                 errors.append('Could not add show %s to switch queue: %s' % (show_obj.tvid_prodid, ex(e)))
 
         return json_dumps(({'result': 'success'}, {'errors': ', '.join(errors)})[0 < len(errors)])
@@ -7116,7 +7151,7 @@ class ManageSearch(Manage):
     def retry_provider(provider=None):
         if not provider:
             return
-        prov = [p for p in sickgear.providerList + sickgear.newznabProviderList if p.get_id() == provider]
+        prov = [p for p in sickgear.provider_list + sickgear.newznab_providers if p.get_id() == provider]
         if not prov:
             return
         prov[0].retry_next()
@@ -7127,7 +7162,7 @@ class ManageSearch(Manage):
         # force it to run the next time it looks
         if not sickgear.search_queue_scheduler.action.is_standard_backlog_in_progress():
             sickgear.backlog_search_scheduler.force_search(force_type=FORCED_BACKLOG)
-            logger.log(u'Backlog search forced')
+            logger.log('Backlog search forced')
             ui.notifications.message('Backlog search started')
 
             time.sleep(5)
@@ -7137,9 +7172,9 @@ class ManageSearch(Manage):
 
         # force it to run the next time it looks
         if not sickgear.search_queue_scheduler.action.is_recentsearch_in_progress():
-            result = sickgear.recent_search_scheduler.forceRun()
+            result = sickgear.recent_search_scheduler.force_run()
             if result:
-                logger.log(u'Recent search forced')
+                logger.log('Recent search forced')
                 ui.notifications.message('Recent search started')
 
         time.sleep(5)
@@ -7148,9 +7183,9 @@ class ManageSearch(Manage):
     def force_find_propers(self):
 
         # force it to run the next time it looks
-        result = sickgear.proper_finder_scheduler.forceRun()
+        result = sickgear.proper_finder_scheduler.force_run()
         if result:
-            logger.log(u'Find propers search forced')
+            logger.log('Find propers search forced')
             ui.notifications.message('Find propers search started')
 
         time.sleep(5)
@@ -7172,9 +7207,9 @@ class ShowTasks(Manage):
         t = PageTemplate(web_handler=self, file='manage_showProcesses.tmpl')
         t.queue_length = sickgear.show_queue_scheduler.action.queue_length()
         t.people_queue = sickgear.people_queue_scheduler.action.queue_data()
-        t.next_run = sickgear.show_update_scheduler.lastRun.replace(
+        t.next_run = sickgear.show_update_scheduler.last_run.replace(
             hour=sickgear.show_update_scheduler.start_time.hour)
-        t.show_update_running = sickgear.show_queue_scheduler.action.isShowUpdateRunning() \
+        t.show_update_running = sickgear.show_queue_scheduler.action.is_show_update_running() \
             or sickgear.show_update_scheduler.action.amActive
 
         my_db = db.DBConnection(row_type='dict')
@@ -7258,9 +7293,9 @@ class ShowTasks(Manage):
 
     def force_show_update(self):
 
-        result = sickgear.show_update_scheduler.forceRun()
+        result = sickgear.show_update_scheduler.force_run()
         if result:
-            logger.log(u'Show Update forced')
+            logger.log('Show Update forced')
             ui.notifications.message('Forced Show Update started')
 
         time.sleep(5)
@@ -7418,7 +7453,7 @@ class History(MainHandler):
                     r['status'] = r['status_w']
                     r['file_size'] = r['file_size_w']
 
-                r['status'], r['quality'] = Quality.splitCompositeStatus(helpers.try_int(r['status']))
+                r['status'], r['quality'] = Quality.split_composite_status(helpers.try_int(r['status']))
                 r['season'], r['episode'] = '%02i' % r['season'], '%02i' % r['episode']
                 if r['tvep_id'] not in mru_count:
                     # depends on SELECT ORDER BY date_watched DESC to determine mru_count
@@ -7434,9 +7469,9 @@ class History(MainHandler):
 
         elif 'stats' in sickgear.HISTORY_LAYOUT:
 
-            prov_list = [p.name for p in (sickgear.providerList
-                                          + sickgear.newznabProviderList
-                                          + sickgear.torrentRssProviderList)]
+            prov_list = [p.name for p in (sickgear.provider_list
+                                          + sickgear.newznab_providers
+                                          + sickgear.torrent_rss_providers)]
             # noinspection SqlResolve
             sql = 'SELECT COUNT(1) AS count,' \
                   ' MIN(DISTINCT date) AS earliest,' \
@@ -7463,12 +7498,12 @@ class History(MainHandler):
 
         elif 'failures' in sickgear.HISTORY_LAYOUT:
 
-            t.provider_fail_stats = filter_list(lambda stat: len(stat['fails']), [
+            t.provider_fail_stats = list(filter(lambda stat: len(stat['fails']), [
                 dict(name=p.name, id=p.get_id(), active=p.is_active(), prov_img=p.image_name(),
                      prov_id=p.get_id(),  # 2020.03.17 legacy var, remove at future date
                      fails=p.fails.fails_sorted, next_try=p.get_next_try_time,
                      has_limit=getattr(p, 'has_limit', False), tmr_limit_time=p.tmr_limit_time)
-                for p in sickgear.providerList + sickgear.newznabProviderList])
+                for p in sickgear.provider_list + sickgear.newznab_providers]))
 
             t.provider_fail_cnt = len([p for p in t.provider_fail_stats if len(p['fails'])])
             t.provider_fails = t.provider_fail_cnt  # 2020.03.17 legacy var, remove at future date
@@ -7502,11 +7537,11 @@ class History(MainHandler):
                         return result
 
             with sg_helpers.DOMAIN_FAILURES.lock:
-                t.domain_fail_stats = filter_list(lambda stat: len(stat['fails']), [
+                t.domain_fail_stats = list(filter(lambda stat: len(stat['fails']), [
                     dict(name=k, id=sickgear.GenericProvider.make_id(k), img=img(k), cls=img(k, True),
                          fails=v.fails_sorted, next_try=v.get_next_try_time,
                          has_limit=getattr(v, 'has_limit', False), tmr_limit_time=v.tmr_limit_time)
-                    for k, v in iteritems(sg_helpers.DOMAIN_FAILURES.domain_list)])
+                    for k, v in iteritems(sg_helpers.DOMAIN_FAILURES.domain_list)]))
 
                 t.domain_fail_cnt = len([d for d in t.domain_fail_stats if len(d['fails'])])
 
@@ -7611,12 +7646,11 @@ class History(MainHandler):
         hosts, keys, message = client.check_config(sickgear.EMBY_HOST, sickgear.EMBY_APIKEY)
 
         if sickgear.USE_EMBY and hosts:
-            logger.log('Updating Emby watched episode states', logger.DEBUG)
+            logger.debug('Updating Emby watched episode states')
 
             rd = sickgear.ROOT_DIRS.split('|')[1:] \
                 + [x.split('=')[0] for x in sickgear.EMBY_PARENT_MAPS.split(',') if any(x)]
-            rootpaths = sorted(
-                ['%s%s' % (ek.ek(os.path.splitdrive, x)[1], os.path.sep) for x in rd], key=len, reverse=True)
+            rootpaths = sorted(['%s%s' % (os.path.splitdrive(x)[1], os.path.sep) for x in rd], key=len, reverse=True)
             rootdirs = sorted([x for x in rd], key=len, reverse=True)
             headers = {'Content-type': 'application/json'}
             states = {}
@@ -7661,7 +7695,7 @@ class History(MainHandler):
                                                             ParentId=folder_id,
                                                             Filters='IsPlayed',
                                                             format='json'), timeout=10, parse_json=True) or {}
-                        for d in filter_iter(lambda item: 'Episode' == item.get('Type', ''), items.get('Items')):
+                        for d in filter(lambda item: 'Episode' == item.get('Type', ''), items.get('Items')):
                             try:
                                 root_dir_found = False
                                 path_file = d.get('Path')
@@ -7669,8 +7703,8 @@ class History(MainHandler):
                                     continue
                                 for index, p in enumerate(rootpaths):
                                     if p in path_file:
-                                        path_file = ek.ek(os.path.join, rootdirs[index],
-                                                          re.sub('.*?%s' % re.escape(p), '', path_file))
+                                        path_file = os.path.join(
+                                            rootdirs[index], re.sub('.*?%s' % re.escape(p), '', path_file))
                                         root_dir_found = True
                                         break
                                 if not root_dir_found:
@@ -7698,16 +7732,16 @@ class History(MainHandler):
                             except (BaseException, Exception):
                                 continue
             if mapping:
-                logger.log('Folder mappings used, the first of %s is [%s] in Emby is [%s] in SickGear' %
-                           (mapped, mapping[0], mapping[1]), logger.DEBUG)
+                logger.debug(f'Folder mappings used, the first of {mapped} is [{mapping[0]}] in Emby is'
+                             f' [{mapping[1]}] in SickGear')
 
             if states:
                 # Prune user removed items that are no longer being returned by API
-                media_paths = map_list(lambda arg: ek.ek(os.path.basename, arg[1]['path_file']), iteritems(states))
+                media_paths = list(map(lambda arg: os.path.basename(arg[1]['path_file']), iteritems(states)))
                 sql = 'FROM tv_episodes_watched WHERE hide=1 AND label LIKE "%%{Emby}"'
                 my_db = db.DBConnection(row_type='dict')
                 files = my_db.select('SELECT location %s' % sql)
-                for i in filter_iter(lambda f: ek.ek(os.path.basename, f['location']) not in media_paths, files):
+                for i in filter(lambda f: os.path.basename(f['location']) not in media_paths, files):
                     loc = i.get('location')
                     if loc:
                         my_db.select('DELETE %s AND location="%s"' % (sql, loc))
@@ -7721,7 +7755,7 @@ class History(MainHandler):
 
         hosts = [x.strip().lower() for x in sickgear.PLEX_SERVER_HOST.split(',')]
         if sickgear.USE_PLEX and hosts:
-            logger.log('Updating Plex watched episode states', logger.DEBUG)
+            logger.debug('Updating Plex watched episode states')
 
             from lib.plex import Plex
 
@@ -7739,7 +7773,7 @@ class History(MainHandler):
                 # noinspection HttpUrlsUsage
                 parts = re.search(r'(.*):(\d+)$', urlparse('http://' + re.sub(r'^\w+://', '', cur_host)).netloc)
                 if not parts:
-                    logger.log('Skipping host not in min. host:port format : %s' % cur_host, logger.WARNING)
+                    logger.warning('Skipping host not in min. host:port format : %s' % cur_host)
                 elif parts.group(1):
                     plex.plex_host = parts.group(1)
                     if None is not parts.group(2):
@@ -7764,19 +7798,18 @@ class History(MainHandler):
 
                             idx += 1
 
-                    logger.log('Fetched %s of %s played for host : %s' % (len(plex.show_states), played, cur_host),
-                               logger.DEBUG)
+                    logger.debug('Fetched %s of %s played for host : %s' % (len(plex.show_states), played, cur_host))
             if mapping:
-                logger.log('Folder mappings used, the first of %s is [%s] in Plex is [%s] in SickGear' %
-                           (mapped, mapping[0], mapping[1]), logger.DEBUG)
+                logger.debug(f'Folder mappings used, the first of {mapped} is [{mapping[0]}] in Plex is'
+                             f' [{mapping[1]}] in SickGear')
 
             if states:
                 # Prune user removed items that are no longer being returned by API
-                media_paths = map_list(lambda arg: ek.ek(os.path.basename, arg[1]['path_file']), iteritems(states))
+                media_paths = list(map(lambda arg: os.path.basename(arg[1]['path_file']), iteritems(states)))
                 sql = 'FROM tv_episodes_watched WHERE hide=1 AND label LIKE "%%{Plex}"'
                 my_db = db.DBConnection(row_type='dict')
                 files = my_db.select('SELECT location %s' % sql)
-                for i in filter_iter(lambda f: ek.ek(os.path.basename, f['location']) not in media_paths, files):
+                for i in filter(lambda f: os.path.basename(f['location']) not in media_paths, files):
                     loc = i.get('location')
                     if loc:
                         my_db.select('DELETE %s AND location="%s"' % (sql, loc))
@@ -7814,13 +7847,13 @@ class History(MainHandler):
         refresh = []
         for cur_result in sql_result:
             if files and cur_result['location'] not in attempted and 0 < helpers.get_size(cur_result['location']) \
-                    and ek.ek(os.path.isfile, cur_result['location']):
+                    and os.path.isfile(cur_result['location']):
                 # locations repeat with watch events but attempt to delete once
                 attempted += [cur_result['location']]
 
                 result = helpers.remove_file(cur_result['location'])
                 if result:
-                    logger.log(u'%s file %s' % (result, cur_result['location']))
+                    logger.log(f'{result} file {cur_result["location"]}')
 
                     deleted.update({cur_result['tvep_id']: row_show_ids[cur_result['rowid']]})
                     if row_show_ids[cur_result['rowid']] not in refresh:
@@ -7847,8 +7880,8 @@ class History(MainHandler):
             for cur_result in sql_result:
                 show_obj = helpers.find_show_by_id(tvid_prodid_dict)
                 ep_obj = show_obj.get_episode(cur_result['season'], cur_result['episode'])
-                for n in filter_iter(lambda x: x.name.lower() in ('emby', 'kodi', 'plex'),
-                                     notifiers.NotifierFactory().get_enabled()):
+                for n in filter(lambda x: x.name.lower() in ('emby', 'kodi', 'plex'),
+                                notifiers.NotifierFactory().get_enabled()):
                     if 'PLEX' == n.name:
                         if updating:
                             continue
@@ -7857,7 +7890,7 @@ class History(MainHandler):
 
         for tvid_prodid_dict in refresh:
             try:
-                sickgear.show_queue_scheduler.action.refreshShow(
+                sickgear.show_queue_scheduler.action.refresh_show(
                     helpers.find_show_by_id(tvid_prodid_dict))
             except (BaseException, Exception):
                 pass
@@ -7901,7 +7934,7 @@ class Config(MainHandler):
         t.submenu = self.config_menu()
 
         try:
-            with open(ek.ek(os.path.join, sickgear.PROG_DIR, 'CHANGES.md')) as fh:
+            with open(os.path.join(sickgear.PROG_DIR, 'CHANGES.md')) as fh:
                 t.version = re.findall(r'###[^0-9]+([0-9]+\.[0-9]+\.[0-9x]+)', fh.readline())[0]
         except (BaseException, Exception):
             t.version = ''
@@ -7911,18 +7944,18 @@ class Config(MainHandler):
         t.tz_version = None
         try:
             if None is not current_file:
-                current_file = ek.ek(os.path.basename, current_file)
-                zonefile = real_path(ek.ek(os.path.join, sickgear.ZONEINFO_DIR, current_file))
-                if not ek.ek(os.path.isfile, zonefile):
+                current_file = os.path.basename(current_file)
+                zonefile = real_path(os.path.join(sickgear.ZONEINFO_DIR, current_file))
+                if not os.path.isfile(zonefile):
                     t.tz_fallback = True
-                    zonefile = ek.ek(os.path.join, ek.ek(os.path.dirname, zoneinfo.__file__), current_file)
-                if ek.ek(os.path.isfile, zonefile):
+                    zonefile = os.path.join(os.path.dirname(zoneinfo.__file__), current_file)
+                if os.path.isfile(zonefile):
                     t.tz_version = zoneinfo.ZoneInfoFile(zoneinfo.getzoneinfofile_stream()).metadata['tzversion']
         except (BaseException, Exception):
             pass
 
         t.backup_db_path = sickgear.BACKUP_DB_MAX_COUNT and \
-            (sickgear.BACKUP_DB_PATH or ek.ek(os.path.join, sickgear.DATA_DIR, 'backup')) or 'Disabled'
+            (sickgear.BACKUP_DB_PATH or os.path.join(sickgear.DATA_DIR, 'backup')) or 'Disabled'
 
         return t.respond()
 
@@ -7969,7 +8002,7 @@ class ConfigGeneral(Config):
                 seasons = [-1] + seasons[0:-1]  # bubble -1
 
             # prepare a seasonal ordered dict for output
-            alts = ordered_dict([(season, {}) for season in seasons])
+            alts = dict([(season, {}) for season in seasons])
 
             # add original show name
             show_obj = sickgear.helpers.find_show_by_id(tvid_prodid, no_mapped_ids=True)
@@ -8018,7 +8051,7 @@ class ConfigGeneral(Config):
         return json_dumps(dict(text='%s\n\n' % ui_output))
 
     @staticmethod
-    def generate_key():
+    def generate_key(*args, **kwargs):
         """ Return a new randomized API_KEY
         """
         # Create some values to seed md5
@@ -8026,8 +8059,10 @@ class ConfigGeneral(Config):
 
         result = hashlib.new('md5', decode_bytes(seed)).hexdigest()
 
-        # Return a hex digest of the md5, eg 49f68a5c8493ec2c0bf489821c21fc3b
-        logger.log(u'New API generated')
+        # Return a hex digest of the md5, e.g. 49f68a5c8493ec2c0bf489821c21fc3b
+        app_name = kwargs.get('app_name')
+        app_name = '' if not app_name else ' for [%s]' % app_name
+        logger.log(f'New API generated{app_name}')
 
         return result
 
@@ -8060,8 +8095,8 @@ class ConfigGeneral(Config):
         any_qualities = ([], any_qualities.split(','))[any(any_qualities)]
         best_qualities = ([], best_qualities.split(','))[any(best_qualities)]
 
-        sickgear.QUALITY_DEFAULT = int(Quality.combineQualities(map_list(int, any_qualities),
-                                                                 map_list(int, best_qualities)))
+        sickgear.QUALITY_DEFAULT = int(Quality.combine_qualities(list(map(int, any_qualities)),
+                                                                 list(map(int, best_qualities))))
         sickgear.WANTED_BEGIN_DEFAULT = config.minimax(default_wanted_begin, 0, -1, 10)
         sickgear.WANTED_LATEST_DEFAULT = config.minimax(default_wanted_latest, 0, -1, 10)
         sickgear.SHOW_TAG_DEFAULT = default_tag
@@ -8074,33 +8109,6 @@ class ConfigGeneral(Config):
 
         sickgear.save_config()
 
-    @staticmethod
-    def generateKey(*args, **kwargs):
-        """ Return a new randomized API_KEY
-        """
-
-        try:
-            from hashlib import md5
-        except ImportError:
-            # noinspection PyUnresolvedReferences,PyCompatibility
-            from md5 import md5
-
-        # Create some values to seed md5
-        t = str(time.time())
-        r = str(random.random())
-
-        # Create the md5 instance and give it the current time
-        m = md5(decode_bytes(t))
-
-        # Update the md5 instance with the random variable
-        m.update(decode_bytes(r))
-
-        # Return a hex digest of the md5, eg 49f68a5c8493ec2c0bf489821c21fc3b
-        app_name = kwargs.get('app_name')
-        app_name = '' if not app_name else ' for [%s]' % app_name
-        logger.log(u'New apikey generated%s' % app_name)
-        return m.hexdigest()
-
     def create_apikey(self, app_name):
         result = dict()
         if not app_name:
@@ -8108,16 +8116,16 @@ class ConfigGeneral(Config):
         elif app_name in [k[0] for k in sickgear.API_KEYS if k[0]]:
             result['result'] = 'Failed: name is not unique'
         else:
-            api_key = self.generateKey(app_name=app_name)
+            api_key = self.generate_key(app_name=app_name)
             if api_key in [k[1] for k in sickgear.API_KEYS if k[0]]:
                 result['result'] = 'Failed: apikey already exists, try again'
             else:
                 sickgear.API_KEYS.append([app_name, api_key])
-                logger.log('Created apikey for [%s]' % app_name, logger.DEBUG)
+                logger.debug('Created apikey for [%s]' % app_name)
                 result.update(dict(result='Success: apikey added', added=api_key))
                 sickgear.USE_API = 1
                 sickgear.save_config()
-                ui.notifications.message('Configuration Saved', ek.ek(os.path.join, sickgear.CONFIG_FILE))
+                ui.notifications.message('Configuration Saved', os.path.join(sickgear.CONFIG_FILE))
 
         return json_dumps(result)
 
@@ -8132,10 +8140,10 @@ class ConfigGeneral(Config):
             result['result'] = 'Failed: key doesn\'t exist'
         else:
             sickgear.API_KEYS = [ak for ak in sickgear.API_KEYS if ak[0] and api_key != ak[1]]
-            logger.log('Revoked [%s] apikey [%s]' % (app_name, api_key), logger.DEBUG)
+            logger.debug('Revoked [%s] apikey [%s]' % (app_name, api_key))
             result.update(dict(result='Success: apikey removed', removed=True))
             sickgear.save_config()
-            ui.notifications.message('Configuration Saved', ek.ek(os.path.join, sickgear.CONFIG_FILE))
+            ui.notifications.message('Configuration Saved', os.path.join(sickgear.CONFIG_FILE))
 
         return json_dumps(result)
 
@@ -8175,7 +8183,7 @@ class ConfigGeneral(Config):
             with sickgear.show_update_scheduler.lock:
                 sickgear.show_update_scheduler.start_time = datetime.time(hour=sickgear.SHOW_UPDATE_HOUR)
         except (BaseException, Exception) as e:
-            logger.log('Could not change Show Update Scheduler time: %s' % ex(e), logger.ERROR)
+            logger.error('Could not change Show Update Scheduler time: %s' % ex(e))
         sickgear.TRASH_REMOVE_SHOW = config.checkbox_to_value(trash_remove_show)
         sg_helpers.TRASH_REMOVE_SHOW = sickgear.TRASH_REMOVE_SHOW
         sickgear.TRASH_ROTATE_LOGS = config.checkbox_to_value(trash_rotate_logs)
@@ -8206,19 +8214,19 @@ class ConfigGeneral(Config):
         sickgear.FANART_LIMIT = config.minimax(fanart_limit, 3, 0, 500)
         sickgear.SHOWLIST_TAGVIEW = showlist_tagview
 
-        # 'Show List' is the must have default fallback. Tags in use that are removed from config ui are restored,
+        # 'Show List' is the must-have default fallback. Tags in use that are removed from config ui are restored,
         # not deleted. Deduped list order preservation is key to feature function.
         my_db = db.DBConnection()
         sql_result = my_db.select('SELECT DISTINCT tag FROM tv_shows')
-        new_names = [u'' + v.strip() for v in (show_tags.split(u','), [])[None is show_tags] if v.strip()]
+        new_names = [v.strip() for v in (show_tags.split(','), [])[None is show_tags] if v.strip()]
         orphans = [item for item in [v['tag'] for v in sql_result or []] if item not in new_names]
         cleanser = []
         if 0 < len(orphans):
             cleanser = [item for item in sickgear.SHOW_TAGS if item in orphans or item in new_names]
-            results += [u'An attempt was prevented to remove a show list group name still in use']
+            results += ['An attempt was prevented to remove a show list group name still in use']
         dedupe = {}
-        sickgear.SHOW_TAGS = [dedupe.setdefault(item, item) for item in (cleanser + new_names + [u'Show List'])
-                               if item not in dedupe]
+        sickgear.SHOW_TAGS = [dedupe.setdefault(item, item) for item in (cleanser + new_names + ['Show List'])
+                              if item not in dedupe]
 
         sickgear.HOME_SEARCH_FOCUS = config.checkbox_to_value(home_search_focus)
         sickgear.USE_IMDB_INFO = config.checkbox_to_value(use_imdb_info)
@@ -8230,7 +8238,7 @@ class ConfigGeneral(Config):
             sickgear.DATE_PRESET = date_preset
         if time_preset:
             sickgear.TIME_PRESET_W_SECONDS = time_preset
-            sickgear.TIME_PRESET = sickgear.TIME_PRESET_W_SECONDS.replace(u':%S', u'')
+            sickgear.TIME_PRESET = sickgear.TIME_PRESET_W_SECONDS.replace(':%S', '')
         sickgear.TIMEZONE_DISPLAY = timezone_display
 
         # Web interface
@@ -8261,8 +8269,8 @@ class ConfigGeneral(Config):
         sickgear.WEB_IPV64 = config.checkbox_to_value(web_ipv64)
         sickgear.HANDLE_REVERSE_PROXY = config.checkbox_to_value(handle_reverse_proxy)
         sickgear.SEND_SECURITY_HEADERS = config.checkbox_to_value(send_security_headers)
-        hosts = ','.join(filter_iter(lambda name: not helpers.re_valid_hostname(with_allowed=False).match(name),
-                                     config.clean_hosts(allowed_hosts).split(',')))
+        hosts = ','.join(filter(lambda name: not helpers.re_valid_hostname(with_allowed=False).match(name),
+                                config.clean_hosts(allowed_hosts).split(',')))
         if not hosts or self.request.host_name in hosts:
             sickgear.ALLOWED_HOSTS = hosts
         sickgear.ALLOW_ANYIP = config.checkbox_to_value(allow_anyip)
@@ -8286,11 +8294,11 @@ class ConfigGeneral(Config):
 
         if 0 < len(results):
             for v in results:
-                logger.log(v, logger.ERROR)
+                logger.error(v)
             ui.notifications.error('Error(s) Saving Configuration',
                                    '<br>\n'.join(results))
         else:
-            ui.notifications.message('Configuration Saved', ek.ek(os.path.join, sickgear.CONFIG_FILE))
+            ui.notifications.message('Configuration Saved', os.path.join(sickgear.CONFIG_FILE))
 
         if restart:
             self.clear_cookie('sickgear-session-%s' % helpers.md5_for_text(sickgear.WEB_PORT))
@@ -8310,7 +8318,7 @@ class ConfigGeneral(Config):
                 pulls = sickgear.update_software_scheduler.action.list_remote_pulls()
                 return json_dumps({'result': 'success', 'pulls': pulls})
             except (BaseException, Exception) as e:
-                logger.log(u'exception msg: ' + ex(e), logger.DEBUG)
+                logger.debug(f'exception msg: {ex(e)}')
                 return json_dumps({'result': 'fail'})
 
     @staticmethod
@@ -8319,7 +8327,7 @@ class ConfigGeneral(Config):
             branches = sickgear.update_software_scheduler.action.list_remote_branches()
             return json_dumps({'result': 'success', 'branches': branches, 'current': sickgear.BRANCH or 'main'})
         except (BaseException, Exception) as e:
-            logger.log(u'exception msg: ' + ex(e), logger.DEBUG)
+            logger.debug(f'exception msg: {ex(e)}')
             return json_dumps({'result': 'fail'})
 
 
@@ -8402,9 +8410,9 @@ class ConfigSearch(Config):
         sickgear.USENET_RETENTION = config.to_int(usenet_retention, default=500)
 
         sickgear.IGNORE_WORDS, sickgear.IGNORE_WORDS_REGEX = helpers.split_word_str(ignore_words
-                                                                                      if ignore_words else '')
+                                                                                    if ignore_words else '')
         sickgear.REQUIRE_WORDS, sickgear.REQUIRE_WORDS_REGEX = helpers.split_word_str(require_words
-                                                                                        if require_words else '')
+                                                                                      if require_words else '')
 
         clean_ignore_require_words()
 
@@ -8413,7 +8421,7 @@ class ConfigSearch(Config):
 
         sickgear.SEARCH_UNAIRED = bool(config.checkbox_to_value(search_unaired))
         sickgear.UNAIRED_RECENT_SEARCH_ONLY = bool(config.checkbox_to_value(unaired_recent_search_only,
-                                                                             value_off=1, value_on=0))
+                                                                            value_off=1, value_on=0))
 
         sickgear.FLARESOLVERR_HOST = config.clean_url(flaresolverr_host)
         sg_helpers.FLARESOLVERR_HOST = sickgear.FLARESOLVERR_HOST
@@ -8444,7 +8452,7 @@ class ConfigSearch(Config):
         sickgear.TORRENT_LABEL = torrent_label
         sickgear.TORRENT_LABEL_VAR = config.to_int((0, torrent_label_var)['rtorrent' == torrent_method], 1)
         if not (0 <= sickgear.TORRENT_LABEL_VAR <= 5):
-            logger.log('Setting rTorrent custom%s is not 0-5, defaulting to custom1' % torrent_label_var, logger.DEBUG)
+            logger.debug('Setting rTorrent custom%s is not 0-5, defaulting to custom1' % torrent_label_var)
             sickgear.TORRENT_LABEL_VAR = 1
         sickgear.TORRENT_VERIFY_CERT = config.checkbox_to_value(torrent_verify_cert)
         sickgear.TORRENT_PATH = torrent_path
@@ -8457,11 +8465,11 @@ class ConfigSearch(Config):
 
         if 0 < len(results):
             for x in results:
-                logger.log(x, logger.ERROR)
+                logger.error(x)
             ui.notifications.error('Error(s) Saving Configuration',
                                    '<br>\n'.join(results))
         else:
-            ui.notifications.message('Configuration Saved', ek.ek(os.path.join, sickgear.CONFIG_FILE))
+            ui.notifications.message('Configuration Saved', os.path.join(sickgear.CONFIG_FILE))
 
         self.redirect('/config/search/')
 
@@ -8580,11 +8588,11 @@ class ConfigMediaProcess(Config):
 
         if 0 < len(results):
             for x in results:
-                logger.log(x, logger.ERROR)
+                logger.error(x)
             ui.notifications.error('Error(s) Saving Configuration',
                                    '<br>\n'.join(results))
         else:
-            ui.notifications.message('Configuration Saved', ek.ek(os.path.join, sickgear.CONFIG_FILE))
+            ui.notifications.message('Configuration Saved', os.path.join(sickgear.CONFIG_FILE))
 
         self.redirect('/config/media-process/')
 
@@ -8599,7 +8607,7 @@ class ConfigMediaProcess(Config):
 
         result = naming.test_name(pattern, multi, abd, sports, anime, anime_type)
 
-        result = ek.ek(os.path.join, result['dir'], result['name'])
+        result = os.path.join(result['dir'], result['name'])
 
         return result
 
@@ -8646,15 +8654,15 @@ class ConfigMediaProcess(Config):
 
         try:
             if 'win32' == sys.platform:
-                rarfile.UNRAR_TOOL = ek.ek(os.path.join, sickgear.PROG_DIR, 'lib', 'rarfile', 'UnRAR.exe')
-            rar_path = ek.ek(os.path.join, sickgear.PROG_DIR, 'lib', 'rarfile', 'test.rar')
+                rarfile.UNRAR_TOOL = os.path.join(sickgear.PROG_DIR, 'lib', 'rarfile', 'UnRAR.exe')
+            rar_path = os.path.join(sickgear.PROG_DIR, 'lib', 'rarfile', 'test.rar')
             if 'This is only a test.' == decode_str(rarfile.RarFile(rar_path).read(r'test/test.txt')):
                 return 'supported'
             msg = 'Could not read test file content'
         except (BaseException, Exception) as e:
             msg = ex(e)
 
-        logger.log(u'Rar Not Supported: %s' % msg, logger.ERROR)
+        logger.error(f'Rar Not Supported: {msg}')
         return 'not supported'
 
 
@@ -8671,9 +8679,9 @@ class ConfigProviders(Config):
             return json_dumps({'error': 'No Provider Name or url specified'})
 
         provider_dict = dict(zip([sickgear.providers.generic_provider_name(x.get_id())
-                                 for x in sickgear.newznabProviderList], sickgear.newznabProviderList))
+                                  for x in sickgear.newznab_providers], sickgear.newznab_providers))
         provider_url_dict = dict(zip([sickgear.providers.generic_provider_url(x.url)
-                                 for x in sickgear.newznabProviderList], sickgear.newznabProviderList))
+                                      for x in sickgear.newznab_providers], sickgear.newznab_providers))
 
         temp_provider = newznab.NewznabProvider(name, config.clean_url(url))
 
@@ -8697,12 +8705,12 @@ class ConfigProviders(Config):
             error = '\nNo provider %s specified' % error
             return json_dumps({'success': False, 'error': error})
 
-        if name in [n.name for n in sickgear.newznabProviderList if n.url == url]:
-            provider = [n for n in sickgear.newznabProviderList if n.name == name][0]
+        if name in [n.name for n in sickgear.newznab_providers if n.url == url]:
+            provider = [n for n in sickgear.newznab_providers if n.name == name][0]
             tv_categories = provider.clean_newznab_categories(provider.all_cats)
             state = provider.is_enabled()
         else:
-            providers = dict(zip([x.get_id() for x in sickgear.newznabProviderList], sickgear.newznabProviderList))
+            providers = dict(zip([x.get_id() for x in sickgear.newznab_providers], sickgear.newznab_providers))
             temp_provider = newznab.NewznabProvider(name, url, key)
             if None is not key and starify(key, True):
                 temp_provider.key = providers[temp_provider.get_id()].key
@@ -8718,7 +8726,7 @@ class ConfigProviders(Config):
             return json_dumps({'error': 'Invalid name specified'})
 
         provider_dict = dict(
-            zip([x.get_id() for x in sickgear.torrentRssProviderList], sickgear.torrentRssProviderList))
+            zip([x.get_id() for x in sickgear.torrent_rss_providers], sickgear.torrent_rss_providers))
 
         temp_provider = rsstorrent.TorrentRssProvider(name, url, cookies)
 
@@ -8733,7 +8741,7 @@ class ConfigProviders(Config):
 
     @staticmethod
     def check_providers_ping():
-        for p in sickgear.providers.sortedProviderList():
+        for p in sickgear.providers.sorted_sources():
             if getattr(p, 'ping_iv', None):
                 if p.is_active() and (p.get_id() not in sickgear.provider_ping_thread_pool
                                       or not sickgear.provider_ping_thread_pool[p.get_id()].is_alive()):
@@ -8751,7 +8759,7 @@ class ConfigProviders(Config):
                         pass
 
         # stop removed providers
-        prov = [n.get_id() for n in sickgear.providers.sortedProviderList()]
+        prov = [n.get_id() for n in sickgear.providers.sorted_sources()]
         for p in [x for x in sickgear.provider_ping_thread_pool if x not in prov]:
             sickgear.provider_ping_thread_pool[p].stop = True
             try:
@@ -8767,7 +8775,7 @@ class ConfigProviders(Config):
         provider_list = []
 
         # add all the newznab info we have into our list
-        newznab_sources = dict(zip([x.get_id() for x in sickgear.newznabProviderList], sickgear.newznabProviderList))
+        newznab_sources = dict(zip([x.get_id() for x in sickgear.newznab_providers], sickgear.newznab_providers))
         active_ids = []
         reload_page = False
         if newznab_string:
@@ -8810,7 +8818,7 @@ class ConfigProviders(Config):
                                 [k for k in nzb_src.may_filter
                                  if config.checkbox_to_value(kwargs.get('%s_filter_%s' % (cur_id, k)))])
 
-                    for attr in filter_iter(lambda a: hasattr(nzb_src, a), [
+                    for attr in filter(lambda a: hasattr(nzb_src, a), [
                         'search_fallback', 'enable_recentsearch', 'enable_backlog', 'enable_scheduled_backlog',
                         'scene_only', 'scene_loose', 'scene_loose_active', 'scene_rej_nuked', 'scene_nuked_active'
                     ]):
@@ -8824,18 +8832,18 @@ class ConfigProviders(Config):
                     new_provider.enabled = True
                     _ = new_provider.caps  # when adding a custom, trigger server_type update
                     new_provider.enabled = False
-                    sickgear.newznabProviderList.append(new_provider)
+                    sickgear.newznab_providers.append(new_provider)
 
                 active_ids.append(cur_id)
 
         # delete anything that is missing
         if sickgear.USE_NZBS:
-            for source in [x for x in sickgear.newznabProviderList if x.get_id() not in active_ids]:
-                sickgear.newznabProviderList.remove(source)
+            for source in [x for x in sickgear.newznab_providers if x.get_id() not in active_ids]:
+                sickgear.newznab_providers.remove(source)
 
         # add all the torrent RSS info we have into our list
-        torrent_rss_sources = dict(zip([x.get_id() for x in sickgear.torrentRssProviderList],
-                                       sickgear.torrentRssProviderList))
+        torrent_rss_sources = dict(zip([x.get_id() for x in sickgear.torrent_rss_providers],
+                                       sickgear.torrent_rss_providers))
         active_ids = []
         if torrentrss_string:
             for curTorrentRssProviderStr in torrentrss_string.split('!!!'):
@@ -8871,19 +8879,19 @@ class ConfigProviders(Config):
                         if attr_check in kwargs:
                             setattr(torrss_src, attr, str(kwargs.get(attr_check) or '').strip())
                 else:
-                    sickgear.torrentRssProviderList.append(new_provider)
+                    sickgear.torrent_rss_providers.append(new_provider)
 
                 active_ids.append(cur_id)
 
         # delete anything that is missing
         if sickgear.USE_TORRENTS:
-            for source in [x for x in sickgear.torrentRssProviderList if x.get_id() not in active_ids]:
-                sickgear.torrentRssProviderList.remove(source)
+            for source in [x for x in sickgear.torrent_rss_providers if x.get_id() not in active_ids]:
+                sickgear.torrent_rss_providers.remove(source)
 
         # enable/disable states of source providers
         provider_str_list = provider_order.split()
-        sources = dict(zip([x.get_id() for x in sickgear.providers.sortedProviderList()],
-                           sickgear.providers.sortedProviderList()))
+        sources = dict(zip([x.get_id() for x in sickgear.providers.sorted_sources()],
+                           sickgear.providers.sorted_sources()))
         for cur_src_str in provider_str_list:
             src_name, src_enabled = cur_src_str.split(':')
 
@@ -8907,7 +8915,7 @@ class ConfigProviders(Config):
                 torrent_rss_sources[src_name].enabled = src_enabled
 
         # update torrent source settings
-        for torrent_src in [src for src in sickgear.providers.sortedProviderList()
+        for torrent_src in [src for src in sickgear.providers.sorted_sources()
                             if sickgear.GenericProvider.TORRENT == src.providerType]:  # type: TorrentProvider
             src_id_prefix = torrent_src.get_id() + '_'
 
@@ -8924,12 +8932,12 @@ class ConfigProviders(Config):
                 elif not starify(key, True):
                     setattr(torrent_src, attr, key)
 
-            for attr in filter_iter(lambda a: hasattr(torrent_src, a), [
+            for attr in filter(lambda a: hasattr(torrent_src, a), [
                 'username', 'uid', '_seed_ratio', 'scene_or_contain'
             ]):
                 setattr(torrent_src, attr, str(kwargs.get(src_id_prefix + attr.replace('_seed_', ''), '')).strip())
 
-            for attr in filter_iter(lambda a: hasattr(torrent_src, a), [
+            for attr in filter(lambda a: hasattr(torrent_src, a), [
                 'minseed', 'minleech', 'seed_time'
             ]):
                 setattr(torrent_src, attr, config.to_int(str(kwargs.get(src_id_prefix + attr, '')).strip()))
@@ -8940,7 +8948,7 @@ class ConfigProviders(Config):
                         [k for k in getattr(torrent_src, 'may_filter', 'nop')
                          if config.checkbox_to_value(kwargs.get('%sfilter_%s' % (src_id_prefix, k)))])
 
-            for attr in filter_iter(lambda a: hasattr(torrent_src, a), [
+            for attr in filter(lambda a: hasattr(torrent_src, a), [
                 'confirmed', 'freeleech', 'reject_m2ts', 'use_after_get_data', 'enable_recentsearch',
                 'enable_backlog', 'search_fallback', 'enable_scheduled_backlog',
                 'scene_only', 'scene_loose', 'scene_loose_active',
@@ -8948,13 +8956,13 @@ class ConfigProviders(Config):
             ]):
                 setattr(torrent_src, attr, config.checkbox_to_value(kwargs.get(src_id_prefix + attr)))
 
-            for attr, default in filter_iter(lambda arg: hasattr(torrent_src, arg[0]), [
+            for attr, default in filter(lambda arg: hasattr(torrent_src, arg[0]), [
                 ('search_mode', 'eponly'),
             ]):
                 setattr(torrent_src, attr, str(kwargs.get(src_id_prefix + attr) or default).strip())
 
         # update nzb source settings
-        for nzb_src in [src for src in sickgear.providers.sortedProviderList() if
+        for nzb_src in [src for src in sickgear.providers.sorted_sources() if
                         sickgear.GenericProvider.NZB == src.providerType]:
             src_id_prefix = nzb_src.get_id() + '_'
 
@@ -8972,17 +8980,17 @@ class ConfigProviders(Config):
                 setattr(nzb_src, attr, config.checkbox_to_value(kwargs.get(src_id_prefix + attr)) or
                         not getattr(nzb_src, 'supports_backlog', True))
 
-            for attr in filter_iter(lambda a: hasattr(nzb_src, a),
-                                    ['search_fallback', 'enable_backlog', 'enable_scheduled_backlog',
-                                     'scene_only', 'scene_loose', 'scene_loose_active',
-                                     'scene_rej_nuked', 'scene_nuked_active']):
+            for attr in filter(lambda a: hasattr(nzb_src, a),
+                               ['search_fallback', 'enable_backlog', 'enable_scheduled_backlog',
+                                'scene_only', 'scene_loose', 'scene_loose_active',
+                                'scene_rej_nuked', 'scene_nuked_active']):
                 setattr(nzb_src, attr, config.checkbox_to_value(kwargs.get(src_id_prefix + attr)))
 
             for (attr, default) in [('scene_or_contain', ''), ('search_mode', 'eponly')]:
                 if hasattr(nzb_src, attr):
                     setattr(nzb_src, attr, str(kwargs.get(src_id_prefix + attr) or default).strip())
 
-        sickgear.NEWZNAB_DATA = '!!!'.join([x.config_str() for x in sickgear.newznabProviderList])
+        sickgear.NEWZNAB_DATA = '!!!'.join([x.config_str() for x in sickgear.newznab_providers])
         sickgear.PROVIDER_ORDER = provider_list
 
         helpers.clear_unused_providers()
@@ -8994,10 +9002,10 @@ class ConfigProviders(Config):
 
         if 0 < len(results):
             for x in results:
-                logger.log(x, logger.ERROR)
+                logger.error(x)
             ui.notifications.error('Error(s) Saving Configuration', '<br>\n'.join(results))
         else:
-            ui.notifications.message('Configuration Saved', ek.ek(os.path.join, sickgear.CONFIG_FILE))
+            ui.notifications.message('Configuration Saved', os.path.join(sickgear.CONFIG_FILE))
 
         if reload_page:
             self.write('reload')
@@ -9261,11 +9269,11 @@ class ConfigNotifications(Config):
 
         if 0 < len(results):
             for x in results:
-                logger.log(x, logger.ERROR)
+                logger.error(x)
             ui.notifications.error('Error(s) Saving Configuration',
                                    '<br>\n'.join(results))
         else:
-            ui.notifications.message('Configuration Saved', ek.ek(os.path.join, sickgear.CONFIG_FILE))
+            ui.notifications.message('Configuration Saved', os.path.join(sickgear.CONFIG_FILE))
 
         self.redirect('/config/notifications/')
 
@@ -9316,11 +9324,11 @@ class ConfigSubtitles(Config):
 
         if 0 < len(results):
             for x in results:
-                logger.log(x, logger.ERROR)
+                logger.error(x)
             ui.notifications.error('Error(s) Saving Configuration',
                                    '<br>\n'.join(results))
         else:
-            ui.notifications.message('Configuration Saved', ek.ek(os.path.join, sickgear.CONFIG_FILE))
+            ui.notifications.message('Configuration Saved', os.path.join(sickgear.CONFIG_FILE))
 
         self.redirect('/config/subtitles/')
 
@@ -9349,11 +9357,11 @@ class ConfigAnime(Config):
 
         if 0 < len(results):
             for x in results:
-                logger.log(x, logger.ERROR)
+                logger.error(x)
             ui.notifications.error('Error(s) Saving Configuration',
                                    '<br>\n'.join(results))
         else:
-            ui.notifications.message('Configuration Saved', ek.ek(os.path.join, sickgear.CONFIG_FILE))
+            ui.notifications.message('Configuration Saved', os.path.join(sickgear.CONFIG_FILE))
 
         self.redirect('/config/anime/')
 
@@ -9409,7 +9417,7 @@ class EventLogs(MainHandler):
 
         min_level = int(min_level)
 
-        regex = re.compile(r'^\d{4}-\d{2}-\d{2}\s*\d{2}:\d{2}:\d{2}\s*([A-Z]+)\s*([^\s]+)\s+:{2}\s*(.*\r?\n)$')
+        regex = re.compile(r'^\d{4}-\d{2}-\d{2}\s*\d{2}:\d{2}:\d{2}\s*([A-Z]+)\s*(\S+)\s+:{2}\s*(.*\r?\n)$')
 
         final_data = []
         normal_data = []
@@ -9490,17 +9498,11 @@ class EventLogs(MainHandler):
 class WebFileBrowser(MainHandler):
 
     def index(self, path='', include_files=False, **kwargs):
-        """ prevent issues with requests using legacy params """
-        include_files = include_files or kwargs.get('includeFiles') or False
-        """ /legacy """
 
         self.set_header('Content-Type', 'application/json')
         return json_dumps(folders_at_path(path, True, bool(int(include_files))))
 
     def complete(self, term, include_files=0, **kwargs):
-        """ prevent issues with requests using legacy params """
-        include_files = include_files or kwargs.get('includeFiles') or False
-        """ /legacy """
 
         self.set_header('Content-Type', 'application/json')
         return json_dumps([entry['path'] for entry in folders_at_path(
@@ -9577,11 +9579,11 @@ class CachedImages(MainHandler):
     def should_try_image(filename, source, days=1, minutes=0):
         result = True
         try:
-            dummy_file = '%s.%s.dummy' % (ek.ek(os.path.splitext, filename)[0], source)
-            if ek.ek(os.path.isfile, dummy_file):
-                if ek.ek(os.stat, dummy_file).st_mtime \
-                        < (int(timestamp_near((datetime.datetime.now()
-                                               - datetime.timedelta(days=days, minutes=minutes))))):
+            dummy_file = '%s.%s.dummy' % (os.path.splitext(filename)[0], source)
+            if os.path.isfile(dummy_file):
+                if os.stat(dummy_file).st_mtime \
+                        < (SGDatetime.timestamp_near(datetime.datetime.now()
+                                                     - datetime.timedelta(days=days, minutes=minutes))):
                     CachedImages.delete_dummy_image(dummy_file)
                 else:
                     result = False
@@ -9591,7 +9593,7 @@ class CachedImages(MainHandler):
 
     @staticmethod
     def create_dummy_image(filename, source):
-        dummy_file = '%s.%s.dummy' % (ek.ek(os.path.splitext, filename)[0], source)
+        dummy_file = '%s.%s.dummy' % (os.path.splitext(filename)[0], source)
         CachedImages.delete_dummy_image(dummy_file)
         try:
             with open(dummy_file, 'w'):
@@ -9602,28 +9604,28 @@ class CachedImages(MainHandler):
     @staticmethod
     def delete_dummy_image(dummy_file):
         try:
-            if ek.ek(os.path.isfile, dummy_file):
-                ek.ek(os.remove, dummy_file)
+            if os.path.isfile(dummy_file):
+                os.remove(dummy_file)
         except (BaseException, Exception):
             pass
 
     @staticmethod
     def delete_all_dummy_images(filename):
         for f in ['tmdb', 'tvdb', 'tvmaze']:
-            CachedImages.delete_dummy_image('%s.%s.dummy' % (ek.ek(os.path.splitext, filename)[0], f))
+            CachedImages.delete_dummy_image('%s.%s.dummy' % (os.path.splitext(filename)[0], f))
 
     def index(self, path='', source=None, filename=None, tmdbid=None, tvdbid=None, trans=True):
 
         path = path.strip('/')
         file_name = ''
         if None is not source:
-            file_name = ek.ek(os.path.basename, source)
+            file_name = os.path.basename(source)
         elif filename not in [None, 0, '0']:
             file_name = filename
-        image_file = ek.ek(os.path.join, sickgear.CACHE_DIR, 'images', path, file_name)
-        image_file = ek.ek(os.path.abspath, image_file.replace('\\', '/'))
-        if not ek.ek(os.path.isfile, image_file) and has_image_ext(file_name):
-            basepath = ek.ek(os.path.dirname, image_file)
+        image_file = os.path.join(sickgear.CACHE_DIR, 'images', path, file_name)
+        image_file = os.path.abspath(image_file.replace('\\', '/'))
+        if not os.path.isfile(image_file) and has_image_ext(file_name):
+            basepath = os.path.dirname(image_file)
             helpers.make_path(basepath)
             poster_url = ''
             tmdb_image = False
@@ -9640,13 +9642,15 @@ class CachedImages(MainHandler):
                         poster_url = show_obj.poster
                 except (BaseException, Exception):
                     poster_url = ''
-            if poster_url and not sg_helpers.download_file(poster_url, image_file, nocache=True) and poster_url.find('trakt.us'):
+            if poster_url \
+                    and not sg_helpers.download_file(poster_url, image_file, nocache=True) \
+                    and poster_url.find('trakt.us'):
                 sg_helpers.download_file(poster_url.replace('trakt.us', 'trakt.tv'), image_file, nocache=True)
-            if tmdb_image and not ek.ek(os.path.isfile, image_file):
+            if tmdb_image and not os.path.isfile(image_file):
                 self.create_dummy_image(image_file, 'tmdb')
 
             if None is source and tvdbid not in [None, 'None', 0, '0'] \
-                    and not ek.ek(os.path.isfile, image_file) \
+                    and not os.path.isfile(image_file) \
                     and self.should_try_image(image_file, 'tvdb'):
                 try:
                     tvinfo_config = sickgear.TVInfoAPI(TVINFO_TVDB).api_params.copy()
@@ -9659,15 +9663,15 @@ class CachedImages(MainHandler):
                     poster_url = ''
                 if poster_url:
                     sg_helpers.download_file(poster_url, image_file, nocache=True)
-                if not ek.ek(os.path.isfile, image_file):
+                if not os.path.isfile(image_file):
                     self.create_dummy_image(image_file, 'tvdb')
 
-            if ek.ek(os.path.isfile, image_file):
+            if os.path.isfile(image_file):
                 self.delete_all_dummy_images(image_file)
 
-        if not ek.ek(os.path.isfile, image_file):
-            image_file = ek.ek(os.path.join, sickgear.PROG_DIR, 'gui', 'slick',
-                               'images', ('image-light.png', 'trans.png')[bool(int(trans))])
+        if not os.path.isfile(image_file):
+            image_file = os.path.join(sickgear.PROG_DIR, 'gui', 'slick', 'images',
+                                      ('image-light.png', 'trans.png')[bool(int(trans))])
         else:
             helpers.set_file_timestamp(image_file, min_age=3, new_time=None)
 
@@ -9682,9 +9686,9 @@ class CachedImages(MainHandler):
         :param filename: image file name with path
         :param days: max age to trigger reload of image
         """
-        if not ek.ek(os.path.isfile, filename) or \
-                ek.ek(os.stat, filename).st_mtime < \
-                (int(timestamp_near((datetime.datetime.now() - datetime.timedelta(days=days))))):
+        if not os.path.isfile(filename) or \
+                os.stat(filename).st_mtime < \
+                SGDatetime.timestamp_near(td=datetime.timedelta(days=days)):
             return True
         return False
 
@@ -9701,7 +9705,7 @@ class CachedImages(MainHandler):
         :param tvid_prodid:
         :param thumb: return thumb or normal as fallback
         :param pid: optional person_id
-        :param prefer_person: prefer person image if person_id is set and character has more then 1 person assigned
+        :param prefer_person: prefer person image if person_id is set and character has more than 1 person assigned
         """
         _ = kwargs.get('oid')  # suppress pyc non used var highlight, oid (original id) is a visual ui key
         show_obj = tvid_prodid and helpers.find_show_by_id(tvid_prodid)
@@ -9734,9 +9738,9 @@ class CachedImages(MainHandler):
                 sg_helpers.download_file(char_obj.thumb_url, image_thumb, nocache=True)
 
             primary, fallback = ((image_normal, image_thumb), (image_thumb, image_normal))[thumb]
-            if ek.ek(os.path.isfile, primary):
+            if os.path.isfile(primary):
                 image_file = primary
-            elif ek.ek(os.path.isfile, fallback):
+            elif os.path.isfile(fallback):
                 image_file = fallback
 
         elif person_id:
@@ -9772,9 +9776,9 @@ class CachedImages(MainHandler):
                 sg_helpers.download_file(person_obj.thumb_url, image_thumb, nocache=True)
 
             primary, fallback = ((image_normal, image_thumb), (image_thumb, image_normal))[thumb]
-            if ek.ek(os.path.isfile, primary):
+            if os.path.isfile(primary):
                 image_file = primary
-            elif ek.ek(os.path.isfile, fallback):
+            elif os.path.isfile(fallback):
                 image_file = fallback
 
         return self.image_data(image_file, cast_default=True)
@@ -9789,7 +9793,7 @@ class CachedImages(MainHandler):
         :return: binary image data or None
         """
         if cast_default and None is image_file:
-            image_file = ek.ek(os.path.join, sickgear.PROG_DIR, 'gui', 'slick', 'images', 'poster-person.jpg')
+            image_file = os.path.join(sickgear.PROG_DIR, 'gui', 'slick', 'images', 'poster-person.jpg')
 
         mime_type, encoding = MimeTypes().guess_type(image_file)
         self.set_header('Content-Type', mime_type)

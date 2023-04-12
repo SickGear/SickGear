@@ -72,7 +72,7 @@ class Boxcar2Notifier(Notifier):
 
         except urllib.error.HTTPError as e:
             if not hasattr(e, 'code'):
-                self._log_error(u'Notification failed: %s' % ex(e))
+                self._log_error(f'Notification failed: {ex(e)}')
             else:
                 result = 'Notification failed. Error code: %s' % e.code
                 self._log_error(result)
@@ -91,7 +91,7 @@ class Boxcar2Notifier(Notifier):
                         result = 'Wrong data sent to Boxcar'
                         self._log_error(result)
         except urllib.error.URLError as e:
-            self._log_error(u'Notification failed: %s' % ex(e))
+            self._log_error(f'Notification failed: ex(e)')
 
         return self._choose((True, 'Failed to send notification: %s' % result)[bool(result)], not bool(result))
 

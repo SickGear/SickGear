@@ -39,7 +39,6 @@ from lib.tvinfo_base import CastList, TVInfoCharacter, CrewList, TVInfoPerson, R
 from .tvdb_exceptions import TvdbError, TvdbShownotfound, TvdbTokenexpired
 from .tvdb_ui import BaseUI, ConsoleUI
 
-from _23 import filter_list, list_keys, list_values, map_list
 from six import integer_types, iteritems, PY2, string_types
 
 # noinspection PyUnreachableCode
@@ -139,7 +138,7 @@ class Tvdb(TVInfoBase):
     """Create easy-to-use interface to name of season/episode name
     >> t = Tvdb()
     >> t['Scrubs'][1][24]['episodename']
-    u'My Last Day'
+    'My Last Day'
     """
     map_languages = {}
     reverse_map_languages = {v: k for k, v in iteritems(map_languages)}
@@ -202,7 +201,7 @@ class Tvdb(TVInfoBase):
 
             >> t = Tvdb(actors=True)
             >> t['scrubs']['actors'][0]['name']
-            u'Zach Braff'
+            'Zach Braff'
 
         custom_ui (tvdb_ui.BaseUI subclass):
             A callable subclass of tvdb_ui.BaseUI (overrides interactive option)
@@ -290,7 +289,7 @@ class Tvdb(TVInfoBase):
             'nl': 'nld', 'no': 'nor',
             'pl': 'pol', 'pt': 'pot', 'ru': 'rus', 'sk': 'slv', 'sv': 'swe', 'zh': 'zho', '_1': 'srp',
         }
-        self.config['valid_languages_3'] = list_values(self.config['langabbv_23'])
+        self.config['valid_languages_3'] = list(self.config['langabbv_23'].values())
 
         # TheTvdb.com should be based around numeric language codes,
         # but to link to a series like http://thetvdb.com/?tab=series&id=79349&lid=16
@@ -358,7 +357,7 @@ class Tvdb(TVInfoBase):
                 else:
                     d_m = shows
                 if d_m:
-                    results = map_list(map_data, [d_m['data']])
+                    results = list(map(map_data, [d_m['data']]))
             if ids.get(TVINFO_TVDB_SLUG):
                 cache_id_key = 's-id-%s-%s' % (TVINFO_TVDB, ids[TVINFO_TVDB_SLUG])
                 is_none, shows = self._get_cache_entry(cache_id_key)
@@ -373,7 +372,7 @@ class Tvdb(TVInfoBase):
                 if d_m:
                     for r in d_m:
                         if ids.get(TVINFO_TVDB_SLUG) == r['slug']:
-                            results = map_list(map_data, [r])
+                            results = list(map(map_data, [r]))
                             break
         if name:
             for n in ([name], name)[isinstance(name, list)]:
@@ -390,7 +389,7 @@ class Tvdb(TVInfoBase):
                 if r:
                     if not isinstance(r, list):
                         r = [r]
-                    results.extend(map_list(map_data, r))
+                    results.extend(list(map(map_data, r)))
 
         seen = set()
         results = [seen.add(r['id']) or r for r in results if r['id'] not in seen]
@@ -581,7 +580,7 @@ class Tvdb(TVInfoBase):
                             data_list.append(cr)
                 resp['data'] = data_list
             return resp
-        return dict([(u'data', (None, resp)[isinstance(resp, string_types)])])
+        return dict([('data', (None, resp)[isinstance(resp, string_types)])])
 
     def _getetsrc(self, url, params=None, language=None, parse_json=False):
         """Loads a URL using caching
@@ -613,8 +612,8 @@ class Tvdb(TVInfoBase):
         # type: (int, Optional[str]) -> Optional[dict]
         results = self.search_tvs(sid, language=language)
         for cur_result in (isinstance(results, dict) and results.get('results') or []):
-            result = filter_list(lambda r: 'series' == r['type'] and sid == r['id'],
-                                 cur_result.get('nbHits') and cur_result.get('hits') or [])
+            result = list(filter(lambda r: 'series' == r['type'] and sid == r['id'],
+                                 cur_result.get('nbHits') and cur_result.get('hits') or []))
             if 1 == len(result):
                 result[0]['overview'] = self.clean_overview(
                     result[0]['overviews'][self.config['langabbv_23'].get(language) or 'eng'])
@@ -627,7 +626,7 @@ class Tvdb(TVInfoBase):
 
                 # notify of new keys
                 if ENV.get('SG_DEV_MODE'):
-                    new_keys = set(list_keys(result[0])).difference({
+                    new_keys = set(list(result[0])).difference({
                         '_highlightResult', 'aliases', 'banner',
                         'fanart', 'firstaired', 'follower_count',
                         'id', 'image', 'is_tvdb_searchable', 'is_tvt_searchable',
@@ -788,7 +787,7 @@ class Tvdb(TVInfoBase):
             series_found = self._getetsrc(self.config['url_search_series'], params=self.config['params_search_series'],
                                           language=self.config['language'])
             if series_found:
-                return list_values(series_found)[0]
+                return list(series_found.values())[0]
         except (BaseException, Exception):
             pass
 
@@ -899,15 +898,15 @@ class Tvdb(TVInfoBase):
                                 try:
                                     for cur_result in (isinstance(results, dict) and results.get('results') or []):
                                         # sorts 'banners/images/missing/' to last before filter
-                                        people = filter_list(
+                                        people = list(filter(
                                             lambda r: 'person' == r['type']
                                                       and rc_clean.sub(name, '') == rc_clean.sub(r['name'], ''),
                                             cur_result.get('nbHits')
                                             and sorted(cur_result.get('hits'),
-                                                       key=lambda x: len(x['image']), reverse=True) or [])
+                                                       key=lambda x: len(x['image']), reverse=True) or []))
                                         if ENV.get('SG_DEV_MODE'):
                                             for person in people:
-                                                new_keys = set(list_keys(person)).difference({
+                                                new_keys = set(list(person)).difference({
                                                     '_highlightResult', 'banner', 'id', 'image',
                                                     'is_tvdb_searchable', 'is_tvt_searchable', 'name',
                                                     'objectID', 'people_birthdate', 'people_died',
@@ -1016,14 +1015,14 @@ class Tvdb(TVInfoBase):
                     url_image = self._make_image(self.config['url_artworks'], image_data['data'][0]['filename'])
                     url_thumb = self._make_image(self.config['url_artworks'], image_data['data'][0]['thumbnail'])
                     self._set_show_data(sid, image_type, url_image)
-                    self._set_show_data(sid, u'%s_thumb' % image_type, url_thumb)
+                    self._set_show_data(sid, f'{image_type}_thumb', url_thumb)
                     excluded_main_data = True  # artwork found so prevent fallback
                 self._parse_banners(sid, image_data['data'])
                 self.shows[sid].__dict__[loaded_name] = True
 
         # fallback image thumbnail for none excluded_main_data if artwork is not found
         if not excluded_main_data and show_data['data'].get(image_type):
-            self._set_show_data(sid, u'%s_thumb' % image_type,
+            self._set_show_data(sid, f'{image_type}_thumb',
                                 re.sub(r'\.jpg$', '_t.jpg', show_data['data'][image_type], flags=re.I))
 
     def _get_show_data(self,
@@ -1068,11 +1067,11 @@ class Tvdb(TVInfoBase):
         else:
             show_data = {'data': {}}
 
-        for img_type, en_type, p_type in [(u'poster', 'posters_enabled', posters),
-                                          (u'banner', 'banners_enabled', banners),
-                                          (u'fanart', 'fanart_enabled', fanart),
-                                          (u'season', 'seasons_enabled', seasons),
-                                          (u'seasonwide', 'seasonwides_enabled', seasonwides)]:
+        for img_type, en_type, p_type in [('poster', 'posters_enabled', posters),
+                                          ('banner', 'banners_enabled', banners),
+                                          ('fanart', 'fanart_enabled', fanart),
+                                          ('season', 'seasons_enabled', seasons),
+                                          ('seasonwide', 'seasonwides_enabled', seasonwides)]:
             self._parse_images(sid, language, show_data, img_type, en_type, p_type)
 
         if (actors or self.config['actors_enabled']) and not getattr(self.shows.get(sid), 'actors_loaded', False):
@@ -1176,9 +1175,9 @@ class Tvdb(TVInfoBase):
                 else:
                     page += 1
 
-            ep_map_keys = {'absolutenumber': u'absolute_number', 'airedepisodenumber': u'episodenumber',
-                           'airedseason': u'seasonnumber', 'airedseasonid': u'seasonid',
-                           'dvdepisodenumber': u'dvd_episodenumber', 'dvdseason': u'dvd_season'}
+            ep_map_keys = {'absolutenumber': 'absolute_number', 'airedepisodenumber': 'episodenumber',
+                           'airedseason': 'seasonnumber', 'airedseasonid': 'seasonid',
+                           'dvdepisodenumber': 'dvd_episodenumber', 'dvdseason': 'dvd_season'}
 
             for cur_ep in episodes:
                 if self.config['dvdorder']:
