@@ -1,50 +1,51 @@
 ######################
-#  SB User Related   #
+#  SG User Related   #
 cache/*
-cache.db*
-config.ini*
 Logs/*
-sickbeard.db*
-failed.db*
+restore/
 autoProcessTV/autoProcessTV.cfg
+config.ini*
+cache.db*
+failed.db*
+sickbeard.db*
 server.crt
 server.key
-restore/
 
 ######################
-#  SB Test Related   #
+#  SG Test Related   #
 tests/cache/*
 tests/Logs/*
-tests/sickgear.*
 tests/*.db
+tests/sickgear.*
 
 ######################
 #  Compiled source   #
 *.py[co]
+**/__pycache__/
 
 ######################
 #  IDE specific      #
+/.idea/
 *.bak
-*.tmp
-*.wpr
+*.cproject
 *.project
 *.pydevproject
-*.cproject
+*.sw?
+*.tmp
 *.tmproj
 *.tmproject
-*.sw?
+*.wpr
 Session.vim
 .ropeproject/*
 
 ######################
 # OS generated files #
+*.torrent
+*~
+.directory
+.DS_Store
 .Spotlight-V100
 .Trashes
-.DS_Store
 desktop.ini
 ehthumbs.db
 Thumbs.db
-.directory
-*~
-/.idea/
-*.torrent

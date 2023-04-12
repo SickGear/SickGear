@@ -189,7 +189,10 @@ def _check_pip_env(pip_outdated=False, reset_fails=False):
     import pkg_resources
     six.moves.reload_module(pkg_resources)
     for cur_distinfo in pkg_resources.working_set:
-        environment[cur_distinfo.project_name] = cur_distinfo.parsed_version
+        try:
+            environment[cur_distinfo.project_name] = cur_distinfo.parsed_version
+        except (BaseException, Exception):
+            pass
 
     save_failed = False
     known_failed = load_ignorables(DATA_DIR)

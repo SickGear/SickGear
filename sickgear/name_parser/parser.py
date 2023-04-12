@@ -58,7 +58,7 @@ class NameParser(object):
                  naming_pattern=False, testing=False, indexer_lookup=True):
 
         self.file_name = file_name  # type: bool
-        self.show_obj = show_obj  # type: sickgear.tv.TVShow or None
+        self.show_obj = show_obj  # type: Optional[sickgear.tv.TVShow]
         self.try_scene_exceptions = try_scene_exceptions  # type: bool
         self.convert = convert  # type: bool
         self.naming_pattern = naming_pattern  # type: bool
@@ -302,7 +302,9 @@ class NameParser(object):
 
                 # confirm passed in show object tvid_prodid matches result show object tvid_prodid
                 if show_obj and not self.testing:
-                    if self.show_obj and show_obj.tvid_prodid != self.show_obj.tvid_prodid:
+                    if self.show_obj and show_obj.tvid_prodid != self.show_obj.tvid_prodid \
+                            and helpers.full_sanitize_scene_name(show_obj.name) != \
+                            helpers.full_sanitize_scene_name(self.show_obj.name):
                         show_obj = None
                 elif not show_obj and self.show_obj:
                     show_obj = self.show_obj
