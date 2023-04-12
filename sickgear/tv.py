@@ -2603,7 +2603,7 @@ class TVShow(TVShowBase):
                     if len(sql_result):
                         logger.log('%s: Loading show info%s from database' % vals)
                         raise exceptions_helper.MultipleDBShowsException()
-                logger.log('%s-%s: Unable to find the show%s in the database' % (self.tvid, self.prodid, self.name))
+                logger.log(f'{self.tvid_prodid}: Unable to find the show{self.name} in the database')
                 return
 
             show_result = next(iter(sql_result))
