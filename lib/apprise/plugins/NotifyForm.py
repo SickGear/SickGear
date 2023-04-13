@@ -1,28 +1,36 @@
 # -*- coding: utf-8 -*-
+# BSD 3-Clause License
 #
-# Copyright (C) 2022 Chris Caron <lead2gold@gmail.com>
-# All rights reserved.
+# Apprise - Push Notification Library.
+# Copyright (c) 2023, Chris Caron <lead2gold@gmail.com>
 #
-# This code is licensed under the MIT License.
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
 #
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files(the "Software"), to deal
-# in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and / or sell
-# copies of the Software, and to permit persons to whom the Software is
-# furnished to do so, subject to the following conditions :
+# 1. Redistributions of source code must retain the above copyright notice,
+#    this list of conditions and the following disclaimer.
 #
-# The above copyright notice and this permission notice shall be included in
-# all copies or substantial portions of the Software.
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+#    this list of conditions and the following disclaimer in the documentation
+#    and/or other materials provided with the distribution.
 #
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-# THE SOFTWARE.
+# 3. Neither the name of the copyright holder nor the names of its
+#    contributors may be used to endorse or promote products derived from
+#    this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
 
+import re
 import requests
 
 from .NotifyBase import NotifyBase
@@ -38,7 +46,8 @@ METHODS = (
     'GET',
     'DELETE',
     'PUT',
-    'HEAD'
+    'HEAD',
+    'PATCH'
 )
 
 
@@ -46,6 +55,27 @@ class NotifyForm(NotifyBase):
     """
     A wrapper for Form Notifications
     """
+
+    # Support
+    # - file*
+    # - file?
+    # - file*name
+    # - file?name
+    # - ?file
+    # - *file
+    # - file
+    # The code will convert the ? or * to the digit increments
+    __attach_as_re = re.compile(
+        r'((?P<match1>(?P<id1a>[a-z0-9_-]+)?'
+        r'(?P<wc1>[*?+$:.%]+)(?P<id1b>[a-z0-9_-]+))'
+        r'|(?P<match2>(?P<id2>[a-z0-9_-]+)(?P<wc2>[*?+$:.%]?)))',
+        re.IGNORECASE)
+
+    # Our count
+    attach_as_count = '{:02d}'
+
+    # the default attach_as value
+    attach_as_default = f'file{attach_as_count}'
 
     # The default descriptive name associated with the Notification
     service_name = 'Form'
@@ -111,6 +141,12 @@ class NotifyForm(NotifyBase):
             'values': METHODS,
             'default': METHODS[0],
         },
+        'attach-as': {
+            'name': _('Attach File As'),
+            'type': 'string',
+            'default': 'file*',
+            'map_to': 'attach_as',
+        },
     })
 
     # Define any kwargs we're using
@@ -130,7 +166,7 @@ class NotifyForm(NotifyBase):
     }
 
     def __init__(self, headers=None, method=None, payload=None, params=None,
-                 **kwargs):
+                 attach_as=None, **kwargs):
         """
         Initialize Form Object
 
@@ -151,6 +187,36 @@ class NotifyForm(NotifyBase):
             msg = 'The method specified ({}) is invalid.'.format(method)
             self.logger.warning(msg)
             raise TypeError(msg)
+
+        # Custom File Attachment Over-Ride Support
+        if not isinstance(attach_as, str):
+            # Default value
+            self.attach_as = self.attach_as_default
+            self.attach_multi_support = True
+
+        else:
+            result = self.__attach_as_re.match(attach_as.strip())
+            if not result:
+                msg = 'The attach-as specified ({}) is invalid.'.format(
+                    attach_as)
+                self.logger.warning(msg)
+                raise TypeError(msg)
+
+            self.attach_as = ''
+            self.attach_multi_support = False
+            if result.group('match1'):
+                if result.group('id1a'):
+                    self.attach_as += result.group('id1a')
+
+                self.attach_as += self.attach_as_count
+                self.attach_multi_support = True
+                self.attach_as += result.group('id1b')
+
+            else:  # result.group('match2'):
+                self.attach_as += result.group('id2')
+                if result.group('wc2'):
+                    self.attach_as += self.attach_as_count
+                    self.attach_multi_support = True
 
         self.params = {}
         if params:
@@ -191,6 +257,10 @@ class NotifyForm(NotifyBase):
         # Append our payload extra's into our parameters
         params.update(
             {':{}'.format(k): v for k, v in self.payload_extras.items()})
+
+        if self.attach_as != self.attach_as_default:
+            # Provide Attach-As extension details
+            params['attach-as'] = self.attach_as
 
         # Determine Authentication
         auth = ''
@@ -247,7 +317,8 @@ class NotifyForm(NotifyBase):
 
                 try:
                     files.append((
-                        'file{:02d}'.format(no), (
+                        self.attach_as.format(no)
+                        if self.attach_multi_support else self.attach_as, (
                             attachment.name,
                             open(attachment.path, 'rb'),
                             attachment.mimetype)
@@ -260,11 +331,10 @@ class NotifyForm(NotifyBase):
                     self.logger.debug('I/O Exception: %s' % str(e))
                     return False
 
-                finally:
-                    for file in files:
-                        # Ensure all files are closed
-                        if file[1][1]:
-                            file[1][1].close()
+            if not self.attach_multi_support and no > 1:
+                self.logger.warning(
+                    'Multiple attachments provided while '
+                    'form:// Multi-Attachment Support not enabled')
 
         # prepare Form Object
         payload = {
@@ -307,6 +377,9 @@ class NotifyForm(NotifyBase):
 
         elif self.method == 'PUT':
             method = requests.put
+
+        elif self.method == 'PATCH':
+            method = requests.patch
 
         elif self.method == 'DELETE':
             method = requests.delete
@@ -395,6 +468,12 @@ class NotifyForm(NotifyBase):
         # Add our GET paramters in the event the user wants to pass these along
         results['params'] = {NotifyForm.unquote(x): NotifyForm.unquote(y)
                              for x, y in results['qsd-'].items()}
+
+        # Allow Attach-As Support which over-rides the name of the filename
+        # posted with the form://
+        # the default is file01, file02, file03, etc
+        if 'attach-as' in results['qsd'] and len(results['qsd']['attach-as']):
+            results['attach_as'] = results['qsd']['attach-as']
 
         # Set method if not otherwise set
         if 'method' in results['qsd'] and len(results['qsd']['method']):
