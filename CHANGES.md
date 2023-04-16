@@ -12,6 +12,7 @@
 * Update urllib3 1.26.14 (a06c05c) to 1.26.15 (25cca389)
 * Change add jobs to centralise scheduler activities
 * Change refactor scene_exceptions
+* Add config to change media process log message if there is no media to process
 
 
 ### 3.28.0 (2023-04-12 13:05:00 UTC)

@@ -295,6 +295,7 @@ PROCESS_LAST_CLEANUP = False
 PROCESS_METHOD = None
 MOVE_ASSOCIATED_FILES = False
 POSTPONE_IF_SYNC_FILES = True
+PROCESS_POSITIVE_LOG = True
 NFO_RENAME = True
 TV_DOWNLOAD_DIR = None
 UNPACK = False
@@ -716,7 +717,7 @@ def init_stage_1(console_logging):
         SUBTITLES_HISTORY, SUBTITLES_SERVICES_LIST, SUBTITLES_SERVICES_ENABLED, SUBTITLES_SERVICES_AUTH
     # Media Process/Post-Processing
     global TV_DOWNLOAD_DIR, PROCESS_METHOD, PROCESS_AUTOMATICALLY, MEDIAPROCESS_INTERVAL, \
-        POSTPONE_IF_SYNC_FILES, EXTRA_SCRIPTS, SG_EXTRA_SCRIPTS, \
+        POSTPONE_IF_SYNC_FILES, PROCESS_POSITIVE_LOG, EXTRA_SCRIPTS, SG_EXTRA_SCRIPTS, \
         DEFAULT_MEDIAPROCESS_INTERVAL, MIN_MEDIAPROCESS_INTERVAL, \
         UNPACK, SKIP_REMOVED_FILES, MOVE_ASSOCIATED_FILES, NFO_RENAME, RENAME_EPISODES, AIRDATE_EPISODES, \
         USE_FAILED_DOWNLOADS, DELETE_FAILED
@@ -1022,6 +1023,7 @@ def init_stage_1(console_logging):
     PROCESS_LAST_CLEANUP = bool(check_setting_int(CFG, 'General', 'process_last_cleanup', 0))
     MOVE_ASSOCIATED_FILES = bool(check_setting_int(CFG, 'General', 'move_associated_files', 0))
     POSTPONE_IF_SYNC_FILES = bool(check_setting_int(CFG, 'General', 'postpone_if_sync_files', 1))
+    PROCESS_POSITIVE_LOG = bool(check_setting_int(CFG, 'General', 'process_positive_log', 0))
     NFO_RENAME = bool(check_setting_int(CFG, 'General', 'nfo_rename', 1))
     CREATE_MISSING_SHOW_DIRS = bool(check_setting_int(CFG, 'General', 'create_missing_show_dirs', 0))
     SHOW_DIRS_WITH_DOTS = bool(check_setting_int(CFG, 'General', 'show_dirs_with_dots', 0))
@@ -1989,6 +1991,7 @@ def save_config():
     new_config['General']['process_last_cleanup'] = int(PROCESS_LAST_CLEANUP)
     new_config['General']['move_associated_files'] = int(MOVE_ASSOCIATED_FILES)
     new_config['General']['postpone_if_sync_files'] = int(POSTPONE_IF_SYNC_FILES)
+    new_config['General']['process_positive_log'] = int(PROCESS_POSITIVE_LOG)
     new_config['General']['nfo_rename'] = int(NFO_RENAME)
     new_config['General']['process_automatically'] = int(PROCESS_AUTOMATICALLY)
     new_config['General']['unpack'] = int(UNPACK)

@@ -85,7 +85,7 @@
 								<span class="component-desc">
 									<input type="checkbox" name="process_automatically" id="process_automatically" #if $sickgear.PROCESS_AUTOMATICALLY == True then $checked else ''#>
 									<p>files in the <em>completed TV downloads</em> folder</p>
-									<p class="clear-left note"><b>note:</b> do not enable with external post processing scripts like sabTosickgear for SABnzbd, or NZBMedia for NZBGET</p>
+									<p class="clear-left note"><b>note:</b> do not enable with external post processing scripts like sabTosickgear for SABnzbd, or NZBMedia for NZBGET unless you're an expert</p>
 								</span>
 							</label>
 						</div>
@@ -106,6 +106,17 @@
 								<span class="component-desc">
 									<input type="checkbox" name="postpone_if_sync_files" id="postpone_if_sync_files" #if $sickgear.POSTPONE_IF_SYNC_FILES == True then $checked else ''#>
 									<p>if <b class="grey-text">!sync</b> files are present in the <em>completed TV downloads</em> folder</p>
+								</span>
+							</label>
+						</div>
+
+						<div class="field-pair">
+							<label for="process_positive_log">
+								<span class="component-title">If no media to process</span>
+								<span class="component-desc">
+									<input type="checkbox" name="process_positive_log" id="process_positive_log" #if $sickgear.PROCESS_POSITIVE_LOG then $checked else ''#>
+									<p>use positive log message "<i class="grey-text">Success, no media to process.</i>"</p>
+									<p class="clear-left note">some setups require the old warning "<i class="grey-text">Failed! Did not process any files.</i>"</p>
 								</span>
 							</label>
 						</div>
