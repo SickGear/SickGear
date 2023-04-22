@@ -2,7 +2,6 @@
 # ---------------
 # functions are placed here to remove cyclic import issues from placement in helpers
 #
-from __future__ import division
 import ast
 import codecs
 import datetime

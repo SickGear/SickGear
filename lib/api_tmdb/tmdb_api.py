@@ -1,7 +1,6 @@
 # encoding:utf-8
 # author:Prinz23
 # project:tmdb_api
-from __future__ import division
 
 __author__ = 'Prinz23'
 __version__ = '1.0'

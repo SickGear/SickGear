@@ -1,5 +1,4 @@
 # coding=utf-8
-from __future__ import print_function
 import warnings
 warnings.filterwarnings('ignore', module=r'.*fuz.*', message='.*Sequence.*')
 warnings.filterwarnings('ignore', module=r'.*dateutil.*', message='.*Unicode.*')

@@ -14,8 +14,6 @@
 #
 # You should have received a copy of the GNU General Public License
 
-from __future__ import with_statement
-
 import exceptions_helper
 
 import sickgear

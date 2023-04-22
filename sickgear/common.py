@@ -13,8 +13,6 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
-from __future__ import division
-
 from functools import reduce
 import operator
 import os.path

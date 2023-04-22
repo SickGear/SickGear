@@ -16,9 +16,6 @@
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
 # Check needed software dependencies to nudge users to fix their setup
-from __future__ import print_function
-from __future__ import with_statement
-
 import codecs
 import datetime
 import errno

@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import print_function
 import unittest
 import test_lib as test
 from random import  randint
@@ -208,10 +207,10 @@ find_tests = [
                'description': 'simple standard search via main id dict'},
               {'para': {'show_id': {TVINFO_TVDB: 12345}}, 'result': None,
                'description': 'simple standard search via main id dict, for non-existing show'},
-              {'para': {'show_id': {TVINFO_TVDB: 123, TVINFO_TVMAZE: 123}, 'check_multishow': True}, 
+              {'para': {'show_id': {TVINFO_TVDB: 123, TVINFO_TVMAZE: 123}, 'check_multishow': True},
                'result': {'success': False},
                'description': 'search via 2 ids matching multiple shows and multi show check'},
-              {'para': {'show_id': {TVINFO_TVDB: 5555, TVINFO_TVMAZE: 123}, 'check_multishow': True}, 
+              {'para': {'show_id': {TVINFO_TVDB: 5555, TVINFO_TVMAZE: 123}, 'check_multishow': True},
                'result': {'tvid': TVINFO_TVMAZE, 'prodid': 123},
                'description': 'search via 2 ids matching only 1 show and multi show check'},
               {'para': {'show_id': {TVINFO_TVDB: 123, TVINFO_TVMAZE: 123}},

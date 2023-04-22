@@ -16,8 +16,6 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import with_statement
-
 # noinspection PyProtectedMember
 from mimetypes import MimeTypes
 from random import randint
