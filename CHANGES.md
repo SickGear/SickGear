@@ -16,6 +16,7 @@
 * Change add jobs to centralise scheduler activities
 * Change refactor scene_exceptions
 * Add config to change media process log message if there is no media to process
+* Change view-show text "invalid timeformat" to "time unknown"
 
 
 ### 3.28.0 (2023-04-12 13:05:00 UTC)
