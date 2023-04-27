@@ -74,14 +74,15 @@ class SceneExceptionTestCase(test.SickbeardTestDBCase):
             sickgear.showList.append(s)
             sickgear.showDict[s.sid_int] = s
         sickgear.webserve.Home.make_showlist_unique_names()
-        scene_exceptions.retrieve_exceptions()
+        scene_exceptions.ReleaseMap().fetch_exceptions()
         name_cache.build_name_cache()
 
     def test_sceneExceptionsEmpty(self):
-        self.assertEqual(scene_exceptions.get_scene_exceptions(0, 0), [])
+        self.assertEqual(scene_exceptions.ReleaseMap().get_alt_names(0, 0), [])
 
     def test_sceneExceptionsBlack_Lagoon(self):
-        self.assertEqual(sorted(scene_exceptions.get_scene_exceptions(1, 79604)), ['Black-Lagoon'])
+        self.assertEqual(sorted(
+            scene_exceptions.ReleaseMap().get_alt_names(1, 79604)), ['Black-Lagoon'])
 
     def test_sceneExceptionByName(self):
         self.assertEqual(scene_exceptions.get_scene_exception_by_name(
@@ -98,14 +99,18 @@ class SceneExceptionTestCase(test.SickbeardTestDBCase):
             s.anime = 1
             sickgear.showList.append(s)
             sickgear.showDict[s.sid_int] = s
-        scene_exceptions.retrieve_exceptions()
+        scene_exceptions.ReleaseMap().fetch_exceptions()
         name_cache.build_name_cache()
-        self.assertEqual(scene_exceptions.get_scene_exception_by_name('ブラック・ラグーン'), [1, 79604, -1])
-        self.assertEqual(scene_exceptions.get_scene_exception_by_name('Burakku Ragūn'), [1, 79604, -1])
-        self.assertEqual(scene_exceptions.get_scene_exception_by_name('Rokka no Yuusha'), [1, 295243, -1])
+        self.assertEqual(scene_exceptions.get_scene_exception_by_name(
+            'ブラック・ラグーン'), [1, 79604, -1])
+        self.assertEqual(scene_exceptions.get_scene_exception_by_name(
+            'Burakku Ragūn'), [1, 79604, -1])
+        self.assertEqual(scene_exceptions.get_scene_exception_by_name(
+            'Rokka no Yuusha'), [1, 295243, -1])
 
     def test_sceneExceptionByNameEmpty(self):
-        self.assertEqual(scene_exceptions.get_scene_exception_by_name('nothing useful'), [None, None, None])
+        self.assertEqual(scene_exceptions.get_scene_exception_by_name(
+            'nothing useful'), [None, None, None])
 
     def test_sceneExceptionsResetNameCache(self):
         # clear the exceptions
@@ -117,7 +122,7 @@ class SceneExceptionTestCase(test.SickbeardTestDBCase):
         name_cache.add_name_to_cache('Cached Name', prodid=0)
 
         # updating should not clear the cache this time since our exceptions didn't change
-        scene_exceptions.retrieve_exceptions()
+        scene_exceptions.ReleaseMap().fetch_exceptions()
         self.assertEqual(name_cache.retrieve_name_from_cache('Cached Name'), (0, 0))
 
 

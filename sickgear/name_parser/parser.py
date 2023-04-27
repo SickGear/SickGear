@@ -407,7 +407,8 @@ class NameParser(object):
                                 new_season_numbers.append(s)
 
                 elif show_obj.is_anime and len(best_result.ab_episode_numbers) and not self.testing:
-                    scene_season = scene_exceptions.get_scene_exception_by_name(best_result.series_name)[2]
+                    scene_season = scene_exceptions.get_scene_exception_by_name(
+                        best_result.series_name)[2]
                     for epAbsNo in best_result.ab_episode_numbers:
                         a = epAbsNo
 

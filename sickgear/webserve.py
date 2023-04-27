@@ -65,6 +65,7 @@ from .name_parser.parser import InvalidNameException, InvalidShowException, Name
 from .providers import newznab, rsstorrent
 from .scene_numbering import get_scene_absolute_numbering_for_show, get_scene_numbering_for_show, \
     get_xem_absolute_numbering_for_show, get_xem_numbering_for_show, set_scene_numbering_helper
+from .scheduler import Scheduler
 from .search_backlog import FORCED_BACKLOG
 from .sgdatetime import SGDatetime
 from .show_name_helpers import abbr_showname
@@ -1327,8 +1328,8 @@ class MainHandler(WebHandler):
 
         now = datetime.datetime.now()
         events = [
-            ('recent', sickgear.recent_search_scheduler.time_left),
-            ('backlog', sickgear.backlog_search_scheduler.next_backlog_timeleft),
+            ('recent', sickgear.search_recent_scheduler.time_left),
+            ('backlog', sickgear.search_backlog_scheduler.next_backlog_timeleft),
         ]
 
         if sickgear.DOWNLOAD_PROPERS:
@@ -2070,6 +2071,9 @@ class Home(MainHandler):
         if str(pid) != str(sickgear.PID):
             return self.redirect('/home/')
 
+        if self.maybe_ignore('Shutdown'):
+            return
+
         t = PageTemplate(web_handler=self, file='restart.tmpl')
         t.shutdown = True
 
@@ -2082,12 +2086,26 @@ class Home(MainHandler):
         if str(pid) != str(sickgear.PID):
             return self.redirect('/home/')
 
+        if self.maybe_ignore('Restart'):
+            return
+
         t = PageTemplate(web_handler=self, file='restart.tmpl')
         t.shutdown = False
 
         sickgear.restart(soft=False, update_pkg=bool(helpers.try_int(update_pkg)))
 
         return t.respond()
+
+    def maybe_ignore(self, task):
+        response = Scheduler.blocking_jobs()
+        if response:
+            task and logger.log('%s aborted because %s' % (task, response.lower()), logger.DEBUG)
+
+            self.redirect(self.request.headers['Referer'])
+            if task:
+                ui.notifications.message(u'Fail %s because %s, please try later' % (task.lower(), response.lower()))
+                return True
+        return False
 
     def update(self, pid=None):
 
@@ -2326,15 +2344,15 @@ class Home(MainHandler):
         t.season_min = ([], [1])[2 < t.latest_season] + [t.latest_season]
         t.other_seasons = (list(set(all_seasons) - set(t.season_min)), [])[display_show_minimum]
         t.seasons = []
-        for x in all_seasons:
-            t.seasons += [(x, [None] if x not in (t.season_min + t.other_seasons) else my_db.select(
+        for cur_season in all_seasons:
+            t.seasons += [(cur_season, [None] if cur_season not in (t.season_min + t.other_seasons) else my_db.select(
                 'SELECT *'
                 ' FROM tv_episodes'
                 ' WHERE indexer = ? AND showid = ?'
                 ' AND season = ?'
                 ' ORDER BY episode DESC',
-                [show_obj.tvid, show_obj.prodid, x]
-            ), scene_exceptions.has_season_exceptions(show_obj.tvid, show_obj.prodid, x))]
+                [show_obj.tvid, show_obj.prodid, cur_season]
+            ), scene_exceptions.ReleaseMap().has_season_exceptions(show_obj.tvid, show_obj.prodid, cur_season))]
 
         for row in my_db.select('SELECT season, episode, status'
                                 ' FROM tv_episodes'
@@ -2423,7 +2441,7 @@ class Home(MainHandler):
         t.clean_show_name = quote_plus(sickgear.indexermapper.clean_show_name(show_obj.name))
 
         t.min_initial = Quality.get_quality_ui(min(Quality.split_quality(show_obj.quality)[0]))
-        t.show_obj.exceptions = scene_exceptions.get_scene_exceptions(show_obj.tvid, show_obj.prodid)
+        t.show_obj.exceptions = scene_exceptions.ReleaseMap().get_alt_names(show_obj.tvid, show_obj.prodid)
         # noinspection PyUnresolvedReferences
         t.all_scene_exceptions = show_obj.exceptions  # normally Unresolved as not a class attribute, force set above
         t.scene_numbering = get_scene_numbering_for_show(show_obj.tvid, show_obj.prodid)
@@ -2562,7 +2580,7 @@ class Home(MainHandler):
     @staticmethod
     def scene_exceptions(tvid_prodid, wanted_season=None):
 
-        exceptions_list = sickgear.scene_exceptions.get_all_scene_exceptions(tvid_prodid)
+        exceptions_list = scene_exceptions.ReleaseMap().get_show_exceptions(tvid_prodid)
         wanted_season = helpers.try_int(wanted_season, None)
         wanted_not_found = None is not wanted_season and wanted_season not in exceptions_list
         if not exceptions_list or wanted_not_found:
@@ -2754,7 +2772,7 @@ class Home(MainHandler):
                 return [err_string]
             return self._generic_message('Error', err_string)
 
-        show_obj.exceptions = scene_exceptions.get_all_scene_exceptions(tvid_prodid)
+        show_obj.exceptions = scene_exceptions.ReleaseMap().get_show_exceptions(tvid_prodid)
 
         if None is not quality_preset and int(quality_preset):
             best_qualities = []
@@ -2971,7 +2989,7 @@ class Home(MainHandler):
 
         if do_update_exceptions:
             try:
-                scene_exceptions.update_scene_exceptions(show_obj.tvid, show_obj.prodid, exceptions_list)
+                scene_exceptions.ReleaseMap().update_exceptions(show_obj, exceptions_list)
                 helpers.cpu_sleep()
             except exceptions_helper.CantUpdateException:
                 errors.append('Unable to force an update on scene exceptions of the show.')
@@ -3912,16 +3930,16 @@ class HomeProcessMedia(Home):
                         m = sickgear.NZBGET_MAP.split('=')
                         dir_name, not_used = helpers.path_mapper(m[0], m[1], dir_name)
 
-                result = processTV.processDir(dir_name if dir_name else None,
-                                              None if not nzb_name else decode_str(nzb_name),
-                                              process_method=process_method, pp_type=process_type,
-                                              cleanup=cleanup,
-                                              force=force in ('on', '1'),
-                                              force_replace=force_replace in ('on', '1'),
-                                              failed='0' != failed,
-                                              webhandler=None if '0' == stream else self.send_message,
-                                              show_obj=show_obj, is_basedir=is_basedir in ('on', '1'),
-                                              skip_failure_processing=skip_failure_processing, client=client)
+                result = processTV.process_dir(dir_name if dir_name else None,
+                                               None if not nzb_name else decode_str(nzb_name),
+                                               process_method=process_method, pp_type=process_type,
+                                               cleanup=cleanup,
+                                               force=force in ('on', '1'),
+                                               force_replace=force_replace in ('on', '1'),
+                                               failed='0' != failed,
+                                               webhandler=None if '0' == stream else self.send_message,
+                                               show_obj=show_obj, is_basedir=is_basedir in ('on', '1'),
+                                               skip_failure_processing=skip_failure_processing, client=client)
 
                 if '0' == stream:
                     regexp = re.compile(r'(?i)<br[\s/]+>', flags=re.UNICODE)
@@ -4448,7 +4466,7 @@ class AddShows(Home):
         t.blocklist = []
         t.groups = []
 
-        t.show_scene_maps = list(itervalues(sickgear.scene_exceptions.xem_ids_list))
+        t.show_scene_maps = list(itervalues(scene_exceptions.MEMCACHE['release_map_xem']))
 
         has_shows = len(sickgear.showList)
         t.try_id = []  # [dict try_tip: try_term]
@@ -6616,7 +6634,7 @@ class Manage(MainHandler):
         show_obj = helpers.find_show_by_id(tvid_prodid)
 
         if show_obj:
-            sickgear.backlog_search_scheduler.action.search_backlog([show_obj])
+            sickgear.search_backlog_scheduler.action.search_backlog([show_obj])
 
         self.redirect('/manage/backlog-overview/')
 
@@ -7116,11 +7134,11 @@ class ManageSearch(Manage):
 
     def index(self):
         t = PageTemplate(web_handler=self, file='manage_manageSearches.tmpl')
-        # t.backlog_pi = sickgear.backlog_search_scheduler.action.get_progress_indicator()
+        # t.backlog_pi = sickgear.search_backlog_scheduler.action.get_progress_indicator()
         t.backlog_paused = sickgear.search_queue_scheduler.action.is_backlog_paused()
         t.scheduled_backlog_active_providers = sickgear.search_backlog.BacklogSearcher.providers_active(scheduled=True)
         t.backlog_running = sickgear.search_queue_scheduler.action.is_backlog_in_progress()
-        t.backlog_is_active = sickgear.backlog_search_scheduler.action.am_running()
+        t.backlog_is_active = sickgear.search_backlog_scheduler.action.am_running()
         t.standard_backlog_running = sickgear.search_queue_scheduler.action.is_standard_backlog_in_progress()
         t.backlog_running_type = sickgear.search_queue_scheduler.action.type_of_backlog_in_progress()
         t.recent_search_status = sickgear.search_queue_scheduler.action.is_recentsearch_in_progress()
@@ -7161,7 +7179,7 @@ class ManageSearch(Manage):
     def force_backlog(self):
         # force it to run the next time it looks
         if not sickgear.search_queue_scheduler.action.is_standard_backlog_in_progress():
-            sickgear.backlog_search_scheduler.force_search(force_type=FORCED_BACKLOG)
+            sickgear.search_backlog_scheduler.force_search(force_type=FORCED_BACKLOG)
             logger.log('Backlog search forced')
             ui.notifications.message('Backlog search started')
 
@@ -7172,7 +7190,7 @@ class ManageSearch(Manage):
 
         # force it to run the next time it looks
         if not sickgear.search_queue_scheduler.action.is_recentsearch_in_progress():
-            result = sickgear.recent_search_scheduler.force_run()
+            result = sickgear.search_recent_scheduler.force_run()
             if result:
                 logger.log('Recent search forced')
                 ui.notifications.message('Recent search started')
@@ -7183,7 +7201,7 @@ class ManageSearch(Manage):
     def force_find_propers(self):
 
         # force it to run the next time it looks
-        result = sickgear.proper_finder_scheduler.force_run()
+        result = sickgear.search_propers_scheduler.force_run()
         if result:
             logger.log('Find propers search forced')
             ui.notifications.message('Find propers search started')
@@ -7207,10 +7225,10 @@ class ShowTasks(Manage):
         t = PageTemplate(web_handler=self, file='manage_showProcesses.tmpl')
         t.queue_length = sickgear.show_queue_scheduler.action.queue_length()
         t.people_queue = sickgear.people_queue_scheduler.action.queue_data()
-        t.next_run = sickgear.show_update_scheduler.last_run.replace(
-            hour=sickgear.show_update_scheduler.start_time.hour)
+        t.next_run = sickgear.update_show_scheduler.last_run.replace(
+            hour=sickgear.update_show_scheduler.start_time.hour)
         t.show_update_running = sickgear.show_queue_scheduler.action.is_show_update_running() \
-            or sickgear.show_update_scheduler.action.amActive
+            or sickgear.update_show_scheduler.is_running_job
 
         my_db = db.DBConnection(row_type='dict')
         sql_result = my_db.select('SELECT n.indexer || ? ||  n.indexer_id AS tvid_prodid,'
@@ -7293,7 +7311,7 @@ class ShowTasks(Manage):
 
     def force_show_update(self):
 
-        result = sickgear.show_update_scheduler.force_run()
+        result = sickgear.update_show_scheduler.force_run()
         if result:
             logger.log('Show Update forced')
             ui.notifications.message('Forced Show Update started')
@@ -7982,7 +8000,7 @@ class ConfigGeneral(Config):
     def update_alt():
         """ Load scene exceptions """
 
-        changed_exceptions, cnt_updated_numbers, min_remain_iv = scene_exceptions.retrieve_exceptions()
+        changed_exceptions, cnt_updated_numbers, min_remain_iv = scene_exceptions.ReleaseMap().fetch_exceptions()
 
         return json_dumps(dict(names=int(changed_exceptions), numbers=cnt_updated_numbers, min_remain_iv=min_remain_iv))
 
@@ -7991,7 +8009,7 @@ class ConfigGeneral(Config):
         """ Return alternative release names and numbering as json text"""
 
         # alternative release names and numbers
-        alt_names = scene_exceptions.get_all_scene_exceptions(tvid_prodid)
+        alt_names = scene_exceptions.ReleaseMap().get_show_exceptions(tvid_prodid)
         alt_numbers = get_scene_numbering_for_show(*TVidProdid(tvid_prodid).tuple)  # arbitrary order
         ui_output = 'No alternative names or numbers to export'
 
@@ -8180,8 +8198,8 @@ class ConfigGeneral(Config):
         sickgear.UPDATE_SHOWS_ON_START = config.checkbox_to_value(update_shows_on_start)
         sickgear.SHOW_UPDATE_HOUR = config.minimax(show_update_hour, 3, 0, 23)
         try:
-            with sickgear.show_update_scheduler.lock:
-                sickgear.show_update_scheduler.start_time = datetime.time(hour=sickgear.SHOW_UPDATE_HOUR)
+            with sickgear.update_show_scheduler.lock:
+                sickgear.update_show_scheduler.start_time = datetime.time(hour=sickgear.SHOW_UPDATE_HOUR)
         except (BaseException, Exception) as e:
             logger.error('Could not change Show Update Scheduler time: %s' % ex(e))
         sickgear.TRASH_REMOVE_SHOW = config.checkbox_to_value(trash_remove_show)

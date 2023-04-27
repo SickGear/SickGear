@@ -71,7 +71,7 @@ def search_propers(provider_proper_obj=None):
     if None is provider_proper_obj:
         _set_last_proper_search(datetime.datetime.now())
 
-        proper_sch = sickgear.proper_finder_scheduler
+        proper_sch = sickgear.search_propers_scheduler
         if None is proper_sch.start_time:
             run_in = proper_sch.last_run + proper_sch.cycle_time - datetime.datetime.now()
             run_at = ', next check '
@@ -696,7 +696,7 @@ def _set_last_proper_search(when):
 
 
 def next_proper_timeleft():
-    return sickgear.proper_finder_scheduler.time_left()
+    return sickgear.search_propers_scheduler.time_left()
 
 
 def get_last_proper_search():

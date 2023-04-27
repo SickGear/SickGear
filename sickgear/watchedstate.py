@@ -14,17 +14,15 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
-import threading
-
 import sickgear
+from .scheduler import Job
 from sickgear import watchedstate_queue
 
 
-class WatchedStateUpdater(object):
+class WatchedStateUpdater(Job):
     def __init__(self, name, queue_item):
+        super(WatchedStateUpdater, self).__init__(self.job_run, silent=True, kwargs={}, thread_lock=True)
 
-        self.amActive = False
-        self.lock = threading.Lock()
         self.name = name
         self.queue_item = queue_item
 
@@ -32,13 +30,15 @@ class WatchedStateUpdater(object):
     def prevent_run(self):
         return sickgear.watched_state_queue_scheduler.action.is_in_queue(self.queue_item)
 
-    def run(self):
+    @staticmethod
+    def is_enabled():
+        return True
+
+    def job_run(self):
         # noinspection PyUnresolvedReferences
         if self.is_enabled():
-            self.amActive = True
             new_item = self.queue_item()
             sickgear.watched_state_queue_scheduler.action.add_item(new_item)
-            self.amActive = False
 
 
 class EmbyWatchedStateUpdater(WatchedStateUpdater):

@@ -29,6 +29,7 @@ from exceptions_helper import ex
 
 import sickgear
 from . import logger, notifiers, ui
+from .scheduler import (Scheduler, Job)
 from .piper import check_pip_outdated
 from sg_helpers import cmdline_runner, get_url
 
@@ -41,12 +42,14 @@ if False:
     from typing import Tuple
 
 
-class PackagesUpdater(object):
+class PackagesUpdater(Job):
 
     def __init__(self):
+        super(PackagesUpdater, self).__init__(self.job_run, kwargs={})
+
         self.install_type = 'Python package updates'
 
-    def run(self, force=False):
+    def job_run(self, force=False):
         if not sickgear.EXT_UPDATES \
                 and self.check_for_new_version(force) \
                 and sickgear.UPDATE_PACKAGES_AUTO:
@@ -64,6 +67,11 @@ class PackagesUpdater(object):
         :returns: True when package install/updates are available
         :rtype: bool
         """
+        response = Scheduler.blocking_jobs()
+        if response:
+            logger.log(f'Update skipped because {response}', logger.DEBUG)
+            return False
+
         if force and not sickgear.UPDATE_PACKAGES_MENU:
             logger.log('Checking not enabled from menu action for %s' % self.install_type)
             return False
@@ -100,12 +108,14 @@ class PackagesUpdater(object):
         return True
 
 
-class SoftwareUpdater(object):
+class SoftwareUpdater(Job):
     """
     Version check class meant to run as a thread object with the sg scheduler.
     """
 
     def __init__(self):
+        super(SoftwareUpdater, self).__init__(self.job_run, kwargs={})
+
         self._min_python = (100, 0)  # set default to absurdly high to prevent update
         self.install_type = self.find_install_type()
 
@@ -150,7 +160,7 @@ class SoftwareUpdater(object):
         except (BaseException, Exception):
             pass
 
-    def run(self, force=False):
+    def job_run(self, force=False):
         # set current branch version
         sickgear.BRANCH = self.get_branch()
 
@@ -218,6 +228,11 @@ class SoftwareUpdater(object):
     def update(self):
         # update branch with current config branch value
         self.updater.branch = sickgear.BRANCH
+
+        response = Scheduler.blocking_jobs()
+        if response:
+            logger.log(f'Update skipped because {response}', logger.DEBUG)
+            return False
 
         if not self.is_updatable:
             self._log_cannot_update()

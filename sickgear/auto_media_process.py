@@ -18,32 +18,31 @@ import os.path
 
 import sickgear
 from . import logger, processTV
+from .scheduler import Job
 
 
-class PostProcesser(object):
+class MediaProcess(Job):
     def __init__(self):
-        self.amActive = False
+        super(MediaProcess, self).__init__(self.job_run, kwargs={})
 
     @staticmethod
     def is_enabled():
         return sickgear.PROCESS_AUTOMATICALLY
 
-    def run(self):
+    def job_run(self):
         if self.is_enabled():
-            self.amActive = True
             self._main()
-            self.amActive = False
 
     @staticmethod
     def _main():
 
         if not os.path.isdir(sickgear.TV_DOWNLOAD_DIR):
-            logger.error('Automatic post-processing attempted but dir %s doesn\'t exist' % sickgear.TV_DOWNLOAD_DIR)
+            logger.error('Automatic media processing attempted but dir %s doesn\'t exist' % sickgear.TV_DOWNLOAD_DIR)
             return
 
         if not os.path.isabs(sickgear.TV_DOWNLOAD_DIR):
-            logger.error('Automatic post-processing attempted but dir %s is relative '
+            logger.error('Automatic media processing attempted but dir %s is relative '
                          '(and probably not what you really want to process)' % sickgear.TV_DOWNLOAD_DIR)
             return
 
-        processTV.processDir(sickgear.TV_DOWNLOAD_DIR, is_basedir=True)
+        processTV.process_dir(sickgear.TV_DOWNLOAD_DIR, is_basedir=True)

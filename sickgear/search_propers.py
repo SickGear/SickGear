@@ -16,24 +16,21 @@
 
 from __future__ import with_statement
 
-import threading
 import sickgear
+from .scheduler import Job
 
 
-class ProperSearcher(object):
+class ProperSearcher(Job):
     def __init__(self):
-        self.lock = threading.Lock()
-        self.amActive = False
+        super(ProperSearcher, self).__init__(self.job_run, kwargs={}, thread_lock=True)
 
     @staticmethod
     def is_enabled():
         # type: (...) -> bool
         return sickgear.DOWNLOAD_PROPERS
 
-    def run(self):
-        self.amActive = True
+    @staticmethod
+    def job_run():
 
         propersearch_queue_item = sickgear.search_queue.ProperSearchQueueItem()
         sickgear.search_queue_scheduler.action.add_item(propersearch_queue_item)
-
-        self.amActive = False

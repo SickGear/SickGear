@@ -70,7 +70,7 @@ class ShowQueue(generic_queue.GenericQueue):
 
     def check_events(self):
         if self.daily_update_running and \
-                not (self.is_show_update_running() or sickgear.show_update_scheduler.action.amActive):
+                not (self.is_show_update_running() or sickgear.update_show_scheduler.is_running_job):
             self.execute_events(DAILY_SHOW_UPDATE_FINISHED_EVENT)
             self.daily_update_running = False
 
@@ -1139,7 +1139,7 @@ class QueueItemAdd(ShowQueueItem):
                 self.show_obj.tvid, self.show_obj.prodid)
         # if "scene" numbering is disabled during add show, output availability to log
         if None is not self.scene and not self.show_obj.scene and \
-                self.show_obj.prodid in sickgear.scene_exceptions.xem_ids_list[self.show_obj.tvid]:
+                self.show_obj.prodid in sickgear.scene_exceptions.MEMCACHE['release_map_xem'][self.show_obj.tvid]:
             logger.log('No scene number mappings found at TheXEM. Therefore, episode scene numbering disabled, '
                        'edit show and enable it to manually add custom numbers for search and media processing.')
         try:
@@ -1179,7 +1179,7 @@ class QueueItemAdd(ShowQueueItem):
         # if started with WANTED eps then run the backlog
         if WANTED == self.default_status or items_wanted:
             logger.log('Launching backlog for this show since episodes are WANTED')
-            sickgear.backlog_search_scheduler.action.search_backlog([self.show_obj], prevent_same=True)
+            sickgear.search_backlog_scheduler.action.search_backlog([self.show_obj], prevent_same=True)
             ui.notifications.message('Show added/search', 'Adding and searching for episodes of' + msg)
         else:
             ui.notifications.message('Show added', 'Adding' + msg)
@@ -1253,7 +1253,7 @@ class QueueItemRefresh(ShowQueueItem):
         self.show_obj.populate_cache(self.force_image_cache)
 
         # Load XEM data to DB for show
-        if self.show_obj.prodid in sickgear.scene_exceptions.xem_ids_list[self.show_obj.tvid]:
+        if self.show_obj.prodid in sickgear.scene_exceptions.MEMCACHE['release_map_xem'][self.show_obj.tvid]:
             sickgear.scene_numbering.xem_refresh(self.show_obj.tvid, self.show_obj.prodid)
 
         if 'pausestatus_after' in self.kwargs and None is not self.kwargs['pausestatus_after']:

@@ -555,9 +555,9 @@ class SickGear(object):
         name_cache.build_name_cache()
 
         # load all ids from xem
-        sickgear.classes.loading_msg.message = 'Loading xem data'
-        startup_background_tasks = threading.Thread(name='XEMUPDATER', target=sickgear.scene_exceptions.get_xem_ids)
-        startup_background_tasks.start()
+#        sickgear.classes.loading_msg.message = 'Loading xem data'
+#        startup_background_tasks = threading.Thread(name='XEMUPDATER', target=sickgear.scene_exceptions.ReleaseMap().fetch_xem_ids)
+#        startup_background_tasks.start()
 
         sickgear.classes.loading_msg.message = 'Checking history'
         # check history snatched_proper update
@@ -624,7 +624,7 @@ class SickGear(object):
         if not switching and (self.force_update or sickgear.UPDATE_SHOWS_ON_START):
             sickgear.classes.loading_msg.message = 'Starting a forced show update'
             background_start_forced_show_update = threading.Thread(name='STARTUP-FORCE-SHOW-UPDATE',
-                                                                   target=sickgear.show_update_scheduler.action.run)
+                                                                   target=sickgear.update_show_scheduler.action.run)
             background_start_forced_show_update.start()
 
         sickgear.classes.loading_msg.message = 'Switching to default web server'

@@ -1,5 +1,4 @@
-from lib.six import moves
-
+import queue
 import threading
 
 
@@ -15,7 +14,7 @@ class Event(object):
 class Events(threading.Thread):
     def __init__(self, callback):
         super(Events, self).__init__()
-        self.queue = moves.queue.Queue()
+        self.queue = queue.Queue()
         self.daemon = True
         self.callback = callback
         self.name = 'EVENT-QUEUE'
@@ -31,24 +30,24 @@ class Events(threading.Thread):
         while not self._stopper.is_set():
             try:
                 # get event type
-                etype = self.queue.get(True, 1)
-            except moves.queue.Empty:
-                etype = 'Empty'
+                ev_type = self.queue.get(True, 1)
+            except queue.Empty:
+                ev_type = 'Empty'
             except(BaseException, Exception):
-                etype = None
-            if etype in (self.SystemEvent.RESTART, self.SystemEvent.SHUTDOWN, None, 'Empty'):
-                if etype in ('Empty',):
+                ev_type = None
+            if ev_type in (self.SystemEvent.RESTART, self.SystemEvent.SHUTDOWN, None, 'Empty'):
+                if ev_type in ('Empty',):
                     continue
                 from sickgear import logger
-                logger.debug(f'Callback {self.callback.__name__}(event type:{etype})')
+                logger.debug(f'Callback {self.callback.__name__}(event type:{ev_type})')
 
             try:
                 # perform callback if we got an event type
-                self.callback(etype)
+                self.callback(ev_type)
 
                 # event completed
                 self.queue.task_done()
-            except moves.queue.Empty:
+            except queue.Empty:
                 pass
 
         # exiting thread
