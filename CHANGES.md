@@ -1,5 +1,6 @@
 ﻿### 3.29.0 (2023-xx-xx xx:xx:00 UTC)
 
+* Update Apprise 1.2.1 (3d07004) to 1.3.0 (6458ab0)
 * Update attr 22.2.0 (a9960de) to 22.2.0 (683d056)
 * Update diskcache 5.4.0 (1cb1425) to 5.6.1 (4d30686)
 * Update feedparser 6.0.10 (5fcb3ae) to 6.0.10 (6d032b8)
