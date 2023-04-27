@@ -5,7 +5,6 @@
 # repository:http://github.com/dbr/tvdb_api
 # license:un license (http://unlicense.org/)
 
-from __future__ import absolute_import
 from functools import wraps
 
 __author__ = 'dbr/Ben'
