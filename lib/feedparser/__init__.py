@@ -1,4 +1,4 @@
-# Copyright 2010-2022 Kurt McKee <contactme@kurtmckee.org>
+# Copyright 2010-2023 Kurt McKee <contactme@kurtmckee.org>
 # Copyright 2002-2008 Mark Pilgrim
 # All rights reserved.
 #
@@ -27,12 +27,18 @@
 
 from .api import parse
 from .datetimes import registerDateHandler
-from .exceptions import *
+from .exceptions import (
+    CharacterEncodingOverride,
+    CharacterEncodingUnknown,
+    FeedparserError,
+    NonXMLContentType,
+    UndeclaredNamespace,
+)
 from .util import FeedParserDict
 
-__author__ = 'Kurt McKee <contactme@kurtmckee.org>'
-__license__ = 'BSD 2-clause'
-__version__ = '6.0.10'
+__author__ = "Kurt McKee <contactme@kurtmckee.org>"
+__license__ = "BSD 2-clause"
+__version__ = "6.0.10"
 
 # HTTP "User-Agent" header to send to servers when downloading feeds.
 # If you are embedding feedparser in a larger application, you should
@@ -46,3 +52,20 @@ RESOLVE_RELATIVE_URIS = 1
 # If you want feedparser to automatically sanitize all potentially unsafe
 # HTML content, set this to 1.
 SANITIZE_HTML = 1
+
+
+# If you want feedparser to use only a prefix of the feed to detect encodings
+# (uses less memory), set this to 1.
+OPTIMISTIC_ENCODING_DETECTION = 1
+
+
+__all__ = (
+    "parse",
+    "registerDateHandler",
+    "FeedParserDict",
+    "FeedparserError",
+    "CharacterEncodingOverride",
+    "CharacterEncodingUnknown",
+    "NonXMLContentType",
+    "UndeclaredNamespace",
+)
