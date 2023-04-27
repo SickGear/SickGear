@@ -514,7 +514,7 @@ class ProcessTVShow(object):
             for f in sorted(list(set([os.path.dirname(item) for item in work_files]) - {path}), key=len, reverse=True):
                 self._delete_folder(f)
 
-        def _bottom_line(text, log_level=logger.DEBUG):
+        def _bottom_line(text, log_level=logger.MESSAGE):
             self._buffer('-' * len(text))
             self._log_helper(text, log_level)
 
@@ -524,11 +524,12 @@ class ProcessTVShow(object):
 
         if self.any_vid_processed:
             if not self.files_failed:
-                _bottom_line('Successfully processed.', logger.MESSAGE)
+                _bottom_line('Successfully processed.')
             else:
                 _bottom_line(f'Successfully processed at least one video file'
-                             f'{(", others were skipped", " and skipped another")[1 == self.files_failed]}.',
-                             logger.MESSAGE)
+                             f'{(", others were skipped", " and skipped another")[1 == self.files_failed]}.')
+        elif sickgear.PROCESS_POSITIVE_LOG:
+            _bottom_line('Success, no media to process.')
         else:
             _bottom_line('Failed! Did not process any files.', logger.WARNING)
 

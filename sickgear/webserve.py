@@ -8504,7 +8504,7 @@ class ConfigMediaProcess(Config):
                              unpack=None, keep_processed_dir=None, process_method=None,
                              extra_scripts='', sg_extra_scripts='',
                              rename_episodes=None, airdate_episodes=None,
-                             move_associated_files=None, postpone_if_sync_files=None,
+                             move_associated_files=None, postpone_if_sync_files=None, process_positive_log=None,
                              naming_custom_abd=None, naming_custom_sports=None, naming_custom_anime=None,
                              naming_strip_year=None, use_failed_downloads=None, delete_failed=None,
                              skip_removed_files=None, nfo_rename=None,
@@ -8541,6 +8541,7 @@ class ConfigMediaProcess(Config):
         sickgear.AIRDATE_EPISODES = config.checkbox_to_value(airdate_episodes)
         sickgear.MOVE_ASSOCIATED_FILES = config.checkbox_to_value(move_associated_files)
         sickgear.POSTPONE_IF_SYNC_FILES = config.checkbox_to_value(postpone_if_sync_files)
+        sickgear.PROCESS_POSITIVE_LOG = config.checkbox_to_value(process_positive_log)
         sickgear.NAMING_CUSTOM_ABD = config.checkbox_to_value(naming_custom_abd)
         sickgear.NAMING_CUSTOM_SPORTS = config.checkbox_to_value(naming_custom_sports)
         sickgear.NAMING_CUSTOM_ANIME = config.checkbox_to_value(naming_custom_anime)
