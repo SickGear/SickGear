@@ -5,6 +5,7 @@
 * Update Requests library 2.28.1 (ec553c2) to 2.29.0 (87d63de)
 * Update SimpleJSON 3.18.1 (c891b95) to 3.19.1 (aeb63ee)
 * Update Tornado Web Server 6.3.0 (7186b86) to 6.3.1 (419838b)
+* Update urllib3 1.26.14 (a06c05c) to 1.26.15 (25cca389)
 
 
 ### 3.28.0 (2023-04-12 13:05:00 UTC)
