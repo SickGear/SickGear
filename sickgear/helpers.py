@@ -422,7 +422,7 @@ def move_and_symlink_file(src_file, dest_file):
         copy_file(src_file, dest_file)
 
 
-def rename_ep_file(cur_path, new_path, old_path_length=0):
+def rename_ep_file(cur_path, new_path, old_path_length=0, use_rename=False):
     """
     Creates all folders needed to move a file to its new location, renames it, then cleans up any folders
     left that are now empty.
@@ -433,6 +433,7 @@ def rename_ep_file(cur_path, new_path, old_path_length=0):
     :type new_path: AnyStr
     :param old_path_length: The length of media file path (old name) WITHOUT THE EXTENSION
     :type old_path_length: int or long
+    :param use_rename: use rename instead of shutil.move
     :return: success
     :rtype: bool
     """
@@ -466,8 +467,11 @@ def rename_ep_file(cur_path, new_path, old_path_length=0):
     # move the file
     try:
         logger.log(f'Renaming file from {cur_path} to {new_path}')
-        shutil.move(cur_path, new_path)
-    except (OSError, IOError) as e:
+        if use_rename:
+            os.rename(cur_path, new_path)
+        else:
+            shutil.move(cur_path, new_path)
+    except (OSError, IOError, IsADirectoryError, NotADirectoryError, FileExistsError) as e:
         logger.error(f'Failed renaming {cur_path} to {new_path}: {ex(e)}')
         return False
 

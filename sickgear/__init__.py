@@ -284,6 +284,8 @@ ADD_SHOWS_METALANG = 'en'
 CREATE_MISSING_SHOW_DIRS = False
 SHOW_DIRS_WITH_DOTS = False
 RENAME_EPISODES = False
+RENAME_TBA_EPISODES = True
+RENAME_NAME_CHANGED_EPISODES = False
 AIRDATE_EPISODES = False
 PROCESS_AUTOMATICALLY = False
 KEEP_PROCESSED_DIR = False
@@ -717,7 +719,8 @@ def init_stage_1(console_logging):
     global TV_DOWNLOAD_DIR, PROCESS_METHOD, PROCESS_AUTOMATICALLY, MEDIAPROCESS_INTERVAL, \
         POSTPONE_IF_SYNC_FILES, PROCESS_POSITIVE_LOG, EXTRA_SCRIPTS, SG_EXTRA_SCRIPTS, \
         DEFAULT_MEDIAPROCESS_INTERVAL, MIN_MEDIAPROCESS_INTERVAL, \
-        UNPACK, SKIP_REMOVED_FILES, MOVE_ASSOCIATED_FILES, NFO_RENAME, RENAME_EPISODES, AIRDATE_EPISODES, \
+        UNPACK, SKIP_REMOVED_FILES, MOVE_ASSOCIATED_FILES, NFO_RENAME, RENAME_EPISODES, RENAME_TBA_EPISODES, \
+        RENAME_NAME_CHANGED_EPISODES, AIRDATE_EPISODES, \
         USE_FAILED_DOWNLOADS, DELETE_FAILED
     # Media Process/Episode Naming
     global NAMING_PATTERN, NAMING_MULTI_EP, NAMING_STRIP_YEAR, NAMING_CUSTOM_ABD, NAMING_ABD_PATTERN, \
@@ -1013,6 +1016,8 @@ def init_stage_1(console_logging):
     PROCESS_AUTOMATICALLY = bool(check_setting_int(CFG, 'General', 'process_automatically', 0))
     UNPACK = bool(check_setting_int(CFG, 'General', 'unpack', 0))
     RENAME_EPISODES = bool(check_setting_int(CFG, 'General', 'rename_episodes', 1))
+    RENAME_TBA_EPISODES = bool(check_setting_int(CFG, 'General', 'rename_tba_episodes', 1))
+    RENAME_NAME_CHANGED_EPISODES = bool(check_setting_int(CFG, 'General', 'rename_name_changed_episodes', 0))
     AIRDATE_EPISODES = bool(check_setting_int(CFG, 'General', 'airdate_episodes', 0))
     KEEP_PROCESSED_DIR = bool(check_setting_int(CFG, 'General', 'keep_processed_dir', 1))
     PROCESS_METHOD = check_setting_str(CFG, 'General', 'process_method', 'copy' if KEEP_PROCESSED_DIR else 'move')
@@ -1994,6 +1999,8 @@ def save_config():
     new_config['General']['process_automatically'] = int(PROCESS_AUTOMATICALLY)
     new_config['General']['unpack'] = int(UNPACK)
     new_config['General']['rename_episodes'] = int(RENAME_EPISODES)
+    new_config['General']['rename_tba_episodes'] = int(RENAME_TBA_EPISODES)
+    new_config['General']['rename_name_changed_episodes'] = int(RENAME_NAME_CHANGED_EPISODES)
     new_config['General']['airdate_episodes'] = int(AIRDATE_EPISODES)
     new_config['General']['create_missing_show_dirs'] = int(CREATE_MISSING_SHOW_DIRS)
     new_config['General']['show_dirs_with_dots'] = int(SHOW_DIRS_WITH_DOTS)
