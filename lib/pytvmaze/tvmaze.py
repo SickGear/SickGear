@@ -287,9 +287,12 @@ class Episode(object):
             if data.get('show'):
                 self.show = Show(data.get('show'))
             # Reference to show for when using get_full_schedule()
-            if data.get('_embedded'):
+            if not self.show and data.get('_embedded'):
                 if data['_embedded'].get('show'):
                     self.show = Show(data['_embedded']['show'])
+            if not self.show and data.get('_links') and 'show' in data['_links']:
+                self.show = Show({})
+                self.show.id = int(re.search(r'/(\d+)$', data['_links']['show']['href']).group(1))
 
     def __repr__(self):
         if self.special:
@@ -345,6 +348,7 @@ class Person(object):
         self.country = data.get('country')
         self.character = None
         self._castcredits = None
+        self._guestcastcredits = None
         self._crewcredits = None
         # self.populate(data)
 
@@ -362,6 +366,12 @@ class Person(object):
         if None is self._castcredits:
             self._castcredits = person_cast_credits(self.id, embed='show,character', raise_error=False)
         return self._castcredits
+
+    @property
+    def guestcastcredits(self):
+        if None is self._guestcastcredits:
+            self._guestcastcredits = person_guestcast_credits(self.id, embed='episode,character', raise_error=False)
+        return self._guestcastcredits
 
     @property
     def crewcredits(self):
@@ -451,8 +461,9 @@ class Cast(object):
 class CastCredit(object):
     def __init__(self, data):
         self.links = data.get('_links')
-        self.character = None
-        self.show = None
+        self.character = None  # type: Optional[Character]
+        self.show = None  # type: Optional[Show]
+        self.episode = None  # type: Optional[Episode]
         self.populate(data)
 
     def populate(self, data):
@@ -461,6 +472,8 @@ class CastCredit(object):
                 self.character = Character(data['_embedded']['character'])
             if data['_embedded'].get('show'):
                 self.show = Show(data['_embedded']['show'])
+            if data['_embedded'].get('episode'):
+                self.episode = Episode(data['_embedded']['episode'])
 
     def __repr__(self):
         return self.__str__()
@@ -1437,6 +1450,17 @@ def person_cast_credits(person_id, embed=None, raise_error=True):
     return []
 
 
+def person_guestcast_credits(person_id, embed=None, raise_error=True):
+    url = _embed_url(endpoints.person_guestcast_credits.format(person_id), embed,
+                     [None, 'episode', 'character'], '?')
+    q = TVmaze.endpoint_standard_get(url)
+    if q:
+        return [CastCredit(credit) for credit in q]
+    elif raise_error:
+        raise CreditsNotFound('Couldn\'t find cast credits for person ID {0}'.format(person_id))
+    return []
+
+
 def person_crew_credits(person_id, embed=None, raise_error=True):
     url = _embed_url(endpoints.person_crew_credits.format(person_id), embed,
                      [None, 'show'], '?')
@@ -1518,10 +1542,31 @@ def season_by_id(season_id, embed=None):
         raise SeasonNotFound('Couldn\'t find Season with ID {0}'.format(season_id))
 
 
-def episode_by_id(episode_id, show=None, raise_error=True):
-    url = endpoints.episode_by_id.format(episode_id)
+def episode_by_id(episode_id, show=None, raise_error=True, embed=None):
+    url = _embed_url(endpoints.episode_by_id.format(episode_id), embed,
+                     [None, 'show', 'guestcast', 'guestcrew'], '?')
     q = TVmaze.endpoint_standard_get(url)
     if q:
         return Episode(q, show=show)
     elif raise_error:
         raise EpisodeNotFound('Couldn\'t find Episode with ID {0}'.format(episode_id))
+
+
+def episode_guestcast_credits(episode_id, raise_error=True):
+    url = endpoints.episode_guestcast.format(episode_id)
+    q = TVmaze.endpoint_standard_get(url)
+    if q:
+        return [CastCredit(credit) for credit in q]
+    elif raise_error:
+        raise CreditsNotFound('Couldn\'t find cast credits for episode ID {0}'.format(episode_id))
+    return []
+
+
+def episode_crew_credits(episode_id, raise_error=True):
+    url = endpoints.episode_guestcrew.format(episode_id)
+    q = TVmaze.endpoint_standard_get(url)
+    if q:
+        return [CrewCredit(credit) for credit in q]
+    elif raise_error:
+        raise CreditsNotFound('Couldn\'t find crew credits for episode ID {0}'.format(episode_id))
+    return []
