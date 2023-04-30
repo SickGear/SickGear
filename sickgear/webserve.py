@@ -8498,20 +8498,20 @@ class ConfigMediaProcess(Config):
         t.submenu = self.config_menu('Processing')
         return t.respond()
 
-    def save_post_processing(self, tv_download_dir=None, process_automatically=None, mediaprocess_interval=None,
-                             unpack=None, keep_processed_dir=None, process_method=None,
-                             extra_scripts='', sg_extra_scripts='',
-                             rename_episodes=None, airdate_episodes=None,
-                             move_associated_files=None, postpone_if_sync_files=None, process_positive_log=None,
-                             naming_custom_abd=None, naming_custom_sports=None, naming_custom_anime=None,
-                             naming_strip_year=None, use_failed_downloads=None, delete_failed=None,
-                             skip_removed_files=None, nfo_rename=None,
-                             xbmc_data=None, xbmc_12plus_data=None, mediabrowser_data=None, sony_ps3_data=None,
-                             wdtv_data=None, tivo_data=None, mede8er_data=None, kodi_data=None,
-                             naming_pattern=None, naming_multi_ep=None,
-                             naming_anime=None, naming_anime_pattern=None, naming_anime_multi_ep=None,
-                             naming_abd_pattern=None, naming_sports_pattern=None,
-                             **kwargs):  # kwargs picks up deprecated vars sent from legacy UIs
+    def save_post_processing(
+            self, tv_download_dir=None, process_method=None, process_automatically=None, mediaprocess_interval=None,
+            postpone_if_sync_files=None, process_positive_log=None, extra_scripts='', sg_extra_scripts='',
+            unpack=None, skip_removed_files=None, move_associated_files=None, nfo_rename=None,
+            rename_episodes=None, rename_tba_episodes=None, rename_name_changed_episodes=None,
+            airdate_episodes=None, use_failed_downloads=None, delete_failed=None,
+            naming_pattern=None, naming_multi_ep=None, naming_strip_year=None,
+            naming_custom_abd=None, naming_abd_pattern=None,
+            naming_custom_sports=None, naming_sports_pattern=None,
+            naming_custom_anime=None, naming_anime_pattern=None,naming_anime_multi_ep=None, naming_anime=None,
+            kodi_data=None, mede8er_data=None, xbmc_data=None, mediabrowser_data=None,
+            sony_ps3_data=None, tivo_data=None, wdtv_data=None, xbmc_12plus_data=None,
+            keep_processed_dir=None,
+            **kwargs):  # kwargs picks up deprecated vars sent from legacy UIs
 
         results = []
 
@@ -8536,6 +8536,8 @@ class ConfigMediaProcess(Config):
         sickgear.EXTRA_SCRIPTS = [x.strip() for x in extra_scripts.split('|') if x.strip()]
         sickgear.SG_EXTRA_SCRIPTS = [x.strip() for x in sg_extra_scripts.split('|') if x.strip()]
         sickgear.RENAME_EPISODES = config.checkbox_to_value(rename_episodes)
+        sickgear.RENAME_TBA_EPISODES = config.checkbox_to_value(rename_tba_episodes)
+        sickgear.RENAME_NAME_CHANGED_EPISODES = config.checkbox_to_value(rename_name_changed_episodes)
         sickgear.AIRDATE_EPISODES = config.checkbox_to_value(airdate_episodes)
         sickgear.MOVE_ASSOCIATED_FILES = config.checkbox_to_value(move_associated_files)
         sickgear.POSTPONE_IF_SYNC_FILES = config.checkbox_to_value(postpone_if_sync_files)

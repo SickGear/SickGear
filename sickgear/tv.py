@@ -78,9 +78,9 @@ if coreid_warnings:
 tz_p = du_parser()
 invalid_date_limit = datetime.date(1900, 1, 1)
 
-tba_ep_name = re.compile(r'^(episode \d+|tba)$', flags=re.I)
-tba_ep_filename = re.compile(r'\b(episode \d+|tba)\b', flags=re.I)
-ep_name_regex = re.compile(r'%E[._]?N', flags=re.I)
+tba_tvinfo_name = re.compile(r'^(episode \d+|tba)$', flags=re.I)
+tba_file_name = re.compile(r'\b(episode.\d+|tba)\b', flags=re.I)
+pattern_ep_name = re.compile(r'%E[._]?N', flags=re.I)
 
 # status codes for switching tv show source
 TVSWITCH_DUPLICATE_SHOW = 0
@@ -4470,20 +4470,20 @@ class TVEpisode(TVEpisodeBase):
 
             if sickgear.RENAME_EPISODES and self.with_ep_name():
                 ep_filename = os.path.basename(self._location or '')
-                ep_basename, ep_ext = os.path.splitext(ep_filename)
+                ep_basename, _ = os.path.splitext(ep_filename)
                 ep_name_changed = (bool(self._location) and old_name != self._name) or \
                                   (sickgear.RENAME_NAME_CHANGED_EPISODES and bool(ep_basename)
                                    and ep_basename != os.path.basename(self.proper_path()))
-                ep_name_tba_changed = (ep_name_changed and bool(tba_ep_name.search(old_name))) or \
-                                      (not bool(tba_ep_name.search(self._name or ''))
-                                       and bool(tba_ep_filename.search(ep_filename or '')))
+                ep_name_tba_changed = (ep_name_changed and bool(tba_tvinfo_name.search(old_name))) or \
+                                      (not bool(tba_tvinfo_name.search(self._name or ''))
+                                       and bool(tba_file_name.search(ep_filename or '')))
                 if ((ep_name_tba_changed and sickgear.RENAME_TBA_EPISODES)
                                                  or (ep_name_changed and sickgear.RENAME_NAME_CHANGED_EPISODES)):
-                    if (re_res := self.rename()):
-                        notifiers.notify_update_library(self)
+                    # noinspection PySimplifyBooleanCheck
+                    if re_res := self.rename():
+                        notifiers.notify_update_library(self, include_online=False)
                     elif False == re_res:
-                        # rename failed
-                        logger.debug('Failed to change changed episode name based filename')
+                        logger.debug('Failed to rename files to TV info episode name')
 
         # shouldn't get here probably
         else:
@@ -5144,17 +5144,8 @@ class TVEpisode(TVEpisodeBase):
         """
         Just the folder name of the episode
         """
-
         if None is pattern:
-            # we only use ABD if it's enabled, this is an ABD show, AND this is not a multi-ep
-            if self._show_obj.air_by_date and sickgear.NAMING_CUSTOM_ABD and not self.related_ep_obj:
-                pattern = sickgear.NAMING_ABD_PATTERN
-            elif self._show_obj.sports and sickgear.NAMING_CUSTOM_SPORTS and not self.related_ep_obj:
-                pattern = sickgear.NAMING_SPORTS_PATTERN
-            elif self._show_obj.anime and sickgear.NAMING_CUSTOM_ANIME:
-                pattern = sickgear.NAMING_ANIME_PATTERN
-            else:
-                pattern = sickgear.NAMING_PATTERN
+            pattern = self.naming_pattern()
 
         # split off the dirs only, if they exist
         name_groups = re.split(r'[\\/]', pattern)
@@ -5164,40 +5155,36 @@ class TVEpisode(TVEpisodeBase):
             return ''
         return self._format_pattern(os.sep.join(name_groups[:-1]), multi)
 
-    def with_ep_name(self):
-        """
-        returns if the episode naming contain the episode name
-        """
-        # type: (...) -> bool
-        if self._show_obj.air_by_date and sickgear.NAMING_CUSTOM_ABD and not self.related_ep_obj:
-            return bool(ep_name_regex.search(sickgear.NAMING_ABD_PATTERN))
-        elif self._show_obj.sports and sickgear.NAMING_CUSTOM_SPORTS and not self.related_ep_obj:
-            return bool(ep_name_regex.search(sickgear.NAMING_SPORTS_PATTERN))
-        elif self._show_obj.anime and sickgear.NAMING_CUSTOM_ANIME:
-            return bool(ep_name_regex.search(sickgear.NAMING_ANIME_PATTERN))
-        else:
-            return bool(ep_name_regex.search(sickgear.NAMING_PATTERN))
-
     def formatted_filename(self, pattern=None, multi=None, anime_type=None):
         """
         Just the filename of the episode, formatted based on the naming settings
         """
-
-        if None is pattern:
-            # we only use ABD if it's enabled, this is an ABD show, AND this is not a multi-ep
-            if self._show_obj.air_by_date and sickgear.NAMING_CUSTOM_ABD and not self.related_ep_obj:
-                pattern = sickgear.NAMING_ABD_PATTERN
-            elif self._show_obj.sports and sickgear.NAMING_CUSTOM_SPORTS and not self.related_ep_obj:
-                pattern = sickgear.NAMING_SPORTS_PATTERN
-            elif self._show_obj.anime and sickgear.NAMING_CUSTOM_ANIME:
-                pattern = sickgear.NAMING_ANIME_PATTERN
-            else:
-                pattern = sickgear.NAMING_PATTERN
-
         # split off the dirs only, if they exist
-        name_groups = re.split(r'[\\/]', pattern)
+        name_groups = re.split(r'[\\/]', pattern or self.naming_pattern())
 
         return self._format_pattern(name_groups[-1], multi, anime_type)
+
+    def with_ep_name(self):
+        # type: (...) -> bool
+        """
+        returns if the episode naming contain the episode name
+        """
+        return bool(pattern_ep_name.search(self.naming_pattern()))
+
+    def naming_pattern(self):
+        # type: (...) -> AnyStr
+        """
+        return a naming pattern for this show
+        """
+        # we only use ABD if it's enabled, this is an ABD show, AND this is not a multi-ep
+        if self._show_obj.air_by_date and sickgear.NAMING_CUSTOM_ABD and not self.related_ep_obj:
+            return sickgear.NAMING_ABD_PATTERN
+        if self._show_obj.sports and sickgear.NAMING_CUSTOM_SPORTS and not self.related_ep_obj:
+            return sickgear.NAMING_SPORTS_PATTERN
+        if self._show_obj.anime and sickgear.NAMING_CUSTOM_ANIME:
+            return sickgear.NAMING_ANIME_PATTERN
+
+        return sickgear.NAMING_PATTERN
 
     def rename(self):
         # type: (...) -> Optional[bool]

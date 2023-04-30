@@ -242,10 +242,30 @@
 
 						<div class="field-pair">
 							<label for="rename_episodes">
-								<span class="component-title">Rename episodes</span>
+								<span class="component-title">Rename episode files</span>
 								<span class="component-desc">
 									<input type="checkbox" name="rename_episodes" id="rename_episodes" #if $sickgear.RENAME_EPISODES == True then $checked else ''#>
-									<p>rename episodes using the Episode Naming settings</p>
+									<p>using the Episode Naming settings</p>
+								</span>
+							</label>
+						</div>
+
+						<div class="field-pair">
+							<label for="rename_tba_episodes">
+								<span class="component-title">Rename "TBA" named files</span>
+								<span class="component-desc">
+									<input type="checkbox" name="rename_tba_episodes" id="rename_tba_episodes" #if $sickgear.RENAME_TBA_EPISODES == True then $checked else ''#>
+									<p>if the TV info episode name changes</p>
+								</span>
+							</label>
+						</div>
+
+						<div class="field-pair">
+							<label for="rename_name_changed_episodes">
+								<span class="component-title">Rename any named file</span>
+								<span class="component-desc">
+									<input type="checkbox" name="rename_name_changed_episodes" id="rename_name_changed_episodes" #if $sickgear.RENAME_NAME_CHANGED_EPISODES == True then $checked else ''#>
+									<p>if the TV info episode name changes</p>
 								</span>
 							</label>
 						</div>

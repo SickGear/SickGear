@@ -16,6 +16,7 @@
 * Change remove redundant py2 import futures
 * Change add jobs to centralise scheduler activities
 * Change refactor scene_exceptions
+* Add to config/media-process/File Handling, "Rename TBA" and "Rename any"
 * Add config to change media process log message if there is no media to process
 * Change view-show text "invalid timeformat" to "time unknown"
 
