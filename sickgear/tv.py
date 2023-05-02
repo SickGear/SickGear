@@ -78,6 +78,10 @@ if coreid_warnings:
 tz_p = du_parser()
 invalid_date_limit = datetime.date(1900, 1, 1)
 
+tba_tvinfo_name = re.compile(r'^(episode \d+|tb[ad])$', flags=re.I)
+tba_file_name = re.compile(r'\b(episode.\d+|tb[ad])\b', flags=re.I)
+pattern_ep_name = re.compile(r'%E[._]?N', flags=re.I)
+
 # status codes for switching tv show source
 TVSWITCH_DUPLICATE_SHOW = 0
 TVSWITCH_ID_CONFLICT = 1
@@ -4301,6 +4305,8 @@ class TVEpisode(TVEpisodeBase):
             if self._name != self.dict_prevent_nonetype(ep_info, 'episodename'):
                 switch_list.append(self.show_obj.switch_ep_change_sql(old_tvid, old_prodid, episode, season,
                                                                       TVSWITCH_EP_RENAMED))
+
+        old_name = self._name or ''
         self.name = self.dict_prevent_nonetype(ep_info, 'episodename')
         self.season = season
         self.episode = episode
@@ -4461,6 +4467,22 @@ class TVEpisode(TVEpisodeBase):
                 msg = '(1) Status changes from %s to ' % statusStrings[self._status]
                 self.status = Quality.status_from_name_or_file(self._location, anime=self._show_obj.is_anime)
                 logger.debug('%s%s' % (msg, statusStrings[self._status]))
+
+            if sickgear.RENAME_EPISODES and self.with_ep_name() \
+                    and os.path.splitext(ep_filename := os.path.basename(self._location or ''))[0] != \
+                        os.path.basename(self.proper_path()) \
+                    and (sickgear.RENAME_NAME_CHANGED_EPISODES
+                         or (sickgear.RENAME_TBA_EPISODES
+                             and (bool(tba_tvinfo_name.search(old_name))
+                                  or (not bool(tba_tvinfo_name.search(self._name or ''))
+                                      and bool(tba_file_name.search(ep_filename or ''))))
+                         )) \
+                    and os.path.isfile(self._location):
+                # noinspection PySimplifyBooleanCheck
+                if re_res := self.rename():
+                    notifiers.notify_update_library(self, include_online=False)
+                elif False == re_res:
+                    logger.debug('Failed to rename files to TV info episode name')
 
         # shouldn't get here probably
         else:
@@ -5121,17 +5143,8 @@ class TVEpisode(TVEpisodeBase):
         """
         Just the folder name of the episode
         """
-
         if None is pattern:
-            # we only use ABD if it's enabled, this is an ABD show, AND this is not a multi-ep
-            if self._show_obj.air_by_date and sickgear.NAMING_CUSTOM_ABD and not self.related_ep_obj:
-                pattern = sickgear.NAMING_ABD_PATTERN
-            elif self._show_obj.sports and sickgear.NAMING_CUSTOM_SPORTS and not self.related_ep_obj:
-                pattern = sickgear.NAMING_SPORTS_PATTERN
-            elif self._show_obj.anime and sickgear.NAMING_CUSTOM_ANIME:
-                pattern = sickgear.NAMING_ANIME_PATTERN
-            else:
-                pattern = sickgear.NAMING_PATTERN
+            pattern = self.naming_pattern()
 
         # split off the dirs only, if they exist
         name_groups = re.split(r'[\\/]', pattern)
@@ -5145,24 +5158,35 @@ class TVEpisode(TVEpisodeBase):
         """
         Just the filename of the episode, formatted based on the naming settings
         """
-
-        if None is pattern:
-            # we only use ABD if it's enabled, this is an ABD show, AND this is not a multi-ep
-            if self._show_obj.air_by_date and sickgear.NAMING_CUSTOM_ABD and not self.related_ep_obj:
-                pattern = sickgear.NAMING_ABD_PATTERN
-            elif self._show_obj.sports and sickgear.NAMING_CUSTOM_SPORTS and not self.related_ep_obj:
-                pattern = sickgear.NAMING_SPORTS_PATTERN
-            elif self._show_obj.anime and sickgear.NAMING_CUSTOM_ANIME:
-                pattern = sickgear.NAMING_ANIME_PATTERN
-            else:
-                pattern = sickgear.NAMING_PATTERN
-
         # split off the dirs only, if they exist
-        name_groups = re.split(r'[\\/]', pattern)
+        name_groups = re.split(r'[\\/]', pattern or self.naming_pattern())
 
         return self._format_pattern(name_groups[-1], multi, anime_type)
 
+    def with_ep_name(self):
+        # type: (...) -> bool
+        """
+        returns if the episode naming contain the episode name
+        """
+        return bool(pattern_ep_name.search(self.naming_pattern()))
+
+    def naming_pattern(self):
+        # type: (...) -> AnyStr
+        """
+        return a naming pattern for this show
+        """
+        # we only use ABD if it's enabled, this is an ABD show, AND this is not a multi-ep
+        if self._show_obj.air_by_date and sickgear.NAMING_CUSTOM_ABD and not self.related_ep_obj:
+            return sickgear.NAMING_ABD_PATTERN
+        if self._show_obj.sports and sickgear.NAMING_CUSTOM_SPORTS and not self.related_ep_obj:
+            return sickgear.NAMING_SPORTS_PATTERN
+        if self._show_obj.anime and sickgear.NAMING_CUSTOM_ANIME:
+            return sickgear.NAMING_ANIME_PATTERN
+
+        return sickgear.NAMING_PATTERN
+
     def rename(self):
+        # type: (...) -> Optional[bool]
         """
         Renames an episode file and all related files to the location and filename as specified
         in the naming settings.
@@ -5202,25 +5226,31 @@ class TVEpisode(TVEpisodeBase):
         logger.debug('Files associated to %s: %s' % (self.location, related_files))
 
         # move the ep file
-        result = helpers.rename_ep_file(self.location, absolute_proper_path, absolute_current_path_no_ext_length)
+        result = helpers.rename_ep_file(self.location, absolute_proper_path, absolute_current_path_no_ext_length,
+                                        use_rename=True)
 
+        any_renamed = all_renamed = result
         # move related files
         for cur_related_file in related_files:
             renamed = helpers.rename_ep_file(cur_related_file, absolute_proper_path,
-                                             absolute_current_path_no_ext_length)
+                                             absolute_current_path_no_ext_length, use_rename=True)
+            any_renamed |= renamed
+            all_renamed &= renamed
             if not renamed:
                 logger.error('%s: Unable to rename file %s' % (self._epid, cur_related_file))
 
         for cur_related_sub in related_subs:
             absolute_proper_subs_path = os.path.join(sickgear.SUBTITLES_DIR, self.formatted_filename())
             renamed = helpers.rename_ep_file(cur_related_sub, absolute_proper_subs_path,
-                                             absolute_current_path_no_ext_length)
+                                             absolute_current_path_no_ext_length, use_rename=True)
+            any_renamed |= renamed
+            all_renamed &= renamed
             if not renamed:
                 logger.error('%s: Unable to rename file %s' % (self._epid, cur_related_sub))
 
         # save the ep
-        with self.lock:
-            if result:
+        if any_renamed:
+            with self.lock:
                 self.location = absolute_proper_path + file_ext
                 for ep_obj in self.related_ep_obj:
                     ep_obj.location = absolute_proper_path + file_ext
@@ -5233,13 +5263,15 @@ class TVEpisode(TVEpisodeBase):
         sql_l = []
         with self.lock:
             for ep_obj in [self] + self.related_ep_obj:
-                result = ep_obj.get_sql()
-                if None is not result:
-                    sql_l.append(result)
+                ep_sql = ep_obj.get_sql()
+                if None is not ep_sql:
+                    sql_l.append(ep_sql)
 
         if 0 < len(sql_l):
             my_db = db.DBConnection()
             my_db.mass_action(sql_l)
+
+        return all_renamed
 
     def airdate_modify_stamp(self):
         """

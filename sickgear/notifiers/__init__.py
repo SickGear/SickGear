@@ -132,7 +132,7 @@ def notify_git_update(new_version=''):
             n.notify_git_update(new_version)
 
 
-def notify_update_library(ep_obj, flush_q=False):
+def notify_update_library(ep_obj, flush_q=False, include_online=True):
 
     if not flush_q or sickgear.QUEUE_UPDATE_LIBRARY:
 
@@ -160,7 +160,8 @@ def notify_update_library(ep_obj, flush_q=False):
 
             elif not flush_q:
 
-                n.update_library(show_obj=ep_obj.show_obj, show_name=ep_obj.show_obj.name, ep_obj=ep_obj)
+                n.update_library(show_obj=ep_obj.show_obj, show_name=ep_obj.show_obj.name, ep_obj=ep_obj,
+                                 include_online=include_online)
 
         if flush_q:
             sickgear.QUEUE_UPDATE_LIBRARY = []
