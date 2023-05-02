@@ -78,8 +78,8 @@ if coreid_warnings:
 tz_p = du_parser()
 invalid_date_limit = datetime.date(1900, 1, 1)
 
-tba_tvinfo_name = re.compile(r'^(episode \d+|tba)$', flags=re.I)
-tba_file_name = re.compile(r'\b(episode.\d+|tba)\b', flags=re.I)
+tba_tvinfo_name = re.compile(r'^(episode \d+|tb[ad])$', flags=re.I)
+tba_file_name = re.compile(r'\b(episode.\d+|tb[ad])\b', flags=re.I)
 pattern_ep_name = re.compile(r'%E[._]?N', flags=re.I)
 
 # status codes for switching tv show source
@@ -4468,19 +4468,21 @@ class TVEpisode(TVEpisodeBase):
                 self.status = Quality.status_from_name_or_file(self._location, anime=self._show_obj.is_anime)
                 logger.debug('%s%s' % (msg, statusStrings[self._status]))
 
-            if sickgear.RENAME_EPISODES and self.with_ep_name() and \
-                    os.path.splitext(ep_filename := os.path.basename(self._location or ''))[0] != \
-                    os.path.basename(self.proper_path()) and \
-                    ((sickgear.RENAME_TBA_EPISODES and (
-                            bool(tba_tvinfo_name.search(old_name)) or
-                            (not bool(tba_tvinfo_name.search(self._name or ''))
-                             and bool(tba_file_name.search(ep_filename or '')))))
-                     or sickgear.RENAME_NAME_CHANGED_EPISODES) and os.path.isfile(self._location):
-                        # noinspection PySimplifyBooleanCheck
-                        if re_res := self.rename():
-                            notifiers.notify_update_library(self, include_online=False)
-                        elif False == re_res:
-                            logger.debug('Failed to rename files to TV info episode name')
+            if sickgear.RENAME_EPISODES and self.with_ep_name() \
+                    and os.path.splitext(ep_filename := os.path.basename(self._location or ''))[0] != \
+                        os.path.basename(self.proper_path()) \
+                    and (sickgear.RENAME_NAME_CHANGED_EPISODES
+                         or (sickgear.RENAME_TBA_EPISODES
+                             and (bool(tba_tvinfo_name.search(old_name))
+                                  or (not bool(tba_tvinfo_name.search(self._name or ''))
+                                      and bool(tba_file_name.search(ep_filename or ''))))
+                         )) \
+                    and os.path.isfile(self._location):
+                # noinspection PySimplifyBooleanCheck
+                if re_res := self.rename():
+                    notifiers.notify_update_library(self, include_online=False)
+                elif False == re_res:
+                    logger.debug('Failed to rename files to TV info episode name')
 
         # shouldn't get here probably
         else:
