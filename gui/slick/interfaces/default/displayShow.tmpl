@@ -176,6 +176,9 @@
 #if not $genres_done and $show_obj.genre
     #for $genre in $show_obj.genre.split('|')
         #set $genres_done = True
+        #if $TVINFO_TVDB == $show_obj.tvid
+            #set $genre = '<a href="%s" target="_blank" title="View other popular %s shows on thetvdb.com" class="addQTip">%s</a>' % (anon_url('https://thetvdb.com/genres/', $genre), $genre, $genre)
+        #end if
 						<span class="label">$genre</span>
     #end for#
 #end if

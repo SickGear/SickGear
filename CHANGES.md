@@ -19,6 +19,9 @@
 * Add to config/media-process/File Handling, "Rename TBA" and "Rename any"
 * Add config to change media process log message if there is no media to process
 * Change view-show text "invalid timeformat" to "time unknown"
+* Add menu Shows/"TMDB Cards"
+* Add a persons available socials (Youtube, LinkedIn, Reddit, Fansite, TikTok, Wikidata)
+* Change use TVDb genres on view-show if config/General/Interface/"Enable IMDb info" is disabled
 
 
 ### 3.28.0 (2023-04-12 13:05:00 UTC)

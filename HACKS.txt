@@ -17,6 +17,7 @@ Libs with customisations...
 /lib/hachoir_parser/guess.py
 /lib/hachoir_parser/misc/torrent.py
 /lib/imdbpie
+/lib/language_data/names.py
 /lib/lockfile/mkdirlockfile.py
 /lib/rtorrent
 /lib/scandir/scandir.py

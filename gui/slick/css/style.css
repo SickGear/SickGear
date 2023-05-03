@@ -1312,6 +1312,9 @@ div.formpaginate{
 	width:480px;
 	margin-top:0
 }
+#addShowForm #nameToSearch.select2{
+	width:428px;
+}
 #addShowForm #nameToSearch.wide{
 	width:591px;
 }
@@ -1439,12 +1442,16 @@ home_browseShows.tmpl
 	padding-top:2px
 }
 
+.show-card-inner .rating{
+	margin-right:3px;
+}
+
 .show-card-inner .heart.icon-glyph{
 	display:inline-block;
 	float:none;
 	height:15px;
 	width:15px;
-	margin:0 -3px -2px 2px
+	margin:0 -3px -2px -1px
 }
 
 .show-card-inner p, .show-card-inner i{
@@ -3784,6 +3791,13 @@ option.flag{
 	padding-left:35px;
 	background-repeat:no-repeat;
 	background-position:10px 50%
+}
+
+#select2-infosrc-lang-select-container .flag,
+#select2-infosrc-lang-select-results .flag{
+	padding-left:25px;
+	background-repeat:no-repeat;
+	background-position:0 50%
 }
 
 /* Anime section for editShow */

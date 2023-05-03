@@ -971,13 +971,15 @@ class QueueItemAdd(ShowQueueItem):
         try:
 
             tvinfo_config = sickgear.TVInfoAPI(self.tvid).api_params.copy()
+            kw = {}
             if self.lang:
                 tvinfo_config['language'] = self.lang
+                kw = {'language': self.lang}
 
             logger.log(f'{sickgear.TVInfoAPI(self.tvid).name}: {repr(tvinfo_config)}')
 
             t = sickgear.TVInfoAPI(self.tvid).setup(**tvinfo_config)
-            s = t.get_show(self.prodid, load_episodes=False, language=self.lang)
+            s = t.get_show(self.prodid, load_episodes=False, **kw)
 
             if getattr(t, 'show_not_found', False):
                 logger.error(f'Show {self.show_name} was not found on {sickgear.TVInfoAPI(self.tvid).name},'
@@ -1676,7 +1678,7 @@ class QueueItemSwitchSource(ShowQueueItem):
             tvinfo_config['dvdorder'] = 0 != self.show_obj._dvdorder
             t = sickgear.TVInfoAPI(self.new_tvid).setup(**tvinfo_config)
             try:
-                td = t.get_show(show_id=new_prodid, actors=True)
+                td = t.get_show(show_id=new_prodid, actors=True, language=self.show_obj._lang)
             except (BaseException, Exception):
                 td = None
                 if not self.force_id:
@@ -1684,7 +1686,7 @@ class QueueItemSwitchSource(ShowQueueItem):
                     if new_prodid != self.show_obj.ids.get(self.new_tvid, {}).get('id') is not None:
                         new_prodid = self.show_obj.ids.get(self.new_tvid, {}).get('id')
                         try:
-                            td = t.get_show(show_id=new_prodid, actors=True, language=self.show_obj.lang)
+                            td = t.get_show(show_id=new_prodid, actors=True, language=self.show_obj._lang)
                         except (BaseException, Exception):
                             td = None
                             logger.warning(f'Failed to get new tv show id ({new_prodid})'

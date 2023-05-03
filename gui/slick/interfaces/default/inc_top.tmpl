@@ -1,5 +1,6 @@
 #import sickgear
 #import datetime
+#import re
 #import urllib
 #from sickgear.common import Quality, SNATCHED_ANY, DOWNLOADED, ARCHIVED, FAILED
 #from sickgear.helpers import anon_url
@@ -176,10 +177,29 @@
 								<li><a id="add-show-name" data-href="$sbRoot/add-shows/find/" tabindex="$tab#set $tab += 1#"><i class="sgicon-addshow"></i>
 									<input  class="form-control form-control-inline input-sm" type="text" placeholder="Search" tabindex="$tab#set $tab += 1#">
 									<div class="menu-item-desc opacity60">find show at TV info source</div></a></li>
+#set $tvm_modes = dict(tvm_premieres='new shows', tvm_returning='returning')
+#set $tvm_mode = $tvm_modes.get($sg_var('TVM_MRU'), 'new shows')
+								<li><a href="$sbRoot/add-shows/tvm-default/" tabindex="$tab#set $tab += 1#"><i class="sgicon-tvmaze"></i>TVmaze Cards
+									<div class="menu-item-desc opacity60">$tvm_mode...</div></a></li>
+#set $tmdb_modes = dict(tmdb_upcoming='upcoming', tmdb_popular='popular', tmdb_toprated='top rated', tmdb_trending_today='trending today', tmdb_trending_week='trending this week')
+#set $tmdb_mode = $tmdb_modes.get($sg_var('TMDB_MRU'), 'upcoming')
+								<li><a href="$sbRoot/add-shows/tmdb-default/" tabindex="$tab#set $tab += 1#"><i class="sgicon-addshow"></i>TMDB Cards
+									<div class="menu-item-desc opacity60">$tmdb_mode...</div></a></li>
+#set $trakt_modes = dict(trakt_anticipated='anticipated', trakt_returning='returning', trakt_newshows='premieres', trakt_popular='popular', trakt_trending='trending',
+                         trakt_watched='most watched this month', trakt_watched_period_year='most watched this year',
+                         trakt_played='most played this month', trakt_played_period_year='most played this year',
+                         trakt_collected='most collected this month', trakt_collected_period_year='most collected this year',
+                         trakt_recommended='recommended', trakt_watchlist='watchlist')
+#set $trakt_mode = $trakt_modes.get(re.sub('[\?=]', '_', $sg_var('TRAKT_MRU')), 'trends, tailored suggestions')
 								<li><a href="$sbRoot/add-shows/trakt-default/" tabindex="$tab#set $tab += 1#"><i class="sgicon-trakt"></i>Trakt Cards
-									<div class="menu-item-desc opacity60">trends, tailored suggestions...</div></a></li>
+									<div class="menu-item-desc opacity60">$trakt_mode...</div></a></li>
+#set $imdb_func = $sg_str('IMDB_MRU').split('-')
+#set $imdb_mru, $params = ($imdb_func[0], '') if 2 > len($imdb_func) else $imdb_func
+#set $period = ('', ' %s' % $params.replace(',', ' to '))['popular' == $imdb_mru]
+#set $imdb_modes = dict(popular='popular', watchlist='watchlist')
+#set $imdb_mode = $imdb_modes.get($imdb_mru, 'popular decades, watchlists...')
 								<li><a href="$sbRoot/add-shows/imdb-default/" tabindex="$tab#set $tab += 1#"><i class="sgicon-imdb"></i>IMDb Cards
-									<div class="menu-item-desc opacity60">popular decades, watchlists...</div></a></li>
+									<div class="menu-item-desc opacity60">$imdb_mode$period...</div></a></li>
 #set $mc_modes = dict(mc_90days='last 90 days', mc_year='by year', mc_discussed='most discussed', mc_shared='most shared')
 #set $mc_mode = $mc_modes.get($sg_var('MC_MRU'), 'new seasons')
 								<li><a href="$sbRoot/add-shows/mc-default/" tabindex="$tab#set $tab += 1#"><i class="sgicon-metac"></i>Metacritic Cards
@@ -188,10 +208,6 @@
 #set $tvc_mode = $tvc_modes.get($sg_var('TVC_MRU'), 'new shows')
 								<li><a href="$sbRoot/add-shows/tvc-default/" tabindex="$tab#set $tab += 1#"><i class="sgicon-tvc"></i>TV Calendar Cards
 									<div class="menu-item-desc opacity60">$tvc_mode...</div></a></li>
-#set $tvm_modes = dict(tvm_premieres='new shows', tvm_returning='returning')
-#set $tvm_mode = $tvm_modes.get($sg_var('TVM_MRU'), 'new shows')
-								<li><a href="$sbRoot/add-shows/tvm-default/" tabindex="$tab#set $tab += 1#"><i class="sgicon-tvmaze"></i>TVmaze Cards
-									<div class="menu-item-desc opacity60">$tvm_mode...</div></a></li>
 #set $ne_modes = dict(ne_newpop='new popular', ne_newtop='new top rated', ne_upcoming='upcoming', ne_trending='trending')
 #set $ne_mode = $ne_modes.get($sg_var('NE_MRU'), 'new popular')
 								<li><a href="$sbRoot/add-shows/ne-default/" tabindex="$tab#set $tab += 1#"><i class="sgicon-ne"></i>Next Episode Cards

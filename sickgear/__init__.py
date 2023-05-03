@@ -614,10 +614,12 @@ else:
     TRAKT_PIN_URL = 'https://trakt.tv/pin/6314'
     TRAKT_BASE_URL = 'https://api.trakt.tv/'
 
+IMDB_MRU = ''
 MC_MRU = ''
+NE_MRU = ''
+TMDB_MRU = ''
 TVC_MRU = ''
 TVM_MRU = ''
-NE_MRU = ''
 
 COOKIE_SECRET = b64encodestring(uuid.uuid4().bytes + uuid.uuid4().bytes)
 
@@ -765,7 +767,7 @@ def init_stage_1(console_logging):
     global USE_TRAKT, TRAKT_CONNECTED_ACCOUNT, TRAKT_ACCOUNTS, TRAKT_MRU, TRAKT_VERIFY, \
         TRAKT_USE_WATCHLIST, TRAKT_REMOVE_WATCHLIST, TRAKT_TIMEOUT, TRAKT_METHOD_ADD, TRAKT_START_PAUSED, \
         TRAKT_SYNC, TRAKT_DEFAULT_INDEXER, TRAKT_REMOVE_SERIESLIST, TRAKT_UPDATE_COLLECTION, \
-        MC_MRU, TVC_MRU, TVM_MRU, NE_MRU, \
+        MC_MRU, NE_MRU, TMDB_MRU, TVC_MRU, TVM_MRU, \
         USE_SLACK, SLACK_NOTIFY_ONSNATCH, SLACK_NOTIFY_ONDOWNLOAD, SLACK_NOTIFY_ONSUBTITLEDOWNLOAD, \
         SLACK_CHANNEL, SLACK_AS_AUTHED, SLACK_BOT_NAME, SLACK_ICON_URL, SLACK_ACCESS_TOKEN, \
         USE_DISCORD, DISCORD_NOTIFY_ONSNATCH, DISCORD_NOTIFY_ONDOWNLOAD, \
@@ -1203,9 +1205,10 @@ def init_stage_1(console_logging):
     TRAKT_MRU = check_setting_str(CFG, 'Trakt', 'trakt_mru', '')
 
     MC_MRU = check_setting_str(CFG, 'Metacritic', 'mc_mru', '')
+    NE_MRU = check_setting_str(CFG, 'NextEpisode', 'ne_mru', '')
+    TMDB_MRU = check_setting_str(CFG, 'TMDB', 'tmdb_mru', '')
     TVC_MRU = check_setting_str(CFG, 'TVCalendar', 'tvc_mru', '')
     TVM_MRU = check_setting_str(CFG, 'TVmaze', 'tvm_mru', '')
-    NE_MRU = check_setting_str(CFG, 'NextEpisode', 'ne_mru', '')
 
     USE_PYTIVO = bool(check_setting_int(CFG, 'pyTivo', 'use_pytivo', 0))
     PYTIVO_HOST = check_setting_str(CFG, 'pyTivo', 'pytivo_host', '')
@@ -1713,7 +1716,7 @@ def init_stage_2():
     background_mapping_task = threading.Thread(name='MAPPINGUPDATES', target=indexermapper.load_mapped_ids,
                                                kwargs={'load_all': True})
 
-    MEMCACHE['history_tab_limit'] = 11
+    MEMCACHE['history_tab_limit'] = 13
     MEMCACHE['history_tab'] = History.menu_tab(MEMCACHE['history_tab_limit'])
 
     try:
@@ -2241,14 +2244,17 @@ def save_config():
         ('Metacritic', [
             ('mru', MC_MRU)
         ]),
+        ('NextEpisode', [
+            ('mru', NE_MRU)
+        ]),
+        ('TMDB', [
+            ('mru', TMDB_MRU)
+        ]),
         ('TVCalendar', [
             ('mru', TVC_MRU)
         ]),
         ('TVmaze', [
             ('mru', TVM_MRU)
-        ]),
-        ('NextEpisode', [
-            ('mru', NE_MRU)
         ]),
         ('Slack', [
             ('use_%s', int(USE_SLACK)),

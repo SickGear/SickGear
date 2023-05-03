@@ -290,7 +290,10 @@ def search_infosrc_for_show_id(reg_show_name, tvid=None, prodid=None, ui=None):
             logger.debug('Trying to find %s on %s' % (cur_name, sickgear.TVInfoAPI(cur_tvid).name))
 
             try:
-                show_info_list = t[prodid] if prodid else t[cur_name]
+                if prodid:
+                    show_info_list = t.get_show(prodid)
+                else:
+                    show_info_list = t.search_show(cur_name)
                 show_info_list = show_info_list if isinstance(show_info_list, list) else [show_info_list]
             except (BaseException, Exception):
                 continue
@@ -989,7 +992,7 @@ def validate_show(show_obj, season=None, episode=None):
         if season is None and episode is None:
             return t
 
-        return t[show_obj.prodid][season][episode]
+        return t.get_show(show_obj.prodid, language=show_obj.lang)[season][episode]
     except (BaseTVinfoEpisodenotfound, BaseTVinfoSeasonnotfound, TypeError):
         pass
 
