@@ -18,18 +18,18 @@
 
 import unittest
 import test_lib as test
-from random import  randint
+from random import randint
 
 import datetime
 import copy
 import sickgear
 from sickgear.tv import TVEpisode, TVShow, TVidProdid, prodid_bitshift
-from exceptions_helper import ex, MultipleShowObjectsException
+from exceptions_helper import MultipleShowObjectsException
 from sickgear.helpers import find_show_by_id
 from sickgear import indexermapper
 from sickgear.indexers.indexer_api import TVInfoAPI
-from sickgear.indexers.indexer_config import TVINFO_IMDB, TVINFO_TMDB, TVINFO_TRAKT, TVINFO_TVDB, TVINFO_TVMAZE, \
-    TVINFO_TVRAGE
+from sickgear.indexers.indexer_config import TVINFO_IMDB, TVINFO_TMDB, TVINFO_TVDB, TVINFO_TVMAZE, TVINFO_TVRAGE
+from sickgear.scene_exceptions import ReleaseMap
 
 # noinspection PyUnreachableCode
 if False:
@@ -42,6 +42,7 @@ class TVShowTests(test.SickbeardTestDBCase):
         super(TVShowTests, self).setUp()
         sickgear.showList = []
         sickgear.showDict = {}
+        _ = ReleaseMap()
 
     def test_init_indexerid(self):
         show_obj = TVShow(1, 1, 'en')
@@ -81,6 +82,7 @@ class TVEpisodeTests(test.SickbeardTestDBCase):
         super(TVEpisodeTests, self).setUp()
         sickgear.showList = []
         sickgear.showDict = {}
+        _ = ReleaseMap()
 
     def test_init_empty_db(self):
         show_obj = TVShow(1, 1, 'en')
@@ -200,36 +202,36 @@ shows = [{'tvid': TVINFO_TVDB, 'prodid': 123,
          ]
 
 find_tests = [
-              {'para': {'show_id': {TVINFO_TVMAZE: 22, TVINFO_TVRAGE: 785}, 'no_mapped_ids': False},
-               'result': {'tvid': TVINFO_TVDB, 'prodid': 123},
-               'description': 'search via mapped id'},
-              {'para': {'show_id': {TVINFO_TVDB: 123}}, 'result': {'tvid': TVINFO_TVDB, 'prodid': 123},
-               'description': 'simple standard search via main id dict'},
-              {'para': {'show_id': {TVINFO_TVDB: 12345}}, 'result': None,
-               'description': 'simple standard search via main id dict, for non-existing show'},
-              {'para': {'show_id': {TVINFO_TVDB: 123, TVINFO_TVMAZE: 123}, 'check_multishow': True},
-               'result': {'success': False},
-               'description': 'search via 2 ids matching multiple shows and multi show check'},
-              {'para': {'show_id': {TVINFO_TVDB: 5555, TVINFO_TVMAZE: 123}, 'check_multishow': True},
-               'result': {'tvid': TVINFO_TVMAZE, 'prodid': 123},
-               'description': 'search via 2 ids matching only 1 show and multi show check'},
-              {'para': {'show_id': {TVINFO_TVDB: 123, TVINFO_TVMAZE: 123}},
-               'result': {'tvid': TVINFO_TVDB, 'prodid': 123},
-               'description': 'search via 2 ids matching only 1 show without multi show check #1'},
-              {'para': {'show_id': {TVINFO_TVDB: 123, TVINFO_TVRAGE: 22}},
-               'result': {'tvid': TVINFO_TVDB, 'prodid': 123},
-               'description': 'search via 2 ids matching only 1 show without multi show check #2'},
-              {'para': {'show_id': {TVINFO_TVMAZE: 22, TVINFO_TVRAGE: 785}},
-               'result': None,
-               'description': 'search for 2 non-existing ids without mapping'},
-              {'para': {'show_id': {TVINFO_IMDB: 123}},
-               'result': None, 'description': 'invalid sid search (tvid above tvid_bitmask)'},
-              {'para': {'show_id': '%s:123' % TVINFO_TVDB}, 'result': {'tvid': TVINFO_TVDB, 'prodid': 123},
-               'description': 'simple search via tvid_prodid string'},
-              {'para': {'show_id': '%s:123' % TVINFO_TVDB, 'check_multishow': True},
-               'result': {'tvid': TVINFO_TVDB, 'prodid': 123},
-               'description': 'simple search via tvid_prodid string and check multishow'},
-              ]
+    {'para': {'show_id': {TVINFO_TVMAZE: 22, TVINFO_TVRAGE: 785}, 'no_mapped_ids': False},
+     'result': {'tvid': TVINFO_TVDB, 'prodid': 123},
+     'description': 'search via mapped id'},
+    {'para': {'show_id': {TVINFO_TVDB: 123}}, 'result': {'tvid': TVINFO_TVDB, 'prodid': 123},
+     'description': 'simple standard search via main id dict'},
+    {'para': {'show_id': {TVINFO_TVDB: 12345}}, 'result': None,
+     'description': 'simple standard search via main id dict, for non-existing show'},
+    {'para': {'show_id': {TVINFO_TVDB: 123, TVINFO_TVMAZE: 123}, 'check_multishow': True},
+     'result': {'success': False},
+     'description': 'search via 2 ids matching multiple shows and multi show check'},
+    {'para': {'show_id': {TVINFO_TVDB: 5555, TVINFO_TVMAZE: 123}, 'check_multishow': True},
+     'result': {'tvid': TVINFO_TVMAZE, 'prodid': 123},
+     'description': 'search via 2 ids matching only 1 show and multi show check'},
+    {'para': {'show_id': {TVINFO_TVDB: 123, TVINFO_TVMAZE: 123}},
+     'result': {'tvid': TVINFO_TVDB, 'prodid': 123},
+     'description': 'search via 2 ids matching only 1 show without multi show check #1'},
+    {'para': {'show_id': {TVINFO_TVDB: 123, TVINFO_TVRAGE: 22}},
+     'result': {'tvid': TVINFO_TVDB, 'prodid': 123},
+     'description': 'search via 2 ids matching only 1 show without multi show check #2'},
+    {'para': {'show_id': {TVINFO_TVMAZE: 22, TVINFO_TVRAGE: 785}},
+     'result': None,
+     'description': 'search for 2 non-existing ids without mapping'},
+    {'para': {'show_id': {TVINFO_IMDB: 123}},
+     'result': None, 'description': 'invalid sid search (tvid above tvid_bitmask)'},
+    {'para': {'show_id': '%s:123' % TVINFO_TVDB}, 'result': {'tvid': TVINFO_TVDB, 'prodid': 123},
+     'description': 'simple search via tvid_prodid string'},
+    {'para': {'show_id': '%s:123' % TVINFO_TVDB, 'check_multishow': True},
+     'result': {'tvid': TVINFO_TVDB, 'prodid': 123},
+     'description': 'simple search via tvid_prodid string and check multishow'},
+]
 
 
 class TVFindTests(test.SickbeardTestDBCase):

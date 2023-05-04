@@ -362,11 +362,9 @@ class ReleaseMap(Job):
                             else:
                                 used.add((cur_for_season, cur_for_episode))
                                 if not sn or sn != (target_season, cur_target_episode):  # not already set
-                                    result = set_scene_numbering_helper(
+                                    count_updated_numbers += int(bool(set_scene_numbering_helper(
                                         tvid, prodid, for_season=cur_for_season, for_episode=cur_for_episode,
-                                        scene_season=target_season, scene_episode=cur_target_episode)
-                                    if result.get('success'):
-                                        count_updated_numbers += 1
+                                        scene_season=target_season, scene_episode=cur_target_episode).get('success')))
 
                             cur_for_episode += 1
 
