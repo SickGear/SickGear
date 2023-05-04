@@ -106,6 +106,10 @@ def fake_action(*args, **kwargs):
     pass
 
 
+class fake_class():
+    pass
+
+
 class WebAPICase(test.SickbeardTestDBCase):
     webserver = None
     instance = None
@@ -147,6 +151,10 @@ class WebAPICase(test.SickbeardTestDBCase):
             sickgear.started = True
             sickgear.API_KEYS = [['unit test key', '1234567890']]
             sickgear.USE_API = True
+            sickgear.process_media_scheduler = fake_class()
+            sickgear.update_show_scheduler = fake_class()
+            sickgear.process_media_scheduler.is_running_job = False
+            sickgear.update_show_scheduler.is_running_job = False
         except (BaseException, Exception) as e:
             print('Failed to start WebServer: %s' % ex(e))
 
