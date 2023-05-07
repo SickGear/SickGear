@@ -247,13 +247,8 @@ class TVInfoSocialIDs(object):
         return self.__getitem__(key)
 
     def keys(self):
-        for k, v in iter(((TVINFO_TWITTER, self.twitter), (TVINFO_INSTAGRAM, self.instagram),
-                          (TVINFO_FACEBOOK, self.facebook), (TVINFO_TIKTOK, self.tiktok),
-                          (TVINFO_WIKIPEDIA, self.wikipedia), (TVINFO_WIKIDATA, self.wikidata),
-                          (TVINFO_REDDIT, self.reddit), (TVINFO_YOUTUBE, self.youtube),
-                          (TVINFO_LINKEDIN, self.linkedin), (TVINFO_FANSITE, self.fansite))):
-            if None is not v:
-                yield k
+        for k, v in self.__iter__():
+            yield k
 
     def __iter__(self):
         for s, v in iter(((TVINFO_TWITTER, self.twitter), (TVINFO_INSTAGRAM, self.instagram),
@@ -952,9 +947,21 @@ class TVInfoPerson(PersonBase):
 
 
 class TVInfoCharacter(PersonBase):
-    def __init__(self, person=None, voice=None, plays_self=None, regular=None, ti_show=None, start_year=None,
-                 end_year=None, ids=None, name=None, episode_count=None, guest_episodes_numbers=None, **kwargs):
-        # type: (List[TVInfoPerson], bool, bool, bool, TVInfoShow, int, int, TVInfoIDs, AnyStr, int, Dict[int, List[int]], ...) -> None
+    def __init__(self,
+                 person=None,  # type: List[TVInfoPerson]
+                 voice=None,  # type: bool
+                 plays_self=None,  # type: bool
+                 regular=None,  # type: bool
+                 ti_show=None,  # type: TVInfoShow
+                 start_year=None,  # type: int
+                 end_year=None,  # type: int
+                 ids=None,  # type: TVInfoIDs
+                 name=None,  # type: AnyStr
+                 episode_count=None,  # type: int
+                 guest_episodes_numbers=None,  # type: Dict[int, List[int]]
+                 **kwargs):
+        # type: (...) -> None
+
         super(TVInfoCharacter, self).__init__(ids=ids, **kwargs)
         self.person = person  # type: List[TVInfoPerson]
         self.voice = voice  # type: Optional[bool]
@@ -1195,7 +1202,7 @@ class TVInfoBase(object):
 
         :param p_id: persons id
         :param get_show_credits: get show credits
-        :param get_images: get images for person
+        :param get_images: get person images
         :return: person object
         """
         pass
@@ -1203,7 +1210,7 @@ class TVInfoBase(object):
     def _search_person(self, name=None, ids=None):
         # type: (AnyStr, Dict[integer_types, integer_types]) -> List[TVInfoPerson]
         """
-        search for person by name
+        search by name for person
         :param name: name to search for
         :param ids: dict of ids to search
         :return: list of found person's
@@ -1213,7 +1220,7 @@ class TVInfoBase(object):
     def search_person(self, name=None, ids=None):
         # type: (AnyStr, Dict[integer_types, integer_types]) -> List[TVInfoPerson]
         """
-        search for person by name
+        search by name for person
         :param name: name to search for
         :param ids: dict of ids to search
         :return: list of found person's
@@ -1235,8 +1242,8 @@ class TVInfoBase(object):
                        seasonwides=False, fanart=False, actors=False, **kwargs):
         # type: (integer_types, AnyStr, bool, bool, bool, bool, bool, bool, bool, Optional[Any]) -> bool
         """
-        internal function that should be overwritten in class to get data for given show id
-        :param sid: show id
+        internal function that should be overwritten in subclass to get data
+        :param sid: show id to get data for
         :param language: language
         :param get_ep_info: get episodes
         :param banners: load banners
@@ -1265,6 +1272,7 @@ class TVInfoBase(object):
         # type: (...) -> Optional[TVInfoShow]
         """
         get data for show id
+
         :param show_id: id of show
         :param load_episodes: load episodes
         :param banners: load banners
@@ -1331,8 +1339,12 @@ class TVInfoBase(object):
                 self._old_config = None
 
     # noinspection PyMethodMayBeStatic
-    def _search_show(self, name=None, ids=None, lang=None, **kwargs):
-        # type: (Union[AnyStr, List[AnyStr]], Dict[integer_types, integer_types], Optional[string_types], Optional[Any]) -> List[Dict]
+    def _search_show(self,
+                     name=None,  # type: Union[AnyStr, List[AnyStr]]
+                     ids=None,  # type: Dict[integer_types, integer_types]
+                     lang=None,  # type: Optional[string_types]
+                     **kwargs):
+        # type: (...) -> List[Dict]
         """
         internal search function to find shows, should be overwritten in class
         :param name: name to search for
@@ -1399,8 +1411,8 @@ class TVInfoBase(object):
         Since the nice-to-use tvinfo[1][24]['name] interface
         makes it impossible to do tvinfo[1][24]['name] = "name"
         and still be capable of checking if an episode exists
-        so we can raise tvinfo_shownotfound, we have a slightly
-        less pretty method of setting items.. but since the API
+        so that we can raise tvinfo_shownotfound, we have a slightly
+        less pretty method of setting items... but since the API
         is supposed to be read-only, this is the best way to
         do it!
         The problem is that calling tvinfo[1][24]['episodename'] = "name"
@@ -1455,6 +1467,7 @@ class TVInfoBase(object):
         # type: (integer_types, int, Any) -> List[TVInfoShow]
         """
         return list of similar shows to given id
+
         :param tvid: id to give similar shows for
         :param result_count: count of results requested
         """
@@ -1464,6 +1477,7 @@ class TVInfoBase(object):
         # type: (integer_types, int, Any) -> List[TVInfoShow]
         """
         list of recommended shows to the provided tv id
+
         :param tvid: id to find recommended shows for
         :param result_count: result count to returned
         """
@@ -1487,7 +1501,7 @@ class TVInfoBase(object):
     def get_top_rated(self, result_count=100, **kwargs):
         # type: (...) -> List[TVInfoShow]
         """
-        get top rated shows
+        get top-rated shows
         """
         return []
 
@@ -1527,7 +1541,7 @@ class TVInfoBase(object):
         # type: (...) -> List[TVInfoShow]
         """
         get most played shows
-        :param result_count: how many results are suppose to be returned
+        :param result_count: how many results are supposed to be returned
         """
         return []
 
@@ -1535,7 +1549,7 @@ class TVInfoBase(object):
         # type: (...) -> List[TVInfoShow]
         """
         get most watched shows
-        :param result_count: how many results are suppose to be returned
+        :param result_count: how many results are supposed to be returned
         """
         return []
 
@@ -1543,7 +1557,7 @@ class TVInfoBase(object):
         # type: (...) -> List[TVInfoShow]
         """
         get most collected shows
-        :param result_count: how many results are suppose to be returned
+        :param result_count: how many results are supposed to be returned
         """
         return []
 
@@ -1551,7 +1565,7 @@ class TVInfoBase(object):
         # type: (...) -> List[TVInfoShow]
         """
         get most recommended shows
-        :param result_count: how many results are suppose to be returned
+        :param result_count: how many results are supposed to be returned
         """
         return []
 
@@ -1559,8 +1573,9 @@ class TVInfoBase(object):
         # type: (...) -> List[TVInfoShow]
         """
         get recommended shows for account
+
         :param account: account to get recommendations for
-        :param result_count: how many results are suppose to be returned
+        :param result_count: how many results are supposed to be returned
         """
         return []
 
@@ -1568,6 +1583,7 @@ class TVInfoBase(object):
         # type: (integer_types, List[integer_types], Any) -> List[integer_types]
         """
         hide recommended show for account
+
         :param account: account to get recommendations for
         :param show_ids: list of show_ids to no longer recommend for account
         :return: list of added ids
@@ -1578,6 +1594,7 @@ class TVInfoBase(object):
         # type: (integer_types, List[integer_types], Any) -> List[integer_types]
         """
         unhide recommended show for account
+
         :param account: account to get recommendations for
         :param show_ids: list of show_ids to be included in possible recommend for account
         :return: list of removed ids
@@ -1588,6 +1605,7 @@ class TVInfoBase(object):
         # type: (integer_types, Any) -> List[TVInfoShow]
         """
         list hidden recommended show for account
+
         :param account: account to get recommendations for
         :return: list of hidden shows
         """
@@ -1597,8 +1615,9 @@ class TVInfoBase(object):
         # type: (...) -> List[TVInfoShow]
         """
         get most watchlisted shows for account
+
         :param account: account to get recommendations for
-        :param result_count: how many results are suppose to be returned
+        :param result_count: how many results are supposed to be returned
         """
         return []
 
@@ -1606,7 +1625,7 @@ class TVInfoBase(object):
         # type: (...) -> List[TVInfoShow]
         """
         get anticipated shows
-        :param result_count: how many results are suppose to be returned
+        :param result_count: how many results are supposed to be returned
         """
         return []
 
@@ -1626,7 +1645,7 @@ class TVInfoBase(object):
             # Item is integer, treat as show id
             return self.get_show(item, (True, arg)[None is not arg], old_call=True)
 
-        # maybe adding this to make callee use showname so that i can bring in the new endpoint
+        # maybe adding this to make callee use showname so that I can bring in the new endpoint
         if isinstance(arg, string_types) and 'Tvdb' == self.__class__.__name__:
             return self.search_show(item)
 
