@@ -10,6 +10,7 @@
 * Update Msgpack 1.0.4 (b5acfd5) to 1.0.5 (0516c2c)
 * Update Pytvmaze library 2.0.8 (16ed096) to 2.0.8 (81888a5)
 * Update Requests library 2.28.1 (ec553c2) to 2.29.0 (87d63de)
+* Update Send2Trash 1.8.1b0 (0ef9b32) to 1.8.2 (0244f53)
 * Update SimpleJSON 3.18.1 (c891b95) to 3.19.1 (aeb63ee)
 * Update Tornado Web Server 6.3.0 (7186b86) to 6.3.1 (419838b)
 * Update urllib3 1.26.14 (a06c05c) to 1.26.15 (25cca389)
