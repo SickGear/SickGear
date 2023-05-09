@@ -370,21 +370,22 @@ class TvdbAPIv4(TVInfoBase):
             characters=ch
         )]
 
-    # noinspection PyUnboundLocalVariable
-    def get_cached_or_new(self, cache_key, url, no_cached=True, expire=None, **kwargs):
-        # type: (str, str, bool, int, ...) -> Union[List, Dict, NoneType]
+    def get_cached_or_url(self, url, cache_key, try_cache=False, expire=None, **kwargs):
+        # type: (AnyStr, AnyStr, Optional[bool], Optional[int], ...) -> Union[Dict, List, NoneType]
         """
-        get cached or new data
+        get cached or new data from url
 
-        :param cache_key: cache key
         :param url: url
-        :param no_cached: always fetch data (no cached data)
+        :param cache_key: cache key
+        :param try_cache: Nonetype to ignore the cache, True to use cache, otherwise False to check cache config
         :param expire: expire time for caching
         :param kwargs: extra parameter for fetching data
         """
-        if not no_cached:
+        is_none, resp = False, None
+        use_cache = False if None is try_cache else try_cache or bool(self.config.get('cache_search'))
+        if use_cache:
             is_none, resp = self._get_cache_entry(cache_key)
-        if no_cached or (None is resp and not is_none):
+        if not use_cache or (None is resp and not is_none):
             try:
                 resp = self._fetch_data(url, **kwargs)
                 self._set_cache_entry(cache_key, resp, expire=expire)
@@ -400,12 +401,10 @@ class TvdbAPIv4(TVInfoBase):
         :param p_id: persons id
         :param get_show_credits: get show credits
         :param get_images: get person images
-        :return: person object
+        :return: person object or None
         """
-        if not p_id:
-            return
-
-        if self._check_resp(dict, resp := self.get_cached_or_new(f'p-v4-{p_id}', f'/people/{p_id}/extended')):
+        if bool(p_id) and self._check_resp(
+                dict, resp := self.get_cached_or_url(f'/people/{p_id}/extended', f'p-v4-{p_id}', None)):
             return self._convert_person(resp['data'])[0]
 
     def _search_person(self, name=None, ids=None):
@@ -430,9 +429,8 @@ class TvdbAPIv4(TVInfoBase):
                         url = f'search/remoteid/{ids.get(TVINFO_TVMAZE)}'
                     else:
                         continue
-                    resp = self.get_cached_or_new(
-                        f'p-v4-id-{cur_tvinfo}-{ids[cur_tvinfo]}', url, expire=self.search_cache_expire,
-                        no_cached=not self.config.get('cache_search'))
+                    resp = self.get_cached_or_url(
+                        url, f'p-v4-id-{cur_tvinfo}-{ids[cur_tvinfo]}', expire=self.search_cache_expire)
 
                     if self._check_resp(list, resp):
                         for cur_resp in resp['data']:
@@ -443,9 +441,8 @@ class TvdbAPIv4(TVInfoBase):
                                     result.extend(self._convert_person(cur_resp['people'], ids))
                                 break
         if name:
-            resp = self.get_cached_or_new(
-                f'p-v4-src-text-{name}', '/search', query=name, type='people',
-                expire=self.search_cache_expire, no_cached=not self.config.get('cache_search'))
+            resp = self.get_cached_or_url(
+                '/search', f'p-v4-src-text-{name}', expire=self.search_cache_expire, query=name, type='people')
 
             if self._check_resp(list, resp):
                 for cur_resp in resp['data']:
@@ -1109,10 +1106,10 @@ class TvdbAPIv4(TVInfoBase):
                     type_chk = dict
                 else:
                     query = cur_arg % ids[cur_tvinfo]
-                    resp = self.get_cached_or_new(
-                        f's-v4-id-{cur_tvinfo}-{ids[cur_tvinfo]}', 'search?meta=translations', remote_id=query,
-                        query=query, type='series', expire=self.search_cache_expire,
-                        no_cached=not self.config.get('cache_search'))
+                    resp = self.get_cached_or_url(
+                        'search?meta=translations',
+                        f's-v4-id-{cur_tvinfo}-{ids[cur_tvinfo]}', expire=self.search_cache_expire,
+                        remote_id=query, query=query, type='series')
 
                 if self._check_resp(type_chk, resp):
                     if TVINFO_TVDB == cur_tvinfo:
@@ -1129,10 +1126,9 @@ class TvdbAPIv4(TVInfoBase):
                             pass
 
             if ids.get(TVINFO_TVDB_SLUG) and isinstance(ids.get(TVINFO_TVDB_SLUG), string_types):
-                resp = self.get_cached_or_new(
-                    f's-id-{TVINFO_TVDB}-{ids[TVINFO_TVDB_SLUG]}',
-                    f'/series/slug/{ids.get(TVINFO_TVDB_SLUG)}?meta=translations', expire=self.search_cache_expire,
-                    no_cached=not self.config.get('cache_search'))
+                resp = self.get_cached_or_url(
+                    f'/series/slug/{ids.get(TVINFO_TVDB_SLUG)}?meta=translations',
+                    f's-id-{TVINFO_TVDB}-{ids[TVINFO_TVDB_SLUG]}', expire=self.search_cache_expire)
 
                 if resp and self._check_resp(dict, resp) \
                         and ids.get(TVINFO_TVDB_SLUG).lower() == resp['data']['slug'].lower():
@@ -1140,9 +1136,10 @@ class TvdbAPIv4(TVInfoBase):
 
         if name:
             for cur_name in ([name], name)[isinstance(name, list)]:
-                resp = self.get_cached_or_new(
-                    f's-v4-name-{cur_name}', 'search?meta=translations', query=cur_name, type='series',
-                    expire=self.search_cache_expire, no_cached=not self.config.get('cache_search'))
+                resp = self.get_cached_or_url(
+                    'search?meta=translations',
+                    f's-v4-name-{cur_name}', expire=self.search_cache_expire,
+                    query=cur_name, type='series')
 
                 if resp and self._check_resp(list, resp):
                     for cur_item in resp['data']:
