@@ -272,7 +272,7 @@ class TvdbAPIv4(TVInfoBase):
     @staticmethod
     def _check_resp(type_chk=list, data=None):
         return isinstance(data, dict) and all(_k in data for _k in ('data', 'status')) \
-            and 'success' == data['status'] and isinstance(data['data'], type_chk)
+            and 'success' == data['status'] and isinstance(data['data'], type_chk) and bool(data['data'])
 
     @staticmethod
     def _next_page(resp, page):
@@ -1102,10 +1102,11 @@ class TvdbAPIv4(TVInfoBase):
                     resp = self._get_show_data(ids[cur_tvinfo], cur_arg, direct_data=True)
                     type_chk = dict
                 else:
+                    query = cur_arg % ids[cur_tvinfo]
                     resp = self.get_cached_or_url(
                         'search?meta=translations',
                         f's-v4-id-{cur_tvinfo}-{ids[cur_tvinfo]}', expire=self.search_cache_expire,
-                        remote_id=(query := cur_arg % ids[cur_tvinfo]), query=query, type='series')
+                        remote_id=query, query=query, type='series')
 
                 if self._check_resp(type_chk, resp):
                     if TVINFO_TVDB == cur_tvinfo:
@@ -1121,21 +1122,19 @@ class TvdbAPIv4(TVInfoBase):
                         except (BaseException, Exception):
                             pass
 
-            if ids.get(TVINFO_TVDB_SLUG) and isinstance(ids.get(TVINFO_TVDB_SLUG), string_types):
-                if (resp := self.get_cached_or_url(
+            if ids.get(TVINFO_TVDB_SLUG) and isinstance(ids.get(TVINFO_TVDB_SLUG), string_types) \
+                and self._check_resp(dict, resp := self.get_cached_or_url(
                             f'/series/slug/{ids.get(TVINFO_TVDB_SLUG)}?meta=translations',
-                            f's-id-{TVINFO_TVDB}-{ids[TVINFO_TVDB_SLUG]}', expire=self.search_cache_expire)) \
-                        and self._check_resp(dict, resp) \
-                        and ids.get(TVINFO_TVDB_SLUG).lower() == resp['data']['slug'].lower():
+                            f's-id-{TVINFO_TVDB}-{ids[TVINFO_TVDB_SLUG]}', expire=self.search_cache_expire)):
+                if ids.get(TVINFO_TVDB_SLUG).lower() == resp['data']['slug'].lower():
                     results.extend(_make_result_dict(resp['data']))
 
         if name:
             for cur_name in ([name], name)[isinstance(name, list)]:
-                if (resp := self.get_cached_or_url(
+                if self._check_resp(list, resp := self.get_cached_or_url(
                             'search?meta=translations',
                             f's-v4-name-{cur_name}', expire=self.search_cache_expire,
-                            query=cur_name, type='series')) \
-                        and self._check_resp(list, resp):
+                            query=cur_name, type='series')):
                     for cur_item in resp['data']:
                         results.extend(_make_result_dict(cur_item))
 
@@ -1159,8 +1158,7 @@ class TvdbAPIv4(TVInfoBase):
         result = []
         page, cc = 0, 0
         while 100 > page and cc < result_count:
-            if self._check_resp(list, resp := self._fetch_data('/series/filter', page=page, **kwargs)) \
-                    and len(resp['data']):
+            if self._check_resp(list, resp := self._fetch_data('/series/filter', page=page, **kwargs)):
                 for cur_item in resp['data']:
                     cc += 1
                     if cc > result_count:

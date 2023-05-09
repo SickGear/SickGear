@@ -6070,6 +6070,8 @@ class AddShows(Home):
             items = t.get_top_rated(year=top_year,
                                     in_last_year=1 == datetime.date.today().month and 7 > datetime.date.today().day)
 
+        ranking = dict((val, idx+1) for idx, val in
+                       enumerate(sorted([cur_show_info.rating for cur_show_info in items], reverse=True)))
         oldest, newest, oldest_dt, newest_dt, dedupe = None, None, 9999999, 0, []
         use_networks = False
         parseinfo = dateutil.parser.parserinfo(dayfirst=False, yearfirst=True)
@@ -6108,14 +6110,14 @@ class AddShows(Home):
                     ord_premiered=ord_premiered,
                     str_premiered=str_premiered,
                     started_past=started_past,
-                    episode_overview=helpers.xhtml_escape(cur_show_info.overview[:250:]).strip('*').strip(),
+                    episode_overview=self.clean_overview(cur_show_info),
                     episode_season=cur_show_info.season,
-                    genres=', '.join(cur_show_info.genre_list)
-                           or (cur_show_info.genre and (cur_show_info.genre.strip('|').replace('|', ', ')) or ''),
+                    genres=(', '.join(cur_show_info.genre_list)
+                            or (cur_show_info.genre and (cur_show_info.genre.strip('|').replace('|', ', ')) or '')
+                            ).lower(),
                     ids=ids,
                     images=images,
-                    overview=(helpers.xhtml_escape(cur_show_info.overview[:250:]).strip('*').strip()
-                              or 'No overview yet'),
+                    overview=self.clean_overview(cur_show_info),
                     title=cur_show_info.seriesname,
                     language=language,
                     language_img=sickgear.MEMCACHE_FLAG_IMAGES.get(language, False),
@@ -6125,6 +6127,7 @@ class AddShows(Home):
                     rating=False,
                     url_src_db=base_url % cur_show_info.id,
                     votes=cur_show_info.rating or 0,
+                    rank=cur_show_info.rating and ranking.get(cur_show_info.rating) or 0,
                 ))
             except (BaseException, Exception):
                 pass

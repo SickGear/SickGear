@@ -631,7 +631,7 @@ $(function() {
         #end if
 			<div class="clearfix">
         #if $use_ratings or $use_votes
-				<p>#if $use_ratings#<span class="rating">$this_show['rating']#if $re.search(r'^\d+(\.\d+)?$', (str($this_show['rating'])))#%</span>#end if##end if##if $use_votes#<i class="heart icon-glyph"></i><i>$this_show['votes'] $term_vote.lower()</i>#end if#</p>#slurp#
+				<p>#if $this_show.get('rank')#&#x23;$this_show.get('rank') #end if##if $use_ratings#<span class="rating">$this_show['rating']#if $re.search(r'^\d+(\.\d+)?$', (str($this_show['rating'])))#%</span>#end if##end if##if $use_votes#<i class="heart icon-glyph"></i><i>$this_show['votes'] $term_vote.lower()</i>#end if#</p>#slurp#
         #else
 				<p>&nbsp;</p>
         #end if
