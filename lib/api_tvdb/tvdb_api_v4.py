@@ -382,8 +382,7 @@ class TvdbAPIv4(TVInfoBase):
         :param kwargs: extra parameter for fetching data
         """
         is_none, resp = False, None
-        use_cache = False if None is try_cache else try_cache or bool(self.config.get('cache_search'))
-        if use_cache:
+        if use_cache := False if None is try_cache else try_cache or bool(self.config.get('cache_search')):
             is_none, resp = self._get_cache_entry(cache_key)
         if not use_cache or (None is resp and not is_none):
             try:
@@ -393,18 +392,20 @@ class TvdbAPIv4(TVInfoBase):
                 resp = None
         return resp
 
-    def get_person(self, p_id, get_show_credits=False, get_images=False, **kwargs):
-        # type: (integer_types, bool, bool, Any) -> Optional[TVInfoPerson]
+    def get_person(self, p_id, get_show_credits=False, get_images=False, try_cache=True, **kwargs):
+        # type: (integer_types, bool, bool, bool, ...) -> Optional[TVInfoPerson]
         """
         get person's data for id or list of matching persons for name
 
         :param p_id: persons id
         :param get_show_credits: get show credits
         :param get_images: get person images
+        :param try_cache: use cached data if available
         :return: person object or None
         """
-        if bool(p_id) and self._check_resp(
-                dict, resp := self.get_cached_or_url(f'/people/{p_id}/extended', f'p-v4-{p_id}', None)):
+        if bool(p_id) and self._check_resp(dict, resp := self.get_cached_or_url(
+                f'/people/{p_id}/extended',
+                f'p-v4-{p_id}', try_cache=try_cache)):
             return self._convert_person(resp['data'])[0]
 
     def _search_person(self, name=None, ids=None):
@@ -420,19 +421,16 @@ class TvdbAPIv4(TVInfoBase):
             if cur_tvinfo in ids:
                 if TVINFO_TVDB == cur_tvinfo and (resp := self.get_person(ids[cur_tvinfo])):
                     result.append(resp)
-                if cur_tvinfo in (TVINFO_IMDB, TVINFO_TMDB, TVINFO_TVMAZE):
+                elif cur_tvinfo in (TVINFO_IMDB, TVINFO_TMDB, TVINFO_TVMAZE):
                     if TVINFO_IMDB == cur_tvinfo:
                         url = f'search/remoteid/nm{ids.get(TVINFO_IMDB):07d}'
-                    elif TVINFO_TMDB == cur_tvinfo:
-                        url = f'search/remoteid/{ids.get(TVINFO_TMDB)}'
-                    elif TVINFO_TVMAZE == cur_tvinfo:
-                        url = f'search/remoteid/{ids.get(TVINFO_TVMAZE)}'
+                    elif cur_tvinfo in (TVINFO_TMDB, TVINFO_TVMAZE):
+                        url = f'search/remoteid/{ids.get(cur_tvinfo)}'
                     else:
                         continue
-                    resp = self.get_cached_or_url(
-                        url, f'p-v4-id-{cur_tvinfo}-{ids[cur_tvinfo]}', expire=self.search_cache_expire)
 
-                    if self._check_resp(list, resp):
+                    if self._check_resp(list, resp := self.get_cached_or_url(
+                            url, f'p-v4-id-{cur_tvinfo}-{ids[cur_tvinfo]}', expire=self.search_cache_expire)):
                         for cur_resp in resp['data']:
                             if isinstance(cur_resp, dict) and 'people' in cur_resp:
                                 if p_d := None if 1 != len(cur_resp) else self.get_person(cur_resp['people']['id']):
@@ -440,13 +438,13 @@ class TvdbAPIv4(TVInfoBase):
                                 else:
                                     result.extend(self._convert_person(cur_resp['people'], ids))
                                 break
-        if name:
-            resp = self.get_cached_or_url(
-                '/search', f'p-v4-src-text-{name}', expire=self.search_cache_expire, query=name, type='people')
 
-            if self._check_resp(list, resp):
-                for cur_resp in resp['data']:
-                    result.extend(self._convert_person(cur_resp))
+        if name and self._check_resp(list, resp := self.get_cached_or_url(
+                '/search',
+                f'p-v4-src-text-{name}', expire=self.search_cache_expire,
+                query=name, type='people')):
+            for cur_resp in resp['data']:
+                result.extend(self._convert_person(cur_resp))
 
         seen = set()
         result = [seen.add(_r.id) or _r for _r in result if _r.id not in seen]
@@ -686,12 +684,11 @@ class TvdbAPIv4(TVInfoBase):
                 if isinstance(show_data.get('characters'), list):
                     for cur_char in sorted(show_data.get('characters') or [],
                                            key=lambda c: (not c['isFeatured'], c['sort'])):
-                        people_type = people_types.get(cur_char['type'])
-                        if people_type not in (RoleTypes.ActorMain, RoleTypes.ActorGuest, RoleTypes.ActorSpecialGuest,
-                                               RoleTypes.ActorRecurring) \
+                        if (people_type := people_types.get(cur_char['type'])) not in (
+                                RoleTypes.ActorMain, RoleTypes.ActorGuest, RoleTypes.ActorSpecialGuest,
+                                RoleTypes.ActorRecurring) \
                                 and isinstance(cur_char['name'], string_types):
-                            low_name = cur_char['name'].lower()
-                            if 'presenter' in low_name:
+                            if 'presenter' in (low_name := cur_char['name'].lower()):
                                 people_type = RoleTypes.Presenter
                             elif 'interviewer' in low_name:
                                 people_type = RoleTypes.Interviewer
@@ -1105,11 +1102,10 @@ class TvdbAPIv4(TVInfoBase):
                     resp = self._get_show_data(ids[cur_tvinfo], cur_arg, direct_data=True)
                     type_chk = dict
                 else:
-                    query = cur_arg % ids[cur_tvinfo]
                     resp = self.get_cached_or_url(
                         'search?meta=translations',
                         f's-v4-id-{cur_tvinfo}-{ids[cur_tvinfo]}', expire=self.search_cache_expire,
-                        remote_id=query, query=query, type='series')
+                        remote_id=(query := cur_arg % ids[cur_tvinfo]), query=query, type='series')
 
                 if self._check_resp(type_chk, resp):
                     if TVINFO_TVDB == cur_tvinfo:
@@ -1126,22 +1122,20 @@ class TvdbAPIv4(TVInfoBase):
                             pass
 
             if ids.get(TVINFO_TVDB_SLUG) and isinstance(ids.get(TVINFO_TVDB_SLUG), string_types):
-                resp = self.get_cached_or_url(
-                    f'/series/slug/{ids.get(TVINFO_TVDB_SLUG)}?meta=translations',
-                    f's-id-{TVINFO_TVDB}-{ids[TVINFO_TVDB_SLUG]}', expire=self.search_cache_expire)
-
-                if resp and self._check_resp(dict, resp) \
+                if (resp := self.get_cached_or_url(
+                            f'/series/slug/{ids.get(TVINFO_TVDB_SLUG)}?meta=translations',
+                            f's-id-{TVINFO_TVDB}-{ids[TVINFO_TVDB_SLUG]}', expire=self.search_cache_expire)) \
+                        and self._check_resp(dict, resp) \
                         and ids.get(TVINFO_TVDB_SLUG).lower() == resp['data']['slug'].lower():
                     results.extend(_make_result_dict(resp['data']))
 
         if name:
             for cur_name in ([name], name)[isinstance(name, list)]:
-                resp = self.get_cached_or_url(
-                    'search?meta=translations',
-                    f's-v4-name-{cur_name}', expire=self.search_cache_expire,
-                    query=cur_name, type='series')
-
-                if resp and self._check_resp(list, resp):
+                if (resp := self.get_cached_or_url(
+                            'search?meta=translations',
+                            f's-v4-name-{cur_name}', expire=self.search_cache_expire,
+                            query=cur_name, type='series')) \
+                        and self._check_resp(list, resp):
                     for cur_item in resp['data']:
                         results.extend(_make_result_dict(cur_item))
 
@@ -1195,10 +1189,8 @@ class TvdbAPIv4(TVInfoBase):
         # type: (integer_types, integer_types, bool, Optional[Any]) -> List[TVInfoShow]
         kw = dict(sort='score', sortType='desc', lang='eng')
         if in_last_year:
-            t = datetime.date.today()
-            y = t.year
-            ly = (t - datetime.timedelta(days=365)).strftime('%Y-%m-%d')
-            this_year = self._get_filtered_series(result_count=result_count, year=y, **kw)
+            ly = ((t := datetime.date.today()) - datetime.timedelta(days=365)).strftime('%Y-%m-%d')
+            this_year = self._get_filtered_series(result_count=result_count, year=(y := t.year), **kw)
             last_year = [_l for _l in self._get_filtered_series(result_count=result_count, year=y-1, **kw)
                          if 10 == len(_l.firstaired or '') and _l.firstaired > ly]
             return sorted(this_year + last_year, key=lambda a: a.rating, reverse=True)[:result_count]
