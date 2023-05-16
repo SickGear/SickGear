@@ -12,7 +12,7 @@
 * Update Requests library 2.28.1 (ec553c2) to 2.29.0 (87d63de)
 * Update Send2Trash 1.8.1b0 (0ef9b32) to 1.8.2 (0244f53)
 * Update SimpleJSON 3.18.1 (c891b95) to 3.19.1 (aeb63ee)
-* Update Tornado Web Server 6.3.0 (7186b86) to 6.3.1 (419838b)
+* Update Tornado Web Server 6.3.0 (7186b86) to 6.3.2 (e3aa6c5)
 * Update urllib3 1.26.14 (a06c05c) to 1.26.15 (25cca389)
 * Change allow rapidfuzz update from 2.x.x to 3.x.x
 * Change remove redundant py2 import futures
@@ -30,6 +30,7 @@
 [develop changelog]
 
 * Update filelock 3.9.0 (ce3e891) to 3.11.0 (d3241b9)
+* Update Tornado Web Server 6.3.1 (419838b) to 6.3.2 (e3aa6c5)
 * Fix tv test to init recently added ReleaseMap to scene_exceptions refactor
 * Fix double use of var `result` overwrites the return value and causes an error in _parse_custom_exceptions
 * Fix name_parser_tests and webapi_tests
