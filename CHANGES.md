@@ -14,6 +14,7 @@
 * Update SimpleJSON 3.18.1 (c891b95) to 3.19.1 (aeb63ee)
 * Update Tornado Web Server 6.3.0 (7186b86) to 6.3.2 (e3aa6c5)
 * Update urllib3 1.26.14 (a06c05c) to 1.26.15 (25cca389)
+* Remove singledispatch
 * Change allow rapidfuzz update from 2.x.x to 3.x.x
 * Change remove redundant py2 import futures
 * Change add jobs to centralise scheduler activities
