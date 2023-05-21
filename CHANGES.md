@@ -1,4 +1,4 @@
-﻿### 3.29.0 (2023-xx-xx xx:xx:00 UTC)
+﻿### 3.29.0 (2023-05-22 00:25:00 UTC)
 
 * Change minimum required Python to version 3.8
 * Update Apprise 1.2.1 (3d07004) to 1.3.0 (6458ab0)
@@ -27,15 +27,6 @@
 * Change use TVDb genres on view-show if config/General/Interface/"Enable IMDb info" is disabled
 * Fix TVDb api episode issues
 * Change remove Python 3.7 from CI
-
-
-[develop changelog]
-
-* Update filelock 3.9.0 (ce3e891) to 3.11.0 (d3241b9)
-* Update Tornado Web Server 6.3.1 (419838b) to 6.3.2 (e3aa6c5)
-* Fix tv test to init recently added ReleaseMap to scene_exceptions refactor
-* Fix double use of var `result` overwrites the return value and causes an error in _parse_custom_exceptions
-* Fix name_parser_tests and webapi_tests
 
 
 ### 3.28.0 (2023-04-12 13:05:00 UTC)
