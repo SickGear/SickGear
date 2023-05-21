@@ -1103,21 +1103,36 @@ class Tvdb(TVInfoBase):
             # Parse episode data
             log.debug('Getting all episodes of %s' % sid)
 
-            page = 1
-            episodes = []
+            page = 0  # type: int
+            episodes = []  # type: list
+            episode_data_found = False  # type: bool
+            episode_data_broken = False  # type: bool
+            page_count = 0  # type: int
+            pages_loaded = 0  # type: int
+            start_page = 0  # type: int
             while page <= 400:
                 episode_data = {}
-                if self.is_apikey():
+                if self.is_apikey() and not episode_data_broken:
                     episode_data = self._getetsrc(
                         self.config['url_series_episodes_info'] % (sid, page), language=language)
+                    # fallback to correct old pagination
+                    if 0 == page and None is episode_data:
+                        page = 1
+                        continue
+                    if episode_data:
+                        if 1 == page and not bool(episodes):
+                            start_page = 1
+                        pages_loaded += 1
+                    episode_data_found |= start_page == page and bool(episode_data)
 
-                if not episode_data:
+                if episode_data_broken or \
+                        (not episode_data_found and isinstance(show_data, dict) and 'slug' in show_data):
                     response = {'data': None}
                     items_found = False
                     # fallback to page 'all' if dvd is enabled and response has no items
                     for page_type in ('url_series_dvd', 'url_series_all'):
                         if 'dvd' not in page_type or self.config['dvdorder']:
-                            response = self._load_url(self.config[page_type] % show_data.get('data').get('slug'))
+                            response = self._load_url(self.config[page_type] % show_data.get('slug'))
                             with BS4Parser(response.get('data') or '') as soup:
                                 items_found = bool(soup.find_all(class_='list-group-item'))
                                 if items_found:
@@ -1129,7 +1144,7 @@ class Tvdb(TVInfoBase):
                     with BS4Parser(response.get('data')) as soup:
                         items = soup.find_all(class_='list-group-item')
                         rc_sxe = re.compile(r'(?i)s(?:pecial\s*)?(\d+)\s*[xe]\s*(\d+)')  # Special nxn or SnnEnn
-                        rc_episode = re.compile(r'(?i)/series/%s/episodes?/(?P<ep_id>\d+)' % show_data['data']['slug'])
+                        rc_episode = re.compile(r'(?i)/series/%s/episodes?/(?P<ep_id>\d+)' % show_data['slug'])
                         rc_date = re.compile(r'\s\d{4}\s*$')
                         season_type, episode_type = ['%s%s' % (('aired', 'dvd')['dvd' in page_type], x)
                                                      for x in ('season', 'episodenumber')]
@@ -1165,18 +1180,25 @@ class Tvdb(TVInfoBase):
                                     'filename': ep_filename,  # 'network': ep_network
                                 })
 
-                                if not show_data['data']['firstaired'] and ep_aired \
+                                if not show_data['firstaired'] and ep_aired \
                                         and (1, 1) == (ep_season, ep_episode):
-                                    show_data['data']['firstaired'] = ep_aired
+                                    show_data['firstaired'] = ep_aired
 
                                 episode_data['fallback'] = True
                             except (BaseException, Exception):
                                 continue
 
-                if None is episode_data:
+                if episode_data_found and not episode_data:
+                    if pages_loaded < page_count or 0 == page_count:
+                        episode_data_broken = True
+                        continue
+                    else:
+                        break
+
+                if None is episode_data and not bool(episodes) and not episode_data_found:
                     raise TvdbError('Exception retrieving episodes for show')
                 if isinstance(episode_data, dict) and not episode_data.get('data', []):
-                    if 1 != page:
+                    if start_page != page:
                         self.not_found = False
                     break
                 if not getattr(self, 'not_found', False) and None is not episode_data.get('data'):
@@ -1185,11 +1207,16 @@ class Tvdb(TVInfoBase):
                 # check if page is a valid following page
                 if not isinstance(next_link, integer_types) or next_link <= page:
                     next_link = None
+                if isinstance(episode_data, dict) and 'links' in episode_data \
+                        and isinstance(episode_data['links'], dict) and 'last' in episode_data['links'] \
+                        and isinstance(episode_data['links']['last'], int) \
+                        and episode_data['links']['last'] > page_count:
+                    page_count = episode_data['links']['last']
                 if not next_link and isinstance(episode_data, dict) \
                         and isinstance(episode_data.get('data', []), list) and \
                         (100 > len(episode_data.get('data', [])) or episode_data.get('fallback')):
                     break
-                if next_link:
+                if isinstance(next_link, int) and page + 1 == next_link:
                     page = next_link
                 else:
                     page += 1
