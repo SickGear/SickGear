@@ -15,8 +15,6 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import with_statement, division
-
 import datetime
 import os
 import os.path
@@ -377,7 +375,8 @@ class NameParser(object):
 
                             t = sickgear.TVInfoAPI(show_obj.tvid).setup(**tvinfo_config)
 
-                            ep_obj = t[show_obj.prodid].aired_on(best_result.air_date)[0]
+                            ep_obj = t.get_show(show_obj.prodid, language=show_obj.lang).aired_on(
+                                best_result.air_date)[0]
 
                             season_number = int(ep_obj['seasonnumber'])
                             episode_numbers = [int(ep_obj['episodenumber'])]
@@ -407,7 +406,8 @@ class NameParser(object):
                                 new_season_numbers.append(s)
 
                 elif show_obj.is_anime and len(best_result.ab_episode_numbers) and not self.testing:
-                    scene_season = scene_exceptions.get_scene_exception_by_name(best_result.series_name)[2]
+                    scene_season = scene_exceptions.get_scene_exception_by_name(
+                        best_result.series_name)[2]
                     for epAbsNo in best_result.ab_episode_numbers:
                         a = epAbsNo
 

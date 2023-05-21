@@ -1,4 +1,35 @@
-﻿### 3.28.0 (2023-04-12 13:05:00 UTC)
+﻿### 3.29.0 (2023-05-22 00:25:00 UTC)
+
+* Change minimum required Python to version 3.8
+* Update Apprise 1.2.1 (3d07004) to 1.3.0 (6458ab0)
+* Update attr 22.2.0 (a9960de) to 22.2.0 (683d056)
+* Update certifi 2022.12.07 to 2023.05.07
+* Update diskcache 5.4.0 (1cb1425) to 5.6.1 (4d30686)
+* Update feedparser 6.0.10 (5fcb3ae) to 6.0.10 (6d032b8)
+* Update filelock 3.9.0 (ce3e891) to 3.12.0 (b4713c9)
+* Update Msgpack 1.0.4 (b5acfd5) to 1.0.5 (0516c2c)
+* Update Pytvmaze library 2.0.8 (16ed096) to 2.0.8 (81888a5)
+* Update Requests library 2.28.1 (ec553c2) to 2.29.0 (87d63de)
+* Update Send2Trash 1.8.1b0 (0ef9b32) to 1.8.2 (0244f53)
+* Update SimpleJSON 3.18.1 (c891b95) to 3.19.1 (aeb63ee)
+* Update Tornado Web Server 6.3.0 (7186b86) to 6.3.2 (e3aa6c5)
+* Update urllib3 1.26.14 (a06c05c) to 1.26.15 (25cca389)
+* Remove singledispatch
+* Change allow rapidfuzz update from 2.x.x to 3.x.x
+* Change remove redundant py2 import futures
+* Change add jobs to centralise scheduler activities
+* Change refactor scene_exceptions
+* Add to config/media-process/File Handling, "Rename TBA" and "Rename any"
+* Add config to change media process log message if there is no media to process
+* Change view-show text "invalid timeformat" to "time unknown"
+* Add menu Shows/"TMDB Cards"
+* Add a persons available socials (Youtube, LinkedIn, Reddit, Fansite, TikTok, Wikidata)
+* Change use TVDb genres on view-show if config/General/Interface/"Enable IMDb info" is disabled
+* Fix TVDb api episode issues
+* Change remove Python 3.7 from CI
+
+
+### 3.28.0 (2023-04-12 13:05:00 UTC)
 
 * Update html5lib 1.1 (f87487a) to 1.2-dev (3e500bb)
 * Update package resource API 63.2.0 (3ae44cd) to 67.5.1 (f51eccd)
@@ -15,7 +46,7 @@
 * Add optional "freespace" parameter to endpoints: sg.getrootdirs, sg.addrootdir, sg.deleterootdir
 * Change update help of affected endpoints
 * Fix explicitly save rootdirs after adding or deleting via Web API
-* Change add Rarbg UHD search category 
+* Change add Rarbg UHD search category
 
 
 ### 3.27.13 (2023-04-12 10:15:00 UTC)

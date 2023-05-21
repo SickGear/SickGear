@@ -1,14 +1,15 @@
+import datetime
 import logging
 import re
-from .exceptions import TraktException
+from .exceptions import TraktException, TraktAuthException
 from exceptions_helper import ConnectionSkipException, ex
 from six import iteritems
 from .trakt import TraktAPI
 from lib.tvinfo_base.exceptions import BaseTVinfoShownotfound
 from lib.tvinfo_base import TVInfoBase, TVINFO_TRAKT, TVINFO_TMDB, TVINFO_TVDB, TVINFO_TVRAGE, TVINFO_IMDB, \
-    TVINFO_SLUG, TVInfoPerson, TVINFO_TWITTER, TVINFO_FACEBOOK, TVINFO_WIKIPEDIA, TVINFO_INSTAGRAM, TVInfoCharacter, TVInfoShow, \
-    TVInfoIDs, TVINFO_TRAKT_SLUG
-from sg_helpers import try_int
+    TVINFO_SLUG, TVInfoPerson, TVINFO_TWITTER, TVINFO_FACEBOOK, TVINFO_WIKIPEDIA, TVINFO_INSTAGRAM, TVInfoCharacter, \
+    TVInfoShow, TVInfoIDs, TVInfoSocialIDs, TVINFO_TRAKT_SLUG, TVInfoEpisode, TVInfoSeason, RoleTypes
+from sg_helpers import clean_data, enforce_type, try_int
 from lib.dateutil.parser import parser
 
 # noinspection PyUnreachableCode
@@ -33,6 +34,7 @@ log.addHandler(logging.NullHandler())
 
 
 def _convert_imdb_id(src, s_id):
+    # type: (int, integer_types) -> integer_types
     if TVINFO_IMDB == src:
         try:
             return try_int(re.search(r'(\d+)', s_id).group(1), s_id)
@@ -100,16 +102,29 @@ class TraktIndexer(TVInfoBase):
 
     @staticmethod
     def _make_result_obj(shows, results):
+        # type: (List[Dict], List[TVInfoShow]) -> None
         if shows:
             try:
                 for s in shows:
                     if s['ids']['trakt'] not in [i['ids'].trakt for i in results]:
-                        s['id'] = s['ids']['trakt']
-                        s['ids'] = TVInfoIDs(
-                            trakt=s['ids']['trakt'], tvdb=s['ids']['tvdb'], tmdb=s['ids']['tmdb'],
-                            rage=s['ids']['tvrage'],
-                            imdb=s['ids']['imdb'] and try_int(s['ids']['imdb'].replace('tt', ''), None))
-                        results.append(s)
+                        ti_show = TVInfoShow()
+                        countries = clean_data(s['country'])
+                        if countries:
+                            countries = [countries]
+                        else:
+                            countries = []
+                        ti_show.id, ti_show.seriesname, ti_show.overview, ti_show.firstaired, ti_show.airs_dayofweek, \
+                            ti_show.runtime, ti_show.network, ti_show.origin_countries, ti_show.official_site, \
+                            ti_show.status, ti_show.rating, ti_show.genre_list, ti_show.ids = s['ids']['trakt'], \
+                            clean_data(s['title']), enforce_type(clean_data(s['overview']), str, ''), s['firstaired'], \
+                            (isinstance(s['airs'], dict) and s['airs']['day']) or '', \
+                            s['runtime'], s['network'], countries, s['homepage'], s['status'], s['rating'], \
+                            s['genres_list'], \
+                            TVInfoIDs(trakt=s['ids']['trakt'], tvdb=s['ids']['tvdb'], tmdb=s['ids']['tmdb'],
+                                      rage=s['ids']['tvrage'],
+                                      imdb=s['ids']['imdb'] and try_int(s['ids']['imdb'].replace('tt', ''), None))
+                        ti_show.genre = '|'.join(ti_show.genre_list or [])
+                        results.append(ti_show)
             except (BaseException, Exception) as e:
                 log.debug('Error creating result dict: %s' % ex(e))
 
@@ -119,7 +134,7 @@ class TraktIndexer(TVInfoBase):
         If a custom_ui UI is configured, it uses this to select the correct
         series.
         """
-        results = []
+        results = []  # type: List[TVInfoShow]
         if ids:
             for t, p in iteritems(ids):
                 if t in self.supported_id_searches:
@@ -168,13 +183,13 @@ class TraktIndexer(TVInfoBase):
                     else:
                         self._make_result_obj(all_series, results)
 
-        final_result = []
+        final_result = []  # type: List[TVInfoShow]
         seen = set()
         film_type = re.compile(r'(?i)films?\)$')
         for r in results:
-            if r['id'] not in seen:
-                seen.add(r['id'])
-                title = r.get('title') or ''
+            if r.id not in seen:
+                seen.add(r.id)
+                title = r.seriesname or ''
                 if not film_type.search(title):
                     final_result.append(r)
                 else:
@@ -247,17 +262,19 @@ class TraktIndexer(TVInfoBase):
                             deathdate=deathdate,
                             homepage=person_obj['homepage'],
                             birthplace=person_obj['birthplace'],
-                            social_ids={TVINFO_TWITTER: person_obj['social_ids']['twitter'],
-                                  TVINFO_FACEBOOK: person_obj['social_ids']['facebook'],
-                                  TVINFO_INSTAGRAM: person_obj['social_ids']['instagram'],
-                                  TVINFO_WIKIPEDIA: person_obj['social_ids']['wikipedia']
-                                  },
-                            ids={TVINFO_TRAKT: person_obj['ids']['trakt'], TVINFO_SLUG: person_obj['ids']['slug'],
-                           TVINFO_IMDB:
-                               person_obj['ids']['imdb'] and
-                               try_int(person_obj['ids']['imdb'].replace('nm', ''), None),
-                           TVINFO_TMDB: person_obj['ids']['tmdb'],
-                           TVINFO_TVRAGE: person_obj['ids']['tvrage']})
+                            social_ids=TVInfoSocialIDs(
+                                ids={TVINFO_TWITTER: person_obj['social_ids']['twitter'],
+                                     TVINFO_FACEBOOK: person_obj['social_ids']['facebook'],
+                                     TVINFO_INSTAGRAM: person_obj['social_ids']['instagram'],
+                                     TVINFO_WIKIPEDIA: person_obj['social_ids']['wikipedia']
+                                     }),
+                            ids=TVInfoIDs(ids={
+                                TVINFO_TRAKT: person_obj['ids']['trakt'], TVINFO_SLUG: person_obj['ids']['slug'],
+                                TVINFO_IMDB:
+                                    person_obj['ids']['imdb'] and
+                                    try_int(person_obj['ids']['imdb'].replace('nm', ''), None),
+                                TVINFO_TMDB: person_obj['ids']['tmdb'],
+                                TVINFO_TVRAGE: person_obj['ids']['tvrage']}))
 
     def get_person(self, p_id, get_show_credits=False, get_images=False, **kwargs):
         # type: (integer_types, bool, bool, Any) -> Optional[TVInfoPerson]
@@ -279,7 +296,7 @@ class TraktIndexer(TVInfoBase):
         if not urls:
             return
 
-        result = None
+        result = None  # type: Optional[TVInfoPerson]
 
         for url, show_credits in urls:
             try:
@@ -292,25 +309,25 @@ class TraktIndexer(TVInfoBase):
                     if show_credits:
                         pc = []
                         for c in resp.get('cast') or []:
-                            show = TVInfoShow()
-                            show.id = c['show']['ids'].get('trakt')
-                            show.seriesname = c['show']['title']
-                            show.ids = TVInfoIDs(ids={id_map[src]: _convert_imdb_id(id_map[src], sid)
-                                                      for src, sid in iteritems(c['show']['ids']) if src in id_map})
-                            show.network = c['show']['network']
-                            show.firstaired = c['show']['first_aired']
-                            show.overview = c['show']['overview']
-                            show.status = c['show']['status']
-                            show.imdb_id = c['show']['ids'].get('imdb')
-                            show.runtime = c['show']['runtime']
-                            show.genre_list = c['show']['genres']
+                            ti_show = TVInfoShow()
+                            ti_show.id = c['show']['ids'].get('trakt')
+                            ti_show.seriesname = c['show']['title']
+                            ti_show.ids = TVInfoIDs(ids={id_map[src]: _convert_imdb_id(id_map[src], sid)
+                                                         for src, sid in iteritems(c['show']['ids']) if src in id_map})
+                            ti_show.network = c['show']['network']
+                            ti_show.firstaired = c['show']['first_aired']
+                            ti_show.overview = enforce_type(clean_data(c['show']['overview']), str, '')
+                            ti_show.status = c['show']['status']
+                            ti_show.imdb_id = c['show']['ids'].get('imdb')
+                            ti_show.runtime = c['show']['runtime']
+                            ti_show.genre_list = c['show']['genres']
                             for ch in c.get('characters') or []:
-                                pc.append(
-                                    TVInfoCharacter(
-                                        name=ch, regular=c.get('series_regular'),
-                                        show=show
-                                    )
-                                )
+                                _ti_character = TVInfoCharacter(name=ch, regular=c.get('series_regular'),
+                                                                ti_show=ti_show, person=[result],
+                                                                episode_count=c.get('episode_count'))
+                                pc.append(_ti_character)
+                                ti_show.cast[(RoleTypes.ActorGuest, RoleTypes.ActorMain)[
+                                    c.get('series_regular', False)]].append(_ti_character)
                         result.characters = pc
                     else:
                         result = self._convert_person_obj(resp)
@@ -356,3 +373,268 @@ class TraktIndexer(TVInfoBase):
                 log.debug('Could not connect to Trakt service: %s' % ex(e))
 
         return result
+
+    @staticmethod
+    def _convert_episode(episode_data, show_obj, season_obj):
+        # type: (Dict, TVInfoShow, TVInfoSeason) -> TVInfoEpisode
+        ti_episode = TVInfoEpisode(show=show_obj)
+        ti_episode.season = season_obj
+        ti_episode.id, ti_episode.episodename, ti_episode.seasonnumber, ti_episode.episodenumber, \
+            ti_episode.absolute_number, ti_episode.overview, ti_episode.firstaired, ti_episode.runtime, \
+            ti_episode.rating, ti_episode.vote_count = episode_data.get('ids', {}).get('trakt'), \
+            clean_data(episode_data.get('title')), episode_data.get('season'), episode_data.get('number'), \
+            episode_data.get('number_abs'), enforce_type(clean_data(episode_data.get('overview')), str, ''), \
+            re.sub('T.+$', '', episode_data.get('first_aired') or ''), \
+            episode_data['runtime'], episode_data.get('rating'), episode_data.get('votes')
+        if episode_data.get('available_translations'):
+            ti_episode.language = clean_data(episode_data['available_translations'][0])
+        ti_episode.ids = TVInfoIDs(ids={id_map[src]: _convert_imdb_id(id_map[src], sid)
+                                   for src, sid in iteritems(episode_data['ids']) if src in id_map})
+        return ti_episode
+
+    @staticmethod
+    def _convert_show(show_data):
+        # type: (Dict) -> TVInfoShow
+        _s_d = (show_data, show_data.get('show'))['show' in show_data]
+        ti_show = TVInfoShow()
+        ti_show.seriesname, ti_show.id, ti_show.firstaired, ti_show.overview, ti_show.runtime, ti_show.network, \
+            ti_show.network_country, ti_show.status, ti_show.genre_list, ti_show.language, ti_show.watcher_count, \
+            ti_show.play_count, ti_show.collected_count, ti_show.collector_count, ti_show.vote_count, \
+            ti_show.vote_average, ti_show.rating, ti_show.contentrating, ti_show.official_site, ti_show.slug = \
+            clean_data(_s_d['title']), _s_d['ids']['trakt'], \
+            re.sub('T.+$', '', _s_d.get('first_aired') or '') or _s_d.get('year'), \
+            enforce_type(clean_data(_s_d.get('overview')), str, ''), _s_d.get('runtime'), _s_d.get('network'), \
+            _s_d.get('country'), _s_d.get('status'), _s_d.get('genres', []), _s_d.get('language'), \
+            show_data.get('watcher_count'), show_data.get('play_count'), show_data.get('collected_count'), \
+            show_data.get('collector_count'), _s_d.get('votes'), _s_d.get('rating'), _s_d.get('rating'), \
+            _s_d.get('certification'), _s_d.get('homepage'), _s_d['ids']['slug']
+        ti_show.ids = TVInfoIDs(ids={id_map[src]: _convert_imdb_id(id_map[src], sid)
+                                for src, sid in iteritems(_s_d['ids']) if src in id_map})
+        ti_show.genre = '|'.join(ti_show.genre_list or [])
+        if _s_d.get('trailer'):
+            ti_show.trailers = {'any': _s_d['trailer']}
+        if 'episode' in show_data:
+            ep_data = show_data['episode']
+            ti_show.next_season_airdate = re.sub('T.+$', '', ep_data.get('first_aired') or '')
+            ti_season = TVInfoSeason(show=ti_show)
+            ti_season.number = ep_data['season']
+            ti_season[ep_data['number']] = TraktIndexer._convert_episode(ep_data, ti_show, ti_season)
+            ti_show[ep_data['season']] = ti_season
+        return ti_show
+
+    def _get_show_lists(self, url, account=None):
+        # type: (str, Any) -> List[TVInfoShow]
+        result = []
+        if account:
+            from sickgear import TRAKT_ACCOUNTS
+            if account in TRAKT_ACCOUNTS and TRAKT_ACCOUNTS[account].active:
+                kw = {'send_oauth': account}
+            else:
+                raise TraktAuthException('Account missing or disabled')
+        else:
+            kw = {}
+        resp = TraktAPI().trakt_request(url, **kw)
+        if resp:
+            for _show in resp:
+                result.append(self._convert_show(_show))
+        return result
+
+    def get_most_played(self, result_count=100, period='weekly', **kwargs):
+        # type: (...) -> List[TVInfoShow]
+        """
+        get most played shows
+        :param period: possible values: 'daily', 'weekly', 'monthly', 'yearly', 'all'
+        :param result_count: how many results are suppose to be returned
+        """
+        use_period = ('weekly', period)[period in ('daily', 'weekly', 'monthly', 'yearly', 'all')]
+        return self._get_show_lists('shows/played/%s?extended=full&page=%d&limit=%d' % (use_period, 1, result_count))
+
+    def get_most_watched(self, result_count=100, period='weekly', **kwargs):
+        # type: (...) -> List[TVInfoShow]
+        """
+        get most watched shows
+        :param period: possible values: 'daily', 'weekly', 'monthly', 'yearly', 'all'
+        :param result_count: how many results are suppose to be returned
+        """
+        use_period = ('weekly', period)[period in ('daily', 'weekly', 'monthly', 'yearly', 'all')]
+        return self._get_show_lists('shows/watched/%s?extended=full&page=%d&limit=%d' % (use_period, 1, result_count))
+
+    def get_most_collected(self, result_count=100, period='weekly', **kwargs):
+        # type: (...) -> List[TVInfoShow]
+        """
+        get most collected shows
+        :param period: possible values: 'daily', 'weekly', 'monthly', 'yearly', 'all'
+        :param result_count: how many results are suppose to be returned
+        """
+        use_period = ('weekly', period)[period in ('daily', 'weekly', 'monthly', 'yearly', 'all')]
+        return self._get_show_lists('shows/collected/%s?extended=full&page=%d&limit=%d' % (use_period, 1, result_count))
+
+    def get_recommended(self, result_count=100, period='weekly', **kwargs):
+        # type: (...) -> List[TVInfoShow]
+        """
+        get most recommended shows
+        :param period: possible values: 'daily', 'weekly', 'monthly', 'yearly', 'all'
+        :param result_count: how many results are suppose to be returned
+        """
+        use_period = ('weekly', period)[period in ('daily', 'weekly', 'monthly', 'yearly', 'all')]
+        return self._get_show_lists('shows/recommended/%s?extended=full&page=%d&limit=%d' % (use_period, 1, result_count))
+
+    def get_recommended_for_account(self, account, result_count=100, ignore_collected=False, ignore_watchlisted=False,
+                                    **kwargs):
+        # type: (...) -> List[TVInfoShow]
+        """
+        get most recommended shows for account
+        :param account: account to get recommendations for
+        :param result_count: how many results are suppose to be returned
+        :param ignore_collected: exclude colleded shows
+        :param ignore_watchlisted: exclude watchlisted shows
+        """
+        from sickgear import TRAKT_ACCOUNTS
+        if not account or account not in TRAKT_ACCOUNTS or not TRAKT_ACCOUNTS[account].active:
+            raise TraktAuthException('Account missing or disabled')
+        extra_param = []
+        if ignore_collected:
+            extra_param.append('ignore_collected=true')
+        if ignore_watchlisted:
+            extra_param.append('ignore_watchlisted=true')
+        return self._get_show_lists('recommendations/shows?extended=full&page=%d&limit=%d%s' %
+                                    (1, result_count, ('', '&%s' % '&'.join(extra_param))[0 < len(extra_param)]),
+                                    account=account)
+
+    def hide_recommended_for_account(self, account, show_ids, **kwargs):
+        # type: (integer_types, List[integer_types], Any) -> List[integer_types]
+        """
+        hide recommended show for account
+        :param account: account to get recommendations for
+        :param show_ids: list of show_ids to no longer recommend for account
+        :return: list of added ids
+        """
+        from sickgear import TRAKT_ACCOUNTS
+        if not account or account not in TRAKT_ACCOUNTS or not TRAKT_ACCOUNTS[account].active:
+            raise TraktAuthException('Account missing or disabled')
+        if not isinstance(show_ids, list) or not show_ids or any(not isinstance(_i, int) for _i in show_ids):
+            raise TraktException('list of show_ids (trakt id) required')
+        resp = TraktAPI().trakt_request('users/hidden/recommendations', send_oauth=account,
+                                        data={'shows': [{'ids': {'trakt': _i}} for _i in show_ids]})
+        if resp and isinstance(resp, dict) and 'added' in resp and 'shows' in resp['added']:
+            if len(show_ids) == resp['added']['shows']:
+                return show_ids
+            if 'not_found' in resp and 'shows' in resp['not_found']:
+                not_found = [_i['ids']['trakt'] for _i in resp['not_found']['shows']]
+            else:
+                not_found = []
+            return [_i for _i in show_ids if _i not in not_found]
+        return []
+
+    def unhide_recommended_for_account(self, account, show_ids, **kwargs):
+        # type: (integer_types, List[integer_types], Any) -> List[integer_types]
+        """
+        unhide recommended show for account
+        :param account: account to get recommendations for
+        :param show_ids: list of show_ids to be included in possible recommend for account
+        :return: list of removed ids
+        """
+        from sickgear import TRAKT_ACCOUNTS
+        if not account or account not in TRAKT_ACCOUNTS or not TRAKT_ACCOUNTS[account].active:
+            raise TraktAuthException('Account missing or disabled')
+        if not isinstance(show_ids, list) or not show_ids or any(not isinstance(_i, int) for _i in show_ids):
+            raise TraktException('list of show_ids (trakt id) required')
+        resp = TraktAPI().trakt_request('users/hidden/recommendations/remove', send_oauth=account,
+                                        data={'shows': [{'ids': {'trakt': _i}} for _i in show_ids]})
+        if resp and isinstance(resp, dict) and 'deleted' in resp and 'shows' in resp['deleted']:
+            if len(show_ids) == resp['deleted']['shows']:
+                return show_ids
+            if 'not_found' in resp and 'shows' in resp['not_found']:
+                not_found = [_i['ids']['trakt'] for _i in resp['not_found']['shows']]
+            else:
+                not_found = []
+            return [_i for _i in show_ids if _i not in not_found]
+        return []
+
+    def list_hidden_recommended_for_account(self, account, **kwargs):
+        # type: (integer_types, Any) -> List[TVInfoShow]
+        """
+        list hidden recommended show for account
+        :param account: account to get recommendations for
+        :return: list of hidden shows
+        """
+        from sickgear import TRAKT_ACCOUNTS
+        if not account or account not in TRAKT_ACCOUNTS or not TRAKT_ACCOUNTS[account].active:
+            raise TraktAuthException('Account missing or disabled')
+        return self._get_show_lists('users/hidden/recommendations?type=show', account=account)
+
+    def get_watchlisted_for_account(self, account, result_count=100, sort='rank', **kwargs):
+        # type: (...) -> List[TVInfoShow]
+        """
+        get watchlisted shows for the account
+        :param account: account to get recommendations for
+        :param result_count: how many results are suppose to be returned
+        :param sort: possible values: 'rank', 'added', 'released', 'title'
+        """
+        from sickgear import TRAKT_ACCOUNTS
+        if not account or account not in TRAKT_ACCOUNTS or not TRAKT_ACCOUNTS[account].active:
+            raise TraktAuthException('Account missing or disabled')
+        sort = ('rank', sort)[sort in ('rank', 'added', 'released', 'title')]
+        return self._get_show_lists('users/%s/watchlist/shows/%s?extended=full&page=%d&limit=%d' %
+                                    (TRAKT_ACCOUNTS[account].slug, sort, 1, result_count), account=account)
+
+    def get_anticipated(self, result_count=100, **kwargs):
+        # type: (...) -> List[TVInfoShow]
+        """
+        get most anticipated shows
+        :param result_count: how many results are suppose to be returned
+        """
+        return self._get_show_lists('shows/anticipated?extended=full&page=%d&limit=%d' % (1, result_count))
+
+    def get_trending(self, result_count=100, **kwargs):
+        # type: (...) -> List[TVInfoShow]
+        """
+        get trending shows
+        :param result_count: how many results are suppose to be returned
+        """
+        return self._get_show_lists('shows/trending?extended=full&page=%d&limit=%d' % (1, result_count))
+
+    def get_popular(self, result_count=100, **kwargs):
+        # type: (...) -> List[TVInfoShow]
+        """
+        get all popular shows
+        :param result_count: how many results are suppose to be returned
+        """
+        return self._get_show_lists('shows/popular?extended=full&page=%d&limit=%d' % (1, result_count))
+
+    def get_similar(self, tvid, result_count=100, **kwargs):
+        # type: (integer_types, int, Any) -> List[TVInfoShow]
+        """
+        return list of similar shows to given id
+        :param tvid: id to give similar shows for
+        :param result_count: count of results requested
+        """
+        if not isinstance(tvid, int):
+            raise TraktException('tvid/trakt id for show required')
+        return self._get_show_lists('shows/%d/related?extended=full&page=%d&limit=%d' % (tvid, 1, result_count))
+
+    def get_new_shows(self, result_count=100, start_date=None, days=32, **kwargs):
+        # type: (...) -> List[TVInfoShow]
+        """
+        get new shows
+        :param result_count: how many results are suppose to be returned
+        :param start_date: start date for returned data in format: '2014-09-01'
+        :param days: number of days to return from start date
+        """
+        if None is start_date:
+            start_date = (datetime.datetime.now() + datetime.timedelta(days=-16)).strftime('%Y-%m-%d')
+        return self._get_show_lists('calendars/all/shows/new/%s/%s?extended=full&page=%d&limit=%d' %
+                                    (start_date, days, 1, result_count))
+
+    def get_new_seasons(self, result_count=100, start_date=None, days=32, **kwargs):
+        # type: (...) -> List[TVInfoShow]
+        """
+        get new seasons
+        :param result_count: how many results are suppose to be returned
+        :param start_date: start date for returned data in format: '2014-09-01'
+        :param days: number of days to return from start date
+        """
+        if None is start_date:
+            start_date = (datetime.datetime.now() + datetime.timedelta(days=-16)).strftime('%Y-%m-%d')
+        return self._get_show_lists('calendars/all/shows/premieres/%s/%s?extended=full&page=%d&limit=%d' %
+                                    (start_date, days, 1, result_count))

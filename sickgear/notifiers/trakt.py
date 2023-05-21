@@ -41,9 +41,10 @@ class TraktNotifier(BaseNotifier):
                     return True
         return False
 
-    def update_library(self, ep_obj=None, **kwargs):
+    def update_library(self, ep_obj=None, include_online=True, **kwargs):
 
-        self._update_collection(ep_obj)
+        if include_online:
+            self._update_collection(ep_obj)
 
     def _update_collection(self, ep_obj):
         """

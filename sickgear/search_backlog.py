@@ -14,16 +14,14 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import with_statement, division
-
 import datetime
-import threading
 from math import ceil
 
 import sickgear
 from . import db, logger, scheduler, search_queue, ui
 from .helpers import find_show_by_id
 from .providers.generic import GenericProvider
+from .scheduler import Job
 from .search import wanted_episodes
 from .sgdatetime import SGDatetime
 from .tv import TVidProdid, TVEpisode, TVShow
@@ -74,13 +72,12 @@ class BacklogSearchScheduler(scheduler.Scheduler):
         return self.action.nextBacklog - now if self.action.nextBacklog > now else datetime.timedelta(seconds=0)
 
 
-class BacklogSearcher(object):
+class BacklogSearcher(Job):
     def __init__(self):
+        super(BacklogSearcher, self).__init__(self.job_run, kwargs={}, thread_lock=True)
 
         self.last_backlog = self._get_last_backlog()
         self.cycle_time = sickgear.BACKLOG_PERIOD
-        self.lock = threading.Lock()
-        self.amActive = False  # type: bool
         self.amPaused = False  # type: bool
         self.amWaiting = False  # type: bool
         self.forcetype = NORMAL_BACKLOG  # type: int
@@ -196,9 +193,6 @@ class BacklogSearcher(object):
         :return: nothing
         :rtype: None
         """
-        if self.amActive and not which_shows:
-            logger.debug('Backlog is still running, not starting it again')
-            return
 
         if which_shows:
             show_list = which_shows
@@ -225,7 +219,6 @@ class BacklogSearcher(object):
             return
 
         self._get_last_backlog()
-        self.amActive = True
         self.amPaused = False
 
         cur_date = datetime.date.today().toordinal()
@@ -328,7 +321,6 @@ class BacklogSearcher(object):
         if standard_backlog and not any_torrent_enabled:
             self._set_last_runtime(now)
 
-        self.amActive = False
         self._reset_progress_indicator()
 
     @staticmethod
@@ -401,7 +393,7 @@ class BacklogSearcher(object):
             # noinspection SqlConstantCondition
             my_db.action('UPDATE info SET last_backlog=%s WHERE 1=1' % when)
 
-    def run(self):
+    def job_run(self):
         try:
             force_type = self.forcetype
             force = self.force
@@ -409,5 +401,4 @@ class BacklogSearcher(object):
             self.force = False
             self.search_backlog(force_type=force_type, force=force)
         except (BaseException, Exception):
-            self.amActive = False
             raise

@@ -11,6 +11,6 @@ orjson; 'Windows' == platform_system
 orjson; 'Linux' == platform_system and ('x86_64' == platform_machine or 'aarch64' == platform_machine or 'armv7l' == platform_machine)
 pip
 Levenshtein
-rapidfuzz < 3.0.0
+rapidfuzz < 4.0.0
 regex
 setuptools

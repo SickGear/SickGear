@@ -16,7 +16,6 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
-from __future__ import print_function
 import datetime
 import itertools
 import os
@@ -107,6 +106,10 @@ def fake_action(*args, **kwargs):
     pass
 
 
+class fake_class():
+    pass
+
+
 class WebAPICase(test.SickbeardTestDBCase):
     webserver = None
     instance = None
@@ -148,6 +151,10 @@ class WebAPICase(test.SickbeardTestDBCase):
             sickgear.started = True
             sickgear.API_KEYS = [['unit test key', '1234567890']]
             sickgear.USE_API = True
+            sickgear.process_media_scheduler = fake_class()
+            sickgear.update_show_scheduler = fake_class()
+            sickgear.process_media_scheduler.is_running_job = False
+            sickgear.update_show_scheduler.is_running_job = False
         except (BaseException, Exception) as e:
             print('Failed to start WebServer: %s' % ex(e))
 
@@ -180,7 +187,7 @@ class WebAPICase(test.SickbeardTestDBCase):
                 search_queue.SearchQueue(),
                 cycle_time=datetime.timedelta(seconds=3),
                 thread_name='SEARCHQUEUE')
-            sickgear.backlog_search_scheduler = search_backlog.BacklogSearchScheduler(
+            sickgear.search_backlog_scheduler = search_backlog.BacklogSearchScheduler(
                 search_backlog.BacklogSearcher(),
                 cycle_time=datetime.timedelta(minutes=60),
                 run_delay=datetime.timedelta(minutes=60),

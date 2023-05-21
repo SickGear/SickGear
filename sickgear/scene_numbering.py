@@ -19,17 +19,14 @@
 # @copyright: Dermot Buckley
 #
 
-import datetime
 import traceback
 from sqlite3 import Row
 
 from exceptions_helper import ex
 
-
 import sickgear
 from . import db, logger
 from .helpers import try_int
-from .scene_exceptions import xem_ids_list
 from .sgdatetime import SGDatetime
 
 # noinspection PyUnreachableCode
@@ -774,7 +771,8 @@ def xem_refresh(tvid, prodid, force=False):
     tvid, prodid = int(tvid), int(prodid)
     tvinfo = sickgear.TVInfoAPI(tvid)
 
-    if 'xem_origin' not in tvinfo.config or prodid not in xem_ids_list.get(tvid, []):
+    if 'xem_origin' not in tvinfo.config \
+            or prodid not in sickgear.scene_exceptions.MEMCACHE['release_map_xem'].get(tvid, []):
         return
 
     xem_origin = tvinfo.config['xem_origin']

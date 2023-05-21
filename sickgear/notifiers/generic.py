@@ -91,9 +91,13 @@ class BaseNotifier(object):
     def notify_git_update(self, *args, **kwargs):
         pass
 
-    def update_library(self, **kwargs):
+    def update_library(self, include_online=True, **kwargs):
         """
         note: nmj_notifier fires its library update when the notify_download is issued (inside notifiers)
+
+        :param include_online: Set False if to exclude derived notifiers from library updates.
+        For example, Trakt doesn't need to be updated when renaming the episode name part of a filename,
+        therefore, this is set False for that specific notification use case update.
         """
         pass
 

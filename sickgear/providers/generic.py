@@ -15,8 +15,6 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import with_statement, division
-
 from base64 import b64decode
 import codecs
 import datetime
@@ -37,7 +35,7 @@ from ..classes import NZBSearchResult, TorrentSearchResult, SearchResult
 from ..common import Quality, MULTI_EP_RESULT, SEASON_RESULT, USER_AGENT
 from ..helpers import maybe_plural, remove_file_perm
 from ..name_parser.parser import InvalidNameException, InvalidShowException, NameParser
-from ..scene_exceptions import has_season_exceptions
+from ..scene_exceptions import ReleaseMap
 from ..show_name_helpers import get_show_names_all_possible
 from ..sgdatetime import SGDatetime
 from ..tv import TVEpisode, TVShow
@@ -1743,7 +1741,8 @@ class TorrentProvider(GenericProvider):
             return []
 
         show_obj = ep_obj.show_obj
-        season = (-1, ep_obj.season)[has_season_exceptions(ep_obj.show_obj.tvid, ep_obj.show_obj.prodid, ep_obj.season)]
+        season = (-1, ep_obj.season)[ReleaseMap().has_season_exceptions(
+            ep_obj.show_obj.tvid, ep_obj.show_obj.prodid, ep_obj.season)]
         ep_dict = self._ep_dict(ep_obj)
         sp_detail = (show_obj.air_by_date or show_obj.is_sports) and str(ep_obj.airdate).split('-')[0] or \
                     (show_obj.is_anime and ep_obj.scene_absolute_number or
@@ -1779,7 +1778,8 @@ class TorrentProvider(GenericProvider):
             return []
 
         show_obj = ep_obj.show_obj
-        season = (-1, ep_obj.season)[has_season_exceptions(ep_obj.show_obj.tvid, ep_obj.show_obj.prodid, ep_obj.season)]
+        season = (-1, ep_obj.season)[ReleaseMap().has_season_exceptions(
+            ep_obj.show_obj.tvid, ep_obj.show_obj.prodid, ep_obj.season)]
         if show_obj.air_by_date or show_obj.is_sports:
             ep_detail = [str(ep_obj.airdate).replace('-', sep_date)]\
                 if 'date_detail' not in kwargs else kwargs['date_detail'](ep_obj.airdate)

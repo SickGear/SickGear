@@ -86,10 +86,7 @@ def convert_sh_file_opt_result(result):
         0x10074: 0x57,  # DE_ROOTDIR | ERRORONDEST -> ERROR_INVALID_PARAMETER
     }
 
-    if result in results.keys():
-        return results[result]
-    else:
-        return result
+    return results.get(result, result)
 
 
 def prefix_and_path(path):

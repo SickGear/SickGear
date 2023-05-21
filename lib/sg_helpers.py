@@ -2,7 +2,6 @@
 # ---------------
 # functions are placed here to remove cyclic import issues from placement in helpers
 #
-from __future__ import division
 import ast
 import codecs
 import datetime
@@ -26,6 +25,7 @@ import unicodedata
 from exceptions_helper import ex, ConnectionSkipException
 from json_helper import json_loads
 from cachecontrol import CacheControl, caches
+from lib.dateutil.parser import parser
 # from lib.tmdbsimple.configuration import Configuration
 # from lib.tmdbsimple.genres import Genres
 from cfscrape import CloudflareScraper
@@ -42,6 +42,7 @@ from six import integer_types, iteritems, iterkeys, itervalues, moves, PY2, stri
 import zipfile
 # py7z hardwired removed, see comment below
 py7zr = None
+tz_p = parser()
 
 # noinspection PyUnreachableCode
 if False:
@@ -61,7 +62,7 @@ if False:
     from sickgear import db, notifiers as NOTIFIERS
     # noinspection PyUnresolvedReferences
     from typing import Any, AnyStr, Dict, Generator, NoReturn, integer_types, Iterable, Iterator, List, Optional, \
-        Tuple, Union
+        Tuple, Type, Union
 
 html_convert_fractions = {0: '', 25: '&frac14;', 50: '&frac12;', 75: '&frac34;', 100: 1}
 
@@ -635,6 +636,21 @@ def try_int(s, s_default=0):
         return s_default
 
 
+def try_date(s, s_default=None):
+    # type: (AnyStr, Any) -> Optional[AnyStr]
+    """
+    Convert string to a standard UTC date string
+    :param s:
+    :param s_default:
+    :return:
+    """
+    try:
+        parse = tz_p.parse(clean_data(s))
+        return '%04d-%02d-%02d' % (parse.year, parse.month, parse.day)
+    except(BaseException, Exception):
+        return s_default
+
+
 def _maybe_request_url(e, def_url=''):
     return hasattr(e, 'request') and hasattr(e.request, 'url') and ' ' + e.request.url or def_url
 
@@ -645,6 +661,7 @@ def clean_data(data):
 
     Issues corrected:
     - Replaces &amp; with &
+    - Replace multiple spaces with one space
     - Trailing whitespace
     - Decode html entities
     :param data: data
@@ -660,7 +677,7 @@ def clean_data(data):
     if isinstance(data, dict):
         return {k: clean_data(v) for k, v in iteritems(data)}
     if isinstance(data, string_types):
-        return unicodedata.normalize('NFKD', html_unescape(data).strip().replace('&amp;', '&'))
+        return unicodedata.normalize('NFKD', re.sub(r' {2,}', ' ', html_unescape(data).strip().replace('&amp;', '&')))
     return data
 
 
@@ -1741,3 +1758,16 @@ def is_virtualenv():
     """Get base/real prefix, or `sys.prefix` if there is none."""
     get_base_prefix_compat = getattr(sys, 'base_prefix', None) or getattr(sys, 'real_prefix', None) or sys.prefix
     return get_base_prefix_compat != sys.prefix
+
+
+def enforce_type(value, allowed_types, default):
+    # type: (Any, Union[Type, Tuple[Type]], Any) -> Any
+    """
+    enforces that value is given type(s)
+    :param value: value to check
+    :param allowed_types: type or tuple of types allowed
+    :param default: value to return if other type
+    """
+    if not isinstance(value, allowed_types):
+        return default
+    return value

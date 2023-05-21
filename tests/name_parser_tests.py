@@ -1,4 +1,3 @@
-from __future__ import print_function
 import datetime
 import os.path
 import test_lib as test
@@ -12,6 +11,7 @@ import sickgear
 from sickgear import db, name_cache, tv
 from sickgear.classes import OrderedDefaultdict
 from sickgear.name_parser import parser
+from sickgear.scene_exceptions import ReleaseMap
 
 sickgear.SYS_ENCODING = 'UTF-8'
 
@@ -475,6 +475,7 @@ scene_numbering_test = [
 
 class MultiSceneNumbering(test.SickbeardTestDBCase):
     def test_multi_ep_numbering(self):
+        _ = ReleaseMap()
         for e_t in scene_numbering_test:
             sickgear.showList = []
             sickgear.showDict = {}

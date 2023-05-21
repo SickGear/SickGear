@@ -113,10 +113,7 @@
 	<div class="clearfix" style="margin-bottom:15px"></div>
 
 #if $show_message
-	<div class="alert alert-info">
-		$show_message
-	</div>
-
+	<div class="alert alert-info">$show_message</div>
 #end if
 	<div class="display-show-container">
 		<div id="posterCol" class="hidden-xs">
@@ -179,6 +176,9 @@
 #if not $genres_done and $show_obj.genre
     #for $genre in $show_obj.genre.split('|')
         #set $genres_done = True
+        #if $TVINFO_TVDB == $show_obj.tvid
+            #set $genre = '<a href="%s" target="_blank" title="View other popular %s shows on thetvdb.com" class="addQTip">%s</a>' % (anon_url('https://thetvdb.com/genres/', $genre), $genre, $genre)
+        #end if
 						<span class="label">$genre</span>
     #end for#
 #end if
@@ -278,7 +278,7 @@
 
 #if $show_obj.airs
     #set $showairs = '%s%s' % ($re.sub(r'(?:s|nes|rs|ur)?day', '', $re.sub(r'(y)[^\w]+', r'\1, ', $show_obj.airs)),
-                               ('', ' <span class="red-text" style="font-weight:bold">(invalid timeformat)</span>')[not $network_timezones.test_timeformat($show_obj.airs)])
+                               ('', ' <span class="red-text" style="font-weight:bold">(time unknown)</span>')[not $network_timezones.test_timeformat($show_obj.airs)])
     #set $showairs = $showairs.replace('Sat, Sun', 'Sat - Sun').replace('Mon, Tue, Wed, Thu, Fri', 'Mon - Fri').replace('Mon, Tue, Wed, Thu', 'Mon - Thu').replace('Tue, Wed, Thu', 'Tue - Thu')
 					<div>
 						<span class="details-title">Air#echo ('s', 'ed')[$show_ended]#</span>

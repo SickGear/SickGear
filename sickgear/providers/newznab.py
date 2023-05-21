@@ -14,7 +14,6 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import division
 # from collections import OrderedDict
 from io import BytesIO
 from math import ceil
@@ -34,7 +33,7 @@ from ..network_timezones import SG_TIMEZONE
 from ..sgdatetime import SGDatetime
 from ..search import get_aired_in_season, get_wanted_qualities
 from ..show_name_helpers import get_show_names
-from ..scene_exceptions import has_season_exceptions
+from ..scene_exceptions import ReleaseMap
 from ..tv import TVEpisode, TVShow
 
 from lib.dateutil import parser
@@ -470,7 +469,7 @@ class NewznabProvider(generic.NZBProvider):
         # id search
         params = base_params.copy()
         use_id = False
-        if not has_season_exceptions(ep_obj.show_obj.tvid, ep_obj.show_obj.prodid, ep_obj.season):
+        if not ReleaseMap().has_season_exceptions(ep_obj.show_obj.tvid, ep_obj.show_obj.prodid, ep_obj.season):
             for i in sickgear.TVInfoAPI().all_sources:
                 if i in ep_obj.show_obj.ids and 0 < ep_obj.show_obj.ids[i]['id'] and i in self.caps:
                     params[self.caps[i]] = ep_obj.show_obj.ids[i]['id']
@@ -528,7 +527,7 @@ class NewznabProvider(generic.NZBProvider):
         # id search
         params = base_params.copy()
         use_id = False
-        if not has_season_exceptions(ep_obj.show_obj.tvid, ep_obj.show_obj.prodid, ep_obj.season):
+        if not ReleaseMap().has_season_exceptions(ep_obj.show_obj.tvid, ep_obj.show_obj.prodid, ep_obj.season):
             for i in sickgear.TVInfoAPI().all_sources:
                 if i in ep_obj.show_obj.ids and 0 < ep_obj.show_obj.ids[i]['id'] and i in self.caps:
                     params[self.caps[i]] = ep_obj.show_obj.ids[i]['id']

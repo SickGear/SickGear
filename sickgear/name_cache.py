@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
+from collections import defaultdict
 import threading
 
 import sickgear
@@ -21,6 +22,7 @@ from . import db
 from .helpers import full_sanitize_scene_name, try_int
 
 from six import iteritems
+from _23 import map_consume
 
 # noinspection PyUnreachableCode
 if False:
@@ -85,18 +87,19 @@ def build_name_cache(show_obj=None, update_only_scene=False):
             if show_obj:
                 # search for only the requested show id and flush old show entries from namecache
                 show_ids = {show_obj.tvid: [show_obj.prodid]}
+
                 nameCache = dict([(k, v) for k, v in iteritems(nameCache)
                                   if not (v[0] == show_obj.tvid and v[1] == show_obj.prodid)])
                 sceneNameCache = dict([(k, v) for k, v in iteritems(sceneNameCache)
                                        if not (v[0] == show_obj.tvid and v[1] == show_obj.prodid)])
 
                 # add standard indexer name to namecache
-                nameCache[full_sanitize_scene_name(show_obj.unique_name or show_obj.name)] = [show_obj.tvid, show_obj.prodid, -1]
+                nameCache[full_sanitize_scene_name(show_obj.unique_name or show_obj.name)] = \
+                    [show_obj.tvid, show_obj.prodid, -1]
             else:
                 # generate list of production ids to look up in cache.db
-                show_ids = {}
-                for cur_show_obj in sickgear.showList:
-                    show_ids.setdefault(cur_show_obj.tvid, []).append(cur_show_obj.prodid)
+                show_ids = defaultdict(list)
+                map_consume(lambda _so: show_ids[_so.tvid].append(_so.prodid), sickgear.showList)
 
                 # add all standard show indexer names to namecache
                 nameCache = dict(
@@ -104,33 +107,32 @@ def build_name_cache(show_obj=None, update_only_scene=False):
                      for cur_so in sickgear.showList if cur_so])
                 sceneNameCache = {}
 
-        cache_db = db.DBConnection()
-
-        cache_results = []
-        if update_only_scene:
-            # generate list of production ids to look up in cache.db
-            show_ids = {}
-            for cur_show_obj in sickgear.showList:
-                show_ids.setdefault(cur_show_obj.tvid, []).append(cur_show_obj.prodid)
-            tmp_scene_name_cache = {}
-        else:
             tmp_scene_name_cache = sceneNameCache.copy()
 
-        for t, s in iteritems(show_ids):
+        else:
+            # generate list of production ids to look up in cache.db
+            show_ids = defaultdict(list)
+            map_consume(lambda _so: show_ids[_so.tvid].append(_so.prodid), sickgear.showList)
+
+            tmp_scene_name_cache = {}
+
+        cache_results = []
+        cache_db = db.DBConnection()
+        for cur_tvid, cur_prodid_list in iteritems(show_ids):
             cache_results += cache_db.select(
-                'SELECT show_name, indexer AS tv_id, indexer_id AS prod_id, season'
-                ' FROM scene_exceptions'
-                ' WHERE indexer = %s AND indexer_id IN (%s)' % (t, ','.join(['%s' % i for i in s])))
+                f'SELECT show_name, indexer AS tv_id, indexer_id AS prod_id, season'
+                f' FROM scene_exceptions'
+                f' WHERE indexer = {cur_tvid} AND indexer_id IN ({",".join(map(str, cur_prodid_list))})')
 
         if cache_results:
-            for cache_result in cache_results:
-                tvid = int(cache_result['tv_id'])
-                prodid = int(cache_result['prod_id'])
-                season = try_int(cache_result['season'], -1)
-                name = full_sanitize_scene_name(cache_result['show_name'])
+            for cur_result in cache_results:
+                tvid = int(cur_result['tv_id'])
+                prodid = int(cur_result['prod_id'])
+                season = try_int(cur_result['season'], -1)
+                name = full_sanitize_scene_name(cur_result['show_name'])
                 tmp_scene_name_cache[name] = [tvid, prodid, season]
 
-            sceneNameCache = tmp_scene_name_cache
+            sceneNameCache = tmp_scene_name_cache.copy()
 
 
 def remove_from_namecache(tvid, prodid):

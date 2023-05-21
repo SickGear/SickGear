@@ -14,7 +14,6 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import with_statement
 from collections import OrderedDict
 
 import datetime
@@ -855,7 +854,7 @@ class GenericMetadata(object):
 
                 t = sickgear.TVInfoAPI(tv_id).setup(**tvinfo_config)
                 return t.get_show((show_obj.ids[tv_id]['id'], show_obj.prodid)[tv_src == show_obj.tvid],
-                                  load_episodes=False, banners=True, posters=True, fanart=True, language=show_obj.lang)
+                                  load_episodes=False, banners=True, posters=True, fanart=True, language=show_lang)
             except (BaseTVinfoError, IOError) as e:
                 logger.warning(f'Unable to look up show on {sickgear.TVInfoAPI(tv_id).name},'
                                f' not downloading images: {ex(e)}')

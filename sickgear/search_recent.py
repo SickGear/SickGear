@@ -14,21 +14,15 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import with_statement
-
-import threading
 import sickgear
+from .scheduler import Job
 
 
-class RecentSearcher(object):
+class RecentSearcher(Job):
     def __init__(self):
-        self.lock = threading.Lock()
-        self.amActive = False
+        super(RecentSearcher, self).__init__(self.job_run, kwargs={}, thread_lock=True)
 
-    def run(self):
-        self.amActive = True
+    def job_run(self):
 
         recentsearch_queue_item = sickgear.search_queue.RecentSearchQueueItem()
         sickgear.search_queue_scheduler.action.add_item(recentsearch_queue_item)
-
-        self.amActive = False

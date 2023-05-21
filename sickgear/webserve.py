@@ -15,8 +15,6 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import with_statement, division
-
 # noinspection PyProtectedMember
 from mimetypes import MimeTypes
 from urllib.parse import urljoin
@@ -65,6 +63,7 @@ from .name_parser.parser import InvalidNameException, InvalidShowException, Name
 from .providers import newznab, rsstorrent
 from .scene_numbering import get_scene_absolute_numbering_for_show, get_scene_numbering_for_show, \
     get_xem_absolute_numbering_for_show, get_xem_numbering_for_show, set_scene_numbering_helper
+from .scheduler import Scheduler
 from .search_backlog import FORCED_BACKLOG
 from .sgdatetime import SGDatetime
 from .show_name_helpers import abbr_showname
@@ -92,6 +91,8 @@ from lib.dateutil.relativedelta import relativedelta
 from lib.fuzzywuzzy import fuzz
 from lib.api_trakt import TraktAPI
 from lib.api_trakt.exceptions import TraktException, TraktAuthException
+from lib.tvinfo_base import TVInfoEpisode
+from lib.tvinfo_base.base import tv_src_names
 
 import lib.rarfile.rarfile as rarfile
 
@@ -101,9 +102,14 @@ from six import binary_type, integer_types, iteritems, iterkeys, itervalues, mov
 
 # noinspection PyUnreachableCode
 if False:
-    from typing import Any, AnyStr, Dict, List, Optional, Set, Tuple
+    from typing import Any, AnyStr, Dict, List, Optional, Set, Tuple, Union
     from sickgear.providers.generic import TorrentProvider
-    from tv import TVInfoShow
+    # prevent pyc TVInfoBase resolution by typing the derived used class to TVInfoAPI instantiation
+    from lib.tvinfo_base import TVInfoBase, TVInfoShow
+    # from api_imdb.imdb_api import IMDbIndexer
+    from api_tmdb.tmdb_api import TmdbIndexer
+    from api_trakt.indexerapiinterface import TraktIndexer
+    from api_tvmaze.tvmaze_api import TvMaze as TvmazeIndexer
 
 
 # noinspection PyAbstractClass
@@ -1327,8 +1333,8 @@ class MainHandler(WebHandler):
 
         now = datetime.datetime.now()
         events = [
-            ('recent', sickgear.recent_search_scheduler.time_left),
-            ('backlog', sickgear.backlog_search_scheduler.next_backlog_timeleft),
+            ('recent', sickgear.search_recent_scheduler.time_left),
+            ('backlog', sickgear.search_backlog_scheduler.next_backlog_timeleft),
         ]
 
         if sickgear.DOWNLOAD_PROPERS:
@@ -1360,7 +1366,6 @@ class MainHandler(WebHandler):
     def update_watched_state(payload=None, as_json=True):
         """
         Update db with details of media file that is watched or unwatched
-
         :param payload: Payload is a dict of dicts
         :type payload: JSON or Dict
         Each dict key in payload is an arbitrary value used to return its associated success or fail response.
@@ -2070,6 +2075,9 @@ class Home(MainHandler):
         if str(pid) != str(sickgear.PID):
             return self.redirect('/home/')
 
+        if self.maybe_ignore('Shutdown'):
+            return
+
         t = PageTemplate(web_handler=self, file='restart.tmpl')
         t.shutdown = True
 
@@ -2082,12 +2090,26 @@ class Home(MainHandler):
         if str(pid) != str(sickgear.PID):
             return self.redirect('/home/')
 
+        if self.maybe_ignore('Restart'):
+            return
+
         t = PageTemplate(web_handler=self, file='restart.tmpl')
         t.shutdown = False
 
         sickgear.restart(soft=False, update_pkg=bool(helpers.try_int(update_pkg)))
 
         return t.respond()
+
+    def maybe_ignore(self, task):
+        response = Scheduler.blocking_jobs()
+        if response:
+            task and logger.log('%s aborted because %s' % (task, response.lower()), logger.DEBUG)
+
+            self.redirect(self.request.headers['Referer'])
+            if task:
+                ui.notifications.message(u'Fail %s because %s, please try later' % (task.lower(), response.lower()))
+                return True
+        return False
 
     def update(self, pid=None):
 
@@ -2161,6 +2183,17 @@ class Home(MainHandler):
 
         return json_dumps({'success': t.respond()})
 
+    @staticmethod
+    def fix_show_obj_db_data(show_obj):
+        # adjust show_obj db data
+        if 'genres' not in show_obj.imdb_info or None is show_obj.imdb_info.get('genres'):
+            show_obj.imdb_info['genres'] = ''
+        if show_obj.genre and not show_obj.genre[1:-1]:
+            show_obj.genre = ''
+        if 'country_codes' not in show_obj.imdb_info or None is show_obj.imdb_info.get('country_codes'):
+            show_obj.imdb_info['country_codes'] = ''
+        return show_obj
+
     def view_show(self, tvid_prodid=None):
 
         if None is tvid_prodid:
@@ -2169,6 +2202,8 @@ class Home(MainHandler):
         show_obj = helpers.find_show_by_id(tvid_prodid)
         if None is show_obj:
             return self._generic_message('Error', 'Show not in show list')
+
+        show_obj = self.fix_show_obj_db_data(show_obj)
 
         t = PageTemplate(web_handler=self, file='displayShow.tmpl')
         t.submenu = [{'title': 'Edit', 'path': 'home/edit-show?tvid_prodid=%s' % tvid_prodid}]
@@ -2326,15 +2361,15 @@ class Home(MainHandler):
         t.season_min = ([], [1])[2 < t.latest_season] + [t.latest_season]
         t.other_seasons = (list(set(all_seasons) - set(t.season_min)), [])[display_show_minimum]
         t.seasons = []
-        for x in all_seasons:
-            t.seasons += [(x, [None] if x not in (t.season_min + t.other_seasons) else my_db.select(
+        for cur_season in all_seasons:
+            t.seasons += [(cur_season, [None] if cur_season not in (t.season_min + t.other_seasons) else my_db.select(
                 'SELECT *'
                 ' FROM tv_episodes'
                 ' WHERE indexer = ? AND showid = ?'
                 ' AND season = ?'
                 ' ORDER BY episode DESC',
-                [show_obj.tvid, show_obj.prodid, x]
-            ), scene_exceptions.has_season_exceptions(show_obj.tvid, show_obj.prodid, x))]
+                [show_obj.tvid, show_obj.prodid, cur_season]
+            ), scene_exceptions.ReleaseMap().has_season_exceptions(show_obj.tvid, show_obj.prodid, cur_season))]
 
         for row in my_db.select('SELECT season, episode, status'
                                 ' FROM tv_episodes'
@@ -2423,7 +2458,7 @@ class Home(MainHandler):
         t.clean_show_name = quote_plus(sickgear.indexermapper.clean_show_name(show_obj.name))
 
         t.min_initial = Quality.get_quality_ui(min(Quality.split_quality(show_obj.quality)[0]))
-        t.show_obj.exceptions = scene_exceptions.get_scene_exceptions(show_obj.tvid, show_obj.prodid)
+        t.show_obj.exceptions = scene_exceptions.ReleaseMap().get_alt_names(show_obj.tvid, show_obj.prodid)
         # noinspection PyUnresolvedReferences
         t.all_scene_exceptions = show_obj.exceptions  # normally Unresolved as not a class attribute, force set above
         t.scene_numbering = get_scene_numbering_for_show(show_obj.tvid, show_obj.prodid)
@@ -2562,7 +2597,7 @@ class Home(MainHandler):
     @staticmethod
     def scene_exceptions(tvid_prodid, wanted_season=None):
 
-        exceptions_list = sickgear.scene_exceptions.get_all_scene_exceptions(tvid_prodid)
+        exceptions_list = scene_exceptions.ReleaseMap().get_show_exceptions(tvid_prodid)
         wanted_season = helpers.try_int(wanted_season, None)
         wanted_not_found = None is not wanted_season and wanted_season not in exceptions_list
         if not exceptions_list or wanted_not_found:
@@ -2754,7 +2789,7 @@ class Home(MainHandler):
                 return [err_string]
             return self._generic_message('Error', err_string)
 
-        show_obj.exceptions = scene_exceptions.get_all_scene_exceptions(tvid_prodid)
+        show_obj.exceptions = scene_exceptions.ReleaseMap().get_show_exceptions(tvid_prodid)
 
         if None is not quality_preset and int(quality_preset):
             best_qualities = []
@@ -2971,7 +3006,7 @@ class Home(MainHandler):
 
         if do_update_exceptions:
             try:
-                scene_exceptions.update_scene_exceptions(show_obj.tvid, show_obj.prodid, exceptions_list)
+                scene_exceptions.ReleaseMap().update_exceptions(show_obj, exceptions_list)
                 helpers.cpu_sleep()
             except exceptions_helper.CantUpdateException:
                 errors.append('Unable to force an update on scene exceptions of the show.')
@@ -3468,7 +3503,6 @@ class Home(MainHandler):
     def prepare_episode(ep_type, searchstate, retrystate=False, statusoverview=False):
         """
         Prepare episode data and its unique id
-
         :param ep_type: Episode structure containing the show that it relates to
         :type ep_type: sickgear.tv.TVEpisode object or Episode Base Namespace
         :param searchstate: Progress of search
@@ -3563,7 +3597,7 @@ class Home(MainHandler):
         # type: (AnyStr) -> AnyStr
         """Return a text list of items separated by comma instead of '/' """
 
-        return re.sub(r'\b\s?/\s?\b', ', ', text)
+        return (isinstance(text, string_types) and re.sub(r'\b\s?/\s?\b', ', ', text)) or text
 
     def role(self, rid, tvid_prodid, **kwargs):
         _ = kwargs.get('oid')  # suppress pyc non used var highlight, oid (original id) is a visual ui key
@@ -3593,7 +3627,7 @@ class Home(MainHandler):
         known = {}
         main_role_known = False
         rc_clean = re.compile(r'[^a-z0-9]')
-        char_name = rc_clean.sub('', character.name.lower())
+        char_name = rc_clean.sub('', (character.name or 'unknown name').lower())
         for cur_person in (character.person or []):
             person, roles, msg = self.cast(cur_person.id)
             if not msg:
@@ -3688,7 +3722,7 @@ class Home(MainHandler):
                                     ref_id = cur_ref_id
 
                     roles.append({
-                        'character_name': self.csv_items(cur_char['name']),
+                        'character_name': self.csv_items(cur_char['name']) or 'unknown name',
                         'character_id': cur_char['id'],
                         'character_rid': ref_id,
                         'show_obj': helpers.find_show_by_id({cur_char['c_tvid']: cur_char['c_prodid']}),
@@ -3912,16 +3946,16 @@ class HomeProcessMedia(Home):
                         m = sickgear.NZBGET_MAP.split('=')
                         dir_name, not_used = helpers.path_mapper(m[0], m[1], dir_name)
 
-                result = processTV.processDir(dir_name if dir_name else None,
-                                              None if not nzb_name else decode_str(nzb_name),
-                                              process_method=process_method, pp_type=process_type,
-                                              cleanup=cleanup,
-                                              force=force in ('on', '1'),
-                                              force_replace=force_replace in ('on', '1'),
-                                              failed='0' != failed,
-                                              webhandler=None if '0' == stream else self.send_message,
-                                              show_obj=show_obj, is_basedir=is_basedir in ('on', '1'),
-                                              skip_failure_processing=skip_failure_processing, client=client)
+                result = processTV.process_dir(dir_name if dir_name else None,
+                                               None if not nzb_name else decode_str(nzb_name),
+                                               process_method=process_method, pp_type=process_type,
+                                               cleanup=cleanup,
+                                               force=force in ('on', '1'),
+                                               force_replace=force_replace in ('on', '1'),
+                                               failed='0' != failed,
+                                               webhandler=None if '0' == stream else self.send_message,
+                                               show_obj=show_obj, is_basedir=is_basedir in ('on', '1'),
+                                               skip_failure_processing=skip_failure_processing, client=client)
 
                 if '0' == stream:
                     regexp = re.compile(r'(?i)<br[\s/]+>', flags=re.UNICODE)
@@ -3957,7 +3991,7 @@ class AddShows(Home):
 
     @staticmethod
     def get_infosrc_languages():
-        result = sickgear.TVInfoAPI().config['valid_languages']
+        result = sickgear.TVInfoAPI().config['valid_languages'].copy()
 
         # sort list alphabetically with sickgear.ADD_SHOWS_METALANG as the first item
         if sickgear.ADD_SHOWS_METALANG in result:
@@ -3965,7 +3999,52 @@ class AddShows(Home):
         result.sort()
         result.insert(0, sickgear.ADD_SHOWS_METALANG)
 
-        return json_dumps({'results': result})
+        for src in sickgear.TVInfoAPI().search_sources:
+            tvinfo_config = sickgear.TVInfoAPI(src).api_params.copy()
+            t = sickgear.TVInfoAPI(src).setup(**tvinfo_config)
+            try:
+                all_langs = t.get_languages()
+            except (BaseException, Exception):
+                continue
+            if all_langs:
+                result.extend([lang['sg_lang'] for lang in all_langs if lang['sg_lang'] not in result])
+
+        try:
+            # noinspection PyPep8Naming
+            from langcodes import Language as lang_obj, LanguageTagError, standardize_tag
+        except ImportError:
+            lang_obj = None
+        result_ext = []
+        if None is not lang_obj:
+            prio_abbr = ''
+            prio_lang = []
+            try:
+                lang = lang_obj.get(sickgear.ADD_SHOWS_METALANG)
+                prio_abbr = lang.to_alpha3()
+                prio_lang = [dict(orig_abbr=sickgear.ADD_SHOWS_METALANG, std_abbr=sickgear.ADD_SHOWS_METALANG,
+                                  abbr=prio_abbr, en=lang.display_name(), native=lang.autonym())]
+            except (BaseException, Exception) as _:
+                pass
+            dedupe = []
+            for cur_lang in result:
+                try:
+                    lang = lang_obj.get(cur_lang)
+                    abbr = lang.to_alpha3()
+                except (BaseException, Exception) as _:
+                    continue
+
+                try:
+                    std_abbr = standardize_tag(cur_lang, macro=True)
+                except (BaseException, Exception) as _:
+                    std_abbr = None
+
+                if abbr not in dedupe and abbr != prio_abbr:
+                    dedupe += [abbr]
+                    result_ext += [dict(orig_abbr=cur_lang, std_abbr=std_abbr, abbr=abbr, en=lang.display_name(), native=lang.autonym())]
+
+            result_ext = prio_lang + sorted(result_ext, key=lambda x: x['en'])
+
+        return json_dumps({'results': [] if result_ext else result, 'results_ext': result_ext})
 
     @staticmethod
     def generate_show_dir_name(show_name):
@@ -4079,7 +4158,9 @@ class AddShows(Home):
             t = sickgear.TVInfoAPI(cur_tvid).setup(**tvinfo_config)
             results.setdefault(cur_tvid, {})
             try:
-                for cur_result in t.search_show(list(used_search_term), ids=ids_search_used):  # type: TVInfoShow
+                for cur_result in t.search_show(list(used_search_term),
+                                                ids=ids_search_used,
+                                                lang=lang):  # type: TVInfoShow
                     if TVINFO_TRAKT == cur_tvid and not cur_result['ids'].tvdb:
                         continue
                     tv_src_id = int(cur_result['id'])
@@ -4144,10 +4225,11 @@ class AddShows(Home):
                        sickgear.TVInfoAPI((tvid, TVINFO_TVDB)[TVINFO_TRAKT == tvid]).config['slug'],
                        (sickgear.TVInfoAPI((tvid, TVINFO_TVDB)[TVINFO_TRAKT == tvid]).config['show_url'] %
                         show['ids'][(tvid, TVINFO_TVDB)[TVINFO_TRAKT == tvid]])
-                       + ('', '&lid=%s' % sickgear.TVInfoAPI().config['langabbv_to_id'][lang])[TVINFO_TVDB == tvid],
+                       + ('', '&lid=%s' % sickgear.TVInfoAPI().config.get('langabbv_to_id', {}).get(lang, lang))[
+                           TVINFO_TVDB == tvid],
                        int(show['id']),
                        show['seriesname'], helpers.xhtml_escape(show['seriesname']), show['firstaired'],
-                       (isinstance(show['firstaired'], string_types)
+                       (isinstance(show['firstaired'], string_types) and show['firstaired']
                         and SGDatetime.sbfdate(_parse_date(show['firstaired'])) or ''),
                        show.get('network', '') or '',  # 11
                        (show.get('genres', '') or show.get('genre', '') or '').replace('|', ', '),  # 12
@@ -4155,7 +4237,7 @@ class AddShows(Home):
                        re.sub(r'([,.!][^,.!]*?)$', '...',
                               re.sub(r'([.!?])(?=\w)', r'\1 ',
                                      helpers.xhtml_escape((show.get('overview', '') or '')[:250:].strip()))),  # 15
-                       self._make_search_image_url(tvid, show),  # 16
+                       self._make_cache_image_url(tvid, show, default_transparent_img=False),  # 16
                        100 - ((show['direct_id'] and 100)
                               or self.get_uw_ratio(term, show['seriesname'], show.get('aliases') or [],
                                                    show.get('language_country_code') or '')),
@@ -4232,22 +4314,15 @@ class AddShows(Home):
         return json_dumps({'results': final_results})
 
     @staticmethod
-    def _make_search_image_url(iid, show_info):
+    def _make_cache_image_url(iid, show_info, default_transparent_img=True):
         img_url = ''
+        trans_param = ('1', '0')[not default_transparent_img]
         if TVINFO_TRAKT == iid:
-            img_url = 'imagecache?path=browse/thumb/trakt&filename=%s&trans=0&tmdbid=%s&tvdbid=%s' % \
-                      ('%s.jpg' % show_info['ids'].trakt, show_info.get('tmdb_id'), show_info['ids'].tvdb)
-        elif TVINFO_TVDB == iid:
-            img_url = 'imagecache?path=browse/thumb/tvdb&filename=%s&trans=0&source=%s' % \
-                      ('%s.jpg' % show_info['id'], show_info['poster'])
-            sickgear.CACHE_IMAGE_URL_LIST.add_url(show_info['poster'])
-        elif TVINFO_TVMAZE == iid and show_info.get('image'):
-            img_url = 'imagecache?path=browse/thumb/tvmaze&filename=%s&trans=0&source=%s' % \
-                      ('%s.jpg' % show_info['id'], show_info['image'])
-            sickgear.CACHE_IMAGE_URL_LIST.add_url(show_info['image'])
-        elif TVINFO_TMDB == iid and 'poster' in show_info and show_info['poster']:
-            img_url = 'imagecache?path=browse/thumb/tmdb&filename=%s&trans=0&source=%s' % \
-                      ('%s.jpg' % show_info['id'], show_info['poster'])
+            img_url = 'imagecache?path=browse/thumb/trakt&filename=%s&trans=%s&tmdbid=%s&tvdbid=%s' % \
+                      ('%s.jpg' % show_info['ids'].trakt, trans_param, show_info['ids'].tmdb, show_info['ids'].tvdb)
+        elif iid in (TVINFO_TVDB, TVINFO_TVMAZE, TVINFO_TMDB) and show_info.get('poster'):
+            img_url = 'imagecache?path=browse/thumb/%s&filename=%s&trans=%s&source=%s' % \
+                      (tv_src_names[iid], '%s.jpg' % show_info['id'], trans_param, show_info['poster'])
             sickgear.CACHE_IMAGE_URL_LIST.add_url(show_info['poster'])
         return img_url
 
@@ -4448,7 +4523,7 @@ class AddShows(Home):
         t.blocklist = []
         t.groups = []
 
-        t.show_scene_maps = list(itervalues(sickgear.scene_exceptions.xem_ids_list))
+        t.show_scene_maps = list(itervalues(scene_exceptions.MEMCACHE['release_map_xem']))
 
         has_shows = len(sickgear.showList)
         t.try_id = []  # [dict try_tip: try_term]
@@ -4482,6 +4557,9 @@ class AddShows(Home):
                         cur_url_def if not try_id else sickgear.TVInfoAPI(cur_tvid).config['show_url'] % try_id}]
 
         return t.respond()
+
+    def anime_default(self):
+        return self.randomhot_anidb()
 
     def randomhot_anidb(self, **kwargs):
 
@@ -4519,15 +4597,8 @@ class AddShows(Home):
                         first_aired, title, image = [None is not y and y.text or y for y in [
                             anime.find(node) for node in ['startdate', 'title', 'picture']]]
 
-                        dt = dateutil.parser.parse(first_aired)
-                        dt_ordinal = dt.toordinal()
-                        dt_string = SGDatetime.sbfdate(dt)
-                        if dt_ordinal < oldest_dt:
-                            oldest_dt = dt_ordinal
-                            oldest = dt_string
-                        if dt_ordinal > newest_dt:
-                            newest_dt = dt_ordinal
-                            newest = dt_string
+                        ord_premiered, str_premiered, started_past, oldest_dt, newest_dt, oldest, newest, _, _, _, _ \
+                            = self.sanitise_dates(first_aired, oldest_dt, newest_dt, oldest, newest)
 
                         # img_uri = 'http://img7.anidb.net/pics/anime/%s' % image
                         img_uri = 'https://cdn-eu.anidb.net/images/main/%s' % image
@@ -4546,16 +4617,18 @@ class AddShows(Home):
                         # noinspection HttpUrlsUsage
                         filtered.append(dict(
                             type=list_type,
+                            ord_premiered=ord_premiered,
+                            str_premiered=str_premiered,
+                            started_past=started_past,  # air time not poss. 16.11.2015
+                            genres='',
                             ids=ids,
-                            premiered=dt_ordinal,
-                            premiered_str=dt_string,
-                            when_past=dt_ordinal < datetime.datetime.now().toordinal(),  # air time not poss. 16.11.2015
-                            title=title.strip(),
                             images=images,
+                            overview='',
+                            rating=rating,
+                            title=title.strip(),
                             url_src_db='http://anidb.net/perl-bin/animedb.pl?show=anime&aid=%s' % ids['anidb'],
                             url_tvdb=sickgear.TVInfoAPI(TVINFO_TVDB).config['show_url'] % ids['tvdb'],
-                            votes=votes, rating=rating,
-                            genres='', overview=''
+                            votes=votes
                         ))
             except (BaseException, Exception):
                 pass
@@ -4563,10 +4636,6 @@ class AddShows(Home):
             kwargs.update(dict(oldest=oldest, newest=newest))
 
         return self.browse_shows(browse_type, 'Random and Hot at AniDB', filtered, **kwargs)
-
-    def anime_default(self):
-
-        return self.redirect('/add-shows/randomhot-anidb')
 
     def info_anidb(self, ids, show_name):
 
@@ -4652,8 +4721,7 @@ class AddShows(Home):
                 overview = text
         return overview
 
-    @staticmethod
-    def parse_imdb(data, filtered, kwargs):
+    def parse_imdb(self, data, filtered, kwargs):
 
         oldest, newest, oldest_dt, newest_dt = None, None, 9999999, 0
         show_list = (data or {}).get('list', {}).get('items', {})
@@ -4670,16 +4738,11 @@ class AddShows(Home):
                 year, ended = 2 * [None]
                 if 2 == len(row.get('primary').get('year')):
                     year, ended = row.get('primary').get('year')
-                dt_ordinal = 0
+                ord_premiered = 0
+                started_past = False
                 if year:
-                    dt = dateutil.parser.parse('01-01-%s' % year)
-                    dt_ordinal = dt.toordinal()
-                    if dt_ordinal < oldest_dt:
-                        oldest_dt = dt_ordinal
-                        oldest = year
-                    if dt_ordinal > newest_dt:
-                        newest_dt = dt_ordinal
-                        newest = year
+                    ord_premiered, str_premiered, started_past, oldest_dt, newest_dt, oldest, newest, _, _, _, _ \
+                        = self.sanitise_dates('01-01-%s' % year, oldest_dt, newest_dt, oldest, newest)
 
                 overview = row.get('plot')
                 rating = row.get('ratings', {}).get('rating', 0)
@@ -4696,10 +4759,10 @@ class AddShows(Home):
                     sickgear.CACHE_IMAGE_URL_LIST.add_url(img_uri)
 
                 filtered.append(dict(
-                    premiered=dt_ordinal,
-                    premiered_str=year or 'No year',
+                    ord_premiered=ord_premiered,
+                    str_premiered=year or 'No year',
                     ended_str=ended or '',
-                    when_past=dt_ordinal < datetime.datetime.now().toordinal(),  # air time not poss. 16.11.2015
+                    started_past=started_past,  # air time not poss. 16.11.2015
                     genres=', '.join(row.get('metadata', {}).get('genres', {})) or 'No genre yet',
                     ids=ids,
                     images='' if not img_uri else images,
@@ -4740,16 +4803,11 @@ class AddShows(Home):
                     if len(first_aired):
                         years = re.findall(r'.*?(\d{4})(?:.*?(\d{4}))?.*', first_aired[0].get_text())
                         year, ended = years and years[0] or 2 * [None]
-                    dt_ordinal = 0
+                    ord_premiered = 0
+                    started_past = False
                     if year:
-                        dt = dateutil.parser.parse('01-01-%s' % year)
-                        dt_ordinal = dt.toordinal()
-                        if dt_ordinal < oldest_dt:
-                            oldest_dt = dt_ordinal
-                            oldest = year
-                        if dt_ordinal > newest_dt:
-                            newest_dt = dt_ordinal
-                            newest = year
+                        ord_premiered, str_premiered, started_past, oldest_dt, newest_dt, oldest, newest, _, _, _, _ \
+                            = self.sanitise_dates('01-01-%s' % year, oldest_dt, newest_dt, oldest, newest)
 
                     genres = row.select('.genre')
                     images = {}
@@ -4777,10 +4835,10 @@ class AddShows(Home):
                             sickgear.CACHE_IMAGE_URL_LIST.add_url(img_uri)
 
                     filtered.append(dict(
-                        premiered=dt_ordinal,
-                        premiered_str=year or 'No year',
+                        ord_premiered=ord_premiered,
+                        str_premiered=year or 'No year',
                         ended_str=ended or '',
-                        when_past=dt_ordinal < datetime.datetime.now().toordinal(),  # air time not poss. 16.11.2015
+                        started_past=started_past,  # air time not poss. 16.11.2015
                         genres=('No genre yet' if not len(genres) else
                                 genres[0].get_text().strip().lower().replace(' |', ',')),
                         ids=ids,
@@ -4829,6 +4887,8 @@ class AddShows(Home):
 
         list_name += ('\'s', '')['your' == list_name.replace('(Off) ', '').lower()]
 
+        mode = 'watchlist-%s' % acc_id
+
         url = 'https://www.imdb.com/user/ur%s/watchlist' % acc_id
         url_ui = '?mode=detail&page=1&sort=date_added,desc&' \
                  'title_type=tvSeries,tvEpisode,tvMiniSeries&ref_=wl_ref_typ'
@@ -4855,7 +4915,24 @@ class AddShows(Home):
                     helpers.anon_url(url + url_ui), list_name)
 
         kwargs.update(dict(footnote=footnote, mode='watchlist-%s' % acc_id, periods=periods))
+
+        if mode:
+            sickgear.IMDB_MRU = mode
+            sickgear.save_config()
+
         return self.browse_shows(browse_type, '%s IMDb Watchlist' % list_name, filtered, **kwargs)
+
+    def imdb_default(self, **kwargs):
+        if 'popular-' in sickgear.IMDB_MRU:
+            kwargs.update(dict(period=sickgear.IMDB_MRU.split('-')[1]))
+            return self.popular_imdb(**kwargs)
+        if 'watchlist-' in sickgear.IMDB_MRU:
+            kwargs.update(dict(account=sickgear.IMDB_MRU.split('-')[1]))
+            return self.watchlist_imdb(**kwargs)
+        method = getattr(self, sickgear.IMDB_MRU, None)
+        if not callable(method):
+            return self.popular_imdb(**kwargs)
+        return method(**kwargs)
 
     def popular_imdb(self, **kwargs):
 
@@ -4895,808 +4972,23 @@ class AddShows(Home):
                             '<a target="_blank" href="%s">IMDb</a>' % helpers.anon_url(url))
 
         kwargs.update(dict(footnote=footnote))
+
+        if mode:
+            sickgear.IMDB_MRU = mode
+            sickgear.save_config()
+
         return self.browse_shows(browse_type, 'Most Popular IMDb TV', filtered, **kwargs)
-
-    def imdb_default(self):
-
-        return self.redirect('/add-shows/popular-imdb')
 
     def info_imdb(self, ids, show_name):
 
         return self.new_show('|'.join(['', '', '', helpers.parse_imdb_id(ids) and ' '.join([ids, show_name])]),
                              use_show_name=True)
 
-    def trakt_anticipated(self):
-
-        return self.browse_trakt(
-            'shows/anticipated?limit=%s&' % 100,
-            'Anticipated at Trakt',
-        )
-
-    def trakt_newseasons(self):
-
-        return self.browse_trakt(
-            '/calendars/all/shows/premieres/%s/%s?' % (SGDatetime.sbfdate(
-                dt=datetime.datetime.now() + datetime.timedelta(days=-16), d_preset='%Y-%m-%d'), 32),
-            'Season premieres at Trakt',
-            mode='newseasons',
-            footnote='Note; Expect default placeholder images in this list')
-
-    def trakt_newshows(self):
-
-        return self.browse_trakt(
-            '/calendars/all/shows/new/%s/%s?' % (SGDatetime.sbfdate(
-                dt=datetime.datetime.now() + datetime.timedelta(days=-16), d_preset='%Y-%m-%d'), 32),
-            'Brand-new shows at Trakt',
-            mode='newshows',
-            footnote='Note; Expect default placeholder images in this list')
-
-    def trakt_popular(self):
-
-        return self.browse_trakt(
-            'shows/popular?limit=%s&' % 100,
-            'Popular at Trakt',
-            mode='popular')
-
-    def trakt_trending(self):
-
-        return self.browse_trakt(
-            'shows/trending?limit=%s&' % 100,
-            'Trending at Trakt',
-            mode='trending',
-            footnote='Tip: For more Trakt, use "Show" near the top of this view')
-
-    def trakt_watched(self, **kwargs):
-
-        return self.trakt_action('watch', **kwargs)
-
-    def trakt_played(self, **kwargs):
-
-        return self.trakt_action('play', **kwargs)
-
-    def trakt_collected(self, **kwargs):
-
-        return self.trakt_action('collect', **kwargs)
-
-    def trakt_action(self, action, **kwargs):
-
-        cycle, desc, ext = (('month', 'month', ''), ('year', '12 months', '-year'))['year' == kwargs.get('period', '')]
-        return self.browse_trakt(
-            'shows/%sed/%sly?limit=%s&' % (action, cycle, 100),
-            'Most %sed at Trakt during the last %s' % (action, desc),
-            mode='%sed%s' % (action, ext))
-
-    def trakt_recommended(self, **kwargs):
-
-        if 'add' == kwargs.get('action'):
-            return self.redirect('/config/notifications/#tabs-3')
-
-        account = helpers.try_int(kwargs.get('account'))
-        try:
-            name = sickgear.TRAKT_ACCOUNTS[account].name
-        except KeyError:
-            return self.trakt_default()
-        return self.browse_trakt(
-            'recommendations/shows?limit=%s&' % 100,
-            'Recommended for <b class="grey-text">%s</b> by Trakt' % name,
-            mode='recommended-%s' % account, send_oauth=account)
-
-    def trakt_watchlist(self, **kwargs):
-
-        if 'add' == kwargs.get('action'):
-            return self.redirect('/config/notifications/#tabs-3')
-
-        account = helpers.try_int(kwargs.get('account'))
-        try:
-            name = sickgear.TRAKT_ACCOUNTS[account].name
-        except KeyError:
-            return self.trakt_default()
-        return self.browse_trakt(
-            'users/%s/watchlist/shows?limit=%s&' % (sickgear.TRAKT_ACCOUNTS[account].slug, 100),
-            'WatchList for <b class="grey-text">%s</b> by Trakt' % name,
-            mode='watchlist-%s' % account, send_oauth=account)
-
-    def trakt_default(self):
-
-        return self.redirect('/add-shows/%s' % ('trakt-trending', sickgear.TRAKT_MRU)[any(sickgear.TRAKT_MRU)])
-
-    @staticmethod
-    def get_trakt_data(url_path, **kwargs):
-        normalised, filtered = ([], [])
-        error_msg = None
-        try:
-            account = kwargs.get('send_oauth')
-            if account:
-                account = helpers.try_int(account)
-            resp = TraktAPI().trakt_request('%sextended=full,images' % url_path, send_oauth=account)
-            if resp:
-                if 'show' in resp[0]:
-                    if 'first_aired' in resp[0]:
-                        for item in resp:
-                            item['show']['first_aired'] = item['first_aired']
-                            del item['first_aired']
-                    normalised = resp
-                else:
-                    for item in resp:
-                        normalised.append({'show': item})
-                del resp
-        except TraktAuthException as e:
-            logger.warning(f'Pin authorisation needed to connect to Trakt service: {ex(e)}')
-            error_msg = 'Unauthorized: Get another pin in the Notifications Trakt settings'
-        except TraktException as e:
-            logger.warning(f'Could not connect to Trakt service: {ex(e)}')
-        except exceptions_helper.ConnectionSkipException as e:
-            logger.log('Skipping Trakt because of previous failure: %s' % ex(e))
-        except (IndexError, KeyError):
-            pass
-
-        if not normalised:
-            error_msg = 'No items in watchlist.  Use the "Add to watchlist" button at the Trakt website'
-            raise Exception(error_msg)
-
-        oldest_dt = 9999999
-        newest_dt = 0
-        oldest = None
-        newest = None
-        for item in normalised:
-            ignore = r'''
-            ((bbc|channel\s*?5.*?|itv)\s*?(drama|documentaries))|bbc\s*?(comedy|music)|music\s*?specials|tedtalks
-                    '''
-            language = (item.get('show', {}).get('language') or '').lower()
-            language_en = 'en' == language
-            country = (item.get('show', {}).get('country') or '').lower()
-            country_ok = country in ('uk', 'gb', 'ie', 'ca', 'us', 'au', 'nz', 'za')
-            if re.search(ignore, item['show']['title'].strip(), re.I | re.X) or \
-                    (not language_en and not country_ok) or \
-                    not (item.get('show', {}).get('overview') or item.get('episode', {}).get('overview')):
-                continue
-            try:
-                dt = dateutil.parser.parse(item['show']['first_aired'])
-                dt_ordinal = dt.toordinal()
-                dt_string = SGDatetime.sbfdate(dt)
-                if dt_ordinal < oldest_dt:
-                    oldest_dt = dt_ordinal
-                    oldest = dt_string
-                if dt_ordinal > newest_dt:
-                    newest_dt = dt_ordinal
-                    newest = dt_string
-
-                tmdbid = item.get('show', {}).get('ids', {}).get('tmdb', 0)
-                tvdbid = item.get('show', {}).get('ids', {}).get('tvdb', 0)
-                traktid = item.get('show', {}).get('ids', {}).get('trakt', 0)
-                images = dict(poster=dict(thumb='imagecache?path=browse/thumb/trakt&filename=%s&tmdbid=%s&tvdbid=%s' %
-                                                ('%s.jpg' % traktid, tmdbid, tvdbid)))
-                filtered.append(dict(
-                    premiered=dt_ordinal,
-                    premiered_str=dt_string,
-                    when_past=dt_ordinal < datetime.datetime.now().toordinal(),  # air time not yet available 16.11.2015
-                    episode_number='' if 'episode' not in item else item['episode']['number'] or 1,
-                    episode_overview=(
-                        '' if 'episode' not in item else
-                        '' if None is item.get('episode', {}).get('overview') and (language_en or country_ok)
-                        else item['episode']['overview'].strip() or ''),
-                    episode_season='' if 'episode' not in item else item['episode']['season'] or 1,
-                    genres=('' if 'genres' not in item['show'] else
-                            ', '.join(['%s' % v for v in item['show']['genres']])),
-                    ids=item['show']['ids'],
-                    images=images,
-                    overview=(item.get('show', {}).get('overview') or '').strip(),
-                    rating=0 < item['show'].get('rating', 0) and
-                           ('%.2f' % (item['show'].get('rating') * 10)).replace('.00', '') or 0,
-                    title=item['show']['title'].strip(),
-                    language=language,
-                    language_img=not language_en and sickgear.MEMCACHE_FLAG_IMAGES.get(language, False),
-                    country=country,
-                    country_img=sickgear.MEMCACHE_FLAG_IMAGES.get(country, False),
-                    url_src_db='https://trakt.tv/shows/%s' % item['show']['ids']['slug'],
-                    url_tvdb=('', sickgear.TVInfoAPI(TVINFO_TVDB).config['show_url'] % item['show']['ids']['tvdb'])[
-                        isinstance(item['show']['ids']['tvdb'], integer_types)
-                        and 0 < item['show']['ids']['tvdb']],
-                    votes='0' if 'votes' not in item['show'] else item['show']['votes']))
-            except (BaseException, Exception):
-                pass
-
-        if 'web_ui' in kwargs:
-            return filtered, oldest, newest, error_msg
-
-        return filtered, oldest, newest
-
-    def browse_trakt(self, url_path, browse_title, **kwargs):
-
-        browse_type = 'Trakt'
-        normalised, filtered = ([], [])
-
-        if not sickgear.USE_TRAKT \
-                and ('recommended' in kwargs.get('mode', '') or 'watchlist' in kwargs.get('mode', '')):
-            error_msg = 'To browse personal recommendations, enable Trakt.tv in Config/Notifications/Social'
-            return self.browse_shows(browse_type, browse_title, filtered, error_msg=error_msg, show_header=1, **kwargs)
-
-        try:
-            filtered, oldest, newest, error_msg = self.get_trakt_data(url_path, web_ui=True,
-                                                                      send_oauth=kwargs.get('send_oauth'))
-        except (BaseException, Exception):
-            error_msg = 'No items in watchlist.  Use the "Add to watchlist" button at the Trakt website'
-            return self.browse_shows(browse_type, browse_title, filtered, error_msg=error_msg, show_header=1, **kwargs)
-
-        for item in filtered:
-            key = 'episode_overview'
-            if item[key]:
-                item[key] = helpers.xhtml_escape(item[key][:250:].strip())
-            key = 'overview'
-            if item[key]:
-                item[key] = helpers.xhtml_escape(item[key][:250:].strip())
-
-        kwargs.update(dict(oldest=oldest, newest=newest, error_msg=error_msg))
-
-        if 'recommended' not in kwargs.get('mode', '') and 'watchlist' not in kwargs.get('mode', ''):
-            mode = kwargs.get('mode', '').split('-')
-            if mode:
-                func = 'trakt_%s' % mode[0]
-                if callable(getattr(self, func, None)):
-                    param = '' if 1 == len(mode) or mode[1] not in ['year', 'month', 'week', 'all'] else \
-                        '?period=' + mode[1]
-                    sickgear.TRAKT_MRU = '%s%s' % (func, param)
-                    sickgear.save_config()
-        return self.browse_shows(browse_type, browse_title, filtered, **kwargs)
-
-    @staticmethod
-    def show_toggle_hide(ids):
-        save_config = False
-        for sid in ids.split(' '):
-            save_config = True
-            if sid in sickgear.BROWSELIST_HIDDEN:
-                sickgear.BROWSELIST_HIDDEN.remove(sid)
-            else:
-                sickgear.BROWSELIST_HIDDEN += [sid]
-        if save_config:
-            sickgear.save_config()
-        return json_dumps({'success': save_config})
-
-    def info_trakt(self, ids, show_name):
-
-        if not list(filter(lambda tvid_prodid: helpers.find_show_by_id(tvid_prodid), ids.split(' '))):
-            return self.new_show('|'.join(['', '', '', ' '.join([ids, show_name])]), use_show_name=True)
-
-    def ne_default(self):
-
-        return self.redirect('/add-shows/%s' % ('ne_newpop', sickgear.NE_MRU)[any(sickgear.NE_MRU)])
-
-    def ne_newpop(self, **kwargs):
-        return self.browse_ne(
-            'hotshowsfilter', 'Popular recent premiered shows at Next Episode', mode='newpop', **kwargs)
-
-    def ne_newtop(self, **kwargs):
-        return self.browse_ne(
-            'hotshowsfilter', 'Top rated recent premiered shows at Next Episode', mode='newtop', **kwargs)
-
-    def ne_upcoming(self, **kwargs):
-        return self.browse_ne(
-            'upcomingshowsfilter', 'Upcoming shows at Next Episode', mode='upcoming', **kwargs)
-
-    def ne_trending(self, **kwargs):
-        return self.browse_ne(
-            'trendingshowsfilter', 'Trending shows at Next Episode', mode='trending', **kwargs)
-
-    def browse_ne(self, url_path, browse_title, **kwargs):
-
-        browse_type = 'Nextepisode'
-
-        footnote = None
-
-        page = 1
-        if 'more' in kwargs:
-            page = 2
-            kwargs['mode'] += '-more'
-
-        filtered = []
-
-        import browser_ua
-
-        when_past = True
-        if 'upcoming' in url_path:
-            when_past = False
-            url = '%s.php?t=1&s=1&inwl=0&user_id=' % url_path
-        elif 'trending' in url_path:
-            url = '%s.php?t=1&a=1&b=1&uid=&status=0&c=1' % url_path
-        else:
-            url = '%s.php?a=1&b=1&uid=0&status=0&c=2&sortOrder=%s' % (url_path, (0, 1)['Top' in browse_title])
-        url = 'https://next-episode.net/PAGES/misc/%s&g=6&channel=0&actors=0&page=%s' % (url, page)
-
-        html = helpers.get_url(url, headers={'User-Agent': browser_ua.get_ua()})
-        if html:
-            try:
-                if re.findall(r'(?i)(<a[^>]+gopage\([^>]+)', html)[0]:
-                    kwargs.update(dict(more=1))
-            except (BaseException, Exception):
-                pass
-
-            with BS4Parser(html) as soup:
-                shows = [] if not soup else soup.find_all(class_='list_item')
-                oldest, newest, oldest_dt, newest_dt = None, None, 9999999, 0
-                rc = [(k, re.compile(r'(?i).*?(\d+)\s*%s.*' % v)) for (k, v) in iteritems({
-                    'months': 'month', 'days': 'day', 'hours': 'hour', 'minutes': 'min'})]
-                rc_show = re.compile(r'^namelink_(\d+)$')
-                rc_title_clean = re.compile(r'(?i)(?:\s*\((?:19|20)\d{2}\))?$')
-                for row in shows:
-                    try:
-                        info_tag = row.find('a', id=rc_show)
-                        if not info_tag:
-                            continue
-
-                        ids = dict(custom=rc_show.findall(info_tag['id'])[0], name='ne')
-                        url_path = info_tag['href'].strip()
-
-                        images = {}
-                        img_uri = None
-                        img_tag = info_tag.find('img')
-                        if img_tag and isinstance(img_tag.attrs, dict):
-                            img_src = img_tag.attrs.get('src').strip()
-                            img_uri = img_src.startswith('//') and ('https:' + img_src) or img_src
-                            images = dict(poster=dict(thumb='imagecache?path=browse/thumb/ne&source=%s' % img_uri))
-                            sickgear.CACHE_IMAGE_URL_LIST.add_url(img_uri)
-
-                        title = info_tag.get_text('strip=True')
-                        title = rc_title_clean.sub('', title.strip())
-
-                        channel_tag = row.find('span', class_='channel_name')
-
-                        network, date_info, dt = None, None, None
-                        channel_tag_copy = copy.copy(channel_tag)
-                        if channel_tag_copy:
-                            network = channel_tag_copy.a.extract().get_text(strip=True)
-                            date_info = re.sub(r'^\D+', '', channel_tag_copy.get_text(strip=True))
-                            if date_info:
-                                dt = dateutil.parser.parse((date_info, '%s.01.01' % date_info)[4 == len(date_info)])
-
-                        if not when_past and channel_tag:
-                            tag = [t for t in channel_tag.next_siblings if hasattr(t, 'attrs')
-                                   and 'printed' in ' '.join(t.get('class', ''))]
-                            if len(tag):
-                                age_args = {}
-                                future = re.sub(r'\D+(.*)', r'\1', tag[0].get_text(strip=True))
-                                for (dim, rcx) in rc:
-                                    value = helpers.try_int(rcx.sub(r'\1', future), None)
-                                    if value:
-                                        age_args.update({dim: value})
-
-                                if age_args:
-                                    dt = datetime.datetime.utcnow()
-                                    if 'months' in age_args and 'days' in age_args:
-                                        age_args['days'] -= 1
-                                        dt += relativedelta(day=1)
-                                    dt += relativedelta(**age_args)
-                                    date_info = SGDatetime.sbfdate(dt)
-
-                        dt_ordinal = 0
-                        dt_string = ''
-                        if date_info:
-                            dt_ordinal = dt.toordinal()
-                            dt_string = date_info
-                            if dt_ordinal < oldest_dt:
-                                oldest_dt = dt_ordinal
-                                oldest = dt_string
-                            if dt_ordinal > newest_dt:
-                                newest_dt = dt_ordinal
-                                newest = dt_string
-
-                        genres = row.find(class_='genre')
-                        if genres:
-                            genres = re.sub(r',(\S)', r', \1', genres.get_text(strip=True))
-                        overview = row.find(class_='summary')
-                        if overview:
-                            overview = overview.get_text(strip=True)
-
-                        rating = None
-                        rating_tag = row.find(class_='rating')
-                        if rating_tag:
-                            label_tag = rating_tag.find('label')
-                            if label_tag:
-                                rating = re.sub(r'.*?width:\s*(\d+).*', r'\1', label_tag.get('style', ''))
-
-                        filtered.append(dict(
-                            premiered=dt_ordinal,
-                            premiered_str=dt_string,
-                            when_past=when_past,  # dt_ordinal < datetime.datetime.now().toordinal(),
-                            genres=('No genre yet' if not genres else genres),
-                            network=network or None,
-                            ids=ids,
-                            images='' if not img_uri else images,
-                            overview='No overview yet' if not overview else helpers.xhtml_escape(overview[:250:]),
-                            rating=(rating, 'TBD')[None is rating],
-                            title=title,
-                            url_src_db='https://next-episode.net/%s/' % url_path.strip('/'),
-                            votes=None))
-
-                    except (AttributeError, IndexError, KeyError, TypeError):
-                        continue
-
-                kwargs.update(dict(oldest=oldest, newest=newest))
-
-        kwargs.update(dict(footnote=footnote, use_votes=False))
-
-        mode = kwargs.get('mode', '')
-        if mode:
-            func = 'ne_%s' % mode
-            if callable(getattr(self, func, None)):
-                sickgear.NE_MRU = func
-                sickgear.save_config()
-        return self.browse_shows(browse_type, browse_title, filtered, **kwargs)
-
-    # noinspection PyUnusedLocal
-    def info_nextepisode(self, ids, show_name):
-
-        return self.new_show('|'.join(['', '', '', show_name]), use_show_name=True)
-
-    def tvm_default(self):
-
-        return self.redirect('/add-shows/%s' % ('tvm_premieres', sickgear.TVM_MRU)[any(sickgear.TVM_MRU)])
-
-    def tvm_premieres(self, **kwargs):
-        return self.browse_tvm(
-            'New Shows at TVmaze', mode='premieres', **kwargs)
-
-    def tvm_returning(self, **kwargs):
-        return self.browse_tvm(
-            'Returning Shows at TVmaze', mode='returning', **kwargs)
-
-    def browse_tvm(self, browse_title, **kwargs):
-
-        browse_type = 'TVmaze'
-
-        footnote = None
-        filtered = []
-
-        tvinfo_config = sickgear.TVInfoAPI(TVINFO_TVMAZE).api_params.copy()
-        t = sickgear.TVInfoAPI(TVINFO_TVMAZE).setup(**tvinfo_config)
-        if 'New' in browse_title:
-            episodes = t.get_premieres()
-        else:
-            episodes = t.get_returning()
-
-        # handle switching between returning and premieres
-        sickgear.BROWSELIST_MRU.setdefault(browse_type, dict())
-        showfilter = ('by_returning', 'by_premiered')['New' in browse_title]
-        saved_showsort = sickgear.BROWSELIST_MRU[browse_type].get('tvm_%s' % kwargs['mode']) or '*,asc'
-        showsort = saved_showsort + (',%s' % showfilter, '')[3 == len(saved_showsort.split(','))]
-        sickgear.BROWSELIST_MRU[browse_type].update(dict(showfilter=showfilter, showsort=showsort))
-
-        oldest, newest, oldest_dt, newest_dt, use_networks = None, None, 9999999, 0, False
-        dedupe = []
-        parseinfo = dateutil.parser.parserinfo(dayfirst=False, yearfirst=True)
-        base_url = sickgear.TVInfoAPI(TVINFO_TVMAZE).config['show_url']
-        for cur_episode_info in episodes:
-            if cur_episode_info.show.id in dedupe:
-                continue
-            dedupe += [cur_episode_info.show.id]
-
-            try:
-                if cur_episode_info.airtime:
-                    airtime = dateutil.parser.parse(cur_episode_info.airtime).time()
-                else:
-                    airtime = cur_episode_info.timestamp \
-                              and SGDatetime.from_timestamp(cur_episode_info.timestamp).time()
-                if (0, 0) == (airtime.hour, airtime.minute):
-                    airtime = dateutil.parser.parse('23:59').time()
-                dt = datetime.datetime.combine(
-                    dateutil.parser.parse(
-                        (cur_episode_info.show.firstaired or cur_episode_info.firstaired), parseinfo).date(), airtime)
-                dt_ordinal = dt.toordinal()
-                now_ordinal = datetime.datetime.now().toordinal()
-                when_past = dt_ordinal < now_ordinal
-                dt_string = SGDatetime.sbfdate(dt)
-
-                if dt_ordinal < oldest_dt:
-                    oldest_dt = dt_ordinal
-                    oldest = dt_string
-                if dt_ordinal > newest_dt:
-                    newest_dt = dt_ordinal
-                    newest = dt_string
-
-                returning = returning_str = None
-                if 'Return' in browse_title:
-                    returning = '9'
-                    returning_str = 'TBC'
-                    if cur_episode_info.firstaired:
-                        returning = cur_episode_info.firstaired
-                        dt_returning = datetime.datetime.combine(
-                            dateutil.parser.parse(returning, parseinfo).date(), airtime)
-                        when_past = dt_returning.toordinal() < now_ordinal
-                        returning_str = SGDatetime.sbfdate(dt_returning)
-
-                try:
-                    img_uri = cur_episode_info.show.poster
-                    images = dict(poster=dict(thumb='imagecache?path=browse/thumb/tvmaze&source=%s' % img_uri))
-                    sickgear.CACHE_IMAGE_URL_LIST.add_url(img_uri)
-                except(BaseException, Exception):
-                    images = {}
-
-                ids = dict(tvmaze=cur_episode_info.show.id)
-                imdb_id = cur_episode_info.show.imdb_id
-                if imdb_id:
-                    ids['imdb'] = imdb_id
-                tvdb_id = cur_episode_info.show.ids.get(TVINFO_TVDB)
-                if tvdb_id:
-                    ids['tvdb'] = tvdb_id
-
-                network_name = cur_episode_info.show.network
-                cc = 'US'
-                if network_name:
-                    use_networks = True
-                    cc = cur_episode_info.show.network_country_code or cc
-
-                language = ((cur_episode_info.show.language and 'jap' in cur_episode_info.show.language.lower())
-                            and 'jp' or 'en')
-                filtered.append(dict(
-                    ids=ids,
-                    premiered=dt_ordinal,
-                    premiered_str=dt_string,
-                    returning=returning,
-                    returning_str=returning_str,
-                    when_past=when_past,
-                    episode_number=cur_episode_info.episodenumber,
-                    episode_season=cur_episode_info.seasonnumber,
-                    episode_overview='' if not cur_episode_info.overview else cur_episode_info.overview.strip(),
-                    genres=(cur_episode_info.show.genre.strip('|').replace('|', ', ')
-                            or ', '.join(cur_episode_info.show.show_type) or ''),
-                    images=images,
-                    overview=('No overview yet' if not cur_episode_info.show.overview
-                              else helpers.xhtml_escape(cur_episode_info.show.overview.strip()[:250:])
-                              .strip('*').strip()),
-                    title=cur_episode_info.show.seriesname,
-                    language=language,
-                    language_img=sickgear.MEMCACHE_FLAG_IMAGES.get(language, False),
-                    country=cc,
-                    country_img=sickgear.MEMCACHE_FLAG_IMAGES.get(cc.lower(), False),
-                    network=network_name,
-                    rating=cur_episode_info.show.rating or cur_episode_info.show.popularity or 0,
-                    url_src_db=base_url % cur_episode_info.show.id,
-                ))
-            except (BaseException, Exception):
-                pass
-            kwargs.update(dict(oldest=oldest, newest=newest))
-
-        kwargs.update(dict(footnote=footnote, use_votes=False, use_networks=use_networks))
-
-        mode = kwargs.get('mode', '')
-        if mode:
-            func = 'tvm_%s' % mode
-            if callable(getattr(self, func, None)):
-                sickgear.TVM_MRU = func
-                sickgear.save_config()
-        return self.browse_shows(browse_type, browse_title, filtered, **kwargs)
-
-    # noinspection PyUnusedLocal
-    def info_tvmaze(self, ids, show_name):
-
-        if not list(filter(lambda tvid_prodid: helpers.find_show_by_id(tvid_prodid), ids.split(' '))):
-            return self.new_show('|'.join(['', '', '', ' '.join([ids, show_name])]), use_show_name=True)
-
-    def tvc_default(self):
-
-        return self.redirect('/add-shows/%s' % ('tvc_newshows', sickgear.TVC_MRU)[any(sickgear.TVC_MRU)])
-
-    def tvc_newshows(self, **kwargs):
-        return self.browse_tvc(
-            'TV-shows-starting-', 'New Shows at TV Calendar', mode='newshows', **kwargs)
-
-    def tvc_returning(self, **kwargs):
-        return self.browse_tvc(
-            'TV-shows-starting-', 'Returning Shows at TV Calendar', mode='returning', **kwargs)
-
-    def tvc_latest(self, **kwargs):
-        return self.browse_tvc(
-            'recent-additions', 'Latest new shows at TV Calendar', mode='latest', **kwargs)
-
-    def browse_tvc(self, url_path, browse_title, **kwargs):
-
-        browse_type = 'TVCalendar'
-
-        footnote = None
-        filtered = []
-        today = datetime.datetime.today()
-        months = ['', 'January', 'February', 'March', 'April', 'May', 'June', 'July',
-                  'August', 'September', 'October', 'November', 'December']
-        this_month = '%s-%s' % (months[today.month], today.strftime('%Y'))
-        section = ''
-        if kwargs.get('mode', '') in ('newshows', 'returning'):
-            section = (kwargs.get('page') or this_month)
-            url_path += section
-
-        import browser_ua
-        url = 'https://www.pogdesign.co.uk/cat/%s' % url_path
-        html = helpers.get_url(url, headers={'User-Agent': browser_ua.get_ua()})
-        use_votes = False
-        if html:
-            prev_month = dt_prev_month = None
-            if kwargs.get('mode', '') in ('newshows', 'returning'):
-                try:
-                    prev_month = re.findall('(?i)href="/cat/tv-shows-starting-([^"]+)', html)[0]
-                    dt_prev_month = dateutil.parser.parse('1-%s' % prev_month)
-                except (BaseException, Exception):
-                    prev_month = None
-            get_prev_month = (lambda _dt: _dt.replace(day=1) - datetime.timedelta(days=1))
-            get_next_month = (lambda _dt: _dt.replace(day=28) + datetime.timedelta(days=5))
-            get_month_year = (lambda _dt: '%s-%s' % (months[_dt.month], _dt.strftime('%Y')))
-            if prev_month:
-                dt_next_month = get_next_month(dt_prev_month)
-                while True:
-                    next_month = get_month_year(dt_next_month)
-                    if next_month not in (this_month, kwargs.get('page')):
-                        break
-                    dt_next_month = get_next_month(dt_next_month)
-                while True:
-                    if prev_month not in (this_month, kwargs.get('page')):
-                        break
-                    dt_prev_month = get_prev_month(dt_prev_month)
-                    prev_month = get_month_year(dt_prev_month)
-
-            else:
-                dt_next_month = get_next_month(today)
-                next_month = get_month_year(dt_next_month)
-                dt_prev_month = get_prev_month(today)
-                prev_month = get_month_year(dt_prev_month)
-
-            suppress_item = not kwargs.get('page') or kwargs.get('page') == this_month
-            get_date_text = (lambda m_y: m_y.replace('-', ' '))
-            next_month_text = get_date_text(next_month)
-            prev_month_text = get_date_text(prev_month)
-            page_month_text = suppress_item and 'void' or get_date_text(kwargs.get('page'))
-            kwargs.update(dict(pages=[
-                ('tvc_newshows?page=%s' % this_month, 'New this month'),
-                ('tvc_newshows?page=%s' % next_month, '...in %s' % next_month_text)] +
-                ([('tvc_newshows?page=%s' % kwargs.get('page'), '...in %s' % page_month_text)], [])[suppress_item] +
-                [('tvc_newshows?page=%s' % prev_month, '...in %s' % prev_month_text)] +
-                [('tvc_returning?page=%s' % this_month, 'Returning this month'),
-                 ('tvc_returning?page=%s' % next_month, '...in %s' % next_month_text)] +
-                ([('tvc_returning?page=%s' % kwargs.get('page'), '...in %s' % page_month_text)], [])[suppress_item] +
-                [('tvc_returning?page=%s' % prev_month, '...in %s' % prev_month_text)]
-            ))
-
-            with BS4Parser(html, parse_only=dict(div={'class': (lambda at: at and 'pgwidth' in at)})) as tbl:
-                shows = []
-                if kwargs.get('mode', '') in ('latest', 'newshows', 'returning'):
-                    tags = tbl.select('h2[class*="midtitle"], div[class*="contbox"]')
-                    collect = False
-                    for cur_tag in tags:
-                        if re.match(r'(?i)h\d+', cur_tag.name) and 'midtitle' in cur_tag.attrs.get('class', []):
-                            text = cur_tag.get_text(strip=True)
-                            if kwargs['mode'] in ('latest', 'newshows'):
-                                if not collect and ('Latest' in text or 'New' in text):
-                                    collect = True
-                                    continue
-                                break
-                            elif 'New' in text:
-                                continue
-                            elif 'Return' in text:
-                                collect = True
-                                continue
-                            break
-                        if collect:
-                            shows += [cur_tag]
-
-                if not len(shows):
-                    kwargs['error_msg'] = 'No TV titles found in <a target="_blank" href="%s">%s</a>%s,' \
-                                          ' try another selection' % (
-                        helpers.anon_url(url), browse_title, (' for %s' % section.replace('-', ' '), '')[not section])
-
-                # build batches to correct htmlentity typos in overview
-                from html5lib.constants import entities
-                batches = []
-                for cur_n, cur_name in enumerate(entities):
-                    if 0 == cur_n % 150:
-                        if cur_n:
-                            batches += [batch]
-                        batch = []
-                    batch += [cur_name]
-                else:
-                    batches += [batch]
-
-                oldest, newest, oldest_dt, newest_dt = None, None, 9999999, 0
-                for row in shows:
-                    try:
-                        ids = dict(custom=row.select('input[type="checkbox"]')[0].attrs['value'], name='tvc')
-                        info = row.find('a', href=re.compile('^/cat'))
-                        url_path = info['href'].strip()
-
-                        title = info.find('h2').get_text(strip=True)
-                        img_uri = info.get('data-original', '').strip()
-                        if not img_uri:
-                            img_uri = re.findall(r'(?i).*?image:\s*url\(([^)]+)', info.attrs['style'])[0].strip()
-                        images = dict(poster=dict(thumb='imagecache?path=browse/thumb/tvc&source=%s' % img_uri))
-                        sickgear.CACHE_IMAGE_URL_LIST.add_url(img_uri)
-                        title = re.sub(r'(?i)(?::\s*season\s*\d+|\s*\((?:19|20)\d{2}\))?$', '', title.strip())
-
-                        dt_ordinal = 0
-                        dt_string = ''
-                        dt_ordinal_returning = 0
-                        dt_string_returning = ''
-                        date = genre = network = ''
-                        date_tag = row.find('span', class_='startz')
-                        if date_tag:
-                            date_network = re.split(r'(?i)\son\s', ''.join(
-                                [t.name and t.get_text() or str(t) for t in date_tag][0:2]))
-                            date = re.sub('(?i)^(starts|returns)', '', date_network[0]).strip()
-                            network = ('', date_network[1].strip())[2 == len(date_network)]
-                        else:
-                            date_tag = row.find('span', class_='selby')
-                            if date_tag:
-                                date = date_tag.get_text(strip=True)
-                            network_genre = info.find('span')
-                            if network_genre:
-                                network_genre = network_genre.get_text(strip=True).split('//')
-                                network = network_genre[0]
-                                genre = ('', network_genre[1].strip())[2 == len(network_genre)]
-
-                        if date:
-                            dt = dateutil.parser.parse(date)
-                            dt_ordinal = dt.toordinal()
-                            dt_string = SGDatetime.sbfdate(dt)
-                            if dt_ordinal < oldest_dt:
-                                oldest_dt = dt_ordinal
-                                oldest = dt_string
-                            if dt_ordinal > newest_dt:
-                                newest_dt = dt_ordinal
-                                newest = dt_string
-                            if kwargs.get('mode', '') in ('returning',):
-                                dt_ordinal_returning, dt_string_returning = dt_ordinal, dt_string
-                                dt_ordinal, dt_string = 0, ''
-
-                        overview = row.find('span', class_='shwtxt')
-                        if overview:
-                            overview = re.sub(r'(?sim)(.*?)(?:[.\s]*\*\*NOTE.*?)?(\.{1,3})$', r'\1\2',
-                                              overview.get_text(strip=True))
-                            for cur_entities in batches:
-                                overview = re.sub(r'and(%s)' % '|'.join(cur_entities), r'&\1', overview)
-
-                        votes = None
-                        votes_tag = row.find('span', class_='selby')
-                        if votes_tag:
-                            votes_tag = votes_tag.find('strong')
-                            if votes_tag:
-                                votes = re.sub(r'(?i)\s*users', '', votes_tag.get_text()).strip()
-                                use_votes = True
-
-                        filtered.append(dict(
-                            premiered=dt_ordinal,
-                            premiered_str=dt_string,
-                            returning=dt_ordinal_returning,
-                            returning_str=dt_string_returning,
-                            episode_season='',
-                            when_past=dt_ordinal < datetime.datetime.now().toordinal(),
-                            genres=genre,
-                            network=network or None,
-                            ids=ids,
-                            images='' if not img_uri else images,
-                            overview='No overview yet' if not overview else helpers.xhtml_escape(overview[:250:]),
-                            rating=None,
-                            title=title,
-                            url_src_db='https://www.pogdesign.co.uk/%s' % url_path.strip('/'),
-                            votes=votes or 'n/a'))
-
-                    except (AttributeError, IndexError, KeyError, TypeError):
-                        continue
-
-                kwargs.update(dict(oldest=oldest, newest=newest))
-
-        kwargs.update(dict(footnote=footnote, use_ratings=False, use_votes=use_votes, show_header=True))
-
-        mode = kwargs.get('mode', '')
-        if mode:
-            func = 'tvc_%s' % mode
-            if callable(getattr(self, func, None)):
-                sickgear.TVC_MRU = func
-                sickgear.save_config()
-
-        return self.browse_shows(browse_type, browse_title, filtered, **kwargs)
-
-    # noinspection PyUnusedLocal
-    def info_tvcalendar(self, ids, show_name):
-
-        return self.new_show('|'.join(['', '', '', show_name]), use_show_name=True)
-
     def mc_default(self):
-
-        return self.redirect('/add-shows/%s' % ('mc_newseries', sickgear.MC_MRU)[any(sickgear.MC_MRU)])
+        method = getattr(self, sickgear.MC_MRU, None)
+        if not callable(method):
+            return self.mc_newseries()
+        return method()
 
     def mc_newseries(self, **kwargs):
         return self.browse_mc(
@@ -5742,12 +5034,12 @@ class AddShows(Home):
 
             with BS4Parser(html, parse_only=dict(table={'class': (lambda at: at and 'clamp-list' in at)})) as tbl:
                 # with BS4Parser(html, features=['html5lib', 'permissive']) as soup:
-                shows = [] if not tbl else tbl.find_all('tr')
+                items = [] if not tbl else tbl.find_all('tr')
                 oldest, newest, oldest_dt, newest_dt = None, None, 9999999, 0
-                for row in shows:
+                for cur_row in items:
                     try:
-                        ids = dict(custom=row.select('input[type="checkbox"]')[0].attrs['id'], name='mc')
-                        info = row.find('a', href=re.compile('^/tv'))
+                        ids = dict(custom=cur_row.select('input[type="checkbox"]')[0].attrs['id'], name='mc')
+                        info = cur_row.find('a', href=re.compile('^/tv'))
                         url_path = info['href'].strip()
 
                         images = {}
@@ -5762,31 +5054,28 @@ class AddShows(Home):
                             images = dict(poster=dict(thumb='imagecache?path=browse/thumb/metac&source=%s' % img_uri))
                             sickgear.CACHE_IMAGE_URL_LIST.add_url(img_uri)
                         if not title:
-                            title = row.find('h3').get_text()
+                            title = cur_row.find('h3').get_text()
                         title = re.sub(r'(?i)(?::\s*season\s*\d+|\s*\((?:19|20)\d{2}\))?$', '', title.strip())
 
-                        dt_ordinal = 0
-                        dt_string = ''
-                        date_tags = list(filter(lambda t: t.find('span'), row.find_all('div', class_='clamp-details')))
+                        ord_premiered = 0
+                        str_premiered = ''
+                        started_past = False
+                        date_tags = list(filter(lambda t: t.find('span'),
+                                                cur_row.find_all('div', class_='clamp-details')))
                         if date_tags:
-                            dt = dateutil.parser.parse(date_tags[0].get_text().strip())
-                            dt_ordinal = dt.toordinal()
-                            dt_string = SGDatetime.sbfdate(dt)
-                            if dt_ordinal < oldest_dt:
-                                oldest_dt = dt_ordinal
-                                oldest = dt_string
-                            if dt_ordinal > newest_dt:
-                                newest_dt = dt_ordinal
-                                newest = dt_string
+                            ord_premiered, str_premiered, started_past, oldest_dt, newest_dt, oldest, newest, \
+                                _, _, _, _ \
+                                = self.sanitise_dates(date_tags[0].get_text().strip(), oldest_dt, newest_dt,
+                                                      oldest, newest)
 
-                        overview = row.find('div', class_='summary').get_text().strip()
+                        overview = cur_row.find('div', class_='summary').get_text().strip()
 
-                        rating = row.find('div', class_='clamp-metascore')
+                        rating = cur_row.find('div', class_='clamp-metascore')
                         if rating:
                             rating = rating.find('div', class_='metascore_w')
                             if rating:
                                 rating = rating.get_text().strip()
-                        rating_user = row.find('div', class_='clamp-userscore')
+                        rating_user = cur_row.find('div', class_='clamp-userscore')
                         if rating_user:
                             rating_user = rating_user.find('div', class_='metascore_w')
                             if rating_user:
@@ -5799,10 +5088,10 @@ class AddShows(Home):
                             pass
 
                         filtered.append(dict(
-                            season=int(season),
-                            premiered=dt_ordinal,
-                            premiered_str=dt_string,
-                            when_past=dt_ordinal < datetime.datetime.now().toordinal(),
+                            ord_premiered=ord_premiered,
+                            str_premiered=str_premiered,
+                            started_past=started_past,
+                            episode_season=int(season),
                             genres='',
                             ids=ids,
                             images='' if not img_uri else images,
@@ -5833,10 +5122,937 @@ class AddShows(Home):
 
         return self.new_show('|'.join(['', '', '', show_name]), use_show_name=True)
 
+    def ne_default(self):
+        method = getattr(self, sickgear.NE_MRU, None)
+        if not callable(method):
+            return self.ne_newpop()
+        return method()
+
+    def ne_newpop(self, **kwargs):
+        return self.browse_ne(
+            'hotshowsfilter', 'Popular recent premiered at Next Episode', mode='newpop', **kwargs)
+
+    def ne_newtop(self, **kwargs):
+        return self.browse_ne(
+            'hotshowsfilter', 'Top rated recent premiered at Next Episode', mode='newtop', **kwargs)
+
+    def ne_upcoming(self, **kwargs):
+        return self.browse_ne(
+            'upcomingshowsfilter', 'Upcoming at Next Episode', mode='upcoming', **kwargs)
+
+    def ne_trending(self, **kwargs):
+        return self.browse_ne(
+            'trendingshowsfilter', 'Trending at Next Episode', mode='trending', **kwargs)
+
+    def browse_ne(self, url_path, browse_title, **kwargs):
+
+        browse_type = 'Nextepisode'
+
+        footnote = None
+
+        page = 1
+        if 'more' in kwargs:
+            page = 2
+            kwargs['mode'] += '-more'
+
+        filtered = []
+
+        import browser_ua
+
+        started_past = True
+        if 'upcoming' in url_path:
+            started_past = False
+            url = '%s.php?t=1&s=1&inwl=0&user_id=' % url_path
+        elif 'trending' in url_path:
+            url = '%s.php?t=1&a=1&b=1&uid=&status=0&c=1' % url_path
+        else:
+            url = '%s.php?a=1&b=1&uid=0&status=0&c=2&sortOrder=%s' % (url_path, (0, 1)['Top' in browse_title])
+        url = 'https://next-episode.net/PAGES/misc/%s&g=6&channel=0&actors=0&page=%s' % (url, page)
+
+        html = helpers.get_url(url, headers={'User-Agent': browser_ua.get_ua()})
+        if html:
+            try:
+                if re.findall(r'(?i)(<a[^>]+gopage\([^>]+)', html)[0]:
+                    kwargs.update(dict(more=1))
+            except (BaseException, Exception):
+                pass
+
+            with BS4Parser(html) as soup:
+                shows = [] if not soup else soup.find_all(class_='list_item')
+                oldest, newest, oldest_dt, newest_dt = None, None, 9999999, 0
+                rc = [(k, re.compile(r'(?i).*?(\d+)\s*%s.*' % v)) for (k, v) in iteritems(
+                    dict(months='months?', weeks='weeks?', days='days?', hours='hours?', minutes='min'))]
+                rc_show = re.compile(r'^namelink_(\d+)$')
+                rc_title_clean = re.compile(r'(?i)(?:\s*\((?:19|20)\d{2}\))?$')
+                for row in shows:
+                    try:
+                        info_tag = row.find('a', id=rc_show)
+                        if not info_tag:
+                            continue
+
+                        ids = dict(custom=rc_show.findall(info_tag['id'])[0], name='ne')
+                        url_path = info_tag['href'].strip()
+
+                        images = {}
+                        img_uri = None
+                        img_tag = info_tag.find('img')
+                        if img_tag and isinstance(img_tag.attrs, dict):
+                            img_src = img_tag.attrs.get('src').strip()
+                            img_uri = img_src.startswith('//') and ('https:' + img_src) or img_src
+                            images = dict(poster=dict(thumb='imagecache?path=browse/thumb/ne&source=%s' % img_uri))
+                            sickgear.CACHE_IMAGE_URL_LIST.add_url(img_uri)
+
+                        title = info_tag.get_text('strip=True')
+                        title = rc_title_clean.sub('', title.strip())
+
+                        channel_tag = row.find('span', class_='channel_name')
+
+                        network, date_info, dt = None, None, None
+                        channel_tag_copy = copy.copy(channel_tag)
+                        if channel_tag_copy:
+                            network = channel_tag_copy.a.extract().get_text(strip=True)
+                            date_info = re.sub(r'^\D+', '', channel_tag_copy.get_text(strip=True))
+                            if date_info:
+                                date_info = (date_info, '%s.01.01' % date_info)[4 == len(date_info)]
+
+                        if not started_past and channel_tag:
+                            tag = [t for t in channel_tag.next_siblings if hasattr(t, 'attrs')
+                                   and 'printed' in ' '.join(t.get('class', ''))]
+                            if len(tag):
+                                age_args = {}
+                                future = re.sub(r'\D+(.*)', r'\1', tag[0].get_text(strip=True))
+                                for (dim, rcx) in rc:
+                                    value = helpers.try_int(rcx.sub(r'\1', future), None)
+                                    if value:
+                                        age_args.update({dim: value})
+
+                                if age_args:
+                                    dt = datetime.datetime.utcnow()
+                                    if 'months' in age_args and 'days' in age_args:
+                                        age_args['days'] -= 1
+                                        dt += relativedelta(day=1)
+                                    dt += relativedelta(**age_args)
+                                    date_info = SGDatetime.sbfdate(dt)
+
+                        ord_premiered = 0
+                        str_premiered = ''
+                        if date_info:
+                            ord_premiered, str_premiered, _, oldest_dt, newest_dt, oldest, newest, _, _, _, _ \
+                                = self.sanitise_dates(date_info, oldest_dt, newest_dt, oldest, newest)
+                            if started_past:
+                                # started_past is false for relative future dates, and those can be output.
+                                # however, it is set true for response data that doesn't contain an accurate date,
+                                # therefore, a too broad fuzzy date is prevented from UI output.
+                                str_premiered = ''
+
+                        genres = row.find(class_='genre')
+                        if genres:
+                            genres = re.sub(r',(\S)', r', \1', genres.get_text(strip=True))
+                        overview = row.find(class_='summary')
+                        if overview:
+                            overview = overview.get_text(strip=True)
+
+                        rating = None
+                        rating_tag = row.find(class_='rating')
+                        if rating_tag:
+                            label_tag = rating_tag.find('label')
+                            if label_tag:
+                                rating = re.sub(r'.*?width:\s*(\d+).*', r'\1', label_tag.get('style', ''))
+
+                        filtered.append(dict(
+                            ord_premiered=ord_premiered,
+                            str_premiered=str_premiered,
+                            started_past=started_past,
+                            genres=('No genre yet' if not genres else genres),
+                            ids=ids,
+                            images='' if not img_uri else images,
+                            network=network or None,
+                            overview='No overview yet' if not overview else helpers.xhtml_escape(overview[:250:]),
+                            rating=(rating, 'TBD')[None is rating],
+                            title=title,
+                            url_src_db='https://next-episode.net/%s/' % url_path.strip('/'),
+                            votes=None))
+
+                    except (AttributeError, IndexError, KeyError, TypeError):
+                        continue
+
+                kwargs.update(dict(oldest=oldest, newest=newest))
+
+        kwargs.update(dict(footnote=footnote, use_votes=False))
+
+        mode = kwargs.get('mode', '')
+        if mode:
+            func = 'ne_%s' % mode
+            if callable(getattr(self, func, None)):
+                sickgear.NE_MRU = func
+                sickgear.save_config()
+        return self.browse_shows(browse_type, browse_title, filtered, **kwargs)
+
+    # noinspection PyUnusedLocal
+    def info_nextepisode(self, ids, show_name):
+
+        return self.new_show('|'.join(['', '', '', show_name]), use_show_name=True)
+
+    def tmdb_default(self):
+        method = getattr(self, sickgear.TMDB_MRU, None)
+        if not callable(method):
+            return self.tmdb_upcoming()
+        return method()
+
+    def tmdb_upcoming(self, **kwargs):
+        return self.browse_tmdb(
+            'Upcoming at TMDB', mode='upcoming', **kwargs)
+
+    def tmdb_popular(self, **kwargs):
+        return self.browse_tmdb(
+            'Popular at TMDB', mode='popular', **kwargs)
+
+    def tmdb_toprated(self, **kwargs):
+        return self.browse_tmdb(
+            'Top rated at TMDB', mode='toprated', **kwargs)
+
+    def tmdb_trending_today(self, **kwargs):
+        return self.browse_tmdb(
+            'Trending today at TMDB', mode='trending_today', **kwargs)
+
+    def tmdb_trending_week(self, **kwargs):
+        return self.browse_tmdb(
+            'Trending this week at TMDB', mode='trending_week', **kwargs)
+
+    def browse_tmdb(self, browse_title, **kwargs):
+
+        browse_type = 'TMDB'
+        mode = kwargs.get('mode', '')
+
+        footnote = None
+        filtered = []
+
+        tvid = TVINFO_TMDB
+        tvinfo_config = sickgear.TVInfoAPI(tvid).api_params.copy()
+        t = sickgear.TVInfoAPI(tvid).setup(**tvinfo_config)  # type: Union[TmdbIndexer, TVInfoBase]
+        if 'popular' == mode:
+            items = t.get_popular()
+        elif 'toprated' == mode:
+            items = t.get_top_rated()
+        elif 'trending_today' == mode:
+            items = t.get_trending()
+        elif 'trending_week' == mode:
+            items = t.get_trending(time_window='week')
+        else:
+            items = t.discover()
+
+        oldest, newest, oldest_dt, newest_dt, dedupe = None, None, 9999999, 0, []
+        use_networks = False
+        parseinfo = dateutil.parser.parserinfo(dayfirst=False, yearfirst=True)
+        base_url = sickgear.TVInfoAPI(TVINFO_TMDB).config['show_url']
+        for cur_show_info in items:
+            if cur_show_info.id in dedupe or not cur_show_info.seriesname:
+                continue
+            dedupe += [cur_show_info.id]
+
+            try:
+                airtime = cur_show_info.airs_time
+                if not airtime or (0, 0) == (airtime.hour, airtime.minute):
+                    airtime = dateutil.parser.parse('23:59').time()
+                dt = datetime.datetime.combine(
+                    dateutil.parser.parse(cur_show_info.firstaired, parseinfo).date(), airtime)
+                ord_premiered, str_premiered, started_past, oldest_dt, newest_dt, oldest, newest, _, _, _, _ \
+                    = self.sanitise_dates(dt, oldest_dt, newest_dt, oldest, newest)
+
+                image = self._make_cache_image_url(tvid, cur_show_info)
+                images = {} if not image else dict(poster=dict(thumb=image))
+
+                network_name = cur_show_info.network
+                cc = 'US'
+                if network_name:
+                    use_networks = True
+                    cc = cur_show_info.network_country_code or cc
+
+                language = ((cur_show_info.language and 'jap' in cur_show_info.language.lower())
+                            and 'jp' or 'en')
+                filtered.append(dict(
+                    ord_premiered=ord_premiered,
+                    str_premiered=str_premiered,
+                    started_past=started_past,
+                    episode_overview=helpers.xhtml_escape(cur_show_info.overview[:250:]).strip('*').strip(),
+                    episode_season=cur_show_info.season,
+                    genres=', '.join(cur_show_info.genre_list)
+                           or (cur_show_info.genre and (cur_show_info.genre.strip('|').replace('|', ', ')) or ''),
+                    ids=cur_show_info.ids.__dict__,
+                    images=images,
+                    overview=(helpers.xhtml_escape(cur_show_info.overview[:250:]).strip('*').strip()
+                              or 'No overview yet'),
+                    title=cur_show_info.seriesname,
+                    language=language,
+                    language_img=sickgear.MEMCACHE_FLAG_IMAGES.get(language, False),
+                    country=cc,
+                    country_img=sickgear.MEMCACHE_FLAG_IMAGES.get(cc.lower(), False),
+                    network=network_name,
+                    url_src_db=base_url % cur_show_info.id,
+                    votes=cur_show_info.popularity or 0,
+                ))
+            except (BaseException, Exception):
+                pass
+            kwargs.update(dict(oldest=oldest, newest=newest, use_ratings=False, use_filter=True, term_vote='Score'))
+
+        kwargs.update(dict(footnote=footnote, use_networks=use_networks))
+
+        if mode:
+            func = 'tmdb_%s' % mode
+            if callable(getattr(self, func, None)):
+                sickgear.TMDB_MRU = func
+                sickgear.save_config()
+        return self.browse_shows(browse_type, browse_title, filtered, **kwargs)
+
+    # noinspection PyUnusedLocal
+    def info_tmdb(self, ids, show_name):
+
+        if not list(filter(lambda tvid_prodid: helpers.find_show_by_id(tvid_prodid), ids.split(' '))):
+            return self.new_show('|'.join(['', '', '', ' '.join([ids, show_name])]), use_show_name=True)
+
+    def trakt_default(self):
+        method = getattr(self, sickgear.TRAKT_MRU, None)
+        if not callable(method):
+            return self.trakt_trending()
+        return method()
+
+    def trakt_anticipated(self):
+
+        return self.browse_trakt(
+            'get_anticipated',
+            'Anticipated at Trakt',
+            mode='anticipated',
+            footnote='Note; Expect default placeholder images in this list'
+        )
+
+    def trakt_newseasons(self):
+
+        return self.browse_trakt(
+            'get_new_seasons',
+            'Returning at Trakt',
+            mode='returning',
+            footnote='Note; Expect default placeholder images in this list')
+
+    def trakt_newshows(self):
+
+        return self.browse_trakt(
+            'get_new_shows',
+            'Brand new at Trakt',
+            mode='newshows',
+            footnote='Note; Expect default placeholder images in this list')
+
+    def trakt_popular(self):
+
+        return self.browse_trakt(
+            'get_popular',
+            'Popular at Trakt',
+            mode='popular')
+
+    def trakt_trending(self):
+
+        return self.browse_trakt(
+            'get_trending',
+            'Trending at Trakt',
+            mode='trending',
+            footnote='Tip: For more Trakt, use "Show" near the top of this view')
+
+    def trakt_watched(self, **kwargs):
+
+        return self.trakt_action('watch', **kwargs)
+
+    def trakt_played(self, **kwargs):
+
+        return self.trakt_action('play', **kwargs)
+
+    def trakt_collected(self, **kwargs):
+
+        return self.trakt_action('collect', **kwargs)
+
+    def trakt_action(self, action, **kwargs):
+
+        cycle, desc, ext = (('month', 'month', ''), ('year', '12 months', '-year'))['year' == kwargs.get('period', '')]
+        return self.browse_trakt(
+            f'get_most_{action}ed',
+            f'Most {action}ed at Trakt during the last {desc}',
+            mode=f'{action}ed{ext}', period=f'{cycle}ly')
+
+    def trakt_recommended(self, **kwargs):
+
+        if 'add' == kwargs.get('action'):
+            return self.redirect('/config/notifications/#tabs-3')
+
+        account = helpers.try_int(kwargs.get('account'))
+        try:
+            name = sickgear.TRAKT_ACCOUNTS[account].name
+        except KeyError:
+            return self.trakt_default()
+        return self.browse_trakt(
+            'get_recommended_for_account',
+            'Recommended for <b class="grey-text">%s</b> by Trakt' % name,
+            mode='recommended-%s' % account, account=account, ignore_collected=True, ignore_watchlisted=True)
+
+    def trakt_watchlist(self, **kwargs):
+
+        if 'add' == kwargs.get('action'):
+            return self.redirect('/config/notifications/#tabs-3')
+
+        account = helpers.try_int(kwargs.get('account'))
+        try:
+            name = sickgear.TRAKT_ACCOUNTS[account].name
+        except KeyError:
+            return self.trakt_default()
+        return self.browse_trakt(
+            'get_watchlisted_for_account',
+            'WatchList for <b class="grey-text">%s</b> by Trakt' % name,
+            mode='watchlist-%s' % account, account=account, ignore_collected=True)
+
+    def get_trakt_data(self, api_method, **kwargs):
+
+        mode = kwargs.get('mode', '')
+        items, filtered = ([], [])
+        error_msg = None
+        tvid = TVINFO_TRAKT
+        tvinfo_config = sickgear.TVInfoAPI(tvid).api_params.copy()
+        t = sickgear.TVInfoAPI(tvid).setup(**tvinfo_config)  # type: Union[TraktIndexer, TVInfoBase]
+        try:
+            trakt_func = getattr(t, api_method, None)  # type: callable
+            if not callable(trakt_func):
+                raise TraktException(f'missing api_trakt lib func: ({api_method})')
+
+            if 'get_anticipated' == api_method:
+                items = t.get_anticipated()
+            elif 'get_new_seasons' == api_method:
+                items = t.get_new_seasons()
+            elif 'get_new_shows' == api_method:
+                items = t.get_new_shows()
+            elif 'get_popular' == api_method:
+                items = t.get_popular()
+            elif 'get_trending' == api_method:
+                items = t.get_trending()
+            elif 'get_most_watched' == api_method:
+                items = t.get_most_watched(**kwargs)
+            elif 'get_most_played' == api_method:
+                items = t.get_most_played(**kwargs)
+            elif 'get_most_collected' == api_method:
+                items = t.get_most_collected(**kwargs)
+            elif 'get_recommended_for_account' == api_method:
+                items = t.get_recommended_for_account(**kwargs)
+            elif 'get_watchlisted_for_account' == api_method:
+                items = t.get_watchlisted_for_account(**kwargs)
+                if not items:
+                    error_msg = 'No items in watchlist.  Use the "Add to watchlist" button at the Trakt website'
+                    raise ValueError(error_msg)
+            else:
+                items = t.get_trending()
+        except TraktAuthException as e:
+            logger.warning(f'Pin authorisation needed to connect to Trakt service: {ex(e)}')
+            error_msg = 'Unauthorized: Get another pin in the Notifications Trakt settings'
+        except TraktException as e:
+            logger.warning(f'Could not connect to Trakt service: {ex(e)}')
+        except exceptions_helper.ConnectionSkipException as e:
+            logger.log('Skipping Trakt because of previous failure: %s' % ex(e))
+        except ValueError as e:
+            raise e
+        except (IndexError, KeyError):
+            pass
+
+        oldest, newest, oldest_dt, newest_dt, dedupe = None, None, 9999999, 0, []
+        use_networks = False
+        rx_ignore = re.compile(r'''
+        ((bbc|channel\s*?5.*?|itv)\s*?(drama|documentaries))|bbc\s*?(comedy|music)|music\s*?specials|tedtalks
+                ''', re.I | re.X)
+        for cur_show_info in items:
+            if cur_show_info.id in dedupe or not cur_show_info.seriesname:
+                continue
+            dedupe += [cur_show_info.id]
+            network_name = cur_show_info.network
+            if network_name:
+                use_networks = True
+            language = (cur_show_info.language or '').lower()
+            language_en = 'en' == language
+            country = (cur_show_info.network_country or '').lower()
+            country_ok = country in ('uk', 'gb', 'ie', 'ca', 'us', 'au', 'nz', 'za')
+            try:
+                season = next(iter(cur_show_info))
+                if 1 == season and 'returning' == mode:
+                    # new shows and new seasons have season 1 shows, filter S1 from new seasons list
+                    continue
+                episode_info = cur_show_info[season][next(iter(cur_show_info[season]))]
+            except(BaseException, Exception):
+                episode_info = TVInfoEpisode()
+
+            if rx_ignore.search(cur_show_info.seriesname.strip()) or \
+                    not (language_en or country_ok) or \
+                    not (cur_show_info.overview or episode_info.overview):
+                continue
+            try:
+                ord_premiered, str_premiered, started_past, oldest_dt, newest_dt, oldest, newest, \
+                    ok_returning, ord_returning, str_returning, return_past \
+                    = self.sanitise_dates(cur_show_info.firstaired, oldest_dt, newest_dt, oldest, newest, episode_info)
+                if 'returning' == mode and not ok_returning:
+                    continue
+
+                image = self._make_cache_image_url(tvid, cur_show_info)
+                images = {} if not image else dict(poster=dict(thumb=image))
+
+                filtered.append(dict(
+                    ord_premiered=ord_premiered,
+                    str_premiered=str_premiered,
+                    ord_returning=ord_returning,
+                    str_returning=str_returning,
+                    started_past=started_past,  # air time not yet available 16.11.2015
+                    return_past=return_past,
+                    episode_number=episode_info.episodenumber,
+                    episode_overview=helpers.xhtml_escape(episode_info.overview[:250:]).strip('*').strip(),
+                    episode_season=getattr(episode_info.season, 'number', 1),
+                    genres=(', '.join(['%s' % v for v in cur_show_info.genre_list])),
+                    ids=cur_show_info.ids.__dict__,
+                    images=images,
+                    network=network_name,
+                    overview=(helpers.xhtml_escape(cur_show_info.overview[:250:]).strip('*').strip()
+                              or 'No overview yet'),
+                    rating=0 < (cur_show_info.rating or 0) and
+                           ('%.2f' % (cur_show_info.rating * 10)).replace('.00', '') or 0,
+                    title=(cur_show_info.seriesname or '').strip(),
+                    language=language,
+                    language_img=not language_en and sickgear.MEMCACHE_FLAG_IMAGES.get(language, False),
+                    country=country,
+                    country_img=sickgear.MEMCACHE_FLAG_IMAGES.get(country, False),
+                    url_src_db='https://trakt.tv/shows/%s' % cur_show_info.slug,
+                    url_tvdb=(
+                        '' if not (isinstance(cur_show_info.ids.tvdb, integer_types) and 0 < cur_show_info.ids.tvdb)
+                        else sickgear.TVInfoAPI(TVINFO_TVDB).config['show_url'] % cur_show_info.ids.tvdb),
+                    votes=cur_show_info.vote_count or '0'))
+            except (BaseException, Exception):
+                pass
+
+        if 'web_ui' in kwargs:
+            return filtered, oldest, newest, use_networks, error_msg
+
+        return filtered, oldest, newest
+
+    def browse_trakt(self, api_method, browse_title, **kwargs):
+
+        browse_type = 'Trakt'
+        mode = kwargs.get('mode', '')
+        filtered = []
+
+        if not sickgear.USE_TRAKT \
+                and ('recommended' in mode or 'watchlist' in mode):
+            error_msg = 'To browse personal recommendations, enable Trakt.tv in Config/Notifications/Social'
+            return self.browse_shows(browse_type, browse_title, filtered, error_msg=error_msg, show_header=1, **kwargs)
+
+        try:
+            filtered, oldest, newest, use_networks, error_msg = self.get_trakt_data(api_method, web_ui=True, **kwargs)
+        except (BaseException, Exception):
+            error_msg = 'No items in watchlist.  Use the "Add to watchlist" button at the Trakt website'
+            return self.browse_shows(browse_type, browse_title, filtered, error_msg=error_msg, show_header=1, **kwargs)
+
+        kwargs.update(dict(oldest=oldest, newest=newest, error_msg=error_msg, use_networks=use_networks))
+
+        if 'recommended' not in mode and 'watchlist' not in mode:
+            mode = mode.split('-')
+            if mode:
+                func = 'trakt_%s' % mode[0]
+                if callable(getattr(self, func, None)):
+                    param = '' if 1 == len(mode) or mode[1] not in ['year', 'month', 'week', 'all'] else \
+                        '?period=' + mode[1]
+                    sickgear.TRAKT_MRU = '%s%s' % (func, param)
+                    sickgear.save_config()
+        return self.browse_shows(browse_type, browse_title, filtered, **kwargs)
+
+    def info_trakt(self, ids, show_name):
+
+        if not list(filter(lambda tvid_prodid: helpers.find_show_by_id(tvid_prodid), ids.split(' '))):
+            return self.new_show('|'.join(['', '', '', ' '.join([ids, show_name])]), use_show_name=True)
+
+    def tvc_default(self):
+        method = getattr(self, sickgear.TVC_MRU, None)
+        if not callable(method):
+            return self.tvc_newshows()
+        return method()
+
+    def tvc_newshows(self, **kwargs):
+        return self.browse_tvc(
+            'TV-shows-starting-', 'New at TV Calendar', mode='newshows', **kwargs)
+
+    def tvc_returning(self, **kwargs):
+        return self.browse_tvc(
+            'TV-shows-starting-', 'Returning at TV Calendar', mode='returning', **kwargs)
+
+    def tvc_latest(self, **kwargs):
+        return self.browse_tvc(
+            'recent-additions', 'Latest new at TV Calendar', mode='latest', **kwargs)
+
+    def browse_tvc(self, url_path, browse_title, **kwargs):
+
+        browse_type = 'TVCalendar'
+        mode = kwargs.get('mode', '')
+
+        footnote = None
+        filtered = []
+        today = datetime.datetime.today()
+        months = ['', 'January', 'February', 'March', 'April', 'May', 'June', 'July',
+                  'August', 'September', 'October', 'November', 'December']
+        this_month = '%s-%s' % (months[today.month], today.strftime('%Y'))
+        section = ''
+        if mode in ('newshows', 'returning'):
+            section = (kwargs.get('page') or this_month)
+            url_path += section
+
+        import browser_ua
+        url = 'https://www.pogdesign.co.uk/cat/%s' % url_path
+        html = helpers.get_url(url, headers={'User-Agent': browser_ua.get_ua()})
+        use_votes = False
+        if html:
+            prev_month = dt_prev_month = None
+            if mode in ('newshows', 'returning'):
+                try:
+                    prev_month = re.findall('(?i)href="/cat/tv-shows-starting-([^"]+)', html)[0]
+                    dt_prev_month = dateutil.parser.parse('1-%s' % prev_month)
+                except (BaseException, Exception):
+                    prev_month = None
+            get_prev_month = (lambda _dt: _dt.replace(day=1) - datetime.timedelta(days=1))
+            get_next_month = (lambda _dt: _dt.replace(day=28) + datetime.timedelta(days=5))
+            get_month_year = (lambda _dt: '%s-%s' % (months[_dt.month], _dt.strftime('%Y')))
+            if prev_month:
+                dt_next_month = get_next_month(dt_prev_month)
+                while True:
+                    next_month = get_month_year(dt_next_month)
+                    if next_month not in (this_month, kwargs.get('page')):
+                        break
+                    dt_next_month = get_next_month(dt_next_month)
+                while True:
+                    if prev_month not in (this_month, kwargs.get('page')):
+                        break
+                    dt_prev_month = get_prev_month(dt_prev_month)
+                    prev_month = get_month_year(dt_prev_month)
+
+            else:
+                dt_next_month = get_next_month(today)
+                next_month = get_month_year(dt_next_month)
+                dt_prev_month = get_prev_month(today)
+                prev_month = get_month_year(dt_prev_month)
+
+            suppress_item = not kwargs.get('page') or kwargs.get('page') == this_month
+            get_date_text = (lambda m_y: m_y.replace('-', ' '))
+            next_month_text = get_date_text(next_month)
+            prev_month_text = get_date_text(prev_month)
+            page_month_text = suppress_item and 'void' or get_date_text(kwargs.get('page'))
+            kwargs.update(dict(pages=[
+                ('tvc_newshows?page=%s' % this_month, 'New this month'),
+                ('tvc_newshows?page=%s' % next_month, '...in %s' % next_month_text)] +
+                ([('tvc_newshows?page=%s' % kwargs.get('page'), '...in %s' % page_month_text)], [])[suppress_item] +
+                [('tvc_newshows?page=%s' % prev_month, '...in %s' % prev_month_text)] +
+                [('tvc_returning?page=%s' % this_month, 'Returning this month'),
+                 ('tvc_returning?page=%s' % next_month, '...in %s' % next_month_text)] +
+                ([('tvc_returning?page=%s' % kwargs.get('page'), '...in %s' % page_month_text)], [])[suppress_item] +
+                [('tvc_returning?page=%s' % prev_month, '...in %s' % prev_month_text)]
+            ))
+
+            with BS4Parser(html, parse_only=dict(div={'class': (lambda at: at and 'pgwidth' in at)})) as tbl:
+                shows = []
+                if mode in ('latest', 'newshows', 'returning'):
+                    tags = tbl.select('h2[class*="midtitle"], div[class*="contbox"]')
+                    collect = False
+                    for cur_tag in tags:
+                        if re.match(r'(?i)h\d+', cur_tag.name) and 'midtitle' in cur_tag.attrs.get('class', []):
+                            text = cur_tag.get_text(strip=True)
+                            if mode in ('latest', 'newshows'):
+                                if not collect and ('Latest' in text or 'New' in text):
+                                    collect = True
+                                    continue
+                                break
+                            elif 'New' in text:
+                                continue
+                            elif 'Return' in text:
+                                collect = True
+                                continue
+                            break
+                        if collect:
+                            shows += [cur_tag]
+
+                if not len(shows):
+                    kwargs['error_msg'] = 'No TV titles found in <a target="_blank" href="%s">%s</a>%s,' \
+                                          ' try another selection' % (
+                        helpers.anon_url(url), browse_title, (' for %s' % section.replace('-', ' '), '')[not section])
+
+                # build batches to correct htmlentity typos in overview
+                from html5lib.constants import entities
+                batches = []
+                for cur_n, cur_name in enumerate(entities):
+                    if 0 == cur_n % 150:
+                        if cur_n:
+                            batches += [batch]
+                        batch = []
+                    batch += [cur_name]
+                else:
+                    batches += [batch]
+
+                oldest, newest, oldest_dt, newest_dt = None, None, 9999999, 0
+                for row in shows:
+                    try:
+                        ids = dict(custom=row.select('input[type="checkbox"]')[0].attrs['value'], name='tvc')
+                        info = row.find('a', href=re.compile('^/cat'))
+                        url_path = info['href'].strip()
+
+                        title = info.find('h2').get_text(strip=True)
+                        img_uri = info.get('data-original', '').strip()
+                        if not img_uri:
+                            img_uri = re.findall(r'(?i).*?image:\s*url\(([^)]+)', info.attrs['style'])[0].strip()
+                        images = dict(poster=dict(thumb='imagecache?path=browse/thumb/tvc&source=%s' % img_uri))
+                        sickgear.CACHE_IMAGE_URL_LIST.add_url(img_uri)
+                        title = re.sub(r'(?i)(?::\s*season\s*\d+|\s*\((?:19|20)\d{2}\))?$', '', title.strip())
+
+                        ord_premiered = 0
+                        str_premiered = ''
+                        ord_returning = 0
+                        str_returning = ''
+                        date = genre = network = ''
+                        date_tag = row.find('span', class_='startz')
+                        if date_tag:
+                            date_network = re.split(r'(?i)\son\s', ''.join(
+                                [t.name and t.get_text() or str(t) for t in date_tag][0:2]))
+                            date = re.sub('(?i)^(starts|returns)', '', date_network[0]).strip()
+                            network = ('', date_network[1].strip())[2 == len(date_network)]
+                        else:
+                            date_tag = row.find('span', class_='selby')
+                            if date_tag:
+                                date = date_tag.get_text(strip=True)
+                            network_genre = info.find('span')
+                            if network_genre:
+                                network_genre = network_genre.get_text(strip=True).split('//')
+                                network = network_genre[0]
+                                genre = ('', network_genre[1].strip())[2 == len(network_genre)]
+
+                        started_past = return_past = False
+                        if date:
+                            ord_premiered, str_premiered, started_past, oldest_dt, newest_dt, oldest, newest, \
+                                _, _, _, _ \
+                                = self.sanitise_dates(date, oldest_dt, newest_dt, oldest, newest)
+                            if mode in ('returning',):
+                                ord_returning, str_returning = ord_premiered, str_premiered
+                                ord_premiered, str_premiered = 0, ''
+
+                        overview = row.find('span', class_='shwtxt')
+                        if overview:
+                            overview = re.sub(r'(?sim)(.*?)(?:[.\s]*\*\*NOTE.*?)?(\.{1,3})$', r'\1\2',
+                                              overview.get_text(strip=True))
+                            for cur_entities in batches:
+                                overview = re.sub(r'and(%s)' % '|'.join(cur_entities), r'&\1', overview)
+
+                        votes = None
+                        votes_tag = row.find('span', class_='selby')
+                        if votes_tag:
+                            votes_tag = votes_tag.find('strong')
+                            if votes_tag:
+                                votes = re.sub(r'(?i)\s*users', '', votes_tag.get_text()).strip()
+                                use_votes = True
+
+                        filtered.append(dict(
+                            ord_premiered=ord_premiered,
+                            str_premiered=str_premiered,
+                            ord_returning=ord_returning,
+                            str_returning=str_returning,
+                            episode_season='',
+                            started_past=started_past,
+                            return_past=return_past,
+                            genres=genre,
+                            network=network or None,
+                            ids=ids,
+                            images='' if not img_uri else images,
+                            overview='No overview yet' if not overview else helpers.xhtml_escape(overview[:250:]),
+                            rating=None,
+                            title=title,
+                            url_src_db='https://www.pogdesign.co.uk/%s' % url_path.strip('/'),
+                            votes=votes or 'n/a'))
+
+                    except (AttributeError, IndexError, KeyError, TypeError):
+                        continue
+
+                kwargs.update(dict(oldest=oldest, newest=newest))
+
+        kwargs.update(dict(footnote=footnote, use_ratings=False, use_votes=use_votes, show_header=True))
+
+        if mode:
+            func = 'tvc_%s' % mode
+            if callable(getattr(self, func, None)):
+                sickgear.TVC_MRU = func
+                sickgear.save_config()
+
+        return self.browse_shows(browse_type, browse_title, filtered, **kwargs)
+
+    # noinspection PyUnusedLocal
+    def info_tvcalendar(self, ids, show_name):
+
+        return self.new_show('|'.join(['', '', '', show_name]), use_show_name=True)
+
+    def tvm_default(self):
+        method = getattr(self, sickgear.TVM_MRU, None)
+        if not callable(method):
+            return self.tvm_premieres()
+        return method()
+
+    def tvm_premieres(self, **kwargs):
+        return self.browse_tvm(
+            'New at TVmaze', mode='premieres', **kwargs)
+
+    def tvm_returning(self, **kwargs):
+        return self.browse_tvm(
+            'Returning at TVmaze', mode='returning', **kwargs)
+
+    def browse_tvm(self, browse_title, **kwargs):
+
+        browse_type = 'TVmaze'
+        mode = kwargs.get('mode', '')
+
+        footnote = None
+        filtered = []
+
+        tvid = TVINFO_TVMAZE
+        tvinfo_config = sickgear.TVInfoAPI(tvid).api_params.copy()
+        t = sickgear.TVInfoAPI(tvid).setup(**tvinfo_config)  # type: Union[TvmazeIndexer, TVInfoBase]
+        if 'premieres' == mode:
+            items = t.get_premieres()
+        else:
+            items = t.get_returning()
+
+        # handle switching between returning and premieres
+        sickgear.BROWSELIST_MRU.setdefault(browse_type, dict())
+        showfilter = ('by_returning', 'by_premiered')['premieres' == mode]
+        saved_showsort = sickgear.BROWSELIST_MRU[browse_type].get('tvm_%s' % mode) or '*,asc'
+        showsort = saved_showsort + (',%s' % showfilter, '')[3 == len(saved_showsort.split(','))]
+        sickgear.BROWSELIST_MRU[browse_type].update(dict(showfilter=showfilter, showsort=showsort))
+
+        oldest, newest, oldest_dt, newest_dt, dedupe = None, None, 9999999, 0, []
+        use_networks = False
+        base_url = sickgear.TVInfoAPI(tvid).config['show_url']
+        for cur_show_info in items:
+            if cur_show_info.id in dedupe or not cur_show_info.seriesname:
+                continue
+            dedupe += [cur_show_info.id]
+
+            try:
+                season = next(iter(cur_show_info))
+                episode_info = cur_show_info[season][next(iter(cur_show_info[season]))]  # type: Optional[TVInfoEpisode]
+            except(BaseException, Exception):
+                episode_info = TVInfoEpisode()
+
+            try:
+                ord_premiered, str_premiered, started_past, oldest_dt, newest_dt, oldest, newest, \
+                    ok_returning, ord_returning, str_returning, return_past \
+                    = self.sanitise_dates(cur_show_info.firstaired, oldest_dt, newest_dt, oldest, newest, episode_info)
+                if 'returning' == mode and not ok_returning:
+                    continue
+
+                image = self._make_cache_image_url(tvid, cur_show_info)
+                images = {} if not image else dict(poster=dict(thumb=image))
+
+                network_name = cur_show_info.network
+                cc = ''
+                if network_name:
+                    use_networks = True
+                    cc = cur_show_info.network_country_code or cc  # ensure string type not None
+                country_ok = cc.lower() in ('uk', 'gb', 'ie', 'ca', 'us', 'au', 'nz', 'za')
+                country = (country_ok and cc) or (cur_show_info.network_country or '').lower()
+
+                language = (('jap' in (cur_show_info.language or '').lower()) and 'jp' or 'en')
+
+                filtered.append(dict(
+                    ord_premiered=ord_premiered,
+                    str_premiered=str_premiered,
+                    ord_returning=ord_returning,
+                    str_returning=str_returning,
+                    started_past=started_past,
+                    return_past=return_past,
+                    episode_number=episode_info.episodenumber or '',
+                    episode_overview=helpers.xhtml_escape(episode_info.overview[:250:]).strip(),
+                    episode_season=getattr(episode_info.season, 'number', episode_info.seasonnumber),
+                    genres=(cur_show_info.genre.strip('|').replace('|', ', ')
+                            or ', '.join(cur_show_info.show_type) or ''),
+                    ids=cur_show_info.ids.__dict__,
+                    images=images,
+                    overview=(helpers.xhtml_escape(cur_show_info.overview[:250:]).strip('*').strip()
+                              or 'No overview yet'),
+                    rating=cur_show_info.rating or cur_show_info.popularity or 0,
+                    title=cur_show_info.seriesname,
+                    language=language,
+                    language_img=sickgear.MEMCACHE_FLAG_IMAGES.get(language, False),
+                    country=country,
+                    country_img=sickgear.MEMCACHE_FLAG_IMAGES.get(country.lower(), False),
+                    network=network_name,
+                    url_src_db=base_url % cur_show_info.id,
+                ))
+            except (BaseException, Exception):
+                pass
+            kwargs.update(dict(oldest=oldest, newest=newest))
+
+        kwargs.update(dict(footnote=footnote, use_votes=False, use_networks=use_networks))
+
+        if mode:
+            func = 'tvm_%s' % mode
+            if callable(getattr(self, func, None)):
+                sickgear.TVM_MRU = func
+                sickgear.save_config()
+        return self.browse_shows(browse_type, browse_title, filtered, **kwargs)
+
+    # noinspection PyUnusedLocal
+    def info_tvmaze(self, ids, show_name):
+
+        if not list(filter(lambda tvid_prodid: helpers.find_show_by_id(tvid_prodid), ids.split(' '))):
+            return self.new_show('|'.join(['', '', '', ' '.join([ids, show_name])]), use_show_name=True)
+
+    @staticmethod
+    def sanitise_dates(date, oldest_dt, newest_dt, oldest, newest, episode_info=None, combine_ep_airtime=False):
+        parseinfo = dateutil.parser.parserinfo(dayfirst=False, yearfirst=True)
+        dt = date if isinstance(date, datetime.datetime) else dateutil.parser.parse(date)
+        if episode_info:
+            airtime = episode_info.airtime \
+                      or episode_info.timestamp and SGDatetime.from_timestamp(episode_info.timestamp).time()
+            if not airtime or (0, 0) == (airtime.hour, airtime.minute):
+                airtime = dateutil.parser.parse('23:59').time()
+            if combine_ep_airtime:
+                dt = datetime.datetime.combine(
+                    dateutil.parser.parse(date, parseinfo).date(), airtime)
+
+        ord_premiered = dt.toordinal()
+        ord_now = datetime.datetime.now().toordinal()
+        started_past = ord_premiered < ord_now
+        str_premiered = SGDatetime.sbfdate(dt)  # an invalid dt becomes '' (e.g. 0202-12-28)
+        if str_premiered:
+            # to prevent UI issues, this logic only runs from a valid dt
+            if ord_premiered < oldest_dt:
+                oldest_dt = ord_premiered
+                oldest = str_premiered
+            if ord_premiered > newest_dt:
+                newest_dt = ord_premiered
+                newest = str_premiered
+
+        ok_returning = True
+        ord_returning = 9
+        str_returning = 'TBC'
+        return_past = False
+        if episode_info:
+            # noinspection PyUnboundLocalVariable
+            dt_returning = datetime.datetime.combine(
+                dateutil.parser.parse(episode_info.firstaired, parseinfo).date(), airtime)
+
+            ord_returning = dt_returning.toordinal()
+            return_past = ord_returning < ord_now
+
+            str_returning = SGDatetime.sbfdate(dt_returning)
+            if dt.year == dt_returning.year and 1900 < dt.year and 1900 < dt_returning.year:
+                # drop first aired year == returning year as most likely to be a new, not a returning show
+                ok_returning = False
+
+        return ord_premiered, str_premiered, started_past, oldest_dt, newest_dt, oldest, newest, \
+            ok_returning, ord_returning, str_returning, return_past
+
     @staticmethod
     def browse_mru(browse_type, **kwargs):
         save_config = False
-        if browse_type in ('AniDB', 'IMDb', 'Metacritic', 'Trakt', 'TVCalendar', 'TVmaze', 'Nextepisode'):
+        if browse_type in ('AniDB', 'IMDb', 'Metacritic', 'Trakt', 'TVCalendar',
+                           'TMDB', 'TVmaze', 'Nextepisode'):
             save_config = True
             if browse_type in ('TVmaze',) and kwargs.get('showfilter') and kwargs.get('showsort'):
                 sickgear.BROWSELIST_MRU.setdefault(browse_type, dict()) \
@@ -5844,6 +6060,19 @@ class AddShows(Home):
             else:
                 sickgear.BROWSELIST_MRU[browse_type] = dict(
                     showfilter=kwargs.get('showfilter', ''), showsort=kwargs.get('showsort', ''))
+        if save_config:
+            sickgear.save_config()
+        return json_dumps({'success': save_config})
+
+    @staticmethod
+    def show_toggle_hide(ids):
+        save_config = False
+        for sid in ids.split(' '):
+            save_config = True
+            if sid in sickgear.BROWSELIST_HIDDEN:
+                sickgear.BROWSELIST_HIDDEN.remove(sid)
+            else:
+                sickgear.BROWSELIST_HIDDEN += [sid]
         if save_config:
             sickgear.save_config()
         return json_dumps({'success': save_config})
@@ -5867,6 +6096,8 @@ class AddShows(Home):
         t.saved_showsort_view = 1 <= len(showsort) and showsort[0] or '*'
         t.all_shows = []
         t.kwargs = kwargs
+        if None is t.kwargs.get('footnote') and kwargs.get('mode', 'nomode') in ('upcoming',):
+            t.kwargs['footnote'] = 'Note; Expect default placeholder images in this list'
         known = []
 
         t.num_inlibrary = 0
@@ -5913,8 +6144,8 @@ class AddShows(Home):
                 titles += ([], [nopost_base_title])[nopost_base_title not in titles]
                 titles += ([], [nopre_base_title])[nopre_base_title not in titles]
                 titles += ([], [nopost_nopre_base_title])[nopost_nopre_base_title not in titles]
-                if 'premiered' in item and 1 == item.get('season', -1):
-                    titles += ['%s.%s' % (_t, datetime.date.fromordinal(item['premiered']).year) for _t in titles]
+                if 'ord_premiered' in item and 1 == item.get('season', -1):
+                    titles += ['%s.%s' % (_t, datetime.date.fromordinal(item['ord_premiered']).year) for _t in titles]
 
                 tvid_prodid_list += ['%s:%s' % (item['ids']['name'], item['ids']['custom'])]
                 for cur_title in titles:
@@ -5949,8 +6180,8 @@ class AddShows(Home):
             for sort_when, sort_type in (
                     ('order', lambda _x: _x['order']),
                     ('name', lambda _x: _title(_x['title'])),
-                    ('premiered', lambda _x: (_x['premiered'], _title(_x['title']))),
-                    ('returning', lambda _x: (_x['returning'], _title(_x['title']))),
+                    ('premiered', lambda _x: (_x['ord_premiered'], _title(_x['title']))),
+                    ('returning', lambda _x: (_x['ord_returning'], _title(_x['title']))),
                     ('votes', lambda _x: (helpers.try_int(_x['votes']), _title(_x['title']))),
                     ('rating', lambda _x: (helpers.try_float(_x['rating']), _title(_x['title']))),
                     ('rating_votes', lambda _x: (helpers.try_float(_x['rating']), helpers.try_int(_x['votes']),
@@ -6616,7 +6847,7 @@ class Manage(MainHandler):
         show_obj = helpers.find_show_by_id(tvid_prodid)
 
         if show_obj:
-            sickgear.backlog_search_scheduler.action.search_backlog([show_obj])
+            sickgear.search_backlog_scheduler.action.search_backlog([show_obj])
 
         self.redirect('/manage/backlog-overview/')
 
@@ -6735,7 +6966,7 @@ class Manage(MainHandler):
                 root_dir_list.append(cur_root_dir)
 
             if upgrade_once_all_same:
-                # if we had a value already and this value is different then they're not all the same
+                # if we had a value already and this value is different, then they're not all the same
                 if last_upgrade_once not in (None, cur_show_obj.upgrade_once):
                     upgrade_once_all_same = False
                 else:
@@ -6743,28 +6974,28 @@ class Manage(MainHandler):
 
             # if we know they're not all the same then no point even bothering
             if paused_all_same:
-                # if we had a value already and this value is different then they're not all the same
+                # if we had a value already and this value is different, then they're not all the same
                 if last_paused not in (None, cur_show_obj.paused):
                     paused_all_same = False
                 else:
                     last_paused = cur_show_obj.paused
 
             if prune_all_same:
-                # if we had a value already and this value is different then they're not all the same
+                # if we had a value already and this value is different, then they're not all the same
                 if last_prune not in (None, cur_show_obj.prune):
                     prune_all_same = False
                 else:
                     last_prune = cur_show_obj.prune
 
             if tag_all_same:
-                # if we had a value already and this value is different then they're not all the same
+                # if we had a value already and this value is different, then they're not all the same
                 if last_tag not in (None, cur_show_obj.tag):
                     tag_all_same = False
                 else:
                     last_tag = cur_show_obj.tag
 
             if anime_all_same:
-                # if we had a value already and this value is different then they're not all the same
+                # if we had a value already and this value is different, then they're not all the same
                 if last_anime not in (None, cur_show_obj.is_anime):
                     anime_all_same = False
                 else:
@@ -7116,11 +7347,11 @@ class ManageSearch(Manage):
 
     def index(self):
         t = PageTemplate(web_handler=self, file='manage_manageSearches.tmpl')
-        # t.backlog_pi = sickgear.backlog_search_scheduler.action.get_progress_indicator()
+        # t.backlog_pi = sickgear.search_backlog_scheduler.action.get_progress_indicator()
         t.backlog_paused = sickgear.search_queue_scheduler.action.is_backlog_paused()
         t.scheduled_backlog_active_providers = sickgear.search_backlog.BacklogSearcher.providers_active(scheduled=True)
         t.backlog_running = sickgear.search_queue_scheduler.action.is_backlog_in_progress()
-        t.backlog_is_active = sickgear.backlog_search_scheduler.action.am_running()
+        t.backlog_is_active = sickgear.search_backlog_scheduler.action.am_running()
         t.standard_backlog_running = sickgear.search_queue_scheduler.action.is_standard_backlog_in_progress()
         t.backlog_running_type = sickgear.search_queue_scheduler.action.type_of_backlog_in_progress()
         t.recent_search_status = sickgear.search_queue_scheduler.action.is_recentsearch_in_progress()
@@ -7161,7 +7392,7 @@ class ManageSearch(Manage):
     def force_backlog(self):
         # force it to run the next time it looks
         if not sickgear.search_queue_scheduler.action.is_standard_backlog_in_progress():
-            sickgear.backlog_search_scheduler.force_search(force_type=FORCED_BACKLOG)
+            sickgear.search_backlog_scheduler.force_search(force_type=FORCED_BACKLOG)
             logger.log('Backlog search forced')
             ui.notifications.message('Backlog search started')
 
@@ -7172,7 +7403,7 @@ class ManageSearch(Manage):
 
         # force it to run the next time it looks
         if not sickgear.search_queue_scheduler.action.is_recentsearch_in_progress():
-            result = sickgear.recent_search_scheduler.force_run()
+            result = sickgear.search_recent_scheduler.force_run()
             if result:
                 logger.log('Recent search forced')
                 ui.notifications.message('Recent search started')
@@ -7183,7 +7414,7 @@ class ManageSearch(Manage):
     def force_find_propers(self):
 
         # force it to run the next time it looks
-        result = sickgear.proper_finder_scheduler.force_run()
+        result = sickgear.search_propers_scheduler.force_run()
         if result:
             logger.log('Find propers search forced')
             ui.notifications.message('Find propers search started')
@@ -7207,10 +7438,10 @@ class ShowTasks(Manage):
         t = PageTemplate(web_handler=self, file='manage_showProcesses.tmpl')
         t.queue_length = sickgear.show_queue_scheduler.action.queue_length()
         t.people_queue = sickgear.people_queue_scheduler.action.queue_data()
-        t.next_run = sickgear.show_update_scheduler.last_run.replace(
-            hour=sickgear.show_update_scheduler.start_time.hour)
+        t.next_run = sickgear.update_show_scheduler.last_run.replace(
+            hour=sickgear.update_show_scheduler.start_time.hour)
         t.show_update_running = sickgear.show_queue_scheduler.action.is_show_update_running() \
-            or sickgear.show_update_scheduler.action.amActive
+            or sickgear.update_show_scheduler.is_running_job
 
         my_db = db.DBConnection(row_type='dict')
         sql_result = my_db.select('SELECT n.indexer || ? ||  n.indexer_id AS tvid_prodid,'
@@ -7293,7 +7524,7 @@ class ShowTasks(Manage):
 
     def force_show_update(self):
 
-        result = sickgear.show_update_scheduler.force_run()
+        result = sickgear.update_show_scheduler.force_run()
         if result:
             logger.log('Show Update forced')
             ui.notifications.message('Forced Show Update started')
@@ -7346,7 +7577,6 @@ class History(MainHandler):
     def query_history(cls, my_db, limit=100):
         # type: (db.DBConnection, int) -> Tuple[List[dict], List[dict]]
         """Query db for historical data
-
         :param my_db: connection should be instantiated with row_type='dict'
         :param limit: number of db rows to fetch
         :return: two data sets, detailed and compact
@@ -7519,7 +7749,6 @@ class History(MainHandler):
                 # type: (AnyStr, bool) -> Optional[AnyStr]
                 """
                 Return an image src, image class, or None based on a recognised identifier
-
                 :param _item: to search for a known domain identifier
                 :param as_class: whether a search should return an image (by default) or class
                 :return: image src, image class, or None if unknown identifier
@@ -7982,7 +8211,7 @@ class ConfigGeneral(Config):
     def update_alt():
         """ Load scene exceptions """
 
-        changed_exceptions, cnt_updated_numbers, min_remain_iv = scene_exceptions.retrieve_exceptions()
+        changed_exceptions, cnt_updated_numbers, min_remain_iv = scene_exceptions.ReleaseMap().fetch_exceptions()
 
         return json_dumps(dict(names=int(changed_exceptions), numbers=cnt_updated_numbers, min_remain_iv=min_remain_iv))
 
@@ -7991,7 +8220,7 @@ class ConfigGeneral(Config):
         """ Return alternative release names and numbering as json text"""
 
         # alternative release names and numbers
-        alt_names = scene_exceptions.get_all_scene_exceptions(tvid_prodid)
+        alt_names = scene_exceptions.ReleaseMap().get_show_exceptions(tvid_prodid)
         alt_numbers = get_scene_numbering_for_show(*TVidProdid(tvid_prodid).tuple)  # arbitrary order
         ui_output = 'No alternative names or numbers to export'
 
@@ -8180,8 +8409,8 @@ class ConfigGeneral(Config):
         sickgear.UPDATE_SHOWS_ON_START = config.checkbox_to_value(update_shows_on_start)
         sickgear.SHOW_UPDATE_HOUR = config.minimax(show_update_hour, 3, 0, 23)
         try:
-            with sickgear.show_update_scheduler.lock:
-                sickgear.show_update_scheduler.start_time = datetime.time(hour=sickgear.SHOW_UPDATE_HOUR)
+            with sickgear.update_show_scheduler.lock:
+                sickgear.update_show_scheduler.start_time = datetime.time(hour=sickgear.SHOW_UPDATE_HOUR)
         except (BaseException, Exception) as e:
             logger.error('Could not change Show Update Scheduler time: %s' % ex(e))
         sickgear.TRASH_REMOVE_SHOW = config.checkbox_to_value(trash_remove_show)
@@ -8215,7 +8444,7 @@ class ConfigGeneral(Config):
         sickgear.SHOWLIST_TAGVIEW = showlist_tagview
 
         # 'Show List' is the must-have default fallback. Tags in use that are removed from config ui are restored,
-        # not deleted. Deduped list order preservation is key to feature function.
+        # not deleted. De-duped list order preservation is key to feature function.
         my_db = db.DBConnection()
         sql_result = my_db.select('SELECT DISTINCT tag FROM tv_shows')
         new_names = [v.strip() for v in (show_tags.split(','), [])[None is show_tags] if v.strip()]
@@ -8482,20 +8711,20 @@ class ConfigMediaProcess(Config):
         t.submenu = self.config_menu('Processing')
         return t.respond()
 
-    def save_post_processing(self, tv_download_dir=None, process_automatically=None, mediaprocess_interval=None,
-                             unpack=None, keep_processed_dir=None, process_method=None,
-                             extra_scripts='', sg_extra_scripts='',
-                             rename_episodes=None, airdate_episodes=None,
-                             move_associated_files=None, postpone_if_sync_files=None,
-                             naming_custom_abd=None, naming_custom_sports=None, naming_custom_anime=None,
-                             naming_strip_year=None, use_failed_downloads=None, delete_failed=None,
-                             skip_removed_files=None, nfo_rename=None,
-                             xbmc_data=None, xbmc_12plus_data=None, mediabrowser_data=None, sony_ps3_data=None,
-                             wdtv_data=None, tivo_data=None, mede8er_data=None, kodi_data=None,
-                             naming_pattern=None, naming_multi_ep=None,
-                             naming_anime=None, naming_anime_pattern=None, naming_anime_multi_ep=None,
-                             naming_abd_pattern=None, naming_sports_pattern=None,
-                             **kwargs):  # kwargs picks up deprecated vars sent from legacy UIs
+    def save_post_processing(
+            self, tv_download_dir=None, process_method=None, process_automatically=None, mediaprocess_interval=None,
+            postpone_if_sync_files=None, process_positive_log=None, extra_scripts='', sg_extra_scripts='',
+            unpack=None, skip_removed_files=None, move_associated_files=None, nfo_rename=None,
+            rename_episodes=None, rename_tba_episodes=None, rename_name_changed_episodes=None,
+            airdate_episodes=None, use_failed_downloads=None, delete_failed=None,
+            naming_pattern=None, naming_multi_ep=None, naming_strip_year=None,
+            naming_custom_abd=None, naming_abd_pattern=None,
+            naming_custom_sports=None, naming_sports_pattern=None,
+            naming_custom_anime=None, naming_anime_pattern=None,naming_anime_multi_ep=None, naming_anime=None,
+            kodi_data=None, mede8er_data=None, xbmc_data=None, mediabrowser_data=None,
+            sony_ps3_data=None, tivo_data=None, wdtv_data=None, xbmc_12plus_data=None,
+            keep_processed_dir=None,
+            **kwargs):  # kwargs picks up deprecated vars sent from legacy UIs
 
         results = []
 
@@ -8520,9 +8749,12 @@ class ConfigMediaProcess(Config):
         sickgear.EXTRA_SCRIPTS = [x.strip() for x in extra_scripts.split('|') if x.strip()]
         sickgear.SG_EXTRA_SCRIPTS = [x.strip() for x in sg_extra_scripts.split('|') if x.strip()]
         sickgear.RENAME_EPISODES = config.checkbox_to_value(rename_episodes)
+        sickgear.RENAME_TBA_EPISODES = config.checkbox_to_value(rename_tba_episodes)
+        sickgear.RENAME_NAME_CHANGED_EPISODES = config.checkbox_to_value(rename_name_changed_episodes)
         sickgear.AIRDATE_EPISODES = config.checkbox_to_value(airdate_episodes)
         sickgear.MOVE_ASSOCIATED_FILES = config.checkbox_to_value(move_associated_files)
         sickgear.POSTPONE_IF_SYNC_FILES = config.checkbox_to_value(postpone_if_sync_files)
+        sickgear.PROCESS_POSITIVE_LOG = config.checkbox_to_value(process_positive_log)
         sickgear.NAMING_CUSTOM_ABD = config.checkbox_to_value(naming_custom_abd)
         sickgear.NAMING_CUSTOM_SPORTS = config.checkbox_to_value(naming_custom_sports)
         sickgear.NAMING_CUSTOM_ANIME = config.checkbox_to_value(naming_custom_anime)

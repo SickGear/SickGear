@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import print_function
 import unittest
 import test_lib as test
 from sickgear import cache_db, mainDB, failed_db

@@ -16,9 +16,6 @@
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
 # Check needed software dependencies to nudge users to fix their setup
-from __future__ import print_function
-from __future__ import with_statement
-
 import codecs
 import datetime
 import errno
@@ -39,7 +36,7 @@ warnings.filterwarnings('ignore', module=r'.*ssl_.*', message='.*SSLContext obje
 warnings.filterwarnings('ignore', module=r'.*zoneinfo.*', message='.*file or directory.*')
 warnings.filterwarnings('ignore', message='.*deprecated in cryptography.*')
 
-versions = [((3, 7, 1), (3, 8, 16)),
+versions = [((3, 8, 0), (3, 8, 16)),
             ((3, 9, 0), (3, 9, 2)), ((3, 9, 4), (3, 9, 16)),
             ((3, 10, 0), (3, 11, 3))]  # inclusive version ranges
 if not any(list(map(lambda v: v[0] <= sys.version_info[:3] <= v[1], versions))) and not int(os.environ.get('PYT', 0)):
@@ -555,9 +552,9 @@ class SickGear(object):
         name_cache.build_name_cache()
 
         # load all ids from xem
-        sickgear.classes.loading_msg.message = 'Loading xem data'
-        startup_background_tasks = threading.Thread(name='XEMUPDATER', target=sickgear.scene_exceptions.get_xem_ids)
-        startup_background_tasks.start()
+#        sickgear.classes.loading_msg.message = 'Loading xem data'
+#        startup_background_tasks = threading.Thread(name='XEMUPDATER', target=sickgear.scene_exceptions.ReleaseMap().fetch_xem_ids)
+#        startup_background_tasks.start()
 
         sickgear.classes.loading_msg.message = 'Checking history'
         # check history snatched_proper update
@@ -624,7 +621,7 @@ class SickGear(object):
         if not switching and (self.force_update or sickgear.UPDATE_SHOWS_ON_START):
             sickgear.classes.loading_msg.message = 'Starting a forced show update'
             background_start_forced_show_update = threading.Thread(name='STARTUP-FORCE-SHOW-UPDATE',
-                                                                   target=sickgear.show_update_scheduler.action.run)
+                                                                   target=sickgear.update_show_scheduler.action.run)
             background_start_forced_show_update.start()
 
         sickgear.classes.loading_msg.message = 'Switching to default web server'

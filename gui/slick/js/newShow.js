@@ -9,35 +9,70 @@ $(document).ready(function () {
 		return ' class="flag" style="background-image:url(' + $.SickGear.Root + '/images/flags/' + lang + '.png)"'
 	}
 
+	function uriFlag(lang) {
+		return $.SickGear.Root + '/images/flags/' + lang + '.png'
+	}
+
 	function populateLangSelect() {
 		if (!$('#nameToSearch').length)
 			return;
 
-		if (1 >= $('#infosrc-lang-select').find('option').length) {
+		if (1 >=  $('#infosrc-lang-select').find('option').length) {
 
 			$.getJSON(sbRoot + '/add-shows/get-infosrc-languages', {}, function (data) {
 
-				var resultStr = '', flag,
+				var htmlText = '', flag,
 					selected = ' selected="selected"',
-					elInfosrcLang = $('#infosrc-lang-select');
+					elInfosrcLang = $('#infosrc-lang-select'),
+					useSelect2 = 0 < data.results_ext.length, populateItem;
 
-				if (0 === data.results.length) {
-					resultStr = '<option value="en"' + selected + '>&gt; en</option>';
+				if (0 === data.results.length && 0 === data.results_ext.length) {
+					htmlText = '<option value="en"' + selected + '>&gt; en</option>';
 				} else {
-					$.each(data.results, function (index, obj) {
-						flag = htmlFlag(obj);
-						resultStr += '<option value="' + obj + '"'
-							+ ('' === resultStr
-								? flag.replace('"flag', '"flag selected-text') + selected + '>&gt; '
-								: flag + '>')
-							+ obj + '</option>';
-					});
+					if (useSelect2) {
+						$('#nameToSearch').addClass('select2');
+						// 3 letter abbr object
+						$.each(data.results_ext, function (index, obj) {
+							htmlText += '<option style="padding-left:25px" value="' + obj.std_abbr + '"'
+								+ ' data-abbr="' + obj.abbr + '"'
+								+ ' data-img="' + uriFlag(obj.std_abbr) + '"'
+								+ ' data-title="' + obj.en + ' (' + obj.orig_abbr + '/' + obj.std_abbr + '/' + obj.abbr + ')' +  '"'
+								+ ('' === htmlText
+									? selected + '>&gt; '
+									: '>')
+								+ obj.native
+								+ '</option>';
+						});
+					} else {
+						// legacy 2 letter abbr list
+						$.each(data.results, function (index, obj) {
+							flag = htmlFlag(obj);
+							htmlText += '<option value="' + obj + '"'
+								+ ('' === htmlText
+									? flag.replace('"flag', '"flag selected-text') + selected + '>&gt; '
+									: flag + '>')
+								+ obj + '</option>';
+						});
+					}
 				}
 
-				elInfosrcLang.html(resultStr);
+				elInfosrcLang.html(htmlText);
 				elInfosrcLang.change(function () {
 					searchIndexers();
 				});
+
+				if (useSelect2) {
+					populateItem = function(data) {
+						if (!!data.element)
+							return $('<span class="flag"'
+								+ ' style="background-image:url(' + $(data.element).data('img') + ')"'
+								+ ' title="' + $(data.element).data('title') + '">'
+								+ data.text
+								+ '</span>');
+						return data.text;
+					}
+					elInfosrcLang.select2({templateResult: populateItem, templateSelection: populateItem, width: 155});
+				}
 			});
 		}
 	}

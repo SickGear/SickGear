@@ -14,8 +14,6 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import with_statement
-
 from functools import partial
 import datetime
 import os
@@ -514,7 +512,7 @@ class ProcessTVShow(object):
             for f in sorted(list(set([os.path.dirname(item) for item in work_files]) - {path}), key=len, reverse=True):
                 self._delete_folder(f)
 
-        def _bottom_line(text, log_level=logger.DEBUG):
+        def _bottom_line(text, log_level=logger.MESSAGE):
             self._buffer('-' * len(text))
             self._log_helper(text, log_level)
 
@@ -524,11 +522,12 @@ class ProcessTVShow(object):
 
         if self.any_vid_processed:
             if not self.files_failed:
-                _bottom_line('Successfully processed.', logger.MESSAGE)
+                _bottom_line('Successfully processed.')
             else:
                 _bottom_line(f'Successfully processed at least one video file'
-                             f'{(", others were skipped", " and skipped another")[1 == self.files_failed]}.',
-                             logger.MESSAGE)
+                             f'{(", others were skipped", " and skipped another")[1 == self.files_failed]}.')
+        elif sickgear.PROCESS_POSITIVE_LOG:
+            _bottom_line('Success, no media to process.')
         else:
             _bottom_line('Failed! Did not process any files.', logger.WARNING)
 
@@ -1141,10 +1140,9 @@ class ProcessTVShow(object):
             self._buffer(processor.log.strip('\n'))
 
 
-# backward compatibility prevents the case of this function name from being updated to PEP8
-def processDir(dir_name, nzb_name=None, process_method=None, force=False, force_replace=None,
-               failed=False, pp_type='auto', cleanup=False, webhandler=None, show_obj=None, is_basedir=True,
-               skip_failure_processing=False, client=None):
+def process_dir(dir_name, nzb_name=None, process_method=None, force=False, force_replace=None,
+                failed=False, pp_type='auto', cleanup=False, webhandler=None, show_obj=None, is_basedir=True,
+                skip_failure_processing=False, client=None):
     """
 
     :param dir_name: dir name
@@ -1180,6 +1178,10 @@ def processDir(dir_name, nzb_name=None, process_method=None, force=False, force_
     return ProcessTVShow(webhandler, is_basedir, skip_failure_processing=skip_failure_processing,
                          client=client).process_dir(dir_name, nzb_name, process_method, force, force_replace, failed,
                                                     pp_type, cleanup, show_obj)
+
+
+# backward compatibility
+processDir = process_dir
 
 
 def process_minimal(nzb_name, show_obj, failed, webhandler):

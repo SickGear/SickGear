@@ -50,14 +50,14 @@ DEFAULT_SETTINGS = {
     'statistics': 0,  # False
     'tag_index': 0,  # False
     'eviction_policy': 'least-recently-stored',
-    'size_limit': 2 ** 30,  # 1gb
+    'size_limit': 2**30,  # 1gb
     'cull_limit': 10,
     'sqlite_auto_vacuum': 1,  # FULL
-    'sqlite_cache_size': 2 ** 13,  # 8,192 pages
+    'sqlite_cache_size': 2**13,  # 8,192 pages
     'sqlite_journal_mode': 'wal',
-    'sqlite_mmap_size': 2 ** 26,  # 64mb
+    'sqlite_mmap_size': 2**26,  # 64mb
     'sqlite_synchronous': 1,  # NORMAL
-    'disk_min_file_size': 2 ** 15,  # 32kb
+    'disk_min_file_size': 2**15,  # 32kb
     'disk_pickle_protocol': pickle.HIGHEST_PROTOCOL,
 }
 
@@ -171,7 +171,7 @@ class Disk:
         :return: corresponding Python key
 
         """
-        # pylint: disable=no-self-use,unidiomatic-typecheck
+        # pylint: disable=unidiomatic-typecheck
         if raw:
             return bytes(key) if type(key) is sqlite3.Binary else key
         else:
@@ -213,7 +213,7 @@ class Disk:
             size = op.getsize(full_path)
             return size, MODE_TEXT, filename, None
         elif read:
-            reader = ft.partial(value.read, 2 ** 22)
+            reader = ft.partial(value.read, 2**22)
             filename, full_path = self.filename(key, value)
             iterator = iter(reader, b'')
             size = self._write(full_path, iterator, 'xb')
@@ -229,7 +229,6 @@ class Disk:
                 return len(result), MODE_PICKLE, filename, None
 
     def _write(self, full_path, iterator, mode, encoding=None):
-        # pylint: disable=no-self-use
         full_dir, _ = op.split(full_path)
 
         for count in range(1, 11):
@@ -265,7 +264,7 @@ class Disk:
         :raises: IOError if the value cannot be read
 
         """
-        # pylint: disable=no-self-use,unidiomatic-typecheck,consider-using-with
+        # pylint: disable=unidiomatic-typecheck,consider-using-with
         if mode == MODE_RAW:
             return bytes(value) if type(value) is sqlite3.Binary else value
         elif mode == MODE_BINARY:
@@ -435,6 +434,7 @@ class Cache:
 
         if directory is None:
             directory = tempfile.mkdtemp(prefix='diskcache-')
+        directory = str(directory)
         directory = op.expanduser(directory)
         directory = op.expandvars(directory)
 
@@ -1380,6 +1380,7 @@ class Cache:
         :raises Timeout: if database timeout occurs
 
         """
+        # pylint: disable=unnecessary-dunder-call
         try:
             return self.__delitem__(key, retry=retry)
         except KeyError:

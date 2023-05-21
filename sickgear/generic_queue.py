@@ -19,6 +19,7 @@ import datetime
 import threading
 
 from . import db, logger
+from .scheduler import Job
 from exceptions_helper import ex
 from six import integer_types
 
@@ -37,9 +38,10 @@ class QueuePriorities(object):
     VERYHIGH = 40
 
 
-class GenericQueue(object):
+class GenericQueue(Job):
     def __init__(self, cache_db_tables=None, main_db_tables=None):
         # type: (List[AnyStr], List[AnyStr]) -> None
+        super(GenericQueue, self).__init__(self.job_run, silent=True, kwargs={}, reentrant_lock=True)
 
         self.currentItem = None  # type: QueueItem or None
 
@@ -51,12 +53,40 @@ class GenericQueue(object):
 
         self.events = {}  # type: Dict[int, List[Callable]]
 
-        self.lock = threading.RLock()
-
         self.cache_db_tables = cache_db_tables or []  # type: List[AnyStr]
         self.main_db_tables = main_db_tables or []  # type: List[AnyStr]
 
         self._id_counter = self._load_init_id()  # type: integer_types
+
+    def job_run(self):
+
+        # only start a new task if one isn't already going
+        with self.lock:
+            if None is self.currentItem or not self.currentItem.is_alive():
+
+                # if the thread is dead then the current item should be finished
+                if self.currentItem:
+                    self.currentItem.finish()
+                    try:
+                        self.delete_item(self.currentItem, finished_run=True)
+                    except (BaseException, Exception):
+                        pass
+                    self.currentItem = None
+
+                # if there's something in the queue then run it in a thread and take it out of the queue
+                if 0 < len(self.queue):
+
+                    self.queue.sort(key=lambda y: (-y.priority, y.added))
+                    if self.queue[0].priority < self.min_priority:
+                        return
+
+                    # launch the queue item in a thread
+                    self.currentItem = self.queue.pop(0)
+                    if 'SEARCHQUEUE' != self.queue_name:
+                        self.currentItem.name = self.queue_name + '-' + self.currentItem.name
+                    self.currentItem.start()
+
+                self.check_events()
 
     def _load_init_id(self):
         # type: (...) -> integer_types
@@ -216,7 +246,7 @@ class GenericQueue(object):
             self.min_priority = 999999999999
 
     def unpause(self):
-        logger.log('Unpausing queue')
+        logger.log('Un-pausing queue')
         with self.lock:
             self.min_priority = 0
 
@@ -268,36 +298,6 @@ class GenericQueue(object):
                     event(*args, **kwargs)
                 except (BaseException, Exception) as e:
                     logger.error('Error executing Event: %s' % ex(e))
-
-    def run(self):
-
-        # only start a new task if one isn't already going
-        with self.lock:
-            if None is self.currentItem or not self.currentItem.is_alive():
-
-                # if the thread is dead then the current item should be finished
-                if self.currentItem:
-                    self.currentItem.finish()
-                    try:
-                        self.delete_item(self.currentItem, finished_run=True)
-                    except (BaseException, Exception):
-                        pass
-                    self.currentItem = None
-
-                # if there's something in the queue then run it in a thread and take it out of the queue
-                if 0 < len(self.queue):
-
-                    self.queue.sort(key=lambda y: (-y.priority, y.added))
-                    if self.queue[0].priority < self.min_priority:
-                        return
-
-                    # launch the queue item in a thread
-                    self.currentItem = self.queue.pop(0)
-                    if 'SEARCHQUEUE' != self.queue_name:
-                        self.currentItem.name = self.queue_name + '-' + self.currentItem.name
-                    self.currentItem.start()
-
-                self.check_events()
 
 
 class QueueItem(threading.Thread):

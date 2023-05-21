@@ -33,7 +33,7 @@ class BaseTVinfoShownotfound(BaseTVinfoError):
     pass
 
 
-class BaseTVinfoSeasonnotfound(BaseTVinfoError):
+class BaseTVinfoSeasonnotfound(BaseTVinfoError, AttributeError, KeyError):
     """Season cannot be found
     """
     pass
@@ -45,7 +45,7 @@ class BaseTVinfoEpisodenotfound(BaseTVinfoError):
     pass
 
 
-class BaseTVinfoAttributenotfound(BaseTVinfoError):
+class BaseTVinfoAttributenotfound(BaseTVinfoError, AttributeError, KeyError):
     """Raised if an episode does not have the requested
     attribute (such as a episode name)
     """

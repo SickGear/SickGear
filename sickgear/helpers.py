@@ -15,10 +15,6 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import division
-from __future__ import print_function
-from __future__ import with_statement
-
 from itertools import cycle
 import datetime
 import hashlib
@@ -294,7 +290,10 @@ def search_infosrc_for_show_id(reg_show_name, tvid=None, prodid=None, ui=None):
             logger.debug('Trying to find %s on %s' % (cur_name, sickgear.TVInfoAPI(cur_tvid).name))
 
             try:
-                show_info_list = t[prodid] if prodid else t[cur_name]
+                if prodid:
+                    show_info_list = t.get_show(prodid)
+                else:
+                    show_info_list = t.search_show(cur_name)
                 show_info_list = show_info_list if isinstance(show_info_list, list) else [show_info_list]
             except (BaseException, Exception):
                 continue
@@ -426,7 +425,7 @@ def move_and_symlink_file(src_file, dest_file):
         copy_file(src_file, dest_file)
 
 
-def rename_ep_file(cur_path, new_path, old_path_length=0):
+def rename_ep_file(cur_path, new_path, old_path_length=0, use_rename=False):
     """
     Creates all folders needed to move a file to its new location, renames it, then cleans up any folders
     left that are now empty.
@@ -437,6 +436,7 @@ def rename_ep_file(cur_path, new_path, old_path_length=0):
     :type new_path: AnyStr
     :param old_path_length: The length of media file path (old name) WITHOUT THE EXTENSION
     :type old_path_length: int or long
+    :param use_rename: use rename instead of shutil.move
     :return: success
     :rtype: bool
     """
@@ -470,8 +470,11 @@ def rename_ep_file(cur_path, new_path, old_path_length=0):
     # move the file
     try:
         logger.log(f'Renaming file from {cur_path} to {new_path}')
-        shutil.move(cur_path, new_path)
-    except (OSError, IOError) as e:
+        if use_rename:
+            os.rename(cur_path, new_path)
+        else:
+            shutil.move(cur_path, new_path)
+    except (OSError, IOError, IsADirectoryError, NotADirectoryError, FileExistsError) as e:
         logger.error(f'Failed renaming {cur_path} to {new_path}: {ex(e)}')
         return False
 
@@ -989,7 +992,7 @@ def validate_show(show_obj, season=None, episode=None):
         if season is None and episode is None:
             return t
 
-        return t[show_obj.prodid][season][episode]
+        return t.get_show(show_obj.prodid, language=show_obj.lang)[season][episode]
     except (BaseTVinfoEpisodenotfound, BaseTVinfoSeasonnotfound, TypeError):
         pass
 

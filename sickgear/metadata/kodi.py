@@ -13,8 +13,6 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
-from __future__ import absolute_import
-
 import datetime
 import io
 import os
@@ -125,7 +123,7 @@ class KODIMetadata(generic.GenericMetadata):
         tv_node = etree.Element('tvshow')
 
         try:
-            show_info = t.get_show(show_obj.prodid, language=show_obj.lang)
+            show_info = t.get_show(show_id, language=show_obj.lang)
         except BaseTVinfoShownotfound as e:
             logger.error(f'Unable to find show with id {show_id} on {sickgear.TVInfoAPI(show_obj.tvid).name},'
                          f' skipping it')
