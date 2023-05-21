@@ -25,6 +25,7 @@
 * Add menu Shows/"TMDB Cards"
 * Add a persons available socials (Youtube, LinkedIn, Reddit, Fansite, TikTok, Wikidata)
 * Change use TVDb genres on view-show if config/General/Interface/"Enable IMDb info" is disabled
+* Fix TVDb api episode issues
 * Change remove Python 3.7 from CI
 
 
