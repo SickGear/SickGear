@@ -1,4 +1,9 @@
-﻿### 3.29.0 (2023-05-22 00:25:00 UTC)
+﻿### 3.29.1 (2023-05-26 06:10:00 UTC)
+
+* Fix IMDB fetch from TheTVDb API
+
+
+### 3.29.0 (2023-05-22 00:25:00 UTC)
 
 * Change minimum required Python to version 3.8
 * Update Apprise 1.2.1 (3d07004) to 1.3.0 (6458ab0)
