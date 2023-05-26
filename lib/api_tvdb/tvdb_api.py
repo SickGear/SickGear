@@ -1081,7 +1081,7 @@ class Tvdb(TVInfoBase):
             ti_show.imdb_id = clean_data(show_data.get('imdb_id')) or None
             ti_show.airs_time = clean_data(show_data.get('airs_time'))
             ti_show.airs_dayofweek = clean_data(show_data.get('airs_dayofweek'))
-            ti_show.ids = TVInfoIDs(tvdb=ti_show.id, imdb=try_int(ti_show.imdb_id.replace('tt', ''), None))
+            ti_show.ids = TVInfoIDs(tvdb=ti_show.id, imdb=try_int(str(ti_show.imdb_id).replace('tt', ''), None))
 
         else:
             show_data = {'data': {}}
