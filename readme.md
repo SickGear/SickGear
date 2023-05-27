@@ -93,7 +93,7 @@ Other features and worthy points;
   <td><a title="Daily Schedule - Layout: Day by Day" href="https://raw.githubusercontent.com/wiki/SickGear/SickGear/images/screenies/episodeview-day-by-day.jpg"><img src="https://raw.githubusercontent.com/wiki/SickGear/SickGear/images/screenies/episodeview-day-by-day-t.jpg" width="200"></a></td>
   <td><a title="Daily Schedule - Layout: List" href="https://raw.githubusercontent.com/wiki/SickGear/SickGear/images/screenies/episodeview-list.jpg"><img src="https://raw.githubusercontent.com/wiki/SickGear/SickGear/images/screenies/episodeview-list-t.jpg" width="200"></a></td>
   <td><a title="Display Show" href="https://raw.githubusercontent.com/wiki/SickGear/SickGear/images/screenies/displayshow.jpg"><img src="https://raw.githubusercontent.com/wiki/SickGear/SickGear/images/screenies/displayshow-t.jpg" width="200"></a></td>
-  <td><a title="Edit Show" href="https://raw.githubusercontent.com/wiki/SickGear/SickGear/images/screenies/editshow.gif"><img src="https://raw.githubusercontent.com/wiki/SickGear/SickGear/images/screenies/editshow-t.jpg" width="200"></a></td>
+  <td><a title="Edit Show" href="https://raw.githubusercontent.com/wiki/SickGear/SickGear/images/screenies/editshow.mp4"><img src="https://raw.githubusercontent.com/wiki/SickGear/SickGear/images/screenies/editshow-t.jpg" width="200"></a></td>
 </tr>
 <tr align="center">
   <td>Show List: Simple<br />Theme: <a title="Theme Dark" href="https://raw.githubusercontent.com/wiki/SickGear/SickGear/images/screenies/showlist-simple.jpg">Dark</a>, <a title="Theme Light" href="https://raw.githubusercontent.com/wiki/SickGear/SickGear/images/screenies/showlist-simple-light.jpg">Light</a></td>
@@ -102,7 +102,7 @@ Other features and worthy points;
   <td>Daily Schedule: Day by Day<br />Theme: <a title="Theme Dark" href="https://raw.githubusercontent.com/wiki/SickGear/SickGear/images/screenies/episodeview-day-by-day.jpg">Dark</a>, <a title="Theme Light" href="https://raw.githubusercontent.com/wiki/SickGear/SickGear/images/screenies/episodeview-day-by-day-light.jpg">Light</a></td>
   <td>Daily Schedule: List<br />Theme: <a title="Theme Dark" href="https://raw.githubusercontent.com/wiki/SickGear/SickGear/images/screenies/episodeview-list.jpg">Dark</a>, <a title="Theme Dark - Anime" href="https://raw.githubusercontent.com/wiki/SickGear/SickGear/images/screenies/episodeview-list2.jpg">Dark 2</a>, <a title="Theme Light" href="https://raw.githubusercontent.com/wiki/SickGear/SickGear/images/screenies/episodeview-list-light.jpg">Light</a></td>
   <td>Display Show<br />Theme: <a title="Theme Dark" href="https://raw.githubusercontent.com/wiki/SickGear/SickGear/images/screenies/displayshow.jpg">Dark</a>, <a title="Theme Light" href="https://raw.githubusercontent.com/wiki/SickGear/SickGear/images/screenies/displayshow-light.jpg">Light</a></td>
-  <td>Edit Show<br />Theme: <a title="Theme Dark" href="https://raw.githubusercontent.com/wiki/SickGear/SickGear/images/screenies/editshow.gif">Dark</a></td>
+  <td>Edit Show<br />Theme: <a title="Theme Dark" href="https://raw.githubusercontent.com/wiki/SickGear/SickGear/images/screenies/editshow.mp4">Dark</a></td>
 </tr>
 </tbody>
 </table>
