@@ -4227,7 +4227,7 @@ class AddShows(Home):
                         show['ids'][(tvid, TVINFO_TVDB)[TVINFO_TRAKT == tvid]])
                        + ('', '&lid=%s' % sickgear.TVInfoAPI().config.get('langabbv_to_id', {}).get(lang, lang))[
                            TVINFO_TVDB == tvid],
-                       int(show['id']),
+                       (int(show['id']), show['ids'][TVINFO_TVDB])[TVINFO_TRAKT == tvid],
                        show['seriesname'], helpers.xhtml_escape(show['seriesname']), show['firstaired'],
                        (isinstance(show['firstaired'], string_types) and show['firstaired']
                         and SGDatetime.sbfdate(_parse_date(show['firstaired'])) or ''),
