@@ -1,4 +1,10 @@
-﻿### 3.29.1 (2023-05-26 06:10:00 UTC)
+﻿### 3.29.2 (2023-05-28 07:45:00 UTC)
+
+* Fix find show results returned as newest/oldest that are then sorted z to a
+* Fix add show "TheTVDB via Trakt"
+
+
+### 3.29.1 (2023-05-26 06:10:00 UTC)
 
 * Fix IMDB fetch from TheTVDb API
 
