@@ -4227,7 +4227,7 @@ class AddShows(Home):
                         show['ids'][(tvid, TVINFO_TVDB)[TVINFO_TRAKT == tvid]])
                        + ('', '&lid=%s' % sickgear.TVInfoAPI().config.get('langabbv_to_id', {}).get(lang, lang))[
                            TVINFO_TVDB == tvid],
-                       int(show['id']),
+                       (int(show['id']), show['ids'][TVINFO_TVDB])[TVINFO_TRAKT == tvid],
                        show['seriesname'], helpers.xhtml_escape(show['seriesname']), show['firstaired'],
                        (isinstance(show['firstaired'], string_types) and show['firstaired']
                         and SGDatetime.sbfdate(_parse_date(show['firstaired'])) or ''),
@@ -4297,19 +4297,24 @@ class AddShows(Home):
 
             return (grouped, combined)[as_combined]
 
-        if 'az' == sickgear.RESULTS_SORTBY[:2]:
-            sort_results = [sort_oldest, sort_newest, sort_rel, sort_za, sort_az]
-        elif 'za' == sickgear.RESULTS_SORTBY[:2]:
-            sort_results = [sort_oldest, sort_newest, sort_rel, sort_az, sort_za]
-        elif 'newest' == sickgear.RESULTS_SORTBY[:6]:
-            sort_results = [sort_az, sort_rel, sort_oldest, sort_newest]
-        elif 'oldest' == sickgear.RESULTS_SORTBY[:6]:
-            sort_results = [sort_az, sort_rel, sort_newest, sort_oldest]
-        else:
-            sort_results = [sort_za, sort_az, sort_oldest, sort_newest, sort_rel]
+        sort_methods = [sort_oldest, sort_newest, sort_za, sort_az, sort_rel]
+        if re.match('az|za|ne|ol', sickgear.RESULTS_SORTBY[:2]):
+            if 'az' == sickgear.RESULTS_SORTBY[:2]:
+                new_default = sort_az
+            elif 'za' == sickgear.RESULTS_SORTBY[:2]:
+                new_default = sort_za
+            elif 'newest' == sickgear.RESULTS_SORTBY[:6]:
+                new_default = sort_newest
+            else:  # 'oldest' == sickgear.RESULTS_SORTBY[:6]:
+                new_default = sort_oldest
 
-        for n, func in enumerate(sort_results):
-            final_results = func(final_results, n == len(sort_results) - 1, 'nogroup' == sickgear.RESULTS_SORTBY[-7:])
+            sort_methods.remove(new_default)
+            sort_methods += [new_default]
+
+        idx_last_sort = len(sort_methods) - 1
+        sort_nogroup = 'nogroup' == sickgear.RESULTS_SORTBY[-7:]
+        for n, cur_method in enumerate(sort_methods):
+            final_results = cur_method(final_results, n == idx_last_sort, sort_nogroup)
 
         return json_dumps({'results': final_results})
 
