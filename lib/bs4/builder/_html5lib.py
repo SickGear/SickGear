@@ -70,7 +70,10 @@ class HTML5TreeBuilder(HTMLTreeBuilder):
         # ATM because the html5lib TreeBuilder doesn't use
         # UnicodeDammit.
         if exclude_encodings:
-            warnings.warn("You provided a value for exclude_encoding, but the html5lib tree builder doesn't support exclude_encoding.")
+            warnings.warn(
+                "You provided a value for exclude_encoding, but the html5lib tree builder doesn't support exclude_encoding.",
+                stacklevel=3
+            )
 
         # html5lib only parses HTML, so if it's given XML that's worth
         # noting.
@@ -81,7 +84,10 @@ class HTML5TreeBuilder(HTMLTreeBuilder):
     # These methods are defined by Beautiful Soup.
     def feed(self, markup):
         if self.soup.parse_only is not None:
-            warnings.warn("You provided a value for parse_only, but the html5lib tree builder doesn't support parse_only. The entire document will be parsed.")
+            warnings.warn(
+                "You provided a value for parse_only, but the html5lib tree builder doesn't support parse_only. The entire document will be parsed.",
+                stacklevel=4
+            )
         parser = html5lib.HTMLParser(tree=self.create_treebuilder)
         self.underlying_builder.parser = parser
         extra_kwargs = dict()

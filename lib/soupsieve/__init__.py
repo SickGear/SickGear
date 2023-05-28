@@ -32,7 +32,7 @@ from . import css_match as cm
 from . import css_types as ct
 from .util import DEBUG, SelectorSyntaxError  # noqa: F401
 import bs4  # type: ignore[import]
-from typing import Optional, Any, Iterator, Iterable
+from typing import Any, Iterator, Iterable
 
 __all__ = (
     'DEBUG', 'SelectorSyntaxError', 'SoupSieve',
@@ -45,16 +45,13 @@ SoupSieve = cm.SoupSieve
 
 def compile(  # noqa: A001
     pattern: str,
-    namespaces: Optional[dict[str, str]] = None,
+    namespaces: dict[str, str] | None = None,
     flags: int = 0,
     *,
-    custom: Optional[dict[str, str]] = None,
+    custom: dict[str, str] | None = None,
     **kwargs: Any
 ) -> cm.SoupSieve:
     """Compile CSS pattern."""
-
-    ns = ct.Namespaces(namespaces) if namespaces is not None else namespaces  # type: Optional[ct.Namespaces]
-    cs = ct.CustomSelectors(custom) if custom is not None else custom  # type: Optional[ct.CustomSelectors]
 
     if isinstance(pattern, SoupSieve):
         if flags:
@@ -65,7 +62,12 @@ def compile(  # noqa: A001
             raise ValueError("Cannot process 'custom' argument on a compiled selector list")
         return pattern
 
-    return cp._cached_css_compile(pattern, ns, cs, flags)
+    return cp._cached_css_compile(
+        pattern,
+        ct.Namespaces(namespaces) if namespaces is not None else namespaces,
+        ct.CustomSelectors(custom) if custom is not None else custom,
+        flags
+    )
 
 
 def purge() -> None:
@@ -77,10 +79,10 @@ def purge() -> None:
 def closest(
     select: str,
     tag: 'bs4.Tag',
-    namespaces: Optional[dict[str, str]] = None,
+    namespaces: dict[str, str] | None = None,
     flags: int = 0,
     *,
-    custom: Optional[dict[str, str]] = None,
+    custom: dict[str, str] | None = None,
     **kwargs: Any
 ) -> 'bs4.Tag':
     """Match closest ancestor."""
@@ -91,10 +93,10 @@ def closest(
 def match(
     select: str,
     tag: 'bs4.Tag',
-    namespaces: Optional[dict[str, str]] = None,
+    namespaces: dict[str, str] | None = None,
     flags: int = 0,
     *,
-    custom: Optional[dict[str, str]] = None,
+    custom: dict[str, str] | None = None,
     **kwargs: Any
 ) -> bool:
     """Match node."""
@@ -105,10 +107,10 @@ def match(
 def filter(  # noqa: A001
     select: str,
     iterable: Iterable['bs4.Tag'],
-    namespaces: Optional[dict[str, str]] = None,
+    namespaces: dict[str, str] | None = None,
     flags: int = 0,
     *,
-    custom: Optional[dict[str, str]] = None,
+    custom: dict[str, str] | None = None,
     **kwargs: Any
 ) -> list['bs4.Tag']:
     """Filter list of nodes."""
@@ -119,10 +121,10 @@ def filter(  # noqa: A001
 def select_one(
     select: str,
     tag: 'bs4.Tag',
-    namespaces: Optional[dict[str, str]] = None,
+    namespaces: dict[str, str] | None = None,
     flags: int = 0,
     *,
-    custom: Optional[dict[str, str]] = None,
+    custom: dict[str, str] | None = None,
     **kwargs: Any
 ) -> 'bs4.Tag':
     """Select a single tag."""
@@ -133,11 +135,11 @@ def select_one(
 def select(
     select: str,
     tag: 'bs4.Tag',
-    namespaces: Optional[dict[str, str]] = None,
+    namespaces: dict[str, str] | None = None,
     limit: int = 0,
     flags: int = 0,
     *,
-    custom: Optional[dict[str, str]] = None,
+    custom: dict[str, str] | None = None,
     **kwargs: Any
 ) -> list['bs4.Tag']:
     """Select the specified tags."""
@@ -148,11 +150,11 @@ def select(
 def iselect(
     select: str,
     tag: 'bs4.Tag',
-    namespaces: Optional[dict[str, str]] = None,
+    namespaces: dict[str, str] | None = None,
     limit: int = 0,
     flags: int = 0,
     *,
-    custom: Optional[dict[str, str]] = None,
+    custom: dict[str, str] | None = None,
     **kwargs: Any
 ) -> Iterator['bs4.Tag']:
     """Iterate the specified tags."""

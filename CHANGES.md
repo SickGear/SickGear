@@ -1,4 +1,10 @@
-﻿### 3.29.2 (2023-05-28 07:45:00 UTC)
+﻿### 3.30.0 (2023-0x-xx xx:xx:00 UTC)
+
+* Update Beautiful Soup 4.11.1 (r642) to 4.12.2
+* Update soupsieve 2.3.2.post1 (792d566) to 2.4.1 (2e66beb)
+
+
+### 3.29.2 (2023-05-28 07:45:00 UTC)
 
 * Fix find show results returned as newest/oldest that are then sorted z to a
 * Fix add show "TheTVDB via Trakt"
