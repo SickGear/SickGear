@@ -2,6 +2,7 @@
 #import re
 #import sickgear
 #from sickgear import TVInfoAPI
+#from sickgear.indexers.indexer_config import TVINFO_TMDB, TVINFO_TRAKT, TVINFO_TVMAZE
 #from sickgear.helpers import anon_url
 #from sickgear.tv import PersonGenders
 #from sg_helpers import spoken_height
@@ -207,6 +208,15 @@ def param(visible=True, rid=None, cache_person=None, cache_char=None, person=Non
 						</ul>
 					</span>
 				</div>
+#end if
+#if $person.ids.get($TVINFO_TRAKT)
+		<div></div><span><a href="$sbRoot/add-shows/trakt-person?person_trakt_id=$person.ids.get($TVINFO_TRAKT)">Search Shows on Trake</a></span></div>
+#end if
+#if $person.ids.get($TVINFO_TMDB)
+		<div><span><a href="$sbRoot/add-shows/tmdb-person?person_tmdb_id=$person.ids.get($TVINFO_TMDB)">Search Shows on TMDB</a></span></div>
+#end if
+#if $person.ids.get($TVINFO_TVMAZE)
+		<div><span><a href="$sbRoot/add-shows/tvm-person?person_tvm_id=$person.ids.get($TVINFO_TVMAZE)">Search Shows on TVMaze</a></span></div>
 #end if
 			</div>
 

@@ -321,6 +321,11 @@ class TraktIndexer(TVInfoBase):
                             ti_show.imdb_id = c['show']['ids'].get('imdb')
                             ti_show.runtime = c['show']['runtime']
                             ti_show.genre_list = c['show']['genres']
+                            ti_show.slug = c['show'].get('ids', {}).get('slug')
+                            ti_show.language = c['show'].get('language')
+                            ti_show.network_country = c['show'].get('country')
+                            ti_show.rating = c['show'].get('rating')
+                            ti_show.vote_count = c['show'].get('votes')
                             for ch in c.get('characters') or []:
                                 _ti_character = TVInfoCharacter(name=ch, regular=c.get('series_regular'),
                                                                 ti_show=ti_show, person=[result],
