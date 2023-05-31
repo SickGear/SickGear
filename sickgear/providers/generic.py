@@ -734,7 +734,7 @@ class GenericProvider(object):
     def is_public_access(self):
         # type: (...) -> bool
         try:
-            return bool(re.search('(?i)rarbg|sick|anizb', self.name)) \
+            return bool(re.search('(?i)sick|anizb', self.name)) \
                    or False is bool(('_authorised' in self.__class__.__dict__ or hasattr(self, 'digest')
                                      or self._check_auth(is_required=True)))
         except AuthException:
@@ -1053,8 +1053,7 @@ class GenericProvider(object):
             [quote_plus(tr) for tr in (
              'http://atrack.pow7.com/announce', 'http://mgtracker.org:2710/announce',
              'http://pow7.com/announce', 'http://t1.pow7.com/announce',
-             'http://tracker.tfile.me/announce', 'udp://9.rarbg.com:2710/announce',
-             'udp://9.rarbg.me:2710/announce', 'udp://9.rarbg.to:2710/announce',
+             'http://tracker.tfile.me/announce',
              'udp://eddie4.nl:6969/announce', 'udp://explodie.org:6969/announce',
              'udp://inferno.demonoid.pw:3395/announce', 'udp://inferno.subdemon.com:3395/announce',
              'udp://ipv4.tracker.harry.lu:80/announce', 'udp://p4p.arenabg.ch:1337/announce',

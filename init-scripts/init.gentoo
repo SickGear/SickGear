@@ -12,7 +12,7 @@
 # SICKGEAR_USER=<user you want sickgear to run under>
 # SICKGEAR_GROUP=<group you want sickgear to run under>
 # SICKGEAR_DIR=<path to sickgear.py>
-# PATH_TO_PYTHON_2=/usr/bin/python2
+# PATH_TO_PYTHON=/usr/bin/python
 # SICKGEAR_DATADIR=<directory that contains sickbeard.db file>
 # SICKGEAR_CONFDIR=<directory that contains SickGear's config.ini file>
 #
@@ -49,7 +49,7 @@ start() {
         --name sickgear \
         --background \
         --pidfile $(get_pidfile) \
-        --exec ${PATH_TO_PYTHON_2} \
+        --exec ${PATH_TO_PYTHON} \
         -- \
         ${SICKGEAR_DIR}/sickgear.py \
         -d \
