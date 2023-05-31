@@ -22,12 +22,12 @@
 
 ### Example Using simple
 # Type=simple
-# ExecStart=/usr/bin/python2 /opt/sickgear/app/sickgear.py -q --nolaunch
+# ExecStart=/usr/bin/python /opt/sickgear/app/sickgear.py -q --nolaunch
 
 ### Example Using simple with EnvironmentFile where SB_DATA=/home/sickgear/.sickgear in /etc/sickgear.conf
 # Type=simple
 # EnvironmentFile=/etc/sickgear.conf
-# ExecStart=/usr/bin/python2 /opt/sickgear/app/sickgear.py -q --nolaunch --datadir=${SB_DATA}
+# ExecStart=/usr/bin/python /opt/sickgear/app/sickgear.py -q --nolaunch --datadir=${SB_DATA}
 
 ### Configuration
 

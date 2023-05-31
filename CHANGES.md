@@ -4,6 +4,15 @@
 * Update soupsieve 2.3.2.post1 (792d566) to 2.4.1 (2e66beb)
 
 
+### 3.29.3 (2023-05-31 13:30:00 UTC)
+
+* Update UnRar x64 for Windows 6.21 to 6.22
+* Change allow Python 3.11.4
+* Change minimum required Python to version 3.8.2
+* Change remove Python 2 references from init-scripts
+* Remove provider Rarbg
+
+
 ### 3.29.2 (2023-05-28 07:45:00 UTC)
 
 * Fix find show results returned as newest/oldest that are then sorted z to a
