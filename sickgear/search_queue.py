@@ -467,13 +467,15 @@ class RecentSearchQueueItem(generic_queue.QueueItem):
                 continue
 
             try:
-                end_time = network_timezones.get_episode_time(cur_result['airdate'],
-                                                              cur_result['airtime'] or show_obj.airs,
-                                                              show_obj.network,
-                                                              show_obj.timezone,
-                                                              cur_result['timestamp'],
-                                                              cur_result['network'],
-                                                              cur_result['timezone']
+                end_time = network_timezones.get_episode_time(d=cur_result['airdate'],
+                                                              t=show_obj.airs,
+                                                              show_network=show_obj.network,
+                                                              show_airtime=show_obj.airtime,
+                                                              show_timezone=show_obj.timezone,
+                                                              ep_timestamp=cur_result['timestamp'],
+                                                              ep_network=cur_result['network'],
+                                                              ep_airtime=cur_result['airtime'],
+                                                              ep_timezone=cur_result['timezone']
                                                               )
 
                 end_time += datetime.timedelta(minutes=helpers.try_int(cur_result['runtime'] or show_obj.runtime, 60))
