@@ -1,4 +1,9 @@
-﻿### 3.29.3 (2023-05-31 13:30:00 UTC)
+﻿### 3.29.4 (2023-06-07 13:45:00 UTC)
+
+* Change allow Python 3.8.17, 3.9.17, 3.10.12
+
+
+### 3.29.3 (2023-05-31 13:30:00 UTC)
 
 * Update UnRar x64 for Windows 6.21 to 6.22
 * Change allow Python 3.11.4
