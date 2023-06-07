@@ -79,8 +79,8 @@ if coreid_warnings:
 tz_p = du_parser()
 invalid_date_limit = datetime.date(1900, 1, 1)
 
-tba_tvinfo_name = re.compile(r'^(episode \d+|tb[ad])$', flags=re.I)
-tba_file_name = re.compile(r'\b(episode.\d+|tb[ad])\b', flags=re.I)
+tba_tvinfo_name = re.compile(r'^(episode \d+|tb[acd])$', flags=re.I)
+tba_file_name = re.compile(r'\b(episode.\d+|tb[acd])\b', flags=re.I)
 pattern_ep_name = re.compile(r'%E[._]?N', flags=re.I)
 
 # status codes for switching tv show source
@@ -4660,7 +4660,14 @@ class TVEpisode(TVEpisodeBase):
                + 'hastbn: %s\n' % self.hastbn \
                + 'status: %s\n' % self.status
 
-    def create_meta_files(self, force=False):
+    def create_meta_files(self, force=False, save_ep=True):
+        # type: (bool, bool) -> None
+        """
+        create meta data files for episode object
+
+        :param force: force writing of meta data files
+        :param save_ep: save changed episode data
+        """
 
         # noinspection PyProtectedMember
         if not os.path.isdir(self.show_obj._location):
@@ -4671,7 +4678,7 @@ class TVEpisode(TVEpisodeBase):
         self.create_nfo(force)
         self.create_thumbnail()
 
-        if self.check_for_meta_files():
+        if self.check_for_meta_files() and save_ep:
             self.save_to_db()
 
     def create_nfo(self, force=False):
@@ -5314,21 +5321,17 @@ class TVEpisode(TVEpisodeBase):
                 for cur_ep_obj in self.related_ep_obj:
                     cur_ep_obj.location = absolute_proper_path + file_ext
 
-        # in case something changed with the metadata just do a quick check
-        for cur_ep_obj in [self] + self.related_ep_obj:
-            cur_ep_obj.check_for_meta_files()
+                # save any changes to the database
+                sql_l = []
+                for cur_ep_obj in [self] + self.related_ep_obj:  # type: TVEpisode
+                    cur_ep_obj.create_meta_files(force=True, save_ep=False)
+                    ep_sql = cur_ep_obj.get_sql()
+                    if None is not ep_sql:
+                        sql_l.append(ep_sql)
 
-        # save any changes to the database
-        sql_l = []
-        with self.lock:
-            for cur_ep_obj in [self] + self.related_ep_obj:
-                ep_sql = cur_ep_obj.get_sql()
-                if None is not ep_sql:
-                    sql_l.append(ep_sql)
-
-        if 0 < len(sql_l):
-            my_db = db.DBConnection()
-            my_db.mass_action(sql_l)
+                if 0 < len(sql_l):
+                    my_db = db.DBConnection()
+                    my_db.mass_action(sql_l)
 
         return all_renamed
 
