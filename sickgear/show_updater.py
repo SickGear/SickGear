@@ -24,6 +24,7 @@ from exceptions_helper import ex
 import sickgear
 from . import db, logger, network_timezones, properFinder, ui
 from .scheduler import Job
+from .config import backup_config
 
 # noinspection PyUnreachableCode
 if False:
@@ -70,7 +71,11 @@ class ShowUpdater(Job):
             if sickgear.db.db_supports_backup and 0 < sickgear.BACKUP_DB_MAX_COUNT:
                 logger.log('backing up all db\'s')
                 try:
-                    sickgear.db.backup_all_dbs(sickgear.BACKUP_DB_PATH or os.path.join(sickgear.DATA_DIR, 'backup'))
+                    backup_success = sickgear.db.backup_all_dbs(
+                        sickgear.BACKUP_DB_PATH or os.path.join(sickgear.DATA_DIR, 'backup'))
+                    if isinstance(backup_success, tuple) and backup_success[0]:
+                        # backup config.ini
+                        backup_config()
                 except (BaseException, Exception):
                     logger.error('backup db error')
 
