@@ -23,7 +23,58 @@ $(document).ready(function() {
 		}
 		return $('<span class="ended"><span class="label" title="">ended</span> <i>' + data.text + '</i></span>');
 	}
-	select$.select2({templateResult: populateItem, templateSelection:populateItem});
+	// https://github.com/bevacqua/fuzzysearch
+	function fuzzysearch(needle, haystack) {
+		var hlen = haystack.length;
+		var nlen = needle.length;
+		if (nlen > hlen) {
+			return false;
+		}
+		if (nlen === hlen) {
+			return needle === haystack;
+		}
+		outer: for (var i = 0, j = 0; i < nlen; i++) {
+			var nch = needle.charCodeAt(i);
+			while (j < hlen) {
+				if (haystack.charCodeAt(j++) === nch) {
+					continue outer;
+				}
+			}
+			return false;
+		}
+		return true;
+	}
+
+	const white_space_regex = /\W/ui;
+	function sel_matcher(params, data) {
+
+		// If there are no search terms, return all of the data
+		if ($.trim(params.term) === '') {
+			return data;
+		}
+
+		// Do not display the item if there is no 'text' property
+		if (typeof data.text === 'undefined') {
+			return null;
+		}
+
+		// `params.term` should be the term that is used for searching
+		// `data.text` is the text that is displayed for the data object
+		var param_term = params.term.toLowerCase().trim().replace(white_space_regex, '');
+		var param_data = data.text.toLowerCase().trim().replace(white_space_regex, '');
+		if (fuzzysearch(param_term, param_data)) {
+			var modifiedData = $.extend({}, data, true);
+
+			// You can return modified objects from here
+			// This includes matching the `children` how you want in nested data sets
+			return modifiedData;
+		}
+
+		// Return `null` if the term should not be displayed
+		return null;
+	}
+
+	select$.select2({templateResult: populateItem, templateSelection:populateItem, matcher: sel_matcher});
 
 	$('#prevShow, #nextShow').on('click', function() {
 		var select$ = $('#pickShow'),
