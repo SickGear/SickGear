@@ -13,7 +13,6 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
-
 from collections import OrderedDict
 from threading import Lock
 
@@ -23,6 +22,7 @@ import os
 import re
 import signal
 import socket
+import time
 import webbrowser
 
 # apparently py2exe won't build these unless they're imported somewhere
@@ -54,6 +54,7 @@ from configobj import ConfigObj
 from api_trakt import TraktAPI
 
 from _23 import b64encodestring, decode_bytes, scandir
+from sg_helpers import remove_file_perm
 from six import iteritems, string_types
 import sg_helpers
 
@@ -2423,7 +2424,69 @@ def save_config():
     new_config['ANIME'] = {}
     new_config['ANIME']['anime_treat_as_hdtv'] = int(ANIME_TREAT_AS_HDTV)
 
-    new_config.write()
+    from sg_helpers import copy_file
+    backup_config = re.sub(r'\.ini$', '.bak', CONFIG_FILE)
+    from .config import check_valid_config
+    try:
+        copy_file(CONFIG_FILE, backup_config)
+        if not check_valid_config(backup_config):
+            logger.error('config file seams to be invalid, not backing up.')
+            remove_file_perm(backup_config)
+            backup_config = None
+    except (BaseException, Exception):
+        backup_config = None
+
+    for _ in range(0, 3):
+        new_config.write()
+        if check_valid_config(CONFIG_FILE):
+            return
+        logger.warning('saving config file failed, retrying...')
+        remove_file_perm(CONFIG_FILE)
+        time.sleep(3)
+
+    # we only get here if the config saving failed multiple times
+    if None is not backup_config and os.path.isfile(backup_config):
+        logger.error('saving config file failed, using backup file')
+        try:
+            copy_file(backup_config, CONFIG_FILE)
+            logger.log('using old backup config file')
+            return
+        except (BaseException, Exception):
+            logger.error('failed to use backup config file')
+
+    from sg_helpers import scantree
+    try:
+        target_base = os.path.join(BACKUP_DB_PATH or os.path.join(DATA_DIR, 'backup'))
+        file_list = [f for f in scantree(target_base, include='config', filter_kind=False)]
+        if file_list:
+            logger.log('trying to use latest config.ini backup')
+            # sort newest to oldest backup
+            file_list.sort(key=lambda _f: _f.stat(follow_symlinks=False).st_mtime)
+            import zipfile
+            try:
+                with zipfile.ZipFile(file_list[0].path, mode='r') as zf:
+                    zf.extractall(target_base)
+                backup_config_file = os.path.join(target_base, 'config.ini')
+                if os.path.isfile(backup_config_file):
+                    os.replace(backup_config_file, CONFIG_FILE)
+                if check_valid_config(CONFIG_FILE):
+                    logger.log(f'used latest config.ini backup file: {file_list[0].name}')
+                    return
+                else:
+                    logger.error(f'failed to use latest config.ini backup file: {file_list[0].name}')
+                    remove_file_perm(CONFIG_FILE)
+            except (BaseException, Exception):
+                pass
+            finally:
+                try:
+                    remove_file_perm(backup_config_file)
+                except (BaseException, Exception):
+                    pass
+            logger.error('failed to use latest config.ini')
+    except (BaseException, Exception):
+        pass
+
+    logger.error('saving config file failed and no backup available')
 
 
 def launch_browser(start_port=None):
