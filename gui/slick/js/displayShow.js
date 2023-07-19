@@ -45,7 +45,7 @@ $(document).ready(function() {
 		return true;
 	}
 
-	const white_space_regex = /\W/ui;
+	const white_space_regex = /\W/gui;
 	function sel_matcher(params, data) {
 
 		// If there are no search terms, return all of the data
