@@ -2,6 +2,7 @@
 
 * Update Beautiful Soup 4.11.1 (r642) to 4.12.2
 * Update soupsieve 2.3.2.post1 (792d566) to 2.4.1 (2e66beb)
+* Fix regex that was not using py312 notation
 
 
 ### 3.29.4 (2023-06-07 13:45:00 UTC)
