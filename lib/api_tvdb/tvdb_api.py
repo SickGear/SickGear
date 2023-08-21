@@ -518,7 +518,8 @@ class Tvdb(TVInfoBase):
                 if None is not v:
                     if k in ['banner', 'fanart', 'poster', 'image'] and v:
                         v = (self.config['url_artworks'],
-                             self.config['url_artworks_search'])['banners/' in v] % v.lstrip('/')
+                             self.config['url_artworks_search'])[
+                                isinstance(v, string_types) and v.lstrip('/').startswith('banners/')] % v.lstrip('/')
                     elif 'genre' == k:
                         keep_data['genre_list'] = v
                         v = '|'.join([clean_data(c) for c in v if isinstance(c, string_types)])

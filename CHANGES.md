@@ -5,6 +5,7 @@
 * Fix regex that was not using py312 notation
 * Change sort backlog and manual segment search results episode number
 * Change sort episodes when set to wanted on display show page
+* Fix banner url validation for TheTVDb api v3 lib
 
 
 ### 3.29.4 (2023-06-07 13:45:00 UTC)
