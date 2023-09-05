@@ -653,6 +653,11 @@ class ManualSearchQueueItem(BaseSearchQueueItem):
             search_result = search.search_providers(self.show_obj, [self.segment], True, try_other_searches=True)
 
             if search_result:
+                # sort results by season, episode number
+                try:
+                    search_result.sort(key=lambda a: (a.ep_obj_list[0].season or 0, a.ep_obj_list[0].episode or 0))
+                except (BaseException, Exception):
+                    pass
                 for result in search_result:  # type: sickgear.classes.NZBSearchResult
                     logger.log(f'Downloading {result.name} from {result.provider.name}')
                     self.success = search.snatch_episode(result)
@@ -734,6 +739,11 @@ class BacklogQueueItem(BaseSearchQueueItem):
                 scheduled=self.standard_backlog)
 
             if search_result:
+                # sort results by season, episode number
+                try:
+                    search_result.sort(key=lambda a: (a.ep_obj_list[0].season or 0, a.ep_obj_list[0].episode or 0))
+                except (BaseException, Exception):
+                    pass
                 for result in search_result:  # type: sickgear.classes.NZBSearchResult
                     logger.log(f'Downloading {result.name} from {result.provider.name}')
                     if search.snatch_episode(result):

@@ -3202,7 +3202,10 @@ class Home(MainHandler):
         if None is not eps:
 
             sql_l = []
-            for cur_ep in eps.split('|'):
+            # sort episode numbers
+            eps_list = eps.split('|')
+            eps_list.sort()
+            for cur_ep in eps_list:
 
                 logger.debug(f'Attempting to set status on episode {cur_ep} to {status}')
 
