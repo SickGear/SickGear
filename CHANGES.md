@@ -8,6 +8,11 @@
 * Fix banner url validation for TheTVDb api v3 lib
 
 
+### 3.29.5 (2023-09-05 23:40:00 UTC)
+
+* Change allow Python 3.11.5, 3.10.13, 3.9.18, and 3.8.18
+
+
 ### 3.29.4 (2023-06-07 13:45:00 UTC)
 
 * Change allow Python 3.8.17, 3.9.17, 3.10.12
