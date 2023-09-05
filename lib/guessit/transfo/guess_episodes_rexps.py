@@ -32,7 +32,7 @@ def number_list(s):
 
     if len(l) == 2:
         # it is an episode interval, return all numbers in between
-        return range(l[0], l[1]+1)
+        return list(range(l[0], l[1]+1))
 
     return l
 
