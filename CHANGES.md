@@ -1,4 +1,10 @@
-﻿### 3.29.5 (2023-09-05 23:40:00 UTC)
+﻿### 3.29.6 (2023-09-06 00:54:00 UTC)
+
+* Fix banner url validation for TheTVDb api v3 lib
+* Fix mock data for CI tests
+
+
+### 3.29.5 (2023-09-05 23:40:00 UTC)
 
 * Change allow Python 3.11.5, 3.10.13, 3.9.18, and 3.8.18
 
