@@ -1,4 +1,10 @@
-﻿### 3.29.6 (2023-09-06 00:54:00 UTC)
+﻿### 3.29.7 (2023-09-06 09:40:00 UTC)
+
+* Fix view show to handle "unknown name" on cast
+* Update UnRar x64 for Windows 6.22 to 6.23
+
+
+### 3.29.6 (2023-09-06 00:54:00 UTC)
 
 * Fix banner url validation for TheTVDb api v3 lib
 * Fix mock data for CI tests

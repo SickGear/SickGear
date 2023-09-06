@@ -378,7 +378,7 @@ def param(visible=True, rid=None, cache_person=None, cache_char=None, person=Non
 								<div class="cast-panel glide__track" data-glide-el="track">
 									<ul class="glide__slides">
     #for $cur_cast in $cast['1st'] + $cast['2nd']
-        #set $by_people = [] if not $cur_cast.person else [$cur_person.name for $cur_person in $cur_cast.person]
+        #set $by_people = [] if not $cur_cast.person else [$cur_person.name or 'unknown name' for $cur_person in $cur_cast.person]
         #set $by_people = ', '.join($by_people if 2 > len($by_people) else $by_people[0:-1] + ['and ' + $by_people[-1]])
         #set $caption = ' '.join(([] if not $cur_cast.name else [$cur_cast.name]) + ([] if not $by_people else ['by', $by_people])).replace('"', '&quot;')
 										<li class="cast body glide__slide" data-rid="$next($iter($cur_cast.person)).ref_id()">
