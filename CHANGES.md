@@ -2,6 +2,7 @@
 
 * Update Beautiful Soup 4.11.1 (r642) to 4.12.2
 * Update soupsieve 2.3.2.post1 (792d566) to 2.4.1 (2e66beb)
+* Update Tornado Web Server 6.3.2 (e3aa6c5) to 6.3.3 (e4d6984)
 * Fix regex that was not using py312 notation
 * Change sort backlog and manual segment search results episode number
 * Change sort episodes when set to wanted on display show page
