@@ -14,8 +14,8 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
+from datetime import datetime, timezone
 from functools import partial
-import datetime
 import os
 import re
 import shutil
@@ -570,7 +570,7 @@ class ProcessTVShow(object):
             archives = [os.path.basename(x) for x in unused_files]
             if unused_files:
                 for f in unused_files:
-                    archive_history.setdefault(f, SGDatetime.timestamp_near(datetime.datetime.utcnow()))
+                    archive_history.setdefault(f, SGDatetime.timestamp_near(datetime.now(timezone.utc)))
 
             if init_history_cnt != len(archive_history):
                 try:

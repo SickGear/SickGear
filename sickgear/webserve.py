@@ -16,12 +16,12 @@
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
 # noinspection PyProtectedMember
+from datetime import datetime, timedelta, timezone
 from mimetypes import MimeTypes
 from urllib.parse import urljoin
 
 import base64
 import copy
-import datetime
 import glob
 import hashlib
 import io
@@ -440,8 +440,8 @@ class CalendarHandler(BaseHandler):
         logger.log(f'Receiving iCal request from {self.request.remote_ip}')
 
         # Limit dates
-        past_date = (datetime.date.today() + datetime.timedelta(weeks=-52)).toordinal()
-        future_date = (datetime.date.today() + datetime.timedelta(weeks=52)).toordinal()
+        past_date = (datetime.date.today() + timedelta(weeks=-52)).toordinal()
+        future_date = (datetime.date.today() + timedelta(weeks=52)).toordinal()
         utc = tz.gettz('GMT', zoneinfo_priority=True)
 
         # Get all the shows that are not paused and are currently on air
@@ -473,8 +473,7 @@ class CalendarHandler(BaseHandler):
             for episode in episode_list:
                 air_date_time = network_timezones.parse_date_time(episode['airdate'], show['airs'],
                                                                   show['network']).astimezone(utc)
-                air_date_time_end = air_date_time + datetime.timedelta(
-                    minutes=helpers.try_int(show['runtime'], 60))
+                air_date_time_end = air_date_time + timedelta(minutes=helpers.try_int(show['runtime'], 60))
 
                 # Create event for episode
                 desc = '' if not episode['description'] else f'{nl}{episode["description"].splitlines()[0]}'
@@ -1123,12 +1122,12 @@ class MainHandler(WebHandler):
         """ display the episodes """
         today_dt = datetime.date.today()
         today = today_dt.toordinal()
-        yesterday_dt = today_dt - datetime.timedelta(days=1)
+        yesterday_dt = today_dt - timedelta(days=1)
         yesterday = yesterday_dt.toordinal()
-        tomorrow = (datetime.date.today() + datetime.timedelta(days=1)).toordinal()
-        next_week_dt = (datetime.date.today() + datetime.timedelta(days=7))
-        next_week = (next_week_dt + datetime.timedelta(days=1)).toordinal()
-        recently = (yesterday_dt - datetime.timedelta(days=sickgear.EPISODE_VIEW_MISSED_RANGE)).toordinal()
+        tomorrow = (datetime.date.today() + timedelta(days=1)).toordinal()
+        next_week_dt = (datetime.date.today() + timedelta(days=7))
+        next_week = (next_week_dt + timedelta(days=1)).toordinal()
+        recently = (yesterday_dt - timedelta(days=sickgear.EPISODE_VIEW_MISSED_RANGE)).toordinal()
 
         done_show_list = []
         qualities = Quality.SNATCHED + Quality.DOWNLOADED + Quality.ARCHIVED + [IGNORED, SKIPPED]
@@ -1281,8 +1280,8 @@ class MainHandler(WebHandler):
 
         sql_result.sort(key=sorts[sickgear.EPISODE_VIEW_SORT])
 
-        t.next_week = datetime.datetime.combine(next_week_dt, datetime.time(tzinfo=network_timezones.SG_TIMEZONE))
-        t.today = datetime.datetime.now(network_timezones.SG_TIMEZONE)
+        t.next_week = datetime.combine(next_week_dt, datetime.time(tzinfo=network_timezones.SG_TIMEZONE))
+        t.today = datetime.now(network_timezones.SG_TIMEZONE)
         t.sql_results = sql_result
 
         return t.respond()
@@ -1331,7 +1330,7 @@ class MainHandler(WebHandler):
     @staticmethod
     def get_footer_time(change_layout=True, json_dump=True):
 
-        now = datetime.datetime.now()
+        now = datetime.now()
         events = [
             ('recent', sickgear.search_recent_scheduler.time_left),
             ('backlog', sickgear.search_backlog_scheduler.next_backlog_timeleft),
@@ -5235,7 +5234,7 @@ class AddShows(Home):
                                         age_args.update({dim: value})
 
                                 if age_args:
-                                    dt = datetime.datetime.utcnow()
+                                    dt = datetime.now(timezone.utc)
                                     if 'months' in age_args and 'days' in age_args:
                                         age_args['days'] -= 1
                                         dt += relativedelta(day=1)
@@ -5362,8 +5361,7 @@ class AddShows(Home):
                 airtime = cur_show_info.airs_time
                 if not airtime or (0, 0) == (airtime.hour, airtime.minute):
                     airtime = dateutil.parser.parse('23:59').time()
-                dt = datetime.datetime.combine(
-                    dateutil.parser.parse(cur_show_info.firstaired, parseinfo).date(), airtime)
+                dt = datetime.combine(dateutil.parser.parse(cur_show_info.firstaired, parseinfo).date(), airtime)
                 ord_premiered, str_premiered, started_past, oldest_dt, newest_dt, oldest, newest, _, _, _, _ \
                     = self.sanitise_dates(dt, oldest_dt, newest_dt, oldest, newest)
 
@@ -5699,7 +5697,7 @@ class AddShows(Home):
 
         footnote = None
         filtered = []
-        today = datetime.datetime.today()
+        today = datetime.today()
         months = ['', 'January', 'February', 'March', 'April', 'May', 'June', 'July',
                   'August', 'September', 'October', 'November', 'December']
         this_month = '%s-%s' % (months[today.month], today.strftime('%Y'))
@@ -5720,8 +5718,8 @@ class AddShows(Home):
                     dt_prev_month = dateutil.parser.parse('1-%s' % prev_month)
                 except (BaseException, Exception):
                     prev_month = None
-            get_prev_month = (lambda _dt: _dt.replace(day=1) - datetime.timedelta(days=1))
-            get_next_month = (lambda _dt: _dt.replace(day=28) + datetime.timedelta(days=5))
+            get_prev_month = (lambda _dt: _dt.replace(day=1) - timedelta(days=1))
+            get_next_month = (lambda _dt: _dt.replace(day=28) + timedelta(days=5))
             get_month_year = (lambda _dt: '%s-%s' % (months[_dt.month], _dt.strftime('%Y')))
             if prev_month:
                 dt_next_month = get_next_month(dt_prev_month)
@@ -6013,18 +6011,17 @@ class AddShows(Home):
     @staticmethod
     def sanitise_dates(date, oldest_dt, newest_dt, oldest, newest, episode_info=None, combine_ep_airtime=False):
         parseinfo = dateutil.parser.parserinfo(dayfirst=False, yearfirst=True)
-        dt = date if isinstance(date, datetime.datetime) else dateutil.parser.parse(date)
+        dt = date if isinstance(date, datetime) else dateutil.parser.parse(date)
         if episode_info:
             airtime = episode_info.airtime \
                       or episode_info.timestamp and SGDatetime.from_timestamp(episode_info.timestamp).time()
             if not airtime or (0, 0) == (airtime.hour, airtime.minute):
                 airtime = dateutil.parser.parse('23:59').time()
             if combine_ep_airtime:
-                dt = datetime.datetime.combine(
-                    dateutil.parser.parse(date, parseinfo).date(), airtime)
+                dt = datetime.combine(dateutil.parser.parse(date, parseinfo).date(), airtime)
 
         ord_premiered = dt.toordinal()
-        ord_now = datetime.datetime.now().toordinal()
+        ord_now = datetime.now().toordinal()
         started_past = ord_premiered < ord_now
         str_premiered = SGDatetime.sbfdate(dt)  # an invalid dt becomes '' (e.g. 0202-12-28)
         if str_premiered:
@@ -6042,8 +6039,7 @@ class AddShows(Home):
         return_past = False
         if episode_info:
             # noinspection PyUnboundLocalVariable
-            dt_returning = datetime.datetime.combine(
-                dateutil.parser.parse(episode_info.firstaired, parseinfo).date(), airtime)
+            dt_returning = datetime.combine(dateutil.parser.parse(episode_info.firstaired, parseinfo).date(), airtime)
 
             ord_returning = dt_returning.toordinal()
             return_past = ord_returning < ord_now
@@ -6531,10 +6527,8 @@ class Manage(MainHandler):
                             d_status, d_qual = Quality.split_composite_status(cur_result_event['action'])
                         if None is s_status and cur_result_event['action'] in Quality.SNATCHED_ANY:
                             s_status, s_quality = Quality.split_composite_status(cur_result_event['action'])
-                            aged = ((datetime.datetime.now() -
-                                     datetime.datetime.strptime(str(cur_result_event['date']),
-                                                                sickgear.history.dateFormat))
-                                    .total_seconds())
+                            aged = ((datetime.now() - datetime.strptime(str(cur_result_event['date']),
+                                                                        sickgear.history.dateFormat)).total_seconds())
                             h = 60 * 60
                             d = 24 * h
                             days = aged // d
@@ -7750,7 +7744,7 @@ class History(MainHandler):
                                            key=lambda y: y.get('fails')[0].get('timestamp'),
                                            reverse=True)
             t.provider_fail_stats = sorted([item for item in t.provider_fail_stats],
-                                           key=lambda y: y.get('next_try') or datetime.timedelta(weeks=65535),
+                                           key=lambda y: y.get('next_try') or timedelta(weeks=65535),
                                            reverse=False)
 
             def img(_item, as_class=False):
@@ -7786,7 +7780,7 @@ class History(MainHandler):
                                              key=lambda y: y.get('fails')[0].get('timestamp'),
                                              reverse=True)
                 t.domain_fail_stats = sorted([item for item in t.domain_fail_stats],
-                                             key=lambda y: y.get('next_try') or datetime.timedelta(weeks=65535),
+                                             key=lambda y: y.get('next_try') or timedelta(weeks=65535),
                                              reverse=False)
 
         article_match = r'^((?:A(?!\s+to)n?)|The)\s+(.*)$'
@@ -7862,7 +7856,7 @@ class History(MainHandler):
 
         my_db = db.DBConnection()
         my_db.action('UPDATE history SET hide = ? WHERE date < ' + str(
-            (datetime.datetime.now() - datetime.timedelta(days=30)).strftime(history.dateFormat)), [1])
+            (datetime.now() - timedelta(days=30)).strftime(history.dateFormat)), [1])
 
         ui.notifications.message('Removed history entries greater than 30 days old')
         self.redirect('/history/')
@@ -9822,8 +9816,7 @@ class CachedImages(MainHandler):
             dummy_file = '%s.%s.dummy' % (os.path.splitext(filename)[0], source)
             if os.path.isfile(dummy_file):
                 if os.stat(dummy_file).st_mtime \
-                        < (SGDatetime.timestamp_near(datetime.datetime.now()
-                                                     - datetime.timedelta(days=days, minutes=minutes))):
+                        < (SGDatetime.timestamp_near(datetime.now() - timedelta(days=days, minutes=minutes))):
                     CachedImages.delete_dummy_image(dummy_file)
                 else:
                     result = False
@@ -9928,7 +9921,7 @@ class CachedImages(MainHandler):
         """
         if not os.path.isfile(filename) or \
                 os.stat(filename).st_mtime < \
-                SGDatetime.timestamp_near(td=datetime.timedelta(days=days)):
+                SGDatetime.timestamp_near(td=timedelta(days=days)):
             return True
         return False
 
