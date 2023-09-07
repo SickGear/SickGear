@@ -88,7 +88,10 @@ from lib import subliminal
 from lib.cfscrape import CloudflareScraper
 from lib.dateutil import tz, zoneinfo
 from lib.dateutil.relativedelta import relativedelta
-from lib.fuzzywuzzy import fuzz
+try:
+    from lib.thefuzz import fuzz
+except ImportError as e:
+    from lib.fuzzywuzzy import fuzz
 from lib.api_trakt import TraktAPI
 from lib.api_trakt.exceptions import TraktException, TraktAuthException
 from lib.tvinfo_base import TVInfoEpisode
