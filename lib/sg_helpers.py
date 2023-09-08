@@ -39,6 +39,17 @@ from _23 import decode_bytes, html_unescape, list_range, \
     Popen, scandir, urlparse, urlsplit, urlunparse
 from six import integer_types, iteritems, iterkeys, itervalues, moves, PY2, string_types, text_type
 
+ACCEPT_ENCODING = "gzip,deflate"
+try:
+    try:
+        import brotlicffi as _unused_module_brotli  # noqa: F401
+    except ImportError:
+        import brotli as _unused_module_brotli  # noqa: F401
+except ImportError:
+    pass
+else:
+    ACCEPT_ENCODING += ",br"
+
 import zipfile
 # py7z hardwired removed, see comment below
 py7zr = None
@@ -863,7 +874,7 @@ def get_url(url,  # type: AnyStr
 
     # session main headers
     req_headers = {'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                   'Accept-Encoding': 'gzip,deflate'}
+                   'Accept-Encoding': ACCEPT_ENCODING}
     if headers:
         req_headers.update(headers)
     if hasattr(session, 'reserved') and 'headers' in session.reserved:
