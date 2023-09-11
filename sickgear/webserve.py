@@ -16,7 +16,7 @@
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
 # noinspection PyProtectedMember
-from datetime import datetime, timedelta, timezone
+from datetime import date as dt_date, datetime, time as dt_time, timedelta, timezone
 from mimetypes import MimeTypes
 from urllib.parse import urljoin
 
@@ -440,8 +440,8 @@ class CalendarHandler(BaseHandler):
         logger.log(f'Receiving iCal request from {self.request.remote_ip}')
 
         # Limit dates
-        past_date = (datetime.date.today() + timedelta(weeks=-52)).toordinal()
-        future_date = (datetime.date.today() + timedelta(weeks=52)).toordinal()
+        past_date = (dt_date.today() + timedelta(weeks=-52)).toordinal()
+        future_date = (dt_date.today() + timedelta(weeks=52)).toordinal()
         utc = tz.gettz('GMT', zoneinfo_priority=True)
 
         # Get all the shows that are not paused and are currently on air
@@ -482,7 +482,7 @@ class CalendarHandler(BaseHandler):
                          f'DTEND:{air_date_time_end.strftime("%Y%m%d")}T{air_date_time_end.strftime("%H%M%S")}Z{crlf}'
                          f'SUMMARY:{show["show_name"]} - {episode["season"]}x{episode["episode"]}'
                             f' - {episode["name"]}{crlf}'
-                         f'UID:{appname}-{datetime.date.today().isoformat()}-{show["show_name"].replace(" ", "-")}'
+                         f'UID:{appname}-{dt_date.today().isoformat()}-{show["show_name"].replace(" ", "-")}'
                             f'-E{episode["episode"]}S{episode["season"]}{crlf}'
                          f'DESCRIPTION:{(show["airs"] or "(Unknown airs)")} on {(show["network"] or "Unknown network")}'
                          f'{desc}{crlf}'
@@ -1118,14 +1118,14 @@ class MainHandler(WebHandler):
 
     @staticmethod
     def get_daily_schedule():
-        # type: (...) -> Tuple[List[Dict], Dict, Dict, datetime.date, integer_types, integer_types]
+        # type: (...) -> Tuple[List[Dict], Dict, Dict, dt_date, integer_types, integer_types]
         """ display the episodes """
-        today_dt = datetime.date.today()
+        today_dt = dt_date.today()
         today = today_dt.toordinal()
         yesterday_dt = today_dt - timedelta(days=1)
         yesterday = yesterday_dt.toordinal()
-        tomorrow = (datetime.date.today() + timedelta(days=1)).toordinal()
-        next_week_dt = (datetime.date.today() + timedelta(days=7))
+        tomorrow = (dt_date.today() + timedelta(days=1)).toordinal()
+        next_week_dt = (dt_date.today() + timedelta(days=7))
         next_week = (next_week_dt + timedelta(days=1)).toordinal()
         recently = (yesterday_dt - timedelta(days=sickgear.EPISODE_VIEW_MISSED_RANGE)).toordinal()
 
@@ -1280,7 +1280,7 @@ class MainHandler(WebHandler):
 
         sql_result.sort(key=sorts[sickgear.EPISODE_VIEW_SORT])
 
-        t.next_week = datetime.combine(next_week_dt, datetime.time(tzinfo=network_timezones.SG_TIMEZONE))
+        t.next_week = datetime.combine(next_week_dt, dt_time(tzinfo=network_timezones.SG_TIMEZONE))
         t.today = datetime.now(network_timezones.SG_TIMEZONE)
         t.sql_results = sql_result
 
@@ -1642,7 +1642,7 @@ class Home(MainHandler):
 
         # Get all show snatched / downloaded / next air date stats
         my_db = db.DBConnection()
-        today = datetime.date.today().toordinal()
+        today = dt_date.today().toordinal()
         status_quality = ','.join([str(x) for x in Quality.SNATCHED_ANY])
         status_download = ','.join([str(x) for x in Quality.DOWNLOADED + Quality.ARCHIVED])
         status_total = '%s, %s, %s' % (SKIPPED, WANTED, FAILED)
@@ -2644,14 +2644,14 @@ class Home(MainHandler):
                         new_ids.setdefault(helpers.try_int(t.group(1)),
                                            {'id': 0,
                                             'status': MapStatus.NONE,
-                                            'date': datetime.date.fromordinal(1)
+                                            'date': dt_date.fromordinal(1)
                                             })['id'] = i
                 else:
                     t = re.search(r'lockid-(\d+)', k)
                     if t:
                         new_ids.setdefault(helpers.try_int(t.group(1)), {
                             'id': 0, 'status': MapStatus.NONE,
-                            'date': datetime.date.fromordinal(1)})['status'] = \
+                            'date': dt_date.fromordinal(1)})['status'] = \
                             (MapStatus.NONE, MapStatus.NO_AUTOMATIC_CHANGE)['true' == v]
             if new_ids:
                 for k, v in iteritems(new_ids):
@@ -2723,10 +2723,10 @@ class Home(MainHandler):
                             if None is not mid_val and 0 <= mid_val:
                                 show_obj.ids.setdefault(locked_val, {
                                     'id': 0, 'status': MapStatus.NONE,
-                                    'date': datetime.date.fromordinal(1)})['id'] = mid_val
+                                    'date': dt_date.fromordinal(1)})['id'] = mid_val
                         show_obj.ids.setdefault(locked_val, {
                             'id': 0, 'status': MapStatus.NONE,
-                            'date': datetime.date.fromordinal(1)})['status'] = new_status
+                            'date': dt_date.fromordinal(1)})['status'] = new_status
                         save_map.append(locked_val)
             if len(save_map):
                 save_mapping(show_obj, save_map=save_map)
@@ -3756,7 +3756,7 @@ class Home(MainHandler):
         for cur_date_kind in ('birthdate', 'deathdate'):
             if person_dict[cur_date_kind]:
                 try:
-                    doe = datetime.date.fromordinal(person_dict[cur_date_kind])
+                    doe = dt_date.fromordinal(person_dict[cur_date_kind])
                     event[cur_date_kind] = doe
                     person_dict[cur_date_kind] = doe.strftime('%Y-%m-%d')
                     person_dict['%s_user' % cur_date_kind] = SGDatetime.sbfdate(doe)
@@ -3777,14 +3777,14 @@ class Home(MainHandler):
             raise Exception('invalid date')
 
         possible_dates = []
-        for cur_year in moves.xrange((1850, 1920)['deathdate' == date_kind], datetime.date.today().year + 1):
+        for cur_year in moves.xrange((1850, 1920)['deathdate' == date_kind], dt_date.today().year + 1):
             try:
-                possible_dates.append(datetime.date(year=cur_year, month=dt.month, day=dt.day).toordinal())
+                possible_dates.append(dt_date(year=cur_year, month=dt.month, day=dt.day).toordinal())
                 if 2 == dt.month and 28 == dt.day:
                     try:
-                        datetime.date(year=dt.year, month=dt.month, day=29)
+                        dt_date(year=dt.year, month=dt.month, day=29)
                     except (BaseException, Exception):
-                        possible_dates.append(datetime.date(year=cur_year, month=dt.month, day=29).toordinal())
+                        possible_dates.append(dt_date(year=cur_year, month=dt.month, day=29).toordinal())
             except (BaseException, Exception):
                 pass
 
@@ -4347,8 +4347,8 @@ class AddShows(Home):
                     s = ns
                     lower_alias = 1
         except (BaseException, Exception) as e:
-            if getattr(cls, 'levenshtein_error', None) != datetime.date.today():
-                cls.levenshtein_error = datetime.date.today()
+            if getattr(cls, 'levenshtein_error', None) != dt_date.today():
+                cls.levenshtein_error = dt_date.today()
                 logger.error('Error generating relevance rating: %s' % ex(e))
                 logger.debug('Traceback: %s' % traceback.format_exc())
             return 0
@@ -4882,7 +4882,7 @@ class AddShows(Home):
 
         filtered = []
         footnote = None
-        start_year, end_year = (datetime.date.today().year - 10, datetime.date.today().year + 1)
+        start_year, end_year = (dt_date.today().year - 10, dt_date.today().year + 1)
         periods = [(start_year, end_year)] + [(x - 10, x) for x in range(start_year, start_year - 40, -10)]
 
         accounts = dict(map_none(*[iter(sickgear.IMDB_ACCOUNTS)] * 2))
@@ -4947,7 +4947,7 @@ class AddShows(Home):
 
         filtered = []
         footnote = None
-        start_year, end_year = (datetime.date.today().year - 10, datetime.date.today().year + 1)
+        start_year, end_year = (dt_date.today().year - 10, dt_date.today().year + 1)
         periods = [(start_year, end_year)] + [(x - 10, x) for x in range(start_year, start_year - 40, -10)]
 
         start_year_in, end_year_in = [helpers.try_int(x) for x in (('0,0', kwargs.get('period'))[
@@ -6149,7 +6149,7 @@ class AddShows(Home):
                 titles += ([], [nopre_base_title])[nopre_base_title not in titles]
                 titles += ([], [nopost_nopre_base_title])[nopost_nopre_base_title not in titles]
                 if 'ord_premiered' in item and 1 == item.get('season', -1):
-                    titles += ['%s.%s' % (_t, datetime.date.fromordinal(item['ord_premiered']).year) for _t in titles]
+                    titles += ['%s.%s' % (_t, dt_date.fromordinal(item['ord_premiered']).year) for _t in titles]
 
                 tvid_prodid_list += ['%s:%s' % (item['ids']['name'], item['ids']['custom'])]
                 for cur_title in titles:
@@ -8412,7 +8412,7 @@ class ConfigGeneral(Config):
         sickgear.SHOW_UPDATE_HOUR = config.minimax(show_update_hour, 3, 0, 23)
         try:
             with sickgear.update_show_scheduler.lock:
-                sickgear.update_show_scheduler.start_time = datetime.time(hour=sickgear.SHOW_UPDATE_HOUR)
+                sickgear.update_show_scheduler.start_time = dt_time(hour=sickgear.SHOW_UPDATE_HOUR)
         except (BaseException, Exception) as e:
             logger.error('Could not change Show Update Scheduler time: %s' % ex(e))
         sickgear.TRASH_REMOVE_SHOW = config.checkbox_to_value(trash_remove_show)
