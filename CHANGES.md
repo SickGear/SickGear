@@ -6,6 +6,7 @@
 * Update package resource API 67.5.1 (f51eccd) to 68.1.2 (1ef36f2)
 * Update soupsieve 2.3.2.post1 (792d566) to 2.4.1 (2e66beb)
 * Update Tornado Web Server 6.3.2 (e3aa6c5) to 6.3.3 (e4d6984)
+* Add thefuzz 0.19.0 (c2cd4f4) as a replacement with fallback to fuzzywuzzy 0.18.0 (2188520)
 * Fix regex that was not using py312 notation
 * Change sort backlog and manual segment search results episode number
 * Change sort episodes when set to wanted on display show page

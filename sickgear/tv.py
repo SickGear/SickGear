@@ -56,7 +56,10 @@ from .tv_base import TVEpisodeBase, TVShowBase
 from lib import imdbpie, subliminal
 from lib.dateutil import tz
 from lib.dateutil.parser import parser as du_parser
-from lib.fuzzywuzzy import fuzz
+try:
+    from lib.thefuzz import fuzz
+except ImportError as e:
+    from lib.fuzzywuzzy import fuzz
 from lib.tvinfo_base import RoleTypes, TVINFO_FACEBOOK, TVINFO_INSTAGRAM, TVINFO_SLUG, TVINFO_TWITTER, \
     TVINFO_WIKIPEDIA, TVINFO_TIKTOK, TVINFO_FANSITE, TVINFO_YOUTUBE, TVINFO_REDDIT, TVINFO_LINKEDIN, TVINFO_WIKIDATA
 from lib.tvinfo_base.exceptions import *
