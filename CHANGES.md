@@ -1,4 +1,9 @@
-﻿### 3.29.7 (2023-09-06 09:40:00 UTC)
+﻿### 3.29.8 (2023-09-12 08:10:00 UTC)
+
+* Change omgwtfnzbs domain
+
+
+### 3.29.7 (2023-09-06 09:40:00 UTC)
 
 * Fix view show to handle "unknown name" on cast
 * Update UnRar x64 for Windows 6.22 to 6.23

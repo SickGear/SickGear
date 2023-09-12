@@ -45,9 +45,9 @@ class OmgwtfnzbsProvider(generic.NZBProvider):
     def __init__(self):
         generic.NZBProvider.__init__(self, 'omgwtfnzbs')
 
-        self.url = 'https://omgwtfnzbs.me/'  # type: AnyStr
-        self.url_base = 'https://omgwtfnzbs.me/'  # type: AnyStr
-        self.url_api = 'https://api.omgwtfnzbs.me/'  # type: AnyStr
+        self.url = 'https://omgwtfnzbs.org/'  # type: AnyStr
+        self.url_base = 'https://omgwtfnzbs.org/'  # type: AnyStr
+        self.url_api = 'https://api.omgwtfnzbs.org/'  # type: AnyStr
         self.urls = {'config_provider_home_uri': self.url_base,
                      'cache': self.url_api + 'xml/?%s',
                      'search': self.url_api + 'json/?%s',
