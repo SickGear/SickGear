@@ -11,6 +11,11 @@
 * Change sort episodes when set to wanted on display show page
 
 
+### 3.29.8 (2023-09-12 08:10:00 UTC)
+
+* Change omgwtfnzbs domain
+
+
 ### 3.29.7 (2023-09-06 09:40:00 UTC)
 
 * Fix view show to handle "unknown name" on cast
