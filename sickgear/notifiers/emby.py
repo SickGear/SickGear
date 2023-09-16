@@ -23,13 +23,53 @@ import sickgear
 
 from _23 import decode_bytes, decode_str
 
+# noinspection PyUnreachableCode
+if False:
+    from sickgear.tv import TVShow
+
 
 class EmbyNotifier(Notifier):
+    EMBY_API = 1
+    JELLYFIN_API = 2
+    # noinspection HttpUrlsUsage
+    SCHEMA = 'http://'
 
     def __init__(self):
         super(EmbyNotifier, self).__init__()
 
         self.response = None
+
+    def _request(self, endpoint, host, token, **kwargs):
+        self.response = dict()
+        return sickgear.helpers.get_url(
+            f'{EmbyNotifier.SCHEMA}{host}/emby/{endpoint}',
+            headers={'Content-type': 'application/json', 'X-MediaBrowser-Token': token},
+            timeout=20, hooks=dict(response=self._cb_response), **kwargs)
+
+    # noinspection PyUnusedLocal
+    def _cb_response(self, r, *args, **kwargs):
+        self.response = dict(status_code=r.status_code, ok=r.ok)
+        return r
+
+    def fetch_info_public(self, host, token):
+        return self._request('System/Info/Public', host, token, json=True)
+
+    def check_server_type(self, host, token):
+        """
+
+        :param host: Emby/jellyfin host
+        :type host: str
+        :param token: Accesstoken
+        :type token: str
+        :return: EmbyNotifier.JELLYFIN_API or EmbyNotifier.EMBY_API
+        :rtype: int
+        """
+        response = self.fetch_info_public(host, token)
+        if (self.response.get('ok') and 200 == self.response.get('status_code') and
+                isinstance(response, dict) and
+                isinstance(response.get('ProductName'), str) and 'jellyfin' in response.get('ProductName').lower()):
+            return EmbyNotifier.JELLYFIN_API
+        return EmbyNotifier.EMBY_API
 
     def is_min_server_version(self, version, host, token):
         """ Test if Emby `host` server version is greater than or equal `version` arg
@@ -43,19 +83,15 @@ class EmbyNotifier(Notifier):
         :return: True if Emby `host` server version is greater than or equal `version` arg, otherwise False
         :rtype: bool
         """
-        self.response = None
-        response = sickgear.helpers.get_url(
-            'http://%s/emby/System/Info/Public' % host,
-            headers={'Content-type': 'application/json', 'X-MediaBrowser-Token': token},
-            timeout=20, hooks=dict(response=self._cb_response), json=True)
-
-        return self.response and self.response.get('ok') and 200 == self.response.get('status_code') and \
+        response = self.fetch_info_public(host, token)
+        return self.response.get('ok') and 200 == self.response.get('status_code') and \
             version <= list(map(lambda x: int(x), (response and response.get('Version') or '0.0.0.0').split('.')))
 
     def update_library(self, show_obj=None, **kwargs):
         """ Update library function
 
         :param show_obj: TVShow object
+        :type show_obj: TVShow
 
         Returns: None if no processing done, True if processing succeeded with no issues else False if any issues found
         """
@@ -70,63 +106,50 @@ class EmbyNotifier(Notifier):
             tvdb_id = show_obj.ids.get(indexer_config.TVINFO_TVDB, {}).get('id', None)
         except (BaseException, Exception):
             pass
-        args = (dict(post_json={'TvdbId': '%s' % tvdb_id}), dict(data=None))[not any([tvdb_id])]
+        args = (dict(post_json={'TvdbId': f'{tvdb_id}'}), dict(data=None))[not any([tvdb_id])]
 
-        mode_to_log = show_obj and 'show "%s"' % show_obj.unique_name or 'all shows'
+        mode_to_log = show_obj and f'show "{show_obj.unique_name}"' or 'all shows'
         total_success = True
         for i, cur_host in enumerate(hosts):
             endpoint = 'Series'
-            # 'Series' endpoint noted in Swagger as deprecated but still works at 4.3.0.30 (2019.11.29)
-            # 'Media' recommended as replacement, but it replaces ID with a clunky 'Path' param, so keep using 'Series'
-            # Added fallback to 404 response for endpoint when/if Emby removes 'Series' endpoint - this renders
-            # the following section not reqd. for a long time - if ever, but kept here just in case.
-            # if self.is_min_server_version([4, 3, 0, 31], cur_host, keys[i]):
-            #     endpoint = 'Media'
-            #     if 'data' in args:
-            #         del(args['data'])
-            #         args.update(dict(post_json={'Path': '', 'UpdateType': ''}))
+            if None is not show_obj and self.is_min_server_version([4, 3, 0, 31], cur_host, keys[i]):
+                endpoint = 'Media'
+                if 'data' in args:
+                    del(args['data'])
+                media_file = show_obj.location
+                # media_file = r'V:\Video\tv\The Chi\'
+                mode_to_log = f'media "{media_file}"'
+                args.update(dict(post_json={'Updates': [{'Path': media_file, 'UpdateType': ''}]}))
             if self.is_min_server_version([4, 3, 0, 0], cur_host, keys[i]):
                 if 'data' in args:
                     # del(args['data'])
                     args.update(dict(post_data=True))
 
-            self.response = None
-            # noinspection PyArgumentList
-            response = sickgear.helpers.get_url(
-                'http://%s/emby/Library/%s/Updated' % (cur_host, endpoint),
-                headers={'Content-type': 'application/json', 'X-MediaBrowser-Token': keys[i]},
-                timeout=20, hooks=dict(response=self._cb_response), **args)
+            response = self._request(f'Library/{endpoint}/Updated', cur_host, keys[i], **args)
             # Emby will initiate a LibraryMonitor path refresh one minute after this success
-            if self.response and 204 == self.response.get('status_code') and self.response.get('ok'):
+            if 200 <= self.response.get('status_code') < 300 and self.response.get('ok'):
                 self._log(f'Success: update {mode_to_log} sent to host {cur_host} in a library updated call')
                 continue
-            elif self.response and 401 == self.response.get('status_code'):
+            elif 401 == self.response.get('status_code'):
                 self._log_warning(f'Failed to authenticate with {cur_host}')
-            elif self.response and 404 == self.response.get('status_code'):
-                self.response = None
-                sickgear.helpers.get_url(
-                    'http://%s/emby/Library/Media/Updated' % cur_host,
-                    headers={'Content-type': 'application/json', 'X-MediaBrowser-Token': keys[i]},
-                    timeout=20, hooks=dict(response=self._cb_response), post_json={'Path': '', 'UpdateType': ''})
-                if self.response and 204 == self.response.get('status_code') and self.response.get('ok'):
+            elif 404 == self.response.get('status_code'):
+                args = dict(post_json={'Updates': [{'Path': '', 'UpdateType': ''}]})
+                self._request(f'Library/Media/Updated', cur_host, keys[i], **args)
+                if 200 <= self.response.get('status_code') < 300 and self.response.get('ok'):
                     self._log(f'Success: fallback to sending Library/Media/Updated call'
                               f' to scan all shows at host {cur_host}')
                     continue
                 self._log_debug(f'Warning, Library update responded 404 not found and'
-                                f' fallback to new /Library/Media/Updated api call failed at {cur_host}')
-            elif not response and not self.response or not self.response.get('ok'):
+                                f' fallback to newer /Library/Media/Updated api call failed at {cur_host}')
+            elif not response and not self.response.get('ok'):
                 self._log_warning(f'Warning, could not connect with server at {cur_host}')
             else:
-                self._log_debug(f'Warning, unknown response %sfrom {cur_host}, can most likely be ignored'
-                                % (self.response and '%s ' % self.response.get('status_code') or ''))
+                self._log_debug(
+                    f'Warning, unknown response {self.response and "%s " % self.response.get("status_code") or ""}'
+                    f'from {cur_host}, can most likely be ignored')
             total_success = False
 
         return total_success
-
-    # noinspection PyUnusedLocal
-    def _cb_response(self, r, *args, **kwargs):
-        self.response = dict(status_code=r.status_code, ok=r.ok)
-        return r
 
     def _discover_server(self):
 
@@ -138,14 +161,14 @@ class EmbyNotifier(Notifier):
         cs.settimeout(10)
         result, sock_issue = '', None
         for server in ('EmbyServer', 'MediaBrowserServer', 'JellyfinServer'):
-            bufr = 'who is %s?' % server
+            bufr = f'who is {server}?'
             try:
                 assert len(bufr) == cs.sendto(decode_bytes(bufr), ('255.255.255.255', mb_listen_port)), \
                     'Not all data sent through the socket'
                 message, host = cs.recvfrom(1024)
                 if message:
                     message = decode_str(message)
-                    self._log('%s found at %s: udp query response (%s)' % (server, host[0], message))
+                    self._log(f'{server} found at {host[0]}: udp query response ({message})')
                     result = ('{"Address":' not in message and message.split('|')[1] or
                               json_loads(message).get('Address', ''))
                     if result:
@@ -206,23 +229,19 @@ class EmbyNotifier(Notifier):
         args = dict(post_json={'Name': 'SickGear', 'Description': body, 'ImageUrl': self._sg_logo_url})
         for i, cur_host in enumerate(hosts):
 
-            self.response = None
-            response = sickgear.helpers.get_url(
-                'http://%s/emby/Notifications/Admin' % cur_host,
-                headers={'Content-type': 'application/json', 'X-MediaBrowser-Token': keys[i]},
-                timeout=10, hooks=dict(response=self._cb_response), **args)
+            response = self._request('Notifications/Admin', cur_host, keys[i], **args)
             if not response or self.response:
-                if self.response and 401 == self.response.get('status_code'):
+                if 401 == self.response.get('status_code'):
                     success = False
-                    message += ['Fail: Cannot authenticate API key with %s' % cur_host]
+                    message += [f'Fail: Cannot authenticate API key with {cur_host}']
                     self._log_warning(f'Failed to authenticate with {cur_host}')
                     continue
-                elif not response and not self.response or not self.response.get('ok'):
+                elif not response and not self.response.get('ok'):
                     success = False
-                    message += ['Fail: No supported Emby server found at %s' % cur_host]
+                    message += [f'Fail: No supported Emby server found at {cur_host}']
                     self._log_warning(f'Warning, could not connect with server at {cur_host}')
                     continue
-            message += ['OK: %s' % cur_host]
+            message += [f'OK: {cur_host}']
 
         return self._choose(('Success, all hosts tested', '<br />\n'.join(message))[not success], success)
 
@@ -234,7 +253,6 @@ class EmbyNotifier(Notifier):
         return self._discover_server()
 
     def check_config(self, hosts=None, apikeys=None):
-
         self._testing = True  # ensure _choose() uses passed args
         return self._check_config(hosts, apikeys)
 
