@@ -8,6 +8,7 @@
 * Update idna library 3.4 (37c7d9b) to 3.4 (cab054c)
 * Update Msgpack 1.0.5 (0516c2c) to 1.0.6 (e1d3d5d)
 * Update package resource API 67.5.1 (f51eccd) to 68.1.2 (1ef36f2)
+* Update Requests library 2.29.0 (87d63de) to 2.31.0 (8812812)
 * Update soupsieve 2.3.2.post1 (792d566) to 2.4.1 (2e66beb)
 * Update Tornado Web Server 6.3.2 (e3aa6c5) to 6.3.3 (e4d6984)
 * Update urllib3 1.26.15 (25cca389) to 2.0.4 (af7c78fa)
