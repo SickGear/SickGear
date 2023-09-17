@@ -5,6 +5,7 @@
 * Update CacheControl 0.12.11 (c05ef9e) to 0.13.1 (783a338)
 * Update feedparser 6.0.10 (859ac57) to 6.0.10 (9865dec)
 * Update filelock 3.12.0 (b4713c9) to 3.12.4 (c1163ae)
+* Update idna library 3.4 (37c7d9b) to 3.4 (cab054c)
 * Update Msgpack 1.0.5 (0516c2c) to 1.0.6 (e1d3d5d)
 * Update package resource API 67.5.1 (f51eccd) to 68.1.2 (1ef36f2)
 * Update soupsieve 2.3.2.post1 (792d566) to 2.4.1 (2e66beb)

@@ -338,9 +338,9 @@ def uts46_remap(domain: str, std3_rules: bool = True, transitional: bool = False
 
 
 def encode(s: Union[str, bytes, bytearray], strict: bool = False, uts46: bool = False, std3_rules: bool = False, transitional: bool = False) -> bytes:
-    if isinstance(s, (bytes, bytearray)):
+    if not isinstance(s, str):
         try:
-            s = s.decode('ascii')
+            s = str(s, 'ascii')
         except UnicodeDecodeError:
             raise IDNAError('should pass a unicode string to the function rather than a byte string.')
     if uts46:
@@ -372,8 +372,8 @@ def encode(s: Union[str, bytes, bytearray], strict: bool = False, uts46: bool = 
 
 def decode(s: Union[str, bytes, bytearray], strict: bool = False, uts46: bool = False, std3_rules: bool = False) -> str:
     try:
-        if isinstance(s, (bytes, bytearray)):
-            s = s.decode('ascii')
+        if not isinstance(s, str):
+            s = str(s, 'ascii')
     except UnicodeDecodeError:
         raise IDNAError('Invalid ASCII in A-label')
     if uts46:
