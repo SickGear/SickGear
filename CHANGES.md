@@ -2,6 +2,7 @@
 
 * Update Beautiful Soup 4.11.1 (r642) to 4.12.2
 * Update certifi 2023.05.07 to 2023.07.22
+* Update CacheControl 0.12.11 (c05ef9e) to 0.13.1 (783a338)
 * Update feedparser 6.0.10 (859ac57) to 6.0.10 (9865dec)
 * Update package resource API 67.5.1 (f51eccd) to 68.1.2 (1ef36f2)
 * Update soupsieve 2.3.2.post1 (792d566) to 2.4.1 (2e66beb)
