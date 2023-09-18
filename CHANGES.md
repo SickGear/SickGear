@@ -13,6 +13,11 @@
 * Add search of grouped options in shows drop down at view-show
 
 
+### 3.29.9 (2023-09-17 23:25:00 UTC)
+
+* Fix Emby notifier library update
+
+
 ### 3.29.8 (2023-09-12 08:10:00 UTC)
 
 * Change omgwtfnzbs domain
