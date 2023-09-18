@@ -9,6 +9,7 @@ __api_version__ = '1.0.0'
 import base64
 import datetime
 import logging
+import os
 import re
 
 from bs4_parser import BS4Parser
@@ -29,12 +30,14 @@ from lib.tvinfo_base import (
     TVINFO_MID_SEASON_FINALE, TVINFO_SEASON_FINALE, TVINFO_SERIES_FINALE, TVINFO_TIKTOK, TVINFO_TMDB, TVINFO_TVDB,
     TVINFO_TVDB_SLUG, TVINFO_TVMAZE, TVINFO_TWITTER, TVINFO_WIKIDATA, TVINFO_WIKIPEDIA, TVINFO_YOUTUBE)
 from sg_helpers import clean_data, clean_str, enforce_type, get_url, try_date, try_int
-from sickgear import ENV
 
 from six import integer_types, iteritems, PY3, string_types
 # noinspection PyUnreachableCode
 if False:
     from typing import Any, AnyStr, Dict, List, Optional, Tuple, Union
+
+
+ENV = os.environ
 
 log = logging.getLogger('tvdb_v4.api')
 log.addHandler(logging.NullHandler())
@@ -101,7 +104,10 @@ class TvdbAuth(RequestsAuthBase):
     @property
     def token(self):
         if not self._token:
-            self.get_token()
+            try:
+                self.get_token()
+            except TvdbTokenFailure as e:
+                log.error(f'Tvdb Taken Failure: {e}')
         return self._token
 
     def handle_401(self, r, **kwargs):
@@ -146,7 +152,7 @@ s = requests.Session()
 retries = Retry(total=3,
                 backoff_factor=1,
                 status_forcelist=[429, 500, 502, 503, 504],
-                method_whitelist=['HEAD', 'GET', 'PUT', 'DELETE', 'OPTIONS', 'TRACE', 'POST'])
+                allowed_methods=['HEAD', 'GET', 'PUT', 'DELETE', 'OPTIONS', 'TRACE', 'POST'])
 # noinspection HttpUrlsUsage
 s.mount('http://', HTTPAdapter(TimeoutHTTPAdapter(max_retries=retries)))
 s.mount('https://', HTTPAdapter(TimeoutHTTPAdapter(max_retries=retries)))
@@ -280,12 +286,13 @@ class TvdbAPIv4(TVInfoBase):
         if f'?page={page}' in ((resp.get('links') or {}).get('next') or ''):
             return page
 
-    def _convert_person(self, p, ids=None):
-        # type: (Dict, Dict) -> List[TVInfoPerson]
+    def _convert_person(self, p, ids=None, include_guests=False):
+        # type: (Dict, Dict, bool) -> List[TVInfoPerson]
         ch, ids = [], ids or {}
+        p_types = ([3], [3, 4])[include_guests]
         for cur_c in sorted(filter(
-                lambda a: (3 == a['type'] or 'Actor' == a['peopleType'])
-                and a['name'] and a['seriesId'] and not a.get('episodeId'),
+                lambda a: (a['type'] in p_types or 'Actor' == a['peopleType'])
+                and a['seriesId'] and ((not a.get('episodeId') and a['name']) or include_guests),
                 p.get('characters') or []),
                 key=lambda a: (not a['isFeatured'], a['sort'])):
             ti_show = TVInfoShow()
@@ -392,8 +399,8 @@ class TvdbAPIv4(TVInfoBase):
                 resp = None
         return resp
 
-    def get_person(self, p_id, get_show_credits=False, get_images=False, try_cache=True, **kwargs):
-        # type: (integer_types, bool, bool, bool, ...) -> Optional[TVInfoPerson]
+    def get_person(self, p_id, get_show_credits=False, get_images=False, try_cache=True, include_guests=False, **kwargs):
+        # type: (integer_types, bool, bool, bool, bool, ...) -> Optional[TVInfoPerson]
         """
         get person's data for id or list of matching persons for name
 
@@ -401,12 +408,13 @@ class TvdbAPIv4(TVInfoBase):
         :param get_show_credits: get show credits
         :param get_images: get person images
         :param try_cache: use cached data if available
+        :param include_guests: include guest roles
         :return: person object or None
         """
         if bool(p_id) and self._check_resp(dict, resp := self.get_cached_or_url(
                 f'/people/{p_id}/extended',
                 f'p-v4-{p_id}', try_cache=try_cache)):
-            return self._convert_person(resp['data'])[0]
+            return self._convert_person(resp['data'], include_guests=include_guests)[0]
 
     def _search_person(self, name=None, ids=None):
         # type: (AnyStr, Dict[integer_types, integer_types]) -> List[TVInfoPerson]

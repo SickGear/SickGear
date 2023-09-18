@@ -96,6 +96,7 @@ from lib.api_trakt import TraktAPI
 from lib.api_trakt.exceptions import TraktException, TraktAuthException
 from lib.tvinfo_base import TVInfoEpisode, RoleTypes
 from lib.tvinfo_base.base import tv_src_names
+from lib.tvinfo_base.exceptions import *
 
 import lib.rarfile.rarfile as rarfile
 
@@ -6039,7 +6040,7 @@ class AddShows(Home):
 
     def tvdb_default(self):
         method = getattr(self, sickgear.TVDB_MRU, None)
-        if not callable(method):
+        if not callable(method) or not self.allow_browse_mru(sickgear.TVDB_MRU):
             return self.tvdb_upcoming()
         return method()
 
@@ -6051,6 +6052,10 @@ class AddShows(Home):
         return self.browse_tvdb(
             'Top rated at TVDb', mode='toprated', **kwargs)
 
+    def tvdb_person(self, person_tvdb_id=None, **kwargs):
+        return self.browse_tvdb(
+            'Person at TVDb', mode='person', p_id=person_tvdb_id, **kwargs)
+
     def browse_tvdb(self, browse_title, **kwargs):
 
         browse_type = 'TVDb'
@@ -6058,20 +6063,41 @@ class AddShows(Home):
 
         footnote = None
         filtered = []
+        p_ref = None
+        overview_ajax = 'person' == mode
 
         tvid = TVINFO_TVDB
         tvinfo_config = sickgear.TVInfoAPI(tvid).api_params.copy()
         t = sickgear.TVInfoAPI(tvid).setup(**tvinfo_config)  # type: Union[TvdbIndexer, TVInfoBase]
 
         top_year = helpers.try_int(kwargs.get('year'), None)
-        if 'upcoming' == mode:
-            items = t.discover()
-        else:
-            items = t.get_top_rated(year=top_year,
-                                    in_last_year=1 == datetime.date.today().month and 7 > datetime.date.today().day)
+        try:
+            if 'upcoming' == mode:
+                items = t.discover()
+            elif 'person' == mode:
+                items = []
+                p_item = t.get_person(get_show_credits=True, include_guests=True, **kwargs)  # type: TVInfoPerson
+                if p_item:
+                    p_ref = f'{TVINFO_TVDB}:{p_item.id}'
+                    dup = {}  # type: Dict[int, TVInfoShow]
+                    for c in p_item.characters:  # type: TVInfoCharacter
+                        c.ti_show.cast[(RoleTypes.ActorGuest, RoleTypes.ActorMain)[True is c.regular]].append(c)
+                        if c.ti_show.id not in dup:
+                            dup[c.ti_show.id] = c.ti_show
+                            items.append(c.ti_show)
+                        else:
+                            dup[c.ti_show.id].cast[RoleTypes.ActorMain].extend(c.ti_show.cast[RoleTypes.ActorMain])
+                            dup[c.ti_show.id].cast[RoleTypes.ActorGuest].extend(c.ti_show.cast[RoleTypes.ActorGuest])
+                    del dup
+                else:
+                    p_item = None
+            else:
+                items = t.get_top_rated(year=top_year, in_last_year=1 == dt_date.today().month and 7 > dt_date.today().day)
+        except (BaseTVinfoError, BaseException, Exception) as e:
+            return self.browse_shows(browse_type, browse_title, filtered, **kwargs)
 
         ranking = dict((val, idx+1) for idx, val in
-                       enumerate(sorted([cur_show_info.rating for cur_show_info in items], reverse=True)))
+                       enumerate(sorted([cur_show_info.rating or 0 for cur_show_info in items], reverse=True)))
         oldest, newest, oldest_dt, newest_dt, dedupe = None, None, 9999999, 0, []
         use_networks = False
         parseinfo = dateutil.parser.parserinfo(dayfirst=False, yearfirst=True)
@@ -6085,7 +6111,7 @@ class AddShows(Home):
                 airtime = cur_show_info.airs_time
                 if not airtime or (0, 0) == (airtime.hour, airtime.minute):
                     airtime = dateutil.parser.parse('23:59').time()
-                dt = datetime.datetime.combine(
+                dt = datetime.combine(
                     dateutil.parser.parse(cur_show_info.firstaired, parseinfo).date(), airtime)
                 ord_premiered, str_premiered, started_past, oldest_dt, newest_dt, oldest, newest, _, _, _, _ \
                     = self.sanitise_dates(dt, oldest_dt, newest_dt, oldest, newest)
@@ -6118,6 +6144,7 @@ class AddShows(Home):
                     ids=ids,
                     images=images,
                     overview=self.clean_overview(cur_show_info),
+                    overview_ajax=(0, 1)[overview_ajax],
                     title=cur_show_info.seriesname,
                     language=language,
                     language_img=sickgear.MEMCACHE_FLAG_IMAGES.get(language, False),
@@ -6129,11 +6156,17 @@ class AddShows(Home):
                     votes=cur_show_info.rating or 0,
                     rank=cur_show_info.rating and ranking.get(cur_show_info.rating) or 0,
                 ))
+                if p_ref:
+                    filtered[-1].update(dict(
+                        p_name=p_item.name or None,
+                        p_ref=p_ref,
+                        p_chars=self._make_char_person_list(cur_show_info)
+                    ))
             except (BaseException, Exception):
                 pass
-            kwargs.update(dict(oldest=oldest, newest=newest, use_ratings=False, term_vote='Score'))
+            kwargs.update(dict(oldest=oldest, newest=newest, oldest_dt=oldest_dt, newest_dt=newest_dt, use_ratings=False, term_vote='Score'))
 
-        this_year = datetime.date.today().year
+        this_year = dt_date.today().year
         years = [
             (this_year - cur_y,
              'tvdb_toprated?year=%s' % (this_year - cur_y),
@@ -6141,7 +6174,7 @@ class AddShows(Home):
             for cur_y in range(0, 10)]
         kwargs.update(dict(footnote=footnote, use_networks=use_networks, year=top_year or '', rate_years=years))
 
-        if mode:
+        if mode and self.allow_browse_mru(mode):
             func = 'tvdb_%s' % mode
             if callable(getattr(self, func, None)):
                 sickgear.TVDB_MRU = func
@@ -6183,37 +6216,45 @@ class AddShows(Home):
             return result.replace('.....', '...')
         return 'No overview yet'
 
-    def tvm_get_showinfo(self, tvid_prodid=None, oldest_dt=9999999, newest_dt=0):
+    def tvi_get_showinfo(self, tvid_prodid=None, oldest_dt=9999999, newest_dt=0):
         result = {}
-        if 'tvmaze' in tvid_prodid:
-            tvid = TVINFO_TVMAZE
-            tvinfo_config = sickgear.TVInfoAPI(tvid).api_params.copy()
-            t = sickgear.TVInfoAPI(tvid).setup(**tvinfo_config)  # type: Union[TvmazeIndexer, TVInfoBase]
-            show_info = t.get_show(int(tvid_prodid.replace('tvmaze:','')), load_episodes=False)
+        if isinstance(tvid_prodid, str):
+            if tvid_prodid.startswith('tvmaze'):
+                tvid = TVINFO_TVMAZE
+                prod_id = int(tvid_prodid.replace('tvmaze:',''))
+            elif tvid_prodid.startswith('tvdb'):
+                tvid = TVINFO_TVDB
+                prod_id = int(tvid_prodid.replace('tvdb:', ''))
+            else:
+                tvid = None
+            if tvid:
+                tvinfo_config = sickgear.TVInfoAPI(tvid).api_params.copy()
+                t = sickgear.TVInfoAPI(tvid).setup(**tvinfo_config)  # type: Union[TvmazeIndexer, TVInfoBase]
+                show_info = t.get_show(prod_id, load_episodes=False)
 
-            oldest_dt, newest_dt = int(oldest_dt), int(newest_dt)
-            ord_premiered, str_premiered, started_past, old_dt, new_dt, oldest, newest, \
-                ok_returning, ord_returning, str_returning, return_past \
-                = self.sanitise_dates(show_info.firstaired, oldest_dt, newest_dt, None, None)
-            result = dict(
-                ord_premiered=ord_premiered,
-                str_premiered=str_premiered,
-                #ord_returning=ord_returning,
-                #str_returning=str_returning,
-                started_past=started_past,
-                #return_past=return_past,
-                genres=((show_info.genre or '')
-                        or ', '.join(show_info.genre_list)
-                        or ', '.join(show_info.show_type) or '').strip('|').replace('|', ', ').lower(),
-                overview=self.clean_overview(show_info),
-                network=show_info.network or ', '.join(show_info.networks) or '',
-            )
-            if old_dt < oldest_dt:
-                result['oldest_dt'] = old_dt
-                result['oldest'] = oldest
-            elif new_dt > newest_dt:
-                result['newest_dt'] = old_dt
-                result['newest'] = newest,
+                oldest_dt, newest_dt = int(oldest_dt), int(newest_dt)
+                ord_premiered, str_premiered, started_past, old_dt, new_dt, oldest, newest, \
+                    ok_returning, ord_returning, str_returning, return_past \
+                    = self.sanitise_dates(show_info.firstaired, oldest_dt, newest_dt, None, None)
+                result = dict(
+                    ord_premiered=ord_premiered,
+                    str_premiered=str_premiered,
+                    #ord_returning=ord_returning,
+                    #str_returning=str_returning,
+                    started_past=started_past,
+                    #return_past=return_past,
+                    genres=((show_info.genre or '')
+                            or ', '.join(show_info.genre_list)
+                            or ', '.join(show_info.show_type) or '').strip('|').replace('|', ', ').lower(),
+                    overview=self.clean_overview(show_info),
+                    network=show_info.network or ', '.join(show_info.networks) or '',
+                )
+                if old_dt < oldest_dt:
+                    result['oldest_dt'] = old_dt
+                    result['oldest'] = oldest
+                elif new_dt > newest_dt:
+                    result['newest_dt'] = old_dt
+                    result['newest'] = newest,
 
         return json_dumps(result)
 
@@ -6352,7 +6393,7 @@ class AddShows(Home):
 
     @staticmethod
     def sanitise_dates(date, oldest_dt, newest_dt, oldest, newest, episode_info=None, combine_ep_airtime=False):
-        # in case of person search (tvmaze) guest starring entires have only show name/id, no dates
+        # in case of person search (tvmaze) guest starring entries have only show name/id, no dates
         if None is date:
             return 9, '', True, oldest_dt, newest_dt, oldest, newest, True, 9, 'TBC', False
         parseinfo = dateutil.parser.parserinfo(dayfirst=False, yearfirst=True)

@@ -1195,14 +1195,15 @@ class TVInfoBase(object):
         except (BaseException, Exception) as e:
             log.error('Error setting %s to cache: %s' % (key, ex(e)))
 
-    def get_person(self, p_id, get_show_credits=False, get_images=False, **kwargs):
-        # type: (integer_types, bool, bool, Any) -> Optional[TVInfoPerson]
+    def get_person(self, p_id, get_show_credits=False, get_images=False, include_guests=False, **kwargs):
+        # type: (integer_types, bool, bool, bool, Any) -> Optional[TVInfoPerson]
         """
         get person's data for id or list of matching persons for name
 
         :param p_id: persons id
         :param get_show_credits: get show credits
         :param get_images: get person images
+        :param include_guests: include guest roles
         :return: person object
         """
         pass

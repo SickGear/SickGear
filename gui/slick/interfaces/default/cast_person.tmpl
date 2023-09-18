@@ -2,7 +2,7 @@
 #import re
 #import sickgear
 #from sickgear import TVInfoAPI
-#from sickgear.indexers.indexer_config import TVINFO_TMDB, TVINFO_TRAKT, TVINFO_TVMAZE
+#from sickgear.indexers.indexer_config import TVINFO_TMDB, TVINFO_TVDB, TVINFO_TRAKT, TVINFO_TVMAZE
 #from sickgear.helpers import anon_url
 #from sickgear.tv import PersonGenders
 #from sg_helpers import spoken_height
@@ -212,7 +212,7 @@ def param(visible=True, rid=None, cache_person=None, cache_char=None, person=Non
 					</span>
 				</div>
 #end if
-#set $src = (($TVINFO_TVMAZE, 'tvm'), ($TVINFO_TMDB, 'tmdb'), ($TVINFO_TRAKT, 'trakt'))
+#set $src = (($TVINFO_TVDB, 'tvdb'), ($TVINFO_TVMAZE, 'tvm'), ($TVINFO_TMDB, 'tmdb'), ($TVINFO_TRAKT, 'trakt'))
 #if any([$person.ids.get($cur_src) for ($cur_src, _) in $src])
 				<div>
 					<span class="details-title">Other shows</span>
