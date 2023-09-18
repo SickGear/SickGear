@@ -8,10 +8,19 @@ import warnings
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from threading import local
-from types import TracebackType
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from ._error import Timeout
+
+if TYPE_CHECKING:
+    import sys
+    from types import TracebackType
+
+    if sys.version_info >= (3, 11):  # pragma: no cover (py311+)
+        from typing import Self
+    else:  # pragma: no cover (<py311)
+        from typing_extensions import Self
+
 
 _LOGGER = logging.getLogger("filelock")
 
@@ -30,18 +39,16 @@ class AcquireReturnProxy:
 
     def __exit__(
         self,
-        exc_type: type[BaseException] | None,  # noqa: U100
-        exc_value: BaseException | None,  # noqa: U100
-        traceback: TracebackType | None,  # noqa: U100
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
     ) -> None:
         self.lock.release()
 
 
 @dataclass
 class FileLockContext:
-    """
-    A dataclass which holds the context for a ``BaseFileLock`` object.
-    """
+    """A dataclass which holds the context for a ``BaseFileLock`` object."""
 
     # The context is held in a separate class to allow optional use of thread local storage via the
     # ThreadLocalFileContext class.
@@ -63,9 +70,7 @@ class FileLockContext:
 
 
 class ThreadLocalFileContext(FileLockContext, local):
-    """
-    A thread local version of the ``FileLockContext`` class.
-    """
+    """A thread local version of the ``FileLockContext`` class."""
 
 
 class BaseFileLock(ABC, contextlib.ContextDecorator):
@@ -73,10 +78,10 @@ class BaseFileLock(ABC, contextlib.ContextDecorator):
 
     def __init__(
         self,
-        lock_file: str | os.PathLike[Any],
+        lock_file: str | os.PathLike[str],
         timeout: float = -1,
         mode: int = 0o644,
-        thread_local: bool = True,
+        thread_local: bool = True,  # noqa: FBT001, FBT002
     ) -> None:
         """
         Create a new lock object.
@@ -151,9 +156,7 @@ class BaseFileLock(ABC, contextlib.ContextDecorator):
 
     @property
     def lock_counter(self) -> int:
-        """
-        :return: The number of times this lock has been acquired (but not yet released).
-        """
+        """:return: The number of times this lock has been acquired (but not yet released)."""
         return self._context.lock_counter
 
     def acquire(
@@ -218,22 +221,21 @@ class BaseFileLock(ABC, contextlib.ContextDecorator):
                 if self.is_locked:
                     _LOGGER.debug("Lock %s acquired on %s", lock_id, lock_filename)
                     break
-                elif blocking is False:
+                if blocking is False:
                     _LOGGER.debug("Failed to immediately acquire lock %s on %s", lock_id, lock_filename)
-                    raise Timeout(lock_filename)
-                elif 0 <= timeout < time.perf_counter() - start_time:
+                    raise Timeout(lock_filename)  # noqa: TRY301
+                if 0 <= timeout < time.perf_counter() - start_time:
                     _LOGGER.debug("Timeout on acquiring lock %s on %s", lock_id, lock_filename)
-                    raise Timeout(lock_filename)
-                else:
-                    msg = "Lock %s not acquired on %s, waiting %s seconds ..."
-                    _LOGGER.debug(msg, lock_id, lock_filename, poll_interval)
-                    time.sleep(poll_interval)
+                    raise Timeout(lock_filename)  # noqa: TRY301
+                msg = "Lock %s not acquired on %s, waiting %s seconds ..."
+                _LOGGER.debug(msg, lock_id, lock_filename, poll_interval)
+                time.sleep(poll_interval)
         except BaseException:  # Something did go wrong, so decrement the counter.
             self._context.lock_counter = max(0, self._context.lock_counter - 1)
             raise
         return AcquireReturnProxy(lock=self)
 
-    def release(self, force: bool = False) -> None:
+    def release(self, force: bool = False) -> None:  # noqa: FBT001, FBT002
         """
         Releases the file lock. Please note, that the lock is only completely released, if the lock counter is 0. Also
         note, that the lock file itself is not automatically deleted.
@@ -251,7 +253,7 @@ class BaseFileLock(ABC, contextlib.ContextDecorator):
                 self._context.lock_counter = 0
                 _LOGGER.debug("Lock %s released on %s", lock_id, lock_filename)
 
-    def __enter__(self) -> BaseFileLock:
+    def __enter__(self) -> Self:
         """
         Acquire the lock.
 
@@ -262,9 +264,9 @@ class BaseFileLock(ABC, contextlib.ContextDecorator):
 
     def __exit__(
         self,
-        exc_type: type[BaseException] | None,  # noqa: U100
-        exc_value: BaseException | None,  # noqa: U100
-        traceback: TracebackType | None,  # noqa: U100
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
     ) -> None:
         """
         Release the lock.

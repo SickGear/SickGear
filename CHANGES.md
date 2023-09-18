@@ -2,10 +2,16 @@
 
 * Update Beautiful Soup 4.11.1 (r642) to 4.12.2
 * Update certifi 2023.05.07 to 2023.07.22
+* Update CacheControl 0.12.11 (c05ef9e) to 0.13.1 (783a338)
 * Update feedparser 6.0.10 (859ac57) to 6.0.10 (9865dec)
+* Update filelock 3.12.0 (b4713c9) to 3.12.4 (c1163ae)
+* Update idna library 3.4 (37c7d9b) to 3.4 (cab054c)
+* Update Msgpack 1.0.5 (0516c2c) to 1.0.6 (e1d3d5d)
 * Update package resource API 67.5.1 (f51eccd) to 68.1.2 (1ef36f2)
+* Update Requests library 2.29.0 (87d63de) to 2.31.0 (8812812)
 * Update soupsieve 2.3.2.post1 (792d566) to 2.4.1 (2e66beb)
 * Update Tornado Web Server 6.3.2 (e3aa6c5) to 6.3.3 (e4d6984)
+* Update urllib3 1.26.15 (25cca389) to 2.0.4 (af7c78fa)
 * Add thefuzz 0.19.0 (c2cd4f4) as a replacement with fallback to fuzzywuzzy 0.18.0 (2188520)
 * Fix regex that was not using py312 notation
 * Change sort backlog and manual segment search results episode number

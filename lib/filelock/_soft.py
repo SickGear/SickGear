@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import os
 import sys
+from contextlib import suppress
 from errno import EACCES, EEXIST
+from pathlib import Path
 
 from ._api import BaseFileLock
-from ._util import raise_on_not_writable_file
+from ._util import ensure_directory_exists, raise_on_not_writable_file
 
 
 class SoftFileLock(BaseFileLock):
@@ -13,6 +15,7 @@ class SoftFileLock(BaseFileLock):
 
     def _acquire(self) -> None:
         raise_on_not_writable_file(self.lock_file)
+        ensure_directory_exists(self.lock_file)
         # first check for exists and read-only mode as the open will mask this case as EEXIST
         flags = (
             os.O_WRONLY  # open for writing only
@@ -32,12 +35,11 @@ class SoftFileLock(BaseFileLock):
             self._context.lock_file_fd = file_handler
 
     def _release(self) -> None:
-        os.close(self._context.lock_file_fd)  # type: ignore # the lock file is definitely not None
+        assert self._context.lock_file_fd is not None  # noqa: S101
+        os.close(self._context.lock_file_fd)  # the lock file is definitely not None
         self._context.lock_file_fd = None
-        try:
-            os.remove(self.lock_file)
-        except OSError:  # the file is already deleted and that's what we want
-            pass
+        with suppress(OSError):  # the file is already deleted and that's what we want
+            Path(self.lock_file).unlink()
 
 
 __all__ = [
