@@ -59,8 +59,33 @@ $(document).ready(function() {
 		}
 
 		// `params.term` should be the term that is used for searching
-		// `data.text` is the text that is displayed for the data object
 		var param_term = params.term.toLowerCase().trim().replace(white_space_regex, '');
+
+		if ('undefined' !== typeof data.children) {
+			// `data.children` contains options to match against
+			var filteredChildren = [];
+			$.each(data.children, function (idx, child) {
+				// `child.text` is the text that is displayed for the data object
+				var param_data = child.text.toLowerCase().trim().replace(white_space_regex, '');
+
+				if (fuzzysearch(param_term, param_data)) {
+					filteredChildren.push(child);
+				}
+			});
+
+			// If any of the group's children match,
+			// then set the matched children on the group and return the group object
+			if (filteredChildren.length) {
+				var modifiedData = $.extend({}, data, true);
+				modifiedData.children = filteredChildren;
+
+				// You can return modified objects from here
+				// This includes matching the `children` how you want in nested data sets
+				return modifiedData;
+			}
+		}
+
+		// `data.text` is the text that is displayed for the data object
 		var param_data = data.text.toLowerCase().trim().replace(white_space_regex, '');
 		if (fuzzysearch(param_term, param_data)) {
 			var modifiedData = $.extend({}, data, true);
