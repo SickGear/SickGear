@@ -10,6 +10,7 @@
 * Fix regex that was not using py312 notation
 * Change sort backlog and manual segment search results episode number
 * Change sort episodes when set to wanted on display show page
+* Add search of grouped options in shows drop down at view-show
 
 
 ### 3.29.8 (2023-09-12 08:10:00 UTC)
