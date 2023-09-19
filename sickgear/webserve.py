@@ -5033,7 +5033,7 @@ class AddShows(Home):
         filtered = []
 
         import browser_ua
-        this_year = datetime.datetime.today().strftime('%Y')
+        this_year = dt_date.today().strftime('%Y')
         url = f'https://www.metacritic.com/browse/tv{url_path}' \
               f'?releaseYearMin={this_year}&releaseYearMax={this_year}{page}'
         html = helpers.get_url(url, headers={'User-Agent': browser_ua.get_ua()})
