@@ -418,12 +418,12 @@ $(document).ready(function(){
         #elif 'Metacritic' == $browse_type
 		<optgroup label="Metacritic">
 			<option value="mc_newseries"#echo ('', selected)['newseries' == $mode]#>New seasons</option>
-			<option value="mc_90days"#echo ('', selected)['90days' == $mode]#>Last 90 days</option>
-			<option value="mc_year"#echo ('', selected)['year' == $mode]#>By year</option>
-			<option value="mc_discussed"#echo ('', selected)['discussed' == $mode]#>Most discussed</option>
-			<option value="mc_shared"#echo ('', selected)['shared' == $mode]#>Most shared</option>
-            #if $kwargs and $kwargs.get('more') and 'newseries' in $mode
-            <option value="mc_newseries?more=1"#echo ('', selected + ' disabled')[mode.endswith('more')]#>... list more</option>
+			<option value="mc_explore"#echo ('', selected)['explore' == $mode]#>Explore</option>
+			<option value="mc_popular"#echo ('', selected)['popular' == $mode]#>Popular</option>
+			<option value="mc_metascore"#echo ('', selected)['metascore' == $mode]#>By metascore</option>
+			<option value="mc_userscore"#echo ('', selected)['userscore' == $mode]#>By userscore</option>
+            #if $kwargs and $kwargs.get('more')
+            <option value="mc_#echo $mode#?more=1"#echo ('', selected + ' disabled')[mode.endswith('more')]#>... list more</option>
             #end if
 		</optgroup>
         #elif 'TMDB' == $browse_type

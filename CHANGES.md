@@ -19,6 +19,12 @@
 * Add search of grouped options in shows drop down at view-show
 
 
+### 3.29.10 (2023-09-19 12:55:00 UTC)
+
+* Fix Metacritic cards
+* Fix Linux CI tests
+
+
 ### 3.29.9 (2023-09-17 23:25:00 UTC)
 
 * Fix Emby notifier library update

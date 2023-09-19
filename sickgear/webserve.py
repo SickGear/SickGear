@@ -5002,23 +5002,23 @@ class AddShows(Home):
 
     def mc_newseries(self, **kwargs):
         return self.browse_mc(
-            'release-date/new-series/date?', 'New Series at Metacritic', mode='newseries', **kwargs)
+            '/all/all/all-time/new/', 'New Series at Metacritic', mode='newseries', **kwargs)
 
-    def mc_90days(self, **kwargs):
+    def mc_explore(self, **kwargs):
         return self.browse_mc(
-            'score/metascore/90day/filtered?sort=desc&', 'Last 90 days at Metacritic', mode='90days', **kwargs)
+            '/', 'Explore at Metacritic', mode='explore', **kwargs)
 
-    def mc_year(self, **kwargs):
+    def mc_popular(self, **kwargs):
         return self.browse_mc(
-            'score/metascore/year/filtered?sort=desc&', 'By year at Metacritic', mode='year', **kwargs)
+            '/all/all/all-time/popular/', 'Popular at Metacritic', mode='popular', **kwargs)
 
-    def mc_discussed(self, **kwargs):
+    def mc_metascore(self, **kwargs):
         return self.browse_mc(
-            'score/metascore/discussed/filtered?sort=desc&', 'Most discussed at Metacritic', mode='discussed', **kwargs)
+            '/all/all/all-time/metascore/', 'By metascore at Metacritic', mode='metascore', **kwargs)
 
-    def mc_shared(self, **kwargs):
+    def mc_userscore(self, **kwargs):
         return self.browse_mc(
-            'score/metascore/shared/filtered?sort=desc&', 'Most shared at Metacritic', mode='shared', **kwargs)
+            '/all/all/all-time/userscore/', 'By userscore at Metacritic', mode='userscore', **kwargs)
 
     def browse_mc(self, url_path, browse_title, **kwargs):
 
@@ -5026,76 +5026,86 @@ class AddShows(Home):
 
         footnote = None
 
-        page = 'more' in kwargs and '&page=1' or ''
+        page = 'more' in kwargs and '&page=2' or ''
         if page:
             kwargs['mode'] += '-more'
 
         filtered = []
 
         import browser_ua
-        url = 'https://www.metacritic.com/browse/tv/%sview=detailed%s' % (url_path, page)
+        this_year = datetime.datetime.today().strftime('%Y')
+        url = f'https://www.metacritic.com/browse/tv{url_path}' \
+              f'?releaseYearMin={this_year}&releaseYearMax={this_year}{page}'
         html = helpers.get_url(url, headers={'User-Agent': browser_ua.get_ua()})
         if html:
             try:
-                if re.findall('(<a[^>]+rel="next"[^>]+)', html)[0]:
+                if re.findall('(c-navigationPagination_item--next)', html)[0]:
                     kwargs.update(dict(more=1))
             except (BaseException, Exception):
                 pass
 
-            with BS4Parser(html, parse_only=dict(table={'class': (lambda at: at and 'clamp-list' in at)})) as tbl:
-                # with BS4Parser(html, features=['html5lib', 'permissive']) as soup:
-                items = [] if not tbl else tbl.find_all('tr')
+            with BS4Parser(html, parse_only=dict(div={'class': (lambda at: at and 'c-productListings' in at)})) as soup:
+                items = [] if not soup else soup.select('.c-finderProductCard_container')
                 oldest, newest, oldest_dt, newest_dt = None, None, 9999999, 0
-                for cur_row in items:
+                rc_title = re.compile(r'(?i)(?::\s*season\s*\d+|\s*\((?:19|20)\d{2}\))?$')
+                rc_id = re.compile(r'(?i)[^A-Z0-9]')
+                rc_img = re.compile(r'(.*?)(/resize/[^?]+)?(/catalog/provider.*?\.(?:jpg|png)).*')
+                rc_season = re.compile(r'(\d+)(?:[.]\d*?)?$')
+                for idx, cur_row in enumerate(items):
                     try:
-                        ids = dict(custom=cur_row.select('input[type="checkbox"]')[0].attrs['id'], name='mc')
-                        info = cur_row.find('a', href=re.compile('^/tv'))
-                        url_path = info['href'].strip()
+                        title = rc_title.sub(
+                            '', cur_row.find('div', class_='c-finderProductCard_title').get('data-title').strip())
 
-                        images = {}
-                        img_uri = None
-                        img = info.find('img')
-                        if img and isinstance(img.attrs, dict):
-                            title = img.attrs.get('alt')
-                            img_src = img.attrs.get('src').split('-')
-                            img_uri = img_src.pop(0)
-                            if img_src:
-                                img_uri += '.' + img_src[0].split('.')[-1]
-                            images = dict(poster=dict(thumb='imagecache?path=browse/thumb/metac&source=%s' % img_uri))
+                        # 2023-09-23 deprecated id at site, using title as id
+                        # ids = dict(custom=cur_row.select('input[type="checkbox"]')[0].attrs['id'], name='mc')
+                        ids = dict(custom=rc_id.sub('', title), name='mc')
+
+                        url_path = cur_row['href'].strip()
+                        if not url_path.startswith('/tv/'):
+                            continue
+
+                        images = None
+                        img_src = (cur_row.find('img') or {}).get('src', '').strip()
+                        if img_src:
+                            img_uri = rc_img.sub(r'\1\3', img_src)
+                            images = dict(poster=dict(thumb=f'imagecache?path=browse/thumb/metac&source={img_uri}'))
                             sickgear.CACHE_IMAGE_URL_LIST.add_url(img_uri)
-                        if not title:
-                            title = cur_row.find('h3').get_text()
-                        title = re.sub(r'(?i)(?::\s*season\s*\d+|\s*\((?:19|20)\d{2}\))?$', '', title.strip())
 
                         ord_premiered = 0
                         str_premiered = ''
                         started_past = False
-                        date_tags = list(filter(lambda t: t.find('span'),
-                                                cur_row.find_all('div', class_='clamp-details')))
-                        if date_tags:
-                            ord_premiered, str_premiered, started_past, oldest_dt, newest_dt, oldest, newest, \
-                                _, _, _, _ \
-                                = self.sanitise_dates(date_tags[0].get_text().strip(), oldest_dt, newest_dt,
-                                                      oldest, newest)
 
-                        overview = cur_row.find('div', class_='summary').get_text().strip()
+                        dated = None
+                        rating = None
+                        rating_user = None # 2023-09-23 deprecated at site
+                        meta_tags = cur_row.find_all('div', class_='c-finderProductCard_meta')
+                        for tag in meta_tags:
+                            meta_tag = tag.find('span', class_='u-text-uppercase')
+                            if not dated and meta_tag:
+                                dated = meta_tag
+                                try:  # a bad date caused a sanitise exception here
+                                    ord_premiered, str_premiered, started_past, oldest_dt, newest_dt, oldest, newest, \
+                                        _, _, _, _ = self.sanitise_dates(dated.get_text().strip(), oldest_dt, newest_dt,
+                                                                         oldest, newest)
+                                except (BaseException, Exception):
+                                    pass
 
-                        rating = cur_row.find('div', class_='clamp-metascore')
-                        if rating:
-                            rating = rating.find('div', class_='metascore_w')
-                            if rating:
+                            meta_tag = tag.find('div', class_='c-siteReviewScore')
+                            if not rating and meta_tag:
+                                rating = meta_tag
                                 rating = rating.get_text().strip()
-                        rating_user = cur_row.find('div', class_='clamp-userscore')
-                        if rating_user:
-                            rating_user = rating_user.find('div', class_='metascore_w')
-                            if rating_user:
-                                rating_user = rating_user.get_text().strip()
 
-                        season = -1
+                            if dated and rating:
+                                break
+
+                        overview = cur_row.find('div', class_='c-finderProductCard_description')
+                        if overview:
+                            overview = helpers.xhtml_escape(overview.get_text().strip()[:250:])
+
                         try:
-                            season = re.findall(r'(\d+)(?:[.]\d*?)?$', url_path)[0]
+                            season = rc_season.findall(url_path)[0]
                         except(BaseException, Exception):
-                            pass
+                            season = -1
 
                         filtered.append(dict(
                             ord_premiered=ord_premiered,
@@ -5104,12 +5114,12 @@ class AddShows(Home):
                             episode_season=int(season),
                             genres='',
                             ids=ids,
-                            images='' if not img_uri else images,
-                            overview='No overview yet' if not overview else helpers.xhtml_escape(overview[:250:]),
+                            images=images or '',
+                            overview=overview or 'No overview yet',
                             rating=0 if not rating else rating or 'TBD',
                             rating_user='tbd' if not rating_user else int(helpers.try_float(rating_user) * 10) or 'tbd',
                             title=title,
-                            url_src_db='https://www.metacritic.com/%s/' % url_path.strip('/'),
+                            url_src_db=f'https://www.metacritic.com/{url_path.strip("/")}/',
                             votes=None))
 
                     except (AttributeError, IndexError, KeyError, TypeError):
@@ -5121,7 +5131,7 @@ class AddShows(Home):
 
         mode = kwargs.get('mode', '')
         if mode:
-            func = 'mc_%s' % mode
+            func = f'mc_{mode}'
             if callable(getattr(self, func, None)):
                 sickgear.MC_MRU = func
                 sickgear.save_config()
