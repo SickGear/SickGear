@@ -18,8 +18,8 @@
 import datetime
 import unittest
 
+import test_lib as test  # must be before import sickgear
 import sickgear
-import test_lib as test
 from sickgear import db
 from sickgear.common import Quality, UNAIRED, SKIPPED, WANTED, WantedQualities, statusStrings
 from sickgear.show_queue import QueueItemAdd
