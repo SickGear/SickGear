@@ -11,12 +11,17 @@
 * Update Requests library 2.29.0 (87d63de) to 2.31.0 (8812812)
 * Update soupsieve 2.3.2.post1 (792d566) to 2.4.1 (2e66beb)
 * Update Tornado Web Server 6.3.2 (e3aa6c5) to 6.3.3 (e4d6984)
-* Update urllib3 1.26.15 (25cca389) to 2.0.4 (af7c78fa)
+* Update urllib3 1.26.15 (25cca389) to 2.0.5 (d9f85a7)
 * Add thefuzz 0.19.0 (c2cd4f4) as a replacement with fallback to fuzzywuzzy 0.18.0 (2188520)
 * Fix regex that was not using py312 notation
 * Change sort backlog and manual segment search results episode number
 * Change sort episodes when set to wanted on display show page
 * Add search of grouped options in shows drop down at view-show
+
+
+[develop changelog]
+
+* Update urllib3 1.26.15 (25cca389) to 2.0.4 (af7c78f)
 
 
 ### 3.29.10 (2023-09-19 12:55:00 UTC)
