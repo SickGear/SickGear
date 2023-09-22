@@ -623,7 +623,7 @@ class NetworkBase(object):
     def _get_coutnry(self):
         c = ''
         if self.country:
-            c = ' (%s)' % self.country.name
+            c = ' (%s)' % self.country
         return c
 
     def __unicode__(self):
