@@ -620,17 +620,17 @@ class NetworkBase(object):
             self.timezone = None
             self.code = None
 
-    def _get_coutnry(self):
+    def _get_country(self):
         c = ''
         if self.country:
-            c = ' (%s)' % self.country.name
+            c = ' (%s)' % self.country
         return c
 
     def __unicode__(self):
-        return '%s%s' % (self.name, self._get_coutnry())
+        return '%s%s' % (self.name, self._get_country())
 
     def __str__(self):
-        return _valid_encoding('%s%s' % (self.name, self._get_coutnry()))
+        return _valid_encoding('%s%s' % (self.name, self._get_country()))
 
 
 class Network(NetworkBase):
