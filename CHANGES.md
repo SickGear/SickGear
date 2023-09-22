@@ -24,6 +24,12 @@
 * Update urllib3 1.26.15 (25cca389) to 2.0.4 (af7c78f)
 
 
+### 3.29.11 (2023-09-22 23:00:00 UTC)
+
+* Fix pytvmaze country handling in NetworkBase
+* Update issue template
+
+
 ### 3.29.10 (2023-09-19 12:55:00 UTC)
 
 * Fix Metacritic cards
