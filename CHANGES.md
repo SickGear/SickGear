@@ -1,4 +1,4 @@
-﻿### 3.30.0 (2023-0x-xx xx:xx:00 UTC)
+﻿### 3.30.0 (2023-09-23 17:20:00 UTC)
 
 * Update Beautiful Soup 4.11.1 (r642) to 4.12.2
 * Update certifi 2023.05.07 to 2023.07.22
@@ -17,11 +17,6 @@
 * Change sort backlog and manual segment search results episode number
 * Change sort episodes when set to wanted on display show page
 * Add search of grouped options in shows drop down at view-show
-
-
-[develop changelog]
-
-* Update urllib3 1.26.15 (25cca389) to 2.0.4 (af7c78f)
 
 
 ### 3.29.11 (2023-09-22 23:00:00 UTC)
