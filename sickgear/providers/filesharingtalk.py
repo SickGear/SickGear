@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear. If not, see <http://www.gnu.org/licenses/>.
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import difflib
 import re
 import time
@@ -154,7 +154,7 @@ class FSTProvider(generic.NZBProvider):
                                 rls_dt = None
                                 age_arg = 'hours' if 'hour' in age_dim else 'days' if 'day' in age_dim else None
                                 if age_arg:
-                                    rls_dt = datetime.utcnow() - timedelta(**{age_arg: float(age_value)})
+                                    rls_dt = datetime.now(timezone.utc) - timedelta(**{age_arg: float(age_value)})
                                 info_url = self._link(tr['data-url'].strip())
                         except (AttributeError, TypeError, ValueError):
                             continue

@@ -466,11 +466,7 @@ def dict_from_cookiejar(cj):
     :rtype: dict
     """
 
-    cookie_dict = {}
-
-    for cookie in cj:
-        cookie_dict[cookie.name] = cookie.value
-
+    cookie_dict = {cookie.name: cookie.value for cookie in cj}
     return cookie_dict
 
 
@@ -767,6 +763,7 @@ def should_bypass_proxies(url, no_proxy):
 
     :rtype: bool
     """
+
     # Prioritize lowercase environment variables over uppercase
     # to keep a consistent behaviour with other http projects (curl, wget).
     def get_proxy(key):

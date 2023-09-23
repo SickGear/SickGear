@@ -2,11 +2,13 @@ from __future__ import annotations
 
 import os
 import sys
+from contextlib import suppress
 from errno import EACCES
+from pathlib import Path
 from typing import cast
 
 from ._api import BaseFileLock
-from ._util import raise_on_not_writable_file
+from ._util import ensure_directory_exists, raise_on_not_writable_file
 
 if sys.platform == "win32":  # pragma: win32 cover
     import msvcrt
@@ -16,6 +18,7 @@ if sys.platform == "win32":  # pragma: win32 cover
 
         def _acquire(self) -> None:
             raise_on_not_writable_file(self.lock_file)
+            ensure_directory_exists(self.lock_file)
             flags = (
                 os.O_RDWR  # open for read and write
                 | os.O_CREAT  # create file if not exists
@@ -42,11 +45,8 @@ if sys.platform == "win32":  # pragma: win32 cover
             msvcrt.locking(fd, msvcrt.LK_UNLCK, 1)
             os.close(fd)
 
-            try:
-                os.remove(self.lock_file)
-            # Probably another instance of the application hat acquired the file lock.
-            except OSError:
-                pass
+            with suppress(OSError):  # Probably another instance of the application hat acquired the file lock.
+                Path(self.lock_file).unlink()
 
 else:  # pragma: win32 no cover
 

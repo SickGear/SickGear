@@ -1071,7 +1071,8 @@ def scantree(path,  # type: AnyStr
              include=None,  # type: Optional[AnyStr, List[AnyStr]]
              follow_symlinks=False,  # type: bool
              filter_kind=None,  # type: Optional[bool]
-             recurse=True  # type: bool
+             recurse=True,  # type: bool
+             exclude_folders_with_files=None  # type: Optional[List[AnyStr]]
              ):
     # type: (...) -> Generator[DirEntry, None, None]
     """Yield DirEntry objects for given path. Returns without yield if path fails sanity check
@@ -1082,6 +1083,7 @@ def scantree(path,  # type: AnyStr
     :param follow_symlinks: Follow symlinks
     :param filter_kind: None to yield everything, True yields directories, False yields files
     :param recurse: Recursively scan the tree
+    :param exclude_folders_with_files: exclude folder that contain the listed file(s)
     """
     if isinstance(path, string_types) and path and os.path.isdir(path):
         rc_exc, rc_inc = [re.compile(rx % '|'.join(
@@ -1093,6 +1095,11 @@ def scantree(path,  # type: AnyStr
             no_filter = any([None is filter_kind, filter_kind and is_dir, not filter_kind and is_file])
             if (rc_exc.search(entry.name), True)[not exclude] and (rc_inc.search(entry.name), True)[not include] \
                     and (no_filter or (not filter_kind and is_dir and recurse)):
+                if is_dir and exclude_folders_with_files and any(os.path.isfile(os.path.join(entry.path, e_f))
+                                                      for e_f in exclude_folders_with_files):
+                    logger.debug(f'Ignoring Folder: "{entry.path}", because it contains a exclude file'
+                                 f' "{", ".join(exclude_folders_with_files)}"')
+                    continue
                 if recurse and is_dir:
                     for subentry in scantree(entry.path, exclude, include, follow_symlinks, filter_kind, recurse):
                         yield subentry

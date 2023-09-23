@@ -190,7 +190,7 @@
                          trakt_played='most played this month', trakt_played_period_year='most played this year',
                          trakt_collected='most collected this month', trakt_collected_period_year='most collected this year',
                          trakt_recommended='recommended', trakt_watchlist='watchlist')
-#set $trakt_mode = $trakt_modes.get(re.sub('[\?=]', '_', $sg_var('TRAKT_MRU')), 'trends, tailored suggestions')
+#set $trakt_mode = $trakt_modes.get(re.sub(r'[\?=]', '_', $sg_var('TRAKT_MRU')), 'trends, tailored suggestions')
 								<li><a href="$sbRoot/add-shows/trakt-default/" tabindex="$tab#set $tab += 1#"><i class="sgicon-trakt"></i>Trakt Cards
 									<div class="menu-item-desc opacity60">$trakt_mode...</div></a></li>
 #set $imdb_func = $sg_str('IMDB_MRU').split('-')

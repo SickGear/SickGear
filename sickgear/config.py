@@ -24,6 +24,7 @@ from . import db, helpers, logger, naming
 from lib.api_trakt import TraktAPI
 
 from _23 import urlsplit, urlunsplit
+from sg_helpers import compress_file, copy_file, remove_file_perm, scantree, try_int
 from six import string_types
 
 
@@ -454,6 +455,58 @@ def check_setting_str(config, cfg_name, item_name, def_val, log=True):
         logger.debug('%s -> ******' % item_name)
 
     return (my_val, def_val)['None' == my_val]
+
+def check_valid_config(filename):
+    # type: (str) -> bool
+    """
+    check if file appears to be a vaild config file
+    :param filename: full path config file name
+    """
+    from configobj import ConfigObj
+    try:
+        conf_obj = ConfigObj(filename)
+        if not (all(section in conf_obj for section in ('General', 'GUI')) and 'config_version' in conf_obj['General']
+                and isinstance(try_int(conf_obj['General']['config_version'], None), int)):
+            return False
+        return True
+    except (BaseException, Exception):
+        return False
+    finally:
+        try:
+            del conf_obj
+        except (BaseException, Exception):
+            pass
+
+def backup_config():
+    """
+    backup config.ini
+    """
+    logger.log('backing up config.ini')
+    try:
+        if not check_valid_config(sickgear.CONFIG_FILE):
+            logger.error('config file seams to be invalid, not backing up.')
+            return
+        now = datetime.datetime.now()
+        d = datetime.datetime.strftime(now, '%Y-%m-%d')
+        t = datetime.datetime.strftime(now, '%H-%M')
+        target_base = os.path.join(sickgear.BACKUP_DB_PATH or os.path.join(sickgear.DATA_DIR, 'backup'))
+        target = os.path.join(target_base, 'config.ini')
+        copy_file(sickgear.CONFIG_FILE, target)
+        if not check_valid_config(target):
+            logger.error('config file seams to be invalid, not backing up.')
+            remove_file_perm(target)
+            return
+        compress_file(target, 'config.ini')
+        os.rename(re.sub(r'\.ini$', '.zip', target), os.path.join(target_base, f'config_{d}_{t}.zip'))
+        # remove old files
+        use_count = (1, sickgear.BACKUP_DB_MAX_COUNT)[not sickgear.BACKUP_DB_ONEDAY]
+        file_list = [f for f in scantree(target_base, include='config', filter_kind=False)]
+        if use_count < len(file_list):
+            file_list.sort(key=lambda _f: _f.stat(follow_symlinks=False).st_mtime, reverse=True)
+            for direntry in file_list[use_count:]:
+                remove_file_perm(direntry.path)
+    except (BaseException, Exception):
+        logger.error('backup config.ini error')
 
 
 class ConfigMigrator(object):
@@ -926,3 +979,4 @@ class ConfigMigrator(object):
 
     def _migrate_v22(self):
         self.deprecate_anon_service()
+

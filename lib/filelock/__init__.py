@@ -24,7 +24,7 @@ __version__: str = version
 
 if sys.platform == "win32":  # pragma: win32 cover
     _FileLock: type[BaseFileLock] = WindowsFileLock
-else:  # pragma: win32 no cover
+else:  # pragma: win32 no cover # noqa: PLR5501
     if has_fcntl:
         _FileLock: type[BaseFileLock] = UnixFileLock
     else:
@@ -32,7 +32,7 @@ else:  # pragma: win32 no cover
         if warnings is not None:
             warnings.warn("only soft file lock is available", stacklevel=2)
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # noqa: SIM108
     FileLock = SoftFileLock
 else:
     #: Alias for the lock, which should be used for the current platform.

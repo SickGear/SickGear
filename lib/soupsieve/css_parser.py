@@ -7,7 +7,7 @@ from . import css_match as cm
 from . import css_types as ct
 from .util import SelectorSyntaxError
 import warnings
-from typing import Optional, Match, Any, Iterator, cast
+from typing import Match, Any, Iterator, cast
 
 UNICODE_REPLACEMENT_CHAR = 0xFFFD
 
@@ -113,7 +113,7 @@ VALUE = r'''
 '''.format(nl=NEWLINE, ident=IDENTIFIER)
 # Attribute value comparison. `!=` is handled special as it is non-standard.
 ATTR = r'''
-(?:{ws}*(?P<cmp>[!~^|*$]?=){ws}*(?P<value>{value})(?:{ws}+(?P<case>[is]))?)?{ws}*\]
+(?:{ws}*(?P<cmp>[!~^|*$]?=){ws}*(?P<value>{value})(?:{ws}*(?P<case>[is]))?)?{ws}*\]
 '''.format(ws=WSC, value=VALUE)
 
 # Selector patterns
@@ -207,8 +207,8 @@ _MAXCACHE = 500
 @lru_cache(maxsize=_MAXCACHE)
 def _cached_css_compile(
     pattern: str,
-    namespaces: Optional[ct.Namespaces],
-    custom: Optional[ct.CustomSelectors],
+    namespaces: ct.Namespaces | None,
+    custom: ct.CustomSelectors | None,
     flags: int
 ) -> cm.SoupSieve:
     """Cached CSS compile."""
@@ -233,7 +233,7 @@ def _purge_cache() -> None:
     _cached_css_compile.cache_clear()
 
 
-def process_custom(custom: Optional[ct.CustomSelectors]) -> dict[str, str | ct.SelectorList]:
+def process_custom(custom: ct.CustomSelectors | None) -> dict[str, str | ct.SelectorList]:
     """Process custom."""
 
     custom_selectors = {}
@@ -317,7 +317,7 @@ class SelectorPattern:
 
         return self.name
 
-    def match(self, selector: str, index: int, flags: int) -> Optional[Match[str]]:
+    def match(self, selector: str, index: int, flags: int) -> Match[str] | None:
         """Match the selector."""
 
         return self.re_pattern.match(selector, index)
@@ -336,7 +336,7 @@ class SpecialPseudoPattern(SelectorPattern):
             for pseudo in p[1]:
                 self.patterns[pseudo] = pattern
 
-        self.matched_name = None  # type: Optional[SelectorPattern]
+        self.matched_name = None  # type: SelectorPattern | None
         self.re_pseudo_name = re.compile(PAT_PSEUDO_CLASS_SPECIAL, re.I | re.X | re.U)
 
     def get_name(self) -> str:
@@ -344,7 +344,7 @@ class SpecialPseudoPattern(SelectorPattern):
 
         return '' if self.matched_name is None else self.matched_name.get_name()
 
-    def match(self, selector: str, index: int, flags: int) -> Optional[Match[str]]:
+    def match(self, selector: str, index: int, flags: int) -> Match[str] | None:
         """Match the selector."""
 
         pseudo = None
@@ -372,14 +372,14 @@ class _Selector:
     def __init__(self, **kwargs: Any) -> None:
         """Initialize."""
 
-        self.tag = kwargs.get('tag', None)  # type: Optional[ct.SelectorTag]
+        self.tag = kwargs.get('tag', None)  # type: ct.SelectorTag | None
         self.ids = kwargs.get('ids', [])  # type: list[str]
         self.classes = kwargs.get('classes', [])  # type: list[str]
         self.attributes = kwargs.get('attributes', [])  # type: list[ct.SelectorAttribute]
         self.nth = kwargs.get('nth', [])  # type: list[ct.SelectorNth]
         self.selectors = kwargs.get('selectors', [])  # type: list[ct.SelectorList]
         self.relations = kwargs.get('relations', [])  # type: list[_Selector]
-        self.rel_type = kwargs.get('rel_type', None)  # type: Optional[str]
+        self.rel_type = kwargs.get('rel_type', None)  # type: str | None
         self.contains = kwargs.get('contains', [])  # type: list[ct.SelectorContains]
         self.lang = kwargs.get('lang', [])  # type: list[ct.SelectorLang]
         self.flags = kwargs.get('flags', 0)  # type: int
@@ -462,7 +462,7 @@ class CSSParser:
     def __init__(
         self,
         selector: str,
-        custom: Optional[dict[str, str | ct.SelectorList]] = None,
+        custom: dict[str, str | ct.SelectorList] | None = None,
         flags: int = 0
     ) -> None:
         """Initialize."""
@@ -723,7 +723,7 @@ class CSSParser:
         if postfix == '_child':
             if m.group('of'):
                 # Parse the rest of `of S`.
-                nth_sel = self.parse_selectors(iselector, m.end(0), FLG_PSEUDO | FLG_OPEN | FLG_FORGIVE)
+                nth_sel = self.parse_selectors(iselector, m.end(0), FLG_PSEUDO | FLG_OPEN)
             else:
                 # Use default `*|*` for `of S`.
                 nth_sel = CSS_NTH_OF_S_DEFAULT
@@ -753,7 +753,7 @@ class CSSParser:
         if name == ':not':
             flags |= FLG_NOT
         elif name == ':has':
-            flags |= FLG_RELATIVE | FLG_FORGIVE
+            flags |= FLG_RELATIVE
         elif name in (':where', ':is'):
             flags |= FLG_FORGIVE
 
@@ -777,11 +777,6 @@ class CSSParser:
         if not combinator:
             combinator = WS_COMBINATOR
         if combinator == COMMA_COMBINATOR:
-            if not has_selector:
-                # If we've not captured any selector parts, the comma is either at the beginning of the pattern
-                # or following another comma, both of which are unexpected. But shouldn't fail the pseudo-class.
-                sel.no_match = True
-
             sel.rel_type = rel_type
             selectors[-1].relations.append(sel)
             rel_type = ":" + WS_COMBINATOR
@@ -1070,22 +1065,12 @@ class CSSParser:
                 selectors.append(sel)
 
         # Forgive empty slots in pseudo-classes that have lists (and are forgiving)
-        elif is_forgive:
-            if is_relative:
-                # Handle relative selectors pseudo-classes with empty slots like `:has()`
-                if selectors and selectors[-1].rel_type is None and rel_type == ': ':
-                    sel.rel_type = rel_type
-                    sel.no_match = True
-                    selectors[-1].relations.append(sel)
-                    has_selector = True
-            else:
-                # Handle normal pseudo-classes with empty slots
-                if not selectors or not relations:
-                    # Others like `:is()` etc.
-                    sel.no_match = True
-                    del relations[:]
-                    selectors.append(sel)
-                    has_selector = True
+        elif is_forgive and (not selectors or not relations):
+            # Handle normal pseudo-classes with empty slots like `:is()` etc.
+            sel.no_match = True
+            del relations[:]
+            selectors.append(sel)
+            has_selector = True
 
         if not has_selector:
             # We will always need to finish a selector when `:has()` is used as it leads with combining.
