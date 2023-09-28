@@ -8,6 +8,7 @@
 * Update Rarfile 4.1a1 (8a72967) to 4.1 (c9140d8)
 * Update soupsieve 2.4.1 (2e66beb) to 2.5.0 (dc71495)
 * Update thefuzz 0.19.0 (c2cd4f4) to 0.21.0 (0b49e4a)
+* Add support for Brotli compression
 
 
 ### 3.30.1 (2023-10-02 22:50:00 UTC)
