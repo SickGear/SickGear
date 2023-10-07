@@ -1,4 +1,10 @@
-﻿### 3.30.1 (2023-10-02 22:50:00 UTC)
+﻿### 3.31.0 (2023-1x-xx xx:xx:00 UTC)
+
+* Update Beautiful Soup 4.12.2 to 4.12.2 (30c58a1)
+* Update soupsieve 2.4.1 (2e66beb) to 2.5.0 (dc71495)
+
+
+### 3.30.1 (2023-10-02 22:50:00 UTC)
 
 * Change allow Python 3.12.0 and 3.11.6
 
