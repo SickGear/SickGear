@@ -59,7 +59,7 @@ def define(
       .. caution::
 
          Usually this has only upsides and few visible effects in everyday
-         programming. But it *can* lead to some suprising behaviors, so please
+         programming. But it *can* lead to some surprising behaviors, so please
          make sure to read :term:`slotted classes`.
     - *auto_exc=True*
     - *auto_detect=True*
@@ -131,10 +131,8 @@ def define(
         for base_cls in cls.__bases__:
             if base_cls.__setattr__ is _frozen_setattrs:
                 if had_on_setattr:
-                    raise ValueError(
-                        "Frozen classes can't use on_setattr "
-                        "(frozen-ness was inherited)."
-                    )
+                    msg = "Frozen classes can't use on_setattr (frozen-ness was inherited)."
+                    raise ValueError(msg)
 
                 on_setattr = setters.NO_OP
                 break
@@ -151,8 +149,8 @@ def define(
     # if it's used as `@attrs` but ``None`` if used as `@attrs()`.
     if maybe_cls is None:
         return wrap
-    else:
-        return wrap(maybe_cls)
+
+    return wrap(maybe_cls)
 
 
 mutable = define
@@ -180,10 +178,9 @@ def field(
     Identical to `attr.ib`, except keyword-only and with some arguments
     removed.
 
-    .. versionadded:: 22.3.0
-       The *type* parameter has been re-added; mostly for
-       {func}`attrs.make_class`. Please note that type checkers ignore this
-       metadata.
+    .. versionadded:: 23.1.0
+       The *type* parameter has been re-added; mostly for `attrs.make_class`.
+       Please note that type checkers ignore this metadata.
     .. versionadded:: 20.1.0
     """
     return attrib(

@@ -1,5 +1,6 @@
 ﻿### 3.31.0 (2023-1x-xx xx:xx:00 UTC)
 
+* Update attr 22.2.0 (683d056) to 23.1.0 (67e4ff2)
 * Update Beautiful Soup 4.12.2 to 4.12.2 (30c58a1)
 * Update soupsieve 2.4.1 (2e66beb) to 2.5.0 (dc71495)
 * Update hachoir 3.1.2 (f739b43) to 3.2.0 (38d759f)
