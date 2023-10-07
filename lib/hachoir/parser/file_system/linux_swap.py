@@ -11,8 +11,8 @@ Creation date: 25 december 2006 (christmas ;-))
 
 from hachoir.parser import Parser
 from hachoir.field import (ParserError, GenericVector,
-                               UInt32, String,
-                               Bytes, NullBytes, RawBytes)
+                           UInt32, String,
+                           Bytes, NullBytes, RawBytes)
 from hachoir.core.endian import LITTLE_ENDIAN
 from hachoir.core.tools import humanFilesize
 from hachoir.core.bits import str2hex

@@ -14,9 +14,9 @@ Sources:
 
 from hachoir.parser import HachoirParser, Parser
 from hachoir.field import (RootSeekableFieldSet, SeekableFieldSet, FieldSet, ParserError,
-                               Bit, Bits, UInt8, UInt16, UInt32,
-                               Enum, String, TimestampUnix32, RawBytes,
-                               NullBytes, PaddingBits, PaddingBytes, FragmentGroup, CustomFragment)
+                           Bit, Bits, UInt8, UInt16, UInt32,
+                           Enum, String, TimestampUnix32, RawBytes,
+                           NullBytes, PaddingBits, PaddingBytes, FragmentGroup, CustomFragment)
 from hachoir.core.tools import (humanDuration, humanFilesize)
 from hachoir.core.endian import LITTLE_ENDIAN
 from hachoir.core.text_handler import textHandler
@@ -240,11 +240,13 @@ class Inode(FieldSet):
         return out
 
     def is_fast_symlink(self):
-        self.seekByte(4 * 15 + 4)
-        acl = UInt32(self, "file_acl")
+        acl_addr = self.absolute_address + self.current_size
+        # skip 15 blocks + version field
+        acl_addr += (4 * 15 + 4) * 8
+        acl = self.stream.readBits(acl_addr, 32, self.endian)
 
         b = 0
-        if acl.value > 0:
+        if acl > 0:
             b = (2 << self["/superblock/log_block_size"].value)
 
         return (self['blocks'].value - b == 0)
@@ -747,7 +749,7 @@ class EXT2_FS(HachoirParser, RootSeekableFieldSet):
     def validate(self):
         if self.stream.readBytes((1024 + 56) * 8, 2) != b"\x53\xEF":
             return "Invalid magic number"
-        if not(0 <= self["superblock/log_block_size"].value <= 2):
+        if not (0 <= self["superblock/log_block_size"].value <= 2):
             return "Invalid (log) block size"
         if self["superblock/inode_size"].value not in (0, 128):
             return "Unsupported inode size"

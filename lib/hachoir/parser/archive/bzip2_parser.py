@@ -7,9 +7,9 @@ Author: Victor Stinner, Robert Xiao
 from hachoir.parser import Parser
 from hachoir.core.tools import paddingSize
 from hachoir.field import (Field, FieldSet, GenericVector,
-                               ParserError, String,
-                               PaddingBits, Bit, Bits, Character,
-                               UInt32, Enum, CompressedField)
+                           ParserError, String,
+                           PaddingBits, Bit, Bits, Character,
+                           UInt32, Enum, CompressedField)
 from hachoir.core.endian import BIG_ENDIAN
 from hachoir.core.text_handler import textHandler, hexadecimal
 from hachoir.parser.archive.zlib import build_tree, HuffmanCode
@@ -218,7 +218,7 @@ class Bzip2Parser(Parser):
     def validate(self):
         if self.stream.readBytes(0, 3) != b'BZh':
             return "Wrong file signature"
-        if not("1" <= self["blocksize"].value <= "9"):
+        if not ("1" <= self["blocksize"].value <= "9"):
             return "Wrong blocksize"
         return True
 

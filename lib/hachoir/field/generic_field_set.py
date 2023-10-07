@@ -1,5 +1,5 @@
 from hachoir.field import (MissingField, BasicFieldSet, Field, ParserError,
-                               createRawField, createNullField, createPaddingField, FakeArray)
+                           createRawField, createNullField, createPaddingField, FakeArray)
 from hachoir.core.dict import Dict, UniqKeyError
 from hachoir.core.tools import lowerBound, makeUnicode
 import hachoir.core.config as config
@@ -117,7 +117,7 @@ class GenericFieldSet(BasicFieldSet):
         _getSize, doc="Size in bits, may create all fields to get size")
 
     def _getCurrentSize(self):
-        assert not(self.done)
+        assert not (self.done)
         return self._current_size
     current_size = property(_getCurrentSize)
 

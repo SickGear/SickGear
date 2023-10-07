@@ -8,11 +8,12 @@ Creation date: July 18, 2007
 """
 from hachoir.parser import Parser
 from hachoir.field import (FieldSet,
-                               UInt32, Bit, Bits, PaddingBits,
-                               RawBytes, ParserError)
+                           UInt32, Bit, Bits, PaddingBits,
+                           RawBytes, ParserError)
 from hachoir.core.endian import MIDDLE_ENDIAN, LITTLE_ENDIAN
 from hachoir.core.tools import paddingSize
 from hachoir.parser.archive.zlib import build_tree, HuffmanCode, extend_data
+import struct
 
 
 class LZXPreTreeEncodedTree(FieldSet):
@@ -146,6 +147,8 @@ class LZXBlock(FieldSet):
         self.window_size = self.WINDOW_SIZE[self.compression_level]
         self.block_type = self["block_type"].value
         curlen = len(self.parent.uncompressed_data)
+        intel_started = False  # Do we perform Intel jump fixups on this block?
+
         if self.block_type in (1, 2):  # Verbatim or aligned offset block
             if self.block_type == 2:
                 for i in range(8):
@@ -156,6 +159,8 @@ class LZXBlock(FieldSet):
             yield LZXPreTreeEncodedTree(self, "main_tree_rest", self.window_size * 8)
             main_tree = build_tree(
                 self["main_tree_start"].lengths + self["main_tree_rest"].lengths)
+            if self["main_tree_start"].lengths[0xE8]:
+                intel_started = True
             yield LZXPreTreeEncodedTree(self, "length_tree", 249)
             length_tree = build_tree(self["length_tree"].lengths)
             current_decoded_size = 0
@@ -169,7 +174,7 @@ class LZXBlock(FieldSet):
                     field._description = "Literal value %r" % chr(
                         field.realvalue)
                     current_decoded_size += 1
-                    self.parent.uncompressed_data += chr(field.realvalue)
+                    self.parent._lzx_window.append(field.realvalue)
                     yield field
                     continue
                 position_header, length_header = divmod(
@@ -243,8 +248,7 @@ class LZXBlock(FieldSet):
                     self.parent.r2 = self.parent.r1
                     self.parent.r1 = self.parent.r0
                     self.parent.r0 = position
-                self.parent.uncompressed_data = extend_data(
-                    self.parent.uncompressed_data, length, position)
+                extend_data(self.parent._lzx_window, length, position)
                 current_decoded_size += length
         elif self.block_type == 3:  # Uncompressed block
             padding = paddingSize(self.address + self.current_size, 16)
@@ -253,6 +257,7 @@ class LZXBlock(FieldSet):
             else:
                 yield PaddingBits(self, "padding[]", 16)
             self.endian = LITTLE_ENDIAN
+            intel_started = True  # apparently intel fixup may be needed on uncompressed blocks?
             yield UInt32(self, "r[]", "New value of R0")
             yield UInt32(self, "r[]", "New value of R1")
             yield UInt32(self, "r[]", "New value of R2")
@@ -260,18 +265,50 @@ class LZXBlock(FieldSet):
             self.parent.r1 = self["r[1]"].value
             self.parent.r2 = self["r[2]"].value
             yield RawBytes(self, "data", self.uncompressed_size)
-            self.parent.uncompressed_data += self["data"].value
+            self.parent._lzx_window += self["data"].value
             if self["block_size"].value % 2:
                 yield PaddingBits(self, "padding", 8)
         else:
             raise ParserError("Unknown block type %d!" % self.block_type)
+
+        # Fixup Intel jumps if necessary (fixups are only applied to the final output, not to the LZX window)
+        self.parent.uncompressed_data += self.parent._lzx_window[-self.uncompressed_size:]
+        self.parent._lzx_window = self.parent._lzx_window[-(1 << self.root.compr_level):]
+
+        if (
+            intel_started
+            and self.parent["filesize_indicator"].value
+            and self.parent["filesize"].value > 0
+        ):
+            # Note that we're decoding a block-at-a-time instead of a frame-at-a-time,
+            # so we need to handle the frame boundaries carefully.
+            filesize = self.parent["filesize"].value
+            start_pos = max(0, curlen - 10)  # We may need to correct something from the last block
+            end_pos = len(self.parent.uncompressed_data) - 10
+            while 1:
+                jmp_pos = self.parent.uncompressed_data.find(b"\xE8", start_pos, end_pos)
+                if jmp_pos == -1:
+                    break
+                if (jmp_pos % 32768) >= (32768 - 10):
+                    # jumps at the end of frames are not fixed up
+                    start_pos = jmp_pos + 1
+                    continue
+                abs_off, = struct.unpack("<i", self.parent.uncompressed_data[jmp_pos + 1:jmp_pos + 5])
+                if -jmp_pos <= abs_off < filesize:
+                    if abs_off < 0:
+                        rel_off = abs_off + filesize
+                    else:
+                        rel_off = abs_off - jmp_pos
+                    self.parent.uncompressed_data[jmp_pos + 1:jmp_pos + 5] = struct.pack("<i", rel_off)
+                start_pos = jmp_pos + 5
 
 
 class LZXStream(Parser):
     endian = MIDDLE_ENDIAN
 
     def createFields(self):
-        self.uncompressed_data = ""
+        self.uncompressed_data = bytearray()
+        self._lzx_window = bytearray()
         self.r0 = 1
         self.r1 = 1
         self.r2 = 1
@@ -291,6 +328,6 @@ class LZXStream(Parser):
 def lzx_decompress(stream, window_bits):
     data = LZXStream(stream)
     data.compr_level = window_bits
-    for unused in data:
+    for _ in data:
         pass
     return data.uncompressed_data

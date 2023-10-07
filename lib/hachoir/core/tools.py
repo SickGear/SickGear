@@ -493,7 +493,7 @@ def timestampUNIX(value):
     """
     if not isinstance(value, (float, int)):
         raise TypeError("timestampUNIX(): an integer or float is required")
-    if not(0 <= value <= 2147483647):
+    if not (0 <= value <= 2147483647):
         raise ValueError("timestampUNIX(): value have to be in 0..2147483647")
     return UNIX_TIMESTAMP_T0 + timedelta(seconds=value)
 
@@ -514,7 +514,7 @@ def timestampMac32(value):
     """
     if not isinstance(value, (float, int)):
         raise TypeError("an integer or float is required")
-    if not(0 <= value <= 4294967295):
+    if not (0 <= value <= 4294967295):
         return "invalid Mac timestamp (%s)" % value
     return MAC_TIMESTAMP_T0 + timedelta(seconds=value)
 

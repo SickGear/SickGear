@@ -6,9 +6,9 @@ Author: Victor Stinner, 1st December 2005.
 
 from hachoir.parser import Parser
 from hachoir.field import (FieldSet, ParserError,
-                               UInt8, UInt16, UInt32, UInt64, Enum,
-                               NullBytes, Bytes, RawBytes, SubFile,
-                               Character, CString, String)
+                           UInt8, UInt16, UInt32, UInt64, Enum,
+                           NullBytes, Bytes, RawBytes, SubFile,
+                           Character, CString, String)
 from hachoir.core.endian import BIG_ENDIAN
 from hachoir.parser.archive.gzip_parser import GzipParser
 from hachoir.parser.archive.bzip2_parser import Bzip2Parser

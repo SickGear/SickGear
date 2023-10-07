@@ -6,9 +6,9 @@
 
 from hachoir.parser import Parser
 from hachoir.field import (Field, FieldSet, createOrphanField,
-                               NullBits, Bit, Bits, Enum, Fragment, MissingField, ParserError,
-                               UInt8, UInt16, UInt24, UInt32, UInt64,
-                               RawBytes, String, PascalString32, NullBytes)
+                           NullBits, Bit, Bits, Enum, Fragment, MissingField, ParserError,
+                           UInt8, UInt16, UInt24, UInt32, UInt64,
+                           RawBytes, String, PascalString32, NullBytes)
 from hachoir.stream import FragmentedStream, InputStreamError
 from hachoir.core.endian import LITTLE_ENDIAN, BIG_ENDIAN
 from hachoir.core.tools import humanDurationNanosec

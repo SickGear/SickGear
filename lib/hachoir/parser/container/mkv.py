@@ -6,11 +6,11 @@
 
 from hachoir.parser import Parser
 from hachoir.field import (FieldSet, Link,
-                               MissingField, ParserError,
-                               Enum as _Enum, String as _String,
-                               Float32, Float64,
-                               NullBits, Bits, Bit, RawBytes, Bytes,
-                               Int16, GenericInteger)
+                           MissingField, ParserError,
+                           Enum as _Enum, String as _String,
+                           Float32, Float64,
+                           NullBits, Bits, Bit, RawBytes, Bytes,
+                           Int16, GenericInteger)
 from hachoir.core.endian import BIG_ENDIAN
 from hachoir.core.iso639 import ISO639_2
 from hachoir.core.tools import humanDatetime

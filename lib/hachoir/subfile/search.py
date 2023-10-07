@@ -95,7 +95,7 @@ class SearchSubfile:
             print("[!] Memory error!", file=stderr)
         self.mainFooter()
         self.stream.close()
-        return not(main_error)
+        return (not main_error)
 
     def mainHeader(self):
         # Fix slice size if needed
@@ -149,7 +149,7 @@ class SearchSubfile:
         if parser.content_size is not None:
             text += " size=%s (%s)" % (parser.content_size //
                                        8, humanFilesize(parser.content_size // 8))
-        if not(parser.content_size) or parser.content_size // 8 < FILE_MAX_SIZE:
+        if not parser.content_size or parser.content_size // 8 < FILE_MAX_SIZE:
             text += ": " + parser.description
         else:
             text += ": " + parser.__class__.__name__

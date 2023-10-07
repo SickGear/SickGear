@@ -11,7 +11,7 @@ Author: Victor Stinner
 
 from hachoir.parser import Parser
 from hachoir.field import (StaticFieldSet, FieldSet, ParserError,
-                               UInt8, UInt32, Enum, Float32, String, PascalString32, RawBytes)
+                           UInt8, UInt32, Enum, Float32, String, PascalString32, RawBytes)
 from hachoir.parser.image.common import RGBA
 from hachoir.core.endian import NETWORK_ENDIAN
 

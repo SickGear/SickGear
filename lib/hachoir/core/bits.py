@@ -4,7 +4,7 @@ string, number, hexadecimal, etc.
 """
 
 from hachoir.core.endian import BIG_ENDIAN, LITTLE_ENDIAN, MIDDLE_ENDIAN
-from struct import calcsize, unpack, error as struct_error
+from struct import calcsize, error as struct_error
 
 
 def swap16(value):
@@ -292,20 +292,11 @@ def str2long(data, endian):
     >>> str2long(b"\x0b\x0a\x0d\x0c", MIDDLE_ENDIAN) == 0x0a0b0c0d
     True
     """
-    assert 1 <= len(data) <= 32   # arbitrary limit: 256 bits
-    try:
-        return unpack(_struct_format[endian][len(data)], data)[0]
-    except KeyError:
-        pass
-
-    assert endian in (BIG_ENDIAN, LITTLE_ENDIAN, MIDDLE_ENDIAN)
-    shift = 0
-    value = 0
-    if endian is BIG_ENDIAN:
-        data = reversed(data)
-    elif endian is MIDDLE_ENDIAN:
-        data = reversed(strswapmid(data))
-    for byte in data:
-        value += (byte << shift)
-        shift += 8
-    return value
+    if endian == LITTLE_ENDIAN:
+        return int.from_bytes(data, "little")
+    elif endian == BIG_ENDIAN:
+        return int.from_bytes(data, "big")
+    elif endian == MIDDLE_ENDIAN:
+        return int.from_bytes(strswapmid(data), "big")
+    else:
+        raise ValueError("Invalid endian %s" % (endian,))

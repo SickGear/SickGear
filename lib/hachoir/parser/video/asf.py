@@ -12,12 +12,12 @@ Creation: 5 august 2006
 
 from hachoir.parser import Parser
 from hachoir.field import (FieldSet, ParserError,
-                               UInt16, UInt32, UInt64,
-                               TimestampWin64, TimedeltaWin64,
-                               TimedeltaMillisWin64,
-                               String, PascalString16, Enum,
-                               Bit, Bits, PaddingBits,
-                               PaddingBytes, NullBytes, RawBytes)
+                           UInt16, UInt32, UInt64,
+                           TimestampWin64, TimedeltaWin64,
+                           TimedeltaMillisWin64,
+                           String, PascalString16, Enum,
+                           Bit, Bits, PaddingBits,
+                           PaddingBytes, NullBytes, RawBytes)
 from hachoir.core.endian import LITTLE_ENDIAN
 from hachoir.core.text_handler import (
     displayHandler, filesizeHandler)
@@ -355,7 +355,7 @@ class AsfFile(Parser):
         if self.stream.readBytes(0, len(magic)) != magic:
             return "Invalid magic"
         header = self[0]
-        if not(30 <= header["size"].value <= MAX_HEADER_SIZE):
+        if not (30 <= header["size"].value <= MAX_HEADER_SIZE):
             return "Invalid header size (%u)" % header["size"].value
         return True
 

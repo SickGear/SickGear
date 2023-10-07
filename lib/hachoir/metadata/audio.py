@@ -1,12 +1,12 @@
 from hachoir.metadata.metadata import (registerExtractor, Metadata,
-                                           RootMetadata, MultipleMetadata)
+                                       RootMetadata, MultipleMetadata)
 from hachoir.parser.audio import (AuFile, MpegAudioFile, RealAudioFile,
-                                      AiffFile, FlacParser)
+                                  AiffFile, FlacParser)
 from hachoir.parser.container import OggFile, RealMediaFile
 from hachoir.core.tools import makePrintable, timedelta2seconds, humanBitRate
 from datetime import timedelta
 from hachoir.metadata.metadata_item import (QUALITY_FAST, QUALITY_NORMAL,
-                                                QUALITY_BEST)
+                                            QUALITY_BEST)
 from hachoir.metadata.safe import fault_tolerant, getValue
 
 

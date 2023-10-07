@@ -5,7 +5,7 @@ Author: Victor Stinner
 
 from hachoir.parser import Parser
 from hachoir.field import (StaticFieldSet, FieldSet,
-                               UInt16, UInt32, RawBytes, Enum, CString)
+                           UInt16, UInt32, RawBytes, Enum, CString)
 from hachoir.parser.image.common import RGB
 from hachoir.core.endian import LITTLE_ENDIAN
 from hachoir.core.text_handler import textHandler, hexadecimal

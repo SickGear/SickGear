@@ -10,12 +10,12 @@ Author: Victor Stinner
 
 from hachoir.parser import Parser
 from hachoir.field import (FieldSet, Fragment,
-                               ParserError, MissingField,
-                               UInt8, UInt16, UInt32,
-                               String, CString,
-                               Bytes, RawBytes,
-                               Bit, NullBits,
-                               Enum, CompressedField)
+                           ParserError, MissingField,
+                           UInt8, UInt16, UInt32,
+                           String, CString,
+                           Bytes, RawBytes,
+                           Bit, NullBits,
+                           Enum, CompressedField)
 from hachoir.parser.image.common import RGB
 from hachoir.core.text_handler import textHandler, hexadecimal
 from hachoir.core.endian import NETWORK_ENDIAN
@@ -45,7 +45,7 @@ UNIT_NAME = {1: "Meter"}
 COMPRESSION_NAME = {
     0: "deflate"  # with 32K sliding window
 }
-MAX_CHUNK_SIZE = 5 * 1024 * 1024  # Maximum chunk size (5 MB)
+MAX_CHUNK_SIZE = 64 * 1024 * 1024  # Maximum chunk size heuristic (64 MB)
 
 
 def headerParse(parent):

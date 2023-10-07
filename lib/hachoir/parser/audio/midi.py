@@ -10,7 +10,7 @@ Creation: 27 december 2006
 
 from hachoir.parser import Parser
 from hachoir.field import (FieldSet, Bits, ParserError,
-                               String, UInt32, UInt24, UInt16, UInt8, Enum, RawBits, RawBytes)
+                           String, UInt32, UInt24, UInt16, UInt8, Enum, RawBits, RawBytes)
 from hachoir.core.endian import BIG_ENDIAN
 from hachoir.core.text_handler import textHandler, hexadecimal
 from hachoir.core.tools import createDict, humanDurationNanosec
@@ -29,7 +29,7 @@ class Integer(Bits):
         while True:
             bits = stream.readBits(addr, 8, parent.endian)
             value = (value << 7) + (bits & 127)
-            if not(bits & 128):
+            if not (bits & 128):
                 break
             addr += 8
             self._size += 8

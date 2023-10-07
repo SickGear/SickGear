@@ -15,8 +15,8 @@ Samples:
 
 from hachoir.parser import Parser
 from hachoir.field import (FieldSet,
-                               UInt16, UInt32, Bit, RawBits,
-                               RawBytes, String, PascalString8, PascalString16)
+                           UInt16, UInt32, Bit, RawBits,
+                           RawBytes, String, PascalString8, PascalString16)
 from hachoir.core.text_handler import textHandler, hexadecimal
 from hachoir.core.endian import BIG_ENDIAN
 

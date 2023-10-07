@@ -85,7 +85,7 @@ def main():
     stream = FileInputStream(filename)
     with stream:
         subfile = SearchSubfile(stream, values.offset, values.size)
-        subfile.verbose = not(values.quiet)
+        subfile.verbose = not values.quiet
         subfile.debug = values.debug
         if output:
             subfile.setOutput(output)

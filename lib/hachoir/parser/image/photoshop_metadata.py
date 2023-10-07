@@ -5,9 +5,9 @@ References:
 """
 
 from hachoir.field import (FieldSet, ParserError,
-                               UInt8, UInt16, UInt32, Float32, Enum,
-                               SubFile, String, CString, PascalString8,
-                               NullBytes, RawBytes)
+                           UInt8, UInt16, UInt32, Float32, Enum,
+                           SubFile, String, CString, PascalString8,
+                           NullBytes, RawBytes)
 from hachoir.core.text_handler import textHandler, hexadecimal
 from hachoir.core.tools import alignValue, createDict
 from hachoir.parser.image.iptc import IPTC

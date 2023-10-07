@@ -8,9 +8,9 @@ Creation: 16 december 2005
 
 from hachoir.parser import Parser
 from hachoir.field import (FieldSet,
-                               UInt8, UInt16, UInt32, Bits,
-                               String, RawBytes, Enum,
-                               PaddingBytes, NullBytes, createPaddingField)
+                           UInt8, UInt16, UInt32, Bits,
+                           String, RawBytes, Enum,
+                           PaddingBytes, NullBytes, createPaddingField)
 from hachoir.core.endian import LITTLE_ENDIAN
 from hachoir.core.text_handler import textHandler, hexadecimal
 from hachoir.parser.image.common import RGB, PaletteRGBA

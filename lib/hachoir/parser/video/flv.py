@@ -14,8 +14,8 @@ Creation date: 4 november 2006
 
 from hachoir.parser import Parser
 from hachoir.field import (FieldSet,
-                               UInt8, UInt24, UInt32, NullBits, NullBytes,
-                               Bit, Bits, String, RawBytes, Enum)
+                           UInt8, UInt24, UInt32, NullBits, NullBytes,
+                           Bit, Bits, String, RawBytes, Enum)
 from hachoir.core.endian import BIG_ENDIAN
 from hachoir.parser.audio.mpeg_audio import Frame
 from hachoir.parser.video.amf import AMFObject

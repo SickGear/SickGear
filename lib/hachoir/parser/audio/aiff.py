@@ -7,9 +7,9 @@ Creation: 27 december 2006
 
 from hachoir.parser import Parser
 from hachoir.field import (FieldSet,
-                               UInt16, UInt32, Float80, TimestampMac32,
-                               RawBytes, NullBytes,
-                               String, Enum, PascalString32)
+                           UInt16, UInt32, Float80, TimestampMac32,
+                           RawBytes, NullBytes,
+                           String, Enum, PascalString32)
 from hachoir.core.endian import BIG_ENDIAN
 from hachoir.core.text_handler import filesizeHandler
 from hachoir.core.tools import alignValue

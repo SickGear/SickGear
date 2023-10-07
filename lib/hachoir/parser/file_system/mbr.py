@@ -14,8 +14,8 @@ Master Boot Record.
 
 from hachoir.parser import Parser
 from hachoir.field import (FieldSet,
-                               Enum, Bits, UInt8, UInt16, UInt32,
-                               RawBytes)
+                           Enum, Bits, UInt8, UInt16, UInt32,
+                           RawBytes)
 from hachoir.core.endian import LITTLE_ENDIAN
 from hachoir.core.tools import humanFilesize
 from hachoir.core.text_handler import textHandler, hexadecimal

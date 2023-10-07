@@ -244,7 +244,7 @@ class GenericString(Bytes):
                 and err.end == len(text) \
                 and self._charset == "UTF-16-LE":
             try:
-                text = str(text + "\0", self._charset, "strict")
+                text = str(text + b"\0", self._charset, "strict")
                 self.warning(
                     "Fix truncated %s string: add missing nul byte" % self._charset)
                 return text

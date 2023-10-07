@@ -9,11 +9,11 @@ Documents
 """
 from hachoir.core.endian import BIG_ENDIAN
 from hachoir.field import (FieldSet, ParserError,
-                               SeekableFieldSet,
-                               Bit, Bits, NullBits,
-                               UInt8, UInt16, UInt32, TimestampWin64, TimedeltaWin64, Enum,
-                               Bytes, RawBytes, NullBytes, PaddingBits, String,
-                               Int8, Int32, Float32, Float64, PascalString32)
+                           SeekableFieldSet,
+                           Bit, Bits, NullBits,
+                           UInt8, UInt16, UInt32, TimestampWin64, TimedeltaWin64, Enum,
+                           Bytes, RawBytes, NullBytes, PaddingBits, String,
+                           Int8, Int32, Float32, Float64, PascalString32)
 from hachoir.core.text_handler import textHandler, hexadecimal, filesizeHandler
 from hachoir.core.tools import createDict, paddingSize
 from hachoir.parser.common.win32 import GUID, PascalStringWin32, CODEPAGE_CHARSET

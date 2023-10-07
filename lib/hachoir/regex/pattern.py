@@ -125,7 +125,7 @@ class PatternMatching:
         item = RegexPattern(regex, user)
         if item.regex.maxLength() is None:
             raise ValueError(
-                "Regular expression with no maximum size has forbidden")
+                "Regular expression with no maximum size is forbidden")
         self.regex_patterns.append(item)
         self._need_commit = True
 

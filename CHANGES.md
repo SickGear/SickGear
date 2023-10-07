@@ -2,6 +2,7 @@
 
 * Update Beautiful Soup 4.12.2 to 4.12.2 (30c58a1)
 * Update soupsieve 2.4.1 (2e66beb) to 2.5.0 (dc71495)
+* Update hachoir 3.1.2 (f739b43) to 3.2.0 (38d759f)
 
 
 ### 3.30.1 (2023-10-02 22:50:00 UTC)

@@ -11,11 +11,11 @@ References:
 """
 
 from hachoir.field import (FieldSet, SeekableFieldSet, ParserError,
-                               UInt8, UInt16, UInt32,
-                               Int8, Int16, Int32,
-                               Float32, Float64,
-                               Enum, String, Bytes, SubFile,
-                               NullBits, NullBytes)
+                           UInt8, UInt16, UInt32,
+                           Int8, Int16, Int32,
+                           Float32, Float64,
+                           Enum, String, Bytes, SubFile,
+                           NullBits, NullBytes)
 from hachoir.core.endian import LITTLE_ENDIAN, BIG_ENDIAN
 from hachoir.core.tools import createDict
 
