@@ -16,9 +16,9 @@ Author: Victor Stinner, Robert Xiao
 
 from hachoir.parser import Parser
 from hachoir.field import (FieldSet, ParserError, FieldError,
-                               UInt8, UInt16, Enum, Field,
-                               Bit, Bits, NullBits, NullBytes, PaddingBits,
-                               String, RawBytes)
+                           UInt8, UInt16, Enum, Field,
+                           Bit, Bits, NullBits, NullBytes, PaddingBits,
+                           String, RawBytes)
 from hachoir.parser.image.common import PaletteRGB
 from hachoir.core.endian import BIG_ENDIAN
 from hachoir.core.text_handler import textHandler, hexadecimal
@@ -205,7 +205,7 @@ class SOSComponent(FieldSet):
     def createFields(self):
         comp_id = UInt8(self, "component_id")
         yield comp_id
-        if not(1 <= comp_id.value <= self["../nr_components"].value):
+        if not (1 <= comp_id.value <= self["../nr_components"].value):
             raise ParserError("JPEG error: Invalid component-id")
         yield Bits(self, "dc_coding_table", 4, "DC entropy coding table destination selector")
         yield Bits(self, "ac_coding_table", 4, "AC entropy coding table destination selector")
@@ -387,7 +387,10 @@ class JpegImageData(FieldSet):
             end = self.stream.searchBytes(b"\xff", start, MAX_FILESIZE * 8)
             if end is None:
                 # this is a bad sign, since it means there is no terminator
-                # we ignore this; it likely means a truncated image
+                # this likely means a truncated image:
+                # set the size to the remaining length of the stream
+                # to avoid being forced to parse subfields to calculate size
+                self._size = self.stream._size - self.absolute_address
                 break
             if self.stream.readBytes(end, 2) == b'\xff\x00':
                 # padding: false alarm

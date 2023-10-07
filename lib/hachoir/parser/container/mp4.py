@@ -20,10 +20,10 @@ Creation: 2 august 2006
 from hachoir.parser import Parser
 from hachoir.parser.common.win32 import GUID
 from hachoir.field import (ParserError, FieldSet, MissingField,
-                               Enum,
-                               Bit, NullBits, Bits, UInt8, Int16, UInt16, UInt24, Int32, UInt32, Int64, UInt64, TimestampMac32,
-                               String, PascalString8, PascalString16, CString,
-                               RawBytes, NullBytes)
+                           Enum,
+                           Bit, NullBits, Bits, UInt8, Int16, UInt16, UInt24, Int32, UInt32, Int64, UInt64, TimestampMac32,
+                           String, PascalString8, PascalString16, CString,
+                           RawBytes, NullBytes)
 from hachoir.field.timestamp import timestampFactory
 from hachoir.core.endian import BIG_ENDIAN
 from hachoir.core.text_handler import textHandler
@@ -1312,7 +1312,7 @@ class MP4File(Parser):
         if size < 8:
             return "Invalid first atom size"
         tag = self.stream.readBytes(4 * 8, 4)
-        if tag not in (b"ftyp", b"moov", b"free"):
+        if tag not in (b"ftyp", b"moov", b"free", b"skip"):
             return "Unknown MOV file type"
         return True
 

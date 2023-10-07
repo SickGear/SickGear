@@ -11,10 +11,10 @@ Creation: 11th February 2007
 
 from hachoir.parser import Parser
 from hachoir.field import (StaticFieldSet, FieldSet, Field,
-                               Bit, Bits,
-                               UInt32, UInt16, UInt8, Enum,
-                               PaddingBytes, RawBytes, NullBytes,
-                               String, GenericVector, ParserError)
+                           Bit, Bits,
+                           UInt32, UInt16, UInt8, Enum,
+                           PaddingBytes, RawBytes, NullBytes,
+                           String, GenericVector, ParserError)
 from hachoir.core.endian import LITTLE_ENDIAN
 from hachoir.core.text_handler import textHandler, hexadecimal
 from hachoir.core.tools import alignValue

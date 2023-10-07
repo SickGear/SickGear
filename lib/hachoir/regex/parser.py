@@ -8,8 +8,8 @@ TODO:
 """
 
 from hachoir.regex import (RegexString, RegexEmpty, RegexRepeat,
-                               RegexDot, RegexWord, RegexStart, RegexEnd,
-                               RegexRange, RegexRangeItem, RegexRangeCharacter)
+                           RegexDot, RegexWord, RegexStart, RegexEnd,
+                           RegexRange, RegexRangeItem, RegexRangeCharacter)
 import re
 
 REGEX_COMMAND_CHARACTERS = '.^$[](){}|+?*\\'
@@ -164,7 +164,7 @@ def _parse(text, start=0, until=None):
                 if char == 'b':
                     new_regex = RegexWord()
                 else:
-                    if not(char in REGEX_COMMAND_CHARACTERS or char in " '"):
+                    if not (char in REGEX_COMMAND_CHARACTERS or char in " '"):
                         raise SyntaxError(
                             "Operator '\\%s' is not supported" % char)
                     new_regex = RegexString(char)

@@ -7,7 +7,7 @@ Creation date: July 10, 2007
 
 from hachoir.core.endian import BIG_ENDIAN
 from hachoir.field import (RootSeekableFieldSet, FieldSet,
-                               String, CString, UInt32, RawBytes)
+                           String, CString, UInt32, RawBytes)
 from hachoir.core.text_handler import displayHandler, filesizeHandler
 from hachoir.core.tools import humanUnixAttributes
 from hachoir.parser import HachoirParser

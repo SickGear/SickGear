@@ -11,8 +11,8 @@ Creation: 8 january 2005
 """
 
 from hachoir.field import (SubFile, FieldSet,
-                               UInt8, UInt16, UInt32, Enum, String, CString,
-                               Bits, RawBytes, CustomFragment)
+                           UInt8, UInt16, UInt32, Enum, String, CString,
+                           Bits, RawBytes, CustomFragment)
 from hachoir.core.text_handler import textHandler, hexadecimal
 from hachoir.parser.misc.ole2_util import OLE2FragmentParser, RawParser
 from hachoir.parser.misc.msoffice_summary import Summary, DocSummary, CompObj

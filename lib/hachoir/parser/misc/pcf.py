@@ -12,8 +12,8 @@ Creation date: 2007-03-20
 
 from hachoir.parser import Parser
 from hachoir.field import (FieldSet, Enum,
-                               UInt8, UInt32, Bytes, RawBytes, NullBytes,
-                               Bit, Bits, PaddingBits, CString)
+                           UInt8, UInt32, Bytes, RawBytes, NullBytes,
+                           Bit, Bits, PaddingBits, CString)
 from hachoir.core.endian import LITTLE_ENDIAN, BIG_ENDIAN
 from hachoir.core.text_handler import textHandler, hexadecimal, filesizeHandler
 from hachoir.core.tools import paddingSize

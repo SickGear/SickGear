@@ -3,7 +3,7 @@ Extract metadata from RIFF file format: AVI video and WAV sound.
 """
 
 from hachoir.metadata.metadata import (Metadata, MultipleMetadata,
-                                           registerExtractor)
+                                       registerExtractor)
 from hachoir.metadata.safe import fault_tolerant, getValue
 from hachoir.parser.container.riff import RiffFile
 from hachoir.parser.video.fourcc import UNCOMPRESSED_AUDIO

@@ -1,8 +1,8 @@
 from hachoir.field import (FieldError,
-                               RawBits, RawBytes,
-                               PaddingBits, PaddingBytes,
-                               NullBits, NullBytes,
-                               GenericString, GenericInteger)
+                           RawBits, RawBytes,
+                           PaddingBits, PaddingBytes,
+                           NullBits, NullBytes,
+                           GenericString, GenericInteger)
 from hachoir.stream import FileOutputStream
 
 

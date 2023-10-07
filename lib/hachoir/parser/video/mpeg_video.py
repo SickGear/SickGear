@@ -16,11 +16,11 @@ Creation date: 15 september 2006
 from hachoir.parser import Parser
 from hachoir.parser.audio.mpeg_audio import MpegAudioFile
 from hachoir.field import (FieldSet,
-                               FieldError, ParserError,
-                               Bit, Bits, Bytes, RawBits, PaddingBits, NullBits,
-                               UInt8, UInt16,
-                               RawBytes, PaddingBytes,
-                               Enum, CustomFragment)
+                           FieldError, ParserError,
+                           Bit, Bits, Bytes, RawBits, PaddingBits, NullBits,
+                           UInt8, UInt16,
+                           RawBytes, PaddingBytes,
+                           Enum, CustomFragment)
 from hachoir.core.endian import BIG_ENDIAN
 from hachoir.core.text_handler import textHandler, hexadecimal
 
@@ -244,7 +244,7 @@ class PacketElement(FieldSet):
             yield Bits(self, "sync[]", 4)  # =2, or 3 if has_dts=True
             yield Timestamp(self, "pts")
         if self["has_dts"].value:
-            if not(self["has_pts"].value):
+            if not self["has_pts"].value:
                 raise ParserError("Invalid PTS/DTS values")
             yield Bits(self, "sync[]", 4)  # =1
             yield Timestamp(self, "dts")

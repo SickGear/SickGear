@@ -14,9 +14,9 @@ Updated: January 13, 2017
 
 from hachoir.parser import HachoirParser
 from hachoir.field import (RootSeekableFieldSet, FieldSet,
-                               Bit, NullBits, String, CString,
-                               RawBytes, Bytes, PaddingBytes,
-                               Int32, UInt32, UInt64, Enum)
+                           Bit, NullBits, String, CString,
+                           RawBytes, Bytes, PaddingBytes,
+                           Int32, UInt32, UInt64, Enum)
 from hachoir.core.text_handler import textHandler, hexadecimal
 from hachoir.core.endian import LITTLE_ENDIAN, BIG_ENDIAN
 from hachoir.core.bits import str2hex

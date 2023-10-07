@@ -12,10 +12,10 @@ Documents:
 """
 
 from hachoir.field import (FieldSet, Enum,
-                               Bit, Bits,
-                               UInt8, Int16, UInt16, UInt32, Int32,
-                               NullBytes, Bytes, RawBytes, PascalString8, CString, String,
-                               TimestampMac32, TimestampWin64)
+                           Bit, Bits,
+                           UInt8, Int16, UInt16, UInt32, Int32,
+                           NullBytes, Bytes, RawBytes, PascalString8, CString, String,
+                           TimestampMac32, TimestampWin64)
 from hachoir.core.text_handler import displayHandler
 from hachoir.core.endian import LITTLE_ENDIAN
 from hachoir.parser import guessParser

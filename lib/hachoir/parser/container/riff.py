@@ -29,10 +29,10 @@ Thanks to:
 
 from hachoir.parser import Parser
 from hachoir.field import (FieldSet, ParserError,
-                               UInt8, UInt16, UInt32, Enum,
-                               Bit, NullBits, NullBytes,
-                               RawBytes, String, PaddingBytes,
-                               SubFile)
+                           UInt8, UInt16, UInt32, Enum,
+                           Bit, NullBits, NullBytes,
+                           RawBytes, String, PaddingBytes,
+                           SubFile)
 from hachoir.core.tools import alignValue, humanDuration
 from hachoir.core.endian import LITTLE_ENDIAN
 from hachoir.core.text_handler import filesizeHandler, textHandler

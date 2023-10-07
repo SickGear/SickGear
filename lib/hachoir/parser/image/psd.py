@@ -7,7 +7,7 @@ Author: Victor Stinner
 
 from hachoir.parser import Parser
 from hachoir.field import (FieldSet,
-                               UInt16, UInt32, String, NullBytes, Enum, RawBytes)
+                           UInt16, UInt32, String, NullBytes, Enum, RawBytes)
 from hachoir.core.endian import BIG_ENDIAN
 from hachoir.parser.image.photoshop_metadata import Photoshop8BIM
 

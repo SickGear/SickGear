@@ -7,10 +7,10 @@ Author: Christophe Gisquet
 
 from hachoir.parser import Parser
 from hachoir.field import (StaticFieldSet, FieldSet,
-                               Bit, Bits, Enum,
-                               UInt8, UInt16, UInt32, UInt64,
-                               String, TimeDateMSDOS32,
-                               NullBytes, NullBits, RawBytes)
+                           Bit, Bits, Enum,
+                           UInt8, UInt16, UInt32, UInt64,
+                           String, TimeDateMSDOS32,
+                           NullBytes, NullBits, RawBytes)
 from hachoir.core.text_handler import textHandler, filesizeHandler, hexadecimal
 from hachoir.core.endian import LITTLE_ENDIAN
 from hachoir.parser.common.msdos import MSDOSFileAttr32

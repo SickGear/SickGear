@@ -13,9 +13,9 @@ Author: Victor Stinner
 
 from hachoir.parser import Parser
 from hachoir.field import (FieldSet, Enum,
-                               UInt8, UInt16, UInt32, UInt64, TimestampWin64,
-                               String, Bytes, Bit, Bits,
-                               NullBits, NullBytes, PaddingBytes, RawBytes)
+                           UInt8, UInt16, UInt32, UInt64, TimestampWin64,
+                           String, Bytes, Bit, Bits,
+                           NullBits, NullBytes, PaddingBytes, RawBytes)
 from hachoir.core.endian import LITTLE_ENDIAN
 from hachoir.core.text_handler import textHandler, hexadecimal, filesizeHandler
 from hachoir.core.tools import humanFilesize, createDict

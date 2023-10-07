@@ -22,7 +22,7 @@ Kurz.
 
 from hachoir.parser import Parser
 from hachoir.field import (FieldSet, Enum,
-                               UInt16, UInt32, String, RawBytes, NullBytes, SeekableFieldSet, Bit)
+                           UInt16, UInt32, String, RawBytes, NullBytes, SeekableFieldSet, Bit)
 from hachoir.core.endian import LITTLE_ENDIAN
 
 

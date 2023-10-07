@@ -7,8 +7,8 @@ Creation date: 29 october 2008
 
 from hachoir.parser import Parser
 from hachoir.field import (FieldSet,
-                               UInt16, UInt32, TimestampMac32,
-                               String, RawBytes)
+                           UInt16, UInt32, TimestampMac32,
+                           String, RawBytes)
 from hachoir.core.endian import BIG_ENDIAN
 
 

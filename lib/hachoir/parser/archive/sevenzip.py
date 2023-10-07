@@ -14,8 +14,8 @@ Date: February 26 2011
 
 from hachoir.parser import Parser
 from hachoir.field import (Field, FieldSet, ParserError, CString,
-                               Enum, Bit, Bits, UInt8, UInt32, UInt64,
-                               Bytes, RawBytes, TimestampWin64)
+                           Enum, Bit, Bits, UInt8, UInt32, UInt64,
+                           Bytes, RawBytes, TimestampWin64)
 from hachoir.stream import StringInputStream
 from hachoir.core.endian import LITTLE_ENDIAN
 from hachoir.core.text_handler import textHandler, hexadecimal

@@ -14,9 +14,9 @@ Creation: 23 march 2006
 
 from hachoir.parser import Parser
 from hachoir.field import (FieldSet, ParserError,
-                               Enum, Bytes, NullBytes, RawBytes,
-                               UInt8, UInt16, UInt32, Int32, TimestampUnix32,
-                               Bit, Bits, NullBits)
+                           Enum, Bytes, NullBytes, RawBytes,
+                           UInt8, UInt16, UInt32, Int32, TimestampUnix32,
+                           Bit, Bits, NullBits)
 from hachoir.core.endian import NETWORK_ENDIAN, LITTLE_ENDIAN
 from hachoir.core.tools import humanDuration
 from hachoir.core.text_handler import textHandler, hexadecimal

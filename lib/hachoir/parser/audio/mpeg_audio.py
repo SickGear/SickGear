@@ -7,10 +7,10 @@ Author: Victor Stinner
 
 from hachoir.parser import Parser
 from hachoir.field import (FieldSet,
-                               MissingField, ParserError, createOrphanField,
-                               Bit, Bits, Enum,
-                               PaddingBits, PaddingBytes,
-                               RawBytes)
+                           MissingField, ParserError, createOrphanField,
+                           Bit, Bits, Enum,
+                           PaddingBits, PaddingBytes,
+                           RawBytes)
 from hachoir.parser.audio.id3 import ID3v1, ID3v2
 from hachoir.core.endian import BIG_ENDIAN
 from hachoir.core.tools import humanFrequency, humanBitSize

@@ -10,13 +10,16 @@ Creation: 25 march 2005
 """
 
 from hachoir.parser import Parser
-from hachoir.field import (FieldSet, UInt8,
-                               UInt16, Int32, UInt32, Int64, ParserError, Float64,
-                               Character, RawBytes, PascalString8, TimestampUnix32,
-                               Bit, String)
+from hachoir.field import (
+    Field, FieldSet, UInt8,
+    UInt16, Int32, UInt32, Int64, UInt64,
+    ParserError, Float64,
+    Character, RawBytes, PascalString8, TimestampUnix32,
+    Bit, String, NullBits)
 from hachoir.core.endian import LITTLE_ENDIAN
 from hachoir.core.bits import long2raw
 from hachoir.core.text_handler import textHandler, hexadecimal
+from hachoir.core import config
 
 DISASSEMBLE = False
 
@@ -51,12 +54,25 @@ def parseString(parent):
         disassembleBytecode(parent["text"])
 
 
+def createStringValue(parent):
+    if parent.name == "lnotab":
+        return "<lnotab>"
+    return parent["text"]
+
+
 def parseStringRef(parent):
     yield textHandler(UInt32(parent, "ref"), hexadecimal)
 
 
 def createStringRefDesc(parent):
     return "String ref: %s" % parent["ref"].display
+
+
+def createStringRefValue(parent):
+    value = parent["ref"].value
+    if hasattr(parent.root, 'string_table') and 0 <= value < len(parent.root.string_table):
+        return parent.root.string_table[value]
+    return None
 
 # --- Integers ---
 
@@ -69,15 +85,35 @@ def parseInt64(parent):
     yield Int64(parent, "value")
 
 
+def createIntValue(parent):
+    return parent["value"]
+
+
 def parseLong(parent):
     yield Int32(parent, "digit_count")
     for index in range(abs(parent["digit_count"].value)):
         yield UInt16(parent, "digit[]")
 
 
+def createLongValue(parent):
+    is_negative = parent["digit_count"].value < 0
+    count = abs(parent["digit_count"].value)
+    total = 0
+    for index in range(count - 1, -1, -1):
+        total <<= 15
+        total += parent["digit[%u]" % index].value
+    if is_negative:
+        total = -total
+    return total
+
+
 # --- Float and complex ---
 def parseFloat(parent):
     yield PascalString8(parent, "value")
+
+
+def createFloatValue(parent):
+    return float(parent["value"].value)
 
 
 def parseBinaryFloat(parent):
@@ -92,6 +128,12 @@ def parseComplex(parent):
 def parseBinaryComplex(parent):
     yield Float64(parent, "real")
     yield Float64(parent, "complex")
+
+
+def createComplexValue(parent):
+    return complex(
+        float(parent["real"].value),
+        float(parent["complex"].value))
 
 
 # --- Tuple and list ---
@@ -119,6 +161,12 @@ def createTupleDesc(parent):
     return "%s: %s" % (parent.code_info[2], items)
 
 
+def tupleValueCreator(constructor):
+    def createTupleValue(parent):
+        return constructor([v.value for v in parent.array("item")])
+    return createTupleValue
+
+
 # --- Dict ---
 def parseDict(parent):
     """
@@ -139,26 +187,58 @@ def createDictDesc(parent):
     return "Dict: %s" % ("%s keys" % parent.count)
 
 
+def createDictValue(parent):
+    return {k.value: v.value for k, v in zip(parent.array("key"), parent.array("value"))}
+
+
 def parseRef(parent):
     yield UInt32(parent, "n", "Reference")
+
+
+def createRefDesc(parent):
+    value = parent["n"].value
+    if hasattr(parent.root, 'object_table') and 0 <= value < len(parent.root.object_table):
+        return 'Reference: %s' % parent.root.object_table[value].description
+    else:
+        return 'Reference: %d' % value
+
+
+def createRefValue(parent):
+    value = parent["n"].value
+    if hasattr(parent.root, 'object_table') and 0 <= value < len(parent.root.object_table):
+        return parent.root.object_table[value]
+    else:
+        return None
+
+
+def parseASCII(parent):
+    size = UInt32(parent, "len", "Number of ASCII characters")
+    yield size
+    if size.value:
+        yield String(parent, "text", size.value, "String content", charset="ASCII")
 
 
 def parseShortASCII(parent):
     size = UInt8(parent, "len", "Number of ASCII characters")
     yield size
-    yield String(parent, "text", size.value, "String content", charset="ASCII")
+    if size.value:
+        yield String(parent, "text", size.value, "String content", charset="ASCII")
 
 # --- Code ---
 
 
 def parseCode(parent):
-    if 0x3000000 <= parent.root.getVersion():
+    version = parent.root.getVersion()
+    if 0x3000000 <= version:
         yield UInt32(parent, "arg_count", "Argument count")
+        if 0x3080000 <= version:
+            yield UInt32(parent, "posonlyargcount", "Positional only argument count")
         yield UInt32(parent, "kwonlyargcount", "Keyword only argument count")
-        yield UInt32(parent, "nb_locals", "Number of local variables")
+        if version < 0x30B0000:
+            yield UInt32(parent, "nb_locals", "Number of local variables")
         yield UInt32(parent, "stack_size", "Stack size")
         yield UInt32(parent, "flags")
-    elif 0x2030000 <= parent.root.getVersion():
+    elif 0x2030000 <= version:
         yield UInt32(parent, "arg_count", "Argument count")
         yield UInt32(parent, "nb_locals", "Number of local variables")
         yield UInt32(parent, "stack_size", "Stack size")
@@ -168,54 +248,70 @@ def parseCode(parent):
         yield UInt16(parent, "nb_locals", "Number of local variables")
         yield UInt16(parent, "stack_size", "Stack size")
         yield UInt16(parent, "flags")
+
     yield Object(parent, "compiled_code")
     yield Object(parent, "consts")
     yield Object(parent, "names")
-    yield Object(parent, "varnames")
-    if 0x2000000 <= parent.root.getVersion():
-        yield Object(parent, "freevars")
-        yield Object(parent, "cellvars")
+    if 0x30B0000 <= version:
+        yield Object(parent, "co_localsplusnames")
+        yield Object(parent, "co_localspluskinds")
+    else:
+        yield Object(parent, "varnames")
+        if 0x2000000 <= version:
+            yield Object(parent, "freevars")
+            yield Object(parent, "cellvars")
+
     yield Object(parent, "filename")
     yield Object(parent, "name")
-    if 0x2030000 <= parent.root.getVersion():
+    if 0x30B0000 <= version:
+        yield Object(parent, "qualname")
+
+    if 0x2030000 <= version:
         yield UInt32(parent, "firstlineno", "First line number")
     else:
         yield UInt16(parent, "firstlineno", "First line number")
-    yield Object(parent, "lnotab")
+    if 0x30A0000 <= version:
+        yield Object(parent, "linetable")
+        if 0x30B0000 <= version:
+            yield Object(parent, "exceptiontable")
+    else:
+        yield Object(parent, "lnotab")
 
 
 class Object(FieldSet):
     bytecode_info = {
         # Don't contains any data
-        '0': ("null", None, "NULL", None),
-        'N': ("none", None, "None", None),
-        'F': ("false", None, "False", None),
-        'T': ("true", None, "True", None),
-        'S': ("stop_iter", None, "StopIter", None),
-        '.': ("ellipsis", None, "ELLIPSIS", None),
-        '?': ("unknown", None, "Unknown", None),
+        '0': ("null", None, "NULL", None, None),
+        'N': ("none", None, "None", None, lambda parent: None),
+        'F': ("false", None, "False", None, lambda parent: False),
+        'T': ("true", None, "True", None, lambda parent: True),
+        'S': ("stop_iter", None, "StopIter", None, None),
+        '.': ("ellipsis", None, "ELLIPSIS", None, lambda parent: ...),
+        '?': ("unknown", None, "Unknown", None, None),
 
-        'i': ("int32", parseInt32, "Int32", None),
-        'I': ("int64", parseInt64, "Int64", None),
-        'f': ("float", parseFloat, "Float", None),
-        'g': ("bin_float", parseBinaryFloat, "Binary float", None),
-        'x': ("complex", parseComplex, "Complex", None),
-        'y': ("bin_complex", parseBinaryComplex, "Binary complex", None),
-        'l': ("long", parseLong, "Long", None),
-        's': ("string", parseString, "String", None),
-        't': ("interned", parseString, "Interned", None),
-        'u': ("unicode", parseString, "Unicode", None),
-        'R': ("string_ref", parseStringRef, "String ref", createStringRefDesc),
-        '(': ("tuple", parseTuple, "Tuple", createTupleDesc),
-        ')': ("small_tuple", parseSmallTuple, "Tuple", createTupleDesc),
-        '[': ("list", parseTuple, "List", createTupleDesc),
-        '<': ("set", parseTuple, "Set", createTupleDesc),
-        '>': ("frozenset", parseTuple, "Frozen set", createTupleDesc),
-        '{': ("dict", parseDict, "Dict", createDictDesc),
-        'c': ("code", parseCode, "Code", None),
-        'r': ("ref", parseRef, "Reference", None),
-        'z': ("short_ascii", parseShortASCII, "Short ASCII", None),
-        'Z': ("short_ascii_interned", parseShortASCII, "Short ASCII interned", None),
+        'i': ("int32", parseInt32, "Int32", None, createIntValue),
+        'I': ("int64", parseInt64, "Int64", None, createIntValue),
+        'f': ("float", parseFloat, "Float", None, createFloatValue),
+        'g': ("bin_float", parseBinaryFloat, "Binary float", None, createFloatValue),
+        'x': ("complex", parseComplex, "Complex", None, createComplexValue),
+        'y': ("bin_complex", parseBinaryComplex, "Binary complex", None, createComplexValue),
+        'l': ("long", parseLong, "Long", None, createLongValue),
+        's': ("string", parseString, "String", None, createStringValue),
+        't': ("interned", parseString, "Interned", None, createStringValue),
+        'u': ("unicode", parseString, "Unicode", None, createStringValue),
+        'R': ("string_ref", parseStringRef, "String ref", createStringRefDesc, createStringRefValue),
+        '(': ("tuple", parseTuple, "Tuple", createTupleDesc, tupleValueCreator(tuple)),
+        ')': ("small_tuple", parseSmallTuple, "Tuple", createTupleDesc, tupleValueCreator(tuple)),
+        '[': ("list", parseTuple, "List", createTupleDesc, tupleValueCreator(list)),
+        '<': ("set", parseTuple, "Set", createTupleDesc, tupleValueCreator(set)),
+        '>': ("frozenset", parseTuple, "Frozen set", createTupleDesc, tupleValueCreator(frozenset)),
+        '{': ("dict", parseDict, "Dict", createDictDesc, createDictValue),
+        'c': ("code", parseCode, "Code", None, None),
+        'r': ("ref", parseRef, "Reference", createRefDesc, createRefValue),
+        'a': ("ascii", parseASCII, "ASCII", None, createStringValue),
+        'A': ("ascii_interned", parseASCII, "ASCII interned", None, createStringValue),
+        'z': ("short_ascii", parseShortASCII, "Short ASCII", None, createStringValue),
+        'Z': ("short_ascii_interned", parseShortASCII, "Short ASCII interned", None, createStringValue),
     }
 
     def __init__(self, parent, name, **kw):
@@ -227,64 +323,40 @@ class Object(FieldSet):
         self.code_info = self.bytecode_info[code]
         if not name:
             self._name = self.code_info[0]
-        if code == "l":
-            self.createValue = self.createValueLong
-        elif code in ("i", "I", "f", "g"):
-            self.createValue = lambda: self["value"].value
-        elif code == "T":
-            self.createValue = lambda: True
-        elif code == "F":
-            self.createValue = lambda: False
-        elif code in ("x", "y"):
-            self.createValue = self.createValueComplex
-        elif code in ("s", "t", "u"):
-            self.createValue = self.createValueString
-            self.createDisplay = self.createDisplayString
-            if code == 't':
-                if not hasattr(self.root, 'string_table'):
-                    self.root.string_table = []
-                self.root.string_table.append(self)
-        elif code == 'R':
-            if hasattr(self.root, 'string_table'):
-                self.createValue = self.createValueStringRef
+        if code in ("t", "A", "Z"):
+            if not hasattr(self.root, 'string_table'):
+                self.root.string_table = []
+            self.root.string_table.append(self)
 
-    def createValueString(self):
-        if "text" in self:
-            return self["text"].value
-        else:
-            return ""
+    def createValue(self):
+        create = self.code_info[4]
+        if create:
+            res = create(self)
+            if isinstance(res, Field):
+                return res.value
+            else:
+                return res
+        return None
 
-    def createDisplayString(self):
-        if "text" in self:
-            return self["text"].display
-        else:
-            return "(empty)"
-
-    def createValueLong(self):
-        is_negative = self["digit_count"].value < 0
-        count = abs(self["digit_count"].value)
-        total = 0
-        for index in range(count - 1, -1, -1):
-            total <<= 15
-            total += self["digit[%u]" % index].value
-        if is_negative:
-            total = -total
-        return total
-
-    def createValueStringRef(self):
-        return self.root.string_table[self['ref'].value].value
-
-    def createDisplayStringRef(self):
-        return self.root.string_table[self['ref'].value].display
-
-    def createValueComplex(self):
-        return complex(
-            float(self["real"].value),
-            float(self["complex"].value))
+    def createDisplay(self):
+        create = self.code_info[4]
+        if create:
+            res = create(self)
+            if isinstance(res, Field):
+                return res.display
+            res = repr(res)
+            if len(res) >= config.max_string_length:
+                res = res[:config.max_string_length] + "..."
+            return res
+        return None
 
     def createFields(self):
         yield BytecodeChar(self, "bytecode", "Bytecode")
         yield Bit(self, "flag_ref", "Is a reference?")
+        if self["flag_ref"].value:
+            if not hasattr(self.root, 'object_table'):
+                self.root.object_table = []
+            self.root.object_table.append(self)
         parser = self.code_info[1]
         if parser:
             yield from parser(self)
@@ -299,6 +371,16 @@ class Object(FieldSet):
 
 class BytecodeChar(Character):
     static_size = 7
+
+
+PY_RELEASE_LEVEL_ALPHA = 0xA
+PY_RELEASE_LEVEL_FINAL = 0xF
+
+
+def VERSION(major, minor, release_level=PY_RELEASE_LEVEL_FINAL, serial=0):
+    micro = 0
+    return ((major << 24) + (minor << 16) + (micro << 8)
+            + (release_level << 4) + (serial << 0))
 
 
 class PythonCompiledFile(Parser):
@@ -394,7 +476,90 @@ class PythonCompiledFile(Parser):
         3377: ("Python 3.6b1 ", 0x3060000),
         3378: ("Python 3.6b2 ", 0x3060000),
         3379: ("Python 3.6rc1", 0x3060000),
-        3390: ("Python 3.7a0 ", 0x3070000),
+        3390: ("Python 3.7a1", 0x30700A1),
+        3391: ("Python 3.7a2", 0x30700A2),
+        3392: ("Python 3.7a4", 0x30700A4),
+        3393: ("Python 3.7b1", 0x30700B1),
+        3394: ("Python 3.7b5", 0x30700B5),
+        3400: ("Python 3.8a1", VERSION(3, 8)),
+        3401: ("Python 3.8a1", VERSION(3, 8)),
+        3410: ("Python 3.8a1", VERSION(3, 8)),
+        3411: ("Python 3.8b2", VERSION(3, 8)),
+        3412: ("Python 3.8b2", VERSION(3, 8)),
+        3413: ("Python 3.8b4", VERSION(3, 8)),
+        3420: ("Python 3.9a0", VERSION(3, 9)),
+        3421: ("Python 3.9a0", VERSION(3, 9)),
+        3422: ("Python 3.9a0", VERSION(3, 9)),
+        3423: ("Python 3.9a2", VERSION(3, 9)),
+        3424: ("Python 3.9a2", VERSION(3, 9)),
+        3425: ("Python 3.9a2", VERSION(3, 9)),
+        3430: ("Python 3.10a1", VERSION(3, 10)),
+        3431: ("Python 3.10a1", VERSION(3, 10)),
+        3432: ("Python 3.10a2", VERSION(3, 10)),
+        3433: ("Python 3.10a2", VERSION(3, 10)),
+        3434: ("Python 3.10a6", VERSION(3, 10)),
+        3435: ("Python 3.10a7", VERSION(3, 10)),
+        3436: ("Python 3.10b1", VERSION(3, 10)),
+        3437: ("Python 3.10b1", VERSION(3, 10)),
+        3438: ("Python 3.10b1", VERSION(3, 10)),
+        3439: ("Python 3.10b1", VERSION(3, 10)),
+        3450: ("Python 3.11a1", VERSION(3, 11)),
+        3451: ("Python 3.11a1", VERSION(3, 11)),
+        3452: ("Python 3.11a1", VERSION(3, 11)),
+        3453: ("Python 3.11a1", VERSION(3, 11)),
+        3454: ("Python 3.11a1", VERSION(3, 11)),
+        3455: ("Python 3.11a1", VERSION(3, 11)),
+        3456: ("Python 3.11a1", VERSION(3, 11)),
+        3457: ("Python 3.11a1", VERSION(3, 11)),
+        3458: ("Python 3.11a1", VERSION(3, 11)),
+        3459: ("Python 3.11a1", VERSION(3, 11)),
+        3460: ("Python 3.11a1", VERSION(3, 11)),
+        3461: ("Python 3.11a1", VERSION(3, 11)),
+        3462: ("Python 3.11a2", VERSION(3, 11)),
+        3463: ("Python 3.11a3", VERSION(3, 11)),
+        3464: ("Python 3.11a3", VERSION(3, 11)),
+        3465: ("Python 3.11a3", VERSION(3, 11)),
+        3466: ("Python 3.11a4", VERSION(3, 11)),
+        3467: ("Python 3.11a4", VERSION(3, 11)),
+        3468: ("Python 3.11a4", VERSION(3, 11)),
+        3469: ("Python 3.11a4", VERSION(3, 11)),
+        3470: ("Python 3.11a4", VERSION(3, 11)),
+        3471: ("Python 3.11a4", VERSION(3, 11)),
+        3472: ("Python 3.11a4", VERSION(3, 11)),
+        3473: ("Python 3.11a4", VERSION(3, 11)),
+        3474: ("Python 3.11a4", VERSION(3, 11)),
+        3475: ("Python 3.11a5", VERSION(3, 11)),
+        3476: ("Python 3.11a5", VERSION(3, 11)),
+        3477: ("Python 3.11a5", VERSION(3, 11)),
+        3478: ("Python 3.11a5", VERSION(3, 11)),
+        3479: ("Python 3.11a5", VERSION(3, 11)),
+        3480: ("Python 3.11a5", VERSION(3, 11)),
+        3481: ("Python 3.11a5", VERSION(3, 11)),
+        3482: ("Python 3.11a5", VERSION(3, 11)),
+        3483: ("Python 3.11a5", VERSION(3, 11)),
+        3484: ("Python 3.11a5", VERSION(3, 11)),
+        3485: ("Python 3.11a5", VERSION(3, 11)),
+        3486: ("Python 3.11a6", VERSION(3, 11)),
+        3487: ("Python 3.11a6", VERSION(3, 11)),
+        3488: ("Python 3.11a6", VERSION(3, 11)),
+        3489: ("Python 3.11a6", VERSION(3, 11)),
+        3490: ("Python 3.11a6", VERSION(3, 11)),
+        3491: ("Python 3.11a6", VERSION(3, 11)),
+        3492: ("Python 3.11a7", VERSION(3, 11)),
+        3493: ("Python 3.11a7", VERSION(3, 11)),
+        3494: ("Python 3.11a7", VERSION(3, 11)),
+        3500: ("Python 3.12a1", VERSION(3, 12)),
+        3501: ("Python 3.12a1", VERSION(3, 12)),
+        3502: ("Python 3.12a1", VERSION(3, 12)),
+        3503: ("Python 3.12a1", VERSION(3, 12)),
+        3504: ("Python 3.12a1", VERSION(3, 12)),
+        3505: ("Python 3.12a1", VERSION(3, 12)),
+        3506: ("Python 3.12a1", VERSION(3, 12)),
+        3507: ("Python 3.12a1", VERSION(3, 12)),
+        3508: ("Python 3.12a1", VERSION(3, 12)),
+        3509: ("Python 3.12a1", VERSION(3, 12)),
+        3510: ("Python 3.12a1", VERSION(3, 12)),
+        3511: ("Python 3.12a1", VERSION(3, 12)),
     }
 
     # Dictionnary which associate the pyc signature (4-byte long string)
@@ -411,13 +576,7 @@ class PythonCompiledFile(Parser):
         if self["magic_string"].value != "\r\n":
             return r"Wrong magic string (\r\n)"
 
-        version = self.getVersion()
-        if version >= 0x3030000 and self['magic_number'].value >= 3200:
-            offset = 12
-        else:
-            offset = 8
-        value = self.stream.readBits(offset * 8, 7, self.endian)
-        if value != ord(b'c'):
+        if self["content/bytecode"].value != "c":
             return "First object bytecode is not code"
         return True
 
@@ -430,8 +589,23 @@ class PythonCompiledFile(Parser):
     def createFields(self):
         yield UInt16(self, "magic_number", "Magic number")
         yield String(self, "magic_string", 2, r"Magic string \r\n", charset="ASCII")
-        yield TimestampUnix32(self, "timestamp", "Timestamp")
+
         version = self.getVersion()
-        if version >= 0x3030000 and self['magic_number'].value >= 3200:
-            yield UInt32(self, "filesize", "Size of the Python source file (.py) modulo 2**32")
+
+        # PEP 552: Deterministic pycs #31650 (Python 3.7a4); magic=3392
+        if version >= 0x30700A4:
+            yield Bit(self, "use_hash", "Is hash based?")
+            yield Bit(self, "checked")
+            yield NullBits(self, "reserved", 30)
+            use_hash = self['use_hash'].value
+        else:
+            use_hash = False
+
+        if use_hash:
+            yield UInt64(self, "hash", "SipHash hash of the source file")
+        else:
+            yield TimestampUnix32(self, "timestamp", "Timestamp modulo 2**32")
+            if version >= 0x3030000 and self['magic_number'].value >= 3200:
+                yield UInt32(self, "filesize", "Size of the Python source file (.py) modulo 2**32")
+
         yield Object(self, "content")

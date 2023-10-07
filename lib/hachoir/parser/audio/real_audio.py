@@ -10,9 +10,9 @@ Samples:
 
 from hachoir.parser import Parser
 from hachoir.field import (FieldSet,
-                               UInt8, UInt16, UInt32,
-                               Bytes, RawBytes, String,
-                               PascalString8)
+                           UInt8, UInt16, UInt32,
+                           Bytes, RawBytes, String,
+                           PascalString8)
 from hachoir.core.tools import humanFrequency
 from hachoir.core.text_handler import displayHandler
 from hachoir.core.endian import BIG_ENDIAN

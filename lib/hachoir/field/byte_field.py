@@ -20,7 +20,7 @@ class RawBytes(Field):
 
     def __init__(self, parent, name, length, description="Raw data"):
         assert issubclass(parent.__class__, Field)
-        if not(0 < length <= MAX_LENGTH):
+        if not (0 < length <= MAX_LENGTH):
             raise FieldError("Invalid RawBytes length (%s)!" % length)
         Field.__init__(self, parent, name, length * 8, description)
         self._display = None

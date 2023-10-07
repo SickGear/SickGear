@@ -6,7 +6,7 @@ Author: Victor Stinner
 
 from hachoir.parser import Parser
 from hachoir.field import (FieldSet, ParserError,
-                               UInt8, UInt16, UInt32, Enum, RawBytes)
+                           UInt8, UInt16, UInt32, Enum, RawBytes)
 from hachoir.parser.image.common import PaletteRGBA
 from hachoir.core.endian import LITTLE_ENDIAN
 from hachoir.parser.common.win32 import BitmapInfoHeader

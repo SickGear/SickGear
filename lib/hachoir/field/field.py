@@ -41,7 +41,7 @@ class Field(Logger):
         None: field size is computed dynamically.
         int: field size, in bits.
         callable: function that receives the same arguments as the constructor,
-            without ``parent``.
+        without ``parent``.
     """
 
     is_field_set = False
@@ -232,7 +232,7 @@ class Field(Logger):
         Args:
             key (str): relative or absolute path for the desired field.
             const (bool): For field sets, whether to consume additional input to
-                find a matching field.
+            find a matching field.
 
         Returns:
             Field: The field matching the provided path.

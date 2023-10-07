@@ -1,5 +1,5 @@
 from hachoir.metadata.metadata import (registerExtractor, Metadata,
-                                           RootMetadata, MultipleMetadata)
+                                       RootMetadata, MultipleMetadata)
 from hachoir.parser.image import (
     BmpFile, IcoFile, PcxFile, GifFile, PngFile, TiffFile,
     XcfFile, TargaFile, WMF_File, PsdFile)
