@@ -11,6 +11,11 @@
 * Add support for Brotli compression
 
 
+### 3.30.2 (2023-10-08 02:00:00 UTC)
+
+* Update UnRar x64 for Windows 6.23 to 6.24
+
+
 ### 3.30.1 (2023-10-02 22:50:00 UTC)
 
 * Change allow Python 3.12.0 and 3.11.6
