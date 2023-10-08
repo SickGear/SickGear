@@ -3,9 +3,10 @@
 * Update attr 22.2.0 (683d056) to 23.1.0 (67e4ff2)
 * Update Beautiful Soup 4.12.2 to 4.12.2 (30c58a1)
 * Update diskcache 5.6.1 (4d30686) to 5.6.3 (323787f)
-* Update Pytvmaze library 2.0.8 (81888a5) to 2.0.8 (b451391)
-* Update soupsieve 2.4.1 (2e66beb) to 2.5.0 (dc71495)
 * Update hachoir 3.1.2 (f739b43) to 3.2.0 (38d759f)
+* Update Pytvmaze library 2.0.8 (81888a5) to 2.0.8 (b451391)
+* Update Rarfile 4.1a1 (8a72967) to 4.1 (c9140d8)
+* Update soupsieve 2.4.1 (2e66beb) to 2.5.0 (dc71495)
 
 
 ### 3.30.1 (2023-10-02 22:50:00 UTC)
