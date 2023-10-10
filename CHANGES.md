@@ -1,4 +1,9 @@
-﻿### 3.30.2 (2023-10-08 02:00:00 UTC)
+﻿### 3.30.3 (2023-10-10 07:30:00 UTC)
+
+* Change bad anon redirect service for an open source service
+
+
+### 3.30.2 (2023-10-08 02:00:00 UTC)
 
 * Update UnRar x64 for Windows 6.23 to 6.24
 
