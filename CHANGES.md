@@ -1,4 +1,9 @@
-﻿### 3.30.3 (2023-10-10 07:30:00 UTC)
+﻿### 3.30.4 (2023-10-12 11:50:00 UTC)
+
+* Add metadata source attribution in footer
+
+
+### 3.30.3 (2023-10-10 07:30:00 UTC)
 
 * Change bad anon redirect service for an open source service
 

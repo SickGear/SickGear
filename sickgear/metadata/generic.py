@@ -1012,7 +1012,7 @@ class GenericMetadata(object):
                              ):
         # type: (...) -> Optional[bytes, List[AnyStr]]
         """
-        Gets an image URL from theTVDB.com, fanart.tv and TMDB.com, downloads it and returns the data.
+        Gets an image URL from theTVDB.com, fanart.tv and TMDB.org, downloads it and returns the data.
         If type is fanart, multiple image src urls are returned instead of a single data image.
 
         image_type: type of image to retrieve (currently supported: fanart, poster, banner, poster_thumb, banner_thumb)

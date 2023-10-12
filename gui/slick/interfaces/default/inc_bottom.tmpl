@@ -3,7 +3,7 @@
 #import sickgear
 #from sickgear import db
 #from sickgear.common import Quality, SKIPPED, WANTED
-#from sickgear.helpers import df
+#from sickgear.helpers import anon_url, df
 #from sickgear.webserve import MainHandler
 <% def sg_var(varname, default=False): return getattr(sickgear, varname, default) %>#slurp#
 <% def sg_str(varname, default=''): return getattr(sickgear, varname, default) %>#slurp#
@@ -97,11 +97,12 @@ if min_output:
 							<td style="text-align:left">$drive[0]</td>
 						</tr>
         #end for
-					</tobdy>
+					</tbody>
 				</table>
 			</div>
     #end if
 #end if
+			<p style="margin-top:6px">Metadata from <a href=<%= anon_url('https://thetvdb.com') %> rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;">TheTVDB</a>, <a href=<%= anon_url('https://tvmaze.com') %> rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;">TVmaze</a>, and <a href=<%= anon_url('https://tmdb.org') %> rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;">TMDB</a>
 		</div>
 <script>
 var footerTimeUrl = '$localRoot/get-footer-time';
