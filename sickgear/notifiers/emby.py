@@ -127,15 +127,15 @@ class EmbyNotifier(Notifier):
 
             response = self._request(f'Library/{endpoint}/Updated', cur_host, keys[i], **args)
             # Emby will initiate a LibraryMonitor path refresh one minute after this success
-            if 200 <= self.response.get('status_code') < 300 and self.response.get('ok'):
+            if 200 <= (self.response.get('status_code') or 0) < 300 and self.response.get('ok'):
                 self._log(f'Success: update {mode_to_log} sent to host {cur_host} in a library updated call')
                 continue
-            elif 401 == self.response.get('status_code'):
+            elif 401 == self.response.get('status_code', 0):
                 self._log_warning(f'Failed to authenticate with {cur_host}')
-            elif 404 == self.response.get('status_code'):
+            elif 404 == self.response.get('status_code', 0):
                 args = dict(post_json={'Updates': [{'Path': '', 'UpdateType': ''}]})
                 self._request(f'Library/Media/Updated', cur_host, keys[i], **args)
-                if 200 <= self.response.get('status_code') < 300 and self.response.get('ok'):
+                if 200 <= (self.response.get('status_code') or 0) < 300 and self.response.get('ok'):
                     self._log(f'Success: fallback to sending Library/Media/Updated call'
                               f' to scan all shows at host {cur_host}')
                     continue
