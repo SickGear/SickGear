@@ -110,7 +110,7 @@ class DBConnection(object):
                 helpers.copy_file(db_alt, db_src)
 
         self.filename = filename
-        self.connection = sqlite3.connect(db_src, 20)
+        self.connection = sqlite3.connect(db_src, timeout=20)
 
         if 'dict' == row_type:
             self.connection.row_factory = self._dict_factory
@@ -150,7 +150,7 @@ class DBConnection(object):
 
         try:
             # copy into this DB
-            backup_con = sqlite3.connect(target_db, 20)
+            backup_con = sqlite3.connect(target_db, timeout=20)
             with backup_con:
                 with db_lock:
                     self.connection.backup(backup_con, progress=progress)
