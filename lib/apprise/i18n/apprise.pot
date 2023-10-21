@@ -6,16 +6,16 @@
 #, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: apprise 1.3.0\n"
+"Project-Id-Version: apprise 1.6.0\n"
 "Report-Msgid-Bugs-To: lead2gold@gmail.com\n"
-"POT-Creation-Date: 2023-02-22 17:31-0500\n"
+"POT-Creation-Date: 2023-10-15 15:56-0400\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Generated-By: Babel 2.9.1\n"
+"Generated-By: Babel 2.11.0\n"
 
 msgid "A local Gnome environment is required."
 msgstr ""
@@ -164,6 +164,9 @@ msgstr ""
 msgid "Consumer Secret"
 msgstr ""
 
+msgid "Content Placement"
+msgstr ""
+
 msgid "Country"
 msgstr ""
 
@@ -209,6 +212,9 @@ msgstr ""
 msgid "Device Name"
 msgstr ""
 
+msgid "Discord Event ID"
+msgstr ""
+
 msgid "Display Footer"
 msgstr ""
 
@@ -222,12 +228,6 @@ msgid "Email"
 msgstr ""
 
 msgid "Email Header"
-msgstr ""
-
-msgid "Encrypted Password"
-msgstr ""
-
-msgid "Encrypted Salt"
 msgstr ""
 
 msgid "Entity"
@@ -270,6 +270,9 @@ msgid "From Email"
 msgstr ""
 
 msgid "From Name"
+msgstr ""
+
+msgid "From Phone ID"
 msgstr ""
 
 msgid "From Phone No"
@@ -317,6 +320,9 @@ msgstr ""
 msgid "Integration ID"
 msgstr ""
 
+msgid "Integration Key"
+msgstr ""
+
 msgid "Is Ad?"
 msgstr ""
 
@@ -351,6 +357,9 @@ msgid "MacOSX Notification"
 msgstr ""
 
 msgid "Master Key"
+msgstr ""
+
+msgid "Matrix API Verion"
 msgstr ""
 
 msgid "Memory"
@@ -433,6 +442,12 @@ msgstr ""
 msgid "Payload Extras"
 msgstr ""
 
+msgid "Ping Discord Role"
+msgstr ""
+
+msgid "Ping Discord User"
+msgstr ""
+
 msgid "Port"
 msgstr ""
 
@@ -451,7 +466,13 @@ msgstr ""
 msgid "Provider Key"
 msgstr ""
 
+msgid "Pushkey"
+msgstr ""
+
 msgid "QOS"
+msgstr ""
+
+msgid "Query Method"
 msgstr ""
 
 msgid "Region"
@@ -475,22 +496,25 @@ msgstr ""
 msgid "Retry"
 msgstr ""
 
-msgid "Rooms"
-msgstr ""
-
-msgid "Route"
+msgid "Room ID"
 msgstr ""
 
 msgid "Route Group"
 msgstr ""
 
-msgid "Routing Key"
-msgstr ""
-
 msgid "SMTP Server"
 msgstr ""
 
+msgid "Salt"
+msgstr ""
+
 msgid "Schema"
+msgstr ""
+
+msgid "Secret"
+msgstr ""
+
+msgid "Secret API Key"
 msgstr ""
 
 msgid "Secret Access Key"
@@ -518,6 +542,9 @@ msgid "Server Timeout"
 msgstr ""
 
 msgid "Severity"
+msgstr ""
+
+msgid "Short URL"
 msgstr ""
 
 msgid "Show Status"
@@ -557,9 +584,6 @@ msgid "Sticky"
 msgstr ""
 
 msgid "Subtitle"
-msgstr ""
-
-msgid "Syslog Mode"
 msgstr ""
 
 msgid "Tags"
@@ -658,6 +682,15 @@ msgstr ""
 msgid "Template Data"
 msgstr ""
 
+msgid "Template ID"
+msgstr ""
+
+msgid "Template Mapping"
+msgstr ""
+
+msgid "Template Name"
+msgstr ""
+
 msgid "Template Path"
 msgstr ""
 
@@ -706,10 +739,16 @@ msgstr ""
 msgid "Topic"
 msgstr ""
 
+msgid "Topic Thread ID"
+msgstr ""
+
 msgid "Transmitter Groups"
 msgstr ""
 
 msgid "URL"
+msgstr ""
+
+msgid "URL Prefix"
 msgstr ""
 
 msgid "URL Title"
@@ -794,5 +833,8 @@ msgid "libdbus-1.so.x must be installed."
 msgstr ""
 
 msgid "ttl"
+msgstr ""
+
+msgid "validity"
 msgstr ""
 

@@ -26,7 +26,6 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-import re
 import requests
 
 from ..common import NotifyType
@@ -34,43 +33,57 @@ from .NotifyBase import NotifyBase
 from ..utils import validate_regex
 from ..AppriseLocale import gettext_lazy as _
 
-
-# Register at https://sct.ftqq.com/
-#   - do as the page describe and you will get the token
-
 # Syntax:
-#  schan://{access_token}/
+#  schan://{key}/
 
 
-class NotifyServerChan(NotifyBase):
+class NotifyPushDeer(NotifyBase):
     """
-    A wrapper for ServerChan Notifications
+    A wrapper for PushDeer Notifications
     """
 
     # The default descriptive name associated with the Notification
-    service_name = 'ServerChan'
+    service_name = 'PushDeer'
 
     # The services URL
-    service_url = 'https://sct.ftqq.com/'
+    service_url = 'https://www.pushdeer.com/'
 
-    # All notification requests are secure
-    secure_protocol = 'schan'
+    # Insecure Protocol Access
+    protocol = 'pushdeer'
+
+    # Secure Protocol
+    secure_protocol = 'pushdeers'
 
     # A URL that takes you to the setup/help of the specific protocol
-    setup_url = 'https://github.com/caronc/apprise/wiki/Notify_serverchan'
+    setup_url = 'https://github.com/caronc/apprise/wiki/Notify_PushDeer'
 
-    # ServerChan API
-    notify_url = 'https://sctapi.ftqq.com/{token}.send'
+    # Default hostname
+    default_hostname = 'api2.pushdeer.com'
+
+    # PushDeer API
+    notify_url = '{schema}://{host}:{port}/message/push?pushkey={pushKey}'
 
     # Define object templates
     templates = (
-        '{schema}://{token}',
+        '{schema}://{pushkey}',
+        '{schema}://{host}/{pushkey}',
+        '{schema}://{host}:{port}/{pushkey}',
     )
 
     # Define our template tokens
     template_tokens = dict(NotifyBase.template_tokens, **{
-        'token': {
-            'name': _('Token'),
+        'host': {
+            'name': _('Hostname'),
+            'type': 'string',
+        },
+        'port': {
+            'name': _('Port'),
+            'type': 'int',
+            'min': 1,
+            'max': 65535,
+        },
+        'pushkey': {
+            'name': _('Pushkey'),
             'type': 'string',
             'private': True,
             'required': True,
@@ -78,37 +91,54 @@ class NotifyServerChan(NotifyBase):
         },
     })
 
-    def __init__(self, token, **kwargs):
+    def __init__(self, pushkey, **kwargs):
         """
-        Initialize ServerChan Object
+        Initialize PushDeer Object
         """
         super().__init__(**kwargs)
 
-        # Token (associated with project)
-        self.token = validate_regex(
-            token, *self.template_tokens['token']['regex'])
-        if not self.token:
-            msg = 'An invalid ServerChan API Token ' \
-                  '({}) was specified.'.format(token)
+        # PushKey (associated with project)
+        self.push_key = validate_regex(
+            pushkey, *self.template_tokens['pushkey']['regex'])
+        if not self.push_key:
+            msg = 'An invalid PushDeer API Pushkey ' \
+                  '({}) was specified.'.format(pushkey)
             self.logger.warning(msg)
             raise TypeError(msg)
 
     def send(self, body, title='', notify_type=NotifyType.INFO, **kwargs):
         """
-        Perform ServerChan Notification
+        Perform PushDeer Notification
         """
+
+        # Prepare our persistent_notification.create payload
         payload = {
-            'title': title,
-            'desp': body,
+            'text': title if title else body,
+            'type': 'text',
+            'desp': body if title else '',
         }
 
+        # Set our schema
+        schema = 'https' if self.secure else 'http'
+
+        # Set host
+        host = self.default_hostname
+        if self.host:
+            host = self.host
+
+        # Set port
+        port = 443 if self.secure else 80
+        if self.port:
+            port = self.port
+
         # Our Notification URL
-        notify_url = self.notify_url.format(token=self.token)
+        notify_url = self.notify_url.format(
+            schema=schema, host=host, port=port, pushKey=self.push_key)
 
         # Some Debug Logging
-        self.logger.debug('ServerChan URL: {} (cert_verify={})'.format(
+        self.logger.debug('PushDeer URL: {} (cert_verify={})'.format(
             notify_url, self.verify_certificate))
-        self.logger.debug('ServerChan Payload: {}'.format(payload))
+        self.logger.debug('PushDeer Payload: {}'.format(payload))
 
         # Always call throttle before any remote server i/o is made
         self.throttle()
@@ -117,16 +147,17 @@ class NotifyServerChan(NotifyBase):
             r = requests.post(
                 notify_url,
                 data=payload,
+                timeout=self.request_timeout,
             )
 
             if r.status_code != requests.codes.ok:
                 # We had a problem
                 status_str = \
-                    NotifyServerChan.http_response_code_lookup(
+                    NotifyPushDeer.http_response_code_lookup(
                         r.status_code)
 
                 self.logger.warning(
-                    'Failed to send ServerChan notification: '
+                    'Failed to send PushDeer notification: '
                     '{}{}error={}.'.format(
                         status_str,
                         ', ' if status_str else '',
@@ -137,11 +168,11 @@ class NotifyServerChan(NotifyBase):
                 return False
 
             else:
-                self.logger.info('Sent ServerChan notification.')
+                self.logger.info('Sent PushDeer notification.')
 
         except requests.RequestException as e:
             self.logger.warning(
-                'A Connection error occured sending ServerChan '
+                'A Connection error occured sending PushDeer '
                 'notification.'
             )
             self.logger.debug('Socket Exception: %s' % str(e))
@@ -154,9 +185,16 @@ class NotifyServerChan(NotifyBase):
         Returns the URL built dynamically based on specified arguments.
         """
 
-        return '{schema}://{token}'.format(
-            schema=self.secure_protocol,
-            token=self.pprint(self.token, privacy, safe=''))
+        if self.host:
+            url = '{schema}://{host}{port}/{pushkey}'
+        else:
+            url = '{schema}://{pushkey}'
+
+        return url.format(
+            schema=self.secure_protocol if self.secure else self.protocol,
+            host=self.host,
+            port='' if not self.port else ':{}'.format(self.port),
+            pushkey=self.pprint(self.push_key, privacy, safe=''))
 
     @staticmethod
     def parse_url(url):
@@ -169,8 +207,12 @@ class NotifyServerChan(NotifyBase):
             # We're done early as we couldn't parse the URL
             return results
 
-        pattern = 'schan://([a-zA-Z0-9]+)/' + \
-                  ('?' if not url.endswith('/') else '')
-        result = re.match(pattern, url)
-        results['token'] = result.group(1) if result else ''
+        fullpaths = NotifyPushDeer.split_path(results['fullpath'])
+
+        if len(fullpaths) == 0:
+            results['pushkey'] = results['host']
+            results['host'] = None
+        else:
+            results['pushkey'] = fullpaths.pop()
+
         return results

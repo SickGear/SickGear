@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# BSD 3-Clause License
+# BSD 2-Clause License
 #
 # Apprise - Push Notification Library.
 # Copyright (c) 2023, Chris Caron <lead2gold@gmail.com>
@@ -13,10 +13,6 @@
 # 2. Redistributions in binary form must reproduce the above copyright notice,
 #    this list of conditions and the following disclaimer in the documentation
 #    and/or other materials provided with the distribution.
-#
-# 3. Neither the name of the copyright holder nor the names of its
-#    contributors may be used to endorse or promote products derived from
-#    this software without specific prior written permission.
 #
 # THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 # AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
@@ -78,7 +74,6 @@ class NotifyVoipms(NotifyBase):
 
     # Define object templates
     templates = (
-        '{schema}://{password}:{email}',
         '{schema}://{password}:{email}/{from_phone}/{targets}',
     )
 
@@ -111,6 +106,7 @@ class NotifyVoipms(NotifyBase):
         'targets': {
             'name': _('Targets'),
             'type': 'list:string',
+            'required': True,
         },
     })
 
@@ -328,6 +324,13 @@ class NotifyVoipms(NotifyBase):
             targets='/'.join(
                 ['1' + NotifyVoipms.quote(x, safe='') for x in self.targets]),
             params=NotifyVoipms.urlencode(params))
+
+    def __len__(self):
+        """
+        Returns the number of targets associated with this notification
+        """
+        targets = len(self.targets)
+        return targets if targets > 0 else 1
 
     @staticmethod
     def parse_url(url):

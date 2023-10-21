@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# BSD 3-Clause License
+# BSD 2-Clause License
 #
 # Apprise - Push Notification Library.
 # Copyright (c) 2023, Chris Caron <lead2gold@gmail.com>
@@ -13,10 +13,6 @@
 # 2. Redistributions in binary form must reproduce the above copyright notice,
 #    this list of conditions and the following disclaimer in the documentation
 #    and/or other materials provided with the distribution.
-#
-# 3. Neither the name of the copyright holder nor the names of its
-#    contributors may be used to endorse or promote products derived from
-#    this software without specific prior written permission.
 #
 # THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 # AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
@@ -39,6 +35,17 @@ from ..URLBase import PrivacyMode
 from ..common import NotifyImageSize
 from ..common import NotifyType
 from ..AppriseLocale import gettext_lazy as _
+
+
+class JSONPayloadField:
+    """
+    Identifies the fields available in the JSON Payload
+    """
+    VERSION = 'version'
+    TITLE = 'title'
+    MESSAGE = 'message'
+    ATTACHMENTS = 'attachments'
+    MESSAGETYPE = 'type'
 
 
 # Defines the method to send the notification
@@ -69,12 +76,21 @@ class NotifyJSON(NotifyBase):
     # A URL that takes you to the setup/help of the specific protocol
     setup_url = 'https://github.com/caronc/apprise/wiki/Notify_Custom_JSON'
 
+    # Support attachments
+    attachment_support = True
+
     # Allows the user to specify the NotifyImageSize object
     image_size = NotifyImageSize.XY_128
 
     # Disable throttle rate for JSON requests since they are normally
     # local anyway
     request_rate_per_sec = 0
+
+    # Define the JSON version to place in all payloads
+    # Version: Major.Minor,  Major is only updated if the entire schema is
+    # changed. If just adding new items (or removing old ones, only increment
+    # the Minor!
+    json_version = '1.0'
 
     # Define object templates
     templates = (
@@ -246,7 +262,7 @@ class NotifyJSON(NotifyBase):
 
         # Track our potential attachments
         attachments = []
-        if attach:
+        if attach and self.attachment_support:
             for attachment in attach:
                 # Perform some simple error checking
                 if not attachment:
@@ -274,20 +290,30 @@ class NotifyJSON(NotifyBase):
                     self.logger.debug('I/O Exception: %s' % str(e))
                     return False
 
-        # prepare JSON Object
+        # Prepare JSON Object
         payload = {
-            # Version: Major.Minor,  Major is only updated if the entire
-            # schema is changed. If just adding new items (or removing
-            # old ones, only increment the Minor!
-            'version': '1.0',
-            'title': title,
-            'message': body,
-            'attachments': attachments,
-            'type': notify_type,
+            JSONPayloadField.VERSION: self.json_version,
+            JSONPayloadField.TITLE: title,
+            JSONPayloadField.MESSAGE: body,
+            JSONPayloadField.ATTACHMENTS: attachments,
+            JSONPayloadField.MESSAGETYPE: notify_type,
         }
 
-        # Apply any/all payload over-rides defined
-        payload.update(self.payload_extras)
+        for key, value in self.payload_extras.items():
+
+            if key in payload:
+                if not value:
+                    # Do not store element in payload response
+                    del payload[key]
+
+                else:
+                    # Re-map
+                    payload[value] = payload[key]
+                    del payload[key]
+
+            else:
+                # Append entry
+                payload[key] = value
 
         auth = None
         if self.user:

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# BSD 3-Clause License
+# BSD 2-Clause License
 #
 # Apprise - Push Notification Library.
 # Copyright (c) 2023, Chris Caron <lead2gold@gmail.com>
@@ -13,10 +13,6 @@
 # 2. Redistributions in binary form must reproduce the above copyright notice,
 #    this list of conditions and the following disclaimer in the documentation
 #    and/or other materials provided with the distribution.
-#
-# 3. Neither the name of the copyright holder nor the names of its
-#    contributors may be used to endorse or promote products derived from
-#    this software without specific prior written permission.
 #
 # THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 # AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
@@ -33,6 +29,7 @@
 import re
 import requests
 from json import dumps
+import base64
 
 from .NotifyBase import NotifyBase
 from ..URLBase import PrivacyMode
@@ -40,6 +37,20 @@ from ..common import NotifyType
 from ..utils import parse_list
 from ..utils import validate_regex
 from ..AppriseLocale import gettext_lazy as _
+
+
+class AppriseAPIMethod:
+    """
+    Defines the method to post data tot he remote server
+    """
+    JSON = 'json'
+    FORM = 'form'
+
+
+APPRISE_API_METHODS = (
+    AppriseAPIMethod.FORM,
+    AppriseAPIMethod.JSON,
+)
 
 
 class NotifyAppriseAPI(NotifyBase):
@@ -62,9 +73,12 @@ class NotifyAppriseAPI(NotifyBase):
     # A URL that takes you to the setup/help of the specific protocol
     setup_url = 'https://github.com/caronc/apprise/wiki/Notify_apprise_api'
 
+    # Support attachments
+    attachment_support = True
+
     # Depending on the number of transactions/notifications taking place, this
     # could take a while. 30 seconds should be enough to perform the task
-    socket_connect_timeout = 30.0
+    socket_read_timeout = 30.0
 
     # Disable throttle rate for Apprise API requests since they are normally
     # local anyway
@@ -119,6 +133,12 @@ class NotifyAppriseAPI(NotifyBase):
             'name': _('Tags'),
             'type': 'string',
         },
+        'method': {
+            'name': _('Query Method'),
+            'type': 'choice:string',
+            'values': APPRISE_API_METHODS,
+            'default': APPRISE_API_METHODS[0],
+        },
         'to': {
             'alias_of': 'token',
         },
@@ -132,7 +152,8 @@ class NotifyAppriseAPI(NotifyBase):
         },
     }
 
-    def __init__(self, token=None, tags=None, headers=None, **kwargs):
+    def __init__(self, token=None, tags=None, method=None, headers=None,
+                 **kwargs):
         """
         Initialize Apprise API Object
 
@@ -142,15 +163,19 @@ class NotifyAppriseAPI(NotifyBase):
         """
         super().__init__(**kwargs)
 
-        self.fullpath = kwargs.get('fullpath')
-        if not isinstance(self.fullpath, str):
-            self.fullpath = '/'
-
         self.token = validate_regex(
             token, *self.template_tokens['token']['regex'])
         if not self.token:
             msg = 'The Apprise API token specified ({}) is invalid.'\
                 .format(token)
+            self.logger.warning(msg)
+            raise TypeError(msg)
+
+        self.method = self.template_args['method']['default'] \
+            if not isinstance(method, str) else method.lower()
+
+        if self.method not in APPRISE_API_METHODS:
+            msg = 'The method specified ({}) is invalid.'.format(method)
             self.logger.warning(msg)
             raise TypeError(msg)
 
@@ -169,8 +194,13 @@ class NotifyAppriseAPI(NotifyBase):
         Returns the URL built dynamically based on specified arguments.
         """
 
-        # Our URL parameters
-        params = self.url_parameters(privacy=privacy, *args, **kwargs)
+        # Define any URL parameters
+        params = {
+            'method': self.method,
+        }
+
+        # Extend our parameters
+        params.update(self.url_parameters(privacy=privacy, *args, **kwargs))
 
         # Append our headers into our parameters
         params.update({'+{}'.format(k): v for k, v in self.headers.items()})
@@ -209,14 +239,60 @@ class NotifyAppriseAPI(NotifyBase):
                    token=self.pprint(self.token, privacy, safe=''),
                    params=NotifyAppriseAPI.urlencode(params))
 
-    def send(self, body, title='', notify_type=NotifyType.INFO, **kwargs):
+    def send(self, body, title='', notify_type=NotifyType.INFO, attach=None,
+             **kwargs):
         """
         Perform Apprise API Notification
         """
 
-        headers = {}
+        # Prepare HTTP Headers
+        headers = {
+            'User-Agent': self.app_id,
+        }
+
         # Apply any/all header over-rides defined
         headers.update(self.headers)
+
+        attachments = []
+        files = []
+        if attach and self.attachment_support:
+            for no, attachment in enumerate(attach, start=1):
+                # Perform some simple error checking
+                if not attachment:
+                    # We could not access the attachment
+                    self.logger.error(
+                        'Could not access attachment {}.'.format(
+                            attachment.url(privacy=True)))
+                    return False
+
+                try:
+                    if self.method == AppriseAPIMethod.JSON:
+                        with open(attachment.path, 'rb') as f:
+                            # Output must be in a DataURL format (that's what
+                            # PushSafer calls it):
+                            attachments.append({
+                                'filename': attachment.name,
+                                'base64': base64.b64encode(f.read())
+                                .decode('utf-8'),
+                                'mimetype': attachment.mimetype,
+                            })
+
+                    else:  # AppriseAPIMethod.FORM
+                        files.append((
+                            'file{:02d}'.format(no),
+                            (
+                                attachment.name,
+                                open(attachment.path, 'rb'),
+                                attachment.mimetype,
+                            )
+                        ))
+
+                except (OSError, IOError) as e:
+                    self.logger.warning(
+                        'An I/O error occurred while reading {}.'.format(
+                            attachment.name if attachment else 'attachment'))
+                    self.logger.debug('I/O Exception: %s' % str(e))
+                    return False
 
         # prepare Apprise API Object
         payload = {
@@ -226,6 +302,14 @@ class NotifyAppriseAPI(NotifyBase):
             'type': notify_type,
             'format': self.notify_format,
         }
+
+        if self.method == AppriseAPIMethod.JSON:
+            headers['Content-Type'] = 'application/json'
+
+            if attachments:
+                payload['attachments'] = attachments
+
+            payload = dumps(payload)
 
         if self.__tags:
             payload['tag'] = self.__tags
@@ -242,13 +326,13 @@ class NotifyAppriseAPI(NotifyBase):
             url += ':%d' % self.port
 
         fullpath = self.fullpath.strip('/')
-        url += '/{}/'.format(fullpath) if fullpath else '/'
-        url += 'notify/{}'.format(self.token)
+        url += '{}'.format('/' + fullpath) if fullpath else ''
+        url += '/notify/{}'.format(self.token)
 
         # Some entries can not be over-ridden
         headers.update({
-            'User-Agent': self.app_id,
-            'Content-Type': 'application/json',
+            # Our response to be in JSON format always
+            'Accept': 'application/json',
             # Pass our Source UUID4 Identifier
             'X-Apprise-ID': self.asset._uid,
             # Pass our current recursion count to our upstream server
@@ -266,9 +350,10 @@ class NotifyAppriseAPI(NotifyBase):
         try:
             r = requests.post(
                 url,
-                data=dumps(payload),
+                data=payload,
                 headers=headers,
                 auth=auth,
+                files=files if files else None,
                 verify=self.verify_certificate,
                 timeout=self.request_timeout,
             )
@@ -290,7 +375,8 @@ class NotifyAppriseAPI(NotifyBase):
                 return False
 
             else:
-                self.logger.info('Sent Apprise API notification.')
+                self.logger.info(
+                    'Sent Apprise API notification; method=%s.', self.method)
 
         except requests.RequestException as e:
             self.logger.warning(
@@ -300,6 +386,18 @@ class NotifyAppriseAPI(NotifyBase):
 
             # Return; we're done
             return False
+
+        except (OSError, IOError) as e:
+            self.logger.warning(
+                'An I/O error occurred while reading one of the '
+                'attached files.')
+            self.logger.debug('I/O Exception: %s' % str(e))
+            return False
+
+        finally:
+            for file in files:
+                # Ensure all files are closed
+                file[1][1].close()
 
         return True
 
@@ -376,5 +474,10 @@ class NotifyAppriseAPI(NotifyBase):
 
                 # re-assemble our full path
                 results['fullpath'] = '/'.join(entries)
+
+        # Set method if specified
+        if 'method' in results['qsd'] and len(results['qsd']['method']):
+            results['method'] = \
+                NotifyAppriseAPI.unquote(results['qsd']['method'])
 
         return results

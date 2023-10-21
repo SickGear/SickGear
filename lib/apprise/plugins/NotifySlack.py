@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# BSD 3-Clause License
+# BSD 2-Clause License
 #
 # Apprise - Push Notification Library.
 # Copyright (c) 2023, Chris Caron <lead2gold@gmail.com>
@@ -13,10 +13,6 @@
 # 2. Redistributions in binary form must reproduce the above copyright notice,
 #    this list of conditions and the following disclaimer in the documentation
 #    and/or other materials provided with the distribution.
-#
-# 3. Neither the name of the copyright holder nor the names of its
-#    contributors may be used to endorse or promote products derived from
-#    this software without specific prior written permission.
 #
 # THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 # AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
@@ -143,6 +139,10 @@ class NotifySlack(NotifyBase):
     # A URL that takes you to the setup/help of the specific protocol
     setup_url = 'https://github.com/caronc/apprise/wiki/Notify_slack'
 
+    # Support attachments
+    attachment_support = True
+
+    # The maximum targets to include when doing batch transfers
     # Slack Webhook URL
     webhook_url = 'https://hooks.slack.com/services'
 
@@ -165,10 +165,10 @@ class NotifySlack(NotifyBase):
     # Define object templates
     templates = (
         # Webhook
-        '{schema}://{token_a}/{token_b}{token_c}',
+        '{schema}://{token_a}/{token_b}/{token_c}',
         '{schema}://{botname}@{token_a}/{token_b}{token_c}',
-        '{schema}://{token_a}/{token_b}{token_c}/{targets}',
-        '{schema}://{botname}@{token_a}/{token_b}{token_c}/{targets}',
+        '{schema}://{token_a}/{token_b}/{token_c}/{targets}',
+        '{schema}://{botname}@{token_a}/{token_b}/{token_c}/{targets}',
 
         # Bot
         '{schema}://{access_token}/',
@@ -198,7 +198,6 @@ class NotifySlack(NotifyBase):
             'name': _('Token A'),
             'type': 'string',
             'private': True,
-            'required': True,
             'regex': (r'^[A-Z0-9]+$', 'i'),
         },
         # Token required as part of the Webhook request
@@ -207,7 +206,6 @@ class NotifySlack(NotifyBase):
             'name': _('Token B'),
             'type': 'string',
             'private': True,
-            'required': True,
             'regex': (r'^[A-Z0-9]+$', 'i'),
         },
         # Token required as part of the Webhook request
@@ -216,7 +214,6 @@ class NotifySlack(NotifyBase):
             'name': _('Token C'),
             'type': 'string',
             'private': True,
-            'required': True,
             'regex': (r'^[A-Za-z0-9]+$', 'i'),
         },
         'target_encoded_id': {
@@ -354,6 +351,13 @@ class NotifySlack(NotifyBase):
             r'>': '&gt;',
         }
 
+        # To notify a channel, one uses <!channel|channel>
+        self._re_channel_support = re.compile(
+            r'(?P<match>(?:<|\&lt;)?[ \t]*'
+            r'!(?P<channel>[^| \n]+)'
+            r'(?:[ \t]*\|[ \t]*(?:(?P<val>[^\n]+?)[ \t]*)?(?:>|\&gt;)'
+            r'|(?:>|\&gt;)))', re.IGNORECASE)
+
         # The markdown in slack isn't [desc](url), it's <url|desc>
         #
         # To accomodate this, we need to ensure we don't escape URLs that match
@@ -455,6 +459,21 @@ class NotifySlack(NotifyBase):
                     lambda x: self._re_formatting_map[x.group()], body,
                 )
 
+                # Support <!channel|desc>, <!channel> entries
+                for match in self._re_channel_support.findall(body):
+                    # Swap back any ampersands previously updaated
+                    channel = match[1].strip()
+                    desc = match[2].strip()
+
+                    # Update our string
+                    body = re.sub(
+                        re.escape(match[0]),
+                        '<!{channel}|{desc}>'.format(
+                            channel=channel, desc=desc)
+                        if desc else '<!{channel}>'.format(channel=channel),
+                        body,
+                        re.IGNORECASE)
+
                 # Support <url|desc>, <url> entries
                 for match in self._re_url_support.findall(body):
                     # Swap back any ampersands previously updaated
@@ -503,7 +522,8 @@ class NotifySlack(NotifyBase):
                 # Include the footer only if specified to do so
                 payload['attachments'][0]['footer'] = self.app_id
 
-        if attach and self.mode is SlackMode.WEBHOOK:
+        if attach and self.attachment_support \
+                and self.mode is SlackMode.WEBHOOK:
             # Be friendly; let the user know why they can't send their
             # attachments if using the Webhook mode
             self.logger.warning(
@@ -581,7 +601,8 @@ class NotifySlack(NotifyBase):
                     ' to {}'.format(channel)
                     if channel is not None else ''))
 
-        if attach and self.mode is SlackMode.BOT and attach_channel_list:
+        if attach and self.attachment_support and \
+                self.mode is SlackMode.BOT and attach_channel_list:
             # Send our attachments (can only be done in bot mode)
             for attachment in attach:
 
@@ -992,6 +1013,12 @@ class NotifySlack(NotifyBase):
                     [NotifySlack.quote(x, safe='') for x in self.channels]),
                 params=NotifySlack.urlencode(params),
             )
+
+    def __len__(self):
+        """
+        Returns the number of targets associated with this notification
+        """
+        return len(self.channels)
 
     @staticmethod
     def parse_url(url):

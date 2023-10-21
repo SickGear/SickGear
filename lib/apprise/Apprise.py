@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# BSD 3-Clause License
+# BSD 2-Clause License
 #
 # Apprise - Push Notification Library.
 # Copyright (c) 2023, Chris Caron <lead2gold@gmail.com>
@@ -14,10 +14,6 @@
 #    this list of conditions and the following disclaimer in the documentation
 #    and/or other materials provided with the distribution.
 #
-# 3. Neither the name of the copyright holder nor the names of its
-#    contributors may be used to endorse or promote products derived from
-#    this software without specific prior written permission.
-#
 # THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 # AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 # IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -31,8 +27,8 @@
 # POSSIBILITY OF SUCH DAMAGE.
 
 import asyncio
+import concurrent.futures as cf
 import os
-from functools import partial
 from itertools import chain
 from . import common
 from .conversion import convert_between
@@ -376,7 +372,7 @@ class Apprise:
         try:
             # Process arguments and build synchronous and asynchronous calls
             # (this step can throw internal errors).
-            sync_partials, async_cors = self._create_notify_calls(
+            sequential_calls, parallel_calls = self._create_notify_calls(
                 body, title,
                 notify_type=notify_type, body_format=body_format,
                 tag=tag, match_always=match_always, attach=attach,
@@ -387,49 +383,13 @@ class Apprise:
             # No notifications sent, and there was an internal error.
             return False
 
-        if not sync_partials and not async_cors:
+        if not sequential_calls and not parallel_calls:
             # Nothing to send
             return None
 
-        sync_result = Apprise._notify_all(*sync_partials)
-
-        if async_cors:
-            # A single coroutine sends all asynchronous notifications in
-            # parallel.
-            all_cor = Apprise._async_notify_all(*async_cors)
-
-            try:
-                # Python <3.7 automatically starts an event loop if there isn't
-                # already one for the main thread.
-                loop = asyncio.get_event_loop()
-
-            except RuntimeError:
-                # Python >=3.7 raises this exception if there isn't already an
-                # event loop. So, we can spin up our own.
-                loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(loop)
-                loop.set_debug(self.debug)
-
-                # Run the coroutine and wait for the result.
-                async_result = loop.run_until_complete(all_cor)
-
-                # Clean up the loop.
-                loop.close()
-                asyncio.set_event_loop(None)
-
-            else:
-                old_debug = loop.get_debug()
-                loop.set_debug(self.debug)
-
-                # Run the coroutine and wait for the result.
-                async_result = loop.run_until_complete(all_cor)
-
-                loop.set_debug(old_debug)
-
-        else:
-            async_result = True
-
-        return sync_result and async_result
+        sequential_result = Apprise._notify_sequential(*sequential_calls)
+        parallel_result = Apprise._notify_parallel_threadpool(*parallel_calls)
+        return sequential_result and parallel_result
 
     async def async_notify(self, *args, **kwargs):
         """
@@ -442,41 +402,42 @@ class Apprise:
         try:
             # Process arguments and build synchronous and asynchronous calls
             # (this step can throw internal errors).
-            sync_partials, async_cors = self._create_notify_calls(
+            sequential_calls, parallel_calls = self._create_notify_calls(
                 *args, **kwargs)
 
         except TypeError:
             # No notifications sent, and there was an internal error.
             return False
 
-        if not sync_partials and not async_cors:
+        if not sequential_calls and not parallel_calls:
             # Nothing to send
             return None
 
-        sync_result = Apprise._notify_all(*sync_partials)
-        async_result = await Apprise._async_notify_all(*async_cors)
-        return sync_result and async_result
+        sequential_result = Apprise._notify_sequential(*sequential_calls)
+        parallel_result = \
+            await Apprise._notify_parallel_asyncio(*parallel_calls)
+        return sequential_result and parallel_result
 
     def _create_notify_calls(self, *args, **kwargs):
         """
         Creates notifications for all the plugins loaded.
 
-        Returns a list of synchronous calls (partial functions with no
-        arguments required) for plugins with async disabled and a list of
-        asynchronous calls (coroutines) for plugins with async enabled.
+        Returns a list of (server, notify() kwargs) tuples for plugins with
+        parallelism disabled and another list for plugins with parallelism
+        enabled.
         """
 
         all_calls = list(self._create_notify_gen(*args, **kwargs))
 
-        # Split into synchronous partials and asynchronous coroutines.
-        sync_partials, async_cors = [], []
-        for notify in all_calls:
-            if asyncio.iscoroutine(notify):
-                async_cors.append(notify)
+        # Split into sequential and parallel notify() calls.
+        sequential, parallel = [], []
+        for (server, notify_kwargs) in all_calls:
+            if server.asset.async_mode:
+                parallel.append((server, notify_kwargs))
             else:
-                sync_partials.append(notify)
+                sequential.append((server, notify_kwargs))
 
-        return sync_partials, async_cors
+        return sequential, parallel
 
     def _create_notify_gen(self, body, title='',
                            notify_type=common.NotifyType.INFO,
@@ -493,7 +454,7 @@ class Apprise:
             logger.error(msg)
             raise TypeError(msg)
 
-        if not (title or body):
+        if not (title or body or attach):
             msg = "No message content specified to deliver"
             logger.error(msg)
             raise TypeError(msg)
@@ -533,25 +494,29 @@ class Apprise:
             # If our code reaches here, we either did not define a tag (it
             # was set to None), or we did define a tag and the logic above
             # determined we need to notify the service it's associated with
-            if server.notify_format not in conversion_body_map:
-                # Perform Conversion
-                conversion_body_map[server.notify_format] = \
-                    convert_between(
-                        body_format, server.notify_format, content=body)
+
+            # First we need to generate a key we will use to determine if we
+            # need to build our data out.  Entries without are merged with
+            # the body at this stage.
+            key = server.notify_format if server.title_maxlen > 0\
+                else f'_{server.notify_format}'
+
+            if key not in conversion_title_map:
 
                 # Prepare our title
-                conversion_title_map[server.notify_format] = \
-                    '' if not title else title
+                conversion_title_map[key] = '' if not title else title
 
-                # Tidy Title IF required (hence it will become part of the
-                # body)
-                if server.title_maxlen <= 0 and \
-                        conversion_title_map[server.notify_format]:
+                # Conversion of title only occurs for services where the title
+                # is blended with the body (title_maxlen <= 0)
+                if conversion_title_map[key] and server.title_maxlen <= 0:
+                    conversion_title_map[key] = convert_between(
+                        body_format, server.notify_format,
+                        content=conversion_title_map[key])
 
-                    conversion_title_map[server.notify_format] = \
-                        convert_between(
-                            body_format, server.notify_format,
-                            content=conversion_title_map[server.notify_format])
+                # Our body is always converted no matter what
+                conversion_body_map[key] = \
+                    convert_between(
+                        body_format, server.notify_format, content=body)
 
                 if interpret_escapes:
                     #
@@ -561,13 +526,13 @@ class Apprise:
                     try:
                         # Added overhead required due to Python 3 Encoding Bug
                         # identified here: https://bugs.python.org/issue21331
-                        conversion_body_map[server.notify_format] = \
-                            conversion_body_map[server.notify_format]\
+                        conversion_body_map[key] = \
+                            conversion_body_map[key]\
                             .encode('ascii', 'backslashreplace')\
                             .decode('unicode-escape')
 
-                        conversion_title_map[server.notify_format] = \
-                            conversion_title_map[server.notify_format]\
+                        conversion_title_map[key] = \
+                            conversion_title_map[key]\
                             .encode('ascii', 'backslashreplace')\
                             .decode('unicode-escape')
 
@@ -578,29 +543,26 @@ class Apprise:
                         raise TypeError(msg)
 
             kwargs = dict(
-                body=conversion_body_map[server.notify_format],
-                title=conversion_title_map[server.notify_format],
+                body=conversion_body_map[key],
+                title=conversion_title_map[key],
                 notify_type=notify_type,
                 attach=attach,
                 body_format=body_format
             )
-            if server.asset.async_mode:
-                yield server.async_notify(**kwargs)
-            else:
-                yield partial(server.notify, **kwargs)
+            yield (server, kwargs)
 
     @staticmethod
-    def _notify_all(*partials):
+    def _notify_sequential(*servers_kwargs):
         """
-        Process a list of synchronous notify() calls.
+        Process a list of notify() calls sequentially and synchronously.
         """
 
         success = True
 
-        for notify in partials:
+        for (server, kwargs) in servers_kwargs:
             try:
                 # Send notification
-                result = notify()
+                result = server.notify(**kwargs)
                 success = success and result
 
             except TypeError:
@@ -616,14 +578,71 @@ class Apprise:
         return success
 
     @staticmethod
-    async def _async_notify_all(*cors):
+    def _notify_parallel_threadpool(*servers_kwargs):
         """
-        Process a list of asynchronous async_notify() calls.
+        Process a list of notify() calls in parallel and synchronously.
         """
+
+        n_calls = len(servers_kwargs)
+
+        # 0-length case
+        if n_calls == 0:
+            return True
+
+        # There's no need to use a thread pool for just a single notification
+        if n_calls == 1:
+            return Apprise._notify_sequential(servers_kwargs[0])
 
         # Create log entry
-        logger.info('Notifying %d service(s) asynchronously.', len(cors))
+        logger.info(
+            'Notifying %d service(s) with threads.', len(servers_kwargs))
 
+        with cf.ThreadPoolExecutor() as executor:
+            success = True
+            futures = [executor.submit(server.notify, **kwargs)
+                       for (server, kwargs) in servers_kwargs]
+
+            for future in cf.as_completed(futures):
+                try:
+                    result = future.result()
+                    success = success and result
+
+                except TypeError:
+                    # These are our internally thrown notifications.
+                    success = False
+
+                except Exception:
+                    # A catch all so we don't have to abort early
+                    # just because one of our plugins has a bug in it.
+                    logger.exception("Unhandled Notification Exception")
+                    success = False
+
+            return success
+
+    @staticmethod
+    async def _notify_parallel_asyncio(*servers_kwargs):
+        """
+        Process a list of async_notify() calls in parallel and asynchronously.
+        """
+
+        n_calls = len(servers_kwargs)
+
+        # 0-length case
+        if n_calls == 0:
+            return True
+
+        # (Unlike with the thread pool, we don't optimize for the single-
+        # notification case because asyncio can do useful work while waiting
+        # for that thread to complete)
+
+        # Create log entry
+        logger.info(
+            'Notifying %d service(s) asynchronously.', len(servers_kwargs))
+
+        async def do_call(server, kwargs):
+            return await server.async_notify(**kwargs)
+
+        cors = (do_call(server, kwargs) for (server, kwargs) in servers_kwargs)
         results = await asyncio.gather(*cors, return_exceptions=True)
 
         if any(isinstance(status, Exception)
@@ -665,6 +684,12 @@ class Apprise:
                 'setup_url': getattr(plugin, 'setup_url', None),
                 # Placeholder - populated below
                 'details': None,
+
+                # Let upstream service know of the plugins that support
+                # attachments
+                'attachment_support': getattr(
+                    plugin, 'attachment_support', False),
+
                 # Differentiat between what is a custom loaded plugin and
                 # which is native.
                 'category': getattr(plugin, 'category', None)
@@ -789,6 +814,36 @@ class Apprise:
 
         # If we reach here, then we indexed out of range
         raise IndexError('list index out of range')
+
+    def __getstate__(self):
+        """
+        Pickle Support dumps()
+        """
+        attributes = {
+            'asset': self.asset,
+            # Prepare our URL list as we need to extract the associated tags
+            # and asset details associated with it
+            'urls': [{
+                'url': server.url(privacy=False),
+                'tag': server.tags if server.tags else None,
+                'asset': server.asset} for server in self.servers],
+            'locale': self.locale,
+            'debug': self.debug,
+            'location': self.location,
+        }
+
+        return attributes
+
+    def __setstate__(self, state):
+        """
+        Pickle Support loads()
+        """
+        self.servers = list()
+        self.asset = state['asset']
+        self.locale = state['locale']
+        self.location = state['location']
+        for entry in state['urls']:
+            self.add(entry['url'], asset=entry['asset'], tag=entry['tag'])
 
     def __bool__(self):
         """
