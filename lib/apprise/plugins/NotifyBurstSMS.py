@@ -26,10 +26,10 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-# Sign-up with https://dashboard.nexmo.com/
+# Sign-up with https://burstsms.com/
 #
-# Get your (api) key and secret here:
-#   - https://dashboard.nexmo.com/getting-started-guide
+# Define your API Secret here and acquire your API Key
+#  - https://can.transmitsms.com/profile
 #
 import requests
 
@@ -38,29 +38,54 @@ from ..URLBase import PrivacyMode
 from ..common import NotifyType
 from ..utils import is_phone_no
 from ..utils import parse_phone_no
+from ..utils import parse_bool
 from ..utils import validate_regex
 from ..AppriseLocale import gettext_lazy as _
 
 
-class NotifyVonage(NotifyBase):
+class BurstSMSCountryCode:
+    # Australia
+    AU = 'au'
+    # New Zeland
+    NZ = 'nz'
+    # United Kingdom
+    UK = 'gb'
+    # United States
+    US = 'us'
+
+
+BURST_SMS_COUNTRY_CODES = (
+    BurstSMSCountryCode.AU,
+    BurstSMSCountryCode.NZ,
+    BurstSMSCountryCode.UK,
+    BurstSMSCountryCode.US,
+)
+
+
+class NotifyBurstSMS(NotifyBase):
     """
-    A wrapper for Vonage Notifications
+    A wrapper for Burst SMS Notifications
     """
 
     # The default descriptive name associated with the Notification
-    service_name = 'Vonage'
+    service_name = 'Burst SMS'
 
     # The services URL
-    service_url = 'https://dashboard.nexmo.com/'
+    service_url = 'https://burstsms.com/'
 
-    # The default protocol (nexmo kept for backwards compatibility)
-    secure_protocol = ('vonage', 'nexmo')
+    # The default protocol
+    secure_protocol = 'burstsms'
+
+    # The maximum amount of SMS Messages that can reside within a single
+    # batch transfer based on:
+    #  https://developer.transmitsms.com/#74911cf8-dec6-4319-a499-7f535a7fd08c
+    default_batch_size = 500
 
     # A URL that takes you to the setup/help of the specific protocol
-    setup_url = 'https://github.com/caronc/apprise/wiki/Notify_nexmo'
+    setup_url = 'https://github.com/caronc/apprise/wiki/Notify_burst_sms'
 
-    # Vonage uses the http protocol with JSON requests
-    notify_url = 'https://rest.nexmo.com/sms/json'
+    # Burst SMS uses the http protocol with JSON requests
+    notify_url = 'https://api.transmitsms.com/send-sms.json'
 
     # The maximum length of the body
     body_maxlen = 160
@@ -71,8 +96,7 @@ class NotifyVonage(NotifyBase):
 
     # Define object templates
     templates = (
-        '{schema}://{apikey}:{secret}@{from_phone}',
-        '{schema}://{apikey}:{secret}@{from_phone}/{targets}',
+        '{schema}://{apikey}:{secret}@{sender_id}/{targets}',
     )
 
     # Define our template tokens
@@ -91,11 +115,10 @@ class NotifyVonage(NotifyBase):
             'required': True,
             'regex': (r'^[a-z0-9]+$', 'i'),
         },
-        'from_phone': {
-            'name': _('From Phone No'),
+        'sender_id': {
+            'name': _('Sender ID'),
             'type': 'string',
             'required': True,
-            'regex': (r'^\+?[0-9\s)(+-]+$', 'i'),
             'map_to': 'source',
         },
         'target_phone': {
@@ -108,6 +131,7 @@ class NotifyVonage(NotifyBase):
         'targets': {
             'name': _('Targets'),
             'type': 'list:string',
+            'required': True,
         },
     })
 
@@ -117,7 +141,7 @@ class NotifyVonage(NotifyBase):
             'alias_of': 'targets',
         },
         'from': {
-            'alias_of': 'from_phone',
+            'alias_of': 'sender_id',
         },
         'key': {
             'alias_of': 'apikey',
@@ -125,25 +149,32 @@ class NotifyVonage(NotifyBase):
         'secret': {
             'alias_of': 'secret',
         },
-
-        # Default Time To Live
-        # By default Vonage attempt delivery for 72 hours, however the maximum
-        # effective value depends on the operator and is typically 24 - 48
-        # hours. We recommend this value should be kept at its default or at
-        # least 30 minutes.
-        'ttl': {
-            'name': _('ttl'),
+        'country': {
+            'name': _('Country'),
+            'type': 'choice:string',
+            'values': BURST_SMS_COUNTRY_CODES,
+            'default': BurstSMSCountryCode.US,
+        },
+        # Validity
+        # Expire a message send if it is undeliverable (defined in minutes)
+        # If set to Zero (0); this is the default and sets the max validity
+        # period
+        'validity': {
+            'name': _('validity'),
             'type': 'int',
-            'default': 900000,
-            'min': 20000,
-            'max': 604800000,
+            'default': 0
+        },
+        'batch': {
+            'name': _('Batch Mode'),
+            'type': 'bool',
+            'default': False,
         },
     })
 
-    def __init__(self, apikey, secret, source, targets=None, ttl=None,
-                 **kwargs):
+    def __init__(self, apikey, secret, source, targets=None, country=None,
+                 validity=None, batch=None, **kwargs):
         """
-        Initialize Vonage Object
+        Initialize Burst SMS Object
         """
         super().__init__(**kwargs)
 
@@ -151,7 +182,7 @@ class NotifyVonage(NotifyBase):
         self.apikey = validate_regex(
             apikey, *self.template_tokens['apikey']['regex'])
         if not self.apikey:
-            msg = 'An invalid Vonage API Key ' \
+            msg = 'An invalid Burst SMS API Key ' \
                   '({}) was specified.'.format(apikey)
             self.logger.warning(msg)
             raise TypeError(msg)
@@ -160,39 +191,45 @@ class NotifyVonage(NotifyBase):
         self.secret = validate_regex(
             secret, *self.template_tokens['secret']['regex'])
         if not self.secret:
-            msg = 'An invalid Vonage API Secret ' \
+            msg = 'An invalid Burst SMS API Secret ' \
                   '({}) was specified.'.format(secret)
             self.logger.warning(msg)
             raise TypeError(msg)
 
-        # Set our Time to Live Flag
-        self.ttl = self.template_args['ttl']['default']
-        try:
-            self.ttl = int(ttl)
+        if not country:
+            self.country = self.template_args['country']['default']
 
-        except (ValueError, TypeError):
-            # Do nothing
-            pass
+        else:
+            self.country = country.lower().strip()
+            if country not in BURST_SMS_COUNTRY_CODES:
+                msg = 'An invalid Burst SMS country ' \
+                      '({}) was specified.'.format(country)
+                self.logger.warning(msg)
+                raise TypeError(msg)
 
-        if self.ttl < self.template_args['ttl']['min'] or \
-                self.ttl > self.template_args['ttl']['max']:
-            msg = 'The Vonage TTL specified ({}) is out of range.'\
-                .format(self.ttl)
-            self.logger.warning(msg)
-            raise TypeError(msg)
+        # Set our Validity
+        self.validity = self.template_args['validity']['default']
+        if validity:
+            try:
+                self.validity = int(validity)
 
-        # The Source Phone #
-        self.source = source
+            except (ValueError, TypeError):
+                msg = 'The Burst SMS Validity specified ({}) is invalid.'\
+                    .format(validity)
+                self.logger.warning(msg)
+                raise TypeError(msg)
 
-        result = is_phone_no(source)
-        if not result:
-            msg = 'The Account (From) Phone # specified ' \
+        # Prepare Batch Mode Flag
+        self.batch = self.template_args['batch']['default'] \
+            if batch is None else batch
+
+        # The Sender ID
+        self.source = validate_regex(source)
+        if not self.source:
+            msg = 'The Account Sender ID specified ' \
                   '({}) is invalid.'.format(source)
             self.logger.warning(msg)
             raise TypeError(msg)
-
-        # Store our parsed value
-        self.source = result['full']
 
         # Parse our targets
         self.targets = list()
@@ -214,8 +251,13 @@ class NotifyVonage(NotifyBase):
 
     def send(self, body, title='', notify_type=NotifyType.INFO, **kwargs):
         """
-        Perform Vonage Notification
+        Perform Burst SMS Notification
         """
+
+        if not self.targets:
+            self.logger.warning(
+                'There are no valid Burst SMS targets to notify.')
+            return False
 
         # error tracking (used for function return)
         has_error = False
@@ -223,39 +265,39 @@ class NotifyVonage(NotifyBase):
         # Prepare our headers
         headers = {
             'User-Agent': self.app_id,
-            'Content-Type': 'application/x-www-form-urlencoded',
+            'Accept': 'application/json',
         }
+
+        # Prepare our authentication
+        auth = (self.apikey, self.secret)
 
         # Prepare our payload
         payload = {
-            'api_key': self.apikey,
-            'api_secret': self.secret,
-            'ttl': self.ttl,
+            'countrycode': self.country,
+            'message': body,
+
+            # Sender ID
             'from': self.source,
-            'text': body,
 
             # The to gets populated in the loop below
             'to': None,
         }
 
+        # Send in batches if identified to do so
+        batch_size = 1 if not self.batch else self.default_batch_size
+
         # Create a copy of the targets list
         targets = list(self.targets)
 
-        if len(targets) == 0:
-            # No sources specified, use our own phone no
-            targets.append(self.source)
-
-        while len(targets):
-            # Get our target to notify
-            target = targets.pop(0)
+        for index in range(0, len(targets), batch_size):
 
             # Prepare our user
-            payload['to'] = target
+            payload['to'] = ','.join(self.targets[index:index + batch_size])
 
             # Some Debug Logging
-            self.logger.debug('Vonage POST URL: {} (cert_verify={})'.format(
+            self.logger.debug('Burst SMS POST URL: {} (cert_verify={})'.format(
                 self.notify_url, self.verify_certificate))
-            self.logger.debug('Vonage Payload: {}' .format(payload))
+            self.logger.debug('Burst SMS Payload: {}' .format(payload))
 
             # Always call throttle before any remote server i/o is made
             self.throttle()
@@ -265,6 +307,7 @@ class NotifyVonage(NotifyBase):
                     self.notify_url,
                     data=payload,
                     headers=headers,
+                    auth=auth,
                     verify=self.verify_certificate,
                     timeout=self.request_timeout,
                 )
@@ -272,13 +315,13 @@ class NotifyVonage(NotifyBase):
                 if r.status_code != requests.codes.ok:
                     # We had a problem
                     status_str = \
-                        NotifyVonage.http_response_code_lookup(
+                        NotifyBurstSMS.http_response_code_lookup(
                             r.status_code)
 
                     self.logger.warning(
-                        'Failed to send Vonage notification to {}: '
-                        '{}{}error={}.'.format(
-                            target,
+                        'Failed to send Burst SMS notification to {} '
+                        'target(s): {}{}error={}.'.format(
+                            len(self.targets[index:index + batch_size]),
                             status_str,
                             ', ' if status_str else '',
                             r.status_code))
@@ -292,13 +335,14 @@ class NotifyVonage(NotifyBase):
 
                 else:
                     self.logger.info(
-                        'Sent Vonage notification to %s.' % target)
+                        'Sent Burst SMS notification to %d target(s).' %
+                        len(self.targets[index:index + batch_size]))
 
             except requests.RequestException as e:
                 self.logger.warning(
-                    'A Connection error occurred sending Vonage:%s '
-                    'notification.' % target
-                )
+                    'A Connection error occurred sending Burst SMS '
+                    'notification to %d target(s).' %
+                    len(self.targets[index:index + batch_size]))
                 self.logger.debug('Socket Exception: %s' % str(e))
 
                 # Mark our failure
@@ -314,27 +358,39 @@ class NotifyVonage(NotifyBase):
 
         # Define any URL parameters
         params = {
-            'ttl': str(self.ttl),
+            'country': self.country,
+            'batch': 'yes' if self.batch else 'no',
         }
+
+        if self.validity:
+            params['validity'] = str(self.validity)
 
         # Extend our parameters
         params.update(self.url_parameters(privacy=privacy, *args, **kwargs))
 
         return '{schema}://{key}:{secret}@{source}/{targets}/?{params}'.format(
-            schema=self.secure_protocol[0],
+            schema=self.secure_protocol,
             key=self.pprint(self.apikey, privacy, safe=''),
             secret=self.pprint(
                 self.secret, privacy, mode=PrivacyMode.Secret, safe=''),
-            source=NotifyVonage.quote(self.source, safe=''),
+            source=NotifyBurstSMS.quote(self.source, safe=''),
             targets='/'.join(
-                [NotifyVonage.quote(x, safe='') for x in self.targets]),
-            params=NotifyVonage.urlencode(params))
+                [NotifyBurstSMS.quote(x, safe='') for x in self.targets]),
+            params=NotifyBurstSMS.urlencode(params))
 
     def __len__(self):
         """
         Returns the number of targets associated with this notification
         """
+        #
+        # Factor batch into calculation
+        #
+        batch_size = 1 if not self.batch else self.default_batch_size
         targets = len(self.targets)
+        if batch_size > 1:
+            targets = int(targets / batch_size) + \
+                (1 if targets % batch_size else 0)
+
         return targets if targets > 0 else 1
 
     @staticmethod
@@ -349,48 +405,56 @@ class NotifyVonage(NotifyBase):
             # We're done early as we couldn't load the results
             return results
 
-        # Get our entries; split_path() looks after unquoting content for us
-        # by default
-        results['targets'] = NotifyVonage.split_path(results['fullpath'])
+        # The hostname is our source (Sender ID)
+        results['source'] = NotifyBurstSMS.unquote(results['host'])
 
-        # The hostname is our source number
-        results['source'] = NotifyVonage.unquote(results['host'])
+        # Get any remaining targets
+        results['targets'] = NotifyBurstSMS.split_path(results['fullpath'])
 
         # Get our account_side and auth_token from the user/pass config
-        results['apikey'] = NotifyVonage.unquote(results['user'])
-        results['secret'] = NotifyVonage.unquote(results['password'])
+        results['apikey'] = NotifyBurstSMS.unquote(results['user'])
+        results['secret'] = NotifyBurstSMS.unquote(results['password'])
 
         # API Key
         if 'key' in results['qsd'] and len(results['qsd']['key']):
             # Extract the API Key from an argument
             results['apikey'] = \
-                NotifyVonage.unquote(results['qsd']['key'])
+                NotifyBurstSMS.unquote(results['qsd']['key'])
 
         # API Secret
         if 'secret' in results['qsd'] and len(results['qsd']['secret']):
             # Extract the API Secret from an argument
             results['secret'] = \
-                NotifyVonage.unquote(results['qsd']['secret'])
+                NotifyBurstSMS.unquote(results['qsd']['secret'])
 
         # Support the 'from'  and 'source' variable so that we can support
         # targets this way too.
         # The 'from' makes it easier to use yaml configuration
         if 'from' in results['qsd'] and len(results['qsd']['from']):
             results['source'] = \
-                NotifyVonage.unquote(results['qsd']['from'])
+                NotifyBurstSMS.unquote(results['qsd']['from'])
         if 'source' in results['qsd'] and len(results['qsd']['source']):
             results['source'] = \
-                NotifyVonage.unquote(results['qsd']['source'])
+                NotifyBurstSMS.unquote(results['qsd']['source'])
 
-        # Support the 'ttl' variable
-        if 'ttl' in results['qsd'] and len(results['qsd']['ttl']):
-            results['ttl'] = \
-                NotifyVonage.unquote(results['qsd']['ttl'])
+        # Support country
+        if 'country' in results['qsd'] and len(results['qsd']['country']):
+            results['country'] = \
+                NotifyBurstSMS.unquote(results['qsd']['country'])
+
+        # Support validity value
+        if 'validity' in results['qsd'] and len(results['qsd']['validity']):
+            results['validity'] = \
+                NotifyBurstSMS.unquote(results['qsd']['validity'])
+
+        # Get Batch Mode Flag
+        if 'batch' in results['qsd'] and len(results['qsd']['batch']):
+            results['batch'] = parse_bool(results['qsd']['batch'])
 
         # Support the 'to' variable so that we can support rooms this way too
         # The 'to' makes it easier to use yaml configuration
         if 'to' in results['qsd'] and len(results['qsd']['to']):
             results['targets'] += \
-                NotifyVonage.parse_phone_no(results['qsd']['to'])
+                NotifyBurstSMS.parse_phone_no(results['qsd']['to'])
 
         return results

@@ -1,5 +1,6 @@
 ﻿### 3.31.0 (2023-1x-xx xx:xx:00 UTC)
 
+* Update Apprise 1.3.0 (6458ab0) to 1.6.0 (0c0d5da)
 * Update attr 22.2.0 (683d056) to 23.1.0 (67e4ff2)
 * Update Beautiful Soup 4.12.2 to 4.12.2 (30c58a1)
 * Update diskcache 5.6.1 (4d30686) to 5.6.3 (323787f)

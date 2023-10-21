@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# BSD 3-Clause License
+# BSD 2-Clause License
 #
 # Apprise - Push Notification Library.
 # Copyright (c) 2023, Chris Caron <lead2gold@gmail.com>
@@ -13,10 +13,6 @@
 # 2. Redistributions in binary form must reproduce the above copyright notice,
 #    this list of conditions and the following disclaimer in the documentation
 #    and/or other materials provided with the distribution.
-#
-# 3. Neither the name of the copyright holder nor the names of its
-#    contributors may be used to endorse or promote products derived from
-#    this software without specific prior written permission.
 #
 # THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 # AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
@@ -356,6 +352,77 @@ class ConfigBase(URLBase):
         return True
 
     @staticmethod
+    def __normalize_tag_groups(group_tags):
+        """
+        Used to normalize a tag assign map which looks like:
+          {
+             'group': set('{tag1}', '{group1}', '{tag2}'),
+             'group1': set('{tag2}','{tag3}'),
+          }
+
+          Then normalized it (merging groups); with respect to the above, the
+          output would be:
+          {
+             'group': set('{tag1}', '{tag2}', '{tag3}),
+             'group1': set('{tag2}','{tag3}'),
+          }
+
+        """
+        # Prepare a key set list we can use
+        tag_groups = set([str(x) for x in group_tags.keys()])
+
+        def _expand(tags, ignore=None):
+            """
+            Expands based on tag provided and returns a set
+
+            this also updates the group_tags while it goes
+            """
+
+            # Prepare ourselves a return set
+            results = set()
+            ignore = set() if ignore is None else ignore
+
+            # track groups
+            groups = set()
+
+            for tag in tags:
+                if tag in ignore:
+                    continue
+
+                # Track our groups
+                groups.add(tag)
+
+                # Store what we know is worth keping
+                results |= group_tags[tag] - tag_groups
+
+                # Get simple tag assignments
+                found = group_tags[tag] & tag_groups
+                if not found:
+                    continue
+
+                for gtag in found:
+                    if gtag in ignore:
+                        continue
+
+                    # Go deeper (recursion)
+                    ignore.add(tag)
+                    group_tags[gtag] = _expand(set([gtag]), ignore=ignore)
+                    results |= group_tags[gtag]
+
+                    # Pop ignore
+                    ignore.remove(tag)
+
+            return results
+
+        for tag in tag_groups:
+            # Get our tags
+            group_tags[tag] |= _expand(set([tag]))
+            if not group_tags[tag]:
+                ConfigBase.logger.warning(
+                    'The group {} has no tags assigned to it'.format(tag))
+                del group_tags[tag]
+
+    @staticmethod
     def parse_url(url, verify_host=True):
         """Parses the URL and returns it broken apart into a dictionary.
 
@@ -533,6 +600,9 @@ class ConfigBase(URLBase):
             # as additional configuration entries when loaded.
             include <ConfigURL>
 
+            # Assign tag contents to a group identifier
+            <Group(s)>=<Tag(s)>
+
         """
         # A list of loaded Notification Services
         servers = list()
@@ -541,6 +611,12 @@ class ConfigBase(URLBase):
         # the include keyword
         configs = list()
 
+        # Track all of the tags we want to assign later on
+        group_tags = {}
+
+        # Track our entries to preload
+        preloaded = []
+
         # Prepare our Asset Object
         asset = asset if isinstance(asset, AppriseAsset) else AppriseAsset()
 
@@ -548,7 +624,7 @@ class ConfigBase(URLBase):
         valid_line_re = re.compile(
             r'^\s*(?P<line>([;#]+(?P<comment>.*))|'
             r'(\s*(?P<tags>[a-z0-9, \t_-]+)\s*=|=)?\s*'
-            r'(?P<url>[a-z0-9]{2,9}://.*)|'
+            r'((?P<url>[a-z0-9]{1,12}://.*)|(?P<assign>[a-z0-9, \t_-]+))|'
             r'include\s+(?P<config>.+))?\s*$', re.I)
 
         try:
@@ -574,8 +650,13 @@ class ConfigBase(URLBase):
                 # otherwise.
                 return (list(), list())
 
-            url, config = result.group('url'), result.group('config')
-            if not (url or config):
+            # Retrieve our line
+            url, assign, config = \
+                result.group('url'), \
+                result.group('assign'), \
+                result.group('config')
+
+            if not (url or config or assign):
                 # Comment/empty line; do nothing
                 continue
 
@@ -595,6 +676,33 @@ class ConfigBase(URLBase):
             loggable_url = url if not asset.secure_logging \
                 else cwe312_url(url)
 
+            if assign:
+                groups = set(parse_list(result.group('tags'), cast=str))
+                if not groups:
+                    # no tags were assigned
+                    ConfigBase.logger.warning(
+                        'Unparseable tag assignment - no group(s) '
+                        'on line {}'.format(line))
+                    continue
+
+                # Get our tags
+                tags = set(parse_list(assign, cast=str))
+                if not tags:
+                    # no tags were assigned
+                    ConfigBase.logger.warning(
+                        'Unparseable tag assignment - no tag(s) to assign '
+                        'on line {}'.format(line))
+                    continue
+
+                # Update our tag group map
+                for tag_group in groups:
+                    if tag_group not in group_tags:
+                        group_tags[tag_group] = set()
+
+                    # ensure our tag group is never included in the assignment
+                    group_tags[tag_group] |= tags - set([tag_group])
+                continue
+
             # Acquire our url tokens
             results = plugins.url_to_dict(
                 url, secure_logging=asset.secure_logging)
@@ -607,25 +715,57 @@ class ConfigBase(URLBase):
 
             # Build a list of tags to associate with the newly added
             # notifications if any were set
-            results['tag'] = set(parse_list(result.group('tags')))
+            results['tag'] = set(parse_list(result.group('tags'), cast=str))
 
             # Set our Asset Object
             results['asset'] = asset
 
+            # Store our preloaded entries
+            preloaded.append({
+                'results': results,
+                'line': line,
+                'loggable_url': loggable_url,
+            })
+
+        #
+        # Normalize Tag Groups
+        # - Expand Groups of Groups so that they don't exist
+        #
+        ConfigBase.__normalize_tag_groups(group_tags)
+
+        #
+        # URL Processing
+        #
+        for entry in preloaded:
+            # Point to our results entry for easier reference below
+            results = entry['results']
+
+            #
+            # Apply our tag groups if they're defined
+            #
+            for group, tags in group_tags.items():
+                # Detect if anything assigned to this tag also maps back to a
+                # group.  If so we want to add the group to our list
+                if next((True for tag in results['tag']
+                         if tag in tags), False):
+                    results['tag'].add(group)
+
             try:
                 # Attempt to create an instance of our plugin using the
                 # parsed URL information
-                plugin = common.NOTIFY_SCHEMA_MAP[results['schema']](**results)
+                plugin = common.NOTIFY_SCHEMA_MAP[
+                    results['schema']](**results)
 
                 # Create log entry of loaded URL
                 ConfigBase.logger.debug(
-                    'Loaded URL: %s', plugin.url(privacy=asset.secure_logging))
+                    'Loaded URL: %s', plugin.url(
+                        privacy=results['asset'].secure_logging))
 
             except Exception as e:
                 # the arguments are invalid or can not be used.
                 ConfigBase.logger.warning(
                     'Could not load URL {} on line {}.'.format(
-                        loggable_url, line))
+                        entry['loggable_url'], entry['line']))
                 ConfigBase.logger.debug('Loading Exception: %s' % str(e))
                 continue
 

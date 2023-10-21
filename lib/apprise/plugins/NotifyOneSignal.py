@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# BSD 3-Clause License
+# BSD 2-Clause License
 #
 # Apprise - Push Notification Library.
 # Copyright (c) 2023, Chris Caron <lead2gold@gmail.com>
@@ -13,10 +13,6 @@
 # 2. Redistributions in binary form must reproduce the above copyright notice,
 #    this list of conditions and the following disclaimer in the documentation
 #    and/or other materials provided with the distribution.
-#
-# 3. Neither the name of the copyright holder nor the names of its
-#    contributors may be used to endorse or promote products derived from
-#    this software without specific prior written permission.
 #
 # THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 # AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
@@ -51,7 +47,7 @@ from ..utils import is_email
 from ..AppriseLocale import gettext_lazy as _
 
 
-class OneSignalCategory(NotifyBase):
+class OneSignalCategory:
     """
     We define the different category types that we can notify via OneSignal
     """
@@ -92,7 +88,7 @@ class NotifyOneSignal(NotifyBase):
     image_size = NotifyImageSize.XY_72
 
     # The maximum allowable batch sizes per message
-    maximum_batch_size = 2000
+    default_batch_size = 2000
 
     # Define object templates
     templates = (
@@ -121,7 +117,7 @@ class NotifyOneSignal(NotifyBase):
             'private': True,
             'required': True,
         },
-        'target_device': {
+        'target_player': {
             'name': _('Target Player ID'),
             'type': 'string',
             'map_to': 'targets',
@@ -146,6 +142,7 @@ class NotifyOneSignal(NotifyBase):
         'targets': {
             'name': _('Targets'),
             'type': 'list:string',
+            'required': True,
         },
     })
 
@@ -204,7 +201,7 @@ class NotifyOneSignal(NotifyBase):
             raise TypeError(msg)
 
         # Prepare Batch Mode Flag
-        self.batch_size = self.maximum_batch_size if batch else 1
+        self.batch_size = self.default_batch_size if batch else 1
 
         # Place a thumbnail image inline with the message body
         self.include_image = include_image
@@ -431,6 +428,26 @@ class NotifyOneSignal(NotifyBase):
                     for x in self.targets[OneSignalCategory.SEGMENT]])),
             params=NotifyOneSignal.urlencode(params),
         )
+
+    def __len__(self):
+        """
+        Returns the number of targets associated with this notification
+        """
+        #
+        # Factor batch into calculation
+        #
+        if self.batch_size > 1:
+            # Batches can only be sent by group (you can't combine groups into
+            # a single batch)
+            total_targets = 0
+            for k, m in self.targets.items():
+                targets = len(m)
+                total_targets += int(targets / self.batch_size) + \
+                    (1 if targets % self.batch_size else 0)
+            return total_targets
+
+        # Normal batch count; just count the targets
+        return sum([len(m) for _, m in self.targets.items()])
 
     @staticmethod
     def parse_url(url):
