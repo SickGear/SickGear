@@ -9,6 +9,8 @@ from io import BytesIO
 
 from dateutil.tz import tzfile as _tzfile
 
+# noinspection PyPep8Naming
+import encodingKludge as ek
 import sickgear
 
 __all__ = ["get_zonefile_instance", "gettz", "gettz_db_metadata"]
@@ -25,10 +27,10 @@ class tzfile(_tzfile):
 def getzoneinfofile_stream():
     try:
         # return BytesIO(get_data(__name__, ZONEFILENAME))
-        zonefile = os.path.join(sickgear.ZONEINFO_DIR, ZONEFILENAME)
-        if not os.path.isfile(zonefile):
+        zonefile = ek.ek(os.path.join, sickgear.ZONEINFO_DIR, ZONEFILENAME)
+        if not ek.ek(os.path.isfile, zonefile):
             warnings.warn('Falling back to included zoneinfo file')
-            zonefile = os.path.join(os.path.dirname(__file__), ZONEFILENAME)
+            zonefile = ek.ek(os.path.join, ek.ek(os.path.dirname, __file__), ZONEFILENAME)
         with open(zonefile, 'rb') as f:
             return BytesIO(f.read())
     except IOError as e:  # TODO  switch to FileNotFoundError?
