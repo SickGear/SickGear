@@ -7,6 +7,7 @@
 * Update diskcache 5.6.1 (4d30686) to 5.6.3 (323787f)
 * Update hachoir 3.1.2 (f739b43) to 3.2.0 (38d759f)
 * Update Pytvmaze library 2.0.8 (81888a5) to 2.0.8 (b451391)
+* Update pytz 2022.7.1/2022g (d38ff47) to 2023.3/2023c (488d3eb)
 * Update Rarfile 4.1a1 (8a72967) to 4.1 (c9140d8)
 * Update soupsieve 2.4.1 (2e66beb) to 2.5.0 (dc71495)
 * Update thefuzz 0.19.0 (c2cd4f4) to 0.21.0 (0b49e4a)
