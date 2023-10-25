@@ -13,6 +13,7 @@
 * Update thefuzz 0.19.0 (c2cd4f4) to 0.21.0 (0b49e4a)
 * Update urllib3 2.0.5 (d9f85a7) to 2.0.7 (56f01e0)
 * Add support for Brotli compression
+* Add ignore Plex extras
 
 
 ### 3.30.4 (2023-10-12 11:50:00 UTC)
