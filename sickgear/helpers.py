@@ -158,7 +158,9 @@ def has_media_ext(filename):
         return False
 
     sep_file = filename.rpartition('.')
-    return (None is re.search('extras?$', sep_file[0], re.I)) and (sep_file[2].lower() in mediaExtensions)
+    return (None is re.search(
+        '(?:extras|-Behind\sThe\sScenes|-Deleted\sScenes|-Featurettes|-Interviews|-Scenes|-Shorts|-Trailers|-Other)?$',
+        sep_file[0], re.I)) and (sep_file[2].lower() in mediaExtensions)
 
 
 def has_image_ext(filename):
@@ -352,8 +354,11 @@ def list_media_files(path):
         if [direntry for direntry in scantree(path, include=[r'\.sickgearignore'], filter_kind=False, recurse=False)]:
             logger.debug('Skipping folder "%s" because it contains ".sickgearignore"' % path)
         else:
-            result = [direntry.path for direntry in scantree(path, exclude=['Extras'], filter_kind=False,
-                                                             exclude_folders_with_files=['.sickgearignore'])
+            result = [direntry.path for direntry in scantree(path, exclude=[
+                'Extras',
+                'Behind The Scenes', 'Deleted Scenes', 'Featurettes',
+                'Interviews', 'Scenes', 'Shorts', 'Trailers', 'Other'
+            ], filter_kind=False, exclude_folders_with_files=['.sickgearignore'])
                       if has_media_ext(direntry.name)]
     return result
 
