@@ -16,6 +16,11 @@
 * Add ignore Plex extras
 
 
+[develop changelog]
+
+* Fix media process being ignored by Plex extras
+
+
 ### 3.30.4 (2023-10-12 11:50:00 UTC)
 
 * Add metadata source attribution in footer

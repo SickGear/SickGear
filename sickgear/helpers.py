@@ -159,7 +159,7 @@ def has_media_ext(filename):
 
     sep_file = filename.rpartition('.')
     return (None is re.search(
-        '(?:extras|-Behind\sThe\sScenes|-Deleted\sScenes|-Featurettes|-Interviews|-Scenes|-Shorts|-Trailers|-Other)?$',
+        r'(extras|-(?:Behind\sThe\sScenes|Deleted\sScenes|Featurettes|Interviews|Scenes|Shorts|Trailers|Other))$',
         sep_file[0], re.I)) and (sep_file[2].lower() in mediaExtensions)
 
 
