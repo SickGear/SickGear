@@ -1016,7 +1016,7 @@ def clear_cache(force=False):
     dirty = None
     del_time = SGDatetime.timestamp_near(td=datetime.timedelta(hours=12))
     direntry_args = dict(follow_symlinks=False)
-    for direntry in scantree(sickgear.CACHE_DIR, ['images|rss|zoneinfo'], follow_symlinks=True):
+    for direntry in scantree(sickgear.CACHE_DIR, exclude_dirs=['images|rss|zoneinfo'], follow_symlinks=True):
         if direntry.is_file(**direntry_args) and (force or del_time > direntry.stat(**direntry_args).st_mtime):
             dirty = dirty or False if remove_file_perm(direntry.path) else True
         elif direntry.is_dir(**direntry_args) and direntry.name not in ['cheetah', 'sessions', 'indexers']:
