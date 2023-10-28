@@ -158,9 +158,7 @@ def has_media_ext(filename):
         return False
 
     sep_file = filename.rpartition('.')
-    return (None is re.search(
-        r'(extras|-(?:Behind\sThe\sScenes|Deleted\sScenes|Featurettes|Interviews|Scenes|Shorts|Trailers|Other))$',
-        sep_file[0], re.I)) and (sep_file[2].lower() in mediaExtensions)
+    return (None is re.search('extras?$', sep_file[0], re.I)) and (sep_file[2].lower() in mediaExtensions)
 
 
 def has_image_ext(filename):
@@ -354,10 +352,10 @@ def list_media_files(path):
         if [direntry for direntry in scantree(path, include=[r'\.sickgearignore'], filter_kind=False, recurse=False)]:
             logger.debug('Skipping folder "%s" because it contains ".sickgearignore"' % path)
         else:
-            result = [direntry.path for direntry in scantree(path, exclude=[
-                'Extras',
-                'Behind The Scenes', 'Deleted Scenes', 'Featurettes',
-                'Interviews', 'Scenes', 'Shorts', 'Trailers', 'Other'
+            result = [direntry.path for direntry in scantree(path, exclude_dirs=[
+                '^Extras$',
+                '^Behind The Scenes$', '^Deleted Scenes$', '^Featurettes$',
+                '^Interviews$', '^Scenes$', '^Shorts$', '^Trailers$', '^Other$'
             ], filter_kind=False, exclude_folders_with_files=['.sickgearignore'])
                       if has_media_ext(direntry.name)]
     return result
@@ -1018,7 +1016,7 @@ def clear_cache(force=False):
     dirty = None
     del_time = SGDatetime.timestamp_near(td=datetime.timedelta(hours=12))
     direntry_args = dict(follow_symlinks=False)
-    for direntry in scantree(sickgear.CACHE_DIR, ['images|rss|zoneinfo'], follow_symlinks=True):
+    for direntry in scantree(sickgear.CACHE_DIR, exclude_dirs=['images|rss|zoneinfo'], follow_symlinks=True):
         if direntry.is_file(**direntry_args) and (force or del_time > direntry.stat(**direntry_args).st_mtime):
             dirty = dirty or False if remove_file_perm(direntry.path) else True
         elif direntry.is_dir(**direntry_args) and direntry.name not in ['cheetah', 'sessions', 'indexers']:
