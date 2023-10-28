@@ -1088,7 +1088,10 @@ def scantree(path,  # type: AnyStr
              internal_call=False,  # type: bool
              rc_exc=None,  # type: List
              rc_exc_dir=None,  # type: List
-             rc_inc=None  # type: List
+             rc_inc=None,  # type: List
+             has_exclude=False,  # type: bool
+             has_exclude_dirs=False,  # type: bool
+             has_include=False  # type: bool
              ):
     # type: (...) -> Generator[DirEntry, None, None]
     """Yield DirEntry objects for given path. Returns without yield if path fails sanity check
@@ -1105,6 +1108,9 @@ def scantree(path,  # type: AnyStr
     :param rc_exc: internal use
     :param rc_exc_dir: internal use
     :param rc_inc: internal use
+    :param has_exclude: internal use
+    :param has_exclude_dirs: internal use
+    :param has_include: internal_use
     """
     if isinstance(path, string_types) and path and os.path.isdir(path):
         if not internal_call:
@@ -1112,13 +1118,15 @@ def scantree(path,  # type: AnyStr
                 [x for x in (param, ([param], [])[None is param])[not isinstance(param, list)]]))
                               for rx, param in ((r'(?i)^(?:(?!%s).)*$', exclude), (r'(?i)^(?:(?!%s).)*$', exclude_dirs),
                                                 (r'(?i)%s', include))]
+            has_exclude, has_exclude_dirs, has_include = bool(exclude), bool(exclude_dirs), bool(include)
+
         for entry in scandir(path):
             is_dir = entry.is_dir(follow_symlinks=follow_symlinks)
             is_file = entry.is_file(follow_symlinks=follow_symlinks)
             no_filter = any([None is filter_kind, filter_kind and is_dir, not filter_kind and is_file])
-            if ((not exclude or rc_exc.search(entry.name))
-                    and (not exclude_dirs or not is_dir or rc_exc_dir.search(entry.name))
-                    and (not include or rc_inc.search(entry.name))
+            if ((not has_exclude or rc_exc.search(entry.name))
+                    and (not has_exclude_dirs or not is_dir or rc_exc_dir.search(entry.name))
+                    and (not has_include or rc_inc.search(entry.name))
                     and (no_filter or (not filter_kind and is_dir and recurse))):
                 if is_dir and exclude_folders_with_files and any(os.path.isfile(os.path.join(entry.path, e_f))
                                                       for e_f in exclude_folders_with_files):
@@ -1130,7 +1138,8 @@ def scantree(path,  # type: AnyStr
                             path=entry.path, exclude=exclude, exclude_dirs=exclude_dirs, include=include,
                             follow_symlinks=follow_symlinks, filter_kind=filter_kind, recurse=recurse,
                             exclude_folders_with_files=exclude_folders_with_files, internal_call=True,
-                            rc_exc=rc_exc, rc_exc_dir=rc_exc_dir, rc_inc=rc_inc):
+                            rc_exc=rc_exc, rc_exc_dir=rc_exc_dir, rc_inc=rc_inc, has_exclude=has_exclude,
+                            has_exclude_dirs=has_exclude_dirs, has_include=has_include):
                         yield subentry
                 if no_filter:
                     yield entry
