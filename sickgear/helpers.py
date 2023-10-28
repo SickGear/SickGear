@@ -354,10 +354,10 @@ def list_media_files(path):
         if [direntry for direntry in scantree(path, include=[r'\.sickgearignore'], filter_kind=False, recurse=False)]:
             logger.debug('Skipping folder "%s" because it contains ".sickgearignore"' % path)
         else:
-            result = [direntry.path for direntry in scantree(path, exclude=[
-                'Extras',
-                'Behind The Scenes', 'Deleted Scenes', 'Featurettes',
-                'Interviews', 'Scenes', 'Shorts', 'Trailers', 'Other'
+            result = [direntry.path for direntry in scantree(path, exclude_dirs=[
+                '^Extras$',
+                '^Behind The Scenes$', '^Deleted Scenes$', '^Featurettes$',
+                '^Interviews$', '^Scenes$', '^Shorts$', '^Trailers$', '^Other$'
             ], filter_kind=False, exclude_folders_with_files=['.sickgearignore'])
                       if has_media_ext(direntry.name)]
     return result
