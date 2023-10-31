@@ -1721,9 +1721,10 @@ def init_stage_2():
     MEMCACHE['history_tab'] = History.menu_tab(MEMCACHE['history_tab_limit'])
 
     try:
-        for f in scandir(os.path.join(PROG_DIR, 'gui', GUI_NAME, 'images', 'flags')):
-            if f.is_file():
-                MEMCACHE_FLAG_IMAGES[os.path.splitext(f.name)[0].lower()] = True
+        with scandir(os.path.join(PROG_DIR, 'gui', GUI_NAME, 'images', 'flags')) as s_d:
+            for f in s_d:
+                if f.is_file():
+                    MEMCACHE_FLAG_IMAGES[os.path.splitext(f.name)[0].lower()] = True
     except (BaseException, Exception):
         pass
 

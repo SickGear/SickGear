@@ -592,15 +592,16 @@ class TVInfoTests(test.SickbeardTestDBCase):
     @classmethod
     def tearDownClass(cls):
         super(TVInfoTests, cls).tearDownClass()
-        files = {_f.name for _f in os.scandir(mock_data_dir) if _f.is_file()}
-        unused_files = files - used_files
-        if delete_unused_mock_files:
-            for _u_f in unused_files:
-                full_filename = os.path.join(mock_data_dir, _u_f)
-                try:
-                    os.remove(full_filename)
-                except (BaseException, Exception) as e:
-                    print('errror deleting: [%s], error: %s' % (full_filename, e))
+        with os.scandir(mock_data_dir) as s_d:
+            files = {_f.name for _f in os.scandir(mock_data_dir) if _f.is_file()}
+            unused_files = files - used_files
+            if delete_unused_mock_files:
+                for _u_f in unused_files:
+                    full_filename = os.path.join(mock_data_dir, _u_f)
+                    try:
+                        os.remove(full_filename)
+                    except (BaseException, Exception) as e:
+                        print('errror deleting: [%s], error: %s' % (full_filename, e))
         if unused_files:
             print('unused files: %s' % unused_files)
         print('reset mock methods')

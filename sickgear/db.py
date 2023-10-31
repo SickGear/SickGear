@@ -746,13 +746,13 @@ def cleanup_old_db_backups(filename):
         d, filename = os.path.split(filename)
         if not d:
             d = sickgear.DATA_DIR
-        for f in filter(lambda fn: fn.is_file() and filename in fn.name and
-                        re.search(r'\.db(\.v\d+)?\.r\d+$', fn.name),
-                        scandir(d)):
-            try:
-                os.unlink(f.path)
-            except (BaseException, Exception):
-                pass
+        with scandir(d) as s_d:
+            for f in filter(lambda fn: fn.is_file() and filename in fn.name and
+                            re.search(r'\.db(\.v\d+)?\.r\d+$', fn.name), s_d):
+                try:
+                    os.unlink(f.path)
+                except (BaseException, Exception):
+                    pass
     except (BaseException, Exception):
         pass
 
