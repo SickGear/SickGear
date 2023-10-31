@@ -1120,29 +1120,30 @@ def scantree(path,  # type: AnyStr
                                                 (r'(?i)%s', include))]
             has_exclude, has_exclude_dirs, has_include = bool(exclude), bool(exclude_dirs), bool(include)
 
-        for entry in scandir(path):
-            is_dir = entry.is_dir(follow_symlinks=follow_symlinks)
-            is_file = entry.is_file(follow_symlinks=follow_symlinks)
-            no_filter = any([None is filter_kind, filter_kind and is_dir, not filter_kind and is_file])
-            if ((not has_exclude or rc_exc.search(entry.name))
-                    and (not has_exclude_dirs or not is_dir or rc_exc_dir.search(entry.name))
-                    and (not has_include or rc_inc.search(entry.name))
-                    and (no_filter or (not filter_kind and is_dir and recurse))):
-                if is_dir and exclude_folders_with_files and any(os.path.isfile(os.path.join(entry.path, e_f))
-                                                      for e_f in exclude_folders_with_files):
-                    logger.debug(f'Ignoring Folder: "{entry.path}", because it contains a exclude file'
-                                 f' "{", ".join(exclude_folders_with_files)}"')
-                    continue
-                if recurse and is_dir:
-                    for subentry in scantree(
-                            path=entry.path, exclude=exclude, exclude_dirs=exclude_dirs, include=include,
-                            follow_symlinks=follow_symlinks, filter_kind=filter_kind, recurse=recurse,
-                            exclude_folders_with_files=exclude_folders_with_files, internal_call=True,
-                            rc_exc=rc_exc, rc_exc_dir=rc_exc_dir, rc_inc=rc_inc, has_exclude=has_exclude,
-                            has_exclude_dirs=has_exclude_dirs, has_include=has_include):
-                        yield subentry
-                if no_filter:
-                    yield entry
+        with scandir(path) as s_d:
+            for entry in s_d:
+                is_dir = entry.is_dir(follow_symlinks=follow_symlinks)
+                is_file = entry.is_file(follow_symlinks=follow_symlinks)
+                no_filter = any([None is filter_kind, filter_kind and is_dir, not filter_kind and is_file])
+                if ((not has_exclude or rc_exc.search(entry.name))
+                        and (not has_exclude_dirs or not is_dir or rc_exc_dir.search(entry.name))
+                        and (not has_include or rc_inc.search(entry.name))
+                        and (no_filter or (not filter_kind and is_dir and recurse))):
+                    if is_dir and exclude_folders_with_files and any(os.path.isfile(os.path.join(entry.path, e_f))
+                                                          for e_f in exclude_folders_with_files):
+                        logger.debug(f'Ignoring Folder: "{entry.path}", because it contains a exclude file'
+                                     f' "{", ".join(exclude_folders_with_files)}"')
+                        continue
+                    if recurse and is_dir:
+                        for subentry in scantree(
+                                path=entry.path, exclude=exclude, exclude_dirs=exclude_dirs, include=include,
+                                follow_symlinks=follow_symlinks, filter_kind=filter_kind, recurse=recurse,
+                                exclude_folders_with_files=exclude_folders_with_files, internal_call=True,
+                                rc_exc=rc_exc, rc_exc_dir=rc_exc_dir, rc_inc=rc_inc, has_exclude=has_exclude,
+                                has_exclude_dirs=has_exclude_dirs, has_include=has_include):
+                            yield subentry
+                    if no_filter:
+                        yield entry
 
 
 def copy_file(src_file, dest_file):
