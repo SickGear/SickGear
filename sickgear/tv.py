@@ -3768,9 +3768,8 @@ class TVShow(TVShowBase):
             return False
 
         cur_status, cur_quality = Quality.split_composite_status(int(sql_result[0]['status']))
-        ep_status_text = statusStrings[cur_status]
 
-        logger.debug('Existing episode status: %s (%s)' % (statusStrings[cur_status], ep_status_text))
+        logger.debug(f'Existing episode status: {statusStrings[int(sql_result[0]["status"])]}')
 
         # if we know we don't want it then just say no
         if cur_status in [IGNORED, ARCHIVED] + ([SKIPPED], [])[multi_ep] and not manual_search:
