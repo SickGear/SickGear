@@ -23,6 +23,12 @@
 * Fix media process being ignored by Plex extras
 
 
+### 3.30.5 (2023-12-10 05:00:00 UTC)
+
+* Change allow Python 3.12.1
+* Change improve Emby status check
+
+
 ### 3.30.4 (2023-10-12 11:50:00 UTC)
 
 * Add metadata source attribution in footer
