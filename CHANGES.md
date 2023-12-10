@@ -11,6 +11,7 @@
 * Update Rarfile 4.1a1 (8a72967) to 4.1 (c9140d8)
 * Update soupsieve 2.4.1 (2e66beb) to 2.5.0 (dc71495)
 * Update thefuzz 0.19.0 (c2cd4f4) to 0.21.0 (0b49e4a)
+* Update Tornado Web Server 6.3.3 (e4d6984) to 6.4 (b3f2a4b)
 * Update urllib3 2.0.5 (d9f85a7) to 2.0.7 (56f01e0)
 * Add support for Brotli compression
 * Add ignore Plex extras
