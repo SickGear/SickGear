@@ -1,6 +1,8 @@
 ﻿### 3.30.6 (2024-01-02 11:05:00 UTC)
 
 * Fix Shows IMDb cards to new layout at IMDb
+* Change update fallback zoneinfo to 2023d
+* Change add Python 3.12 to the unit tests
 
 
 ### 3.30.5 (2023-12-10 05:00:00 UTC)
