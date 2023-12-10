@@ -14,6 +14,8 @@
 * Update urllib3 2.0.5 (d9f85a7) to 2.0.7 (56f01e0)
 * Add support for Brotli compression
 * Add ignore Plex extras
+* Fix apply filters to multiple episode releases
+* Add use multi episode result as fallback if it's better quality or has an episode that does not have a single ep result
 
 
 [develop changelog]

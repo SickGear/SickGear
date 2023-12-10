@@ -27,20 +27,21 @@ from sg_helpers import write_file
 import sickgear
 from . import clients, common, db, failed_history, helpers, history, logger, \
     notifiers, nzbget, nzbSplitter, show_name_helpers, sab, ui
-from .classes import NZBDataSearchResult, NZBSearchResult, TorrentSearchResult
 from .common import DOWNLOADED, SNATCHED, SNATCHED_BEST, SNATCHED_PROPER, MULTI_EP_RESULT, SEASON_RESULT, Quality
 from .providers.generic import GenericProvider
 from .tv import TVEpisode, TVShow
 
 from six import iteritems, itervalues, string_types
 
-# noinspection PyUnreachableCode
+# noinspection PyUnreachableCode, PyStatementEffect
 if False:
     from typing import AnyStr, Dict, List, Optional, Tuple, Union
+    from .classes import NZBDataSearchResult, NZBSearchResult, SearchResult, TorrentSearchResult
+    search_result_type = Union[NZBDataSearchResult, NZBSearchResult, SearchResult, TorrentSearchResult]
 
 
 def _download_result(result):
-    # type: (Union[NZBDataSearchResult, NZBSearchResult, TorrentSearchResult]) -> bool
+    # type: (search_result_type) -> bool
     """
     Downloads a result to the appropriate black hole folder.
 
@@ -87,7 +88,7 @@ def _download_result(result):
 
 
 def snatch_episode(result, end_status=SNATCHED):
-    # type: (Union[NZBDataSearchResult, NZBSearchResult, TorrentSearchResult], int) -> bool
+    # type: (search_result_type, int) -> bool
     """
     Contains the internal logic necessary to actually "snatch" a result that
     has been found.
@@ -208,12 +209,12 @@ def pass_show_wordlist_checks(name, show_obj):
 
 
 def pick_best_result(
-        results,  # type: List[Union[NZBDataSearchResult, NZBSearchResult, TorrentSearchResult]]
+        results,  # type: List[search_result_type]
         show_obj,  # type: TVShow
         quality_list=None,  # type: List[int]
         filter_rls=''  # type: AnyStr
 ):
-    # type: (...) -> sickgear.classes.SearchResult
+    # type: (...) -> search_result_type
     """
     picks best result from given search result list for given show object
 
@@ -314,7 +315,7 @@ def pick_best_result(
 
 
 def best_candidate(best_result, cur_result):
-    # type: (sickgear.classes.SearchResult, sickgear.classes.SearchResult) -> sickgear.classes.SearchResult
+    # type: (search_result_type, search_result_type) -> search_result_type
     """
     compare 2 search results and return best
 
@@ -345,7 +346,7 @@ def best_candidate(best_result, cur_result):
 
 
 def is_final_result(result):
-    # type: (sickgear.classes.SearchResult) -> bool
+    # type: (search_result_type) -> bool
     """
     Checks if the given result is good enough quality that we can stop searching for other ones.
 
@@ -386,7 +387,7 @@ def is_final_result(result):
 
 
 def is_first_best_match(ep_status, result):
-    # type: (int, sickgear.classes.SearchResult) -> bool
+    # type: (int, search_result_type) -> bool
     """
     Checks if the given result is the best quality match and if we want to archive the episode on first match.
 
@@ -571,7 +572,7 @@ def wanted_episodes(show_obj,  # type: TVShow
 
 
 def search_for_needed_episodes(ep_obj_list):
-    # type: (List[TVEpisode]) -> List[Union[NZBDataSearchResult, NZBSearchResult, TorrentSearchResult]]
+    # type: (List[TVEpisode]) -> List[search_result_type]
     """
     search for episodes in list
 
@@ -796,12 +797,46 @@ def cache_torrent_file(
             if search_result.provider.get_id() in ['tvchaosuk'] \
                     and hasattr(search_result.provider, 'regulate_cache_torrent_file'):
                 torrent_name = search_result.provider.regulate_cache_torrent_file(torrent_name)
-            if not pick_best_result([search_result], show_obj, **kwargs) or \
+            if not _pick_best_result_helper([search_result], **kwargs) or \
                     not show_name_helpers.pass_wordlist_checks(torrent_name, indexer_lookup=False, show_obj=show_obj):
                 logger.log(f'Ignored {result_name} that contains {torrent_name} (debug log has detail)')
                 return
 
     return search_result
+
+
+def _pick_best_result_helper(
+        results,  # type: List[search_result_type]
+        show_obj,  # type: TVShow
+        old_status=None,  # type: int
+        use_quality_list=None,  # type: List[int]
+        best_qualities=None,  # type: List[int]
+        orig_thread_name=''  # type: AnyStr
+    ):
+    # type: (...) -> search_result_type
+    """
+    helper to apply pick_best_result with filters
+
+    :param results: SearchResults
+    :param show_obj: show object
+    :param old_status: old status of checked episode
+    :param use_quality_list: default quality list
+    :param best_qualities: best qualites for the episode
+    :param orig_thread_name: original thread name
+    :return: best matching result
+    """
+    internal_quality_list = None
+    if None is not use_quality_list and any([results[0].ep_obj_list]):
+        old_status = old_status or \
+                     failed_history.find_old_status(results[0].ep_obj_list[0]) or results[0].ep_obj_list[0].status
+        if old_status:
+            status, quality = Quality.split_composite_status(old_status)
+            internal_quality_list = (status not in (
+                common.WANTED, common.FAILED, common.UNAIRED, common.SKIPPED, common.IGNORED, common.UNKNOWN))
+
+    quality_list = use_quality_list or (internal_quality_list and (None, best_qualities)[any(best_qualities)] or None)
+
+    return pick_best_result(results=results, show_obj=show_obj, quality_list=quality_list, filter_rls=orig_thread_name)
 
 
 def search_providers(
@@ -813,7 +848,7 @@ def search_providers(
         old_status=None,  # type: int
         scheduled=False  # type: bool
 ):
-    # type: (...) -> List[sickgear.classes.SearchResult]
+    # type: (...) -> List[search_result_type]
     """
     search provider for given episode objects from given show object
 
@@ -827,7 +862,7 @@ def search_providers(
     :return: list of search result objects
     """
     found_results = {}
-    final_results = []
+    final_results = []  # type: List[search_result_type]
 
     search_done = False
     search_threads = []
@@ -864,6 +899,10 @@ def search_providers(
     for s_t in search_threads:
         s_t.join()
 
+    any_qualities, best_qualities = Quality.split_quality(show_obj.quality)
+    params = dict(show_obj=show_obj, old_status=old_status, best_qualities=best_qualities,
+                  orig_thread_name=orig_thread_name)
+
     # now look in all the results
     for cur_provider in provider_list:
         provider_id = cur_provider.get_id()
@@ -872,13 +911,12 @@ def search_providers(
         if provider_id not in found_results or not len(found_results[provider_id]):
             continue
 
-        any_qualities, best_qualities = Quality.split_quality(show_obj.quality)
-
         # pick the best season NZB
         best_season_result = None
         if SEASON_RESULT in found_results[provider_id]:
-            best_season_result = pick_best_result(found_results[provider_id][SEASON_RESULT], show_obj,
-                                                  any_qualities + best_qualities)
+            best_season_result = _pick_best_result_helper(
+                found_results[provider_id][SEASON_RESULT], show_obj=show_obj,
+                use_quality_list=any_qualities + best_qualities, orig_thread_name=orig_thread_name)
 
         highest_quality_overall = 0
         for cur_episode in found_results[provider_id]:
@@ -972,7 +1010,7 @@ def search_providers(
                             found_results[provider_id][ep_num] = [best_season_result]
 
         # go through multi-ep results and see if we really want them or not, get rid of the rest
-        multi_results = {}
+        multi_result_groups = {}  # type: Dict[AnyStr, Union[List, search_result_type]]
         if MULTI_EP_RESULT in found_results[provider_id]:
             for multi_result in found_results[provider_id][MULTI_EP_RESULT]:
 
@@ -983,58 +1021,18 @@ def search_providers(
                     logger.log(f'Rejecting previously failed multi episode result [{multi_result.name}]')
                     continue
 
-                # see how many of the eps that this result covers aren't covered by single results
-                needed_eps = []
-                not_needed_eps = []
-                for ep_obj in multi_result.ep_obj_list:
-                    ep_num = ep_obj.episode
-                    # if we have results for the episode
-                    if ep_num in found_results[provider_id] and 0 < len(found_results[provider_id][ep_num]):
-                        needed_eps.append(ep_num)
-                    else:
-                        not_needed_eps.append(ep_num)
+                group_name = '-'.join(f'{_num}' for _num in sorted(_ep.episode for _ep in multi_result.ep_obj_list))
+                multi_result_groups.setdefault(group_name, []).append(multi_result)
 
-                logger.debug(f'Single episode check result is... needed episodes: {needed_eps},'
-                             f' not needed episodes: {not_needed_eps}')
-
-                if not not_needed_eps:
-                    logger.debug('All of these episodes were covered by single episode results,'
-                                 ' ignoring this multi episode result')
-                    continue
-
-                # check if these eps are already covered by another multi-result
-                multi_needed_eps = []
-                multi_not_needed_eps = []
-                for ep_obj in multi_result.ep_obj_list:
-                    ep_num = ep_obj.episode
-                    if ep_num in multi_results:
-                        multi_not_needed_eps.append(ep_num)
-                    else:
-                        multi_needed_eps.append(ep_num)
-
-                logger.debug(f'Multi episode check result is...'
-                             f' multi needed episodes: {multi_needed_eps},'
-                             f' multi not needed episodes: {multi_not_needed_eps}')
-
-                if not multi_needed_eps:
-                    logger.debug('All of these episodes were covered by another multi episode nzb,'
-                                 ' ignoring this multi episode result')
-                    continue
-
-                # if we're keeping this multi-result then remember it
-                for ep_obj in multi_result.ep_obj_list:
-                    multi_results[ep_obj.episode] = multi_result
-
-                # don't bother with the single result if we're going to get it with a multi result
-                for ep_obj in multi_result.ep_obj_list:
-                    ep_num = ep_obj.episode
-                    if ep_num in found_results[provider_id]:
-                        logger.debug(f'A needed multi episode result overlaps with a single episode result'
-                                     f' for episode #{ep_num}, removing the single episode results from the list')
-                        del found_results[provider_id][ep_num]
-
-        # of all the single ep results narrow it down to the best one for each episode
-        final_results += set(itervalues(multi_results))
+            remove_list = []
+            for multi_group_name, multi_group_result in multi_result_groups.items():
+                best_result = _pick_best_result_helper(multi_group_result, **params)
+                if best_result:
+                    multi_result_groups[multi_group_name] = best_result
+                else:
+                    remove_list.append(multi_group_name)
+            if remove_list:
+                multi_result_groups = {k: v for k, v in multi_result_groups.items() if k not in remove_list}
 
         for cur_search_result in found_results[provider_id]:  # type: int
             if cur_search_result in (MULTI_EP_RESULT, SEASON_RESULT):
@@ -1043,23 +1041,7 @@ def search_providers(
             if 0 == len(found_results[provider_id][cur_search_result]):
                 continue
 
-            use_quality_list = None
-            if 0 < len(found_results[provider_id][cur_search_result]) and \
-                    any([found_results[provider_id][cur_search_result][0].ep_obj_list]):
-                old_status = old_status or \
-                             failed_history.find_old_status(
-                                 found_results[provider_id][cur_search_result][0].ep_obj_list[0]) or \
-                             found_results[provider_id][cur_search_result][0].ep_obj_list[0].status
-                if old_status:
-                    status, quality = Quality.split_composite_status(old_status)
-                    use_quality_list = (status not in (
-                        common.WANTED, common.FAILED, common.UNAIRED, common.SKIPPED, common.IGNORED, common.UNKNOWN))
-
-            quality_list = use_quality_list and (None, best_qualities)[any(best_qualities)] or None
-
-            params = dict(show_obj=show_obj, quality_list=quality_list, filter_rls=orig_thread_name)
-
-            best_result = pick_best_result(found_results[provider_id][cur_search_result], **params)
+            best_result = _pick_best_result_helper(results=found_results[provider_id][cur_search_result], **params)
 
             # if all results were rejected move on to the next episode
             if not best_result:
@@ -1098,6 +1080,18 @@ def search_providers(
                             found = True
             if not found:
                 final_results += [best_result]
+
+        # check if we have multi episode results that should be taken
+        if len(multi_result_groups):
+            found_eps = {_ep: _res.quality for _res in final_results for _ep in _res.ep_obj_list}
+            for multi_group_name, multi_group_result in multi_result_groups.items():  # type: AnyStr, search_result_type
+                # if a episode result is only available in multi result or is better quality then single
+                if (any(_ep not in found_eps for _ep in multi_group_result.ep_obj_list) or
+                        any(multi_group_result.quality > found_eps[_ep]
+                            for _ep in multi_group_result.ep_obj_list if _ep in found_eps)):
+                    final_results = [_res for _res in final_results
+                                     if not any(_ep in _res.ep_obj_list for _ep in multi_group_result.ep_obj_list)]
+                    final_results += [multi_group_result]
 
         # check that we got all the episodes we wanted first before doing a match and snatch
         wanted_ep_count = 0
