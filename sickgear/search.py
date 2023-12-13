@@ -797,7 +797,7 @@ def cache_torrent_file(
             if search_result.provider.get_id() in ['tvchaosuk'] \
                     and hasattr(search_result.provider, 'regulate_cache_torrent_file'):
                 torrent_name = search_result.provider.regulate_cache_torrent_file(torrent_name)
-            if not _pick_best_result_helper([search_result], **kwargs) or \
+            if not _pick_best_result_helper([search_result], show_obj=show_obj, **kwargs) or \
                     not show_name_helpers.pass_wordlist_checks(torrent_name, indexer_lookup=False, show_obj=show_obj):
                 logger.log(f'Ignored {result_name} that contains {torrent_name} (debug log has detail)')
                 return
