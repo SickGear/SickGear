@@ -4709,7 +4709,7 @@ class AddShows(Home):
 
     @staticmethod
     def parse_imdb_overview(tag):
-        paragraphs = tag.select('.lister-item-content p')
+        paragraphs = tag.select('.dli-plot-container .ipc-html-content-inner-div')
         filtered = []
         for item in paragraphs:
             if not (item.select('span.certificate') or item.select('span.genre') or
@@ -4724,7 +4724,7 @@ class AddShows(Home):
                 filtered = [item_lines]
             elif len(item_lines) == least_lines:
                 filtered.append(item_lines)
-        overview = None
+        overview = ''
         for item_lines in filtered:
             text = ' '.join([item_lines.strip() for item_lines in item_lines]).strip()
             if len(text) and (not overview or (len(text) > len(overview))):
@@ -4799,19 +4799,19 @@ class AddShows(Home):
         img_size = re.compile(r'(?im)(V1[^XY]+([XY]))(\d+)(\D+)(\d+)(\D+)(\d+)(\D+)(\d+)(\D+)(\d+)(.*?)$')
 
         with BS4Parser(html, features=['html5lib', 'permissive']) as soup:
-            show_list = soup.select('.lister-list')
-            shows = [] if not show_list else show_list[0].select('.lister-item')
+            show_list = soup.select('.detailed-list-view ')
+            shows = [] if not show_list else show_list[0].select('li')
             oldest, newest, oldest_dt, newest_dt = None, None, 9999999, 0
 
             for row in shows:
                 try:
-                    title = row.select('.lister-item-header a[href*=title]')[0]
-                    url_path = title['href'].strip('/')
+                    title = re.sub(r'\d+\.\s(.*)', r'\1', row.select('.ipc-title__text')[0].get_text(strip=True))
+                    url_path = re.sub(r'(.*?)(\?ref_=.*)?', r'\1', row.select('.ipc-title-link-wrapper')[0]['href'])
                     ids = dict(imdb=helpers.parse_imdb_id(url_path))
                     year, ended = 2 * [None]
-                    first_aired = row.select('.lister-item-header .lister-item-year')
+                    first_aired = row.select('.dli-title-metadata .dli-title-metadata-item')
                     if len(first_aired):
-                        years = re.findall(r'.*?(\d{4})(?:.*?(\d{4}))?.*', first_aired[0].get_text())
+                        years = re.findall(r'.*?(\d{4})(?:.*?(\d{4}))?.*', first_aired[0].get_text(strip=True))
                         year, ended = years and years[0] or 2 * [None]
                     ord_premiered = 0
                     started_past = False
@@ -4821,15 +4821,15 @@ class AddShows(Home):
 
                     genres = row.select('.genre')
                     images = {}
-                    img = row.select('.lister-item-image img')
+                    img = row.select('img.ipc-image')
                     overview = self.parse_imdb_overview(row)
-                    rating = row.find('meta', attrs={'itemprop': 'ratingValue'})
-                    rating = None is not rating and rating.get('content') or ''
-                    voting = row.find('meta', attrs={'itemprop': 'ratingCount'})
-                    voting = None is not voting and voting.get('content') or ''
+                    rating = row.select_one('.ipc-rating-star').get_text()
+                    rating = rating and rating.split()[0] or ''
+                    voting = row('span', text=re.compile(r'(?i)vote'))
+                    voting = voting and re.sub(r'\D', '', voting[0].find_parent('div').get_text()) or ''
                     img_uri = None
                     if len(img):
-                        img_uri = img[0].get('loadlate')
+                        img_uri = img[0].get('src')
                         match = img_size.search(img_uri)
                         if match and 'tv_series.gif' not in img_uri and 'nopicture' not in img_uri:
                             scale = (lambda low1, high1: int((float(450) / high1) * low1))
@@ -4849,13 +4849,12 @@ class AddShows(Home):
                         str_premiered=year or 'No year',
                         ended_str=ended or '',
                         started_past=started_past,  # air time not poss. 16.11.2015
-                        genres=('No genre yet' if not len(genres) else
-                                genres[0].get_text().strip().lower().replace(' |', ',')),
+                        genres='',
                         ids=ids,
                         images='' if not img_uri else images,
                         overview='No overview yet' if not overview else helpers.xhtml_escape(overview[:250:]),
                         rating=0 if not len(rating) else int(helpers.try_float(rating) * 10),
-                        title=title.get_text().strip(),
+                        title=title,
                         url_src_db='https://www.imdb.com/%s/' % url_path.strip('/'),
                         votes=0 if not len(voting) else helpers.try_int(voting, 'TBA')))
 
