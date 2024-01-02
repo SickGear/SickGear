@@ -1,4 +1,9 @@
-﻿### 3.30.5 (2023-12-10 05:00:00 UTC)
+﻿### 3.30.6 (2024-01-02 11:05:00 UTC)
+
+* Fix Shows IMDb cards to new layout at IMDb
+
+
+### 3.30.5 (2023-12-10 05:00:00 UTC)
 
 * Change allow Python 3.12.1
 * Change improve Emby status check
