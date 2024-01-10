@@ -24,6 +24,11 @@
 * Fix media process being ignored by Plex extras
 
 
+### 3.30.7 (2024-01-10 14:20:00 UTC)
+
+* Fix limit loaded cast (max 30) and crew (max 5) from TVmaze API
+
+
 ### 3.30.6 (2024-01-02 11:05:00 UTC)
 
 * Fix Shows IMDb cards to new layout at IMDb

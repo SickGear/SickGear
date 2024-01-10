@@ -403,11 +403,12 @@ class Cast(object):
         self.populate(data)
 
     def populate(self, data):
-        for cast_member in data:
-            self.people.append(Person(cast_member['person']))
-            self.characters.append(Character(cast_member['character'], cast_member))
-            self.people[-1].character = self.characters[-1]  # add reference to character
-            self.characters[-1].person = self.people[-1]  # add reference to cast member
+        if isinstance(data, list):
+            for cast_member in data[:30]:
+                self.people.append(Person(cast_member['person']))
+                self.characters.append(Character(cast_member['character'], cast_member))
+                self.people[-1].character = self.characters[-1]  # add reference to character
+                self.characters[-1].person = self.people[-1]  # add reference to cast member
 
     def __repr__(self):
         return self.__str__()
@@ -1434,7 +1435,7 @@ def get_show_crew(maze_id, raise_error=True):
     url = endpoints.show_crew.format(maze_id)
     q = TVmaze.endpoint_standard_get(url)
     if q:
-        return [Crew(crew) for crew in q]
+        return [Crew(crew) for crew in (isinstance(q, list) and q[:5]) or []]
     elif raise_error:
         raise CrewNotFound(f'Couldn\'t find crew for TVmaze ID {maze_id}')
     return []
