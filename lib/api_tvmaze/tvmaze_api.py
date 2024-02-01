@@ -397,27 +397,28 @@ class TvMaze(TVInfoBase):
         # type: (...) -> Dict[integer_types, integer_types]
         return {sid: v.seconds_since_epoch for sid, v in iteritems(tvmaze.show_updates().updates)}
 
-    def _convert_person(self, tvmaze_person_obj):
-        # type: (tvmaze.Person) -> TVInfoPerson
+    def _convert_person(self, tvmaze_person_obj, load_credits=True):
+        # type: (tvmaze.Person, bool) -> TVInfoPerson
         ch = []
         _dupes = []
-        for c in tvmaze_person_obj.castcredits or []:
-            ti_show = TVInfoShow()
-            ti_show.seriesname = clean_data(c.show.name)
-            ti_show.id = c.show.id
-            ti_show.firstaired = clean_data(c.show.premiered)
-            ti_show.ids = TVInfoIDs(ids={TVINFO_TVMAZE: ti_show.id})
-            ti_show.overview = clean_data(c.show.summary)
-            ti_show.status = clean_data(c.show.status)
-            net = c.show.network or c.show.web_channel
-            if net:
-                ti_show.network = clean_data(net.name)
-                ti_show.network_id = net.maze_id
-                ti_show.network_country = clean_data(net.country)
-                ti_show.network_country_code = clean_data(net.code)
-                ti_show.network_timezone = clean_data(net.timezone)
-                ti_show.network_is_stream = None is not c.show.web_channel
-            ch.append(TVInfoCharacter(name=clean_data(c.character.name), ti_show=ti_show, episode_count=1))
+        if load_credits:
+            for c in tvmaze_person_obj.castcredits or []:
+                ti_show = TVInfoShow()
+                ti_show.seriesname = clean_data(c.show.name)
+                ti_show.id = c.show.id
+                ti_show.firstaired = clean_data(c.show.premiered)
+                ti_show.ids = TVInfoIDs(ids={TVINFO_TVMAZE: ti_show.id})
+                ti_show.overview = clean_data(c.show.summary)
+                ti_show.status = clean_data(c.show.status)
+                net = c.show.network or c.show.web_channel
+                if net:
+                    ti_show.network = clean_data(net.name)
+                    ti_show.network_id = net.maze_id
+                    ti_show.network_country = clean_data(net.country)
+                    ti_show.network_country_code = clean_data(net.code)
+                    ti_show.network_timezone = clean_data(net.timezone)
+                    ti_show.network_is_stream = None is not c.show.web_channel
+                ch.append(TVInfoCharacter(name=clean_data(c.character.name), ti_show=ti_show, episode_count=1))
         try:
             birthdate = tvmaze_person_obj.birthday and tz_p.parse(tvmaze_person_obj.birthday).date()
         except (BaseException, Exception):
@@ -440,66 +441,67 @@ class TvMaze(TVInfoBase):
             url=tvmaze_person_obj.url, ids=TVInfoIDs(ids={TVINFO_TVMAZE: tvmaze_person_obj.id})
         )
 
-        for (c_t, regular) in [(tvmaze_person_obj.castcredits or [], True),
-                               (tvmaze_person_obj.guestcastcredits or [], False)]:
-            for c in c_t:  # type: tvmaze.CastCredit
-                _show = c.show or c.episode.show
-                _clean_char_name = clean_data(c.character.name)
-                ti_show = TVInfoShow()
-                if None is not _show:
-                    _clean_show_name = clean_data(_show.name)
-                    _clean_show_id = clean_data(_show.id)
-                    _cur_dup = (_clean_char_name, _clean_show_id)
-                    if _cur_dup in _dupes:
-                        _co = next((_c for _c in ch if _clean_show_id == _c.ti_show.id
-                                    and _c.name == _clean_char_name), None)
-                        if None is not _co:
-                            ti_show = _co.ti_show
-                            _co.episode_count += 1
-                            if not regular:
-                                ep_no = c.episode.episode_number or 0
-                                _co.guest_episodes_numbers.setdefault(c.episode.season_number, []).append(ep_no)
-                                if c.episode.season_number not in ti_show:
-                                    season = TVInfoSeason(show=ti_show, number=c.episode.season_number)
-                                    ti_show[c.episode.season_number] = season
-                                else:
-                                    season = ti_show[c.episode.season_number]
-                                episode = self._make_episode(c.episode, show_obj=ti_show)
-                                episode.season = season
-                                ti_show[c.episode.season_number][ep_no] = episode
-                        continue
-                    else:
-                        _dupes.append(_cur_dup)
-                    ti_show.seriesname = clean_data(_show.name)
-                    ti_show.id = _show.id
-                    ti_show.firstaired = clean_data(_show.premiered)
-                    ti_show.ids = TVInfoIDs(ids={TVINFO_TVMAZE: ti_show.id})
-                    ti_show.overview = enforce_type(clean_data(_show.summary), str, '')
-                    ti_show.status = clean_data(_show.status)
-                    net = _show.network or _show.web_channel
-                    if net:
-                        ti_show.network = clean_data(net.name)
-                        ti_show.network_id = net.maze_id
-                        ti_show.network_country = clean_data(net.country)
-                        ti_show.network_timezone = clean_data(net.timezone)
-                        ti_show.network_country_code = clean_data(net.code)
-                    ti_show.network_is_stream = None is not _show.web_channel
-                    if c.episode:
+        if load_credits:
+            for (c_t, regular) in [(tvmaze_person_obj.castcredits or [], True),
+                                   (tvmaze_person_obj.guestcastcredits or [], False)]:
+                for c in c_t:  # type: tvmaze.CastCredit
+                    _show = c.show or c.episode.show
+                    _clean_char_name = clean_data(c.character.name)
+                    ti_show = TVInfoShow()
+                    if None is not _show:
+                        _clean_show_name = clean_data(_show.name)
+                        _clean_show_id = clean_data(_show.id)
+                        _cur_dup = (_clean_char_name, _clean_show_id)
+                        if _cur_dup in _dupes:
+                            _co = next((_c for _c in ch if _clean_show_id == _c.ti_show.id
+                                        and _c.name == _clean_char_name), None)
+                            if None is not _co:
+                                ti_show = _co.ti_show
+                                _co.episode_count += 1
+                                if not regular:
+                                    ep_no = c.episode.episode_number or 0
+                                    _co.guest_episodes_numbers.setdefault(c.episode.season_number, []).append(ep_no)
+                                    if c.episode.season_number not in ti_show:
+                                        season = TVInfoSeason(show=ti_show, number=c.episode.season_number)
+                                        ti_show[c.episode.season_number] = season
+                                    else:
+                                        season = ti_show[c.episode.season_number]
+                                    episode = self._make_episode(c.episode, show_obj=ti_show)
+                                    episode.season = season
+                                    ti_show[c.episode.season_number][ep_no] = episode
+                            continue
+                        else:
+                            _dupes.append(_cur_dup)
+                        ti_show.seriesname = clean_data(_show.name)
+                        ti_show.id = _show.id
+                        ti_show.firstaired = clean_data(_show.premiered)
+                        ti_show.ids = TVInfoIDs(ids={TVINFO_TVMAZE: ti_show.id})
+                        ti_show.overview = enforce_type(clean_data(_show.summary), str, '')
+                        ti_show.status = clean_data(_show.status)
+                        net = _show.network or _show.web_channel
+                        if net:
+                            ti_show.network = clean_data(net.name)
+                            ti_show.network_id = net.maze_id
+                            ti_show.network_country = clean_data(net.country)
+                            ti_show.network_timezone = clean_data(net.timezone)
+                            ti_show.network_country_code = clean_data(net.code)
+                        ti_show.network_is_stream = None is not _show.web_channel
+                        if c.episode:
 
-                        ti_show.show_loaded = False
-                        ti_show.load_method = self._show_info_loader
-                        season = TVInfoSeason(show=ti_show, number=c.episode.season_number)
-                        ti_show[c.episode.season_number] = season
-                        episode = self._make_episode(c.episode, show_obj=ti_show)
-                        episode.season = season
-                        ti_show[c.episode.season_number][c.episode.episode_number or 0] = episode
-                if not regular:
-                    _g_kw = {'guest_episodes_numbers': {c.episode.season_number: [c.episode.episode_number or 0]}}
-                else:
-                    _g_kw = {}
-                ch.append(TVInfoCharacter(name=_clean_char_name, ti_show=ti_show, regular=regular, episode_count=1,
-                                          person=[_ti_person_obj], **_g_kw))
-        _ti_person_obj.characters = ch
+                            ti_show.show_loaded = False
+                            ti_show.load_method = self._show_info_loader
+                            season = TVInfoSeason(show=ti_show, number=c.episode.season_number)
+                            ti_show[c.episode.season_number] = season
+                            episode = self._make_episode(c.episode, show_obj=ti_show)
+                            episode.season = season
+                            ti_show[c.episode.season_number][c.episode.episode_number or 0] = episode
+                    if not regular:
+                        _g_kw = {'guest_episodes_numbers': {c.episode.season_number: [c.episode.episode_number or 0]}}
+                    else:
+                        _g_kw = {}
+                    ch.append(TVInfoCharacter(name=_clean_char_name, ti_show=ti_show, regular=regular, episode_count=1,
+                                              person=[_ti_person_obj], **_g_kw))
+            _ti_person_obj.characters = ch
         return _ti_person_obj
 
     def _show_info_loader(self, show_id, show_data=None, show_obj=None, load_images=True, load_actors=True):
@@ -553,7 +555,7 @@ class TvMaze(TVInfoBase):
                             existing_character = next(
                                 (c for c in _s_o.cast[RoleTypes.ActorMain] if c.id == cur_ch.id),
                                 None)  # type: Optional[TVInfoCharacter]
-                            person = self._convert_person(cur_ch.person)
+                            person = self._convert_person(cur_ch.person, load_credits=False)
                             if existing_character:
                                 existing_person = next((p for p in existing_character.person
                                                         if person.id == p.ids.get(TVINFO_TVMAZE)),
