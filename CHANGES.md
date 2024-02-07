@@ -1,4 +1,16 @@
-﻿### 3.30.7 (2024-01-10 14:20:00 UTC)
+﻿### 3.30.9 (2024-02-07 23:10:00 UTC)
+
+* Change allow Python 3.12.2
+
+
+### 3.30.8 (2024-02-01 23:30:00 UTC)
+
+* Change update fallback zoneinfo to 2024a
+* Change reduce mem used by cast/person credits with main show info from TVmaze
+* Fix mock data for CI tests
+
+
+### 3.30.7 (2024-01-10 14:20:00 UTC)
 
 * Fix limit loaded cast (max 30) and crew (max 5) from TVmaze API
 
