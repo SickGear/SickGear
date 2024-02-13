@@ -601,9 +601,10 @@ class GitUpdateManager(UpdateManager):
 
         if self.branch == self._find_installed_branch():
             if not self._cur_pr_number:
-                _, _, exit_status = self._run_git(['pull', '-f', '%s' % sickgear.GIT_REMOTE, '%s' % self.branch])
+                _, _, exit_status = self._run_git(['pull', '-f', '--no-rebase', '%s' % sickgear.GIT_REMOTE,
+                                                   '%s' % self.branch])
             else:
-                _, _, exit_status = self._run_git(['pull', '-f', '%s' % sickgear.GIT_REMOTE,
+                _, _, exit_status = self._run_git(['pull', '-f', '--no-rebase', '%s' % sickgear.GIT_REMOTE,
                                                    'pull/%s/head:%s' % (self._cur_pr_number, self.branch)])
 
         else:
