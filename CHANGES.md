@@ -24,6 +24,11 @@
 * Fix media process being ignored by Plex extras
 
 
+### 3.30.10 (2024-02-13 11:00:00 UTC)
+
+* Change prevent git update issue
+
+
 ### 3.30.9 (2024-02-07 23:10:00 UTC)
 
 * Change allow Python 3.12.2
