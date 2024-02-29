@@ -24,6 +24,11 @@
 * Fix media process being ignored by Plex extras
 
 
+### 3.30.11 (2024-02-29 01:20:00 UTC)
+
+* Update UnRar x64 for Windows 6.24 to 7.00
+
+
 ### 3.30.10 (2024-02-13 11:00:00 UTC)
 
 * Change prevent git update issue
