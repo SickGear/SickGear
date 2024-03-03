@@ -5187,7 +5187,7 @@ class AddShows(Home):
             started_past = False
             params = f'premiering_period={("1", "2")["2" in url_path]}&sort=2'
             url_path = 'upcoming'
-        elif 'trending' in url_path:
+        elif 'trends' in url_path:
             params = 'trending_within=2'
         else:
             params = f'chart_type={("most_popular", "top_rated")["Top" in browse_title]}&premiered_within=2'
@@ -5255,7 +5255,7 @@ class AddShows(Home):
                                         age_args['days'] -= 1
                                         dt += relativedelta(day=1)
                                     dt += relativedelta(**age_args)
-                                    date_info = SGDatetime.sbfdate(dt)
+                                    date_info = dt
 
                         ord_premiered = 0
                         str_premiered = ''
