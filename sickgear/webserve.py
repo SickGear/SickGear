@@ -5149,19 +5149,23 @@ class AddShows(Home):
 
     def ne_newpop(self, **kwargs):
         return self.browse_ne(
-            'hotshowsfilter', 'Popular recent premiered at Next Episode', mode='newpop', **kwargs)
+            'hot', 'Popular recent premiered at Next Episode', mode='newpop', **kwargs)
 
     def ne_newtop(self, **kwargs):
         return self.browse_ne(
-            'hotshowsfilter', 'Top rated recent premiered at Next Episode', mode='newtop', **kwargs)
+            'hot', 'Top rated recent premiered at Next Episode', mode='newtop', **kwargs)
 
     def ne_upcoming(self, **kwargs):
         return self.browse_ne(
-            'upcomingshowsfilter', 'Upcoming at Next Episode', mode='upcoming', **kwargs)
+            'upcoming', 'Upcoming Season 1 at Next Episode', mode='upcoming', **kwargs)
+
+    def ne_upcoming2(self, **kwargs):
+        return self.browse_ne(
+            'upcoming2', 'Upcoming Season 2 at Next Episode', mode='upcoming2', **kwargs)
 
     def ne_trending(self, **kwargs):
         return self.browse_ne(
-            'trendingshowsfilter', 'Trending at Next Episode', mode='trending', **kwargs)
+            'trends', 'Trending at Next Episode', mode='trending', **kwargs)
 
     def browse_ne(self, url_path, browse_title, **kwargs):
 
@@ -5181,17 +5185,17 @@ class AddShows(Home):
         started_past = True
         if 'upcoming' in url_path:
             started_past = False
-            url = '%s.php?t=1&s=1&inwl=0&user_id=' % url_path
+            params = f'premiering_period={("1", "2")["2" in url_path]}&sort=2'
+            url_path = 'upcoming'
         elif 'trending' in url_path:
-            url = '%s.php?t=1&a=1&b=1&uid=&status=0&c=1' % url_path
+            params = 'trending_within=2'
         else:
-            url = '%s.php?a=1&b=1&uid=0&status=0&c=2&sortOrder=%s' % (url_path, (0, 1)['Top' in browse_title])
-        url = 'https://next-episode.net/PAGES/misc/%s&g=6&channel=0&actors=0&page=%s' % (url, page)
-
+            params = f'chart_type={("most_popular", "top_rated")["Top" in browse_title]}&premiered_within=2'
+        url = f'https://next-episode.net/{url_path}/?{params}&page={page}'
         html = helpers.get_url(url, headers={'User-Agent': browser_ua.get_ua()})
         if html:
             try:
-                if re.findall(r'(?i)(<a[^>]+gopage\([^>]+)', html)[0]:
+                if re.findall(r'(?i)id="paginationDiv"', html)[0]:
                     kwargs.update(dict(more=1))
             except (BaseException, Exception):
                 pass
