@@ -1,4 +1,10 @@
-﻿### 3.30.12 (2024-03-03 22:30:00 UTC)
+﻿### 3.30.13 (2024-03-03 23:30:00 UTC)
+
+* Fix Shows/"Next Episode Cards" change to Trending
+* Fix unnecessary conversion of datetime object into str and back
+
+
+### 3.30.12 (2024-03-03 22:30:00 UTC)
 
 * Fix menu Shows/"Next Episode Cards"
 

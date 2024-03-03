@@ -5255,7 +5255,7 @@ class AddShows(Home):
                                         age_args['days'] -= 1
                                         dt += relativedelta(day=1)
                                     dt += relativedelta(**age_args)
-                                    date_info = SGDatetime.sbfdate(dt)
+                                    date_info = dt
 
                         ord_premiered = 0
                         str_premiered = ''
