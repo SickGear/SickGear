@@ -208,7 +208,7 @@
 #set $tvc_mode = $tvc_modes.get($sg_var('TVC_MRU'), 'new shows')
 								<li><a href="$sbRoot/add-shows/tvc-default/" tabindex="$tab#set $tab += 1#"><i class="sgicon-tvc"></i>TV Calendar Cards
 									<div class="menu-item-desc opacity60">$tvc_mode...</div></a></li>
-#set $ne_modes = dict(ne_newpop='new popular', ne_newtop='new top rated', ne_upcoming='upcoming', ne_trending='trending')
+#set $ne_modes = dict(ne_newpop='new popular', ne_newtop='new top rated', ne_upcoming='upcoming S01', ne_upcoming2='upcoming s02', ne_trending='trending')
 #set $ne_mode = $ne_modes.get($sg_var('NE_MRU'), 'new popular')
 								<li><a href="$sbRoot/add-shows/ne-default/" tabindex="$tab#set $tab += 1#"><i class="sgicon-ne"></i>Next Episode Cards
 									<div class="menu-item-desc opacity60">$ne_mode...</div></a></li>
