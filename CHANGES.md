@@ -1,4 +1,10 @@
-﻿### 3.30.13 (2024-03-03 23:30:00 UTC)
+﻿### 3.30.14 (2024-03-16 23:20:00 UTC)
+
+* Update certifi 2023.07.22 to 2024.02.02
+* Fix properly handle an error condition during process tv
+
+
+### 3.30.13 (2024-03-03 23:30:00 UTC)
 
 * Fix Shows/"Next Episode Cards" change to Trending
 * Fix unnecessary conversion of datetime object into str and back
