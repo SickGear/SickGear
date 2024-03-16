@@ -119,7 +119,7 @@ class ProcessTVShow(object):
         :rtype: bool
         """
         # check if it's a folder
-        if not os.path.isdir(folder):
+        if not folder or not os.path.isdir(folder):
             return False
 
         # make sure it isn't TV_DOWNLOAD_DIR
