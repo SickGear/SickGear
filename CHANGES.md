@@ -1,4 +1,9 @@
-﻿### 3.30.14 (2024-03-16 23:20:00 UTC)
+﻿### 3.30.15 (2024-03-20 01:55:00 UTC)
+
+* Change allow Python 3.10.14, 3.9.19, and 3.8.19
+
+
+### 3.30.14 (2024-03-16 23:20:00 UTC)
 
 * Update certifi 2023.07.22 to 2024.02.02
 * Fix properly handle an error condition during process tv
