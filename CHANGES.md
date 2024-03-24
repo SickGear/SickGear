@@ -1,6 +1,7 @@
-﻿### 3.30.16 (2024-03-24 17:30:00 UTC)
+﻿### 3.30.16 (2024-03-24 20:30:00 UTC)
 
 * Fix external site links that used a deprecated config/general/advanced/"Anonymous redirect"
+* Change enable legacy double quote support for SQLite when using Python 3.12+
 
 
 ### 3.30.15 (2024-03-20 01:55:00 UTC)
