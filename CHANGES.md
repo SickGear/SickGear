@@ -1,4 +1,9 @@
-﻿### 3.30.15 (2024-03-20 01:55:00 UTC)
+﻿### 3.30.16 (2024-03-24 17:30:00 UTC)
+
+* Fix external site links that used a deprecated config/general/advanced/"Anonymous redirect"
+
+
+### 3.30.15 (2024-03-20 01:55:00 UTC)
 
 * Change allow Python 3.10.14, 3.9.19, and 3.8.19
 
