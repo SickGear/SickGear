@@ -44,6 +44,8 @@ db_support_multiple_insert = (3, 7, 11) <= sqlite3.sqlite_version_info  # type: 
 db_support_column_rename = (3, 25, 0) <= sqlite3.sqlite_version_info  # type: bool
 db_support_upsert = (3, 25, 0) <= sqlite3.sqlite_version_info  # type: bool
 db_supports_backup = hasattr(sqlite3.Connection, 'backup') and (3, 6, 11) <= sqlite3.sqlite_version_info  # type: bool
+db_supports_setconfig_dqs = (hasattr(sqlite3.Connection, 'setconfig') and hasattr(sqlite3, 'SQLITE_DBCONFIG_DQS_DDL')
+                             and hasattr(sqlite3, 'SQLITE_DBCONFIG_DQS_DML'))  # type: bool
 
 
 def db_filename(filename='sickbeard.db', suffix=None):
@@ -111,6 +113,10 @@ class DBConnection(object):
 
         self.filename = filename
         self.connection = sqlite3.connect(db_src, 20)
+        # enable legacy double quote support
+        if db_supports_setconfig_dqs:
+            self.connection.setconfig(sqlite3.SQLITE_DBCONFIG_DQS_DDL, True)
+            self.connection.setconfig(sqlite3.SQLITE_DBCONFIG_DQS_DML, True)
 
         if 'dict' == row_type:
             self.connection.row_factory = self._dict_factory

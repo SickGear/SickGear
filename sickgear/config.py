@@ -544,6 +544,7 @@ class ConfigMigrator(object):
                                 21: 'Rename vars misusing frequency',
                                 22: 'Change Anonymous redirect',
                                 23: 'Change Anonymous redirect',
+                                24: 'Change Anonymous redirect',
                                 }
 
     def migrate_config(self):
@@ -587,8 +588,9 @@ class ConfigMigrator(object):
         """
         Change deprecated anon redirect service URLs
         """
-        if re.search(r'https?://(?:nullrefer.com|dereferer.org|derefer.me)', sickgear.ANON_REDIRECT):
-            sickgear.ANON_REDIRECT = r'https://nosplash.open-dereferrer.com/?'
+        sickgear.ANON_REDIRECT = re.sub(
+            r'https?://(?:nosplash.open-dereferrer.com|nullrefer.com|dereferer.org|derefer.me)',
+            r'https://nullrefer.ir', sickgear.ANON_REDIRECT)
 
     # Migration v1: Custom naming
     def _migrate_v1(self):
@@ -982,4 +984,7 @@ class ConfigMigrator(object):
         self.deprecate_anon_service()
 
     def _migrate_v23(self):
+        self.deprecate_anon_service()
+
+    def _migrate_v24(self):
         self.deprecate_anon_service()
