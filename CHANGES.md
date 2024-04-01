@@ -1,4 +1,9 @@
-﻿### 3.30.16 (2024-03-24 20:30:00 UTC)
+﻿### 3.30.17 (2024-04-01 17:55:00 UTC)
+
+* Change restrict lxml to < 5.2.0 on non-windows OS's
+
+
+### 3.30.16 (2024-03-24 20:30:00 UTC)
 
 * Fix external site links that used a deprecated config/general/advanced/"Anonymous redirect"
 * Change enable legacy double quote support for SQLite when using Python 3.12+
