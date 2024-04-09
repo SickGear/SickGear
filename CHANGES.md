@@ -1,4 +1,9 @@
-﻿### 3.30.17 (2024-04-01 17:55:00 UTC)
+﻿### 3.30.18 (2024-04-24 23:55:00 UTC)
+
+* Change allow Python 3.12.3
+
+
+### 3.30.17 (2024-04-01 17:55:00 UTC)
 
 * Change restrict lxml to < 5.2.0 on non-windows OS's
 
