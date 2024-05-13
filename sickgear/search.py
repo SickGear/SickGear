@@ -1000,7 +1000,7 @@ def search_providers(
 
                     if not best_season_result.url.startswith('magnet'):
                         best_season_result = cache_torrent_file(
-                            best_season_result, show_obj=show_obj, filter_rls=orig_thread_name)
+                            best_season_result, show_obj=show_obj, orig_thread_name=orig_thread_name)
 
                     if best_season_result:
                         ep_num = MULTI_EP_RESULT
