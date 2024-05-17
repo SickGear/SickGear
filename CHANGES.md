@@ -24,6 +24,11 @@
 * Fix media process being ignored by Plex extras
 
 
+### 3.30.19 (2024-05-17 23:40:00 UTC)
+
+* Fix exclude lxml versions 5.2.0 and 5.2.1 on non Windows because of CPU requirements creating core dump failure
+
+
 ### 3.30.18 (2024-04-24 23:55:00 UTC)
 
 * Change allow Python 3.12.3
