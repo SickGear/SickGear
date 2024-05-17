@@ -6,7 +6,7 @@ cryptography <= 3.3.2; 'Linux' == platform_system and 'x86_64' != platform_machi
 cryptography != 38.0.2; 'Darwin' == platform_system and 'x86_64' == platform_machine
 cryptography <= 3.3.2; 'Darwin' == platform_system and 'x86_64' != platform_machine
 lxml >= 4.9.2; 'Windows' == platform_system
-lxml < 5.2.0; 'Windows' != platform_system
+lxml != 5.2.0, != 5.2.1; 'Windows' != platform_system
 orjson; 'Windows' == platform_system
 orjson; 'Linux' == platform_system and ('x86_64' == platform_machine or 'aarch64' == platform_machine or 'armv7l' == platform_machine)
 pip
