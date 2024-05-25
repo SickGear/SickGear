@@ -2,6 +2,7 @@
 
 * Fix FST provider exception raised when no title
 * Update UnRar x64 for Windows 7.00 to 7.0.1
+* Change improve handling of invalid person id for get_person in Trakt indexer
 
 
 ### 3.30.19 (2024-05-17 23:40:00 UTC)
