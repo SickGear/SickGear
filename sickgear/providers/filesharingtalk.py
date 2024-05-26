@@ -146,6 +146,7 @@ class FSTProvider(generic.NZBProvider):
                         raise generic.HaltParseException
 
                     for tr in tbl_rows:
+                        title = None
                         try:
                             if tr.find('img', class_=rc['cat']):
                                 title = tr['data-title'].strip()

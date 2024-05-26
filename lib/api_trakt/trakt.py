@@ -325,7 +325,7 @@ class TraktAPI(object):
                 return self.trakt_request(path, data, headers, url, count=count, sleep_retry=sleep_retry,
                                           send_oauth=send_oauth, method=method)
             elif 404 == code:
-                log.warning(f'Trakt error (404) the resource does not exist: {url}{path}')
+                # log.debug(f'Trakt error (404) the resource does not exist: {url}{path}')
                 raise TraktMethodNotExisting('Trakt error (404) the resource does not exist: %s%s' % (url, path))
             elif 429 == code:
                 if count >= self.max_retrys:

@@ -16,7 +16,10 @@
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
 import re
-import telnetlib
+try:
+    import telnetlib
+except ImportError:
+    import lib.telnetlib313up as telnetlib
 
 from .generic import BaseNotifier
 import sickgear
