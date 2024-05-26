@@ -1,4 +1,12 @@
-﻿### 3.30.19 (2024-05-17 23:40:00 UTC)
+﻿### 3.30.20 (2024-05-25 09:35:00 UTC)
+
+* Fix FST provider exception raised when no title
+* Update UnRar x64 for Windows 7.00 to 7.0.1
+* Change improve handling of invalid person id for get_person in Trakt indexer
+* Changes for py3.13 compatibility
+
+
+### 3.30.19 (2024-05-17 23:40:00 UTC)
 
 * Fix exclude lxml versions 5.2.0 and 5.2.1 on non Windows because of CPU requirements creating core dump failure
 

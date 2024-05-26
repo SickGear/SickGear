@@ -15,7 +15,7 @@
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import cgi
+# import cgi
 
 from .generic import Notifier
 import sickgear
@@ -44,13 +44,13 @@ def diagnose():
         try:
             bus = dbus.SessionBus()
         except dbus.DBusException as e:
-            return (f'Error: unable to connect to D-Bus session bus: <code>{cgi.escape(e)}</code>.'
+            return (f'Error: unable to connect to D-Bus session bus: <code>{e}</code>.'
                     f' Are you running SickGear in a desktop session?')
         try:
             bus.get_object('org.freedesktop.Notifications',
                            '/org/freedesktop/Notifications')
         except dbus.DBusException as e:
-            return (f'Error: there doesn\'t seem to be a notification daemon available: <code>{cgi.escape(e)}</code>.'
+            return (f'Error: there doesn\'t seem to be a notification daemon available: <code>{e}</code>.'
                     f' Try installing notification-daemon or notify-osd.')
     return 'Error: Unable to send notification.'
 

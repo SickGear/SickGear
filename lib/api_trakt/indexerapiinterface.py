@@ -1,7 +1,7 @@
 import datetime
 import logging
 import re
-from .exceptions import TraktException, TraktAuthException
+from .exceptions import TraktException, TraktAuthException, TraktMethodNotExisting
 from exceptions_helper import ConnectionSkipException, ex
 from six import iteritems
 from .trakt import TraktAPI
@@ -333,8 +333,10 @@ class TraktIndexer(TVInfoBase):
                         result = self._convert_person_obj(resp)
             except ConnectionSkipException as e:
                 raise e
+            except TraktMethodNotExisting:
+                log.debug(f'Person id doesn\'t exist: {p_id}')
             except TraktException as e:
-                log.debug('Could not connect to Trakt service: %s' % ex(e))
+                log.debug('Could not connect to Trakt service: {ex(e)}')
         return result
 
     def _search_person(self, name=None, ids=None):
