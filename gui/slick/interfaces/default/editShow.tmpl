@@ -166,7 +166,7 @@
     #set $options = ''
     #set $selected = ' selected=\"selected\"'
     #set $num_selected = 0
-    #for $gw in $sickgear.IGNORE_WORDS:
+    #for $gw in sorted($sickgear.IGNORE_WORDS, key=$str.lower):
         #set $sel_html = ''
         #if $gw in $show_obj.rls_global_exclude_ignore
             #set $sel_html = $selected
@@ -202,7 +202,7 @@
     #set $options = ''
     #set $selected = ' selected=\"selected\"'
     #set $num_selected = 0
-    #for $gw in $sickgear.REQUIRE_WORDS:
+    #for $gw in sorted($sickgear.REQUIRE_WORDS, key=$str.lower):
         #set $sel_html = ''
         #if $gw in $show_obj.rls_global_exclude_require
             #set $sel_html = $selected
