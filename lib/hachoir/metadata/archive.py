@@ -3,7 +3,7 @@ from hachoir.metadata.safe import fault_tolerant, getValue
 from hachoir.metadata.metadata import (
     RootMetadata, Metadata, MultipleMetadata, registerExtractor)
 from hachoir.parser.archive import (Bzip2Parser, CabFile, GzipParser,
-                                        TarFile, ZipFile, MarFile)
+                                    TarFile, ZipFile, MarFile)
 from hachoir.core.tools import humanUnixAttributes
 
 

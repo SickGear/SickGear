@@ -12,10 +12,10 @@ Creation date: 2008-04-09
 from hachoir.core.tools import paddingSize
 from hachoir.parser import Parser
 from hachoir.field import (FieldSet,
-                               Bit, NullBits, NullBytes,
-                               UInt8, UInt32, String, RawBytes, Enum,
-                               TimestampUnix64, CompressedField,
-                               SubFile)
+                           Bit, NullBits, NullBytes,
+                           UInt8, UInt32, String, RawBytes, Enum,
+                           TimestampUnix64, CompressedField,
+                           SubFile)
 from hachoir.core.endian import BIG_ENDIAN
 
 try:

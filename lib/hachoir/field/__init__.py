@@ -4,27 +4,27 @@ from hachoir.field.bit_field import Bit, Bits, RawBits  # noqa
 from hachoir.field.byte_field import Bytes, RawBytes  # noqa
 from hachoir.field.sub_file import SubFile, CompressedField  # noqa
 from hachoir.field.character import Character  # noqa
-from hachoir.field.integer import (Int8, Int16, Int24, Int32, Int64,  # noqa
-                                       UInt8, UInt16, UInt24, UInt32, UInt64,
-                                       GenericInteger)
+from hachoir.field.integer import (Int8,  Int16,  Int24,  Int32,  Int64,  # noqa
+                                   UInt8, UInt16, UInt24, UInt32, UInt64,
+                                   GenericInteger)
 from hachoir.field.enum import Enum  # noqa
 from hachoir.field.string_field import (GenericString,  # noqa
-                                            String, CString, UnixLine,
-                                            PascalString8, PascalString16,
-                                            PascalString32)
+                                        String, CString, UnixLine,
+                                        PascalString8, PascalString16,
+                                        PascalString32)
 from hachoir.field.padding import (PaddingBits, PaddingBytes,  # noqa
-                                       NullBits, NullBytes)
+                                   NullBits, NullBytes)
 
 # Functions
 from hachoir.field.helper import (isString, isInteger,  # noqa
-                                      createPaddingField, createNullField,
-                                      createRawField, writeIntoFile,
-                                      createOrphanField)
+                                  createPaddingField, createNullField,
+                                  createRawField, writeIntoFile,
+                                  createOrphanField)
 
 # FieldSet classes
 from hachoir.field.fake_array import FakeArray  # noqa
 from hachoir.field.basic_field_set import (BasicFieldSet,  # noqa
-                                               ParserError, MatchError)
+                                           ParserError, MatchError)
 from hachoir.field.generic_field_set import GenericFieldSet  # noqa
 from hachoir.field.seekable_field_set import SeekableFieldSet, RootSeekableFieldSet  # noqa
 from hachoir.field.field_set import FieldSet  # noqa

@@ -41,9 +41,9 @@ Creation date: 24 september 2006
 
 from hachoir.parser import Parser
 from hachoir.field import (FieldSet,
-                               FieldError, ParserError,
-                               Bit, Bits, Bytes, UInt8, GenericInteger, String,
-                               Field, Enum, RawBytes)
+                           FieldError, ParserError,
+                           Bit, Bits, Bytes, UInt8, GenericInteger, String,
+                           Field, Enum, RawBytes)
 from hachoir.core.endian import BIG_ENDIAN
 from hachoir.core.tools import createDict, humanDatetime
 from hachoir.stream import InputStreamError

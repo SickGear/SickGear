@@ -39,6 +39,17 @@ from _23 import decode_bytes, html_unescape, list_range, \
     Popen, scandir, urlparse, urlsplit, urlunparse
 from six import integer_types, iteritems, iterkeys, itervalues, moves, PY2, string_types, text_type
 
+ACCEPT_ENCODING = "gzip,deflate"
+try:
+    try:
+        import brotlicffi as _unused_module_brotli  # noqa: F401
+    except ImportError:
+        import brotli as _unused_module_brotli  # noqa: F401
+except ImportError:
+    pass
+else:
+    ACCEPT_ENCODING += ",br"
+
 import zipfile
 # py7z hardwired removed, see comment below
 py7zr = None
@@ -863,7 +874,7 @@ def get_url(url,  # type: AnyStr
 
     # session main headers
     req_headers = {'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                   'Accept-Encoding': 'gzip,deflate'}
+                   'Accept-Encoding': ACCEPT_ENCODING}
     if headers:
         req_headers.update(headers)
     if hasattr(session, 'reserved') and 'headers' in session.reserved:
@@ -1068,43 +1079,71 @@ def save_failure(url, domain, log_failure_url, post_data, post_json):
 
 def scantree(path,  # type: AnyStr
              exclude=None,  # type: Optional[AnyStr, List[AnyStr]]
+             exclude_dirs=None,  # type: Optional[AnyStr, List[AnyStr]]
              include=None,  # type: Optional[AnyStr, List[AnyStr]]
              follow_symlinks=False,  # type: bool
              filter_kind=None,  # type: Optional[bool]
              recurse=True,  # type: bool
-             exclude_folders_with_files=None  # type: Optional[List[AnyStr]]
+             exclude_folders_with_files=None,  # type: Optional[List[AnyStr]]
+             internal_call=False,  # type: bool
+             rc_exc=None,  # type: List
+             rc_exc_dir=None,  # type: List
+             rc_inc=None,  # type: List
+             has_exclude=False,  # type: bool
+             has_exclude_dirs=False,  # type: bool
+             has_include=False  # type: bool
              ):
     # type: (...) -> Generator[DirEntry, None, None]
     """Yield DirEntry objects for given path. Returns without yield if path fails sanity check
 
     :param path: Path to scan, sanity check is_dir and exists
-    :param exclude: Escaped regex string(s) to exclude
+    :param exclude: Escaped regex string(s) to exclude (files and directories)
+    :param exclude_dirs: Escaped regex string(s) to exclude (directories only)
     :param include: Escaped regex string(s) to include
     :param follow_symlinks: Follow symlinks
     :param filter_kind: None to yield everything, True yields directories, False yields files
     :param recurse: Recursively scan the tree
     :param exclude_folders_with_files: exclude folder that contain the listed file(s)
+    :param internal_call: internal use
+    :param rc_exc: internal use
+    :param rc_exc_dir: internal use
+    :param rc_inc: internal use
+    :param has_exclude: internal use
+    :param has_exclude_dirs: internal use
+    :param has_include: internal_use
     """
     if isinstance(path, string_types) and path and os.path.isdir(path):
-        rc_exc, rc_inc = [re.compile(rx % '|'.join(
-            [x for x in (param, ([param], [])[None is param])[not isinstance(param, list)]]))
-                          for rx, param in ((r'(?i)^(?:(?!%s).)*$', exclude), (r'(?i)%s', include))]
-        for entry in scandir(path):
-            is_dir = entry.is_dir(follow_symlinks=follow_symlinks)
-            is_file = entry.is_file(follow_symlinks=follow_symlinks)
-            no_filter = any([None is filter_kind, filter_kind and is_dir, not filter_kind and is_file])
-            if (rc_exc.search(entry.name), True)[not exclude] and (rc_inc.search(entry.name), True)[not include] \
-                    and (no_filter or (not filter_kind and is_dir and recurse)):
-                if is_dir and exclude_folders_with_files and any(os.path.isfile(os.path.join(entry.path, e_f))
-                                                      for e_f in exclude_folders_with_files):
-                    logger.debug(f'Ignoring Folder: "{entry.path}", because it contains a exclude file'
-                                 f' "{", ".join(exclude_folders_with_files)}"')
-                    continue
-                if recurse and is_dir:
-                    for subentry in scantree(entry.path, exclude, include, follow_symlinks, filter_kind, recurse):
-                        yield subentry
-                if no_filter:
-                    yield entry
+        if not internal_call:
+            rc_exc, rc_exc_dir, rc_inc = [re.compile(rx % '|'.join(
+                [x for x in (param, ([param], [])[None is param])[not isinstance(param, list)]]))
+                              for rx, param in ((r'(?i)^(?:(?!%s).)*$', exclude), (r'(?i)^(?:(?!%s).)*$', exclude_dirs),
+                                                (r'(?i)%s', include))]
+            has_exclude, has_exclude_dirs, has_include = bool(exclude), bool(exclude_dirs), bool(include)
+
+        with scandir(path) as s_d:
+            for entry in s_d:
+                is_dir = entry.is_dir(follow_symlinks=follow_symlinks)
+                is_file = entry.is_file(follow_symlinks=follow_symlinks)
+                no_filter = any([None is filter_kind, filter_kind and is_dir, not filter_kind and is_file])
+                if ((not has_exclude or rc_exc.search(entry.name))
+                        and (not has_exclude_dirs or not is_dir or rc_exc_dir.search(entry.name))
+                        and (not has_include or rc_inc.search(entry.name))
+                        and (no_filter or (not filter_kind and is_dir and recurse))):
+                    if is_dir and exclude_folders_with_files and any(os.path.isfile(os.path.join(entry.path, e_f))
+                                                          for e_f in exclude_folders_with_files):
+                        logger.debug(f'Ignoring Folder: "{entry.path}", because it contains a exclude file'
+                                     f' "{", ".join(exclude_folders_with_files)}"')
+                        continue
+                    if recurse and is_dir:
+                        for subentry in scantree(
+                                path=entry.path, exclude=exclude, exclude_dirs=exclude_dirs, include=include,
+                                follow_symlinks=follow_symlinks, filter_kind=filter_kind, recurse=recurse,
+                                exclude_folders_with_files=exclude_folders_with_files, internal_call=True,
+                                rc_exc=rc_exc, rc_exc_dir=rc_exc_dir, rc_inc=rc_inc, has_exclude=has_exclude,
+                                has_exclude_dirs=has_exclude_dirs, has_include=has_include):
+                            yield subentry
+                    if no_filter:
+                        yield entry
 
 
 def copy_file(src_file, dest_file):

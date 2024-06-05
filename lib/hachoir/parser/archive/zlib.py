@@ -7,20 +7,20 @@ Creation date: July 9 2007
 
 from hachoir.parser import Parser
 from hachoir.field import (Bit, Bits, Field, Int16, UInt32,
-                               Enum, FieldSet, GenericFieldSet,
-                               PaddingBits, ParserError, RawBytes)
+                           Enum, FieldSet, GenericFieldSet,
+                           PaddingBits, ParserError, RawBytes)
 from hachoir.core.endian import LITTLE_ENDIAN
 from hachoir.core.text_handler import textHandler, hexadecimal
 from hachoir.core.tools import paddingSize, alignValue
 
 
-def extend_data(data, length, offset):
-    """Extend data using a length and an offset."""
+def extend_data(data: bytearray, length, offset):
+    """Extend data using a length and an offset, LZ-style."""
     if length >= offset:
         new_data = data[-offset:] * (alignValue(length, offset) // offset)
-        return data + new_data[:length]
+        data += new_data[:length]
     else:
-        return data + data[-offset:-offset + length]
+        data += data[-offset:-offset + length]
 
 
 def build_tree(lengths):
@@ -136,9 +136,9 @@ class DeflateBlock(FieldSet):
     CODE_LENGTH_ORDER = [16, 17, 18, 0, 8, 7, 9,
                          6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15]
 
-    def __init__(self, parent, name, uncomp_data="", *args, **kwargs):
+    def __init__(self, parent, name, uncomp_data=b"", *args, **kwargs):
         FieldSet.__init__(self, parent, name, *args, **kwargs)
-        self.uncomp_data = uncomp_data
+        self.uncomp_data = bytearray(uncomp_data)
 
     def createFields(self):
         yield Bit(self, "final", "Is this the final block?")  # BFINAL
@@ -227,7 +227,7 @@ class DeflateBlock(FieldSet):
                 field._description = "Literal Code %r (Huffman Code %i)" % (
                     chr(value), field.value)
                 yield field
-                self.uncomp_data += chr(value)
+                self.uncomp_data.append(value)
             if value == 256:
                 field._description = "Block Terminator Code (256) (Huffman Code %i)" % field.value
                 yield field
@@ -267,15 +267,14 @@ class DeflateBlock(FieldSet):
                     extrafield._description = "Distance Extra Bits (%i), total length %i" % (
                         extrafield.value, distance)
                     yield extrafield
-                self.uncomp_data = extend_data(
-                    self.uncomp_data, length, distance)
+                extend_data(self.uncomp_data, length, distance)
 
 
 class DeflateData(GenericFieldSet):
     endian = LITTLE_ENDIAN
 
     def createFields(self):
-        uncomp_data = ""
+        uncomp_data = bytearray()
         blk = DeflateBlock(self, "compressed_block[]", uncomp_data)
         yield blk
         uncomp_data = blk.uncomp_data
@@ -326,11 +325,11 @@ class ZlibData(Parser):
         yield textHandler(UInt32(self, "data_checksum", "ADLER32 checksum of compressed data"), hexadecimal)
 
 
-def zlib_inflate(stream, wbits=None, prevdata=""):
+def zlib_inflate(stream, wbits=None):
     if wbits is None or wbits >= 0:
         return ZlibData(stream)["data"].uncompressed_data
     else:
         data = DeflateData(None, "root", stream, "", stream.askSize(None))
-        for unused in data:
+        for _ in data:
             pass
         return data.uncompressed_data

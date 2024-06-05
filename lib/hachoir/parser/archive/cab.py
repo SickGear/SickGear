@@ -10,9 +10,9 @@ Creation date: 31 january 2007
 
 from hachoir.parser import Parser
 from hachoir.field import (FieldSet, Enum,
-                               CString, String,
-                               UInt8, UInt16, UInt32, Bit, Bits, PaddingBits, NullBits,
-                               DateTimeMSDOS32, RawBytes, CustomFragment)
+                           CString, String,
+                           UInt8, UInt16, UInt32, Bit, Bits, PaddingBits, NullBits,
+                           DateTimeMSDOS32, RawBytes, CustomFragment)
 from hachoir.core.text_handler import textHandler, hexadecimal, filesizeHandler
 from hachoir.core.endian import LITTLE_ENDIAN
 from hachoir.core.tools import paddingSize

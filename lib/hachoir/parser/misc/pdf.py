@@ -44,7 +44,7 @@ def getElementEnd(s, limit=b' ', offset=0):
 
 
 class PDFNumber(Field):
-    LIMITS = [b'[', b'/', b'\x0D', b']']
+    LIMITS = [b'[', b'/', b'\x0A', b'\x0D', b'>', b']']
     """
     sprintf("%i") or sprinf("%.?f")
     """
@@ -81,18 +81,18 @@ class PDFString(Field):
 
     def __init__(self, parent, name, desc=None):
         Field.__init__(self, parent, name, description=desc)
-        val = ""
+        val = bytearray()
         count = 1
         off = 1
         while not parent.eof:
             char = parent.stream.readBytes(self.absolute_address + 8 * off, 1)
             # Non-ASCII
-            if not char.isalpha() or char == '\\':
+            if not char.isalpha() or char == b'\\':
                 off += 1
                 continue
-            if char == '(':
+            if char == b'(':
                 count += 1
-            if char == ')':
+            if char == b')':
                 count -= 1
             # Parenthesis block = 0 => end of string
             if count == 0:
@@ -101,13 +101,15 @@ class PDFString(Field):
 
             # Add it to the string
             val += char
+            off += 1
 
+        val = bytes(val)
         self._size = 8 * off
         self.createValue = lambda: val
 
 
 class PDFName(Field):
-    LIMITS = [b'[', b'/', b'<', b']']
+    LIMITS = [b'[', b'/', b'<', b'>', b']']
     """
     String starting with '/', where characters may be written using their
     ASCII code (exemple: '#20' would be ' '
@@ -145,7 +147,7 @@ class PDFID(Field):
 
     def __init__(self, parent, name, desc=None):
         Field.__init__(self, parent, name, description=desc)
-        self._size = 8 * getElementEnd(parent, '>')
+        self._size = 8 * getElementEnd(parent, b'>')
         self.createValue = lambda: parent.stream.readBytes(
             self.absolute_address + 8, (self._size // 8) - 1)
 
@@ -254,7 +256,7 @@ def parsePDFType(s):
     else:
         # First parse size
         size = getElementEnd(s)
-        for limit in ['/', '>', '<']:
+        for limit in [b'/', b'>', b'<']:
             other_size = getElementEnd(s, limit)
             if other_size is not None:
                 other_size -= 1
@@ -424,7 +426,7 @@ class Catalog(FieldSet):
             new_length = getElementEnd(self, limit)
             if length is None or (new_length is not None and new_length - len(limit) < length):
                 length = new_length - len(limit)
-        yield String(self, "object", length, strip=' ')
+        yield String(self, "object", length, strip=' \n')
         if self.stream.readBytes(self.absolute_address + self.current_size, 2) == b'<<':
             yield PDFDictionary(self, "key_list")
         # End of catalog: this one has "endobj"
@@ -441,9 +443,9 @@ class Trailer(FieldSet):
         yield RawBytes(self, "marker", len(self.MAGIC))
         yield WhiteSpace(self, "sep[]")
         yield String(self, "start_attribute_marker", 2)
+        yield WhiteSpace(self, "sep[]")
         addr = self.absolute_address + self.current_size
         while self.stream.readBytes(addr, 2) != b'>>':
-            yield WhiteSpace(self, "sep[]")
             t = PDFName(self, "type[]")
             yield t
             name = t.value.decode()
@@ -462,6 +464,7 @@ class Trailer(FieldSet):
                 yield PDFDictionary(self, "decrypt")
             else:
                 raise ParserError("Don't know trailer type '%s'" % name)
+            yield WhiteSpace(self, "sep[]")
             addr = self.absolute_address + self.current_size
         yield String(self, "end_attribute_marker", 2)
         yield LineEnd(self, "line_end[]")

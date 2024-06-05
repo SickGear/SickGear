@@ -211,7 +211,7 @@ class OLE2_File(HachoirParser, RootSeekableFieldSet):
             return "Unknown major version (%s)" % self["header/ver_maj"].value
         if self["header/endian"].value not in (b"\xFF\xFE", b"\xFE\xFF"):
             return "Unknown endian (%s)" % self["header/endian"].raw_display
-        if not(MIN_BIG_BLOCK_LOG2 <= self["header/bb_shift"].value <= MAX_BIG_BLOCK_LOG2):
+        if not (MIN_BIG_BLOCK_LOG2 <= self["header/bb_shift"].value <= MAX_BIG_BLOCK_LOG2):
             return "Invalid (log 2 of) big block size (%s)" % self["header/bb_shift"].value
         if self["header/bb_shift"].value < self["header/sb_shift"].value:
             return "Small block size (log2=%s) is bigger than big block size (log2=%s)!" \

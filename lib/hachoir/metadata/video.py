@@ -1,6 +1,6 @@
 from hachoir.field import MissingField
 from hachoir.metadata.metadata import (registerExtractor,
-                                           Metadata, RootMetadata, MultipleMetadata)
+                                       Metadata, RootMetadata, MultipleMetadata)
 from hachoir.metadata.metadata_item import QUALITY_GOOD
 from hachoir.metadata.safe import fault_tolerant
 from hachoir.parser.video import AsfFile, FlvFile

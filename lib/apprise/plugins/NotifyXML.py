@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# BSD 3-Clause License
+# BSD 2-Clause License
 #
 # Apprise - Push Notification Library.
 # Copyright (c) 2023, Chris Caron <lead2gold@gmail.com>
@@ -13,10 +13,6 @@
 # 2. Redistributions in binary form must reproduce the above copyright notice,
 #    this list of conditions and the following disclaimer in the documentation
 #    and/or other materials provided with the distribution.
-#
-# 3. Neither the name of the copyright holder nor the names of its
-#    contributors may be used to endorse or promote products derived from
-#    this software without specific prior written permission.
 #
 # THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 # AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
@@ -39,6 +35,16 @@ from ..URLBase import PrivacyMode
 from ..common import NotifyImageSize
 from ..common import NotifyType
 from ..AppriseLocale import gettext_lazy as _
+
+
+class XMLPayloadField:
+    """
+    Identifies the fields available in the JSON Payload
+    """
+    VERSION = 'Version'
+    TITLE = 'Subject'
+    MESSAGE = 'Message'
+    MESSAGETYPE = 'MessageType'
 
 
 # Defines the method to send the notification
@@ -69,6 +75,9 @@ class NotifyXML(NotifyBase):
     # A URL that takes you to the setup/help of the specific protocol
     setup_url = 'https://github.com/caronc/apprise/wiki/Notify_Custom_XML'
 
+    # Support attachments
+    attachment_support = True
+
     # Allows the user to specify the NotifyImageSize object
     image_size = NotifyImageSize.XY_128
 
@@ -78,7 +87,8 @@ class NotifyXML(NotifyBase):
 
     # XSD Information
     xsd_ver = '1.1'
-    xsd_url = 'https://raw.githubusercontent.com/caronc/apprise/master' \
+    xsd_default_url = \
+        'https://raw.githubusercontent.com/caronc/apprise/master' \
         '/apprise/assets/NotifyXML-{version}.xsd'
 
     # Define object templates
@@ -161,7 +171,7 @@ class NotifyXML(NotifyBase):
     xmlns:xsd="http://www.w3.org/2001/XMLSchema"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
     <soapenv:Body>
-        <Notification xmlns:xsi="{{XSD_URL}}">
+        <Notification{{XSD_URL}}>
             {{CORE}}
             {{ATTACHMENTS}}
        </Notification>
@@ -180,6 +190,18 @@ class NotifyXML(NotifyBase):
             self.logger.warning(msg)
             raise TypeError(msg)
 
+        # A payload map allows users to over-ride the default mapping if
+        # they're detected with the :overide=value.  Normally this would
+        # create a new key and assign it the value specified.  However
+        # if the key you specify is actually an internally mapped one,
+        # then a re-mapping takes place using the value
+        self.payload_map = {
+            XMLPayloadField.VERSION: XMLPayloadField.VERSION,
+            XMLPayloadField.TITLE: XMLPayloadField.TITLE,
+            XMLPayloadField.MESSAGE: XMLPayloadField.MESSAGE,
+            XMLPayloadField.MESSAGETYPE: XMLPayloadField.MESSAGETYPE,
+        }
+
         self.params = {}
         if params:
             # Store our extra headers
@@ -190,6 +212,7 @@ class NotifyXML(NotifyBase):
             # Store our extra headers
             self.headers.update(headers)
 
+        self.payload_overrides = {}
         self.payload_extras = {}
         if payload:
             # Store our extra payload entries (but tidy them up since they will
@@ -201,7 +224,21 @@ class NotifyXML(NotifyBase):
                         'Ignoring invalid XML Stanza element name({})'
                         .format(k))
                     continue
-                self.payload_extras[key] = v
+
+                # Any values set in the payload to alter a system related one
+                # alters the system key.  Hence :message=msg maps the 'message'
+                # variable that otherwise already contains the payload to be
+                # 'msg' instead (containing the payload)
+                if key in self.payload_map:
+                    self.payload_map[key] = v
+                    self.payload_overrides[key] = v
+
+                else:
+                    self.payload_extras[key] = v
+
+        # Set our xsd url
+        self.xsd_url = None if self.payload_overrides or self.payload_extras \
+            else self.xsd_default_url.format(version=self.xsd_ver)
 
         return
 
@@ -227,6 +264,8 @@ class NotifyXML(NotifyBase):
         # Append our payload extra's into our parameters
         params.update(
             {':{}'.format(k): v for k, v in self.payload_extras.items()})
+        params.update(
+            {':{}'.format(k): v for k, v in self.payload_overrides.items()})
 
         # Determine Authentication
         auth = ''
@@ -273,14 +312,21 @@ class NotifyXML(NotifyBase):
         # Our XML Attachmement subsitution
         xml_attachments = ''
 
-        # Our Payload Base
-        payload_base = {
-            'Version': self.xsd_ver,
-            'Subject': NotifyXML.escape_html(title, whitespace=False),
-            'MessageType': NotifyXML.escape_html(
-                notify_type, whitespace=False),
-            'Message': NotifyXML.escape_html(body, whitespace=False),
-        }
+        payload_base = {}
+
+        for key, value in (
+                (XMLPayloadField.VERSION, self.xsd_ver),
+                (XMLPayloadField.TITLE, NotifyXML.escape_html(
+                    title, whitespace=False)),
+                (XMLPayloadField.MESSAGE, NotifyXML.escape_html(
+                    body, whitespace=False)),
+                (XMLPayloadField.MESSAGETYPE, NotifyXML.escape_html(
+                    notify_type, whitespace=False))):
+
+            if not self.payload_map[key]:
+                # Do not store element in payload response
+                continue
+            payload_base[self.payload_map[key]] = value
 
         # Apply our payload extras
         payload_base.update(
@@ -292,7 +338,7 @@ class NotifyXML(NotifyBase):
             ['<{}>{}</{}>'.format(k, v, k) for k, v in payload_base.items()])
 
         attachments = []
-        if attach:
+        if attach and self.attachment_support:
             for attachment in attach:
                 # Perform some simple error checking
                 if not attachment:
@@ -328,7 +374,8 @@ class NotifyXML(NotifyBase):
                 ''.join(attachments) + '</Attachments>'
 
         re_map = {
-            '{{XSD_URL}}': self.xsd_url.format(version=self.xsd_ver),
+            '{{XSD_URL}}':
+            f' xmlns:xsi="{self.xsd_url}"' if self.xsd_url else '',
             '{{ATTACHMENTS}}': xml_attachments,
             '{{CORE}}': xml_base,
         }

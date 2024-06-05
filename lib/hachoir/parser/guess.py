@@ -139,4 +139,7 @@ def createParser(filename, real_filename=None, tags=None):
     if not tags:
         tags = []
     stream = FileInputStream(filename, real_filename, tags=tags)
-    return guessParser(stream)
+    guess = guessParser(stream)
+    if guess is None:
+        stream.close()
+    return guess

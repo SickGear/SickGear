@@ -13,10 +13,10 @@ Creation date: 19 january 2006
 
 from hachoir.parser import Parser
 from hachoir.field import (StaticFieldSet, FieldSet,
-                               Bit, Bits, NullBits, RawBytes, Enum,
-                               UInt8, UInt16, UInt32,
-                               PascalString8, PascalString16, String,
-                               TimeDateMSDOS32)
+                           Bit, Bits, NullBits, RawBytes, Enum,
+                           UInt8, UInt16, UInt32,
+                           PascalString8, PascalString16, String,
+                           TimeDateMSDOS32)
 from hachoir.core.text_handler import textHandler, filesizeHandler, hexadecimal
 from hachoir.core.endian import LITTLE_ENDIAN
 from hachoir.parser.common.msdos import MSDOSFileAttr32

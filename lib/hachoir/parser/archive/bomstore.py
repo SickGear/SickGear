@@ -11,7 +11,7 @@ Created: 2015-05-14
 
 from hachoir.parser import HachoirParser
 from hachoir.field import (RootSeekableFieldSet, FieldSet,
-                               UInt32, Bytes, NullBytes, RawBytes)
+                           UInt32, Bytes, NullBytes, RawBytes)
 from hachoir.core.endian import BIG_ENDIAN
 
 

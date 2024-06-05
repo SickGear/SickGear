@@ -13,7 +13,7 @@ class HachoirParser(object):
     """
     A parser is the root of all other fields. It create first level of fields
     and have special attributes and methods:
-    - tags: dictionnary with keys:
+    - tags: dictionary with keys:
       - "file_ext": classical file extensions (string or tuple of strings) ;
       - "mime": MIME type(s) (string or tuple of strings) ;
       - "description": String describing the parser.

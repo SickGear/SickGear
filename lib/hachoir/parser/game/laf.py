@@ -7,7 +7,7 @@ Creation date: 1 January 2007
 
 from hachoir.parser import Parser
 from hachoir.field import (FieldSet,
-                               UInt8, UInt16, UInt32, GenericVector)
+                           UInt8, UInt16, UInt32, GenericVector)
 from hachoir.core.endian import LITTLE_ENDIAN
 
 

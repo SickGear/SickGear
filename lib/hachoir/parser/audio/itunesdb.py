@@ -10,8 +10,8 @@ Creation date: 19 august 2006
 
 from hachoir.parser import Parser
 from hachoir.field import (FieldSet,
-                               UInt8, UInt16, UInt32, Int32, UInt64, TimestampMac32,
-                               String, Float32, NullBytes, Enum, RawBytes)
+                           UInt8, UInt16, UInt32, Int32, UInt64, TimestampMac32,
+                           String, Float32, NullBytes, Enum, RawBytes)
 from hachoir.core.endian import LITTLE_ENDIAN
 from hachoir.core.tools import humanDuration
 from hachoir.core.text_handler import displayHandler, filesizeHandler
@@ -128,7 +128,7 @@ class DataObject(FieldSet):
                 yield padding
             for i in range(self["entry_count"].value):
                 yield UInt32(self, "index[" + str(i) + "]", "Index of the " + str(i) + "nth mhit")
-        elif(self["type"].value < 15) or (self["type"].value > 17) or (self["type"].value >= 200):
+        elif (self["type"].value < 15) or (self["type"].value > 17) or (self["type"].value >= 200):
             yield UInt32(self, "unknown[]")
             yield UInt32(self, "unknown[]")
             yield UInt32(self, "position", "Position")

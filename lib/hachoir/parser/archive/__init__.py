@@ -1,5 +1,6 @@
 from hachoir.parser.archive.ace import AceFile  # noqa
 from hachoir.parser.archive.ar import ArchiveFile  # noqa
+from hachoir.parser.archive.arj import ArjParser  # noqa
 from hachoir.parser.archive.bomstore import BomFile  # noqa
 from hachoir.parser.archive.bzip2_parser import Bzip2Parser  # noqa
 from hachoir.parser.archive.cab import CabFile  # noqa

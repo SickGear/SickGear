@@ -85,7 +85,7 @@ def processFile(values, filename,
 
     with parser:
         # Extract metadata
-        extract_metadata = not(values.mime or values.type)
+        extract_metadata = not (values.mime or values.type)
         if extract_metadata:
             try:
                 metadata = extractMetadata(parser, values.quality)
@@ -124,7 +124,7 @@ def processFile(values, filename,
 
 
 def processFiles(values, filenames, display=True):
-    human = not(values.raw)
+    human = not values.raw
     ok = True
     priority = int(values.level) * 100 + 99
     display_filename = (1 < len(filenames))

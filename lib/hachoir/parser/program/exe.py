@@ -12,14 +12,14 @@ Creation date: 2006-08-13
 from hachoir.parser import HachoirParser
 from hachoir.core.endian import LITTLE_ENDIAN
 from hachoir.field import (FieldSet, RootSeekableFieldSet,
-                               UInt16, UInt32, String,
-                               RawBytes, PaddingBytes)
+                           UInt16, UInt32, String,
+                           RawBytes, PaddingBytes)
 from hachoir.core.text_handler import textHandler, hexadecimal
 from hachoir.parser.program.exe_ne import NE_Header
 from hachoir.parser.program.exe_pe import PE_Header, PE_OptHeader, SectionHeader
 from hachoir.parser.program.exe_res import PE_Resource, NE_VersionInfoNode
 
-MAX_NB_SECTION = 50
+MAX_NB_SECTION = 100
 
 
 class MSDosHeader(FieldSet):

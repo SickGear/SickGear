@@ -1,7 +1,7 @@
 from hachoir.field import (FieldSet, ParserError,
-                               Bit, UInt8, UInt16, UInt32, TimestampUnix32,
-                               Bytes, String, Enum,
-                               PaddingBytes, PaddingBits, NullBytes, NullBits)
+                           Bit, UInt8, UInt16, UInt32, UInt64, TimestampUnix32,
+                           Bytes, String, Enum,
+                           PaddingBytes, PaddingBits, NullBytes, NullBits)
 from hachoir.core.text_handler import textHandler, hexadecimal, filesizeHandler
 
 
@@ -175,10 +175,13 @@ class PE_OptHeader(FieldSet):
     }
 
     def createFields(self):
-        yield UInt16(self, "signature", "PE optional header signature (0x010b)")
-        # TODO: Support PE32+ (signature=0x020b)
-        if self["signature"].value != 0x010b:
+        yield UInt16(self, "signature", "PE optional header signature (0x010b | 0x020b)")
+
+        if self["signature"].value != 0x010b and self["signature"].value != 0x020b:
             raise ParserError("Invalid PE optional header signature")
+        is_pe32plus = self["signature"].value == 0x020b
+        VarUInt = UInt64 if is_pe32plus else UInt32
+
         yield UInt8(self, "maj_lnk_ver", "Major linker version")
         yield UInt8(self, "min_lnk_ver", "Minor linker version")
         yield filesizeHandler(UInt32(self, "size_code", "Size of code"))
@@ -186,8 +189,9 @@ class PE_OptHeader(FieldSet):
         yield filesizeHandler(UInt32(self, "size_uninit_data", "Size of uninitialized data"))
         yield textHandler(UInt32(self, "entry_point", "Address (RVA) of the code entry point"), hexadecimal)
         yield textHandler(UInt32(self, "base_code", "Base (RVA) of code"), hexadecimal)
-        yield textHandler(UInt32(self, "base_data", "Base (RVA) of data"), hexadecimal)
-        yield textHandler(UInt32(self, "image_base", "Image base (RVA)"), hexadecimal)
+        if not is_pe32plus:
+            yield textHandler(UInt32(self, "base_data", "Base (RVA) of data"), hexadecimal)
+        yield textHandler(VarUInt(self, "image_base", "Image base (RVA)"), hexadecimal)
         yield filesizeHandler(UInt32(self, "sect_align", "Section alignment"))
         yield filesizeHandler(UInt32(self, "file_align", "File alignment"))
         yield UInt16(self, "maj_os_ver", "Major OS version")
@@ -202,10 +206,10 @@ class PE_OptHeader(FieldSet):
         yield textHandler(UInt32(self, "checksum"), hexadecimal)
         yield Enum(UInt16(self, "subsystem"), self.SUBSYSTEM_NAME)
         yield UInt16(self, "dll_flags")
-        yield filesizeHandler(UInt32(self, "size_stack_reserve"))
-        yield filesizeHandler(UInt32(self, "size_stack_commit"))
-        yield filesizeHandler(UInt32(self, "size_heap_reserve"))
-        yield filesizeHandler(UInt32(self, "size_heap_commit"))
+        yield filesizeHandler(VarUInt(self, "size_stack_reserve"))
+        yield filesizeHandler(VarUInt(self, "size_stack_commit"))
+        yield filesizeHandler(VarUInt(self, "size_heap_reserve"))
+        yield filesizeHandler(VarUInt(self, "size_heap_commit"))
         yield UInt32(self, "loader_flags")
         yield UInt32(self, "nb_directory", "Number of RVA and sizes")
         for index in range(self["nb_directory"].value):

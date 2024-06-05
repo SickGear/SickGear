@@ -10,10 +10,10 @@ Creation date: 2007-01-19
 """
 
 from hachoir.field import (FieldSet, ParserError, Enum,
-                               Bit, Bits, SeekableFieldSet,
-                               UInt16, UInt32, TimestampUnix32,
-                               Bytes, RawBytes, PaddingBytes, NullBytes, NullBits,
-                               CString, String)
+                           Bit, Bits, SeekableFieldSet,
+                           UInt16, UInt32, TimestampUnix32,
+                           Bytes, RawBytes, PaddingBytes, NullBytes, NullBits,
+                           CString, String)
 from hachoir.core.text_handler import textHandler, filesizeHandler, hexadecimal
 from hachoir.core.tools import createDict, paddingSize, alignValue, makePrintable
 from hachoir.parser.common.win32 import BitmapInfoHeader

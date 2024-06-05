@@ -7,11 +7,11 @@ Authors: Christophe Gisquet and Victor Stinner
 
 from hachoir.parser import Parser
 from hachoir.field import (FieldSet, ParserError,
-                               Bit, Bits, Enum,
-                               TimeDateMSDOS32, SubFile,
-                               UInt8, UInt16, UInt32, UInt64,
-                               String, PascalString16,
-                               RawBytes)
+                           Bit, Bits, Enum,
+                           TimeDateMSDOS32, SubFile,
+                           UInt8, UInt16, UInt32, UInt64,
+                           String, PascalString16,
+                           RawBytes)
 from hachoir.stream.input import ReadStreamError
 from hachoir.core.text_handler import textHandler, filesizeHandler, hexadecimal
 from hachoir.core.tools import makeUnicode

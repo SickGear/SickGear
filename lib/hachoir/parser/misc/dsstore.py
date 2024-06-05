@@ -9,10 +9,10 @@ Created: 2010-09-01
 
 from hachoir.parser import HachoirParser
 from hachoir.field import (RootSeekableFieldSet, FieldSet,
-                               NullBytes, RawBytes, PaddingBytes, Bytes, SubFile, String, PascalString8,
-                               Bits, UInt8, UInt16, UInt32,
-                               Link,
-                               ParserError)
+                           NullBytes, RawBytes, PaddingBytes, Bytes, SubFile, String, PascalString8,
+                           Bits, UInt8, UInt16, UInt32,
+                           Link,
+                           ParserError)
 from hachoir.core.endian import BIG_ENDIAN
 from hachoir.core.text_handler import displayHandler
 from hachoir.core.tools import paddingSize

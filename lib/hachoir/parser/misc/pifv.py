@@ -7,8 +7,8 @@ Creation date: 08 jul 2007
 
 from hachoir.parser import Parser
 from hachoir.field import (FieldSet,
-                               UInt8, UInt16, UInt24, UInt32, UInt64, Enum,
-                               CString, String, PaddingBytes, RawBytes, NullBytes)
+                           UInt8, UInt16, UInt24, UInt32, UInt64, Enum,
+                           CString, String, PaddingBytes, RawBytes, NullBytes)
 from hachoir.core.endian import LITTLE_ENDIAN
 from hachoir.core.tools import paddingSize, humanFilesize
 from hachoir.parser.common.win32 import GUID

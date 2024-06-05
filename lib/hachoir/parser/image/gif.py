@@ -11,11 +11,11 @@ Author: Victor Stinner, Robert Xiao
 
 from hachoir.parser import Parser
 from hachoir.field import (FieldSet, ParserError,
-                               Enum, UInt8, UInt16,
-                               Bit, Bits, NullBytes,
-                               String, PascalString8, Character,
-                               NullBits, RawBytes,
-                               CustomFragment)
+                           Enum, UInt8, UInt16,
+                           Bit, Bits, NullBytes,
+                           String, PascalString8, Character,
+                           NullBits, RawBytes,
+                           CustomFragment)
 from hachoir.parser.image.common import PaletteRGB
 from hachoir.core.endian import LITTLE_ENDIAN
 from hachoir.core.tools import humanDuration, paddingSize

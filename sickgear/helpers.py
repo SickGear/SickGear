@@ -352,8 +352,11 @@ def list_media_files(path):
         if [direntry for direntry in scantree(path, include=[r'\.sickgearignore'], filter_kind=False, recurse=False)]:
             logger.debug('Skipping folder "%s" because it contains ".sickgearignore"' % path)
         else:
-            result = [direntry.path for direntry in scantree(path, exclude=['Extras'], filter_kind=False,
-                                                             exclude_folders_with_files=['.sickgearignore'])
+            result = [direntry.path for direntry in scantree(path, exclude_dirs=[
+                '^Extras$',
+                '^Behind The Scenes$', '^Deleted Scenes$', '^Featurettes$',
+                '^Interviews$', '^Scenes$', '^Shorts$', '^Trailers$', '^Other$'
+            ], filter_kind=False, exclude_folders_with_files=['.sickgearignore'])
                       if has_media_ext(direntry.name)]
     return result
 
@@ -1013,7 +1016,7 @@ def clear_cache(force=False):
     dirty = None
     del_time = SGDatetime.timestamp_near(td=datetime.timedelta(hours=12))
     direntry_args = dict(follow_symlinks=False)
-    for direntry in scantree(sickgear.CACHE_DIR, ['images|rss|zoneinfo'], follow_symlinks=True):
+    for direntry in scantree(sickgear.CACHE_DIR, exclude_dirs=['images|rss|zoneinfo'], follow_symlinks=True):
         if direntry.is_file(**direntry_args) and (force or del_time > direntry.stat(**direntry_args).st_mtime):
             dirty = dirty or False if remove_file_perm(direntry.path) else True
         elif direntry.is_dir(**direntry_args) and direntry.name not in ['cheetah', 'sessions', 'indexers']:
@@ -1564,15 +1567,19 @@ def count_files_dirs(base_dir):
     """
     f = d = 0
     try:
-        files = scandir(base_dir)
+        with scandir(base_dir) as s_d:
+            try:
+                files = s_d
+            except OSError as e:
+                logger.warning('Unable to count files %s / %s' % (repr(e), ex(e)))
+            else:
+                for e in files:
+                    if e.is_file():
+                        f += 1
+                    elif e.is_dir():
+                        d += 1
     except OSError as e:
         logger.warning('Unable to count files %s / %s' % (repr(e), ex(e)))
-    else:
-        for e in files:
-            if e.is_file():
-                f += 1
-            elif e.is_dir():
-                d += 1
 
     return f, d
 
@@ -1617,93 +1624,108 @@ def upgrade_new_naming():
             cf = 0
             p_text = 'Upgrading %s' % (d, 'banner/poster')[not d]
             _set_progress(p_text, 0, 0)
-            for entry in scandir(bd):
-                if entry.is_file():
-                    cf += 1
-                    _set_progress(p_text, cf, step)
-                    b_s = bp_match.search(entry.name)
-                    if b_s:
-                        old_id = int(b_s.group(1))
-                        tvid = show_list.get(old_id)
-                        if tvid:
-                            nb_dir = os.path.join(sickgear.CACHE_DIR, 'images', 'shows', '%s-%s' % (tvid, old_id), d)
-                            if not os.path.isdir(nb_dir):
+            with scandir(bd) as s_d:
+                for entry in scandir(bd):
+                    if entry.is_file():
+                        cf += 1
+                        _set_progress(p_text, cf, step)
+                        b_s = bp_match.search(entry.name)
+                        if b_s:
+                            old_id = int(b_s.group(1))
+                            tvid = show_list.get(old_id)
+                            if tvid:
+                                nb_dir = os.path.join(sickgear.CACHE_DIR, 'images', 'shows', '%s-%s' % (tvid, old_id), d)
+                                if not os.path.isdir(nb_dir):
+                                    try:
+                                        os.makedirs(nb_dir)
+                                    except (BaseException, Exception):
+                                        pass
+                                new_name = os.path.join(nb_dir, bp_match.sub(r'\2', entry.name))
                                 try:
-                                    os.makedirs(nb_dir)
+                                    move_file(entry.path, new_name)
+                                except (BaseException, Exception) as e:
+                                    logger.warning('Unable to rename %s to %s: %s / %s'
+                                                   % (entry.path, new_name, repr(e), ex(e)))
+                            else:
+                                # clean up files without reference in db
+                                try:
+                                    os.remove(entry.path)
                                 except (BaseException, Exception):
                                     pass
-                            new_name = os.path.join(nb_dir, bp_match.sub(r'\2', entry.name))
-                            try:
-                                move_file(entry.path, new_name)
-                            except (BaseException, Exception) as e:
-                                logger.warning('Unable to rename %s to %s: %s / %s'
-                                               % (entry.path, new_name, repr(e), ex(e)))
-                        else:
-                            # clean up files without reference in db
-                            try:
-                                os.remove(entry.path)
-                            except (BaseException, Exception):
-                                pass
-                elif entry.is_dir():
-                    if entry.name in ['shows', 'browse']:
-                        continue
-                    elif 'fanart' == entry.name:
-                        _set_progress(p_text, 0, 1)
-                        fc_fan, dc_fan = count_files_dirs(entry.path)
-                        step_fan = dc_fan / float(100)
-                        cf_fan = 0
-                        p_text = 'Upgrading fanart'
-                        _set_progress(p_text, 0, 0)
-                        try:
-                            entries = scandir(entry.path)
-                        except OSError as e:
-                            logger.warning('Unable to stat dirs %s / %s' % (repr(e), ex(e)))
+                    elif entry.is_dir():
+                        if entry.name in ['shows', 'browse']:
                             continue
-                        for d_entry in entries:
-                            if d_entry.is_dir():
-                                cf_fan += 1
-                                _set_progress(p_text, cf_fan, step_fan)
-                                old_id = try_int(d_entry.name)
-                                if old_id:
-                                    new_id = show_list.get(old_id)
-                                    if new_id:
-                                        new_dir_name = os.path.join(sickgear.CACHE_DIR, 'images', 'shows',
-                                                                    '%s-%s' % (new_id, old_id), 'fanart')
-                                        try:
-                                            move_file(d_entry.path, new_dir_name)
-                                        except (BaseException, Exception) as e:
-                                            logger.warning(f'Unable to rename {d_entry.path} to {new_dir_name}:'
-                                                           f' {repr(e)} / {ex(e)}')
-                                        if os.path.isdir(new_dir_name):
-                                            try:
-                                                f_n = filter(lambda fn: fn.is_file(), scandir(new_dir_name))
-                                            except OSError as e:
-                                                logger.warning('Unable to rename %s / %s' % (repr(e), ex(e)))
-                                            else:
-                                                rename_args = []
-                                                # noinspection PyTypeChecker
-                                                for f_entry in f_n:
-                                                    rename_args += [(f_entry.path, bp_match.sub(r'\2', f_entry.path))]
-
-                                                for args in rename_args:
+                        elif 'fanart' == entry.name:
+                            _set_progress(p_text, 0, 1)
+                            fc_fan, dc_fan = count_files_dirs(entry.path)
+                            step_fan = dc_fan / float(100)
+                            cf_fan = 0
+                            p_text = 'Upgrading fanart'
+                            _set_progress(p_text, 0, 0)
+                            try:
+                                with scandir(entry.path) as s_p:
+                                    try:
+                                        entries = s_p
+                                    except OSError as e:
+                                        logger.warning('Unable to stat dirs %s / %s' % (repr(e), ex(e)))
+                                        continue
+                                    for d_entry in entries:
+                                        if d_entry.is_dir():
+                                            cf_fan += 1
+                                            _set_progress(p_text, cf_fan, step_fan)
+                                            old_id = try_int(d_entry.name)
+                                            if old_id:
+                                                new_id = show_list.get(old_id)
+                                                if new_id:
+                                                    new_dir_name = os.path.join(sickgear.CACHE_DIR, 'images', 'shows',
+                                                                                '%s-%s' % (new_id, old_id), 'fanart')
                                                     try:
-                                                        move_file(*args)
+                                                        move_file(d_entry.path, new_dir_name)
                                                     except (BaseException, Exception) as e:
-                                                        logger.warning(f'Unable to rename {args[0]} to {args[1]}:'
-                                                                       f' {repr(e)} / {ex(e)}')
-                                    else:
-                                        try:
-                                            shutil.rmtree(d_entry.path)
-                                        except (BaseException, Exception):
-                                            pass
-                                try:
-                                    shutil.rmtree(d_entry.path)
-                                except (BaseException, Exception):
-                                    pass
-                    try:
-                        os.rmdir(entry.path)
-                    except (BaseException, Exception):
-                        pass
+                                                        logger.warning(f'Unable to rename {d_entry.path}'
+                                                                       f' to {new_dir_name}: {repr(e)} / {ex(e)}')
+                                                    if os.path.isdir(new_dir_name):
+                                                        try:
+                                                            with scandir(new_dir_name) as s_d_n:
+                                                                try:
+                                                                    f_n = filter(lambda fn: fn.is_file(), s_d_n)
+                                                                except OSError as e:
+                                                                    logger.warning(
+                                                                        f'Unable to rename {repr(e)} / {ex(d)}')
+                                                                else:
+                                                                    rename_args = []
+                                                                    # noinspection PyTypeChecker
+                                                                    for f_entry in f_n:
+                                                                        rename_args += [
+                                                                            (f_entry.path,
+                                                                             bp_match.sub(r'\2', f_entry.path))]
+
+                                                                    for args in rename_args:
+                                                                        try:
+                                                                            move_file(*args)
+                                                                        except (BaseException, Exception) as e:
+                                                                            logger.warning(
+                                                                                f'Unable to rename {args[0]}'
+                                                                                f' to {args[1]}: {repr(e)} / {ex(e)}')
+                                                        except OSError as e:
+                                                            logger.warning(
+                                                                'Unable to rename %s / %s' % (repr(e), ex(e)))
+                                                else:
+                                                    try:
+                                                        shutil.rmtree(d_entry.path)
+                                                    except (BaseException, Exception):
+                                                        pass
+                                            try:
+                                                shutil.rmtree(d_entry.path)
+                                            except (BaseException, Exception):
+                                                pass
+                            except OSError as e:
+                                logger.warning('Unable to stat dirs %s / %s' % (repr(e), ex(e)))
+                                continue
+                        try:
+                            os.rmdir(entry.path)
+                        except (BaseException, Exception):
+                            pass
             if 'thumbnails' == d:
                 try:
                     os.rmdir(bd)

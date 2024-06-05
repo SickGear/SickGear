@@ -11,7 +11,7 @@ Creation date: 13 january 2007
 
 from hachoir.parser import Parser
 from hachoir.field import (FieldSet, ParserError, MissingField,
-                               UInt8, Enum, Bit, Bits, RawBytes, RawBits)
+                           UInt8, Enum, Bit, Bits, RawBytes, RawBits)
 from hachoir.core.endian import BIG_ENDIAN
 from hachoir.core.text_handler import textHandler, hexadecimal
 
@@ -134,7 +134,7 @@ class MPEG_TS(Parser):
         # FIXME: detect using file content, not file name
         # maybe detect sync at offset+4 bytes?
         source = self.stream.source
-        if not(source and source.startswith("file:")):
+        if not (source and source.startswith("file:")):
             return True
         filename = source[5:].lower()
         return filename.endswith((".m2ts", ".mts"))

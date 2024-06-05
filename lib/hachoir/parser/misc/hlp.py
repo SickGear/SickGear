@@ -12,11 +12,11 @@ Creation date: 2007-09-03
 
 from hachoir.parser import Parser
 from hachoir.field import (FieldSet,
-                               Bits, Int32, UInt16, UInt32,
-                               NullBytes, RawBytes, PaddingBytes, String)
+                           Bits, Int32, UInt16, UInt32,
+                           NullBytes, RawBytes, PaddingBytes, String)
 from hachoir.core.endian import LITTLE_ENDIAN
 from hachoir.core.text_handler import (textHandler, hexadecimal,
-                                           displayHandler, humanFilesize)
+                                       displayHandler, humanFilesize)
 
 
 class FileEntry(FieldSet):

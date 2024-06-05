@@ -9,8 +9,8 @@ Creation: 10th February 2007
 """
 
 from hachoir.field import (FieldSet,
-                               UInt32, UInt16, UInt8, Int8, Float32,
-                               RawBytes, String, GenericVector, ParserError)
+                           UInt32, UInt16, UInt8, Int8, Float32,
+                           RawBytes, String, GenericVector, ParserError)
 from hachoir.core.endian import LITTLE_ENDIAN
 from hachoir.core.text_handler import textHandler, hexadecimal
 

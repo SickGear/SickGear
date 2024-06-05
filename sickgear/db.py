@@ -112,7 +112,7 @@ class DBConnection(object):
                 helpers.copy_file(db_alt, db_src)
 
         self.filename = filename
-        self.connection = sqlite3.connect(db_src, 20)
+        self.connection = sqlite3.connect(db_src, timeout=20)
         # enable legacy double quote support
         if db_supports_setconfig_dqs:
             self.connection.setconfig(sqlite3.SQLITE_DBCONFIG_DQS_DDL, True)
@@ -156,7 +156,7 @@ class DBConnection(object):
 
         try:
             # copy into this DB
-            backup_con = sqlite3.connect(target_db, 20)
+            backup_con = sqlite3.connect(target_db, timeout=20)
             with backup_con:
                 with db_lock:
                     self.connection.backup(backup_con, progress=progress)
@@ -752,13 +752,13 @@ def cleanup_old_db_backups(filename):
         d, filename = os.path.split(filename)
         if not d:
             d = sickgear.DATA_DIR
-        for f in filter(lambda fn: fn.is_file() and filename in fn.name and
-                        re.search(r'\.db(\.v\d+)?\.r\d+$', fn.name),
-                        scandir(d)):
-            try:
-                os.unlink(f.path)
-            except (BaseException, Exception):
-                pass
+        with scandir(d) as s_d:
+            for f in filter(lambda fn: fn.is_file() and filename in fn.name and
+                            re.search(r'\.db(\.v\d+)?\.r\d+$', fn.name), s_d):
+                try:
+                    os.unlink(f.path)
+                except (BaseException, Exception):
+                    pass
     except (BaseException, Exception):
         pass
 

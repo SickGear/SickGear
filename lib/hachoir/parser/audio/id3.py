@@ -7,9 +7,9 @@ Author: Victor Stinner
 """
 
 from hachoir.field import (FieldSet, MatchError, ParserError,
-                               Enum, UInt8, UInt24, UInt32,
-                               CString, String, RawBytes,
-                               Bit, Bits, NullBytes, NullBits)
+                           Enum, UInt8, UInt24, UInt32,
+                           CString, String, RawBytes,
+                           Bit, Bits, NullBytes, NullBits)
 from hachoir.core.text_handler import textHandler
 from hachoir.core.tools import humanDuration
 from hachoir.core.endian import NETWORK_ENDIAN
@@ -451,7 +451,7 @@ class ID3_Chunk(FieldSet):
 
         if size:
             cls = None
-            if not(is_compressed):
+            if not is_compressed:
                 tag = self["tag"].value
                 if tag in ID3_Chunk.handler:
                     cls = ID3_Chunk.handler[tag]

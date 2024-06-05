@@ -44,7 +44,7 @@ class MarFile(Parser):
             return "Invalid magic"
         if self["version"].value != 3:
             return "Invalid version"
-        if not(1 <= self["nb_file"].value <= MAX_NB_FILE):
+        if not (1 <= self["nb_file"].value <= MAX_NB_FILE):
             return "Invalid number of file"
         return True
 

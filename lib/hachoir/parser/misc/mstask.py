@@ -12,8 +12,8 @@ http://technet.microsoft.com/en-us/library/bb490996.aspx
 
 from hachoir.parser import Parser
 from hachoir.field import (FieldSet, RootSeekableFieldSet,
-                               UInt32, UInt16,
-                               Bit, RawBits, RawBytes, Enum)
+                           UInt32, UInt16,
+                           Bit, RawBits, RawBytes, Enum)
 from hachoir.core.endian import LITTLE_ENDIAN
 from hachoir.parser.common.win32 import PascalStringWin16, GUID
 

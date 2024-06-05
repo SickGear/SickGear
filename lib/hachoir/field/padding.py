@@ -23,7 +23,7 @@ class PaddingBits(Bits):
         self._display_pattern = self.checkPattern()
 
     def checkPattern(self):
-        if not(config.check_padding_pattern):
+        if not (config.check_padding_pattern):
             return False
         if self.pattern != 0:
             return False
@@ -72,7 +72,7 @@ class PaddingBytes(Bytes):
         self._display_pattern = self.checkPattern()
 
     def checkPattern(self):
-        if not(config.check_padding_pattern):
+        if not (config.check_padding_pattern):
             return False
         if self.pattern is None:
             return False

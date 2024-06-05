@@ -1,4 +1,25 @@
-﻿### 3.30.20 (2024-05-25 09:35:00 UTC)
+﻿### 3.31.0 (2024-06-05 08:00:00 UTC)
+
+* Update Apprise 1.3.0 (6458ab0) to 1.6.0 (0c0d5da)
+* Update attr 22.2.0 (683d056) to 23.1.0 (67e4ff2)
+* Update Beautiful Soup 4.12.2 to 4.12.2 (30c58a1)
+* Update dateutil 2.8.2 (28da62d) to 2.8.2 (296d419)
+* Update diskcache 5.6.1 (4d30686) to 5.6.3 (323787f)
+* Update hachoir 3.1.2 (f739b43) to 3.2.0 (38d759f)
+* Update Pytvmaze library 2.0.8 (81888a5) to 2.0.8 (b451391)
+* Update pytz 2022.7.1/2022g (d38ff47) to 2023.3/2023c (488d3eb)
+* Update Rarfile 4.1a1 (8a72967) to 4.1 (c9140d8)
+* Update soupsieve 2.4.1 (2e66beb) to 2.5.0 (dc71495)
+* Update thefuzz 0.19.0 (c2cd4f4) to 0.21.0 (0b49e4a)
+* Update Tornado Web Server 6.3.3 (e4d6984) to 6.4 (b3f2a4b)
+* Update urllib3 2.0.5 (d9f85a7) to 2.0.7 (56f01e0)
+* Add support for Brotli compression
+* Add ignore Plex extras
+* Fix apply filters to multiple episode releases
+* Add use multi episode result as fallback if it's better quality or has an episode that does not have a single ep result
+
+
+### 3.30.20 (2024-05-25 09:35:00 UTC)
 
 * Fix FST provider exception raised when no title
 * Update UnRar x64 for Windows 7.00 to 7.0.1

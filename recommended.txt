@@ -1,4 +1,5 @@
 --extra-index-url https://gitlab+deploy-token-1599941:UNupqjtDab_zxNzvP2gA@gitlab.com/api/v4/projects/279215/packages/pypi/simple
+Brotli
 cffi
 cryptography != 38.0.2; 'Windows' == platform_system
 cryptography != 38.0.2; 'Linux' == platform_system and ('x86_64' == platform_machine or 'aarch64' == platform_machine)

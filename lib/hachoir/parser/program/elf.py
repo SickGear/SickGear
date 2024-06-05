@@ -10,8 +10,8 @@ Reference:
 
 from hachoir.parser import HachoirParser
 from hachoir.field import (RootSeekableFieldSet, FieldSet, Bit, NullBits, RawBits,
-                               UInt8, UInt16, UInt32, UInt64, Enum,
-                               String, RawBytes, Bytes)
+                           UInt8, UInt16, UInt32, UInt64, Enum,
+                           String, RawBytes, Bytes)
 from hachoir.core.text_handler import textHandler, hexadecimal
 from hachoir.core.endian import LITTLE_ENDIAN, BIG_ENDIAN
 
