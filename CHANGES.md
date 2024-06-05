@@ -1,6 +1,7 @@
 ﻿### 3.32.0 (2024-xx-xx xx:xx:00 UTC)
 
 * Update CacheControl 0.13.1 (783a338) to 0.14.0 (e2be0c2)
+* Update filelock 3.12.4 (c1163ae) to 3.14.0 (8556141)
 * Update idna library 3.4 (cab054c) to 3.7 (1d365e1)
 * Update Requests library 2.31.0 (8812812) to 2.32.3 (0e322af)
 * Update urllib3 2.0.7 (56f01e0) to 2.2.1 (54d6edf)
