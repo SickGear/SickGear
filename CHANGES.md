@@ -1,4 +1,4 @@
-﻿### 3.31.0 (2023-1x-xx xx:xx:00 UTC)
+﻿### 3.31.0 (2024-06-05 08:00:00 UTC)
 
 * Update Apprise 1.3.0 (6458ab0) to 1.6.0 (0c0d5da)
 * Update attr 22.2.0 (683d056) to 23.1.0 (67e4ff2)
@@ -17,11 +17,6 @@
 * Add ignore Plex extras
 * Fix apply filters to multiple episode releases
 * Add use multi episode result as fallback if it's better quality or has an episode that does not have a single ep result
-
-
-[develop changelog]
-
-* Fix media process being ignored by Plex extras
 
 
 ### 3.30.20 (2024-05-25 09:35:00 UTC)
