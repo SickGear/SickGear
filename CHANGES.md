@@ -1,4 +1,9 @@
-﻿### 3.31.0 (2024-06-05 08:00:00 UTC)
+﻿### 3.32.0 (2024-xx-xx xx:xx:00 UTC)
+
+* Update Requests library 2.31.0 (8812812) to 2.32.3 (0e322af)
+
+
+### 3.31.0 (2024-06-05 08:00:00 UTC)
 
 * Update Apprise 1.3.0 (6458ab0) to 1.6.0 (0c0d5da)
 * Update attr 22.2.0 (683d056) to 23.1.0 (67e4ff2)
