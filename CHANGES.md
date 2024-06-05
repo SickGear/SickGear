@@ -1,6 +1,7 @@
 ﻿### 3.32.0 (2024-xx-xx xx:xx:00 UTC)
 
 * Update Requests library 2.31.0 (8812812) to 2.32.3 (0e322af)
+* Update urllib3 2.0.7 (56f01e0) to 2.2.1 (54d6edf)
 
 
 ### 3.31.0 (2024-06-05 08:00:00 UTC)
