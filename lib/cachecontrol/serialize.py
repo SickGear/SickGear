@@ -32,13 +32,13 @@ class Serializer:
             # also update the response with a new file handler to be
             # sure it acts as though it was never read.
             body = response.read(decode_content=False)
-            response._fp = io.BytesIO(body)  # type: ignore[attr-defined]
+            response._fp = io.BytesIO(body)  # type: ignore[assignment]
             response.length_remaining = len(body)
 
         data = {
             "response": {
                 "body": body,  # Empty bytestring if body is stored separately
-                "headers": {str(k): str(v) for k, v in response.headers.items()},  # type: ignore[no-untyped-call]
+                "headers": {str(k): str(v) for k, v in response.headers.items()},
                 "status": response.status,
                 "version": response.version,
                 "reason": str(response.reason),

@@ -66,7 +66,7 @@ class _FileCacheMixin:
 
     def __init__(
         self,
-        directory: Union[str, Path],
+        directory: str | Path,
         forever: bool = False,
         filemode: int = 0o0600,
         dirmode: int = 0o0700,
