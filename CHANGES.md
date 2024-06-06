@@ -1,5 +1,6 @@
 ﻿### 3.32.0 (2024-xx-xx xx:xx:00 UTC)
 
+* Update Beautiful Soup 4.12.2 (30c58a1) to 4.12.3 (7fb5175)
 * Update CacheControl 0.13.1 (783a338) to 0.14.0 (e2be0c2)
 * Update filelock 3.12.4 (c1163ae) to 3.14.0 (8556141)
 * Update idna library 3.4 (cab054c) to 3.7 (1d365e1)
