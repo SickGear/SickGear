@@ -11,6 +11,7 @@
 * Update idna library 3.4 (cab054c) to 3.7 (1d365e1)
 * Update imdbpie 5.6.4 (f695e87) to 5.6.5 (f8ed7a0)
 * Update profilehooks module 1.12.1 (c3fc078) to 1.13.0.dev0 (99f8a31)
+* Update pytz 2023.3/2023c (488d3eb) to 2024.1/2024a (3680953)
 * Update Requests library 2.31.0 (8812812) to 2.32.3 (0e322af)
 * Update Tornado Web Server 6.4 (b3f2a4b) to 6.4.1 (2a0e1d1)
 * Update urllib3 2.0.7 (56f01e0) to 2.2.1 (54d6edf)
