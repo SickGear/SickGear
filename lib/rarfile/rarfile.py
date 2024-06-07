@@ -1,6 +1,6 @@
 # rarfile.py
 #
-# Copyright (c) 2005-2020  Marko Kreen <markokr@gmail.com>
+# Copyright (c) 2005-2024  Marko Kreen <markokr@gmail.com>
 #
 # Permission to use, copy, modify, and/or distribute this software for any
 # purpose with or without fee is hereby granted, provided that the above
@@ -92,7 +92,7 @@ class AES_CBC_Decrypt:
             self.decrypt = ciph.decryptor().update
 
 
-__version__ = "4.1"
+__version__ = "4.2"
 
 # export only interesting items
 __all__ = ["get_rar_version", "is_rarfile", "is_rarfile_sfx", "RarInfo", "RarFile", "RarExtFile"]
@@ -209,6 +209,9 @@ RAR_M2 = 0x32   #: Compression level `-m2`.
 RAR_M3 = 0x33   #: Compression level `-m3`.
 RAR_M4 = 0x34   #: Compression level `-m4`.
 RAR_M5 = 0x35   #: Compression level `-m5` - Maximum compression.
+
+RAR_MAX_PASSWORD = 127  #: Max number of utf-16 chars in passwords.
+RAR_MAX_KDF_SHIFT = 24  #: Max power-of-2 for KDF count
 
 #
 # RAR5 constants
@@ -739,6 +742,13 @@ class RarFile:
         """
         return self._file_parser.needs_password()
 
+    def is_solid(self):
+        """Returns True if archive uses solid compression.
+
+        .. versionadded:: 4.2
+        """
+        return self._file_parser.is_solid()
+
     def namelist(self):
         """Return list of filenames in archive.
         """
@@ -1030,6 +1040,14 @@ class CommonParser:
         self._sfx_offset = sfx_offset
         self._part_only = part_only
 
+    def is_solid(self):
+        """Returns True if archive uses solid compression.
+        """
+        if self._main:
+            if self._main.flags & RAR_MAIN_SOLID:
+                return True
+        return False
+
     def has_header_encryption(self):
         """Returns True if headers are encrypted
         """
@@ -1167,7 +1185,9 @@ class CommonParser:
                     if not self._password:
                         break
             elif h.type == RAR_BLOCK_ENDARC:
-                more_vols = (h.flags & RAR_ENDARC_NEXT_VOLUME) > 0
+                # use flag, but also allow RAR 2.x logic below to trigger
+                if h.flags & RAR_ENDARC_NEXT_VOLUME:
+                    more_vols = True
                 endarc = True
                 if raise_need_first_vol and (h.flags & RAR_ENDARC_VOLNR) > 0:
                     raise NeedFirstVolume(
@@ -1810,10 +1830,10 @@ class RAR5Parser(CommonParser):
     def _gen_key(self, kdf_count, salt):
         if self._last_aes256_key[:2] == (kdf_count, salt):
             return self._last_aes256_key[2]
-        if kdf_count > 24:
+        if kdf_count > RAR_MAX_KDF_SHIFT:
             raise BadRarFile("Too large kdf_count")
         pwd = self._get_utf8_password()
-        key = pbkdf2_hmac("sha256", pwd, salt, 1 << kdf_count)
+        key = rar5_s2k(pwd, salt, 1 << kdf_count)
         self._last_aes256_key = (kdf_count, salt, key)
         return key
 
@@ -1978,6 +1998,8 @@ class RAR5Parser(CommonParser):
     def _check_password(self, check_value, kdf_count_shift, salt):
         if len(check_value) != RAR5_PW_CHECK_SIZE + RAR5_PW_SUM_SIZE:
             return
+        if kdf_count_shift > RAR_MAX_KDF_SHIFT:
+            raise BadRarFile("Too large kdf_count")
 
         hdr_check = check_value[:RAR5_PW_CHECK_SIZE]
         hdr_sum = check_value[RAR5_PW_CHECK_SIZE:]
@@ -1987,7 +2009,7 @@ class RAR5Parser(CommonParser):
 
         kdf_count = (1 << kdf_count_shift) + 32
         pwd = self._get_utf8_password()
-        pwd_hash = pbkdf2_hmac("sha256", pwd, salt, kdf_count)
+        pwd_hash = rar5_s2k(pwd, salt, kdf_count)
 
         pwd_check = bytearray(RAR5_PW_CHECK_SIZE)
         len_mask = RAR5_PW_CHECK_SIZE - 1
@@ -2341,8 +2363,8 @@ class RarExtFile(io.RawIOBase):
         """Seek in data.
 
         On uncompressed files, the seeking works by actual
-        seeks so it's fast.  On compresses files its slow
-        - forward seeking happends by reading ahead,
+        seeks so it's fast.  On compressed files its slow
+        - forward seeking happens by reading ahead,
         backwards by re-opening and decompressing from the start.
         """
 
@@ -3044,12 +3066,23 @@ def is_filelike(obj):
     return True
 
 
+def rar5_s2k(pwd, salt, kdf_count):
+    """String-to-key hash for RAR5.
+    """
+    if not isinstance(pwd, str):
+        pwd = pwd.decode("utf8")
+    wstr = pwd.encode("utf-16le")[:RAR_MAX_PASSWORD*2]
+    ustr = wstr.decode("utf-16le").encode("utf8")
+    return pbkdf2_hmac("sha256", ustr, salt, kdf_count)
+
+
 def rar3_s2k(pwd, salt):
     """String-to-key hash for RAR3.
     """
     if not isinstance(pwd, str):
         pwd = pwd.decode("utf8")
-    seed = bytearray(pwd.encode("utf-16le") + salt)
+    wstr = pwd.encode("utf-16le")[:RAR_MAX_PASSWORD*2]
+    seed = bytearray(wstr + salt)
     h = Rar3Sha1(rarbug=True)
     iv = b""
     for i in range(16):
@@ -3114,7 +3147,7 @@ def rar3_decompress(vers, meth, data, declen=0, flags=0, crc=0, pwd=None, salt=N
 
 
 def sanitize_filename(fname, pathsep, is_win32):
-    """Simulate unrar sanitization.
+    """Make filename safe for write access.
     """
     if is_win32:
         if len(fname) > 1 and fname[1] == ":":
@@ -3186,12 +3219,12 @@ def parse_dos_time(stamp):
 class nsdatetime(datetime):
     """Datetime that carries nanoseconds.
 
-    Arithmetic not supported, will lose nanoseconds.
+    Arithmetic operations will lose nanoseconds.
 
     .. versionadded:: 4.0
     """
     __slots__ = ("nanosecond",)
-    nanosecond: int     #: Number of nanoseconds, 0 <= nanosecond < 999999999
+    nanosecond: int     #: Number of nanoseconds, 0 <= nanosecond <= 999999999
 
     def __new__(cls, year, month=None, day=None, hour=0, minute=0, second=0,
                 microsecond=0, tzinfo=None, *, fold=0, nanosecond=0):
@@ -3393,7 +3426,7 @@ class ToolSetup:
 
 UNRAR_CONFIG = {
     "open_cmd": ("UNRAR_TOOL", "p", "-inul"),
-    "check_cmd": ("UNRAR_TOOL", "-inul"),
+    "check_cmd": ("UNRAR_TOOL", "-inul", "-?"),
     "password": "-p",
     "no_password": ("-p-",),
     # map return code to exception class, codes from rar.txt
