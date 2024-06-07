@@ -5,6 +5,7 @@
 * Update CacheControl 0.13.1 (783a338) to 0.14.0 (e2be0c2)
 * Update certifi 2024.02.02 to 2024.06.02
 * Update dateutil 2.8.2 (296d419) to 2.9.0.post0 (0353b78)
+* Update diskcache 5.6.3 (323787f) to 5.6.3 (ebfa37c)
 * Update feedparser 6.0.10 (9865dec) to 6.0.11 (efcb89b)
 * Update filelock 3.12.4 (c1163ae) to 3.14.0 (8556141)
 * Update idna library 3.4 (cab054c) to 3.7 (1d365e1)
