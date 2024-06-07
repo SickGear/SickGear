@@ -1,5 +1,6 @@
 ﻿### 3.32.0 (2024-xx-xx xx:xx:00 UTC)
 
+* Update apprise 1.6.0 (0c0d5da) to 1.8.0 (81caf92)
 * Update attr 23.1.0 (67e4ff2) to 23.2.0 (b393d79)
 * Update Beautiful Soup 4.12.2 (30c58a1) to 4.12.3 (7fb5175)
 * Update CacheControl 0.13.1 (783a338) to 0.14.0 (e2be0c2)
