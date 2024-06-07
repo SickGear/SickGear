@@ -1,21 +1,21 @@
 # Translations template for apprise.
-# Copyright (C) 2023 Chris Caron
+# Copyright (C) 2024 Chris Caron
 # This file is distributed under the same license as the apprise project.
-# FIRST AUTHOR <EMAIL@ADDRESS>, 2023.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2024.
 #
 #, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: apprise 1.6.0\n"
+"Project-Id-Version: apprise 1.8.0\n"
 "Report-Msgid-Bugs-To: lead2gold@gmail.com\n"
-"POT-Creation-Date: 2023-10-15 15:56-0400\n"
+"POT-Creation-Date: 2024-05-11 16:13-0400\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Generated-By: Babel 2.11.0\n"
+"Generated-By: Babel 2.13.1\n"
 
 msgid "A local Gnome environment is required."
 msgstr ""
@@ -30,6 +30,9 @@ msgid "API Key"
 msgstr ""
 
 msgid "API Secret"
+msgstr ""
+
+msgid "API Token"
 msgstr ""
 
 msgid "Access Key"
@@ -101,9 +104,6 @@ msgstr ""
 msgid "Authentication Type"
 msgstr ""
 
-msgid "Authorization Token"
-msgstr ""
-
 msgid "Avatar Image"
 msgstr ""
 
@@ -125,6 +125,9 @@ msgstr ""
 msgid "Bot Token"
 msgstr ""
 
+msgid "Bot Webhook Key"
+msgstr ""
+
 msgid "Cache Age"
 msgstr ""
 
@@ -140,7 +143,13 @@ msgstr ""
 msgid "Category"
 msgstr ""
 
+msgid "Channel ID"
+msgstr ""
+
 msgid "Channels"
+msgstr ""
+
+msgid "Chantify"
 msgstr ""
 
 msgid "Class"
@@ -230,6 +239,9 @@ msgstr ""
 msgid "Email Header"
 msgstr ""
 
+msgid "Embed URL"
+msgstr ""
+
 msgid "Entity"
 msgstr ""
 
@@ -243,6 +255,9 @@ msgid "Expire"
 msgstr ""
 
 msgid "Facility"
+msgstr ""
+
+msgid "Feishu"
 msgstr ""
 
 msgid "Fetch Method"
@@ -266,6 +281,9 @@ msgstr ""
 msgid "Forced Mime Type"
 msgstr ""
 
+msgid "Free-Mobile"
+msgstr ""
+
 msgid "From Email"
 msgstr ""
 
@@ -279,6 +297,12 @@ msgid "From Phone No"
 msgstr ""
 
 msgid "GET Params"
+msgstr ""
+
+msgid "Gateway"
+msgstr ""
+
+msgid "Gateway ID"
 msgstr ""
 
 msgid "Gnome Notification"
@@ -297,6 +321,9 @@ msgid "IRC Colors"
 msgstr ""
 
 msgid "Icon Type"
+msgstr ""
+
+msgid "Icon URL"
 msgstr ""
 
 msgid "Idempotency-Key"
@@ -323,6 +350,9 @@ msgstr ""
 msgid "Integration Key"
 msgstr ""
 
+msgid "Interpret Emojis"
+msgstr ""
+
 msgid "Is Ad?"
 msgstr ""
 
@@ -344,6 +374,9 @@ msgstr ""
 msgid "Local File"
 msgstr ""
 
+msgid "Locale"
+msgstr ""
+
 msgid "Log PID"
 msgstr ""
 
@@ -354,6 +387,9 @@ msgid "Long-Lived Access Token"
 msgstr ""
 
 msgid "MacOSX Notification"
+msgstr ""
+
+msgid "Markdown Version"
 msgstr ""
 
 msgid "Master Key"
@@ -488,6 +524,9 @@ msgid "Reply To"
 msgstr ""
 
 msgid "Reply To Email"
+msgstr ""
+
+msgid "Resend Delay"
 msgstr ""
 
 msgid "Resubmit Flag"
@@ -661,6 +700,9 @@ msgstr ""
 msgid "Target Team"
 msgstr ""
 
+msgid "Target Threema ID"
+msgstr ""
+
 msgid "Target Topic"
 msgstr ""
 
@@ -757,6 +799,9 @@ msgstr ""
 msgid "Unicode Characters"
 msgstr ""
 
+msgid "Upload"
+msgstr ""
+
 msgid "Urgency"
 msgstr ""
 
@@ -773,9 +818,6 @@ msgid "Use Session"
 msgstr ""
 
 msgid "User Email"
-msgstr ""
-
-msgid "User ID"
 msgstr ""
 
 msgid "User Key"
