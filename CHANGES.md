@@ -17,6 +17,7 @@
 * Update Requests library 2.31.0 (8812812) to 2.32.3 (0e322af)
 * Update Send2Trash 1.5.0 (66afce7) to 1.8.3 (91d0698)
 * Update Tornado Web Server 6.4 (b3f2a4b) to 6.4.1 (2a0e1d1)
+* Update unidecode module 1.3.6 (4141992) to 1.3.8 (dfe397d)
 * Update urllib3 2.0.7 (56f01e0) to 2.2.1 (54d6edf)
 
 
