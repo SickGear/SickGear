@@ -18,7 +18,7 @@ import re
 
 from .generic import Notifier, notify_strings
 from exceptions_helper import ex
-from lib.apprise.plugins.NotifyGrowl.gntp import notifier as growl_notifier
+from lib.apprise.plugins.gntp import notifier as growl_notifier
 import sickgear
 
 from six import string_types
