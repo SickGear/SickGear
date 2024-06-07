@@ -10,6 +10,7 @@
 * Update filelock 3.12.4 (c1163ae) to 3.14.0 (8556141)
 * Update idna library 3.4 (cab054c) to 3.7 (1d365e1)
 * Update imdbpie 5.6.4 (f695e87) to 5.6.5 (f8ed7a0)
+* Update package resource API 68.1.2 (1ef36f2) to 68.2.2 (8ad627d)
 * Update profilehooks module 1.12.1 (c3fc078) to 1.13.0.dev0 (99f8a31)
 * Update pytz 2023.3/2023c (488d3eb) to 2024.1/2024a (3680953)
 * Update Rarfile 4.1a1 (8a72967) to 4.2 (db1df33)
