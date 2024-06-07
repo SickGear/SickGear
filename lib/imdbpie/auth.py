@@ -50,7 +50,7 @@ class ZuluHmacAuthV3HTTPHandler(object):
         them into a string, separated by newlines.
         """
         vals = sorted(['%s:%s' % (n.lower().strip(),
-                                  headers_to_sign[n].strip()) for n in headers_to_sign])
+                    headers_to_sign[n].strip()) for n in headers_to_sign])
         return '\n'.join(vals)
 
     def headers_to_sign(self, http_request):
@@ -90,14 +90,16 @@ class ZuluHmacAuthV3HTTPHandler(object):
         headers_to_sign = self.headers_to_sign(http_request)
         canonical_qs = self.canonical_query_string(http_request)
         canonical_headers = self.canonical_headers(headers_to_sign)
-        string_to_sign = '\n'.join((
-            http_request.method,
-            http_request.path,
-            canonical_qs,
-            canonical_headers,
-            '',
-            http_request.body
-        ))
+        string_to_sign = '\n'.join(
+            (
+                http_request.method,
+                http_request.path,
+                canonical_qs,
+                canonical_headers,
+                '',
+                http_request.body,
+            )
+        )
         return string_to_sign, headers_to_sign
 
     def add_auth(self, req):
@@ -319,9 +321,15 @@ class Auth(object):
             key: val[0] for key, val in parse_qs(parsed_url.query).items()
         }
         request = HTTPRequest(
-            method='GET', protocol='https', host=HOST,
-            port=443, path=parsed_url.path, auth_path=None, params=params,
-            headers={'User-Agent': USER_AGENT}, body=''
+            method='GET',
+            protocol='https',
+            host=HOST,
+            port=443,
+            path=parsed_url.path,
+            auth_path=None,
+            params=params,
+            headers={'User-Agent': USER_AGENT},
+            body='',
         )
         handler.add_auth(req=request)
         headers = request.headers
