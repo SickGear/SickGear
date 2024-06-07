@@ -18,3 +18,8 @@ else:
     text_type = unicode  # noqa: F821
     binary_type = str
     environb = os.environ
+
+try:
+    from collections.abc import Iterable as iterable_type
+except ImportError:
+    from collections import Iterable as iterable_type  # noqa: F401

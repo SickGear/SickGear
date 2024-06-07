@@ -115,7 +115,7 @@ def trash_move(src, dst, topdir=None, cross_dev=False):
         f.write(info_for(src, topdir))
     destpath = op.join(filespath, destname)
     if cross_dev:
-        shutil.move(src, destpath)
+        shutil.move(fsdecode(src), fsdecode(destpath))
     else:
         os.rename(src, destpath)
 
