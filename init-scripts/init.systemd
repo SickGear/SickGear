@@ -39,10 +39,14 @@ User=sickgear
 Group=sickgear
 
 Environment=PYTHONUNBUFFERED=true
-ExecStart=/usr/bin/python2 /opt/sickgear/app/sickgear.py --systemd --datadir=/opt/sickgear/data
+ExecStart=/opt/sickgear/app/sickgear.py --systemd --datadir=/opt/sickgear/data
 KillMode=process
 Restart=on-failure
-WorkingDirectory=/opt/sickgear
+ProtectSystem=full
+DeviceAllow=/dev/null rw
+DeviceAllow=/dev/urandom r
+DevicePolicy=strict
+NoNewPrivileges=yesWorkingDirectory=/opt/sickgear
 
 [Install]
 WantedBy=multi-user.target
