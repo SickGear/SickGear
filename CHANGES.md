@@ -20,7 +20,8 @@
 * Update Tornado Web Server 6.4 (b3f2a4b) to 6.4.1 (2a0e1d1)
 * Update unidecode module 1.3.6 (4141992) to 1.3.8 (dfe397d)
 * Update urllib3 2.0.7 (56f01e0) to 2.2.1 (54d6edf)
-* Change growl notifier location for Apprise update refactor 
+* Change growl notifier location for Apprise update refactor
+* Change systemd remove py2 and add basic hardening options
 
 
 ### 3.31.0 (2024-06-05 08:00:00 UTC)
