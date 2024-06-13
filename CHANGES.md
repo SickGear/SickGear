@@ -22,6 +22,7 @@
 * Update urllib3 2.0.7 (56f01e0) to 2.2.1 (54d6edf)
 * Change growl notifier location for Apprise update refactor
 * Change systemd remove py2 and add basic hardening options
+* Change alphabetically sort list at edit show/Exclude global ignore/require words 
 
 
 ### 3.31.0 (2024-06-05 08:00:00 UTC)
