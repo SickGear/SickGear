@@ -25,6 +25,11 @@
 * Change alphabetically sort list at edit show/Exclude global ignore/require words 
 
 
+### 3.31.1 (2024-06-14 01:00:00 UTC)
+
+* Change allow Python 3.12.4
+
+
 ### 3.31.0 (2024-06-05 08:00:00 UTC)
 
 * Update Apprise 1.3.0 (6458ab0) to 1.6.0 (0c0d5da)
