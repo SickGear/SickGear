@@ -24,7 +24,10 @@
 #set sg_root = $getVar('sbRoot', WEB_ROOT)
 ##
 #import os.path
+#set global $inc_ofi = True
 #include $os.path.join($sg_str('PROG_DIR'), 'gui/slick/interfaces/default/inc_top.tmpl')
+<script type="text/javascript" src="$sbRoot/js/cast.js?v=$sbPID"></script>
+
 <script>
 	var config = {
 		homeSearchFocus: #echo ['!1','!0'][$sg_var('HOME_SEARCH_FOCUS', True)]#,
@@ -63,7 +66,7 @@
 		});
 	});
 
-$(document).ready(function(){
+$(function() {
 	// initialise combos for dirty page refreshes
 	$('#showsort').val('#end raw#$saved_showsort_view#raw#');
 
@@ -288,6 +291,16 @@ $(document).ready(function(){
 				input.focus();
 		}
 	});
+
+	objectFitImages();
+
+	$('#content').find('img.browse-image').each(function(i, oImage){
+		removeImageBackground(oImage);
+	});
+
+	$('#content').find('img.browse-image').each(function (i, oImage){
+		scaleImage(oImage);
+	});
 });
 
 #end raw
@@ -505,7 +518,7 @@ $(document).ready(function(){
 		<div class="show-card-inner">
 			<div class="browse-image">
 				<a class="browse-image" href="<%= anon_url(this_show['url_src_db']) %>" target="_blank"
-					title="<span style='color: rgb(66, 139, 202)'>$re.sub(r'(?m)\s+\((?:19|20)\d\d\)\s*$', '', $title_html)</span>
+					title="<span style='color: #226baa'>$re.sub(r'(?m)\s+\((?:19|20)\d\d\)\s*$', '', $title_html)</span>
 
 					#if $this_show['genres']#<br><div style='font-weight:bold'>(<em>$this_show['genres']</em>)</div>#end if#
 					#if $kwargs and $use_returning#<span style='display:block;clear:both;font-weight:bold;font-size:0.9em;color:#888'><em>Season $this_show['episode_season'] return#echo ('s', 'ed')[$this_show['return_past']]# $this_show['str_returning']</em></span>#end if#
@@ -517,6 +530,13 @@ $(document).ready(function(){
             #if $this_show.get('language')
 						<span style='font-size:0.9em;color:#888#if $this_show.get('country')#;padding-left:6px#end if#'><em>Language:#if not $this_show.get('language_img')#&nbsp;$this_show.get('language')#else#<img style='margin:0 0 2px 4px;width:16px;height:11px;vertical-align:middle' title='${this_show['language']}' src='$sbRoot/images/flags/${$this_show['language'].lower()}.png' width='16' height='11'>#end if#</em></span>
             #end if
+					</p>
+        #end if
+        #if $this_show.get('p_chars')
+					<p>
+            #for $char in $this_show['p_chars']
+						<span style='display:block;clear:both;font-weight:bold;font-size:0.9em;color:#393'>as $char[0]#if $RoleTypes.ActorMain != $char[1]# ($char[2]/$char[3] eps)#end if#</span>
+            #end for
 					</p>
         #end if
 					<p style='margin:0 0 2px'>#echo re.sub(r'([,\.!][^,\.!]*?)$', '...', re.sub(r'([!\?\.])(?=\w)', r'\1 ', $overview)).replace('.....', '...')#</p>
@@ -538,13 +558,6 @@ $(document).ready(function(){
 			<div class="show-title">
 				#echo ((re.sub(r'^((?:A(?!\s+to)n?)|The)\s(\w)', r'<span class="article">\1</span> \2', $this_show['title']), $this_show['title'])[$sg_var('SORT_ARTICLE')], '<span>&nbsp;</span>')['' == $this_show['title']]#
 			</div>
-			#if $this_show.get('p_chars')
-				<div class="show-title">
-					#for $char in $this_show['p_chars']
-						<div>as $char[0]#if $RoleTypes.ActorMain != $char[1]# ($char[2]/$char[3] eps)#end if#</div>
-					#end for
-				</div>
-			#end if
         #if 'Ani' not in $browse_type
 			<a class="show-toggle-hide" href="$sg_root/add-shows/show-toggle-hide?ids=$show_id" title="#echo ('H', 'Unh')[any($hide)]#ide"><i class="sgicon-delete"></i></a>
         #end if
