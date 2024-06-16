@@ -3,6 +3,7 @@
 #from sickgear import WEB_ROOT, THEME_NAME
 #from sickgear.common import *
 #from sickgear.helpers import anon_url, try_float
+#from lib.tvinfo_base import RoleTypes
 #from _23 import quote
 <% def sg_var(varname, default=False): return getattr(sickgear, varname, default) %>#slurp#
 <% def sg_str(varname, default=''): return getattr(sickgear, varname, default) %>#slurp#
@@ -10,7 +11,7 @@
 #set $mode = $kwargs and $kwargs.get('mode', '')
 #set $use_network = $kwargs.get('use_networks', False)
 #set $use_returning = 'returning' == mode
-#set $use_filter = $kwargs and $kwargs.get('use_filter', True)
+#set $use_filter = $kwargs and $kwargs.get('use_filter', True) and not $p_ref
 #set $use_ratings = $kwargs and $kwargs.get('use_ratings', True)
 #set $use_votes = $kwargs and $kwargs.get('use_votes', True)
 #set $term_vote = $kwargs and $kwargs.get('term_vote', 'Votes')
@@ -463,11 +464,18 @@ $(document).ready(function(){
 			<input id="search_show_name" class="search form-control form-control-inline input-sm input200" type="search" placeholder="Filter Show Name#if $use_network#/Network#end if#">
 			&nbsp;<button type="button" class="resetshows btn btn-inline">Reset Filter</button>
 		</div>
+
 <h4 style="float:left;margin:0 0 0 2px">$browse_title</h4>
     #if $kwargs and $kwargs.get('oldest')
 <div class="grey-text" style="clear:left;margin-left:2px;font-size:0.85em">
 	First aired from $kwargs['oldest'] until $kwargs['newest']
 </div>
+    #end if
+
+    #if $p_ref
+	<div class="browse-image" style="margin: 10px 2px 30px; border-radius: 5px">
+		<a class="browse-image" href="$sbRoot/imagecache/person?pid=$p_ref&thumb=1" rel="dialog"><img class="browse-image" src="$sbRoot/imagecache/person?pid=$p_ref&thumb=0"></a>
+	</div>
     #end if
 #end if
 
@@ -530,6 +538,13 @@ $(document).ready(function(){
 			<div class="show-title">
 				#echo ((re.sub(r'^((?:A(?!\s+to)n?)|The)\s(\w)', r'<span class="article">\1</span> \2', $this_show['title']), $this_show['title'])[$sg_var('SORT_ARTICLE')], '<span>&nbsp;</span>')['' == $this_show['title']]#
 			</div>
+			#if $this_show.get('p_chars')
+				<div class="show-title">
+					#for $char in $this_show['p_chars']
+						<div>as $char[0]#if $RoleTypes.ActorMain != $char[1]# ($char[2]/$char[3] eps)#end if#</div>
+					#end for
+				</div>
+			#end if
         #if 'Ani' not in $browse_type
 			<a class="show-toggle-hide" href="$sg_root/add-shows/show-toggle-hide?ids=$show_id" title="#echo ('H', 'Unh')[any($hide)]#ide"><i class="sgicon-delete"></i></a>
         #end if
