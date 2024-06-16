@@ -146,15 +146,17 @@ def param(visible=True, rid=None, cache_person=None, cache_char=None, person=Non
 #end if
 
 <style>
-#vitals{clear:both}
+.vitals{clear:both}
+.details-title{width:90px !important}
+.details-info{margin-left:95px !important}
 .details-info.akas{max-height:100px; overflow:auto; min-width:300px; word-break:normal}
 .details-info i{font-style:normal; font-size:smaller}
-.links{display:block; padding:0}
+.links{display:block; padding:0; margin:3px 0 0}
 .links li{display: inline-block; padding:0 10px 0 0}
 .links img{margin-bottom: -1px; vertical-align:initial}
 </style>
 
-			<div class="#vitals" data-birthdate="$person.birthday" data-deathdate="$person.deathday">
+			<div class="vitals" data-birthdate="$person.birthday" data-deathdate="$person.deathday">
 #if $person.real_name
 				<div><span class="details-title">Real name</span><span class="details-info">$person.real_name</span></div>
 #end if
@@ -209,14 +211,21 @@ def param(visible=True, rid=None, cache_person=None, cache_char=None, person=Non
 					</span>
 				</div>
 #end if
-#if $person.ids.get($TVINFO_TRAKT)
-		<div></div><span><a href="$sbRoot/add-shows/trakt-person?person_trakt_id=$person.ids.get($TVINFO_TRAKT)">Search Shows on Trake</a></span></div>
-#end if
-#if $person.ids.get($TVINFO_TMDB)
-		<div><span><a href="$sbRoot/add-shows/tmdb-person?person_tmdb_id=$person.ids.get($TVINFO_TMDB)">Search Shows on TMDB</a></span></div>
-#end if
-#if $person.ids.get($TVINFO_TVMAZE)
-		<div><span><a href="$sbRoot/add-shows/tvm-person?person_tvm_id=$person.ids.get($TVINFO_TVMAZE)">Search Shows on TVMaze</a></span></div>
+#set $src = (($TVINFO_TVMAZE, 'tvm'), ($TVINFO_TMDB, 'tmdb'), ($TVINFO_TRAKT, 'trakt'))
+#if any([$person.ids.get($cur_src) for ($cur_src, _) in $src])
+				<div>
+					<span class="details-title">Other shows</span>
+					<span class="details-info">
+						<ul class="links">
+    #for ($cur_src, $cur_api) in $src
+        #if $person.ids.get($cur_src)
+							<img alt="$TVInfoAPI($cur_src).name" height="16" width="16" src="$sbRoot/images/$TVInfoAPI($cur_src).config['icon']">#slurp
+							<li><a href="$sbRoot/add-shows/${cur_api}-person?person_${cur_api}_id=$person.ids.get($cur_src)">$TVInfoAPI($cur_src).name</a></li>
+        #end if
+    #end for
+						</ul>
+					</span>
+				</div>
 #end if
 			</div>
 

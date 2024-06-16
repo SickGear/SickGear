@@ -22,7 +22,8 @@
 * Update urllib3 2.0.7 (56f01e0) to 2.2.1 (54d6edf)
 * Change growl notifier location for Apprise update refactor
 * Change systemd remove py2 and add basic hardening options
-* Change alphabetically sort list at edit show/Exclude global ignore/require words 
+* Change alphabetically sort list at edit show/Exclude global ignore/require words
+* Add search on TVmaze, TMDb, or Trakt for other shows with the actor that is viewed on Person page
 
 
 ### 3.31.1 (2024-06-14 01:00:00 UTC)

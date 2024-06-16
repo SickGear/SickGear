@@ -464,16 +464,18 @@ $(document).ready(function(){
 			<input id="search_show_name" class="search form-control form-control-inline input-sm input200" type="search" placeholder="Filter Show Name#if $use_network#/Network#end if#">
 			&nbsp;<button type="button" class="resetshows btn btn-inline">Reset Filter</button>
 		</div>
-#if $p_ref
-<div class="browse-image">
-	<a class="browse-image" href="$sbRoot/imagecache/person?pid=$p_ref&thumb=1" rel="dialog"><img src="$sbRoot/imagecache/person?pid=$p_ref&thumb=0" class="browse-image"></a>
-</div>
-#end if
+
 <h4 style="float:left;margin:0 0 0 2px">$browse_title</h4>
     #if $kwargs and $kwargs.get('oldest')
 <div class="grey-text" style="clear:left;margin-left:2px;font-size:0.85em">
 	First aired from $kwargs['oldest'] until $kwargs['newest']
 </div>
+    #end if
+
+    #if $p_ref
+	<div class="browse-image" style="margin: 10px 2px 30px; border-radius: 5px">
+		<a class="browse-image" href="$sbRoot/imagecache/person?pid=$p_ref&thumb=1" rel="dialog"><img class="browse-image" src="$sbRoot/imagecache/person?pid=$p_ref&thumb=0"></a>
+	</div>
     #end if
 #end if
 
