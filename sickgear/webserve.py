@@ -5319,6 +5319,13 @@ class AddShows(Home):
 
         return self.new_show('|'.join(['', '', '', show_name]), use_show_name=True)
 
+    @staticmethod
+    def _make_char_person_list(cur_show_info):
+        # type: (TVInfoShow) -> List[Tuple[str, int, str, int]]
+        return [(ch.name.replace('"', "'"), r_t, RoleTypes.reverse[r_t], ch.episode_count)
+                for r_t in cur_show_info.cast or [] for ch in cur_show_info.cast[r_t]]
+
+
     def tmdb_default(self):
         method = getattr(self, sickgear.TMDB_MRU, None)
         if not callable(method):
@@ -5376,11 +5383,12 @@ class AddShows(Home):
                 p_ref = f'{TVINFO_TMDB}:{p_item.id}'
                 dup = {}  # type: Dict[int, TVInfoShow]
                 for c in p_item.characters:  # type: TVInfoCharacter
+                    c.ti_show.cast[RoleTypes.ActorMain].append(c)
                     if c.ti_show.id not in dup:
                         dup[c.ti_show.id] = c.ti_show
                         items.append(c.ti_show)
                     else:
-                        dup[c.ti_show.id].cast.update(c.ti_show.cast)
+                        dup[c.ti_show.id].cast[RoleTypes.ActorMain].extend(c.ti_show.cast[RoleTypes.ActorMain])
                 del dup
             else:
                 p_item = None
@@ -5400,7 +5408,10 @@ class AddShows(Home):
                 airtime = cur_show_info.airs_time
                 if not airtime or (0, 0) == (airtime.hour, airtime.minute):
                     airtime = dateutil.parser.parse('23:59').time()
-                dt = datetime.combine(dateutil.parser.parse(cur_show_info.firstaired, parseinfo).date(), airtime)
+                try:
+                    dt = datetime.combine(dateutil.parser.parse(cur_show_info.firstaired, parseinfo).date(), airtime)
+                except (BaseException, Exception):
+                    dt = None
                 ord_premiered, str_premiered, started_past, oldest_dt, newest_dt, oldest, newest, _, _, _, _ \
                     = self.sanitise_dates(dt, oldest_dt, newest_dt, oldest, newest)
 
@@ -5417,8 +5428,7 @@ class AddShows(Home):
                             and 'jp' or 'en')
                 filtered.append(dict(
                     p_ref=p_ref,
-                    p_chars=[(ch.name, r_t, RoleTypes.reverse[r_t], ch.episode_count)
-                             for r_t in cur_show_info.cast or [] for ch in cur_show_info.cast[r_t]],
+                    p_chars=self._make_char_person_list(cur_show_info),
                     ord_premiered=ord_premiered,
                     str_premiered=str_premiered,
                     started_past=started_past,
@@ -5602,8 +5612,6 @@ class AddShows(Home):
                         if c.ti_show.id not in dup:
                             dup[c.ti_show.id] = c.ti_show
                             items.append(c.ti_show)
-                        else:
-                            dup[c.ti_show.id].cast.update(c.ti_show.cast)
                     del dup
                 else:
                     p_item = None
@@ -5664,8 +5672,7 @@ class AddShows(Home):
                 filtered.append(dict(
                     p_ref=p_ref,
                     p_item=p_item,
-                    p_chars=[(ch.name, r_t, RoleTypes.reverse[r_t], ch.episode_count)
-                             for r_t in cur_show_info.cast or [] for ch in cur_show_info.cast[r_t]],
+                    p_chars=self._make_char_person_list(cur_show_info),
                     ord_premiered=ord_premiered,
                     str_premiered=str_premiered,
                     ord_returning=ord_returning,
@@ -6009,11 +6016,13 @@ class AddShows(Home):
                 p_ref = f'{TVINFO_TVMAZE}:{p_item.id}'
                 dup = {}  # type: Dict[int, TVInfoShow]
                 for c in p_item.characters:  # type: TVInfoCharacter
+                    c.ti_show.cast[(RoleTypes.ActorGuest, RoleTypes.ActorMain)[True is c.regular]].append(c)
                     if c.ti_show.id not in dup:
                         dup[c.ti_show.id] = c.ti_show
                         items.append(c.ti_show)
                     else:
-                        dup[c.ti_show.id].cast.update(c.ti_show.cast)
+                        dup[c.ti_show.id].cast[RoleTypes.ActorMain].extend(c.ti_show.cast[RoleTypes.ActorMain])
+                        dup[c.ti_show.id].cast[RoleTypes.ActorGuest].extend(c.ti_show.cast[RoleTypes.ActorGuest])
                 del dup
             else:
                 p_item = None
@@ -6063,8 +6072,7 @@ class AddShows(Home):
 
                 filtered.append(dict(
                     p_ref=p_ref,
-                    p_chars=[(ch.name, r_t, RoleTypes.reverse[r_t], ch.episode_count)
-                             for r_t in cur_show_info.cast or [] for ch in cur_show_info.cast[r_t]],
+                    p_chars=self._make_char_person_list(cur_show_info),
                     ord_premiered=ord_premiered,
                     str_premiered=str_premiered,
                     ord_returning=ord_returning,
@@ -6110,6 +6118,9 @@ class AddShows(Home):
 
     @staticmethod
     def sanitise_dates(date, oldest_dt, newest_dt, oldest, newest, episode_info=None, combine_ep_airtime=False):
+        # in case of person search (tvmaze) guest starring entires have only show name/id, no dates
+        if None is date:
+            return 9, '', True, oldest_dt, newest_dt, oldest, newest, True, 9, 'TBC', False
         parseinfo = dateutil.parser.parserinfo(dayfirst=False, yearfirst=True)
         dt = date if isinstance(date, datetime) else dateutil.parser.parse(date)
         if episode_info:

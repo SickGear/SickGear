@@ -50,6 +50,8 @@
 		$.ll.handleScroll();
 	});
 
+	$('.nav').on('mouseover', function() {$('.service, .browse-image').qtip('hide')})
+
 	savePrefs = (function(){
 		var showsort = [], showfilter = [];
 
@@ -294,11 +296,8 @@ $(function() {
 
 	objectFitImages();
 
-	$('#content').find('img.browse-image').each(function(i, oImage){
+	$('#person .person-bg').each(function(i, oImage){
 		removeImageBackground(oImage);
-	});
-
-	$('#content').find('img.browse-image').each(function (i, oImage){
 		scaleImage(oImage);
 	});
 });
@@ -310,6 +309,9 @@ $(function() {
 <style>
 #set theme_suffix = ('', '-dark')['dark' == $getVar('sbThemeName', THEME_NAME)]
 .bfr{position:absolute;left:-999px;top:-999px}.bfr img{width:16px;height:16px}.spinner{display:inline-block;width:16px;height:16px;background:url(${sg_root}/images/loading16${theme_suffix}.gif) no-repeat 0 0}
+#person{height:300px;width:215px;display:block;}
+.main-image{float:left;margin:0 20px 20px 0; }
+.person-bg{height:300px;width:215px;display:block; background-color:#181818 !important; border:1px solid #181818; object-fit: contain; font-family: 'object-fit: contain;'; -moz-border-radius:10px; -webkit-border-radius:10px; border-radius:10px; margin:0 auto; background:url(/images/poster-person.jpg) center center no-repeat}
 </style>
 <div class="bfr"><img src="$sg_root/images/loading16${theme_suffix}.gif" /></div>
 
@@ -486,8 +488,10 @@ $(function() {
     #end if
 
     #if $p_ref
-	<div class="browse-image" style="margin: 10px 2px 30px; border-radius: 5px">
-		<a class="browse-image" href="$sbRoot/imagecache/person?pid=$p_ref&thumb=1" rel="dialog"><img class="browse-image" src="$sbRoot/imagecache/person?pid=$p_ref&thumb=0"></a>
+	<div id="person">
+		<div id="person-content" class="main-image">
+			<a class="thumb" href="$sbRoot/imagecache/person?pid=$p_ref&thumb=1" rel="dialog"><img class="person-bg" src="$sbRoot/imagecache/person?pid=$p_ref&thumb=0"></a>
+		</div>
 	</div>
     #end if
 #end if
