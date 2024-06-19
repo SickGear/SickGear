@@ -425,6 +425,10 @@ class TvMaze(TVInfoBase):
                 net = c.show.network or c.show.web_channel
                 ti_show.genre_list = clean_data(c.show.genres or [])
                 ti_show.genre = '|'.join(ti_show.genre_list or [])
+                ti_show.show_type = clean_data((
+                        isinstance(c.show.type, string_types) and [c.show.type.lower()] or
+                        isinstance(c.show.type, list) and [x.lower() for x in c.show.type] or []
+                ))
                 if net:
                     ti_show.network = clean_data(net.name)
                     ti_show.network_id = net.maze_id

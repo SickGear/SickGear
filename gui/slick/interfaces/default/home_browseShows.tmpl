@@ -42,6 +42,62 @@
 		$(this).css('cursor', 'help');
 		$(this).qtip({
 			show: {solo:true},
+			// Change qTip to manual hide when it contains many roles to scroll
+			hide: {event:(5 < $(this).closest('div.show-card').attr('data-nroles')) ? 'unfocus' : 'mouseleave'},
+			events: { // Callback events
+				render: function(event, api) {
+					// Grab the tooltip element from the API
+					var tooltip = api.elements.tooltip
+					tooltip.bind('tooltipshow', function(event, api) {
+						var showcardEl = $(api.target).closest('div.show-card')
+						if ('1' === showcardEl.attr('data-ajax')) { // do a one time fetch
+							var qtipEl = $(this).find('.qtip-content'),
+								premiereEl = qtipEl.find('.premiere'),
+								genreEl = qtipEl.find('.genre'),
+								overviewEl = qtipEl.find('.overview'),
+								oldestEl = $('#oldest'),
+								newestEl = $('#newest');
+
+							// Set initial text
+							overviewEl.html('Fetching overview...');
+							$.getJSON($.SickGear.Root + '/add-shows/tvm-get-showinfo', {
+								tvid_prodid: showcardEl.attr('data-id'),
+								oldest_dt: $('#oldest').attr('data-oldest-dt'),
+								newest_dt: $('#newest').attr('data-newest-dt'),
+								},
+								function (data) {
+									if (undefined !== data.overview) {
+										showcardEl.attr('data-ajax', '0'); // mark one time fetch as completed
+										if (undefined !== data.oldest) {
+											oldestEl.attr('data-oldest-dt', data.oldest_dt)
+											oldestEl.html(data.oldest);
+										} else if (undefined !== data.newest) {
+											newestEl.attr('data-newest-dt', data.newest_dt)
+											newestEl.html(data.newest);
+										}
+										var premiere = '';
+										if (data.str_premiered.length) {
+											showcardEl.attr('data-premiered', data.ord_premiered);
+											premiere = "<span style='font-weight:bold;font-size:0.9em;color:#888'><em>First air" + (data.started_past ? 'ed' : 's') + ": " + data.str_premiered + "</em></span>";
+										}
+										if (data.genres) {
+											genreEl.css('display', 'block');
+											genreEl.find('em').html(data.genres);
+										}
+										overviewEl.html(data.overview);
+										if (data.network.length) {
+											premiere += "<span style='display:block;clear:both;font-weight:bold;font-size:0.9em;color:#888'><em>On: " + data.network + "</em></span>";
+										}
+										premiereEl.html(premiere);
+									} else {
+										overviewEl.html('Failed to fetch TVmaze overview' );
+									}
+								}
+							)
+						}
+					})
+				}
+			},
 			position: {viewport:$(window), my:'left center', adjust:{y: -10,x: 2 }},
 			style: {tip: {corner:true, method:'polygon'}, classes:'qtip-rounded qtip-bootstrap qtip-shadow ui-tooltip-sb'}
 		});
@@ -264,7 +320,7 @@ $(function() {
 		}
 	});
 
-	$('.service, .browse-image').each(addQTip);
+	$('.service, a.browse-image').each(addQTip);
 
 	if (config.homeSearchFocus) {
 		$('#search_show_name').focus();
@@ -309,9 +365,10 @@ $(function() {
 <style>
 #set theme_suffix = ('', '-dark')['dark' == $getVar('sbThemeName', THEME_NAME)]
 .bfr{position:absolute;left:-999px;top:-999px}.bfr img{width:16px;height:16px}.spinner{display:inline-block;width:16px;height:16px;background:url(${sg_root}/images/loading16${theme_suffix}.gif) no-repeat 0 0}
-#person{height:300px;width:215px;display:block;}
-.main-image{float:left;margin:0 20px 20px 0; }
-.person-bg{height:300px;width:215px;display:block; background-color:#181818 !important; border:1px solid #181818; object-fit: contain; font-family: 'object-fit: contain;'; -moz-border-radius:10px; -webkit-border-radius:10px; border-radius:10px; margin:0 auto; background:url(/images/poster-person.jpg) center center no-repeat}
+#person{min-height:130px; height:auto; width:215px; margin:auto; display:block}
+.main-image{margin:15px auto}
+.person-bg{height:300px; width:215px; display:block; background-color:#181818 !important; border:1px solid #181818; object-fit: contain; font-family: 'object-fit: contain;'; -moz-border-radius:10px; -webkit-border-radius:10px; border-radius:10px; background:url(/images/poster-person.jpg) center center no-repeat}
+.person-bg{margin:0 auto !important}
 </style>
 <div class="bfr"><img src="$sg_root/images/loading16${theme_suffix}.gif" /></div>
 
@@ -356,7 +413,7 @@ $(function() {
 			<option value="by_rating"#if 'by_rating' in $saved_showsort_sortby#$selected>>&nbsp;#else#>#end if#% Rating</option>
     #end if
     #if $use_ratings and $use_votes
-			<option value="by_rating_votes"#if 'by_rating_votes' in $saved_showsort_sortby#$selected>>&nbsp;#else#>#end if#% Rating > Votes</option>
+			<option value="by_rating_votes"#if 'by_rating_votes' in $saved_showsort_sortby#$selected>>&nbsp;#else#>#end if#% Rating > $term_vote</option>
     #end if
 		</optgroup>
 	</select>
@@ -483,7 +540,7 @@ $(function() {
 <h4 style="float:left;margin:0 0 0 2px">$browse_title</h4>
     #if $kwargs and $kwargs.get('oldest')
 <div class="grey-text" style="clear:left;margin-left:2px;font-size:0.85em">
-	First aired from $kwargs['oldest'] until $kwargs['newest']
+	First aired from <span id="oldest" data-oldest-dt="$kwargs.get('oldest_dt', '')">$kwargs['oldest']</span> until <span id="newest" data-newest-dt="$kwargs.get('newest_dt', '')">$kwargs['newest']</span>
 </div>
     #end if
 
@@ -506,7 +563,7 @@ $(function() {
         #if 'returning' == $mode
             #set $overview = '%s: %s' % (
             	'Season %s' % $this_show['episode_season'],
-                $this_show['episode_overview'] or $this_show['overview'])
+                $this_show[('episode_overview', 'overview')['No overview yet' == $this_show['episode_overview']]])
         #else
             #set $overview = $this_show['overview']
         #end if
@@ -517,14 +574,13 @@ $(function() {
         #if $use_ratings:
             #set $data_rating = $try_float($this_show['rating'])
         #end if
-
-	<div class="show-card ${hide}${known}inlibrary" data-name="#echo re.sub(r'([\'\"])', r'', $this_show['title'])#" data_id="$show_id"#if $use_ratings# data-rating="$data_rating"#end if##if $use_votes# data-votes="$this_show['votes']"#end if# data-premiered="$this_show['ord_premiered']"#if $use_returning# data-returning="$this_show['ord_returning']"#end if# data-order="$this_show['order']"#if $use_network# data-network="$this_show['network']"#end if#>
+	<div class="show-card ${hide}${known}inlibrary" data-name="#echo re.sub(r'([\'\"])', r'', $this_show['title'])#" data-id="$show_id" data-ajax="$this_show.get('overview_ajax', '0')" data-nroles="#echo len($this_show.get('p_chars', []))#" #if $use_ratings# data-rating="$data_rating"#end if##if $use_votes# data-votes="$this_show['votes']"#end if# data-premiered="$this_show['ord_premiered']"#if $use_returning# data-returning="$this_show['ord_returning']"#end if# data-order="$this_show['order']"#if $use_network# data-network="$this_show['network']"#end if#>
 		<div class="show-card-inner">
 			<div class="browse-image">
 				<a class="browse-image" href="<%= anon_url(this_show['url_src_db']) %>" target="_blank"
 					title="<span style='color: #226baa'>$re.sub(r'(?m)\s+\((?:19|20)\d\d\)\s*$', '', $title_html)</span>
 
-					#if $this_show['genres']#<br><div style='font-weight:bold'>(<em>$this_show['genres']</em>)</div>#end if#
+					<div class='genre' style='display:#echo ('none', 'block')[bool($this_show['genres'])]#;font-weight:bold'>(<em>$this_show['genres']</em>)</div>
 					#if $kwargs and $use_returning#<span style='display:block;clear:both;font-weight:bold;font-size:0.9em;color:#888'><em>Season $this_show['episode_season'] return#echo ('s', 'ed')[$this_show['return_past']]# $this_show['str_returning']</em></span>#end if#
         #if $this_show.get('country') or $this_show.get('language')
 					 <p style='line-height:15px;margin-bottom:2px'>
@@ -537,14 +593,14 @@ $(function() {
 					</p>
         #end if
         #if $this_show.get('p_chars')
-					<p>
+					<p style='overflow-y:auto;max-height:152px'>
             #for $char in $this_show['p_chars']
 						<span style='display:block;clear:both;font-weight:bold;font-size:0.9em;color:#393'>as $char[0]#if $RoleTypes.ActorMain != $char[1]# ($char[2]/$char[3] eps)#end if#</span>
             #end for
 					</p>
         #end if
-					<p style='margin:0 0 2px'>#echo re.sub(r'([,\.!][^,\.!]*?)$', '...', re.sub(r'([!\?\.])(?=\w)', r'\1 ', $overview)).replace('.....', '...')#</p>
-					<p>#if $this_show['str_premiered']#<span style='font-weight:bold;font-size:0.9em;color:#888'><em>#if 'Trakt' == $browse_type and $kwargs and 'returning' == $mode#Air#else#First air#end if##echo ('s', 'ed')[$this_show['started_past']]#: $this_show['str_premiered']</em></span>#end if#
+					<p class='overview' style='margin:0 0 2px'>$overview</p>
+					<p class='premiere'>#if $this_show['str_premiered']#<span style='font-weight:bold;font-size:0.9em;color:#888'><em>#if 'Trakt' == $browse_type and $kwargs and 'returning' == $mode#Air#else#First air#end if##echo ('s', 'ed')[$this_show['started_past']]#: $this_show['str_premiered']</em></span>#end if#
 					#if $this_show.get('ended_str')# - <span style='font-weight:bold;font-size:0.9em;color:#888'><em>Ended: $this_show['ended_str']</em></span>#end if#
 					#if $this_show.get('network')#<span style='display:block;clear:both;font-weight:bold;font-size:0.9em;color:#888'><em>On: $this_show['network']</em></span>#end if#
 					</p>
@@ -568,6 +624,8 @@ $(function() {
 			<div class="clearfix">
         #if $use_ratings or $use_votes
 				<p>#if $use_ratings#<span class="rating">$this_show['rating']#if $re.search(r'^\d+(\.\d+)?$', (str($this_show['rating'])))#%</span>#end if##end if##if $use_votes#<i class="heart icon-glyph"></i><i>$this_show['votes'] $term_vote.lower()</i>#end if#</p>#slurp#
+        #else
+				<p>&nbsp;</p>
         #end if
         #if 'url_tvdb' in $this_show and $this_show['url_tvdb']
 				<a class="service" href="<%= anon_url(this_show['url_tvdb']) %>" onclick="window.open(this.href, '_blank'); return false;"
