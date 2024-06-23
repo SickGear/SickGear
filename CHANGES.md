@@ -1,4 +1,9 @@
-﻿### 3.31.1 (2024-06-14 01:00:00 UTC)
+﻿### 3.31.2 (2024-06-23 18:20:00 UTC)
+
+* Fix parsing show names that contain the word "parts" by making parser more restrictive
+
+
+### 3.31.1 (2024-06-14 01:00:00 UTC)
 
 * Change allow Python 3.12.4
 
