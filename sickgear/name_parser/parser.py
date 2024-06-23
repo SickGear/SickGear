@@ -170,7 +170,7 @@ class NameParser(object):
                     result.series_name = match.group('series_name')
                     if result.series_name:
                         result.series_name = self.clean_series_name(result.series_name)
-                        name_parts = re.match(r'(?i)(.*)[ -]((?:part|pt)[ -]?\w+)$', result.series_name)
+                        name_parts = re.match(r'(?i)(.*)[ -]((?:part|pt)[ -]?[0-9IVXL]+)$', result.series_name)
                         try:
                             result.series_name = name_parts.group(1)
                             result.extra_info = name_parts.group(2)

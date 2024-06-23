@@ -44,6 +44,8 @@ simple_test_cases = {
         'Show.Name.S01E15-11001001': parser.ParseResult(None, 'Show Name', 1, [15], None),
         'Show.Name.S01E02.Source.Quality.Etc-Group - [stuff]':
             parser.ParseResult(None, 'Show Name', 1, [2], 'Source.Quality.Etc', 'Group'),
+        'Show.Name.Parts.S02E01':
+            parser.ParseResult(None, 'Show Name Parts', 2, [1]),
     },
 
     'non_standard_multi_ep': {
