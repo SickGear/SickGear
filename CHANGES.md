@@ -1,4 +1,9 @@
-﻿### 3.32.0 (2024-06-25 21:15:00 UTC)
+﻿### 3.33.0 (2024-0x-xx xx:xx:00 UTC)
+
+* Update urllib3 2.2.1 (54d6edf) to 2.2.2 (27e2a5c)
+
+
+### 3.32.0 (2024-06-25 21:15:00 UTC)
 
 * Update apprise 1.6.0 (0c0d5da) to 1.8.0 (81caf92)
 * Update attr 23.1.0 (67e4ff2) to 23.2.0 (b393d79)
