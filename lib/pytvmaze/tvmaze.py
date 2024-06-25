@@ -12,6 +12,18 @@ if False:
     from typing import Any, AnyStr, Dict, List, Optional, Union
 
 
+url_maze_id_regex = re.compile(r'^https?://(?:(?:api|wwww)\.)?tvmaze\.com/shows/(\d+)', flags=re.I)
+
+
+def _parse_show_id_from_url(url):
+    # type: (str) -> Optional[int]
+    if isinstance(url, str):
+        try:
+            return int(url_maze_id_regex.search(url).group(1))
+        except (BaseException, Exception):
+            pass
+
+
 class Show(object):
     def __init__(self, data):
         self.status = data.get('status')  # type: Optional[AnyStr]
@@ -36,7 +48,7 @@ class Show(object):
         self.runtime = data.get('runtime')  # type: Optional[int]
         self.average_runtime = data.get('averageRuntime')
         self.type = data.get('type')  # type: Optional[AnyStr]
-        self.id = data.get('id')  # type: int
+        self.id = data.get('id') or ('href' in data and _parse_show_id_from_url(data['href'])) or None  # type: int
         self.maze_id = self.id  # type: int
         if data.get('network'):
             self.network = Network(data.get('network'))  # type: Optional[Network]
@@ -428,9 +440,12 @@ class CastCredit(object):
     def populate(self, data):
         if data.get('_embedded'):
             if data['_embedded'].get('character'):
-                self.character = Character(data['_embedded']['character'])
+                self.character = Character(data['_embedded']['character'], base_data=data)
             if data['_embedded'].get('show'):
                 self.show = Show(data['_embedded']['show'])
+            elif ('episode' in data['_embedded'] and '_links' in data['_embedded']['episode'] and
+                  'show' in data['_embedded']['episode']['_links']):
+                self.show = Show(data['_embedded']['episode']['_links']['show'])
             if data['_embedded'].get('episode'):
                 self.episode = Episode(data['_embedded']['episode'])
 

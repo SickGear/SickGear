@@ -6,7 +6,7 @@ from exceptions_helper import ConnectionSkipException, ex
 from six import iteritems
 from .trakt import TraktAPI
 from lib.tvinfo_base.exceptions import BaseTVinfoShownotfound
-from lib.tvinfo_base import TVInfoBase, TVINFO_TRAKT, TVINFO_TMDB, TVINFO_TVDB, TVINFO_TVRAGE, TVINFO_IMDB, \
+from lib.tvinfo_base import PersonGenders, TVInfoBase, TVINFO_TRAKT, TVINFO_TMDB, TVINFO_TVDB, TVINFO_TVRAGE, TVINFO_IMDB, \
     TVINFO_SLUG, TVInfoPerson, TVINFO_TWITTER, TVINFO_FACEBOOK, TVINFO_WIKIPEDIA, TVINFO_INSTAGRAM, TVInfoCharacter, \
     TVInfoShow, TVInfoIDs, TVInfoSocialIDs, TVINFO_TRAKT_SLUG, TVInfoEpisode, TVInfoSeason, RoleTypes
 from sg_helpers import clean_data, enforce_type, try_int
@@ -262,6 +262,7 @@ class TraktIndexer(TVInfoBase):
                             deathdate=deathdate,
                             homepage=person_obj['homepage'],
                             birthplace=person_obj['birthplace'],
+                            gender=PersonGenders.trakt_map.get(person_obj['gender'], PersonGenders.unknown),
                             social_ids=TVInfoSocialIDs(
                                 ids={TVINFO_TWITTER: person_obj['social_ids']['twitter'],
                                      TVINFO_FACEBOOK: person_obj['social_ids']['facebook'],
@@ -308,6 +309,7 @@ class TraktIndexer(TVInfoBase):
                 if resp:
                     if show_credits:
                         pc = []
+                        clean_lower_person_name = (result.name or '').lower()
                         for c in resp.get('cast') or []:
                             ti_show = TVInfoShow()
                             ti_show.id = c['show']['ids'].get('trakt')
@@ -321,10 +323,17 @@ class TraktIndexer(TVInfoBase):
                             ti_show.imdb_id = c['show']['ids'].get('imdb')
                             ti_show.runtime = c['show']['runtime']
                             ti_show.genre_list = c['show']['genres']
+                            ti_show.slug = c['show'].get('ids', {}).get('slug')
+                            ti_show.language = c['show'].get('language')
+                            ti_show.network_country = c['show'].get('country')
+                            ti_show.rating = c['show'].get('rating')
+                            ti_show.vote_count = c['show'].get('votes')
                             for ch in c.get('characters') or []:
-                                _ti_character = TVInfoCharacter(name=ch, regular=c.get('series_regular'),
-                                                                ti_show=ti_show, person=[result],
-                                                                episode_count=c.get('episode_count'))
+                                clean_ch = clean_data(ch)
+                                _ti_character = TVInfoCharacter(
+                                    name=clean_ch, regular=c.get('series_regular'), ti_show=ti_show, person=[result],
+                                    episode_count=c.get('episode_count'),
+                                    plays_self=(clean_ch or '').lower() in ('self', clean_lower_person_name))
                                 pc.append(_ti_character)
                                 ti_show.cast[(RoleTypes.ActorGuest, RoleTypes.ActorMain)[
                                     c.get('series_regular', False)]].append(_ti_character)

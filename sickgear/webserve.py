@@ -94,7 +94,7 @@ except ImportError as e:
     from lib.fuzzywuzzy import fuzz
 from lib.api_trakt import TraktAPI
 from lib.api_trakt.exceptions import TraktException, TraktAuthException
-from lib.tvinfo_base import TVInfoEpisode
+from lib.tvinfo_base import TVInfoEpisode, RoleTypes
 from lib.tvinfo_base.base import tv_src_names
 
 import lib.rarfile.rarfile as rarfile
@@ -108,7 +108,7 @@ if False:
     from typing import Any, AnyStr, Dict, List, Optional, Set, Tuple, Union
     from sickgear.providers.generic import TorrentProvider
     # prevent pyc TVInfoBase resolution by typing the derived used class to TVInfoAPI instantiation
-    from lib.tvinfo_base import TVInfoBase, TVInfoShow
+    from lib.tvinfo_base import TVInfoBase, TVInfoCharacter, TVInfoPerson, TVInfoShow
     # from api_imdb.imdb_api import IMDbIndexer
     from api_tmdb.tmdb_api import TmdbIndexer
     from api_trakt.indexerapiinterface import TraktIndexer
@@ -4324,12 +4324,15 @@ class AddShows(Home):
         return json_dumps({'results': final_results})
 
     @staticmethod
-    def _make_cache_image_url(iid, show_info, default_transparent_img=True):
+    def _make_cache_image_url(iid, show_info, default_transparent_img=True, use_source_id=False):
         img_url = ''
         trans_param = ('1', '0')[not default_transparent_img]
         if TVINFO_TRAKT == iid:
             img_url = 'imagecache?path=browse/thumb/trakt&filename=%s&trans=%s&tmdbid=%s&tvdbid=%s' % \
                       ('%s.jpg' % show_info['ids'].trakt, trans_param, show_info['ids'].tmdb, show_info['ids'].tvdb)
+        elif use_source_id and TVINFO_TVMAZE == iid:
+            img_url = 'imagecache?path=browse/thumb/tvmaze&filename=%s&trans=%s&tvmazeid=%s' % \
+                      ('%s.jpg' % show_info['ids'].tvmaze, trans_param, show_info['ids'].tvmaze)
         elif iid in (TVINFO_TVDB, TVINFO_TVMAZE, TVINFO_TMDB) and show_info.get('poster'):
             img_url = 'imagecache?path=browse/thumb/%s&filename=%s&trans=%s&source=%s' % \
                       (tv_src_names[iid], '%s.jpg' % show_info['id'], trans_param, show_info['poster'])
@@ -4776,7 +4779,7 @@ class AddShows(Home):
                     genres=', '.join(row.get('metadata', {}).get('genres', {})) or 'No genre yet',
                     ids=ids,
                     images='' if not img_uri else images,
-                    overview='No overview yet' if not overview else helpers.xhtml_escape(overview[:250:]),
+                    overview=self.clean_overview(overview),
                     rating=int(helpers.try_float(rating) * 10),
                     title=row.get('primary').get('title'),
                     url_src_db='https://www.imdb.com/%s/' % row.get('primary').get('href').strip('/'),
@@ -4852,7 +4855,7 @@ class AddShows(Home):
                         genres='',
                         ids=ids,
                         images='' if not img_uri else images,
-                        overview='No overview yet' if not overview else helpers.xhtml_escape(overview[:250:]),
+                        overview=self.clean_overview(overview),
                         rating=0 if not len(rating) else int(helpers.try_float(rating) * 10),
                         title=title,
                         url_src_db='https://www.imdb.com/%s/' % url_path.strip('/'),
@@ -5037,6 +5040,19 @@ class AddShows(Home):
               f'?releaseYearMin={this_year}&releaseYearMax={this_year}{page}'
         html = helpers.get_url(url, headers={'User-Agent': browser_ua.get_ua()})
         if html:
+            items_data = []
+            try:
+                items_html = html[6 + html.index('items:[{awards'):]
+                items_bufr = re.split(r'\btype:"', items_html)
+                for cur_item in items_bufr[1:]:  # iterates from the first true type:"show" record
+                    if not cur_item.startswith('show'):
+                        break
+                    items_data.append(f'type:"{cur_item}')
+                del items_html
+                del items_bufr
+            except (BaseException, Exception):
+                pass
+
             try:
                 if re.findall('(c-navigationPagination_item--next)', html)[0]:
                     kwargs.update(dict(more=1))
@@ -5050,7 +5066,7 @@ class AddShows(Home):
                 rc_id = re.compile(r'(?i)[^A-Z0-9]')
                 rc_img = re.compile(r'(.*?)(/resize/[^?]+)?(/catalog/provider.*?\.(?:jpg|png)).*')
                 rc_season = re.compile(r'(\d+)(?:[.]\d*?)?$')
-                for idx, cur_row in enumerate(items):
+                for cur_idx, cur_row in enumerate(items):
                     try:
                         title = rc_title.sub(
                             '', cur_row.find('div', class_='c-finderProductCard_title').get('data-title').strip())
@@ -5065,6 +5081,24 @@ class AddShows(Home):
 
                         images = None
                         img_src = (cur_row.find('img') or {}).get('src', '').strip()
+                        if not img_src and items_data: # items_data is the sites' image method from 2024
+                            buffer_idx = None
+                            if title in items_data[cur_idx]:
+                                buffer_idx = cur_idx
+                            else:
+                                for cur_data_idx, cur_item in enumerate(items_data):
+                                    if title in cur_item:
+                                        buffer_idx = cur_data_idx
+                                        break
+                            if None is not buffer_idx:
+                                try:
+                                    img_rel = re.findall(
+                                        r'bucketPath[^:]*?:[^"]*?"([^"]+?)"',
+                                        items_data[buffer_idx], re.I)[0].encode().decode('unicode-escape')
+                                    img_src = f'https://www.metacritic.com/a/img/catalog/{img_rel.strip("/")}'
+                                except (BaseException, Exception):
+                                    pass
+
                         if img_src:
                             img_uri = rc_img.sub(r'\1\3', img_src)
                             images = dict(poster=dict(thumb=f'imagecache?path=browse/thumb/metac&source={img_uri}'))
@@ -5099,7 +5133,7 @@ class AddShows(Home):
 
                         overview = cur_row.find('div', class_='c-finderProductCard_description')
                         if overview:
-                            overview = helpers.xhtml_escape(overview.get_text().strip()[:250:])
+                            overview = overview.get_text()
 
                         try:
                             season = rc_season.findall(url_path)[0]
@@ -5114,7 +5148,7 @@ class AddShows(Home):
                             genres='',
                             ids=ids,
                             images=images or '',
-                            overview=overview or 'No overview yet',
+                            overview=self.clean_overview(overview),
                             rating=0 if not rating else rating or 'TBD',
                             rating_user='tbd' if not rating_user else int(helpers.try_float(rating_user) * 10) or 'tbd',
                             title=title,
@@ -5270,7 +5304,7 @@ class AddShows(Home):
 
                         genres = row.find(class_='genre')
                         if genres:
-                            genres = re.sub(r',(\S)', r', \1', genres.get_text(strip=True))
+                            genres = re.sub(r',(\S)', r', \1', genres.get_text(strip=True)).lower()
                         overview = row.find(class_='summary')
                         if overview:
                             overview = overview.get_text(strip=True)
@@ -5290,7 +5324,7 @@ class AddShows(Home):
                             ids=ids,
                             images='' if not img_uri else images,
                             network=network or None,
-                            overview='No overview yet' if not overview else helpers.xhtml_escape(overview[:250:]),
+                            overview=self.clean_overview(overview),
                             rating=(rating, 'TBD')[None is rating],
                             title=title,
                             url_src_db='https://next-episode.net/%s/' % url_path.strip('/'),
@@ -5316,9 +5350,21 @@ class AddShows(Home):
 
         return self.new_show('|'.join(['', '', '', show_name]), use_show_name=True)
 
+    @staticmethod
+    def _make_char_person_list(cur_show_info):
+        # type: (TVInfoShow) -> List[Tuple[str, int, str, int]]
+        return [(ch.name.replace('"', "'"), r_t, RoleTypes.reverse[r_t], ch.episode_count)
+                for r_t in cur_show_info.cast or [] for ch in cur_show_info.cast[r_t] if ch.name]
+
+    @staticmethod
+    def allow_browse_mru(mode_or_mru):
+        # Fix an issue where a default view mixed with a deriviative view that requires a param will break the default
+        # Disallows default views from using derivative mru's
+        return 'person' not in mode_or_mru
+
     def tmdb_default(self):
         method = getattr(self, sickgear.TMDB_MRU, None)
-        if not callable(method):
+        if not callable(method) or not self.allow_browse_mru(sickgear.TMDB_MRU):
             return self.tmdb_upcoming()
         return method()
 
@@ -5342,6 +5388,10 @@ class AddShows(Home):
         return self.browse_tmdb(
             'Trending this week at TMDB', mode='trending_week', **kwargs)
 
+    def tmdb_person(self, person_tmdb_id=None, **kwargs):
+        return self.browse_tmdb(
+            'Person at TMDB', mode='person', p_id=person_tmdb_id, **kwargs)
+
     def browse_tmdb(self, browse_title, **kwargs):
 
         browse_type = 'TMDB'
@@ -5349,6 +5399,7 @@ class AddShows(Home):
 
         footnote = None
         filtered = []
+        p_ref = None
 
         tvid = TVINFO_TMDB
         tvinfo_config = sickgear.TVInfoAPI(tvid).api_params.copy()
@@ -5361,6 +5412,20 @@ class AddShows(Home):
             items = t.get_trending()
         elif 'trending_week' == mode:
             items = t.get_trending(time_window='week')
+        elif 'person' == mode:
+            items = []
+            p_item = t.get_person(get_show_credits=True, **kwargs)  # type: TVInfoPerson
+            if p_item:
+                p_ref = f'{TVINFO_TMDB}:{p_item.id}'
+                dup = {}  # type: Dict[int, TVInfoShow]
+                for c in p_item.characters:  # type: TVInfoCharacter
+                    c.ti_show.cast[RoleTypes.ActorMain].append(c)
+                    if c.ti_show.id not in dup:
+                        dup[c.ti_show.id] = c.ti_show
+                        items.append(c.ti_show)
+                    else:
+                        dup[c.ti_show.id].cast[RoleTypes.ActorMain].extend(c.ti_show.cast[RoleTypes.ActorMain])
+                del dup
         else:
             items = t.discover()
 
@@ -5377,7 +5442,10 @@ class AddShows(Home):
                 airtime = cur_show_info.airs_time
                 if not airtime or (0, 0) == (airtime.hour, airtime.minute):
                     airtime = dateutil.parser.parse('23:59').time()
-                dt = datetime.combine(dateutil.parser.parse(cur_show_info.firstaired, parseinfo).date(), airtime)
+                try:
+                    dt = datetime.combine(dateutil.parser.parse(cur_show_info.firstaired, parseinfo).date(), airtime)
+                except (BaseException, Exception):
+                    dt = None
                 ord_premiered, str_premiered, started_past, oldest_dt, newest_dt, oldest, newest, _, _, _, _ \
                     = self.sanitise_dates(dt, oldest_dt, newest_dt, oldest, newest)
 
@@ -5396,14 +5464,14 @@ class AddShows(Home):
                     ord_premiered=ord_premiered,
                     str_premiered=str_premiered,
                     started_past=started_past,
-                    episode_overview=helpers.xhtml_escape(cur_show_info.overview[:250:]).strip('*').strip(),
+                    episode_overview=self.clean_overview(cur_show_info),
                     episode_season=cur_show_info.season,
-                    genres=', '.join(cur_show_info.genre_list)
-                           or (cur_show_info.genre and (cur_show_info.genre.strip('|').replace('|', ', ')) or ''),
+                    genres=(', '.join(cur_show_info.genre_list)
+                            or (cur_show_info.genre and (cur_show_info.genre.strip('|').replace('|', ', ')) or '')
+                            ).lower(),
                     ids=cur_show_info.ids.__dict__,
                     images=images,
-                    overview=(helpers.xhtml_escape(cur_show_info.overview[:250:]).strip('*').strip()
-                              or 'No overview yet'),
+                    overview=self.clean_overview(cur_show_info),
                     title=cur_show_info.seriesname,
                     language=language,
                     language_img=sickgear.MEMCACHE_FLAG_IMAGES.get(language, False),
@@ -5411,15 +5479,23 @@ class AddShows(Home):
                     country_img=sickgear.MEMCACHE_FLAG_IMAGES.get(cc.lower(), False),
                     network=network_name,
                     url_src_db=base_url % cur_show_info.id,
-                    votes=cur_show_info.popularity or 0,
+                    rating=0 < (cur_show_info.rating or 0) and
+                           ('%.2f' % (cur_show_info.rating * 10)).replace('.00', '') or 0,
+                    votes=('%.2f' % cur_show_info.popularity) or 0,
                 ))
+                if p_ref:
+                    filtered[-1].update(dict(
+                        p_name=p_item.name,
+                        p_ref=p_ref,
+                        p_chars=self._make_char_person_list(cur_show_info)
+                    ))
             except (BaseException, Exception):
                 pass
-            kwargs.update(dict(oldest=oldest, newest=newest, use_ratings=False, use_filter=True, term_vote='Score'))
+            kwargs.update(dict(oldest=oldest, newest=newest, use_filter=True, term_vote='Score'))
 
         kwargs.update(dict(footnote=footnote, use_networks=use_networks))
 
-        if mode:
+        if mode and self.allow_browse_mru(mode):
             func = 'tmdb_%s' % mode
             if callable(getattr(self, func, None)):
                 sickgear.TMDB_MRU = func
@@ -5434,7 +5510,7 @@ class AddShows(Home):
 
     def trakt_default(self):
         method = getattr(self, sickgear.TRAKT_MRU, None)
-        if not callable(method):
+        if not callable(method) or not self.allow_browse_mru(sickgear.TMDB_MRU):
             return self.trakt_trending()
         return method()
 
@@ -5533,6 +5609,8 @@ class AddShows(Home):
         mode = kwargs.get('mode', '')
         items, filtered = ([], [])
         error_msg = None
+        p_item = None
+        p_ref = None
         tvid = TVINFO_TRAKT
         tvinfo_config = sickgear.TVInfoAPI(tvid).api_params.copy()
         t = sickgear.TVInfoAPI(tvid).setup(**tvinfo_config)  # type: Union[TraktIndexer, TVInfoBase]
@@ -5564,6 +5642,17 @@ class AddShows(Home):
                 if not items:
                     error_msg = 'No items in watchlist.  Use the "Add to watchlist" button at the Trakt website'
                     raise ValueError(error_msg)
+            elif 'person' == mode:
+                items = []
+                p_item = t.get_person(get_show_credits=True, **kwargs)  # type: TVInfoPerson
+                if p_item:
+                    p_ref = f'{TVINFO_TRAKT}:{p_item.id}'
+                    dup = {}  # type: Dict[int, TVInfoShow]
+                    for c in p_item.characters:  # type: TVInfoCharacter
+                        if c.ti_show.id not in dup:
+                            dup[c.ti_show.id] = c.ti_show
+                            items.append(c.ti_show)
+                    del dup
             else:
                 items = t.get_trending()
         except TraktAuthException as e:
@@ -5603,9 +5692,10 @@ class AddShows(Home):
             except(BaseException, Exception):
                 episode_info = TVInfoEpisode()
 
-            if rx_ignore.search(cur_show_info.seriesname.strip()) or \
-                    not (language_en or country_ok) or \
-                    not (cur_show_info.overview or episode_info.overview):
+            if 'get_person' != api_method and \
+                    (rx_ignore.search(cur_show_info.seriesname.strip()) or
+                     not (language_en or country_ok) or
+                     not (cur_show_info.overview or episode_info.overview)):
                 continue
             try:
                 ord_premiered, str_premiered, started_past, oldest_dt, newest_dt, oldest, newest, \
@@ -5625,14 +5715,13 @@ class AddShows(Home):
                     started_past=started_past,  # air time not yet available 16.11.2015
                     return_past=return_past,
                     episode_number=episode_info.episodenumber,
-                    episode_overview=helpers.xhtml_escape(episode_info.overview[:250:]).strip('*').strip(),
+                    episode_overview=self.clean_overview(episode_info),
                     episode_season=getattr(episode_info.season, 'number', 1),
                     genres=(', '.join(['%s' % v for v in cur_show_info.genre_list])),
                     ids=cur_show_info.ids.__dict__,
                     images=images,
                     network=network_name,
-                    overview=(helpers.xhtml_escape(cur_show_info.overview[:250:]).strip('*').strip()
-                              or 'No overview yet'),
+                    overview=self.clean_overview(cur_show_info),
                     rating=0 < (cur_show_info.rating or 0) and
                            ('%.2f' % (cur_show_info.rating * 10)).replace('.00', '') or 0,
                     title=(cur_show_info.seriesname or '').strip(),
@@ -5644,7 +5733,14 @@ class AddShows(Home):
                     url_tvdb=(
                         '' if not (isinstance(cur_show_info.ids.tvdb, integer_types) and 0 < cur_show_info.ids.tvdb)
                         else sickgear.TVInfoAPI(TVINFO_TVDB).config['show_url'] % cur_show_info.ids.tvdb),
-                    votes=cur_show_info.vote_count or '0'))
+                    votes=cur_show_info.vote_count or '0'
+                ))
+                if p_ref:
+                    filtered[-1].update(dict(
+                        p_name=p_item.name,
+                        p_ref=p_ref,
+                        p_chars=self._make_char_person_list(cur_show_info)
+                    ))
             except (BaseException, Exception):
                 pass
 
@@ -5652,6 +5748,16 @@ class AddShows(Home):
             return filtered, oldest, newest, use_networks, error_msg
 
         return filtered, oldest, newest
+
+    def trakt_person(self, person_trakt_id=None):
+
+        return self.browse_trakt(
+            'get_person',
+            'Person at Trakt',
+            mode='person',
+            footnote='Note; Expect default placeholder images in this list',
+            p_id=person_trakt_id
+        )
 
     def browse_trakt(self, api_method, browse_title, **kwargs):
 
@@ -5672,9 +5778,9 @@ class AddShows(Home):
 
         kwargs.update(dict(oldest=oldest, newest=newest, error_msg=error_msg, use_networks=use_networks))
 
-        if 'recommended' not in mode and 'watchlist' not in mode:
+        if not any(m in mode for m in ('recommended', 'watchlist', 'person')):
             mode = mode.split('-')
-            if mode:
+            if mode and self.allow_browse_mru(mode):
                 func = 'trakt_%s' % mode[0]
                 if callable(getattr(self, func, None)):
                     param = '' if 1 == len(mode) or mode[1] not in ['year', 'month', 'week', 'all'] else \
@@ -5883,7 +5989,7 @@ class AddShows(Home):
                             network=network or None,
                             ids=ids,
                             images='' if not img_uri else images,
-                            overview='No overview yet' if not overview else helpers.xhtml_escape(overview[:250:]),
+                            overview=self.clean_overview(overview),
                             rating=None,
                             title=title,
                             url_src_db='https://www.pogdesign.co.uk/%s' % url_path.strip('/'),
@@ -5911,7 +6017,7 @@ class AddShows(Home):
 
     def tvm_default(self):
         method = getattr(self, sickgear.TVM_MRU, None)
-        if not callable(method):
+        if not callable(method) or not self.allow_browse_mru(sickgear.TMDB_MRU):
             return self.tvm_premieres()
         return method()
 
@@ -5923,6 +6029,55 @@ class AddShows(Home):
         return self.browse_tvm(
             'Returning at TVmaze', mode='returning', **kwargs)
 
+    def tvm_person(self, person_tvm_id=None, **kwargs):
+        return self.browse_tvm(
+            'Person at TVmaze', mode='person', p_id=person_tvm_id, **kwargs)
+
+    @staticmethod
+    def clean_overview(info=None):
+        # type (AnyStr, TVInfoShow) -> AnyStr
+        text = info if isinstance(info, str) else info.overview
+        if text:
+            result = helpers.xhtml_escape(re.sub(r'[\r\n]+', ' ', text[:250:])).strip('*').strip()
+            result = re.sub(r'([!?.])(?=\w)', r'\1 ', result)
+            result = re.sub(r'([,.!][^,.!]*?)$', '...', result)
+            return result.replace('.....', '...')
+        return 'No overview yet'
+
+    def tvm_get_showinfo(self, tvid_prodid=None, oldest_dt=9999999, newest_dt=0):
+        result = {}
+        if 'tvmaze' in tvid_prodid:
+            tvid = TVINFO_TVMAZE
+            tvinfo_config = sickgear.TVInfoAPI(tvid).api_params.copy()
+            t = sickgear.TVInfoAPI(tvid).setup(**tvinfo_config)  # type: Union[TvmazeIndexer, TVInfoBase]
+            show_info = t.get_show(int(tvid_prodid.replace('tvmaze:','')), load_episodes=False)
+
+            oldest_dt, newest_dt = int(oldest_dt), int(newest_dt)
+            ord_premiered, str_premiered, started_past, old_dt, new_dt, oldest, newest, \
+                ok_returning, ord_returning, str_returning, return_past \
+                = self.sanitise_dates(show_info.firstaired, oldest_dt, newest_dt, None, None)
+            result = dict(
+                ord_premiered=ord_premiered,
+                str_premiered=str_premiered,
+                #ord_returning=ord_returning,
+                #str_returning=str_returning,
+                started_past=started_past,
+                #return_past=return_past,
+                genres=((show_info.genre or '')
+                        or ', '.join(show_info.genre_list)
+                        or ', '.join(show_info.show_type) or '').strip('|').replace('|', ', ').lower(),
+                overview=self.clean_overview(show_info),
+                network=show_info.network or ', '.join(show_info.networks) or '',
+            )
+            if old_dt < oldest_dt:
+                result['oldest_dt'] = old_dt
+                result['oldest'] = oldest
+            elif new_dt > newest_dt:
+                result['newest_dt'] = old_dt
+                result['newest'] = newest,
+
+        return json_dumps(result)
+
     def browse_tvm(self, browse_title, **kwargs):
 
         browse_type = 'TVmaze'
@@ -5930,21 +6085,38 @@ class AddShows(Home):
 
         footnote = None
         filtered = []
+        p_ref = None
 
         tvid = TVINFO_TVMAZE
         tvinfo_config = sickgear.TVInfoAPI(tvid).api_params.copy()
         t = sickgear.TVInfoAPI(tvid).setup(**tvinfo_config)  # type: Union[TvmazeIndexer, TVInfoBase]
         if 'premieres' == mode:
             items = t.get_premieres()
+        elif 'person' == mode:
+            items = []
+            p_item = t.get_person(get_show_credits=True, **kwargs)  # type: TVInfoPerson
+            if p_item:
+                p_ref = f'{TVINFO_TVMAZE}:{p_item.id}'
+                dup = {}  # type: Dict[int, TVInfoShow]
+                for c in p_item.characters:  # type: TVInfoCharacter
+                    c.ti_show.cast[(RoleTypes.ActorGuest, RoleTypes.ActorMain)[True is c.regular]].append(c)
+                    if c.ti_show.id not in dup:
+                        dup[c.ti_show.id] = c.ti_show
+                        items.append(c.ti_show)
+                    else:
+                        dup[c.ti_show.id].cast[RoleTypes.ActorMain].extend(c.ti_show.cast[RoleTypes.ActorMain])
+                        dup[c.ti_show.id].cast[RoleTypes.ActorGuest].extend(c.ti_show.cast[RoleTypes.ActorGuest])
+                del dup
         else:
             items = t.get_returning()
 
         # handle switching between returning and premieres
         sickgear.BROWSELIST_MRU.setdefault(browse_type, dict())
-        showfilter = ('by_returning', 'by_premiered')['premieres' == mode]
-        saved_showsort = sickgear.BROWSELIST_MRU[browse_type].get('tvm_%s' % mode) or '*,asc'
-        showsort = saved_showsort + (',%s' % showfilter, '')[3 == len(saved_showsort.split(','))]
-        sickgear.BROWSELIST_MRU[browse_type].update(dict(showfilter=showfilter, showsort=showsort))
+        if mode in ('premieres', 'returning'):
+            showfilter = ('by_returning', 'by_premiered')['premieres' == mode]
+            saved_showsort = sickgear.BROWSELIST_MRU[browse_type].get('tvm_%s' % mode) or '*,asc'
+            showsort = saved_showsort + (f',{showfilter}', '')[3 == len(saved_showsort.split(','))]
+            sickgear.BROWSELIST_MRU[browse_type].update(dict(showfilter=showfilter, showsort=showsort))
 
         oldest, newest, oldest_dt, newest_dt, dedupe = None, None, 9999999, 0, []
         use_networks = False
@@ -5967,7 +6139,7 @@ class AddShows(Home):
                 if 'returning' == mode and not ok_returning:
                     continue
 
-                image = self._make_cache_image_url(tvid, cur_show_info)
+                image = self._make_cache_image_url(tvid, cur_show_info, use_source_id='person' == mode)
                 images = {} if not image else dict(poster=dict(thumb=image))
 
                 network_name = cur_show_info.network
@@ -5980,6 +6152,10 @@ class AddShows(Home):
 
                 language = (('jap' in (cur_show_info.language or '').lower()) and 'jp' or 'en')
 
+                overview = self.clean_overview(cur_show_info)
+                overview_ajax = ("No overview yet" == overview
+                                 and p_ref and not bool(cur_show_info.cast[RoleTypes.ActorMain]))
+
                 filtered.append(dict(
                     ord_premiered=ord_premiered,
                     str_premiered=str_premiered,
@@ -5988,14 +6164,15 @@ class AddShows(Home):
                     started_past=started_past,
                     return_past=return_past,
                     episode_number=episode_info.episodenumber or '',
-                    episode_overview=helpers.xhtml_escape(episode_info.overview[:250:]).strip(),
+                    episode_overview=self.clean_overview(episode_info),
                     episode_season=getattr(episode_info.season, 'number', episode_info.seasonnumber),
-                    genres=(cur_show_info.genre.strip('|').replace('|', ', ')
-                            or ', '.join(cur_show_info.show_type) or ''),
+                    genres=((cur_show_info.genre or '')
+                            or ', '.join(cur_show_info.genre_list)
+                            or ', '.join(cur_show_info.show_type) or '').strip('|').replace('|', ', ').lower(),
                     ids=cur_show_info.ids.__dict__,
                     images=images,
-                    overview=(helpers.xhtml_escape(cur_show_info.overview[:250:]).strip('*').strip()
-                              or 'No overview yet'),
+                    overview_ajax=(0, 1)[overview_ajax],
+                    overview=overview,
                     rating=cur_show_info.rating or cur_show_info.popularity or 0,
                     title=cur_show_info.seriesname,
                     language=language,
@@ -6005,13 +6182,23 @@ class AddShows(Home):
                     network=network_name,
                     url_src_db=base_url % cur_show_info.id,
                 ))
+                if p_ref:
+                    filtered[-1].update(dict(
+                        p_name=p_item.name or None,
+                        p_ref=p_ref,
+                        p_chars=self._make_char_person_list(cur_show_info)
+                    ))
             except (BaseException, Exception):
                 pass
-            kwargs.update(dict(oldest=oldest, newest=newest))
 
-        kwargs.update(dict(footnote=footnote, use_votes=False, use_networks=use_networks))
+            kwargs.update(dict(oldest=oldest, newest=newest, oldest_dt=oldest_dt, newest_dt=newest_dt))
 
-        if mode:
+        params = dict(footnote=footnote, use_votes=False, use_networks=use_networks)
+        if p_ref:
+            params.update(dict(use_ratings=False))
+        kwargs.update(params)
+
+        if mode and self.allow_browse_mru(mode):
             func = 'tvm_%s' % mode
             if callable(getattr(self, func, None)):
                 sickgear.TVM_MRU = func
@@ -6026,6 +6213,9 @@ class AddShows(Home):
 
     @staticmethod
     def sanitise_dates(date, oldest_dt, newest_dt, oldest, newest, episode_info=None, combine_ep_airtime=False):
+        # in case of person search (tvmaze) guest starring entires have only show name/id, no dates
+        if None is date:
+            return 9, '', True, oldest_dt, newest_dt, oldest, newest, True, 9, 'TBC', False
         parseinfo = dateutil.parser.parserinfo(dayfirst=False, yearfirst=True)
         dt = date if isinstance(date, datetime) else dateutil.parser.parse(date)
         if episode_info:
@@ -6105,7 +6295,9 @@ class AddShows(Home):
         t = PageTemplate(web_handler=self, file='home_browseShows.tmpl')
         t.submenu = self.home_menu()
         t.browse_type = browse_type
-        t.browse_title = browse_title
+        t.browse_title = browse_title if ('person' != kwargs.get('mode') or not shows) \
+            else f'{shows[0].get("p_name", "")} (Person) on {browse_type}'
+        t.p_ref = (0 < len(shows) and shows[0].get('p_ref')) or None
         t.saved_showfilter = sickgear.BROWSELIST_MRU.get(browse_type, {}).get('showfilter', '')
         t.saved_showsort = sickgear.BROWSELIST_MRU.get(browse_type, {}).get('showsort', '*,asc,by_order')
         showsort = t.saved_showsort.split(',')
@@ -9863,7 +10055,7 @@ class CachedImages(MainHandler):
         for f in ['tmdb', 'tvdb', 'tvmaze']:
             CachedImages.delete_dummy_image('%s.%s.dummy' % (os.path.splitext(filename)[0], f))
 
-    def index(self, path='', source=None, filename=None, tmdbid=None, tvdbid=None, trans=True):
+    def index(self, path='', source=None, filename=None, tmdbid=None, tvdbid=None, trans=True, tvmazeid=None):
 
         path = path.strip('/')
         file_name = ''
@@ -9878,8 +10070,25 @@ class CachedImages(MainHandler):
             helpers.make_path(basepath)
             poster_url = ''
             tmdb_image = False
+            tvmaze_image = False
             if None is not source and source in sickgear.CACHE_IMAGE_URL_LIST:
                 poster_url = source
+            if None is source and tvmazeid not in [None, 'None', 0, '0'] \
+                    and self.should_try_image(image_file, 'tvmaze'):
+                tvmaze_image = True
+                try:
+                    tvinfo_config = sickgear.TVInfoAPI(TVINFO_TVMAZE).api_params.copy()
+                    t = sickgear.TVInfoAPI(TVINFO_TVMAZE).setup(**tvinfo_config)
+                    show_obj = t.get_show(tvmazeid, load_episodes=False, posters=True)
+                    if show_obj and show_obj.poster:
+                        poster_url = show_obj.poster
+                except (BaseException, Exception):
+                    poster_url = ''
+            if poster_url:
+                sg_helpers.download_file(poster_url, image_file, nocache=True)
+            if tvmaze_image and not os.path.isfile(image_file):
+                self.create_dummy_image(image_file, 'tvmaze')
+
             if None is source and tmdbid not in [None, 'None', 0, '0'] \
                     and self.should_try_image(image_file, 'tmdb'):
                 tmdb_image = True

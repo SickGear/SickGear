@@ -26,8 +26,7 @@ from .util.url import Url, parse_url
 
 if typing.TYPE_CHECKING:
     import ssl
-
-    from typing_extensions import Literal
+    from typing import Literal
 
 __all__ = ["PoolManager", "ProxyManager", "proxy_from_url"]
 
@@ -39,6 +38,7 @@ SSL_KEYWORDS = (
     "cert_file",
     "cert_reqs",
     "ca_certs",
+    "ca_cert_data",
     "ssl_version",
     "ssl_minimum_version",
     "ssl_maximum_version",
@@ -74,6 +74,7 @@ class PoolKey(typing.NamedTuple):
     key_cert_file: str | None
     key_cert_reqs: str | None
     key_ca_certs: str | None
+    key_ca_cert_data: str | bytes | None
     key_ssl_version: int | str | None
     key_ssl_minimum_version: ssl.TLSVersion | None
     key_ssl_maximum_version: ssl.TLSVersion | None

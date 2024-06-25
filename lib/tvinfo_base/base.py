@@ -884,6 +884,7 @@ class PersonGenders(object):
     tmdb_map = {0: unknown, 1: female, 2: male}
     imdb_map = {'female': female, 'male': male}
     tvdb_map = {0: unknown, 1: male, 2: female, 3: unknown}  # 3 is technically: other
+    trakt_map = {'female': female, 'male': male}
 
 
 class Crew(PersonBase):

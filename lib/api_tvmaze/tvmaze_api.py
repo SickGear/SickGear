@@ -57,6 +57,8 @@ empty_ep = TVInfoEpisode()
 empty_se = TVInfoSeason()
 tz_p = parser()
 
+character_clean_regex = re.compile(r'^tb(a|d)$', flags=re.I)
+
 img_type_map = {
     'poster': TVInfoImageType.poster,
     'banner': TVInfoImageType.banner,
@@ -397,6 +399,14 @@ class TvMaze(TVInfoBase):
         # type: (...) -> Dict[integer_types, integer_types]
         return {sid: v.seconds_since_epoch for sid, v in iteritems(tvmaze.show_updates().updates)}
 
+    @staticmethod
+    def _clean_character_name(name):
+        # type: (Optional[str]) -> str
+        name = clean_data(name)
+        if isinstance(name, str):
+            return enforce_type(character_clean_regex.sub('', name), str, '')
+        return enforce_type(name, str, '')
+
     def _convert_person(self, tvmaze_person_obj, load_credits=True):
         # type: (tvmaze.Person, bool) -> TVInfoPerson
         ch = []
@@ -410,7 +420,15 @@ class TvMaze(TVInfoBase):
                 ti_show.ids = TVInfoIDs(ids={TVINFO_TVMAZE: ti_show.id})
                 ti_show.overview = clean_data(c.show.summary)
                 ti_show.status = clean_data(c.show.status)
+                ti_show.vote_average = clean_data((c.show.rating and c.show.rating.get('average'))) or None
+                ti_show.rating = ti_show.vote_average
                 net = c.show.network or c.show.web_channel
+                ti_show.genre_list = clean_data(c.show.genres or [])
+                ti_show.genre = '|'.join(ti_show.genre_list or [])
+                ti_show.show_type = clean_data((
+                        isinstance(c.show.type, string_types) and [c.show.type.lower()] or
+                        isinstance(c.show.type, list) and [x.lower() for x in c.show.type] or []
+                ))
                 if net:
                     ti_show.network = clean_data(net.name)
                     ti_show.network_id = net.maze_id
@@ -418,7 +436,18 @@ class TvMaze(TVInfoBase):
                     ti_show.network_country_code = clean_data(net.code)
                     ti_show.network_timezone = clean_data(net.timezone)
                     ti_show.network_is_stream = None is not c.show.web_channel
-                ch.append(TVInfoCharacter(name=clean_data(c.character.name), ti_show=ti_show, episode_count=1))
+                _images = None
+                if c.character.image and all(i_s in c.character.image and c.character.image[i_s]
+                                             for i_s in ('original', 'medium')):
+                    _images = [TVInfoImage(TVInfoImageType.poster,
+                                           sizes={TVInfoImageSize.original: c.character.image['original'],
+                                                  TVInfoImageSize.medium: c.character.image['medium']})]
+                ch.append(TVInfoCharacter(name=self._clean_character_name(c.character.name),
+                                          ti_show=ti_show, episode_count=1, plays_self=c.character.plays_self,
+                                          voice=c.character.voice,
+                                          image= c.character.image and c.character.image.get('original'),
+                                          thumb_url= c.character.image and c.character.image.get('medium'),
+                                          p_id=c.character.id, images=_images))
         try:
             birthdate = tvmaze_person_obj.birthday and tz_p.parse(tvmaze_person_obj.birthday).date()
         except (BaseException, Exception):
@@ -446,7 +475,7 @@ class TvMaze(TVInfoBase):
                                    (tvmaze_person_obj.guestcastcredits or [], False)]:
                 for c in c_t:  # type: tvmaze.CastCredit
                     _show = c.show or c.episode.show
-                    _clean_char_name = clean_data(c.character.name)
+                    _clean_char_name = self._clean_character_name(c.character.name)
                     ti_show = TVInfoShow()
                     if None is not _show:
                         _clean_show_name = clean_data(_show.name)
@@ -478,6 +507,8 @@ class TvMaze(TVInfoBase):
                         ti_show.ids = TVInfoIDs(ids={TVINFO_TVMAZE: ti_show.id})
                         ti_show.overview = enforce_type(clean_data(_show.summary), str, '')
                         ti_show.status = clean_data(_show.status)
+                        ti_show.vote_average = clean_data(_show.rating and _show.rating.get('average')) or None
+                        ti_show.rating = ti_show.vote_average
                         net = _show.network or _show.web_channel
                         if net:
                             ti_show.network = clean_data(net.name)
@@ -499,8 +530,18 @@ class TvMaze(TVInfoBase):
                         _g_kw = {'guest_episodes_numbers': {c.episode.season_number: [c.episode.episode_number or 0]}}
                     else:
                         _g_kw = {}
+                    _images = None
+                    if c.character.image and  all(i_s in c.character.image and c.character.image[i_s]
+                                                  for i_s in ('original', 'medium')):
+                        _images = [TVInfoImage(TVInfoImageType.poster,
+                                               sizes={TVInfoImageSize.original: c.character.image['original'],
+                                                      TVInfoImageSize.medium: c.character.image['medium']})]
                     ch.append(TVInfoCharacter(name=_clean_char_name, ti_show=ti_show, regular=regular, episode_count=1,
-                                              person=[_ti_person_obj], **_g_kw))
+                                              person=[_ti_person_obj], plays_self=c.character.plays_self,
+                                              voice=c.character.voice,
+                                              image=c.character.image and c.character.image.get('original'),
+                                              thumb_url=c.character.image and c.character.image.get('medium'),
+                                              p_id=c.character.id, images=_images, **_g_kw))
             _ti_person_obj.characters = ch
         return _ti_person_obj
 
@@ -588,7 +629,7 @@ class TvMaze(TVInfoBase):
                             else:
                                 _s_o.cast[RoleTypes.ActorMain].append(
                                     TVInfoCharacter(image=cur_ch.image and cur_ch.image.get('original'),
-                                                    name=clean_data(cur_ch.name),
+                                                    name=self._clean_character_name(cur_ch.name),
                                                     ids=TVInfoIDs({TVINFO_TVMAZE: cur_ch.id}),
                                                     p_id=cur_ch.id, person=[person], plays_self=cur_ch.plays_self,
                                                     thumb_url=cur_ch.image and cur_ch.image.get('medium'),

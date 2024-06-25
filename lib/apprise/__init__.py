@@ -2,7 +2,7 @@
 # BSD 2-Clause License
 #
 # Apprise - Push Notification Library.
-# Copyright (c) 2023, Chris Caron <lead2gold@gmail.com>
+# Copyright (c) 2024, Chris Caron <lead2gold@gmail.com>
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -27,10 +27,10 @@
 # POSSIBILITY OF SUCH DAMAGE.
 
 __title__ = 'Apprise'
-__version__ = '1.6.0'
+__version__ = '1.8.0'
 __author__ = 'Chris Caron'
 __license__ = 'BSD'
-__copywrite__ = 'Copyright (C) 2023 Chris Caron <lead2gold@gmail.com>'
+__copywrite__ = 'Copyright (C) 2024 Chris Caron <lead2gold@gmail.com>'
 __email__ = 'lead2gold@gmail.com'
 __status__ = 'Production'
 
@@ -49,17 +49,20 @@ from .common import CONTENT_INCLUDE_MODES
 from .common import ContentLocation
 from .common import CONTENT_LOCATIONS
 
-from .URLBase import URLBase
-from .URLBase import PrivacyMode
-from .plugins.NotifyBase import NotifyBase
-from .config.ConfigBase import ConfigBase
-from .attachment.AttachBase import AttachBase
+from .url import URLBase
+from .url import PrivacyMode
+from .plugins.base import NotifyBase
+from .config.base import ConfigBase
+from .attachment.base import AttachBase
 
-from .Apprise import Apprise
-from .AppriseAsset import AppriseAsset
-from .AppriseConfig import AppriseConfig
-from .AppriseAttachment import AppriseAttachment
-
+from .apprise import Apprise
+from .locale import AppriseLocale
+from .asset import AppriseAsset
+from .apprise_config import AppriseConfig
+from .apprise_attachment import AppriseAttachment
+from .manager_attachment import AttachmentManager
+from .manager_config import ConfigurationManager
+from .manager_plugins import NotificationManager
 from . import decorators
 
 # Inherit our logging with our additional entries added to it
@@ -73,7 +76,7 @@ logging.getLogger(__name__).addHandler(logging.NullHandler())
 __all__ = [
     # Core
     'Apprise', 'AppriseAsset', 'AppriseConfig', 'AppriseAttachment', 'URLBase',
-    'NotifyBase', 'ConfigBase', 'AttachBase',
+    'NotifyBase', 'ConfigBase', 'AttachBase', 'AppriseLocale',
 
     # Reference
     'NotifyType', 'NotifyImageSize', 'NotifyFormat', 'OverflowMode',
@@ -82,6 +85,9 @@ __all__ = [
     'ContentIncludeMode', 'CONTENT_INCLUDE_MODES',
     'ContentLocation', 'CONTENT_LOCATIONS',
     'PrivacyMode',
+
+    # Managers
+    'NotificationManager', 'ConfigurationManager', 'AttachmentManager',
 
     # Decorator
     'decorators',

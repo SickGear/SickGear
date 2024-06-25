@@ -532,7 +532,7 @@ class Cache:
 
         sql(
             'CREATE INDEX IF NOT EXISTS Cache_expire_time ON'
-            ' Cache (expire_time)'
+            ' Cache (expire_time) WHERE expire_time IS NOT NULL'
         )
 
         query = EVICTION_POLICY[self.eviction_policy]['init']
@@ -2030,7 +2030,10 @@ class Cache:
 
         """
         sql = self._sql
-        sql('CREATE INDEX IF NOT EXISTS Cache_tag_rowid ON Cache(tag, rowid)')
+        sql(
+            'CREATE INDEX IF NOT EXISTS Cache_tag_rowid ON Cache(tag, rowid) '
+            'WHERE tag IS NOT NULL'
+        )
         self.reset('tag_index', 1)
 
     def drop_tag_index(self):

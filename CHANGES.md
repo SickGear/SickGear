@@ -1,4 +1,32 @@
-﻿### 3.31.2 (2024-06-23 18:20:00 UTC)
+﻿### 3.32.0 (2024-06-25 21:15:00 UTC)
+
+* Update apprise 1.6.0 (0c0d5da) to 1.8.0 (81caf92)
+* Update attr 23.1.0 (67e4ff2) to 23.2.0 (b393d79)
+* Update Beautiful Soup 4.12.2 (30c58a1) to 4.12.3 (7fb5175)
+* Update CacheControl 0.13.1 (783a338) to 0.14.0 (e2be0c2)
+* Update certifi 2024.02.02 to 2024.06.02
+* Update dateutil 2.8.2 (296d419) to 2.9.0.post0 (0353b78)
+* Update diskcache 5.6.3 (323787f) to 5.6.3 (ebfa37c)
+* Update feedparser 6.0.10 (9865dec) to 6.0.11 (efcb89b)
+* Update filelock 3.12.4 (c1163ae) to 3.14.0 (8556141)
+* Update idna library 3.4 (cab054c) to 3.7 (1d365e1)
+* Update imdbpie 5.6.4 (f695e87) to 5.6.5 (f8ed7a0)
+* Update package resource API 68.1.2 (1ef36f2) to 68.2.2 (8ad627d)
+* Update profilehooks module 1.12.1 (c3fc078) to 1.13.0.dev0 (99f8a31)
+* Update pytz 2023.3/2023c (488d3eb) to 2024.1/2024a (3680953)
+* Update Rarfile 4.1a1 (8a72967) to 4.2 (db1df33)
+* Update Requests library 2.31.0 (8812812) to 2.32.3 (0e322af)
+* Update Send2Trash 1.5.0 (66afce7) to 1.8.3 (91d0698)
+* Update Tornado Web Server 6.4 (b3f2a4b) to 6.4.1 (2a0e1d1)
+* Update unidecode module 1.3.6 (4141992) to 1.3.8 (dfe397d)
+* Update urllib3 2.0.7 (56f01e0) to 2.2.1 (54d6edf)
+* Change growl notifier location for Apprise update refactor
+* Change systemd remove py2 and add basic hardening options
+* Change alphabetically sort list at edit show/Exclude global ignore/require words
+* Add search on TVmaze, TMDb, or Trakt for other shows with the actor that is viewed on Person page
+
+
+### 3.31.2 (2024-06-23 18:20:00 UTC)
 
 * Fix parsing show names that contain the word "parts" by making parser more restrictive
 
