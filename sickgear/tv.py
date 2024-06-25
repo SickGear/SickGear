@@ -724,7 +724,7 @@ class Person(Referential):
         self._data_fetched = True
         tvsrc_result, found_persons, found_on_src, search_sources, \
             found_ids, ids_to_check, imdb_confirmed, source_confirmed = \
-            None, {}, set(), [TVINFO_TRAKT, TVINFO_TMDB, TVINFO_IMDB, TVINFO_TVDB], \
+            None, {}, set(), [TVINFO_TRAKT, TVINFO_TMDB, TVINFO_IMDB, TVINFO_TVDB, TVINFO_TVMAZE], \
             set([_k for _k, _v in iteritems(self.ids) if _v] + ['text']), {}, False, {}
         # confirmed_character =  False
         max_search_src = len(search_sources)

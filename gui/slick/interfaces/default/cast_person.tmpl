@@ -45,6 +45,7 @@
 #person-content .thumb{display:block}
 #person-content > .main-image{margin-bottom:19px}
 #person-content > .cast .cast-bg{height:300px; margin:0 auto; background:url(/images/poster-person.jpg) center center no-repeat}
+#character-content{margin-left:235px}
 </style>
 <%
 def param(visible=True, rid=None, cache_person=None, cache_char=None, person=None, role=None, tvid_prodid=None, thumb=None, oid=None, pid=None):
@@ -64,10 +65,6 @@ def param(visible=True, rid=None, cache_person=None, cache_char=None, person=Non
 %>
 	<div id="person">
 		<div id="person-content">
-			<div class="main-image cast">
-				<a class="thumb" href="$sbRoot/$param(rid=$person.ref_id(), cache_person=True, thumb=0, oid=$person.id)" rel="dialog"><img src="$sbRoot/$param(False, rid=$person.id, cache_person=True)" class="cast-bg"></a>
-			</div>
-
 			<div class="intro">#slurp
 #set $gender = ''
 #if $PersonGenders.female == $person.gender#
@@ -76,6 +73,10 @@ def param(visible=True, rid=None, cache_person=None, cache_char=None, person=Non
     #set $gender = '&male;'
 #end if##slurp
 				<h2><span class="name">$person.name</span>#if $age #<span class="age">($age)</span>#end if##if $gender #<span class="gender" title="Biological gender">$gender</span>#end if##if $person.deathday # &dagger;#end if#</h2>
+			</div>
+
+			<div class="main-image cast">
+				<a class="thumb" href="$sbRoot/$param(rid=$person.ref_id(), cache_person=True, thumb=0, oid=$person.id)" rel="dialog"><img src="$sbRoot/$param(False, rid=$person.id, cache_person=True)" class="cast-bg"></a>
 			</div>
 
 <style>
@@ -98,7 +99,7 @@ def param(visible=True, rid=None, cache_person=None, cache_char=None, person=Non
         #if not $section_header
             #set $section_header = True
 			<div id="character-content">
-				<div style="margin:40px 0 7px">is known in your show list as,</div>
+				<div style="margin:0 0 7px">is known in your show list as,</div>
 		#end if
 
 				<div class="role-panel">

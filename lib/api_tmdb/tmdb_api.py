@@ -310,8 +310,9 @@ class TmdbIndexer(TVInfoBase):
                 self.img_base_url, self.size_map[TVInfoImageType.person_poster][TVInfoImageSize.medium],
                 tmdb_person_obj['profile_path'])
 
+        clean_person_name = clean_data(tmdb_person_obj.get('name'))
         _it_person_obj = TVInfoPerson(
-            p_id=tmdb_person_obj.get('id'), ids=TVInfoIDs(ids=person_ids), name=clean_data(tmdb_person_obj.get('name')),
+            p_id=tmdb_person_obj.get('id'), ids=TVInfoIDs(ids=person_ids), name=clean_person_name,
             akas=clean_data(set(tmdb_person_obj.get('also_known_as') or [])),
             bio=clean_data(tmdb_person_obj.get('biography')), gender=gender,
             image=main_image, images=image_list, thumb_url=main_thumb,
@@ -331,6 +332,10 @@ class TmdbIndexer(TVInfoBase):
             ti_show.overview = self._enforce_text(character.get('overview'))
             ti_show.firstaired = clean_data(character.get('first_air_date'))
             ti_show.language = clean_data(character.get('original_language'))
+            ti_show.popularity = character.get('popularity')
+            ti_show.vote_count = character.get('vote_count')
+            ti_show.vote_average = character.get('vote_average')
+            ti_show.rating = ti_show.vote_average
             ti_show.genre_list = []
             for g in character.get('genre_ids') or []:
                 if g in self.tv_genres:
@@ -350,9 +355,13 @@ class TmdbIndexer(TVInfoBase):
                                  (self.img_base_url,
                                   self.size_map[TVInfoImageType.person_poster][TVInfoImageSize.original],
                                   character['backdrop_path'])
+            clean_char_name = clean_data(character.get('character'))
+            clean_lower_person_name = (clean_person_name or '').lower() or None
             characters.append(
-                TVInfoCharacter(name=clean_data(character.get('character')), ti_show=ti_show, person=[_it_person_obj],
-                                episode_count=character.get('episode_count'))
+                TVInfoCharacter(name=clean_char_name, ti_show=ti_show, person=[_it_person_obj],
+                                episode_count=character.get('episode_count'),
+                                plays_self=clean_char_name and
+                                (clean_char_name or '').lower() in ('self', clean_lower_person_name))
             )
 
         _it_person_obj.characters = characters
@@ -754,11 +763,16 @@ class TmdbIndexer(TVInfoBase):
                     for character in sorted(list(filter(lambda b: b['credit_id'] in main_cast_credit_ids,
                                                         person_obj.get('roles', []) or [])),
                                             key=lambda c: c['episode_count'], reverse=True):
+                        clean_char_name = clean_data(character['character'])
+                        clean_person_name = clean_data(person_obj['name'])
+                        clean_lower_person_name = (clean_person_name or '').lower() or None
                         character_obj = TVInfoCharacter(
-                            name=clean_data(character['character']),
+                            name=clean_char_name,
+                            plays_self=clean_char_name and
+                            (clean_char_name or '').lower() in ('self', clean_lower_person_name),
                             person=[
                                 TVInfoPerson(
-                                    p_id=person_obj['id'], name=clean_data(person_obj['name']),
+                                    p_id=person_obj['id'], name=clean_person_name,
                                     ids=TVInfoIDs(ids={TVINFO_TMDB: person_obj['id']}),
                                     image='%s%s%s' % (
                                         self.img_base_url,
