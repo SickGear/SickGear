@@ -360,8 +360,8 @@ class TmdbIndexer(TVInfoBase):
             characters.append(
                 TVInfoCharacter(name=clean_char_name, ti_show=ti_show, person=[_it_person_obj],
                                 episode_count=character.get('episode_count'),
-                                plays_self=clean_char_name and
-                                (clean_char_name or '').lower() in ('self', clean_lower_person_name))
+                                plays_self=enforce_type(clean_char_name and
+                                (clean_char_name or '').lower() in ('self', clean_lower_person_name), bool, False)),
             )
 
         _it_person_obj.characters = characters
@@ -768,8 +768,8 @@ class TmdbIndexer(TVInfoBase):
                         clean_lower_person_name = (clean_person_name or '').lower() or None
                         character_obj = TVInfoCharacter(
                             name=clean_char_name,
-                            plays_self=clean_char_name and
-                            (clean_char_name or '').lower() in ('self', clean_lower_person_name),
+                            plays_self=enforce_type(clean_char_name and
+                            (clean_char_name or '').lower() in ('self', clean_lower_person_name), bool, False),
                             person=[
                                 TVInfoPerson(
                                     p_id=person_obj['id'], name=clean_person_name,

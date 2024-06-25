@@ -333,7 +333,8 @@ class TraktIndexer(TVInfoBase):
                                 _ti_character = TVInfoCharacter(
                                     name=clean_ch, regular=c.get('series_regular'), ti_show=ti_show, person=[result],
                                     episode_count=c.get('episode_count'),
-                                    plays_self=(clean_ch or '').lower() in ('self', clean_lower_person_name))
+                                    plays_self=enforce_type((clean_ch or '').lower() in
+                                                            ('self', clean_lower_person_name), bool, False))
                                 pc.append(_ti_character)
                                 ti_show.cast[(RoleTypes.ActorGuest, RoleTypes.ActorMain)[
                                     c.get('series_regular', False)]].append(_ti_character)
