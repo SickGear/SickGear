@@ -1,5 +1,6 @@
 ﻿### 3.33.0 (2024-0x-xx xx:xx:00 UTC)
 
+* Update filelock 3.14.0 (8556141) to 3.15.4 (9a979df)
 * Update urllib3 2.2.1 (54d6edf) to 2.2.2 (27e2a5c)
 
 
