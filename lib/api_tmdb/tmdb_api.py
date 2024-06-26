@@ -473,6 +473,7 @@ class TmdbIndexer(TVInfoBase):
             ti_show.popularity = show_dict.get('popularity')
             ti_show.vote_count = show_dict.get('vote_count')
             ti_show.vote_average = show_dict.get('vote_average')
+            ti_show.rating = ti_show.vote_average
             ti_show.origin_countries = show_dict.get('origin_country') or []
             ti_show.genre_list = []
             ti_show.origin_countries = clean_data(show_dict.get('origin_country') or [])

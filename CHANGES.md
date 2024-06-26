@@ -5,6 +5,13 @@
 * Update urllib3 2.2.1 (54d6edf) to 2.2.2 (27e2a5c)
 
 
+### 3.32.3 (2024-06-26 18:10:00 UTC)
+
+* Fix votes on shows/IMDb cards
+* Fix ratings on shows/TMDB cards
+* Fix TVmaze parser
+
+
 ### 3.32.2 (2024-06-26 07:20:00 UTC)
 
 * Fix systemd linefeed typo
