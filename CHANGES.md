@@ -1,4 +1,9 @@
-﻿### 3.32.1 (2024-06-26 01:15:00 UTC)
+﻿### 3.32.2 (2024-06-26 07:20:00 UTC)
+
+* Fix systemd linefeed typo
+
+
+### 3.32.1 (2024-06-26 01:15:00 UTC)
 
 * Fix update tvinfo test data
 * Fix type of self.plays_self
