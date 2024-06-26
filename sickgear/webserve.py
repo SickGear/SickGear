@@ -6218,43 +6218,38 @@ class AddShows(Home):
 
     def tvi_get_showinfo(self, tvid_prodid=None, oldest_dt=9999999, newest_dt=0):
         result = {}
-        if isinstance(tvid_prodid, str):
-            if tvid_prodid.startswith('tvmaze'):
-                tvid = TVINFO_TVMAZE
-                prod_id = int(tvid_prodid.replace('tvmaze:',''))
-            elif tvid_prodid.startswith('tvdb'):
+        if isinstance(tvid_prodid, str) and (tvid_prodid.startswith('tvmaze') or tvid_prodid.startswith('tvdb')):
+            tvid = TVINFO_TVMAZE
+            if tvid_prodid.startswith('tvdb'):
                 tvid = TVINFO_TVDB
-                prod_id = int(tvid_prodid.replace('tvdb:', ''))
-            else:
-                tvid = None
-            if tvid:
-                tvinfo_config = sickgear.TVInfoAPI(tvid).api_params.copy()
-                t = sickgear.TVInfoAPI(tvid).setup(**tvinfo_config)  # type: Union[TvmazeIndexer, TVInfoBase]
-                show_info = t.get_show(prod_id, load_episodes=False)
 
-                oldest_dt, newest_dt = int(oldest_dt), int(newest_dt)
-                ord_premiered, str_premiered, started_past, old_dt, new_dt, oldest, newest, \
-                    ok_returning, ord_returning, str_returning, return_past \
-                    = self.sanitise_dates(show_info.firstaired, oldest_dt, newest_dt, None, None)
-                result = dict(
-                    ord_premiered=ord_premiered,
-                    str_premiered=str_premiered,
-                    #ord_returning=ord_returning,
-                    #str_returning=str_returning,
-                    started_past=started_past,
-                    #return_past=return_past,
-                    genres=((show_info.genre or '')
-                            or ', '.join(show_info.genre_list)
-                            or ', '.join(show_info.show_type) or '').strip('|').replace('|', ', ').lower(),
-                    overview=self.clean_overview(show_info),
-                    network=show_info.network or ', '.join(show_info.networks) or '',
-                )
-                if old_dt < oldest_dt:
-                    result['oldest_dt'] = old_dt
-                    result['oldest'] = oldest
-                elif new_dt > newest_dt:
-                    result['newest_dt'] = old_dt
-                    result['newest'] = newest,
+            tvinfo_config = sickgear.TVInfoAPI(tvid).api_params.copy()
+            t = sickgear.TVInfoAPI(tvid).setup(**tvinfo_config)  # type: Union[TvmazeIndexer, TVInfoBase]
+            show_info = t.get_show(int(re.sub('^[a-z]+?:', '', tvid_prodid)), load_episodes=False)
+
+            oldest_dt, newest_dt = int(oldest_dt), int(newest_dt)
+            ord_premiered, str_premiered, started_past, old_dt, new_dt, oldest, newest, \
+                ok_returning, ord_returning, str_returning, return_past \
+                = self.sanitise_dates(show_info.firstaired, oldest_dt, newest_dt, None, None)
+            result = dict(
+                ord_premiered=ord_premiered,
+                str_premiered=str_premiered,
+                #ord_returning=ord_returning,
+                #str_returning=str_returning,
+                started_past=started_past,
+                #return_past=return_past,
+                genres=((show_info.genre or '')
+                        or ', '.join(show_info.genre_list)
+                        or ', '.join(show_info.show_type) or '').strip('|').replace('|', ', ').lower(),
+                overview=self.clean_overview(show_info),
+                network=show_info.network or ', '.join(show_info.networks) or '',
+            )
+            if old_dt < oldest_dt:
+                result['oldest_dt'] = old_dt
+                result['oldest'] = oldest
+            elif new_dt > newest_dt:
+                result['newest_dt'] = old_dt
+                result['newest'] = newest,
 
         return json_dumps(result)
 

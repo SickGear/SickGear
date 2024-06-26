@@ -290,11 +290,20 @@ class TvdbAPIv4(TVInfoBase):
         # type: (Dict, Dict, bool) -> List[TVInfoPerson]
         ch, ids = [], ids or {}
         p_types = ([3], [3, 4])[include_guests]
+        dedupe = {}
         for cur_c in sorted(filter(
                 lambda a: (a['type'] in p_types or 'Actor' == a['peopleType'])
                 and a['seriesId'] and ((not a.get('episodeId') and a['name']) or include_guests),
                 p.get('characters') or []),
                 key=lambda a: (not a['isFeatured'], a['sort'])):
+            role_name = clean_data(cur_c['name'] or '')
+            role_name_lc = role_name.lower()
+            sid = cur_c.get('seriesId')
+            if sid and sid == dedupe.get(role_name_lc):
+                continue
+            if role_name:  # skip dedupe of records that are name ''
+                dedupe[role_name_lc] = sid
+
             ti_show = TVInfoShow()
             ti_show.id = clean_data(cur_c['seriesId'])
             ti_show.ids = TVInfoIDs(ids={TVINFO_TVDB: ti_show.id})
@@ -304,7 +313,7 @@ class TvdbAPIv4(TVInfoBase):
             ti_show.firstaired = self._get_first_aired(('series' in cur_c and cur_c['series']))
             ch.append(TVInfoCharacter(
                 id=cur_c['id'], ids=TVInfoIDs(ids={TVINFO_TVDB: cur_c['id']}),
-                name=clean_data(cur_c['name'] or ''),
+                name=role_name,
                 image=self._sanitise_image_uri(cur_c.get('image')),
                 regular=cur_c['isFeatured'],
                 ti_show=ti_show
