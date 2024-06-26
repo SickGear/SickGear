@@ -5,6 +5,12 @@
 * Update urllib3 2.2.1 (54d6edf) to 2.2.2 (27e2a5c)
 
 
+### 3.32.1 (2024-06-26 01:15:00 UTC)
+
+* Fix update tvinfo test data
+* Fix type of self.plays_self
+
+
 ### 3.32.0 (2024-06-25 21:15:00 UTC)
 
 * Update apprise 1.6.0 (0c0d5da) to 1.8.0 (81caf92)
