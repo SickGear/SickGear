@@ -4822,14 +4822,19 @@ class AddShows(Home):
                         ord_premiered, str_premiered, started_past, oldest_dt, newest_dt, oldest, newest, _, _, _, _ \
                             = self.sanitise_dates('01-01-%s' % year, oldest_dt, newest_dt, oldest, newest)
 
-                    genres = row.select('.genre')
                     images = {}
                     img = row.select('img.ipc-image')
                     overview = self.parse_imdb_overview(row)
                     rating = row.select_one('.ipc-rating-star').get_text()
                     rating = rating and rating.split()[0] or ''
-                    voting = row('span', text=re.compile(r'(?i)vote'))
-                    voting = voting and re.sub(r'\D', '', voting[0].find_parent('div').get_text()) or ''
+                    try:
+                        voting = row.select_one('.ipc-rating-star--voteCount').get_text(strip=True).strip('()').lower()
+                        if voting.endswith('k'):
+                            voting = helpers.try_float(voting[:-1]) * 1000
+                        elif voting.endswith('m'):
+                            voting = helpers.try_float(voting[:-1]) * 1000000
+                    except (BaseException, Exception):
+                        voting = ''
                     img_uri = None
                     if len(img):
                         img_uri = img[0].get('src')
@@ -4859,7 +4864,7 @@ class AddShows(Home):
                         rating=0 if not len(rating) else int(helpers.try_float(rating) * 10),
                         title=title,
                         url_src_db='https://www.imdb.com/%s/' % url_path.strip('/'),
-                        votes=0 if not len(voting) else helpers.try_int(voting, 'TBA')))
+                        votes=helpers.try_int(voting, 'TBA')))
 
                     show_obj = helpers.find_show_by_id({TVINFO_IMDB: int(ids['imdb'].replace('tt', ''))},
                                                        no_mapped_ids=False)
@@ -5479,8 +5484,8 @@ class AddShows(Home):
                     country_img=sickgear.MEMCACHE_FLAG_IMAGES.get(cc.lower(), False),
                     network=network_name,
                     url_src_db=base_url % cur_show_info.id,
-                    rating=0 < (cur_show_info.rating or 0) and
-                           ('%.2f' % (cur_show_info.rating * 10)).replace('.00', '') or 0,
+                    rating=0 < (cur_show_info.vote_average or 0) and
+                           ('%.2f' % (cur_show_info.vote_average * 10)).replace('.00', '') or 0,
                     votes=('%.2f' % cur_show_info.popularity) or 0,
                 ))
                 if p_ref:
