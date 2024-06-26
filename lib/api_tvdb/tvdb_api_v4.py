@@ -296,16 +296,16 @@ class TvdbAPIv4(TVInfoBase):
                 and a['seriesId'] and ((not a.get('episodeId') and a['name']) or include_guests),
                 p.get('characters') or []),
                 key=lambda a: (not a['isFeatured'], a['sort'])):
+            show_id = clean_data(cur_c['seriesId'])
             role_name = clean_data(cur_c['name'] or '')
             role_name_lc = role_name.lower()
-            sid = cur_c.get('seriesId')
-            if sid and sid == dedupe.get(role_name_lc):
+            if existing_char := dedupe.get(show_id, {}).get(role_name_lc):  # Optional[TVInfoCharacter]
+                if not existing_char.regular:
+                    existing_char.episode_count += 1
                 continue
-            if role_name:  # skip dedupe of records that are name ''
-                dedupe[role_name_lc] = sid
 
             ti_show = TVInfoShow()
-            ti_show.id = clean_data(cur_c['seriesId'])
+            ti_show.id = show_id
             ti_show.ids = TVInfoIDs(ids={TVINFO_TVDB: ti_show.id})
             ti_show.seriesname = clean_data(('series' in cur_c and cur_c['series'] and cur_c['series']['name']))
             ti_show.poster = self._sanitise_image_uri(('series' in cur_c and cur_c['series']
@@ -318,6 +318,10 @@ class TvdbAPIv4(TVInfoBase):
                 regular=cur_c['isFeatured'],
                 ti_show=ti_show
             ))
+            if role_name:  # remember character obj in dupe value (for episode counter)
+                if not cur_c['isFeatured']:
+                    ch[-1].episode_count = 1
+                dedupe.setdefault(show_id, {})[role_name_lc] = ch[-1]
         try:
             b_date = clean_data(p.get('birth'))
             birthdate = (b_date and '0000-00-00' != b_date and tz_p.parse(b_date).date()) or None
