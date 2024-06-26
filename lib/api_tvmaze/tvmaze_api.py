@@ -443,7 +443,8 @@ class TvMaze(TVInfoBase):
                                            sizes={TVInfoImageSize.original: c.character.image['original'],
                                                   TVInfoImageSize.medium: c.character.image['medium']})]
                 ch.append(TVInfoCharacter(name=self._clean_character_name(c.character.name),
-                                          ti_show=ti_show, episode_count=1, plays_self=c.character.plays_self,
+                                          ti_show=ti_show, episode_count=1,
+                                          plays_self=enforce_type(c.character.plays_self, bool, False),
                                           voice=c.character.voice,
                                           image= c.character.image and c.character.image.get('original'),
                                           thumb_url= c.character.image and c.character.image.get('medium'),
@@ -537,7 +538,8 @@ class TvMaze(TVInfoBase):
                                                sizes={TVInfoImageSize.original: c.character.image['original'],
                                                       TVInfoImageSize.medium: c.character.image['medium']})]
                     ch.append(TVInfoCharacter(name=_clean_char_name, ti_show=ti_show, regular=regular, episode_count=1,
-                                              person=[_ti_person_obj], plays_self=c.character.plays_self,
+                                              person=[_ti_person_obj],
+                                              plays_self=enforce_type(c.character.plays_self, bool, False),
                                               voice=c.character.voice,
                                               image=c.character.image and c.character.image.get('original'),
                                               thumb_url=c.character.image and c.character.image.get('medium'),
@@ -631,7 +633,8 @@ class TvMaze(TVInfoBase):
                                     TVInfoCharacter(image=cur_ch.image and cur_ch.image.get('original'),
                                                     name=self._clean_character_name(cur_ch.name),
                                                     ids=TVInfoIDs({TVINFO_TVMAZE: cur_ch.id}),
-                                                    p_id=cur_ch.id, person=[person], plays_self=cur_ch.plays_self,
+                                                    p_id=cur_ch.id, person=[person],
+                                                    plays_self=enforce_type(cur_ch.plays_self, bool, False),
                                                     thumb_url=cur_ch.image and cur_ch.image.get('medium'),
                                                     ti_show=_s_o
                                                     ))
