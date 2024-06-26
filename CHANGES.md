@@ -1,4 +1,9 @@
-﻿### 3.32.3 (2024-06-26 18:10:00 UTC)
+﻿### 3.32.4 (2024-06-2x xx:xx:00 UTC)
+
+* Change person cards to not display "eps" when number of eps is unknown
+
+
+### 3.32.3 (2024-06-26 18:10:00 UTC)
 
 * Fix votes on shows/IMDb cards
 * Fix ratings on shows/TMDB cards
