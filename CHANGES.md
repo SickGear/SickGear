@@ -1,6 +1,8 @@
 ﻿### 3.32.3 (2024-06-26 18:10:00 UTC)
 
 * Fix votes on shows/IMDb cards
+* Fix ratings on shows/TMDB cards
+* Fix TVmaze parser
 
 
 ### 3.32.2 (2024-06-26 07:20:00 UTC)

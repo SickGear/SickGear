@@ -372,7 +372,8 @@ class TvMaze(TVInfoBase):
                             log.error('error episodes have no numbers')
                     ti_season = ti_season or ti_show[cur_season.season_number]  # type: TVInfoSeason
                     for k, v in iteritems(season_map):
-                        setattr(ti_season, k, clean_data(getattr(cur_season, v, None)) or empty_se.get(v))
+                        if k not in ('network', ) and k in season_map:
+                            setattr(ti_season, k, clean_data(getattr(cur_season, v, None)) or empty_se.get(v))
                     if cur_season.network:
                         self._set_network(ti_season, cur_season.network, False)
                     elif cur_season.web_channel:
@@ -558,7 +559,7 @@ class TvMaze(TVInfoBase):
                     _s_o = TVInfoShow()
                 show_dict = _s_o.__dict__
                 for k, v in iteritems(show_dict):
-                    if k not in ('cast', 'crew', 'images', 'aliases', 'rating'):
+                    if k not in ('cast', 'crew', 'images', 'aliases', 'rating', 'network') and k in show_map:
                         show_dict[k] = getattr(_s_d, show_map.get(k, k), clean_data(show_dict[k]))
                 _s_o.aliases = [clean_data(a.name) for a in _s_d.akas]
                 _s_o.runtime = _s_d.average_runtime or _s_d.runtime
