@@ -46,7 +46,8 @@ ProtectSystem=full
 DeviceAllow=/dev/null rw
 DeviceAllow=/dev/urandom r
 DevicePolicy=strict
-NoNewPrivileges=yesWorkingDirectory=/opt/sickgear
+NoNewPrivileges=yes
+WorkingDirectory=/opt/sickgear
 
 [Install]
 WantedBy=multi-user.target

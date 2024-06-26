@@ -5,6 +5,11 @@
 * Update urllib3 2.2.1 (54d6edf) to 2.2.2 (27e2a5c)
 
 
+### 3.32.2 (2024-06-26 07:20:00 UTC)
+
+* Fix systemd linefeed typo
+
+
 ### 3.32.1 (2024-06-26 01:15:00 UTC)
 
 * Fix update tvinfo test data
