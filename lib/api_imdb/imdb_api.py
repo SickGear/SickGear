@@ -219,7 +219,7 @@ class IMDbIndexer(TVInfoBase):
             if not bio:
                 return
             with BS4Parser(bio) as bio_item:
-                bv = bio_item.find(string='Mini Bio', recursive=True).find_next('p')
+                bv = bio_item.find('div', attrs={'data-testid': re.compile('mini_bio$')}, recursive=True)
                 for a in bv.findAll('a'):
                     a.replaceWithChildren()
                 for b in bv.findAll('br'):

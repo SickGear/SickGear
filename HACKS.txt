@@ -4,6 +4,7 @@ Libs with customisations...
 /lib/backports/configparser
 /lib/browser_ua
 /lib/bs4
+/lib/configobj/__init__.py
 /lib/dateutil/zoneinfo/__init__.py
 /lib/dateutil/tz/tz.py
 /lib/enzyme

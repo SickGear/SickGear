@@ -583,7 +583,7 @@ class Person(Referential):
                 continue
             if cur_key not in self.__dict__:
                 raise Exception('Person has no property [%s]' % cur_key)
-            if None is not cur_value:
+            if None is not cur_value or ('deathday' == cur_key and kwargs.get('birthday')):
                 if 'akas' == cur_key:
                     cur_value.update(self.akas)
                 elif 'nicknames' == cur_key:
@@ -768,7 +768,7 @@ class Person(Referential):
                                 self._data_failure = True
                                 logger.warning('Error searching extra info for person: %s - %s' % (self.name, ex(e)))
                                 continue
-                            if None is not pd and imdb_confirmed and TVINFO_IMDB == cur_tv_src:
+                            if None is not pd and imdb_confirmed and TVINFO_IMDB == cur_tv_info_src:
                                 rp = pd
                                 break
                             # noinspection PyUnresolvedReferences
