@@ -771,6 +771,8 @@ def cache_torrent_file(
         with open(cache_file, 'rb') as fh:
             torrent_content = fh.read()
     except (BaseException, Exception):
+        logger.warning(f'parsing torrent content failed, skipping')
+        logger.debug(f'Torrent content: %s' % torrent_content)
         return
 
     try:
