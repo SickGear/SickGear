@@ -16,6 +16,7 @@
 from collections import OrderedDict
 from threading import Lock
 
+import copy
 import datetime
 import io
 import os
@@ -39,6 +40,7 @@ from . import auto_media_process, properFinder  # must come after the above impo
 from .common import SD, SKIPPED, USER_AGENT
 from .config import check_section, check_setting_int, check_setting_str, ConfigMigrator, minimax
 from .databases import cache_db, failed_db, mainDB
+from .event_queue import ConfigEvents
 from .indexers.indexer_api import TVInfoAPI
 from .indexers.indexer_config import TVINFO_IMDB, TVINFO_TVDB, TmdbIndexer
 from .providers.generic import GenericProvider
@@ -73,6 +75,7 @@ ENV = {}
 CFG = None  # type: ConfigObj
 CONFIG_FILE = ''
 CONFIG_VERSION = None
+CONFIG_OLD = None
 
 # Default encryption version (0 for None)
 ENCRYPTION_VERSION = 0
@@ -86,6 +89,7 @@ DATA_DIR = ''
 # system events
 # noinspection PyTypeChecker
 events = None  # type: Events
+config_events = None  # type: ConfigEvents
 
 show_queue_scheduler = None  # type: Optional[scheduler.Scheduler]
 search_queue_scheduler = None  # type: Optional[scheduler.Scheduler]
@@ -667,7 +671,7 @@ def init_stage_1(console_logging):
         WEB_HOST, WEB_ROOT, ACTUAL_CACHE_DIR, CACHE_DIR, ZONEINFO_DIR, ADD_SHOWS_WO_DIR, ADD_SHOWS_METALANG, \
         CREATE_MISSING_SHOW_DIRS, SHOW_DIRS_WITH_DOTS, \
         RECENTSEARCH_STARTUP, NAMING_FORCE_FOLDERS, SOCKET_TIMEOUT, DEBUG, TVINFO_DEFAULT, \
-        CONFIG_FILE, CONFIG_VERSION, \
+        CONFIG_FILE, CONFIG_VERSION, CONFIG_OLD, \
         REMOVE_FILENAME_CHARS, IMPORT_DEFAULT_CHECKED_SHOWS, WANTEDLIST_CACHE, MODULE_UPDATE_STRING, EXT_UPDATES
     # Add Show Search
     global RESULTS_SORTBY
@@ -1537,7 +1541,7 @@ def init_stage_2():
         search_recent_scheduler, search_subtitles_scheduler, \
         search_queue_scheduler, show_queue_scheduler, people_queue_scheduler, \
         watched_state_queue_scheduler, emby_watched_state_scheduler, plex_watched_state_scheduler, \
-        process_media_scheduler, background_mapping_task
+        process_media_scheduler, background_mapping_task, config_events
 
     # Gen Config/Misc
     global SHOW_UPDATE_HOUR, UPDATE_INTERVAL, UPDATE_PACKAGES_INTERVAL
@@ -1728,6 +1732,9 @@ def init_stage_2():
     except (BaseException, Exception):
         pass
 
+    config_events = ConfigEvents(_save_config)
+    config_events.start()
+
     __INITIALIZED__ = True
     return True
 
@@ -1801,7 +1808,7 @@ def sig_handler(signum=None, _=None):
 
 
 def halt():
-    global __INITIALIZED__, started
+    global __INITIALIZED__, started, config_events
 
     logger.debug('Check INIT_LOCK on halt')
     with INIT_LOCK:
@@ -1810,6 +1817,11 @@ def halt():
         if __INITIALIZED__:
 
             logger.log('Exiting threads')
+
+            try:
+                config_events.stopit()
+            except (BaseException, Exception):
+                pass
 
             for p in provider_ping_thread_pool:
                 provider_ping_thread_pool[p].stop = True
@@ -1854,6 +1866,11 @@ def halt():
                 except (BaseException, Exception) as e:
                     logger.log('Thread %s exception %s' % (thread.name, e))
 
+            try:
+                config_events.join(10)
+            except RuntimeError:
+                pass
+
             __INITIALIZED__ = False
             started = False
 
@@ -1869,10 +1886,23 @@ def save_all():
 
     # save config
     logger.log('Saving config file to disk')
-    save_config()
+    _save_config(force=True)
 
 
-def save_config():
+def save_config(force=False):
+    # type: (bool) -> None
+    """
+    add queue request for saving the config.ini
+
+    :param force: force save config even if unchanged
+    """
+    global config_events
+    config_events.put(force)
+
+
+def _save_config(force=False, **kwargs):
+    # type: (bool, ...) -> None
+    global CONFIG_OLD
     new_config = ConfigObj()
     new_config.filename = CONFIG_FILE
 
@@ -2425,6 +2455,9 @@ def save_config():
     new_config['ANIME'] = {}
     new_config['ANIME']['anime_treat_as_hdtv'] = int(ANIME_TREAT_AS_HDTV)
 
+    if not force and CONFIG_OLD == new_config and os.path.isfile(new_config.filename):
+        logger.debug('config.ini not dirty, not saving.')
+        return
     from sg_helpers import copy_file
     backup_config = re.sub(r'\.ini$', '.bak', CONFIG_FILE)
     from .config import check_valid_config
@@ -2440,6 +2473,7 @@ def save_config():
     for _ in range(0, 3):
         new_config.write()
         if check_valid_config(CONFIG_FILE):
+            CONFIG_OLD = copy.deepcopy(new_config)
             return
         logger.warning('saving config file failed, retrying...')
         remove_file_perm(CONFIG_FILE)

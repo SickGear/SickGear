@@ -1053,12 +1053,18 @@ class MainHandler(WebHandler):
     @staticmethod
     def set_display_show_glide(slidetime=None, tvid_prodid=None, start_at=None):
 
-        if tvid_prodid and start_at:
+        dirty_config = False
+        if tvid_prodid and start_at and start_at != sickgear.DISPLAY_SHOW_GLIDE.get(tvid_prodid, {}).get('start_at'):
             sickgear.DISPLAY_SHOW_GLIDE.setdefault(tvid_prodid, {}).update({'start_at': start_at})
+            dirty_config = True
 
-        if slidetime:
-            sickgear.DISPLAY_SHOW_GLIDE_SLIDETIME = sg_helpers.try_int(slidetime, 3000)
-        sickgear.save_config()
+        if slidetime and (
+                int_slidetime := sg_helpers.try_int(slidetime, 3000)) != sickgear.DISPLAY_SHOW_GLIDE_SLIDETIME:
+            sickgear.DISPLAY_SHOW_GLIDE_SLIDETIME = int_slidetime
+            dirty_config = True
+
+        if dirty_config:
+            sickgear.save_config()
 
     @staticmethod
     def set_poster_sortby(sort):

@@ -595,7 +595,7 @@ $(function() {
         #if $this_show.get('p_chars')
 					<p style='overflow-y:auto;max-height:152px'>
             #for $char in $this_show['p_chars']
-						<span style='display:block;clear:both;font-weight:bold;font-size:0.9em;color:#393'>as $char[0]#if $RoleTypes.ActorMain != $char[1]# ($char[2]/$char[3] eps)#end if#</span>
+						<span style='display:block;clear:both;font-weight:bold;font-size:0.9em;color:#393'>as $char[0]#if $RoleTypes.ActorMain != $char[1]# ($char[2]#if $char[3]#/$char[3] eps#end if#)#end if#</span>
             #end for
 					</p>
         #end if

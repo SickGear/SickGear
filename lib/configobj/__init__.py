@@ -2097,6 +2097,7 @@ class ConfigObj(Section):
         else:
             with open(self.filename, 'wb') as h:
                 h.write(output_bytes)
+                h.flush()
 
     def validate(self, validator, preserve_errors=False, copy=False,
                  section=None):
