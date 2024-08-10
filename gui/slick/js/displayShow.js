@@ -245,7 +245,9 @@ $(document).ready(function() {
 				if (saveTime){
 					params.slidetime = $.SickGear.config.glideSlideTime;
 				}
-				$.get($.SickGear.Root + '/home/set-display-show-glide', params);
+				if (!$.isEmptyObject(params)){
+					$.get($.SickGear.Root + '/home/set-display-show-glide', params);
+				}
 			}
 		}
 

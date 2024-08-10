@@ -5,6 +5,16 @@
 * Update urllib3 2.2.1 (54d6edf) to 2.2.2 (27e2a5c)
 
 
+### 3.32.4 (2024-08-10 11:40:00 UTC)
+
+* Change person cards to not display "eps" when number of eps is unknown
+* Fix wrong added death dates
+* Fix parsing changes to IMDb bio
+* Change improve efficiency when saving config.ini
+* Change improve efficiency when saving viewshow glide
+* Change allow Python 3.12.5
+
+
 ### 3.32.3 (2024-06-26 18:10:00 UTC)
 
 * Fix votes on shows/IMDb cards
