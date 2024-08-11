@@ -581,7 +581,7 @@ class ConfigMigrator(object):
             # save new config after migration
             sickgear.CONFIG_VERSION = self.config_version
             logger.log('Saving config file to disk')
-            sickgear.save_config()
+            sickgear._save_config()
 
     @staticmethod
     def deprecate_anon_service():

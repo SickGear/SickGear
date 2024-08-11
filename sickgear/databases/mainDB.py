@@ -624,7 +624,7 @@ class Add1080pAndRawHDQualities(db.SchemaUpgrade):
 
         # update the default quality so we dont grab the wrong qualities after migration
         sickgear.QUALITY_DEFAULT = self._update_composite_qualities(sickgear.QUALITY_DEFAULT)
-        sickgear.save_config()
+        sickgear._save_config()
 
         # upgrade previous HD to HD720p -- shift previous qualities to new placevalues
         old_hd = common.Quality.combine_qualities(

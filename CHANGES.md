@@ -1,4 +1,9 @@
-﻿### 3.32.4 (2024-08-10 11:40:00 UTC)
+﻿### 3.32.5 (2024-08-12 00:15:00 UTC)
+
+* Fix to create initial config.ini when one doesn't exist
+
+
+### 3.32.4 (2024-08-10 11:40:00 UTC)
 
 * Change person cards to not display "eps" when number of eps is unknown
 * Fix wrong added death dates
