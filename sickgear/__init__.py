@@ -1511,7 +1511,7 @@ def init_stage_1(console_logging):
     # Get expected config version
     CONFIG_VERSION = max(ConfigMigrator(CFG).migration_names)
     if update_config:
-        save_config()
+        _save_config(force=True)
 
     # start up all the threads
     old_log = os.path.join(LOG_DIR, 'sickgear.log')
