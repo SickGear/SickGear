@@ -5,6 +5,11 @@
 * Update urllib3 2.2.1 (54d6edf) to 2.2.2 (27e2a5c)
 
 
+### 3.32.6 (2024-08-12 17:10:00 UTC)
+
+* Fix saving config.ini after restart and startup
+
+
 ### 3.32.5 (2024-08-12 00:15:00 UTC)
 
 * Fix to create initial config.ini when one doesn't exist
