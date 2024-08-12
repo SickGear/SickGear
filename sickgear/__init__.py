@@ -1897,7 +1897,9 @@ def save_config(force=False):
     :param force: force save config even if unchanged
     """
     global config_events
-    config_events.put(force)
+
+    # use queue if it's available, otherwise, call save_config directly
+    hasattr(config_events, 'put') and config_events.put(force) or _save_config(force)
 
 
 def _save_config(force=False, **kwargs):
