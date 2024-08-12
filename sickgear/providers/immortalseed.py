@@ -56,7 +56,7 @@ class ImmortalSeedProvider(generic.TorrentProvider):
 
         if secret_key != self.api_key:
             self.api_key = secret_key
-            sickgear.save_config()
+            self.save_main_config()
 
         return True
 

@@ -92,7 +92,7 @@ class SpeedCDProvider(generic.TorrentProvider):
                     self.digest = None
                     if self.session.cookies.get('inSpeed_speedian'):
                         self.digest = 'inSpeed_speedian=%s' % self.session.cookies.get('inSpeed_speedian')
-                    sickgear.save_config()
+                    self.save_main_config()
                     result = True
                     logger.debug('Cookie details for %s updated.' % self.name)
             elif not self.failure_count:
