@@ -76,6 +76,7 @@ CFG = None  # type: ConfigObj
 CONFIG_FILE = ''
 CONFIG_VERSION = None
 CONFIG_OLD = None
+CONFIG_LOADED = False
 
 # Default encryption version (0 for None)
 ENCRYPTION_VERSION = 0
@@ -671,7 +672,7 @@ def init_stage_1(console_logging):
         WEB_HOST, WEB_ROOT, ACTUAL_CACHE_DIR, CACHE_DIR, ZONEINFO_DIR, ADD_SHOWS_WO_DIR, ADD_SHOWS_METALANG, \
         CREATE_MISSING_SHOW_DIRS, SHOW_DIRS_WITH_DOTS, \
         RECENTSEARCH_STARTUP, NAMING_FORCE_FOLDERS, SOCKET_TIMEOUT, DEBUG, TVINFO_DEFAULT, \
-        CONFIG_FILE, CONFIG_VERSION, CONFIG_OLD, \
+        CONFIG_FILE, CONFIG_VERSION, CONFIG_OLD, CONFIG_LOADED, \
         REMOVE_FILENAME_CHARS, IMPORT_DEFAULT_CHECKED_SHOWS, WANTEDLIST_CACHE, MODULE_UPDATE_STRING, EXT_UPDATES
     # Add Show Search
     global RESULTS_SORTBY
@@ -1479,6 +1480,7 @@ def init_stage_1(console_logging):
             header = callable(getattr(cur_provider, '_init_api', False)) and False is cur_provider._init_api() \
                 and header or {}
         cur_provider.headers.update(header)
+        update_config |= cur_provider.should_save_config()
 
     # current commit hash
     CUR_COMMIT_HASH = check_setting_str(CFG, 'General', 'cur_commit_hash', '')
@@ -1510,6 +1512,10 @@ def init_stage_1(console_logging):
 
     # Get expected config version
     CONFIG_VERSION = max(ConfigMigrator(CFG).migration_names)
+
+    # we have fully loaded all config settings into vars
+    CONFIG_LOADED = True
+
     if update_config:
         _save_config(force=True)
 
@@ -1896,7 +1902,9 @@ def save_config(force=False):
 
     :param force: force save config even if unchanged
     """
-    global config_events
+    global config_events, CONFIG_LOADED
+    if not CONFIG_LOADED:
+        return
 
     # use queue if it's available, otherwise, call save_config directly
     hasattr(config_events, 'put') and config_events.put(force) or _save_config(force)
@@ -1904,7 +1912,10 @@ def save_config(force=False):
 
 def _save_config(force=False, **kwargs):
     # type: (bool, ...) -> None
-    global CONFIG_OLD
+    global CONFIG_OLD, CONFIG_LOADED
+    if not CONFIG_LOADED:
+        return
+
     new_config = ConfigObj()
     new_config.filename = CONFIG_FILE
 

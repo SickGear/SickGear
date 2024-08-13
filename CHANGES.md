@@ -5,6 +5,12 @@
 * Update urllib3 2.2.1 (54d6edf) to 2.2.2 (27e2a5c)
 
 
+### 3.32.7 (2024-08-13 11:30:00 UTC)
+
+* Change to prevent saving config.ini before it's fully loaded
+* Change login form to be more password manager friendly
+
+
 ### 3.32.6 (2024-08-12 17:10:00 UTC)
 
 * Fix saving config.ini after restart and startup
