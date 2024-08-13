@@ -275,6 +275,19 @@ class GenericProvider(object):
         self.scene_rej_nuked = False  # type: bool
         self.scene_nuked_active = False  # type: bool
 
+        self._save_config = False  # type: bool
+
+
+    def save_main_config(self):
+        self._save_config = True
+        sickgear.save_config()
+
+    def should_save_config(self):
+        # type: (...) -> bool
+        _s_c = self._save_config
+        self._save_config = False
+        return _s_c
+
     def _load_fail_values(self):
         if hasattr(sickgear, 'DATA_DIR'):
             my_db = db.DBConnection('cache.db')
@@ -1957,7 +1970,7 @@ class TorrentProvider(GenericProvider):
 
                 if last_url != cur_url or (expire and not (expire > int(time.time()))):
                     sickgear.PROVIDER_HOMES[self.get_id()] = (cur_url, int(time.time()) + (60*60))
-                    sickgear.save_config()
+                    self.save_main_config()
                 return cur_url
 
         seen_attr = 'PROVIDER_SEEN'
@@ -1975,7 +1988,7 @@ class TorrentProvider(GenericProvider):
         if not hasattr(self, 'url_api'):
             self.urls = {}
         sickgear.PROVIDER_HOMES[self.get_id()] = ('site down', int(time.time()) + (5 * 60))
-        sickgear.save_config()
+        self.save_main_config()
         return None
 
     def is_valid_mod(self, url):
@@ -2088,7 +2101,7 @@ class TorrentProvider(GenericProvider):
 
             if maxed_out(response) and hasattr(self, 'password'):
                 self.password = None
-                sickgear.save_config()
+                self.save_main_config()
             msg = failed_msg(response)
             if msg:
                 logger.error(msg % self.name)
