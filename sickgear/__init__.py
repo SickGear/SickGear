@@ -2475,22 +2475,36 @@ def _save_config(force=False, **kwargs):
     backup_config = re.sub(r'\.ini$', '.bak', CONFIG_FILE)
     from .config import check_valid_config
     try:
+        if check_valid_config(CONFIG_FILE):
+            for _t in range(0, 3):
         copy_file(CONFIG_FILE, backup_config)
         if not check_valid_config(backup_config):
-            logger.error('config file seams to be invalid, not backing up.')
+                    if 2 > _t:
+                        logger.debug('backup config file seems to be invalid, retrying...')
+                    else:
+                        logger.warning('backup config file seems to be invalid, not backing up.')
+                        backup_config = None
             remove_file_perm(backup_config)
+                    2 > _t and time.sleep(3)
+                else:
+                    break
+        else:
+            logger.warning('existing config file is invalid, not backing it up')
             backup_config = None
     except (BaseException, Exception):
         backup_config = None
 
-    for _ in range(0, 3):
+    for _t in range(0, 3):
         new_config.write()
         if check_valid_config(CONFIG_FILE):
             CONFIG_OLD = copy.deepcopy(new_config)
             return
-        logger.warning('saving config file failed, retrying...')
+        if 2 > _t:
+            logger.debug('saving config file failed, retrying...')
+        else:
+            logger.warning('saving config file failed.')
         remove_file_perm(CONFIG_FILE)
-        time.sleep(3)
+        2 > _t and time.sleep(3)
 
     # we only get here if the config saving failed multiple times
     if None is not backup_config and os.path.isfile(backup_config):
