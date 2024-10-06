@@ -171,7 +171,7 @@ def has_image_ext(filename):
     :rtype: bool
     """
     try:
-        if os.path.splitext(filename)[1].lower() in ['.bmp', '.gif', '.jpeg', '.jpg', '.png', '.webp']:
+        if os.path.splitext(filename)[1].lower() in ['.avif', '.bmp', '.gif', '.jpeg', '.jpg', '.png', '.webp']:
             return True
     except (BaseException, Exception):
         pass

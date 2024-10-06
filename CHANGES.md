@@ -1,4 +1,17 @@
-﻿### 3.32.7 (2024-08-13 11:30:00 UTC)
+﻿### 3.32.8 (2024-10-07 00:30:00 UTC)
+
+* Change min required Python version to 3.9
+* Change add support for Python 3.9.20, 3.10.15, 3.11.10, 3.12.7
+* Change update fallback zoneinfo to 2024b
+* Change improve config.ini save failure messages
+* Change add '-f' to copy_file command for 'posix' systems
+* Fix Fanart.tv and CF data fetch
+* Fix TVC images
+* Change add '.avif' extensions as valid image type (used by tvc cards)
+* Change hide lazy load animation when loading fails (unsupported image format)
+
+
+### 3.32.7 (2024-08-13 11:30:00 UTC)
 
 * Change to prevent saving config.ini before it's fully loaded
 * Change login form to be more password manager friendly

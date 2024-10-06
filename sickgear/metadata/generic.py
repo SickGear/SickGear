@@ -1198,7 +1198,8 @@ class GenericMetadata(object):
 
         try:
             if tvdb_id:
-                request = fanartRequest(apikey=sickgear.FANART_API_KEY, tvdb_id=tvdb_id, types=types[image_type])
+                request = fanartRequest(apikey=sickgear.FANART_API_KEY, tvdb_id=tvdb_id, types=types[image_type],
+                                        url_solver=sickgear.FLARESOLVERR_HOST)
                 resp = request.response()
                 itemlist = []
                 dedupe = []

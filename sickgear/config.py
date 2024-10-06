@@ -484,7 +484,7 @@ def backup_config():
     logger.log('backing up config.ini')
     try:
         if not check_valid_config(sickgear.CONFIG_FILE):
-            logger.error('config file seams to be invalid, not backing up.')
+            logger.error('config file seems to be invalid, not backing up.')
             return
         now = datetime.datetime.now()
         d = datetime.datetime.strftime(now, '%Y-%m-%d')
@@ -493,7 +493,7 @@ def backup_config():
         target = os.path.join(target_base, 'config.ini')
         copy_file(sickgear.CONFIG_FILE, target)
         if not check_valid_config(target):
-            logger.error('config file seams to be invalid, not backing up.')
+            logger.error('config file seems to be invalid, not backing up.')
             remove_file_perm(target)
             return
         compress_file(target, 'config.ini')

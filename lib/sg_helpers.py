@@ -1148,7 +1148,7 @@ def scantree(path,  # type: AnyStr
 
 def copy_file(src_file, dest_file):
     if os.name.startswith('posix'):
-        subprocess.call(['cp', src_file, dest_file])
+        subprocess.call(['cp', '-f', src_file, dest_file])
     else:
         shutil.copyfile(src_file, dest_file)
 
