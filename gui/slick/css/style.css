@@ -1485,6 +1485,8 @@ home_browseShows.tmpl
 	border-top-left-radius:5px;
 	border-top-right-radius:5px;
 	border-bottom:1px solid #111;
+	background-position:50% 50%;
+	text-decoration: none !important;
 	background-image:url("../images/poster-dark.jpg")
 }
 

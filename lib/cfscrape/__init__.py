@@ -56,8 +56,8 @@ class CloudflareScraper(Session):
                 and resp.status_code in (503, 429, 403)):
             self.start_time = time.time()
             if (re.search('(?i)cloudflare', resp.headers.get('Server', ''))
-                    and b'jschl_vc' in resp.content
-                    and b'jschl_answer' in resp.content):
+                    and b'_cf_chl_' in resp.content
+                    or (b'jschl_vc' in resp.content and b'jschl_answer' in resp.content)):
                 resp = self.solve_cf_challenge(resp, url_solver, **kwargs)
             elif b'ddgu' in resp.content:
                 resp = self.solve_ddg_challenge(resp, **kwargs)

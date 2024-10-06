@@ -206,7 +206,7 @@ def setup_test_db():
 
 def teardown_test_db():
     """Deletes the test db
-        although this seams not to work on my system it leaves me with an zero kb file
+        although this seems not to work on my system it leaves me with an zero kb file
     """
     # uncomment next line so leave the db intact between test and at the end
     # return False

@@ -5936,9 +5936,19 @@ class AddShows(Home):
                         url_path = info['href'].strip()
 
                         title = info.find('h2').get_text(strip=True)
-                        img_uri = info.get('data-original', '').strip()
-                        if not img_uri:
-                            img_uri = re.findall(r'(?i).*?image:\s*url\(([^)]+)', info.attrs['style'])[0].strip()
+                        img_uri = None
+                        # try image locations e.g. https://pogd.es/assets/bg/KAOS.jpg
+                        img_name = re.sub(r'[:\s]+', '-', title)
+                        for cur_type in ('jpg', 'jpeg', 'webp', 'png', 'gif', 'bmp', 'avif'):
+                            uri = f'https://pogd.es/assets/bg/{img_name}.{cur_type}'
+                            if helpers.check_url(uri):
+                                img_uri = uri
+                                break
+                        if None is img_uri:
+                            # use alternative avif image fallback as only supported by new browsers
+                            img_uri = info.get('data-original', '').strip()
+                            if not img_uri:  # old image fallback (pre 2024-08-18)
+                                img_uri = re.findall(r'(?i).*?image:\s*url\(([^)]+)', info.attrs['style'])[0].strip()
                         images = dict(poster=dict(thumb='imagecache?path=browse/thumb/tvc&source=%s' % img_uri))
                         sickgear.CACHE_IMAGE_URL_LIST.add_url(img_uri)
                         title = re.sub(r'(?i)(?::\s*season\s*\d+|\s*\((?:19|20)\d{2}\))?$', '', title.strip())

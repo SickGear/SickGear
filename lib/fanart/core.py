@@ -7,11 +7,12 @@ from sg_helpers import get_url
 
 
 class Request(object):
-    def __init__(self, apikey, tvdb_id, ws=fanart.WS.TV, types=None):
+    def __init__(self, apikey, tvdb_id, ws=fanart.WS.TV, types=None, **kwargs):
         self._apikey = apikey
         self._tvdb_id = tvdb_id
         self._ws = ws
         self._types = types
+        self._kwargs = kwargs
         self._response = None
         self._web_url = 'https://fanart.tv/series/%s'
         self._assets_url = 'https://assets.fanart.tv'
@@ -22,7 +23,7 @@ class Request(object):
     def response(self):
 
         try:
-            rjson = get_url(str(self), parse_json=True)
+            rjson = get_url(str(self), parse_json=True, **self._kwargs)
             image_type = self._types or u'showbackground'
             rhtml = self.scrape_web(image_type)
             if not isinstance(rjson, dict) and 0 == len(rhtml[image_type]):
@@ -31,7 +32,7 @@ class Request(object):
             if not isinstance(rjson, dict):
                 rjson = {image_type: []}
 
-            if 0 != len(rhtml[image_type]):
+            if None is not rhtml and 0 != len(rhtml[image_type]):
                 rjson_ids = map(lambda i: i['id'], rjson[image_type])
                 for item in filter(lambda i: i['id'] not in rjson_ids, rhtml[image_type]):
                     rjson[image_type] += [item]
@@ -48,7 +49,7 @@ class Request(object):
 
     def scrape_web(self, image_type):
         try:
-            data = get_url(self._web_url % self._tvdb_id)
+            data = get_url(self._web_url % self._tvdb_id, **self._kwargs)
             if not data:
                 return
 
