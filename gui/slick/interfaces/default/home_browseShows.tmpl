@@ -60,7 +60,7 @@
 
 							// Set initial text
 							overviewEl.html('Fetching overview...');
-							$.getJSON($.SickGear.Root + '/add-shows/tvm-get-showinfo', {
+							$.getJSON($.SickGear.Root + '/add-shows/tvi-get-showinfo', {
 								tvid_prodid: showcardEl.attr('data-id'),
 								oldest_dt: $('#oldest').attr('data-oldest-dt'),
 								newest_dt: $('#newest').attr('data-newest-dt'),
@@ -301,7 +301,7 @@ $(function() {
 		var filterValue = this.value;
 		if (-1 == filterValue.indexOf('trakt') && -1 == filterValue.indexOf('imdb') && -1 == filterValue.indexOf('mc_')
 		 && -1 == filterValue.indexOf('tmdb_') && -1 == filterValue.indexOf('tvc_')
-		 && -1 == filterValue.indexOf('tvm_')
+		 && -1 == filterValue.indexOf('tvdb_') && -1 == filterValue.indexOf('tvm_')
 		 && -1 == filterValue.indexOf('ne_') && -1 == filterValue.indexOf('_ne')
 		 && -1 == filterValue.indexOf('default')) {
 			var el$ = $('#container')
@@ -507,6 +507,14 @@ $(function() {
 			<option value="tmdb_trending_today"#echo ('', selected)['trending_today' == $mode]#>Trending today</option>
 			<option value="tmdb_trending_week"#echo ('', selected)['trending_week' == $mode]#>Trending this week</option>
 		</optgroup>
+        #elif 'TVDb' == $browse_type
+		<optgroup label="TVDb">
+			<option value="tvdb_upcoming"#echo ('', selected)['upcoming' == $mode]#>Upcoming</option>
+			<option value="tvdb_toprated"#echo ('', selected)['toprated' == $mode and not $kwargs.get('year')]#>Top rated all time</option>
+            #for $cur_y in $kwargs.get('rate_years') or []
+			<option value="$cur_y[1]"#echo ('', selected)[$cur_y[0] == $kwargs.get('year')]#>$cur_y[2]</option>
+            #end for
+		</optgroup>
         #elif 'TVCalendar' == $browse_type
 		<optgroup label="TVCalendar">
             #for $page in $kwargs.get('pages') or []
@@ -623,7 +631,7 @@ $(function() {
         #end if
 			<div class="clearfix">
         #if $use_ratings or $use_votes
-				<p>#if $use_ratings#<span class="rating">$this_show['rating']#if $re.search(r'^\d+(\.\d+)?$', (str($this_show['rating'])))#%</span>#end if##end if##if $use_votes#<i class="heart icon-glyph"></i><i>$this_show['votes'] $term_vote.lower()</i>#end if#</p>#slurp#
+				<p>#if $this_show.get('rank')#&#x23;$this_show.get('rank') #end if##if $use_ratings#<span class="rating">$this_show['rating']#if $re.search(r'^\d+(\.\d+)?$', (str($this_show['rating'])))#%</span>#end if##end if##if $use_votes#<i class="heart icon-glyph"></i><i>$this_show['votes'] $term_vote.lower()</i>#end if#</p>#slurp#
         #else
 				<p>&nbsp;</p>
         #end if

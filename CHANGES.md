@@ -3,6 +3,10 @@
 * Update filelock 3.14.0 (8556141) to 3.15.4 (9a979df)
 * Update package resource API 68.2.2 (8ad627d) to 70.1.1 (222ebf9)
 * Update urllib3 2.2.1 (54d6edf) to 2.2.2 (27e2a5c)
+* Change add TheTVDb v4 support
+* Add menu Shows/"TVDb Cards"
+* Add a persons available socials (Youtube, LinkedIn, Reddit, Fansite, TikTok, Wikidata)
+* Change increase viewable history menu items from 13 to 15
 
 
 ### 3.32.8 (2024-10-07 00:30:00 UTC)
@@ -343,7 +347,6 @@
 * Add config to change media process log message if there is no media to process
 * Change view-show text "invalid timeformat" to "time unknown"
 * Add menu Shows/"TMDB Cards"
-* Add a persons available socials (Youtube, LinkedIn, Reddit, Fansite, TikTok, Wikidata)
 * Change use TVDb genres on view-show if config/General/Interface/"Enable IMDb info" is disabled
 * Fix TVDb api episode issues
 * Change remove Python 3.7 from CI

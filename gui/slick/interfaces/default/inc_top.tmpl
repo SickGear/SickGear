@@ -177,6 +177,10 @@
 								<li><a id="add-show-name" data-href="$sbRoot/add-shows/find/" tabindex="$tab#set $tab += 1#"><i class="sgicon-addshow"></i>
 									<input  class="form-control form-control-inline input-sm" type="text" placeholder="Search" tabindex="$tab#set $tab += 1#">
 									<div class="menu-item-desc opacity60">find show at TV info source</div></a></li>
+#set $tvdb_modes = dict(tvdb_upcoming='upcoming', tvdb_toprated='top rated')
+#set $tvdb_mode = $tvdb_modes.get($sg_var('TVDB_MRU'), 'upcoming')
+								<li><a href="$sbRoot/add-shows/tvdb-default/" tabindex="$tab#set $tab += 1#"><i class="sgicon-addshow"></i>TVDb Cards
+									<div class="menu-item-desc opacity60">$tvdb_mode...</div></a></li>
 #set $tvm_modes = dict(tvm_premieres='new shows', tvm_returning='returning')
 #set $tvm_mode = $tvm_modes.get($sg_var('TVM_MRU'), 'new shows')
 								<li><a href="$sbRoot/add-shows/tvm-default/" tabindex="$tab#set $tab += 1#"><i class="sgicon-tvmaze"></i>TVmaze Cards

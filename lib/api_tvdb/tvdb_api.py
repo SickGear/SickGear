@@ -27,7 +27,6 @@ import warnings
 from bs4_parser import BS4Parser
 from collections import OrderedDict
 from sg_helpers import clean_data, get_url, try_int
-from sickgear import ENV
 
 from lib.cachecontrol import CacheControl, caches
 from lib.dateutil.parser import parse
@@ -45,6 +44,8 @@ if False:
     # noinspection PyUnresolvedReferences
     from typing import Any, AnyStr, Dict, List, Optional, Union
 
+
+ENV = os.environ
 
 THETVDB_V2_API_TOKEN = {'token': None, 'datetime': datetime.datetime.fromordinal(1)}
 log = logging.getLogger('tvdb.api')

@@ -96,6 +96,7 @@ from lib.api_trakt import TraktAPI
 from lib.api_trakt.exceptions import TraktException, TraktAuthException
 from lib.tvinfo_base import TVInfoEpisode, RoleTypes
 from lib.tvinfo_base.base import tv_src_names
+from lib.tvinfo_base.exceptions import *
 
 import lib.rarfile.rarfile as rarfile
 
@@ -112,6 +113,7 @@ if False:
     # from api_imdb.imdb_api import IMDbIndexer
     from api_tmdb.tmdb_api import TmdbIndexer
     from api_trakt.indexerapiinterface import TraktIndexer
+    from api_tvdb.tvdb_api_v4 import TvdbAPIv4 as TvdbIndexer
     from api_tvmaze.tvmaze_api import TvMaze as TvmazeIndexer
 
 
@@ -6036,6 +6038,155 @@ class AddShows(Home):
 
         return self.new_show('|'.join(['', '', '', show_name]), use_show_name=True)
 
+    def tvdb_default(self):
+        method = getattr(self, sickgear.TVDB_MRU, None)
+        if not callable(method) or not self.allow_browse_mru(sickgear.TVDB_MRU):
+            return self.tvdb_upcoming()
+        return method()
+
+    def tvdb_upcoming(self, **kwargs):
+        return self.browse_tvdb(
+            'Upcoming at TVDb', mode='upcoming', **kwargs)
+
+    def tvdb_toprated(self, **kwargs):
+        return self.browse_tvdb(
+            'Top rated at TVDb', mode='toprated', **kwargs)
+
+    def tvdb_person(self, person_tvdb_id=None, **kwargs):
+        return self.browse_tvdb(
+            'Person at TVDb', mode='person', p_id=person_tvdb_id, **kwargs)
+
+    def browse_tvdb(self, browse_title, **kwargs):
+
+        browse_type = 'TVDb'
+        mode = kwargs.get('mode', '')
+
+        footnote = None
+        filtered = []
+        p_ref = None
+        overview_ajax = 'person' == mode
+
+        tvid = TVINFO_TVDB
+        tvinfo_config = sickgear.TVInfoAPI(tvid).api_params.copy()
+        t = sickgear.TVInfoAPI(tvid).setup(**tvinfo_config)  # type: Union[TvdbIndexer, TVInfoBase]
+
+        top_year = helpers.try_int(kwargs.get('year'), None)
+        try:
+            if 'upcoming' == mode:
+                items = t.discover()
+            elif 'person' == mode:
+                items = []
+                p_item = t.get_person(get_show_credits=True, include_guests=True, **kwargs)  # type: TVInfoPerson
+                if p_item:
+                    p_ref = f'{TVINFO_TVDB}:{p_item.id}'
+                    dup = {}  # type: Dict[int, TVInfoShow]
+                    for c in p_item.characters:  # type: TVInfoCharacter
+                        c.ti_show.cast[(RoleTypes.ActorGuest, RoleTypes.ActorMain)[True is c.regular]].append(c)
+                        if c.ti_show.id not in dup:
+                            dup[c.ti_show.id] = c.ti_show
+                            items.append(c.ti_show)
+                        else:
+                            dup[c.ti_show.id].cast[RoleTypes.ActorMain].extend(c.ti_show.cast[RoleTypes.ActorMain])
+                            dup[c.ti_show.id].cast[RoleTypes.ActorGuest].extend(c.ti_show.cast[RoleTypes.ActorGuest])
+                    del dup
+                else:
+                    p_item = None
+            else:
+                items = t.get_top_rated(year=top_year, in_last_year=1 == dt_date.today().month and 7 > dt_date.today().day)
+        except (BaseTVinfoError, BaseException, Exception) as e:
+            return self.browse_shows(browse_type, browse_title, filtered, **kwargs)
+
+        ranking = dict((val, idx+1) for idx, val in
+                       enumerate(sorted([cur_show_info.rating or 0 for cur_show_info in items], reverse=True)))
+        oldest, newest, oldest_dt, newest_dt, dedupe = None, None, 9999999, 0, []
+        use_networks = False
+        parseinfo = dateutil.parser.parserinfo(dayfirst=False, yearfirst=True)
+        base_url = sickgear.TVInfoAPI(TVINFO_TVDB).config['show_url']
+        for cur_show_info in items:
+            if cur_show_info.id in dedupe or not cur_show_info.seriesname:
+                continue
+            dedupe += [cur_show_info.id]
+
+            try:
+                airtime = cur_show_info.airs_time
+                if not airtime or (0, 0) == (airtime.hour, airtime.minute):
+                    airtime = dateutil.parser.parse('23:59').time()
+                dt = datetime.combine(
+                    dateutil.parser.parse(cur_show_info.firstaired, parseinfo).date(), airtime)
+                ord_premiered, str_premiered, started_past, oldest_dt, newest_dt, oldest, newest, _, _, _, _ \
+                    = self.sanitise_dates(dt, oldest_dt, newest_dt, oldest, newest)
+
+                image = self._make_cache_image_url(tvid, cur_show_info)
+                images = {} if not image else dict(poster=dict(thumb=image))
+
+                ids = dict(tvdb=cur_show_info.id)
+                if cur_show_info.ids.imdb:
+                    ids['imdb'] = cur_show_info.ids.imdb
+
+                network_name = cur_show_info.network
+                cc = 'US'
+                if network_name:
+                    use_networks = True
+                    cc = cur_show_info.network_country_code or cc
+
+                language = ((cur_show_info.language and 'jap' in cur_show_info.language.lower())
+                            and 'jp' or 'en')
+
+                filtered.append(dict(
+                    ord_premiered=ord_premiered,
+                    str_premiered=str_premiered,
+                    started_past=started_past,
+                    episode_overview=self.clean_overview(cur_show_info),
+                    episode_season=cur_show_info.season,
+                    genres=(', '.join(cur_show_info.genre_list)
+                            or (cur_show_info.genre and (cur_show_info.genre.strip('|').replace('|', ', ')) or '')
+                            ).lower(),
+                    ids=ids,
+                    images=images,
+                    overview=self.clean_overview(cur_show_info),
+                    overview_ajax=(0, 1)[overview_ajax],
+                    title=cur_show_info.seriesname,
+                    language=language,
+                    language_img=sickgear.MEMCACHE_FLAG_IMAGES.get(language, False),
+                    country=cc,
+                    country_img=sickgear.MEMCACHE_FLAG_IMAGES.get(cc.lower(), False),
+                    network=network_name,
+                    rating=False,
+                    url_src_db=base_url % cur_show_info.id,
+                    votes=cur_show_info.rating or 0,
+                    rank=cur_show_info.rating and ranking.get(cur_show_info.rating) or 0,
+                ))
+                if p_ref:
+                    filtered[-1].update(dict(
+                        p_name=p_item.name or None,
+                        p_ref=p_ref,
+                        p_chars=self._make_char_person_list(cur_show_info)
+                    ))
+            except (BaseException, Exception):
+                pass
+            kwargs.update(dict(oldest=oldest, newest=newest, oldest_dt=oldest_dt, newest_dt=newest_dt, use_ratings=False, term_vote='Score'))
+
+        this_year = dt_date.today().year
+        years = [
+            (this_year - cur_y,
+             'tvdb_toprated?year=%s' % (this_year - cur_y),
+             'Top %s releases' % (this_year - cur_y))
+            for cur_y in range(0, 10)]
+        kwargs.update(dict(footnote=footnote, use_networks=use_networks, year=top_year or '', rate_years=years))
+
+        if mode and self.allow_browse_mru(mode):
+            func = 'tvdb_%s' % mode
+            if callable(getattr(self, func, None)):
+                sickgear.TVDB_MRU = func
+                sickgear.save_config()
+        return self.browse_shows(browse_type, browse_title, filtered, **kwargs)
+
+    # noinspection PyUnusedLocal
+    def info_tvdb(self, ids, show_name):
+
+        if not list(filter(lambda tvid_prodid: helpers.find_show_by_id(tvid_prodid), ids.split(' '))):
+            return self.new_show('|'.join(['', '', '', ' '.join([ids, show_name])]), use_show_name=True)
+
     def tvm_default(self):
         method = getattr(self, sickgear.TVM_MRU, None)
         if not callable(method) or not self.allow_browse_mru(sickgear.TMDB_MRU):
@@ -6065,13 +6216,16 @@ class AddShows(Home):
             return result.replace('.....', '...')
         return 'No overview yet'
 
-    def tvm_get_showinfo(self, tvid_prodid=None, oldest_dt=9999999, newest_dt=0):
+    def tvi_get_showinfo(self, tvid_prodid=None, oldest_dt=9999999, newest_dt=0):
         result = {}
-        if 'tvmaze' in tvid_prodid:
+        if isinstance(tvid_prodid, str) and (tvid_prodid.startswith('tvmaze') or tvid_prodid.startswith('tvdb')):
             tvid = TVINFO_TVMAZE
+            if tvid_prodid.startswith('tvdb'):
+                tvid = TVINFO_TVDB
+
             tvinfo_config = sickgear.TVInfoAPI(tvid).api_params.copy()
             t = sickgear.TVInfoAPI(tvid).setup(**tvinfo_config)  # type: Union[TvmazeIndexer, TVInfoBase]
-            show_info = t.get_show(int(tvid_prodid.replace('tvmaze:','')), load_episodes=False)
+            show_info = t.get_show(int(re.sub('^[a-z]+?:', '', tvid_prodid)), load_episodes=False)
 
             oldest_dt, newest_dt = int(oldest_dt), int(newest_dt)
             ord_premiered, str_premiered, started_past, old_dt, new_dt, oldest, newest, \
@@ -6234,7 +6388,7 @@ class AddShows(Home):
 
     @staticmethod
     def sanitise_dates(date, oldest_dt, newest_dt, oldest, newest, episode_info=None, combine_ep_airtime=False):
-        # in case of person search (tvmaze) guest starring entires have only show name/id, no dates
+        # in case of person search (tvmaze) guest starring entries have only show name/id, no dates
         if None is date:
             return 9, '', True, oldest_dt, newest_dt, oldest, newest, True, 9, 'TBC', False
         parseinfo = dateutil.parser.parserinfo(dayfirst=False, yearfirst=True)
@@ -6283,7 +6437,7 @@ class AddShows(Home):
     def browse_mru(browse_type, **kwargs):
         save_config = False
         if browse_type in ('AniDB', 'IMDb', 'Metacritic', 'Trakt', 'TVCalendar',
-                           'TMDB', 'TVmaze', 'Nextepisode'):
+                           'TMDB', 'TVDb', 'TVmaze', 'Nextepisode'):
             save_config = True
             if browse_type in ('TVmaze',) and kwargs.get('showfilter') and kwargs.get('showsort'):
                 sickgear.BROWSELIST_MRU.setdefault(browse_type, dict()) \

@@ -78,27 +78,40 @@ class TVInfoAPI(object):
         if sickgear.CACHE_DIR:
             return self.api_params['cache']
 
+    @staticmethod
+    def _filter(condition):
+        return dict([(int(x['id']), x['name']) for x in list(tvinfo_config.values()) if condition(x)])
+
     @property
     def sources(self):
         # type: () -> Dict[int, AnyStr]
-        return dict([(int(x['id']), x['name']) for x in list(tvinfo_config.values()) if not x['mapped_only'] and
-                     True is not x.get('fallback') and True is not x.get('people_only')])
+        return self._filter(lambda x:
+                            not x['mapped_only'] and
+                            True is not x.get('fallback') and True is not x.get('people_only'))
 
     @property
     def search_sources(self):
         # type: () -> Dict[int, AnyStr]
-        return dict([(int(x['id']), x['name']) for x in list(tvinfo_config.values()) if not x['mapped_only'] and
-                     x.get('active') and not x.get('defunct') and True is not x.get('fallback')
-                     and True is not x.get('people_only')])
+        return self._filter(lambda x:
+                            not x['mapped_only'] and x.get('active') and not x.get('defunct') and
+                            True is not x.get('fallback') and True is not x.get('people_only'))
 
     @property
     def all_sources(self):
         # type: () -> Dict[int, AnyStr]
         """
-        :return: return all indexers including mapped only indexers excluding fallback indexers
+        :return: return all indexers for show data including mapped only indexers excluding fallback indexers
         """
-        return dict([(int(x['id']), x['name']) for x in list(tvinfo_config.values()) if True is not x.get('fallback')
-                     and True is not x.get('people_only')])
+        return self._filter(lambda x:
+                            True is not x.get('fallback') and True is not x.get('people_only'))
+
+    @property
+    def all_non_fallback_sources(self):
+        # type: (...) -> Dict[int, AnyStr]
+        """
+        return all sources with the exclusion of fallback indexer
+        """
+        return self._filter(lambda x: True is not x.get('fallback'))
 
     @property
     def fallback_sources(self):
@@ -106,9 +119,9 @@ class TVInfoAPI(object):
         """
         :return: return all fallback indexers
         """
-        return dict([(int(x['id']), x['name']) for x in list(tvinfo_config.values()) if True is x.get('fallback')])
+        return self._filter(lambda x: True is x.get('fallback'))
 
     @property
     def xem_supported_sources(self):
         # type: () -> Dict[int, AnyStr]
-        return dict([(int(x['id']), x['name']) for x in list(tvinfo_config.values()) if x.get('xem_origin')])
+        return self._filter(lambda x: x.get('xem_origin'))
