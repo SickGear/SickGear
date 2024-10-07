@@ -2477,14 +2477,14 @@ def _save_config(force=False, **kwargs):
     try:
         if check_valid_config(CONFIG_FILE):
             for _t in range(0, 3):
-        copy_file(CONFIG_FILE, backup_config)
-        if not check_valid_config(backup_config):
-            if 2 > _t:
-                logger.debug('backup config file seems to be invalid, retrying...')
-            else:
-                logger.warning('backup config file seems to be invalid, not backing up.')
-                backup_config = None
-            remove_file_perm(backup_config)
+                copy_file(CONFIG_FILE, backup_config)
+                if not check_valid_config(backup_config):
+                    if 2 > _t:
+                        logger.debug('backup config file seems to be invalid, retrying...')
+                    else:
+                        logger.warning('backup config file seems to be invalid, not backing up.')
+                        backup_config = None
+                    remove_file_perm(backup_config)
                     2 > _t and time.sleep(3)
                 else:
                     break
