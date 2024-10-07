@@ -1,4 +1,11 @@
-﻿### 3.32.8 (2024-10-07 00:30:00 UTC)
+﻿### 3.33.0 (2024-0x-xx xx:xx:00 UTC)
+
+* Update filelock 3.14.0 (8556141) to 3.15.4 (9a979df)
+* Update package resource API 68.2.2 (8ad627d) to 70.1.1 (222ebf9)
+* Update urllib3 2.2.1 (54d6edf) to 2.2.2 (27e2a5c)
+
+
+### 3.32.8 (2024-10-07 00:30:00 UTC)
 
 * Change min required Python version to 3.9
 * Change add support for Python 3.9.20, 3.10.15, 3.11.10, 3.12.7
