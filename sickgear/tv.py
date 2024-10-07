@@ -2787,9 +2787,9 @@ class TVShow(TVShowBase):
         """
         cast_list = self.cast_list
         existing_cast = set(hash(*([', '.join(p.name for p in c.person or [] if p.name)]))
-                            for c in cast_list or [] if c.name)
+                            for c in cast_list or [])
         new_cast = set(hash(*([', '.join(p.name for p in c.person or [] if p.name)]))
-                       for c_t, c_l in iteritems(show_info_cast or {}) for c in c_l or [] if c.name
+                       for c_t, c_l in iteritems(show_info_cast or {}) for c in c_l or []
                        and c_t in (RoleTypes.ActorMain, RoleTypes.Host, RoleTypes.Interviewer, RoleTypes.Presenter))
         now = datetime.date.today().toordinal()
         max_age = random.randint(30, 60)
