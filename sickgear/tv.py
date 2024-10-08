@@ -913,8 +913,8 @@ class Person(Referential):
                     cl.extend([
                         ['UPDATE person_ids SET src_id = ? WHERE person_id = ? AND src = ?',
                          [cur_ids, self.id, cur_src]],
-                        ["INSERT INTO person_ids (src, src_id, person_id) SELECT %s, '%s', %s WHERE changes() == 0"
-                         % (cur_src, cur_ids, self.id)]
+                        ["INSERT INTO person_ids (src, src_id, person_id) SELECT ?, ?, ? WHERE changes() == 0",
+                         [cur_src, cur_ids, self.id]]
                     ])
         if cl:
             r_id = my_db.mass_action(cl)
@@ -1256,8 +1256,8 @@ class Character(Referential):
                     ], [
                         """
                         INSERT INTO character_ids (src, src_id, character_id)
-                        SELECT %s, %s, %s WHERE changes() == 0
-                        """ % (cur_tvid, cur_src_id, self.id)]
+                        SELECT ?, ?, ? WHERE changes() == 0
+                        """, [cur_tvid, cur_src_id, self.id]]
                     ])
 
         # in case we don't have a character id yet, we need to fetch it for the next step
@@ -1990,8 +1990,8 @@ class TVShow(TVShowBase):
                 ], [
                     """
                     INSERT INTO castlist (indexer, indexer_id, character_id, sort_order, updated)
-                    SELECT %s, %s, %s, %s, %s WHERE changes() == 0;
-                    """ % (self.tvid, self.prodid, cur_cast.id, cur_enum, update_date)]
+                    SELECT ?, ?, ?, ?, ? WHERE changes() == 0;
+                    """, [self.tvid, self.prodid, cur_cast.id, cur_enum, update_date]]
                 ])
             if removed_char_ids:
                 # remove orphaned entries
