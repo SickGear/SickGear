@@ -17,7 +17,7 @@ from lib.tvinfo_base import CastList, PersonGenders, RoleTypes, \
     TVInfoBase, TVInfoIDs, TVInfoImage, TVInfoImageSize, TVInfoImageType, TVInfoNetwork, TVInfoSocialIDs, \
     TVInfoCharacter, TVInfoPerson, TVInfoShow, TVInfoEpisode, TVInfoSeason, \
     TVINFO_IMDB, TVINFO_TMDB, TVINFO_TVDB, \
-    TVINFO_FACEBOOK, TVINFO_INSTAGRAM, TVINFO_TWITTER
+    TVINFO_FACEBOOK, TVINFO_INSTAGRAM, TVINFO_X
 from json_helper import json_dumps
 from sg_helpers import clean_data, enforce_type, get_url, iterate_chunk, try_int
 
@@ -34,7 +34,7 @@ tz_p = parser()
 tmdbsimple.API_KEY = 'edc5f123313769de83a71e157758030b'
 
 id_map = {TVINFO_IMDB: 'imdb_id', TVINFO_TVDB: 'tvdb_id',
-          TVINFO_FACEBOOK: 'facebook_id', TVINFO_INSTAGRAM: 'instagram_id', TVINFO_TWITTER: 'twitter_id'}
+          TVINFO_FACEBOOK: 'facebook_id', TVINFO_INSTAGRAM: 'instagram_id', TVINFO_X: 'twitter_id'}
 
 tv_show_map = dict(
     name='seriesname', id='id', first_air_date='firstaired', status='status', original_language='language')
@@ -165,7 +165,7 @@ def get_tmdb_constants():
 
 class TmdbIndexer(TVInfoBase):
     API_KEY = tmdbsimple.API_KEY
-    supported_person_id_searches = [TVINFO_FACEBOOK, TVINFO_IMDB, TVINFO_INSTAGRAM, TVINFO_TMDB, TVINFO_TWITTER]
+    supported_person_id_searches = [TVINFO_FACEBOOK, TVINFO_IMDB, TVINFO_INSTAGRAM, TVINFO_TMDB, TVINFO_X]
     supported_id_searches = [TVINFO_IMDB, TVINFO_TMDB, TVINFO_TVDB]
     map_languages = {}
     reverse_map_languages = {v: k for k, v in iteritems(map_languages)}

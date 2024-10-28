@@ -60,7 +60,7 @@ try:
     from lib.thefuzz import fuzz
 except ImportError as e:
     from lib.fuzzywuzzy import fuzz
-from lib.tvinfo_base import RoleTypes, TVINFO_FACEBOOK, TVINFO_INSTAGRAM, TVINFO_SLUG, TVINFO_TWITTER, \
+from lib.tvinfo_base import RoleTypes, TVINFO_FACEBOOK, TVINFO_INSTAGRAM, TVINFO_SLUG, TVINFO_X, \
     TVINFO_WIKIPEDIA, TVINFO_TIKTOK, TVINFO_FANSITE, TVINFO_YOUTUBE, TVINFO_REDDIT, TVINFO_LINKEDIN, TVINFO_WIKIDATA
 from lib.tvinfo_base.exceptions import *
 from sg_helpers import calc_age, int_to_time, remove_file_perm, time_to_int
@@ -629,7 +629,7 @@ class Person(Referential):
                     k, v = cur_ids.split(':', 1)
                     k = try_int(k, None)
                     if v and None is not k:
-                        p_ids[k] = v if k in (TVINFO_FACEBOOK, TVINFO_INSTAGRAM, TVINFO_TWITTER, TVINFO_WIKIPEDIA,
+                        p_ids[k] = v if k in (TVINFO_FACEBOOK, TVINFO_INSTAGRAM, TVINFO_X, TVINFO_WIKIPEDIA,
                                               TVINFO_TIKTOK, TVINFO_FANSITE, TVINFO_YOUTUBE, TVINFO_REDDIT,
                                               TVINFO_LINKEDIN, TVINFO_WIKIDATA) \
                             else try_int(v, None)
@@ -816,7 +816,7 @@ class Person(Referential):
                                 found_ids.add(cur_i)
                                 self.dirty_ids = True
 
-                        for cur_i in (TVINFO_INSTAGRAM, TVINFO_TWITTER, TVINFO_FACEBOOK, TVINFO_WIKIPEDIA,
+                        for cur_i in (TVINFO_INSTAGRAM, TVINFO_X, TVINFO_FACEBOOK, TVINFO_WIKIPEDIA,
                                       TVINFO_TIKTOK, TVINFO_FANSITE, TVINFO_YOUTUBE, TVINFO_REDDIT, TVINFO_LINKEDIN,
                                       TVINFO_WIKIDATA):
                             if not rp.social_ids.get(cur_i):
@@ -1866,7 +1866,7 @@ class TVShow(TVShowBase):
                 k, v = cur_i.split(':', 1)
                 k = try_int(k, None)
                 if v:
-                    if k in (TVINFO_INSTAGRAM, TVINFO_TWITTER, TVINFO_FACEBOOK, TVINFO_WIKIPEDIA, TVINFO_TIKTOK,
+                    if k in (TVINFO_INSTAGRAM, TVINFO_X, TVINFO_FACEBOOK, TVINFO_WIKIPEDIA, TVINFO_TIKTOK,
                              TVINFO_FANSITE, TVINFO_YOUTUBE, TVINFO_REDDIT, TVINFO_LINKEDIN, TVINFO_WIKIDATA):
                         p_ids[k] = v
                     else:
