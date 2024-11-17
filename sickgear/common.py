@@ -344,6 +344,8 @@ class Quality(object):
                 return Quality.UHD4KBLURAY
             if name_has([webfmt]):
                 return Quality.UHD4KWEB
+            # for some non scene releases that have no source in name
+            return Quality.UHD4KWEB
 
         return Quality.UNKNOWN
 
