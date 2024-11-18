@@ -366,7 +366,7 @@ class Quality(object):
             from hachoir.metadata import extractMetadata
             from hachoir.stream import InputStreamError
 
-            parser = height = None
+            parser = height = width = None
             msg = 'Hachoir can\'t parse file "%s" content quality because it found error: %s'
             try:
                 parser = createParser(filename)
@@ -389,11 +389,13 @@ class Quality(object):
                 if extract:
                     try:
                         height = extract.get('height')
+                        width = extract.get('width')
                     except (AttributeError, ValueError):
                         try:
                             for metadata in extract.iterGroups():
                                 if re.search('(?i)video', metadata.header):
                                     height = metadata.get('height')
+                                    width = metadata.get('width')
                                     break
                         except (AttributeError, ValueError):
                             pass
@@ -403,11 +405,12 @@ class Quality(object):
 
                     tolerance = (lambda value, percent: int(round(value - (value * percent / 100.0))))
                     if None is not height and height >= tolerance(352, 5):
-                        if height <= tolerance(720, 2):
+                        if height <= tolerance(720, 2) and (None is width or width < tolerance(1280, 2)):
                             return Quality.SDTV
-                        if 1100 < height:
+                        if 1100 < height or (None is not width and 2000 < width):
                             return Quality.UHD4KWEB
-                        return (Quality.HDTV, Quality.FULLHDTV)[height >= tolerance(1080, 1)]
+                        return (Quality.HDTV, Quality.FULLHDTV)[
+                            height >= tolerance(1080, 1) or (None is not width and width >= tolerance(1920, 4))]
         return Quality.UNKNOWN
 
     @staticmethod
