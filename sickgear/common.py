@@ -405,6 +405,8 @@ class Quality(object):
                     if None is not height and height >= tolerance(352, 5):
                         if height <= tolerance(720, 2):
                             return Quality.SDTV
+                        if 1100 < height:
+                            return Quality.UHD4KWEB
                         return (Quality.HDTV, Quality.FULLHDTV)[height >= tolerance(1080, 1)]
         return Quality.UNKNOWN
 
