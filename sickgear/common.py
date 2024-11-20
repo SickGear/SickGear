@@ -364,6 +364,7 @@ class Quality(object):
 
             from hachoir.parser import createParser
             from hachoir.metadata import extractMetadata
+            from hachoir.metadata.metadata_item import QUALITY_BEST
             from hachoir.stream import InputStreamError
 
             parser = height = width = None
@@ -383,7 +384,7 @@ class Quality(object):
                     parser.parse_exif = False
                     parser.parse_photoshop_content = False
                     parser.parse_comments = False
-                    extract = extractMetadata(parser, **args)
+                    extract = extractMetadata(parser, quality=QUALITY_BEST, **args)
                 except (BaseException, Exception) as e:
                     logger.warning(msg % (filename, ex(e)))
                 if extract:
