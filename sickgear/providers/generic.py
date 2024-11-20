@@ -41,8 +41,8 @@ from ..sgdatetime import SGDatetime
 from ..tv import TVEpisode, TVShow
 
 from cfscrape import CloudflareScraper
-from hachoir.parser import guessParser
-from hachoir.stream import FileInputStream
+from lib.hachoir.parser import guessParser
+from lib.hachoir.stream import FileInputStream
 from lxml_etree import etree
 import requests
 import requests.cookies

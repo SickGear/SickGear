@@ -362,10 +362,10 @@ class Quality(object):
         from sickgear import logger
         if os.path.isfile(filename):
 
-            from hachoir.parser import createParser
-            from hachoir.metadata import extractMetadata
-            from hachoir.metadata.metadata_item import QUALITY_BEST
-            from hachoir.stream import InputStreamError
+            from lib.hachoir.parser import createParser
+            from lib.hachoir.metadata import extractMetadata
+            from lib.hachoir.metadata.metadata_item import QUALITY_BEST
+            from lib.hachoir.stream import InputStreamError
 
             parser = height = width = None
             msg = 'Hachoir can\'t parse file "%s" content quality because it found error: %s'
