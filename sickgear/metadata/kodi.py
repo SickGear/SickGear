@@ -21,6 +21,7 @@ from . import generic
 from .. import logger
 import sg_helpers
 from ..indexers.indexer_config import TVINFO_IMDB, TVINFO_TVDB
+from lib.tvinfo_base import RoleTypes
 from lib.tvinfo_base.exceptions import *
 import sickgear
 import exceptions_helper
@@ -33,6 +34,7 @@ from six import string_types
 # noinspection PyUnreachableCode
 if False:
     from typing import AnyStr, Dict, Optional, Union
+    from lib.tvinfo_base import PersonBase
 
 
 class KODIMetadata(generic.GenericMetadata):
@@ -378,15 +380,25 @@ class KODIMetadata(generic.GenericMetadata):
             watched = etree.SubElement(ep_node, 'watched')
             watched.text = 'false'
 
-            credits = etree.SubElement(ep_node, 'credits')
-            credits_text = getattr(ep_info, 'writer', None)
-            if None is not credits_text:
-                credits.text = '%s' % credits_text
+            crew = getattr(ep_info, 'crew', None)
+            if None is not crew:
+                for role_type, sub_el_name in [(RoleTypes.CrewWriter, 'credits'), (RoleTypes.CrewDirector, 'director')]:
+                    for credit in (crew[role_type] or []):  # type: PersonBase
+                        if credit.name:
+                            sub_el = etree.SubElement(ep_node, sub_el_name)
+                            sub_el.text = '%s' % credit.name
 
-            director = etree.SubElement(ep_node, 'director')
-            director_text = getattr(ep_info, 'director', None)
-            if None is not director_text:
-                director.text = '%s' % director_text
+            # credits_text = getattr(ep_info, 'writer', None)
+            # if None is not credits_text and (
+            #         credits_list := [_c.strip() for _c in credits_text.split('|') if _c.strip()]):
+            #     for credit in credits_list:
+            #         credits = etree.SubElement(ep_node, 'credits')
+            #         credits.text = '%s' % credit
+
+            # director = etree.SubElement(ep_node, 'director')
+            # director_text = getattr(ep_info, 'director', None)
+            # if None is not director_text:
+            #     director.text = '%s' % director_text
 
             ratings = etree.SubElement(ep_node, 'ratings')
             if None is not getattr(ep_info, 'rating', None):
