@@ -8,6 +8,7 @@
 * Add menu Shows/"TVDb Cards"
 * Add a persons available socials (Youtube, LinkedIn, Reddit, Fansite, TikTok, Wikidata)
 * Change increase viewable history menu items from 13 to 15
+* Change add parsing of 2160p releases that don't have a source tag
 
 
 ### 3.32.8 (2024-10-07 00:30:00 UTC)

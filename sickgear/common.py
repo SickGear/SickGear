@@ -344,6 +344,8 @@ class Quality(object):
                 return Quality.UHD4KBLURAY
             if name_has([webfmt]):
                 return Quality.UHD4KWEB
+            # for some non scene releases that have no source in name
+            return Quality.UHD4KWEB
 
         return Quality.UNKNOWN
 
@@ -360,11 +362,12 @@ class Quality(object):
         from sickgear import logger
         if os.path.isfile(filename):
 
-            from hachoir.parser import createParser
-            from hachoir.metadata import extractMetadata
-            from hachoir.stream import InputStreamError
+            from lib.hachoir.parser import createParser
+            from lib.hachoir.metadata import extractMetadata
+            from lib.hachoir.metadata.metadata_item import QUALITY_BEST
+            from lib.hachoir.stream import InputStreamError
 
-            parser = height = None
+            parser = height = width = None
             msg = 'Hachoir can\'t parse file "%s" content quality because it found error: %s'
             try:
                 parser = createParser(filename)
@@ -381,17 +384,19 @@ class Quality(object):
                     parser.parse_exif = False
                     parser.parse_photoshop_content = False
                     parser.parse_comments = False
-                    extract = extractMetadata(parser, **args)
+                    extract = extractMetadata(parser, quality=QUALITY_BEST, **args)
                 except (BaseException, Exception) as e:
                     logger.warning(msg % (filename, ex(e)))
                 if extract:
                     try:
                         height = extract.get('height')
+                        width = extract.get('width')
                     except (AttributeError, ValueError):
                         try:
                             for metadata in extract.iterGroups():
                                 if re.search('(?i)video', metadata.header):
                                     height = metadata.get('height')
+                                    width = metadata.get('width')
                                     break
                         except (AttributeError, ValueError):
                             pass
@@ -401,9 +406,12 @@ class Quality(object):
 
                     tolerance = (lambda value, percent: int(round(value - (value * percent / 100.0))))
                     if None is not height and height >= tolerance(352, 5):
-                        if height <= tolerance(720, 2):
+                        if height <= tolerance(720, 2) and (None is width or width < tolerance(1280, 2)):
                             return Quality.SDTV
-                        return (Quality.HDTV, Quality.FULLHDTV)[height >= tolerance(1080, 1)]
+                        if 1100 < height or (None is not width and 2000 < width):
+                            return Quality.UHD4KWEB
+                        return (Quality.HDTV, Quality.FULLHDTV)[
+                            height >= tolerance(1080, 1) or (None is not width and width >= tolerance(1920, 4))]
         return Quality.UNKNOWN
 
     @staticmethod

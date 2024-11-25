@@ -40,6 +40,7 @@ if False:
 
 from lib.hachoir.parser import createParser, guessParser
 from lib.hachoir.metadata import extractMetadata
+from lib.hachoir.metadata.metadata_item import QUALITY_BEST
 from lib.hachoir.stream import StringInputStream
 
 cache_img_base = {'tvmaze': TVINFO_TVMAZE, 'themoviedb': TVINFO_TMDB, 'thetvdb': TVINFO_TVDB, 'imdb': TVINFO_IMDB}
@@ -379,7 +380,7 @@ class ImageCache(object):
             img_parser.parse_comments = False
             img_parser.parse_exif = False
             img_parser.parse_photoshop_content = False
-            img_metadata = extractMetadata(img_parser)
+            img_metadata = extractMetadata(img_parser, quality=QUALITY_BEST)
         except (BaseException, Exception) as e:
             logger.debug(f'Unable to extract metadata from {image}, not using file. Error: {ex(e)}')
             return

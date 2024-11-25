@@ -126,7 +126,8 @@ quality_tests = {
             'Test.Show.S01E02.2160p.WEBRip.h264-GROUP',
             'Test.Show.S01E02.2160p.WEBRip.x264-GROUP',
             'Test.Show.S01E02.2160p.WEBRip.x265-GROUP',
-            'Test.Show.S01E02.2160p.WEBRip.vp9-GROUP'],
+            'Test.Show.S01E02.2160p.WEBRip.vp9-GROUP',
+            'Test.Show.S02E01.The.Name.2160p.DV.HDR.Opus.AV1'],
     common.Quality.UHD4KBLURAY: [
             'Test.Show.S01E02.2160p.BluRay.h264-GROUP',
             'Test.Show.S01E02.2160p.BluRay.x264-GROUP',
@@ -3110,6 +3111,7 @@ class QualityTests(unittest.TestCase):
             (('The.Show.S03E05.1080p.NF.WEB-DL.DD5.1.HDR.HEVC-Group', False), common.Quality.FULLHDWEBDL),
             (('The.Show.S01E10.Name.2160p.UHD.BluRay.REMUX.HDR.HEVC.DTS-HD.MA.5.1', False), common.Quality.UHD4KBLURAY),
             (('Show.S01E07.2160p.4K.UHD.10bit.NF.WEBRip.5.1.x265.HEVC-Group', False), common.Quality.UHD4KWEB),
+            (('Test.Show.S02E01.The.Name.2160p.DV.HDR.Opus.AV1', False), common.Quality.UHD4KWEB),
         ])
         for q, l in iteritems(quality_tests):
             self.check_sceneQuality([((v, False), q) for v in l])
