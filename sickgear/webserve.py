@@ -84,6 +84,10 @@ from tornado.escape import utf8
 from tornado.web import RequestHandler, StaticFileHandler, authenticated
 from tornado.concurrent import run_on_executor
 
+from lib import requests
+from lib.urllib3.util.retry import Retry
+from lib.requests.adapters import HTTPAdapter
+
 from lib import subliminal
 from lib.cfscrape import CloudflareScraper
 from lib.dateutil import tz, zoneinfo
@@ -10186,6 +10190,13 @@ class Cache(MainHandler):
 
 
 class CachedImages(MainHandler):
+    download_session = CloudflareScraper.create_scraper()
+    retries = Retry(total=5,
+                    backoff_factor=3,
+                    status_forcelist=[429])
+    download_session.mount('http://', HTTPAdapter(max_retries=retries))
+    download_session.mount('https://', HTTPAdapter(max_retries=retries))
+
     def set_default_headers(self):
         super(CachedImages, self).set_default_headers()
         self.set_header('Cache-Control', 'no-cache, max-age=0')
@@ -10260,7 +10271,8 @@ class CachedImages(MainHandler):
                 except (BaseException, Exception):
                     poster_url = ''
             if poster_url:
-                sg_helpers.download_file(poster_url, image_file, nocache=True)
+                # try to rate limit tvmaze to some degree
+                sg_helpers.download_file(poster_url, image_file, nocache=True, session=CachedImages.download_session)
             if tvmaze_image and not os.path.isfile(image_file):
                 self.create_dummy_image(image_file, 'tvmaze')
 
