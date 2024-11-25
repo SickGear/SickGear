@@ -41,6 +41,7 @@ if False:
 
 db_lock = threading.Lock()
 db_support_multiple_insert = (3, 7, 11) <= sqlite3.sqlite_version_info  # type: bool
+db_support_partial_index = (3, 8, 0) <= sqlite3.sqlite_version_info  # type: bool
 db_support_column_rename = (3, 25, 0) <= sqlite3.sqlite_version_info  # type: bool
 db_support_upsert = (3, 25, 0) <= sqlite3.sqlite_version_info  # type: bool
 db_supports_backup = hasattr(sqlite3.Connection, 'backup') and (3, 6, 11) <= sqlite3.sqlite_version_info  # type: bool
