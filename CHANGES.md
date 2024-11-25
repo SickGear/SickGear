@@ -2,6 +2,7 @@
 
 * Update filelock 3.14.0 (8556141) to 3.15.4 (9a979df)
 * Update package resource API 68.2.2 (8ad627d) to 70.1.1 (222ebf9)
+* Update Tornado Web Server 6.4.1 (2a0e1d1) to 6.4.2 (27b3252)
 * Update urllib3 2.2.1 (54d6edf) to 2.2.2 (27e2a5c)
 * Change add TheTVDb v4 support
 * Add menu Shows/"TVDb Cards"
