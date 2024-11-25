@@ -28,7 +28,7 @@ from lib.tvinfo_base import (
     TVInfoPerson, TVInfoSeason, TVInfoSeasonTypes, TVInfoShow, TVInfoSocialIDs,
     TVINFO_FACEBOOK, TVINFO_FANSITE, TVINFO_IMDB, TVINFO_INSTAGRAM, TVINFO_LINKEDIN, TVINFO_OFFICIALSITE, TVINFO_REDDIT,
     TVINFO_MID_SEASON_FINALE, TVINFO_SEASON_FINALE, TVINFO_SERIES_FINALE, TVINFO_TIKTOK, TVINFO_TMDB, TVINFO_TVDB,
-    TVINFO_TVDB_SLUG, TVINFO_TVMAZE, TVINFO_TWITTER, TVINFO_WIKIDATA, TVINFO_WIKIPEDIA, TVINFO_YOUTUBE)
+    TVINFO_TVDB_SLUG, TVINFO_TVMAZE, TVINFO_X, TVINFO_WIKIDATA, TVINFO_WIKIPEDIA, TVINFO_YOUTUBE)
 from sg_helpers import clean_data, clean_str, enforce_type, get_url, try_date, try_int
 
 from six import integer_types, iteritems, PY3, string_types
@@ -194,7 +194,7 @@ source_types = {
     # 3: TVINFO_ZAP2IT,
     4: TVINFO_OFFICIALSITE,
     5: TVINFO_FACEBOOK,
-    6: TVINFO_TWITTER,
+    6: TVINFO_X,
     7: TVINFO_REDDIT,
     8: TVINFO_FANSITE,
     9: TVINFO_INSTAGRAM,
@@ -357,8 +357,8 @@ class TvdbAPIv4(TVInfoBase):
                     official_site = src_value
                 elif TVINFO_FACEBOOK == src_type or 'facebook' in src_name:
                     social_ids[TVINFO_FACEBOOK] = src_value
-                elif TVINFO_TWITTER == src_type or 'twitter' in src_name:
-                    social_ids[TVINFO_TWITTER] = src_value
+                elif TVINFO_X == src_type or 'twitter' in src_name:
+                    social_ids[TVINFO_X] = src_value
                 elif TVINFO_INSTAGRAM == src_type or 'instagram' in src_name:
                     social_ids[TVINFO_INSTAGRAM] = src_value
                 elif TVINFO_REDDIT == src_type or 'reddit' in src_name:
@@ -651,7 +651,7 @@ class TvdbAPIv4(TVInfoBase):
                         ti_show.official_site = src_value
                     elif TVINFO_FACEBOOK == src_type or 'facebook' in src_name:
                         social_ids['facebook'] = src_value
-                    elif TVINFO_TWITTER == src_type or 'twitter' in src_name:
+                    elif TVINFO_X == src_type or 'twitter' in src_name:
                         social_ids['twitter'] = src_value
                     elif TVINFO_INSTAGRAM == src_type or 'instagram' in src_name:
                         social_ids['instagram'] = src_value

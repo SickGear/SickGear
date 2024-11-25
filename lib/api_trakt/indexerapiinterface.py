@@ -7,7 +7,7 @@ from six import iteritems
 from .trakt import TraktAPI
 from lib.tvinfo_base.exceptions import BaseTVinfoShownotfound
 from lib.tvinfo_base import PersonGenders, TVInfoBase, TVINFO_TRAKT, TVINFO_TMDB, TVINFO_TVDB, TVINFO_TVRAGE, TVINFO_IMDB, \
-    TVINFO_SLUG, TVInfoPerson, TVINFO_TWITTER, TVINFO_FACEBOOK, TVINFO_WIKIPEDIA, TVINFO_INSTAGRAM, TVInfoCharacter, \
+    TVINFO_SLUG, TVInfoPerson, TVINFO_X, TVINFO_FACEBOOK, TVINFO_WIKIPEDIA, TVINFO_INSTAGRAM, TVInfoCharacter, \
     TVInfoShow, TVInfoIDs, TVInfoSocialIDs, TVINFO_TRAKT_SLUG, TVInfoEpisode, TVInfoSeason, RoleTypes
 from sg_helpers import clean_data, enforce_type, try_int
 from lib.dateutil.parser import parser
@@ -264,7 +264,7 @@ class TraktIndexer(TVInfoBase):
                             birthplace=person_obj['birthplace'],
                             gender=PersonGenders.trakt_map.get(person_obj['gender'], PersonGenders.unknown),
                             social_ids=TVInfoSocialIDs(
-                                ids={TVINFO_TWITTER: person_obj['social_ids']['twitter'],
+                                ids={TVINFO_X: person_obj['social_ids']['twitter'],
                                      TVINFO_FACEBOOK: person_obj['social_ids']['facebook'],
                                      TVINFO_INSTAGRAM: person_obj['social_ids']['instagram'],
                                      TVINFO_WIKIPEDIA: person_obj['social_ids']['wikipedia']

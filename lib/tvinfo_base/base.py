@@ -42,7 +42,7 @@ TVINFO_TRAKT_SLUG = 1101
 TVINFO_SLUG = 100000
 
 # social media sources
-TVINFO_TWITTER = 250000
+TVINFO_X = 250000
 TVINFO_FACEBOOK = 250001
 TVINFO_INSTAGRAM = 250002
 TVINFO_WIKIPEDIA = 250003
@@ -68,7 +68,7 @@ tv_src_names = {
 
     TVINFO_SLUG: 'generic slug',
 
-    TVINFO_TWITTER: 'twitter',
+    TVINFO_X: 'twitter',
     TVINFO_FACEBOOK: 'facebook',
     TVINFO_INSTAGRAM: 'instagram',
     TVINFO_WIKIPEDIA: 'wikipedia',
@@ -219,7 +219,7 @@ class TVInfoSocialIDs(object):
             fansite=None  # type: AnyStr
     ):
         ids = ids or {}
-        self.twitter = twitter or ids.get(TVINFO_TWITTER)
+        self.twitter = twitter or ids.get(TVINFO_X)
         self.instagram = instagram or ids.get(TVINFO_INSTAGRAM)
         self.facebook = facebook or ids.get(TVINFO_FACEBOOK)
         self.wikipedia = wikipedia or ids.get(TVINFO_WIKIPEDIA)
@@ -231,14 +231,14 @@ class TVInfoSocialIDs(object):
         self.fansite = fansite or ids.get(TVINFO_FANSITE)
 
     def __getitem__(self, key):
-        return {TVINFO_TWITTER: self.twitter, TVINFO_INSTAGRAM: self.instagram, TVINFO_FACEBOOK: self.facebook,
+        return {TVINFO_X: self.twitter, TVINFO_INSTAGRAM: self.instagram, TVINFO_FACEBOOK: self.facebook,
                 TVINFO_WIKIDATA: self.wikidata, TVINFO_WIKIPEDIA: self.wikipedia, TVINFO_REDDIT: self.reddit,
                 TVINFO_TIKTOK: self.tiktok, TVINFO_LINKEDIN: self.linkedin, TVINFO_FANSITE: self.fansite,
                 TVINFO_YOUTUBE: self.youtube}.get(key)
 
     def __setitem__(self, key, value):
         self.__dict__[{
-            TVINFO_TWITTER: 'twitter', TVINFO_INSTAGRAM: 'instagram', TVINFO_FACEBOOK: 'facebook',
+            TVINFO_X: 'twitter', TVINFO_INSTAGRAM: 'instagram', TVINFO_FACEBOOK: 'facebook',
             TVINFO_WIKIPEDIA: 'wikipedia', TVINFO_REDDIT: 'reddit', TVINFO_YOUTUBE: 'youtube',
             TVINFO_WIKIDATA: 'wikidata', TVINFO_TIKTOK: 'tiktok', TVINFO_LINKEDIN: 'linkedin', TVINFO_FANSITE: 'fansite'
         }[key]] = value
@@ -251,7 +251,7 @@ class TVInfoSocialIDs(object):
             yield k
 
     def __iter__(self):
-        for s, v in iter(((TVINFO_TWITTER, self.twitter), (TVINFO_INSTAGRAM, self.instagram),
+        for s, v in iter(((TVINFO_X, self.twitter), (TVINFO_INSTAGRAM, self.instagram),
                           (TVINFO_FACEBOOK, self.facebook), (TVINFO_TIKTOK, self.tiktok),
                           (TVINFO_WIKIPEDIA, self.wikipedia), (TVINFO_WIKIDATA, self.wikidata),
                           (TVINFO_REDDIT, self.reddit), (TVINFO_YOUTUBE, self.youtube),
