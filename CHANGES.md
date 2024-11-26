@@ -1,8 +1,16 @@
-﻿### 3.33.0 (2024-0x-xx xx:xx:00 UTC)
+﻿### 3.32.11 (2024-11-26 20:15:00 UTC)
 
-* Update filelock 3.14.0 (8556141) to 3.15.4 (9a979df)
-* Update package resource API 68.2.2 (8ad627d) to 70.1.1 (222ebf9)
-* Update urllib3 2.2.1 (54d6edf) to 2.2.2 (27e2a5c)
+* Fix nzbSplitter needs to use binary data for xml parser
+
+
+### 3.32.10 (2024-10-07 01:10:00 UTC)
+
+* Fix IndentationError, pt2/2
+
+
+### 3.32.9 (2024-10-07 01:00:00 UTC)
+
+* Fix IndentationError, pt1/2
 
 
 ### 3.32.8 (2024-10-07 00:30:00 UTC)
