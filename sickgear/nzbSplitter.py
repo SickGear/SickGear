@@ -174,7 +174,7 @@ def split_result(result):
     :return: list of search results
     :rtype: List[sickgear.classes.SearchResult]
     """
-    resp = helpers.get_url(result.url, failure_monitor=False)
+    resp = helpers.get_url(result.url, failure_monitor=False, as_binary=True)
     if None is resp:
         logger.error(f'Unable to load url {result.url}, can\'t download season NZB')
         return False

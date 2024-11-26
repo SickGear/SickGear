@@ -14,6 +14,21 @@
 * Fix credits in Kodi episode nfo writer
 
 
+### 3.32.11 (2024-11-26 20:15:00 UTC)
+
+* Fix nzbSplitter needs to use binary data for xml parser
+
+
+### 3.32.10 (2024-10-07 01:10:00 UTC)
+
+* Fix IndentationError, pt2/2
+
+
+### 3.32.9 (2024-10-07 01:00:00 UTC)
+
+* Fix IndentationError, pt1/2
+
+
 ### 3.32.8 (2024-10-07 00:30:00 UTC)
 
 * Change min required Python version to 3.9
