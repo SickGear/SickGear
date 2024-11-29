@@ -972,19 +972,20 @@ def search_providers(
                     # if not, break it apart and add them as the lowest priority results
                     individual_results = nzbSplitter.split_result(best_season_result)
 
-                    for cur_result in filter(
-                        lambda r: r.show_obj == show_obj and show_name_helpers.pass_wordlist_checks(
-                            r.name, parse=False, indexer_lookup=False, show_obj=r.show_obj), individual_results):
-                        ep_num = None
-                        if 1 == len(cur_result.ep_obj_list):
-                            ep_num = cur_result.ep_obj_list[0].episode
-                        elif 1 < len(cur_result.ep_obj_list):
-                            ep_num = MULTI_EP_RESULT
+                    if isinstance(individual_results, list):
+                        for cur_result in filter(
+                            lambda r: r.show_obj == show_obj and show_name_helpers.pass_wordlist_checks(
+                                r.name, parse=False, indexer_lookup=False, show_obj=r.show_obj), individual_results):
+                            ep_num = None
+                            if 1 == len(cur_result.ep_obj_list):
+                                ep_num = cur_result.ep_obj_list[0].episode
+                            elif 1 < len(cur_result.ep_obj_list):
+                                ep_num = MULTI_EP_RESULT
 
-                        if ep_num in found_results[provider_id]:
-                            found_results[provider_id][ep_num].append(cur_result)
-                        else:
-                            found_results[provider_id][ep_num] = [cur_result]
+                            if ep_num in found_results[provider_id]:
+                                found_results[provider_id][ep_num].append(cur_result)
+                            else:
+                                found_results[provider_id][ep_num] = [cur_result]
 
                 # If this is a torrent all we can do is leech the entire torrent,
                 # user will have to select which eps not do download in his torrent client

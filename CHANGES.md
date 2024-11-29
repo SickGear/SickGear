@@ -1,4 +1,9 @@
-﻿### 3.32.11 (2024-11-26 20:15:00 UTC)
+﻿### 3.32.12 (2024-11-29 19:20:00 UTC)
+
+* Fix split_result to return a list in the case of an internal exception
+
+
+### 3.32.11 (2024-11-26 20:15:00 UTC)
 
 * Fix nzbSplitter needs to use binary data for xml parser
 
