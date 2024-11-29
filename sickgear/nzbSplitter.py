@@ -167,17 +167,15 @@ def _strip_ns(element, ns):
 
 
 def split_result(result):
+    # type: (sickgear.classes.SearchResult) -> List[sickgear.classes.SearchResult]
     """
 
     :param result: search result
-    :type result: sickgear.classes.SearchResult
-    :return: list of search results
-    :rtype: List[sickgear.classes.SearchResult]
     """
     resp = helpers.get_url(result.url, failure_monitor=False, as_binary=True)
     if None is resp:
         logger.error(f'Unable to load url {result.url}, can\'t download season NZB')
-        return False
+        return []
 
     # parse the season ep name
     try:
@@ -185,10 +183,10 @@ def split_result(result):
         parse_result = np.parse(result.name)
     except InvalidNameException:
         logger.debug(f'Unable to parse the filename {result.name} into a valid episode')
-        return False
+        return []
     except InvalidShowException:
         logger.debug(f'Unable to parse the filename {result.name} into a valid show')
-        return False
+        return []
 
     # bust it up
     season = parse_result.season_number if None is not parse_result.season_number else 1
@@ -207,10 +205,10 @@ def split_result(result):
             parse_result = np.parse(new_nzb)
         except InvalidNameException:
             logger.debug(f'Unable to parse the filename {new_nzb} into a valid episode')
-            return False
+            return []
         except InvalidShowException:
             logger.debug(f'Unable to parse the filename {new_nzb} into a valid show')
-            return False
+            return []
 
         # make sure the result is sane
         if (None is not parse_result.season_number and season != parse_result.season_number) \
