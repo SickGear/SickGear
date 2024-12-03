@@ -1,6 +1,7 @@
 ﻿### 3.32.13 (2024-12-11 02:15:00 UTC)
 
 * Fix ignore empty SEASON_RESULT entries
+* Change add support for Python 3.9.21, 3.10.16, 3.11.11, 3.12.8
 
 
 ### 3.32.12 (2024-11-29 19:20:00 UTC)
