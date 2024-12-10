@@ -913,7 +913,7 @@ def search_providers(
 
         # pick the best season NZB
         best_season_result = None
-        if SEASON_RESULT in found_results[provider_id]:
+        if SEASON_RESULT in found_results[provider_id] and found_results[provider_id][SEASON_RESULT]:
             best_season_result = _pick_best_result_helper(
                 found_results[provider_id][SEASON_RESULT], show_obj=show_obj,
                 use_quality_list=any_qualities + best_qualities, orig_thread_name=orig_thread_name)

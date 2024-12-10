@@ -1,4 +1,9 @@
-﻿### 3.32.12 (2024-11-29 19:20:00 UTC)
+﻿### 3.32.13 (2024-12-11 02:15:00 UTC)
+
+* Fix ignore empty SEASON_RESULT entries
+
+
+### 3.32.12 (2024-11-29 19:20:00 UTC)
 
 * Fix split_result to return a list in the case of an internal exception
 
