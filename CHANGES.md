@@ -14,6 +14,12 @@
 * Fix credits in Kodi episode nfo writer
 
 
+### 3.32.14 (2024-12-19 01:45:00 UTC)
+
+* Change validate get_image path
+* Change remove Python 3.8 and add Python 3.13 to Gitlab and Github CI tests
+
+
 ### 3.32.13 (2024-12-11 02:15:00 UTC)
 
 * Fix ignore empty SEASON_RESULT entries

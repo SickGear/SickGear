@@ -55,7 +55,8 @@ from .anime import AniGroupList, pull_anidb_groups, short_group_names
 from .browser import folders_at_path
 from .common import ARCHIVED, DOWNLOADED, FAILED, IGNORED, SKIPPED, SNATCHED, SNATCHED_ANY, UNAIRED, UNKNOWN, WANTED, \
     SD, HD720p, HD1080p, UHD2160p, Overview, Quality, qualityPresetStrings, statusStrings
-from .helpers import get_media_stats, has_image_ext, real_path, remove_article, remove_file_perm, starify
+from .helpers import (get_media_stats, has_image_ext, is_sickgear_dir, real_path, remove_article, remove_file_perm,
+                      starify)
 from .indexermapper import MapStatus, map_indexers_to_show, save_mapping
 from .indexers.indexer_config import TVINFO_IMDB, TVINFO_TMDB, TVINFO_TRAKT, TVINFO_TVDB, TVINFO_TVMAZE, \
     TVINFO_TRAKT_SLUG, TVINFO_TVDB_SLUG
@@ -338,11 +339,12 @@ class BaseHandler(RouteHandler):
         return True
 
     def get_image(self, image):
-        if os.path.isfile(image):
+        if None is re.search(r'\.\.[\\/]', image) and has_image_ext(image) and os.path.isfile(image) and is_sickgear_dir(image):
             mime_type, encoding = MimeTypes().guess_type(image)
             self.set_header('Content-Type', mime_type)
             with open(image, 'rb') as img:
                 return img.read()
+        return self.set_status(404)
 
     def show_poster(self, tvid_prodid=None, which=None, api=None):
         # Redirect initial poster/banner thumb to default images
