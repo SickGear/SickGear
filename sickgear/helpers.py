@@ -25,6 +25,7 @@ import socket
 import time
 import uuid
 import sys
+from pathlib import Path
 
 import sickgear
 from . import db, logger, notifiers
@@ -175,6 +176,19 @@ def has_image_ext(filename):
             return True
     except (BaseException, Exception):
         pass
+    return False
+
+def is_sickgear_dir(path):
+    # type: (str) -> bool
+    """
+    validate that a path is a sickgear subpath
+    :param path: path to check
+    """
+    path = Path(os.path.realpath(os.path.abspath(path)))
+    sickgear_path = Path(sickgear.PROG_DIR)
+    sickgear_data_path = Path(sickgear.DATA_DIR)
+    if sickgear_data_path in path.parents or sickgear_path in path.parents:
+        return True
     return False
 
 
