@@ -565,6 +565,10 @@ class NewznabProvider(generic.NZBProvider):
         title, url = None, None
         try:
             url = str(item.findtext('link')).replace('&amp;', '&')
+            api_key = self.maybe_apikey()
+            if ('apikey' not in url and 'releases/' in url and
+                    isinstance(api_key, string_types) and api_key not in ('0', '')):
+                url = f'{self.url}api?t=get&apikey={api_key}&id={re.findall(r"(?i).*/([a-z0-9-]+)$", url)[0]}'
             title = ('%s' % item.findtext('title')).strip()
             title = re.sub(r'\s+', '.', title)
             # remove indexer specific release name parts
