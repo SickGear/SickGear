@@ -14,6 +14,11 @@
 * Fix credits in Kodi episode nfo writer
 
 
+### 3.32.15 (2025-01-15 04:15:00 UTC)
+
+* Fix support a Newznab download link that deviates from the standard format
+
+
 ### 3.32.14 (2024-12-19 01:45:00 UTC)
 
 * Change validate get_image path
