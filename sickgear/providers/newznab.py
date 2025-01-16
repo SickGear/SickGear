@@ -435,7 +435,7 @@ class NewznabProvider(generic.NZBProvider):
 
     def config_str(self):
         # type: (...) -> AnyStr
-        return (f"{self.name} or ''"
+        return (f"{self.name or ''}"
                 f"|{self.url or ''}"
                 f"|{self.maybe_apikey() or ''}"
                 f"|{self.cat_ids or ''}"
