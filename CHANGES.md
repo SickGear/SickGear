@@ -14,6 +14,11 @@
 * Fix credits in Kodi episode nfo writer
 
 
+### 3.32.17 (2025-01-16 14:50:00 UTC)
+
+* Change improve slash sanitisation for url in Newnab provider
+
+
 ### 3.32.16 (2025-01-16 14:20:00 UTC)
 
 * Change ensure no double slash // in an url

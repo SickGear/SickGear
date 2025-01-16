@@ -565,9 +565,6 @@ class GenericProvider(object):
                 or self.should_skip(use_tmr_limit=use_tmr_limit):
             return
 
-        # ensure no double slash // in an url
-        url = re.sub(r'//+', '/', url)
-
         kwargs['raise_exceptions'] = True
         kwargs['raise_status_code'] = True
         kwargs['failure_monitor'] = False
