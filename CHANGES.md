@@ -1,4 +1,9 @@
-﻿### 3.32.17 (2025-01-16 14:50:00 UTC)
+﻿### 3.32.18 (2025-01-16 15:45:00 UTC)
+
+* Fix Newznab save
+
+
+### 3.32.17 (2025-01-16 14:50:00 UTC)
 
 * Change improve slash sanitisation for url in Newnab provider
 

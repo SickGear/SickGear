@@ -138,7 +138,7 @@ class NewznabProvider(generic.NZBProvider):
         """
         generic.NZBProvider.__init__(self, name, True, False)
 
-        self._url = url
+        self.url = f'{url.strip().rstrip("/")}' if url else ''
         self.key = key
         self.server_type = try_int(server_type, None) or NewznabConstants.SERVER_DEFAULT
         self._exclude = set()
@@ -224,14 +224,6 @@ class NewznabProvider(generic.NZBProvider):
         except (BaseException, Exception):
             pass
         self._last_recent_search = value
-
-    @property
-    def url(self):
-        return self._url
-
-    @url.setter
-    def url(self, value):
-        self._url = f'{value.strip().rstrip("/")}/'
 
     def image_name(self):
         """
@@ -443,17 +435,17 @@ class NewznabProvider(generic.NZBProvider):
 
     def config_str(self):
         # type: (...) -> AnyStr
-        return (f"self.name or ''"
-                f"|self.url or ''"
-                f"|self.maybe_apikey() or ''"
-                f"|self.cat_ids or ''"
-                f"|self.enabled"
-                f"|self.search_mode or ''"
-                f"|self.search_fallback"
-                f"|getattr(self, 'enable_recentsearch', False)"
-                f"|getattr(self, 'enable_backlog', False)"
-                f"|getattr(self, 'enable_scheduled_backlog', False)"
-                f"|self.server_type")
+        return (f"{self.name} or ''"
+                f"|{self.url or ''}"
+                f"|{self.maybe_apikey() or ''}"
+                f"|{self.cat_ids or ''}"
+                f"|{self.enabled}"
+                f"|{self.search_mode or ''}"
+                f"|{self.search_fallback}"
+                f"|{getattr(self, 'enable_recentsearch', False)}"
+                f"|{getattr(self, 'enable_backlog', False)}"
+                f"|{getattr(self, 'enable_scheduled_backlog', False)}"
+                f"|{self.server_type}")
 
     def _season_strings(self,
                         ep_obj  # type: TVEpisode
