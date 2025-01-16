@@ -245,13 +245,13 @@ class NewznabProvider(generic.NZBProvider):
             if datetime.date.today() - self._caps_need_apikey['date'] > datetime.timedelta(days=30) or \
                     not self._caps_need_apikey['need']:
                 self._caps_need_apikey['need'] = False
-                data = self.get_url('%s/api?t=caps' % self.url)
+                data = self.get_url('%sapi?t=caps' % self.url)
                 if data:
                     xml_caps = helpers.parse_xml(data)
             if None is xml_caps or not hasattr(xml_caps, 'tag') or 'error' == xml_caps.tag or 'caps' != xml_caps.tag:
                 api_key = self.maybe_apikey()
                 if isinstance(api_key, string_types) and api_key not in ('0', ''):
-                    data = self.get_url('%s/api?t=caps&apikey=%s' % (self.url, api_key))
+                    data = self.get_url('%sapi?t=caps&apikey=%s' % (self.url, api_key))
                     if data:
                         xml_caps = helpers.parse_xml(data)
                         if None is not xml_caps and 'caps' == getattr(xml_caps, 'tag', ''):
