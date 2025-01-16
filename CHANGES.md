@@ -1,4 +1,9 @@
-﻿### 3.32.15 (2025-01-15 04:15:00 UTC)
+﻿### 3.32.16 (2025-01-16 14:20:00 UTC)
+
+* Change ensure no double slash // in an url
+
+
+### 3.32.15 (2025-01-15 04:15:00 UTC)
 
 * Fix support a Newznab download link that deviates from the standard format
 
