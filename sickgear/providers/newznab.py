@@ -138,7 +138,7 @@ class NewznabProvider(generic.NZBProvider):
         """
         generic.NZBProvider.__init__(self, name, True, False)
 
-        self.url = f'{url.strip().rstrip("/")}' if url else ''
+        self.url = f'{url.strip().rstrip("/")}/' if url else ''
         self.key = key
         self.server_type = try_int(server_type, None) or NewznabConstants.SERVER_DEFAULT
         self._exclude = set()
