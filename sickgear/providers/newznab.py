@@ -138,7 +138,7 @@ class NewznabProvider(generic.NZBProvider):
         """
         generic.NZBProvider.__init__(self, name, True, False)
 
-        self.url = url
+        self._url = url
         self.key = key
         self.server_type = try_int(server_type, None) or NewznabConstants.SERVER_DEFAULT
         self._exclude = set()
@@ -225,6 +225,14 @@ class NewznabProvider(generic.NZBProvider):
             pass
         self._last_recent_search = value
 
+    @property
+    def url(self):
+        return self._url
+
+    @url.setter
+    def url(self, value):
+        self._url = f'{value.strip().rstrip("/")}/'
+
     def image_name(self):
         """
         :rtype: AnyStr
@@ -245,13 +253,13 @@ class NewznabProvider(generic.NZBProvider):
             if datetime.date.today() - self._caps_need_apikey['date'] > datetime.timedelta(days=30) or \
                     not self._caps_need_apikey['need']:
                 self._caps_need_apikey['need'] = False
-                data = self.get_url('%s/api?t=caps' % self.url)
+                data = self.get_url(f'{self.url}api?t=caps')
                 if data:
                     xml_caps = helpers.parse_xml(data)
             if None is xml_caps or not hasattr(xml_caps, 'tag') or 'error' == xml_caps.tag or 'caps' != xml_caps.tag:
                 api_key = self.maybe_apikey()
                 if isinstance(api_key, string_types) and api_key not in ('0', ''):
-                    data = self.get_url('%s/api?t=caps&apikey=%s' % (self.url, api_key))
+                    data = self.get_url(f'{self.url}api?t=caps&apikey={api_key}')
                     if data:
                         xml_caps = helpers.parse_xml(data)
                         if None is not xml_caps and 'caps' == getattr(xml_caps, 'tag', ''):
@@ -435,11 +443,17 @@ class NewznabProvider(generic.NZBProvider):
 
     def config_str(self):
         # type: (...) -> AnyStr
-        return '%s|%s|%s|%s|%i|%s|%i|%i|%i|%i|%i' \
-               % (self.name or '', self.url or '', self.maybe_apikey() or '', self.cat_ids or '', self.enabled,
-                  self.search_mode or '', self.search_fallback, getattr(self, 'enable_recentsearch', False),
-                  getattr(self, 'enable_backlog', False), getattr(self, 'enable_scheduled_backlog', False),
-                  self.server_type)
+        return (f"self.name or ''"
+                f"|self.url or ''"
+                f"|self.maybe_apikey() or ''"
+                f"|self.cat_ids or ''"
+                f"|self.enabled"
+                f"|self.search_mode or ''"
+                f"|self.search_fallback"
+                f"|getattr(self, 'enable_recentsearch', False)"
+                f"|getattr(self, 'enable_backlog', False)"
+                f"|getattr(self, 'enable_scheduled_backlog', False)"
+                f"|self.server_type")
 
     def _season_strings(self,
                         ep_obj  # type: TVEpisode
@@ -963,9 +977,9 @@ class NewznabProvider(generic.NZBProvider):
                     cnt = len(results)
 
                     if 'Cache' == mode and use_rss:
-                        search_url = '%srss?%s' % (self.url, urlencode(base_params_rss))
+                        search_url = f'{self.url}rss?{urlencode(base_params_rss)}'
                     else:
-                        search_url = '%sapi?%s' % (self.url, urlencode(request_params))
+                        search_url = f'{self.url}api?{urlencode(request_params)}'
                     i and time.sleep(2.1)
 
                     data = self.get_url(search_url)
