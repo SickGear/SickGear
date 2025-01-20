@@ -833,7 +833,6 @@
 				<div class="component-group bubblelist">
 					<div class="type bgcol">
 						<span class="list"><div class="item text">Bubble links:</div>
-							<div class="item"><a href="#boxcar2" rel="noreferrer"><img height="16px" src="$sbRoot/images/notifiers/boxcar2.png">Boxcar2</a></div>
 #if 'PUSHALOT' in NotifierFactory().notifiers
 							<div class="item"><a href="#pushalot" rel="noreferrer"><img height="16px" src="$sbRoot/images/notifiers/pushalot.png">Pushalot</a></div>
 #end if
@@ -845,107 +844,6 @@
 						</span>
 					</div>
 				</div>
-
-				<div class="component-group">
-					<div class="component-group-desc">
-						<img class="notifier-icon" src="$sbRoot/images/notifiers/boxcar2.png" alt="" title="Boxcar2"/>
-						<h3><a name="boxcar2" href="<%= anon_url('https://boxcar.io/') %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;">Boxcar2</a></h3>
-						<p>Read messages where and when you want them.</p>
-					</div>
-					<fieldset class="component-group-list">
-						<div class="field-pair">
-							<label for="use-boxcar2">
-								<span class="component-title">Enable</span>
-								<span class="component-desc">
-									<input type="checkbox" class="enabler" name="use_boxcar2" id="use-boxcar2" #if $sickgear.USE_BOXCAR2 then 'checked="checked"' else ''#>
-									<p>should SickGear send Boxcar2 notifications ?</p>
-								</span>
-							</label>
-						</div>
-
-						<div id="content_use-boxcar2">
-							<div class="field-pair">
-								<label for="boxcar2-notify-onsnatch">
-									<span class="component-title">Notify on snatch</span>
-									<span class="component-desc">
-										<input type="checkbox" name="boxcar2_notify_onsnatch" id="boxcar2-notify-onsnatch" #if $sickgear.BOXCAR2_NOTIFY_ONSNATCH then 'checked="checked"' else ''#>
-										<p>send a notification when a download starts ?</p>
-									</span>
-								</label>
-							</div>
-							<div class="field-pair">
-								<label for="boxcar2-notify-ondownload">
-									<span class="component-title">Notify on download</span>
-									<span class="component-desc">
-										<input type="checkbox" name="boxcar2_notify_ondownload" id="boxcar2-notify-ondownload" #if $sickgear.BOXCAR2_NOTIFY_ONDOWNLOAD then 'checked="checked"' else ''#>
-										<p>send a notification when a download finishes ?</p>
-									</span>
-								</label>
-							</div>
-							<div class="field-pair">
-								<label for="boxcar2-notify-onsubtitledownload">
-									<span class="component-title">Notify on subtitle download</span>
-									<span class="component-desc">
-										<input type="checkbox" name="boxcar2_notify_onsubtitledownload" id="boxcar2-notify-onsubtitledownload" #if $sickgear.BOXCAR2_NOTIFY_ONSUBTITLEDOWNLOAD then 'checked="checked"' else ''#>
-										<p>send a notification when subtitles are downloaded ?</p>
-									</span>
-								</label>
-							</div>
-							<div class="field-pair">
-								<label for="boxcar2-access-token">
-									<span class="component-title">Boxcar2 access token</span>
-									<span class="component-desc">
-										<input type="text" name="boxcar2_access_token" id="boxcar2-access-token" value="<%= starify(sickgear.BOXCAR2_ACCESSTOKEN) %>" class="form-control input-sm input250">
-									</span>
-								</label>
-							</div>
-							<div class="field-pair">
-								<label for="boxcar2-sound">
-									<span class="component-title">Custom sound</span>
-									<span class="component-desc">
-										<select id="boxcar2-sound" name="boxcar2_sound" class="form-control input-sm">
-											<option value="default" #if $sickgear.BOXCAR2_SOUND == 'default' then 'selected="selected"' else ''#>Default (General)</option>
-											<option value="no-sound" #if $sickgear.BOXCAR2_SOUND == 'no-sound' then 'selected="selected"' else ''#>Silent</option>
-											<option value="beep-crisp" #if $sickgear.BOXCAR2_SOUND == 'beep-crisp' then 'selected="selected"' else ''#>Beep Crisp</option>
-											<option value="beep-soft" #if $sickgear.BOXCAR2_SOUND == 'beep-soft' then 'selected="selected"' else ''#>Beep Soft</option>
-											<option value="bell-modern" #if $sickgear.BOXCAR2_SOUND == 'bell-modern' then 'selected="selected"' else ''#>Bell Modern</option>
-											<option value="bell-one-tone" #if $sickgear.BOXCAR2_SOUND == 'bell-one-tone' then 'selected="selected"' else ''#>Bell One Tone</option>
-											<option value="bell-simple" #if $sickgear.BOXCAR2_SOUND == 'bell-simple' then 'selected="selected"' else ''#>Bell Simple</option>
-											<option value="bell-triple" #if $sickgear.BOXCAR2_SOUND == 'bell-triple' then 'selected="selected"' else ''#>Bell Triple</option>
-											<option value="bird-1" #if $sickgear.BOXCAR2_SOUND == 'bird-1' then 'selected="selected"' else ''#>Bird 1</option>
-											<option value="bird-2" #if $sickgear.BOXCAR2_SOUND == 'bird-2' then 'selected="selected"' else ''#>Bird 2</option>
-											<option value="boing" #if $sickgear.BOXCAR2_SOUND == 'boing' then 'selected="selected"' else ''#>Boing</option>
-											<option value="cash" #if $sickgear.BOXCAR2_SOUND == 'cash' then 'selected="selected"' else ''#>Cash</option>
-											<option value="clanging" #if $sickgear.BOXCAR2_SOUND == 'clanging' then 'selected="selected"' else ''#>Clanging</option>
-											<option value="detonator-charge" #if $sickgear.BOXCAR2_SOUND == 'detonator-charge' then 'selected="selected"' else ''#>Detonator Charge</option>
-											<option value="digital-alarm" #if $sickgear.BOXCAR2_SOUND == 'digital-alarm' then 'selected="selected"' else ''#>Digital Alarm</option>
-											<option value="done" #if $sickgear.BOXCAR2_SOUND == 'done' then 'selected="selected"' else ''#>Done</option>
-											<option value="echo" #if $sickgear.BOXCAR2_SOUND == 'echo' then 'selected="selected"' else ''#>Echo</option>
-											<option value="flourish" #if $sickgear.BOXCAR2_SOUND == 'flourish' then 'selected="selected"' else ''#>Flourish</option>
-											<option value="harp" #if $sickgear.BOXCAR2_SOUND == 'harp' then 'selected="selected"' else ''#>Harp</option>
-											<option value="light" #if $sickgear.BOXCAR2_SOUND == 'light' then 'selected="selected"' else ''#>Light</option>
-											<option value="magic-chime" #if $sickgear.BOXCAR2_SOUND == 'magic-chime' then 'selected="selected"' else ''#>Magic Chime</option>
-											<option value="magic-coin" #if $sickgear.BOXCAR2_SOUND == 'magic-coin' then 'selected="selected"' else ''#>Magic Coin 1</option>
-											<option value="notifier-1" #if $sickgear.BOXCAR2_SOUND == 'notifier-1' then 'selected="selected"' else ''#>Notifier 1</option>
-											<option value="notifier-2" #if $sickgear.BOXCAR2_SOUND == 'notifier-2' then 'selected="selected"' else ''#>Notifier 2</option>
-											<option value="notifier-3" #if $sickgear.BOXCAR2_SOUND == 'notifier-3' then 'selected="selected"' else ''#>Notifier 3</option>
-											<option value="orchestral-long" #if $sickgear.BOXCAR2_SOUND == 'orchestral-long' then 'selected="selected"' else ''#>Orchestral Long</option>
-											<option value="orchestral-short" #if $sickgear.BOXCAR2_SOUND == 'orchestral-short' then 'selected="selected"' else ''#>Orchestral Short</option>
-											<option value="score" #if $sickgear.BOXCAR2_SOUND == 'score' then 'selected="selected"' else ''#>Score</option>
-											<option value="success" #if $sickgear.BOXCAR2_SOUND == 'success' then 'selected="selected"' else ''#>Success</option>
-											<option value="up" #if $sickgear.BOXCAR2_SOUND == 'up' then 'selected="selected"' else ''#>Up</option>
-										</select>
-										<div class="clear-left">override the default sound selected for the general notification</div>
-									</span>
-								</label>
-							</div>
-							<div class="test-notification" id="test-boxcar2-result">Click below to test</div>
-							<input class="btn" type="button" value="Test Boxcar2" id="test-boxcar2">
-							<input type="submit" class="config_submitter btn" value="Save Changes">
-						</div><!-- /content_use-boxcar2 //-->
-
-					</fieldset>
-				</div><!-- /boxcar2 component-group //-->
 
 
 #if 'PUSHALOT' in NotifierFactory().notifiers

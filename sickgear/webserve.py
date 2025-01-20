@@ -1834,14 +1834,6 @@ class Home(MainHandler):
         host = config.clean_host(host)
         return notifiers.NotifierFactory().get('NMJV2').notify_settings(unquote_plus(host), dbloc, instance)
 
-    def test_boxcar2(self, access_token=None, sound=None):
-        self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
-
-        if None is not access_token and starify(access_token, True):
-            access_token = sickgear.BOXCAR2_ACCESSTOKEN
-
-        return notifiers.NotifierFactory().get('BOXCAR2').test_notify(access_token, sound)
-
     def test_pushbullet(self, access_token=None, device_iden=None):
         self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
 
@@ -9667,8 +9659,6 @@ class ConfigNotifications(Config):
             synologynotifier_notify_ondownload=None, synologynotifier_notify_onsubtitledownload=None,
             use_pytivo=None, pytivo_host=None, pytivo_share_name=None, pytivo_tivo_name=None,
 
-            use_boxcar2=None, boxcar2_notify_onsnatch=None, boxcar2_notify_ondownload=None,
-            boxcar2_notify_onsubtitledownload=None, boxcar2_access_token=None, boxcar2_sound=None,
             use_pushbullet=None, pushbullet_notify_onsnatch=None, pushbullet_notify_ondownload=None,
             pushbullet_notify_onsubtitledownload=None, pushbullet_access_token=None, pushbullet_device_iden=None,
             use_pushover=None, pushover_notify_onsnatch=None, pushover_notify_ondownload=None,
@@ -9767,15 +9757,6 @@ class ConfigNotifications(Config):
         if not starify(key, True):
             sickgear.PROWL_API = key
         sickgear.PROWL_PRIORITY = prowl_priority
-
-        sickgear.USE_BOXCAR2 = config.checkbox_to_value(use_boxcar2)
-        sickgear.BOXCAR2_NOTIFY_ONSNATCH = config.checkbox_to_value(boxcar2_notify_onsnatch)
-        sickgear.BOXCAR2_NOTIFY_ONDOWNLOAD = config.checkbox_to_value(boxcar2_notify_ondownload)
-        sickgear.BOXCAR2_NOTIFY_ONSUBTITLEDOWNLOAD = config.checkbox_to_value(boxcar2_notify_onsubtitledownload)
-        key = boxcar2_access_token.strip()
-        if not starify(key, True):
-            sickgear.BOXCAR2_ACCESSTOKEN = key
-        sickgear.BOXCAR2_SOUND = boxcar2_sound
 
         sickgear.USE_PUSHOVER = config.checkbox_to_value(use_pushover)
         sickgear.PUSHOVER_NOTIFY_ONSNATCH = config.checkbox_to_value(pushover_notify_onsnatch)
