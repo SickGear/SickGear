@@ -5,6 +5,7 @@
 * Update idna library 3.7 (1d365e1) to 3.10 (729225d)
 * Update Msgpack 1.0.6 (e1d3d5d) to 1.1.0 (0eeabfb)
 * Update deprecated pkg_resources 24.0 to Packaging 24.2 (d8e3b31)
+* Update profilehooks module 1.13.0.dev0 (99f8a31) to 1.13.1.dev0 (824fcd4) 
 * Update SimpleJSON 3.19.1 (aeb63ee) to 3.19.3 (6932004)
 * Update Six compatibility library 1.16.0 (b620447) to 1.17.0 (4a765bf)
 * Update thefuzz 0.21.0 (0b49e4a) to 0.22.1 (83bea3d)
