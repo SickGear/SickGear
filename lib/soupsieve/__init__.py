@@ -31,7 +31,7 @@ from . import css_parser as cp
 from . import css_match as cm
 from . import css_types as ct
 from .util import DEBUG, SelectorSyntaxError  # noqa: F401
-import bs4  # type: ignore[import]
+import bs4  # type: ignore[import-untyped]
 from typing import Any, Iterator, Iterable
 
 __all__ = (
