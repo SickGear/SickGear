@@ -1,5 +1,6 @@
 ﻿### 3.34.x (2025-xx-xx xx:xx:00 UTC)
 
+* Update Beautiful Soup 4.12.3 (7fb5175) to 4.13.0b3 (55e006b)
 * Update CacheControl 0.14.0 (e2be0c2) to 0.14.2 (928422d)
 * Update certifi 2024.08.30 to 2024.12.14
 * Update chardet packages 5.1.0 (8087f00) to 5.3.0dev0 (8e8dfcd)
