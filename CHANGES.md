@@ -11,6 +11,11 @@
 * Update urllib3 2.2.2 (27e2a5c) to 2.3.0 (2f68c53)
 
 
+### 3.33.1 (2025-01-20 14:50:00 UTC)
+
+* Fix incorrect case of recommended RapidFuzz
+
+
 ### 3.33.0 (2025-01-20 00:20:00 UTC)
 
 * Update certifi 2024.06.02 to 2024.08.30
