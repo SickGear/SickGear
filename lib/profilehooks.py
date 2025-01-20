@@ -96,8 +96,8 @@ except ImportError:
 __author__ = "Marius Gedminas <marius@gedmin.as>"
 __copyright__ = "Copyright 2004-2020 Marius Gedminas and contributors"
 __license__ = "MIT"
-__version__ = '1.13.0.dev0'
-__date__ = "2023-12-18"
+__version__ = '1.13.1.dev0'
+__date__ = "2024-10-09"
 
 
 # registry of available profilers
