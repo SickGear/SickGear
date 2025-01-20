@@ -14,13 +14,22 @@
 * Fix credits in Kodi episode nfo writer
 
 
-### 3.32.18 (2025-01-16 15:45:00 UTC)
+### 3.32.21 (2025-01-19 23:50:00 UTC)
+
+* Change update fallback zoneinfo to 2025a
+
+
+### 3.32.20 (2025-01-16 16:10:00 UTC)
+
+* Fix final Newznab url to add trailing slash
+
+
 ### 3.32.19 (2025-01-16 16:00:00 UTC)
 
 * Fix another Newznab save
 
 
-* ### 3.32.18 (2025-01-16 15:45:00 UTC)
+### 3.32.18 (2025-01-16 15:45:00 UTC)
 
 * Fix Newznab save
 
