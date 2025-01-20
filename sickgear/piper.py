@@ -184,13 +184,11 @@ def _check_pip_env(pip_outdated=False, reset_fails=False):
             pass
 
     environment = {}
-    # noinspection PyUnresolvedReferences
-    import six.moves
-    import pkg_resources
-    six.moves.reload_module(pkg_resources)
-    for cur_distinfo in pkg_resources.working_set:
+    from packaging.version import Version, parse
+    from importlib.metadata import distributions
+    for cur_distinfo in distributions():
         try:
-            environment[cur_distinfo.project_name] = cur_distinfo.parsed_version
+            environment[cur_distinfo.metadata['Name']] = parse(cur_distinfo.metadata['Version'])  # type: Version
         except (BaseException, Exception):
             pass
 
@@ -204,15 +202,15 @@ def _check_pip_env(pip_outdated=False, reset_fails=False):
     names_reco = []
     specifiers = {}
     requirement_update = set()
-    from pkg_resources import parse_requirements
+    from packaging.requirements import Requirement
     for cur_line in input_reco:
         try:
-            requirement = next(parse_requirements(cur_line))  # https://packaging.pypa.io/en/latest/requirements.html
-        except ValueError as e:
+            requirement = Requirement(cur_line)  # https://packaging.pypa.io/en/latest/requirements.html
+        except (BaseException, Exception) as e:
             if not cur_line.startswith('--'):
                 logger.error('Error [%s] with line: %s' % (e, cur_line))  # name@url ; whitespace/LF must follow url
             continue
-        project_name = getattr(requirement, 'project_name', None)
+        project_name = getattr(requirement, 'name', None)
         if cur_line in known_failed and project_name not in environment:
             failed_names += [project_name]
         else:
