@@ -1,5 +1,6 @@
 ﻿### 3.34.x (2025-xx-xx xx:xx:00 UTC)
 
+* Update CacheControl 0.14.0 (e2be0c2) to 0.14.2 (928422d)
 * Update certifi 2024.08.30 to 2024.12.14
 * Update idna library 3.7 (1d365e1) to 3.10 (729225d)
 * Update urllib3 2.2.2 (27e2a5c) to 2.3.0 (2f68c53)
