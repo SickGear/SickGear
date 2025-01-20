@@ -5,7 +5,7 @@ from . import util
 import re
 from . import css_types as ct
 import unicodedata
-import bs4  # type: ignore[import]
+import bs4  # type: ignore[import-untyped]
 from typing import Iterator, Iterable, Any, Callable, Sequence, cast  # noqa: F401
 
 # Empty tag pattern (whitespace okay)
