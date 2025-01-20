@@ -2,7 +2,7 @@
 # BSD 2-Clause License
 #
 # Apprise - Push Notification Library.
-# Copyright (c) 2024, Chris Caron <lead2gold@gmail.com>
+# Copyright (c) 2025, Chris Caron <lead2gold@gmail.com>
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -55,17 +55,15 @@
 # API Documentation: https://developers.sparkpost.com/api/
 # Specifically: https://developers.sparkpost.com/api/transmissions/
 import requests
-import base64
 from json import loads
 from json import dumps
 from .base import NotifyBase
+from .. import exception
 from ..common import NotifyType
 from ..common import NotifyFormat
-from ..utils import is_email
 from email.utils import formataddr
-from ..utils import validate_regex
-from ..utils import parse_emails
-from ..utils import parse_bool
+from ..utils.parse import (
+    validate_regex, parse_emails, parse_bool, is_email)
 from ..locale import gettext_lazy as _
 
 # Provide some known codes SparkPost uses and what they translate to:
@@ -500,7 +498,7 @@ class NotifySparkPost(NotifyBase):
         if not self.targets:
             # There is no one to email; we're done
             self.logger.warning(
-                'There are no Email recipients to notify')
+                'There are no SparkPost Email recipients to notify')
             return False
 
         # Initialize our has_error flag
@@ -546,34 +544,34 @@ class NotifySparkPost(NotifyBase):
             # Prepare ourselves an attachment object
             payload['content']['attachments'] = []
 
-            for attachment in attach:
+            for no, attachment in enumerate(attach, start=1):
                 # Perform some simple error checking
                 if not attachment:
                     # We could not access the attachment
                     self.logger.error(
-                        'Could not access attachment {}.'.format(
+                        'Could not access SparkPost attachment {}.'.format(
+                            attachment.url(privacy=True)))
+                    return False
+
+                try:
+                    # Prepare API Upload Payload
+                    payload['content']['attachments'].append({
+                        'name': attachment.name
+                        if attachment.name else f'file{no:03}.dat',
+                        'type': attachment.mimetype,
+                        'data': attachment.base64(),
+                    })
+
+                except exception.AppriseException:
+                    # We could not access the attachment
+                    self.logger.error(
+                        'Could not access SparkPost attachment {}.'.format(
                             attachment.url(privacy=True)))
                     return False
 
                 self.logger.debug(
-                    'Preparing SparkPost attachment {}'.format(
+                    'Appending SparkPost attachment {}'.format(
                         attachment.url(privacy=True)))
-
-                try:
-                    with open(attachment.path, 'rb') as fp:
-                        # Prepare API Upload Payload
-                        payload['content']['attachments'].append({
-                            'name': attachment.name,
-                            'type': attachment.mimetype,
-                            'data': base64.b64encode(fp.read()).decode("ascii")
-                        })
-
-                except (OSError, IOError) as e:
-                    self.logger.warning(
-                        'An I/O error occurred while reading {}.'.format(
-                            attachment.name if attachment else 'attachment'))
-                    self.logger.debug('I/O Exception: %s' % str(e))
-                    return False
 
         # Take a copy of our token dictionary
         tokens = self.tokens.copy()
@@ -669,6 +667,15 @@ class NotifySparkPost(NotifyBase):
                 has_error = True
 
         return not has_error
+
+    @property
+    def url_identifier(self):
+        """
+        Returns all of the identifiers that make this URL unique from
+        another simliar one. Targets or end points should never be identified
+        here.
+        """
+        return (self.secure_protocol, self.user, self.apikey, self.host)
 
     def url(self, privacy=False, *args, **kwargs):
         """

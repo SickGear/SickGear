@@ -2,7 +2,7 @@
 # BSD 2-Clause License
 #
 # Apprise - Push Notification Library.
-# Copyright (c) 2024, Chris Caron <lead2gold@gmail.com>
+# Copyright (c) 2025, Chris Caron <lead2gold@gmail.com>
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -40,10 +40,8 @@ from itertools import chain
 from .base import NotifyBase
 from ..common import NotifyType
 from ..common import NotifyImageSize
-from ..utils import validate_regex
-from ..utils import parse_list
-from ..utils import parse_bool
-from ..utils import is_email
+from ..utils.base64 import decode_b64_dict, encode_b64_dict
+from ..utils.parse import validate_regex, parse_list, parse_bool, is_email
 from ..locale import gettext_lazy as _
 
 
@@ -82,7 +80,7 @@ class NotifyOneSignal(NotifyBase):
     setup_url = 'https://github.com/caronc/apprise/wiki/Notify_onesignal'
 
     # Notification
-    notify_url = "https://onesignal.com/api/v1/notifications"
+    notify_url = "https://api.onesignal.com/notifications"
 
     # Allows the user to specify the NotifyImageSize object
     image_size = NotifyImageSize.XY_72
@@ -161,6 +159,18 @@ class NotifyOneSignal(NotifyBase):
             'type': 'bool',
             'default': False,
         },
+        'contents': {
+            'name': _('Enable Contents'),
+            'type': 'bool',
+            'default': True,
+            'map_to': 'use_contents',
+        },
+        'decode': {
+            'name': _('Decode Template Args'),
+            'type': 'bool',
+            'default': False,
+            'map_to': 'decode_tpl_args',
+        },
         'template': {
             'alias_of': 'template',
         },
@@ -175,9 +185,22 @@ class NotifyOneSignal(NotifyBase):
         },
     })
 
+    # Define our token control
+    template_kwargs = {
+        'custom': {
+            'name': _('Custom Data'),
+            'prefix': ':',
+        },
+        'postback': {
+            'name': _('Postback Data'),
+            'prefix': '+',
+        },
+    }
+
     def __init__(self, app, apikey, targets=None, include_image=True,
-                 template=None, subtitle=None, language=None, batch=False,
-                 **kwargs):
+                 template=None, subtitle=None, language=None, batch=None,
+                 use_contents=None, decode_tpl_args=None,
+                 custom=None, postback=None, **kwargs):
         """
         Initialize OneSignal
 
@@ -201,7 +224,19 @@ class NotifyOneSignal(NotifyBase):
             raise TypeError(msg)
 
         # Prepare Batch Mode Flag
-        self.batch_size = self.default_batch_size if batch else 1
+        self.batch_size = self.default_batch_size if (
+            batch if batch is not None else
+            self.template_args['batch']['default']) else 1
+
+        # Prepare Use Contents Flag
+        self.use_contents = True if (
+            use_contents if use_contents is not None else
+            self.template_args['contents']['default']) else False
+
+        # Prepare Decode Template Arguments Flag
+        self.decode_tpl_args = True if (
+            decode_tpl_args if decode_tpl_args is not None else
+            self.template_args['decode']['default']) else False
 
         # Place a thumbnail image inline with the message body
         self.include_image = include_image
@@ -273,6 +308,30 @@ class NotifyOneSignal(NotifyBase):
                     'Detected OneSignal Player ID: %s' %
                     self.targets[OneSignalCategory.PLAYER][-1])
 
+        # Custom Data
+        self.custom_data = {}
+        if custom and isinstance(custom, dict):
+            if self.decode_tpl_args:
+                custom = decode_b64_dict(custom)
+
+            self.custom_data.update(custom)
+
+        elif custom:
+            msg = 'The specified OneSignal Custom Data ' \
+                  '({}) are not identified as a dictionary.'.format(custom)
+            self.logger.warning(msg)
+            raise TypeError(msg)
+
+        # Postback Data
+        self.postback_data = {}
+        if postback and isinstance(postback, dict):
+            self.postback_data.update(postback)
+
+        elif postback:
+            msg = 'The specified OneSignal Postback Data ' \
+                  '({}) are not identified as a dictionary.'.format(postback)
+            self.logger.warning(msg)
+            raise TypeError(msg)
         return
 
     def send(self, body, title='', notify_type=NotifyType.INFO, **kwargs):
@@ -291,14 +350,9 @@ class NotifyOneSignal(NotifyBase):
 
         payload = {
             'app_id': self.app,
-
-            'headings': {
-                self.language: title if title else self.app_desc,
-            },
             'contents': {
                 self.language: body,
             },
-
             # Sending true wakes your app from background to run custom native
             # code (Apple interprets this as content-available=1).
             # Note: Not applicable if the app is in the "force-quit" state
@@ -307,15 +361,39 @@ class NotifyOneSignal(NotifyBase):
             'content_available': True,
         }
 
+        if self.template_id:
+            # Store template information
+            payload['template_id'] = self.template_id
+
+            if not self.use_contents:
+                # Only if a template is defined can contents be removed
+                del payload['contents']
+
+        # Set our data if defined
+        if self.custom_data:
+            payload.update({
+                'custom_data': self.custom_data,
+            })
+
+        # Set our postback data if defined
+        if self.postback_data:
+            payload.update({
+                'data': self.postback_data,
+            })
+
+        if title:
+            # Display our title if defined
+            payload.update({
+                'headings': {
+                    self.language: title,
+                }})
+
         if self.subtitle:
             payload.update({
                 'subtitle': {
                     self.language: self.subtitle,
                 },
             })
-
-        if self.template_id:
-            payload['template_id'] = self.template_id
 
         # Acquire our large_icon image URL (if set)
         image_url = None if not self.include_image \
@@ -392,6 +470,17 @@ class NotifyOneSignal(NotifyBase):
 
         return not has_error
 
+    @property
+    def url_identifier(self):
+        """
+        Returns all of the identifiers that make this URL unique from
+        another simliar one. Targets or end points should never be identified
+        here.
+        """
+        return (
+            self.secure_protocol, self.template_id, self.app, self.apikey,
+        )
+
     def url(self, privacy=False, *args, **kwargs):
         """
         Returns the URL built dynamically based on specified arguments.
@@ -405,6 +494,25 @@ class NotifyOneSignal(NotifyBase):
 
         # Extend our parameters
         params.update(self.url_parameters(privacy=privacy, *args, **kwargs))
+
+        custom_data, needs_decoding = encode_b64_dict(self.custom_data)
+        # custom_data, needs_decoding = self.custom_data, False
+        # Save our template data
+        params.update(
+            {':{}'.format(k): v for k, v in custom_data.items()}
+        )
+
+        # Save our postback data
+        params.update(
+            {'+{}'.format(k): v for k, v in self.postback_data.items()})
+
+        if self.use_contents != self.template_args['contents']['default']:
+            params['contents'] = 'yes' if self.use_contents else 'no'
+
+        if (self.decode_tpl_args != self.template_args['decode']['default']
+                or needs_decoding):
+            params['decode'] = 'yes' if (self.decode_tpl_args or
+                                         needs_decoding) else 'no'
 
         return '{schema}://{tp_id}{app}@{apikey}/{targets}?{params}'.format(
             schema=self.secure_protocol,
@@ -485,6 +593,20 @@ class NotifyOneSignal(NotifyBase):
                     'batch',
                     NotifyOneSignal.template_args['batch']['default']))
 
+        # Get Use Contents Boolean (if set)
+        results['use_contents'] = \
+            parse_bool(
+                results['qsd'].get(
+                    'contents',
+                    NotifyOneSignal.template_args['contents']['default']))
+
+        # Get Use Contents Boolean (if set)
+        results['decode_tpl_args'] = \
+            parse_bool(
+                results['qsd'].get(
+                    'decode',
+                    NotifyOneSignal.template_args['decode']['default']))
+
         # The API Key is stored in the hostname
         results['apikey'] = NotifyOneSignal.unquote(results['host'])
 
@@ -515,5 +637,11 @@ class NotifyOneSignal(NotifyBase):
         if 'lang' in results['qsd'] and len(results['qsd']['lang']):
             results['language'] = \
                 NotifyOneSignal.unquote(results['qsd']['lang'])
+
+        # Store our custom data
+        results['custom'] = results['qsd:']
+
+        # Store our postback data
+        results['postback'] = results['qsd+']
 
         return results

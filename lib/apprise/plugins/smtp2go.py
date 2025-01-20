@@ -2,7 +2,7 @@
 # BSD 2-Clause License
 #
 # Apprise - Push Notification Library.
-# Copyright (c) 2024, Chris Caron <lead2gold@gmail.com>
+# Copyright (c) 2025, Chris Caron <lead2gold@gmail.com>
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -45,17 +45,15 @@
 #  the email will be transmitted from.  If no email address is specified
 #  then it will also become the 'to' address as well.
 #
-import base64
 import requests
 from json import dumps
 from email.utils import formataddr
 from .base import NotifyBase
+from .. import exception
 from ..common import NotifyType
 from ..common import NotifyFormat
-from ..utils import parse_emails
-from ..utils import parse_bool
-from ..utils import is_email
-from ..utils import validate_regex
+from ..utils.parse import (
+    parse_emails, parse_bool, is_email, validate_regex)
 from ..locale import gettext_lazy as _
 
 SMTP2GO_HTTP_ERROR_MAP = {
@@ -294,32 +292,34 @@ class NotifySMTP2Go(NotifyBase):
         attachments = []
 
         if attach and self.attachment_support:
-            for attachment in attach:
+            for no, attachment in enumerate(attach, start=1):
                 # Perform some simple error checking
                 if not attachment:
                     # We could not access the attachment
                     self.logger.error(
-                        'Could not access attachment {}.'.format(
+                        'Could not access SMTP2Go attachment {}.'.format(
                             attachment.url(privacy=True)))
                     return False
 
                 try:
-                    with open(attachment.path, 'rb') as f:
-                        # Output must be in a DataURL format (that's what
-                        # PushSafer calls it):
-                        attachments.append({
-                            'filename': attachment.name,
-                            'fileblob': base64.b64encode(f.read())
-                            .decode('utf-8'),
-                            'mimetype': attachment.mimetype,
-                        })
+                    # Format our attachment
+                    attachments.append({
+                        'filename': attachment.name
+                        if attachment.name else f'file{no:03}.dat',
+                        'fileblob': attachment.base64(),
+                        'mimetype': attachment.mimetype,
+                    })
 
-                except (OSError, IOError) as e:
-                    self.logger.warning(
-                        'An I/O error occurred while reading {}.'.format(
-                            attachment.name if attachment else 'attachment'))
-                    self.logger.debug('I/O Exception: %s' % str(e))
+                except exception.AppriseException:
+                    # We could not access the attachment
+                    self.logger.error(
+                        'Could not access SMTP2Go attachment {}.'.format(
+                            attachment.url(privacy=True)))
                     return False
+
+                self.logger.debug(
+                    'Appending SMTP2Go attachment {}'.format(
+                        attachment.url(privacy=True)))
 
         sender = formataddr(
             (self.from_name if self.from_name else False,
@@ -463,6 +463,15 @@ class NotifySMTP2Go(NotifyBase):
                 continue
 
         return not has_error
+
+    @property
+    def url_identifier(self):
+        """
+        Returns all of the identifiers that make this URL unique from
+        another simliar one. Targets or end points should never be identified
+        here.
+        """
+        return (self.secure_protocol, self.user, self.host, self.apikey)
 
     def url(self, privacy=False, *args, **kwargs):
         """

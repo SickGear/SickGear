@@ -2,7 +2,7 @@
 # BSD 2-Clause License
 #
 # Apprise - Push Notification Library.
-# Copyright (c) 2024, Chris Caron <lead2gold@gmail.com>
+# Copyright (c) 2025, Chris Caron <lead2gold@gmail.com>
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -34,11 +34,8 @@ from .. import plugins
 from .. import common
 from ..asset import AppriseAsset
 from ..url import URLBase
-from ..utils import GET_SCHEMA_RE
-from ..utils import parse_list
-from ..utils import parse_bool
-from ..utils import parse_urls
-from ..utils import cwe312_url
+from ..utils.parse import GET_SCHEMA_RE, parse_list, parse_bool, parse_urls
+from ..utils.cwe312 import cwe312_url
 from ..manager_config import ConfigurationManager
 from ..manager_plugins import NotificationManager
 

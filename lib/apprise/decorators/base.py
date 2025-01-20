@@ -2,7 +2,7 @@
 # BSD 2-Clause License
 #
 # Apprise - Push Notification Library.
-# Copyright (c) 2024, Chris Caron <lead2gold@gmail.com>
+# Copyright (c) 2025, Chris Caron <lead2gold@gmail.com>
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -29,10 +29,8 @@
 
 from ..plugins.base import NotifyBase
 from ..manager_plugins import NotificationManager
-from ..utils import URL_DETAILS_RE
-from ..utils import parse_url
-from ..utils import url_assembly
-from ..utils import dict_full_update
+from ..utils.parse import URL_DETAILS_RE, parse_url, url_assembly
+from ..utils.logic import dict_full_update
 from .. import common
 from ..logger import logger
 import inspect
@@ -57,6 +55,9 @@ class CustomNotifyPlugin(NotifyBase):
 
     # Support Attachments
     attachment_support = True
+
+    # Allow persistent storage support
+    storage_mode = common.PersistentStoreMode.AUTO
 
     # Define object templates
     templates = (

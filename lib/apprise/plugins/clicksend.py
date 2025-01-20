@@ -2,7 +2,7 @@
 # BSD 2-Clause License
 #
 # Apprise - Push Notification Library.
-# Copyright (c) 2024, Chris Caron <lead2gold@gmail.com>
+# Copyright (c) 2025, Chris Caron <lead2gold@gmail.com>
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -45,9 +45,7 @@ from json import dumps
 from .base import NotifyBase
 from ..url import PrivacyMode
 from ..common import NotifyType
-from ..utils import is_phone_no
-from ..utils import parse_phone_no
-from ..utils import parse_bool
+from ..utils.parse import is_phone_no, parse_phone_no, parse_bool
 from ..locale import gettext_lazy as _
 
 # Extend HTTP Error Messages
@@ -284,6 +282,15 @@ class NotifyClickSend(NotifyBase):
                 [NotifyClickSend.quote(x, safe='') for x in self.targets]),
             params=NotifyClickSend.urlencode(params),
         )
+
+    @property
+    def url_identifier(self):
+        """
+        Returns all of the identifiers that make this URL unique from
+        another simliar one. Targets or end points should never be identified
+        here.
+        """
+        return (self.secure_protocol, self.user, self.password)
 
     def __len__(self):
         """

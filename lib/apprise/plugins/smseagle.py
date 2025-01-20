@@ -2,7 +2,7 @@
 # BSD 2-Clause License
 #
 # Apprise - Push Notification Library.
-# Copyright (c) 2024, Chris Caron <lead2gold@gmail.com>
+# Copyright (c) 2025, Chris Caron <lead2gold@gmail.com>
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -29,15 +29,13 @@
 import re
 import requests
 from json import dumps, loads
-import base64
 from itertools import chain
 
 from .base import NotifyBase
 from ..common import NotifyType
-from ..utils import validate_regex
-from ..utils import is_phone_no
-from ..utils import parse_phone_no
-from ..utils import parse_bool
+from .. import exception
+from ..utils.parse import (
+    validate_regex, is_phone_no, parse_phone_no, parse_bool)
 from ..url import PrivacyMode
 from ..locale import gettext_lazy as _
 
@@ -345,7 +343,7 @@ class NotifySMSEagle(NotifyBase):
                 if not attachment:
                     # We could not access the attachment
                     self.logger.error(
-                        'Could not access attachment {}.'.format(
+                        'Could not access SMSEagle attachment {}.'.format(
                             attachment.url(privacy=True)))
                     return False
 
@@ -357,20 +355,22 @@ class NotifySMSEagle(NotifyBase):
                     continue
 
                 try:
-                    with open(attachment.path, 'rb') as f:
-                        # Prepare our Attachment in Base64
-                        attachments.append({
-                            'content_type': attachment.mimetype,
-                            'content': base64.b64encode(
-                                f.read()).decode('utf-8'),
-                        })
+                    # Prepare our Attachment in Base64
+                    attachments.append({
+                        'content_type': attachment.mimetype,
+                        'content': attachment.base64(),
+                    })
 
-                except (OSError, IOError) as e:
-                    self.logger.warning(
-                        'An I/O error occurred while reading {}.'.format(
-                            attachment.name if attachment else 'attachment'))
-                    self.logger.debug('I/O Exception: %s' % str(e))
+                except exception.AppriseException:
+                    # We could not access the attachment
+                    self.logger.error(
+                        'Could not access SMSEagle attachment {}.'.format(
+                            attachment.url(privacy=True)))
                     return False
+
+                self.logger.debug(
+                    'Appending SMSEagle attachment {}'.format(
+                        attachment.url(privacy=True)))
 
         # Prepare our headers
         headers = {
@@ -563,6 +563,18 @@ class NotifySMSEagle(NotifyBase):
                     continue
 
         return not has_error
+
+    @property
+    def url_identifier(self):
+        """
+        Returns all of the identifiers that make this URL unique from
+        another simliar one. Targets or end points should never be identified
+        here.
+        """
+        return (
+            self.secure_protocol if self.secure else self.protocol,
+            self.token, self.host, self.port,
+        )
 
     def url(self, privacy=False, *args, **kwargs):
         """

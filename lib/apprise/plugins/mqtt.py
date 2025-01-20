@@ -2,7 +2,7 @@
 # BSD 2-Clause License
 #
 # Apprise - Push Notification Library.
-# Copyright (c) 2024, Chris Caron <lead2gold@gmail.com>
+# Copyright (c) 2025, Chris Caron <lead2gold@gmail.com>
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -41,8 +41,7 @@ from os.path import isfile
 from .base import NotifyBase
 from ..url import PrivacyMode
 from ..common import NotifyType
-from ..utils import parse_list
-from ..utils import parse_bool
+from ..utils.parse import parse_list, parse_bool
 from ..locale import gettext_lazy as _
 
 # Default our global support flag
@@ -89,7 +88,7 @@ class NotifyMQTT(NotifyBase):
 
     requirements = {
         # Define our required packaging in order to work
-        'packages_required': 'paho-mqtt < 2.0.0'
+        'packages_required': 'paho-mqtt != 2.0.*'
     }
 
     # The default descriptive name associated with the Notification
@@ -204,10 +203,15 @@ class NotifyMQTT(NotifyBase):
             'type': 'bool',
             'default': False,
         },
+        'retain': {
+            'name': _('Retain Messages'),
+            'type': 'bool',
+            'default': False,
+        },
     })
 
     def __init__(self, targets=None, version=None, qos=None,
-                 client_id=None, session=None, **kwargs):
+                 client_id=None, session=None, retain=None, **kwargs):
         """
         Initialize MQTT Object
         """
@@ -229,6 +233,10 @@ class NotifyMQTT(NotifyBase):
         self.session = self.template_args['session']['default'] \
             if session is None or not self.client_id \
             else parse_bool(session)
+
+        # Our Retain Message Flag
+        self.retain = self.template_args['retain']['default'] \
+            if retain is None else parse_bool(retain)
 
         # Set up our Quality of Service (QoS)
         try:
@@ -376,7 +384,7 @@ class NotifyMQTT(NotifyBase):
                 self.logger.debug('MQTT Payload: %s' % str(body))
 
                 result = self.client.publish(
-                    topic, payload=body, qos=self.qos, retain=False)
+                    topic, payload=body, qos=self.qos, retain=self.retain)
 
                 if result.rc != mqtt.MQTT_ERR_SUCCESS:
                     # Toggle our status
@@ -429,6 +437,23 @@ class NotifyMQTT(NotifyBase):
 
         return not has_error
 
+    @property
+    def url_identifier(self):
+        """
+        Returns all of the identifiers that make this URL unique from
+        another simliar one. Targets or end points should never be identified
+        here.
+        """
+        return (
+            self.secure_protocol if self.secure else self.protocol,
+            self.user, self.password, self.host,
+            self.port if self.port else (
+                self.mqtt_secure_port if self.secure
+                else self.mqtt_insecure_port),
+            self.fullpath.rstrip('/'),
+            self.client_id,
+        )
+
     def url(self, privacy=False, *args, **kwargs):
         """
         Returns the URL built dynamically based on specified arguments.
@@ -439,6 +464,7 @@ class NotifyMQTT(NotifyBase):
             'version': self.version,
             'qos': str(self.qos),
             'session': 'yes' if self.session else 'no',
+            'retain': 'yes' if self.retain else 'no',
         }
 
         if self.client_id:
@@ -517,6 +543,10 @@ class NotifyMQTT(NotifyBase):
 
         if 'session' in results['qsd'] and len(results['qsd']['session']):
             results['session'] = parse_bool(results['qsd']['session'])
+
+        # Message Retain Flag
+        if 'retain' in results['qsd'] and len(results['qsd']['retain']):
+            results['retain'] = parse_bool(results['qsd']['retain'])
 
         # The MQTT Quality of Service to use
         if 'qos' in results['qsd'] and len(results['qsd']['qos']):

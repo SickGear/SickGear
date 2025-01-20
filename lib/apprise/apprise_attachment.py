@@ -2,7 +2,7 @@
 # BSD 2-Clause License
 #
 # Apprise - Push Notification Library.
-# Copyright (c) 2024, Chris Caron <lead2gold@gmail.com>
+# Copyright (c) 2025, Chris Caron <lead2gold@gmail.com>
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -33,7 +33,7 @@ from .manager_attachment import AttachmentManager
 from .logger import logger
 from .common import ContentLocation
 from .common import CONTENT_LOCATIONS
-from .utils import GET_SCHEMA_RE
+from .utils.parse import GET_SCHEMA_RE
 
 # Grant access to our Notification Manager Singleton
 A_MGR = AttachmentManager()

@@ -2,7 +2,7 @@
 # BSD 2-Clause License
 #
 # Apprise - Push Notification Library.
-# Copyright (c) 2024, Chris Caron <lead2gold@gmail.com>
+# Copyright (c) 2025, Chris Caron <lead2gold@gmail.com>
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -36,7 +36,7 @@ from json import loads
 
 from .base import NotifyBase
 from ..url import PrivacyMode
-from ..utils import parse_bool
+from ..utils.parse import parse_bool
 from ..common import NotifyType
 from .. import __version__ as VERSION
 from ..locale import gettext_lazy as _
@@ -592,6 +592,18 @@ class NotifyEmby(NotifyBase):
                 continue
 
         return not has_error
+
+    @property
+    def url_identifier(self):
+        """
+        Returns all of the identifiers that make this URL unique from
+        another simliar one. Targets or end points should never be identified
+        here.
+        """
+        return (
+            self.secure_protocol, self.user, self.password, self.host,
+            self.port if self.port else (443 if self.secure else 80),
+        )
 
     def url(self, privacy=False, *args, **kwargs):
         """

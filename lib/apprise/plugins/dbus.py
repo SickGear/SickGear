@@ -2,7 +2,7 @@
 # BSD 2-Clause License
 #
 # Apprise - Push Notification Library.
-# Copyright (c) 2024, Chris Caron <lead2gold@gmail.com>
+# Copyright (c) 2025, Chris Caron <lead2gold@gmail.com>
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -30,7 +30,7 @@ import sys
 from .base import NotifyBase
 from ..common import NotifyImageSize
 from ..common import NotifyType
-from ..utils import parse_bool
+from ..utils.parse import parse_bool
 from ..locale import gettext_lazy as _
 
 # Default our global support flag
@@ -174,7 +174,6 @@ class NotifyDBus(NotifyBase):
     # object if we were to reference, we wouldn't be backwards compatible with
     # Python v2.  So converting the result set back into a list makes us
     # compatible
-    # TODO: Review after dropping support for Python 2.
     protocol = list(MAINLOOP_MAP.keys())
 
     # A URL that takes you to the setup/help of the specific protocol
@@ -196,6 +195,10 @@ class NotifyDBus(NotifyBase):
     # The following are required to hook into the notifications:
     dbus_interface = 'org.freedesktop.Notifications'
     dbus_setting_location = '/org/freedesktop/Notifications'
+
+    # No URL Identifier will be defined for this service as there simply isn't
+    # enough details to uniquely identify one dbus:// from another.
+    url_identifier = False
 
     # Define object templates
     templates = (

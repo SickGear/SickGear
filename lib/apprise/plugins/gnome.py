@@ -2,7 +2,7 @@
 # BSD 2-Clause License
 #
 # Apprise - Push Notification Library.
-# Copyright (c) 2024, Chris Caron <lead2gold@gmail.com>
+# Copyright (c) 2025, Chris Caron <lead2gold@gmail.com>
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -29,7 +29,7 @@
 from .base import NotifyBase
 from ..common import NotifyImageSize
 from ..common import NotifyType
-from ..utils import parse_bool
+from ..utils.parse import parse_bool
 from ..locale import gettext_lazy as _
 
 # Default our global support flag
@@ -133,6 +133,10 @@ class NotifyGnome(NotifyBase):
     # A title can not be used for Gnome Messages.  Setting this to zero will
     # cause any title (if defined) to get placed into the message body.
     title_maxlen = 0
+
+    # No URL Identifier will be defined for this service as there simply isn't
+    # enough details to uniquely identify one dbus:// from another.
+    url_identifier = False
 
     # Define object templates
     templates = (

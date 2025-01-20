@@ -2,7 +2,7 @@
 # BSD 2-Clause License
 #
 # Apprise - Push Notification Library.
-# Copyright (c) 2024, Chris Caron <lead2gold@gmail.com>
+# Copyright (c) 2025, Chris Caron <lead2gold@gmail.com>
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -54,8 +54,7 @@ from .base import NotifyBase
 from ..common import NotifyImageSize
 from ..common import NotifyFormat
 from ..common import NotifyType
-from ..utils import parse_bool
-from ..utils import validate_regex
+from ..utils.parse import parse_bool, validate_regex
 from ..locale import gettext_lazy as _
 from ..attachment.base import AttachBase
 
@@ -597,15 +596,30 @@ class NotifyDiscord(NotifyBase):
         if self.thread_id:
             params['thread'] = self.thread_id
 
+        # Ensure our botname is set
+        botname = f'{self.user}@' if self.user else ''
+
         # Extend our parameters
         params.update(self.url_parameters(privacy=privacy, *args, **kwargs))
 
-        return '{schema}://{webhook_id}/{webhook_token}/?{params}'.format(
-            schema=self.secure_protocol,
-            webhook_id=self.pprint(self.webhook_id, privacy, safe=''),
-            webhook_token=self.pprint(self.webhook_token, privacy, safe=''),
-            params=NotifyDiscord.urlencode(params),
-        )
+        return '{schema}://{botname}{webhook_id}/{webhook_token}/?{params}' \
+            .format(
+                schema=self.secure_protocol,
+                botname=botname,
+                webhook_id=self.pprint(self.webhook_id, privacy, safe=''),
+                webhook_token=self.pprint(
+                    self.webhook_token, privacy, safe=''),
+                params=NotifyDiscord.urlencode(params),
+            )
+
+    @property
+    def url_identifier(self):
+        """
+        Returns all of the identifiers that make this URL unique from
+        another simliar one. Targets or end points should never be identified
+        here.
+        """
+        return (self.secure_protocol, self.webhook_id, self.webhook_token)
 
     @staticmethod
     def parse_url(url):
@@ -659,6 +673,11 @@ class NotifyDiscord(NotifyBase):
         # Boolean to include an image or not
         results['include_image'] = parse_bool(results['qsd'].get(
             'image', NotifyDiscord.template_args['image']['default']))
+
+        if 'botname' in results['qsd']:
+            # Alias to User
+            results['user'] = \
+                NotifyDiscord.unquote(results['qsd']['botname'])
 
         # Extract avatar url if it was specified
         if 'avatar_url' in results['qsd']:

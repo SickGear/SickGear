@@ -2,7 +2,7 @@
 # BSD 2-Clause License
 #
 # Apprise - Push Notification Library.
-# Copyright (c) 2024, Chris Caron <lead2gold@gmail.com>
+# Copyright (c) 2025, Chris Caron <lead2gold@gmail.com>
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -31,7 +31,7 @@ from time import sleep
 from .base import NotifyBase
 from ..common import NotifyImageSize
 from ..common import NotifyType
-from ..utils import parse_bool
+from ..utils.parse import parse_bool
 from ..locale import gettext_lazy as _
 
 # Default our global support flag
@@ -86,6 +86,10 @@ class NotifyWindows(NotifyBase):
 
     # The number of seconds to display the popup for
     default_popup_duration_sec = 12
+
+    # No URL Identifier will be defined for this service as there simply isn't
+    # enough details to uniquely identify one dbus:// from another.
+    url_identifier = False
 
     # Define object templates
     templates = (

@@ -2,7 +2,7 @@
 # BSD 2-Clause License
 #
 # Apprise - Push Notification Library.
-# Copyright (c) 2024, Chris Caron <lead2gold@gmail.com>
+# Copyright (c) 2025, Chris Caron <lead2gold@gmail.com>
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -29,8 +29,10 @@
 import os
 import time
 import mimetypes
+import base64
+from .. import exception
 from ..url import URLBase
-from ..utils import parse_bool
+from ..utils.parse import parse_bool
 from ..common import ContentLocation
 from ..locale import gettext_lazy as _
 
@@ -267,27 +269,59 @@ class AttachBase(URLBase):
         cache = self.template_args['cache']['default'] \
             if self.cache is None else self.cache
 
-        if self.download_path and os.path.isfile(self.download_path) \
-                and cache:
+        try:
+            if self.download_path and os.path.isfile(self.download_path) \
+                    and cache:
 
-            # We have enough reason to look further into our cached content
-            # and verify it has not expired.
-            if cache is True:
-                # return our fixed content as is; we will always cache it
-                return True
+                # We have enough reason to look further into our cached content
+                # and verify it has not expired.
+                if cache is True:
+                    # return our fixed content as is; we will always cache it
+                    return True
 
-            # Verify our cache time to determine whether we will get our
-            # content again.
-            try:
-                age_in_sec = time.time() - os.stat(self.download_path).st_mtime
+                # Verify our cache time to determine whether we will get our
+                # content again.
+                age_in_sec = \
+                    time.time() - os.stat(self.download_path).st_mtime
                 if age_in_sec <= cache:
                     return True
 
-            except (OSError, IOError):
-                # The file is not present
-                pass
+        except (OSError, IOError):
+            # The file is not present
+            pass
 
         return False if not retrieve_if_missing else self.download()
+
+    def base64(self, encoding='ascii'):
+        """
+        Returns the attachment object as a base64 string otherwise
+        None is returned if an error occurs.
+
+        If encoding is set to None, then it is not encoded when returned
+        """
+        if not self:
+            # We could not access the attachment
+            self.logger.error(
+                'Could not access attachment {}.'.format(
+                    self.url(privacy=True)))
+            raise exception.AppriseFileNotFound("Attachment Missing")
+
+        try:
+            with self.open() as f:
+                # Prepare our Attachment in Base64
+                return base64.b64encode(f.read()).decode(encoding) \
+                    if encoding else base64.b64encode(f.read())
+
+        except (TypeError, FileNotFoundError):
+            # We no longer have a path to open
+            raise exception.AppriseFileNotFound("Attachment Missing")
+
+        except (TypeError, OSError, IOError) as e:
+            self.logger.warning(
+                'An I/O error occurred while reading {}.'.format(
+                    self.name if self else 'attachment'))
+            self.logger.debug('I/O Exception: %s' % str(e))
+            raise exception.AppriseDiskIOError("Attachment Access Error")
 
     def invalidate(self):
         """
@@ -326,11 +360,26 @@ class AttachBase(URLBase):
 
     def open(self, mode='rb'):
         """
-        return our file pointer and track it (we'll auto close later
+        return our file pointer and track it (we'll auto close later)
         """
         pointer = open(self.path, mode=mode)
         self.__pointers.add(pointer)
         return pointer
+
+    def chunk(self, size=5242880):
+        """
+        A Generator that yield chunks of a file with the specified size.
+
+        By default the chunk size is set to 5MB (5242880 bytes)
+        """
+
+        with self.open() as file:
+            while True:
+                chunk = file.read(size)
+                if not chunk:
+                    break
+
+                yield chunk
 
     def __enter__(self):
         """
@@ -398,7 +447,15 @@ class AttachBase(URLBase):
         Returns the filesize of the attachment.
 
         """
-        return os.path.getsize(self.path) if self.path else 0
+        if not self:
+            return 0
+
+        try:
+            return os.path.getsize(self.path) if self.path else 0
+
+        except OSError:
+            # OSError can occur if the file is inaccessible
+            return 0
 
     def __bool__(self):
         """
