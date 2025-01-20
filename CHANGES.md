@@ -7,6 +7,7 @@
 * Update deprecated pkg_resources 24.0 to Packaging 24.2 (d8e3b31)
 * Update SimpleJSON 3.19.1 (aeb63ee) to 3.19.3 (6932004)
 * Update Six compatibility library 1.16.0 (b620447) to 1.17.0 (4a765bf)
+* Update thefuzz 0.21.0 (0b49e4a) to 0.22.1 (83bea3d)
 * Update tmdbsimple 2.9.1 (9da400a) to 2.9.2 (0b3359f)
 * Update urllib3 2.2.2 (27e2a5c) to 2.3.0 (2f68c53)
 
