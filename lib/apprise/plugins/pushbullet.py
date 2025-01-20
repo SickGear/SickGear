@@ -2,7 +2,7 @@
 # BSD 2-Clause License
 #
 # Apprise - Push Notification Library.
-# Copyright (c) 2024, Chris Caron <lead2gold@gmail.com>
+# Copyright (c) 2025, Chris Caron <lead2gold@gmail.com>
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -31,10 +31,8 @@ from json import dumps
 from json import loads
 
 from .base import NotifyBase
-from ..utils import is_email
 from ..common import NotifyType
-from ..utils import parse_list
-from ..utils import validate_regex
+from ..utils.parse import is_email, parse_list, validate_regex
 from ..locale import gettext_lazy as _
 from ..attachment.base import AttachBase
 
@@ -152,7 +150,7 @@ class NotifyPushBullet(NotifyBase):
         if attach and self.attachment_support:
             # We need to upload our payload first so that we can source it
             # in remaining messages
-            for attachment in attach:
+            for no, attachment in enumerate(attach, start=1):
 
                 # Perform some simple error checking
                 if not attachment:
@@ -168,7 +166,8 @@ class NotifyPushBullet(NotifyBase):
 
                 # prepare payload
                 payload = {
-                    'file_name': attachment.name,
+                    'file_name': attachment.name
+                    if attachment.name else f'file{no:03}.dat',
                     'file_type': attachment.mimetype,
                 }
                 # First thing we need to do is make a request so that we can
@@ -385,6 +384,15 @@ class NotifyPushBullet(NotifyBase):
             # of our files tuple (index 1)
             if files:
                 files['file'][1].close()
+
+    @property
+    def url_identifier(self):
+        """
+        Returns all of the identifiers that make this URL unique from
+        another simliar one. Targets or end points should never be identified
+        here.
+        """
+        return (self.secure_protocol, self.accesstoken)
 
     def url(self, privacy=False, *args, **kwargs):
         """

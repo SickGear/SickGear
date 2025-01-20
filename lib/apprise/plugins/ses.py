@@ -2,7 +2,7 @@
 # BSD 2-Clause License
 #
 # Apprise - Push Notification Library.
-# Copyright (c) 2024, Chris Caron <lead2gold@gmail.com>
+# Copyright (c) 2025, Chris Caron <lead2gold@gmail.com>
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -99,10 +99,8 @@ from .base import NotifyBase
 from ..url import PrivacyMode
 from ..common import NotifyFormat
 from ..common import NotifyType
-from ..utils import parse_emails
-from ..utils import validate_regex
+from ..utils.parse import parse_emails, validate_regex, is_email
 from ..locale import gettext_lazy as _
-from ..utils import is_email
 
 # Our Regin Identifier
 # support us-gov-west-1 syntax as well
@@ -448,7 +446,7 @@ class NotifySES(NotifyBase):
                 base.attach(content)
 
                 # Now store our attachments
-                for attachment in attach:
+                for no, attachment in enumerate(attach, start=1):
                     if not attachment:
                         # We could not load the attachment; take an early
                         # exit since this isn't what the end user wanted
@@ -468,10 +466,13 @@ class NotifySES(NotifyBase):
                         app = MIMEApplication(abody.read())
                         app.set_type(attachment.mimetype)
 
+                        filename = attachment.name \
+                            if attachment.name else f'file{no:03}.dat'
+
                         app.add_header(
                             'Content-Disposition',
                             'attachment; filename="{}"'.format(
-                                Header(attachment.name, 'utf-8')),
+                                Header(filename, 'utf-8')),
                         )
 
                         base.attach(app)
@@ -769,6 +770,18 @@ class NotifySES(NotifyBase):
             pass
 
         return response
+
+    @property
+    def url_identifier(self):
+        """
+        Returns all of the identifiers that make this URL unique from
+        another simliar one. Targets or end points should never be identified
+        here.
+        """
+        return (
+            self.secure_protocol, self.from_addr, self.aws_access_key_id,
+            self.aws_secret_access_key, self.aws_region_name,
+        )
 
     def url(self, privacy=False, *args, **kwargs):
         """

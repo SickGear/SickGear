@@ -2,7 +2,7 @@
 # BSD 2-Clause License
 #
 # Apprise - Push Notification Library.
-# Copyright (c) 2024, Chris Caron <lead2gold@gmail.com>
+# Copyright (c) 2025, Chris Caron <lead2gold@gmail.com>
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -63,9 +63,8 @@ from .base import NotifyBase
 from ..common import NotifyType
 from ..common import NotifyImageSize
 from ..common import NotifyFormat
-from ..utils import parse_bool
-from ..utils import parse_list
-from ..utils import validate_regex
+from ..common import PersistentStoreMode
+from ..utils.parse import parse_bool, parse_list, validate_regex
 from ..locale import gettext_lazy as _
 from ..attachment.base import AttachBase
 
@@ -163,6 +162,10 @@ class NotifyTelegram(NotifyBase):
 
     # Telegram is limited to sending a maximum of 100 requests per second.
     request_rate_per_sec = 0.001
+
+    # Our default is to no not use persistent storage beyond in-memory
+    # reference
+    storage_mode = PersistentStoreMode.AUTO
 
     # Define object templates
     templates = (
@@ -361,11 +364,14 @@ class NotifyTelegram(NotifyBase):
             'name': _('Topic Thread ID'),
             'type': 'int',
         },
+        'thread': {
+            'alias_of': 'topic',
+        },
         'mdv': {
             'name': _('Markdown Version'),
             'type': 'choice:string',
             'values': ('v1', 'v2'),
-            'default': 'v2',
+            'default': 'v1',
         },
         'to': {
             'alias_of': 'targets',
@@ -460,14 +466,13 @@ class NotifyTelegram(NotifyBase):
                 self.detect_owner = False
                 continue
 
-            try:
+            if results.group('topic'):
                 topic = int(
                     results.group('topic')
                     if results.group('topic') else self.topic)
-
-            except TypeError:
-                # No worries
-                topic = None
+            else:
+                # Default (if one set)
+                topic = self.topic
 
             if results.group('name') is not None:
                 # Name
@@ -714,6 +719,7 @@ class NotifyTelegram(NotifyBase):
                     self.logger.info(
                         'Detected Telegram user %s (userid=%d)' % (_user, _id))
                     # Return our detected userid
+                    self.store.set('bot_owner', _id)
                     return _id
 
         self.logger.warning(
@@ -728,10 +734,10 @@ class NotifyTelegram(NotifyBase):
         """
 
         if len(self.targets) == 0 and self.detect_owner:
-            _id = self.detect_bot_owner()
+            _id = self.store.get('bot_owner') or self.detect_bot_owner()
             if _id:
                 # Permanently store our id in our target list for next time
-                self.targets.append((str(_id), None))
+                self.targets.append((str(_id), self.topic))
                 self.logger.info(
                     'Update your Telegram Apprise URL to read: '
                     '{}'.format(self.url(privacy=True)))
@@ -763,6 +769,16 @@ class NotifyTelegram(NotifyBase):
 
         # Prepare Message Body
         if self.notify_format == NotifyFormat.MARKDOWN:
+
+            if body_format not in (None, NotifyFormat.MARKDOWN) \
+                    and self.markdown_ver == TelegramMarkdownVersion.TWO:
+                # Telegram Markdown v2 is not very accomodating to some
+                # characters such as the hashtag (#) which is fine in v1.
+                # To try and be accomodating we escape them in advance
+                # See: https://stackoverflow.com/a/69892704/355584
+                # Also: https://core.telegram.org/bots/api#markdownv2-style
+                body = re.sub(r'(?<!\\)([_*[\]()~`>#+=|{}.!-])', r'\\\1', body)
+
             _payload['parse_mode'] = self.markdown_ver
             _payload['text'] = body
 
@@ -919,6 +935,15 @@ class NotifyTelegram(NotifyBase):
 
         return not has_error
 
+    @property
+    def url_identifier(self):
+        """
+        Returns all of the identifiers that make this URL unique from
+        another simliar one. Targets or end points should never be identified
+        here.
+        """
+        return (self.secure_protocol, self.bot_token)
+
     def url(self, privacy=False, *args, **kwargs):
         """
         Returns the URL built dynamically based on specified arguments.
@@ -1043,6 +1068,9 @@ class NotifyTelegram(NotifyBase):
         # Support Thread Topic
         if 'topic' in results['qsd'] and len(results['qsd']['topic']):
             results['topic'] = results['qsd']['topic']
+
+        elif 'thread' in results['qsd'] and len(results['qsd']['thread']):
+            results['topic'] = results['qsd']['thread']
 
         # Silent (Sends the message Silently); users will receive
         # notification with no sound.

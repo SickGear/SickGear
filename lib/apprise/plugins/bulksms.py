@@ -2,7 +2,7 @@
 # BSD 2-Clause License
 #
 # Apprise - Push Notification Library.
-# Copyright (c) 2024, Chris Caron <lead2gold@gmail.com>
+# Copyright (c) 2025, Chris Caron <lead2gold@gmail.com>
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -39,9 +39,7 @@ from itertools import chain
 from .base import NotifyBase
 from ..url import PrivacyMode
 from ..common import NotifyType
-from ..utils import is_phone_no
-from ..utils import parse_phone_no
-from ..utils import parse_bool
+from ..utils.parse import is_phone_no, parse_phone_no, parse_bool
 from ..locale import gettext_lazy as _
 
 
@@ -269,7 +267,7 @@ class NotifyBulkSMS(NotifyBase):
             'to': None,
             'body': body,
             'routingGroup': self.route,
-            'encoding': BulkSMSEncoding.UNICODE \
+            'encoding': BulkSMSEncoding.UNICODE
             if self.unicode else BulkSMSEncoding.TEXT,
             # Options are NONE, ALL and ERRORS
             'deliveryReports': "ERRORS"
@@ -412,6 +410,19 @@ class NotifyBulkSMS(NotifyBase):
                 [NotifyBulkSMS.quote('@{}'.format(x), safe='@')
                  for x in self.groups])),
             params=NotifyBulkSMS.urlencode(params))
+
+    @property
+    def url_identifier(self):
+        """
+        Returns all of the identifiers that make this URL unique from
+        another simliar one. Targets or end points should never be identified
+        here.
+        """
+        return (
+            self.secure_protocol,
+            self.user if self.user else None,
+            self.password if self.password else None,
+        )
 
     def __len__(self):
         """

@@ -2,7 +2,7 @@
 # BSD 2-Clause License
 #
 # Apprise - Push Notification Library.
-# Copyright (c) 2024, Chris Caron <lead2gold@gmail.com>
+# Copyright (c) 2025, Chris Caron <lead2gold@gmail.com>
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -30,7 +30,7 @@ import requests
 
 from ..common import NotifyType
 from .base import NotifyBase
-from ..utils import validate_regex
+from ..utils.parse import validate_regex
 from ..locale import gettext_lazy as _
 
 # Syntax:
@@ -179,6 +179,18 @@ class NotifyPushDeer(NotifyBase):
             return False
 
         return True
+
+    @property
+    def url_identifier(self):
+        """
+        Returns all of the identifiers that make this URL unique from
+        another simliar one. Targets or end points should never be identified
+        here.
+        """
+        return (
+            self.secure_protocol if self.secure else self.protocol,
+            self.push_key, self.host, self.port,
+        )
 
     def url(self, privacy=False):
         """

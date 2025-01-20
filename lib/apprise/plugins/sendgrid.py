@@ -2,7 +2,7 @@
 # BSD 2-Clause License
 #
 # Apprise - Push Notification Library.
-# Copyright (c) 2024, Chris Caron <lead2gold@gmail.com>
+# Copyright (c) 2025, Chris Caron <lead2gold@gmail.com>
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -50,12 +50,12 @@ import requests
 from json import dumps
 
 from .base import NotifyBase
+from .. import exception
 from ..common import NotifyFormat
 from ..common import NotifyType
-from ..utils import parse_list
-from ..utils import is_email
-from ..utils import validate_regex
+from ..utils.parse import parse_list, is_email, validate_regex
 from ..locale import gettext_lazy as _
+
 
 # Extend HTTP Error Messages
 SENDGRID_HTTP_ERROR_MAP = {
@@ -89,6 +89,9 @@ class NotifySendGrid(NotifyBase):
 
     # The default Email API URL to use
     notify_url = 'https://api.sendgrid.com/v3/mail/send'
+
+    # Support attachments
+    attachment_support = True
 
     # Allow 300 requests per minute.
     # 60/300 = 0.2
@@ -243,6 +246,15 @@ class NotifySendGrid(NotifyBase):
 
         return
 
+    @property
+    def url_identifier(self):
+        """
+        Returns all of the identifiers that make this URL unique from
+        another simliar one. Targets or end points should never be identified
+        here.
+        """
+        return (self.secure_protocol, self.apikey, self.from_email)
+
     def url(self, privacy=False, *args, **kwargs):
         """
         Returns the URL built dynamically based on specified arguments.
@@ -288,7 +300,8 @@ class NotifySendGrid(NotifyBase):
         """
         return len(self.targets)
 
-    def send(self, body, title='', notify_type=NotifyType.INFO, **kwargs):
+    def send(self, body, title='', notify_type=NotifyType.INFO, attach=None,
+             **kwargs):
         """
         Perform SendGrid Notification
         """
@@ -321,6 +334,44 @@ class NotifySendGrid(NotifyBase):
                 'value': body,
             }],
         }
+
+        if attach and self.attachment_support:
+            attachments = []
+
+            # Send our attachments
+            for no, attachment in enumerate(attach, start=1):
+                # Perform some simple error checking
+                if not attachment:
+                    # We could not access the attachment
+                    self.logger.error(
+                        'Could not access SendGrid attachment {}.'.format(
+                            attachment.url(privacy=True)))
+                    return False
+
+                try:
+                    attachments.append({
+                        "content": attachment.base64(),
+                        "filename": attachment.name
+                        if attachment.name else f'file{no:03}.dat',
+                        "type": "application/octet-stream",
+                        "disposition": "attachment"
+                    })
+
+                except exception.AppriseException:
+                    # We could not access the attachment
+                    self.logger.error(
+                        'Could not access SendGrid attachment {}.'.format(
+                            attachment.url(privacy=True)))
+                    return False
+
+                self.logger.debug(
+                    'Appending SendGrid attachment {}'.format(
+                        attachment.url(privacy=True)))
+
+            # Append our attachments to the payload
+            _payload.update({
+                'attachments': attachments,
+            })
 
         if self.template:
             _payload['template_id'] = self.template

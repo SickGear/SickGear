@@ -2,7 +2,7 @@
 # BSD 2-Clause License
 #
 # Apprise - Push Notification Library.
-# Copyright (c) 2024, Chris Caron <lead2gold@gmail.com>
+# Copyright (c) 2025, Chris Caron <lead2gold@gmail.com>
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -36,10 +36,8 @@ from json import dumps
 from .base import NotifyBase
 from ..common import NotifyType
 from ..common import NotifyImageSize
-from ..utils import parse_list
-from ..utils import is_hostname
-from ..utils import is_ipaddr
-from ..utils import parse_bool
+from ..utils.parse import (
+    parse_list, is_hostname, is_ipaddr, parse_bool)
 from ..locale import gettext_lazy as _
 from ..url import PrivacyMode
 
@@ -323,6 +321,24 @@ class NotifyLunaSea(NotifyBase):
                 has_error = True
 
         return not has_error
+
+    @property
+    def url_identifier(self):
+        """
+        Returns all of the identifiers that make this URL unique from
+        another simliar one. Targets or end points should never be identified
+        here.
+        """
+        secure = self.secure_protocol[0] \
+            if self.mode == LunaSeaMode.CLOUD else (
+                self.secure_protocol[0] if self.secure else self.protocol[0])
+        return (
+            secure,
+            self.host if self.mode == LunaSeaMode.PRIVATE else None,
+            self.port if self.port else (443 if self.secure else 80),
+            self.user if self.user else None,
+            self.password if self.password else None,
+        )
 
     def url(self, privacy=False, *args, **kwargs):
         """

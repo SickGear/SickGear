@@ -2,7 +2,7 @@
 # BSD 2-Clause License
 #
 # Apprise - Push Notification Library.
-# Copyright (c) 2024, Chris Caron <lead2gold@gmail.com>
+# Copyright (c) 2025, Chris Caron <lead2gold@gmail.com>
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -39,9 +39,7 @@ from json import loads
 from .base import NotifyBase
 from ..url import PrivacyMode
 from ..common import NotifyType
-from ..utils import parse_list
-from ..utils import parse_bool
-from ..utils import validate_regex
+from ..utils.parse import parse_list, parse_bool, validate_regex
 from ..locale import gettext_lazy as _
 from ..attachment.base import AttachBase
 
@@ -287,7 +285,7 @@ class NotifyTwitter(NotifyBase):
         if attach and self.attachment_support:
             # We need to upload our payload first so that we can source it
             # in remaining messages
-            for attachment in attach:
+            for no, attachment in enumerate(attach, start=1):
 
                 # Perform some simple error checking
                 if not attachment:
@@ -320,11 +318,15 @@ class NotifyTwitter(NotifyBase):
                     # We can't post our attachment
                     return False
 
+                # Prepare our filename
+                filename = attachment.name \
+                    if attachment.name else f'file{no:03}.dat'
+
                 if not (isinstance(response, dict)
                         and response.get('media_id')):
                     self.logger.debug(
                         'Could not attach the file to Twitter: %s (mime=%s)',
-                        attachment.name, attachment.mimetype)
+                        filename, attachment.mimetype)
                     continue
 
                 # If we get here, our output will look something like this:
@@ -344,7 +346,7 @@ class NotifyTwitter(NotifyBase):
                 response.update({
                     # Update our response to additionally include the
                     # attachment details
-                    'file_name': attachment.name,
+                    'file_name': filename,
                     'file_mime': attachment.mimetype,
                     'file_path': attachment.path,
                 })
@@ -779,6 +781,18 @@ class NotifyTwitter(NotifyBase):
         which are limited to 280 characters)
         """
         return 10000 if self.mode == TwitterMessageMode.DM else 280
+
+    @property
+    def url_identifier(self):
+        """
+        Returns all of the identifiers that make this URL unique from
+        another simliar one. Targets or end points should never be identified
+        here.
+        """
+        return (
+            self.secure_protocol[0], self.ckey, self.csecret, self.akey,
+            self.asecret,
+        )
 
     def url(self, privacy=False, *args, **kwargs):
         """

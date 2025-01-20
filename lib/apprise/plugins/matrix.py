@@ -2,7 +2,7 @@
 # BSD 2-Clause License
 #
 # Apprise - Push Notification Library.
-# Copyright (c) 2024, Chris Caron <lead2gold@gmail.com>
+# Copyright (c) 2025, Chris Caron <lead2gold@gmail.com>
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -32,6 +32,7 @@
 #
 import re
 import requests
+import uuid
 from markdown import markdown
 from json import dumps
 from json import loads
@@ -39,13 +40,13 @@ from time import time
 
 from .base import NotifyBase
 from ..url import PrivacyMode
+from ..exception import AppriseException
 from ..common import NotifyType
 from ..common import NotifyImageSize
 from ..common import NotifyFormat
-from ..utils import parse_bool
-from ..utils import parse_list
-from ..utils import is_hostname
-from ..utils import validate_regex
+from ..common import PersistentStoreMode
+from ..utils.parse import (
+    parse_bool, parse_list, is_hostname, validate_regex)
 from ..locale import gettext_lazy as _
 
 # Define default path
@@ -54,6 +55,13 @@ MATRIX_V2_API_PATH = '/_matrix/client/r0'
 MATRIX_V3_API_PATH = '/_matrix/client/v3'
 MATRIX_V3_MEDIA_PATH = '/_matrix/media/v3'
 MATRIX_V2_MEDIA_PATH = '/_matrix/media/r0'
+
+
+class MatrixDiscoveryException(AppriseException):
+    """
+    Apprise Matrix Exception Class
+    """
+
 
 # Extend HTTP Error Messages
 MATRIX_HTTP_ERROR_MAP = {
@@ -164,9 +172,6 @@ class NotifyMatrix(NotifyBase):
     # Throttle a wee-bit to avoid thrashing
     request_rate_per_sec = 0.5
 
-    # Our Matrix API Version
-    matrix_api_version = '3'
-
     # How many retry attempts we'll make in the event the server asks us to
     # throttle back.
     default_retries = 2
@@ -175,15 +180,31 @@ class NotifyMatrix(NotifyBase):
     # the server doesn't remind us how long we shoul wait for
     default_wait_ms = 1000
 
+    # Our default is to no not use persistent storage beyond in-memory
+    # reference
+    storage_mode = PersistentStoreMode.AUTO
+
+    # Keep our cache for 20 days
+    default_cache_expiry_sec = 60 * 60 * 24 * 20
+
+    # Used for server discovery
+    discovery_base_key = '__discovery_base'
+    discovery_identity_key = '__discovery_identity'
+
+    # Defines how long we cache our discovery for
+    discovery_cache_length_sec = 86400
+
     # Define object templates
     templates = (
         # Targets are ignored when using t2bot mode; only a token is required
         '{schema}://{token}',
         '{schema}://{user}@{token}',
 
-        # Disabled webhook
+        # Matrix Server
         '{schema}://{user}:{password}@{host}/{targets}',
         '{schema}://{user}:{password}@{host}:{port}/{targets}',
+        '{schema}://{token}@{host}/{targets}',
+        '{schema}://{token}@{host}:{port}/{targets}',
 
         # Webhook mode
         '{schema}://{user}:{token}@{host}/{targets}',
@@ -248,6 +269,11 @@ class NotifyMatrix(NotifyBase):
             'default': False,
             'map_to': 'include_image',
         },
+        'discovery': {
+            'name': _('Server Discovery'),
+            'type': 'bool',
+            'default': True,
+        },
         'mode': {
             'name': _('Webhook Mode'),
             'type': 'choice:string',
@@ -275,7 +301,7 @@ class NotifyMatrix(NotifyBase):
     })
 
     def __init__(self, targets=None, mode=None, msgtype=None, version=None,
-                 include_image=False, **kwargs):
+                 include_image=None, discovery=None, **kwargs):
         """
         Initialize Matrix Object
         """
@@ -297,11 +323,12 @@ class NotifyMatrix(NotifyBase):
         self.transaction_id = 0
 
         # Place an image inline with the message body
-        self.include_image = include_image
+        self.include_image = self.template_args['image']['default'] \
+            if include_image is None else include_image
 
-        # maintain a lookup of room alias's we already paired with their id
-        # to speed up future requests
-        self._room_cache = {}
+        # Prepare Delegate Server Lookup Check
+        self.discovery = self.template_args['discovery']['default'] \
+            if discovery is None else discovery
 
         # Setup our mode
         self.mode = self.template_args['mode']['default'] \
@@ -342,6 +369,7 @@ class NotifyMatrix(NotifyBase):
                   .format(self.host)
             self.logger.warning(msg)
             raise TypeError(msg)
+
         else:
             # Verify port if specified
             if self.port is not None and not (
@@ -352,6 +380,27 @@ class NotifyMatrix(NotifyBase):
                       .format(self.port)
                 self.logger.warning(msg)
                 raise TypeError(msg)
+
+        if self.mode != MatrixWebhookMode.DISABLED:
+            # Discovery only works when we're not using webhooks
+            self.discovery = False
+
+        #
+        # Initialize from cache if present
+        #
+        if self.mode != MatrixWebhookMode.T2BOT:
+            # our home server gets populated after a login/registration
+            self.home_server = self.store.get('home_server')
+
+            # our user_id gets populated after a login/registration
+            self.user_id = self.store.get('user_id')
+
+            # This gets initialized after a login/registration
+            self.access_token = self.store.get('access_token')
+
+        # This gets incremented for each request made against the v3 API
+        self.transaction_id = 0 if not self.access_token \
+            else self.store.get('transaction_id', 0)
 
     def send(self, body, title='', notify_type=NotifyType.INFO, **kwargs):
         """
@@ -564,6 +613,10 @@ class NotifyMatrix(NotifyBase):
         Perform Direct Matrix Server Notification (no webhook)
         """
 
+        if self.access_token is None and self.password and not self.user:
+            self.access_token = self.password
+            self.transaction_id = uuid.uuid4()
+
         if self.access_token is None:
             # We need to register
             if not self._login():
@@ -693,8 +746,12 @@ class NotifyMatrix(NotifyBase):
 
             # Increment the transaction ID to avoid future messages being
             # recognized as retransmissions and ignored
-            if self.version == MatrixVersion.V3:
+            if self.version == MatrixVersion.V3 \
+               and self.access_token != self.password:
                 self.transaction_id += 1
+                self.store.set(
+                    'transaction_id', self.transaction_id,
+                    expires=self.default_cache_expiry_sec)
 
             if not postokay:
                 # Notify our user
@@ -811,7 +868,18 @@ class NotifyMatrix(NotifyBase):
         self.home_server = response.get('home_server')
         self.user_id = response.get('user_id')
 
+        self.store.set(
+            'access_token', self.access_token,
+            expires=self.default_cache_expiry_sec)
+        self.store.set(
+            'home_server', self.home_server,
+            expires=self.default_cache_expiry_sec)
+        self.store.set(
+            'user_id', self.user_id,
+            expires=self.default_cache_expiry_sec)
+
         if self.access_token is not None:
+            # Store our token into our store
             self.logger.debug(
                 'Registered successfully with Matrix server.')
             return True
@@ -828,31 +896,32 @@ class NotifyMatrix(NotifyBase):
             # Login not required; silently skip-over
             return True
 
-        if not (self.user and self.password):
+        if (self.user and self.password):
+            # Prepare our Authentication Payload
+            if self.version == MatrixVersion.V3:
+                payload = {
+                    'type': 'm.login.password',
+                    'identifier': {
+                        'type': 'm.id.user',
+                        'user': self.user,
+                    },
+                    'password': self.password,
+                }
+
+            else:
+                payload = {
+                    'type': 'm.login.password',
+                    'user': self.user,
+                    'password': self.password,
+                }
+
+        else:
             # It's not possible to register since we need these 2 values to
             # make the action possible.
             self.logger.warning(
                 'Failed to login to Matrix server: '
-                'user/pass combo is missing.')
+                'token or user/pass combo is missing.')
             return False
-
-        # Prepare our Authentication Payload
-        if self.version == MatrixVersion.V3:
-            payload = {
-                'type': 'm.login.password',
-                'identifier': {
-                    'type': 'm.id.user',
-                    'user': self.user,
-                },
-                'password': self.password,
-            }
-
-        else:
-            payload = {
-                'type': 'm.login.password',
-                'user': self.user,
-                'password': self.password,
-            }
 
         # Build our URL
         postokay, response = self._fetch('/login', payload=payload)
@@ -870,6 +939,18 @@ class NotifyMatrix(NotifyBase):
 
         self.logger.debug(
             'Authenticated successfully with Matrix server.')
+
+        # Store our token into our store
+        self.store.set(
+            'access_token', self.access_token,
+            expires=self.default_cache_expiry_sec)
+        self.store.set(
+            'home_server', self.home_server,
+            expires=self.default_cache_expiry_sec)
+        self.store.set(
+            'user_id', self.user_id,
+            expires=self.default_cache_expiry_sec)
+
         return True
 
     def _logout(self):
@@ -907,8 +988,9 @@ class NotifyMatrix(NotifyBase):
         self.home_server = None
         self.user_id = None
 
-        # Clear our room cache
-        self._room_cache = {}
+        # clear our tokens
+        self.store.clear(
+            'access_token', 'home_server', 'user_id', 'transaction_id')
 
         self.logger.debug(
             'Unauthenticated successfully with Matrix server.')
@@ -948,9 +1030,13 @@ class NotifyMatrix(NotifyBase):
             )
 
             # Check our cache for speed:
-            if room_id in self._room_cache:
+            try:
                 # We're done as we've already joined the channel
-                return self._room_cache[room_id]['id']
+                return self.store[room_id]['id']
+
+            except KeyError:
+                # No worries, we'll try to acquire the info
+                pass
 
             # Build our URL
             path = '/join/{}'.format(NotifyMatrix.quote(room_id))
@@ -959,10 +1045,10 @@ class NotifyMatrix(NotifyBase):
             postokay, _ = self._fetch(path, payload=payload)
             if postokay:
                 # Cache our entry for fast access later
-                self._room_cache[room_id] = {
+                self.store.set(room_id, {
                     'id': room_id,
                     'home_server': home_server,
-                }
+                })
 
             return room_id if postokay else None
 
@@ -984,9 +1070,13 @@ class NotifyMatrix(NotifyBase):
         room = '#{}:{}'.format(result.group('room'), home_server)
 
         # Check our cache for speed:
-        if room in self._room_cache:
+        try:
             # We're done as we've already joined the channel
-            return self._room_cache[room]['id']
+            return self.store[room]['id']
+
+        except KeyError:
+            # No worries, we'll try to acquire the info
+            pass
 
         # If we reach here, we need to join the channel
 
@@ -997,11 +1087,12 @@ class NotifyMatrix(NotifyBase):
         postokay, response = self._fetch(path, payload=payload)
         if postokay:
             # Cache our entry for fast access later
-            self._room_cache[room] = {
+            self.store.set(room, {
                 'id': response.get('room_id'),
                 'home_server': home_server,
-            }
-            return self._room_cache[room]['id']
+            })
+
+            return response.get('room_id')
 
         # Try to create the channel
         return self._room_create(room)
@@ -1056,10 +1147,10 @@ class NotifyMatrix(NotifyBase):
             return None
 
         # Cache our entry for fast access later
-        self._room_cache[response.get('room_alias')] = {
+        self.store.set(response.get('room_alias'), {
             'id': response.get('room_id'),
             'home_server': home_server,
-        }
+        })
 
         return response.get('room_id')
 
@@ -1122,14 +1213,16 @@ class NotifyMatrix(NotifyBase):
 
         return None
 
-    def _fetch(self, path, payload=None, params=None, attachment=None,
-               method='POST'):
+    def _fetch(self, path, payload=None, params={}, attachment=None,
+               method='POST', url_override=None):
         """
         Wrapper to request.post() to manage it's response better and make
         the send() function cleaner and easier to maintain.
 
         This function returns True if the _post was successful and False
         if it wasn't.
+
+        this function returns the status code if url_override is used
         """
 
         # Define our headers
@@ -1142,14 +1235,20 @@ class NotifyMatrix(NotifyBase):
         if self.access_token is not None:
             headers["Authorization"] = 'Bearer %s' % self.access_token
 
-        default_port = 443 if self.secure else 80
+        # Server Discovery / Well-known URI
+        if url_override:
+            url = url_override
 
-        url = \
-            '{schema}://{hostname}{port}'.format(
-                schema='https' if self.secure else 'http',
-                hostname=self.host,
-                port='' if self.port is None
-                or self.port == default_port else f':{self.port}')
+        else:
+            try:
+                url = self.base_url
+
+            except MatrixDiscoveryException:
+                # Discovery failed; we're done
+                return (False, {})
+
+        # Default return status code
+        status_code = requests.codes.internal_server_error
 
         if path == '/upload':
             # FUTURE if self.version == MatrixVersion.V3:
@@ -1159,14 +1258,14 @@ class NotifyMatrix(NotifyBase):
             # FUTURE     url += MATRIX_V2_MEDIA_PATH + path
             url += MATRIX_V2_MEDIA_PATH + path
 
-            params = {'filename': attachment.name}
+            params.update({'filename': attachment.name})
             with open(attachment.path, 'rb') as fp:
                 payload = fp.read()
 
             # Update our content type
             headers['Content-Type'] = attachment.mimetype
 
-        else:
+        elif not url_override:
             if self.version == MatrixVersion.V3:
                 url += MATRIX_V3_API_PATH + path
 
@@ -1188,7 +1287,9 @@ class NotifyMatrix(NotifyBase):
             # Decrement our throttle retry count
             retries -= 1
 
-            self.logger.debug('Matrix POST URL: %s (cert_verify=%r)' % (
+            self.logger.debug('Matrix %s URL: %s (cert_verify=%r)' % (
+                'POST' if method == 'POST' else (
+                    requests.put if method == 'PUT' else 'GET'),
                 url, self.verify_certificate,
             ))
             self.logger.debug('Matrix Payload: %s' % str(payload))
@@ -1200,18 +1301,21 @@ class NotifyMatrix(NotifyBase):
                 r = fn(
                     url,
                     data=dumps(payload) if not attachment else payload,
-                    params=params,
+                    params=None if not params else params,
                     headers=headers,
                     verify=self.verify_certificate,
                     timeout=self.request_timeout,
                 )
+
+                # Store status code
+                status_code = r.status_code
 
                 self.logger.debug(
                     'Matrix Response: code=%d, %s' % (
                         r.status_code, str(r.content)))
                 response = loads(r.content)
 
-                if r.status_code == 429:
+                if r.status_code == requests.codes.too_many_requests:
                     wait = self.default_wait_ms / 1000
                     try:
                         wait = response['retry_after_ms'] / 1000
@@ -1252,7 +1356,8 @@ class NotifyMatrix(NotifyBase):
                         'Response Details:\r\n{}'.format(r.content))
 
                     # Return; we're done
-                    return (False, response)
+                    return (
+                        False if not url_override else status_code, response)
 
             except (AttributeError, TypeError, ValueError):
                 # This gets thrown if we can't parse our JSON Response
@@ -1262,27 +1367,27 @@ class NotifyMatrix(NotifyBase):
                 self.logger.warning('Invalid response from Matrix server.')
                 self.logger.debug(
                     'Response Details:\r\n{}'.format(r.content))
-                return (False, {})
+                return (False if not url_override else status_code, {})
 
-            except requests.RequestException as e:
+            except (requests.TooManyRedirects, requests.RequestException) as e:
                 self.logger.warning(
                     'A Connection error occurred while registering with Matrix'
                     ' server.')
-                self.logger.debug('Socket Exception: %s' % str(e))
+                self.logger.debug('Socket Exception: %s', str(e))
                 # Return; we're done
-                return (False, response)
+                return (False if not url_override else status_code, response)
 
             except (OSError, IOError) as e:
                 self.logger.warning(
                     'An I/O error occurred while reading {}.'.format(
                         attachment.name if attachment else 'unknown file'))
-                self.logger.debug('I/O Exception: %s' % str(e))
-                return (False, {})
+                self.logger.debug('I/O Exception: %s', str(e))
+                return (False if not url_override else status_code, {})
 
-            return (True, response)
+            return (True if not url_override else status_code, response)
 
         # If we get here, we ran out of retries
-        return (False, {})
+        return (False if not url_override else status_code, {})
 
     def __del__(self):
         """
@@ -1290,6 +1395,15 @@ class NotifyMatrix(NotifyBase):
         """
         if self.mode == MatrixWebhookMode.T2BOT:
             # nothing to do
+            return
+
+        if self.store.mode != PersistentStoreMode.MEMORY:
+            # We no longer have to log out as we have persistant storage to
+            # re-use our credentials with
+            return
+
+        if self.access_token is not None \
+           and self.access_token == self.password and not self.user:
             return
 
         try:
@@ -1336,6 +1450,22 @@ class NotifyMatrix(NotifyBase):
             # the end user if we don't have to.
             pass
 
+    @property
+    def url_identifier(self):
+        """
+        Returns all of the identifiers that make this URL unique from
+        another simliar one. Targets or end points should never be identified
+        here.
+        """
+        return (
+            self.secure_protocol if self.secure else self.protocol,
+            self.host if self.mode != MatrixWebhookMode.T2BOT
+            else self.access_token,
+            self.port if self.port else (443 if self.secure else 80),
+            self.user if self.mode != MatrixWebhookMode.T2BOT else None,
+            self.password if self.mode != MatrixWebhookMode.T2BOT else None,
+        )
+
     def url(self, privacy=False, *args, **kwargs):
         """
         Returns the URL built dynamically based on specified arguments.
@@ -1347,6 +1477,7 @@ class NotifyMatrix(NotifyBase):
             'mode': self.mode,
             'version': self.version,
             'msgtype': self.msgtype,
+            'discovery': 'yes' if self.discovery else 'no',
         }
 
         # Extend our parameters
@@ -1363,9 +1494,10 @@ class NotifyMatrix(NotifyBase):
                         safe=''),
                 )
 
-            elif self.user:
-                auth = '{user}@'.format(
-                    user=NotifyMatrix.quote(self.user, safe=''),
+            elif self.user or self.password:
+                auth = '{value}@'.format(
+                    value=NotifyMatrix.quote(
+                        self.user if self.user else self.password, safe=''),
                 )
 
         default_port = 443 if self.secure else 80
@@ -1416,6 +1548,10 @@ class NotifyMatrix(NotifyBase):
         results['include_image'] = parse_bool(results['qsd'].get(
             'image', NotifyMatrix.template_args['image']['default']))
 
+        # Boolean to perform a server discovery
+        results['discovery'] = parse_bool(results['qsd'].get(
+            'discovery', NotifyMatrix.template_args['discovery']['default']))
+
         # Get our mode
         results['mode'] = results['qsd'].get('mode')
 
@@ -1442,6 +1578,11 @@ class NotifyMatrix(NotifyBase):
         # Support the use of the token= keyword
         if 'token' in results['qsd'] and len(results['qsd']['token']):
             results['password'] = NotifyMatrix.unquote(results['qsd']['token'])
+
+        elif not results['password'] and results['user']:
+            # swap
+            results['password'] = results['user']
+            results['user'] = None
 
         # Support the use of the version= or v= keyword
         if 'version' in results['qsd'] and len(results['qsd']['version']):
@@ -1475,3 +1616,200 @@ class NotifyMatrix(NotifyBase):
                     else '{}&{}'.format(result.group('params'), mode)))
 
         return None
+
+    def server_discovery(self):
+        """
+        Home Server Discovery as documented here:
+           https://spec.matrix.org/v1.11/client-server-api/#well-known-uri
+        """
+
+        if not (self.discovery and self.secure):
+            # Nothing further to do with insecure server setups
+            return ''
+
+        # Get our content from cache
+        base_url, identity_url = (
+            self.store.get(self.discovery_base_key),
+            self.store.get(self.discovery_identity_key),
+        )
+
+        if not (base_url is None and identity_url is None):
+            # We can use our cached value and return early
+            return base_url
+
+        # 1. Extract the server name from the user’s Matrix ID by splitting
+        # the Matrix ID at the first colon.
+        verify_url = f'https://{self.host}/.well-known/matrix/client'
+        code, wk_response = self._fetch(
+            None, method='GET', url_override=verify_url)
+
+        # Output may look as follows:
+        # {
+        #     "m.homeserver": {
+        #         "base_url": "https://matrix.example.com"
+        #     },
+        #     "m.identity_server": {
+        #         "base_url": "https://nuxref.com"
+        #     }
+        # }
+
+        if code == requests.codes.not_found:
+            # This is an acceptable response; we're done
+            self.logger.debug(
+                'Matrix Well-Known Base URI not found at %s', verify_url)
+
+            # Set our keys out for fast recall later on
+            self.store.set(
+                self.discovery_base_key, '',
+                expires=self.discovery_cache_length_sec)
+            self.store.set(
+                self.discovery_identity_key, '',
+                expires=self.discovery_cache_length_sec)
+            return ''
+
+        elif code != requests.codes.ok:
+            # We're done early as we couldn't load the results
+            msg = 'Matrix Well-Known Base URI Discovery Failed'
+            self.logger.warning(
+                '%s - %s returned error code: %d', msg, verify_url, code)
+            raise MatrixDiscoveryException(msg, error_code=code)
+
+        if not wk_response:
+            # This is an acceptable response; we simply do nothing
+            self.logger.debug(
+                'Matrix Well-Known Base URI not defined %s', verify_url)
+
+            # Set our keys out for fast recall later on
+            self.store.set(
+                self.discovery_base_key, '',
+                expires=self.discovery_cache_length_sec)
+            self.store.set(
+                self.discovery_identity_key, '',
+                expires=self.discovery_cache_length_sec)
+            return ''
+
+        #
+        # Parse our m.homeserver information
+        #
+        try:
+            base_url = wk_response['m.homeserver']['base_url'].rstrip('/')
+            results = NotifyBase.parse_url(base_url, verify_host=True)
+
+        except (AttributeError, TypeError, KeyError):
+            # AttributeError: result wasn't a string (rstrip failed)
+            # TypeError     : wk_response wasn't a dictionary
+            # KeyError      : wk_response not to standards
+            results = None
+
+        if not results:
+            msg = 'Matrix Well-Known Base URI Discovery Failed'
+            self.logger.warning(
+                '%s - m.homeserver payload is missing or invalid: %s',
+                msg, str(wk_response))
+            raise MatrixDiscoveryException(msg)
+
+        #
+        # Our .well-known extraction was successful; now we need to verify
+        # that the version information resolves.
+        #
+        verify_url = f'{base_url}/_matrix/client/versions'
+        # Post our content
+        code, response = self._fetch(
+            None, method='GET', url_override=verify_url)
+        if code != requests.codes.ok:
+            # We're done early as we couldn't load the results
+            msg = 'Matrix Well-Known Base URI Discovery Verification Failed'
+            self.logger.warning(
+                '%s - %s returned error code: %d', msg, verify_url, code)
+            raise MatrixDiscoveryException(msg, error_code=code)
+
+        #
+        # Phase 2: Handle m.identity_server IF defined
+        #
+        if 'm.identity_server' in wk_response:
+            try:
+                identity_url = \
+                    wk_response['m.identity_server']['base_url'].rstrip('/')
+                results = NotifyBase.parse_url(identity_url, verify_host=True)
+
+            except (AttributeError, TypeError, KeyError):
+                # AttributeError: result wasn't a string (rstrip failed)
+                # TypeError     : wk_response wasn't a dictionary
+                # KeyError      : wk_response not to standards
+                results = None
+
+            if not results:
+                msg = 'Matrix Well-Known Identity URI Discovery Failed'
+                self.logger.warning(
+                    '%s - m.identity_server payload is missing or invalid: %s',
+                    msg, str(wk_response))
+                raise MatrixDiscoveryException(msg)
+
+            #
+            #  Verify identity server found
+            #
+            verify_url = f'{identity_url}/_matrix/identity/v2'
+
+            # Post our content
+            code, response = self._fetch(
+                None, method='GET', url_override=verify_url)
+            if code != requests.codes.ok:
+                # We're done early as we couldn't load the results
+                msg = 'Matrix Well-Known Identity URI Discovery Failed'
+                self.logger.warning(
+                    '%s - %s returned error code: %d', msg, verify_url, code)
+                raise MatrixDiscoveryException(msg, error_code=code)
+
+            # Update our cache
+            self.store.set(
+                self.discovery_identity_key, identity_url,
+                # Add 2 seconds to prevent this key from expiring before base
+                expires=self.discovery_cache_length_sec + 2)
+        else:
+            # No identity server
+            self.store.set(
+                self.discovery_identity_key, '',
+                # Add 2 seconds to prevent this key from expiring before base
+                expires=self.discovery_cache_length_sec + 2)
+
+        # Update our cache
+        self.store.set(
+            self.discovery_base_key, base_url,
+            expires=self.discovery_cache_length_sec)
+
+        return base_url
+
+    @property
+    def base_url(self):
+        """
+        Returns the base_url if known
+        """
+        try:
+            base_url = self.server_discovery()
+            if base_url:
+                # We can use our cached value and return early
+                return base_url
+
+        except MatrixDiscoveryException:
+            self.store.clear(
+                self.discovery_base_key, self.discovery_identity_key)
+            raise
+
+        # If we get hear, we need to build our URL dynamically based on what
+        # was provided to us during the plugins initialization
+        default_port = 443 if self.secure else 80
+
+        return '{schema}://{hostname}{port}'.format(
+            schema='https' if self.secure else 'http',
+            hostname=self.host,
+            port='' if self.port is None
+            or self.port == default_port else f':{self.port}')
+
+    @property
+    def identity_url(self):
+        """
+        Returns the identity_url if known
+        """
+        base_url = self.base_url
+        identity_url = self.store.get(self.discovery_identity_key)
+        return base_url if not identity_url else identity_url

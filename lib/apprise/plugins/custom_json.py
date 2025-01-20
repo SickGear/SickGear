@@ -2,7 +2,7 @@
 # BSD 2-Clause License
 #
 # Apprise - Push Notification Library.
-# Copyright (c) 2024, Chris Caron <lead2gold@gmail.com>
+# Copyright (c) 2025, Chris Caron <lead2gold@gmail.com>
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -27,9 +27,9 @@
 # POSSIBILITY OF SUCH DAMAGE.
 
 import requests
-import base64
 from json import dumps
 
+from .. import exception
 from .base import NotifyBase
 from ..url import PrivacyMode
 from ..common import NotifyImageSize
@@ -195,56 +195,6 @@ class NotifyJSON(NotifyBase):
 
         return
 
-    def url(self, privacy=False, *args, **kwargs):
-        """
-        Returns the URL built dynamically based on specified arguments.
-        """
-
-        # Define any URL parameters
-        params = {
-            'method': self.method,
-        }
-
-        # Extend our parameters
-        params.update(self.url_parameters(privacy=privacy, *args, **kwargs))
-
-        # Append our headers into our parameters
-        params.update({'+{}'.format(k): v for k, v in self.headers.items()})
-
-        # Append our GET params into our parameters
-        params.update({'-{}'.format(k): v for k, v in self.params.items()})
-
-        # Append our payload extra's into our parameters
-        params.update(
-            {':{}'.format(k): v for k, v in self.payload_extras.items()})
-
-        # Determine Authentication
-        auth = ''
-        if self.user and self.password:
-            auth = '{user}:{password}@'.format(
-                user=NotifyJSON.quote(self.user, safe=''),
-                password=self.pprint(
-                    self.password, privacy, mode=PrivacyMode.Secret, safe=''),
-            )
-        elif self.user:
-            auth = '{user}@'.format(
-                user=NotifyJSON.quote(self.user, safe=''),
-            )
-
-        default_port = 443 if self.secure else 80
-
-        return '{schema}://{auth}{hostname}{port}{fullpath}?{params}'.format(
-            schema=self.secure_protocol if self.secure else self.protocol,
-            auth=auth,
-            # never encode hostname since we're expecting it to be a valid one
-            hostname=self.host,
-            port='' if self.port is None or self.port == default_port
-                 else ':{}'.format(self.port),
-            fullpath=NotifyJSON.quote(self.fullpath, safe='/')
-            if self.fullpath else '/',
-            params=NotifyJSON.urlencode(params),
-        )
-
     def send(self, body, title='', notify_type=NotifyType.INFO, attach=None,
              **kwargs):
         """
@@ -263,32 +213,33 @@ class NotifyJSON(NotifyBase):
         # Track our potential attachments
         attachments = []
         if attach and self.attachment_support:
-            for attachment in attach:
+            for no, attachment in enumerate(attach, start=1):
                 # Perform some simple error checking
                 if not attachment:
                     # We could not access the attachment
                     self.logger.error(
-                        'Could not access attachment {}.'.format(
+                        'Could not access Custom JSON attachment {}.'.format(
                             attachment.url(privacy=True)))
                     return False
 
                 try:
-                    with open(attachment.path, 'rb') as f:
-                        # Output must be in a DataURL format (that's what
-                        # PushSafer calls it):
-                        attachments.append({
-                            'filename': attachment.name,
-                            'base64': base64.b64encode(f.read())
-                            .decode('utf-8'),
-                            'mimetype': attachment.mimetype,
-                        })
+                    attachments.append({
+                        "filename": attachment.name
+                        if attachment.name else f'file{no:03}.dat',
+                        'base64': attachment.base64(),
+                        'mimetype': attachment.mimetype,
+                    })
 
-                except (OSError, IOError) as e:
-                    self.logger.warning(
-                        'An I/O error occurred while reading {}.'.format(
-                            attachment.name if attachment else 'attachment'))
-                    self.logger.debug('I/O Exception: %s' % str(e))
+                except exception.AppriseException:
+                    # We could not access the attachment
+                    self.logger.error(
+                        'Could not access Custom JSON attachment {}.'.format(
+                            attachment.url(privacy=True)))
                     return False
+
+                self.logger.debug(
+                    'Appending Custom JSON attachment {}'.format(
+                        attachment.url(privacy=True)))
 
         # Prepare JSON Object
         payload = {
@@ -394,6 +345,70 @@ class NotifyJSON(NotifyBase):
             return False
 
         return True
+
+    @property
+    def url_identifier(self):
+        """
+        Returns all of the identifiers that make this URL unique from
+        another simliar one. Targets or end points should never be identified
+        here.
+        """
+        return (
+            self.secure_protocol if self.secure else self.protocol,
+            self.user, self.password, self.host,
+            self.port if self.port else (443 if self.secure else 80),
+            self.fullpath.rstrip('/'),
+        )
+
+    def url(self, privacy=False, *args, **kwargs):
+        """
+        Returns the URL built dynamically based on specified arguments.
+        """
+
+        # Define any URL parameters
+        params = {
+            'method': self.method,
+        }
+
+        # Extend our parameters
+        params.update(self.url_parameters(privacy=privacy, *args, **kwargs))
+
+        # Append our headers into our parameters
+        params.update({'+{}'.format(k): v for k, v in self.headers.items()})
+
+        # Append our GET params into our parameters
+        params.update({'-{}'.format(k): v for k, v in self.params.items()})
+
+        # Append our payload extra's into our parameters
+        params.update(
+            {':{}'.format(k): v for k, v in self.payload_extras.items()})
+
+        # Determine Authentication
+        auth = ''
+        if self.user and self.password:
+            auth = '{user}:{password}@'.format(
+                user=NotifyJSON.quote(self.user, safe=''),
+                password=self.pprint(
+                    self.password, privacy, mode=PrivacyMode.Secret, safe=''),
+            )
+        elif self.user:
+            auth = '{user}@'.format(
+                user=NotifyJSON.quote(self.user, safe=''),
+            )
+
+        default_port = 443 if self.secure else 80
+
+        return '{schema}://{auth}{hostname}{port}{fullpath}?{params}'.format(
+            schema=self.secure_protocol if self.secure else self.protocol,
+            auth=auth,
+            # never encode hostname since we're expecting it to be a valid one
+            hostname=self.host,
+            port='' if self.port is None or self.port == default_port
+                 else ':{}'.format(self.port),
+            fullpath=NotifyJSON.quote(self.fullpath, safe='/')
+            if self.fullpath else '/',
+            params=NotifyJSON.urlencode(params),
+        )
 
     @staticmethod
     def parse_url(url):

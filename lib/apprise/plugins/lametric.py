@@ -2,7 +2,7 @@
 # BSD 2-Clause License
 #
 # Apprise - Push Notification Library.
-# Copyright (c) 2024, Chris Caron <lead2gold@gmail.com>
+# Copyright (c) 2025, Chris Caron <lead2gold@gmail.com>
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -92,10 +92,8 @@ import requests
 from json import dumps
 from .base import NotifyBase
 from ..common import NotifyType
-from ..utils import validate_regex
 from ..locale import gettext_lazy as _
-from ..utils import is_hostname
-from ..utils import is_ipaddr
+from ..utils.parse import validate_regex, is_hostname, is_ipaddr
 
 # A URL Parser to detect App ID
 LAMETRIC_APP_ID_DETECTOR_RE = re.compile(
@@ -783,6 +781,29 @@ class NotifyLametric(NotifyBase):
 
         return True
 
+    @property
+    def url_identifier(self):
+        """
+        Returns all of the identifiers that make this URL unique from
+        another simliar one. Targets or end points should never be identified
+        here.
+        """
+        if self.mode == LametricMode.DEVICE:
+            return (
+                self.secure_protocol if self.secure else self.protocol,
+                self.user, self.lametric_apikey, self.host,
+                self.port if self.port else (
+                    443 if self.secure else
+                    self.template_tokens['port']['default']),
+            )
+
+        return (
+            self.protocol,
+            self.lametric_app_access_token,
+            self.lametric_app_id,
+            self.lametric_app_ver,
+        )
+
     def url(self, privacy=False, *args, **kwargs):
         """
         Returns the URL built dynamically based on specified arguments.
@@ -871,6 +892,9 @@ class NotifyLametric(NotifyBase):
             results['password'] = results['user']
             results['user'] = None
 
+        # Get unquoted entries
+        entries = NotifyLametric.split_path(results['fullpath'])
+
         # Priority Handling
         if 'priority' in results['qsd'] and results['qsd']['priority']:
             results['priority'] = NotifyLametric.unquote(
@@ -913,6 +937,10 @@ class NotifyLametric(NotifyBase):
             results['app_ver'] = \
                 NotifyLametric.unquote(results['qsd']['app_ver'])
 
+        elif entries:
+            # Store our app id
+            results['app_ver'] = entries.pop(0)
+
         if 'token' in results['qsd'] and results['qsd']['token']:
             # Extract Application Access Token from an argument
             results['app_token'] = \
@@ -938,7 +966,7 @@ class NotifyLametric(NotifyBase):
                         LAMETRIC_IS_APP_TOKEN.match(results['password'])) and
 
                     # Scan for app_ flags
-                    next((f for f in results.keys() \
+                    next((f for f in results.keys()
                           if f.startswith('app_')), None) is None) \
                 else LametricMode.CLOUD
 

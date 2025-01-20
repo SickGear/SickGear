@@ -2,7 +2,7 @@
 # BSD 2-Clause License
 #
 # Apprise - Push Notification Library.
-# Copyright (c) 2024, Chris Caron <lead2gold@gmail.com>
+# Copyright (c) 2025, Chris Caron <lead2gold@gmail.com>
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -32,9 +32,8 @@ from .manager_config import ConfigurationManager
 from . import URLBase
 from .asset import AppriseAsset
 from . import common
-from .utils import GET_SCHEMA_RE
-from .utils import parse_list
-from .utils import is_exclusive_match
+from .utils.parse import GET_SCHEMA_RE, parse_list
+from .utils.logic import is_exclusive_match
 from .logger import logger
 
 # Grant access to our Configuration Manager Singleton
@@ -46,7 +45,6 @@ class AppriseConfig:
     Our Apprise Configuration File Manager
 
         - Supports a list of URLs defined one after another (text format)
-        - Supports a destinct YAML configuration format
 
     """
 
@@ -222,7 +220,7 @@ class AppriseConfig:
         a memory based object and only exists for the life of this
         AppriseConfig object it was loaded into.
 
-        If you know the format ('yaml' or 'text') you can specify
+        If you know the format ('text') you can specify
         it for slightly less overhead during this call.  Otherwise the
         configuration is auto-detected.
 

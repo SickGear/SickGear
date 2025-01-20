@@ -1,5 +1,6 @@
 ﻿### 3.34.x (2025-xx-xx xx:xx:00 UTC)
 
+* Update apprise 1.8.0 (81caf92) to 1.9.2 (a2a2216)
 * Update Beautiful Soup 4.12.3 (7fb5175) to 4.13.0b3 (55e006b)
 * Update CacheControl 0.14.0 (e2be0c2) to 0.14.2 (928422d)
 * Update certifi 2024.08.30 to 2024.12.14
