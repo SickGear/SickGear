@@ -18,7 +18,7 @@ from lib.dateutil.parser import parser
 from lib.tvinfo_base import (
     TVInfoCharacter, TVInfoPerson, PersonGenders, TVINFO_IMDB,
     # TVINFO_FACEBOOK, TVINFO_INSTAGRAM, TVINFO_TMDB, TVINFO_TRAKT,
-    # TVINFO_TVDB, TVINFO_TVRAGE, TVINFO_TWITTER, TVINFO_WIKIPEDIA,
+    # TVINFO_TVDB, TVINFO_TVRAGE, TVINFO_X, TVINFO_WIKIPEDIA,
     TVInfoBase, TVInfoIDs, TVInfoShow)
 from sg_helpers import clean_data, enforce_type, get_url, try_int
 from json_helper import json_loads

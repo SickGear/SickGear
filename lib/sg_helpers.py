@@ -1809,7 +1809,7 @@ def is_virtualenv():
 def enforce_type(value, allowed_types, default):
     # type: (Any, Union[Type, Tuple[Type]], Any) -> Any
     """
-    enforces that value is given type(s)
+    enforce value to supplied type(s)
     :param value: value to check
     :param allowed_types: type or tuple of types allowed
     :param default: value to return if other type
@@ -1817,3 +1817,12 @@ def enforce_type(value, allowed_types, default):
     if not isinstance(value, allowed_types):
         return default
     return value
+
+
+def clean_str(value):
+    # type: (Any) -> AnyStr
+    """
+    clean and enforced a value to a string type
+    :param value: to process
+    """
+    return enforce_type(clean_data(value), str, '')

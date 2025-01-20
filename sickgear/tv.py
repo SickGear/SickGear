@@ -60,7 +60,7 @@ try:
     from lib.thefuzz import fuzz
 except ImportError as e:
     from lib.fuzzywuzzy import fuzz
-from lib.tvinfo_base import RoleTypes, TVINFO_FACEBOOK, TVINFO_INSTAGRAM, TVINFO_SLUG, TVINFO_TWITTER, \
+from lib.tvinfo_base import RoleTypes, TVINFO_FACEBOOK, TVINFO_INSTAGRAM, TVINFO_SLUG, TVINFO_X, \
     TVINFO_WIKIPEDIA, TVINFO_TIKTOK, TVINFO_FANSITE, TVINFO_YOUTUBE, TVINFO_REDDIT, TVINFO_LINKEDIN, TVINFO_WIKIDATA
 from lib.tvinfo_base.exceptions import *
 from sg_helpers import calc_age, int_to_time, remove_file_perm, time_to_int
@@ -629,7 +629,7 @@ class Person(Referential):
                     k, v = cur_ids.split(':', 1)
                     k = try_int(k, None)
                     if v and None is not k:
-                        p_ids[k] = v if k in (TVINFO_FACEBOOK, TVINFO_INSTAGRAM, TVINFO_TWITTER, TVINFO_WIKIPEDIA,
+                        p_ids[k] = v if k in (TVINFO_FACEBOOK, TVINFO_INSTAGRAM, TVINFO_X, TVINFO_WIKIPEDIA,
                                               TVINFO_TIKTOK, TVINFO_FANSITE, TVINFO_YOUTUBE, TVINFO_REDDIT,
                                               TVINFO_LINKEDIN, TVINFO_WIKIDATA) \
                             else try_int(v, None)
@@ -816,7 +816,7 @@ class Person(Referential):
                                 found_ids.add(cur_i)
                                 self.dirty_ids = True
 
-                        for cur_i in (TVINFO_INSTAGRAM, TVINFO_TWITTER, TVINFO_FACEBOOK, TVINFO_WIKIPEDIA,
+                        for cur_i in (TVINFO_INSTAGRAM, TVINFO_X, TVINFO_FACEBOOK, TVINFO_WIKIPEDIA,
                                       TVINFO_TIKTOK, TVINFO_FANSITE, TVINFO_YOUTUBE, TVINFO_REDDIT, TVINFO_LINKEDIN,
                                       TVINFO_WIKIDATA):
                             if not rp.social_ids.get(cur_i):
@@ -913,8 +913,8 @@ class Person(Referential):
                     cl.extend([
                         ['UPDATE person_ids SET src_id = ? WHERE person_id = ? AND src = ?',
                          [cur_ids, self.id, cur_src]],
-                        ["INSERT INTO person_ids (src, src_id, person_id) SELECT %s, '%s', %s WHERE changes() == 0"
-                         % (cur_src, cur_ids, self.id)]
+                        ["INSERT INTO person_ids (src, src_id, person_id) SELECT ?, ?, ? WHERE changes() == 0",
+                         [cur_src, cur_ids, self.id]]
                     ])
         if cl:
             r_id = my_db.mass_action(cl)
@@ -1256,8 +1256,8 @@ class Character(Referential):
                     ], [
                         """
                         INSERT INTO character_ids (src, src_id, character_id)
-                        SELECT %s, %s, %s WHERE changes() == 0
-                        """ % (cur_tvid, cur_src_id, self.id)]
+                        SELECT ?, ?, ? WHERE changes() == 0
+                        """, [cur_tvid, cur_src_id, self.id]]
                     ])
 
         # in case we don't have a character id yet, we need to fetch it for the next step
@@ -1866,7 +1866,7 @@ class TVShow(TVShowBase):
                 k, v = cur_i.split(':', 1)
                 k = try_int(k, None)
                 if v:
-                    if k in (TVINFO_INSTAGRAM, TVINFO_TWITTER, TVINFO_FACEBOOK, TVINFO_WIKIPEDIA, TVINFO_TIKTOK,
+                    if k in (TVINFO_INSTAGRAM, TVINFO_X, TVINFO_FACEBOOK, TVINFO_WIKIPEDIA, TVINFO_TIKTOK,
                              TVINFO_FANSITE, TVINFO_YOUTUBE, TVINFO_REDDIT, TVINFO_LINKEDIN, TVINFO_WIKIDATA):
                         p_ids[k] = v
                     else:
@@ -1990,8 +1990,8 @@ class TVShow(TVShowBase):
                 ], [
                     """
                     INSERT INTO castlist (indexer, indexer_id, character_id, sort_order, updated)
-                    SELECT %s, %s, %s, %s, %s WHERE changes() == 0;
-                    """ % (self.tvid, self.prodid, cur_cast.id, cur_enum, update_date)]
+                    SELECT ?, ?, ?, ?, ? WHERE changes() == 0;
+                    """, [self.tvid, self.prodid, cur_cast.id, cur_enum, update_date]]
                 ])
             if removed_char_ids:
                 # remove orphaned entries
@@ -2787,9 +2787,9 @@ class TVShow(TVShowBase):
         """
         cast_list = self.cast_list
         existing_cast = set(hash(*([', '.join(p.name for p in c.person or [] if p.name)]))
-                            for c in cast_list or [] if c.name)
+                            for c in cast_list or [])
         new_cast = set(hash(*([', '.join(p.name for p in c.person or [] if p.name)]))
-                       for c_t, c_l in iteritems(show_info_cast or {}) for c in c_l or [] if c.name
+                       for c_t, c_l in iteritems(show_info_cast or {}) for c in c_l or []
                        and c_t in (RoleTypes.ActorMain, RoleTypes.Host, RoleTypes.Interviewer, RoleTypes.Presenter))
         now = datetime.date.today().toordinal()
         max_age = random.randint(30, 60)

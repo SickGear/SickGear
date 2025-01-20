@@ -1,11 +1,13 @@
 from lib.api_tvdb.tvdb_api import Tvdb
+from lib.api_tvdb.tvdb_api_v4 import TvdbAPIv4
+import lib.api_tvdb.tvdb_api_v4
 from lib.api_trakt.indexerapiinterface import TraktIndexer
 from lib.api_tvmaze.tvmaze_api import TvMaze
 from lib.api_tmdb.tmdb_api import TmdbIndexer
 from lib.api_imdb.imdb_api import IMDbIndexer
 # noinspection PyUnresolvedReferences
 from lib.tvinfo_base import (
-    TVINFO_FACEBOOK, TVINFO_INSTAGRAM, TVINFO_TWITTER, TVINFO_WIKIPEDIA,
+    TVINFO_FACEBOOK, TVINFO_INSTAGRAM, TVINFO_X, TVINFO_WIKIPEDIA,
     TVINFO_IMDB, TVINFO_TMDB, TVINFO_TRAKT, TVINFO_TVDB, TVINFO_TVMAZE, TVINFO_TVRAGE,
     TVINFO_TRAKT_SLUG, TVINFO_TVDB_SLUG, TVINFO_TIKTOK, TVINFO_WIKIDATA, TVINFO_LINKEDIN, TVINFO_FANSITE,
     TVINFO_REDDIT, TVINFO_YOUTUBE
@@ -23,8 +25,9 @@ tvinfo_config = {
         api_url='https://api.thetvdb.com/',
         id=TVINFO_TVDB,
         name='TheTVDB', slug='tvdb', kodi_slug='tvdb',
-        module=Tvdb,
-        api_params=dict(apikey='6cfd6399fd2bee018a8793da976f6522', language='en'),
+        module=TvdbAPIv4,
+        api_params=dict(apikey='6cfd6399fd2bee018a8793da976f6522',
+                        apikey_v4=b'm5uaxWhrm56TlWTGm5Jkk5uYZW-ea5uOnmqcmWmXZmVtxp2a', language='en'),
         active=True,
         dupekey='',
         mapped_only=False,
@@ -103,16 +106,16 @@ tvinfo_config = {
         people_only=True,
         icon='instagram16.png'
     ),
-    TVINFO_TWITTER: dict(
-        id=TVINFO_TWITTER,
-        name='Twitter',
+    TVINFO_X: dict(
+        id=TVINFO_X,
+        name='X (Twitter)',
         module=None,
         active=False,
         mapped_only=True,
-        people_url='https://twitter.com/%s',
+        people_url='https://x.com/%s',
         show_url=None,
         people_only=True,
-        icon='twitter16.png'
+        icon='X16.png'
     ),
     TVINFO_FACEBOOK: dict(
         id=TVINFO_FACEBOOK,
@@ -260,3 +263,5 @@ tvinfo_config[src].update(dict(
     show_url='%stv/%%d' % tvinfo_config[src]['main_url'],
     finder='%ssearch/tv?query=%s' % (tvinfo_config[src]['main_url'], '%s'),
 ))
+
+lib.api_tvdb.tvdb_api_v4.TVDB_API_CONFIG = tvinfo_config[TVINFO_TVDB]
