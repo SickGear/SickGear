@@ -20,7 +20,7 @@ import re
 # import pushalot
 # from lib import api_trakt
 from . import emby, kodi, plex, xbmc, \
-    boxcar2, nmj, nmjv2, pushbullet, pushover, pytivo, synoindex, synologynotifier, \
+    nmj, nmjv2, pushbullet, pushover, pytivo, synoindex, synologynotifier, \
     discord, emailnotify, gitter, libnotify, growl, prowl, slack, telegram, trakt
 
 import sickgear
@@ -42,7 +42,6 @@ class NotifierFactory(object):
             PYTIVO=pytivo.PyTivoNotifier,
 
             # devices,
-            BOXCAR2=boxcar2.Boxcar2Notifier,
             # PUSHALOT=pushalot.PushalotNotifier,
             PUSHBULLET=pushbullet.PushbulletNotifier,
             PUSHOVER=pushover.PushoverNotifier,

@@ -177,25 +177,6 @@ $(document).ready(function(){
 			});
 	});
 
-	$('#test-boxcar2').click(function () {
-		var boxcarAccesstoken = $.trim($('#boxcar2-access-token').val());
-		var boxcarSound = $('#boxcar2-sound').val() || 'default';
-		if (!boxcarAccesstoken) {
-			$('#test-boxcar2-result').html('Please fill out the necessary fields above.');
-			$('#boxcar2-access-token').addClass('warning');
-			return;
-		}
-		$('#boxcar2-access-token').removeClass('warning');
-		$(this).prop('disabled', !0);
-		$('#test-boxcar2-result').html(loading);
-		$.get(sbRoot + '/home/test-boxcar2',
-			{access_token: boxcarAccesstoken, sound: boxcarSound})
-			.done(function (data) {
-				$('#test-boxcar2-result').html(data);
-				$('#test-boxcar2').prop('disabled', !1);
-			});
-	});
-
 	$('#test-pushover').click(function () {
 		var pushover$ = $('#pushover-userkey'), pushoverUserkey = $.trim(pushover$.val()),
 			pushoverApikey$ = $('#pushover-apikey'), pushoverApikey = $.trim(pushoverApikey$.val()),

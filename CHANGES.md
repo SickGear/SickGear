@@ -16,6 +16,7 @@
 * Update thefuzz 0.21.0 (0b49e4a) to 0.22.1 (83bea3d)
 * Update tmdbsimple 2.9.1 (9da400a) to 2.9.2 (0b3359f)
 * Update urllib3 2.2.2 (27e2a5c) to 2.3.0 (2f68c53)
+* Remove notifier Boxcar2
 
 
 ### 3.33.1 (2025-01-20 14:50:00 UTC)
