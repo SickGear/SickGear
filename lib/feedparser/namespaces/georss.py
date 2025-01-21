@@ -1,5 +1,5 @@
 # Support for the GeoRSS format
-# Copyright 2010-2023 Kurt McKee <contactme@kurtmckee.org>
+# Copyright 2010-2024 Kurt McKee <contactme@kurtmckee.org>
 # Copyright 2002-2008 Mark Pilgrim
 # All rights reserved.
 #
@@ -170,11 +170,10 @@ class Namespace:
 def _parse_poslist(value, geom_type, swap=True, dims=2):
     if geom_type == "linestring":
         return _parse_georss_line(value, swap, dims)
-    elif geom_type == "polygon":
+    if geom_type == "polygon":
         ring = _parse_georss_line(value, swap, dims)
         return {"type": "Polygon", "coordinates": (ring["coordinates"],)}
-    else:
-        return None
+    return None
 
 
 def _gen_georss_coords(value, swap=True, dims=2):
