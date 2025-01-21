@@ -201,10 +201,13 @@ class Inode(FieldSet):
         7: "Reserved group descriptors",
         8: "EXT3 journal"
     }
-    static_size = (68 + 15 * 4) * 8
 
     def __init__(self, parent, name, index):
         FieldSet.__init__(self, parent, name, None)
+        inode_size = self["/superblock/inode_size"].value
+        if inode_size == 0:
+            inode_size = 128
+        self._size = inode_size * 8
         self.uniq_id = 1 + index
 
     def createDescription(self):
@@ -751,7 +754,10 @@ class EXT2_FS(HachoirParser, RootSeekableFieldSet):
             return "Invalid magic number"
         if not (0 <= self["superblock/log_block_size"].value <= 2):
             return "Invalid (log) block size"
-        if self["superblock/inode_size"].value not in (0, 128):
+        blocksize = (1 << 10) << self["superblock/log_block_size"].value
+        acceptable_inode_sizes = (s for s in [0, 128, 256, 512, 1024, 2048, 4096]
+                                  if s <= blocksize)
+        if self["superblock/inode_size"].value not in acceptable_inode_sizes:
             return "Unsupported inode size"
         return True
 

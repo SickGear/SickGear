@@ -6,7 +6,7 @@ Creation date: July 9 2007
 """
 
 from hachoir.parser import Parser
-from hachoir.field import (Bit, Bits, Field, Int16, UInt32,
+from hachoir.field import (Bit, Bits, Field, UInt16, UInt32,
                            Enum, FieldSet, GenericFieldSet,
                            PaddingBits, ParserError, RawBytes)
 from hachoir.core.endian import LITTLE_ENDIAN
@@ -149,9 +149,9 @@ class DeflateBlock(FieldSet):
             padding = paddingSize(self.current_size + self.absolute_address, 8)
             if padding:
                 yield PaddingBits(self, "padding[]", padding)
-            yield Int16(self, "len")
-            yield Int16(self, "nlen", "One's complement of len")
-            if self["len"].value != ~self["nlen"].value:
+            yield UInt16(self, "len")
+            yield UInt16(self, "nlen", "One's complement of len")
+            if self["len"].value != ((~self["nlen"].value) & 0xFFFF):
                 raise ParserError(
                     "len must be equal to the one's complement of nlen!")
             # null stored blocks produced by some encoders (e.g. PIL)

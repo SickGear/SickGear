@@ -267,6 +267,14 @@ class ProgramHeader32(FieldSet):
         5: "Reserved, unspecified semantics",
         6: "Entry for header table itself",
         7: "Thread Local Storage segment",
+        8: "Number of defined types",
+        0x6474e550: "GCC .eh_frame_hdr segment",
+        0x6474e551: "Indicates stack executability",
+        0x6474e552: "Read-only after relocation",
+        0x6474e553: "GNU property",
+        0x6474e554: "SFrame segment",
+        0x6ffffffa: "Sun Specific segment",
+        0x6ffffffb: "Sun Stack segment",
         0x70000000: "MIPS_REGINFO",
     }
     static_size = 32 * 8
