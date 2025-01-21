@@ -22,6 +22,7 @@
 * Change add typing-extensions 4.12.2 (8184ac6) for BSoup
 * Change chardet to permit Requests import
 * Remove notifier Boxcar2
+* Change incorrect case of recommended RapidFuzz
 
 
 ### 3.33.2 (2025-01-21 11:50:00 UTC)
