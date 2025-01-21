@@ -24,6 +24,11 @@
 * Remove notifier Boxcar2
 
 
+### 3.33.2 (2025-01-21 11:50:00 UTC)
+
+* Fix revert incorrect case of recommended RapidFuzz on main, added too early
+
+
 ### 3.33.1 (2025-01-20 14:50:00 UTC)
 
 * Fix incorrect case of recommended RapidFuzz
