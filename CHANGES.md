@@ -5,6 +5,7 @@
 * Update CacheControl 0.14.0 (e2be0c2) to 0.14.2 (928422d)
 * Update certifi 2024.08.30 to 2024.12.14
 * Update chardet packages 5.1.0 (8087f00) to 5.3.0dev0 (8e8dfcd)
+* Update feedparser 6.0.11 (efcb89b) to 6.0.11 (ff59549)
 * Update idna library 3.7 (1d365e1) to 3.10 (729225d)
 * Update Msgpack 1.0.6 (e1d3d5d) to 1.1.0 (0eeabfb)
 * Update deprecated pkg_resources 24.0 to Packaging 24.2 (d8e3b31)

@@ -1,4 +1,4 @@
-# Copyright 2010-2023 Kurt McKee <contactme@kurtmckee.org>
+# Copyright 2010-2024 Kurt McKee <contactme@kurtmckee.org>
 # Copyright 2002-2008 Mark Pilgrim
 # All rights reserved.
 #
@@ -31,7 +31,6 @@ import copy
 import html.entities
 import re
 import xml.sax.saxutils
-from typing import Dict
 
 from .html import _cp1252
 from .namespaces import _base, cc, dc, georss, itunes, mediarss, psc
@@ -126,7 +125,7 @@ class XMLParserMixin(
         "http://www.w3.org/XML/1998/namespace": "xml",
         "http://podlove.org/simple-chapters": "psc",
     }
-    _matchnamespaces: Dict[str, str] = {}
+    _matchnamespaces: dict[str, str] = {}
 
     can_be_relative_uri = {
         "comments",
@@ -314,10 +313,9 @@ class XMLParserMixin(
             if len(attrs_d) == 0:
                 # No attributes so merge it into the enclosing dictionary
                 return self.push(unknown_tag, 1)
-            else:
-                # Has attributes so create it in its own dictionary
-                context = self._get_context()
-                context[unknown_tag] = attrs_d
+            # Has attributes so create it in its own dictionary
+            context = self._get_context()
+            context[unknown_tag] = attrs_d
 
     def unknown_endtag(self, tag):
         # match namespaces
@@ -427,13 +425,11 @@ class XMLParserMixin(
                 return k
             self.handle_data(xml.sax.saxutils.escape(self.rawdata[i + 9 : k]), 0)
             return k + 3
-        else:
-            k = self.rawdata.find(">", i)
-            if k >= 0:
-                return k + 1
-            else:
-                # We have an incomplete CDATA block.
-                return k
+        k = self.rawdata.find(">", i)
+        if k >= 0:
+            return k + 1
+        # We have an incomplete CDATA block.
+        return k
 
     @staticmethod
     def map_content_type(content_type):

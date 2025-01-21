@@ -1,5 +1,5 @@
 # Character encoding routines
-# Copyright 2010-2023 Kurt McKee <contactme@kurtmckee.org>
+# Copyright 2010-2024 Kurt McKee <contactme@kurtmckee.org>
 # Copyright 2002-2008 Mark Pilgrim
 # All rights reserved.
 #
@@ -623,7 +623,7 @@ class PrefixFileWrapper:
 
         if self.offset < len(self.prefix):
             if size < 0:
-                chunk = self.prefix
+                chunk = self.prefix[self.offset :]
             else:
                 chunk = self.prefix[self.offset : self.offset + size]
                 size -= len(chunk)

@@ -1,4 +1,4 @@
-# Copyright 2010-2023 Kurt McKee <contactme@kurtmckee.org>
+# Copyright 2010-2024 Kurt McKee <contactme@kurtmckee.org>
 # Copyright 2002-2008 Mark Pilgrim
 # All rights reserved.
 #
@@ -123,8 +123,7 @@ class FeedParserDict(dict):
             self.__getitem__(key, _stacklevel=3)
         except KeyError:
             return False
-        else:
-            return True
+        return True
 
     has_key = __contains__
 
