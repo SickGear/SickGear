@@ -11,6 +11,6 @@ lxml != 5.2.0, != 5.2.1; 'Windows' != platform_system
 orjson; 'Windows' == platform_system
 orjson; 'Linux' == platform_system and ('x86_64' == platform_machine or 'aarch64' == platform_machine or 'armv7l' == platform_machine)
 pip
-RapidFuzz < 4.0.0
+rapidfuzz < 4.0.0
 regex
 setuptools

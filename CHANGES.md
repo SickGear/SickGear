@@ -1,9 +1,4 @@
-﻿### 3.33.1 (2025-01-20 14:50:00 UTC)
-
-* Fix incorrect case of recommended RapidFuzz
-
-
-### 3.33.0 (2025-01-20 00:20:00 UTC)
+﻿### 3.33.0 (2025-01-20 00:20:00 UTC)
 
 * Update certifi 2024.06.02 to 2024.08.30
 * Update filelock 3.14.0 (8556141) to 3.15.4 (9a979df)
