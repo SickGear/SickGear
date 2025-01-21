@@ -4,11 +4,10 @@
 Commonly useful converters.
 """
 
-
 import typing
 
 from ._compat import _AnnotationExtractor
-from ._make import NOTHING, Factory, pipe
+from ._make import NOTHING, Converter, Factory, pipe
 
 
 __all__ = [
@@ -27,16 +26,26 @@ def optional(converter):
     Type annotations will be inferred from the wrapped converter's, if it has
     any.
 
-    :param typing.Callable converter: the converter that is used for non-`None`
-        values.
+    Args:
+        converter (typing.Callable):
+            the converter that is used for non-`None` values.
 
     .. versionadded:: 17.1.0
     """
 
-    def optional_converter(val):
-        if val is None:
-            return None
-        return converter(val)
+    if isinstance(converter, Converter):
+
+        def optional_converter(val, inst, field):
+            if val is None:
+                return None
+            return converter(val, inst, field)
+
+    else:
+
+        def optional_converter(val):
+            if val is None:
+                return None
+            return converter(val)
 
     xtr = _AnnotationExtractor(converter)
 
@@ -48,6 +57,9 @@ def optional(converter):
     if rt:
         optional_converter.__annotations__["return"] = typing.Optional[rt]
 
+    if isinstance(converter, Converter):
+        return Converter(optional_converter, takes_self=True, takes_field=True)
+
     return optional_converter
 
 
@@ -56,16 +68,24 @@ def default_if_none(default=NOTHING, factory=None):
     A converter that allows to replace `None` values by *default* or the result
     of *factory*.
 
-    :param default: Value to be used if `None` is passed. Passing an instance
-       of `attrs.Factory` is supported, however the ``takes_self`` option is
-       *not*.
-    :param typing.Callable factory: A callable that takes no parameters whose
-       result is used if `None` is passed.
+    Args:
+        default:
+            Value to be used if `None` is passed. Passing an instance of
+            `attrs.Factory` is supported, however the ``takes_self`` option is
+            *not*.
 
-    :raises TypeError: If **neither** *default* or *factory* is passed.
-    :raises TypeError: If **both** *default* and *factory* are passed.
-    :raises ValueError: If an instance of `attrs.Factory` is passed with
-       ``takes_self=True``.
+        factory (typing.Callable):
+            A callable that takes no parameters whose result is used if `None`
+            is passed.
+
+    Raises:
+        TypeError: If **neither** *default* or *factory* is passed.
+
+        TypeError: If **both** *default* and *factory* are passed.
+
+        ValueError:
+            If an instance of `attrs.Factory` is passed with
+            ``takes_self=True``.
 
     .. versionadded:: 18.2.0
     """
@@ -125,7 +145,8 @@ def to_bool(val):
     - ``"0"``
     - ``0``
 
-    :raises ValueError: for any other value.
+    Raises:
+        ValueError: For any other value.
 
     .. versionadded:: 21.3.0
     """
