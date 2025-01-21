@@ -19,6 +19,7 @@
 * Update thefuzz 0.21.0 (0b49e4a) to 0.22.1 (83bea3d)
 * Update tmdbsimple 2.9.1 (9da400a) to 2.9.2 (0b3359f)
 * Update urllib3 2.2.2 (27e2a5c) to 2.3.0 (2f68c53)
+* Change add typing-extensions 4.12.2 (8184ac6) for BSoup
 * Remove notifier Boxcar2
 
 
