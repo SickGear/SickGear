@@ -24,7 +24,7 @@ try:
     import autoProcessTV
 except ImportError:
     # 0  sys.argv[0] is the name of this script
-    print('Can\'t import autoProcessTV.py, make sure it\'s in the same folder as %s' % sys.argv[0])
+    print(f'Can\'t import autoProcessTV.py, make sure it\'s in the same folder as {sys.argv[0]}')
     sys.exit(1)
 
 if 2 > len(sys.argv):

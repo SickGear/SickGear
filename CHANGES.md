@@ -1,7 +1,9 @@
-﻿### 3.33.3 (2025-02-05 18:10:00 UTC)
+﻿### 3.33.3 (2025-02-18 04:50:00 UTC)
 
 * Change add TraktFreemiumLimit exception for collection endpoint
 * Change revert hotfix 3.33.1 in release 3.33.2
+* Change add support for Python 3.13.2, 3.12.9
+* Change ensure autoprocess is run with a compatible Python version else exit
 
 
 ### 3.33.0 (2025-01-20 00:20:00 UTC)
