@@ -47,3 +47,7 @@ class TraktLockedUserAccount(TraktException):
 
 class TraktInvalidGrant(TraktException):
     pass
+
+
+class TraktFreemiumLimit(TraktException):
+    pass

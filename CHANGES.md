@@ -1,4 +1,12 @@
-﻿### 3.33.0 (2025-01-20 00:20:00 UTC)
+﻿### 3.33.3 (2025-02-18 04:50:00 UTC)
+
+* Change add TraktFreemiumLimit exception for collection endpoint
+* Change revert hotfix 3.33.1 in release 3.33.2
+* Change add support for Python 3.13.2, 3.12.9
+* Change ensure autoprocess is run with a compatible Python version else exit
+
+
+### 3.33.0 (2025-01-20 00:20:00 UTC)
 
 * Update certifi 2024.06.02 to 2024.08.30
 * Update filelock 3.14.0 (8556141) to 3.15.4 (9a979df)

@@ -355,6 +355,9 @@ class TraktAPI(object):
                 raise TraktInvalidGrant('Error: invalid_grant. The provided authorization grant is invalid, expired, '
                                         'revoked, does not match the redirection URI used in the authorization request,'
                                         ' or was issued to another client.')
+            elif 420 == code and 'sync/collection' in path:
+                # collections are limited to 100 items
+                raise TraktFreemiumLimit('Freemium account maximum items exceeded')
             else:
                 log.error('Could not connect to Trakt. Code error: {0}'.format(code))
                 raise TraktException('Could not connect to Trakt. Code error: %s' % code)

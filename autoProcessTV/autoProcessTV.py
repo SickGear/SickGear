@@ -26,21 +26,23 @@ import warnings
 warnings.filterwarnings('ignore', module=r'.*connectionpool.*', message='.*certificate verification.*')
 warnings.filterwarnings('ignore', module=r'.*ssl_.*', message='.*SSLContext object.*')
 
-PY2 = 2 == sys.version_info[0]
-if not PY2:
-    sg_path = os.path.split(os.path.split(sys.argv[0])[0])[0]
-    sys.path.insert(1, os.path.join(sg_path, 'lib'))
-    sys.path.insert(1, sg_path)
+# noinspection DuplicatedCode
+versions = [((3, 9, 0), (3, 9, 2)), ((3, 9, 4), (3, 9, 21)),
+            ((3, 10, 0), (3, 13, 2))]  # inclusive version ranges
+if not any(list(map(lambda v: v[0] <= sys.version_info[:3] <= v[1], versions))) and not int(os.environ.get('PYT', 0)):
+    major, minor, micro = sys.version_info[:3]
+    print(f'Python {major}.{minor}.{micro} detected.')
+    print('Sorry, SickGear requires a Python version %s' % ', '.join(map(
+        lambda r: '%s - %s' % tuple(map(lambda v: str(v).replace(', ', '.')[1:-1], r)), versions)))
+    sys.exit(1)
 
-py_msg = 'Python 3 %s be set to run python files instead of the current Python 2.'
+sg_path = os.path.split(os.path.split(sys.argv[0])[0])[0]
+sys.path.insert(1, os.path.join(sg_path, 'lib'))
+sys.path.insert(1, sg_path)
+
 try:
     import requests
-    if PY2:
-        print(py_msg % 'should')
 except ImportError:
-    if PY2:
-        print(py_msg % 'must')
-        sys.exit(1)
     print('You must install python requests library')
     sys.exit(1)
 
@@ -50,13 +52,8 @@ try:  # Try importing Python 3 modules
     import urllib.request as urllib2
     # noinspection PyUnresolvedReferences,PyCompatibility
     from urllib.parse import urlencode
-except ImportError:  # On error, import Python 2 modules
-    # noinspection PyPep8Naming,PyUnresolvedReferences
-    import ConfigParser as configparser
-    # noinspection PyUnresolvedReferences
-    import urllib2
-    # noinspection PyUnresolvedReferences
-    from urllib import urlencode
+except ImportError:  # On error, exit
+    sys.exit(1)
 
 
 # noinspection DuplicatedCode
@@ -67,30 +64,23 @@ def process_files(dir_to_process, org_nzb_name=None, status=None):
     username = password = ''
     use_ssl = ''  # or 's'
     web_root = ''  # e.g. "/path"
-    url = 'http%s://%s:%s%s' % (use_ssl, host, port, web_root)
+    url = f'http{use_ssl}://{host}:{port}{web_root}'
 
     # Get values from config_file
     config = configparser.RawConfigParser()
     config_filename = os.path.join(os.path.dirname(sys.argv[0]), 'autoProcessTV.cfg')
 
     if not os.path.isfile(config_filename):
-        print('ERROR: %s doesn\'t exist' % config_filename)
-        print('copy/rename %s.sample and edit\n' % config_filename)
-        print('Trying default url: %s\n' % url)
+        print(f'ERROR: {config_filename} doesn\'t exist')
+        print(f'copy/rename {config_filename}.sample and edit\n')
+        print(f'Trying default url: {url}\n')
 
     else:
         try:
-            print('Loading config from %s\n' % config_filename)
+            print(f'Loading config from {config_filename}\n')
 
             with open(config_filename, 'r') as fp:
-                """ Under py3, `config.readfp` is flagged deprecated with advice to use read_file instead.
-                However, py2 doesn't have `read_file`, so a little defensive coding is added here
-                """
-                if callable(getattr(config, 'read_file', None)):
-                    config.read_file(fp)
-                else:
-                    # noinspection PyDeprecation
-                    config.readfp(fp)
+                config.read_file(fp)
 
             def cfg_get(cfg, option):
                 try:
@@ -110,15 +100,15 @@ def process_files(dir_to_process, org_nzb_name=None, status=None):
             try:
                 web_root = cfg_get(config, 'web_root')
                 web_root = web_root.strip('/').strip()
-                web_root = any(web_root) and ('/%s' % web_root) or ''
+                web_root = any(web_root) and f'/{web_root}' or ''
             except configparser.NoOptionError:
                 pass
 
-            url = 'http%s://%s:%s%s' % (use_ssl, host, port, web_root)
+            url = f'http{use_ssl}://{host}:{port}{web_root}'
 
         except EnvironmentError:
             e = sys.exc_info()[1]
-            print('Could not read configuration file: ' + str(e))
+            print(f'Could not read configuration file: {str(e)}')
             # There was a config_file, don't use default values but exit
             sys.exit(1)
 
@@ -130,10 +120,10 @@ def process_files(dir_to_process, org_nzb_name=None, status=None):
     if None is not status:
         params['failed'] = status
 
-    login_url = '%s/login' % url
-    url = '%s/home/process-media/files' % url
+    login_url = f'{url}/login'
+    url = f'{url}/home/process-media/files'
 
-    print('Opening URL: ' + url)
+    print(f'Opening URL: {url}')
 
     try:
         sess = requests.Session()
@@ -153,7 +143,7 @@ def process_files(dir_to_process, org_nzb_name=None, status=None):
 
     except IOError:
         e = sys.exc_info()[1]
-        print('Unable to open URL: ' + str(e))
+        print(f'Unable to open URL: {str(e)}')
         sys.exit(1)
 
 
