@@ -112,6 +112,8 @@ class TraktNotifier(BaseNotifier):
                             msg = 'Episode not found on Trakt, not adding to'
                         else:
                             warn, msg = True, 'Could not add episode to'
+                    except exceptions.TraktFreemiumLimit as e:
+                        warn, msg = True, f'{e} to'
                     except (ConnectionSkipException, exceptions.TraktAuthException, exceptions.TraktException):
                         warn, msg = True, 'Error adding episode to'
                     msg = 'Trakt: %s your %s collection' % (msg, sickgear.TRAKT_ACCOUNTS[tid].name)

@@ -36,13 +36,14 @@ warnings.filterwarnings('ignore', module=r'.*ssl_.*', message='.*SSLContext obje
 warnings.filterwarnings('ignore', module=r'.*zoneinfo.*', message='.*file or directory.*')
 warnings.filterwarnings('ignore', message='.*deprecated in cryptography.*')
 
+# noinspection DuplicatedCode
 versions = [((3, 9, 0), (3, 9, 2)), ((3, 9, 4), (3, 9, 21)),
-            ((3, 10, 0), (3, 12, 8))]  # inclusive version ranges
+            ((3, 10, 0), (3, 13, 2))]  # inclusive version ranges
 if not any(list(map(lambda v: v[0] <= sys.version_info[:3] <= v[1], versions))) and not int(os.environ.get('PYT', 0)):
     major, minor, micro = sys.version_info[:3]
-    print('Python %s.%s.%s detected.' % (major, minor, micro))
+    print(f'Python {major}.{minor}.{micro} detected.')
     print('Sorry, SickGear requires a Python version %s' % ', '.join(map(
-        lambda r: '%s - %s' % tuple(map(lambda v: str(v).replace(',', '.')[1:-1], r)), versions)))
+        lambda r: '%s - %s' % tuple(map(lambda v: str(v).replace(', ', '.')[1:-1], r)), versions)))
     sys.exit(1)
 
 sys.path.insert(1, os.path.abspath(os.path.join(os.path.dirname(__file__), 'lib')))

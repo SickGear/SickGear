@@ -25,6 +25,13 @@
 * Change incorrect case of recommended RapidFuzz
 
 
+### 3.33.3 (2025-02-18 04:50:00 UTC)
+
+* Change add TraktFreemiumLimit exception for collection endpoint
+* Change add support for Python 3.13.2, 3.12.9
+* Change ensure autoprocess is run with a compatible Python version else exit
+
+
 ### 3.33.2 (2025-01-21 11:50:00 UTC)
 
 * Fix revert incorrect case of recommended RapidFuzz on main, added too early
