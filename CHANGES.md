@@ -1,4 +1,10 @@
-﻿### 3.33.3 (2025-02-18 04:50:00 UTC)
+﻿### 3.33.4 (2025-02-21 11:20:00 UTC)
+
+* Update UnRar x64 for Windows 7.01 to 7.1.0
+* Change update an nzb provider logo
+
+
+### 3.33.3 (2025-02-18 04:50:00 UTC)
 
 * Change add TraktFreemiumLimit exception for collection endpoint
 * Change revert hotfix 3.33.1 in release 3.33.2
