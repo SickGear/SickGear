@@ -2,6 +2,7 @@
 
 * Change limit get_image to only intended API direct calls
 * Change filter private methods and non method attrs to improve security
+* Fix don't use provider failure counter for caps (they can fail for different reasons)
 
 
 ### 3.33.4 (2025-02-21 11:20:00 UTC)
