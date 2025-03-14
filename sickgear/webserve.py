@@ -38,7 +38,7 @@ from exceptions_helper import ex, MultipleShowObjectsException
 import exceptions_helper
 from json_helper import json_dumps, json_loads
 import sg_helpers
-from sg_helpers import remove_file, scantree, is_virtualenv
+from sg_helpers import remove_file, scantree, is_virtualenv, strip_html_tags
 
 from sg_futures import SgThreadPoolExecutor
 try:
@@ -1080,10 +1080,10 @@ class MainHandler(WebHandler):
             self.redirect(sickgear.WEB_ROOT + '/home/')
         elif self.settings.get('debug') and 'exc_info' in kwargs:
             exc_info = kwargs['exc_info']
-            trace_info = ''.join(['%s<br/>' % line for line in traceback.format_exception(*exc_info)])
-            request_info = ''.join(['<strong>%s</strong>: %s<br/>' % (k, self.request.__dict__[k]) for k in
-                                    iterkeys(self.request.__dict__)])
-            error = exc_info[1]
+            trace_info = ''.join(['%s<br/>' % strip_html_tags(line) for line in traceback.format_exception(*exc_info)])
+            request_info = ''.join(['<strong>%s</strong>: %s<br/>' % (k, strip_html_tags(self.request.__dict__[k]))
+                                    for k in iterkeys(self.request.__dict__)])
+            error = strip_html_tags(exc_info[1])
 
             self.set_header('Content-Type', 'text/html')
             self.finish('''<html>
@@ -1820,6 +1820,9 @@ class Home(MainHandler):
         hosts = config.clean_hosts(host, default_port=8096)
         if not hosts:
             return 'Fail: No valid host(s)'
+
+        hosts = strip_html_tags(hosts)
+        apikey = strip_html_tags(apikey)
 
         result = notifiers.NotifierFactory().get('EMBY').test_notify(hosts, apikey)
 
@@ -2856,9 +2859,11 @@ class Home(MainHandler):
         any_qualities = any_qualities if None is not any_qualities else []
         best_qualities = best_qualities if None is not best_qualities else []
         exceptions_list = exceptions_list if None is not exceptions_list else []
+        if None is not tvid_prodid:
+            tvid_prodid = strip_html_tags(tvid_prodid)
 
         if None is tvid_prodid:
-            err_string = 'Invalid show ID: ' + str(tvid_prodid)
+            err_string = f'Invalid show ID: {tvid_prodid}'
             if direct_call:
                 return [err_string]
             return self._generic_message('Error', err_string)
@@ -6667,7 +6672,7 @@ class AddShows(Home):
         t = PageTemplate(web_handler=self, file='home_addExistingShow.tmpl')
         t.submenu = self.home_menu()
         t.enable_anime_options = False
-        t.kwargs = kwargs
+        t.kwargs = {k: strip_html_tags(v) for k, v in kwargs.items()}
         t.multi_parents = helpers.maybe_plural(sickgear.ROOT_DIRS.split('|')[1:]) and 's are' or ' is'
 
         return t.respond()
@@ -6714,8 +6719,8 @@ class AddShows(Home):
 
         # sanity check on our inputs
         if (not root_dir and not full_show_path) or not which_series:
-            return 'Missing params, no production id or folder:' + repr(which_series) + ' and ' + repr(
-                root_dir) + '/' + repr(full_show_path)
+            return (f'Missing params, no production id or folder:{strip_html_tags(which_series)} and '
+                    f'{strip_html_tags(root_dir)}/{strip_html_tags(full_show_path)}')
 
         # figure out what show we're adding and where
         series_pieces = which_series.split('|')
@@ -6812,11 +6817,11 @@ class AddShows(Home):
         extra_show = decode_str(extra_show, errors='replace')
         split_vals = extra_show.split('|')
         tvid = helpers.try_int(split_vals[0], sickgear.TVINFO_DEFAULT)
-        show_dir = split_vals[1]
+        show_dir = strip_html_tags(split_vals[1])
         if 4 > len(split_vals):
             return tvid, show_dir, None, None
-        prodid = split_vals[2]
-        show_name = '|'.join(split_vals[3:])
+        prodid = strip_html_tags(split_vals[2])
+        show_name = strip_html_tags('|'.join(split_vals[3:]))
 
         return tvid, show_dir, prodid, show_name
 
