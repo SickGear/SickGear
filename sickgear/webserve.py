@@ -10330,14 +10330,15 @@ class CachedImages(MainHandler):
 
     def index(self, path='', source=None, filename=None, tmdbid=None, tvdbid=None, trans=True, tvmazeid=None):
 
-        path = path.strip('/')
+        path = os.path.normpath(path.strip(r'/\\'))
         file_name = ''
         if None is not source:
             file_name = os.path.basename(source)
         elif filename not in [None, 0, '0']:
             file_name = filename
+        file_name = os.path.normpath(file_name.strip(r'/\\'))
         image_file = os.path.join(sickgear.CACHE_DIR, 'images', path, file_name)
-        image_file = os.path.abspath(image_file.replace('\\', '/'))
+        image_file = os.path.realpath(os.path.abspath(image_file.replace('\\', '/')))
         if not os.path.isfile(image_file) and has_image_ext(file_name):
             basepath = os.path.dirname(image_file)
             helpers.make_path(basepath)
@@ -10530,7 +10531,15 @@ class CachedImages(MainHandler):
         if cast_default and None is image_file:
             image_file = os.path.join(sickgear.PROG_DIR, 'gui', 'slick', 'images', 'poster-person.jpg')
 
+        if not has_image_ext(image_file) or not is_sickgear_dir(image_file):
+            self.set_status(403)
+            return
+
         mime_type, encoding = MimeTypes().guess_type(image_file)
+        if None is mime_type or not mime_type.lower().startswith('image'):
+            self.set_status(403)
+            return
+
         self.set_header('Content-Type', mime_type)
         with open(image_file, 'rb') as io_stream:
             return io_stream.read()
