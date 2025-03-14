@@ -235,7 +235,7 @@ class NewznabProvider(generic.NZBProvider):
             self, ('newznab', 'spotweb')[self.server_type == NewznabConstants.SERVER_SPOTWEB])
 
     def check_cap_update(self):
-        if self.enabled and \
+        if self.enabled and not self.should_skip(log_warning=False) and \
                 (not self._caps or (datetime.datetime.now() - self._caps_last_updated) >= datetime.timedelta(days=1)):
             self.get_caps()
 
@@ -245,7 +245,7 @@ class NewznabProvider(generic.NZBProvider):
             if datetime.date.today() - self._caps_need_apikey['date'] > datetime.timedelta(days=30) or \
                     not self._caps_need_apikey['need']:
                 self._caps_need_apikey['need'] = False
-                data = self.get_url(f'{self.url}api?t=caps')
+                data = self.get_url(f'{self.url}api?t=caps', use_failure_counter=False)
                 if data:
                     xml_caps = helpers.parse_xml(data)
             if None is xml_caps or not hasattr(xml_caps, 'tag') or 'error' == xml_caps.tag or 'caps' != xml_caps.tag:

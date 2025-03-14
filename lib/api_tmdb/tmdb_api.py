@@ -17,7 +17,7 @@ from lib.tvinfo_base import CastList, PersonGenders, RoleTypes, \
     TVInfoBase, TVInfoIDs, TVInfoImage, TVInfoImageSize, TVInfoImageType, TVInfoNetwork, TVInfoSocialIDs, \
     TVInfoCharacter, TVInfoPerson, TVInfoShow, TVInfoEpisode, TVInfoSeason, \
     TVINFO_IMDB, TVINFO_TMDB, TVINFO_TVDB, \
-    TVINFO_FACEBOOK, TVINFO_INSTAGRAM, TVINFO_X
+    TVINFO_FACEBOOK, TVINFO_INSTAGRAM, TVINFO_X, TVINFO_CAST_LIMIT
 from json_helper import json_dumps
 from sg_helpers import clean_data, enforce_type, get_url, iterate_chunk, try_int
 
@@ -758,7 +758,7 @@ class TmdbIndexer(TVInfoBase):
                                 season_data[season_obj[0]].get('cast') or []])
 
                 for person_obj in sorted(list(filter(lambda a: a['id'] in main_cast_ids,
-                                                     show_data['aggregate_credits']['cast'] or []))[:50],
+                                                     show_data['aggregate_credits']['cast'] or []))[:TVINFO_CAST_LIMIT],
                                          key=lambda c: (main_cast_ids.get(c['id'], 0) or 0,
                                                         c['total_episode_count'], c['order'] * -1), reverse=True):
                     for character in sorted(list(filter(lambda b: b['credit_id'] in main_cast_credit_ids,

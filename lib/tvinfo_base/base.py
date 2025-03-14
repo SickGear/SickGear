@@ -92,6 +92,9 @@ final_types = {
     TVINFO_SERIES_FINALE: 'series'
 }
 
+# limit to maximum actors
+TVINFO_CAST_LIMIT = 30
+
 log = logging.getLogger('TVInfo')
 log.addHandler(logging.NullHandler())
 TVInfoShowContainer = {}  # type: Union[ShowContainer, Dict]

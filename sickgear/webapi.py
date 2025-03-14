@@ -197,7 +197,7 @@ class Api(webserve.BaseHandler):
         args = args[1:]
 
         self.apiKeys = sickgear.API_KEYS
-        access, accessMsg, args, kwargs = self._grand_access(self.apiKeys, route, args, kwargs)
+        access, accessMsg, args, kwargs = self._grant_access(self.apiKeys, route, args, kwargs)
 
         # set the output callback
         # default json
@@ -270,10 +270,11 @@ class Api(webserve.BaseHandler):
 
         return out
 
-    def _grand_access(self, realKeys, apiKey, args, kwargs):
+    def _grant_access(self, realKeys, apiKey, args, kwargs):
         """ validate api key and log result """
         remoteIp = self.request.remote_ip
         self.apikey_name = ''
+        self.api_access_granted = False  # type: bool
 
         if not sickgear.USE_API:
             msg = f'{remoteIp} - SB API Disabled. ACCESS DENIED'
@@ -284,6 +285,7 @@ class Api(webserve.BaseHandler):
         for realKey in realKeys:
             if apiKey == realKey[1]:
                 self.apikey_name = realKey[0]
+                self.api_access_granted = True
                 msg = f'{remoteIp} - gave correct API KEY: {realKey[0]}. ACCESS GRANTED'
                 return True, msg, args, kwargs
         msg = f'{remoteIp} - gave WRONG API KEY {apiKey}. ACCESS DENIED'
@@ -2353,6 +2355,9 @@ class CMD_SickGearGetIndexerIcon(ApiCall):
         if not os.path.isfile(image):
             self.handler.set_status(404)
             return _responds(RESULT_FAILURE, 'Icon not found')
+        if not hasattr(self.handler, '_image_list'):
+            self.handler._image_list = classes.ImageUrlList()
+        self.handler._image_list.add_url(image)
         return {'outputType': 'image', 'image': self.handler.get_image(image)}
 
 
@@ -2374,6 +2379,9 @@ class CMD_SickGearGetNetworkIcon(ApiCall):
         if not os.path.isfile(image):
             self.handler.set_status(404)
             return _responds(RESULT_FAILURE, 'Icon not found')
+        if not hasattr(self.handler, '_image_list'):
+            self.handler._image_list = classes.ImageUrlList()
+        self.handler._image_list.add_url(image)
         return {'outputType': 'image', 'image': self.handler.get_image(image)}
 
 

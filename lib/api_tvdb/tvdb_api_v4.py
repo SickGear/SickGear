@@ -28,7 +28,7 @@ from lib.tvinfo_base import (
     TVInfoPerson, TVInfoSeason, TVInfoSeasonTypes, TVInfoShow, TVInfoSocialIDs,
     TVINFO_FACEBOOK, TVINFO_FANSITE, TVINFO_IMDB, TVINFO_INSTAGRAM, TVINFO_LINKEDIN, TVINFO_OFFICIALSITE, TVINFO_REDDIT,
     TVINFO_MID_SEASON_FINALE, TVINFO_SEASON_FINALE, TVINFO_SERIES_FINALE, TVINFO_TIKTOK, TVINFO_TMDB, TVINFO_TVDB,
-    TVINFO_TVDB_SLUG, TVINFO_TVMAZE, TVINFO_X, TVINFO_WIKIDATA, TVINFO_WIKIPEDIA, TVINFO_YOUTUBE)
+    TVINFO_TVDB_SLUG, TVINFO_TVMAZE, TVINFO_X, TVINFO_WIKIDATA, TVINFO_WIKIPEDIA, TVINFO_YOUTUBE, TVINFO_CAST_LIMIT)
 from sg_helpers import clean_data, clean_str, enforce_type, get_url, try_date, try_int
 
 from six import integer_types, iteritems, PY3, string_types
@@ -704,7 +704,7 @@ class TvdbAPIv4(TVInfoBase):
                 cast, crew, ti_show.actors_loaded = CastList(), CrewList(), True
                 if isinstance(show_data.get('characters'), list):
                     for cur_char in sorted(show_data.get('characters') or [],
-                                           key=lambda c: (not c['isFeatured'], c['sort'])):
+                                           key=lambda c: (not c['isFeatured'], c['sort']))[:TVINFO_CAST_LIMIT]:
                         if (people_type := people_types.get(cur_char['type'])) not in (
                                 RoleTypes.ActorMain, RoleTypes.ActorGuest, RoleTypes.ActorSpecialGuest,
                                 RoleTypes.ActorRecurring) \
@@ -759,7 +759,7 @@ class TvdbAPIv4(TVInfoBase):
                                 rc_img_v3 = re.compile(r'/(?P<url>actors/(?P<img_id>[^/]+)\..*)')
                                 max_people = 5
                                 rc_clean = re.compile(r'[^a-z\d]')
-                                for cur_role in soup.find_all('a', href=rc_role) or []:
+                                for cur_role in (soup.find_all('a', href=rc_role) or [])[:TVINFO_CAST_LIMIT]:
                                     try:
                                         image, person_id = 2 * [None]
                                         for cur_rc in (rc_img, rc_img_v3):
