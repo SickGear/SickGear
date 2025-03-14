@@ -78,7 +78,13 @@ class NewznabConstants(object):
                                 'tvmazeid': TVINFO_TVMAZE,
                                 'imdbid': TVINFO_IMDB,
                                 'tmdbid': TVINFO_TMDB,
-                                'traktid': TVINFO_TRAKT}
+                                'traktid': TVINFO_TRAKT,
+                                'tvdb': TVINFO_TVDB,
+                                'rage': TVINFO_TVRAGE,
+                                'tvmaze': TVINFO_TVMAZE,
+                                'imdb': TVINFO_IMDB,
+                                'tmdb': TVINFO_TMDB,
+                                'trakt': TVINFO_TRAKT}
 
     indexer_priority_list = [TVINFO_TVDB, TVINFO_TVMAZE, TVINFO_TVRAGE, TVINFO_TRAKT, TVINFO_TMDB, TVINFO_TMDB]
 
@@ -874,9 +880,14 @@ class NewznabProvider(generic.NZBProvider):
         base_params = {'t': 'tvsearch',
                        'maxage': sickgear.USENET_RETENTION or 0,
                        'limit': self.limits,
-                       'attrs': ','.join([k for k, v in iteritems(NewznabConstants.providerToIndexerMapping)
-                                          if v in self.caps]),
                        'offset': 0}
+
+        if self._noname in self.url.lower():
+            base_params['extended'] = '1'
+        else:
+            base_params['attrs'] =  ','.join([k for k, v in iteritems(NewznabConstants.providerToIndexerMapping)
+                                              if v in self.caps])
+
         base_params_rss = {'num': self.limits, 'dl': '1'}
         rss_fallback = False
 
@@ -1250,7 +1261,7 @@ class NewznabCache(tvcache.TVCache):
         if 'newznab' in ns:
             for attr in item.findall('%sattr' % ns['newznab']):
                 if attr.get('name', '') in NewznabConstants.providerToIndexerMapping:
-                    v = try_int(attr.get('value'))
+                    v = try_int((str(attr.get('value')) or '').replace('tt', ''))
                     if 0 < v:
                         ids[NewznabConstants.providerToIndexerMapping[attr.get('name')]] = v
         return ids
