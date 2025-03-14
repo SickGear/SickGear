@@ -544,8 +544,8 @@ class GenericProvider(object):
         else:
             logger.debug('%s: Not logging same failure within 3 seconds' % self.name)
 
-    def get_url(self, url, skip_auth=False, use_tmr_limit=True, *args, **kwargs):
-        # type: (AnyStr, bool, bool, Any, Any) -> Optional[AnyStr, Dict]
+    def get_url(self, url, skip_auth=False, use_tmr_limit=True, use_failure_counter=True, *args, **kwargs):
+        # type: (AnyStr, bool, bool, bool, Any, Any) -> Optional[AnyStr, Dict]
         """
         Return data from a URI with a possible check for authentication prior to the data fetch.
         Raised errors and no data in responses are tracked for making future logic decisions.
@@ -553,6 +553,7 @@ class GenericProvider(object):
         :param url: Address where to fetch data from
         :param skip_auth: Skip authentication check of provider if True
         :param use_tmr_limit: An API limit can be +ve before a fetch, but unwanted, set False to short should_skip
+        :param use_failure_counter: use the provider failure counter
         :param args: params to pass through to get_url
         :param kwargs: keyword params to pass through to get_url
         :return: None or data fetched from URL
@@ -593,8 +594,8 @@ class GenericProvider(object):
                 self.failure_count = 0
                 self.failure_time = None
             else:
-                self.inc_failure_count(ProviderFail(fail_type=ProviderFailTypes.nodata))
-                log_failure_url = True
+                use_failure_counter and self.inc_failure_count(ProviderFail(fail_type=ProviderFailTypes.nodata))
+                log_failure_url = True and use_failure_counter
         except requests.exceptions.HTTPError as e:
             if 429 == e.response.status_code:
                 r_headers = getattr(e.response, 'headers', {})
@@ -613,16 +614,17 @@ class GenericProvider(object):
                         retry_time, unit = None, None
                 self.tmr_limit_update(retry_time, unit, description)
             else:
-                self.inc_failure_count(ProviderFail(fail_type=ProviderFailTypes.http, code=e.response.status_code))
+                (use_failure_counter and
+                 self.inc_failure_count(ProviderFail(fail_type=ProviderFailTypes.http, code=e.response.status_code)))
         except requests.exceptions.ConnectionError:
-            self.inc_failure_count(ProviderFail(fail_type=ProviderFailTypes.connection))
+            use_failure_counter and self.inc_failure_count(ProviderFail(fail_type=ProviderFailTypes.connection))
         except requests.exceptions.ReadTimeout:
-            self.inc_failure_count(ProviderFail(fail_type=ProviderFailTypes.timeout))
+            use_failure_counter and self.inc_failure_count(ProviderFail(fail_type=ProviderFailTypes.timeout))
         except (requests.exceptions.Timeout, socket.timeout):
-            self.inc_failure_count(ProviderFail(fail_type=ProviderFailTypes.connection_timeout))
+            use_failure_counter and self.inc_failure_count(ProviderFail(fail_type=ProviderFailTypes.connection_timeout))
         except (BaseException, Exception):
-            log_failure_url = True
-            self.inc_failure_count(ProviderFail(fail_type=ProviderFailTypes.other))
+            log_failure_url = True and use_failure_counter
+            use_failure_counter and self.inc_failure_count(ProviderFail(fail_type=ProviderFailTypes.other))
 
         self.fails.save_list()
         if log_failure_url:

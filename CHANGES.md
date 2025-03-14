@@ -1,4 +1,12 @@
-﻿### 3.33.4 (2025-02-21 11:20:00 UTC)
+﻿### 3.33.5 (2025-03-14 04:25:00 UTC)
+
+* Change limit get_image to only intended API direct calls
+* Change filter private methods and non method attrs to improve security
+* Fix don't use provider failure counter for caps (they can fail for different reasons)
+* Change add cast limit of 30 main actors to all data sources
+
+
+### 3.33.4 (2025-02-21 11:20:00 UTC)
 
 * Update UnRar x64 for Windows 7.01 to 7.1.0
 * Change update an nzb provider logo

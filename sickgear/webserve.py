@@ -122,6 +122,28 @@ if False:
     from api_tvmaze.tvmaze_api import TvMaze as TvmazeIndexer
 
 
+def private_call(wrapped):
+    wrapped._is_private_method = True
+    return wrapped
+
+
+def is_private_call(func):
+    return getattr(func, '_is_private_method', False)
+
+
+def get_class_methods(class_to_check, required_baseclass):
+    m_l = set()
+    for current_class in (class_to_check, ) + tuple(_b for _b in class_to_check.__mro__
+                                                    if issubclass(_b, required_baseclass)):
+        for m, f in current_class.__dict__.items():  # type: str, Any
+            if (not m.startswith('_') and m not in (
+                    'get', 'post', 'put', 'delete', 'fetch', 'head', 'prepare', 'set_default_headers',
+                    'set_extra_headers', 'set_headers', 'check_xsrf_cookie', 'executor', '_routes', '_routes_set')
+                    and not is_private_call(f)) and callable(f):
+                m_l.add(m)
+    return m_l
+
+
 # noinspection PyAbstractClass
 class PageTemplate(Template):
 
@@ -212,6 +234,14 @@ class BaseStaticFileHandler(StaticFileHandler):
 class RouteHandler(RequestHandler):
 
     executor = SgThreadPoolExecutor(thread_name_prefix='WEBSERVER', max_workers=min(32, (cpu_count() or 1) + 4))
+    _routes = {'get_message'}  # type: set
+    _routes_set = set()  # type: set
+
+    def __init__(self, *arg, **kwargs):
+        super().__init__(*arg, **kwargs)
+        if self.__class__.__qualname__ not in RouteHandler._routes_set:
+            self.__class__._routes = self.__class__._routes.union(get_class_methods(self.__class__, RouteHandler))
+            RouteHandler._routes_set.add(self.__class__.__qualname__)
 
     def redirect(self, url, permanent=False, status=None):
         """Send a redirect to the given (optionally relative) URL.
@@ -237,6 +267,7 @@ class RouteHandler(RequestHandler):
         self.set_status(status)
         self.set_header('Location', urljoin(utf8(self.request.uri), utf8(url)))
 
+    @private_call
     def write_error(self, status_code, **kwargs):
         body = ''
         try:
@@ -252,9 +283,11 @@ class RouteHandler(RequestHandler):
             del kwargs['exc_info']
         return super(RouteHandler, self).write_error(status_code, **kwargs)
 
+    @private_call
     def data_received(self, *args):
         pass
 
+    @private_call
     def decode_data(self, data):
         if isinstance(data, binary_type):
             return decode_str(data)
@@ -264,6 +297,7 @@ class RouteHandler(RequestHandler):
             return data
         return data.encode('latin1').decode('utf-8')
 
+    @private_call
     @gen.coroutine
     def route_method(self, route, use_404=False, limit_route=None, xsrf_filter=True):
 
@@ -277,8 +311,18 @@ class RouteHandler(RequestHandler):
             route = '%s%s' % (parts[0].replace('-', '_'), '' if not len(parts) else ''.join(parts[1:]))
 
         try:
+            # no access to private methods
+            if route.startswith('_'):
+                raise Exception('endpoint not allowed')
+            if route not in self._routes:
+                raise Exception('endpoint does not exist')
             method = getattr(self, route)
-        except (BaseException, Exception):
+            if not callable(method):
+                raise Exception('endpoint is not a callable method')
+        except AttributeError:
+            self.finish(use_404 and self.page_not_found() or None)
+        except (BaseException, Exception) as e:
+            logger.debug(f'Routing error: {self.__class__.__qualname__} "{route}": {e}')
             self.finish(use_404 and self.page_not_found() or None)
         else:
             request_kwargs = {k: self.decode_data(v if not (isinstance(v, list) and 1 == len(v)) else v[0])
@@ -306,6 +350,7 @@ class RouteHandler(RequestHandler):
                 result = yield self.async_call(method, filter_kwargs)  # method(**filter_kwargs)
             self.finish(result)
 
+    @private_call
     @run_on_executor
     def async_call(self, function, kw):
         try:
@@ -313,6 +358,7 @@ class RouteHandler(RequestHandler):
         except (BaseException, Exception) as e:
             raise e
 
+    @private_call
     def page_not_found(self):
         self.set_status(404)
         t = PageTemplate(web_handler=self, file='404.tmpl')
@@ -333,13 +379,20 @@ class BaseHandler(RouteHandler):
 
         super(BaseHandler, self).redirect(url, permanent, status)
 
+    @private_call
     def get_current_user(self):
         if sickgear.WEB_USERNAME or sickgear.WEB_PASSWORD:
             return self.get_signed_cookie('sickgear-session-%s' % helpers.md5_for_text(sickgear.WEB_PORT))
         return True
 
+    @private_call
     def get_image(self, image):
-        if None is re.search(r'\.\.[\\/]', image) and has_image_ext(image) and os.path.isfile(image) and is_sickgear_dir(image):
+        if (not self.request.path.startswith('/api/') or not getattr(self, 'api_access_granted', False)
+                or image not in getattr(self, '_image_list', [])):
+            return self.set_status(403)
+
+        if (None is re.search(r'\.\.[\\/]', image) and has_image_ext(image) and os.path.isfile(image)
+                and is_sickgear_dir(image)):
             mime_type, encoding = MimeTypes().guess_type(image)
             self.set_header('Content-Type', mime_type)
             with open(image, 'rb') as img:
@@ -1003,6 +1056,7 @@ class MainHandler(WebHandler):
     def index(self):
         self.redirect('/home/')
 
+    @private_call
     @staticmethod
     def http_error_401_handler():
         """ Custom handler for 401 error """
@@ -1018,6 +1072,7 @@ class MainHandler(WebHandler):
     </html>
     ''' % ('Access denied', 401)
 
+    @private_call
     def write_error(self, status_code, **kwargs):
         if 401 == status_code:
             self.finish(self.http_error_401_handler())
@@ -1551,18 +1606,22 @@ class Home(MainHandler):
             {'title': 'Update Plex', 'path': 'home/update-plex/', 'requires': self.have_plex}
         ]
 
+    @private_call
     @staticmethod
     def have_emby():
         return sickgear.USE_EMBY
 
+    @private_call
     @staticmethod
     def have_kodi():
         return sickgear.USE_KODI
 
+    @private_call
     @staticmethod
     def have_xbmc():
         return sickgear.USE_XBMC and sickgear.XBMC_UPDATE_LIBRARY
 
+    @private_call
     @staticmethod
     def have_plex():
         return sickgear.USE_PLEX and sickgear.PLEX_UPDATE_LIBRARY
@@ -2116,6 +2175,7 @@ class Home(MainHandler):
 
         return t.respond()
 
+    @private_call
     def maybe_ignore(self, task):
         response = Scheduler.blocking_jobs()
         if response:
@@ -2199,6 +2259,7 @@ class Home(MainHandler):
 
         return json_dumps({'success': t.respond()})
 
+    @private_call
     @staticmethod
     def fix_show_obj_db_data(show_obj):
         # adjust show_obj db data
@@ -2484,6 +2545,7 @@ class Home(MainHandler):
 
         return t.respond()
 
+    @private_call
     @staticmethod
     def make_showlist_unique_names():
         def titler(x):
@@ -2521,6 +2583,7 @@ class Home(MainHandler):
 
         name_cache.build_name_cache()
 
+    @private_call
     @staticmethod
     def sorted_show_lists():
         def titler(x):
@@ -2625,6 +2688,7 @@ class Home(MainHandler):
                 out.append('S%s: %s' % (('%02d' % season, '*')[-1 == season], ',<br>\n'.join(names)))
         return '\n<hr class="exception-divider">\n'.join(out)
 
+    @private_call
     @staticmethod
     def switch_infosrc(prodid, tvid, m_prodid, m_tvid, set_pause=False, mark_wanted=False):
         tvid = helpers.try_int(tvid)
@@ -2751,6 +2815,7 @@ class Home(MainHandler):
             ui.notifications.message('Mapping Reloaded')
         return json_dumps({k: {r: w for r, w in iteritems(v) if 'date' != r} for k, v in iteritems(show_obj.ids)})
 
+    @private_call
     @staticmethod
     def fanart_tmpl(t):
         t.fanart = []
@@ -3518,6 +3583,7 @@ class Home(MainHandler):
             return '{"episodes":[]}'
         return json_dumps(dict(episodes=ep_data_list))
 
+    @private_call
     @staticmethod
     def prepare_episode(ep_type, searchstate, retrystate=False, statusoverview=False):
         """
@@ -3611,6 +3677,7 @@ class Home(MainHandler):
             result = dict(result='success', groups=result)
         return json_dumps(result)
 
+    @private_call
     @staticmethod
     def csv_items(text):
         # type: (AnyStr) -> AnyStr
@@ -4353,6 +4420,7 @@ class AddShows(Home):
             sickgear.CACHE_IMAGE_URL_LIST.add_url(show_info['poster'])
         return img_url
 
+    @private_call
     @classmethod
     def get_uw_ratio(cls, search_term, showname, aliases, lang=None):
         search_term = decode_str(search_term, errors='replace')
@@ -4724,6 +4792,7 @@ class AddShows(Home):
 
         return json_dumps({'result': 'Success', 'accounts': sickgear.IMDB_ACCOUNTS})
 
+    @private_call
     @staticmethod
     def parse_imdb_overview(tag):
         paragraphs = tag.select('.dli-plot-container .ipc-html-content-inner-div')
@@ -4748,6 +4817,7 @@ class AddShows(Home):
                 overview = text
         return overview
 
+    @private_call
     def parse_imdb(self, data, filtered, kwargs):
 
         oldest, newest, oldest_dt, newest_dt = None, None, 9999999, 0
@@ -4811,6 +4881,7 @@ class AddShows(Home):
 
         return show_list and True or None
 
+    @private_call
     def parse_imdb_html(self, html, filtered, kwargs):
 
         img_size = re.compile(r'(?im)(V1[^XY]+([XY]))(\d+)(\D+)(\d+)(\D+)(\d+)(\D+)(\d+)(\D+)(\d+)(.*?)$')
@@ -5375,6 +5446,7 @@ class AddShows(Home):
         return [(ch.name.replace('"', "'"), r_t, RoleTypes.reverse[r_t], ch.episode_count)
                 for r_t in cur_show_info.cast or [] for ch in cur_show_info.cast[r_t] if ch.name]
 
+    @private_call
     @staticmethod
     def allow_browse_mru(mode_or_mru):
         # Fix an issue where a default view mixed with a deriviative view that requires a param will break the default
@@ -5623,6 +5695,7 @@ class AddShows(Home):
             'WatchList for <b class="grey-text">%s</b> by Trakt' % name,
             mode='watchlist-%s' % account, account=account, ignore_collected=True)
 
+    @private_call
     def get_trakt_data(self, api_method, **kwargs):
 
         mode = kwargs.get('mode', '')
@@ -6211,6 +6284,7 @@ class AddShows(Home):
         return self.browse_tvm(
             'Person at TVmaze', mode='person', p_id=person_tvm_id, **kwargs)
 
+    @private_call
     @staticmethod
     def clean_overview(info=None):
         # type (AnyStr, TVInfoShow) -> AnyStr
@@ -6392,6 +6466,7 @@ class AddShows(Home):
         if not list(filter(lambda tvid_prodid: helpers.find_show_by_id(tvid_prodid), ids.split(' '))):
             return self.new_show('|'.join(['', '', '', ' '.join([ids, show_name])]), use_show_name=True)
 
+    @private_call
     @staticmethod
     def sanitise_dates(date, oldest_dt, newest_dt, oldest, newest, episode_info=None, combine_ep_airtime=False):
         # in case of person search (tvmaze) guest starring entries have only show name/id, no dates
@@ -6729,6 +6804,7 @@ class AddShows(Home):
 
         return finish_add_show()
 
+    @private_call
     @staticmethod
     def split_extra_show(extra_show):
         if not extra_show:
@@ -6945,6 +7021,7 @@ class Manage(MainHandler):
 
         return json_dumps(result)
 
+    @private_call
     @staticmethod
     def recommend_status(cur_status, location=None, d_qual=None, cur_quality=None):
 
@@ -7072,6 +7149,7 @@ class Manage(MainHandler):
 
         self.redirect('/manage/episode-overview/')
 
+    @private_call
     @staticmethod
     def status_changes(new_status, wanted_status=sickgear.common.UNKNOWN, **kwargs):
 
@@ -7948,6 +8026,7 @@ class History(MainHandler):
     def toggle_help(self):
         db.DBConnection().toggle_flag(self.flagname_help_watched)
 
+    @private_call
     @classmethod
     def menu_tab(cls, limit):
 
@@ -7964,6 +8043,7 @@ class History(MainHandler):
                     break
         return result
 
+    @private_call
     @classmethod
     def query_history(cls, my_db, limit=100):
         # type: (db.DBConnection, int) -> Tuple[List[dict], List[dict]]
@@ -9362,6 +9442,7 @@ class ConfigProviders(Config):
 
             return json_dumps({'error': errMsg})
 
+    @private_call
     @staticmethod
     def check_providers_ping():
         for p in sickgear.providers.sorted_sources():
@@ -10205,6 +10286,7 @@ class CachedImages(MainHandler):
         self.set_header('Pragma', 'no-cache')
         self.set_header('Expires', '0')
 
+    @private_call
     @staticmethod
     def should_try_image(filename, source, days=1, minutes=0):
         result = True
@@ -10220,6 +10302,7 @@ class CachedImages(MainHandler):
             pass
         return result
 
+    @private_call
     @staticmethod
     def create_dummy_image(filename, source):
         dummy_file = '%s.%s.dummy' % (os.path.splitext(filename)[0], source)
@@ -10230,6 +10313,7 @@ class CachedImages(MainHandler):
         except (BaseException, Exception):
             pass
 
+    @private_call
     @staticmethod
     def delete_dummy_image(dummy_file):
         try:
@@ -10238,6 +10322,7 @@ class CachedImages(MainHandler):
         except (BaseException, Exception):
             pass
 
+    @private_call
     @staticmethod
     def delete_all_dummy_images(filename):
         for f in ['tmdb', 'tvdb', 'tvmaze']:
@@ -10322,8 +10407,9 @@ class CachedImages(MainHandler):
         else:
             helpers.set_file_timestamp(image_file, min_age=3, new_time=None)
 
-        return self.image_data(image_file)
+        return self._image_data(image_file)
 
+    @private_call
     @staticmethod
     def should_load_image(filename, days=7):
         # type: (AnyStr, integer_types) -> bool
@@ -10339,6 +10425,7 @@ class CachedImages(MainHandler):
             return True
         return False
 
+    @private_call
     @staticmethod
     def find_cast_by_id(ref_id, cast_list):
         for cur_item in cast_list:
@@ -10395,7 +10482,7 @@ class CachedImages(MainHandler):
         elif char_obj.person and (char_obj.person[0].thumb_url or char_obj.person[0].image_url):
             return self.person(rid=char_id, pid=char_obj.person[0].id, show_obj=show_obj, thumb=thumb)
 
-        return self.image_data(image_file, cast_default=True)
+        return self._image_data(image_file, cast_default=True)
 
     def person(self, rid=None, pid=None, tvid_prodid=None, show_obj=None, thumb=True, **kwargs):
         _ = kwargs.get('oid')  # suppress pyc non used var highlight, oid (original id) is a visual ui key
@@ -10428,9 +10515,10 @@ class CachedImages(MainHandler):
             elif os.path.isfile(fallback):
                 image_file = fallback
 
-        return self.image_data(image_file, cast_default=True)
+        return self._image_data(image_file, cast_default=True)
 
-    def image_data(self, image_file, cast_default=False):
+    @private_call
+    def _image_data(self, image_file, cast_default=False):
         # type: (Optional[AnyStr], bool) -> Optional[Any]
         """
         return image file binary data

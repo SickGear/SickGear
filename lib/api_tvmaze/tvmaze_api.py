@@ -25,7 +25,7 @@ from lib.pytvmaze import tvmaze
 # from .tvmaze_exceptions import *
 from lib.tvinfo_base import TVInfoBase, TVInfoImage, TVInfoImageSize, TVInfoImageType, TVInfoCharacter, Crew, \
     crew_type_names, TVInfoPerson, RoleTypes, TVInfoShow, TVInfoEpisode, TVInfoIDs, TVInfoNetwork, TVInfoSeason, \
-    PersonGenders, TVINFO_TVMAZE, TVINFO_TVDB, TVINFO_IMDB
+    PersonGenders, TVINFO_TVMAZE, TVINFO_TVDB, TVINFO_IMDB, TVINFO_CAST_LIMIT
 
 from six import integer_types, iteritems, string_types
 
@@ -593,7 +593,7 @@ class TvMaze(TVInfoBase):
                 if load_actors and not _s_o.actors_loaded:
                     if _s_d.cast:
                         character_person_ids = {}
-                        for cur_ch in _s_o.cast[RoleTypes.ActorMain]:
+                        for cur_ch in _s_o.cast[RoleTypes.ActorMain][:TVINFO_CAST_LIMIT]:
                             character_person_ids.setdefault(cur_ch.id, []).extend([p.id for p in cur_ch.person])
                         for cur_ch in _s_d.cast.characters:
                             existing_character = next(
