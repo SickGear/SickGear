@@ -25,6 +25,11 @@
 * Change incorrect case of recommended RapidFuzz
 
 
+### 3.33.6 (2025-03-15 03:25:00 UTC)
+
+* Change improve security by sanitising input requests (thanks to xbow for reports)
+
+
 ### 3.33.5 (2025-03-14 04:25:00 UTC)
 
 * Change limit get_image to only intended API direct calls

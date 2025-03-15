@@ -22,6 +22,9 @@ import time
 import traceback
 import unicodedata
 
+from io import StringIO
+from html.parser import HTMLParser
+
 from exceptions_helper import ex, ConnectionSkipException
 from json_helper import json_loads
 from cachecontrol import CacheControl, caches
@@ -1826,3 +1829,34 @@ def clean_str(value):
     :param value: to process
     """
     return enforce_type(clean_data(value), str, '')
+
+
+class MLStripper(HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.reset()
+        self.strict = False
+        self.convert_charrefs= True
+        self.text = StringIO()
+
+    def handle_data(self, d):
+        self.text.write(d)
+
+    def get_data(self):
+        return self.text.getvalue()
+
+
+def strip_html_tags(html):
+    # type: (str) -> str
+    """
+    Remove all html tags from string
+
+    :param html:  string to sanitize
+    :return: sanitized string
+    """
+    if not isinstance(html, str):
+        html = repr(html)
+
+    s = MLStripper()
+    s.feed(html)
+    return s.get_data()
