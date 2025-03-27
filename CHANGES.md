@@ -25,6 +25,11 @@
 * Change incorrect case of recommended RapidFuzz
 
 
+### 3.33.7 (2025-03-27 01:30:00 UTC)
+
+* Remove MagnetDL torrent provider
+
+
 ### 3.33.6 (2025-03-15 03:25:00 UTC)
 
 * Change improve security by sanitising input requests (thanks to xbow for reports)
