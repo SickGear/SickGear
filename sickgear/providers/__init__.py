@@ -38,7 +38,7 @@ __all__ = [
     'alpharatio', 'bithdtv', 'blutopia', 'btn',
     'custom01', 'custom11', 'eztv', 'fano', 'filelist', 'funfile',
     'hdbits', 'hdspace', 'hdtorrents',
-    'immortalseed', 'iptorrents', 'limetorrents', 'magnetdl', 'milkie', 'morethan', 'nebulance', 'ncore', 'nyaa',
+    'immortalseed', 'iptorrents', 'limetorrents', 'milkie', 'morethan', 'nebulance', 'ncore', 'nyaa',
     'pretome', 'privatehd', 'ptf',
     'revtt', 'scenehd', 'scenetime', 'shazbat', 'showrss', 'snowfl', 'speedapp', 'speedcd',
     'thepiratebay', 'torlock', 'torrentday', 'torrenting', 'torrentleech',  'tvchaosuk',
