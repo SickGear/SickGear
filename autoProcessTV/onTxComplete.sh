@@ -2,7 +2,7 @@
 : <<'main'
 *******************************************************************************
 
-onTxComplete.sh v1.3 for SickGear
+onTxComplete.sh v1.4 for SickGear
 
   Script to copy select files to a location for SickGear to post process.
 
@@ -161,10 +161,10 @@ if [ -n "$4" ]; then
 
   # Use the four input parameters
   # This also strips quotes used to safely pass values containing spaces
-  sg_path=$(echo $1 | xargs)
-  sg_label=$(echo $2 | xargs)
-  client_label=$(echo $3 | xargs)
-  content_path=$(echo $4 | xargs)
+  sg_path=$(echo "$1" | xargs -0)
+  sg_label=$(echo "$2" | xargs -0)
+  client_label=$(echo "$3" | xargs -0)
+  content_path=$(echo "$4" | xargs -0)
   [ "1" != "$testmode" ] && [ "" != "$(echo $5 | xargs)" ] && testmode="1"
   check_label_path_tail=""
 
@@ -201,21 +201,21 @@ else
 
     # Deluge input parameters (i.e. "TorrentID" "Torrent Name" "Torrent Path")
     # This also strips quotes used to safely pass values containing spaces
-    client_name=$(echo $2 | xargs)
-    client_path=$(echo $3 | xargs)
+    client_name=$(echo "$2" | xargs -0)
+    client_path=$(echo "$3" | xargs -0)
   fi
   content_path="$client_path/$client_name"
   check_label_path_tail="1"
 fi
 
 # Replace any double slashes in path with single slash
-sg_path=$(echo ${sg_path} | sed -En "s/([/\])?[/\]*/\1/gp")
-content_path=$(echo ${content_path} | sed -En "s/([/\])?[/\]*/\1/gp")
+sg_path=$(echo "${sg_path}" | sed -En "s/([/\])?[/\]*/\1/gp")
+content_path=$(echo "${content_path}" | sed -En "s/([/\])?[/\]*/\1/gp")
 
 # Remove any trailing slashes from paths
-sg_path=${sg_path%/}
-content_path=${content_path%/}
-client_path=${client_path%/}
+sg_path="${sg_path%/}"
+content_path="${content_path%/}"
+client_path="${client_path%/}"
 
 if [ -n "$check_label_path_tail" ]; then
   # Enable the copy action if path ends with user defined label
@@ -223,7 +223,7 @@ if [ -n "$check_label_path_tail" ]; then
 
   label_length=$(echo -n "$sg_label" | wc -m)
 
-  [ "/$sg_label" != $(echo -n $client_path | tail -c $((1 + $label_length))) ] && client_label="skip copy"
+  [ "/$sg_label" != $(echo -n "$client_path" | tail -c $((1 + $label_length))) ] && client_label="skip copy"
 fi
 
 # Create '.!sync' filename

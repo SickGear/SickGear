@@ -25,6 +25,11 @@
 * Change incorrect case of recommended RapidFuzz
 
 
+### 3.33.8 (2025-05-16 14:30:00 UTC)
+
+* Fix port of onTXComplete.sh parsing spaces in pathname parameters on Linux
+
+
 ### 3.33.7 (2025-03-27 01:30:00 UTC)
 
 * Remove MagnetDL torrent provider
