@@ -26,6 +26,11 @@
 * Change incorrect case of recommended RapidFuzz
 
 
+### 3.33.9 (2025-05-20 16:45:00 UTC)
+
+* Change add support for Python 3.13.3, 3.12.9, 3.11.9 (Win), 3.10.17, 3.9.22
+
+
 ### 3.33.8 (2025-05-16 14:30:00 UTC)
 
 * Fix port of onTXComplete.sh parsing spaces in pathname parameters on Linux

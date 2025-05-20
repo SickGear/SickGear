@@ -161,11 +161,11 @@ if [ -n "$4" ]; then
 
   # Use the four input parameters
   # This also strips quotes used to safely pass values containing spaces
-  sg_path=$(echo "$1" | xargs -0)
-  sg_label=$(echo "$2" | xargs -0)
-  client_label=$(echo "$3" | xargs -0)
-  content_path=$(echo "$4" | xargs -0)
-  [ "1" != "$testmode" ] && [ "" != "$(echo $5 | xargs)" ] && testmode="1"
+  sg_path="$1"
+  sg_label="$2"
+  client_label="$3"
+  content_path="$4"
+  [ "1" != "$testmode" ] && [ "" != "$5" ] && testmode="1"
   check_label_path_tail=""
 
 else
@@ -201,8 +201,8 @@ else
 
     # Deluge input parameters (i.e. "TorrentID" "Torrent Name" "Torrent Path")
     # This also strips quotes used to safely pass values containing spaces
-    client_name=$(echo "$2" | xargs -0)
-    client_path=$(echo "$3" | xargs -0)
+    client_name="$2"
+    client_path="$3"
   fi
   content_path="$client_path/$client_name"
   check_label_path_tail="1"
