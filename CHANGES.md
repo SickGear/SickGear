@@ -18,6 +18,7 @@
 * Update soupsieve 2.5.0 (dc71495) to 2.6.0 (a8080d9) 
 * Update thefuzz 0.21.0 (0b49e4a) to 0.22.1 (83bea3d)
 * Update tmdbsimple 2.9.1 (9da400a) to 2.9.2 (0b3359f)
+* Update Tornado Web Server 6.4.2 (27b3252) to 6.5.0 (ab5f354)
 * Update urllib3 2.2.2 (27e2a5c) to 2.3.0 (2f68c53)
 * Change add typing-extensions 4.12.2 (8184ac6) for BSoup
 * Change chardet to permit Requests import
