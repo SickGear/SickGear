@@ -10,7 +10,7 @@
 * Update hachoir 3.2.0 (38d759f) to 3.3.0 (48b478f)
 * Update idna library 3.7 (1d365e1) to 3.10 (729225d)
 * Update Msgpack 1.0.6 (e1d3d5d) to 1.1.0 (0eeabfb)
-* Update deprecated pkg_resources 24.0 to Packaging 24.2 (d8e3b31)
+* Update deprecated pkg_resources 24.0 to Packaging 25.0 (f585376)
 * Update profilehooks module 1.13.0.dev0 (99f8a31) to 1.13.1.dev0 (824fcd4) 
 * Update pytz 2024.1/2024a (3680953) to 2024.2/2024b (3944f75)
 * Update SimpleJSON 3.19.1 (aeb63ee) to 3.19.3 (6932004)
@@ -29,6 +29,7 @@
 [develop changelog]
 
 * Update Tornado Web Server 6.4.2 (27b3252) to 6.5.0 (ab5f354)
+* Update deprecated pkg_resources 24.0 to Packaging 24.2 (d8e3b31)
 
 
 ### 3.33.9 (2025-05-20 16:45:00 UTC)
