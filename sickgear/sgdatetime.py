@@ -199,7 +199,7 @@ class SGDatetime(datetime.datetime):
 
         finally:
             SGDatetime.setlocale(setlocale=setlocale)
-            return strd
+        return strd
 
     # display Datetime in SickGear Format
     @static_or_instance
@@ -217,7 +217,7 @@ class SGDatetime(datetime.datetime):
 
         finally:
             SGDatetime.setlocale(use_has_locale=SGDatetime.has_locale)
-            return strd
+        return strd
 
     @staticmethod
     def sbstrftime(obj, str_format):
@@ -279,8 +279,10 @@ class SGDatetime(datetime.datetime):
         timestamp = default
         try:
             timestamp = (obj - EPOCH_START).total_seconds()
-        finally:
-            return (default, timestamp)[isinstance(timestamp, (float, integer_types))]
+        except:
+            pass
+
+        return (default, timestamp)[isinstance(timestamp, (float, integer_types))]
 
     @static_or_instance
     def timestamp_near(self,
