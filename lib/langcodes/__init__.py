@@ -674,14 +674,16 @@ class Language:
         )
         return 100 - min(self.distance(supported), 100)
 
-    def distance(self, supported: 'Language') -> int:
+    def distance(self, supported: 'Language', ignore_script: bool = False) -> int:
         """
         Suppose that `self` is the language that the user desires, and
         `supported` is a language that is actually supported.
 
         This method returns a number from 0 to 134 measuring the 'distance'
         between the languages (lower numbers are better). This is not a
-        symmetric relation.
+        symmetric relation. If `ignore_script` is `True`, the script will
+        not be used in the comparison, possibly resulting in a smaller
+        'distance'.
 
         The language distance is not really about the linguistic similarity or
         history of the languages; instead, it's based largely on sociopolitical
@@ -703,9 +705,10 @@ class Language:
             desired_triple = ('und', 'Zzzz', 'ZZ')
         else:
             desired_complete = self.prefer_macrolanguage().maximize()
+
             desired_triple = (
                 desired_complete.language,
-                desired_complete.script,
+                None if ignore_script else desired_complete.script,
                 desired_complete.territory,
             )
 
@@ -717,9 +720,10 @@ class Language:
             supported_triple = ('und', 'Zzzz', 'ZZ')
         else:
             supported_complete = supported.prefer_macrolanguage().maximize()
+
             supported_triple = (
                 supported_complete.language,
-                supported_complete.script,
+                None if ignore_script else supported_complete.script,
                 supported_complete.territory,
             )
 
@@ -1013,7 +1017,7 @@ class Language:
         # parentheses are full-width.
         if self._disp_pattern is not None:
             return self._disp_pattern
-        if self.distance(Language.get('zh')) <= 25:
+        if self.distance(Language.get('zh')) <= 25 or self.distance(Language.get('zh-Hant')) <= 25:
             self._disp_pattern = "{0}（{1}）"
         else:
             self._disp_pattern = "{0} ({1})"
@@ -1214,9 +1218,9 @@ class Language:
         how many people speak in a particular writing script.
 
         >>> Language.get('es').speaking_population()
-        487664083
+        493528077
         >>> Language.get('pt').speaking_population()
-        237135429
+        237496885
         >>> Language.get('es-BR').speaking_population()
         76218
         >>> Language.get('pt-BR').speaking_population()
@@ -1249,11 +1253,11 @@ class Language:
 
         >>> all = Language.get('zh').writing_population()
         >>> all
-        1240326057
+        1240841517
 
         >>> traditional = Language.get('zh-Hant').writing_population()
         >>> traditional
-        37019589
+        36863340
 
         >>> simplified = Language.get('zh-Hans').writing_population()
         >>> all == traditional + simplified
@@ -1501,7 +1505,7 @@ class Language:
         return self._str_tag == other._str_tag
 
     def __hash__(self) -> int:
-        return hash(id(self))
+        return hash(self._str_tag)
 
     def __getitem__(self, key: str) -> Optional[Union[str, List[str]]]:
         if key in self.ATTRIBUTES:
@@ -1648,7 +1652,7 @@ def tag_match_score(
     return desired_ld.match_score(supported_ld)
 
 
-def tag_distance(desired: Union[str, Language], supported: Union[str, Language]) -> int:
+def tag_distance(desired: Union[str, Language], supported: Union[str, Language], ignore_script: bool = False) -> int:
     """
     Tags that expand to the same thing when likely values are filled in get a
     distance of 0.
@@ -1792,13 +1796,19 @@ def tag_distance(desired: Union[str, Language], supported: Union[str, Language])
     >>> tag_distance('ja', 'ja-Latn-US-hepburn')
     54
 
+    If `ignore_script` is used, the script difference is ignored and a smaller
+    difference with lower score will be found.
+
+    >>> tag_distance('ja', 'ja-Latn-hepburn', ignore_script=True)
+    0
+
     >>> # You can read the Shavian script, right?
     >>> tag_distance('en', 'en-Shaw')
     54
     """
     desired_obj = Language.get(desired)
     supported_obj = Language.get(supported)
-    return desired_obj.distance(supported_obj)
+    return desired_obj.distance(supported_obj, ignore_script)
 
 
 def best_match(
@@ -1835,6 +1845,7 @@ def closest_match(
     desired_language: Union[str, Language],
     supported_languages: Sequence[str],
     max_distance: int = 25,
+    ignore_script: bool = False,
 ) -> Tuple[str, int]:
     """
     You have software that supports any of the `supported_languages`. You want
@@ -1854,6 +1865,9 @@ def closest_match(
     the wrong language. The documentation for `tag_distance` describes the
     distance values in more detail.
 
+    `ignore_script` makes the matching ignore scripts, allowing matches to be
+    found when they wouldn't otherwise be due to different scripts.
+
     When there is a tie for the best matching language, the first one in the
     tie will be used.
 
@@ -1871,6 +1885,9 @@ def closest_match(
 
     >>> closest_match('ja', ['ja-Latn-hepburn', 'en'])
     ('und', 1000)
+
+    >>> closest_match('ja', ['ja-Latn-hepburn', 'en'], ignore_script=True)
+    ('ja-Latn-hepburn', 0)
     """
     desired_language = str(desired_language)
 
@@ -1884,7 +1901,7 @@ def closest_match(
         return desired_language, 0
 
     match_distances = [
-        (supported, tag_distance(desired_language, supported))
+        (supported, tag_distance(desired_language, supported, ignore_script))
         for supported in supported_languages
     ]
     match_distances = [
