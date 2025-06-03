@@ -9,6 +9,8 @@
 * Update feedparser 6.0.11 (efcb89b) to 6.0.11 (ff59549)
 * Update hachoir 3.2.0 (38d759f) to 3.3.0 (48b478f)
 * Update idna library 3.7 (1d365e1) to 3.10 (729225d)
+* Update langcodes 3.3.0 to 3.5.0
+* Update language-data 1.1 to 1.3
 * Update Msgpack 1.0.6 (e1d3d5d) to 1.1.0 (0eeabfb)
 * Update deprecated pkg_resources 24.0 to Packaging 25.0 (f585376)
 * Update profilehooks module 1.13.0.dev0 (99f8a31) to 1.13.1.dev0 (824fcd4) 
