@@ -190,7 +190,7 @@ WIKT_LANGUAGE_NAMES['en'] = [
     "Maltese",
     "Hakka",
     "Sicilian",
-    "Ladino",
+    # "Ladino", -- same as Ladin
     "Basque",
     "Breton",
     # Guernésiais -- same as Norman
@@ -485,7 +485,7 @@ WIKT_LANGUAGE_NAMES['de'] = [
     "Niedersorbisch",
     "Kannada",
     "Guanche",
-    "Weißrussisch",
+    "Belarussisch",
     "Sanskrit",
     "Aserbaidschanisch",
     "Mittelhochdeutsch",
