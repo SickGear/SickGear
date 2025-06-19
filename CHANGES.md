@@ -34,6 +34,11 @@
 * Update deprecated pkg_resources 24.0 to Packaging 24.2 (d8e3b31)
 
 
+### 3.33.10 (2025-06-19 19:50:00 UTC)
+
+* Change add support for Python 3.13.5, 3.13.4, 3.9.23
+
+
 ### 3.33.9 (2025-05-20 16:45:00 UTC)
 
 * Change add support for Python 3.13.3, 3.12.9, 3.11.9 (Win), 3.10.17, 3.9.22
