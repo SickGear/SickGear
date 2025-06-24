@@ -105,7 +105,7 @@ class CloudflareScraper(Session):
         try:
             params = {} if 'v1' not in self.test_flaresolverr(url_solver) else dict(userAgent=user_agent)
             params.update(dict(
-                cmd='request.%s' % method.lower(), url=url,
+                cmd='request.%s' % method.lower(), url=url, maxTimeout=120000,
                 cookies=[{'name': cur_ckee.name, 'value': cur_ckee.value,
                           'domain': cur_ckee.domain, 'path': cur_ckee.path} for cur_ckee in self.cookies]))
             response = super(CloudflareScraper, self).request('POST', '%s/v1' % url_solver, json=params)
