@@ -26,6 +26,7 @@
 * Change chardet to permit Requests import
 * Remove notifier Boxcar2
 * Change incorrect case of recommended RapidFuzz
+* Change improve success rate of Flaresolver requests
 
 
 [develop changelog]
