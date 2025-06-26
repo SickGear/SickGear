@@ -18,6 +18,7 @@ PSEUDO_SIMPLE = {
     ":first-child",
     ":first-of-type",
     ":in-range",
+    ":open",
     ":out-of-range",
     ":last-child",
     ":last-of-type",
@@ -36,26 +37,35 @@ PSEUDO_SIMPLE = {
     ':read-write',
     ':required',
     ':scope',
-    ':defined'
+    ':defined',
+    ':muted'
 }
 
 # Supported, simple pseudo classes that match nothing in the Soup Sieve environment
 PSEUDO_SIMPLE_NO_MATCH = {
     ':active',
+    ':autofill',
+    ':buffering',
     ':current',
     ':focus',
     ':focus-visible',
     ':focus-within',
+    ':fullscreen',
     ':future',
     ':host',
     ':hover',
     ':local-link',
     ':past',
     ':paused',
+    ':picture-in-picture',
     ':playing',
+    ':popover-open',
+    ':seeking',
+    ':stalled',
     ':target',
     ':target-within',
     ':user-invalid',
+    ':volume-locked',
     ':visited'
 }
 
@@ -606,6 +616,10 @@ class CSSParser:
                 sel.selectors.append(CSS_ENABLED)
             elif pseudo == ":required":
                 sel.selectors.append(CSS_REQUIRED)
+            elif pseudo == ":muted":
+                sel.selectors.append(CSS_MUTED)
+            elif pseudo == ":open":
+                sel.selectors.append(CSS_OPEN)
             elif pseudo == ":optional":
                 sel.selectors.append(CSS_OPTIONAL)
             elif pseudo == ":read-only":
@@ -1287,3 +1301,18 @@ CSS_OUT_OF_RANGE = CSSParser(
     )
     '''
 ).process_selectors(flags=FLG_PSEUDO | FLG_OUT_OF_RANGE | FLG_HTML)
+
+# CSS pattern for :open
+CSS_OPEN = CSSParser(
+    '''
+    html|*:is(details, dialog)[open]
+    '''
+).process_selectors(flags=FLG_PSEUDO | FLG_HTML)
+
+
+# CSS pattern for :muted
+CSS_MUTED = CSSParser(
+    '''
+    html|*:is(video, audio)[muted]
+    '''
+).process_selectors(flags=FLG_PSEUDO | FLG_HTML)

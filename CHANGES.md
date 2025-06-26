@@ -19,7 +19,7 @@
 * Update Requests library 2.32.3 (0e322af) to 2.32.4 (91a3eab)
 * Update SimpleJSON 3.19.1 (aeb63ee) to 3.19.3 (6932004)
 * Update Six compatibility library 1.16.0 (b620447) to 1.17.0 (4a765bf)
-* Update soupsieve 2.5.0 (dc71495) to 2.6.0 (a8080d9) 
+* Update soupsieve 2.5.0 (dc71495) to 2.7.0 (a616022)
 * Update thefuzz 0.21.0 (0b49e4a) to 0.22.1 (1ba86f3)
 * Update tmdbsimple 2.9.1 (9da400a) to 2.9.2 (0b3359f)
 * Update Tornado Web Server 6.4.2 (27b3252) to 6.5.1 (b5586f3)
@@ -36,6 +36,7 @@
 
 * Update CacheControl 0.14.0 (e2be0c2) to 0.14.2 (928422d)
 * Update Msgpack 1.0.6 (e1d3d5d) to 1.1.0 (0eeabfb)
+* Update soupsieve 2.5.0 (dc71495) to 2.6.0 (a8080d9)
 * Update thefuzz 0.21.0 (0b49e4a) to 0.22.1 (83bea3d)
 * Update Tornado Web Server 6.4.2 (27b3252) to 6.5.0 (ab5f354)
 * Update deprecated pkg_resources 24.0 to Packaging 24.2 (d8e3b31)
