@@ -26,23 +26,6 @@ try:
 except ImportError:
     brotli = None
 
-try:
-    import zstandard as zstd
-except (AttributeError, ImportError, ValueError):  # Defensive:
-    HAS_ZSTD = False
-else:
-    # The package 'zstandard' added the 'eof' property starting
-    # in v0.18.0 which we require to ensure a complete and
-    # valid zstd stream was fed into the ZstdDecoder.
-    # See: https://github.com/urllib3/urllib3/pull/2624
-    _zstd_version = tuple(
-        map(int, re.search(r"^([0-9]+)\.([0-9]+)", zstd.__version__).groups())  # type: ignore[union-attr]
-    )
-    if _zstd_version < (0, 18):  # Defensive:
-        HAS_ZSTD = False
-    else:
-        HAS_ZSTD = True
-
 from . import util
 from ._base_connection import _TYPE_BODY
 from ._collections import HTTPHeaderDict
@@ -163,11 +146,15 @@ if brotli is not None:
             return b""
 
 
-if HAS_ZSTD:
+try:
+    # Python 3.14+
+    from compression import zstd  # type: ignore[import-not-found] # noqa: F401
+
+    HAS_ZSTD = True
 
     class ZstdDecoder(ContentDecoder):
         def __init__(self) -> None:
-            self._obj = zstd.ZstdDecompressor().decompressobj()
+            self._obj = zstd.ZstdDecompressor()
 
         def decompress(self, data: bytes) -> bytes:
             if not data:
@@ -175,15 +162,53 @@ if HAS_ZSTD:
             data_parts = [self._obj.decompress(data)]
             while self._obj.eof and self._obj.unused_data:
                 unused_data = self._obj.unused_data
-                self._obj = zstd.ZstdDecompressor().decompressobj()
+                self._obj = zstd.ZstdDecompressor()
                 data_parts.append(self._obj.decompress(unused_data))
             return b"".join(data_parts)
 
         def flush(self) -> bytes:
-            ret = self._obj.flush()  # note: this is a no-op
             if not self._obj.eof:
                 raise DecodeError("Zstandard data is incomplete")
-            return ret
+            return b""
+
+except ImportError:
+    try:
+        # Python 3.13 and earlier require the 'zstandard' module.
+        import zstandard as zstd
+
+        # The package 'zstandard' added the 'eof' property starting
+        # in v0.18.0 which we require to ensure a complete and
+        # valid zstd stream was fed into the ZstdDecoder.
+        # See: https://github.com/urllib3/urllib3/pull/2624
+        _zstd_version = tuple(
+            map(int, re.search(r"^([0-9]+)\.([0-9]+)", zstd.__version__).groups())  # type: ignore[union-attr]
+        )
+        if _zstd_version < (0, 18):  # Defensive:
+            raise ImportError("zstandard module doesn't have eof")
+    except (AttributeError, ImportError, ValueError):  # Defensive:
+        HAS_ZSTD = False
+    else:
+        HAS_ZSTD = True
+
+        class ZstdDecoder(ContentDecoder):  # type: ignore[no-redef]
+            def __init__(self) -> None:
+                self._obj = zstd.ZstdDecompressor().decompressobj()
+
+            def decompress(self, data: bytes) -> bytes:
+                if not data:
+                    return b""
+                data_parts = [self._obj.decompress(data)]
+                while self._obj.eof and self._obj.unused_data:
+                    unused_data = self._obj.unused_data
+                    self._obj = zstd.ZstdDecompressor().decompressobj()
+                    data_parts.append(self._obj.decompress(unused_data))
+                return b"".join(data_parts)
+
+            def flush(self) -> bytes:
+                ret = self._obj.flush()  # note: this is a no-op
+                if not self._obj.eof:
+                    raise DecodeError("Zstandard data is incomplete")
+                return ret  # type: ignore[no-any-return]
 
 
 class MultiDecoder(ContentDecoder):
@@ -518,7 +543,7 @@ class BaseHTTPResponse(io.IOBase):
     def getheaders(self) -> HTTPHeaderDict:
         warnings.warn(
             "HTTPResponse.getheaders() is deprecated and will be removed "
-            "in urllib3 v2.1.0. Instead access HTTPResponse.headers directly.",
+            "in urllib3 v2.6.0. Instead access HTTPResponse.headers directly.",
             category=DeprecationWarning,
             stacklevel=2,
         )
@@ -527,7 +552,7 @@ class BaseHTTPResponse(io.IOBase):
     def getheader(self, name: str, default: str | None = None) -> str | None:
         warnings.warn(
             "HTTPResponse.getheader() is deprecated and will be removed "
-            "in urllib3 v2.1.0. Instead use HTTPResponse.headers.get(name, default).",
+            "in urllib3 v2.6.0. Instead use HTTPResponse.headers.get(name, default).",
             category=DeprecationWarning,
             stacklevel=2,
         )
@@ -1075,6 +1100,10 @@ class HTTPResponse(BaseHTTPResponse):
     def shutdown(self) -> None:
         if not self._sock_shutdown:
             raise ValueError("Cannot shutdown socket as self._sock_shutdown is not set")
+        if self._connection is None:
+            raise RuntimeError(
+                "Cannot shutdown as connection has already been released to the pool"
+            )
         self._sock_shutdown(socket.SHUT_RD)
 
     def close(self) -> None:
@@ -1257,7 +1286,7 @@ class HTTPResponse(BaseHTTPResponse):
         return self._request_url
 
     @url.setter
-    def url(self, url: str) -> None:
+    def url(self, url: str | None) -> None:
         self._request_url = url
 
     def __iter__(self) -> typing.Iterator[bytes]:
