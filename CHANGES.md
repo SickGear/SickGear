@@ -7,6 +7,7 @@
 * Update certifi 2024.08.30 to 2024.12.14
 * Update chardet packages 5.1.0 (8087f00) to 5.3.0dev0 (8e8dfcd)
 * Update feedparser 6.0.11 (efcb89b) to 6.0.11 (ff59549)
+* Update filelock 3.15.4 (9a979df) to 3.18.0 (129a1ef)
 * Update hachoir 3.2.0 (38d759f) to 3.3.0 (48b478f)
 * Update idna library 3.7 (1d365e1) to 3.10 (729225d)
 * Update langcodes 3.3.0 to 3.5.0
