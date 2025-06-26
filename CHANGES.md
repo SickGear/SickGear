@@ -15,6 +15,7 @@
 * Update deprecated pkg_resources 24.0 to Packaging 25.0 (f585376)
 * Update profilehooks module 1.13.0.dev0 (99f8a31) to 1.13.1.dev0 (824fcd4) 
 * Update pytz 2024.1/2024a (3680953) to 2024.2/2024b (3944f75)
+* Update Requests library 2.32.3 (0e322af) to 2.32.4 (91a3eab)
 * Update SimpleJSON 3.19.1 (aeb63ee) to 3.19.3 (6932004)
 * Update Six compatibility library 1.16.0 (b620447) to 1.17.0 (4a765bf)
 * Update soupsieve 2.5.0 (dc71495) to 2.6.0 (a8080d9) 
