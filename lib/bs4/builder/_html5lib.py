@@ -136,7 +136,7 @@ class HTML5TreeBuilder(HTMLTreeBuilder):
             # HTMLBinaryInputStream.__init__.
             extra_kwargs["override_encoding"] = self.user_specified_encoding
 
-        doc = parser.parse(markup, **extra_kwargs)
+        doc = parser.parse(markup, **extra_kwargs) # type:ignore
 
         # Set the character encoding detected by the tokenizer.
         if isinstance(markup, str):
@@ -144,7 +144,7 @@ class HTML5TreeBuilder(HTMLTreeBuilder):
             # charEncoding to UTF-8 if it gets Unicode input.
             doc.original_encoding = None
         else:
-            original_encoding = parser.tokenizer.stream.charEncoding[0]
+            original_encoding = parser.tokenizer.stream.charEncoding[0] # type:ignore
             # The encoding is an html5lib Encoding object. We want to
             # use a string for compatibility with other tree builders.
             original_encoding = original_encoding.name
@@ -227,7 +227,7 @@ class TreeBuilderForHtml5lib(treebuilder_base.TreeBuilder):
             # This represents the point immediately after the end of the
             # tag. We don't know when the tag started, but we do know
             # where it ended -- the character just before this one.
-            sourceline, sourcepos = self.parser.tokenizer.stream.position()
+            sourceline, sourcepos = self.parser.tokenizer.stream.position() # type:ignore
             assert sourcepos is not None
             sourcepos = sourcepos - 1
         tag = self.soup.new_tag(
@@ -266,7 +266,7 @@ class TreeBuilderForHtml5lib(treebuilder_base.TreeBuilder):
     def getDocument(self) -> "BeautifulSoup":
         return self.soup
 
-    def testSerializer(self, element: "Element") -> str:
+    def testSerializer(self, element: "Element") -> None:
         """This is only used by the html5lib unit tests. Since we
         don't currently hook into those tests, the implementation is
         left blank.
@@ -337,7 +337,7 @@ class BeautifulSoupNode(treebuilder_base.Node):
 
     # TODO-TYPING: typeshed stubs are incorrect about this;
     # cloneNode returns a new Node, not None.
-    def cloneNode(self) -> treebuilder_base.Node:
+    def cloneNode(self) -> treebuilder_base.Node: # type:ignore
         raise NotImplementedError()
 
 
@@ -564,12 +564,12 @@ class Element(BeautifulSoupNode):
 
     # TODO-TYPING: typeshed stubs are incorrect about this;
     # hasContent returns a boolean, not None.
-    def hasContent(self) -> bool:
+    def hasContent(self) -> bool: # type:ignore
         return len(self.element.contents) > 0
 
     # TODO-TYPING: typeshed stubs are incorrect about this;
     # cloneNode returns a new Node, not None.
-    def cloneNode(self) -> treebuilder_base.Node:
+    def cloneNode(self) -> treebuilder_base.Node: # type:ignore
         tag = self.soup.new_tag(self.element.name, self.namespace)
         node = Element(tag, self.soup, self.namespace)
         for key, value in self.attributes:

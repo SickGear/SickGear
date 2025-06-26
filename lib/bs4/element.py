@@ -37,6 +37,7 @@ from typing import (
     TypeVar,
     Union,
     cast,
+    overload,
 )
 from typing_extensions import (
     Self,
@@ -223,7 +224,7 @@ class AttributeValueList(List[str]):
     """
 
 
-class AttributeDict(dict):
+class AttributeDict(Dict[Any,Any]):
     """Superclass for the dictionary used to hold a tag's
     attributes. You can use this, but it's just a regular dict with no
     special logic.
@@ -235,7 +236,7 @@ class XMLAttributeDict(AttributeDict):
     incoming values for consistency with the HTML spec.
     """
 
-    def __setitem__(self, key: str, value: Any):
+    def __setitem__(self, key: str, value: Any) -> None:
         """Set an attribute value, possibly modifying it to comply with
         the XML spec.
 
@@ -273,7 +274,7 @@ class HTMLAttributeDict(AttributeDict):
     around boolean attributes that XML doesn't have.
     """
 
-    def __setitem__(self, key: str, value: Any):
+    def __setitem__(self, key: str, value: Any) -> None:
         """Set an attribute value, possibly modifying it to comply
         with the HTML spec,
         """
@@ -389,7 +390,7 @@ class PageElement(object):
         :param previous_element: The element parsed immediately before
             this one.
 
-        :param next_element: The element parsed immediately before
+        :param next_element: The element parsed immediately after
             this one.
 
         :param previous_sibling: The most recently encountered element
@@ -1231,7 +1232,7 @@ class PageElement(object):
         """
         return self._self_and(self.parents)
 
-    def _self_and(self, other_generator):
+    def _self_and(self, other_generator:Iterator[PageElement]) -> Iterator[PageElement]:
         """Modify a generator by yielding this element, then everything
         yielded by the other generator.
         """
@@ -1316,6 +1317,14 @@ class NavigableString(str, PageElement):
 
     def __getnewargs__(self) -> Tuple[str]:
         return (str(self),)
+
+    # TODO-TYPING This should be SupportsIndex|slice but SupportsIndex
+    # is introduced in 3.8. This can be changed once 3.7 support is dropped.
+    def __getitem__(self, key: Union[int|slice]) -> str: # type:ignore
+        """Raise an exception """
+        if isinstance(key, str):
+            raise TypeError("string indices must be integers, not '{0}'. Are you treating a NavigableString like a Tag?".format(key.__class__.__name__))
+        return super(NavigableString, self).__getitem__(key)
 
     @property
     def string(self) -> str:
@@ -2188,7 +2197,8 @@ class Tag(PageElement):
         elif isinstance(value, list):
             list_value = value
         else:
-            value = cast(str, value)
+            if not isinstance(value, str):
+                value = cast(str, value)
             list_value = self.attribute_value_list_class([value])
         return list_value
 
@@ -2596,6 +2606,22 @@ class Tag(PageElement):
             not self.preserve_whitespace_tags
             or self.name not in self.preserve_whitespace_tags
         )
+
+    @overload
+    def prettify(
+        self,
+        encoding: None = None,
+        formatter: _FormatterOrName = "minimal",
+    ) -> str:
+        ...
+
+    @overload
+    def prettify(
+        self,
+        encoding: _Encoding,
+        formatter: _FormatterOrName = "minimal",
+    ) -> bytes:
+        ...
 
     def prettify(
         self,

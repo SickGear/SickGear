@@ -22,11 +22,13 @@ from typing import (
     TYPE_CHECKING,
     Union,
 )
-from typing_extensions import TypeAlias
 
 from io import BytesIO
 from io import StringIO
-from lxml import etree
+
+from typing_extensions import TypeAlias
+
+from lxml import etree # type:ignore
 from ..element import (
     AttributeDict,
     XMLAttributeDict,
@@ -180,6 +182,11 @@ class LXMLTreeBuilderForXML(TreeBuilder):
         self.soup = None
         self.nsmaps = [self.DEFAULT_NSMAPS_INVERTED]
         self.active_namespace_prefixes = [dict(self.DEFAULT_NSMAPS)]
+        if self.is_xml:
+            self.processing_instruction_class = XMLProcessingInstruction
+        else:
+            self.processing_instruction_class = ProcessingInstruction
+
         if "attribute_dict_class" not in kwargs:
             kwargs["attribute_dict_class"] = XMLAttributeDict
         super(LXMLTreeBuilderForXML, self).__init__(**kwargs)
@@ -226,14 +233,10 @@ class LXMLTreeBuilderForXML(TreeBuilder):
             document to Unicode and parsing it. Each strategy will be tried
             in turn.
         """
-        is_html = not self.is_xml
-        if is_html:
-            self.processing_instruction_class = ProcessingInstruction
+        if not self.is_xml:
             # We're in HTML mode, so if we're given XML, that's worth
             # noting.
             DetectsXMLParsedAsHTML.warn_if_markup_looks_like_xml(markup, stacklevel=3)
-        else:
-            self.processing_instruction_class = XMLProcessingInstruction
 
         if isinstance(markup, str):
             # We were given Unicode. Maybe lxml can parse Unicode on
@@ -274,7 +277,7 @@ class LXMLTreeBuilderForXML(TreeBuilder):
             markup,
             known_definite_encodings=known_definite_encodings,
             user_encodings=user_encodings,
-            is_html=is_html,
+            is_html=not self.is_xml,
             exclude_encodings=exclude_encodings,
         )
         for encoding in detector.encodings:
