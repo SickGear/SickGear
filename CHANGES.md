@@ -12,7 +12,7 @@
 * Update idna library 3.7 (1d365e1) to 3.10 (729225d)
 * Update langcodes 3.3.0 to 3.5.0
 * Update language-data 1.1 to 1.3
-* Update Msgpack 1.0.6 (e1d3d5d) to 1.1.0 (0eeabfb)
+* Update Msgpack 1.0.6 (e1d3d5d) to 1.1.1 (42f056f)
 * Update deprecated pkg_resources 24.0 to Packaging 25.0 (f585376)
 * Update profilehooks module 1.13.0.dev0 (99f8a31) to 1.13.1.dev0 (824fcd4) 
 * Update pytz 2024.1/2024a (3680953) to 2024.2/2024b (3944f75)
@@ -34,6 +34,7 @@
 [develop changelog]
 
 * Update CacheControl 0.14.0 (e2be0c2) to 0.14.2 (928422d)
+* Update Msgpack 1.0.6 (e1d3d5d) to 1.1.0 (0eeabfb)
 * Update Tornado Web Server 6.4.2 (27b3252) to 6.5.0 (ab5f354)
 * Update deprecated pkg_resources 24.0 to Packaging 24.2 (d8e3b31)
 * Update urllib3 2.2.2 (27e2a5c) to 2.3.0 (2f68c53)
