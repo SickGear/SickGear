@@ -6,7 +6,7 @@
 * Update CacheControl 0.14.0 (e2be0c2) to 0.14.3 (116113c)
 * Update certifi 2024.08.30 to 2025.06.15
 * Update chardet packages 5.1.0 (8087f00) to 5.3.0dev0 (8e8dfcd)
-* Update feedparser 6.0.11 (efcb89b) to 6.0.11 (ff59549)
+* Update feedparser 6.0.11 (efcb89b) to 6.0.11 (89fde03)
 * Update filelock 3.15.4 (9a979df) to 3.18.0 (129a1ef)
 * Update hachoir 3.2.0 (38d759f) to 3.3.0 (48b478f)
 * Update idna library 3.7 (1d365e1) to 3.10 (729225d)
@@ -37,6 +37,7 @@
 * Update Beautiful Soup 4.12.3 (7fb5175) to 4.13.0b3 (55e006b)
 * Update CacheControl 0.14.0 (e2be0c2) to 0.14.2 (928422d)
 * Update certifi 2024.08.30 to 2024.12.14
+* Update feedparser 6.0.11 (efcb89b) to 6.0.11 (ff59549)
 * Update Msgpack 1.0.6 (e1d3d5d) to 1.1.0 (0eeabfb)
 * Update soupsieve 2.5.0 (dc71495) to 2.6.0 (a8080d9)
 * Update thefuzz 0.21.0 (0b49e4a) to 0.22.1 (83bea3d)
