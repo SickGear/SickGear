@@ -1,7 +1,7 @@
 ﻿### 3.34.x (2025-xx-xx xx:xx:00 UTC)
 
 * Update apprise 1.8.0 (81caf92) to 1.9.2 (a2a2216)
-* Update attr 23.2.0 (b393d79) to 24.3.0 (598494a)
+* Update attr 23.2.0 (b393d79) to 25.3.0 (ca3fb0e)
 * Update Beautiful Soup 4.12.3 (7fb5175) to 4.13.4 (9752e85)
 * Update CacheControl 0.14.0 (e2be0c2) to 0.14.3 (116113c)
 * Update certifi 2024.08.30 to 2025.06.15
@@ -34,6 +34,7 @@
 
 [develop changelog]
 
+* Update attr 23.2.0 (b393d79) to 24.3.0 (598494a)
 * Update Beautiful Soup 4.12.3 (7fb5175) to 4.13.0b3 (55e006b)
 * Update CacheControl 0.14.0 (e2be0c2) to 0.14.2 (928422d)
 * Update certifi 2024.08.30 to 2024.12.14
