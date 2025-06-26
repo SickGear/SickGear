@@ -1,4 +1,9 @@
-﻿### 3.33.10 (2025-06-19 19:50:00 UTC)
+﻿### 3.33.11 (2025-06-26 11:15:00 UTC)
+
+* Update UnRar x64 for Windows 7.10 to 7.12
+
+
+### 3.33.10 (2025-06-19 19:50:00 UTC)
 
 * Change add support for Python 3.13.5, 3.13.4, 3.9.23
 
@@ -33,7 +38,7 @@
 
 ### 3.33.4 (2025-02-21 11:20:00 UTC)
 
-* Update UnRar x64 for Windows 7.01 to 7.1.0
+* Update UnRar x64 for Windows 7.01 to 7.10
 * Change update an nzb provider logo
 
 
@@ -247,7 +252,7 @@
 ### 3.30.20 (2024-05-25 09:35:00 UTC)
 
 * Fix FST provider exception raised when no title
-* Update UnRar x64 for Windows 7.00 to 7.0.1
+* Update UnRar x64 for Windows 7.00 to 7.01
 * Change improve handling of invalid person id for get_person in Trakt indexer
 * Changes for py3.13 compatibility
 
@@ -970,7 +975,7 @@
 
 ### 0.25.5 (2021-09-24 14:55:00 UTC)
 
-* Change upgrade Snap unrar 5.6.8 to 6.0.2
+* Change upgrade Snap unrar 5.68 to 6.02
 * Fix workaround snap certificate failure to access rarlab server
 
 
@@ -1274,7 +1279,7 @@
 
 ### 0.23.17 (2021-04-12 12:40:00 UTC)
 
-* Update UnRar for Windows 6.00 to 6.01 x64
+* Update UnRar x64 for Windows 6.00 to 6.01
 
 
 ### 0.23.16 (2021-04-05 23:45:00 UTC)
@@ -1342,7 +1347,7 @@
 
 ### 0.23.6 (2020-12-11 01:50:00 UTC)
 
-* Update UnRar for Windows 5.91 to 6.00 x64
+* Update UnRar x64 for Windows 5.91 to 6.00
 * Fix providers BitHDTV, Blutopia, HDTorrents, Pretome, PrivateHD, PTFiles, SceneHD, TVChaosUK
 * Change handle redirects from POST requests
 * Change Kodi Addon 1.0.8
@@ -1683,7 +1688,7 @@
 ### 0.21.38 (2020-07-08 23:15:00 UTC)
 
 * Change add handling for when a dev db is based on an older production db
-* Update UnRar for Windows 5.90 to 5.91 x64
+* Update UnRar x64 for Windows 5.90 to 5.91
 * Fix saving Trakt notification under py3
 
 
@@ -1777,7 +1782,7 @@
 
 ### 0.21.23 (2020-03-31 10:00:00 UTC)
 
-* Update UnRar for Windows 5.80 to 5.90 x64
+* Update UnRar x64 for Windows 5.80 to 5.90
 * Fix viewing Manage/"Bulk Change" page skews "Added last..." list
 
 
@@ -2043,7 +2048,7 @@
 
 ### 0.20.18 (2019-12-30 12:15:00 UTC)
 
-* Update UnRar for Windows 5.71 to 5.80 x64
+* Update UnRar x64 for Windows 5.71 to 5.80
 
 
 ### 0.20.17 (2019-12-25 01:40:00 UTC)
@@ -2285,7 +2290,7 @@
 
 ### 0.18.22 (2019-05-06 19:25:00 UTC)
 
-* Update UnRar for Windows 5.70 to 5.71 x64
+* Update UnRar x64 for Windows 5.70 to 5.71
 * Change improve clarity for media provider search task
 * Add Milkie torrent provider
 * Change check manual search of illegal UNKNOWN status and change it to SKIPPED
