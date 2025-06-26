@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0
 from __future__ import annotations
 
+import gc
 import hashlib
 import os
 import tempfile
@@ -100,6 +101,7 @@ class _FileCacheMixin:
         if not self.forever:
             try:
                 os.remove(name)
+                gc.collect(2)
             except FileNotFoundError:
                 pass
 
