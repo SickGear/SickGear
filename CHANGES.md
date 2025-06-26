@@ -3,7 +3,7 @@
 * Update apprise 1.8.0 (81caf92) to 1.9.2 (a2a2216)
 * Update attr 23.2.0 (b393d79) to 24.3.0 (598494a)
 * Update Beautiful Soup 4.12.3 (7fb5175) to 4.13.0b3 (55e006b)
-* Update CacheControl 0.14.0 (e2be0c2) to 0.14.2 (928422d)
+* Update CacheControl 0.14.0 (e2be0c2) to 0.14.3 (116113c)
 * Update certifi 2024.08.30 to 2024.12.14
 * Update chardet packages 5.1.0 (8087f00) to 5.3.0dev0 (8e8dfcd)
 * Update feedparser 6.0.11 (efcb89b) to 6.0.11 (ff59549)
@@ -32,6 +32,7 @@
 
 [develop changelog]
 
+* Update CacheControl 0.14.0 (e2be0c2) to 0.14.2 (928422d)
 * Update Tornado Web Server 6.4.2 (27b3252) to 6.5.0 (ab5f354)
 * Update deprecated pkg_resources 24.0 to Packaging 24.2 (d8e3b31)
 * Update urllib3 2.2.2 (27e2a5c) to 2.3.0 (2f68c53)
