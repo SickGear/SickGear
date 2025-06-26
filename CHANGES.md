@@ -25,7 +25,7 @@
 * Update Tornado Web Server 6.4.2 (27b3252) to 6.5.1 (b5586f3)
 * Update unidecode module 1.3.8 (dfe397d) to 1.4.0 (8d83b7c)
 * Update urllib3 2.2.2 (27e2a5c) to 2.5.0 (98a60f9)
-* Change add typing-extensions 4.12.2 (8184ac6) for BSoup
+* Change add typing-extensions 4.14.0 (59d2c20) for BSoup
 * Change chardet to permit Requests import
 * Remove notifier Boxcar2
 * Change incorrect case of recommended RapidFuzz
@@ -41,6 +41,7 @@
 * Update Tornado Web Server 6.4.2 (27b3252) to 6.5.0 (ab5f354)
 * Update deprecated pkg_resources 24.0 to Packaging 24.2 (d8e3b31)
 * Update urllib3 2.2.2 (27e2a5c) to 2.3.0 (2f68c53)
+* Change add typing-extensions 4.12.2 (8184ac6) for BSoup
 
 
 ### 3.33.11 (2025-06-26 11:15:00 UTC)
