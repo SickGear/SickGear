@@ -23,6 +23,7 @@
 * Update thefuzz 0.21.0 (0b49e4a) to 0.22.1 (1ba86f3)
 * Update tmdbsimple 2.9.1 (9da400a) to 2.9.2 (0b3359f)
 * Update Tornado Web Server 6.4.2 (27b3252) to 6.5.1 (b5586f3)
+* Update unidecode module 1.3.8 (dfe397d) to 1.4.0 (8d83b7c)
 * Update urllib3 2.2.2 (27e2a5c) to 2.5.0 (98a60f9)
 * Change add typing-extensions 4.12.2 (8184ac6) for BSoup
 * Change chardet to permit Requests import
