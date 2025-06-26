@@ -2,7 +2,7 @@
 
 * Update apprise 1.8.0 (81caf92) to 1.9.2 (a2a2216)
 * Update attr 23.2.0 (b393d79) to 24.3.0 (598494a)
-* Update Beautiful Soup 4.12.3 (7fb5175) to 4.13.0b3 (55e006b)
+* Update Beautiful Soup 4.12.3 (7fb5175) to 4.13.4 (9752e85)
 * Update CacheControl 0.14.0 (e2be0c2) to 0.14.3 (116113c)
 * Update certifi 2024.08.30 to 2024.12.14
 * Update chardet packages 5.1.0 (8087f00) to 5.3.0dev0 (8e8dfcd)
@@ -34,6 +34,7 @@
 
 [develop changelog]
 
+* Update Beautiful Soup 4.12.3 (7fb5175) to 4.13.0b3 (55e006b)
 * Update CacheControl 0.14.0 (e2be0c2) to 0.14.2 (928422d)
 * Update Msgpack 1.0.6 (e1d3d5d) to 1.1.0 (0eeabfb)
 * Update soupsieve 2.5.0 (dc71495) to 2.6.0 (a8080d9)

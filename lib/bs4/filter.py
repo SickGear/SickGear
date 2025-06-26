@@ -79,6 +79,21 @@ class ElementFilter(object):
         self.match_function = match_function
 
     @property
+    def includes_everything(self) -> bool:
+        """Does this `ElementFilter` obviously include everything? If so,
+        the filter process can be made much faster.
+
+        The `ElementFilter` might turn out to include everything even
+        if this returns `False`, but it won't include everything in an
+        obvious way.
+
+        The base `ElementFilter` implementation includes things based on
+        the match function, so includes_everything is only true if
+        there is no match function.
+        """
+        return not self.match_function
+
+    @property
     def excludes_everything(self) -> bool:
         """Does this `ElementFilter` obviously exclude everything? If
         so, Beautiful Soup will issue a warning if you try to use it
@@ -88,19 +103,25 @@ class ElementFilter(object):
         if this returns `False`, but it won't exclude everything in an
         obvious way.
 
-        The base `ElementFilter` implementation excludes *nothing*, so
-        the base implementation of `excludes_everything` always
-        returns `False`.
+        The base `ElementFilter` implementation excludes things based
+        on a match function we can't inspect, so excludes_everything
+        is always false.
         """
         return False
 
-    def match(self, element: PageElement) -> bool:
+    def match(self, element: PageElement, _known_rules:bool=False) -> bool:
         """Does the given PageElement match the rules set down by this
         ElementFilter?
 
         The base implementation delegates to the function passed in to
         the constructor.
+
+        :param _known_rules: Defined for compatibility with
+            SoupStrainer._match(). Used more for consistency than because
+            we need the performance optimization.
         """
+        if not _known_rules and self.includes_everything:
+            return True
         if not self.match_function:
             return True
         return self.match_function(element)
@@ -111,13 +132,18 @@ class ElementFilter(object):
         Acts like Python's built-in `filter`, using
         `ElementFilter.match` as the filtering function.
         """
+        # If there are no rules at all, don't bother filtering. Let
+        # anything through.
+        if self.includes_everything:
+            for i in generator:
+                yield i
         while True:
             try:
                 i = next(generator)
             except StopIteration:
                 break
             if i:
-                if self.match(i):
+                if self.match(i, _known_rules=True):
                     yield cast("_OneElement", i)
 
     def find(self, generator: Iterator[PageElement]) -> _AtMostOneElement:
@@ -190,6 +216,7 @@ class MatchRule(object):
     string: Optional[str]
     pattern: Optional[_RegularExpressionProtocol]
     present: Optional[bool]
+    exclude_everything: Optional[bool]
     # TODO-TYPING: All MatchRule objects also have an attribute
     # ``function``, but the type of the function depends on the
     # subclass.
@@ -200,6 +227,7 @@ class MatchRule(object):
         pattern: Optional[_RegularExpressionProtocol] = None,
         function: Optional[Callable] = None,
         present: Optional[bool] = None,
+        exclude_everything: Optional[bool] = None
     ):
         if isinstance(string, bytes):
             string = string.decode("utf8")
@@ -212,19 +240,20 @@ class MatchRule(object):
             self.pattern = pattern
         self.function = function
         self.present = present
+        self.exclude_everything = exclude_everything
 
         values = [
             x
-            for x in (self.string, self.pattern, self.function, self.present)
+            for x in (self.string, self.pattern, self.function, self.present, self.exclude_everything)
             if x is not None
         ]
         if len(values) == 0:
             raise ValueError(
-                "Either string, pattern, function or present must be provided."
+                "Either string, pattern, function, present, or exclude_everything must be provided."
             )
         if len(values) > 1:
             raise ValueError(
-                "At most one of string, pattern, function and present must be provided."
+                "At most one of string, pattern, function, present, and exclude_everything must be provided."
             )
 
     def _base_match(self, string: Optional[str]) -> Optional[bool]:
@@ -234,6 +263,10 @@ class MatchRule(object):
         :return: True or False if we have a (positive or negative)
         match; None if we need to keep trying.
         """
+        # self.exclude_everything matches nothing.
+        if self.exclude_everything:
+            return False
+
         # self.present==True matches everything except None.
         if self.present is True:
             return string is not None
@@ -357,9 +390,15 @@ class SoupStrainer(ElementFilter):
                 stacklevel=2,
             )
 
-        self.name_rules = cast(
-            List[TagNameMatchRule], list(self._make_match_rules(name, TagNameMatchRule))
-        )
+        if name is None and not attrs and not string and not kwargs:
+            # Special case for backwards compatibility. Instantiating
+            # a SoupStrainer with no arguments whatsoever gets you one
+            # that matches all Tags, and only Tags.
+            self.name_rules = [TagNameMatchRule(present=True)]
+        else:
+                self.name_rules = cast(
+                    List[TagNameMatchRule], list(self._make_match_rules(name, TagNameMatchRule))
+                )
         self.attribute_rules = defaultdict(list)
 
         if not isinstance(attrs, dict):
@@ -396,16 +435,34 @@ class SoupStrainer(ElementFilter):
         self.__string = string
 
     @property
+    def includes_everything(self) -> bool:
+        """Check whether the provided rules will obviously include
+        everything. (They might include everything even if this returns `False`,
+        but not in an obvious way.)
+        """
+        return not self.name_rules and not self.string_rules and not self.attribute_rules
+
+    @property
     def excludes_everything(self) -> bool:
         """Check whether the provided rules will obviously exclude
         everything. (They might exclude everything even if this returns `False`,
         but not in an obvious way.)
         """
-        return (
-            True
-            if (self.string_rules and (self.name_rules or self.attribute_rules))
-            else False
-        )
+        if (self.string_rules and (self.name_rules or self.attribute_rules)):
+            # This is self-contradictory, so the rules exclude everything.
+            return True
+
+        # If there's a rule that ended up treated as an "exclude everything"
+        # rule due to creating a logical inconsistency, then the rules
+        # exclude everything.
+        if any(x.exclude_everything for x in self.string_rules):
+            return True
+        if any(x.exclude_everything for x in self.name_rules):
+            return True
+        for ruleset in self.attribute_rules.values():
+            if any(x.exclude_everything for x in ruleset):
+                return True
+        return False
 
     @property
     def string(self) -> Optional[_StrainableString]:
@@ -454,18 +511,24 @@ class SoupStrainer(ElementFilter):
         elif isinstance(obj, _RegularExpressionProtocol):
             yield rule_class(pattern=obj)
         elif hasattr(obj, "__iter__"):
+            if not obj:
+                # The attribute is being matched against the null set,
+                # which means it should exclude everything.
+                yield rule_class(exclude_everything=True)
             for o in obj:
                 if not isinstance(o, (bytes, str)) and hasattr(o, "__iter__"):
                     # This is almost certainly the user's
                     # mistake. This list contains another list, which
                     # opens up the possibility of infinite
                     # self-reference. In the interests of avoiding
-                    # infinite recursion, we'll ignore this item
-                    # rather than looking inside.
+                    # infinite recursion, we'll treat this as an
+                    # impossible match and issue a rule that excludes
+                    # everything, rather than looking inside.
                     warnings.warn(
                         f"Ignoring nested list {o} to avoid the possibility of infinite recursion.",
                         stacklevel=5,
                     )
+                    yield rule_class(exclude_everything=True)
                     continue
                 for x in cls._make_match_rules(o, rule_class):
                     yield x
@@ -487,6 +550,10 @@ class SoupStrainer(ElementFilter):
         but a `SoupStrainer` that *only* contains `StringMatchRule`
         cannot match a `Tag`, only a `NavigableString`.
         """
+        # If there are no rules at all, let anything through.
+        #if self.includes_everything:
+        #    return True
+
         # String rules cannot not match a Tag on their own.
         if not self.name_rules and not self.attribute_rules:
             return False
@@ -515,8 +582,12 @@ class SoupStrainer(ElementFilter):
                 #     [f"{k}={v}" for k, v in sorted(tag.attrs.items())]
                 # )
                 # print(f"Testing <{tag.name} {attrs}>{tag.string}</{tag.name}> against {rule}")
+
+                # If the rule contains a function, the function will be called
+                # with `tag`. It will not be called a second time with
+                # `prefixed_name`.
                 if rule.matches_tag(tag) or (
-                    prefixed_name is not None and rule.matches_string(prefixed_name)
+                        not rule.function and prefixed_name is not None and rule.matches_string(prefixed_name)
                 ):
                     name_matches = True
                     break
@@ -647,24 +718,30 @@ class SoupStrainer(ElementFilter):
                 return True
         return False
 
-    def match(self, element: PageElement) -> bool:
+    def match(self, element: PageElement, _known_rules: bool=False) -> bool:
         """Does the given `PageElement` match the rules set down by this
         `SoupStrainer`?
 
         The find_* methods rely heavily on this method to find matches.
 
         :param element: A `PageElement`.
+        :param _known_rules: Set to true in the common case where
+           we already checked and found at least one rule in this SoupStrainer
+           that might exclude a PageElement. Without this, we need
+           to check .includes_everything every time, just to be safe.
         :return: `True` if the element matches this `SoupStrainer`'s rules; `False` otherwise.
         """
+        # If there are no rules at all, let anything through.
+        if not _known_rules and self.includes_everything:
+            return True
         if isinstance(element, Tag):
             return self.matches_tag(element)
         assert isinstance(element, NavigableString)
         if not (self.name_rules or self.attribute_rules):
             # A NavigableString can only match a SoupStrainer that
-            # does not define any name or attribute restrictions.
-            for rule in self.string_rules:
-                if rule.matches_string(element):
-                    return True
+            # does not define any name or attribute rules.
+            # Then it comes down to the string rules.
+            return self.matches_any_string_rule(element)
         return False
 
     @_deprecated("allow_tag_creation", "4.13.0")

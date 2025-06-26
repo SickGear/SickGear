@@ -192,17 +192,11 @@ class TreeBuilder(object):
      doesn't keep track of this information, then store_line_numbers
      is irrelevant.
 
-    :param attribute_dict_class: A Tag's attribute values (available
-      as tag.attrs) willl be stored in an instance of this class.
-      The default is Beautiful Soup's built-in `AttributeDict` class and
-      you will probably never need to change it.
-
     :param attribute_dict_class: The value of a multi-valued attribute
       (such as HTML's 'class') willl be stored in an instance of this
       class.  The default is Beautiful Soup's built-in
       `AttributeValueList`, which is a normal Python list, and you
       will probably never need to change it.
-
     """
 
     USE_DEFAULT: Any = object()  #: :meta private:
@@ -266,7 +260,7 @@ class TreeBuilder(object):
 
     #: The textual contents of tags with these names should be
     #: instantiated with some class other than `bs4.element.NavigableString`.
-    DEFAULT_STRING_CONTAINERS: Dict[str, Type[bs4.element.NavigableString]] = {}
+    DEFAULT_STRING_CONTAINERS: Dict[str, Type[bs4.element.NavigableString]] = {} # type:ignore
 
     #: By default, tags are treated as empty-element tags if they have
     #: no contents--that is, using XML rules. HTMLTreeBuilder
@@ -605,7 +599,7 @@ class HTMLTreeBuilder(TreeBuilder):
     #:
     #: TODO: Arguably <noscript> could go here but it seems
     #: qualitatively different from the other tags.
-    DEFAULT_STRING_CONTAINERS: Dict[str, Type[bs4.element.NavigableString]] = {
+    DEFAULT_STRING_CONTAINERS: Dict[str, Type[bs4.element.NavigableString]] = { # type:ignore
         "rt": RubyTextString,
         "rp": RubyParenthesisString,
         "style": Stylesheet,

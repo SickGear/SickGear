@@ -25,7 +25,7 @@ def _deprecated_alias(old_name: str, new_name: str, version: str):
     :meta private:
     """
 
-    @property
+    @property # type:ignore
     def alias(self) -> Any:
         ":meta private:"
         warnings.warn(

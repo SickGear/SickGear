@@ -52,7 +52,7 @@ def diagnose(data: "_IncomingMarkup") -> None:
     if "lxml" in basic_parsers:
         basic_parsers.append("lxml-xml")
         try:
-            from lxml import etree
+            from lxml import etree # type:ignore
 
             print(("Found lxml version %s" % ".".join(map(str, etree.LXML_VERSION))))
         except ImportError:
