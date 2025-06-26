@@ -22,7 +22,7 @@
 * Update thefuzz 0.21.0 (0b49e4a) to 0.22.1 (83bea3d)
 * Update tmdbsimple 2.9.1 (9da400a) to 2.9.2 (0b3359f)
 * Update Tornado Web Server 6.4.2 (27b3252) to 6.5.1 (b5586f3)
-* Update urllib3 2.2.2 (27e2a5c) to 2.3.0 (2f68c53)
+* Update urllib3 2.2.2 (27e2a5c) to 2.5.0 (98a60f9)
 * Change add typing-extensions 4.12.2 (8184ac6) for BSoup
 * Change chardet to permit Requests import
 * Remove notifier Boxcar2
@@ -34,6 +34,7 @@
 
 * Update Tornado Web Server 6.4.2 (27b3252) to 6.5.0 (ab5f354)
 * Update deprecated pkg_resources 24.0 to Packaging 24.2 (d8e3b31)
+* Update urllib3 2.2.2 (27e2a5c) to 2.3.0 (2f68c53)
 
 
 ### 3.33.11 (2025-06-26 11:15:00 UTC)
