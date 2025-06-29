@@ -27,6 +27,7 @@
 * Remove notifier Boxcar2
 * Change incorrect case of recommended RapidFuzz
 * Change improve success rate of Flaresolver requests
+* Add sorting of Show List by Last Episode for today
 
 
 [develop changelog]

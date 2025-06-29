@@ -48,6 +48,7 @@
 				<select id="postersort" class="form-control form-control-inline input-sm" tabindex="$tab#set $tab += 1#">
 					<option value="name" data-sort="$sg_root/set_poster_sortby/?sort=name"#echo $selected if 'name' == $sg_str('POSTER_SORTBY', 'name') else ''#>Name</option>
 					<option value="date" data-sort="$sg_root/set_poster_sortby/?sort=date"#echo $selected if 'date' == $sg_str('POSTER_SORTBY') else ''#>Next Episode</option>
+					<option value="lastdate" data-sort="$sg_root/set_poster_sortby/?sort=lastdate"#echo $selected if 'lastdate' == $sg_str('POSTER_SORTBY') else ''#>Last Episode</option>
 					<option value="network" data-sort="$sg_root/set_poster_sortby/?sort=network"#echo $selected if 'network' == $sg_str('POSTER_SORTBY') else ''#>Network</option>
 					<option value="progress" data-sort="$sg_root/set_poster_sortby/?sort=progress"#echo $selected if 'progress' == $sg_str('POSTER_SORTBY') else ''#>Progress</option>
 					<option value="quality" data-sort="$sg_root/set_poster_sortby/?sort=quality"#echo $selected if 'quality' == $sg_str('POSTER_SORTBY') else ''#>Quality</option>
@@ -123,6 +124,7 @@
         #for $cur_show_obj in $showlist
             ##
             #set $cur_airs_next = ''
+            #set $cur_airs_last = ''
             #set $cur_snatched = 0
             #set $cur_downloaded = 0
             #set $cur_total = 0
@@ -141,6 +143,10 @@
             ##
             #if $cur_show_obj.tvid_prodid in $show_stat
                 #set $cur_airs_next = $show_stat[$cur_show_obj.tvid_prodid]['ep_airs_next']
+                ##
+                #if 'ep_airs_last' in $show_stat[$cur_show_obj.tvid_prodid]
+                    #set $cur_airs_last = $show_stat[$cur_show_obj.tvid_prodid]['ep_airs_last']
+                #end if
                 ##
                 #set $cur_snatched = $show_stat[$cur_show_obj.tvid_prodid]['ep_snatched']
                 #if not $cur_snatched
@@ -181,7 +187,9 @@
             #set $progressbar_percent = $nom * 100 / $den
             ##
             #set $data_date = '600000000000'
-            #if $cur_airs_next
+            #if 'lastdate' == $sg_str('POSTER_SORTBY') and $cur_airs_last
+                #set $data_date = $SGDatetime.convert_to_setting($network_timezones.parse_date_time($cur_airs_last, $cur_show_obj.airs, $cur_show_obj.network)).strftime('%Y%m%d%H%M')
+            #elif $cur_airs_next
                 #set $data_date = $SGDatetime.convert_to_setting($network_timezones.parse_date_time($cur_airs_next, $cur_show_obj.airs, $cur_show_obj.network)).strftime('%Y%m%d%H%M')
             #else if None is not $display_status
                 #if 'nded' not in $display_status and 1 == int($cur_show_obj.paused)
@@ -213,7 +221,10 @@
 					</div>
 
 					<div class="show-date">
-            #if $cur_airs_next
+            #if 'lastdate' == $sg_str('POSTER_SORTBY') and $cur_airs_last
+                #set $ldatetime = $SGDatetime.convert_to_setting($network_timezones.parse_date_time($cur_airs_last,$cur_show_obj.airs,$cur_show_obj.network))
+					<span class="$fuzzydate">$SGDatetime.sbfdate($ldatetime)</span>
+            #elif $cur_airs_next
                 #set $ldatetime = $SGDatetime.convert_to_setting($network_timezones.parse_date_time($cur_airs_next,$cur_show_obj.airs,$cur_show_obj.network))
 					<span class="$fuzzydate">$SGDatetime.sbfdate($ldatetime)</span>
             #else
@@ -321,6 +332,7 @@
         #for $cur_show_obj in $showlist
             ##
             #set $cur_airs_next = ''
+            #set $cur_airs_last = ''
             #set $cur_snatched = 0
             #set $cur_downloaded = 0
             #set $cur_total = 0
@@ -331,6 +343,10 @@
             ##
             #if $cur_show_obj.tvid_prodid in $show_stat
                 #set $cur_airs_next = $show_stat[$cur_show_obj.tvid_prodid]['ep_airs_next']
+                ##
+                #if 'ep_airs_last' in $show_stat[$cur_show_obj.tvid_prodid]
+                    #set $cur_airs_last = $show_stat[$cur_show_obj.tvid_prodid]['ep_airs_last']
+                #end if
                 ##
                 #set $cur_snatched = $show_stat[$cur_show_obj.tvid_prodid]['ep_snatched']
                 #if not $cur_snatched
@@ -374,7 +390,10 @@
             #end if
             ##
 			<tr>
-            #if $cur_airs_next
+            #if 'lastdate' == $sg_str('POSTER_SORTBY') and $cur_airs_last
+                #set $ldatetime = $SGDatetime.convert_to_setting($network_timezones.parse_date_time($cur_airs_last, $cur_show_obj.airs, $cur_show_obj.network))
+				<td class="text-nowrap"><div class="$fuzzydate">$SGDatetime.sbfdate($ldatetime)</div><span class="sort-data">$ldatetime.strftime('%Y%m%d%H%M')</span></td>
+            #elif $cur_airs_next
                 #set $ldatetime = $SGDatetime.convert_to_setting($network_timezones.parse_date_time($cur_airs_next, $cur_show_obj.airs, $cur_show_obj.network))
 				<td class="text-nowrap"><div class="$fuzzydate">$SGDatetime.sbfdate($ldatetime)</div><span class="sort-data">$ldatetime.strftime('%Y%m%d%H%M')</span></td>
             #else

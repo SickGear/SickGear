@@ -1132,7 +1132,7 @@ class MainHandler(WebHandler):
     @staticmethod
     def set_poster_sortby(sort):
 
-        if sort not in ('name', 'date', 'network', 'progress', 'quality'):
+        if sort not in ('name', 'date', 'lastdate', 'network', 'progress', 'quality'):
             sort = 'name'
 
         sickgear.POSTER_SORTBY = sort
@@ -1749,6 +1749,22 @@ class Home(MainHandler):
 
         for cur_result in sql_result:
             t.show_stat[TVidProdid({cur_result['tvid']: cur_result['prodid']})()] = cur_result
+
+        if 'lastdate' == sickgear.POSTER_SORTBY:
+            # get last airdate of regular episode for today
+            sql_result = my_db.select(
+                'SELECT indexer AS tvid, showid as prodid, '
+                + 'MAX(airdate) as ep_airs_last'
+                  ' FROM tv_episodes'
+                  ' WHERE airdate <= %s AND season > 0'
+                  ' GROUP BY indexer, showid'
+                % (today))
+
+            for cur_result in sql_result:
+                tvid_prodid = TVidProdid({cur_result['tvid']: cur_result['prodid']})()
+                if tvid_prodid in t.show_stat:
+                    t.show_stat[tvid_prodid] = dict(t.show_stat[tvid_prodid])
+                    t.show_stat[tvid_prodid]['ep_airs_last'] = cur_result['ep_airs_last']
 
         return t.respond()
 

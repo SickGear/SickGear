@@ -97,6 +97,7 @@ $(document).ready(function () {
 			var sortCriteria;
 			switch (config.posterSortby) {
 				case 'date':
+				case 'lastdate':
 					sortCriteria = ['date', 'name', 'network', 'progress'];
 					break;
 				case 'network':
