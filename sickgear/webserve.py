@@ -1740,31 +1740,20 @@ class Home(MainHandler):
               ' (SELECT airdate FROM tv_episodes'
               ' WHERE indexer = tv_eps.indexer AND showid = tv_eps.showid'
               ' AND airdate >= %s AND (status = %s  OR status = %s)'
-              ' ORDER BY airdate ASC LIMIT 1) AS ep_airs_next'
+              ' ORDER BY airdate ASC LIMIT 1) AS ep_airs_next,'
+              ' (SELECT airdate FROM tv_episodes'  # get last airdate of regular episode for today
+              ' WHERE indexer = tv_eps.indexer AND showid = tv_eps.showid'
+              ' AND airdate <= %s AND season > 0'
+              ' ORDER BY airdate DESC LIMIT 1) AS ep_airs_last'
               ' FROM tv_episodes tv_eps GROUP BY indexer, showid'
             % (status_quality, status_download, today, status_total,
-               status_quality, status_download, today, UNAIRED, WANTED))
+               status_quality, status_download, today, UNAIRED, WANTED,
+               today))
 
         t.show_stat = {}
 
         for cur_result in sql_result:
             t.show_stat[TVidProdid({cur_result['tvid']: cur_result['prodid']})()] = cur_result
-
-        if 'lastdate' == sickgear.POSTER_SORTBY:
-            # get last airdate of regular episode for today
-            sql_result = my_db.select(
-                'SELECT indexer AS tvid, showid as prodid, '
-                + 'MAX(airdate) as ep_airs_last'
-                  ' FROM tv_episodes'
-                  ' WHERE airdate <= %s AND season > 0'
-                  ' GROUP BY indexer, showid'
-                % (today))
-
-            for cur_result in sql_result:
-                tvid_prodid = TVidProdid({cur_result['tvid']: cur_result['prodid']})()
-                if tvid_prodid in t.show_stat:
-                    t.show_stat[tvid_prodid] = dict(t.show_stat[tvid_prodid])
-                    t.show_stat[tvid_prodid]['ep_airs_last'] = cur_result['ep_airs_last']
 
         return t.respond()
 

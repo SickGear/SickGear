@@ -97,8 +97,10 @@ $(document).ready(function () {
 			var sortCriteria;
 			switch (config.posterSortby) {
 				case 'date':
-				case 'lastdate':
 					sortCriteria = ['date', 'name', 'network', 'progress'];
+					break;
+				case 'lastdate':
+					sortCriteria = ['lastdate', 'name', 'network', 'progress'];
 					break;
 				case 'network':
 					sortCriteria = ['network', 'name', 'date', 'progress'];
@@ -134,6 +136,10 @@ $(document).ready(function () {
 						var date = $(itemElem).attr('data-date');
 						return date.length && parseInt(date, 10) || Number.POSITIVE_INFINITY;
 					},
+					lastdate: function (itemElem) {
+						var lastdate = $(itemElem).attr('data-lastdate');
+						return lastdate.length && parseInt(lastdate, 10) || Number.NEGATIVE_INFINITY;
+					},
 					network: function (itemElem) {
 						return $(itemElem).attr('data-network').toLowerCase()
 								.replace(/^(.*?)\W*[(]\w{2,3}[)]|1$/i, '$1') || '';
@@ -150,6 +156,15 @@ $(document).ready(function () {
 
 			$('#postersort').on('change', function () {
 				var sortValue = this.value;
+				$(config.fuzzydate).each(function() {
+					var $fd = $(this);
+					// Use the correct data attribute based on sort
+					if (sortValue === 'lastdate') {
+						$fd.text($fd.attr('data-lastdate') || '');
+					} else {
+						$fd.text($fd.attr('data-date') || '');
+					}
+				});
 				$(obj).one('layoutComplete', llUpdate);
 				$(obj).isotope({sortBy: sortValue});
 				$.get(this.options[this.selectedIndex].getAttribute('data-sort'));

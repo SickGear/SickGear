@@ -144,8 +144,9 @@
             #if $cur_show_obj.tvid_prodid in $show_stat
                 #set $cur_airs_next = $show_stat[$cur_show_obj.tvid_prodid]['ep_airs_next']
                 ##
-                #if 'ep_airs_last' in $show_stat[$cur_show_obj.tvid_prodid]
-                    #set $cur_airs_last = $show_stat[$cur_show_obj.tvid_prodid]['ep_airs_last']
+                #set $cur_airs_last = $show_stat[$cur_show_obj.tvid_prodid]['ep_airs_last']
+                #if not $cur_airs_last
+                    #set $cur_airs_last = ''
                 #end if
                 ##
                 #set $cur_snatched = $show_stat[$cur_show_obj.tvid_prodid]['ep_snatched']
@@ -187,9 +188,7 @@
             #set $progressbar_percent = $nom * 100 / $den
             ##
             #set $data_date = '600000000000'
-            #if 'lastdate' == $sg_str('POSTER_SORTBY') and $cur_airs_last
-                #set $data_date = $SGDatetime.convert_to_setting($network_timezones.parse_date_time($cur_airs_last, $cur_show_obj.airs, $cur_show_obj.network)).strftime('%Y%m%d%H%M')
-            #elif $cur_airs_next
+            #if $cur_airs_next
                 #set $data_date = $SGDatetime.convert_to_setting($network_timezones.parse_date_time($cur_airs_next, $cur_show_obj.airs, $cur_show_obj.network)).strftime('%Y%m%d%H%M')
             #else if None is not $display_status
                 #if 'nded' not in $display_status and 1 == int($cur_show_obj.paused)
@@ -201,7 +200,12 @@
                 #end if
             #end if
             ##
-			<div id="show$cur_show_obj.tvid_prodid" class="show-card" data-name="$show_name" data-date="$data_date" data-network="$cur_show_obj.network">
+            #set $data_lastdate = '000000000000'
+            #if $cur_airs_last
+                #set $data_lastdate = $SGDatetime.convert_to_setting($network_timezones.parse_date_time($cur_airs_last, $cur_show_obj.airs, $cur_show_obj.network)).strftime('%Y%m%d%H%M')
+            #end if
+            ##
+			<div id="show$cur_show_obj.tvid_prodid" class="show-card" data-name="$show_name" data-date="$data_date" data-lastdate="$data_lastdate" data-network="$cur_show_obj.network">
 				<div class="show-card-top">
 					<div class="show-image">
 						<a href="$sg_root/home/view-show?tvid_prodid=$cur_show_obj.tvid_prodid">
@@ -221,23 +225,30 @@
 					</div>
 
 					<div class="show-date">
-            #if 'lastdate' == $sg_str('POSTER_SORTBY') and $cur_airs_last
+            #set $data_lastdate = '?'
+            #if $cur_airs_last
                 #set $ldatetime = $SGDatetime.convert_to_setting($network_timezones.parse_date_time($cur_airs_last,$cur_show_obj.airs,$cur_show_obj.network))
-					<span class="$fuzzydate">$SGDatetime.sbfdate($ldatetime)</span>
-            #elif $cur_airs_next
+				#set $data_lastdate = $SGDatetime.sbfdate($ldatetime)
+            #end if
+            #if $cur_airs_next
                 #set $ldatetime = $SGDatetime.convert_to_setting($network_timezones.parse_date_time($cur_airs_next,$cur_show_obj.airs,$cur_show_obj.network))
-					<span class="$fuzzydate">$SGDatetime.sbfdate($ldatetime)</span>
+				#set $data_date = $SGDatetime.sbfdate($ldatetime)
             #else
-                #set $output_html = '?'
+                #set $data_date = '?'
                 #if None is not $display_status
                     #if 'nded' not in $display_status and 1 == int($cur_show_obj.paused)
-                        #set $output_html = 'Paused'
+                        #set $data_date = 'Paused'
                     #else if $display_status
-                        #set $output_html = $display_status
+                        #set $data_date = $display_status
                     #end if
                 #end if
-						$output_html
             #end if
+            #if 'lastdate' == $sg_str('POSTER_SORTBY')
+                #set $output_date = $data_lastdate
+            #else
+                #set $output_date = $data_date
+            #end if
+                        <span class="$fuzzydate" data-date="$data_date" data-lastdate="$data_lastdate">$output_date</span>
 					</div><!-- /show-date -->
 
 					<table width="100%" border="0">
