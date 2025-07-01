@@ -1132,7 +1132,7 @@ class MainHandler(WebHandler):
     @staticmethod
     def set_poster_sortby(sort):
 
-        if sort not in ('name', 'date', 'network', 'progress', 'quality'):
+        if sort not in ('name', 'date', 'lastdate', 'network', 'progress', 'quality'):
             sort = 'name'
 
         sickgear.POSTER_SORTBY = sort
@@ -1740,10 +1740,15 @@ class Home(MainHandler):
               ' (SELECT airdate FROM tv_episodes'
               ' WHERE indexer = tv_eps.indexer AND showid = tv_eps.showid'
               ' AND airdate >= %s AND (status = %s  OR status = %s)'
-              ' ORDER BY airdate ASC LIMIT 1) AS ep_airs_next'
+              ' ORDER BY airdate ASC LIMIT 1) AS ep_airs_next,'
+              ' (SELECT airdate FROM tv_episodes'  # get last airdate of regular episode for today
+              ' WHERE indexer = tv_eps.indexer AND showid = tv_eps.showid'
+              ' AND airdate <= %s AND season > 0'
+              ' ORDER BY airdate DESC LIMIT 1) AS ep_airs_last'
               ' FROM tv_episodes tv_eps GROUP BY indexer, showid'
             % (status_quality, status_download, today, status_total,
-               status_quality, status_download, today, UNAIRED, WANTED))
+               status_quality, status_download, today, UNAIRED, WANTED,
+               today))
 
         t.show_stat = {}
 
