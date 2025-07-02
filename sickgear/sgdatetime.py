@@ -214,9 +214,13 @@ class SGDatetime(datetime.datetime):
                 strd = '%s, %s' % (
                     SGDatetime.sbstrftime(obj, (sickgear.DATE_PRESET, d_preset)[None is not d_preset]),
                     SGDatetime.sbftime(dt, show_seconds, t_preset, False, markup))
+        except(BaseException, Exception):
+            pass
 
-        finally:
+        try:
             SGDatetime.setlocale(use_has_locale=SGDatetime.has_locale)
+        except(BaseException, Exception):
+            pass
         return strd
 
     @staticmethod
