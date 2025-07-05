@@ -15,6 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
+import sys
+
 # noinspection PyCompatibility
 from concurrent.futures import ThreadPoolExecutor
 # noinspection PyCompatibility,PyProtectedMember,PyUnresolvedReferences
@@ -22,14 +24,20 @@ from concurrent.futures.thread import _base, _shutdown, BrokenThreadPool
 
 from .base import *
 
+ge_py314 = sys.version_info[:3] >= (3, 14)
+
 
 class SgWorkItem(GenericWorkItem):
 
-    def run(self):
+    def run(self, *args):
         if self.future.set_running_or_notify_cancel():
             try:
                 self._set_thread_name()
-                result = self.fn(*self.args, **self.kwargs)
+                if ge_py314:
+                    ctx = args[0]
+                    result = ctx.run(self.task)
+                else:
+                    result = self.fn(*self.args, **self.kwargs)
             except BaseException as exc:
                 self.future.set_exception(exc)
                 # Break a reference cycle with the exception 'exc'
@@ -61,7 +69,11 @@ class SgThreadPoolExecutor(ThreadPoolExecutor):
                 raise RuntimeError('cannot schedule new futures after interpreter shutdown')
 
             f = _base.Future()
-            w = SgWorkItem(f, fn, args, kwargs)
+            if ge_py314:
+                task = self._resolve_work_item_task(fn, args, kwargs)
+                w = SgWorkItem(f, task)
+            else:
+                w = SgWorkItem(f, fn, args, kwargs)
 
             self._work_queue.put(w)
             self._adjust_thread_count()

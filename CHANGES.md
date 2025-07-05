@@ -31,6 +31,7 @@
 * Change incorrect case of recommended RapidFuzz
 * Change improve success rate of Flaresolver requests
 * Add "Last Episode" to "Sort By" on the "Poster" layout in the "Show List" view
+* Fix Python 3.14 compatibility issues
 
 
 [develop changelog]
