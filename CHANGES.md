@@ -1,4 +1,9 @@
-﻿### 3.33.11 (2025-06-26 11:15:00 UTC)
+﻿### 3.33.12 (2025-07-15 17:25:00 UTC)
+
+* Remove RevolutionTT torrent provider
+
+
+### 3.33.11 (2025-06-26 11:15:00 UTC)
 
 * Update UnRar x64 for Windows 7.10 to 7.12
 
