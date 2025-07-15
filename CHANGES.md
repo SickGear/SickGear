@@ -4,7 +4,7 @@
 * Update attr 23.2.0 (b393d79) to 25.3.0 (ca3fb0e)
 * Update Beautiful Soup 4.12.3 (7fb5175) to 4.13.4 (9752e85)
 * Update CacheControl 0.14.0 (e2be0c2) to 0.14.3 (116113c)
-* Update certifi 2024.08.30 to 2025.06.15
+* Update certifi 2024.08.30 to 2025.07.14
 * Update chardet packages 5.1.0 (8087f00) to 5.3.0dev0 (8e8dfcd)
 * Update feedparser 6.0.11 (efcb89b) to 6.0.11 (89fde03)
 * Update filelock 3.15.4 (9a979df) to 3.18.0 (129a1ef)
@@ -40,6 +40,7 @@
 * Update Beautiful Soup 4.12.3 (7fb5175) to 4.13.0b3 (55e006b)
 * Update CacheControl 0.14.0 (e2be0c2) to 0.14.2 (928422d)
 * Update certifi 2024.08.30 to 2024.12.14
+* Update certifi 2024.12.14 to 2025.06.15
 * Update feedparser 6.0.11 (efcb89b) to 6.0.11 (ff59549)
 * Update Msgpack 1.0.6 (e1d3d5d) to 1.1.0 (0eeabfb)
 * Update soupsieve 2.5.0 (dc71495) to 2.6.0 (a8080d9)
