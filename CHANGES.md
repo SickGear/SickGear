@@ -1,4 +1,9 @@
-﻿### 3.33.13 (2025-08-11 19:20:00 UTC)
+﻿### 3.33.14 (2025-08-11 19:25:00 UTC)
+
+* Change add support for Python 3.13.6
+
+
+### 3.33.13 (2025-08-11 19:20:00 UTC)
 
 * Change add support to autoProcessTV for Python 3.13.5, 3.13.4, 3.9.23
 
