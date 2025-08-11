@@ -51,6 +51,11 @@
 * Change add typing-extensions 4.12.2 (8184ac6) for BSoup
 
 
+### 3.33.13 (2025-08-11 19:20:00 UTC)
+
+* Change add support to autoProcessTV for Python 3.13.5, 3.13.4, 3.9.23
+
+
 ### 3.33.12 (2025-07-15 17:25:00 UTC)
 
 * Remove RevolutionTT torrent provider
