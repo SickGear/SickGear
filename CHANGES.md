@@ -51,6 +51,11 @@
 * Change add typing-extensions 4.12.2 (8184ac6) for BSoup
 
 
+### 3.33.15 (2025-08-12 15:45:00 UTC)
+
+* Update UnRar x64 for Windows 7.12 to 7.13
+
+
 ### 3.33.14 (2025-08-11 19:25:00 UTC)
 
 * Change add support for Python 3.13.6
