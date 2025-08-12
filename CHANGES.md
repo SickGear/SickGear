@@ -1,4 +1,9 @@
-﻿### 3.33.14 (2025-08-11 19:25:00 UTC)
+﻿### 3.33.15 (2025-08-12 15:45:00 UTC)
+
+* Update UnRar x64 for Windows 7.12 to 7.13
+
+
+### 3.33.14 (2025-08-11 19:25:00 UTC)
 
 * Change add support for Python 3.13.6
 
