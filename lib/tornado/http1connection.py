@@ -66,6 +66,9 @@ class _ExceptionLoggingContext:
     ) -> None:
         if value is not None:
             assert typ is not None
+            # Let HTTPInputError pass through to higher-level handler
+            if isinstance(value, httputil.HTTPInputError):
+                return None
             self.logger.error("Uncaught exception", exc_info=(typ, value, tb))
             raise _QuietException
 
@@ -827,8 +830,12 @@ class HTTP1ServerConnection:
                     # This exception was already logged.
                     conn.close()
                     return
-                except Exception:
-                    gen_log.error("Uncaught exception", exc_info=True)
+                except Exception as e:
+                    # if 1 != e.errno:
+                    from errno import EPERM
+                    from tornado.util import errno_from_exception
+                    if EPERM is not errno_from_exception(e):
+                        gen_log.error("Uncaught exception", exc_info=True)
                     conn.close()
                     return
                 if not ret:
