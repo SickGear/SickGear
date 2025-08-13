@@ -73,3 +73,17 @@ test 3.13:
     - if: $CI_COMMIT_BRANCH == "main"
     - if: $CI_COMMIT_BRANCH == "dev"
 
+test 3.14:
+  image: python:3.14.0rc1
+  stage: test
+  before_script:
+    - pip install responses
+    - pip install -r requirements.txt
+    - pip install coveralls
+  script:
+    - cd ./tests
+    - coverage run --source=.. --omit=../lib/* ./all_tests.py
+  when: manual
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+    - if: $CI_COMMIT_BRANCH == "dev"
