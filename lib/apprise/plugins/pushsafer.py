@@ -2,7 +2,7 @@
 # BSD 2-Clause License
 #
 # Apprise - Push Notification Library.
-# Copyright (c) 2024, Chris Caron <lead2gold@gmail.com>
+# Copyright (c) 2025, Chris Caron <lead2gold@gmail.com>
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -26,14 +26,13 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-import base64
 import requests
 from json import loads
 
 from .base import NotifyBase
+from .. import exception
 from ..common import NotifyType
-from ..utils import parse_list
-from ..utils import validate_regex
+from ..utils.parse import parse_list, validate_regex
 from ..locale import gettext_lazy as _
 
 
@@ -548,12 +547,12 @@ class NotifyPushSafer(NotifyBase):
         if attach and self.attachment_support:
             # We need to upload our payload first so that we can source it
             # in remaining messages
-            for attachment in attach:
+            for no, attachment in enumerate(attach, start=1):
                 # prepare payload
                 if not attachment:
                     # We could not access the attachment
                     self.logger.error(
-                        'Could not access attachment {}.'.format(
+                        'Could not access PushSafer attachment {}.'.format(
                             attachment.url(privacy=True)))
                     return False
 
@@ -569,24 +568,27 @@ class NotifyPushSafer(NotifyBase):
                         attachment.url(privacy=True)))
 
                 try:
-                    with open(attachment.path, 'rb') as f:
-                        # Output must be in a DataURL format (that's what
-                        # PushSafer calls it):
-                        attachment = (
-                            attachment.name,
-                            'data:{};base64,{}'.format(
-                                attachment.mimetype,
-                                base64.b64encode(f.read())))
+                    # Output must be in a DataURL format (that's what
+                    # PushSafer calls it):
+                    attachments.append((
+                        attachment.name
+                        if attachment.name else f'file{no:03}.dat',
+                        'data:{};base64,{}'.format(
+                            attachment.mimetype,
+                            attachment.base64(),
+                        )
+                    ))
 
-                except (OSError, IOError) as e:
-                    self.logger.warning(
-                        'An I/O error occurred while reading {}.'.format(
-                            attachment.name if attachment else 'attachment'))
-                    self.logger.debug('I/O Exception: %s' % str(e))
+                except exception.AppriseException:
+                    # We could not access the attachment
+                    self.logger.error(
+                        'Could not access PushSafer attachment {}.'.format(
+                            attachment.url(privacy=True)))
                     return False
 
-                # Save our pre-prepared payload for attachment posting
-                attachments.append(attachment)
+                self.logger.debug(
+                    'Appending PushSafer attachment {}'.format(
+                        attachment.url(privacy=True)))
 
         # Create a copy of the targets list
         targets = list(self.targets)
@@ -755,6 +757,18 @@ class NotifyPushSafer(NotifyBase):
             self.logger.debug('Socket Exception: %s' % str(e))
 
             return False, response
+
+    @property
+    def url_identifier(self):
+        """
+        Returns all of the identifiers that make this URL unique from
+        another simliar one. Targets or end points should never be identified
+        here.
+        """
+        return (
+            self.secure_protocol if self.secure else self.protocol,
+            self.privatekey,
+        )
 
     def url(self, privacy=False, *args, **kwargs):
         """

@@ -8,6 +8,7 @@ import logging
 import os
 import time
 from dataclasses import dataclass
+from inspect import iscoroutinefunction
 from threading import local
 from typing import TYPE_CHECKING, Any, Callable, NoReturn, cast
 
@@ -95,7 +96,7 @@ class AsyncFileLockMeta(FileLockMeta):
             run_in_executor=run_in_executor,
             executor=executor,
         )
-        return cast(BaseAsyncFileLock, instance)
+        return cast("BaseAsyncFileLock", instance)
 
 
 class BaseAsyncFileLock(BaseFileLock, metaclass=AsyncFileLockMeta):
@@ -265,7 +266,7 @@ class BaseAsyncFileLock(BaseFileLock, metaclass=AsyncFileLockMeta):
                 _LOGGER.debug("Lock %s released on %s", lock_id, lock_filename)
 
     async def _run_internal_method(self, method: Callable[[], Any]) -> None:
-        if asyncio.iscoroutinefunction(method):
+        if iscoroutinefunction(method):
             await method()
         elif self.run_in_executor:
             loop = self.loop or asyncio.get_running_loop()

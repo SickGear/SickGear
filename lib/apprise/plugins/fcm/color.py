@@ -2,7 +2,7 @@
 # BSD 2-Clause License
 #
 # Apprise - Push Notification Library.
-# Copyright (c) 2024, Chris Caron <lead2gold@gmail.com>
+# Copyright (c) 2025, Chris Caron <lead2gold@gmail.com>
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -34,7 +34,7 @@
 # https://firebase.google.com/docs/reference/fcm/rest/v1/\
 #       projects.messages#androidnotification
 import re
-from ...utils import parse_bool
+from ...utils.parse import parse_bool
 from ...common import NotifyType
 from ...asset import AppriseAsset
 

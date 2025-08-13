@@ -2,7 +2,7 @@
 # BSD 2-Clause License
 #
 # Apprise - Push Notification Library.
-# Copyright (c) 2024, Chris Caron <lead2gold@gmail.com>
+# Copyright (c) 2025, Chris Caron <lead2gold@gmail.com>
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -59,10 +59,8 @@ from email.utils import formataddr
 from .base import NotifyBase
 from ..common import NotifyType
 from ..common import NotifyFormat
-from ..utils import parse_emails
-from ..utils import parse_bool
-from ..utils import is_email
-from ..utils import validate_regex
+from ..utils.parse import (
+    parse_emails, parse_bool, is_email, validate_regex)
 from ..logger import logger
 from ..locale import gettext_lazy as _
 
@@ -383,9 +381,15 @@ class NotifyMailgun(NotifyBase):
                 self.logger.debug(
                     'Preparing Mailgun attachment {}'.format(
                         attachment.url(privacy=True)))
+
+                # Prepare our filename
+                filename = attachment.name \
+                    if attachment.name \
+                    else 'file{no:03}.dat'.format(no=idx + 1)
+
                 try:
                     files['attachment[{}]'.format(idx)] = \
-                        (attachment.name, open(attachment.path, 'rb'))
+                        (filename, open(attachment.path, 'rb'))
 
                 except (OSError, IOError) as e:
                     self.logger.warning(
@@ -578,6 +582,17 @@ class NotifyMailgun(NotifyBase):
             entry[1].close()
 
         return not has_error
+
+    @property
+    def url_identifier(self):
+        """
+        Returns all of the identifiers that make this URL unique from
+        another simliar one. Targets or end points should never be identified
+        here.
+        """
+        return (
+            self.secure_protocol, self.host, self.apikey, self.region_name,
+        )
 
     def url(self, privacy=False, *args, **kwargs):
         """

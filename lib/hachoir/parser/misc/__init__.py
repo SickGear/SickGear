@@ -17,3 +17,4 @@ from hachoir.parser.misc.word_2 import Word2DocumentParser  # noqa
 from hachoir.parser.misc.mstask import MSTaskFile  # noqa
 from hachoir.parser.misc.mapsforge_map import MapsforgeMapFile  # noqa
 from hachoir.parser.misc.fit import FITFile  # noqa
+from hachoir.parser.misc.git_pack import GitPackFile  # noqa

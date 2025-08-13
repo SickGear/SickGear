@@ -68,7 +68,7 @@ Other features and worthy points;
   * Known and user editable alternative numbered seasons and/or episodes can be searched
   * Forward search results directly to clients like NZBGet, SABNZBd, qBitTorrent, Deluge and others
   * Save search results to a "blackhole" folder, a place designated for clients to auto scan
-  * Built-in post processing of episodes, with renaming to custom folder and/or file names
+  * Built-in post-processing of episodes, with renaming to custom folder and/or file names
   * Fetch metadata like fanart, poster and banner images, nfo's for clients like Kodi, Emby, Plex, Jellyfin and many more
   * Native advanced automated handling of failed downloads to ensure a success after failure
   * Overview of episodes, rating, version, airdate, episode status ([their meaning](https://github.com/SickGear/SickGear/wiki/Status-Modes))
@@ -80,7 +80,7 @@ Other features and worthy points;
 * Notification
   * Home Theater/NAS (Emby, Kodi, Plex, Syno, Tivo, and more) can be notified to update their library
   * Social notifiers (Trakt, Slack, Gitter, Discord, E-mail, and more)
-  * Device notifiers (Boxcar2, Growl, Prowl, and more)
+  * Device notifiers (Growl, Prowl, and more)
 * Server friendly with minimal number of API calls using both active and passive search tech
 * Automated alternative show names and episode numbering from XEM
 

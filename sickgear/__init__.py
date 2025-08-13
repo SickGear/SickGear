@@ -405,13 +405,6 @@ PYTIVO_HOST = ''
 PYTIVO_SHARE_NAME = ''
 PYTIVO_TIVO_NAME = ''
 
-USE_BOXCAR2 = False
-BOXCAR2_NOTIFY_ONSNATCH = False
-BOXCAR2_NOTIFY_ONDOWNLOAD = False
-BOXCAR2_NOTIFY_ONSUBTITLEDOWNLOAD = False
-BOXCAR2_ACCESSTOKEN = None
-BOXCAR2_SOUND = None
-
 USE_PUSHBULLET = False
 PUSHBULLET_NOTIFY_ONSNATCH = False
 PUSHBULLET_NOTIFY_ONDOWNLOAD = False
@@ -764,8 +757,6 @@ def init_stage_1(console_logging):
         LIBNOTIFY_NOTIFY_ONSUBTITLEDOWNLOAD, \
         USE_PUSHOVER, PUSHOVER_NOTIFY_ONSNATCH, PUSHOVER_NOTIFY_ONDOWNLOAD, PUSHOVER_NOTIFY_ONSUBTITLEDOWNLOAD, \
         PUSHOVER_USERKEY, PUSHOVER_APIKEY, PUSHOVER_PRIORITY, PUSHOVER_DEVICE, PUSHOVER_SOUND, \
-        USE_BOXCAR2, BOXCAR2_NOTIFY_ONSNATCH, BOXCAR2_NOTIFY_ONDOWNLOAD, BOXCAR2_NOTIFY_ONSUBTITLEDOWNLOAD, \
-        BOXCAR2_ACCESSTOKEN, BOXCAR2_SOUND, \
         USE_PUSHALOT, PUSHALOT_NOTIFY_ONSNATCH, PUSHALOT_NOTIFY_ONDOWNLOAD, \
         PUSHALOT_NOTIFY_ONSUBTITLEDOWNLOAD, PUSHALOT_AUTHORIZATIONTOKEN, \
         USE_PUSHBULLET, PUSHBULLET_NOTIFY_ONSNATCH, PUSHBULLET_NOTIFY_ONDOWNLOAD, \
@@ -794,7 +785,7 @@ def init_stage_1(console_logging):
     global UPDATES_TODO
 
     for stanza in ('General', 'Blackhole', 'SABnzbd', 'NZBGet', 'Emby', 'Kodi', 'XBMC', 'PLEX',
-                   'Growl', 'Prowl', 'Slack', 'Discord', 'Boxcar2', 'NMJ', 'NMJv2',
+                   'Growl', 'Prowl', 'Slack', 'Discord', 'NMJ', 'NMJv2',
                    'Synology', 'SynologyNotifier',
                    'pyTivo', 'Pushalot', 'Pushbullet', 'Subtitles'):
         check_section(CFG, stanza)
@@ -1152,14 +1143,6 @@ def init_stage_1(console_logging):
     PROWL_NOTIFY_ONSUBTITLEDOWNLOAD = bool(check_setting_int(CFG, 'Prowl', 'prowl_notify_onsubtitledownload', 0))
     PROWL_API = check_setting_str(CFG, 'Prowl', 'prowl_api', '')
     PROWL_PRIORITY = check_setting_str(CFG, 'Prowl', 'prowl_priority', '0')
-
-    USE_BOXCAR2 = bool(check_setting_int(CFG, 'Boxcar2', 'use_boxcar2', 0))
-    BOXCAR2_NOTIFY_ONSNATCH = bool(check_setting_int(CFG, 'Boxcar2', 'boxcar2_notify_onsnatch', 0))
-    BOXCAR2_NOTIFY_ONDOWNLOAD = bool(check_setting_int(CFG, 'Boxcar2', 'boxcar2_notify_ondownload', 0))
-    BOXCAR2_NOTIFY_ONSUBTITLEDOWNLOAD = bool(
-        check_setting_int(CFG, 'Boxcar2', 'boxcar2_notify_onsubtitledownload', 0))
-    BOXCAR2_ACCESSTOKEN = check_setting_str(CFG, 'Boxcar2', 'boxcar2_accesstoken', '')
-    BOXCAR2_SOUND = check_setting_str(CFG, 'Boxcar2', 'boxcar2_sound', 'default')
 
     USE_PUSHOVER = bool(check_setting_int(CFG, 'Pushover', 'use_pushover', 0))
     PUSHOVER_NOTIFY_ONSNATCH = bool(check_setting_int(CFG, 'Pushover', 'pushover_notify_onsnatch', 0))
@@ -2238,11 +2221,6 @@ def _save_config(force=False, **kwargs):
             ('share_name', PYTIVO_SHARE_NAME),
             ('tivo_name', PYTIVO_TIVO_NAME),
         ]),
-        ('Boxcar2', [
-            ('use_%s', int(USE_BOXCAR2)),
-            ('accesstoken', BOXCAR2_ACCESSTOKEN),
-            ('sound', BOXCAR2_SOUND if 'default' != BOXCAR2_SOUND else None),
-        ]),
         ('Pushbullet', [
             ('use_%s', int(USE_PUSHBULLET)),
             ('access_token', PUSHBULLET_ACCESS_TOKEN),
@@ -2365,7 +2343,6 @@ def _save_config(force=False, **kwargs):
         ('SynologyNotifier', SYNOLOGYNOTIFIER_NOTIFY_ONSNATCH, SYNOLOGYNOTIFIER_NOTIFY_ONDOWNLOAD,
          SYNOLOGYNOTIFIER_NOTIFY_ONSUBTITLEDOWNLOAD),
 
-        ('Boxcar2', BOXCAR2_NOTIFY_ONSNATCH, BOXCAR2_NOTIFY_ONDOWNLOAD, BOXCAR2_NOTIFY_ONSUBTITLEDOWNLOAD),
         ('Pushbullet', PUSHBULLET_NOTIFY_ONSNATCH, PUSHBULLET_NOTIFY_ONDOWNLOAD, PUSHBULLET_NOTIFY_ONSUBTITLEDOWNLOAD),
         ('Pushover', PUSHOVER_NOTIFY_ONSNATCH, PUSHOVER_NOTIFY_ONDOWNLOAD, PUSHOVER_NOTIFY_ONSUBTITLEDOWNLOAD),
         ('Growl', GROWL_NOTIFY_ONSNATCH, GROWL_NOTIFY_ONDOWNLOAD, GROWL_NOTIFY_ONSUBTITLEDOWNLOAD),

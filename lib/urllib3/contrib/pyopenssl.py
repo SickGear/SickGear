@@ -366,9 +366,11 @@ class WrappedSocket:
             )
             total_sent += sent
 
-    def shutdown(self) -> None:
-        # FIXME rethrow compatible exceptions should we ever use this
-        self.connection.shutdown()
+    def shutdown(self, how: int) -> None:
+        try:
+            self.connection.shutdown()
+        except OpenSSL.SSL.Error as e:
+            raise ssl.SSLError(f"shutdown error: {e!r}") from e
 
     def close(self) -> None:
         self._closed = True
@@ -400,6 +402,10 @@ class WrappedSocket:
     def version(self) -> str:
         return self.connection.get_protocol_version_name()  # type: ignore[no-any-return]
 
+    def selected_alpn_protocol(self) -> str | None:
+        alpn_proto = self.connection.get_alpn_proto_negotiated()
+        return alpn_proto.decode() if alpn_proto else None
+
 
 WrappedSocket.makefile = socket_cls.makefile  # type: ignore[attr-defined]
 
@@ -418,6 +424,7 @@ class PyOpenSSLContext:
         self.check_hostname = False
         self._minimum_version: int = ssl.TLSVersion.MINIMUM_SUPPORTED
         self._maximum_version: int = ssl.TLSVersion.MAXIMUM_SUPPORTED
+        self._verify_flags: int = ssl.VERIFY_X509_TRUSTED_FIRST
 
     @property
     def options(self) -> int:
@@ -427,6 +434,15 @@ class PyOpenSSLContext:
     def options(self, value: int) -> None:
         self._options = value
         self._set_ctx_options()
+
+    @property
+    def verify_flags(self) -> int:
+        return self._verify_flags
+
+    @verify_flags.setter
+    def verify_flags(self, value: int) -> None:
+        self._verify_flags = value
+        self._ctx.get_cert_store().set_flags(self._verify_flags)
 
     @property
     def verify_mode(self) -> int:

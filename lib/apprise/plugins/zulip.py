@@ -2,7 +2,7 @@
 # BSD 2-Clause License
 #
 # Apprise - Push Notification Library.
-# Copyright (c) 2024, Chris Caron <lead2gold@gmail.com>
+# Copyright (c) 2025, Chris Caron <lead2gold@gmail.com>
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -63,10 +63,7 @@ import requests
 
 from .base import NotifyBase
 from ..common import NotifyType
-from ..utils import parse_list
-from ..utils import validate_regex
-from ..utils import is_email
-from ..utils import remove_suffix
+from ..utils.parse import (parse_list, validate_regex, is_email)
 from ..locale import gettext_lazy as _
 
 # A Valid Bot Name
@@ -192,7 +189,10 @@ class NotifyZulip(NotifyBase):
 
             # The botname
             botname = match.group('name')
-            botname = remove_suffix(botname, '-bot')
+            suffix = '-bot'
+            # Eliminate suffix if found
+            botname = \
+                botname[:-len(suffix)] if botname.endswith(suffix) else botname
             self.botname = botname
 
         except (TypeError, AttributeError):
@@ -333,6 +333,18 @@ class NotifyZulip(NotifyBase):
                 continue
 
         return not has_error
+
+    @property
+    def url_identifier(self):
+        """
+        Returns all of the identifiers that make this URL unique from
+        another simliar one. Targets or end points should never be identified
+        here.
+        """
+        return (
+            self.secure_protocol, self.organization, self.hostname,
+            self.token,
+        )
 
     def url(self, privacy=False, *args, **kwargs):
         """

@@ -1011,15 +1011,15 @@ def get_url(url,  # type: AnyStr
             DOMAIN_FAILURES.inc_failure_count(url, ConnectionFail(**connection_fail_params))
             save_failure(url, domain, log_failure_url, post_data, post_json)
 
-        if isinstance(raised, Exception):
-            if raise_exceptions or raise_status_code:
-                try:
-                    if not hasattr(raised, 'text') and hasattr(response, 'text'):
-                        raised.text = response.text
-                except (BaseException, Exception):
-                    pass
-                raise raised
-            return
+    if isinstance(raised, Exception):
+        if raise_exceptions or raise_status_code:
+            try:
+                if not hasattr(raised, 'text') and hasattr(response, 'text'):
+                    raised.text = response.text
+            except (BaseException, Exception):
+                pass
+            raise raised
+        return
 
     if return_response:
         result = response

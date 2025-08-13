@@ -2,7 +2,7 @@
 # BSD 2-Clause License
 #
 # Apprise - Push Notification Library.
-# Copyright (c) 2024, Chris Caron <lead2gold@gmail.com>
+# Copyright (c) 2025, Chris Caron <lead2gold@gmail.com>
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -46,11 +46,8 @@ from ..common import NotifyFormat
 from ..common import NotifyType
 from ..common import NotifyImageSize
 from ..locale import gettext_lazy as _
-from ..utils import parse_list
-from ..utils import parse_bool
-from ..utils import is_hostname
-from ..utils import is_ipaddr
-from ..utils import validate_regex
+from ..utils.parse import (
+    parse_list, parse_bool, is_hostname, is_ipaddr, validate_regex)
 from ..url import PrivacyMode
 from ..attachment.base import AttachBase
 from ..attachment.memory import AttachMemory
@@ -655,6 +652,34 @@ class NotifyNtfy(NotifyBase):
             self.logger.debug('I/O Exception: %s' % str(e))
 
         return False, response
+
+    @property
+    def url_identifier(self):
+        """
+        Returns all of the identifiers that make this URL unique from
+        another simliar one. Targets or end points should never be identified
+        here.
+        """
+
+        kwargs = [
+            self.secure_protocol if self.mode == NtfyMode.CLOUD else (
+                self.secure_protocol if self.secure else self.protocol),
+            self.host if self.mode == NtfyMode.PRIVATE else '',
+            443 if self.mode == NtfyMode.CLOUD else (
+                self.port if self.port else (443 if self.secure else 80)),
+        ]
+
+        if self.mode == NtfyMode.PRIVATE:
+            if self.auth == NtfyAuth.BASIC:
+                kwargs.extend([
+                    self.user if self.user else None,
+                    self.password if self.password else None,
+                ])
+
+            elif self.token:  # NtfyAuth.TOKEN also
+                kwargs.append(self.token)
+
+        return kwargs
 
     def url(self, privacy=False, *args, **kwargs):
         """

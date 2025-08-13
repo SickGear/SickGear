@@ -717,7 +717,6 @@ class GenericProvider(object):
             (sickgear.EMBY_APIKEY, 'emby_apikey'), (sickgear.KODI_PASSWORD, 'kodi_password'),
             (sickgear.PLEX_PASSWORD, 'plex_password'), (sickgear.XBMC_PASSWORD, 'xbmc_password'),
             (sickgear.EMAIL_PASSWORD, 'email_password'), (sickgear.ANIDB_PASSWORD, 'anidb_password'),
-            (sickgear.BOXCAR2_ACCESSTOKEN, 'boxcar2_accesstoken'),
             (sickgear.DISCORD_ACCESS_TOKEN, 'discord_access_token'),
             (sickgear.GITTER_ACCESS_TOKEN, 'gitter_access_token'),
             (('', sickgear.GROWL_HOST[:sickgear.GROWL_HOST.find('@')])['@' in sickgear.GROWL_HOST], 'growl_host'),

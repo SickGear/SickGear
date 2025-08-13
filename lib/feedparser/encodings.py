@@ -1,5 +1,5 @@
 # Character encoding routines
-# Copyright 2010-2023 Kurt McKee <contactme@kurtmckee.org>
+# Copyright 2010-2025 Kurt McKee <contactme@kurtmckee.org>
 # Copyright 2002-2008 Mark Pilgrim
 # All rights reserved.
 #
@@ -55,11 +55,11 @@ from .exceptions import (
 
 # Each marker represents some of the characters of the opening XML
 # processing instruction ('<?xm') in the specified encoding.
-EBCDIC_MARKER = b"\x4C\x6F\xA7\x94"
-UTF16BE_MARKER = b"\x00\x3C\x00\x3F"
-UTF16LE_MARKER = b"\x3C\x00\x3F\x00"
-UTF32BE_MARKER = b"\x00\x00\x00\x3C"
-UTF32LE_MARKER = b"\x3C\x00\x00\x00"
+EBCDIC_MARKER = b"\x4c\x6f\xa7\x94"
+UTF16BE_MARKER = b"\x00\x3c\x00\x3f"
+UTF16LE_MARKER = b"\x3c\x00\x3f\x00"
+UTF32BE_MARKER = b"\x00\x00\x00\x3c"
+UTF32LE_MARKER = b"\x3c\x00\x00\x00"
 
 ZERO_BYTES = b"\x00\x00"
 
@@ -623,7 +623,7 @@ class PrefixFileWrapper:
 
         if self.offset < len(self.prefix):
             if size < 0:
-                chunk = self.prefix
+                chunk = self.prefix[self.offset :]
             else:
                 chunk = self.prefix[self.offset : self.offset + size]
                 size -= len(chunk)

@@ -2,7 +2,7 @@
 # BSD 2-Clause License
 #
 # Apprise - Push Notification Library.
-# Copyright (c) 2024, Chris Caron <lead2gold@gmail.com>
+# Copyright (c) 2025, Chris Caron <lead2gold@gmail.com>
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -37,8 +37,7 @@ from ..url import PrivacyMode
 from ..common import NotifyImageSize
 from ..common import NotifyFormat
 from ..common import NotifyType
-from ..utils import parse_list
-from ..utils import parse_bool
+from ..utils.parse import parse_list, parse_bool
 from ..locale import gettext_lazy as _
 
 IS_CHANNEL = re.compile(r'^#(?P<name>[A-Za-z0-9_-]+)$')
@@ -318,6 +317,23 @@ class NotifyRocketChat(NotifyBase):
             self.avatar = True if avatar is None else avatar
 
         return
+
+    @property
+    def url_identifier(self):
+        """
+        Returns all of the identifiers that make this URL unique from
+        another simliar one. Targets or end points should never be identified
+        here.
+        """
+        return (
+            self.secure_protocol if self.secure else self.protocol,
+            self.host,
+            self.port if self.port else (443 if self.secure else 80),
+            self.user,
+            self.password if self.mode in (
+                RocketChatAuthMode.BASIC, RocketChatAuthMode.TOKEN)
+            else self.webhook,
+        )
 
     def url(self, privacy=False, *args, **kwargs):
         """

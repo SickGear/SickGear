@@ -1,4 +1,40 @@
-﻿### 3.33.15 (2025-08-12 15:45:00 UTC)
+﻿### 3.34.0 (2025-08-14 00:10:00 UTC)
+
+* Update apprise 1.8.0 (81caf92) to 1.9.2 (a2a2216)
+* Update attr 23.2.0 (b393d79) to 25.3.0 (ca3fb0e)
+* Update Beautiful Soup 4.12.3 (7fb5175) to 4.13.4 (9752e85)
+* Update CacheControl 0.14.0 (e2be0c2) to 0.14.3 (116113c)
+* Update certifi 2024.08.30 to 2025.08.03
+* Update chardet packages 5.1.0 (8087f00) to 5.3.0dev0 (8e8dfcd)
+* Update feedparser 6.0.11 (efcb89b) to 6.0.11 (89fde03)
+* Update filelock 3.15.4 (9a979df) to 3.19.0 (0c54837)
+* Update hachoir 3.2.0 (38d759f) to 3.3.0 (48b478f)
+* Update idna library 3.7 (1d365e1) to 3.10 (729225d)
+* Update langcodes 3.3.0 to 3.5.0
+* Update language-data 1.1 to 1.3
+* Update Msgpack 1.0.6 (e1d3d5d) to 1.1.1 (42f056f)
+* Update deprecated pkg_resources 24.0 to Packaging 25.0 (f585376)
+* Update profilehooks module 1.13.0.dev0 (99f8a31) to 1.13.1.dev0 (824fcd4) 
+* Update pytz 2024.1/2024a (3680953) to 2024.2/2024b (3944f75)
+* Update Requests library 2.32.3 (0e322af) to 2.32.4 (131e506)
+* Update SimpleJSON 3.19.1 (aeb63ee) to 3.19.3 (6932004)
+* Update Six compatibility library 1.16.0 (b620447) to 1.17.0 (4a765bf)
+* Update soupsieve 2.5.0 (dc71495) to 2.7.0 (a616022)
+* Update thefuzz 0.21.0 (0b49e4a) to 0.22.1 (1ba86f3)
+* Update tmdbsimple 2.9.1 (9da400a) to 2.9.2 (0b3359f)
+* Update Tornado Web Server 6.4.2 (27b3252) to 6.5.2 (f01a7b0)
+* Update unidecode module 1.3.8 (dfe397d) to 1.4.0 (8d83b7c)
+* Update urllib3 2.2.2 (27e2a5c) to 2.5.0 (98a60f9)
+* Change add typing-extensions 4.14.0 (59d2c20) for BSoup
+* Change chardet to permit Requests import
+* Remove notifier Boxcar2
+* Change incorrect case of recommended RapidFuzz
+* Change improve success rate of Flaresolver requests
+* Add "Last Episode" to "Sort By" on the "Poster" layout in the "Show List" view
+* Fix Python 3.14 compatibility issues
+
+
+### 3.33.15 (2025-08-12 15:45:00 UTC)
 
 * Update UnRar x64 for Windows 7.12 to 7.13
 
@@ -65,9 +101,18 @@
 ### 3.33.3 (2025-02-18 04:50:00 UTC)
 
 * Change add TraktFreemiumLimit exception for collection endpoint
-* Change revert hotfix 3.33.1 in release 3.33.2
 * Change add support for Python 3.13.2, 3.12.9
 * Change ensure autoprocess is run with a compatible Python version else exit
+
+
+### 3.33.2 (2025-01-21 11:50:00 UTC)
+
+* Fix revert incorrect case of recommended RapidFuzz on main, added too early
+
+
+### 3.33.1 (2025-01-20 14:50:00 UTC)
+
+* Fix incorrect case of recommended RapidFuzz
 
 
 ### 3.33.0 (2025-01-20 00:20:00 UTC)

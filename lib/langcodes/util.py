@@ -1,6 +1,6 @@
-from pkg_resources import resource_filename
+from importlib.resources import files
 
-DATA_ROOT = resource_filename('langcodes', 'data')
+DATA_ROOT = files('langcodes').joinpath('data')
 import os
 
 

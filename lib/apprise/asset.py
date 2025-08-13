@@ -2,7 +2,7 @@
 # BSD 2-Clause License
 #
 # Apprise - Push Notification Library.
-# Copyright (c) 2024, Chris Caron <lead2gold@gmail.com>
+# Copyright (c) 2025, Chris Caron <lead2gold@gmail.com>
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -33,6 +33,7 @@ from os.path import dirname
 from os.path import isfile
 from os.path import abspath
 from .common import NotifyType
+from .common import PersistentStoreMode
 from .manager_plugins import NotificationManager
 
 
@@ -142,6 +143,12 @@ class AppriseAsset:
     # Defines the encoding of the content passed into Apprise
     encoding = 'utf-8'
 
+    # Automatically generate our Pretty Good Privacy (PGP) keys if one isn't
+    # present and our environment configuration allows for it.
+    # For example, a case where the environment wouldn't allow for it would be
+    # if Persistent Storage was set to `memory`
+    pgp_autogen = True
+
     # For more detail see CWE-312 @
     #    https://cwe.mitre.org/data/definitions/312.html
     #
@@ -157,6 +164,22 @@ class AppriseAsset:
     # By default, no paths are scanned.
     __plugin_paths = []
 
+    # Optionally set the location of the persistent storage
+    # By default there is no path and thus persistent storage is not used
+    __storage_path = None
+
+    # Optionally define the default salt to apply to all persistent storage
+    # namespace generation (unless over-ridden)
+    __storage_salt = b''
+
+    # Optionally define the namespace length of the directories created by
+    # the storage. If this is set to zero, then the length is pre-determined
+    # by the generator (sha1, md5, sha256, etc)
+    __storage_idlen = 8
+
+    # Set storage to auto
+    __storage_mode = PersistentStoreMode.AUTO
+
     # All internal/system flags are prefixed with an underscore (_)
     # These can only be initialized using Python libraries and are not picked
     # up from (yaml) configuration files (if set)
@@ -171,7 +194,9 @@ class AppriseAsset:
     # A unique identifer we can use to associate our calling source
     _uid = str(uuid4())
 
-    def __init__(self, plugin_paths=None, **kwargs):
+    def __init__(self, plugin_paths=None, storage_path=None,
+                 storage_mode=None, storage_salt=None,
+                 storage_idlen=None, **kwargs):
         """
         Asset Initialization
 
@@ -187,7 +212,48 @@ class AppriseAsset:
 
         if plugin_paths:
             # Load any decorated modules if defined
+            self.__plugin_paths = plugin_paths
             N_MGR.module_detection(plugin_paths)
+
+        if storage_path:
+            # Define our persistent storage path
+            self.__storage_path = storage_path
+
+        if storage_mode:
+            # Define how our persistent storage behaves
+            self.__storage_mode = storage_mode
+
+        if isinstance(storage_idlen, int):
+            # Define the number of characters utilized from our namespace lengh
+            if storage_idlen < 0:
+                # Unsupported type
+                raise ValueError(
+                    'AppriseAsset storage_idlen(): Value must '
+                    'be an integer and > 0')
+
+            # Store value
+            self.__storage_idlen = storage_idlen
+
+        if storage_salt is not None:
+            # Define the number of characters utilized from our namespace lengh
+
+            if isinstance(storage_salt, bytes):
+                self.__storage_salt = storage_salt
+
+            elif isinstance(storage_salt, str):
+                try:
+                    self.__storage_salt = storage_salt.encode(self.encoding)
+
+                except UnicodeEncodeError:
+                    # Bad data; don't pass it along
+                    raise ValueError(
+                        'AppriseAsset namespace_salt(): '
+                        'Value provided could not be encoded')
+
+            else:  # Unsupported
+                raise ValueError(
+                    'AppriseAsset namespace_salt(): Value provided must be '
+                    'string or bytes object')
 
     def color(self, notify_type, color_type=None):
         """
@@ -356,3 +422,40 @@ class AppriseAsset:
 
         """
         return int(value.lstrip('#'), 16)
+
+    @property
+    def plugin_paths(self):
+        """
+        Return the plugin paths defined
+        """
+        return self.__plugin_paths
+
+    @property
+    def storage_path(self):
+        """
+        Return the persistent storage path defined
+        """
+        return self.__storage_path
+
+    @property
+    def storage_mode(self):
+        """
+        Return the persistent storage mode defined
+        """
+
+        return self.__storage_mode
+
+    @property
+    def storage_salt(self):
+        """
+        Return the provided namespace salt; this is always of type bytes
+        """
+        return self.__storage_salt
+
+    @property
+    def storage_idlen(self):
+        """
+        Return the persistent storage id length
+        """
+
+        return self.__storage_idlen

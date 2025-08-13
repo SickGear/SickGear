@@ -2,7 +2,7 @@
 # BSD 2-Clause License
 #
 # Apprise - Push Notification Library.
-# Copyright (c) 2024, Chris Caron <lead2gold@gmail.com>
+# Copyright (c) 2025, Chris Caron <lead2gold@gmail.com>
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -33,7 +33,7 @@ from .base import NotifyBase
 from ..url import PrivacyMode
 from ..common import NotifyType
 from ..common import NotifyImageSize
-from ..utils import parse_bool
+from ..utils.parse import parse_bool
 from ..locale import gettext_lazy as _
 
 
@@ -298,6 +298,25 @@ class NotifyXBMC(NotifyBase):
             return False
 
         return True
+
+    @property
+    def url_identifier(self):
+        """
+        Returns all of the identifiers that make this URL unique from
+        another simliar one. Targets or end points should never be identified
+        here.
+        """
+        default_schema = self.xbmc_protocol if (
+            self.protocol <= self.xbmc_remote_protocol) else self.kodi_protocol
+        if self.secure:
+            # Append 's' to schema
+            default_schema += 's'
+
+        port = self.port if self.port else (
+            443 if self.secure else self.xbmc_default_port)
+        return (
+            default_schema, self.user, self.password, self.host, port,
+        )
 
     def url(self, privacy=False, *args, **kwargs):
         """

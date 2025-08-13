@@ -2,7 +2,7 @@
 # BSD 2-Clause License
 #
 # Apprise - Push Notification Library.
-# Copyright (c) 2024, Chris Caron <lead2gold@gmail.com>
+# Copyright (c) 2025, Chris Caron <lead2gold@gmail.com>
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -82,10 +82,8 @@ from .base import NotifyBase
 from ..common import NotifyImageSize
 from ..common import NotifyType
 from ..common import NotifyFormat
-from ..utils import is_email
-from ..utils import parse_bool
-from ..utils import parse_list
-from ..utils import validate_regex
+from ..utils.parse import (
+    is_email, parse_bool, parse_list, validate_regex)
 from ..locale import gettext_lazy as _
 
 # Extend HTTP Error Messages
@@ -326,6 +324,7 @@ class NotifySlack(NotifyBase):
         self.mode = SlackMode.BOT if access_token else SlackMode.WEBHOOK
 
         if self.mode is SlackMode.WEBHOOK:
+            self.access_token = None
             self.token_a = validate_regex(
                 token_a, *self.template_tokens['token_a']['regex'])
             if not self.token_a:
@@ -350,6 +349,9 @@ class NotifySlack(NotifyBase):
                 self.logger.warning(msg)
                 raise TypeError(msg)
         else:
+            self.token_a = None
+            self.token_b = None
+            self.token_c = None
             self.access_token = validate_regex(
                 access_token, *self.template_tokens['access_token']['regex'])
             if not self.access_token:
@@ -642,7 +644,7 @@ class NotifySlack(NotifyBase):
         if attach and self.attachment_support and \
                 self.mode is SlackMode.BOT and attach_channel_list:
             # Send our attachments (can only be done in bot mode)
-            for attachment in attach:
+            for no, attachment in enumerate(attach, start=1):
 
                 # Perform some simple error checking
                 if not attachment:
@@ -659,7 +661,8 @@ class NotifySlack(NotifyBase):
                 # Get the URL to which to upload the file.
                 # https://api.slack.com/methods/files.getUploadURLExternal
                 _params = {
-                    'filename': attachment.name,
+                    'filename': attachment.name
+                    if attachment.name else f'file{no:03}.dat',
                     'length': len(attachment),
                 }
                 _url = self.api_url.format('files.getUploadURLExternal')
@@ -1017,6 +1020,18 @@ class NotifySlack(NotifyBase):
 
         # Return the response for processing
         return response
+
+    @property
+    def url_identifier(self):
+        """
+        Returns all of the identifiers that make this URL unique from
+        another simliar one. Targets or end points should never be identified
+        here.
+        """
+        return (
+            self.secure_protocol, self.token_a, self.token_b, self.token_c,
+            self.access_token,
+        )
 
     def url(self, privacy=False, *args, **kwargs):
         """

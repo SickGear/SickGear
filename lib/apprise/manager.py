@@ -2,7 +2,7 @@
 # BSD 2-Clause License
 #
 # Apprise - Push Notification Library.
-# Copyright (c) 2024, Chris Caron <lead2gold@gmail.com>
+# Copyright (c) 2025, Chris Caron <lead2gold@gmail.com>
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -33,9 +33,10 @@ import time
 import hashlib
 import inspect
 import threading
-from .utils import import_module
-from .utils import Singleton
-from .utils import parse_list
+from .utils.module import import_module
+from .utils.singleton import Singleton
+from .utils.parse import parse_list
+from .utils.disk import path_decode
 from os.path import dirname
 from os.path import abspath
 from os.path import join
@@ -223,7 +224,7 @@ class PluginManager(metaclass=Singleton):
                     if not hasattr(plugin, 'app_id'):
                         # Filter out non-notification modules
                         logger.trace(
-                            "(%s) import failed; no app_id defined in %s",
+                            "(%s.%s) import failed; no app_id defined in %s",
                             self.name, m_class, os.path.join(module_path, f))
                         continue
 
@@ -243,8 +244,10 @@ class PluginManager(metaclass=Singleton):
                     for schema in schemas:
                         if schema in self._schema_map:
                             logger.error(
-                                "{} schema ({}) mismatch detected - {} to {}"
-                                .format(self.name, schema, self._schema_map,
+                                "{} schema ({}) mismatch detected -"
+                                ' {} already maps to {}'
+                                .format(self.name, schema,
+                                        self._schema_map[schema],
                                         plugin))
                             continue
 
@@ -373,7 +376,7 @@ class PluginManager(metaclass=Singleton):
             return
 
         for _path in paths:
-            path = os.path.abspath(os.path.expanduser(_path))
+            path = path_decode(_path)
             if (cache and path in self._paths_previously_scanned) \
                     or not os.path.exists(path):
                 # We're done as we've already scanned this

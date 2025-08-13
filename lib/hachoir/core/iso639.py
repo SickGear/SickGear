@@ -1,7 +1,7 @@
 """
-ISO639-2 standart: the module only contains the dictionary ISO639_2
+ISO639-2 standard: the module only contains the dictionary ISO639_2
 which maps a language code in three letters (eg. "fre") to a language
-name in english (eg. "French").
+name in English (eg. "French").
 """
 
 # ISO-639, the list comes from:

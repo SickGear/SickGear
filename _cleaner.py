@@ -37,6 +37,17 @@ if old_magic != magic_number:
 
 # skip cleaned005 as used during dev by testers
 cleanups = [
+    ['.cleaned010.tmp', r'lib\pkg_resources', [
+        r'lib\pkg_resources\extern\__pycache__', r'lib\pkg_resources\extern',
+        r'lib\pkg_resources\_vendor\__pycache__', r'lib\pkg_resources\_vendor',
+        r'lib\pkg_resources\_vendor\packaging\__pycache__', r'lib\pkg_resources\_vendor\packaging',
+        r'lib\pkg_resources\_vendor\packaging\specifiers\__pycache__', r'lib\pkg_resources\_vendor\packaging\specifiers',
+        r'lib\pkg_resources\_vendor\packaging\version\__pycache__', r'lib\pkg_resources\_vendor\packaging\version',
+        r'lib\pkg_resources\_vendor\packaging\markers\__pycache__', r'lib\pkg_resources\_vendor\packaging\markers',
+        r'lib\pkg_resources\_vendor\packaging\requirements\__pycache__', r'lib\pkg_resources\_vendor\packaging\requirements',
+        r'lib\pkg_resources\_vendor\packaging\utils\__pycache__', r'lib\pkg_resources\_vendor\packaging\utils',
+        r'lib\pkg_resources\__pycache__', r'lib\pkg_resources'
+    ]],
     ['.cleaned009.tmp', r'lib\scandir', [
         r'lib\scandir\__pycache__', r'lib\scandir',
     ]],

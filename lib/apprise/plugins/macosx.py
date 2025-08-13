@@ -2,7 +2,7 @@
 # BSD 2-Clause License
 #
 # Apprise - Push Notification Library.
-# Copyright (c) 2024, Chris Caron <lead2gold@gmail.com>
+# Copyright (c) 2025, Chris Caron <lead2gold@gmail.com>
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -33,7 +33,7 @@ import os
 from .base import NotifyBase
 from ..common import NotifyImageSize
 from ..common import NotifyType
-from ..utils import parse_bool
+from ..utils.parse import parse_bool
 from ..locale import gettext_lazy as _
 
 # Default our global support flag
@@ -91,6 +91,10 @@ class NotifyMacOSX(NotifyBase):
     # Limit results to just the first 10 line otherwise there is just to much
     # content to display
     body_max_line_count = 10
+
+    # No URL Identifier will be defined for this service as there simply isn't
+    # enough details to uniquely identify one dbus:// from another.
+    url_identifier = False
 
     # The possible paths to the terminal-notifier
     notify_paths = (

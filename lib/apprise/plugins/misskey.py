@@ -2,7 +2,7 @@
 # BSD 2-Clause License
 #
 # Apprise - Push Notification Library.
-# Copyright (c) 2024, Chris Caron <lead2gold@gmail.com>
+# Copyright (c) 2025, Chris Caron <lead2gold@gmail.com>
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -49,7 +49,7 @@ from json import dumps
 
 from .base import NotifyBase
 from ..common import NotifyType
-from ..utils import validate_regex
+from ..utils.parse import validate_regex
 from ..locale import gettext_lazy as _
 
 
@@ -64,8 +64,6 @@ class MisskeyVisibility:
 
     FOLLOWERS = 'followers'
 
-    PRIVATE = 'private'
-
     SPECIFIED = 'specified'
 
 
@@ -74,7 +72,6 @@ MISSKEY_VISIBILITIES = (
     MisskeyVisibility.PUBLIC,
     MisskeyVisibility.HOME,
     MisskeyVisibility.FOLLOWERS,
-    MisskeyVisibility.PRIVATE,
     MisskeyVisibility.SPECIFIED,
 )
 
@@ -190,6 +187,18 @@ class NotifyMisskey(NotifyBase):
             self.api_url += ':%d' % self.port
 
         return
+
+    @property
+    def url_identifier(self):
+        """
+        Returns all of the identifiers that make this URL unique from
+        another simliar one. Targets or end points should never be identified
+        here.
+        """
+        return (
+            self.secure_protocol if self.secure else self.protocol,
+            self.token, self.host, self.port,
+        )
 
     def url(self, privacy=False, *args, **kwargs):
         """

@@ -2,7 +2,7 @@
 # BSD 2-Clause License
 #
 # Apprise - Push Notification Library.
-# Copyright (c) 2024, Chris Caron <lead2gold@gmail.com>
+# Copyright (c) 2025, Chris Caron <lead2gold@gmail.com>
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -40,9 +40,8 @@ import requests
 from json import dumps
 from .base import NotifyBase
 from ..common import NotifyType
-from ..utils import is_phone_no
-from ..utils import parse_phone_no, parse_bool
-from ..utils import validate_regex
+from ..utils.parse import (
+    is_phone_no, parse_phone_no, parse_bool, validate_regex)
 from ..locale import gettext_lazy as _
 
 
@@ -309,6 +308,15 @@ class NotifyMSG91(NotifyBase):
             return False
 
         return True
+
+    @property
+    def url_identifier(self):
+        """
+        Returns all of the identifiers that make this URL unique from
+        another simliar one. Targets or end points should never be identified
+        here.
+        """
+        return (self.secure_protocol, self.template, self.authkey)
 
     def url(self, privacy=False, *args, **kwargs):
         """

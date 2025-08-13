@@ -2,7 +2,7 @@
 # BSD 2-Clause License
 #
 # Apprise - Push Notification Library.
-# Copyright (c) 2024, Chris Caron <lead2gold@gmail.com>
+# Copyright (c) 2025, Chris Caron <lead2gold@gmail.com>
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -29,6 +29,7 @@
 import re
 import os
 from .base import AttachBase
+from ..utils.disk import path_decode
 from ..common import ContentLocation
 from ..locale import gettext_lazy as _
 
@@ -57,7 +58,10 @@ class AttachFile(AttachBase):
 
         # Store path but mark it dirty since we have not performed any
         # verification at this point.
-        self.dirty_path = os.path.expanduser(path)
+        self.dirty_path = path_decode(path)
+
+        # Track our file as it was saved
+        self.__original_path = os.path.normpath(path)
         return
 
     def url(self, privacy=False, *args, **kwargs):
@@ -77,7 +81,7 @@ class AttachFile(AttachBase):
             params['name'] = self._name
 
         return 'file://{path}{params}'.format(
-            path=self.quote(self.dirty_path),
+            path=self.quote(self.__original_path),
             params='?{}'.format(self.urlencode(params, safe='/'))
             if params else '',
         )
@@ -97,7 +101,11 @@ class AttachFile(AttachBase):
         # Ensure any existing content set has been invalidated
         self.invalidate()
 
-        if not os.path.isfile(self.dirty_path):
+        try:
+            if not os.path.isfile(self.dirty_path):
+                return False
+
+        except OSError:
             return False
 
         if self.max_file_size > 0 and \

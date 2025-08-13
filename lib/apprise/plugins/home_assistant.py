@@ -2,7 +2,7 @@
 # BSD 2-Clause License
 #
 # Apprise - Push Notification Library.
-# Copyright (c) 2024, Chris Caron <lead2gold@gmail.com>
+# Copyright (c) 2025, Chris Caron <lead2gold@gmail.com>
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -37,7 +37,7 @@ from uuid import uuid4
 from .base import NotifyBase
 from ..url import PrivacyMode
 from ..common import NotifyType
-from ..utils import validate_regex
+from ..utils.parse import validate_regex
 from ..locale import gettext_lazy as _
 
 
@@ -179,8 +179,8 @@ class NotifyHomeAssistant(NotifyBase):
         if isinstance(self.port, int):
             url += ':%d' % self.port
 
-        url += '' if not self.fullpath else '/' + self.fullpath.strip('/')
-        url += '/api/services/persistent_notification/create'
+        url += self.fullpath.rstrip('/') + \
+            '/api/services/persistent_notification/create'
 
         self.logger.debug('Home Assistant POST URL: %s (cert_verify=%r)' % (
             url, self.verify_certificate,
@@ -230,6 +230,22 @@ class NotifyHomeAssistant(NotifyBase):
             return False
 
         return True
+
+    @property
+    def url_identifier(self):
+        """
+        Returns all of the identifiers that make this URL unique from
+        another simliar one. Targets or end points should never be identified
+        here.
+        """
+        return (
+            self.secure_protocol if self.secure else self.protocol,
+            self.user, self.password, self.host,
+            self.port if self.port else (
+                443 if self.secure else self.default_insecure_port),
+            self.fullpath.rstrip('/'),
+            self.accesstoken,
+        )
 
     def url(self, privacy=False, *args, **kwargs):
         """
@@ -302,7 +318,7 @@ class NotifyHomeAssistant(NotifyBase):
             results['accesstoken'] = fullpath.pop() if fullpath else None
 
             # Re-assemble our full path
-            results['fullpath'] = '/'.join(fullpath)
+            results['fullpath'] = '/' + '/'.join(fullpath) if fullpath else ''
 
         # Allow the specification of a unique notification_id so that
         # it will always replace the last one sent.
