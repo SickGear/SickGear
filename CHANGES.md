@@ -1,4 +1,4 @@
-﻿### 3.34.x (2025-xx-xx xx:xx:00 UTC)
+﻿### 3.34.0 (2025-08-14 00:10:00 UTC)
 
 * Update apprise 1.8.0 (81caf92) to 1.9.2 (a2a2216)
 * Update attr 23.2.0 (b393d79) to 25.3.0 (ca3fb0e)
@@ -32,27 +32,6 @@
 * Change improve success rate of Flaresolver requests
 * Add "Last Episode" to "Sort By" on the "Poster" layout in the "Show List" view
 * Fix Python 3.14 compatibility issues
-
-
-[develop changelog]
-
-* Update attr 23.2.0 (b393d79) to 24.3.0 (598494a)
-* Update Beautiful Soup 4.12.3 (7fb5175) to 4.13.0b3 (55e006b)
-* Update CacheControl 0.14.0 (e2be0c2) to 0.14.2 (928422d)
-* Update certifi 2024.08.30 to 2024.12.14
-* Update certifi 2024.12.14 to 2025.06.15
-* Update certifi 2025.06.15 to 2025.07.14
-* Update feedparser 6.0.11 (efcb89b) to 6.0.11 (ff59549)
-* Update filelock 3.15.4 (9a979df) to 3.18.0 (129a1ef)
-* Update Msgpack 1.0.6 (e1d3d5d) to 1.1.0 (0eeabfb)
-* Update soupsieve 2.5.0 (dc71495) to 2.6.0 (a8080d9)
-* Update thefuzz 0.21.0 (0b49e4a) to 0.22.1 (83bea3d)
-* Update Requests library 2.32.3 (0e322af) to 2.32.4 (91a3eab)
-* Update Tornado Web Server 6.4.2 (27b3252) to 6.5.0 (ab5f354)
-* Update Tornado Web Server 6.5.0 (ab5f354) to 6.5.1 (b5586f3)
-* Update deprecated pkg_resources 24.0 to Packaging 24.2 (d8e3b31)
-* Update urllib3 2.2.2 (27e2a5c) to 2.3.0 (2f68c53)
-* Change add typing-extensions 4.12.2 (8184ac6) for BSoup
 
 
 ### 3.33.15 (2025-08-12 15:45:00 UTC)
