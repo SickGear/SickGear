@@ -776,7 +776,9 @@ class BaseIOStream:
         except asyncio.CancelledError:
             raise
         except Exception as e:
-            gen_log.warning("error on read: %s" % e)
+            # if 1 != e.errno:
+            if errno.EPERM is not errno_from_exception(e):
+                gen_log.warning("error on read: %s" % e)
             self.close(exc_info=e)
             return
         if pos is not None:
