@@ -7,6 +7,11 @@
 
 
 
+### 3.34.1 (2025-08-14 23:05:00 UTC)
+
+* Change add support for Python 3.13.7
+
+
 ### 3.34.0 (2025-08-14 00:10:00 UTC)
 
 * Update apprise 1.8.0 (81caf92) to 1.9.2 (a2a2216)
