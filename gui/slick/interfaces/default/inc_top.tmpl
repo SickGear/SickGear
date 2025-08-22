@@ -371,19 +371,17 @@
 #end if
 ##
 #set $py_ver = sys.version_info[:3]
-#if $py_ver in [(3, 9, 3), (3, 8, 1), (3, 7, 6)]:
+#set $py_ver_str = '.'.join(map(str, $py_ver[:2]))
+#set $is_no_py = $py_ver[:2] in [(3, 9), (3, 8)]
+#if $is_no_py or $py_ver in [(3, 8, 1)]:
 	<div class="alert alert-danger topbar-notification upgrade-py" role="alert">
-    #if (3, 9, 3) == $py_ver:
-		<p>Your installed Python 3.9.3 has been <a href="<%= anon_url('https://bugs.python.org/issue43710') %>" onclick="window.open(this.href);return !1;">recalled</a> due to breakage with C extensions<br>
-			Please replace with Python <b>3.9.4</b>: <a href="<%= anon_url('https://www.python.org/downloads/') %>" onclick="window.open(this.href);return !1;">download here</a>
+    #if $is_no_py:
+		<p>Your installed Python $py_ver_str is not supported and will soon be deprecated.<br>
+			Please replace with newest of Python <b>3.13, 3.12, 3.11, or 3.10</b>: <a href="<%= anon_url('https://www.python.org/downloads/') %>" onclick="window.open(this.href);return !1;">download here</a>
 		</p>
     #elif (3, 8, 1) == $py_ver:
 		<p>Your installed Python 3.8.1 has a <a href="<%= anon_url('https://github.com/python/cpython/commit/ea316fd21527dec53e704a5b04833ac462ce3863') %>" onclick="window.open(this.href);return !1;">critical issue</a> affecting the parsing of URLs<br>
 			Please replace with Python <b>3.8.2</b>, <b>3.8.0</b>, or older: <a href="<%= anon_url('https://www.python.org/downloads/') %>" onclick="window.open(this.href);return !1;">download here</a>
-		</p>
-    #else if (3, 7, 6) == $py_ver:
-		<p>Your installed Python 3.7.6 has a <a href="<%= anon_url('https://github.com/python/cpython/commit/505b6015a1579fc50d9697e4a285ecc64976397a') %>" onclick="window.open(this.href);return !1;">critical issue</a> affecting the parsing of URLs<br>
-			Please replace with Python <b>3.7.7</b>, <b>3.7.5</b>, or older: <a href="<%= anon_url('https://www.python.org/downloads/') %>" onclick="window.open(this.href);return !1;">download here</a>
 		</p>
     #end if
 	</div>
