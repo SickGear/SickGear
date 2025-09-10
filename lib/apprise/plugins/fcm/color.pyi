@@ -1,0 +1,13 @@
+from ...asset import AppriseAsset as AppriseAsset
+from ...common import NotifyType as NotifyType
+from ...utils.parse import parse_bool as parse_bool
+from _typeshed import Incomplete
+
+class FCMColorManager:
+    __color_rgb: Incomplete
+    asset: Incomplete
+    color: Incomplete
+    def __init__(self, color, asset=None) -> None: ...
+    def get(self, notify_type=...): ...
+    def __str__(self) -> str: ...
+    def __bool__(self) -> bool: ...

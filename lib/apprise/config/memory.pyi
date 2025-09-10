@@ -1,0 +1,13 @@
+from .base import ConfigBase as ConfigBase
+from _typeshed import Incomplete
+
+class ConfigMemory(ConfigBase):
+    service_name: Incomplete
+    protocol: str
+    content: Incomplete
+    config_format: Incomplete
+    def __init__(self, content, **kwargs) -> None: ...
+    def url(self, privacy: bool = False, *args, **kwargs): ...
+    def read(self, **kwargs): ...
+    @staticmethod
+    def parse_url(url) -> None: ...
