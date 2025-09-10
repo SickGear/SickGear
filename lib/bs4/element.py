@@ -550,8 +550,8 @@ class PageElement(object):
     getText = get_text
     text = property(get_text)
 
-    def replace_with(self, *args: PageElement) -> Self:
-        """Replace this `PageElement` with one or more other `PageElement`,
+    def replace_with(self, *args: _InsertableElement) -> Self:
+        """Replace this `PageElement` with one or more other elements,
         objects, keeping the rest of the tree the same.
 
         :return: This `PageElement`, no longer part of the tree.
@@ -651,6 +651,7 @@ class PageElement(object):
             next_up = e.next_element
             e.__dict__.clear()
             if isinstance(e, Tag):
+                e.name = ""
                 e.contents = []
             e._decomposed = True
             e = next_up
@@ -1512,7 +1513,7 @@ class Doctype(PreformattedString):
 
     @classmethod
     def _string_for_name_and_ids(
-        self, name: str, pub_id: Optional[str], system_id: Optional[str]
+        cls, name: str, pub_id: Optional[str], system_id: Optional[str]
     ) -> str:
         """Generate a string to be used as the basis of a Doctype object.
 

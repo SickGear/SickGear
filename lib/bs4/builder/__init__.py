@@ -136,7 +136,7 @@ class TreeBuilderRegistry(object):
                 if candidates is None:
                     candidates = we_have_the_feature
                     candidate_set = set(candidates)
-                else:
+                elif candidate_set is not None:
                     # Eliminate any candidates that don't have this feature.
                     candidate_set = candidate_set.intersection(set(we_have_the_feature))
 
@@ -508,7 +508,7 @@ class HTMLTreeBuilder(TreeBuilder):
 
     #: Some HTML tags are defined as having no contents. Beautiful Soup
     #: treats these specially.
-    DEFAULT_EMPTY_ELEMENT_TAGS: Set[str] = set(
+    DEFAULT_EMPTY_ELEMENT_TAGS: Optional[Set[str]] = set(
         [
             # These are from HTML5.
             "area",

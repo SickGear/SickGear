@@ -98,7 +98,7 @@ class LXMLTreeBuilderForXML(TreeBuilder):
     DEFAULT_NSMAPS_INVERTED: _InvertedNamespaceMapping = _invert(DEFAULT_NSMAPS)
 
     nsmaps: List[Optional[_InvertedNamespaceMapping]]
-    empty_element_tags: Set[str]
+    empty_element_tags: Optional[Set[str]]
     parser: Any
     _default_parser: Optional[etree.XMLParser]
 
@@ -194,11 +194,10 @@ class LXMLTreeBuilderForXML(TreeBuilder):
     def _getNsTag(self, tag: str) -> Tuple[Optional[str], str]:
         # Split the namespace URL out of a fully-qualified lxml tag
         # name. Copied from lxml's src/lxml/sax.py.
-        if tag[0] == "{":
+        if tag[0] == "{" and "}" in tag:
             namespace, name = tag[1:].split("}", 1)
             return (namespace, name)
-        else:
-            return (None, tag)
+        return (None, tag)
 
     def prepare_markup(
         self,
@@ -315,7 +314,7 @@ class LXMLTreeBuilderForXML(TreeBuilder):
     def start(
         self,
         tag: str | bytes,
-        attrs: Dict[str | bytes, str | bytes],
+        attrib: Dict[str | bytes, str | bytes],
         nsmap: _NamespaceMapping = {},
     ) -> None:
         # This is called by lxml code as a result of calling
@@ -330,13 +329,13 @@ class LXMLTreeBuilderForXML(TreeBuilder):
         # need a mutable dict--lxml might send us an immutable
         # dictproxy. Third, so we can handle namespaced attribute
         # names by converting the keys to NamespacedAttributes.
-        new_attrs: Dict[Union[str, NamespacedAttribute], str] = (
+        new_attrib: Dict[Union[str, NamespacedAttribute], str] = (
             self.attribute_dict_class()
         )
-        for k, v in attrs.items():
+        for k, v in attrib.items():
             assert isinstance(k, str)
             assert isinstance(v, str)
-            new_attrs[k] = v
+            new_attrib[k] = v
 
         nsprefix: Optional[_NamespacePrefix] = None
         namespace: Optional[_NamespaceURL] = None
@@ -376,20 +375,20 @@ class LXMLTreeBuilderForXML(TreeBuilder):
                 attribute = NamespacedAttribute(
                     "xmlns", prefix, "http://www.w3.org/2000/xmlns/"
                 )
-                new_attrs[attribute] = namespace
+                new_attrib[attribute] = namespace
 
         # Namespaces are in play. Find any attributes that came in
         # from lxml with namespaces attached to their names, and
         # turn then into NamespacedAttribute objects.
-        final_attrs: AttributeDict = self.attribute_dict_class()
-        for attr, value in list(new_attrs.items()):
+        final_attrib: AttributeDict = self.attribute_dict_class()
+        for attr, value in list(new_attrib.items()):
             namespace, attr = self._getNsTag(attr)
             if namespace is None:
-                final_attrs[attr] = value
+                final_attrib[attr] = value
             else:
                 nsprefix = self._prefix_for_namespace(namespace)
                 attr = NamespacedAttribute(nsprefix, attr, namespace)
-                final_attrs[attr] = value
+                final_attrib[attr] = value
 
         namespace, tag = self._getNsTag(tag)
         nsprefix = self._prefix_for_namespace(namespace)
@@ -397,7 +396,7 @@ class LXMLTreeBuilderForXML(TreeBuilder):
             tag,
             namespace,
             nsprefix,
-            final_attrs,
+            final_attrib,
             namespaces=self.active_namespace_prefixes[-1],
         )
 
@@ -412,18 +411,18 @@ class LXMLTreeBuilderForXML(TreeBuilder):
                 return inverted_nsmap[namespace]
         return None
 
-    def end(self, name: str | bytes) -> None:
+    def end(self, tag: str | bytes) -> None:
         assert self.soup is not None
-        assert isinstance(name, str)
+        assert isinstance(tag, str)
         self.soup.endData()
-        namespace, name = self._getNsTag(name)
+        namespace, tag = self._getNsTag(tag)
         nsprefix = None
         if namespace is not None:
             for inverted_nsmap in reversed(self.nsmaps):
                 if inverted_nsmap is not None and namespace in inverted_nsmap:
                     nsprefix = inverted_nsmap[namespace]
                     break
-        self.soup.handle_endtag(name, nsprefix)
+        self.soup.handle_endtag(tag, nsprefix)
         if len(self.nsmaps) > 1:
             # This tag, or one of its parents, introduced a namespace
             # mapping, so pop it off the stack.

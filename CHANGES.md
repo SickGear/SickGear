@@ -1,6 +1,7 @@
 ﻿### 3.35.0 (202x-xx-xx xx:xx:00 UTC)
 
 * Change add support for Python 3.14.0 and add to unittest matrix
+* Update Beautiful Soup 4.13.4 (9752e85) to 4.13.5 (70c7473)
 
 
 [develop]
