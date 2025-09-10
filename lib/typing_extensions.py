@@ -14,6 +14,7 @@ import types as _types
 import typing
 import warnings
 
+# Breakpoint: https://github.com/python/cpython/pull/119891
 if sys.version_info >= (3, 14):
     import annotationlib
 
@@ -70,6 +71,7 @@ __all__ = [
     'clear_overloads',
     'dataclass_transform',
     'deprecated',
+    'disjoint_base',
     'Doc',
     'evaluate_forward_ref',
     'get_overloads',
@@ -100,6 +102,7 @@ __all__ = [
     'TypeGuard',
     'TypeIs',
     'TYPE_CHECKING',
+    'type_repr',
     'Never',
     'NoReturn',
     'ReadOnly',
@@ -151,23 +154,56 @@ __all__ = [
 # for backward compatibility
 PEP_560 = True
 GenericMeta = type
+# Breakpoint: https://github.com/python/cpython/pull/116129
 _PEP_696_IMPLEMENTED = sys.version_info >= (3, 13, 0, "beta")
 
 # Added with bpo-45166 to 3.10.1+ and some 3.9 versions
 _FORWARD_REF_HAS_CLASS = "__forward_is_class__" in typing.ForwardRef.__slots__
 
+class Sentinel:
+    """Create a unique sentinel object.
+
+    *name* should be the name of the variable to which the return value shall be assigned.
+
+    *repr*, if supplied, will be used for the repr of the sentinel object.
+    If not provided, "<name>" will be used.
+    """
+
+    def __init__(
+        self,
+        name: str,
+        repr: typing.Optional[str] = None,
+    ):
+        self._name = name
+        self._repr = repr if repr is not None else f'<{name}>'
+
+    def __repr__(self):
+        return self._repr
+
+    if sys.version_info < (3, 11):
+        # The presence of this method convinces typing._type_check
+        # that Sentinels are types.
+        def __call__(self, *args, **kwargs):
+            raise TypeError(f"{type(self).__name__!r} object is not callable")
+
+    # Breakpoint: https://github.com/python/cpython/pull/21515
+    if sys.version_info >= (3, 10):
+        def __or__(self, other):
+            return typing.Union[self, other]
+
+        def __ror__(self, other):
+            return typing.Union[other, self]
+
+    def __getstate__(self):
+        raise TypeError(f"Cannot pickle {type(self).__name__!r} object")
+
+
+_marker = Sentinel("sentinel")
+
 # The functions below are modified copies of typing internal helpers.
 # They are needed by _ProtocolMeta and they provide support for PEP 646.
 
-
-class _Sentinel:
-    def __repr__(self):
-        return "<sentinel>"
-
-
-_marker = _Sentinel()
-
-
+# Breakpoint: https://github.com/python/cpython/pull/27342
 if sys.version_info >= (3, 10):
     def _should_collect_from_parameters(t):
         return isinstance(
@@ -189,6 +225,7 @@ T_co = typing.TypeVar('T_co', covariant=True)  # Any type covariant containers.
 T_contra = typing.TypeVar('T_contra', contravariant=True)  # Ditto contravariant.
 
 
+# Breakpoint: https://github.com/python/cpython/pull/31841
 if sys.version_info >= (3, 11):
     from typing import Any
 else:
@@ -277,6 +314,7 @@ class _ExtensionsSpecialForm(typing._SpecialForm, _root=True):
 
 Final = typing.Final
 
+# Breakpoint: https://github.com/python/cpython/pull/30530
 if sys.version_info >= (3, 11):
     final = typing.final
 else:
@@ -315,11 +353,39 @@ else:
         return f
 
 
+if hasattr(typing, "disjoint_base"):  # 3.15
+    disjoint_base = typing.disjoint_base
+else:
+    def disjoint_base(cls):
+        """This decorator marks a class as a disjoint base.
+
+        Child classes of a disjoint base cannot inherit from other disjoint bases that are
+        not parent classes of the disjoint base.
+
+        For example:
+
+            @disjoint_base
+            class Disjoint1: pass
+
+            @disjoint_base
+            class Disjoint2: pass
+
+            class Disjoint3(Disjoint1, Disjoint2): pass  # Type checker error
+
+        Type checkers can use knowledge of disjoint bases to detect unreachable code
+        and determine when two types can overlap.
+
+        See PEP 800."""
+        cls.__disjoint_base__ = True
+        return cls
+
+
 def IntVar(name):
     return typing.TypeVar(name)
 
 
 # A Literal bug was fixed in 3.11.0, 3.10.1 and 3.9.8
+# Breakpoint: https://github.com/python/cpython/pull/29334
 if sys.version_info >= (3, 10, 1):
     Literal = typing.Literal
 else:
@@ -480,6 +546,7 @@ Text = typing.Text
 TYPE_CHECKING = typing.TYPE_CHECKING
 
 
+# Breakpoint: https://github.com/python/cpython/pull/118681
 if sys.version_info >= (3, 13, 0, "beta"):
     from typing import AsyncContextManager, AsyncGenerator, ContextManager, Generator
 else:
@@ -488,7 +555,9 @@ else:
 
 
     class _SpecialGenericAlias(typing._SpecialGenericAlias, _root=True):
-        def __init__(self, origin, nparams, *, inst=True, name=None, defaults=()):
+        def __init__(self, origin, nparams, *, defaults, inst=True, name=None):
+            assert nparams > 0, "`nparams` must be a positive integer"
+            assert defaults, "Must always specify a non-empty sequence for `defaults`"
             super().__init__(origin, nparams, inst=inst, name=name)
             self._defaults = defaults
 
@@ -506,20 +575,14 @@ else:
             msg = "Parameters to generic types must be types."
             params = tuple(typing._type_check(p, msg) for p in params)
             if (
-                self._defaults
-                and len(params) < self._nparams
+                len(params) < self._nparams
                 and len(params) + len(self._defaults) >= self._nparams
             ):
                 params = (*params, *self._defaults[len(params) - self._nparams:])
             actual_len = len(params)
 
             if actual_len != self._nparams:
-                if self._defaults:
-                    expected = f"at least {self._nparams - len(self._defaults)}"
-                else:
-                    expected = str(self._nparams)
-                if not self._nparams:
-                    raise TypeError(f"{self} is not a generic class")
+                expected = f"at least {self._nparams - len(self._defaults)}"
                 raise TypeError(
                     f"Too {'many' if actual_len > self._nparams else 'few'}"
                     f" arguments for {self};"
@@ -590,6 +653,7 @@ def _caller(depth=1, default='__main__'):
 
 # `__match_args__` attribute was removed from protocol members in 3.13,
 # we want to backport this change to older Python versions.
+# Breakpoint: https://github.com/python/cpython/pull/110683
 if sys.version_info >= (3, 13):
     Protocol = typing.Protocol
 else:
@@ -770,6 +834,7 @@ else:
                 cls.__init__ = _no_init
 
 
+# Breakpoint: https://github.com/python/cpython/pull/113401
 if sys.version_info >= (3, 13):
     runtime_checkable = typing.runtime_checkable
 else:
@@ -830,6 +895,7 @@ runtime = runtime_checkable
 
 
 # Our version of runtime-checkable protocols is faster on Python <=3.11
+# Breakpoint: https://github.com/python/cpython/pull/112717
 if sys.version_info >= (3, 12):
     SupportsInt = typing.SupportsInt
     SupportsFloat = typing.SupportsFloat
@@ -1159,6 +1225,7 @@ else:
                     mutable_keys.add(annotation_key)
                     readonly_keys.discard(annotation_key)
 
+            # Breakpoint: https://github.com/python/cpython/pull/119891
             if sys.version_info >= (3, 14):
                 def __annotate__(format):
                     annos = {}
@@ -1249,6 +1316,7 @@ else:
             raise TypeError("TypedDict takes either a dict or keyword arguments,"
                             " but not both")
         if kwargs:
+            # Breakpoint: https://github.com/python/cpython/pull/104891
             if sys.version_info >= (3, 13):
                 raise TypeError("TypedDict takes no keyword arguments")
             warnings.warn(
@@ -1458,6 +1526,7 @@ else:  # <=3.13
         hint = typing.get_type_hints(
             obj, globalns=globalns, localns=localns, include_extras=True
         )
+        # Breakpoint: https://github.com/python/cpython/pull/30304
         if sys.version_info < (3, 11):
             _clean_optional(obj, hint, globalns, localns)
         if include_extras:
@@ -1530,7 +1599,8 @@ else:  # <=3.13
 
 # Python 3.9 has get_origin() and get_args() but those implementations don't support
 # ParamSpecArgs and ParamSpecKwargs, so only Python 3.10's versions will do.
-if sys.version_info[:2] >= (3, 10):
+# Breakpoint: https://github.com/python/cpython/pull/25298
+if sys.version_info >= (3, 10):
     get_origin = typing.get_origin
     get_args = typing.get_args
 # 3.9
@@ -1886,6 +1956,9 @@ else:
         def __call__(self, *args, **kwargs):
             pass
 
+        def __init_subclass__(cls) -> None:
+            raise TypeError(f"type '{__name__}.ParamSpec' is not an acceptable base type")
+
 
 # 3.9
 if not hasattr(typing, 'Concatenate'):
@@ -1913,7 +1986,9 @@ if not hasattr(typing, 'Concatenate'):
         __class__ = typing._GenericAlias
 
         def __init__(self, origin, args):
-            super().__init__(args)
+            # Cannot use `super().__init__` here because of the `__class__` assignment
+            # in the class body (https://github.com/python/typing_extensions/issues/661)
+            list.__init__(self, args)
             self.__origin__ = origin
             self.__args__ = args
 
@@ -2096,6 +2171,7 @@ def _concatenate_getitem(self, parameters):
 
 
 # 3.11+; Concatenate does not accept ellipsis in 3.10
+# Breakpoint: https://github.com/python/cpython/pull/30969
 if sys.version_info >= (3, 11):
     Concatenate = typing.Concatenate
 # <=3.10
@@ -2432,7 +2508,9 @@ For more information, see PEP 646 and PEP 692.
 """
 
 
-if sys.version_info >= (3, 12):  # PEP 692 changed the repr of Unpack[]
+# PEP 692 changed the repr of Unpack[]
+# Breakpoint: https://github.com/python/cpython/pull/104048
+if sys.version_info >= (3, 12):
     Unpack = typing.Unpack
 
     def _is_unpack(obj):
@@ -2469,7 +2547,10 @@ else:  # <=3.11
         def __getitem__(self, args):
             if self.__typing_is_unpacked_typevartuple__:
                 return args
-            return super().__getitem__(args)
+            # Cannot use `super().__getitem__` here because of the `__class__` assignment
+            # in the class body on Python <=3.11
+            # (https://github.com/python/typing_extensions/issues/661)
+            return typing._GenericAlias.__getitem__(self, args)
 
     @_UnpackSpecialForm
     def Unpack(self, parameters):
@@ -2695,8 +2776,9 @@ else:  # <=3.10
         raise AssertionError(f"Expected code to be unreachable, but got: {value}")
 
 
+# dataclass_transform exists in 3.11 but lacks the frozen_default parameter
+# Breakpoint: https://github.com/python/cpython/pull/99958
 if sys.version_info >= (3, 12):  # 3.12+
-    # dataclass_transform exists in 3.11 but lacks the frozen_default parameter
     dataclass_transform = typing.dataclass_transform
 else:  # <=3.11
     def dataclass_transform(
@@ -2826,8 +2908,9 @@ else:  # <=3.11
         return arg
 
 
-# Python 3.13.3+ contains a fix for the wrapped __new__
-if sys.version_info >= (3, 13, 3):
+# Python 3.13.8+ and 3.14.1+ contain a fix for the wrapped __init_subclass__
+# Breakpoint: https://github.com/python/cpython/pull/138210
+if ((3, 13, 8) <= sys.version_info < (3, 14)) or sys.version_info >= (3, 14, 1):
     deprecated = warnings.deprecated
 else:
     _T = typing.TypeVar("_T")
@@ -2920,27 +3003,27 @@ else:
 
                 arg.__new__ = staticmethod(__new__)
 
-                original_init_subclass = arg.__init_subclass__
-                # We need slightly different behavior if __init_subclass__
-                # is a bound method (likely if it was implemented in Python)
-                if isinstance(original_init_subclass, MethodType):
-                    original_init_subclass = original_init_subclass.__func__
+                if "__init_subclass__" in arg.__dict__:
+                    # __init_subclass__ is directly present on the decorated class.
+                    # Synthesize a wrapper that calls this method directly.
+                    original_init_subclass = arg.__init_subclass__
+                    # We need slightly different behavior if __init_subclass__
+                    # is a bound method (likely if it was implemented in Python).
+                    # Otherwise, it likely means it's a builtin such as
+                    # object's implementation of __init_subclass__.
+                    if isinstance(original_init_subclass, MethodType):
+                        original_init_subclass = original_init_subclass.__func__
 
                     @functools.wraps(original_init_subclass)
                     def __init_subclass__(*args, **kwargs):
                         warnings.warn(msg, category=category, stacklevel=stacklevel + 1)
                         return original_init_subclass(*args, **kwargs)
-
-                    arg.__init_subclass__ = classmethod(__init_subclass__)
-                # Or otherwise, which likely means it's a builtin such as
-                # object's implementation of __init_subclass__.
                 else:
-                    @functools.wraps(original_init_subclass)
-                    def __init_subclass__(*args, **kwargs):
+                    def __init_subclass__(cls, *args, **kwargs):
                         warnings.warn(msg, category=category, stacklevel=stacklevel + 1)
-                        return original_init_subclass(*args, **kwargs)
+                        return super(arg, cls).__init_subclass__(*args, **kwargs)
 
-                    arg.__init_subclass__ = __init_subclass__
+                arg.__init_subclass__ = classmethod(__init_subclass__)
 
                 arg.__deprecated__ = __new__.__deprecated__ = msg
                 __init_subclass__.__deprecated__ = msg
@@ -2956,6 +3039,7 @@ else:
                     return arg(*args, **kwargs)
 
                 if asyncio.coroutines.iscoroutinefunction(arg):
+                    # Breakpoint: https://github.com/python/cpython/pull/99247
                     if sys.version_info >= (3, 12):
                         wrapper = inspect.markcoroutinefunction(wrapper)
                     else:
@@ -2969,6 +3053,7 @@ else:
                     f"a class or callable, not {arg!r}"
                 )
 
+# Breakpoint: https://github.com/python/cpython/pull/23702
 if sys.version_info < (3, 10):
     def _is_param_expr(arg):
         return arg is ... or isinstance(
@@ -3045,6 +3130,7 @@ if not hasattr(typing, "TypeVarTuple"):
 
                     expect_val = f"at least {elen}"
 
+            # Breakpoint: https://github.com/python/cpython/pull/27515
             things = "arguments" if sys.version_info >= (3, 10) else "parameters"
             raise TypeError(f"Too {'many' if alen > elen else 'few'} {things}"
                             f" for {cls}; actual {alen}, expected {expect_val}")
@@ -3238,6 +3324,7 @@ else:
 # This was explicitly disallowed in 3.9-3.10, and only half-worked in <=3.8.
 # On 3.12, we added __orig_bases__ to call-based NamedTuples
 # On 3.13, we deprecated kwargs-based NamedTuples
+# Breakpoint: https://github.com/python/cpython/pull/105609
 if sys.version_info >= (3, 13):
     NamedTuple = typing.NamedTuple
 else:
@@ -3313,6 +3400,7 @@ else:
                             # using add_note() until py312.
                             # Making sure exceptions are raised in the same way
                             # as in "normal" classes seems most important here.
+                            # Breakpoint: https://github.com/python/cpython/pull/95915
                             if sys.version_info >= (3, 12):
                                 e.add_note(msg)
                                 raise
@@ -3461,6 +3549,7 @@ else:
 
 # NewType is a class on Python 3.10+, making it pickleable
 # The error message for subclassing instances of NewType was improved on 3.11+
+# Breakpoint: https://github.com/python/cpython/pull/30268
 if sys.version_info >= (3, 11):
     NewType = typing.NewType
 else:
@@ -3513,6 +3602,7 @@ else:
         def __reduce__(self):
             return self.__qualname__
 
+        # Breakpoint: https://github.com/python/cpython/pull/21515
         if sys.version_info >= (3, 10):
             # PEP 604 methods
             # It doesn't make sense to have these methods on Python <3.10
@@ -3524,10 +3614,12 @@ else:
                 return typing.Union[other, self]
 
 
+# Breakpoint: https://github.com/python/cpython/pull/124795
 if sys.version_info >= (3, 14):
     TypeAliasType = typing.TypeAliasType
 # <=3.13
 else:
+    # Breakpoint: https://github.com/python/cpython/pull/103764
     if sys.version_info >= (3, 12):
         # 3.12-3.13
         def _is_unionable(obj):
@@ -3723,6 +3815,7 @@ else:
         def __call__(self):
             raise TypeError("Type alias is not callable")
 
+        # Breakpoint: https://github.com/python/cpython/pull/21515
         if sys.version_info >= (3, 10):
             def __or__(self, right):
                 # For forward compatibility with 3.12, reject Unions
@@ -3835,15 +3928,19 @@ if _CapsuleType is not None:
     __all__.append("CapsuleType")
 
 
-if sys.version_info >= (3,14):
+if sys.version_info >= (3, 14):
     from annotationlib import Format, get_annotations
 else:
+    # Available since Python 3.14.0a3
+    # PR: https://github.com/python/cpython/pull/124415
     class Format(enum.IntEnum):
         VALUE = 1
         VALUE_WITH_FAKE_GLOBALS = 2
         FORWARDREF = 3
         STRING = 4
 
+    # Available since Python 3.14.0a1
+    # PR: https://github.com/python/cpython/pull/119891
     def get_annotations(obj, *, globals=None, locals=None, eval_str=False,
                         format=Format.VALUE):
         """Compute the annotations dict for an object.
@@ -4031,23 +4128,13 @@ else:
             # as a way of emulating annotation scopes when calling `eval()`
             type_params = getattr(owner, "__type_params__", None)
 
-        # type parameters require some special handling,
-        # as they exist in their own scope
-        # but `eval()` does not have a dedicated parameter for that scope.
-        # For classes, names in type parameter scopes should override
-        # names in the global scope (which here are called `localns`!),
-        # but should in turn be overridden by names in the class scope
-        # (which here are called `globalns`!)
+        # Type parameters exist in their own scope, which is logically
+        # between the locals and the globals. We simulate this by adding
+        # them to the globals.
         if type_params is not None:
             globals = dict(globals)
-            locals = dict(locals)
             for param in type_params:
-                param_name = param.__name__
-                if (
-                    _FORWARD_REF_HAS_CLASS and not forward_ref.__forward_is_class__
-                ) or param_name not in globals:
-                    globals[param_name] = param
-                    locals.pop(param_name, None)
+                globals[param.__name__] = param
 
         arg = forward_ref.__forward_arg__
         if arg.isidentifier() and not keyword.iskeyword(arg):
@@ -4155,41 +4242,24 @@ else:
             )
 
 
-class Sentinel:
-    """Create a unique sentinel object.
+if sys.version_info >= (3, 14, 0, "beta"):
+    type_repr = annotationlib.type_repr
+else:
+    def type_repr(value):
+        """Convert a Python value to a format suitable for use with the STRING format.
 
-    *name* should be the name of the variable to which the return value shall be assigned.
+        This is intended as a helper for tools that support the STRING format but do
+        not have access to the code that originally produced the annotations. It uses
+        repr() for most objects.
 
-    *repr*, if supplied, will be used for the repr of the sentinel object.
-    If not provided, "<name>" will be used.
-    """
-
-    def __init__(
-        self,
-        name: str,
-        repr: typing.Optional[str] = None,
-    ):
-        self._name = name
-        self._repr = repr if repr is not None else f'<{name}>'
-
-    def __repr__(self):
-        return self._repr
-
-    if sys.version_info < (3, 11):
-        # The presence of this method convinces typing._type_check
-        # that Sentinels are types.
-        def __call__(self, *args, **kwargs):
-            raise TypeError(f"{type(self).__name__!r} object is not callable")
-
-    if sys.version_info >= (3, 10):
-        def __or__(self, other):
-            return typing.Union[self, other]
-
-        def __ror__(self, other):
-            return typing.Union[other, self]
-
-    def __getstate__(self):
-        raise TypeError(f"Cannot pickle {type(self).__name__!r} object")
+        """
+        if isinstance(value, (type, _types.FunctionType, _types.BuiltinFunctionType)):
+            if value.__module__ == "builtins":
+                return value.__qualname__
+            return f"{value.__module__}.{value.__qualname__}"
+        if value is ...:
+            return "..."
+        return repr(value)
 
 
 # Aliases for items that are in typing in all supported versions.
