@@ -2,6 +2,7 @@
 
 * Change add support for Python 3.14.0 and add to unittest matrix
 * Update Beautiful Soup 4.13.4 (9752e85) to 4.13.5 (70c7473)
+* Update soupsieve 2.7.0 (a616022) to 2.8.0 (bf93778)
 * Update typing-extensions 4.14.0 (59d2c20) to 4.15.0 (9215c95)
 
 
