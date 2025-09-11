@@ -1,0 +1,26 @@
+from ..apprise_attachment import AppriseAttachment as AppriseAttachment
+from ..asset import AppriseAsset as AppriseAsset
+from ..exception import ApprisePluginException as ApprisePluginException
+from ..logger import logger as logger
+from _typeshed import Incomplete
+
+PGP_SUPPORT: bool
+
+class ApprisePGPException(ApprisePluginException):
+    def __init__(self, message, error_code: int = 602) -> None: ...
+
+class ApprisePGPController:
+    max_pgp_public_key_size: int
+    __key_lookup: Incomplete
+    path: Incomplete
+    email: Incomplete
+    asset: Incomplete
+    _pub_keyfile: Incomplete
+    def __init__(self, path, pub_keyfile=None, email=None, asset=None, **kwargs) -> None: ...
+    def keygen(self, email=None, name=None, force: bool = False): ...
+    def public_keyfile(self, *emails): ...
+    def public_key(self, *emails, autogen=None): ...
+    def encrypt(self, message, *emails): ...
+    def prune(self) -> None: ...
+    @property
+    def pub_keyfile(self): ...
