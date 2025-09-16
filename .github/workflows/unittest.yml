@@ -15,13 +15,13 @@ jobs:
       matrix:
         os:
           - windows-latest
-        python-version: ['3.9', '3.10', '3.11', '3.12', '3.13', '3.14-dev']
+        python-version: ['3.9', '3.10', '3.11', '3.12', '3.13', '3.14']
     steps:
       - name: 'Set up Python ${{ matrix.python-version }}'
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '${{ matrix.python-version }}'
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v5
       - run: pip install responses
       - run: pip install -r requirements.txt
       - run: pip install coveralls
@@ -34,13 +34,13 @@ jobs:
       matrix:
         os:
           - ubuntu-latest
-        python-version: ['3.9', '3.10', '3.11', '3.12', '3.13']
+        python-version: ['3.9', '3.10', '3.11', '3.12', '3.13', '3.14']
     steps:
       - name: 'Set up Python ${{ matrix.python-version }}'
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '${{ matrix.python-version }}'
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v5
       - run: export BOTO_CONFIG=/dev/null
       - run: 'export PYTHONPATH=$PYTHONPATH:$(pwd)'
       - run: pip install responses
@@ -55,13 +55,13 @@ jobs:
       matrix:
         os:
           - macos-latest
-        python-version: ['3.9', '3.10', '3.11', '3.12', '3.13']
+        python-version: ['3.9', '3.10', '3.11', '3.12', '3.13', '3.14']
     steps:
       - name: 'Set up Python ${{ matrix.python-version }}'
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '${{ matrix.python-version }}'
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v5
       - run: export BOTO_CONFIG=/dev/null
       - run: 'export PYTHONPATH=$PYTHONPATH:$(pwd)'
       - run: pip install responses
