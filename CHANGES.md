@@ -12,6 +12,11 @@
 
 
 
+### 3.34.4 (2025-10-11 22:40:00 UTC)
+
+* Change increase minimum auto upgrade version to Python 3.10.0 so that 3.9 installs no longer upgrade
+
+
 ### 3.34.3 (2025-10-11 21:50:00 UTC)
 
 * Change add support for Python 3.14.0
