@@ -1,4 +1,10 @@
-﻿### 3.34.2 (2025-08-22 17:45:00 UTC)
+﻿### 3.34.3 (2025-10-11 21:50:00 UTC)
+
+* Change add support for Python 3.14.0
+* Change remove support for Python 3.9 (Supporting Python; 3.10, 3.11, 3.12, 3.13, and 3.14)
+
+
+### 3.34.2 (2025-08-22 17:45:00 UTC)
 
 * Change warn that minimum supported Python is version 3.9. Support for 3.8 will be removed when Python 3.14 is added
 

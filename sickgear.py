@@ -37,8 +37,7 @@ warnings.filterwarnings('ignore', module=r'.*zoneinfo.*', message='.*file or dir
 warnings.filterwarnings('ignore', message='.*deprecated in cryptography.*')
 
 # noinspection DuplicatedCode
-versions = [((3, 9, 0), (3, 9, 2)), ((3, 9, 4), (3, 9, 23)),
-            ((3, 10, 0), (3, 13, 7))]  # inclusive version ranges
+versions = [((3, 10, 0), (3, 14, 0))]  # inclusive version ranges
 if not any(list(map(lambda v: v[0] <= sys.version_info[:3] <= v[1], versions))) and not int(os.environ.get('PYT', 0)):
     major, minor, micro = sys.version_info[:3]
     print(f'Python {major}.{minor}.{micro} detected.')
