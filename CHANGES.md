@@ -4,6 +4,7 @@
 * Update apprise 1.9.2 (a2a2216) to 1.9.4 (1d9e1e5)
 * Update Beautiful Soup 4.13.4 (9752e85) to 4.13.5 (70c7473)
 * Update feedparser 6.0.11 (89fde03) to 6.0.12 (5d2578b)
+* Update idna library 3.10 (729225d) to 3.11 (ad949ee)
 * Update soupsieve 2.7.0 (a616022) to 2.8.0 (bf93778)
 * Update typing-extensions 4.14.0 (59d2c20) to 4.15.0 (9215c95)
 
