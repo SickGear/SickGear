@@ -9,6 +9,7 @@ import re
 
 from json_helper import json_loads
 from sg_helpers import cmdline_runner, is_virtualenv
+from lib.requests.structures import CaseInsensitiveDict
 
 from six import iteritems
 
@@ -183,12 +184,14 @@ def _check_pip_env(pip_outdated=False, reset_fails=False):
         except (BaseException, Exception):
             pass
 
-    environment = {}
+    environment = CaseInsensitiveDict()
     from packaging.version import Version, parse
-    from importlib.metadata import distributions
-    for cur_distinfo in distributions():
+    from importlib.metadata import distributions, packages_distributions
+    distros = {d.metadata['Name']: d.metadata for d in distributions()}
+    for cur_package_name, cur_package_map in packages_distributions().items():
         try:
-            environment[cur_distinfo.metadata['Name']] = parse(cur_distinfo.metadata['Version'])  # type: Version
+            cur_distinfo = distros[cur_package_map[0]]
+            environment[cur_distinfo['Name']] = parse(cur_distinfo['Version'])  # type: Version
         except (BaseException, Exception):
             pass
 
@@ -234,7 +237,7 @@ def _check_pip_env(pip_outdated=False, reset_fails=False):
     if save_failed:
         save_ignorables(DATA_DIR, known_failed)
 
-    to_install = set(names_reco).difference(set(environment))
+    to_install = set(n for n in names_reco if n not in environment)
     fresh_install = len(to_install) == len(names_reco)
     installed = [(cur_name, getattr(environment.get(cur_name), 'public', '')) for cur_name in names_reco]
 
