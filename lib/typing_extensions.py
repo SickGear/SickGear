@@ -148,7 +148,6 @@ __all__ = [
     'ValuesView',
     'cast',
     'no_type_check',
-    'no_type_check_decorator',
 ]
 
 # for backward compatibility
@@ -2291,10 +2290,10 @@ else:
         return typing._GenericAlias(self, (item,))
 
 
-# 3.14+?
+# 3.15+?
 if hasattr(typing, 'TypeForm'):
     TypeForm = typing.TypeForm
-# <=3.13
+# <=3.14
 else:
     class _TypeFormForm(_ExtensionsSpecialForm, _root=True):
         # TypeForm(X) is equivalent to X but indicates to the type checker
@@ -3864,8 +3863,8 @@ else:
             >>> class P(Protocol):
             ...     def a(self) -> str: ...
             ...     b: int
-            >>> get_protocol_members(P)
-            frozenset({'a', 'b'})
+            >>> get_protocol_members(P) == frozenset({'a', 'b'})
+            True
 
         Raise a TypeError for arguments that are not Protocols.
         """
@@ -4312,3 +4311,7 @@ globals().update(
 Generic = typing.Generic
 ForwardRef = typing.ForwardRef
 Annotated = typing.Annotated
+
+# Breakpoint: https://github.com/python/cpython/pull/133602
+if sys.version_info < (3, 15, 0):
+    __all__.append("no_type_check_decorator")

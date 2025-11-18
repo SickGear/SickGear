@@ -7,13 +7,14 @@
 * Update feedparser 6.0.11 (89fde03) to 6.0.12 (5d2578b)
 * Update idna library 3.10 (729225d) to 3.11 (ad949ee)
 * Update soupsieve 2.7.0 (a616022) to 2.8.0 (bf93778)
-* Update typing-extensions 4.14.0 (59d2c20) to 4.15.0 (9215c95)
+* Update typing-extensions 4.14.0 (59d2c20) to 4.15.0 (2638b86)
 
 
 [develop]
 * Update apprise 1.9.4 (1d9e1e5) to 1.9.5 (19dfd14)
 * Update Beautiful Soup 4.13.5 (70c7473) to 4.14.2 (fc02060)
 * Update certifi 2025.10.05 to 2025.11.12
+* Update typing-extensions 4.15.0 (9215c95) to 4.15.0 (2638b86)
 
 
 
