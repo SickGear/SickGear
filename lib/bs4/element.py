@@ -28,6 +28,7 @@ from typing import (
     Iterator,
     List,
     Mapping,
+    MutableSequence,
     Optional,
     Pattern,
     Set,
@@ -54,6 +55,8 @@ if TYPE_CHECKING:
     )
     from ._typing import (
         _AtMostOneElement,
+        _AtMostOneTag,
+        _AtMostOneNavigableString,
         _AttributeValue,
         _AttributeValues,
         _Encoding,
@@ -65,6 +68,8 @@ if TYPE_CHECKING:
         _StrainableAttribute,
         _StrainableAttributes,
         _StrainableString,
+        _SomeNavigableStrings,
+        _SomeTags,
     )
 
 _OneOrMoreStringTypes: TypeAlias = Union[
@@ -746,13 +751,35 @@ class PageElement(object):
 
         return results
 
+    # For the suppression of this pyright warning, see discussion here:
+    # https://github.com/microsoft/pyright/issues/10929
+    @overload
+    def find_next( # pyright: ignore [reportOverlappingOverload]
+            self,
+            name: _FindMethodName = None,
+            attrs: Optional[_StrainableAttributes] = None,
+            string: None=None,
+            **kwargs: _StrainableAttribute,
+    ) -> _AtMostOneTag:
+        ...
+
+    @overload
+    def find_next(
+            self,
+            name: None=None,
+            attrs: None=None,
+            string: _StrainableString="",
+            **kwargs: _StrainableAttribute,
+    ) -> _AtMostOneNavigableString:
+        ...
+
     def find_next(
         self,
         name: _FindMethodName = None,
-        attrs: _StrainableAttributes = {},
+        attrs: Optional[_StrainableAttributes] = None,
         string: Optional[_StrainableString] = None,
         **kwargs: _StrainableAttribute,
-    ) -> _AtMostOneElement:
+    ) -> Union[_AtMostOneTag,_AtMostOneNavigableString,_AtMostOneElement]:
         """Find the first PageElement that matches the given criteria and
         appears later in the document than this PageElement.
 
@@ -768,15 +795,39 @@ class PageElement(object):
 
     findNext = _deprecated_function_alias("findNext", "find_next", "4.0.0")
 
+    @overload
+    def find_all_next( # pyright: ignore [reportOverlappingOverload]
+        self,
+        name: _FindMethodName = None,
+        attrs: Optional[_StrainableAttributes] = None,
+        string: None = None,
+        limit: Optional[int] = None,
+        _stacklevel: int = 2,
+        **kwargs: _StrainableAttribute,
+    ) -> _SomeTags:
+        ...
+
+    @overload
+    def find_all_next(
+        self,
+        name: None = None,
+        attrs: None = None,
+        string: _StrainableString = "",
+        limit: Optional[int] = None,
+        _stacklevel: int = 2,
+        **kwargs: _StrainableAttribute,
+    ) -> _SomeNavigableStrings:
+        ...
+
     def find_all_next(
         self,
         name: _FindMethodName = None,
-        attrs: _StrainableAttributes = {},
+        attrs: Optional[_StrainableAttributes] = None,
         string: Optional[_StrainableString] = None,
         limit: Optional[int] = None,
         _stacklevel: int = 2,
         **kwargs: _StrainableAttribute,
-    ) -> _QueryResults:
+    ) -> Union[_SomeTags,_SomeNavigableStrings,_QueryResults]:
         """Find all `PageElement` objects that match the given criteria and
         appear later in the document than this `PageElement`.
 
@@ -802,13 +853,33 @@ class PageElement(object):
 
     findAllNext = _deprecated_function_alias("findAllNext", "find_all_next", "4.0.0")
 
+    @overload
+    def find_next_sibling( # pyright: ignore [reportOverlappingOverload]
+            self,
+            name: _FindMethodName = None,
+            attrs: Optional[_StrainableAttributes] = None,
+            string: None=None,
+            **kwargs: _StrainableAttribute,
+    ) -> _AtMostOneTag:
+        ...
+
+    @overload
+    def find_next_sibling(
+            self,
+            name: None=None,
+            attrs: None=None,
+            string: _StrainableString="",
+            **kwargs: _StrainableAttribute,
+    ) -> _AtMostOneNavigableString:
+        ...
+
     def find_next_sibling(
         self,
         name: _FindMethodName = None,
-        attrs: _StrainableAttributes = {},
+        attrs: Optional[_StrainableAttributes] = None,
         string: Optional[_StrainableString] = None,
         **kwargs: _StrainableAttribute,
-    ) -> _AtMostOneElement:
+    ) -> Union[_AtMostOneTag,_AtMostOneNavigableString,_AtMostOneElement]:
         """Find the closest sibling to this PageElement that matches the
         given criteria and appears later in the document.
 
@@ -826,15 +897,39 @@ class PageElement(object):
         "findNextSibling", "find_next_sibling", "4.0.0"
     )
 
+    @overload
+    def find_next_siblings( # pyright: ignore [reportOverlappingOverload]
+        self,
+        name: _FindMethodName = None,
+        attrs: Optional[_StrainableAttributes] = None,
+        string: None = None,
+        limit: Optional[int] = None,
+        _stacklevel: int = 2,
+        **kwargs: _StrainableAttribute,
+    ) -> _SomeTags:
+        ...
+
+    @overload
+    def find_next_siblings(
+        self,
+        name: None = None,
+        attrs: None = None,
+        string: _StrainableString = "",
+        limit: Optional[int] = None,
+        _stacklevel: int = 2,
+        **kwargs: _StrainableAttribute,
+    ) -> _SomeNavigableStrings:
+        ...
+
     def find_next_siblings(
         self,
         name: _FindMethodName = None,
-        attrs: _StrainableAttributes = {},
+        attrs: Optional[_StrainableAttributes] = None,
         string: Optional[_StrainableString] = None,
         limit: Optional[int] = None,
         _stacklevel: int = 2,
         **kwargs: _StrainableAttribute,
-    ) -> _QueryResults:
+    ) -> Union[_SomeTags,_SomeNavigableStrings,_QueryResults]:
         """Find all siblings of this `PageElement` that match the given criteria
         and appear later in the document.
 
@@ -865,13 +960,33 @@ class PageElement(object):
         "fetchNextSiblings", "find_next_siblings", "3.0.0"
     )
 
+    @overload
+    def find_previous( # pyright: ignore [reportOverlappingOverload]
+            self,
+            name: _FindMethodName = None,
+            attrs: Optional[_StrainableAttributes] = None,
+            string: None=None,
+            **kwargs: _StrainableAttribute,
+    ) -> _AtMostOneTag:
+        ...
+
+    @overload
+    def find_previous(
+            self,
+            name: None=None,
+            attrs: None=None,
+            string: _StrainableString="",
+           **kwargs: _StrainableAttribute,
+    ) -> _AtMostOneNavigableString:
+        ...
+
     def find_previous(
         self,
         name: _FindMethodName = None,
-        attrs: _StrainableAttributes = {},
+        attrs: Optional[_StrainableAttributes] = None,
         string: Optional[_StrainableString] = None,
         **kwargs: _StrainableAttribute,
-    ) -> _AtMostOneElement:
+    ) -> Union[_AtMostOneTag,_AtMostOneNavigableString,_AtMostOneElement]:
         """Look backwards in the document from this `PageElement` and find the
         first `PageElement` that matches the given criteria.
 
@@ -887,15 +1002,39 @@ class PageElement(object):
 
     findPrevious = _deprecated_function_alias("findPrevious", "find_previous", "3.0.0")
 
+    @overload
+    def find_all_previous( # pyright: ignore [reportOverlappingOverload]
+        self,
+        name: _FindMethodName = None,
+        attrs: Optional[_StrainableAttributes] = None,
+        string: None = None,
+        limit: Optional[int] = None,
+        _stacklevel: int = 2,
+        **kwargs: _StrainableAttribute,
+    ) -> _SomeTags:
+        ...
+
+    @overload
+    def find_all_previous(
+        self,
+        name: None = None,
+        attrs: None = None,
+        string: _StrainableString = "",
+        limit: Optional[int] = None,
+        _stacklevel: int = 2,
+        **kwargs: _StrainableAttribute,
+    ) -> _SomeNavigableStrings:
+        ...
+
     def find_all_previous(
         self,
         name: _FindMethodName = None,
-        attrs: _StrainableAttributes = {},
+        attrs: Optional[_StrainableAttributes] = None,
         string: Optional[_StrainableString] = None,
         limit: Optional[int] = None,
         _stacklevel: int = 2,
         **kwargs: _StrainableAttribute,
-    ) -> _QueryResults:
+    ) -> Union[_SomeTags,_SomeNavigableStrings,_QueryResults]:
         """Look backwards in the document from this `PageElement` and find all
         `PageElement` that match the given criteria.
 
@@ -926,13 +1065,33 @@ class PageElement(object):
         "fetchAllPrevious", "find_all_previous", "3.0.0"
     )
 
+    @overload
+    def find_previous_sibling( # pyright: ignore [reportOverlappingOverload]
+            self,
+            name: _FindMethodName = None,
+            attrs: Optional[_StrainableAttributes] = None,
+            string: None=None,
+            **kwargs: _StrainableAttribute,
+    ) -> _AtMostOneTag:
+        ...
+
+    @overload
+    def find_previous_sibling(
+            self,
+            name: None=None,
+            attrs: None=None,
+            string: _StrainableString="",
+           **kwargs: _StrainableAttribute,
+    ) -> _AtMostOneNavigableString:
+        ...
+
     def find_previous_sibling(
         self,
         name: _FindMethodName = None,
-        attrs: _StrainableAttributes = {},
+        attrs: Optional[_StrainableAttributes] = None,
         string: Optional[_StrainableString] = None,
         **kwargs: _StrainableAttribute,
-    ) -> _AtMostOneElement:
+    ) -> Union[_AtMostOneTag,_AtMostOneNavigableString,_AtMostOneElement]:
         """Returns the closest sibling to this `PageElement` that matches the
         given criteria and appears earlier in the document.
 
@@ -952,15 +1111,39 @@ class PageElement(object):
         "findPreviousSibling", "find_previous_sibling", "4.0.0"
     )
 
+    @overload
+    def find_previous_siblings( # pyright: ignore [reportOverlappingOverload]
+        self,
+        name: _FindMethodName = None,
+        attrs: Optional[_StrainableAttributes] = None,
+        string: None = None,
+        limit: Optional[int] = None,
+        _stacklevel: int = 2,
+        **kwargs: _StrainableAttribute,
+    ) -> _SomeTags:
+        ...
+
+    @overload
+    def find_previous_siblings(
+        self,
+        name: None = None,
+        attrs: None = None,
+        string: _StrainableString = "",
+        limit: Optional[int] = None,
+        _stacklevel: int = 2,
+        **kwargs: _StrainableAttribute,
+    ) -> _SomeNavigableStrings:
+        ...
+
     def find_previous_siblings(
         self,
         name: _FindMethodName = None,
-        attrs: _StrainableAttributes = {},
+        attrs: Optional[_StrainableAttributes] = None,
         string: Optional[_StrainableString] = None,
         limit: Optional[int] = None,
         _stacklevel: int = 2,
         **kwargs: _StrainableAttribute,
-    ) -> _QueryResults:
+    ) -> Union[_SomeTags,_SomeNavigableStrings,_QueryResults]:
         """Returns all siblings to this PageElement that match the
         given criteria and appear earlier in the document.
 
@@ -994,9 +1177,9 @@ class PageElement(object):
     def find_parent(
         self,
         name: _FindMethodName = None,
-        attrs: _StrainableAttributes = {},
+        attrs: Optional[_StrainableAttributes] = None,
         **kwargs: _StrainableAttribute,
-    ) -> _AtMostOneElement:
+    ) -> _AtMostOneTag:
         """Find the closest parent of this PageElement that matches the given
         criteria.
 
@@ -1024,11 +1207,11 @@ class PageElement(object):
     def find_parents(
         self,
         name: _FindMethodName = None,
-        attrs: _StrainableAttributes = {},
+        attrs: Optional[_StrainableAttributes] = None,
         limit: Optional[int] = None,
         _stacklevel: int = 2,
         **kwargs: _StrainableAttribute,
-    ) -> _QueryResults:
+    ) -> _SomeTags:
         """Find all parents of this `PageElement` that match the given criteria.
 
         All find_* methods take a common set of arguments. See the online
@@ -1041,9 +1224,11 @@ class PageElement(object):
         :kwargs: Additional filters on attribute values.
         """
         iterator = self.parents
-        return self._find_all(
+        # Only Tags can have children, so this ResultSet will contain
+        # nothing but Tags.
+        return cast(ResultSet[Tag], self._find_all(
             name, attrs, None, limit, iterator, _stacklevel=_stacklevel + 1, **kwargs
-        )
+        ))
 
     findParents = _deprecated_function_alias("findParents", "find_parents", "4.0.0")
     fetchParents = _deprecated_function_alias("fetchParents", "find_parents", "3.0.0")
@@ -1068,7 +1253,7 @@ class PageElement(object):
         # specific here.
         method: Callable,
         name: _FindMethodName,
-        attrs: _StrainableAttributes,
+        attrs: Optional[_StrainableAttributes],
         string: Optional[_StrainableString],
         **kwargs: _StrainableAttribute,
     ) -> _AtMostOneElement:
@@ -1081,7 +1266,7 @@ class PageElement(object):
     def _find_all(
         self,
         name: _FindMethodName,
-        attrs: _StrainableAttributes,
+        attrs: Optional[_StrainableAttributes],
         string: Optional[_StrainableString],
         limit: Optional[int],
         generator: Iterator[PageElement],
@@ -1116,11 +1301,11 @@ class PageElement(object):
         else:
             matcher = SoupStrainer(name, attrs, string, **kwargs)
 
-        result: Iterable[_OneElement]
+        result: MutableSequence[_OneElement]
         if string is None and not limit and not attrs and not kwargs:
             if name is True or name is None:
                 # Optimization to find all tags.
-                result = (element for element in generator if isinstance(element, Tag))
+                result = [element for element in generator if isinstance(element, Tag)]
                 return ResultSet(matcher, result)
             elif isinstance(name, str):
                 # Optimization to find all tags with a given name.
@@ -2239,22 +2424,63 @@ class Tag(PageElement):
         "Deleting tag[key] deletes all 'key' attributes for the tag."
         self.attrs.pop(key, None)
 
+    @overload
+    def __call__( # pyright: ignore [reportOverlappingOverload]
+        self,
+        name: _FindMethodName = None,
+        attrs: Optional[_StrainableAttributes] = None,
+        recursive: bool = True,
+        string: None = None,
+        limit: Optional[int] = None,
+        _stacklevel: int = 2,
+        **kwargs: _StrainableAttribute,
+    ) -> _SomeTags:
+        ...
+
+    @overload
     def __call__(
         self,
-        name: Optional[_StrainableElement] = None,
-        attrs: _StrainableAttributes = {},
+        name: None = None,
+        attrs: None = None,
+        recursive: bool = True,
+        string: _StrainableString = "",
+        limit: Optional[int] = None,
+        _stacklevel: int = 2,
+        **kwargs: _StrainableAttribute,
+    ) -> _SomeNavigableStrings:
+        ...
+
+    def __call__(
+        self,
+        name: _FindMethodName = None,
+        attrs: Optional[_StrainableAttributes] = None,
         recursive: bool = True,
         string: Optional[_StrainableString] = None,
         limit: Optional[int] = None,
         _stacklevel: int = 2,
         **kwargs: _StrainableAttribute,
-    ) -> _QueryResults:
+    ) -> Union[_SomeTags,_SomeNavigableStrings,_QueryResults]:
         """Calling a Tag like a function is the same as calling its
         find_all() method. Eg. tag('a') returns a list of all the A tags
         found within this tag."""
-        return self.find_all(
-            name, attrs, recursive, string, limit, _stacklevel, **kwargs
+        if string is not None and (name is not None or attrs is not None or kwargs):
+            # TODO: Using the @overload decorator to express the three ways you
+            # could get into this path is way too much code for a rarely(?) used
+            # feature.
+            return cast(ResultSet[Tag], self.find_all(name, attrs, recursive, string, limit, _stacklevel, **kwargs)) #type: ignore
+
+        if string is None:
+            # If string is None, we're searching for tags.
+            tags:ResultSet[Tag] = self.find_all(
+                name, attrs, recursive, None, limit, _stacklevel, **kwargs
+            )
+            return tags
+
+        # Otherwise, we're searching for strings.
+        strings:ResultSet[NavigableString] = self.find_all(
+            None, None, recursive, string, limit, _stacklevel, **kwargs
         )
+        return strings
 
     def __getattr__(self, subtag: str) -> Optional[Tag]:
         """Calling tag.subtag is the same as calling tag.find(name="subtag")"""
@@ -2277,7 +2503,7 @@ class Tag(PageElement):
             raise AttributeError(
                 "'%s' object has no attribute '%s'" % (self.__class__, subtag)
             )
-        return cast(Optional[Tag], result)
+        return result
 
     def __eq__(self, other: Any) -> bool:
         """Returns true iff this Tag has the same name, the same attributes,
@@ -2707,14 +2933,35 @@ class Tag(PageElement):
 
     # Soup methods
 
+    @overload
+    def find(
+            self,
+            name: _FindMethodName = None,
+            attrs: Optional[_StrainableAttributes] = None,
+            recursive: bool = True,
+            string: None=None,
+            **kwargs: _StrainableAttribute,
+    ) -> _AtMostOneTag:
+        ...
+
+    @overload
+    def find(
+            self,
+            name: None=None,
+            attrs: None=None,
+            recursive: bool = True,
+            string: _StrainableString="",
+    ) -> _AtMostOneNavigableString:
+        ...
+
     def find(
         self,
         name: _FindMethodName = None,
-        attrs: _StrainableAttributes = {},
+        attrs: Optional[_StrainableAttributes] = None,
         recursive: bool = True,
         string: Optional[_StrainableString] = None,
         **kwargs: _StrainableAttribute,
-    ) -> _AtMostOneElement:
+    ) -> Union[_AtMostOneTag,_AtMostOneNavigableString,_AtMostOneElement]:
         """Look in the children of this PageElement and find the first
         PageElement that matches the given criteria.
 
@@ -2727,27 +2974,63 @@ class Tag(PageElement):
             recursive search of this Tag's children. Otherwise,
             only the direct children will be considered.
         :param string: A filter on the `Tag.string` attribute.
-        :param limit: Stop looking after finding this many results.
         :kwargs: Additional filters on attribute values.
         """
-        r = None
-        results = self.find_all(name, attrs, recursive, string, 1, _stacklevel=3, **kwargs)
-        if results:
-            r = results[0]
-        return r
+        if string is not None and (name is not None or attrs is not None or kwargs):
+            # TODO: Using the @overload decorator to express the three ways you
+            # could get into this path is way too much code for a rarely(?) used
+            # feature.
+            elements = self.find_all(name, attrs, recursive, string, 1, _stacklevel=3, **kwargs) # type:ignore
+            if elements:
+                return cast(Tag, elements[0])
+        elif string is None:
+            tags = self.find_all(name, attrs, recursive, None, 1, _stacklevel=3, **kwargs)
+            if tags:
+                return cast(Tag, tags[0])
+        else:
+            strings = self.find_all(None, None, recursive, string, 1, _stacklevel=3, **kwargs)
+            if strings:
+                return cast(NavigableString, strings[0])
+        return None
 
     findChild = _deprecated_function_alias("findChild", "find", "3.0.0")
+
+    @overload
+    def find_all( # pyright: ignore [reportOverlappingOverload]
+        self,
+        name: _FindMethodName = None,
+        attrs: Optional[_StrainableAttributes] = None,
+        recursive: bool = True,
+        string: None = None,
+        limit: Optional[int] = None,
+        _stacklevel: int = 2,
+        **kwargs: _StrainableAttribute,
+    ) -> _SomeTags:
+        ...
+
+    @overload
+    def find_all(
+        self,
+        name: None = None,
+        attrs: None = None,
+        recursive: bool = True,
+        string: _StrainableString = "",
+        limit: Optional[int] = None,
+        _stacklevel: int = 2,
+        **kwargs: _StrainableAttribute,
+    ) -> _SomeNavigableStrings:
+        ...
 
     def find_all(
         self,
         name: _FindMethodName = None,
-        attrs: _StrainableAttributes = {},
+        attrs: Optional[_StrainableAttributes] = None,
         recursive: bool = True,
         string: Optional[_StrainableString] = None,
         limit: Optional[int] = None,
         _stacklevel: int = 2,
         **kwargs: _StrainableAttribute,
-    ) -> _QueryResults:
+    ) -> Union[_SomeTags,_SomeNavigableStrings,_QueryResults]:
         """Look in the children of this `PageElement` and find all
         `PageElement` objects that match the given criteria.
 
@@ -2766,9 +3049,27 @@ class Tag(PageElement):
         generator = self.descendants
         if not recursive:
             generator = self.children
-        return self._find_all(
-            name, attrs, string, limit, generator, _stacklevel=_stacklevel + 1, **kwargs
-        )
+        _stacklevel += 1
+
+        if string is not None and (name is not None or attrs is not None or kwargs):
+            # TODO: Using the @overload decorator to express the three ways you
+            # could get into this path is way too much code for a rarely(?) used
+            # feature.
+            return cast(ResultSet[Tag],
+                        self._find_all(name, attrs, string, limit, generator,
+                                       _stacklevel=_stacklevel, **kwargs)
+                        )
+
+        if string is None:
+            # If string is None, we're searching for tags.
+            return cast(ResultSet[Tag], self._find_all(
+                name, attrs, None, limit, generator, _stacklevel=_stacklevel, **kwargs
+            ))
+
+        # Otherwise, we're searching for strings.
+        return cast(ResultSet[NavigableString], self._find_all(
+            None, None, string, limit, generator, _stacklevel=_stacklevel, **kwargs
+        ))
 
     findAll = _deprecated_function_alias("findAll", "find_all", "4.0.0")
     findChildren = _deprecated_function_alias("findChildren", "find_all", "3.0.0")
@@ -2883,7 +3184,6 @@ class Tag(PageElement):
 
 _PageElementT = TypeVar("_PageElementT", bound=PageElement)
 
-
 class ResultSet(List[_PageElementT], Generic[_PageElementT]):
     """A ResultSet is a list of `PageElement` objects, gathered as the result
     of matching an :py:class:`ElementFilter` against a parse tree. Basically, a list of
@@ -2903,7 +3203,6 @@ class ResultSet(List[_PageElementT], Generic[_PageElementT]):
         raise AttributeError(
             f"""ResultSet object has no attribute "{key}". You're probably treating a list of elements like a single element. Did you call find_all() when you meant to call find()?"""
         )
-
 
 # Now that all the classes used by SoupStrainer have been defined,
 # import SoupStrainer itself into this module to preserve the
