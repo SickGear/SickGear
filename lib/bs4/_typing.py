@@ -198,4 +198,8 @@ _StrainableAttributes: TypeAlias = Dict[str, _StrainableAttribute]
 #: are available on the objects they're dealing with.
 _OneElement: TypeAlias = Union["PageElement", "Tag", "NavigableString"]
 _AtMostOneElement: TypeAlias = Optional[_OneElement]
+_AtMostOneTag: TypeAlias = Optional["Tag"]
+_AtMostOneNavigableString: TypeAlias = Optional["NavigableString"]
 _QueryResults: TypeAlias = "ResultSet[_OneElement]"
+_SomeTags: TypeAlias = "ResultSet[Tag]"
+_SomeNavigableStrings: TypeAlias = "ResultSet[NavigableString]"

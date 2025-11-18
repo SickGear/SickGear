@@ -136,8 +136,7 @@ class ElementFilter(object):
         # If there are no rules at all, don't bother filtering. Let
         # anything through.
         if self.includes_everything:
-            for i in generator:
-                yield i
+            yield from generator
         while True:
             try:
                 i = next(generator)
@@ -175,12 +174,12 @@ class ElementFilter(object):
 
         :param limit: Stop looking after finding this many results.
         """
-        results: _QueryResults = ResultSet(self)
+        results = []
         for match in self.filter(generator):
             results.append(match)
             if limit is not None and len(results) >= limit:
                 break
-        return results
+        return ResultSet(self, results)
 
     def allow_tag_creation(
         self, nsprefix: Optional[str], name: str, attrs: Optional[_RawAttributeValues]
@@ -379,7 +378,7 @@ class SoupStrainer(ElementFilter):
     def __init__(
         self,
         name: Optional[_StrainableElement] = None,
-        attrs: Dict[str, _StrainableAttribute] = {},
+        attrs: Optional[Dict[str, _StrainableAttribute]] = None,
         string: Optional[_StrainableString] = None,
         **kwargs: _StrainableAttribute,
     ):
@@ -397,11 +396,13 @@ class SoupStrainer(ElementFilter):
             # that matches all Tags, and only Tags.
             self.name_rules = [TagNameMatchRule(present=True)]
         else:
-                self.name_rules = cast(
-                    List[TagNameMatchRule], list(self._make_match_rules(name, TagNameMatchRule))
-                )
+            self.name_rules = cast(
+                List[TagNameMatchRule], list(self._make_match_rules(name, TagNameMatchRule))
+            )
         self.attribute_rules = defaultdict(list)
 
+        if attrs is None:
+            attrs = {}
         if not isinstance(attrs, dict):
             # Passing something other than a dictionary as attrs is
             # sugar for matching that thing against the 'class'
