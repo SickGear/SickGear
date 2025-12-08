@@ -18,6 +18,11 @@
 
 
 
+### 3.34.6 (2025-12-08 00:30:00 UTC)
+
+* Change add support for Python 3.14.2, 3.13.11
+
+
 ### 3.34.5 (2025-11-10 16:00:00 UTC)
 
 * Fix package upgrades breaking due to package case renames
