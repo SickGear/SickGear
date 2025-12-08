@@ -46,7 +46,7 @@ from _23 import urlencode
 
 # noinspection PyUnreachableCode
 if False:
-    from typing import Any, AnyStr, Dict, List, Tuple, Union
+    from typing import Any, AnyStr, Dict, List, Optional, Tuple, Union
 
 
 class NewznabConstants(object):
@@ -158,13 +158,13 @@ class NewznabProvider(generic.NZBProvider):
         self._last_recent_search = None
         self._caps_last_updated = datetime.datetime.fromordinal(1)
         self.cache = NewznabCache(self)
-        # filters
-        # deprecated; kept here as bookmark for new haspretime:0|1 + nuked:0|1 can be used here instead
-        # if super(NewznabProvider, self).get_id() in ('nzbs_org',):
-        #     self.filter = []
-        #     if 'nzbs_org' == super(NewznabProvider, self).get_id():
-        #         self.may_filter = OrderedDict([
-        #             ('so', ('scene only', False)), ('snn', ('scene not nuked', False))])
+        self._noname = ('ni.s%sn' % 'bz')[::-1]
+        self._or_providers = [self._noname, 'drunkenslug.com', 'nzbfinder.ws',
+                              'dognzb.cr', 'scenenzbs.com']
+        if any(_p in (self.url or '').lower() for _p in self._or_providers):
+            self.support_or = '|'
+        else:
+            self.support_or = None  # type: Optional[str]
 
     @property
     def cat_ids(self):
@@ -352,11 +352,11 @@ class NewznabProvider(generic.NZBProvider):
             caps[NewznabConstants.SEARCH_TEXT] = 'q'
 
         if NewznabConstants.CAT_HD not in cats or not cats.get(NewznabConstants.CAT_HD):
-            cats[NewznabConstants.CAT_HD] = ['5040']  # (['5040'], ['5040', '5090'])['nzbs_org' == self.get_id()]
+            cats[NewznabConstants.CAT_HD] = ['5040']
         if NewznabConstants.CAT_SD not in cats or not cats.get(NewznabConstants.CAT_SD):
-            cats[NewznabConstants.CAT_SD] = ['5030']  # (['5030'], ['5030', '5070'])['nzbs_org' == self.get_id()]
+            cats[NewznabConstants.CAT_SD] = ['5030']
         if NewznabConstants.CAT_ANIME not in cats or not cats.get(NewznabConstants.CAT_ANIME):
-            cats[NewznabConstants.CAT_ANIME] = ['5070']  # (['5070'], ['6070', '7040'])['nzbs_org' == self.get_id()]
+            cats[NewznabConstants.CAT_ANIME] = ['5070']
         if NewznabConstants.CAT_SPORT not in cats or not cats.get(NewznabConstants.CAT_SPORT):
             cats[NewznabConstants.CAT_SPORT] = ['5060']
 
@@ -470,7 +470,7 @@ class NewznabProvider(generic.NZBProvider):
             base_params['season'] = '%d' % ep_obj.scene_absolute_number
         else:
             base_params['season'] = str((ep_obj.season, ep_obj.scene_season)[bool(ep_obj.show_obj.is_scene)])
-            ep_detail = 'S%02d' % try_int(base_params['season'], 1)
+            ep_detail = 'S%02d%s' % (try_int(base_params['season'], 1), ('*', '')[None is self.support_or])
 
         # id search
         params = base_params.copy()
@@ -482,18 +482,26 @@ class NewznabProvider(generic.NZBProvider):
                     use_id = True
             use_id and search_params.append(params)
 
-        spacer = 'nzbgeek.info' in self.url.lower() and ' ' or '.'
+        if None is not self.support_or:
+            search_spacer = ' '
+            spacer = '.'
+        else:
+            spacer = search_params = 'nzbgeek.info' in self.url.lower() and ' ' or '.'
+
         # query search and exceptions
         name_exceptions = get_show_names(ep_obj, spacer)
+        if None is not self.support_or and 1 < len(name_exceptions):
+            name_exceptions = [f'{self.support_or.join(name_exceptions)}']
+
         for cur_exception in name_exceptions:
             params = base_params.copy()
             if 'q' in params:
-                params['q'] = '%s%s%s' % (cur_exception, spacer, params['q'])
+                params['q'] = '%s%s%s' % (cur_exception, search_spacer, params['q'])
                 search_params.append(params)
 
             if ep_detail:
                 params = base_params.copy()
-                params['q'] = '%s%s%s' % (cur_exception, spacer, ep_detail)
+                params['q'] = '%s%s%s' % (cur_exception, search_spacer, ep_detail)
                 'season' in params and params.pop('season')
                 'ep' in params and params.pop('ep')
                 search_params.append(params)
@@ -945,16 +953,10 @@ class NewznabProvider(generic.NZBProvider):
                     base_params_rss['t'] = base_params['cat']
 
                 request_params = base_params.copy()
-                # if ('Propers' == mode or 'nzbs_org' == self.get_id()) \
                 if 'Propers' == mode \
                         and 'q' in params and not (any(x in params for x in ['season', 'ep'])):
                     request_params['t'] = 'search'
                 request_params.update(params)
-
-                # deprecated; kept here as bookmark for new haspretime:0|1 + nuked:0|1 can be used here instead
-                # if hasattr(self, 'filter'):
-                #     if 'nzbs_org' == self.get_id():
-                #         request_params['rls'] = ((0, 1)['so' in self.filter], 2)['snn' in self.filter]
 
                 # workaround a strange glitch
                 if sum([ord(i) for i in self.get_id()]) in [383] and 5 == 14 - request_params['maxage']:
@@ -1087,13 +1089,14 @@ class NewznabProvider(generic.NZBProvider):
             return results
 
         index = 0
-        # alt_search = ('nzbs_org' == self.get_id())
-        # do_search_alt = False
 
         search_terms = []
         regex = []
         if shows:
-            search_terms += ['.proper.', '.repack.', '.real.']
+            if None is not  self.support_or:
+                search_terms += [self.support_or.join(['.proper.', '.repack.', '.real.'])]
+            else:
+                search_terms += ['.proper.', '.repack.', '.real.']
             regex += ['proper|repack', Quality.real_check]
             proper_check = re.compile(r'(?i)(\b%s\b)' % '|'.join(regex))
         if anime:
@@ -1164,6 +1167,11 @@ class NewznabProvider(generic.NZBProvider):
 
     def __repr__(self):
         return self.__str__()
+
+    def ui_string(self, key):
+        return (self._noname in (self.url or '').lower() and f'{self.get_id()}_tip' == key
+                and 'must select "High-performance" at site in profile section -> "Search & Browsing"'
+                or '')
 
 
 class NewznabCache(tvcache.TVCache):

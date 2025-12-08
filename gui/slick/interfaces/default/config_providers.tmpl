@@ -215,6 +215,17 @@
 #set $filter_tip = 'nothing selected allows everything (i.e. no filtering, default)'
 #for $cur_newznab_provider in [$cur_provider for $cur_provider in $sickgear.newznab_providers]
 					<div class="providerDiv" id="${cur_newznab_provider.get_id()}Div">
+    #if callable(getattr(cur_newznab_provider, 'ui_string', None))
+        #set $field_name = cur_newznab_provider.get_id() + '_tip'
+        #set $tip_text = cur_newznab_provider.ui_string($field_name)
+        #if $tip_text
+						<div class="field-pair">
+							<span class="component-desc" style="margin:0;width:100%">
+								<div class="clear-left"><p class="grey-text"><span class="red-text">Important! ${cur_newznab_provider.name}</span> $tip_text</p></div>
+							</span>
+						</div>
+        #end if
+    #end if
     #set $can_recent = $hasattr($cur_newznab_provider, 'enable_recentsearch')
     #set $can_backlog = $hasattr($cur_newznab_provider, 'enable_backlog')
     #set $can_schedule_backlog = $hasattr($cur_newznab_provider, 'enable_scheduled_backlog')
