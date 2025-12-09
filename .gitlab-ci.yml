@@ -1,5 +1,5 @@
-test 3.9:
-  image: python:3.9
+test:
+  image: "python:$VERSION"
   stage: test
   before_script:
     - pip install responses
@@ -12,78 +12,6 @@ test 3.9:
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
     - if: $CI_COMMIT_BRANCH == "dev"
-
-test 3.10:
-  image: python:3.10
-  stage: test
-  before_script:
-    - pip install responses
-    - pip install -r requirements.txt
-    - pip install coveralls
-  script:
-    - cd ./tests
-    - coverage run --source=.. --omit=../lib/* ./all_tests.py
-  when: manual
-  rules:
-    - if: $CI_COMMIT_BRANCH == "main"
-    - if: $CI_COMMIT_BRANCH == "dev"
-
-test 3.11:
-  image: python:3.11
-  stage: test
-  before_script:
-    - pip install responses
-    - pip install -r requirements.txt
-    - pip install coveralls
-  script:
-    - cd ./tests
-    - coverage run --source=.. --omit=../lib/* ./all_tests.py
-  when: manual
-  rules:
-    - if: $CI_COMMIT_BRANCH == "main"
-    - if: $CI_COMMIT_BRANCH == "dev"
-
-test 3.12:
-  image: python:3.12
-  stage: test
-  before_script:
-    - pip install responses
-    - pip install -r requirements.txt
-    - pip install coveralls
-  script:
-    - cd ./tests
-    - coverage run --source=.. --omit=../lib/* ./all_tests.py
-  when: manual
-  rules:
-    - if: $CI_COMMIT_BRANCH == "main"
-    - if: $CI_COMMIT_BRANCH == "dev"
-
-test 3.13:
-  image: python:3.13
-  stage: test
-  before_script:
-    - pip install responses
-    - pip install -r requirements.txt
-    - pip install coveralls
-  script:
-    - cd ./tests
-    - coverage run --source=.. --omit=../lib/* ./all_tests.py
-  when: manual
-  rules:
-    - if: $CI_COMMIT_BRANCH == "main"
-    - if: $CI_COMMIT_BRANCH == "dev"
-
-test 3.14:
-  image: python:3.14.0rc1
-  stage: test
-  before_script:
-    - pip install responses
-    - pip install -r requirements.txt
-    - pip install coveralls
-  script:
-    - cd ./tests
-    - coverage run --source=.. --omit=../lib/* ./all_tests.py
-  when: manual
-  rules:
-    - if: $CI_COMMIT_BRANCH == "main"
-    - if: $CI_COMMIT_BRANCH == "dev"
+  parallel:
+    matrix:
+      - VERSION: ['3.14', '3.13', '3.12', '3.11', '3.10']
