@@ -25,70 +25,66 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-# You will need an API Key for this plugin to work.
-# From the Settings -> API Keys you can click "Create API Key" if you don't
-# have one already. The key must have at least the "Mail Send" permission
-# to work.
-#
-# The schema to use the plugin looks like this:
-#    {schema}://{apikey}:{from_email}
-#
-# Your {from_email} must be comprissed of your Sendgrid Authenticated
-# Domain. The same domain must have 'Link Branding' turned on as well or it
-# will not work. This can be seen from Settings -> Sender Authentication.
-
-# If you're (SendGrid) verified domain is example.com, then your schema may
-# look something like this:
-
-# Simple API Reference:
-#  - https://sendgrid.com/docs/API_Reference/Web_API_v3/index.html
-#  - https://sendgrid.com/docs/ui/sending-email/\
-#       how-to-send-an-email-with-dynamic-transactional-templates/
+# API Reference: https://developers.brevo.com/reference/getting-started-1
 
 from json import dumps
+from os.path import splitext
 
 import requests
 
 from .. import exception
 from ..common import NotifyFormat, NotifyType
+from ..conversion import convert_between
 from ..locale import gettext_lazy as _
 from ..utils.parse import is_email, parse_list, validate_regex
 from .base import NotifyBase
 
-# Extend HTTP Error Messages
-SENDGRID_HTTP_ERROR_MAP = {
-    401: "Unauthorized - You do not have authorization to make the request.",
-    413: (
-        "Payload To Large - The JSON payload you have included in your "
-        "request is too large."
-    ),
-    429: (
-        "Too Many Requests - The number of requests you have made exceeds "
-        "SendGrid's rate limitations."
-    ),
+# Extend HTTP Error Messages (most common Brevo SMTP errors)
+BREVO_HTTP_ERROR_MAP = {
+    400: "Bad Request - Invalid payload or missing parameters.",
+    401: "Unauthorized - Invalid Brevo API key.",
+    402: "Payment Required - Plan limitation or credit issue.",
+    429: "Too Many Requests - Rate limit exceeded.",
 }
 
+# Comprehensive list of Brevo-supported extensions for Transactional Emails
+# Source: Brevo API Documentation & Transactional Attachment Guidelines
+BREVO_VALID_EXTENSIONS = (
+    # Documents & Text
+    "xlsx", "xls", "ods", "docx", "docm", "doc", "csv", "pdf", "txt",
+    "rtf", "msg", "pub", "mobi", "ppt", "pptx", "eps", "odt", "ics",
+    "xml", "css", "html", "htm", "shtml",
+    # Images
+    "gif", "jpg", "jpeg", "png", "tif", "tiff", "bmp", "cgm",
+    # Archives
+    "zip", "tar", "ez", "pkpass",
+    # Audio
+    "mp3", "m4a", "m4v", "wma", "ogg", "flac", "wav", "aif", "aifc", "aiff",
+    # Video
+    "mp4", "mov", "avi", "mkv", "mpeg", "mpg", "wmv"
+)
 
-class NotifySendGrid(NotifyBase):
-    """A wrapper for Notify SendGrid Notifications."""
+
+class NotifyBrevo(NotifyBase):
+    """A wrapper for Notify Brevo Notifications."""
 
     # The default descriptive name associated with the Notification
-    service_name = "SendGrid"
+    service_name = "Brevo"
 
     # The services URL
-    service_url = "https://sendgrid.com"
+    service_url = "https://www.brevo.com/"
 
     # The default secure protocol
-    secure_protocol = "sendgrid"
+    secure_protocol = "brevo"
 
     # A URL that takes you to the setup/help of the specific protocol
-    setup_url = "https://github.com/caronc/apprise/wiki/Notify_sendgrid"
+    setup_url = "https://github.com/caronc/apprise/wiki/Notify_brevo"
 
     # Default to markdown
     notify_format = NotifyFormat.HTML
 
     # The default Email API URL to use
-    notify_url = "https://api.sendgrid.com/v3/mail/send"
+    notify_url = "https://api.brevo.com/v3/smtp/email"
 
     # Support attachments
     attachment_support = True
@@ -115,7 +111,7 @@ class NotifySendGrid(NotifyBase):
                 "type": "string",
                 "private": True,
                 "required": True,
-                "regex": (r"^[A-Z0-9._-]+$", "i"),
+                "regex": (r"^[a-zA-Z0-9._-]+$", "i"),
             },
             "from_email": {
                 "name": _("Source Email"),
@@ -149,35 +145,25 @@ class NotifySendGrid(NotifyBase):
                 "name": _("Blind Carbon Copy"),
                 "type": "list:string",
             },
-            "template": {
-                # Template ID
-                # The template ID is 64 characters with one dash (d-uuid)
-                "name": _("Template"),
+            "reply": {
+                "name": _("Reply To Email"),
                 "type": "string",
+                "map_to": "reply_to",
             },
         },
     )
-
-    # Support Template Dynamic Variables (Substitutions)
-    template_kwargs = {
-        "template_data": {
-            "name": _("Template Data"),
-            "prefix": "+",
-        },
-    }
 
     def __init__(
         self,
         apikey,
         from_email,
         targets=None,
+        reply_to=None,
         cc=None,
         bcc=None,
-        template=None,
-        template_data=None,
         **kwargs,
     ):
-        """Initialize Notify SendGrid Object."""
+        """Initialize Notify Brevo Object."""
         super().__init__(**kwargs)
 
         # API Key (associated with project)
@@ -185,7 +171,7 @@ class NotifySendGrid(NotifyBase):
             apikey, *self.template_tokens["apikey"]["regex"]
         )
         if not self.apikey:
-            msg = f"An invalid SendGrid API Key ({apikey}) was specified."
+            msg = f"An invalid Brevo API Key ({apikey}) was specified."
             self.logger.warning(msg)
             raise TypeError(msg)
 
@@ -198,6 +184,21 @@ class NotifySendGrid(NotifyBase):
         # Store email address
         self.from_email = result["full_email"]
 
+        # Reply-to
+        self.reply_to = None
+        if reply_to:
+            result = is_email(reply_to)
+            if not result:
+                msg = "An invalid Brevo Reply To ({}) was specified.".format(
+                    f"{reply_to}")
+                self.logger.warning(msg)
+                raise TypeError(msg)
+
+            self.reply_to = (
+                    result["name"] if result["name"] else False,
+                    result["full_email"],
+                )
+
         # Acquire Targets (To Emails)
         self.targets = []
 
@@ -206,14 +207,6 @@ class NotifySendGrid(NotifyBase):
 
         # Acquire Blind Carbon Copies
         self.bcc = set()
-
-        # Now our dynamic template (if defined)
-        self.template = template
-
-        # Now our dynamic template data (if defined)
-        self.template_data = (
-            template_data if isinstance(template_data, dict) else {}
-        )
 
         # Validate recipients (to:) and drop bad ones:
         if targets:
@@ -281,12 +274,13 @@ class NotifySendGrid(NotifyBase):
             # Handle our Blind Carbon Copy Addresses
             params["bcc"] = ",".join(self.bcc)
 
-        if self.template:
-            # Handle our Template ID if if was specified
-            params["template"] = self.template
-
-        # Append our template_data into our parameter list
-        params.update({f"+{k}": v for k, v in self.template_data.items()})
+        if self.reply_to:
+            # Handle our reply to address
+            params["reply"] = (
+                "{} <{}>".format(*self.reply_to)
+                if self.reply_to[0]
+                else self.reply_to[1]
+            )
 
         # a simple boolean check as to whether we display our target emails
         # or not
@@ -303,15 +297,15 @@ class NotifySendGrid(NotifyBase):
                 ""
                 if not has_targets
                 else "/".join(
-                    [NotifySendGrid.quote(x, safe="") for x in self.targets]
+                    [NotifyBrevo.quote(x, safe="") for x in self.targets]
                 )
             ),
-            params=NotifySendGrid.urlencode(params),
+            params=NotifyBrevo.urlencode(params),
         )
 
     def __len__(self):
         """Returns the number of targets associated with this notification."""
-        return max(1, len(self.targets))
+        return max(len(self.targets), 1)
 
     def send(
         self,
@@ -321,18 +315,19 @@ class NotifySendGrid(NotifyBase):
         attach=None,
         **kwargs,
     ):
-        """Perform SendGrid Notification."""
+        """Perform Brevo Notification."""
 
         if not self.targets:
             # There is no one to email; we're done
             self.logger.warning(
-                "There are no SendGrid email recipients to notify")
+                "There are no Brevo email recipients to notify")
             return False
 
         headers = {
             "User-Agent": self.app_id,
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {self.apikey}",
+            "Accept": "application/json",
+            "api-key": self.apikey,
         }
 
         # error tracking (used for function return)
@@ -340,26 +335,28 @@ class NotifySendGrid(NotifyBase):
 
         # A Simple Email Payload Template
         _payload = {
-            "personalizations": [{
-                # Placeholder
-                "to": [{"email": None}],
-            }],
-            "from": {
+            "sender": {
                 "email": self.from_email,
             },
-            # A subject is a requirement, so if none is specified we must
-            # set a default with at least 1 character or SendGrid will deny
-            # our request
+            # Placeholder, filled per target
+            "to": [{"email": None}],
             "subject": title if title else self.default_empty_subject,
-            "content": [{
-                "type": (
-                    "text/plain"
-                    if self.notify_format == NotifyFormat.TEXT
-                    else "text/html"
-                ),
-                "value": body,
-            }],
         }
+        # Body selection
+        use_html = self.notify_format == NotifyFormat.HTML
+
+        if use_html:
+            # body already normalised; keep your existing logic
+            _payload["htmlContent"] = body
+            _payload["textContent"] = convert_between(
+                NotifyFormat.HTML, NotifyFormat.TEXT, body
+            )
+        else:
+            # Plain text requested, but Brevo still wants HTML
+            _payload["textContent"] = body
+            _payload["htmlContent"] = convert_between(
+                NotifyFormat.TEXT, NotifyFormat.HTML, body
+            )
 
         if attach and self.attachment_support:
             attachments = []
@@ -370,48 +367,57 @@ class NotifySendGrid(NotifyBase):
                 if not attachment:
                     # We could not access the attachment
                     self.logger.error(
-                        "Could not access SendGrid attachment"
+                        "Could not access Brevo attachment"
                         f" {attachment.url(privacy=True)}."
                     )
                     return False
 
+                # Brevo does not track content/mime type and relies 100%
+                # entirely on the filename extension as to whether or not it
+                # will accept it or not.
+                #
+                # The below prepares a safe_name (which can't be .dat like
+                # other plugins since Brevo rejects that type). For this
+                # reason .txt is chosen intentionally for this circumstance.
+
+                # Use the attachment name if available, otherwise default to a
+                # generic name
+                raw_name = attachment.name \
+                    if attachment.name else f"file{no:03}.txt"
+
+                # If the filename does NOT match a supported extension, append
+                # .txt
+                _, ext = splitext(raw_name)
+                safe_name = f"{raw_name}.txt" if (
+                    not ext or ext[1:].lower()
+                    not in BREVO_VALID_EXTENSIONS) else raw_name
+
                 try:
                     attachments.append({
                         "content": attachment.base64(),
-                        "filename": (
-                            attachment.name
-                            if attachment.name
-                            else f"file{no:03}.dat"
-                        ),
-                        "type": "application/octet-stream",
-                        "disposition": "attachment",
+                        "name": safe_name,
                     })
 
                 except exception.AppriseException:
                     # We could not access the attachment
                     self.logger.error(
-                        "Could not access SendGrid attachment"
+                        "Could not access Brevo attachment"
                         f" {attachment.url(privacy=True)}."
                     )
                     return False
 
                 self.logger.debug(
-                    "Appending SendGrid attachment"
+                    "Appending Brevo attachment"
                     f" {attachment.url(privacy=True)}"
                 )
 
             # Append our attachments to the payload
             _payload.update({
-                "attachments": attachments,
+                "attachment": attachments,
             })
 
-        if self.template:
-            _payload["template_id"] = self.template
-
-            if self.template_data:
-                _payload["personalizations"][0]["dynamic_template_data"] = (
-                    dict(self.template_data.items())
-                )
+        if self.reply_to:
+            _payload["replyTo"] = {"email": self.reply_to[1]}
 
         targets = list(self.targets)
         while len(targets) > 0:
@@ -427,24 +433,20 @@ class NotifySendGrid(NotifyBase):
             cc = self.cc - self.bcc - {target}
             bcc = self.bcc - {target}
 
-            # Set our target
-            payload["personalizations"][0]["to"][0]["email"] = target
+            # Set our main recipient
+            payload["to"] = [{"email": target}]
 
             if len(cc):
-                payload["personalizations"][0]["cc"] = [
-                    {"email": email} for email in cc
-                ]
+                payload["cc"] = [{"email": email} for email in cc]
 
             if len(bcc):
-                payload["personalizations"][0]["bcc"] = [
-                    {"email": email} for email in bcc
-                ]
+                payload["bcc"] = [{"email": email} for email in bcc]
 
             self.logger.debug(
-                "SendGrid POST URL:"
+                "Brevo POST URL:"
                 f" {self.notify_url} (cert_verify={self.verify_certificate!r})"
             )
-            self.logger.debug(f"SendGrid Payload: {payload!s}")
+            self.logger.debug(f"Brevo Payload: {payload!s}")
 
             # Always call throttle before any remote server i/o is made
             self.throttle()
@@ -459,14 +461,15 @@ class NotifySendGrid(NotifyBase):
                 if r.status_code not in (
                     requests.codes.ok,
                     requests.codes.accepted,
+                    requests.codes.created,
                 ):
                     # We had a problem
-                    status_str = NotifySendGrid.http_response_code_lookup(
-                        r.status_code, SENDGRID_HTTP_ERROR_MAP
+                    status_str = NotifyBrevo.http_response_code_lookup(
+                        r.status_code, BREVO_HTTP_ERROR_MAP
                     )
 
                     self.logger.warning(
-                        "Failed to send SendGrid notification to {}: "
+                        "Failed to send Brevo notification to {}: "
                         "{}{}error={}.".format(
                             target,
                             status_str,
@@ -483,12 +486,12 @@ class NotifySendGrid(NotifyBase):
 
                 else:
                     self.logger.info(
-                        f"Sent SendGrid notification to {target}."
+                        f"Sent Brevo notification to {target}."
                     )
 
             except requests.RequestException as e:
                 self.logger.warning(
-                    "A Connection error occurred sending SendGrid "
+                    "A Connection error occurred sending Brevo "
                     f"notification to {target}."
                 )
                 self.logger.debug(f"Socket Exception: {e!s}")
@@ -527,38 +530,33 @@ class NotifySendGrid(NotifyBase):
             return None
 
         # Prepare our API Key
-        results["apikey"] = NotifySendGrid.unquote(results["user"])
+        results["apikey"] = NotifyBrevo.unquote(results["user"])
 
         # Prepare our From Email Address
         results["from_email"] = "{}@{}".format(
-            NotifySendGrid.unquote(results["password"]),
-            NotifySendGrid.unquote(results["host"]),
+            NotifyBrevo.unquote(results["password"]),
+            NotifyBrevo.unquote(results["host"]),
         )
 
         # Acquire our targets
-        results["targets"] = NotifySendGrid.split_path(results["fullpath"])
+        results["targets"] = NotifyBrevo.split_path(results["fullpath"])
 
         # The 'to' makes it easier to use yaml configuration
         if "to" in results["qsd"] and len(results["qsd"]["to"]):
-            results["targets"] += NotifySendGrid.parse_list(
+            results["targets"] += NotifyBrevo.parse_list(
                 results["qsd"]["to"]
             )
 
         # Handle Carbon Copy Addresses
         if "cc" in results["qsd"] and len(results["qsd"]["cc"]):
-            results["cc"] = NotifySendGrid.parse_list(results["qsd"]["cc"])
+            results["cc"] = NotifyBrevo.parse_list(results["qsd"]["cc"])
 
         # Handle Blind Carbon Copy Addresses
         if "bcc" in results["qsd"] and len(results["qsd"]["bcc"]):
-            results["bcc"] = NotifySendGrid.parse_list(results["qsd"]["bcc"])
+            results["bcc"] = NotifyBrevo.parse_list(results["qsd"]["bcc"])
 
-        # Handle Blind Carbon Copy Addresses
-        if "template" in results["qsd"] and len(results["qsd"]["template"]):
-            results["template"] = NotifySendGrid.unquote(
-                results["qsd"]["template"]
-            )
-
-        # Add any template substitutions
-        results["template_data"] = results["qsd+"]
+        # Handle Reply To Address
+        if "reply" in results["qsd"] and len(results["qsd"]["reply"]):
+            results["reply_to"] = NotifyBrevo.unquote(results["qsd"]["reply"])
 
         return results

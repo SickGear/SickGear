@@ -1,7 +1,7 @@
 ﻿### 3.35.0 (202x-xx-xx xx:xx:00 UTC)
 
 * Change add support for Python 3.14.0 and add to unittest matrix
-* Update apprise 1.9.2 (a2a2216) to 1.9.5 (19dfd14)
+* Update apprise 1.9.2 (a2a2216) to 1.9.6 (cbc97ce)
 * Update Beautiful Soup 4.13.4 (9752e85) to 4.14.2 (fc02060)
 * Update certifi 2025.08.03 to 2025.11.12
 * Update feedparser 6.0.11 (89fde03) to 6.0.12 (5d2578b)
@@ -13,6 +13,7 @@
 
 [develop]
 * Update apprise 1.9.4 (1d9e1e5) to 1.9.5 (19dfd14)
+* Update apprise 1.9.5 (19dfd14) to 1.9.6 (cbc97ce)
 * Update Beautiful Soup 4.13.5 (70c7473) to 4.14.2 (fc02060)
 * Update certifi 2025.10.05 to 2025.11.12
 * Update typing-extensions 4.15.0 (9215c95) to 4.15.0 (2638b86)
