@@ -2,71 +2,37 @@ name: Python Unit Tests
 on:
   push:
     branches:
-      - main
+      - main  # tested with a branch called... "- test"
       - dev
   pull_request:
     branches:
       - main
       - dev
 jobs:
-  windows:
+  test:
     runs-on: '${{ matrix.os }}'
     strategy:
       matrix:
+        python-version: ['3.14', '3.13', '3.12', '3.11', '3.10']
         os:
           - windows-latest
-        python-version: ['3.10', '3.11', '3.12', '3.13', '3.14-dev']
-    steps:
-      - name: 'Set up Python ${{ matrix.python-version }}'
-        uses: actions/setup-python@v5
-        with:
-          python-version: '${{ matrix.python-version }}'
-      - uses: actions/checkout@v5
-      - run: pip install responses
-      - run: pip install -r requirements.txt
-      - run: pip install coveralls
-      - name: 'Unit tests...'
-        working-directory: ./tests
-        run: coverage run --source=.. --omit=../lib/* ./all_tests.py
-  linux:
-    runs-on: '${{ matrix.os }}'
-    strategy:
-      matrix:
-        os:
           - ubuntu-latest
-        python-version: ['3.10', '3.11', '3.12', '3.13', '3.14-dev']
-    steps:
-      - name: 'Set up Python ${{ matrix.python-version }}'
-        uses: actions/setup-python@v5
-        with:
-          python-version: '${{ matrix.python-version }}'
-      - uses: actions/checkout@v5
-      - run: export BOTO_CONFIG=/dev/null
-      - run: 'export PYTHONPATH=$PYTHONPATH:$(pwd)'
-      - run: pip install responses
-      - run: pip install -r requirements.txt
-      - run: pip install coveralls
-      - name: 'Unit tests...'
-        working-directory: ./tests
-        run: coverage run --source=.. --omit=../lib/* ./all_tests.py
-  macos:
-    runs-on: '${{ matrix.os }}'
-    strategy:
-      matrix:
-        os:
           - macos-latest
-        python-version: ['3.10', '3.11', '3.12', '3.13', '3.14-dev']
     steps:
-      - name: 'Set up Python ${{ matrix.python-version }}'
-        uses: actions/setup-python@v5
+      - uses: actions/checkout@v6.0.1
+      - name: 'Set up Python ${{ matrix.python-version }} on ${{ matrix.os }}'
+        uses: actions/setup-python@v6.1.0
         with:
           python-version: '${{ matrix.python-version }}'
-      - uses: actions/checkout@v5
-      - run: export BOTO_CONFIG=/dev/null
-      - run: 'export PYTHONPATH=$PYTHONPATH:$(pwd)'
-      - run: pip install responses
-      - run: pip install -r requirements.txt
-      - run: pip install coveralls
+      - if: ${{ 'windows-latest' != matrix.os }}
+        run: export BOTO_CONFIG=/dev/null
+      - if: ${{ 'windows-latest' != matrix.os }}
+        run: 'export PYTHONPATH=$PYTHONPATH:$(pwd)'
+      - name: 'Set up test env'
+        run: |
+          pip install responses
+          pip install -r requirements.txt
+          pip install coveralls
       - name: 'Unit tests...'
         working-directory: ./tests
         run: coverage run --source=.. --omit=../lib/* ./all_tests.py
