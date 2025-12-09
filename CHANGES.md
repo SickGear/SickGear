@@ -8,6 +8,7 @@
 * Update idna library 3.10 (729225d) to 3.11 (ad949ee)
 * Update soupsieve 2.7.0 (a616022) to 2.8.0 (bf93778)
 * Update typing-extensions 4.14.0 (59d2c20) to 4.15.0 (2638b86)
+* Update urllib3 2.5.0 (98a60f9) to 2.6.1 (bfe8e19)
 
 
 [develop]
