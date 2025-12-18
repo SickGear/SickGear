@@ -1,4 +1,9 @@
-﻿### 3.34.6 (2025-12-08 00:30:00 UTC)
+﻿### 3.34.7 (2025-12-18 18:00:00 UTC)
+
+* Update filelock 3.19.0 (0c54837) to 3.20.1 (377f622) fixes TOCTOU symlink vulnerability in lock file creation
+
+
+### 3.34.6 (2025-12-08 00:30:00 UTC)
 
 * Change add support for Python 3.14.2, 3.13.11
 
