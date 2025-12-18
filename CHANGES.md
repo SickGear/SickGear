@@ -1,6 +1,6 @@
 ﻿### 3.35.0 (202x-xx-xx xx:xx:00 UTC)
 
-* Change add support for Python 3.14.0 and add to unittest matrix
+* Change add support for Python 3.14.2 and add to unittest matrix
 * Update apprise 1.9.2 (a2a2216) to 1.9.6 (cbc97ce)
 * Update attr 25.3.0 (ca3fb0e) to 25.4.0 (9a98e00)
 * Update Beautiful Soup 4.13.4 (9752e85) to 4.14.2 (fc02060)
@@ -24,6 +24,11 @@
 * Update typing-extensions 4.15.0 (9215c95) to 4.15.0 (2638b86)
 * Update urllib3 2.6.1 (bfe8e19) to 2.6.2 (83f8643)
 
+
+
+### 3.34.7 (2025-12-18 18:00:00 UTC)
+
+* Update filelock 3.19.0 (0c54837) to 3.20.1 (377f622) fixes TOCTOU symlink vulnerability in lock file creation
 
 
 ### 3.34.6 (2025-12-08 00:30:00 UTC)
