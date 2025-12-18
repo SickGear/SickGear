@@ -12,6 +12,7 @@
 * Update Tornado Web Server 6.5.2 (f01a7b0) to 6.5.4 (63d4df4)
 * Update typing-extensions 4.14.0 (59d2c20) to 4.15.0 (2638b86)
 * Update urllib3 2.5.0 (98a60f9) to 2.6.2 (83f8643)
+* Update zoneinfo 2025a to 2025c (fallback)
 
 
 [develop]
