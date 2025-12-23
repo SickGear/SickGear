@@ -486,7 +486,7 @@ class NewznabProvider(generic.NZBProvider):
             search_spacer = ' '
             spacer = '.'
         else:
-            spacer = search_params = 'nzbgeek.info' in self.url.lower() and ' ' or '.'
+            spacer = search_spacer = 'nzbgeek.info' in self.url.lower() and ' ' or '.'
 
         # query search and exceptions
         name_exceptions = get_show_names(ep_obj, spacer)

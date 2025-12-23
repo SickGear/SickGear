@@ -24,6 +24,7 @@
 * Update Tornado Web Server 6.5.3 (38014dd) to 6.5.4 (63d4df4)
 * Update typing-extensions 4.15.0 (9215c95) to 4.15.0 (2638b86)
 * Update urllib3 2.6.1 (bfe8e19) to 2.6.2 (83f8643)
+* Fix newznab misnamed variable for nzbgeek
 
 
 
