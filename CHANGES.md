@@ -28,6 +28,11 @@
 
 
 
+### 3.34.8 (2025-12-24 23:10:00 UTC)
+
+* Fix importing Trakt data
+
+
 ### 3.34.7 (2025-12-18 18:00:00 UTC)
 
 * Update filelock 3.19.0 (0c54837) to 3.20.1 (377f622) fixes TOCTOU symlink vulnerability in lock file creation

@@ -106,23 +106,22 @@ class TraktIndexer(TVInfoBase):
         if shows:
             try:
                 for s in shows:
-                    if s['ids']['trakt'] not in [i['ids'].trakt for i in results]:
+                    if s['ids'].get('trakt') not in [i['ids'].trakt for i in results]:
                         ti_show = TVInfoShow()
-                        countries = clean_data(s['country'])
+                        countries = clean_data(s.get('country'))
                         if countries:
                             countries = [countries]
                         else:
                             countries = []
                         ti_show.id, ti_show.seriesname, ti_show.overview, ti_show.firstaired, ti_show.airs_dayofweek, \
                             ti_show.runtime, ti_show.network, ti_show.origin_countries, ti_show.official_site, \
-                            ti_show.status, ti_show.rating, ti_show.genre_list, ti_show.ids = s['ids']['trakt'], \
-                            clean_data(s['title']), enforce_type(clean_data(s['overview']), str, ''), s['firstaired'], \
-                            (isinstance(s['airs'], dict) and s['airs']['day']) or '', \
-                            s['runtime'], s['network'], countries, s['homepage'], s['status'], s['rating'], \
-                            s['genres_list'], \
-                            TVInfoIDs(trakt=s['ids']['trakt'], tvdb=s['ids']['tvdb'], tmdb=s['ids']['tmdb'],
-                                      rage=s['ids']['tvrage'],
-                                      imdb=s['ids']['imdb'] and try_int(s['ids']['imdb'].replace('tt', ''), None))
+                            ti_show.status, ti_show.rating, ti_show.genre_list, ti_show.ids = s['ids'].get('trakt'), \
+                            clean_data(s.get('title', '')), enforce_type(clean_data(s.get('overview')), str, ''), s.get('firstaired'), \
+                            (isinstance(s.get('airs'), dict) and s['airs'].get('day', '')) or '', \
+                            s.get('runtime'), s.get('network'), countries, s.get('homepage'), s.get('status'), s.get('rating'), \
+                            s.get('genres_list'), \
+                            TVInfoIDs(trakt=s['ids']['trakt'], tvdb=s['ids'].get('tvdb'), tmdb=s['ids'].get('tmdb'),
+                                      imdb=s['ids'].get('imdb') and try_int(s['ids']['imdb'].replace('tt', ''), None))
                         ti_show.genre = '|'.join(ti_show.genre_list or [])
                         results.append(ti_show)
             except (BaseException, Exception) as e:
@@ -257,25 +256,24 @@ class TraktIndexer(TVInfoBase):
 
         return TVInfoPerson(p_id=person_obj['ids']['trakt'],
                             name=person_obj['name'],
-                            bio=person_obj['biography'],
+                            bio=person_obj.get('biography'),
                             birthdate=birthdate,
                             deathdate=deathdate,
-                            homepage=person_obj['homepage'],
-                            birthplace=person_obj['birthplace'],
-                            gender=PersonGenders.trakt_map.get(person_obj['gender'], PersonGenders.unknown),
+                            homepage=person_obj.get('homepage'),
+                            birthplace=person_obj.get('birthplace'),
+                            gender=PersonGenders.trakt_map.get(person_obj.get('gender'), PersonGenders.unknown),
                             social_ids=TVInfoSocialIDs(
-                                ids={TVINFO_X: person_obj['social_ids']['twitter'],
-                                     TVINFO_FACEBOOK: person_obj['social_ids']['facebook'],
-                                     TVINFO_INSTAGRAM: person_obj['social_ids']['instagram'],
-                                     TVINFO_WIKIPEDIA: person_obj['social_ids']['wikipedia']
+                                ids={TVINFO_X: person_obj['social_ids'].get('twitter'),
+                                     TVINFO_FACEBOOK: person_obj['social_ids'].get('facebook'),
+                                     TVINFO_INSTAGRAM: person_obj['social_ids'].get('instagram'),
+                                     TVINFO_WIKIPEDIA: person_obj['social_ids'].get('wikipedia')
                                      }),
                             ids=TVInfoIDs(ids={
-                                TVINFO_TRAKT: person_obj['ids']['trakt'], TVINFO_SLUG: person_obj['ids']['slug'],
+                                TVINFO_TRAKT: person_obj['ids']['trakt'], TVINFO_SLUG: person_obj['ids'].get('slug'),
                                 TVINFO_IMDB:
-                                    person_obj['ids']['imdb'] and
-                                    try_int(person_obj['ids']['imdb'].replace('nm', ''), None),
-                                TVINFO_TMDB: person_obj['ids']['tmdb'],
-                                TVINFO_TVRAGE: person_obj['ids']['tvrage']}))
+                                    person_obj['ids'].get('imdb') and
+                                    try_int(person_obj['ids'].get('imdb', '').replace('nm', ''), None),
+                                TVINFO_TMDB: person_obj['ids'].get('tmdb')}))
 
     def get_person(self, p_id, get_show_credits=False, get_images=False, **kwargs):
         # type: (integer_types, bool, bool, Any) -> Optional[TVInfoPerson]
@@ -328,7 +326,7 @@ class TraktIndexer(TVInfoBase):
                             ti_show.network_country = c['show'].get('country')
                             ti_show.rating = c['show'].get('rating')
                             ti_show.vote_count = c['show'].get('votes')
-                            for ch in c.get('characters') or []:
+                            for ch in c.get('characters') or ['unknown name']:
                                 clean_ch = clean_data(ch)
                                 _ti_character = TVInfoCharacter(
                                     name=clean_ch, regular=c.get('series_regular'), ti_show=ti_show, person=[result],
@@ -419,7 +417,7 @@ class TraktIndexer(TVInfoBase):
             _s_d.get('country'), _s_d.get('status'), _s_d.get('genres', []), _s_d.get('language'), \
             show_data.get('watcher_count'), show_data.get('play_count'), show_data.get('collected_count'), \
             show_data.get('collector_count'), _s_d.get('votes'), _s_d.get('rating'), _s_d.get('rating'), \
-            _s_d.get('certification'), _s_d.get('homepage'), _s_d['ids']['slug']
+            _s_d.get('certification'), _s_d.get('homepage'), _s_d['ids'].get('slug')
         ti_show.ids = TVInfoIDs(ids={id_map[src]: _convert_imdb_id(id_map[src], sid)
                                 for src, sid in iteritems(_s_d['ids']) if src in id_map})
         ti_show.genre = '|'.join(ti_show.genre_list or [])
