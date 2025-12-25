@@ -7,6 +7,7 @@
 * Update certifi 2025.08.03 to 2025.11.12
 * Update feedparser 6.0.11 (89fde03) to 6.0.12 (5d2578b)
 * Update idna library 3.10 (729225d) to 3.11 (ad949ee)
+* Update langcodes 3.5.0 (ed97477) to 3.5.1 (4701cd3)
 * Update SimpleJSON 3.19.3 (6932004) to 3.20.2 (10e5aaf)
 * Update soupsieve 2.7.0 (a616022) to 2.8.0 (bf93778)
 * Update Tornado Web Server 6.5.2 (f01a7b0) to 6.5.4 (63d4df4)
@@ -81,7 +82,7 @@
 * Update filelock 3.15.4 (9a979df) to 3.19.0 (0c54837)
 * Update hachoir 3.2.0 (38d759f) to 3.3.0 (48b478f)
 * Update idna library 3.7 (1d365e1) to 3.10 (729225d)
-* Update langcodes 3.3.0 to 3.5.0
+* Update langcodes 3.3.0 (49beea8) to 3.5.0 (ed97477)
 * Update language-data 1.1 to 1.3
 * Update Msgpack 1.0.6 (e1d3d5d) to 1.1.1 (42f056f)
 * Update deprecated pkg_resources 24.0 to Packaging 25.0 (f585376)
