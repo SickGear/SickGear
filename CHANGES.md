@@ -31,6 +31,11 @@
 
 
 
+### 3.34.9 (2026-01-01 18:55:00 UTC)
+
+* Fix api endpoint to add new shows
+
+
 ### 3.34.8 (2025-12-24 23:10:00 UTC)
 
 * Fix importing Trakt data
