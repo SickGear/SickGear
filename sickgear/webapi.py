@@ -3379,14 +3379,14 @@ class CMD_SickGearShowAddExisting(ApiCall):
             return _responds(RESULT_FAILURE, msg="Unable to retrieve information from indexer")
 
         indexerName = None
-        if None is myShow or getattr(t, 'show_not_found', False) or not myShow.data['seriesname']:
+        if None is myShow or getattr(t, 'show_not_found', False) or not myShow['seriesname']:
             self.log(
                 "Found show with tvid %s prodid %s, however it contained no show name" % (self.tvid, self.prodid),
                 logger.DEBUG)
             return _responds(RESULT_FAILURE, msg="Unable to retrieve information from indexer")
 
         else:
-            indexerName = myShow.data['seriesname']
+            indexerName = myShow['seriesname']
 
         if not indexerName:
             return _responds(RESULT_FAILURE, msg="Unable to retrieve information from indexer")
@@ -3542,14 +3542,14 @@ class CMD_SickGearShowAddNew(ApiCall):
             return _responds(RESULT_FAILURE, msg="Unable to retrieve information from indexer")
 
         indexerName = None
-        if None is myShow or getattr(t, 'show_not_found', False) or not myShow.data['seriesname']:
+        if None is myShow or getattr(t, 'show_not_found', False) or not myShow['seriesname']:
             self.log(
                 "Found show with tvid %s prodid %s, however it contained no show name" % (self.tvid, self.prodid),
                 logger.DEBUG)
             return _responds(RESULT_FAILURE, msg="Unable to retrieve information from indexer")
 
         else:
-            indexerName = myShow.data['seriesname']
+            indexerName = myShow['seriesname']
 
         if not indexerName:
             return _responds(RESULT_FAILURE, msg="Unable to retrieve information from indexer")
