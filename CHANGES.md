@@ -1,4 +1,9 @@
-﻿### 3.35.7 (2026-05-19 20:00:00 UTC)
+﻿### 3.35.8 (2026-06-10 22:25:00 UTC)
+
+* Change add support for Python 3.14.6, 3.13.14
+
+
+### 3.35.7 (2026-05-19 20:00:00 UTC)
 
 * Add support for qBittorrent WebAPI 2.14.0 (qB > 5.1.4)
 
