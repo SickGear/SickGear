@@ -528,8 +528,10 @@ def backup_btn_status():
     """
     backup btn-status.json
     """
-    logger.log('backing up btn-status.json')
     try:
+        if not os.path.isfile(sickgear.BTN_SETTINGS_FILE):
+            return
+        logger.log('backing up btn-status.json')
         if not validate_btn_status_file(sickgear.BTN_SETTINGS_FILE):
             logger.error('btn-status.json file seems to be invalid, not backing up.')
             return

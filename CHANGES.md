@@ -107,6 +107,7 @@
 * Fix hover styling of Remove and Edit buttons on light theme
 * Fix Kodi notifier f-string conversion
 * Fix a couple more issues with older Python versions that don't support certain f-string niceness in newer versions
+* Fix ignore btn-status.json backup if file does not exist
 
 
 ### 3.35.8 (2026-06-10 22:25:00 UTC)
