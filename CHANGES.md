@@ -6,7 +6,7 @@
 * Update certifi 2026.02.25 to 2026.05.20
 * Update chardet packages 7.3.0 (00667a4) to 7.4.1 (9079efc)
 * Update filelock 3.20.1 (377f622) to 3.29.0 (469b47f)
-* Update idna library 3.11 (ad949ee) to 3.17 (f48619c)
+* Update idna library 3.11 (ad949ee) to 3.18 (f39ea90)
 * Update imdbpie 5.6.5 (f8ed7a0) to 5.7.0 (2eff17c)
 * Update packaging 26.0 (3b77a26) to 26.2 (84a87ee)
 * Update Requests library 2.33.0 (bc04dfd) to 2.34.2 (6e83187)
@@ -95,6 +95,7 @@
 * Update idna library 3.13 (89cdfd2) to 3.14 (37b6b74)
 * Update idna library 3.14 (37b6b74) to 3.16 (6d1a0de)
 * Update idna library 3.16 (6d1a0de) to 3.17 (f48619c)
+* Update idna library 3.17 (f48619c) to 3.18 (f39ea90)
 * Update packaging 26.1 (c1a88a3) to 26.2 (84a87ee)
 * Update Requests library 2.33.1 (111d2b7) to 2.34.0 (0b401c7)
 * Update Requests library 2.34.0 (0b401c7) to 2.34.2 (6e83187)
