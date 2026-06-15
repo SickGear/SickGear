@@ -584,6 +584,7 @@ def decode(
     strict: bool = False,
     uts46: bool = False,
     std3_rules: bool = False,
+    display: bool = False,
 ) -> str:
     """Decode an A-label-encoded domain name back to Unicode.
 
@@ -598,6 +599,13 @@ def decode(
     :param uts46: If ``True``, apply UTS #46 mapping before decoding.
     :param std3_rules: Forwarded to :func:`uts46_remap` when ``uts46`` is
         ``True``.
+    :param display: If ``True``, any ``xn--`` label that fails IDNA
+        validation is passed through unchanged (lowercased) rather than
+        aborting the whole call. Intended for "decode for display"
+        consumers (e.g. URL libraries, HTTP clients) that want to show
+        the user the label as it appears on the wire when it cannot be
+        rendered as Unicode. Matches the per-label recovery prescribed
+        by UTS #46 §4 and the WHATWG URL "domain to Unicode" algorithm.
     :returns: The decoded domain as a Unicode string.
     :raises IDNAError: If the input is not valid ASCII, contains an
         invalid label, or is empty.
@@ -624,9 +632,15 @@ def decode(
         del labels[-1]
         trailing_dot = True
     for label in labels:
-        s = ulabel(label)
-        if s:
-            result.append(s)
+        try:
+            u = ulabel(label)
+        except IDNAError:
+            if display and label[:4].lower() == "xn--":
+                u = label.lower()
+            else:
+                raise
+        if u:
+            result.append(u)
         else:
             raise IDNAError("Empty label")
     if trailing_dot:
