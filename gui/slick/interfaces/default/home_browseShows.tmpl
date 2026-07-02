@@ -693,7 +693,7 @@ $browse_title
         #if $mode in ('returning', 'new_seasons')
             #set $overview = '%s: %s' % (
             	'Season %s' % $this_show['episode_season'],
-                $this_show[('episode_overview', 'overview')['No overview yet' == $this_show['episode_overview']]])
+                $this_show[('episode_overview', 'overview')[not $this_show.get('episode_overview') or 'No overview yet' == $this_show['episode_overview']]])
         #else
             #set $overview = $this_show['overview']
         #end if

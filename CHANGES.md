@@ -83,6 +83,7 @@
 * Fix db issue during Plex notification updates
 * Change ignore scanning of Plex extras
 * Change replace py2 compatible iterkeys, itervalues, iteritems with faster py3 compatible calls to keys, values, items
+* Fix display of browse TVC filter "returning"
 
 
 [develop]
