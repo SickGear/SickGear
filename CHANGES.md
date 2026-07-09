@@ -9,6 +9,7 @@
 * Update idna library 3.11 (ad949ee) to 3.18 (f39ea90)
 * Update imdbpie 5.6.5 (f8ed7a0) to 5.7.0 (2eff17c)
 * Update packaging 26.0 (3b77a26) to 26.2 (84a87ee)
+* Update Rarfile 4.2 (db1df33) to 4.3 (4e9451c)
 * Update Requests library 2.33.0 (bc04dfd) to 2.34.2 (6e83187)
 * Update browser_ua from user-agents 2.1.38 (a78437e)
 * Update SimpleJSON 3.20.2 (10e5aaf) to 4.0.0 (1608c05)

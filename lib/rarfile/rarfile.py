@@ -1,6 +1,6 @@
 # rarfile.py
 #
-# Copyright (c) 2005-2024  Marko Kreen <markokr@gmail.com>
+# Copyright (c) 2005-2026  Marko Kreen <markokr@gmail.com>
 #
 # Permission to use, copy, modify, and/or distribute this software for any
 # purpose with or without fee is hereby granted, provided that the above
@@ -92,7 +92,7 @@ class AES_CBC_Decrypt:
             self.decrypt = ciph.decryptor().update
 
 
-__version__ = "4.2"
+__version__ = "4.3"
 
 # export only interesting items
 __all__ = ["get_rar_version", "is_rarfile", "is_rarfile_sfx", "RarInfo", "RarFile", "RarExtFile"]
@@ -337,6 +337,7 @@ def _find_sfx_header(xfile):
                 if curdata[pos:pos + len(RAR5_ID)] == RAR5_ID:
                     return RAR_V5, pos
                 findpos = pos + len(sig)
+        fd.restore_pos()
     return 0, 0
 
 
@@ -350,6 +351,7 @@ def get_rar_version(xfile):
     """
     with XFile(xfile) as fd:
         buf = fd.read(len(RAR5_ID))
+        fd.restore_pos()
     if buf.startswith(RAR_ID):
         return RAR_V3
     elif buf.startswith(RAR5_ID):
@@ -397,6 +399,10 @@ class NoRarEntry(Error):
 
 class PasswordRequired(Error):
     """File requires password"""
+
+
+class BadSymLinkError(Error):
+    """Invalid symbolic link"""
 
 
 class NeedFirstVolume(Error):
@@ -946,6 +952,17 @@ class RarFile:
             path = os.fspath(path)
         dstfn = os.path.join(path, fname)
 
+        # Reject members whose destination escapes `path` once symlinks
+        # already created on disk are resolved.  Without this, a symlink
+        # member can point outside `path` and a later file/dir member
+        # named through it will be written outside the extraction root.
+        real_path = os.path.realpath(path)
+        real_dst = os.path.realpath(dstfn)
+        if real_dst != real_path and not real_dst.startswith(real_path + os.sep):
+            raise BadRarFile(
+                "Refusing to extract entry that escapes destination: %r" % info.filename
+            )
+
         dirname = os.path.dirname(dstfn)
         if dirname and dirname != ".":
             os.makedirs(dirname, exist_ok=True)
@@ -955,7 +972,7 @@ class RarFile:
         if info.is_dir():
             return self._make_dir(info, dstfn, pwd, set_attrs)
         if info.is_symlink():
-            return self._make_symlink(info, dstfn, pwd, set_attrs)
+            return self._make_symlink(info, dstfn, pwd, set_attrs, path)
         return None
 
     def _create_helper(self, name, flags, info):
@@ -977,10 +994,10 @@ class RarFile:
             self._set_attrs(info, dstfn)
         return dstfn
 
-    def _make_symlink(self, info, dstfn, pwd, set_attrs):
+    def _make_symlink(self, info, dstfn, pwd, set_attrs, top):
         target_is_directory = False
         if info.host_os == RAR_OS_UNIX:
-            link_name = self.read(info, pwd)
+            link_name = self.read(info, pwd).decode("utf8", "replace")
             target_is_directory = (info.flags & RAR_FILE_DIRECTORY) == RAR_FILE_DIRECTORY
         elif info.file_redir:
             redir_type, redir_flags, link_name = info.file_redir
@@ -991,6 +1008,18 @@ class RarFile:
         else:
             warnings.warn(f"Unsupported link type - {info.filename}", UnsupportedWarning)
             return None
+
+        # disallow abs paths
+        target = os.path.normpath(link_name)
+        if os.path.isabs(target) or os.path.splitdrive(target)[0]:
+            raise BadSymLinkError('Absolute links not allowed')
+
+        # disallow ../ traversal
+        dest_abs = os.path.realpath(top)
+        target_base = os.path.dirname(dstfn)
+        target_abs = os.path.realpath(os.path.join(target_base, target))
+        if os.path.commonpath([target_abs, dest_abs]) != dest_abs:
+            raise BadSymLinkError('Link to outside not allowed')
 
         os.symlink(link_name, dstfn, target_is_directory=target_is_directory)
         return dstfn
@@ -2307,6 +2336,8 @@ class RarExtFile(io.RawIOBase):
             n -= len(data)
         data = b"".join(buf)
         if n > 0:
+            if self._returncode:
+                check_returncode(self._returncode, "", tool_setup().get_errmap())
             raise BadRarFile("Failed the read enough data: req=%d got=%d" % (orig, len(data)))
 
         # done?
@@ -2687,16 +2718,26 @@ class HeaderDecrypt:
 class XFile:
     """Input may be filename or file object.
     """
-    __slots__ = ("_fd", "_need_close")
+    __slots__ = ("_fd", "_need_close", "_initial_pos")
 
     def __init__(self, xfile, bufsize=1024):
         if is_filelike(xfile):
+            self._initial_pos = xfile.tell()
             self._need_close = False
             self._fd = xfile
             self._fd.seek(0)
         else:
+            self._initial_pos = None
             self._need_close = True
             self._fd = open(xfile, "rb", bufsize)
+
+    def restore_pos(self):
+        if self._initial_pos is None:
+            return
+        try:
+            self._fd.seek(self._initial_pos)
+        except:
+            pass
 
     def read(self, n=None):
         """Read from file."""
