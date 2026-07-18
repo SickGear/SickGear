@@ -15,6 +15,7 @@ import socket
 import stat
 import subprocess
 import sys
+import tarfile
 import tempfile
 import threading
 import time
@@ -1866,3 +1867,20 @@ def strip_html_tags(html):
     s = MLStripper()
     s.feed(html)
     return s.get_data()
+
+def tar_check_sanity(tar, path):
+    # type: (tarfile, str) -> None
+    """
+    Check sanity of tar file object for security reasons.
+    Raise `Exception` if tarfile is not secure.
+
+    Includes:
+    Path traversal checker for tar member paths.
+
+    :param tar: An open tarfile object
+    :param path: Where the tar file will be extracted
+    """
+    for member in tar.getmembers():
+        member_path = os.path.realpath(os.path.join(path, member.name))
+        if not member_path.startswith(os.path.realpath(path) + os.sep):
+            raise Exception(f'Path traversal detected: {member.name}')
