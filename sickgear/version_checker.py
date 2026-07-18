@@ -31,7 +31,7 @@ import sickgear
 from . import logger, notifiers, ui
 from .scheduler import (Scheduler, Job)
 from .piper import check_pip_outdated
-from sg_helpers import cmdline_runner, get_url
+from sg_helpers import cmdline_runner, get_url, tar_check_sanity
 
 # noinspection PyUnresolvedReferences
 from six.moves import urllib
@@ -794,9 +794,9 @@ class SourceUpdateManager(UpdateManager):
 
             # extract to sg-update dir
             logger.log(f'Extracting file {tar_download_path}')
-            tar = tarfile.open(tar_download_path)
-            tar.extractall(sg_update_dir)
-            tar.close()
+            with tarfile.open(tar_download_path) as tar:
+                tar_check_sanity(tar, sg_update_dir)
+                tar.extractall(sg_update_dir)
 
             # delete .tar.gz
             logger.log(f'Deleting file {tar_download_path}')
