@@ -1,4 +1,9 @@
-﻿### 3.35.9 (2026-07-02 17:00:00 UTC)
+﻿### 3.35.10 (2026-07-18 19:40:00 UTC)
+
+* Change improve security of extracting tar source updates
+
+
+### 3.35.9 (2026-07-02 17:00:00 UTC)
 
 * Update UnRar x64 for Windows 7.22 to 7.23
 
