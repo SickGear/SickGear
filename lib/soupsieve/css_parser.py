@@ -8,6 +8,12 @@ from . import css_types as ct
 from .util import SelectorSyntaxError
 import warnings
 from typing import Match, Any, Iterator, cast
+from dataclasses import dataclass
+from collections import UserDict
+import threading
+
+RE_LOCK = threading.Lock()
+SEL_LOCK = threading.RLock()
 
 UNICODE_REPLACEMENT_CHAR = 0xFFFD
 
@@ -106,7 +112,7 @@ PSEUDO_SUPPORTED = PSEUDO_SIMPLE | PSEUDO_SIMPLE_NO_MATCH | PSEUDO_COMPLEX | PSE
 NEWLINE = r'(?:\r\n|(?!\r\n)[\n\f\r])'
 WS = fr'(?:[ \t]|{NEWLINE})'
 # Comments
-COMMENTS = r'(?:/\*[^*]*\*+(?:[^/*][^*]*\*+)*/)'
+COMMENTS = r'(?:/\*(?:[^*]|\*(?!/))*\*/)'
 # Whitespace with comments included
 WSC = fr'(?:{WS}|{COMMENTS})'
 # CSS escapes
@@ -114,7 +120,7 @@ CSS_ESCAPES = fr'(?:\\(?:[a-f0-9]{{1,6}}{WS}?|[^\r\n\f]|$))'
 CSS_STRING_ESCAPES = fr'(?:\\(?:[a-f0-9]{{1,6}}{WS}?|[^\r\n\f]|$|{NEWLINE}))'
 # CSS Identifier
 IDENTIFIER = fr'''
-(?:(?:-?(?:[^\x00-\x2f\x30-\x40\x5B-\x5E\x60\x7B-\x9f]|{CSS_ESCAPES})+|--)
+(?:(?:--|-?(?:[^\x00-\x2f\x30-\x40\x5B-\x5E\x60\x7B-\x9f]|{CSS_ESCAPES}))
 (?:[^\x00-\x2c\x2e\x2f\x3A-\x40\x5B-\x5E\x60\x7B-\x9f]|{CSS_ESCAPES})*)
 '''
 # `nth` content
@@ -177,8 +183,9 @@ RE_VALUES = re.compile(fr'(?:(?P<value>{VALUE})|(?P<split>{WSC}*,{WSC}*))', re.X
 # Whitespace checks
 RE_WS = re.compile(WS)
 RE_WS_BEGIN = re.compile(fr'^{WSC}*')
-RE_WS_END = re.compile(fr'{WSC}*$')
+RE_WS_END = re.compile(fr'^(?:[ \t]|(?:\n\r|(?!\n\r)[\n\f\r])|{COMMENTS})*')
 RE_CUSTOM = re.compile(fr'^{PAT_PSEUDO_CLASS_CUSTOM}$', re.X)
+RE_PSEUDO_CLASS_SPECIAL = re.compile(PAT_PSEUDO_CLASS_SPECIAL, re.I | re.X | re.U)
 
 # Constants
 # List split token
@@ -309,7 +316,17 @@ class SelectorPattern:
         """Initialize."""
 
         self.name = name
-        self.re_pattern = re.compile(pattern, re.I | re.X | re.U)
+        self.pattern = pattern
+        self._re_pattern: re.Pattern[str] | None = None
+
+    @property
+    def re_pattern(self) -> re.Pattern[str]:
+        """Retrieve the compiled regular expression pattern."""
+
+        with RE_LOCK:
+            if self._re_pattern is None:
+                self._re_pattern = re.compile(self.pattern, re.I | re.X | re.U)
+        return self._re_pattern
 
     def get_name(self) -> str:
         """Get name."""
@@ -336,7 +353,6 @@ class SpecialPseudoPattern(SelectorPattern):
                 self.patterns[pseudo] = pattern
 
         self.matched_name = None  # type: SelectorPattern | None
-        self.re_pseudo_name = re.compile(PAT_PSEUDO_CLASS_SPECIAL, re.I | re.X | re.U)
 
     def get_name(self) -> str:
         """Get name."""
@@ -347,7 +363,7 @@ class SpecialPseudoPattern(SelectorPattern):
         """Match the selector."""
 
         pseudo = None
-        m = self.re_pseudo_name.match(selector, index)
+        m = RE_PSEUDO_CLASS_SPECIAL.match(selector, index)
         if m:
             name = util.lower(css_unescape(m.group('name')))
             pattern = self.patterns.get(name)
@@ -427,10 +443,187 @@ class _Selector:
     __repr__ = __str__
 
 
+@dataclass
+class CSSPattern:
+    """A CSS pattern that hasn't been processed by `CSSParser` yet."""
+
+    selector: str
+    flags: int
+
+
+class PseudoSelectorMap(UserDict[str, CSSPattern | ct.SelectorList]):
+    """Pseudo selector map."""
+
+    def __setitem__(self, key: str, value: CSSPattern | ct.SelectorList) -> None:
+        """Set item."""
+
+        self.data[key] = value
+
+    def __getitem__(self, key: str) -> ct.SelectorList:
+        """Get item."""
+
+        with SEL_LOCK:
+            value = self.data[key]
+            if isinstance(value, CSSPattern):
+                value = CSSParser(value.selector).process_selectors(flags=value.flags)
+                self.data[key] = value
+
+        return value
+
+
+# CSS pattern for `:link` and `:any-link`
+CSS_LINK = CSSPattern('html|*:is(a, area)[href]', FLG_PSEUDO | FLG_HTML)
+# CSS pattern for `:checked`
+CSS_CHECKED = CSSPattern(
+    '''
+    html|*:is(input[type=checkbox], input[type=radio])[checked], html|option[selected]
+    ''',
+    FLG_PSEUDO | FLG_HTML
+)
+# CSS pattern for `:default` (must compile CSS_CHECKED first)
+CSS_DEFAULT = CSSPattern(
+    '''
+    :checked,
+
+    /*
+    This pattern must be at the end.
+    Special logic is applied to the last selector.
+    */
+    html|form html|*:is(button, input)[type="submit"]
+    ''',
+    FLG_PSEUDO | FLG_HTML | FLG_DEFAULT
+)
+# CSS pattern for `:indeterminate`
+CSS_INDETERMINATE = CSSPattern(
+    '''
+    html|input[type="checkbox"][indeterminate],
+    html|input[type="radio"]:is(:not([name]), [name=""]):not([checked]),
+    html|progress:not([value]),
+
+    /*
+    This pattern must be at the end.
+    Special logic is applied to the last selector.
+    */
+    html|input[type="radio"][name]:not([name='']):not([checked])
+    ''',
+    FLG_PSEUDO | FLG_HTML | FLG_INDETERMINATE
+)
+# CSS pattern for `:disabled`
+CSS_DISABLED = CSSPattern(
+    '''
+    html|*:is(input:not([type=hidden]), button, select, textarea, fieldset, optgroup, option, fieldset)[disabled],
+    html|optgroup[disabled] > html|option,
+    html|fieldset[disabled] > html|*:is(input:not([type=hidden]), button, select, textarea, fieldset),
+    html|fieldset[disabled] >
+        html|*:not(legend:nth-of-type(1)) html|*:is(input:not([type=hidden]), button, select, textarea, fieldset)
+    ''',
+    FLG_PSEUDO | FLG_HTML
+)
+# CSS pattern for `:enabled`
+CSS_ENABLED = CSSPattern(
+    '''
+    html|*:is(input:not([type=hidden]), button, select, textarea, fieldset, optgroup, option, fieldset):not(:disabled)
+    ''',
+    FLG_PSEUDO | FLG_HTML
+)
+# CSS pattern for `:required`
+CSS_REQUIRED = CSSPattern('html|*:is(input, textarea, select)[required]', FLG_PSEUDO | FLG_HTML)
+# CSS pattern for `:optional`
+CSS_OPTIONAL = CSSPattern('html|*:is(input, textarea, select):not([required])', FLG_PSEUDO | FLG_HTML)
+# CSS pattern for `:placeholder-shown`
+CSS_PLACEHOLDER_SHOWN = CSSPattern(
+    '''
+    html|input:is(
+        :not([type]),
+        [type=""],
+        [type=text],
+        [type=search],
+        [type=url],
+        [type=tel],
+        [type=email],
+        [type=password],
+        [type=number]
+    )[placeholder]:not([placeholder='']):is(:not([value]), [value=""]),
+    html|textarea[placeholder]:not([placeholder=''])
+    ''',
+    FLG_PSEUDO | FLG_HTML | FLG_PLACEHOLDER_SHOWN
+)
+# CSS pattern for `:read-write` (CSS_DISABLED must be compiled first)
+CSS_READ_WRITE = CSSPattern(
+    '''
+    html|*:is(
+        textarea,
+        input:is(
+            :not([type]),
+            [type=""],
+            [type=text],
+            [type=search],
+            [type=url],
+            [type=tel],
+            [type=email],
+            [type=number],
+            [type=password],
+            [type=date],
+            [type=datetime-local],
+            [type=month],
+            [type=time],
+            [type=week]
+        )
+    ):not([readonly], :disabled),
+    html|*:is([contenteditable=""], [contenteditable="true" i])
+    ''',
+    FLG_PSEUDO | FLG_HTML
+)
+# CSS pattern for `:read-only`
+CSS_READ_ONLY = CSSPattern('html|*:not(:read-write)', FLG_PSEUDO | FLG_HTML)
+# CSS pattern for `:in-range`
+CSS_IN_RANGE = CSSPattern(
+    '''
+    html|input:is(
+        [type="date"],
+        [type="month"],
+        [type="week"],
+        [type="time"],
+        [type="datetime-local"],
+        [type="number"],
+        [type="range"]
+    ):is(
+        [min],
+        [max]
+    )
+    ''',
+    FLG_PSEUDO | FLG_HTML | FLG_IN_RANGE
+)
+# CSS pattern for `:out-of-range`
+CSS_OUT_OF_RANGE = CSSPattern(
+    '''
+    html|input:is(
+        [type="date"],
+        [type="month"],
+        [type="week"],
+        [type="time"],
+        [type="datetime-local"],
+        [type="number"],
+        [type="range"]
+    ):is(
+        [min],
+        [max]
+    )
+    ''',
+    FLG_PSEUDO | FLG_HTML | FLG_OUT_OF_RANGE
+)
+# CSS pattern for :open
+CSS_OPEN = CSSPattern('html|*:is(details, dialog)[open]', FLG_PSEUDO | FLG_HTML)
+# CSS pattern for :muted
+CSS_MUTED = CSSPattern('html|*:is(video, audio)[muted]', FLG_PSEUDO | FLG_HTML)
+# CSS pattern default for `:nth-child` "of S" feature
+CSS_NTH_OF_S_DEFAULT = CSSPattern("*|*", FLG_PSEUDO)
+
+
 class CSSParser:
     """Parse CSS selectors."""
 
-    css_tokens = (
+    CSS_TOKENS = (
         SelectorPattern("pseudo_close", PAT_PSEUDO_CLOSE),
         SpecialPseudoPattern(
             (
@@ -456,6 +649,29 @@ class CSSParser:
         SelectorPattern("tag", PAT_TAG),
         SelectorPattern("attribute", PAT_ATTR),
         SelectorPattern("combine", PAT_COMBINE)
+    )
+
+    # Pseudos that expand to selectors
+    PSEUDO_SELECTORS = PseudoSelectorMap(
+        {
+            ':link': CSS_LINK,
+            ':any-link': CSS_LINK,
+            ':checked': CSS_CHECKED,
+            ':default': CSS_DEFAULT,
+            ':indeterminate': CSS_INDETERMINATE,
+            ':disabled': CSS_DISABLED,
+            ':enabled': CSS_ENABLED,
+            ':required': CSS_REQUIRED,
+            ':muted': CSS_MUTED,
+            ':open': CSS_OPEN,
+            ':optional': CSS_OPTIONAL,
+            ':read-only': CSS_READ_ONLY,
+            ':read-write': CSS_READ_WRITE,
+            ':in-range': CSS_IN_RANGE,
+            ':out-of-range': CSS_OUT_OF_RANGE,
+            ':placeholder-shown': CSS_PLACEHOLDER_SHOWN,
+            '<nth-of-s>': CSS_NTH_OF_S_DEFAULT
+        }
     )
 
     def __init__(
@@ -614,66 +830,11 @@ class CSSParser:
                 sel.flags |= ct.SEL_SCOPE
             elif pseudo == ':empty':
                 sel.flags |= ct.SEL_EMPTY
-            elif pseudo in (':link', ':any-link'):
-                self.count += CSS_LINK.count
+            elif pseudo in self.PSEUDO_SELECTORS:
+                pseudo_selector = self.PSEUDO_SELECTORS[pseudo]
+                self.count += pseudo_selector.count
                 self.check_count()
-                sel.selectors.append(CSS_LINK)
-            elif pseudo == ':checked':
-                self.count += CSS_CHECKED.count
-                self.check_count()
-                sel.selectors.append(CSS_CHECKED)
-            elif pseudo == ':default':
-                self.count += CSS_DEFAULT.count
-                self.check_count()
-                sel.selectors.append(CSS_DEFAULT)
-            elif pseudo == ':indeterminate':
-                self.count += CSS_INDETERMINATE.count
-                self.check_count()
-                sel.selectors.append(CSS_INDETERMINATE)
-            elif pseudo == ":disabled":
-                self.count += CSS_DISABLED.count
-                self.check_count()
-                sel.selectors.append(CSS_DISABLED)
-            elif pseudo == ":enabled":
-                self.count += CSS_ENABLED.count
-                self.check_count()
-                sel.selectors.append(CSS_ENABLED)
-            elif pseudo == ":required":
-                self.count += CSS_REQUIRED.count
-                self.check_count()
-                sel.selectors.append(CSS_REQUIRED)
-            elif pseudo == ":muted":
-                self.count += CSS_MUTED.count
-                self.check_count()
-                sel.selectors.append(CSS_MUTED)
-            elif pseudo == ":open":
-                self.count += CSS_OPEN.count
-                self.check_count()
-                sel.selectors.append(CSS_OPEN)
-            elif pseudo == ":optional":
-                self.count += CSS_OPTIONAL.count
-                self.check_count()
-                sel.selectors.append(CSS_OPTIONAL)
-            elif pseudo == ":read-only":
-                self.count += CSS_READ_ONLY.count
-                self.check_count()
-                sel.selectors.append(CSS_READ_ONLY)
-            elif pseudo == ":read-write":
-                self.count += CSS_READ_WRITE.count
-                self.check_count()
-                sel.selectors.append(CSS_READ_WRITE)
-            elif pseudo == ":in-range":
-                self.count += CSS_IN_RANGE.count
-                self.check_count()
-                sel.selectors.append(CSS_IN_RANGE)
-            elif pseudo == ":out-of-range":
-                self.count += CSS_OUT_OF_RANGE.count
-                self.check_count()
-                sel.selectors.append(CSS_OUT_OF_RANGE)
-            elif pseudo == ":placeholder-shown":
-                self.count += CSS_PLACEHOLDER_SHOWN.count
-                self.check_count()
-                sel.selectors.append(CSS_PLACEHOLDER_SHOWN)
+                sel.selectors.append(pseudo_selector)
             elif pseudo == ':first-child':
                 sel.nth.append(ct.SelectorNth(1, False, 0, False, False, ct.SelectorList()))
             elif pseudo == ':last-child':
@@ -772,7 +933,7 @@ class CSSParser:
                 nth_sel = self.parse_selectors(iselector, m.end(0), FLG_PSEUDO | FLG_OPEN)
             else:
                 # Use default `*|*` for `of S`.
-                nth_sel = CSS_NTH_OF_S_DEFAULT
+                nth_sel = self.PSEUDO_SELECTORS['<nth-of-s>']
                 self.count += nth_sel.count
                 self.check_count()
             if pseudo_sel == ':nth-child':
@@ -1160,14 +1321,15 @@ class CSSParser:
         # Ignore whitespace and comments at start and end of pattern
         m = RE_WS_BEGIN.search(pattern)
         index = m.end(0) if m else 0
-        m = RE_WS_END.search(pattern)
-        end = (m.start(0) - 1) if m else (len(pattern) - 1)
+        m = RE_WS_END.search(pattern[::-1])
+        offset = m.end(0) if m else 0
+        end = len(pattern) - (1 + offset)
 
         if self.debug:  # pragma: no cover
             print(f'## PARSING: {pattern!r}')
         while index <= end:
             m = None
-            for v in self.css_tokens:
+            for v in self.CSS_TOKENS:
                 m = v.match(pattern, index, self.flags)
                 if m:
                     name = v.get_name()
@@ -1199,169 +1361,3 @@ class CSSParser:
         """Process selectors."""
 
         return self.parse_selectors(self.selector_iter(self.pattern), index, flags)
-
-
-# Precompile CSS selector lists for pseudo-classes (additional logic may be required beyond the pattern)
-# A few patterns are order dependent as they use patterns previous compiled.
-
-# CSS pattern for `:link` and `:any-link`
-CSS_LINK = CSSParser(
-    'html|*:is(a, area)[href]'
-).process_selectors(flags=FLG_PSEUDO | FLG_HTML)
-# CSS pattern for `:checked`
-CSS_CHECKED = CSSParser(
-    '''
-    html|*:is(input[type=checkbox], input[type=radio])[checked], html|option[selected]
-    '''
-).process_selectors(flags=FLG_PSEUDO | FLG_HTML)
-# CSS pattern for `:default` (must compile CSS_CHECKED first)
-CSS_DEFAULT = CSSParser(
-    '''
-    :checked,
-
-    /*
-    This pattern must be at the end.
-    Special logic is applied to the last selector.
-    */
-    html|form html|*:is(button, input)[type="submit"]
-    '''
-).process_selectors(flags=FLG_PSEUDO | FLG_HTML | FLG_DEFAULT)
-# CSS pattern for `:indeterminate`
-CSS_INDETERMINATE = CSSParser(
-    '''
-    html|input[type="checkbox"][indeterminate],
-    html|input[type="radio"]:is(:not([name]), [name=""]):not([checked]),
-    html|progress:not([value]),
-
-    /*
-    This pattern must be at the end.
-    Special logic is applied to the last selector.
-    */
-    html|input[type="radio"][name]:not([name='']):not([checked])
-    '''
-).process_selectors(flags=FLG_PSEUDO | FLG_HTML | FLG_INDETERMINATE)
-# CSS pattern for `:disabled`
-CSS_DISABLED = CSSParser(
-    '''
-    html|*:is(input:not([type=hidden]), button, select, textarea, fieldset, optgroup, option, fieldset)[disabled],
-    html|optgroup[disabled] > html|option,
-    html|fieldset[disabled] > html|*:is(input:not([type=hidden]), button, select, textarea, fieldset),
-    html|fieldset[disabled] >
-        html|*:not(legend:nth-of-type(1)) html|*:is(input:not([type=hidden]), button, select, textarea, fieldset)
-    '''
-).process_selectors(flags=FLG_PSEUDO | FLG_HTML)
-# CSS pattern for `:enabled`
-CSS_ENABLED = CSSParser(
-    '''
-    html|*:is(input:not([type=hidden]), button, select, textarea, fieldset, optgroup, option, fieldset):not(:disabled)
-    '''
-).process_selectors(flags=FLG_PSEUDO | FLG_HTML)
-# CSS pattern for `:required`
-CSS_REQUIRED = CSSParser(
-    'html|*:is(input, textarea, select)[required]'
-).process_selectors(flags=FLG_PSEUDO | FLG_HTML)
-# CSS pattern for `:optional`
-CSS_OPTIONAL = CSSParser(
-    'html|*:is(input, textarea, select):not([required])'
-).process_selectors(flags=FLG_PSEUDO | FLG_HTML)
-# CSS pattern for `:placeholder-shown`
-CSS_PLACEHOLDER_SHOWN = CSSParser(
-    '''
-    html|input:is(
-        :not([type]),
-        [type=""],
-        [type=text],
-        [type=search],
-        [type=url],
-        [type=tel],
-        [type=email],
-        [type=password],
-        [type=number]
-    )[placeholder]:not([placeholder='']):is(:not([value]), [value=""]),
-    html|textarea[placeholder]:not([placeholder=''])
-    '''
-).process_selectors(flags=FLG_PSEUDO | FLG_HTML | FLG_PLACEHOLDER_SHOWN)
-# CSS pattern default for `:nth-child` "of S" feature
-CSS_NTH_OF_S_DEFAULT = CSSParser(
-    '*|*'
-).process_selectors(flags=FLG_PSEUDO)
-# CSS pattern for `:read-write` (CSS_DISABLED must be compiled first)
-CSS_READ_WRITE = CSSParser(
-    '''
-    html|*:is(
-        textarea,
-        input:is(
-            :not([type]),
-            [type=""],
-            [type=text],
-            [type=search],
-            [type=url],
-            [type=tel],
-            [type=email],
-            [type=number],
-            [type=password],
-            [type=date],
-            [type=datetime-local],
-            [type=month],
-            [type=time],
-            [type=week]
-        )
-    ):not([readonly], :disabled),
-    html|*:is([contenteditable=""], [contenteditable="true" i])
-    '''
-).process_selectors(flags=FLG_PSEUDO | FLG_HTML)
-# CSS pattern for `:read-only`
-CSS_READ_ONLY = CSSParser(
-    '''
-    html|*:not(:read-write)
-    '''
-).process_selectors(flags=FLG_PSEUDO | FLG_HTML)
-# CSS pattern for `:in-range`
-CSS_IN_RANGE = CSSParser(
-    '''
-    html|input:is(
-        [type="date"],
-        [type="month"],
-        [type="week"],
-        [type="time"],
-        [type="datetime-local"],
-        [type="number"],
-        [type="range"]
-    ):is(
-        [min],
-        [max]
-    )
-    '''
-).process_selectors(flags=FLG_PSEUDO | FLG_IN_RANGE | FLG_HTML)
-# CSS pattern for `:out-of-range`
-CSS_OUT_OF_RANGE = CSSParser(
-    '''
-    html|input:is(
-        [type="date"],
-        [type="month"],
-        [type="week"],
-        [type="time"],
-        [type="datetime-local"],
-        [type="number"],
-        [type="range"]
-    ):is(
-        [min],
-        [max]
-    )
-    '''
-).process_selectors(flags=FLG_PSEUDO | FLG_OUT_OF_RANGE | FLG_HTML)
-
-# CSS pattern for :open
-CSS_OPEN = CSSParser(
-    '''
-    html|*:is(details, dialog)[open]
-    '''
-).process_selectors(flags=FLG_PSEUDO | FLG_HTML)
-
-
-# CSS pattern for :muted
-CSS_MUTED = CSSParser(
-    '''
-    html|*:is(video, audio)[muted]
-    '''
-).process_selectors(flags=FLG_PSEUDO | FLG_HTML)
