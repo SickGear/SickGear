@@ -15,6 +15,7 @@
 * Update SimpleJSON 3.20.2 (10e5aaf) to 4.0.0 (1608c05)
 * Update soupsieve 2.8.3 (5aedc41) to 2.8.4 (28108ab)
 * Update Tornado Web Server 6.5.5 (7d64650) to 6.5.7 (48fc2d4)
+* Update typing-extensions 4.15.0 (2638b86) to 4.16.0 (f29cd28)
 * Update tmdbsimple 2.9.2 (0b3359f) to 2.9.6 (e17ec76)
 * Update urllib3 2.6.3 (0248277) to 2.7.0 (9a950b9)
 * Update zoneinfo 2025c to 2026b (fallback)
