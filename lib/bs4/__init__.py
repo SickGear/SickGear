@@ -15,8 +15,8 @@ documentation: http://www.crummy.com/software/BeautifulSoup/bs4/doc/
 """
 
 __author__ = "Leonard Richardson (leonardr@segfault.org)"
-__version__ = "4.14.3"
-__copyright__ = "Copyright (c) 2004-2025 Leonard Richardson"
+__version__ = "4.15.0"
+__copyright__ = "Copyright (c) 2004-2026 Leonard Richardson"
 # Use of this source code is governed by the MIT license.
 __license__ = "MIT"
 
@@ -534,6 +534,11 @@ class BeautifulSoup(Tag):
         self.reset()
         self._feed()
 
+    @property
+    def _is_root(self):
+        """Yes, a BeautifulSoup object is the root of its parse tree. Used by the _root_object internal property."""
+        return True
+
     @classmethod
     @_deprecated(
         replaced_by="nothing (private method, will be removed)", version="4.13.0"
@@ -799,10 +804,10 @@ class BeautifulSoup(Tag):
             self.open_tag_counter[tag.name] -= 1
         if (
             self.preserve_whitespace_tag_stack
-            and tag == self.preserve_whitespace_tag_stack[-1]
+            and tag is self.preserve_whitespace_tag_stack[-1]
         ):
             self.preserve_whitespace_tag_stack.pop()
-        if self.string_container_stack and tag == self.string_container_stack[-1]:
+        if self.string_container_stack and tag is self.string_container_stack[-1]:
             self.string_container_stack.pop()
         # print("Pop", tag.name)
         if self.tagStack:
@@ -1142,7 +1147,7 @@ class BeautifulSoup(Tag):
             warnings.warn(warning, DeprecationWarning, stacklevel=2)
         elif indent_level is False or pretty_print is False:
             indent_level = None
-        return prefix + super(BeautifulSoup, self).decode(
+        return prefix + super().decode(
             indent_level, eventual_encoding, formatter, iterator
         )
 
@@ -1163,7 +1168,7 @@ class BeautifulStoneSoup(BeautifulSoup):
             DeprecationWarning,
             stacklevel=2,
         )
-        super(BeautifulStoneSoup, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
 
 # If this file is run as a script, act as an HTML pretty-printer.

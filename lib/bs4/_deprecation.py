@@ -47,14 +47,20 @@ def _deprecated_alias(old_name: str, new_name: str, version: str):
 
     return alias
 
+_UPDATE_NOW:str = "\nYou must update this call before the next Beautiful Soup release, or your code will silently change its behavior."
 
 def _deprecated_function_alias(
-    old_name: str, new_name: str, version: str
+        old_name: str, new_name: str, version: str, eol:bool=False
 ) -> Callable[[Any], Any]:
     def alias(self, *args: Any, **kwargs: Any) -> Any:
         ":meta private:"
+
+        message = f"Call to deprecated method {old_name}. (Replaced by {new_name}) -- Deprecated since version {version}."
+        if eol:
+            message += _UPDATE_NOW
+            raise NotImplementedError(message)
         warnings.warn(
-            f"Call to deprecated method {old_name}. (Replaced by {new_name}) -- Deprecated since version {version}.",
+            message,
             DeprecationWarning,
             stacklevel=2,
         )
@@ -63,13 +69,17 @@ def _deprecated_function_alias(
     return alias
 
 
-def _deprecated(replaced_by: str, version: str) -> Callable:
+def _deprecated(replaced_by: str, version: str, eol:bool=False) -> Callable:
     def deprecate(func: Callable) -> Callable:
         @functools.wraps(func)
         def with_warning(*args: Any, **kwargs: Any) -> Any:
             ":meta private:"
+            message = f"Call to deprecated method {func.__name__}. (Replaced by {replaced_by}) -- Deprecated since version {version}."
+            if eol:
+                message += _UPDATE_NOW
+                raise NotImplementedError(message)
             warnings.warn(
-                f"Call to deprecated method {func.__name__}. (Replaced by {replaced_by}) -- Deprecated since version {version}.",
+                message,
                 DeprecationWarning,
                 stacklevel=2,
             )
