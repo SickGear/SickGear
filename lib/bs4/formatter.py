@@ -203,7 +203,7 @@ class HTMLFormatter(Formatter):
         empty_attributes_are_booleans: bool = False,
         indent: Union[int,str] = 1,
     ):
-        super(HTMLFormatter, self).__init__(
+        super().__init__(
             self.HTML,
             entity_substitution,
             void_element_close_prefix,
@@ -226,7 +226,7 @@ class XMLFormatter(Formatter):
         empty_attributes_are_booleans: bool = False,
         indent: Union[int,str] = 1,
     ):
-        super(XMLFormatter, self).__init__(
+        super().__init__(
             self.XML,
             entity_substitution,
             void_element_close_prefix,

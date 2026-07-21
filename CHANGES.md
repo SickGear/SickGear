@@ -3,6 +3,7 @@
 * Change update actions and optimise unittest
 * Update actions/checkout@v6.0.2 to actions/checkout@v7
 * Update apprise 1.9.9 (4639799) to 1.11.0 (158c4e1)
+* Update Beautiful Soup 4.14.3 (55f655f) → 4.15.0 (9cb49d6)
 * Update certifi 2026.02.25 to 2026.06.17
 * Update chardet packages 7.3.0 (00667a4) to 7.4.1 (9079efc)
 * Update filelock 3.20.1 (377f622) to 3.29.0 (469b47f)
