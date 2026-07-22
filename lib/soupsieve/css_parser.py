@@ -725,18 +725,23 @@ class CSSParser:
             pattern = None
         elif op.startswith('^'):
             # Value start with
-            pattern = re.compile(r'^%s.*' % re.escape(value), flags)
+            # `^=` should match nothing if the value is empty, so use `(?!)` which cannot be matched.
+            value = r'(?!)' if not value else re.escape(value)
+            pattern = re.compile(r'^%s.*' % value, flags)
         elif op.startswith('$'):
             # Value ends with
-            pattern = re.compile(r'.*?%s$' % re.escape(value), flags)
+            # `$=` should match nothing if the value is empty, so use `(?!)` which cannot be matched.
+            value = r'(?!)' if not value else re.escape(value)
+            pattern = re.compile(r'.*?%s$' % value, flags)
         elif op.startswith('*'):
             # Value contains
-            pattern = re.compile(r'.*?%s.*' % re.escape(value), flags)
+            # `*=` should match nothing if the value is empty, so use `(?!)` which cannot be matched.
+            value = r'(?!)' if not value else re.escape(value)
+            pattern = re.compile(r'.*?%s.*' % value, flags)
         elif op.startswith('~'):
             # Value contains word within space separated list
-            # `~=` should match nothing if it is empty or contains whitespace,
-            # so if either of these cases is present, use `[^\s\S]` which cannot be matched.
-            value = r'[^\s\S]' if not value or RE_WS.search(value) else re.escape(value)
+            # `*~` should match nothing if the value is empty, so use `(?!)` which cannot be matched.
+            value = r'(?!)' if not value or RE_WS.search(value) else re.escape(value)
             pattern = re.compile(r'.*?(?:(?<=^)|(?<=[ \t\r\n\f]))%s(?=(?:[ \t\r\n\f]|$)).*' % value, flags)
         elif op.startswith('|'):
             # Value starts with word in dash separated list
