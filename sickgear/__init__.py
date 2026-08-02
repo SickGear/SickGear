@@ -603,6 +603,7 @@ TRAKT_CONNECTED_ACCOUNT = None
 TRAKT_ACCOUNTS = {}  # type: Dict[int, TraktAccount]
 TRAKT_MRU = ''
 
+# ids are not invalid because trakt deleted all non VIP account ids
 if TRAKT_STAGING:
     # staging trakt values:
     TRAKT_CLIENT_ID = '2aae3052f90b14235d184cc8f709b12b4fd8ae35f339a060a890c70db92be87a'
@@ -766,7 +767,7 @@ def init_stage_1(console_logging):
         USE_PUSHBULLET, PUSHBULLET_NOTIFY_ONSNATCH, PUSHBULLET_NOTIFY_ONDOWNLOAD, \
         PUSHBULLET_NOTIFY_ONSUBTITLEDOWNLOAD, PUSHBULLET_ACCESS_TOKEN, PUSHBULLET_DEVICE_IDEN
     # Notification Settings/Social
-    global USE_TRAKT, TRAKT_CONNECTED_ACCOUNT, TRAKT_ACCOUNTS, TRAKT_MRU, TRAKT_VERIFY, \
+    global USE_TRAKT, TRAKT_CONNECTED_ACCOUNT, TRAKT_MRU, TRAKT_VERIFY, \
         TRAKT_USE_WATCHLIST, TRAKT_REMOVE_WATCHLIST, TRAKT_TIMEOUT, TRAKT_METHOD_ADD, TRAKT_START_PAUSED, \
         TRAKT_SYNC, TRAKT_DEFAULT_INDEXER, TRAKT_REMOVE_SERIESLIST, TRAKT_UPDATE_COLLECTION, \
         IMDB_MRU, MC_MRU, NE_MRU, TMDB_MRU, TVC_MRU, TVDB_MRU, TVM_MRU, \
@@ -1188,7 +1189,7 @@ def init_stage_1(console_logging):
     SYNOLOGYNOTIFIER_NOTIFY_ONSUBTITLEDOWNLOAD = bool(
         check_setting_int(CFG, 'SynologyNotifier', 'synologynotifier_notify_onsubtitledownload', 0))
 
-    USE_TRAKT = bool(check_setting_int(CFG, 'Trakt', 'use_trakt', 0))
+    # USE_TRAKT = bool(check_setting_int(CFG, 'Trakt', 'use_trakt', 0))
     TRAKT_REMOVE_WATCHLIST = bool(check_setting_int(CFG, 'Trakt', 'trakt_remove_watchlist', 0))
     TRAKT_REMOVE_SERIESLIST = bool(check_setting_int(CFG, 'Trakt', 'trakt_remove_serieslist', 0))
     TRAKT_USE_WATCHLIST = bool(check_setting_int(CFG, 'Trakt', 'trakt_use_watchlist', 0))
@@ -1198,7 +1199,7 @@ def init_stage_1(console_logging):
     TRAKT_DEFAULT_INDEXER = check_setting_int(CFG, 'Trakt', 'trakt_default_indexer', 1)
     TRAKT_UPDATE_COLLECTION = trakt_helpers.read_config_string(
         check_setting_str(CFG, 'Trakt', 'trakt_update_collection', ''))
-    TRAKT_ACCOUNTS = TraktAPI.read_config_string(check_setting_str(CFG, 'Trakt', 'trakt_accounts', ''))
+    # TRAKT_ACCOUNTS = TraktAPI.read_config_string(check_setting_str(CFG, 'Trakt', 'trakt_accounts', ''))
     TRAKT_MRU = check_setting_str(CFG, 'Trakt', 'trakt_mru', '')
 
     IMDB_MRU = check_setting_str(CFG, 'IMDB', 'imdb_mru', '')
@@ -2259,21 +2260,22 @@ def _save_config(force=False, **kwargs):
         # new_config['Pushalot'] = {}
         # new_config['Pushalot']['use_pushalot'] = int(USE_PUSHALOT)
         # new_config['Pushalot']['pushalot_authorizationtoken'] = PUSHALOT_AUTHORIZATIONTOKEN
-        ('Trakt', [
-            ('use_%s', int(USE_TRAKT)),
-            ('update_collection', TRAKT_UPDATE_COLLECTION
-                and trakt_helpers.build_config_string(TRAKT_UPDATE_COLLECTION)),
-            ('accounts', TraktAPI.build_config_string(TRAKT_ACCOUNTS)),
-            ('mru', TRAKT_MRU),
-            # new_config['Trakt'] = {}
-            # new_config['Trakt']['trakt_remove_watchlist'] = int(TRAKT_REMOVE_WATCHLIST)
-            # new_config['Trakt']['trakt_remove_serieslist'] = int(TRAKT_REMOVE_SERIESLIST)
-            # new_config['Trakt']['trakt_use_watchlist'] = int(TRAKT_USE_WATCHLIST)
-            # new_config['Trakt']['trakt_method_add'] = int(TRAKT_METHOD_ADD)
-            # new_config['Trakt']['trakt_start_paused'] = int(TRAKT_START_PAUSED)
-            # new_config['Trakt']['trakt_sync'] = int(TRAKT_SYNC)
-            # new_config['Trakt']['trakt_default_indexer'] = int(TRAKT_DEFAULT_INDEXER)
-        ]),
+        # Trakt requires now the dev to VIP to get a client id
+        # ('Trakt', [
+        #     ('use_%s', int(USE_TRAKT)),
+        #     ('update_collection', TRAKT_UPDATE_COLLECTION
+        #         and trakt_helpers.build_config_string(TRAKT_UPDATE_COLLECTION)),
+        #     ('accounts', TraktAPI.build_config_string(TRAKT_ACCOUNTS)),
+        #     ('mru', TRAKT_MRU),
+        #     # new_config['Trakt'] = {}
+        #     # new_config['Trakt']['trakt_remove_watchlist'] = int(TRAKT_REMOVE_WATCHLIST)
+        #     # new_config['Trakt']['trakt_remove_serieslist'] = int(TRAKT_REMOVE_SERIESLIST)
+        #     # new_config['Trakt']['trakt_use_watchlist'] = int(TRAKT_USE_WATCHLIST)
+        #     # new_config['Trakt']['trakt_method_add'] = int(TRAKT_METHOD_ADD)
+        #     # new_config['Trakt']['trakt_start_paused'] = int(TRAKT_START_PAUSED)
+        #     # new_config['Trakt']['trakt_sync'] = int(TRAKT_SYNC)
+        #     # new_config['Trakt']['trakt_default_indexer'] = int(TRAKT_DEFAULT_INDEXER)
+        # ]),
         ('Metacritic', [
             ('mru', MC_MRU)
         ]),
