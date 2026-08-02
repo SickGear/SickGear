@@ -5897,36 +5897,6 @@ class AddShows(Home):
             f'Most {action}ed at Trakt during the last {desc}',
             mode=f'{action}ed{ext}', period=f'{cycle}ly')
 
-    def trakt_recommended(self, **kwargs):
-
-        if 'add' == kwargs.get('action'):
-            return self.redirect('/config/notifications/#tabs-3')
-
-        account = helpers.try_int(kwargs.get('account'))
-        try:
-            name = sickgear.TRAKT_ACCOUNTS[account].name
-        except KeyError:
-            return self.trakt_default()
-        return self.browse_trakt(
-            'get_recommended_for_account',
-            'Recommended for <b class="grey-text">%s</b> by Trakt' % name,
-            mode='recommended-%s' % account, account=account, ignore_collected=True, ignore_watchlisted=True)
-
-    def trakt_watchlist(self, **kwargs):
-
-        if 'add' == kwargs.get('action'):
-            return self.redirect('/config/notifications/#tabs-3')
-
-        account = helpers.try_int(kwargs.get('account'))
-        try:
-            name = sickgear.TRAKT_ACCOUNTS[account].name
-        except KeyError:
-            return self.trakt_default()
-        return self.browse_trakt(
-            'get_watchlisted_for_account',
-            'WatchList for <b class="grey-text">%s</b> by Trakt' % name,
-            mode='watchlist-%s' % account, account=account, ignore_collected=True)
-
     @private_call
     def get_trakt_data(self, api_method, **kwargs):
 
@@ -5959,13 +5929,6 @@ class AddShows(Home):
                 items = t.get_most_played(**kwargs)
             elif 'get_most_collected' == api_method:
                 items = t.get_most_collected(**kwargs)
-            elif 'get_recommended_for_account' == api_method:
-                items = t.get_recommended_for_account(**kwargs)
-            elif 'get_watchlisted_for_account' == api_method:
-                items = t.get_watchlisted_for_account(**kwargs)
-                if not items:
-                    error_msg = 'No items in watchlist.  Use the "Add to watchlist" button at the Trakt website'
-                    raise ValueError(error_msg)
             elif 'person' == mode:
                 items = []
                 p_item = t.get_person(get_show_credits=True, **kwargs)  # type: TVInfoPerson
