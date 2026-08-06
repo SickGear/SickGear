@@ -62,16 +62,16 @@ class NewznabConstants(object):
     CAT_SPORT = -205
     CAT_WEBDL = -206
 
-    catSearchStrings = {r'^Anime$': CAT_ANIME,
-                        r'^Sport$': CAT_SPORT,
-                        r'^SD$': CAT_SD,
+    catSearchStrings = {r'^(TV\/)?Anime$': CAT_ANIME,
+                        r'^(TV\/)?Sport$': CAT_SPORT,
+                        r'^(TV\/)?SD$': CAT_SD,
                         r'^BoxSD$': CAT_SD,
-                        r'^HD$': CAT_HD,
+                        r'^(TV\/)?HD$': CAT_HD,
                         r'^BoxHD$': CAT_HD,
-                        r'^UHD$': CAT_UHD,
+                        r'^(TV\/)?UHD$': CAT_UHD,
                         r'^4K$': CAT_UHD,
-                        # r'^HEVC$': CAT_HEVC,
-                        r'^WEB.?DL$': CAT_WEBDL}
+                        # r'^(TV\/)?(HEVC|X265)$': CAT_HEVC,
+                        r'^(TV\/)?WEB.?DL$': CAT_WEBDL}
 
     providerToIndexerMapping = {'tvdbid': TVINFO_TVDB,
                                 'rageid': TVINFO_TVRAGE,
