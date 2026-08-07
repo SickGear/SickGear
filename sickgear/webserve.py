@@ -143,7 +143,7 @@ else:
 
 # noinspection PyUnreachableCode
 if False:
-    from typing import Any, AnyStr, Dict, List, Optional, Set, Tuple, Union
+    from typing import Any, AnyStr, Callable, Dict, List, Optional, Set, Tuple, Union
     from sickgear.providers.generic import TorrentProvider
     # prevent pyc TVInfoBase resolution by typing the derived used class to TVInfoAPI instantiation
     from lib.tvinfo_base import TVInfoBase, TVInfoCharacter, TVInfoPerson
@@ -5835,10 +5835,18 @@ class AddShows(Home):
             return self.new_show('|'.join(['', '', '', ' '.join([ids, show_name])]), use_show_name=True)
 
     def trakt_default(self):
-        method = getattr(self, sickgear.TRAKT_MRU, None)
-        if not callable(method) or not self.allow_browse_mru(sickgear.TMDB_MRU):
-            return self.trakt_trending()
-        return method()
+        if sickgear.TRAKT_MRU:
+            try:
+                method, args = sickgear.TRAKT_MRU.split('?')
+                kwargs = dict(args.split('=') for _ in args.strip().splitlines())
+            except (BaseException, Exception):
+                method, kwargs = sickgear.TRAKT_MRU, {}
+
+            func = getattr(self, method, None)  # type: Callable
+            if func and callable(func) and self.allow_browse_mru(method):
+                return func(**kwargs)
+
+        return self.trakt_trending()
 
     def trakt_anticipated(self):
 

@@ -2266,12 +2266,12 @@ def _save_config(force=False, **kwargs):
         # new_config['Pushalot']['use_pushalot'] = int(USE_PUSHALOT)
         # new_config['Pushalot']['pushalot_authorizationtoken'] = PUSHALOT_AUTHORIZATIONTOKEN
         # Trakt requires now the dev to VIP to get a client id
-        # ('Trakt', [
-        #     ('use_%s', int(USE_TRAKT)),
+        ('Trakt', [
+            ('use_%s', int(USE_TRAKT)),
         #     ('update_collection', TRAKT_UPDATE_COLLECTION
         #         and trakt_helpers.build_config_string(TRAKT_UPDATE_COLLECTION)),
         #     ('accounts', TraktAPI.build_config_string(TRAKT_ACCOUNTS)),
-        #     ('mru', TRAKT_MRU),
+            ('mru', TRAKT_MRU),
         #     # new_config['Trakt'] = {}
         #     # new_config['Trakt']['trakt_remove_watchlist'] = int(TRAKT_REMOVE_WATCHLIST)
         #     # new_config['Trakt']['trakt_remove_serieslist'] = int(TRAKT_REMOVE_SERIESLIST)
@@ -2280,7 +2280,7 @@ def _save_config(force=False, **kwargs):
         #     # new_config['Trakt']['trakt_start_paused'] = int(TRAKT_START_PAUSED)
         #     # new_config['Trakt']['trakt_sync'] = int(TRAKT_SYNC)
         #     # new_config['Trakt']['trakt_default_indexer'] = int(TRAKT_DEFAULT_INDEXER)
-        # ]),
+        ]),
         ('Metacritic', [
             ('mru', MC_MRU)
         ]),
