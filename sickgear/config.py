@@ -226,11 +226,11 @@ def schedule_download_propers(download_propers):
         sickgear.search_propers_scheduler.set_paused_state()
 
 
-def schedule_trakt(use_trakt):
-    if sickgear.USE_TRAKT == use_trakt:
-        return
-
-    sickgear.USE_TRAKT = use_trakt
+# def schedule_trakt(use_trakt):
+#     if sickgear.USE_TRAKT == use_trakt:
+#         return
+#
+#     sickgear.USE_TRAKT = use_trakt
 
 
 def schedule_subtitles(use_subtitles):
@@ -919,10 +919,12 @@ class ConfigMigrator(object):
         self.deprecate_anon_service()
 
     def _migrate_v14(self):
-        old_token = check_setting_str(self.config_obj, 'Trakt', 'trakt_token', '')
-        old_refresh_token = check_setting_str(self.config_obj, 'Trakt', 'trakt_refresh_token', '')
-        if old_token and old_refresh_token:
-            TraktAPI.add_account(old_token, old_refresh_token, None)
+        # -- deprecated service
+        pass
+        # old_token = check_setting_str(self.config_obj, 'Trakt', 'trakt_token', '')
+        # old_refresh_token = check_setting_str(self.config_obj, 'Trakt', 'trakt_refresh_token', '')
+        # if old_token and old_refresh_token:
+        #     TraktAPI.add_account(old_token, old_refresh_token, None)
 
     # Migration v15: Transmithe.net variables
     def _migrate_v15(self):

@@ -71,7 +71,7 @@ from .sgdatetime import SGDatetime
 from .show_name_helpers import abbr_showname
 
 from .show_updater import clean_ignore_require_words
-from .trakt_helpers import build_config, trakt_collection_remove_account
+# from .trakt_helpers import build_config, trakt_collection_remove_account
 from .tv import TVidProdid, Person as TVPerson, Character as TVCharacter, TVSWITCH_NORMAL, tvswitch_names, \
     TVSWITCH_EP_DELETED, tvswitch_ep_names, usable_id
 
@@ -86,7 +86,7 @@ from tornado.escape import utf8
 from tornado.web import RequestHandler, StaticFileHandler, authenticated
 from tornado.concurrent import run_on_executor
 
-from lib import requests
+# from lib import requests
 from lib.urllib3.util.retry import Retry
 from lib.requests.adapters import HTTPAdapter
 from lib.iso639 import Lang
@@ -99,7 +99,8 @@ try:
     from lib.thefuzz import fuzz
 except ImportError as e:
     from lib.fuzzywuzzy import fuzz
-from lib.api_trakt import TraktAPI
+# -- deprecated service
+# from lib.api_trakt import TraktAPI
 from lib.api_trakt.exceptions import TraktException, TraktAuthException
 from lib.api_imdb.imdb_exceptions import IMDbException
 from lib.tvinfo_base import TVInfoEpisode, RoleTypes
@@ -2077,54 +2078,56 @@ class Home(MainHandler):
 
         return notifiers.NotifierFactory().get('LIBNOTIFY').test_notify()
 
-    def trakt_authenticate(self, pin=None, account=None):
-        self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
+    # -- deprecated service
+    # def trakt_authenticate(self, pin=None, account=None):
+    #     self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
+    #
+    #     if None is pin:
+    #         return json_dumps({'result': 'Fail', 'error_message': 'Trakt PIN required for authentication'})
+    #
+    #     if account and 'new' == account:
+    #         account = None
+    #
+    #     acc = None
+    #     if account:
+    #         acc = helpers.try_int(account, -1)
+    #         if 0 < acc and acc not in sickgear.TRAKT_ACCOUNTS:
+    #             return json_dumps({'result': 'Fail', 'error_message': 'Fail: cannot update non-existing account'})
+    #
+    #     json_fail_auth = json_dumps({'result': 'Fail', 'error_message': 'Trakt NOT authenticated'})
+    #     try:
+    #         resp = TraktAPI().trakt_token(pin, account=acc)
+    #     except TraktAuthException:
+    #         return json_fail_auth
+    #     if not account and isinstance(resp, bool) and not resp:
+    #         return json_fail_auth
+    #
+    #     if not sickgear.USE_TRAKT:
+    #         sickgear.USE_TRAKT = True
+    #         sickgear.save_config()
+    #     pick = resp if not account else acc
+    #     return json_dumps({'result': 'Success',
+    #                        'account_id': sickgear.TRAKT_ACCOUNTS[pick].account_id,
+    #                        'account_name': sickgear.TRAKT_ACCOUNTS[pick].name})
 
-        if None is pin:
-            return json_dumps({'result': 'Fail', 'error_message': 'Trakt PIN required for authentication'})
-
-        if account and 'new' == account:
-            account = None
-
-        acc = None
-        if account:
-            acc = helpers.try_int(account, -1)
-            if 0 < acc and acc not in sickgear.TRAKT_ACCOUNTS:
-                return json_dumps({'result': 'Fail', 'error_message': 'Fail: cannot update non-existing account'})
-
-        json_fail_auth = json_dumps({'result': 'Fail', 'error_message': 'Trakt NOT authenticated'})
-        try:
-            resp = TraktAPI().trakt_token(pin, account=acc)
-        except TraktAuthException:
-            return json_fail_auth
-        if not account and isinstance(resp, bool) and not resp:
-            return json_fail_auth
-
-        if not sickgear.USE_TRAKT:
-            sickgear.USE_TRAKT = True
-            sickgear.save_config()
-        pick = resp if not account else acc
-        return json_dumps({'result': 'Success',
-                           'account_id': sickgear.TRAKT_ACCOUNTS[pick].account_id,
-                           'account_name': sickgear.TRAKT_ACCOUNTS[pick].name})
-
-    def trakt_delete(self, accountid=None):
-        self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
-
-        if accountid:
-            aid = helpers.try_int(accountid, None)
-            if None is not aid:
-                if aid in sickgear.TRAKT_ACCOUNTS:
-                    account = {'result': 'Success',
-                               'account_id': sickgear.TRAKT_ACCOUNTS[aid].account_id,
-                               'account_name': sickgear.TRAKT_ACCOUNTS[aid].name}
-                    if TraktAPI.delete_account(aid):
-                        trakt_collection_remove_account(aid)
-                        account['num_accounts'] = len(sickgear.TRAKT_ACCOUNTS)
-                        return json_dumps(account)
-
-                return json_dumps({'result': 'Not found: Account to delete'})
-        return json_dumps({'result': 'Not found: Invalid account id'})
+    # -- deprecated service
+    # def trakt_delete(self, accountid=None):
+    #     self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
+    #
+    #     if accountid:
+    #         aid = helpers.try_int(accountid, None)
+    #         if None is not aid:
+    #             if aid in sickgear.TRAKT_ACCOUNTS:
+    #                 account = {'result': 'Success',
+    #                            'account_id': sickgear.TRAKT_ACCOUNTS[aid].account_id,
+    #                            'account_name': sickgear.TRAKT_ACCOUNTS[aid].name}
+    #                 if TraktAPI.delete_account(aid):
+    #                     trakt_collection_remove_account(aid)
+    #                     account['num_accounts'] = len(sickgear.TRAKT_ACCOUNTS)
+    #                     return json_dumps(account)
+    #
+    #             return json_dumps({'result': 'Not found: Account to delete'})
+    #     return json_dumps({'result': 'Not found: Invalid account id'})
 
     def load_show_notify_lists(self):
         self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
@@ -5667,7 +5670,7 @@ class AddShows(Home):
     @private_call
     @staticmethod
     def allow_browse_mru(mode_or_mru):
-        # Fix an issue where a default view mixed with a deriviative view that requires a param will break the default
+        # Fix an issue where a default view mixed with a derivative view that requires a param will break the default
         # Disallows default views from using derivative mru's
         return 'person' not in mode_or_mru
 
@@ -6060,11 +6063,11 @@ class AddShows(Home):
         browse_type = 'Trakt'
         mode = kwargs.get('mode', '')
         filtered = []
-        all_classes = set()
 
         if not sickgear.USE_TRAKT \
                 and ('recommended' in mode or 'watchlist' in mode):
-            error_msg = 'To browse personal recommendations, enable Trakt.tv in Config/Notifications/Social'
+            # error_msg = 'To browse personal recommendations, enable Trakt.tv in Config/Notifications/Social'
+            error_msg = 'Deprecated due to VIP only; personal recommendations'
             return self.browse_shows(browse_type, browse_title, filtered, error_msg=error_msg, show_header=1, **kwargs)
 
         try:
@@ -6079,7 +6082,8 @@ class AddShows(Home):
 
         kwargs.update(dict(oldest=oldest, newest=newest, error_msg=error_msg, use_networks=use_networks))
 
-        if not any(m in mode for m in ('recommended', 'watchlist', 'person')):
+        # if not any(m in mode for m in ('recommended', 'watchlist', 'person')):
+        if not any(m in mode for m in ('person',)):
             mode = mode.split('-')
             if mode and self.allow_browse_mru(mode):
                 func = 'trakt_%s' % mode[0]
@@ -10253,7 +10257,7 @@ class ConfigNotifications(Config):
             synologynotifier_notify_onsubtitledownload)
 
         sickgear.USE_TRAKT = config.checkbox_to_value(use_trakt)
-        sickgear.TRAKT_UPDATE_COLLECTION = build_config(**kwargs)
+        # sickgear.TRAKT_UPDATE_COLLECTION = build_config(**kwargs)
         # sickgear.trakt_checker_scheduler.silent = not sickgear.USE_TRAKT
         # sickgear.TRAKT_DEFAULT_INDEXER = int(trakt_default_indexer)
         # sickgear.TRAKT_SYNC = config.checkbox_to_value(trakt_sync)
