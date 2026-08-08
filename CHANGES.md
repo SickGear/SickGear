@@ -121,6 +121,11 @@
 * Fix ignore btn-status.json backup if file does not exist
 
 
+### 3.35.11 (2026-08-08 03:20:00 UTC)
+
+* Change add support for Python 3.14.7 and 3.13.15
+
+
 ### 3.35.10 (2026-07-18 19:40:00 UTC)
 
 * Change improve security of extracting tar source updates
