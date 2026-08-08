@@ -2119,12 +2119,6 @@ class Home(MainHandler):
             as_authed='true' == as_authed, username=username, icon_url=icon_url,
             as_tts='true' == as_tts, access_token=access_token)
 
-    def test_gitter(self, room_name=None, access_token=None):
-        self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
-
-        return notifiers.NotifierFactory().get('GITTER').test_notify(
-            room_name=room_name, access_token=access_token)
-
     def test_telegram(self, send_icon=False, access_token=None, chatid=None, quiet=False):
         self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
 
@@ -10089,8 +10083,6 @@ class ConfigNotifications(Config):
             discord_notify_onsubtitledownload=None, discord_access_token=None,
             discord_as_authed=None, discord_username=None, discord_icon_url=None,
             discord_as_tts=None,
-            use_gitter=None, gitter_notify_onsnatch=None, gitter_notify_ondownload=None,
-            gitter_notify_onsubtitledownload=None, gitter_access_token=None, gitter_room=None,
             use_telegram=None, telegram_notify_onsnatch=None, telegram_notify_ondownload=None,
             telegram_notify_onsubtitledownload=None, telegram_access_token=None, telegram_chatid=None,
             telegram_send_image=None, telegram_quiet=None,
@@ -10221,13 +10213,6 @@ class ConfigNotifications(Config):
         sickgear.DISCORD_USERNAME = discord_username
         sickgear.DISCORD_ICON_URL = discord_icon_url
         sickgear.DISCORD_AS_TTS = config.checkbox_to_value(discord_as_tts)
-
-        sickgear.USE_GITTER = config.checkbox_to_value(use_gitter)
-        sickgear.GITTER_NOTIFY_ONSNATCH = config.checkbox_to_value(gitter_notify_onsnatch)
-        sickgear.GITTER_NOTIFY_ONDOWNLOAD = config.checkbox_to_value(gitter_notify_ondownload)
-        sickgear.GITTER_NOTIFY_ONSUBTITLEDOWNLOAD = config.checkbox_to_value(gitter_notify_onsubtitledownload)
-        sickgear.GITTER_ACCESS_TOKEN = gitter_access_token
-        sickgear.GITTER_ROOM = gitter_room
 
         sickgear.USE_TELEGRAM = config.checkbox_to_value(use_telegram)
         sickgear.TELEGRAM_NOTIFY_ONSNATCH = config.checkbox_to_value(telegram_notify_onsnatch)

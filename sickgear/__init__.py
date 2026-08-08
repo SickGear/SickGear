@@ -469,13 +469,6 @@ DISCORD_ICON_URL = None
 DISCORD_AS_TTS = 0
 DISCORD_ACCESS_TOKEN = None
 
-USE_GITTER = False
-GITTER_NOTIFY_ONSNATCH = False
-GITTER_NOTIFY_ONDOWNLOAD = False
-GITTER_NOTIFY_ONSUBTITLEDOWNLOAD = False
-GITTER_ROOM = None
-GITTER_ACCESS_TOKEN = None
-
 USE_TELEGRAM = False
 TELEGRAM_NOTIFY_ONSNATCH = False
 TELEGRAM_NOTIFY_ONDOWNLOAD = False
@@ -748,8 +741,6 @@ def init_stage_1(console_logging):
         USE_DISCORD, DISCORD_NOTIFY_ONSNATCH, DISCORD_NOTIFY_ONDOWNLOAD, \
         DISCORD_NOTIFY_ONSUBTITLEDOWNLOAD, \
         DISCORD_AS_AUTHED, DISCORD_USERNAME, DISCORD_ICON_URL, DISCORD_AS_TTS, DISCORD_ACCESS_TOKEN,\
-        USE_GITTER, GITTER_NOTIFY_ONSNATCH, GITTER_NOTIFY_ONDOWNLOAD, GITTER_NOTIFY_ONSUBTITLEDOWNLOAD,\
-        GITTER_ROOM, GITTER_ACCESS_TOKEN, \
         USE_TELEGRAM, TELEGRAM_NOTIFY_ONSNATCH, TELEGRAM_NOTIFY_ONDOWNLOAD, TELEGRAM_NOTIFY_ONSUBTITLEDOWNLOAD, \
         TELEGRAM_SEND_IMAGE, TELEGRAM_QUIET, TELEGRAM_ACCESS_TOKEN, TELEGRAM_CHATID, \
         USE_EMAIL, EMAIL_NOTIFY_ONSNATCH, EMAIL_NOTIFY_ONDOWNLOAD, EMAIL_NOTIFY_ONSUBTITLEDOWNLOAD, EMAIL_FROM, \
@@ -1210,13 +1201,6 @@ def init_stage_1(console_logging):
     DISCORD_ICON_URL = check_setting_str(CFG, 'Discord', 'discord_icon_url', '')
     DISCORD_AS_TTS = bool(check_setting_str(CFG, 'Discord', 'discord_as_tts', 0))
     DISCORD_ACCESS_TOKEN = check_setting_str(CFG, 'Discord', 'discord_access_token', '')
-
-    USE_GITTER = bool(check_setting_int(CFG, 'Gitter', 'use_gitter', 0))
-    GITTER_NOTIFY_ONSNATCH = bool(check_setting_int(CFG, 'Gitter', 'gitter_notify_onsnatch', 0))
-    GITTER_NOTIFY_ONDOWNLOAD = bool(check_setting_int(CFG, 'Gitter', 'gitter_notify_ondownload', 0))
-    GITTER_NOTIFY_ONSUBTITLEDOWNLOAD = bool(check_setting_int(CFG, 'Gitter', 'gitter_notify_onsubtitledownload', 0))
-    GITTER_ROOM = check_setting_str(CFG, 'Gitter', 'gitter_room', '')
-    GITTER_ACCESS_TOKEN = check_setting_str(CFG, 'Gitter', 'gitter_access_token', '')
 
     USE_TELEGRAM = bool(check_setting_int(CFG, 'Telegram', 'use_telegram', 0))
     TELEGRAM_NOTIFY_ONSNATCH = bool(check_setting_int(CFG, 'Telegram', 'telegram_notify_onsnatch', 0))
@@ -2259,11 +2243,6 @@ def _save_config(force=False, **kwargs):
             ('as_tts', int(DISCORD_AS_TTS)),
             ('access_token', DISCORD_ACCESS_TOKEN),
         ]),
-        ('Gitter', [
-            ('use_%s', int(USE_GITTER)),
-            ('room', GITTER_ROOM),
-            ('access_token', GITTER_ACCESS_TOKEN),
-        ]),
         ('Telegram', [
             ('use_%s', int(USE_TELEGRAM)),
             ('send_image', int(TELEGRAM_SEND_IMAGE)),
@@ -2311,7 +2290,6 @@ def _save_config(force=False, **kwargs):
 
         ('Slack', SLACK_NOTIFY_ONSNATCH, SLACK_NOTIFY_ONDOWNLOAD, SLACK_NOTIFY_ONSUBTITLEDOWNLOAD),
         ('Discord', DISCORD_NOTIFY_ONSNATCH, DISCORD_NOTIFY_ONDOWNLOAD, DISCORD_NOTIFY_ONSUBTITLEDOWNLOAD),
-        ('Gitter', GITTER_NOTIFY_ONSNATCH, GITTER_NOTIFY_ONDOWNLOAD, GITTER_NOTIFY_ONSUBTITLEDOWNLOAD),
         ('Telegram', TELEGRAM_NOTIFY_ONSNATCH, TELEGRAM_NOTIFY_ONDOWNLOAD, TELEGRAM_NOTIFY_ONSUBTITLEDOWNLOAD),
         ('Email', EMAIL_NOTIFY_ONSNATCH, EMAIL_NOTIFY_ONDOWNLOAD, EMAIL_NOTIFY_ONSUBTITLEDOWNLOAD),
     ]:

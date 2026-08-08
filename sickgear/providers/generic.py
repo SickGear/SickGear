@@ -721,7 +721,6 @@ class GenericProvider(object):
             (sickgear.PLEX_PASSWORD, 'plex_password'), (sickgear.XBMC_PASSWORD, 'xbmc_password'),
             (sickgear.EMAIL_PASSWORD, 'email_password'), (sickgear.ANIDB_PASSWORD, 'anidb_password'),
             (sickgear.DISCORD_ACCESS_TOKEN, 'discord_access_token'),
-            (sickgear.GITTER_ACCESS_TOKEN, 'gitter_access_token'),
             (('', sickgear.GROWL_HOST[:sickgear.GROWL_HOST.find('@')])['@' in sickgear.GROWL_HOST], 'growl_host'),
             (sickgear.PUSHBULLET_ACCESS_TOKEN, 'pushbullet_access_token'),
             (sickgear.PUSHOVER_APIKEY, 'pushover_apikey'),
