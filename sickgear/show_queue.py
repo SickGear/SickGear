@@ -1124,14 +1124,6 @@ class QueueItemAdd(ShowQueueItem):
         # load ids
         _ = self.show_obj.ids
 
-        # if sickgear.USE_TRAKT:
-        #     # if there are specific episodes that need to be added by trakt
-        #     sickgear.trakt_checker_scheduler.action.manageNewShow(self.show_obj)
-        #
-        #     # add show to trakt.tv library
-        #     if sickgear.TRAKT_SYNC:
-        #         sickgear.trakt_checker_scheduler.action.addShowToTraktLibrary(self.show_obj)
-
         # Load XEM data to DB for show
         sickgear.scene_numbering.xem_refresh(self.show_obj.tvid, self.show_obj.prodid, force=True)
         if self.show_obj.scene:

@@ -21,7 +21,7 @@ import re
 # from lib import api_trakt
 from . import emby, kodi, plex, xbmc, \
     nmj, nmjv2, pushbullet, pushover, pytivo, synoindex, synologynotifier, \
-    discord, emailnotify, gitter, libnotify, growl, prowl, slack, telegram, trakt
+    discord, emailnotify, gitter, libnotify, growl, prowl, slack, telegram
 
 import sickgear
 
@@ -50,7 +50,6 @@ class NotifierFactory(object):
             LIBNOTIFY=libnotify.LibnotifyNotifier,
 
             # social
-            TRAKT=trakt.TraktNotifier,
             SLACK=slack.SlackNotifier,
             DISCORD=discord.DiscordNotifier,
             GITTER=gitter.GitterNotifier,

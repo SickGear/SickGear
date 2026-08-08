@@ -71,7 +71,6 @@ from .sgdatetime import SGDatetime
 from .show_name_helpers import abbr_showname
 
 from .show_updater import clean_ignore_require_words
-# from .trakt_helpers import build_config, trakt_collection_remove_account
 from .tv import TVidProdid, Person as TVPerson, Character as TVCharacter, TVSWITCH_NORMAL, tvswitch_names, \
     TVSWITCH_EP_DELETED, tvswitch_ep_names, usable_id
 
@@ -99,8 +98,6 @@ try:
     from lib.thefuzz import fuzz
 except ImportError as e:
     from lib.fuzzywuzzy import fuzz
-# -- deprecated service
-# from lib.api_trakt import TraktAPI
 from lib.api_trakt.exceptions import TraktException, TraktAuthException
 from lib.api_imdb.imdb_exceptions import IMDbException
 from lib.tvinfo_base import TVInfoEpisode, RoleTypes
@@ -2078,57 +2075,6 @@ class Home(MainHandler):
 
         return notifiers.NotifierFactory().get('LIBNOTIFY').test_notify()
 
-    # -- deprecated service
-    # def trakt_authenticate(self, pin=None, account=None):
-    #     self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
-    #
-    #     if None is pin:
-    #         return json_dumps({'result': 'Fail', 'error_message': 'Trakt PIN required for authentication'})
-    #
-    #     if account and 'new' == account:
-    #         account = None
-    #
-    #     acc = None
-    #     if account:
-    #         acc = helpers.try_int(account, -1)
-    #         if 0 < acc and acc not in sickgear.TRAKT_ACCOUNTS:
-    #             return json_dumps({'result': 'Fail', 'error_message': 'Fail: cannot update non-existing account'})
-    #
-    #     json_fail_auth = json_dumps({'result': 'Fail', 'error_message': 'Trakt NOT authenticated'})
-    #     try:
-    #         resp = TraktAPI().trakt_token(pin, account=acc)
-    #     except TraktAuthException:
-    #         return json_fail_auth
-    #     if not account and isinstance(resp, bool) and not resp:
-    #         return json_fail_auth
-    #
-    #     if not sickgear.USE_TRAKT:
-    #         sickgear.USE_TRAKT = True
-    #         sickgear.save_config()
-    #     pick = resp if not account else acc
-    #     return json_dumps({'result': 'Success',
-    #                        'account_id': sickgear.TRAKT_ACCOUNTS[pick].account_id,
-    #                        'account_name': sickgear.TRAKT_ACCOUNTS[pick].name})
-
-    # -- deprecated service
-    # def trakt_delete(self, accountid=None):
-    #     self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
-    #
-    #     if accountid:
-    #         aid = helpers.try_int(accountid, None)
-    #         if None is not aid:
-    #             if aid in sickgear.TRAKT_ACCOUNTS:
-    #                 account = {'result': 'Success',
-    #                            'account_id': sickgear.TRAKT_ACCOUNTS[aid].account_id,
-    #                            'account_name': sickgear.TRAKT_ACCOUNTS[aid].name}
-    #                 if TraktAPI.delete_account(aid):
-    #                     trakt_collection_remove_account(aid)
-    #                     account['num_accounts'] = len(sickgear.TRAKT_ACCOUNTS)
-    #                     return json_dumps(account)
-    #
-    #             return json_dumps({'result': 'Not found: Account to delete'})
-    #     return json_dumps({'result': 'Not found: Invalid account id'})
-
     def load_show_notify_lists(self):
         self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
 
@@ -3280,10 +3226,6 @@ class Home(MainHandler):
         if sickgear.show_queue_scheduler.action.is_being_added(
                 show_obj) or sickgear.show_queue_scheduler.action.is_being_updated(show_obj):
             return self._generic_message("Error", "Shows can't be deleted while they're being added or updated.")
-
-        # if sickgear.USE_TRAKT and sickgear.TRAKT_SYNC:
-        #     # remove show from trakt.tv library
-        #     sickgear.trakt_checker_scheduler.action.removeShowFromTraktLibrary(show_obj)
 
         show_obj.delete_show(bool(full))
 
@@ -10140,10 +10082,6 @@ class ConfigNotifications(Config):
             use_libnotify=None, libnotify_notify_onsnatch=None, libnotify_notify_ondownload=None,
             libnotify_notify_onsubtitledownload=None,
 
-            use_trakt=None,
-            # trakt_pin=None, trakt_remove_watchlist=None, trakt_use_watchlist=None, trakt_method_add=None,
-            # trakt_start_paused=None, trakt_sync=None, trakt_default_indexer=None, trakt_remove_serieslist=None,
-            # trakt_collection=None, trakt_accounts=None,
             use_slack=None, slack_notify_onsnatch=None, slack_notify_ondownload=None,
             slack_notify_onsubtitledownload=None, slack_access_token=None, slack_channel=None,
             slack_as_authed=None, slack_bot_name=None, slack_icon_url=None,
@@ -10263,17 +10201,6 @@ class ConfigNotifications(Config):
         sickgear.SYNOLOGYNOTIFIER_NOTIFY_ONDOWNLOAD = config.checkbox_to_value(synologynotifier_notify_ondownload)
         sickgear.SYNOLOGYNOTIFIER_NOTIFY_ONSUBTITLEDOWNLOAD = config.checkbox_to_value(
             synologynotifier_notify_onsubtitledownload)
-
-        sickgear.USE_TRAKT = config.checkbox_to_value(use_trakt)
-        # sickgear.TRAKT_UPDATE_COLLECTION = build_config(**kwargs)
-        # sickgear.trakt_checker_scheduler.silent = not sickgear.USE_TRAKT
-        # sickgear.TRAKT_DEFAULT_INDEXER = int(trakt_default_indexer)
-        # sickgear.TRAKT_SYNC = config.checkbox_to_value(trakt_sync)
-        # sickgear.TRAKT_USE_WATCHLIST = config.checkbox_to_value(trakt_use_watchlist)
-        # sickgear.TRAKT_METHOD_ADD = int(trakt_method_add)
-        # sickgear.TRAKT_REMOVE_WATCHLIST = config.checkbox_to_value(trakt_remove_watchlist)
-        # sickgear.TRAKT_REMOVE_SERIESLIST = config.checkbox_to_value(trakt_remove_serieslist)
-        # sickgear.TRAKT_START_PAUSED = config.checkbox_to_value(trakt_start_paused)
 
         sickgear.USE_SLACK = config.checkbox_to_value(use_slack)
         sickgear.SLACK_NOTIFY_ONSNATCH = config.checkbox_to_value(slack_notify_onsnatch)

@@ -441,15 +441,6 @@ class TraktIndexer(TVInfoBase):
     def _get_show_lists(self, url, account=None):
         # type: (str, Any) -> List[TVInfoShow]
         result = []
-        # -- deprecated service
-        # if account:
-        #     from sickgear import TRAKT_ACCOUNTS
-        #     if account in TRAKT_ACCOUNTS and TRAKT_ACCOUNTS[account].active:
-        #         kw = {'send_oauth': account}
-        #     else:
-        #         raise TraktAuthException('Account missing or disabled')
-        # else:
-        #     kw = {}
         kw = {}
         resp = TraktAPI().trakt_request(url, **kw)
         if resp:
@@ -496,110 +487,6 @@ class TraktIndexer(TVInfoBase):
         """
         use_period = ('weekly', period)[period in ('daily', 'weekly', 'monthly', 'yearly', 'all')]
         return self._get_show_lists(f'shows/recommended/{use_period}?extended=full&page={1:d}&limit={result_count:d}')
-
-    # -- deprecated service
-    # def get_recommended_for_account(self, account, result_count=100, ignore_collected=False, ignore_watchlisted=False,
-    #                                 **kwargs):
-    #     # type: (...) -> List[TVInfoShow]
-    #     """
-    #     get most recommended shows for account
-    #     :param account: account to get recommendations for
-    #     :param result_count: how many results are suppose to be returned
-    #     :param ignore_collected: exclude colleded shows
-    #     :param ignore_watchlisted: exclude watchlisted shows
-    #     """
-    #     from sickgear import TRAKT_ACCOUNTS
-    #     if not account or account not in TRAKT_ACCOUNTS or not TRAKT_ACCOUNTS[account].active:
-    #         raise TraktAuthException('Account missing or disabled')
-    #     extra_param = []
-    #     if ignore_collected:
-    #         extra_param.append('ignore_collected=true')
-    #     if ignore_watchlisted:
-    #         extra_param.append('ignore_watchlisted=true')
-    #     return self._get_show_lists('recommendations/shows?extended=full&page=%d&limit=%d%s' %
-    #                                 (1, result_count, ('', '&%s' % '&'.join(extra_param))[0 < len(extra_param)]),
-    #                                 account=account)
-
-    # -- deprecated service
-    # def hide_recommended_for_account(self, account, show_ids, **kwargs):
-    #     # type: (integer_types, List[integer_types], Any) -> List[integer_types]
-    #     """
-    #     hide recommended show for account
-    #     :param account: account to get recommendations for
-    #     :param show_ids: list of show_ids to no longer recommend for account
-    #     :return: list of added ids
-    #     """
-    #     from sickgear import TRAKT_ACCOUNTS
-    #     if not account or account not in TRAKT_ACCOUNTS or not TRAKT_ACCOUNTS[account].active:
-    #         raise TraktAuthException('Account missing or disabled')
-    #     if not isinstance(show_ids, list) or not show_ids or any(not isinstance(_i, int) for _i in show_ids):
-    #         raise TraktException('list of show_ids (trakt id) required')
-    #     resp = TraktAPI().trakt_request('users/hidden/recommendations', send_oauth=account,
-    #                                     data={'shows': [{'ids': {'trakt': _i}} for _i in show_ids]})
-    #     if resp and isinstance(resp, dict) and 'added' in resp and 'shows' in resp['added']:
-    #         if len(show_ids) == resp['added']['shows']:
-    #             return show_ids
-    #         if 'not_found' in resp and 'shows' in resp['not_found']:
-    #             not_found = [_i['ids']['trakt'] for _i in resp['not_found']['shows']]
-    #         else:
-    #             not_found = []
-    #         return [_i for _i in show_ids if _i not in not_found]
-    #     return []
-
-    # -- deprecated service
-    # def unhide_recommended_for_account(self, account, show_ids, **kwargs):
-    #     # type: (integer_types, List[integer_types], Any) -> List[integer_types]
-    #     """
-    #     unhide recommended show for account
-    #     :param account: account to get recommendations for
-    #     :param show_ids: list of show_ids to be included in possible recommend for account
-    #     :return: list of removed ids
-    #     """
-    #     from sickgear import TRAKT_ACCOUNTS
-    #     if not account or account not in TRAKT_ACCOUNTS or not TRAKT_ACCOUNTS[account].active:
-    #         raise TraktAuthException('Account missing or disabled')
-    #     if not isinstance(show_ids, list) or not show_ids or any(not isinstance(_i, int) for _i in show_ids):
-    #         raise TraktException('list of show_ids (trakt id) required')
-    #     resp = TraktAPI().trakt_request('users/hidden/recommendations/remove', send_oauth=account,
-    #                                     data={'shows': [{'ids': {'trakt': _i}} for _i in show_ids]})
-    #     if resp and isinstance(resp, dict) and 'deleted' in resp and 'shows' in resp['deleted']:
-    #         if len(show_ids) == resp['deleted']['shows']:
-    #             return show_ids
-    #         if 'not_found' in resp and 'shows' in resp['not_found']:
-    #             not_found = [_i['ids']['trakt'] for _i in resp['not_found']['shows']]
-    #         else:
-    #             not_found = []
-    #         return [_i for _i in show_ids if _i not in not_found]
-    #     return []
-
-    # -- deprecated service
-    # def list_hidden_recommended_for_account(self, account, **kwargs):
-    #     # type: (integer_types, Any) -> List[TVInfoShow]
-    #     """
-    #     list hidden recommended show for account
-    #     :param account: account to get recommendations for
-    #     :return: list of hidden shows
-    #     """
-    #     from sickgear import TRAKT_ACCOUNTS
-    #     if not account or account not in TRAKT_ACCOUNTS or not TRAKT_ACCOUNTS[account].active:
-    #         raise TraktAuthException('Account missing or disabled')
-    #     return self._get_show_lists('users/hidden/recommendations?type=show', account=account)
-
-    # -- deprecated service
-    # def get_watchlisted_for_account(self, account, result_count=100, sort='rank', **kwargs):
-    #     # type: (...) -> List[TVInfoShow]
-    #     """
-    #     get watchlisted shows for the account
-    #     :param account: account to get recommendations for
-    #     :param result_count: how many results are suppose to be returned
-    #     :param sort: possible values: 'rank', 'added', 'released', 'title'
-    #     """
-    #     from sickgear import TRAKT_ACCOUNTS
-    #     if not account or account not in TRAKT_ACCOUNTS or not TRAKT_ACCOUNTS[account].active:
-    #         raise TraktAuthException('Account missing or disabled')
-    #     sort = ('rank', sort)[sort in ('rank', 'added', 'released', 'title')]
-    #     return self._get_show_lists('users/%s/watchlist/shows/%s?extended=full&page=%d&limit=%d' %
-    #                                 (TRAKT_ACCOUNTS[account].slug, sort, 1, result_count), account=account)
 
     def get_anticipated(self, result_count=100, **kwargs):
         # type: (...) -> List[TVInfoShow]

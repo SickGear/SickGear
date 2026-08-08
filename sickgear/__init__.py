@@ -35,7 +35,7 @@ import zlib
 
 from . import classes, db, helpers, image_cache, indexermapper, logger, metadata, naming, people_queue, providers, \
     scene_exceptions, scene_numbering, scheduler, search_backlog, search_propers, search_queue, search_recent, \
-    show_queue, show_updater, subtitles, version_checker, watchedstate_queue # , trakt_helpers
+    show_queue, show_updater, subtitles, version_checker, watchedstate_queue
 from . import auto_media_process, properFinder  # must come after the above imports
 from .common import SD, SKIPPED, USER_AGENT
 from .config import check_section, check_setting_int, check_setting_str, ConfigMigrator, minimax
@@ -66,8 +66,6 @@ if False:
     from adba import Connection
     from .event_queue import Events
     from .tv import TVShow
-    ## -- deprecated service
-    # from lib.api_trakt.trakt import TraktAccount
 
 PID = None
 ENV = {}
@@ -113,8 +111,6 @@ plex_watched_state_scheduler = None  # type: Optional[scheduler.Scheduler]
 process_media_scheduler = None  # type: Optional[scheduler.Scheduler]
 # noinspection PyTypeChecker
 background_mapping_task = None  # type: threading.Thread
-# deprecated
-# trakt_checker_scheduler = None
 
 provider_ping_thread_pool = {}
 
@@ -452,14 +448,6 @@ PUSHALOT_AUTHORIZATIONTOKEN = None
 
 # -- deprecated service, but flag kept for logic relating to existing active tabs (2026-08-07)
 USE_TRAKT = False
-# TRAKT_REMOVE_WATCHLIST = False
-# TRAKT_REMOVE_SERIESLIST = False
-# TRAKT_USE_WATCHLIST = False
-# TRAKT_METHOD_ADD = 0
-# TRAKT_START_PAUSED = False
-# TRAKT_SYNC = False
-# TRAKT_DEFAULT_INDEXER = None
-# TRAKT_UPDATE_COLLECTION = {}
 
 USE_SLACK = False
 SLACK_NOTIFY_ONSNATCH = False
@@ -596,28 +584,11 @@ CALENDAR_UNPROTECTED = False
 TMDB_API_KEY = TmdbIndexer.API_KEY
 FANART_API_KEY = '3728ca1a2a937ba0c93b6e63cc86cecb'
 
-# to switch between staging and production TRAKT environment
-TRAKT_STAGING = False
-
+TRAKT_BASE_URL = 'https://api.trakt.tv/'
+TRAKT_CLIENT_ID = 'f1c453c67d81f1307f9118172c408a883eb186b094d5ea33080d59ddedb7fc7c'
+TRAKT_MRU = ''
 TRAKT_TIMEOUT = 60
 TRAKT_VERIFY = True
-# TRAKT_CONNECTED_ACCOUNT = None
-# TRAKT_ACCOUNTS = {}  # type: Dict[int, TraktAccount]
-TRAKT_MRU = ''
-
-# ids are not invalid because trakt deleted all non VIP account ids
-if TRAKT_STAGING:
-    # staging trakt values:
-    TRAKT_CLIENT_ID = '2aae3052f90b14235d184cc8f709b12b4fd8ae35f339a060a890c70db92be87a'
-    # TRAKT_CLIENT_SECRET = '900e03471220503843d4a856bfbef17080cddb630f2b7df6a825e96e3ff3c39e'
-    # TRAKT_PIN_URL = 'https://staging.trakt.tv/pin/638'
-    TRAKT_BASE_URL = 'http' + '://api.staging.trakt.tv/'
-else:
-    # production trakt values:
-    TRAKT_CLIENT_ID = 'f1c453c67d81f1307f9118172c408a883eb186b094d5ea33080d59ddedb7fc7c'
-    # TRAKT_CLIENT_SECRET = '12efb6fb6e863a08934d9904032a90008325df7e23514650cade55e7e7c118c5'
-    # TRAKT_PIN_URL = 'https://trakt.tv/pin/6314'
-    TRAKT_BASE_URL = 'https://api.trakt.tv/'
 
 IMDB_MRU = ''
 MC_MRU = ''
@@ -769,11 +740,8 @@ def init_stage_1(console_logging):
         USE_PUSHBULLET, PUSHBULLET_NOTIFY_ONSNATCH, PUSHBULLET_NOTIFY_ONDOWNLOAD, \
         PUSHBULLET_NOTIFY_ONSUBTITLEDOWNLOAD, PUSHBULLET_ACCESS_TOKEN, PUSHBULLET_DEVICE_IDEN
     # Notification Settings/Social
-    # -- deprecated service
-    # global TRAKT_CONNECTED_ACCOUNT, TRAKT_UPDATE_COLLECTION, TRAKT_USE_WATCHLIST, TRAKT_REMOVE_WATCHLIST, \
-    # TRAKT_REMOVE_SERIESLIST, TRAKT_SYNC, TRAKT_DEFAULT_INDEXER, TRAKT_METHOD_ADD, TRAKT_START_PAUSED, \
-    global USE_TRAKT, TRAKT_MRU, TRAKT_VERIFY, \
-        TRAKT_TIMEOUT, \
+
+    global USE_TRAKT, TRAKT_MRU, TRAKT_TIMEOUT, TRAKT_VERIFY, \
         IMDB_MRU, MC_MRU, NE_MRU, TMDB_MRU, TVC_MRU, TVDB_MRU, TVM_MRU, \
         USE_SLACK, SLACK_NOTIFY_ONSNATCH, SLACK_NOTIFY_ONDOWNLOAD, SLACK_NOTIFY_ONSUBTITLEDOWNLOAD, \
         SLACK_CHANNEL, SLACK_AS_AUTHED, SLACK_BOT_NAME, SLACK_ICON_URL, SLACK_ACCESS_TOKEN, \
@@ -1193,20 +1161,7 @@ def init_stage_1(console_logging):
     SYNOLOGYNOTIFIER_NOTIFY_ONSUBTITLEDOWNLOAD = bool(
         check_setting_int(CFG, 'SynologyNotifier', 'synologynotifier_notify_onsubtitledownload', 0))
 
-    # -- deprecated service
-    # USE_TRAKT = bool(check_setting_int(CFG, 'Trakt', 'use_trakt', 0))
-    # TRAKT_REMOVE_WATCHLIST = bool(check_setting_int(CFG, 'Trakt', 'trakt_remove_watchlist', 0))
-    # TRAKT_REMOVE_SERIESLIST = bool(check_setting_int(CFG, 'Trakt', 'trakt_remove_serieslist', 0))
-    # TRAKT_USE_WATCHLIST = bool(check_setting_int(CFG, 'Trakt', 'trakt_use_watchlist', 0))
-    # TRAKT_METHOD_ADD = check_setting_int(CFG, 'Trakt', 'trakt_method_add', 0)
-    # TRAKT_START_PAUSED = bool(check_setting_int(CFG, 'Trakt', 'trakt_start_paused', 0))
-    # TRAKT_SYNC = bool(check_setting_int(CFG, 'Trakt', 'trakt_sync', 0))
-    # TRAKT_DEFAULT_INDEXER = check_setting_int(CFG, 'Trakt', 'trakt_default_indexer', 1)
-    # TRAKT_UPDATE_COLLECTION = trakt_helpers.read_config_string(
-    #     check_setting_str(CFG, 'Trakt', 'trakt_update_collection', ''))
-    # TRAKT_ACCOUNTS = TraktAPI.read_config_string(check_setting_str(CFG, 'Trakt', 'trakt_accounts', ''))
     TRAKT_MRU = check_setting_str(CFG, 'Trakt', 'trakt_mru', '')
-
     IMDB_MRU = check_setting_str(CFG, 'IMDB', 'imdb_mru', '')
     MC_MRU = check_setting_str(CFG, 'Metacritic', 'mc_mru', '')
     NE_MRU = check_setting_str(CFG, 'NextEpisode', 'ne_mru', '')
@@ -1539,7 +1494,6 @@ def init_stage_2():
     # Misc
     global __INITIALIZED__, MEMCACHE, MEMCACHE_FLAG_IMAGES, RECENTSEARCH_STARTUP
     # Schedulers
-    # global trakt_checker_scheduler
     global update_software_scheduler, update_packages_scheduler, \
         update_show_scheduler, update_release_mappings_scheduler, \
         search_backlog_scheduler, search_propers_scheduler, \
@@ -1745,7 +1699,6 @@ def init_stage_2():
 
 
 def enabled_schedulers(is_init=False):
-    # ([], [trakt_checker_scheduler])[USE_TRAKT] + \
     return ([], [events])[is_init] \
            + ([], [update_software_scheduler, update_packages_scheduler,
                    update_show_scheduler, update_release_mappings_scheduler,
@@ -2265,21 +2218,9 @@ def _save_config(force=False, **kwargs):
         # new_config['Pushalot'] = {}
         # new_config['Pushalot']['use_pushalot'] = int(USE_PUSHALOT)
         # new_config['Pushalot']['pushalot_authorizationtoken'] = PUSHALOT_AUTHORIZATIONTOKEN
-        # Trakt requires now the dev to VIP to get a client id
         ('Trakt', [
             ('use_%s', int(USE_TRAKT)),
-        #     ('update_collection', TRAKT_UPDATE_COLLECTION
-        #         and trakt_helpers.build_config_string(TRAKT_UPDATE_COLLECTION)),
-        #     ('accounts', TraktAPI.build_config_string(TRAKT_ACCOUNTS)),
             ('mru', TRAKT_MRU),
-        #     # new_config['Trakt'] = {}
-        #     # new_config['Trakt']['trakt_remove_watchlist'] = int(TRAKT_REMOVE_WATCHLIST)
-        #     # new_config['Trakt']['trakt_remove_serieslist'] = int(TRAKT_REMOVE_SERIESLIST)
-        #     # new_config['Trakt']['trakt_use_watchlist'] = int(TRAKT_USE_WATCHLIST)
-        #     # new_config['Trakt']['trakt_method_add'] = int(TRAKT_METHOD_ADD)
-        #     # new_config['Trakt']['trakt_start_paused'] = int(TRAKT_START_PAUSED)
-        #     # new_config['Trakt']['trakt_sync'] = int(TRAKT_SYNC)
-        #     # new_config['Trakt']['trakt_default_indexer'] = int(TRAKT_DEFAULT_INDEXER)
         ]),
         ('Metacritic', [
             ('mru', MC_MRU)
