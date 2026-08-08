@@ -92,7 +92,7 @@ class AES_CBC_Decrypt:
             self.decrypt = ciph.decryptor().update
 
 
-__version__ = "4.3"
+__version__ = "4.5"
 
 # export only interesting items
 __all__ = ["get_rar_version", "is_rarfile", "is_rarfile_sfx", "RarInfo", "RarFile", "RarExtFile"]
@@ -194,6 +194,14 @@ RAR_ENDARC_VOLNR = 0x0008
 RAR_SKIP_IF_UNKNOWN = 0x4000
 RAR_LONG_BLOCK = 0x8000
 
+# Subtypes for RAR_BLOCK_OLD_SUB
+RAR_OLD_SUB_OS2 = 0x100
+RAR_OLD_SUB_UNIX = 0x101
+RAR_OLD_SUB_MAC = 0x102
+RAR_OLD_SUB_BEOS = 0x103
+RAR_OLD_SUB_NT = 0x104
+RAR_OLD_SUB_STREAM = 0x105
+
 # Host OS types
 RAR_OS_MSDOS = 0    #: MSDOS (only in RAR3)
 RAR_OS_OS2 = 1      #: OS2 (only in RAR3)
@@ -212,6 +220,7 @@ RAR_M5 = 0x35   #: Compression level `-m5` - Maximum compression.
 
 RAR_MAX_PASSWORD = 127  #: Max number of utf-16 chars in passwords.
 RAR_MAX_KDF_SHIFT = 24  #: Max power-of-2 for KDF count
+RAR_MAX_COMMENT = 256 * 1024  #: Max supported comment size
 
 #
 # RAR5 constants
@@ -1415,6 +1424,8 @@ class Rar3Info(RarInfo):
     endarc_datacrc = None
     endarc_volnr = None
 
+    old_sub_type = None
+
     def _must_disable_hack(self):
         if self.type == RAR_BLOCK_FILE:
             if self.flags & RAR_FILE_PASSWORD:
@@ -1525,6 +1536,16 @@ class RAR3Parser(CommonParser):
         elif h.type == RAR_BLOCK_OLD_EXTRA:
             pos += 7
             crc_pos = pos
+        elif h.type == RAR_BLOCK_OLD_SUB:
+            pos = self._parse_old_subblock(h, hdata, pos)
+
+            # these types do not have their own data CRC,
+            # so data was included in header CRC.
+            if h.old_sub_type in (RAR_OLD_SUB_UNIX, RAR_OLD_SUB_MAC):
+                # skip CRC check, it requires to read data part
+                return h
+
+            crc_pos = h.header_size
         elif h.type == RAR_BLOCK_ENDARC:
             if h.flags & RAR_ENDARC_DATACRC:
                 h.endarc_datacrc, pos = load_le32(hdata, pos)
@@ -1535,12 +1556,8 @@ class RAR3Parser(CommonParser):
         else:
             crc_pos = h.header_size
 
-        # check crc
-        if h.type == RAR_BLOCK_OLD_SUB:
-            crcdat = hdata[2:] + fd.read(h.add_size)
-        else:
-            crcdat = hdata[2:crc_pos]
-
+        # calculate crc
+        crcdat = hdata[2:crc_pos]
         calc_crc = crc32(crcdat) & 0xFFFF
 
         # return good header
@@ -1597,6 +1614,9 @@ class RAR3Parser(CommonParser):
             h.orig_filename = name
             h.filename = name.decode("utf8", "replace")
         else:
+            nul = name.find(b"\0")
+            if nul >= 0:
+                name = name[:nul]
             # stored in random encoding
             h.orig_filename = name
             h.filename = self._decode(name)
@@ -1619,6 +1639,12 @@ class RAR3Parser(CommonParser):
 
         return pos
 
+    def _parse_old_subblock(self, h, hdata, pos):
+        """Parse RAR2 subblock
+        """
+        h.old_sub_type, _reserved = S_OLD_SUBBLOCK_HDR.unpack_from(hdata, pos)
+        return pos
+
     def _parse_subblocks(self, h, hdata, pos):
         """Find old-style comment subblock
         """
@@ -1636,6 +1662,9 @@ class RAR3Parser(CommonParser):
             # followed by block-specific header
             if stype == RAR_BLOCK_OLD_COMMENT and pos + S_COMMENT_HDR.size <= pos_next:
                 declen, ver, meth, crc = S_COMMENT_HDR.unpack_from(hdata, pos)
+                if declen > RAR_MAX_COMMENT:
+                    pos = pos_next
+                    continue
                 pos += S_COMMENT_HDR.size
                 data = hdata[pos: pos_next]
                 cmt = rar3_decompress(ver, meth, data, declen, sflags,
@@ -1647,6 +1676,11 @@ class RAR3Parser(CommonParser):
         return pos
 
     def _read_comment_v3(self, inf, pwd=None):
+
+        if inf.compress_size > RAR_MAX_COMMENT:
+            return None
+        if inf.file_size > RAR_MAX_COMMENT:
+            return None
 
         # read data
         with XFile(inf.volume_file) as rf:
@@ -1988,7 +2022,12 @@ class RAR5Parser(CommonParser):
 
         h.file_compress_flags, pos = load_vint(hdata, pos)
         h.file_host_os, pos = load_vint(hdata, pos)
-        h.orig_filename, pos = load_vstr(hdata, pos)
+
+        name, pos = load_vstr(hdata, pos)
+        nul = name.find(b"\0")
+        if nul >= 0:
+            name = name[:nul]
+        h.orig_filename = name
         h.filename = h.orig_filename.decode("utf8", "replace").rstrip("/")
 
         # use compatible values
@@ -2049,6 +2088,8 @@ class RAR5Parser(CommonParser):
             raise RarWrongPassword()
 
     def _parse_encryption_block(self, h, hdata, pos):
+        self._hdrenc_main = h
+        self._needs_password = True
         h.encryption_algo, pos = load_vint(hdata, pos)
         h.encryption_flags, pos = load_vint(hdata, pos)
         h.encryption_kdf_count, pos = load_byte(hdata, pos)
@@ -2059,7 +2100,6 @@ class RAR5Parser(CommonParser):
             raise BadRarFile("Unsupported header encryption cipher")
         if h.encryption_check_value and self._password:
             self._check_password(h.encryption_check_value, h.encryption_kdf_count, h.encryption_salt)
-        self._hdrenc_main = h
         return h
 
     def _process_file_extra(self, h, xdata):
@@ -2183,6 +2223,10 @@ class RAR5Parser(CommonParser):
         if item.block_flags & (RAR5_BLOCK_FLAG_SPLIT_BEFORE | RAR5_BLOCK_FLAG_SPLIT_AFTER):
             return None
         if item.compress_type != RAR_M0:
+            return None
+        if item.compress_size > RAR_MAX_COMMENT:
+            return None
+        if item.file_size > RAR_MAX_COMMENT:
             return None
 
         if item.flags & RAR_FILE_PASSWORD:
@@ -2922,7 +2966,7 @@ S_BYTE = Struct("<B")
 S_BLK_HDR = Struct("<HBHH")
 S_FILE_HDR = Struct("<LLBLLBBHL")
 S_COMMENT_HDR = Struct("<HBBH")
-
+S_OLD_SUBBLOCK_HDR = Struct("<HB")
 
 def load_vint(buf, pos):
     """Load RAR5 variable-size int."""
