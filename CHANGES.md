@@ -1,4 +1,4 @@
-﻿### 3.36.0 (2026-xx-xx xx:xx:00 UTC)
+﻿### 3.36.0 (2026-08-08 23:40:00 UTC)
 
 * Change update actions and optimise unittest
 * Update actions/checkout@v6.0.2 to actions/checkout@v7
@@ -91,40 +91,6 @@
 * Change remove Trakt recommended/watchlist
 * Change remove deprecated Gitter notifier
 * Remove Blutopia, MoreThan, and nCore torrent provider
-
-
-[develop]
-* Fix crash on startup with indentation issue
-* Change disable check_same_thread for sqllite connection to make sure that finalize __del__ doesn't throw exceptions
-* Update actions/checkout@v6.0.2 to actions/checkout@v6.0.3
-* Update apprise 1.10.0 (343c960) to 1.11.0 (158c4e1)
-* Update certifi 2026.04.22 to 2026.05.20
-* Update certifi 2026.05.20 to 2026.06.17
-* Update certifi 2026.06.17 to 2026.07.22
-* Update chardet packages 7.4.0 (582c664) to 7.4.1 (9079efc)
-* Update filelock 3.25.2 (5b9872c) to 3.29.0 (469b47f)
-* Update idna library 3.13 (89cdfd2) to 3.14 (37b6b74)
-* Update idna library 3.14 (37b6b74) to 3.16 (6d1a0de)
-* Update idna library 3.16 (6d1a0de) to 3.17 (f48619c)
-* Update idna library 3.17 (f48619c) to 3.18 (f39ea90)
-* Update packaging 26.1 (c1a88a3) to 26.2 (84a87ee)
-* Update Rarfile 4.3 (4e9451c) to 4.4 (d626470)
-* Update Requests library 2.33.1 (111d2b7) to 2.34.0 (0b401c7)
-* Update Requests library 2.34.0 (0b401c7) to 2.34.2 (6e83187)
-* Update soupsieve 2.8.4 (28108ab) to 2.9.0 (8763f91)
-* Update soupsieve 2.9.0 (8763f91) to 2.9.1 (05e92be)
-* Update soupsieve 2.9.1 (05e92be) to 2.9.2 (78661a6)
-* Update Tornado Web Server 6.5.6 (aba2569) to 6.5.7 (48fc2d4)
-* Update Tornado Web Server 6.5.7 (48fc2d4) to 6.5.8 (a55abe3)
-* Fix import if orjson is not installed that blocked running unittests
-* Change temporary remove browse filters while a bug is being investigated, and remove tag-trait-self from actor lists
-* Fix save states on browse shows when a tab is open on a page and sg restarts e.g. for an upgrade
-* Change restore filters
-* Fix for old Pythons that don't support certain quotation use in f-string
-* Fix hover styling of Remove and Edit buttons on light theme
-* Fix Kodi notifier f-string conversion
-* Fix a couple more issues with older Python versions that don't support certain f-string niceness in newer versions
-* Fix ignore btn-status.json backup if file does not exist
 
 
 ### 3.35.11 (2026-08-08 03:20:00 UTC)
